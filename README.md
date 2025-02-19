@@ -2,6 +2,11 @@
 
 The webdriver WC3 API represented as a Haskell type
 
+## Note
+- need to install
+  - geckodriver
+  - tasty discover
+
 ## TODO
 
 - rename from Pyrethrum
@@ -14,6 +19,7 @@ The webdriver WC3 API represented as a Haskell type
   - docker file
   - dev-container
   - scripts
+- update tasks
 - add all to github container repo (check vs docker hub)
 - hackage
 - stackage
