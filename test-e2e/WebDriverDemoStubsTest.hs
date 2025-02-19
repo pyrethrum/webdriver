@@ -155,8 +155,8 @@ johnsCapabilities =
 
 mkExtendedTimeoutsSession :: IO SessionId
 mkExtendedTimeoutsSession = do
-  -- ses <- minFirefoxSession
-  ses <- newSession johnsCapabilities
+  ses <- minFirefoxSession
+  -- ses <- newSession johnsCapabilities
   setTimeouts ses $
     MkTimeouts
       { pageLoad = Just $ 30 * seconds,
