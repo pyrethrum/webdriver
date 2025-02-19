@@ -1,0 +1,164 @@
+cabal-version: 3.6
+
+name:           pyrethrum
+version:        0.1.0.0
+description:    Please see the README on GitHub at <https://github.com/githubuser/simple-hpack#readme>
+homepage:       https://github.com/githubuser/simple-hpack#readme
+bug-reports:    https://github.com/githubuser/simple-hpack/issues
+author:         Author name here
+maintainer:     example@example.com
+copyright:      2018 Author name here
+license:        MIT
+license-file:   LICENSE
+build-type:     Simple
+extra-source-files:
+    README.md
+    ChangeLog.md
+
+common commonExtensions
+  default-extensions:
+    AllowAmbiguousTypes
+      BangPatterns
+      BlockArguments
+      ConstrainedClassMethods
+      ConstraintKinds
+      DisambiguateRecordFields
+      DuplicateRecordFields
+      DataKinds
+      DefaultSignatures
+      DeriveFoldable
+      DeriveFunctor
+      DeriveGeneric
+      DeriveLift
+      DeriveTraversable
+      DerivingStrategies
+      EmptyCase
+      ExistentialQuantification
+      ExtendedDefaultRules
+      FlexibleContexts
+      FlexibleInstances
+      FunctionalDependencies
+      GADTs
+      GeneralizedNewtypeDeriving
+      ImportQualifiedPost
+      InstanceSigs
+      KindSignatures
+      LambdaCase
+      LiberalTypeSynonyms
+      MultiParamTypeClasses
+      MultiWayIf
+      NamedFieldPuns
+      NoFieldSelectors
+      NoImplicitPrelude
+      NumericUnderscores
+      OverloadedStrings
+      OverloadedRecordDot
+      PartialTypeSignatures
+      PatternSynonyms
+      PolyKinds
+      QuasiQuotes
+      RankNTypes
+      RecordWildCards
+      ScopedTypeVariables
+      StandaloneDeriving
+      StrictData
+      TemplateHaskell
+      TupleSections
+      TypeApplications
+      TypeFamilies
+      TypeFamilyDependencies
+      TypeOperators
+
+common commonGhcOptions
+  ghc-options:
+    -fmax-pmcheck-models=10000000 
+    -ferror-spans 
+    -O2 
+    -fprint-potential-instances 
+    -Wall 
+    -Wcompat 
+    -Wincomplete-record-updates 
+    -Wincomplete-uni-patterns 
+    -Wredundant-constraints 
+    -fwarn-tabs 
+    -fwrite-ide-info 
+    -fno-warn-type-defaults 
+    -fno-warn-unused-do-bind 
+    -Wno-overlapping-patterns 
+    -fprefer-byte-code 
+    -fbyte-code-and-object-code 
+    -fno-break-points
+
+ -- -fdefer-type-errors
+
+library
+  import: commonExtensions, commonGhcOptions
+  exposed-modules:
+      Capabilities
+      WebDriverSpec
+      WebDriverError
+  hs-source-dirs: src
+  other-modules:
+      Utils
+  build-depends:
+    , aeson
+    , aeson-pretty
+    , base
+    , bytestring
+    , pyrethrum-extras
+    , text
+    , containers
+  default-language: Haskell2010
+
+test-suite test
+  import: commonExtensions, commonGhcOptions
+  type: exitcode-stdio-1.0
+  main-is: Driver.hs
+  hs-source-dirs: test
+  build-depends:
+    , aeson
+    , base
+    , containers
+    , ghc
+    , text
+    , tasty
+    , tasty-hunit
+    , tasty-discover
+    , bytestring
+    , falsify
+    , pyrethrum
+    , raw-strings-qq
+  other-modules:
+      Utils
+    , ApiCoverageTest
+  build-tool-depends:
+    tasty-discover:tasty-discover
+
+test-suite test-e2e
+  import: commonExtensions, commonGhcOptions
+  type: exitcode-stdio-1.0
+  main-is: Driver.hs
+  hs-source-dirs: test-e2e
+  build-depends:
+    , aeson
+    , aeson-pretty
+    , base
+    , text
+    , req
+    , containers
+    , tasty
+    , tasty-hunit
+    , tasty-discover
+    , bytestring
+    , falsify
+    , pyrethrum
+    , raw-strings-qq
+  other-modules:
+      WebDriverDemoStubsTest
+    , WebDriverPure
+    , WebDriverDemoUtils
+    , WebDriverIO
+    , Utils
+  build-tool-depends:
+    tasty-discover:tasty-discover
+

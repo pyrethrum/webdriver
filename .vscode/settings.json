@@ -1,0 +1,17 @@
+{
+  "languageServerHaskell.useCustomHieWrapper": true,
+  "languageServerHaskell.useCustomHieWrapperPath": "hie-wrapper",
+  "workbench.colorCustomizations": {},
+  "cSpell.words": [
+    "Aeson",
+    "Interactor",
+    "Pyrelude"
+  ],
+  "cSpell.language": "en-GB",
+  "cSpell.enabled": true,
+  "cSpell.enableFiletypes": [
+    "log"
+  ],
+  "git.closeDiffOnOperation": true,
+  "git.postCommitCommand": "push"
+}

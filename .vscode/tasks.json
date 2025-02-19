@@ -1,0 +1,73 @@
+{
+  // See https://go.microsoft.com/fwlink/?LinkId=733558
+  // for the documentation about the tasks.json format
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "ghciwatch",
+      "type": "shell",
+      "command": "ghciwatch --log-filter info --command 'cabal repl --repl-no-load' --watch src --watch test --watch test-e2e --allow-eval --clear --backtrace full",
+      "presentation": {
+        "reveal": "always",
+        "panel": "shared",
+        "showReuseMessage": false
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "cabal build",
+      "type": "shell",
+      "command": "cabal",
+      "args": [
+        "build"
+      ],
+      "presentation": {
+        "reveal": "always",
+        "panel": "shared",
+        "showReuseMessage": false
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "cabal build CI",
+      "type": "shell",
+      "command": "cabal",
+      "args": [
+        "build",
+        "--flags='+optimised -godLibrary'"
+      ],
+      "presentation": {
+        "reveal": "always",
+        "panel": "shared",
+        "showReuseMessage": false
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "cabal test",
+      "type": "shell",
+      "command": "cabal",
+      "args": [
+        "test",
+        "--test-show-details=streaming"
+      ],
+      "presentation": {
+        "reveal": "always",
+        "panel": "shared",
+        "showReuseMessage": false
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "gecko driver",
+      "type": "shell",
+      "command": "pkill -f geckodriver || true  && geckodriver &",
+      "presentation": {
+        "reveal": "always",
+        "panel": "shared",
+        "showReuseMessage": true
+      },
+      "problemMatcher": []
+    }
+  ]
+}

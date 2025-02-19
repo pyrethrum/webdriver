@@ -1,0 +1,60 @@
+// For format details, see https://aka.ms/devcontainer.json. For config options, see the
+// README at: https://github.com/devcontainers/templates/tree/main/src/docker-existing-dockerfile
+{
+	"name": "pyrethrum",
+	"image": "theghostjw/pyrethrum",
+
+	// Features to add to the dev container. More info: https://containers.dev/features.
+	// "features": {},
+
+	// Use 'forwardPorts' to make a list of ports inside the container available locally.
+	// "forwardPorts": [],
+
+	// copy the compiled library files from dist-newstyle into the current working directory
+	// if the dist-newstyle directory does not already exist  this does not work
+	// cabal is too clever about cache invalidation and rebuild anyway
+	// "postCreateCommand": "[ ! -d ./dist-newstyle ] && cp -r ~/dist-newstyle ./",
+
+	// Configure tool-specific properties.devco
+	// "customizations": {},
+
+	"remoteUser": "vscode",
+	"containerUser": "vscode",
+	"customizations": {
+		"vscode": {
+			"extensions": [
+				"alefragnani.Bookmarks",
+				"ms-vscode.vscode-speech-language-pack-en-au",
+				"ms-vscode.vscode-speech",
+				"tomoki1207.pdf",
+				"techer.open-in-browser",
+				"johnpapa.vscode-peacock",
+				"acarreiro.calculate",
+				"streetsidesoftware.code-spell-checker",
+				"nemesv.copy-file-name",
+				"mrmlnc.vscode-duplicate",
+				"sleistner.vscode-fileutils",
+				"huizhou.githd",
+				"donjayamanne.githistory",
+				"eamodio.gitlens",
+				"haskell.haskell",
+				"justusadam.language-haskell",
+				"ms-vsliveshare.vsliveshare-pack",
+				"yzhang.markdown-all-in-one",
+				"yzane.markdown-pdf",
+				"jack89ita.open-file-from-path",
+				"christian-kohler.path-intellisense",
+				"mechatroner.rainbow-csv",
+				"daiyy.quick-html-previewer",
+				"humao.rest-client",
+				"kylepaulsen.stack-tabs",
+				"spmeesseman.vscode-taskexplorer",
+				"Gruntfuggly.todo-tree",
+				"andyyaldoo.vscode-json",
+				"redhat.vscode-yaml",
+				"bee.git-temporal-vscode",
+				"foxundermoon.shell-format"
+			]
+		}
+	}
+}
