@@ -68,9 +68,7 @@ capsToJson :: Capabilities -> Value
 capsToJson caps =
   object
     [ "capabilities"
-        .= object
-          ["alwaysMatch" .= caps],
-      "desiredCapabilities" .= caps
+        .= object ["alwaysMatch" .= caps]
     ]
 
 -- Custom Types for Enums

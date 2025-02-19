@@ -316,7 +316,7 @@ sleepMs :: Int -> IO ()
 sleepMs = threadDelay . (* 1_000)
 
 debug :: Bool
-debug = False
+debug = True
 
 
 -- no console out for "production"

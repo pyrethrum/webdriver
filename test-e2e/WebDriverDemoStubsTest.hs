@@ -1,9 +1,18 @@
 module WebDriverDemoStubsTest where
 
+import Capabilities
+  ( Capabilities (..),
+    VendorSpecific (..),
+    minFirefoxCapabilities,
+  )
+import Control.Monad (forM_)
 import Data.Aeson (Value (..))
 import Data.Set qualified as Set
+import Data.Text (Text, pack)
 import Data.Text.IO qualified as TIO
-import Test.Tasty.HUnit as HUnit ( Assertion, HasCallStack, (@=?), assertBool )
+import Test.Tasty.HUnit as HUnit (Assertion, HasCallStack, assertBool, (@=?))
+import Network.URI (escapeURIString, isUnreserved)
+import Utils (txt)
 import WebDriverDemoUtils
   ( alertsUrl,
     anyElmCss,
@@ -15,6 +24,7 @@ import WebDriverDemoUtils
     divCss,
     framesUrl,
     h3TagCss,
+    infinitScrollUrl,
     inputTagCss,
     inputsUrl,
     jsAlertXPath,
@@ -25,7 +35,7 @@ import WebDriverDemoUtils
     shadowDomUrl,
     theInternet,
     topFrameCSS,
-    userNameCss, infinitScrollUrl,
+    userNameCss,
   )
 import WebDriverIO
   ( Action (..),
@@ -40,6 +50,7 @@ import WebDriverIO
     Selector (..),
     SessionId (..),
     Timeouts (..),
+    WheelAction (..),
     WindowHandleSpec (..),
     WindowRect (..),
     acceptAlert,
@@ -86,13 +97,14 @@ import WebDriverIO
     isElementEnabled,
     isElementSelected,
     maximizeWindow,
+    minFirefoxSession,
     minimizeWindow,
     navigateTo,
-    minFirefoxSession,
     newWindow,
     performActions,
     printPage,
     refresh,
+    releaseActions,
     sendAlertText,
     setTimeouts,
     setWindowRect,
@@ -102,14 +114,11 @@ import WebDriverIO
     switchToParentFrame,
     switchToWindow,
     takeElementScreenshot,
-    takeScreenshot, WheelAction (..), releaseActions,
+    takeScreenshot, newSession,
   )
-import WebDriverPure (seconds, second)
+import WebDriverPure (second, seconds)
+import WebDriverSpec (DriverStatus (..))
 import Prelude hiding (log)
-import Data.Text (Text)
-import Utils (txt)
-import Control.Monad (forM_)
-import WebDriverSpec (DriverStatus(..))
 
 logTxt :: Text -> IO ()
 logTxt = TIO.putStrLn
@@ -132,25 +141,40 @@ sleep1 = sleepMs $ 1 * second
 sleep2 :: IO ()
 sleep2 = sleepMs $ 2 * seconds
 
+johnsCapabilities :: Capabilities
+johnsCapabilities =
+  minFirefoxCapabilities
+    { vendorSpecific =
+        Just
+          FirefoxOptions
+            { firefoxArgs = Nothing,
+              firefoxBinary = Nothing,
+              firefoxProfile = Just "/home/john-walker/geckoFirefoxProfile"
+            }
+    }
+
 mkExtendedTimeoutsSession :: IO SessionId
 mkExtendedTimeoutsSession = do
-  ses <- minFirefoxSession
+  -- ses <- minFirefoxSession
+  ses <- newSession johnsCapabilities
   setTimeouts ses $
     MkTimeouts
       { pageLoad = Just $ 30 * seconds,
-        script = Just $  11 * seconds,
+        script = Just $ 11 * seconds,
         implicit = Just $ 12 * seconds
       }
   pure ses
 
 -- todo: test extras - split off
 
-(===) :: (Eq a, Show a, HasCallStack)
-  => a -- ^ The actual value
-  -> a -- ^ The expected value
-  -> Assertion
+(===) ::
+  (Eq a, Show a, HasCallStack) =>
+  -- | The actual value
+  a ->
+  -- | The expected value
+  a ->
+  Assertion
 (===) = (@=?)
-
 
 -- >>> unit_demoSessionDriverStatus
 unit_demoSessionDriverStatus :: IO ()
@@ -179,6 +203,37 @@ unit_demoSendKeysClear = do
   deleteSession ses
 
 -- >>> unit_demoForwardBackRefresh
+-- *** Exception: VanillaHttpException (HttpExceptionRequest Request {
+--   host                 = "127.0.0.1"
+--   port                 = 4444
+--   secure               = False
+--   requestHeaders       = [("Accept","application/json"),("Content-Type","application/json; charset=utf-8")]
+--   path                 = "/session"
+--   queryString          = ""
+--   method               = "POST"
+--   proxy                = Nothing
+--   rawBody              = False
+--   redirectCount        = 10
+--   responseTimeout      = ResponseTimeoutDefault
+--   requestVersion       = HTTP/1.1
+--   proxySecureMode      = ProxySecureWithConnect
+-- }
+--  (StatusCodeException (Response {responseStatus = Status {statusCode = 500, statusMessage = "Internal Server Error"}, responseVersion = HTTP/1.1, responseHeaders = [("content-type","application/json; charset=utf-8"),("cache-control","no-cache"),("content-length","91"),("date","Wed, 19 Feb 2025 07:19:29 GMT")], responseBody = (), responseCookieJar = CJ {expose = []}, responseClose' = ResponseClose, responseOriginalRequest = Request {
+--   host                 = "127.0.0.1"
+--   port                 = 4444
+--   secure               = False
+--   requestHeaders       = [("Accept","application/json"),("Content-Type","application/json; charset=utf-8")]
+--   path                 = "/session"
+--   queryString          = ""
+--   method               = "POST"
+--   proxy                = Nothing
+--   rawBody              = False
+--   redirectCount        = 10
+--   responseTimeout      = ResponseTimeoutDefault
+--   requestVersion       = HTTP/1.1
+--   proxySecureMode      = ProxySecureWithConnect
+-- }
+-- , responseEarlyHints = []}) "{\"value\":{\"error\":\"unknown error\",\"message\":\"Invalid byte 45, offset 10.\",\"stacktrace\":\"\"}}"))
 unit_demoForwardBackRefresh :: IO ()
 unit_demoForwardBackRefresh = do
   ses <- mkExtendedTimeoutsSession
@@ -300,11 +355,12 @@ unit_demoTimeouts = do
   log "new session" $ txt ses
   ---
   logShowM "timeouts" $ getTimeouts ses
-  let timeouts = MkTimeouts {
-        pageLoad = Just $ 50 * seconds,
-        script = Just $ 11 * seconds,
-        implicit = Just $ 12 * seconds
-      }
+  let timeouts =
+        MkTimeouts
+          { pageLoad = Just $ 50 * seconds,
+            script = Just $ 11 * seconds,
+            implicit = Just $ 12 * seconds
+          }
   setTimeouts ses timeouts
   timeouts' <- getTimeouts ses
 
@@ -318,7 +374,7 @@ unit_demoWindowRecs :: IO ()
 unit_demoWindowRecs = do
   ses <- mkExtendedTimeoutsSession
   ---
-  let wr =  Rect 500 300 500 500
+  let wr = Rect 500 300 500 500
   logShowM "set window rect" $ setWindowRect ses wr
   r <- getWindowRect ses
   sleepMs $ 2 * seconds
@@ -336,7 +392,7 @@ unit_demoWindowRecs = do
 
   deleteSession ses
 
-chkHasElms :: Foldable t => t a -> Assertion
+chkHasElms :: (Foldable t) => t a -> Assertion
 chkHasElms els = assertBool "elements should be found" $ not (null els)
 
 -- >>> unit_demoWindowFindElement
@@ -555,7 +611,7 @@ unit_demoCookies = do
   afterDeleteAll <- getAllCookies ses
   logShow "cookies after delete all" afterDeleteAll
   assertBool "all cookies should be removed" $ null afterDeleteAll
-  
+
   deleteSession ses
 
 -- >>> unit_demoAlerts
@@ -645,20 +701,21 @@ unit_demoPointerNoneActions = do
                         altitudeAngle = Nothing,
                         azimuthAngle = Nothing
                       }
-                    -- looks like Cancel not supported yet by gecko driver 02-02-2025
-                    -- https://searchfox.org/mozilla-central/source/remote/shared/webdriver/Actions.sys.mjs#2340
-                    -- , Cancel
+                      -- looks like Cancel not supported yet by gecko driver 02-02-2025
+                      -- https://searchfox.org/mozilla-central/source/remote/shared/webdriver/Actions.sys.mjs#2340
+                      -- , Cancel
                   ]
               },
-              NoneAction {
-                id = "NullAction",
-                noneActions = [
-                  Nothing,
-                  Just $ 1 * second,
-                  Just $ 4 * seconds,
-                  Nothing,
-                  Nothing
-                ]}
+            NoneAction
+              { id = "NullAction",
+                noneActions =
+                  [ Nothing,
+                    Just $ 1 * second,
+                    Just $ 4 * seconds,
+                    Nothing,
+                    Nothing
+                  ]
+              }
               --
           ]
 
@@ -679,8 +736,7 @@ unit_demoKeyAndReleaseActions = do
           [ Key
               { id = "keyboard1",
                 keyActions =
-                  [
-                    PauseKey Nothing,
+                  [ PauseKey Nothing,
                     KeyDown "a",
                     -- a random pause to test the API
                     PauseKey . Just $ 2 * seconds,
@@ -709,10 +765,11 @@ unit_demoKeyAndReleaseActions = do
 -- >>> manyWheelActions
 manyWheelActions :: IO ()
 manyWheelActions = do
-  unit_demoKeyAndReleaseActions 
+  unit_demoKeyAndReleaseActions
   unit_demoWheelActions
-  -- unit_demoWheelActions
-  -- unit_demoWheelActions
+
+-- unit_demoWheelActions
+-- unit_demoWheelActions
 
 -- >>> unit_demoWheelActions
 unit_demoWheelActions :: IO ()
@@ -745,7 +802,6 @@ unit_demoWheelActions = do
                   ]
               }
           ]
-
 
   logTxt "wheel actions"
   performActions ses wheel

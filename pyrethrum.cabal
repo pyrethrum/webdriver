@@ -150,6 +150,7 @@ test-suite test-e2e
     , tasty-hunit
     , tasty-discover
     , bytestring
+    , network-uri
     , falsify
     , pyrethrum
     , raw-strings-qq
