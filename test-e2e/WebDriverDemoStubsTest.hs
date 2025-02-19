@@ -149,7 +149,7 @@ johnsCapabilities =
           FirefoxOptions
             { firefoxArgs = Nothing,
               firefoxBinary = Nothing,
-              firefoxProfile = Just "/home/john-walker/geckoFirefoxProfile"
+              firefoxProfile = Just "/usr/local/WebDriverProfile"
             }
     }
 
@@ -218,7 +218,7 @@ unit_demoSendKeysClear = do
 --   requestVersion       = HTTP/1.1
 --   proxySecureMode      = ProxySecureWithConnect
 -- }
---  (StatusCodeException (Response {responseStatus = Status {statusCode = 500, statusMessage = "Internal Server Error"}, responseVersion = HTTP/1.1, responseHeaders = [("content-type","application/json; charset=utf-8"),("cache-control","no-cache"),("content-length","91"),("date","Wed, 19 Feb 2025 07:19:29 GMT")], responseBody = (), responseCookieJar = CJ {expose = []}, responseClose' = ResponseClose, responseOriginalRequest = Request {
+--  (StatusCodeException (Response {responseStatus = Status {statusCode = 500, statusMessage = "Internal Server Error"}, responseVersion = HTTP/1.1, responseHeaders = [("content-type","application/json; charset=utf-8"),("cache-control","no-cache"),("content-length","79"),("date","Wed, 19 Feb 2025 08:06:04 GMT")], responseBody = (), responseCookieJar = CJ {expose = []}, responseClose' = ResponseClose, responseOriginalRequest = Request {
 --   host                 = "127.0.0.1"
 --   port                 = 4444
 --   secure               = False
@@ -233,7 +233,7 @@ unit_demoSendKeysClear = do
 --   requestVersion       = HTTP/1.1
 --   proxySecureMode      = ProxySecureWithConnect
 -- }
--- , responseEarlyHints = []}) "{\"value\":{\"error\":\"unknown error\",\"message\":\"Invalid byte 45, offset 10.\",\"stacktrace\":\"\"}}"))
+-- , responseEarlyHints = []}) "{\"value\":{\"error\":\"unknown error\",\"message\":\"Invalid padding\",\"stacktrace\":\"\"}}"))
 unit_demoForwardBackRefresh :: IO ()
 unit_demoForwardBackRefresh = do
   ses <- mkExtendedTimeoutsSession
