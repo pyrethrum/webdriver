@@ -1,17 +1,16 @@
 module WebDriverDemoStubsTest where
 
 import Capabilities
-  ( Capabilities (..),
+  ( StandardCapabilities (..),
     VendorSpecific (..),
     minFirefoxCapabilities,
   )
 import Control.Monad (forM_)
 import Data.Aeson (Value (..))
 import Data.Set qualified as Set
-import Data.Text (Text, pack)
+import Data.Text (Text)
 import Data.Text.IO qualified as TIO
 import Test.Tasty.HUnit as HUnit (Assertion, HasCallStack, assertBool, (@=?))
-import Network.URI (escapeURIString, isUnreserved)
 import Utils (txt)
 import WebDriverDemoUtils
   ( alertsUrl,
@@ -141,7 +140,7 @@ sleep1 = sleepMs $ 1 * second
 sleep2 :: IO ()
 sleep2 = sleepMs $ 2 * seconds
 
-johnsCapabilities :: Capabilities
+johnsCapabilities :: StandardCapabilities
 johnsCapabilities =
   minFirefoxCapabilities
     { vendorSpecific =
@@ -155,8 +154,8 @@ johnsCapabilities =
 
 mkExtendedTimeoutsSession :: IO SessionId
 mkExtendedTimeoutsSession = do
-  ses <- minFirefoxSession
-  -- ses <- newSession johnsCapabilities
+  -- ses <- minFirefoxSession
+  ses <- newSession johnsCapabilities
   setTimeouts ses $
     MkTimeouts
       { pageLoad = Just $ 30 * seconds,
@@ -202,6 +201,7 @@ unit_demoSendKeysClear = do
   sleep2
   deleteSession ses
 
+
 -- >>> unit_demoForwardBackRefresh
 -- *** Exception: VanillaHttpException (HttpExceptionRequest Request {
 --   host                 = "127.0.0.1"
@@ -218,7 +218,7 @@ unit_demoSendKeysClear = do
 --   requestVersion       = HTTP/1.1
 --   proxySecureMode      = ProxySecureWithConnect
 -- }
---  (StatusCodeException (Response {responseStatus = Status {statusCode = 500, statusMessage = "Internal Server Error"}, responseVersion = HTTP/1.1, responseHeaders = [("content-type","application/json; charset=utf-8"),("cache-control","no-cache"),("content-length","79"),("date","Wed, 19 Feb 2025 08:06:04 GMT")], responseBody = (), responseCookieJar = CJ {expose = []}, responseClose' = ResponseClose, responseOriginalRequest = Request {
+--  (StatusCodeException (Response {responseStatus = Status {statusCode = 500, statusMessage = "Internal Server Error"}, responseVersion = HTTP/1.1, responseHeaders = [("content-type","application/json; charset=utf-8"),("cache-control","no-cache"),("content-length","79"),("date","Wed, 19 Feb 2025 08:14:08 GMT")], responseBody = (), responseCookieJar = CJ {expose = []}, responseClose' = ResponseClose, responseOriginalRequest = Request {
 --   host                 = "127.0.0.1"
 --   port                 = 4444
 --   secure               = False
@@ -234,6 +234,10 @@ unit_demoSendKeysClear = do
 --   proxySecureMode      = ProxySecureWithConnect
 -- }
 -- , responseEarlyHints = []}) "{\"value\":{\"error\":\"unknown error\",\"message\":\"Invalid padding\",\"stacktrace\":\"\"}}"))
+
+-- looks like we need to get rid of the formatting
+-- Request {description = "New Session", method = "POST", path = ["session"], body = Just "{\n    \"capabilities\": {\n        \"alwaysMatch\": {\n            \"browserName\": \"firefox\",\n            \"moz:firefoxOptions\": {\n                \"profile\": \"/usr/local/WebDriverProfile\"\n            }\n        }\n    }\n}"}
+-- body
 unit_demoForwardBackRefresh :: IO ()
 unit_demoForwardBackRefresh = do
   ses <- mkExtendedTimeoutsSession

@@ -85,7 +85,7 @@ where
 
 -- import Effectful.Reader.Dynamic
 
-import Capabilities (Capabilities, minFirefoxCapabilities)
+import Capabilities (StandardCapabilities, minFirefoxCapabilities)
 import Control.Concurrent (threadDelay)
 import Control.Monad (when)
 import Control.Monad.IO.Class (liftIO)
@@ -127,7 +127,7 @@ import Network.HTTP.Req (JsonResponse)
 status :: IO DriverStatus
 status = run W.status
 
-newSession :: Capabilities -> IO SessionId
+newSession :: StandardCapabilities -> IO SessionId
 newSession = run . W.newSession
 
 getTimeouts :: SessionId -> IO W.Timeouts

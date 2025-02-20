@@ -9,9 +9,15 @@ The webdriver WC3 API represented as a Haskell type
   - need to run:
     ``pkill -f geckodriver || true  && geckodriver &``
     before running E2E tests
+  - note 
+    - having issues with geko driver with hyphen in path
+    - padding
 
 ## TODO
 
+- [ ] fix capabilities
+  - [ ] https://developer.mozilla.org/en-US/docs/Web/WebDriver/Capabilities
+  - [ ] https://mucsi96.gitbook.io/w3c-webdriver/capabilities
 - [ ] rename from Pyrethrum
 - [ ] finish WebDriverError
 - [ ] check parser of timeouts has been changed to by name

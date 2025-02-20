@@ -1,6 +1,6 @@
 module Capabilities
   ( capsToJson,
-    Capabilities (..),
+    StandardCapabilities (..),
     UnhandledPromptBehavior (..),
     PageLoadStrategy (..),
     BrowserName (..),
@@ -43,9 +43,9 @@ import Data.Functor ((<$>))
 import Control.Monad (Monad(..), MonadFail (..))
 import Data.Semigroup (Semigroup(..))
 
-minCapabilities :: BrowserName -> Capabilities
+minCapabilities :: BrowserName -> StandardCapabilities
 minCapabilities browserName =
-  MkCapabilities
+  MkStandardCapabilities
     { browserName,
       browserVersion = Nothing,
       platformName = Nothing,
@@ -58,13 +58,13 @@ minCapabilities browserName =
       vendorSpecific = Nothing
     }
 
-minFirefoxCapabilities :: Capabilities
+minFirefoxCapabilities :: StandardCapabilities
 minFirefoxCapabilities = minCapabilities Firefox
 
-minChromeCapabilities :: Capabilities
+minChromeCapabilities :: StandardCapabilities
 minChromeCapabilities = minCapabilities Chrome
 
-capsToJson :: Capabilities -> Value
+capsToJson :: StandardCapabilities -> Value
 capsToJson caps =
   object
     [ "capabilities"
@@ -103,7 +103,7 @@ data PlatformName
   deriving (Show, Generic)
 
 -- Core Capabilities
-data Capabilities = MkCapabilities
+data StandardCapabilities = MkStandardCapabilities
   { browserName :: BrowserName,
     browserVersion :: Maybe Text,
     platformName :: Maybe PlatformName,
@@ -232,10 +232,10 @@ instance FromJSON VendorSpecific where
     chromeOptions <|> firefoxOptions <|> safariOptions
 
 -- ToJSON Instances
-instance ToJSON Capabilities where
-  toJSON :: Capabilities -> Value
+instance ToJSON StandardCapabilities where
+  toJSON :: StandardCapabilities -> Value
   toJSON
-    MkCapabilities
+    MkStandardCapabilities
       { browserName,
         browserVersion,
         platformName,
@@ -348,10 +348,11 @@ instance FromJSON PlatformName where
     _ -> fail "Invalid PlatformName"
 
 -- FromJSON Instances for Data Structures
-instance FromJSON Capabilities where
-  parseJSON :: Value -> Parser Capabilities
+instance FromJSON StandardCapabilities where
+  parseJSON :: Value -> Parser StandardCapabilities
   parseJSON = withObject "Capabilities" $ \v ->
-    MkCapabilities
+    -- TODO: make by name
+    MkStandardCapabilities
       <$> v .: "browserName"
       <*> v .:? "browserVersion"
       <*> v .:? "platformName"

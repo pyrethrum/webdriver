@@ -105,7 +105,6 @@ library
     , aeson-pretty
     , base
     , bytestring
-    , pyrethrum-extras
     , text
     , containers
   default-language: Haskell2010

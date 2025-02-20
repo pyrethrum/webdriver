@@ -106,19 +106,19 @@ import Data.Aeson
 import Data.Aeson.Types (Parser)
 import Data.Aeson.Encode.Pretty (encodePretty)
 import Data.Aeson.KeyMap qualified as AKM
-import Data.ByteString.Lazy.Char8 (unpack)
 import Data.Text qualified as T
-import PyrethrumExtras (toS)
 import Prelude hiding (id, lookup)
 import Utils (opt, txt)
-import Capabilities (Timeouts (..), Capabilities, capsToJson)
-import Data.Text (Text, pack)
+import Capabilities (Timeouts (..), StandardCapabilities, capsToJson)
+import Data.Text (Text, pack, unpack)
 import Data.Word (Word16)
 import Data.Set (Set)
 import GHC.Generics ( Generic )
 import Data.Maybe (catMaybes)
 import Data.Foldable (toList)
 import Data.Function ((&))
+import Data.ByteString.Lazy qualified as LBS
+import Data.Text.Encoding qualified as E
 
 data W3Spec a
   = Get
@@ -192,6 +192,16 @@ data HandleType
   | Tab
   deriving (Show, Eq)
 
+
+-- Todo move to utils library when HLS is ready
+-- Aeson stuff to help debugging
+-- https://blog.ssanj.net/posts/2019-09-24-pretty-printing-json-in-haskell.html
+lsbToText :: LBS.ByteString -> Text
+lsbToText = E.decodeUtf8 . LBS.toStrict
+
+jsonToText :: Value -> Text
+jsonToText = lsbToText . encodePretty
+
 instance ToJSON HandleType where
   toJSON :: HandleType -> Value
   toJSON = String . T.toLower . pack . show
@@ -201,7 +211,7 @@ instance FromJSON HandleType where
   parseJSON = withText "HandleType" $ \case
     "window" -> pure Window
     "tab" -> pure Tab
-    v -> fail $ "Unknown HandleType " <> unpack (encodePretty v) 
+    v -> fail $ unpack $ "Unknown HandleType " <> v
    
 
 newtype ElementId = Element {id :: Text}
@@ -362,7 +372,7 @@ POST 	/session/{session id}/print 	Print Page
 -- Method 	URI Template 	Command
 
 -- -- TODO: native capabilities type - change this to use type
-newSession :: Capabilities -> W3Spec SessionId
+newSession :: StandardCapabilities -> W3Spec SessionId
 newSession capabilities = newSession' $ capsToJson capabilities
 
 -- POST 	/session 	New Session
@@ -775,13 +785,13 @@ lookupInt :: Key -> Value -> Result Int
 lookupInt k v = lookup k v >>= asInt
 
 aeasonTypeErrorMessage :: Text -> Value -> Text
-aeasonTypeErrorMessage t v = "Expected Json Value to be of type: " <> t <> "\nbut got:\n" <> jsonPretty v
+aeasonTypeErrorMessage t v = "Expected Json Value to be of type: " <> t <> "\nbut got:\n" <> jsonToText v
 
 aesonTypeError :: Text -> Value -> Result a
-aesonTypeError t v = Error . toS $ aeasonTypeErrorMessage t v
+aesonTypeError t v = Error . unpack $ aeasonTypeErrorMessage t v
 
 aesonTypeError' :: Text -> Text ->  Value -> Result a
-aesonTypeError' typ info v = Error . toS $ aeasonTypeErrorMessage typ v <> "\n" <> info
+aesonTypeError' typ info v = Error . unpack $ aeasonTypeErrorMessage typ v <> "\n" <> info
 
 
 asText :: Value -> Result Text
@@ -848,16 +858,14 @@ elementUri1 sr er sp = [session, sr.id, "element", er.id, sp]
 elementUri2 :: SessionId -> ElementId -> Text -> Text -> [Text]
 elementUri2 sr er sp sp2 = [session, sr.id, "element", er.id, sp, sp2]
 
-jsonPretty :: Value -> Text
-jsonPretty = toS . jsonPrettyString
 
 jsonPrettyString :: Value -> String
-jsonPrettyString = unpack . encodePretty
+jsonPrettyString = unpack . jsonToText
 
 mkShowable :: W3Spec a -> W3SpecShowable
 mkShowable = \case
   Get d p _ -> Request d "GET" p Nothing
-  Post d p b _ -> Request d "POST" p (Just $ jsonPretty b)
+  Post d p b _ -> Request d "POST" p (Just $ jsonToText b)
   PostEmpty d p _ -> Request d "POST" p Nothing
   Delete d p _ -> Request d "DELETE" p Nothing
 
