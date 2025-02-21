@@ -121,6 +121,8 @@ import WebDriverSpec (DriverStatus, ElementId, HttpResponse (..), Selector, Sess
 import WebDriverSpec qualified as W
 import Prelude hiding (log)
 import Network.HTTP.Req (JsonResponse)
+import Data.Aeson.Text (encodeToLazyText)
+import Data.Text.Lazy (toStrict)
 
 -- ############# IO Implementation #############
 
@@ -327,7 +329,11 @@ run spec = do
     devLog . txt $ spec
     case spec of
       Get {} -> pure ()
-      Post {body} -> devLog "body" >> prettyPrintJson body
+      Post {body} -> do 
+        devLog "body PP"
+        prettyPrintJson body
+        devLog "Body Raw"
+        T.putStrLn ( toStrict $ encodeToLazyText body)
       PostEmpty {} -> pure ()
       Delete {} -> pure ()
   callWebDriver debug (mkRequest spec) >>= parseIO spec

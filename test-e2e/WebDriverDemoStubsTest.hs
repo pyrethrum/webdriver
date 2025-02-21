@@ -224,7 +224,7 @@ unit_demoSendKeysClear = do
 --   requestVersion       = HTTP/1.1
 --   proxySecureMode      = ProxySecureWithConnect
 -- }
---  (StatusCodeException (Response {responseStatus = Status {statusCode = 500, statusMessage = "Internal Server Error"}, responseVersion = HTTP/1.1, responseHeaders = [("content-type","application/json; charset=utf-8"),("cache-control","no-cache"),("content-length","105"),("date","Fri, 21 Feb 2025 20:11:08 GMT")], responseBody = (), responseCookieJar = CJ {expose = []}, responseClose' = ResponseClose, responseOriginalRequest = Request {
+--  (StatusCodeException (Response {responseStatus = Status {statusCode = 500, statusMessage = "Internal Server Error"}, responseVersion = HTTP/1.1, responseHeaders = [("content-type","application/json; charset=utf-8"),("cache-control","no-cache"),("content-length","79"),("date","Fri, 21 Feb 2025 20:55:32 GMT")], responseBody = (), responseCookieJar = CJ {expose = []}, responseClose' = ResponseClose, responseOriginalRequest = Request {
 --   host                 = "127.0.0.1"
 --   port                 = 4444
 --   secure               = False
@@ -239,7 +239,7 @@ unit_demoSendKeysClear = do
 --   requestVersion       = HTTP/1.1
 --   proxySecureMode      = ProxySecureWithConnect
 -- }
--- , responseEarlyHints = []}) "{\"value\":{\"error\":\"unknown error\",\"message\":\"Process unexpectedly closed with status 1\",\"stacktrace\":\"\"}}"))
+-- , responseEarlyHints = []}) "{\"value\":{\"error\":\"unknown error\",\"message\":\"Invalid padding\",\"stacktrace\":\"\"}}"))
 unit_demoForwardBackRefresh :: IO ()
 unit_demoForwardBackRefresh = do
   ses <- mkExtendedTimeoutsSession

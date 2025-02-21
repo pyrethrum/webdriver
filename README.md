@@ -8,10 +8,19 @@ The webdriver WC3 API represented as a Haskell type
   - tasty discover
   - need to run:
     ``pkill -f geckodriver || true  && geckodriver &``
+
+    ``pkill -f geckodriver || true  && geckodriver --log debug``
+
     before running E2E tests
   - note 
-    - having issues with geko driver with hyphen in path
-    - padding
+    - profiles - missing progile
+  
+  - need to install lfs
+  - ```
+    curl -s https://packagecloud.io/install/repositories/github/git-lfs/script.deb.sh | sudo bash
+    sudo apt-get install git-lfs
+    git lfs install
+  ```
 
 ## TODO
 
