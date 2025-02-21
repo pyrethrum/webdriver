@@ -1,5 +1,6 @@
 module Capabilities
-  ( capsToJson,
+  ( 
+    FullCapabilities (..),
     StandardCapabilities (..),
     UnhandledPromptBehavior (..),
     PageLoadStrategy (..),
@@ -8,7 +9,9 @@ module Capabilities
     Proxy (..),
     Timeouts (..),
     VendorSpecific (..),
-    minCapabilities,
+    MatchCapabilities (..),
+    minStandardCapabilities,
+    minFullCapabilities,
     minFirefoxCapabilities,
     minChromeCapabilities,
   )
@@ -22,13 +25,13 @@ import Data.Aeson.Types
     Object,
     Pair,
     Parser,
-    ToJSON (toJSON),
+    ToJSON (toJSON, toEncoding),
     Value (..),
     object,
     withObject,
     withText,
     (.:),
-    (.:?),
+    (.:?), genericToEncoding, defaultOptions, Encoding,
   )
 import Data.Bool (bool, Bool)
 import Data.Maybe (catMaybes, Maybe (..), maybe)
@@ -43,10 +46,46 @@ import Data.Functor ((<$>))
 import Control.Monad (Monad(..), MonadFail (..))
 import Data.Semigroup (Semigroup(..))
 
-minCapabilities :: BrowserName -> StandardCapabilities
-minCapabilities browserName =
+{- references:
+- https://www.w3.org/TR/webdriver2/#capabilities
+
+ - https://developer.mozilla.org/en-US/docs/Web/WebDriver/Capabilities
+ - https://mucsi96.gitbook.io/w3c-webdriver/capabilities
+
+ -}
+
+data MatchCapabilities = MkMatchCapabilities
+   { 
+    alwaysMatch :: Maybe StandardCapabilities,
+    firstMatch :: [StandardCapabilities]
+  }
+  deriving (Show, Generic)
+
+instance ToJSON MatchCapabilities
+instance FromJSON MatchCapabilities
+newtype FullCapabilities = MkFullCapabilities
+  { 
+    capabilities :: MatchCapabilities
+  }
+  deriving (Show, Generic)
+
+instance ToJSON FullCapabilities where
+  toEncoding :: FullCapabilities -> Encoding
+  toEncoding = genericToEncoding defaultOptions
+
+instance FromJSON FullCapabilities
+
+minFullCapabilities :: BrowserName -> FullCapabilities
+minFullCapabilities browserName =
+  MkFullCapabilities $ MkMatchCapabilities
+    { alwaysMatch = Just $ minStandardCapabilities browserName,
+      firstMatch = []
+    }
+
+minStandardCapabilities :: BrowserName -> StandardCapabilities
+minStandardCapabilities browserName =
   MkStandardCapabilities
-    { browserName,
+    { browserName = Just browserName,
       browserVersion = Nothing,
       platformName = Nothing,
       acceptInsecureCerts = Nothing,
@@ -58,18 +97,11 @@ minCapabilities browserName =
       vendorSpecific = Nothing
     }
 
-minFirefoxCapabilities :: StandardCapabilities
-minFirefoxCapabilities = minCapabilities Firefox
+minFirefoxCapabilities :: FullCapabilities
+minFirefoxCapabilities = minFullCapabilities Firefox
 
-minChromeCapabilities :: StandardCapabilities
-minChromeCapabilities = minCapabilities Chrome
-
-capsToJson :: StandardCapabilities -> Value
-capsToJson caps =
-  object
-    [ "capabilities"
-        .= object ["alwaysMatch" .= caps]
-    ]
+minChromeCapabilities :: FullCapabilities
+minChromeCapabilities = minFullCapabilities Chrome
 
 -- Custom Types for Enums
 data UnhandledPromptBehavior
@@ -104,7 +136,7 @@ data PlatformName
 
 -- Core Capabilities
 data StandardCapabilities = MkStandardCapabilities
-  { browserName :: BrowserName,
+  { browserName :: Maybe BrowserName,
     browserVersion :: Maybe Text,
     platformName :: Maybe PlatformName,
     acceptInsecureCerts :: Maybe Bool,

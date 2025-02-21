@@ -22,8 +22,6 @@ module WebDriverSpec
     Pointer (..),
     PointerAction (..),
     WheelAction (..),
-    -- Capabilities(..),
-    mkShowable,
     --- Specs
     status,
     maximizeWindow,
@@ -109,7 +107,7 @@ import Data.Aeson.KeyMap qualified as AKM
 import Data.Text qualified as T
 import Prelude hiding (id, lookup)
 import Utils (opt, txt)
-import Capabilities (Timeouts (..), StandardCapabilities, capsToJson)
+import Capabilities (Timeouts (..), FullCapabilities)
 import Data.Text (Text, pack, unpack)
 import Data.Word (Word16)
 import Data.Set (Set)
@@ -372,8 +370,8 @@ POST 	/session/{session id}/print 	Print Page
 -- Method 	URI Template 	Command
 
 -- -- TODO: native capabilities type - change this to use type
-newSession :: StandardCapabilities -> W3Spec SessionId
-newSession capabilities = newSession' $ capsToJson capabilities
+newSession :: FullCapabilities -> W3Spec SessionId
+newSession capabilities = newSession' $ toJSON capabilities
 
 -- POST 	/session 	New Session
 newSession' :: Value -> W3Spec SessionId

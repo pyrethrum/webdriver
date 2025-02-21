@@ -22,7 +22,8 @@ The webdriver WC3 API represented as a Haskell type
 - [ ] finish WebDriverError
 - [ ] check parser of timeouts has been changed to by name
 - [ ] update readme
-  - [ ] include notes on profile
+  - [ ] include notes on profile isssues (firefox)
+- [ ] Haddock
 - [ ] get tests working locally again
 - [ ] CI
   - [ ] get tests and E2E working in CI
