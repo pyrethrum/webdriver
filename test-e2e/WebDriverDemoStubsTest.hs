@@ -98,7 +98,7 @@ import WebDriverIO
     isElementEnabled,
     isElementSelected,
     maximizeWindow,
-    minFirefoxSession,
+    -- minFirefoxSession,
     minimizeWindow,
     navigateTo,
     newWindow,
@@ -185,7 +185,7 @@ mkExtendedTimeoutsSession = do
 -- >>> unit_demoSessionDriverStatus
 unit_demoSessionDriverStatus :: IO ()
 unit_demoSessionDriverStatus = do
-  ses <- minFirefoxSession
+  ses <- mkExtendedTimeoutsSession
   log "new session" $ txt ses
   s <- status
   Ready === s
@@ -208,7 +208,7 @@ unit_demoSendKeysClear = do
   sleep2
   deleteSession ses
 
--- >>> unit_demoSessionDriverStatus
+-- >>> unit_demoForwardBackRefresh
 -- *** Exception: VanillaHttpException (HttpExceptionRequest Request {
 --   host                 = "127.0.0.1"
 --   port                 = 4444
@@ -224,7 +224,7 @@ unit_demoSendKeysClear = do
 --   requestVersion       = HTTP/1.1
 --   proxySecureMode      = ProxySecureWithConnect
 -- }
---  (StatusCodeException (Response {responseStatus = Status {statusCode = 500, statusMessage = "Internal Server Error"}, responseVersion = HTTP/1.1, responseHeaders = [("content-type","application/json; charset=utf-8"),("cache-control","no-cache"),("content-length","79"),("date","Fri, 21 Feb 2025 19:57:40 GMT")], responseBody = (), responseCookieJar = CJ {expose = []}, responseClose' = ResponseClose, responseOriginalRequest = Request {
+--  (StatusCodeException (Response {responseStatus = Status {statusCode = 500, statusMessage = "Internal Server Error"}, responseVersion = HTTP/1.1, responseHeaders = [("content-type","application/json; charset=utf-8"),("cache-control","no-cache"),("content-length","105"),("date","Fri, 21 Feb 2025 20:11:08 GMT")], responseBody = (), responseCookieJar = CJ {expose = []}, responseClose' = ResponseClose, responseOriginalRequest = Request {
 --   host                 = "127.0.0.1"
 --   port                 = 4444
 --   secure               = False
@@ -239,34 +239,7 @@ unit_demoSendKeysClear = do
 --   requestVersion       = HTTP/1.1
 --   proxySecureMode      = ProxySecureWithConnect
 -- }
--- , responseEarlyHints = []}) "{\"value\":{\"error\":\"unknown error\",\"message\":\"Invalid padding\",\"stacktrace\":\"\"}}"))
---   requestHeaders       = [("Accept","application/json"),("Content-Type","application/json; charset=utf-8")]
---   path                 = "/session"
---   queryString          = ""
---   method               = "POST"
---   proxy                = Nothing
---   rawBody              = False
---   redirectCount        = 10
---   responseTimeout      = ResponseTimeoutDefault
---   requestVersion       = HTTP/1.1
---   proxySecureMode      = ProxySecureWithConnect
--- }
---  (StatusCodeException (Response {responseStatus = Status {statusCode = 500, statusMessage = "Internal Server Error"}, responseVersion = HTTP/1.1, responseHeaders = [("content-type","application/json; charset=utf-8"),("cache-control","no-cache"),("content-length","79"),("date","Wed, 19 Feb 2025 08:14:08 GMT")], responseBody = (), responseCookieJar = CJ {expose = []}, responseClose' = ResponseClose, responseOriginalRequest = Request {
---   host                 = "127.0.0.1"
---   port                 = 4444
---   secure               = False
---   requestHeaders       = [("Accept","application/json"),("Content-Type","application/json; charset=utf-8")]
---   path                 = "/session"
---   queryString          = ""
---   method               = "POST"
---   proxy                = Nothing
---   rawBody              = False
---   redirectCount        = 10
---   responseTimeout      = ResponseTimeoutDefault
---   requestVersion       = HTTP/1.1
---   proxySecureMode      = ProxySecureWithConnect
--- }
--- , responseEarlyHints = []}) "{\"value\":{\"error\":\"unknown error\",\"message\":\"Invalid padding\",\"stacktrace\":\"\"}}"))
+-- , responseEarlyHints = []}) "{\"value\":{\"error\":\"unknown error\",\"message\":\"Process unexpectedly closed with status 1\",\"stacktrace\":\"\"}}"))
 unit_demoForwardBackRefresh :: IO ()
 unit_demoForwardBackRefresh = do
   ses <- mkExtendedTimeoutsSession
@@ -384,7 +357,7 @@ unit_demoElementPageProps = do
 -- >>> unit_demoTimeouts
 unit_demoTimeouts :: IO ()
 unit_demoTimeouts = do
-  ses <- minFirefoxSession
+  ses <- mkExtendedTimeoutsSession
   log "new session" $ txt ses
   ---
   logShowM "timeouts" $ getTimeouts ses
