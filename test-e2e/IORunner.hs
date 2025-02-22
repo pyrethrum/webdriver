@@ -1,7 +1,8 @@
-
-
-module WebDriverIO
-  ( W.Timeouts (..),
+module IORunner
+  ( 
+    W.Cookie (..),
+    W.DriverStatus(..),
+    W.Timeouts (..),
     W.WindowHandleSpec (..),
     W.WindowHandle(..),
     W.SameSite (..),
@@ -9,7 +10,6 @@ module WebDriverIO
     W.SessionId (..),
     W.FrameReference (..),
     W.WindowRect (..),
-    W.Cookie (..),
     W.PointerOrigin (..),
     W.Action (..),
     W.Actions (..),
@@ -84,9 +84,7 @@ module WebDriverIO
   )
 where
 
--- import Effectful.Reader.Dynamic
-
-import Capabilities ( minFirefoxCapabilities, FullCapabilities )
+import WebDriverPreCore.Capabilities ( minFirefoxCapabilities, FullCapabilities )
 import Control.Concurrent (threadDelay)
 import Control.Monad (when)
 import Control.Monad.IO.Class (liftIO)
@@ -116,10 +114,10 @@ import Network.HTTP.Req as R
     runReq,
     (/:),
   )
-import Utils (txt)
-import WebDriverPure (RequestArgs (..), prettyPrintJson)
-import WebDriverSpec (DriverStatus, ElementId, HttpResponse (..), Selector, SessionId, W3Spec (..))
-import WebDriverSpec qualified as W
+import WebDriverPreCore.Internal.Utils (txt, prettyPrintJson)
+import E2EConst (RequestArgs (..))
+import WebDriverPreCore.Spec (DriverStatus, ElementId, HttpResponse (..), Selector, SessionId, W3Spec (..))
+import WebDriverPreCore.Spec qualified as W
 import Prelude hiding (log)
 import Network.HTTP.Req (JsonResponse)
 import Data.Aeson.Text (encodeToLazyText)

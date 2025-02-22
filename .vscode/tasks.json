@@ -29,21 +29,21 @@
       },
       "problemMatcher": []
     },
-    {
-      "label": "cabal build CI",
-      "type": "shell",
-      "command": "cabal",
-      "args": [
-        "build",
-        "--flags='+optimised -godLibrary'"
-      ],
-      "presentation": {
-        "reveal": "always",
-        "panel": "shared",
-        "showReuseMessage": false
-      },
-      "problemMatcher": []
-    },
+    // {
+    //   "label": "cabal build CI",
+    //   "type": "shell",
+    //   "command": "cabal",
+    //   "args": [
+    //     "build",
+    //     "--flags='+optimised -godLibrary'"
+    //   ],
+    //   "presentation": {
+    //     "reveal": "always",
+    //     "panel": "shared",
+    //     "showReuseMessage": false
+    //   },
+    //   "problemMatcher": []
+    // },
     {
       "label": "cabal test",
       "type": "shell",
@@ -62,7 +62,7 @@
     {
       "label": "gecko driver",
       "type": "shell",
-      "command": "pkill -f geckodriver || true  && geckodriver &",
+      "command": "pkill -f geckodriver || true  && geckodriver --log trace &",
       "presentation": {
         "reveal": "always",
         "panel": "shared",

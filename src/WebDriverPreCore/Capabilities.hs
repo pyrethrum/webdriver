@@ -1,4 +1,4 @@
-module Capabilities
+module WebDriverPreCore.Capabilities
   ( 
     FullCapabilities (..),
     StandardCapabilities (..),
@@ -37,7 +37,7 @@ import Data.Bool (bool, Bool)
 import Data.Maybe (catMaybes, Maybe (..), maybe)
 import Data.Text (Text)
 import GHC.Generics (Generic)
-import Utils (opt)
+import WebDriverPreCore.Internal.Utils (opt)
 import Data.Int (Int)
 import GHC.Show (Show (..))
 import Data.Eq (Eq)

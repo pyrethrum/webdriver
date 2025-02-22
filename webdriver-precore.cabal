@@ -1,13 +1,13 @@
-cabal-version: 3.6
+cabal-version: 3.12
 
-name:           pyrethrum
-version:        0.1.0.0
-description:    Please see the README on GitHub at <https://github.com/githubuser/simple-hpack#readme>
-homepage:       https://github.com/githubuser/simple-hpack#readme
-bug-reports:    https://github.com/githubuser/simple-hpack/issues
-author:         Author name here
-maintainer:     example@example.com
-copyright:      2018 Author name here
+name:           webdriver-precore
+version:        0.0.0.1
+description:    Please see the README on GitHub at <https://github.com/pyrethrum/webdriver-precore#readme>
+homepage:       https://github.com/pyrethrum/webdriver-precore#readme
+bug-reports:    https://github.com/pyrethrum/webdriver-precore/issues
+author:         John Walker, Adrian Glouftsis
+maintainer:     theghostjw@gmail.com
+copyright:      2025 John Walker, Adrian Glouftsis
 license:        MIT
 license-file:   LICENSE
 build-type:     Simple
@@ -94,12 +94,11 @@ common commonGhcOptions
 library
   import: commonExtensions, commonGhcOptions
   exposed-modules:
-      Capabilities
-      WebDriverSpec
-      WebDriverError
+      WebDriverPreCore.Capabilities
+      WebDriverPreCore.Spec
+      WebDriverPreCore.Error
+      WebDriverPreCore.Internal.Utils
   hs-source-dirs: src
-  other-modules:
-      Utils
   build-depends:
     , aeson
     , aeson-pretty
@@ -125,11 +124,10 @@ test-suite test
     , tasty-discover
     , bytestring
     , falsify
-    , pyrethrum
+    , webdriver-precore
     , raw-strings-qq
   other-modules:
-      Utils
-    , ApiCoverageTest
+    ApiCoverageTest
   build-tool-depends:
     tasty-discover:tasty-discover
 
@@ -153,14 +151,12 @@ test-suite test-e2e
     , bytestring
     , network-uri
     , falsify
-    , pyrethrum
+    , webdriver-precore
     , raw-strings-qq
   other-modules:
-      WebDriverDemoStubsTest
-    , WebDriverPure
-    , WebDriverDemoUtils
-    , WebDriverIO
-    , Utils
+      WebDriverE2EDemoTest
+    , E2EConst
+    , IORunner
   build-tool-depends:
     tasty-discover:tasty-discover
 

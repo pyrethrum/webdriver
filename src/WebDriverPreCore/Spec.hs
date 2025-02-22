@@ -1,6 +1,6 @@
 {-# LANGUAGE UndecidableInstances #-}
 
-module WebDriverSpec
+module WebDriverPreCore.Spec
   ( W3Spec (..),
     HttpResponse (..),
     ElementId (..),
@@ -106,8 +106,8 @@ import Data.Aeson.Encode.Pretty (encodePretty)
 import Data.Aeson.KeyMap qualified as AKM
 import Data.Text qualified as T
 import Prelude hiding (id, lookup)
-import Utils (opt, txt)
-import Capabilities (Timeouts (..), FullCapabilities)
+import WebDriverPreCore.Internal.Utils (opt, txt)
+import WebDriverPreCore.Capabilities (Timeouts (..), FullCapabilities)
 import Data.Text (Text, pack, unpack)
 import Data.Word (Word16)
 import Data.Set (Set)

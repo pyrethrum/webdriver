@@ -1,13 +1,13 @@
 module ApiCoverageTest where
 
-import Capabilities
+import WebDriverPreCore.Capabilities
     ( Timeouts(MkTimeouts), minFirefoxCapabilities )
 import Data.Set as S (Set, difference, fromList, null)
 import Data.Text as T (Text, intercalate, lines, null, pack, replace, strip, unwords, words)
 import GHC.Utils.Misc (filterOut)
 import Test.Tasty.HUnit as HUnit ( assertBool, Assertion )
 import Text.RawString.QQ (r)
-import WebDriverSpec
+import WebDriverPreCore.Spec
     ( SessionId(Session),
       ElementId(Element),
       Selector(CSS),

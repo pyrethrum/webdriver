@@ -1,8 +1,51 @@
-module WebDriverDemoUtils where
+module E2EConst (
+  theInternet,
+  subDomain,
+  alertsUrl,
+  infinitScrollUrl,
+  framesUrl,
+  inputsUrl,
+  loginUrl,
+  checkBoxesUrl,
+  shadowDomUrl,
+  checkBoxesLinkCss,
+  checkBoxesCss,
+  topFrameCSS,
+  midFrameCss,
+  bottomFrameCss,
+  jsAlertXPath,
+  jsPromptXPath,
+  divCss,
+  midFrameTitle,
+  userNameCss,
+  contentCss,
+  inputTagCss,
+  h3TagCss,
+  anyElmCss,
+  second,
+  seconds,
+  minute,
+  minutes,
+  hour,
+  hours,
+  RequestArgs(..),
+  defaultRequest
+) where
 
-import WebDriverSpec (Selector (CSS, XPath))
+import WebDriverPreCore.Spec (Selector (CSS, XPath))
 import Data.Text (Text)
 import Data.Semigroup (Semigroup(..))
+import Data.Int (Int)
+import GHC.Num((*))
+
+import Network.HTTP.Req as R
+  ( GET (GET),
+    HttpBody,
+    HttpBodyAllowed,
+    HttpMethod (AllowsBody),
+    NoReqBody (NoReqBody),
+    ProvidesBody,
+  )
 
 
 -- ################### urls ##################
@@ -77,6 +120,45 @@ h3TagCss = CSS "h3"
 
 anyElmCss :: Selector
 anyElmCss = CSS "*"
+
+
+-- ################### time ##################
+
+
+second :: Int
+second = 1_000
+
+seconds :: Int
+seconds = second
+
+minute :: Int
+minute = 60 * seconds
+
+minutes :: Int
+minutes = minute
+
+hour :: Int
+hour = 60 * minutes
+
+hours :: Int
+hours = hour
+
+-- ################### request ##################
+
+data RequestArgs where
+  RequestParams ::
+    (HttpBodyAllowed (AllowsBody method) (ProvidesBody body), HttpMethod method, HttpBody body) =>
+    { subDirs :: [Text],
+      method :: method,
+      body :: body,
+      port :: Int
+    } ->
+    RequestArgs
+  
+
+defaultRequest :: RequestArgs
+defaultRequest = RequestParams [] GET NoReqBody 4444
+
 
 
 

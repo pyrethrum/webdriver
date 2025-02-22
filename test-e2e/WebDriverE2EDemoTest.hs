@@ -1,6 +1,6 @@
-module WebDriverDemoStubsTest where
+module WebDriverE2EDemoTest where
 
-import Capabilities
+import WebDriverPreCore.Capabilities
   ( BrowserName (Firefox),
     FullCapabilities (..),
     MatchCapabilities (..),
@@ -16,8 +16,8 @@ import Data.Text.IO qualified as TIO
 -- minFirefoxSession,
 
 import Test.Tasty.HUnit as HUnit (Assertion, HasCallStack, assertBool, (@=?))
-import Utils (txt)
-import WebDriverDemoUtils
+import WebDriverPreCore.Internal.Utils (txt)
+import E2EConst
   ( alertsUrl,
     anyElmCss,
     bottomFrameCss,
@@ -40,8 +40,10 @@ import WebDriverDemoUtils
     theInternet,
     topFrameCSS,
     userNameCss,
+    second, 
+    seconds
   )
-import WebDriverIO
+import IORunner
   ( Action (..),
     Actions (..),
     Cookie (..),
@@ -122,8 +124,7 @@ import WebDriverIO
     takeElementScreenshot,
     takeScreenshot,
   )
-import WebDriverPure (second, seconds)
-import WebDriverSpec (DriverStatus (..))
+import WebDriverPreCore.Spec (DriverStatus (..))
 import Prelude hiding (log)
 
 logTxt :: Text -> IO ()
