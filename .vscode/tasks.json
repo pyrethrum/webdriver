@@ -19,7 +19,8 @@
       "type": "shell",
       "command": "cabal",
       "args": [
-        "build"
+        "build",
+        "--enable-tests"
       ],
       "presentation": {
         "reveal": "always",

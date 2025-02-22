@@ -71,7 +71,7 @@ data RequestArgs where
 defaultRequest :: RequestArgs
 defaultRequest = RequestParams [] GET NoReqBody 4444
 
--- Todo move to pyrelude
+-- Todo move to separte library
 -- Aeson stuff to help debugging
 -- https://blog.ssanj.net/posts/2019-09-24-pretty-printing-json-in-haskell.html
 lsbToText :: LBS.ByteString -> Text
