@@ -1,4 +1,4 @@
-module WebDriverError where
+module WebDriverPreCore.Error where
 
 import Data.Aeson (Value, FromJSON (parseJSON))
 import Data.Aeson.Types ((.:), parseMaybe)
