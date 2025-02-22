@@ -79,7 +79,7 @@ common commonGhcOptions
     -Wcompat 
     -Wincomplete-record-updates 
     -Wincomplete-uni-patterns 
-    -Wredundant-constraints 
+    -Wredundant-constraints
     -fwarn-tabs 
     -fwrite-ide-info 
     -fno-warn-type-defaults 
@@ -142,6 +142,8 @@ test-suite test-e2e
     , aeson
     , aeson-pretty
     , base
+    , base64
+    , directory
     , text
     , req
     , containers

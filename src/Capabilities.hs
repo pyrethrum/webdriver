@@ -259,8 +259,8 @@ instance FromJSON VendorSpecific where
   parseJSON :: Value -> Parser VendorSpecific
   parseJSON = withObject "VendorSpecific" $ \v -> do
     let chromeOptions = ChromeOptions <$> v .:? "args" <*> v .:? "binary" <*> v .:? "extensions"
-        firefoxOptions = FirefoxOptions <$> v .:? "args" <*> v .:? "binary" <*> v .:? "profile"
-        safariOptions = SafariOptions <$> v .:? "automaticInspection" <*> v .:? "automaticProfiling"
+        firefoxOptions = FirefoxOptions <$> v .:? "args" <*> v .:? "binary" <*> v .:? "profile" 
+        safariOptions = SafariOptions <$> v .:? "automaticInspection" <*> v .:? "automaticProfiling" 
     chromeOptions <|> firefoxOptions <|> safariOptions
 
 -- ToJSON Instances

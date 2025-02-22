@@ -15,7 +15,7 @@ The webdriver WC3 API represented as a Haskell type
   - note 
     - profiles - missing progile
   
-  - need to install lfs
+  - need to install lfs locally
   - ```
     curl -s https://packagecloud.io/install/repositories/github/git-lfs/script.deb.sh | sudo bash
     sudo apt-get install git-lfs

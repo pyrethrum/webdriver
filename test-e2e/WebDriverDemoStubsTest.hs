@@ -67,6 +67,7 @@ import WebDriverIO
     elementSendKeys,
     executeScript,
     executeScriptAsync,
+    encodeFileToBase64,
     findElement,
     findElementFromElement,
     findElementFromShadowRoot,
@@ -120,6 +121,7 @@ import WebDriverIO
 import WebDriverPure (second, seconds)
 import WebDriverSpec (DriverStatus (..))
 import Prelude hiding (log)
+import System.Directory (getCurrentDirectory)
 
 logTxt :: Text -> IO ()
 logTxt = TIO.putStrLn
@@ -142,23 +144,29 @@ sleep1 = sleepMs $ 1 * second
 sleep2 :: IO ()
 sleep2 = sleepMs $ 2 * seconds
 
-johnsCapabilities :: StandardCapabilities
-johnsCapabilities =
-  (minStandardCapabilities Firefox)
+capsWithCustomFirefoxProfile :: IO StandardCapabilities
+capsWithCustomFirefoxProfile = do
+  -- profile <- encodeFileToBase64 "./test-e2e/FirefoxWebDriverProfile.zip"
+  pure $ (minStandardCapabilities Firefox)
     { vendorSpecific =
         Just
           FirefoxOptions
-            { firefoxArgs = Nothing,
+            { firefoxArgs = Just ["-profile", "./test-e2e/.profile/FirefoxWebDriverProfile"],
               firefoxBinary = Nothing,
-              firefoxProfile = Just "/usr/local/WebDriverProfile"
+              -- firefoxProfile = Just profile
+              firefoxProfile = Nothing
             }
     }
 
 mkExtendedTimeoutsSession :: IO SessionId
 mkExtendedTimeoutsSession = do
   -- ses <- minFirefoxSession
+
+  cwd <- getCurrentDirectory
+  putStrLn $ "Current working directory: " ++ cwd
+  profileBase64 <- capsWithCustomFirefoxProfile
   ses <- newSession . MkFullCapabilities $ MkMatchCapabilities {
-    alwaysMatch = Just johnsCapabilities,
+    alwaysMatch = Just profileBase64,
     firstMatch = []
   }
 
@@ -209,37 +217,6 @@ unit_demoSendKeysClear = do
   deleteSession ses
 
 -- >>> unit_demoForwardBackRefresh
--- *** Exception: VanillaHttpException (HttpExceptionRequest Request {
---   host                 = "127.0.0.1"
---   port                 = 4444
---   secure               = False
---   requestHeaders       = [("Accept","application/json"),("Content-Type","application/json; charset=utf-8")]
---   path                 = "/session"
---   queryString          = ""
---   method               = "POST"
---   proxy                = Nothing
---   rawBody              = False
---   redirectCount        = 10
---   responseTimeout      = ResponseTimeoutDefault
---   requestVersion       = HTTP/1.1
---   proxySecureMode      = ProxySecureWithConnect
--- }
---  (StatusCodeException (Response {responseStatus = Status {statusCode = 500, statusMessage = "Internal Server Error"}, responseVersion = HTTP/1.1, responseHeaders = [("content-type","application/json; charset=utf-8"),("cache-control","no-cache"),("content-length","79"),("date","Fri, 21 Feb 2025 20:55:32 GMT")], responseBody = (), responseCookieJar = CJ {expose = []}, responseClose' = ResponseClose, responseOriginalRequest = Request {
---   host                 = "127.0.0.1"
---   port                 = 4444
---   secure               = False
---   requestHeaders       = [("Accept","application/json"),("Content-Type","application/json; charset=utf-8")]
---   path                 = "/session"
---   queryString          = ""
---   method               = "POST"
---   proxy                = Nothing
---   rawBody              = False
---   redirectCount        = 10
---   responseTimeout      = ResponseTimeoutDefault
---   requestVersion       = HTTP/1.1
---   proxySecureMode      = ProxySecureWithConnect
--- }
--- , responseEarlyHints = []}) "{\"value\":{\"error\":\"unknown error\",\"message\":\"Invalid padding\",\"stacktrace\":\"\"}}"))
 unit_demoForwardBackRefresh :: IO ()
 unit_demoForwardBackRefresh = do
   ses <- mkExtendedTimeoutsSession

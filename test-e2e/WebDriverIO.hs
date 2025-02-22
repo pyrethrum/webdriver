@@ -17,6 +17,7 @@ module WebDriverIO
     W.Pointer (..),
     W.PointerAction (..),
     W.WheelAction (..),
+    encodeFileToBase64,
     status,
     findElementFromElement,
     findElementsFromElement,
@@ -87,13 +88,13 @@ where
 
 import Capabilities ( minFirefoxCapabilities, FullCapabilities )
 import Control.Concurrent (threadDelay)
-import Control.Monad (when)
+import Control.Monad (when, (>=>))
 import Control.Monad.IO.Class (liftIO)
 import Data.Aeson (Result (..), Value, object)
 
 import Data.Foldable (foldl')
 import Data.Function ((&))
-import Data.Text (Text, unpack)
+import Data.Text  as T (Text, unpack)
 import Data.Text.Encoding (decodeUtf8Lenient)
 import Data.Text.IO qualified as T
 import Network.HTTP.Req as R
@@ -122,7 +123,13 @@ import WebDriverSpec qualified as W
 import Prelude hiding (log)
 import Network.HTTP.Req (JsonResponse)
 import Data.Aeson.Text (encodeToLazyText)
-import Data.Text.Lazy (toStrict)
+import Data.Text.Lazy qualified as LT
+import Data.ByteString.Lazy qualified as LBS
+import Data.Text.Encoding qualified as E
+import qualified Data.ByteString as BS
+import qualified Data.ByteString.Base64 as B64
+import qualified Data.Base64.Types as B64T
+
 
 -- ############# IO Implementation #############
 
@@ -320,6 +327,17 @@ sleepMs = threadDelay . (* 1_000)
 debug :: Bool
 debug = True
 
+-- -- Returns the Base64-encoded bytestring of the file content.
+-- encodeFileToBase64 :: FilePath -> IO BS.ByteString
+-- encodeFileToBase64 filePath = do
+--     contents <- BS.readFile filePath
+--     pure . B64T.extractBase64 $ B64.encodeBase64' contents
+
+-- Returns the Base64-encoded bytestring of the file content.
+encodeFileToBase64 :: FilePath -> IO Text
+encodeFileToBase64 filePath = do
+    contents <- BS.readFile filePath
+    pure . B64T.extractBase64 $ B64.encodeBase64 contents
 
 -- no console out for "production"
 run :: (Show a) => W3Spec a -> IO a
@@ -333,7 +351,7 @@ run spec = do
         devLog "body PP"
         prettyPrintJson body
         devLog "Body Raw"
-        T.putStrLn ( toStrict $ encodeToLazyText body)
+        T.putStrLn ( LT.toStrict $ encodeToLazyText body)
       PostEmpty {} -> pure ()
       Delete {} -> pure ()
   callWebDriver debug (mkRequest spec) >>= parseIO spec
