@@ -88,7 +88,7 @@ where
 
 import Capabilities ( minFirefoxCapabilities, FullCapabilities )
 import Control.Concurrent (threadDelay)
-import Control.Monad (when, (>=>))
+import Control.Monad (when)
 import Control.Monad.IO.Class (liftIO)
 import Data.Aeson (Result (..), Value, object)
 
@@ -124,8 +124,6 @@ import Prelude hiding (log)
 import Network.HTTP.Req (JsonResponse)
 import Data.Aeson.Text (encodeToLazyText)
 import Data.Text.Lazy qualified as LT
-import Data.ByteString.Lazy qualified as LBS
-import Data.Text.Encoding qualified as E
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Base64 as B64
 import qualified Data.Base64.Types as B64T
@@ -326,12 +324,6 @@ sleepMs = threadDelay . (* 1_000)
 
 debug :: Bool
 debug = True
-
--- -- Returns the Base64-encoded bytestring of the file content.
--- encodeFileToBase64 :: FilePath -> IO BS.ByteString
--- encodeFileToBase64 filePath = do
---     contents <- BS.readFile filePath
---     pure . B64T.extractBase64 $ B64.encodeBase64' contents
 
 -- Returns the Base64-encoded bytestring of the file content.
 encodeFileToBase64 :: FilePath -> IO Text

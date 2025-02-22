@@ -2,35 +2,60 @@
 
 The webdriver WC3 API represented as a Haskell type
 
-## Note
-- need to install
-  - geckodriver
-  - tasty discover
-  - need to run:
-    ``pkill -f geckodriver || true  && geckodriver &``
-
-    ``pkill -f geckodriver || true  && geckodriver --log debug``
-
-    before running E2E tests
-  - note 
-    - profiles - missing progile
-  
+## Git LFS
   - need to install lfs locally
-  - ```
+   ```
     curl -s https://packagecloud.io/install/repositories/github/git-lfs/script.deb.sh | sudo bash
     sudo apt-get install git-lfs
     git lfs install
   ```
 
+## Generrating Tests
+   - need to install tasty discover: ``cabal install tasty-discover``
+  
+## Running E2E Tests
+- need to install
+  - firefox
+  - geckodriver
+ 
+  - need to run:
+
+    ``pkill -f geckodriver || true  && geckodriver &``
+
+    or with logging
+
+    ``pkill -f geckodriver || true  && geckodriver --log trace``
+
+### Firefox Profile Issues
+
+If you get an error when running tests like: **Your Firefox profile cannot be loaded. It may be missing or inaccessible.** you will need to run using a custom profile.
+
+1. unzip `./test-e2e/FirefoxWebDriverProfile.zip => to "./test-e2e/.profile/FirefoxWebDriverProfile"`
+2. ensure `useCustomProfile = True`
+
+  ```haskell
+    module WebDriverDemoStubsTest
+    --- 
+    mkExtendedTimeoutsSession :: IO SessionId
+    mkExtendedTimeoutsSession = do
+    let useCustomProfile = True
+    ---
+  ```
+
+### Problems with setting 64 bit encrypted profiles
+
+Setting the profile with a 64 bit encoded string did not work for me. The driver could not access the folder it unpacked in the `\tmp` directory. This may be a permissions issue on my machuine so others' mileage may differ. See ``capsWithCustomFirefoxProfileNotWorking``
+  
+
+
 ## TODO
 
-- [ ] fix capabilities
-  - [ ] https://developer.mozilla.org/en-US/docs/Web/WebDriver/Capabilities
-  - [ ] https://mucsi96.gitbook.io/w3c-webdriver/capabilities
+- [x] fix capabilities
 - [ ] rename from Pyrethrum
 - [ ] finish WebDriverError
-- [ ] check parser of timeouts has been changed to by name
+- [ ] check parser of timeouts all other parseJSON has been changed to by name
 - [ ] update readme
+  - [ ] include notes on running tests and why the tests are there / what they cover
   - [ ] include notes on profile isssues (firefox)
 - [ ] Haddock
 - [ ] get tests working locally again
@@ -40,6 +65,7 @@ The webdriver WC3 API represented as a Haskell type
   - [ ] docker file
   - [ ] dev-container
   - [ ] scripts
+- [ ] fork the internet into Pyrethrum org
 - [ ] update tasks
 - [ ] add all to github container repo (check vs docker hub)
 - [ ] hackage

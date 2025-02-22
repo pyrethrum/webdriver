@@ -1,17 +1,20 @@
 module WebDriverDemoStubsTest where
 
 import Capabilities
-    ( StandardCapabilities(..),
-      VendorSpecific(..),
-      FullCapabilities(..),
-      minStandardCapabilities,
-      BrowserName(Firefox),
-      MatchCapabilities(..) )
+  ( BrowserName (Firefox),
+    FullCapabilities (..),
+    MatchCapabilities (..),
+    StandardCapabilities (..),
+    VendorSpecific (..),
+    minStandardCapabilities,
+  )
 import Control.Monad (forM_)
 import Data.Aeson (Value (..))
 import Data.Set qualified as Set
 import Data.Text (Text)
 import Data.Text.IO qualified as TIO
+-- minFirefoxSession,
+
 import Test.Tasty.HUnit as HUnit (Assertion, HasCallStack, assertBool, (@=?))
 import Utils (txt)
 import WebDriverDemoUtils
@@ -65,9 +68,9 @@ import WebDriverIO
     elementClear,
     elementClick,
     elementSendKeys,
+    encodeFileToBase64,
     executeScript,
     executeScriptAsync,
-    encodeFileToBase64,
     findElement,
     findElementFromElement,
     findElementFromShadowRoot,
@@ -99,9 +102,10 @@ import WebDriverIO
     isElementEnabled,
     isElementSelected,
     maximizeWindow,
-    -- minFirefoxSession,
+    minFirefoxSession,
     minimizeWindow,
     navigateTo,
+    newSession,
     newWindow,
     performActions,
     printPage,
@@ -116,12 +120,11 @@ import WebDriverIO
     switchToParentFrame,
     switchToWindow,
     takeElementScreenshot,
-    takeScreenshot, newSession,
+    takeScreenshot,
   )
 import WebDriverPure (second, seconds)
 import WebDriverSpec (DriverStatus (..))
 import Prelude hiding (log)
-import System.Directory (getCurrentDirectory)
 
 logTxt :: Text -> IO ()
 logTxt = TIO.putStrLn
@@ -144,31 +147,68 @@ sleep1 = sleepMs $ 1 * second
 sleep2 :: IO ()
 sleep2 = sleepMs $ 2 * seconds
 
+{-
+This fails on my machine with the following error:
+
+```Your Firefox profile cannot be loaded. It may be missing or inaccessible.```
+
+This appears to be due to the profile being unpacked into tmp and the driver not being able to access it.
+If I copy the unpacked profile to "./test-e2e/.profile/FirefoxWebDriverProfile" and reference in
+capabilites as follows see (capsWithCustomFirefoxProfile):
+
+```firefoxArgs = Just ["-profile", "./test-e2e/.profile/FirefoxWebDriverProfile"]```
+
+then it works.
+-}
+capsWithCustomFirefoxProfileNotWorking :: IO StandardCapabilities
+capsWithCustomFirefoxProfileNotWorking = do
+  profile <- encodeFileToBase64 "./test-e2e/FirefoxWebDriverProfile.zip"
+  pure $
+    (minStandardCapabilities Firefox)
+      { vendorSpecific =
+          Just
+            FirefoxOptions
+              { firefoxArgs = Nothing,
+                firefoxBinary = Nothing,
+                firefoxProfile = Just profile
+              }
+      }
+
+{-
+this works when the profile in: ./test-e2e/FirefoxWebDriverProfile.zip
+=> is unzipped to "./test-e2e/.profile/FirefoxWebDriverProfile"
+before running any tests
+-}
 capsWithCustomFirefoxProfile :: IO StandardCapabilities
 capsWithCustomFirefoxProfile = do
-  -- profile <- encodeFileToBase64 "./test-e2e/FirefoxWebDriverProfile.zip"
-  pure $ (minStandardCapabilities Firefox)
-    { vendorSpecific =
-        Just
-          FirefoxOptions
-            { firefoxArgs = Just ["-profile", "./test-e2e/.profile/FirefoxWebDriverProfile"],
-              firefoxBinary = Nothing,
-              -- firefoxProfile = Just profile
-              firefoxProfile = Nothing
-            }
-    }
+  pure $
+    (minStandardCapabilities Firefox)
+      { vendorSpecific =
+          Just
+            FirefoxOptions
+              { -- this works when the profile is unpacked to here
+                firefoxArgs = Just ["-profile", "./test-e2e/.profile/FirefoxWebDriverProfile"],
+                firefoxBinary = Nothing,
+                firefoxProfile = Nothing
+              }
+      }
 
 mkExtendedTimeoutsSession :: IO SessionId
 mkExtendedTimeoutsSession = do
-  -- ses <- minFirefoxSession
+  let useCustomProfile = True
 
-  cwd <- getCurrentDirectory
-  putStrLn $ "Current working directory: " ++ cwd
-  profileBase64 <- capsWithCustomFirefoxProfile
-  ses <- newSession . MkFullCapabilities $ MkMatchCapabilities {
-    alwaysMatch = Just profileBase64,
-    firstMatch = []
-  }
+  ses <-
+    if useCustomProfile
+      then do
+        profileBase64 <- capsWithCustomFirefoxProfile
+        newSession . MkFullCapabilities $
+          MkMatchCapabilities
+            { alwaysMatch = Just profileBase64,
+              firstMatch = []
+            }
+      else
+        -- this was working in the dev-container but failing locally
+        minFirefoxSession
 
   setTimeouts ses $
     MkTimeouts
@@ -188,7 +228,6 @@ mkExtendedTimeoutsSession = do
   a ->
   Assertion
 (===) = (@=?)
-
 
 -- >>> unit_demoSessionDriverStatus
 unit_demoSessionDriverStatus :: IO ()
