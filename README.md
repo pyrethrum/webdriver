@@ -51,14 +51,14 @@ Setting the profile with a 64 bit encoded string did not work for me. The driver
 ## TODO
 
 - [x] fix capabilities
-- [ ] rename from Pyrethrum
+- [x] rename from Pyrethrum
 - [ ] finish WebDriverError
 - [ ] check parser of timeouts all other parseJSON has been changed to by name
 - [ ] update readme
   - [ ] include notes on running tests and why the tests are there / what they cover
   - [ ] include notes on profile issues (firefox)
 - [ ] Haddock
-- [ ] get tests working locally again
+- [x] get tests working locally again
 - [ ] CI
   - [ ] get tests and E2E working in CI
 - [ ] update replace
