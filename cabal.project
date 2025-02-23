@@ -10,8 +10,6 @@ optimization: 0
 -- jobs: $ncpus
 
 allow-newer: base,
-             bytestring,
-             text,
              hedgehog:barbies, 
              bytesmith:bytestring, 
              primitive-unlifted:bytestring, 
