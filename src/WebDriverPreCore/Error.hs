@@ -1,14 +1,22 @@
-module WebDriverPreCore.Error where
+module WebDriverPreCore.Error (
+  WebDriverErrorType(..),
+  classifyError,
+  errorDescription,
+  WebDriverError(..),
+  parseWebDriverError
+) where
 
 import Data.Aeson (Value, FromJSON (parseJSON))
 import Data.Aeson.Types ((.:), parseMaybe)
 import Data.Text (Text)
-import Data.Map.Strict (Map, fromList, lookup)
 import Data.Eq (Eq)
 import GHC.Show (Show)
 import Data.Ord (Ord)
 import Data.Maybe (Maybe (..), fromMaybe)
-import Data.Function (($))
+import Data.Int (Int)
+import WebDriverPreCore.HttpResponse (HttpResponse (..))
+import Control.Applicative ((<$>))
+import Control.Monad ((>>=))
 
 {-
 Error Code 	HTTP Status 	JSON Error Code 	Description
@@ -43,7 +51,7 @@ unsupported operation 	500 	unsupported operation 	Indicates that a command that
 -}
 
 
-data WebDriverError = 
+data WebDriverErrorType =
   UnrecognisedError Text |
   ElementClickIntercepted |
   ElementNotInteractable |
@@ -76,40 +84,95 @@ data WebDriverError =
   deriving (Eq, Show, Ord)
 
 
-classifyError :: Value -> Maybe WebDriverError
-classifyError response = do
-  o <- parseMaybe parseJSON response
-  txt <- parseMaybe (.: "error") o
-  Just $ fromMaybe (UnrecognisedError txt) (lookup txt errorCodeMap) 
+classifyError :: Value -> Maybe WebDriverErrorType
+classifyError response = 
+  errorCodeToErrorType <$> (parseMaybe parseJSON response >>= parseMaybe (.: "error"))
 
-errorCodeMap :: Map Text WebDriverError
-errorCodeMap = fromList
-  [ ("element click intercepted", ElementClickIntercepted)
-  , ("element not interactable", ElementNotInteractable)
-  , ("insecure certificate", InsecureCertificate)
-  , ("invalid argument", InvalidArgument)
-  , ("invalid cookie domain", InvalidCookieDomain)
-  , ("invalid element state", InvalidElementState)
-  , ("invalid selector", InvalidSelector)
-  , ("invalid session id", InvalidSessionId)
-  , ("javascript error", JavascriptError)
-  , ("move target out of bounds", MoveTargetOutOfBounds)
-  , ("no such alert", NoSuchAlert)
-  , ("no such cookie", NoSuchCookie)
-  , ("no such element", NoSuchElement)
-  , ("no such frame", NoSuchFrame)
-  , ("no such window", NoSuchWindow)
-  , ("no such shadow root", NoSuchShadowRoot)
-  , ("script timeout", ScriptTimeoutError)
-  , ("session not created", SessionNotCreated)
-  , ("stale element reference", StaleElementReference)
-  , ("detached shadow root", DetachedShadowRoot)
-  , ("timeout", Timeout)
-  , ("unable to set cookie", UnableToSetCookie)
-  , ("unable to capture screen", UnableToCaptureScreen)
-  , ("unexpected alert open", UnexpectedAlertOpen)
-  , ("unknown command", UnknownCommand)
-  , ("unknown error", UnknownError)
-  , ("unknown method", UnknownMethod)
-  , ("unsupported operation", UnsupportedOperation)
-  ]
+errorCodeToErrorType :: Text -> WebDriverErrorType
+errorCodeToErrorType = \case
+      "element click intercepted" -> ElementClickIntercepted
+      "element not interactable" -> ElementNotInteractable
+      "insecure certificate" -> InsecureCertificate
+      "invalid argument" -> InvalidArgument
+      "invalid cookie domain" -> InvalidCookieDomain
+      "invalid element state" -> InvalidElementState
+      "invalid selector" -> InvalidSelector
+      "invalid session id" -> InvalidSessionId
+      "javascript error" -> JavascriptError
+      "move target out of bounds" -> MoveTargetOutOfBounds
+      "no such alert" -> NoSuchAlert
+      "no such cookie" -> NoSuchCookie
+      "no such element" -> NoSuchElement
+      "no such frame" -> NoSuchFrame
+      "no such window" -> NoSuchWindow
+      "no such shadow root" -> NoSuchShadowRoot
+      "script timeout" -> ScriptTimeoutError
+      "session not created" -> SessionNotCreated
+      "stale element reference" -> StaleElementReference
+      "detached shadow root" -> DetachedShadowRoot
+      "timeout" -> Timeout
+      "unable to set cookie" -> UnableToSetCookie
+      "unable to capture screen" -> UnableToCaptureScreen
+      "unexpected alert open" -> UnexpectedAlertOpen
+      "unknown command" -> UnknownCommand
+      "unknown error" -> UnknownError
+      "unknown method" -> UnknownMethod
+      "unsupported operation" -> UnsupportedOperation
+      er -> UnrecognisedError er
+
+
+errorDescription :: WebDriverErrorType -> Text
+errorDescription = \case
+  UnrecognisedError txt -> txt
+  ElementClickIntercepted -> "The Element Click command could not be completed because the element receiving the events is obscuring the element that was requested clicked"
+  ElementNotInteractable -> "A command could not be completed because the element is not pointer- or keyboard interactable"
+  InsecureCertificate -> "Navigation caused the user agent to hit a certificate warning, which is usually the result of an expired or invalid TLS certificate"
+  InvalidArgument -> "The arguments passed to a command are either invalid or malformed"
+  InvalidCookieDomain -> "An illegal attempt was made to set a cookie under a different domain than the current page"
+  InvalidElementState -> "A command could not be completed because the element is in an invalid state, e.g. attempting to clear an element that isn't both editable and resettable"
+  InvalidSelector -> "Argument was an invalid selector"
+  InvalidSessionId -> "Occurs if the given session id is not in the list of active sessions, meaning the session either does not exist or that it's not active"
+  JavascriptError -> "An error occurred while executing JavaScript supplied by the user"
+  MoveTargetOutOfBounds -> "The target for mouse interaction is not in the browser's viewport and cannot be brought into that viewport"
+  NoSuchAlert -> "An attempt was made to operate on a modal dialog when one was not open"
+  NoSuchCookie -> "No cookie matching the given path name was found amongst the associated cookies of session's current browsing context's active document"
+  NoSuchElement -> "An element could not be located on the page using the given search parameters"
+  NoSuchFrame -> "A command to switch to a frame could not be satisfied because the frame could not be found"
+  NoSuchWindow -> "A command to switch to a window could not be satisfied because the window could not be found"
+  NoSuchShadowRoot -> "The element does not have a shadow root"
+  ScriptTimeoutError -> "A script did not complete before its timeout expired"
+  SessionNotCreated -> "A new session could not be created"
+  StaleElementReference -> "A command failed because the referenced element is no longer attached to the DOM"
+  DetachedShadowRoot -> "A command failed because the referenced shadow root is no longer attached to the DOM"
+  Timeout -> "An operation did not complete before its timeout expired"
+  UnableToSetCookie -> "A command to set a cookie's value could not be satisfied"
+  UnableToCaptureScreen -> "A screen capture was made impossible"
+  UnexpectedAlertOpen -> "A modal dialog was open, blocking this operation"
+  UnknownCommand -> "A command could not be executed because the remote end is not aware of it"
+  UnknownError -> "An unknown error occurred in the remote end while processing the command"
+  UnknownMethod -> "The requested command matched a known URL but did not match any method for that URL"
+  UnsupportedOperation -> "Indicates that a command that should have executed properly cannot be supported for some reason"
+
+
+data WebDriverError = MkWebDriverError {
+  error :: WebDriverErrorType,
+  description :: Text,
+  statusCode :: Int,
+  statusMessage :: Text,
+  body :: Value,
+  stacktrace :: Maybe Text
+} deriving (Eq, Show, Ord)
+
+parseWebDriverError ::  HttpResponse -> Maybe WebDriverError
+parseWebDriverError (Response statusCode statusMessage body) =
+  (\et -> MkWebDriverError {
+    error = et,
+    description = fromMaybe "Unknown Error" desc,
+    statusCode = statusCode,
+    statusMessage = statusMessage,
+    body = body,
+    stacktrace = Nothing
+  }) <$> errorType
+  where
+    errorType = classifyError body
+    desc = errorDescription <$> errorType

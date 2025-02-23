@@ -101,6 +101,7 @@ import Data.Aeson
     withObject,
     withText
   )
+import WebDriverPreCore.HttpResponse (HttpResponse (..))
 import Data.Aeson.Types (Parser)
 import Data.Aeson.Encode.Pretty (encodePretty)
 import Data.Aeson.KeyMap qualified as AKM
@@ -153,12 +154,6 @@ data W3SpecShowable = Request
   }
   deriving (Show)
 
-data HttpResponse = Response
-  { statusCode :: Int,
-    statusMessage :: Text,
-    body :: Value
-  }
-  deriving (Show)
 
 newtype WindowHandle =  Handle {handle :: Text}
   deriving (Show, Eq)
