@@ -9,14 +9,14 @@ module WebDriverPreCore.Error (
 import Data.Aeson (Value, FromJSON (parseJSON))
 import Data.Aeson.Types ((.:), parseMaybe)
 import Data.Text (Text)
-import Data.Map.Strict (Map, fromList, lookup)
 import Data.Eq (Eq)
 import GHC.Show (Show)
 import Data.Ord (Ord)
 import Data.Maybe (Maybe (..), fromMaybe)
-import Data.Function (($))
 import Data.Int (Int)
 import WebDriverPreCore.HttpResponse (HttpResponse (..))
+import Control.Applicative ((<$>))
+import Control.Monad ((>>=))
 
 {-
 Error Code 	HTTP Status 	JSON Error Code 	Description
@@ -85,12 +85,11 @@ data WebDriverErrorType =
 
 
 classifyError :: Value -> Maybe WebDriverErrorType
-classifyError response =
-  parseMaybe parseJSON response >>= parseMaybe (.: "error") . errorCodeToErrorType
-
+classifyError response = 
+  errorCodeToErrorType <$> (parseMaybe parseJSON response >>= parseMaybe (.: "error"))
 
 errorCodeToErrorType :: Text -> WebDriverErrorType
-errorCodeToErrorType txt = \case
+errorCodeToErrorType = \case
       "element click intercepted" -> ElementClickIntercepted
       "element not interactable" -> ElementNotInteractable
       "insecure certificate" -> InsecureCertificate
@@ -119,7 +118,7 @@ errorCodeToErrorType txt = \case
       "unknown error" -> UnknownError
       "unknown method" -> UnknownMethod
       "unsupported operation" -> UnsupportedOperation
-      _ -> UnrecognisedError txt
+      er -> UnrecognisedError er
 
 
 errorDescription :: WebDriverErrorType -> Text
@@ -165,15 +164,15 @@ data WebDriverError = MkWebDriverError {
 } deriving (Eq, Show, Ord)
 
 parseWebDriverError ::  HttpResponse -> Maybe WebDriverError
-parseWebDriverError (HttpResponse statusCode statusMessage body) =
-  \et -> MkWebDriverError {
-    error = fromMaybe (UnrecognisedError "Unknown Error") et,
+parseWebDriverError (Response statusCode statusMessage body) =
+  (\et -> MkWebDriverError {
+    error = et,
     description = fromMaybe "Unknown Error" desc,
     statusCode = statusCode,
     statusMessage = statusMessage,
     body = body,
     stacktrace = Nothing
-  } <$> errorType
+  }) <$> errorType
   where
     errorType = classifyError body
     desc = errorDescription <$> errorType

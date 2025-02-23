@@ -4,7 +4,9 @@ module WebDriverPreCore.HttpResponse (
 
 import Data.Aeson (Value)
 import Data.Text (Text)
-Import Data.Int (Int)
+import Data.Int (Int)
+import GHC.Show (Show)
+import Data.Eq (Eq)
 
 
 data HttpResponse = Response
