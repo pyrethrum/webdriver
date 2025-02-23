@@ -91,6 +91,8 @@ common commonGhcOptions
 
  -- -fdefer-type-errors
 
+tested-with: GHC == { 9.8.2}
+
 library
   import: commonExtensions, commonGhcOptions
   exposed-modules:
