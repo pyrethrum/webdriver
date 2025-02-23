@@ -100,12 +100,12 @@ library
       WebDriverPreCore.Internal.Utils
   hs-source-dirs: src
   build-depends:
-    , aeson
-    , aeson-pretty
-    , base
-    , bytestring
-    , text
-    , containers
+    aeson         >=1.4   && <2.3,
+    aeson-pretty  >=0.8   && <0.9,
+    base          >=4.16  && <5,
+    bytestring    >=0.10  && <0.12,
+    text          >=2.1   && <2.2,
+    containers    >=0.6   && <0.7
   default-language: Haskell2010
 
 test-suite test
