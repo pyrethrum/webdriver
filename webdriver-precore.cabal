@@ -99,6 +99,7 @@ library
       WebDriverPreCore.Capabilities
       WebDriverPreCore.Spec
       WebDriverPreCore.Error
+      WebDriverPreCore.HttpResponse
       WebDriverPreCore.Internal.Utils
   hs-source-dirs: src
   build-depends:

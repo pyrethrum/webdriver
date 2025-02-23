@@ -2,6 +2,8 @@
 
 The webdriver WC3 API represented as a Haskell type
 
+# Work In Progress
+
 ## Git LFS
   - need to install lfs locally
    ```
