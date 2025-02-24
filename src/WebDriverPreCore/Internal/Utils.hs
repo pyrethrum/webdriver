@@ -1,8 +1,12 @@
 module WebDriverPreCore.Internal.Utils
   ( opt,
     txt,
+    -- Aeson utils
+    jsonToText,
+    lsbToText,
     prettyPrintJson,
-    parseJson
+    parseJson,
+    enumerate
   )
 where
 
@@ -25,6 +29,7 @@ import Control.Exception (try, Exception (displayException), SomeException)
 import GHC.Base (IO)
 import Data.Either (Either, either)
 import System.IO (print)
+import GHC.Enum (Enum, Bounded (..))
 
 
 {-
@@ -34,6 +39,10 @@ import System.IO (print)
 
 txt :: (Show a) => a -> Text
 txt = pack . show
+
+
+enumerate :: (Enum a, Bounded a) => [a]
+enumerate = [minBound ..]
 
 -- Aeson stuff
 -- TODO move to separte library

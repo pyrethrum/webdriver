@@ -103,11 +103,10 @@ import Data.Aeson
   )
 import WebDriverPreCore.HttpResponse (HttpResponse (..))
 import Data.Aeson.Types (Parser)
-import Data.Aeson.Encode.Pretty (encodePretty)
 import Data.Aeson.KeyMap qualified as AKM
 import Data.Text qualified as T
 import Prelude hiding (id, lookup)
-import WebDriverPreCore.Internal.Utils (opt, txt)
+import WebDriverPreCore.Internal.Utils (opt, txt, jsonToText, )
 import WebDriverPreCore.Capabilities (Timeouts (..), FullCapabilities)
 import Data.Text (Text, pack, unpack)
 import Data.Word (Word16)
@@ -116,8 +115,10 @@ import GHC.Generics ( Generic )
 import Data.Maybe (catMaybes)
 import Data.Foldable (toList)
 import Data.Function ((&))
-import Data.ByteString.Lazy qualified as LBS
-import Data.Text.Encoding qualified as E
+
+{-- TODO use Haddock variable
+ Covers Spec Version https://www.w3.org/TR/2025/WD-webdriver2-20250210 
+ --}
 
 data W3Spec a
   = Get
@@ -185,15 +186,6 @@ data HandleType
   | Tab
   deriving (Show, Eq)
 
-
--- Todo move to utils library when HLS is ready
--- Aeson stuff to help debugging
--- https://blog.ssanj.net/posts/2019-09-24-pretty-printing-json-in-haskell.html
-lsbToText :: LBS.ByteString -> Text
-lsbToText = E.decodeUtf8 . LBS.toStrict
-
-jsonToText :: Value -> Text
-jsonToText = lsbToText . encodePretty
 
 instance ToJSON HandleType where
   toJSON :: HandleType -> Value
