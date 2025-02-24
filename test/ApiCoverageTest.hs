@@ -5,7 +5,7 @@ import WebDriverPreCore.Capabilities
 import Data.Set as S (Set, difference, fromList, null)
 import Data.Text as T (Text, intercalate, lines, null, pack, replace, strip, unwords, words, split)
 import GHC.Utils.Misc (filterOut)
-import Test.Tasty.HUnit as HUnit ( assertBool, Assertion )
+import Test.Tasty.HUnit as HUnit ( assertBool, Assertion, (@=?) )
 import Text.RawString.QQ (r)
 import WebDriverPreCore.Spec
     ( SessionId(Session),
@@ -87,8 +87,10 @@ import Data.List ((!!), drop)
 import Data.Functor ((<$>))
 import Data.Maybe (Maybe(..))
 import GHC.Base (error)
-import WebDriverPreCore.Error (errorTypeToErrorCode, errorDescription)
+import WebDriverPreCore.Error (errorTypeToErrorCode, errorDescription, errorCodeToErrorType)
 import WebDriverPreCore.Internal.Utils (enumerate)
+import Data.Foldable (traverse_)
+import Data.Either (either)
 
 
 {-- TODO use Haddock variable
@@ -382,3 +384,13 @@ unit_test_all_errors_covered = do
     missing = allErrors `difference` allErrorsFromSpec
     extra = allErrorsFromSpec `difference` allErrors
 
+
+-- >>> unit_round_trip_error_codes
+unit_round_trip_error_codes :: Assertion
+unit_round_trip_error_codes = do
+  traverse_ checkRoundTripErrorCodes enumerate
+  where
+    checkRoundTripErrorCodes errorType = do
+      let errorCode = errorTypeToErrorCode errorType
+          errorType' = errorCodeToErrorType errorCode
+      errorType' & either (error . show) (errorType @=?)

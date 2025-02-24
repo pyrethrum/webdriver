@@ -244,8 +244,7 @@ unit_demoSessionDriverStatus = do
 
 -- >>> unit_demoSendKeysClear
 unit_demoSendKeysClear :: IO ()
-unit_demoSendKeysClear = do
-  ses <- mkExtendedTimeoutsSession
+unit_demoSendKeysClear = withSession \ses -> do
   navigateTo ses loginUrl
   usr <- findElement ses userNameCss
 
@@ -256,13 +255,10 @@ unit_demoSendKeysClear = do
   logTxt "clear user name"
   elementClear ses usr
   sleep2
-  deleteSession ses
 
 -- >>> unit_demoForwardBackRefresh
 unit_demoForwardBackRefresh :: IO ()
-unit_demoForwardBackRefresh = do
-  ses <- mkExtendedTimeoutsSession
-
+unit_demoForwardBackRefresh = withSession \ses -> do
   navigateTo ses theInternet
   logM "current url" $ getCurrentUrl ses
   logM "title" $ getTitle ses
@@ -296,12 +292,9 @@ unit_demoForwardBackRefresh = do
   logM "current url" $ getCurrentUrl ses
   logM "title" $ getTitle ses
 
-  deleteSession ses
-
 -- >>> unit_demoWindowHandles
 unit_demoWindowHandles :: IO ()
-unit_demoWindowHandles = do
-  ses <- mkExtendedTimeoutsSession
+unit_demoWindowHandles = withSession \ses -> do
   navigateTo ses theInternet
 
   logShowM "window Handle" $ getWindowHandle ses
@@ -318,13 +311,10 @@ unit_demoWindowHandles = do
   log "windows closed" $ txt ses
 
   logShowM "all windows handles" $ getWindowHandles ses
-  deleteSession ses
 
 -- >>> unit_demoWindowSizes
 unit_demoWindowSizes :: IO ()
-unit_demoWindowSizes = do
-  ses <- mkExtendedTimeoutsSession
-  ---
+unit_demoWindowSizes = withSession \ses -> do
   maximizeWindow ses
   navigateTo ses theInternet
   sleep1
@@ -338,12 +328,9 @@ unit_demoWindowSizes = do
   logShowM "maximizeWindow" $ maximizeWindow ses
   sleep1
 
-  deleteSession ses
-
 -- >>> unit_demoElementPageProps
 unit_demoElementPageProps :: IO ()
-unit_demoElementPageProps = do
-  ses <- mkExtendedTimeoutsSession
+unit_demoElementPageProps = withSession \ses -> do
   navigateTo ses theInternet
   logM "current url" $ getCurrentUrl ses
   logM "title" $ getTitle ses
@@ -371,14 +358,10 @@ unit_demoElementPageProps = do
   forM_ divs $ \d ->
     logShowM "div overflow value" $ getElementCssValue ses d "overflow"
 
-  deleteSession ses
-
 -- >>> unit_demoTimeouts
 unit_demoTimeouts :: IO ()
-unit_demoTimeouts = do
-  ses <- mkExtendedTimeoutsSession
+unit_demoTimeouts = withSession \ses -> do
   log "new session" $ txt ses
-  ---
   logShowM "timeouts" $ getTimeouts ses
   let timeouts =
         MkTimeouts
@@ -392,13 +375,9 @@ unit_demoTimeouts = do
   logShow "updated timeouts" timeouts'
   timeouts === timeouts'
 
-  deleteSession ses
-
 -- >>> unit_demoWindowRecs
 unit_demoWindowRecs :: IO ()
-unit_demoWindowRecs = do
-  ses <- mkExtendedTimeoutsSession
-  ---
+unit_demoWindowRecs = withSession \ses -> do
   let wr = Rect 500 300 500 500
   logShowM "set window rect" $ setWindowRect ses wr
   r <- getWindowRect ses
@@ -415,15 +394,9 @@ unit_demoWindowRecs = do
   els <- findElementsFromElement ses div' anyElmCss
   logShow "elements in div" els
 
-  deleteSession ses
-
-chkHasElms :: (Foldable t) => t a -> Assertion
-chkHasElms els = assertBool "elements should be found" $ not (null els)
-
 -- >>> unit_demoWindowFindElement
 unit_demoWindowFindElement :: IO ()
-unit_demoWindowFindElement = do
-  ses <- mkExtendedTimeoutsSession
+unit_demoWindowFindElement = withSession \ses -> do
   navigateTo ses inputsUrl
   allElms <- findElements ses anyElmCss
 
@@ -439,12 +412,9 @@ unit_demoWindowFindElement = do
   chkHasElms els
   logShow "elements in div" els
 
-  deleteSession ses
-
 -- >>> unit_demoFrames
 unit_demoFrames :: IO ()
-unit_demoFrames = do
-  ses <- mkExtendedTimeoutsSession
+unit_demoFrames = withSession \ses -> do
   navigateTo ses framesUrl
 
   logTxt "At top level frame"
@@ -503,15 +473,9 @@ unit_demoFrames = do
 
   logShowM "active element" $ getActiveElement ses
 
-  deleteSession ses
-
-bottomFameExists :: SessionId -> IO Bool
-bottomFameExists ses = not . null <$> findElements ses bottomFrameCss
-
 -- >>> unit_demoShadowDom
 unit_demoShadowDom :: IO ()
-unit_demoShadowDom = do
-  ses <- mkExtendedTimeoutsSession
+unit_demoShadowDom = withSession \ses -> do
   navigateTo ses shadowDomUrl
 
   -- Find the custom element:
@@ -523,7 +487,6 @@ unit_demoShadowDom = do
   logShow "shadowRootId" shadowRootId
 
   -- From the shadow root, find all elements
-  -- allInsideShadow <- findElementsFromShadowRoot ses shadowRootId (CSS "*")
   allInsideShadow <- findElementsFromShadowRoot ses shadowRootId anyElmCss
   logShow "shadow root elements" allInsideShadow
 
@@ -535,12 +498,10 @@ unit_demoShadowDom = do
 
   -- Retrieve text from the shadow element:
   logShowM "shadow text" $ getElementText ses srootElm
-  deleteSession ses
 
 -- >>> unit_demoIsElementSelected
 unit_demoIsElementSelected :: IO ()
-unit_demoIsElementSelected = do
-  ses <- mkExtendedTimeoutsSession
+unit_demoIsElementSelected = withSession \ses -> do
   logShowM "driver status" status
   navigateTo ses checkBoxesUrl
   allCbs <- findElements ses checkBoxesCss
@@ -557,12 +518,9 @@ unit_demoIsElementSelected = do
     assertBool "checkBox state should change after click" $ not before == after
     logTxt "------------------"
 
-  deleteSession ses
-
 -- >>> unit_demoGetPageSourceScreenShot
 unit_demoGetPageSourceScreenShot :: IO ()
-unit_demoGetPageSourceScreenShot = do
-  ses <- mkExtendedTimeoutsSession
+unit_demoGetPageSourceScreenShot = withSession \ses -> do
   navigateTo ses theInternet
   logTxt "!!!!! Page Source !!!!!"
   logShowM "page source" $ getPageSource ses
@@ -573,16 +531,20 @@ unit_demoGetPageSourceScreenShot = do
   logTxt "!!!!! Screenshot Element !!!!!"
   chkBoxLink <- findElement ses checkBoxesLinkCss
   logShowM "take element screenshot" $ takeElementScreenshot ses chkBoxLink
-  deleteSession ses
 
 -- >>> unit_demoPrintPage
 unit_demoPrintPage :: IO ()
-unit_demoPrintPage = do
-  ses <- mkExtendedTimeoutsSession
+unit_demoPrintPage = withSession \ses -> do
   navigateTo ses theInternet
   -- pdf (encoded string)
   logM "print page" $ printPage ses
-  deleteSession ses
+
+chkHasElms :: (Foldable t) => t a -> Assertion
+chkHasElms els = assertBool "elements should be found" $ not (null els)
+
+bottomFameExists :: SessionId -> IO Bool
+bottomFameExists ses = not . null <$> findElements ses bottomFrameCss
+
 
 --- >>> unit_demoExecuteScript
 unit_demoExecuteScript :: IO ()
@@ -745,7 +707,6 @@ unit_demoPointerNoneActions =
     logTxt "move and None actions"
     performActions ses pointer
 
-
 -- >>> unit_demoKeyAndReleaseActions
 unit_demoKeyAndReleaseActions :: IO ()
 unit_demoKeyAndReleaseActions = 
@@ -784,7 +745,6 @@ unit_demoKeyAndReleaseActions =
     releaseActions ses
     sleep2
 
-
 -- >>> unit_demoWheelActions
 unit_demoWheelActions :: IO ()
 unit_demoWheelActions = withSession \ses -> do
@@ -820,7 +780,6 @@ unit_demoWheelActions = withSession \ses -> do
   performActions ses wheel
   sleep2
  
-
 -- >>> unit_demoError
 unit_demoError :: IO ()
 unit_demoError = withSession \ses -> do
@@ -851,10 +810,8 @@ unit_demoError = withSession \ses -> do
           expectedText = "WebDriverError {error = NoSuchElement, description = \"An element could not be located on the page using the given search parameters\""
       assertBool "NoSuchElement error should be mapped" $ expectedText `isInfixOf` errTxt        
 
-
-
 withSession :: (SessionId -> IO ()) -> IO ()
-withSession = bracket mkExtendedTimeoutsSession deleteSession 
+withSession = bracket mkExtendedTimeoutsSession deleteSession
 
- 
+
 
