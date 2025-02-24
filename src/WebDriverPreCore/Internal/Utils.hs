@@ -1,12 +1,12 @@
 module WebDriverPreCore.Internal.Utils
   ( opt,
     txt,
+    enumerate,
     -- Aeson utils
     jsonToText,
     lsbToText,
     prettyPrintJson,
-    parseJson,
-    enumerate
+    parseJson
   )
 where
 
