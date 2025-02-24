@@ -54,7 +54,7 @@ Setting the profile with a 64 bit encoded string did not work for me. The driver
 
 - [x] fix capabilities
 - [x] rename from Pyrethrum
-- [ ] finish WebDriverError
+- [x] finish WebDriverError
 - [ ] check parser of timeouts all other parseJSON has been changed to by name
 - [ ] update readme
   - [ ] include notes on running tests and why the tests are there / what they cover
