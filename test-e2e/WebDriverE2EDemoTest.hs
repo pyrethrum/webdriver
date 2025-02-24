@@ -11,7 +11,7 @@ import WebDriverPreCore.Capabilities
 import Control.Monad (forM_)
 import Data.Aeson (Value (..))
 import Data.Set qualified as Set
-import Data.Text (Text)
+import Data.Text (Text, isInfixOf)
 import Data.Text.IO qualified as TIO
 -- minFirefoxSession,
 
@@ -126,6 +126,8 @@ import IORunner
   )
 import WebDriverPreCore.Spec (DriverStatus (..))
 import Prelude hiding (log)
+import Control.Exception (bracket)
+import GHC.IO (catchAny)
 
 logTxt :: Text -> IO ()
 logTxt = TIO.putStrLn
@@ -242,8 +244,7 @@ unit_demoSessionDriverStatus = do
 
 -- >>> unit_demoSendKeysClear
 unit_demoSendKeysClear :: IO ()
-unit_demoSendKeysClear = do
-  ses <- mkExtendedTimeoutsSession
+unit_demoSendKeysClear = withSession \ses -> do
   navigateTo ses loginUrl
   usr <- findElement ses userNameCss
 
@@ -254,13 +255,10 @@ unit_demoSendKeysClear = do
   logTxt "clear user name"
   elementClear ses usr
   sleep2
-  deleteSession ses
 
 -- >>> unit_demoForwardBackRefresh
 unit_demoForwardBackRefresh :: IO ()
-unit_demoForwardBackRefresh = do
-  ses <- mkExtendedTimeoutsSession
-
+unit_demoForwardBackRefresh = withSession \ses -> do
   navigateTo ses theInternet
   logM "current url" $ getCurrentUrl ses
   logM "title" $ getTitle ses
@@ -294,12 +292,9 @@ unit_demoForwardBackRefresh = do
   logM "current url" $ getCurrentUrl ses
   logM "title" $ getTitle ses
 
-  deleteSession ses
-
 -- >>> unit_demoWindowHandles
 unit_demoWindowHandles :: IO ()
-unit_demoWindowHandles = do
-  ses <- mkExtendedTimeoutsSession
+unit_demoWindowHandles = withSession \ses -> do
   navigateTo ses theInternet
 
   logShowM "window Handle" $ getWindowHandle ses
@@ -316,13 +311,10 @@ unit_demoWindowHandles = do
   log "windows closed" $ txt ses
 
   logShowM "all windows handles" $ getWindowHandles ses
-  deleteSession ses
 
 -- >>> unit_demoWindowSizes
 unit_demoWindowSizes :: IO ()
-unit_demoWindowSizes = do
-  ses <- mkExtendedTimeoutsSession
-  ---
+unit_demoWindowSizes = withSession \ses -> do
   maximizeWindow ses
   navigateTo ses theInternet
   sleep1
@@ -336,12 +328,9 @@ unit_demoWindowSizes = do
   logShowM "maximizeWindow" $ maximizeWindow ses
   sleep1
 
-  deleteSession ses
-
 -- >>> unit_demoElementPageProps
 unit_demoElementPageProps :: IO ()
-unit_demoElementPageProps = do
-  ses <- mkExtendedTimeoutsSession
+unit_demoElementPageProps = withSession \ses -> do
   navigateTo ses theInternet
   logM "current url" $ getCurrentUrl ses
   logM "title" $ getTitle ses
@@ -369,14 +358,10 @@ unit_demoElementPageProps = do
   forM_ divs $ \d ->
     logShowM "div overflow value" $ getElementCssValue ses d "overflow"
 
-  deleteSession ses
-
 -- >>> unit_demoTimeouts
 unit_demoTimeouts :: IO ()
-unit_demoTimeouts = do
-  ses <- mkExtendedTimeoutsSession
+unit_demoTimeouts = withSession \ses -> do
   log "new session" $ txt ses
-  ---
   logShowM "timeouts" $ getTimeouts ses
   let timeouts =
         MkTimeouts
@@ -390,13 +375,9 @@ unit_demoTimeouts = do
   logShow "updated timeouts" timeouts'
   timeouts === timeouts'
 
-  deleteSession ses
-
 -- >>> unit_demoWindowRecs
 unit_demoWindowRecs :: IO ()
-unit_demoWindowRecs = do
-  ses <- mkExtendedTimeoutsSession
-  ---
+unit_demoWindowRecs = withSession \ses -> do
   let wr = Rect 500 300 500 500
   logShowM "set window rect" $ setWindowRect ses wr
   r <- getWindowRect ses
@@ -413,15 +394,9 @@ unit_demoWindowRecs = do
   els <- findElementsFromElement ses div' anyElmCss
   logShow "elements in div" els
 
-  deleteSession ses
-
-chkHasElms :: (Foldable t) => t a -> Assertion
-chkHasElms els = assertBool "elements should be found" $ not (null els)
-
 -- >>> unit_demoWindowFindElement
 unit_demoWindowFindElement :: IO ()
-unit_demoWindowFindElement = do
-  ses <- mkExtendedTimeoutsSession
+unit_demoWindowFindElement = withSession \ses -> do
   navigateTo ses inputsUrl
   allElms <- findElements ses anyElmCss
 
@@ -437,12 +412,9 @@ unit_demoWindowFindElement = do
   chkHasElms els
   logShow "elements in div" els
 
-  deleteSession ses
-
 -- >>> unit_demoFrames
 unit_demoFrames :: IO ()
-unit_demoFrames = do
-  ses <- mkExtendedTimeoutsSession
+unit_demoFrames = withSession \ses -> do
   navigateTo ses framesUrl
 
   logTxt "At top level frame"
@@ -501,15 +473,9 @@ unit_demoFrames = do
 
   logShowM "active element" $ getActiveElement ses
 
-  deleteSession ses
-
-bottomFameExists :: SessionId -> IO Bool
-bottomFameExists ses = not . null <$> findElements ses bottomFrameCss
-
 -- >>> unit_demoShadowDom
 unit_demoShadowDom :: IO ()
-unit_demoShadowDom = do
-  ses <- mkExtendedTimeoutsSession
+unit_demoShadowDom = withSession \ses -> do
   navigateTo ses shadowDomUrl
 
   -- Find the custom element:
@@ -521,7 +487,6 @@ unit_demoShadowDom = do
   logShow "shadowRootId" shadowRootId
 
   -- From the shadow root, find all elements
-  -- allInsideShadow <- findElementsFromShadowRoot ses shadowRootId (CSS "*")
   allInsideShadow <- findElementsFromShadowRoot ses shadowRootId anyElmCss
   logShow "shadow root elements" allInsideShadow
 
@@ -533,12 +498,10 @@ unit_demoShadowDom = do
 
   -- Retrieve text from the shadow element:
   logShowM "shadow text" $ getElementText ses srootElm
-  deleteSession ses
 
 -- >>> unit_demoIsElementSelected
 unit_demoIsElementSelected :: IO ()
-unit_demoIsElementSelected = do
-  ses <- mkExtendedTimeoutsSession
+unit_demoIsElementSelected = withSession \ses -> do
   logShowM "driver status" status
   navigateTo ses checkBoxesUrl
   allCbs <- findElements ses checkBoxesCss
@@ -555,12 +518,9 @@ unit_demoIsElementSelected = do
     assertBool "checkBox state should change after click" $ not before == after
     logTxt "------------------"
 
-  deleteSession ses
-
 -- >>> unit_demoGetPageSourceScreenShot
 unit_demoGetPageSourceScreenShot :: IO ()
-unit_demoGetPageSourceScreenShot = do
-  ses <- mkExtendedTimeoutsSession
+unit_demoGetPageSourceScreenShot = withSession \ses -> do
   navigateTo ses theInternet
   logTxt "!!!!! Page Source !!!!!"
   logShowM "page source" $ getPageSource ses
@@ -571,21 +531,25 @@ unit_demoGetPageSourceScreenShot = do
   logTxt "!!!!! Screenshot Element !!!!!"
   chkBoxLink <- findElement ses checkBoxesLinkCss
   logShowM "take element screenshot" $ takeElementScreenshot ses chkBoxLink
-  deleteSession ses
 
 -- >>> unit_demoPrintPage
 unit_demoPrintPage :: IO ()
-unit_demoPrintPage = do
-  ses <- mkExtendedTimeoutsSession
+unit_demoPrintPage = withSession \ses -> do
   navigateTo ses theInternet
   -- pdf (encoded string)
   logM "print page" $ printPage ses
-  deleteSession ses
+
+chkHasElms :: (Foldable t) => t a -> Assertion
+chkHasElms els = assertBool "elements should be found" $ not (null els)
+
+bottomFameExists :: SessionId -> IO Bool
+bottomFameExists ses = not . null <$> findElements ses bottomFrameCss
+
 
 --- >>> unit_demoExecuteScript
 unit_demoExecuteScript :: IO ()
-unit_demoExecuteScript = do
-  ses <- mkExtendedTimeoutsSession
+unit_demoExecuteScript = 
+  withSession \ses -> do
   navigateTo ses theInternet
   logShowM "executeScript" $ executeScript ses "return arguments[0];" [String "Hello from Pyrethrum!", Number 2000]
   sleep2
@@ -593,12 +557,12 @@ unit_demoExecuteScript = do
   executeScriptAsync ses "setTimeout(() => alert('Hello from Pyrethrum!'), 2000); return 5;" []
   logTxt "after asynch alert"
   sleep2
-  deleteSession ses
+
 
 -- >>> unit_demoCookies
 unit_demoCookies :: IO ()
-unit_demoCookies = do
-  ses <- mkExtendedTimeoutsSession
+unit_demoCookies = 
+  withSession \ses -> do
   navigateTo ses theInternet
   logShowM "cookies" $ getAllCookies ses
 
@@ -635,12 +599,11 @@ unit_demoCookies = do
   logShow "cookies after delete all" afterDeleteAll
   assertBool "all cookies should be removed" $ null afterDeleteAll
 
-  deleteSession ses
 
 -- >>> unit_demoAlerts
 unit_demoAlerts :: IO ()
-unit_demoAlerts = do
-  ses <- mkExtendedTimeoutsSession
+unit_demoAlerts = 
+  withSession \ses -> do
   navigateTo ses alertsUrl
 
   alert <- findElement ses jsAlertXPath
@@ -665,139 +628,126 @@ unit_demoAlerts = do
   dismissAlert ses
 
   sleep1
-  deleteSession ses
 
 -- >>> unit_demoPointerNoneActions
 unit_demoPointerNoneActions :: IO ()
-unit_demoPointerNoneActions = do
-  ses <- mkExtendedTimeoutsSession
-  navigateTo ses theInternet
+unit_demoPointerNoneActions = 
+  withSession \ses -> do
+    navigateTo ses theInternet
 
-  let pointer =
-        MkActions
-          [ Pointer
-              { id = "mouse1",
-                subType = Mouse,
-                pointerId = 0,
-                pressed = Set.empty,
-                x = 0,
-                y = 0,
-                actions =
-                  [ PausePointer Nothing,
-                    Down
-                      { button = 0,
-                        width = Nothing,
-                        height = Nothing,
-                        pressure = Nothing,
-                        tangentialPressure = Nothing,
-                        tiltX = Nothing,
-                        tiltY = Nothing,
-                        twist = Nothing,
-                        altitudeAngle = Nothing,
-                        azimuthAngle = Nothing
-                      },
-                    Move
-                      { origin = Viewport,
-                        duration = Just $ 4 * seconds,
-                        x = 150,
-                        y = 150,
-                        width = Just 2,
-                        height = Just 2,
-                        pressure = Just 0.5,
-                        tangentialPressure = Just $ -0.4,
-                        tiltX = Just $ -50,
-                        tiltY = Just $ -50,
-                        twist = Just 5,
-                        altitudeAngle = Just 1.5,
-                        azimuthAngle = Just 6.2
-                      },
-                    PausePointer $ Just 1000,
-                    Up
-                      { button = 0,
-                        width = Nothing,
-                        height = Nothing,
-                        pressure = Nothing,
-                        tangentialPressure = Nothing,
-                        tiltX = Nothing,
-                        tiltY = Nothing,
-                        twist = Nothing,
-                        altitudeAngle = Nothing,
-                        azimuthAngle = Nothing
-                      }
-                      -- looks like Cancel not supported yet by gecko driver 02-02-2025
-                      -- https://searchfox.org/mozilla-central/source/remote/shared/webdriver/Actions.sys.mjs#2340
-                      -- , Cancel
-                  ]
-              },
-            NoneAction
-              { id = "NullAction",
-                noneActions =
-                  [ Nothing,
-                    Just $ 1 * second,
-                    Just $ 4 * seconds,
-                    Nothing,
-                    Nothing
-                  ]
-              }
-              --
-          ]
+    let pointer =
+          MkActions
+            [ Pointer
+                { id = "mouse1",
+                  subType = Mouse,
+                  pointerId = 0,
+                  pressed = Set.empty,
+                  x = 0,
+                  y = 0,
+                  actions =
+                    [ PausePointer Nothing,
+                      Down
+                        { button = 0,
+                          width = Nothing,
+                          height = Nothing,
+                          pressure = Nothing,
+                          tangentialPressure = Nothing,
+                          tiltX = Nothing,
+                          tiltY = Nothing,
+                          twist = Nothing,
+                          altitudeAngle = Nothing,
+                          azimuthAngle = Nothing
+                        },
+                      Move
+                        { origin = Viewport,
+                          duration = Just $ 4 * seconds,
+                          x = 150,
+                          y = 150,
+                          width = Just 2,
+                          height = Just 2,
+                          pressure = Just 0.5,
+                          tangentialPressure = Just $ -0.4,
+                          tiltX = Just $ -50,
+                          tiltY = Just $ -50,
+                          twist = Just 5,
+                          altitudeAngle = Just 1.5,
+                          azimuthAngle = Just 6.2
+                        },
+                      PausePointer $ Just 1000,
+                      Up
+                        { button = 0,
+                          width = Nothing,
+                          height = Nothing,
+                          pressure = Nothing,
+                          tangentialPressure = Nothing,
+                          tiltX = Nothing,
+                          tiltY = Nothing,
+                          twist = Nothing,
+                          altitudeAngle = Nothing,
+                          azimuthAngle = Nothing
+                        }
+                        -- looks like Cancel not supported yet by gecko driver 02-02-2025
+                        -- https://searchfox.org/mozilla-central/source/remote/shared/webdriver/Actions.sys.mjs#2340
+                        -- , Cancel
+                    ]
+                },
+              NoneAction
+                { id = "NullAction",
+                  noneActions =
+                    [ Nothing,
+                      Just $ 1 * second,
+                      Just $ 4 * seconds,
+                      Nothing,
+                      Nothing
+                    ]
+                }
+                --
+            ]
 
-  logTxt "move and None actions"
-  performActions ses pointer
-  deleteSession ses
+    logTxt "move and None actions"
+    performActions ses pointer
 
 -- >>> unit_demoKeyAndReleaseActions
 unit_demoKeyAndReleaseActions :: IO ()
-unit_demoKeyAndReleaseActions = do
-  ses <- mkExtendedTimeoutsSession
-  navigateTo ses loginUrl
-  usr <- findElement ses userNameCss
-  elementClick ses usr
+unit_demoKeyAndReleaseActions = 
+  withSession \ses -> do
+    navigateTo ses loginUrl
+    usr <- findElement ses userNameCss
+    elementClick ses usr
 
-  let keys =
-        MkActions
-          [ Key
-              { id = "keyboard1",
-                keyActions =
-                  [ PauseKey Nothing,
-                    KeyDown "a",
-                    -- a random pause to test the API
-                    PauseKey . Just $ 2 * seconds,
-                    KeyUp "a",
-                    -- select the a
-                    -- send special control key not a raw control character
-                    -- Use \xE009 to represent the Unicode code point U+E009
-                    KeyDown "\xE009",
-                    KeyDown "a",
-                    -- this will do nothing - just used for correlating frames
-                    -- just testing tha API
-                    PauseKey Nothing
-                  ]
-              }
-          ]
+    let keys =
+          MkActions
+            [ Key
+                { id = "keyboard1",
+                  keyActions =
+                    [ PauseKey Nothing,
+                      KeyDown "a",
+                      -- a random pause to test the API
+                      PauseKey . Just $ 2 * seconds,
+                      KeyUp "a",
+                      -- select the a
+                      -- send special control key not a raw control character
+                      -- Use \xE009 to represent the Unicode code point U+E009
+                      KeyDown "\xE009",
+                      KeyDown "a",
+                      -- this will do nothing - just used for correlating frames
+                      -- just testing tha API
+                      PauseKey Nothing
+                    ]
+                }
+            ]
 
-  sleep2
-  logTxt "key actions"
-  performActions ses keys
+    sleep2
+    logTxt "key actions"
+    performActions ses keys
 
-  sleep2
-  releaseActions ses
-  sleep2
-  deleteSession ses
-
--- >>> manyWheelActions
-manyWheelActions :: IO ()
-manyWheelActions = do
-  unit_demoKeyAndReleaseActions
-  unit_demoWheelActions
-
--- unit_demoWheelActions
--- unit_demoWheelActions
+    sleep2
+    releaseActions ses
+    sleep2
 
 -- >>> unit_demoWheelActions
 unit_demoWheelActions :: IO ()
-unit_demoWheelActions = do
-  ses <- mkExtendedTimeoutsSession
+unit_demoWheelActions = withSession \ses -> do
   navigateTo ses infinitScrollUrl
 
   let wheel =
@@ -828,6 +778,40 @@ unit_demoWheelActions = do
 
   logTxt "wheel actions"
   performActions ses wheel
-
   sleep2
-  deleteSession ses
+ 
+-- >>> unit_demoError
+unit_demoError :: IO ()
+unit_demoError = withSession \ses -> do
+  -- this tests error mapping of one error type by checking the text of the error
+  -- thrown by the runner with a deliberately incorrect selector
+
+  -- reset timeouts so we don't wait too long for our failure
+  setTimeouts ses $
+    MkTimeouts
+      { pageLoad = Just $ 30 * seconds,
+        script = Just $ 11 * seconds,
+        implicit = Just $ 1 * seconds
+      }
+  navigateTo ses inputsUrl
+
+  -- if the runner has mapped the error as expected (using parseWebDriverError) we expect it to rethrow the text of the mapped webdriver error
+  -- including  the text: 
+  -- "WebDriverError {error = NoSuchElement, description = "An element could not be located on the page using the given search parameters"
+  -- other libraries will use the error mapping function in more sophisticated ways
+  catchAny 
+    (do 
+      findElement ses $ CSS "#id-that-does-not-exist-on-this-page"
+      error "should not get here - no such element"
+    ) $ 
+    \e -> do
+      logShow "caught error" e
+      let errTxt = txt e
+          expectedText = "WebDriverError {error = NoSuchElement, description = \"An element could not be located on the page using the given search parameters\""
+      assertBool "NoSuchElement error should be mapped" $ expectedText `isInfixOf` errTxt        
+
+withSession :: (SessionId -> IO ()) -> IO ()
+withSession = bracket mkExtendedTimeoutsSession deleteSession
+
+
+

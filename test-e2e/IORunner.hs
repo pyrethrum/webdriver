@@ -112,7 +112,7 @@ import Network.HTTP.Req as R
     responseStatusCode,
     responseStatusMessage,
     runReq,
-    (/:),
+    (/:), HttpConfig (httpConfigCheckResponse),
   )
 import WebDriverPreCore.Internal.Utils (txt, prettyPrintJson)
 import E2EConst (RequestArgs (..))
@@ -125,6 +125,7 @@ import Data.Text.Lazy qualified as LT
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Base64 as B64
 import qualified Data.Base64.Types as B64T
+import WebDriverPreCore.Error (parseWebDriverError, ErrorClassification (..))
 
 
 -- ############# IO Implementation #############
@@ -357,7 +358,10 @@ parseIO :: W3Spec a -> W.HttpResponse -> IO a
 parseIO spec r =
   spec.parser r
     & \case
-      Error msg -> fail $ unpack spec.description <> "\n" <> "Failed to parse response:\n " <> msg
+      Error msg -> fail $ parseWebDriverError r & \case
+          e@NotAnError {} -> unpack spec.description <> "\n" <> "Failed to parse response:\n " <> msg <> "\nin response:" <> show e
+          e@UnrecognisedError {} -> "UnrecognisedError:\n " <> "\nin response:" <> show e
+          e@WebDriverError {} -> "WebDriver error thrown:\n " <> show e
       Success a -> pure a
 
 devLog :: Text -> IO ()
@@ -366,10 +370,13 @@ devLog = T.putStrLn
 responseStatusText :: Network.HTTP.Req.JsonResponse Value -> Text
 responseStatusText = decodeUtf8Lenient . responseStatusMessage
 
+-- \_ _ _ -> Nothing
+-- httpConfigCheckResponse
+
 callWebDriver :: Bool -> RequestArgs -> IO HttpResponse
 callWebDriver wantLog RequestParams {subDirs, method, body, port = prt} =
-  runReq defaultHttpConfig $ do
-    r <- req method url body jsonResponse $ port prt
+  runReq defaultHttpConfig  {httpConfigCheckResponse = \_ _ _ -> Nothing} $ do
+    r <- req method url body jsonResponse $ port prt 
     log $ "JSON Response:\n" <> txt r
     let fr =
           Response

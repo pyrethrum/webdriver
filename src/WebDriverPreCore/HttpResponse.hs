@@ -7,6 +7,7 @@ import Data.Text (Text)
 import Data.Int (Int)
 import GHC.Show (Show)
 import Data.Eq (Eq)
+import Data.Ord (Ord)
 
 
 data HttpResponse = Response
@@ -14,4 +15,4 @@ data HttpResponse = Response
     statusMessage :: Text,
     body :: Value
   }
-  deriving (Show, Eq)
+  deriving (Show, Eq, Ord)

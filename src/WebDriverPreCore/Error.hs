@@ -1,22 +1,25 @@
 module WebDriverPreCore.Error (
   WebDriverErrorType(..),
-  classifyError,
+  ErrorClassification(..),
   errorDescription,
-  WebDriverError(..),
-  parseWebDriverError
+  errorCodeToErrorType,
+  errorTypeToErrorCode,
+  parseWebDriverError,
+  parseWebDriverErrorType 
 ) where
 
-import Data.Aeson (Value, FromJSON (parseJSON))
+import Data.Aeson (Value, withObject)
 import Data.Aeson.Types ((.:), parseMaybe)
 import Data.Text (Text)
 import Data.Eq (Eq)
 import GHC.Show (Show)
 import Data.Ord (Ord)
-import Data.Maybe (Maybe (..), fromMaybe)
-import Data.Int (Int)
+import Data.Maybe (Maybe (..))
 import WebDriverPreCore.HttpResponse (HttpResponse (..))
-import Control.Applicative ((<$>))
+import GHC.Enum ( Bounded, Enum )
+import Data.Either (Either (..))
 import Control.Monad ((>>=))
+import Data.Function (($))
 
 {-
 Error Code 	HTTP Status 	JSON Error Code 	Description
@@ -52,7 +55,6 @@ unsupported operation 	500 	unsupported operation 	Indicates that a command that
 
 
 data WebDriverErrorType =
-  UnrecognisedError Text |
   ElementClickIntercepted |
   ElementNotInteractable |
   InsecureCertificate |
@@ -81,49 +83,84 @@ data WebDriverErrorType =
   UnknownError |
   UnknownMethod |
   UnsupportedOperation
-  deriving (Eq, Show, Ord)
+  deriving (Eq, Show, Ord, Bounded, Enum)
 
 
-classifyError :: Value -> Maybe WebDriverErrorType
-classifyError response = 
-  errorCodeToErrorType <$> (parseMaybe parseJSON response >>= parseMaybe (.: "error"))
+getError :: Value -> Maybe Text
+getError =
+  parseMaybe $ withObject "root" $ \o ->
+                      o .: "value" >>= withObject "inner" (.: "error")
+                   
 
-errorCodeToErrorType :: Text -> WebDriverErrorType
-errorCodeToErrorType = \case
-      "element click intercepted" -> ElementClickIntercepted
-      "element not interactable" -> ElementNotInteractable
-      "insecure certificate" -> InsecureCertificate
-      "invalid argument" -> InvalidArgument
-      "invalid cookie domain" -> InvalidCookieDomain
-      "invalid element state" -> InvalidElementState
-      "invalid selector" -> InvalidSelector
-      "invalid session id" -> InvalidSessionId
-      "javascript error" -> JavascriptError
-      "move target out of bounds" -> MoveTargetOutOfBounds
-      "no such alert" -> NoSuchAlert
-      "no such cookie" -> NoSuchCookie
-      "no such element" -> NoSuchElement
-      "no such frame" -> NoSuchFrame
-      "no such window" -> NoSuchWindow
-      "no such shadow root" -> NoSuchShadowRoot
-      "script timeout" -> ScriptTimeoutError
-      "session not created" -> SessionNotCreated
-      "stale element reference" -> StaleElementReference
-      "detached shadow root" -> DetachedShadowRoot
-      "timeout" -> Timeout
-      "unable to set cookie" -> UnableToSetCookie
-      "unable to capture screen" -> UnableToCaptureScreen
-      "unexpected alert open" -> UnexpectedAlertOpen
-      "unknown command" -> UnknownCommand
-      "unknown error" -> UnknownError
-      "unknown method" -> UnknownMethod
-      "unsupported operation" -> UnsupportedOperation
-      er -> UnrecognisedError er
 
+errorCodeToErrorType :: Text -> Either Text WebDriverErrorType
+errorCodeToErrorType errCode = 
+   case errCode of
+      "element click intercepted" -> r ElementClickIntercepted
+      "element not interactable" -> r ElementNotInteractable
+      "insecure certificate" -> r InsecureCertificate
+      "invalid argument" -> r InvalidArgument
+      "invalid cookie domain" -> r InvalidCookieDomain
+      "invalid element state" -> r InvalidElementState
+      "invalid selector" -> r InvalidSelector
+      "invalid session id" -> r InvalidSessionId
+      "javascript error" -> r JavascriptError
+      "move target out of bounds" -> r MoveTargetOutOfBounds
+      "no such alert" -> r NoSuchAlert
+      "no such cookie" -> r NoSuchCookie
+      "no such element" -> r NoSuchElement
+      "no such frame" -> r NoSuchFrame
+      "no such window" -> r NoSuchWindow
+      "no such shadow root" -> r NoSuchShadowRoot
+      "script timeout" -> r ScriptTimeoutError
+      "session not created" -> r SessionNotCreated
+      "stale element reference" -> r StaleElementReference
+      "detached shadow root" -> r DetachedShadowRoot
+      "timeout" -> r Timeout
+      "unable to set cookie" -> r UnableToSetCookie
+      "unable to capture screen" -> r UnableToCaptureScreen
+      "unexpected alert open" -> r UnexpectedAlertOpen
+      "unknown command" -> r UnknownCommand
+      "unknown error" -> r UnknownError
+      "unknown method" -> r UnknownMethod
+      "unsupported operation" -> r UnsupportedOperation
+      er -> Left er
+    where
+      r = Right
+
+errorTypeToErrorCode :: WebDriverErrorType -> Text
+errorTypeToErrorCode = \case
+  ElementClickIntercepted -> "element click intercepted"
+  ElementNotInteractable -> "element not interactable"
+  InsecureCertificate -> "insecure certificate"
+  InvalidArgument -> "invalid argument"
+  InvalidCookieDomain -> "invalid cookie domain"
+  InvalidElementState -> "invalid element state"
+  InvalidSelector -> "invalid selector"
+  InvalidSessionId -> "invalid session id"
+  JavascriptError -> "javascript error"
+  MoveTargetOutOfBounds -> "move target out of bounds"
+  NoSuchAlert -> "no such alert"
+  NoSuchCookie -> "no such cookie"
+  NoSuchElement -> "no such element"
+  NoSuchFrame -> "no such frame"
+  NoSuchWindow -> "no such window"
+  NoSuchShadowRoot -> "no such shadow root"
+  ScriptTimeoutError -> "script timeout"
+  SessionNotCreated -> "session not created"
+  StaleElementReference -> "stale element reference"
+  DetachedShadowRoot -> "detached shadow root"
+  Timeout -> "timeout"
+  UnableToSetCookie -> "unable to set cookie"
+  UnableToCaptureScreen -> "unable to capture screen"
+  UnexpectedAlertOpen -> "unexpected alert open"
+  UnknownCommand -> "unknown command"
+  UnknownError -> "unknown error"
+  UnknownMethod -> "unknown method"
+  UnsupportedOperation -> "unsupported operation"
 
 errorDescription :: WebDriverErrorType -> Text
 errorDescription = \case
-  UnrecognisedError txt -> txt
   ElementClickIntercepted -> "The Element Click command could not be completed because the element receiving the events is obscuring the element that was requested clicked"
   ElementNotInteractable -> "A command could not be completed because the element is not pointer- or keyboard interactable"
   InsecureCertificate -> "Navigation caused the user agent to hit a certificate warning, which is usually the result of an expired or invalid TLS certificate"
@@ -153,26 +190,30 @@ errorDescription = \case
   UnknownMethod -> "The requested command matched a known URL but did not match any method for that URL"
   UnsupportedOperation -> "Indicates that a command that should have executed properly cannot be supported for some reason"
 
+data ErrorClassification = 
+  NotAnError {httpResponse :: HttpResponse} |
+  UnrecognisedError {httpResponse :: HttpResponse} |
+  WebDriverError {
+    error :: WebDriverErrorType,
+    description :: Text,
+    httpResponse :: HttpResponse
+    -- todo find stacktrace
+    -- stacktrace :: Maybe Text
+  } deriving (Eq, Show, Ord)
 
-data WebDriverError = MkWebDriverError {
-  error :: WebDriverErrorType,
-  description :: Text,
-  statusCode :: Int,
-  statusMessage :: Text,
-  body :: Value,
-  stacktrace :: Maybe Text
-} deriving (Eq, Show, Ord)
+parseWebDriverError :: HttpResponse -> ErrorClassification
+parseWebDriverError resp = 
+  case getError resp.body of
+    Nothing -> NotAnError resp
+    Just err -> 
+      case errorCodeToErrorType err of
+        Right et -> WebDriverError et (errorDescription et) resp
+        Left _ -> UnrecognisedError resp
 
-parseWebDriverError ::  HttpResponse -> Maybe WebDriverError
-parseWebDriverError (Response statusCode statusMessage body) =
-  (\et -> MkWebDriverError {
-    error = et,
-    description = fromMaybe "Unknown Error" desc,
-    statusCode = statusCode,
-    statusMessage = statusMessage,
-    body = body,
-    stacktrace = Nothing
-  }) <$> errorType
-  where
-    errorType = classifyError body
-    desc = errorDescription <$> errorType
+parseWebDriverErrorType :: HttpResponse -> Maybe WebDriverErrorType
+parseWebDriverErrorType resp = 
+  case parseWebDriverError resp of
+    WebDriverError {error} -> Just error
+    NotAnError {} -> Nothing
+    UnrecognisedError {} -> Nothing
+  

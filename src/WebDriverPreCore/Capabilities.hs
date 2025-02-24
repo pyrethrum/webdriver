@@ -47,7 +47,7 @@ import Control.Monad (Monad(..), MonadFail (..))
 import Data.Semigroup (Semigroup(..))
 
 {- references:
-- https://www.w3.org/TR/webdriver2/#capabilities
+- https://https://www.w3.org/TR/2025/WD-webdriver2-20250210/#capabilities
 
  - https://developer.mozilla.org/en-US/docs/Web/WebDriver/Capabilities
  - https://mucsi96.gitbook.io/w3c-webdriver/capabilities
