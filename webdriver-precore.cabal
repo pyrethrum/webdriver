@@ -91,7 +91,9 @@ common commonGhcOptions
     -haddock
 
  -- -fdefer-type-errors
-tested-with: GHC ==9.8.2
+tested-with: 
+  GHC ==9.8.2
+  GHC ==9.10.1
 
 library
   import: commonExtensions, commonGhcOptions
