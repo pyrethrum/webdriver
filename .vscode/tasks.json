@@ -44,6 +44,22 @@
         "showReuseMessage": false
       },
       "problemMatcher": []
+    },
+    {
+      "label": "build haddock",
+      "type": "shell",
+      "command": "cabal",
+      "args": [
+        "haddock",
+        // open does not work in task but does in terminal
+        "--open"
+      ],
+      "presentation": {
+        "reveal": "always",
+        "panel": "new",
+        "showReuseMessage": true
+      },
+      "problemMatcher": []
     }
   ]
 }

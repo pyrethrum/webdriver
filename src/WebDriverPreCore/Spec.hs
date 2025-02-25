@@ -1,12 +1,5 @@
 {-|
 Module      : W
-Description : Short description
-Copyright   : (c) Some Person, 2013
-                  Someone Else, 2014
-License     : GPL-3
-Maintainer  : sample@email.com
-Stability   : experimental
-Portability : POSIX
 
 Here is a longer description of this module, containing some
 commentary with @some markup@.
@@ -14,79 +7,51 @@ commentary with @some markup@.
 module WebDriverPreCore.Spec
   ( 
     --- types
-    W3Spec (..),
-    HttpResponse (..),
-    ElementId (..),
-    SessionId (..),
+    Cookie (..),
     DriverStatus (..),
+    ElementId (..),
+    FrameReference (..),
+    HttpResponse (..),
     SameSite (..),
     Selector (..),
-    Cookie (..),
+    SessionId (..),
     Timeouts (..),
-    WindowHandleSpec (..),
+    W3Spec (..),
     WindowHandle (..),
-    FrameReference (..),
+    WindowHandleSpec (..),
     WindowRect (..),
 
     --- action types
-    PointerOrigin (..),
     Action (..),
     Actions (..),
     KeyAction (..),
     Pointer (..),
     PointerAction (..),
+    PointerOrigin (..),
     WheelAction (..),
 
     --- Specs
+    -- Root Methods
+    newSession,
+    newSession',
     status,
-    maximizeWindow,
-    minimizeWindow,
-    fullscreenWindow,
+
+    -- Session Methods
+    deleteSession,
     getTimeouts,
     setTimeouts,
-    switchToFrame,
+    navigateTo,
     getCurrentUrl,
-    findElementFromElement,
-    findElementsFromElement,
-    findElements,
-    getTitle,
-    getWindowHandle,
-    isElementSelected,
-    closeWindow,
     back,
     forward,
     refresh,
-    newSession,
-    newSession',
-    deleteSession,
-    getActiveElement,
-    getWindowHandles,
+    getTitle,
+    getWindowHandle,
     newWindow,
+    closeWindow,
     switchToWindow,
-    navigateTo,
-    findElement,
-    getWindowRect,
-    elementClick,
-    getElementText,
-    switchToParentFrame,
-    getElementProperty,
-    getElementAttribute,
-    getElementCssValue,
-    setWindowRect,
-    findElementsFromShadowRoot,
-    getElementShadowRoot,
-    findElementFromShadowRoot,
-    getElementTagName,
-    getElementRect,
-    isElementEnabled,
-    getElementComputedRole,
-    getElementComputedLabel,
-    elementClear,
-    elementSendKeys,
+    switchToFrame,
     getPageSource,
-    takeScreenshot,
-    takeElementScreenshot,
-    printPage,
     executeScript,
     executeScriptAsync,
     getAllCookies,
@@ -94,12 +59,53 @@ module WebDriverPreCore.Spec
     addCookie,
     deleteCookie,
     deleteAllCookies,
+    performActions,
+    releaseActions,
     dismissAlert,
     acceptAlert,
     getAlertText,
     sendAlertText,
-    performActions,
-    releaseActions,
+    takeScreenshot,
+    printPage,
+
+    -- Window Methods
+    getWindowHandles,
+    getWindowRect,
+    setWindowRect,
+    maximizeWindow,
+    minimizeWindow,
+    fullscreenWindow,
+
+    -- Frame Methods
+    switchToParentFrame,
+
+    -- Element(s) Methods
+    getActiveElement,
+    findElement,
+    findElements,
+
+    -- Element Instance Methods
+    getElementShadowRoot,
+    findElementFromElement,
+    findElementsFromElement,
+    isElementSelected,
+    getElementAttribute,
+    getElementProperty,
+    getElementCssValue,
+    getElementText,
+    getElementTagName,
+    getElementRect,
+    isElementEnabled,
+    getElementComputedRole,
+    getElementComputedLabel,
+    elementClick,
+    elementClear,
+    elementSendKeys,
+    takeElementScreenshot,
+
+    -- Shadow DOM Methods
+    findElementFromShadowRoot,
+    findElementsFromShadowRoot
   )
 where
 
@@ -376,11 +382,11 @@ POST 	/session/{session id}/print 	Print Page
 
 -- POST 	/session 	New Session
 newSession :: FullCapabilities -> W3Spec SessionId
-newSession capabilities = newSession' $ toJSON capabilities
+newSession = newSession' 
 
 -- POST 	/session 	New Session
-newSession' :: Value -> W3Spec SessionId
-newSession' capabilities = Post "New Session" [session] capabilities parseSessionRef
+newSession' :: ToJSON a => a -> W3Spec SessionId
+newSession' capabilities = Post "New Session" [session] (toJSON capabilities) parseSessionRef
 
 -- GET 	/status 	Status
 status :: W3Spec DriverStatus
