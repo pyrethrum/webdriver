@@ -1,5 +1,7 @@
 module WebDriverPreCore.Spec
-  ( W3Spec (..),
+  ( 
+    --- types
+    W3Spec (..),
     HttpResponse (..),
     ElementId (..),
     SessionId (..),
@@ -12,7 +14,8 @@ module WebDriverPreCore.Spec
     WindowHandle (..),
     FrameReference (..),
     WindowRect (..),
-    --- actions
+
+    --- action types
     PointerOrigin (..),
     Action (..),
     Actions (..),
@@ -20,6 +23,7 @@ module WebDriverPreCore.Spec
     Pointer (..),
     PointerAction (..),
     WheelAction (..),
+
     --- Specs
     status,
     maximizeWindow,
@@ -354,7 +358,10 @@ POST 	/session/{session id}/print 	Print Page
 -- 61 endpoints
 -- Method 	URI Template 	Command
 
--- -- TODO: native capabilities type - change this to use type
+
+-- ############################ Root Methods ##########################################
+
+-- POST 	/session 	New Session
 newSession :: FullCapabilities -> W3Spec SessionId
 newSession capabilities = newSession' $ toJSON capabilities
 
@@ -362,13 +369,15 @@ newSession capabilities = newSession' $ toJSON capabilities
 newSession' :: Value -> W3Spec SessionId
 newSession' capabilities = Post "New Session" [session] capabilities parseSessionRef
 
--- DELETE 	/session/{session id} 	Delete Session
-deleteSession :: SessionId -> W3Spec ()
-deleteSession sessionRef = Delete "Delete Session" (sessionUri sessionRef.id) voidParser
-
 -- GET 	/status 	Status
 status :: W3Spec DriverStatus
 status = Get "Status" ["status"] parseDriverStatus
+
+-- ############################ Session Methods ##########################################
+
+-- DELETE 	/session/{session id} 	Delete Session
+deleteSession :: SessionId -> W3Spec ()
+deleteSession sessionRef = Delete "Delete Session" (sessionUri sessionRef.id) voidParser
 
 -- GET 	/session/{session id}/timeouts 	Get Timeouts
 getTimeouts :: SessionId -> W3Spec Timeouts
@@ -419,125 +428,14 @@ closeWindow sessionRef = Delete "Close Window" (sessionUri1 sessionRef "window")
 switchToWindow :: SessionId -> WindowHandle -> W3Spec ()
 switchToWindow sessionRef Handle {handle} = Post "Switch To Window" (sessionUri1 sessionRef "window") (object ["handle" .= handle]) voidParser
 
--- GET 	/session/{session id}/window/handles 	Get Window Handles
-getWindowHandles :: SessionId -> W3Spec [WindowHandle]
-getWindowHandles sessionRef = Get "Get Window Handles" (sessionUri2 sessionRef "window" "handles") windowHandlesParser
-
 -- POST 	/session/{session id}/frame 	Switch To Frame
 switchToFrame :: SessionId -> FrameReference -> W3Spec ()
 switchToFrame sessionRef frameRef = Post "Switch To Frame" (sessionUri1 sessionRef "frame") (frameJson frameRef) voidParser
 
--- POST 	/session/{session id}/frame/parent 	Switch To Parent Frame
-switchToParentFrame :: SessionId -> W3Spec ()
-switchToParentFrame sessionRef = PostEmpty "Switch To Parent Frame" (sessionUri2 sessionRef "frame" "parent") voidParser
-
--- GET 	/session/{session id}/window/rect 	Get Window Rect
-getWindowRect :: SessionId -> W3Spec WindowRect
-getWindowRect sessionRef = Get "Get Window Rect" (sessionUri2 sessionRef "window" "rect") parseWindowRect
-
--- POST 	/session/{session id}/window/rect 	Set Window Rect
-setWindowRect :: SessionId -> WindowRect -> W3Spec WindowRect
-setWindowRect sessionRef rect = Post "Set Window Rect" (sessionUri2 sessionRef "window" "rect") (toJSON rect) parseWindowRect
-
--- POST 	/session/{session id}/window/maximize 	Maximize
-maximizeWindow :: SessionId -> W3Spec WindowRect
-maximizeWindow sessionRef = PostEmpty "Maximize Window" (windowUri1 sessionRef "maximize") parseWindowRect
-
--- POST 	/session/{session id}/window/minimize 	Minimize Window
-minimizeWindow :: SessionId -> W3Spec WindowRect
-minimizeWindow sessionRef = PostEmpty "Minimize Window" (windowUri1 sessionRef "minimize") parseWindowRect
-
--- POST 	/session/{session id}/window/fullscreen 	Fullscreen Window
-fullscreenWindow :: SessionId -> W3Spec WindowRect
-fullscreenWindow sessionRef = PostEmpty "Fullscreen Window" (windowUri1 sessionRef "fullscreen") parseWindowRect
-
--- GET 	/session/{session id}/element/active 	Get Active Element
-getActiveElement :: SessionId -> W3Spec ElementId
-getActiveElement sessionId = Get "Get Active Element" (sessionUri2 sessionId "element" "active") parseElementRef
-
--- GET 	/session/{session id}/element/{element id}/shadow 	Get Element Shadow Root
-getElementShadowRoot :: SessionId -> ElementId -> W3Spec ElementId
-getElementShadowRoot sessionId elementId = Get "Get Element Shadow Root" (elementUri1 sessionId elementId "shadow") parseShadowElementRef
-
--- POST 	/session/{session id}/element 	Find Element
-findElement :: SessionId -> Selector -> W3Spec ElementId
-findElement sessionRef = findElement' sessionRef . selectorJson
-
--- POST 	/session/{session id}/elements 	Find Elements
-findElements :: SessionId -> Selector -> W3Spec [ElementId]
-findElements sessionRef selector = Post "Find Elements" (sessionUri1 sessionRef "elements") (selectorJson selector) parseElementsRef
-
--- POST 	/session/{session id}/element/{element id}/element 	Find Element From Element
-findElementFromElement :: SessionId -> ElementId -> Selector -> W3Spec ElementId
-findElementFromElement sessionId elementId selector = Post "Find Element From Element" (elementUri1 sessionId elementId "element") (selectorJson selector) parseElementRef
-
--- POST 	/session/{session id}/element/{element id}/elements 	Find Elements From Element
-findElementsFromElement :: SessionId -> ElementId -> Selector -> W3Spec [ElementId]
-findElementsFromElement sessionId elementId selector = Post "Find Elements From Element" (elementUri1 sessionId elementId "elements") (selectorJson selector) parseElementsRef
-
--- POST 	/session/{session id}/shadow/{shadow id}/element 	Find Element From Shadow Root
-findElementFromShadowRoot :: SessionId -> ElementId -> Selector -> W3Spec ElementId
-findElementFromShadowRoot sessionId shadowId selector = Post "Find Element From Shadow Root" (sessionUri3 sessionId "shadow" shadowId.id "element") (selectorJson selector) parseElementRef
-
--- POST 	/session/{session id}/shadow/{shadow id}/elements 	Find Elements From Shadow Root
-findElementsFromShadowRoot :: SessionId -> ElementId -> Selector -> W3Spec [ElementId]
-findElementsFromShadowRoot sessionId shadowId selector = Post "Find Elements From Shadow Root" (sessionUri3 sessionId "shadow" shadowId.id "elements") (selectorJson selector) parseElementsRef
-
--- GET 	/session/{session id}/element/{element id}/selected 	Is Element Selected
-isElementSelected :: SessionId -> ElementId -> W3Spec Bool
-isElementSelected sessionId elementId = Get "Is Element Selected" (elementUri1 sessionId elementId "selected") parseBodyBool
-
--- GET 	/session/{session id}/element/{element id}/attribute/{name} 	Get Element Attribute
-getElementAttribute :: SessionId -> ElementId -> Text -> W3Spec Text
-getElementAttribute sessionId elementId attributeName = Get "Get Element Attribute" (elementUri2 sessionId elementId "attribute" attributeName) parseBodyTxt
-
--- GET 	/session/{session id}/element/{element id}/property/{name} 	Get Element Property
-getElementProperty :: SessionId -> ElementId -> Text -> W3Spec Value
-getElementProperty sessionId elementId propertyName = Get "Get Element Property" (elementUri2 sessionId elementId "property" propertyName) bodyValue
-
--- GET 	/session/{session id}/element/{element id}/css/{property name} 	Get Element CSS Value
-getElementCssValue :: SessionId -> ElementId -> Text -> W3Spec Text
-getElementCssValue sessionId elementId propertyName = Get "Get Element CSS Value" (elementUri2 sessionId elementId "css" propertyName) parseBodyTxt
-
--- GET 	/session/{session id}/element/{element id}/text 	Get Element Text
-getElementText :: SessionId -> ElementId -> W3Spec Text
-getElementText sessionId elementId = Get "Get Element Text" (elementUri1 sessionId elementId "text") parseBodyTxt
-
--- GET 	/session/{session id}/element/{element id}/name 	Get Element Tag Name
-getElementTagName :: SessionId -> ElementId -> W3Spec Text
-getElementTagName sessionId elementId = Get "Get Element Tag Name" (elementUri1 sessionId elementId "name") parseBodyTxt
-
--- GET 	/session/{session id}/element/{element id}/rect 	Get Element Rect
-getElementRect :: SessionId -> ElementId -> W3Spec WindowRect
-getElementRect sessionId elementId = Get "Get Element Rect" (elementUri1 sessionId elementId "rect") parseWindowRect
-
--- GET 	/session/{session id}/element/{element id}/enabled 	Is Element Enabled
-isElementEnabled :: SessionId -> ElementId -> W3Spec Bool
-isElementEnabled sessionId elementId = Get "Is Element Enabled" (elementUri1 sessionId elementId "enabled") parseBodyBool
-
--- GET 	/session/{session id}/element/{element id}/computedrole 	Get Computed Role
-getElementComputedRole :: SessionId -> ElementId -> W3Spec Text
-getElementComputedRole sessionId elementId = Get "Get Computed Role" (elementUri1 sessionId elementId "computedrole") parseBodyTxt
-
--- GET 	/session/{session id}/element/{element id}/computedlabel 	Get Computed Label
-getElementComputedLabel :: SessionId -> ElementId -> W3Spec Text
-getElementComputedLabel sessionId elementId = Get "Get Computed Label" (elementUri1 sessionId elementId "computedlabel") parseBodyTxt
-
--- POST 	/session/{session id}/element/{element id}/click 	Element Click
-elementClick :: SessionId -> ElementId -> W3Spec ()
-elementClick sessionId elementId = PostEmpty "Element Click" (elementUri1 sessionId elementId "click") voidParser
-
--- POST 	/session/{session id}/element/{element id}/clear 	Element Clear
-elementClear :: SessionId -> ElementId -> W3Spec ()
-elementClear sessionId elementId = PostEmpty "Element Clear" (elementUri1 sessionId elementId "clear") voidParser
-
--- POST 	/session/{session id}/element/{element id}/value 	Element Send Keys
-elementSendKeys :: SessionId -> ElementId -> Text -> W3Spec ()
-elementSendKeys sessionId elementId keysToSend = Post "Element Send Keys" (elementUri1 sessionId elementId "value") (keysJson keysToSend) voidParser
-
 -- GET 	/session/{session id}/source 	Get Page Source
 getPageSource :: SessionId -> W3Spec Text
 getPageSource sessionId = Get "Get Page Source" (sessionUri1 sessionId "source") parseBodyTxt
+
 
 -- POST 	/session/{session id}/execute/sync 	Execute Script
 executeScript :: SessionId -> Text -> [Value] -> W3Spec Value
@@ -595,18 +493,141 @@ sendAlertText sessionId text = Post "Send Alert Text" (sessionUri2 sessionId "al
 takeScreenshot :: SessionId -> W3Spec Text
 takeScreenshot sessionId = Get "Take Screenshot" (sessionUri1 sessionId "screenshot") parseBodyTxt
 
--- GET 	/session/{session id}/element/{element id}/screenshot 	Take Element Screenshot
-takeElementScreenshot :: SessionId -> ElementId -> W3Spec Text
-takeElementScreenshot sessionId elementId = Get "Take Element Screenshot" (elementUri1 sessionId elementId "screenshot") parseBodyTxt
-
 -- POST 	/session/{session id}/print 	Print Page
 printPage :: SessionId -> W3Spec Text
 printPage sessionId = PostEmpty "Print Page" (sessionUri1 sessionId "print") parseBodyTxt
 
+
+-- ############################ Window Methods ##########################################
+
+-- GET 	/session/{session id}/window/handles 	Get Window Handles
+getWindowHandles :: SessionId -> W3Spec [WindowHandle]
+getWindowHandles sessionRef = Get "Get Window Handles" (sessionUri2 sessionRef "window" "handles") windowHandlesParser
+
+-- GET 	/session/{session id}/window/rect 	Get Window Rect
+getWindowRect :: SessionId -> W3Spec WindowRect
+getWindowRect sessionRef = Get "Get Window Rect" (sessionUri2 sessionRef "window" "rect") parseWindowRect
+
+-- POST 	/session/{session id}/window/rect 	Set Window Rect
+setWindowRect :: SessionId -> WindowRect -> W3Spec WindowRect
+setWindowRect sessionRef rect = Post "Set Window Rect" (sessionUri2 sessionRef "window" "rect") (toJSON rect) parseWindowRect
+
+-- POST 	/session/{session id}/window/maximize 	Maximize
+maximizeWindow :: SessionId -> W3Spec WindowRect
+maximizeWindow sessionRef = PostEmpty "Maximize Window" (windowUri1 sessionRef "maximize") parseWindowRect
+
+-- POST 	/session/{session id}/window/minimize 	Minimize Window
+minimizeWindow :: SessionId -> W3Spec WindowRect
+minimizeWindow sessionRef = PostEmpty "Minimize Window" (windowUri1 sessionRef "minimize") parseWindowRect
+
+-- POST 	/session/{session id}/window/fullscreen 	Fullscreen Window
+fullscreenWindow :: SessionId -> W3Spec WindowRect
+fullscreenWindow sessionRef = PostEmpty "Fullscreen Window" (windowUri1 sessionRef "fullscreen") parseWindowRect
+
+-- ############################ Frame Methods ##########################################
+
+-- POST 	/session/{session id}/frame/parent 	Switch To Parent Frame
+switchToParentFrame :: SessionId -> W3Spec ()
+switchToParentFrame sessionRef = PostEmpty "Switch To Parent Frame" (sessionUri2 sessionRef "frame" "parent") voidParser
+
+-- ############################ Element(s) Methods ##########################################
+
+-- GET 	/session/{session id}/element/active 	Get Active Element
+getActiveElement :: SessionId -> W3Spec ElementId
+getActiveElement sessionId = Get "Get Active Element" (sessionUri2 sessionId "element" "active") parseElementRef
+
+-- POST 	/session/{session id}/element 	Find Element
+findElement :: SessionId -> Selector -> W3Spec ElementId
+findElement sessionRef = findElement' sessionRef . selectorJson
+
+-- POST 	/session/{session id}/elements 	Find Elements
+findElements :: SessionId -> Selector -> W3Spec [ElementId]
+findElements sessionRef selector = Post "Find Elements" (sessionUri1 sessionRef "elements") (selectorJson selector) parseElementsRef
+
+-- ############################ Element Instance Methods ##########################################
+
+-- GET 	/session/{session id}/element/{element id}/shadow 	Get Element Shadow Root
+getElementShadowRoot :: SessionId -> ElementId -> W3Spec ElementId
+getElementShadowRoot sessionId elementId = Get "Get Element Shadow Root" (elementUri1 sessionId elementId "shadow") parseShadowElementRef
+
+-- POST 	/session/{session id}/element/{element id}/element 	Find Element From Element
+findElementFromElement :: SessionId -> ElementId -> Selector -> W3Spec ElementId
+findElementFromElement sessionId elementId selector = Post "Find Element From Element" (elementUri1 sessionId elementId "element") (selectorJson selector) parseElementRef
+
+-- POST 	/session/{session id}/element/{element id}/elements 	Find Elements From Element
+findElementsFromElement :: SessionId -> ElementId -> Selector -> W3Spec [ElementId]
+findElementsFromElement sessionId elementId selector = Post "Find Elements From Element" (elementUri1 sessionId elementId "elements") (selectorJson selector) parseElementsRef
+
+-- GET 	/session/{session id}/element/{element id}/selected 	Is Element Selected
+isElementSelected :: SessionId -> ElementId -> W3Spec Bool
+isElementSelected sessionId elementId = Get "Is Element Selected" (elementUri1 sessionId elementId "selected") parseBodyBool
+
+-- GET 	/session/{session id}/element/{element id}/attribute/{name} 	Get Element Attribute
+getElementAttribute :: SessionId -> ElementId -> Text -> W3Spec Text
+getElementAttribute sessionId elementId attributeName = Get "Get Element Attribute" (elementUri2 sessionId elementId "attribute" attributeName) parseBodyTxt
+
+-- GET 	/session/{session id}/element/{element id}/property/{name} 	Get Element Property
+getElementProperty :: SessionId -> ElementId -> Text -> W3Spec Value
+getElementProperty sessionId elementId propertyName = Get "Get Element Property" (elementUri2 sessionId elementId "property" propertyName) bodyValue
+
+-- GET 	/session/{session id}/element/{element id}/css/{property name} 	Get Element CSS Value
+getElementCssValue :: SessionId -> ElementId -> Text -> W3Spec Text
+getElementCssValue sessionId elementId propertyName = Get "Get Element CSS Value" (elementUri2 sessionId elementId "css" propertyName) parseBodyTxt
+
+-- GET 	/session/{session id}/element/{element id}/text 	Get Element Text
+getElementText :: SessionId -> ElementId -> W3Spec Text
+getElementText sessionId elementId = Get "Get Element Text" (elementUri1 sessionId elementId "text") parseBodyTxt
+
+-- GET 	/session/{session id}/element/{element id}/name 	Get Element Tag Name
+getElementTagName :: SessionId -> ElementId -> W3Spec Text
+getElementTagName sessionId elementId = Get "Get Element Tag Name" (elementUri1 sessionId elementId "name") parseBodyTxt
+
+-- GET 	/session/{session id}/element/{element id}/rect 	Get Element Rect
+getElementRect :: SessionId -> ElementId -> W3Spec WindowRect
+getElementRect sessionId elementId = Get "Get Element Rect" (elementUri1 sessionId elementId "rect") parseWindowRect
+
+-- GET 	/session/{session id}/element/{element id}/enabled 	Is Element Enabled
+isElementEnabled :: SessionId -> ElementId -> W3Spec Bool
+isElementEnabled sessionId elementId = Get "Is Element Enabled" (elementUri1 sessionId elementId "enabled") parseBodyBool
+
+-- GET 	/session/{session id}/element/{element id}/computedrole 	Get Computed Role
+getElementComputedRole :: SessionId -> ElementId -> W3Spec Text
+getElementComputedRole sessionId elementId = Get "Get Computed Role" (elementUri1 sessionId elementId "computedrole") parseBodyTxt
+
+-- GET 	/session/{session id}/element/{element id}/computedlabel 	Get Computed Label
+getElementComputedLabel :: SessionId -> ElementId -> W3Spec Text
+getElementComputedLabel sessionId elementId = Get "Get Computed Label" (elementUri1 sessionId elementId "computedlabel") parseBodyTxt
+
+-- POST 	/session/{session id}/element/{element id}/click 	Element Click
+elementClick :: SessionId -> ElementId -> W3Spec ()
+elementClick sessionId elementId = PostEmpty "Element Click" (elementUri1 sessionId elementId "click") voidParser
+
+-- POST 	/session/{session id}/element/{element id}/clear 	Element Clear
+elementClear :: SessionId -> ElementId -> W3Spec ()
+elementClear sessionId elementId = PostEmpty "Element Clear" (elementUri1 sessionId elementId "clear") voidParser
+
+-- POST 	/session/{session id}/element/{element id}/value 	Element Send Keys
+elementSendKeys :: SessionId -> ElementId -> Text -> W3Spec ()
+elementSendKeys sessionId elementId keysToSend = Post "Element Send Keys" (elementUri1 sessionId elementId "value") (keysJson keysToSend) voidParser
+
+-- GET 	/session/{session id}/element/{element id}/screenshot 	Take Element Screenshot
+takeElementScreenshot :: SessionId -> ElementId -> W3Spec Text
+takeElementScreenshot sessionId elementId = Get "Take Element Screenshot" (elementUri1 sessionId elementId "screenshot") parseBodyTxt
+
+-- ############################ Shadow DOM Methods ##########################################
+
+-- POST 	/session/{session id}/shadow/{shadow id}/element 	Find Element From Shadow Root
+findElementFromShadowRoot :: SessionId -> ElementId -> Selector -> W3Spec ElementId
+findElementFromShadowRoot sessionId shadowId selector = Post "Find Element From Shadow Root" (sessionUri3 sessionId "shadow" shadowId.id "element") (selectorJson selector) parseElementRef
+
+-- POST 	/session/{session id}/shadow/{shadow id}/elements 	Find Elements From Shadow Root
+findElementsFromShadowRoot :: SessionId -> ElementId -> Selector -> W3Spec [ElementId]
+findElementsFromShadowRoot sessionId shadowId selector = Post "Find Elements From Shadow Root" (sessionUri3 sessionId "shadow" shadowId.id "elements") (selectorJson selector) parseElementsRef
+
+-- ############################ Utils ##########################################
+
 findElement' :: SessionId -> Value -> W3Spec ElementId
 findElement' sessionRef selector = Post "Find Element" (sessionUri1 sessionRef "element") selector parseElementRef
-
--- #### Utils ####
 
 data WindowRect = Rect
   { x :: Int,
