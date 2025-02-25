@@ -37,10 +37,11 @@
       "label": "launch gecko driver",
       "type": "shell",
       "command": "pkill -f geckodriver || true  && geckodriver --log trace &",
+      "isBackground": true,
       "presentation": {
         "reveal": "always",
         "panel": "new",
-        "showReuseMessage": true
+        "showReuseMessage": false
       },
       "problemMatcher": []
     }

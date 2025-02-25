@@ -90,7 +90,6 @@ import Control.Monad (when)
 import Control.Monad.IO.Class (liftIO)
 import Data.Aeson (Result (..), Value, object)
 
-import Data.Foldable (foldl')
 import Data.Function ((&))
 import Data.Text  as T (Text, unpack)
 import Data.Text.Encoding (decodeUtf8Lenient)
