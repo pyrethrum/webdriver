@@ -1,5 +1,3 @@
-{-# LANGUAGE UndecidableInstances #-}
-
 module WebDriverPreCore.Spec
   ( W3Spec (..),
     HttpResponse (..),

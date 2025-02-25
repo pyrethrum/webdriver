@@ -129,6 +129,9 @@ import Prelude hiding (log)
 import Control.Exception (bracket)
 import GHC.IO (catchAny)
 
+useCustomProfile :: Bool
+useCustomProfile = True
+
 logTxt :: Text -> IO ()
 logTxt = TIO.putStrLn
 
@@ -198,8 +201,6 @@ capsWithCustomFirefoxProfile = do
 
 mkExtendedTimeoutsSession :: IO SessionId
 mkExtendedTimeoutsSession = do
-  let useCustomProfile = True
-
   ses <-
     if useCustomProfile
       then do

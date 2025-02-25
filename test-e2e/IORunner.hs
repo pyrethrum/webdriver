@@ -127,6 +127,8 @@ import qualified Data.ByteString.Base64 as B64
 import qualified Data.Base64.Types as B64T
 import WebDriverPreCore.Error (parseWebDriverError, ErrorClassification (..))
 
+wantConsoleLogging :: Bool
+wantConsoleLogging = True
 
 -- ############# IO Implementation #############
 
@@ -321,19 +323,15 @@ releaseActions = run . W.releaseActions
 sleepMs :: Int -> IO ()
 sleepMs = threadDelay . (* 1_000)
 
-debug :: Bool
-debug = True
-
 -- Returns the Base64-encoded bytestring of the file content.
 encodeFileToBase64 :: FilePath -> IO Text
 encodeFileToBase64 filePath = do
     contents <- BS.readFile filePath
     pure . B64T.extractBase64 $ B64.encodeBase64 contents
 
--- no console out for "production"
 run :: (Show a) => W3Spec a -> IO a
 run spec = do
-  when debug $ do
+  when wantConsoleLogging $ do
     devLog "Request"
     devLog . txt $ spec
     case spec of
@@ -345,7 +343,7 @@ run spec = do
         T.putStrLn ( LT.toStrict $ encodeToLazyText body)
       PostEmpty {} -> pure ()
       Delete {} -> pure ()
-  callWebDriver debug (mkRequest spec) >>= parseIO spec
+  callWebDriver wantConsoleLogging (mkRequest spec) >>= parseIO spec
 
 mkRequest :: forall a. W3Spec a -> RequestArgs
 mkRequest = \case
@@ -369,9 +367,6 @@ devLog = T.putStrLn
 
 responseStatusText :: Network.HTTP.Req.JsonResponse Value -> Text
 responseStatusText = decodeUtf8Lenient . responseStatusMessage
-
--- \_ _ _ -> Nothing
--- httpConfigCheckResponse
 
 callWebDriver :: Bool -> RequestArgs -> IO HttpResponse
 callWebDriver wantLog RequestParams {subDirs, method, body, port = prt} =
