@@ -4,18 +4,7 @@
   "version": "2.0.0",
   "tasks": [
     {
-      "label": "ghciwatch",
-      "type": "shell",
-      "command": "ghciwatch --log-filter info --command 'cabal repl --repl-no-load' --watch src --watch test --watch test-e2e --allow-eval --clear --backtrace full",
-      "presentation": {
-        "reveal": "always",
-        "panel": "shared",
-        "showReuseMessage": false
-      },
-      "problemMatcher": []
-    },
-    {
-      "label": "cabal build",
+      "label": "build",
       "type": "shell",
       "command": "cabal",
       "args": [
@@ -29,23 +18,8 @@
       },
       "problemMatcher": []
     },
-    // {
-    //   "label": "cabal build CI",
-    //   "type": "shell",
-    //   "command": "cabal",
-    //   "args": [
-    //     "build",
-    //     "--flags='+optimised -godLibrary'"
-    //   ],
-    //   "presentation": {
-    //     "reveal": "always",
-    //     "panel": "shared",
-    //     "showReuseMessage": false
-    //   },
-    //   "problemMatcher": []
-    // },
     {
-      "label": "cabal test",
+      "label": "test",
       "type": "shell",
       "command": "cabal",
       "args": [
@@ -60,12 +34,29 @@
       "problemMatcher": []
     },
     {
-      "label": "gecko driver",
+      "label": "launch gecko driver",
       "type": "shell",
       "command": "pkill -f geckodriver || true  && geckodriver --log trace &",
+      "isBackground": true,
       "presentation": {
         "reveal": "always",
-        "panel": "shared",
+        "panel": "new",
+        "showReuseMessage": false
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "build haddock",
+      "type": "shell",
+      "command": "cabal",
+      "args": [
+        "haddock",
+        // open does not work in task but does in terminal
+        "--open"
+      ],
+      "presentation": {
+        "reveal": "always",
+        "panel": "new",
         "showReuseMessage": true
       },
       "problemMatcher": []

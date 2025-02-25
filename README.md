@@ -55,11 +55,14 @@ Setting the profile with a 64 bit encoded string did not work for me. The driver
 - [x] fix capabilities
 - [x] rename from Pyrethrum
 - [x] finish WebDriverError
-- [ ] check parser of timeouts all other parseJSON has been changed to by name
+- [x] check parser of timeouts all other parseJSON has been changed to by name
 - [ ] update readme
   - [ ] include notes on running tests and why the tests are there / what they cover
   - [ ] include notes on profile issues (firefox)
 - [ ] Haddock
+  - [ ] synopsis 
+  - [ ] description
+  - [ ] Spec et. al.
 - [x] get tests working locally again
 - [ ] CI
   - [ ] get tests and E2E working in CI
@@ -68,8 +71,9 @@ Setting the profile with a 64 bit encoded string did not work for me. The driver
   - [ ] dev-container
   - [ ] scripts
 - [ ] fork the internet into Pyrethrum org
-- [ ] update tasks
+- [x] update tasks
 - [ ] review compiler switches
 - [ ] add all to github container repo (check vs docker hub)
+- [ ] change log
 - [ ] hackage
 - [ ] stackage

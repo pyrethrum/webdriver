@@ -1,5 +1,5 @@
 packages: .
-import: https://www.stackage.org/nightly-2024-12-05/cabal.config
+import: https://www.stackage.org/nightly-2025-02-25/cabal.config
 
 multi-repl: True
 
@@ -9,18 +9,8 @@ optimization: 0
 -- semaphore: true
 -- jobs: $ncpus
 
-allow-newer: base,
-             hedgehog:barbies, 
-             bytesmith:bytestring, 
-             primitive-unlifted:bytestring, 
-             encode-string-0.1.0.0:bytestring,
-             encode-string-0.1.0.0:text,
-             discrimination:deepseq,
-             falsify:base,
-             falsify:bytestring,
-             falsify:tasty
 
 package *
- ghc-options: -haddock
-with-compiler: ghc-9.8.2
--- with-compiler: ghc-9.8.4
+ghc-options: -haddock
+with-compiler: ghc-9.10.1
+-- with-compiler: ghc-9.8.2 -- haddock not working

@@ -1,7 +1,7 @@
 module WebDriverPreCore.Capabilities
   ( 
     FullCapabilities (..),
-    StandardCapabilities (..),
+    Capabilities (..),
     UnhandledPromptBehavior (..),
     PageLoadStrategy (..),
     BrowserName (..),
@@ -33,7 +33,8 @@ import Data.Aeson.Types
     (.:),
     (.:?), genericToEncoding, defaultOptions, Encoding,
   )
-import Data.Bool (bool, Bool)
+import Data.Bool (Bool, bool)
+import Data.Functor ((<$>))
 import Data.Maybe (catMaybes, Maybe (..), maybe)
 import Data.Text (Text)
 import GHC.Generics (Generic)
@@ -42,8 +43,7 @@ import Data.Int (Int)
 import GHC.Show (Show (..))
 import Data.Eq (Eq)
 import Data.Function (($))
-import Data.Functor ((<$>))
-import Control.Monad (Monad(..), MonadFail (..))
+import Control.Monad (MonadFail (..), Monad ((>>=)))
 import Data.Semigroup (Semigroup(..))
 
 {- references:
@@ -56,8 +56,8 @@ import Data.Semigroup (Semigroup(..))
 
 data MatchCapabilities = MkMatchCapabilities
    { 
-    alwaysMatch :: Maybe StandardCapabilities,
-    firstMatch :: [StandardCapabilities]
+    alwaysMatch :: Maybe Capabilities,
+    firstMatch :: [Capabilities]
   }
   deriving (Show, Generic)
 
@@ -82,9 +82,9 @@ minFullCapabilities browserName =
       firstMatch = []
     }
 
-minStandardCapabilities :: BrowserName -> StandardCapabilities
+minStandardCapabilities :: BrowserName -> Capabilities
 minStandardCapabilities browserName =
-  MkStandardCapabilities
+  MkCapabilities
     { browserName = Just browserName,
       browserVersion = Nothing,
       platformName = Nothing,
@@ -135,7 +135,7 @@ data PlatformName
   deriving (Show, Generic)
 
 -- Core Capabilities
-data StandardCapabilities = MkStandardCapabilities
+data Capabilities = MkCapabilities
   { browserName :: Maybe BrowserName,
     browserVersion :: Maybe Text,
     platformName :: Maybe PlatformName,
@@ -166,9 +166,10 @@ instance ToJSON SocksProxy where
 instance FromJSON SocksProxy where
   parseJSON :: Value -> Parser SocksProxy
   parseJSON = withObject "SocksProxy" $ \v ->
-    SocksProxy
-      <$> v .: "socksProxy"
-      <*> v .: "socksVersion"
+    do 
+      socksProxy <- v .: "socksProxy"
+      socksVersion <- v .: "socksVersion"
+      pure SocksProxy {..}
 
 data Proxy
   = Direct
@@ -264,10 +265,10 @@ instance FromJSON VendorSpecific where
     chromeOptions <|> firefoxOptions <|> safariOptions
 
 -- ToJSON Instances
-instance ToJSON StandardCapabilities where
-  toJSON :: StandardCapabilities -> Value
+instance ToJSON Capabilities where
+  toJSON :: Capabilities -> Value
   toJSON
-    MkStandardCapabilities
+    MkCapabilities
       { browserName,
         browserVersion,
         platformName,
@@ -380,21 +381,22 @@ instance FromJSON PlatformName where
     _ -> fail "Invalid PlatformName"
 
 -- FromJSON Instances for Data Structures
-instance FromJSON StandardCapabilities where
-  parseJSON :: Value -> Parser StandardCapabilities
+instance FromJSON Capabilities where
+  parseJSON :: Value -> Parser Capabilities
   parseJSON = withObject "Capabilities" $ \v ->
-    -- TODO: make by name
-    MkStandardCapabilities
-      <$> v .: "browserName"
-      <*> v .:? "browserVersion"
-      <*> v .:? "platformName"
-      <*> v .:? "acceptInsecureCerts"
-      <*> v .:? "pageLoadStrategy"
-      <*> v .:? "proxy"
-      <*> v .:? "timeouts"
-      <*> v .:? "strictFileInteractability"
-      <*> v .:? "unhandledPromptBehavior"
-      <*> parseVendorSpecific v
+    do
+      browserName <- v .: "browserName"
+      browserVersion <- v .:? "browserVersion"
+      platformName <- v .:? "platformName"
+      acceptInsecureCerts <- v .:? "acceptInsecureCerts"
+      pageLoadStrategy <- v .:? "pageLoadStrategy"
+      proxy <- v .:? "proxy"
+      timeouts <- v .:? "timeouts"
+      strictFileInteractability <- v .:? "strictFileInteractability"
+      unhandledPromptBehavior <- v .:? "unhandledPromptBehavior"
+      vendorSpecific <- parseVendorSpecific v
+      pure MkCapabilities {..}
+
 
 parseVendorSpecific :: Object -> Parser (Maybe VendorSpecific)
 parseVendorSpecific v =
@@ -415,10 +417,11 @@ data Timeouts = MkTimeouts
 instance FromJSON Timeouts where
   parseJSON :: Value -> Parser Timeouts
   parseJSON = withObject "Timeouts" $ \v ->
-    MkTimeouts
-      <$> v .:? "implicit"
-      <*> v .:? "pageLoad"
-      <*> v .:? "script"
+    do 
+      implicit <- v .:? "implicit"
+      pageLoad <- v .:? "pageLoad"
+      script <- v .:? "script"
+      pure MkTimeouts {..}
 
 instance ToJSON Timeouts where
   toJSON :: Timeouts -> Value

@@ -4,7 +4,7 @@ import WebDriverPreCore.Capabilities
   ( BrowserName (Firefox),
     FullCapabilities (..),
     MatchCapabilities (..),
-    StandardCapabilities (..),
+    Capabilities (..),
     VendorSpecific (..),
     minStandardCapabilities,
   )
@@ -129,6 +129,9 @@ import Prelude hiding (log)
 import Control.Exception (bracket)
 import GHC.IO (catchAny)
 
+useCustomProfile :: Bool
+useCustomProfile = True
+
 logTxt :: Text -> IO ()
 logTxt = TIO.putStrLn
 
@@ -163,7 +166,7 @@ capabilites as follows see (capsWithCustomFirefoxProfile):
 
 then it works.
 -}
-capsWithCustomFirefoxProfileNotWorking :: IO StandardCapabilities
+capsWithCustomFirefoxProfileNotWorking :: IO Capabilities
 capsWithCustomFirefoxProfileNotWorking = do
   profile <- encodeFileToBase64 "./test-e2e/FirefoxWebDriverProfile.zip"
   pure $
@@ -182,7 +185,7 @@ this works when the profile in: ./test-e2e/FirefoxWebDriverProfile.zip
 => is unzipped to "./test-e2e/.profile/FirefoxWebDriverProfile"
 before running any tests
 -}
-capsWithCustomFirefoxProfile :: IO StandardCapabilities
+capsWithCustomFirefoxProfile :: IO Capabilities
 capsWithCustomFirefoxProfile = do
   pure $
     (minStandardCapabilities Firefox)
@@ -198,8 +201,6 @@ capsWithCustomFirefoxProfile = do
 
 mkExtendedTimeoutsSession :: IO SessionId
 mkExtendedTimeoutsSession = do
-  let useCustomProfile = True
-
   ses <-
     if useCustomProfile
       then do
