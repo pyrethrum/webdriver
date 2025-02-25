@@ -635,11 +635,12 @@ parseTimeouts r = do
 
 parseWindowRect :: HttpResponse -> Result WindowRect
 parseWindowRect r =
-  Rect
-    <$> bdyInt "x"
-    <*> bdyInt "y"
-    <*> bdyInt "width"
-    <*> bdyInt "height"
+  do 
+    x <- bdyInt "x"
+    y <- bdyInt "y"
+    width <- bdyInt "width"
+    height <- bdyInt "height"
+    pure $ Rect {..}
   where
     bdyInt = bodyInt r
 
@@ -749,15 +750,6 @@ lookup k v = v & \case
 lookupTxt :: Key -> Value -> Result Text
 lookupTxt k v = lookup k v >>= asText
 
--- lookupBool :: Key -> Value -> Result Bool
--- lookupBool k v =
---   lookup k v >>= \case
---     Bool b -> Success b
---     _ -> aesonTypeError "Bool" v
-
--- lookupSameSite :: Key -> Value -> Result SameSite
--- lookupSameSite k v =
---   lookup k v >>= toSameSite
 
 toSameSite :: Value -> Result SameSite
 toSameSite = \case
@@ -777,7 +769,6 @@ aesonTypeError t v = Error . unpack $ aeasonTypeErrorMessage t v
 
 aesonTypeError' :: Text -> Text ->  Value -> Result a
 aesonTypeError' typ info v = Error . unpack $ aeasonTypeErrorMessage typ v <> "\n" <> info
-
 
 asText :: Value -> Result Text
 asText = \case
