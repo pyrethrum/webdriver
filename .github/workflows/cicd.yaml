@@ -39,4 +39,4 @@ jobs:
           push: true
           tags: theghostjw/webdriver-precore:${{needs.env-setup.outputs.buildid}}
           cache-from: type=registry,ref=theghostjw/webdriver-precore:buildcache
-          cache-to: type=registry,ref=theghostjw/webdriver-precore,mode=max
+          cache-to: type=registry,ref=theghostjw/webdriver-precore:buildcache,mode=max
