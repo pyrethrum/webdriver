@@ -32,7 +32,7 @@ The webdriver WC3 API represented as a Haskell type
 
 If you get an error when running tests like: **Your Firefox profile cannot be loaded. It may be missing or inaccessible.** you will need to run using a custom profile.
 
-1. unzip `./test-e2e/FirefoxWebDriverProfile.zip => to "./test-e2e/.profile/FirefoxWebDriverProfile"`
+1. unzip `./webdriver-examples/driver-demo-e2e/FirefoxWebDriverProfile.zip => to "./webdriver-examples/driver-demo-e2e/.profile/FirefoxWebDriverProfile"`
 2. ensure `useCustomProfile = True`
 
   ```haskell
@@ -72,7 +72,15 @@ Setting the profile with a 64 bit encoded string did not work for me. The driver
   - [ ] scripts
 - [ ] fork the internet into Pyrethrum org
 - [x] update tasks
+- [ ] sort out / delete misbehaving tasks (permissions)
+  - [ ] run geckodriver - doesn't work 
+  - [ ] run haddock - doesn't open in browser
+- [ ] work out whats up with the trailing fields warning on tested with
+  - [ ] meaning of tested with
+  - [ ] why warning
+- [ ] add checks for e2e when profile dir is not there
 - [ ] review compiler switches
+- [ ] review licence
 - [ ] add all to github container repo (check vs docker hub)
 - [ ] change log
 - [ ] hackage

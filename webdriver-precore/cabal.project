@@ -1,0 +1,16 @@
+packages: .
+import: https://www.stackage.org/nightly-2025-02-25/cabal.config
+
+multi-repl: True
+
+optimization: 0
+
+-- https://well-typed.com/blog/2023/08/reducing-haskell-parallel-build-times
+-- semaphore: true
+-- jobs: $ncpus
+
+
+package *
+ghc-options: -haddock
+with-compiler: ghc-9.10.1
+-- with-compiler: ghc-9.8.2 -- haddock not working

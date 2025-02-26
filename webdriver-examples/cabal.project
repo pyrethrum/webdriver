@@ -1,0 +1,8 @@
+packages: .
+   ../webdriver-precore
+   
+import: https://www.stackage.org/nightly-2025-02-25/cabal.config
+
+
+with-compiler: ghc-9.10.1
+-- with-compiler: ghc-9.8.2 -- haddock not working

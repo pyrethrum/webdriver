@@ -159,16 +159,16 @@ This fails on my machine with the following error:
 ```Your Firefox profile cannot be loaded. It may be missing or inaccessible.```
 
 This appears to be due to the profile being unpacked into tmp and the driver not being able to access it.
-If I copy the unpacked profile to "./test-e2e/.profile/FirefoxWebDriverProfile" and reference in
+If I copy the unpacked profile to "./webdriver-examples/driver-demo-e2e/.profile/FirefoxWebDriverProfile" and reference in
 capabilites as follows see (capsWithCustomFirefoxProfile):
 
-```firefoxArgs = Just ["-profile", "./test-e2e/.profile/FirefoxWebDriverProfile"]```
+```firefoxArgs = Just ["-profile", "./webdriver-examples/driver-demo-e2e/.profile/FirefoxWebDriverProfile"]```
 
 then it works.
 -}
 capsWithCustomFirefoxProfileNotWorking :: IO Capabilities
 capsWithCustomFirefoxProfileNotWorking = do
-  profile <- encodeFileToBase64 "./test-e2e/FirefoxWebDriverProfile.zip"
+  profile <- encodeFileToBase64 "./webdriver-examples/driver-demo-e2e/FirefoxWebDriverProfile.zip"
   pure $
     (minStandardCapabilities Firefox)
       { vendorSpecific =
@@ -181,8 +181,8 @@ capsWithCustomFirefoxProfileNotWorking = do
       }
 
 {-
-this works when the profile in: ./test-e2e/FirefoxWebDriverProfile.zip
-=> is unzipped to "./test-e2e/.profile/FirefoxWebDriverProfile"
+this works when the profile in: ./webdriver-examples/driver-demo-e2e/FirefoxWebDriverProfile.zip
+=> is unzipped to "/webdriver-examples/driver-demo-e2e/FirefoxWebDriverProfile"
 before running any tests
 -}
 capsWithCustomFirefoxProfile :: IO Capabilities
@@ -193,7 +193,7 @@ capsWithCustomFirefoxProfile = do
           Just
             FirefoxOptions
               { -- this works when the profile is unpacked to here
-                firefoxArgs = Just ["-profile", "./test-e2e/.profile/FirefoxWebDriverProfile"],
+                firefoxArgs = Just ["-profile", "./webdriver-examples/driver-demo-e2e/FirefoxWebDriverProfile"],
                 firefoxBinary = Nothing,
                 firefoxProfile = Nothing
               }
