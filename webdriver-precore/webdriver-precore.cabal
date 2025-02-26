@@ -1,0 +1,143 @@
+cabal-version: 3.12
+
+name:           webdriver-precore
+version:        0.0.0.1
+description:    Please see the README on GitHub at <https://github.com/pyrethrum/webdriver-precore#readme>
+homepage:       https://github.com/pyrethrum/webdriver-precore#readme
+bug-reports:    https://github.com/pyrethrum/webdriver-precore/issues
+author:         John Walker, Adrian Glouftsis
+maintainer:     theghostjw@gmail.com
+copyright:      2025 John Walker, Adrian Glouftsis
+license:        BSD-3-Clause
+license-file:   LICENSE
+build-type:     Simple
+extra-source-files:
+    README.md
+    ChangeLog.md
+
+synopsis:       The W3C WebDriver spec as a list of types functions
+
+description:
+  This library provides typed definitions for the endpoints of the @<https://www.w3.org/TR/2025/WD-webdriver2-20250210/ W3C Webdriver>@.
+  It is intended to be used as a base for other libraries that provide a more idiomatic interface to the WebDriver protocol.
+
+
+common commonExtensions
+  default-extensions:
+    AllowAmbiguousTypes
+      BangPatterns
+      BlockArguments
+      ConstrainedClassMethods
+      ConstraintKinds
+      DisambiguateRecordFields
+      DuplicateRecordFields
+      DataKinds
+      DefaultSignatures
+      DeriveFoldable
+      DeriveFunctor
+      DeriveGeneric
+      DeriveLift
+      DeriveTraversable
+      DerivingStrategies
+      EmptyCase
+      ExistentialQuantification
+      ExtendedDefaultRules
+      FlexibleContexts
+      FlexibleInstances
+      FunctionalDependencies
+      GADTs
+      GeneralizedNewtypeDeriving
+      ImportQualifiedPost
+      InstanceSigs
+      KindSignatures
+      LambdaCase
+      LiberalTypeSynonyms
+      MultiParamTypeClasses
+      MultiWayIf
+      NamedFieldPuns
+      NoFieldSelectors
+      NoImplicitPrelude
+      NumericUnderscores
+      OverloadedStrings
+      OverloadedRecordDot
+      PartialTypeSignatures
+      PatternSynonyms
+      PolyKinds
+      QuasiQuotes
+      RankNTypes
+      RecordWildCards
+      ScopedTypeVariables
+      StandaloneDeriving
+      StrictData
+      TemplateHaskell
+      TupleSections
+      TypeApplications
+      TypeFamilies
+      TypeFamilyDependencies
+      TypeOperators
+
+common commonGhcOptions
+  ghc-options:
+    -fmax-pmcheck-models=10000000 
+    -ferror-spans 
+    -O2 
+    -fprint-potential-instances 
+    -Wall 
+    -Wcompat 
+    -Wincomplete-record-updates 
+    -Wincomplete-uni-patterns 
+    -Wredundant-constraints
+    -fwarn-tabs 
+    -fwrite-ide-info 
+    -fno-warn-type-defaults 
+    -fno-warn-unused-do-bind 
+    -Wno-overlapping-patterns 
+    -fprefer-byte-code 
+    -fbyte-code-and-object-code 
+    -fno-break-points
+    -haddock
+
+ -- -fdefer-type-errors
+tested-with: GHC == { 9.8.2, 9.10.1 }
+
+library
+  import: commonExtensions, commonGhcOptions
+  exposed-modules:
+      WebDriverPreCore.Capabilities
+      WebDriverPreCore.Spec
+      WebDriverPreCore.Error
+      WebDriverPreCore.Internal.Utils
+  other-modules:
+      WebDriverPreCore.HttpResponse
+  hs-source-dirs: src
+  build-depends:
+    aeson         >=1.4   && <2.3, 
+    aeson-pretty  >=0.8   && <0.9,
+    base          >=4.16  && <5,
+    bytestring    >=0.10  && <0.12.3,
+    text          >=2.1   && <2.2,
+    containers    >=0.6   && <0.8
+  default-language: Haskell2010
+
+test-suite test
+  import: commonExtensions, commonGhcOptions
+  type: exitcode-stdio-1.0
+  main-is: Driver.hs
+  hs-source-dirs: test
+  build-depends:
+    , aeson
+    , base
+    , containers
+    , ghc
+    , text
+    , tasty
+    , tasty-hunit
+    , tasty-discover
+    , bytestring
+    , falsify
+    , webdriver-precore
+    , raw-strings-qq
+  other-modules:
+    ApiCoverageTest
+  build-tool-depends:
+    tasty-discover:tasty-discover

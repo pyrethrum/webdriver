@@ -9,7 +9,6 @@
       "command": "cabal",
       "args": [
         "build",
-        "all",
         "--enable-tests"
       ],
       "presentation": {
@@ -25,7 +24,6 @@
       "command": "cabal",
       "args": [
         "test",
-        "all",
         "--test-show-details=streaming"
       ],
       "presentation": {
@@ -44,24 +42,6 @@
         "reveal": "always",
         "panel": "new",
         "showReuseMessage": false
-      },
-      "problemMatcher": []
-    },
-    {
-      "label": "build haddock",
-      "type": "shell",
-      "command": "cabal",
-      "args": [
-        "haddock",
-        "all",
-        // open does not work in task but does in terminal
-        "--haddock-option=--hyperlink-source",
-        "--open"
-      ],
-      "presentation": {
-        "reveal": "always",
-        "panel": "new",
-        "showReuseMessage": true
       },
       "problemMatcher": []
     }
