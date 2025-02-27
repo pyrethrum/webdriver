@@ -13,14 +13,12 @@ license-file:   LICENSE
 build-type:     Simple
 extra-source-files:
     README.md
-    ChangeLog.md
 
 synopsis:       The W3C WebDriver spec as a list of types functions
 
 description:
   This library provides typed definitions for the endpoints of the @<https://www.w3.org/TR/2025/WD-webdriver2-20250210/ W3C Webdriver>@.
   It is intended to be used as a base for other libraries that provide a more idiomatic interface to the WebDriver protocol.
-
 
 common commonExtensions
   default-extensions:

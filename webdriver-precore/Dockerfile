@@ -23,4 +23,13 @@ RUN curl --proto '=https' --tlsv1.2 -sSf https://get-ghcup.haskell.org | \
     BOOTSTRAP_HASKELL_CABAL_VERSION=${CABAL_VERSION} \
     sh
 
+ENV PATH="/root/.ghcup/bin/:$PATH"
+
+RUN cabal install tasty-discover
+
+COPY webdriver-precore.cabal .
+RUN cabal v2-build --only-dependencies --enable-tests
+
 COPY . .
+RUN cabal v2-build \
+    && cabal test
