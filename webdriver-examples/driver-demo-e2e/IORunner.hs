@@ -384,4 +384,4 @@ callWebDriver wantLog RequestParams {path, method, body, port = prt} =
   where
     log m = liftIO $ when wantLog $ devLog m
     url :: Url 'Http
-    url =  foldl' (/:) (http "127.0.0.1") path.path
+    url =  foldl' (/:) (http "127.0.0.1") path.segments
