@@ -120,7 +120,6 @@ test-suite driver-demo-e2e
     , tasty-discover
     , bytestring
     , webdriver-precore
-    , raw-strings-qq
   other-modules:
       WebDriverE2EDemoTest
     , E2EConst

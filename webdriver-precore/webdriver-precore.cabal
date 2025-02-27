@@ -2,7 +2,6 @@ cabal-version: 3.12
 
 name:           webdriver-precore
 version:        0.0.0.1
-description:    Please see the README on GitHub at <https://github.com/pyrethrum/webdriver-precore#readme>
 homepage:       https://github.com/pyrethrum/webdriver-precore#readme
 bug-reports:    https://github.com/pyrethrum/webdriver-precore/issues
 author:         John Walker, Adrian Glouftsis
@@ -19,7 +18,7 @@ synopsis:       The W3C WebDriver spec as a list of types functions
 
 description:
   This library provides typed definitions for the endpoints of the @<https://www.w3.org/TR/2025/WD-webdriver2-20250210/ W3C Webdriver>@.
-  It is intended to be used as a base for other libraries that provide a more idiomatic interface to the WebDriver protocol.
+  It is intended to be used as a base for other libraries that provide a more convenient, idiomatic interface to the WebDriver protocol. See <https://github.com/pyrethrum/webdriver-precore#readme README> on GitHub for further details.
 
 
 common commonExtensions
@@ -133,8 +132,6 @@ test-suite test
     , tasty
     , tasty-hunit
     , tasty-discover
-    , bytestring
-    , falsify
     , webdriver-precore
     , raw-strings-qq
   other-modules:

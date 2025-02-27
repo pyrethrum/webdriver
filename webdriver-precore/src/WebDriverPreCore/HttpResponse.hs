@@ -1,4 +1,4 @@
--- | This module defines a minimal 'HttpResponse' data type, used to WebDriver responses.
+
 module WebDriverPreCore.HttpResponse (
   HttpResponse(..)
 ) where

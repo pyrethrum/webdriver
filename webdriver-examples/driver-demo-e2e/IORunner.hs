@@ -111,7 +111,7 @@ import Network.HTTP.Req as R
     responseStatusCode,
     responseStatusMessage,
     runReq,
-    (/:), HttpConfig (httpConfigCheckResponse),
+    HttpConfig (httpConfigCheckResponse), (/:),
   )
 import WebDriverPreCore.Internal.Utils (txt, prettyPrintJson)
 import E2EConst (RequestArgs (..))
@@ -368,8 +368,9 @@ responseStatusText :: Network.HTTP.Req.JsonResponse Value -> Text
 responseStatusText = decodeUtf8Lenient . responseStatusMessage
 
 callWebDriver :: Bool -> RequestArgs -> IO HttpResponse
-callWebDriver wantLog RequestParams {subDirs, method, body, port = prt} =
+callWebDriver wantLog RequestParams {path, method, body, port = prt} =
   runReq defaultHttpConfig  {httpConfigCheckResponse = \_ _ _ -> Nothing} $ do
+    log $ "URL: " <> txt url
     r <- req method url body jsonResponse $ port prt 
     log $ "JSON Response:\n" <> txt r
     let fr =
@@ -383,4 +384,4 @@ callWebDriver wantLog RequestParams {subDirs, method, body, port = prt} =
   where
     log m = liftIO $ when wantLog $ devLog m
     url :: Url 'Http
-    url = foldl' (/:) (http "127.0.0.1") subDirs
+    url =  foldl' (/:) (http "127.0.0.1") path.path

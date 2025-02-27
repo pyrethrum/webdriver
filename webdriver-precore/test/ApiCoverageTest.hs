@@ -3,7 +3,7 @@ module ApiCoverageTest where
 import WebDriverPreCore.Capabilities
     ( Timeouts(MkTimeouts), minFirefoxCapabilities )
 import Data.Set as S (Set, difference, fromList, null)
-import Data.Text as T (Text, intercalate, lines, null, pack, replace, strip, unwords, words, split)
+import Data.Text as T (Text, lines, null, pack, replace, strip, unwords, words, split, intercalate)
 import GHC.Utils.Misc (filterOut)
 import Test.Tasty.HUnit as HUnit ( assertBool, Assertion, (@=?) )
 import Text.RawString.QQ (r)
@@ -91,6 +91,7 @@ import WebDriverPreCore.Error (errorTypeToErrorCode, errorDescription, errorCode
 import WebDriverPreCore.Internal.Utils (enumerate)
 import Data.Foldable (traverse_)
 import Data.Either (either)
+import WebDriverPreCore.Spec (UrlPath(..))
 
 
 {-- TODO use Haddock variable
@@ -227,7 +228,7 @@ toSpecLine w3 = case w3 of
   Delete {} -> MkSpecLine "DELETE" path command
   where
     command = w3.description
-    path = replaceTemplateTxt $ "/" <> intercalate "/" w3.path
+    path = replaceTemplateTxt $ "/" <> intercalate "/" w3.path.path
 
 allSpecsSample :: Set SpecLine
 allSpecsSample =

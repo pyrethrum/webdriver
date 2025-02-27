@@ -1,12 +1,11 @@
-{-|
-Module      : W
-
-Here is a longer description of this module, containing some
-commentary with @some markup@.
--}
+-- |
+-- Description : All Webdriver W3C endpoints
+--
+--
+-- Here is a longer description of this module, containing some
+-- commentary with @some markup@.
 module WebDriverPreCore.Spec
-  ( 
-    --- types
+  ( --- types
     Cookie (..),
     DriverStatus (..),
     ElementId (..),
@@ -20,7 +19,7 @@ module WebDriverPreCore.Spec
     WindowHandle (..),
     WindowHandleSpec (..),
     WindowRect (..),
-
+    UrlPath (..),
     --- action types
     Action (..),
     Actions (..),
@@ -29,13 +28,11 @@ module WebDriverPreCore.Spec
     PointerAction (..),
     PointerOrigin (..),
     WheelAction (..),
-
     --- Specs
     -- Root Methods
     newSession,
     newSession',
     status,
-
     -- Session Methods
     deleteSession,
     getTimeouts,
@@ -67,7 +64,6 @@ module WebDriverPreCore.Spec
     sendAlertText,
     takeScreenshot,
     printPage,
-
     -- Window Methods
     getWindowHandles,
     getWindowRect,
@@ -75,15 +71,12 @@ module WebDriverPreCore.Spec
     maximizeWindow,
     minimizeWindow,
     fullscreenWindow,
-
     -- Frame Methods
     switchToParentFrame,
-
     -- Element(s) Methods
     getActiveElement,
     findElement,
     findElements,
-
     -- Element Instance Methods
     getElementShadowRoot,
     findElementFromElement,
@@ -102,65 +95,63 @@ module WebDriverPreCore.Spec
     elementClear,
     elementSendKeys,
     takeElementScreenshot,
-
     -- Shadow DOM Methods
     findElementFromShadowRoot,
-    findElementsFromShadowRoot
+    findElementsFromShadowRoot,
   )
 where
 
 import Data.Aeson
-  ( Key,
+  ( FromJSON (..),
+    Key,
     KeyValue ((.=)),
-    ToJSON (toJSON),
-    FromJSON(..),
-    Value (..),
-    object, 
-    fromJSON, 
     Result (..),
-    (.:),
+    ToJSON (toJSON),
+    Value (..),
+    fromJSON,
+    object,
     withObject,
-    withText
+    withText,
+    (.:),
   )
-import WebDriverPreCore.HttpResponse (HttpResponse (..))
-import Data.Aeson.Types (Parser)
 import Data.Aeson.KeyMap qualified as AKM
-import Data.Text qualified as T
-import Prelude hiding (id, lookup)
-import WebDriverPreCore.Internal.Utils (opt, txt, jsonToText, )
-import WebDriverPreCore.Capabilities (Timeouts (..), FullCapabilities)
-import Data.Text (Text, pack, unpack)
-import Data.Word (Word16)
-import Data.Set (Set)
-import GHC.Generics ( Generic )
-import Data.Maybe (catMaybes)
+import Data.Aeson.Types (Parser)
 import Data.Foldable (toList)
 import Data.Function ((&))
+import Data.Maybe (catMaybes)
+import Data.Set (Set)
+import Data.Text (Text, pack, unpack)
+import Data.Text qualified as T
+import Data.Word (Word16)
+import GHC.Generics (Generic)
+import WebDriverPreCore.Capabilities (FullCapabilities, Timeouts (..))
+import WebDriverPreCore.HttpResponse (HttpResponse (..))
+import WebDriverPreCore.Internal.Utils (jsonToText, opt, txt)
+import Prelude hiding (id, lookup)
 
-{-- TODO use Haddock variable
- Covers Spec Version https://www.w3.org/TR/2025/WD-webdriver2-20250210 
- --}
+newtype UrlPath = MkUrlPath {segments :: [Text]}
+  deriving newtype (Show, Eq, Ord, Semigroup)
 
 data W3Spec a
   = Get
       { description :: Text,
-        path :: [Text],
+        path :: UrlPath,
         parser :: HttpResponse -> Result a
       }
   | Post
       { description :: Text,
-        path :: [Text],
+        path :: UrlPath,
         body :: Value,
         parser :: HttpResponse -> Result a
       }
   | PostEmpty
       { description :: Text,
-        path :: [Text],
+        path :: UrlPath,
         parser :: HttpResponse -> Result a
       }
   | Delete
       { description :: Text,
-        path :: [Text],
+        path :: UrlPath,
         parser :: HttpResponse -> Result a
       }
 
@@ -171,15 +162,13 @@ instance (Show a) => Show (W3Spec a) where
 data W3SpecShowable = Request
   { description :: Text,
     method :: Text,
-    path :: [Text],
+    path :: UrlPath,
     body :: Maybe Text
   }
   deriving (Show)
 
-
-newtype WindowHandle =  Handle {handle :: Text}
+newtype WindowHandle = Handle {handle :: Text}
   deriving (Show, Eq)
-
 
 data WindowHandleSpec = HandleSpec
   { handle :: WindowHandle,
@@ -196,8 +185,8 @@ instance ToJSON WindowHandleSpec where
       ]
 
 instance FromJSON WindowHandleSpec where
-   parseJSON :: Value -> Parser WindowHandleSpec
-   parseJSON = withObject "WindowHandleSpec" $ \v -> do
+  parseJSON :: Value -> Parser WindowHandleSpec
+  parseJSON = withObject "WindowHandleSpec" $ \v -> do
     handle <- Handle <$> v .: "handle"
     handletype <- v .: "type"
     pure $ HandleSpec {..}
@@ -206,7 +195,6 @@ data HandleType
   = Window
   | Tab
   deriving (Show, Eq)
-
 
 instance ToJSON HandleType where
   toJSON :: HandleType -> Value
@@ -218,7 +206,6 @@ instance FromJSON HandleType where
     "window" -> pure Window
     "tab" -> pure Tab
     v -> fail $ unpack $ "Unknown HandleType " <> v
-   
 
 newtype ElementId = Element {id :: Text}
   deriving (Show, Eq, Generic)
@@ -302,7 +289,6 @@ data Selector
   | TagName Text
   deriving (Show, Eq)
 
-
 -- ######################################################################
 -- ########################### WebDriver API ############################
 -- ######################################################################
@@ -346,7 +332,7 @@ GET 	/session/{session id}/element/{element id}/attribute/{name} 	Get Element At
 GET 	/session/{session id}/element/{element id}/property/{name} 	Get Element Property
 GET 	/session/{session id}/element/{element id}/css/{property name} 	Get Element CSS Value
 GET 	/session/{session id}/element/{element id}/text 	Get Element Text
-GET 	/session/{session id}/element/{element id}/name 	Get Element Tag Name
+GET 	/session/{session id}/element/{element id}/name 	Get Element Tag Name-- [API Docs](https://www.w3.org/TR/2025/WD-webdriver2-20250210/#new-session)
 GET 	/session/{session id}/element/{element id}/rect 	Get Element Rect
 GET 	/session/{session id}/element/{element id}/enabled 	Is Element Enabled
 GET 	/session/{session id}/element/{element id}/computedrole 	Get Computed Role
@@ -377,20 +363,27 @@ POST 	/session/{session id}/print 	Print Page
 -- 61 endpoints
 -- Method 	URI Template 	Command
 
-
 -- ############################ Root Methods ##########################################
 
--- POST 	/session 	New Session
+-- |
+--
+--  The 'newSession' function returns a 'W3Spec' corresponding to the following WebDriver [API](https://www.w3.org/TR/2025/WD-webdriver2-20250210/#new-session) endpoint:
+--
+--  @POST 	/session 	New Session@
+--
+--
+--
+--  Return a spec to create a new session with the given 'FullCapabilities'.
 newSession :: FullCapabilities -> W3Spec SessionId
-newSession = newSession' 
+newSession = newSession'
 
 -- POST 	/session 	New Session
-newSession' :: ToJSON a => a -> W3Spec SessionId
-newSession' capabilities = Post "New Session" [session] (toJSON capabilities) parseSessionRef
+newSession' :: (ToJSON a) => a -> W3Spec SessionId
+newSession' capabilities = Post "New Session" (MkUrlPath [session] )(toJSON capabilities) parseSessionRef
 
 -- GET 	/status 	Status
 status :: W3Spec DriverStatus
-status = Get "Status" ["status"] parseDriverStatus
+status = Get "Status" (MkUrlPath ["status"]) parseDriverStatus
 
 -- ############################ Session Methods ##########################################
 
@@ -455,7 +448,6 @@ switchToFrame sessionRef frameRef = Post "Switch To Frame" (sessionUri1 sessionR
 getPageSource :: SessionId -> W3Spec Text
 getPageSource sessionId = Get "Get Page Source" (sessionUri1 sessionId "source") parseBodyTxt
 
-
 -- POST 	/session/{session id}/execute/sync 	Execute Script
 executeScript :: SessionId -> Text -> [Value] -> W3Spec Value
 executeScript sessionId script args = Post "Execute Script" (sessionUri2 sessionId "execute" "sync") (mkScript script args) bodyValue
@@ -515,7 +507,6 @@ takeScreenshot sessionId = Get "Take Screenshot" (sessionUri1 sessionId "screens
 -- POST 	/session/{session id}/print 	Print Page
 printPage :: SessionId -> W3Spec Text
 printPage sessionId = PostEmpty "Print Page" (sessionUri1 sessionId "print") parseBodyTxt
-
 
 -- ############################ Window Methods ##########################################
 
@@ -667,13 +658,13 @@ instance ToJSON WindowRect where
       ]
 
 parseTimeouts :: HttpResponse -> Result Timeouts
-parseTimeouts r = do 
+parseTimeouts r = do
   r' <- bodyValue r
-  fromJSON r' 
+  fromJSON r'
 
 parseWindowRect :: HttpResponse -> Result WindowRect
 parseWindowRect r =
-  do 
+  do
     x <- bdyInt "x"
     y <- bdyInt "y"
     width <- bdyInt "width"
@@ -684,7 +675,6 @@ parseWindowRect r =
 
 mkScript :: Text -> [Value] -> Value
 mkScript script args = object ["script" .= script, "args" .= args]
-
 
 windowHandleParser :: HttpResponse -> Result WindowHandleSpec
 windowHandleParser r =
@@ -706,7 +696,7 @@ parseCookies :: HttpResponse -> Result [Cookie]
 parseCookies r =
   bodyValue r
     >>= \case
-      Array a ->  mapM cookieFromBody (toList a)
+      Array a -> mapM cookieFromBody (toList a)
       v -> aesonTypeError "Array" v
 
 parseCookie :: HttpResponse -> Result Cookie
@@ -719,21 +709,20 @@ cookieFromBody b = case b of
   Object kv -> do
     name <- lookupTxt "name" b
     value <- lookupTxt "value" b
-    path <- opt' "path" 
-    domain <- opt' "domain" 
-    secure <- optBool  "secure" 
-    httpOnly <- optBool "httpOnly" 
-    sameSite <- optBase toSameSite "sameSite" 
-    expiry <- optInt "expiry" 
+    path <- opt' "path"
+    domain <- opt' "domain"
+    secure <- optBool "secure"
+    httpOnly <- optBool "httpOnly"
+    sameSite <- optBase toSameSite "sameSite"
+    expiry <- optInt "expiry"
     pure $ MkCookie {..}
-    where 
+    where
       optBase :: (Value -> Result a) -> Key -> Result (Maybe a)
       optBase typeCaster k = AKM.lookup k kv & maybe (Success Nothing) (fmap Just . typeCaster)
       opt' = optBase asText
-      optInt = optBase asInt 
+      optInt = optBase asInt
       optBool = optBase asBool
   v -> aesonTypeError "Object" v
-
 
 selectorJson :: Selector -> Value
 selectorJson = \case
@@ -781,13 +770,13 @@ parseElementsRef r =
 
 -- TODO Aeson helpers separate module
 lookup :: Key -> Value -> Result Value
-lookup k v = v & \case
-  Object o -> AKM.lookup k o & maybe (Error ("the key: " <> show k <> "does not exist in the object:\n" <> jsonPrettyString v)) pure
-  _ -> aesonTypeError "Object" v
+lookup k v =
+  v & \case
+    Object o -> AKM.lookup k o & maybe (Error ("the key: " <> show k <> "does not exist in the object:\n" <> jsonPrettyString v)) pure
+    _ -> aesonTypeError "Object" v
 
 lookupTxt :: Key -> Value -> Result Text
 lookupTxt k v = lookup k v >>= asText
-
 
 toSameSite :: Value -> Result SameSite
 toSameSite = \case
@@ -805,7 +794,7 @@ aeasonTypeErrorMessage t v = "Expected Json Value to be of type: " <> t <> "\nbu
 aesonTypeError :: Text -> Value -> Result a
 aesonTypeError t v = Error . unpack $ aeasonTypeErrorMessage t v
 
-aesonTypeError' :: Text -> Text ->  Value -> Result a
+aesonTypeError' :: Text -> Text -> Value -> Result a
 aesonTypeError' typ info v = Error . unpack $ aeasonTypeErrorMessage typ v <> "\n" <> info
 
 asText :: Value -> Result Text
@@ -848,30 +837,33 @@ elemtRefFromBody b = Element <$> lookupTxt elementFieldName b
 session :: Text
 session = "session"
 
-sessionUri :: Text -> [Text]
-sessionUri sp = [session, sp]
 
-sessionUri1 :: SessionId -> Text -> [Text]
-sessionUri1 sr sp = [session, sr.id, sp]
+sessionUri :: Text -> UrlPath
+sessionUri sp = MkUrlPath [session, sp]
 
-sessionUri2 :: SessionId -> Text -> Text -> [Text]
-sessionUri2 sr sp sp2 = [session, sr.id, sp, sp2]
+sessionUri1 :: SessionId -> Text -> UrlPath
+sessionUri1 s sp = MkUrlPath [session, s.id, sp]
 
-sessionUri3 :: SessionId -> Text -> Text -> Text -> [Text]
-sessionUri3 sr sp sp2 sp3 = [session, sr.id, sp, sp2, sp3]
+sessionUri2 :: SessionId -> Text -> Text -> UrlPath
+sessionUri2 s sp sp2 = MkUrlPath [session, s.id, sp, sp2]
+
+sessionUri3 :: SessionId -> Text -> Text -> Text -> UrlPath
+sessionUri3 s sp sp2 sp3 = MkUrlPath [session, s.id, sp, sp2, sp3]
+
+sessionUri4 :: SessionId -> Text -> Text -> Text -> Text -> UrlPath
+sessionUri4 s sp sp2 sp3 sp4 = MkUrlPath [session, s.id, sp, sp2, sp3, sp4]
 
 window :: Text
 window = "window"
 
-windowUri1 :: SessionId -> Text -> [Text]
-windowUri1 sr sp = [session, sr.id, window, sp]
+windowUri1 :: SessionId -> Text -> UrlPath
+windowUri1 sr sp = sessionUri2 sr window sp
 
-elementUri1 :: SessionId -> ElementId -> Text -> [Text]
-elementUri1 sr er sp = [session, sr.id, "element", er.id, sp]
+elementUri1 :: SessionId -> ElementId -> Text -> UrlPath
+elementUri1 s er ep = sessionUri3 s "element" er.id ep
 
-elementUri2 :: SessionId -> ElementId -> Text -> Text -> [Text]
-elementUri2 sr er sp sp2 = [session, sr.id, "element", er.id, sp, sp2]
-
+elementUri2 :: SessionId -> ElementId -> Text -> Text -> UrlPath
+elementUri2 s er ep ep2 = sessionUri4 s "element" er.id ep  ep2
 
 jsonPrettyString :: Value -> String
 jsonPrettyString = unpack . jsonToText
@@ -908,12 +900,10 @@ actionsToJson MkActions {actions} =
 data KeyAction
   = PauseKey {duration :: Maybe Int} -- ms
   | KeyDown
-      { 
-        value :: Text
+      { value :: Text
       }
   | KeyUp
-      { 
-        value :: Text
+      { value :: Text
       }
   deriving (Show, Eq)
 
@@ -923,7 +913,7 @@ instance ToJSON KeyAction where
     object $
       [ "type" .= ("pause" :: Text)
       ]
-      <> catMaybes [opt "duration" duration]
+        <> catMaybes [opt "duration" duration]
   toJSON KeyDown {value} =
     object
       [ "type" .= ("keyDown" :: Text),
@@ -1191,11 +1181,11 @@ instance ToJSON Action where
             "actions" .= (mkPause <$> noneActions)
           ]
     Key {id, keyActions} ->
-      object [
-         "id" .= id,
-         "type" .= ("key" :: Text),
+      object
+        [ "id" .= id,
+          "type" .= ("key" :: Text),
           "actions" .= keyActions
-      ]
+        ]
     Pointer
       { subType,
         actions,
