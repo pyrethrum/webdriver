@@ -3,7 +3,7 @@ name: Webdriver CI/CD
 on:
   push:
     branches:
-      - master
+      - main
     paths:
       - webdriver-*/**
 
