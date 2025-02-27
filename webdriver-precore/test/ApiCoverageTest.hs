@@ -228,7 +228,7 @@ toSpecLine w3 = case w3 of
   Delete {} -> MkSpecLine "DELETE" path command
   where
     command = w3.description
-    path = replaceTemplateTxt $ "/" <> intercalate "/" w3.path.path
+    path = replaceTemplateTxt $ "/" <> intercalate "/" w3.path.segments
 
 allSpecsSample :: Set SpecLine
 allSpecsSample =
