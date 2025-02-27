@@ -32,7 +32,7 @@ module E2EConst (
   defaultRequest
 ) where
 
-import WebDriverPreCore.Spec (Selector (CSS, XPath))
+import WebDriverPreCore.Spec (Selector (CSS, XPath), UrlPath (MkUrlPath))
 import Data.Text (Text)
 import Data.Semigroup (Semigroup(..))
 import Data.Int (Int)
@@ -148,7 +148,7 @@ hours = hour
 data RequestArgs where
   RequestParams ::
     (HttpBodyAllowed (AllowsBody method) (ProvidesBody body), HttpMethod method, HttpBody body) =>
-    { subDirs :: [Text],
+    { path :: UrlPath,
       method :: method,
       body :: body,
       port :: Int
@@ -157,7 +157,7 @@ data RequestArgs where
   
 
 defaultRequest :: RequestArgs
-defaultRequest = RequestParams [] GET NoReqBody 4444
+defaultRequest = RequestParams (MkUrlPath []) GET NoReqBody 4444
 
 
 

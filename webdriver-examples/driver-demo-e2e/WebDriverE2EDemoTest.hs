@@ -180,20 +180,29 @@ capsWithCustomFirefoxProfileNotWorking = do
               }
       }
 
-{-
+{- 
 this works when the profile in: ./webdriver-examples/driver-demo-e2e/FirefoxWebDriverProfile.zip
-=> is unzipped to "/webdriver-examples/driver-demo-e2e/FirefoxWebDriverProfile"
+=> is unzipped to "./webdriver-examples/driver-demo-e2e/.profile/FirefoxWebDriverProfile"
 before running any tests
 -}
 capsWithCustomFirefoxProfile :: IO Capabilities
 capsWithCustomFirefoxProfile = do
-  pure $
+  pure $ 
     (minStandardCapabilities Firefox)
       { vendorSpecific =
           Just
             FirefoxOptions
               { -- this works when the profile is unpacked to here
-                firefoxArgs = Just ["-profile", "./webdriver-examples/driver-demo-e2e/FirefoxWebDriverProfile"],
+              -- TODO: needs to be different based on WD - needs logic here:
+                -- check wd
+                -- caculate expected path of profle
+                -- unzip if .profile exists and Profile doesn't
+                -- fail if .profile and zip does not exist
+                  
+                -- running in root dir
+                firefoxArgs = Just ["-profile", "./webdriver-examples/driver-demo-e2e/.profile/FirefoxWebDriverProfile"],
+                -- runing in examples dir
+                -- firefoxArgs = Just ["-profile", "./driver-demo-e2e/.profile/FirefoxWebDriverProfile"],
                 firefoxBinary = Nothing,
                 firefoxProfile = Nothing
               }
@@ -234,6 +243,22 @@ mkExtendedTimeoutsSession = do
 (===) = (@=?)
 
 -- >>> unit_demoSessionDriverStatus
+-- *** Exception: VanillaHttpException (HttpExceptionRequest Request {
+--   host                 = "127.0.0.1%2Fsession"
+--   port                 = 4444
+--   secure               = False
+--   requestHeaders       = [("Accept","application/json"),("Content-Type","application/json; charset=utf-8")]
+--   path                 = ""
+--   queryString          = ""
+--   method               = "POST"
+--   proxy                = Nothing
+--   rawBody              = False
+--   redirectCount        = 10
+--   responseTimeout      = ResponseTimeoutDefault
+--   requestVersion       = HTTP/1.1
+--   proxySecureMode      = ProxySecureWithConnect
+-- }
+--  (ConnectionFailure Network.Socket.getAddrInfo (called with preferred socket type/protocol: AddrInfo {addrFlags = [], addrFamily = AF_UNSPEC, addrSocketType = Stream, addrProtocol = 0, addrAddress = 0.0.0.0:0, addrCanonName = Nothing}, host name: "127.0.0.1%2Fsession", service name: "4444"): does not exist (Name or service not known)))
 unit_demoSessionDriverStatus :: IO ()
 unit_demoSessionDriverStatus = do
   ses <- mkExtendedTimeoutsSession
