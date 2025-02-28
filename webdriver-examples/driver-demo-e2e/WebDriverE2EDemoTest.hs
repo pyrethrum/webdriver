@@ -35,7 +35,7 @@ import E2EConst
     second, 
     seconds
   )
-import IORunner
+import IOAPI
   ( Action (..),
     Actions (..),
     Cookie (..),
@@ -117,7 +117,10 @@ import IORunner
     takeScreenshot,
     Capabilities(..),
     FullCapabilities(..),
-    VendorSpecific(..), DriverStatus (..), minStandardCapabilities, BrowserName (..)
+    VendorSpecific(..), 
+    DriverStatus (..), 
+    minStandardCapabilities, 
+    BrowserName (..)
   )
 import Prelude hiding (log)
 import Control.Exception (bracket)

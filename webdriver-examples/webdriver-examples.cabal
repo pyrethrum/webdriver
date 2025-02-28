@@ -121,8 +121,11 @@ test-suite driver-demo-e2e
     , bytestring
     , webdriver-precore
   other-modules:
-      WebDriverE2EDemoTest
-    , E2EConst
+      E2EConst
+    , IOAPI
     , IORunner
+    , IORunnerMinimal
+    , IOUtils
+    , WebDriverE2EDemoTest
   build-tool-depends:
     tasty-discover:tasty-discover
