@@ -1,4 +1,7 @@
 module WebDriverPreCore.Spec (
+    -- * Introduction
+    -- $whyThisLibrary
+
    -- * The W3Spec Type
     S.W3Spec (..),
     -- * The API
@@ -115,8 +118,31 @@ module WebDriverPreCore.Spec (
 
 import WebDriverPreCore.Spec.SpecDefinition qualified as S
 
-
-
 import WebDriverPreCore.Spec.HttpResponse
 import WebDriverPreCore.Spec.Capabilities
 import WebDriverPreCore.Spec.Error
+
+-- $whyThisLibrary
+--
+-- == What is This Library?
+-- This library provides a miniaml abstration over the [WebDriver W3C Protocol](https://www.w3.org/TR/2025/WD-webdriver2-20250210/).
+-- It has low dependencies, is unopinionated, and doesn't do very much. 
+--
+-- It provides a description the W3C API as a type but does not provide any implementation. 
+-- This is left to dependent libraries to implement. 
+-- 
+-- == Why This Library?
+-- There are a number of libraries that provide WebDriver bindings for Haskell. However, the libraries we have found to be one or more of:
+--
+-- 1. Based on the use of Selenium and the older /JSON Wire Protocol/
+--
+-- 2. Unmaintained
+--
+-- 3. Part of larger opnionated testing frameworks
+-- 
+-- This library is intended to be a well maintained, simple, low-dependency, unopinionated base on which other libraries can be built.
+--
+
+-- $usage
+-- == How to Use This Library?
+-- 
