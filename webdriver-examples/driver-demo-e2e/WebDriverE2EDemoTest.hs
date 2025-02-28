@@ -1,13 +1,5 @@
 module WebDriverE2EDemoTest where
 
-import WebDriverPreCore.Capabilities
-  ( BrowserName (Firefox),
-    FullCapabilities (..),
-    MatchCapabilities (..),
-    Capabilities (..),
-    VendorSpecific (..),
-    minStandardCapabilities,
-  )
 import Control.Monad (forM_)
 import Data.Aeson (Value (..))
 import Data.Set qualified as Set
@@ -123,8 +115,10 @@ import IORunner
     switchToWindow,
     takeElementScreenshot,
     takeScreenshot,
+    Capabilities(..),
+    FullCapabilities(..),
+    VendorSpecific(..), DriverStatus (..), minStandardCapabilities, BrowserName (..)
   )
-import WebDriverPreCore.Spec (DriverStatus (..))
 import Prelude hiding (log)
 import Control.Exception (bracket)
 import GHC.IO (catchAny)
@@ -214,8 +208,7 @@ mkExtendedTimeoutsSession = do
     if useCustomProfile
       then do
         profileBase64 <- capsWithCustomFirefoxProfile
-        newSession . MkFullCapabilities $
-          MkMatchCapabilities
+        newSession $ MkFullCapabilities 
             { alwaysMatch = Just profileBase64,
               firstMatch = []
             }

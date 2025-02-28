@@ -1,4 +1,6 @@
-module WebDriverPreCore.Capabilities
+{-# OPTIONS_HADDOCK hide #-}
+
+module WebDriverPreCore.Spec.Capabilities
   ( 
     FullCapabilities (..),
     Capabilities (..),
@@ -9,7 +11,6 @@ module WebDriverPreCore.Capabilities
     Proxy (..),
     Timeouts (..),
     VendorSpecific (..),
-    MatchCapabilities (..),
     minStandardCapabilities,
     minFullCapabilities,
     minFirefoxCapabilities,
@@ -54,18 +55,10 @@ import Data.Semigroup (Semigroup(..))
 
  -}
 
-data MatchCapabilities = MkMatchCapabilities
-   { 
+data FullCapabilities = MkFullCapabilities
+  { 
     alwaysMatch :: Maybe Capabilities,
     firstMatch :: [Capabilities]
-  }
-  deriving (Show, Generic)
-
-instance ToJSON MatchCapabilities
-instance FromJSON MatchCapabilities
-newtype FullCapabilities = MkFullCapabilities
-  { 
-    capabilities :: MatchCapabilities
   }
   deriving (Show, Generic)
 
@@ -77,7 +70,7 @@ instance FromJSON FullCapabilities
 
 minFullCapabilities :: BrowserName -> FullCapabilities
 minFullCapabilities browserName =
-  MkFullCapabilities $ MkMatchCapabilities
+  MkFullCapabilities 
     { alwaysMatch = Just $ minStandardCapabilities browserName,
       firstMatch = []
     }
@@ -113,7 +106,7 @@ data UnhandledPromptBehavior
   deriving (Show, Generic)
 
 data PageLoadStrategy
-  = None
+  = None'
   | Eager
   | Normal
   deriving (Show, Generic)
@@ -320,7 +313,7 @@ instance ToJSON UnhandledPromptBehavior where
 instance ToJSON PageLoadStrategy where
   toJSON :: PageLoadStrategy -> Value
   toJSON = \case
-    None -> "none"
+    None' -> "none"
     Eager -> "eager"
     Normal -> "normal"
 
@@ -355,7 +348,7 @@ instance FromJSON UnhandledPromptBehavior where
 instance FromJSON PageLoadStrategy where
   parseJSON :: Value -> Parser PageLoadStrategy
   parseJSON = withText "PageLoadStrategy" $ \case
-    "none" -> pure None
+    "none" -> pure None'
     "eager" -> pure Eager
     "normal" -> pure Normal
     _ -> fail "Invalid PageLoadStrategy"

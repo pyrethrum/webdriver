@@ -100,12 +100,13 @@ tested-with: GHC == { 9.8.2, 9.10.1 }
 library
   import: commonExtensions, commonGhcOptions
   exposed-modules:
-      WebDriverPreCore.Capabilities
       WebDriverPreCore.Spec
-      WebDriverPreCore.Error
       WebDriverPreCore.Internal.Utils
   other-modules:
-      WebDriverPreCore.HttpResponse
+      WebDriverPreCore.Spec.Capabilities
+      WebDriverPreCore.Spec.Error
+      WebDriverPreCore.Spec.SpecDefinition
+      WebDriverPreCore.Spec.HttpResponse
   hs-source-dirs: src
   build-depends:
     aeson         >=1.4   && <2.3, 

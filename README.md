@@ -37,6 +37,7 @@ Libraries for working with browsers
 - [ ] add checks for e2e when profile dir is not there
 - [ ] review compiler switches
 - [ ] review license
+- [ ] release checklist
 - [ ] add all to github container repo (check vs docker hub)
 - [ ] change log
 - [ ] hackage

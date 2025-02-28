@@ -1,7 +1,5 @@
 module ApiCoverageTest where
 
-import WebDriverPreCore.Capabilities
-    ( Timeouts(MkTimeouts), minFirefoxCapabilities )
 import Data.Set as S (Set, difference, fromList, null)
 import Data.Text as T (Text, lines, null, pack, replace, strip, unwords, words, split, intercalate)
 import GHC.Utils.Misc (filterOut)
@@ -16,7 +14,11 @@ import WebDriverPreCore.Spec
       FrameReference(TopLevelFrame),
       Cookie(MkCookie),
       Actions(MkActions),
+      Timeouts(..),
       W3Spec(description, Get, Post, PostEmpty, Delete, path),
+      errorTypeToErrorCode,
+      minFirefoxCapabilities,
+      errorDescription,
       acceptAlert,
       addCookie,
       back,
@@ -28,6 +30,7 @@ import WebDriverPreCore.Spec
       elementClear,
       elementClick,
       elementSendKeys,
+      errorCodeToErrorType,
       executeScript,
       executeScriptAsync,
       findElement,
@@ -87,7 +90,6 @@ import Data.List ((!!), drop)
 import Data.Functor ((<$>))
 import Data.Maybe (Maybe(..))
 import GHC.Base (error)
-import WebDriverPreCore.Error (errorTypeToErrorCode, errorDescription, errorCodeToErrorType)
 import WebDriverPreCore.Internal.Utils (enumerate)
 import Data.Foldable (traverse_)
 import Data.Either (either)

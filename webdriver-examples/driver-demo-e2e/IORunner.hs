@@ -1,6 +1,9 @@
 module IORunner
   ( 
     W.Cookie (..),
+    W.Capabilities(..),
+    W.FullCapabilities(..), 
+    W.VendorSpecific(..),
     W.DriverStatus(..),
     W.Timeouts (..),
     W.WindowHandleSpec (..),
@@ -17,6 +20,10 @@ module IORunner
     W.Pointer (..),
     W.PointerAction (..),
     W.WheelAction (..),
+    W.errorCodeToErrorType,
+    W.minFirefoxCapabilities,
+    W.minStandardCapabilities,
+    W.BrowserName(..),
     encodeFileToBase64,
     status,
     findElementFromElement,
@@ -80,11 +87,10 @@ module IORunner
     dismissAlert,
     acceptAlert,
     getAlertText,
-    sendAlertText,
+    sendAlertText
   )
 where
 
-import WebDriverPreCore.Capabilities ( minFirefoxCapabilities, FullCapabilities )
 import Control.Concurrent (threadDelay)
 import Control.Monad (when)
 import Control.Monad.IO.Class (liftIO)
@@ -115,7 +121,7 @@ import Network.HTTP.Req as R
   )
 import WebDriverPreCore.Internal.Utils (txt, prettyPrintJson)
 import E2EConst (RequestArgs (..))
-import WebDriverPreCore.Spec (DriverStatus, ElementId, HttpResponse (..), Selector, SessionId, W3Spec (..))
+import WebDriverPreCore.Spec (DriverStatus, ElementId, HttpResponse (..), Selector, SessionId, W3Spec (..), parseWebDriverError, ErrorClassification (..))
 import WebDriverPreCore.Spec qualified as W
 import Prelude hiding (log)
 import Network.HTTP.Req (JsonResponse)
@@ -124,7 +130,6 @@ import Data.Text.Lazy qualified as LT
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Base64 as B64
 import qualified Data.Base64.Types as B64T
-import WebDriverPreCore.Error (parseWebDriverError, ErrorClassification (..))
 
 wantConsoleLogging :: Bool
 wantConsoleLogging = True
@@ -134,7 +139,7 @@ wantConsoleLogging = True
 status :: IO DriverStatus
 status = run W.status
 
-newSession :: FullCapabilities -> IO SessionId
+newSession :: W.FullCapabilities -> IO SessionId
 newSession = run . W.newSession
 
 getTimeouts :: SessionId -> IO W.Timeouts
@@ -195,7 +200,7 @@ setWindowRect :: SessionId -> W.WindowRect -> IO W.WindowRect
 setWindowRect s = run . W.setWindowRect s
 
 minFirefoxSession :: IO SessionId
-minFirefoxSession = newSession minFirefoxCapabilities
+minFirefoxSession = newSession W.minFirefoxCapabilities
 
 deleteSession :: SessionId -> IO ()
 deleteSession = run . W.deleteSession
