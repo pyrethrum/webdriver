@@ -347,7 +347,13 @@ status = Get "Status" (MkUrlPath ["status"]) parseDriverStatus
 
 -- ############################ Session Methods ##########################################
 
--- DELETE 	/session/{session id} 	Delete Session
+-- |
+--
+-- 'deleteSession' returns a 'W3Spec' corresponding to the following [WebDriver endpoint](https://www.w3.org/TR/2025/WD-webdriver2-20250210/#delete-session)
+--
+-- @DELETE 	/session/{session id} 	Delete Session@
+--
+-- Return a spec to delete a session given a 'SessionId'.
 deleteSession :: SessionId -> W3Spec ()
 deleteSession sessionRef = Delete "Delete Session" (sessionUri sessionRef.id) voidParser
 
