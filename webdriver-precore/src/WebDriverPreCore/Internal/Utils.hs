@@ -1,3 +1,5 @@
+{-# OPTIONS_HADDOCK hide #-}
+
 module WebDriverPreCore.Internal.Utils
   ( opt,
     txt,
