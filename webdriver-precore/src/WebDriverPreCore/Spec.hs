@@ -164,12 +164,12 @@ import WebDriverPreCore.Spec.SpecDefinition as WindowMethods
 -- There are a number of libraries that provide WebDriver bindings for Haskell. However, at the time work on this library commenced
 -- the available libraries were either in need of maintenance, required Selenium, or part of larger opinionated testing frameworks.
 --
--- The end goal of the authors of this library is to enble UI interaction in our own high level testing framework. We would prefer to
--- communicate with drivers directly, using the W3C standards (developed by the Selenium core contributors) rather than depend on Selenium
+-- The end goal of the authors of this library is to enable UI interaction in our own high level testing framework. We would prefer to
+-- communicate with drivers directly, using the W3C standards (developed largely by the Selenium core contributors) rather than depend on Selenium
 -- itself. We would also like to avoid pulling in too many dependencies or potentially incompatible concepts from other high level libraries.
--- To achieve this, we plan to develop a number of unopinioated lower level libraries that can be used by others without buying into our entire stack.
+-- To achieve this, we plan to develop a number of unopinionated lower level libraries that can be used by others without buying into our entire stack.
 --
--- This library is the first of those libraries and is intended to provide a unopinionated, low-dependency base on which fully featured
+-- This library is the first of those libraries and is intended to provide a low-dependency base on which fully featured
 -- (W3C) WebDriver libraries can be built.
 
 -- $usage
@@ -182,7 +182,7 @@ import WebDriverPreCore.Spec.SpecDefinition as WindowMethods
 -- The full example can be found at [IORunnerMinimal.hs](https://github.com/pyrethrum/webdriver/blob/main/webdriver-examples/driver-demo-e2e/IORunnerMinimal.hs)
 -- To \run\ a 'W3Spec', requires the following:
 --
--- 1. Choose a library to make the HTTP request to the WebDriver server. In this case, we use "req".
+-- 1. Choose a library to make the HTTP request to the WebDriver server. In this case, we have chosen [req](https://hackage.haskell.org/package/req).
 -- 2. Define a function to convert a 'W3Spec' to a @RequestParams@ (such as url, port and body) that can be used by the chosen library.
 -- 3. Call the WebDriver server with the @ReqRequestParams@ and construct the result in the form of a simplified 'HttpResponse'.
 -- 4. Use the parser provided by the 'W3Spec' to transform the 'HttpResponse' to the desired result type and handle any errors.
@@ -254,9 +254,9 @@ import WebDriverPreCore.Spec.SpecDefinition as WindowMethods
 -- @
 --
 -- === 1. Import Chosen HTTP Library
--- @ -- see import Network.HTTP.Req as R in module header @
+-- see [req](https://hackage.haskell.org/package/req) documentation for more details
 --
--- === 2. Define a function to convert a 'S.W3Spec' to a '@ReqRequestParams'
+-- === 2. Define a function to convert a 'W3Spec' to a @ReqRequestParams@
 -- @
 -- mkRequest :: forall a. W3Spec a -> ReqRequestParams
 -- mkRequest spec = case spec of
