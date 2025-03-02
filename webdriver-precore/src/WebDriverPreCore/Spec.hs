@@ -13,6 +13,7 @@ module WebDriverPreCore.Spec
     module RootMethods,
 
     -- ** Session Methods
+    -- | /See also 'newSession' and 'newSession''/
     module SessionMethods,
 
     -- ** Window Methods
