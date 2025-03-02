@@ -81,7 +81,7 @@ module WebDriverPreCore.Spec.SpecDefinition
     findElementFromShadowRoot,
     findElementsFromShadowRoot,
     
-    -- * Auxilary Types
+    -- * auxiliary Types
     Cookie (..),
     DriverStatus (..),
     ElementId (..),
@@ -325,9 +325,9 @@ newSession = newSession'
 --
 --  Return a spec to create a new session given an object of any type that implements `ToJSON`.
 --
--- The 'FullCapabilities' type and associated types should work for the vast majority use cases, but there may be edge cases (such as missing 'Capabilities.VendorSpecific' capabilites) 
--- where these types are not sufficient. 'newSession'' is a fallback for such cases and can be used with any user defined type that implments 'ToJSON', (including an Aeson 'Value'). 
--- Obviously, any type used must be compatiable with the [Capabilities](https://www.w3.org/TR/2025/WD-webdriver2-20250210/#capabilities) spec.
+-- The 'FullCapabilities' type and associated types should work for the vast majority use cases, but there may be edge cases (such as missing 'Capabilities.VendorSpecific' capabilities) 
+-- where these types are not sufficient. 'newSession'' is a fallback for such cases and can be used with any user defined type that implements 'ToJSON', (including an Aeson 'Value'). 
+-- Obviously, any type used must be compatible with the [Capabilities](https://www.w3.org/TR/2025/WD-webdriver2-20250210/#capabilities) spec.
 --
 --  [spec](https://www.w3.org/TR/2025/WD-webdriver2-20250210/#new-session)
 --
@@ -1164,14 +1164,14 @@ toSameSite = \case
 lookupInt :: Key -> Value -> Result Int
 lookupInt k v = lookup k v >>= asInt
 
-aeasonTypeErrorMessage :: Text -> Value -> Text
-aeasonTypeErrorMessage t v = "Expected Json Value to be of type: " <> t <> "\nbut got:\n" <> jsonToText v
+aesonTypeErrorMessage :: Text -> Value -> Text
+aesonTypeErrorMessage t v = "Expected Json Value to be of type: " <> t <> "\nbut got:\n" <> jsonToText v
 
 aesonTypeError :: Text -> Value -> Result a
-aesonTypeError t v = Error . unpack $ aeasonTypeErrorMessage t v
+aesonTypeError t v = Error . unpack $ aesonTypeErrorMessage t v
 
 aesonTypeError' :: Text -> Text -> Value -> Result a
-aesonTypeError' typ info v = Error . unpack $ aeasonTypeErrorMessage typ v <> "\n" <> info
+aesonTypeError' typ info v = Error . unpack $ aesonTypeErrorMessage typ v <> "\n" <> info
 
 asText :: Value -> Result Text
 asText = \case
@@ -1251,7 +1251,7 @@ mkShowable = \case
   Delete d p _ -> Request d "DELETE" p Nothing
 
 parseDriverStatus :: HttpResponse -> Result DriverStatus
-parseDriverStatus Response {statusCode, statusMessage} =
+parseDriverStatus MkHttpResponse {statusCode, statusMessage} =
   Success $
     statusCode & \case
       200 -> Ready

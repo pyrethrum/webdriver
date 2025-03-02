@@ -20,7 +20,7 @@ import E2EConst
     divCss,
     framesUrl,
     h3TagCss,
-    infinitScrollUrl,
+    infiniteScrollUrl,
     inputTagCss,
     inputsUrl,
     jsAlertXPath,
@@ -770,7 +770,7 @@ unit_demoKeyAndReleaseActions =
 -- >>> unit_demoWheelActions
 unit_demoWheelActions :: IO ()
 unit_demoWheelActions = withSession \ses -> do
-  navigateTo ses infinitScrollUrl
+  navigateTo ses infiniteScrollUrl
 
   let wheel =
         MkActions

@@ -1,8 +1,9 @@
 module E2EConst (
+  ReqRequestParams(..),
   theInternet,
   subDomain,
   alertsUrl,
-  infinitScrollUrl,
+  infiniteScrollUrl,
   framesUrl,
   inputsUrl,
   loginUrl,
@@ -28,11 +29,10 @@ module E2EConst (
   minutes,
   hour,
   hours,
-  RequestArgs(..),
   defaultRequest
 ) where
 
-import WebDriverPreCore.Spec (Selector (CSS, XPath), UrlPath (MkUrlPath))
+import WebDriverPreCore.Spec (Selector (CSS, XPath))
 import Data.Text (Text)
 import Data.Semigroup (Semigroup(..))
 import Data.Int (Int)
@@ -44,7 +44,7 @@ import Network.HTTP.Req as R
     HttpBodyAllowed,
     HttpMethod (AllowsBody),
     NoReqBody (NoReqBody),
-    ProvidesBody,
+    ProvidesBody, Scheme (..), Url, http,
   )
 
 
@@ -59,8 +59,8 @@ subDomain sd = theInternet <> sd
 alertsUrl :: Text
 alertsUrl = subDomain "javascript_alerts"
 
-infinitScrollUrl :: Text
-infinitScrollUrl = subDomain "infinite_scroll"
+infiniteScrollUrl :: Text
+infiniteScrollUrl = subDomain "infinite_scroll"
 
 framesUrl :: Text
 framesUrl = subDomain "nested_frames"
@@ -145,19 +145,19 @@ hours = hour
 
 -- ################### request ##################
 
-data RequestArgs where
-  RequestParams ::
+data ReqRequestParams where
+  MkRequestParams ::
     (HttpBodyAllowed (AllowsBody method) (ProvidesBody body), HttpMethod method, HttpBody body) =>
-    { path :: UrlPath,
+    { url :: Url 'Http,
       method :: method,
       body :: body,
       port :: Int
     } ->
-    RequestArgs
+    ReqRequestParams
   
 
-defaultRequest :: RequestArgs
-defaultRequest = RequestParams (MkUrlPath []) GET NoReqBody 4444
+defaultRequest :: ReqRequestParams
+defaultRequest = MkRequestParams (http "127.0.0.1") GET NoReqBody 4444
 
 
 

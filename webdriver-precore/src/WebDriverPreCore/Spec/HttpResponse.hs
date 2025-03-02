@@ -12,7 +12,7 @@ import Data.Eq (Eq)
 import Data.Ord (Ord)
 
 -- | 'HttpResponse' represents a WebDriver HTTP response.
-data HttpResponse = Response
+data HttpResponse = MkHttpResponse
   { -- | HTTP status code.
     statusCode :: Int,
     -- | HTTP status message.
