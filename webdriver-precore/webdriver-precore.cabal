@@ -17,7 +17,10 @@ synopsis:       The W3C WebDriver spec as a list of types functions
 
 description:
   This library provides typed definitions for the endpoints of the @<https://www.w3.org/TR/2025/WD-webdriver2-20250210/ W3C Webdriver>@.
-  It is intended to be used as a base for other libraries that provide a more convenient, idiomatic interface to the WebDriver protocol. See <https://github.com/pyrethrum/webdriver-precore#readme README> on GitHub for further details.
+  It is intended to be used as a base for other libraries that provide a more convenient, idiomatic interface to the WebDriver protocol. 
+  
+  
+  See <https://github.com/pyrethrum/webdriver-precore#readme README> on GitHub for further details.
 
 common commonExtensions
   default-extensions:
@@ -102,10 +105,10 @@ library
   exposed-modules:
       WebDriverPreCore.Spec
       WebDriverPreCore.Internal.Utils
+      WebDriverPreCore.Spec.SpecDefinition
   other-modules:
       WebDriverPreCore.Spec.Capabilities
       WebDriverPreCore.Spec.Error
-      WebDriverPreCore.Spec.SpecDefinition
       WebDriverPreCore.Spec.HttpResponse
   hs-source-dirs: src
   build-depends:
