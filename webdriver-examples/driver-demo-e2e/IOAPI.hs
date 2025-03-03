@@ -22,7 +22,7 @@ module IOAPI
     W.WheelAction (..),
     W.errorCodeToErrorType,
     W.minFirefoxCapabilities,
-    W.minStandardCapabilities,
+    W.minCapabilities,
     W.BrowserName(..),
     encodeFileToBase64,
     status,

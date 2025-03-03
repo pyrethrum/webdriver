@@ -119,7 +119,7 @@ import IOAPI
     FullCapabilities(..),
     VendorSpecific(..), 
     DriverStatus (..), 
-    minStandardCapabilities, 
+    minCapabilities, 
     BrowserName (..)
   )
 import Prelude hiding (log)
@@ -168,7 +168,7 @@ capsWithCustomFirefoxProfileNotWorking :: IO Capabilities
 capsWithCustomFirefoxProfileNotWorking = do
   profile <- encodeFileToBase64 "./webdriver-examples/driver-demo-e2e/FirefoxWebDriverProfile.zip"
   pure $
-    (minStandardCapabilities Firefox)
+    (minCapabilities Firefox)
       { vendorSpecific =
           Just
             FirefoxOptions
@@ -186,7 +186,7 @@ before running any tests
 capsWithCustomFirefoxProfile :: IO Capabilities
 capsWithCustomFirefoxProfile = do
   pure $ 
-    (minStandardCapabilities Firefox)
+    (minCapabilities Firefox)
       { vendorSpecific =
           Just
             FirefoxOptions
