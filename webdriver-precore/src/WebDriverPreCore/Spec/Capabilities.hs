@@ -11,6 +11,7 @@ module WebDriverPreCore.Spec.Capabilities
     Proxy (..),
     Timeouts (..),
     VendorSpecific (..),
+    SocksProxy (..),
     minStandardCapabilities,
     minFullCapabilities,
     minFirefoxCapabilities,

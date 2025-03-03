@@ -93,6 +93,7 @@ module WebDriverPreCore.Spec.SpecDefinition
     DriverStatus (..),
     ElementId (..),
     FrameReference (..),
+    HandleType (..),
     HttpResponse (..),
     SameSite (..),
     Selector (..),
