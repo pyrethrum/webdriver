@@ -400,6 +400,7 @@ parseVendorSpecific v =
     <|> v
     .:? "safari:options"
 
+-- | Timeouts in milliseconds
 data Timeouts = MkTimeouts
   { implicit :: Maybe Int, -- field order needs to be the same as FromJSON below
     pageLoad :: Maybe Int,
