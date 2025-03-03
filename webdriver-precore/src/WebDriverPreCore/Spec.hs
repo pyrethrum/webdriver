@@ -14,20 +14,20 @@ module WebDriverPreCore.Spec
     -- *** 1. Implementing a /runner/
     -- $runnerImp
 
-    -- **** Example
+    -- *** Example
     -- | The full source for this example can be found in [the project repo](https://github.com/pyrethrum/webdriver/blob/main/webdriver-examples/driver-demo-e2e/IORunnerMinimal.hs).
     -- $modHeader
 
-    -- ***** @run@ function
+    -- **** @run@ function
     -- $runFunction
 
-    -- ***** 1. 'W3Spec' to @ReqRequestParams@
+    -- **** 1. 'W3Spec' to @ReqRequestParams@
     -- $mkRequest
 
-    -- ***** 2. Call the WebDriver
+    -- **** 2. Call the WebDriver
     -- $callReq
 
-    -- ***** 3. Parse 'HttpResponse'
+    -- **** 3. Parse 'HttpResponse'
     -- $parseResponse
 
     -- *** 2. Applying the /runner/ to the 'W3Spec' functions
@@ -67,6 +67,7 @@ module WebDriverPreCore.Spec
     module WebDriverPreCore.Spec.HttpResponse,
 
     -- * Capabilities
+    module CoreCapabilities,
     module WebDriverPreCore.Spec.Capabilities,
 
     -- * Errors
@@ -80,6 +81,7 @@ module WebDriverPreCore.Spec
   )
 where
 
+import WebDriverPreCore.Spec.Capabilities as CoreCapabilities (FullCapabilities(..), Capabilities(..) )
 import WebDriverPreCore.Spec.Capabilities
 import WebDriverPreCore.Spec.Error
 import WebDriverPreCore.Spec.HttpResponse
@@ -197,7 +199,7 @@ import WebDriverPreCore.Spec.SpecDefinition as WindowMethods
 -- There are a number of libraries that provide WebDriver bindings for Haskell. However, at the time work on this library commenced
 -- the available libraries were either in need of maintenance, required Selenium, or part of larger opinionated testing frameworks.
 --
--- The end goal of the authors of this library is to enable browser interaction in our own high level testing framework. We would prefer to
+-- The goal of the authors of this library is to enable browser interaction in our own high level testing framework. We would prefer to
 -- communicate with drivers directly, using the W3C standards (developed largely by the Selenium core contributors) rather than depend on Selenium
 -- itself. We would also like to avoid pulling in too many dependencies or potentially incompatible concepts from other high level libraries.
 -- To achieve this, we plan to first develop a number of unopinionated, lower level libraries that can be used by others 

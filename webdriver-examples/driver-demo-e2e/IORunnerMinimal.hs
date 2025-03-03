@@ -12,7 +12,6 @@
 module IORunnerMinimal (run) where
 
 import Control.Applicative (Applicative (..))
-import Control.Monad (Monad (..))
 import Control.Monad.Fail (MonadFail (..))
 import Data.Aeson (Result (..), Value, object)
 import Data.Foldable (foldl')
@@ -123,12 +122,3 @@ parseResponse spec r =
             e@UnrecognisedError {} -> "UnrecognisedError:\n " <> "\nin response:" <> show e
             e@WebDriverError {} -> "WebDriver error thrown:\n " <> show e
       Success a -> pure a
-
-{-
-The following assumes that an appropriate browser and WebDriver have been installed, and the WebDriver has been started.
-
-e.g. For Firefox and geckodriver on Linux or WSL:
-```bash
-pkill -f geckodriver || true  && geckodriver --log trace &
-
--}

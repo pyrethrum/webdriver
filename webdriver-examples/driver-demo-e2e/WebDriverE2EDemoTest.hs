@@ -240,22 +240,8 @@ mkExtendedTimeoutsSession = do
 (===) = (@=?)
 
 -- >>> unit_demoSessionDriverStatus
--- *** Exception: VanillaHttpException (HttpExceptionRequest Request {
---   host                 = "127.0.0.1%2Fsession"
---   port                 = 4444
---   secure               = False
---   requestHeaders       = [("Accept","application/json"),("Content-Type","application/json; charset=utf-8")]
---   path                 = ""
---   queryString          = ""
---   method               = "POST"
---   proxy                = Nothing
---   rawBody              = False
---   redirectCount        = 10
---   responseTimeout      = ResponseTimeoutDefault
---   requestVersion       = HTTP/1.1
---   proxySecureMode      = ProxySecureWithConnect
--- }
---  (ConnectionFailure Network.Socket.getAddrInfo (called with preferred socket type/protocol: AddrInfo {addrFlags = [], addrFamily = AF_UNSPEC, addrSocketType = Stream, addrProtocol = 0, addrAddress = 0.0.0.0:0, addrCanonName = Nothing}, host name: "127.0.0.1%2Fsession", service name: "4444"): does not exist (Name or service not known)))
+-- *** Exception: user error (WebDriver error thrown:
+--  WebDriverError {error = InvalidArgument, description = "The arguments passed to a command are either invalid or malformed", httpResponse = MkHttpResponse {statusCode = 400, statusMessage = "Bad Request", body = Object (fromList [("value",Object (fromList [("error",String "invalid argument"),("message",String "missing field `capabilities`"),("stacktrace",String "")]))])}})
 unit_demoSessionDriverStatus :: IO ()
 unit_demoSessionDriverStatus = do
   ses <- mkExtendedTimeoutsSession
@@ -266,6 +252,8 @@ unit_demoSessionDriverStatus = do
   deleteSession ses
 
 -- >>> unit_demoSendKeysClear
+-- *** Exception: user error (WebDriver error thrown:
+--  WebDriverError {error = InvalidArgument, description = "The arguments passed to a command are either invalid or malformed", httpResponse = MkHttpResponse {statusCode = 400, statusMessage = "Bad Request", body = Object (fromList [("value",Object (fromList [("error",String "invalid argument"),("message",String "missing field `capabilities`"),("stacktrace",String "")]))])}})
 unit_demoSendKeysClear :: IO ()
 unit_demoSendKeysClear = withSession \ses -> do
   navigateTo ses loginUrl
@@ -280,6 +268,8 @@ unit_demoSendKeysClear = withSession \ses -> do
   sleep2
 
 -- >>> unit_demoForwardBackRefresh
+-- *** Exception: user error (WebDriver error thrown:
+--  WebDriverError {error = InvalidArgument, description = "The arguments passed to a command are either invalid or malformed", httpResponse = MkHttpResponse {statusCode = 400, statusMessage = "Bad Request", body = Object (fromList [("value",Object (fromList [("error",String "invalid argument"),("message",String "missing field `capabilities`"),("stacktrace",String "")]))])}})
 unit_demoForwardBackRefresh :: IO ()
 unit_demoForwardBackRefresh = withSession \ses -> do
   navigateTo ses theInternet
