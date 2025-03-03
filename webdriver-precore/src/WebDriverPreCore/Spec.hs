@@ -1,16 +1,22 @@
 module WebDriverPreCore.Spec
   ( 
     -- * Introduction
+    
     -- ** What is This Library?
     -- $whatThisLibrary
+
     -- ** Why This Library?
     -- $whyThisLibrary
+
     -- ** Implementing WebDriver Interaction
     -- $highLevelImplementation
+
     -- *** Implementing a /runner/
     -- $runnerImp
+
     -- **** /runner/ Example
     -- $runnerExample
+
     -- * The API
 
     -- ** The W3Spec Type
@@ -94,7 +100,7 @@ import WebDriverPreCore.Spec.SpecDefinition as ElementInstanceMethods
     getElementCssValue,
     getElementProperty,
     getElementRect,
-    getElementShadowRoot,Implementing a 
+    getElementShadowRoot,
     getElementTagName,
     getElementText,
     isElementEnabled,
@@ -106,7 +112,7 @@ import WebDriverPreCore.Spec.SpecDefinition as ElementMethods
     findElements,
     getActiveElement,
   )
-import WebDriverPreCore.Spec.SpecDefinition as FrameMetMinimal Implementation Examplehods (switchToParentFrame)
+import WebDriverPreCore.Spec.SpecDefinition as FrameMethods (switchToParentFrame)
 import WebDriverPreCore.Spec.SpecDefinition as RootMethods (newSession, newSession', status)
 import WebDriverPreCore.Spec.SpecDefinition as SessionMethods
   ( acceptAlert,
@@ -127,7 +133,7 @@ import WebDriverPreCore.Spec.SpecDefinition as SessionMethods
     getNamedCookie,
     getPageSource,
     getTimeouts,
-    getTitle,Implementing a 
+    getTitle,
     getWindowHandle,
     getWindowHandles,
     getWindowRect,
