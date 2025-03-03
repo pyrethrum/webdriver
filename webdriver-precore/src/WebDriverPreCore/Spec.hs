@@ -1,7 +1,7 @@
 module WebDriverPreCore.Spec
   ( 
     -- * Introduction
-    
+
     -- ** What is This Library?
     -- $whatThisLibrary
 
@@ -11,10 +11,10 @@ module WebDriverPreCore.Spec
     -- ** Implementing WebDriver Interaction
     -- $highLevelImplementation
 
-    -- *** Implementing a /runner/
+    -- *** 1. Implementing a /runner/
     -- $runnerImp
 
-    -- **** /runner/ Example
+    -- **** Example
     -- $runnerExample
 
     -- * The API
@@ -192,21 +192,24 @@ import WebDriverPreCore.Spec.SpecDefinition as WindowMethods
 Using [webdriver-precore](TODO) to build a webdriver library requires two steps to attain the basic functionality provided by the WebDriver API:
 
 1. Implement a /runner/ that, given a 'W3Spec', interacts can make requests to the WebDriver server and parse the response.
-2. Apply the runner to the 'W3Spec' functions provided by this library to transform the static types provided into actual browser interactions.
+2. Apply the runner to the 'W3Spec' functions provided by this library to transform the 'W3Spec' into actual browser interactions. This is just boilerplate.
 -}
 
--- $runnerImp
--- This is an example of a minimal \runner\ that implements the interaction with WebDriver endpoint definitions as provided by this library.
--- The source file for this example can be found in [the project repo](https://github.com/pyrethrum/webdriver/blob/main/webdriver-examples/driver-demo-e2e/IORunnerMinimal.hs)
--- To \run\ a 'W3Spec', requires the following:
---
--- 1. Choose a library to make the HTTP request to the WebDriver server. In this case, we have chosen [req](https://hackage.haskell.org/package/req).
--- 2. Define a function to convert a 'W3Spec' to a @RequestParams@ (such as url, port and body) that can be used by the chosen library.
--- 3. Call the WebDriver server with the @ReqRequestParams@ and construct the result in the form of a simplified 'HttpResponse'.
--- 4. Use the parser provided by the 'W3Spec' to transform the 'HttpResponse' to the desired result type and handle any errors.
+{- $runnerImp
+This is an example of a minimal \runner\ that implements the interaction with WebDriver endpoint definitions as provided by this library.
+
+The source file for this example can be found in [the project repo](https://github.com/pyrethrum/webdriver/blob/main/webdriver-examples/driver-demo-e2e/IORunnerMinimal.hs).
+
+To \run\ a 'W3Spec', requires the following:
+
+    1. Choose a library to make the HTTP request to the WebDriver server. In this case, we have chosen [req](https://hackage.haskell.org/package/req).
+    2. Define a function to convert a 'W3Spec' to a @RequestParams@ (such as url, port and body) that can be used by the chosen library.
+    3. Call the WebDriver server with the @ReqRequestParams@ and construct the result in the form of a simplified 'HttpResponse'.
+    4. Use the parser provided by the 'W3Spec' to transform the 'HttpResponse' to the desired result type and handle any errors.
+-}
 
 -- $runnerExample
--- === __Module Header__
+-- ==== __Module Header__
 -- @
 -- {-# LANGUAGE DataKinds #-}
 -- {-# LANGUAGE DuplicateRecordFields #-}
@@ -261,7 +264,7 @@ Using [webdriver-precore](TODO) to build a webdriver library requires two steps 
 --   )
 -- @
 --
--- === The Run Function
+-- ==== The Run Function
 -- @
 -- run :: W3Spec a -> IO a
 -- run spec =
@@ -271,10 +274,10 @@ Using [webdriver-precore](TODO) to build a webdriver library requires two steps 
 --     >>= parseResponse spec    -- 4. Use the W3Spec parser to convert the HttpResponse to the desired result type and handle any errors
 -- @
 --
--- === 1. Import Chosen HTTP Library
+-- ==== 1. Import Chosen HTTP Library
 -- see [req](https://hackage.haskell.org/package/req) documentation for more details
 --
--- === 2. Define a function to convert a 'W3Spec' to a @ReqRequestParams@
+-- ==== 2. Define a function to convert a 'W3Spec' to a @ReqRequestParams@
 -- @
 -- mkRequest :: forall a. W3Spec a -> ReqRequestParams
 -- mkRequest spec = case spec of
@@ -296,7 +299,7 @@ Using [webdriver-precore](TODO) to build a webdriver library requires two steps 
 --     ReqRequestParams
 -- @
 --
--- === 3. Call the WebDriver server with the @ReqRequestParams@ and return the result in the form of a simplified 'HttpResponse'
+-- ==== 3. Call the WebDriver server with the @ReqRequestParams@ and return the result in the form of a simplified 'HttpResponse'
 -- @
 -- callReq :: ReqRequestParams -> IO HttpResponse
 -- callReq MkRequestParams {url, method, body, port = prt} =
@@ -312,7 +315,7 @@ Using [webdriver-precore](TODO) to build a webdriver library requires two steps 
 --     responseStatusText = decodeUtf8Lenient . responseStatusMessage
 -- @
 --
--- === 4. Use the 'S.W3Spec' parser to convert the 'HttpResponse' to the desired result type and handle any errors (in this case just throwing an exception)
+-- ==== 4. Use the 'W3Spec' parser to convert the 'HttpResponse' to the desired result type and handle any errors (in this case just throwing an exception)
 -- @
 -- parseResponse :: W3Spec a -> HttpResponse -> IO a
 -- parseResponse spec r =
