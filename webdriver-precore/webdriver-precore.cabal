@@ -13,12 +13,12 @@ build-type:     Simple
 extra-source-files:
     README.md
 
-synopsis:       The W3C WebDriver spec as a list of types functions
+synopsis:       A typed wrapper for W3C WebDriver protocol. A base for other libraries.
 
 description:
   This library provides typed definitions for the endpoints of the @<https://www.w3.org/TR/2025/WD-webdriver2-20250210/ W3C Webdriver>@.
-  It is intended to be used as a base for other libraries that provide a more convenient, idiomatic interface to the WebDriver protocol. 
-  
+
+  It is intended to be used as a base for other libraries that provide a WebDriver client implementation and higher level functions.
   
   See <https://github.com/pyrethrum/webdriver-precore#readme README> on GitHub for further details.
 

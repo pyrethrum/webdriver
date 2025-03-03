@@ -1,13 +1,20 @@
 module WebDriverPreCore.Spec
-  ( -- * Introduction
+  ( 
+    -- * Introduction
+    -- ** What is This Library?
+    -- $whatThisLibrary
+    -- ** Why This Library?
     -- $whyThisLibrary
-    -- $usage
-    -- $example
-
-    -- * The W3Spec Type
-    module WC3Spec,
-
+    -- ** Implementing WebDriver Interaction
+    -- $highLevelImplementation
+    -- *** Implementing a /runner/
+    -- $runnerImp
+    -- **** /runner/ Example
+    -- $runnerExample
     -- * The API
+
+    -- ** The W3Spec Type
+    module WC3Spec,
 
     -- ** Root Methods
     module RootMethods,
@@ -87,7 +94,7 @@ import WebDriverPreCore.Spec.SpecDefinition as ElementInstanceMethods
     getElementCssValue,
     getElementProperty,
     getElementRect,
-    getElementShadowRoot,
+    getElementShadowRoot,Implementing a 
     getElementTagName,
     getElementText,
     isElementEnabled,
@@ -99,7 +106,7 @@ import WebDriverPreCore.Spec.SpecDefinition as ElementMethods
     findElements,
     getActiveElement,
   )
-import WebDriverPreCore.Spec.SpecDefinition as FrameMethods (switchToParentFrame)
+import WebDriverPreCore.Spec.SpecDefinition as FrameMetMinimal Implementation Examplehods (switchToParentFrame)
 import WebDriverPreCore.Spec.SpecDefinition as RootMethods (newSession, newSession', status)
 import WebDriverPreCore.Spec.SpecDefinition as SessionMethods
   ( acceptAlert,
@@ -120,7 +127,7 @@ import WebDriverPreCore.Spec.SpecDefinition as SessionMethods
     getNamedCookie,
     getPageSource,
     getTimeouts,
-    getTitle,
+    getTitle,Implementing a 
     getWindowHandle,
     getWindowHandles,
     getWindowRect,
@@ -153,34 +160,38 @@ import WebDriverPreCore.Spec.SpecDefinition as WindowMethods
     switchToWindow,
   )
 
--- $whyThisLibrary
--- == What is This Library?
+-- $whatThisLibrary
 -- This library provides a minimal abstraction over the [WebDriver W3C Protocol](https://www.w3.org/TR/2025/WD-webdriver2-20250210/) endpoints
--- __without providing any implementation__. It provides a description of the W3C API as typed (primarily 'W3Spec' ) functions.
+-- __without providing any implementation__. It provides a description of the W3C API as a list of functions returning a 'W3Spec'.
 -- The intention is that other libraries will provide the actual implementation.
 --
--- You can not use this library directly to drive a browser.
---
+-- You can not use this library directly to drive a browser. If you are looking for a library to drive a browser, you may be interested in
+-- an alternative library such [haskell-webdriver](https://github.com/haskell-webdriver/haskell-webdriver#readme).
+
+-- $whyThisLibrary
 -- == Why This Library?
 -- There are a number of libraries that provide WebDriver bindings for Haskell. However, at the time work on this library commenced
 -- the available libraries were either in need of maintenance, required Selenium, or part of larger opinionated testing frameworks.
 --
--- The end goal of the authors of this library is to enable UI interaction in our own high level testing framework. We would prefer to
+-- The end goal of the authors of this library is to enable browser interaction in our own high level testing framework. We would prefer to
 -- communicate with drivers directly, using the W3C standards (developed largely by the Selenium core contributors) rather than depend on Selenium
 -- itself. We would also like to avoid pulling in too many dependencies or potentially incompatible concepts from other high level libraries.
--- To achieve this, we plan to develop a number of unopinionated lower level libraries that can be used by others without buying into our entire stack.
+-- To achieve this, we plan to first develop a number of unopinionated, lower level libraries that can be used by others 
+-- without buying into our entire stack.
 --
--- This library is the first of those libraries and is intended to provide a low-dependency base on which fully featured
+-- This library is the first of those libraries, and is intended to provide a low-dependency base on which fully featured
 -- (W3C) WebDriver libraries can be built.
 
--- $usage
---
--- == Minimal WebDriver IO Runner
---
--- [webdriver-precore](TODO) does not provide any implementation to drive a browser.
---
+{- $highLevelImplementation
+Using [webdriver-precore](TODO) to build a webdriver library requires two steps to attain the basic functionality provided by the WebDriver API:
+
+1. Implement a /runner/ that, given a 'W3Spec', interacts can make requests to the WebDriver server and parse the response.
+2. Apply the runner to the 'W3Spec' functions provided by this library to transform the static types provided into actual browser interactions.
+-}
+
+-- $runnerImp
 -- This is an example of a minimal \runner\ that implements the interaction with WebDriver endpoint definitions as provided by this library.
--- The full example can be found at [IORunnerMinimal.hs](https://github.com/pyrethrum/webdriver/blob/main/webdriver-examples/driver-demo-e2e/IORunnerMinimal.hs)
+-- The source file for this example can be found in [the project repo](https://github.com/pyrethrum/webdriver/blob/main/webdriver-examples/driver-demo-e2e/IORunnerMinimal.hs)
 -- To \run\ a 'W3Spec', requires the following:
 --
 -- 1. Choose a library to make the HTTP request to the WebDriver server. In this case, we have chosen [req](https://hackage.haskell.org/package/req).
@@ -188,7 +199,7 @@ import WebDriverPreCore.Spec.SpecDefinition as WindowMethods
 -- 3. Call the WebDriver server with the @ReqRequestParams@ and construct the result in the form of a simplified 'HttpResponse'.
 -- 4. Use the parser provided by the 'W3Spec' to transform the 'HttpResponse' to the desired result type and handle any errors.
 
--- $example
+-- $runnerExample
 -- === __Module Header__
 -- @
 -- {-# LANGUAGE DataKinds #-}
