@@ -145,6 +145,10 @@ import Prelude hiding (id, lookup)
 newtype UrlPath = MkUrlPath {segments :: [Text]}
   deriving newtype (Show, Eq, Ord, Semigroup)
 
+{-|
+  The 'W3Spec' type is a specification for a WebDriver command.
+  Every endpoint function in this module returns a 'W3Spec' object.
+-}
 data W3Spec a
   = Get
       { description :: Text,
@@ -343,7 +347,7 @@ newSession' capabilities = Post "New Session" (MkUrlPath [session]) (toJSON capa
 --
 -- [spec](https://www.w3.org/TR/2025/WD-webdriver2-20250210/#status)
 --
--- @GET 	/status 	Status@
+-- @GET 	\/status 	Status@
 status :: W3Spec DriverStatus
 status = Get "Status" (MkUrlPath ["status"]) parseDriverStatus
 
@@ -355,7 +359,7 @@ status = Get "Status" (MkUrlPath ["status"]) parseDriverStatus
 --
 -- [spec](https://www.w3.org/TR/2025/WD-webdriver2-20250210/#delete-session)
 --
--- @DELETE 	/session/{session id} 	Delete Session@
+-- @DELETE 	//session//{session id} 	Delete Session@
 deleteSession :: SessionId -> W3Spec ()
 deleteSession sessionRef = Delete "Delete Session" (sessionUri sessionRef.id) voidParser
 
@@ -606,7 +610,7 @@ dismissAlert sessionId = PostEmpty "Dismiss Alert" (sessionUri2 sessionId "alert
 --
 -- [spec](https://www.w3.org/TR/2025/WD-webdriver2-20250210/#accept-alert)
 --
--- @POST 	/session/{session id}/alert/accept 	Accept Alert@
+-- @POST 	\/session\/{session id}\/alert\/accept 	Accept Alert@
 acceptAlert :: SessionId -> W3Spec ()
 acceptAlert sessionId = PostEmpty "Accept Alert" (sessionUri2 sessionId "alert" "accept") voidParser
 
