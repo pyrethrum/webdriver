@@ -125,6 +125,7 @@ import IOAPI
 import Prelude hiding (log)
 import Control.Exception (bracket)
 import GHC.IO (catchAny)
+import WebDriverPreCore.Spec (minFullCapabilities)
 
 useCustomProfile :: Bool
 useCustomProfile = True
@@ -313,6 +314,18 @@ unit_demoForwardBackRefresh = withSession \ses -> do
 
   logM "current url" $ getCurrentUrl ses
   logM "title" $ getTitle ses
+
+-- example used in haddock leave here for testing
+demoForwardBackRefresh :: IO ()
+demoForwardBackRefresh = do
+  ses <- newSession $ minFullCapabilities Firefox
+  navigateTo ses "https://the-internet.herokuapp.com/"
+  link <- findElement ses $ CSS "#content > ul:nth-child(4) > li:nth-child(6) > a:nth-child(1)"
+  elementClick ses link
+  back ses
+  forward ses
+  refresh ses
+  deleteSession ses
 
 -- >>> unit_demoWindowHandles
 unit_demoWindowHandles :: IO ()

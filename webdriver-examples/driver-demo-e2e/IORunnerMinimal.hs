@@ -72,11 +72,10 @@ To \run\ a 'W3Spec', requires the following:
 
 -}
 run :: W3Spec a -> IO a
-run spec =
-  -- req chosen               -- 1. HTTP library chosen is req
-  mkRequest spec -- 2. Convert W3Spec to params for req
-    & callReq -- 3. Call WebDriver server (via req) and return a simplified HttpResponse
-      >>= parseResponse spec -- 4. Use the W3Spec parser to convert the HttpResponse to the desired result type and handle any errors
+run spec = do
+  let request = mkRequest spec -- 2. Convert W3Spec to params for req
+  response <- callReq request  -- 3. Call WebDriver server (via req) and return a simplified HttpResponse
+  parseResponse spec response  -- 4. Use the W3Spec parser to convert the HttpResponse to the desired result type and handle any errors
 
 data ReqRequestParams where
   MkRequestParams ::
