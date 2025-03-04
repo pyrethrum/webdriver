@@ -143,6 +143,10 @@ import WebDriverPreCore.Spec.Capabilities as Capabilities
 import WebDriverPreCore.Spec.HttpResponse (HttpResponse (..))
 import Prelude hiding (id, lookup)
 
+-- | Url as returned by 'W3Spec'
+-- The 'UrlPath' type is a newtype wrapper around a list of 'Text' segments representing a path.
+--
+-- e.g. the path: @\/session\/session-no-1-2-3\/window@ would be represented as: @MkUrlPath ["session", "session-no-1-2-3", "window"]@
 newtype UrlPath = MkUrlPath {segments :: [Text]}
   deriving newtype (Show, Eq, Ord, Semigroup)
 
@@ -185,9 +189,11 @@ data W3SpecShowable = Request
   }
   deriving (Show)
 
+-- | [spec](https://www.w3.org/TR/2025/WD-webdriver2-20250210/#dfn-get-window-handle)
 newtype WindowHandle = Handle {handle :: Text}
   deriving (Show, Eq)
 
+-- | [spec](https://www.w3.org/TR/2025/WD-webdriver2-20250210/#new-window)
 data WindowHandleSpec = HandleSpec
   { handle :: WindowHandle,
     handletype :: HandleType
@@ -225,12 +231,15 @@ instance FromJSON HandleType where
     "tab" -> pure Tab
     v -> fail $ unpack $ "Unknown HandleType " <> v
 
+-- | [spec](https://www.w3.org/TR/2025/WD-webdriver2-20250210/#dfn-find-element)
 newtype ElementId = Element {id :: Text}
   deriving (Show, Eq, Generic)
 
+-- | [spec](https://www.w3.org/TR/2025/WD-webdriver2-20250210/#dfn-new-sessions)
 newtype SessionId = Session {id :: Text}
   deriving (Show)
 
+-- | [spec](https://www.w3.org/TR/2025/WD-webdriver2-20250210/#dfn-status)
 data DriverStatus
   = Ready
   | Running
@@ -238,7 +247,7 @@ data DriverStatus
   | Unknown {statusCode :: Int, statusMessage :: Text}
   deriving (Show, Eq)
 
--- https://www.w3.org/TR/webdriver2/#cookies
+-- | [spec](https://www.w3.org/TR/2025/WD-webdriver2-20250210/#cookies)
 data SameSite
   = Lax
   | Strict
@@ -249,6 +258,7 @@ instance ToJSON SameSite where
   toJSON :: SameSite -> Value
   toJSON = String . txt
 
+-- | [spec](https://www.w3.org/TR/2025/WD-webdriver2-20250210/#dfn-switch-to-frame)
 data FrameReference
   = TopLevelFrame
   | FrameNumber Word16
@@ -266,6 +276,7 @@ frameJson fr =
         FrameNumber n -> Number $ fromIntegral n
         FrameElementId elm -> object [elementFieldName .= elm.id]
 
+-- | [spec](https://www.w3.org/TR/2025/WD-webdriver2-20250210/#cookies)
 data Cookie = MkCookie
   { name :: Text,
     value :: Text,
@@ -299,6 +310,7 @@ instance ToJSON Cookie where
 cookieJSON :: Cookie -> Value
 cookieJSON c = object ["cookie" .= c]
 
+-- | [spec](https://www.w3.org/TR/2025/WD-webdriver2-20250210/#locator-strategies)
 data Selector
   = CSS Text
   | XPath Text
@@ -333,8 +345,12 @@ newSession = newSession'
 --  Return a spec to create a new session given an object of any type that implements `ToJSON`.
 --
 -- The 'FullCapabilities' type and associated types should work for the vast majority use cases, but there may be edge cases (such as missing 'Capabilities.VendorSpecific' capabilities)
--- where these types are not sufficient. 'newSession'' is a fallback for such cases and can be used with any user defined type that implements 'ToJSON', (including an Aeson 'Value').
--- Obviously, any type used must be compatible with the [Capabilities](https://www.w3.org/TR/2025/WD-webdriver2-20250210/#capabilities) spec.
+-- where these types are not sufficient. 
+-- 
+-- In such cases use a user defined type and 'newSession'' instead of 'newSession' as fallback. 
+-- 'newSession'' works with any type that implements 'ToJSON', (including an Aeson 'Value').
+-- 
+-- Obviously, any type used must produece a JSON object compatible with [capabilities as defined W3C spec](https://www.w3.org/TR/2025/WD-webdriver2-20250210/#capabilities).
 --
 --  [spec](https://www.w3.org/TR/2025/WD-webdriver2-20250210/#new-session)
 --
@@ -960,6 +976,7 @@ findElementsFromShadowRoot sessionId shadowId selector = Post "Find Elements Fro
 findElement' :: SessionId -> Value -> W3Spec ElementId
 findElement' sessionRef selector = Post "Find Element" (sessionUri1 sessionRef "element") selector parseElementRef
 
+-- | [spec](https://www.w3.org/TR/2025/WD-webdriver2-20250210/#dfn-get-element-rect)
 data WindowRect = Rect
   { x :: Int,
     y :: Int,
@@ -1208,7 +1225,7 @@ keysJson :: Text -> Value
 keysJson keysToSend = object ["text" .= keysToSend]
 
 -- actions
-
+-- | [spec](https://www.w3.org/TR/2025/WD-webdriver2-20250210/#actions)
 newtype Actions = MkActions {actions :: [Action]}
 
 actionsToJson :: Actions -> Value
@@ -1217,6 +1234,7 @@ actionsToJson MkActions {actions} =
     [ "actions" .= actions
     ]
 
+-- | [spec](https://www.w3.org/TR/2025/WD-webdriver2-20250210/#actions)
 data KeyAction
   = PauseKey {duration :: Maybe Int} -- ms
   | KeyDown
@@ -1246,6 +1264,7 @@ instance ToJSON KeyAction where
       ]
 
 -- Pointer subtypes
+-- | [spec](https://www.w3.org/TR/2025/WD-webdriver2-20250210/#actions)
 data Pointer
   = Mouse
   | Pen
@@ -1259,6 +1278,7 @@ instance ToJSON Pointer where
   toJSON :: Pointer -> Value
   toJSON = mkLwrTxt
 
+-- | [spec](https://www.w3.org/TR/2025/WD-webdriver2-20250210/#actions)
 data PointerOrigin
   = Viewport
   | OriginPointer
@@ -1272,8 +1292,8 @@ instance ToJSON PointerOrigin where
     OriginPointer -> "pointer"
     OriginElement (Element id') -> object ["element" .= id']
 
--- TODO fix me
 
+-- | [spec](https://www.w3.org/TR/2025/WD-webdriver2-20250210/#actions)
 data Action
   = NoneAction
       { id :: Text,
@@ -1302,6 +1322,7 @@ data Action
       }
   deriving (Show, Eq)
 
+-- | [spec](https://www.w3.org/TR/2025/WD-webdriver2-20250210/#actions)
 data WheelAction
   = PauseWheel {duration :: Maybe Int} -- ms
   | Scroll
@@ -1336,7 +1357,7 @@ instance ToJSON WheelAction where
               "deltaY" .= deltaY
             ]
 
--- https://www.w3.org/TR/webdriver2/#pointer-input-source
+-- | [spec](https://www.w3.org/TR/2025/WD-webdriver2-20250210/#actions)
 data PointerAction
   = PausePointer {duration :: Maybe Int} -- ms
   | Up

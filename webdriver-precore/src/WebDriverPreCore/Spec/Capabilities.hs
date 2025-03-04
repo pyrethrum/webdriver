@@ -58,16 +58,16 @@ import WebDriverPreCore.Internal.Utils (opt)
 
  -}
 
--- | FullCapabilities is a combination of alwaysMatch and firstMatch
--- alwaysMatch is a dictionary of capabilities that are always matched
--- firstMatch is a list of dictionaries of capabilities that are matched in order
--- The first dictionary in the list that matches the capabilities of the session is used
--- See [spec](https://https://www.w3.org/TR/2025/WD-webdriver2-20250210/#capabilities)
--- See also: 'Capabilities' and constructors for 'Capabilities' such as 'minCapabilities'
--- 'minFullCapabilities', 'minFirefoxCapabilities' and 'minChromeCapabilities'
+-- | 'FullCapabilities' is the object that is passed to webdriver to define the properties of the session via the 'Spec.newSession' function.
+--   It is a combination of 'alwaysMatch' and 'firstMatch' properties. 
+--
+--   See [spec](https://https://www.w3.org/TR/2025/WD-webdriver2-20250210/#capabilities)
+--
+--   See also: 'Capabilities' and related constructors such as 'minCapabilities', 'minFullCapabilities', 'minFirefoxCapabilities' and 'minChromeCapabilities'
 data FullCapabilities = MkFullCapabilities
-  { alwaysMatch :: Maybe Capabilities,
-    firstMatch :: [Capabilities]
+  { 
+    alwaysMatch :: Maybe Capabilities, -- ^ capabilities that are always matched
+    firstMatch :: [Capabilities] -- ^ a list of capabilities that are matched in order, the first matching capabilities that matches the capabilities of the session is used
   }
   deriving (Show, Generic)
 
@@ -94,7 +94,7 @@ instance FromJSON FullCapabilities where
       pure MkFullCapabilities {..}
 
 -- | Returns the minimal FullCapabilities object for a given browser
--- The browserName in the alwaysMatch field is the only field populated
+-- The browserName in the 'alwaysMatch' field is the only field populated
 -- See [spec](https://https://www.w3.org/TR/2025/WD-webdriver2-20250210/#capabilities)
 minFullCapabilities :: BrowserName -> FullCapabilities
 minFullCapabilities browserName =
@@ -130,6 +130,7 @@ minChromeCapabilities :: FullCapabilities
 minChromeCapabilities = minFullCapabilities Chrome
 
 -- Custom Types for Enums
+-- | [spec](https://www.w3.org/TR/2025/WD-webdriver2-20250210/#capabilities)
 data UnhandledPromptBehavior
   = Dismiss
   | Accept
@@ -138,12 +139,14 @@ data UnhandledPromptBehavior
   | Ignore
   deriving (Show, Generic)
 
+-- | [spec](https://www.w3.org/TR/2025/WD-webdriver2-20250210/#capabilities)
 data PageLoadStrategy
   = None'
   | Eager
   | Normal
   deriving (Show, Generic)
 
+-- | [spec](https://www.w3.org/TR/2025/WD-webdriver2-20250210/#capabilities)
 data BrowserName
   = Chrome
   | Firefox
@@ -152,6 +155,7 @@ data BrowserName
   | InternetExplorer
   deriving (Show, Generic)
 
+-- | [spec](https://www.w3.org/TR/2025/WD-webdriver2-20250210/#capabilities)
 data PlatformName
   = Windows
   | Mac
@@ -160,7 +164,12 @@ data PlatformName
   | IOS
   deriving (Show, Generic)
 
--- Core Capabilities
+-- | 'Capabilities' define the properties of the session and are passed to the webdriver
+-- via fields of the 'FullCapabilities' object.
+--
+-- See [spec](https://https://www.w3.org/TR/2025/WD-webdriver2-20250210/#capabilities)
+-- See also: 'FullCapabilities' and related constructors such as 'minCapabilities',
+-- 'minFullCapabilities', 'minFirefoxCapabilities' and 'minChromeCapabilities'
 data Capabilities = MkCapabilities
   { browserName :: Maybe BrowserName,
     browserVersion :: Maybe Text,
@@ -175,6 +184,7 @@ data Capabilities = MkCapabilities
   }
   deriving (Show, Generic)
 
+-- | [spec](https://www.w3.org/TR/2025/WD-webdriver2-20250210/#proxy)
 data SocksProxy = SocksProxy
   { socksProxy :: Text,
     socksVersion :: Int
@@ -197,6 +207,7 @@ instance FromJSON SocksProxy where
       socksVersion <- v .: "socksVersion"
       pure SocksProxy {..}
 
+-- | [spec](https://www.w3.org/TR/2025/WD-webdriver2-20250210/#proxy)
 data Proxy
   = Direct
   | Manual
@@ -243,6 +254,7 @@ instance FromJSON Proxy where
       direct <|> autoDetect <|> system <|> pac <|> manual
 
 -- Vendor-Specific Capabilities
+-- | [spec](https://www.w3.org/TR/2025/WD-webdriver2-20250210/#extensions-0)
 data VendorSpecific
   = ChromeOptions
       { chromeArgs :: Maybe [Text],
@@ -433,6 +445,7 @@ parseVendorSpecific v =
     .:? "safari:options"
 
 -- | Timeouts in milliseconds
+-- [spec](https://www.w3.org/TR/2025/WD-webdriver2-20250210/#timeouts)
 data Timeouts = MkTimeouts
   { implicit :: Maybe Int, -- field order needs to be the same as FromJSON below
     pageLoad :: Maybe Int,
