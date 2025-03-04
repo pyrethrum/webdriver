@@ -1,8 +1,7 @@
 {-# OPTIONS_HADDOCK hide #-}
 
 module WebDriverPreCore.Spec.Capabilities
-  ( 
-    FullCapabilities (..),
+  ( FullCapabilities (..),
     Capabilities (..),
     UnhandledPromptBehavior (..),
     PageLoadStrategy (..),
@@ -11,7 +10,8 @@ module WebDriverPreCore.Spec.Capabilities
     Proxy (..),
     Timeouts (..),
     VendorSpecific (..),
-    minStandardCapabilities,
+    SocksProxy (..),
+    minCapabilities,
     minFullCapabilities,
     minFirefoxCapabilities,
     minChromeCapabilities,
@@ -19,33 +19,36 @@ module WebDriverPreCore.Spec.Capabilities
 where
 
 import Control.Applicative (Alternative (..), Applicative (..))
-import Data.Aeson.Key (fromText)
-import Data.Aeson.Types
+import Control.Monad (Monad ((>>=)), MonadFail (..))
+import Data.Aeson
   ( FromJSON (parseJSON),
     KeyValue ((.=)),
     Object,
-    Pair,
-    Parser,
-    ToJSON (toJSON, toEncoding),
-    Value (..),
+    ToJSON (toJSON),
+    Value (Array),
     object,
     withObject,
     withText,
     (.:),
-    (.:?), genericToEncoding, defaultOptions, Encoding,
+    (.:?),
+  )
+import Data.Aeson.Key (fromText)
+import Data.Aeson.Types
+  ( Pair,
+    Parser,
   )
 import Data.Bool (Bool, bool)
-import Data.Functor ((<$>))
-import Data.Maybe (catMaybes, Maybe (..), maybe)
-import Data.Text (Text)
-import GHC.Generics (Generic)
-import WebDriverPreCore.Internal.Utils (opt)
-import Data.Int (Int)
-import GHC.Show (Show (..))
 import Data.Eq (Eq)
-import Data.Function (($))
-import Control.Monad (MonadFail (..), Monad ((>>=)))
-import Data.Semigroup (Semigroup(..))
+import Data.Function (($), (.))
+import Data.Functor ((<$>))
+import Data.Int (Int)
+import Data.Maybe (Maybe (..), catMaybes, maybe)
+import Data.Semigroup (Semigroup (..))
+import Data.Text (Text)
+import Data.Vector (fromList)
+import GHC.Generics (Generic)
+import GHC.Show (Show (..))
+import WebDriverPreCore.Internal.Utils (opt)
 
 {- references:
 - https://https://www.w3.org/TR/2025/WD-webdriver2-20250210/#capabilities
@@ -55,28 +58,56 @@ import Data.Semigroup (Semigroup(..))
 
  -}
 
+-- | 'FullCapabilities' is the object that is passed to webdriver to define the properties of the session via the 'Spec.newSession' function.
+--   It is a combination of 'alwaysMatch' and 'firstMatch' properties. 
+--
+--   See [spec](https://https://www.w3.org/TR/2025/WD-webdriver2-20250210/#capabilities)
+--
+--   See also: 'Capabilities' and related constructors such as 'minCapabilities', 'minFullCapabilities', 'minFirefoxCapabilities' and 'minChromeCapabilities'
 data FullCapabilities = MkFullCapabilities
   { 
-    alwaysMatch :: Maybe Capabilities,
-    firstMatch :: [Capabilities]
+    alwaysMatch :: Maybe Capabilities, -- ^ capabilities that are always matched
+    firstMatch :: [Capabilities] -- ^ a list of capabilities that are matched in order, the first matching capabilities that matches the capabilities of the session is used
   }
   deriving (Show, Generic)
 
+
 instance ToJSON FullCapabilities where
-  toEncoding :: FullCapabilities -> Encoding
-  toEncoding = genericToEncoding defaultOptions
+  toJSON :: FullCapabilities -> Value
+  toJSON MkFullCapabilities {alwaysMatch, firstMatch} =
+    object $
+      [ "capabilities" .= (object $ catMaybes [opt "alwaysMatch" $ alwaysMatch]),
+        "firstMatch" .= firstMatch'
+      ]
+    where
+      firstMatch' :: Value
+      firstMatch' = Array . fromList $ toJSON <$> firstMatch
 
-instance FromJSON FullCapabilities
+instance FromJSON FullCapabilities where
+  parseJSON :: Value -> Parser FullCapabilities
+  parseJSON = 
+    withObject "FullCapabilities" $ \v ->
+    do
+      capabilities <- v .: "capabilities"
+      alwaysMatch <- capabilities .:? "alwaysMatch"
+      firstMatch <- capabilities .: "firstMatch"
+      pure MkFullCapabilities {..}
 
+-- | Returns the minimal FullCapabilities object for a given browser
+-- The browserName in the 'alwaysMatch' field is the only field populated
+-- See [spec](https://https://www.w3.org/TR/2025/WD-webdriver2-20250210/#capabilities)
 minFullCapabilities :: BrowserName -> FullCapabilities
 minFullCapabilities browserName =
-  MkFullCapabilities 
-    { alwaysMatch = Just $ minStandardCapabilities browserName,
+  MkFullCapabilities
+    { alwaysMatch = Just $ minCapabilities browserName,
       firstMatch = []
     }
 
-minStandardCapabilities :: BrowserName -> Capabilities
-minStandardCapabilities browserName =
+-- | Returns the minimal Capabilities object for a given browser
+-- The browserName is the only field populated
+-- See [spec](https://https://www.w3.org/TR/2025/WD-webdriver2-20250210/#capabilities)
+minCapabilities :: BrowserName -> Capabilities
+minCapabilities browserName =
   MkCapabilities
     { browserName = Just browserName,
       browserVersion = Nothing,
@@ -90,13 +121,16 @@ minStandardCapabilities browserName =
       vendorSpecific = Nothing
     }
 
+-- | Returns the minimal FullCapabilities object for Firefox
 minFirefoxCapabilities :: FullCapabilities
 minFirefoxCapabilities = minFullCapabilities Firefox
 
+-- | Returns the minimal FullCapabilities object for Chrome
 minChromeCapabilities :: FullCapabilities
 minChromeCapabilities = minFullCapabilities Chrome
 
 -- Custom Types for Enums
+-- | [spec](https://www.w3.org/TR/2025/WD-webdriver2-20250210/#capabilities)
 data UnhandledPromptBehavior
   = Dismiss
   | Accept
@@ -105,12 +139,14 @@ data UnhandledPromptBehavior
   | Ignore
   deriving (Show, Generic)
 
+-- | [spec](https://www.w3.org/TR/2025/WD-webdriver2-20250210/#capabilities)
 data PageLoadStrategy
   = None'
   | Eager
   | Normal
   deriving (Show, Generic)
 
+-- | [spec](https://www.w3.org/TR/2025/WD-webdriver2-20250210/#capabilities)
 data BrowserName
   = Chrome
   | Firefox
@@ -119,6 +155,7 @@ data BrowserName
   | InternetExplorer
   deriving (Show, Generic)
 
+-- | [spec](https://www.w3.org/TR/2025/WD-webdriver2-20250210/#capabilities)
 data PlatformName
   = Windows
   | Mac
@@ -127,7 +164,12 @@ data PlatformName
   | IOS
   deriving (Show, Generic)
 
--- Core Capabilities
+-- | 'Capabilities' define the properties of the session and are passed to the webdriver
+-- via fields of the 'FullCapabilities' object.
+--
+-- See [spec](https://https://www.w3.org/TR/2025/WD-webdriver2-20250210/#capabilities)
+-- See also: 'FullCapabilities' and related constructors such as 'minCapabilities',
+-- 'minFullCapabilities', 'minFirefoxCapabilities' and 'minChromeCapabilities'
 data Capabilities = MkCapabilities
   { browserName :: Maybe BrowserName,
     browserVersion :: Maybe Text,
@@ -142,6 +184,7 @@ data Capabilities = MkCapabilities
   }
   deriving (Show, Generic)
 
+-- | [spec](https://www.w3.org/TR/2025/WD-webdriver2-20250210/#proxy)
 data SocksProxy = SocksProxy
   { socksProxy :: Text,
     socksVersion :: Int
@@ -159,11 +202,12 @@ instance ToJSON SocksProxy where
 instance FromJSON SocksProxy where
   parseJSON :: Value -> Parser SocksProxy
   parseJSON = withObject "SocksProxy" $ \v ->
-    do 
+    do
       socksProxy <- v .: "socksProxy"
       socksVersion <- v .: "socksVersion"
       pure SocksProxy {..}
 
+-- | [spec](https://www.w3.org/TR/2025/WD-webdriver2-20250210/#proxy)
 data Proxy
   = Direct
   | Manual
@@ -210,6 +254,7 @@ instance FromJSON Proxy where
       direct <|> autoDetect <|> system <|> pac <|> manual
 
 -- Vendor-Specific Capabilities
+-- | [spec](https://www.w3.org/TR/2025/WD-webdriver2-20250210/#extensions-0)
 data VendorSpecific
   = ChromeOptions
       { chromeArgs :: Maybe [Text],
@@ -253,8 +298,8 @@ instance FromJSON VendorSpecific where
   parseJSON :: Value -> Parser VendorSpecific
   parseJSON = withObject "VendorSpecific" $ \v -> do
     let chromeOptions = ChromeOptions <$> v .:? "args" <*> v .:? "binary" <*> v .:? "extensions"
-        firefoxOptions = FirefoxOptions <$> v .:? "args" <*> v .:? "binary" <*> v .:? "profile" 
-        safariOptions = SafariOptions <$> v .:? "automaticInspection" <*> v .:? "automaticProfiling" 
+        firefoxOptions = FirefoxOptions <$> v .:? "args" <*> v .:? "binary" <*> v .:? "profile"
+        safariOptions = SafariOptions <$> v .:? "automaticInspection" <*> v .:? "automaticProfiling"
     chromeOptions <|> firefoxOptions <|> safariOptions
 
 -- ToJSON Instances
@@ -390,7 +435,6 @@ instance FromJSON Capabilities where
       vendorSpecific <- parseVendorSpecific v
       pure MkCapabilities {..}
 
-
 parseVendorSpecific :: Object -> Parser (Maybe VendorSpecific)
 parseVendorSpecific v =
   v
@@ -400,17 +444,19 @@ parseVendorSpecific v =
     <|> v
     .:? "safari:options"
 
+-- | Timeouts in milliseconds
+-- [spec](https://www.w3.org/TR/2025/WD-webdriver2-20250210/#timeouts)
 data Timeouts = MkTimeouts
   { implicit :: Maybe Int, -- field order needs to be the same as FromJSON below
     pageLoad :: Maybe Int,
     script :: Maybe Int
   }
   deriving (Show, Generic, Eq)
- 
+
 instance FromJSON Timeouts where
   parseJSON :: Value -> Parser Timeouts
   parseJSON = withObject "Timeouts" $ \v ->
-    do 
+    do
       implicit <- v .:? "implicit"
       pageLoad <- v .:? "pageLoad"
       script <- v .:? "script"

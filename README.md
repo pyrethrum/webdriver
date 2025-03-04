@@ -12,6 +12,7 @@ Libraries for working with browsers
 - [x] finish WebDriverError
 - [x] check parser of timeouts all other parseJSON has been changed to by name
 - [x] create monorepo structure
+- [ ] rename library to webdriver-w3c-typed-endpoints
 - [ ] update readme
   - [ ] include notes on running tests and why the tests are there / what they cover
   - [ ] include notes on profile issues (firefox)
@@ -42,3 +43,13 @@ Libraries for working with browsers
 - [ ] change log
 - [ ] hackage
 - [ ] stackage
+
+
+# Acknowledgments
+
+# Other Libraries
+
+https://github.com/haskell-webdriver/haskell-webdriver
+
+https://hackage.haskell.org/package/webdriver-w3c
+

@@ -13,11 +13,20 @@ build-type:     Simple
 extra-source-files:
     README.md
 
-synopsis:       The W3C WebDriver spec as a list of types functions
+synopsis:       A typed wrapper for W3C WebDriver protocol. A base for other libraries.
 
 description:
   This library provides typed definitions for the endpoints of the @<https://www.w3.org/TR/2025/WD-webdriver2-20250210/ W3C Webdriver>@.
-  It is intended to be used as a base for other libraries that provide a more convenient, idiomatic interface to the WebDriver protocol. See <https://github.com/pyrethrum/webdriver-precore#readme README> on GitHub for further details.
+
+  It is intended to be used as a base for other libraries that provide a WebDriver client implementation and higher level functions.
+
+  You should not use this library directly unless you are writing your own WebDriver client implementation.
+
+  If you are looking for a library to drive a browser, you may be interested in an alternative library such [haskell-webdriver](https://github.com/haskell-webdriver/haskell-webdriver#readme).
+  
+  See "WebDriverPreCore.Spec" for further details.
+  
+  See [the project repo](https://github.com/pyrethrum/webdriver/blob/main/webdriver-examples/driver-demo-e2e/WebDriverE2EDemoTest.hs) for an examples.
 
 common commonExtensions
   default-extensions:
@@ -102,10 +111,10 @@ library
   exposed-modules:
       WebDriverPreCore.Spec
       WebDriverPreCore.Internal.Utils
+      WebDriverPreCore.Spec.SpecDefinition
   other-modules:
       WebDriverPreCore.Spec.Capabilities
       WebDriverPreCore.Spec.Error
-      WebDriverPreCore.Spec.SpecDefinition
       WebDriverPreCore.Spec.HttpResponse
   hs-source-dirs: src
   build-depends:
@@ -114,7 +123,8 @@ library
     base          >=4.16  && <5,
     bytestring    >=0.10  && <0.12.3,
     text          >=2.1   && <2.2,
-    containers    >=0.6   && <0.8
+    containers    >=0.6   && <0.8,
+    vector        >=0.12
   default-language: Haskell2010
 
 test-suite test
