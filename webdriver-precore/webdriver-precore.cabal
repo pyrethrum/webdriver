@@ -144,6 +144,9 @@ test-suite test
     , webdriver-precore
     , raw-strings-qq
   other-modules:
-    ApiCoverageTest
+    ApiCoverageTest,
+    ErrorCoverageTest,
+    JSONParsingTest,
+    TestUtils,
   build-tool-depends:
     tasty-discover:tasty-discover
