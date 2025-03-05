@@ -39,30 +39,30 @@ module WebDriverPreCore.Spec
     -- * The API
 
     -- ** The W3Spec Type
-    module WC3Spec,
-
-    -- ** Root Methods
-    module RootMethods,
-
-    -- ** Session Methods
-    -- | /See also 'newSession' and 'newSession''/
-    module SessionMethods,
-
-    -- ** Window Methods
-    module WindowMethods,
-
-    -- ** Frame Methods
-    module FrameMethods,
-
-    -- ** Element(s) Methods
-    module ElementMethods,
-
-    -- ** Element Instance Methods
-    module ElementInstanceMethods,
-
-    -- ** Shadow DOM Methods
-    module ShadowDOMMethods,
-
+    -- module WC3Spec,
+    --
+    -- -- ** Root Methods
+    -- module RootMethods,
+    --
+    -- -- ** Session Methods
+    -- -- | /See also 'newSession' and 'newSession''/
+    -- module SessionMethods,
+    --
+    -- -- ** Window Methods
+    -- module WindowMethods,
+    --
+    -- -- ** Frame Methods
+    -- module FrameMethods,
+    --
+    -- -- ** Element(s) Methods
+    -- module ElementMethods,
+    --
+    -- -- ** Element Instance Methods
+    -- module ElementInstanceMethods,
+    --
+    -- -- ** Shadow DOM Methods
+    -- module ShadowDOMMethods,
+    --
     -- * HTTP Response
     module WebDriverPreCore.Spec.HttpResponse,
 
@@ -109,84 +109,84 @@ import WebDriverPreCore.Spec.SpecDefinition as AuxTypes
     WindowHandleSpec (..),
     WindowRect (..),
   )
-import WebDriverPreCore.Spec.SpecDefinition as ElementInstanceMethods
-  ( elementClear,
-    elementClick,
-    elementSendKeys,
-    findElementFromElement,
-    findElementsFromElement,
-    getElementAttribute,
-    getElementComputedLabel,
-    getElementComputedRole,
-    getElementCssValue,
-    getElementProperty,
-    getElementRect,
-    getElementShadowRoot,
-    getElementTagName,
-    getElementText,
-    isElementEnabled,
-    isElementSelected,
-    takeElementScreenshot,
-  )
-import WebDriverPreCore.Spec.SpecDefinition as ElementMethods
-  ( findElement,
-    findElements,
-    getActiveElement,
-  )
-import WebDriverPreCore.Spec.SpecDefinition as FrameMethods (switchToParentFrame)
-import WebDriverPreCore.Spec.SpecDefinition as RootMethods (newSession, newSession', status)
-import WebDriverPreCore.Spec.SpecDefinition as SessionMethods
-  ( acceptAlert,
-    addCookie,
-    back,
-    closeWindow,
-    deleteAllCookies,
-    deleteCookie,
-    deleteSession,
-    dismissAlert,
-    executeScript,
-    executeScriptAsync,
-    forward,
-    fullscreenWindow,
-    getAlertText,
-    getAllCookies,
-    getCurrentUrl,
-    getNamedCookie,
-    getPageSource,
-    getTimeouts,
-    getTitle,
-    getWindowHandle,
-    getWindowHandles,
-    getWindowRect,
-    maximizeWindow,
-    minimizeWindow,
-    navigateTo,
-    newWindow,
-    performActions,
-    printPage,
-    refresh,
-    releaseActions,
-    sendAlertText,
-    setTimeouts,
-    setWindowRect,
-    switchToFrame,
-    switchToWindow,
-    takeScreenshot,
-  )
-import WebDriverPreCore.Spec.SpecDefinition as ShadowDOMMethods (findElementFromShadowRoot, findElementsFromShadowRoot)
-import WebDriverPreCore.Spec.SpecDefinition as WC3Spec (W3Spec (..))
-import WebDriverPreCore.Spec.SpecDefinition as WindowMethods
-  ( closeWindow,
-    fullscreenWindow,
-    getWindowHandles,
-    getWindowRect,
-    maximizeWindow,
-    minimizeWindow,
-    newWindow,
-    setWindowRect,
-    switchToWindow,
-  )
-
+-- import WebDriverPreCore.Spec.SpecDefinition as ElementInstanceMethods
+--   ( elementClear,
+--     elementClick,
+--     elementSendKeys,
+--     findElementFromElement,
+--     findElementsFromElement,
+--     getElementAttribute,
+--     getElementComputedLabel,
+--     getElementComputedRole,
+--     getElementCssValue,
+--     getElementProperty,
+--     getElementRect,
+--     getElementShadowRoot,
+--     getElementTagName,
+--     getElementText,
+--     isElementEnabled,
+--     isElementSelected,
+--     takeElementScreenshot,
+--   )
+-- import WebDriverPreCore.Spec.SpecDefinition as ElementMethods
+--   ( findElement,
+--     findElements,
+--     getActiveElement,
+--   )
+-- import WebDriverPreCore.Spec.SpecDefinition as FrameMethods (switchToParentFrame)
+-- import WebDriverPreCore.Spec.SpecDefinition as RootMethods (newSession, newSession', status)
+-- import WebDriverPreCore.Spec.SpecDefinition as SessionMethods
+--   ( acceptAlert,
+--     addCookie,
+--     back,
+--     closeWindow,
+--     deleteAllCookies,
+--     deleteCookie,
+--     deleteSession,
+--     dismissAlert,
+--     executeScript,
+--     executeScriptAsync,
+--     forward,
+--     fullscreenWindow,
+--     getAlertText,
+--     getAllCookies,
+--     getCurrentUrl,
+--     getNamedCookie,
+--     getPageSource,
+--     getTimeouts,
+--     getTitle,
+--     getWindowHandle,
+--     getWindowHandles,
+--     getWindowRect,
+--     maximizeWindow,
+--     minimizeWindow,
+--     navigateTo,
+--     newWindow,
+--     performActions,
+--     printPage,
+--     refresh,
+--     releaseActions,
+--     sendAlertText,
+--     setTimeouts,
+--     setWindowRect,
+--     switchToFrame,
+--     switchToWindow,
+--     takeScreenshot,
+--   )
+-- import WebDriverPreCore.Spec.SpecDefinition as ShadowDOMMethods (findElementFromShadowRoot, findElementsFromShadowRoot)
+-- import WebDriverPreCore.Spec.SpecDefinition as WC3Spec (W3Spec (..))
+-- import WebDriverPreCore.Spec.SpecDefinition as WindowMethods
+--   ( closeWindow,
+--     fullscreenWindow,
+--     getWindowHandles,
+--     getWindowRect,
+--     maximizeWindow,
+--     minimizeWindow,
+--     newWindow,
+--     setWindowRect,
+--     switchToWindow,
+--   )
+--
 -- $whatThisLibrary
 -- This library provides a minimal abstraction over the [WebDriver W3C Protocol](https://www.w3.org/TR/2025/WD-webdriver2-20250210/) endpoints
 -- __without providing any implementation__. It provides a description of the W3C API as a list of functions returning a 'W3Spec'.
