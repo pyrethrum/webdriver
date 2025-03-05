@@ -131,7 +131,7 @@ import Data.Aeson
   )
 import Data.Aeson.KeyMap qualified as AKM
 import Data.Aeson.Types (Parser)
-import Data.Foldable (toList)
+import Data.Foldable (toList, forM_)
 import Data.Function ((&))
 import Data.Maybe (catMaybes)
 import Data.Set (Set)
@@ -146,6 +146,7 @@ import Prelude hiding (id, lookup)
 import Data.ByteString.Builder (lazyByteString)
 import Data.ByteString (ByteString)
 import Data.Text.Internal.Encoding.Utf8 (DecoderState)
+import Data.Functor ((<&>))
 
 -- | Url as returned by 'W3Spec'
 -- The 'UrlPath' type is a newtype wrapper around a list of 'Text' segments representing a path.
@@ -177,6 +178,7 @@ data W3Spec b a
       }
 
 data NoBody = NoBody
+data Location = Location { url :: Text }
 ------------------------------------------------------------------------------
 -- LOOK HERE JOHNNNYY boi
 --
@@ -203,6 +205,24 @@ getTitle sessionRef = Get "Get Title" (sessionUri1 sessionRef "title")
 newWindow :: SessionId -> W3Spec NoBody WindowHandleSpec
 newWindow sessionRef = Post "New Window" (sessionUri2 sessionRef "window" "new") NoBody 
 
+navigateTo :: SessionId -> Text -> W3Spec Location ()
+navigateTo sessionRef url = Post "Navigate To" (sessionUri1 sessionRef "url") $ Location url
+
+findElements :: SessionId -> Selector -> W3Spec Selector [ElementId]
+findElements sessionRef selector = Post "Find Elements" (sessionUri1 sessionRef "elements") selector
+
+isElementSelected :: SessionId -> ElementId -> W3Spec NoBody Bool
+isElementSelected sessionId elementId = Get "Is Element Selected" (elementUri1 sessionId elementId "selected")
+
+elementClick :: SessionId -> ElementId -> W3Spec NoBody ()
+elementClick sessionId elementId = Post "Element Click" (elementUri1 sessionId elementId "click") NoBody
+
+newSession :: FullCapabilities -> W3Spec FullCapabilities SessionId
+newSession capabilities = Post "New Session" (MkUrlPath [session]) capabilities
+
+status :: W3Spec NoBody DriverStatus
+status = Get "Status" (MkUrlPath ["status"]) 
+
 --
 --
 -- This is our core layer
@@ -224,10 +244,15 @@ class (Monad m) => HttpClient m where
     post :: Text -> ByteString -> m ByteString
     delete :: Text -> m () 
 
-run :: (Serialize b, Deserialize r, HttpClient m) => W3Spec b r -> m r
-run spec = do
-    res <- getResponse spec
-    pure $ decode res
+class (Monad m) => Logger m where
+    logInfo :: Text -> m ()
+
+run :: (Logger m, Serialize b, Deserialize r, HttpClient m) 
+    => W3Spec b r 
+    -> m r
+run spec = do 
+    logInfo $ "Executing.. " <> spec.description
+    getResponse spec <&> decode 
 
 getResponse :: (Serialize b, HttpClient m) => W3Spec b r -> m ByteString
 getResponse spec = case spec of
@@ -235,7 +260,36 @@ getResponse spec = case spec of
     Post {description, body, path} -> post (fullPath path) (encode body)
     _ -> undefined
 
--- now we can create cool combos of our specs etc and utils
+defaultCapabilites :: FullCapabilities
+defaultCapabilites = undefined
+
+checkBoxesCss :: Selector
+checkBoxesCss = CSS "input[type='checkbox']"
+
+instance Serialize FullCapabilities where
+instance Serialize Location where
+instance Serialize Selector where
+instance Deserialize SessionId where
+instance Deserialize () where
+instance Deserialize ElementId where
+instance Deserialize Bool where
+instance Deserialize DriverStatus where
+instance Deserialize a => Deserialize [a] where
+
+unit_IsElementSelected :: (Logger m, HttpClient m) => m ()
+unit_IsElementSelected = do
+    driverStatus <- run $ status
+    logInfo $ "DriverStatus is " <> (pack . show $ driverStatus)
+    sessionId <- run $ newSession defaultCapabilites
+    run $ navigateTo sessionId "checkbox"
+    allCbs <- run $ findElements sessionId checkBoxesCss
+    forM_ allCbs $ \cb -> do
+        before <- run $ isElementSelected sessionId cb
+        logInfo $ "checkBox isElementSelected before" <> (pack . show $ before)
+        run $ elementClick sessionId cb
+        after <- run $ isElementSelected sessionId cb
+        logInfo $ "checkBox isElementSelected after" <> (pack . show $ after)
+    logInfo "-----------"
 
 --
 --
@@ -248,15 +302,19 @@ instance HttpClient Wreq where
     post body path = undefined -- mKReq body path ...
     delete path = undefined 
 
-runWreq :: Wreq a -> IO a
-runWreq = undefined
+instance Logger Wreq where
+    logInfo info = Wreq $ do
+        print "[INFO]: "
+        print info
 
--- we can expose these directly also, so no need to worry about mlt stuff
+runWreq :: Wreq a -> IO a
+runWreq (Wreq io) = io
+
+-- we can expose these directly also, so no need to worry about mtl stuff
 getTimeoutsIO :: SessionId -> IO Timeouts
-getTimeoutsIO sessionId = runWreq do
-    let spec = getTimeouts sessionId
-    t <- run spec
-    pure t
+getTimeoutsIO = runWreq 
+    . run 
+    . getTimeouts
 
 ---------------------------------------------------------------------
 --
