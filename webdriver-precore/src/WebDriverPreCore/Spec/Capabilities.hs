@@ -49,6 +49,8 @@ import Data.Vector (fromList)
 import GHC.Generics (Generic)
 import GHC.Show (Show (..))
 import WebDriverPreCore.Internal.Utils (opt)
+import Data.Enum (Enum)
+import GHC.Enum (Bounded)
 
 {- references:
 - https://https://www.w3.org/TR/2025/WD-webdriver2-20250210/#capabilities
@@ -137,14 +139,14 @@ data UnhandledPromptBehavior
   | DismissAndNotify
   | AcceptAndNotify
   | Ignore
-  deriving (Show, Generic)
+  deriving (Show, Generic, Enum, Bounded, Eq)
 
 -- | [spec](https://www.w3.org/TR/2025/WD-webdriver2-20250210/#capabilities)
 data PageLoadStrategy
   = None'
   | Eager
   | Normal
-  deriving (Show, Generic)
+  deriving (Show, Generic, Enum, Bounded, Eq)
 
 -- | [spec](https://www.w3.org/TR/2025/WD-webdriver2-20250210/#capabilities)
 data BrowserName
@@ -153,7 +155,7 @@ data BrowserName
   | Safari
   | Edge
   | InternetExplorer
-  deriving (Show, Generic)
+  deriving (Show, Generic, Enum, Bounded, Eq)
 
 -- | [spec](https://www.w3.org/TR/2025/WD-webdriver2-20250210/#capabilities)
 data PlatformName
@@ -162,7 +164,7 @@ data PlatformName
   | Linux
   | Android
   | IOS
-  deriving (Show, Generic)
+  deriving (Show, Generic, Enum, Bounded, Eq)
 
 -- | 'Capabilities' define the properties of the session and are passed to the webdriver
 -- via fields of the 'FullCapabilities' object.
@@ -182,7 +184,7 @@ data Capabilities = MkCapabilities
     unhandledPromptBehavior :: Maybe UnhandledPromptBehavior,
     vendorSpecific :: Maybe VendorSpecific
   }
-  deriving (Show, Generic)
+  deriving (Show, Generic, Eq)
 
 -- | [spec](https://www.w3.org/TR/2025/WD-webdriver2-20250210/#proxy)
 data SocksProxy = SocksProxy
@@ -270,7 +272,7 @@ data VendorSpecific
       { safariAutomaticInspection :: Maybe Bool,
         safariAutomaticProfiling :: Maybe Bool
       }
-  deriving (Show, Generic)
+  deriving (Show, Generic, Eq)
 
 -- ToJSON Instance for VendorSpecific
 instance ToJSON VendorSpecific where

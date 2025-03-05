@@ -14,7 +14,7 @@ import Data.Semigroup ((<>))
 import Data.List ((!!), drop)
 import Data.Functor ((<$>))
 import Data.Maybe (Maybe(..))
-import GHC.Base (error)
+import GHC.Base (error, Bool (..))
 import WebDriverPreCore.Internal.Utils (enumerate)
 import Data.Foldable (traverse_)
 import Data.Either (either)
@@ -31,50 +31,48 @@ import Data.Aeson
 import Data.Enum (Enum, Bounded (minBound), maxBound)
 import GHC.Err (undefined)
 import Control.Applicative (pure)
+import Data.Bool (Bool)
 
-
-
--- Generate a random Value (very simplistic)
-genJSONValue :: G.Gen Value
-genJSONValue = G.frequency
-  [ (1, pure A.Null)
-  , (1, pure $ object ["key" .= ("example" :: Text)])
-  ]
-
-
-genOneOf :: forall a. Enum a => G.Gen a
-genOneOf = G.inRange $ R.enum (minBound @a, maxBound @a)
-
-genMaybeOf :: forall a. Enum a => G.Gen (Maybe a)
-genMaybeOf gen' = G.frequency
+genMaybe :: G.Gen a -> G.Gen (Maybe a)
+genMaybe gen' = G.frequency
   [ (1, pure Nothing)
   , (3, Just <$> gen')
   ]
 
--- Generate a random BrowserName
--- genBrowserName :: G.Gen BrowserName
--- genBrowserName = genOneOf
+genOneOf :: forall a. (Enum a, Bounded a ) => G.Gen a
+genOneOf = G.inRange $ R.enum (minBound @a, maxBound @a)
 
--- Generate a random UnhandledPromptBehavior
-genUnhandledPromptBehavior :: G.Gen UnhandledPromptBehavior
-genUnhandledPromptBehavior = G.frequency
-  [ (1, pure Dismiss)
-  , (1, pure Accept)
-  , (1, pure DismissAndNotify)
-  , (1, pure AcceptAndNotify)
-  , (1, pure Ignore)
-  ]
+genMEnum :: forall a. (Enum a, Bounded a )  => G.Gen (Maybe a)
+genMEnum = genMaybe $ genOneOf @a
+
+genVendorSpecific :: G.Gen VendorSpecific
+genVendorSpecific = undefined
+
+genBool :: G.Gen Bool
+genBool = bool False
+
+genProxy :: G.Gen Proxy
+genProxy = undefined
+
+genTimeouts :: G.Gen Timeouts
+genTimeouts = undefined
+
+genText :: G.Gen Text
+genText = undefined
 
 -- Generate random Capabilities
 genCapabilities :: G.Gen Capabilities
 genCapabilities = do
-
-  pure $ undefined
-    MkCapabilities
-      { browserName = mbBrowser
-      , strictFileInteractability = mbStrictFileInteract
-      , unhandledPromptBehavior = mbUnhandledPrompt
-      , vendorSpecific = mbVendorSpecific
-      }
-
+  browserName <- genMEnum @BrowserName
+  browserVersion <- genMaybe genText
+  platformName <- genMEnum 
+  strictFileInteractability <- genMaybe genBool
+  unhandledPromptBehavior <- genMEnum @UnhandledPromptBehavior
+  acceptInsecureCerts <- genMaybe genBool
+  pageLoadStrategy <- genMEnum @PageLoadStrategy
+  proxy <- genMaybe genProxy
+  timeouts <- genMaybe genTimeouts
+  vendorSpecific <- genMaybe genVendorSpecific
+  pure $ 
+    MkCapabilities { ..}
 
