@@ -102,8 +102,8 @@ common commonGhcOptions
     -fbyte-code-and-object-code 
     -fno-break-points
     -haddock
-
- -- -fdefer-type-errors
+    -fdefer-type-errors
+    
 tested-with: GHC == { 9.8.2, 9.10.1 }
 
 library

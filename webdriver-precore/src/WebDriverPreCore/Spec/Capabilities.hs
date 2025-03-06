@@ -187,7 +187,7 @@ data Capabilities = MkCapabilities
   deriving (Show, Generic, Eq)
 
 -- | [spec](https://www.w3.org/TR/2025/WD-webdriver2-20250210/#proxy)
-data SocksProxy = SocksProxy
+data SocksProxy = MkSocksProxy
   { socksProxy :: Text,
     socksVersion :: Int
   }
@@ -195,7 +195,7 @@ data SocksProxy = SocksProxy
 
 instance ToJSON SocksProxy where
   toJSON :: SocksProxy -> Value
-  toJSON SocksProxy {..} =
+  toJSON MkSocksProxy {..} =
     object
       [ "socksProxy" .= socksProxy,
         "socksVersion" .= socksVersion
@@ -207,7 +207,7 @@ instance FromJSON SocksProxy where
     do
       socksProxy <- v .: "socksProxy"
       socksVersion <- v .: "socksVersion"
-      pure SocksProxy {..}
+      pure MkSocksProxy {..}
 
 -- | [spec](https://www.w3.org/TR/2025/WD-webdriver2-20250210/#proxy)
 data Proxy
