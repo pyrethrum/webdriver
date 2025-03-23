@@ -18,7 +18,6 @@ import Test.Falsify.Generator as G
     list,
   )
 import Test.Falsify.Predicate (dot, expect, fn, (.$))
-import Test.Falsify.Predicate qualified as P
 import Test.Falsify.Range as R (between, enum)
 import Test.Tasty (TestTree)
 import Test.Tasty.Falsify

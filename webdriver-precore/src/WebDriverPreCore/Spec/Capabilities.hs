@@ -18,14 +18,14 @@ module WebDriverPreCore.Spec.Capabilities
   )
 where
 
-import Control.Applicative (Alternative (..), Applicative (..), asum)
+import Control.Applicative (Applicative (..), asum)
 import Control.Monad (Monad ((>>=)), MonadFail (..))
 import Data.Aeson
   ( FromJSON (parseJSON),
     KeyValue ((.=)),
     Object,
     ToJSON (toJSON),
-    Value (Array),
+    Value,
     object,
     withObject,
     withText,
@@ -38,17 +38,16 @@ import Data.Aeson.Types
     Parser,
     Value (..),
   )
-import Data.Bool (Bool, bool)
+import Data.Bool (Bool)
 import Data.Enum (Enum)
 import Data.Eq (Eq)
-import Data.Function (($), (&), (.))
+import Data.Function (($), (.))
 import Data.Functor ((<$>))
 import Data.Int (Int)
 import Data.Maybe (Maybe (..), catMaybes, maybe)
 import Data.Semigroup (Semigroup (..))
 import Data.Text (Text)
 import Data.Vector (fromList)
-import GHC.Base (undefined)
 import GHC.Enum (Bounded)
 import GHC.Generics (Generic)
 import GHC.Show (Show (..))
