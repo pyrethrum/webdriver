@@ -82,7 +82,16 @@ genText :: G.Gen Text
 genText =
   G.frequency
     [ (1, pure ""),
-      (3, pure "Awd34rtf")
+      (1, pure "Awd34rtf"),
+      (1, pure "f"),
+      (1, pure "sfdsds"),
+      (1, pure "5"),
+      (1, pure "ttttttttttttt"),
+      (1, pure "a"),
+      (1, pure "zzzzz"),
+      (1, pure "rr"),
+      (1, pure "aa"),
+      (1, pure "pppp")
     ]
 
 genTextList :: G.Gen [Text]
