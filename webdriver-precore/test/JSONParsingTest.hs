@@ -1,36 +1,45 @@
 module JSONParsingTest where
 
-import Control.Applicative (pure)
-import Data.Aeson
-import Data.Bool (Bool)
-import Data.Either (either)
+import Data.Aeson (ToJSON (..), Value, decode, encode)
+import Data.Bool (Bool, (&&), (||))
 import Data.Enum (Bounded (minBound), Enum, maxBound)
-import Data.Eq (Eq ((==)))
-import Data.Foldable (traverse_)
-import Data.Function (($), (&), (.))
+import Data.Function (($))
 import Data.Functor ((<$>))
-import Data.List (drop, (!!))
 import Data.Maybe (Maybe (..))
-import Data.Ord (Ord)
-import Data.Semigroup ((<>))
-import Data.Set as S (Set, difference, fromList, null)
-import Data.Text
-import Data.Text as T (Text, intercalate, lines, null, pack, replace, split, strip, unwords, words)
-import GHC.Base (Applicative (..), Bool (..), Int, error)
-import GHC.Err (undefined)
-import GHC.Show (Show (..))
-import GHC.Utils.Misc (filterOut)
+import Data.Text (Text, unpack)
+import Data.Text qualified as T
+import GHC.Base (Applicative (..), Bool (..), Eq (..), Int)
+import GHC.Data.Maybe (maybe)
 import Test.Falsify.Generator as G
-import Test.Falsify.Generator as G (Gen, frequency, inRange, list)
-import Test.Falsify.Predicate qualified as FP
-import Test.Falsify.Range as R (between, enum, skewedBy)
-import Test.Tasty (TestName, TestTree, defaultMain, testGroup)
+  ( Gen,
+    bool,
+    frequency,
+    inRange,
+    list,
+  )
+import Test.Falsify.Predicate (dot, expect, fn, (.$))
+import Test.Falsify.Predicate qualified as P
+import Test.Falsify.Range as R (between, enum)
+import Test.Tasty (TestTree)
 import Test.Tasty.Falsify
-import Test.Tasty.HUnit as HUnit (Assertion, assertBool, (@=?))
-import Text.RawString.QQ (r)
-import WebDriverPreCore.Internal.Utils (enumerate)
+  ( ExpectFailure (DontExpectFailure),
+    TestOptions (..),
+    Verbose (Verbose),
+    assert,
+    gen,
+    info,
+    testPropertyWith,
+  )
+import Text.Show.Pretty (ppShow)
+import WebDriverPreCore.Internal.Utils (jsonToText)
 import WebDriverPreCore.Spec
-import WebDriverPreCore.Spec (UrlPath (..))
+  ( Capabilities (..),
+    Proxy (AutoDetect, Direct, Manual, Pac, System),
+    SocksProxy (MkSocksProxy),
+    Timeouts (MkTimeouts),
+    VendorSpecific (..)
+  )
+import Data.Foldable (null, all)
 
 genMaybe :: G.Gen a -> G.Gen (Maybe a)
 genMaybe gen' =
@@ -124,3 +133,93 @@ genCapabilities = do
   timeouts <- genMaybe genTimeouts
   vendorSpecific <- genMaybe genVendorSpecific
   pure MkCapabilities {..}
+
+options :: TestOptions
+options =
+  TestOptions
+    { expectFailure = DontExpectFailure,
+      overrideVerbose = Just Verbose,
+      overrideMaxShrinks = Nothing,
+      overrideNumTests = Just 1000,
+      overrideMaxRatio = Nothing
+    }
+
+capabilitiesRoundTrip :: TestTree
+capabilitiesRoundTrip = testPropertyWith options "Roundtrip Capabilities Parsing" $ do
+  c <- gen genCapabilities
+  let encoded = encode c
+      showEncode = jsonToText <$> decode @Value encoded
+      decoded = decode @Capabilities encoded
+      asExpected = jsonEq c
+  info ""
+  info "Initial Capabilities:"
+  info $ ppShow c
+  info ""
+  info "Encoded Capabilities:"
+  info $ maybe "Nothing" unpack showEncode
+  info ""
+  info "Decoded Capabilities:"
+  info $ maybe "Nothing" ppShow decoded
+  assert $ expect True `dot` fn ("matches encoded", asExpected) .$ ("decoded", decoded)
+
+jsonEq :: Capabilities -> Maybe Capabilities -> Bool
+jsonEq expected =
+  maybe
+    False
+    ( \actual ->
+        let noVendor caps = caps {vendorSpecific = Nothing}
+            ev = expected.vendorSpecific
+            av = actual.vendorSpecific
+            vendorsEq = empty ev && empty av || ev == av
+
+            emptyTxt :: Maybe Text -> Bool
+            emptyTxt = maybe True T.null
+
+            emptyList :: Maybe [a] -> Bool
+            emptyList = maybe True null
+
+            emptyTextList :: Maybe [Text] -> Bool
+            emptyTextList ml = emptyList ml || maybe True (all T.null) ml
+
+            empty :: Maybe VendorSpecific -> Bool
+            empty = \case
+              Nothing -> True
+              Just vs -> case vs of
+                ChromeOptions
+                  { chromeArgs,
+                    chromeBinary,
+                    chromeExtensions
+                  } ->
+                    emptyTextList chromeArgs
+                      && emptyTxt chromeBinary
+                      && emptyTextList chromeExtensions
+                FirefoxOptions
+                  { firefoxArgs,
+                    firefoxBinary,
+                    firefoxProfile
+                  } ->
+                    emptyTextList firefoxArgs
+                      && emptyTxt firefoxBinary
+                      && emptyTxt firefoxProfile
+                SafariOptions Nothing Nothing -> True
+                SafariOptions _ _ -> False
+         in noVendor expected == noVendor actual && vendorsEq
+    )
+
+-- >>> test_round_trip
+-- No instance for `Show TestTree' arising from a use of `evalPrint'
+-- In a stmt of an interactive GHCi command: evalPrint it_a228X
+test_round_trip :: TestTree
+test_round_trip = capabilitiesRoundTrip
+
+-- >>> fo
+-- Object (fromList [])
+fo :: Value
+fo = toJSON $ FirefoxOptions Nothing Nothing Nothing
+
+{-
+
+    initial caps: Just (MkCapabilities {browserName = Nothing, browserVersion = Nothing, platformName = Nothing, acceptInsecureCerts = Nothing, pageLoadStrategy = Nothing, proxy = Nothing, timeouts = Nothing, strictFileInteractability = Nothing, unhandledPromptBehavior = Nothing, vendorSpecific = Just (FirefoxOptions {firefoxArgs = Nothing, firefoxBinary = Nothing, firefoxProfile = Nothing})})
+    parsed caps : Just (MkCapabilities {browserName = Nothing, browserVersion = Nothing, platformName = Nothing, acceptInsecureCerts = Nothing, pageLoadStrategy = Nothing, proxy = Nothing, timeouts = Nothing, strictFileInteractability = Nothing, unhandledPromptBehavior = Nothing, vendorSpecific = Nothing})
+
+-}
