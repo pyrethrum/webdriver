@@ -1,6 +1,6 @@
 module JSONParsingTest where
 
-import Data.Aeson (ToJSON (..), Value, decode, encode)
+import Data.Aeson (Value, decode, encode)
 import Data.Bool (Bool, (&&), (||))
 import Data.Enum (Bounded (minBound), Enum, maxBound)
 import Data.Function (($))
@@ -8,7 +8,7 @@ import Data.Functor ((<$>))
 import Data.Maybe (Maybe (..))
 import Data.Text (Text, unpack)
 import Data.Text qualified as T
-import GHC.Base (Applicative (..), Bool (..), Eq (..), Int)
+import GHC.Base (Applicative (..), Bool (..), Eq (..), Int, const)
 import GHC.Data.Maybe (maybe)
 import Test.Falsify.Generator as G
   ( Gen,
@@ -19,7 +19,7 @@ import Test.Falsify.Generator as G
   )
 import Test.Falsify.Predicate (dot, expect, fn, (.$))
 import Test.Falsify.Range as R (between, enum)
-import Test.Tasty (TestTree)
+import Test.Tasty (TestTree, defaultMain)
 import Test.Tasty.Falsify
   ( ExpectFailure (DontExpectFailure),
     TestOptions (..),
@@ -27,7 +27,7 @@ import Test.Tasty.Falsify
     assert,
     gen,
     info,
-    testPropertyWith,
+    testPropertyWith, Property,
   )
 import Text.Show.Pretty (ppShow)
 import WebDriverPreCore.Internal.Utils (jsonToText)
@@ -39,6 +39,8 @@ import WebDriverPreCore.Spec
     VendorSpecific (..)
   )
 import Data.Foldable (null, all)
+import Data.String (String)
+import GHC.IO (IO)
 
 genMaybe :: G.Gen a -> G.Gen (Maybe a)
 genMaybe gen' =
@@ -146,29 +148,11 @@ options :: TestOptions
 options =
   TestOptions
     { expectFailure = DontExpectFailure,
-      overrideVerbose = Just Verbose,
+      overrideVerbose = if wantLogging then Just Verbose else Nothing,
       overrideMaxShrinks = Nothing,
       overrideNumTests = Just 1000,
       overrideMaxRatio = Nothing
     }
-
-capabilitiesRoundTrip :: TestTree
-capabilitiesRoundTrip = testPropertyWith options "Roundtrip Capabilities Parsing" $ do
-  c <- gen genCapabilities
-  let encoded = encode c
-      showEncode = jsonToText <$> decode @Value encoded
-      decoded = decode @Capabilities encoded
-      asExpected = jsonEq c
-  info ""
-  info "Initial Capabilities:"
-  info $ ppShow c
-  info ""
-  info "Encoded Capabilities:"
-  info $ maybe "Nothing" unpack showEncode
-  info ""
-  info "Decoded Capabilities:"
-  info $ maybe "Nothing" ppShow decoded
-  assert $ expect True `dot` fn ("matches encoded", asExpected) .$ ("decoded", decoded)
 
 jsonEq :: Capabilities -> Maybe Capabilities -> Bool
 jsonEq expected =
@@ -214,20 +198,30 @@ jsonEq expected =
          in noVendor expected == noVendor actual && vendorsEq
     )
 
--- >>> test_round_trip
--- No instance for `Show TestTree' arising from a use of `evalPrint'
--- In a stmt of an interactive GHCi command: evalPrint it_a228X
+wantLogging :: Bool
+wantLogging = False
+
+log :: String -> Property ()
+log = if wantLogging then info else const $ pure ()
+
+
 test_round_trip :: TestTree
-test_round_trip = capabilitiesRoundTrip
+test_round_trip = testPropertyWith options "Roundtrip Capabilities Parsing" $ do
+  c <- gen genCapabilities
+  let encoded = encode c
+      showEncode = jsonToText <$> decode @Value encoded
+      decoded = decode @Capabilities encoded
+      asExpected = jsonEq c
 
--- >>> fo
--- Object (fromList [])
-fo :: Value
-fo = toJSON $ FirefoxOptions Nothing Nothing Nothing
+  log ""
+  log "Initial Capabilities:"
+  log $ ppShow c
+  log ""
+  log "Encoded Capabilities:"
+  log $ maybe "Nothing" unpack showEncode
+  log ""
+  log "Decoded Capabilities:"
+  log $ maybe "Nothing" ppShow decoded
+  assert $ expect True `dot` fn ("matches encoded", asExpected) .$ ("decoded", decoded)
 
-{-
 
-    initial caps: Just (MkCapabilities {browserName = Nothing, browserVersion = Nothing, platformName = Nothing, acceptInsecureCerts = Nothing, pageLoadStrategy = Nothing, proxy = Nothing, timeouts = Nothing, strictFileInteractability = Nothing, unhandledPromptBehavior = Nothing, vendorSpecific = Just (FirefoxOptions {firefoxArgs = Nothing, firefoxBinary = Nothing, firefoxProfile = Nothing})})
-    parsed caps : Just (MkCapabilities {browserName = Nothing, browserVersion = Nothing, platformName = Nothing, acceptInsecureCerts = Nothing, pageLoadStrategy = Nothing, proxy = Nothing, timeouts = Nothing, strictFileInteractability = Nothing, unhandledPromptBehavior = Nothing, vendorSpecific = Nothing})
-
--}
