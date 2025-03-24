@@ -102,8 +102,8 @@ common commonGhcOptions
     -fbyte-code-and-object-code 
     -fno-break-points
     -haddock
-
- -- -fdefer-type-errors
+    -- -fdefer-type-errors
+    
 tested-with: GHC == { 9.8.2, 9.10.1 }
 
 library
@@ -124,7 +124,7 @@ library
     bytestring    >=0.10  && <0.12.3,
     text          >=2.1   && <2.2,
     containers    >=0.6   && <0.8,
-    vector        >=0.12
+    vector        >=0.12  && <0.14
   default-language: Haskell2010
 
 test-suite test
@@ -137,13 +137,19 @@ test-suite test
     , base
     , containers
     , ghc
+    , pretty-show
     , text
     , tasty
     , tasty-hunit
+    , tasty-quickcheck
     , tasty-discover
+    , falsify
     , webdriver-precore
     , raw-strings-qq
   other-modules:
-    ApiCoverageTest
+    ApiCoverageTest,
+    ErrorCoverageTest,
+    JSONParsingTest,
+    TestUtils,
   build-tool-depends:
     tasty-discover:tasty-discover

@@ -12,6 +12,7 @@ Libraries for working with browsers
 - [x] finish WebDriverError
 - [x] check parser of timeouts all other parseJSON has been changed to by name
 - [x] create monorepo structure
+- [x] round trip JSON test for capabilities
 - [ ] rename library to webdriver-w3c-typed-endpoints
 - [ ] update readme
   - [ ] include notes on running tests and why the tests are there / what they cover
@@ -27,6 +28,7 @@ Libraries for working with browsers
   - [ ] docker file
   - [ ] dev-container
   - [ ] scripts
+- [ ] get rmote dev-container working (laptop demo)
 - [ ] fork the internet into Pyrethrum org
 - [x] update tasks
 - [ ] sort out / delete misbehaving tasks (permissions)
@@ -35,6 +37,7 @@ Libraries for working with browsers
 - [ ] work out whats up with the trailing fields warning on tested with
   - [ ] meaning of tested with
   - [ ] why warning
+- [ ] add notes on top of examples
 - [ ] add checks for e2e when profile dir is not there
 - [ ] review compiler switches
 - [ ] review license

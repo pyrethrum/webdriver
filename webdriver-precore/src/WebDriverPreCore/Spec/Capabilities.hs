@@ -18,14 +18,14 @@ module WebDriverPreCore.Spec.Capabilities
   )
 where
 
-import Control.Applicative (Alternative (..), Applicative (..))
+import Control.Applicative (Applicative (..), asum)
 import Control.Monad (Monad ((>>=)), MonadFail (..))
 import Data.Aeson
   ( FromJSON (parseJSON),
     KeyValue ((.=)),
     Object,
     ToJSON (toJSON),
-    Value (Array),
+    Value,
     object,
     withObject,
     withText,
@@ -36,8 +36,10 @@ import Data.Aeson.Key (fromText)
 import Data.Aeson.Types
   ( Pair,
     Parser,
+    Value (..),
   )
-import Data.Bool (Bool, bool)
+import Data.Bool (Bool)
+import Data.Enum (Enum)
 import Data.Eq (Eq)
 import Data.Function (($), (.))
 import Data.Functor ((<$>))
@@ -46,6 +48,7 @@ import Data.Maybe (Maybe (..), catMaybes, maybe)
 import Data.Semigroup (Semigroup (..))
 import Data.Text (Text)
 import Data.Vector (fromList)
+import GHC.Enum (Bounded)
 import GHC.Generics (Generic)
 import GHC.Show (Show (..))
 import WebDriverPreCore.Internal.Utils (opt)
@@ -59,18 +62,18 @@ import WebDriverPreCore.Internal.Utils (opt)
  -}
 
 -- | 'FullCapabilities' is the object that is passed to webdriver to define the properties of the session via the 'Spec.newSession' function.
---   It is a combination of 'alwaysMatch' and 'firstMatch' properties. 
+--   It is a combination of 'alwaysMatch' and 'firstMatch' properties.
 --
 --   See [spec](https://https://www.w3.org/TR/2025/WD-webdriver2-20250210/#capabilities)
 --
 --   See also: 'Capabilities' and related constructors such as 'minCapabilities', 'minFullCapabilities', 'minFirefoxCapabilities' and 'minChromeCapabilities'
 data FullCapabilities = MkFullCapabilities
-  { 
-    alwaysMatch :: Maybe Capabilities, -- ^ capabilities that are always matched
-    firstMatch :: [Capabilities] -- ^ a list of capabilities that are matched in order, the first matching capabilities that matches the capabilities of the session is used
+  { -- | capabilities that are always matched
+    alwaysMatch :: Maybe Capabilities,
+    -- | a list of capabilities that are matched in order, the first matching capabilities that matches the capabilities of the session is used
+    firstMatch :: [Capabilities]
   }
   deriving (Show, Generic)
-
 
 instance ToJSON FullCapabilities where
   toJSON :: FullCapabilities -> Value
@@ -85,13 +88,13 @@ instance ToJSON FullCapabilities where
 
 instance FromJSON FullCapabilities where
   parseJSON :: Value -> Parser FullCapabilities
-  parseJSON = 
+  parseJSON =
     withObject "FullCapabilities" $ \v ->
-    do
-      capabilities <- v .: "capabilities"
-      alwaysMatch <- capabilities .:? "alwaysMatch"
-      firstMatch <- capabilities .: "firstMatch"
-      pure MkFullCapabilities {..}
+      do
+        capabilities <- v .: "capabilities"
+        alwaysMatch <- capabilities .:? "alwaysMatch"
+        firstMatch <- capabilities .: "firstMatch"
+        pure MkFullCapabilities {..}
 
 -- | Returns the minimal FullCapabilities object for a given browser
 -- The browserName in the 'alwaysMatch' field is the only field populated
@@ -130,6 +133,7 @@ minChromeCapabilities :: FullCapabilities
 minChromeCapabilities = minFullCapabilities Chrome
 
 -- Custom Types for Enums
+
 -- | [spec](https://www.w3.org/TR/2025/WD-webdriver2-20250210/#capabilities)
 data UnhandledPromptBehavior
   = Dismiss
@@ -137,14 +141,14 @@ data UnhandledPromptBehavior
   | DismissAndNotify
   | AcceptAndNotify
   | Ignore
-  deriving (Show, Generic)
+  deriving (Show, Generic, Enum, Bounded, Eq)
 
 -- | [spec](https://www.w3.org/TR/2025/WD-webdriver2-20250210/#capabilities)
 data PageLoadStrategy
   = None'
   | Eager
   | Normal
-  deriving (Show, Generic)
+  deriving (Show, Generic, Enum, Bounded, Eq)
 
 -- | [spec](https://www.w3.org/TR/2025/WD-webdriver2-20250210/#capabilities)
 data BrowserName
@@ -153,7 +157,7 @@ data BrowserName
   | Safari
   | Edge
   | InternetExplorer
-  deriving (Show, Generic)
+  deriving (Show, Generic, Enum, Bounded, Eq)
 
 -- | [spec](https://www.w3.org/TR/2025/WD-webdriver2-20250210/#capabilities)
 data PlatformName
@@ -162,7 +166,7 @@ data PlatformName
   | Linux
   | Android
   | IOS
-  deriving (Show, Generic)
+  deriving (Show, Generic, Enum, Bounded, Eq)
 
 -- | 'Capabilities' define the properties of the session and are passed to the webdriver
 -- via fields of the 'FullCapabilities' object.
@@ -182,127 +186,8 @@ data Capabilities = MkCapabilities
     unhandledPromptBehavior :: Maybe UnhandledPromptBehavior,
     vendorSpecific :: Maybe VendorSpecific
   }
-  deriving (Show, Generic)
+  deriving (Show, Generic, Eq)
 
--- | [spec](https://www.w3.org/TR/2025/WD-webdriver2-20250210/#proxy)
-data SocksProxy = SocksProxy
-  { socksProxy :: Text,
-    socksVersion :: Int
-  }
-  deriving (Eq, Show, Generic)
-
-instance ToJSON SocksProxy where
-  toJSON :: SocksProxy -> Value
-  toJSON SocksProxy {..} =
-    object
-      [ "socksProxy" .= socksProxy,
-        "socksVersion" .= socksVersion
-      ]
-
-instance FromJSON SocksProxy where
-  parseJSON :: Value -> Parser SocksProxy
-  parseJSON = withObject "SocksProxy" $ \v ->
-    do
-      socksProxy <- v .: "socksProxy"
-      socksVersion <- v .: "socksVersion"
-      pure SocksProxy {..}
-
--- | [spec](https://www.w3.org/TR/2025/WD-webdriver2-20250210/#proxy)
-data Proxy
-  = Direct
-  | Manual
-      { ftpProxy :: Maybe Text,
-        httpProxy :: Maybe Text,
-        sslProxy :: Maybe Text,
-        socksProxy :: Maybe SocksProxy,
-        noProxy :: Maybe [Text]
-      }
-  | AutoDetect
-  | System
-  | Pac
-      { proxyAutoconfigUrl :: Text
-      }
-  deriving (Show, Eq)
-
-instance ToJSON Proxy where
-  toJSON :: Proxy -> Value
-  toJSON = \case
-    Direct -> "direct"
-    AutoDetect -> "autodetect"
-    System -> "system"
-    Pac {..} -> object ["proxyAutoconfigUrl" .= proxyAutoconfigUrl]
-    Manual {..} ->
-      object $
-        catMaybes
-          [ opt "ftpProxy" ftpProxy,
-            opt "httpProxy" httpProxy,
-            opt "sslProxy" sslProxy,
-            opt "socksProxy" socksProxy,
-            opt "noProxy" noProxy
-          ]
-
--- TODO :: test esp manual
-instance FromJSON Proxy where
-  parseJSON :: Value -> Parser Proxy
-  parseJSON = withObject "Proxy" $
-    \v -> do
-      let direct = v .: "direct" >>= bool (fail "Invalid Proxy") (pure Direct)
-          autoDetect = v .: "autodetect" >>= bool (fail "Invalid Proxy") (pure AutoDetect)
-          system = v .: "system" >>= bool (fail "Invalid Proxy") (pure System)
-          pac = Pac <$> v .: "proxyAutoconfigUrl"
-          manual = Manual <$> v .:? "ftpProxy" <*> v .:? "httpProxy" <*> v .:? "sslProxy" <*> v .:? "socksProxy" <*> v .:? "noProxy"
-      direct <|> autoDetect <|> system <|> pac <|> manual
-
--- Vendor-Specific Capabilities
--- | [spec](https://www.w3.org/TR/2025/WD-webdriver2-20250210/#extensions-0)
-data VendorSpecific
-  = ChromeOptions
-      { chromeArgs :: Maybe [Text],
-        chromeBinary :: Maybe Text,
-        chromeExtensions :: Maybe [Text]
-      }
-  | FirefoxOptions
-      { firefoxArgs :: Maybe [Text],
-        firefoxBinary :: Maybe Text,
-        firefoxProfile :: Maybe Text
-      }
-  | SafariOptions
-      { safariAutomaticInspection :: Maybe Bool,
-        safariAutomaticProfiling :: Maybe Bool
-      }
-  deriving (Show, Generic)
-
--- ToJSON Instance for VendorSpecific
-instance ToJSON VendorSpecific where
-  toJSON :: VendorSpecific -> Value
-  toJSON vs =
-    object $ catMaybes props
-    where
-      props = case vs of
-        ChromeOptions {chromeArgs, chromeBinary, chromeExtensions} ->
-          [ opt "args" chromeArgs,
-            opt "binary" chromeBinary,
-            opt "extensions" chromeExtensions
-          ]
-        FirefoxOptions {firefoxArgs, firefoxBinary, firefoxProfile} ->
-          [ opt "args" firefoxArgs,
-            opt "binary" firefoxBinary,
-            opt "profile" firefoxProfile
-          ]
-        SafariOptions {safariAutomaticInspection, safariAutomaticProfiling} ->
-          [ opt "automaticInspection" safariAutomaticInspection,
-            opt "automaticProfiling" safariAutomaticProfiling
-          ]
-
-instance FromJSON VendorSpecific where
-  parseJSON :: Value -> Parser VendorSpecific
-  parseJSON = withObject "VendorSpecific" $ \v -> do
-    let chromeOptions = ChromeOptions <$> v .:? "args" <*> v .:? "binary" <*> v .:? "extensions"
-        firefoxOptions = FirefoxOptions <$> v .:? "args" <*> v .:? "binary" <*> v .:? "profile"
-        safariOptions = SafariOptions <$> v .:? "automaticInspection" <*> v .:? "automaticProfiling"
-    chromeOptions <|> firefoxOptions <|> safariOptions
-
--- ToJSON Instances
 instance ToJSON Capabilities where
   toJSON :: Capabilities -> Value
   toJSON
@@ -333,17 +218,169 @@ instance ToJSON Capabilities where
             ]
           <> vendorSpecificToJSON vendorSpecific
 
+instance FromJSON Capabilities where
+  parseJSON :: Value -> Parser Capabilities
+  parseJSON = withObject "Capabilities" $ \v ->
+    do
+      browserName <- v .: "browserName"
+      browserVersion <- v .:? "browserVersion"
+      platformName <- v .:? "platformName"
+      acceptInsecureCerts <- v .:? "acceptInsecureCerts"
+      pageLoadStrategy <- v .:? "pageLoadStrategy"
+      proxy <- v .:? "proxy"
+      timeouts <- v .:? "timeouts"
+      strictFileInteractability <- v .:? "strictFileInteractability"
+      unhandledPromptBehavior <- v .:? "unhandledPromptBehavior"
+      vendorSpecific <- parseVendorSpecific v
+      pure MkCapabilities {..}
+
+-- | [spec](https://www.w3.org/TR/2025/WD-webdriver2-20250210/#proxy)
+data SocksProxy = MkSocksProxy
+  { socksProxy :: Text,
+    socksVersion :: Int
+  }
+  deriving (Eq, Show, Generic)
+
+instance ToJSON SocksProxy where
+  toJSON :: SocksProxy -> Value
+  toJSON MkSocksProxy {..} =
+    object
+      [ "socksProxy" .= socksProxy,
+        "socksVersion" .= socksVersion
+      ]
+
+instance FromJSON SocksProxy where
+  parseJSON :: Value -> Parser SocksProxy
+  parseJSON = withObject "SocksProxy" $ \v ->
+    do
+      socksProxy <- v .: "socksProxy"
+      socksVersion <- v .: "socksVersion"
+      pure MkSocksProxy {..}
+
+-- | [spec](https://www.w3.org/TR/2025/WD-webdriver2-20250210/#proxy)
+data Proxy
+  = Direct
+  | Manual
+      { ftpProxy :: Maybe Text,
+        httpProxy :: Maybe Text,
+        sslProxy :: Maybe Text,
+        socksProxy :: Maybe SocksProxy,
+        noProxy :: Maybe [Text]
+      }
+  | AutoDetect
+  | System
+  | Pac
+      { proxyAutoconfigUrl :: Text
+      }
+  deriving (Show, Eq)
+
+instance ToJSON Proxy where
+  toJSON :: Proxy -> Value
+  toJSON p =
+    object $
+      [ "proxyType" .= proxyType
+      ]
+        <> details
+    where
+      proxyType = case p of
+        Direct -> "direct"
+        AutoDetect -> "autodetect"
+        System -> "system"
+        Pac {} -> "pac"
+        Manual {} -> "manual"
+      details = case p of
+        Direct -> []
+        AutoDetect -> []
+        System -> []
+        Pac {..} -> ["proxyAutoconfigUrl" .= proxyAutoconfigUrl]
+        Manual {..} ->
+          catMaybes
+            [ opt "ftpProxy" ftpProxy,
+              opt "httpProxy" httpProxy,
+              opt "sslProxy" sslProxy,
+              opt "socksProxy" socksProxy,
+              opt "noProxy" noProxy
+            ]
+
+instance FromJSON Proxy where
+  parseJSON :: Value -> Parser Proxy
+  parseJSON = withObject "Proxy" $
+    \v ->
+      v .: "proxyType" >>= \case
+        String "direct" -> pure Direct
+        String "autodetect" -> pure AutoDetect
+        String "system" -> pure System
+        String "pac" -> Pac <$> v .: "proxyAutoconfigUrl"
+        String "manual" ->
+          Manual
+            <$> v .:? "ftpProxy"
+            <*> v .:? "httpProxy"
+            <*> v .:? "sslProxy"
+            <*> v .:? "socksProxy"
+            <*> v .:? "noProxy"
+        _ -> fail "Invalid Proxy"
+
+-- Vendor-Specific Capabilities
+
+-- | [spec](https://www.w3.org/TR/2025/WD-webdriver2-20250210/#extensions-0)
+data VendorSpecific
+  = ChromeOptions
+      { chromeArgs :: Maybe [Text],
+        chromeBinary :: Maybe Text,
+        chromeExtensions :: Maybe [Text]
+      }
+  | FirefoxOptions
+      { firefoxArgs :: Maybe [Text],
+        firefoxBinary :: Maybe Text,
+        firefoxProfile :: Maybe Text
+      }
+  | SafariOptions
+      { safariAutomaticInspection :: Maybe Bool,
+        safariAutomaticProfiling :: Maybe Bool
+      }
+  deriving (Show, Generic, Eq)
+
+-- ToJSON Instance for VendorSpecific
+instance ToJSON VendorSpecific where
+  toJSON :: VendorSpecific -> Value
+  toJSON vs =
+    object $ catMaybes props
+    where
+      props = case vs of
+        ChromeOptions {chromeArgs, chromeBinary, chromeExtensions} ->
+          [ opt "args" chromeArgs,
+            opt "binary" chromeBinary,
+            opt "extensions" chromeExtensions
+          ]
+        FirefoxOptions {firefoxArgs, firefoxBinary, firefoxProfile} ->
+          [ opt "args" firefoxArgs,
+            opt "binary" firefoxBinary,
+            opt "profile" firefoxProfile
+          ]
+        SafariOptions {safariAutomaticInspection, safariAutomaticProfiling} ->
+          [ opt "automaticInspection" safariAutomaticInspection,
+            opt "automaticProfiling" safariAutomaticProfiling
+          ]
+
+-- instance FromJSON VendorSpecific where
+--   parseJSON :: Value -> Parser VendorSpecific
+--   parseJSON = withObject "VendorSpecific" $ \v -> do
+--     let chromeOptions = ChromeOptions <$> v .:? "args" <*> v .:? "binary" <*> v .:? "extensions"
+--         firefoxOptions = FirefoxOptions <$> v .:? "args" <*> v .:? "binary" <*> v .:? "profile"
+--         safariOptions = SafariOptions <$> v .:? "automaticInspection" <*> v .:? "automaticProfiling"
+--     chromeOptions <|> firefoxOptions <|> safariOptions
+
+vendorSpecificPropName :: VendorSpecific -> Text
+vendorSpecificPropName = \case
+  ChromeOptions {} -> "goog:chromeOptions"
+  FirefoxOptions {} -> "moz:firefoxOptions"
+  SafariOptions {} -> "safari:options"
+
 vendorSpecificToJSON :: Maybe VendorSpecific -> [Pair]
 vendorSpecificToJSON = maybe [] vendorSpecificToJSON'
   where
     vendorSpecificToJSON' :: VendorSpecific -> [Pair]
-    vendorSpecificToJSON' vs = [(fromText (propName vs), toJSON vs)]
-
-    propName :: VendorSpecific -> Text
-    propName = \case
-      ChromeOptions {} -> "goog:chromeOptions"
-      FirefoxOptions {} -> "moz:firefoxOptions"
-      SafariOptions {} -> "safari:options"
+    vendorSpecificToJSON' vs = [(fromText (vendorSpecificPropName vs), toJSON vs)]
 
 -- ToJSON Instances for Custom Types
 instance ToJSON UnhandledPromptBehavior where
@@ -418,31 +455,70 @@ instance FromJSON PlatformName where
     "ios" -> pure IOS
     _ -> fail "Invalid PlatformName"
 
--- FromJSON Instances for Data Structures
-instance FromJSON Capabilities where
-  parseJSON :: Value -> Parser Capabilities
-  parseJSON = withObject "Capabilities" $ \v ->
-    do
-      browserName <- v .: "browserName"
-      browserVersion <- v .:? "browserVersion"
-      platformName <- v .:? "platformName"
-      acceptInsecureCerts <- v .:? "acceptInsecureCerts"
-      pageLoadStrategy <- v .:? "pageLoadStrategy"
-      proxy <- v .:? "proxy"
-      timeouts <- v .:? "timeouts"
-      strictFileInteractability <- v .:? "strictFileInteractability"
-      unhandledPromptBehavior <- v .:? "unhandledPromptBehavior"
-      vendorSpecific <- parseVendorSpecific v
-      pure MkCapabilities {..}
+-- parseChromeOptions :: Object -> Parser (Maybe VendorSpecific)
+-- parseChromeOptions v = do
+--   co <- v .:? "goog:chromeOptions"
+--   co & maybe (pure Nothing) (\o -> Just <$> parseChromeOptions' o)
 
+--   where
+--     parseChromeOptions' :: Object -> Parser VendorSpecific
+--     parseChromeOptions' v' =
+--       ChromeOptions
+--         <$> v' .:? "args"
+--         <*> v' .:? "binary"
+--         <*> v' .:? "extensions"
+
+-- (v .:? "goog:chromeOptions") >>= \case
+--   Nothing -> pure Nothing
+--   Just v' -> Just <$> parseChromeOptions' v'
+-- where
+--   parseChromeOptions' :: Object -> Parser VendorSpecific
+--   parseChromeOptions' v =
+--     ChromeOptions
+--       <$> v .:? "args"
+--       <*> v .:? "binary"
+--       <*> v .:? "extensions"
+-- v .:? "goog:chromeOptions"
+
+-- ChromeOptions
+--   <$> v .:? "args"
+--   <*> v .:? "binary"
+--   <*> v .:? "extensions"
+
+-- FromJSON Instances for Data Structures
 parseVendorSpecific :: Object -> Parser (Maybe VendorSpecific)
 parseVendorSpecific v =
-  v
-    .:? "goog:chromeOptions"
-    <|> v
-    .:? "moz:firefoxOptions"
-    <|> v
-    .:? "safari:options"
+  asum
+    [ Just <$> (v .: "goog:chromeOptions" >>= parseChromeOptions),
+      Just <$> (v .: "moz:firefoxOptions" >>= parseFirefoxOptions),
+      Just <$> (v .: "safari:options" >>= parseSafariOptions),
+      pure Nothing
+    ]
+  where
+    parseChromeOptions o =
+      ChromeOptions
+        <$> o
+          .:? "args"
+          <*> o
+          .:? "binary"
+          <*> o
+          .:? "extensions"
+
+    parseFirefoxOptions o =
+      FirefoxOptions
+        <$> o
+          .:? "args"
+          <*> o
+          .:? "binary"
+          <*> o
+          .:? "profile"
+
+    parseSafariOptions o =
+      SafariOptions
+        <$> o
+          .:? "automaticInspection"
+          <*> o
+          .:? "automaticProfiling"
 
 -- | Timeouts in milliseconds
 -- [spec](https://www.w3.org/TR/2025/WD-webdriver2-20250210/#timeouts)
