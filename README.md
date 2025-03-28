@@ -13,6 +13,7 @@ Libraries for working with browsers
 - [x] check parser of timeouts all other parseJSON has been changed to by name
 - [x] create monorepo structure
 - [x] round trip JSON test for capabilities
+- [ ] review / update capabilities
 - [ ] rename library to webdriver-w3c-typed-endpoints
 - [ ] update readme
   - [ ] include notes on running tests and why the tests are there / what they cover
@@ -37,6 +38,7 @@ Libraries for working with browsers
 - [ ] work out whats up with the trailing fields warning on tested with
   - [ ] meaning of tested with
   - [ ] why warning
+- [x] try chromedriver
 - [ ] add notes on top of examples
 - [ ] add checks for e2e when profile dir is not there
 - [ ] review compiler switches

@@ -19,7 +19,7 @@ import Test.Falsify.Generator as G
   )
 import Test.Falsify.Predicate (dot, expect, fn, (.$))
 import Test.Falsify.Range as R (between, enum)
-import Test.Tasty (TestTree, defaultMain)
+import Test.Tasty (TestTree)
 import Test.Tasty.Falsify
   ( ExpectFailure (DontExpectFailure),
     TestOptions (..),
@@ -40,7 +40,6 @@ import WebDriverPreCore
   )
 import Data.Foldable (null, all)
 import Data.String (String)
-import GHC.IO (IO)
 
 genMaybe :: G.Gen a -> G.Gen (Maybe a)
 genMaybe gen' =

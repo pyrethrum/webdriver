@@ -21,16 +21,16 @@ module WebDriverPreCore
     -- **** @run@ function
     -- $runFunction
 
-    -- **** 1. 'W3Spec' to @ReqRequestParams@
+    -- **** 1.1 'W3Spec' -> @ReqRequestParams@
     -- $mkRequest
 
-    -- **** 2. Call the WebDriver
+    -- **** 1.2 Call the WebDriver
     -- $callReq
 
-    -- **** 3. Parse 'HttpResponse'
+    -- **** 1.3 Parse 'HttpResponse' using the parser provided by 'W3Spec'
     -- $parseResponse
 
-    -- *** 2. Applying the /runner/ to the 'W3Spec' functions
+    -- *** 2. Applying the @runner@ to the 'W3Spec' functions
     -- $applicationOfRunner
 
     -- ** Using the API
@@ -292,9 +292,12 @@ run spec = do
 -}
 
 {- $mkRequest
-/Create request params consumable by the HTTP library (@ReqRequestParams@ in this example)/
+/Transform 'W3Spec' to @ReqRequestParams@/
 
 @
+-- ReqRequestParams are specific to the chosen HTTP library (in this example req)
+-- The port would not normally be hard coded
+
 mkRequest :: forall a. W3Spec a -> ReqRequestParams
 mkRequest spec = case spec of
   Get {} -> MkRequestParams url GET NoReqBody 4444
@@ -304,8 +307,8 @@ mkRequest spec = case spec of
   where
     url =  foldl' (/:) (http "127.0.0.1") spec.path.segments
 
--- A custom data type for request params specific to the chosen HTTP library
--- (in this example req)
+-- A custom data type for request params specific to req
+
 data ReqRequestParams where
   MkRequestParams ::
     (HttpBodyAllowed (AllowsBody method) (ProvidesBody body), HttpMethod method, HttpBody body) =>
@@ -398,9 +401,22 @@ __Prerequisites__:
  1. An appropriate browser and WebDriver installed.
  2. WebDriver started.
 
- e.g. For Firefox and geckodriver on Linux or WSL you could start geckodriver as follows:
+ e.g. For Firefox and geckodriver on Linux or WSL you could start geckodriver from the terminal as follows:
+ Note: we are setting the port to 4444, which is the hard coded port in our example.
 
->>> pkill -f geckodriver || true  && geckodriver --log trace &
+>>> pkill -f geckodriver || true  && geckodriver --port=4444 &
+
+or with logging:
+
+>>> pkill -f geckodriver || true  && geckodriver --log trace --port=4444 &
+
+or similarly for Chrome and chromedriver:
+
+>>> pkill -f chromedriver || true && chromedriver --port=4444 &
+
+or with logging:
+
+>>> pkill -f chromedriver || true && chromedriver --log-level=ALL --port=4444 &
 
 With the driver running you can now interact with the browser:
 

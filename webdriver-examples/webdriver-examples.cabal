@@ -111,6 +111,7 @@ test-suite driver-demo-e2e
     , aeson-pretty
     , base
     , base64
+    , bytestring
     , directory
     , text
     , req
@@ -118,13 +119,13 @@ test-suite driver-demo-e2e
     , tasty
     , tasty-hunit
     , tasty-discover
-    , bytestring
+    , time
     , webdriver-precore
   other-modules:
       E2EConst
     , IOAPI
     , IORunner
-    , IORunnerMinimal
+    , IORunnerMinimalForDocs
     , IOUtils
     , WebDriverE2EDemoTest
   build-tool-depends:

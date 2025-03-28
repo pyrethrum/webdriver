@@ -9,7 +9,13 @@
 {-# LANGUAGE NoFieldSelectors #-}
 {-# LANGUAGE NoImplicitPrelude #-}
 
-module IORunnerMinimal (run) where
+{- 
+  !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+  This module is a cut down version of IORunner used in the Haddock documentation 
+  !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+-}
+
+module IORunnerMinimalForDocs (run) where
 
 import Control.Applicative (Applicative (..))
 import Control.Monad.Fail (MonadFail (..))
@@ -95,6 +101,7 @@ mkRequest spec = case spec of
   Delete {} -> MkRequestParams url DELETE NoReqBody 4444
   where
     url = foldl' (/:) (http "127.0.0.1") spec.path.segments
+
 
 -- 3. Call the WebDriver server with the `ReqRequestParams` and return the result in the form of a simplified `HttpResponse`
 callReq :: ReqRequestParams -> IO HttpResponse
