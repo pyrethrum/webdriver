@@ -18,15 +18,16 @@ synopsis:       A typed wrapper for W3C WebDriver protocol. A base for other lib
 description:
   This library provides typed definitions for the endpoints of the @<https://www.w3.org/TR/2025/WD-webdriver2-20250210/ W3C Webdriver>@.
 
-  It is intended to be used as a base for other libraries that provide a WebDriver client implementation and higher level functions.
-
-  You should not use this library directly unless you are writing your own WebDriver client implementation.
-
-  If you are looking for a library to drive a browser, you may be interested in an alternative library such [haskell-webdriver](https://github.com/haskell-webdriver/haskell-webdriver#readme).
+  It is intended to be used as a base for other libraries that provide a WebDriver client implementation and higher level functions. 
   
-  See "WebDriverPreCore" for further details.
+  A WebDriver client implementation can be built by pattern matching on the 'W3Spec' type returned by the functions in this library,
+  sending the corresponding HTTP requests to a vendor provided WebDriver, then parsing the response using the parser provided as part 
+  of the 'W3Spec' type.
+
+  See "WebDriverPreCore" for further details and [the project repo](https://github.com/pyrethrum/webdriver/blob/main/webdriver-examples/driver-demo-e2e/WebDriverE2EDemoTest.hs) for an examples.
   
-  See [the project repo](https://github.com/pyrethrum/webdriver/blob/main/webdriver-examples/driver-demo-e2e/WebDriverE2EDemoTest.hs) for an examples.
+  If you are looking for a fully implemented client implementation, you should check out an alternative library such as [haskell-webdriver](https://github.com/haskell-webdriver/haskell-webdriver#readme).
+  
 
 common commonExtensions
   default-extensions:

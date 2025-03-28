@@ -304,7 +304,8 @@ mkRequest spec = case spec of
   where
     url =  foldl' (/:) (http "127.0.0.1") spec.path.segments
 
--- A custom data type for request params that can be used with the req library
+-- A custom data type for request params specific to the chosen HTTP library
+-- (in this example req)
 data ReqRequestParams where
   MkRequestParams ::
     (HttpBodyAllowed (AllowsBody method) (ProvidesBody body), HttpMethod method, HttpBody body) =>

@@ -17,10 +17,10 @@ Libraries for working with browsers
 - [ ] update readme
   - [ ] include notes on running tests and why the tests are there / what they cover
   - [ ] include notes on profile issues (firefox)
-- [ ] Haddock
-  - [ ] synopsis 
-  - [ ] description
-  - [ ] Spec et. al.
+- [x] Haddock
+  - [x] synopsis 
+  - [x] description
+  - [x] Spec et. al.
 - [x] get tests working locally again
 - [ ] CI
   - [ ] get tests and E2E working in CI
