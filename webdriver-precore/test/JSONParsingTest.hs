@@ -31,7 +31,7 @@ import Test.Tasty.Falsify
   )
 import Text.Show.Pretty (ppShow)
 import WebDriverPreCore.Internal.Utils (jsonToText)
-import WebDriverPreCore.Spec
+import WebDriverPreCore
   ( Capabilities (..),
     Proxy (AutoDetect, Direct, Manual, Pac, System),
     SocksProxy (MkSocksProxy),

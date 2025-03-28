@@ -125,7 +125,7 @@ import IOAPI
 import Prelude hiding (log)
 import Control.Exception (bracket)
 import GHC.IO (catchAny)
-import WebDriverPreCore.Spec (minFullCapabilities)
+import WebDriverPreCore (minFullCapabilities)
 
 useCustomProfile :: Bool
 useCustomProfile = True

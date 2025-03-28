@@ -24,7 +24,7 @@ description:
 
   If you are looking for a library to drive a browser, you may be interested in an alternative library such [haskell-webdriver](https://github.com/haskell-webdriver/haskell-webdriver#readme).
   
-  See "WebDriverPreCore.Spec" for further details.
+  See "WebDriverPreCore" for further details.
   
   See [the project repo](https://github.com/pyrethrum/webdriver/blob/main/webdriver-examples/driver-demo-e2e/WebDriverE2EDemoTest.hs) for an examples.
 
@@ -109,13 +109,13 @@ tested-with: GHC == { 9.8.2, 9.10.1 }
 library
   import: commonExtensions, commonGhcOptions
   exposed-modules:
-      WebDriverPreCore.Spec
+      WebDriverPreCore
       WebDriverPreCore.Internal.Utils
-      WebDriverPreCore.Spec.SpecDefinition
   other-modules:
-      WebDriverPreCore.Spec.Capabilities
-      WebDriverPreCore.Spec.Error
-      WebDriverPreCore.Spec.HttpResponse
+      WebDriverPreCore.SpecDefinition
+      WebDriverPreCore.Capabilities
+      WebDriverPreCore.Error
+      WebDriverPreCore.HttpResponse
   hs-source-dirs: src
   build-depends:
     aeson         >=1.4   && <2.3, 
@@ -150,6 +150,5 @@ test-suite test
     ApiCoverageTest,
     ErrorCoverageTest,
     JSONParsingTest,
-    TestUtils,
   build-tool-depends:
     tasty-discover:tasty-discover

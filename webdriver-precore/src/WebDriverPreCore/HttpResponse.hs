@@ -1,6 +1,6 @@
 {-# OPTIONS_HADDOCK hide #-}
 
-module WebDriverPreCore.Spec.HttpResponse (
+module WebDriverPreCore.HttpResponse (
   HttpResponse(..)
 ) where
 

@@ -33,13 +33,13 @@ import Network.HTTP.Req as R
     (/:),
   )
 import WebDriverPreCore.Internal.Utils (prettyPrintJson, txt)
-import WebDriverPreCore.Spec
+import WebDriverPreCore
   ( ErrorClassification (..),
     HttpResponse (..),
     W3Spec (..),
     parseWebDriverError,
   )
-import WebDriverPreCore.Spec qualified as W
+import WebDriverPreCore qualified as W
 import Prelude hiding (log)
 
 -- ############# Config #############

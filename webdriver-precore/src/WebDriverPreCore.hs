@@ -1,4 +1,4 @@
-module WebDriverPreCore.Spec
+module WebDriverPreCore
   ( 
     -- * Introduction
 
@@ -64,14 +64,14 @@ module WebDriverPreCore.Spec
     module ShadowDOMMethods,
 
     -- * HTTP Response
-    module WebDriverPreCore.Spec.HttpResponse,
+    module WebDriverPreCore.HttpResponse,
 
     -- * Capabilities
     module CoreCapabilities,
-    module WebDriverPreCore.Spec.Capabilities,
+    module WebDriverPreCore.Capabilities,
 
     -- * Errors
-    module WebDriverPreCore.Spec.Error,
+    module WebDriverPreCore.Error,
 
     -- * Action Types
     module ActionTypes,
@@ -81,11 +81,11 @@ module WebDriverPreCore.Spec
   )
 where
 
-import WebDriverPreCore.Spec.Capabilities as CoreCapabilities (FullCapabilities(..), Capabilities(..) )
-import WebDriverPreCore.Spec.Capabilities
-import WebDriverPreCore.Spec.Error
-import WebDriverPreCore.Spec.HttpResponse
-import WebDriverPreCore.Spec.SpecDefinition as ActionTypes
+import WebDriverPreCore.Capabilities as CoreCapabilities (FullCapabilities(..), Capabilities(..) )
+import WebDriverPreCore.Capabilities
+import WebDriverPreCore.Error
+import WebDriverPreCore.HttpResponse
+import WebDriverPreCore.SpecDefinition as ActionTypes
   ( Action (..),
     Actions (..),
     KeyAction (..),
@@ -94,7 +94,7 @@ import WebDriverPreCore.Spec.SpecDefinition as ActionTypes
     PointerOrigin (..),
     WheelAction (..),
   )
-import WebDriverPreCore.Spec.SpecDefinition as AuxTypes
+import WebDriverPreCore.SpecDefinition as AuxTypes
   ( Cookie (..),
     DriverStatus (..),
     ElementId (..),
@@ -109,7 +109,7 @@ import WebDriverPreCore.Spec.SpecDefinition as AuxTypes
     WindowHandleSpec (..),
     WindowRect (..),
   )
-import WebDriverPreCore.Spec.SpecDefinition as ElementInstanceMethods
+import WebDriverPreCore.SpecDefinition as ElementInstanceMethods
   ( elementClear,
     elementClick,
     elementSendKeys,
@@ -128,14 +128,14 @@ import WebDriverPreCore.Spec.SpecDefinition as ElementInstanceMethods
     isElementSelected,
     takeElementScreenshot,
   )
-import WebDriverPreCore.Spec.SpecDefinition as ElementMethods
+import WebDriverPreCore.SpecDefinition as ElementMethods
   ( findElement,
     findElements,
     getActiveElement,
   )
-import WebDriverPreCore.Spec.SpecDefinition as FrameMethods (switchToParentFrame)
-import WebDriverPreCore.Spec.SpecDefinition as RootMethods (newSession, newSession', status)
-import WebDriverPreCore.Spec.SpecDefinition as SessionMethods
+import WebDriverPreCore.SpecDefinition as FrameMethods (switchToParentFrame)
+import WebDriverPreCore.SpecDefinition as RootMethods (newSession, newSession', status)
+import WebDriverPreCore.SpecDefinition as SessionMethods
   ( acceptAlert,
     addCookie,
     back,
@@ -173,9 +173,9 @@ import WebDriverPreCore.Spec.SpecDefinition as SessionMethods
     switchToWindow,
     takeScreenshot,
   )
-import WebDriverPreCore.Spec.SpecDefinition as ShadowDOMMethods (findElementFromShadowRoot, findElementsFromShadowRoot)
-import WebDriverPreCore.Spec.SpecDefinition as WC3Spec (W3Spec (..))
-import WebDriverPreCore.Spec.SpecDefinition as WindowMethods
+import WebDriverPreCore.SpecDefinition as ShadowDOMMethods (findElementFromShadowRoot, findElementsFromShadowRoot)
+import WebDriverPreCore.SpecDefinition as WC3Spec (W3Spec (..))
+import WebDriverPreCore.SpecDefinition as WindowMethods
   ( closeWindow,
     fullscreenWindow,
     getWindowHandles,
@@ -245,7 +245,7 @@ Then to implement a \run\ function requires the following:
   import Data.Function ((&), ($), (.))
   import Data.Text  as T (Text, unpack)
   import Data.Text.Encoding (decodeUtf8Lenient)
-  import WebDriverPreCore.Spec (
+  import WebDriverPreCore (
     HttpResponse (..),
     W3Spec (..),
     parseWebDriverError,
@@ -304,6 +304,7 @@ mkRequest spec = case spec of
   where
     url =  foldl' (/:) (http "127.0.0.1") spec.path.segments
 
+-- A custom data type for request params that can be used with the req library
 data ReqRequestParams where
   MkRequestParams ::
     (HttpBodyAllowed (AllowsBody method) (ProvidesBody body), HttpMethod method, HttpBody body) =>
@@ -322,7 +323,7 @@ data ReqRequestParams where
 @
 callReq :: ReqRequestParams -> IO HttpResponse
 callReq MkRequestParams {url, method, body, port = prt} =
-  runReq defaultHttpConfig {httpConfigCheckResponse = \_ _ _ -> Nothing} $ do
+  runReq defaultHttpConfig {httpConfigCheckResponse = \\_ _ _ -> Nothing} $ do
     r <- req method url body jsonResponse $ port prt
     pure $
       MkHttpResponse
@@ -343,11 +344,11 @@ callReq MkRequestParams {url, method, body, port = prt} =
 parseResponse :: W3Spec a -> HttpResponse -> IO a
 parseResponse spec r =
   spec.parser r
-    & \case
+    & \\case
       Error msg -> fail $ parseWebDriverError r & \case
-          e\@NotAnError {} -> unpack spec.description <> "\n" <> "Failed to parse response:\n " <> msg <> "\nin response:" <> show e
-          e\@UnrecognisedError {} -> "UnrecognisedError:\n " <> "\nin response:" <> show e
-          e\@WebDriverError {} -> "WebDriver error thrown:\n " <> show e
+          e\@NotAnError {} -> unpack spec.description <> "\\n" <> "Failed to parse response:\\n " <> msg <> "\\nin response:" <> show e
+          e\@UnrecognisedError {} -> "UnrecognisedError:\\n " <> "\\nin response:" <> show e
+          e\@WebDriverError {} -> "WebDriver error thrown:\\n " <> show e
       Success a -> pure a
 @
 -}
@@ -361,7 +362,7 @@ Full source can be found in the [project repo](https://github.com/pyrethrum/webd
 @
 module IOAPI where 
 
-import WebDriverPreCore.Spec qualified as W
+import WebDriverPreCore qualified as W
 
 status :: IO DriverStatus
 status = run W.status
