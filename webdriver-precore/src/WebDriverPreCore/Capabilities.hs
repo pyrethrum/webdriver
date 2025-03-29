@@ -78,7 +78,7 @@ import GHC.Float (Double)
 data FullCapabilities = MkFullCapabilities
   { -- | capabilities that are always matched
     alwaysMatch :: Maybe Capabilities,
-    -- | a list of capabilities that are matched in order, the first matching capabilities thaIntt matches the capabilities of the session is used
+    -- | a list of capabilities that are matched in order, the first matching capabilities that matches the capabilities of the session is used
     firstMatch :: [Capabilities]
   }
   deriving (Show, Generic)

@@ -345,9 +345,9 @@ newSession = newSession'
 --  Return a spec to create a new session given an object of any type that implements `ToJSON`.
 --
 -- The 'FullCapabilities' type and associated types should work for the vast majority use cases, but if the required capabilities are not covered by the types provided, 'newSession''.
--- can be used instead. newSession' works with any type that implements 'ToJSON', (including an Aeson 'Value').
+-- can be used with a custom type instead. 'newSession'' works with any type that implements 'ToJSON', (including an Aeson 'Value').
 -- 
--- Obviously, any type used must produece a JSON object compatible with [capabilities as defined W3C spec](https://www.w3.org/TR/2025/WD-webdriver2-20250210/#capabilities).
+-- Obviously, any type used must produce a JSON object compatible with [capabilities as defined W3C spec](https://www.w3.org/TR/2025/WD-webdriver2-20250210/#capabilities).
 --
 --  [spec](https://www.w3.org/TR/2025/WD-webdriver2-20250210/#new-session)
 --
