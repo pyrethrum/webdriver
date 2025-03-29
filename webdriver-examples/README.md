@@ -60,7 +60,7 @@ Setting the profile with a 64 bit encoded string did not work for me. The driver
 - [ ] update readme
   - [ ] include notes on running tests and why the tests are there / what they cover
   - [ ] include notes on profile issues (firefox)
-- [ ] Haddock
+- [x] Haddock
   - [ ] synopsis 
   - [ ] description
   - [ ] Spec et. al.

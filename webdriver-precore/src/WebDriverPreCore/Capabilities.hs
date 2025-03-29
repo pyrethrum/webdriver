@@ -11,6 +11,11 @@ module WebDriverPreCore.Capabilities
     Timeouts (..),
     VendorSpecific (..),
     SocksProxy (..),
+    PerfLoggingPrefs (..),
+    MobileEmulation (..),
+    LogLevel (..),
+    LogSettings (..),
+    DeviceMetrics (..),
     minCapabilities,
     minFullCapabilities,
     minFirefoxCapabilities,
@@ -30,15 +35,15 @@ import Data.Aeson
     withObject,
     withText,
     (.:),
-    (.:?),
+    (.:?), Key, genericParseJSON, genericToJSON, defaultOptions,
   )
 import Data.Aeson.Key (fromText)
 import Data.Aeson.Types
   ( Pair,
     Parser,
-    Value (..),
+    Value (..), omitNothingFields, parseFieldMaybe, parseField,
   )
-import Data.Bool (Bool)
+import Data.Bool (Bool (..))
 import Data.Enum (Enum)
 import Data.Eq (Eq)
 import Data.Function (($), (.))
@@ -52,6 +57,9 @@ import GHC.Enum (Bounded)
 import GHC.Generics (Generic)
 import GHC.Show (Show (..))
 import WebDriverPreCore.Internal.Utils (opt)
+import Data.Map.Strict (Map)
+import GHC.IO (FilePath)
+import GHC.Float (Double)
 
 {- references:
 - https://https://www.w3.org/TR/2025/WD-webdriver2-20250210/#capabilities
@@ -70,7 +78,7 @@ import WebDriverPreCore.Internal.Utils (opt)
 data FullCapabilities = MkFullCapabilities
   { -- | capabilities that are always matched
     alwaysMatch :: Maybe Capabilities,
-    -- | a list of capabilities that are matched in order, the first matching capabilities that matches the capabilities of the session is used
+    -- | a list of capabilities that are matched in order, the first matching capabilities thaIntt matches the capabilities of the session is used
     firstMatch :: [Capabilities]
   }
   deriving (Show, Generic)
@@ -149,6 +157,21 @@ data PageLoadStrategy
   | Eager
   | Normal
   deriving (Show, Generic, Enum, Bounded, Eq)
+
+instance ToJSON PageLoadStrategy where
+  toJSON :: PageLoadStrategy -> Value
+  toJSON = \case
+    None' -> "none"
+    Eager -> "eager"
+    Normal -> "normal"
+
+instance FromJSON PageLoadStrategy where
+  parseJSON :: Value -> Parser PageLoadStrategy
+  parseJSON = withText "PageLoadStrategy" $ \case
+    "none" -> pure None'
+    "eager" -> pure Eager
+    "normal" -> pure Normal
+    _ -> fail "Invalid PageLoadStrategy"
 
 -- | [spec](https://www.w3.org/TR/2025/WD-webdriver2-20250210/#capabilities)
 data BrowserName
@@ -313,11 +336,16 @@ instance FromJSON Proxy where
         String "pac" -> Pac <$> v .: "proxyAutoconfigUrl"
         String "manual" ->
           Manual
-            <$> v .:? "ftpProxy"
-            <*> v .:? "httpProxy"
-            <*> v .:? "sslProxy"
-            <*> v .:? "socksProxy"
-            <*> v .:? "noProxy"
+            <$> v
+              .:? "ftpProxy"
+              <*> v
+              .:? "httpProxy"
+              <*> v
+              .:? "sslProxy"
+              <*> v
+              .:? "socksProxy"
+              <*> v
+              .:? "noProxy"
         _ -> fail "Invalid Proxy"
 
 -- Vendor-Specific Capabilities
@@ -327,18 +355,145 @@ data VendorSpecific
   = ChromeOptions
       { chromeArgs :: Maybe [Text],
         chromeBinary :: Maybe Text,
-        chromeExtensions :: Maybe [Text]
+        chromeExtensions :: Maybe [Text], -- Base64-encoded
+        chromeMobileEmulation :: Maybe MobileEmulation,
+        chromePrefs :: Maybe (Map Text Value) -- User preferences
+      }
+  | EdgeOptions
+      { edgeArgs :: Maybe [Text],
+        edgeBinary :: Maybe Text,
+        edgeExtensions :: Maybe [Text], -- Base64-encoded
+        edgeLocalState :: Maybe (Map Text Value), -- Local state preferences
+        edgePrefs :: Maybe (Map Text Value), -- User preferences
+        edgeDetach :: Maybe Bool, -- Keep browser running after driver exit
+        edgeDebuggerAddress :: Maybe Text, -- Remote debugger address
+        edgeExcludeSwitches :: Maybe [Text], -- Chrome switches to exclude
+        edgeMinidumpPath :: Maybe FilePath, -- Crash dump directory
+        edgeMobileEmulation :: Maybe MobileEmulation,
+        edgePerfLoggingPrefs :: Maybe PerfLoggingPrefs,
+        edgeWindowTypes :: Maybe [Text] -- Window types to create
       }
   | FirefoxOptions
       { firefoxArgs :: Maybe [Text],
         firefoxBinary :: Maybe Text,
-        firefoxProfile :: Maybe Text
+        firefoxProfile :: Maybe Text, -- Base64-encoded profile
+        firefoxLog :: Maybe LogSettings
       }
   | SafariOptions
       { safariAutomaticInspection :: Maybe Bool,
         safariAutomaticProfiling :: Maybe Bool
       }
   deriving (Show, Generic, Eq)
+
+data PerfLoggingPrefs = PerfLoggingPrefs
+  { enableNetwork :: Maybe Bool,
+    enablePage :: Maybe Bool,
+    enableTimeline :: Maybe Bool,
+    traceCategories :: Maybe Text,
+    bufferUsageReportingInterval :: Maybe Int
+  }
+  deriving (Show, Eq, Generic)
+
+instance ToJSON PerfLoggingPrefs where
+  toJSON = genericToJSON defaultOptions {omitNothingFields = True}
+
+instance FromJSON PerfLoggingPrefs where
+  parseJSON = genericParseJSON defaultOptions {omitNothingFields = True}
+
+data MobileEmulation = MobileEmulation
+  { deviceName :: Maybe Text,
+    deviceMetrics :: Maybe DeviceMetrics,
+    userAgent :: Maybe Text
+  }
+  deriving (Show, Eq, Generic)
+
+instance FromJSON MobileEmulation where
+  parseJSON = genericParseJSON defaultOptions {omitNothingFields = True}
+instance ToJSON MobileEmulation where
+  toJSON = genericToJSON defaultOptions {omitNothingFields = True}
+
+-- | Browser log levels as defined in vendor specs
+data LogLevel
+  = -- | Most verbose logging
+    Trace
+  | -- | Debug-level information
+    Debug
+  | -- | Configuration details
+    Config
+  | -- | General operational logs
+    Info
+  | -- | Potential issues
+    Warning
+  | -- | Recoverable errors
+    Error
+  | -- | Critical failures
+    Fatal
+  | -- | No logging
+    Off
+  deriving (Show, Eq, Enum, Bounded, Generic)
+
+instance ToJSON LogLevel where
+  toJSON :: LogLevel -> Value
+  toJSON = String . \case
+    Trace -> "trace"
+    Debug -> "debug"
+    Config -> "config"
+    Info -> "info"
+    Warning -> "warn"
+    Error -> "error"
+    Fatal -> "fatal"
+    Off -> "off"
+
+instance FromJSON LogLevel where
+  parseJSON = withText "LogLevel" $ \case
+    "trace" -> pure Trace
+    "debug" -> pure Debug
+    "config" -> pure Config
+    "info" -> pure Info
+    "warn" -> pure Warning
+    "error" -> pure Error
+    "fatal" -> pure Fatal
+    "off" -> pure Off
+    other -> fail $ "Invalid log level: " <> show other
+
+-- | Log settings structure for vendor capabilities
+data LogSettings = LogSettings
+  { level :: LogLevel
+  }
+  deriving (Show, Eq, Generic)
+
+instance FromJSON LogSettings where
+  parseJSON = withObject "LogSettings" $ \v ->
+    do
+      level <- v .: "level"
+      pure LogSettings {..}
+      
+instance ToJSON LogSettings where
+  toJSON = genericToJSON defaultOptions {omitNothingFields = True}
+
+data DeviceMetrics = DeviceMetrics
+  { width :: Int,
+    height :: Int,
+    pixelRatio :: Double,
+    touch :: Bool
+  }
+  deriving (Show, Eq, Generic)
+
+instance FromJSON DeviceMetrics where
+  parseJSON = withObject "DeviceMetrics" $ \v ->
+    do
+      let 
+        m :: forall a. FromJSON a => Key -> Parser a
+        m = parseField v
+      width <- m "width"
+      height <- m "height"
+      pixelRatio <- m "pixelRatio"
+      touch <- m "touch"
+      pure DeviceMetrics {..}
+
+instance ToJSON DeviceMetrics where
+  toJSON = genericToJSON defaultOptions {omitNothingFields = True}
+-- | ToJSON Instance for VendorSpecific
 
 -- ToJSON Instance for VendorSpecific
 instance ToJSON VendorSpecific where
@@ -347,32 +502,42 @@ instance ToJSON VendorSpecific where
     object $ catMaybes props
     where
       props = case vs of
-        ChromeOptions {chromeArgs, chromeBinary, chromeExtensions} ->
+        ChromeOptions {chromeArgs, chromeBinary, chromeExtensions, chromeMobileEmulation, chromePrefs} ->
           [ opt "args" chromeArgs,
             opt "binary" chromeBinary,
-            opt "extensions" chromeExtensions
+            opt "extensions" chromeExtensions,
+            opt "mobileEmulation" chromeMobileEmulation,
+            opt "prefs" chromePrefs
           ]
-        FirefoxOptions {firefoxArgs, firefoxBinary, firefoxProfile} ->
+        EdgeOptions {edgeArgs, edgeBinary, edgeExtensions, edgeLocalState, edgePrefs, edgeDetach, edgeDebuggerAddress, edgeExcludeSwitches, edgeMinidumpPath, edgeMobileEmulation, edgePerfLoggingPrefs, edgeWindowTypes} ->
+          [ opt "args" edgeArgs,
+            opt "binary" edgeBinary,
+            opt "extensions" edgeExtensions,
+            opt "localState" edgeLocalState,
+            opt "prefs" edgePrefs,
+            opt "detach" edgeDetach,
+            opt "debuggerAddress" edgeDebuggerAddress,
+            opt "excludeSwitches" edgeExcludeSwitches,
+            opt "minidumpPath" edgeMinidumpPath,
+            opt "mobileEmulation" edgeMobileEmulation,
+            opt "perfLoggingPrefs" edgePerfLoggingPrefs,
+            opt "windowTypes" edgeWindowTypes
+          ]
+        FirefoxOptions {firefoxArgs, firefoxBinary, firefoxProfile, firefoxLog} ->
           [ opt "args" firefoxArgs,
             opt "binary" firefoxBinary,
-            opt "profile" firefoxProfile
+            opt "profile" firefoxProfile,
+            opt "log" firefoxLog
           ]
         SafariOptions {safariAutomaticInspection, safariAutomaticProfiling} ->
           [ opt "automaticInspection" safariAutomaticInspection,
             opt "automaticProfiling" safariAutomaticProfiling
           ]
 
--- instance FromJSON VendorSpecific where
---   parseJSON :: Value -> Parser VendorSpecific
---   parseJSON = withObject "VendorSpecific" $ \v -> do
---     let chromeOptions = ChromeOptions <$> v .:? "args" <*> v .:? "binary" <*> v .:? "extensions"
---         firefoxOptions = FirefoxOptions <$> v .:? "args" <*> v .:? "binary" <*> v .:? "profile"
---         safariOptions = SafariOptions <$> v .:? "automaticInspection" <*> v .:? "automaticProfiling"
---     chromeOptions <|> firefoxOptions <|> safariOptions
-
 vendorSpecificPropName :: VendorSpecific -> Text
 vendorSpecificPropName = \case
   ChromeOptions {} -> "goog:chromeOptions"
+  EdgeOptions {} -> "ms:edgeOptions"
   FirefoxOptions {} -> "moz:firefoxOptions"
   SafariOptions {} -> "safari:options"
 
@@ -391,13 +556,6 @@ instance ToJSON UnhandledPromptBehavior where
     DismissAndNotify -> "dismiss and notify"
     AcceptAndNotify -> "accept and notify"
     Ignore -> "ignore"
-
-instance ToJSON PageLoadStrategy where
-  toJSON :: PageLoadStrategy -> Value
-  toJSON = \case
-    None' -> "none"
-    Eager -> "eager"
-    Normal -> "normal"
 
 instance ToJSON BrowserName where
   toJSON :: BrowserName -> Value
@@ -427,14 +585,6 @@ instance FromJSON UnhandledPromptBehavior where
     "ignore" -> pure Ignore
     other -> fail $ "UnhandledPromptBehavior: " <> show other
 
-instance FromJSON PageLoadStrategy where
-  parseJSON :: Value -> Parser PageLoadStrategy
-  parseJSON = withText "PageLoadStrategy" $ \case
-    "none" -> pure None'
-    "eager" -> pure Eager
-    "normal" -> pure Normal
-    _ -> fail "Invalid PageLoadStrategy"
-
 instance FromJSON BrowserName where
   parseJSON :: Value -> Parser BrowserName
   parseJSON = withText "BrowserName" $ \case
@@ -455,70 +605,64 @@ instance FromJSON PlatformName where
     "ios" -> pure IOS
     _ -> fail "Invalid PlatformName"
 
--- parseChromeOptions :: Object -> Parser (Maybe VendorSpecific)
--- parseChromeOptions v = do
---   co <- v .:? "goog:chromeOptions"
---   co & maybe (pure Nothing) (\o -> Just <$> parseChromeOptions' o)
-
---   where
---     parseChromeOptions' :: Object -> Parser VendorSpecific
---     parseChromeOptions' v' =
---       ChromeOptions
---         <$> v' .:? "args"
---         <*> v' .:? "binary"
---         <*> v' .:? "extensions"
-
--- (v .:? "goog:chromeOptions") >>= \case
---   Nothing -> pure Nothing
---   Just v' -> Just <$> parseChromeOptions' v'
--- where
---   parseChromeOptions' :: Object -> Parser VendorSpecific
---   parseChromeOptions' v =
---     ChromeOptions
---       <$> v .:? "args"
---       <*> v .:? "binary"
---       <*> v .:? "extensions"
--- v .:? "goog:chromeOptions"
-
--- ChromeOptions
---   <$> v .:? "args"
---   <*> v .:? "binary"
---   <*> v .:? "extensions"
-
 -- FromJSON Instances for Data Structures
 parseVendorSpecific :: Object -> Parser (Maybe VendorSpecific)
 parseVendorSpecific v =
   asum
     [ Just <$> (v .: "goog:chromeOptions" >>= parseChromeOptions),
+      Just <$> (v .: "ms:edgeOptions" >>= parseEdgeOptions),
       Just <$> (v .: "moz:firefoxOptions" >>= parseFirefoxOptions),
       Just <$> (v .: "safari:options" >>= parseSafariOptions),
       pure Nothing
     ]
   where
-    parseChromeOptions o =
-      ChromeOptions
-        <$> o
-          .:? "args"
-          <*> o
-          .:? "binary"
-          <*> o
-          .:? "extensions"
+ 
 
-    parseFirefoxOptions o =
-      FirefoxOptions
-        <$> o
-          .:? "args"
-          <*> o
-          .:? "binary"
-          <*> o
-          .:? "profile"
+    parseChromeOptions o = do
+      chromeArgs <- m "args"
+      chromeBinary <- m "binary"
+      chromeExtensions <- m "extensions"
+      chromeMobileEmulation <- m "mobileEmulation"
+      chromePrefs <- m "prefs"
+      pure $ ChromeOptions {..}
+      where
+        m :: forall a. FromJSON a => Key -> Parser (Maybe a)
+        m = parseFieldMaybe o
 
-    parseSafariOptions o =
-      SafariOptions
-        <$> o
-          .:? "automaticInspection"
-          <*> o
-          .:? "automaticProfiling"
+    parseEdgeOptions o = do
+      edgeArgs <- m "args"
+      edgeBinary <- m "binary"
+      edgeExtensions <- m "extensions"
+      edgeLocalState <- m "localState"
+      edgePrefs <- m "prefs"
+      edgeDetach <- m "detach"
+      edgeDebuggerAddress <- m "debuggerAddress"
+      edgeExcludeSwitches <- m "excludeSwitches"
+      edgeMinidumpPath <- m "minidumpPath"
+      edgeMobileEmulation <- m "mobileEmulation"
+      edgePerfLoggingPrefs <- m "perfLoggingPrefs"
+      edgeWindowTypes <- m "windowTypes"
+      pure EdgeOptions {..}
+      where
+        m :: forall a. FromJSON a => Key -> Parser (Maybe a)
+        m = parseFieldMaybe o
+
+    parseFirefoxOptions o = do
+      firefoxArgs <- m "args"
+      firefoxBinary <- m "binary"
+      firefoxProfile <- m "profile"
+      firefoxLog <- m "log"
+      pure FirefoxOptions {..}
+      where
+        m :: forall a. FromJSON a => Key -> Parser (Maybe a)
+        m = parseFieldMaybe o
+
+    parseSafariOptions o = do
+      safariAutomaticInspection <- m "automaticInspection"
+      safariAutomaticProfiling <- m "automaticProfiling"
+      pure SafariOptions {..}
+      where
+        m = parseFieldMaybe o
 
 -- | Timeouts in milliseconds
 -- [spec](https://www.w3.org/TR/2025/WD-webdriver2-20250210/#timeouts)
@@ -546,3 +690,6 @@ instance ToJSON Timeouts where
         "pageLoad" .= pageLoad,
         "script" .= script
       ]
+
+
+
