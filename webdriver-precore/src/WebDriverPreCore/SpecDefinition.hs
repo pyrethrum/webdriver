@@ -35,9 +35,9 @@ module WebDriverPreCore.SpecDefinition
     getPageSource,
     executeScript,
     executeScriptAsync,
+    addCookie,
     getAllCookies,
     getNamedCookie,
-    addCookie,
     deleteCookie,
     deleteAllCookies,
     performActions,
@@ -64,7 +64,7 @@ module WebDriverPreCore.SpecDefinition
     getActiveElement,
     findElement,
     findElements,
-
+    
     -- ** Element Instance Methods
     findElementFromElement,
     findElementsFromElement,
@@ -115,7 +115,7 @@ module WebDriverPreCore.SpecDefinition
   )
 where
 
-import Data.Aeson
+import Data.Aeson as A
   ( FromJSON (..),
     Key,
     KeyValue ((.=)),
@@ -1107,7 +1107,7 @@ parseElementsRef r =
 lookup :: Key -> Value -> Result Value
 lookup k v =
   v & \case
-    Object o -> AKM.lookup k o & maybe (Error ("the key: " <> show k <> "does not exist in the object:\n" <> jsonPrettyString v)) pure
+    Object o -> AKM.lookup k o & maybe (A.Error ("the key: " <> show k <> "does not exist in the object:\n" <> jsonPrettyString v)) pure
     _ -> aesonTypeError "Object" v
 
 lookupTxt :: Key -> Value -> Result Text
@@ -1127,10 +1127,10 @@ aesonTypeErrorMessage :: Text -> Value -> Text
 aesonTypeErrorMessage t v = "Expected Json Value to be of type: " <> t <> "\nbut got:\n" <> jsonToText v
 
 aesonTypeError :: Text -> Value -> Result a
-aesonTypeError t v = Error . unpack $ aesonTypeErrorMessage t v
+aesonTypeError t v = A.Error . unpack $ aesonTypeErrorMessage t v
 
 aesonTypeError' :: Text -> Text -> Value -> Result a
-aesonTypeError' typ info v = Error . unpack $ aesonTypeErrorMessage typ v <> "\n" <> info
+aesonTypeError' typ info v = A.Error . unpack $ aesonTypeErrorMessage typ v <> "\n" <> info
 
 asText :: Value -> Result Text
 asText = \case
