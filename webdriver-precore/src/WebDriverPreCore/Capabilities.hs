@@ -27,21 +27,28 @@ import Control.Applicative (Applicative (..), asum)
 import Control.Monad (Monad ((>>=)), MonadFail (..))
 import Data.Aeson
   ( FromJSON (parseJSON),
+    Key,
     KeyValue ((.=)),
     Object,
     ToJSON (toJSON),
     Value,
+    defaultOptions,
+    genericParseJSON,
+    genericToJSON,
     object,
     withObject,
     withText,
     (.:),
-    (.:?), Key, genericParseJSON, genericToJSON, defaultOptions,
+    (.:?),
   )
 import Data.Aeson.Key (fromText)
 import Data.Aeson.Types
   ( Pair,
     Parser,
-    Value (..), omitNothingFields, parseFieldMaybe, parseField,
+    Value (..),
+    omitNothingFields,
+    parseField,
+    parseFieldMaybe,
   )
 import Data.Bool (Bool (..))
 import Data.Enum (Enum)
@@ -49,17 +56,17 @@ import Data.Eq (Eq)
 import Data.Function (($), (.))
 import Data.Functor ((<$>))
 import Data.Int (Int)
+import Data.Map.Strict (Map)
 import Data.Maybe (Maybe (..), catMaybes, maybe)
 import Data.Semigroup (Semigroup (..))
 import Data.Text (Text)
 import Data.Vector (fromList)
 import GHC.Enum (Bounded)
+import GHC.Float (Double)
 import GHC.Generics (Generic)
+import GHC.IO (FilePath)
 import GHC.Show (Show (..))
 import WebDriverPreCore.Internal.Utils (opt)
-import Data.Map.Strict (Map)
-import GHC.IO (FilePath)
-import GHC.Float (Double)
 
 {- references:
 - https://https://www.w3.org/TR/2025/WD-webdriver2-20250210/#capabilities
@@ -245,15 +252,17 @@ instance FromJSON Capabilities where
   parseJSON :: Value -> Parser Capabilities
   parseJSON = withObject "Capabilities" $ \v ->
     do
+      let m :: forall a. (FromJSON a) => Key -> Parser (Maybe a)
+          m = parseFieldMaybe v
       browserName <- v .: "browserName"
-      browserVersion <- v .:? "browserVersion"
-      platformName <- v .:? "platformName"
-      acceptInsecureCerts <- v .:? "acceptInsecureCerts"
-      pageLoadStrategy <- v .:? "pageLoadStrategy"
-      proxy <- v .:? "proxy"
-      timeouts <- v .:? "timeouts"
-      strictFileInteractability <- v .:? "strictFileInteractability"
-      unhandledPromptBehavior <- v .:? "unhandledPromptBehavior"
+      browserVersion <- m "browserVersion"
+      platformName <- m "platformName"
+      acceptInsecureCerts <- m "acceptInsecureCerts"
+      pageLoadStrategy <- m "pageLoadStrategy"
+      proxy <- m "proxy"
+      timeouts <- m "timeouts"
+      strictFileInteractability <- m "strictFileInteractability"
+      unhandledPromptBehavior <- m "unhandledPromptBehavior"
       vendorSpecific <- parseVendorSpecific v
       pure MkCapabilities {..}
 
@@ -335,25 +344,20 @@ instance FromJSON Proxy where
         String "system" -> pure System
         String "pac" -> Pac <$> v .: "proxyAutoconfigUrl"
         String "manual" ->
-          Manual
-            <$> v
-              .:? "ftpProxy"
-              <*> v
-              .:? "httpProxy"
-              <*> v
-              .:? "sslProxy"
-              <*> v
-              .:? "socksProxy"
-              <*> v
-              .:? "noProxy"
+          do
+            ftpProxy <- v .:? "ftpProxy"
+            httpProxy <- v .:? "httpProxy"
+            sslProxy <- v .:? "sslProxy"
+            socksProxy <- v .:? "socksProxy"
+            noProxy <- v .:? "noProxy"
+            pure Manual {..}
         _ -> fail "Invalid Proxy"
 
 -- Vendor-Specific Capabilities
 
 -- | [spec](https://www.w3.org/TR/2025/WD-webdriver2-20250210/#extensions-0)
 data VendorSpecific
-  = 
-    -- | Chrome-specific capabilities
+  = -- | Chrome-specific capabilities
     ChromeOptions
       { chromeArgs :: Maybe [Text],
         chromeBinary :: Maybe Text,
@@ -417,6 +421,7 @@ data MobileEmulation = MobileEmulation
 
 instance FromJSON MobileEmulation where
   parseJSON = genericParseJSON defaultOptions {omitNothingFields = True}
+
 instance ToJSON MobileEmulation where
   toJSON = genericToJSON defaultOptions {omitNothingFields = True}
 
@@ -442,15 +447,16 @@ data LogLevel
 
 instance ToJSON LogLevel where
   toJSON :: LogLevel -> Value
-  toJSON = String . \case
-    Trace -> "trace"
-    Debug -> "debug"
-    Config -> "config"
-    Info -> "info"
-    Warning -> "warn"
-    Error -> "error"
-    Fatal -> "fatal"
-    Off -> "off"
+  toJSON =
+    String . \case
+      Trace -> "trace"
+      Debug -> "debug"
+      Config -> "config"
+      Info -> "info"
+      Warning -> "warn"
+      Error -> "error"
+      Fatal -> "fatal"
+      Off -> "off"
 
 instance FromJSON LogLevel where
   parseJSON = withText "LogLevel" $ \case
@@ -475,7 +481,7 @@ instance FromJSON LogSettings where
     do
       level <- v .: "level"
       pure LogSettings {..}
-      
+
 instance ToJSON LogSettings where
   toJSON = genericToJSON defaultOptions {omitNothingFields = True}
 
@@ -490,9 +496,8 @@ data DeviceMetrics = DeviceMetrics
 instance FromJSON DeviceMetrics where
   parseJSON = withObject "DeviceMetrics" $ \v ->
     do
-      let 
-        m :: forall a. FromJSON a => Key -> Parser a
-        m = parseField v
+      let m :: forall a. (FromJSON a) => Key -> Parser a
+          m = parseField v
       width <- m "width"
       height <- m "height"
       pixelRatio <- m "pixelRatio"
@@ -501,6 +506,7 @@ instance FromJSON DeviceMetrics where
 
 instance ToJSON DeviceMetrics where
   toJSON = genericToJSON defaultOptions {omitNothingFields = True}
+
 -- | ToJSON Instance for VendorSpecific
 
 -- ToJSON Instance for VendorSpecific
@@ -630,8 +636,6 @@ parseVendorSpecific v =
       pure Nothing
     ]
   where
- 
-
     parseChromeOptions o = do
       chromeArgs <- m "args"
       chromeBinary <- m "binary"
@@ -646,7 +650,7 @@ parseVendorSpecific v =
       chromeWindowTypes <- m "windowTypes"
       pure $ ChromeOptions {..}
       where
-        m :: forall a. FromJSON a => Key -> Parser (Maybe a)
+        m :: forall a. (FromJSON a) => Key -> Parser (Maybe a)
         m = parseFieldMaybe o
 
     parseEdgeOptions o = do
@@ -664,7 +668,7 @@ parseVendorSpecific v =
       edgeWindowTypes <- m "windowTypes"
       pure EdgeOptions {..}
       where
-        m :: forall a. FromJSON a => Key -> Parser (Maybe a)
+        m :: forall a. (FromJSON a) => Key -> Parser (Maybe a)
         m = parseFieldMaybe o
 
     parseFirefoxOptions o = do
@@ -674,7 +678,7 @@ parseVendorSpecific v =
       firefoxLog <- m "log"
       pure FirefoxOptions {..}
       where
-        m :: forall a. FromJSON a => Key -> Parser (Maybe a)
+        m :: forall a. (FromJSON a) => Key -> Parser (Maybe a)
         m = parseFieldMaybe o
 
     parseSafariOptions o = do
@@ -710,6 +714,3 @@ instance ToJSON Timeouts where
         "pageLoad" .= pageLoad,
         "script" .= script
       ]
-
-
-
