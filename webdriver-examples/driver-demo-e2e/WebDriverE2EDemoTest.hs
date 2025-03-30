@@ -175,7 +175,8 @@ capsWithCustomFirefoxProfileNotWorking = do
             FirefoxOptions
               { firefoxArgs = Nothing,
                 firefoxBinary = Nothing,
-                firefoxProfile = Just profile
+                firefoxProfile = Just profile,
+                firefoxLog = Nothing
               }
       }
 
@@ -197,13 +198,15 @@ capsWithCustomFirefoxProfile = do
                 -- caculate expected path of profle
                 -- unzip if .profile exists and Profile doesn't
                 -- fail if .profile and zip does not exist
+              
 
                 -- running in root dir
                 firefoxArgs = Just ["-profile", "./webdriver-examples/driver-demo-e2e/.profile/FirefoxWebDriverProfile"],
                 -- runing in examples dir
                 -- firefoxArgs = Just ["-profile", "./driver-demo-e2e/.profile/FirefoxWebDriverProfile"],
                 firefoxBinary = Nothing,
-                firefoxProfile = Nothing
+                firefoxProfile = Nothing,
+                firefoxLog = Nothing
               }
       }
 
@@ -256,7 +259,7 @@ unit_demoSessionDriverStatus = do
   ses <- mkExtendedFirefoxTimeoutsSession
   log "new session" $ txt ses
   s <- status
-  Ready === smkExtendedFirefoxTimeoutsSession
+  Ready === s
   logShowM "driver status" status
   deleteSession ses
 

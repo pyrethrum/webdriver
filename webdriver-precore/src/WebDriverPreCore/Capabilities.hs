@@ -362,6 +362,7 @@ data VendorSpecific
       { chromeArgs :: Maybe [Text],
         chromeBinary :: Maybe Text,
         chromeExtensions :: Maybe [Text], -- Base64-encoded
+        chromeLocalState :: Maybe (Map Text Value), -- Local state preferences
         chromeMobileEmulation :: Maybe MobileEmulation,
         chromePrefs :: Maybe (Map Text Value), -- User preferences
         chromeDetach :: Maybe Bool, -- Keep browser running after driver exit
@@ -376,12 +377,12 @@ data VendorSpecific
         edgeBinary :: Maybe Text,
         edgeExtensions :: Maybe [Text], -- Base64-encoded
         edgeLocalState :: Maybe (Map Text Value), -- Local state preferences
+        edgeMobileEmulation :: Maybe MobileEmulation,
         edgePrefs :: Maybe (Map Text Value), -- User preferences
         edgeDetach :: Maybe Bool, -- Keep browser running after driver exit
         edgeDebuggerAddress :: Maybe Text, -- Remote debugger address
         edgeExcludeSwitches :: Maybe [Text], -- Chrome switches to exclude
         edgeMinidumpPath :: Maybe FilePath, -- Crash dump directory
-        edgeMobileEmulation :: Maybe MobileEmulation,
         edgePerfLoggingPrefs :: Maybe PerfLoggingPrefs,
         edgeWindowTypes :: Maybe [Text] -- Window types to create
       }
@@ -397,7 +398,7 @@ data VendorSpecific
       }
   deriving (Show, Generic, Eq)
 
-data PerfLoggingPrefs = PerfLoggingPrefs
+data PerfLoggingPrefs = MkPerfLoggingPrefs
   { enableNetwork :: Maybe Bool,
     enablePage :: Maybe Bool,
     enableTimeline :: Maybe Bool,
@@ -412,7 +413,7 @@ instance ToJSON PerfLoggingPrefs where
 instance FromJSON PerfLoggingPrefs where
   parseJSON = genericParseJSON defaultOptions {omitNothingFields = True}
 
-data MobileEmulation = MobileEmulation
+data MobileEmulation = MkMobileEmulation
   { deviceName :: Maybe Text,
     deviceMetrics :: Maybe DeviceMetrics,
     userAgent :: Maybe Text
@@ -471,7 +472,7 @@ instance FromJSON LogLevel where
     other -> fail $ "Invalid log level: " <> show other
 
 -- | Log settings structure for vendor capabilities
-data LogSettings = LogSettings
+data LogSettings = MkLogSettings
   { level :: LogLevel
   }
   deriving (Show, Eq, Generic)
@@ -480,12 +481,12 @@ instance FromJSON LogSettings where
   parseJSON = withObject "LogSettings" $ \v ->
     do
       level <- v .: "level"
-      pure LogSettings {..}
+      pure MkLogSettings {..}
 
 instance ToJSON LogSettings where
   toJSON = genericToJSON defaultOptions {omitNothingFields = True}
 
-data DeviceMetrics = DeviceMetrics
+data DeviceMetrics = MkDeviceMetrics
   { width :: Int,
     height :: Int,
     pixelRatio :: Double,
@@ -502,7 +503,7 @@ instance FromJSON DeviceMetrics where
       height <- m "height"
       pixelRatio <- m "pixelRatio"
       touch <- m "touch"
-      pure DeviceMetrics {..}
+      pure MkDeviceMetrics {..}
 
 instance ToJSON DeviceMetrics where
   toJSON = genericToJSON defaultOptions {omitNothingFields = True}
@@ -640,6 +641,7 @@ parseVendorSpecific v =
       chromeArgs <- m "args"
       chromeBinary <- m "binary"
       chromeExtensions <- m "extensions"
+      chromeLocalState <- m "localState" -- Local state preferences
       chromeMobileEmulation <- m "mobileEmulation"
       chromePrefs <- m "prefs"
       chromeDetach <- m "detach"
