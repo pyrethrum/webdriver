@@ -352,12 +352,20 @@ instance FromJSON Proxy where
 
 -- | [spec](https://www.w3.org/TR/2025/WD-webdriver2-20250210/#extensions-0)
 data VendorSpecific
-  = ChromeOptions
+  = 
+    -- | Chrome-specific capabilities
+    ChromeOptions
       { chromeArgs :: Maybe [Text],
         chromeBinary :: Maybe Text,
         chromeExtensions :: Maybe [Text], -- Base64-encoded
         chromeMobileEmulation :: Maybe MobileEmulation,
-        chromePrefs :: Maybe (Map Text Value) -- User preferences
+        chromePrefs :: Maybe (Map Text Value), -- User preferences
+        chromeDetach :: Maybe Bool, -- Keep browser running after driver exit
+        chromeDebuggerAddress :: Maybe Text, -- Remote debugger address
+        chromeExcludeSwitches :: Maybe [Text], -- Chrome switches to exclude
+        chromeMinidumpPath :: Maybe FilePath, -- Crash dump directory
+        chromePerfLoggingPrefs :: Maybe PerfLoggingPrefs,
+        chromeWindowTypes :: Maybe [Text] -- Window types to create
       }
   | EdgeOptions
       { edgeArgs :: Maybe [Text],
@@ -502,14 +510,20 @@ instance ToJSON VendorSpecific where
     object $ catMaybes props
     where
       props = case vs of
-        ChromeOptions {chromeArgs, chromeBinary, chromeExtensions, chromeMobileEmulation, chromePrefs} ->
+        ChromeOptions {..} ->
           [ opt "args" chromeArgs,
             opt "binary" chromeBinary,
             opt "extensions" chromeExtensions,
             opt "mobileEmulation" chromeMobileEmulation,
-            opt "prefs" chromePrefs
+            opt "prefs" chromePrefs,
+            opt "detach" chromeDetach,
+            opt "debuggerAddress" chromeDebuggerAddress,
+            opt "excludeSwitches" chromeExcludeSwitches,
+            opt "minidumpPath" chromeMinidumpPath,
+            opt "perfLoggingPrefs" chromePerfLoggingPrefs,
+            opt "windowTypes" chromeWindowTypes
           ]
-        EdgeOptions {edgeArgs, edgeBinary, edgeExtensions, edgeLocalState, edgePrefs, edgeDetach, edgeDebuggerAddress, edgeExcludeSwitches, edgeMinidumpPath, edgeMobileEmulation, edgePerfLoggingPrefs, edgeWindowTypes} ->
+        EdgeOptions {..} ->
           [ opt "args" edgeArgs,
             opt "binary" edgeBinary,
             opt "extensions" edgeExtensions,
@@ -523,13 +537,13 @@ instance ToJSON VendorSpecific where
             opt "perfLoggingPrefs" edgePerfLoggingPrefs,
             opt "windowTypes" edgeWindowTypes
           ]
-        FirefoxOptions {firefoxArgs, firefoxBinary, firefoxProfile, firefoxLog} ->
+        FirefoxOptions {..} ->
           [ opt "args" firefoxArgs,
             opt "binary" firefoxBinary,
             opt "profile" firefoxProfile,
             opt "log" firefoxLog
           ]
-        SafariOptions {safariAutomaticInspection, safariAutomaticProfiling} ->
+        SafariOptions {..} ->
           [ opt "automaticInspection" safariAutomaticInspection,
             opt "automaticProfiling" safariAutomaticProfiling
           ]
@@ -624,6 +638,12 @@ parseVendorSpecific v =
       chromeExtensions <- m "extensions"
       chromeMobileEmulation <- m "mobileEmulation"
       chromePrefs <- m "prefs"
+      chromeDetach <- m "detach"
+      chromeDebuggerAddress <- m "debuggerAddress"
+      chromeExcludeSwitches <- m "excludeSwitches"
+      chromeMinidumpPath <- m "minidumpPath"
+      chromePerfLoggingPrefs <- m "perfLoggingPrefs"
+      chromeWindowTypes <- m "windowTypes"
       pure $ ChromeOptions {..}
       where
         m :: forall a. FromJSON a => Key -> Parser (Maybe a)
