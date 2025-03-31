@@ -20,12 +20,28 @@
       "problemMatcher": []
     },
     {
-      "label": "test",
+      "label": "test all",
       "type": "shell",
       "command": "cabal",
       "args": [
         "test",
         "all",
+        "--test-show-details=streaming"
+      ],
+      "presentation": {
+        "reveal": "always",
+        "panel": "shared",
+        "showReuseMessage": false
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "test precore",
+      "type": "shell",
+      "command": "cabal",
+      "args": [
+        "test",
+        "webdriver-precore",
         "--test-show-details=streaming"
       ],
       "presentation": {

@@ -1,17 +1,17 @@
 module JSONParsingTest where
 
-import Data.Aeson (ToJSON (toJSON), Value, decode, encode)
+import Data.Aeson (ToJSON (toJSON), Value (Bool), decode, encode)
 import Data.Bool (Bool, (&&), (||))
 import Data.Enum (Bounded (minBound), Enum, maxBound)
 import Data.Foldable (all, null)
-import Data.Function (($))
+import Data.Function (($), (.))
 import Data.Functor ((<$>))
 import Data.Map.Strict qualified as M
 import Data.Maybe (Maybe (..), isNothing)
 import Data.String (String)
 import Data.Text (Text, unpack)
 import Data.Text qualified as T
-import GHC.Base (Applicative (..), Bool (..), Eq (..), Int, const)
+import GHC.Base (Applicative (..), Bool (..), Eq (..), Int, const, undefined)
 import GHC.Data.Maybe (maybe)
 import GHC.Float (Double)
 import GHC.IO (FilePath)
@@ -281,6 +281,31 @@ options =
       overrideMaxRatio = Nothing
     }
 
+
+subEmt :: forall a. (a -> Bool) -> Maybe a -> Maybe a
+subEmt f = maybe Nothing (\x -> if f x then Nothing else Just x)
+
+subEmptyTxt :: Maybe Text -> Maybe Text
+subEmptyTxt = subEmt T.null
+
+subEmptyVendor :: Maybe VendorSpecific -> Maybe VendorSpecific
+subEmptyVendor = subEmt (allPropsNull . subEmptFields)
+ where 
+  allPropsNull :: VendorSpecific -> Bool
+  allPropsNull = undefined
+
+  subEmptFields :: VendorSpecific -> VendorSpecific
+  subEmptFields = undefined
+
+
+
+emptyFieldsToNothing :: Capabilities -> Capabilities
+emptyFieldsToNothing caps = caps {
+  browserVersion = subEmptyTxt caps.browserVersion,
+  vendorSpecific = subEmptyVendor caps.vendorSpecific
+ }
+
+
 jsonEq :: Capabilities -> Maybe Capabilities -> Bool
 jsonEq expected =
   maybe
@@ -378,7 +403,7 @@ jsonEq expected =
     )
 
 wantLogging :: Bool
-wantLogging = False
+wantLogging = True
 
 log :: String -> Property ()
 log = if wantLogging then info else const $ pure ()
