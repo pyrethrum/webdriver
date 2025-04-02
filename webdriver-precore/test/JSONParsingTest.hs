@@ -42,7 +42,7 @@ import WebDriverPreCore
     LogLevel (..),
     MobileEmulation (..),
     PerfLoggingPrefs (..),
-    Proxy (AutoDetect, Direct, Manual, Pac, System),
+    Proxy (..),
     SocksProxy (MkSocksProxy),
     Timeouts (MkTimeouts),
     VendorSpecific (..), LogSettings (MkLogSettings)
@@ -298,11 +298,63 @@ subEmptyVendor = subEmt (allPropsNull . subEmptFields)
   subEmptFields = undefined
 
 
+emptyTxt :: Maybe Text -> Bool
+emptyTxt = maybe True T.null
+
+emptyList :: Maybe [a] -> Bool
+emptyList = maybe True null
+
+emptyTextList :: Maybe [Text] -> Bool
+emptyTextList ml = emptyList ml || maybe True (all T.null) ml
+
+
+isNothingProxy :: Proxy -> Bool
+isNothingProxy = \case
+  Direct -> False
+  Manual ftpProxy httpProxy sslProxy noProxy socksProxy-> 
+    all isNothing [ftpProxy, httpProxy, sslProxy, noProxy, socksProxy]
+  AutoDetect -> False
+  Pac url -> T.null url
+  System -> False
+
+subEmptyProxy :: Maybe Proxy -> Maybe Proxy
+subEmptyProxy p = subEmt isNothingProxy $ subEmptProps <$> p
+  where
+    subEmptProps :: Proxy -> Proxy
+    subEmptProps = \case
+      Direct -> Direct
+      Manual {..} ->
+        Manual
+          { ftpProxy = subEmptyTxt ftpProxy,
+            httpProxy = subEmptyTxt httpProxy,
+            sslProxy = subEmptyTxt sslProxy,
+            noProxy = subEmptyTxt noProxy,
+            socksProxy
+          }
+      AutoDetect -> AutoDetect
+      Pac url -> Pac $ subEmptyTxt (Just url)
+      System -> System 
+
+
+subEmptyTimeouts :: Maybe Timeouts -> Maybe Timeouts
+subEmptyTimeouts = subEmt isNothingTimeouts . subEmptProps
+  where
+    isNothingTimeouts :: Timeouts -> Bool
+    isNothingTimeouts = \case
+      MkTimeouts {..} ->
+        all isNothing [implicitWait, pageLoad, scriptTimeout]
 
 emptyFieldsToNothing :: Capabilities -> Capabilities
-emptyFieldsToNothing caps = caps {
-  browserVersion = subEmptyTxt caps.browserVersion,
-  vendorSpecific = subEmptyVendor caps.vendorSpecific
+emptyFieldsToNothing caps@MkCapabilities {..} = caps {
+  browserVersion = subEmptyTxt browserVersion,
+  vendorSpecific = subEmptyVendor vendorSpecific,
+  platformName,
+  acceptInsecureCerts,
+  pageLoadStrategy,
+  proxy = subEmptyProxy proxy,
+  timeouts = subEmptyTimeouts timeouts,
+  strictFileInteractability,
+  unhandledPromptBehavior
  }
 
 
@@ -316,14 +368,6 @@ jsonEq expected =
             av = actual.vendorSpecific
             vendorsEq = empty ev && empty av || ev == av
 
-            emptyTxt :: Maybe Text -> Bool
-            emptyTxt = maybe True T.null
-
-            emptyList :: Maybe [a] -> Bool
-            emptyList = maybe True null
-
-            emptyTextList :: Maybe [Text] -> Bool
-            emptyTextList ml = emptyList ml || maybe True (all T.null) ml
 
             emptyMobileEmulation :: Maybe MobileEmulation -> Bool
             emptyMobileEmulation = \case
