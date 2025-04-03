@@ -43,8 +43,8 @@ import WebDriverPreCore
     MobileEmulation (..),
     PerfLoggingPrefs (..),
     Proxy (..),
-    SocksProxy (MkSocksProxy),
-    Timeouts (MkTimeouts),
+    SocksProxy (..),
+    Timeouts (..),
     VendorSpecific (..), LogSettings (MkLogSettings)
   )
 import WebDriverPreCore.Internal.Utils (jsonToText)
@@ -288,6 +288,9 @@ subEmt f = maybe Nothing (\x -> if f x then Nothing else Just x)
 subEmptyTxt :: Maybe Text -> Maybe Text
 subEmptyTxt = subEmt T.null
 
+subEmptyTxtLst :: Maybe [Text] -> Maybe [Text]
+subEmptyTxtLst = subEmt emptyTextList
+
 subEmptyVendor :: Maybe VendorSpecific -> Maybe VendorSpecific
 subEmptyVendor = subEmt (allPropsNull . subEmptFields)
  where 
@@ -304,15 +307,15 @@ emptyTxt = maybe True T.null
 emptyList :: Maybe [a] -> Bool
 emptyList = maybe True null
 
-emptyTextList :: Maybe [Text] -> Bool
-emptyTextList ml = emptyList ml || maybe True (all T.null) ml
+emptyTextList :: [Text] -> Bool
+emptyTextList ml = null ml || (all T.null) ml
 
 
 isNothingProxy :: Proxy -> Bool
 isNothingProxy = \case
   Direct -> False
   Manual ftpProxy httpProxy sslProxy noProxy socksProxy-> 
-    all isNothing [ftpProxy, httpProxy, sslProxy, noProxy, socksProxy]
+    all isNothing [ftpProxy, httpProxy, sslProxy] && isNothing noProxy && isNothing socksProxy
   AutoDetect -> False
   Pac url -> T.null url
   System -> False
@@ -321,28 +324,28 @@ subEmptyProxy :: Maybe Proxy -> Maybe Proxy
 subEmptyProxy p = subEmt isNothingProxy $ subEmptProps <$> p
   where
     subEmptProps :: Proxy -> Proxy
-    subEmptProps = \case
-      Direct -> Direct
+    subEmptProps p' = case p' of
       Manual {..} ->
         Manual
           { ftpProxy = subEmptyTxt ftpProxy,
             httpProxy = subEmptyTxt httpProxy,
             sslProxy = subEmptyTxt sslProxy,
-            noProxy = subEmptyTxt noProxy,
+            noProxy = subEmptyTxtLst noProxy,
             socksProxy
           }
-      AutoDetect -> AutoDetect
-      Pac url -> Pac $ subEmptyTxt (Just url)
-      System -> System 
+      Direct -> p'
+      AutoDetect -> p'
+      Pac {} -> p'
+      System -> p'
 
 
 subEmptyTimeouts :: Maybe Timeouts -> Maybe Timeouts
-subEmptyTimeouts = subEmt isNothingTimeouts . subEmptProps
+subEmptyTimeouts = subEmt isNothingTimeouts 
   where
     isNothingTimeouts :: Timeouts -> Bool
     isNothingTimeouts = \case
       MkTimeouts {..} ->
-        all isNothing [implicitWait, pageLoad, scriptTimeout]
+        all isNothing [implicit, pageLoad, script]
 
 emptyFieldsToNothing :: Capabilities -> Capabilities
 emptyFieldsToNothing caps@MkCapabilities {..} = caps {
