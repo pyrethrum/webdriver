@@ -1,6 +1,8 @@
 module JSONParsingTest where
 
-import Data.Aeson (ToJSON (toJSON), Value (Bool), decode, encode)
+import Data.Aeson (ToJSON (toJSON), Value (..), decode, encode)
+import Data.Aeson.KeyMap qualified as KM
+
 import Data.Bool (Bool, (&&), (||))
 import Data.Enum (Bounded (minBound), Enum, maxBound)
 import Data.Foldable (all, null)
@@ -291,6 +293,22 @@ subEmptyTxt = subEmt T.null
 subEmptyTxtLst :: Maybe [Text] -> Maybe [Text]
 subEmptyTxtLst = subEmt emptyTextList
 
+
+emptyVal :: Value -> Bool
+emptyVal = \case
+  Bool _ -> False
+  String t -> T.null t
+  Number _ -> False
+  Array arr -> null arr
+  Object o -> KM.null o
+  Null -> True
+
+subEmtyValueMap :: Maybe (M.Map Text Value) -> Maybe (M.Map Text Value)
+subEmtyValueMap = subEmt emptyTextList . fmap M.toList
+ where
+  emptyTextList :: [(Text, Value)] -> Bool
+  emptyTextList ml = null ml || all (\(t, v) -> T.null t || emptyVal v) ml
+
 subEmptyVendor :: Maybe VendorSpecific -> Maybe VendorSpecific
 subEmptyVendor = subEmt (allPropsNull . subEmptFields)
  where 
@@ -298,7 +316,61 @@ subEmptyVendor = subEmt (allPropsNull . subEmptFields)
   allPropsNull = undefined
 
   subEmptFields :: VendorSpecific -> VendorSpecific
-  subEmptFields = undefined
+  subEmptFields = \case
+    ChromeOptions {..} ->
+      ChromeOptions
+        { chromeArgs = subEmptyTxtLst chromeArgs,
+          chromeBinary = subEmptyTxt chromeBinary,
+          chromeExtensions = subEmptyTxtLst chromeExtensions,
+          chromeLocalState = subEmptyTxtLst <$> chromeLocalState,
+          chromePrefs = subEmptyTxtLst <$> chromePrefs,
+          chromeDetach,
+          chromeDebuggerAddress = subEmptyTxt chromeDebuggerAddress,
+          chromeExcludeSwitches = subEmptyTxtLst chromeExcludeSwitches,
+          chromeMobileEmulation = subEmptyMobileEmulation chromeMobileEmulation,
+          chromeMinidumpPath = subEmptyTxt <$> (T.pack <$> chromeMinidumpPath),
+          chromePerfLoggingPrefs = subEmptyPerfLoggingPrefs <$> chromePerfLoggingPrefs,
+          chromeWindowTypes = subEmptyTxtLst chromeWindowTypes
+        }
+    EdgeOptions {..} ->
+      EdgeOptions
+        { edgeArgs = subEmptyTxtLst edgeArgs,
+          edgeBinary = subEmptyTxt edgeBinary,
+          edgeExtensions = subEmptyTxtLst edgeExtensions,
+          edgeLocalState = subEmptyTxtLst <$> edgeLocalState,
+          edgePrefs = subEmptyTxtLst <$> edgePrefs,
+          edgeDetach,
+          edgeDebuggerAddress = subEmptyTxt edgeDebuggerAddress,
+          edgeExcludeSwitches = subEmptyTxtLst edgeExcludeSwitches,
+          edgeMobileEmulation = subEmptyMobileEmulation edgeMobileEmulation,
+          edgeMinidumpPath = subEmptyTxt <$> (T.pack <$> edgeMinidumpPath),
+          edgePerfLoggingPrefs = subEmptyPerfLoggingPrefs <$> edgePerfLoggingPrefs,
+          edgeWindowTypes = subEmptyTxtLst edgeWindowTypes
+        }
+    FirefoxOptions {..} ->
+      FirefoxOptions
+        { firefoxArgs = subEmptyTxtLst firefoxArgs,
+          firefoxBinary = subEmptyTxt firefoxBinary,
+          firefoxProfile = subEmptyTxt firefoxProfile,
+          firefoxLog
+        }
+    s@SafariOptions {} -> s
+    where
+      subEmptyMobileEmulation :: Maybe MobileEmulation -> Maybe MobileEmulation
+      subEmptyMobileEmulation = subEmt emptyMobileEmulation
+
+      emptyMobileEmulation :: MobileEmulation -> Bool
+      emptyMobileEmulation = \case
+        MkMobileEmulation {deviceName, deviceMetrics, userAgent} ->
+          emptyTxt deviceName && isNothing deviceMetrics && emptyTxt userAgent
+
+      subEmptyPerfLoggingPrefs :: Maybe PerfLoggingPrefs -> Maybe PerfLoggingPrefs
+      subEmptyPerfLoggingPrefs = subEmt emptyPerfLoggingPrefs
+
+      emptyPerfLoggingPrefs :: PerfLoggingPrefs -> Bool
+      emptyPerfLoggingPrefs = \case
+        MkPerfLoggingPrefs {enableNetwork, enablePage, enableTimeline, traceCategories, bufferUsageReportingInterval} ->
+          emptyTxt traceCategories && isNothing bufferUsageReportingInterval && isNothing enableNetwork && isNothing enablePage && isNothing enableTimeline
 
 
 emptyTxt :: Maybe Text -> Bool
