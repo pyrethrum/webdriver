@@ -6,14 +6,14 @@ import Data.Aeson.KeyMap qualified as KM
 import Data.Bool (Bool, (&&), (||))
 import Data.Enum (Bounded (minBound), Enum, maxBound)
 import Data.Foldable (all, null)
-import Data.Function (($), (.))
+import Data.Function (($), (.), id)
 import Data.Functor ((<$>))
 import Data.Map.Strict qualified as M
 import Data.Maybe (Maybe (..), isNothing)
 import Data.String (String)
 import Data.Text (Text, unpack)
 import Data.Text qualified as T
-import GHC.Base (Applicative (..), Bool (..), Eq (..), Int, const, undefined)
+import GHC.Base (Applicative (..), Bool (..), Eq (..), Int, const, Functor (..))
 import GHC.Data.Maybe (maybe)
 import GHC.Float (Double)
 import GHC.IO (FilePath)
@@ -290,6 +290,9 @@ subEmt f = maybe Nothing (\x -> if f x then Nothing else Just x)
 subEmptyTxt :: Maybe Text -> Maybe Text
 subEmptyTxt = subEmt T.null
 
+subEmptyList :: Maybe String -> Maybe String
+subEmptyList = subEmt null 
+
 subEmptyTxtLst :: Maybe [Text] -> Maybe [Text]
 subEmptyTxtLst = subEmt emptyTextList
 
@@ -304,16 +307,26 @@ emptyVal = \case
   Null -> True
 
 subEmtyValueMap :: Maybe (M.Map Text Value) -> Maybe (M.Map Text Value)
-subEmtyValueMap = subEmt emptyTextList . fmap M.toList
+subEmtyValueMap = fmap M.fromList . subEmt emptyValList . fmap M.toList
  where
-  emptyTextList :: [(Text, Value)] -> Bool
-  emptyTextList ml = null ml || all (\(t, v) -> T.null t || emptyVal v) ml
+  emptyValList :: [(Text, Value)] -> Bool
+  emptyValList ml = null ml || all (\(t, v) -> T.null t || emptyVal v) ml
 
+-- | Substitutes empty fields with Nothing
 subEmptyVendor :: Maybe VendorSpecific -> Maybe VendorSpecific
-subEmptyVendor = subEmt (allPropsNull . subEmptFields)
+subEmptyVendor = subEmt allPropsNothing . fmap subEmptFields
  where 
-  allPropsNull :: VendorSpecific -> Bool
-  allPropsNull = undefined
+  allPropsNothing :: VendorSpecific -> Bool
+  allPropsNothing = \case 
+    ChromeOptions p1 p2 p3 p4 p5 p6 p7 p8 p9 p10 p11 p12 -> allTrue [n p1, n p2, n p3, n p4, n p5, n p6, n p7, n p8, n p9, n p10, n p11, n p12]
+    EdgeOptions p1 p2 p3 p4 p5 p6 p7 p8 p9 p10 p11 p12 -> allTrue [n p1, n p2, n p3, n p4, n p5, n p6, n p7, n p8, n p9, n p10, n p11, n p12]
+    FirefoxOptions p1 p2 p3 p4 -> allTrue [n p1, n p2, n p3, n p4]
+    SafariOptions p1 p2-> allTrue [n p1, n p2]
+    
+    where 
+      n = isNothing
+      allTrue :: [Bool] -> Bool
+      allTrue = all id
 
   subEmptFields :: VendorSpecific -> VendorSpecific
   subEmptFields = \case
@@ -322,14 +335,14 @@ subEmptyVendor = subEmt (allPropsNull . subEmptFields)
         { chromeArgs = subEmptyTxtLst chromeArgs,
           chromeBinary = subEmptyTxt chromeBinary,
           chromeExtensions = subEmptyTxtLst chromeExtensions,
-          chromeLocalState = subEmptyTxtLst <$> chromeLocalState,
-          chromePrefs = subEmptyTxtLst <$> chromePrefs,
+          chromeLocalState = subEmtyValueMap chromeLocalState,
+          chromePrefs = subEmtyValueMap chromePrefs,
           chromeDetach,
           chromeDebuggerAddress = subEmptyTxt chromeDebuggerAddress,
           chromeExcludeSwitches = subEmptyTxtLst chromeExcludeSwitches,
           chromeMobileEmulation = subEmptyMobileEmulation chromeMobileEmulation,
-          chromeMinidumpPath = subEmptyTxt <$> (T.pack <$> chromeMinidumpPath),
-          chromePerfLoggingPrefs = subEmptyPerfLoggingPrefs <$> chromePerfLoggingPrefs,
+          chromeMinidumpPath = subEmptyList chromeMinidumpPath,
+          chromePerfLoggingPrefs = subEmptyPerfLoggingPrefs chromePerfLoggingPrefs,
           chromeWindowTypes = subEmptyTxtLst chromeWindowTypes
         }
     EdgeOptions {..} ->
@@ -337,14 +350,14 @@ subEmptyVendor = subEmt (allPropsNull . subEmptFields)
         { edgeArgs = subEmptyTxtLst edgeArgs,
           edgeBinary = subEmptyTxt edgeBinary,
           edgeExtensions = subEmptyTxtLst edgeExtensions,
-          edgeLocalState = subEmptyTxtLst <$> edgeLocalState,
-          edgePrefs = subEmptyTxtLst <$> edgePrefs,
+          edgeLocalState = subEmtyValueMap edgeLocalState,
+          edgePrefs = subEmtyValueMap edgePrefs,
           edgeDetach,
           edgeDebuggerAddress = subEmptyTxt edgeDebuggerAddress,
           edgeExcludeSwitches = subEmptyTxtLst edgeExcludeSwitches,
           edgeMobileEmulation = subEmptyMobileEmulation edgeMobileEmulation,
-          edgeMinidumpPath = subEmptyTxt <$> (T.pack <$> edgeMinidumpPath),
-          edgePerfLoggingPrefs = subEmptyPerfLoggingPrefs <$> edgePerfLoggingPrefs,
+          edgeMinidumpPath = subEmptyList edgeMinidumpPath,
+          edgePerfLoggingPrefs = subEmptyPerfLoggingPrefs edgePerfLoggingPrefs,
           edgeWindowTypes = subEmptyTxtLst edgeWindowTypes
         }
     FirefoxOptions {..} ->
@@ -432,97 +445,25 @@ emptyFieldsToNothing caps@MkCapabilities {..} = caps {
   unhandledPromptBehavior
  }
 
+subEmptyCapabilities :: Capabilities -> Capabilities
+subEmptyCapabilities caps@MkCapabilities {..} = caps {
+  browserVersion = subEmptyTxt browserVersion,
+  strictFileInteractability = strictFileInteractability,
+  acceptInsecureCerts = acceptInsecureCerts,
+  proxy = subEmptyProxy proxy,
+  timeouts = subEmptyTimeouts timeouts,
+  vendorSpecific = subEmptyVendor vendorSpecific
+ }
+
 
 jsonEq :: Capabilities -> Maybe Capabilities -> Bool
 jsonEq expected =
   maybe
     False
-    ( \actual ->
-        let noVendor caps = caps {vendorSpecific = Nothing}
-            ev = expected.vendorSpecific
-            av = actual.vendorSpecific
-            vendorsEq = empty ev && empty av || ev == av
-
-
-            emptyMobileEmulation :: Maybe MobileEmulation -> Bool
-            emptyMobileEmulation = \case
-              Nothing -> True
-              Just me -> case me of
-                MkMobileEmulation {
-                  deviceName,
-                  deviceMetrics,
-                  userAgent
-                } -> emptyTxt deviceName 
-                    && isNothing deviceMetrics
-                    && emptyTxt userAgent
-            
-            emptyPerfLoggingPrefs :: Maybe PerfLoggingPrefs -> Bool
-            emptyPerfLoggingPrefs = maybe
-              True
-              \plp -> case plp of
-                MkPerfLoggingPrefs {
-                  enableNetwork,
-                  enablePage,
-                  enableTimeline,
-                  traceCategories,
-                  bufferUsageReportingInterval
-                } -> emptyTxt traceCategories 
-                    && isNothing bufferUsageReportingInterval
-                    && isNothing enableNetwork
-                    && isNothing enablePage
-                    && isNothing enableTimeline
-
-            empty :: Maybe VendorSpecific -> Bool
-            empty = maybe
-              True
-              \case
-                ChromeOptions {..} ->
-                    emptyTextList chromeArgs
-                      && emptyTxt chromeBinary
-                      && emptyTextList chromeExtensions
-                      && emptyList (M.toList <$> chromeLocalState)
-                      && emptyList (M.toList <$> chromePrefs)
-                      && isNothing chromeDetach
-                      && emptyTxt chromeDebuggerAddress
-                      && emptyTextList chromeExcludeSwitches
-                      && emptyMobileEmulation chromeMobileEmulation
-                      && emptyTxt (T.pack <$> chromeMinidumpPath)
-                      && emptyPerfLoggingPrefs chromePerfLoggingPrefs
-                      && emptyTextList chromeWindowTypes
-
-                EdgeOptions {..} ->
-                    emptyTextList edgeArgs
-                      && emptyTxt edgeBinary
-                      && emptyTextList edgeExtensions
-                      && emptyList (M.toList <$> edgeLocalState)
-                      && emptyList (M.toList <$> edgePrefs)
-                      && isNothing edgeDetach
-                      && emptyTxt edgeDebuggerAddress
-                      && emptyTextList edgeExcludeSwitches
-                      && emptyMobileEmulation edgeMobileEmulation
-                      && emptyTxt (T.pack <$> edgeMinidumpPath)
-                      && emptyPerfLoggingPrefs edgePerfLoggingPrefs
-                      && emptyTextList edgeWindowTypes
-
-                  
-                FirefoxOptions
-                  { firefoxArgs,
-                    firefoxBinary,
-                    firefoxProfile,
-                    firefoxLog
-                  } ->
-                    emptyTextList firefoxArgs
-                      && emptyTxt firefoxBinary
-                      && emptyTxt firefoxProfile
-                      && isNothing firefoxLog
-
-                SafariOptions Nothing Nothing -> True
-                SafariOptions _ _ -> False
-         in noVendor expected == noVendor actual && vendorsEq
-    )
+    (\actual -> subEmptyCapabilities expected == subEmptyCapabilities actual)
 
 wantLogging :: Bool
-wantLogging = True
+wantLogging = False
 
 log :: String -> Property ()
 log = if wantLogging then info else const $ pure ()

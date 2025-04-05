@@ -521,6 +521,7 @@ instance ToJSON VendorSpecific where
           [ opt "args" chromeArgs,
             opt "binary" chromeBinary,
             opt "extensions" chromeExtensions,
+            opt "localState" chromeLocalState,
             opt "mobileEmulation" chromeMobileEmulation,
             opt "prefs" chromePrefs,
             opt "detach" chromeDetach,
