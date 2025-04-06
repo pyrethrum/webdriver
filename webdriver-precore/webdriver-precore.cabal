@@ -6,12 +6,16 @@ homepage:       https://github.com/pyrethrum/webdriver-precore#readme
 bug-reports:    https://github.com/pyrethrum/webdriver-precore/issues
 author:         John Walker, Adrian Glouftsis
 maintainer:     theghostjw@gmail.com
+category:       Webb, WebDriver, Testing
 copyright:      2025 John Walker, Adrian Glouftsis
 license:        BSD-3-Clause
 license-file:   LICENSE
 build-type:     Simple
-extra-source-files:
-    README.md
+extra-doc-files: 
+  README.md
+  ChangeLog.md
+tested-with: GHC == { 9.8.2, 9.10.1 }
+    
 
 synopsis:       A typed wrapper for W3C WebDriver protocol. A base for other libraries.
 
@@ -87,7 +91,6 @@ common commonGhcOptions
   ghc-options:
     -fmax-pmcheck-models=10000000 
     -ferror-spans 
-    -O2 
     -fprint-potential-instances 
     -Wall 
     -Wcompat 
@@ -100,12 +103,9 @@ common commonGhcOptions
     -fno-warn-unused-do-bind 
     -Wno-overlapping-patterns 
     -fprefer-byte-code 
-    -fbyte-code-and-object-code 
-    -fno-break-points
+    -fbyte-code-and-object-code
     -haddock
     -- -fdefer-type-errors
-    
-tested-with: GHC == { 9.8.2, 9.10.1 }
 
 library
   import: commonExtensions, commonGhcOptions
@@ -153,3 +153,4 @@ test-suite test
     JSONParsingTest,
   build-tool-depends:
     tasty-discover:tasty-discover
+  default-language: Haskell2010

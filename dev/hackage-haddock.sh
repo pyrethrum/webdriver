@@ -1,0 +1,1 @@
+cabal haddock --haddock-for-hackage --enable-doc
