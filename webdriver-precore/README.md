@@ -1,3 +1,22 @@
+# webdriver-precore
+
+- [webdriver-precore](#webdriver-precore)
+  - [What is This Library?](#what-is-this-library)
+  - [Why This Library?](#why-this-library)
+    - [Core Principles](#core-principles)
+    - [Library Non-Goals](#library-non-goals)
+  - [1. Implementing a runner](#1-implementing-a-runner)
+    - [Example](#example)
+      - [run function](#run-function)
+    - [1.1 Convert W3Spec to params for req](#11-convert-w3spec-to-params-for-req)
+    - [1.2 Call the WebDriver](#12-call-the-webdriver)
+    - [1.3 Parse HttpResponse using the parser provided in the W3Spec](#13-parse-httpresponse-using-the-parser-provided-in-the-w3spec)
+    - [2. Applying the runner to the W3Spec functions](#2-applying-the-runner-to-the-w3spec-functions)
+    - [Using the API](#using-the-api)
+      - [Prerequisites:](#prerequisites)
+      - [Starting WebDriver From the Console](#starting-webdriver-from-the-console)
+      - [An Example WebDriver Interaction](#an-example-webdriver-interaction)
+
 ## What is This Library?
 
 This library provides a minimal abstraction over the [WebDriver W3C Protocol endpoints]() without providing any implementation. It provides a description of the W3C API as a list of functions that return a [W3Spec type](). The intention is that other libraries will provide the actual implementation.
@@ -165,7 +184,7 @@ maximizeWindow = run . W.maximizeWindow
 
 *Drivers can be downloaded from the developers' web sites: e.g. [chrome](https://googlechromelabs.github.io/chrome-for-testing/), [firefox](https://github.com/mozilla/geckodriver/releases), [edge](https://developer.microsoft.com/en-us/microsoft-edge/tools/webdriver?form=MA13LH)*
 
-*Start WebDriver from the console*
+#### Starting WebDriver From the Console
 
 e.g. For Firefox and geckodriver on Linux or WSL you could start geckodriver from the terminal as follows: Note: we are setting the port to 4444, which is the hard coded port in our example.
 
@@ -189,6 +208,8 @@ or with logging:
 ```bash
 > pkill -f chromedriver || true && chromedriver --log-level=ALL --port=4444 &
 ```
+
+#### An Example WebDriver Interaction
 
 *With the driver running you can now run code that interacts with the browser:*
 

@@ -1,4 +1,11 @@
 # webdriver
+
+- [webdriver](#webdriver)
+- [Work In Progress](#work-in-progress)
+  - [TODO](#todo)
+- [Acknowledgments](#acknowledgments)
+- [Other Libraries](#other-libraries)
+
 ![build](https://github.com/pyrethrum/webdriver/actions/workflows/cicd.yaml/badge.svg?branch=main)
 
 Libraries for working with browsers
