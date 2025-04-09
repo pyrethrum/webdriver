@@ -5,29 +5,32 @@
   - [Why This Library?](#why-this-library)
     - [Core Principles](#core-principles)
     - [Library Non-Goals](#library-non-goals)
+    - [Acknowledgements](#acknowledgements)
 - [Minimal Example](#minimal-example)
   - [1. Implementing a runner](#1-implementing-a-runner)
-      - [run function](#run-function)
+      - [Main Types (Used in the Runner)](#main-types-used-in-the-runner)
+        - [W3Spec](#w3spec)
+        - [HttpResponse](#httpresponse)
+      - [The Runner](#the-runner)
     - [1.1 Convert W3Spec to params for req](#11-convert-w3spec-to-params-for-req)
     - [1.2 Call the WebDriver](#12-call-the-webdriver)
-    - [1.3 Parse HttpResponse using the parser provided in the W3Spec](#13-parse-httpresponse-using-the-parser-provided-in-the-w3spec)
-    - [2. Applying the runner to the W3Spec functions](#2-applying-the-runner-to-the-w3spec-functions)
-    - [3. Obtain and Launch a Vendor Provided WebDriver](#3-obtain-and-launch-a-vendor-provided-webdriver)
-      - [3.1 Drivers Can Be Obtained From the Devlopers' Web Sites](#31-drivers-can-be-obtained-from-the-devlopers-web-sites)
-      - [3.2 Launch WebDriver From the Console](#32-launch-webdriver-from-the-console)
-      - [4. Drive the browser by calling the IO API](#4-drive-the-browser-by-calling-the-io-api)
+    - [1.3 Parse HttpResponse Using the Parser Provided in the W3Spec](#13-parse-httpresponse-using-the-parser-provided-in-the-w3spec)
+    - [2. Applying the Runner to the W3Spec Functions](#2-applying-the-runner-to-the-w3spec-functions)
+    - [3. Install a Vendor Provided WebDriver](#3-install-a-vendor-provided-webdriver)
+      - [4. Launch WebDriver From the Terminal](#4-launch-webdriver-from-the-terminal)
+      - [5. Drive the Browser Via the IO API](#5-drive-the-browser-via-the-io-api)
 
 ## What is This Library?
 
-This library provides a minimal abstraction over the [WebDriver W3C Protocol endpoints]() without providing any implementation. It provides a description of the W3C API as a list of functions that return a [W3Spec type](). The intention is that other libraries will provide the actual implementation.
+This library provides a minimal abstraction over the [WebDriver W3C Protocol endpoints](https://www.w3.org/TR/webdriver2/) without providing any implementation. It provides a description of the W3C API as a list of functions that return a [W3Spec type](#w3spec). The intention is that other libraries will provide the actual implementation.
 
-You can not use this library directly to drive a browser. If you are looking for a library to drive a browser, you may be interested in an alternative library such as [haskell-webdriver](https://hackage.haskell.org/package/webdriver), a Selenium 2 client that is actively maintained.
+You can not use this library directly to drive a browser. If you are looking for a fully featured library to drive a browser, you may be interested in an alternative library such as [haskell-webdriver](https://hackage.haskell.org/package/webdriver), a Selenium 2 client that is actively maintained.
 
 ## Why This Library?
 
-There are a number of libraries that provide WebDriver bindings for Haskell. However, at the time work on this library commenced, the available libraries were not being actively maintained, depended on Selenium, or part of larger opinionated testing frameworks.
+Several libraries provide WebDriver bindings for Haskell. However, when development on this library began, the existing options were either unmaintained, dependent on Selenium, or tightly coupled with larger, opinionated testing frameworks.
 
-The intent of the authors is to write a number of low level libraries to enable web UI testing in our own stand alone test framework. This is the first of those libraries.
+The authors aim to develop a set of low-level libraries to support web UI testing within our standalone test framework, while also making them useful for others. This library is the first in that series.
 
 ### Core Principles
 - **Direct W3C WebDriver Implementation**  
@@ -43,29 +46,101 @@ The intent of the authors is to write a number of low level libraries to enable 
   - Provide an unopinionated WebDriver client for use in higher level libraries
 
 ### Library Non-Goals
-  Any convenience / utility functions that do not directly correspond to an endpoint on the WC3 spec. Such functions belong in downstream libraries.
+  
+  * Any convenience or utility functions, that do not directly correspond to an endpoint on the WC3 spec. Such functions belong in downstream libraries.
+  * Any transformers or effects or similar. These too belong downstream.
+
+### Acknowledgements
+
+This library would not have been possible without the prior work in: 
+
+Haskell (particularly):
+* [haskell-webdriver](https://hackage.haskell.org/package/webdriver)
+* [webdriver-w3c](https://hackage.haskell.org/package/webdriver-w3c)
+
+Selenium and WebDriver Standards:
+
+The decade+ efforts of the [Selenium](https://www.selenium.dev/) maintainers, both in forging the way with Selenium and their ongoing work in the development of the [W3C standards](https://www.w3.org/TR/webdriver2/) 
+
 
 # Minimal Example
 
-Driving a browser using this library requires the user to implement the following:
-1. Implement a `runner` that takes a [W3Spec]() and calls a running WebDriver
-2. Create an IO API by applying the runner to each of the endpoint funtions in this library
-3. HERE !!!!!
+Driving a browser using this library requires the following:
+1. Implement a `runner` that takes a [W3Spec](#w3spec) and makes HTTP calls to a running WebDriver
+2. Create an IO API by applying the `runner` to each of the endpoint functions in this library
+3. Install the desired browser and browser driver
+4. Run the driver
+5. Drive the browser using the IO API
+
+The full source can be found in the [example project repo](https://github.com/pyrethrum/webdriver/tree/jw-busywork/webdriver-examples/driver-demo-e2e).
+
+
 ## 1. Implementing a runner
 
-This is an example of a minimal runner that implements the interaction with WebDriver endpoint definitions as provided by this library.
-
-The first step in writing a WebDriver implementation is to choose an HTTP library. In this example, the chosen library is [req]().
+The first step in writing a WebDriver implementation is to choose an HTTP library. In this example, the chosen library is [req](https://hackage.haskell.org/package/req).
 
 Then to implement a run function requires the following:
 
-1. Transform a [W3Spec]() to RequestParams compatible with the chosen HTTP library.
-2. Make an HTTP call to WebDriver as per the RequestParams and return a simplified [HttpResponse]().
-3. Use the parser provided by the [W3Spec]() to transform the [HttpResponse]() to the desired result type and handle any errors.
+1. Transform a [W3Spec](#w3spec) to RequestParams compatible with the chosen HTTP library.
+2. Make an HTTP call to WebDriver as per the RequestParams and return a simplified [HttpResponse](#httpresponse).
+3. Use the parser provided by the [W3Spec](#w3spec) to transform the [HttpResponse](#httpresponse) to the desired result type and handle any errors.
 
-#### run function
+#### Main Types (Used in the Runner)
 
-The full source for can be found in the [example project repo](https://github.com/pyrethrum/webdriver/blob/main/webdriver-examples/driver-demo-e2e/IORunner.hs).
+The two most important types in this library are:
+
+##### W3Spec
+
+The `W3Spec` returned by each of this library's endpoint functions. This type represents a driver endpoint.
+
+```haskell
+data W3Spec a
+  = Get
+      { description :: Text,
+        path :: UrlPath,
+        parser :: HttpResponse -> Result a
+      }
+  | Post
+      { description :: Text,
+        path :: UrlPath,
+        body :: Value,
+        parser :: HttpResponse -> Result a
+      }
+  | PostEmpty
+      { description :: Text,
+        path :: UrlPath,
+        parser :: HttpResponse -> Result a
+      }
+  | Delete
+      { description :: Text,
+        path :: UrlPath,
+        parser :: HttpResponse -> Result a
+      }
+```
+
+*Example Endpoint Function*
+```haskell
+navigateTo :: SessionId -> Text -> W3Spec ()
+navigateTo sesionId url = ...
+```
+
+##### HttpResponse
+`HttpResponse` is consumed by the `parser` provided by this library and needs to be constructed by the `runner`
+
+```haskell
+data HttpResponse = MkHttpResponse
+  { -- | HTTP status code.
+    statusCode :: Int,
+    -- | HTTP status message.
+    statusMessage :: Text,
+    -- | Response body in JSON format.
+    body :: Value
+  }
+```
+
+#### The Runner
+
+[source](https://github.com/pyrethrum/webdriver/blob/main/webdriver-examples/driver-demo-e2e/IORunner.hs)
 
 
 ```haskell
@@ -75,7 +150,7 @@ run spec = do
   let request = mkRequest spec
   -- 2. Call WebDriver server (via req) and return a simplified HttpResponse 
   response <- callReq request
-  -- 3. Use the W3Spec parser to convert the HttpResponse to the desired result type and handle any errors  
+  -- 3. Apply the W3Spec parser to the HttpResponse get result type and handle errors  
   parseResponse spec response  
 ```
 
@@ -96,9 +171,10 @@ data ReqRequestParams where
     ReqRequestParams
 
 -- W3Spec -> ReqRequestParams
+-- the url and port would not normally be hard coded
 mkRequest :: forall a. W3Spec a -> ReqRequestParams
 mkRequest spec = case spec of
-  Get {} -> MkRequestParams url GET NoReqBody 4444 -- port 4444 would not normally be hard coded
+  Get {} -> MkRequestParams url GET NoReqBody 4444 
   Post {body} -> MkRequestParams url POST (ReqBodyJson body) 4444
   PostEmpty {} -> MkRequestParams url POST (ReqBodyJson $ object []) 4444
   Delete {} -> MkRequestParams url DELETE NoReqBody 4444
@@ -125,7 +201,7 @@ callReq MkRequestParams {url, method, body, port = prt} =
     responseStatusText = decodeUtf8Lenient . responseStatusMessage
 ```
 
-### 1.3 Parse HttpResponse using the parser provided in the [W3Spec]()
+### 1.3 Parse HttpResponse Using the Parser Provided in the [W3Spec](#w3spec)
 
 *HttpResponse -> Return Type*
 
@@ -135,17 +211,17 @@ parseResponse :: W3Spec a -> HttpResponse -> IO a
 parseResponse spec r =
   spec.parser r
     & \case
-      Error msg -> fail $ parseWebDriverError r & case
-          e@NotAnError {} -> unpack spec.description <> "\n" <> "Failed to parse response:\n " <> msg <> "\nin response:" <> show e
+      Error msg -> fail $ parseWebDriverError r & \case
+          e@NotAnError {} -> unpack spec.description <> "\n" <> 
+                            "Failed to parse response:\n " <> msg <> "\nin response:" <> show e
           e@UnrecognisedError {} -> "UnrecognisedError:\n " <> "\nin response:" <> show e
           e@WebDriverError {} -> "WebDriver error thrown:\n " <> show e
       Success a -> pure a
 ```
 
-### 2. Applying the runner to the W3Spec functions
+### 2. Applying the Runner to the W3Spec Functions
 
 *Create an IO API by applying run to each endpoint definition exposed by this library*
-
 
 The full source for can be found in the [example project repo](https://github.com/pyrethrum/webdriver/blob/main/webdriver-examples/driver-demo-e2e/IOAPI.hs).
 ```haskell
@@ -183,11 +259,9 @@ maximizeWindow = run . W.maximizeWindow
 -- ... and 50+ more API functions
 ```
 
-### 3. Obtain and Launch a Vendor Provided WebDriver
+### 3. Install a Vendor Provided WebDriver
 
 *Once all the required endpoints are implemented you will be able to interact with browsers via WebDriver*
-
-#### 3.1 Drivers Can Be Obtained From the Devlopers' Web Sites
 
 Examples:
   1. [firefox](https://github.com/mozilla/geckodriver/releases)
@@ -196,7 +270,9 @@ Examples:
   4. [opera](https://github.com/operasoftware/operachromiumdriver?tab=readme-ov-file)
   5. [safari](https://developer.apple.com/documentation/webkit/testing-with-webdriver-in-safari)
 
-#### 3.2 Launch WebDriver From the Console
+*Ensure the corresponding browser is installed on your system*
+
+#### 4. Launch WebDriver From the Terminal
 
 e.g. For Firefox and geckodriver on Linux or WSL you could start geckodriver from the terminal as follows: 
 
@@ -223,7 +299,7 @@ or with logging:
 > pkill -f chromedriver || true && chromedriver --log-level=ALL --port=4444 &
 ```
 
-#### 4. Drive the browser by calling the IO API
+#### 5. Drive the Browser Via the IO API
 
 *With the driver running you can now run code that interacts with the browser:*
 
@@ -242,4 +318,4 @@ demoForwardBackRefresh = do
   deleteSession ses
 ```
 
-*This is a minimal API. There is plenty of scope to build on this to provide a more user-friendly functions and capabilites such as retries, and session and driver management.*
+*This is a minimal API. There is plenty of scope to build on this to provide more constrained types, user-friendly functions and capabilites such as retries, and session and driver management.*

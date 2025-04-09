@@ -1,1 +1,0 @@
-cabal upload /home/john-walker/repos/webdriver/webdriver-precore/dist-newstyle/webdriver-precore-0.0.0.1-docs.tar.gz --documentation

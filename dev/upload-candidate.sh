@@ -1,1 +1,0 @@
-cabal upload ./dist-newstyle/sdist/webdriver-precore-0.0.0.1.tar.gz
