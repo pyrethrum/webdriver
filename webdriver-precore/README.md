@@ -118,13 +118,8 @@ data W3Spec a
       }
 ```
 
-*Example Endpoint Function*
-```haskell
-navigateTo :: SessionId -> Text -> W3Spec ()
-navigateTo sesionId url = ...
-```
-
 ##### HttpResponse
+
 `HttpResponse` is consumed by the `parser` provided by this library and needs to be constructed by the `runner`
 
 ```haskell

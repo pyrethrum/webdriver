@@ -80,6 +80,23 @@
         "showReuseMessage": true
       },
       "problemMatcher": []
+    },
+    {
+      "label": "upload to hackage",
+      "type": "shell",
+      "options": {
+        "cwd": "${workspaceFolder}/webdriver-precore"
+      },
+      "command": "bash",
+      "args": [
+        "../dev/upload-package.sh",
+      ],
+      "presentation": {
+        "reveal": "always",
+        "panel": "new",
+        "showReuseMessage": true
+      },
+      "problemMatcher": []
     }
   ]
 }

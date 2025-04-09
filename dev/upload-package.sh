@@ -1,15 +1,15 @@
 set -e
 
-# see issue https://github.com/haskell/cabal/issues/10252
 # take API key as a parameter
+# Prompt for API key if not provided as a parameter
 if [ "$#" -ne 1 ]; then
   echo "This script uploads the package tarball to Hackage."
-  echo "It requires the API key for Hackage as a parameter."
-  echo "Usage: $0 <API_KEY>"
-  exit 1
+  echo "It requires the API key for Hackage."
+  read -sp "Enter your Hackage API key: " API_KEY
+  echo
+else
+  API_KEY="$1"
 fi
-
-API_KEY="$1"
 
 echo "checking package..."
 cabal check
@@ -27,7 +27,8 @@ SOURCE_TARBALL=$(cabal sdist | awk '/^Wrote tarball/ {getline; print}')
 # echo "Tarball to upload: $SOURCE_TARBALL"
 
 echo "Uploading source tarball..."
-cabal upload --username="" --password="$API_KEY" "$SOURCE_TARBALL"
+# echo "token is $API_KEY"
+cabal upload --token=$API_KEY "$SOURCE_TARBALL"
 
 # see issue https://github.com/haskell/cabal/issues/10252
 # when fixed replace with cabal upload --username="" --password="$API_KEY" "$DOCS_TARBALL" --documentation
@@ -37,6 +38,6 @@ curl -X PUT \
   -H "Content-Type: application/x-tar" \
   -H 'Content-Encoding: gzip' \
   --data-binary "$DOCS_TARBALL" \
-  "https://hackage.haskell.org/package/$PACKAGE_NAME/candidate/docs"
+  https://hackage.haskell.org/package/$PACKAGE_NAME/candidate/docs
 
 echo "Upload complete for $PACKAGE_NAME"
