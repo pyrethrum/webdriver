@@ -4,6 +4,6 @@ import: https://www.stackage.org/nightly-2025-02-25/cabal.config
 multi-repl: True
 
 package *
-ghc-options: -haddock
+
 with-compiler: ghc-9.10.1
 -- with-compiler: ghc-9.8.2 -- haddock not working
