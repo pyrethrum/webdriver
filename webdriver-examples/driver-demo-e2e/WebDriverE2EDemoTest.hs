@@ -132,9 +132,11 @@ import Prelude hiding (log)
 useFirefox :: Bool
 useFirefox = True
 
+-- see README.md
 useCustomFirefoxProfile :: Bool
-useCustomFirefoxProfile = False
+useCustomFirefoxProfile = True
 
+-- change this to point to your Firefox profile
 firefoxProfilePath :: Text
 firefoxProfilePath = "./webdriver-examples/driver-demo-e2e/.profile/FirefoxWebDriverProfile"
 
@@ -142,7 +144,8 @@ firefoxProfilePath = "./webdriver-examples/driver-demo-e2e/.profile/FirefoxWebDr
 unit_demoSessionDriverStatus :: IO ()
 unit_demoSessionDriverStatus = do
   ses <-
-    -- helper functions are normally used to simplify session creation
+    -- demo only
+    -- helper functions would oterwise always be used to simplify session creation
     newSession $
       MkFullCapabilities
         { alwaysMatch =
@@ -157,7 +160,16 @@ unit_demoSessionDriverStatus = do
                   timeouts = Nothing,
                   strictFileInteractability = Nothing,
                   unhandledPromptBehavior = Nothing,
-                  vendorSpecific = Nothing
+                  vendorSpecific = if 
+                    | useFirefox && useCustomFirefoxProfile -> Just
+                        FirefoxOptions
+                          { -- requires a path to the profile directory
+                            firefoxArgs = Just ["-profile", firefoxProfilePath],
+                            firefoxBinary = Nothing,
+                            firefoxProfile = Nothing,
+                            firefoxLog = Nothing
+                          }
+                    | otherwise -> Nothing
                 },
           firstMatch = []
         }
@@ -182,10 +194,6 @@ unit_demoSendKeysClear = withSession \ses -> do
   sleep2
 
 -- >>> unit_demoForwardBackRefresh
-
--- *** Exception: user error (WebDriver error thrown:
-
---  WebDriverError {error = UnknownError, description = "An unknown error occurred in the remote end while processing the command", httpResponse = MkHttpResponse {statusCode = 500, statusMessage = "Internal Server Error", body = Object (fromList [("value",Object (fromList [("error",String "unknown error"),("message",String "Process unexpectedly closed with status 1"),("stacktrace",String "")]))])}})
 unit_demoForwardBackRefresh :: IO ()
 unit_demoForwardBackRefresh = withSession \ses -> do
   navigateTo ses theInternet
@@ -753,7 +761,9 @@ unit_demoError = withSession \ses -> do
           expectedText = "WebDriverError {error = NoSuchElement, description = \"An element could not be located on the page using the given search parameters\""
       assertBool "NoSuchElement error should be mapped" $ expectedText `isInfixOf` errTxt
 
+-- ##############################################
 -- ##################  Utils ####################
+-- ##############################################
 
 session :: IO SessionId
 session =
@@ -813,10 +823,10 @@ mkExtendedFirefoxTimeoutsSession = do
   ses <-
     if useCustomFirefoxProfile
       then do
-        profileBase64 <- capsWithCustomFirefoxProfile
+        profile <- capsWithCustomFirefoxProfile
         newSession $
           MkFullCapabilities
-            { alwaysMatch = Just profileBase64,
+            { alwaysMatch = Just profile,
               firstMatch = []
             }
       else
