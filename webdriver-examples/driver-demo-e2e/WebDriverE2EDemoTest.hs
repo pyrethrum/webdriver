@@ -128,128 +128,15 @@ import WebDriverPreCore (minFullCapabilities)
 import WebDriverPreCore.Internal.Utils (txt)
 import Prelude hiding (log)
 
-useCustomProfile :: Bool
-useCustomProfile = True
+useFireFox :: Bool
+useFireFox = True
 
-logTxt :: Text -> IO ()
-logTxt = TIO.putStrLn
+useCustomFirefoxProfile :: Bool
+useCustomFirefoxProfile = True
 
-log :: Text -> Text -> IO ()
-log l t = logTxt $ l <> ": " <> t
+firefoxProfilePath :: Text
+firefoxProfilePath = "./webdriver-examples/driver-demo-e2e/.profile/FirefoxWebDriverProfile"
 
-logShow :: (Show a) => Text -> a -> IO ()
-logShow l = log l . txt
-
-logM :: Text -> IO Text -> IO ()
-logM l t = t >>= log l
-
-logShowM :: (Show a) => Text -> IO a -> IO ()
-logShowM l t = t >>= logShow l
-
-sleep1 :: IO ()
-sleep1 = sleepMs $ 1 * second
-
-sleep2 :: IO ()
-sleep2 = sleepMs $ 2 * seconds
-
-{-
-This fails on my machine with the following error:
-
-```Your Firefox profile cannot be loaded. It may be missing or inaccessible.```
-
-This appears to be due to the profile being unpacked into tmp and the driver not being able to access it.
-If I copy the unpacked profile to "./webdriver-examples/driver-demo-e2e/.profile/FirefoxWebDriverProfile" and reference in
-capabilites as follows see (capsWithCustomFirefoxProfile):
-
-```firefoxArgs = Just ["-profile", "./webdriver-examples/driver-demo-e2e/.profile/FirefoxWebDriverProfile"]```
-
-then it works.
--}
-capsWithCustomFirefoxProfileNotWorking :: IO Capabilities
-capsWithCustomFirefoxProfileNotWorking = do
-  profile <- encodeFileToBase64 "./webdriver-examples/driver-demo-e2e/FirefoxWebDriverProfile.zip"
-  pure $
-    (minCapabilities Firefox)
-      { vendorSpecific =
-          Just
-            FirefoxOptions
-              { firefoxArgs = Nothing,
-                firefoxBinary = Nothing,
-                firefoxProfile = Just profile,
-                firefoxLog = Nothing
-              }
-      }
-
-{-
-this works when the profile in: ./webdriver-examples/driver-demo-e2e/FirefoxWebDriverProfile.zip
-=> is unzipped to "./webdriver-examples/driver-demo-e2e/.profile/FirefoxWebDriverProfile"
-before running any tests
--}
-capsWithCustomFirefoxProfile :: IO Capabilities
-capsWithCustomFirefoxProfile = do
-  pure $
-    (minCapabilities Firefox)
-      { vendorSpecific =
-          Just
-            FirefoxOptions
-              { -- this works when the profile is unpacked to here
-                -- TODO: needs to be different based on WD - needs logic here:
-                -- check wd
-                -- caculate expected path of profle
-                -- unzip if .profile exists and Profile doesn't
-                -- fail if .profile and zip does not exist
-              
-
-                -- running in root dir
-                firefoxArgs = Just ["-profile", "./webdriver-examples/driver-demo-e2e/.profile/FirefoxWebDriverProfile"],
-                -- runing in examples dir
-                -- firefoxArgs = Just ["-profile", "./driver-demo-e2e/.profile/FirefoxWebDriverProfile"],
-                firefoxBinary = Nothing,
-                firefoxProfile = Nothing,
-                firefoxLog = Nothing
-              }
-      }
-
-mkExtendedFirefoxTimeoutsSession :: IO SessionId
-mkExtendedFirefoxTimeoutsSession = do
-  ses <-
-    if useCustomProfile
-      then do
-        profileBase64 <- capsWithCustomFirefoxProfile
-        newSession $
-          MkFullCapabilities
-            { alwaysMatch = Just profileBase64,
-              firstMatch = []
-            }
-      else
-        -- this was working in the dev-container but failing locally
-        minFirefoxSession
-  extendTimeouts ses
-
-mkExtendedChromeTimeoutsSession :: IO SessionId
-mkExtendedChromeTimeoutsSession =
-  newSession (minFullCapabilities Chrome) >>= extendTimeouts
-
-extendTimeouts :: SessionId -> IO SessionId
-extendTimeouts ses = do
-  setTimeouts ses $
-    MkTimeouts
-      { pageLoad = Just $ 30 * seconds,
-        script = Just $ 11 * seconds,
-        implicit = Just $ 12 * seconds
-      }
-  pure ses
-
--- todo: test extras - split off
-
-(===) ::
-  (Eq a, Show a, HasCallStack) =>
-  -- | The actual value
-  a ->
-  -- | The expected value
-  a ->
-  Assertion
-(===) = (@=?)
 
 -- >>> unit_demoSessionDriverStatus
 unit_demoSessionDriverStatus :: IO ()
@@ -640,6 +527,26 @@ unit_demoCookies =
 
 -- >>> unit_demoAlerts
 unit_demoAlerts :: IO ()
+logTxt :: Text -> IO ()
+logTxt = TIO.putStrLn
+
+log :: Text -> Text -> IO ()
+log l t = logTxt $ l <> ": " <> t
+
+logShow :: (Show a) => Text -> a -> IO ()
+logShow l = log l . txt
+
+logM :: Text -> IO Text -> IO ()
+logM l t = t >>= log l
+
+logShowM :: (Show a) => Text -> IO a -> IO ()
+logShowM l t = t >>= logShow l
+
+sleep1 :: IO ()
+sleep1 = sleepMs $ 1 * second
+
+sleep2 :: IO ()
+sleep2 = sleepMs $ 2 * seconds
 unit_demoAlerts =
   withSession \ses -> do
     navigateTo ses alertsUrl
@@ -848,8 +755,137 @@ unit_demoError = withSession \ses -> do
           expectedText = "WebDriverError {error = NoSuchElement, description = \"An element could not be located on the page using the given search parameters\""
       assertBool "NoSuchElement error should be mapped" $ expectedText `isInfixOf` errTxt
 
+
+
+-- ##################  Utils ####################
+
 withSession :: (SessionId -> IO ()) -> IO ()
 -- firefox
-withSession = bracket mkExtendedFirefoxTimeoutsSession deleteSession
+withSession = bracket (if useFirefox mkExtendedFirefoxTimeoutsSession ) deleteSession
 -- chrome
 -- withSession = bracket mkExtendedChromeTimeoutsSession deleteSession
+
+
+
+{-
+This fails on my machine with the following error:
+
+```Your Firefox profile cannot be loaded. It may be missing or inaccessible.```
+
+This appears to be due to the profile being unpacked into tmp and the driver not being able to access it.
+If I copy the unpacked profile to "./webdriver-examples/driver-demo-e2e/.profile/FirefoxWebDriverProfile" and reference in
+capabilites as follows see (capsWithCustomFirefoxProfile):
+
+```firefoxArgs = Just ["-profile", "./webdriver-examples/driver-demo-e2e/.profile/FirefoxWebDriverProfile"]```
+
+then it works.
+-}
+capsWithCustomFirefoxProfileNotWorking :: IO Capabilities
+capsWithCustomFirefoxProfileNotWorking = do
+  profile <- encodeFileToBase64 "./webdriver-examples/driver-demo-e2e/FirefoxWebDriverProfile.zip"
+  pure $
+    (minCapabilities Firefox)
+      { vendorSpecific =
+          Just
+            FirefoxOptions
+              { firefoxArgs = Nothing,
+                firefoxBinary = Nothing,
+                firefoxProfile = Just profile,
+                firefoxLog = Nothing
+              }
+      }
+
+{-
+this works when the profile in: ./webdriver-examples/driver-demo-e2e/FirefoxWebDriverProfile.zip
+=> is unzipped to "./webdriver-examples/driver-demo-e2e/.profile/FirefoxWebDriverProfile"
+before running any tests
+-}
+capsWithCustomFirefoxProfile :: IO Capabilities
+capsWithCustomFirefoxProfile = do
+  pure $
+    (minCapabilities Firefox)
+      { vendorSpecific =
+          Just
+            FirefoxOptions
+              { -- this works when the profile is unpacked to here
+                -- TODO: needs to be different based on WD - needs logic here:
+                -- check wd
+                -- caculate expected path of profle
+                -- unzip if .profile exists and Profile doesn't
+                -- fail if .profile and zip does not exist
+              
+
+                -- running in root dir
+                firefoxArgs = Just ["-profile", "./webdriver-examples/driver-demo-e2e/.profile/FirefoxWebDriverProfile"],
+                -- firefoxArgs = Just ["-profile", "/home/john-walker/snap/firefox/common/.mozilla/firefox/lp9fupjr.default"],
+                -- firefoxArgs = Nothing,
+                -- runing in examples dir
+                -- firefoxArgs = Just ["-profile", "./driver-demo-e2e/.profile/FirefoxWebDriverProfile"],
+                firefoxBinary = Nothing,
+                firefoxProfile = Nothing,
+                firefoxLog = Nothing
+              }
+      }
+
+mkExtendedFirefoxTimeoutsSession :: IO SessionId
+mkExtendedFirefoxTimeoutsSession = do
+  ses <-
+    if useCustomFirefoxProfile
+      then do
+        profileBase64 <- capsWithCustomFirefoxProfile
+        newSession $
+          MkFullCapabilities
+            { alwaysMatch = Just profileBase64,
+              firstMatch = []
+            }
+      else
+        -- this was working in the dev-container but failing locally
+        minFirefoxSession
+  extendTimeouts ses
+
+mkExtendedChromeTimeoutsSession :: IO SessionId
+mkExtendedChromeTimeoutsSession =
+  newSession (minFullCapabilities Chrome) >>= extendTimeouts
+
+extendTimeouts :: SessionId -> IO SessionId
+extendTimeouts ses = do
+  setTimeouts ses $
+    MkTimeouts
+      { pageLoad = Just $ 30 * seconds,
+        script = Just $ 11 * seconds,
+        implicit = Just $ 12 * seconds
+      }
+  pure ses
+
+
+logTxt :: Text -> IO ()
+logTxt = TIO.putStrLn
+
+log :: Text -> Text -> IO ()
+log l t = logTxt $ l <> ": " <> t
+
+logShow :: (Show a) => Text -> a -> IO ()
+logShow l = log l . txt
+
+logM :: Text -> IO Text -> IO ()
+logM l t = t >>= log l
+
+logShowM :: (Show a) => Text -> IO a -> IO ()
+logShowM l t = t >>= logShow l
+
+sleep1 :: IO ()
+sleep1 = sleepMs $ 1 * second
+
+sleep2 :: IO ()
+sleep2 = sleepMs $ 2 * seconds
+
+-- todo: test extras - split off
+
+(===) ::
+  (Eq a, Show a, HasCallStack) =>
+  -- | The actual value
+  a ->
+  -- | The expected value
+  a ->
+  Assertion
+(===) = (@=?)

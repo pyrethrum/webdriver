@@ -1,4 +1,26 @@
-# webdriver-precore
+# webdriver-examples
+
+not complete or best practice 
+
+best way to browse functionality VSCode
+
+hits all the end points
+
+[demo tests are here](./driver-demo-e2e/WebDriverE2EDemoTest.hs)
+[runner](./driver-demo-e2e/IORunner.hs)
+[API](./driver-demo-e2e/IOAPI.hs)
+
+
+geckoDriver on linux has been tested with ChromeADriver as well
+
+Install gheckodriver
+
+```
+~/repos/webdriver/webdriver-examples$ pkill -f geckodriver || true  && geckodriver --log trace
+1744331627146   geckodriver     INFO    Listening on 127.0.0.1:4444
+```
+
+about:profiles
 
 The webdriver WC3 API represented as a Haskell type
 
@@ -43,6 +65,20 @@ If you get an error when running tests like: **Your Firefox profile cannot be lo
     let useCustomProfile = True
     ---
   ```
+
+{-
+This fails on my machine with the following error:
+
+```Your Firefox profile cannot be loaded. It may be missing or inaccessible.```
+
+This appears to be due to the profile being unpacked into tmp and the driver not being able to access it.
+If I copy the unpacked profile to "./webdriver-examples/driver-demo-e2e/.profile/FirefoxWebDriverProfile" and reference in
+capabilites as follows see (capsWithCustomFirefoxProfile):
+
+```firefoxArgs = Just ["-profile", "./webdriver-examples/driver-demo-e2e/.profile/FirefoxWebDriverProfile"]```
+
+then it works.
+-}
 
 ### Problems with setting 64 bit encrypted profiles
 
