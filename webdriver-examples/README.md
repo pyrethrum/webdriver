@@ -1,21 +1,44 @@
 # webdriver-examples
 
-not complete or best practice 
+## About These Examples
 
-basic logging
-sleeps
-https://the-internet.herokuapp.com/
-no work has gone into making these tests robust 
-minimal API
+These examples demonstrate a minimal wrapper for the `webdriver-precore` library, to the extent that it can be used to drive a browser. Utility functions and other "production" concerns have been deliberately omitted.
 
-hits all the end points
+Differences between these examples and how `webdriver-precore`  would be used in developing a full framework include:
+ * no utility functions or automatic browser and session management
+ * hard coded config options
+ * hard coded console logging
+ * sleeps and arbitrary browser info being logged throughout the tests (so the user can observe whats happening)
+ * little effort has been put into ensuring these examples are robust (such as sophisticated waits)
+
+These examples hit every [W3C endpoint]() exposed by [webdriver-precore]() while interaction with [the internet](https://the-internet.herokuapp.com)
+
+## Core Modules
+
+The core modules are as follows:
+
+### The [Runner](./driver-demo-e2e/IORunner.hs)
+
+Takes the 
+
+### The [API](./driver-demo-e2e/IOAPI.hs)
+
+Takes the 
+
+### The Actual Examples [Demo Tests Are here](./driver-demo-e2e/WebDriverE2EDemoTest.hs)
+
+A more detailed explanation of how the modules fit together can be found  in the [webdriver-precore readme]().
+
+
+## Running Examples
+
+### Prerequisites
+
+## Executing the Tests
 
 best way to browse functionality VSCode using the eval 
 
-
-[demo tests are here](./driver-demo-e2e/WebDriverE2EDemoTest.hs)
-[runner](./driver-demo-e2e/IORunner.hs)
-[API](./driver-demo-e2e/IOAPI.hs)
+ need to install tasty discover: ``cabal install tasty-discover``
 
 geckoDriver on linux has been tested with ChromeADriver as well
 
@@ -26,7 +49,12 @@ Install gheckodriver
 1744331627146   geckodriver     INFO    Listening on 127.0.0.1:4444
 ```
 
+Install gheckodriver
 
+### Update 'Configuration Options'
+
+
+### Gheckodriver and Firfox Profile Issues
 ~/repos/webdriver$ pkill -f chromedriver || true && chromedriver --log-level=ALL --port=4444
 Starting ChromeDriver 135.0.7049.52 (9ba7e609d28c509a8ce9265c2247065d8d251173-refs/branch-heads/7049_41@{#4}) on port 4444
 Only local connections are allowed.
@@ -51,8 +79,6 @@ The webdriver WC3 API represented as a Haskell type
     git lfs install
   ```
 
-## Generating Tests
-   - need to install tasty discover: ``cabal install tasty-discover``
   
 ## Running E2E Tests
 - need to install
@@ -90,7 +116,7 @@ This fails on my machine with the following error:
 
 This appears to be due to the profile being unpacked into tmp and the driver not being able to access it.
 If I copy the unpacked profile to "./webdriver-examples/driver-demo-e2e/.profile/FirefoxWebDriverProfile" and reference in
-capabilites as follows see (capsWithCustomFirefoxProfile):
+capabilities as follows see (capsWithCustomFirefoxProfile):
 
 ```firefoxArgs = Just ["-profile", "./webdriver-examples/driver-demo-e2e/.profile/FirefoxWebDriverProfile"]```
 
@@ -101,41 +127,3 @@ then it works.
 
 Setting the profile with a 64 bit encoded string did not work for me. The driver could not access the folder it unpacked in the `\tmp` directory. This may be a permissions issue on my machine so others' mileage may differ. See ``capsWithCustomFirefoxProfileNotWorking``
   
-
-
-## TODO
-
-- [x] fix capabilities
-- [x] rename from Pyrethrum
-- [x] finish WebDriverError
-- [x] check parser of timeouts all other parseJSON has been changed to by name
-- [x] create monorepo structure
-- [ ] update readme
-  - [ ] include notes on running tests and why the tests are there / what they cover
-  - [ ] include notes on profile issues (firefox)
-- [x] Haddock
-  - [ ] synopsis 
-  - [ ] description
-  - [ ] Spec et. al.
-- [x] get tests working locally again
-- [ ] CI
-  - [ ] get tests and E2E working in CI
-- [ ] update replace
-  - [ ] docker file
-  - [ ] dev-container
-  - [ ] scripts
-- [ ] fork the internet into Pyrethrum org
-- [x] update tasks
-- [ ] sort out / delete misbehaving tasks (permissions)
-  - [ ] run geckodriver - doesn't work 
-  - [ ] run haddock - doesn't open in browser
-- [ ] work out whats up with the trailing fields warning on tested with
-  - [ ] meaning of tested with
-  - [ ] why warning
-- [ ] add checks for e2e when profile dir is not there
-- [ ] review compiler switches
-- [ ] review licence
-- [ ] add all to github container repo (check vs docker hub)
-- [ ] change log
-- [ ] hackage
-- [ ] stackage

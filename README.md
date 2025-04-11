@@ -3,14 +3,13 @@
 - [webdriver](#webdriver)
 - [Work In Progress](#work-in-progress)
   - [TODO](#todo)
-- [Acknowledgments](#acknowledgments)
-- [Other Libraries](#other-libraries)
 
 ![build](https://github.com/pyrethrum/webdriver/actions/workflows/cicd.yaml/badge.svg?branch=main)
 
 Libraries for working with browsers
 
 # Work In Progress
+
 
 ## TODO
 
@@ -19,16 +18,13 @@ Libraries for working with browsers
 - [x] finish WebDriverError
 - [x] check parser of timeouts all other parseJSON has been changed to by name
 - [x] create monorepo structure
-- [x] round trip JSON test for capabilities
-- [ ] review / update capabilities
-- [ ] rename library to webdriver-w3c-typed-endpoints
 - [ ] update readme
   - [ ] include notes on running tests and why the tests are there / what they cover
   - [ ] include notes on profile issues (firefox)
 - [x] Haddock
-  - [x] synopsis 
-  - [x] description
-  - [x] Spec et. al.
+  - [ ] synopsis 
+  - [ ] description
+  - [ ] Spec et. al.
 - [x] get tests working locally again
 - [ ] CI
   - [ ] get tests and E2E working in CI
@@ -36,32 +32,20 @@ Libraries for working with browsers
   - [ ] docker file
   - [ ] dev-container
   - [ ] scripts
-- [ ] get rmote dev-container working (laptop demo)
 - [ ] fork the internet into Pyrethrum org
 - [x] update tasks
 - [ ] sort out / delete misbehaving tasks (permissions)
-  - [ ] run gecko driver - doesn't work 
+  - [ ] run geckodriver - doesn't work 
   - [ ] run haddock - doesn't open in browser
 - [ ] work out whats up with the trailing fields warning on tested with
   - [ ] meaning of tested with
   - [ ] why warning
-- [x] try chromedriver
-- [ ] add notes on top of examples
 - [ ] add checks for e2e when profile dir is not there
 - [ ] review compiler switches
-- [ ] review license
-- [ ] release checklist
+- [ ] review licence
 - [ ] add all to github container repo (check vs docker hub)
 - [ ] change log
 - [ ] hackage
 - [ ] stackage
-
-
-# Acknowledgments
-
-# Other Libraries
-
-https://github.com/haskell-webdriver/haskell-webdriver
-
-https://hackage.haskell.org/package/webdriver-w3c
+- [ ] release checklist
 
