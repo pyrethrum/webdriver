@@ -2,15 +2,21 @@
 
 not complete or best practice 
 
-best way to browse functionality VSCode
+basic logging
+sleeps
+https://the-internet.herokuapp.com/
+no work has gone into making these tests robust 
+minimal API
 
 hits all the end points
+
+best way to browse functionality VSCode using the eval 
+
 
 [demo tests are here](./driver-demo-e2e/WebDriverE2EDemoTest.hs)
 [runner](./driver-demo-e2e/IORunner.hs)
 [API](./driver-demo-e2e/IOAPI.hs)
 
-basic logging
 geckoDriver on linux has been tested with ChromeADriver as well
 
 Install gheckodriver
@@ -27,7 +33,7 @@ Only local connections are allowed.
 Please see https://chromedriver.chromium.org/security-considerations for suggestions on keeping ChromeDriver safe.
 ChromeDriver was started successfully on port 4444.
 
-
+https://github.com/mozilla/geckodriver/releases
 
 about:profiles
 

@@ -124,16 +124,16 @@ import IOAPI
     takeScreenshot,
   )
 import Test.Tasty.HUnit as HUnit (Assertion, HasCallStack, assertBool, (@=?))
-import WebDriverPreCore (minFullCapabilities, minChromeCapabilities)
+import WebDriverPreCore (minChromeCapabilities, minFullCapabilities)
 import WebDriverPreCore.Internal.Utils (txt)
 import Prelude hiding (log)
 
 -- set to False for chrome
 useFirefox :: Bool
-useFirefox = False
+useFirefox = True
 
 useCustomFirefoxProfile :: Bool
-useCustomFirefoxProfile = True
+useCustomFirefoxProfile = False
 
 firefoxProfilePath :: Text
 firefoxProfilePath = "./webdriver-examples/driver-demo-e2e/.profile/FirefoxWebDriverProfile"
@@ -141,9 +141,26 @@ firefoxProfilePath = "./webdriver-examples/driver-demo-e2e/.profile/FirefoxWebDr
 -- >>> unit_demoSessionDriverStatus
 unit_demoSessionDriverStatus :: IO ()
 unit_demoSessionDriverStatus = do
-  -- will fail if running example with Chrome driver
-  -- test is hard coded to get Firefox driver status
-  ses <- mkExtendedFirefoxTimeoutsSession
+  ses <-
+    -- helper functions are normally used to simplify session creation
+    newSession $
+      MkFullCapabilities
+        { alwaysMatch =
+            Just $
+              MkCapabilities
+                { browserName = Just $ if useFirefox then Firefox else Chrome,
+                  browserVersion = Nothing,
+                  platformName = Nothing,
+                  acceptInsecureCerts = Nothing,
+                  pageLoadStrategy = Nothing,
+                  proxy = Nothing,
+                  timeouts = Nothing,
+                  strictFileInteractability = Nothing,
+                  unhandledPromptBehavior = Nothing,
+                  vendorSpecific = Nothing
+                },
+          firstMatch = []
+        }
   log "new session" $ txt ses
   s <- status
   Ready === s
@@ -165,6 +182,10 @@ unit_demoSendKeysClear = withSession \ses -> do
   sleep2
 
 -- >>> unit_demoForwardBackRefresh
+
+-- *** Exception: user error (WebDriver error thrown:
+
+--  WebDriverError {error = UnknownError, description = "An unknown error occurred in the remote end while processing the command", httpResponse = MkHttpResponse {statusCode = 500, statusMessage = "Internal Server Error", body = Object (fromList [("value",Object (fromList [("error",String "unknown error"),("message",String "Process unexpectedly closed with status 1"),("stacktrace",String "")]))])}})
 unit_demoForwardBackRefresh :: IO ()
 unit_demoForwardBackRefresh = withSession \ses -> do
   navigateTo ses theInternet
@@ -734,14 +755,15 @@ unit_demoError = withSession \ses -> do
 
 -- ##################  Utils ####################
 
+session :: IO SessionId
+session =
+  if useFirefox
+    then mkExtendedFirefoxTimeoutsSession
+    else mkExtendedChromeTimeoutsSession
+
 withSession :: (SessionId -> IO ()) -> IO ()
 withSession =
-  bracket
-    ( if useFirefox
-        then mkExtendedFirefoxTimeoutsSession
-        else mkExtendedChromeTimeoutsSession
-    )
-    deleteSession
+  bracket session deleteSession
 
 {-
 This fails on my machine with the following error:
@@ -771,7 +793,6 @@ capsWithCustomFirefoxProfileNotWorking = do
               }
       }
 
-
 capsWithCustomFirefoxProfile :: IO Capabilities
 capsWithCustomFirefoxProfile = do
   pure $
@@ -800,7 +821,7 @@ mkExtendedFirefoxTimeoutsSession = do
             }
       else
         -- this was working in the dev-container but fails
-        -- on mmy machine due to the way firfox was installed (profile issues)
+        -- on my machine due to the way firfox was installed (profile issues)
         minFirefoxSession
   extendTimeouts ses
 
