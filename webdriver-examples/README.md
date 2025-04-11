@@ -10,7 +10,7 @@ hits all the end points
 [runner](./driver-demo-e2e/IORunner.hs)
 [API](./driver-demo-e2e/IOAPI.hs)
 
-
+basic logging
 geckoDriver on linux has been tested with ChromeADriver as well
 
 Install gheckodriver
@@ -20,7 +20,18 @@ Install gheckodriver
 1744331627146   geckodriver     INFO    Listening on 127.0.0.1:4444
 ```
 
+
+~/repos/webdriver$ pkill -f chromedriver || true && chromedriver --log-level=ALL --port=4444
+Starting ChromeDriver 135.0.7049.52 (9ba7e609d28c509a8ce9265c2247065d8d251173-refs/branch-heads/7049_41@{#4}) on port 4444
+Only local connections are allowed.
+Please see https://chromedriver.chromium.org/security-considerations for suggestions on keeping ChromeDriver safe.
+ChromeDriver was started successfully on port 4444.
+
+
+
 about:profiles
+
+pkill -f chromedriver || true && chromedriver --log-level=ALL --port=4444
 
 The webdriver WC3 API represented as a Haskell type
 
