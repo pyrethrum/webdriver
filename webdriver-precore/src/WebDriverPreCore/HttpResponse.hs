@@ -12,6 +12,8 @@ import Data.Eq (Eq)
 import Data.Ord (Ord)
 
 -- | 'HttpResponse' represents a WebDriver HTTP response.
+--
+-- An instance of 'HttpResponse' needs to be constructed in order to run the 'parser' suppplied in the 'WebDriverPreCore.W3Spec' 
 data HttpResponse = MkHttpResponse
   { -- | HTTP status code.
     statusCode :: Int,

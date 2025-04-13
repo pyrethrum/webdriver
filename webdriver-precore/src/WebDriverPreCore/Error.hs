@@ -55,7 +55,9 @@ unknown method 	405 	unknown method 	The requested command matched a known URL b
 unsupported operation 	500 	unsupported operation 	Indicates that a command that should have executed properly cannot be supported for some reason. 
 -}
 
--- | Known WevDriver error types: [spec](https://www.w3.org/TR/2025/WD-webdriver2-20250306/#errors)
+-- | Known WevDriver Error Types
+-- 
+-- [spec](https://www.w3.org/TR/2025/WD-webdriver2-20250306/#errors)
 data WebDriverErrorType =
   ElementClickIntercepted |
   ElementNotInteractable |

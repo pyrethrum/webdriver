@@ -80,7 +80,7 @@ import WebDriverPreCore.Internal.Utils (opt)
 -- | 'FullCapabilities' is the object that is passed to webdriver to define the properties of the session via the 'Spec.newSession' function.
 --   It is a combination of 'alwaysMatch' and 'firstMatch' properties.
 --
---   See [spec](https://https://www.w3.org/TR/2025/WD-webdriver2-20250306/#capabilities)
+--   [spec](https://https://www.w3.org/TR/2025/WD-webdriver2-20250306/#capabilities)
 --
 --   See also: 'Capabilities' and related constructors such as 'minCapabilities', 'minFullCapabilities', 'minFirefoxCapabilities' and 'minChromeCapabilities'
 data FullCapabilities = MkFullCapabilities
@@ -116,19 +116,19 @@ instance FromJSON FullCapabilities where
 --
 -- It is very common for 'alwaysMatch' to be the only field populated and the 'firstMatch' field to be empty. 
 --
--- See [spec](https://https://www.w3.org/TR/2025/WD-webdriver2-20250306/#capabilities)
+-- [spec](https://https://www.w3.org/TR/2025/WD-webdriver2-20250306/#capabilities)
 alwaysMatchCapabilities :: Capabilities -> FullCapabilities
 alwaysMatchCapabilities = flip MkFullCapabilities [] . Just
 
 -- | Returns the minimal FullCapabilities object for a given browser
 -- The browserName in the 'alwaysMatch' field is the only field populated
--- See [spec](https://https://www.w3.org/TR/2025/WD-webdriver2-20250306/#capabilities)
+-- [spec](https://https://www.w3.org/TR/2025/WD-webdriver2-20250306/#capabilities)
 minFullCapabilities :: BrowserName -> FullCapabilities
 minFullCapabilities  =  alwaysMatchCapabilities . minCapabilities 
 
 -- | Returns the minimal Capabilities object for a given browser
 -- The browserName is the only field populated
--- See [spec](https://https://www.w3.org/TR/2025/WD-webdriver2-20250306/#capabilities)
+-- [spec](https://https://www.w3.org/TR/2025/WD-webdriver2-20250306/#capabilities)
 minCapabilities :: BrowserName -> Capabilities
 minCapabilities browserName =
   MkCapabilities
@@ -206,9 +206,10 @@ data PlatformName
 -- | 'Capabilities' define the properties of the session and are passed to the webdriver
 -- via fields of the 'FullCapabilities' object.
 --
--- See [spec](https://https://www.w3.org/TR/2025/WD-webdriver2-20250306/#capabilities)
--- See also: 'FullCapabilities' and related constructors such as 'minCapabilities',
--- 'minFullCapabilities', 'minFirefoxCapabilities' and 'minChromeCapabilities'
+-- [spec](https://https://www.w3.org/TR/2025/WD-webdriver2-20250306/#capabilities)
+--
+-- See also: 'FullCapabilities' and related constructors such as: 'minCapabilities',
+--   'minFullCapabilities',  'minFirefoxCapabilities' and 'minChromeCapabilities'
 data Capabilities = MkCapabilities
   { browserName :: Maybe BrowserName,
     browserVersion :: Maybe Text,
@@ -358,11 +359,13 @@ instance FromJSON Proxy where
             pure Manual {..}
         _ -> fail "Invalid Proxy"
 
--- Vendor-Specific Capabilities
+-- Vendor Capabilities
 
 -- | [spec](https://www.w3.org/TR/2025/WD-webdriver2-20250306/#extensions-0)
 data VendorSpecific
-  = -- | Chrome-specific capabilities
+  = -- | Chrome capabilities - [spec](https://developer.chrome.com/docs/chromedriver/capabilities)
+    --
+    -- Use also for Opera - [spec](https://github.com/operasoftware/operachromiumdriver)
     ChromeOptions
       { chromeArgs :: Maybe [Text],
         chromeBinary :: Maybe Text,
@@ -377,6 +380,7 @@ data VendorSpecific
         chromePerfLoggingPrefs :: Maybe PerfLoggingPrefs,
         chromeWindowTypes :: Maybe [Text] -- Window types to create
       }
+  -- | Edge capabilities - [spec](https://learn.microsoft.com/en-us/microsoft-edge/webdriver-chromium/capabilities-edge-options)
   | EdgeOptions
       { edgeArgs :: Maybe [Text],
         edgeBinary :: Maybe Text,
@@ -391,12 +395,14 @@ data VendorSpecific
         edgePerfLoggingPrefs :: Maybe PerfLoggingPrefs,
         edgeWindowTypes :: Maybe [Text] -- Window types to create
       }
+  -- | Firefox capabilities - [spec](https://developer.mozilla.org/en-US/docs/Web/WebDriver/Capabilities)
   | FirefoxOptions
       { firefoxArgs :: Maybe [Text],
         firefoxBinary :: Maybe Text,
         firefoxProfile :: Maybe Text, -- Base64-encoded profile
         firefoxLog :: Maybe LogSettings
       }
+  -- | Safari capabilities - [spec](https://developer.apple.com/documentation/webkit/testing_with_webdriver_in_safari)
   | SafariOptions
       { safariAutomaticInspection :: Maybe Bool,
         safariAutomaticProfiling :: Maybe Bool
