@@ -2,22 +2,18 @@
 
 ## About These Examples
 
-These examples illustrate the implementation of wrapper around the `webdriver-precore` library, to enable basic browser automation. 
+These examples demonstrate a minimal wrapper implementation around the [`webdriver-precore`](https://hackage.haskell.org/package/webdriver-precore) library for basic browser automation. 
 
-This is a minimal example with many production-level features deliberately omitted.
+Key simplifications compared to a production-ready framework:
+- No utility functions or automated browser/session management
+- Hardcoded configuration options
+- Direct console logging (no structured logging)
+- Included sleeps and debug outputs for observability
+- Minimal robustness features (no advanced waits or retry mechanisms)
 
-Key differences between these examples and a full framework implementation using `webdriver-precore` include:
-* No utility functions or automated browser/session management
-* Configuration options are hardcoded
-* Logging is done directly to the console
-* To help users observe what’s happening, tests include sleeps and log arbitrary browser information 
-* Minimal effort has been made to ensure robustness (e.g. no advanced wait or retry mechanisms)
-
-These examples hit every [W3C endpoint](https://www.w3.org/TR/webdriver2/#endpoints) exposed by [webdriver-precore](https://hackage.haskell.org/package/webdriver-precore) while interaction with [the internet](https://the-internet.herokuapp.com)
+The examples cover all [W3C WebDriver endpoints](https://www.w3.org/TR/webdriver2/#endpoints) using [the-internet](https://the-internet.herokuapp.com) test site.
 
 ## Core Modules
-
-The core modules are as follows:
 
 ### IORunner
 

@@ -18,13 +18,13 @@ Libraries for working with browsers
 - [x] finish WebDriverError
 - [x] check parser of timeouts all other parseJSON has been changed to by name
 - [x] create monorepo structure
-- [ ] update readme
-  - [ ] include notes on running tests and why the tests are there / what they cover
-  - [ ] include notes on profile issues (firefox)
+- [x] update readme
+  - [x] include notes on running tests and why the tests are there / what they cover
+  - [x] include notes on profile issues (firefox)
 - [x] Haddock
-  - [ ] synopsis 
-  - [ ] description
-  - [ ] Spec et. al.
+  - [x] synopsis 
+  - [x] description
+  - [x] Spec et. al.
 - [x] get tests working locally again
 - [ ] CI
   - [ ] get tests and E2E working in CI
