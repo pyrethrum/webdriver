@@ -17,8 +17,8 @@
     - [1.3 Parse HttpResponse Using the Parser Provided in the W3Spec](#13-parse-httpresponse-using-the-parser-provided-in-the-w3spec)
     - [2. Applying the Runner to the W3Spec Functions](#2-applying-the-runner-to-the-w3spec-functions)
     - [3. Install a Vendor Provided WebDriver](#3-install-a-vendor-provided-webdriver)
-      - [4. Launch WebDriver From the Terminal](#4-launch-webdriver-from-the-terminal)
-      - [5. Drive the Browser Via the IO API](#5-drive-the-browser-via-the-io-api)
+    - [4. Launch WebDriver From the Terminal](#4-launch-webdriver-from-the-terminal)
+    - [5. Drive the Browser Via the IO API](#5-drive-the-browser-via-the-io-api)
 
 ## What is This Library?
 
@@ -28,9 +28,10 @@ You can not use this library directly to drive a browser. If you are looking for
 
 ## Why This Library?
 
-Several libraries provide WebDriver bindings for Haskell. However, when development on this library began, the existing options were either unmaintained, dependent on Selenium, or tightly coupled with larger, opinionated testing frameworks.
+Several libraries provide WebDriver bindings for Haskell. However, when development on this library began, the existing options were either unmaintained, dependent on Selenium, or tightly coupled with larger, batteries included testing frameworks.
 
-The authors aim to develop a set of low-level libraries to support web UI testing within our standalone test framework, while also making them useful for others. This library is the first in that series.
+We, the authors of this library, are developing our own standalone test framework. We are enabling 
+web UI testing within this framework, by first developing a number of independent low level libraries with the goal of making them broadly useful to others as well. This library is the first in that series. 
 
 ### Core Principles
 - **Direct W3C WebDriver Implementation**  
@@ -48,7 +49,7 @@ The authors aim to develop a set of low-level libraries to support web UI testin
 ### Library Non-Goals
   
   * Any convenience or utility functions, that do not directly correspond to an endpoint on the WC3 spec. Such functions belong in downstream libraries.
-  * Any transformers or effects or similar. These too belong downstream.
+  * Any transformers, effects or similar abstractions. These too belong downstream.
 
 ### Acknowledgements
 
@@ -65,12 +66,14 @@ The decade+ efforts of the [Selenium](https://www.selenium.dev/) maintainers, bo
 
 # Minimal Example
 
+*TLDR ~ bring your own HTTP client and use it to implement the endpoints as defined in this library.*
+
 Driving a browser using this library requires the following:
-1. Implement a `runner` that takes a [W3Spec](#w3spec) and makes HTTP calls to a running WebDriver
+1. Implement a `runner` that takes a [W3Spec](#w3spec) and makes HTTP calls an active WebDriver instance
 2. Create an IO API by applying the `runner` to each of the endpoint functions in this library
 3. Install the desired browser and browser driver
 4. Run the driver
-5. Drive the browser using the IO API
+5. Drive the browser via the IO API
 
 The full source can be found in the [example project repo](https://github.com/pyrethrum/webdriver/tree/jw-busywork/webdriver-examples/driver-demo-e2e).
 
@@ -83,7 +86,7 @@ Then to implement a run function requires the following:
 
 1. Transform a [W3Spec](#w3spec) to RequestParams compatible with the chosen HTTP library.
 2. Make an HTTP call to WebDriver as per the RequestParams and return a simplified [HttpResponse](#httpresponse).
-3. Use the parser provided by the [W3Spec](#w3spec) to transform the [HttpResponse](#httpresponse) to the desired result type and handle any errors.
+3. Use the parser provided by the [W3Spec](#w3spec) to parse the [HttpResponse](#httpresponse) and handle any errors.
 
 #### Main Types (Used in the Runner)
 
@@ -259,15 +262,15 @@ maximizeWindow = run . W.maximizeWindow
 *Once all the required endpoints are implemented you will be able to interact with browsers via WebDriver*
 
 Examples:
-  1. [firefox](https://github.com/mozilla/geckodriver/releases)
-  2. [chrome](https://googlechromelabs.github.io/chrome-for-testing/)
-  3. [edge](https://developer.microsoft.com/en-us/microsoft-edge/tools/webdriver?form=MA13LH)
-  4. [opera](https://github.com/operasoftware/operachromiumdriver?tab=readme-ov-file)
-  5. [safari](https://developer.apple.com/documentation/webkit/testing-with-webdriver-in-safari)
+  1. [Firefox](https://github.com/mozilla/geckodriver/releases)
+  2. [Chrome](https://googlechromelabs.github.io/chrome-for-testing/)
+  3. [Edge](https://developer.microsoft.com/en-us/microsoft-edge/tools/webdriver?form=MA13LH)
+  4. [Opera](https://github.com/operasoftware/operachromiumdriver?tab=readme-ov-file)
+  5. [Safari](https://developer.apple.com/documentation/webkit/testing-with-webdriver-in-safari)
 
 *Ensure the corresponding browser is installed on your system*
 
-#### 4. Launch WebDriver From the Terminal
+### 4. Launch WebDriver From the Terminal
 
 e.g. For Firefox and geckodriver on Linux or WSL you could start geckodriver from the terminal as follows: 
 
@@ -294,7 +297,7 @@ or with logging:
 > pkill -f chromedriver || true && chromedriver --log-level=ALL --port=4444 &
 ```
 
-#### 5. Drive the Browser Via the IO API
+### 5. Drive the Browser Via the IO API
 
 *With the driver running you can now run code that interacts with the browser:*
 
@@ -313,4 +316,4 @@ demoForwardBackRefresh = do
   deleteSession ses
 ```
 
-*This is a minimal API. There is plenty of scope to build on this to provide more constrained types, user-friendly functions and capabilites such as retries, and session and driver management.*
+*This is a minimal API. There is plenty of scope to build on this to provide more constrained types, user-friendly functions and capabilities such as retries, and session and driver management.*

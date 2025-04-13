@@ -5,6 +5,8 @@ module WebDriverE2EDemoTest where
 import Control.Exception (bracket)
 import Control.Monad (forM_)
 import Data.Aeson (Value (..))
+import Data.Function ((&))
+import Data.Functor ((<&>))
 import Data.Set qualified as Set
 import Data.Text (Text, isInfixOf)
 import Data.Text.IO qualified as TIO
@@ -124,21 +126,22 @@ import IOAPI
     takeScreenshot,
   )
 import Test.Tasty.HUnit as HUnit (Assertion, HasCallStack, assertBool, (@=?))
-import WebDriverPreCore (minChromeCapabilities, minFullCapabilities)
+import WebDriverPreCore (alwaysMatchCapabilities, minChromeCapabilities, minFullCapabilities)
 import WebDriverPreCore.Internal.Utils (txt)
 import Prelude hiding (log)
 
--- set to False for chrome
+-- #################### Config ######################
+
+-- set to False for Chrome
 useFirefox :: Bool
 useFirefox = True
 
--- see README.md
-useCustomFirefoxProfile :: Bool
-useCustomFirefoxProfile = True
+-- see readme
+customFirefoxProfilePath :: Maybe Text
+customFirefoxProfilePath = Nothing
+-- customFirefoxProfilePath = Just "./webdriver-examples/driver-demo-e2e/.profile/WebDriverProfile"
 
--- change this to point to your Firefox profile
-firefoxProfilePath :: Text
-firefoxProfilePath = "./webdriver-examples/driver-demo-e2e/.profile/FirefoxWebDriverProfile"
+-- #################### The Tests ######################
 
 -- >>> unit_demoSessionDriverStatus
 unit_demoSessionDriverStatus :: IO ()
@@ -160,16 +163,19 @@ unit_demoSessionDriverStatus = do
                   timeouts = Nothing,
                   strictFileInteractability = Nothing,
                   unhandledPromptBehavior = Nothing,
-                  vendorSpecific = if 
-                    | useFirefox && useCustomFirefoxProfile -> Just
-                        FirefoxOptions
-                          { -- requires a path to the profile directory
-                            firefoxArgs = Just ["-profile", firefoxProfilePath],
-                            firefoxBinary = Nothing,
-                            firefoxProfile = Nothing,
-                            firefoxLog = Nothing
-                          }
-                    | otherwise -> Nothing
+                  vendorSpecific =
+                    if
+                      | useFirefox ->
+                          customFirefoxProfilePath
+                            <&> \firefoxProfilePath ->
+                              FirefoxOptions
+                                { -- requires a path to the profile directory
+                                  firefoxArgs = Just ["-profile", firefoxProfilePath],
+                                  firefoxBinary = Nothing,
+                                  firefoxProfile = Nothing,
+                                  firefoxLog = Nothing
+                                }
+                      | otherwise -> Nothing
                 },
           firstMatch = []
         }
@@ -327,10 +333,16 @@ unit_demoTimeouts = withSession \ses -> do
 -- >>> unit_demoWindowRecs
 unit_demoWindowRecs :: IO ()
 unit_demoWindowRecs = withSession \ses -> do
-  let wr = Rect 500 300 500 500
+  let wr =
+        Rect
+          { x = 500,
+            y = 300,
+            width = 600,
+            height = 400
+          }
   logShowM "set window rect" $ setWindowRect ses wr
-  r <- getWindowRect ses
   sleepMs $ 2 * seconds
+  r <- getWindowRect ses
   logShow "window rect" r
 
   wr === r
@@ -761,9 +773,7 @@ unit_demoError = withSession \ses -> do
           expectedText = "WebDriverError {error = NoSuchElement, description = \"An element could not be located on the page using the given search parameters\""
       assertBool "NoSuchElement error should be mapped" $ expectedText `isInfixOf` errTxt
 
--- ##############################################
--- ##################  Utils ####################
--- ##############################################
+-- #################### Utils ######################
 
 session :: IO SessionId
 session =
@@ -803,37 +813,27 @@ capsWithCustomFirefoxProfileNotWorking = do
               }
       }
 
-capsWithCustomFirefoxProfile :: IO Capabilities
-capsWithCustomFirefoxProfile = do
-  pure $
-    (minCapabilities Firefox)
-      { vendorSpecific =
-          Just
-            FirefoxOptions
-              { -- requires a path to the profile directory
-                firefoxArgs = Just ["-profile", firefoxProfilePath],
-                firefoxBinary = Nothing,
-                firefoxProfile = Nothing,
-                firefoxLog = Nothing
-              }
-      }
+capsWithCustomFirefoxProfile :: Text -> Capabilities
+capsWithCustomFirefoxProfile firefoxProfilePath =
+  (minCapabilities Firefox)
+    { vendorSpecific =
+        Just
+          FirefoxOptions
+            { -- requires a path to the profile directory
+              firefoxArgs = Just ["-profile", firefoxProfilePath],
+              firefoxBinary = Nothing,
+              firefoxProfile = Nothing,
+              firefoxLog = Nothing
+            }
+    }
 
 mkExtendedFirefoxTimeoutsSession :: IO SessionId
-mkExtendedFirefoxTimeoutsSession = do
-  ses <-
-    if useCustomFirefoxProfile
-      then do
-        profile <- capsWithCustomFirefoxProfile
-        newSession $
-          MkFullCapabilities
-            { alwaysMatch = Just profile,
-              firstMatch = []
-            }
-      else
-        -- this was working in the dev-container but fails
-        -- on my machine due to the way firfox was installed (profile issues)
-        minFirefoxSession
-  extendTimeouts ses
+mkExtendedFirefoxTimeoutsSession =
+  customFirefoxProfilePath
+    & maybe
+      minFirefoxSession
+      (\profilepath -> newSession . alwaysMatchCapabilities $ capsWithCustomFirefoxProfile profilepath)
+    >>= extendTimeouts
 
 mkExtendedChromeTimeoutsSession :: IO SessionId
 mkExtendedChromeTimeoutsSession =

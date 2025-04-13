@@ -16,6 +16,7 @@ module WebDriverPreCore.Capabilities
     LogLevel (..),
     LogSettings (..),
     DeviceMetrics (..),
+    alwaysMatchCapabilities,
     minCapabilities,
     minFullCapabilities,
     minFirefoxCapabilities,
@@ -53,7 +54,7 @@ import Data.Aeson.Types
 import Data.Bool (Bool (..))
 import Data.Enum (Enum)
 import Data.Eq (Eq)
-import Data.Function (($), (.))
+import Data.Function (($), (.), flip)
 import Data.Functor ((<$>))
 import Data.Int (Int)
 import Data.Map.Strict (Map)
@@ -111,15 +112,19 @@ instance FromJSON FullCapabilities where
         firstMatch <- capabilities .: "firstMatch"
         pure MkFullCapabilities {..}
 
+-- | Returns the minimal FullCapabilities object where the 'firstMatch' property is empty.
+--
+-- It is very common for 'alwaysMatch' to be the only field populated and the 'firstMatch' field to be empty. 
+--
+-- See [spec](https://https://www.w3.org/TR/2025/WD-webdriver2-20250210/#capabilities)
+alwaysMatchCapabilities :: Capabilities -> FullCapabilities
+alwaysMatchCapabilities = flip MkFullCapabilities [] . Just
+
 -- | Returns the minimal FullCapabilities object for a given browser
 -- The browserName in the 'alwaysMatch' field is the only field populated
 -- See [spec](https://https://www.w3.org/TR/2025/WD-webdriver2-20250210/#capabilities)
 minFullCapabilities :: BrowserName -> FullCapabilities
-minFullCapabilities browserName =
-  MkFullCapabilities
-    { alwaysMatch = Just $ minCapabilities browserName,
-      firstMatch = []
-    }
+minFullCapabilities  =  alwaysMatchCapabilities . minCapabilities 
 
 -- | Returns the minimal Capabilities object for a given browser
 -- The browserName is the only field populated
