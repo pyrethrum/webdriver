@@ -1,5 +1,5 @@
 # Use the latest official Ubuntu image as a base
-FROM ubuntu:22.04
+FROM ubuntu:25.04
 
 # large chunks of this file "inspired by" aka. plagerised from https://github.com/vzarytovskii/haskell-dev-env/blob/master/.devcontainer/Dockerfile
 # use
@@ -7,21 +7,13 @@ FROM ubuntu:22.04
 # docker tag haskell theghostjw/haskell:latest
 # docker push theghostjw/haskell:latest
 
-# Set environment variables to avoid interactive prompts during package installation
-ARG GHC_VERSION=9.8.2
-ARG CABAL_VERSION=3.12.1.0
-ARG HLS_VERSION=2.9.0.1
-# for some reason hls trys to download stack if it is not there
-ARG STACK_VERSION=2.15.7
 
 ENV USERNAME=vscode \
     # modified from https://github.com/vzarytovskii/haskell-dev-env/blob/master/.devcontainer/Dockerfile 
     # this 1000 is aready taken by ubuntu
     USER_UID=1001 \
     USER_GID=1001 \
-    DEBIAN_FRONTEND=noninteractive \
-    GHC_VERSION=${GHC_VERSION} \
-    CABAL_VERSION=${CABAL_VERSION} 
+    DEBIAN_FRONTEND=noninteractive 
 
 # Update the package list and install some basic utilities
 RUN apt-get update && \
@@ -50,13 +42,7 @@ RUN apt-get update && \
     echo ${USERNAME} ALL=\(root\) NOPASSWD:ALL > /etc/sudoers.d/${USERNAME} && \
     chmod 0440 /etc/sudoers.d/${USERNAME}
 
-    # Download ghciwatch binary as root
-    RUN curl -L -o /usr/local/bin/ghciwatch https://github.com/MercuryTechnologies/ghciwatch/releases/download/v1.0.1/ghciwatch-x86_64-linux && \
-        chmod +x /usr/local/bin/ghciwatch
-        
-    # Ensure the vscode user has ownership of the ghciwatch binary
-    RUN chown ${USER_UID}:${USER_GID} /usr/local/bin/ghciwatch
-    
+
     # Set working directory and path for vscode user
     USER ${USER_UID}:${USER_GID}
     WORKDIR /home/${USERNAME}
@@ -87,29 +73,26 @@ RUN apt-get update && \
 #   * GHCUP_BASE_URL - the base url for ghcup binary download (use this to overwrite https://downloads.haskell.org/~ghcup with a mirror)
 #   * GHCUP_MSYS2_ENV - the msys2 environment to use on windows, see https://www.msys2.org/docs/environments/ (defauts to MINGW64, MINGW32 or CLANGARM64, depending on the architecture)
 
-RUN curl --proto '=https' --tlsv1.2 -sSf https://get-ghcup.haskell.org | BOOTSTRAP_HASKELL_NONINTERACTIVE=1 \
+# Set environment variables to avoid interactive prompts during package installation
+ARG GHC_VERSION=9.8.2
+ARG CABAL_VERSION=3.14.2.0
+ARG HLS_VERSION=2.9.0.1
+
+ENV GHC_VERSION=${GHC_VERSION} \
+    CABAL_VERSION=${CABAL_VERSION} 
+
+RUN export BOOTSTRAP_HASKELL_NONINTERACTIVE=1 \
     BOOTSTRAP_HASKELL_GHC_VERSION=${GHC_VERSION} \
     BOOTSTRAP_HASKELL_CABAL_VERSION=${CABAL_VERSION} \
-    sh
+    BOOTSTRAP_HASKELL_INSTALL_NO_STACK=1 && \
+    curl --proto '=https' --tlsv1.2 -sSf https://get-ghcup.haskell.org | sh
 
 # RUN ghcup --url-source=https://raw.githubusercontent.com/haskell/ghcup-metadata/master/ghcup-vanilla-0.0.8.yaml install hls 2.9.0.1
 RUN ghcup install hls ${HLS_VERSION} \
     ghcup set hls ${HLS_VERSION}
 
-# for some reason hls trys to download stack if it is not there
-RUN ghcup install stack ${STACK_VERSION} \
-    ghcup set stack ${STACK_VERSION}
-
 # install other tools    
 RUN cabal update 
-
-RUN cabal install hpack
-
-# Copy any local files to the container (if needed)
-# COPY . /home/dockeruser/
-
-# Expose a port if the application needs it
-# EXPOSE 8080
 
 # Specify the default command to run when the container starts
 CMD ["bash"]
