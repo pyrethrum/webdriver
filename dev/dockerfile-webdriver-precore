@@ -1,5 +1,5 @@
 # Use the latest official Ubuntu image as a base
-FROM theghostjw/haskell:latest
+FROM ghcr.io/pyrethrum/haskell:latest
 
 # use
 # docker build -t "pyrethrum" .
@@ -15,14 +15,15 @@ ENV DEBIAN_FRONTEND=noninteractive \
     USER_UID=1001 \
     USER_GID=1001
     
-ARG REPO=https://github.com/theGhostJW/pyrethrum.git
-ARG BRANCH=master
+    # ensure switched user
+    USER ${USER_UID}:${USER_GID}
+    
+    # Set the working directory
+    WORKDIR /home/vscode
+    
+ARG REPO=https://github.com/pyrethrum/webdriver.git
+ARG BRANCH=main
 
-# ensure switched user
-USER ${USER_UID}:${USER_GID}
-
-# Set the working directory
-WORKDIR /home/vscode
 
 # Sadly this has to all be in a single RUN command so REPO_DIR can be used
 # Docker does not directly support storing command output in variables within a Dockerfile as you might in a shell script. 
@@ -34,7 +35,7 @@ RUN REPO_DIR=$(basename -s .git "${REPO}") \
     # clone into home (note single branch)
     && git clone --single-branch --branch ${BRANCH} ${REPO} \
     # cd into source repo
-    && cd "${REPO_DIR}" \
+    && cd "${REPO_DIR}/webdriver-precore" \
     # build it all (go have coffee for an hour or more)
     # libraries will be cached by cabal
     # local modules => dist-newstyle

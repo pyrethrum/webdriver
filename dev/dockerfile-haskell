@@ -74,7 +74,7 @@ RUN apt-get update && \
 #   * GHCUP_MSYS2_ENV - the msys2 environment to use on windows, see https://www.msys2.org/docs/environments/ (defauts to MINGW64, MINGW32 or CLANGARM64, depending on the architecture)
 
 # Set environment variables to avoid interactive prompts during package installation
-ARG GHC_VERSION=9.8.2
+ARG GHC_VERSION=9.10.1
 ARG CABAL_VERSION=3.14.2.0
 ARG HLS_VERSION=2.9.0.1
 
