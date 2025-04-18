@@ -23,6 +23,9 @@ ENV DEBIAN_FRONTEND=noninteractive \
 ARG REPO=https://github.com/pyrethrum/webdriver.git
 ARG BRANCH=main
 
+    
+# Ensure the vscode user has ownership of its home directory
+RUN chown -R ${USER_UID}:${USER_GID} /home/${USERNAME}
 
 # Sadly this has to all be in a single RUN command so REPO_DIR can be used
 # Docker does not directly support storing command output in variables within a Dockerfile as you might in a shell script. 
