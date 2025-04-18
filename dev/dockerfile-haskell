@@ -42,6 +42,15 @@ RUN apt-get update && \
     echo ${USERNAME} ALL=\(root\) NOPASSWD:ALL > /etc/sudoers.d/${USERNAME} && \
     chmod 0440 /etc/sudoers.d/${USERNAME}
 
+    # Add these lines right before the USER directive
+    RUN mkdir -p /workspaces && chown -R ${USER_UID}:${USER_GID} /workspaces
+
+    # Also ensure the vscode user has proper permissions in their home directory
+    RUN mkdir -p /home/${USERNAME}/.cabal && \
+        chown -R ${USER_UID}:${USER_GID} /home/${USERNAME}/.cabal
+
+    # Add this to ensure cabal can create temp files
+    ENV CABAL_DIR=/home/${USERNAME}/.cabal
 
     # Set working directory and path for vscode user
     USER ${USER_UID}:${USER_GID}
