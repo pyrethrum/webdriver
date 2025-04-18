@@ -7,11 +7,10 @@ FROM ghcr.io/pyrethrum/haskell:latest
 # docker push theghostjw/pyrethrum:latest
 
 # vscode user created in haskell
-# TODo: parameterise this amd args must run through all pipelines
 ENV DEBIAN_FRONTEND=noninteractive \
     USERNAME=vscode \
     # modified from https://github.com/vzarytovskii/haskell-dev-env/blob/master/.devcontainer/Dockerfile 
-    # this 1000 is aready taken by ubuntu
+    # this 1000 is already taken by ubuntu
     USER_UID=1001 \
     USER_GID=1001
     
@@ -41,6 +40,12 @@ RUN REPO_DIR=$(basename -s .git "${REPO}") \
     # local modules => dist-newstyle
     && cabal update \
     && cabal build \
+    && echo "working directory is ${PWD}" \
+    # cd back into examples
+    && cd .. \
+    && echo "working directory after cd out ${PWD}" \
+    && cd "webdriver-examples" \
+    && cabal build --enable-tests \
     # local copy module build artifacts to home dir
     # note this does not work cabal is too clever with its cach invalidation
     # && cp -r ./dist-newstyle /home/vscode/dist-newstyle \
