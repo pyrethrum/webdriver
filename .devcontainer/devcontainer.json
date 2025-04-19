@@ -15,11 +15,12 @@
 	// "customizations": {},
 	"remoteUser": "vscode",
 	"containerUser": "vscode",
-	"overrideCommand": false,
-	"runArgs": [
-		"--user",
-		"1001:1001"
-	],
+	// "overrideCommand": false,
+	// "updateRemoteUserUID": false,
+	// "runArgs": [
+	// 	"--user",
+	// 	"1001:1001"
+	// ],
 	"customizations": {
 		"vscode": {
 			"extensions": [
