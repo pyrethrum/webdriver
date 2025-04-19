@@ -57,8 +57,24 @@ RUN REPO_DIR=$(basename -s .git "${REPO}") \
     # delete the repo
     && rm -rf "${REPO_DIR}"
 
-# Expose a port if the application needs it
-# EXPOSE 8080
+
+# Install Firefox by running the install script
+COPY install-firefox.sh /home/vscode/install-firefox.sh
+USER root
+RUN echo "Install firefox" && \
+    # chown ${USER_UID}:${USER_GID} /home/vscode/install-firefox.sh && \
+    # ls -l /home/vscode/install-firefox.sh && \
+    chmod +x /home/vscode/install-firefox.sh && \
+    /home/vscode/install-firefox.sh && \
+    rm /home/vscode/install-firefox.sh
+
+# Install geckodriver by running the install script
+COPY install-gecko-driver.sh /home/vscode/install-gecko-driver.sh
+RUN echo "Install geckodriver" && \
+    chmod +x /home/vscode/install-gecko-driver.sh && \
+    /home/vscode/install-gecko-driver.sh && \ 
+    rm /home/vscode/install-gecko-driver.sh
+USER ${USER_UID}:${USER_GID}
 
 # Specify the default command to run when the container starts
 CMD ["bash"]
