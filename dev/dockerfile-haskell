@@ -91,7 +91,9 @@ RUN export BOOTSTRAP_HASKELL_NONINTERACTIVE=1 \
 RUN ghcup install hls ${HLS_VERSION} \
     ghcup set hls ${HLS_VERSION}
 
-RUN cabal update 
+RUN cabal update
+
+RUN cabal install tasty-discover
 
 # Specify the default command to run when the container starts
 CMD ["bash"]

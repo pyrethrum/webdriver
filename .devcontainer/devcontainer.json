@@ -3,24 +3,23 @@
 {
 	"name": "webdriver-precore",
 	"image": "ghcr.io/pyrethrum/webdriver-precore:latest",
-
-
 	// Features to add to the dev container. More info: https://containers.dev/features.
 	// "features": {},
-
 	// Use 'forwardPorts' to make a list of ports inside the container available locally.
 	// "forwardPorts": [],
-
 	// copy the compiled library files from dist-newstyle into the current working directory
 	// if the dist-newstyle directory does not already exist  this does not work
 	// cabal is too clever about cache invalidation and rebuild anyway
 	// "postCreateCommand": "[ ! -d ./dist-newstyle ] && cp -r ~/dist-newstyle ./",
-
 	// Configure tool-specific properties.devco
 	// "customizations": {},
-
 	"remoteUser": "vscode",
 	"containerUser": "vscode",
+	"overrideCommand": false,
+	"runArgs": [
+		"--user",
+		"1001:1001"
+	],
 	"customizations": {
 		"vscode": {
 			"extensions": [
