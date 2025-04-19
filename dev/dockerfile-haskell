@@ -84,14 +84,9 @@ ENV GHC_VERSION=${GHC_VERSION} \
 RUN export BOOTSTRAP_HASKELL_NONINTERACTIVE=1 \
     BOOTSTRAP_HASKELL_GHC_VERSION=${GHC_VERSION} \
     BOOTSTRAP_HASKELL_CABAL_VERSION=${CABAL_VERSION} \
-    BOOTSTRAP_HASKELL_INSTALL_NO_STACK=1 && \
+    BOOTSTRAP_HASKELL_INSTALL_HLS && \
     curl --proto '=https' --tlsv1.2 -sSf https://get-ghcup.haskell.org | sh
-
-# RUN ghcup --url-source=https://raw.githubusercontent.com/haskell/ghcup-metadata/master/ghcup-vanilla-0.0.8.yaml install hls 2.9.0.1
-RUN ghcup install hls ${HLS_VERSION} \
-    ghcup set hls ${HLS_VERSION}
-
-# install other tools    
+  
 RUN cabal update 
 
 # Specify the default command to run when the container starts
