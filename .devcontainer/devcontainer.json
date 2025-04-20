@@ -16,7 +16,7 @@
 	"remoteUser": "vscode",
 	"containerUser": "vscode",
 
-	// "postStartCommand": "bash container-start.sh",
+	"postStartCommand": "bash container-start.sh",
 	"postAttachCommand": "bash container-attach.sh",
 	
 

@@ -1,6 +1,3 @@
 #!/bin/bash
-cd webdriver-examples
-cabal build --enable-tests
-pkill -f geckodriver || true
-echo "Starting geckodriver..."
-geckodriver &
+# This runs when the terminal attaches
+echo "Dev container ready. Geckodriver should be running."
