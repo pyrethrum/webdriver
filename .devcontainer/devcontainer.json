@@ -16,7 +16,7 @@
 	"remoteUser": "vscode",
 	"containerUser": "vscode",
 
-	"postStartCommand": "cd webdriver-examples && cabal build --enable-tests && (pkill -f geckodriver || true) && echo 'Starting geckodriver' && geckodriver --log trace",
+	"postStartCommand": "cd webdriver-examples && cabal build --enable-tests && (pkill -f geckodriver || true) && geckodriver",
 
 	"customizations": {
 		"vscode": {
