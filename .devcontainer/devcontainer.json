@@ -16,7 +16,7 @@
 	"remoteUser": "vscode",
 	"containerUser": "vscode",
 
-	"postStartCommand": "cd webdriver-examples && cabal build --enable-tests && (pkill -f geckodriver || true) && tmux new-session -d 'geckodriver'",
+	"postStartCommand": "bash container-start.sh",
 
 	"customizations": {
 		"vscode": {
