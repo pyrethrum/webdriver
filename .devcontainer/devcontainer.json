@@ -15,6 +15,9 @@
 	// "customizations": {},
 	"remoteUser": "vscode",
 	"containerUser": "vscode",
+	// make sure the user has access to the workspace directory
+	"postCreateCommand": "sudo chown -R vscode:vscode /home/vscode || true",
+
 	// "overrideCommand": false,
 	// "updateRemoteUserUID": false,
 	// "runArgs": [
