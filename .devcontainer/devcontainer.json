@@ -15,15 +15,11 @@
 	// "customizations": {},
 	"remoteUser": "vscode",
 	"containerUser": "vscode",
-	// make sure the user has access to the workspace directory
-	"updateRemoteUserUID": true,
-	
-	// "overrideCommand": false,
-	// "updateRemoteUserUID": false,
-	// "runArgs": [
-	// 	"--user",
-	// 	"1001:1001"
-	// ],
+
+	// workspaceMount avoids problems with permissions
+	"workspaceMount": "source=${localWorkspaceFolder},target=/workspaces/${localWorkspaceFolderBasename},type=volume",
+	"workspaceFolder": "/workspaces/${localWorkspaceFolderBasename}",
+
 	"customizations": {
 		"vscode": {
 			"extensions": [
