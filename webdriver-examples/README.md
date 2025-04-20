@@ -1,5 +1,24 @@
 # webdriver-examples
 
+- [webdriver-examples](#webdriver-examples)
+  - [About These Examples](#about-these-examples)
+  - [Core Modules](#core-modules)
+    - [IORunner](#iorunner)
+    - [IOAPI](#ioapi)
+    - [WebDriverE2EDemoTest](#webdrivere2edemotest)
+  - [Running Examples (VSCode Dev-Container)](#running-examples-vscode-dev-container)
+  - [Running Examples (Manual Configuration)](#running-examples-manual-configuration)
+    - [Prerequisites](#prerequisites)
+      - [1. Tasty Discover Installed](#1-tasty-discover-installed)
+      - [2. Web Driver Installed](#2-web-driver-installed)
+      - [3. Web Driver Running](#3-web-driver-running)
+    - [4. Update 'Config'](#4-update-config)
+  - [Executing the Examples](#executing-the-examples)
+    - [Evaluate...](#evaluate)
+    - [cabal repl](#cabal-repl)
+    - [cabal test](#cabal-test)
+    - [Fixing Geckodriver Firefox Profile Issues](#fixing-geckodriver-firefox-profile-issues)
+
 ## About These Examples
 
 These examples demonstrate a minimal wrapper implementation around the [`webdriver-precore`](https://hackage.haskell.org/package/webdriver-precore) library for basic browser automation. 
@@ -27,7 +46,24 @@ The examples cover all [W3C WebDriver endpoints](https://www.w3.org/TR/webdriver
 
 [WebDriverE2EDemoTest](./driver-demo-e2e/WebDriverE2EDemoTest.hs) is \"unit test" module where the unit tests are actually example stubs that demonstrate driving a browser via the [IOAPI](./driver-demo-e2e/IOAPI.hs).
 
-## Running Examples
+## Running Examples (VSCode Dev-Container)
+
+ *The following assumes the pre-requisites for [dev-containers](https://code.visualstudio.com/docs/devcontainers/containers#_getting-started) are installed* 
+ 
+ *See [Running Examples (Manual Configuration)](#running-examples-manual-configuration) if you are not dev-container user.*
+
+The dev-container provided includes all the Haskell tools required, pre-compiled dependencies and Firefox and geckodriver. The examples will be compiled and geckodriver started when the container starts.
+ 
+From VSCode invoke: <BR/> 
+&nbsp;&nbsp; \>> `Show All Commands` <BR/> 
+&nbsp;&nbsp; \>> `Dev Containers: Clone Repository in Dev Container Volume...`<BR/>
+&nbsp;&nbsp; \>> `Clone a repository from Github in a Container Volume`<BR/>
+&nbsp;&nbsp; \>> search and select `pyrethrum/webdriver`<BR/>
+&nbsp;&nbsp; \>> `main` branch
+
+Once the container downloads starts, you should be ready to run the examples (see [Executing the Examples](#executing-the-examples) below).
+
+## Running Examples (Manual Configuration)
 
 ### Prerequisites
 *Assuming Haskell and the related tooling is installed.*
