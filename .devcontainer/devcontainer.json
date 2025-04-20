@@ -16,10 +16,6 @@
 	"remoteUser": "vscode",
 	"containerUser": "vscode",
 
-	// workspaceMount avoids problems with permissions
-	"workspaceMount": "source=${localWorkspaceFolder},target=/workspaces/${localWorkspaceFolderBasename},type=volume",
-	"workspaceFolder": "/workspaces/${localWorkspaceFolderBasename}",
-
 	"customizations": {
 		"vscode": {
 			"extensions": [
