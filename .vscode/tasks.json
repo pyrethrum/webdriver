@@ -54,8 +54,10 @@
     {
       "label": "launch gecko driver",
       "type": "shell",
-      "command": "pkill -f geckodriver || true  && geckodriver --log trace &",
-      "isBackground": true,
+      "options": {
+        "cwd": "${workspaceFolder}/dev"
+      },
+      "command": "bash start-geckodriver.sh",
       "presentation": {
         "reveal": "always",
         "panel": "new",

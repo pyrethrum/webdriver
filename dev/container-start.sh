@@ -4,7 +4,7 @@
 set -e
 
 # Kill any existing geckodriver processes
-sh ./dev/start-geckodriver.sh
+bash ./dev/start-geckodriver.sh
 
 # Build the project
 cd webdriver-examples
