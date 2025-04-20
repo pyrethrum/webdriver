@@ -131,7 +131,7 @@ ChromeDriver was started successfully on port 4444.
 
 ### 4. Update 'Config'
 
-"Configuration" for these examples has been achieved through the time honoured technique of [hard coding values in the source file](./driver-demo-e2e/WebDriverE2EDemoTest.hs)
+"Configuration" for these examples has been achieved through the time honoured technique of [hard coding values in the source file (WebDriverE2EDemoTest.hs)](./driver-demo-e2e/WebDriverE2EDemoTest.hs)
 
 ```haskell
 -- #################### Config ######################
@@ -156,6 +156,10 @@ customFirefoxProfilePath = Nothing
 Once the [driver is running](#3-web-driver-running), the recommended way to experiment in these examples is to use the `Evaluate...` lens provided by Haskell Language Server in VSCode.
 
 ### Evaluate...
+
+1. From VSCode `Ctrl+P` \>> search `demo`
+2. Open `WebDriverE2EDemoTest`
+3. Wait for HLS to process the file, at which point the `Evaluate...` lens will be visible
 
 <img src="evaluate.png" alt="profile missing" width="600">
 
