@@ -3,5 +3,6 @@
 dist-newstyle/
 *~
 *.hie
+*.out
 *.log
 **/.profile
