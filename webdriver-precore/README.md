@@ -85,7 +85,7 @@ Driving a browser using this library requires the following:
 4. Run the driver
 5. Drive the browser via the IO API
 
-The full source can be found in the [example project repo](https://github.com/pyrethrum/webdriver/tree/jw-busywork/webdriver-examples/driver-demo-e2e).
+The full source can be found in the [example project repo](https://github.com/pyrethrum/webdriver/blob/main/webdriver-examples/README.md).
 
 
 ## 1. Implementing a runner
