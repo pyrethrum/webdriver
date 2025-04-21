@@ -30,7 +30,7 @@ description:
 
   See "WebDriverPreCore" for further details and [the project repo](https://github.com/pyrethrum/webdriver/blob/main/webdriver-examples/driver-demo-e2e/WebDriverE2EDemoTest.hs) for an examples.
   
-  If you are looking for a fully implemented client implementation, you should check out an alternative library such as [haskell-webdriver](https://github.com/haskell-webdriver/haskell-webdriver#readme).
+  If you are looking for a fully implemented web client library, you should check out an alternative such as [haskell-webdriver](https://github.com/haskell-webdriver/haskell-webdriver#readme).
   
 
 common commonExtensions

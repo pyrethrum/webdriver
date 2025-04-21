@@ -28,10 +28,9 @@ You can not use this library directly to drive a browser. If you are looking for
 
 ## Why This Library?
 
-Several libraries provide WebDriver bindings for Haskell. However, when development on this library began, the existing options were either unmaintained, dependent on Selenium, or tightly coupled with larger, batteries included testing frameworks.
+Several libraries provide WebDriver bindings for Haskell. However, when development on this library began, the existing options were either unmaintained, dependent on Selenium, or tightly coupled with larger "batteries included" testing frameworks.
 
-We, the authors of this library, are developing our own standalone test framework. We are enabling 
-web UI testing within this framework, by first developing a number of independent low level libraries with the goal of making them broadly useful to others as well. This library is the first in that series. 
+We, the authors of this library, are building our own standalone test framework. To support browser based testing within this framework, we're first creating a series of independent low-level libraries. This library is the first in that series. Our aim is to make each of our low level libraries broadly useful to others, outside its use within our framework. 
 
 ### Core Principles
 - **Direct W3C WebDriver Implementation**  

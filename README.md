@@ -1,51 +1,18 @@
 # webdriver
 
-- [webdriver](#webdriver)
-- [Work In Progress](#work-in-progress)
-  - [TODO](#todo)
+This repository contains two sub-repos:
 
-![build](https://github.com/pyrethrum/webdriver/actions/workflows/cicd.yaml/badge.svg?branch=main)
+## 1. [webdriver-precore](./webdriver-precore/README.md)
 
-Libraries for working with browsers
+Typed definitions for the endpoints of the [W3C Webdriver](https://www.w3.org/TR/2025/WD-webdriver2-20250306).
 
-# Work In Progress
+This is a library intended to be used as a base for other libraries that provide a WebDriver client implementation and higher level functions.
 
+More info can be found in the [README](./webdriver-precore/README.md) and the [Hackage Docs](https://hackage.haskell.org/package/webdriver-precore-0.0.0.2/candidate)
 
-## TODO
+## 2. [webdriver-examples](./webdriver-examples/README.md)
 
-- [x] fix capabilities
-- [x] rename from Pyrethrum
-- [x] finish WebDriverError
-- [x] check parser of timeouts all other parseJSON has been changed to by name
-- [x] create monorepo structure
-- [x] update readme
-  - [x] include notes on running tests and why the tests are there / what they cover
-  - [x] include notes on profile issues (firefox)
-- [x] Haddock
-  - [x] synopsis 
-  - [x] description
-  - [x] Spec et. al.
-- [x] get tests working locally again
-- [ ] CI
-  - [ ] get tests and E2E working in CI
-- [ ] update replace
-  - [ ] docker file
-  - [ ] dev-container
-  - [ ] scripts
-- [ ] fork the internet into Pyrethrum org
-- [x] update tasks
-- [ ] sort out / delete misbehaving tasks (permissions)
-  - [ ] run geckodriver - doesn't work 
-  - [ ] run haddock - doesn't open in browser
-- [ ] work out whats up with the trailing fields warning on tested with
-  - [ ] meaning of tested with
-  - [ ] why warning
-- [ ] add checks for e2e when profile dir is not there
-- [ ] review compiler switches
-- [ ] review licence
-- [ ] add all to github container repo (check vs docker hub)
-- [ ] change log
-- [ ] hackage
-- [ ] stackage
-- [ ] release checklist
+Examples that demonstrate a minimal wrapper implementation around the [webdriver-precore](./webdriver-precore/README.md) library for basic browser automation.
+
+More info can be found in the [README](./webdriver-examples/README.md)
 
