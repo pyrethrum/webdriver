@@ -8,7 +8,7 @@ Typed definitions for the endpoints of the [W3C Webdriver](https://www.w3.org/TR
 
 This is a library intended to be used as a base for other libraries that provide a WebDriver client implementation and higher level functions.
 
-More info can be found in the [README](./webdriver-precore/README.md) and the [Hackage Docs](https://hackage.haskell.org/package/webdriver-precore-0.0.0.2/candidate)
+More info can be found in the [README](./webdriver-precore/README.md) and the [Hackage Docs](https://hackage.haskell.org/package/webdriver-precore)
 
 ## 2. [webdriver-examples](./webdriver-examples/README.md)
 
