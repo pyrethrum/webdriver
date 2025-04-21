@@ -1,7 +1,6 @@
 # USE
 # cd webdriver-precore
-# bash ../dev/upload-package.sh
-
+# bash ../dev/release-package-upload.sh
 
 set -e
 
@@ -33,16 +32,17 @@ SOURCE_TARBALL=$(cabal sdist | awk '/^Wrote tarball/ {getline; print}')
 
 echo "Uploading source tarball..."
 # echo "token is $API_KEY"
-cabal upload --token=$API_KEY "$SOURCE_TARBALL"
+cabal upload --publish --token=$API_KEY "$SOURCE_TARBALL"
 
 # see issue https://github.com/haskell/cabal/issues/10252
 # when fixed replace with cabal upload --username="" --password="$API_KEY" "$DOCS_TARBALL" --documentation
 echo "Uploading docs tarball..."
-curl -X PUT \
-  --header "Authorization: X-ApiKey $API_KEY" \
-  -H "Content-Type: application/x-tar" \
-  -H 'Content-Encoding: gzip' \
-  --data-binary "$DOCS_TARBALL" \
-  https://hackage.haskell.org/package/$PACKAGE_NAME/candidate/docs
+cabal upload --publish --token=$API_KEY "$DOCS_TARBALL" --documentation
+# curl -X PUT \
+#   --header "Authorization: X-ApiKey $API_KEY" \
+#   -H "Content-Type: application/x-tar" \
+#   -H 'Content-Encoding: gzip' \
+#   --data-binary "$DOCS_TARBALL" \
+#   https://hackage.haskell.org/package/$PACKAGE_NAME/candidate/docs
 
-echo "Upload complete for $PACKAGE_NAME"
+echo "Release upload complete for $PACKAGE_NAME"
