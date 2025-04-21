@@ -1,5 +1,16 @@
 # webdriver-precore
 
+[![Hackage](https://img.shields.io/hackage/v/webdriver-precore.svg)](https://hackage.haskell.org/package/webdriver-precore)
+![build](https://github.com/pyrethrum/webdriver/actions/workflows/cicd.yaml/badge.svg?branch=main)
+
+
+<!-- 
+Adapt and move when ready
+![CI](https://github.com/commercialhaskell/path/workflows/CI/badge.svg?branch=master)
+[![Stackage LTS](http://stackage.org/package/path/badge/lts)](http://stackage.org/lts/package/path)
+[![Stackage Nightly](http://stackage.org/package/path/badge/nightly)](http://stackage.org/nightly/package/path) 
+-->
+
 - [webdriver-precore](#webdriver-precore)
   - [What is This Library?](#what-is-this-library)
   - [Why This Library?](#why-this-library)
