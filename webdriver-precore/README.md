@@ -30,13 +30,13 @@ You can not use this library directly to drive a browser. If you are looking for
 
 Several libraries provide WebDriver bindings for Haskell. However, when development on this library began, the existing options were either unmaintained, dependent on Selenium, or tightly coupled with larger "batteries included" testing frameworks.
 
-We, the authors of this library, are building our own standalone test framework. To support browser based testing within this framework, we're first creating a series of independent low-level libraries. This library is the first in that series. Our aim is to make each of our low level libraries broadly useful to others, outside its use within our framework. 
+We, the authors of this library, are building our own standalone test framework. To support browser based testing within this framework we're first creating a series of independent low-level libraries. This library is the first in that series. Our aim is to make each of our low level libraries broadly useful to others, outside its use within our own framework. 
 
 ### Core Principles
 - **Direct W3C WebDriver Implementation**  
   - No Selenium dependency  
   - Full control over protocol handling  
-  *Note: the [W3C WebDriver standard]() is an initiative driven largely by the core Selenium contributors. It provides a uniform HTTP API to drive browsers, and can be leveraged by any library, including Selenium.*
+  *Note: the [W3C WebDriver standard](https://www.w3.org/TR/webdriver2/) is an initiative driven largely by the core Selenium contributors. It provides a uniform HTTP API to drive browsers, and can be leveraged by any library, including Selenium.*
 
 - **Minimalist Design**  
   - Boring Haskell
@@ -54,11 +54,11 @@ We, the authors of this library, are building our own standalone test framework.
 
 This library would not have been possible without the prior work in: 
 
-Haskell (particularly):
+**Haskell (particularly)**:
 * [haskell-webdriver](https://hackage.haskell.org/package/webdriver)
 * [webdriver-w3c](https://hackage.haskell.org/package/webdriver-w3c)
 
-Selenium and WebDriver Standards:
+**Selenium and WebDriver Standards**:
 
 The decade+ efforts of the [Selenium](https://www.selenium.dev/) maintainers, both in forging the way with Selenium and their ongoing work in the development of the [W3C standards](https://www.w3.org/TR/webdriver2/) 
 
