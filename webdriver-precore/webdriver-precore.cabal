@@ -28,7 +28,7 @@ description:
   sending the corresponding HTTP requests to a vendor provided WebDriver, then parsing the response using the parser provided as part 
   of the 'W3Spec' type.
 
-  See "WebDriverPreCore" for further details and [the project repo](https://github.com/pyrethrum/webdriver/blob/main/webdriver-examples/driver-demo-e2e/WebDriverE2EDemoTest.hs) for an examples.
+  See "WebDriverPreCore" for further details and [the project repo](https://github.com/pyrethrum/webdriver) for [examples](https://github.com/pyrethrum/webdriver/blob/main/webdriver-examples/README.md) .
   
   If you are looking for a fully implemented web client library, you should check out an alternative such as [haskell-webdriver](https://github.com/haskell-webdriver/haskell-webdriver#readme).
   
