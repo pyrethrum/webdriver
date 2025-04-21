@@ -40,7 +40,7 @@ The examples cover all [W3C WebDriver endpoints](https://www.w3.org/TR/webdriver
 
 ### IOAPI
 
-[IOAPI](./driver-demo-e2e/IOAPI.hs) is [W3C WebDriver](https://www.w3.org/TR/webdriver2) client implemented by applying `run` to every endpoint exported by [webdriver-precore]((https://hackage-content.haskell.org/package/webdriver-precore).
+[IOAPI](./driver-demo-e2e/IOAPI.hs) is [W3C WebDriver](https://www.w3.org/TR/webdriver2) client implemented by applying `run` to every endpoint exported by [webdriver-precore](https://hackage-content.haskell.org/package/webdriver-precore).
 
 ### WebDriverE2EDemoTest
 
