@@ -9,7 +9,8 @@
 {-# LANGUAGE NoFieldSelectors #-}
 {-# LANGUAGE NoImplicitPrelude #-}
 
-module IORunnerMinimal (run) where
+
+module IORunnerMinimalForDocs (run) where
 
 import Control.Applicative (Applicative (..))
 import Control.Monad.Fail (MonadFail (..))
@@ -47,7 +48,7 @@ import Network.HTTP.Req as R
     runReq,
     (/:),
   )
-import WebDriverPreCore.Spec
+import WebDriverPreCore
   ( ErrorClassification (..),
     HttpResponse (..),
     UrlPath (..),
@@ -95,6 +96,7 @@ mkRequest spec = case spec of
   Delete {} -> MkRequestParams url DELETE NoReqBody 4444
   where
     url = foldl' (/:) (http "127.0.0.1") spec.path.segments
+
 
 -- 3. Call the WebDriver server with the `ReqRequestParams` and return the result in the form of a simplified `HttpResponse`
 callReq :: ReqRequestParams -> IO HttpResponse

@@ -1,58 +1,18 @@
 # webdriver
-![build](https://github.com/pyrethrum/webdriver/actions/workflows/cicd.yaml/badge.svg?branch=main)
 
-Libraries for working with browsers
+This repository contains two sub-repos:
 
-# Work In Progress
+## 1. [webdriver-precore](./webdriver-precore/README.md)
 
-## TODO
+Typed definitions for the endpoints of the [W3C Webdriver](https://www.w3.org/TR/2025/WD-webdriver2-20250306).
 
-- [x] fix capabilities
-- [x] rename from Pyrethrum
-- [x] finish WebDriverError
-- [x] check parser of timeouts all other parseJSON has been changed to by name
-- [x] create monorepo structure
-- [x] round trip JSON test for capabilities
-- [ ] rename library to webdriver-w3c-typed-endpoints
-- [ ] update readme
-  - [ ] include notes on running tests and why the tests are there / what they cover
-  - [ ] include notes on profile issues (firefox)
-- [ ] Haddock
-  - [ ] synopsis 
-  - [ ] description
-  - [ ] Spec et. al.
-- [x] get tests working locally again
-- [ ] CI
-  - [ ] get tests and E2E working in CI
-- [ ] update replace
-  - [ ] docker file
-  - [ ] dev-container
-  - [ ] scripts
-- [ ] get rmote dev-container working (laptop demo)
-- [ ] fork the internet into Pyrethrum org
-- [x] update tasks
-- [ ] sort out / delete misbehaving tasks (permissions)
-  - [ ] run gecko driver - doesn't work 
-  - [ ] run haddock - doesn't open in browser
-- [ ] work out whats up with the trailing fields warning on tested with
-  - [ ] meaning of tested with
-  - [ ] why warning
-- [ ] add notes on top of examples
-- [ ] add checks for e2e when profile dir is not there
-- [ ] review compiler switches
-- [ ] review license
-- [ ] release checklist
-- [ ] add all to github container repo (check vs docker hub)
-- [ ] change log
-- [ ] hackage
-- [ ] stackage
+This is a library intended to be used as a base for other libraries that provide a WebDriver client implementation and higher level functions.
 
+More info can be found in the [README](./webdriver-precore/README.md) and the [Hackage Docs](https://hackage.haskell.org/package/webdriver-precore-0.0.0.2/candidate)
 
-# Acknowledgments
+## 2. [webdriver-examples](./webdriver-examples/README.md)
 
-# Other Libraries
+Examples that demonstrate a minimal wrapper implementation around the [webdriver-precore](./webdriver-precore/README.md) library for basic browser automation.
 
-https://github.com/haskell-webdriver/haskell-webdriver
-
-https://hackage.haskell.org/package/webdriver-w3c
+More info can be found in the [README](./webdriver-examples/README.md)
 

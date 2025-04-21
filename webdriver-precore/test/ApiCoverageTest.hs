@@ -1,11 +1,11 @@
 module ApiCoverageTest where
 
 import Data.Set as S (Set, difference, fromList, null)
-import Data.Text as T (Text, lines, null, pack, replace, strip, unwords, words, split, intercalate)
+import Data.Text as T (Text, lines, null, pack, replace, strip, unwords, words, intercalate)
 import GHC.Utils.Misc (filterOut)
-import Test.Tasty.HUnit as HUnit ( assertBool, Assertion, (@=?) )
+import Test.Tasty.HUnit as HUnit ( assertBool, Assertion )
 import Text.RawString.QQ (r)
-import WebDriverPreCore.Spec
+import WebDriverPreCore
     ( SessionId(Session),
       ElementId(Element),
       Selector(CSS),
@@ -16,9 +16,7 @@ import WebDriverPreCore.Spec
       Actions(MkActions),
       Timeouts(..),
       W3Spec(description, Get, Post, PostEmpty, Delete, path),
-      errorTypeToErrorCode,
       minFirefoxCapabilities,
-      errorDescription,
       acceptAlert,
       addCookie,
       back,
@@ -30,7 +28,6 @@ import WebDriverPreCore.Spec
       elementClear,
       elementClick,
       elementSendKeys,
-      errorCodeToErrorType,
       executeScript,
       executeScriptAsync,
       findElement,
@@ -82,28 +79,24 @@ import WebDriverPreCore.Spec
       takeElementScreenshot,
       takeScreenshot )
 import GHC.Show (Show (..))
-import Data.Eq (Eq ((==)))
+import Data.Eq (Eq)
 import Data.Ord (Ord)
-import Data.Function (($), (.), (&))
+import Data.Function (($), (.))
 import Data.Semigroup ((<>))
 import Data.List ((!!), drop)
 import Data.Functor ((<$>))
 import Data.Maybe (Maybe(..))
-import GHC.Base (error)
-import WebDriverPreCore.Internal.Utils (enumerate)
-import Data.Foldable (traverse_)
-import Data.Either (either)
-import WebDriverPreCore.Spec (UrlPath(..))
+import WebDriverPreCore (UrlPath(..))
 
 
 {-- TODO use Haddock variable
- Covers Spec Version https://www.w3.org/TR/2025/WD-webdriver2-20250210 
+ Covers Spec Version https://www.w3.org/TR/2025/WD-webdriver2-20250306 
  --}
 
 
 {-
 !! Replace this the endepoints from the spec with every release
-https://www.w3.org/TR/2025/WD-webdriver2-20250210 - W3C Editor's Draft 10 February 2025
+https://www.w3.org/TR/2025/WD-webdriver2-20250306 - W3C Editor's Draft 10 February 2025
 61 endpoints
 Method 	URI Template 	Command
 POST 	/session 	New Session

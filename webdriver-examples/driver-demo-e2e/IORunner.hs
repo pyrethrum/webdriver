@@ -33,19 +33,19 @@ import Network.HTTP.Req as R
     (/:),
   )
 import WebDriverPreCore.Internal.Utils (prettyPrintJson, txt)
-import WebDriverPreCore.Spec
+import WebDriverPreCore
   ( ErrorClassification (..),
     HttpResponse (..),
     W3Spec (..),
     parseWebDriverError,
   )
-import WebDriverPreCore.Spec qualified as W
+import WebDriverPreCore qualified as W
 import Prelude hiding (log)
 
 -- ############# Config #############
 
 wantConsoleLogging :: Bool
-wantConsoleLogging = True
+wantConsoleLogging = False
 
 -- ############# Runner #############
 
@@ -67,12 +67,14 @@ run spec = do
 
 mkRequest :: forall a. W3Spec a -> ReqRequestParams
 mkRequest spec = case spec of
-  Get {} -> MkRequestParams url GET NoReqBody 4444
-  Post {body} -> MkRequestParams url POST (ReqBodyJson body) 4444
-  PostEmpty {} -> MkRequestParams url POST (ReqBodyJson $ object []) 4444
-  Delete {} -> MkRequestParams url DELETE NoReqBody 4444
+  Get {} -> MkRequestParams url GET NoReqBody port'
+  Post {body} -> MkRequestParams url POST (ReqBodyJson body) port'
+  PostEmpty {} -> MkRequestParams url POST (ReqBodyJson $ object []) port'
+  Delete {} -> MkRequestParams url DELETE NoReqBody port'
   where
     url = foldl' (/:) (http "127.0.0.1") spec.path.segments
+    port' = 4444 -- firefox
+
 
 parseIO :: W3Spec a -> W.HttpResponse -> IO a
 parseIO spec r =

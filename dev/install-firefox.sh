@@ -46,7 +46,7 @@ export LC_ALL=en_AU.UTF-8
 wget -O /tmp/firefox.tar.xz "https://download.mozilla.org/?product=firefox-latest&os=linux64&lang=en-US"
 
 # Extract the tarball to /opt
-tar -xjf /tmp/firefox.tar.xz -C /opt/
+tar -xaf /tmp/firefox.tar.xz -C /opt/
 
 # Create a symbolic link to the Firefox binary
 ln -s /opt/firefox/firefox /usr/local/bin/firefox

@@ -6,7 +6,7 @@
 --
 -- Here is a longer description of this module, containing some
 -- commentary with @some markup@.
-module WebDriverPreCore.Spec.SpecDefinition
+module WebDriverPreCore.SpecDefinition
   ( -- * The W3Spec Type
     W3Spec (..),
 
@@ -35,9 +35,9 @@ module WebDriverPreCore.Spec.SpecDefinition
     getPageSource,
     executeScript,
     executeScriptAsync,
+    addCookie,
     getAllCookies,
     getNamedCookie,
-    addCookie,
     deleteCookie,
     deleteAllCookies,
     performActions,
@@ -64,7 +64,7 @@ module WebDriverPreCore.Spec.SpecDefinition
     getActiveElement,
     findElement,
     findElements,
-
+    
     -- ** Element Instance Methods
     findElementFromElement,
     findElementsFromElement,
@@ -115,7 +115,7 @@ module WebDriverPreCore.Spec.SpecDefinition
   )
 where
 
-import Data.Aeson
+import Data.Aeson as A
   ( FromJSON (..),
     Key,
     KeyValue ((.=)),
@@ -139,8 +139,8 @@ import Data.Text qualified as T
 import Data.Word (Word16)
 import GHC.Generics (Generic)
 import WebDriverPreCore.Internal.Utils (jsonToText, opt, txt)
-import WebDriverPreCore.Spec.Capabilities as Capabilities
-import WebDriverPreCore.Spec.HttpResponse (HttpResponse (..))
+import WebDriverPreCore.Capabilities as Capabilities
+import WebDriverPreCore.HttpResponse (HttpResponse (..))
 import Prelude hiding (id, lookup)
 
 -- | Url as returned by 'W3Spec'
@@ -189,11 +189,11 @@ data W3SpecShowable = Request
   }
   deriving (Show)
 
--- | [spec](https://www.w3.org/TR/2025/WD-webdriver2-20250210/#dfn-get-window-handle)
+-- | [spec](https://www.w3.org/TR/2025/WD-webdriver2-20250306/#dfn-get-window-handle)
 newtype WindowHandle = Handle {handle :: Text}
   deriving (Show, Eq)
 
--- | [spec](https://www.w3.org/TR/2025/WD-webdriver2-20250210/#new-window)
+-- | [spec](https://www.w3.org/TR/2025/WD-webdriver2-20250306/#new-window)
 data WindowHandleSpec = HandleSpec
   { handle :: WindowHandle,
     handletype :: HandleType
@@ -231,15 +231,15 @@ instance FromJSON HandleType where
     "tab" -> pure Tab
     v -> fail $ unpack $ "Unknown HandleType " <> v
 
--- | [spec](https://www.w3.org/TR/2025/WD-webdriver2-20250210/#dfn-find-element)
+-- | [spec](https://www.w3.org/TR/2025/WD-webdriver2-20250306/#dfn-find-element)
 newtype ElementId = Element {id :: Text}
   deriving (Show, Eq, Generic)
 
--- | [spec](https://www.w3.org/TR/2025/WD-webdriver2-20250210/#dfn-new-sessions)
+-- | [spec](https://www.w3.org/TR/2025/WD-webdriver2-20250306/#dfn-new-sessions)
 newtype SessionId = Session {id :: Text}
   deriving (Show)
 
--- | [spec](https://www.w3.org/TR/2025/WD-webdriver2-20250210/#dfn-status)
+-- | [spec](https://www.w3.org/TR/2025/WD-webdriver2-20250306/#dfn-status)
 data DriverStatus
   = Ready
   | Running
@@ -247,7 +247,7 @@ data DriverStatus
   | Unknown {statusCode :: Int, statusMessage :: Text}
   deriving (Show, Eq)
 
--- | [spec](https://www.w3.org/TR/2025/WD-webdriver2-20250210/#cookies)
+-- | [spec](https://www.w3.org/TR/2025/WD-webdriver2-20250306/#cookies)
 data SameSite
   = Lax
   | Strict
@@ -258,7 +258,7 @@ instance ToJSON SameSite where
   toJSON :: SameSite -> Value
   toJSON = String . txt
 
--- | [spec](https://www.w3.org/TR/2025/WD-webdriver2-20250210/#dfn-switch-to-frame)
+-- | [spec](https://www.w3.org/TR/2025/WD-webdriver2-20250306/#dfn-switch-to-frame)
 data FrameReference
   = TopLevelFrame
   | FrameNumber Word16
@@ -276,7 +276,7 @@ frameJson fr =
         FrameNumber n -> Number $ fromIntegral n
         FrameElementId elm -> object [elementFieldName .= elm.id]
 
--- | [spec](https://www.w3.org/TR/2025/WD-webdriver2-20250210/#cookies)
+-- | [spec](https://www.w3.org/TR/2025/WD-webdriver2-20250306/#cookies)
 data Cookie = MkCookie
   { name :: Text,
     value :: Text,
@@ -310,7 +310,7 @@ instance ToJSON Cookie where
 cookieJSON :: Cookie -> Value
 cookieJSON c = object ["cookie" .= c]
 
--- | [spec](https://www.w3.org/TR/2025/WD-webdriver2-20250210/#locator-strategies)
+-- | [spec](https://www.w3.org/TR/2025/WD-webdriver2-20250306/#locator-strategies)
 data Selector
   = CSS Text
   | XPath Text
@@ -323,7 +323,7 @@ data Selector
 -- ########################### WebDriver API ############################
 -- ######################################################################
 
--- https://www.w3.org/TR/2025/WD-webdriver2-20250210/
+-- https://www.w3.org/TR/2025/WD-webdriver2-20250306/
 -- 61 endpoints
 -- Method 	URI Template 	Command
 
@@ -334,7 +334,7 @@ data Selector
 --
 -- 'newSession'' can be used if 'FullCapabilities' doesn't meet your requirements.
 --
--- [spec](https://www.w3.org/TR/2025/WD-webdriver2-20250210/#new-session)
+-- [spec](https://www.w3.org/TR/2025/WD-webdriver2-20250306/#new-session)
 --
 --  @POST 	\/session 	New Session@
 newSession :: FullCapabilities -> W3Spec SessionId
@@ -344,15 +344,12 @@ newSession = newSession'
 --
 --  Return a spec to create a new session given an object of any type that implements `ToJSON`.
 --
--- The 'FullCapabilities' type and associated types should work for the vast majority use cases, but there may be edge cases (such as missing 'Capabilities.VendorSpecific' capabilities)
--- where these types are not sufficient. 
+-- The 'FullCapabilities' type and associated types should work for the vast majority use cases, but if the required capabilities are not covered by the types provided, 'newSession''.
+-- can be used with a custom type instead. 'newSession'' works with any type that implements 'ToJSON', (including an Aeson 'Value').
 -- 
--- In such cases use a user defined type and 'newSession'' instead of 'newSession' as fallback. 
--- 'newSession'' works with any type that implements 'ToJSON', (including an Aeson 'Value').
--- 
--- Obviously, any type used must produece a JSON object compatible with [capabilities as defined W3C spec](https://www.w3.org/TR/2025/WD-webdriver2-20250210/#capabilities).
+-- Obviously, any type used must produce a JSON object compatible with [capabilities as defined W3C spec](https://www.w3.org/TR/2025/WD-webdriver2-20250306/#capabilities).
 --
---  [spec](https://www.w3.org/TR/2025/WD-webdriver2-20250210/#new-session)
+--  [spec](https://www.w3.org/TR/2025/WD-webdriver2-20250306/#new-session)
 --
 --  @POST 	\/session 	New Session@
 newSession' :: (ToJSON a) => a -> W3Spec SessionId
@@ -362,7 +359,7 @@ newSession' capabilities = Post "New Session" (MkUrlPath [session]) (toJSON capa
 --
 -- Return a spec to get the status of the driver.
 --
--- [spec](https://www.w3.org/TR/2025/WD-webdriver2-20250210/#status)
+-- [spec](https://www.w3.org/TR/2025/WD-webdriver2-20250306/#status)
 --
 -- @GET 	\/status 	Status@
 status :: W3Spec DriverStatus
@@ -374,7 +371,7 @@ status = Get "Status" (MkUrlPath ["status"]) parseDriverStatus
 --
 -- Return a spec to delete a session given a 'SessionId'.
 --
--- [spec](https://www.w3.org/TR/2025/WD-webdriver2-20250210/#delete-session)
+-- [spec](https://www.w3.org/TR/2025/WD-webdriver2-20250306/#delete-session)
 --
 -- @DELETE 	\/session\/{session id} 	Delete Session@
 deleteSession :: SessionId -> W3Spec ()
@@ -384,7 +381,7 @@ deleteSession sessionRef = Delete "Delete Session" (sessionUri sessionRef.id) vo
 --
 -- Return a spec to get the timeouts of a session given a 'SessionId'.
 --
--- [spec](https://www.w3.org/TR/2025/WD-webdriver2-20250210/#get-timeouts)
+-- [spec](https://www.w3.org/TR/2025/WD-webdriver2-20250306/#get-timeouts)
 --
 -- @GET 	\/session\/{session id}\/timeouts 	Get Timeouts@
 getTimeouts :: SessionId -> W3Spec Timeouts
@@ -394,7 +391,7 @@ getTimeouts sessionRef = Get "Get Timeouts" (sessionUri1 sessionRef "timeouts") 
 --
 -- Return a spec to set the timeouts of a session given a 'SessionId' and 'Timeouts'.
 --
--- [spec](https://www.w3.org/TR/2025/WD-webdriver2-20250210/#set-timeouts)
+-- [spec](https://www.w3.org/TR/2025/WD-webdriver2-20250306/#set-timeouts)
 --
 -- @POST 	\/session\/{session id}\/timeouts 	Set Timeouts@
 setTimeouts :: SessionId -> Timeouts -> W3Spec ()
@@ -405,7 +402,7 @@ setTimeouts sessionRef timeouts =
 --
 -- Return a spec to navigate to a URL given a 'SessionId' and a 'Text' URL.
 --
--- [spec](https://www.w3.org/TR/2025/WD-webdriver2-20250210/#navigate-to)
+-- [spec](https://www.w3.org/TR/2025/WD-webdriver2-20250306/#navigate-to)
 --
 -- @POST 	\/session\/{session id}\/url 	Navigate To@
 navigateTo :: SessionId -> Text -> W3Spec ()
@@ -415,7 +412,7 @@ navigateTo sessionRef url = Post "Navigate To" (sessionUri1 sessionRef "url") (o
 --
 -- Return a spec to get the current URL of a session given a 'SessionId'.
 --
--- [spec](https://www.w3.org/TR/2025/WD-webdriver2-20250210/#get-current-url)
+-- [spec](https://www.w3.org/TR/2025/WD-webdriver2-20250306/#get-current-url)
 --
 -- @GET 	\/session\/{session id}\/url 	Get Current URL@
 getCurrentUrl :: SessionId -> W3Spec Text
@@ -425,7 +422,7 @@ getCurrentUrl sessionRef = Get "Get Current URL" (sessionUri1 sessionRef "url") 
 --
 -- Return a spec to navigate back in the browser history given a 'SessionId'.
 --
--- [spec](https://www.w3.org/TR/2025/WD-webdriver2-20250210/#back)
+-- [spec](https://www.w3.org/TR/2025/WD-webdriver2-20250306/#back)
 --
 -- @POST 	\/session\/{session id}\/back 	Back@
 back :: SessionId -> W3Spec ()
@@ -435,7 +432,7 @@ back sessionRef = PostEmpty "Back" (sessionUri1 sessionRef "back") voidParser
 --
 -- Return a spec to navigate forward in the browser history given a 'SessionId'.
 --
--- [spec](https://www.w3.org/TR/2025/WD-webdriver2-20250210/#forward)
+-- [spec](https://www.w3.org/TR/2025/WD-webdriver2-20250306/#forward)
 --
 -- @POST 	\/session\/{session id}\/forward 	Forward@
 forward :: SessionId -> W3Spec ()
@@ -445,7 +442,7 @@ forward sessionRef = PostEmpty "Forward" (sessionUri1 sessionRef "forward") void
 --
 -- Return a spec to refresh the current page given a 'SessionId'.
 --
--- [spec](https://www.w3.org/TR/2025/WD-webdriver2-20250210/#refresh)
+-- [spec](https://www.w3.org/TR/2025/WD-webdriver2-20250306/#refresh)
 --
 -- @POST 	\/session\/{session id}\/refresh 	Refresh@
 refresh :: SessionId -> W3Spec ()
@@ -455,7 +452,7 @@ refresh sessionRef = PostEmpty "Refresh" (sessionUri1 sessionRef "refresh") void
 --
 -- Return a spec to get the title of the current page given a 'SessionId'.
 --
--- [spec](https://www.w3.org/TR/2025/WD-webdriver2-20250210/#get-title)
+-- [spec](https://www.w3.org/TR/2025/WD-webdriver2-20250306/#get-title)
 --
 -- @GET 	\/session\/{session id}\/title 	Get Title@
 getTitle :: SessionId -> W3Spec Text
@@ -465,7 +462,7 @@ getTitle sessionRef = Get "Get Title" (sessionUri1 sessionRef "title") parseBody
 --
 -- Return a spec to get the current window handle given a 'SessionId'.
 --
--- [spec](https://www.w3.org/TR/2025/WD-webdriver2-20250210/#get-window-handle)
+-- [spec](https://www.w3.org/TR/2025/WD-webdriver2-20250306/#get-window-handle)
 --
 -- @GET 	\/session\/{session id}\/window 	Get Window Handle@
 getWindowHandle :: SessionId -> W3Spec WindowHandle
@@ -475,7 +472,7 @@ getWindowHandle sessionRef = Get "Get Window Handle" (sessionUri1 sessionRef "wi
 --
 -- Return a spec to create a new window given a 'SessionId'.
 --
--- [spec](https://www.w3.org/TR/2025/WD-webdriver2-20250210/#new-window)
+-- [spec](https://www.w3.org/TR/2025/WD-webdriver2-20250306/#new-window)
 --
 -- @POST 	\/session\/{session id}\/window\/new 	New Window@
 newWindow :: SessionId -> W3Spec WindowHandleSpec
@@ -485,7 +482,7 @@ newWindow sessionRef = PostEmpty "New Window" (sessionUri2 sessionRef "window" "
 --
 -- Return a spec to close the current window given a 'SessionId'.
 --
--- [spec](https://www.w3.org/TR/2025/WD-webdriver2-20250210/#close-window)
+-- [spec](https://www.w3.org/TR/2025/WD-webdriver2-20250306/#close-window)
 --
 -- @DELETE 	\/session\/{session id}\/window 	Close Window@
 closeWindow :: SessionId -> W3Spec ()
@@ -495,7 +492,7 @@ closeWindow sessionRef = Delete "Close Window" (sessionUri1 sessionRef "window")
 --
 -- Return a spec to switch to a different window given a 'SessionId' and 'WindowHandle'.
 --
--- [spec](https://www.w3.org/TR/2025/WD-webdriver2-20250210/#switch-to-window)
+-- [spec](https://www.w3.org/TR/2025/WD-webdriver2-20250306/#switch-to-window)
 --
 -- @POST 	\/session\/{session id}\/window 	Switch To Window@
 switchToWindow :: SessionId -> WindowHandle -> W3Spec ()
@@ -505,7 +502,7 @@ switchToWindow sessionRef Handle {handle} = Post "Switch To Window" (sessionUri1
 --
 -- Return a spec to switch to a different frame given a 'SessionId' and 'FrameReference'.
 --
--- [spec](https://www.w3.org/TR/2025/WD-webdriver2-20250210/#switch-to-frame)
+-- [spec](https://www.w3.org/TR/2025/WD-webdriver2-20250306/#switch-to-frame)
 --
 -- @POST 	\/session\/{session id}\/frame 	Switch To Frame@
 switchToFrame :: SessionId -> FrameReference -> W3Spec ()
@@ -515,7 +512,7 @@ switchToFrame sessionRef frameRef = Post "Switch To Frame" (sessionUri1 sessionR
 --
 -- Return a spec to get the source of the current page given a 'SessionId'.
 --
--- [spec](https://www.w3.org/TR/2025/WD-webdriver2-20250210/#get-page-source)
+-- [spec](https://www.w3.org/TR/2025/WD-webdriver2-20250306/#get-page-source)
 --
 -- @GET 	\/session\/{session id}\/source 	Get Page Source@
 getPageSource :: SessionId -> W3Spec Text
@@ -525,7 +522,7 @@ getPageSource sessionId = Get "Get Page Source" (sessionUri1 sessionId "source")
 --
 -- Return a spec to execute a script in the context of the current page given a 'SessionId', 'Text' script, and a list of 'Value' arguments.
 --
--- [spec](https://www.w3.org/TR/2025/WD-webdriver2-20250210/#execute-script)
+-- [spec](https://www.w3.org/TR/2025/WD-webdriver2-20250306/#execute-script)
 --
 -- @POST 	\/session\/{session id}\/execute\/sync 	Execute Script@
 executeScript :: SessionId -> Text -> [Value] -> W3Spec Value
@@ -535,7 +532,7 @@ executeScript sessionId script args = Post "Execute Script" (sessionUri2 session
 --
 -- Return a spec to execute an asynchronous script in the context of the current page given a 'SessionId', 'Text' script, and a list of 'Value' arguments.
 --
--- [spec](https://www.w3.org/TR/2025/WD-webdriver2-20250210/#execute-async-script)
+-- [spec](https://www.w3.org/TR/2025/WD-webdriver2-20250306/#execute-async-script)
 --
 -- @POST 	\/session\/{session id}\/execute\/async 	Execute Async Script@
 executeScriptAsync :: SessionId -> Text -> [Value] -> W3Spec Value
@@ -545,7 +542,7 @@ executeScriptAsync sessionId script args = Post "Execute Async Script" (sessionU
 --
 -- Return a spec to get all cookies of the current page given a 'SessionId'.
 --
--- [spec](https://www.w3.org/TR/2025/WD-webdriver2-20250210/#get-all-cookies)
+-- [spec](https://www.w3.org/TR/2025/WD-webdriver2-20250306/#get-all-cookies)
 --
 -- @GET 	\/session\/{session id}\/cookie 	Get All Cookies@
 getAllCookies :: SessionId -> W3Spec [Cookie]
@@ -555,7 +552,7 @@ getAllCookies sessionId = Get "Get All Cookies" (sessionUri1 sessionId "cookie")
 --
 -- Return a spec to get a named cookie of the current page given a 'SessionId' and cookie name.
 --
--- [spec](https://www.w3.org/TR/2025/WD-webdriver2-20250210/#get-named-cookie)
+-- [spec](https://www.w3.org/TR/2025/WD-webdriver2-20250306/#get-named-cookie)
 --
 -- @GET 	\/session\/{session id}\/cookie\/{name} 	Get Named Cookie@
 getNamedCookie :: SessionId -> Text -> W3Spec Cookie
@@ -565,7 +562,7 @@ getNamedCookie sessionId cookieName = Get "Get Named Cookie" (sessionUri2 sessio
 --
 -- Return a spec to add a cookie to the current page given a 'SessionId' and 'Cookie'.
 --
--- [spec](https://www.w3.org/TR/2025/WD-webdriver2-20250210/#add-cookie)
+-- [spec](https://www.w3.org/TR/2025/WD-webdriver2-20250306/#add-cookie)
 --
 -- @POST 	\/session\/{session id}\/cookie 	Add Cookie@
 addCookie :: SessionId -> Cookie -> W3Spec ()
@@ -575,7 +572,7 @@ addCookie sessionId cookie = Post "Add Cookie" (sessionUri1 sessionId "cookie") 
 --
 -- Return a spec to delete a named cookie from the current page given a 'SessionId' and cookie name.
 --
--- [spec](https://www.w3.org/TR/2025/WD-webdriver2-20250210/#delete-cookie)
+-- [spec](https://www.w3.org/TR/2025/WD-webdriver2-20250306/#delete-cookie)
 --
 -- @DELETE 	\/session\/{session id}\/cookie\/{name} 	Delete Cookie@
 deleteCookie :: SessionId -> Text -> W3Spec ()
@@ -585,7 +582,7 @@ deleteCookie sessionId cookieName = Delete "Delete Cookie" (sessionUri2 sessionI
 --
 -- Return a spec to delete all cookies from the current page given a 'SessionId'.
 --
--- [spec](https://www.w3.org/TR/2025/WD-webdriver2-20250210/#delete-all-cookies)
+-- [spec](https://www.w3.org/TR/2025/WD-webdriver2-20250306/#delete-all-cookies)
 --
 -- @DELETE 	\/session\/{session id}\/cookie 	Delete All Cookies@
 deleteAllCookies :: SessionId -> W3Spec ()
@@ -595,7 +592,7 @@ deleteAllCookies sessionId = Delete "Delete All Cookies" (sessionUri1 sessionId 
 --
 -- Return a spec to perform actions on the current page given a 'SessionId' and 'Actions'.
 --
--- [spec](https://www.w3.org/TR/2025/WD-webdriver2-20250210/#perform-actions)
+-- [spec](https://www.w3.org/TR/2025/WD-webdriver2-20250306/#perform-actions)
 --
 -- @POST 	\/session\/{session id}\/actions 	Perform Actions@
 performActions :: SessionId -> Actions -> W3Spec ()
@@ -605,7 +602,7 @@ performActions sessionId actions = Post "Perform Actions" (sessionUri1 sessionId
 --
 -- Return a spec to release actions on the current page given a 'SessionId'.
 --
--- [spec](https://www.w3.org/TR/2025/WD-webdriver2-20250210/#release-actions)
+-- [spec](https://www.w3.org/TR/2025/WD-webdriver2-20250306/#release-actions)
 --
 -- @DELETE 	\/session\/{session id}\/actions 	Release Actions@
 releaseActions :: SessionId -> W3Spec ()
@@ -615,7 +612,7 @@ releaseActions sessionId = Delete "Release Actions" (sessionUri1 sessionId "acti
 --
 -- Return a spec to dismiss an alert on the current page given a 'SessionId'.
 --
--- [spec](https://www.w3.org/TR/2025/WD-webdriver2-20250210/#dismiss-alert)
+-- [spec](https://www.w3.org/TR/2025/WD-webdriver2-20250306/#dismiss-alert)
 --
 -- @POST 	\/session\/{session id}\/alert\/dismiss 	Dismiss Alert@
 dismissAlert :: SessionId -> W3Spec ()
@@ -625,7 +622,7 @@ dismissAlert sessionId = PostEmpty "Dismiss Alert" (sessionUri2 sessionId "alert
 --
 -- Return a spec to accept an alert on the current page given a 'SessionId'.
 --
--- [spec](https://www.w3.org/TR/2025/WD-webdriver2-20250210/#accept-alert)
+-- [spec](https://www.w3.org/TR/2025/WD-webdriver2-20250306/#accept-alert)
 --
 -- @POST 	\/session\/{session id}\/alert\/accept 	Accept Alert@
 acceptAlert :: SessionId -> W3Spec ()
@@ -635,7 +632,7 @@ acceptAlert sessionId = PostEmpty "Accept Alert" (sessionUri2 sessionId "alert" 
 --
 -- Return a spec to get the text of an alert on the current page given a 'SessionId'.
 --
--- [spec](https://www.w3.org/TR/2025/WD-webdriver2-20250210/#get-alert-text)
+-- [spec](https://www.w3.org/TR/2025/WD-webdriver2-20250306/#get-alert-text)
 --
 -- @GET 	\/session\/{session id}\/alert\/text 	Get Alert Text@
 getAlertText :: SessionId -> W3Spec Text
@@ -645,7 +642,7 @@ getAlertText sessionId = Get "Get Alert Text" (sessionUri2 sessionId "alert" "te
 --
 -- Return a spec to send text to an alert on the current page given a 'SessionId' and 'Text'.
 --
--- [spec](https://www.w3.org/TR/2025/WD-webdriver2-20250210/#send-alert-text)
+-- [spec](https://www.w3.org/TR/2025/WD-webdriver2-20250306/#send-alert-text)
 --
 -- @POST 	\/session\/{session id}\/alert\/text 	Send Alert Text@
 sendAlertText :: SessionId -> Text -> W3Spec ()
@@ -655,7 +652,7 @@ sendAlertText sessionId text = Post "Send Alert Text" (sessionUri2 sessionId "al
 --
 -- Return a spec to take a screenshot of the current page given a 'SessionId'.
 --
--- [spec](https://www.w3.org/TR/2025/WD-webdriver2-20250210/#take-screenshot)
+-- [spec](https://www.w3.org/TR/2025/WD-webdriver2-20250306/#take-screenshot)
 --
 -- @GET 	\/session\/{session id}\/screenshot 	Take Screenshot@
 takeScreenshot :: SessionId -> W3Spec Text
@@ -665,7 +662,7 @@ takeScreenshot sessionId = Get "Take Screenshot" (sessionUri1 sessionId "screens
 --
 -- Return a spec to print the current page given a 'SessionId'.
 --
--- [spec](https://www.w3.org/TR/2025/WD-webdriver2-20250210/#print-page)
+-- [spec](https://www.w3.org/TR/2025/WD-webdriver2-20250306/#print-page)
 --
 -- @POST 	\/session\/{session id}\/print 	Print Page@
 printPage :: SessionId -> W3Spec Text
@@ -677,7 +674,7 @@ printPage sessionId = PostEmpty "Print Page" (sessionUri1 sessionId "print") par
 --
 -- Return a spec to get all window handles of the current session given a 'SessionId'.
 --
--- [spec](https://www.w3.org/TR/2025/WD-webdriver2-20250210/#get-window-handles)
+-- [spec](https://www.w3.org/TR/2025/WD-webdriver2-20250306/#get-window-handles)
 --
 -- @GET 	\/session\/{session id}\/window\/handles 	Get Window Handles@
 getWindowHandles :: SessionId -> W3Spec [WindowHandle]
@@ -687,7 +684,7 @@ getWindowHandles sessionRef = Get "Get Window Handles" (sessionUri2 sessionRef "
 --
 -- Return a spec to get the window rect of the current window given a 'SessionId'.
 --
--- [spec](https://www.w3.org/TR/2025/WD-webdriver2-20250210/#get-window-rect)
+-- [spec](https://www.w3.org/TR/2025/WD-webdriver2-20250306/#get-window-rect)
 --
 -- @GET 	\/session\/{session id}\/window\/rect 	Get Window Rect@
 getWindowRect :: SessionId -> W3Spec WindowRect
@@ -697,7 +694,7 @@ getWindowRect sessionRef = Get "Get Window Rect" (sessionUri2 sessionRef "window
 --
 -- Return a spec to set the window rect of the current window given a 'SessionId' and 'WindowRect'.
 --
--- [spec](https://www.w3.org/TR/2025/WD-webdriver2-20250210/#set-window-rect)
+-- [spec](https://www.w3.org/TR/2025/WD-webdriver2-20250306/#set-window-rect)
 --
 -- @POST 	\/session\/{session id}\/window\/rect 	Set Window Rect@
 setWindowRect :: SessionId -> WindowRect -> W3Spec WindowRect
@@ -707,7 +704,7 @@ setWindowRect sessionRef rect = Post "Set Window Rect" (sessionUri2 sessionRef "
 --
 -- Return a spec to maximize the current window given a 'SessionId'.
 --
--- [spec](https://www.w3.org/TR/2025/WD-webdriver2-20250210/#maximize-window)
+-- [spec](https://www.w3.org/TR/2025/WD-webdriver2-20250306/#maximize-window)
 --
 -- @POST 	\/session\/{session id}\/window\/maximize 	Maximize Window@
 maximizeWindow :: SessionId -> W3Spec WindowRect
@@ -717,7 +714,7 @@ maximizeWindow sessionRef = PostEmpty "Maximize Window" (windowUri1 sessionRef "
 --
 -- Return a spec to minimize the current window given a 'SessionId'.
 --
--- [spec](https://www.w3.org/TR/2025/WD-webdriver2-20250210/#minimize-window)
+-- [spec](https://www.w3.org/TR/2025/WD-webdriver2-20250306/#minimize-window)
 --
 -- @POST 	\/session\/{session id}\/window\/minimize 	Minimize Window@
 minimizeWindow :: SessionId -> W3Spec WindowRect
@@ -727,7 +724,7 @@ minimizeWindow sessionRef = PostEmpty "Minimize Window" (windowUri1 sessionRef "
 --
 -- Return a spec to fullscreen the current window given a 'SessionId'.
 --
--- [spec](https://www.w3.org/TR/2025/WD-webdriver2-20250210/#fullscreen-window)
+-- [spec](https://www.w3.org/TR/2025/WD-webdriver2-20250306/#fullscreen-window)
 --
 -- @POST 	\/session\/{session id}\/window\/fullscreen 	Fullscreen Window@
 fullscreenWindow :: SessionId -> W3Spec WindowRect
@@ -739,7 +736,7 @@ fullscreenWindow sessionRef = PostEmpty "Fullscreen Window" (windowUri1 sessionR
 --
 -- Return a spec to switch to the parent frame given a 'SessionId'.
 --
--- [spec](https://www.w3.org/TR/2025/WD-webdriver2-20250210/#switch-to-parent-frame)
+-- [spec](https://www.w3.org/TR/2025/WD-webdriver2-20250306/#switch-to-parent-frame)
 --
 -- @POST 	\/session\/{session id}\/frame\/parent 	Switch To Parent Frame@
 switchToParentFrame :: SessionId -> W3Spec ()
@@ -751,7 +748,7 @@ switchToParentFrame sessionRef = PostEmpty "Switch To Parent Frame" (sessionUri2
 --
 -- Return a spec to get the active element of the current page given a 'SessionId'.
 --
--- [spec](https://www.w3.org/TR/2025/WD-webdriver2-20250210/#get-active-element)
+-- [spec](https://www.w3.org/TR/2025/WD-webdriver2-20250306/#get-active-element)
 --
 -- @GET 	\/session\/{session id}\/element\/active 	Get Active Element@
 getActiveElement :: SessionId -> W3Spec ElementId
@@ -761,7 +758,7 @@ getActiveElement sessionId = Get "Get Active Element" (sessionUri2 sessionId "el
 --
 -- Return a spec to find an element on the current page given a 'SessionId' and 'Selector'.
 --
--- [spec](https://www.w3.org/TR/2025/WD-webdriver2-20250210/#find-element)
+-- [spec](https://www.w3.org/TR/2025/WD-webdriver2-20250306/#find-element)
 --
 -- @POST 	\/session\/{session id}\/element 	Find Element@
 findElement :: SessionId -> Selector -> W3Spec ElementId
@@ -771,7 +768,7 @@ findElement sessionRef = findElement' sessionRef . selectorJson
 --
 -- Return a spec to find elements on the current page given a 'SessionId' and 'Selector'.
 --
--- [spec](https://www.w3.org/TR/2025/WD-webdriver2-20250210/#find-elements)
+-- [spec](https://www.w3.org/TR/2025/WD-webdriver2-20250306/#find-elements)
 --
 -- @POST 	\/session\/{session id}\/elements 	Find Elements@
 findElements :: SessionId -> Selector -> W3Spec [ElementId]
@@ -783,7 +780,7 @@ findElements sessionRef selector = Post "Find Elements" (sessionUri1 sessionRef 
 --
 -- Return a spec to get the shadow root of an element given a 'SessionId' and 'ElementId'.
 --
--- [spec](https://www.w3.org/TR/2025/WD-webdriver2-20250210/#get-element-shadow-root)
+-- [spec](https://www.w3.org/TR/2025/WD-webdriver2-20250306/#get-element-shadow-root)
 --
 -- @GET 	\/session\/{session id}\/element\/{element id}\/shadow 	Get Element Shadow Root@
 getElementShadowRoot :: SessionId -> ElementId -> W3Spec ElementId
@@ -793,7 +790,7 @@ getElementShadowRoot sessionId elementId = Get "Get Element Shadow Root" (elemen
 --
 -- Return a spec to find an element from another element given a 'SessionId', 'ElementId', and 'Selector'.
 --
--- [spec](https://www.w3.org/TR/2025/WD-webdriver2-20250210/#find-element-from-element)
+-- [spec](https://www.w3.org/TR/2025/WD-webdriver2-20250306/#find-element-from-element)
 --
 -- @POST 	\/session\/{session id}\/element\/{element id}\/element 	Find Element From Element@
 findElementFromElement :: SessionId -> ElementId -> Selector -> W3Spec ElementId
@@ -803,7 +800,7 @@ findElementFromElement sessionId elementId selector = Post "Find Element From El
 --
 -- Return a spec to find elements from another element given a 'SessionId', 'ElementId', and 'Selector'.
 --
--- [spec](https://www.w3.org/TR/2025/WD-webdriver2-20250210/#find-elements-from-element)
+-- [spec](https://www.w3.org/TR/2025/WD-webdriver2-20250306/#find-elements-from-element)
 --
 -- @POST 	\/session\/{session id}\/element\/{element id}\/elements 	Find Elements From Element@
 findElementsFromElement :: SessionId -> ElementId -> Selector -> W3Spec [ElementId]
@@ -813,7 +810,7 @@ findElementsFromElement sessionId elementId selector = Post "Find Elements From 
 --
 -- Return a spec to check if an element is selected given a 'SessionId' and 'ElementId'.
 --
--- [spec](https://www.w3.org/TR/2025/WD-webdriver2-20250210/#is-element-selected)
+-- [spec](https://www.w3.org/TR/2025/WD-webdriver2-20250306/#is-element-selected)
 --
 -- @GET 	\/session\/{session id}\/element\/{element id}\/selected 	Is Element Selected@
 isElementSelected :: SessionId -> ElementId -> W3Spec Bool
@@ -823,7 +820,7 @@ isElementSelected sessionId elementId = Get "Is Element Selected" (elementUri1 s
 --
 -- Return a spec to get an attribute of an element given a 'SessionId', 'ElementId', and attribute name.
 --
--- [spec](https://www.w3.org/TR/2025/WD-webdriver2-20250210/#get-element-attribute)
+-- [spec](https://www.w3.org/TR/2025/WD-webdriver2-20250306/#get-element-attribute)
 --
 -- @GET 	\/session\/{session id}\/element\/{element id}\/attribute\/{name} 	Get Element Attribute@
 getElementAttribute :: SessionId -> ElementId -> Text -> W3Spec Text
@@ -833,7 +830,7 @@ getElementAttribute sessionId elementId attributeName = Get "Get Element Attribu
 --
 -- Return a spec to get a property of an element given a 'SessionId', 'ElementId', and property name.
 --
--- [spec](https://www.w3.org/TR/2025/WD-webdriver2-20250210/#get-element-property)
+-- [spec](https://www.w3.org/TR/2025/WD-webdriver2-20250306/#get-element-property)
 --
 -- @GET 	\/session\/{session id}\/element\/{element id}\/property\/{name} 	Get Element Property@
 getElementProperty :: SessionId -> ElementId -> Text -> W3Spec Value
@@ -843,7 +840,7 @@ getElementProperty sessionId elementId propertyName = Get "Get Element Property"
 --
 -- Return a spec to get the CSS value of an element given a 'SessionId', 'ElementId', and CSS property name.
 --
--- [spec](https://www.w3.org/TR/2025/WD-webdriver2-20250210/#get-element-css-value)
+-- [spec](https://www.w3.org/TR/2025/WD-webdriver2-20250306/#get-element-css-value)
 --
 -- @GET 	\/session\/{session id}\/element\/{element id}\/css\/{property name} 	Get Element CSS Value@
 getElementCssValue :: SessionId -> ElementId -> Text -> W3Spec Text
@@ -853,7 +850,7 @@ getElementCssValue sessionId elementId propertyName = Get "Get Element CSS Value
 --
 -- Return a spec to get the text of an element given a 'SessionId' and 'ElementId'.
 --
--- [spec](https://www.w3.org/TR/2025/WD-webdriver2-20250210/#get-element-text)
+-- [spec](https://www.w3.org/TR/2025/WD-webdriver2-20250306/#get-element-text)
 --
 -- @GET 	\/session\/{session id}\/element\/{element id}\/text 	Get Element Text@
 getElementText :: SessionId -> ElementId -> W3Spec Text
@@ -863,7 +860,7 @@ getElementText sessionId elementId = Get "Get Element Text" (elementUri1 session
 --
 -- Return a spec to get the tag name of an element given a 'SessionId' and 'ElementId'.
 --
--- [spec](https://www.w3.org/TR/2025/WD-webdriver2-20250210/#get-element-tag-name)
+-- [spec](https://www.w3.org/TR/2025/WD-webdriver2-20250306/#get-element-tag-name)
 --
 -- @GET 	\/session\/{session id}\/element\/{element id}\/name 	Get Element Tag Name@
 getElementTagName :: SessionId -> ElementId -> W3Spec Text
@@ -873,7 +870,7 @@ getElementTagName sessionId elementId = Get "Get Element Tag Name" (elementUri1 
 --
 -- Return a spec to get the rect of an element given a 'SessionId' and 'ElementId'.
 --
--- [spec](https://www.w3.org/TR/2025/WD-webdriver2-20250210/#get-element-rect)
+-- [spec](https://www.w3.org/TR/2025/WD-webdriver2-20250306/#get-element-rect)
 --
 -- @GET 	\/session\/{session id}\/element\/{element id}\/rect 	Get Element Rect@
 getElementRect :: SessionId -> ElementId -> W3Spec WindowRect
@@ -883,7 +880,7 @@ getElementRect sessionId elementId = Get "Get Element Rect" (elementUri1 session
 --
 -- Return a spec to check if an element is enabled given a 'SessionId' and 'ElementId'.
 --
--- [spec](https://www.w3.org/TR/2025/WD-webdriver2-20250210/#is-element-enabled)
+-- [spec](https://www.w3.org/TR/2025/WD-webdriver2-20250306/#is-element-enabled)
 --
 -- @GET 	\/session\/{session id}\/element\/{element id}\/enabled 	Is Element Enabled@
 isElementEnabled :: SessionId -> ElementId -> W3Spec Bool
@@ -893,7 +890,7 @@ isElementEnabled sessionId elementId = Get "Is Element Enabled" (elementUri1 ses
 --
 -- Return a spec to get the computed role of an element given a 'SessionId' and 'ElementId'.
 --
--- [spec](https://www.w3.org/TR/2025/WD-webdriver2-20250210/#get-computed-role)
+-- [spec](https://www.w3.org/TR/2025/WD-webdriver2-20250306/#get-computed-role)
 --
 -- @GET 	\/session\/{session id}\/element\/{element id}\/computedrole 	Get Computed Role@
 getElementComputedRole :: SessionId -> ElementId -> W3Spec Text
@@ -903,7 +900,7 @@ getElementComputedRole sessionId elementId = Get "Get Computed Role" (elementUri
 --
 -- Return a spec to get the computed label of an element given a 'SessionId' and 'ElementId'.
 --
--- [spec](https://www.w3.org/TR/2025/WD-webdriver2-20250210/#get-computed-label)
+-- [spec](https://www.w3.org/TR/2025/WD-webdriver2-20250306/#get-computed-label)
 --
 -- @GET 	\/session\/{session id}\/element\/{element id}\/computedlabel 	Get Computed Label@
 getElementComputedLabel :: SessionId -> ElementId -> W3Spec Text
@@ -913,7 +910,7 @@ getElementComputedLabel sessionId elementId = Get "Get Computed Label" (elementU
 --
 -- Return a spec to click an element given a 'SessionId' and 'ElementId'.
 --
--- [spec](https://www.w3.org/TR/2025/WD-webdriver2-20250210/#element-click)
+-- [spec](https://www.w3.org/TR/2025/WD-webdriver2-20250306/#element-click)
 --
 -- @POST 	\/session\/{session id}\/element\/{element id}\/click 	Element Click@
 elementClick :: SessionId -> ElementId -> W3Spec ()
@@ -923,7 +920,7 @@ elementClick sessionId elementId = PostEmpty "Element Click" (elementUri1 sessio
 --
 -- Return a spec to clear an element given a 'SessionId' and 'ElementId'.
 --
--- [spec](https://www.w3.org/TR/2025/WD-webdriver2-20250210/#element-clear)
+-- [spec](https://www.w3.org/TR/2025/WD-webdriver2-20250306/#element-clear)
 --
 -- @POST 	\/session\/{session id}\/element\/{element id}\/clear 	Element Clear@
 elementClear :: SessionId -> ElementId -> W3Spec ()
@@ -933,7 +930,7 @@ elementClear sessionId elementId = PostEmpty "Element Clear" (elementUri1 sessio
 --
 -- Return a spec to send keys to an element given a 'SessionId', 'ElementId', and keys to send.
 --
--- [spec](https://www.w3.org/TR/2025/WD-webdriver2-20250210/#element-send-keys)
+-- [spec](https://www.w3.org/TR/2025/WD-webdriver2-20250306/#element-send-keys)
 --
 -- @POST 	\/session\/{session id}\/element\/{element id}\/value 	Element Send Keys@
 elementSendKeys :: SessionId -> ElementId -> Text -> W3Spec ()
@@ -943,7 +940,7 @@ elementSendKeys sessionId elementId keysToSend = Post "Element Send Keys" (eleme
 --
 -- Return a spec to take a screenshot of an element given a 'SessionId' and 'ElementId'.
 --
--- [spec](https://www.w3.org/TR/2025/WD-webdriver2-20250210/#take-element-screenshot)
+-- [spec](https://www.w3.org/TR/2025/WD-webdriver2-20250306/#take-element-screenshot)
 --
 -- @GET 	\/session\/{session id}\/element\/{element id}\/screenshot 	Take Element Screenshot@
 takeElementScreenshot :: SessionId -> ElementId -> W3Spec Text
@@ -955,7 +952,7 @@ takeElementScreenshot sessionId elementId = Get "Take Element Screenshot" (eleme
 --
 -- Return a spec to find an element from the shadow root given a 'SessionId', 'ElementId', and 'Selector'.
 --
--- [spec](https://www.w3.org/TR/2025/WD-webdriver2-20250210/#find-element-from-shadow-root)
+-- [spec](https://www.w3.org/TR/2025/WD-webdriver2-20250306/#find-element-from-shadow-root)
 --
 -- @POST 	\/session\/{session id}\/shadow\/{shadow id}\/element 	Find Element From Shadow Root@
 findElementFromShadowRoot :: SessionId -> ElementId -> Selector -> W3Spec ElementId
@@ -965,7 +962,7 @@ findElementFromShadowRoot sessionId shadowId selector = Post "Find Element From 
 --
 -- Return a spec to find elements from the shadow root given a 'SessionId', 'ElementId', and 'Selector'.
 --
--- [spec](https://www.w3.org/TR/2025/WD-webdriver2-20250210/#find-elements-from-shadow-root)
+-- [spec](https://www.w3.org/TR/2025/WD-webdriver2-20250306/#find-elements-from-shadow-root)
 --
 -- @POST 	\/session\/{session id}\/shadow\/{shadow id}\/elements 	Find Elements From Shadow Root@
 findElementsFromShadowRoot :: SessionId -> ElementId -> Selector -> W3Spec [ElementId]
@@ -976,7 +973,7 @@ findElementsFromShadowRoot sessionId shadowId selector = Post "Find Elements Fro
 findElement' :: SessionId -> Value -> W3Spec ElementId
 findElement' sessionRef selector = Post "Find Element" (sessionUri1 sessionRef "element") selector parseElementRef
 
--- | [spec](https://www.w3.org/TR/2025/WD-webdriver2-20250210/#dfn-get-element-rect)
+-- | [spec](https://www.w3.org/TR/2025/WD-webdriver2-20250306/#dfn-get-element-rect)
 data WindowRect = Rect
   { x :: Int,
     y :: Int,
@@ -1110,7 +1107,7 @@ parseElementsRef r =
 lookup :: Key -> Value -> Result Value
 lookup k v =
   v & \case
-    Object o -> AKM.lookup k o & maybe (Error ("the key: " <> show k <> "does not exist in the object:\n" <> jsonPrettyString v)) pure
+    Object o -> AKM.lookup k o & maybe (A.Error ("the key: " <> show k <> "does not exist in the object:\n" <> jsonPrettyString v)) pure
     _ -> aesonTypeError "Object" v
 
 lookupTxt :: Key -> Value -> Result Text
@@ -1130,10 +1127,10 @@ aesonTypeErrorMessage :: Text -> Value -> Text
 aesonTypeErrorMessage t v = "Expected Json Value to be of type: " <> t <> "\nbut got:\n" <> jsonToText v
 
 aesonTypeError :: Text -> Value -> Result a
-aesonTypeError t v = Error . unpack $ aesonTypeErrorMessage t v
+aesonTypeError t v = A.Error . unpack $ aesonTypeErrorMessage t v
 
 aesonTypeError' :: Text -> Text -> Value -> Result a
-aesonTypeError' typ info v = Error . unpack $ aesonTypeErrorMessage typ v <> "\n" <> info
+aesonTypeError' typ info v = A.Error . unpack $ aesonTypeErrorMessage typ v <> "\n" <> info
 
 asText :: Value -> Result Text
 asText = \case
@@ -1225,7 +1222,7 @@ keysJson :: Text -> Value
 keysJson keysToSend = object ["text" .= keysToSend]
 
 -- actions
--- | [spec](https://www.w3.org/TR/2025/WD-webdriver2-20250210/#actions)
+-- | [spec](https://www.w3.org/TR/2025/WD-webdriver2-20250306/#actions)
 newtype Actions = MkActions {actions :: [Action]}
 
 actionsToJson :: Actions -> Value
@@ -1234,7 +1231,7 @@ actionsToJson MkActions {actions} =
     [ "actions" .= actions
     ]
 
--- | [spec](https://www.w3.org/TR/2025/WD-webdriver2-20250210/#actions)
+-- | [spec](https://www.w3.org/TR/2025/WD-webdriver2-20250306/#actions)
 data KeyAction
   = PauseKey {duration :: Maybe Int} -- ms
   | KeyDown
@@ -1264,7 +1261,7 @@ instance ToJSON KeyAction where
       ]
 
 -- Pointer subtypes
--- | [spec](https://www.w3.org/TR/2025/WD-webdriver2-20250210/#actions)
+-- | [spec](https://www.w3.org/TR/2025/WD-webdriver2-20250306/#actions)
 data Pointer
   = Mouse
   | Pen
@@ -1278,7 +1275,7 @@ instance ToJSON Pointer where
   toJSON :: Pointer -> Value
   toJSON = mkLwrTxt
 
--- | [spec](https://www.w3.org/TR/2025/WD-webdriver2-20250210/#actions)
+-- | [spec](https://www.w3.org/TR/2025/WD-webdriver2-20250306/#actions)
 data PointerOrigin
   = Viewport
   | OriginPointer
@@ -1293,7 +1290,7 @@ instance ToJSON PointerOrigin where
     OriginElement (Element id') -> object ["element" .= id']
 
 
--- | [spec](https://www.w3.org/TR/2025/WD-webdriver2-20250210/#actions)
+-- | [spec](https://www.w3.org/TR/2025/WD-webdriver2-20250306/#actions)
 data Action
   = NoneAction
       { id :: Text,
@@ -1322,7 +1319,7 @@ data Action
       }
   deriving (Show, Eq)
 
--- | [spec](https://www.w3.org/TR/2025/WD-webdriver2-20250210/#actions)
+-- | [spec](https://www.w3.org/TR/2025/WD-webdriver2-20250306/#actions)
 data WheelAction
   = PauseWheel {duration :: Maybe Int} -- ms
   | Scroll
@@ -1357,7 +1354,7 @@ instance ToJSON WheelAction where
               "deltaY" .= deltaY
             ]
 
--- | [spec](https://www.w3.org/TR/2025/WD-webdriver2-20250210/#actions)
+-- | [spec](https://www.w3.org/TR/2025/WD-webdriver2-20250306/#actions)
 data PointerAction
   = PausePointer {duration :: Maybe Int} -- ms
   | Up

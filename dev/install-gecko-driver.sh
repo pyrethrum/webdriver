@@ -5,7 +5,7 @@ set -e
 
 # Variables
 # FIREFOX_URL="https://download.mozilla.org/?product=firefox-latest&os=linux64&lang=en-US"
-GECKODRIVER_VERSION="v0.35.0"
+GECKODRIVER_VERSION="v0.36.0"
 GECKODRIVER_URL="https://github.com/mozilla/geckodriver/releases/download/$GECKODRIVER_VERSION/geckodriver-$GECKODRIVER_VERSION-linux64.tar.gz"
 
 # Install dependencies
@@ -15,7 +15,7 @@ sudo apt-get install -y wget tar
 
 # Download and install GeckoDriver
 wget $GECKODRIVER_URL -O /tmp/geckodriver.tar.gz
-tar -xzf /tmp/geckodriver.tar.gz -C /tmp
+tar -xaf /tmp/geckodriver.tar.gz -C /tmp
 sudo mv /tmp/geckodriver /usr/local/bin/
 sudo chown vscode:vscode /usr/local/bin/geckodriver
 sudo chmod +x /usr/local/bin/geckodriver

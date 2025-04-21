@@ -1,14 +1,16 @@
 module WebDriverE2EDemoTest where
 
+-- minFirefoxSession,
+
+import Control.Exception (bracket)
 import Control.Monad (forM_)
 import Data.Aeson (Value (..))
+import Data.Function ((&))
+import Data.Functor ((<&>))
 import Data.Set qualified as Set
 import Data.Text (Text, isInfixOf)
 import Data.Text.IO qualified as TIO
--- minFirefoxSession,
-
-import Test.Tasty.HUnit as HUnit (Assertion, HasCallStack, assertBool, (@=?))
-import WebDriverPreCore.Internal.Utils (txt)
+import Data.Time.Clock.POSIX (getPOSIXTime)
 import E2EConst
   ( alertsUrl,
     anyElmCss,
@@ -28,18 +30,23 @@ import E2EConst
     loginUrl,
     midFrameCss,
     midFrameTitle,
+    second,
+    seconds,
     shadowDomUrl,
     theInternet,
     topFrameCSS,
     userNameCss,
-    second, 
-    seconds
   )
+import GHC.IO (catchAny)
 import IOAPI
   ( Action (..),
     Actions (..),
+    BrowserName (..),
+    Capabilities (..),
     Cookie (..),
+    DriverStatus (..),
     FrameReference (..),
+    FullCapabilities (..),
     KeyAction (..),
     Pointer (..),
     PointerAction (..),
@@ -48,6 +55,7 @@ import IOAPI
     Selector (..),
     SessionId (..),
     Timeouts (..),
+    VendorSpecific (..),
     WheelAction (..),
     WindowHandleSpec (..),
     WindowRect (..),
@@ -96,6 +104,7 @@ import IOAPI
     isElementEnabled,
     isElementSelected,
     maximizeWindow,
+    minCapabilities,
     minFirefoxSession,
     minimizeWindow,
     navigateTo,
@@ -115,136 +124,61 @@ import IOAPI
     switchToWindow,
     takeElementScreenshot,
     takeScreenshot,
-    Capabilities(..),
-    FullCapabilities(..),
-    VendorSpecific(..), 
-    DriverStatus (..), 
-    minCapabilities, 
-    BrowserName (..)
   )
+import Test.Tasty.HUnit as HUnit (Assertion, HasCallStack, assertBool, (@=?))
+import WebDriverPreCore (alwaysMatchCapabilities, minChromeCapabilities, minFullCapabilities)
+import WebDriverPreCore.Internal.Utils (txt)
 import Prelude hiding (log)
-import Control.Exception (bracket)
-import GHC.IO (catchAny)
-import WebDriverPreCore.Spec (minFullCapabilities)
 
-useCustomProfile :: Bool
-useCustomProfile = True
+-- #################### Config ######################
 
-logTxt :: Text -> IO ()
-logTxt = TIO.putStrLn
+-- set to False for Chrome
+useFirefox :: Bool
+useFirefox = True
 
-log :: Text -> Text -> IO ()
-log l t = logTxt $ l <> ": " <> t
+-- see readme
+customFirefoxProfilePath :: Maybe Text
+customFirefoxProfilePath = Nothing
+-- customFirefoxProfilePath = Just "./webdriver-examples/driver-demo-e2e/.profile/WebDriverProfile"
 
-logShow :: (Show a) => Text -> a -> IO ()
-logShow l = log l . txt
-
-logM :: Text -> IO Text -> IO ()
-logM l t = t >>= log l
-
-logShowM :: (Show a) => Text -> IO a -> IO ()
-logShowM l t = t >>= logShow l
-
-sleep1 :: IO ()
-sleep1 = sleepMs $ 1 * second
-
-sleep2 :: IO ()
-sleep2 = sleepMs $ 2 * seconds
-
-{-
-This fails on my machine with the following error:
-
-```Your Firefox profile cannot be loaded. It may be missing or inaccessible.```
-
-This appears to be due to the profile being unpacked into tmp and the driver not being able to access it.
-If I copy the unpacked profile to "./webdriver-examples/driver-demo-e2e/.profile/FirefoxWebDriverProfile" and reference in
-capabilites as follows see (capsWithCustomFirefoxProfile):
-
-```firefoxArgs = Just ["-profile", "./webdriver-examples/driver-demo-e2e/.profile/FirefoxWebDriverProfile"]```
-
-then it works.
--}
-capsWithCustomFirefoxProfileNotWorking :: IO Capabilities
-capsWithCustomFirefoxProfileNotWorking = do
-  profile <- encodeFileToBase64 "./webdriver-examples/driver-demo-e2e/FirefoxWebDriverProfile.zip"
-  pure $
-    (minCapabilities Firefox)
-      { vendorSpecific =
-          Just
-            FirefoxOptions
-              { firefoxArgs = Nothing,
-                firefoxBinary = Nothing,
-                firefoxProfile = Just profile
-              }
-      }
-
-{- 
-this works when the profile in: ./webdriver-examples/driver-demo-e2e/FirefoxWebDriverProfile.zip
-=> is unzipped to "./webdriver-examples/driver-demo-e2e/.profile/FirefoxWebDriverProfile"
-before running any tests
--}
-capsWithCustomFirefoxProfile :: IO Capabilities
-capsWithCustomFirefoxProfile = do
-  pure $ 
-    (minCapabilities Firefox)
-      { vendorSpecific =
-          Just
-            FirefoxOptions
-              { -- this works when the profile is unpacked to here
-              -- TODO: needs to be different based on WD - needs logic here:
-                -- check wd
-                -- caculate expected path of profle
-                -- unzip if .profile exists and Profile doesn't
-                -- fail if .profile and zip does not exist
-                  
-                -- running in root dir
-                firefoxArgs = Just ["-profile", "./webdriver-examples/driver-demo-e2e/.profile/FirefoxWebDriverProfile"],
-                -- runing in examples dir
-                -- firefoxArgs = Just ["-profile", "./driver-demo-e2e/.profile/FirefoxWebDriverProfile"],
-                firefoxBinary = Nothing,
-                firefoxProfile = Nothing
-              }
-      }
-
-mkExtendedTimeoutsSession :: IO SessionId
-mkExtendedTimeoutsSession = do
-  ses <-
-    if useCustomProfile
-      then do
-        profileBase64 <- capsWithCustomFirefoxProfile
-        newSession $ MkFullCapabilities 
-            { alwaysMatch = Just profileBase64,
-              firstMatch = []
-            }
-      else
-        -- this was working in the dev-container but failing locally
-        minFirefoxSession
-
-  setTimeouts ses $
-    MkTimeouts
-      { pageLoad = Just $ 30 * seconds,
-        script = Just $ 11 * seconds,
-        implicit = Just $ 12 * seconds
-      }
-  pure ses
-
--- todo: test extras - split off
-
-(===) ::
-  (Eq a, Show a, HasCallStack) =>
-  -- | The actual value
-  a ->
-  -- | The expected value
-  a ->
-  Assertion
-(===) = (@=?)
+-- #################### The Tests ######################
 
 -- >>> unit_demoSessionDriverStatus
--- *** Exception: user error (WebDriver error thrown:
---  WebDriverError {error = InvalidArgument, description = "The arguments passed to a command are either invalid or malformed", httpResponse = MkHttpResponse {statusCode = 400, statusMessage = "Bad Request", body = Object (fromList [("value",Object (fromList [("error",String "invalid argument"),("message",String "missing field `capabilities`"),("stacktrace",String "")]))])}})
 unit_demoSessionDriverStatus :: IO ()
 unit_demoSessionDriverStatus = do
-  ses <- mkExtendedTimeoutsSession
+  ses <-
+    -- demo only
+    -- helper functions would oterwise always be used to simplify session creation
+    newSession $
+      MkFullCapabilities
+        { alwaysMatch =
+            Just $
+              MkCapabilities
+                { browserName = Just $ if useFirefox then Firefox else Chrome,
+                  browserVersion = Nothing,
+                  platformName = Nothing,
+                  acceptInsecureCerts = Nothing,
+                  pageLoadStrategy = Nothing,
+                  proxy = Nothing,
+                  timeouts = Nothing,
+                  strictFileInteractability = Nothing,
+                  unhandledPromptBehavior = Nothing,
+                  vendorSpecific =
+                    if
+                      | useFirefox ->
+                          customFirefoxProfilePath
+                            <&> \firefoxProfilePath ->
+                              FirefoxOptions
+                                { -- requires a path to the profile directory
+                                  firefoxArgs = Just ["-profile", firefoxProfilePath],
+                                  firefoxBinary = Nothing,
+                                  firefoxProfile = Nothing,
+                                  firefoxLog = Nothing
+                                }
+                      | otherwise -> Nothing
+                },
+          firstMatch = []
+        }
   log "new session" $ txt ses
   s <- status
   Ready === s
@@ -252,8 +186,6 @@ unit_demoSessionDriverStatus = do
   deleteSession ses
 
 -- >>> unit_demoSendKeysClear
--- *** Exception: user error (WebDriver error thrown:
---  WebDriverError {error = InvalidArgument, description = "The arguments passed to a command are either invalid or malformed", httpResponse = MkHttpResponse {statusCode = 400, statusMessage = "Bad Request", body = Object (fromList [("value",Object (fromList [("error",String "invalid argument"),("message",String "missing field `capabilities`"),("stacktrace",String "")]))])}})
 unit_demoSendKeysClear :: IO ()
 unit_demoSendKeysClear = withSession \ses -> do
   navigateTo ses loginUrl
@@ -268,8 +200,6 @@ unit_demoSendKeysClear = withSession \ses -> do
   sleep2
 
 -- >>> unit_demoForwardBackRefresh
--- *** Exception: user error (WebDriver error thrown:
---  WebDriverError {error = InvalidArgument, description = "The arguments passed to a command are either invalid or malformed", httpResponse = MkHttpResponse {statusCode = 400, statusMessage = "Bad Request", body = Object (fromList [("value",Object (fromList [("error",String "invalid argument"),("message",String "missing field `capabilities`"),("stacktrace",String "")]))])}})
 unit_demoForwardBackRefresh :: IO ()
 unit_demoForwardBackRefresh = withSession \ses -> do
   navigateTo ses theInternet
@@ -403,10 +333,16 @@ unit_demoTimeouts = withSession \ses -> do
 -- >>> unit_demoWindowRecs
 unit_demoWindowRecs :: IO ()
 unit_demoWindowRecs = withSession \ses -> do
-  let wr = Rect 500 300 500 500
+  let wr =
+        Rect
+          { x = 500,
+            y = 300,
+            width = 600,
+            height = 400
+          }
   logShowM "set window rect" $ setWindowRect ses wr
-  r <- getWindowRect ses
   sleepMs $ 2 * seconds
+  r <- getWindowRect ses
   logShow "window rect" r
 
   wr === r
@@ -570,93 +506,95 @@ chkHasElms els = assertBool "elements should be found" $ not (null els)
 bottomFameExists :: SessionId -> IO Bool
 bottomFameExists ses = not . null <$> findElements ses bottomFrameCss
 
-
 --- >>> unit_demoExecuteScript
 unit_demoExecuteScript :: IO ()
-unit_demoExecuteScript = 
+unit_demoExecuteScript =
   withSession \ses -> do
-  navigateTo ses theInternet
-  logShowM "executeScript" $ executeScript ses "return arguments[0];" [String "Hello from Pyrethrum!", Number 2000]
-  sleep2
-  logTxt "executing asynch alert"
-  executeScriptAsync ses "setTimeout(() => alert('Hello from Pyrethrum!'), 2000); return 5;" []
-  logTxt "after asynch alert"
-  sleep2
+    navigateTo ses theInternet
+    logShowM "executeScript" $ executeScript ses "return arguments[0];" [String "Hello from Pyrethrum!", Number 2000]
+    sleep2
+    logTxt "executing asynch alert"
+    executeScriptAsync ses "setTimeout(() => alert('Hello from Pyrethrum!'), 2000); return 5;" []
+    logTxt "after asynch alert"
+    sleep2
 
+epochSeconds :: IO Int
+epochSeconds = round <$> getPOSIXTime
 
 -- >>> unit_demoCookies
 unit_demoCookies :: IO ()
-unit_demoCookies = 
+unit_demoCookies =
   withSession \ses -> do
-  navigateTo ses theInternet
-  logShowM "cookies" $ getAllCookies ses
+    navigateTo ses theInternet
+    logShowM "cookies" $ getAllCookies ses
 
-  logShowM "getNamedCookie: optimizelyEndUserId" $ getNamedCookie ses "optimizelyEndUserId"
+    logShowM "getNamedCookie: optimizelyEndUserId" $ getNamedCookie ses "optimizelyEndUserId"
+    epocSecs <- epochSeconds
 
-  let myCookie =
-        MkCookie
-          { name = "myCookie",
-            value = "myCookieValue",
-            path = Just "/",
-            domain = Just ".the-internet.herokuapp.com",
-            secure = Just True,
-            sameSite = Just Strict,
-            httpOnly = Just False,
-            expiry = Just 2772072677
-          }
+    let myCookie =
+          MkCookie
+            { name = "myCookie",
+              value = "myCookieValue",
+              path = Just "/",
+              domain = Just ".the-internet.herokuapp.com",
+              secure = Just True,
+              sameSite = Just Strict,
+              httpOnly = Just False,
+              -- expire in 10 mins (Chrome has a 400 day limit)
+              expiry = Just $ epocSecs + 600
+            }
 
-  logShow "cookie to add" myCookie
-  logShowM "addCookie" $ addCookie ses myCookie
-  logShowM "cookies after add" $ getAllCookies ses
+    logShow "cookie to add" myCookie
+    logShowM "addCookie" $ addCookie ses myCookie
+    logShowM "cookies after add" $ getAllCookies ses
 
-  myCookie' <- getNamedCookie ses "myCookie"
-  myCookie === myCookie'
+    myCookie' <- getNamedCookie ses "myCookie"
+    myCookie === myCookie'
 
-  logShowM "deleteCookie (myCookie)" $ deleteCookie ses "myCookie"
-  afterRemove <- getAllCookies ses
-  logShow "cookies after delete" afterRemove
+    logShowM "deleteCookie (myCookie)" $ deleteCookie ses "myCookie"
+    afterRemove <- getAllCookies ses
+    logShow "cookies after delete" afterRemove
 
-  assertBool "cookie should be removed" $ not (any ((== "myCookie") . (.name)) afterRemove)
-  assertBool "there still should be cookies in the list" $ not (null afterRemove)
+    assertBool "cookie should be removed" $ not (any ((== "myCookie") . (.name)) afterRemove)
+    assertBool "there still should be cookies in the list" $ not (null afterRemove)
 
-  logShowM "deleteAllCookies" $ deleteAllCookies ses
-  afterDeleteAll <- getAllCookies ses
-  logShow "cookies after delete all" afterDeleteAll
-  assertBool "all cookies should be removed" $ null afterDeleteAll
-
+    logShowM "deleteAllCookies" $ deleteAllCookies ses
+    afterDeleteAll <- getAllCookies ses
+    logShow "cookies after delete all" afterDeleteAll
+    assertBool "all cookies should be removed" $ null afterDeleteAll
 
 -- >>> unit_demoAlerts
 unit_demoAlerts :: IO ()
-unit_demoAlerts = 
+unit_demoAlerts =
   withSession \ses -> do
-  navigateTo ses alertsUrl
+    navigateTo ses alertsUrl
 
-  alert <- findElement ses jsAlertXPath
-  elementClick ses alert
+    alert <- findElement ses jsAlertXPath
+    elementClick ses alert
 
-  sleep2
-  at <- getAlertText ses
-  logShow "get alert text" at
-  "I am a JS Alert" === at
+    sleep2
+    at <- getAlertText ses
+    logShow "get alert text" at
+    "I am a JS Alert" === at
 
-  sleep2
-  logShowM "acceptAlert" $ acceptAlert ses
+    sleep2
+    logShowM "acceptAlert" $ acceptAlert ses
 
-  sleep1
-  prompt <- findElement ses jsPromptXPath
-  elementClick ses prompt
+    sleep1
+    prompt <- findElement ses jsPromptXPath
+    elementClick ses prompt
 
-  sleep1
-  logShowM "sendAlertText: I am Dave" $ sendAlertText ses "I am Dave"
+    sleep1
+    logShowM "sendAlertText: I am Dave" $ sendAlertText ses "I am Dave"
 
-  sleep2
-  dismissAlert ses
+    sleep2
+    dismissAlert ses
 
-  sleep1
+    sleep1
 
 -- >>> unit_demoPointerNoneActions
 unit_demoPointerNoneActions :: IO ()
-unit_demoPointerNoneActions = 
+unit_demoPointerNoneActions =
   withSession \ses -> do
     navigateTo ses theInternet
 
@@ -734,7 +672,7 @@ unit_demoPointerNoneActions =
 
 -- >>> unit_demoKeyAndReleaseActions
 unit_demoKeyAndReleaseActions :: IO ()
-unit_demoKeyAndReleaseActions = 
+unit_demoKeyAndReleaseActions =
   withSession \ses -> do
     navigateTo ses loginUrl
     usr <- findElement ses userNameCss
@@ -804,7 +742,7 @@ unit_demoWheelActions = withSession \ses -> do
   logTxt "wheel actions"
   performActions ses wheel
   sleep2
- 
+
 -- >>> unit_demoError
 unit_demoError :: IO ()
 unit_demoError = withSession \ses -> do
@@ -821,22 +759,124 @@ unit_demoError = withSession \ses -> do
   navigateTo ses inputsUrl
 
   -- if the runner has mapped the error as expected (using parseWebDriverError) we expect it to rethrow the text of the mapped webdriver error
-  -- including  the text: 
+  -- including  the text:
   -- "WebDriverError {error = NoSuchElement, description = "An element could not be located on the page using the given search parameters"
   -- other libraries will use the error mapping function in more sophisticated ways
-  catchAny 
-    (do 
-      findElement ses $ CSS "#id-that-does-not-exist-on-this-page"
-      error "should not get here - no such element"
-    ) $ 
-    \e -> do
+  catchAny
+    ( do
+        findElement ses $ CSS "#id-that-does-not-exist-on-this-page"
+        error "should not get here - no such element"
+    )
+    $ \e -> do
       logShow "caught error" e
       let errTxt = txt e
           expectedText = "WebDriverError {error = NoSuchElement, description = \"An element could not be located on the page using the given search parameters\""
-      assertBool "NoSuchElement error should be mapped" $ expectedText `isInfixOf` errTxt        
+      assertBool "NoSuchElement error should be mapped" $ expectedText `isInfixOf` errTxt
+
+-- #################### Utils ######################
+
+session :: IO SessionId
+session =
+  if useFirefox
+    then mkExtendedFirefoxTimeoutsSession
+    else mkExtendedChromeTimeoutsSession
 
 withSession :: (SessionId -> IO ()) -> IO ()
-withSession = bracket mkExtendedTimeoutsSession deleteSession
+withSession =
+  bracket session deleteSession
 
+{-
+This fails on my machine with the following error:
 
+```Your Firefox profile cannot be loaded. It may be missing or inaccessible.```
 
+This appears to be due to the profile being unpacked into tmp and the driver not being able to access it.
+If I copy the unpacked profile to "./webdriver-examples/driver-demo-e2e/.profile/FirefoxWebDriverProfile" and reference in
+capabilites as follows see (capsWithCustomFirefoxProfile):
+
+```firefoxArgs = Just ["-profile", "./webdriver-examples/driver-demo-e2e/.profile/FirefoxWebDriverProfile"]```
+
+then it works.
+-}
+capsWithCustomFirefoxProfileNotWorking :: IO Capabilities
+capsWithCustomFirefoxProfileNotWorking = do
+  profile <- encodeFileToBase64 "./webdriver-examples/driver-demo-e2e/FirefoxWebDriverProfile.zip"
+  pure $
+    (minCapabilities Firefox)
+      { vendorSpecific =
+          Just
+            FirefoxOptions
+              { firefoxArgs = Nothing,
+                firefoxBinary = Nothing,
+                firefoxProfile = Just profile,
+                firefoxLog = Nothing
+              }
+      }
+
+capsWithCustomFirefoxProfile :: Text -> Capabilities
+capsWithCustomFirefoxProfile firefoxProfilePath =
+  (minCapabilities Firefox)
+    { vendorSpecific =
+        Just
+          FirefoxOptions
+            { -- requires a path to the profile directory
+              firefoxArgs = Just ["-profile", firefoxProfilePath],
+              firefoxBinary = Nothing,
+              firefoxProfile = Nothing,
+              firefoxLog = Nothing
+            }
+    }
+
+mkExtendedFirefoxTimeoutsSession :: IO SessionId
+mkExtendedFirefoxTimeoutsSession =
+  customFirefoxProfilePath
+    & maybe
+      minFirefoxSession
+      (\profilepath -> newSession . alwaysMatchCapabilities $ capsWithCustomFirefoxProfile profilepath)
+    >>= extendTimeouts
+
+mkExtendedChromeTimeoutsSession :: IO SessionId
+mkExtendedChromeTimeoutsSession =
+  newSession minChromeCapabilities >>= extendTimeouts
+
+extendTimeouts :: SessionId -> IO SessionId
+extendTimeouts ses = do
+  setTimeouts ses $
+    MkTimeouts
+      { pageLoad = Just $ 30 * seconds,
+        script = Just $ 11 * seconds,
+        implicit = Just $ 12 * seconds
+      }
+  pure ses
+
+logTxt :: Text -> IO ()
+logTxt = TIO.putStrLn
+
+log :: Text -> Text -> IO ()
+log l t = logTxt $ l <> ": " <> t
+
+logShow :: (Show a) => Text -> a -> IO ()
+logShow l = log l . txt
+
+logM :: Text -> IO Text -> IO ()
+logM l t = t >>= log l
+
+logShowM :: (Show a) => Text -> IO a -> IO ()
+logShowM l t = t >>= logShow l
+
+sleep1 :: IO ()
+sleep1 = sleepMs $ 1 * second
+
+sleep2 :: IO ()
+sleep2 = sleepMs $ 2 * seconds
+
+-- todo: test extras - split off
+
+(===) ::
+  (Eq a, Show a, HasCallStack) =>
+  -- | The actual value
+  a ->
+  -- | The expected value
+  a ->
+  Assertion
+(===) = (@=?)

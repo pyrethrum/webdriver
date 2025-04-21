@@ -1,22 +1,23 @@
 cabal-version: 3.12
 
 name:           webdriver-examples
-version:        0.0.0.0
+version:        0.0.0.2
 homepage:       https://github.com/pyrethrum/webdriver/webdriver-precore#readme
 bug-reports:    https://github.com/pyrethrum/webdriver/issues
 author:         John Walker, Adrian Glouftsis
 maintainer:     theghostjw@gmail.com
 copyright:      2025 John Walker, Adrian Glouftsis
 license:        BSD-3-Clause
+category:       WebDriver, Demo
 license-file:   LICENSE
 build-type:     Simple
-extra-source-files:
+extra-doc-files: 
     README.md
     ChangeLog.md
 
 tested-with: GHC == { 9.8.2, 9.10.1 }
 
-synopsis:       A test suite that demonstrates how to use the webdriver-precore library when provided with a basic runner.
+synopsis:       A test suite that demonstrates how to use the webdriver-precore library
 
 description:
   The E2E tests in WebDriverE2EDemoTest module demonstrate how the webdriver-precore might be used in a library that provides a basic runner.
@@ -81,7 +82,6 @@ common commonGhcOptions
   ghc-options:
     -fmax-pmcheck-models=10000000 
     -ferror-spans 
-    -O2 
     -fprint-potential-instances 
     -Wall 
     -Wcompat 
@@ -111,6 +111,7 @@ test-suite driver-demo-e2e
     , aeson-pretty
     , base
     , base64
+    , bytestring
     , directory
     , text
     , req
@@ -118,14 +119,15 @@ test-suite driver-demo-e2e
     , tasty
     , tasty-hunit
     , tasty-discover
-    , bytestring
+    , time
     , webdriver-precore
   other-modules:
       E2EConst
     , IOAPI
     , IORunner
-    , IORunnerMinimal
+    , IORunnerMinimalForDocs
     , IOUtils
     , WebDriverE2EDemoTest
   build-tool-depends:
     tasty-discover:tasty-discover
+  default-language: Haskell2010

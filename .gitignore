@@ -3,5 +3,12 @@
 dist-newstyle/
 *~
 *.hie
+*.out
 *.log
-**/.profile
+
+# Ignore all files in the .profile directory
+**/.profile/*
+
+# keep this file to ensure directory is checked in
+!**/.profile/.gitkeep
+

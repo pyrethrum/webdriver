@@ -20,7 +20,7 @@
       "problemMatcher": []
     },
     {
-      "label": "test",
+      "label": "test all",
       "type": "shell",
       "command": "cabal",
       "args": [
@@ -36,10 +36,28 @@
       "problemMatcher": []
     },
     {
+      "label": "test precore",
+      "type": "shell",
+      "command": "cabal",
+      "args": [
+        "test",
+        "webdriver-precore",
+        "--test-show-details=streaming"
+      ],
+      "presentation": {
+        "reveal": "always",
+        "panel": "shared",
+        "showReuseMessage": false
+      },
+      "problemMatcher": []
+    },
+    {
       "label": "launch gecko driver",
       "type": "shell",
-      "command": "pkill -f geckodriver || true  && geckodriver --log trace &",
-      "isBackground": true,
+      "options": {
+        "cwd": "${workspaceFolder}/dev"
+      },
+      "command": "bash start-geckodriver.sh",
       "presentation": {
         "reveal": "always",
         "panel": "new",
@@ -57,6 +75,23 @@
         // open does not work in task but does in terminal
         "--haddock-option=--hyperlink-source",
         "--open"
+      ],
+      "presentation": {
+        "reveal": "always",
+        "panel": "new",
+        "showReuseMessage": true
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "upload to hackage",
+      "type": "shell",
+      "options": {
+        "cwd": "${workspaceFolder}/webdriver-precore"
+      },
+      "command": "bash",
+      "args": [
+        "../dev/upload-package.sh",
       ],
       "presentation": {
         "reveal": "always",
