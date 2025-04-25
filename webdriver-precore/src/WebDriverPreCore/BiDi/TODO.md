@@ -1,11 +1,11 @@
 # BiDi
 
 ## old directory
-- [ ] Http dir
-- [ ] rename modules
-- [ ] compile
-- [ ] get tests demo working 
-- [ ] fix tasks
+- [X] Http dir
+- [X] rename modules
+- [X] compile
+- [X] get tests demo working 
+- [X] fix tasks
 
 
 ## new directory
