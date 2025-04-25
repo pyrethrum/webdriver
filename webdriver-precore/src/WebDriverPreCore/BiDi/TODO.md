@@ -9,11 +9,13 @@
 
 
 ## new directory
-- [ ] BidiSpec Module - autogenerate to start wirh
+- [X] BidiSpec Module 
+- [X] Autogenerate to start with
+- [ ] Fix and demo
 - [ ] BidiExamples - the Internet
-
 
 ## finally 
 - [ ] update READMEs
 - [ ] check docs urls
 - [ ] check all licence fiiles
+- [ ] add update method to release notes also branch into pyrethrum Web - the ddl genrator
