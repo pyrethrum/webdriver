@@ -33,7 +33,7 @@ import Network.HTTP.Req as R
     (/:),
   )
 import WebDriverPreCore.Http.Internal.Utils (prettyPrintJson, txt)
-import WebDriverPreCore
+import WebDriverPreCore.Http
   ( ErrorClassification (..),
     HttpResponse (..),
     W3Spec (..),

@@ -48,7 +48,7 @@ import Network.HTTP.Req as R
     runReq,
     (/:),
   )
-import WebDriverPreCore
+import WebDriverPreCore.Http
   ( ErrorClassification (..),
     HttpResponse (..),
     UrlPath (..),
