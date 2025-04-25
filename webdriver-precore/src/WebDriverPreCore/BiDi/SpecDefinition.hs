@@ -16,6 +16,8 @@ import Data.Scientific (Scientific)
 import GHC.Generics (Generic)
 import Data.Maybe (fromMaybe)
 
+-- https://www.w3.org/TR/2025/WD-webdriver-bidi-20250414/
+
 -- | Common types used across commands
 
 -- | BiDi command IDs are sequential integers
@@ -341,7 +343,7 @@ data EvaluateParams = EvaluateParams
   , evalExpression :: Text
   , evalAwaitPromise :: Maybe Bool
   , evalResultOwnership :: Maybe Text
-  , evalSerializationOptions :: Maybe Value -- Implementation for serialization options
+  , evalSerializationOptions :: Maybe Value
   } deriving (Show, Eq, Generic)
 
 instance ToJSON EvaluateParams where
@@ -377,7 +379,7 @@ data CallFunctionParams = CallFunctionParams
   , callArguments :: Maybe [Value]
   , callAwaitPromise :: Maybe Bool
   , callResultOwnership :: Maybe Text
-  , callSerializationOptions :: Maybe Value -- Implementation for serialization options
+  , callSerializationOptions :: Maybe Value
   } deriving (Show, Eq, Generic)
 
 instance ToJSON CallFunctionParams where
@@ -526,7 +528,7 @@ mkCloseBrowser =
 
 -- | browser.createUserContext command
 data CreateUserContextParams = CreateUserContextParams
-  { userContextOptions :: Maybe Value -- Raw options value
+  { userContextOptions :: Maybe Value
   } deriving (Show, Eq, Generic)
 
 instance ToJSON CreateUserContextParams where
@@ -590,4 +592,241 @@ mkRemoveUserContext :: RemoveUserContextParams -> (BidiRequest, Value -> Parser 
 mkRemoveUserContext params =
   ( BidiRequest 0 "browser.removeUserContext" (Just $ toJSON params)
   , \_ -> pure ()
+  )
+
+-- | browsingContext.close command
+data CloseContextParams = CloseContextParams
+  { closeContextId :: Text
+  } deriving (Show, Eq, Generic)
+
+instance ToJSON CloseContextParams where
+  toJSON CloseContextParams{..} = object
+    [ "context" .= closeContextId ]
+
+mkCloseContext :: CloseContextParams -> (BidiRequest, Value -> Parser ())
+mkCloseContext params =
+  ( BidiRequest 0 "browsingContext.close" (Just $ toJSON params)
+  , \_ -> pure ()
+  )
+
+-- | browsingContext.print command
+data PrintParams = PrintParams
+  { printContextId :: Text
+  , printBackground :: Maybe Bool
+  , printMargin :: Maybe Value
+  , printOrientation :: Maybe Text
+  , printPage :: Maybe Value
+  , printScale :: Maybe Double
+  , printShrinkToFit :: Maybe Bool
+  } deriving (Show, Eq, Generic)
+
+instance ToJSON PrintParams where
+  toJSON PrintParams{..} = object $
+    [ "context" .= printContextId ]
+    ++ maybe [] (\b -> ["background" .= b]) printBackground
+    ++ maybe [] (\m -> ["margin" .= m]) printMargin
+    ++ maybe [] (\o -> ["orientation" .= o]) printOrientation
+    ++ maybe [] (\p -> ["page" .= p]) printPage
+    ++ maybe [] (\s -> ["scale" .= s]) printScale
+    ++ maybe [] (\s -> ["shrinkToFit" .= s]) printShrinkToFit
+
+data PrintResult = PrintResult
+  { printData :: Text
+  } deriving (Show, Eq, Generic)
+
+instance FromJSON PrintResult where
+  parseJSON = \case
+    Object o -> PrintResult <$> o .: "data"
+    _ -> fail "Expected object for PrintResult"
+
+mkPrint :: PrintParams -> (BidiRequest, Value -> Parser PrintResult)
+mkPrint params =
+  ( BidiRequest 0 "browsingContext.print" (Just $ toJSON params)
+  , \v -> case v of
+      Object _ -> parseJSON v
+      _ -> fail "Expected object for PrintResult"
+  )
+
+-- | browsingContext.handleUserPrompt command
+data HandleUserPromptParams = HandleUserPromptParams
+  { promptContextId :: Text
+  , promptAccept :: Maybe Bool
+  , promptUserText :: Maybe Text
+  } deriving (Show, Eq, Generic)
+
+instance ToJSON HandleUserPromptParams where
+  toJSON HandleUserPromptParams{..} = object $
+    [ "context" .= promptContextId ]
+    ++ maybe [] (\a -> ["accept" .= a]) promptAccept
+    ++ maybe [] (\t -> ["userText" .= t]) promptUserText
+
+mkHandleUserPrompt :: HandleUserPromptParams -> (BidiRequest, Value -> Parser ())
+mkHandleUserPrompt params =
+  ( BidiRequest 0 "browsingContext.handleUserPrompt" (Just $ toJSON params)
+  , \_ -> pure ()
+  )
+
+-- | network.addIntercept command
+data AddInterceptParams = AddInterceptParams
+  { interceptPhases :: [Text]
+  , interceptUrlPatterns :: Maybe [Value]
+  } deriving (Show, Eq, Generic)
+
+instance ToJSON AddInterceptParams where
+  toJSON AddInterceptParams{..} = object $
+    [ "phases" .= interceptPhases ]
+    ++ maybe [] (\p -> ["urlPatterns" .= p]) interceptUrlPatterns
+
+data AddInterceptResult = AddInterceptResult
+  { interceptId :: Text
+  } deriving (Show, Eq, Generic)
+
+instance FromJSON AddInterceptResult where
+  parseJSON = \case
+    Object o -> AddInterceptResult <$> o .: "intercept"
+    _ -> fail "Expected object for AddInterceptResult"
+
+mkAddIntercept :: AddInterceptParams -> (BidiRequest, Value -> Parser AddInterceptResult)
+mkAddIntercept params =
+  ( BidiRequest 0 "network.addIntercept" (Just $ toJSON params)
+  , \v -> case v of
+      Object _ -> parseJSON v
+      _ -> fail "Expected object for AddInterceptResult"
+  )
+
+-- | network.removeIntercept command
+data RemoveInterceptParams = RemoveInterceptParams
+  { removeInterceptId :: Text
+  } deriving (Show, Eq, Generic)
+
+instance ToJSON RemoveInterceptParams where
+  toJSON RemoveInterceptParams{..} = object
+    [ "intercept" .= removeInterceptId ]
+
+mkRemoveIntercept :: RemoveInterceptParams -> (BidiRequest, Value -> Parser ())
+mkRemoveIntercept params =
+  ( BidiRequest 0 "network.removeIntercept" (Just $ toJSON params)
+  , \_ -> pure ()
+  )
+
+-- | network.continueRequest command
+data ContinueRequestParams = ContinueRequestParams
+  { continueRequestId :: Text
+  , continueHeaders :: Maybe [Value]
+  , continueMethod :: Maybe Text
+  , continueUrl :: Maybe Text
+  , continueBody :: Maybe Value
+  , continueCookies :: Maybe [Value]
+  } deriving (Show, Eq, Generic)
+
+instance ToJSON ContinueRequestParams where
+  toJSON ContinueRequestParams{..} = object $
+    [ "request" .= continueRequestId ]
+    ++ maybe [] (\h -> ["headers" .= h]) continueHeaders
+    ++ maybe [] (\m -> ["method" .= m]) continueMethod
+    ++ maybe [] (\u -> ["url" .= u]) continueUrl
+    ++ maybe [] (\b -> ["body" .= b]) continueBody
+    ++ maybe [] (\c -> ["cookies" .= c]) continueCookies
+
+mkContinueRequest :: ContinueRequestParams -> (BidiRequest, Value -> Parser ())
+mkContinueRequest params =
+  ( BidiRequest 0 "network.continueRequest" (Just $ toJSON params)
+  , \_ -> pure ()
+  )
+
+-- | network.failRequest command
+data FailRequestParams = FailRequestParams
+  { failRequestId :: Text
+  } deriving (Show, Eq, Generic)
+
+instance ToJSON FailRequestParams where
+  toJSON FailRequestParams{..} = object
+    [ "request" .= failRequestId ]
+
+mkFailRequest :: FailRequestParams -> (BidiRequest, Value -> Parser ())
+mkFailRequest params =
+  ( BidiRequest 0 "network.failRequest" (Just $ toJSON params)
+  , \_ -> pure ()
+  )
+
+-- | network.provideResponse command
+data ProvideResponseParams = ProvideResponseParams
+  { provideRequestId :: Text
+  , provideStatusCode :: Int
+  , provideReasonPhrase :: Maybe Text
+  , provideHeaders :: Maybe [Value]
+  , provideBody :: Maybe Value
+  } deriving (Show, Eq, Generic)
+
+instance ToJSON ProvideResponseParams where
+  toJSON ProvideResponseParams{..} = object $
+    [ "request" .= provideRequestId
+    , "statusCode" .= provideStatusCode
+    ] ++ maybe [] (\r -> ["reasonPhrase" .= r]) provideReasonPhrase
+    ++ maybe [] (\h -> ["headers" .= h]) provideHeaders
+    ++ maybe [] (\b -> ["body" .= b]) provideBody
+
+mkProvideResponse :: ProvideResponseParams -> (BidiRequest, Value -> Parser ())
+mkProvideResponse params =
+  ( BidiRequest 0 "network.provideResponse" (Just $ toJSON params)
+  , \_ -> pure ()
+  )
+
+-- | storage.getCookies command
+data GetCookiesParams = GetCookiesParams
+  { getCookiesPartition :: Maybe Value
+  , getCookiesBrowsingContexts :: Maybe [Text]
+  , getCookiesUrls :: Maybe [Text]
+  } deriving (Show, Eq, Generic)
+
+instance ToJSON GetCookiesParams where
+  toJSON GetCookiesParams{..} = object $
+    maybe [] (\p -> ["partition" .= p]) getCookiesPartition
+    ++ maybe [] (\bc -> ["browsingContexts" .= bc]) getCookiesBrowsingContexts
+    ++ maybe [] (\u -> ["urls" .= u]) getCookiesUrls
+
+data Cookie = Cookie
+  { cookieDomain :: Text
+  , cookiePath :: Text
+  , cookieName :: Text
+  , cookieValue :: Text
+  , cookieSecure :: Bool
+  , cookieHttpOnly :: Bool
+  , cookieSameSite :: Text
+  , cookieExpiry :: Maybe Scientific
+  , cookieSize :: Int
+  } deriving (Show, Eq, Generic)
+
+instance FromJSON Cookie where
+  parseJSON = \case
+    Object o -> Cookie
+      <$> o .: "domain"
+      <*> o .: "path"
+      <*> o .: "name"
+      <*> o .: "value"
+      <*> o .: "secure"
+      <*> o .: "httpOnly"
+      <*> o .: "sameSite"
+      <*> o .:? "expiry"
+      <*> o .: "size"
+    _ -> fail "Expected object for Cookie"
+
+data GetCookiesResult = GetCookiesResult
+  { cookies :: [Cookie]
+  , partitionKey :: Maybe Value
+  } deriving (Show, Eq, Generic)
+
+instance FromJSON GetCookiesResult where
+  parseJSON = \case
+    Object o -> GetCookiesResult
+      <$> o .: "cookies"
+      <*> o .:? "partitionKey"
+    _ -> fail "Expected object for GetCookiesResult"
+
+mkGetCookies :: GetCookiesParams -> (BidiRequest, Value -> Parser GetCookiesResult)
+mkGetCookies params =
+  ( BidiRequest 0 "storage.getCookies" (Just $ toJSON params)
+  , \v -> case v of
+      Object _ -> parseJSON v
+      _ -> fail "Expected object for GetCookiesResult"
   )
