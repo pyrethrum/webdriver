@@ -5,7 +5,7 @@ import Data.Text as T (Text, lines, null, pack, replace, strip, unwords, words, 
 import GHC.Utils.Misc (filterOut)
 import Test.Tasty.HUnit as HUnit ( assertBool, Assertion )
 import Text.RawString.QQ (r)
-import WebDriverPreCore
+import WebDriverPreCore.Http
     ( SessionId(Session),
       ElementId(Element),
       Selector(CSS),
@@ -86,7 +86,7 @@ import Data.Semigroup ((<>))
 import Data.List ((!!), drop)
 import Data.Functor ((<$>))
 import Data.Maybe (Maybe(..))
-import WebDriverPreCore (UrlPath(..))
+import WebDriverPreCore.Http (UrlPath(..))
 
 
 {-- TODO use Haddock variable

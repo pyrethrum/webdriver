@@ -126,8 +126,8 @@ import IOAPI
     takeScreenshot,
   )
 import Test.Tasty.HUnit as HUnit (Assertion, HasCallStack, assertBool, (@=?))
-import WebDriverPreCore (alwaysMatchCapabilities, minChromeCapabilities, minFullCapabilities)
-import WebDriverPreCore.Internal.Utils (txt)
+import WebDriverPreCore.Http (alwaysMatchCapabilities, minChromeCapabilities, minFullCapabilities)
+import WebDriverPreCore.Http.Internal.Utils (txt)
 import Prelude hiding (log)
 
 -- #################### Config ######################

@@ -38,7 +38,7 @@ import Test.Tasty.Falsify
     testPropertyWith,
   )
 import Text.Show.Pretty (ppShow)
-import WebDriverPreCore
+import WebDriverPreCore.Http
   ( Capabilities (..),
     DeviceMetrics (..),
     LogLevel (..),
@@ -49,7 +49,7 @@ import WebDriverPreCore
     Timeouts (..),
     VendorSpecific (..), LogSettings (MkLogSettings)
   )
-import WebDriverPreCore.Internal.Utils (jsonToText)
+import WebDriverPreCore.Http.Internal.Utils (jsonToText)
 import GHC.Real (Integral, Fractional (..), fromIntegral)
 import Data.Bits (FiniteBits)
 import GHC.Num (Num(..))

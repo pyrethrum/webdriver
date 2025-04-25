@@ -110,13 +110,13 @@ common commonGhcOptions
 library
   import: commonExtensions, commonGhcOptions
   exposed-modules:
-      WebDriverPreCore
-      WebDriverPreCore.Internal.Utils
+      WebDriverPreCore.Http
+      WebDriverPreCore.Http.Internal.Utils
   other-modules:
-      WebDriverPreCore.SpecDefinition
-      WebDriverPreCore.Capabilities
-      WebDriverPreCore.Error
-      WebDriverPreCore.HttpResponse
+      WebDriverPreCore.Http.SpecDefinition
+      WebDriverPreCore.Http.Capabilities
+      WebDriverPreCore.Http.Error
+      WebDriverPreCore.Http.HttpResponse
   hs-source-dirs: src
   build-depends:
     aeson         >=1.4   && <2.3, 

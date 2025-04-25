@@ -94,8 +94,8 @@ where
 import Data.Aeson (Value)
 
 import Data.Text  as T (Text)
-import WebDriverPreCore (DriverStatus, ElementId, Selector, SessionId)
-import WebDriverPreCore qualified as W
+import WebDriverPreCore.Http (DriverStatus, ElementId, Selector, SessionId)
+import WebDriverPreCore.Http qualified as W
 import Prelude hiding (log)
 import IOUtils (sleepMs, encodeFileToBase64)
 import IORunner (run)

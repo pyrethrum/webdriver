@@ -32,14 +32,14 @@ import Network.HTTP.Req as R
     runReq,
     (/:),
   )
-import WebDriverPreCore.Internal.Utils (prettyPrintJson, txt)
+import WebDriverPreCore.Http.Internal.Utils (prettyPrintJson, txt)
 import WebDriverPreCore
   ( ErrorClassification (..),
     HttpResponse (..),
     W3Spec (..),
     parseWebDriverError,
   )
-import WebDriverPreCore qualified as W
+import WebDriverPreCore.Http qualified as W
 import Prelude hiding (log)
 
 -- ############# Config #############

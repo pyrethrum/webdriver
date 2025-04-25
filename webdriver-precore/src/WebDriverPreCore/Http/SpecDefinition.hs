@@ -6,7 +6,7 @@
 --
 -- Here is a longer description of this module, containing some
 -- commentary with @some markup@.
-module WebDriverPreCore.SpecDefinition
+module WebDriverPreCore.Http.SpecDefinition
   ( -- * The W3Spec Type
     W3Spec (..),
 
@@ -138,9 +138,9 @@ import Data.Text (Text, pack, unpack)
 import Data.Text qualified as T
 import Data.Word (Word16)
 import GHC.Generics (Generic)
-import WebDriverPreCore.Internal.Utils (jsonToText, opt, txt)
-import WebDriverPreCore.Capabilities as Capabilities
-import WebDriverPreCore.HttpResponse (HttpResponse (..))
+import WebDriverPreCore.Http.Internal.Utils (jsonToText, opt, txt)
+import WebDriverPreCore.Http.Capabilities as Capabilities
+import WebDriverPreCore.Http.HttpResponse (HttpResponse (..))
 import Prelude hiding (id, lookup)
 
 -- | Url as returned by 'W3Spec'

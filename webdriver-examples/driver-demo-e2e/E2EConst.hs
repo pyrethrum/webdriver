@@ -32,7 +32,7 @@ module E2EConst (
   defaultRequest
 ) where
 
-import WebDriverPreCore (Selector (CSS, XPath))
+import WebDriverPreCore.Http (Selector (CSS, XPath))
 import Data.Text (Text)
 import Data.Semigroup (Semigroup(..))
 import Data.Int (Int)

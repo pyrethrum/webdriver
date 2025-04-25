@@ -1,6 +1,6 @@
 {-# OPTIONS_HADDOCK hide #-}
 
-module WebDriverPreCore.Internal.Utils
+module WebDriverPreCore.Http.Internal.Utils
   ( opt,
     txt,
     enumerate,

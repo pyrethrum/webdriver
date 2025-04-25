@@ -1,6 +1,6 @@
 {-# OPTIONS_HADDOCK hide #-}
 
-module WebDriverPreCore.Capabilities
+module WebDriverPreCore.Http.Capabilities
   ( FullCapabilities (..),
     Capabilities (..),
     UnhandledPromptBehavior (..),
@@ -67,7 +67,7 @@ import GHC.Float (Double)
 import GHC.Generics (Generic)
 import GHC.IO (FilePath)
 import GHC.Show (Show (..))
-import WebDriverPreCore.Internal.Utils (opt)
+import WebDriverPreCore.Http.Internal.Utils (opt)
 
 {- references:
 - https://https://www.w3.org/TR/2025/WD-webdriver2-20250306/#capabilities

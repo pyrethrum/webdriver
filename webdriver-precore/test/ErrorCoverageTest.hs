@@ -5,7 +5,7 @@ import Data.Text as T (Text, lines, null, pack, strip, split)
 import GHC.Utils.Misc (filterOut)
 import Test.Tasty.HUnit as HUnit ( assertBool, Assertion, (@=?) )
 import Text.RawString.QQ (r)
-import WebDriverPreCore
+import WebDriverPreCore.Http
     ( errorTypeToErrorCode,
       errorDescription,
       errorCodeToErrorType )
@@ -16,7 +16,7 @@ import Data.Function (($), (.), (&))
 import Data.Semigroup ((<>))
 import Data.Functor ((<$>))
 import GHC.Base (error)
-import WebDriverPreCore.Internal.Utils (enumerate)
+import WebDriverPreCore.Http.Internal.Utils (enumerate)
 import Data.Foldable (traverse_)
 import Data.Either (either)
 
