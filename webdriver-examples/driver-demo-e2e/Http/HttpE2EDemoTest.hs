@@ -1,4 +1,4 @@
-module Http.WebDriverE2EDemoTest where
+module Http.HttpE2EDemoTest where
 
 -- minFirefoxSession,
 
@@ -38,7 +38,7 @@ import E2EConst
     userNameCss,
   )
 import GHC.IO (catchAny)
-import IOAPI
+import Http.IOAPI
   ( Action (..),
     Actions (..),
     BrowserName (..),

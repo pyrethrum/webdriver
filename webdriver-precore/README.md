@@ -311,7 +311,7 @@ or with logging:
 
 *With the driver running you can now run code that interacts with the browser:*
 
-Full source file can be found in the [example project repo](https://github.com/pyrethrum/webdriver/blob/main/webdriver-examples/driver-demo-e2e/WebDriverE2EDemoTest.hs).
+Full source file can be found in the [example project repo](https://github.com/pyrethrum/webdriver/blob/main/webdriver-examples/driver-demo-e2e/HttpE2EDemoTest.hs).
 
 ```haskell
 demoForwardBackRefresh :: IO ()

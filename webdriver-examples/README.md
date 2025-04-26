@@ -5,7 +5,7 @@
   - [Core Modules](#core-modules)
     - [IORunner](#iorunner)
     - [IOAPI](#ioapi)
-    - [WebDriverE2EDemoTest](#webdrivere2edemotest)
+    - [HttpE2EDemoTest](#httpe2edemotest)
   - [Running Examples (VSCode Dev-Container)](#running-examples-vscode-dev-container)
   - [Running Examples (Manual Configuration)](#running-examples-manual-configuration)
     - [Prerequisites](#prerequisites)
@@ -42,9 +42,9 @@ The examples cover all [W3C WebDriver endpoints](https://www.w3.org/TR/webdriver
 
 [IOAPI](./driver-demo-e2e/IOAPI.hs) is [W3C WebDriver](https://www.w3.org/TR/webdriver2) client implemented by applying `run` to every endpoint exported by [webdriver-precore](https://hackage-content.haskell.org/package/webdriver-precore).
 
-### WebDriverE2EDemoTest
+### HttpE2EDemoTest
 
-[WebDriverE2EDemoTest](./driver-demo-e2e/WebDriverE2EDemoTest.hs) is \"unit test" module where the unit tests are actually example stubs that demonstrate driving a browser via the [IOAPI](./driver-demo-e2e/IOAPI.hs).
+[HttpE2EDemoTest](./driver-demo-e2e/Http/HttpE2EDemoTest.hs) is \"unit test" module where the unit tests are actually example stubs that demonstrate driving a browser via the [IOAPI](./driver-demo-e2e/IOAPI.hs).
 
 ## Running Examples (VSCode Dev-Container)
 
@@ -131,7 +131,7 @@ ChromeDriver was started successfully on port 4444.
 
 ### 4. Update 'Config'
 
-"Configuration" for these examples has been achieved through the time honoured technique of [hard coding values in the source file (WebDriverE2EDemoTest.hs)](./driver-demo-e2e/WebDriverE2EDemoTest.hs)
+"Configuration" for these examples has been achieved through the time honoured technique of [hard coding values in the source file (HttpE2EDemoTest.hs)](./driver-demo-e2e/HttpE2EDemoTest.hs)
 
 ```haskell
 -- #################### Config ######################
@@ -158,7 +158,7 @@ Once the [driver is running](#3-web-driver-running), the recommended way to expe
 ### Evaluate...
 
 1. From VSCode `Ctrl+P` \>> search `demo`
-2. Open `WebDriverE2EDemoTest`
+2. Open `HttpE2EDemoTest`
 3. Wait for HLS to process the file, at which point the `Evaluate...` lens will be visible
 
 <img src="evaluate.png" alt="profile missing" width="600">
@@ -171,7 +171,7 @@ Clicking `Evaluate...` will execute the test.
 
 ```
 ~/webdriver/webdriver-examples$ cabal repl --enable-tests
-ghci> WebDriverE2EDemoTest.unit_demoSendKeysClear
+ghci> HttpE2EDemoTest.unit_demoSendKeysClear
 fill in user name
 clear user name
 ```
@@ -201,7 +201,7 @@ One solution is to create a profile in a directory somewhere accessible to gecko
 4. `Profile Name:` WebDriver
 5. `Next` >> `Choose Folder` >> `/webdriver/webdriver-examples/driver-demo-e2e/.profile/WebDriverProfile`
 6. `Finish`
-7. Change the *Config* in the [WebDriverE2EDemoTest](./driver-demo-e2e/WebDriverE2EDemoTest.hs) to point to the directory of your new profile:
+7. Change the *Config* in the [HttpE2EDemoTest](./driver-demo-e2e/HttpE2EDemoTest.hs) to point to the directory of your new profile:
 
 ```haskell
 

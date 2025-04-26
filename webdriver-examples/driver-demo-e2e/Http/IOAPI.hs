@@ -97,8 +97,8 @@ import Data.Text  as T (Text)
 import WebDriverPreCore.Http (DriverStatus, ElementId, Selector, SessionId)
 import WebDriverPreCore.Http qualified as W
 import Prelude hiding (log)
-import IOUtils (sleepMs, encodeFileToBase64)
-import IORunner (run)
+import Http.IOUtils (sleepMs, encodeFileToBase64)
+import Http.IORunner (run)
 
 -- ############# API #############
 

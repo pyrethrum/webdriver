@@ -20,7 +20,7 @@ tested-with: GHC == { 9.8.2, 9.10.1 }
 synopsis:       A test suite that demonstrates how to use the webdriver-precore library
 
 description:
-  The E2E tests in WebDriverE2EDemoTest module demonstrate how the webdriver-precore might be used in a library that provides a basic runner.
+  The E2E tests in HttpE2EDemoTest module demonstrate how the webdriver-precore might be used in a library that provides a basic runner.
   The runner is implemented in IORunner module. See the @<https://github.com/pyrethrum/webdriver/webdriver-examples#readme/ the README>@ for more details.
 
 
@@ -123,11 +123,11 @@ test-suite driver-demo-e2e
     , webdriver-precore
   other-modules:
       E2EConst
-    , IOAPI
-    , IORunner
-    , IORunnerMinimalForDocs
-    , IOUtils
-    , WebDriverE2EDemoTest
+    , Http.IOAPI
+    , Http.IORunner
+    , Http.IORunnerMinimalForDocs
+    , Http.IOUtils
+    , Http.HttpE2EDemoTest
   build-tool-depends:
     tasty-discover:tasty-discover
   default-language: Haskell2010
