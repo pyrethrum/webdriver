@@ -118,7 +118,7 @@ library
       WebDriverPreCore.Http.Capabilities
       WebDriverPreCore.Http.Error
       WebDriverPreCore.Http.HttpResponse
-      WebDriverPreCore.BiDi.SpecDefinition
+      WebDriverPreCore.BiDi.SpecDefinitionDeprecate
   hs-source-dirs: src
   build-depends:
     aeson         >=1.4   && <2.3, 

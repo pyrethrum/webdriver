@@ -1,18 +1,19 @@
 
-module WebDriverPreCore.BiDi.SpecDefinition where
+module WebDriverPreCore.BiDi.SpecDefinitionDeprecate where
 
 import Data.Aeson (FromJSON(..), ToJSON(..), Value(..), (.=), (.:), (.:?), object)
 import Data.Aeson.Types (Parser)
 import Data.Text (Text)
 import GHC.Generics (Generic)
 import Prelude (Eq(..), Show(..), Maybe(..), Int, Bool(..), Double, fail, pure, (<>), maybe, ($), (<$>), Applicative (..))
+import Data.Word (Word32)
 
 -- https://www.w3.org/TR/2025/WD-webdriver-bidi-20250414/
 
 -- | Common types used across commands
 
 -- | BiDi command IDs are sequential integers
-type CommandId = Int
+type CommandId = Word32
 
 -- | BiDi messages have a standard format
 data BidiRequest = BidiRequest
