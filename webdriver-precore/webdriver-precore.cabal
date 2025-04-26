@@ -112,12 +112,13 @@ library
   exposed-modules:
       WebDriverPreCore.Http
       WebDriverPreCore.Http.Internal.Utils
-      WebDriverPreCore.BiDi.SpecDefinition
+      WebDriverPreCore.BiDi
   other-modules:
       WebDriverPreCore.Http.SpecDefinition
       WebDriverPreCore.Http.Capabilities
       WebDriverPreCore.Http.Error
       WebDriverPreCore.Http.HttpResponse
+      WebDriverPreCore.BiDi.SpecDefinition
   hs-source-dirs: src
   build-depends:
     aeson         >=1.4   && <2.3, 

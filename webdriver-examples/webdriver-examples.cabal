@@ -123,11 +123,14 @@ test-suite driver-demo-e2e
     , webdriver-precore
   other-modules:
       E2EConst
-    , Http.IOAPI
-    , Http.IORunner
     , Http.IORunnerMinimalForDocs
     , Http.IOUtils
+    , Http.IORunner
+    , Http.IOAPI
     , Http.HttpE2EDemoTest
+    , BiDi.IORunner
+    , BiDi.IOAPI
+    , BiDi.BiDiE2EDemoTest
   build-tool-depends:
     tasty-discover:tasty-discover
   default-language: Haskell2010
