@@ -88,6 +88,8 @@ parseIO spec r =
             e@UnrecognisedError {} -> "UnrecognisedError:\n " <> "\nin response:" <> show e
             e@WebDriverError {} -> "WebDriver error thrown:\n " <> show e
       Success a -> pure a
+
+callWebDriver :: Bool -> ReqRequestParams -> IO HttpResponse
 callWebDriver wantLog MkRequestParams {url, method, body, port = prt} =
   runReq defaultHttpConfig {httpConfigCheckResponse = \_ _ _ -> Nothing} $ do
     log $ "URL: " <> txt url
