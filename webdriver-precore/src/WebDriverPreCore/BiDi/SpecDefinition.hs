@@ -1,27 +1,18 @@
-{-# LANGUAGE DeriveGeneric #-}
-{-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE LambdaCase #-}
-{-# LANGUAGE RecordWildCards #-}
 
-module WebDriver.BidDi.SpecDefinition where
+module WebDriverPreCore.BiDi.SpecDefinition where
 
 import Data.Aeson (FromJSON(..), ToJSON(..), Value(..), (.=), (.:), (.:?), object)
 import Data.Aeson.Types (Parser)
-import qualified Data.Aeson as Aeson
-import Data.Map.Strict (Map)
-import qualified Data.Map.Strict as Map
 import Data.Text (Text)
-import qualified Data.Text as T
-import Data.Scientific (Scientific)
 import GHC.Generics (Generic)
-import Data.Maybe (fromMaybe)
+import Prelude (Eq(..), Show(..), Maybe(..), Int, Bool(..), Double, fail, pure, (<>), maybe, ($), (<$>), Applicative (..))
 
 -- https://www.w3.org/TR/2025/WD-webdriver-bidi-20250414/
 
 -- | Common types used across commands
 
 -- | BiDi command IDs are sequential integers
-type CommandId = Integer
+type CommandId = Int
 
 -- | BiDi messages have a standard format
 data BidiRequest = BidiRequest
@@ -34,7 +25,7 @@ instance ToJSON BidiRequest where
   toJSON BidiRequest{..} = object $
     [ "id" .= requestId
     , "method" .= requestMethod
-    ] ++ case requestParams of
+    ] <> case requestParams of
           Just params -> ["params" .= params]
           Nothing -> []
 
@@ -125,7 +116,7 @@ instance ToJSON RemoteReference where
     ]
 
 -- | RemoteValue type
-data RemoteValue = RemoteValue
+data RemoteValue = MkRemoteValue
   { remoteValueType :: Text
   , remoteValueValue :: Maybe Value
   , remoteValueInternalId :: Maybe Text
@@ -135,7 +126,7 @@ data RemoteValue = RemoteValue
 
 instance FromJSON RemoteValue where
   parseJSON = \case
-    Object o -> RemoteValue
+    Object o -> MkRemoteValue
       <$> o .: "type"
       <*> o .:? "value"
       <*> o .:? "internalId"
@@ -144,12 +135,12 @@ instance FromJSON RemoteValue where
     _ -> fail "Expected object for RemoteValue"
 
 instance ToJSON RemoteValue where
-  toJSON RemoteValue{..} = object $ 
+  toJSON MkRemoteValue{..} = object $ 
     [ "type" .= remoteValueType ]
-    ++ maybe [] (\v -> ["value" .= v]) remoteValueValue
-    ++ maybe [] (\v -> ["internalId" .= v]) remoteValueInternalId
-    ++ maybe [] (\v -> ["handle" .= v]) remoteValueHandle
-    ++ maybe [] (\v -> ["shared" .= v]) remoteValueShared
+    <> maybe [] (\v -> ["value" .= v]) remoteValueValue
+    <> maybe [] (\v -> ["internalId" .= v]) remoteValueInternalId
+    <> maybe [] (\v -> ["handle" .= v]) remoteValueHandle
+    <> maybe [] (\v -> ["shared" .= v]) remoteValueShared
 
 -- | ScriptEvaluationResult type
 data ScriptEvaluationResult = ScriptEvaluationResult
@@ -190,12 +181,14 @@ instance ToJSON BrowsingContext where
 -- | Navigation behavior/reload options
 data NavigationBehavior = NavigationBehavior
   { waitForLoad :: Maybe Text
-  , waitTimeout :: Maybe Scientific
+  -- this looks like a halucination, timeout does not appear to be in spec
+  -- https://w3c.github.io/webdriver-bidi/#browsingcontext-navigate
+  , waitTimeout :: Maybe Int
   } deriving (Show, Eq, Generic)
 
 instance ToJSON NavigationBehavior where
   toJSON NavigationBehavior{..} = object $
-    maybe [] (\w -> ["wait" .= w]) waitForLoad ++
+    maybe [] (\w -> ["wait" .= w]) waitForLoad <>
     maybe [] (\t -> ["timeout" .= t]) waitTimeout
 
 -- | Command definitions for each BiDi command
@@ -209,7 +202,7 @@ data CreateContextParams = CreateContextParams
 instance ToJSON CreateContextParams where
   toJSON CreateContextParams{..} = object $
     [ "type" .= createType ]
-    ++ maybe [] (\rc -> ["referenceContext" .= rc]) createReferenceContext
+    <> maybe [] (\rc -> ["referenceContext" .= rc]) createReferenceContext
 
 data CreateContextResult = CreateContextResult
   { createdContext :: Text
@@ -224,7 +217,7 @@ mkCreateContext :: CreateContextParams -> (BidiRequest, Value -> Parser CreateCo
 mkCreateContext params = 
   ( BidiRequest 0 "browsingContext.create" (Just $ toJSON params)
   , \v -> case v of
-      Object o -> parseJSON v
+      Object _ -> parseJSON v
       _ -> fail "Expected object for CreateContextResult"
   )
 
@@ -239,7 +232,7 @@ instance ToJSON NavigateParams where
   toJSON NavigateParams{..} = object $
     [ "context" .= navContext
     , "url" .= navUrl
-    ] ++ maybe [] (\b -> ["wait" .= toJSON b]) navBehavior
+    ] <> maybe [] (\b -> ["wait" .= toJSON b]) navBehavior
 
 data NavigateResult = NavigateResult
   { navigationId :: Text
@@ -270,7 +263,7 @@ data ReloadParams = ReloadParams
 instance ToJSON ReloadParams where
   toJSON ReloadParams{..} = object $
     [ "context" .= reloadContext
-    ] ++ maybe [] (\b -> ["wait" .= toJSON b]) reloadBehavior
+    ] <> maybe [] (\b -> ["wait" .= toJSON b]) reloadBehavior
 
 data ReloadResult = ReloadResult
   { reloadNavigationId :: Text
@@ -300,7 +293,7 @@ data GetTreeParams = GetTreeParams
 
 instance ToJSON GetTreeParams where
   toJSON GetTreeParams{..} = object $
-    maybe [] (\d -> ["maxDepth" .= d]) treeMaxDepth ++
+    maybe [] (\d -> ["maxDepth" .= d]) treeMaxDepth <>
     maybe [] (\r -> ["root" .= r]) treeRoot
 
 data ContextInfo = ContextInfo
@@ -350,9 +343,9 @@ instance ToJSON EvaluateParams where
   toJSON EvaluateParams{..} = object $
     [ "target" .= evalTarget
     , "expression" .= evalExpression
-    ] ++ maybe [] (\a -> ["awaitPromise" .= a]) evalAwaitPromise
-    ++ maybe [] (\o -> ["resultOwnership" .= o]) evalResultOwnership
-    ++ maybe [] (\s -> ["serializationOptions" .= s]) evalSerializationOptions
+    ] <> maybe [] (\a -> ["awaitPromise" .= a]) evalAwaitPromise
+    <> maybe [] (\o -> ["resultOwnership" .= o]) evalResultOwnership
+    <> maybe [] (\s -> ["serializationOptions" .= s]) evalSerializationOptions
 
 data EvaluateResult = EvaluateResult
   { evalResult :: ScriptEvaluationResult
@@ -386,11 +379,11 @@ instance ToJSON CallFunctionParams where
   toJSON CallFunctionParams{..} = object $
     [ "target" .= callTarget
     , "functionDeclaration" .= callFunctionDeclaration
-    ] ++ maybe [] (\t -> ["this" .= t]) callThis
-    ++ maybe [] (\a -> ["arguments" .= a]) callArguments
-    ++ maybe [] (\a -> ["awaitPromise" .= a]) callAwaitPromise
-    ++ maybe [] (\o -> ["resultOwnership" .= o]) callResultOwnership
-    ++ maybe [] (\s -> ["serializationOptions" .= s]) callSerializationOptions
+    ] <> maybe [] (\t -> ["this" .= t]) callThis
+    <> maybe [] (\a -> ["arguments" .= a]) callArguments
+    <> maybe [] (\a -> ["awaitPromise" .= a]) callAwaitPromise
+    <> maybe [] (\o -> ["resultOwnership" .= o]) callResultOwnership
+    <> maybe [] (\s -> ["serializationOptions" .= s]) callSerializationOptions
 
 data CallFunctionResult = CallFunctionResult
   { callResult :: ScriptEvaluationResult
@@ -494,7 +487,7 @@ data SubscribeParams = SubscribeParams
 instance ToJSON SubscribeParams where
   toJSON SubscribeParams{..} = object $
     [ "events" .= subscribeEvents ]
-    ++ maybe [] (\c -> ["contexts" .= c]) subscribeContexts
+    <> maybe [] (\c -> ["contexts" .= c]) subscribeContexts
 
 mkSubscribe :: SubscribeParams -> (BidiRequest, Value -> Parser ())
 mkSubscribe params =
@@ -511,7 +504,7 @@ data UnsubscribeParams = UnsubscribeParams
 instance ToJSON UnsubscribeParams where
   toJSON UnsubscribeParams{..} = object $
     [ "events" .= unsubscribeEvents ]
-    ++ maybe [] (\c -> ["contexts" .= c]) unsubscribeContexts
+    <> maybe [] (\c -> ["contexts" .= c]) unsubscribeContexts
 
 mkUnsubscribe :: UnsubscribeParams -> (BidiRequest, Value -> Parser ())
 mkUnsubscribe params =
@@ -623,12 +616,12 @@ data PrintParams = PrintParams
 instance ToJSON PrintParams where
   toJSON PrintParams{..} = object $
     [ "context" .= printContextId ]
-    ++ maybe [] (\b -> ["background" .= b]) printBackground
-    ++ maybe [] (\m -> ["margin" .= m]) printMargin
-    ++ maybe [] (\o -> ["orientation" .= o]) printOrientation
-    ++ maybe [] (\p -> ["page" .= p]) printPage
-    ++ maybe [] (\s -> ["scale" .= s]) printScale
-    ++ maybe [] (\s -> ["shrinkToFit" .= s]) printShrinkToFit
+    <> maybe [] (\b -> ["background" .= b]) printBackground
+    <> maybe [] (\m -> ["margin" .= m]) printMargin
+    <> maybe [] (\o -> ["orientation" .= o]) printOrientation
+    <> maybe [] (\p -> ["page" .= p]) printPage
+    <> maybe [] (\s -> ["scale" .= s]) printScale
+    <> maybe [] (\s -> ["shrinkToFit" .= s]) printShrinkToFit
 
 data PrintResult = PrintResult
   { printData :: Text
@@ -657,8 +650,8 @@ data HandleUserPromptParams = HandleUserPromptParams
 instance ToJSON HandleUserPromptParams where
   toJSON HandleUserPromptParams{..} = object $
     [ "context" .= promptContextId ]
-    ++ maybe [] (\a -> ["accept" .= a]) promptAccept
-    ++ maybe [] (\t -> ["userText" .= t]) promptUserText
+    <> maybe [] (\a -> ["accept" .= a]) promptAccept
+    <> maybe [] (\t -> ["userText" .= t]) promptUserText
 
 mkHandleUserPrompt :: HandleUserPromptParams -> (BidiRequest, Value -> Parser ())
 mkHandleUserPrompt params =
@@ -675,7 +668,7 @@ data AddInterceptParams = AddInterceptParams
 instance ToJSON AddInterceptParams where
   toJSON AddInterceptParams{..} = object $
     [ "phases" .= interceptPhases ]
-    ++ maybe [] (\p -> ["urlPatterns" .= p]) interceptUrlPatterns
+    <> maybe [] (\p -> ["urlPatterns" .= p]) interceptUrlPatterns
 
 data AddInterceptResult = AddInterceptResult
   { interceptId :: Text
@@ -722,11 +715,11 @@ data ContinueRequestParams = ContinueRequestParams
 instance ToJSON ContinueRequestParams where
   toJSON ContinueRequestParams{..} = object $
     [ "request" .= continueRequestId ]
-    ++ maybe [] (\h -> ["headers" .= h]) continueHeaders
-    ++ maybe [] (\m -> ["method" .= m]) continueMethod
-    ++ maybe [] (\u -> ["url" .= u]) continueUrl
-    ++ maybe [] (\b -> ["body" .= b]) continueBody
-    ++ maybe [] (\c -> ["cookies" .= c]) continueCookies
+    <> maybe [] (\h -> ["headers" .= h]) continueHeaders
+    <> maybe [] (\m -> ["method" .= m]) continueMethod
+    <> maybe [] (\u -> ["url" .= u]) continueUrl
+    <> maybe [] (\b -> ["body" .= b]) continueBody
+    <> maybe [] (\c -> ["cookies" .= c]) continueCookies
 
 mkContinueRequest :: ContinueRequestParams -> (BidiRequest, Value -> Parser ())
 mkContinueRequest params =
@@ -762,9 +755,9 @@ instance ToJSON ProvideResponseParams where
   toJSON ProvideResponseParams{..} = object $
     [ "request" .= provideRequestId
     , "statusCode" .= provideStatusCode
-    ] ++ maybe [] (\r -> ["reasonPhrase" .= r]) provideReasonPhrase
-    ++ maybe [] (\h -> ["headers" .= h]) provideHeaders
-    ++ maybe [] (\b -> ["body" .= b]) provideBody
+    ] <> maybe [] (\r -> ["reasonPhrase" .= r]) provideReasonPhrase
+    <> maybe [] (\h -> ["headers" .= h]) provideHeaders
+    <> maybe [] (\b -> ["body" .= b]) provideBody
 
 mkProvideResponse :: ProvideResponseParams -> (BidiRequest, Value -> Parser ())
 mkProvideResponse params =
@@ -782,8 +775,8 @@ data GetCookiesParams = GetCookiesParams
 instance ToJSON GetCookiesParams where
   toJSON GetCookiesParams{..} = object $
     maybe [] (\p -> ["partition" .= p]) getCookiesPartition
-    ++ maybe [] (\bc -> ["browsingContexts" .= bc]) getCookiesBrowsingContexts
-    ++ maybe [] (\u -> ["urls" .= u]) getCookiesUrls
+    <> maybe [] (\bc -> ["browsingContexts" .= bc]) getCookiesBrowsingContexts
+    <> maybe [] (\u -> ["urls" .= u]) getCookiesUrls
 
 data Cookie = Cookie
   { cookieDomain :: Text
@@ -793,7 +786,7 @@ data Cookie = Cookie
   , cookieSecure :: Bool
   , cookieHttpOnly :: Bool
   , cookieSameSite :: Text
-  , cookieExpiry :: Maybe Scientific
+  , cookieExpiry :: Maybe Int
   , cookieSize :: Int
   } deriving (Show, Eq, Generic)
 

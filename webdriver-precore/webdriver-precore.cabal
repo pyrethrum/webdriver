@@ -112,6 +112,7 @@ library
   exposed-modules:
       WebDriverPreCore.Http
       WebDriverPreCore.Http.Internal.Utils
+      WebDriverPreCore.BiDi.SpecDefinition
   other-modules:
       WebDriverPreCore.Http.SpecDefinition
       WebDriverPreCore.Http.Capabilities
