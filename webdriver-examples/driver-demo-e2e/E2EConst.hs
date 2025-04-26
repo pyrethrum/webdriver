@@ -157,7 +157,7 @@ data ReqRequestParams where
   
 
 defaultRequest :: ReqRequestParams
-defaultRequest = MkRequestParams (http "127.0.0.1") GET NoReqBody 4444
+defaultRequest = MkRequestParams { url = (http "127.0.0.1"), method = GET, body = NoReqBody, port = 4444 }
 
 
 

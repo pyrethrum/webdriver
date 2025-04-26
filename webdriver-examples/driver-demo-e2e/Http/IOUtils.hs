@@ -1,4 +1,4 @@
-module IOUtils
+module Http.IOUtils
   ( sleepMs,
     encodeFileToBase64,
   )

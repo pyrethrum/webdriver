@@ -1,4 +1,4 @@
-module WebDriverE2EDemoTest where
+module Http.WebDriverE2EDemoTest where
 
 -- minFirefoxSession,
 

@@ -10,7 +10,7 @@
 {-# LANGUAGE NoImplicitPrelude #-}
 
 
-module IORunnerMinimalForDocs (run) where
+module Http.IORunnerMinimalForDocs (run) where
 
 import Control.Applicative (Applicative (..))
 import Control.Monad.Fail (MonadFail (..))
