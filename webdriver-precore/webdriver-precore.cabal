@@ -123,6 +123,8 @@ library
       WebDriverPreCore.Http.Error
       WebDriverPreCore.Http.HttpResponse
       WebDriverPreCore.BiDi.SpecDefinitionDeprecate
+      WebDriverPreCore.BiDi.Protocol
+      WebDriverPreCore.BiDi.Session
   hs-source-dirs: src
   build-depends:
     aeson         >=1.4   && <2.3, 
