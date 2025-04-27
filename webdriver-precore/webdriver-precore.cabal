@@ -118,13 +118,18 @@ library
       WebDriverPreCore.Http.Internal.Utils
       WebDriverPreCore.BiDi
   other-modules:
+      -- Http
       WebDriverPreCore.Http.SpecDefinition
       WebDriverPreCore.Http.Capabilities
       WebDriverPreCore.Http.Error
       WebDriverPreCore.Http.HttpResponse
+      -- BiDi
       WebDriverPreCore.BiDi.SpecDefinitionDeprecate
       WebDriverPreCore.BiDi.Protocol
       WebDriverPreCore.BiDi.Session
+      WebDriverPreCore.BiDi.BrowsingContext
+      WebDriverPreCore.BiDi.CoreTypes
+      WebDriverPreCore.BiDi.Script
   hs-source-dirs: src
   build-depends:
     aeson         >=1.4   && <2.3, 

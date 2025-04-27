@@ -183,7 +183,7 @@ instance FromJSON PageLoadStrategy where
     "none" -> pure None'
     "eager" -> pure Eager
     "normal" -> pure Normal
-    _ -> fail "Invalid PageLoadStrategy"
+    _ -> fail "Invalid PageLoadStrategy"deriving
 
 -- | [spec](https://www.w3.org/TR/2025/WD-webdriver2-20250306/#capabilities)
 data BrowserName
@@ -195,14 +195,7 @@ data BrowserName
   deriving (Show, Generic, Enum, Bounded, Eq)
 
 -- | [spec](https://www.w3.org/TR/2025/WD-webdriver2-20250306/#capabilities)
-data PlatformName
-  = Windows
-  | Mac
-  | Linux
-  | Android
-  | IOS
-  deriving (Show, Generic, Enum, Bounded, Eq)
-
+data PlatformNamederiving
 -- | 'Capabilities' define the properties of the session and are passed to the webdriver
 -- via fields of the 'FullCapabilities' object.
 --

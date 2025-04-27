@@ -596,7 +596,7 @@ deleteAllCookies sessionId = Delete "Delete All Cookies" (sessionUri1 sessionId 
 --
 -- @POST 	\/session\/{session id}\/actions 	Perform Actions@
 performActions :: SessionId -> Actions -> W3Spec ()
-performActions sessionId actions = Post "Perform Actions" (sessionUri1 sessionId "actions") (actionsToJson actions) voidParser
+performActions sessionId actions = Post "Perform Actions" (sessionUri1 sessionId "actions") (actionsToJSON actions) voidParser
 
 -- |
 --
@@ -1225,8 +1225,8 @@ keysJson keysToSend = object ["text" .= keysToSend]
 -- | [spec](https://www.w3.org/TR/2025/WD-webdriver2-20250306/#actions)
 newtype Actions = MkActions {actions :: [Action]}
 
-actionsToJson :: Actions -> Value
-actionsToJson MkActions {actions} =
+actionsToJSON :: Actions -> Value
+actionsToJSON MkActions {actions} =
   object
     [ "actions" .= actions
     ]
