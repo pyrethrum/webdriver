@@ -183,7 +183,7 @@ instance FromJSON PageLoadStrategy where
     "none" -> pure None'
     "eager" -> pure Eager
     "normal" -> pure Normal
-    _ -> fail "Invalid PageLoadStrategy"deriving
+    _ -> fail "Invalid PageLoadStrategy"
 
 -- | [spec](https://www.w3.org/TR/2025/WD-webdriver2-20250306/#capabilities)
 data BrowserName
