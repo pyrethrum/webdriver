@@ -1,8 +1,12 @@
 # webdriver-examples-??.??.??.?? (????-??-??) - Unreleased
 
+# webdriver-examples-0.1.0.0 (2025-04-21)
+
+No change - examples that work with `webdriver-precore-0.1.0.0`.
+
 # webdriver-examples-0.0.0.4 (2025-04-21)
 
-No change - examples that work with `webdriver-precore-0.0.0.34`.
+No change - examples that work with `webdriver-precore-0.0.0.4`.
 
 # webdriver-examples-0.0.0.3 (2025-04-21)
 
