@@ -1,7 +1,7 @@
 # webdriver-precore
 
-[![Hackage](https://img.shields.io/hackage/v/webdriver-precore.svg)](https://hackage.haskell.org/package/webdriver-precore)
 ![build](https://github.com/pyrethrum/webdriver/actions/workflows/cicd.yaml/badge.svg?branch=main)
+[![Hackage](https://img.shields.io/hackage/v/webdriver-precore.svg)](https://hackage.haskell.org/package/webdriver-precore)
 [![Stackage Nightly](http://stackage.org/package/webdriver-precore/badge/nightly)](http://stackage.org/nightly/package/webdriver-precore)
 
 
