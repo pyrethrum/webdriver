@@ -1,7 +1,7 @@
 cabal-version: 3.8
 
 name:           webdriver-precore
-version:        0.1.0.0
+version:        0.1.0.1
 homepage:       https://github.com/pyrethrum/webdriver-precore#readme
 bug-reports:    https://github.com/pyrethrum/webdriver-precore/issues
 author:         John Walker, Adrian Glouftsis
