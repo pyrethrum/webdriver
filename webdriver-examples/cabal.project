@@ -1,7 +1,7 @@
 packages: .
    ../webdriver-precore
    
-import: https://www.stackage.org/nightly-2025-02-25/cabal.config
+-- import: https://www.stackage.org/nightly-2025-02-25/cabal.config
 
 
 with-compiler: ghc-9.10.1
