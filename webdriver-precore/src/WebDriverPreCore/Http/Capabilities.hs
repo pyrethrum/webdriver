@@ -195,7 +195,14 @@ data BrowserName
   deriving (Show, Generic, Enum, Bounded, Eq)
 
 -- | [spec](https://www.w3.org/TR/2025/WD-webdriver2-20250306/#capabilities)
-data PlatformNamederiving
+data PlatformName
+  = Windows
+  | Mac
+  | Linux
+  | Android
+  | IOS
+  deriving (Show, Generic, Enum, Bounded, Eq)
+  
 -- | 'Capabilities' define the properties of the session and are passed to the webdriver
 -- via fields of the 'FullCapabilities' object.
 --

@@ -1,22 +1,24 @@
 module WebDriverPreCore.BiDi.Script where
 
-
 import Data.Aeson
 import Data.Aeson.Types
+import Data.Map qualified as Map
 import Data.Text (Text)
 import GHC.Generics
-import qualified Data.Map as Map
-import WebDriverPreCore.BiDi.CoreTypes (JSUint, JSInt)
+import WebDriverPreCore.BiDi.CoreTypes (JSInt, JSUint, NodeRemoteValue, Handle, InternalId)
+import Prelude (Show, Maybe, Either, Double, Eq)
 
 -- Main Script types
 data ScriptResult
-  = AddPreloadScriptResult AddPreloadScriptResult
+  = AddPreloadScriptResult { script :: PreloadScript}
   | EvaluateResult EvaluateResult
-  | GetRealmsResult GetRealmsResult
+  | GetRealmsResult { realms :: [RealmInfo] }
   deriving (Show, Generic, ToJSON, FromJSON)
 
 data ScriptEvent
-  = MessageEvent MessageEvent
+  = MessageEvent { method :: Text, -- "script.message"
+    params :: MessageParameters
+  }
   | RealmCreatedEvent RealmInfo
   | RealmDestroyedEvent RealmDestroyedParams
   deriving (Show, Generic, ToJSON, FromJSON)
@@ -25,71 +27,76 @@ data ScriptEvent
 newtype Channel = Channel Text deriving newtype (Show, Generic, ToJSON, FromJSON)
 
 data ChannelValue = ChannelValue
-  { typ :: Text  -- "channel"
-  , value :: ChannelProperties
-  } deriving (Show, Generic)
+  { typ :: Text, -- "channel"
+    value :: ChannelProperties
+  }
+  deriving (Show, Generic)
 
 instance ToJSON ChannelValue where
-  toJSON = genericToJSON defaultOptions { fieldLabelModifier = \case
-    "typ" -> "type"
-    x -> x }
+  toJSON =
+    genericToJSON
+      defaultOptions
+        { fieldLabelModifier = \case
+            "typ" -> "type"
+            x -> x
+        }
 
 instance FromJSON ChannelValue where
-  parseJSON = genericParseJSON defaultOptions { fieldLabelModifier = \case
-    "type" -> "typ"
-    x -> x }
+  parseJSON =
+    genericParseJSON
+      defaultOptions
+        { fieldLabelModifier = \case
+            "type" -> "typ"
+            x -> x
+        }
 
 data ChannelProperties = ChannelProperties
-  { channel :: Channel
-  , serializationOptions :: Maybe SerializationOptions
-  , ownership :: Maybe ResultOwnership
-  } deriving (Show, Generic, ToJSON, FromJSON)
+  { channel :: Channel,
+    serializationOptions :: Maybe SerializationOptions,
+    ownership :: Maybe ResultOwnership
+  }
+  deriving (Show, Generic, ToJSON, FromJSON)
 
 -- Evaluation types
 data EvaluateResult
-  = EvaluateResultSuccess EvaluateResultSuccess
-  | EvaluateResultException EvaluateResultException
+  = EvaluateResultSuccess
+      { typ :: Text, -- "success"
+        result :: RemoteValue,
+        realm :: Realm
+      }
+  | EvaluateResultException
+      { typ :: Text, -- "exception"
+        exceptionDetails :: ExceptionDetails,
+        realm :: Realm
+      }
   deriving (Show, Generic, ToJSON, FromJSON)
 
-data EvaluateResultSuccess = EvaluateResultSuccess
-  { typ :: Text  -- "success"
-  , result :: RemoteValue
-  , realm :: Realm
-  } deriving (Show, Generic)
+instance ToJSON EvaluateResult where
+  toJSON =
+    genericToJSON
+      defaultOptions
+        { fieldLabelModifier = \case
+            "typ" -> "type"
+            x -> x
+        }
 
-instance ToJSON EvaluateResultSuccess where
-  toJSON = genericToJSON defaultOptions { fieldLabelModifier = \case
-    "typ" -> "type"
-    x -> x }
-
-instance FromJSON EvaluateResultSuccess where
-  parseJSON = genericParseJSON defaultOptions { fieldLabelModifier = \case
-    "type" -> "typ"
-    x -> x }
-
-data EvaluateResultException = EvaluateResultException
-  { typ :: Text  -- "exception"
-  , exceptionDetails :: ExceptionDetails
-  , realm :: Realm
-  } deriving (Show, Generic)
-
-instance ToJSON EvaluateResultException where
-  toJSON = genericToJSON defaultOptions { fieldLabelModifier = \case
-    "typ" -> "type"
-    x -> x }
-
-instance FromJSON EvaluateResultException where
-  parseJSON = genericParseJSON defaultOptions { fieldLabelModifier = \case
-    "type" -> "typ"
-    x -> x }
+instance FromJSON EvaluateResult where
+  parseJSON =
+    genericParseJSON
+      defaultOptions
+        { fieldLabelModifier = \case
+            "type" -> "typ"
+            x -> x
+        }
 
 data ExceptionDetails = ExceptionDetails
-  { columnNumber :: JSUint
-  , exception :: RemoteValue
-  , lineNumber :: JSUint
-  , stackTrace :: StackTrace
-  , text :: Text
-  } deriving (Show, Generic, ToJSON, FromJSON)
+  { columnNumber :: JSUint,
+    exception :: RemoteValue,
+    lineNumber :: JSUint,
+    stackTrace :: StackTrace,
+    text :: Text
+  }
+  deriving (Show, Generic, ToJSON, FromJSON)
 
 -- Remote Value types
 data RemoteValue
@@ -116,6 +123,44 @@ data RemoteValue
   | WindowProxyValue WindowProxyRemoteValue
   deriving (Show, Generic, ToJSON, FromJSON)
 
+
+-- | Properties of a WindowProxy remote value
+data WindowProxyProperties = WindowProxyProperties
+  { context :: Text  -- BrowsingContext ID
+  } deriving (Show, Eq, Generic, ToJSON, FromJSON)
+
+-- | WindowProxy remote value representation
+data WindowProxyRemoteValue = WindowProxyRemoteValue
+  { typ :: Text                -- "window"
+  , value :: WindowProxyProperties
+  , handle :: Maybe Handle     -- Optional handle
+  , internalId :: Maybe InternalId  -- Optional internal ID
+  } deriving (Show, Eq, Generic)
+
+-- Custom JSON instances to handle the "type" field naming
+instance ToJSON WindowProxyRemoteValue where
+  toJSON WindowProxyRemoteValue{..} = object
+    [ "type" .= typ
+    , "value" .= value
+    , "handle" .= handle
+    , "internalId" .= internalId
+    ]
+  toEncoding WindowProxyRemoteValue{..} = pairs
+    ("type" .= typ <>
+     "value" .= value <>
+     "handle" .= handle <>
+     "internalId" .= internalId)
+
+instance FromJSON WindowProxyRemoteValue where
+  parseJSON = withObject "WindowProxyRemoteValue" $ \v -> do
+    typ <- v .: "type"
+    unless (typ == "window") $ fail "Type must be 'window'"
+    WindowProxyRemoteValue
+      <$> pure typ
+      <*> v .: "value"
+      <*> v .:? "handle"
+      <*> v .:? "internalId"
+
 data PrimitiveProtocolValue
   = UndefinedValue
   | NullValue
@@ -126,10 +171,10 @@ data PrimitiveProtocolValue
   deriving (Show, Generic)
 
 instance ToJSON PrimitiveProtocolValue where
-  toJSON = genericToJSON defaultOptions { omitNothingFields = True }
+  toJSON = genericToJSON defaultOptions {omitNothingFields = True}
 
 instance FromJSON PrimitiveProtocolValue where
-  parseJSON = genericParseJSON defaultOptions { omitNothingFields = True }
+  parseJSON = genericParseJSON defaultOptions {omitNothingFields = True}
 
 data SpecialNumber
   = NaN
@@ -140,160 +185,182 @@ data SpecialNumber
 
 -- Remote Object types
 data SymbolRemoteValue = SymbolRemoteValue
-  { typ :: Text  -- "symbol"
-  , handle :: Maybe Handle
-  , internalId :: Maybe InternalId
-  } deriving (Show, Generic)
+  { typ :: Text, -- "symbol"
+    handle :: Maybe Handle,
+    internalId :: Maybe InternalId
+  }
+  deriving (Show, Generic)
 
 instance ToJSON SymbolRemoteValue where
-  toJSON = genericToJSON defaultOptions { fieldLabelModifier = \case
-    "typ" -> "type"
-    x -> x }
+  toJSON =
+    genericToJSON
+      defaultOptions
+        { fieldLabelModifier = \case
+            "typ" -> "type"
+            x -> x
+        }
 
 instance FromJSON SymbolRemoteValue where
-  parseJSON = genericParseJSON defaultOptions { fieldLabelModifier = \case
-    "type" -> "typ"
-    x -> x }
+  parseJSON =
+    genericParseJSON
+      defaultOptions
+        { fieldLabelModifier = \case
+            "type" -> "typ"
+            x -> x
+        }
 
 data ArrayRemoteValue = ArrayRemoteValue
-  { typ :: Text  -- "array"
-  , handle :: Maybe Handle
-  , internalId :: Maybe InternalId
-  , value :: Maybe [RemoteValue]
-  } deriving (Show, Generic)
+  { typ :: Text, -- "array"
+    handle :: Maybe Handle,
+    internalId :: Maybe InternalId,
+    value :: Maybe [RemoteValue]
+  }
+  deriving (Show, Generic)
 
 instance ToJSON ArrayRemoteValue where
-  toJSON = genericToJSON defaultOptions { fieldLabelModifier = \case
-    "typ" -> "type"
-    x -> x }
+  toJSON =
+    genericToJSON
+      defaultOptions
+        { fieldLabelModifier = \case
+            "typ" -> "type"
+            x -> x
+        }
 
 instance FromJSON ArrayRemoteValue where
-  parseJSON = genericParseJSON defaultOptions { fieldLabelModifier = \case
-    "type" -> "typ"
-    x -> x }
+  parseJSON =
+    genericParseJSON
+      defaultOptions
+        { fieldLabelModifier = \case
+            "type" -> "typ"
+            x -> x
+        }
+
+data ObjectRemoteValue = MkObjectRemoteValue {typ :: Text, handle :: Maybe Handle, internalId :: Maybe InternalId, value :: Maybe [(Either RemoteValue Text, RemoteValue)]}
+
+data FunctionRemoteValue = MkFunctionRemoteValue {typ :: Text, handle :: Maybe Handle, internalId :: Maybe InternalId}
+
+data RegExpRemoteValue = MkRegExpRemoteValue {handle :: Maybe Handle, internalId :: Maybe InternalId, pattern' :: Text, flags :: Maybe Text}
+
+data DateRemoteValue = MkDateRemoteValue {handle :: Maybe Handle, internalId :: Maybe InternalId, value :: Text}
+
+data MapRemoteValue = MkMapRemoteValue {typ :: Text, handle :: Maybe Handle, internalId :: Maybe InternalId, value :: Maybe [(Either RemoteValue Text, RemoteValue)]}
+
+data SetRemoteValue = MkSetRemoteValue {typ :: Text, handle :: Maybe Handle, internalId :: Maybe InternalId, value :: Maybe [RemoteValue]}
+
+data WeakMapRemoteValue = MkWeakMapRemoteValue {typ :: Text, handle :: Maybe Handle, internalId :: Maybe InternalId}
+
+data WeakSetRemoteValue = MkWeakSetRemoteValue {typ :: Text, handle :: Maybe Handle, internalId :: Maybe InternalId}
+
+data GeneratorRemoteValue = MkGeneratorRemoteValue {typ :: Text, handle :: Maybe Handle, internalId :: Maybe InternalId}
+
+data ErrorRemoteValue = MkErrorRemoteValue {typ :: Text, handle :: Maybe Handle, internalId :: Maybe InternalId}
+
+data ProxyRemoteValue = MkProxyRemoteValue {typ :: Text, handle :: Maybe Handle, internalId :: Maybe InternalId}
+
+data PromiseRemoteValue = MkPromiseRemoteValue {typ :: Text, handle :: Maybe Handle, internalId :: Maybe InternalId}
+
+data TypedArrayRemoteValue = MkTypedArrayRemoteValue {typ :: Text, handle :: Maybe Handle, internalId :: Maybe InternalId}
+
+data ArrayBufferRemoteValue = MkArrayBufferRemoteValue {typ :: Text, handle :: Maybe Handle, internalId :: Maybe InternalId}
+
+data NodeListRemoteValue = MkNodeListRemoteValue {typ :: Text, handle :: Maybe Handle, internalId :: Maybe InternalId, value :: Maybe [RemoteValue]}
+
+data HTMLCollectionRemoteValue = MkHTMLCollectionRemoteValue {typ :: Text, handle :: Maybe Handle, internalId :: Maybe InternalId, value :: Maybe [RemoteValue]}
 
 -- Additional remote value types implemented similarly...
-data ObjectRemoteValue = ObjectRemoteValue { typ :: Text, handle :: Maybe Handle, internalId :: Maybe InternalId, value :: Maybe [(Either RemoteValue Text, RemoteValue)] }
-data FunctionRemoteValue = FunctionRemoteValue { typ :: Text, handle :: Maybe Handle, internalId :: Maybe InternalId }
-data RegExpRemoteValue = RegExpRemoteValue { handle :: Maybe Handle, internalId :: Maybe InternalId, pattern :: Text, flags :: Maybe Text }
-data DateRemoteValue = DateRemoteValue { handle :: Maybe Handle, internalId :: Maybe InternalId, value :: Text }
-data MapRemoteValue = MapRemoteValue { typ :: Text, handle :: Maybe Handle, internalId :: Maybe InternalId, value :: Maybe [(Either RemoteValue Text, RemoteValue)] }
-data SetRemoteValue = SetRemoteValue { typ :: Text, handle :: Maybe Handle, internalId :: Maybe InternalId, value :: Maybe [RemoteValue] }
-data WeakMapRemoteValue = WeakMapRemoteValue { typ :: Text, handle :: Maybe Handle, internalId :: Maybe InternalId }
-data WeakSetRemoteValue = WeakSetRemoteValue { typ :: Text, handle :: Maybe Handle, internalId :: Maybe InternalId }
-data GeneratorRemoteValue = GeneratorRemoteValue { typ :: Text, handle :: Maybe Handle, internalId :: Maybe InternalId }
-data ErrorRemoteValue = ErrorRemoteValue { typ :: Text, handle :: Maybe Handle, internalId :: Maybe InternalId }
-data ProxyRemoteValue = ProxyRemoteValue { typ :: Text, handle :: Maybe Handle, internalId :: Maybe InternalId }
-data PromiseRemoteValue = PromiseRemoteValue { typ :: Text, handle :: Maybe Handle, internalId :: Maybe InternalId }
-data TypedArrayRemoteValue = TypedArrayRemoteValue { typ :: Text, handle :: Maybe Handle, internalId :: Maybe InternalId }
-data ArrayBufferRemoteValue = ArrayBufferRemoteValue { typ :: Text, handle :: Maybe Handle, internalId :: Maybe InternalId }
-data NodeListRemoteValue = NodeListRemoteValue { typ :: Text, handle :: Maybe Handle, internalId :: Maybe InternalId, value :: Maybe [RemoteValue] }
-data HTMLCollectionRemoteValue = HTMLCollectionRemoteValue { typ :: Text, handle :: Maybe Handle, internalId :: Maybe InternalId, value :: Maybe [RemoteValue] }
-
 
 -- Realm types
-newtype Realm = Realm Text deriving (Show, Generic, ToJSON, FromJSON)
-newtype PreloadScript = PreloadScript Text deriving (Show, Generic, ToJSON, FromJSON)
+newtype Realm = MkRealm Text deriving (Show, Generic, ToJSON, FromJSON)
+
+newtype PreloadScript = MkPreloadScript Text deriving (Show, Generic, ToJSON, FromJSON)
 
 data RealmInfo
-  = WindowRealmInfo WindowRealmInfo
-  | DedicatedWorkerRealmInfo DedicatedWorkerRealmInfo
-  | SharedWorkerRealmInfo SharedWorkerRealmInfo
-  | ServiceWorkerRealmInfo ServiceWorkerRealmInfo
-  | WorkerRealmInfo WorkerRealmInfo
-  | PaintWorkletRealmInfo PaintWorkletRealmInfo
-  | AudioWorkletRealmInfo AudioWorkletRealmInfo
-  | WorkletRealmInfo WorkletRealmInfo
-  deriving (Show, Generic, ToJSON, FromJSON)
-
-data BaseRealmInfo = BaseRealmInfo
-  { realm :: Realm
-  , origin :: Text
-  } deriving (Show, Generic, ToJSON, FromJSON)
-
-data WindowRealmInfo = WindowRealmInfo
-  { base :: BaseRealmInfo
-  , typ :: Text  -- "window"
-  , context :: BrowsingContext
-  , sandbox :: Maybe Text
-  } deriving (Show, Generic)
-
-instance ToJSON WindowRealmInfo where
-  toJSON = genericToJSON defaultOptions { fieldLabelModifier = \case
-    "typ" -> "type"
-    x -> x }
+  = WindowRealmInfo
+      { base :: BaseRealmInfo,
+        typ :: Text, -- "window"
+        context :: BrowsingContext,
+        sandbox :: Maybe Text
+      }
+  | DedicatedWorkerRealmInfo {base :: BaseRealmInfo, typ :: Text, owners :: [Realm]}
+  | SharedWorkerRealmInfo {base :: BaseRealmInfo, typ :: Text}
+  | ServiceWorkerRealmInfo {base :: BaseRealmInfo, typ :: Text}
+  | WorkerRealmInfo {base :: BaseRealmInfo, typ :: Text}
+  | PaintWorkletRealmInfo {base :: BaseRealmInfo, typ :: Text}
+  | AudioWorkletRealmInfo {base :: BaseRealmInfo, typ :: Text}
+  | WorkletRealmInfo {base :: BaseRealmInfo, typ :: Text}
+  deriving (Show, Generic )
 
 instance FromJSON WindowRealmInfo where
-  parseJSON = genericParseJSON defaultOptions { fieldLabelModifier = \case
-    "type" -> "typ"
-    x -> x }
+  parseJSON = undefined
 
--- Other realm types implemented similarly...
-data DedicatedWorkerRealmInfo = DedicatedWorkerRealmInfo { base :: BaseRealmInfo, typ :: Text, owners :: [Realm] }
-data SharedWorkerRealmInfo = SharedWorkerRealmInfo { base :: BaseRealmInfo, typ :: Text }
-data ServiceWorkerRealmInfo = ServiceWorkerRealmInfo { base :: BaseRealmInfo, typ :: Text }
-data WorkerRealmInfo = WorkerRealmInfo { base :: BaseRealmInfo, typ :: Text }
-data PaintWorkletRealmInfo = PaintWorkletRealmInfo { base :: BaseRealmInfo, typ :: Text }
-data AudioWorkletRealmInfo = AudioWorkletRealmInfo { base :: BaseRealmInfo, typ :: Text }
-data WorkletRealmInfo = WorkletRealmInfo { base :: BaseRealmInfo, typ :: Text }
+instance ToJSON WindowRealmInfo where
+  toJSON = undefined
+
+
+data BaseRealmInfo = BaseRealmInfo
+  { realm :: Realm,
+    origin :: Text
+  }
+  deriving (Show, Generic, ToJSON, FromJSON)
+
 
 -- Stack trace types
 data StackTrace = StackTrace
   { callFrames :: [StackFrame]
-  } deriving (Show, Generic, ToJSON, FromJSON)
+  }
+  deriving (Show, Generic, ToJSON, FromJSON)
 
 data StackFrame = StackFrame
-  { columnNumber :: JSUint
-  , functionName :: Text
-  , lineNumber :: JSUint
-  , url :: Text
-  } deriving (Show, Generic, ToJSON, FromJSON)
+  { columnNumber :: JSUint,
+    functionName :: Text,
+    lineNumber :: JSUint,
+    url :: Text
+  }
+  deriving (Show, Generic, ToJSON, FromJSON)
 
--- Result types
-data AddPreloadScriptResult = AddPreloadScriptResult
-  { script :: PreloadScript
-  } deriving (Show, Generic, ToJSON, FromJSON)
-
-data GetRealmsResult = GetRealmsResult
-  { realms :: [RealmInfo]
-  } deriving (Show, Generic, ToJSON, FromJSON)
-
--- Event types
-data MessageEvent = MessageEvent
-  { method :: Text  -- "script.message"
-  , params :: MessageParameters
-  } deriving (Show, Generic, ToJSON, FromJSON)
 
 data MessageParameters = MessageParameters
-  { channel :: Channel
-  , data_ :: RemoteValue
-  , source :: Source
-  } deriving (Show, Generic)
+  { channel :: Channel,
+    data_ :: RemoteValue,
+    source :: Source
+  }
+  deriving (Show, Generic)
 
 instance ToJSON MessageParameters where
-  toJSON = genericToJSON defaultOptions { fieldLabelModifier = \case
-    "data_" -> "data"
-    x -> x }
+  toJSON =
+    genericToJSON
+      defaultOptions
+        { fieldLabelModifier = \case
+            "data_" -> "data"
+            x -> x
+        }
 
 instance FromJSON MessageParameters where
-  parseJSON = genericParseJSON defaultOptions { fieldLabelModifier = \case
-    "data" -> "data_"
-    x -> x }
+  parseJSON =
+    genericParseJSON
+      defaultOptions
+        { fieldLabelModifier = \case
+            "data" -> "data_"
+            x -> x
+        }
 
 data Source = Source
-  { realm :: Realm
-  , context :: Maybe BrowsingContext
-  } deriving (Show, Generic, ToJSON, FromJSON)
+  { realm :: Realm,
+    context :: Maybe BrowsingContext
+  }
+  deriving (Show, Generic, ToJSON, FromJSON)
 
 data RealmDestroyedParams = RealmDestroyedParams
   { realm :: Realm
-  } deriving (Show, Generic, ToJSON, FromJSON)
+  }
+  deriving (Show, Generic, ToJSON, FromJSON)
 
 -- Configuration types
 data ResultOwnership = Root | None deriving (Show, Generic, ToJSON, FromJSON)
 
 data SerializationOptions = SerializationOptions
-  { maxDomDepth :: Maybe (Maybe JSUint)  -- .default 0
-  , maxObjectDepth :: Maybe (Maybe JSUint)  -- .default null
-  , includeShadowTree :: Maybe Text  -- "none", "open", "all" .default "none"
-  } deriving (Show, Generic, ToJSON, FromJSON)
+  { maxDomDepth :: Maybe (Maybe JSUint), -- .default 0
+    maxObjectDepth :: Maybe (Maybe JSUint), -- .default null
+    includeShadowTree :: Maybe Text -- "none", "open", "all" .default "none"
+  }
+  deriving (Show, Generic, ToJSON, FromJSON)

@@ -13,6 +13,8 @@
 - [X] Autogenerate to start with
 - [ ] Fix and demo
 - [ ] BidiExamples - the Internet
+- [ ] remove all instances of `typ :: Text` and updat From/To JSON
+- [ ] clean up `MessageParameters` 
 
 ## finally 
 - [ ] update READMEs

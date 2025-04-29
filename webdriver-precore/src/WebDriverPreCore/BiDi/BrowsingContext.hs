@@ -4,7 +4,7 @@ import Data.Aeson
 import Data.Text (Text)
 import GHC.Generics
 import qualified Data.Map as Map
-import Script (NodeRemoteValue)
+import WebDriverPreCore.BiDi.Script (NodeRemoteValue)
 import WebDriverPreCore.BiDi.CoreTypes (JSUint, JSInt)
 
 -- Main BrowsingContext types

@@ -9,6 +9,7 @@ import Prelude (Integer, Show, Maybe)
 import Data.Word (Word64)
 import Data.Int (Int64)
 import WebDriverPreCore.BiDi.CoreTypes
+import WebDriverPreCore.BiDi.BrowsingContext (BrowsingContext)
                         
 -- Main message type
 data Message
