@@ -7,9 +7,6 @@ import qualified Data.Map as Map
 import WebDriverPreCore.BiDi.Script (NodeRemoteValue)
 import WebDriverPreCore.BiDi.CoreTypes (JSUint, JSInt)
 
--- Main BrowsingContext types
-newtype BrowsingContext = BrowsingContext Text deriving (Show, Generic, ToJSON, FromJSON)
-
 data Info = Info
   { children :: Maybe [Info]  -- null allowed per spec
   , clientWindow :: Text

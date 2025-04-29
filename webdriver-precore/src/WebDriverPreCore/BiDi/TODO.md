@@ -15,6 +15,7 @@
 - [ ] BidiExamples - the Internet
 - [ ] remove all instances of `typ :: Text` and updat From/To JSON
 - [ ] clean up `MessageParameters` 
+- [ ] script from and to Json all types
 
 ## finally 
 - [ ] update READMEs

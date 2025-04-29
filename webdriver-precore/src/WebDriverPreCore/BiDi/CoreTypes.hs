@@ -1,10 +1,12 @@
 module WebDriverPreCore.BiDi.CoreTypes
-  ( JSUint (..),
-    JSInt (..),
-    NodeRemoteValue (..),
-    NodeProperties (..),
+  ( 
+    BrowsingContext (..),
     Handle (..),
     InternalId (..),
+    JSInt (..),
+    JSUint (..),
+    NodeProperties (..),
+    NodeRemoteValue (..),
     SharedId (..),
   )
 where
@@ -25,6 +27,9 @@ import Prelude (Eq, Maybe, Show)
 newtype JSUint = MkJSUInt Word64 deriving newtype (Show, Eq, FromJSON, ToJSON) -- JSUnit ::  0..9007199254740991  -     Word64 :: 18446744073709551615
 
 newtype JSInt = MkJSInt Int64 deriving newtype (Show, Eq, FromJSON, ToJSON) -- JSINt  :: -9007199254740991..9007199254740991 - Int64  -9223372036854775808 to 9223372036854775807
+
+-- Main BrowsingContext types
+newtype BrowsingContext = BrowsingContext Text deriving (Show, Generic, ToJSON, FromJSON)
 
 -- Node type used by BrowsingContext and Script
 data NodeRemoteValue = MkNodeRemoteValue
@@ -71,8 +76,8 @@ instance ToJSON NodeProperties
 
 instance FromJSON NodeProperties
 
-newtype Handle = MkHandle Text deriving newtype (Show, ToJSON, FromJSON)
+newtype Handle = MkHandle Text deriving newtype (Show, Eq, ToJSON, FromJSON)
 
-newtype InternalId = MkInternalId Text deriving newtype (Show, ToJSON, FromJSON)
+newtype InternalId = MkInternalId Text deriving newtype (Show, Eq, ToJSON, FromJSON)
 
-newtype SharedId = MkSharedId Text deriving newtype (Show, ToJSON, FromJSON)
+newtype SharedId = MkSharedId Text deriving newtype (Show, Eq, ToJSON, FromJSON)
