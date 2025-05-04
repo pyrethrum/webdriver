@@ -2,13 +2,10 @@ module WebDriverPreCore.BiDi.Script where
 
 import Data.Aeson
 import Data.Aeson.Types
-import Data.Map qualified as Map
 import Data.Text (Text)
 import GHC.Generics
-import WebDriverPreCore.BiDi.CoreTypes (BrowsingContext, Handle, InternalId, JSInt, JSUint, NodeRemoteValue)
-import Prelude (Bool (..), Double, Either, Eq (..), Maybe, Show, Semigroup (..), ($), (<$>), (<*>), Applicative (..))
-import Control.Monad (unless)
-import Control.Monad (MonadFail(..))
+import WebDriverPreCore.BiDi.CoreTypes (BrowsingContext, Handle, InternalId, JSUint, NodeRemoteValue)
+import Prelude (Bool (..), Double, Either, Eq (..), Maybe, Show)
 
 -- Main Script types
 data ScriptResult
@@ -45,6 +42,7 @@ instance ToJSON ChannelValue where
         }
 
 instance FromJSON ChannelValue where
+  parseJSON :: Value -> Parser ChannelValue
   parseJSON =
     genericParseJSON
       defaultOptions
@@ -59,6 +57,17 @@ data ChannelProperties = ChannelProperties
     ownership :: Maybe ResultOwnership
   }
   deriving (Show, Generic)
+
+instance ToJSON ChannelProperties
+
+instance FromJSON ChannelProperties where
+  parseJSON =
+    genericParseJSON
+      defaultOptions
+        { fieldLabelModifier = \case
+            "channel" -> "channel"
+            x -> x
+        }
 
 -- Evaluation types
 data EvaluateResult
@@ -75,6 +84,7 @@ data EvaluateResult
   deriving (Show, Generic)
 
 instance ToJSON EvaluateResult where
+  toJSON :: EvaluateResult -> Value
   toJSON =
     genericToJSON
       defaultOptions
@@ -101,79 +111,131 @@ data ExceptionDetails = ExceptionDetails
   }
   deriving (Show, Generic)
 
+instance ToJSON ExceptionDetails
+
+instance FromJSON ExceptionDetails
+
 -- Remote Value types
 data RemoteValue
   = PrimitiveValue PrimitiveProtocolValue
-  | SymbolValue SymbolRemoteValue
-  | ArrayValue ArrayRemoteValue
-  | ObjectValue ObjectRemoteValue
-  | FunctionValue FunctionRemoteValue
-  | RegExpValue RegExpRemoteValue
-  | DateValue DateRemoteValue
-  | MapValue MapRemoteValue
-  | SetValue SetRemoteValue
-  | WeakMapValue WeakMapRemoteValue
-  | GeneratorValue GeneratorRemoteValue
-  | ErrorValue ErrorRemoteValue
-  | ProxyValue ProxyRemoteValue
-  | PromiseValue PromiseRemoteValue
-  | TypedArrayValue TypedArrayRemoteValue
-  | ArrayBufferValue ArrayBufferRemoteValue
-  | NodeListValue NodeListRemoteValue
-  | HTMLCollectionValue HTMLCollectionRemoteValue
+  | SymbolValue
+      { typ :: Text, -- "symbol"
+        handle :: Maybe Handle,
+        internalId :: Maybe InternalId
+      }
+  | ArrayValue
+      { typ :: Text, -- "array"
+        handle :: Maybe Handle,
+        internalId :: Maybe InternalId,
+        value :: Maybe [RemoteValue]
+      }
+  | ObjectValue
+      { typ :: Text,
+        handle :: Maybe Handle,
+        internalId :: Maybe InternalId,
+        -- change to value from / to JSON
+        values :: Maybe [(Either RemoteValue Text, RemoteValue)]
+      }
+  | FunctionValue
+      { typ :: Text,
+        handle :: Maybe Handle,
+        internalId :: Maybe InternalId
+      }
+  | RegExpValue
+      { handle :: Maybe Handle,
+        internalId :: Maybe InternalId,
+        pattern' :: Text,
+        flags :: Maybe Text
+      }
+  | DateValue
+      { handle :: Maybe Handle,
+        internalId :: Maybe InternalId,
+        dateValue :: Text
+      }
+  | MapValue
+      { typ :: Text,
+        handle :: Maybe Handle,
+        internalId :: Maybe InternalId,
+        values :: Maybe [(Either RemoteValue Text, RemoteValue)]
+      }
+  | SetValue
+      { typ :: Text,
+        handle :: Maybe Handle,
+        internalId :: Maybe InternalId,
+        value :: Maybe [RemoteValue]
+      }
+  | WeakMapValue
+      { typ :: Text,
+        handle :: Maybe Handle,
+        internalId :: Maybe InternalId
+      }
+  | GeneratorValue
+      { typ :: Text,
+        handle :: Maybe Handle,
+        internalId :: Maybe InternalId
+      }
+  | ErrorValue
+      { typ :: Text,
+        handle :: Maybe Handle,
+        internalId :: Maybe InternalId
+      }
+  | ProxyValue
+      { typ :: Text,
+        handle :: Maybe Handle,
+        internalId :: Maybe InternalId
+      }
+  | PromiseValue
+      { typ :: Text,
+        handle :: Maybe Handle,
+        internalId :: Maybe InternalId
+      }
+  | TypedArrayValue
+      { typ :: Text,
+        handle :: Maybe Handle,
+        internalId :: Maybe InternalId
+      }
+  | ArrayBufferValue
+      { typ :: Text,
+        handle :: Maybe Handle,
+        internalId :: Maybe InternalId
+      }
+  | NodeListValue
+      { typ :: Text,
+        handle :: Maybe Handle,
+        internalId :: Maybe InternalId,
+        value :: Maybe [RemoteValue]
+      }
+  | HTMLCollectionValue
+      { typ :: Text,
+        handle :: Maybe Handle,
+        internalId :: Maybe InternalId,
+        value :: Maybe [RemoteValue]
+      }
   | NodeValue NodeRemoteValue
-  | WindowProxyValue WindowProxyRemoteValue
+  | WindowProxyValue
+      { typ :: Text, -- "window"
+        winProxyValues :: WindowProxyProperties,
+        handle :: Maybe Handle, -- Optional handle
+        internalId :: Maybe InternalId -- Optional internal ID
+      }
   deriving (Show, Generic)
 
+
+instance ToJSON RemoteValue
+
+instance FromJSON RemoteValue
+
 -- | Properties of a WindowProxy remote value
-data WindowProxyProperties = WindowProxyProperties
+newtype WindowProxyProperties = MkWindowProxyProperties
   { context :: Text -- BrowsingContext ID
   }
   deriving (Show, Eq, Generic)
 
+instance ToJSON WindowProxyProperties
+
+instance FromJSON WindowProxyProperties
+
 -- | WindowProxy remote value representation
-data WindowProxyRemoteValue = WindowProxyRemoteValue
-  { typ :: Text, -- "window"
-    value :: WindowProxyProperties,
-    handle :: Maybe Handle, -- Optional handle
-    internalId :: Maybe InternalId -- Optional internal ID
-  }
-  deriving (Show, Eq, Generic)
-
--- Custom JSON instances to handle the "type" field naming
-instance ToJSON WindowProxyRemoteValue where
-  toJSON WindowProxyRemoteValue {..} =
-    object
-      [ "type" .= typ,
-        "value" .= value,
-        "handle" .= handle,
-        "internalId" .= internalId
-      ]
-  toEncoding WindowProxyRemoteValue {..} =
-    pairs
-      ( "type"
-          .= typ
-            <> "value"
-          .= value
-            <> "handle"
-          .= handle
-            <> "internalId"
-          .= internalId
-      )
-
-instance FromJSON WindowProxyRemoteValue where
-  parseJSON = withObject "WindowProxyRemoteValue" $ \v -> do
-    typ <- v .: "type"
-    unless (typ == "window") $ fail "Type must be 'window'"
-    WindowProxyRemoteValue
-      <$> pure typ
-      <*> v
-      .: "value"
-      <*> v
-      .:? "handle"
-      <*> v
-      .:? "internalId"
-
 data PrimitiveProtocolValue
   = UndefinedValue
   | NullValue
@@ -196,158 +258,17 @@ data SpecialNumber
   | NegativeInfinity
   deriving (Show, Generic)
 
+instance FromJSON SpecialNumber where
+
+instance ToJSON SpecialNumber where 
+
 -- Remote Object types
-data SymbolRemoteValue = SymbolRemoteValue
-  { typ :: Text, -- "symbol"
-    handle :: Maybe Handle,
-    internalId :: Maybe InternalId
-  }
-  deriving (Show, Generic)
-
-instance ToJSON SymbolRemoteValue where
-  toJSON =
-    genericToJSON
-      defaultOptions
-        { fieldLabelModifier = \case
-            "typ" -> "type"
-            x -> x
-        }
-
-instance FromJSON SymbolRemoteValue where
-  parseJSON =
-    genericParseJSON
-      defaultOptions
-        { fieldLabelModifier = \case
-            "type" -> "typ"
-            x -> x
-        }
-
-data ArrayRemoteValue = ArrayRemoteValue
-  { typ :: Text, -- "array"
-    handle :: Maybe Handle,
-    internalId :: Maybe InternalId,
-    value :: Maybe [RemoteValue]
-  }
-  deriving (Show, Generic)
-
-instance ToJSON ArrayRemoteValue where
-  toJSON =
-    genericToJSON
-      defaultOptions
-        { fieldLabelModifier = \case
-            "typ" -> "type"
-            x -> x
-        }
-
-instance FromJSON ArrayRemoteValue where
-  parseJSON =
-    genericParseJSON
-      defaultOptions
-        { fieldLabelModifier = \case
-            "type" -> "typ"
-            x -> x
-        }
-
-data ObjectRemoteValue = MkObjectRemoteValue
-  { typ :: Text,
-    handle :: Maybe Handle,
-    internalId :: Maybe InternalId,
-    value :: Maybe [(Either RemoteValue Text, RemoteValue)]
-  } deriving (Show, Generic)
-
-data FunctionRemoteValue = MkFunctionRemoteValue
-  { typ :: Text,
-    handle :: Maybe Handle,
-    internalId :: Maybe InternalId
-  } deriving (Show, Generic)
-
-data RegExpRemoteValue = MkRegExpRemoteValue
-  { handle :: Maybe Handle,
-    internalId :: Maybe InternalId,
-    pattern' :: Text,
-    flags :: Maybe Text
-  } deriving (Show, Generic)
-data DateRemoteValue = MkDateRemoteValue
-  { handle :: Maybe Handle,
-    internalId :: Maybe InternalId,
-    value :: Text
-  } deriving (Show, Generic)
-
-data MapRemoteValue = MkMapRemoteValue
-  { typ :: Text,
-    handle :: Maybe Handle,
-    internalId :: Maybe InternalId,
-    value :: Maybe [(Either RemoteValue Text, RemoteValue)]
-  } deriving (Show, Generic)
-
-data SetRemoteValue = MkSetRemoteValue
-  { typ :: Text,
-    handle :: Maybe Handle,
-    internalId :: Maybe InternalId,
-    value :: Maybe [RemoteValue]
-  } deriving (Show, Generic)
-
-data WeakMapRemoteValue = MkWeakMapRemoteValue
-  { typ :: Text,
-    handle :: Maybe Handle,
-    internalId :: Maybe InternalId
-  } deriving (Show, Generic)
 
 data WeakSetRemoteValue = MkWeakSetRemoteValue
   { typ :: Text,
     handle :: Maybe Handle,
     internalId :: Maybe InternalId
   }
-
-data GeneratorRemoteValue = MkGeneratorRemoteValue
-  { typ :: Text,
-    handle :: Maybe Handle,
-    internalId :: Maybe InternalId
-  } deriving (Show, Generic)
-
-data ErrorRemoteValue = MkErrorRemoteValue
-  { typ :: Text,
-    handle :: Maybe Handle,
-    internalId :: Maybe InternalId
-  } deriving (Show, Generic)
-
-data ProxyRemoteValue = MkProxyRemoteValue
-  { typ :: Text,
-    handle :: Maybe Handle,
-    internalId :: Maybe InternalId
-  } deriving (Show, Generic)
-
-data PromiseRemoteValue = MkPromiseRemoteValue
-  { typ :: Text,
-    handle :: Maybe Handle,
-    internalId :: Maybe InternalId
-  } deriving (Show, Generic)
-
-data TypedArrayRemoteValue = MkTypedArrayRemoteValue
-  { typ :: Text,
-    handle :: Maybe Handle,
-    internalId :: Maybe InternalId
-  } deriving (Show, Generic)
-
-data ArrayBufferRemoteValue = MkArrayBufferRemoteValue
-  { typ :: Text,
-    handle :: Maybe Handle,
-    internalId :: Maybe InternalId
-  } deriving (Show, Generic)
-
-data NodeListRemoteValue = MkNodeListRemoteValue
-  { typ :: Text,
-    handle :: Maybe Handle,
-    internalId :: Maybe InternalId,
-    value :: Maybe [RemoteValue]
-  } deriving (Show, Generic)
-
-data HTMLCollectionRemoteValue = MkHTMLCollectionRemoteValue
-  { typ :: Text,
-    handle :: Maybe Handle,
-    internalId :: Maybe InternalId,
-    value :: Maybe [RemoteValue]
-  } deriving (Show, Generic)
 
 -- Additional remote value types implemented similarly...
 
@@ -372,7 +293,6 @@ data RealmInfo
   | WorkletRealmInfo {base :: BaseRealmInfo, typ :: Text}
   deriving (Show, Generic)
 
-
 data BaseRealmInfo = BaseRealmInfo
   { realm :: Realm,
     origin :: Text
@@ -385,6 +305,10 @@ data StackTrace = StackTrace
   }
   deriving (Show, Generic)
 
+instance ToJSON StackTrace
+
+instance FromJSON StackTrace
+
 data StackFrame = StackFrame
   { columnNumber :: JSUint,
     functionName :: Text,
@@ -392,6 +316,10 @@ data StackFrame = StackFrame
     url :: Text
   }
   deriving (Show, Generic)
+
+instance ToJSON StackFrame
+
+instance FromJSON StackFrame
 
 data MessageParameters = MessageParameters
   { channel :: Channel,
@@ -401,6 +329,7 @@ data MessageParameters = MessageParameters
   deriving (Show, Generic)
 
 instance ToJSON MessageParameters where
+  toJSON :: MessageParameters -> Value
   toJSON =
     genericToJSON
       defaultOptions
@@ -410,6 +339,7 @@ instance ToJSON MessageParameters where
         }
 
 instance FromJSON MessageParameters where
+  parseJSON :: Value -> Parser MessageParameters
   parseJSON =
     genericParseJSON
       defaultOptions
@@ -424,6 +354,10 @@ data Source = Source
   }
   deriving (Show, Generic)
 
+instance ToJSON Source
+
+instance FromJSON Source
+
 data RealmDestroyedParams = RealmDestroyedParams
   { realm :: Realm
   }
@@ -432,9 +366,27 @@ data RealmDestroyedParams = RealmDestroyedParams
 -- Configuration types
 data ResultOwnership = Root | None deriving (Show, Generic)
 
+instance ToJSON ResultOwnership where
+  toJSON :: ResultOwnership -> Value
+  toJSON = genericToJSON defaultOptions {omitNothingFields = True}
+
+instance FromJSON ResultOwnership where
+  parseJSON :: Value -> Parser ResultOwnership
+  parseJSON = genericParseJSON defaultOptions {omitNothingFields = True}
+
 data SerializationOptions = SerializationOptions
   { maxDomDepth :: Maybe (Maybe JSUint), -- .default 0
     maxObjectDepth :: Maybe (Maybe JSUint), -- .default null
     includeShadowTree :: Maybe Text -- "none", "open", "all" .default "none"
   }
   deriving (Show, Generic)
+
+instance ToJSON SerializationOptions where
+  toJSON :: SerializationOptions -> Value
+  toJSON =
+    genericToJSON
+      defaultOptions {omitNothingFields = True}
+
+instance FromJSON SerializationOptions where
+  parseJSON :: Value -> Parser SerializationOptions
+  parseJSON = genericParseJSON defaultOptions {omitNothingFields = True}

@@ -1,6 +1,5 @@
 module WebDriverPreCore.BiDi.CoreTypes
-  ( 
-    BrowsingContext (..),
+  ( BrowsingContext (..),
     Handle (..),
     InternalId (..),
     JSInt (..),
@@ -11,8 +10,7 @@ module WebDriverPreCore.BiDi.CoreTypes
   )
 where
 
-import Data.Aeson (FromJSON (..), Options (fieldLabelModifier), ToJSON, genericParseJSON)
-import Data.Aeson.Types (ToJSON (..), defaultOptions, genericToJSON)
+import Data.Aeson (FromJSON (..), ToJSON)
 import Data.Int (Int64)
 import Data.Map qualified as Map
 import Data.Text (Text)
@@ -32,6 +30,7 @@ newtype JSInt = MkJSInt Int64 deriving newtype (Show, Eq, FromJSON, ToJSON) -- J
 newtype BrowsingContext = BrowsingContext Text deriving (Show, Generic, ToJSON, FromJSON)
 
 -- Node type used by BrowsingContext and Script
+
 data NodeRemoteValue = MkNodeRemoteValue
   { typ :: Text, -- "node"
     sharedId :: Maybe SharedId,
@@ -41,23 +40,9 @@ data NodeRemoteValue = MkNodeRemoteValue
   }
   deriving (Show, Generic)
 
-instance ToJSON NodeRemoteValue where
-  toJSON =
-    genericToJSON
-      defaultOptions
-        { fieldLabelModifier = \case
-            "typ" -> "type"
-            x -> x
-        }
+instance FromJSON NodeRemoteValue
 
-instance FromJSON NodeRemoteValue where
-  parseJSON =
-    genericParseJSON
-      defaultOptions
-        { fieldLabelModifier = \case
-            "type" -> "typ"
-            x -> x
-        }
+instance ToJSON NodeRemoteValue
 
 data NodeProperties = MkNodeProperties
   { nodeType :: JSUint,
