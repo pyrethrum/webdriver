@@ -1,31 +1,130 @@
-
 module WebDriverPreCore.BiDi.Protocol where
 
-import Data.Aeson 
-import Data.Text (Text)
-import GHC.Generics
-import qualified Data.Map as Map
-import Prelude (Integer, Show, Maybe)
-import Data.Word (Word64)
+import Data.Aeson
 import Data.Int (Int64)
+import Data.Map qualified as Map
+import Data.Text (Text)
+import Data.Word (Word64)
+import GHC.Generics
+import WebDriverPreCore.BiDi.BrowsingContext (BrowsingContextResult, BrowsingContextEvent)
 import WebDriverPreCore.BiDi.CoreTypes
-import WebDriverPreCore.BiDi.BrowsingContext (BrowsingContext)
-                        
+import Prelude (Integer, Maybe, Show)
+
 -- Main message type
 data Message
-  = CommandResponse CommandResponse
-  | ErrorResponse ErrorResponse
-  | Event Event
-  deriving (Show, Generic, ToJSON, FromJSON)
+  = SuccessResponse
+  { id :: JSUint,
+    result :: ResultData,
+    extensions :: Maybe (Map.Map Text Value)
+  } |
+  ErrorResponse { typ :: Text  -- "error"
+  , errorId :: Maybe JSUint
+  , error :: ErrorCode
+  , message :: Text
+  , stacktrace :: Maybe Text
+  , extensions :: Maybe (Map.Map Text Value)
+  } 
+  | Event {
+    typ :: Text,  -- "event"
+    eventData :: EventData,
+    extensions :: Maybe (Map.Map Text Value)
+  }
+  deriving (
+            Show, Generic)
 
 data CommandResponse = Success
-  { 
-    id :: JSUint
-  , result :: ResultData
-  , extensions :: Maybe (Map.Map Text Value)
-  } deriving (Show, Generic)
+  { id :: JSUint,
+    result :: ResultData,
+    extensions :: Maybe (Map.Map Text Value)
+  }
+  deriving (Show, Generic)
+
+data EventData
+  = BrowsingContextEvent BrowsingContextEvent
+  | InputEvent InputEvent
+  | LogEvent LogEvent
+  | NetworkEvent NetworkEvent
+  | ScriptEvent ScriptEvent
+  deriving (Show, Generic)
 
 
+Here 
+InputEvent = (
+  input.FileDialogOpened
+)
+
+input.FileDialogOpened = (
+   method: "input.fileDialogOpened",
+   params: input.FileDialogInfo
+)
+
+input.FileDialogInfo = {
+   context: browsingContext.BrowsingContext,
+   ? element: script.SharedReference,
+   multiple: bool,
+}
+
+
+data ErrorCode
+  = InvalidArgument | 
+    InvalidSelector |
+    InvalidSessionId |
+    InvalidWebExtension |
+    MoveTargetOutOfBounds |
+    NoSuchAlert |
+    NoSuchElement |
+    NoSuchFrame |
+    NoSuchHandle |
+    NoSuchHistoryEntry |
+    NoSuchIntercept |
+    NoSuchNode |
+    NoSuchRequest |
+    NoSuchScript |
+    NoSuchStoragePartition |
+    NoSuchUserContext |
+    NoSuchWebExtension |
+    SessionNotCreated |
+    UnableToCaptureScreen |
+    UnableToCloseBrowser |
+    UnableToSetCookie |
+    UnableToSetFileInput |
+    UnderspecifiedStoragePartition |
+    UnknownCommand |
+    UnknownError |
+    UnsupportedOperation 
+
+    {- 
+    "invalid argument" /
+            "invalid selector" /
+            "invalid session id" /
+            "invalid web extension" /
+            "move target out of bounds" /
+            "no such alert" /
+            "no such element" /
+            "no such frame" /
+            "no such handle" /
+            "no such history entry" /
+            "no such intercept" /
+            "no such node" /
+            "no such request" /
+            "no such script" /
+            "no such storage partition" /
+            "no such user context" /
+            "no such web extension" /
+            "session not created" /
+            "unable to capture screen" /
+            "unable to close browser" /
+            "unable to set cookie" /
+            "unable to set file input" /
+            "underspecified storage partition" /
+            "unknown command" /
+            "unknown error" /
+            "unsupported operation"
+
+    -}
+
+  -- ... TODO :: other error codes ...
+  deriving (Show, Generic)
 
 -- ResultData = (
 --   BrowsingContextResult /
@@ -37,21 +136,17 @@ data CommandResponse = Success
 --   WebExtensionResult
 -- )
 data ResultData
-  = BrowsingContextResult BrowsingContextResult {-}
-  | EmptyResult (Map.Map Text Value)
-  | NetworkResult NetworkResult
-  | ScriptResult ScriptResult
-  | SessionResult SessionResult
-  | StorageResult StorageResult
-  | WebExtensionResult WebExtensionResult
-  -}
-  deriving (Show, Generic, ToJSON, FromJSON)
+  = BrowsingContext BrowsingContextResult {-}
+                                          \| EmptyResult (Map.Map Text Value)
+                                          \| NetworkResult NetworkResult
+                                          \| ScriptResult ScriptResult
+                                          \| SessionResult SessionResult
+                                          \| StorageResult StorageResult
+                                          \| WebExtensionResult WebExtensionResult
+                                          -}
+  deriving (Show, Generic)
 
-
-
-  {- Spec
-
-
+{- Spec
 
 Message = (
   CommandResponse /
@@ -75,8 +170,6 @@ ErrorResponse = {
   Extensible
 }
 
-
-
 EmptyResult = {
   Extensible
 }
@@ -95,9 +188,7 @@ EventData = (
   ScriptEvent
 )
 
-  
   -}
-
 
 {-
 
@@ -160,7 +251,7 @@ instance FromJSON ErrorResponse where
 data ErrorCode
   = InvalidArgument | InvalidSelector | InvalidSessionId
   -- ... other error codes ...
-  deriving (Show, Generic, ToJSON, FromJSON)
+  deriving (Show, Generic)
 
 -- Event.hs
 module Event where
@@ -177,17 +268,10 @@ instance ToJSON Event where
 instance FromJSON Event where
   parseJSON = genericParseJSON defaultOptions
 
-data EventData
-  = BrowsingContextEvent BrowsingContextEvent
-  | InputEvent InputEvent
-  | LogEvent LogEvent
-  | NetworkEvent NetworkEvent
-  | ScriptEvent ScriptEvent
-  deriving (Show, Generic, ToJSON, FromJSON)
+
 
 -- ResultData.hs
 module ResultData where
-
 
 -- Session.hs
 module Session where
