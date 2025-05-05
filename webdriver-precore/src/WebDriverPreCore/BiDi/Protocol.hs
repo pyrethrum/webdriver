@@ -1,6 +1,14 @@
 module WebDriverPreCore.BiDi.Protocol where
 
-import Data.Aeson
+import Data.Aeson 
+  ( FromJSON,
+    ToJSON,
+    Value,
+    genericParseJSON,
+    genericToJSON,
+    defaultOptions,
+    omitNothingFields,
+  )
 import Data.Int (Int64)
 import Data.Map qualified as Map
 import Data.Text (Text)
@@ -8,62 +16,62 @@ import Data.Word (Word64)
 import GHC.Generics
 import WebDriverPreCore.BiDi.BrowsingContext (BrowsingContextResult, BrowsingContextEvent)
 import WebDriverPreCore.BiDi.CoreTypes
-import Prelude (Integer, Maybe, Show)
+import Prelude (Integer, Maybe, Show, Bool)
 
 -- Main message type
 data Message
-  = SuccessResponse
-  { id :: JSUint,
-    result :: ResultData,
-    extensions :: Maybe (Map.Map Text Value)
-  } |
-  ErrorResponse { typ :: Text  -- "error"
-  , errorId :: Maybe JSUint
-  , error :: ErrorCode
-  , message :: Text
-  , stacktrace :: Maybe Text
-  , extensions :: Maybe (Map.Map Text Value)
-  } 
-  | Event {
-    typ :: Text,  -- "event"
-    eventData :: EventData,
-    extensions :: Maybe (Map.Map Text Value)
-  }
+  = CommandResponse Success |
+    ErrorResponse Error |
+    Event Event
   deriving (
             Show, Generic)
 
-data CommandResponse = Success
+data Success = MkSuccess
   { id :: JSUint,
     result :: ResultData,
+    extensions :: Maybe (Map.Map Text Value)
+  }
+  deriving (Show, Generic)
+
+data Error = MkError
+  { typ :: Text,  -- "error"
+    errorId :: Maybe JSUint,
+    error :: ErrorCode,
+    message :: Text,
+    stacktrace :: Maybe Text,
+    extensions :: Maybe (Map.Map Text Value)
+  }
+  deriving (Show, Generic)
+
+data Event = MkEvent
+  { typ :: Text,  -- "event"
+    eventData :: EventData,
     extensions :: Maybe (Map.Map Text Value)
   }
   deriving (Show, Generic)
 
 data EventData
   = BrowsingContextEvent BrowsingContextEvent
-  | InputEvent InputEvent
-  | LogEvent LogEvent
+  -- | InputEvent InputEvent
+  | InputEvent FileDialogOpened 
+  -- method: "log.entryAdded"
+  | LogEvent Entry 
   | NetworkEvent NetworkEvent
   | ScriptEvent ScriptEvent
   deriving (Show, Generic)
 
+data FileDialogOpened  = MkFileDialogOpened {
+      context :: BrowsingContext,
+      element :: Maybe NodeRemoteValue,
+      multiple :: Bool
+    } 
+  deriving (Show, Generic)
 
-Here 
-InputEvent = (
-  input.FileDialogOpened
-)
-
-input.FileDialogOpened = (
-   method: "input.fileDialogOpened",
-   params: input.FileDialogInfo
-)
-
-input.FileDialogInfo = {
-   context: browsingContext.BrowsingContext,
-   ? element: script.SharedReference,
-   multiple: bool,
-}
-
+data Entry
+  = GenericLogEntry GenericLogEntry
+  | ConsoleLogEntry ConsoleLogEntry
+  | JavascriptLogEntry JavascriptLogEntry
+  deriving (Show, Generic)
 
 data ErrorCode
   = InvalidArgument | 
@@ -92,6 +100,7 @@ data ErrorCode
     UnknownCommand |
     UnknownError |
     UnsupportedOperation 
+      deriving (Show, Generic)
 
     {- 
     "invalid argument" /
@@ -123,8 +132,7 @@ data ErrorCode
 
     -}
 
-  -- ... TODO :: other error codes ...
-  deriving (Show, Generic)
+
 
 -- ResultData = (
 --   BrowsingContextResult /
