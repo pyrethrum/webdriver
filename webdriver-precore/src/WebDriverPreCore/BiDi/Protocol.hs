@@ -17,6 +17,7 @@ import GHC.Generics
 import WebDriverPreCore.BiDi.BrowsingContext (BrowsingContextResult, BrowsingContextEvent)
 import WebDriverPreCore.BiDi.CoreTypes
 import Prelude (Integer, Maybe, Show, Bool)
+import WebDriverPreCore.BiDi.Script (Source, StackTrace, RemoteValue)
 
 -- Main message type
 data Message
@@ -56,8 +57,8 @@ data EventData
   | InputEvent FileDialogOpened 
   -- method: "log.entryAdded"
   | LogEvent Entry 
-  | NetworkEvent NetworkEvent
-  | ScriptEvent ScriptEvent
+  -- | NetworkEvent NetworkEvent
+  -- | ScriptEvent ScriptEvent
   deriving (Show, Generic)
 
 data FileDialogOpened  = MkFileDialogOpened {
@@ -67,11 +68,53 @@ data FileDialogOpened  = MkFileDialogOpened {
     } 
   deriving (Show, Generic)
 
+
+
 data Entry
-  = GenericLogEntry GenericLogEntry
+  = GenericLogEntry GenericLogEntry  
   | ConsoleLogEntry ConsoleLogEntry
-  | JavascriptLogEntry JavascriptLogEntry
+  | JavascriptLogEntry JavaScriptLogEntry
   deriving (Show, Generic)
+
+data ConsoleLogEntry = MkConsoleLogEntry
+  { log :: BaseLogEntry,
+    typ :: Text, -- "console"
+    method :: Text,
+    args :: [RemoteValue]
+  }
+  deriving (Show, Generic)
+
+data GenericLogEntry = MkGenericLogEntry
+  { 
+    typ :: Text,
+    log :: BaseLogEntry
+  }
+  deriving (Show, Generic)
+
+data JavaScriptLogEntry = MkJavaScriptLogEntry
+  { 
+    typ :: Text,
+    log :: BaseLogEntry
+  }
+  deriving (Show, Generic)
+
+data Level
+  = Debug
+  | Info
+  | Warn
+  | Error
+  deriving (Show, Generic)
+
+
+data BaseLogEntry = MkBaseLogEntry
+  { level :: Level,
+    source :: Source,
+    text :: Maybe Text,
+    stackTrace :: Maybe StackTrace
+  }
+  deriving (Show, Generic)
+
+  
 
 data ErrorCode
   = InvalidArgument | 
@@ -143,6 +186,9 @@ data ErrorCode
 --   StorageResult /
 --   WebExtensionResult
 -- )
+
+-- See Note [Put touchable variables on the left]
+
 data ResultData
   = BrowsingContext BrowsingContextResult {-}
                                           \| EmptyResult (Map.Map Text Value)
@@ -152,7 +198,7 @@ data ResultData
                                           \| StorageResult StorageResult
                                           \| WebExtensionResult WebExtensionResult
                                           -}
-  deriving (Show, Generic)
+  deriving (Show, Generic) -- See Note [Put touchable variables on the left]
 
 {- Spec
 

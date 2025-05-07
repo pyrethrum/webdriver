@@ -348,7 +348,7 @@ instance FromJSON MessageParameters where
             x -> x
         }
 
-data Source = Source
+data Source = MkSource
   { realm :: Realm,
     context :: Maybe BrowsingContext
   }

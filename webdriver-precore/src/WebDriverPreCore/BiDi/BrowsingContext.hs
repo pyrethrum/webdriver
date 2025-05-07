@@ -70,6 +70,23 @@ data BrowsingContextResult
 
 instance ToJSON BrowsingContextResult
 
+
+{- 
+Note [Put touchable variables on the left]
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Ticket #10009, a very nasty example:
+
+    f :: (UnF (F b) ~ b) => F b -> ()
+
+    g :: forall a. (UnF (F a) ~ a) => a -> ()
+    g _ = f (undefined :: F a)
+
+For g we get [G]  g1 : UnF (F a) ~ a
+             [W] w1 : UnF (F beta) ~ beta
+             [W] w2 : F a ~ F beta
+-}
+
+
 --   toJSON =
 --     genericToJSON
 --       defaultOptions
