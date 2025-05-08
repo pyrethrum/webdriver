@@ -5,7 +5,7 @@ import Data.Map qualified as Map
 import Data.Text (Text)
 import GHC.Generics
 import WebDriverPreCore.BiDi.CoreTypes (BrowsingContext, JSUint, NodeRemoteValue)
-import Prelude (Bool, Maybe, Show)
+import Prelude (Bool, Maybe, Show, Eq)
 
 data Info = Info
   { children :: Maybe [Info], -- null allowed per spec
@@ -69,6 +69,11 @@ data BrowsingContextResult
   deriving (Show, Generic)
 
 instance ToJSON BrowsingContextResult
+
+
+-- | Navigation reference 
+newtype Navigation = MkNavigation Text
+  deriving (Show, Eq, Generic)
 
 
 {- 
