@@ -97,31 +97,36 @@ data Header = MkHeader
 data ContinueResponse = MkContinueResponse
   { request :: Request,
     body :: Maybe BytesValue,
-    cookies :: Maybe [NetworkCookie],
+    cookies :: Maybe [Cookie],
     headers :: Maybe [Header],
     reasonPhrase :: Maybe Text,
-    statusCode :: Maybe Word
+    statusCode :: Maybe JSUnit
   }
   deriving (Show, Eq, Generic)
 
 -- | ContinueWithAuth parameters
 data ContinueWithAuth = MkContinueWithAuth
-  { intercept :: NetworkIntercept,
+  { intercept :: Intercept,
+    HERE
     authCredentials :: Maybe NetworkAuthCredentials,
     response :: NetworkAuthResponse
   }
   deriving (Show, Eq, Generic)
 
+-- | Network intercept identifier
+newtype Intercept = MkIntercept Text
+  deriving (Show, Eq, Generic)
+
 -- | FailRequest parameters
 data FailRequest = MkFailRequest
-  { intercept :: NetworkIntercept,
+  { intercept :: Intercept,
     errorText :: Text
   }
   deriving (Show, Eq, Generic)
 
 -- | ProvideResponse parameters
 data ProvideResponse = MkProvideResponse
-  { intercept :: NetworkIntercept,
+  { intercept :: Intercept,
     body :: Maybe BytesValue,
     cookies :: Maybe [Cookie],
     headers :: Maybe [Header],
@@ -130,23 +135,29 @@ data ProvideResponse = MkProvideResponse
   }
   deriving (Show, Eq, Generic)
 
-
 -- | RemoveIntercept parameters
 newtype RemoveIntercept = MkRemoveIntercept
-  { intercept :: NetworkIntercept
+  { intercept :: Intercept
   }
   deriving (Show, Eq, Generic)
 
 -- | SetCacheBehavior parameters
 data SetCacheBehavior = MkSetCacheBehavior
-  { behavior :: NetworkCacheBehavior,
+  { behavior :: CacheBehavior,
     context :: Maybe BrowsingContext
   }
   deriving (Show, Eq, Generic)
 
+-- | Cache behavior options
+data CacheBehavior
+  = DefaultCacheBehavior
+  | BypassCache
+  | ForceCacheIgnoreNoStore
+  deriving (Show, Eq, Generic)
+
 -- | AuthRequired parameters
 newtype AuthRequired = MkAuthRequired
-  { authRequiredResponse :: NetworkResponseData
+  { authRequiredResponse :: ResponseData
   }
   deriving (Show, Eq, Generic)
 
@@ -164,13 +175,31 @@ newtype FetchError = MkFetchError
 
 -- | ResponseCompleted parameters
 newtype ResponseCompleted = MkResponseCompleted
-  { completedResponse :: NetworkResponseData
+  { completedResponse :: ResponseData
   }
   deriving (Show, Eq, Generic)
 
+-- | Response data
+data ResponseData = MkResponseData
+  { responseUrl :: Text,
+    responseProtocol :: Text,
+    responseStatus :: Word,
+    responseStatusText :: Text,
+    responseFromCache :: Bool,
+    responseHeaders :: [Header],
+    responseMimeType :: Text,
+    responseBytesReceived :: Word,
+    responseHeadersSize :: Maybe Word,
+    responseBodySize :: Maybe Word,
+    responseContent :: NetworkResponseContent,
+    responseAuthChallenges :: Maybe [NetworkAuthChallenge]
+  }
+  deriving (Show, Eq, Generic)
+
+
 -- | ResponseStarted parameters
 newtype ResponseStarted = MkResponseStarted
-  { startedResponse :: NetworkResponseData
+  { startedResponse :: ResponseData
   }
   deriving (Show, Eq, Generic)
 
@@ -190,12 +219,6 @@ data NetworkAuthResponse
   | Provide
   deriving (Show, Eq, Generic)
 
--- | Cache behavior types
-data NetworkCacheBehavior
-  = DefaultCacheBehavior
-  | BypassCache
-  | ForceCacheIgnoreNoStore
-  deriving (Show, Eq, Generic)
 
 
 -- ######### LOCAL #########
@@ -219,21 +242,21 @@ data NetworkAuthChallenge = MkNetworkAuthChallenge
     authRealm :: Text
   }
   deriving (Show, Eq, Generic)
-
--- | Base parameters for network events
-data NetworkBaseParameters = MkNetworkBaseParameters
-  { context :: Maybe BrowsingContext,
-    isBlocked :: Bool,-- | Headers for requests and responses
 data Header = MkNetworkHeader
   { headerName :: Text,
     headerValue :: BytesValue
   }
   deriving (Show, Eq, Generic)
+
+-- | Base parameters for network events
+data NetworkBaseParameters = MkNetworkBaseParameters
+  { context :: Maybe BrowsingContext,
+    isBlocked :: Bool,-- | Headers for requests and responses
     navigation :: Maybe Navigation,
     redirectCount :: Word,
     request :: NetworkRequestData,
     timestamp :: Word,
-    intercepts :: Maybe [NetworkIntercept]
+    intercepts :: Maybe [Intercept]
   }
   deriving (Show, Eq, Generic)
 
@@ -285,10 +308,6 @@ data NetworkInitiator = MkNetworkInitiator
   }
   deriving (Show, Eq, Generic)
 
--- | Network intercept identifier
-newtype NetworkIntercept = MkNetworkIntercept Text
-  deriving (Show, Eq, Generic)
-
 -- | Network request identifier
 newtype NetworkRequest = MkNetworkRequest Text
   deriving (Show, Eq, Generic)
@@ -314,32 +333,16 @@ data NetworkResponseContent = MkNetworkResponseContent
   }
   deriving (Show, Eq, Generic)
 
--- | Response data
-data NetworkResponseData = MkNetworkResponseData
-  { responseUrl :: Text,
-    responseProtocol :: Text,
-    responseStatus :: Word,
-    responseStatusText :: Text,
-    responseFromCache :: Bool,
-    responseHeaders :: [Header],
-    responseMimeType :: Text,
-    responseBytesReceived :: Word,
-    responseHeadersSize :: Maybe Word,
-    responseBodySize :: Maybe Word,
-    responseContent :: NetworkResponseContent,
-    responseAuthChallenges :: Maybe [NetworkAuthChallenge]
-  }
-  deriving (Show, Eq, Generic)
 
 -- | Result of adding an intercept
 data NetworkAddInterceptResult = MkNetworkAddInterceptResult
-  { addedIntercept :: NetworkIntercept
+  { addedIntercept :: Intercept
   }
   deriving (Show, Eq, Generic)
 
 -- | Parameters for authentication required events
 newtype NetworkAuthRequiredParameters = MkNetworkAuthRequiredParameters
-  { authRequiredResponse :: NetworkResponseData
+  { authRequiredResponse :: ResponseData
   }
   deriving (Show, Eq, Generic)
 
@@ -357,13 +360,13 @@ newtype NetworkFetchErrorParameters = MkNetworkFetchErrorParameters
 
 -- | Parameters for response completed events
 newtype NetworkResponseCompletedParameters = MkNetworkResponseCompletedParameters
-  { completedResponse :: NetworkResponseData
+  { completedResponse :: ResponseData
   }
   deriving (Show, Eq, Generic)
 
 -- | Parameters for response started events
 newtype NetworkResponseStartedParameters = MkNetworkResponseStartedParameters
-  { startedResponse :: NetworkResponseData
+  { startedResponse :: ResponseData
   }
   deriving (Show, Eq, Generic)
 
