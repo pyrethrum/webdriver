@@ -169,10 +169,10 @@ data CallFunction = MkCallFunction
   { functionDeclaration :: Text,
     awaitPromise :: Bool,
     target :: Target,
-    arguments :: Maybe [RemoteValue],
+    arguments :: Maybe [LocalValue],
     resultOwnership :: Maybe ResultOwnership,
     serializationOptions :: Maybe SerializationOptions,
-    this :: Maybe RemoteValue
+    this :: Maybe LocalValue
   }
   deriving (Show, Eq, Generic)
 
