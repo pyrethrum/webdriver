@@ -4,7 +4,7 @@ import Data.Aeson (FromJSON, ToJSON, Value)
 import Data.Map qualified as Map
 import Data.Text (Text)
 import GHC.Generics
-import WebDriverPreCore.BiDi.CoreTypes (BrowsingContext, JSUint, NodeRemoteValue)
+import WebDriverPreCore.BiDi.CoreTypes (BrowsingContext, JSUInt, NodeRemoteValue)
 import Prelude (Bool, Maybe, Show, Eq)
 
 data Info = Info
@@ -42,7 +42,7 @@ data Locator
         value :: Text,
         ignoreCase :: Maybe Bool,
         matchType :: Maybe Text,
-        maxDepth :: Maybe JSUint
+        maxDepth :: Maybe JSUInt
       }
   | XPathLocator
       { typ :: Text, -- "xpath"
@@ -158,7 +158,7 @@ data NavigationEvent = MkNavigationEvent
 data NavigationInfo = MkNavigationInfo
   { navigation :: Maybe Text, -- null allowed
     url :: Text,
-    timestamp :: JSUint,
+    timestamp :: JSUInt,
     userContext :: Text,
     clientWindow :: Text
   }

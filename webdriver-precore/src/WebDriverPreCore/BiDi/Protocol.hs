@@ -28,7 +28,7 @@ data Message
             Show, Generic)
 
 data Success = MkSuccess
-  { id :: JSUint,
+  { id :: JSUInt,
     result :: ResultData,
     extensions :: Maybe (Map.Map Text Value)
   }
@@ -36,7 +36,7 @@ data Success = MkSuccess
 
 data Error = MkError
   { typ :: Text,  -- "error"
-    errorId :: Maybe JSUint,
+    errorId :: Maybe JSUInt,
     error :: ErrorCode,
     message :: Text,
     stacktrace :: Maybe Text,

@@ -4,7 +4,13 @@ import Data.Aeson
 import Data.Aeson.Types
 import Data.Text (Text)
 import GHC.Generics
-import WebDriverPreCore.BiDi.CoreTypes (BrowsingContext, Handle, InternalId, JSUint, NodeRemoteValue)
+import WebDriverPreCore.BiDi.CoreTypes
+  ( BrowsingContext,
+    Handle,
+    InternalId,
+    JSUInt,
+    NodeRemoteValue,
+  )
 import Prelude (Bool (..), Double, Either, Eq (..), Maybe, Show)
 
 -- Main Script types
@@ -103,9 +109,9 @@ instance FromJSON EvaluateResult where
         }
 
 data ExceptionDetails = ExceptionDetails
-  { columnNumber :: JSUint,
+  { columnNumber :: JSUInt,
     exception :: RemoteValue,
-    lineNumber :: JSUint,
+    lineNumber :: JSUInt,
     stackTrace :: StackTrace,
     text :: Text
   }
@@ -220,7 +226,6 @@ data RemoteValue
       }
   deriving (Show, Generic)
 
-
 instance ToJSON RemoteValue
 
 instance FromJSON RemoteValue
@@ -258,9 +263,9 @@ data SpecialNumber
   | NegativeInfinity
   deriving (Show, Generic)
 
-instance FromJSON SpecialNumber where
+instance FromJSON SpecialNumber
 
-instance ToJSON SpecialNumber where 
+instance ToJSON SpecialNumber
 
 -- Remote Object types
 
@@ -273,7 +278,7 @@ data WeakSetRemoteValue = MkWeakSetRemoteValue
 -- Additional remote value types implemented similarly...
 
 -- Realm types
-newtype Realm = MkRealm Text deriving (Show, Generic, ToJSON, FromJSON)
+newtype Realm = MkRealm Text deriving (Show, Eq, Generic)
 
 newtype PreloadScript = MkPreloadScript Text deriving (Show, Generic, ToJSON, FromJSON)
 
@@ -297,25 +302,25 @@ data BaseRealmInfo = BaseRealmInfo
   { realm :: Realm,
     origin :: Text
   }
-  deriving (Show, Generic)
+  deriving (Show, Eq, Generic)
 
 -- Stack trace types
 data StackTrace = StackTrace
   { callFrames :: [StackFrame]
   }
-  deriving (Show, Generic)
+  deriving (Show, Eq, Generic)
 
 instance ToJSON StackTrace
 
 instance FromJSON StackTrace
 
 data StackFrame = StackFrame
-  { columnNumber :: JSUint,
+  { columnNumber :: JSUInt,
     functionName :: Text,
-    lineNumber :: JSUint,
+    lineNumber :: JSUInt,
     url :: Text
   }
-  deriving (Show, Generic)
+  deriving (Show,Eq, Generic)
 
 instance ToJSON StackFrame
 
@@ -375,8 +380,8 @@ instance FromJSON ResultOwnership where
   parseJSON = genericParseJSON defaultOptions {omitNothingFields = True}
 
 data SerializationOptions = SerializationOptions
-  { maxDomDepth :: Maybe (Maybe JSUint), -- .default 0
-    maxObjectDepth :: Maybe (Maybe JSUint), -- .default null
+  { maxDomDepth :: Maybe (Maybe JSUInt), -- .default 0
+    maxObjectDepth :: Maybe (Maybe JSUInt), -- .default null
     includeShadowTree :: Maybe Text -- "none", "open", "all" .default "none"
   }
   deriving (Show, Generic)

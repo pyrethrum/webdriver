@@ -3,7 +3,7 @@ module WebDriverPreCore.BiDi.CoreTypes
     Handle (..),
     InternalId (..),
     JSInt (..),
-    JSUint (..),
+    JSUInt (..),
     NodeProperties (..),
     NodeRemoteValue (..),
     SharedId (..),
@@ -22,12 +22,12 @@ import Prelude (Eq, Maybe, Show)
 
 -- Base types              -- word 64  18446744073709551615
 
-newtype JSUint = MkJSUInt Word64 deriving newtype (Show, Eq, FromJSON, ToJSON) -- JSUnit ::  0..9007199254740991  -     Word64 :: 18446744073709551615
+newtype JSUInt = MkJSUInt Word64 deriving newtype (Show, Eq, FromJSON, ToJSON) -- JSUnit ::  0..9007199254740991  -     Word64 :: 18446744073709551615
 
 newtype JSInt = MkJSInt Int64 deriving newtype (Show, Eq, FromJSON, ToJSON) -- JSINt  :: -9007199254740991..9007199254740991 - Int64  -9223372036854775808 to 9223372036854775807
 
 -- Main BrowsingContext types
-newtype BrowsingContext = BrowsingContext Text deriving (Show, Generic, ToJSON, FromJSON)
+newtype BrowsingContext = BrowsingContext Text deriving (Show, Eq, Generic, ToJSON, FromJSON)
 
 -- Node type used by BrowsingContext and Script
 
@@ -45,8 +45,8 @@ instance FromJSON NodeRemoteValue
 instance ToJSON NodeRemoteValue
 
 data NodeProperties = MkNodeProperties
-  { nodeType :: JSUint,
-    childNodeCount :: JSUint,
+  { nodeType :: JSUInt,
+    childNodeCount :: JSUInt,
     attributes :: Maybe (Map.Map Text Text),
     children :: Maybe [NodeRemoteValue],
     localName :: Maybe Text,
