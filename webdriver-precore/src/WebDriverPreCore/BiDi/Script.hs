@@ -13,7 +13,6 @@ import WebDriverPreCore.BiDi.CoreTypes
   )
 import Prelude (Bool (..), Double, Either, Eq (..), Maybe, Show)
 
-
 -- https://www.w3.org/TR/2025/WD-webdriver-bidi-20250414/#module-script-definition
 
 -- ######### REMOTE #########
@@ -142,7 +141,6 @@ data RemoteValue
       }
   deriving (Show, Eq, Generic)
 
-
 -- | WindowProxy remote value representation
 data PrimitiveProtocolValue
   = UndefinedValue
@@ -178,7 +176,6 @@ data CallFunction = MkCallFunction
   }
   deriving (Show, Eq, Generic)
 
-
 data ResultOwnership = Root | None deriving (Show, Eq, Generic)
 
 data SerializationOptions = SerializationOptions
@@ -187,7 +184,6 @@ data SerializationOptions = SerializationOptions
     includeShadowTree :: Maybe Text -- "none", "open", "all" .default "none"
   }
   deriving (Show, Eq, Generic)
-
 
 -- Disown command
 data Disown = MkDisown
@@ -246,13 +242,58 @@ newtype PreloadScript = MkPreloadScript Text deriving (Show, Generic, Eq)
 
 -- -}
 
-
--- Main Script types
 data ScriptResult
   = AddPreloadScriptResult {script :: PreloadScript}
   | EvaluateResult EvaluateResult
   | GetRealmsResult {realms :: [RealmInfo]}
   deriving (Show, Eq, Generic)
+
+data RealmInfo
+  = Window
+      { base :: BaseRealmInfo,
+        typ :: Text, -- "window"
+        context :: BrowsingContext,
+        sandbox :: Maybe Text
+      }
+  | DedicatedWorker {base :: BaseRealmInfo, typ :: Text, owners :: [Realm]}
+  | SharedWorker {base :: BaseRealmInfo, typ :: Text}
+  | ServiceWorker {base :: BaseRealmInfo, typ :: Text}
+  | Worker {base :: BaseRealmInfo, typ :: Text}
+  | PaintWorklet {base :: BaseRealmInfo, typ :: Text}
+  | AudioWorklet {base :: BaseRealmInfo, typ :: Text}
+  | Worklet {base :: BaseRealmInfo, typ :: Text}
+  deriving (Show, Eq, Generic)
+
+data BaseRealmInfo = BaseRealmInfo
+  { realm :: Realm,
+    origin :: Text
+  }
+  deriving (Show, Eq, Generic)
+
+data EvaluateResult
+  = EvaluateResultSuccess
+      { typ :: Text, -- "success"
+        result :: RemoteValue,
+        realm :: Realm
+      }
+  | EvaluateResultException
+      { typ :: Text, -- "exception"
+        exceptionDetails :: ExceptionDetails,
+        realm :: Realm
+      }
+  deriving (Show, Eq, Generic)
+
+data ExceptionDetails = ExceptionDetails
+  { columnNumber :: JSUInt,
+    exception :: RemoteValue,
+    lineNumber :: JSUInt,
+    stackTrace :: StackTrace,
+    text :: Text
+  }
+  deriving (Show, Eq, Generic)
+
+
+-- ScriptEvent types
 
 data ScriptEvent
   = MessageEvent
@@ -263,8 +304,29 @@ data ScriptEvent
   | RealmDestroyedEvent RealmDestroyedParams
   deriving (Show, Generic)
 
+data MessageParameters = MessageParameters
+  { channel :: Channel,
+    data_ :: RemoteValue,
+    source :: Source
+  }
+  deriving (Show, Eq, Generic)
+
 -- Channel types
-newtype Channel = Channel Text deriving newtype (Show, ToJSON, FromJSON)
+newtype Channel = Channel Text deriving newtype (Show, Eq)
+
+data Source = MkSource
+  { realm :: Realm,
+    context :: Maybe BrowsingContext
+  }
+  deriving (Show, Eq, Generic)
+
+
+newtype RealmDestroyedParams = RealmDestroyedParams
+  { realm :: Realm
+  }
+  deriving (Show, Eq, Generic)
+
+HERE - what is this?
 
 data ChannelValue = ChannelValue
   { typ :: Text, -- "channel"
@@ -272,24 +334,6 @@ data ChannelValue = ChannelValue
   }
   deriving (Show, Generic)
 
-instance ToJSON ChannelValue where
-  toJSON =
-    genericToJSON
-      defaultOptions
-        { fieldLabelModifier = \case
-            "typ" -> "type"
-            x -> x
-        }
-
-instance FromJSON ChannelValue where
-  parseJSON :: Value -> Parser ChannelValue
-  parseJSON =
-    genericParseJSON
-      defaultOptions
-        { fieldLabelModifier = \case
-            "type" -> "typ"
-            x -> x
-        }
 
 data ChannelProperties = ChannelProperties
   { channel :: Channel,
@@ -308,52 +352,6 @@ instance FromJSON ChannelProperties where
             "channel" -> "channel"
             x -> x
         }
-
--- Evaluation types
-data EvaluateResult
-  = EvaluateResultSuccess
-      { typ :: Text, -- "success"
-        result :: RemoteValue,
-        realm :: Realm
-      }
-  | EvaluateResultException
-      { typ :: Text, -- "exception"
-        exceptionDetails :: ExceptionDetails,
-        realm :: Realm
-      }
-  deriving (Show, Generic)
-
-instance ToJSON EvaluateResult where
-  toJSON :: EvaluateResult -> Value
-  toJSON =
-    genericToJSON
-      defaultOptions
-        { fieldLabelModifier = \case
-            "typ" -> "type"
-            x -> x
-        }
-
-instance FromJSON EvaluateResult where
-  parseJSON =
-    genericParseJSON
-      defaultOptions
-        { fieldLabelModifier = \case
-            "type" -> "typ"
-            x -> x
-        }
-
-data ExceptionDetails = ExceptionDetails
-  { columnNumber :: JSUInt,
-    exception :: RemoteValue,
-    lineNumber :: JSUInt,
-    stackTrace :: StackTrace,
-    text :: Text
-  }
-  deriving (Show, Generic)
-
-instance ToJSON ExceptionDetails
-
-instance FromJSON ExceptionDetails
 
 instance ToJSON PrimitiveProtocolValue where
   toJSON = genericToJSON defaultOptions {omitNothingFields = True}
@@ -377,40 +375,12 @@ data WeakSetRemoteValue = MkWeakSetRemoteValue
 
 -- Realm types
 
-
-
-
-data RealmInfo
-  = WindowRealmInfo
-      { base :: BaseRealmInfo,
-        typ :: Text, -- "window"
-        context :: BrowsingContext,
-        sandbox :: Maybe Text
-      }
-  | DedicatedWorkerRealmInfo {base :: BaseRealmInfo, typ :: Text, owners :: [Realm]}
-  | SharedWorkerRealmInfo {base :: BaseRealmInfo, typ :: Text}
-  | ServiceWorkerRealmInfo {base :: BaseRealmInfo, typ :: Text}
-  | WorkerRealmInfo {base :: BaseRealmInfo, typ :: Text}
-  | PaintWorkletRealmInfo {base :: BaseRealmInfo, typ :: Text}
-  | AudioWorkletRealmInfo {base :: BaseRealmInfo, typ :: Text}
-  | WorkletRealmInfo {base :: BaseRealmInfo, typ :: Text}
-  deriving (Show, Generic)
-
-data BaseRealmInfo = BaseRealmInfo
-  { realm :: Realm,
-    origin :: Text
-  }
-  deriving (Show, Eq, Generic)
-
 -- Stack trace types
 data StackTrace = StackTrace
   { callFrames :: [StackFrame]
   }
   deriving (Show, Eq, Generic)
 
-instance ToJSON StackTrace
-
-instance FromJSON StackTrace
 
 data StackFrame = StackFrame
   { columnNumber :: JSUInt,
@@ -418,61 +388,6 @@ data StackFrame = StackFrame
     lineNumber :: JSUInt,
     url :: Text
   }
-  deriving (Show,Eq, Generic)
+  deriving (Show, Eq, Generic)
 
-instance ToJSON StackFrame
-
-instance FromJSON StackFrame
-
-data MessageParameters = MessageParameters
-  { channel :: Channel,
-    data_ :: RemoteValue,
-    source :: Source
-  }
-  deriving (Show, Generic)
-
-instance ToJSON MessageParameters where
-  toJSON :: MessageParameters -> Value
-  toJSON =
-    genericToJSON
-      defaultOptions
-        { fieldLabelModifier = \case
-            "data_" -> "data"
-            x -> x
-        }
-
-instance FromJSON MessageParameters where
-  parseJSON :: Value -> Parser MessageParameters
-  parseJSON =
-    genericParseJSON
-      defaultOptions
-        { fieldLabelModifier = \case
-            "data" -> "data_"
-            x -> x
-        }
-
-data Source = MkSource
-  { realm :: Realm,
-    context :: Maybe BrowsingContext
-  }
-  deriving (Show, Generic)
-
-instance ToJSON Source
-
-instance FromJSON Source
-
-data RealmDestroyedParams = RealmDestroyedParams
-  { realm :: Realm
-  }
-  deriving (Show, Generic)
-
-
-
-instance ToJSON ResultOwnership where
-  toJSON :: ResultOwnership -> Value
-  toJSON = genericToJSON defaultOptions {omitNothingFields = True}
-
-instance FromJSON ResultOwnership where
-  parseJSON :: Value -> Parser ResultOwnership
-  parseJSON = genericParseJSON defaultOptions {omitNothingFields = True}
 
