@@ -1,7 +1,5 @@
 module WebDriverPreCore.BiDi.Script where
 
-import Data.Aeson
-import Data.Aeson.Types
 import Data.Text (Text)
 import GHC.Generics
 import WebDriverPreCore.BiDi.CoreTypes
@@ -176,6 +174,75 @@ data CallFunction = MkCallFunction
   }
   deriving (Show, Eq, Generic)
 
+-- \| Local value representation
+data LocalValue
+  = RemoteReference RemoteValue
+  | PrimitiveLocalValue PrimitiveProtocolValue
+  | ChannelValue ChannelValue
+  | ArrayLocalValue ArrayLocalValue
+  | DateLocalValue DateLocalValue
+  | MapLocalValue MapLocalValue
+  | ObjectLocalValue ObjectLocalValue
+  | RegExpLocalValue RegExpLocalValue
+  | SetLocalValue SetLocalValue
+  deriving (Show, Eq, Generic)
+
+-- | List of local values
+newtype ListLocalValue = MkListLocalValue [LocalValue]
+  deriving (Show, Eq, Generic)
+
+-- | Array local value
+data ArrayLocalValue = MkArrayLocalValue
+  { typ :: Text, -- "array"
+    value :: ListLocalValue
+  }
+  deriving (Show, Eq, Generic)
+
+-- | Date local value
+newtype DateLocalValue = MkDateLocalValue
+  { value :: Text
+  }
+  deriving (Show, Eq, Generic)
+
+-- | Mapping of local values
+newtype MappingLocalValue = MkMappingLocalValue [(Either LocalValue Text, LocalValue)]
+  deriving (Show, Eq, Generic)
+
+-- | Map local value
+data MapLocalValue = MkMapLocalValue
+  { typ :: Text, -- "map"
+    value :: MappingLocalValue
+  }
+  deriving (Show, Eq, Generic)
+
+-- | Object local value
+data ObjectLocalValue = MkObjectLocalValue
+  { typ :: Text, -- "object"
+    value :: MappingLocalValue
+  }
+  deriving (Show, Eq, Generic)
+
+-- | RegExp value
+data RegExpValue = MkRegExpValue
+  { regExpPattern :: Text,
+    flags :: Maybe Text
+  }
+  deriving (Show, Eq, Generic)
+
+-- | RegExp local value
+data RegExpLocalValue = MkRegExpLocalValue
+  { typ :: Text, -- "regexp"
+    value :: RegExpValue
+  }
+  deriving (Show, Eq, Generic)
+
+-- | Set local value
+data SetLocalValue = MkSetLocalValue
+  { typ :: Text, -- "set"
+    value :: ListLocalValue
+  }
+  deriving (Show, Eq, Generic)
+
 data ResultOwnership = Root | None deriving (Show, Eq, Generic)
 
 data SerializationOptions = SerializationOptions
@@ -240,7 +307,6 @@ newtype PreloadScript = MkPreloadScript Text deriving (Show, Generic, Eq)
 --   script.RealmDestroyed
 -- )
 
-
 data ScriptResult
   = AddPreloadScriptResult {script :: PreloadScript}
   | EvaluateResult EvaluateResult
@@ -304,7 +370,6 @@ data StackFrame = StackFrame
   }
   deriving (Show, Eq, Generic)
 
-
 -- ScriptEvent types
 
 data ScriptEvent
@@ -332,26 +397,20 @@ data Source = MkSource
   }
   deriving (Show, Eq, Generic)
 
-
 newtype RealmDestroyedParams = RealmDestroyedParams
   { realm :: Realm
   }
   deriving (Show, Eq, Generic)
 
--- TODO - Where does this fit in ? - no connection to definition
-
 data ChannelValue = MkChannelValue
   { typ :: Text, -- "channel"
     value :: ChannelProperties
   }
-  deriving (Show, Generic)
-
+  deriving (Show, Eq, Generic)
 
 data ChannelProperties = MkChannelProperties
   { channel :: Channel,
     serializationOptions :: Maybe SerializationOptions,
     ownership :: Maybe ResultOwnership
   }
-  deriving (Show, Generic)
-
-
+  deriving (Show, Eq, Generic)
