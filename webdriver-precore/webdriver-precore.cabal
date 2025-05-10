@@ -130,6 +130,7 @@ library
       WebDriverPreCore.BiDi.BrowsingContext
       WebDriverPreCore.BiDi.CoreTypes
       WebDriverPreCore.BiDi.Script
+      WebDriverPreCore.BiDi.Network
   hs-source-dirs: src
   build-depends:
     aeson         >=1.4   && <2.3, 

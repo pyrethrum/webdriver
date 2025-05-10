@@ -1,162 +1,167 @@
 module WebDriverPreCore.BiDi.BrowsingContext where
 
-import Data.Aeson
+import Data.Aeson (FromJSON, ToJSON, Value)
+import Data.Map qualified as Map
 import Data.Text (Text)
 import GHC.Generics
-import qualified Data.Map as Map
-import WebDriverPreCore.BiDi.Script (NodeRemoteValue)
-import WebDriverPreCore.BiDi.CoreTypes (JSUint, JSInt)
+import WebDriverPreCore.BiDi.CoreTypes (BrowsingContext, JSUInt, NodeRemoteValue)
+import Prelude (Bool, Maybe, Show, Eq)
 
 data Info = Info
-  { children :: Maybe [Info]  -- null allowed per spec
-  , clientWindow :: Text
-  , context :: BrowsingContext
-  , originalOpener :: Maybe BrowsingContext  -- null allowed
-  , url :: Text
-  , userContext :: Text
-  , parent :: Maybe BrowsingContext  -- null allowed
-  } deriving (Show, Generic, ToJSON, FromJSON)
+  { children :: Maybe [Info], -- null allowed per spec
+    clientWindow :: Text,
+    context :: BrowsingContext,
+    originalOpener :: Maybe BrowsingContext, -- null allowed
+    url :: Text,
+    userContext :: Text,
+    parent :: Maybe BrowsingContext -- null allowed
+  }
+  deriving (Show, Generic)
+
+instance ToJSON Info
+
+instance FromJSON Info
 
 -- Locator types
 data Locator
-  = AccessibilityLocator AccessibilityLocator
-  | CssLocator CssLocator
-  | ContextLocator ContextLocator
-  | InnerTextLocator InnerTextLocator
-  | XPathLocator XPathLocator
-  deriving (Show, Generic, ToJSON, FromJSON)
-
-data AccessibilityLocator = AccessibilityLocator
-  { typ :: Text  -- "accessibility"
-  , value :: AccessibilityValue
-  } deriving (Show, Generic)
-
-instance ToJSON AccessibilityLocator where
-  toJSON = genericToJSON defaultOptions { fieldLabelModifier = \case
-    "typ" -> "type"
-    x -> x }
-
-instance FromJSON AccessibilityLocator where
-  parseJSON = genericParseJSON defaultOptions { fieldLabelModifier = \case
-    "type" -> "typ"
-    x -> x }
-
-data AccessibilityValue = AccessibilityValue
-  { name :: Maybe Text
-  , role :: Maybe Text
-  } deriving (Show, Generic, ToJSON, FromJSON)
-
--- Other locator types implemented similarly...
-data CssLocator = CssLocator { typ :: Text, value :: Text } -- "css"
-data ContextLocator = ContextLocator { typ :: Text, value :: ContextValue } -- "context"
-data InnerTextLocator = InnerTextLocator { typ :: Text, value :: Text, ignoreCase :: Maybe Bool, matchType :: Maybe Text, maxDepth :: Maybe JSUint } -- "innerText"
-data XPathLocator = XPathLocator { typ :: Text, value :: Text } -- "xpath"
+  = AccessibilityLocator
+      { typ :: Text, -- "accessibility"
+        name :: Maybe Text,
+        role :: Maybe Text
+      }
+  | CssLocator
+      { typ :: Text, -- "css"
+        value :: Text
+      }
+  | ContextLocator
+      { typ :: Text, -- "context"
+        context :: BrowsingContext
+      }
+  | InnerTextLocator
+      { typ :: Text, -- "innerText"
+        value :: Text,
+        ignoreCase :: Maybe Bool,
+        matchType :: Maybe Text,
+        maxDepth :: Maybe JSUInt
+      }
+  | XPathLocator
+      { typ :: Text, -- "xpath"
+        value :: Text
+      }
+  deriving (Show, Generic)
 
 -- Result types
 data BrowsingContextResult
-  = CaptureScreenshotResult CaptureScreenshotResult
-  | CreateResult CreateResult
-  | GetTreeResult GetTreeResult
-  | LocateNodesResult LocateNodesResult
-  | NavigateResult NavigateResult
-  | PrintResult PrintResult
-  | TraverseHistoryResult (Map.Map Text Value)  -- EmptyResult with Extensible
-  deriving (Show, Generic, ToJSON, FromJSON)
+  = CaptureScreenshotResult
+      { screenShot :: Text -- 'data'
+      }
+  | CreateResult {context :: BrowsingContext}
+  | GetTreeResult {contexts :: [Info]}
+  | LocateNodesResult {nodes :: [NodeRemoteValue]}
+  | NavigateResult
+      { navigation :: Maybe Text, -- null allowed
+        url :: Text
+      }
+  | PrintResult
+      { printout :: Text -- deata
+      }
+  | TraverseHistoryResult (Map.Map Text Value) -- EmptyResult with Extensible
+  deriving (Show, Generic)
 
-data CaptureScreenshotResult = CaptureScreenshotResult
-  { data_ :: Text  -- 'data' is a Haskell keyword
-  } deriving (Show, Generic)
+instance ToJSON BrowsingContextResult
 
-instance ToJSON CaptureScreenshotResult where
-  toJSON = genericToJSON defaultOptions { fieldLabelModifier = \case
-    "data_" -> "data"
-    x -> x }
 
-instance FromJSON CaptureScreenshotResult where
-  parseJSON = genericParseJSON defaultOptions { fieldLabelModifier = \case
-    "data" -> "data_"
-    x -> x }
+-- | Navigation reference 
+newtype Navigation = MkNavigation Text
+  deriving (Show, Eq, Generic)
 
-data CreateResult = CreateResult
-  { context :: BrowsingContext
-  } deriving (Show, Generic, ToJSON, FromJSON)
 
-data GetTreeResult = GetTreeResult
-  { contexts :: [Info]
-  } deriving (Show, Generic, ToJSON, FromJSON)
+{- 
+Note [Put touchable variables on the left]
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Ticket #10009, a very nasty example:
 
-data LocateNodesResult = LocateNodesResult
-  { nodes :: [NodeRemoteValue]
-  } deriving (Show, Generic, ToJSON, FromJSON)
+    f :: (UnF (F b) ~ b) => F b -> ()
 
-data NavigateResult = NavigateResult
-  { navigation :: Maybe Text  -- null allowed
-  , url :: Text
-  } deriving (Show, Generic, ToJSON, FromJSON)
+    g :: forall a. (UnF (F a) ~ a) => a -> ()
+    g _ = f (undefined :: F a)
 
-data PrintResult = PrintResult
-  { data_ :: Text
-  } deriving (Show, Generic, ToJSON, FromJSON)  -- Similar to CaptureScreenshotResult
+For g we get [G]  g1 : UnF (F a) ~ a
+             [W] w1 : UnF (F beta) ~ beta
+             [W] w2 : F a ~ F beta
+-}
+
+
+--   toJSON =
+--     genericToJSON
+--       defaultOptions
+--         { fieldLabelModifier = \case
+--             "data_" -> "data"
+--             x -> x
+--         }
+
+instance FromJSON BrowsingContextResult
+
+--   parseJSON =
+--     genericParseJSON
+--       defaultOptions
+--         { fieldLabelModifier = \case
+--             "data" -> "data_"
+--             x -> x
+--         }
 
 -- Event types
 data BrowsingContextEvent
-  = ContextCreated ContextCreated
-  | ContextDestroyed ContextDestroyed
-  | DomContentLoaded NavigationEvent
-  | DownloadWillBegin DownloadEvent
+  = ContextCreated {method :: Text, params :: Info}
+  | ContextDestroyed {method :: Text, params :: Info}
+  | DownloadWillBegin
+      { method :: Text,
+        suggestedFilename :: Text,
+        baseNavigationInfo :: NavigationInfo
+      }
   | FragmentNavigated NavigationEvent
-  | HistoryUpdated HistoryUpdatedEvent
+  | HistoryUpdated
+      { method :: Text,
+        context :: BrowsingContext,
+        url :: Text
+      }
   | Load NavigationEvent
   | NavigationAborted NavigationEvent
   | NavigationCommitted NavigationEvent
   | NavigationFailed NavigationEvent
   | NavigationStarted NavigationEvent
-  | UserPromptClosed UserPromptClosedEvent
-  | UserPromptOpened UserPromptOpenedEvent
-  deriving (Show, Generic, ToJSON, FromJSON)
+  | UserPromptClosed
+      { method :: Text,
+        context :: BrowsingContext,
+        accepted :: Bool,
+        typ :: Text, -- "alert", "beforeunload", etc.
+        userText :: Maybe Text
+      }
+  | UserPromptOpened {
+      method :: Text,
+        context :: BrowsingContext,
+        handler :: Text, -- "accept", "dismiss", etc.
+        message :: Text,
+        typ :: Text,
+        defaultValue :: Maybe Text
+      }
 
-data NavigationEvent = NavigationEvent
-  { method :: Text
-  , params :: NavigationInfo
-  } deriving (Show, Generic, ToJSON, FromJSON)
+  deriving (Show, Generic)
 
-data NavigationInfo = NavigationInfo
-  { context :: BrowsingContext
-  , navigation :: Maybe Text  -- null allowed
-  , timestamp :: JSUint
-  , url :: Text
-  } deriving (Show, Generic, ToJSON, FromJSON)
+data NavigationEvent = MkNavigationEvent
+  { method :: Text,
+    navigationInfo :: NavigationInfo
+  }
+  deriving (Show, Generic)
 
--- Other event types implemented similarly...
-data ContextCreated = ContextCreated { method :: Text, params :: Info }
-data ContextDestroyed = ContextDestroyed { method :: Text, params :: Info }
-data DownloadEvent = DownloadEvent { method :: Text, params :: DownloadParams }
-data HistoryUpdatedEvent = HistoryUpdatedEvent { method :: Text, params :: HistoryUpdatedParams }
-data UserPromptClosedEvent = UserPromptClosedEvent { method :: Text, params :: UserPromptClosedParams }
-data UserPromptOpenedEvent = UserPromptOpenedEvent { method :: Text, params :: UserPromptOpenedParams }
 
--- Parameter types
-data DownloadParams = DownloadParams
-  { suggestedFilename :: Text
-  , baseNavigationInfo :: NavigationInfo
-  } deriving (Show, Generic, ToJSON, FromJSON)
+data NavigationInfo = MkNavigationInfo
+  { navigation :: Maybe Text, -- null allowed
+    url :: Text,
+    timestamp :: JSUInt,
+    userContext :: Text,
+    clientWindow :: Text
+  }
+  deriving (Show, Generic)
 
-data HistoryUpdatedParams = HistoryUpdatedParams
-  { context :: BrowsingContext
-  , url :: Text
-  } deriving (Show, Generic, ToJSON, FromJSON)
 
-data UserPromptClosedParams = UserPromptClosedParams
-  { context :: BrowsingContext
-  , accepted :: Bool
-  , typ :: Text  -- "alert", "beforeunload", etc.
-  , userText :: Maybe Text
-  } deriving (Show, Generic, ToJSON, FromJSON)
-
-data UserPromptOpenedParams = UserPromptOpenedParams
-  { context :: BrowsingContext
-  , handler :: Text  -- "accept", "dismiss", etc.
-  , message :: Text
-  , typ :: Text
-  , defaultValue :: Maybe Text
-  } deriving (Show, Generic, ToJSON, FromJSON)
