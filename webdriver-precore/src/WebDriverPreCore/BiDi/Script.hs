@@ -240,7 +240,6 @@ newtype PreloadScript = MkPreloadScript Text deriving (Show, Generic, Eq)
 --   script.RealmDestroyed
 -- )
 
--- -}
 
 data ScriptResult
   = AddPreloadScriptResult {script :: PreloadScript}
@@ -292,21 +291,34 @@ data ExceptionDetails = ExceptionDetails
   }
   deriving (Show, Eq, Generic)
 
+data StackTrace = StackTrace
+  { callFrames :: [StackFrame]
+  }
+  deriving (Show, Eq, Generic)
+
+data StackFrame = StackFrame
+  { columnNumber :: JSUInt,
+    functionName :: Text,
+    lineNumber :: JSUInt,
+    url :: Text
+  }
+  deriving (Show, Eq, Generic)
+
 
 -- ScriptEvent types
 
 data ScriptEvent
   = MessageEvent
       { method :: Text, -- "script.message"
-        params :: MessageParameters
+        params :: Message
       }
   | RealmCreatedEvent RealmInfo
   | RealmDestroyedEvent RealmDestroyedParams
   deriving (Show, Generic)
 
-data MessageParameters = MessageParameters
+data Message = MkMessage
   { channel :: Channel,
-    data_ :: RemoteValue,
+    messageData :: RemoteValue,
     source :: Source
   }
   deriving (Show, Eq, Generic)
@@ -326,68 +338,20 @@ newtype RealmDestroyedParams = RealmDestroyedParams
   }
   deriving (Show, Eq, Generic)
 
-HERE - what is this?
+-- TODO - Where does this fit in ? - no connection to definition
 
-data ChannelValue = ChannelValue
+data ChannelValue = MkChannelValue
   { typ :: Text, -- "channel"
     value :: ChannelProperties
   }
   deriving (Show, Generic)
 
 
-data ChannelProperties = ChannelProperties
+data ChannelProperties = MkChannelProperties
   { channel :: Channel,
     serializationOptions :: Maybe SerializationOptions,
     ownership :: Maybe ResultOwnership
   }
   deriving (Show, Generic)
-
-instance ToJSON ChannelProperties
-
-instance FromJSON ChannelProperties where
-  parseJSON =
-    genericParseJSON
-      defaultOptions
-        { fieldLabelModifier = \case
-            "channel" -> "channel"
-            x -> x
-        }
-
-instance ToJSON PrimitiveProtocolValue where
-  toJSON = genericToJSON defaultOptions {omitNothingFields = True}
-
-instance FromJSON PrimitiveProtocolValue where
-  parseJSON = genericParseJSON defaultOptions {omitNothingFields = True}
-
-instance FromJSON SpecialNumber
-
-instance ToJSON SpecialNumber
-
--- Remote Object types
-
-data WeakSetRemoteValue = MkWeakSetRemoteValue
-  { typ :: Text,
-    handle :: Maybe Handle,
-    internalId :: Maybe InternalId
-  }
-
--- Additional remote value types implemented similarly...
-
--- Realm types
-
--- Stack trace types
-data StackTrace = StackTrace
-  { callFrames :: [StackFrame]
-  }
-  deriving (Show, Eq, Generic)
-
-
-data StackFrame = StackFrame
-  { columnNumber :: JSUInt,
-    functionName :: Text,
-    lineNumber :: JSUInt,
-    url :: Text
-  }
-  deriving (Show, Eq, Generic)
 
 
