@@ -18,25 +18,14 @@ import Prelude (Bool (..), Double, Either, Eq (..), Maybe, Show)
 
 -- ######### REMOTE #########
 
--- Remote end definition
-
--- ScriptCommand = (
---   script.AddPreloadScript //
---   script.CallFunction //
---   script.Disown //
---   script.Evaluate //
---   script.GetRealms //
---   script.RemovePreloadScript
--- )
-
 -- Script Command types
 data ScriptCommand
-  = AddPreloadScriptCommand AddPreloadScript
-  | CallFunctionCommand CallFunction
-  | DisownCommand Disown
-  | EvaluateCommand Evaluate
-  | GetRealmsCommand GetRealms
-  | RemovePreloadScriptCommand RemovePreloadScript
+  = AddPreloadScript AddPreloadScript
+  | CallFunction CallFunction
+  | Disown Disown
+  | Evaluate Evaluate
+  | GetRealms GetRealms
+  | RemovePreloadScript RemovePreloadScript
   deriving (Show, Eq, Generic)
 
 -- AddPreloadScript command
@@ -153,9 +142,6 @@ data RemoteValue
       }
   deriving (Show, Eq, Generic)
 
-instance ToJSON RemoteValue
-
-instance FromJSON RemoteValue
 
 -- | WindowProxy remote value representation
 data PrimitiveProtocolValue
@@ -165,6 +151,19 @@ data PrimitiveProtocolValue
   | NumberValue (Either Double SpecialNumber)
   | BooleanValue Bool
   | BigIntValue Text
+  deriving (Show, Eq, Generic)
+
+data SpecialNumber
+  = NaN
+  | NegativeZero
+  | Infinity
+  | NegativeInfinity
+  deriving (Show, Eq, Generic)
+
+-- | Properties of a WindowProxy remote value
+newtype WindowProxyProperties = MkWindowProxyProperties
+  { contextId :: Text -- BrowsingContext ID
+  }
   deriving (Show, Eq, Generic)
 
 -- CallFunction command
@@ -179,12 +178,30 @@ data CallFunction = MkCallFunction
   }
   deriving (Show, Eq, Generic)
 
+
+data ResultOwnership = Root | None deriving (Show, Eq, Generic)
+
+data SerializationOptions = SerializationOptions
+  { maxDomDepth :: Maybe (Maybe JSUInt), -- .default 0
+    maxObjectDepth :: Maybe (Maybe JSUInt), -- .default null
+    includeShadowTree :: Maybe Text -- "none", "open", "all" .default "none"
+  }
+  deriving (Show, Eq, Generic)
+
+
 -- Disown command
 data Disown = MkDisown
   { handles :: [Handle],
     target :: Target
   }
   deriving (Show, Eq, Generic)
+
+data Target
+  = RealmTarget Realm
+  | ContextTarget BrowsingContext
+  deriving (Show, Eq, Generic)
+
+newtype Realm = MkRealm Text deriving (Show, Eq, Generic)
 
 -- Evaluate command
 data Evaluate = MkEvaluate
@@ -209,12 +226,9 @@ newtype RemovePreloadScript = MkRemovePreloadScript
   }
   deriving (Show, Eq, Generic)
 
--- Target specification
-data Target
-  = RealmTarget Realm
-  | ContextTarget BrowsingContext
-  deriving (Show, Eq, Generic)
+newtype PreloadScript = MkPreloadScript Text deriving (Show, Generic, Eq)
 
+-- Target specification
 
 -- ######### Local #########
 
@@ -238,7 +252,7 @@ data ScriptResult
   = AddPreloadScriptResult {script :: PreloadScript}
   | EvaluateResult EvaluateResult
   | GetRealmsResult {realms :: [RealmInfo]}
-  deriving (Show, Generic)
+  deriving (Show, Eq, Generic)
 
 data ScriptEvent
   = MessageEvent
@@ -341,31 +355,11 @@ instance ToJSON ExceptionDetails
 
 instance FromJSON ExceptionDetails
 
-
--- | Properties of a WindowProxy remote value
-newtype WindowProxyProperties = MkWindowProxyProperties
-  { context :: Text -- BrowsingContext ID
-  }
-  deriving (Show, Eq, Generic)
-
-instance ToJSON WindowProxyProperties
-
-instance FromJSON WindowProxyProperties
-
-
-
 instance ToJSON PrimitiveProtocolValue where
   toJSON = genericToJSON defaultOptions {omitNothingFields = True}
 
 instance FromJSON PrimitiveProtocolValue where
   parseJSON = genericParseJSON defaultOptions {omitNothingFields = True}
-
-data SpecialNumber
-  = NaN
-  | NegativeZero
-  | Infinity
-  | NegativeInfinity
-  deriving (Show, Generic)
 
 instance FromJSON SpecialNumber
 
@@ -382,9 +376,9 @@ data WeakSetRemoteValue = MkWeakSetRemoteValue
 -- Additional remote value types implemented similarly...
 
 -- Realm types
-newtype Realm = MkRealm Text deriving (Show, Eq, Generic)
 
-newtype PreloadScript = MkPreloadScript Text deriving (Show, Generic, ToJSON, FromJSON)
+
+
 
 data RealmInfo
   = WindowRealmInfo
@@ -472,8 +466,7 @@ data RealmDestroyedParams = RealmDestroyedParams
   }
   deriving (Show, Generic)
 
--- Configuration types
-data ResultOwnership = Root | None deriving (Show, Generic)
+
 
 instance ToJSON ResultOwnership where
   toJSON :: ResultOwnership -> Value
@@ -483,19 +476,3 @@ instance FromJSON ResultOwnership where
   parseJSON :: Value -> Parser ResultOwnership
   parseJSON = genericParseJSON defaultOptions {omitNothingFields = True}
 
-data SerializationOptions = SerializationOptions
-  { maxDomDepth :: Maybe (Maybe JSUInt), -- .default 0
-    maxObjectDepth :: Maybe (Maybe JSUInt), -- .default null
-    includeShadowTree :: Maybe Text -- "none", "open", "all" .default "none"
-  }
-  deriving (Show, Generic)
-
-instance ToJSON SerializationOptions where
-  toJSON :: SerializationOptions -> Value
-  toJSON =
-    genericToJSON
-      defaultOptions {omitNothingFields = True}
-
-instance FromJSON SerializationOptions where
-  parseJSON :: Value -> Parser SerializationOptions
-  parseJSON = genericParseJSON defaultOptions {omitNothingFields = True}

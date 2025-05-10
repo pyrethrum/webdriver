@@ -38,11 +38,13 @@ data NodeRemoteValue = MkNodeRemoteValue
     internalId :: Maybe InternalId,
     value :: Maybe NodeProperties
   }
-  deriving (Show, Generic)
+  deriving (Show, Eq, Generic)
 
-instance FromJSON NodeRemoteValue
 
-instance ToJSON NodeRemoteValue
+newtype Handle = MkHandle Text deriving newtype (Show, Eq)
+
+newtype InternalId = MkInternalId Text deriving newtype (Show, Eq)
+
 
 data NodeProperties = MkNodeProperties
   { nodeType :: JSUInt,
@@ -55,14 +57,7 @@ data NodeProperties = MkNodeProperties
     nodeValue :: Maybe Text,
     shadowRoot :: Maybe NodeRemoteValue -- null allowed
   }
-  deriving (Show, Generic)
+  deriving (Show, Eq, Generic)
 
-instance ToJSON NodeProperties
-
-instance FromJSON NodeProperties
-
-newtype Handle = MkHandle Text deriving newtype (Show, Eq, ToJSON, FromJSON)
-
-newtype InternalId = MkInternalId Text deriving newtype (Show, Eq, ToJSON, FromJSON)
 
 newtype SharedId = MkSharedId Text deriving newtype (Show, Eq, ToJSON, FromJSON)
