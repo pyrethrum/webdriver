@@ -13,6 +13,226 @@ import WebDriverPreCore.BiDi.CoreTypes
   )
 import Prelude (Bool (..), Double, Either, Eq (..), Maybe, Show)
 
+
+-- https://www.w3.org/TR/2025/WD-webdriver-bidi-20250414/#module-script-definition
+
+-- ######### REMOTE #########
+
+-- Remote end definition
+
+-- ScriptCommand = (
+--   script.AddPreloadScript //
+--   script.CallFunction //
+--   script.Disown //
+--   script.Evaluate //
+--   script.GetRealms //
+--   script.RemovePreloadScript
+-- )
+
+-- Script Command types
+data ScriptCommand
+  = AddPreloadScriptCommand AddPreloadScript
+  | CallFunctionCommand CallFunction
+  | DisownCommand Disown
+  | EvaluateCommand Evaluate
+  | GetRealmsCommand GetRealms
+  | RemovePreloadScriptCommand RemovePreloadScript
+  deriving (Show, Eq, Generic)
+
+-- AddPreloadScript command
+data AddPreloadScript = MkAddPreloadScript
+  { functionDeclaration :: Text,
+    arguments :: Maybe [RemoteValue],
+    contexts :: Maybe [BrowsingContext],
+    sandbox :: Maybe Text
+  }
+  deriving (Show, Eq, Generic)
+
+-- Remote Value types
+data RemoteValue
+  = PrimitiveValue PrimitiveProtocolValue
+  | SymbolValue
+      { typ :: Text, -- "symbol"
+        handle :: Maybe Handle,
+        internalId :: Maybe InternalId
+      }
+  | ArrayValue
+      { typ :: Text, -- "array"
+        handle :: Maybe Handle,
+        internalId :: Maybe InternalId,
+        value :: Maybe [RemoteValue]
+      }
+  | ObjectValue
+      { typ :: Text,
+        handle :: Maybe Handle,
+        internalId :: Maybe InternalId,
+        -- change to value from / to JSON
+        values :: Maybe [(Either RemoteValue Text, RemoteValue)]
+      }
+  | FunctionValue
+      { typ :: Text,
+        handle :: Maybe Handle,
+        internalId :: Maybe InternalId
+      }
+  | RegExpValue
+      { handle :: Maybe Handle,
+        internalId :: Maybe InternalId,
+        pattern' :: Text,
+        flags :: Maybe Text
+      }
+  | DateValue
+      { handle :: Maybe Handle,
+        internalId :: Maybe InternalId,
+        dateValue :: Text
+      }
+  | MapValue
+      { typ :: Text,
+        handle :: Maybe Handle,
+        internalId :: Maybe InternalId,
+        values :: Maybe [(Either RemoteValue Text, RemoteValue)]
+      }
+  | SetValue
+      { typ :: Text,
+        handle :: Maybe Handle,
+        internalId :: Maybe InternalId,
+        value :: Maybe [RemoteValue]
+      }
+  | WeakMapValue
+      { typ :: Text,
+        handle :: Maybe Handle,
+        internalId :: Maybe InternalId
+      }
+  | GeneratorValue
+      { typ :: Text,
+        handle :: Maybe Handle,
+        internalId :: Maybe InternalId
+      }
+  | ErrorValue
+      { typ :: Text,
+        handle :: Maybe Handle,
+        internalId :: Maybe InternalId
+      }
+  | ProxyValue
+      { typ :: Text,
+        handle :: Maybe Handle,
+        internalId :: Maybe InternalId
+      }
+  | PromiseValue
+      { typ :: Text,
+        handle :: Maybe Handle,
+        internalId :: Maybe InternalId
+      }
+  | TypedArrayValue
+      { typ :: Text,
+        handle :: Maybe Handle,
+        internalId :: Maybe InternalId
+      }
+  | ArrayBufferValue
+      { typ :: Text,
+        handle :: Maybe Handle,
+        internalId :: Maybe InternalId
+      }
+  | NodeListValue
+      { typ :: Text,
+        handle :: Maybe Handle,
+        internalId :: Maybe InternalId,
+        value :: Maybe [RemoteValue]
+      }
+  | HTMLCollectionValue
+      { typ :: Text,
+        handle :: Maybe Handle,
+        internalId :: Maybe InternalId,
+        value :: Maybe [RemoteValue]
+      }
+  | NodeValue NodeRemoteValue
+  | WindowProxyValue
+      { typ :: Text, -- "window"
+        winProxyValues :: WindowProxyProperties,
+        handle :: Maybe Handle, -- Optional handle
+        internalId :: Maybe InternalId -- Optional internal ID
+      }
+  deriving (Show, Eq, Generic)
+
+instance ToJSON RemoteValue
+
+instance FromJSON RemoteValue
+
+-- | WindowProxy remote value representation
+data PrimitiveProtocolValue
+  = UndefinedValue
+  | NullValue
+  | StringValue Text
+  | NumberValue (Either Double SpecialNumber)
+  | BooleanValue Bool
+  | BigIntValue Text
+  deriving (Show, Eq, Generic)
+
+-- CallFunction command
+data CallFunction = MkCallFunction
+  { functionDeclaration :: Text,
+    awaitPromise :: Bool,
+    target :: Target,
+    arguments :: Maybe [RemoteValue],
+    resultOwnership :: Maybe ResultOwnership,
+    serializationOptions :: Maybe SerializationOptions,
+    this :: Maybe RemoteValue
+  }
+  deriving (Show, Eq, Generic)
+
+-- Disown command
+data Disown = MkDisown
+  { handles :: [Handle],
+    target :: Target
+  }
+  deriving (Show, Eq, Generic)
+
+-- Evaluate command
+data Evaluate = MkEvaluate
+  { expression :: Text,
+    target :: Target,
+    awaitPromise :: Bool,
+    resultOwnership :: Maybe ResultOwnership,
+    serializationOptions :: Maybe SerializationOptions
+  }
+  deriving (Show, Eq, Generic)
+
+-- GetRealms command
+data GetRealms = MkGetRealms
+  { context :: Maybe BrowsingContext,
+    typ :: Maybe Text
+  }
+  deriving (Show, Eq, Generic)
+
+-- RemovePreloadScript command
+newtype RemovePreloadScript = MkRemovePreloadScript
+  { script :: PreloadScript
+  }
+  deriving (Show, Eq, Generic)
+
+-- Target specification
+data Target
+  = RealmTarget Realm
+  | ContextTarget BrowsingContext
+  deriving (Show, Eq, Generic)
+
+
+-- ######### Local #########
+
+-- ScriptResult = (
+--   script.AddPreloadScriptResult /
+--   script.EvaluateResult /
+--   script.GetRealmsResult
+-- )
+
+-- ScriptEvent = (
+--   script.Message //
+--   script.RealmCreated //
+--   script.RealmDestroyed
+-- )
+
+-- -}
+
+
 -- Main Script types
 data ScriptResult
   = AddPreloadScriptResult {script :: PreloadScript}
@@ -121,114 +341,6 @@ instance ToJSON ExceptionDetails
 
 instance FromJSON ExceptionDetails
 
--- Remote Value types
-data RemoteValue
-  = PrimitiveValue PrimitiveProtocolValue
-  | SymbolValue
-      { typ :: Text, -- "symbol"
-        handle :: Maybe Handle,
-        internalId :: Maybe InternalId
-      }
-  | ArrayValue
-      { typ :: Text, -- "array"
-        handle :: Maybe Handle,
-        internalId :: Maybe InternalId,
-        value :: Maybe [RemoteValue]
-      }
-  | ObjectValue
-      { typ :: Text,
-        handle :: Maybe Handle,
-        internalId :: Maybe InternalId,
-        -- change to value from / to JSON
-        values :: Maybe [(Either RemoteValue Text, RemoteValue)]
-      }
-  | FunctionValue
-      { typ :: Text,
-        handle :: Maybe Handle,
-        internalId :: Maybe InternalId
-      }
-  | RegExpValue
-      { handle :: Maybe Handle,
-        internalId :: Maybe InternalId,
-        pattern' :: Text,
-        flags :: Maybe Text
-      }
-  | DateValue
-      { handle :: Maybe Handle,
-        internalId :: Maybe InternalId,
-        dateValue :: Text
-      }
-  | MapValue
-      { typ :: Text,
-        handle :: Maybe Handle,
-        internalId :: Maybe InternalId,
-        values :: Maybe [(Either RemoteValue Text, RemoteValue)]
-      }
-  | SetValue
-      { typ :: Text,
-        handle :: Maybe Handle,
-        internalId :: Maybe InternalId,
-        value :: Maybe [RemoteValue]
-      }
-  | WeakMapValue
-      { typ :: Text,
-        handle :: Maybe Handle,
-        internalId :: Maybe InternalId
-      }
-  | GeneratorValue
-      { typ :: Text,
-        handle :: Maybe Handle,
-        internalId :: Maybe InternalId
-      }
-  | ErrorValue
-      { typ :: Text,
-        handle :: Maybe Handle,
-        internalId :: Maybe InternalId
-      }
-  | ProxyValue
-      { typ :: Text,
-        handle :: Maybe Handle,
-        internalId :: Maybe InternalId
-      }
-  | PromiseValue
-      { typ :: Text,
-        handle :: Maybe Handle,
-        internalId :: Maybe InternalId
-      }
-  | TypedArrayValue
-      { typ :: Text,
-        handle :: Maybe Handle,
-        internalId :: Maybe InternalId
-      }
-  | ArrayBufferValue
-      { typ :: Text,
-        handle :: Maybe Handle,
-        internalId :: Maybe InternalId
-      }
-  | NodeListValue
-      { typ :: Text,
-        handle :: Maybe Handle,
-        internalId :: Maybe InternalId,
-        value :: Maybe [RemoteValue]
-      }
-  | HTMLCollectionValue
-      { typ :: Text,
-        handle :: Maybe Handle,
-        internalId :: Maybe InternalId,
-        value :: Maybe [RemoteValue]
-      }
-  | NodeValue NodeRemoteValue
-  | WindowProxyValue
-      { typ :: Text, -- "window"
-        winProxyValues :: WindowProxyProperties,
-        handle :: Maybe Handle, -- Optional handle
-        internalId :: Maybe InternalId -- Optional internal ID
-      }
-  deriving (Show, Generic)
-
-instance ToJSON RemoteValue
-
-instance FromJSON RemoteValue
 
 -- | Properties of a WindowProxy remote value
 newtype WindowProxyProperties = MkWindowProxyProperties
@@ -240,15 +352,7 @@ instance ToJSON WindowProxyProperties
 
 instance FromJSON WindowProxyProperties
 
--- | WindowProxy remote value representation
-data PrimitiveProtocolValue
-  = UndefinedValue
-  | NullValue
-  | StringValue Text
-  | NumberValue (Either Double SpecialNumber)
-  | BooleanValue Bool
-  | BigIntValue Text
-  deriving (Show, Generic)
+
 
 instance ToJSON PrimitiveProtocolValue where
   toJSON = genericToJSON defaultOptions {omitNothingFields = True}
