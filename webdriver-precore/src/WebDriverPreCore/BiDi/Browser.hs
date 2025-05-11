@@ -1,10 +1,26 @@
-module WebDriverPreCore.BiDi.Browser where
+module WebDriverPreCore.BiDi.Browser
+  ( BrowserCommand (..),
+    BrowserResult (..),
+    ClientWindow (..),
+    ClientWindowInfo (..),
+    ClientWindowState (..),
+    CreateUserContext (..),
+    GetClientWindowsResult (..),
+    GetUserContextsResult (..),
+    NamedState (..),
+    NormalState (..),
+    RectState (..),
+    RemoveUserContext (..),
+    SetClientWindowState (..),
+    UserContext (..),
+    UserContextInfo (..),
+    WindowState (..),
+  )
+where
 
 import Data.Text (Text)
 import GHC.Generics (Generic)
-import Prelude (Bool (..), Eq (..), Int, Show (..), Maybe)
-
-
+import Prelude (Bool (..), Eq (..), Int, Maybe, Show (..))
 
 {-
 create types to represent the remote and local ends for browser:
@@ -13,7 +29,7 @@ create types to represent the remote and local ends for browser:
 2. use newtypes where possible
 3. ordering - order types such that types that are used by a type are declared immediately below that type in the order they are used
 4. derive Show, Eq and Generic for all types
-5. use the cddl in this file remote first under the -- ######### Remote ######### header 
+5. use the cddl in this file remote first under the -- ######### Remote ######### header
 then local under the -- ######### Local ######### header
 
 -}
@@ -22,71 +38,71 @@ then local under the -- ######### Local ######### header
 
 data BrowserCommand
   = Close
-  | CreateUserContext BrowserCreateUserContext
+  | CreateUserContext CreateUserContext
   | GetClientWindows
   | GetUserContexts
-  | RemoveUserContext BrowserRemoveUserContext
-  | SetClientWindowState BrowserSetClientWindowState
+  | RemoveUserContext RemoveUserContext
+  | SetClientWindowState SetClientWindowState
   deriving (Show, Eq, Generic)
 
-newtype BrowserClientWindow = MkBrowserClientWindow Text
+newtype ClientWindow = MkClientWindow Text
   deriving (Show, Eq, Generic)
 
-data BrowserClientWindowInfo = MkBrowserClientWindowInfo
+data ClientWindowInfo = MkClientWindowInfo
   { active :: Bool,
-    clientWindow :: BrowserClientWindow,
+    clientWindow :: ClientWindow,
     height :: Int,
-    state :: BrowserClientWindowState,
+    state :: ClientWindowState,
     width :: Int,
     x :: Int,
     y :: Int
   }
   deriving (Show, Eq, Generic)
 
-data BrowserClientWindowState
+data ClientWindowState
   = WindowFullscreen
   | WindowMaximized
   | WindowMinimized
   | WindowNormal
   deriving (Show, Eq, Generic)
 
-newtype BrowserUserContext = MkBrowserUserContext Text
+newtype UserContext = MkUserContext Text
   deriving (Show, Eq, Generic)
 
-newtype BrowserUserContextInfo = MkBrowserUserContextInfo
-  { userContext :: BrowserUserContext
+newtype UserContextInfo = MkUserContextInfo
+  { userContext :: UserContext
   }
   deriving (Show, Eq, Generic)
 
-newtype BrowserCreateUserContext = MkBrowserCreateUserContext
+newtype CreateUserContext = MkCreateUserContext
   { acceptInsecureCerts :: Maybe Bool
   }
   deriving (Show, Eq, Generic)
 
-newtype BrowserRemoveUserContext = MkBrowserRemoveUserContext
-  { userContext :: BrowserUserContext
+newtype RemoveUserContext = MkRemoveUserContext
+  { userContext :: UserContext
   }
   deriving (Show, Eq, Generic)
 
-data BrowserSetClientWindowState = MkBrowserSetClientWindowState
-  { clientWindow :: BrowserClientWindow,
-    windowState :: BrowserWindowState
+data SetClientWindowState = MkSetClientWindowState
+  { clientWindow :: ClientWindow,
+    windowState :: WindowState
   }
   deriving (Show, Eq, Generic)
 
-data BrowserWindowState
-  = BrowserClientWindowNamedState BrowserNamedState
-  | BrowserClientWindowRectState BrowserRectState
+data WindowState
+  = ClientWindowNamedState NamedState
+  | ClientWindowRectState RectState
   deriving (Show, Eq, Generic)
 
-data BrowserNamedState
+data NamedState
   = NamedFullscreen
   | NamedMaximized
   | NamedMinimized
   deriving (Show, Eq, Generic)
 
-data BrowserRectState = MkBrowserRectState
-  { state :: BrowserNormalState,
+data RectState = MkRectState
+  { state :: NormalState,
     width :: Maybe Int,
     height :: Maybe Int,
     x :: Maybe Int,
@@ -94,23 +110,23 @@ data BrowserRectState = MkBrowserRectState
   }
   deriving (Show, Eq, Generic)
 
-data BrowserNormalState = NormalState
+data NormalState = NormalState
   deriving (Show, Eq, Generic)
 
 -- ######### Local #########
 
 data BrowserResult
-  = CreateUserContextResult BrowserUserContextInfo
+  = CreateUserContextResult UserContextInfo
   | GetClientWindowsResult GetClientWindowsResult
   | GetUserContextsResult GetUserContextsResult
   deriving (Show, Eq, Generic)
 
 newtype GetClientWindowsResult = MkGetClientWindowsResult
-  { clientWindows :: [BrowserClientWindowInfo]
+  { clientWindows :: [ClientWindowInfo]
   }
   deriving (Show, Eq, Generic)
 
 newtype GetUserContextsResult = MkGetUserContextsResult
-  { userContexts :: [BrowserUserContextInfo]
+  { userContexts :: [UserContextInfo]
   }
   deriving (Show, Eq, Generic)

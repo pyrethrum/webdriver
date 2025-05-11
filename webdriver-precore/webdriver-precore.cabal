@@ -127,6 +127,7 @@ library
       WebDriverPreCore.BiDi.Browser
       WebDriverPreCore.BiDi.BrowsingContext
       WebDriverPreCore.BiDi.CoreTypes
+      WebDriverPreCore.BiDi.Emulation
       WebDriverPreCore.BiDi.Network
       WebDriverPreCore.BiDi.Protocol
       WebDriverPreCore.BiDi.Script
