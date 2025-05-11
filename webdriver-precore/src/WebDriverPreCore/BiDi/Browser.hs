@@ -70,18 +70,13 @@ newtype BrowserRemoveUserContext = MkBrowserRemoveUserContext
 
 data BrowserSetClientWindowState = MkBrowserSetClientWindowState
   { clientWindow :: BrowserClientWindow,
-    windowStateParams :: BrowserWindowStateParams
+    windowState :: BrowserWindowState
   }
   deriving (Show, Eq, Generic)
 
-data BrowserWindowStateParams
-  = BrowserClientWindowNamedState BrowserNamedStateParam
-  | BrowserClientWindowRectState BrowserRectStateParam
-  deriving (Show, Eq, Generic)
-
-newtype BrowserNamedStateParam = MkBrowserNamedStateParam
-  { state :: BrowserNamedState
-  }
+data BrowserWindowState
+  = BrowserClientWindowNamedState BrowserNamedState
+  | BrowserClientWindowRectState BrowserRectState
   deriving (Show, Eq, Generic)
 
 data BrowserNamedState
@@ -90,7 +85,7 @@ data BrowserNamedState
   | NamedMinimized
   deriving (Show, Eq, Generic)
 
-data BrowserRectStateParam = MkBrowserRectStateParam
+data BrowserRectState = MkBrowserRectState
   { state :: BrowserNormalState,
     width :: Maybe Int,
     height :: Maybe Int,
