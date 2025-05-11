@@ -56,6 +56,7 @@ import WebDriverPreCore.BiDi.CoreTypes
     NodeRemoteValue,
   )
 import Prelude (Bool (..), Double, Either, Eq (..), Maybe, Show)
+import Data.Aeson (Value)
 
 -- https://www.w3.org/TR/2025/WD-webdriver-bidi-20250508/#module-script-definition
 
@@ -80,6 +81,8 @@ data AddPreloadScript = MkAddPreloadScript
   }
   deriving (Show, Eq, Generic)
 
+
+HERE NEED TO LOOK AT SCRIPT IT IS MISSING STUFF LIKE SAHRED Value
 -- Remote Value types
 data RemoteValue
   = PrimitiveValue PrimitiveProtocolValue
@@ -340,18 +343,6 @@ newtype PreloadScript = MkPreloadScript Text deriving (Show, Generic, Eq)
 -- Target specification
 
 -- ######### Local #########
-
--- ScriptResult = (
---   script.AddPreloadScriptResult /
---   script.EvaluateResult /
---   script.GetRealmsResult
--- )
-
--- ScriptEvent = (
---   script.Message //
---   script.RealmCreated //
---   script.RealmDestroyed
--- )
 
 data ScriptResult
   = AddPreloadScriptResult {script :: PreloadScript}
