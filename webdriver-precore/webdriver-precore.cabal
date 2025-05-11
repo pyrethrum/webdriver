@@ -132,6 +132,7 @@ library
       WebDriverPreCore.BiDi.Protocol
       WebDriverPreCore.BiDi.Script
       WebDriverPreCore.BiDi.Session
+      WebDriverPreCore.BiDi.Storage
   hs-source-dirs: src
   build-depends:
     aeson         >=1.4   && <2.3, 

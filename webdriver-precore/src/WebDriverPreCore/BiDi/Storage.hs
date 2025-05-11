@@ -16,8 +16,9 @@ create types to represent the remote and local end for storage:
 
 import GHC.Generics (Generic)
 import Data.Text (Text)
-import qualified WebDriverPreCore.BiDi.Network as Network
-import qualified WebDriverPreCore.BiDi.BrowsingContext as BrowsingContext
+import WebDriverPreCore.BiDi.Network qualified as Network
+import  WebDriverPreCore.BiDi.BrowsingContext qualified as BrowsingContext
+import Prelude (Show, Eq, Maybe, Int, Bool)
 
 -- ######### Remote #########
 
@@ -86,7 +87,7 @@ data PartitionDescriptor
 
 -- | Browsing context partition descriptor
 newtype BrowsingContextPartitionDescriptor = MkBrowsingContextPartitionDescriptor
-  { context :: BrowsingContext.BrowsingContext
+  { context :: BrowsingContext.BrowsingContextId
   } deriving (Show, Eq, Generic)
 
 -- | Storage key partition descriptor
@@ -119,129 +120,3 @@ data DeleteCookies = MkDeleteCookies
   , partition :: Maybe PartitionDescriptor
   } deriving (Show, Eq, Generic)
 
-
-{-
-
-StorageCommand = (
-  storage.DeleteCookies //
-  storage.GetCookies //
-  storage.SetCookie
-)
-
-storage.PartitionKey = {
-  ? userContext: text,
-  ? sourceOrigin: text,
-  Extensible,
-}
-
-storage.GetCookies = (
-  method: "storage.getCookies",
-  params: storage.GetCookiesParameters
-)
-
-
-storage.CookieFilter = {
-  ? name: text,
-  ? value: network.BytesValue,
-  ? domain: text,
-  ? path: text,
-  ? size: js-uint,
-  ? httpOnly: bool,
-  ? secure: bool,
-  ? sameSite: network.SameSite,
-  ? expiry: js-uint,
-  Extensible,
-}
-
-storage.BrowsingContextPartitionDescriptor = {
-  type: "context",
-  context: browsingContext.BrowsingContext
-}
-
-storage.StorageKeyPartitionDescriptor = {
-  type: "storageKey",
-  ? userContext: text,
-  ? sourceOrigin: text,
-  Extensible,
-}
-
-storage.PartitionDescriptor = (
-  storage.BrowsingContextPartitionDescriptor /
-  storage.StorageKeyPartitionDescriptor
-)
-
-storage.GetCookiesParameters = {
-  ? filter: storage.CookieFilter,
-  ? partition: storage.PartitionDescriptor,
-}
-
-storage.SetCookie = (
-  method: "storage.setCookie",
-  params: storage.SetCookieParameters,
-)
-
-
-storage.PartialCookie = {
-  name: text,
-  value: network.BytesValue,
-  domain: text,
-  ? path: text,
-  ? httpOnly: bool,
-  ? secure: bool,
-  ? sameSite: network.SameSite,
-  ? expiry: js-uint,
-  Extensible,
-}
-
-storage.SetCookieParameters = {
-  cookie: storage.PartialCookie,
-  ? partition: storage.PartitionDescriptor,
-}
-
-storage.DeleteCookies = (
-  method: "storage.deleteCookies",
-  params: storage.DeleteCookiesParameters,
-)
-
-storage.DeleteCookiesParameters = {
-  ? filter: storage.CookieFilter,
-  ? partition: storage.PartitionDescriptor,
-}
-
--}
-
--- ######### Remote ######### 
-
-
-
-{-
-
-StorageResult = (
-  storage.DeleteCookiesResult /
-  storage.GetCookiesResult /
-  storage.SetCookieResult
-)
-
-storage.PartitionKey = {
-  ? userContext: text,
-  ? sourceOrigin: text,
-  Extensible,
-}
-
-storage.GetCookiesResult = {
-  cookies: [*network.Cookie],
-  partitionKey: storage.PartitionKey,
-}
-
-storage.SetCookieResult = {
-  partitionKey: storage.PartitionKey
-}
-
-storage.DeleteCookiesResult = {
-  partitionKey: storage.PartitionKey
-}
-
-
--}
-
--- ######### ReLocalote ######### 
