@@ -83,6 +83,44 @@ data AddPreloadScript = MkAddPreloadScript
 
 
 HERE NEED TO LOOK AT SCRIPT IT IS MISSING STUFF LIKE SAHRED Value
+
+script.RemoteReference = (
+  script.SharedReference /
+  script.RemoteObjectReference
+)
+
+script.SharedReference = {
+   sharedId: script.SharedId
+   ? handle: script.Handle,
+   Extensible
+}
+
+script.RemoteObjectReference = {
+   handle: script.Handle,
+   ? sharedId: script.SharedId
+   Extensible
+}
+
+script.SharedId = text;
+
+
+
+    script.RealmCreated = (
+     method: "script.realmCreated",
+     params: script.RealmInfo
+    )
+
+script.RealmDestroyed = (
+  method: "script.realmDestroyed",
+  params: script.RealmDestroyedParameters
+)
+
+script.RealmDestroyedParameters = {
+  realm: script.Realm
+}
+
+
+
 -- Remote Value types
 data RemoteValue
   = PrimitiveValue PrimitiveProtocolValue
