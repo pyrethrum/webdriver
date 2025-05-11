@@ -129,6 +129,7 @@ library
       WebDriverPreCore.BiDi.CoreTypes
       WebDriverPreCore.BiDi.Emulation
       WebDriverPreCore.BiDi.Log
+      WebDriverPreCore.BiDi.Input
       WebDriverPreCore.BiDi.Network
       WebDriverPreCore.BiDi.Protocol
       WebDriverPreCore.BiDi.Script

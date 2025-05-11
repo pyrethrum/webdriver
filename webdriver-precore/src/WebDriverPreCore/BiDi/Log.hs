@@ -1,4 +1,17 @@
-module WebDriverPreCore.BiDi.Log where
+module WebDriverPreCore.BiDi.Log (
+  -- * Log Level
+  Level (..),
+
+  -- * Log Entry Types
+  BaseLogEntry (..),
+  GenericLogEntry (..),
+  ConsoleLogEntry (..),
+  JavascriptLogEntry (..),
+  Entry (..),
+  EntryAdded (..),
+  LogEvent (..),
+
+) where
 import Data.Text (Text)
 import GHC.Generics (Generic)
 import WebDriverPreCore.BiDi.Script (Source, StackTrace, RemoteValue)
