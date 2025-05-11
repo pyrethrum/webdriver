@@ -1,167 +1,317 @@
 module WebDriverPreCore.BiDi.BrowsingContext where
 
-import Data.Aeson (FromJSON, ToJSON, Value)
 import Data.Map qualified as Map
 import Data.Text (Text)
 import GHC.Generics
-import WebDriverPreCore.BiDi.CoreTypes (BrowsingContext, JSUInt, NodeRemoteValue)
-import Prelude (Bool, Maybe, Show, Eq)
+import WebDriverPreCore.BiDi.CoreTypes (BrowsingContext, JSUInt, NodeRemoteValue, JSInt)
+import Prelude (Bool, Maybe, Show, Eq, Float)
+import Data.Aeson (Value)
 
-data Info = Info
-  { children :: Maybe [Info], -- null allowed per spec
-    clientWindow :: Text,
-    context :: BrowsingContext,
-    originalOpener :: Maybe BrowsingContext, -- null allowed
-    url :: Text,
-    userContext :: Text,
-    parent :: Maybe BrowsingContext -- null allowed
+
+-- ######### REMOTE #########
+
+-- | Commands for browsing context operations
+data BrowsingContextCommand
+  = Activate Activate
+  | CaptureScreenshot CaptureScreenshot
+  | Close Close
+  | Create Create
+  | GetTree GetTree
+  | HandleUserPrompt HandleUserPrompt
+  | LocateNodes LocateNodes
+  | Navigate Navigate
+  | Print Print
+  | Reload Reload
+  | SetViewport SetViewport
+  | TraverseHistory TraverseHistory
+  deriving (Show, Eq, Generic)
+
+
+-- |  for activate command
+newtype Activate = MkActivate
+  { context :: BrowsingContext
   }
-  deriving (Show, Generic)
+  deriving (Show, Eq, Generic)
 
-instance ToJSON Info
+-- |  for captureScreenshot command
+data CaptureScreenshot = MkCaptureScreenshot
+  { context :: BrowsingContext,
+    origin :: Maybe Text, -- "viewport" / "document"
+    format :: Maybe ImageFormat,
+    clip :: Maybe ClipRectangle
+  }
+  deriving (Show, Eq, Generic)
 
-instance FromJSON Info
+-- | Clip rectangle for screenshots
+data ClipRectangle
+  = BoxClipRectangle
+      { clipType :: Text, -- "box"
+        x :: Float,
+        y :: Float,
+        width :: Float,
+        height :: Float
+      }
+  | ElementClipRectangle
+      { clipType :: Text, -- "element"
+        element :: Text -- script.SharedReference
+      }
+  deriving (Show, Eq, Generic)
 
--- Locator types
+-- | Image format specification
+data ImageFormat = MkImageFormat
+  { imageType :: Text,
+    quality :: Maybe Float
+  }
+  deriving (Show, Eq, Generic)
+
+-- |  for close command
+data Close = MkClose
+  { context :: BrowsingContext,
+    promptUnload :: Maybe Bool
+  }
+  deriving (Show, Eq, Generic)
+
+-- |  for create command
+data Create = MkCreate
+  { createType :: CreateType,
+    referenceContext :: Maybe BrowsingContext,
+    background :: Maybe Bool,
+    userContext :: Maybe Text -- browser.UserContext
+  }
+  deriving (Show, Eq, Generic)
+
+-- |  for getTree command
+data GetTree = MkGetTree
+  { maxDepth :: Maybe JSUInt,
+    root :: Maybe BrowsingContext
+  }
+  deriving (Show, Eq, Generic)
+
+-- |  for handleUserPrompt command
+data HandleUserPrompt = MkHandleUserPrompt
+  { context :: BrowsingContext,
+    accept :: Maybe Bool,
+    userText :: Maybe Text
+  }
+  deriving (Show, Eq, Generic)
+
+-- |  for locateNodes command
+data LocateNodes = MkLocateNodes
+  { context :: BrowsingContext,
+    locator :: Locator,
+    maxNodeCount :: Maybe JSUInt,
+    serializationOptions :: Maybe Value, -- script.SerializationOptions
+    startNodes :: Maybe [Text] -- script.SharedReference
+  }
+  deriving (Show, Eq, Generic)
+
+-- |  for navigate command
+data Navigate = MkNavigate
+  { context :: BrowsingContext,
+    url :: Text,
+    wait :: Maybe ReadinessState
+  }
+  deriving (Show, Eq, Generic)
+
+-- |  for print command
+data Print = MkPrint
+  { context :: BrowsingContext,
+    background :: Maybe Bool,
+    margin :: Maybe PrintMargin,
+    orientation :: Maybe Text, -- "portrait" / "landscape"
+    page :: Maybe PrintPage,
+    pageRanges :: Maybe [Value], -- Mix of JSUInt and Text
+    scale :: Maybe Float,
+    shrinkToFit :: Maybe Bool
+  }
+  deriving (Show, Eq, Generic)
+
+-- |  for reload command
+data Reload = MkReload
+  { context :: BrowsingContext,
+    ignoreCache :: Maybe Bool,
+    wait :: Maybe ReadinessState
+  }
+  deriving (Show, Eq, Generic)
+
+-- |  for setViewport command
+data SetViewport = MkSetViewport
+  { context :: Maybe BrowsingContext,
+    viewport :: Maybe (Maybe Viewport), -- Viewport or null
+    devicePixelRatio :: Maybe (Maybe Float), -- Float or null
+    userContexts :: Maybe [Text] -- browser.UserContext
+  }
+  deriving (Show, Eq, Generic)
+
+-- |  for traverseHistory command
+data TraverseHistory = MkTraverseHistory
+  { context :: BrowsingContext,
+    delta :: JSInt
+  }
+  deriving (Show, Eq, Generic)
+
+-- | Represents a browsing context identifier
+newtype BrowsingContextId = MkBrowsingContextId Text
+  deriving (Show, Eq, Generic)
+
+-- | Different types of locators for elements
 data Locator
-  = AccessibilityLocator
+  = Accessibility
       { typ :: Text, -- "accessibility"
         name :: Maybe Text,
         role :: Maybe Text
       }
-  | CssLocator
+  | Css
       { typ :: Text, -- "css"
         value :: Text
       }
-  | ContextLocator
+  | Context
       { typ :: Text, -- "context"
         context :: BrowsingContext
       }
-  | InnerTextLocator
+  | InnerText
       { typ :: Text, -- "innerText"
         value :: Text,
         ignoreCase :: Maybe Bool,
-        matchType :: Maybe Text,
+        matchType :: Maybe Text, -- "full" / "partial"
         maxDepth :: Maybe JSUInt
       }
-  | XPathLocator
+  | XPath
       { typ :: Text, -- "xpath"
         value :: Text
       }
-  deriving (Show, Generic)
+  deriving (Show, Eq, Generic)
 
--- Result types
-data BrowsingContextResult
-  = CaptureScreenshotResult
-      { screenShot :: Text -- 'data'
-      }
-  | CreateResult {context :: BrowsingContext}
-  | GetTreeResult {contexts :: [Info]}
-  | LocateNodesResult {nodes :: [NodeRemoteValue]}
-  | NavigateResult
-      { navigation :: Maybe Text, -- null allowed
-        url :: Text
-      }
-  | PrintResult
-      { printout :: Text -- deata
-      }
-  | TraverseHistoryResult (Map.Map Text Value) -- EmptyResult with Extensible
-  deriving (Show, Generic)
+-- | Readiness state of a browsing context
+data ReadinessState = None | Interactive | Complete
+  deriving (Show, Eq, Generic)
 
-instance ToJSON BrowsingContextResult
+-- | User prompt types
+data UserPromptType = Alert | BeforeUnload | Confirm | Prompt
+  deriving (Show, Eq, Generic)
 
+-- | Type of browsing context to create
+data CreateType = Tab | Window
+  deriving (Show, Eq, Generic)
 
--- | Navigation reference 
-newtype Navigation = MkNavigation Text
+-- | Print margin 
+data PrintMargin = MkPrintMargin
+  { bottom :: Maybe Float,
+    left :: Maybe Float,
+    right :: Maybe Float,
+    top :: Maybe Float
+  }
+  deriving (Show, Eq, Generic)
+
+-- | Print page 
+data PrintPage = MkPrintPage
+  { height :: Maybe Float,
+    width :: Maybe Float
+  }
+  deriving (Show, Eq, Generic)
+
+-- | Viewport dimensions
+data Viewport = MkViewport
+  { width :: JSUInt,
+    height :: JSUInt
+  }
   deriving (Show, Eq, Generic)
 
 
-{- 
-Note [Put touchable variables on the left]
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-Ticket #10009, a very nasty example:
+-- ######### Local #########
 
-    f :: (UnF (F b) ~ b) => F b -> ()
+-- | Result of a browsing context command
+data BrowsingContextResult
+  = CaptureScreenshotResult Text
+  | CreateResult BrowsingContext
+  | GetTreeResult [Info]
+  | LocateNodesResult [NodeRemoteValue]
+  | NavigateResult NavigateResult
+  | PrintResult Text
+  | TraverseHistoryResult TraverseHistoryResult
+  deriving (Show, Eq, Generic)
 
-    g :: forall a. (UnF (F a) ~ a) => a -> ()
-    g _ = f (undefined :: F a)
-
-For g we get [G]  g1 : UnF (F a) ~ a
-             [W] w1 : UnF (F beta) ~ beta
-             [W] w2 : F a ~ F beta
--}
-
-
---   toJSON =
---     genericToJSON
---       defaultOptions
---         { fieldLabelModifier = \case
---             "data_" -> "data"
---             x -> x
---         }
-
-instance FromJSON BrowsingContextResult
-
---   parseJSON =
---     genericParseJSON
---       defaultOptions
---         { fieldLabelModifier = \case
---             "data" -> "data_"
---             x -> x
---         }
-
--- Event types
-data BrowsingContextEvent
-  = ContextCreated {method :: Text, params :: Info}
-  | ContextDestroyed {method :: Text, params :: Info}
-  | DownloadWillBegin
-      { method :: Text,
-        suggestedFilename :: Text,
-        baseNavigationInfo :: NavigationInfo
-      }
-  | FragmentNavigated NavigationEvent
-  | HistoryUpdated
-      { method :: Text,
-        context :: BrowsingContext,
-        url :: Text
-      }
-  | Load NavigationEvent
-  | NavigationAborted NavigationEvent
-  | NavigationCommitted NavigationEvent
-  | NavigationFailed NavigationEvent
-  | NavigationStarted NavigationEvent
-  | UserPromptClosed
-      { method :: Text,
-        context :: BrowsingContext,
-        accepted :: Bool,
-        typ :: Text, -- "alert", "beforeunload", etc.
-        userText :: Maybe Text
-      }
-  | UserPromptOpened {
-      method :: Text,
-        context :: BrowsingContext,
-        handler :: Text, -- "accept", "dismiss", etc.
-        message :: Text,
-        typ :: Text,
-        defaultValue :: Maybe Text
-      }
-
-  deriving (Show, Generic)
-
-data NavigationEvent = MkNavigationEvent
-  { method :: Text,
-    navigationInfo :: NavigationInfo
+data Info = MkInfo
+  { children :: Maybe [Info],
+    clientWindow :: Text, -- browser.ClientWindow
+    context :: BrowsingContext,
+    originalOpener :: Maybe BrowsingContext,
+    url :: Text,
+    userContext :: Text, -- browser.UserContext
+    parent :: Maybe BrowsingContext
   }
-  deriving (Show, Generic)
+  deriving (Show, Eq, Generic)
 
+data NavigateResult = MkNavigateResult
+  { navigation :: Maybe Text,
+    url :: Text
+  }
+  deriving (Show, Eq, Generic)
+
+data TraverseHistoryResult = MkTraverseHistoryResult
+  { 
+    extensions :: Maybe (Map.Map Text Value)
+  }
+  deriving (Show, Eq, Generic)
+
+-- | Event from a browsing context
+data BrowsingContextEvent
+  = ContextCreated Info
+  | ContextDestroyed Info
+  | DomContentLoaded NavigationInfo
+  | DownloadWillBegin DownloadWillBegin
+  | FragmentNavigated NavigationInfo
+  | HistoryUpdated HistoryUpdated
+  | Load NavigationInfo
+  | NavigationAborted NavigationInfo
+  | NavigationCommitted NavigationInfo
+  | NavigationFailed NavigationInfo
+  | NavigationStarted NavigationInfo
+  | UserPromptClosed UserPromptClosed
+  | UserPromptOpened UserPromptOpened
+  deriving (Show, Eq, Generic)
 
 data NavigationInfo = MkNavigationInfo
-  { navigation :: Maybe Text, -- null allowed
-    url :: Text,
+  { context :: BrowsingContext,
+    navigation :: Maybe Navigation,
     timestamp :: JSUInt,
-    userContext :: Text,
-    clientWindow :: Text
+    url :: Text
   }
-  deriving (Show, Generic)
+  deriving (Show, Eq, Generic)
 
+data DownloadWillBegin = MkDownloadWillBegin
+  { suggestedFilename :: Text,
+    context :: BrowsingContext,
+    navigation :: Maybe Navigation,
+    timestamp :: JSUInt,
+    url :: Text
+  }
+  deriving (Show, Eq, Generic)
 
+data HistoryUpdated = MkHistoryUpdated
+  { context :: BrowsingContext,
+    url :: Text
+  }
+  deriving (Show, Eq, Generic)
+
+data UserPromptClosed = MkUserPromptClosed
+  { context :: BrowsingContext,
+    accepted :: Bool,
+    typ :: Text, -- UserPromptType
+    userText :: Maybe Text
+  }
+  deriving (Show, Eq, Generic)
+
+data UserPromptOpened = MkUserPromptOpened
+  { context :: BrowsingContext,
+    handler :: Text, -- session.UserPromptHandlerType
+    message :: Text,
+    typ :: Text, -- UserPromptType
+    defaultValue :: Maybe Text
+  }
+  deriving (Show, Eq, Generic)
+
+newtype Navigation = MkNavigation
+  { navigationId :: Text
+  }
+  deriving (Show, Eq, Generic)

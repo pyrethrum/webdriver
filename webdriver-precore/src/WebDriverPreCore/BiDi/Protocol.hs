@@ -1,22 +1,14 @@
 module WebDriverPreCore.BiDi.Protocol where
 
 import Data.Aeson 
-  ( FromJSON,
-    ToJSON,
-    Value,
-    genericParseJSON,
-    genericToJSON,
-    defaultOptions,
-    omitNothingFields,
+  ( Value,
   )
-import Data.Int (Int64)
 import Data.Map qualified as Map
 import Data.Text (Text)
-import Data.Word (Word64)
 import GHC.Generics
 import WebDriverPreCore.BiDi.BrowsingContext (BrowsingContextResult, BrowsingContextEvent)
 import WebDriverPreCore.BiDi.CoreTypes
-import Prelude (Integer, Maybe, Show, Bool)
+import Prelude (Maybe, Show, Bool)
 import WebDriverPreCore.BiDi.Script (Source, StackTrace, RemoteValue)
 
 -- Main message type

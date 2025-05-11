@@ -9,7 +9,7 @@ import Prelude (Eq(..), Show(..), Maybe(..), Int, Bool(..), Double, fail, pure, 
 import Data.Word (Word32)
 
 {-
--- https://www.w3.org/TR/2025/WD-webdriver-bidi-20250414/
+-- https://www.w3.org/TR/2025/WD-webdriver-bidi-20250508/
 
 -- | Common types used across commands
 

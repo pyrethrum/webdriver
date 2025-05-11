@@ -57,7 +57,7 @@ import WebDriverPreCore.BiDi.CoreTypes
   )
 import Prelude (Bool (..), Double, Either, Eq (..), Maybe, Show)
 
--- https://www.w3.org/TR/2025/WD-webdriver-bidi-20250414/#module-script-definition
+-- https://www.w3.org/TR/2025/WD-webdriver-bidi-20250508/#module-script-definition
 
 -- ######### REMOTE #########
 
