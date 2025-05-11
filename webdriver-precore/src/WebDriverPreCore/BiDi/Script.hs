@@ -37,15 +37,22 @@ module WebDriverPreCore.BiDi.Script
     Message (..),
     Channel (..),
     Source (..),
-    RealmDestroyedParams (..),
     ChannelValue (..),
     ChannelProperties (..),
 
     -- * PreloadScript
     PreloadScript (..),
+    RemoteReference (..),
+    SharedReference (..),
+    RemoteObjectReference (..),
+    SharedId (..),
+
+    ScriptCommand (..)
   )
 where
 
+import Data.Aeson (Value)
+import Data.Map.Strict qualified as Map
 import Data.Text (Text)
 import GHC.Generics
 import WebDriverPreCore.BiDi.CoreTypes
@@ -56,7 +63,7 @@ import WebDriverPreCore.BiDi.CoreTypes
     NodeRemoteValue,
   )
 import Prelude (Bool (..), Double, Either, Eq (..), Maybe, Show)
-import Data.Aeson (Value)
+
 
 -- https://www.w3.org/TR/2025/WD-webdriver-bidi-20250508/#module-script-definition
 
@@ -80,46 +87,6 @@ data AddPreloadScript = MkAddPreloadScript
     sandbox :: Maybe Text
   }
   deriving (Show, Eq, Generic)
-
-
-HERE NEED TO LOOK AT SCRIPT IT IS MISSING STUFF LIKE SAHRED Value
-
-script.RemoteReference = (
-  script.SharedReference /
-  script.RemoteObjectReference
-)
-
-script.SharedReference = {
-   sharedId: script.SharedId
-   ? handle: script.Handle,
-   Extensible
-}
-
-script.RemoteObjectReference = {
-   handle: script.Handle,
-   ? sharedId: script.SharedId
-   Extensible
-}
-
-script.SharedId = text;
-
-
-
-    script.RealmCreated = (
-     method: "script.realmCreated",
-     params: script.RealmInfo
-    )
-
-script.RealmDestroyed = (
-  method: "script.realmDestroyed",
-  params: script.RealmDestroyedParameters
-)
-
-script.RealmDestroyedParameters = {
-  realm: script.Realm
-}
-
-
 
 -- Remote Value types
 data RemoteValue
@@ -263,7 +230,7 @@ data CallFunction = MkCallFunction
 
 -- \| Local value representation
 data LocalValue
-  = RemoteReference RemoteValue
+  = RemoteReference RemoteReference
   | PrimitiveLocalValue PrimitiveProtocolValue
   | ChannelValue ChannelValue
   | ArrayLocalValue ArrayLocalValue
@@ -272,6 +239,31 @@ data LocalValue
   | ObjectLocalValue ObjectLocalValue
   | RegExpLocalValue RegExpLocalValue
   | SetLocalValue SetLocalValue
+  deriving (Show, Eq, Generic)
+
+data RemoteReference = MkRemoteReference
+  { sharedreference :: SharedReference,
+    remoteObjectReference :: RemoteObjectReference
+  }
+  deriving (Show, Eq, Generic)
+
+data SharedReference = MkSharedReference
+  { sharedId :: SharedId,
+    handle :: Maybe Handle,
+    extensions :: Maybe (Map.Map Text Value) -- "extensions" field is optional
+  }
+  deriving (Show, Eq, Generic)
+
+data RemoteObjectReference = MkRemoteObjectReference
+  { handle :: Handle,
+    shartedId :: Maybe SharedId,
+    extensions :: Maybe (Map.Map Text Value) -- "extensions" field is optional
+  }
+  deriving (Show, Eq, Generic)
+
+newtype SharedId = MkShareId
+  { id :: Text -- SharedId
+  }
   deriving (Show, Eq, Generic)
 
 -- | List of local values
@@ -453,7 +445,7 @@ data ScriptEvent
         params :: Message
       }
   | RealmCreatedEvent RealmInfo
-  | RealmDestroyedEvent RealmDestroyedParams
+  | RealmDestroyed Realm
   deriving (Show, Generic)
 
 data Message = MkMessage
@@ -469,11 +461,6 @@ newtype Channel = Channel Text deriving newtype (Show, Eq)
 data Source = MkSource
   { realm :: Realm,
     context :: Maybe BrowsingContext
-  }
-  deriving (Show, Eq, Generic)
-
-newtype RealmDestroyedParams = RealmDestroyedParams
-  { realm :: Realm
   }
   deriving (Show, Eq, Generic)
 

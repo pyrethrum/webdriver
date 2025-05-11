@@ -1,10 +1,10 @@
-module WebDriverPreCore.BiDi.Log where
+module WebDriverPreCore.BiDi.Input where
 
 import Data.Text (Text)
 import GHC.Generics (Generic)
 import WebDriverPreCore.BiDi.BrowsingContext qualified as BrowsingContext
 import WebDriverPreCore.BiDi.Script qualified as Script
-import Prelude (Show, Eq, Maybe, Int, Double)
+import Prelude (Show, Eq, Maybe, Int, Double, Bool)
 
 -- Remote Types for Input module
 
@@ -168,7 +168,7 @@ newtype ReleaseActions = MkReleaseActions
 
 
 data SetFiles = MkSetFiles
-  { context :: BrowsingContext.BrowsingContext,
+  { context :: BrowsingContext.BrowsingContextId,
     element :: Script.SharedReference,
     files :: [Text]
   }
@@ -180,7 +180,7 @@ data FileDialogOpened = MkFileDialogOpened
   deriving (Show, Eq, Generic)
 
 data FileDialogInfo = MkFileDialogInfo
-  { context :: BrowsingContext.BrowsingContext,
+  { context :: BrowsingContext.BrowsingContextId,
     element :: Maybe Script.SharedReference,
     multiple :: Bool
   }
