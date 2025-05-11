@@ -1,5 +1,11 @@
 
-module WebDriverPreCore.BiDi.Emulation where
+module WebDriverPreCore.BiDi.Emulation (
+  EmulationCommand (..),
+  SetGeolocationOverride (..),
+  SetGeolocationOverrideParams (..),
+  GeolocationCoordinates (..),
+  GeolocationPositionError (..),
+) where
 
 {-
 create types to represent the remote  end for emulation:
@@ -27,10 +33,10 @@ data EmulationCommand = MkEmulationSetGeolocationOverride
 
 data SetGeolocationOverride = MkSetGeolocationOverride
   { method :: Text
-  , params :: SetGeolocationOverrideParameters
+  , params :: SetGeolocationOverrideParams
   } deriving (Show, Eq, Generic)
 
-data SetGeolocationOverrideParameters = MkSetGeolocationOverrideParameters
+data SetGeolocationOverrideParams = MkSetGeolocationOverrideParams
   { coordinates :: Maybe GeolocationCoordinates
   , error :: Maybe GeolocationPositionError
   , contexts :: Maybe [BrowsingContext]
