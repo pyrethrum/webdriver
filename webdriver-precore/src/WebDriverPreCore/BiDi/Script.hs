@@ -1,4 +1,50 @@
-module WebDriverPreCore.BiDi.Script where
+module WebDriverPreCore.BiDi.Script
+  ( -- * ScriptCommand
+    AddPreloadScript (..),
+    RemoteValue (..),
+    PrimitiveProtocolValue (..),
+    SpecialNumber (..),
+    WindowProxyProperties (..),
+    CallFunction (..),
+    LocalValue (..),
+    ListLocalValue (..),
+    ArrayLocalValue (..),
+    DateLocalValue (..),
+    MappingLocalValue (..),
+    MapLocalValue (..),
+    ObjectLocalValue (..),
+    RegExpValue (..),
+    RegExpLocalValue (..),
+    SetLocalValue (..),
+    ResultOwnership (..),
+    SerializationOptions (..),
+    Disown (..),
+    Target (..),
+    Realm (..),
+    Evaluate (..),
+    GetRealms (..),
+    RemovePreloadScript (..),
+
+    -- * ScriptResult
+    ScriptResult (..),
+    RealmInfo (..),
+    BaseRealmInfo (..),
+    EvaluateResult (..),
+    ExceptionDetails (..),
+    StackTrace (..),
+    StackFrame (..),
+    ScriptEvent (..),
+    Message (..),
+    Channel (..),
+    Source (..),
+    RealmDestroyedParams (..),
+    ChannelValue (..),
+    ChannelProperties (..),
+
+    -- * PreloadScript
+    PreloadScript (..),
+  )
+where
 
 import Data.Text (Text)
 import GHC.Generics
