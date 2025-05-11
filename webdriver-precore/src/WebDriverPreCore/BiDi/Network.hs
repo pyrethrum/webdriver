@@ -36,8 +36,6 @@ module WebDriverPreCore.BiDi.Network (
   FetchError (..),
   ResponseCompleted (..),
   ResponseStarted (..),
-
-
 ) where
 
 -- This module provides functionality related to BiDi (Bidirectional) network operations
