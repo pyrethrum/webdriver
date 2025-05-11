@@ -124,12 +124,13 @@ library
       WebDriverPreCore.Http.Error
       WebDriverPreCore.Http.HttpResponse
       -- BiDi
-      WebDriverPreCore.BiDi.Protocol
-      WebDriverPreCore.BiDi.Session
+      WebDriverPreCore.BiDi.Browser
       WebDriverPreCore.BiDi.BrowsingContext
       WebDriverPreCore.BiDi.CoreTypes
-      WebDriverPreCore.BiDi.Script
       WebDriverPreCore.BiDi.Network
+      WebDriverPreCore.BiDi.Protocol
+      WebDriverPreCore.BiDi.Script
+      WebDriverPreCore.BiDi.Session
   hs-source-dirs: src
   build-depends:
     aeson         >=1.4   && <2.3, 
