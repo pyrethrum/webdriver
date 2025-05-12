@@ -49,7 +49,7 @@ import WebDriverPreCore.BiDi.CoreTypes (BrowsingContext, JSUInt)
 import WebDriverPreCore.BiDi.Script (StackTrace)
 import Prelude (Bool, Eq, Maybe, Show)
 
--- https://www.w3.org/TR/2025/WD-webdriver-bidi-20250508/#module-network
+-- https://www.w3.org/TR/2025/WD-webdriver-bidi-20250512/#module-network
 
 -- ######### REMOTE #########
 
