@@ -4,7 +4,8 @@ packages:
   webdriver-precore/*.cabal
   webdriver-examples/*.cabal
 
-with-compiler: ghc-9.10.1
+with-compiler: ghc-9.8.4
+-- with-compiler: ghc-9.10.1
 -- with-compiler: ghc-9.8.2 -- haddock not working
 
 

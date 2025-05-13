@@ -4,6 +4,3 @@ packages: .
 multi-repl: True
 
 package *
-
-with-compiler: ghc-9.10.1
--- with-compiler: ghc-9.8.2 -- haddock not working

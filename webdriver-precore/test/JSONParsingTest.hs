@@ -4,7 +4,7 @@ import Data.Aeson (ToJSON (toJSON), Value (..), decode, encode)
 import Data.Aeson.KeyMap qualified as KM
 
 import Data.Bool (Bool, (&&), (||))
-import Data.Enum (Bounded (minBound), Enum, maxBound)
+import Prelude (Bounded (minBound), Enum, maxBound)
 import Data.Foldable (all, null)
 import Data.Function (($), (.), id)
 import Data.Functor ((<$>))

@@ -51,14 +51,11 @@ import Data.Aeson.Types
     parseField,
     parseFieldMaybe,
   )
-import Data.Bool (Bool (..))
-import Data.Enum (Enum)
-import Data.Eq (Eq)
+import Prelude (Enum, Bool (..), Maybe (..), Int, Show (..), Eq (..), maybe)
 import Data.Function (($), (.), flip)
 import Data.Functor ((<$>))
-import Data.Int (Int)
 import Data.Map.Strict (Map)
-import Data.Maybe (Maybe (..), catMaybes, maybe)
+import Data.Maybe (catMaybes)
 import Data.Semigroup (Semigroup (..))
 import Data.Text (Text)
 import Data.Vector (fromList)
@@ -66,7 +63,6 @@ import GHC.Enum (Bounded)
 import GHC.Float (Double)
 import GHC.Generics (Generic)
 import GHC.IO (FilePath)
-import GHC.Show (Show (..))
 import WebDriverPreCore.Internal.Utils (opt)
 
 {- references:
