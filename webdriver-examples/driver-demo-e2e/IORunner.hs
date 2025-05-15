@@ -39,7 +39,7 @@ import WebDriverPreCore
     W3Spec (..),
     parseWebDriverError,
   )
-import WebDriverPreCore.SpecDefinition qualified as W
+import WebDriverPreCore qualified as W
 import Prelude hiding (log)
 import Data.Foldable qualified as F 
 
