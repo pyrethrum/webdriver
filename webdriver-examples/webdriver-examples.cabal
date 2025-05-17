@@ -1,7 +1,7 @@
-cabal-version: 3.12
+cabal-version: 3.8
 
 name:           webdriver-examples
-version:        0.1.0.1
+version:        0.1.0.2
 homepage:       https://github.com/pyrethrum/webdriver/webdriver-precore#readme
 bug-reports:    https://github.com/pyrethrum/webdriver/issues
 author:         John Walker, Adrian Glouftsis
@@ -15,7 +15,7 @@ extra-doc-files:
     README.md
     ChangeLog.md
 
-tested-with: GHC == { 9.8.2, 9.10.1 }
+tested-with: GHC == { 9.8.2, 9.8.4, 9.10.1 }
 
 synopsis:       A test suite that demonstrates how to use the webdriver-precore library
 

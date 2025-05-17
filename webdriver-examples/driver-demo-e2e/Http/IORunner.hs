@@ -41,6 +41,7 @@ import WebDriverPreCore.Http
   )
 import WebDriverPreCore.Http qualified as W
 import Prelude hiding (log)
+import Data.Foldable qualified as F 
 
 -- ############# Config #############
 
@@ -72,7 +73,7 @@ mkRequest spec = case spec of
   PostEmpty {} -> MkRequestParams url POST (ReqBodyJson $ object []) port'
   Delete {} -> MkRequestParams url DELETE NoReqBody port'
   where
-    url = foldl' (/:) (http "127.0.0.1") spec.path.segments
+    url = F.foldl' (/:) (http "127.0.0.1") spec.path.segments
     port' = 4444 -- firefox
 
 
