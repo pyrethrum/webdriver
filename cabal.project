@@ -1,15 +1,9 @@
--- import: https://www.stackage.org/nightly-2025-02-25/cabal.config
+import: https://www.stackage.org/nightly-2025-02-25/cabal.config
 
 packages: 
   webdriver-precore/*.cabal
   webdriver-examples/*.cabal
 
-with-compiler: ghc-9.8.4
+with-compiler: ghc-9.10.1
 -- with-compiler: ghc-9.10.1
--- with-compiler: ghc-9.8.2 -- haddock not working
-
-
-rm -rf dist-newstyle
-cabal update
-cabal build --enable-test
-
+-- with-compiler: ghc-9.8.4
