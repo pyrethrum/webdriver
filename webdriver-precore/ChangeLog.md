@@ -1,5 +1,9 @@
 <!-- # webdriver-precore-??.??.??.?? (????-??-??) - Unreleased -->
 
+# webdriver-precore-0.1.0.2 (2025-05-17)
+
+Fix Hackage build failure (ghc-9.8.4)
+
 # webdriver-precore-0.1.0.1 (2025-04-28)
 
 README update - Stackage badge
