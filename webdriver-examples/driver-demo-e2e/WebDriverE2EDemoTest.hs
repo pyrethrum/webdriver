@@ -6,7 +6,6 @@ import Control.Exception (bracket)
 import Control.Monad (forM_)
 import Data.Aeson (Value (..))
 import Data.Function ((&))
-import Data.Functor ((<&>))
 import Data.Set qualified as Set
 import Data.Text (Text, isInfixOf)
 import Data.Text.IO qualified as TIO
@@ -105,7 +104,6 @@ import IOAPI
     isElementSelected,
     maximizeWindow,
     minCapabilities,
-    minFirefoxSession,
     minimizeWindow,
     navigateTo,
     newSession,
@@ -126,7 +124,7 @@ import IOAPI
     takeScreenshot,
   )
 import Test.Tasty.HUnit as HUnit (Assertion, HasCallStack, assertBool, (@=?))
-import WebDriverPreCore (alwaysMatchCapabilities, minChromeCapabilities, minFullCapabilities)
+import WebDriverPreCore (minChromeCapabilities, minFullCapabilities)
 import WebDriverPreCore.Internal.Utils (txt)
 import Prelude hiding (log)
 
@@ -141,44 +139,51 @@ customFirefoxProfilePath :: Maybe Text
 customFirefoxProfilePath = Nothing
 -- customFirefoxProfilePath = Just "./webdriver-examples/driver-demo-e2e/.profile/WebDriverProfile"
 
+-- very boring to watch if set to True
+firefoxHealess :: Bool
+firefoxHealess = False
+
 -- #################### The Tests ######################
+
+configuredCapabilities :: FullCapabilities
+configuredCapabilities =
+  MkFullCapabilities
+    { alwaysMatch =
+        Just $
+          MkCapabilities
+            { browserName = Just $ if useFirefox then Firefox else Chrome,
+              browserVersion = Nothing,
+              platformName = Nothing,
+              acceptInsecureCerts = Nothing,
+              pageLoadStrategy = Nothing,
+              proxy = Nothing,
+              timeouts = Nothing,
+              strictFileInteractability = Nothing,
+              unhandledPromptBehavior = Nothing,
+              vendorSpecific =
+                if
+                  | useFirefox ->
+                      let headless = if firefoxHealess then ["--headless"] else []
+                          profile = maybe [] (\p -> ["-profile", p]) customFirefoxProfilePath
+                          args = headless <> profile
+                          mArgs = if null args then Nothing else Just args
+                       in mArgs & maybe Nothing \_ ->
+                            Just FirefoxOptions
+                              { -- requires a path to the profile directory
+                                firefoxArgs = mArgs,
+                                firefoxBinary = Nothing,
+                                firefoxProfile = Nothing,
+                                firefoxLog = Nothing
+                              }
+                  | otherwise -> Nothing
+            },
+      firstMatch = []
+    }
 
 -- >>> unit_demoSessionDriverStatus
 unit_demoSessionDriverStatus :: IO ()
 unit_demoSessionDriverStatus = do
-  ses <-
-    -- demo only
-    -- helper functions would oterwise always be used to simplify session creation
-    newSession $
-      MkFullCapabilities
-        { alwaysMatch =
-            Just $
-              MkCapabilities
-                { browserName = Just $ if useFirefox then Firefox else Chrome,
-                  browserVersion = Nothing,
-                  platformName = Nothing,
-                  acceptInsecureCerts = Nothing,
-                  pageLoadStrategy = Nothing,
-                  proxy = Nothing,
-                  timeouts = Nothing,
-                  strictFileInteractability = Nothing,
-                  unhandledPromptBehavior = Nothing,
-                  vendorSpecific =
-                    if
-                      | useFirefox ->
-                          customFirefoxProfilePath
-                            <&> \firefoxProfilePath ->
-                              FirefoxOptions
-                                { -- requires a path to the profile directory
-                                  firefoxArgs = Just ["-profile", firefoxProfilePath],
-                                  firefoxBinary = Nothing,
-                                  firefoxProfile = Nothing,
-                                  firefoxLog = Nothing
-                                }
-                      | otherwise -> Nothing
-                },
-          firstMatch = []
-        }
+  ses <- newSession configuredCapabilities
   log "new session" $ txt ses
   s <- status
   Ready === s
@@ -829,11 +834,7 @@ capsWithCustomFirefoxProfile firefoxProfilePath =
 
 mkExtendedFirefoxTimeoutsSession :: IO SessionId
 mkExtendedFirefoxTimeoutsSession =
-  customFirefoxProfilePath
-    & maybe
-      minFirefoxSession
-      (\profilepath -> newSession . alwaysMatchCapabilities $ capsWithCustomFirefoxProfile profilepath)
-    >>= extendTimeouts
+  newSession configuredCapabilities >>= extendTimeouts
 
 mkExtendedChromeTimeoutsSession :: IO SessionId
 mkExtendedChromeTimeoutsSession =
