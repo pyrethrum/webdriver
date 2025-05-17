@@ -18,7 +18,7 @@ build-type:     Simple
 extra-source-files: 
   README.md
   ChangeLog.md
-tested-with: GHC == { 9.8.2, 9.10.1 }
+tested-with: GHC == { 9.8.2, 9.8.4, 9.10.1 }
     
 
 synopsis:       A typed wrapper for W3C WebDriver protocol. A base for other libraries.
