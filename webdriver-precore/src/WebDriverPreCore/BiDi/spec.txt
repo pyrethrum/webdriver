@@ -5,17 +5,17 @@
 W3C
 WebDriver BiDi
 
-W3C Working Draft, 12 May 2025
+W3C Working Draft, 14 May 2025
 More details about this document
 
 This version:
-    https://www.w3.org/TR/2025/WD-webdriver-bidi-20250512/ 
+    https://www.w3.org/TR/2025/WD-webdriver-bidi-20250514/ 
 Latest published version:
     https://www.w3.org/TR/webdriver-bidi/ 
 Editor's Draft:
     https://w3c.github.io/webdriver-bidi/ 
 Previous Versions:
-    https://www.w3.org/TR/2025/WD-webdriver-bidi-20250508/ 
+    https://www.w3.org/TR/2025/WD-webdriver-bidi-20250513/ 
 History:
     https://www.w3.org/standards/history/webdriver-bidi/ 
 Implementation Report:
@@ -1000,7 +1000,7 @@ Note: "At any time" here includes during implementation startup, so a given impl
 
 Implementations may remove any empty user context, with exception of the default user context, from the set of user contexts at any time. However they are not required to remove such user contexts. User contexts that are not empty user contexts must not be removed from the set of user contexts.
 
-A BiDi session has a user contexts with insecure certificates overrides, which is a set of user contexts.
+A BiDi session has a user context to accept insecure certificates override map, which is a map between user contexts and boolean.
 
 When a user context is removed from the set of user contexts, remove user context subscriptions.
 
@@ -1080,11 +1080,9 @@ To cleanup the session given session:
 
     Close the WebSocket connections with session.
 
-    For each user context in the session’s user contexts with insecure certificates overrides:
+    For each user context in the set of user contexts:
 
-        Restore insecure certificates behavior with user context.
-
-        Remove user context from session’s user contexts with insecure certificates overrides.
+        Remove session’s user context to accept insecure certificates override map[user context].
 
     If active sessions is empty, cleanup remote end state.
 
@@ -1845,38 +1843,6 @@ Return Type
 
     browser.CreateUserContextResult = browser.UserContextInfo
 
-The steps to check if request originates in user context given request and user context are:
-
-    Let settings be request’s client.
-
-    Let related navigables be get related navigables with settings.
-
-    For navigable in related navigables:
-
-        If navigable’s associated user context is user context return true.
-
-    Return false.
-
-To restore insecure certificates behavior given user context:
-
-    If endpoint node’s accept insecure TLS flag is true and endpoint node supports accepting insecure TLS connections, override insecure certificates behavior with user context and true.
-
-    Otherwise, override insecure certificates behavior with user context and false.
-
-To override insecure certificates behavior given user context and acceptInsecureCerts:
-
-    If acceptInsecureCerts is true:
-
-        If endpoint node doesn’t support accepting insecure TLS connections, return error with error code unsupported operation.
-
-        For any network request request for which the request originates in user context steps with request and user context return true, when running the Basic Certificate Processing steps for that request, skip step a, along with any other implementation-specific certificate validation steps.
-
-        Return.
-
-    Assert acceptInsecureCerts is false.
-
-    For any network request request for which the request originates in user context steps with request and user context return true, when running the Basic Certificate Processing steps for that request, the step a, along with any other implementation-specific certificate validation steps, must not be skipped.
-
 The remote end steps with session and command parameters are:
 
     Let user context be a new user context.
@@ -1885,9 +1851,11 @@ The remote end steps with session and command parameters are:
 
     Note: If "acceptInsecureCerts" is set, it overrides the accept insecure TLS flag’s behavior.
 
-        Override insecure certificates behavior with user context and command parameters["acceptInsecureCerts"].
+        Let acceptInsecureCerts be command parameters["acceptInsecureCerts"]:
 
-        Append user context to session’s user contexts with insecure certificates overrides.
+        If acceptInsecureCerts is true and endpoint node doesn’t support accepting insecure TLS connections, return error with error code unsupported operation.
+
+        Set session’s user context to accept insecure certificates override map[user context] to acceptInsecureCerts.
 
     Append user context to the set of user contexts.
 
@@ -4229,11 +4197,11 @@ To process a network event given session, event, and request:
 
     Let top-level navigable id be null.
 
-    If request’s window is an environment settings object:
+    If request’s client is an environment settings object:
 
-        Let environment settings be request’s window
+        Let environment settings be request’s client.
 
-        If there is a navigable whose active window is environment settings’ global object, set navigable id to the navigable id for that navigable, and set top-level navigable id to be top-level traversable’s navigable id for that context.
+        If there is a navigable whose active window is environment settings’ global object, set navigable id to that navigable’s navigable id, and set top-level navigable id to that navigable’s top-level traversable’s navigable id.
 
     Let intercepts be the result of get the network intercepts with session, event, request, and top-level navigable id.
 
@@ -5403,11 +5371,11 @@ The WebDriver BiDi cache behavior steps given request are:
 
     Let navigable be null.
 
-    If request’s window is an environment settings object:
+    If request’s client is an environment settings object:
 
-        Let environment settings be request’s window
+        Let environment settings be request’s client.
 
-        If there is a navigable whose active window is environment settings’ global object, set navigable to the top-level browsing context for that browsing context.
+        If there is a navigable whose active window is environment settings’ global object, set navigable to that navigable’s top-level traversable.
 
     If navigable is not null and navigable cache behavior map contains navigable, return navigable cache behavior map[navigable].
 
@@ -5543,7 +5511,39 @@ Event Type
     }
 
 This event is emitted before a request is sent (either over the network or before it’s handled by a serviceworker or a local cache).
+The steps to check if request originates in user context given request and user context are:
+
+    Let settings be request’s client.
+
+    Let related navigables be get related navigables with settings.
+
+    For navigable in related navigables:
+
+        If navigable’s associated user context is user context return true.
+
+    Return false.
+
 The remote end event trigger is the WebDriver BiDi before request sent steps given request:
+
+    For each user context in the set of user contexts:
+
+        If the request originates in user context steps with request and user context return true:
+
+            For each session in active BiDI sessions
+
+            Note: user context can be in not more then one user context to accept insecure certificates override map.
+
+                If session’s user context to accept insecure certificates override map contain user context:
+
+                    Let accept insecure certificates be session’s user context to accept insecure certificates override map[user context].
+
+                    If accept insecure certificates is true:
+
+                        Assert endpoint node supports accepting insecure TLS connections.
+
+                        When running the Basic Certificate Processing steps for request, skip step a, along with any other implementation-defined certificate validation steps.
+
+                    Otherwise, when running the Basic Certificate Processing steps for request, perform all steps along with any implementation-defined certificate validation steps.
 
     If before request sent map does not contain request, set before request sent map[request] to a new set.
 
@@ -8967,7 +8967,6 @@ Terms defined by this specification
     no such web extension, in § 3.5
     obtain a set of event names, in § 3.6
     original opener, in § 7.3.2.1
-    override insecure certificates behavior, in § 7.2.4.2
     parse URL pattern, in § 7.5.3.16
     pending, in § 7.3
     port, in § 4
@@ -8983,10 +8982,9 @@ Terms defined by this specification
     remove user context subscriptions, in § 6
     render document to a canvas, in § 7.3.3.2
     request id, in § 7.5.3.11
-    request originates in user context, in § 7.2.4.2
+    request originates in user context, in § 7.5.5.2
     required partition key attributes, in § 7.7.2.1
     restore client window is supported, in § 7.2.2
-    restore insecure certificates behavior, in § 7.2.4.2
     restore the client window, in § 7.2.2
     result type, in § 3.4
     resume, in § 2
@@ -9065,7 +9063,7 @@ Terms defined by this specification
     user context, in § 6
     user context id, in § 6
     user context ids, in § 3.6
-    user contexts with insecure certificates overrides, in § 6
+    user context to accept insecure certificates override map, in § 6
     viewport, in § 7.3.1
     viewport configuration, in § 7.3.1
     viewport dimensions, in § 7.3.1
@@ -9250,8 +9248,7 @@ Terms defined by reference
         status
         status message
         URL (for request)
-        URL (for response)
-        window 
+        URL (for response) 
     [FS] defines the following terms:
         binary data
         directory entry
