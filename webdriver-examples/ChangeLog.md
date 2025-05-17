@@ -1,4 +1,7 @@
 <!-- # webdriver-examples-??.??.??.?? (????-??-??) - Unreleased -->
+# webdriver-examples-0.1.0.2 (2025-05-17)
+
+Add Firefox headless config option
 
 # webdriver-examples-0.1.0.1 (2025-04-28)
 
