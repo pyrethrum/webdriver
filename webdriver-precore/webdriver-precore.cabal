@@ -116,17 +116,9 @@ library
   exposed-modules:
       WebDriverPreCore.Http
       WebDriverPreCore.Http.Internal.Utils
-      WebDriverPreCore.BiDi
-  other-modules:
-      -- Http
-      WebDriverPreCore.Http.SpecDefinition
-      WebDriverPreCore.Http.Capabilities
-      WebDriverPreCore.Http.Error
-      WebDriverPreCore.Http.HttpResponse
       -- BiDi
       WebDriverPreCore.BiDi.Browser
       WebDriverPreCore.BiDi.BrowsingContext
-      WebDriverPreCore.BiDi.CoreTypes
       WebDriverPreCore.BiDi.Emulation
       WebDriverPreCore.BiDi.Log
       WebDriverPreCore.BiDi.Input
@@ -135,6 +127,15 @@ library
       WebDriverPreCore.BiDi.Script
       WebDriverPreCore.BiDi.Session
       WebDriverPreCore.BiDi.Storage
+      WebDriverPreCore.BiDi.WebExtensions
+  other-modules:
+      -- Http
+      WebDriverPreCore.Http.SpecDefinition
+      WebDriverPreCore.Http.Capabilities
+      WebDriverPreCore.Http.Error
+      WebDriverPreCore.Http.HttpResponse
+      -- BiDi
+      WebDriverPreCore.BiDi.CoreTypes
   hs-source-dirs: src
   build-depends:
     aeson         >=1.4   && <2.3, 
