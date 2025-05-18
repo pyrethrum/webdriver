@@ -121,6 +121,8 @@ test-suite driver-demo-e2e
     , tasty-discover
     , time
     , webdriver-precore
+    , websockets
+    , wuss
   other-modules:
       E2EConst
     , Http.IORunnerMinimalForDocs

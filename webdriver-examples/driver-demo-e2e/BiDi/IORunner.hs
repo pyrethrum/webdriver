@@ -1,114 +1,29 @@
-module BiDi.IORunner
-  -- ( run,
-  -- )
-where
+module BiDi.IORunner where
 
--- import Control.Monad (when)
--- import Control.Monad.IO.Class (liftIO)
--- import Data.Aeson (Result (..), Value, object)
--- import Data.Aeson.Text (encodeToLazyText)
--- import Data.Function ((&))
--- import Data.Text as T (Text, unpack)
--- import Data.Text.Encoding (decodeUtf8Lenient)
--- import Data.Text.IO qualified as T
--- import Data.Text.Lazy qualified as LT
--- import E2EConst (ReqRequestParams (..))
--- import Network.HTTP.Req (JsonResponse)
--- import Network.HTTP.Req as R
---   ( DELETE (DELETE),
---     GET (GET),
---     HttpConfig (httpConfigCheckResponse),
---     NoReqBody (NoReqBody),
---     POST (POST),
---     ReqBodyJson (ReqBodyJson),
---     defaultHttpConfig,
---     http,
---     jsonResponse,
---     port,
---     req,
---     responseBody,
---     responseStatusCode,
---     responseStatusMessage,
---     runReq,
---     (/:),
---   )
--- import WebDriverPreCore.Http.Internal.Utils (prettyPrintJson, txt)
--- import WebDriverPreCore.Http
---   ( ErrorClassification (..),
---     HttpResponse (..),
---     W3Spec (..),
---     parseWebDriverError,
---   )
--- import Prelude hiding (log)
+import Control.Concurrent (forkIO)
+import Control.Monad (forever, unless, void)
+import Data.Text (Text, pack)
+import Data.Text.IO (putStrLn)
+import Network.WebSockets (ClientApp, receiveData, sendClose, sendTextData)
+import Wuss (runSecureClient)
+import Prelude (Foldable (..), IO, getLine, print, ($), (.))
 
+wussDemo :: IO ()
+wussDemo = runSecureClient "echo.websocket.org" 443 "/" ws
 
--- -- ############# Config #############
+ws :: ClientApp ()
+ws connection = do
+  putStrLn "Connected!"
 
--- wantConsoleLogging :: Bool
--- wantConsoleLogging = False
+  void . forkIO . forever $ do
+    message <- receiveData connection
+    print (message :: Text)
 
--- -- ############# Runner #############
+  let loop = do
+        line <- getLine
+        unless (null line) $ do
+          sendTextData connection (pack line)
+          loop
+  loop
 
--- run :: (Show a) => W3Spec a -> IO a
--- run spec = do
---   when wantConsoleLogging $ do
---     devLog "Request"
---     devLog . txt $ spec
---     case spec of
---       Get {} -> pure ()
---       Post {body} -> do
---         devLog "body PP"
---         prettyPrintJson body
---         devLog "Body Raw"
---         T.putStrLn (LT.toStrict $ encodeToLazyText body)
---       PostEmpty {} -> pure ()
---       Delete {} -> pure ()
---   callWebDriver wantConsoleLogging (mkRequest spec) >>= parseIO spec
-
--- mkRequest :: forall a. W3Spec a -> ReqRequestParams
--- mkRequest spec = case spec of
---   Get {} -> MkRequestParams url GET NoReqBody port'
---   Post {body} -> MkRequestParams url POST (ReqBodyJson body) port'
---   PostEmpty {} -> MkRequestParams url POST (ReqBodyJson $ object []) port'
---   Delete {} -> MkRequestParams url DELETE NoReqBody port'
---   where
---     url = foldl' (/:) (http "127.0.0.1") spec.path.segments
---     port' = 4444 -- firefox
-
-
--- parseIO :: W3Spec a -> B.HttpResponse -> IO a
--- parseIO spec r =
---   spec.parser r
---     & \case
---       Error msg ->
---         fail $
---           parseWebDriverError r & \case
---             e@NotAnError {} -> unpack spec.description <> "\n" <> "Failed to parse response:\n " <> msg <> "\nin response:" <> show e
---             e@UnrecognisedError {} -> "UnrecognisedError:\n " <> "\nin response:" <> show e
---             e@WebDriverError {} -> "WebDriver error thrown:\n " <> show e
---       Success a -> pure a
-
--- callWebDriver :: Bool -> ReqRequestParams -> IO HttpResponse
--- callWebDriver wantLog MkRequestParams {url, method, body, port = prt} =
---   runReq defaultHttpConfig {httpConfigCheckResponse = \_ _ _ -> Nothing} $ do
---     log $ "URL: " <> txt url
---     r <- req method url body jsonResponse $ port prt
---     log $ "JSON Response:\n" <> txt r
---     let fr =
---           MkHttpResponse
---             { statusCode = responseStatusCode r,
---               statusMessage = responseStatusText r,
---               body = responseBody r :: Value
---             }
---     log $ "Framework Response:\n" <> txt fr
---     pure fr
---   where
---     log m = liftIO $ when wantLog $ devLog m
-
--- -- ############# Utils #############
-
--- responseStatusText :: Network.HTTP.Req.JsonResponse Value -> Text
--- responseStatusText = decodeUtf8Lenient . responseStatusMessage
-
--- devLog :: Text -> IO ()
--- devLog = T.putStrLn
+  sendClose connection (pack "Bye!")
