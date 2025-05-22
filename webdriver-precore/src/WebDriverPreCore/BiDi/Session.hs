@@ -3,32 +3,37 @@ module WebDriverPreCore.BiDi.Session where
 import Data.Text (Text)
 import Data.Word (Word8)
 import GHC.Generics (Generic)
-import Prelude (Bool (..), Eq (..), Maybe (..), Show (..))
+import Prelude (Bool (..), Eq (..), Maybe (..), Show (..), undefined)
+import Data.Aeson (Encoding)
+import Data.ByteString (ByteString)
+
+-- webSocketUrl :: https://www.w3.org/TR/2025/WD-webdriver-bidi-20250514/#establishing
+
+sessionNew :: Capabilities -> Encoding
+sessionNew = undefined
+
+sessionNewResult :: ByteString -> SessionNewResult
+sessionNewResult = undefined
 
 -- ######### Remote #########
 data SessionCommand
   = SessionEnd
-  | SessionNew SessionNewParameters
+  | SessionNew Capabilities
   | SessionStatus
   | SessionSubscribe SessionSubscriptionRequest
   | SessionUnsubscribe SessionUnsubscribeParameters
   deriving (Show, Eq, Generic)
 
--- | New Session Parameters
-newtype SessionNewParameters = MkSessionNewParameters
-  { capabilities :: CapabilitiesRequest
-  }
-  deriving (Show, Eq, Generic)
 
 -- | Capabilities Request
-data CapabilitiesRequest = MkCapabilitiesRequest
-  { alwaysMatch :: Maybe CapabilityRequest,
-    firstMatch :: Maybe [CapabilityRequest]
+data Capabilities = MkCapabilities
+  { alwaysMatch :: Maybe Capability,
+    firstMatch :: Maybe [Capability]
   }
   deriving (Show, Eq, Generic)
 
 -- | Capability Request
-data CapabilityRequest = MkCapabilityRequest
+data Capability = MkCapability
   { acceptInsecureCerts :: Maybe Bool,
     browserName :: Maybe Text,
     browserVersion :: Maybe Text,
