@@ -5,17 +5,17 @@
 W3C
 WebDriver BiDi
 
-W3C Working Draft, 14 May 2025
+W3C Working Draft, 20 May 2025
 More details about this document
 
 This version:
-    https://www.w3.org/TR/2025/WD-webdriver-bidi-20250514/ 
+    https://www.w3.org/TR/2025/WD-webdriver-bidi-20250520/ 
 Latest published version:
     https://www.w3.org/TR/webdriver-bidi/ 
 Editor's Draft:
     https://w3c.github.io/webdriver-bidi/ 
 Previous Versions:
-    https://www.w3.org/TR/2025/WD-webdriver-bidi-20250513/ 
+    https://www.w3.org/TR/2025/WD-webdriver-bidi-20250514/ 
 History:
     https://www.w3.org/standards/history/webdriver-bidi/ 
 Implementation Report:
@@ -1002,6 +1002,8 @@ Implementations may remove any empty user context, with exception of the default
 
 A BiDi session has a user context to accept insecure certificates override map, which is a map between user contexts and boolean.
 
+A BiDi session has a user context to proxy configuration map, which is a map between user contexts and proxy configuration.
+
 When a user context is removed from the set of user contexts, remove user context subscriptions.
 
 To remove user context subscriptions:
@@ -1083,6 +1085,8 @@ To cleanup the session given session:
     For each user context in the set of user contexts:
 
         Remove session’s user context to accept insecure certificates override map[user context].
+
+        Remove session’s user context to proxy configuration map[user context].
 
     If active sessions is empty, cleanup remote end state.
 
@@ -1836,7 +1840,8 @@ Command Type
     )
 
     browser.CreateUserContextParameters = {
-      ? acceptInsecureCerts: bool
+      ? acceptInsecureCerts: bool,
+      ? proxy: session.ProxyConfiguration
     }
 
 Return Type
@@ -1856,6 +1861,14 @@ The remote end steps with session and command parameters are:
         If acceptInsecureCerts is true and endpoint node doesn’t support accepting insecure TLS connections, return error with error code unsupported operation.
 
         Set session’s user context to accept insecure certificates override map[user context] to acceptInsecureCerts.
+
+    If command parameters contains "proxy":
+
+        Let proxy configuration be command parameters["proxy"].
+
+        If the remote end is unable to configure proxy settings per user context, or is unable to configure the proxy with proxy configuration, return error with error code unsupported operation.
+
+        Set session’s user context to proxy configuration map[user context] to proxy configuration.
 
     Append user context to the set of user contexts.
 
@@ -5533,7 +5546,7 @@ The remote end event trigger is the WebDriver BiDi before request sent steps giv
 
             Note: user context can be in not more then one user context to accept insecure certificates override map.
 
-                If session’s user context to accept insecure certificates override map contain user context:
+                If session’s user context to accept insecure certificates override map contains user context:
 
                     Let accept insecure certificates be session’s user context to accept insecure certificates override map[user context].
 
@@ -5544,6 +5557,16 @@ The remote end event trigger is the WebDriver BiDi before request sent steps giv
                         When running the Basic Certificate Processing steps for request, skip step a, along with any other implementation-defined certificate validation steps.
 
                     Otherwise, when running the Basic Certificate Processing steps for request, perform all steps along with any implementation-defined certificate validation steps.
+
+            Note: user context can be in not more then one user context to proxy configuration map.
+
+                If session’s user context to proxy configuration map contains user context:
+
+                    Let proxy configuration be session’s user context to proxy configuration map[user context].
+
+                    Take implementation-defined steps to ensure that request uses the proxy settings defined by the proxy configuration.
+
+                    Note: the settings are validated when the user context is created and so are assumed to be valid at this stage; any error accessing the proxy will be reported as a network error when handling the request.
 
     If before request sent map does not contain request, set before request sent map[request] to a new set.
 
@@ -9064,6 +9087,7 @@ Terms defined by this specification
     user context id, in § 6
     user context ids, in § 3.6
     user context to accept insecure certificates override map, in § 6
+    user context to proxy configuration map, in § 6
     viewport, in § 7.3.1
     viewport configuration, in § 7.3.1
     viewport dimensions, in § 7.3.1
@@ -9528,6 +9552,7 @@ Terms defined by reference
         no such frame
         parse a page range
         process capabilities
+        proxy configuration
         readiness state
         remote end
         remote end steps
