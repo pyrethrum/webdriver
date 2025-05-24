@@ -138,7 +138,7 @@ import Data.Text (Text, pack, unpack)
 import Data.Text qualified as T
 import Data.Word (Word16)
 import GHC.Generics (Generic)
-import WebDriverPreCore.Http.Internal.Utils (jsonToText, opt, txt)
+import WebDriverPreCore.Internal.Utils(jsonToText, opt, txt)
 import WebDriverPreCore.Http.Capabilities as Capabilities
 import WebDriverPreCore.Http.HttpResponse (HttpResponse (..))
 import Prelude hiding (id, lookup)

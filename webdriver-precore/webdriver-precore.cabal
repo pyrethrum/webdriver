@@ -114,8 +114,8 @@ common commonGhcOptions
 library
   import: commonExtensions, commonGhcOptions
   exposed-modules:
+      -- Http
       WebDriverPreCore.Http
-      WebDriverPreCore.Http.Internal.Utils
       -- BiDi
       WebDriverPreCore.BiDi.Browser
       WebDriverPreCore.BiDi.BrowsingContext
@@ -128,6 +128,8 @@ library
       WebDriverPreCore.BiDi.Session
       WebDriverPreCore.BiDi.Storage
       WebDriverPreCore.BiDi.WebExtensions
+      -- Utils
+      WebDriverPreCore.Internal.Utils
   other-modules:
       -- Http
       WebDriverPreCore.Http.SpecDefinition

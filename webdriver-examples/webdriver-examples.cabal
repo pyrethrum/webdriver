@@ -94,7 +94,7 @@ common commonGhcOptions
     -fno-warn-unused-do-bind 
     -Wno-overlapping-patterns 
     -fprefer-byte-code 
-    -fbyte-code-and-object-code 
+    -fbyte-code-and-object-code PortNumber
     -fno-break-points
     -haddock
 
@@ -112,13 +112,14 @@ test-suite driver-demo-e2e
     , base
     , base64
     , bytestring
-    , directory
-    , text
-    , req
     , containers
+    , network
+    , directory
+    , req
     , tasty
     , tasty-hunit
     , tasty-discover
+    , text
     , time
     , webdriver-precore
     , websockets

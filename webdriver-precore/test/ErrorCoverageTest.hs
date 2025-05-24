@@ -16,7 +16,7 @@ import Data.Function (($), (.), (&))
 import Data.Semigroup ((<>))
 import Data.Functor ((<$>))
 import GHC.Base (error)
-import WebDriverPreCore.Http.Internal.Utils (enumerate)
+import WebDriverPreCore.Internal.Utils(enumerate)
 import Data.Foldable (traverse_)
 import Data.Either (either)
 

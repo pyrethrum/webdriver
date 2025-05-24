@@ -64,7 +64,7 @@ import GHC.Float (Double)
 import GHC.Generics (Generic)
 import GHC.IO (FilePath)
 import GHC.Show (Show (..))
-import WebDriverPreCore.Http.Internal.Utils (opt)
+import WebDriverPreCore.Internal.Utils(opt)
 
 {- references:
 - https://https://www.w3.org/TR/2025/WD-webdriver2-20250306/#capabilities
