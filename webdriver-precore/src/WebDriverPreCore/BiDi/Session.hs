@@ -42,6 +42,7 @@ data Capabilities = MkCapabilities
 instance ToJSON Capabilities where
   toJSON :: Capabilities -> Value
   toJSON (MkCapabilities alwaysMatch firstMatch) =
+    HERE
     object
       [ "alwaysMatch" .= alwaysMatch,
         "firstMatch" .= firstMatch

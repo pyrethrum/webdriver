@@ -7,6 +7,15 @@ import WebDriverPreCore.Internal.Utils
 import Prelude hiding (putStrLn)
 import Data.Text.IO (putStrLn)
 
+
+-- >>> unit_sessionNew
+-- *** Exception: user error (WebDriver error thrown:
+--  WebDriverError {error = InvalidArgument, description = "The arguments passed to a command are either invalid or malformed", httpResponse = MkHttpResponse {statusCode = 400, statusMessage = "Bad Request", body = Object (fromList [("value",Object (fromList [("error",String "invalid argument"),("message",String "missing field `capabilities`"),("stacktrace",String "")]))])}})
+unit_sessionNew :: IO ()
+unit_sessionNew = do
+  ses <- newSession firefoxCapabilities
+  putStrLn $ txt ses
+
 firefoxCapabilities :: Capabilities
 firefoxCapabilities =
   MkCapabilities
@@ -26,11 +35,3 @@ firefoxCapability =
       proxy = Nothing,
       unhandledPromptBehavior = Nothing
     }
-
--- >>> unit_sessionNew
--- *** Exception: user error (WebDriver error thrown:
---  WebDriverError {error = InvalidArgument, description = "The arguments passed to a command are either invalid or malformed", httpResponse = MkHttpResponse {statusCode = 400, statusMessage = "Bad Request", body = Object (fromList [("value",Object (fromList [("error",String "invalid argument"),("message",String "missing field `capabilities`"),("stacktrace",String "")]))])}})
-unit_sessionNew :: IO ()
-unit_sessionNew = do
-  ses <- newSession firefoxCapabilities
-  putStrLn $ txt ses
