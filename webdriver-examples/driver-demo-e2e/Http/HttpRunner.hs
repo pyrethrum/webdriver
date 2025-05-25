@@ -47,7 +47,7 @@ import Prelude hiding (log)
 -- ############# Config #############
 
 wantConsoleLogging :: Bool
-wantConsoleLogging = False
+wantConsoleLogging = True
 
 -- ############# Runner #############
 
