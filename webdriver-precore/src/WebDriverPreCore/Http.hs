@@ -1,6 +1,6 @@
 module WebDriverPreCore.Http
   ( 
-    -- ** The W3Spec Type
+    -- ** The HttpSpec Type
     module WC3Spec,
 
     -- ** Root Methods
@@ -136,7 +136,7 @@ import WebDriverPreCore.Http.SpecDefinition as SessionMethods
     takeScreenshot,
   )
 import WebDriverPreCore.Http.SpecDefinition as ShadowDOMMethods (findElementFromShadowRoot, findElementsFromShadowRoot)
-import WebDriverPreCore.Http.SpecDefinition as WC3Spec (W3Spec (..))
+import WebDriverPreCore.Http.SpecDefinition as WC3Spec (HttpSpec (..))
 import WebDriverPreCore.Http.SpecDefinition as WindowMethods
   ( closeWindow,
     fullscreenWindow,

@@ -36,7 +36,7 @@ import WebDriverPreCore.Internal.Utils(prettyPrintJson, txt)
 import WebDriverPreCore.Http
   ( ErrorClassification (..),
     HttpResponse (..),
-    W3Spec (..),
+    HttpSpec (..),
     parseWebDriverError,
   )
 import WebDriverPreCore.Http qualified as W
@@ -50,7 +50,7 @@ wantConsoleLogging = False
 
 -- ############# Runner #############
 
-run :: (Show a) => W3Spec a -> IO a
+run :: (Show a) => HttpSpec a -> IO a
 run spec = do
   when wantConsoleLogging $ do
     devLog "Request"
@@ -66,7 +66,7 @@ run spec = do
       Delete {} -> pure ()
   callWebDriver wantConsoleLogging (mkRequest spec) >>= parseIO spec
 
-mkRequest :: forall a. W3Spec a -> ReqRequestParams
+mkRequest :: forall a. HttpSpec a -> ReqRequestParams
 mkRequest spec = case spec of
   Get {} -> MkRequestParams url GET NoReqBody port'
   Post {body} -> MkRequestParams url POST (ReqBodyJson body) port'
@@ -77,7 +77,7 @@ mkRequest spec = case spec of
     port' = 4444 -- firefox
 
 
-parseIO :: W3Spec a -> W.HttpResponse -> IO a
+parseIO :: HttpSpec a -> W.HttpResponse -> IO a
 parseIO spec r =
   spec.parser r
     & \case

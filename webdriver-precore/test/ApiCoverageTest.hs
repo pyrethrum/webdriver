@@ -15,7 +15,7 @@ import WebDriverPreCore.Http
       Cookie(MkCookie),
       Actions(MkActions),
       Timeouts(..),
-      W3Spec(description, Get, Post, PostEmpty, Delete, path),
+      HttpSpec(description, Get, Post, PostEmpty, Delete, path),
       minFirefoxCapabilities,
       acceptAlert,
       addCookie,
@@ -215,7 +215,7 @@ replaceTemplateTxt =
     . replace "{element id}" elementId
     . replace "{shadow id}" elementId
 
-toSpecLine :: W3Spec a -> SpecLine
+toSpecLine :: HttpSpec a -> SpecLine
 toSpecLine w3 = case w3 of
   Get {} -> MkSpecLine "GET" path command
   Post {} -> MkSpecLine "POST" path command

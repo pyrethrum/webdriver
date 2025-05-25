@@ -21,20 +21,20 @@ Adapt and move when ready
 - [Minimal Example](#minimal-example)
   - [1. Implementing a runner](#1-implementing-a-runner)
       - [Main Types (Used in the Runner)](#main-types-used-in-the-runner)
-        - [W3Spec](#w3spec)
+        - [HttpSpec](#HttpSpec)
         - [HttpResponse](#httpresponse)
       - [The Runner](#the-runner)
-    - [1.1 Convert W3Spec to params for req](#11-convert-w3spec-to-params-for-req)
+    - [1.1 Convert HttpSpec to params for req](#11-convert-HttpSpec-to-params-for-req)
     - [1.2 Call the WebDriver](#12-call-the-webdriver)
-    - [1.3 Parse HttpResponse Using the Parser Provided in the W3Spec](#13-parse-httpresponse-using-the-parser-provided-in-the-w3spec)
-    - [2. Applying the Runner to the W3Spec Functions](#2-applying-the-runner-to-the-w3spec-functions)
+    - [1.3 Parse HttpResponse Using the Parser Provided in the HttpSpec](#13-parse-httpresponse-using-the-parser-provided-in-the-HttpSpec)
+    - [2. Applying the Runner to the HttpSpec Functions](#2-applying-the-runner-to-the-HttpSpec-functions)
     - [3. Install a Vendor Provided WebDriver](#3-install-a-vendor-provided-webdriver)
     - [4. Launch WebDriver From the Terminal](#4-launch-webdriver-from-the-terminal)
     - [5. Drive the Browser Via the IO API](#5-drive-the-browser-via-the-io-api)
 
 ## What is This Library?
 
-This library provides a minimal abstraction over the [WebDriver W3C Protocol endpoints](https://www.w3.org/TR/webdriver2/) without providing any implementation. It provides a description of the W3C API as a list of functions that return a [W3Spec type](#w3spec). The intention is that other libraries will provide the actual implementation.
+This library provides a minimal abstraction over the [WebDriver W3C Protocol endpoints](https://www.w3.org/TR/webdriver2/) without providing any implementation. It provides a description of the W3C API as a list of functions that return a [HttpSpec type](#HttpSpec). The intention is that other libraries will provide the actual implementation.
 
 You can not use this library directly to drive a browser. If you are looking for a fully featured library to drive a browser, you may be interested in an alternative library such as [haskell-webdriver](https://hackage.haskell.org/package/webdriver), a Selenium 2 client that is actively maintained.
 
@@ -80,7 +80,7 @@ The decade+ efforts of the [Selenium](https://www.selenium.dev/) maintainers, bo
 *TLDR ~ bring your own HTTP client and use it to implement the endpoints as defined in this library.*
 
 Driving a browser using this library requires the following:
-1. Implement a `runner` that takes a [W3Spec](#w3spec) and makes HTTP calls an active WebDriver instance
+1. Implement a `runner` that takes a [HttpSpec](#HttpSpec) and makes HTTP calls an active WebDriver instance
 2. Create an IO API by applying the `runner` to each of the endpoint functions in this library
 3. Install the desired browser and browser driver
 4. Run the driver
@@ -95,20 +95,20 @@ The first step in writing a WebDriver implementation is to choose an HTTP librar
 
 Then to implement a run function requires the following:
 
-1. Transform a [W3Spec](#w3spec) to RequestParams compatible with the chosen HTTP library.
+1. Transform a [HttpSpec](#HttpSpec) to RequestParams compatible with the chosen HTTP library.
 2. Make an HTTP call to WebDriver as per the RequestParams and return a simplified [HttpResponse](#httpresponse).
-3. Use the parser provided by the [W3Spec](#w3spec) to parse the [HttpResponse](#httpresponse) and handle any errors.
+3. Use the parser provided by the [HttpSpec](#HttpSpec) to parse the [HttpResponse](#httpresponse) and handle any errors.
 
 #### Main Types (Used in the Runner)
 
 The two most important types in this library are:
 
-##### W3Spec
+##### HttpSpec
 
-The `W3Spec` returned by each of this library's endpoint functions. This type represents a driver endpoint.
+The `HttpSpec` returned by each of this library's endpoint functions. This type represents a driver endpoint.
 
 ```haskell
-data W3Spec a
+data HttpSpec a
   = Get
       { description :: Text,
         path :: UrlPath,
@@ -153,19 +153,19 @@ data HttpResponse = MkHttpResponse
 
 
 ```haskell
-run :: W3Spec a -> IO a
+run :: HttpSpec a -> IO a
 run spec = do
-  -- 1. Convert W3Spec to params for req
+  -- 1. Convert HttpSpec to params for req
   let request = mkRequest spec
   -- 2. Call WebDriver server (via req) and return a simplified HttpResponse 
   response <- callReq request
-  -- 3. Apply the W3Spec parser to the HttpResponse get result type and handle errors  
+  -- 3. Apply the HttpSpec parser to the HttpResponse get result type and handle errors  
   parseResponse spec response  
 ```
 
-### 1.1 Convert W3Spec to params for req
+### 1.1 Convert HttpSpec to params for req
 
-*W3Spec -> ReqRequestParams*
+*HttpSpec -> ReqRequestParams*
 
 ```haskell
 -- A custom data type specific to req
@@ -179,9 +179,9 @@ data ReqRequestParams where
     } ->
     ReqRequestParams
 
--- W3Spec -> ReqRequestParams
+-- HttpSpec -> ReqRequestParams
 -- the url and port would not normally be hard coded
-mkRequest :: forall a. W3Spec a -> ReqRequestParams
+mkRequest :: forall a. HttpSpec a -> ReqRequestParams
 mkRequest spec = case spec of
   Get {} -> MkRequestParams url GET NoReqBody 4444 
   Post {body} -> MkRequestParams url POST (ReqBodyJson body) 4444
@@ -210,13 +210,13 @@ callReq MkRequestParams {url, method, body, port = prt} =
     responseStatusText = decodeUtf8Lenient . responseStatusMessage
 ```
 
-### 1.3 Parse HttpResponse Using the Parser Provided in the [W3Spec](#w3spec)
+### 1.3 Parse HttpResponse Using the Parser Provided in the [HttpSpec](#HttpSpec)
 
 *HttpResponse -> Return Type*
 
 ```haskell
 -- in this implementation we are just throwing exceptions on failure
-parseResponse :: W3Spec a -> HttpResponse -> IO a
+parseResponse :: HttpSpec a -> HttpResponse -> IO a
 parseResponse spec r =
   spec.parser r
     & \case
@@ -228,7 +228,7 @@ parseResponse spec r =
       Success a -> pure a
 ```
 
-### 2. Applying the Runner to the W3Spec Functions
+### 2. Applying the Runner to the HttpSpec Functions
 
 *Create an IO API by applying run to each endpoint definition exposed by this library*
 

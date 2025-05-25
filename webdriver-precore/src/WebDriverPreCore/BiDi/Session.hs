@@ -7,13 +7,15 @@ import Prelude (Bool (..), Eq (..), Maybe (..), Show (..), undefined, ($), (<$>)
 import Data.Aeson (Encoding, ToJSON (..), object, (.=), Value, FromJSON (..), withObject, (.:))
 import Data.ByteString (ByteString)
 import Data.Aeson.Types (Parser)
+import WebDriverPreCore.Http.SpecDefinition (HttpSpec(..) )
+
 
 -- webSocketUrl :: https://www.w3.org/TR/2025/WD-webdriver-bidi-20250514/#establishing
 
-{-| sessionNew produces 
+{-| sessionNew produces a HttpSpec
 
 -}
-sessionNew :: Capabilities -> Encoding
+sessionNew :: Capabilities -> HttpSpec SessionNewResult
 sessionNew = undefined
 
 sessionNewResult :: ByteString -> SessionNewResult

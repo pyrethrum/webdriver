@@ -28,9 +28,9 @@ description:
 
   It is intended to be used as a base for other libraries that provide a WebDriver client implementation and higher level functions. 
   
-  A WebDriver client implementation can be built by pattern matching on the 'W3Spec' type returned by the functions in this library,
+  A WebDriver client implementation can be built by pattern matching on the 'HttpSpec' type returned by the functions in this library,
   sending the corresponding HTTP requests to a vendor provided WebDriver, then parsing the response using the parser provided as part 
-  of the 'W3Spec' type.
+  of the 'HttpSpec' type.
 
   See "WebDriverPreCore" for further details and [the project repo](https://github.com/pyrethrum/webdriver) for [examples](https://github.com/pyrethrum/webdriver/blob/main/webdriver-examples/README.md) .
   

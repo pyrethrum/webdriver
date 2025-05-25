@@ -36,7 +36,7 @@ The examples cover all [W3C WebDriver endpoints](https://www.w3.org/TR/webdriver
 
 ### IORunner
 
-[IORunner](./driver-demo-e2e/IORunner.hs) exports a single `run` function that accepts a [webdriver-precore W3Spec](https://hackage-content.haskell.org/package/webdriver-precore-0.0.0.1/package/docs/WebDriverPreCore.html#g:14) and performs HTTP requests to an active WebDriver instance.
+[IORunner](./driver-demo-e2e/IORunner.hs) exports a single `run` function that accepts a [webdriver-precore HttpSpec](https://hackage-content.haskell.org/package/webdriver-precore-0.0.0.1/package/docs/WebDriverPreCore.html#g:14) and performs HTTP requests to an active WebDriver instance.
 
 ### IOAPI
 
