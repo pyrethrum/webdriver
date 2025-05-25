@@ -101,10 +101,15 @@ callWebDriver wantLog MkRequestParams {url, method, body, port = prt} =
               statusMessage = responseStatusText r,
               body = responseBody r :: Value
             }
+    log "Response Body:"
+    logJSON fr.body
     log $ "Framework Response:\n" <> txt fr
+
     pure fr
   where
-    log m = liftIO $ when wantLog $ devLog m
+    liftLog = liftIO . when wantLog
+    log = liftLog . devLog
+    logJSON = liftLog . prettyPrintJson
 
 -- ############# Utils #############
 

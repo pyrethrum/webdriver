@@ -126,7 +126,7 @@ webDriverBiDiClient connection = do
                     proxy = Nothing,
                     unhandledPromptBehavior = Nothing
                   },
-            firstMatch = Nothing
+            firstMatch = []
           }
 
   -- Send session.new command

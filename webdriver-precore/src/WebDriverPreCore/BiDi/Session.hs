@@ -1,14 +1,16 @@
 module WebDriverPreCore.BiDi.Session where
 
-import Data.Aeson (FromJSON (..), ToJSON (..), Value, fromJSON, object, withObject, (.:), (.=))
+import Data.Aeson (FromJSON (..), ToJSON (..), Value (..), fromJSON, object, withObject, (.:), (.=))
 import Data.Aeson.Types (Parser)
 import Data.Text (Text)
 import Data.Word (Word8)
 import GHC.Generics (Generic)
 import WebDriverPreCore.Http.SpecDefinition (HttpSpec (..))
-import WebDriverPreCore.Internal.AesonUtils ()
+import WebDriverPreCore.Internal.AesonUtils (opt)
 import WebDriverPreCore.Internal.Utils (bodyValue, newSessionUrl)
-import Prelude (Applicative ((<*>)), Bool (..), Eq (..), Maybe (..), Monad (..), Show (..), ($), (<$>))
+import Prelude (Applicative ((<*>)), Bool (..), Eq (..), Maybe (..), Monad (..), Show (..), ($), (<$>), (.))
+import Data.Maybe (catMaybes)
+import Data.Vector (fromList)
 
 -- webSocketUrl :: https://www.w3.org/TR/2025/WD-webdriver-bidi-20250514/#establishing
 
@@ -35,18 +37,20 @@ data SessionCommand
 -- | Capabilities Request
 data Capabilities = MkCapabilities
   { alwaysMatch :: Maybe Capability,
-    firstMatch :: Maybe [Capability]
+    firstMatch :: [Capability]
   }
   deriving (Show, Eq, Generic)
 
 instance ToJSON Capabilities where
   toJSON :: Capabilities -> Value
-  toJSON (MkCapabilities alwaysMatch firstMatch) =
-    HERE
-    object
-      [ "alwaysMatch" .= alwaysMatch,
-        "firstMatch" .= firstMatch
+  toJSON MkCapabilities  {alwaysMatch, firstMatch} =
+    object $
+      [ "capabilities" .= (object $ catMaybes [opt "alwaysMatch" $ alwaysMatch]),
+        "firstMatch" .= firstMatch'
       ]
+    where
+      firstMatch' :: Value
+      firstMatch' = Array . fromList $ toJSON <$> firstMatch
 
 -- | Capability Request
 data Capability = MkCapability

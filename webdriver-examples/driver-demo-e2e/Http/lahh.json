@@ -1,0 +1,30 @@
+{responseStatus = Status {statusCode = 200, statusMessage = "OK"
+  }, responseVersion = HTTP/1.1, responseHeaders = [("content-type",
+    "application/json; charset=utf-8"),("cache-control",
+    "no-cache"),("content-length",
+    "849"),("date",
+    "Sun, 25 May 2025 20:06:45 GMT")
+  ], responseBody = Object (fromList [("value",Object (fromList [("capabilities",Object (fromList [("acceptInsecureCerts",Bool False),("browserName",String "firefox"),("browserVersion",String "137.0.2"),("moz:accessibilityChecks",Bool False),("moz:buildID",String "20250414091429"),("moz:geckodriverVersion",String "0.36.0"),("moz:headless",Bool False),("moz:platformVersion",String "6.11.0-25-generic"),("moz:processID",Number 7482.0),("moz:profile",String "/tmp/rust_mozprofilekPA5q9"),("moz:shutdownTimeout",Number 60000.0),("moz:webdriverClick",Bool True),("moz:windowless",Bool False),("pageLoadStrategy",String "normal"),("platformName",String "linux"),("proxy",Object (fromList [])),("setWindowRect",Bool True),("strictFileInteractability",Bool False),("timeouts",Object (fromList [("implicit",Number 0.0),("pageLoad",Number 300000.0),("script",Number 30000.0)
+        ])),("unhandledPromptBehavior",String "dismiss and notify"),("userAgent",String "Mozilla/5.0 (X11; Linux x86_64; rv:137.0) Gecko/20100101 Firefox/137.0"),("webSocketUrl",String "ws://127.0.0.1:9222/session/9b48fa71-0585-4a2b-8cd9-33b217088071")
+      ])),("sessionId",String "9b48fa71-0585-4a2b-8cd9-33b217088071")
+    ]))
+  ]), responseCookieJar = CJ {expose = []
+  }, responseClose' = ResponseClose, responseOriginalRequest = Request {
+  host                 = "127.0.0.1"
+  port                 = 4444
+  secure               = False
+  requestHeaders       = [("Accept",
+      "application/json"),("Content-Type",
+      "application/json; charset=utf-8")
+    ]
+  path                 = "/session"
+  queryString          = ""
+  method               = "POST"
+  proxy                = Nothing
+  rawBody              = False
+  redirectCount        = 10
+  responseTimeout      = ResponseTimeoutDefault
+  requestVersion       = HTTP/1.1
+  proxySecureMode      = ProxySecureWithConnect
+  }, responseEarlyHints = []
+}
