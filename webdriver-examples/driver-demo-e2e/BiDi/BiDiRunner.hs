@@ -1,8 +1,4 @@
-{-# LANGUAGE OverloadedStrings #-}
--- filepath: /workspaces/webdriver/webdriver-examples/driver-demo-e2e/BiDi/IORunner.hs
-{-# LANGUAGE RecordWildCards #-}
-
-module BiDi.IORunner where
+module BiDi.BiDiRunner where
 
 import Control.Applicative ((<*>))
 import Control.Concurrent (forkIO)
@@ -14,39 +10,26 @@ import Data.ByteString.Lazy (ByteString)
 import Data.ByteString.Lazy qualified as BL
 import Data.Functor ((<$>))
 import Data.IORef (newIORef, readIORef, writeIORef)
-import Data.Text as T (Text, pack, null, unpack)
+import Data.Text as T (Text, null, pack, unpack)
 import Data.Text.IO as T (getLine, putStrLn)
-import Network.Socket (PortNumber)
-import Network.WebSockets (ClientApp, receiveData, sendClose, sendTextData)
+import Network.WebSockets (ClientApp, receiveData, runClient, sendClose, sendTextData)
 import WebDriverPreCore.BiDi.Session
 import Wuss (runSecureClient)
-import Prelude (Either (..), Eq ((==)), IO, Int, Maybe (..), Show (..), maybe, ($), (.), (<>), (+), Bool (True))
+import Prelude (Bool (True), Either (..), Eq ((==)), IO, Int, Maybe (..), Show (..), maybe, ($), (+), (.), (<>))
+import Http.IOAPI qualified as Http
 
--- Example from Wuss
-wussDemo :: IO ()
-wussDemo = runSecureClient "echo.websocket.org" 443 "/" ws
 
-ws :: ClientApp ()
-ws connection = do
-  T.putStrLn "Connected!"
 
-  void . forkIO . forever $ do
-    message <- receiveData connection
-    T.putStrLn (message :: Text)
+-- >>> runBiDiExample
+-- *** Exception: MalformedResponse (ResponseHead {responseCode = 405, responseMessage = "Method Not Allowed", responseHeaders = [("content-type","text/plain; charset=utf-8"),("content-length","23"),("date","Sat, 24 May 2025 10:40:13 GMT")]}) "Wrong response status or message."
+runBiDiExample :: IO ()
+runBiDiExample = runWebDriverBiDi defaultGeckoDriverConfig
 
-  let loop = do
-        line <- getLine
-        unless (null line) $ do
-          sendTextData connection line
-          loop
-  loop
-
-  sendClose connection (pack "Bye!")
 
 -- | WebDriver BiDi client configuration
 data WebDriverBiDiConfig = WebDriverBiDiConfig
   { host :: Text,
-    port :: PortNumber,
+    port :: Int,
     path :: Text
   }
   deriving (Show)
@@ -55,7 +38,7 @@ data WebDriverBiDiConfig = WebDriverBiDiConfig
 defaultGeckoDriverConfig :: WebDriverBiDiConfig
 defaultGeckoDriverConfig =
   WebDriverBiDiConfig
-    { host = "localhost",
+    { host = "127.0.0.1",
       port = 4444,
       path = "/session"
     }
@@ -110,9 +93,9 @@ createSessionEndMessage msgId =
 
 -- | Run WebDriver BiDi client
 runWebDriverBiDi :: WebDriverBiDiConfig -> IO ()
-runWebDriverBiDi WebDriverBiDiConfig {..} = do
+runWebDriverBiDi WebDriverBiDiConfig {host, port, path} = do
   putStrLn $ "Connecting to WebDriver at " <> host <> ":" <> pack (show port) <> path
-  runSecureClient (unpack host) port (unpack path) webDriverBiDiClient
+  runClient (unpack host) port (unpack path) webDriverBiDiClient
 
 -- | WebDriver BiDi client application
 webDriverBiDiClient :: ClientApp ()
@@ -135,6 +118,7 @@ webDriverBiDiClient connection = do
                 MkCapability
                   { acceptInsecureCerts = Just True,
                     browserName = Just "firefox",
+                    webSocketUrl = True,
                     browserVersion = Nothing,
                     platformName = Nothing,
                     proxy = Nothing,
@@ -146,6 +130,7 @@ webDriverBiDiClient connection = do
   -- Send session.new command
   msgId <- readIORef messageIdRef
   let sessionNewMsg = createSessionNewMessage msgId capabilities
+
   putStrLn $ "Sending session.new command: " <> pack (show sessionNewMsg)
   sendTextData connection (BL.toStrict $ encode sessionNewMsg)
   writeIORef messageIdRef (msgId + 1)
@@ -190,5 +175,28 @@ webDriverBiDiClient connection = do
               putStrLn $ "Received message without result: " <> pack (show parsedMsg)
 
 -- | Run the example with default GeckoDriver config
-runBiDiExample :: IO ()
-runBiDiExample = runWebDriverBiDi defaultGeckoDriverConfig
+
+
+
+
+---- wuss example ----
+
+wussDemo :: IO ()
+wussDemo = runSecureClient "echo.websocket.org" 443 "/" ws
+
+ws :: ClientApp ()
+ws connection = do
+  T.putStrLn "Connected!"
+
+  void . forkIO . forever $ do
+    message <- receiveData connection
+    T.putStrLn (message :: Text)
+
+  let loop = do
+        line <- getLine
+        unless (null line) $ do
+          sendTextData connection line
+          loop
+  loop
+
+  sendClose connection (pack "Bye!")

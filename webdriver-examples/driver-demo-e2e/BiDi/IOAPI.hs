@@ -1,4 +1,10 @@
+
+
 module BiDi.IOAPI where
+
+import WebDriverPreCore.Http qualified as W
+
+
 --   ( 
 --     B.Cookie (..),
 --     B.Capabilities(..),
@@ -206,7 +212,7 @@ module BiDi.IOAPI where
 -- -- import Data.Text  as T (Text)
 -- -- import Prelude hiding (log)
 -- -- import Http.IOUtils (sleepMs, encodeFileToBase64)
--- -- import Http.IORunner (run)
+-- -- import Http.HttpRunner (run)
 
 -- -- -- ############# API #############
 
@@ -491,7 +497,7 @@ module BiDi.IOAPI where
 -- -- import Data.Text  as T (Text)
 -- -- import Prelude hiding (log)
 -- -- import Http.IOUtils (sleepMs, encodeFileToBase64)
--- -- import Http.IORunner (run)
+-- -- import Http.HttpRunner (run)
 
 -- -- -- ############# API #############
 
@@ -805,7 +811,7 @@ module BiDi.IOAPI where
 -- -- import Data.Text  as T (Text)
 -- -- import Prelude hiding (log)
 -- -- import Http.IOUtils (sleepMs, encodeFileToBase64)
--- -- import Http.IORunner (run)
+-- -- import Http.HttpRunner (run)
 
 -- -- -- ############# API #############
 

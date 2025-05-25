@@ -1,4 +1,4 @@
-module Http.IORunner
+module Http.HttpRunner
   ( run,
   )
 where

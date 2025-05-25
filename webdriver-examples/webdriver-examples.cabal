@@ -94,7 +94,7 @@ common commonGhcOptions
     -fno-warn-unused-do-bind 
     -Wno-overlapping-patterns 
     -fprefer-byte-code 
-    -fbyte-code-and-object-code PortNumber
+    -fbyte-code-and-object-code
     -fno-break-points
     -haddock
 
@@ -126,12 +126,12 @@ test-suite driver-demo-e2e
     , wuss
   other-modules:
       E2EConst
-    , Http.IORunnerMinimalForDocs
+    , Http.HttpRunnerMinimalForDocs
     , Http.IOUtils
-    , Http.IORunner
+    , Http.HttpRunner
     , Http.IOAPI
     , Http.HttpE2EDemoTest
-    , BiDi.IORunner
+    , BiDi.BiDiRunner
     , BiDi.IOAPI
     , BiDi.BiDiE2EDemoTest
   build-tool-depends:

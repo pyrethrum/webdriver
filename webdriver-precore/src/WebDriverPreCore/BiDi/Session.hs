@@ -10,6 +10,9 @@ import Data.Aeson.Types (Parser)
 
 -- webSocketUrl :: https://www.w3.org/TR/2025/WD-webdriver-bidi-20250514/#establishing
 
+{-| sessionNew produces 
+
+-}
 sessionNew :: Capabilities -> Encoding
 sessionNew = undefined
 
@@ -45,6 +48,8 @@ data Capability = MkCapability
   { acceptInsecureCerts :: Maybe Bool,
     browserName :: Maybe Text,
     browserVersion :: Maybe Text,
+    -- Always true for BiDi
+    webSocketUrl :: Bool,
     platformName :: Maybe Text,
     proxy :: Maybe ProxyConfiguration,
     unhandledPromptBehavior :: Maybe UserPromptHandler
