@@ -38,7 +38,7 @@ import E2EConst
     userNameCss,
   )
 import GHC.IO (catchAny)
-import Http.IOAPI
+import Http.HttpAPI
   ( Action (..),
     Actions (..),
     BrowserName (..),

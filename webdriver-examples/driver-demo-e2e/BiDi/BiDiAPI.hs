@@ -1,6 +1,6 @@
 
 
-module BiDi.IOAPI where
+module BiDi.BiDiAPI where
 
 import WebDriverPreCore.Http qualified as W
 

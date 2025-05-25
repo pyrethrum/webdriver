@@ -1,4 +1,4 @@
-module Http.IOAPI
+module Http.HttpAPI
   ( 
     W.Cookie (..),
     W.Capabilities(..),
