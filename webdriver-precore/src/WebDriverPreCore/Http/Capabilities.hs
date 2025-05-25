@@ -63,8 +63,7 @@ import GHC.Enum (Bounded)
 import GHC.Float (Double)
 import GHC.Generics (Generic)
 import GHC.IO (FilePath)
-import GHC.Show (Show (..))
-import WebDriverPreCore.Internal.Utils(opt)
+import WebDriverPreCore.Internal.AesonUtils(opt)
 
 {- references:
 - https://https://www.w3.org/TR/2025/WD-webdriver2-20250306/#capabilities

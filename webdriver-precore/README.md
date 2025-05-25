@@ -21,13 +21,13 @@ Adapt and move when ready
 - [Minimal Example](#minimal-example)
   - [1. Implementing a runner](#1-implementing-a-runner)
       - [Main Types (Used in the Runner)](#main-types-used-in-the-runner)
-        - [HttpSpec](#HttpSpec)
+        - [HttpSpec](#httpspec)
         - [HttpResponse](#httpresponse)
       - [The Runner](#the-runner)
-    - [1.1 Convert HttpSpec to params for req](#11-convert-HttpSpec-to-params-for-req)
+    - [1.1 Convert HttpSpec to params for req](#11-convert-httpspec-to-params-for-req)
     - [1.2 Call the WebDriver](#12-call-the-webdriver)
-    - [1.3 Parse HttpResponse Using the Parser Provided in the HttpSpec](#13-parse-httpresponse-using-the-parser-provided-in-the-HttpSpec)
-    - [2. Applying the Runner to the HttpSpec Functions](#2-applying-the-runner-to-the-HttpSpec-functions)
+    - [1.3 Parse HttpResponse Using the Parser Provided in the HttpSpec](#13-parse-httpresponse-using-the-parser-provided-in-the-httpspec)
+    - [2. Applying the Runner to the HttpSpec Functions](#2-applying-the-runner-to-the-httpspec-functions)
     - [3. Install a Vendor Provided WebDriver](#3-install-a-vendor-provided-webdriver)
     - [4. Launch WebDriver From the Terminal](#4-launch-webdriver-from-the-terminal)
     - [5. Drive the Browser Via the IO API](#5-drive-the-browser-via-the-io-api)
@@ -149,7 +149,7 @@ data HttpResponse = MkHttpResponse
 
 #### The Runner
 
-[source](https://github.com/pyrethrum/webdriver/blob/main/webdriver-examples/driver-demo-e2e/IORunner.hs)
+[source](https://github.com/pyrethrum/webdriver/blob/main/webdriver-examples/driver-demo-e2e/HttpRunner.hs)
 
 
 ```haskell
@@ -242,7 +242,7 @@ import WebDriverPreCore.Http (DriverStatus, ElementId, Selector, SessionId)
 import WebDriverPreCore.Http qualified as W
 import Prelude hiding (log)
 import IOUtils (sleepMs, encodeFileToBase64)
-import IORunner (run)
+import HttpRunner (run)
 
 status :: IO DriverStatus
 status = run W.status

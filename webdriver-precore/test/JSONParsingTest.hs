@@ -49,7 +49,7 @@ import WebDriverPreCore.Http
     Timeouts (..),
     VendorSpecific (..), LogSettings (MkLogSettings)
   )
-import WebDriverPreCore.Internal.Utils(jsonToText)
+import WebDriverPreCore.Internal.AesonUtils(jsonToText)
 import GHC.Real (Integral, Fractional (..), fromIntegral)
 import Data.Bits (FiniteBits)
 import GHC.Num (Num(..))

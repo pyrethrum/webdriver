@@ -129,6 +129,7 @@ library
       WebDriverPreCore.BiDi.Storage
       WebDriverPreCore.BiDi.WebExtensions
       -- Utils
+      WebDriverPreCore.Internal.AesonUtils
       WebDriverPreCore.Internal.Utils
   other-modules:
       -- Http

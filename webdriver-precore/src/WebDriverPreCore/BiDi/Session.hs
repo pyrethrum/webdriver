@@ -1,25 +1,27 @@
 module WebDriverPreCore.BiDi.Session where
 
+import Data.Aeson (FromJSON (..), ToJSON (..), Value, fromJSON, object, withObject, (.:), (.=))
+import Data.Aeson.Types (Parser)
 import Data.Text (Text)
 import Data.Word (Word8)
 import GHC.Generics (Generic)
-import Prelude (Bool (..), Eq (..), Maybe (..), Show (..), undefined, ($), (<$>), Applicative ((<*>)))
-import Data.Aeson (Encoding, ToJSON (..), object, (.=), Value, FromJSON (..), withObject, (.:))
-import Data.ByteString (ByteString)
-import Data.Aeson.Types (Parser)
-import WebDriverPreCore.Http.SpecDefinition (HttpSpec(..) )
-
+import WebDriverPreCore.Http.SpecDefinition (HttpSpec (..))
+import WebDriverPreCore.Internal.AesonUtils ()
+import WebDriverPreCore.Internal.Utils (bodyValue, newSessionUrl)
+import Prelude (Applicative ((<*>)), Bool (..), Eq (..), Maybe (..), Monad (..), Show (..), ($), (<$>))
 
 -- webSocketUrl :: https://www.w3.org/TR/2025/WD-webdriver-bidi-20250514/#establishing
 
-{-| sessionNew produces a HttpSpec
-
--}
+-- | sessionNew produces a HttpSpec because an a webdriver Http request is required to initialise
+-- a BiDi session before any socket connections can be made.
 sessionNew :: Capabilities -> HttpSpec SessionNewResult
-sessionNew = undefined
-
-sessionNewResult :: ByteString -> SessionNewResult
-sessionNewResult = undefined
+sessionNew capabilities =
+  Post
+    { description = "New Session",
+      path = newSessionUrl,
+      body = (toJSON capabilities),
+      parser = \r -> bodyValue r >>= fromJSON
+    }
 
 -- ######### Remote #########
 data SessionCommand
@@ -29,7 +31,6 @@ data SessionCommand
   | SessionSubscribe SessionSubscriptionRequest
   | SessionUnsubscribe SessionUnsubscribeParameters
   deriving (Show, Eq, Generic)
-
 
 -- | Capabilities Request
 data Capabilities = MkCapabilities
@@ -41,9 +42,10 @@ data Capabilities = MkCapabilities
 instance ToJSON Capabilities where
   toJSON :: Capabilities -> Value
   toJSON (MkCapabilities alwaysMatch firstMatch) =
-    object [ "alwaysMatch" .= alwaysMatch
-           , "firstMatch" .= firstMatch
-           ]
+    object
+      [ "alwaysMatch" .= alwaysMatch,
+        "firstMatch" .= firstMatch
+      ]
 
 -- | Capability Request
 data Capability = MkCapability
@@ -78,6 +80,7 @@ data ProxyConfiguration
   deriving (Show, Eq, Generic)
 
 instance FromJSON ProxyConfiguration
+
 instance ToJSON ProxyConfiguration where
   toJSON :: ProxyConfiguration -> Value
   toJSON = \case
@@ -145,7 +148,8 @@ data UserPromptHandlerType
   | Ignore
   deriving (Show, Eq, Generic)
 
-instance FromJSON UserPromptHandlerType 
+instance FromJSON UserPromptHandlerType
+
 instance ToJSON UserPromptHandlerType where
   toJSON :: UserPromptHandlerType -> Value
   toJSON = \case

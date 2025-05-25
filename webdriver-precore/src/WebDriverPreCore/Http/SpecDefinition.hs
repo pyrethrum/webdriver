@@ -64,7 +64,7 @@ module WebDriverPreCore.Http.SpecDefinition
     getActiveElement,
     findElement,
     findElements,
-    
+
     -- ** Element Instance Methods
     findElementFromElement,
     findElementsFromElement,
@@ -102,7 +102,11 @@ module WebDriverPreCore.Http.SpecDefinition
     WindowHandle (..),
     WindowHandleSpec (..),
     WindowRect (..),
-    UrlPath (..),
+    -- | Url as returned by 'HttpSpec'
+    -- The 'UrlPath' type is a newtype wrapper around a list of 'Text' segments representing a path.
+    --
+    -- e.g. the path: @\/session\/session-no-1-2-3\/window@ would be represented as: @MkUrlPath ["session", "session-no-1-2-3", "window"]@
+    WebDriverPreCore.Internal.Utils.UrlPath (..),
 
     -- ** Action Types
     Action (..),
@@ -138,22 +142,15 @@ import Data.Text (Text, pack, unpack)
 import Data.Text qualified as T
 import Data.Word (Word16)
 import GHC.Generics (Generic)
-import WebDriverPreCore.Internal.Utils(jsonToText, opt, txt)
 import WebDriverPreCore.Http.Capabilities as Capabilities
 import WebDriverPreCore.Http.HttpResponse (HttpResponse (..))
+import WebDriverPreCore.Internal.AesonUtils (jsonToText, opt, aesonTypeError, asText, lookupTxt, lookup, aesonTypeErrorMessage)
+import WebDriverPreCore.Internal.Utils (UrlPath (..), newSessionUrl, session, txt, bodyValue, bodyText)
 import Prelude hiding (id, lookup)
 
--- | Url as returned by 'HttpSpec'
--- The 'UrlPath' type is a newtype wrapper around a list of 'Text' segments representing a path.
---
--- e.g. the path: @\/session\/session-no-1-2-3\/window@ would be represented as: @MkUrlPath ["session", "session-no-1-2-3", "window"]@
-newtype UrlPath = MkUrlPath {segments :: [Text]}
-  deriving newtype (Show, Eq, Ord, Semigroup)
-
-{-|
-  The 'HttpSpec' type is a specification for a WebDriver Http command.
-  Every endpoint function in this module returns a 'HttpSpec' object.
--}
+-- |
+--  The 'HttpSpec' type is a specification for a WebDriver Http command.
+--  Every endpoint function in this module returns a 'HttpSpec' object.
 data HttpSpec a
   = Get
       { description :: Text,
@@ -346,14 +343,20 @@ newSession = newSession'
 --
 -- The 'FullCapabilities' type and associated types should work for the vast majority use cases, but if the required capabilities are not covered by the types provided, 'newSession''.
 -- can be used with a custom type instead. 'newSession'' works with any type that implements 'ToJSON', (including an Aeson 'Value').
--- 
+--
 -- Obviously, any type used must produce a JSON object compatible with [capabilities as defined W3C spec](https://www.w3.org/TR/2025/WD-webdriver2-20250306/#capabilities).
 --
 --  [spec](https://www.w3.org/TR/2025/WD-webdriver2-20250306/#new-session)
 --
 --  @POST 	\/session 	New Session@
 newSession' :: (ToJSON a) => a -> HttpSpec SessionId
-newSession' capabilities = Post "New Session" (MkUrlPath [session]) (toJSON capabilities) parseSessionRef
+newSession' capabilities =
+  Post
+    { description = "New Session",
+      path = newSessionUrl,
+      body = (toJSON capabilities),
+      parser = parseSessionRef
+    }
 
 -- |
 --
@@ -363,7 +366,7 @@ newSession' capabilities = Post "New Session" (MkUrlPath [session]) (toJSON capa
 --
 -- @GET 	\/status 	Status@
 status :: HttpSpec DriverStatus
-status = Get "Status" (MkUrlPath ["status"]) parseDriverStatus
+status = Get {description = "Status", path = MkUrlPath ["status"], parser = parseDriverStatus}
 
 -- ############################ Session Methods ##########################################
 
@@ -1072,12 +1075,6 @@ selectorJson = \case
 voidParser :: HttpResponse -> Result ()
 voidParser _ = pure ()
 
-bodyText' :: Result Value -> Key -> Result Text
-bodyText' v k = v >>= lookupTxt k
-
-bodyText :: HttpResponse -> Key -> Result Text
-bodyText r = bodyText' (bodyValue r)
-
 bodyInt' :: Result Value -> Key -> Result Int
 bodyInt' v k = v >>= lookupInt k
 
@@ -1103,16 +1100,6 @@ parseElementsRef r =
       Array a -> mapM elemtRefFromBody $ toList a
       v -> aesonTypeError "Array" v
 
--- TODO Aeson helpers separate module
-lookup :: Key -> Value -> Result Value
-lookup k v =
-  v & \case
-    Object o -> AKM.lookup k o & maybe (A.Error ("the key: " <> show k <> "does not exist in the object:\n" <> jsonPrettyString v)) pure
-    _ -> aesonTypeError "Object" v
-
-lookupTxt :: Key -> Value -> Result Text
-lookupTxt k v = lookup k v >>= asText
-
 toSameSite :: Value -> Result SameSite
 toSameSite = \case
   String "Lax" -> Success Lax
@@ -1123,19 +1110,8 @@ toSameSite = \case
 lookupInt :: Key -> Value -> Result Int
 lookupInt k v = lookup k v >>= asInt
 
-aesonTypeErrorMessage :: Text -> Value -> Text
-aesonTypeErrorMessage t v = "Expected Json Value to be of type: " <> t <> "\nbut got:\n" <> jsonToText v
-
-aesonTypeError :: Text -> Value -> Result a
-aesonTypeError t v = A.Error . unpack $ aesonTypeErrorMessage t v
-
 aesonTypeError' :: Text -> Text -> Value -> Result a
 aesonTypeError' typ info v = A.Error . unpack $ aesonTypeErrorMessage typ v <> "\n" <> info
-
-asText :: Value -> Result Text
-asText = \case
-  String t -> Success t
-  v -> aesonTypeError "Text" v
 
 asInt :: Value -> Result Int
 asInt = \case
@@ -1146,9 +1122,6 @@ parseSessionRef :: HttpResponse -> Result SessionId
 parseSessionRef r =
   Session
     <$> bodyText r "sessionId"
-
-bodyValue :: HttpResponse -> Result Value
-bodyValue r = lookup "value" r.body
 
 -- https://www.w3.org/TR/webdriver2/#elements
 elementFieldName :: Key
@@ -1168,9 +1141,6 @@ parseShadowElementRef r =
 
 elemtRefFromBody :: Value -> Result ElementId
 elemtRefFromBody b = Element <$> lookupTxt elementFieldName b
-
-session :: Text
-session = "session"
 
 sessionUri :: Text -> UrlPath
 sessionUri sp = MkUrlPath [session, sp]
@@ -1199,9 +1169,6 @@ elementUri1 s er ep = sessionUri3 s "element" er.id ep
 elementUri2 :: SessionId -> ElementId -> Text -> Text -> UrlPath
 elementUri2 s er ep ep2 = sessionUri4 s "element" er.id ep ep2
 
-jsonPrettyString :: Value -> String
-jsonPrettyString = unpack . jsonToText
-
 mkShowable :: HttpSpec a -> HttpSpecShowable
 mkShowable = \case
   Get d p _ -> Request d "GET" p Nothing
@@ -1222,6 +1189,7 @@ keysJson :: Text -> Value
 keysJson keysToSend = object ["text" .= keysToSend]
 
 -- actions
+
 -- | [spec](https://www.w3.org/TR/2025/WD-webdriver2-20250306/#actions)
 newtype Actions = MkActions {actions :: [Action]}
 
@@ -1261,6 +1229,7 @@ instance ToJSON KeyAction where
       ]
 
 -- Pointer subtypes
+
 -- | [spec](https://www.w3.org/TR/2025/WD-webdriver2-20250306/#actions)
 data Pointer
   = Mouse
@@ -1288,7 +1257,6 @@ instance ToJSON PointerOrigin where
     Viewport -> "viewport"
     OriginPointer -> "pointer"
     OriginElement (Element id') -> object ["element" .= id']
-
 
 -- | [spec](https://www.w3.org/TR/2025/WD-webdriver2-20250306/#actions)
 data Action

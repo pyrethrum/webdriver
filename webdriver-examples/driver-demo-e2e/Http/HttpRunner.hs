@@ -7,6 +7,7 @@ import Control.Monad (when)
 import Control.Monad.IO.Class (liftIO)
 import Data.Aeson (Result (..), Value, object)
 import Data.Aeson.Text (encodeToLazyText)
+import Data.Foldable qualified as F
 import Data.Function ((&))
 import Data.Text as T (Text, unpack)
 import Data.Text.Encoding (decodeUtf8Lenient)
@@ -32,7 +33,6 @@ import Network.HTTP.Req as R
     runReq,
     (/:),
   )
-import WebDriverPreCore.Internal.Utils(prettyPrintJson, txt)
 import WebDriverPreCore.Http
   ( ErrorClassification (..),
     HttpResponse (..),
@@ -40,8 +40,9 @@ import WebDriverPreCore.Http
     parseWebDriverError,
   )
 import WebDriverPreCore.Http qualified as W
+import WebDriverPreCore.Internal.AesonUtils (prettyPrintJson)
+import WebDriverPreCore.Internal.Utils (txt)
 import Prelude hiding (log)
-import Data.Foldable qualified as F 
 
 -- ############# Config #############
 
@@ -75,7 +76,6 @@ mkRequest spec = case spec of
   where
     url = F.foldl' (/:) (http "127.0.0.1") spec.path.segments
     port' = 4444 -- firefox
-
 
 parseIO :: HttpSpec a -> W.HttpResponse -> IO a
 parseIO spec r =
