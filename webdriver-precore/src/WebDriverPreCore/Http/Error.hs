@@ -57,7 +57,7 @@ unsupported operation 	500 	unsupported operation 	Indicates that a command that
 
 -- | Known WevDriver Error Types
 -- 
--- [spec](https://www.w3.org/TR/2025/WD-webdriver2-20250306/#errors)
+-- [spec](https://www.w3.org/TR/2025/WD-webdriver2-20250512/#errors)
 data WebDriverErrorType =
   ElementClickIntercepted |
   ElementNotInteractable |

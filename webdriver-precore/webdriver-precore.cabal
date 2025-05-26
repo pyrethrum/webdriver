@@ -24,7 +24,7 @@ tested-with: GHC == { 9.8.2, 9.8.4, 9.10.1 }
 synopsis:       A typed wrapper for W3C WebDriver protocol. A base for other libraries.
 
 description:
-  This library provides typed definitions for the endpoints of the @<https://www.w3.org/TR/2025/WD-webdriver2-20250306/ W3C Webdriver>@.
+  This library provides typed definitions for the endpoints of the @<https://www.w3.org/TR/2025/WD-webdriver2-20250512/ W3C Webdriver>@.
 
   It is intended to be used as a base for other libraries that provide a WebDriver client implementation and higher level functions. 
   

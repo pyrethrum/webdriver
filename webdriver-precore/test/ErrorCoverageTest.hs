@@ -23,7 +23,7 @@ import Data.Either (either)
 {-
 !! Replace this the endepoints from the spec with every release
 !! remove full stops and replace tabs with " | "
-https://www.w3.org/TR/2025/WD-webdriver2-20250306 - W3C Editor's Draft 10 February 2025
+https://www.w3.org/TR/2025/WD-webdriver2-20250512 - W3C Editor's Draft 10 February 2025
 61 endpoints
 Error Code 	HTTP Status 	JSON Error Code 	Description 
 -}

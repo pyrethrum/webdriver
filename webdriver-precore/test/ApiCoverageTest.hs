@@ -90,13 +90,13 @@ import WebDriverPreCore.Http (UrlPath(..))
 
 
 {-- TODO use Haddock variable
- Covers Spec Version https://www.w3.org/TR/2025/WD-webdriver2-20250306 
+ Covers Spec Version https://www.w3.org/TR/2025/WD-webdriver2-20250512 
  --}
 
 
 {-
 !! Replace this the endepoints from the spec with every release
-https://www.w3.org/TR/2025/WD-webdriver2-20250306 - W3C Editor's Draft 10 February 2025
+https://www.w3.org/TR/2025/WD-webdriver2-20250512 - W3C Editor's Draft 10 February 2025
 61 endpoints
 Method 	URI Template 	Command
 POST 	/session 	New Session
