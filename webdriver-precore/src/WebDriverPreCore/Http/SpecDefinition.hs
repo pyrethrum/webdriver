@@ -142,11 +142,12 @@ import Data.Text (Text, pack, unpack)
 import Data.Text qualified as T
 import Data.Word (Word16)
 import GHC.Generics (Generic)
-import WebDriverPreCore.Http.Capabilities as Capabilities
+import WebDriverPreCore.Http.Capabilities as C
 import WebDriverPreCore.Http.HttpResponse (HttpResponse (..))
 import WebDriverPreCore.Internal.AesonUtils (aesonTypeError, aesonTypeErrorMessage, asText, jsonToText, lookup, lookupTxt, opt)
 import WebDriverPreCore.Internal.Utils (UrlPath (..), bodyText, bodyValue, newSessionUrl, session, txt)
 import Prelude hiding (id, lookup)
+import Data.Map.Strict as M
 
 -- |
 --  The 'HttpSpec' type is a specification for a WebDriver Http command.
@@ -235,6 +236,31 @@ newtype ElementId = Element {id :: Text}
 -- | [spec](https://www.w3.org/TR/2025/WD-webdriver2-20250512/#dfn-new-sessions)
 newtype SessionId = Session {id :: Text}
   deriving (Show)
+
+data SessionResponse = MkSessionResponse {
+  sessionId :: SessionId,
+  webSocketUrl :: Maybe Text,
+  capabilities :: C.Capabilities,
+  extensions :: Maybe (Map Text Value)
+} deriving (Show, Eq, Generic)
+
+instance ToJSON SessionResponse where
+  toJSON :: SessionResponse -> Value
+  toJSON MkSessionResponse {sessionId, webSocketUrl, capabilities, extensions} =
+    object $
+      [ "sessionId" .= sessionId.id,
+        "capabilities" .= mergedCaps,
+        "webSocketUrl" .= webSocketUrl
+      ]
+    where
+      capsVal = toJSON capabilities
+      mergedCaps = extensions & maybe capsVal mergeExtensions
+      mergeExtensions ::  Map Text Value -> Value
+      mergeExtensions extMap =
+        \cases
+          (Object capObj, Just extMap) ->
+            Object $ capObj <> AKM.fromList (M.toList extMap)
+          _ -> capsVal
 
 {-
 
