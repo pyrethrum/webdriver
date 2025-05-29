@@ -130,13 +130,14 @@ import Data.Aeson as A
     object,
     withObject,
     withText,
-    (.:),
+    (.:), (.:?), (.!=), decode,
   )
-import Data.Aeson.KeyMap qualified as AKM
+import Data.Aeson.KeyMap qualified as KM
 import Data.Aeson.Types (Parser)
 import Data.Foldable (toList)
 import Data.Function ((&))
-import Data.Maybe (catMaybes)
+import Data.Map.Strict qualified as M
+import Data.Maybe (catMaybes, fromMaybe)
 import Data.Set (Set)
 import Data.Text (Text, pack, unpack)
 import Data.Text qualified as T
@@ -147,7 +148,6 @@ import WebDriverPreCore.Http.HttpResponse (HttpResponse (..))
 import WebDriverPreCore.Internal.AesonUtils (aesonTypeError, aesonTypeErrorMessage, asText, jsonToText, lookup, lookupTxt, opt)
 import WebDriverPreCore.Internal.Utils (UrlPath (..), bodyText, bodyValue, newSessionUrl, session, txt)
 import Prelude hiding (id, lookup)
-import Data.Map.Strict as M
 
 -- |
 --  The 'HttpSpec' type is a specification for a WebDriver Http command.
@@ -235,14 +235,15 @@ newtype ElementId = Element {id :: Text}
 
 -- | [spec](https://www.w3.org/TR/2025/WD-webdriver2-20250512/#dfn-new-sessions)
 newtype SessionId = Session {id :: Text}
-  deriving (Show)
+  deriving (Show, Eq, Generic)
 
-data SessionResponse = MkSessionResponse {
-  sessionId :: SessionId,
-  webSocketUrl :: Maybe Text,
-  capabilities :: C.Capabilities,
-  extensions :: Maybe (Map Text Value)
-} deriving (Show, Eq, Generic)
+data SessionResponse = MkSessionResponse
+  { sessionId :: SessionId,
+    webSocketUrl :: Maybe Text,
+    capabilities :: C.Capabilities,
+    extensions :: Maybe (M.Map Text Value)
+  }
+  deriving (Show, Eq, Generic)
 
 instance ToJSON SessionResponse where
   toJSON :: SessionResponse -> Value
@@ -255,16 +256,53 @@ instance ToJSON SessionResponse where
     where
       capsVal = toJSON capabilities
       mergedCaps = extensions & maybe capsVal mergeExtensions
-      mergeExtensions ::  Map Text Value -> Value
-      mergeExtensions extMap =
-        \cases
-          (Object capObj, Just extMap) ->
-            Object $ capObj <> AKM.fromList (M.toList extMap)
-          _ -> capsVal
+      mergeExtensions :: M.Map Text Value -> Value
+      mergeExtensions mv =
+        case capsVal of
+          Object capsObj -> Object . KM.union capsObj . KM.fromMapText $ mv
+          -- this will never happen - capabilities is always an Object
+          _ -> error "SessionResponse - toJSON: capabilities must be an Object"
+     
+instance FromJSON SessionResponse where
+  parseJSON :: Value -> Parser SessionResponse
+  parseJSON = withObject "SessionResponse" $ \v -> 
+    v .: "value" >>= 
+    withObject "SessionResponse.value" (\valueKV -> do
+      sessionId <- Session <$> valueKV .: "sessionId"
+      webSocketUrl <- valueKV .:? "webSocketUrl"
+      capabilities <- parseJSON (Object valueKV)
+      
+      -- Get capabilities keys by converting back to JSON
+      let 
+        capsValue :: Maybe (KM.KeyMap Value)
+        capsValue = decode capabilities
+      capsKeys <- case capsValue of
+        Object capsKV -> pure $ KM.keysSet capsKV
+        _ -> fail "SessionResponse: capabilities must serialize to Object"
+      
+      -- Calculate extensions by removing known keys
+      let knownKeys = KM.insert "sessionId" (KM.insert "webSocketUrl" capsKeys) capsKeys
+          extensionsKV = KM.withoutKeys valueKV knownKeys
+          extensions = if KM.null extensionsKV 
+                      then Nothing 
+                      else Just $ M.fromList $ map (\(k, v) -> (KM.toText k, v)) $ KM.toList extensionsKV
+      
+      pure $ MkSessionResponse {sessionId, webSocketUrl, capabilities, extensions}
+     ) 
+
+-- this will never happen - capabilities is always an Object
+-- tv
+--   & maybe
+--     capsVal
+--     (\exMap -> capsVal)
+-- ( \extMap -> case capsVal of
+--     Object capsObj -> Object $ KM.union capsObj $ KM.fromList $ M.toList extMap
+--     _ -> aesonTypeError "SessionResponse.toJSON" "capabilities" "Object" capsVal
+-- )
 
 {-
 
-ToDO: 
+ToDO:
   - newSessionResponse
     - try to parse / test vendor specific options
     - what to do with extra fields like "webSocketUrl"?
@@ -1164,7 +1202,7 @@ cookieFromBody b = case b of
     pure $ MkCookie {..}
     where
       optBase :: (Value -> Result a) -> Key -> Result (Maybe a)
-      optBase typeCaster k = AKM.lookup k kv & maybe (Success Nothing) (fmap Just . typeCaster)
+      optBase typeCaster k = KM.lookup k kv & maybe (Success Nothing) (fmap Just . typeCaster)
       opt' = optBase asText
       optInt = optBase asInt
       optBool = optBase asBool
