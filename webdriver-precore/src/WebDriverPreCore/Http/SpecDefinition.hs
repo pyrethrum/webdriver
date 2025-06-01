@@ -134,6 +134,7 @@ import Data.Aeson as A
     (.:),
     (.:?),
   )
+import Data.Aeson qualified as A
 import Data.Aeson.KeyMap qualified as KM
 import Data.Aeson.Types (Parser)
 import Data.Foldable (toList)
@@ -147,9 +148,10 @@ import Data.Word (Word16)
 import GHC.Generics (Generic)
 import WebDriverPreCore.Http.Capabilities as C
 import WebDriverPreCore.Http.HttpResponse (HttpResponse (..))
-import WebDriverPreCore.Internal.AesonUtils (aesonTypeError, aesonTypeErrorMessage, asText, jsonToText, lookup, lookupTxt, opt)
+import WebDriverPreCore.Internal.AesonUtils (aesonTypeError, aesonTypeErrorMessage, asText, jsonToText, lookup, lookupTxt, opt, parseObject)
 import WebDriverPreCore.Internal.Utils (UrlPath (..), bodyText, bodyValue, newSessionUrl, session, txt)
 import Prelude hiding (id, lookup)
+import Debug.Trace (trace)
 
 -- |
 --  The 'HttpSpec' type is a specification for a WebDriver Http command.
@@ -268,37 +270,36 @@ instance ToJSON SessionResponse where
 instance FromJSON SessionResponse where
   parseJSON :: Value -> Parser SessionResponse
   parseJSON =
-    withObject "SessionResponse" $ \v ->
-      v .: "value"
-        >>= withObject
-          "SessionResponse.value"
-          ( \valueObj -> do
-              let webSocketKey = "webSocketUrl"
-              sessionId <- Session <$> valueObj .: "sessionId"
-              webSocketUrl <- valueObj .:? webSocketKey
-              capabilities :: Capabilities <- parseJSON (Object valueObj)
-              let keySet = pure . fromList . KM.keys
+    withObject
+      "SessionResponse.value"
+      ( \valueObj -> do
+          let webSocketKey = "webSocketUrl"
+          sessionId <- Session <$> valueObj .: "sessionId"
+          webSocketUrl <- valueObj .:? webSocketKey
+          capabilitiesVal :: Value <- valueObj .: "capabilities"
+          capabilities :: Capabilities <- parseJSON capabilitiesVal
+          let keySet = pure . fromList . KM.keys
 
-                  capsKeys :: Parser (Set Key)
-                  capsKeys = case toJSON capabilities of
-                    Object obj -> keySet obj
-                    _ -> fail "This should never happen as capabilities is always an Object"
+              capsKeys :: Parser (Set Key)
+              capsKeys =
+                parseObject "SessionResponse.value.capabilities must be an Object" capabilitiesVal
+                  >>= keySet
 
-                  allKeys :: Parser (Set Key)
-                  allKeys = keySet valueObj
+              allKeys :: Parser (Set Key)
+              allKeys = keySet valueObj
 
-              capsKeys' <- capsKeys
-              allKeys' <- allKeys
-              let -- Calculate extensions by removing known keys from all keys
-                  hasExtensionKey k _v = k `member` (allKeys' `difference` capsKeys')
-                  extensionsMap = KM.toMapText $ KM.filterWithKey hasExtensionKey valueObj
-                  extensions =
-                    if null extensionsMap
-                      then Nothing
-                      else Just extensionsMap
+          capsKeys' <- capsKeys
+          allKeys' <- allKeys
+          let -- Calculate extensions by removing known keys from all keys
+              hasExtensionKey k _v = k `member` (allKeys' `difference` capsKeys')
+              extensionsMap = KM.toMapText $ KM.filterWithKey hasExtensionKey valueObj
+              extensions =
+                if null extensionsMap
+                  then Nothing
+                  else Just extensionsMap
 
-              pure $ MkSessionResponse {sessionId, webSocketUrl, capabilities, extensions}
-          )
+          pure $ MkSessionResponse {sessionId, webSocketUrl, capabilities, extensions}
+      )
 
 {-
 
@@ -501,7 +502,7 @@ newSession' capabilities =
     { description = "New Session",
       path = newSessionUrl,
       body = (toJSON capabilities),
-      parser = \j -> bodyValue j >>= fromJSON
+      parser = \j -> trace "SESSION RESPONSE" bodyValue j >>= fromJSON
     }
 
 -- |

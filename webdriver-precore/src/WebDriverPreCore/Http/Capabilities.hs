@@ -51,8 +51,7 @@ import Data.Aeson.Types
     parseField,
     parseFieldMaybe,
   )
-import Prelude (Enum, Bool (..), Maybe (..), Int, Show (..), Eq (..), maybe)
-import Data.Function (($), (.), flip)
+import Data.Function (flip, ($), (.), (&))
 import Data.Functor ((<$>))
 import Data.Map.Strict (Map)
 import Data.Maybe (catMaybes)
@@ -63,7 +62,9 @@ import GHC.Enum (Bounded)
 import GHC.Float (Double)
 import GHC.Generics (Generic)
 import GHC.IO (FilePath)
-import WebDriverPreCore.Internal.AesonUtils(opt)
+import WebDriverPreCore.Internal.AesonUtils (opt, parseOpt)
+import Prelude (Bool (..), Enum, Eq (..), Int, Maybe (..), Show (..), maybe)
+import Debug.Trace (trace)
 
 {- references:
 - https://https://www.w3.org/TR/2025/WD-webdriver2-20250512/#capabilities
@@ -110,7 +111,7 @@ instance FromJSON FullCapabilities where
 
 -- | Returns the minimal FullCapabilities object where the 'firstMatch' property is empty.
 --
--- It is very common for 'alwaysMatch' to be the only field populated and the 'firstMatch' field to be empty. 
+-- It is very common for 'alwaysMatch' to be the only field populated and the 'firstMatch' field to be empty.
 --
 -- [spec](https://https://www.w3.org/TR/2025/WD-webdriver2-20250512/#capabilities)
 alwaysMatchCapabilities :: Capabilities -> FullCapabilities
@@ -120,7 +121,7 @@ alwaysMatchCapabilities = flip MkFullCapabilities [] . Just
 -- The browserName in the 'alwaysMatch' field is the only field populated
 -- [spec](https://https://www.w3.org/TR/2025/WD-webdriver2-20250512/#capabilities)
 minFullCapabilities :: BrowserName -> FullCapabilities
-minFullCapabilities  =  alwaysMatchCapabilities . minCapabilities 
+minFullCapabilities = alwaysMatchCapabilities . minCapabilities
 
 -- | Returns the minimal Capabilities object for a given browser
 -- The browserName is the only field populated
@@ -198,7 +199,7 @@ data PlatformName
   | Android
   | IOS
   deriving (Show, Generic, Enum, Bounded, Eq)
-  
+
 -- | 'Capabilities' define the properties of the session and are passed to the webdriver
 -- via fields of the 'FullCapabilities' object.
 --
@@ -250,23 +251,22 @@ instance ToJSON Capabilities where
             ]
           <> vendorSpecificToJSON vendorSpecific
 
+
 instance FromJSON Capabilities where
   parseJSON :: Value -> Parser Capabilities
   parseJSON = withObject "Capabilities" $ \v ->
     do
-      let m :: forall a. (FromJSON a) => Key -> Parser (Maybe a)
-          m = parseFieldMaybe v
       browserName <- v .: "browserName"
-      browserVersion <- m "browserVersion"
-      platformName <- m "platformName"
-      acceptInsecureCerts <- m "acceptInsecureCerts"
-      pageLoadStrategy <- m "pageLoadStrategy"
-      proxy <- m "proxy"
-      timeouts <- m "timeouts"
-      strictFileInteractability <- m "strictFileInteractability"
-      unhandledPromptBehavior <- m "unhandledPromptBehavior"
+      browserVersion <- v .:? "browserVersion"
+      platformName <- v .:? "platformName"
+      acceptInsecureCerts <- v .:? "acceptInsecureCerts"
+      pageLoadStrategy <- v .:? "pageLoadStrategy"
+      proxy  <- v `parseOpt` "proxy"
+      timeouts <- v .:? "timeouts"
+      strictFileInteractability <- v .:? "strictFileInteractability"
+      unhandledPromptBehavior <- v .:? "unhandledPromptBehavior"
       vendorSpecific <- parseVendorSpecific v
-      pure MkCapabilities {..}
+      pure MkCapabilities {..} 
 
 -- | [spec](https://www.w3.org/TR/2025/WD-webdriver2-20250512/#proxy)
 data SocksProxy = MkSocksProxy
@@ -376,8 +376,8 @@ data VendorSpecific
         chromePerfLoggingPrefs :: Maybe PerfLoggingPrefs,
         chromeWindowTypes :: Maybe [Text] -- Window types to create
       }
-  -- | Edge capabilities - [spec](https://learn.microsoft.com/en-us/microsoft-edge/webdriver-chromium/capabilities-edge-options)
-  | EdgeOptions
+  | -- | Edge capabilities - [spec](https://learn.microsoft.com/en-us/microsoft-edge/webdriver-chromium/capabilities-edge-options)
+    EdgeOptions
       { edgeArgs :: Maybe [Text],
         edgeBinary :: Maybe Text,
         edgeExtensions :: Maybe [Text], -- Base64-encoded
@@ -391,15 +391,15 @@ data VendorSpecific
         edgePerfLoggingPrefs :: Maybe PerfLoggingPrefs,
         edgeWindowTypes :: Maybe [Text] -- Window types to create
       }
-  -- | Firefox capabilities - [spec](https://developer.mozilla.org/en-US/docs/Web/WebDriver/Capabilities)
-  | FirefoxOptions
+  | -- | Firefox capabilities - [spec](https://developer.mozilla.org/en-US/docs/Web/WebDriver/Capabilities)
+    FirefoxOptions
       { firefoxArgs :: Maybe [Text],
         firefoxBinary :: Maybe Text,
         firefoxProfile :: Maybe Text, -- Base64-encoded profile
         firefoxLog :: Maybe LogSettings
       }
-  -- | Safari capabilities - [spec](https://developer.apple.com/documentation/webkit/testing_with_webdriver_in_safari)
-  | SafariOptions
+  | -- | Safari capabilities - [spec](https://developer.apple.com/documentation/webkit/testing_with_webdriver_in_safari)
+    SafariOptions
       { safariAutomaticInspection :: Maybe Bool,
         safariAutomaticProfiling :: Maybe Bool
       }
