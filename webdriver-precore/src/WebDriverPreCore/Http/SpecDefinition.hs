@@ -480,7 +480,7 @@ data Selector
 -- [spec](https://www.w3.org/TR/2025/WD-webdriver2-20250512/#new-session)
 --
 --  @POST 	\/session 	New Session@
-newSession :: FullCapabilities -> HttpSpec SessionId
+newSession :: FullCapabilities -> HttpSpec SessionResponse
 newSession = newSession'
 
 -- |
@@ -495,13 +495,13 @@ newSession = newSession'
 --  [spec](https://www.w3.org/TR/2025/WD-webdriver2-20250512/#new-session)
 --
 --  @POST 	\/session 	New Session@
-newSession' :: (ToJSON a) => a -> HttpSpec SessionId
+newSession' :: (ToJSON a) => a -> HttpSpec SessionResponse
 newSession' capabilities =
   Post
     { description = "New Session",
       path = newSessionUrl,
       body = (toJSON capabilities),
-      parser = parseSessionRef
+      parser = \j -> bodyValue j >>= fromJSON
     }
 
 -- |
@@ -1263,11 +1263,6 @@ asInt :: Value -> Result Int
 asInt = \case
   Number t -> Success $ floor t
   v -> aesonTypeError "Int" v
-
-parseSessionRef :: HttpResponse -> Result SessionId
-parseSessionRef r =
-  Session
-    <$> bodyText r "sessionId"
 
 -- https://www.w3.org/TR/webdriver2/#elements
 elementFieldName :: Key

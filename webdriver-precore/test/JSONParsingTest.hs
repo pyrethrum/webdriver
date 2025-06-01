@@ -486,3 +486,8 @@ test_round_trip = testPropertyWith options "Roundtrip Capabilities Parsing" $ do
   log "Decoded Capabilities:"
   log $ maybe "Nothing" ppShow decoded
   assert $ expect True `dot` fn ("matches encoded", asExpected) .$ ("decoded", decoded)
+
+
+
+
+  
