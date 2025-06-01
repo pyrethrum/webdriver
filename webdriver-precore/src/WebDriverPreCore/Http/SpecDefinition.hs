@@ -98,6 +98,7 @@ module WebDriverPreCore.Http.SpecDefinition
     SameSite (..),
     Selector (..),
     SessionId (..),
+    SessionResponse (..),
     Timeouts (..),
     WindowHandle (..),
     WindowHandleSpec (..),
@@ -130,15 +131,16 @@ import Data.Aeson as A
     object,
     withObject,
     withText,
-    (.:), (.:?), (.!=), decode,
+    (.:),
+    (.:?),
   )
 import Data.Aeson.KeyMap qualified as KM
 import Data.Aeson.Types (Parser)
 import Data.Foldable (toList)
 import Data.Function ((&))
 import Data.Map.Strict qualified as M
-import Data.Maybe (catMaybes, fromMaybe)
-import Data.Set (Set)
+import Data.Maybe (catMaybes)
+import Data.Set (Set, difference, fromList, member)
 import Data.Text (Text, pack, unpack)
 import Data.Text qualified as T
 import Data.Word (Word16)
@@ -262,43 +264,41 @@ instance ToJSON SessionResponse where
           Object capsObj -> Object . KM.union capsObj . KM.fromMapText $ mv
           -- this will never happen - capabilities is always an Object
           _ -> error "SessionResponse - toJSON: capabilities must be an Object"
-     
+
 instance FromJSON SessionResponse where
   parseJSON :: Value -> Parser SessionResponse
-  parseJSON = withObject "SessionResponse" $ \v -> 
-    v .: "value" >>= 
-    withObject "SessionResponse.value" (\valueKV -> do
-      sessionId <- Session <$> valueKV .: "sessionId"
-      webSocketUrl <- valueKV .:? "webSocketUrl"
-      capabilities <- parseJSON (Object valueKV)
-      
-      -- Get capabilities keys by converting back to JSON
-      let 
-        capsValue :: Maybe (KM.KeyMap Value)
-        capsValue = decode capabilities
-      capsKeys <- case capsValue of
-        Object capsKV -> pure $ KM.keysSet capsKV
-        _ -> fail "SessionResponse: capabilities must serialize to Object"
-      
-      -- Calculate extensions by removing known keys
-      let knownKeys = KM.insert "sessionId" (KM.insert "webSocketUrl" capsKeys) capsKeys
-          extensionsKV = KM.withoutKeys valueKV knownKeys
-          extensions = if KM.null extensionsKV 
-                      then Nothing 
-                      else Just $ M.fromList $ map (\(k, v) -> (KM.toText k, v)) $ KM.toList extensionsKV
-      
-      pure $ MkSessionResponse {sessionId, webSocketUrl, capabilities, extensions}
-     ) 
+  parseJSON =
+    withObject "SessionResponse" $ \v ->
+      v .: "value"
+        >>= withObject
+          "SessionResponse.value"
+          ( \valueObj -> do
+              let webSocketKey = "webSocketUrl"
+              sessionId <- Session <$> valueObj .: "sessionId"
+              webSocketUrl <- valueObj .:? webSocketKey
+              capabilities :: Capabilities <- parseJSON (Object valueObj)
+              let keySet = pure . fromList . KM.keys
 
--- this will never happen - capabilities is always an Object
--- tv
---   & maybe
---     capsVal
---     (\exMap -> capsVal)
--- ( \extMap -> case capsVal of
---     Object capsObj -> Object $ KM.union capsObj $ KM.fromList $ M.toList extMap
---     _ -> aesonTypeError "SessionResponse.toJSON" "capabilities" "Object" capsVal
--- )
+                  capsKeys :: Parser (Set Key)
+                  capsKeys = case toJSON capabilities of
+                    Object obj -> keySet obj
+                    _ -> fail "This should never happen as capabilities is always an Object"
+
+                  allKeys :: Parser (Set Key)
+                  allKeys = keySet valueObj
+
+              capsKeys' <- capsKeys
+              allKeys' <- allKeys
+              let -- Calculate extensions by removing known keys from all keys
+                  hasExtensionKey k _v = k `member` (allKeys' `difference` capsKeys')
+                  extensionsMap = KM.toMapText $ KM.filterWithKey hasExtensionKey valueObj
+                  extensions =
+                    if null extensionsMap
+                      then Nothing
+                      else Just extensionsMap
+
+              pure $ MkSessionResponse {sessionId, webSocketUrl, capabilities, extensions}
+          )
 
 {-
 
