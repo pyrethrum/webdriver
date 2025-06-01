@@ -65,6 +65,7 @@ import WebDriverPreCore.Http.SpecDefinition as AuxTypes
     SameSite (..),
     Selector (..),
     SessionId (..),
+    SessionResponse (..),
     Timeouts (..),
     UrlPath (..),
     WindowHandle (..),

@@ -94,7 +94,7 @@ where
 import Data.Aeson (Value)
 
 import Data.Text  as T (Text)
-import WebDriverPreCore.Http (DriverStatus, ElementId, Selector, SessionId)
+import WebDriverPreCore.Http (DriverStatus, ElementId, Selector, SessionId, SessionResponse(..))
 import WebDriverPreCore.Http qualified as W
 import Prelude hiding (log)
 import Http.IOUtils (sleepMs, encodeFileToBase64)
@@ -106,7 +106,7 @@ status :: IO DriverStatus
 status = run W.status
 
 newSession :: W.FullCapabilities -> IO SessionId
-newSession = run . W.newSession
+newSession c = (.sessionId) <$> (run $ W.newSession c)
 
 getTimeouts :: SessionId -> IO W.Timeouts
 getTimeouts = run . W.getTimeouts
