@@ -14,7 +14,7 @@ import Data.Text.Encoding (decodeUtf8Lenient)
 import Data.Text.IO qualified as T
 import Data.Text.Lazy qualified as LT
 import E2EConst (ReqRequestParams (..))
-import Network.HTTP.Req (JsonResponse)
+import Network.HTTP.Req (JsonResponse, Req)
 import Network.HTTP.Req as R
   ( DELETE (DELETE),
     GET (GET),
@@ -43,6 +43,8 @@ import WebDriverPreCore.Http qualified as W
 import WebDriverPreCore.Internal.AesonUtils (prettyPrintJson)
 import WebDriverPreCore.Internal.Utils (txt)
 import Prelude hiding (log)
+import IOUtils qualified as U 
+import qualified IOUtils as U
 
 -- ############# Config #############
 
@@ -54,15 +56,15 @@ wantConsoleLogging = True
 run :: (Show a) => HttpSpec a -> IO a
 run spec = do
   when wantConsoleLogging $ do
-    devLog "Request"
-    devLog . txt $ spec
+    U.logTxt "Request"
+    U.logShow "HttpSpec" spec
     case spec of
       Get {} -> pure ()
       Post {body} -> do
-        devLog "body PP"
+        U.logTxt "body PP"
         prettyPrintJson body
-        devLog "Body Raw"
-        T.putStrLn (LT.toStrict $ encodeToLazyText body)
+        -- U.logTxt "Body Raw"
+        -- T.putStrLn (LT.toStrict $ encodeToLazyText body)
       PostEmpty {} -> pure ()
       Delete {} -> pure ()
   callWebDriver wantConsoleLogging (mkRequest spec) >>= parseIO spec
@@ -92,23 +94,28 @@ parseIO spec r =
 callWebDriver :: Bool -> ReqRequestParams -> IO HttpResponse
 callWebDriver wantLog MkRequestParams {url, method, body, port = prt} =
   runReq defaultHttpConfig {httpConfigCheckResponse = \_ _ _ -> Nothing} $ do
-    log $ "URL: " <> txt url
+    logShow "URL" url
     r <- req method url body jsonResponse $ port prt
-    log $ "JSON Response:\n" <> txt r
+
     let fr =
           MkHttpResponse
             { statusCode = responseStatusCode r,
               statusMessage = responseStatusText r,
               body = responseBody r :: Value
             }
-    log "Response Body:"
+
+    logShow "Status Code" fr.statusCode
+    logShow "Status Message" fr.statusMessage
+    log "Response Body"
     logJSON fr.body
-    log $ "Framework Response:\n" <> txt fr
+    logShow "Framework Response Object"  fr
 
     pure fr
   where
     liftLog = liftIO . when wantLog
-    log = liftLog . devLog
+    log = liftLog . U.logTxt 
+    logShow :: Show a => Text -> a -> Req ()
+    logShow message = liftLog . U.logShow message
     logJSON = liftLog . prettyPrintJson
 
 -- ############# Utils #############
@@ -116,5 +123,4 @@ callWebDriver wantLog MkRequestParams {url, method, body, port = prt} =
 responseStatusText :: Network.HTTP.Req.JsonResponse Value -> Text
 responseStatusText = decodeUtf8Lenient . responseStatusMessage
 
-devLog :: Text -> IO ()
-devLog = T.putStrLn
+

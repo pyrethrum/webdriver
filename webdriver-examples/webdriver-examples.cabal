@@ -107,6 +107,7 @@ test-suite driver-demo-e2e
   main-is: Driver.hs
   hs-source-dirs: driver-demo-e2e
   build-depends:
+    , pretty-show ^>=1.10
     , aeson
     , aeson-pretty
     , base
@@ -126,8 +127,8 @@ test-suite driver-demo-e2e
     , wuss
   other-modules:
       E2EConst
+    , IOUtils
     , Http.HttpRunnerMinimalForDocs
-    , Http.IOUtils
     , Http.HttpRunner
     , Http.HttpAPI
     , Http.HttpE2EDemoTest

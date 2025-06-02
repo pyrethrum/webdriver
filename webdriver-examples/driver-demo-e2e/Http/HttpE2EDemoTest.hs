@@ -9,7 +9,6 @@ import Data.Function ((&))
 import Data.Functor ((<&>))
 import Data.Set qualified as Set
 import Data.Text (Text, isInfixOf)
-import Data.Text.IO qualified as TIO
 import Data.Time.Clock.POSIX (getPOSIXTime)
 import E2EConst
   ( alertsUrl,
@@ -54,6 +53,7 @@ import Http.HttpAPI
     SameSite (..),
     Selector (..),
     SessionId (..),
+    SessionResponse (..),
     Timeouts (..),
     VendorSpecific (..),
     WheelAction (..),
@@ -109,6 +109,7 @@ import Http.HttpAPI
     minimizeWindow,
     navigateTo,
     newSession,
+    newSessionFull,
     newWindow,
     performActions,
     printPage,
@@ -125,10 +126,20 @@ import Http.HttpAPI
     takeElementScreenshot,
     takeScreenshot,
   )
-import Test.Tasty.HUnit as HUnit (Assertion, HasCallStack, assertBool, (@=?))
+import IOUtils
+  ( log,
+    logM,
+    logShow,
+    logShowM,
+    logTxt,
+    sleep1,
+    sleep2,
+    (===),
+  )
 import WebDriverPreCore.Http (alwaysMatchCapabilities, minChromeCapabilities, minFullCapabilities)
-import WebDriverPreCore.Internal.Utils(txt)
+import WebDriverPreCore.Internal.Utils (txt)
 import Prelude hiding (log)
+import Test.Tasty.HUnit (Assertion, assertBool)
 
 -- #################### Config ######################
 
@@ -139,16 +150,57 @@ useFirefox = True
 -- see readme
 customFirefoxProfilePath :: Maybe Text
 customFirefoxProfilePath = Nothing
+
 -- customFirefoxProfilePath = Just "./webdriver-examples/driver-demo-e2e/.profile/WebDriverProfile"
 
 -- #################### The Tests ######################
+
+-- >>> unit_demoNewSession
+unit_demoNewSession :: IO ()
+unit_demoNewSession = do
+  ses <-
+    -- demo only
+    -- helper functions would otherwise always be used to simplify session creation
+    newSessionFull $
+      MkFullCapabilities
+        { alwaysMatch =
+            Just $
+              MkCapabilities
+                { browserName = Just $ if useFirefox then Firefox else Chrome,
+                  browserVersion = Nothing,
+                  platformName = Nothing,
+                  acceptInsecureCerts = Nothing,
+                  pageLoadStrategy = Nothing,
+                  proxy = Nothing,
+                  timeouts = Nothing,
+                  strictFileInteractability = Nothing,
+                  unhandledPromptBehavior = Nothing,
+                  vendorSpecific =
+                    if
+                      | useFirefox ->
+                          customFirefoxProfilePath
+                            <&> \firefoxProfilePath ->
+                              FirefoxOptions
+                                { -- requires a path to the profile directory
+                                  firefoxArgs = Just ["-profile", firefoxProfilePath],
+                                  firefoxBinary = Nothing,
+                                  firefoxProfile = Nothing,
+                                  firefoxLog = Nothing
+                                }
+                      | otherwise -> Nothing
+                },
+          firstMatch = []
+        }
+  logShow "new session response:\n" ses
+
+  deleteSession ses.sessionId
 
 -- >>> unit_demoSessionDriverStatus
 unit_demoSessionDriverStatus :: IO ()
 unit_demoSessionDriverStatus = do
   ses <-
     -- demo only
-    -- helper functions would oterwise always be used to simplify session creation
+    -- helper functions would otherwise always be used to simplify session creation
     newSession $
       MkFullCapabilities
         { alwaysMatch =
@@ -179,10 +231,12 @@ unit_demoSessionDriverStatus = do
                 },
           firstMatch = []
         }
-  log "new session" $ txt ses
+  log "new session:" $ txt ses
+
   s <- status
   Ready === s
   logShowM "driver status" status
+
   deleteSession ses
 
 -- >>> unit_demoSendKeysClear
@@ -848,35 +902,3 @@ extendTimeouts ses = do
         implicit = Just $ 12 * seconds
       }
   pure ses
-
-logTxt :: Text -> IO ()
-logTxt = TIO.putStrLn
-
-log :: Text -> Text -> IO ()
-log l t = logTxt $ l <> ": " <> t
-
-logShow :: (Show a) => Text -> a -> IO ()
-logShow l = log l . txt
-
-logM :: Text -> IO Text -> IO ()
-logM l t = t >>= log l
-
-logShowM :: (Show a) => Text -> IO a -> IO ()
-logShowM l t = t >>= logShow l
-
-sleep1 :: IO ()
-sleep1 = sleepMs $ 1 * second
-
-sleep2 :: IO ()
-sleep2 = sleepMs $ 2 * seconds
-
--- todo: test extras - split off
-
-(===) ::
-  (Eq a, Show a, HasCallStack) =>
-  -- | The actual value
-  a ->
-  -- | The expected value
-  a ->
-  Assertion
-(===) = (@=?)

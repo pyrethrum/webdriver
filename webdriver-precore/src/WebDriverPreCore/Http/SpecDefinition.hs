@@ -145,7 +145,7 @@ import Data.Set (Set, difference, fromList, member)
 import Data.Text (Text, pack, unpack)
 import Data.Text qualified as T
 import Data.Word (Word16)
-import GHC.Generics (Generic)
+import GHC.Generics (Generic (to))
 import WebDriverPreCore.Http.Capabilities as C
 import WebDriverPreCore.Http.HttpResponse (HttpResponse (..))
 import WebDriverPreCore.Internal.AesonUtils (aesonTypeError, aesonTypeErrorMessage, asText, jsonToText, lookup, lookupTxt, opt, parseObject)
@@ -282,11 +282,11 @@ instance FromJSON SessionResponse where
 
               capsKeys :: Parser (Set Key)
               capsKeys =
-                parseObject "SessionResponse.value.capabilities must be an Object" capabilitiesVal
+                parseObject "JSON from Capabilities Object must be a JSON Object" (toJSON capabilities)
                   >>= keySet
 
               allKeys :: Parser (Set Key)
-              allKeys = keySet valueObj
+              allKeys = parseObject "capabilities property returned from newSession should be an object" capabilitiesVal >>= keySet 
 
           capsKeys' <- capsKeys
           allKeys' <- allKeys

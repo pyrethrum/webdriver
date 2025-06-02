@@ -11,6 +11,7 @@ module Http.HttpAPI
     W.SameSite (..),
     W.Selector (..),
     W.SessionId (..),
+    W.SessionResponse (..),
     W.FrameReference (..),
     W.WindowRect (..),
     W.PointerOrigin (..),
@@ -51,6 +52,7 @@ module Http.HttpAPI
     closeWindow,
     newWindow,
     newSession,
+    newSessionFull,
     minFirefoxSession,
     performActions,
     releaseActions,
@@ -97,7 +99,7 @@ import Data.Text  as T (Text)
 import WebDriverPreCore.Http (DriverStatus, ElementId, Selector, SessionId, SessionResponse(..))
 import WebDriverPreCore.Http qualified as W
 import Prelude hiding (log)
-import Http.IOUtils (sleepMs, encodeFileToBase64)
+import IOUtils (sleepMs, encodeFileToBase64)
 import Http.HttpRunner (run)
 
 -- ############# API #############
@@ -106,7 +108,10 @@ status :: IO DriverStatus
 status = run W.status
 
 newSession :: W.FullCapabilities -> IO SessionId
-newSession c = (.sessionId) <$> (run $ W.newSession c)
+newSession = fmap (.sessionId) .  newSessionFull
+
+newSessionFull :: W.FullCapabilities -> IO SessionResponse
+newSessionFull c = run $ W.newSession c
 
 getTimeouts :: SessionId -> IO W.Timeouts
 getTimeouts = run . W.getTimeouts
