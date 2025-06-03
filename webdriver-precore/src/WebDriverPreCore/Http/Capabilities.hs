@@ -51,7 +51,7 @@ import Data.Aeson.Types
     parseField,
     parseFieldMaybe,
   )
-import Data.Function (flip, ($), (.), (&))
+import Data.Function (flip, ($), (.))
 import Data.Functor ((<$>))
 import Data.Map.Strict (Map)
 import Data.Maybe (catMaybes)
@@ -64,7 +64,6 @@ import GHC.Generics (Generic)
 import GHC.IO (FilePath)
 import WebDriverPreCore.Internal.AesonUtils (opt, parseOpt)
 import Prelude (Bool (..), Enum, Eq (..), Int, Maybe (..), Show (..), maybe)
-import Debug.Trace (trace)
 
 {- references:
 - https://https://www.w3.org/TR/2025/WD-webdriver2-20250512/#capabilities

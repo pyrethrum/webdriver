@@ -277,20 +277,22 @@ instance FromJSON SessionResponse where
           webSocketUrl <- valueObj .:? webSocketKey
           capabilitiesVal :: Value <- valueObj .: "capabilities"
           capabilities :: Capabilities <- parseJSON capabilitiesVal
-          let keySet = pure . fromList . KM.keys
+          let keySet = pure . fromList . KM.keys . trace "KEYSET KEYS"
 
               capsKeys :: Parser (Set Key)
               capsKeys =
-                parseObject "JSON from Capabilities Object must be a JSON Object" (toJSON capabilities)
+                trace "CAPABILITIES KEYS" <$> parseObject "JSON from Capabilities Object must be a JSON Object" (toJSON capabilities)
                   >>= keySet
 
               allKeys :: Parser (Set Key)
               allKeys = parseObject "capabilities property returned from newSession should be an object" capabilitiesVal >>= keySet 
 
           capsKeys' <- capsKeys
+       
           allKeys' <- allKeys
           let -- Calculate extensions by removing known keys from all keys
-              hasExtensionKey k _v = k `member` (allKeys' `difference` capsKeys')
+              extKeys = trace "EXTENSION KEYS" (trace "all keys" allKeys') `difference` (capsKeys' & trace "SessionResponse - parseJSON: capabilities keys")
+              hasExtensionKey k _v = k `member` extKeys
               extensionsMap = KM.toMapText $ KM.filterWithKey hasExtensionKey valueObj
               extensions =
                 if null extensionsMap
