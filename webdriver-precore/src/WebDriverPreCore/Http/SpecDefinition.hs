@@ -134,7 +134,6 @@ import Data.Aeson as A
     (.:),
     (.:?),
   )
-import Data.Aeson qualified as A
 import Data.Aeson.KeyMap qualified as KM
 import Data.Aeson.Types (Parser)
 import Data.Foldable (toList)
@@ -145,7 +144,7 @@ import Data.Set (Set, difference, fromList, member)
 import Data.Text (Text, pack, unpack)
 import Data.Text qualified as T
 import Data.Word (Word16)
-import GHC.Generics (Generic (to))
+import GHC.Generics (Generic)
 import WebDriverPreCore.Http.Capabilities as C
 import WebDriverPreCore.Http.HttpResponse (HttpResponse (..))
 import WebDriverPreCore.Internal.AesonUtils (aesonTypeError, aesonTypeErrorMessage, asText, jsonToText, lookup, lookupTxt, opt, parseObject)

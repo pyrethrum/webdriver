@@ -1,7 +1,6 @@
 module BiDi.BiDiE2EDemoTest where
 
 import BiDi.BiDiRunner
-import Test.Tasty.HUnit as HUnit (Assertion, HasCallStack, assertBool, (@=?))
 import WebDriverPreCore.BiDi.Session
 import WebDriverPreCore.Internal.Utils
 import Prelude hiding (putStrLn)

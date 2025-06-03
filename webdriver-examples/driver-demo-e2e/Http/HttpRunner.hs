@@ -6,13 +6,10 @@ where
 import Control.Monad (when)
 import Control.Monad.IO.Class (liftIO)
 import Data.Aeson (Result (..), Value, object)
-import Data.Aeson.Text (encodeToLazyText)
 import Data.Foldable qualified as F
 import Data.Function ((&))
 import Data.Text as T (Text, unpack)
 import Data.Text.Encoding (decodeUtf8Lenient)
-import Data.Text.IO qualified as T
-import Data.Text.Lazy qualified as LT
 import E2EConst (ReqRequestParams (..))
 import Network.HTTP.Req (JsonResponse, Req)
 import Network.HTTP.Req as R
@@ -41,15 +38,9 @@ import WebDriverPreCore.Http
   )
 import WebDriverPreCore.Http qualified as W
 import WebDriverPreCore.Internal.AesonUtils (prettyPrintJson)
-import WebDriverPreCore.Internal.Utils (txt)
 import Prelude hiding (log)
 import IOUtils qualified as U 
-import qualified IOUtils as U
-
--- ############# Config #############
-
-wantConsoleLogging :: Bool
-wantConsoleLogging = True
+import Config (wantConsoleLogging)
 
 -- ############# Runner #############
 

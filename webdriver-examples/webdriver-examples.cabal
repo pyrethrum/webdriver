@@ -126,7 +126,8 @@ test-suite driver-demo-e2e
     , websockets
     , wuss
   other-modules:
-      E2EConst
+      Config
+    , E2EConst
     , IOUtils
     , Http.HttpRunnerMinimalForDocs
     , Http.HttpRunner

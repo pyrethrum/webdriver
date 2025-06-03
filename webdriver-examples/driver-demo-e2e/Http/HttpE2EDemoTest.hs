@@ -140,18 +140,7 @@ import WebDriverPreCore.Http (alwaysMatchCapabilities, minChromeCapabilities, mi
 import WebDriverPreCore.Internal.Utils (txt)
 import Prelude hiding (log)
 import Test.Tasty.HUnit (Assertion, assertBool)
-
--- #################### Config ######################
-
--- set to False for Chrome
-useFirefox :: Bool
-useFirefox = True
-
--- see readme
-customFirefoxProfilePath :: Maybe Text
-customFirefoxProfilePath = Nothing
-
--- customFirefoxProfilePath = Just "./webdriver-examples/driver-demo-e2e/.profile/WebDriverProfile"
+import Config (useFirefox, customFirefoxProfilePath)
 
 -- #################### The Tests ######################
 
