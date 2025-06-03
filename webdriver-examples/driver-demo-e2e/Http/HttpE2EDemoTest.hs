@@ -6,7 +6,6 @@ import Control.Exception (bracket)
 import Control.Monad (forM_)
 import Data.Aeson (Value (..))
 import Data.Function ((&))
-import Data.Functor ((<&>))
 import Data.Set qualified as Set
 import Data.Text (Text, isInfixOf)
 import Data.Time.Clock.POSIX (getPOSIXTime)
@@ -140,46 +139,47 @@ import WebDriverPreCore.Http (alwaysMatchCapabilities, minChromeCapabilities, mi
 import WebDriverPreCore.Internal.Utils (txt)
 import Prelude hiding (log)
 import Test.Tasty.HUnit (Assertion, assertBool)
-import Config (useFirefox, customFirefoxProfilePath)
+import Config (useFirefox, customFirefoxProfilePath, firefoxHeadless)
 
 -- #################### The Tests ######################
 
+configuredCapabilities :: FullCapabilities
+configuredCapabilities = MkFullCapabilities
+    { alwaysMatch =
+        Just $
+          MkCapabilities
+            { browserName = Just $ if useFirefox then Firefox else Chrome,
+              browserVersion = Nothing,
+              platformName = Nothing,
+              acceptInsecureCerts = Nothing,
+              pageLoadStrategy = Nothing,
+              proxy = Nothing,
+              timeouts = Nothing,
+              strictFileInteractability = Nothing,
+              unhandledPromptBehavior = Nothing,
+              vendorSpecific =
+                if
+                  | useFirefox ->
+                      let headless = if firefoxHeadless then ["--headless"] else []
+                          profile = maybe [] (\p -> ["-profile", p]) customFirefoxProfilePath
+                          args = headless <> profile
+                          mArgs = if null args then Nothing else Just args
+                       in mArgs & maybe Nothing \_ ->
+                            Just FirefoxOptions
+                              { -- requires a path to the profile directory
+                                firefoxArgs = mArgs,
+                                firefoxBinary = Nothing,
+                                firefoxProfile = Nothing,
+                                firefoxLog = Nothing
+                              }
+                  | otherwise -> Nothing
+            },
+      firstMatch = []
+    }
 -- >>> unit_demoNewSession
 unit_demoNewSession :: IO ()
 unit_demoNewSession = do
-  ses <-
-    -- demo only
-    -- helper functions would otherwise always be used to simplify session creation
-    newSessionFull $
-      MkFullCapabilities
-        { alwaysMatch =
-            Just $
-              MkCapabilities
-                { browserName = Just $ if useFirefox then Firefox else Chrome,
-                  browserVersion = Nothing,
-                  platformName = Nothing,
-                  acceptInsecureCerts = Nothing,
-                  pageLoadStrategy = Nothing,
-                  proxy = Nothing,
-                  timeouts = Nothing,
-                  strictFileInteractability = Nothing,
-                  unhandledPromptBehavior = Nothing,
-                  vendorSpecific =
-                    if
-                      | useFirefox ->
-                          customFirefoxProfilePath
-                            <&> \firefoxProfilePath ->
-                              FirefoxOptions
-                                { -- requires a path to the profile directory
-                                  firefoxArgs = Just ["-profile", firefoxProfilePath],
-                                  firefoxBinary = Nothing,
-                                  firefoxProfile = Nothing,
-                                  firefoxLog = Nothing
-                                }
-                      | otherwise -> Nothing
-                },
-          firstMatch = []
-        }
+  ses <- newSessionFull configuredCapabilities
   logShow "new session response:\n" ses
 
   deleteSession ses.sessionId
@@ -187,39 +187,7 @@ unit_demoNewSession = do
 -- >>> unit_demoSessionDriverStatus
 unit_demoSessionDriverStatus :: IO ()
 unit_demoSessionDriverStatus = do
-  ses <-
-    -- demo only
-    -- helper functions would otherwise always be used to simplify session creation
-    newSession $
-      MkFullCapabilities
-        { alwaysMatch =
-            Just $
-              MkCapabilities
-                { browserName = Just $ if useFirefox then Firefox else Chrome,
-                  browserVersion = Nothing,
-                  platformName = Nothing,
-                  acceptInsecureCerts = Nothing,
-                  pageLoadStrategy = Nothing,
-                  proxy = Nothing,
-                  timeouts = Nothing,
-                  strictFileInteractability = Nothing,
-                  unhandledPromptBehavior = Nothing,
-                  vendorSpecific =
-                    if
-                      | useFirefox ->
-                          customFirefoxProfilePath
-                            <&> \firefoxProfilePath ->
-                              FirefoxOptions
-                                { -- requires a path to the profile directory
-                                  firefoxArgs = Just ["-profile", firefoxProfilePath],
-                                  firefoxBinary = Nothing,
-                                  firefoxProfile = Nothing,
-                                  firefoxLog = Nothing
-                                }
-                      | otherwise -> Nothing
-                },
-          firstMatch = []
-        }
+  ses <- newSession configuredCapabilities
   log "new session:" $ txt ses
 
   s <- status
