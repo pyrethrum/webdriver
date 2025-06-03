@@ -176,6 +176,7 @@ configuredCapabilities = MkFullCapabilities
             },
       firstMatch = []
     }
+    
 -- >>> unit_demoNewSession
 unit_demoNewSession :: IO ()
 unit_demoNewSession = do
