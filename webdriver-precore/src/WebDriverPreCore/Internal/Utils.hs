@@ -8,18 +8,20 @@ module WebDriverPreCore.Internal.Utils
     newSessionUrl,
     session,
     bodyValue,
-    bodyText
+    bodyText,
+    db
   )
 where
 
 import Data.Function ((.))
-import Data.Text (Text, pack)
+import Data.Text (Text, pack, unpack)
 import GHC.Enum (Bounded (..), Enum)
 import GHC.Show (Show (..))
-import Prelude (Eq, Ord, Semigroup)
+import Prelude (Eq, Ord, Semigroup, (<>), ($))
 import WebDriverPreCore.Http.HttpResponse (HttpResponse(..))
 import Data.Aeson (Key, Result, Value)
 import WebDriverPreCore.Internal.AesonUtils (lookup, bodyText')
+import Debug.Trace (trace)
 
 {-
   this module is used between the library and testing modules
@@ -50,3 +52,7 @@ bodyValue r = lookup "value" r.body
 bodyText :: HttpResponse -> Key -> Result Text
 bodyText r = bodyText' (bodyValue r)
 
+-- debugging 
+
+db :: Show a => Text -> a -> a
+db label value = trace (unpack $ label <> ":\n" <> txt value) value

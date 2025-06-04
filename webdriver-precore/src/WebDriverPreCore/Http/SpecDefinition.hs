@@ -148,9 +148,8 @@ import GHC.Generics (Generic)
 import WebDriverPreCore.Http.Capabilities as C
 import WebDriverPreCore.Http.HttpResponse (HttpResponse (..))
 import WebDriverPreCore.Internal.AesonUtils (aesonTypeError, aesonTypeErrorMessage, asText, jsonToText, lookup, lookupTxt, opt, parseObject)
-import WebDriverPreCore.Internal.Utils (UrlPath (..), bodyText, bodyValue, newSessionUrl, session, txt)
+import WebDriverPreCore.Internal.Utils (UrlPath (..), bodyText, bodyValue, newSessionUrl, session, txt, db)
 import Prelude hiding (id, lookup)
-import Debug.Trace (trace)
 
 -- |
 --  The 'HttpSpec' type is a specification for a WebDriver Http command.
@@ -276,24 +275,26 @@ instance FromJSON SessionResponse where
           sessionId <- Session <$> valueObj .: "sessionId"
           webSocketUrl <- valueObj .:? webSocketKey
           capabilitiesVal :: Value <- valueObj .: "capabilities"
-          capabilities :: Capabilities <- parseJSON capabilitiesVal
-          let keySet = pure . fromList . KM.keys . trace "KEYSET KEYS"
 
+          let allCapsParser = parseObject "capabilities property returned from newSession should be an object" capabilitiesVal
+          allCapsObject <- allCapsParser
+          capabilities :: Capabilities <- parseJSON capabilitiesVal
+          let keySet = pure . fromList . KM.keys 
               capsKeys :: Parser (Set Key)
               capsKeys =
-                trace "CAPABILITIES KEYS" <$> parseObject "JSON from Capabilities Object must be a JSON Object" (toJSON capabilities)
+                parseObject "JSON from Capabilities Object must be a JSON Object" (toJSON capabilities)
                   >>= keySet
 
               allKeys :: Parser (Set Key)
-              allKeys = parseObject "capabilities property returned from newSession should be an object" capabilitiesVal >>= keySet 
+              allKeys = allCapsParser >>= keySet 
 
           capsKeys' <- capsKeys
        
           allKeys' <- allKeys
           let -- Calculate extensions by removing known keys from all keys
-              extKeys = trace "EXTENSION KEYS" (trace "all keys" allKeys') `difference` (capsKeys' & trace "SessionResponse - parseJSON: capabilities keys")
+              extKeys = db "EXTENSION KEYS" (db "ALL KEYS" allKeys') `difference` (capsKeys' & db "CAPABILITIES KEYS")
               hasExtensionKey k _v = k `member` extKeys
-              extensionsMap = KM.toMapText $ KM.filterWithKey hasExtensionKey valueObj
+              extensionsMap = db "EXTENSIONS MAP" $ KM.toMapText $ KM.filterWithKey hasExtensionKey (db "VALUE OBJECT" $ allCapsObject)
               extensions =
                 if null extensionsMap
                   then Nothing
@@ -503,7 +504,7 @@ newSession' capabilities =
     { description = "New Session",
       path = newSessionUrl,
       body = (toJSON capabilities),
-      parser = \j -> trace "SESSION RESPONSE" bodyValue j >>= fromJSON
+      parser = \j -> db "SESSION RESPONSE" $ bodyValue j >>= fromJSON
     }
 
 -- |
