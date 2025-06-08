@@ -268,6 +268,7 @@ genCapabilities = do
   unhandledPromptBehavior <- genMEnum
   acceptInsecureCerts <- genMaybe genBool
   pageLoadStrategy <- genMEnum
+  setWindowRect <- genMaybeBool
   proxy <- genMaybe genProxy
   timeouts <- genMaybe genTimeouts
   vendorSpecific <- genMaybe genVendorSpecific

@@ -140,14 +140,14 @@ import Data.Foldable (toList)
 import Data.Function ((&))
 import Data.Map.Strict qualified as M
 import Data.Maybe (catMaybes)
-import Data.Set (Set, difference, fromList, member)
+import Data.Set (Set, fromList, notMember)
 import Data.Text (Text, pack, unpack)
 import Data.Text qualified as T
 import Data.Word (Word16)
 import GHC.Generics (Generic)
 import WebDriverPreCore.Http.Capabilities as C
 import WebDriverPreCore.Http.HttpResponse (HttpResponse (..))
-import WebDriverPreCore.Internal.AesonUtils (aesonTypeError, aesonTypeErrorMessage, asText, jsonToText, lookup, lookupTxt, opt, parseObject)
+import WebDriverPreCore.Internal.AesonUtils (aesonTypeError, aesonTypeErrorMessage, asText, jsonToText, lookup, lookupTxt, opt, parseObject, nonEmpty)
 import WebDriverPreCore.Internal.Utils (UrlPath (..), bodyText, bodyValue, newSessionUrl, session, txt, db)
 import Prelude hiding (id, lookup)
 
@@ -275,26 +275,14 @@ instance FromJSON SessionResponse where
           sessionId <- Session <$> valueObj .: "sessionId"
           webSocketUrl <- valueObj .:? webSocketKey
           capabilitiesVal :: Value <- valueObj .: "capabilities"
-
-          let allCapsParser = parseObject "capabilities property returned from newSession should be an object" capabilitiesVal
-          allCapsObject <- allCapsParser
+          allCapsObject <- parseObject "capabilities property returned from newSession should be an object" capabilitiesVal
           capabilities :: Capabilities <- parseJSON capabilitiesVal
-          let keySet = pure . fromList . KM.keys 
-              capsKeys :: Parser (Set Key)
-              capsKeys =
-                parseObject "JSON from Capabilities Object must be a JSON Object" (toJSON capabilities)
-                  >>= keySet
-
-              allKeys :: Parser (Set Key)
-              allKeys = allCapsParser >>= keySet 
-
-          capsKeys' <- capsKeys
-       
-          allKeys' <- allKeys
-          let -- Calculate extensions by removing known keys from all keys
-              extKeys = db "EXTENSION KEYS" (db "ALL KEYS" allKeys') `difference` (capsKeys' & db "CAPABILITIES KEYS")
-              hasExtensionKey k _v = k `member` extKeys
-              extensionsMap = db "EXTENSIONS MAP" $ KM.toMapText $ KM.filterWithKey hasExtensionKey (db "VALUE OBJECT" $ allCapsObject)
+          standardCapsProps <- parseObject "JSON from Capabilities Object must be a JSON Object" (toJSON capabilities)
+          let 
+              keys = fromList . KM.keys 
+              capsKeys = keys standardCapsProps
+              nonNullExtensionKey k v = k `notMember` capsKeys && k /= webSocketKey && nonEmpty v
+              extensionsMap = db "EXTENSIONS MAP" $ KM.toMapText $ KM.filterWithKey nonNullExtensionKey (db "VALUE OBJECT" $ allCapsObject)
               extensions =
                 if null extensionsMap
                   then Nothing

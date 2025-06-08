@@ -154,6 +154,7 @@ configuredCapabilities = MkFullCapabilities
               acceptInsecureCerts = Nothing,
               pageLoadStrategy = Nothing,
               proxy = Nothing,
+              setWindowRect = Nothing,
               timeouts = Nothing,
               strictFileInteractability = Nothing,
               unhandledPromptBehavior = Nothing,

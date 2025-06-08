@@ -107,15 +107,15 @@ test-suite driver-demo-e2e
   main-is: Driver.hs
   hs-source-dirs: driver-demo-e2e
   build-depends:
-    , pretty-show ^>=1.10
     , aeson
     , aeson-pretty
     , base
     , base64
     , bytestring
     , containers
-    , network
     , directory
+    , network
+    , pretty-show ^>=1.10
     , req
     , tasty
     , tasty-hunit

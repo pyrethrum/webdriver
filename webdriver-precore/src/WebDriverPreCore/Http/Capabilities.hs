@@ -134,6 +134,7 @@ minCapabilities browserName =
       acceptInsecureCerts = Nothing,
       pageLoadStrategy = Nothing,
       proxy = Nothing,
+      setWindowRect = Nothing, 
       timeouts = Nothing,
       strictFileInteractability = Nothing,
       unhandledPromptBehavior = Nothing,
@@ -213,6 +214,7 @@ data Capabilities = MkCapabilities
     acceptInsecureCerts :: Maybe Bool,
     pageLoadStrategy :: Maybe PageLoadStrategy,
     proxy :: Maybe Proxy,
+    setWindowRect :: Maybe Bool, 
     timeouts :: Maybe Timeouts,
     strictFileInteractability :: Maybe Bool,
     unhandledPromptBehavior :: Maybe UnhandledPromptBehavior,
@@ -229,6 +231,7 @@ instance ToJSON Capabilities where
         platformName,
         acceptInsecureCerts,
         pageLoadStrategy,
+        setWindowRect,
         proxy,
         timeouts,
         strictFileInteractability,
@@ -243,6 +246,7 @@ instance ToJSON Capabilities where
               opt "platformName" platformName,
               opt "acceptInsecureCerts" acceptInsecureCerts,
               opt "pageLoadStrategy" pageLoadStrategy,
+              opt "setWindowRect" setWindowRect,
               opt "proxy" proxy,
               opt "timeouts" timeouts,
               opt "strictFileInteractability" strictFileInteractability,
@@ -261,6 +265,7 @@ instance FromJSON Capabilities where
       acceptInsecureCerts <- v .:? "acceptInsecureCerts"
       pageLoadStrategy <- v .:? "pageLoadStrategy"
       proxy  <- v `parseOpt` "proxy"
+      setWindowRect <- v .:? "setWindowRect" 
       timeouts <- v .:? "timeouts"
       strictFileInteractability <- v .:? "strictFileInteractability"
       unhandledPromptBehavior <- v .:? "unhandledPromptBehavior"

@@ -23,6 +23,9 @@ import Data.Aeson (Key, Result, Value)
 import WebDriverPreCore.Internal.AesonUtils (lookup, bodyText')
 import Debug.Trace (trace)
 
+-- debugging only remove brefore release
+import Text.Show.Pretty qualified as P
+
 {-
   this module is used between the library and testing modules
   it will be removed in a later release
@@ -31,7 +34,7 @@ import Debug.Trace (trace)
 -- general utils
 
 txt :: (Show a) => a -> Text
-txt = pack . show
+txt = pack . P.ppShow
 
 enumerate :: (Enum a, Bounded a) => [a]
 enumerate = [minBound ..]

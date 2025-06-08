@@ -5,7 +5,9 @@ module WebDriverPreCore.Internal.AesonUtils
     bodyText',
     lookup,
     lookupTxt,
+    nonEmpty,
     opt,
+    empty,
     jsonPrettyString,
     jsonToText,
     parseObject,
@@ -48,7 +50,7 @@ import Prelude
     pure,
     (<>),
     (>>=),
-    Bool (..), Foldable (..)
+    Bool (..), Foldable (..), not
   )
 import Control.Monad (MonadFail(..))
 
@@ -106,6 +108,8 @@ lookup k v =
     Object o -> AKM.lookup k o & maybe (Error ("the key: " <> show k <> "does not exist in the object:\n" <> jsonPrettyString v)) pure
     _ -> aesonTypeError "Object" v
 
+nonEmpty :: Value -> Bool
+nonEmpty = not . empty
 
 empty :: Value -> Bool
 empty = \case

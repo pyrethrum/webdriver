@@ -141,6 +141,9 @@ library
       WebDriverPreCore.BiDi.CoreTypes
   hs-source-dirs: src
   build-depends:
+    -- debugging only remove brefore release
+    pretty-show ^>=1.10,
+    --
     aeson         >=1.4   && <2.3, 
     aeson-pretty  >=0.8   && <0.9,
     base          >=4.16  && <5,
