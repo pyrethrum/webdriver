@@ -134,7 +134,7 @@ minCapabilities browserName =
       acceptInsecureCerts = Nothing,
       pageLoadStrategy = Nothing,
       proxy = Nothing,
-      setWindowRect = Nothing, 
+      setWindowRect = Nothing,
       timeouts = Nothing,
       strictFileInteractability = Nothing,
       unhandledPromptBehavior = Nothing,
@@ -214,7 +214,7 @@ data Capabilities = MkCapabilities
     acceptInsecureCerts :: Maybe Bool,
     pageLoadStrategy :: Maybe PageLoadStrategy,
     proxy :: Maybe Proxy,
-    setWindowRect :: Maybe Bool, 
+    setWindowRect :: Maybe Bool,
     timeouts :: Maybe Timeouts,
     strictFileInteractability :: Maybe Bool,
     unhandledPromptBehavior :: Maybe UnhandledPromptBehavior,
@@ -254,7 +254,6 @@ instance ToJSON Capabilities where
             ]
           <> vendorSpecificToJSON vendorSpecific
 
-
 instance FromJSON Capabilities where
   parseJSON :: Value -> Parser Capabilities
   parseJSON = withObject "Capabilities" $ \v ->
@@ -264,13 +263,13 @@ instance FromJSON Capabilities where
       platformName <- v .:? "platformName"
       acceptInsecureCerts <- v .:? "acceptInsecureCerts"
       pageLoadStrategy <- v .:? "pageLoadStrategy"
-      proxy  <- v `parseOpt` "proxy"
-      setWindowRect <- v .:? "setWindowRect" 
+      proxy <- v `parseOpt` "proxy"
+      setWindowRect <- v .:? "setWindowRect"
       timeouts <- v .:? "timeouts"
       strictFileInteractability <- v .:? "strictFileInteractability"
       unhandledPromptBehavior <- v .:? "unhandledPromptBehavior"
       vendorSpecific <- parseVendorSpecific v
-      pure MkCapabilities {..} 
+      pure MkCapabilities {..}
 
 -- | [spec](https://www.w3.org/TR/2025/WD-webdriver2-20250512/#proxy)
 data SocksProxy = MkSocksProxy

@@ -33,7 +33,7 @@ import E2EConst
     shadowDomUrl,
     theInternet,
     topFrameCSS,
-    userNameCss,
+    userNameCss, httpFullCapabilities,
   )
 import GHC.IO (catchAny)
 import Http.HttpAPI
@@ -44,7 +44,6 @@ import Http.HttpAPI
     Cookie (..),
     DriverStatus (..),
     FrameReference (..),
-    FullCapabilities (..),
     KeyAction (..),
     Pointer (..),
     PointerAction (..),
@@ -139,57 +138,22 @@ import WebDriverPreCore.Http (alwaysMatchCapabilities, minChromeCapabilities, mi
 import WebDriverPreCore.Internal.Utils (txt)
 import Prelude hiding (log)
 import Test.Tasty.HUnit (Assertion, assertBool)
-import Config (useFirefox, customFirefoxProfilePath, firefoxHeadless)
+import Config (useFirefox, customFirefoxProfilePath)
 
 -- #################### The Tests ######################
 
-configuredCapabilities :: FullCapabilities
-configuredCapabilities = MkFullCapabilities
-    { alwaysMatch =
-        Just $
-          MkCapabilities
-            { browserName = Just $ if useFirefox then Firefox else Chrome,
-              browserVersion = Nothing,
-              platformName = Nothing,
-              acceptInsecureCerts = Nothing,
-              pageLoadStrategy = Nothing,
-              proxy = Nothing,
-              setWindowRect = Nothing,
-              timeouts = Nothing,
-              strictFileInteractability = Nothing,
-              unhandledPromptBehavior = Nothing,
-              vendorSpecific =
-                if
-                  | useFirefox ->
-                      let headless = if firefoxHeadless then ["--headless"] else []
-                          profile = maybe [] (\p -> ["-profile", p]) customFirefoxProfilePath
-                          args = headless <> profile
-                          mArgs = if null args then Nothing else Just args
-                       in mArgs & maybe Nothing \_ ->
-                            Just FirefoxOptions
-                              { -- requires a path to the profile directory
-                                firefoxArgs = mArgs,
-                                firefoxBinary = Nothing,
-                                firefoxProfile = Nothing,
-                                firefoxLog = Nothing
-                              }
-                  | otherwise -> Nothing
-            },
-      firstMatch = []
-    }
     
 -- >>> unit_demoNewSession
 unit_demoNewSession :: IO ()
 unit_demoNewSession = do
-  ses <- newSessionFull configuredCapabilities
+  ses <- newSessionFull httpFullCapabilities
   logShow "new session response:\n" ses
-
   deleteSession ses.sessionId
 
 -- >>> unit_demoSessionDriverStatus
 unit_demoSessionDriverStatus :: IO ()
 unit_demoSessionDriverStatus = do
-  ses <- newSession configuredCapabilities
+  ses <- newSession httpFullCapabilities
   log "new session:" $ txt ses
 
   s <- status

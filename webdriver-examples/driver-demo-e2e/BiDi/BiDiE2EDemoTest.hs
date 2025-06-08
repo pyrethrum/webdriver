@@ -5,6 +5,18 @@ import WebDriverPreCore.BiDi.Session
 import WebDriverPreCore.Internal.Utils
 import Prelude hiding (putStrLn)
 import Data.Text.IO (putStrLn)
+import Http.HttpAPI (newSessionFull, deleteSession, SessionResponse(..), newSessionFull')
+import E2EConst (httpFullCapabilities)
+import IOUtils (logShow)
+
+
+
+-- >>> unit_demoNewSession
+unit_demoNewSessionViaHttp :: IO ()
+unit_demoNewSessionViaHttp = do
+  ses <- newSessionFull' httpFullCapabilities
+  logShow "new session response:\n" ses
+  deleteSession ses.sessionId
 
 
 -- >>> unit_sessionNew

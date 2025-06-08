@@ -1,9 +1,11 @@
 # webdriver-examples
 
+TODO: fix all code links
+
 - [webdriver-examples](#webdriver-examples)
   - [About These Examples](#about-these-examples)
   - [Core Modules](#core-modules)
-    - [HttpRunner](#HttpRunner)
+    - [HttpRunner](#httprunner)
     - [IOAPI](#ioapi)
     - [HttpE2EDemoTest](#httpe2edemotest)
   - [Running Examples (VSCode Dev-Container)](#running-examples-vscode-dev-container)
@@ -195,6 +197,7 @@ When `Firefox` is installed in this way, `geckodriver` does not have the require
 
 One solution is to create a profile in a directory somewhere accessible to geckodriver on the file system:
 
+TODO:: This has stopped working - work out why - update
 1. Create a new subdirectory in `.profiles` name `WebDriverProfile`, so you will end up with: `/webdriver/webdriver-examples/driver-demo-e2e/.profile/WebDriverProfile`
 2. In Firefox type the following into the search bar: `about:profiles`
 3. `Create New Profile` 

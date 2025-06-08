@@ -277,12 +277,12 @@ instance FromJSON SessionResponse where
           capabilitiesVal :: Value <- valueObj .: "capabilities"
           allCapsObject <- parseObject "capabilities property returned from newSession should be an object" capabilitiesVal
           capabilities :: Capabilities <- parseJSON capabilitiesVal
-          standardCapsProps <- parseObject "JSON from Capabilities Object must be a JSON Object" (toJSON capabilities)
-          let 
-              keys = fromList . KM.keys 
+          standardCapsProps <- parseObject "JSON from Capabilities Object must be a JSON Object" $ toJSON capabilities
+          let
+              keys = fromList . KM.keys
               capsKeys = keys standardCapsProps
               nonNullExtensionKey k v = k `notMember` capsKeys && k /= webSocketKey && nonEmpty v
-              extensionsMap = db "EXTENSIONS MAP" $ KM.toMapText $ KM.filterWithKey nonNullExtensionKey (db "VALUE OBJECT" $ allCapsObject)
+              extensionsMap = db "EXTENSIONS MAP" . KM.toMapText $ KM.filterWithKey nonNullExtensionKey . db "VALUE OBJECT" $ allCapsObject
               extensions =
                 if null extensionsMap
                   then Nothing

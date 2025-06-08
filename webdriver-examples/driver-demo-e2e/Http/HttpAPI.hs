@@ -53,6 +53,7 @@ module Http.HttpAPI
     newWindow,
     newSession,
     newSessionFull,
+    newSessionFull',
     minFirefoxSession,
     performActions,
     releaseActions,
@@ -93,7 +94,7 @@ module Http.HttpAPI
   )
 where
 
-import Data.Aeson (Value)
+import Data.Aeson (Value, ToJSON)
 
 import Data.Text  as T (Text)
 import WebDriverPreCore.Http (DriverStatus, ElementId, Selector, SessionId, SessionResponse(..))
@@ -112,6 +113,9 @@ newSession = fmap (.sessionId) .  newSessionFull
 
 newSessionFull :: W.FullCapabilities -> IO SessionResponse
 newSessionFull c = run $ W.newSession c
+
+newSessionFull' :: (ToJSON a) => a -> IO SessionResponse
+newSessionFull' = run . W.newSession' 
 
 getTimeouts :: SessionId -> IO W.Timeouts
 getTimeouts = run . W.getTimeouts

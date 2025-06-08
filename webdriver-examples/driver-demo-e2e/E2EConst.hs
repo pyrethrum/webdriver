@@ -11,6 +11,7 @@ module E2EConst
     shadowDomUrl,
     checkBoxesLinkCss,
     checkBoxesCss,
+    httpFullCapabilities,
     topFrameCSS,
     midFrameCss,
     bottomFrameCss,
@@ -33,10 +34,8 @@ module E2EConst
   )
 where
 
-import Data.Int (Int)
-import Data.Semigroup (Semigroup (..))
+import Prelude (Maybe (..), ($), (<>), Int, Num (..), maybe, otherwise, null)
 import Data.Text (Text)
-import GHC.Num ((*))
 import Network.HTTP.Req as R
   ( GET (GET),
     HttpBody,
@@ -48,7 +47,9 @@ import Network.HTTP.Req as R
     Url,
     http,
   )
-import WebDriverPreCore.Http (Selector (CSS, XPath))
+import WebDriverPreCore.Http (FullCapabilities(..), BrowserName(..), Selector (CSS, XPath), Capabilities(..), VendorSpecific(..))
+import Config
+import Data.Function ((&))
 
 -- ################### urls ##################
 
@@ -162,4 +163,41 @@ defaultRequest =
       method = GET,
       body = NoReqBody,
       port = 4444
+    }
+
+httpFullCapabilities :: FullCapabilities
+httpFullCapabilities =
+  MkFullCapabilities
+    { alwaysMatch =
+        Just
+          $ MkCapabilities
+            { browserName = Just $ if useFirefox then Firefox else Chrome,
+              browserVersion = Nothing,
+              platformName = Nothing,
+              acceptInsecureCerts = Nothing,
+              pageLoadStrategy = Nothing,
+              proxy = Nothing,
+              setWindowRect = Nothing,
+              timeouts = Nothing,
+              strictFileInteractability = Nothing,
+              unhandledPromptBehavior = Nothing,
+              vendorSpecific =
+                if
+                  | useFirefox ->
+                      let headless = if firefoxHeadless then ["--headless"] else []
+                          profile = maybe [] (\p -> ["-profile", p]) customFirefoxProfilePath
+                          args = headless <> profile
+                          mArgs = if null args then Nothing else Just args
+                       in mArgs & maybe Nothing \_ ->
+                            Just
+                              FirefoxOptions
+                                { -- requires a path to the profile directory
+                                  firefoxArgs = mArgs,
+                                  firefoxBinary = Nothing,
+                                  firefoxProfile = Nothing,
+                                  firefoxLog = Nothing
+                                }
+                  | otherwise -> Nothing
+            },
+      firstMatch = []
     }
