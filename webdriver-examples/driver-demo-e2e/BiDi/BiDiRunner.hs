@@ -16,7 +16,6 @@ import Network.WebSockets (ClientApp, receiveData, runClient, sendClose, sendTex
 import WebDriverPreCore.BiDi.Session
 import Wuss (runSecureClient)
 import Prelude (Bool (True), Either (..), Eq ((==)), IO, Int, Maybe (..), Show (..), maybe, ($), (+), (.), (<>))
-import Http.HttpRunner qualified as HttpRunner
 
 
 -- newSession :: Capabilities -> IO SessionNewResult

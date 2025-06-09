@@ -44,9 +44,7 @@ import Data.Aeson
   )
 import Data.Aeson.Key (fromText)
 import Data.Aeson.Types
-  ( Array,
-    Object,
-    Pair,
+  ( Pair,
     Parser,
     Value (..),
     omitNothingFields,
@@ -64,13 +62,8 @@ import GHC.Enum (Bounded)
 import GHC.Float (Double)
 import GHC.Generics (Generic)
 import GHC.IO (FilePath)
-import WebDriverPreCore.Http.Internal.Capabilities
-  ( alwaysMatchValue,
-    firstMatchArray,
-    fullCapsVal,
-  )
 import WebDriverPreCore.Internal.AesonUtils (opt, parseOpt)
-import Prelude (Bool (..), Enum, Eq (..), Int, Maybe (..), Show (..), fmap, maybe)
+import Prelude (Bool (..), Enum, Eq (..), Int, Maybe (..), Show (..), maybe)
 
 {- references:
 - https://https://www.w3.org/TR/2025/WD-webdriver2-20250512/#capabilities
@@ -97,7 +90,13 @@ data FullCapabilities = MkFullCapabilities
 instance ToJSON FullCapabilities where
   toJSON :: FullCapabilities -> Value
   toJSON MkFullCapabilities {alwaysMatch, firstMatch} =
-    fullCapsVal (alwaysMatchValue alwaysMatch) (firstMatchArray firstMatch)
+        object $
+      [ "capabilities" .= (object $ catMaybes [opt "alwaysMatch" $ alwaysMatch]),
+        "firstMatch" .= firstMatch'
+      ]
+    where
+      firstMatch' :: Value
+      firstMatch' = Array . fromList $ toJSON <$> firstMatch
 
 instance FromJSON FullCapabilities where
   parseJSON :: Value -> Parser FullCapabilities
@@ -139,6 +138,7 @@ minCapabilities browserName =
       timeouts = Nothing,
       strictFileInteractability = Nothing,
       unhandledPromptBehavior = Nothing,
+      webSocketUrl = Nothing, 
       vendorSpecific = Nothing
     }
 
@@ -219,6 +219,7 @@ data Capabilities = MkCapabilities
     timeouts :: Maybe Timeouts,
     strictFileInteractability :: Maybe Bool,
     unhandledPromptBehavior :: Maybe UnhandledPromptBehavior,
+    webSocketUrl :: Maybe Bool, 
     vendorSpecific :: Maybe VendorSpecific
   }
   deriving (Show, Generic, Eq)
@@ -237,6 +238,7 @@ instance ToJSON Capabilities where
         timeouts,
         strictFileInteractability,
         unhandledPromptBehavior,
+        webSocketUrl,
         vendorSpecific
       } =
       object $
@@ -251,7 +253,8 @@ instance ToJSON Capabilities where
               opt "proxy" proxy,
               opt "timeouts" timeouts,
               opt "strictFileInteractability" strictFileInteractability,
-              opt "unhandledPromptBehavior" unhandledPromptBehavior
+              opt "unhandledPromptBehavior" unhandledPromptBehavior,
+              opt "webSocketUrl" webSocketUrl
             ]
           <> vendorSpecificToJSON vendorSpecific
 
@@ -269,6 +272,7 @@ instance FromJSON Capabilities where
       timeouts <- v .:? "timeouts"
       strictFileInteractability <- v .:? "strictFileInteractability"
       unhandledPromptBehavior <- v .:? "unhandledPromptBehavior"
+      webSocketUrl <- v .:? "webSocketUrl"
       vendorSpecific <- parseVendorSpecific v
       pure MkCapabilities {..}
 

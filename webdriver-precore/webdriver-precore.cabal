@@ -139,8 +139,6 @@ library
       WebDriverPreCore.Http.HttpResponse
       -- BiDi
       WebDriverPreCore.BiDi.CoreTypes
-      -- Internal
-      WebDriverPreCore.Http.Internal.Capabilities
   hs-source-dirs: src
   build-depends:
     -- debugging only remove brefore release

@@ -1,11 +1,8 @@
 module BiDi.BiDiE2EDemoTest where
 
-import BiDi.BiDiRunner
 import WebDriverPreCore.BiDi.Session
-import WebDriverPreCore.Internal.Utils
 import Prelude hiding (putStrLn)
-import Data.Text.IO (putStrLn)
-import Http.HttpAPI (newSessionFull, deleteSession, SessionResponse(..), newSessionFull')
+import Http.HttpAPI (deleteSession, SessionResponse(..), newSessionFull')
 import E2EConst (httpFullCapabilities)
 import IOUtils (logShow)
 

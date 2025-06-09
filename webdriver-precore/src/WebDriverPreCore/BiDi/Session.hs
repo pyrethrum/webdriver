@@ -1,63 +1,19 @@
 module WebDriverPreCore.BiDi.Session where
 
-import Data.Aeson (FromJSON (..), Key, Object, ToJSON (..), Value (..), fromJSON, object, withObject, (.:), (.=), decode)
-import Data.Aeson.KeyMap (fromList, singleton)
-import Data.Aeson.Types (Parser, Result (..))
+import Data.Aeson (FromJSON (..), Key, ToJSON (..), Value (..), object, withObject, (.:), (.=))
+import Data.Aeson.Types (Parser)
 import Data.Maybe (catMaybes)
 import Data.Text (Text)
 import Data.Vector (fromList)
 import Data.Word (Word8)
 import GHC.Generics (Generic)
-import WebDriverPreCore.BiDi.Script (RemoteValue (DateValue))
-import WebDriverPreCore.Http qualified as Http
-import WebDriverPreCore.Internal.AesonUtils (opt, parseObject)
-import WebDriverPreCore.Internal.Utils (bodyValue, newSessionUrl)
-import Prelude (Applicative ((<*>)), Bool (..), Char, Eq (..), Maybe (..), Monad (..), Semigroup (..), Show (..), ($), (.), (<$>))
+import WebDriverPreCore.Internal.AesonUtils (opt)
+import Prelude (Applicative ((<*>)), Bool (..), Eq (..), Maybe (..), Show (..), ($), (.), (<$>))
 
 webSocketUrlKey :: Key
 webSocketUrlKey = "webSocketUrl"
 
-{-
--- webSocketUrl :: https://www.w3.org/TR/2025/WD-webdriver-bidi-20250514/#establishing
 
--- | sessionNew produces a HttpSpec because an a webdriver Http request is required to initialise
--- a BiDi session before any socket connections can be made.
-sessionNew :: Http.FullCapabilities -> Http.HttpSpec Http.SessionResponse
-sessionNew Http.MkFullCapabilities {alwaysMatch, firstMatch} =
-  baseHttpSpec {Http.body = fullCapsValWithSocket}
-  where
-    baseHttpSpec :: Http.HttpSpec Http.SessionResponse
-    baseHttpSpec = Http.newSession fullCaps
-
-    fullCapsValWithSocket :: Parser Object
-    fullCapsValWithSocket = do 
-      capsVal' <- capsVal
-
-      -- case fromJSON (toJSON fullCaps) of
-      --   Data.Aeson.Types.Success caps ->
-      --     object
-      --       [ "capabilities"
-      --           .= object
-      --             [ "alwaysMatch" .= (addWebSocketUrl <$> caps.alwaysMatch),
-      --               "firstMatch"
-      --                 .= ( Array . Data.Vector.fromList $
-      --                        toJSON . addWebSocketUrl
-      --                          <$> ( caps.firstMatch >>= \fm -> case fromJSON (toJSON fm) of
-      --                                  Data.Aeson.Types.Success obj -> [obj]
-      --                                  _ -> []
-      --                              )
-      --                    )
-      --             ]
-      --       ]
-      --   _ -> object ["capabilities" .= object []]
-
-
-    capsVal :: Parser Object
-    capsVal = parseObject "fullcaps must be an object" $ toJSON fullCaps
-
-    addWebSocketUrl :: Object -> Object
-    addWebSocketUrl o = o <> singleton webSocketUrlKey (Bool True)
--}
 
 -- ######### Remote #########
 data SessionCommand

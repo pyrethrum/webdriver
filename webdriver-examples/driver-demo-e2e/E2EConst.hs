@@ -181,6 +181,7 @@ httpFullCapabilities =
               timeouts = Nothing,
               strictFileInteractability = Nothing,
               unhandledPromptBehavior = Nothing,
+              webSocketUrl= Nothing,
               vendorSpecific =
                 if
                   | useFirefox ->
