@@ -44,7 +44,9 @@ import Data.Aeson
   )
 import Data.Aeson.Key (fromText)
 import Data.Aeson.Types
-  ( Pair,
+  ( Array,
+    Object,
+    Pair,
     Parser,
     Value (..),
     omitNothingFields,
@@ -62,8 +64,13 @@ import GHC.Enum (Bounded)
 import GHC.Float (Double)
 import GHC.Generics (Generic)
 import GHC.IO (FilePath)
+import WebDriverPreCore.Http.Internal.Capabilities
+  ( alwaysMatchValue,
+    firstMatchArray,
+    fullCapsVal,
+  )
 import WebDriverPreCore.Internal.AesonUtils (opt, parseOpt)
-import Prelude (Bool (..), Enum, Eq (..), Int, Maybe (..), Show (..), maybe)
+import Prelude (Bool (..), Enum, Eq (..), Int, Maybe (..), Show (..), fmap, maybe)
 
 {- references:
 - https://https://www.w3.org/TR/2025/WD-webdriver2-20250512/#capabilities
@@ -90,13 +97,7 @@ data FullCapabilities = MkFullCapabilities
 instance ToJSON FullCapabilities where
   toJSON :: FullCapabilities -> Value
   toJSON MkFullCapabilities {alwaysMatch, firstMatch} =
-    object $
-      [ "capabilities" .= (object $ catMaybes [opt "alwaysMatch" $ alwaysMatch]),
-        "firstMatch" .= firstMatch'
-      ]
-    where
-      firstMatch' :: Value
-      firstMatch' = Array . fromList $ toJSON <$> firstMatch
+    fullCapsVal (alwaysMatchValue alwaysMatch) (firstMatchArray firstMatch)
 
 instance FromJSON FullCapabilities where
   parseJSON :: Value -> Parser FullCapabilities

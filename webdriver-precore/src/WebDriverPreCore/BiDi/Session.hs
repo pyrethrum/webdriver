@@ -1,29 +1,63 @@
 module WebDriverPreCore.BiDi.Session where
 
-import Data.Aeson (FromJSON (..), ToJSON (..), Value (..), fromJSON, object, withObject, (.:), (.=))
-import Data.Aeson.Types (Parser)
+import Data.Aeson (FromJSON (..), Key, Object, ToJSON (..), Value (..), fromJSON, object, withObject, (.:), (.=), decode)
+import Data.Aeson.KeyMap (fromList, singleton)
+import Data.Aeson.Types (Parser, Result (..))
+import Data.Maybe (catMaybes)
 import Data.Text (Text)
+import Data.Vector (fromList)
 import Data.Word (Word8)
 import GHC.Generics (Generic)
-import WebDriverPreCore.Http.SpecDefinition (HttpSpec (..))
-import WebDriverPreCore.Internal.AesonUtils (opt)
+import WebDriverPreCore.BiDi.Script (RemoteValue (DateValue))
+import WebDriverPreCore.Http qualified as Http
+import WebDriverPreCore.Internal.AesonUtils (opt, parseObject)
 import WebDriverPreCore.Internal.Utils (bodyValue, newSessionUrl)
-import Prelude (Applicative ((<*>)), Bool (..), Eq (..), Maybe (..), Monad (..), Show (..), ($), (<$>), (.))
-import Data.Maybe (catMaybes)
-import Data.Vector (fromList)
+import Prelude (Applicative ((<*>)), Bool (..), Char, Eq (..), Maybe (..), Monad (..), Semigroup (..), Show (..), ($), (.), (<$>))
 
+webSocketUrlKey :: Key
+webSocketUrlKey = "webSocketUrl"
+
+{-
 -- webSocketUrl :: https://www.w3.org/TR/2025/WD-webdriver-bidi-20250514/#establishing
 
 -- | sessionNew produces a HttpSpec because an a webdriver Http request is required to initialise
 -- a BiDi session before any socket connections can be made.
-sessionNew :: Capabilities -> HttpSpec SessionNewResult
-sessionNew capabilities =
-  Post
-    { description = "New Session",
-      path = newSessionUrl,
-      body = (toJSON capabilities),
-      parser = \r -> bodyValue r >>= fromJSON
-    }
+sessionNew :: Http.FullCapabilities -> Http.HttpSpec Http.SessionResponse
+sessionNew Http.MkFullCapabilities {alwaysMatch, firstMatch} =
+  baseHttpSpec {Http.body = fullCapsValWithSocket}
+  where
+    baseHttpSpec :: Http.HttpSpec Http.SessionResponse
+    baseHttpSpec = Http.newSession fullCaps
+
+    fullCapsValWithSocket :: Parser Object
+    fullCapsValWithSocket = do 
+      capsVal' <- capsVal
+
+      -- case fromJSON (toJSON fullCaps) of
+      --   Data.Aeson.Types.Success caps ->
+      --     object
+      --       [ "capabilities"
+      --           .= object
+      --             [ "alwaysMatch" .= (addWebSocketUrl <$> caps.alwaysMatch),
+      --               "firstMatch"
+      --                 .= ( Array . Data.Vector.fromList $
+      --                        toJSON . addWebSocketUrl
+      --                          <$> ( caps.firstMatch >>= \fm -> case fromJSON (toJSON fm) of
+      --                                  Data.Aeson.Types.Success obj -> [obj]
+      --                                  _ -> []
+      --                              )
+      --                    )
+      --             ]
+      --       ]
+      --   _ -> object ["capabilities" .= object []]
+
+
+    capsVal :: Parser Object
+    capsVal = parseObject "fullcaps must be an object" $ toJSON fullCaps
+
+    addWebSocketUrl :: Object -> Object
+    addWebSocketUrl o = o <> singleton webSocketUrlKey (Bool True)
+-}
 
 -- ######### Remote #########
 data SessionCommand
@@ -43,14 +77,14 @@ data Capabilities = MkCapabilities
 
 instance ToJSON Capabilities where
   toJSON :: Capabilities -> Value
-  toJSON MkCapabilities  {alwaysMatch, firstMatch} =
+  toJSON MkCapabilities {alwaysMatch, firstMatch} =
     object $
       [ "capabilities" .= (object $ catMaybes [opt "alwaysMatch" $ alwaysMatch]),
         "firstMatch" .= firstMatch'
       ]
     where
       firstMatch' :: Value
-      firstMatch' = Array . fromList $ toJSON <$> firstMatch
+      firstMatch' = Array . Data.Vector.fromList $ toJSON <$> firstMatch
 
 -- | Capability Request
 data Capability = MkCapability
@@ -250,7 +284,7 @@ instance ToJSON CapabilitiesResult where
         "userAgent" .= userAgent,
         "proxy" .= proxy,
         "unhandledPromptBehavior" .= unhandledPromptBehavior,
-        "webSocketUrl" .= webSocketUrl
+        webSocketUrlKey .= webSocketUrl
       ]
 
 instance FromJSON CapabilitiesResult

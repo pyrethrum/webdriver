@@ -19,8 +19,8 @@ import Prelude (Bool (True), Either (..), Eq ((==)), IO, Int, Maybe (..), Show (
 import Http.HttpRunner qualified as HttpRunner
 
 
-newSession :: Capabilities -> IO SessionNewResult
-newSession = HttpRunner.run . sessionNew 
+-- newSession :: Capabilities -> IO SessionNewResult
+-- newSession = HttpRunner.run . sessionNew 
 
 -- >>> runBiDiExample
 -- *** Exception: MalformedResponse (ResponseHead {responseCode = 405, responseMessage = "Method Not Allowed", responseHeaders = [("content-type","text/plain; charset=utf-8"),("content-length","23"),("date","Sat, 24 May 2025 10:40:13 GMT")]}) "Wrong response status or message."
