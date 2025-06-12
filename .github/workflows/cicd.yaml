@@ -43,3 +43,6 @@ jobs:
       - name: Test
         run: |
           echo 'Testing'
+          docker pull theghostjw/webdriver:${{needs.env-setup.outputs.buildid}}
+          docker run theghostjw/webdriver:${{needs.env-setup.outputs.buildid}} bash \
+            -c 'echo NICE'

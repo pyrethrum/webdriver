@@ -272,6 +272,7 @@ genCapabilities = do
   proxy <- genMaybe genProxy
   timeouts <- genMaybe genTimeouts
   vendorSpecific <- genMaybe genVendorSpecific
+  let webSocketUrl = Nothing
   pure MkCapabilities {..}
 
 options :: TestOptions
@@ -487,8 +488,3 @@ test_round_trip = testPropertyWith options "Roundtrip Capabilities Parsing" $ do
   log "Decoded Capabilities:"
   log $ maybe "Nothing" ppShow decoded
   assert $ expect True `dot` fn ("matches encoded", asExpected) .$ ("decoded", decoded)
-
-
-
-
-  

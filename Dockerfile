@@ -33,4 +33,4 @@ RUN cabal v2-build all --only-dependencies --enable-tests
 RUN cabal install tasty-discover
 
 COPY . .
-RUN cabal v2-build all
+RUN cabal v2-build all --enable-tests
