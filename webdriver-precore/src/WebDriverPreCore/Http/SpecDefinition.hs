@@ -147,8 +147,8 @@ import Data.Word (Word16)
 import GHC.Generics (Generic)
 import WebDriverPreCore.Http.Capabilities as C
 import WebDriverPreCore.Http.HttpResponse (HttpResponse (..))
-import WebDriverPreCore.Internal.AesonUtils (aesonTypeError, aesonTypeErrorMessage, asText, jsonToText, lookup, lookupTxt, opt, parseObject, nonEmpty)
-import WebDriverPreCore.Internal.Utils (UrlPath (..), bodyText, bodyValue, newSessionUrl, session, txt, db)
+import WebDriverPreCore.Internal.AesonUtils (aesonTypeError, aesonTypeErrorMessage, asText, jsonToText, lookup, lookupTxt, nonEmpty, opt, parseObject)
+import WebDriverPreCore.Internal.Utils (UrlPath (..), bodyText, bodyValue, newSessionUrl, session, txt)
 import Prelude hiding (id, lookup)
 
 -- |
@@ -247,13 +247,16 @@ data SessionResponse = MkSessionResponse
   }
   deriving (Show, Eq, Generic)
 
+webSocketKey :: Key
+webSocketKey = "webSocketUrl"
+
 instance ToJSON SessionResponse where
   toJSON :: SessionResponse -> Value
   toJSON MkSessionResponse {sessionId, webSocketUrl, capabilities, extensions} =
     object $
       [ "sessionId" .= sessionId.id,
         "capabilities" .= mergedCaps,
-        "webSocketUrl" .= webSocketUrl
+        webSocketKey .= webSocketUrl
       ]
     where
       capsVal = toJSON capabilities
@@ -271,18 +274,20 @@ instance FromJSON SessionResponse where
     withObject
       "SessionResponse.value"
       ( \valueObj -> do
-          let webSocketKey = "webSocketUrl"
           sessionId <- Session <$> valueObj .: "sessionId"
           webSocketUrl <- valueObj .:? webSocketKey
-          capabilitiesVal :: Value <- valueObj .: "capabilities"
+          --
+          capabilitiesVal' :: Value <- valueObj .: "capabilities"
+          -- webSocketUrl will come back as a url but is is a Bool flag in Capabilities
+          -- so it must be converted or there will be a parse error
+          let capabilitiesVal = webSocketUrlToBool capabilitiesVal'
           allCapsObject <- parseObject "capabilities property returned from newSession should be an object" capabilitiesVal
           capabilities :: Capabilities <- parseJSON capabilitiesVal
           standardCapsProps <- parseObject "JSON from Capabilities Object must be a JSON Object" $ toJSON capabilities
-          let
-              keys = fromList . KM.keys
+          let keys = fromList . KM.keys
               capsKeys = keys standardCapsProps
               nonNullExtensionKey k v = k `notMember` capsKeys && k /= webSocketKey && nonEmpty v
-              extensionsMap = db "EXTENSIONS MAP" . KM.toMapText $ KM.filterWithKey nonNullExtensionKey . db "VALUE OBJECT" $ allCapsObject
+              extensionsMap = KM.toMapText $ KM.filterWithKey nonNullExtensionKey $ allCapsObject
               extensions =
                 if null extensionsMap
                   then Nothing
@@ -290,6 +295,19 @@ instance FromJSON SessionResponse where
 
           pure $ MkSessionResponse {sessionId, webSocketUrl, capabilities, extensions}
       )
+
+webSocketUrlToBool :: Value -> Value
+webSocketUrlToBool = \case
+  v@(Object o) -> case KM.lookup webSocketKey o of
+    Just (String url) ->
+      Object $
+        if (T.null url)
+          then
+            KM.delete webSocketKey o
+          else
+            KM.insert webSocketKey (Bool True) o -- change to Bool
+    _ -> v -- no change if not an object
+  v -> v -- if not an Object, return as is
 
 {-
 
@@ -492,7 +510,7 @@ newSession' capabilities =
     { description = "New Session",
       path = newSessionUrl,
       body = (toJSON capabilities),
-      parser = \j -> db "SESSION RESPONSE" $ bodyValue j >>= fromJSON
+      parser = \j -> bodyValue j >>= fromJSON
     }
 
 -- |

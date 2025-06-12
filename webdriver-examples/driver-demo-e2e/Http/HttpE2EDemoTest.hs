@@ -2,6 +2,7 @@ module Http.HttpE2EDemoTest where
 
 -- minFirefoxSession,
 
+import Config (customFirefoxProfilePath, useFirefox)
 import Control.Exception (bracket)
 import Control.Monad (forM_)
 import Data.Aeson (Value (..))
@@ -20,6 +21,7 @@ import E2EConst
     divCss,
     framesUrl,
     h3TagCss,
+    httpFullCapabilities,
     infiniteScrollUrl,
     inputTagCss,
     inputsUrl,
@@ -35,7 +37,7 @@ import E2EConst
     topFrameCSS,
     userNameCss, httpFullCapabilities,
   )
-import GHC.IO (catchAny)
+import GHC.IO (catchAny, finally)
 import Http.HttpAPI
   ( Action (..),
     Actions (..),
@@ -134,33 +136,33 @@ import IOUtils
     sleep2,
     (===),
   )
+import Test.Tasty.HUnit (Assertion, assertBool)
 import WebDriverPreCore.Http (alwaysMatchCapabilities, minChromeCapabilities, minFullCapabilities)
 import WebDriverPreCore.Internal.Utils (txt)
 import Prelude hiding (log)
-import Test.Tasty.HUnit (Assertion, assertBool)
-import Config (useFirefox, customFirefoxProfilePath)
 
 -- #################### The Tests ######################
 
-    
 -- >>> unit_demoNewSession
 unit_demoNewSession :: IO ()
 unit_demoNewSession = do
   ses <- newSessionFull httpFullCapabilities
-  logShow "new session response:\n" ses
-  deleteSession ses.sessionId
+  finally
+    (logShow "new session response:\n" ses)
+    (deleteSession ses.sessionId)
 
 -- >>> unit_demoSessionDriverStatus
 unit_demoSessionDriverStatus :: IO ()
 unit_demoSessionDriverStatus = do
-  ses <- newSession httpFullCapabilities
-  log "new session:" $ txt ses
-
-  s <- status
-  Ready === s
-  logShowM "driver status" status
-
-  deleteSession ses
+  sesId <- newSession httpFullCapabilities
+  finally
+    ( do
+        log "new session:" $ txt sesId
+        s <- status
+        Ready === s
+        logShowM "driver status" status
+    )
+    (deleteSession sesId)
 
 -- >>> unit_demoSendKeysClear
 unit_demoSendKeysClear :: IO ()
@@ -177,6 +179,10 @@ unit_demoSendKeysClear = withSession \ses -> do
   sleep2
 
 -- >>> unit_demoForwardBackRefresh
+
+-- *** Exception: user error (WebDriver error thrown:
+
+--  WebDriverError {error = SessionNotCreated, description = "A new session could not be created", httpResponse = MkHttpResponse {statusCode = 500, statusMessage = "Internal Server Error", body = Object (fromList [("value",Object (fromList [("error",String "session not created"),("message",String "Session is already started"),("stacktrace",String "")]))])}})
 unit_demoForwardBackRefresh :: IO ()
 unit_demoForwardBackRefresh = withSession \ses -> do
   navigateTo ses theInternet
