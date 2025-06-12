@@ -18,6 +18,6 @@ firefoxHeadless = False
 
 -- see readme
 customFirefoxProfilePath :: Maybe Text
-customFirefoxProfilePath = Just "/home/john-walker/snap/firefox/common/.cache/mozilla/firefox/2c77yj8o.Another"
+customFirefoxProfilePath = Nothing --Just "/home/john-walker/snap/firefox/common/.cache/mozilla/firefox/2c77yj8o.Another"
 -- customFirefoxProfilePath = Just "./webdriver-examples/driver-demo-e2e/.profile/WebDriverProfile"
 -- customFirefoxProfilePath = Nothing
