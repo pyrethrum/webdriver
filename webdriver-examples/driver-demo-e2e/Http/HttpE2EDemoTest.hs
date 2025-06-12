@@ -35,7 +35,7 @@ import E2EConst
     shadowDomUrl,
     theInternet,
     topFrameCSS,
-    userNameCss,
+    userNameCss, httpFullCapabilities,
   )
 import GHC.IO (catchAny, finally)
 import Http.HttpAPI
