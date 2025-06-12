@@ -269,6 +269,7 @@ genCapabilities = do
   acceptInsecureCerts <- genMaybe genBool
   pageLoadStrategy <- genMEnum
   setWindowRect <- genMaybeBool
+  webSocketUrl <- genMaybeBool
   proxy <- genMaybe genProxy
   timeouts <- genMaybe genTimeouts
   vendorSpecific <- genMaybe genVendorSpecific
