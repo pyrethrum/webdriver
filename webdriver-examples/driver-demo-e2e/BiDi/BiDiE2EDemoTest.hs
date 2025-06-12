@@ -1,19 +1,28 @@
 module BiDi.BiDiE2EDemoTest where
 
-import WebDriverPreCore.BiDi.Session
 import Prelude hiding (putStrLn)
-import Http.HttpAPI (deleteSession, SessionResponse(..), newSessionFull')
-import E2EConst (httpFullCapabilities)
+import E2EConst (httpFullCapabilities, httpCapabilities)
 import IOUtils (logShow)
+import BiDi.BiDiRunner (newHttpSession)
+import Http.HttpAPI qualified as Http
+import Http.HttpAPI qualified as Caps (Capabilities(..))
 
 
+
+httpBidiCapabilities :: Http.FullCapabilities
+httpBidiCapabilities =
+  httpFullCapabilities {
+    Http.alwaysMatch = Just (httpCapabilities {
+      Caps.webSocketUrl = Just True
+    })
+  }
 
 -- >>> unit_demoNewSession
 unit_demoNewSessionViaHttp :: IO ()
 unit_demoNewSessionViaHttp = do
-  ses <- newSessionFull' httpFullCapabilities
+  ses <- newHttpSession httpBidiCapabilities
   logShow "new session response:\n" ses
-  deleteSession ses.sessionId
+  Http.deleteSession ses.sessionId
 
 
 -- >>> unit_sessionNew
@@ -26,22 +35,22 @@ unit_demoNewSessionViaHttp = do
 --   ses <- newSession firefoxCapabilities
 --   putStrLn $ txt ses
 
-firefoxCapabilities :: Capabilities
-firefoxCapabilities =
-  MkCapabilities
-    { alwaysMatch = Just firefoxCapability,
-      firstMatch = []
-    }
+-- firefoxCapabilities :: Capabilities
+-- firefoxCapabilities =
+--   MkCapabilities
+--     { alwaysMatch = Just firefoxCapability,
+--       firstMatch = []
+--     }
 
-firefoxCapability :: Capability
-firefoxCapability =
-  MkCapability
-    { browserName = Just "firefox",
-      browserVersion = Nothing,
-      -- Always true for BiDi
-      webSocketUrl = True,
-      acceptInsecureCerts = Nothing,
-      platformName = Nothing,
-      proxy = Nothing,
-      unhandledPromptBehavior = Nothing
-    }
+-- firefoxCapability :: Capability
+-- firefoxCapability =
+--   MkCapability
+--     { browserName = Just "firefox",
+--       browserVersion = Nothing,
+--       -- Always true for BiDi
+--       webSocketUrl = True,
+--       acceptInsecureCerts = Nothing,
+--       platformName = Nothing,
+--       proxy = Nothing,
+--       unhandledPromptBehavior = Nothing
+--     }

@@ -16,10 +16,11 @@ import Network.WebSockets (ClientApp, receiveData, runClient, sendClose, sendTex
 import WebDriverPreCore.BiDi.Session
 import Wuss (runSecureClient)
 import Prelude (Bool (True), Either (..), Eq ((==)), IO, Int, Maybe (..), Show (..), maybe, ($), (+), (.), (<>))
+import Http.HttpAPI (newSessionFull, FullCapabilities, SessionResponse)
 
 
--- newSession :: Capabilities -> IO SessionNewResult
--- newSession = HttpRunner.run . sessionNew 
+newHttpSession :: FullCapabilities -> IO SessionResponse
+newHttpSession = newSessionFull 
 
 -- >>> runBiDiExample
 -- *** Exception: MalformedResponse (ResponseHead {responseCode = 405, responseMessage = "Method Not Allowed", responseHeaders = [("content-type","text/plain; charset=utf-8"),("content-length","23"),("date","Sat, 24 May 2025 10:40:13 GMT")]}) "Wrong response status or message."

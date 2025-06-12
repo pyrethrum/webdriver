@@ -11,6 +11,7 @@ module E2EConst
     shadowDomUrl,
     checkBoxesLinkCss,
     checkBoxesCss,
+    httpCapabilities,
     httpFullCapabilities,
     topFrameCSS,
     midFrameCss,
@@ -34,7 +35,7 @@ module E2EConst
   )
 where
 
-import Prelude (Maybe (..), ($), (<>), Int, Num (..), maybe, otherwise, null)
+import Config
 import Data.Text (Text)
 import Network.HTTP.Req as R
   ( GET (GET),
@@ -47,9 +48,8 @@ import Network.HTTP.Req as R
     Url,
     http,
   )
-import WebDriverPreCore.Http (FullCapabilities(..), BrowserName(..), Selector (CSS, XPath), Capabilities(..), VendorSpecific(..))
-import Config
-import Data.Function ((&))
+import WebDriverPreCore.Http (BrowserName (..), Capabilities (..), FullCapabilities (..), Selector (CSS, XPath), VendorSpecific (..))
+import Prelude (Int, Maybe (..), Num (..), ($), (<>))
 
 -- ################### urls ##################
 
@@ -165,40 +165,39 @@ defaultRequest =
       port = 4444
     }
 
+-- ################### capabilities ##################
+
+httpCapabilities :: Capabilities
+httpCapabilities =
+  MkCapabilities
+    { browserName = Just $ if useFirefox then Firefox else Chrome,
+      browserVersion = Nothing,
+      platformName = Nothing,
+      acceptInsecureCerts = Nothing,
+      pageLoadStrategy = Nothing,
+      proxy = Nothing,
+      setWindowRect = Nothing,
+      timeouts = Nothing,
+      strictFileInteractability = Nothing,
+      unhandledPromptBehavior = Nothing,
+      webSocketUrl = Nothing,
+      vendorSpecific =
+        if useFirefox
+          then
+            Just $
+              FirefoxOptions
+                { firefoxArgs = if firefoxHeadless then Just ["--headless"] else Nothing,
+                  firefoxBinary = Nothing,
+                  firefoxProfile = customFirefoxProfilePath,
+                  firefoxLog = Nothing
+                }
+          else Nothing
+    }
+
 httpFullCapabilities :: FullCapabilities
 httpFullCapabilities =
   MkFullCapabilities
     { alwaysMatch =
-        Just
-          $ MkCapabilities
-            { browserName = Just $ if useFirefox then Firefox else Chrome,
-              browserVersion = Nothing,
-              platformName = Nothing,
-              acceptInsecureCerts = Nothing,
-              pageLoadStrategy = Nothing,
-              proxy = Nothing,
-              setWindowRect = Nothing,
-              timeouts = Nothing,
-              strictFileInteractability = Nothing,
-              unhandledPromptBehavior = Nothing,
-              webSocketUrl= Nothing,
-              vendorSpecific =
-                if
-                  | useFirefox ->
-                      let headless = if firefoxHeadless then ["--headless"] else []
-                          profile = maybe [] (\p -> ["-profile", p]) customFirefoxProfilePath
-                          args = headless <> profile
-                          mArgs = if null args then Nothing else Just args
-                       in mArgs & maybe Nothing \_ ->
-                            Just
-                              FirefoxOptions
-                                { -- requires a path to the profile directory
-                                  firefoxArgs = mArgs,
-                                  firefoxBinary = Nothing,
-                                  firefoxProfile = Nothing,
-                                  firefoxLog = Nothing
-                                }
-                  | otherwise -> Nothing
-            },
+        Just httpCapabilities,
       firstMatch = []
     }
