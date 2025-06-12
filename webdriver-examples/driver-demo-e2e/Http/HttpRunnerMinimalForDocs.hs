@@ -10,7 +10,7 @@
 {-# LANGUAGE NoImplicitPrelude #-}
 
 
-module IORunnerMinimalForDocs (run) where
+module Http.HttpRunnerMinimalForDocs (run) where
 
 import Control.Applicative (Applicative (..))
 import Control.Monad.Fail (MonadFail (..))
@@ -48,11 +48,11 @@ import Network.HTTP.Req as R
     runReq,
     (/:),
   )
-import WebDriverPreCore
+import WebDriverPreCore.Http
   ( ErrorClassification (..),
     HttpResponse (..),
     UrlPath (..),
-    W3Spec (..),
+    HttpSpec (..),
     parseWebDriverError,
   )
 
@@ -63,19 +63,19 @@ import WebDriverPreCore
 
 This is a minimal example of a \runner\ that implements the interaction with WebDriver endpoint definitions as provided by this library.
 
-To \run\ a 'W3Spec', requires the following:
+To \run\ a 'HttpSpec', requires the following:
 
 1. Chose a library to make the HTTP request to the WebDriver server. In this case, we use `req`.
-2. Define a function to convert a `C.W3Spec` to a `RequestParams` (such as url, port and body) that can be used by the chosen library.
+2. Define a function to convert a `C.HttpSpec` to a `RequestParams` (such as url, port and body) that can be used by the chosen library.
 3. Call the WebDriver server with the `ReqRequestParams` and construct the result in the form of a simplified `HttpResponse`.
-4. Use the parser provided by the `W3Spec` to transform the `HttpResponse` to the desired result type and handle any errors.
+4. Use the parser provided by the `HttpSpec` to transform the `HttpResponse` to the desired result type and handle any errors.
 
 -}
-run :: W3Spec a -> IO a
+run :: HttpSpec a -> IO a
 run spec = do
-  let request = mkRequest spec -- 2. Convert W3Spec to params for req
+  let request = mkRequest spec -- 2. Convert HttpSpec to params for req
   response <- callReq request  -- 3. Call WebDriver server (via req) and return a simplified HttpResponse
-  parseResponse spec response  -- 4. Use the W3Spec parser to convert the HttpResponse to the desired result type and handle any errors
+  parseResponse spec response  -- 4. Use the HttpSpec parser to convert the HttpResponse to the desired result type and handle any errors
 
 data ReqRequestParams where
   MkRequestParams ::
@@ -87,8 +87,8 @@ data ReqRequestParams where
     } ->
     ReqRequestParams
 
--- 2. Define a function to convert a `W3Spec` to a `RequestParams`
-mkRequest :: forall a. W3Spec a -> ReqRequestParams
+-- 2. Define a function to convert a `HttpSpec` to a `RequestParams`
+mkRequest :: forall a. HttpSpec a -> ReqRequestParams
 mkRequest spec = case spec of
   Get {} -> MkRequestParams url GET NoReqBody 4444
   Post {body} -> MkRequestParams url POST (ReqBodyJson body) 4444
@@ -112,8 +112,8 @@ callReq MkRequestParams {url, method, body, port = prt} =
   where
     responseStatusText = decodeUtf8Lenient . responseStatusMessage
 
--- 4. Use the W3Spec parser to convert the HttpResponse to the desired result type and handle any errors (in this case just throwing an exception)
-parseResponse :: W3Spec a -> HttpResponse -> IO a
+-- 4. Use the HttpSpec parser to convert the HttpResponse to the desired result type and handle any errors (in this case just throwing an exception)
+parseResponse :: HttpSpec a -> HttpResponse -> IO a
 parseResponse spec r =
   spec.parser r
     & \case

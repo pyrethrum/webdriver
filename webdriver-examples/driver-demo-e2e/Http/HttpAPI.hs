@@ -1,4 +1,4 @@
-module IOAPI
+module Http.HttpAPI
   ( 
     W.Cookie (..),
     W.Capabilities(..),
@@ -11,6 +11,7 @@ module IOAPI
     W.SameSite (..),
     W.Selector (..),
     W.SessionId (..),
+    W.SessionResponse (..),
     W.FrameReference (..),
     W.WindowRect (..),
     W.PointerOrigin (..),
@@ -51,6 +52,8 @@ module IOAPI
     closeWindow,
     newWindow,
     newSession,
+    newSessionFull,
+    newSessionFull',
     minFirefoxSession,
     performActions,
     releaseActions,
@@ -91,14 +94,14 @@ module IOAPI
   )
 where
 
-import Data.Aeson (Value)
+import Data.Aeson (Value, ToJSON)
 
 import Data.Text  as T (Text)
-import WebDriverPreCore (DriverStatus, ElementId, Selector, SessionId)
-import WebDriverPreCore qualified as W
+import WebDriverPreCore.Http (DriverStatus, ElementId, Selector, SessionId, SessionResponse(..))
+import WebDriverPreCore.Http qualified as W
 import Prelude hiding (log)
 import IOUtils (sleepMs, encodeFileToBase64)
-import IORunner (run)
+import Http.HttpRunner (run)
 
 -- ############# API #############
 
@@ -106,7 +109,13 @@ status :: IO DriverStatus
 status = run W.status
 
 newSession :: W.FullCapabilities -> IO SessionId
-newSession = run . W.newSession
+newSession = fmap (.sessionId) .  newSessionFull
+
+newSessionFull :: W.FullCapabilities -> IO SessionResponse
+newSessionFull c = run $ W.newSession c
+
+newSessionFull' :: (ToJSON a) => a -> IO SessionResponse
+newSessionFull' = run . W.newSession' 
 
 getTimeouts :: SessionId -> IO W.Timeouts
 getTimeouts = run . W.getTimeouts

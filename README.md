@@ -9,7 +9,7 @@ This repository contains two sub-repos:
 
 ## 1. [webdriver-precore](./webdriver-precore/README.md)
 
-Typed definitions for the endpoints of the [W3C Webdriver](https://www.w3.org/TR/2025/WD-webdriver2-20250306).
+Typed definitions for the endpoints of the [W3C Webdriver](https://www.w3.org/TR/2025/WD-webdriver2-20250512).
 
 This is a library intended to be used as a base for other libraries that provide a WebDriver client implementation and higher level functions.
 

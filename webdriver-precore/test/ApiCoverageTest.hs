@@ -5,7 +5,7 @@ import Data.Text as T (Text, lines, null, pack, replace, strip, unwords, words, 
 import GHC.Utils.Misc (filterOut)
 import Test.Tasty.HUnit as HUnit ( assertBool, Assertion )
 import Text.RawString.QQ (r)
-import WebDriverPreCore
+import WebDriverPreCore.Http
     ( SessionId(Session),
       ElementId(Element),
       Selector(CSS),
@@ -15,7 +15,7 @@ import WebDriverPreCore
       Cookie(MkCookie),
       Actions(MkActions),
       Timeouts(..),
-      W3Spec(description, Get, Post, PostEmpty, Delete, path),
+      HttpSpec(description, Get, Post, PostEmpty, Delete, path),
       minFirefoxCapabilities,
       acceptAlert,
       addCookie,
@@ -86,17 +86,17 @@ import Data.Semigroup ((<>))
 import Data.List ((!!), drop)
 import Data.Functor ((<$>))
 import Data.Maybe (Maybe(..))
-import WebDriverPreCore (UrlPath(..))
+import WebDriverPreCore.Http (UrlPath(..))
 
 
 {-- TODO use Haddock variable
- Covers Spec Version https://www.w3.org/TR/2025/WD-webdriver2-20250306 
+ Covers Spec Version https://www.w3.org/TR/2025/WD-webdriver2-20250512 
  --}
 
 
 {-
 !! Replace this the endepoints from the spec with every release
-https://www.w3.org/TR/2025/WD-webdriver2-20250306 - W3C Editor's Draft 10 February 2025
+https://www.w3.org/TR/2025/WD-webdriver2-20250512 - W3C Editor's Draft 10 February 2025
 61 endpoints
 Method 	URI Template 	Command
 POST 	/session 	New Session
@@ -215,7 +215,7 @@ replaceTemplateTxt =
     . replace "{element id}" elementId
     . replace "{shadow id}" elementId
 
-toSpecLine :: W3Spec a -> SpecLine
+toSpecLine :: HttpSpec a -> SpecLine
 toSpecLine w3 = case w3 of
   Get {} -> MkSpecLine "GET" path command
   Post {} -> MkSpecLine "POST" path command

@@ -5,7 +5,7 @@ import Data.Text as T (Text, lines, null, pack, strip, split)
 import GHC.Utils.Misc (filterOut)
 import Test.Tasty.HUnit as HUnit ( assertBool, Assertion, (@=?) )
 import Text.RawString.QQ (r)
-import WebDriverPreCore
+import WebDriverPreCore.Http
     ( errorTypeToErrorCode,
       errorDescription,
       errorCodeToErrorType )
@@ -16,14 +16,14 @@ import Data.Function (($), (.), (&))
 import Data.Semigroup ((<>))
 import Data.Functor ((<$>))
 import GHC.Base (error)
-import WebDriverPreCore.Internal.Utils (enumerate)
+import WebDriverPreCore.Internal.Utils(enumerate)
 import Data.Foldable (traverse_)
 import Data.Either (either)
 
 {-
 !! Replace this the endepoints from the spec with every release
 !! remove full stops and replace tabs with " | "
-https://www.w3.org/TR/2025/WD-webdriver2-20250306 - W3C Editor's Draft 10 February 2025
+https://www.w3.org/TR/2025/WD-webdriver2-20250512 - W3C Editor's Draft 10 February 2025
 61 endpoints
 Error Code 	HTTP Status 	JSON Error Code 	Description 
 -}

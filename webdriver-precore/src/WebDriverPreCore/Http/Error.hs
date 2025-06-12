@@ -1,6 +1,6 @@
 {-# OPTIONS_HADDOCK hide #-}
 
-module WebDriverPreCore.Error (
+module WebDriverPreCore.Http.Error (
   WebDriverErrorType(..),
   ErrorClassification(..),
   errorDescription,
@@ -17,7 +17,7 @@ import Data.Eq (Eq)
 import GHC.Show (Show)
 import Data.Ord (Ord)
 import Data.Maybe (Maybe (..))
-import WebDriverPreCore.HttpResponse (HttpResponse (..))
+import WebDriverPreCore.Http.HttpResponse (HttpResponse (..))
 import GHC.Enum ( Bounded, Enum )
 import Data.Either (Either (..))
 import Control.Monad ((>>=))
@@ -57,7 +57,7 @@ unsupported operation 	500 	unsupported operation 	Indicates that a command that
 
 -- | Known WevDriver Error Types
 -- 
--- [spec](https://www.w3.org/TR/2025/WD-webdriver2-20250306/#errors)
+-- [spec](https://www.w3.org/TR/2025/WD-webdriver2-20250512/#errors)
 data WebDriverErrorType =
   ElementClickIntercepted |
   ElementNotInteractable |

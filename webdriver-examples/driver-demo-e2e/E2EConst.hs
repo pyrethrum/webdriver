@@ -1,52 +1,55 @@
-module E2EConst (
-  ReqRequestParams(..),
-  theInternet,
-  subDomain,
-  alertsUrl,
-  infiniteScrollUrl,
-  framesUrl,
-  inputsUrl,
-  loginUrl,
-  checkBoxesUrl,
-  shadowDomUrl,
-  checkBoxesLinkCss,
-  checkBoxesCss,
-  topFrameCSS,
-  midFrameCss,
-  bottomFrameCss,
-  jsAlertXPath,
-  jsPromptXPath,
-  divCss,
-  midFrameTitle,
-  userNameCss,
-  contentCss,
-  inputTagCss,
-  h3TagCss,
-  anyElmCss,
-  second,
-  seconds,
-  minute,
-  minutes,
-  hour,
-  hours,
-  defaultRequest
-) where
+module E2EConst
+  ( ReqRequestParams (..),
+    theInternet,
+    subDomain,
+    alertsUrl,
+    infiniteScrollUrl,
+    framesUrl,
+    inputsUrl,
+    loginUrl,
+    checkBoxesUrl,
+    shadowDomUrl,
+    checkBoxesLinkCss,
+    checkBoxesCss,
+    httpCapabilities,
+    httpFullCapabilities,
+    topFrameCSS,
+    midFrameCss,
+    bottomFrameCss,
+    jsAlertXPath,
+    jsPromptXPath,
+    divCss,
+    midFrameTitle,
+    userNameCss,
+    contentCss,
+    inputTagCss,
+    h3TagCss,
+    anyElmCss,
+    second,
+    seconds,
+    minute,
+    minutes,
+    hour,
+    hours,
+    defaultRequest,
+  )
+where
 
-import WebDriverPreCore (Selector (CSS, XPath))
+import Config
 import Data.Text (Text)
-import Data.Semigroup (Semigroup(..))
-import Data.Int (Int)
-import GHC.Num((*))
-
 import Network.HTTP.Req as R
   ( GET (GET),
     HttpBody,
     HttpBodyAllowed,
     HttpMethod (AllowsBody),
     NoReqBody (NoReqBody),
-    ProvidesBody, Scheme (..), Url, http,
+    ProvidesBody,
+    Scheme (..),
+    Url,
+    http,
   )
-
+import WebDriverPreCore.Http (BrowserName (..), Capabilities (..), FullCapabilities (..), Selector (CSS, XPath), VendorSpecific (..))
+import Prelude (Int, Maybe (..), Num (..), ($), (<>))
 
 -- ################### urls ##################
 
@@ -94,8 +97,8 @@ midFrameCss = CSS "frame[name='frame-middle']"
 bottomFrameCss :: Selector
 bottomFrameCss = CSS "frame[name='frame-bottom']"
 
-jsAlertXPath  :: Selector
-jsAlertXPath  = XPath "//button[text()='Click for JS Alert']"
+jsAlertXPath :: Selector
+jsAlertXPath = XPath "//button[text()='Click for JS Alert']"
 
 jsPromptXPath :: Selector
 jsPromptXPath = XPath "//button[text()='Click for JS Prompt']"
@@ -121,9 +124,7 @@ h3TagCss = CSS "h3"
 anyElmCss :: Selector
 anyElmCss = CSS "*"
 
-
 -- ################### time ##################
-
 
 second :: Int
 second = 1_000
@@ -154,11 +155,49 @@ data ReqRequestParams where
       port :: Int
     } ->
     ReqRequestParams
-  
 
 defaultRequest :: ReqRequestParams
-defaultRequest = MkRequestParams (http "127.0.0.1") GET NoReqBody 4444
+defaultRequest =
+  MkRequestParams
+    { url = http "127.0.0.1",
+      method = GET,
+      body = NoReqBody,
+      port = 4444
+    }
 
+-- ################### capabilities ##################
 
+httpCapabilities :: Capabilities
+httpCapabilities =
+  MkCapabilities
+    { browserName = Just $ if useFirefox then Firefox else Chrome,
+      browserVersion = Nothing,
+      platformName = Nothing,
+      acceptInsecureCerts = Nothing,
+      pageLoadStrategy = Nothing,
+      proxy = Nothing,
+      setWindowRect = Nothing,
+      timeouts = Nothing,
+      strictFileInteractability = Nothing,
+      unhandledPromptBehavior = Nothing,
+      webSocketUrl = Nothing,
+      vendorSpecific =
+        if useFirefox
+          then
+            Just $
+              FirefoxOptions
+                { firefoxArgs = if firefoxHeadless then Just ["--headless"] else Nothing,
+                  firefoxBinary = Nothing,
+                  firefoxProfile = customFirefoxProfilePath,
+                  firefoxLog = Nothing
+                }
+          else Nothing
+    }
 
-
+httpFullCapabilities :: FullCapabilities
+httpFullCapabilities =
+  MkFullCapabilities
+    { alwaysMatch =
+        Just httpCapabilities,
+      firstMatch = []
+    }

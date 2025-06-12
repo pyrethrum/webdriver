@@ -1,4 +1,4 @@
-module WebDriverE2EDemoTest where
+module Http.HttpE2EDemoTest where
 
 -- minFirefoxSession,
 
@@ -8,7 +8,6 @@ import Data.Aeson (Value (..))
 import Data.Function ((&))
 import Data.Set qualified as Set
 import Data.Text (Text, isInfixOf)
-import Data.Text.IO qualified as TIO
 import Data.Time.Clock.POSIX (getPOSIXTime)
 import E2EConst
   ( alertsUrl,
@@ -34,10 +33,10 @@ import E2EConst
     shadowDomUrl,
     theInternet,
     topFrameCSS,
-    userNameCss,
+    userNameCss, httpFullCapabilities,
   )
 import GHC.IO (catchAny)
-import IOAPI
+import Http.HttpAPI
   ( Action (..),
     Actions (..),
     BrowserName (..),
@@ -45,7 +44,6 @@ import IOAPI
     Cookie (..),
     DriverStatus (..),
     FrameReference (..),
-    FullCapabilities (..),
     KeyAction (..),
     Pointer (..),
     PointerAction (..),
@@ -53,6 +51,7 @@ import IOAPI
     SameSite (..),
     Selector (..),
     SessionId (..),
+    SessionResponse (..),
     Timeouts (..),
     VendorSpecific (..),
     WheelAction (..),
@@ -104,9 +103,11 @@ import IOAPI
     isElementSelected,
     maximizeWindow,
     minCapabilities,
+    minFirefoxSession,
     minimizeWindow,
     navigateTo,
     newSession,
+    newSessionFull,
     newWindow,
     performActions,
     printPage,
@@ -123,71 +124,42 @@ import IOAPI
     takeElementScreenshot,
     takeScreenshot,
   )
-import Test.Tasty.HUnit as HUnit (Assertion, HasCallStack, assertBool, (@=?))
-import WebDriverPreCore (minChromeCapabilities, minFullCapabilities)
+import IOUtils
+  ( log,
+    logM,
+    logShow,
+    logShowM,
+    logTxt,
+    sleep1,
+    sleep2,
+    (===),
+  )
+import WebDriverPreCore.Http (alwaysMatchCapabilities, minChromeCapabilities, minFullCapabilities)
 import WebDriverPreCore.Internal.Utils (txt)
 import Prelude hiding (log)
-
--- #################### Config ######################
-
--- set to False for Chrome
-useFirefox :: Bool
-useFirefox = True
-
--- see readme
-customFirefoxProfilePath :: Maybe Text
-customFirefoxProfilePath = Nothing
--- customFirefoxProfilePath = Just "./webdriver-examples/driver-demo-e2e/.profile/WebDriverProfile"
-
--- very boring to watch if set to True
-firefoxHealess :: Bool
-firefoxHealess = False
+import Test.Tasty.HUnit (Assertion, assertBool)
+import Config (useFirefox, customFirefoxProfilePath)
 
 -- #################### The Tests ######################
 
-configuredCapabilities :: FullCapabilities
-configuredCapabilities =
-  MkFullCapabilities
-    { alwaysMatch =
-        Just $
-          MkCapabilities
-            { browserName = Just $ if useFirefox then Firefox else Chrome,
-              browserVersion = Nothing,
-              platformName = Nothing,
-              acceptInsecureCerts = Nothing,
-              pageLoadStrategy = Nothing,
-              proxy = Nothing,
-              timeouts = Nothing,
-              strictFileInteractability = Nothing,
-              unhandledPromptBehavior = Nothing,
-              vendorSpecific =
-                if
-                  | useFirefox ->
-                      let headless = if firefoxHealess then ["--headless"] else []
-                          profile = maybe [] (\p -> ["-profile", p]) customFirefoxProfilePath
-                          args = headless <> profile
-                          mArgs = if null args then Nothing else Just args
-                       in mArgs & maybe Nothing \_ ->
-                            Just FirefoxOptions
-                              { -- requires a path to the profile directory
-                                firefoxArgs = mArgs,
-                                firefoxBinary = Nothing,
-                                firefoxProfile = Nothing,
-                                firefoxLog = Nothing
-                              }
-                  | otherwise -> Nothing
-            },
-      firstMatch = []
-    }
+    
+-- >>> unit_demoNewSession
+unit_demoNewSession :: IO ()
+unit_demoNewSession = do
+  ses <- newSessionFull httpFullCapabilities
+  logShow "new session response:\n" ses
+  deleteSession ses.sessionId
 
 -- >>> unit_demoSessionDriverStatus
 unit_demoSessionDriverStatus :: IO ()
 unit_demoSessionDriverStatus = do
-  ses <- newSession configuredCapabilities
-  log "new session" $ txt ses
+  ses <- newSession httpFullCapabilities
+  log "new session:" $ txt ses
+
   s <- status
   Ready === s
   logShowM "driver status" status
+
   deleteSession ses
 
 -- >>> unit_demoSendKeysClear
@@ -834,7 +806,11 @@ capsWithCustomFirefoxProfile firefoxProfilePath =
 
 mkExtendedFirefoxTimeoutsSession :: IO SessionId
 mkExtendedFirefoxTimeoutsSession =
-  newSession configuredCapabilities >>= extendTimeouts
+  customFirefoxProfilePath
+    & maybe
+      minFirefoxSession
+      (\profilepath -> newSession . alwaysMatchCapabilities $ capsWithCustomFirefoxProfile profilepath)
+    >>= extendTimeouts
 
 mkExtendedChromeTimeoutsSession :: IO SessionId
 mkExtendedChromeTimeoutsSession =
@@ -849,35 +825,3 @@ extendTimeouts ses = do
         implicit = Just $ 12 * seconds
       }
   pure ses
-
-logTxt :: Text -> IO ()
-logTxt = TIO.putStrLn
-
-log :: Text -> Text -> IO ()
-log l t = logTxt $ l <> ": " <> t
-
-logShow :: (Show a) => Text -> a -> IO ()
-logShow l = log l . txt
-
-logM :: Text -> IO Text -> IO ()
-logM l t = t >>= log l
-
-logShowM :: (Show a) => Text -> IO a -> IO ()
-logShowM l t = t >>= logShow l
-
-sleep1 :: IO ()
-sleep1 = sleepMs $ 1 * second
-
-sleep2 :: IO ()
-sleep2 = sleepMs $ 2 * seconds
-
--- todo: test extras - split off
-
-(===) ::
-  (Eq a, Show a, HasCallStack) =>
-  -- | The actual value
-  a ->
-  -- | The expected value
-  a ->
-  Assertion
-(===) = (@=?)
