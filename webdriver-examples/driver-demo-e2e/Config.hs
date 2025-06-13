@@ -12,7 +12,7 @@ useFirefox = True
 
 -- very boring to watch if set to True
 firefoxHeadless :: Bool
-firefoxHeadless = False
+firefoxHeadless = True
 
 -- see readme
 customFirefoxProfilePath :: Maybe Text
