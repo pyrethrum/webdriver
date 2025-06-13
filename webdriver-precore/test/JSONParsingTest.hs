@@ -267,8 +267,9 @@ genCapabilities = do
   strictFileInteractability <- genMaybe genBool
   unhandledPromptBehavior <- genMEnum
   acceptInsecureCerts <- genMaybe genBool
+  setWindowRect <- genMaybe genBool
+  webSocketUrl  <- genMaybe genBool
   pageLoadStrategy <- genMEnum
-  setWindowRect <- genMaybeBool
   proxy <- genMaybe genProxy
   timeouts <- genMaybe genTimeouts
   vendorSpecific <- genMaybe genVendorSpecific
