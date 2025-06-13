@@ -273,7 +273,6 @@ genCapabilities = do
   proxy <- genMaybe genProxy
   timeouts <- genMaybe genTimeouts
   vendorSpecific <- genMaybe genVendorSpecific
-  let webSocketUrl = Nothing
   pure MkCapabilities {..}
 
 options :: TestOptions
