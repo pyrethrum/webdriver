@@ -42,6 +42,4 @@ jobs:
           cache-to: type=registry,ref=theghostjw/webdriver:buildcache,mode=max
       - name: Test
         run: |
-          docker pull theghostjw/webdriver:${{needs.env-setup.outputs.buildid}}
-          docker run theghostjw/webdriver:${{needs.env-setup.outputs.buildid}} bash \
-            -c 'MOZ_REMOTE_SETTINGS_DEVTOOLS=1 MOZ_HEADLESS=1 geckodriver --binary /usr/bin/firefox & \cabal test all'
+          IMAGE=theghostjw/webdriver:${{needs.env-setup.outputs.buildid}} make test
