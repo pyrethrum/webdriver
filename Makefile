@@ -3,8 +3,6 @@
 
 IMAGE ?= webdriver
 
-all: build test
-
 build:
 	docker build -t $(IMAGE) .
 
