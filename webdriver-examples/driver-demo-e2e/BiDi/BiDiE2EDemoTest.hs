@@ -5,7 +5,10 @@ import E2EConst (httpFullCapabilities, httpCapabilities)
 import IOUtils (logShow)
 import BiDi.BiDiRunner (newHttpSession)
 import Http.HttpAPI qualified as Http
+
+-- custom import needed to disambiguate capabilities
 import Http.HttpAPI qualified as Caps (Capabilities(..))
+import Control.Exception (finally)
 
 
 
@@ -17,12 +20,13 @@ httpBidiCapabilities =
     })
   }
 
--- >>> unit_demoNewSession
+-- >>> unit_demoNewSessionViaHttp
 unit_demoNewSessionViaHttp :: IO ()
 unit_demoNewSessionViaHttp = do
   ses <- newHttpSession httpBidiCapabilities
-  logShow "new session response:\n" ses
-  Http.deleteSession ses.sessionId
+  finally 
+    (logShow "new session response:\n" ses)
+    (Http.deleteSession ses.sessionId)
 
 
 -- >>> unit_sessionNew

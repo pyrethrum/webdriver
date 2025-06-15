@@ -4,7 +4,7 @@ import Prelude
 import Data.Text
 
 wantConsoleLogging :: Bool
-wantConsoleLogging = False
+wantConsoleLogging = True
 
 -- set to False for Chrome
 useFirefox :: Bool

@@ -135,7 +135,7 @@ import Data.Aeson as A
     (.:?),
   )
 import Data.Aeson.KeyMap qualified as KM
-import Data.Aeson.Types (Parser)
+import Data.Aeson.Types (Object, Parser)
 import Data.Foldable (toList)
 import Data.Function ((&))
 import Data.Map.Strict qualified as M
@@ -275,14 +275,14 @@ instance FromJSON SessionResponse where
       "SessionResponse.value"
       ( \valueObj -> do
           sessionId <- Session <$> valueObj .: "sessionId"
-          webSocketUrl <- valueObj .:? webSocketKey
           --
           capabilitiesVal' :: Value <- valueObj .: "capabilities"
+          allCapsObject <- parseObject "capabilities property returned from newSession should be an object" capabilitiesVal'
+          webSocketUrl <- allCapsObject .:? webSocketKey
           -- webSocketUrl will come back as a url but is is a Bool flag in Capabilities
           -- so it must be converted or there will be a parse error
-          let capabilitiesVal = webSocketUrlToBool capabilitiesVal'
-          allCapsObject <- parseObject "capabilities property returned from newSession should be an object" capabilitiesVal
-          capabilities :: Capabilities <- parseJSON capabilitiesVal
+          let capabilitiesVal = webSocketUrlToBool allCapsObject
+          capabilities :: Capabilities <- parseJSON $ Object capabilitiesVal
           standardCapsProps <- parseObject "JSON from Capabilities Object must be a JSON Object" $ toJSON capabilities
           let keys = fromList . KM.keys
               capsKeys = keys standardCapsProps
@@ -296,18 +296,16 @@ instance FromJSON SessionResponse where
           pure $ MkSessionResponse {sessionId, webSocketUrl, capabilities, extensions}
       )
 
-webSocketUrlToBool :: Value -> Value
-webSocketUrlToBool = \case
-  v@(Object o) -> case KM.lookup webSocketKey o of
+webSocketUrlToBool :: Object -> Object
+webSocketUrlToBool o =
+  case KM.lookup webSocketKey o of
     Just (String url) ->
-      Object $
-        if (T.null url)
-          then
-            KM.delete webSocketKey o
-          else
-            KM.insert webSocketKey (Bool True) o -- change to Bool
-    _ -> v -- no change if not an object
-  v -> v -- if not an Object, return as is
+      if (T.null url)
+        then
+          KM.delete webSocketKey o
+        else
+          KM.insert webSocketKey (Bool True) o -- change to Bool
+    _ -> o -- no change if property not present
 
 {-
 
