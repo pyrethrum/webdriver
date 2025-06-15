@@ -23,6 +23,9 @@ description:
   The E2E tests in HttpE2EDemoTest module demonstrate how the webdriver-precore might be used in a library that provides a basic runner.
   The runner is implemented in HttpRunner module. See the @<https://github.com/pyrethrum/webdriver/webdriver-examples#readme/ the README>@ for more details.
 
+-- For test/dev configs that shouldn't be installed
+extra-source-files: 
+  config/config.default.dhall
 
 common commonExtensions
   default-extensions:
@@ -113,7 +116,9 @@ test-suite driver-demo-e2e
     , base64
     , bytestring
     , containers
+    , dhall
     , directory
+    , filepath
     , network
     , pretty-show ^>=1.10
     , req

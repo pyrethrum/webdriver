@@ -5,6 +5,10 @@ dist-newstyle/
 *.hie
 *.out
 *.log
+.gitignore
+
+# ignore the user dhall config file
+.webdriver-examples/driver-demo-e2e/config/config.dhall
 
 # Ignore all files in the .profile directory
 **/.profile/*

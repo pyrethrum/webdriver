@@ -144,6 +144,10 @@ import Prelude hiding (log)
 -- #################### The Tests ######################
 
 -- >>> unit_demoNewSession
+-- *** Exception: 
+-- [1;31mError[0m: Unbound variable: webdriver-examples/driver-demo-e2e/config/config
+-- 1│ webdriver-examples/driver-demo-e2e/config/config
+-- (input):1:1
 unit_demoNewSession :: IO ()
 unit_demoNewSession = do
   cfg <- loadConfig

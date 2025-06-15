@@ -2,7 +2,6 @@ module JSONParsingTest where
 
 import Data.Aeson (Result (Success), ToJSON (toJSON), Value (..), decode, encode, fromJSON)
 import Data.Aeson.KeyMap qualified as KM
-import Data.Aeson.Types (parseMaybe)
 import Data.Bits (FiniteBits)
 import Data.Bool (Bool, (&&), (||))
 import Data.Foldable (all, null)
@@ -19,7 +18,7 @@ import GHC.Float (Double)
 import GHC.IO (FilePath)
 import GHC.Num (Num (..))
 import GHC.Plugins (HasCallStack)
-import GHC.Prelude (Show, putStrLn)
+import GHC.Prelude (Show)
 import GHC.Real (Fractional (..), Integral, fromIntegral)
 import Test.Falsify.Generator as G
   ( Gen,
@@ -45,8 +44,7 @@ import Test.Tasty.HUnit (Assertion, (@=?))
 import Text.Show.Pretty (ppShow)
 import WebDriverPreCore.Http (Capabilities (..), DeviceMetrics (..), LogLevel (..), LogSettings (MkLogSettings), MobileEmulation (..), PerfLoggingPrefs (..), Proxy (..), SessionResponse (..), SocksProxy (..), Timeouts (..), VendorSpecific (..))
 import WebDriverPreCore.Internal.AesonUtils (jsonToText)
-import Prelude (Bounded (minBound), Enum, IO, maxBound, undefined, Semigroup (..))
-import System.Directory (getCurrentDirectory)
+import Prelude (Bounded (minBound), Enum, IO, maxBound)
 
 -- todo: test extras - split off
 
@@ -544,10 +542,5 @@ unit_websocketUrlFromJSon =
 
     decoded = (.webSocketUrl) <$> fromJSON @SessionResponse json
 
--- >>> unit_working_directory
-unit_working_directory :: IO ()
-unit_working_directory = do
-  let expected = "C:\\Users\\John\\Documents\\Haskell\\webdriver-precore"
-  actual <- getCurrentDirectory
-  putStrLn $ "Current working directory: " <> actual
+
 
