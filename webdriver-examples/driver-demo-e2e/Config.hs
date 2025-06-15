@@ -7,29 +7,55 @@ where
 import Control.Monad (unless)
 import Data.Text (Text, pack)
 import Dhall (FromDhall, Generic, ToDhall, auto, input)
-import System.Directory (copyFile, doesFileExist)
-import System.FilePath ((</>))
+import System.Directory (copyFile, doesFileExist, getCurrentDirectory)
+import System.FilePath (combine, joinPath, splitDirectories, (</>))
 import Prelude
 
-configDir :: FilePath
-configDir = "webdriver-examples" </> "driver-demo-e2e" </> "config"
+findWebDriverRoot :: FilePath -> Maybe FilePath
+findWebDriverRoot path =
+  if rootDir `elem` dirs
+    then Just webDriverPath
+    else Nothing
+  where
+    rootDir = "webdriver"
+    dirs = splitDirectories path
+    webDriverPath = joinPath $ takeWhile (/= rootDir) dirs <> [rootDir]
 
-defaultPath :: FilePath
-defaultPath = configDir </> "config.default.dhall"
+configDir :: IO FilePath
+configDir = do
+  currentDir <- getCurrentDirectory
+  case findWebDriverRoot currentDir of
+    Just root -> return $ root </> "webdriver-examples" </> "driver-demo-e2e" </> "config"
+    Nothing -> error "Could not find webdriver root directory"
 
-userPath :: FilePath
-userPath = configDir </> "config.dhall"
+defaultConfigFile :: FilePath
+defaultConfigFile = "config.default.dhall"
+
+userConfigFile :: FilePath
+userConfigFile = "config.dhall"
 
 initialiseTestConfig :: IO ()
 initialiseTestConfig = do
-  exists <- doesFileExist userPath
+  userPath' <- userPath
+  exists <- doesFileExist userPath'
   unless exists $ do
-    putStrLn "No local config detected - copying defaults"
-    copyFile defaultPath userPath
+    cfgDir <- configDir
+    let defaultPath = combine cfgDir defaultConfigFile
+    putStrLn $ "Copying default config: " <> defaultPath <> " => " <> userPath'
+    copyFile defaultPath userPath'
+
+readConfig :: IO Config
+readConfig =
+  userPath >>= input auto . pack
+
+userPath :: IO FilePath
+userPath =
+  configDir >>= pure . (flip combine) userConfigFile
 
 loadConfig :: IO Config
-loadConfig =
-  initialiseTestConfig *> input auto (pack userPath) :: IO Config
+loadConfig = do
+  initialiseTestConfig
+  readConfig
 
 data Config = MkConfig
   { useFirefox :: Bool,

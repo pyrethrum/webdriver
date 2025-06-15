@@ -143,11 +143,20 @@ import Prelude hiding (log)
 
 -- #################### The Tests ######################
 
+-- unit_dhall :: IO ()
+-- unit_dhall = do
+--   cfg <- loadConfig
+--   logShow "config" cfg
+--   where 
+--     cfg = MkConfig
+--       { useFirefox = False,
+--         firefoxHeadless = True,
+--         customFirefoxProfilePath = Nothing,
+--         wantConsoleLogging = True
+--       }
+--       cfgDhall = "{ useFirefox : Bool, firefoxHeadless : Bool, customFirefoxProfilePath : Optional Text, wantConsoleLogging : Bool }"
+
 -- >>> unit_demoNewSession
--- *** Exception: 
--- [1;31mError[0m: Unbound variable: webdriver-examples/driver-demo-e2e/config/config
--- 1│ webdriver-examples/driver-demo-e2e/config/config
--- (input):1:1
 unit_demoNewSession :: IO ()
 unit_demoNewSession = do
   cfg <- loadConfig
@@ -171,6 +180,8 @@ unit_demoSessionDriverStatus = do
     (deleteSession sesId)
 
 -- >>> unit_demoSendKeysClear
+-- *** Exception: user error (WebDriver error thrown:
+--  WebDriverError {error = UnknownError, description = "An unknown error occurred in the remote end while processing the command", httpResponse = MkHttpResponse {statusCode = 500, statusMessage = "Internal Server Error", body = Object (fromList [("value",Object (fromList [("error",String "unknown error"),("message",String "Process unexpectedly closed with status 1"),("stacktrace",String "")]))])}})
 unit_demoSendKeysClear :: IO ()
 unit_demoSendKeysClear = withSession \ses -> do
   navigateTo ses loginUrl
@@ -185,10 +196,6 @@ unit_demoSendKeysClear = withSession \ses -> do
   sleep2
 
 -- >>> unit_demoForwardBackRefresh
-
--- *** Exception: user error (WebDriver error thrown:
-
---  WebDriverError {error = SessionNotCreated, description = "A new session could not be created", httpResponse = MkHttpResponse {statusCode = 500, statusMessage = "Internal Server Error", body = Object (fromList [("value",Object (fromList [("error",String "session not created"),("message",String "Session is already started"),("stacktrace",String "")]))])}})
 unit_demoForwardBackRefresh :: IO ()
 unit_demoForwardBackRefresh = withSession \ses -> do
   navigateTo ses theInternet

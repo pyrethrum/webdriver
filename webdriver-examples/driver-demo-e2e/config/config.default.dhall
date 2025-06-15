@@ -1,20 +1,11 @@
-let ConfigType = 
-  { useFirefox : Bool
-  , firefoxHeadless : Bool
-  , customFirefoxProfilePath : Optional Text
-  , wantConsoleLogging : Bool
-  }
+let Config = ./ConfigType.dhall
 
-let config = 
-  { useFirefox = False
-  , firefoxHeadless = True
-  , customFirefoxProfilePath = None Text
-  , wantConsoleLogging = False
-  }
+let config : Config = {
+  useFirefox = True,
+  firefoxHeadless = True,
+  customFirefoxProfilePath = None Text,
+  wantConsoleLogging = False
+}
 
-let Config = 
-  { Type = ConfigType
-  , config = config
-  }
-
-in Config
+in
+  config
