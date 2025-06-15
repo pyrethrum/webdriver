@@ -167,8 +167,8 @@ defaultRequest =
 
 -- ################### capabilities ##################
 
-httpCapabilities :: Capabilities
-httpCapabilities =
+httpCapabilities :: Config -> Capabilities
+httpCapabilities MkConfig {useFirefox, firefoxHeadless, customFirefoxProfilePath} =
   MkCapabilities
     { browserName = Just $ if useFirefox then Firefox else Chrome,
       browserVersion = Nothing,
@@ -194,10 +194,10 @@ httpCapabilities =
           else Nothing
     }
 
-httpFullCapabilities :: FullCapabilities
-httpFullCapabilities =
+httpFullCapabilities :: Config ->  FullCapabilities
+httpFullCapabilities cfg =
   MkFullCapabilities
     { alwaysMatch =
-        Just httpCapabilities,
+        Just $ httpCapabilities cfg,
       firstMatch = []
     }

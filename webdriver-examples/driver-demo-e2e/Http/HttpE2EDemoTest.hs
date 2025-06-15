@@ -2,7 +2,7 @@ module Http.HttpE2EDemoTest where
 
 -- minFirefoxSession,
 
-import Config (customFirefoxProfilePath, useFirefox)
+import Config (Config (..), loadConfig)
 import Control.Exception (bracket)
 import Control.Monad (forM_)
 import Data.Aeson (Value (..))
@@ -35,7 +35,7 @@ import E2EConst
     shadowDomUrl,
     theInternet,
     topFrameCSS,
-    userNameCss, httpFullCapabilities,
+    userNameCss,
   )
 import GHC.IO (catchAny, finally)
 import Http.HttpAPI
@@ -146,7 +146,8 @@ import Prelude hiding (log)
 -- >>> unit_demoNewSession
 unit_demoNewSession :: IO ()
 unit_demoNewSession = do
-  ses <- newSessionFull httpFullCapabilities
+  cfg <- loadConfig
+  ses <- newSessionFull $ httpFullCapabilities cfg
   finally
     (logShow "new session response:\n" ses)
     (deleteSession ses.sessionId)
@@ -154,7 +155,8 @@ unit_demoNewSession = do
 -- >>> unit_demoSessionDriverStatus
 unit_demoSessionDriverStatus :: IO ()
 unit_demoSessionDriverStatus = do
-  sesId <- newSession httpFullCapabilities
+  cfg <- loadConfig
+  sesId <- newSession $ httpFullCapabilities cfg
   finally
     ( do
         log "new session:" $ txt sesId
@@ -759,7 +761,8 @@ unit_demoError = withSession \ses -> do
 -- #################### Utils ######################
 
 session :: IO SessionId
-session =
+session = do
+  MkConfig {useFirefox} <- loadConfig
   if useFirefox
     then mkExtendedFirefoxTimeoutsSession
     else mkExtendedChromeTimeoutsSession
@@ -811,7 +814,8 @@ capsWithCustomFirefoxProfile firefoxProfilePath =
     }
 
 mkExtendedFirefoxTimeoutsSession :: IO SessionId
-mkExtendedFirefoxTimeoutsSession =
+mkExtendedFirefoxTimeoutsSession = do
+  MkConfig {customFirefoxProfilePath} <- loadConfig
   customFirefoxProfilePath
     & maybe
       minFirefoxSession

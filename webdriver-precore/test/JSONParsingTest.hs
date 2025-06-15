@@ -19,7 +19,7 @@ import GHC.Float (Double)
 import GHC.IO (FilePath)
 import GHC.Num (Num (..))
 import GHC.Plugins (HasCallStack)
-import GHC.Prelude (Show)
+import GHC.Prelude (Show, putStrLn)
 import GHC.Real (Fractional (..), Integral, fromIntegral)
 import Test.Falsify.Generator as G
   ( Gen,
@@ -45,7 +45,8 @@ import Test.Tasty.HUnit (Assertion, (@=?))
 import Text.Show.Pretty (ppShow)
 import WebDriverPreCore.Http (Capabilities (..), DeviceMetrics (..), LogLevel (..), LogSettings (MkLogSettings), MobileEmulation (..), PerfLoggingPrefs (..), Proxy (..), SessionResponse (..), SocksProxy (..), Timeouts (..), VendorSpecific (..))
 import WebDriverPreCore.Internal.AesonUtils (jsonToText)
-import Prelude (Bounded (minBound), Enum, IO, maxBound, undefined)
+import Prelude (Bounded (minBound), Enum, IO, maxBound, undefined, Semigroup (..))
+import System.Directory (getCurrentDirectory)
 
 -- todo: test extras - split off
 
@@ -542,3 +543,11 @@ unit_websocketUrlFromJSon =
         )
 
     decoded = (.webSocketUrl) <$> fromJSON @SessionResponse json
+
+-- >>> unit_working_directory
+unit_working_directory :: IO ()
+unit_working_directory = do
+  let expected = "C:\\Users\\John\\Documents\\Haskell\\webdriver-precore"
+  actual <- getCurrentDirectory
+  putStrLn $ "Current working directory: " <> actual
+

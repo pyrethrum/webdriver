@@ -1,21 +1,26 @@
-module Config where
+module Config (
+  Config (..),
+  loadConfig
+) where
 
-import Prelude
 import Data.Text
+import GHC.Generics (Generic)
+import Prelude
 
-wantConsoleLogging :: Bool
-wantConsoleLogging = True
+loadConfig :: IO Config
+loadConfig =
+  pure $
+    MkConfig
+      { useFirefox = True,
+        firefoxHeadless = True,
+        customFirefoxProfilePath = Nothing,
+        wantConsoleLogging = False
+      }
 
--- set to False for Chrome
-useFirefox :: Bool
-useFirefox = True
-
--- very boring to watch if set to True
-firefoxHeadless :: Bool
-firefoxHeadless = True
-
--- see readme
-customFirefoxProfilePath :: Maybe Text
--- customFirefoxProfilePath = Just "/home/john-walker/snap/firefox/common/.cache/mozilla/firefox/2c77yj8o.Another"
--- customFirefoxProfilePath = Just "./webdriver-examples/driver-demo-e2e/.profile/WebDriverProfile"
-customFirefoxProfilePath = Nothing
+data Config = MkConfig
+  { useFirefox :: Bool,
+    firefoxHeadless :: Bool,
+    customFirefoxProfilePath :: Maybe Text,
+    wantConsoleLogging :: Bool
+  }
+  deriving (Eq, Generic, Show)
