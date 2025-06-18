@@ -35,7 +35,7 @@ module E2EConst
   )
 where
 
-import Config
+import Config as CFG
 import Data.Text (Text)
 import Network.HTTP.Req as R
   ( GET (GET),
@@ -48,8 +48,22 @@ import Network.HTTP.Req as R
     Url,
     http,
   )
-import WebDriverPreCore.Http (BrowserName (..), Capabilities (..), FullCapabilities (..), Selector (CSS, XPath), VendorSpecific (..))
-import Prelude (Int, Maybe (..), Num (..), ($), (<>))
+import WebDriverPreCore.Http as WPC
+  ( BrowserName (..),
+    Capabilities (..),
+    FullCapabilities (..),
+    Selector (CSS, XPath),
+    VendorSpecific (..),
+  )
+import Prelude as P
+  ( Int,
+    Maybe (..),
+    Num (..),
+    Eq (..),
+    ($),
+    (<>),
+    elem
+  )
 
 -- ################### urls ##################
 
@@ -168,9 +182,9 @@ defaultRequest =
 -- ################### capabilities ##################
 
 httpCapabilities :: Config -> Capabilities
-httpCapabilities MkConfig {useFirefox, firefoxHeadless, customFirefoxProfilePath} =
+httpCapabilities MkConfig {browser, customFirefoxProfilePath} =
   MkCapabilities
-    { browserName = Just $ if useFirefox then Firefox else Chrome,
+    { browserName = Just $ if useFirefox then WPC.Firefox else WPC.Chrome,
       browserVersion = Nothing,
       platformName = Nothing,
       acceptInsecureCerts = Nothing,
@@ -186,15 +200,18 @@ httpCapabilities MkConfig {useFirefox, firefoxHeadless, customFirefoxProfilePath
           then
             Just $
               FirefoxOptions
-                { firefoxArgs = if firefoxHeadless then Just ["--headless"] else Nothing,
+                { firefoxArgs = if headless then Just ["--headless"] else Nothing,
                   firefoxBinary = Nothing,
                   firefoxProfile = customFirefoxProfilePath,
                   firefoxLog = Nothing
                 }
           else Nothing
     }
+  where
+    useFirefox = browser `P.elem` [CFG.Firefox, CFG.FirefoxHeadless]
+    headless = browser == CFG.FirefoxHeadless
 
-httpFullCapabilities :: Config ->  FullCapabilities
+httpFullCapabilities :: Config -> FullCapabilities
 httpFullCapabilities cfg =
   MkFullCapabilities
     { alwaysMatch =
