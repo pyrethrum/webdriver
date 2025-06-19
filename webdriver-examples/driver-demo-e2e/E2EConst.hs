@@ -182,9 +182,9 @@ defaultRequest =
 -- ################### capabilities ##################
 
 httpCapabilities :: Config -> Capabilities
-httpCapabilities MkConfig {browser, customFirefoxProfilePath} =
+httpCapabilities MkConfig {browser} =
   MkCapabilities
-    { browserName = Just $ if useFirefox then WPC.Firefox else WPC.Chrome,
+    { browserName = Just $ if (isFirefox browser) then WPC.Firefox else WPC.Chrome,
       browserVersion = Nothing,
       platformName = Nothing,
       acceptInsecureCerts = Nothing,
@@ -196,20 +196,16 @@ httpCapabilities MkConfig {browser, customFirefoxProfilePath} =
       unhandledPromptBehavior = Nothing,
       webSocketUrl = Nothing,
       vendorSpecific =
-        if useFirefox
-          then
-            Just $
-              FirefoxOptions
+        case browser of
+          CFG.Firefox {headless, profilePath} -> Just $  FirefoxOptions
                 { firefoxArgs = if headless then Just ["--headless"] else Nothing,
                   firefoxBinary = Nothing,
-                  firefoxProfile = customFirefoxProfilePath,
+                  firefoxProfile = profilePath,
                   firefoxLog = Nothing
                 }
-          else Nothing
+          CFG.Chrome -> Nothing
     }
-  where
-    useFirefox = browser `P.elem` [CFG.Firefox, CFG.FirefoxHeadless]
-    headless = browser == CFG.FirefoxHeadless
+
 
 httpFullCapabilities :: Config -> FullCapabilities
 httpFullCapabilities cfg =

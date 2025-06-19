@@ -1,29 +1,34 @@
 module Config
   ( Config (..),
     DemoBrowser (..),
+    isFirefox,
     loadConfig,
   )
 where
 
 import Control.Monad (unless)
 import Data.Text (Text, pack)
-import Dhall (FromDhall, Generic, ToDhall, auto, input, Encoder (embed), inject)
+import Data.Text.IO qualified as T
+import Dhall (Encoder (embed), FromDhall, Generic, ToDhall, auto, inject, input)
+import Dhall.Pretty qualified as P
 import System.Directory (copyFile, doesFileExist, getCurrentDirectory)
 import System.FilePath (combine, joinPath, splitDirectories, (</>))
 import Prelude
-import qualified Dhall.Pretty as P
-import qualified Data.Text.IO as T
 
+isFirefox :: DemoBrowser -> Bool
+isFirefox = \case
+  Firefox {} -> True
+  Chrome -> False
 
-data DemoBrowser = Chrome | Firefox | FirefoxHeadless
+data DemoBrowser = Chrome | Firefox {headless :: Bool, profilePath :: Maybe Text}
   deriving (Eq, Show, Generic)
 
 instance FromDhall DemoBrowser
+
 instance ToDhall DemoBrowser
 
 data Config = MkConfig
   { browser :: DemoBrowser,
-    customFirefoxProfilePath :: Maybe Text,
     wantConsoleLogging :: Bool
   }
   deriving (Eq, Generic, Show)
@@ -35,8 +40,11 @@ instance ToDhall Config
 defaultConfig :: Config
 defaultConfig =
   MkConfig
-    { browser = Firefox,
-      customFirefoxProfilePath = Nothing,
+    { browser =
+        Firefox
+          { headless = False,
+            profilePath = Nothing
+          },
       wantConsoleLogging = False
     }
 
@@ -68,14 +76,11 @@ initialiseTestConfig = do
     let expr = embed (inject @Config) defaultConfig
         doc = pack (show (P.prettyCharacterSet P.ASCII expr))
 
-    
-
     putStrLn $ "Saving default config to: " <> userPath'
     T.writeFile userPath' doc
 
-    {-
-    -}
-
+{-
+-}
 
 -- initialiseTestConfig :: IO ()
 -- initialiseTestConfig = do
@@ -99,7 +104,3 @@ loadConfig :: IO Config
 loadConfig = do
   initialiseTestConfig
   readConfig
-
-
-
-

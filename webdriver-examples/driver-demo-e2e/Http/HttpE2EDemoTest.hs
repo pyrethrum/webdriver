@@ -9,6 +9,7 @@ import Data.Aeson (Value (..))
 import Data.Function ((&))
 import Data.Set qualified as Set
 import Data.Text (Text, isInfixOf)
+import Data.Text.Array (new)
 import Data.Time.Clock.POSIX (getPOSIXTime)
 import E2EConst
   ( alertsUrl,
@@ -147,7 +148,7 @@ import Prelude hiding (log)
 -- unit_dhall = do
 --   cfg <- loadConfig
 --   logShow "config" cfg
---   where 
+--   where
 --     cfg = MkConfig
 --       { useFirefox = False,
 --         firefoxHeadless = True,
@@ -157,10 +158,14 @@ import Prelude hiding (log)
 --       cfgDhall = "{ useFirefox : Bool, firefoxHeadless : Bool, customFirefoxProfilePath : Optional Text, wantConsoleLogging : Bool }"
 
 -- >>> unit_demoNewSession
+-- *** Exception: user error (WebDriver error thrown:
+--  WebDriverError {error = UnknownError, description = "An unknown error occurred in the remote end while processing the command", httpResponse = MkHttpResponse {statusCode = 500, statusMessage = "Internal Server Error", body = Object (fromList [("value",Object (fromList [("error",String "unknown error"),("message",String "Process unexpectedly closed with status 1"),("stacktrace",String "")]))])}})
 unit_demoNewSession :: IO ()
 unit_demoNewSession = do
   cfg <- loadConfig
-  ses <- newSessionFull $ httpFullCapabilities cfg
+  let caps = httpFullCapabilities cfg
+  logShow "capabilities" caps
+  ses <- newSessionFull caps
   finally
     (logShow "new session response:\n" ses)
     (deleteSession ses.sessionId)
@@ -180,7 +185,9 @@ unit_demoSessionDriverStatus = do
     (deleteSession sesId)
 
 -- >>> unit_demoSendKeysClear
+
 -- *** Exception: user error (WebDriver error thrown:
+
 --  WebDriverError {error = UnknownError, description = "An unknown error occurred in the remote end while processing the command", httpResponse = MkHttpResponse {statusCode = 500, statusMessage = "Internal Server Error", body = Object (fromList [("value",Object (fromList [("error",String "unknown error"),("message",String "Process unexpectedly closed with status 1"),("stacktrace",String "")]))])}})
 unit_demoSendKeysClear :: IO ()
 unit_demoSendKeysClear = withSession \ses -> do
@@ -772,11 +779,20 @@ unit_demoError = withSession \ses -> do
 -- #################### Utils ######################
 
 session :: IO SessionId
-session = do
-  MkConfig {useFirefox} <- loadConfig
-  if useFirefox
-    then mkExtendedFirefoxTimeoutsSession
-    else mkExtendedChromeTimeoutsSession
+session =
+  httpFullCapabilities <$> loadConfig
+    >>= newSessionFull
+    >>= extendTimeouts . (.sessionId)
+
+extendTimeouts :: SessionId -> IO SessionId
+extendTimeouts ses = do
+  setTimeouts ses $
+    MkTimeouts
+      { pageLoad = Just $ 30 * seconds,
+        script = Just $ 11 * seconds,
+        implicit = Just $ 12 * seconds
+      }
+  pure ses
 
 withSession :: (SessionId -> IO ()) -> IO ()
 withSession =
@@ -809,40 +825,3 @@ capsWithCustomFirefoxProfileNotWorking = do
                 firefoxLog = Nothing
               }
       }
-
-capsWithCustomFirefoxProfile :: Text -> Capabilities
-capsWithCustomFirefoxProfile firefoxProfilePath =
-  (minCapabilities Firefox)
-    { vendorSpecific =
-        Just
-          FirefoxOptions
-            { -- requires a path to the profile directory
-              firefoxArgs = Just ["-profile", firefoxProfilePath],
-              firefoxBinary = Nothing,
-              firefoxProfile = Nothing,
-              firefoxLog = Nothing
-            }
-    }
-
-mkExtendedFirefoxTimeoutsSession :: IO SessionId
-mkExtendedFirefoxTimeoutsSession = do
-  MkConfig {customFirefoxProfilePath} <- loadConfig
-  customFirefoxProfilePath
-    & maybe
-      minFirefoxSession
-      (\profilepath -> newSession . alwaysMatchCapabilities $ capsWithCustomFirefoxProfile profilepath)
-    >>= extendTimeouts
-
-mkExtendedChromeTimeoutsSession :: IO SessionId
-mkExtendedChromeTimeoutsSession =
-  newSession minChromeCapabilities >>= extendTimeouts
-
-extendTimeouts :: SessionId -> IO SessionId
-extendTimeouts ses = do
-  setTimeouts ses $
-    MkTimeouts
-      { pageLoad = Just $ 30 * seconds,
-        script = Just $ 11 * seconds,
-        implicit = Just $ 12 * seconds
-      }
-  pure ses
