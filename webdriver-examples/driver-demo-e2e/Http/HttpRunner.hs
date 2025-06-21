@@ -49,8 +49,8 @@ run :: (Show a) => HttpSpec a -> IO a
 run spec = do
   cfg <- loadConfig
   let wantLog = cfg.wantConsoleLogging
-  when wantLog $ 
-    logSpec spec
+  when wantLog $
+   logSpec spec
   callWebDriver wantLog (mkRequest spec) >>= parseIO spec
 
 logSpec :: (Show a) => HttpSpec a -> IO ()

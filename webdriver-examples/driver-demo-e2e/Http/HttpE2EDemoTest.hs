@@ -141,19 +141,6 @@ import Prelude hiding (log)
 
 -- #################### The Tests ######################
 
--- unit_dhall :: IO ()
--- unit_dhall = do
---   cfg <- loadConfig
---   logShow "config" cfg
---   where
---     cfg = MkConfig
---       { useFirefox = False,
---         firefoxHeadless = True,
---         customFirefoxProfilePath = Nothing,
---         wantConsoleLogging = True
---       }
---       cfgDhall = "{ useFirefox : Bool, firefoxHeadless : Bool, customFirefoxProfilePath : Optional Text, wantConsoleLogging : Bool }"
-
 -- >>> unit_demoNewSession
 unit_demoNewSession :: IO ()
 unit_demoNewSession = do

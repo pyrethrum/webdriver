@@ -11,23 +11,23 @@ import Http.HttpAPI qualified as Http
 import IOUtils (logShow)
 import Prelude hiding (putStrLn)
 
+-- Get the initial BiDi connection by making an HTTP request
+-- with webSocketUrl set to True
 httpBidiCapabilities :: Config -> Http.FullCapabilities
 httpBidiCapabilities cfg =
   (httpFullCapabilities cfg)
     { Http.alwaysMatch =
         Just $
-          caps
+          (httpCapabilities cfg)
             { Caps.webSocketUrl = Just True
             }
     }
-  where
-    caps = httpCapabilities cfg
 
 -- >>> unit_demoNewSessionViaHttp
 unit_demoNewSessionViaHttp :: IO ()
 unit_demoNewSessionViaHttp = do
   cfg <- loadConfig
-  ses <- newHttpSession $ httpBidiCapabilities cfg
+  ses <- Http.newSessionFull $ httpBidiCapabilities cfg
   finally
     (logShow "new session response:\n" ses)
     (Http.deleteSession ses.sessionId)
