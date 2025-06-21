@@ -2,14 +2,12 @@ module Http.HttpE2EDemoTest where
 
 -- minFirefoxSession,
 
-import Config (Config (..), loadConfig)
+import Config (loadConfig)
 import Control.Exception (bracket)
 import Control.Monad (forM_)
 import Data.Aeson (Value (..))
-import Data.Function ((&))
 import Data.Set qualified as Set
-import Data.Text (Text, isInfixOf)
-import Data.Text.Array (new)
+import Data.Text (isInfixOf)
 import Data.Time.Clock.POSIX (getPOSIXTime)
 import E2EConst
   ( alertsUrl,
@@ -106,7 +104,6 @@ import Http.HttpAPI
     isElementSelected,
     maximizeWindow,
     minCapabilities,
-    minFirefoxSession,
     minimizeWindow,
     navigateTo,
     newSession,
@@ -138,7 +135,7 @@ import IOUtils
     (===),
   )
 import Test.Tasty.HUnit (Assertion, assertBool)
-import WebDriverPreCore.Http (alwaysMatchCapabilities, minChromeCapabilities, minFullCapabilities)
+import WebDriverPreCore.Http (minFullCapabilities)
 import WebDriverPreCore.Internal.Utils (txt)
 import Prelude hiding (log)
 
@@ -158,8 +155,6 @@ import Prelude hiding (log)
 --       cfgDhall = "{ useFirefox : Bool, firefoxHeadless : Bool, customFirefoxProfilePath : Optional Text, wantConsoleLogging : Bool }"
 
 -- >>> unit_demoNewSession
--- *** Exception: user error (WebDriver error thrown:
---  WebDriverError {error = UnknownError, description = "An unknown error occurred in the remote end while processing the command", httpResponse = MkHttpResponse {statusCode = 500, statusMessage = "Internal Server Error", body = Object (fromList [("value",Object (fromList [("error",String "unknown error"),("message",String "Process unexpectedly closed with status 1"),("stacktrace",String "")]))])}})
 unit_demoNewSession :: IO ()
 unit_demoNewSession = do
   cfg <- loadConfig
@@ -185,10 +180,6 @@ unit_demoSessionDriverStatus = do
     (deleteSession sesId)
 
 -- >>> unit_demoSendKeysClear
-
--- *** Exception: user error (WebDriver error thrown:
-
---  WebDriverError {error = UnknownError, description = "An unknown error occurred in the remote end while processing the command", httpResponse = MkHttpResponse {statusCode = 500, statusMessage = "Internal Server Error", body = Object (fromList [("value",Object (fromList [("error",String "unknown error"),("message",String "Process unexpectedly closed with status 1"),("stacktrace",String "")]))])}})
 unit_demoSendKeysClear :: IO ()
 unit_demoSendKeysClear = withSession \ses -> do
   navigateTo ses loginUrl

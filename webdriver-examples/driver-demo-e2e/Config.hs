@@ -7,11 +7,10 @@ module Config
 where
 
 import Control.Monad (unless)
-import Data.Text (Text, pack)
+import Data.Text as T (Text, pack, unlines)
 import Data.Text.IO qualified as T
-import Dhall (Encoder (embed), FromDhall, Generic, ToDhall, auto, inject, input)
-import Dhall.Pretty qualified as P
-import System.Directory (copyFile, doesFileExist, getCurrentDirectory)
+import Dhall (Generic, FromDhall, ToDhall, input, auto)
+import System.Directory (doesFileExist, getCurrentDirectory)
 import System.FilePath (combine, joinPath, splitDirectories, (</>))
 import Prelude
 
@@ -37,17 +36,6 @@ instance FromDhall Config
 
 instance ToDhall Config
 
-defaultConfig :: Config
-defaultConfig =
-  MkConfig
-    { browser =
-        Firefox
-          { headless = False,
-            profilePath = Nothing
-          },
-      wantConsoleLogging = False
-    }
-
 findWebDriverRoot :: FilePath -> Maybe FilePath
 findWebDriverRoot path =
   if rootDir `elem` dirs
@@ -65,32 +53,52 @@ configDir = do
     Just root -> pure $ root </> "webdriver-examples" </> "driver-demo-e2e" </> "config"
     Nothing -> error "Could not find webdriver root directory"
 
-userConfigFile :: FilePath
-userConfigFile = "config.dhall"
 
 initialiseTestConfig :: IO ()
 initialiseTestConfig = do
   userPath' <- userPath
   exists <- doesFileExist userPath'
   unless exists $ do
-    let expr = embed (inject @Config) defaultConfig
-        doc = pack (show (P.prettyCharacterSet P.ASCII expr))
-
     putStrLn $ "Saving default config to: " <> userPath'
-    T.writeFile userPath' doc
+    T.writeFile userPath' configText
 
-{-
--}
+{- 
+Generating in code is more principled but produces a less readable file.
 
--- initialiseTestConfig :: IO ()
--- initialiseTestConfig = do
---   userPath' <- userPath
---   exists <- doesFileExist userPath'
---   unless exists $ do
---     cfgDir <- configDir
---     let defaultPath = combine cfgDir defaultConfigFile
---     putStrLn $ "Copying default config: " <> defaultPath <> " => " <> userPath'
---     copyFile defaultPath userPath'
+import Dhall.Pretty qualified as P
+let expr = embed (inject @Config) defaultConfig
+     doc = pack (show (P.prettyCharacterSet P.ASCII expr))
+ -}
+configText :: Text
+configText = T.unlines
+        [ "-- Config types"
+        , "let Browser = "
+        , "      < Chrome"
+        , "      | Firefox : "
+        , "          { headless : Bool"
+        , "          , profilePath : Optional Text "
+        , "          }"
+        , "      >"
+        , ""
+        , "let Config = "
+        , "      { browser : Browser"
+        , "      , wantConsoleLogging : Bool"
+        , "      }"
+        , ""
+        , "-- Config value"
+        , "let browser : Browser = "
+        , "      Browser.Firefox "
+        , "        { headless = False"
+        , "        , profilePath = None Text"
+        , "        }"
+        , ""
+        , "let config : Config = "
+        , "      { browser = browser"
+        , "      , wantConsoleLogging = False"
+        , "      }"
+        , ""
+        , "in config"
+        ]
 
 readConfig :: IO Config
 readConfig =
@@ -98,9 +106,11 @@ readConfig =
 
 userPath :: IO FilePath
 userPath =
-  configDir >>= pure . (flip combine) userConfigFile
+  configDir >>= pure . (flip combine) "config.dhall"
 
 loadConfig :: IO Config
 loadConfig = do
   initialiseTestConfig
   readConfig
+
+
