@@ -1,25 +1,25 @@
 # webdriver-examples
 
-TODO: fix all code links
-
 - [webdriver-examples](#webdriver-examples)
   - [About These Examples](#about-these-examples)
   - [Core Modules](#core-modules)
     - [HttpRunner](#httprunner)
-    - [IOAPI](#ioapi)
+    - [HttpAPI](#httpapi)
     - [HttpE2EDemoTest](#httpe2edemotest)
   - [Running Examples (VSCode Dev-Container)](#running-examples-vscode-dev-container)
   - [Running Examples (Manual Configuration)](#running-examples-manual-configuration)
     - [Prerequisites](#prerequisites)
       - [1. Tasty Discover Installed](#1-tasty-discover-installed)
       - [2. Web Driver Installed](#2-web-driver-installed)
-      - [3. Web Driver Running](#3-web-driver-running)
-    - [4. Update 'Config'](#4-update-config)
+      - [3. The Project Builds](#3-the-project-builds)
+      - [4. Web Driver Running](#4-web-driver-running)
+    - [5. Configuration](#5-configuration)
   - [Executing the Examples](#executing-the-examples)
     - [Evaluate...](#evaluate)
     - [cabal repl](#cabal-repl)
     - [cabal test](#cabal-test)
-    - [Fixing Geckodriver Firefox Profile Issues](#fixing-geckodriver-firefox-profile-issues)
+  - [Updating Test Configuration](#updating-test-configuration)
+  - [Fixing Geckodriver Firefox Profile Issues on Linux](#fixing-geckodriver-firefox-profile-issues-on-linux)
 
 ## About These Examples
 
@@ -27,7 +27,6 @@ These examples demonstrate a minimal wrapper implementation around the [`webdriv
 
 Key simplifications compared to a production-ready framework:
 - No utility functions or automated browser/session management
-- Hardcoded configuration options
 - Direct console logging (no structured logging)
 - Included sleeps and debug outputs for observability
 - Minimal robustness features (no advanced waits or retry mechanisms)
@@ -38,15 +37,15 @@ The examples cover all [W3C WebDriver endpoints](https://www.w3.org/TR/webdriver
 
 ### HttpRunner
 
-[HttpRunner](./driver-demo-e2e/HttpRunner.hs) exports a single `run` function that accepts a [webdriver-precore HttpSpec](https://hackage-content.haskell.org/package/webdriver-precore-0.0.0.1/package/docs/WebDriverPreCore.html#g:14) and performs HTTP requests to an active WebDriver instance.
+[HttpRunner](./driver-demo-e2e/Http/HttpRunner.hs) exports a single `run` function that accepts a [webdriver-precore HttpSpec](https://hackage-content.haskell.org/package/webdriver-precore-0.0.0.1/package/docs/WebDriverPreCore.html#g:14) and performs HTTP requests to an active WebDriver instance.
 
-### IOAPI
+### HttpAPI
 
-[IOAPI](./driver-demo-e2e/IOAPI.hs) is [W3C WebDriver](https://www.w3.org/TR/webdriver2) client implemented by applying `run` to every endpoint exported by [webdriver-precore](https://hackage-content.haskell.org/package/webdriver-precore).
+[HttpAPI](./driver-demo-e2e/Http/HttpAPI.hs) is [W3C WebDriver](https://www.w3.org/TR/webdriver2) client implemented by applying `run` to every endpoint exported by [webdriver-precore](https://hackage-content.haskell.org/package/webdriver-precore).
 
 ### HttpE2EDemoTest
 
-[HttpE2EDemoTest](./driver-demo-e2e/Http/HttpE2EDemoTest.hs) is \"unit test" module where the unit tests are actually example stubs that demonstrate driving a browser via the [IOAPI](./driver-demo-e2e/IOAPI.hs).
+[HttpE2EDemoTest](./driver-demo-e2e/Http/HttpE2EDemoTest.hs) is \"unit test" module where the unit tests are actually example stubs that demonstrate driving a browser via the [HttpAPI](./driver-demo-e2e/Http/HttpE2EDemoTest.hs).
 
 ## Running Examples (VSCode Dev-Container)
 
@@ -92,7 +91,35 @@ Drivers can be downloaded from the vendors' web sites e.g.:
 
 **Note:** Linux users of `geckodriver` (the Firefox driver), may, under some circumstances, encounter **profile related errors when initialising WebDriver** sessions. A solution can be found [at the end of this document](#fixing-geckodriver-firefox-profile-issues)
 
-#### 3. Web Driver Running
+#### 3. The Project Builds
+
+In the the integrated terminal in your IDE run:
+
+1. ensure you are in the project directory
+2. `cabal update`
+3. `cabal build all --enable-tests `
+
+On linux  this would look something like
+
+```bash
+~/repos/webdriver$ cabal update
+
+Configuration is affected by the following files:
+- cabal.project
+Downloading the latest package list from hackage.haskell.org
+Package list of hackage.haskell.org has been updated.
+The index-state is set to 2025-06-22T01:41:09Z.
+To revert to previous state run:
+    cabal v2-update 'hackage.haskell.org,2025-06-22T00:48:21Z'
+
+~/repos/webdriver$ cabal build all --enable-tests 
+
+Configuration is affected by the following files:
+... many build log entries
+```
+
+*You may need to restart your IDE or envoke `Haskell: Restart Haskell LSP server` after your first rebuild.*
+#### 4. Web Driver Running
 
 Before running any of the examples you need to invoke the WebDriver from the terminal. On Linux this can be done with one of the following bash commands:
 
@@ -131,27 +158,14 @@ Please see https://chromedriver.chromium.org/security-considerations for suggest
 ChromeDriver was started successfully on port 4444.
 ```
 
-### 4. Update 'Config'
+### 5. Configuration
 
-"Configuration" for these examples has been achieved through the time honoured technique of [hard coding values in the source file (HttpE2EDemoTest.hs)](./driver-demo-e2e/HttpE2EDemoTest.hs)
+The first time you attempt to run a test a default config file will be generate at: </br>
+&nbsp;&nbsp; `webdriver-examples\driver-demo-e2e\.config\config.dhall`. 
 
-```haskell
--- #################### Config ######################
+You will will probably need to make adjustments to this file to get these tests to run successfully.
+</br>See [Executing the Examples](#executing-the-examples) (below) for details.
 
--- set to False for Chrome
-useFirefox :: Bool
-useFirefox = True
-
--- see readme
-customFirefoxProfilePath :: Maybe Text
-customFirefoxProfilePath = Nothing
-  -- customFirefoxProfilePath = Just "./webdriver-examples/driver-demo-e2e/.profile/WebDriverProfile"
-
-```
-
-*`useFirefox` is self explanatory*
-
-*`customFirefoxProfilePath` should be `Nothing` unless fixing issues related to [Firefox profiles in geckodriver](#fixing-geckodriver-firefox-profile-issues). See the linked topic for further details.*
 
 ## Executing the Examples
 
@@ -163,11 +177,12 @@ Once the [driver is running](#3-web-driver-running), the recommended way to expe
 2. Open `HttpE2EDemoTest`
 3. Wait for HLS to process the file, at which point the `Evaluate...` lens will be visible
 
-<img src="evaluate.png" alt="profile missing" width="600">
+<img src="evaluate.png" alt="evaluate code lens" width="400">
 
 Clicking `Evaluate...` will execute the test.
 * any exceptions will be inserted in the source file under the evaluation
 * any console logs generated form the test will be piped to the `OUTPUT` window for `Haskell (webdriver)` 
+* when the first test is run it will probably fail due to configuration issues (see [Updating Test Configuration](#updating-test-configuration))
 ### cabal repl
 *Alternatively tests can be run in `cabal repl --enable-tests` from the `webdriver-examples` directory:*
 
@@ -187,7 +202,11 @@ clear user name
 .. all test logs 
 ```
 
-### Fixing Geckodriver Firefox Profile Issues
+## Updating Test Configuration
+
+As mentioned above, the first time you attempt to run one of these tests it may well fail due to configuration issues.
+
+## Fixing Geckodriver Firefox Profile Issues on Linux
 
 There is a [known issue](https://github.com/mozilla/geckodriver/releases/tag/v0.36.0) with geckodriver on linux machines when Firefox has been installed inside a container such as when installed with `snap` or `flatpak` and also the `default Firefox installation` for Ubuntu.
 
@@ -197,27 +216,33 @@ When `Firefox` is installed in this way, `geckodriver` does not have the require
 
 One solution is to create a profile in a directory somewhere accessible to geckodriver on the file system:
 
-TODO:: This has stopped working - work out why - update
-1. Create a new subdirectory in `.profiles` name `WebDriverProfile`, so you will end up with: `/webdriver/webdriver-examples/driver-demo-e2e/.profile/WebDriverProfile`
-2. In Firefox type the following into the search bar: `about:profiles`
-3. `Create New Profile` 
-4. `Profile Name:` WebDriver
-5. `Next` >> `Choose Folder` >> `/webdriver/webdriver-examples/driver-demo-e2e/.profile/WebDriverProfile`
-6. `Finish`
-7. Change the *Config* in the [HttpE2EDemoTest](./driver-demo-e2e/HttpE2EDemoTest.hs) to point to the directory of your new profile:
+1. Create a new folder called `test-firefox-profile` in an accessible place such as your linux `Home` directory
+2. In Firefox type the following into the search bar: `about:profiles` to be take to `About Profiles`
+3. Note your current `Default Profile`
+4. `Create New Profile` 
+5. `Next`
+6. `Profile Name:` **WebDriver**
+7.  `Choose Folder...` >> browse to `test-firefox-profile` >> `Select`
+8. `Finish`
+9. This new profile will automatically be set to the default profile. Set the `Default Profile` back to your initial profile or you will not be able to see the usual shortcuts and other settings when you restart Firefox
+10. Copy the `Root Directory` path for the **WebDriver** profile to the clipboard
+11. The first time a test was run, a [config.dhall](./driver-demo-e2e/.config/config.dhall) file which was created. Update `profilePath` in this config to point to the WebDriver profile directory:
 
 ```haskell
+...
+-- Config value
+let browser : Browser = 
+      Browser.Firefox 
+        { headless = False
+        , profilePath = Some "YOUR/PARENT/DIRECTORY/test-firefox-profile"
+        }
 
--- #################### Config ######################
+let config : Config = 
+      { browser = browser
+      , wantConsoleLogging = False
+      }
 
--- set to False for Chrome
-useFirefox :: Bool
-useFirefox = True
-
--- see readme
-customFirefoxProfilePath :: Maybe Text
-customFirefoxProfilePath = Just "[YOUR REPOS DIRECTORY]/webdriver-examples/driver-demo-e2e/.profile/WebDriverProfile"
-
+in config
 ```
 
 Tests should now be able to create sessions successfully.

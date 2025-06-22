@@ -62,7 +62,7 @@ import Prelude as P
     Eq (..),
     ($),
     (<>),
-    elem
+    elem, null
   )
 
 -- ################### urls ##################
@@ -198,11 +198,18 @@ httpCapabilities MkConfig {browser} =
       vendorSpecific =
         case browser of
           CFG.Firefox {headless, profilePath} -> Just $  FirefoxOptions
-                { firefoxArgs = if headless then Just ["--headless"] else Nothing,
+                { firefoxArgs = if null allArgs then  Nothing else Just allArgs,
                   firefoxBinary = Nothing,
-                  firefoxProfile = profilePath,
+                  firefoxProfile = Nothing,
                   firefoxLog = Nothing
                 }
+              where 
+                headlessArgs = if headless then  ["--headless"] else []
+                profileArgs = case profilePath of
+                  Just path -> ["--profile", path]
+                  Nothing -> []
+                allArgs = headlessArgs <> profileArgs
+
           CFG.Chrome -> Nothing
     }
 
