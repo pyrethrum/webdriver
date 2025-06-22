@@ -6,6 +6,7 @@ module IOUtils
     logShow,
     logM,
     logShowM,
+    prettyPack,
     sleep1,
     sleep2,
     (===),
@@ -46,8 +47,11 @@ logTxt = TIO.putStrLn
 log :: Text -> Text -> IO ()
 log l t = logTxt $ l <> ": " <> t
 
+prettyPack :: Show a => a -> Text
+prettyPack = pack . P.ppShow
+
 logShow :: (Show a) => Text -> a -> IO ()
-logShow l = log l . pack . P.ppShow
+logShow l = log l . prettyPack
 
 logM :: Text -> IO Text -> IO ()
 logM l t = t >>= log l
