@@ -13,7 +13,7 @@
       - [2. Web Driver Installed](#2-web-driver-installed)
       - [3. The Project Builds](#3-the-project-builds)
       - [4. Web Driver Running](#4-web-driver-running)
-    - [5. Configuration](#5-configuration)
+      - [5. Configuration Set](#5-configuration-set)
   - [Executing the Examples](#executing-the-examples)
     - [Evaluate...](#evaluate)
     - [cabal repl](#cabal-repl)
@@ -158,7 +158,7 @@ Please see https://chromedriver.chromium.org/security-considerations for suggest
 ChromeDriver was started successfully on port 4444.
 ```
 
-### 5. Configuration
+#### 5. Configuration Set
 
 The first time you attempt to run a test a default config file will be generate at: </br>
 &nbsp;&nbsp; `webdriver-examples\driver-demo-e2e\.config\config.dhall`. 
@@ -206,6 +206,28 @@ clear user name
 
 As mentioned above, the first time you attempt to run one of these tests it may well fail due to configuration issues.
 
+The first time a test is run a [config.dhall](./driver-demo-e2e/.config/config.dhall) file will be created. 
+
+Edit the value as per your requirements (eg. using Chrome instead of Firefox)
+
+```haskell
+
+...
+-- Config value
+let browser : Browser = 
+      Browser.Chrome
+
+let config : Config = 
+      { browser = browser
+      , wantConsoleLogging = False
+      }
+
+in config
+
+```
+
+Or setting the Firefox profile path (see below)
+
 ## Fixing Geckodriver Firefox Profile Issues on Linux
 
 There is a [known issue](https://github.com/mozilla/geckodriver/releases/tag/v0.36.0) with geckodriver on linux machines when Firefox has been installed inside a container such as when installed with `snap` or `flatpak` and also the `default Firefox installation` for Ubuntu.
@@ -246,6 +268,3 @@ in config
 ```
 
 Tests should now be able to create sessions successfully.
-
-*Note: the suggested `.profile` directory is included in `.gitignore` so as not pollute your git repo.*
-
