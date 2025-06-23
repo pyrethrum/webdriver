@@ -35,33 +35,38 @@ unit_demoNewSessionViaHttp = do
     (Http.deleteSession ses.sessionId)
 
 
-parseUrl :: Text -> WebDriverBiDiConfig
-parseUrl url =
-  -- get the host, port, and path from the URL 
-  -- such as "ws://127.0.0.1:9222/session/e43698d9-b02a-4284-a936-12041deb3552"
-  WebDriverBiDiConfig { host = host, port = port, path = path }
+parseUrl :: Text -> Either Text WebDriverBiDiConfig
+parseUrl url = do
+  (scheme, host, portPath) <- splitCol url
+  (port, path) <- portAndPath portPath
+  Right $ WebDriverBiDiConfig { 
+            host = scheme <> ":" <> host, 
+            port = port, 
+            path = path }
   where 
     -- "ws://127.0.0.1:9222/session/e43698d9-b02a-4284-a936-12041deb3552"
     -- -> [ws, //127.0.0.1, 9222/session/e43698d9-b02a-4284-a936-12041deb3552]
-    (scheme, host, portPath) = T.splitOn ":" url
+    splitCol = T.splitOn ":" url
                & \case 
-                     [scheme, host, portPath] -> (scheme, host, portPath)
-                     _ -> failParser "Invalid URL format"
-    
+                     [scheme, host, portPath] -> Right (scheme, host, portPath)
+                     _ -> failParser "Expected format: ws://host:port/path"
+    -- 9222/session/e43698d9-b02a-4284-a936-12041deb3552
+    -- -> (9222, /session/e43698d9-b02a-4284-a936-12041deb3552)
+    portAndPath :: Text -> Either Text (Int, Text)
+    portAndPath pp = 
+      (,path) <$> portEth
+      where 
+        (portTxt, path) = T.breakOn "/" pp
+        portEth = case readEither $ unpack portTxt of
+                 Left msg -> failParser $ "Could not extract port (an Int) from prefix of: " 
+                                  <> portTxt
+                                  <> "\n"
+                                  <> "Error on read Int: " <> msg
+                 Right p -> Right p
+          
+    failParser :: forall a. Text -> Either Text a
+    failParser msg = Left $ "Failed to parse URL: " <> T.unpack url <> "\n" <> T.unpack msg
 
-    failParser :: forall a. Text -> a
-    failParser msg = error $ "Failed to parse URL: " <> T.unpack url <> "\n" <> T.unpack msg
-    -- check if the URL starts with "ws://" or
-  let (host, port, path) = parseUrlComponents url
-  in WebDriverBiDiConfig { host = host, port = port, path = path }
-  where
-    parseUrlComponents :: Text -> (Text, Int, Text)
-    parseUrlComponents url =
-      let parts = T.splitOn ":" url
-          host = head parts
-          port = read $ T.unpack $ parts !! 1 :: Int
-          path = T.intercalate "/" $ drop 2 parts
-      in (host, port, path)
 
 unit_bidiSession :: IO ()
 unit_bidiSession = do
