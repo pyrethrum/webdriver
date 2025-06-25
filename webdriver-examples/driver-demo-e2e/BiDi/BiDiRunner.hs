@@ -10,13 +10,48 @@ import Data.ByteString.Lazy (ByteString)
 import Data.ByteString.Lazy qualified as BL
 import Data.Functor ((<$>))
 import Data.IORef (newIORef, readIORef, writeIORef)
-import Data.Text as T (Text, null, pack, unpack)
+import Data.Text as T (Text, null, pack, unpack, splitOn, breakOn)
 import Data.Text.IO as T (getLine, putStrLn)
 import Network.WebSockets (ClientApp, receiveData, runClient, sendClose, sendTextData)
 import WebDriverPreCore.BiDi.Session
 import Wuss (runSecureClient)
 import Prelude (Bool (True), Either (..), Eq ((==)), IO, Int, Maybe (..), Show (..), maybe, ($), (+), (.), (<>))
 import Http.HttpAPI (newSessionFull, FullCapabilities, SessionResponse)
+import Text.Read (readEither)
+import Data.Function ((&))
+
+
+parseUrl :: Text -> Either Text BiDiPath
+parseUrl url = do
+  (scheme, host, portPath) <- splitCol
+  (port, path) <- portAndPath portPath
+  Right $ MkBiDiPath { 
+            host = scheme <> ":" <> host, 
+            port = port, 
+            path = path }
+  where 
+    -- "ws://127.0.0.1:9222/session/e43698d9-b02a-4284-a936-12041deb3552"
+    -- -> [ws, //127.0.0.1, 9222/session/e43698d9-b02a-4284-a936-12041deb3552]
+    splitCol = splitOn ":" url
+               & \case 
+                     [scheme, host, portPath] -> Right (scheme, host, portPath)
+                     _ -> failParser "Expected format: ws://host:port/path"
+    -- 9222/session/e43698d9-b02a-4284-a936-12041deb3552
+    -- -> (9222, session/e43698d9-b02a-4284-a936-12041deb3552)
+    portAndPath :: Text -> Either Text (Int, Text)
+    portAndPath pp = 
+      (,path) <$> portEth
+      where 
+        (portTxt, path) = T.breakOn "/" pp
+        portEth = case readEither $ T.unpack portTxt of
+                 Left msg -> failParser $ "Could not extract port (an Int) from prefix of: " 
+                                  <> portTxt
+                                  <> "\n"
+                                  <> "Error on read Int: " <> T.pack msg
+                 Right p -> Right p
+          
+    failParser :: forall a. Text -> Either Text a
+    failParser msg = Left $ "Failed to parse URL: " <> url <> "\n" <> msg
 
 
 newHttpSession :: FullCapabilities -> IO SessionResponse
@@ -29,7 +64,7 @@ runBiDiExample = runWebDriverBiDi defaultGeckoDriverConfig
 
 
 -- | WebDriver BiDi client configuration
-data WebDriverBiDiConfig = WebDriverBiDiConfig
+data BiDiPath= MkBiDiPath
   { host :: Text,
     port :: Int,
     path :: Text
@@ -37,9 +72,9 @@ data WebDriverBiDiConfig = WebDriverBiDiConfig
   deriving (Show)
 
 -- | Default WebDriver BiDi configuration for GeckoDriver
-defaultGeckoDriverConfig :: WebDriverBiDiConfig
+defaultGeckoDriverConfig :: BiDiPath
 defaultGeckoDriverConfig =
-  WebDriverBiDiConfig
+  MkBiDiPath
     { host = "127.0.0.1",
       port = 4444,
       path = "/session"
@@ -94,8 +129,8 @@ createSessionEndMessage msgId =
     }
 
 -- | Run WebDriver BiDi client
-runWebDriverBiDi :: WebDriverBiDiConfig -> IO ()
-runWebDriverBiDi WebDriverBiDiConfig {host, port, path} = do
+runWebDriverBiDi :: BiDiPath -> IO ()
+runWebDriverBiDi MkBiDiPath {host, port, path} = do
   putStrLn $ "Connecting to WebDriver at " <> host <> ":" <> pack (show port) <> path
   runClient (unpack host) port (unpack path) webDriverBiDiClient
 
