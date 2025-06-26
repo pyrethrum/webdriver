@@ -6,7 +6,7 @@ IMAGE ?= webdriver
 build:
 	docker build -t $(IMAGE) .
 
-test:
+test: build
 	docker run $(IMAGE) bash -c \
 		'MOZ_REMOTE_SETTINGS_DEVTOOLS=1 \
 		 MOZ_HEADLESS=1 \

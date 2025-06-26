@@ -9,7 +9,7 @@ where
 import Control.Monad (unless)
 import Data.Text as T (Text, pack, unlines)
 import Data.Text.IO qualified as T
-import Dhall (Generic, FromDhall, ToDhall, input, auto)
+import Dhall (FromDhall, Generic, ToDhall, auto, input)
 import System.Directory (doesFileExist, getCurrentDirectory)
 import System.FilePath (combine, joinPath, splitDirectories, (</>))
 import Prelude
@@ -51,8 +51,12 @@ configDir = do
   currentDir <- getCurrentDirectory
   case findWebDriverRoot currentDir of
     Just root -> pure $ root </> "webdriver-examples" </> "driver-demo-e2e" </> ".config"
-    Nothing -> error "Could not find webdriver root directory"
-
+    Nothing ->
+      error $
+        "Could not find 'webdriver' root directory from: "
+          <> currentDir
+          <> "\n tests are expected to be run from the 'webdriver' directory or "
+          <> ("webdriver" </> "webdriver-examples")
 
 initialiseTestConfig :: IO ()
 initialiseTestConfig = do
@@ -62,7 +66,7 @@ initialiseTestConfig = do
     putStrLn $ "Saving default config to: " <> userPath'
     T.writeFile userPath' configText
 
-{- 
+{-
 Generating in code is more principled but produces a less readable file.
 
 import Dhall.Pretty qualified as P
@@ -70,35 +74,36 @@ let expr = embed (inject @Config) defaultConfig
      doc = pack (show (P.prettyCharacterSet P.ASCII expr))
  -}
 configText :: Text
-configText = T.unlines
-        [ "-- Config types"
-        , "let Browser = "
-        , "      < Chrome"
-        , "      | Firefox : "
-        , "          { headless : Bool"
-        , "          , profilePath : Optional Text "
-        , "          }"
-        , "      >"
-        , ""
-        , "let Config = "
-        , "      { browser : Browser"
-        , "      , wantConsoleLogging : Bool"
-        , "      }"
-        , ""
-        , "-- Config value"
-        , "let browser : Browser = "
-        , "      Browser.Firefox "
-        , "        { headless = False"
-        , "        , profilePath = None Text"
-        , "        }"
-        , ""
-        , "let config : Config = "
-        , "      { browser = browser"
-        , "      , wantConsoleLogging = False"
-        , "      }"
-        , ""
-        , "in config"
-        ]
+configText =
+  T.unlines
+    [ "-- Config types",
+      "let Browser = ",
+      "      < Chrome",
+      "      | Firefox : ",
+      "          { headless : Bool",
+      "          , profilePath : Optional Text ",
+      "          }",
+      "      >",
+      "",
+      "let Config = ",
+      "      { browser : Browser",
+      "      , wantConsoleLogging : Bool",
+      "      }",
+      "",
+      "-- Config value",
+      "let browser : Browser = ",
+      "      Browser.Firefox ",
+      "        { headless = False",
+      "        , profilePath = None Text",
+      "        }",
+      "",
+      "let config : Config = ",
+      "      { browser = browser",
+      "      , wantConsoleLogging = False",
+      "      }",
+      "",
+      "in config"
+    ]
 
 readConfig :: IO Config
 readConfig =
@@ -112,5 +117,3 @@ loadConfig :: IO Config
 loadConfig = do
   initialiseTestConfig
   readConfig
-
-

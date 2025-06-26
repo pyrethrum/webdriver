@@ -1,5 +1,5 @@
 FROM ubuntu:20.04
-WORKDIR /app
+WORKDIR /webdriver
 
 RUN apt-get update \
     && apt-get install -y \
