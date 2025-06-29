@@ -33,4 +33,6 @@ RUN cabal v2-build all --only-dependencies --enable-tests
 RUN cabal install tasty-discover
 
 COPY . .
+COPY dev/config-ci.dhall webdriver-examples/driver-demo-e2e/.config/config.dhall
+
 RUN cabal v2-build all --enable-tests

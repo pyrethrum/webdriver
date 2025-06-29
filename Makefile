@@ -4,10 +4,10 @@
 IMAGE ?= webdriver
 
 build:
-	docker build -t $(IMAGE) .
+	docker build --progress=plain -t $(IMAGE) .
 
 test: build
 	docker run $(IMAGE) bash -c \
-		'MOZ_REMOTE_SETTINGS_DEVTOOLS=1 \
+	  'MOZ_REMOTE_SETTINGS_DEVTOOLS=1 \
 		 MOZ_HEADLESS=1 \
-		 geckodriver --binary /usr/bin/firefox & \cabal test all'
+		 geckodriver --binary /usr/bin/firefox & cabal test all'

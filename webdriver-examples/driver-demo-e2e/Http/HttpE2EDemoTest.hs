@@ -9,7 +9,8 @@ import Data.Aeson (Value (..))
 import Data.Set qualified as Set
 import Data.Text (isInfixOf)
 import Data.Time.Clock.POSIX (getPOSIXTime)
-import E2EConst
+import RuntimeConst ( httpFullCapabilities)
+import Const
   ( alertsUrl,
     anyElmCss,
     bottomFrameCss,
@@ -20,7 +21,6 @@ import E2EConst
     divCss,
     framesUrl,
     h3TagCss,
-    httpFullCapabilities,
     infiniteScrollUrl,
     inputTagCss,
     inputsUrl,

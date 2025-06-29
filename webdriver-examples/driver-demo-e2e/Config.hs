@@ -10,6 +10,7 @@ import Control.Monad (unless)
 import Data.Text as T (Text, pack, unlines)
 import Data.Text.IO qualified as T
 import Dhall (FromDhall, Generic, ToDhall, auto, input)
+import IOUtils (logShow)
 import System.Directory (doesFileExist, getCurrentDirectory)
 import System.FilePath (combine, joinPath, splitDirectories, (</>))
 import Prelude
@@ -116,4 +117,6 @@ userPath =
 loadConfig :: IO Config
 loadConfig = do
   initialiseTestConfig
-  readConfig
+  c <- readConfig
+  logShow "######## CONFIG ########" c
+  pure c

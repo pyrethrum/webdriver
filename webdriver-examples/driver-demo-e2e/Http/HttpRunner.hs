@@ -10,7 +10,7 @@ import Data.Foldable qualified as F
 import Data.Function ((&))
 import Data.Text as T (Text, unpack)
 import Data.Text.Encoding (decodeUtf8Lenient)
-import E2EConst (ReqRequestParams (..))
+import Const (ReqRequestParams (..))
 import Network.HTTP.Req (JsonResponse, Req)
 import Network.HTTP.Req as R
   ( DELETE (DELETE),

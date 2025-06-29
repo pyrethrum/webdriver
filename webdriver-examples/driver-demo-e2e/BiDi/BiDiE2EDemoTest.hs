@@ -3,7 +3,7 @@ module BiDi.BiDiE2EDemoTest where
 
 import Config (Config, loadConfig)
 import Control.Exception (finally)
-import E2EConst (httpCapabilities, httpFullCapabilities)
+import RuntimeConst (httpCapabilities, httpFullCapabilities)
 -- custom import needed to disambiguate capabilities
 import Http.HttpAPI qualified as Caps (Capabilities (..))
 import Http.HttpAPI qualified as Http

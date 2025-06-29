@@ -29,7 +29,7 @@ import Test.Tasty.HUnit as HUnit (Assertion, HasCallStack, (@=?))
 import Data.Semigroup (Semigroup (..))
 import Data.Text (pack)
 import Prelude (Show, Eq, (>>=))
-import E2EConst (second, seconds)
+import Const (second, seconds)
 
 
 sleepMs :: Int -> IO ()

@@ -131,7 +131,7 @@ test-suite driver-demo-e2e
     , wuss
   other-modules:
       Config
-    , E2EConst
+    , Const
     , IOUtils
     , Http.HttpRunnerMinimalForDocs
     , Http.HttpRunner
@@ -139,6 +139,7 @@ test-suite driver-demo-e2e
     , Http.HttpE2EDemoTest
     , BiDi.BiDiRunner
     , BiDi.BiDiE2EDemoTest
+    , RuntimeConst
   build-tool-depends:
     tasty-discover:tasty-discover
   default-language: Haskell2010
