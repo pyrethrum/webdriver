@@ -13,12 +13,20 @@ import Data.Functor ((<$>))
 import Data.IORef (newIORef, readIORef, writeIORef)
 import Data.Text as T (Text, breakOn, null, pack, splitOn, unpack)
 import Data.Text.IO as T (getLine, putStrLn)
-import Http.HttpAPI (FullCapabilities, SessionResponse, newSessionFull)
+import Http.HttpAPI (FullCapabilities, SessionResponse(..), newSessionFull)
+import IOUtils (ppTxt)
 import Network.WebSockets (ClientApp, receiveData, runClient, sendClose, sendTextData)
 import Text.Read (readEither)
 import WebDriverPreCore.BiDi.Session
 import Wuss (runSecureClient)
 import Prelude (Bool (True), Either (..), Eq ((==)), IO, Int, Maybe (..), Show (..), maybe, ($), (+), (.), (<>))
+
+getBiDiPath :: SessionResponse -> Either Text BiDiPath
+getBiDiPath r =
+  r.webSocketUrl
+    & maybe
+      (Left $ "WebSocket URL not provided in session response:\n" <> ppTxt r)
+      parseUrl
 
 parseUrl :: Text -> Either Text BiDiPath
 parseUrl url = do
@@ -48,7 +56,7 @@ parseUrl url = do
         portEth = case readEither $ T.unpack portTxt of
           Left msg ->
             failParser $
-              "Could not extract port (an Int) from prefix of: "
+              "Could not extract port (an Int) from pBiDi.BiDiRunnerrefix of: "
                 <> portTxt
                 <> "\n"
                 <> "Error on read Int: "
@@ -218,8 +226,14 @@ webDriverBiDiClient connection = do
 
 -- | Run the example with default GeckoDriver config
 
----- wuss example ----
 
+
+
+
+---- wuss example - works but driver is not a secure connection ----
+---- keep around for later - may be useful for remote providers such as LambdaTest / BrowserStack  ----
+
+-- >>> wussDemo
 wussDemo :: IO ()
 wussDemo = runSecureClient "echo.websocket.org" 443 "/" ws
 

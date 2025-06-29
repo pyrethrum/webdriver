@@ -31,9 +31,10 @@ httpBidiCapabilities cfg =
             }
     }
 
--- >>> unit_demoNewSessionViaHttp
-unit_demoNewSessionViaHttp :: IO ()
-unit_demoNewSessionViaHttp = do
+
+-- >>> unit_newBidiSessionViaHttp
+unit_newBidiSessionViaHttp :: IO ()
+unit_newBidiSessionViaHttp = do
   cfg <- loadConfig
   ses <- Http.newSessionFull $ httpBidiCapabilities cfg
   finally
