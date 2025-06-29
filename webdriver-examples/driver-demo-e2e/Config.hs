@@ -6,7 +6,7 @@ module Config
   )
 where
 
-import Control.Monad (unless)
+import Control.Monad (unless, when)
 import Data.Text as T (Text, pack, unlines)
 import Data.Text.IO qualified as T
 import Dhall (FromDhall, Generic, ToDhall, auto, input)
@@ -114,9 +114,15 @@ userPath :: IO FilePath
 userPath =
   configDir >>= pure . (flip combine) "config.dhall"
 
+-- for debugging
+wantPrintConfig :: IO Bool
+wantPrintConfig = pure False
+
 loadConfig :: IO Config
 loadConfig = do
   initialiseTestConfig
   c <- readConfig
-  logShow "######## CONFIG ########" c
+  p <- wantPrintConfig
+  when p $
+    logShow "######## CONFIG ########" c
   pure c

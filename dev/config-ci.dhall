@@ -15,7 +15,7 @@ let Config =
 -- Config value
 let browser : Browser = 
       Browser.Firefox
-        { headless = False
+        { headless = True
         , profilePath = None Text
         }
 
