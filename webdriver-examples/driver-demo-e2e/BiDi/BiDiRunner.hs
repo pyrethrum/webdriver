@@ -8,63 +8,68 @@ import Data.Aeson (FromJSON, ToJSON, eitherDecode, encode, (.:), (.:?), (.=))
 import Data.Aeson qualified as Aeson
 import Data.ByteString.Lazy (ByteString)
 import Data.ByteString.Lazy qualified as BL
+import Data.Function ((&))
 import Data.Functor ((<$>))
 import Data.IORef (newIORef, readIORef, writeIORef)
-import Data.Text as T (Text, null, pack, unpack, splitOn, breakOn)
+import Data.Text as T (Text, breakOn, null, pack, splitOn, unpack)
 import Data.Text.IO as T (getLine, putStrLn)
+import Http.HttpAPI (FullCapabilities, SessionResponse, newSessionFull)
 import Network.WebSockets (ClientApp, receiveData, runClient, sendClose, sendTextData)
+import Text.Read (readEither)
 import WebDriverPreCore.BiDi.Session
 import Wuss (runSecureClient)
 import Prelude (Bool (True), Either (..), Eq ((==)), IO, Int, Maybe (..), Show (..), maybe, ($), (+), (.), (<>))
-import Http.HttpAPI (newSessionFull, FullCapabilities, SessionResponse)
-import Text.Read (readEither)
-import Data.Function ((&))
-
 
 parseUrl :: Text -> Either Text BiDiPath
 parseUrl url = do
   (scheme, host, portPath) <- splitCol
   (port, path) <- portAndPath portPath
-  Right $ MkBiDiPath { 
-            host = scheme <> ":" <> host, 
-            port = port, 
-            path = path }
-  where 
+  Right $
+    MkBiDiPath
+      { host = scheme <> ":" <> host,
+        port = port,
+        path = path
+      }
+  where
     -- "ws://127.0.0.1:9222/session/e43698d9-b02a-4284-a936-12041deb3552"
     -- -> [ws, //127.0.0.1, 9222/session/e43698d9-b02a-4284-a936-12041deb3552]
-    splitCol = splitOn ":" url
-               & \case 
-                     [scheme, host, portPath] -> Right (scheme, host, portPath)
-                     _ -> failParser "Expected format: ws://host:port/path"
+    splitCol =
+      splitOn ":" url
+        & \case
+          [scheme, host, portPath] -> Right (scheme, host, portPath)
+          _ -> failParser "Expected format: ws://host:port/path"
     -- 9222/session/e43698d9-b02a-4284-a936-12041deb3552
     -- -> (9222, session/e43698d9-b02a-4284-a936-12041deb3552)
     portAndPath :: Text -> Either Text (Int, Text)
-    portAndPath pp = 
+    portAndPath pp =
       (,path) <$> portEth
-      where 
+      where
         (portTxt, path) = T.breakOn "/" pp
         portEth = case readEither $ T.unpack portTxt of
-                 Left msg -> failParser $ "Could not extract port (an Int) from prefix of: " 
-                                  <> portTxt
-                                  <> "\n"
-                                  <> "Error on read Int: " <> T.pack msg
-                 Right p -> Right p
-          
+          Left msg ->
+            failParser $
+              "Could not extract port (an Int) from prefix of: "
+                <> portTxt
+                <> "\n"
+                <> "Error on read Int: "
+                <> T.pack msg
+          Right p -> Right p
+
     failParser :: forall a. Text -> Either Text a
     failParser msg = Left $ "Failed to parse URL: " <> url <> "\n" <> msg
 
-
 newHttpSession :: FullCapabilities -> IO SessionResponse
-newHttpSession = newSessionFull 
+newHttpSession = newSessionFull
 
 -- >>> runBiDiExample
+
 -- *** Exception: MalformedResponse (ResponseHead {responseCode = 405, responseMessage = "Method Not Allowed", responseHeaders = [("content-type","text/plain; charset=utf-8"),("content-length","23"),("date","Sat, 24 May 2025 10:40:13 GMT")]}) "Wrong response status or message."
+
 runBiDiExample :: IO ()
 runBiDiExample = runWebDriverBiDi defaultGeckoDriverConfig
 
-
 -- | WebDriver BiDi client configuration
-data BiDiPath= MkBiDiPath
+data BiDiPath = MkBiDiPath
   { host :: Text,
     port :: Int,
     path :: Text
@@ -212,9 +217,6 @@ webDriverBiDiClient connection = do
               putStrLn $ "Received message without result: " <> pack (show parsedMsg)
 
 -- | Run the example with default GeckoDriver config
-
-
-
 
 ---- wuss example ----
 
