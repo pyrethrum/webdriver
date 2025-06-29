@@ -20,6 +20,8 @@
 ## finally 
 - [ ] update READMEs
   - [ ] add links to implementation report
+  - [ ] config notes
 - [ ] check docs urls
 - [ ] check all licence fiiles
 - [ ] add update method to release notes also branch into pyrethrum Web - the ddl genrator
+- [ ] update dev-container including dhall extensions

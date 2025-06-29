@@ -10,7 +10,7 @@ import Data.Foldable qualified as F
 import Data.Function ((&))
 import Data.Text as T (Text, unpack)
 import Data.Text.Encoding (decodeUtf8Lenient)
-import E2EConst (ReqRequestParams (..))
+import Const (ReqRequestParams (..))
 import Network.HTTP.Req (JsonResponse, Req)
 import Network.HTTP.Req as R
   ( DELETE (DELETE),
@@ -40,25 +40,30 @@ import WebDriverPreCore.Http qualified as W
 import WebDriverPreCore.Internal.AesonUtils (prettyPrintJson)
 import Prelude hiding (log)
 import IOUtils qualified as U 
-import Config (wantConsoleLogging)
+import Config (loadConfig, Config (..))
+
 
 -- ############# Runner #############
 
 run :: (Show a) => HttpSpec a -> IO a
 run spec = do
-  when wantConsoleLogging $ do
-    U.logTxt "Request"
-    U.logShow "HttpSpec" spec
-    case spec of
-      Get {} -> pure ()
-      Post {body} -> do
-        U.logTxt "body PP"
-        prettyPrintJson body
-        -- U.logTxt "Body Raw"
-        -- T.putStrLn (LT.toStrict $ encodeToLazyText body)
-      PostEmpty {} -> pure ()
-      Delete {} -> pure ()
-  callWebDriver wantConsoleLogging (mkRequest spec) >>= parseIO spec
+  cfg <- loadConfig
+  let wantLog = cfg.wantConsoleLogging
+  when wantLog $
+   logSpec spec
+  callWebDriver wantLog (mkRequest spec) >>= parseIO spec
+
+logSpec :: (Show a) => HttpSpec a -> IO ()
+logSpec spec = do
+  U.logTxt "Request"
+  U.logShow "HttpSpec" spec
+  case spec of
+    Get {} -> pure ()
+    Post {body} -> do
+      U.logTxt "body PP"
+      prettyPrintJson body
+    PostEmpty {} -> pure ()
+    Delete {} -> pure ()
 
 mkRequest :: forall a. HttpSpec a -> ReqRequestParams
 mkRequest spec = case spec of

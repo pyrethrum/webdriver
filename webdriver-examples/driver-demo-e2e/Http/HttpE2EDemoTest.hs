@@ -2,15 +2,15 @@ module Http.HttpE2EDemoTest where
 
 -- minFirefoxSession,
 
-import Config (customFirefoxProfilePath, useFirefox)
+import Config (loadConfig)
 import Control.Exception (bracket)
 import Control.Monad (forM_)
 import Data.Aeson (Value (..))
-import Data.Function ((&))
 import Data.Set qualified as Set
-import Data.Text (Text, isInfixOf)
+import Data.Text (isInfixOf)
 import Data.Time.Clock.POSIX (getPOSIXTime)
-import E2EConst
+import RuntimeConst ( httpFullCapabilities)
+import Const
   ( alertsUrl,
     anyElmCss,
     bottomFrameCss,
@@ -21,7 +21,6 @@ import E2EConst
     divCss,
     framesUrl,
     h3TagCss,
-    httpFullCapabilities,
     infiniteScrollUrl,
     inputTagCss,
     inputsUrl,
@@ -35,7 +34,7 @@ import E2EConst
     shadowDomUrl,
     theInternet,
     topFrameCSS,
-    userNameCss, httpFullCapabilities,
+    userNameCss,
   )
 import GHC.IO (catchAny, finally)
 import Http.HttpAPI
@@ -105,7 +104,6 @@ import Http.HttpAPI
     isElementSelected,
     maximizeWindow,
     minCapabilities,
-    minFirefoxSession,
     minimizeWindow,
     navigateTo,
     newSession,
@@ -137,7 +135,7 @@ import IOUtils
     (===),
   )
 import Test.Tasty.HUnit (Assertion, assertBool)
-import WebDriverPreCore.Http (alwaysMatchCapabilities, minChromeCapabilities, minFullCapabilities)
+import WebDriverPreCore.Http (minFullCapabilities)
 import WebDriverPreCore.Internal.Utils (txt)
 import Prelude hiding (log)
 
@@ -146,7 +144,10 @@ import Prelude hiding (log)
 -- >>> unit_demoNewSession
 unit_demoNewSession :: IO ()
 unit_demoNewSession = do
-  ses <- newSessionFull httpFullCapabilities
+  cfg <- loadConfig
+  let caps = httpFullCapabilities cfg
+  logShow "capabilities" caps
+  ses <- newSessionFull caps
   finally
     (logShow "new session response:\n" ses)
     (deleteSession ses.sessionId)
@@ -154,7 +155,8 @@ unit_demoNewSession = do
 -- >>> unit_demoSessionDriverStatus
 unit_demoSessionDriverStatus :: IO ()
 unit_demoSessionDriverStatus = do
-  sesId <- newSession httpFullCapabilities
+  cfg <- loadConfig
+  sesId <- newSession $ httpFullCapabilities cfg
   finally
     ( do
         log "new session:" $ txt sesId
@@ -179,10 +181,6 @@ unit_demoSendKeysClear = withSession \ses -> do
   sleep2
 
 -- >>> unit_demoForwardBackRefresh
-
--- *** Exception: user error (WebDriver error thrown:
-
---  WebDriverError {error = SessionNotCreated, description = "A new session could not be created", httpResponse = MkHttpResponse {statusCode = 500, statusMessage = "Internal Server Error", body = Object (fromList [("value",Object (fromList [("error",String "session not created"),("message",String "Session is already started"),("stacktrace",String "")]))])}})
 unit_demoForwardBackRefresh :: IO ()
 unit_demoForwardBackRefresh = withSession \ses -> do
   navigateTo ses theInternet
@@ -760,9 +758,19 @@ unit_demoError = withSession \ses -> do
 
 session :: IO SessionId
 session =
-  if useFirefox
-    then mkExtendedFirefoxTimeoutsSession
-    else mkExtendedChromeTimeoutsSession
+  httpFullCapabilities <$> loadConfig
+    >>= newSessionFull
+    >>= extendTimeouts . (.sessionId)
+
+extendTimeouts :: SessionId -> IO SessionId
+extendTimeouts ses = do
+  setTimeouts ses $
+    MkTimeouts
+      { pageLoad = Just $ 30 * seconds,
+        script = Just $ 11 * seconds,
+        implicit = Just $ 12 * seconds
+      }
+  pure ses
 
 withSession :: (SessionId -> IO ()) -> IO ()
 withSession =
@@ -795,39 +803,3 @@ capsWithCustomFirefoxProfileNotWorking = do
                 firefoxLog = Nothing
               }
       }
-
-capsWithCustomFirefoxProfile :: Text -> Capabilities
-capsWithCustomFirefoxProfile firefoxProfilePath =
-  (minCapabilities Firefox)
-    { vendorSpecific =
-        Just
-          FirefoxOptions
-            { -- requires a path to the profile directory
-              firefoxArgs = Just ["-profile", firefoxProfilePath],
-              firefoxBinary = Nothing,
-              firefoxProfile = Nothing,
-              firefoxLog = Nothing
-            }
-    }
-
-mkExtendedFirefoxTimeoutsSession :: IO SessionId
-mkExtendedFirefoxTimeoutsSession =
-  customFirefoxProfilePath
-    & maybe
-      minFirefoxSession
-      (\profilepath -> newSession . alwaysMatchCapabilities $ capsWithCustomFirefoxProfile profilepath)
-    >>= extendTimeouts
-
-mkExtendedChromeTimeoutsSession :: IO SessionId
-mkExtendedChromeTimeoutsSession =
-  newSession minChromeCapabilities >>= extendTimeouts
-
-extendTimeouts :: SessionId -> IO SessionId
-extendTimeouts ses = do
-  setTimeouts ses $
-    MkTimeouts
-      { pageLoad = Just $ 30 * seconds,
-        script = Just $ 11 * seconds,
-        implicit = Just $ 12 * seconds
-      }
-  pure ses

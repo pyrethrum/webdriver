@@ -1,5 +1,5 @@
 FROM ubuntu:20.04
-WORKDIR /app
+WORKDIR /webdriver
 
 RUN apt-get update \
     && apt-get install -y \
@@ -33,4 +33,10 @@ RUN cabal v2-build all --only-dependencies --enable-tests
 RUN cabal install tasty-discover
 
 COPY . .
+COPY dev/config-ci.dhall webdriver-examples/driver-demo-e2e/.config/config.dhall
+# RUN echo "==== BEGIN CONFIG FILE ====" && \
+#     cat webdriver-examples/driver-demo-e2e/.config/config.dhall && \
+#     echo "==== END CONFIG FILE ===="
+
+# RUN cabal clean
 RUN cabal v2-build all --enable-tests

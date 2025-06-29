@@ -1,22 +1,25 @@
 module JSONParsingTest where
 
-import Data.Aeson (ToJSON (toJSON), Value (..), decode, encode)
+import Data.Aeson (Result (Success), ToJSON (toJSON), Value (..), decode, encode, fromJSON)
 import Data.Aeson.KeyMap qualified as KM
-
+import Data.Bits (FiniteBits)
 import Data.Bool (Bool, (&&), (||))
-import Prelude (Bounded (minBound), Enum, maxBound)
 import Data.Foldable (all, null)
-import Data.Function (($), (.), id)
+import Data.Function (id, ($), (.))
 import Data.Functor ((<$>))
 import Data.Map.Strict qualified as M
 import Data.Maybe (Maybe (..), isNothing)
 import Data.String (String)
 import Data.Text (Text, unpack)
 import Data.Text qualified as T
-import GHC.Base (Applicative (..), Bool (..), Eq (..), Int, const, Functor (..))
+import GHC.Base (Applicative (..), Bool (..), Eq (..), Functor (..), Int, const)
 import GHC.Data.Maybe (maybe)
 import GHC.Float (Double)
 import GHC.IO (FilePath)
+import GHC.Num (Num (..))
+import GHC.Plugins (HasCallStack)
+import GHC.Prelude (Show)
+import GHC.Real (Fractional (..), Integral, fromIntegral)
 import Test.Falsify.Generator as G
   ( Gen,
     bool,
@@ -37,22 +40,22 @@ import Test.Tasty.Falsify
     info,
     testPropertyWith,
   )
+import Test.Tasty.HUnit (Assertion, (@=?))
 import Text.Show.Pretty (ppShow)
-import WebDriverPreCore.Http
-  ( Capabilities (..),
-    DeviceMetrics (..),
-    LogLevel (..),
-    MobileEmulation (..),
-    PerfLoggingPrefs (..),
-    Proxy (..),
-    SocksProxy (..),
-    Timeouts (..),
-    VendorSpecific (..), LogSettings (MkLogSettings)
-  )
-import WebDriverPreCore.Internal.AesonUtils(jsonToText)
-import GHC.Real (Integral, Fractional (..), fromIntegral)
-import Data.Bits (FiniteBits)
-import GHC.Num (Num(..))
+import WebDriverPreCore.Http (Capabilities (..), DeviceMetrics (..), LogLevel (..), LogSettings (MkLogSettings), MobileEmulation (..), PerfLoggingPrefs (..), Proxy (..), SessionResponse (..), SocksProxy (..), Timeouts (..), VendorSpecific (..))
+import WebDriverPreCore.Internal.AesonUtils (jsonToText)
+import Prelude (Bounded (minBound), Enum, IO, maxBound)
+
+-- todo: test extras - split off
+
+(===) ::
+  (Eq a, Show a, HasCallStack) =>
+  -- | The actual value
+  a ->
+  -- | The expected value
+  a ->
+  Assertion
+(===) = (@=?)
 
 genMaybe :: G.Gen a -> G.Gen (Maybe a)
 genMaybe gen' =
@@ -230,8 +233,7 @@ genManualProxy =
       <*> genMaybe genSocksProxy
       <*> (genMaybe genTextList)
 
-
-genFromRange :: (Integral a,  FiniteBits a) => a -> a -> Gen a
+genFromRange :: (Integral a, FiniteBits a) => a -> a -> Gen a
 genFromRange lb ub = G.inRange $ R.between (lb, ub)
 
 genInt :: Int -> Int -> G.Gen Int
@@ -268,7 +270,7 @@ genCapabilities = do
   unhandledPromptBehavior <- genMEnum
   acceptInsecureCerts <- genMaybe genBool
   setWindowRect <- genMaybe genBool
-  webSocketUrl  <- genMaybe genBool
+  webSocketUrl <- genMaybe genBool
   pageLoadStrategy <- genMEnum
   proxy <- genMaybe genProxy
   timeouts <- genMaybe genTimeouts
@@ -285,7 +287,6 @@ options =
       overrideMaxRatio = Nothing
     }
 
-
 subEmt :: forall a. (a -> Bool) -> Maybe a -> Maybe a
 subEmt f = maybe Nothing (\x -> if f x then Nothing else Just x)
 
@@ -293,11 +294,10 @@ subEmptyTxt :: Maybe Text -> Maybe Text
 subEmptyTxt = subEmt T.null
 
 subEmptyList :: Maybe String -> Maybe String
-subEmptyList = subEmt null 
+subEmptyList = subEmt null
 
 subEmptyTxtLst :: Maybe [Text] -> Maybe [Text]
 subEmptyTxtLst = subEmt emptyTextList
-
 
 emptyVal :: Value -> Bool
 emptyVal = \case
@@ -310,83 +310,81 @@ emptyVal = \case
 
 subEmtyValueMap :: Maybe (M.Map Text Value) -> Maybe (M.Map Text Value)
 subEmtyValueMap = fmap M.fromList . subEmt emptyValList . fmap M.toList
- where
-  emptyValList :: [(Text, Value)] -> Bool
-  emptyValList ml = null ml || all (\(t, v) -> T.null t || emptyVal v) ml
+  where
+    emptyValList :: [(Text, Value)] -> Bool
+    emptyValList ml = null ml || all (\(t, v) -> T.null t || emptyVal v) ml
 
 -- | Substitutes empty fields with Nothing
 subEmptyVendor :: Maybe VendorSpecific -> Maybe VendorSpecific
 subEmptyVendor = subEmt allPropsNothing . fmap subEmptFields
- where 
-  allPropsNothing :: VendorSpecific -> Bool
-  allPropsNothing = \case 
-    ChromeOptions p1 p2 p3 p4 p5 p6 p7 p8 p9 p10 p11 p12 -> allTrue [n p1, n p2, n p3, n p4, n p5, n p6, n p7, n p8, n p9, n p10, n p11, n p12]
-    EdgeOptions p1 p2 p3 p4 p5 p6 p7 p8 p9 p10 p11 p12 -> allTrue [n p1, n p2, n p3, n p4, n p5, n p6, n p7, n p8, n p9, n p10, n p11, n p12]
-    FirefoxOptions p1 p2 p3 p4 -> allTrue [n p1, n p2, n p3, n p4]
-    SafariOptions p1 p2-> allTrue [n p1, n p2]
-    
-    where 
-      n = isNothing
-      allTrue :: [Bool] -> Bool
-      allTrue = all id
+  where
+    allPropsNothing :: VendorSpecific -> Bool
+    allPropsNothing = \case
+      ChromeOptions p1 p2 p3 p4 p5 p6 p7 p8 p9 p10 p11 p12 -> allTrue [n p1, n p2, n p3, n p4, n p5, n p6, n p7, n p8, n p9, n p10, n p11, n p12]
+      EdgeOptions p1 p2 p3 p4 p5 p6 p7 p8 p9 p10 p11 p12 -> allTrue [n p1, n p2, n p3, n p4, n p5, n p6, n p7, n p8, n p9, n p10, n p11, n p12]
+      FirefoxOptions p1 p2 p3 p4 -> allTrue [n p1, n p2, n p3, n p4]
+      SafariOptions p1 p2 -> allTrue [n p1, n p2]
+      where
+        n = isNothing
+        allTrue :: [Bool] -> Bool
+        allTrue = all id
 
-  subEmptFields :: VendorSpecific -> VendorSpecific
-  subEmptFields = \case
-    ChromeOptions {..} ->
-      ChromeOptions
-        { chromeArgs = subEmptyTxtLst chromeArgs,
-          chromeBinary = subEmptyTxt chromeBinary,
-          chromeExtensions = subEmptyTxtLst chromeExtensions,
-          chromeLocalState = subEmtyValueMap chromeLocalState,
-          chromePrefs = subEmtyValueMap chromePrefs,
-          chromeDetach,
-          chromeDebuggerAddress = subEmptyTxt chromeDebuggerAddress,
-          chromeExcludeSwitches = subEmptyTxtLst chromeExcludeSwitches,
-          chromeMobileEmulation = subEmptyMobileEmulation chromeMobileEmulation,
-          chromeMinidumpPath = subEmptyList chromeMinidumpPath,
-          chromePerfLoggingPrefs = subEmptyPerfLoggingPrefs chromePerfLoggingPrefs,
-          chromeWindowTypes = subEmptyTxtLst chromeWindowTypes
-        }
-    EdgeOptions {..} ->
-      EdgeOptions
-        { edgeArgs = subEmptyTxtLst edgeArgs,
-          edgeBinary = subEmptyTxt edgeBinary,
-          edgeExtensions = subEmptyTxtLst edgeExtensions,
-          edgeLocalState = subEmtyValueMap edgeLocalState,
-          edgePrefs = subEmtyValueMap edgePrefs,
-          edgeDetach,
-          edgeDebuggerAddress = subEmptyTxt edgeDebuggerAddress,
-          edgeExcludeSwitches = subEmptyTxtLst edgeExcludeSwitches,
-          edgeMobileEmulation = subEmptyMobileEmulation edgeMobileEmulation,
-          edgeMinidumpPath = subEmptyList edgeMinidumpPath,
-          edgePerfLoggingPrefs = subEmptyPerfLoggingPrefs edgePerfLoggingPrefs,
-          edgeWindowTypes = subEmptyTxtLst edgeWindowTypes
-        }
-    FirefoxOptions {..} ->
-      FirefoxOptions
-        { firefoxArgs = subEmptyTxtLst firefoxArgs,
-          firefoxBinary = subEmptyTxt firefoxBinary,
-          firefoxProfile = subEmptyTxt firefoxProfile,
-          firefoxLog
-        }
-    s@SafariOptions {} -> s
-    where
-      subEmptyMobileEmulation :: Maybe MobileEmulation -> Maybe MobileEmulation
-      subEmptyMobileEmulation = subEmt emptyMobileEmulation
+    subEmptFields :: VendorSpecific -> VendorSpecific
+    subEmptFields = \case
+      ChromeOptions {..} ->
+        ChromeOptions
+          { chromeArgs = subEmptyTxtLst chromeArgs,
+            chromeBinary = subEmptyTxt chromeBinary,
+            chromeExtensions = subEmptyTxtLst chromeExtensions,
+            chromeLocalState = subEmtyValueMap chromeLocalState,
+            chromePrefs = subEmtyValueMap chromePrefs,
+            chromeDetach,
+            chromeDebuggerAddress = subEmptyTxt chromeDebuggerAddress,
+            chromeExcludeSwitches = subEmptyTxtLst chromeExcludeSwitches,
+            chromeMobileEmulation = subEmptyMobileEmulation chromeMobileEmulation,
+            chromeMinidumpPath = subEmptyList chromeMinidumpPath,
+            chromePerfLoggingPrefs = subEmptyPerfLoggingPrefs chromePerfLoggingPrefs,
+            chromeWindowTypes = subEmptyTxtLst chromeWindowTypes
+          }
+      EdgeOptions {..} ->
+        EdgeOptions
+          { edgeArgs = subEmptyTxtLst edgeArgs,
+            edgeBinary = subEmptyTxt edgeBinary,
+            edgeExtensions = subEmptyTxtLst edgeExtensions,
+            edgeLocalState = subEmtyValueMap edgeLocalState,
+            edgePrefs = subEmtyValueMap edgePrefs,
+            edgeDetach,
+            edgeDebuggerAddress = subEmptyTxt edgeDebuggerAddress,
+            edgeExcludeSwitches = subEmptyTxtLst edgeExcludeSwitches,
+            edgeMobileEmulation = subEmptyMobileEmulation edgeMobileEmulation,
+            edgeMinidumpPath = subEmptyList edgeMinidumpPath,
+            edgePerfLoggingPrefs = subEmptyPerfLoggingPrefs edgePerfLoggingPrefs,
+            edgeWindowTypes = subEmptyTxtLst edgeWindowTypes
+          }
+      FirefoxOptions {..} ->
+        FirefoxOptions
+          { firefoxArgs = subEmptyTxtLst firefoxArgs,
+            firefoxBinary = subEmptyTxt firefoxBinary,
+            firefoxProfile = subEmptyTxt firefoxProfile,
+            firefoxLog
+          }
+      s@SafariOptions {} -> s
+      where
+        subEmptyMobileEmulation :: Maybe MobileEmulation -> Maybe MobileEmulation
+        subEmptyMobileEmulation = subEmt emptyMobileEmulation
 
-      emptyMobileEmulation :: MobileEmulation -> Bool
-      emptyMobileEmulation = \case
-        MkMobileEmulation {deviceName, deviceMetrics, userAgent} ->
-          emptyTxt deviceName && isNothing deviceMetrics && emptyTxt userAgent
+        emptyMobileEmulation :: MobileEmulation -> Bool
+        emptyMobileEmulation = \case
+          MkMobileEmulation {deviceName, deviceMetrics, userAgent} ->
+            emptyTxt deviceName && isNothing deviceMetrics && emptyTxt userAgent
 
-      subEmptyPerfLoggingPrefs :: Maybe PerfLoggingPrefs -> Maybe PerfLoggingPrefs
-      subEmptyPerfLoggingPrefs = subEmt emptyPerfLoggingPrefs
+        subEmptyPerfLoggingPrefs :: Maybe PerfLoggingPrefs -> Maybe PerfLoggingPrefs
+        subEmptyPerfLoggingPrefs = subEmt emptyPerfLoggingPrefs
 
-      emptyPerfLoggingPrefs :: PerfLoggingPrefs -> Bool
-      emptyPerfLoggingPrefs = \case
-        MkPerfLoggingPrefs {enableNetwork, enablePage, enableTimeline, traceCategories, bufferUsageReportingInterval} ->
-          emptyTxt traceCategories && isNothing bufferUsageReportingInterval && isNothing enableNetwork && isNothing enablePage && isNothing enableTimeline
-
+        emptyPerfLoggingPrefs :: PerfLoggingPrefs -> Bool
+        emptyPerfLoggingPrefs = \case
+          MkPerfLoggingPrefs {enableNetwork, enablePage, enableTimeline, traceCategories, bufferUsageReportingInterval} ->
+            emptyTxt traceCategories && isNothing bufferUsageReportingInterval && isNothing enableNetwork && isNothing enablePage && isNothing enableTimeline
 
 emptyTxt :: Maybe Text -> Bool
 emptyTxt = maybe True T.null
@@ -397,11 +395,10 @@ emptyList = maybe True null
 emptyTextList :: [Text] -> Bool
 emptyTextList ml = null ml || (all T.null) ml
 
-
 isNothingProxy :: Proxy -> Bool
 isNothingProxy = \case
   Direct -> False
-  Manual ftpProxy httpProxy sslProxy noProxy socksProxy-> 
+  Manual ftpProxy httpProxy sslProxy noProxy socksProxy ->
     all isNothing [ftpProxy, httpProxy, sslProxy] && isNothing noProxy && isNothing socksProxy
   AutoDetect -> False
   Pac url -> T.null url
@@ -425,9 +422,8 @@ subEmptyProxy p = subEmt isNothingProxy $ subEmptProps <$> p
       Pac {} -> p'
       System -> p'
 
-
 subEmptyTimeouts :: Maybe Timeouts -> Maybe Timeouts
-subEmptyTimeouts = subEmt isNothingTimeouts 
+subEmptyTimeouts = subEmt isNothingTimeouts
   where
     isNothingTimeouts :: Timeouts -> Bool
     isNothingTimeouts = \case
@@ -435,28 +431,29 @@ subEmptyTimeouts = subEmt isNothingTimeouts
         all isNothing [implicit, pageLoad, script]
 
 emptyFieldsToNothing :: Capabilities -> Capabilities
-emptyFieldsToNothing caps@MkCapabilities {..} = caps {
-  browserVersion = subEmptyTxt browserVersion,
-  vendorSpecific = subEmptyVendor vendorSpecific,
-  platformName,
-  acceptInsecureCerts,
-  pageLoadStrategy,
-  proxy = subEmptyProxy proxy,
-  timeouts = subEmptyTimeouts timeouts,
-  strictFileInteractability,
-  unhandledPromptBehavior
- }
+emptyFieldsToNothing caps@MkCapabilities {..} =
+  caps
+    { browserVersion = subEmptyTxt browserVersion,
+      vendorSpecific = subEmptyVendor vendorSpecific,
+      platformName,
+      acceptInsecureCerts,
+      pageLoadStrategy,
+      proxy = subEmptyProxy proxy,
+      timeouts = subEmptyTimeouts timeouts,
+      strictFileInteractability,
+      unhandledPromptBehavior
+    }
 
 subEmptyCapabilities :: Capabilities -> Capabilities
-subEmptyCapabilities caps@MkCapabilities {..} = caps {
-  browserVersion = subEmptyTxt browserVersion,
-  strictFileInteractability = strictFileInteractability,
-  acceptInsecureCerts = acceptInsecureCerts,
-  proxy = subEmptyProxy proxy,
-  timeouts = subEmptyTimeouts timeouts,
-  vendorSpecific = subEmptyVendor vendorSpecific
- }
-
+subEmptyCapabilities caps@MkCapabilities {..} =
+  caps
+    { browserVersion = subEmptyTxt browserVersion,
+      strictFileInteractability = strictFileInteractability,
+      acceptInsecureCerts = acceptInsecureCerts,
+      proxy = subEmptyProxy proxy,
+      timeouts = subEmptyTimeouts timeouts,
+      vendorSpecific = subEmptyVendor vendorSpecific
+    }
 
 jsonEq :: Capabilities -> Maybe Capabilities -> Bool
 jsonEq expected =
@@ -488,3 +485,62 @@ test_round_trip = testPropertyWith options "Roundtrip Capabilities Parsing" $ do
   log "Decoded Capabilities:"
   log $ maybe "Nothing" ppShow decoded
   assert $ expect True `dot` fn ("matches encoded", asExpected) .$ ("decoded", decoded)
+
+-- >>> unit_websocketUrlFromJSon
+unit_websocketUrlFromJSon :: IO ()
+unit_websocketUrlFromJSon =
+  (Success $ Just "ws://127.0.0.1:9222/session/b82f5798-2d37-4555-ac1d-7c70153ad372") === decoded
+  where
+    json =
+      Object
+        ( KM.fromList
+            [ ( "capabilities",
+                Object
+                  ( KM.fromList
+                      [ ("acceptInsecureCerts", Bool False),
+                        ("browserName", String "firefox"),
+                        ("browserVersion", String "137.0.2"),
+                        ("moz:accessibilityChecks", Bool False),
+                        ("moz:buildID", String "20250414091429"),
+                        ("moz:geckodriverVersion", String "0.36.0"),
+                        ("moz:headless", Bool True),
+                        ("moz:platformVersion", String "6.11.0-26-generic"),
+                        ("moz:processID", Number 14181.0),
+                        ("moz:profile", String "/tmp/rust_mozprofileNltPR1"),
+                        ("moz:shutdownTimeout", Number 60000.0),
+                        ("moz:webdriverClick", Bool True),
+                        ("moz:windowless", Bool False),
+                        ("pageLoadStrategy", String "normal"),
+                        ("platformName", String "linux"),
+                        ("proxy", Object (KM.fromList [])),
+                        ("setWindowRect", Bool True),
+                        ("strictFileInteractability", Bool False),
+                        ( "timeouts",
+                          Object
+                            ( KM.fromList
+                                [ ("implicit", Number 0.0),
+                                  ("pageLoad", Number 300000.0),
+                                  ("script", Number 30000.0)
+                                ]
+                            )
+                        ),
+                        ("unhandledPromptBehavior", String "dismiss and notify"),
+                        ( "userAgent",
+                          String
+                            "Mozilla/5.0 (X11; Linux x86_64; rv:137.0) Gecko/20100101 Firefox/137.0"
+                        ),
+                        ( "webSocketUrl",
+                          String
+                            "ws://127.0.0.1:9222/session/b82f5798-2d37-4555-ac1d-7c70153ad372"
+                        )
+                      ]
+                  )
+              ),
+              ("sessionId", String "b82f5798-2d37-4555-ac1d-7c70153ad372")
+            ]
+        )
+
+    decoded = (.webSocketUrl) <$> fromJSON @SessionResponse json
+
+
+

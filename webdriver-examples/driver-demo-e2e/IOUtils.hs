@@ -6,6 +6,7 @@ module IOUtils
     logShow,
     logM,
     logShowM,
+    ppTxt,
     sleep1,
     sleep2,
     (===),
@@ -28,7 +29,7 @@ import Test.Tasty.HUnit as HUnit (Assertion, HasCallStack, (@=?))
 import Data.Semigroup (Semigroup (..))
 import Data.Text (pack)
 import Prelude (Show, Eq, (>>=))
-import E2EConst (second, seconds)
+import Const (second, seconds)
 
 
 sleepMs :: Int -> IO ()
@@ -46,8 +47,11 @@ logTxt = TIO.putStrLn
 log :: Text -> Text -> IO ()
 log l t = logTxt $ l <> ": " <> t
 
+ppTxt :: Show a => a -> Text
+ppTxt = pack . P.ppShow
+
 logShow :: (Show a) => Text -> a -> IO ()
-logShow l = log l . pack . P.ppShow
+logShow l = log l . ppTxt
 
 logM :: Text -> IO Text -> IO ()
 logM l t = t >>= log l

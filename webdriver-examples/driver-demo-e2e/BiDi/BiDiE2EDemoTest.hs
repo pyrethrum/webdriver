@@ -1,56 +1,60 @@
 module BiDi.BiDiE2EDemoTest where
 
-import Prelude hiding (putStrLn)
-import E2EConst (httpFullCapabilities, httpCapabilities)
-import IOUtils (logShow)
-import BiDi.BiDiRunner (newHttpSession)
+
+import Config (Config, loadConfig)
+import Control.Exception (finally)
+import RuntimeConst (httpCapabilities, httpFullCapabilities)
+-- custom import needed to disambiguate capabilities
+import Http.HttpAPI qualified as Caps (Capabilities (..))
 import Http.HttpAPI qualified as Http
-import Http.HttpAPI qualified as Caps (Capabilities(..))
+import IOUtils (logShow, ppTxt)
+import Prelude hiding (putStrLn, log)
+import BiDi.BiDiRunner (parseUrl)
+import Data.Text (Text)
 
+-- WORK IN PROGRESS
 
+-- >>> demo_parseUrl
+-- "Right\n  MkBiDiPath\n    { host = \"ws://127.0.0.1\"\n    , port = 9222\n    , path = \"/session/e43698d9-b02a-4284-a936-12041deb3552\"\n    }"
+demo_parseUrl :: Text
+demo_parseUrl = ppTxt $ parseUrl "ws://127.0.0.1:9222/session/e43698d9-b02a-4284-a936-12041deb3552"
 
-httpBidiCapabilities :: Http.FullCapabilities
-httpBidiCapabilities =
-  httpFullCapabilities {
-    Http.alwaysMatch = Just (httpCapabilities {
-      Caps.webSocketUrl = Just True
-    })
-  }
+-- Get the initial BiDi connection by making an HTTP request
+-- with webSocketUrl set to True
+httpBidiCapabilities :: Config -> Http.FullCapabilities
+httpBidiCapabilities cfg =
+  (httpFullCapabilities cfg)
+    { Http.alwaysMatch =
+        Just $
+          (httpCapabilities cfg)
+            { Caps.webSocketUrl = Just True
+            }
+    }
 
--- >>> unit_demoNewSession
+-- >>> unit_demoNewSessionViaHttp
 unit_demoNewSessionViaHttp :: IO ()
 unit_demoNewSessionViaHttp = do
-  ses <- newHttpSession httpBidiCapabilities
-  logShow "new session response:\n" ses
-  Http.deleteSession ses.sessionId
+  cfg <- loadConfig
+  ses <- Http.newSessionFull $ httpBidiCapabilities cfg
+  finally
+    (logShow "new session response:\n" ses)
+    (Http.deleteSession ses.sessionId)
 
 
--- >>> unit_sessionNew
--- *** Exception: user error (New Session
--- Failed to parse response:
---  parsing WebDriverPreCore.BiDi.Session.ProxyConfiguration failed, expected Object with key "tag" containing one of ["AutodetectProxyConfiguration","DirectProxyConfiguration","ManualProxyConfiguration","PacProxyConfiguration","SystemProxyConfiguration"], key "tag" not found
--- in response:NotAnError {httpResponse = MkHttpResponse {statusCode = 200, statusMessage = "OK", body = Object (fromList [("value",Object (fromList [("capabilities",Object (fromList [("acceptInsecureCerts",Bool False),("browserName",String "firefox"),("browserVersion",String "137.0.2"),("moz:accessibilityChecks",Bool False),("moz:buildID",String "20250414091429"),("moz:geckodriverVersion",String "0.36.0"),("moz:headless",Bool False),("moz:platformVersion",String "6.11.0-25-generic"),("moz:processID",Number 15645.0),("moz:profile",String "/tmp/rust_mozprofile0Qk6Xy"),("moz:shutdownTimeout",Number 60000.0),("moz:webdriverClick",Bool True),("moz:windowless",Bool False),("pageLoadStrategy",String "normal"),("platformName",String "linux"),("proxy",Object (fromList [])),("setWindowRect",Bool True),("strictFileInteractability",Bool False),("timeouts",Object (fromList [("implicit",Number 0.0),("pageLoad",Number 300000.0),("script",Number 30000.0)])),("unhandledPromptBehavior",String "dismiss and notify"),("userAgent",String "Mozilla/5.0 (X11; Linux x86_64; rv:137.0) Gecko/20100101 Firefox/137.0"),("webSocketUrl",String "ws://127.0.0.1:9222/session/306034e3-57c8-46d9-bbc8-a0709ab1e2c5")])),("sessionId",String "306034e3-57c8-46d9-bbc8-a0709ab1e2c5")]))])}})
--- sessionNew :: IO ()
--- sessionNew = do
---   ses <- newSession firefoxCapabilities
---   putStrLn $ txt ses
+-- unit_bidiSession :: IO ()
+-- unit_bidiSession = do
+--   cfg <- loadConfig
+--   ses <- newHttpSession $ httpBidiCapabilities cfg
+--   let sesTxt = prettyPack ses
+--       wsUrl = fromMaybe (error $ "WebSocket URL not provided in session response\n" <> sesTxt) ses.webSocketUrl
+--   log "new session response:\n" ses
+--   let wsUrl = case ses.webSocketUrl of
+--     Just url -> url
+--     Nothing -> (error "WebSocket URL not provided in session response")
 
--- firefoxCapabilities :: Capabilities
--- firefoxCapabilities =
---   MkCapabilities
---     { alwaysMatch = Just firefoxCapability,
---       firstMatch = []
---     }
+  -- let bidiCOnfig = WebDriverBiDiConfig
+  --       { host = cfg.host,
+  --         port = cfg.port,
+  --         path = "/session/" <> ses.sessionId <> "/bidi"
+  --       }
 
--- firefoxCapability :: Capability
--- firefoxCapability =
---   MkCapability
---     { browserName = Just "firefox",
---       browserVersion = Nothing,
---       -- Always true for BiDi
---       webSocketUrl = True,
---       acceptInsecureCerts = Nothing,
---       platformName = Nothing,
---       proxy = Nothing,
---       unhandledPromptBehavior = Nothing
---     }

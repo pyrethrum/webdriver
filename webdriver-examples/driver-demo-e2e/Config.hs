@@ -1,21 +1,128 @@
-module Config where
+module Config
+  ( Config (..),
+    DemoBrowser (..),
+    isFirefox,
+    loadConfig,
+  )
+where
 
+import Control.Monad (unless, when)
+import Data.Text as T (Text, pack, unlines)
+import Data.Text.IO qualified as T
+import Dhall (FromDhall, Generic, ToDhall, auto, input)
+import IOUtils (logShow)
+import System.Directory (doesFileExist, getCurrentDirectory)
+import System.FilePath (combine, joinPath, splitDirectories, (</>))
 import Prelude
-import Data.Text
 
-wantConsoleLogging :: Bool
-wantConsoleLogging = False
+isFirefox :: DemoBrowser -> Bool
+isFirefox = \case
+  Firefox {} -> True
+  Chrome -> False
 
--- set to False for Chrome
-useFirefox :: Bool
-useFirefox = True
+data DemoBrowser = Chrome | Firefox {headless :: Bool, profilePath :: Maybe Text}
+  deriving (Eq, Show, Generic)
 
--- very boring to watch if set to True
-firefoxHeadless :: Bool
-firefoxHeadless = True
+instance FromDhall DemoBrowser
 
--- see readme
-customFirefoxProfilePath :: Maybe Text
--- customFirefoxProfilePath = Just "/home/john-walker/snap/firefox/common/.cache/mozilla/firefox/2c77yj8o.Another"
--- customFirefoxProfilePath = Just "./webdriver-examples/driver-demo-e2e/.profile/WebDriverProfile"
-customFirefoxProfilePath = Nothing
+instance ToDhall DemoBrowser
+
+data Config = MkConfig
+  { browser :: DemoBrowser,
+    wantConsoleLogging :: Bool
+  }
+  deriving (Eq, Generic, Show)
+
+instance FromDhall Config
+
+instance ToDhall Config
+
+findWebDriverRoot :: FilePath -> Maybe FilePath
+findWebDriverRoot path =
+  if rootDir `elem` dirs
+    then Just webDriverPath
+    else Nothing
+  where
+    rootDir = "webdriver"
+    dirs = splitDirectories path
+    webDriverPath = (joinPath $ takeWhile (/= rootDir) dirs) </> rootDir
+
+configDir :: IO FilePath
+configDir = do
+  currentDir <- getCurrentDirectory
+  case findWebDriverRoot currentDir of
+    Just root -> pure $ root </> "webdriver-examples" </> "driver-demo-e2e" </> ".config"
+    Nothing ->
+      error $
+        "Could not find 'webdriver' root directory from: "
+          <> currentDir
+          <> "\n tests are expected to be run from the 'webdriver' directory or "
+          <> ("webdriver" </> "webdriver-examples")
+
+initialiseTestConfig :: IO ()
+initialiseTestConfig = do
+  userPath' <- userPath
+  exists <- doesFileExist userPath'
+  unless exists $ do
+    putStrLn $ "Saving default config to: " <> userPath'
+    T.writeFile userPath' configText
+
+{-
+Generating in code is more principled but produces a less readable file.
+
+import Dhall.Pretty qualified as P
+let expr = embed (inject @Config) defaultConfig
+     doc = pack (show (P.prettyCharacterSet P.ASCII expr))
+ -}
+configText :: Text
+configText =
+  T.unlines
+    [ "-- Config types",
+      "let Browser = ",
+      "      < Chrome",
+      "      | Firefox : ",
+      "          { headless : Bool",
+      "          , profilePath : Optional Text ",
+      "          }",
+      "      >",
+      "",
+      "let Config = ",
+      "      { browser : Browser",
+      "      , wantConsoleLogging : Bool",
+      "      }",
+      "",
+      "-- Config value",
+      "let browser : Browser = ",
+      "      Browser.Firefox ",
+      "        { headless = False",
+      "        , profilePath = None Text",
+      "        }",
+      "",
+      "let config : Config = ",
+      "      { browser = browser",
+      "      , wantConsoleLogging = False",
+      "      }",
+      "",
+      "in config"
+    ]
+
+readConfig :: IO Config
+readConfig =
+  userPath >>= input auto . pack
+
+userPath :: IO FilePath
+userPath =
+  configDir >>= pure . (flip combine) "config.dhall"
+
+-- for debugging
+wantPrintConfig :: IO Bool
+wantPrintConfig = pure False
+
+loadConfig :: IO Config
+loadConfig = do
+  initialiseTestConfig
+  c <- readConfig
+  p <- wantPrintConfig
+  when p $
+    logShow "######## CONFIG ########" c
+  pure c

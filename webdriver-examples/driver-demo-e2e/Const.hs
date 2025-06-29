@@ -1,4 +1,4 @@
-module E2EConst
+module Const
   ( ReqRequestParams (..),
     theInternet,
     subDomain,
@@ -11,8 +11,6 @@ module E2EConst
     shadowDomUrl,
     checkBoxesLinkCss,
     checkBoxesCss,
-    httpCapabilities,
-    httpFullCapabilities,
     topFrameCSS,
     midFrameCss,
     bottomFrameCss,
@@ -35,7 +33,6 @@ module E2EConst
   )
 where
 
-import Config
 import Data.Text (Text)
 import Network.HTTP.Req as R
   ( GET (GET),
@@ -48,8 +45,9 @@ import Network.HTTP.Req as R
     Url,
     http,
   )
-import WebDriverPreCore.Http (BrowserName (..), Capabilities (..), FullCapabilities (..), Selector (CSS, XPath), VendorSpecific (..))
-import Prelude (Int, Maybe (..), Num (..), ($), (<>))
+import WebDriverPreCore.Http as WPC
+  ( Selector (..))
+import Prelude (Int, Semigroup (..), Num (..))
 
 -- ################### urls ##################
 
@@ -71,6 +69,7 @@ framesUrl = subDomain "nested_frames"
 inputsUrl :: Text
 inputsUrl = subDomain "inputs"
 
+
 loginUrl :: Text
 loginUrl = subDomain "login"
 
@@ -80,6 +79,7 @@ checkBoxesUrl = subDomain "checkboxes"
 shadowDomUrl :: Text
 shadowDomUrl = subDomain "shadowdom"
 
+
 -- ################### selectors  ##################
 
 checkBoxesLinkCss :: Selector
@@ -87,6 +87,7 @@ checkBoxesLinkCss = CSS "#content > ul:nth-child(4) > li:nth-child(6) > a:nth-ch
 
 checkBoxesCss :: Selector
 checkBoxesCss = CSS "input[type='checkbox']"
+
 
 topFrameCSS :: Selector
 topFrameCSS = CSS "frame[name='frame-top']"
@@ -106,23 +107,6 @@ jsPromptXPath = XPath "//button[text()='Click for JS Prompt']"
 divCss :: Selector
 divCss = CSS "div"
 
-midFrameTitle :: Selector
-midFrameTitle = CSS "#content"
-
-userNameCss :: Selector
-userNameCss = CSS "#username"
-
-contentCss :: Selector
-contentCss = CSS "#content"
-
-inputTagCss :: Selector
-inputTagCss = CSS "input"
-
-h3TagCss :: Selector
-h3TagCss = CSS "h3"
-
-anyElmCss :: Selector
-anyElmCss = CSS "*"
 
 -- ################### time ##################
 
@@ -165,39 +149,20 @@ defaultRequest =
       port = 4444
     }
 
--- ################### capabilities ##################
+midFrameTitle :: Selector
+midFrameTitle = CSS "#content"
 
-httpCapabilities :: Capabilities
-httpCapabilities =
-  MkCapabilities
-    { browserName = Just $ if useFirefox then Firefox else Chrome,
-      browserVersion = Nothing,
-      platformName = Nothing,
-      acceptInsecureCerts = Nothing,
-      pageLoadStrategy = Nothing,
-      proxy = Nothing,
-      setWindowRect = Nothing,
-      timeouts = Nothing,
-      strictFileInteractability = Nothing,
-      unhandledPromptBehavior = Nothing,
-      webSocketUrl = Nothing,
-      vendorSpecific =
-        if useFirefox
-          then
-            Just $
-              FirefoxOptions
-                { firefoxArgs = if firefoxHeadless then Just ["--headless"] else Nothing,
-                  firefoxBinary = Nothing,
-                  firefoxProfile = customFirefoxProfilePath,
-                  firefoxLog = Nothing
-                }
-          else Nothing
-    }
+userNameCss :: Selector
+userNameCss = CSS "#username"
 
-httpFullCapabilities :: FullCapabilities
-httpFullCapabilities =
-  MkFullCapabilities
-    { alwaysMatch =
-        Just httpCapabilities,
-      firstMatch = []
-    }
+contentCss :: Selector
+contentCss = CSS "#content"
+
+inputTagCss :: Selector
+inputTagCss = CSS "input"
+
+h3TagCss :: Selector
+h3TagCss = CSS "h3"
+
+anyElmCss :: Selector
+anyElmCss = CSS "*"

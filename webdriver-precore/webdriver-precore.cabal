@@ -19,7 +19,6 @@ extra-source-files:
   README.md
   ChangeLog.md
 tested-with: GHC == { 9.8.2, 9.8.4, 9.10.1 }
-    
 
 synopsis:       A typed wrapper for W3C WebDriver protocol. A base for other libraries.
 
@@ -107,9 +106,7 @@ common commonGhcOptions
     -fno-warn-unused-do-bind 
     -Wno-overlapping-patterns 
     -fprefer-byte-code 
-    -fbyte-code-and-object-code
-    -haddock
-    -- -fdefer-type-errors
+    -fdefer-type-errors
 
 library
   import: commonExtensions, commonGhcOptions
@@ -153,6 +150,8 @@ library
     vector        >=0.12  && <0.14
   default-language: Haskell2010
 
+
+
 test-suite test
   import: commonExtensions, commonGhcOptions
   type: exitcode-stdio-1.0
@@ -162,6 +161,7 @@ test-suite test
     , aeson
     , base
     , containers
+    , directory     >=1.3   && <1.4
     , ghc
     , pretty-show
     , text
