@@ -1,25 +1,29 @@
 module BiDi.BiDiRunner where
 
-import Control.Applicative ((<*>))
 import Control.Concurrent (forkIO)
 import Control.Exception (finally)
 import Control.Monad (forever, unless, void)
-import Data.Aeson (FromJSON, ToJSON, eitherDecode, encode, (.:), (.:?), (.=))
+import Data.Aeson (FromJSON, ToJSON, eitherDecode, encode, (.:), (.:?), (.=), toJSON, Value)
 import Data.Aeson qualified as Aeson
 import Data.ByteString.Lazy (ByteString)
 import Data.ByteString.Lazy qualified as BL
 import Data.Function ((&))
-import Data.Functor ((<$>))
 import Data.IORef (newIORef, readIORef, writeIORef)
 import Data.Text as T (Text, breakOn, null, pack, splitOn, unpack)
 import Data.Text.IO as T (getLine, putStrLn)
 import Http.HttpAPI (FullCapabilities, SessionResponse(..), newSessionFull)
 import IOUtils (ppTxt)
-import Network.WebSockets (ClientApp, receiveData, runClient, sendClose, sendTextData)
+import Network.WebSockets (ClientApp, receiveData, runClient, sendClose, sendTextData, Connection)
 import Text.Read (readEither)
 import WebDriverPreCore.BiDi.Session
 import Wuss (runSecureClient)
-import Prelude (Bool (True), Either (..), Eq ((==)), IO, Int, Maybe (..), Show (..), maybe, ($), (+), (.), (<>))
+import Prelude hiding (getLine, null, putStrLn)
+import Config ( loadConfig, Config )
+import qualified WebDriverPreCore.Http as Http
+import Http.HttpAPI qualified as Caps (Capabilities (..))
+import RuntimeConst (httpFullCapabilities, httpCapabilities)
+import UnliftIO.STM 
+import UnliftIO.Async (async, cancel, waitEither_)
 
 getBiDiPath :: SessionResponse -> Either Text BiDiPath
 getBiDiPath r =
@@ -69,12 +73,30 @@ parseUrl url = do
 newHttpSession :: FullCapabilities -> IO SessionResponse
 newHttpSession = newSessionFull
 
--- >>> runBiDiExample
 
--- *** Exception: MalformedResponse (ResponseHead {responseCode = 405, responseMessage = "Method Not Allowed", responseHeaders = [("content-type","text/plain; charset=utf-8"),("content-length","23"),("date","Sat, 24 May 2025 10:40:13 GMT")]}) "Wrong response status or message."
+-- Bidi capabilities request is the same as regular HTTP capabilities,
+-- but with the `webSocketUrl` field set to `True` 
+httpBidiCapabilities :: Config -> Http.FullCapabilities
+httpBidiCapabilities cfg =
+  (httpFullCapabilities cfg)
+    { Http.alwaysMatch =
+        Just $
+          (httpCapabilities cfg)
+            { Caps.webSocketUrl = Just True
+            }
+    }
 
-runBiDiExample :: IO ()
-runBiDiExample = runWebDriverBiDi defaultGeckoDriverConfig
+sessionViaHttp :: IO BiDiPath
+sessionViaHttp = do
+  cfg <- loadConfig
+  ses <- newHttpSession $ httpBidiCapabilities cfg
+  getBiDiPath ses & either (error . T.unpack) pure
+
+-- >>> biDiDemo
+-- *** Exception: user error (WebDriver error thrown:
+--  WebDriverError {error = SessionNotCreated, description = "A new session could not be created", httpResponse = MkHttpResponse {statusCode = 500, statusMessage = "Internal Server Error", body = Object (fromList [("value",Object (fromList [("error",String "session not created"),("message",String "Session is already started"),("stacktrace",String "")]))])}})
+biDiDemo :: IO ()
+biDiDemo = sessionViaHttp >>= newBidiSessionDemo
 
 -- | WebDriver BiDi client configuration
 data BiDiPath = MkBiDiPath
@@ -94,16 +116,16 @@ defaultGeckoDriverConfig =
     }
 
 -- | WebDriver BiDi message
-data WebDriverBiDiMessage a = WebDriverBiDiMessage
+data WebDriverBiDiMessage = WebDriverBiDiMessage
   { msgId :: Int,
     msgMethod :: Maybe Text,
-    msgParams :: Maybe a,
+    msgParams :: Maybe Value,
     msgResult :: Maybe Aeson.Value,
     msgError :: Maybe Aeson.Value
   }
   deriving (Show)
 
-instance (FromJSON a) => FromJSON (WebDriverBiDiMessage a) where
+instance FromJSON WebDriverBiDiMessage where
   parseJSON = Aeson.withObject "WebDriverBiDiMessage" $ \v ->
     WebDriverBiDiMessage
       <$> v .: "id"
@@ -112,7 +134,7 @@ instance (FromJSON a) => FromJSON (WebDriverBiDiMessage a) where
       <*> v .:? "result"
       <*> v .:? "error"
 
-instance (ToJSON a) => ToJSON (WebDriverBiDiMessage a) where
+instance ToJSON WebDriverBiDiMessage where
   toJSON (WebDriverBiDiMessage id' method params _ _) =
     Aeson.object $
       ["id" .= id']
@@ -120,18 +142,18 @@ instance (ToJSON a) => ToJSON (WebDriverBiDiMessage a) where
         <> maybe [] (\p -> ["params" .= p]) params
 
 -- | Create a BiDi message for session.new command
-createSessionNewMessage :: Int -> Capabilities -> WebDriverBiDiMessage Capabilities
+createSessionNewMessage :: Int -> Capabilities -> WebDriverBiDiMessage
 createSessionNewMessage msgId caps =
   WebDriverBiDiMessage
     { msgId = msgId,
       msgMethod = Just "session.new",
-      msgParams = Just caps,
+      msgParams = Just $ toJSON caps,
       msgResult = Nothing,
       msgError = Nothing
     }
 
 -- | Create a BiDi message for session.end command
-createSessionEndMessage :: Int -> WebDriverBiDiMessage ()
+createSessionEndMessage :: Int -> WebDriverBiDiMessage 
 createSessionEndMessage msgId =
   WebDriverBiDiMessage
     { msgId = msgId,
@@ -141,92 +163,109 @@ createSessionEndMessage msgId =
       msgError = Nothing
     }
 
--- | Run WebDriver BiDi client
-runWebDriverBiDi :: BiDiPath -> IO ()
+
+-- | WebDriver BiDi client with communication channels
+data WebDriverBiDiClient = MkWebDriverBiDiClient
+  { sendMessage :: Value -> IO ()
+  , receiveChannel :: TChan WebDriverBiDiMessage
+  , disconnect :: IO ()
+  }
+
+-- | Run WebDriver BiDi client and return a client interface
+runWebDriverBiDi :: BiDiPath -> IO WebDriverBiDiClient
 runWebDriverBiDi MkBiDiPath {host, port, path} = do
   putStrLn $ "Connecting to WebDriver at " <> host <> ":" <> pack (show port) <> path
-  runClient (unpack host) port (unpack path) webDriverBiDiClient
-
--- | WebDriver BiDi client application
-webDriverBiDiClient :: ClientApp ()
-webDriverBiDiClient connection = do
-  putStrLn "Connected to WebDriver BiDi endpoint!"
-
-  -- Create a reference to track message IDs
-  messageIdRef <- newIORef 1
-
-  -- Handle incoming messages in a separate thread
-  void . forkIO . forever $ do
-    message <- receiveData connection
-    handleIncomingMessage (message :: ByteString)
-
-  -- Create minimal capabilities for session
-  let capabilities =
-        MkCapabilities
-          { alwaysMatch =
-              Just $
-                MkCapability
-                  { acceptInsecureCerts = Just True,
-                    browserName = Just "firefox",
-                    webSocketUrl = True,
-                    browserVersion = Nothing,
-                    platformName = Nothing,
-                    proxy = Nothing,
-                    unhandledPromptBehavior = Nothing
-                  },
-            firstMatch = []
-          }
-
-  -- Send session.new command
-  msgId <- readIORef messageIdRef
-  let sessionNewMsg = createSessionNewMessage msgId capabilities
-
-  putStrLn $ "Sending session.new command: " <> pack (show sessionNewMsg)
-  sendTextData connection (BL.toStrict $ encode sessionNewMsg)
-  writeIORef messageIdRef (msgId + 1)
-
-  -- Wait for user to type "quit" to end the session
-  let loop = do
-        line <- getLine
-        if line == "quit"
-          then do
-            -- Send session.end command
-            endMsgId <- readIORef messageIdRef
-            let sessionEndMsg = createSessionEndMessage endMsgId
-            putStrLn $ "Sending session.end command: " <> pack (show sessionEndMsg)
-            sendTextData connection (BL.toStrict $ encode sessionEndMsg)
-            writeIORef messageIdRef (endMsgId + 1)
-          else do
-            putStrLn $ "Type 'quit' to end the session"
-            loop
-
-  -- Run the interaction loop and ensure we close the connection properly
-  finally loop (sendClose connection (pack "Closing BiDi session"))
-  where
-    handleIncomingMessage :: ByteString -> IO ()
-    handleIncomingMessage msg = do
-      putStrLn $ "Received message: " <> pack (show (BL.toStrict msg))
-
-      -- Try to parse as a generic BiDi message
+  
+  -- Create communication channels
+  inChan <- newTChanIO
+  outChan <- newTChanIO
+  
+  -- Set up the client
+  clientAsync <- async $ runClient (unpack host) port (unpack path) $ \conn -> do
+    -- Start message receiver thread
+    receiverAsync <- async $ forever $ do
+      msg <- receiveData conn
       case eitherDecode msg of
         Left err -> putStrLn $ "Error parsing message: " <> pack err
-        Right (parsedMsg :: WebDriverBiDiMessage Aeson.Value) -> do
-          -- Check for session.new result
-          case parsedMsg.msgResult of
-            Just result ->
-              case Aeson.fromJSON result of
-                Aeson.Success (MkSessionNewResult sessionId' caps) -> do
-                  putStrLn $ "Session created successfully!"
-                  putStrLn $ "Session ID: " <> sessionId'
-                  putStrLn $ "Browser: " <> caps.browserName <> " " <> caps.browserVersion
-                Aeson.Error _ ->
-                  putStrLn $ "Received result: " <> pack (show result)
-            Nothing ->
-              putStrLn $ "Received message without result: " <> pack (show parsedMsg)
+        Right parsedMsg -> atomically $ writeTChan inChan parsedMsg
+    
+    -- Start message sender thread
+    senderAsync <- async $ forever $ do
+      msgToSend <- atomically $ readTChan outChan
+      sendTextData conn (BL.toStrict $ encode msgToSend)
+    
+    -- Wait for both threads to complete (they shouldn't unless there's an error)
+    waitEither_ receiverAsync senderAsync
+  
+  -- Return the client interface
+  pure $ MkWebDriverBiDiClient
+    { sendMessage = \msg -> atomically $ writeTChan outChan $ toJSON msg
+    , receiveChannel = inChan
+    , disconnect = cancel clientAsync
+    }
 
--- | Run the example with default GeckoDriver config
 
+-- | Run an example with the STM-based WebDriver BiDi client
+newBidiSessionDemo :: BiDiPath -> IO ()
+newBidiSessionDemo bidiPath = do
+  client <- runWebDriverBiDi bidiPath
+  let send = client.sendMessage . toJSON
 
+  -- Start message handler
+  void $ forkIO $ forever $ do
+    msg <- atomically $ readTChan client.receiveChannel
+    case msg.msgResult of
+      Just result ->
+        case Aeson.fromJSON result of
+          Aeson.Success (MkSessionNewResult sessionId' caps) -> do
+            putStrLn $ "Session created successfully!"
+            putStrLn $ "Session ID: " <> sessionId'
+            putStrLn $ "Browser: " <> caps.browserName <> " " <> caps.browserVersion
+          Aeson.Error _ ->
+            putStrLn $ "Received result: " <> pack (show result)
+      Nothing ->
+        putStrLn $ "Received message: " <> pack (show msg)
+  
+  -- Send session.new command
+  let capabilities = MkCapabilities
+        { alwaysMatch = Just $ MkCapability
+            { acceptInsecureCerts = Just True
+            , browserName = Just "firefox"
+            , webSocketUrl = True
+            , browserVersion = Nothing
+            , platformName = Nothing
+            , proxy = Nothing
+            , unhandledPromptBehavior = Nothing
+            }
+        , firstMatch = []
+        }
+
+  send $ createSessionNewMessage 1 capabilities
+
+  -- Interactive loop
+  let loop = do
+        putStrLn "Enter command (or 'quit' to exit):"
+        cmd <- getLine
+        case cmd of
+          "quit" -> do
+            send $ createSessionEndMessage 2
+            client.disconnect
+          "reload" -> do
+            -- Example of sending a browsing context command
+            let browsingContextMsg = WebDriverBiDiMessage
+                  { msgId = 3
+                  , msgMethod = Just "browsingContext.reload"
+                  , msgParams = Just $ Aeson.object ["context" .= ("current" :: Text)]
+                  , msgResult = Nothing
+                  , msgError = Nothing
+                  }
+            client.sendMessage $ toJSON browsingContextMsg
+            loop
+          _ -> do
+            putStrLn "Unknown command"
+            loop
+  
+  loop
 
 
 

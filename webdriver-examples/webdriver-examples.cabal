@@ -126,6 +126,7 @@ test-suite driver-demo-e2e
     , tasty-discover
     , text
     , time
+    , unliftio
     , webdriver-precore
     , websockets
     , wuss
