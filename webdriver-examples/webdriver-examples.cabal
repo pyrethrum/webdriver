@@ -100,7 +100,7 @@ common commonGhcOptions
     -fbyte-code-and-object-code
     -fno-break-points
     -haddock
-    -fdefer-type-errors
+    -- -fdefer-type-errors
 
 
 test-suite driver-demo-e2e

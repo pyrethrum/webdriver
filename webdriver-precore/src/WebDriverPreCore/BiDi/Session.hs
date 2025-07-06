@@ -16,6 +16,7 @@ webSocketUrlKey = "webSocketUrl"
 
 
 -- ######### Remote #########
+
 data SessionCommand
   = SessionEnd
   | SessionNew Capabilities
