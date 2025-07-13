@@ -25,3 +25,7 @@
 - [ ] check all licence fiiles
 - [ ] add update method to release notes also branch into pyrethrum Web - the ddl genrator
 - [ ] update dev-container including dhall extensions
+
+## other
+ - [ ] use one base container for dev-container and CI (update)
+ - [ ] reteest dev-container

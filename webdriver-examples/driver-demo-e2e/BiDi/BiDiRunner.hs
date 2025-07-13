@@ -18,11 +18,11 @@ import IOUtils (ppTxt)
 import Network.WebSockets (ClientApp, Connection, receiveData, runClient, sendClose, sendTextData)
 import RuntimeConst (httpCapabilities, httpFullCapabilities)
 import Text.Read (readEither)
-import UnliftIO.Async (async, cancel, wait, waitAny, waitEither_)
+import UnliftIO.Async (Async, async, cancel, wait, waitAny, waitEither_)
 import UnliftIO.STM
 import WebDriverPreCore.BiDi.Session
 import WebDriverPreCore.Http qualified as Http
-import WebDriverPreCore.Internal.AesonUtils (prettyPrintJson, jsonToText)
+import WebDriverPreCore.Internal.AesonUtils (jsonToText, prettyPrintJson)
 import Wuss (runSecureClient)
 import Prelude hiding (getLine, log, null, putStrLn)
 
@@ -40,8 +40,7 @@ parseUrl url = do
   (port, path) <- portAndPath portPath
   Right $
     MkBiDiPath
-      { 
-        host,
+      { host,
         port,
         path
       }
@@ -54,12 +53,12 @@ parseUrl url = do
           [scheme, hostPortPath] -> Right (scheme, hostPortPath)
           _ -> failParser "Expected format: ws://host:port/path"
 
-    splitHost hostPortPath = 
+    splitHost hostPortPath =
       T.splitOn ":" hostPortPath
         & \case
           [host, portPath] -> Right (host, portPath)
           _ -> failParser "Expected format: host:port/path"
-  
+
     -- 9222/session/e43698d9-b02a-4284-a936-12041deb3552
     -- -> (9222, session/e43698d9-b02a-4284-a936-12041deb3552)
     portAndPath :: Text -> Either Text (Int, Text)
@@ -106,14 +105,15 @@ sessionViaHttp = do
 -- *** Exception: user error (WebDriver error thrown:
 
 --  WebDriverError {error = SessionNotCreated, description = "A new session could not be created", httpResponse = MkHttpResponse {statusCode = 500, statusMessage = "Internal Server Error", body = Object (fromList [("value",Object (fromList [("error",String "session not created"),("message",String "Session is already started"),("stacktrace",String "")]))])}})
+-- sessionViaHttp >>= newBidiSessionDemo - does not work because the session is already created
 biDiDemo :: IO ()
 biDiDemo =
-  -- sessionViaHttp >>= newBidiSessionDemo - does not work because the session is already created
-  newBidiSessionDemo MkBiDiPath
-  { host = "127.0.0.1",
-    port = 9222,
-    path = ""
-  }
+  newBidiSessionDemo
+    MkBiDiPath
+      { host = "127.0.0.1",
+        port = 9222,
+        path = "/session"
+      }
 
 -- | WebDriver BiDi client configuration
 data BiDiPath = MkBiDiPath
@@ -201,52 +201,27 @@ createSessionEndMessage msgId =
 
 -- | WebDriver BiDi client with communication channels
 data WebDriverBiDiClient = MkWebDriverBiDiClient
-  { 
-    log :: Text -> IO (),
-    sendMessage :: Value -> IO (),
+  { log :: Text -> IO (),
+    sendMessage :: forall a. (ToJSON a) => a -> IO (),
     receiveChannel :: TChan Value,
     disconnect :: IO ()
   }
 
--- | Run WebDriver BiDi client and return a client interface
-runWebDriverBiDi :: BiDiPath -> IO WebDriverBiDiClient
-runWebDriverBiDi bidiPth@MkBiDiPath {host, port, path} = do
-  -- Create communication channels
-  outChan <- newTChanIO
-  receiveChan <- newTChanIO
-  logChan <- newTChanIO
+catchLog :: (Text -> IO ()) -> IO () -> IO ()
+catchLog log action =
+  action `catch` \(e :: SomeException) -> do
+    log $ "Thread failed: " <> pack (show e)
 
-  print bidiPth
-
-  forkIO $ forever $ do
-    msg <- atomically $ readTChan logChan
-    putStrLn $ "[LOG] " <> msg
-
-  let log :: Text -> IO ()
-      log msg = do
-        -- putStrLn $ "[LOG] !!!!!!!!!!!!!! " <> msg
-        atomically $ writeTChan logChan msg
-
-      withErrorHandling :: IO () -> IO ()
-      withErrorHandling action =
-        action `catch` \(e :: SomeException) -> do
-          log $ "Thread failed: " <> pack (show e)
-
-  -- Set up the client
-  log "Creating async client..."
-  clientAsync <- async $ do
+startClient :: BiDiPath -> (Text -> IO ()) -> TChan Value -> TChan Value -> IO (Async ())
+startClient MkBiDiPath {host, port, path} log sendChan receiveChan =
+  async $ do
     log $ "Connecting to WebDriver at " <> host <> ":" <> pack (show port) <> path
     runClient (unpack host) port (unpack path) $ \conn -> do
       log "WebSocket connection established!"
 
       let runForever name action = async $ do
             log $ "Starting " <> name <> " thread..."
-            forever $ withErrorHandling action
-
-      -- -- Start all threads
-      -- logAsync <- runForever "logger" $ do
-      --   msg <- atomically $ readTChan logChan
-      --   putStrLn $ "[LOG OUTPUT] " <> msg
+            forever $ catchLog log action
 
       receiverAsync <- runForever "receiver" $ do
         msg <- receiveData conn
@@ -258,89 +233,98 @@ runWebDriverBiDi bidiPth@MkBiDiPath {host, port, path} = do
             atomically $ writeTChan receiveChan parsedMsg
 
       senderAsync <- runForever "sender" $ do
-        msgToSend <- atomically $ readTChan outChan
-        log $ "Sending message: " <> pack (show msgToSend)
+        msgToSend <- atomically $ readTChan sendChan
+        log $ "Sending Message: " <> pack (show msgToSend)
         sendTextData conn (BL.toStrict $ encode msgToSend)
 
       -- Wait for any thread to fail (they shouldn't unless there's an error)
       waitAny [receiverAsync, senderAsync]
       log "One of the WebSocket threads terminated, closing connection."
 
-  -- Wait for client to be ready or to fail
-  -- This will either wait for the ready signal or propagate any exception
-  -- from the clientAsync thread
+-- | Run WebDriver BiDi client and return a client interface
+runWebDriverBiDi :: BiDiPath -> IO WebDriverBiDiClient
+runWebDriverBiDi bidiPth = do
+  -- Create communication channels
+  sendChan <- newTChanIO
+  receiveChan <- newTChanIO
+  logChan <- newTChanIO
+
+  print bidiPth
+
+  forkIO $ forever $ do
+    msg <- atomically $ readTChan logChan
+    putStrLn $ "[LOG] " <> msg
+
+  let log :: Text -> IO ()
+      log msg = do
+        atomically $ writeTChan logChan msg
+
+  -- Set up the client
+  log "Creating async client..."
+  clientAsync <- startClient bidiPth log sendChan receiveChan
+
   log "Starting client"
 
-  -- forkIO $ wait clientAsync `catch` \(e :: SomeException) -> do 
-  --   -- threadDelay 100_000
-  --   throwIO e
-
-  -- Replace the problematic forkIO line with:
   void $ async $ do
     result <- try $ wait clientAsync
     case result of
       Left (e :: SomeException) -> do
         log $ "WebSocket connection failed: " <> pack (show e)
         throwIO e
-      Right _ -> 
+      Right _ ->
         log "WebSocket connection closed normally"
 
   log "Client started"
   -- Return the client interface
   pure $
     MkWebDriverBiDiClient
-      { 
-        log,
-        sendMessage = \msg -> atomically $ writeTChan outChan $ toJSON msg,
+      { log,
+        sendMessage = \a -> atomically $ writeTChan sendChan $ toJSON a,
         receiveChannel = receiveChan,
         disconnect = do
           log "Disconnecting client..."
           cancel clientAsync
       }
 
--- | Run an example with the STM-based WebDriver BiDi client
 newBidiSessionDemo :: BiDiPath -> IO ()
 newBidiSessionDemo bidiPath = do
-  client <-
+  MkWebDriverBiDiClient
+    { disconnect,
+      sendMessage,
+      log,
+      receiveChannel
+    } <-
     runWebDriverBiDi bidiPath `catch` \(e :: SomeException) ->
       error $ "Failed to initialise client:\n" <> displayException e
 
   let send :: forall a. (ToJSON a) => a -> IO ()
-      send msgJSON = do
-        client.sendMessage $ toJSON msgJSON
+      send msg = do
+        log $ "Queuing message: " <> jsonToText (toJSON msg)
+        catch
+          (sendMessage msg)
+          ( \(e :: SomeException) -> do
+              log $ "Failed to queuemessage: " <> pack (displayException e)
+              threadDelay 100_000
+              throwIO e
+          )
 
   -- Start message handler
   void $ forkIO $ forever $ do
-    msg <- atomically $ readTChan client.receiveChannel
-    client.log $ "MESSAGE RECEIVED: " <> jsonToText msg
-  -- case msg.msgResult of
-  --   Just result ->
-  --     case Aeson.fromJSON result of
-  --       -- Aeson.Success (MkSessionNewResult sessionId' caps) -> do
-  --       --   putStrLn $ "Session created successfully!"
-  --       --   putStrLn $ "Session ID: " <> sessionId'
-  --       --   putStrLn $ "Browser: " <> caps.browserName <> " " <> caps.browserVersion
-  --       Aeson.Success val -> do
-  --         putStrLn "!!!! Got Response !!!!"
-  --         prettyPrintJson val
-  --       -- Handle specific error cases
-  --       Aeson.Error _ ->
-  --         putStrLn $ "Received result: " <> pack (show result)
-  --   Nothing ->
-  --     putStrLn $ "Received message: " <> pack (show msg)
+    msg <- atomically $ readTChan receiveChannel
+    log $ "MESSAGE RECEIVED: " <> jsonToText msg
 
-  -- Send session.new command
-  -- send firefoxCapabilies
+  log "Creating new session..."
+  threadDelay 1000_000
   send $ createSessionNewMessage 1 firefoxCapabilies
 
   -- Interactive loop
   let loop = do
-        client.log "Enter command (or 'q' to exit 'r' to reload):"
+        log "Enter command (or 'q' to exit 'r' to reload):"
         cmd <- getLine
         case cmd of
           "q" -> do
             send $ createSessionEndMessage 2
-            client.disconnect
+            disconnect
           "r" -> do
             -- Example of sending a browsing context command
             let browsingContextMsg =
@@ -354,7 +338,7 @@ newBidiSessionDemo bidiPath = do
             send $ toJSON browsingContextMsg
             loop
           _ -> do
-            client.log "Unknown command"
+            log "Unknown command"
             loop
 
   loop
