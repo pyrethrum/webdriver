@@ -23,6 +23,7 @@ import UnliftIO.STM
 import WebDriverPreCore.BiDi.Session
 import WebDriverPreCore.Http qualified as Http
 import WebDriverPreCore.Internal.AesonUtils (jsonToText, prettyPrintJson)
+import WebDriverPreCore.Internal.Utils (txt)
 import Wuss (runSecureClient)
 import Prelude hiding (getLine, log, null, putStrLn)
 
@@ -107,13 +108,21 @@ sessionViaHttp = do
 --  WebDriverError {error = SessionNotCreated, description = "A new session could not be created", httpResponse = MkHttpResponse {statusCode = 500, statusMessage = "Internal Server Error", body = Object (fromList [("value",Object (fromList [("error",String "session not created"),("message",String "Session is already started"),("stacktrace",String "")]))])}})
 -- sessionViaHttp >>= newBidiSessionDemo - does not work because the session is already created
 biDiDemo :: IO ()
-biDiDemo =
+biDiDemo = do
+  _path <- sessionViaHttp
   newBidiSessionDemo
     MkBiDiPath
       { host = "127.0.0.1",
         port = 9222,
         path = "/session"
       }
+  -- threadDelay 1000_000 -- Wait for a while to see the output
+  -- newBidiSessionDemo
+  --   MkBiDiPath
+  --     { host = "127.0.0.1",
+  --       port = 9222,
+  --       path = "/session"
+  --     }
 
 -- | WebDriver BiDi client configuration
 data BiDiPath = MkBiDiPath
@@ -212,16 +221,29 @@ catchLog log action =
   action `catch` \(e :: SomeException) -> do
     log $ "Thread failed: " <> pack (show e)
 
+asyncForever :: (Text -> IO ()) -> Text -> IO () -> IO (Async ())
+asyncForever log name action = async $ do
+  log $ "Starting " <> name <> " thread..."
+  forever $ catchLog log action
+
 startClient :: BiDiPath -> (Text -> IO ()) -> TChan Value -> TChan Value -> IO (Async ())
-startClient MkBiDiPath {host, port, path} log sendChan receiveChan =
+startClient pth@MkBiDiPath {host, port, path} log sendChan receiveChan =
   async $ do
-    log $ "Connecting to WebDriver at " <> host <> ":" <> pack (show port) <> path
-    runClient (unpack host) port (unpack path) $ \conn -> do
+    log $ "Connecting to WebDriver at " <> txt pth
+
+    catch
+      webSocketGo
+      ( \(e :: SomeException) -> do
+          log $ "WebSocket failure: " <> pack (displayException e)
+          -- flush log channel
+          threadDelay 100_000
+          throwIO e
+      )
+  where
+    webSocketGo = runClient (unpack host) port (unpack path) $ \conn -> do
       log "WebSocket connection established!"
 
-      let runForever name action = async $ do
-            log $ "Starting " <> name <> " thread..."
-            forever $ catchLog log action
+      let runForever = asyncForever log
 
       receiverAsync <- runForever "receiver" $ do
         msg <- receiveData conn
@@ -239,7 +261,8 @@ startClient MkBiDiPath {host, port, path} log sendChan receiveChan =
 
       -- Wait for any thread to fail (they shouldn't unless there's an error)
       waitAny [receiverAsync, senderAsync]
-      log "One of the WebSocket threads terminated, closing connection."
+      threadDelay 1000_000 -- Wait a bit before closing
+      putStrLn "One of the WebSocket threads terminated, closing connection."
 
 -- | Run WebDriver BiDi client and return a client interface
 runWebDriverBiDi :: BiDiPath -> IO WebDriverBiDiClient
@@ -249,9 +272,9 @@ runWebDriverBiDi bidiPth = do
   receiveChan <- newTChanIO
   logChan <- newTChanIO
 
-  print bidiPth
-
-  forkIO $ forever $ do
+  putStrLn "Starting logger thread"
+  threadDelay 10_000
+  async . forever $ do
     msg <- atomically $ readTChan logChan
     putStrLn $ "[LOG] " <> msg
 
@@ -259,30 +282,17 @@ runWebDriverBiDi bidiPth = do
       log msg = do
         atomically $ writeTChan logChan msg
 
-  -- Set up the client
-  log "Creating async client..."
+  -- -- Set up the client
+  -- log "Creating async client..."
   clientAsync <- startClient bidiPth log sendChan receiveChan
 
-  log "Starting client"
-
-  void $ async $ do
-    result <- try $ wait clientAsync
-    case result of
-      Left (e :: SomeException) -> do
-        log $ "WebSocket connection failed: " <> pack (show e)
-        throwIO e
-      Right _ ->
-        log "WebSocket connection closed normally"
-
-  log "Client started"
-  -- Return the client interface
   pure $
     MkWebDriverBiDiClient
       { log,
         sendMessage = \a -> atomically $ writeTChan sendChan $ toJSON a,
         receiveChannel = receiveChan,
         disconnect = do
-          log "Disconnecting client..."
+          log "Disconnecting client... TODO: implement proper cleanup"
           cancel clientAsync
       }
 
@@ -303,13 +313,13 @@ newBidiSessionDemo bidiPath = do
         catch
           (sendMessage msg)
           ( \(e :: SomeException) -> do
-              log $ "Failed to queuemessage: " <> pack (displayException e)
+              log $ "Failed to queue message: " <> pack (displayException e)
               threadDelay 100_000
               throwIO e
           )
 
   -- Start message handler
-  void $ forkIO $ forever $ do
+  async . forever $ do
     msg <- atomically $ readTChan receiveChannel
     log $ "MESSAGE RECEIVED: " <> jsonToText msg
 
