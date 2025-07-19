@@ -108,13 +108,12 @@ sessionViaHttp = do
 --  WebDriverError {error = SessionNotCreated, description = "A new session could not be created", httpResponse = MkHttpResponse {statusCode = 500, statusMessage = "Internal Server Error", body = Object (fromList [("value",Object (fromList [("error",String "session not created"),("message",String "Session is already started"),("stacktrace",String "")]))])}})
 -- sessionViaHttp >>= newBidiSessionDemo - does not work because the session is already created
 biDiDemo :: IO ()
-biDiDemo = do
-  _path <- sessionViaHttp
-  newBidiSessionDemo
+biDiDemo =
+   newBidiSessionDemo
     MkBiDiPath
       { host = "127.0.0.1",
         port = 9222,
-        path = "/session"
+        path = ""
       }
   -- threadDelay 1000_000 -- Wait for a while to see the output
   -- newBidiSessionDemo
