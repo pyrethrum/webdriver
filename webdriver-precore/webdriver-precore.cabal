@@ -117,6 +117,7 @@ library
       WebDriverPreCore.BiDi.Browser
       WebDriverPreCore.BiDi.BrowsingContext
       WebDriverPreCore.BiDi.Emulation
+      WebDriverPreCore.BiDi.Error
       WebDriverPreCore.BiDi.Log
       WebDriverPreCore.BiDi.Input
       WebDriverPreCore.BiDi.Network
