@@ -5,28 +5,33 @@ import Data.Aeson
   )
 import Data.Map qualified as Map
 import Data.Text (Text)
-import GHC.Generics
-import WebDriverPreCore.BiDi.BrowsingContext (BrowsingContextEvent, BrowsingContextResult)
+import GHC.Generics (Generic)
+import WebDriverPreCore.BiDi.Browser (BrowserCommand, BrowserResult)
+import WebDriverPreCore.BiDi.BrowsingContext (BrowsingContextCommand, BrowsingContextEvent, BrowsingContextResult)
 import WebDriverPreCore.BiDi.CoreTypes
-import WebDriverPreCore.BiDi.Input (InputCommand, FileDialogOpened)
+import WebDriverPreCore.BiDi.Emulation (EmulationCommand)
+import WebDriverPreCore.BiDi.Error (ErrorCode)
+import WebDriverPreCore.BiDi.Input (FileDialogOpened, InputCommand)
+import WebDriverPreCore.BiDi.Log (Entry)
 import WebDriverPreCore.BiDi.Network (NetworkCommand)
 import WebDriverPreCore.BiDi.Script (RemoteValue, ScriptCommand, Source, StackTrace)
 import WebDriverPreCore.BiDi.Session (SessionCommand)
 import WebDriverPreCore.BiDi.Storage (StorageCommand)
 import WebDriverPreCore.BiDi.WebExtensions (WebExtensionCommand)
 import Prelude (Bool, Eq, Maybe, Show)
-import WebDriverPreCore.BiDi.Log (Entry)
-import WebDriverPreCore.BiDi.Error (ErrorCode)
 
 -- ######### Local #########
 
 -- Command types
 
 data CommandData
-  = Session SessionCommand
+  = BrowserCommand BrowserCommand
+  | BrowsingContext BrowsingContextCommand
+  | EmulationCommand EmulationCommand
   | Input InputCommand
   | Network NetworkCommand
   | Script ScriptCommand
+  | Session SessionCommand
   | Storage StorageCommand
   | WebExtension WebExtensionCommand
   deriving (Show, Eq, Generic)
@@ -69,20 +74,22 @@ data EventData
     InputEvent FileDialogOpened
   | -- method: "log.entryAdded"
     LogEvent Entry
-  deriving (-- | NetworkEvent NetworkEvent
-            -- | ScriptEvent ScriptEvent
-            Show, Generic)
-
+  deriving
+    ( -- | NetworkEvent NetworkEvent
+      -- | ScriptEvent ScriptEvent
+      Show,
+      Generic
+    )
 
 data ResultData
   = BrowsingContextResult BrowsingContextResult
-  -- | EmptyResult
-  -- | NetworkResult RemoteValue -- Placeholder for network results
-  -- | ScriptResult RemoteValue -- Placeholder for script results
-  -- | SessionResult RemoteValue -- Placeholder for session results
-  -- | StorageResult RemoteValue -- Placeholder for storage results
-  -- | WebExtensionResult RemoteValue -- Placeholder for web extension results
-  deriving (Show, Generic)
+  deriving (-- | EmptyResult
+            -- | NetworkResult RemoteValue -- Placeholder for network results
+            -- | ScriptResult RemoteValue -- Placeholder for script results
+            -- | SessionResult RemoteValue -- Placeholder for session results
+            -- | StorageResult RemoteValue -- Placeholder for storage results
+            -- | WebExtensionResult RemoteValue -- Placeholder for web extension results
+            Show, Generic)
 
 -- ToDO:
 -- ResultData = (
