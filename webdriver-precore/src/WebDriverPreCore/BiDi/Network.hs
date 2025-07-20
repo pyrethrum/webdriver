@@ -1,42 +1,43 @@
-module WebDriverPreCore.BiDi.Network (
-  -- * NetworkCommand
-  NetworkCommand (..),
-  AddIntercept (..),
-  InterceptPhase (..),
-  UrlPattern (..),
-  ContinueRequest (..),
-  RequestId (..),
-  BytesValue (..),
-  Cookie (..),
-  SameSite (..),
-  Header (..),
-  ContinueResponse (..),
-  ContinueWithAuth (..),
-  Intercept (..),
-  AuthCredentials (..),
-  AuthResponse (..),
-  FailRequest (..),
-  ProvideResponse (..),
-  RemoveIntercept (..),
-  SetCacheBehavior (..),
-  CacheBehavior (..),
+module WebDriverPreCore.BiDi.Network
+  ( -- * NetworkCommand
+    NetworkCommand (..),
+    AddIntercept (..),
+    InterceptPhase (..),
+    UrlPattern (..),
+    ContinueRequest (..),
+    RequestId (..),
+    BytesValue (..),
+    Cookie (..),
+    SameSite (..),
+    Header (..),
+    ContinueResponse (..),
+    ContinueWithAuth (..),
+    Intercept (..),
+    AuthCredentials (..),
+    AuthResponse (..),
+    FailRequest (..),
+    ProvideResponse (..),
+    RemoveIntercept (..),
+    SetCacheBehavior (..),
+    CacheBehavior (..),
 
-  -- * NetworkResult
-  AddInterceptResult (..),
+    -- * NetworkResult
+    AddInterceptResult (..),
 
-  -- * NetworkEvent
-  NetworkEvent (..),
-  AuthRequired (..),
-  ResponseData (..),
-  ResponseContent (..),
-  AuthChallenge (..),
-  BeforeRequestSent (..),
-  Initiator (..),
-  InitiatorType (..),
-  FetchError (..),
-  ResponseCompleted (..),
-  ResponseStarted (..),
-) where
+    -- * NetworkEvent
+    NetworkEvent (..),
+    AuthRequired (..),
+    ResponseData (..),
+    ResponseContent (..),
+    AuthChallenge (..),
+    BeforeRequestSent (..),
+    Initiator (..),
+    InitiatorType (..),
+    FetchError (..),
+    ResponseCompleted (..),
+    ResponseStarted (..),
+  )
+where
 
 -- This module provides functionality related to BiDi (Bidirectional) network operations
 -- for WebDriverPreCore. It is currently a placeholder for future implementation.
@@ -45,24 +46,72 @@ module WebDriverPreCore.BiDi.Network (
 import Data.Text (Text)
 import Data.Word (Word)
 import GHC.Generics (Generic)
+import WebDriverPreCore.BiDi.Browser (UserContext)
 import WebDriverPreCore.BiDi.CoreTypes (BrowsingContext, JSUInt)
 import WebDriverPreCore.BiDi.Script (StackTrace)
 import Prelude (Bool, Eq, Maybe, Show)
-
--- https://www.w3.org/TR/2025/WD-webdriver-bidi-20250512/#module-network
 
 -- ######### REMOTE #########
 
 -- | NetworkCommand type for remote end operations
 data NetworkCommand
-  = AddIntercept AddIntercept
+  = AddDataCollector AddDataCollector
+  | AddIntercept AddIntercept
   | ContinueRequest ContinueRequest
   | ContinueResponse ContinueResponse
   | ContinueWithAuth ContinueWithAuth
+  | DisownData DisownData
   | FailRequest FailRequest
+  | GetData GetData
   | ProvideResponse ProvideResponse
+  | RemoveDataCollector RemoveDataCollector
   | RemoveIntercept RemoveIntercept
   | SetCacheBehavior SetCacheBehavior
+  deriving (Show, Eq, Generic)
+
+data AddDataCollector = MkAddDataCollector
+  { dataTypes :: [DataType],
+    maxEncodedDataSize :: JSUInt,
+    collectorType :: Maybe CollectorType,
+    contexts :: Maybe [BrowsingContext],
+    userContexts :: Maybe [UserContext]
+  }
+  deriving (Show, Eq, Generic)
+
+-- TODO - not sure what this is about
+-- network.DataType = "response"
+newtype DataType = MkDataType {dataType :: Text}
+  deriving (Show, Eq, Generic)
+
+-- TODO - not sure what this is about
+-- network.CollectorType = "blob"
+newtype CollectorType = MkCollectorType {collectorType :: Text}
+  deriving (Show, Eq, Generic)
+
+data DisownData = MkDisownData
+  { dataType :: DataType,
+    collector :: Collector,
+    request :: Request
+  }
+  deriving (Show, Eq, Generic)
+
+newtype Collector = MkCollector {collector :: Text}
+  deriving (Show, Eq, Generic)
+
+newtype Request = MkRequest {request :: Text}
+  deriving (Show, Eq, Generic)
+
+data GetData = MkGetData
+  { dataType :: DataType,
+    collector :: Maybe Collector,
+    disown :: Bool,
+    request :: Request
+  }
+  deriving (Show, Eq, Generic)
+
+data RemoveDataCollector = MkRemoveDataCollector
+  { collector :: Collector
+  }
   deriving (Show, Eq, Generic)
 
 -- | AddIntercept parameters
@@ -128,6 +177,7 @@ data SameSite
   = Strict
   | Lax
   | None
+  | Default
   deriving (Show, Eq, Generic)
 
 -- | Headers for requests and responses
@@ -169,7 +219,7 @@ data AuthCredentials = MkAuthCredentials
 
 -- | Authentication response type
 data AuthResponse
-  = Default
+  = DefaultResponse
   | Cancel
   | Provide
   deriving (Show, Eq, Generic)
@@ -296,7 +346,15 @@ newtype ResponseCompleted = MkResponseCompleted
   deriving (Show, Eq, Generic)
 
 -- | ResponseStarted parameters
-newtype ResponseStarted = MkResponseStarted
+data ResponseStarted = MkResponseStarted
   { startedResponse :: ResponseData
   }
   deriving (Show, Eq, Generic)
+
+newtype GetDataResult = MkGetDataResult
+  { bytes :: BytesValue
+  }
+
+newtype CollectorResult = MkCollectorResult
+  { collector :: Collector
+  }

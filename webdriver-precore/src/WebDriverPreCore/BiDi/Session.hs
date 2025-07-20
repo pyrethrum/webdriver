@@ -63,8 +63,7 @@ data ProxyConfiguration
   = AutodetectProxyConfiguration
   | DirectProxyConfiguration
   | ManualProxyConfiguration
-      { ftpProxy :: Maybe Text,
-        httpProxy :: Maybe Text,
+      { httpProxy :: Maybe Text,
         sslProxy :: Maybe Text,
         socksProxyConfig :: Maybe SocksProxyConfiguration,
         noProxy :: Maybe [Text]
@@ -82,10 +81,9 @@ instance ToJSON ProxyConfiguration where
   toJSON = \case
     AutodetectProxyConfiguration -> object ["proxyType" .= ("autodetect" :: Text)]
     DirectProxyConfiguration -> object ["proxyType" .= ("direct" :: Text)]
-    ManualProxyConfiguration ftpProxy httpProxy sslProxy socksProxyConfig noProxy ->
+    ManualProxyConfiguration {httpProxy, sslProxy, socksProxyConfig, noProxy} ->
       object
         [ "proxyType" .= ("manual" :: Text),
-          "ftpProxy" .= ftpProxy,
           "httpProxy" .= httpProxy,
           "sslProxy" .= sslProxy,
           "socksProxy" .= socksProxyConfig,

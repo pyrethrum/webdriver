@@ -1,5 +1,6 @@
 module WebDriverPreCore.BiDi.CoreTypes
   ( BrowsingContext (..),
+    EmptyResult (..),
     Handle (..),
     InternalId (..),
     JSInt (..),
@@ -40,11 +41,9 @@ data NodeRemoteValue = MkNodeRemoteValue
   }
   deriving (Show, Eq, Generic)
 
-
 newtype Handle = MkHandle Text deriving newtype (Show, Eq)
 
 newtype InternalId = MkInternalId Text deriving newtype (Show, Eq)
-
 
 data NodeProperties = MkNodeProperties
   { nodeType :: JSUInt,
@@ -59,5 +58,6 @@ data NodeProperties = MkNodeProperties
   }
   deriving (Show, Eq, Generic)
 
-
 newtype SharedId = MkSharedId Text deriving newtype (Show, Eq, ToJSON, FromJSON)
+
+newtype EmptyResult = MkEmptyResult {extensible :: Maybe [Text]} deriving (Show, Eq, Generic)

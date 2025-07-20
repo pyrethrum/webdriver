@@ -21,7 +21,7 @@ where
 import Data.Text (Text)
 import GHC.Generics (Generic)
 import Prelude (Bool (..), Eq (..), Int, Maybe, Show (..))
-import WebDriverPreCore.BiDi.Session (ProxyConfiguration)
+import WebDriverPreCore.BiDi.Session (ProxyConfiguration, UserPromptHandler)
 
 {-
 create types to represent the remote and local ends for browser:
@@ -77,7 +77,8 @@ newtype UserContextInfo = MkUserContextInfo
 
 data CreateUserContext = MkCreateUserContext
   { acceptInsecureCerts :: Maybe Bool,
-    proxy :: Maybe ProxyConfiguration
+    proxy :: Maybe ProxyConfiguration,
+    unhandledPromptBehavior :: Maybe UserPromptHandler
   }
   deriving (Show, Eq, Generic)
 

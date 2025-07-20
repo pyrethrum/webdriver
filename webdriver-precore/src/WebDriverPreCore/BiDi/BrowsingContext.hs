@@ -1,12 +1,11 @@
 module WebDriverPreCore.BiDi.BrowsingContext where
 
+import Data.Aeson (Value)
 import Data.Map qualified as Map
 import Data.Text (Text)
 import GHC.Generics
-import WebDriverPreCore.BiDi.CoreTypes (BrowsingContext, JSUInt, NodeRemoteValue, JSInt)
-import Prelude (Bool, Maybe, Show, Eq, Float)
-import Data.Aeson (Value)
-
+import WebDriverPreCore.BiDi.CoreTypes (BrowsingContext, JSInt, JSUInt, NodeRemoteValue)
+import Prelude (Bool, Eq, Float, Maybe, Show)
 
 -- ######### REMOTE #########
 
@@ -25,7 +24,6 @@ data BrowsingContextCommand
   | SetViewport SetViewport
   | TraverseHistory TraverseHistory
   deriving (Show, Eq, Generic)
-
 
 -- |  for activate command
 newtype Activate = MkActivate
@@ -194,7 +192,7 @@ data UserPromptType = Alert | BeforeUnload | Confirm | Prompt
 data CreateType = Tab | Window
   deriving (Show, Eq, Generic)
 
--- | Print margin 
+-- | Print margin
 data PrintMargin = MkPrintMargin
   { bottom :: Maybe Float,
     left :: Maybe Float,
@@ -203,7 +201,7 @@ data PrintMargin = MkPrintMargin
   }
   deriving (Show, Eq, Generic)
 
--- | Print page 
+-- | Print page
 data PrintPage = MkPrintPage
   { height :: Maybe Float,
     width :: Maybe Float
@@ -216,7 +214,6 @@ data Viewport = MkViewport
     height :: JSUInt
   }
   deriving (Show, Eq, Generic)
-
 
 -- ######### Local #########
 
@@ -249,8 +246,7 @@ data NavigateResult = MkNavigateResult
   deriving (Show, Eq, Generic)
 
 data TraverseHistoryResult = MkTraverseHistoryResult
-  { 
-    extensions :: Maybe (Map.Map Text Value)
+  { extensions :: Maybe (Map.Map Text Value)
   }
   deriving (Show, Eq, Generic)
 
@@ -259,6 +255,7 @@ data BrowsingContextEvent
   = ContextCreated Info
   | ContextDestroyed Info
   | DomContentLoaded NavigationInfo
+  | DownloadEnd
   | DownloadWillBegin DownloadWillBegin
   | FragmentNavigated NavigationInfo
   | HistoryUpdated HistoryUpdated
@@ -279,6 +276,14 @@ data NavigationInfo = MkNavigationInfo
   }
   deriving (Show, Eq, Generic)
 
+data DownloadEnd
+  = DownloadCompleted
+      { filePath :: Maybe Text,
+        navigationInfo :: NavigationInfo
+      }
+  | DownloadCanceled {navigationInfo :: NavigationInfo}
+  deriving (Show, Eq, Generic)
+
 data DownloadWillBegin = MkDownloadWillBegin
   { suggestedFilename :: Text,
     context :: BrowsingContext,
@@ -290,6 +295,7 @@ data DownloadWillBegin = MkDownloadWillBegin
 
 data HistoryUpdated = MkHistoryUpdated
   { context :: BrowsingContext,
+    timestamp :: JSUInt,
     url :: Text
   }
   deriving (Show, Eq, Generic)
