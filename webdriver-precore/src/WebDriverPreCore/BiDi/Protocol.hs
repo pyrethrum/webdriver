@@ -16,6 +16,7 @@ import WebDriverPreCore.BiDi.Storage (StorageCommand)
 import WebDriverPreCore.BiDi.WebExtensions (WebExtensionCommand)
 import Prelude (Bool, Eq, Maybe, Show)
 import WebDriverPreCore.BiDi.Log (Entry)
+import WebDriverPreCore.BiDi.Error (ErrorCode)
 
 -- ######### Local #########
 
@@ -73,6 +74,17 @@ data EventData
             Show, Generic)
 
 
+data ResultData
+  = BrowsingContextResult BrowsingContextResult
+  -- | EmptyResult
+  -- | NetworkResult RemoteValue -- Placeholder for network results
+  -- | ScriptResult RemoteValue -- Placeholder for script results
+  -- | SessionResult RemoteValue -- Placeholder for session results
+  -- | StorageResult RemoteValue -- Placeholder for storage results
+  -- | WebExtensionResult RemoteValue -- Placeholder for web extension results
+  deriving (Show, Generic)
+
+-- ToDO:
 -- ResultData = (
 --   BrowsingContextResult /
 --   EmptyResult /

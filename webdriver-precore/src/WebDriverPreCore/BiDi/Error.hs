@@ -5,10 +5,10 @@ module WebDriverPreCore.BiDi.Error
   )
 where
 
-import Data.Map.Strict (Map)
-import qualified Data.Map.Strict as Map
+
 import Data.Text (Text)
 import GHC.Generics (Generic)
+import Prelude (Eq, Show, Ord, Maybe (..))
 
 data ErrorCode
   = -- | Tried to perform an action with an invalid argument
