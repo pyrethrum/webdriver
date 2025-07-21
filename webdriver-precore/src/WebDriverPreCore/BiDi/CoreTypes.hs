@@ -8,10 +8,11 @@ module WebDriverPreCore.BiDi.CoreTypes
     NodeProperties (..),
     NodeRemoteValue (..),
     SharedId (..),
+    methodOnly,
   )
 where
 
-import Data.Aeson (FromJSON (..), ToJSON)
+import Data.Aeson (FromJSON (..), ToJSON, Value, KeyValue (..), object)
 import Data.Int (Int64)
 import Data.Map qualified as Map
 import Data.Text (Text)
@@ -61,3 +62,6 @@ data NodeProperties = MkNodeProperties
 newtype SharedId = MkSharedId Text deriving newtype (Show, Eq, ToJSON, FromJSON)
 
 newtype EmptyResult = MkEmptyResult {extensible :: Maybe [Text]} deriving (Show, Eq, Generic)
+
+methodOnly :: Text -> Value
+methodOnly method = object ["method" .= method]

@@ -9,6 +9,7 @@ import Data.Word (Word8)
 import GHC.Generics (Generic)
 import WebDriverPreCore.Internal.AesonUtils (opt)
 import Prelude (Applicative ((<*>)), Bool (..), Eq (..), Maybe (..), Show (..), ($), (.), (<$>))
+import WebDriverPreCore.BiDi.CoreTypes (methodOnly)
 
 webSocketUrlKey :: Key
 webSocketUrlKey = "webSocketUrl"
@@ -24,6 +25,17 @@ data SessionCommand
   | SessionSubscribe SessionSubscriptionRequest
   | SessionUnsubscribe SessionUnsubscribeParameters
   deriving (Show, Eq, Generic)
+
+instance ToJSON SessionCommand where 
+  toJSON :: SessionCommand -> Value
+  toJSON = \case
+    SessionEnd -> methodOnly "session.end"
+    SessionNew capabilities -> object ["sessionNew" .= capabilities]
+    SessionStatus -> methodOnly "session.status"
+    SessionSubscribe request -> object ["sessionSubscribe" .= request]
+    SessionUnsubscribe params -> object ["sessionUnsubscribe" .= params]
+    
+
 
 -- | Capabilities Request
 data Capabilities = MkCapabilities

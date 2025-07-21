@@ -1,9 +1,17 @@
 module WebDriverPreCore.BiDi.Protocol where
 
 import Data.Aeson
-  ( Value,
+  ( FromJSON,
+    Object,
+    ToJSON,
+    Value (..),
+    object,
+    (.=),
   )
+import Data.Aeson.Types (ToJSON (..))
+import Data.Function ((&))
 import Data.Map qualified as Map
+import Data.Maybe (fromMaybe)
 import Data.Text (Text)
 import GHC.Generics (Generic)
 import WebDriverPreCore.BiDi.Browser (BrowserCommand, BrowserResult)
@@ -18,9 +26,16 @@ import WebDriverPreCore.BiDi.Script (RemoteValue, ScriptCommand, Source, StackTr
 import WebDriverPreCore.BiDi.Session (SessionCommand)
 import WebDriverPreCore.BiDi.Storage (StorageCommand)
 import WebDriverPreCore.BiDi.WebExtensions (WebExtensionCommand)
-import Prelude (Bool, Eq, Maybe, Show)
+import WebDriverPreCore.Internal.AesonUtils (objectOrThrow, parseObject)
+import Prelude (Bool, Eq, Maybe, Show, error, maybe, ($), (.), (<$>), (<>))
 
 -- ######### Local #########
+
+command :: JSUInt -> CommandData -> Maybe Object -> Value
+command id cmdData =
+  Object . maybe idCmd (idCmd <>)
+  where
+    idCmd = "id" .= id <> objectOrThrow "CommandData will always be an Object" cmdData
 
 -- Command types
 
@@ -35,6 +50,21 @@ data CommandData
   | Storage StorageCommand
   | WebExtension WebExtensionCommand
   deriving (Show, Eq, Generic)
+
+-- todo :: replace with derived instnace when donee
+instance ToJSON CommandData where
+  toJSON :: CommandData -> Value
+  toJSON = \case
+    -- BrowserCommand cmd -> toJSON cmd
+    -- BrowsingContext cmd -> toJSON cmd
+    -- EmulationCommand cmd -> toJSON cmd
+    -- Input cmd -> toJSON cmd
+    -- Network cmd -> toJSON cmd
+    -- Script cmd -> toJSON cmd
+    Session cmd -> toJSON cmd
+    -- Storage cmd -> toJSON cmd
+    -- WebExtension cmd -> toJSON cmd
+    _ -> error "Unsupported command type for JSON serialization"
 
 -- ######### Remote #########
 
@@ -83,13 +113,16 @@ data EventData
 
 data ResultData
   = BrowsingContextResult BrowsingContextResult
-  deriving (-- | EmptyResult
-            -- | NetworkResult RemoteValue -- Placeholder for network results
-            -- | ScriptResult RemoteValue -- Placeholder for script results
-            -- | SessionResult RemoteValue -- Placeholder for session results
-            -- | StorageResult RemoteValue -- Placeholder for storage results
-            -- | WebExtensionResult RemoteValue -- Placeholder for web extension results
-            Show, Generic)
+  deriving
+    ( -- | EmptyResult
+      -- | NetworkResult RemoteValue -- Placeholder for network results
+      -- | ScriptResult RemoteValue -- Placeholder for script results
+      -- | SessionResult RemoteValue -- Placeholder for session results
+      -- | StorageResult RemoteValue -- Placeholder for storage results
+      -- | WebExtensionResult RemoteValue -- Placeholder for web extension results
+      Show,
+      Generic
+    )
 
 -- ToDO:
 -- ResultData = (
