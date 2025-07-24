@@ -7,35 +7,44 @@ import Data.Text (Text)
 import Data.Vector (fromList)
 import Data.Word (Word8)
 import GHC.Generics (Generic)
+import WebDriverPreCore.BiDi.CoreTypes (BiDiMethod (..), methodOnly)
 import WebDriverPreCore.Internal.AesonUtils (opt)
 import Prelude (Applicative ((<*>)), Bool (..), Eq (..), Maybe (..), Show (..), ($), (.), (<$>))
-import WebDriverPreCore.BiDi.CoreTypes (methodOnly)
 
 webSocketUrlKey :: Key
 webSocketUrlKey = "webSocketUrl"
 
-
-
 -- ######### Remote #########
 
 data SessionCommand
-  = SessionEnd
-  | SessionNew Capabilities
+  = SessionNew Capabilities
   | SessionStatus
   | SessionSubscribe SessionSubscriptionRequest
   | SessionUnsubscribe SessionUnsubscribeParameters
+  | SessionEnd
   deriving (Show, Eq, Generic)
 
-instance ToJSON SessionCommand where 
+instance BiDiMethod SessionCommand where
+  bidiMethod :: SessionCommand -> Text
+  bidiMethod = \case
+    SessionNew _ -> "session.new"
+    SessionStatus -> "session.status"
+    SessionSubscribe _ -> "session.subscribe"
+    SessionUnsubscribe _ -> "session.unsubscribe"
+    SessionEnd -> "session.end"
+
+instance ToJSON SessionCommand where
   toJSON :: SessionCommand -> Value
   toJSON = \case
-    SessionEnd -> methodOnly "session.end"
-    SessionNew capabilities -> object ["sessionNew" .= capabilities]
-    SessionStatus -> methodOnly "session.status"
-    SessionSubscribe request -> object ["sessionSubscribe" .= request]
-    SessionUnsubscribe params -> object ["sessionUnsubscribe" .= params]
-    
-
+    SessionNew capabilities -> toJSON capabilities
+    SessionSubscribe request -> toJSON request
+    SessionUnsubscribe params ->
+      object
+        [ "method" .= "session.unsubscribe",
+          "sessionUnsubscribe" .= params
+        ]
+    SessionStatus -> emptyObj
+    SessionEnd -> emptyObj
 
 -- | Capabilities Request
 data Capabilities = MkCapabilities
@@ -164,8 +173,12 @@ instance ToJSON UserPromptHandlerType where
     Ignore -> "ignore"
 
 -- | Subscription
-newtype Subscription = MkSubscription Text
+newtype Subscription = MkSubscription { subscriptionId :: Text }
   deriving (Show, Eq, Generic)
+
+instance ToJSON Subscription where
+  toJSON :: Subscription -> Value
+  toJSON (MkSubscription subId) = string subId
 
 -- | Subscription Request
 data SessionSubscriptionRequest = MkSessionSubscriptionRequest
@@ -175,8 +188,11 @@ data SessionSubscriptionRequest = MkSessionSubscriptionRequest
   }
   deriving (Show, Eq, Generic)
 
+instance ToJSON SessionSubscriptionRequest
+
 -- | Unsubscribe Parameters
 data SessionUnsubscribeParameters
+
   = UnsubscribeByID SessionUnsubscribeByIDRequest
   | UnsubscribeByAttributes SessionUnsubscribeByAttributesRequest
   deriving (Show, Eq, Generic)
@@ -187,12 +203,16 @@ newtype SessionUnsubscribeByIDRequest = MkSessionUnsubscribeByIDRequest
   }
   deriving (Show, Eq, Generic)
 
+instance ToJSON SessionUnsubscribeByIDRequest 
+
 -- | Unsubscribe By Attributes Request
 data SessionUnsubscribeByAttributesRequest = MkSessionUnsubscribeByAttributesRequest
   { unsubEvents :: [Text],
     unsubContexts :: Maybe [Text]
   }
   deriving (Show, Eq, Generic)
+
+instance ToJSON SessionUnsubscribeParameters 
 
 -- ######### Local #########
 

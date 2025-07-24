@@ -3,6 +3,7 @@ module WebDriverPreCore.Internal.AesonUtils
     aesonTypeErrorMessage,
     asText,
     bodyText',
+    emptyObj,
     lookup,
     lookupTxt,
     nonEmpty,
@@ -116,6 +117,10 @@ lookup k v =
 
 nonEmpty :: Value -> Bool
 nonEmpty = not . empty
+
+
+emptyObj :: Value
+emptyObj = Object AKM.empty
 
 empty :: Value -> Bool
 empty = \case

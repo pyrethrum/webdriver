@@ -9,16 +9,18 @@ module WebDriverPreCore.BiDi.CoreTypes
     NodeRemoteValue (..),
     SharedId (..),
     methodOnly,
+    BiDiMethod (..),
   )
 where
 
-import Data.Aeson (FromJSON (..), ToJSON, Value, KeyValue (..), object)
+import Data.Aeson (FromJSON (..), ToJSON, Value (..), KeyValue (..), object)
 import Data.Int (Int64)
 import Data.Map qualified as Map
 import Data.Text (Text)
 import Data.Word (Word64)
 import GHC.Generics (Generic)
 import Prelude (Eq, Maybe, Show)
+import Data.Aeson.KeyMap (empty)
 
 -- | Core types for the WebDriver BiDi (Bidirectional) protocol.
 
@@ -63,5 +65,5 @@ newtype SharedId = MkSharedId Text deriving newtype (Show, Eq, ToJSON, FromJSON)
 
 newtype EmptyResult = MkEmptyResult {extensible :: Maybe [Text]} deriving (Show, Eq, Generic)
 
-methodOnly :: Text -> Value
-methodOnly method = object ["method" .= method]
+class BiDiMethod a where
+  bidiMethod :: a -> Text
