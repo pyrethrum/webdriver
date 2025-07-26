@@ -356,48 +356,6 @@ bidiSession bidiPath = do
 
   loop
 
--- | Hybrid BiDi demo - minimal HTTP session creation to open port 9222, then pure BiDi
--- This is the correct approach for GeckoDriver
--- >>> hybridBiDiDemo
-hybridBiDiDemo :: IO ()
-hybridBiDiDemo = do
-  putStrLn "Starting hybrid BiDi demo..."
-  putStrLn "Step 1: Creating minimal HTTP session to open port 9222..."
-  
-  -- Create minimal HTTP session (just to open port 9222)
-  cfg <- loadConfig
-  _httpSession <- newHttpSession $ httpBidiCapabilities cfg
-  putStrLn "✓ HTTP session created, port 9222 should now be open"
-  
-  -- Small delay to ensure port is ready
-  threadDelay 500_000
-  
-  putStrLn "Step 2: Connecting to pure BiDi on port 9222..."
-  -- Now connect to pure BiDi endpoint (not session-specific)
-  let pureBiDiPath = MkBiDiPath 
-        { host = "127.0.0.1"
-        , port = 9222  -- Now available thanks to HTTP session
-        , path = ""    -- Root BiDi endpoint
-        }
-  pureBidiSession pureBiDiPath
-
--- | Pure BiDi demo - creates session entirely via BiDi protocol
--- NOTE: This will fail unless port 9222 is open (requires HTTP session first)
--- >>> pureBiDiDemo  
-pureBiDiDemo :: IO ()
-pureBiDiDemo = do
-  putStrLn "Starting pure BiDi demo..."
-  putStrLn "WARNING: This will fail unless port 9222 is already open!"
-  putStrLn "Use hybridBiDiDemo instead for reliable connection"
-  putStrLn "Connecting directly to GeckoDriver BiDi endpoint..."
-  
-  -- Connect to GeckoDriver's BiDi endpoint (no HTTP session)
-  let pureBiDiPath = MkBiDiPath 
-        { host = "127.0.0.1"
-        , port = 9222  -- BiDi port (may not be open!)
-        , path = ""    -- Root BiDi endpoint (not session-specific)
-        }
-  pureBidiSession pureBiDiPath
 
 -- | Pure BiDi session that creates its own session via BiDi
 pureBidiSession :: BiDiPath -> IO ()
@@ -452,7 +410,52 @@ pureBidiSession bidiPath = do
             loop
 
   loop
+  
+-- | Pure BiDi demo - creates session entirely via BiDi protocol
+-- NOTE: This will fail unless port 9222 is open (requires HTTP session first)
+-- >>> pureBiDiDemo  
+pureBiDiDemo :: IO ()
+pureBiDiDemo = do
+  putStrLn "Starting pure BiDi demo..."
+  putStrLn "WARNING: This will fail unless port 9222 is already open!"
+  putStrLn "Use hybridBiDiDemo instead for reliable connection"
+  putStrLn "Connecting directly to GeckoDriver BiDi endpoint..."
+  
+  -- Connect to GeckoDriver's BiDi endpoint (no HTTP session)
+  let pureBiDiPath = MkBiDiPath 
+        { host = "127.0.0.1"
+        , port = 9222  -- BiDi port (may not be open!)
+        , path = ""    -- Root BiDi endpoint (not session-specific)
+        }
+  pureBidiSession pureBiDiPath
 
+
+  -- | Hybrid BiDi demo - minimal HTTP session creation to open port 9222, then pure BiDi
+-- This is the correct approach for GeckoDriver
+-- >>> hybridBiDiDemo
+hybridBiDiDemo :: IO ()
+hybridBiDiDemo = do
+  putStrLn "Starting hybrid BiDi demo..."
+  putStrLn "Step 1: Creating minimal HTTP session to open port 9222..."
+  
+  -- Create minimal HTTP session (just to open port 9222)
+  cfg <- loadConfig
+  _httpSession <- newHttpSession $ httpBidiCapabilities cfg
+  putStrLn "HTTP session created, port 9222 should now be open"
+  
+  -- Small delay to ensure port is ready
+  threadDelay 500_000
+  
+  putStrLn "Step 2: Connecting to pure BiDi on port 9222..."
+  -- Now connect to pure BiDi endpoint (not session-specific)
+  let pureBiDiPath = MkBiDiPath 
+        { host = "127.0.0.1"
+        , port = 9222  -- Now available thanks to HTTP session
+        , path = ""    -- Root BiDi endpoint
+        }
+  pureBidiSession pureBiDiPath
+
+  
 -- | Direct BiDi connection demo - connects directly to GeckoDriver's BiDi endpoint
 -- This avoids the HTTP session creation step
 -- >>> biDiDirectDemo
@@ -500,4 +503,5 @@ ws connection = do
           loop
   loop
 
-  sendClose connection (pack "Bye!")
+  sendClose connection (pack "Bye!") 
+
