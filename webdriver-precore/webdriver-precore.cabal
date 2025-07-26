@@ -116,6 +116,7 @@ library
       -- BiDi
       WebDriverPreCore.BiDi.Browser
       WebDriverPreCore.BiDi.BrowsingContext
+      WebDriverPreCore.BiDi.CoreTypes
       WebDriverPreCore.BiDi.Emulation
       WebDriverPreCore.BiDi.Error
       WebDriverPreCore.BiDi.Log
@@ -135,8 +136,6 @@ library
       WebDriverPreCore.Http.Capabilities
       WebDriverPreCore.Http.Error
       WebDriverPreCore.Http.HttpResponse
-      -- BiDi
-      WebDriverPreCore.BiDi.CoreTypes
   hs-source-dirs: src
   build-depends:
     -- debugging only remove brefore release

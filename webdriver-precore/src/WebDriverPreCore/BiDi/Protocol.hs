@@ -23,23 +23,40 @@ import WebDriverPreCore.BiDi.Input (FileDialogOpened, InputCommand)
 import WebDriverPreCore.BiDi.Log (Entry)
 import WebDriverPreCore.BiDi.Network (NetworkCommand)
 import WebDriverPreCore.BiDi.Script (RemoteValue, ScriptCommand, Source, StackTrace)
-import WebDriverPreCore.BiDi.Session (SessionCommand)
+import WebDriverPreCore.BiDi.Session (Capabilities, SessionCommand (..))
 import WebDriverPreCore.BiDi.Storage (StorageCommand)
 import WebDriverPreCore.BiDi.WebExtensions (WebExtensionCommand)
 import WebDriverPreCore.Internal.AesonUtils (objectOrThrow, parseObject)
-import Prelude (Bool, Eq, Maybe, Show, error, maybe, ($), (.), (<$>), (<>))
+import Prelude (Bool, Eq, Maybe (..), Show, error, maybe, ($), (.), (<$>), (<>))
 
 -- ######### Local #########
 
-command :: JSUInt -> CommandData -> Maybe Object -> Value
-command id cmdData =
-  Object . maybe idCmd (idCmd <>)
+command' :: Maybe Object -> Command -> JSUInt -> Value
+command' extensions cmd id =
+  Object $ maybe idMethodCmd (idMethodCmd <>) extensions
   where
-    idCmd = "id" .= id <> objectOrThrow "CommandData will always be an Object" cmdData
+    idMethodCmd =
+      "id" .= id
+        <> "method" .= (method cmd)
+        <> "params" .= objectOrThrow "CommandData will always be an Object" cmd
+    method = \case
+      -- BrowserCommand _ -> "browser"
+      -- BrowsingContext _ -> "browsingContext"
+      -- EmulationCommand _ -> "emulation"
+      -- Input _ -> "input"
+      -- Network _ -> "network"
+      -- Script _ -> "script"
+      Session s -> bidiMethod s
+      -- Storage _ -> "storage"
+      -- WebExtension _ -> "webExtension"
+      _ -> error "Unsupported command type"
+
+command :: Command -> JSUInt -> Value
+command = command' Nothing
 
 -- Command types
 
-data CommandData
+data Command
   = BrowserCommand BrowserCommand
   | BrowsingContext BrowsingContextCommand
   | EmulationCommand EmulationCommand
@@ -52,8 +69,8 @@ data CommandData
   deriving (Show, Eq, Generic)
 
 -- todo :: replace with derived instnace when donee
-instance ToJSON CommandData where
-  toJSON :: CommandData -> Value
+instance ToJSON Command where
+  toJSON :: Command -> Value
   toJSON = \case
     -- BrowserCommand cmd -> toJSON cmd
     -- BrowsingContext cmd -> toJSON cmd
@@ -65,6 +82,22 @@ instance ToJSON CommandData where
     -- Storage cmd -> toJSON cmd
     -- WebExtension cmd -> toJSON cmd
     _ -> error "Unsupported command type for JSON serialization"
+
+sessionCommand' ::  Maybe Object -> SessionCommand -> JSUInt -> Value
+sessionCommand' extensions cmd id =
+  command' extensions (Session cmd) id
+
+sessionCommand :: SessionCommand -> JSUInt -> Value
+sessionCommand = sessionCommand' Nothing
+
+newSession :: Capabilities -> JSUInt -> Value
+newSession caps id = sessionCommand' Nothing (SessionNew caps) id
+
+sessionStatus :: JSUInt -> Value
+sessionStatus = sessionCommand SessionStatus
+
+sessionEnd :: JSUInt -> Value
+sessionEnd = sessionCommand SessionEnd
 
 -- ######### Remote #########
 

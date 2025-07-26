@@ -7,8 +7,8 @@ import Data.Text (Text)
 import Data.Vector (fromList)
 import Data.Word (Word8)
 import GHC.Generics (Generic)
-import WebDriverPreCore.BiDi.CoreTypes (BiDiMethod (..), methodOnly)
-import WebDriverPreCore.Internal.AesonUtils (opt)
+import WebDriverPreCore.BiDi.CoreTypes (BiDiMethod (..))
+import WebDriverPreCore.Internal.AesonUtils (emptyObj, opt)
 import Prelude (Applicative ((<*>)), Bool (..), Eq (..), Maybe (..), Show (..), ($), (.), (<$>))
 
 webSocketUrlKey :: Key
@@ -38,11 +38,7 @@ instance ToJSON SessionCommand where
   toJSON = \case
     SessionNew capabilities -> toJSON capabilities
     SessionSubscribe request -> toJSON request
-    SessionUnsubscribe params ->
-      object
-        [ "method" .= "session.unsubscribe",
-          "sessionUnsubscribe" .= params
-        ]
+    SessionUnsubscribe params -> toJSON params
     SessionStatus -> emptyObj
     SessionEnd -> emptyObj
 
@@ -173,12 +169,12 @@ instance ToJSON UserPromptHandlerType where
     Ignore -> "ignore"
 
 -- | Subscription
-newtype Subscription = MkSubscription { subscriptionId :: Text }
+newtype Subscription = MkSubscription {subscriptionId :: Text}
   deriving (Show, Eq, Generic)
 
 instance ToJSON Subscription where
   toJSON :: Subscription -> Value
-  toJSON (MkSubscription subId) = string subId
+  toJSON (MkSubscription subId) = String subId
 
 -- | Subscription Request
 data SessionSubscriptionRequest = MkSessionSubscriptionRequest
@@ -192,10 +188,11 @@ instance ToJSON SessionSubscriptionRequest
 
 -- | Unsubscribe Parameters
 data SessionUnsubscribeParameters
-
   = UnsubscribeByID SessionUnsubscribeByIDRequest
   | UnsubscribeByAttributes SessionUnsubscribeByAttributesRequest
   deriving (Show, Eq, Generic)
+
+instance ToJSON SessionUnsubscribeParameters
 
 -- | Unsubscribe By ID Request
 newtype SessionUnsubscribeByIDRequest = MkSessionUnsubscribeByIDRequest
@@ -203,7 +200,7 @@ newtype SessionUnsubscribeByIDRequest = MkSessionUnsubscribeByIDRequest
   }
   deriving (Show, Eq, Generic)
 
-instance ToJSON SessionUnsubscribeByIDRequest 
+instance ToJSON SessionUnsubscribeByIDRequest
 
 -- | Unsubscribe By Attributes Request
 data SessionUnsubscribeByAttributesRequest = MkSessionUnsubscribeByAttributesRequest
@@ -212,7 +209,7 @@ data SessionUnsubscribeByAttributesRequest = MkSessionUnsubscribeByAttributesReq
   }
   deriving (Show, Eq, Generic)
 
-instance ToJSON SessionUnsubscribeParameters 
+instance ToJSON SessionUnsubscribeByAttributesRequest
 
 -- ######### Local #########
 

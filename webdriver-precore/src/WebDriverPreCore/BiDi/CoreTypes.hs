@@ -8,7 +8,6 @@ module WebDriverPreCore.BiDi.CoreTypes
     NodeProperties (..),
     NodeRemoteValue (..),
     SharedId (..),
-    methodOnly,
     BiDiMethod (..),
   )
 where
