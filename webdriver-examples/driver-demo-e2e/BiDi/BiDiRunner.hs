@@ -21,7 +21,7 @@ import Text.Read (readEither)
 import UnliftIO.Async (Async, async, cancel, wait, waitAny, waitEither_)
 import UnliftIO.STM
 import WebDriverPreCore.BiDi.CoreTypes (JSUInt (..))
-import WebDriverPreCore.BiDi.Protocol (newSession, sessionEnd)
+import WebDriverPreCore.BiDi.Protocol (newSession, sessionEnd, sessionStatus)
 import WebDriverPreCore.BiDi.Session
 import WebDriverPreCore.Http qualified as Http
 import WebDriverPreCore.Internal.AesonUtils (jsonToText, prettyPrintJson)
@@ -386,8 +386,11 @@ pureBidiSession bidiPath = do
     log $ "MESSAGE RECEIVED: " <> jsonToText msg
 
   -- Create BiDi session properly
-  log "Creating new BiDi session..."
-  send $ newSession firefoxCapabilies (MkJSUInt 1)
+  -- log "Creating new BiDi session..."
+  -- send $ newSession firefoxCapabilies (MkJSUInt 1)
+
+  log "Getting session Status..."
+  send . sessionStatus $ MkJSUInt 1
   
   -- Wait for session creation response
   threadDelay 3000_000
@@ -443,6 +446,7 @@ hybridBiDiDemo = do
   _httpSession <- newHttpSession $ httpBidiCapabilities cfg
   putStrLn "HTTP session created, port 9222 should now be open"
   
+
   -- Small delay to ensure port is ready
   threadDelay 500_000
   
@@ -451,7 +455,7 @@ hybridBiDiDemo = do
   let pureBiDiPath = MkBiDiPath 
         { host = "127.0.0.1"
         , port = 9222  -- Now available thanks to HTTP session
-        , path = ""    -- Root BiDi endpoint
+        , path = "/session"    -- Root BiDi endpoint
         }
   pureBidiSession pureBiDiPath
 
