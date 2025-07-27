@@ -31,6 +31,7 @@ import Prelude (Bool, Eq, Maybe (..), Show, error, maybe, ($), (.), (<$>), (<>))
 
 -- ######### Local #########
 
+-- TODO: check exceptions eg test with unsupported command - currently not getting to main thread
 command' :: Maybe Object -> Command -> JSUInt -> Value
 command' extensions cmd id =
   Object $ maybe idMethodCmd (idMethodCmd <>) extensions
