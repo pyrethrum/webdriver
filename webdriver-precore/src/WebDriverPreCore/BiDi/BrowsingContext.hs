@@ -1,11 +1,11 @@
 module WebDriverPreCore.BiDi.BrowsingContext where
 
-import Data.Aeson (Value)
+import Data.Aeson (Value, ToJSON (..))
 import Data.Map qualified as Map
 import Data.Text (Text)
 import GHC.Generics
-import WebDriverPreCore.BiDi.CoreTypes (BrowsingContext, JSInt, JSUInt, NodeRemoteValue)
-import Prelude (Bool, Eq, Float, Maybe, Show)
+import WebDriverPreCore.BiDi.CoreTypes (BrowsingContext, JSInt, JSUInt, NodeRemoteValue, BiDiMethod (bidiMethod))
+import Prelude (Bool, Eq, Float, Maybe, Show, error)
 
 -- ######### REMOTE #########
 
@@ -24,6 +24,39 @@ data BrowsingContextCommand
   | SetViewport SetViewport
   | TraverseHistory TraverseHistory
   deriving (Show, Eq, Generic)
+
+instance ToJSON BrowsingContextCommand where
+  toJSON :: BrowsingContextCommand -> Value
+  toJSON = \case
+    -- Activate cmd -> toJSON cmd
+    -- CaptureScreenshot cmd -> toJSON cmd
+    -- Close cmd -> toJSON cmd
+    Create cmd -> toJSON cmd
+    -- GetTree cmd -> toJSON cmd
+    -- HandleUserPrompt cmd -> toJSON cmd
+    -- LocateNodes cmd -> toJSON cmd
+    -- Navigate cmd -> toJSON cmd
+    -- Print cmd -> toJSON cmd
+    -- Reload cmd -> toJSON cmd
+    -- SetViewport cmd -> toJSON cmd
+    -- TraverseHistory cmd -> toJSON cmd
+    _ -> error "Unsupported browsing context command type for JSON serialization"
+
+instance BiDiMethod BrowsingContextCommand where
+  bidiMethod :: BrowsingContextCommand -> Text
+  bidiMethod = \case
+    Activate _ -> "browsingContext.activate"
+    CaptureScreenshot _ -> "browsingContext.captureScreenshot"
+    Close _ -> "browsingContext.close"
+    Create _ -> "browsingContext.create"
+    GetTree _ -> "browsingContext.getTree"
+    HandleUserPrompt _ -> "browsingContext.handleUserPrompt"
+    LocateNodes _ -> "browsingContext.locateNodes"
+    Navigate _ -> "browsingContext.navigate"
+    Print _ -> "browsingContext.print"
+    Reload _ -> "browsingContext.reload"
+    SetViewport _ -> "browsingContext.setViewport"
+    TraverseHistory _ -> "browsingContext.traverseHistory"
 
 -- |  for activate command
 newtype Activate = MkActivate
@@ -77,6 +110,8 @@ data Create = MkCreate
     userContext :: Maybe Text -- browser.UserContext
   }
   deriving (Show, Eq, Generic)
+
+instance ToJSON Create 
 
 -- |  for getTree command
 data GetTree = MkGetTree
@@ -191,6 +226,12 @@ data UserPromptType = Alert | BeforeUnload | Confirm | Prompt
 -- | Type of browsing context to create
 data CreateType = Tab | Window
   deriving (Show, Eq, Generic)
+
+instance ToJSON CreateType where
+  toJSON :: CreateType -> Value
+  toJSON = \case
+    Tab -> "tab"
+    Window -> "window"
 
 -- | Print margin
 data PrintMargin = MkPrintMargin

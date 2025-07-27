@@ -1,33 +1,30 @@
 module BiDi.BiDiRunner where
 
 import Config (Config, loadConfig)
-import Control.Concurrent (forkIO, threadDelay)
-import Control.Exception (Exception (displayException), SomeException, catch, finally, throwIO, try)
-import Control.Monad (forever, unless, void)
-import Data.Aeson (FromJSON, ToJSON, Value, eitherDecode, encode, toJSON, (.:), (.:?), (.=))
-import Data.Aeson qualified as Aeson
-import Data.ByteString.Lazy (ByteString)
+import Control.Concurrent (threadDelay)
+import Control.Exception (Exception (displayException), SomeException, catch, throwIO)
+import Control.Monad (forever)
+import Data.Aeson (ToJSON, Value, eitherDecode, encode, toJSON)
 import Data.ByteString.Lazy qualified as BL
 import Data.Function ((&))
-import Data.IORef (newIORef, readIORef, writeIORef)
-import Data.Text as T (Text, breakOn, null, pack, splitOn, unpack)
+import Data.Text as T (Text, breakOn, pack, splitOn, unpack)
 import Data.Text.IO as T (getLine, putStrLn)
 import Http.HttpAPI (FullCapabilities, SessionResponse (..), newSessionFull)
 import Http.HttpAPI qualified as Caps (Capabilities (..))
 import IOUtils (ppTxt)
-import Network.WebSockets (ClientApp, Connection, receiveData, runClient, sendClose, sendTextData)
+import Network.WebSockets (receiveData, runClient, sendTextData)
 import RuntimeConst (httpCapabilities, httpFullCapabilities)
 import Text.Read (readEither)
-import UnliftIO.Async (Async, async, cancel, wait, waitAny, waitEither_)
+import UnliftIO.Async (Async, async, cancel, waitAny)
 import UnliftIO.STM
 import WebDriverPreCore.BiDi.CoreTypes (JSUInt (..))
-import WebDriverPreCore.BiDi.Protocol (newSession, sessionEnd, sessionStatus)
-import WebDriverPreCore.BiDi.Session
+import WebDriverPreCore.BiDi.Protocol (sessionStatus, browsingContextCreate)
 import WebDriverPreCore.Http qualified as Http
-import WebDriverPreCore.Internal.AesonUtils (jsonToText, prettyPrintJson)
+import WebDriverPreCore.Internal.AesonUtils (jsonToText)
 import WebDriverPreCore.Internal.Utils (txt)
-import Wuss (runSecureClient)
 import Prelude hiding (getLine, log, null, putStrLn)
+import WebDriverPreCore.BiDi.BrowsingContext (Create(MkCreate))
+import WebDriverPreCore.BiDi.BrowsingContext (CreateType(..))
 
 getBiDiPath :: SessionResponse -> Either Text BiDiPath
 getBiDiPath r =
@@ -99,32 +96,12 @@ httpBidiCapabilities cfg =
 
 sessionViaHttp :: IO BiDiPath
 sessionViaHttp = do
-  cfg <- loadConfig
-  ses <- newHttpSession $ httpBidiCapabilities cfg
+  ses <- loadConfig >>= newHttpSession . httpBidiCapabilities
   getBiDiPath ses & either (error . T.unpack) pure
 
 -- >>> biDiDemo
-
--- *** Exception: user error (WebDriver error thrown:
-
---  WebDriverError {error = SessionNotCreated, description = "A new session could not be created", httpResponse = MkHttpResponse {statusCode = 500, statusMessage = "Internal Server Error", body = Object (fromList [("value",Object (fromList [("error",String "session not created"),("message",String "Session is already started"),("stacktrace",String "")]))])}})
--- sessionViaHttp >>= newBidiSessionDemo - does not work because the session is already created
 biDiDemo :: IO ()
 biDiDemo = sessionViaHttp >>= bidiSession
-
---  newBidiSessionDemo
---   MkBiDiPath
---     { host = "127.0.0.1",
---       port = 9222,
---       path = ""
---     }
--- threadDelay 1000_000 -- Wait for a while to see the output
--- newBidiSessionDemo
---   MkBiDiPath
---     { host = "127.0.0.1",
---       port = 9222,
---       path = "/session"
---     }
 
 -- | WebDriver BiDi client configuration
 data BiDiPath = MkBiDiPath
@@ -133,71 +110,6 @@ data BiDiPath = MkBiDiPath
     path :: Text
   }
   deriving (Show)
-
--- | Default WebDriver BiDi configuration for GeckoDriver
-defaultGeckoDriverConfig :: BiDiPath
-defaultGeckoDriverConfig =
-  MkBiDiPath
-    { host = "127.0.0.1",
-      port = 4444,
-      path = "/session"
-    }
-
--- | WebDriver BiDi message
-data WebDriverBiDiMessage = WebDriverBiDiMessage
-  { msgId :: Int,
-    msgMethod :: Maybe Text,
-    msgParams :: Maybe Value,
-    msgResult :: Maybe Aeson.Value,
-    msgError :: Maybe Aeson.Value
-  }
-  deriving (Show)
-
-instance FromJSON WebDriverBiDiMessage where
-  parseJSON = Aeson.withObject "WebDriverBiDiMessage" $ \v ->
-    WebDriverBiDiMessage
-      <$> v .: "id"
-      <*> v .:? "method"
-      <*> v .:? "params"
-      <*> v .:? "result"
-      <*> v .:? "error"
-
-instance ToJSON WebDriverBiDiMessage where
-  toJSON (WebDriverBiDiMessage id' method params _ _) =
-    Aeson.object $
-      ["id" .= id']
-        <> maybe [] (\m -> ["method" .= m]) method
-        <> maybe [] (\p -> ["params" .= p]) params
-
-fireFoxCapability :: Capability
-fireFoxCapability =
-  MkCapability
-    { acceptInsecureCerts = Just True,
-      browserName = Just "firefox",
-      webSocketUrl = True,
-      browserVersion = Nothing,
-      platformName = Nothing,
-      proxy = Nothing,
-      unhandledPromptBehavior = Nothing
-    }
-
-firefoxCapabilies :: Capabilities
-firefoxCapabilies =
-  MkCapabilities
-    { alwaysMatch = Just fireFoxCapability,
-      firstMatch = []
-    }
-
--- | Create a BiDi message for session.end command
-createSessionEndMessage :: Int -> WebDriverBiDiMessage
-createSessionEndMessage msgId =
-  WebDriverBiDiMessage
-    { msgId = msgId,
-      msgMethod = Just "session.end",
-      msgParams = Nothing,
-      msgResult = Nothing,
-      msgError = Nothing
-    }
 
 -- | WebDriver BiDi client with communication channels
 data WebDriverBiDiClient = MkWebDriverBiDiClient
@@ -249,6 +161,7 @@ startClient pth@MkBiDiPath {host, port, path} log sendChan receiveChan =
       sender <- runForever "sender" $ do
         msgToSend <- atomically $ readTChan sendChan
         log $ "Sending Message: " <> pack (show msgToSend)
+        threadDelay 1_000_000 
         catchLog
           "Message Send Failed"
           log
@@ -256,9 +169,8 @@ startClient pth@MkBiDiPath {host, port, path} log sendChan receiveChan =
 
       -- Wait for any thread to fail (they shouldn't unless there's an error)
       waitAny [receiver, sender]
-      threadDelay 1000_000 -- Wait a bit before closing
+      threadDelay 1_000_000 -- Wait a bit before closing
       putStrLn "One of the WebSocket threads terminated, closing connection."
-     
 
 -- | Run WebDriver BiDi client and return a client interface
 runWebDriverBiDi :: BiDiPath -> IO WebDriverBiDiClient
@@ -272,7 +184,7 @@ runWebDriverBiDi bidiPth = do
   loggerAsync <- async . forever $ do
     msg <- atomically $ readTChan logChan
     putStrLn $ "[LOG] " <> msg
-  
+
   -- Give logger thread time to start
   threadDelay 50_000
 
@@ -324,188 +236,20 @@ bidiSession bidiPath = do
 
   -- No session initialization needed - session was created via HTTP
   log "BiDi WebSocket connected to existing session"
-  
+
   -- Wait a bit for things to settle
   threadDelay 1000_000
 
   -- Interactive loop
   let loop = do
-        log "Enter command (or 'q' to exit 'r' to reload):"
-        cmd <- getLine
-        case cmd of
-          "q" -> do
-            send $ sessionEnd $ MkJSUInt 2
-            threadDelay 3000_000 -- Wait a bit before disconnecting
-            log "Disconnecting..."
-            disconnect
-          "r" -> do
-            -- Example of sending a browsing context command
-            let browsingContextMsg =
-                  WebDriverBiDiMessage
-                    { msgId = 3,
-                      msgMethod = Just "browsingContext.reload",
-                      msgParams = Just $ Aeson.object ["context" .= ("current" :: Text)],
-                      msgResult = Nothing,
-                      msgError = Nothing
-                    }
-            send $ toJSON browsingContextMsg
-            loop
-          _ -> do
-            log "Unknown command"
-            loop
+        log "Enter c for new context:"
+        msg <- getLine
+        if msg == "c" then do
+          log "Creating new tab"
+          send . browsingContextCreate (MkCreate Tab Nothing Nothing Nothing) $ MkJSUInt 2
+        else
+          send . sessionStatus $ MkJSUInt 2
+        threadDelay 500_000 -- Give some time for the server to respond
+        loop
 
   loop
-
-
--- | Pure BiDi session that creates its own session via BiDi
-pureBidiSession :: BiDiPath -> IO ()
-pureBidiSession bidiPath = do
-  MkWebDriverBiDiClient
-    { disconnect,
-      sendMessage,
-      log,
-      receiveChannel
-    } <-
-    runWebDriverBiDi bidiPath `catch` \(e :: SomeException) ->
-      error $ "Failed to initialise client:\n" <> displayException e
-
-  let send :: forall a. (ToJSON a) => a -> IO ()
-      send msg = do
-        log $ "Queuing message: " <> jsonToText (toJSON msg)
-        catch
-          (sendMessage msg)
-          ( \(e :: SomeException) -> do
-              log $ "Failed to queue message: " <> pack (displayException e)
-              threadDelay 100_000
-              throwIO e
-          )
-
-  -- Start message handler
-  async . forever $ do
-    msg <- atomically $ readTChan receiveChannel
-    log $ "MESSAGE RECEIVED: " <> jsonToText msg
-
-  -- Create BiDi session properly
-  -- log "Creating new BiDi session..."
-  -- send $ newSession firefoxCapabilies (MkJSUInt 1)
-
-  log "Getting session Status..."
-  send . sessionStatus $ MkJSUInt 1
-  
-  -- Wait for session creation response
-  threadDelay 3000_000
-
-  -- Interactive loop
-  let loop = do
-        putStrLn "Enter command (or 'q' to exit 'r' to reload):"
-        cmd <- getLine
-        case cmd of
-          "q" -> do
-            send $ sessionEnd $ MkJSUInt 99
-            threadDelay 1000_000
-            log "Disconnecting..."
-            disconnect
-          "r" -> do
-            log "Reload command not implemented yet"
-            loop
-          _ -> do
-            log "Unknown command"
-            loop
-
-  loop
-  
--- | Pure BiDi demo - creates session entirely via BiDi protocol
--- NOTE: This will fail unless port 9222 is open (requires HTTP session first)
--- >>> pureBiDiDemo  
-pureBiDiDemo :: IO ()
-pureBiDiDemo = do
-  putStrLn "Starting pure BiDi demo..."
-  putStrLn "WARNING: This will fail unless port 9222 is already open!"
-  putStrLn "Use hybridBiDiDemo instead for reliable connection"
-  putStrLn "Connecting directly to GeckoDriver BiDi endpoint..."
-  
-  -- Connect to GeckoDriver's BiDi endpoint (no HTTP session)
-  let pureBiDiPath = MkBiDiPath 
-        { host = "127.0.0.1"
-        , port = 9222  -- BiDi port (may not be open!)
-        , path = ""    -- Root BiDi endpoint (not session-specific)
-        }
-  pureBidiSession pureBiDiPath
-
-
-  -- | Hybrid BiDi demo - minimal HTTP session creation to open port 9222, then pure BiDi
--- This is the correct approach for GeckoDriver
--- >>> hybridBiDiDemo
-hybridBiDiDemo :: IO ()
-hybridBiDiDemo = do
-  putStrLn "Starting hybrid BiDi demo..."
-  putStrLn "Step 1: Creating minimal HTTP session to open port 9222..."
-  
-  -- Create minimal HTTP session (just to open port 9222)
-  cfg <- loadConfig
-  httpSession <- newHttpSession $ httpBidiCapabilities cfg
-  putStrLn "HTTP session created, port 9222 should now be open"
-  
-
-  -- Small delay to ensure port is ready
-  threadDelay 500_000
-  
-  putStrLn "Step 2: Connecting to pure BiDi on port 9222..."
-  -- Now connect to pure BiDi endpoint (not session-specific)
-  let pureBiDiPath = MkBiDiPath 
-        { host = "127.0.0.1"
-        , port = 9222  -- Now available thanks to HTTP session
-        , path = "/session"    -- Root BiDi endpoint
-        }
-  pureBidiSession pureBiDiPath
-
-  
--- | Direct BiDi connection demo - connects directly to GeckoDriver's BiDi endpoint
--- This avoids the HTTP session creation step
--- >>> biDiDirectDemo
-biDiDirectDemo :: IO ()
-biDiDirectDemo = do
-  putStrLn "Starting direct BiDi demo..."
-  putStrLn "Note: This requires an existing session. Creating one first..."
-  
-  -- First create an HTTP session to get the WebSocket URL
-  cfg <- loadConfig
-  sesResponse <- newHttpSession $ httpBidiCapabilities cfg
-  bidiPath <- getBiDiPath sesResponse & either (error . T.unpack) pure
-  
-  putStrLn $ "Got BiDi path: " <> txt bidiPath
-  bidiSession bidiPath
-
-  -- Original hardcoded approach (doesn't work without existing session):
-  -- let directPath =
-  --       MkBiDiPath
-  --         { host = "127.0.0.1",
-  --           port = 9222, -- GeckoDriver's WebSocket port
-  --           path = "/session" -- BiDi endpoint
-  --         }
-  -- bidiSession directPath
-
----- wuss example - works but driver is not a secure connection ----
----- keep around for later - may be useful for remote providers such as LambdaTest / BrowserStack  ----
-
--- >>> wussDemo
-wussDemo :: IO ()
-wussDemo = runSecureClient "echo.websocket.org" 443 "/" ws
-
-ws :: ClientApp ()
-ws connection = do
-  T.putStrLn "Connected!"
-
-  void . forkIO . forever $ do
-    message <- receiveData connection
-    T.putStrLn (message :: Text)
-
-  let loop = do
-        line <- getLine
-        unless (null line) $ do
-          sendTextData connection line
-          loop
-  loop
-
-  sendClose connection (pack "Bye!") 
-

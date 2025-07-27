@@ -140,6 +140,7 @@ test-suite driver-demo-e2e
     , Http.HttpE2EDemoTest
     , BiDi.BiDiRunner
     , BiDi.BiDiE2EDemoTest
+    , BiDi.WussDemo
     , RuntimeConst
   build-tool-depends:
     tasty-discover:tasty-discover

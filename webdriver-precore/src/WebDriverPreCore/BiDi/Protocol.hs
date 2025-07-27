@@ -15,15 +15,15 @@ import Data.Maybe (fromMaybe)
 import Data.Text (Text)
 import GHC.Generics (Generic)
 import WebDriverPreCore.BiDi.Browser (BrowserCommand, BrowserResult)
-import WebDriverPreCore.BiDi.BrowsingContext (BrowsingContextCommand, BrowsingContextEvent, BrowsingContextResult)
-import WebDriverPreCore.BiDi.CoreTypes
+import WebDriverPreCore.BiDi.BrowsingContext (BrowsingContextCommand (..), BrowsingContextEvent, BrowsingContextResult, Create)
+import WebDriverPreCore.BiDi.CoreTypes (JSUInt, BiDiMethod (bidiMethod))
 import WebDriverPreCore.BiDi.Emulation (EmulationCommand)
 import WebDriverPreCore.BiDi.Error (ErrorCode)
 import WebDriverPreCore.BiDi.Input (FileDialogOpened, InputCommand)
 import WebDriverPreCore.BiDi.Log (Entry)
 import WebDriverPreCore.BiDi.Network (NetworkCommand)
 import WebDriverPreCore.BiDi.Script (RemoteValue, ScriptCommand, Source, StackTrace)
-import WebDriverPreCore.BiDi.Session (Capabilities, SessionCommand (..))
+import WebDriverPreCore.BiDi.Session (Capabilities, SessionCommand (..), SessionSubscriptionRequest, SessionUnsubscribeParameters)
 import WebDriverPreCore.BiDi.Storage (StorageCommand)
 import WebDriverPreCore.BiDi.WebExtensions (WebExtensionCommand)
 import WebDriverPreCore.Internal.AesonUtils (objectOrThrow, parseObject)
@@ -73,7 +73,7 @@ instance ToJSON Command where
   toJSON :: Command -> Value
   toJSON = \case
     -- BrowserCommand cmd -> toJSON cmd
-    -- BrowsingContext cmd -> toJSON cmd
+    BrowsingContext cmd -> toJSON cmd
     -- EmulationCommand cmd -> toJSON cmd
     -- Input cmd -> toJSON cmd
     -- Network cmd -> toJSON cmd
@@ -82,6 +82,8 @@ instance ToJSON Command where
     -- Storage cmd -> toJSON cmd
     -- WebExtension cmd -> toJSON cmd
     _ -> error "Unsupported command type for JSON serialization"
+
+-- ~~~~~~~~ Session Commands ~~~~~~~~
 
 sessionCommand' ::  Maybe Object -> SessionCommand -> JSUInt -> Value
 sessionCommand' extensions cmd id =
@@ -96,8 +98,22 @@ newSession caps id = sessionCommand' Nothing (SessionNew caps) id
 sessionStatus :: JSUInt -> Value
 sessionStatus = sessionCommand SessionStatus
 
+sessionSubscribe :: SessionSubscriptionRequest -> JSUInt -> Value
+sessionSubscribe request = sessionCommand' Nothing (SessionSubscribe request)
+
+sessionUnsubscribe :: SessionUnsubscribeParameters -> JSUInt -> Value
+sessionUnsubscribe params = sessionCommand' Nothing (SessionUnsubscribe params)
+
 sessionEnd :: JSUInt -> Value
 sessionEnd = sessionCommand SessionEnd
+
+-- ~~~~~~~~ Browsering Context Commands ~~~~~~~~
+
+browsingContextCommand :: BrowsingContextCommand -> JSUInt -> Value
+browsingContextCommand cmd = command (BrowsingContext cmd)
+
+browsingContextCreate :: Create -> JSUInt -> Value
+browsingContextCreate cmd = browsingContextCommand (Create cmd)
 
 -- ######### Remote #########
 
