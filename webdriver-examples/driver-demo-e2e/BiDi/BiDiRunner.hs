@@ -123,6 +123,8 @@ catchLog :: Text -> (Text -> IO ()) -> IO () -> IO ()
 catchLog message log action =
   action `catch` \(e :: SomeException) -> do
     log $ message <> ": " <> pack (show e)
+    threadDelay 1000_000 -- Wait a bit before rethrowing
+    throwIO e
 
 asyncForever :: (Text -> IO ()) -> Text -> IO () -> IO (Async ())
 asyncForever log name action = async $ do
@@ -140,7 +142,7 @@ startClient pth@MkBiDiPath {host, port, path} log sendChan receiveChan =
       ( \(e :: SomeException) -> do
           log $ "WebSocket failure: " <> pack (displayException e)
           -- flush log channel
-          threadDelay 100_000
+          threadDelay 1000_000
           throwIO e
       )
   where
@@ -161,7 +163,6 @@ startClient pth@MkBiDiPath {host, port, path} log sendChan receiveChan =
       sender <- runForever "sender" $ do
         msgToSend <- atomically $ readTChan sendChan
         log $ "Sending Message: " <> pack (show msgToSend)
-        threadDelay 1_000_000 
         catchLog
           "Message Send Failed"
           log
@@ -185,8 +186,6 @@ runWebDriverBiDi bidiPth = do
     msg <- atomically $ readTChan logChan
     putStrLn $ "[LOG] " <> msg
 
-  -- Give logger thread time to start
-  threadDelay 50_000
 
   let log :: Text -> IO ()
       log = atomically . writeTChan logChan
@@ -225,7 +224,7 @@ bidiSession bidiPath = do
           (sendMessage msg)
           ( \(e :: SomeException) -> do
               log $ "Failed to queue message: " <> pack (displayException e)
-              threadDelay 100_000
+              threadDelay 1000_000
               throwIO e
           )
 
@@ -237,9 +236,6 @@ bidiSession bidiPath = do
   -- No session initialization needed - session was created via HTTP
   log "BiDi WebSocket connected to existing session"
 
-  -- Wait a bit for things to settle
-  threadDelay 1000_000
-
   -- Interactive loop
   let loop = do
         log "Enter c for new context:"
@@ -249,7 +245,6 @@ bidiSession bidiPath = do
           send . browsingContextCreate (MkCreate Tab Nothing Nothing Nothing) $ MkJSUInt 2
         else
           send . sessionStatus $ MkJSUInt 2
-        threadDelay 500_000 -- Give some time for the server to respond
         loop
 
   loop

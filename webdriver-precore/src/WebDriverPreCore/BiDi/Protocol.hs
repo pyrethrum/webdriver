@@ -41,7 +41,7 @@ command' extensions cmd id =
         <> "params" .= objectOrThrow "CommandData will always be an Object" cmd
     method = \case
       -- BrowserCommand _ -> "browser"
-      -- BrowsingContext _ -> "browsingContext"
+      BrowsingContext bc -> bidiMethod bc
       -- EmulationCommand _ -> "emulation"
       -- Input _ -> "input"
       -- Network _ -> "network"
@@ -49,7 +49,7 @@ command' extensions cmd id =
       Session s -> bidiMethod s
       -- Storage _ -> "storage"
       -- WebExtension _ -> "webExtension"
-      _ -> error "Unsupported command type"
+      _ -> error "Unsupported command type for bidi method"
 
 command :: Command -> JSUInt -> Value
 command = command' Nothing

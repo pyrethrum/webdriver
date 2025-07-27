@@ -1,11 +1,13 @@
 module WebDriverPreCore.BiDi.BrowsingContext where
 
-import Data.Aeson (Value, ToJSON (..))
+import Data.Aeson (KeyValue (..), ToJSON (..), Value, object)
 import Data.Map qualified as Map
+import Data.Maybe (catMaybes)
 import Data.Text (Text)
 import GHC.Generics
-import WebDriverPreCore.BiDi.CoreTypes (BrowsingContext, JSInt, JSUInt, NodeRemoteValue, BiDiMethod (bidiMethod))
-import Prelude (Bool, Eq, Float, Maybe, Show, error)
+import WebDriverPreCore.BiDi.CoreTypes (BiDiMethod (bidiMethod), BrowsingContext, JSInt, JSUInt, NodeRemoteValue)
+import WebDriverPreCore.Internal.AesonUtils (opt)
+import Prelude (Bool, Eq, Float, Maybe, Semigroup ((<>)), Show, error, ($))
 
 -- ######### REMOTE #########
 
@@ -25,6 +27,22 @@ data BrowsingContextCommand
   | TraverseHistory TraverseHistory
   deriving (Show, Eq, Generic)
 
+instance BiDiMethod BrowsingContextCommand where
+  bidiMethod :: BrowsingContextCommand -> Text
+  bidiMethod = \case
+    Activate _ -> "browsingContext.activate"
+    CaptureScreenshot _ -> "browsingContext.captureScreenshot"
+    Close _ -> "browsingContext.close"
+    Create _ -> "browsingContext.create"
+    GetTree _ -> "browsingContext.getTree"
+    HandleUserPrompt _ -> "browsingContext.handleUserPrompt"
+    LocateNodes _ -> "browsingContext.locateNodes"
+    Navigate _ -> "browsingContext.navigate"
+    Print _ -> "browsingContext.print"
+    Reload _ -> "browsingContext.reload"
+    SetViewport _ -> "browsingContext.setViewport"
+    TraverseHistory _ -> "browsingContext.traverseHistory"
+
 instance ToJSON BrowsingContextCommand where
   toJSON :: BrowsingContextCommand -> Value
   toJSON = \case
@@ -41,22 +59,6 @@ instance ToJSON BrowsingContextCommand where
     -- SetViewport cmd -> toJSON cmd
     -- TraverseHistory cmd -> toJSON cmd
     _ -> error "Unsupported browsing context command type for JSON serialization"
-
-instance BiDiMethod BrowsingContextCommand where
-  bidiMethod :: BrowsingContextCommand -> Text
-  bidiMethod = \case
-    Activate _ -> "browsingContext.activate"
-    CaptureScreenshot _ -> "browsingContext.captureScreenshot"
-    Close _ -> "browsingContext.close"
-    Create _ -> "browsingContext.create"
-    GetTree _ -> "browsingContext.getTree"
-    HandleUserPrompt _ -> "browsingContext.handleUserPrompt"
-    LocateNodes _ -> "browsingContext.locateNodes"
-    Navigate _ -> "browsingContext.navigate"
-    Print _ -> "browsingContext.print"
-    Reload _ -> "browsingContext.reload"
-    SetViewport _ -> "browsingContext.setViewport"
-    TraverseHistory _ -> "browsingContext.traverseHistory"
 
 -- |  for activate command
 newtype Activate = MkActivate
@@ -111,7 +113,17 @@ data Create = MkCreate
   }
   deriving (Show, Eq, Generic)
 
-instance ToJSON Create 
+instance ToJSON Create where
+  toJSON :: Create -> Value
+  toJSON (MkCreate createType referenceContext background userContext) =
+    object $
+      [ "type" .= createType
+      ]
+        <> catMaybes
+          [ opt "referenceContext" referenceContext,
+            opt "background" background,
+            opt "userContext" userContext
+          ]
 
 -- |  for getTree command
 data GetTree = MkGetTree
