@@ -443,7 +443,7 @@ hybridBiDiDemo = do
   
   -- Create minimal HTTP session (just to open port 9222)
   cfg <- loadConfig
-  _httpSession <- newHttpSession $ httpBidiCapabilities cfg
+  httpSession <- newHttpSession $ httpBidiCapabilities cfg
   putStrLn "HTTP session created, port 9222 should now be open"
   
 

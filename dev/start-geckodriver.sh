@@ -7,7 +7,7 @@ set -e
 pkill -x geckodriver || true
 
 PORT=4444
-WEBSOCKET_PORT=9222
+WEBSOCKET_PORT=0 # 0 means a random port will be assigned
 MARIONETTE_PORT=2828
 
 # Set Firefox preferences
@@ -28,7 +28,7 @@ disown
 echo "geckodriver started with PID $! at http://127.0.0.1:$PORT"
 
 # Wait to ensure geckodriver is up and running and detached (neeeded when running from a task)
-sleep 5
+sleep 1
 
 
 # Port checking alternatives
