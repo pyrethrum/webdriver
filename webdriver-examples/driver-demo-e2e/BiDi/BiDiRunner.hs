@@ -18,7 +18,7 @@ import Text.Read (readEither)
 import UnliftIO.Async (Async, async, cancel, waitAny)
 import UnliftIO.STM
 import WebDriverPreCore.BiDi.CoreTypes (JSUInt (..))
-import WebDriverPreCore.BiDi.Protocol (sessionStatus, browsingContextCreate)
+import WebDriverPreCore.BiDi.Protocol (browsingContextCreate)
 import WebDriverPreCore.Http qualified as Http
 import WebDriverPreCore.Internal.AesonUtils (jsonToText)
 import WebDriverPreCore.Internal.Utils (txt)
