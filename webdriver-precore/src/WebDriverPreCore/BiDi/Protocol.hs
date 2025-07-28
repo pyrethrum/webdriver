@@ -31,19 +31,22 @@ import Prelude (Bool, Eq, Maybe (..), Show, error, maybe, ($), (.), (<$>), (<>))
 
 -- ######### Local #########
 
-type Extensions = Maybe Object
-
--- jsonCommand :: Object -> Extensions-> JSUInt -> Value
+-- TODO: check exceptions eg test with unsupported command - currently not getting to main thread
+jsonCommand :: Text -> Object -> JSUInt -> Value
+jsonCommand methodName params id =
+  object
+    [ "id" .= id,
+      "method" .= methodName,
+      "params" .= params
+    ]
 
 -- TODO: check exceptions eg test with unsupported command - currently not getting to main thread
-command' :: Command -> Extensions -> JSUInt -> Value
-command' cmd extensions id =
-  Object $ maybe idMethodCmd (idMethodCmd <>) extensions
+baseCommand :: Command -> Maybe Object -> JSUInt -> Value
+baseCommand cmd extensions =
+  jsonCommand (method cmd) extendedParams
   where
-    idMethodCmd =
-      "id" .= id
-        <> "method" .= (method cmd)
-        <> "params" .= objectOrThrow "CommandData will always be an Object" cmd
+    prmsObj = objectOrThrow "CommandData will always be an Object" cmd
+    extendedParams = extensions & maybe prmsObj (prmsObj <>)
     method = \case
       -- BrowserCommand _ -> "browser"
       BrowsingContext bc -> bidiMethod bc
@@ -57,7 +60,10 @@ command' cmd extensions id =
       _ -> error "Unsupported command type for bidi method"
 
 command :: Command -> JSUInt -> Value
-command c = command' c Nothing
+command c = baseCommand c Nothing
+
+extendedCommand :: Command -> Object -> JSUInt -> Value
+extendedCommand c extensions = baseCommand c (Just extensions)
 
 -- Command types
 
@@ -88,39 +94,46 @@ instance ToJSON Command where
     -- WebExtension cmd -> toJSON cmd
     _ -> error "Unsupported command type for JSON serialization"
 
-subCommand' :: (a -> Command) -> Extensions -> a -> JSUInt -> Value
-subCommand' f extensions a = command' (f a) extensions
+extendedSubCommand :: (a -> Command) -> a -> Object -> JSUInt -> Value
+extendedSubCommand cstr a extn = extendedCommand (cstr a) extn
 
 subCommand :: (a -> Command) -> a -> JSUInt -> Value
-subCommand f = subCommand' f Nothing
+subCommand cstr = command . cstr
 
 -- ~~~~~~~~ Session Commands ~~~~~~~~
 
-sessionCommand' :: Extensions -> SessionCommand -> JSUInt -> Value
-sessionCommand' = subCommand' Session
-
 sessionCommand :: SessionCommand -> JSUInt -> Value
-sessionCommand = sessionCommand' Nothing
+sessionCommand = subCommand Session
 
+extendedSessionCommand :: SessionCommand -> Object -> JSUInt -> Value
+extendedSessionCommand = extendedSubCommand Session
 
-newSession' :: Capabilities -> JSUInt -> Value
-newSession' c = subCommand' (SessionNew c)
+newSession :: Capabilities -> JSUInt -> Value
+newSession = sessionCommand . SessionNew
 
--- newSession :: Capabilities -> JSUInt -> Value
--- newSession c = sessionCommand (SessionNew c)
+extendedNewSession :: Capabilities -> Object -> JSUInt -> Value
+extendedNewSession = extendedSessionCommand . SessionNew
 
+sessionStatus :: JSUInt -> Value
+sessionStatus = sessionCommand SessionStatus
 
--- sessionStatus :: JSUInt -> Value
--- sessionStatus = sessionCommand SessionStatus
+extendedSessionStatus :: Object -> JSUInt -> Value
+extendedSessionStatus = extendedSessionCommand SessionStatus
 
--- sessionSubscribe :: SessionSubscriptionRequest -> JSUInt -> Value
--- sessionSubscribe request = sessionCommand' Nothing (SessionSubscribe request)
+sessionSubscribe :: SessionSubscriptionRequest -> JSUInt -> Value
+sessionSubscribe = sessionCommand . SessionSubscribe
 
--- sessionUnsubscribe :: SessionUnsubscribeParameters -> JSUInt -> Value
--- sessionUnsubscribe params = sessionCommand' Nothing (SessionUnsubscribe params)
+sessionUnsubscribe :: SessionUnsubscribeParameters -> JSUInt -> Value
+sessionUnsubscribe = sessionCommand . SessionUnsubscribe
 
--- sessionEnd :: JSUInt -> Value
--- sessionEnd = sessionCommand SessionEnd
+extendedSessionUnsubscribe :: SessionUnsubscribeParameters -> Object -> JSUInt -> Value
+extendedSessionUnsubscribe = extendedSessionCommand . SessionUnsubscribe
+
+sessionEnd :: JSUInt -> Value
+sessionEnd = sessionCommand SessionEnd
+
+extendedSessionEnd :: Object -> JSUInt -> Value
+extendedSessionEnd = extendedSessionCommand SessionEnd
 
 -- -- ~~~~~~~~ Browsering Context Commands ~~~~~~~~
 
