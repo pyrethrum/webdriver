@@ -145,11 +145,59 @@ browsingContextCommand = subCommand BrowsingContext
 extendedBrowsingContextCommand :: BrowsingContextCommand -> Object -> JSUInt -> Value
 extendedBrowsingContextCommand = extendedSubCommand BrowsingContext
 
-browsingContextCreate :: BC.Create -> JSUInt -> Value
-browsingContextCreate = browsingContextCommand . BC.Create
+browsingContextActivate :: BC.Activate -> JSUInt -> Value
+browsingContextActivate = browsingContextCommand . BC.Activate
 
-browsingContextCreateExtended :: BC.Create -> Object -> JSUInt -> Value
-browsingContextCreateExtended = extendedBrowsingContextCommand . BC.Create
+extendedBrowsingContextActivate :: BC.Activate -> Object -> JSUInt -> Value
+extendedBrowsingContextActivate = extendedBrowsingContextCommand . BC.Activate
+
+browsingContextCaptureScreenshot :: BC.CaptureScreenshot -> JSUInt -> Value
+browsingContextCaptureScreenshot = browsingContextCommand . BC.CaptureScreenshot
+
+extendedBrowsingContextCaptureScreenshot :: BC.CaptureScreenshot -> Object -> JSUInt -> Value
+extendedBrowsingContextCaptureScreenshot = extendedBrowsingContextCommand . BC.CaptureScreenshot
+
+browsingContextHandleUserPrompt :: BC.HandleUserPrompt -> JSUInt -> Value
+browsingContextHandleUserPrompt = browsingContextCommand . BC.HandleUserPrompt
+
+extendedBrowsingContextHandleUserPrompt :: BC.HandleUserPrompt -> Object -> JSUInt -> Value
+extendedBrowsingContextHandleUserPrompt = extendedBrowsingContextCommand . BC.HandleUserPrompt
+
+browsingContextLocateNodes :: BC.LocateNodes -> JSUInt -> Value
+browsingContextLocateNodes = browsingContextCommand . BC.LocateNodes
+
+extendedBrowsingContextLocateNodes :: BC.LocateNodes -> Object -> JSUInt -> Value
+extendedBrowsingContextLocateNodes = extendedBrowsingContextCommand . BC.LocateNodes
+
+browsingContextNavigate :: BC.Navigate -> JSUInt -> Value
+browsingContextNavigate = browsingContextCommand . BC.Navigate
+
+extendedBrowsingContextNavigate :: BC.Navigate -> Object -> JSUInt -> Value
+extendedBrowsingContextNavigate = extendedBrowsingContextCommand . BC.Navigate
+
+browsingContextPrint :: BC.Print -> JSUInt -> Value
+browsingContextPrint = browsingContextCommand . BC.Print
+
+extendedBrowsingContextPrint :: BC.Print -> Object -> JSUInt -> Value
+extendedBrowsingContextPrint = extendedBrowsingContextCommand . BC.Print
+
+browsingContextReload :: BC.Reload -> JSUInt -> Value
+browsingContextReload = browsingContextCommand . BC.Reload
+
+extendedBrowsingContextReload :: BC.Reload -> Object -> JSUInt -> Value
+extendedBrowsingContextReload = extendedBrowsingContextCommand . BC.Reload
+
+browsingContextSetViewport :: BC.SetViewport -> JSUInt -> Value
+browsingContextSetViewport = browsingContextCommand . BC.SetViewport
+
+extendedBrowsingContextSetViewport :: BC.SetViewport -> Object -> JSUInt -> Value
+extendedBrowsingContextSetViewport = extendedBrowsingContextCommand . BC.SetViewport
+
+browsingContextTraverseHistory :: BC.TraverseHistory -> JSUInt -> Value
+browsingContextTraverseHistory = browsingContextCommand . BC.TraverseHistory
+
+extendedBrowsingContextTraverseHistory :: BC.TraverseHistory -> Object -> JSUInt -> Value
+extendedBrowsingContextTraverseHistory = extendedBrowsingContextCommand . BC.TraverseHistory
 
 
 -- ######### Remote #########
