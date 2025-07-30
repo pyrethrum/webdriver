@@ -17,30 +17,30 @@ webSocketUrlKey = "webSocketUrl"
 -- ######### Remote #########
 
 data SessionCommand
-  = SessionNew Capabilities
-  | SessionStatus
-  | SessionSubscribe SessionSubscriptionRequest
-  | SessionUnsubscribe SessionUnsubscribeParameters
-  | SessionEnd
+  = New Capabilities
+  | Status
+  | Subscribe SessionSubscriptionRequest
+  | Unsubscribe SessionUnsubscribeParameters
+  | End
   deriving (Show, Eq, Generic)
 
 instance BiDiMethod SessionCommand where
   bidiMethod :: SessionCommand -> Text
   bidiMethod = \case
-    SessionNew _ -> "session.new"
-    SessionStatus -> "session.status"
-    SessionSubscribe _ -> "session.subscribe"
-    SessionUnsubscribe _ -> "session.unsubscribe"
-    SessionEnd -> "session.end"
+    New _ -> "session.new"
+    Status -> "session.status"
+    Subscribe _ -> "session.subscribe"
+    Unsubscribe _ -> "session.unsubscribe"
+    End -> "session.end"
 
 instance ToJSON SessionCommand where
   toJSON :: SessionCommand -> Value
   toJSON = \case
-    SessionNew capabilities -> toJSON capabilities
-    SessionSubscribe request -> toJSON request
-    SessionUnsubscribe params -> toJSON params
-    SessionStatus -> emptyObj
-    SessionEnd -> emptyObj
+    New capabilities -> toJSON capabilities
+    Subscribe request -> toJSON request
+    Unsubscribe params -> toJSON params
+    Status -> emptyObj
+    End -> emptyObj
 
 -- | Capabilities Request
 data Capabilities = MkCapabilities

@@ -15,7 +15,8 @@ import Data.Maybe (fromMaybe)
 import Data.Text (Text)
 import GHC.Generics (Generic)
 import WebDriverPreCore.BiDi.Browser (BrowserCommand, BrowserResult)
-import WebDriverPreCore.BiDi.BrowsingContext (BrowsingContextCommand (..), BrowsingContextEvent, BrowsingContextResult, Create)
+import WebDriverPreCore.BiDi.BrowsingContext qualified as BC 
+import WebDriverPreCore.BiDi.BrowsingContext (BrowsingContextCommand, BrowsingContextEvent, BrowsingContextResult)
 import WebDriverPreCore.BiDi.CoreTypes (BiDiMethod (bidiMethod), JSUInt)
 import WebDriverPreCore.BiDi.Emulation (EmulationCommand)
 import WebDriverPreCore.BiDi.Error (ErrorCode)
@@ -23,7 +24,8 @@ import WebDriverPreCore.BiDi.Input (FileDialogOpened, InputCommand)
 import WebDriverPreCore.BiDi.Log (Entry)
 import WebDriverPreCore.BiDi.Network (NetworkCommand)
 import WebDriverPreCore.BiDi.Script (RemoteValue, ScriptCommand, Source, StackTrace)
-import WebDriverPreCore.BiDi.Session (Capabilities, SessionCommand (..), SessionSubscriptionRequest, SessionUnsubscribeParameters)
+import WebDriverPreCore.BiDi.Session (Capabilities, SessionCommand, SessionSubscriptionRequest, SessionUnsubscribeParameters)
+import WebDriverPreCore.BiDi.Session qualified as S
 import WebDriverPreCore.BiDi.Storage (StorageCommand)
 import WebDriverPreCore.BiDi.WebExtensions (WebExtensionCommand)
 import WebDriverPreCore.Internal.AesonUtils (objectOrThrow, parseObject)
@@ -109,43 +111,46 @@ extendedSessionCommand :: SessionCommand -> Object -> JSUInt -> Value
 extendedSessionCommand = extendedSubCommand Session
 
 newSession :: Capabilities -> JSUInt -> Value
-newSession = sessionCommand . SessionNew
+newSession = sessionCommand . S.New
 
 extendedNewSession :: Capabilities -> Object -> JSUInt -> Value
-extendedNewSession = extendedSessionCommand . SessionNew
+extendedNewSession = extendedSessionCommand . S.New
 
 sessionStatus :: JSUInt -> Value
-sessionStatus = sessionCommand SessionStatus
+sessionStatus = sessionCommand S.Status
 
 extendedSessionStatus :: Object -> JSUInt -> Value
-extendedSessionStatus = extendedSessionCommand SessionStatus
+extendedSessionStatus = extendedSessionCommand S.Status
 
 sessionSubscribe :: SessionSubscriptionRequest -> JSUInt -> Value
-sessionSubscribe = sessionCommand . SessionSubscribe
+sessionSubscribe = sessionCommand . S.Subscribe
 
 sessionUnsubscribe :: SessionUnsubscribeParameters -> JSUInt -> Value
-sessionUnsubscribe = sessionCommand . SessionUnsubscribe
+sessionUnsubscribe = sessionCommand . S.Unsubscribe
 
 extendedSessionUnsubscribe :: SessionUnsubscribeParameters -> Object -> JSUInt -> Value
-extendedSessionUnsubscribe = extendedSessionCommand . SessionUnsubscribe
+extendedSessionUnsubscribe = extendedSessionCommand . S.Unsubscribe
 
 sessionEnd :: JSUInt -> Value
-sessionEnd = sessionCommand SessionEnd
+sessionEnd = sessionCommand S.End
 
 extendedSessionEnd :: Object -> JSUInt -> Value
-extendedSessionEnd = extendedSessionCommand SessionEnd
+extendedSessionEnd = extendedSessionCommand S.End
 
--- -- ~~~~~~~~ Browsering Context Commands ~~~~~~~~
+-- ~~~~~~~~ Browsering Context Commands ~~~~~~~~
 
--- browsingContextCommand :: BrowsingContextCommand -> JSUInt -> Value
--- browsingContextCommand cmd = command (BrowsingContext cmd)
+browsingContextCommand :: BrowsingContextCommand -> JSUInt -> Value
+browsingContextCommand = subCommand BrowsingContext
 
--- browsingContextCommand' :: Extensions -> BrowsingContextCommand -> JSUInt -> Value
--- browsingContextCommand' extensions cmd id =
---   command' extensions (BrowsingContext cmd) id
+extendedBrowsingContextCommand :: BrowsingContextCommand -> Object -> JSUInt -> Value
+extendedBrowsingContextCommand = extendedSubCommand BrowsingContext
 
--- browsingContextCreate :: Create -> JSUInt -> Value
--- browsingContextCreate cmd = browsingContextCommand (Create cmd)
+browsingContextCreate :: BC.Create -> JSUInt -> Value
+browsingContextCreate = browsingContextCommand . BC.Create
+
+browsingContextCreateExtended :: BC.Create -> Object -> JSUInt -> Value
+browsingContextCreateExtended = extendedBrowsingContextCommand . BC.Create
+
 
 -- ######### Remote #########
 
