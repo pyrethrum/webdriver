@@ -18,13 +18,13 @@ import Text.Read (readEither)
 import UnliftIO.Async (Async, async, cancel, waitAny)
 import UnliftIO.STM
 import WebDriverPreCore.BiDi.CoreTypes (JSUInt (..))
-import WebDriverPreCore.BiDi.Protocol (browsingContextCreate)
 import WebDriverPreCore.Http qualified as Http
 import WebDriverPreCore.Internal.AesonUtils (jsonToText)
 import WebDriverPreCore.Internal.Utils (txt)
 import Prelude hiding (getLine, log, null, putStrLn)
 import WebDriverPreCore.BiDi.BrowsingContext (Create(MkCreate))
 import WebDriverPreCore.BiDi.BrowsingContext (CreateType(..))
+import WebDriverPreCore.BiDi.Command
 
 getBiDiPath :: SessionResponse -> Either Text BiDiPath
 getBiDiPath r =

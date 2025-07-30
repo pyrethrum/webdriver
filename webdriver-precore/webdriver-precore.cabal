@@ -116,6 +116,7 @@ library
       -- BiDi
       WebDriverPreCore.BiDi.Browser
       WebDriverPreCore.BiDi.BrowsingContext
+      WebDriverPreCore.BiDi.Command
       WebDriverPreCore.BiDi.CoreTypes
       WebDriverPreCore.BiDi.Emulation
       WebDriverPreCore.BiDi.Error
@@ -123,6 +124,7 @@ library
       WebDriverPreCore.BiDi.Input
       WebDriverPreCore.BiDi.Network
       WebDriverPreCore.BiDi.Protocol
+      WebDriverPreCore.BiDi.ResponseEvent
       WebDriverPreCore.BiDi.Script
       WebDriverPreCore.BiDi.Session
       WebDriverPreCore.BiDi.Storage

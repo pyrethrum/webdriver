@@ -1,32 +1,11 @@
 module BiDi.WussDemo where
 
-import Config (Config, loadConfig)
-import Control.Concurrent (forkIO, threadDelay)
-import Control.Exception (Exception (displayException), SomeException, catch, finally, throwIO, try)
+import Control.Concurrent (forkIO)
 import Control.Monad (forever, unless, void)
-import Data.Aeson (FromJSON, ToJSON, Value, eitherDecode, encode, toJSON, (.:), (.:?), (.=))
-import Data.Aeson qualified as Aeson
-import Data.ByteString.Lazy (ByteString)
-import Data.ByteString.Lazy qualified as BL
-import Data.Function ((&))
-import Data.IORef (newIORef, readIORef, writeIORef)
-import Data.Text as T (Text, breakOn, null, pack, splitOn, unpack)
+import Data.Text as T (Text, null, pack)
 import Data.Text.IO as T (getLine, putStrLn)
-import Http.HttpAPI (FullCapabilities, SessionResponse (..), newSessionFull)
-import Http.HttpAPI qualified as Caps (Capabilities (..))
-import IOUtils (ppTxt)
-import Network.WebSockets (ClientApp, Connection, receiveData, runClient, sendClose, sendTextData)
-import RuntimeConst (httpCapabilities, httpFullCapabilities)
-import Text.Read (readEither)
-import UnliftIO.Async (Async, async, cancel, wait, waitAny, waitEither_)
-import UnliftIO.STM
-import WebDriverPreCore.BiDi.CoreTypes (JSUInt (..))
-import WebDriverPreCore.BiDi.Protocol (newSession, sessionEnd, sessionStatus)
+import Network.WebSockets (ClientApp, receiveData, sendClose, sendTextData)
 
-import WebDriverPreCore.BiDi.Session
-import WebDriverPreCore.Http qualified as Http
-import WebDriverPreCore.Internal.AesonUtils (jsonToText, prettyPrintJson)
-import WebDriverPreCore.Internal.Utils (txt)
 import Wuss (runSecureClient)
 import Prelude hiding (getLine, log, null, putStrLn)
 
