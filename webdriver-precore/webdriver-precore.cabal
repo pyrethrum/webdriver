@@ -116,6 +116,7 @@ library
       -- BiDi
       WebDriverPreCore.BiDi.Browser
       WebDriverPreCore.BiDi.BrowsingContext
+      WebDriverPreCore.BiDi.Capabilities
       WebDriverPreCore.BiDi.Command
       WebDriverPreCore.BiDi.CoreTypes
       WebDriverPreCore.BiDi.Emulation
