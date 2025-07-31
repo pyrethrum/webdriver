@@ -24,7 +24,7 @@ import WebDriverPreCore.BiDi.Input (FileDialogOpened, InputCommand)
 import WebDriverPreCore.BiDi.Log (Entry)
 import WebDriverPreCore.BiDi.Network (NetworkCommand)
 import WebDriverPreCore.BiDi.Script (RemoteValue, ScriptCommand, Source, StackTrace)
-import WebDriverPreCore.BiDi.Session (Capabilities, SessionCommand, SessionSubscriptionRequest, SessionUnsubscribeParameters)
+import WebDriverPreCore.BiDi.Session (SessionCommand, SessionSubscriptionRequest, SessionUnsubscribeParameters)
 import WebDriverPreCore.BiDi.Session qualified as S
 import WebDriverPreCore.BiDi.Storage (StorageCommand)
 import WebDriverPreCore.BiDi.WebExtensions (WebExtensionCommand)

@@ -11,8 +11,7 @@ import WebDriverPreCore.BiDi.CoreTypes (BiDiMethod (..))
 import WebDriverPreCore.Internal.AesonUtils (emptyObj, opt)
 import Prelude (Applicative ((<*>)), Bool (..), Eq (..), Maybe (..), Show (..), ($), (.), (<$>))
 
-webSocketUrlKey :: Key
-webSocketUrlKey = "webSocketUrl"
+
 
 -- | Capabilities Request
 data Capabilities = MkCapabilities
@@ -167,7 +166,7 @@ instance ToJSON CapabilitiesResult where
         "userAgent" .= userAgent,
         "proxy" .= proxy,
         "unhandledPromptBehavior" .= unhandledPromptBehavior,
-        webSocketUrlKey .= webSocketUrl
+        "webSocketUrl" .= webSocketUrl
       ]
 
 instance FromJSON CapabilitiesResult

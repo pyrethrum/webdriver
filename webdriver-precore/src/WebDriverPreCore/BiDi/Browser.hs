@@ -21,7 +21,7 @@ where
 import Data.Text (Text)
 import GHC.Generics (Generic)
 import Prelude (Bool (..), Eq (..), Int, Maybe, Show (..))
-import WebDriverPreCore.BiDi.Session (ProxyConfiguration, UserPromptHandler)
+import WebDriverPreCore.BiDi.Capabilities (UserPromptHandler, ProxyConfiguration)
 
 {-
 create types to represent the remote and local ends for browser:

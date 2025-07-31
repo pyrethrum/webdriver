@@ -10,9 +10,8 @@ import GHC.Generics (Generic)
 import WebDriverPreCore.BiDi.CoreTypes (BiDiMethod (..))
 import WebDriverPreCore.Internal.AesonUtils (emptyObj, opt)
 import Prelude (Applicative ((<*>)), Bool (..), Eq (..), Maybe (..), Show (..), ($), (.), (<$>))
+import WebDriverPreCore.BiDi.Capabilities (CapabilitiesResult, Capabilities)
 
-webSocketUrlKey :: Key
-webSocketUrlKey = "webSocketUrl"
 
 -- ######### Remote #########
 
