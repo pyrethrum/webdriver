@@ -15,8 +15,8 @@ import Data.Maybe (fromMaybe)
 import Data.Text (Text)
 import GHC.Generics (Generic)
 import WebDriverPreCore.BiDi.Browser (BrowserCommand, BrowserResult)
-import WebDriverPreCore.BiDi.BrowsingContext qualified as BC 
 import WebDriverPreCore.BiDi.BrowsingContext (BrowsingContextCommand, BrowsingContextEvent, BrowsingContextResult)
+import WebDriverPreCore.BiDi.BrowsingContext qualified as BC
 import WebDriverPreCore.BiDi.CoreTypes (BiDiMethod (bidiMethod), JSUInt)
 import WebDriverPreCore.BiDi.Emulation (EmulationCommand)
 import WebDriverPreCore.BiDi.Error (ErrorCode)
@@ -79,13 +79,7 @@ data EventData
 data ResultData
   = BrowsingContextResult BrowsingContextResult
   deriving
-    ( -- | EmptyResult
-      -- | NetworkResult RemoteValue -- Placeholder for network results
-      -- | ScriptResult RemoteValue -- Placeholder for script results
-      -- | SessionResult RemoteValue -- Placeholder for session results
-      -- | StorageResult RemoteValue -- Placeholder for storage results
-      -- | WebExtensionResult RemoteValue -- Placeholder for web extension results
-      Show,
+    ( Show,
       Generic
     )
 
