@@ -142,8 +142,6 @@ import Prelude hiding (log)
 -- #################### The Tests ######################
 
 -- >>> unit_demoNewSession
--- *** Exception: user error (WebDriver error thrown:
---  WebDriverError {error = UnknownError, description = "An unknown error occurred in the remote end while processing the command", httpResponse = MkHttpResponse {statusCode = 500, statusMessage = "Internal Server Error", body = Object (fromList [("value",Object (fromList [("error",String "unknown error"),("message",String "Process unexpectedly closed with status 1"),("stacktrace",String "")]))])}})
 unit_demoNewSession :: IO ()
 unit_demoNewSession = do
   cfg <- loadConfig

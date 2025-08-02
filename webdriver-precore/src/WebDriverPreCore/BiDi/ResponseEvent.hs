@@ -17,17 +17,17 @@ import GHC.Generics (Generic)
 import WebDriverPreCore.BiDi.Browser (BrowserCommand, BrowserResult)
 import WebDriverPreCore.BiDi.BrowsingContext (BrowsingContextCommand, BrowsingContextEvent, BrowsingContextResult)
 import WebDriverPreCore.BiDi.BrowsingContext qualified as BC
-import WebDriverPreCore.BiDi.CoreTypes (BiDiMethod (bidiMethod), JSUInt)
+import WebDriverPreCore.BiDi.CoreTypes (BiDiMethod (bidiMethod), JSUInt, EmptyResult(..))
 import WebDriverPreCore.BiDi.Emulation (EmulationCommand)
 import WebDriverPreCore.BiDi.Error (ErrorCode)
-import WebDriverPreCore.BiDi.Input (FileDialogOpened, InputCommand)
+import WebDriverPreCore.BiDi.Input (FileDialogOpened, InputCommand, FileDialogInfo)
 import WebDriverPreCore.BiDi.Log (Entry)
-import WebDriverPreCore.BiDi.Network (NetworkCommand)
-import WebDriverPreCore.BiDi.Script (RemoteValue, ScriptCommand, Source, StackTrace)
-import WebDriverPreCore.BiDi.Session (SessionCommand, SessionSubscriptionRequest, SessionUnsubscribeParameters)
+import WebDriverPreCore.BiDi.Network (NetworkCommand, NetworkResult(..))
+import WebDriverPreCore.BiDi.Script (RemoteValue, ScriptCommand, Source, StackTrace, ScriptResult)
+import WebDriverPreCore.BiDi.Session (SessionCommand, SessionSubscriptionRequest, SessionUnsubscribeParameters, SessionResult(..))
 import WebDriverPreCore.BiDi.Session qualified as S
-import WebDriverPreCore.BiDi.Storage (StorageCommand)
-import WebDriverPreCore.BiDi.WebExtensions (WebExtensionCommand)
+import WebDriverPreCore.BiDi.Storage (StorageCommand, StorageResult(..))
+import WebDriverPreCore.BiDi.WebExtensions (WebExtensionCommand, WebExtensionResult(..))
 import WebDriverPreCore.Internal.AesonUtils (objectOrThrow, parseObject)
 import Prelude (Bool, Eq, Maybe (..), Show, error, maybe, ($), (.), (<$>), (<>))
 
@@ -70,26 +70,24 @@ data EventData
   | -- method: "log.entryAdded"
     LogEvent Entry
   deriving
-    ( -- | NetworkEvent NetworkEvent
-      -- | ScriptEvent ScriptEvent
+    ( 
       Show,
       Generic
     )
 
 data ResultData
   = BrowsingContextResult BrowsingContextResult
+  | BrowserResult BrowserResult
+  | EmulationResult EmptyResult
+  | InputResult FileDialogInfo
+  | NetworkResult NetworkResult
+  | ScriptResult ScriptResult
+  | SessionResult SessionResult
+  | StorageResult StorageResult
+  | WebExtensionResult WebExtensionResult
   deriving
-    ( Show,
+    ( 
+      Show,
       Generic
     )
 
--- ToDO:
--- ResultData = (
---   BrowsingContextResult /
---   EmptyResult /
---   NetworkResult /
---   ScriptResult /
---   SessionResult /
---   StorageResult /
---   WebExtensionResult
--- )

@@ -62,7 +62,7 @@ data NodeProperties = MkNodeProperties
 
 newtype SharedId = MkSharedId Text deriving newtype (Show, Eq, ToJSON, FromJSON)
 
-newtype EmptyResult = MkEmptyResult {extensible :: Maybe [Text]} deriving (Show, Eq, Generic)
+newtype EmptyResult = MkEmptyResult {extensible :: Value} deriving (Show, Eq, Generic)
 
 class BiDiMethod a where
   bidiMethod :: a -> Text

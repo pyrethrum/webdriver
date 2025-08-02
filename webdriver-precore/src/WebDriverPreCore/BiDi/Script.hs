@@ -60,7 +60,7 @@ import WebDriverPreCore.BiDi.CoreTypes
     Handle,
     InternalId,
     JSUInt,
-    NodeRemoteValue,
+    NodeRemoteValue, EmptyResult,
   )
 import Prelude (Bool (..), Double, Either, Eq (..), Maybe, Show)
 
@@ -373,9 +373,29 @@ newtype PreloadScript = MkPreloadScript Text deriving (Show, Generic, Eq)
 -- ######### Local #########
 
 data ScriptResult
-  = AddPreloadScriptResult {script :: PreloadScript}
+  = AddPreloadScriptResult AddPreloadScriptResult
+  | CallFunctionResult CallFunctionResult
+  | DisownResult EmptyResult
   | EvaluateResult EvaluateResult
-  | GetRealmsResult {realms :: [RealmInfo]}
+  | GetRealmsResult GetRealmsResult
+  | RemovePreloadScriptResult EmptyResult
+  deriving (Show, Eq, Generic)
+
+newtype AddPreloadScriptResult = MkAddPreloadScriptResult
+  { script :: PreloadScript
+  }
+  deriving (Show, Eq, Generic)
+
+data CallFunctionResult = MkCallFunctionResult
+  { result :: RemoteValue,
+    realm :: Realm,
+    stackTrace :: Maybe StackTrace
+  }
+  deriving (Show, Eq, Generic)
+
+newtype GetRealmsResult = MkGetRealmsResult
+  { realms :: [RealmInfo]
+  }
   deriving (Show, Eq, Generic)
 
 data RealmInfo

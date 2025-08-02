@@ -22,6 +22,7 @@ import Data.Text (Text)
 import GHC.Generics (Generic)
 import Prelude (Bool (..), Eq (..), Int, Maybe, Show (..))
 import WebDriverPreCore.BiDi.Capabilities (UserPromptHandler, ProxyConfiguration)
+import WebDriverPreCore.BiDi.CoreTypes (EmptyResult)
 
 {-
 create types to represent the remote and local ends for browser:
@@ -118,10 +119,14 @@ data NormalState = NormalState
 
 -- ######### Local #########
 
+-- Note includes more than spec spec seems inconsistant
 data BrowserResult
   = CreateUserContextResult UserContextInfo
   | GetClientWindowsResult GetClientWindowsResult
   | GetUserContextsResult GetUserContextsResult
+  | CloseResult EmptyResult
+  | RemoveUserContextResult EmptyResult
+  | SetClientWindowStateResult ClientWindowInfo 
   deriving (Show, Eq, Generic)
 
 newtype GetClientWindowsResult = MkGetClientWindowsResult

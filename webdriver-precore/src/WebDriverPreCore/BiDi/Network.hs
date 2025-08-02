@@ -22,6 +22,7 @@ module WebDriverPreCore.BiDi.Network
     CacheBehavior (..),
 
     -- * NetworkResult
+    NetworkResult (..),
     AddInterceptResult (..),
 
     -- * NetworkEvent
@@ -47,7 +48,7 @@ import Data.Text (Text)
 import Data.Word (Word)
 import GHC.Generics (Generic)
 import WebDriverPreCore.BiDi.Browser (UserContext)
-import WebDriverPreCore.BiDi.CoreTypes (BrowsingContext, JSUInt)
+import WebDriverPreCore.BiDi.CoreTypes (BrowsingContext, EmptyResult, JSUInt)
 import WebDriverPreCore.BiDi.Script (StackTrace)
 import Prelude (Bool, Eq, Maybe, Show)
 
@@ -264,6 +265,21 @@ data CacheBehavior
 
 -- ######### LOCAL #########
 
+data NetworkResult
+  = AddDataCollectorResult AddDataCollectorResult
+  | AddInterceptResult AddInterceptResult
+  | ContinueRequestResult EmptyResult
+  | ContinueResponseResult EmptyResult
+  | ContinueWithAuthResult EmptyResult
+  | DisownDataResult EmptyResult
+  | FailRequestResult EmptyResult
+  | GetDataResult GetDataResult
+  | ProvideResponseResult EmptyResult
+  | RemoveDataCollectorResult EmptyResult
+  | RemoveInterceptResult EmptyResult
+  | SetCacheBehaviorResult EmptyResult
+  deriving (Show, Eq, Generic)
+
 newtype AddInterceptResult = MkAddInterceptResult {addedIntercept :: Intercept}
   deriving (Show, Eq, Generic)
 
@@ -354,7 +370,9 @@ data ResponseStarted = MkResponseStarted
 newtype GetDataResult = MkGetDataResult
   { bytes :: BytesValue
   }
+  deriving (Show, Eq, Generic)
 
-newtype CollectorResult = MkCollectorResult
+newtype AddDataCollectorResult = MkAddDataCollectorResult
   { collector :: Collector
   }
+  deriving (Show, Eq, Generic)

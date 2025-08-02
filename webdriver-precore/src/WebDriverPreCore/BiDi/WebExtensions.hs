@@ -18,7 +18,6 @@ create types to represent the remote end for storage as prer the cddl in this fi
 -}
 
 -- ######### Remote #########
--- Note: webextensions module does not have a local end
 
 -- WebExtensionCommand represents possible commands
 data WebExtensionCommand 
@@ -55,3 +54,10 @@ data WebExtensionBase64Encoded = MkWebExtensionBase64Encoded
    , value :: Text
    } deriving (Show, Eq, Generic)
 
+
+-- ######### Remote #########
+
+-- | Represents a command to install a web extension
+data WebExtensionResult =  WebExtensionInstallResult
+   { extension :: WebExtension
+   } deriving (Show, Eq, Generic)
