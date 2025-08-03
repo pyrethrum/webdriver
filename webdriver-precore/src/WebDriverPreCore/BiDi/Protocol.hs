@@ -34,5 +34,10 @@ import Prelude (Bool, Eq, Maybe (..), Show, error, maybe, ($), (.), (<$>), (<>))
 -- ######### Local #########
 
 
+data Command c r = MkCommand {
+  command :: c -> JSUInt -> Value,
+  extendedCommand :: c -> Object -> JSUInt -> Value,
+  parser :: JSUInt -> Object -> Parser (Maybe (Either ResponseError (Success r)))
+}
 
 -- ######### Remote #########

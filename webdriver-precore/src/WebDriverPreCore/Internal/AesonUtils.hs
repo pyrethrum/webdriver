@@ -82,9 +82,10 @@ parseObjectMaybe :: FromJSON a => Object -> Maybe a
 parseObjectMaybe = parseMaybe parseJSON . Object
 
 objectOrThrow :: ToJSON a => Text -> a -> A.Object
-objectOrThrow errMsg val = case A.toJSON val of
-  Object obj -> obj
-  _ -> error $ unpack errMsg
+objectOrThrow errMsg val = 
+  case A.toJSON val of
+    Object obj -> obj
+    _ -> error $ unpack errMsg
 
 
 -- https://blog.ssanj.net/posts/2019-09-24-pretty-printing-json-in-haskell.html

@@ -1,19 +1,8 @@
 module WebDriverPreCore.BiDi.ResponseEvent where
 
-import Data.Aeson
-  ( FromJSON (parseJSON),
-    Object,
-    ToJSON,
-    Value (..),
-    fromJSON,
-    object,
-    withObject,
-    (.:),
-    (.:?),
-    (.=),
-  )
+import Data.Aeson (FromJSON (parseJSON), Object, Result, ToJSON, Value (..), fromJSON, object, withObject, (.:), (.:?), (.=))
 import Data.Aeson.KeyMap ((!?))
-import Data.Aeson.Types (Parser, ToJSON (..), parseMaybe)
+import Data.Aeson.Types (Parser, ToJSON (..), parse, parseMaybe)
 import Data.Function ((&))
 import Data.Map qualified as Map
 import Data.Maybe (fromMaybe)
@@ -33,23 +22,28 @@ import WebDriverPreCore.BiDi.Session (SessionCommand, SessionResult (..), Sessio
 import WebDriverPreCore.BiDi.Session qualified as S
 import WebDriverPreCore.BiDi.Storage (StorageCommand, StorageResult (..))
 import WebDriverPreCore.BiDi.WebExtensions (WebExtensionCommand, WebExtensionResult (..))
-import WebDriverPreCore.Internal.AesonUtils (subtractProps, objectOrThrow, parseObject, parseObjectMaybe)
+import WebDriverPreCore.Internal.AesonUtils (objectOrThrow, parseObject, parseObjectMaybe, subtractProps)
 import Prelude
 
 -- ######### Remote #########
 
--- HERE simplify pare response by applying this parser and adding an extra constructor to ResponseError
-parseResponse' :: forall a. FromJSON a => JSUInt -> Object -> Parser (Maybe (Either ResponseError (Success a)))
+parseResponse :: forall a. (FromJSON a) => JSUInt -> Object -> Maybe (Either ResponseError (Success a))
+parseResponse msgId obj = undefined
+  where
+    parsed :: Result (Maybe (Either ResponseError (Success a)))
+    parsed = parse (parseResponse' msgId) obj
+
+parseResponse' :: forall a. (FromJSON a) => JSUInt -> Object -> Parser (Maybe (Either ResponseError (Success a)))
 parseResponse' msgId obj = do
   id' <- obj .:? "id"
   pure $
     if id' == Just msgId
       then
         Just $
-         success &
-          maybe
-            (Left responseError)
-            Right
+          success
+            & maybe
+              (Left responseError)
+              Right
       else
         Nothing
   where
@@ -57,11 +51,13 @@ parseResponse' msgId obj = do
     success = parseObjectMaybe obj
 
     responseError :: ResponseError
-    responseError = parseObjectMaybe obj
+    responseError =
+      parseObjectMaybe obj
         & maybe (UnknownResponse obj) BiDIError
 
 data ResponseError
   = UnknownResponse Object
+  | JSONParseError Text
   | BiDIError Error
   deriving (Show, Eq, Generic)
 
@@ -72,7 +68,7 @@ data Success a = MkSuccess
   }
   deriving (Show, Generic)
 
-instance FromJSON a => FromJSON (Success a) where
+instance (FromJSON a) => FromJSON (Success a) where
   parseJSON :: Value -> Parser (Success a)
   parseJSON = withObject "Success" $ \o -> do
     id' <- o .: "id"
@@ -94,27 +90,29 @@ data Error = MkError
   }
   deriving (Show, Generic, Eq)
 
-instance FromJSON Error where 
+instance FromJSON Error where
   parseJSON :: Value -> Parser Error
-  parseJSON = withObject "Error" $ \o -> do 
+  parseJSON = withObject "Error" $ \o -> do
     id' <- o .: "id"
-    error'<- o .: "error"
+    error' <- o .: "error"
     message <- o .: "message"
     stacktrace <- o .: "stacktrace"
-    pure $ MkError {
-      id = id',
-      error = error',
-      message,
-      stacktrace,
-      extensions = MkEmptyResult $ 
-        subtractProps [
-        "id",
-        "error",
-        "message",
-        "stacktrace"
-       ] o
-    }
-
+    pure $
+      MkError
+        { id = id',
+          error = error',
+          message,
+          stacktrace,
+          extensions =
+            MkEmptyResult $
+              subtractProps
+                [ "id",
+                  "error",
+                  "message",
+                  "stacktrace"
+                ]
+                o
+        }
 
 -- typ :: Text, -- "event"
 data Event = MkEvent
