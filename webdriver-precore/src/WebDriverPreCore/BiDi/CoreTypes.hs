@@ -12,14 +12,15 @@ module WebDriverPreCore.BiDi.CoreTypes
   )
 where
 
-import Data.Aeson (FromJSON (..), ToJSON, Value (..), KeyValue (..), object)
+import Data.Aeson (FromJSON (..), KeyValue (..), Object (..), ToJSON, Value (..), object)
+import Data.Aeson.KeyMap (empty)
 import Data.Int (Int64)
 import Data.Map qualified as Map
 import Data.Text (Text)
 import Data.Word (Word64)
 import GHC.Generics (Generic)
-import Prelude (Eq, Maybe, Show)
-import Data.Aeson.KeyMap (empty)
+import Prelude 
+import Data.Aeson.Types (Parser, withObject)
 
 -- | Core types for the WebDriver BiDi (Bidirectional) protocol.
 
@@ -62,7 +63,12 @@ data NodeProperties = MkNodeProperties
 
 newtype SharedId = MkSharedId Text deriving newtype (Show, Eq, ToJSON, FromJSON)
 
-newtype EmptyResult = MkEmptyResult {extensible :: Value} deriving (Show, Eq, Generic)
+newtype EmptyResult = MkEmptyResult {extensible :: Object} deriving (Show, Eq, Generic)
+
+instance FromJSON EmptyResult where
+  parseJSON :: Value -> Parser EmptyResult
+  parseJSON = withObject "EmptyResult" $ fmap MkEmptyResult . pure
+    
 
 class BiDiMethod a where
   bidiMethod :: a -> Text

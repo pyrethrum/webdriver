@@ -1,14 +1,16 @@
 module WebDriverPreCore.BiDi.Error
   ( ErrorCode (..),
-  toErrorCodeText,
-  fromErrorCodeText,
+    toErrorCodeText,
+    fromErrorCodeText,
   )
 where
 
-
-import Data.Text (Text)
+import Data.Aeson (FromJSON, Value (..))
+import Data.Aeson.Types (FromJSON (..), Parser)
+import Data.Text (Text, unpack)
 import GHC.Generics (Generic)
-import Prelude (Eq, Show, Ord, Maybe (..))
+import Prelude
+import Data.Function ((&))
 
 data ErrorCode
   = -- | Tried to perform an action with an invalid argument
@@ -70,6 +72,16 @@ data ErrorCode
   | -- | The operation requested is not supported
     UnsupportedOperation
   deriving (Show, Eq, Ord, Generic)
+
+instance FromJSON ErrorCode where
+  parseJSON :: Value -> Parser ErrorCode
+  parseJSON = \case
+    String s ->
+      fromErrorCodeText s
+        & maybe
+          (fail $ "Unknown ErrorCode: " <> unpack s)
+          pure
+    _ -> fail "Expected a string for ErrorCode"
 
 -- | Maps ErrorCode enum values to their string representation in the WebDriver BiDi spec
 toErrorCodeText :: ErrorCode -> Text

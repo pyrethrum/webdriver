@@ -1,14 +1,19 @@
 module WebDriverPreCore.BiDi.ResponseEvent where
 
 import Data.Aeson
-  ( FromJSON,
+  ( FromJSON (parseJSON),
     Object,
     ToJSON,
     Value (..),
+    fromJSON,
     object,
+    withObject,
+    (.:),
+    (.:?),
     (.=),
   )
-import Data.Aeson.Types (ToJSON (..))
+import Data.Aeson.KeyMap ((!?))
+import Data.Aeson.Types (Parser, ToJSON (..), parseMaybe)
 import Data.Function ((&))
 import Data.Map qualified as Map
 import Data.Maybe (fromMaybe)
@@ -17,49 +22,86 @@ import GHC.Generics (Generic)
 import WebDriverPreCore.BiDi.Browser (BrowserCommand, BrowserResult)
 import WebDriverPreCore.BiDi.BrowsingContext (BrowsingContextCommand, BrowsingContextEvent, BrowsingContextResult)
 import WebDriverPreCore.BiDi.BrowsingContext qualified as BC
-import WebDriverPreCore.BiDi.CoreTypes (BiDiMethod (bidiMethod), JSUInt, EmptyResult(..))
+import WebDriverPreCore.BiDi.CoreTypes (BiDiMethod (bidiMethod), EmptyResult (..), JSUInt)
 import WebDriverPreCore.BiDi.Emulation (EmulationCommand)
 import WebDriverPreCore.BiDi.Error (ErrorCode)
-import WebDriverPreCore.BiDi.Input (FileDialogOpened, InputCommand, FileDialogInfo)
+import WebDriverPreCore.BiDi.Input (FileDialogInfo, FileDialogOpened, InputCommand)
 import WebDriverPreCore.BiDi.Log (Entry)
-import WebDriverPreCore.BiDi.Network (NetworkCommand, NetworkResult(..))
-import WebDriverPreCore.BiDi.Script (RemoteValue, ScriptCommand, Source, StackTrace, ScriptResult)
-import WebDriverPreCore.BiDi.Session (SessionCommand, SessionSubscriptionRequest, SessionUnsubscribeParameters, SessionResult(..))
+import WebDriverPreCore.BiDi.Network (NetworkCommand, NetworkResult (..))
+import WebDriverPreCore.BiDi.Script (RemoteValue, ScriptCommand, ScriptResult, Source, StackTrace)
+import WebDriverPreCore.BiDi.Session (SessionCommand, SessionResult (..), SessionSubscriptionRequest, SessionUnsubscribeParameters)
 import WebDriverPreCore.BiDi.Session qualified as S
-import WebDriverPreCore.BiDi.Storage (StorageCommand, StorageResult(..))
-import WebDriverPreCore.BiDi.WebExtensions (WebExtensionCommand, WebExtensionResult(..))
-import WebDriverPreCore.Internal.AesonUtils (objectOrThrow, parseObject)
-import Prelude (Bool, Eq, Maybe (..), Show, error, maybe, ($), (.), (<$>), (<>))
+import WebDriverPreCore.BiDi.Storage (StorageCommand, StorageResult (..))
+import WebDriverPreCore.BiDi.WebExtensions (WebExtensionCommand, WebExtensionResult (..))
+import WebDriverPreCore.Internal.AesonUtils (subtractProps, objectOrThrow, parseObject, parseObjectMaybe)
+import Prelude
 
 -- ######### Remote #########
 
-data Message
-  = CommandResponse Success
-  | ErrorResponse Error
-  | Event Event
-  deriving (Show, Generic)
+-- HERE simplify pare response by applying this parser and adding an extra constructor to ResponseError
+parseResponse' :: forall a. FromJSON a => JSUInt -> Object -> Parser (Maybe (Either ResponseError (Success a)))
+parseResponse' msgId obj = do
+  id' <- obj .:? "id"
+  pure $
+    if id' == Just msgId
+      then
+        Just $
+          maybe
+            (Left err)
+            Right
+            success
+      else
+        Nothing
+  where
+    success :: Maybe (Success a)
+    success = parseObjectMaybe obj
 
-data Success = MkSuccess
+    bidiError :: Maybe Error
+    bidiError = parseObjectMaybe obj
+
+    err :: ResponseError
+    err = bidiError & maybe (UnknownResponse obj) BiDIError
+
+data ResponseError
+  = UnknownResponse Object
+  | BiDIError Error
+  deriving (Show, Eq, Generic)
+
+data Success a = MkSuccess
   { id :: JSUInt,
-    result :: ResultData,
-    extensions :: Maybe (Map.Map Text Value)
+    result :: a,
+    extensions :: EmptyResult
   }
   deriving (Show, Generic)
 
+instance FromJSON a => FromJSON (Success a) where
+  parseJSON :: Value -> Parser (Success a)
+  parseJSON = withObject "Success" $ \o -> do
+    id' <- o .: "id"
+    result <- o .: "result"
+    pure $
+      MkSuccess
+        { id = id',
+          result = result,
+          extensions = (MkEmptyResult $ subtractProps ["id", "result"] o)
+        }
+
+-- typ :: Text, -- "error"
 data Error = MkError
-  { typ :: Text, -- "error"
-    errorId :: Maybe JSUInt,
+  { id :: Maybe JSUInt,
     error :: ErrorCode,
     message :: Text,
     stacktrace :: Maybe Text,
-    extensions :: Maybe (Map.Map Text Value)
+    extensions :: EmptyResult
   }
-  deriving (Show, Generic)
+  deriving (Show, Generic, Eq)
 
+instance FromJSON Error
+
+-- typ :: Text, -- "event"
 data Event = MkEvent
-  { typ :: Text, -- "event"
-    eventData :: EventData,
-    extensions :: Maybe (Map.Map Text Value)
+  { eventData :: EventData,
+    extensions :: EmptyResult
   }
   deriving (Show, Generic)
 
@@ -70,8 +112,7 @@ data EventData
   | -- method: "log.entryAdded"
     LogEvent Entry
   deriving
-    ( 
-      Show,
+    ( Show,
       Generic
     )
 
@@ -86,8 +127,22 @@ data ResultData
   | StorageResult StorageResult
   | WebExtensionResult WebExtensionResult
   deriving
-    ( 
-      Show,
+    ( Show,
       Generic
     )
 
+-- instance FromJSON ResultData where
+--   parseJSON :: Value -> Parser ResultData
+--   parseJSON = withObject "ResultData" $ \o -> do
+--     typ <- o .: "typ"
+--     case typ of
+--       "browsingContext" -> BrowsingContextResult <$> parseObject o
+--       "browser" -> BrowserResult <$> parseObject o
+--       "emulation" -> EmulationResult <$> parseObject o
+--       "input" -> InputResult <$> parseObject o
+--       "network" -> NetworkResult <$> parseObject o
+--       "script" -> ScriptResult <$> parseObject o
+--       "session" -> SessionResult <$> parseObject o
+--       "storage" -> StorageResult <$> parseObject o
+--       "webExtension" -> WebExtensionResult <$> parseObject o
+--       _ -> error $ "Unknown ResultData type: " <> typ <> " in " <> show o

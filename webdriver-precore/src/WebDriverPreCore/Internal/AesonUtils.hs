@@ -9,10 +9,12 @@ module WebDriverPreCore.Internal.AesonUtils
     nonEmpty,
     opt,
     empty,
+    subtractProps,
     jsonPrettyString,
     jsonToText,
     objectOrThrow,
     parseObject,
+    parseObjectMaybe,
     parseOpt,
     prettyPrintJson,
     parseJson,
@@ -22,18 +24,19 @@ where
 -- \| Utility functions for working with Aeson (JSON) values.
 import Control.Exception (Exception (displayException), SomeException, try)
 import Data.Aeson
-  ( FromJSON,
+  ( FromJSON (..),
     Key,
     KeyValue ((.=)),
     Result (..),
     ToJSON (),
     Value (..),
     eitherDecodeStrict, (.:?),
+    Object
   )
 import Data.Aeson qualified as A
 import Data.Aeson.Encode.Pretty (encodePretty)
 import Data.Aeson.KeyMap qualified as AKM
-import Data.Aeson.Types (Parser)
+import Data.Aeson.Types (Parser, parseMaybe)
 import Data.ByteString.Lazy qualified as LBS
 import Data.Either (Either, either)
 import Data.Function (($), (&), (.))
@@ -55,6 +58,9 @@ import Prelude
     Bool (..), Foldable (..), not, error
   )
 import Control.Monad (MonadFail(..))
+import Data.Aeson.KeyMap (member)
+import Data.Set qualified as S
+import Data.Aeson.Key (fromString)
 
 -- Aeson stuff
 -- TODO move to separte library
@@ -71,6 +77,9 @@ parseObject :: Text -> Value -> Parser A.Object
 parseObject errMsg val = case val of
   Object obj -> pure obj
   _ -> fail $ unpack errMsg
+
+parseObjectMaybe :: FromJSON a => Object -> Maybe a
+parseObjectMaybe = parseMaybe parseJSON . Object
 
 objectOrThrow :: ToJSON a => Text -> a -> A.Object
 objectOrThrow errMsg val = case A.toJSON val of
@@ -142,6 +151,11 @@ parseOpt o k = do
   case mv >>= forceNonEmpty of
     Nothing -> pure Nothing
     Just v -> Just <$> A.parseJSON v
+
+subtractProps :: [Text] -> Object -> Object
+subtractProps keys obj = AKM.filterWithKey (\k _ -> k `S.member` keySet) obj
+  where 
+    keySet = S.fromList $ fromString . unpack <$> keys
 
 
 
