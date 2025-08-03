@@ -46,21 +46,19 @@ parseResponse' msgId obj = do
     if id' == Just msgId
       then
         Just $
+         success &
           maybe
-            (Left err)
+            (Left responseError)
             Right
-            success
       else
         Nothing
   where
     success :: Maybe (Success a)
     success = parseObjectMaybe obj
 
-    bidiError :: Maybe Error
-    bidiError = parseObjectMaybe obj
-
-    err :: ResponseError
-    err = bidiError & maybe (UnknownResponse obj) BiDIError
+    responseError :: ResponseError
+    responseError = parseObjectMaybe obj
+        & maybe (UnknownResponse obj) BiDIError
 
 data ResponseError
   = UnknownResponse Object
@@ -82,8 +80,8 @@ instance FromJSON a => FromJSON (Success a) where
     pure $
       MkSuccess
         { id = id',
-          result = result,
-          extensions = (MkEmptyResult $ subtractProps ["id", "result"] o)
+          result,
+          extensions = MkEmptyResult $ subtractProps ["id", "result"] o
         }
 
 -- typ :: Text, -- "error"
@@ -96,7 +94,27 @@ data Error = MkError
   }
   deriving (Show, Generic, Eq)
 
-instance FromJSON Error
+instance FromJSON Error where 
+  parseJSON :: Value -> Parser Error
+  parseJSON = withObject "Error" $ \o -> do 
+    id' <- o .: "id"
+    error'<- o .: "error"
+    message <- o .: "message"
+    stacktrace <- o .: "stacktrace"
+    pure $ MkError {
+      id = id',
+      error = error',
+      message,
+      stacktrace,
+      extensions = MkEmptyResult $ 
+        subtractProps [
+        "id",
+        "error",
+        "message",
+        "stacktrace"
+       ] o
+    }
+
 
 -- typ :: Text, -- "event"
 data Event = MkEvent
