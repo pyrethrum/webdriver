@@ -55,6 +55,37 @@ parseResponse' msgId obj = do
       parseObjectMaybe obj
         & maybe (UnknownResponse obj) BiDIError
 
+parseResponse' :: forall a. (FromJSON a) => JSUInt -> Object -> Parser (Maybe (Either ResponseError (Success a)))
+parseResponse' msgId obj = do
+  id' <- obj .:? "id"
+  pure $
+    if id' == Just msgId
+      then
+        Just $
+          success
+            & maybe
+              (Left responseError)
+              Right
+      else
+        Nothing
+  where
+    success :: Maybe (Success a)
+    success = parseObjectMaybe obj
+
+    responseError :: ResponseError
+    responseError =
+      parseObjectMaybe obj
+        & maybe (UnknownResponse obj) BiDIError
+
+decodeResponse :: FromJSON a => ByteString -> Either Text ResponseObject
+decodeResponse bs = undefined
+  HERE - use eitherDecode to get objet
+
+data ResponseObject
+  = NoID {object :: Object}
+  | WithID {id :: JSUInt, object :: Object}
+  deriving (Show, Generic)
+
 data ResponseError
   = UnknownResponse Object
   | JSONParseError Text
