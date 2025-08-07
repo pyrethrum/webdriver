@@ -29,7 +29,8 @@ import WebDriverPreCore.BiDi.Session qualified as S
 import WebDriverPreCore.BiDi.Storage (StorageCommand)
 import WebDriverPreCore.BiDi.WebExtensions (WebExtensionCommand)
 import WebDriverPreCore.Internal.AesonUtils (objectOrThrow, parseObject)
-import Prelude (Bool, Eq, Maybe (..), Show, error, maybe, ($), (.), (<$>), (<>))
+import Prelude 
+import WebDriverPreCore.BiDi.ResponseEvent (ResponseObject, ResponseError, MatchedResponse)
 
 -- ######### Local #########
 
@@ -37,7 +38,7 @@ import Prelude (Bool, Eq, Maybe (..), Show, error, maybe, ($), (.), (<$>), (<>))
 data Command c r = MkCommand {
   command :: c -> JSUInt -> Value,
   extendedCommand :: c -> Object -> JSUInt -> Value,
-  parser :: JSUInt -> Object -> Parser (Maybe (Either ResponseError (Success r)))
+  responseMatcher :: JSUInt -> ResponseObject -> Either ResponseError (Maybe (MatchedResponse r))
 }
 
 -- ######### Remote #########

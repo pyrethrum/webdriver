@@ -1,9 +1,12 @@
 module WebDriverPreCore.BiDi.ResponseEvent where
 
-import Data.Aeson (FromJSON (parseJSON), Object, Result, ToJSON, Value (..), fromJSON, object, withObject, (.:), (.:?), (.=), eitherDecode)
+import Data.Aeson (FromJSON (parseJSON), Object, Result, ToJSON, Value (..), eitherDecode, fromJSON, object, withObject, (.:), (.:?), (.=))
 import Data.Aeson.KeyMap ((!?))
-import Data.Aeson.Types (Parser, ToJSON (..), parse, parseMaybe)
+import Data.Aeson.Types (Parser, ToJSON (..), parse, parseEither, parseMaybe)
+import Data.Bool (bool)
+import Data.ByteString.Lazy (ByteString)
 import Data.Function ((&))
+import Data.Functor ((<&>))
 import Data.Map qualified as Map
 import Data.Maybe (fromMaybe)
 import Data.Text (Text, pack)
@@ -24,37 +27,14 @@ import WebDriverPreCore.BiDi.Storage (StorageCommand, StorageResult (..))
 import WebDriverPreCore.BiDi.WebExtensions (WebExtensionCommand, WebExtensionResult (..))
 import WebDriverPreCore.Internal.AesonUtils (objectOrThrow, parseObject, parseObjectMaybe, subtractProps)
 import Prelude
-import Data.ByteString.Lazy (ByteString)
 
 -- ######### Remote #########
 
-parseResponse :: forall a. (FromJSON a) => JSUInt -> Object -> Maybe (Either ResponseError (Success a))
-parseResponse msgId obj = undefined
-  where
-    parsed :: Result (Maybe (Either ResponseError (Success a)))
-    parsed = parse (parseResponse' msgId) obj
-
-parseResponse' :: forall a. (FromJSON a) => JSUInt -> Object -> Parser (Maybe (Either ResponseError (Success a)))
-parseResponse' msgId obj = do
-  id' <- obj .:? "id"
-  pure $
-    if id' == Just msgId
-      then
-        Just $
-          success
-            & maybe
-              (Left responseError)
-              Right
-      else
-        Nothing
-  where
-    success :: Maybe (Success a)
-    success = parseObjectMaybe obj
-
-    responseError :: ResponseError
-    responseError =
-      parseObjectMaybe obj
-        & maybe (UnknownResponse obj) BiDIError
+-- parseResponse :: forall a. (FromJSON a) => JSUInt -> Object -> Maybe (Either ResponseError (Success a))
+-- parseResponse msgId obj = undefined
+--   where
+--     parsed :: Result (Maybe (Either ResponseError (Success a)))
+--     parsed = parse (parseResponse' msgId) obj
 
 -- parseResponse' :: forall a. (FromJSON a) => JSUInt -> Object -> Parser (Maybe (Either ResponseError (Success a)))
 -- parseResponse' msgId obj = do
@@ -76,20 +56,63 @@ parseResponse' msgId obj = do
 --     responseError :: ResponseError
 --     responseError =
 --       parseObjectMaybe obj
---         & maybe (UnknownResponse obj) BiDIError
+--         & maybe (JSONParseError obj) BiDIError
 
-decodeResponse :: FromJSON a => ByteString -> Either Text ResponseObject
-decodeResponse bs = undefined
+-- parseResponse' :: forall a. (FromJSON a) => JSUInt -> Object -> Parser (Maybe (Either ResponseError (Success a)))
+-- parseResponse' msgId obj = do
+--   id' <- obj .:? "id"
+--   pure $
+--     if id' == Just msgId
+--       then
+--         Just $
+--           success
+--             & maybe
+--               (Left responseError)
+--               Right
+--       else
+--         Nothing
+--   where
+--     success :: Maybe (Success a)
+--     success = parseObjectMaybe obj
+
+--     responseError :: ResponseError
+--     responseError =
+--       parseObjectMaybe obj
+--         & maybe (JSONParseError obj) BiDIError
+
+matchResponseObject :: forall a. (FromJSON a) => JSUInt -> ResponseObject -> Either ResponseError (Maybe (MatchedResponse a))
+matchResponseObject msgId = \case
+  NoID {} -> Right Nothing
+  WithID id' obj ->
+    bool
+      (Right Nothing)
+      matchedResult
+      (id' == msgId)
+    where
+      success :: Maybe (Success a)
+      success = parseObjectMaybe obj
+
+      matchedResult :: Either ResponseError (Maybe (MatchedResponse a))
+      matchedResult = success & maybe (Left $ JSONParseError obj) (\s -> Right . Just $ MkMatchedResponse s.result obj)
+
+mapLeft :: (a -> b) -> Either a c -> Either b c
+mapLeft f = either (Left . f) Right
+
+decodeResponse :: ByteString -> Either Text ResponseObject
+decodeResponse =
+  (=<<) parseResponseObj . packLeft . eitherDecode
   where
-    obj :: Either Text Object
-    obj = eitherDecode bs & \case
-      Left err -> Left $ pack err
-      Right o -> undefined
-        where
-          parseObjectMaybe :: Parser ResponseObject
-          parseObjectMaybe = do
-            id' <- o .:? "id"
-            pure $ id' & maybe (NoID { object = o }) \i -> WithID {id = i, object = o}
+    packLeft = mapLeft pack
+
+    parseResponseObj :: Object -> Either Text ResponseObject
+    parseResponseObj =
+      packLeft . parseEither (\o' -> maybe NoID WithID <$> o' .:? "id" <*> pure o')
+
+data MatchedResponse a = MkMatchedResponse
+  { response :: a,
+    object :: Object
+  }
+  deriving (Show, Generic)
 
 data ResponseObject
   = NoID {object :: Object}
@@ -97,8 +120,8 @@ data ResponseObject
   deriving (Show, Generic)
 
 data ResponseError
-  = UnknownResponse Object
-  | JSONParseError Text
+  = JSONParseError Object
+  | JSONEncodeError Text
   | BiDIError Error
   deriving (Show, Eq, Generic)
 
