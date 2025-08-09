@@ -6,20 +6,47 @@ import Control.Exception (Exception (displayException), SomeException, catch, th
 import Control.Monad (forever)
 import Data.Aeson (ToJSON, Value, encode, toJSON)
 import Data.ByteString.Lazy qualified as BL
+import Data.Function ((&))
 import Data.Text as T (Text, pack, unpack)
 import Data.Text.IO as T (putStrLn)
-import Http.HttpAPI (FullCapabilities, SessionResponse (..), newSessionFull)
+import Http.HttpAPI (FullCapabilities, SessionResponse (..), deleteSession, newSessionFull)
 import Http.HttpAPI qualified as Caps (Capabilities (..))
 import Network.WebSockets (receiveData, runClient, sendTextData)
 import RuntimeConst (httpCapabilities, httpFullCapabilities)
+import UnliftIO (bracket)
 import UnliftIO.Async (Async, async, cancel, waitAny)
 import UnliftIO.STM
+import WebDriverPreCore.BiDi.BiDiPath (BiDiPath (..), getBiDiPath)
 import WebDriverPreCore.BiDi.ResponseEvent (ResponseError, ResponseObject, decodeResponse)
 import WebDriverPreCore.Http qualified as Http
 import WebDriverPreCore.Internal.Utils (txt)
 import Prelude hiding (getLine, log, null, putStrLn)
-import WebDriverPreCore.BiDi.BiDiPath (BiDiPath, getBiDiPath)
-import WebDriverPreCore.BiDi.BiDiPath (BiDiPath(..))
+import WebDriverPreCore.BiDi.Protocol (Command(..))
+
+
+sendCommand :: WebDriverBiDiClient -> Command c r -> c -> IO r
+sendCommand client cmd params = do
+  client.sendMessage (cmd, params)
+  atomically $ readTChan client.receiveChannel
+
+withBiDiSession :: (WebDriverBiDiClient -> IO a) -> IO a
+withBiDiSession action =
+  bracket
+    httpSession
+    (deleteSession . (.sessionId))
+    \s' -> do
+      let bidiPath = getBiDiPath s' & either (error . T.unpack) id
+      withBiDi bidiPath action
+
+withBiDi :: BiDiPath -> (WebDriverBiDiClient -> IO a) -> IO a
+withBiDi bidiPath action =
+  bracket
+    (runWebDriverBiDi bidiPath)
+    ( \client ->
+        putStrLn "Ending BiDi session - will need some clean up here"
+          >> client.disconnect
+    )
+    action
 
 -- | WebDriver BiDi client with communication channels
 data WebDriverBiDiClient = MkWebDriverBiDiClient
@@ -37,16 +64,12 @@ runWebDriverBiDi bidiPth = do
   receiveChan <- newTChanIO
   logChan <- newTChanIO
 
-  putStrLn "Starting logger thread"
   loggerAsync <- async . forever $ do
     msg <- atomically $ readTChan logChan
     putStrLn $ "[LOG] " <> msg
 
-  let log :: Text -> IO ()
-      log = atomically . writeTChan logChan
+  let log = atomically . writeTChan logChan
 
-  -- -- Set up the client
-  -- log "Creating async client..."
   clientAsync <- startClient bidiPth log sendChan receiveChan
 
   pure $
@@ -66,15 +89,15 @@ startClient pth@MkBiDiPath {host, port, path} log sendChan receiveChan =
   async $ do
     log $ "Connecting to WebDriver at " <> txt pth
     catch
-      webSocketGo
+      runSocketClient
       ( \(e :: SomeException) -> do
           log $ "WebSocket failure: " <> pack (displayException e)
-          -- flush log channelnewSessionFull . 
+          -- flush log channelnewSessionFull .
           threadDelay 1000_000
           throwIO e
       )
   where
-    webSocketGo = runClient (unpack host) port (unpack path) $ \conn -> do
+    runSocketClient = runClient (unpack host) port (unpack path) $ \conn -> do
       log "WebSocket connection established!"
 
       let runForever = asyncForever log
@@ -97,12 +120,8 @@ startClient pth@MkBiDiPath {host, port, path} log sendChan receiveChan =
       threadDelay 1_000_000 -- Wait a bit before closing
       putStrLn "One of the WebSocket threads terminated, closing connection."
 
-
-sessionViaHttp :: IO BiDiPath
-sessionViaHttp =
-  loadConfig
-    >>= newSessionFull . httpBidiCapabilities
-    >>= either (error . T.unpack) pure . getBiDiPath
+httpSession :: IO SessionResponse
+httpSession = loadConfig >>= newSessionFull . httpBidiCapabilities
 
 -- Bidi capabilities request is the same as regular HTTP capabilities,
 -- but with the `webSocketUrl` field set to `True`
@@ -115,7 +134,6 @@ httpBidiCapabilities cfg =
             { Caps.webSocketUrl = Just True
             }
     }
-
 
 catchLog :: Text -> (Text -> IO ()) -> IO () -> IO ()
 catchLog message log action =
@@ -130,7 +148,6 @@ asyncForever log name action = async $ do
   forever $ catchLog message log action
   where
     message = "Starting " <> name <> " thread"
-
 
 newHttpSession :: FullCapabilities -> IO SessionResponse
 newHttpSession = newSessionFull
