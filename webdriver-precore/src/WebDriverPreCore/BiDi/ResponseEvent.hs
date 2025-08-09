@@ -1,31 +1,24 @@
 module WebDriverPreCore.BiDi.ResponseEvent where
 
-import Data.Aeson (FromJSON (parseJSON), Object, Result, ToJSON, Value (..), eitherDecode, fromJSON, object, withObject, (.:), (.:?), (.=))
-import Data.Aeson.KeyMap ((!?))
-import Data.Aeson.Types (Parser, ToJSON (..), parse, parseEither, parseMaybe)
+import Data.Aeson (FromJSON (parseJSON), Object, Value (..), eitherDecode, withObject, (.:), (.:?))
+import Data.Aeson.Types (Parser, parseEither)
 import Data.Bool (bool)
 import Data.ByteString.Lazy (ByteString)
 import Data.Function ((&))
-import Data.Functor ((<&>))
-import Data.Map qualified as Map
-import Data.Maybe (fromMaybe)
 import Data.Text (Text, pack)
 import GHC.Generics (Generic)
-import WebDriverPreCore.BiDi.Browser (BrowserCommand, BrowserResult)
-import WebDriverPreCore.BiDi.BrowsingContext (BrowsingContextCommand, BrowsingContextEvent, BrowsingContextResult)
-import WebDriverPreCore.BiDi.BrowsingContext qualified as BC
-import WebDriverPreCore.BiDi.CoreTypes (BiDiMethod (bidiMethod), EmptyResult (..), JSUInt)
-import WebDriverPreCore.BiDi.Emulation (EmulationCommand)
+import WebDriverPreCore.BiDi.Browser (BrowserResult)
+import WebDriverPreCore.BiDi.BrowsingContext (BrowsingContextEvent, BrowsingContextResult)
+import WebDriverPreCore.BiDi.CoreTypes (EmptyResult (..), JSUInt)
 import WebDriverPreCore.BiDi.Error (ErrorCode)
-import WebDriverPreCore.BiDi.Input (FileDialogInfo, FileDialogOpened, InputCommand)
+import WebDriverPreCore.BiDi.Input (FileDialogInfo, FileDialogOpened)
 import WebDriverPreCore.BiDi.Log (Entry)
-import WebDriverPreCore.BiDi.Network (NetworkCommand, NetworkResult (..))
-import WebDriverPreCore.BiDi.Script (RemoteValue, ScriptCommand, ScriptResult, Source, StackTrace)
-import WebDriverPreCore.BiDi.Session (SessionCommand, SessionResult (..), SessionSubscriptionRequest, SessionUnsubscribeParameters)
-import WebDriverPreCore.BiDi.Session qualified as S
-import WebDriverPreCore.BiDi.Storage (StorageCommand, StorageResult (..))
-import WebDriverPreCore.BiDi.WebExtensions (WebExtensionCommand, WebExtensionResult (..))
-import WebDriverPreCore.Internal.AesonUtils (objectOrThrow, parseObject, parseObjectMaybe, subtractProps)
+import WebDriverPreCore.BiDi.Network (NetworkResult (..))
+import WebDriverPreCore.BiDi.Script (ScriptResult)
+import WebDriverPreCore.BiDi.Session (SessionResult (..))
+import WebDriverPreCore.BiDi.Storage (StorageResult (..))
+import WebDriverPreCore.BiDi.WebExtensions (WebExtensionResult (..))
+import WebDriverPreCore.Internal.AesonUtils (parseObjectMaybe, subtractProps)
 import Prelude
 
 -- ######### Remote #########
@@ -98,13 +91,13 @@ matchResponseObject msgId = \case
 mapLeft :: (a -> b) -> Either a c -> Either b c
 mapLeft f = either (Left . f) Right
 
-decodeResponse :: ByteString -> Either Text ResponseObject
+decodeResponse :: ByteString -> Either ResponseError ResponseObject
 decodeResponse =
   (=<<) parseResponseObj . packLeft . eitherDecode
   where
-    packLeft = mapLeft pack
+    packLeft = mapLeft (JSONEncodeError . pack)
 
-    parseResponseObj :: Object -> Either Text ResponseObject
+    parseResponseObj :: Object -> Either ResponseError ResponseObject
     parseResponseObj =
       packLeft . parseEither (\o' -> maybe NoID WithID <$> o' .:? "id" <*> pure o')
 

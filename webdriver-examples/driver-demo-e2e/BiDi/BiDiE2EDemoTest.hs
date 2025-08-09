@@ -1,23 +1,23 @@
 module BiDi.BiDiE2EDemoTest where
 
 
-import Config (Config, loadConfig)
+import Config (loadConfig)
 import Control.Exception (finally)
-import RuntimeConst (httpCapabilities, httpFullCapabilities)
 -- custom import needed to disambiguate capabilities
-import Http.HttpAPI qualified as Caps (Capabilities (..))
 import Http.HttpAPI qualified as Http
-import IOUtils (logShow, ppTxt)
+import IOUtils (logShow)
 import Prelude hiding (putStrLn, log)
-import BiDi.BiDiRunner (parseUrl, httpBidiCapabilities)
+import BiDi.BiDiRunner (httpBidiCapabilities)
 import Data.Text (Text)
+import WebDriverPreCore.Internal.Utils (txt)
+import WebDriverPreCore.BiDi.BiDiPath (parseUrl)
 
 -- WORK IN PROGRESS
 
 -- >>> demo_parseUrl
 -- "Right\n  MkBiDiPath\n    { host = \"127.0.0.1\"\n    , port = 9222\n    , path = \"/session/e43698d9-b02a-4284-a936-12041deb3552\"\n    }"
 demo_parseUrl :: Text
-demo_parseUrl = ppTxt $ parseUrl "ws://127.0.0.1:9222/session/e43698d9-b02a-4284-a936-12041deb3552"
+demo_parseUrl = txt $ parseUrl "ws://127.0.0.1:9222/session/e43698d9-b02a-4284-a936-12041deb3552"
 
 
 -- >>> unit_newBidiSessionViaHttp

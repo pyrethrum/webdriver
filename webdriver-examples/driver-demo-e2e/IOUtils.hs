@@ -6,40 +6,29 @@ module IOUtils
     logShow,
     logM,
     logShowM,
-    ppTxt,
     sleep1,
     sleep2,
     (===),
   )
 where
-import Control.Concurrent (threadDelay)
-import qualified Data.ByteString as BS
-import qualified Data.ByteString.Base64 as B64
-import qualified Data.Base64.Types as B64T
-import Data.Text (Text)
-import System.IO (FilePath, IO)
-import Data.Int (Int)
-import Control.Applicative (pure)
-import Data.Function ((.), ($))
-import GHC.Num (Num(..))
 
-import Data.Text.IO qualified as TIO
-import Text.Show.Pretty qualified as P
-import Test.Tasty.HUnit as HUnit (Assertion, HasCallStack, (@=?))
-import Data.Semigroup (Semigroup (..))
-import Data.Text (pack)
-import Prelude (Show, Eq, (>>=))
 import Const (second, seconds)
-
+import Control.Concurrent (threadDelay)
+import Data.Base64.Types qualified as B64T
+import Data.ByteString qualified as BS
+import Data.ByteString.Base64 qualified as B64
+import Data.Text (Text)
+import Data.Text.IO qualified as TIO
+import Test.Tasty.HUnit as HUnit (Assertion, HasCallStack, (@=?))
+import WebDriverPreCore.Internal.Utils (txt)
+import Prelude hiding (log)
 
 sleepMs :: Int -> IO ()
-sleepMs = threadDelay . (* 1_000)
+sleepMs = threadDelay . (*) 1_000
 
 encodeFileToBase64 :: FilePath -> IO Text
-encodeFileToBase64 filePath = do
-  contents <- BS.readFile filePath
-  pure . B64T.extractBase64 $ B64.encodeBase64 contents
-
+encodeFileToBase64 filePath =
+  B64T.extractBase64 . B64.encodeBase64 <$> BS.readFile filePath
 
 logTxt :: Text -> IO ()
 logTxt = TIO.putStrLn
@@ -47,11 +36,8 @@ logTxt = TIO.putStrLn
 log :: Text -> Text -> IO ()
 log l t = logTxt $ l <> ": " <> t
 
-ppTxt :: Show a => a -> Text
-ppTxt = pack . P.ppShow
-
 logShow :: (Show a) => Text -> a -> IO ()
-logShow l = log l . ppTxt
+logShow l = log l . txt
 
 logM :: Text -> IO Text -> IO ()
 logM l t = t >>= log l

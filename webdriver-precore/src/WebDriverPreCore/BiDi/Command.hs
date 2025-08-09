@@ -1,36 +1,17 @@
 module WebDriverPreCore.BiDi.Command where
 
 import Data.Aeson
-  ( FromJSON,
-    Object,
+  ( Object,
     ToJSON,
     Value (..),
     object,
     (.=),
   )
-import Data.Aeson.Types (ToJSON (..))
 import Data.Function ((&))
-import Data.Map qualified as Map
-import Data.Maybe (fromMaybe)
 import Data.Text (Text)
-import GHC.Generics (Generic)
-import WebDriverPreCore.BiDi.Browser (BrowserCommand, BrowserResult)
-import WebDriverPreCore.BiDi.BrowsingContext qualified as BC 
-import WebDriverPreCore.BiDi.BrowsingContext (BrowsingContextCommand, BrowsingContextEvent, BrowsingContextResult)
 import WebDriverPreCore.BiDi.CoreTypes (BiDiMethod (bidiMethod), JSUInt)
-import WebDriverPreCore.BiDi.Emulation (EmulationCommand)
-import WebDriverPreCore.BiDi.Error (ErrorCode)
-import WebDriverPreCore.BiDi.Input (FileDialogOpened, InputCommand)
-import WebDriverPreCore.BiDi.Log (Entry)
-import WebDriverPreCore.BiDi.Network (NetworkCommand)
-import WebDriverPreCore.BiDi.Script (RemoteValue, ScriptCommand, Source, StackTrace)
-import WebDriverPreCore.BiDi.Session (SessionCommand, SessionSubscriptionRequest, SessionUnsubscribeParameters)
-import WebDriverPreCore.BiDi.Session qualified as S
-import WebDriverPreCore.BiDi.Storage (StorageCommand)
-import WebDriverPreCore.BiDi.WebExtensions (WebExtensionCommand)
-import WebDriverPreCore.Internal.AesonUtils (objectOrThrow, parseObject)
-import Prelude (Bool, Eq, Maybe (..), Show, error, maybe, ($), (.), (<$>), (<>))
-import WebDriverPreCore.BiDi.Capabilities (Capabilities)
+import WebDriverPreCore.Internal.AesonUtils (objectOrThrow)
+import Prelude (Maybe (..), maybe, ($), (.), (<>))
 
 -- ######### Local #########
 

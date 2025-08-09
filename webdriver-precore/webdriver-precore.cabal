@@ -114,6 +114,7 @@ library
       -- Http
       WebDriverPreCore.Http
       -- BiDi
+      WebDriverPreCore.BiDi.BiDiPath
       WebDriverPreCore.BiDi.Browser
       WebDriverPreCore.BiDi.BrowsingContext
       WebDriverPreCore.BiDi.Capabilities

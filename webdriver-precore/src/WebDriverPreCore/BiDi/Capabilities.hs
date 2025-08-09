@@ -1,15 +1,13 @@
 module WebDriverPreCore.BiDi.Capabilities where
 
-import Data.Aeson (FromJSON (..), Key, ToJSON (..), Value (..), object, withObject, (.:), (.=))
-import Data.Aeson.Types (Parser)
+import Data.Aeson (FromJSON (..), ToJSON (..), Value (..), object, (.=))
 import Data.Maybe (catMaybes)
 import Data.Text (Text)
 import Data.Vector (fromList)
 import Data.Word (Word8)
 import GHC.Generics (Generic)
-import WebDriverPreCore.BiDi.CoreTypes (BiDiMethod (..))
-import WebDriverPreCore.Internal.AesonUtils (emptyObj, opt)
-import Prelude (Applicative ((<*>)), Bool (..), Eq (..), Maybe (..), Show (..), ($), (.), (<$>))
+import WebDriverPreCore.Internal.AesonUtils (opt)
+import Prelude (Bool (..), Eq (..), Maybe (..), Show (..), ($), (.), (<$>))
 
 
 

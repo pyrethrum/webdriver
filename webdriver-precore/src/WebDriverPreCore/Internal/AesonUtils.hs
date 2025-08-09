@@ -58,7 +58,6 @@ import Prelude
     Bool (..), Foldable (..), not, error
   )
 import Control.Monad (MonadFail(..))
-import Data.Aeson.KeyMap (member)
 import Data.Set qualified as S
 import Data.Aeson.Key (fromString)
 
