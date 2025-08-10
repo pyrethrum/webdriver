@@ -7,11 +7,10 @@ import Data.Aeson
     object,
     (.=),
   )
-import Data.Function ((&))
 import Data.Text (Text)
-import WebDriverPreCore.BiDi.CoreTypes (BiDiMethod (bidiMethod), JSUInt)
+import WebDriverPreCore.BiDi.CoreTypes (JSUInt)
 import WebDriverPreCore.Internal.AesonUtils (objectOrThrow)
-import Prelude (Maybe (..), maybe, ($), (.), (<>))
+import Prelude (Maybe (..), maybe, (<>))
 
 data Command c r = MkCommand
   { method :: Text,
