@@ -27,7 +27,7 @@ jsonCommand methodName params id =
 -- TODO: check exceptions eg test with unsupported command - currently not getting to main thread
 baseCommand :: (BiDiMethod a, ToJSON a) => a -> Maybe Object -> JSUInt -> Value
 baseCommand cmd extensions =
-  jsonCommand (bidiMethod cmd) $ extensions & maybe cmdObj (cmdObj <>)
+  jsonCommand (bidiMethod cmd) $ maybe cmdObj (cmdObj <>) extensions 
   where
     cmdObj = objectOrThrow "CommandData will always be an Object" cmd
 
