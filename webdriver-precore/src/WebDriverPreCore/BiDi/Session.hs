@@ -20,15 +20,6 @@ data SessionCommand
   | End
   deriving (Show, Eq, Generic)
 
-instance BiDiMethod SessionCommand where
-  bidiMethod :: SessionCommand -> Text
-  bidiMethod = \case
-    New _ -> "session.new"
-    Status -> "session.status"
-    Subscribe _ -> "session.subscribe"
-    Unsubscribe _ -> "session.unsubscribe"
-    End -> "session.end"
-
 instance ToJSON SessionCommand where
   toJSON :: SessionCommand -> Value
   toJSON = \case

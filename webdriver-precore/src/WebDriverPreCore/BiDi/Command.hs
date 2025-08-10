@@ -13,29 +13,29 @@ import WebDriverPreCore.BiDi.CoreTypes (BiDiMethod (bidiMethod), JSUInt)
 import WebDriverPreCore.Internal.AesonUtils (objectOrThrow)
 import Prelude (Maybe (..), maybe, ($), (.), (<>))
 
--- ######### Local #########
+data Command c r = MkCommand
+  { method :: Text,
+    params :: c,
+    extended :: Maybe Object
+  }
+
 
 -- TODO: check exceptions eg test with unsupported command - currently not getting to main thread
-jsonCommand :: Text -> Object -> JSUInt -> Value
-jsonCommand methodName params id =
-  object
-    [ "id" .= id,
-      "method" .= methodName,
-      "params" .= params
+commandValue :: (ToJSON c) => Command c r -> JSUInt -> Value
+commandValue MkCommand {method, params, extended} id' =
+    object
+    [ "id" .= id',
+      "method" .= method,
+      "params" .= maybe cmdObj (cmdObj <>) extended
     ]
-
--- TODO: check exceptions eg test with unsupported command - currently not getting to main thread
-baseCommand :: (BiDiMethod a, ToJSON a) => a -> Maybe Object -> JSUInt -> Value
-baseCommand cmd extensions =
-  jsonCommand (bidiMethod cmd) $ maybe cmdObj (cmdObj <>) extensions 
   where
-    cmdObj = objectOrThrow "CommandData will always be an Object" cmd
+    cmdObj = objectOrThrow "CommandData will always be an Object" params
 
-command :: (BiDiMethod a, ToJSON a) => a -> JSUInt -> Value
-command cmd = baseCommand cmd Nothing
+-- command :: (ToJSON a) => Text -> a -> JSUInt -> Value
+-- command method cmd = baseCommand method cmd Nothing
 
-extendedCommand :: (BiDiMethod a, ToJSON a) => a -> Object -> JSUInt -> Value
-extendedCommand cmd = baseCommand cmd . Just
+-- extendedCommand :: (ToJSON a) => Text -> a -> Object -> JSUInt -> Value
+-- extendedCommand method cmd = baseCommand method cmd . Just
 -- Command types
 
 -- data Command

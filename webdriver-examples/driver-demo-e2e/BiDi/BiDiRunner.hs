@@ -18,22 +18,21 @@ import UnliftIO.Async (Async, async, cancel, waitAny)
 import UnliftIO.STM
 import WebDriverPreCore.BiDi.BiDiPath (BiDiPath (..), getBiDiPath)
 import WebDriverPreCore.BiDi.CoreTypes (JSUInt)
-import WebDriverPreCore.BiDi.Protocol (Command (..))
 import WebDriverPreCore.BiDi.ResponseEvent (MatchedResponse (..), ResponseError, ResponseObject, decodeResponse, parseResponse)
-import WebDriverPreCore.Http.Capabilities qualified as Http
+import WebDriverPreCore.Http qualified as Http
 import WebDriverPreCore.Internal.Utils (txt)
 import Prelude hiding (getLine, log, null, putStrLn)
 import WebDriverPreCore.BiDi.CoreTypes (JSUInt(..))
+import WebDriverPreCore.BiDi.Command
 
 -- note: just throws an exception if an error is encountered 
--- no timeout implemented - will just hang if 
-sendCommand :: forall c r. (FromJSON r) => WebDriverBiDiClient -> Command c r -> c -> IO r
+-- no timeout implemented - will just hang if bidi does not behave
+sendCommand :: forall c r. (FromJSON r, ToJSON c) => WebDriverBiDiClient -> Command c r  -> IO r
 sendCommand
   MkWebDriverBiDiClient {sendMessage, receiveChannel, nextId}
-  MkCommand {command}
-  cmdPrms = do
+  command = do
     id' <- nextId
-    sendMessage $ command cmdPrms id'
+    sendMessage $ commandValue command id'
     matchedResponse id'
     where
       matchedResponse :: JSUInt -> IO r
