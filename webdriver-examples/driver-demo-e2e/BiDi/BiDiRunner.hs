@@ -2,9 +2,9 @@ module BiDi.BiDiRunner where
 
 import Config (Config, loadConfig)
 import Control.Concurrent (threadDelay)
-import Control.Exception (Exception (displayException), SomeException, catch, throwIO)
+import Control.Exception (Exception (displayException), SomeException, catch)
 import Control.Monad (forever)
-import Data.Aeson (ToJSON, Value, encode, toJSON)
+import Data.Aeson (FromJSON, ToJSON, Value, encode, toJSON)
 import Data.ByteString.Lazy qualified as BL
 import Data.Function ((&))
 import Data.Text as T (Text, pack, unpack)
@@ -13,21 +13,39 @@ import Http.HttpAPI (FullCapabilities, SessionResponse (..), deleteSession, newS
 import Http.HttpAPI qualified as Caps (Capabilities (..))
 import Network.WebSockets (receiveData, runClient, sendTextData)
 import RuntimeConst (httpCapabilities, httpFullCapabilities)
-import UnliftIO (bracket)
+import UnliftIO (bracket, throwIO)
 import UnliftIO.Async (Async, async, cancel, waitAny)
 import UnliftIO.STM
 import WebDriverPreCore.BiDi.BiDiPath (BiDiPath (..), getBiDiPath)
-import WebDriverPreCore.BiDi.ResponseEvent (ResponseError, ResponseObject, decodeResponse)
-import WebDriverPreCore.Http qualified as Http
+import WebDriverPreCore.BiDi.CoreTypes (JSUInt)
+import WebDriverPreCore.BiDi.Protocol (Command (..))
+import WebDriverPreCore.BiDi.ResponseEvent (MatchedResponse (..), ResponseError, ResponseObject, decodeResponse, parseResponse)
+import WebDriverPreCore.Http.Capabilities qualified as Http
 import WebDriverPreCore.Internal.Utils (txt)
 import Prelude hiding (getLine, log, null, putStrLn)
-import WebDriverPreCore.BiDi.Protocol (Command(..))
+import WebDriverPreCore.BiDi.CoreTypes (JSUInt(..))
 
-
-sendCommand :: WebDriverBiDiClient -> Command c r -> c -> IO r
-sendCommand client cmd params = do
-  client.sendMessage (cmd, params)
-  atomically $ readTChan client.receiveChannel
+-- note: just throws an exception if an error is encountered 
+-- no timeout implemented - will just hang if 
+sendCommand :: forall c r. (FromJSON r) => WebDriverBiDiClient -> Command c r -> c -> IO r
+sendCommand
+  MkWebDriverBiDiClient {sendMessage, receiveChannel, nextId}
+  MkCommand {command}
+  cmdPrms = do
+    id' <- nextId
+    sendMessage $ command cmdPrms id'
+    matchedResponse id'
+    where
+      matchedResponse :: JSUInt -> IO r
+      matchedResponse id' = do
+        response <- atomically $ readTChan receiveChannel
+        parseResponse id' response
+          & either
+            (error . unpack . txt)
+            ( maybe
+                (matchedResponse id')
+                (pure . (.response))
+            )
 
 withBiDiSession :: (WebDriverBiDiClient -> IO a) -> IO a
 withBiDiSession action =
@@ -51,6 +69,7 @@ withBiDi bidiPath action =
 -- | WebDriver BiDi client with communication channels
 data WebDriverBiDiClient = MkWebDriverBiDiClient
   { log :: Text -> IO (),
+    nextId :: IO JSUInt,
     sendMessage :: forall a. (ToJSON a) => a -> IO (),
     receiveChannel :: TChan (Either ResponseError ResponseObject),
     disconnect :: IO ()
@@ -63,6 +82,7 @@ runWebDriverBiDi bidiPth = do
   sendChan <- newTChanIO
   receiveChan <- newTChanIO
   logChan <- newTChanIO
+  counter <- newTVarIO $ MkJSUInt 1 
 
   loggerAsync <- async . forever $ do
     msg <- atomically $ readTChan logChan
@@ -75,6 +95,10 @@ runWebDriverBiDi bidiPth = do
   pure $
     MkWebDriverBiDiClient
       { log,
+        nextId = atomically $ do
+          i <- readTVar counter
+          writeTVar counter $ succ i
+          pure i,
         sendMessage = atomically . writeTChan sendChan . toJSON,
         receiveChannel = receiveChan,
         disconnect = do

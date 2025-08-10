@@ -25,7 +25,7 @@ import Data.Aeson.Types (Parser, withObject)
 
 -- Base types              -- word 64  18446744073709551615
 
-newtype JSUInt = MkJSUInt Word64 deriving newtype (Show, Eq, FromJSON, ToJSON) -- JSUnit ::  0..9007199254740991  -     Word64 :: 18446744073709551615
+newtype JSUInt = MkJSUInt Word64 deriving newtype (Show, Eq, Enum, FromJSON, ToJSON) -- JSUnit ::  0..9007199254740991  -     Word64 :: 18446744073709551615
 
 newtype JSInt = MkJSInt Int64 deriving newtype (Show, Eq, FromJSON, ToJSON) -- JSINt  :: -9007199254740991..9007199254740991 - Int64  -9223372036854775808 to 9223372036854775807
 

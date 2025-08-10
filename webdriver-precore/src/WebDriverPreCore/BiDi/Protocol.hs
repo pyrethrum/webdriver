@@ -5,13 +5,11 @@ import Data.Aeson
     Value (..),
   )
 import WebDriverPreCore.BiDi.CoreTypes (JSUInt)
-import Prelude 
-import WebDriverPreCore.BiDi.ResponseEvent (ResponseObject, ResponseError, MatchedResponse)
 
 data Command c r = MkCommand {
   command :: c -> JSUInt -> Value,
-  extendedCommand :: c -> Object -> JSUInt -> Value,
-  responseMatcher :: JSUInt -> ResponseObject -> Either ResponseError (Maybe (MatchedResponse r))
+  extended :: c -> Object -> JSUInt -> Value --,
+  -- responseMatcher :: JSUInt -> ResponseObject -> Either ResponseError (Maybe (MatchedResponse r))
 }
 
 

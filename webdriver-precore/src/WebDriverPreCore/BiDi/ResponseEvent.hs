@@ -2,6 +2,7 @@ module WebDriverPreCore.BiDi.ResponseEvent where
 
 import Data.Aeson (FromJSON (parseJSON), Object, Value (..), eitherDecode, withObject, (.:), (.:?))
 import Data.Aeson.Types (Parser, parseEither)
+import Data.Bifunctor (Bifunctor (..))
 import Data.Bool (bool)
 import Data.ByteString.Lazy (ByteString)
 import Data.Function ((&))
@@ -21,57 +22,8 @@ import WebDriverPreCore.BiDi.WebExtensions (WebExtensionResult (..))
 import WebDriverPreCore.Internal.AesonUtils (parseObjectMaybe, subtractProps)
 import Prelude
 
--- ######### Remote #########
-
--- parseResponse :: forall a. (FromJSON a) => JSUInt -> Object -> Maybe (Either ResponseError (Success a))
--- parseResponse msgId obj = undefined
---   where
---     parsed :: Result (Maybe (Either ResponseError (Success a)))
---     parsed = parse (parseResponse' msgId) obj
-
--- parseResponse' :: forall a. (FromJSON a) => JSUInt -> Object -> Parser (Maybe (Either ResponseError (Success a)))
--- parseResponse' msgId obj = do
---   id' <- obj .:? "id"
---   pure $
---     if id' == Just msgId
---       then
---         Just $
---           success
---             & maybe
---               (Left responseError)
---               Right
---       else
---         Nothing
---   where
---     success :: Maybe (Success a)
---     success = parseObjectMaybe obj
-
---     responseError :: ResponseError
---     responseError =
---       parseObjectMaybe obj
---         & maybe (JSONParseError obj) BiDIError
-
--- parseResponse' :: forall a. (FromJSON a) => JSUInt -> Object -> Parser (Maybe (Either ResponseError (Success a)))
--- parseResponse' msgId obj = do
---   id' <- obj .:? "id"
---   pure $
---     if id' == Just msgId
---       then
---         Just $
---           success
---             & maybe
---               (Left responseError)
---               Right
---       else
---         Nothing
---   where
---     success :: Maybe (Success a)
---     success = parseObjectMaybe obj
-
---     responseError :: ResponseError
---     responseError =
---       parseObjectMaybe obj
---         & maybe (JSONParseError obj) BiDIError
+parseResponse :: (FromJSON r) => JSUInt -> Either ResponseError ResponseObject -> Either ResponseError (Maybe (MatchedResponse r))
+parseResponse id' response = response >>= matchResponseObject id'
 
 matchResponseObject :: forall a. (FromJSON a) => JSUInt -> ResponseObject -> Either ResponseError (Maybe (MatchedResponse a))
 matchResponseObject msgId = \case
@@ -88,14 +40,11 @@ matchResponseObject msgId = \case
       matchedResult :: Either ResponseError (Maybe (MatchedResponse a))
       matchedResult = success & maybe (Left $ JSONParseError obj) (\s -> Right . Just $ MkMatchedResponse s.result obj)
 
-mapLeft :: (a -> b) -> Either a c -> Either b c
-mapLeft f = either (Left . f) Right
-
 decodeResponse :: ByteString -> Either ResponseError ResponseObject
 decodeResponse =
   (=<<) parseResponseObj . packLeft . eitherDecode
   where
-    packLeft = mapLeft (JSONEncodeError . pack)
+    packLeft = first (JSONEncodeError . pack)
 
     parseResponseObj :: Object -> Either ResponseError ResponseObject
     parseResponseObj =
@@ -115,6 +64,10 @@ data ResponseObject
 data ResponseError
   = JSONParseError Object
   | JSONEncodeError Text
+  | BiDiTimeoutError
+      { message :: Text,
+        ms :: Int
+      }
   | BiDIError Error
   deriving (Show, Eq, Generic)
 
