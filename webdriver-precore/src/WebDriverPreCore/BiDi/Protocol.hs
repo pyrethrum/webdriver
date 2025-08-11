@@ -119,8 +119,8 @@ inputSetFiles = mkCommand "input.setFiles"
 
 ---- Network ----
 
--- TODO: AddDataCollector type not exported from Network module
--- networkAddDataCollector :: Network.AddDataCollector -> Command Network.AddDataCollector Network.AddDataCollectorResult
+networkAddDataCollector :: Network.AddDataCollector -> Command Network.AddDataCollector Network.AddDataCollectorResult
+networkAddDataCollector = mkCommand "network.addDataCollector"
 
 networkAddIntercept :: Network.AddIntercept -> Command Network.AddIntercept Network.AddInterceptResult
 networkAddIntercept = mkCommand "network.addIntercept"
@@ -134,20 +134,20 @@ networkContinueResponse = mkCommand "network.continueResponse"
 networkContinueWithAuth :: Network.ContinueWithAuth -> Command Network.ContinueWithAuth Object
 networkContinueWithAuth = mkCommand "network.continueWithAuth"
 
--- TODO: DisownData type not exported from Network module
--- networkDisownData :: Network.DisownData -> Command Network.DisownData Object
+networkDisownData :: Network.DisownData -> Command Network.DisownData Object
+networkDisownData = mkCommand "network.disownData"
 
 networkFailRequest :: Network.FailRequest -> Command Network.FailRequest Object
 networkFailRequest = mkCommand "network.failRequest"
 
--- TODO: GetData type not exported from Network module
--- networkGetData :: Network.GetData -> Command Network.GetData Network.GetDataResult
+networkGetData :: Network.GetData -> Command Network.GetData Network.GetDataResult
+networkGetData = mkCommand "network.getData"
 
 networkProvideResponse :: Network.ProvideResponse -> Command Network.ProvideResponse Object
 networkProvideResponse = mkCommand "network.provideResponse"
 
--- TODO: RemoveDataCollector type not exported from Network module
--- networkRemoveDataCollector :: Network.RemoveDataCollector -> Command Network.RemoveDataCollector Object
+networkRemoveDataCollector :: Network.RemoveDataCollector -> Command Network.RemoveDataCollector Object
+networkRemoveDataCollector = mkCommand "network.removeDataCollector"
 
 networkRemoveIntercept :: Network.RemoveIntercept -> Command Network.RemoveIntercept Object
 networkRemoveIntercept = mkCommand "network.removeIntercept"
@@ -203,15 +203,16 @@ Completed command implementations following the existing pattern:
 ✓ Browser: All 6 commands implemented  
 ✓ Emulation: All 4 commands implemented (setGeolocationOverride, setLocaleOverride, setScreenOrientationOverride, setTimezoneOverride)
 ✓ Input: All 3 commands implemented (performActions, releaseActions, setFiles)
+✓ Network: All 12 commands implemented (addDataCollector, addIntercept, continueRequest, continueResponse, continueWithAuth, disownData, failRequest, getData, provideResponse, removeDataCollector, removeIntercept, setCacheBehavior)
 ✓ Script: All 6 commands implemented (addPreloadScript, callFunction, disown, evaluate, getRealms, removePreloadScript)
 ✓ Storage: All 3 commands implemented (deleteCookies, getCookies, setCookie)
 ✓ WebExtension: All 2 commands implemented (install, uninstall)
 
-Network module issues:
-⚠ Some Network command parameter types are not exported from the Network module:
-  - AddDataCollector, DisownData, GetData, RemoveDataCollector
-  These commands are commented out with TODO markers
-✓ Implemented: addIntercept, continueRequest, continueResponse, continueWithAuth, failRequest, provideResponse, removeIntercept, setCacheBehavior
+RESOLVED: Network module export issues fixed by adding missing exports:
+✓ Added AddDataCollector, DisownData, GetData, RemoveDataCollector to exports
+✓ Added DataType, CollectorType, Collector, Request supporting types  
+✓ Added AddDataCollectorResult, GetDataResult to results
+✓ All network commands now fully implemented
 
 Differences from spec (beyond Haskell naming conventions):
 
@@ -223,9 +224,10 @@ Differences from spec (beyond Haskell naming conventions):
    - All emulation commands in spec return EmptyResult
    - Haskell: All return Object ✓ Correct (Object represents EmptyResult)
 
-3. Network Commands:
-   - Missing exports prevent full implementation of some commands
-   - Need to export AddDataCollector, DisownData, GetData, RemoveDataCollector types from Network module
+3. Network Commands: ✓ ALL IMPLEMENTED
+   - addDataCollector -> AddDataCollectorResult ✓
+   - addIntercept -> AddInterceptResult ✓
+   - All other network commands return EmptyResult (Object) ✓
 
 4. Storage Commands:
    - All storage commands correctly return their respective result types
@@ -248,9 +250,11 @@ Differences from spec (beyond Haskell naming conventions):
    - Commands without parameters use emptyCommand ✓
    - Empty command types correctly use Object ✓
 
-All implemented commands follow the existing Protocol.hs pattern correctly.
-The main outstanding issue is the Network module export list needs updating
-to expose the missing parameter types for full Network command coverage.
+ALL COMMANDS FULLY IMPLEMENTED: 
+- Total: 48 commands across 8 modules
+- All follow the existing Protocol.hs pattern correctly
+- All method names match WebDriver BiDi specification exactly
+- All parameter and result types correctly mapped from spec to Haskell types
 -}
 
 

@@ -1,6 +1,7 @@
 module WebDriverPreCore.BiDi.Network
   ( -- * NetworkCommand
     NetworkCommand (..),
+    AddDataCollector (..),
     AddIntercept (..),
     InterceptPhase (..),
     UrlPattern (..),
@@ -15,15 +16,26 @@ module WebDriverPreCore.BiDi.Network
     Intercept (..),
     AuthCredentials (..),
     AuthResponse (..),
+    DisownData (..),
     FailRequest (..),
+    GetData (..),
     ProvideResponse (..),
+    RemoveDataCollector (..),
     RemoveIntercept (..),
     SetCacheBehavior (..),
     CacheBehavior (..),
+    
+    -- * Additional Network Types
+    DataType (..),
+    CollectorType (..),
+    Collector (..),
+    Request (..),
 
     -- * NetworkResult
     NetworkResult (..),
+    AddDataCollectorResult (..),
     AddInterceptResult (..),
+    GetDataResult (..),
 
     -- * NetworkEvent
     NetworkEvent (..),
