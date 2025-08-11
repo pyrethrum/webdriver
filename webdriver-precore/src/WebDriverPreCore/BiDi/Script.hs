@@ -26,6 +26,9 @@ module WebDriverPreCore.BiDi.Script
     RemovePreloadScript (..),
 
     -- * ScriptResult
+    AddPreloadScriptResult(..),
+    CallFunctionResult(..),
+    GetRealmsResult(..),
     ScriptResult (..),
     RealmInfo (..),
     BaseRealmInfo (..),

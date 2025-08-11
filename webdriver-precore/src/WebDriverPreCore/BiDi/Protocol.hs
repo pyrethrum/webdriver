@@ -4,16 +4,103 @@ import Data.Aeson
   ( Object,
   )
 import WebDriverPreCore.BiDi.Browser
+  ( ClientWindowInfo,
+    CreateUserContext,
+    GetClientWindowsResult,
+    GetUserContextsResult,
+    RemoveUserContext,
+    SetClientWindowState,
+    UserContextInfo,
+  )
 import WebDriverPreCore.BiDi.BrowsingContext
+  ( Activate,
+    BrowsingContextResult
+      ( CaptureScreenshotResult,
+        CreateResult,
+        GetTreeResult,
+        LocateNodesResult,
+        PrintResult
+      ),
+    CaptureScreenshot,
+    Close,
+    Create,
+    GetTree,
+    HandleUserPrompt,
+    LocateNodes,
+    Navigate,
+    NavigateResult,
+    Print,
+    Reload,
+    SetViewport,
+    TraverseHistory,
+    TraverseHistoryResult,
+  )
 import WebDriverPreCore.BiDi.Capabilities (Capabilities)
-import WebDriverPreCore.BiDi.Command 
+import WebDriverPreCore.BiDi.Command
+  ( Command,
+    emptyCommand,
+    mkCommand,
+  )
 import WebDriverPreCore.BiDi.Emulation
+  ( SetGeolocationOverride,
+    SetLocaleOverride,
+    SetScreenOrientationOverride,
+    SetTimezoneOverride,
+  )
 import WebDriverPreCore.BiDi.Input
-import WebDriverPreCore.BiDi.Network qualified as Network
-import WebDriverPreCore.BiDi.Script qualified as Script
+  ( PerformActions,
+    ReleaseActions,
+    SetFiles,
+  )
+import WebDriverPreCore.BiDi.Network
+  ( AddDataCollector,
+    AddDataCollectorResult (..),
+    AddIntercept,
+    AddInterceptResult (..),
+    ContinueRequest,
+    ContinueResponse,
+    ContinueWithAuth,
+    DisownData,
+    FailRequest,
+    GetData,
+    GetDataResult (..),
+    ProvideResponse,
+    RemoveDataCollector,
+    RemoveIntercept,
+    SetCacheBehavior,
+  )
+import WebDriverPreCore.BiDi.Script
+  ( AddPreloadScript,
+    CallFunction,
+    CallFunctionResult,
+    Disown,
+    Evaluate,
+    EvaluateResult,
+    GetRealms,
+    GetRealmsResult,
+    RemovePreloadScript,
+    AddPreloadScriptResult(..)
+  )
 import WebDriverPreCore.BiDi.Session
-import WebDriverPreCore.BiDi.Storage qualified as Storage
-import WebDriverPreCore.BiDi.WebExtensions qualified as WebExtensions
+  ( SessionNewResult,
+    SessionStatusResult,
+    SessionSubscribeResult,
+    SessionSubscriptionRequest,
+    SessionUnsubscribeParameters,
+  )
+import WebDriverPreCore.BiDi.Storage
+  ( DeleteCookies,
+    DeleteCookiesResult (..),
+    GetCookies,
+    GetCookiesResult (..),
+    SetCookie,
+    SetCookieResult (..),
+  )
+import WebDriverPreCore.BiDi.WebExtensions
+  ( WebExtension,
+    WebExtensionData,
+    WebExtensionResult (..),
+  )
 
 ---- Session ----
 
@@ -117,142 +204,77 @@ inputSetFiles = mkCommand "input.setFiles"
 
 ---- Network ----
 
-networkAddDataCollector :: Network.AddDataCollector -> Command Network.AddDataCollector Network.AddDataCollectorResult
+networkAddDataCollector :: AddDataCollector -> Command AddDataCollector AddDataCollectorResult
 networkAddDataCollector = mkCommand "network.addDataCollector"
 
-networkAddIntercept :: Network.AddIntercept -> Command Network.AddIntercept Network.AddInterceptResult
+networkAddIntercept :: AddIntercept -> Command AddIntercept AddInterceptResult
 networkAddIntercept = mkCommand "network.addIntercept"
 
-networkContinueRequest :: Network.ContinueRequest -> Command Network.ContinueRequest Object
+networkContinueRequest :: ContinueRequest -> Command ContinueRequest Object
 networkContinueRequest = mkCommand "network.continueRequest"
 
-networkContinueResponse :: Network.ContinueResponse -> Command Network.ContinueResponse Object
+networkContinueResponse :: ContinueResponse -> Command ContinueResponse Object
 networkContinueResponse = mkCommand "network.continueResponse"
 
-networkContinueWithAuth :: Network.ContinueWithAuth -> Command Network.ContinueWithAuth Object
+networkContinueWithAuth :: ContinueWithAuth -> Command ContinueWithAuth Object
 networkContinueWithAuth = mkCommand "network.continueWithAuth"
 
-networkDisownData :: Network.DisownData -> Command Network.DisownData Object
+networkDisownData :: DisownData -> Command DisownData Object
 networkDisownData = mkCommand "network.disownData"
 
-networkFailRequest :: Network.FailRequest -> Command Network.FailRequest Object
+networkFailRequest :: FailRequest -> Command FailRequest Object
 networkFailRequest = mkCommand "network.failRequest"
 
-networkGetData :: Network.GetData -> Command Network.GetData Network.GetDataResult
+networkGetData :: GetData -> Command GetData GetDataResult
 networkGetData = mkCommand "network.getData"
 
-networkProvideResponse :: Network.ProvideResponse -> Command Network.ProvideResponse Object
+networkProvideResponse :: ProvideResponse -> Command ProvideResponse Object
 networkProvideResponse = mkCommand "network.provideResponse"
 
-networkRemoveDataCollector :: Network.RemoveDataCollector -> Command Network.RemoveDataCollector Object
+networkRemoveDataCollector :: RemoveDataCollector -> Command RemoveDataCollector Object
 networkRemoveDataCollector = mkCommand "network.removeDataCollector"
 
-networkRemoveIntercept :: Network.RemoveIntercept -> Command Network.RemoveIntercept Object
+networkRemoveIntercept :: RemoveIntercept -> Command RemoveIntercept Object
 networkRemoveIntercept = mkCommand "network.removeIntercept"
 
-networkSetCacheBehavior :: Network.SetCacheBehavior -> Command Network.SetCacheBehavior Object
+networkSetCacheBehavior :: SetCacheBehavior -> Command SetCacheBehavior Object
 networkSetCacheBehavior = mkCommand "network.setCacheBehavior"
 
 ---- Script ----
 
-scriptAddPreloadScript :: Script.AddPreloadScript -> Command Script.AddPreloadScript Script.AddPreloadScriptResult
+scriptAddPreloadScript :: AddPreloadScript -> Command AddPreloadScript AddPreloadScriptResult
 scriptAddPreloadScript = mkCommand "script.addPreloadScript"
 
-scriptCallFunction :: Script.CallFunction -> Command Script.CallFunction Script.CallFunctionResult
+scriptCallFunction :: CallFunction -> Command CallFunction CallFunctionResult
 scriptCallFunction = mkCommand "script.callFunction"
 
-scriptDisown :: Script.Disown -> Command Script.Disown Object
+scriptDisown :: Disown -> Command Disown Object
 scriptDisown = mkCommand "script.disown"
 
-scriptEvaluate :: Script.Evaluate -> Command Script.Evaluate Script.EvaluateResult
+scriptEvaluate :: Evaluate -> Command Evaluate EvaluateResult
 scriptEvaluate = mkCommand "script.evaluate"
 
-scriptGetRealms :: Script.GetRealms -> Command Script.GetRealms Script.GetRealmsResult
+scriptGetRealms :: GetRealms -> Command GetRealms GetRealmsResult
 scriptGetRealms = mkCommand "script.getRealms"
 
-scriptRemovePreloadScript :: Script.RemovePreloadScript -> Command Script.RemovePreloadScript Object
+scriptRemovePreloadScript :: RemovePreloadScript -> Command RemovePreloadScript Object
 scriptRemovePreloadScript = mkCommand "script.removePreloadScript"
 
 ---- Storage ----
 
-storageDeleteCookies :: Storage.DeleteCookies -> Command Storage.DeleteCookies Storage.DeleteCookiesResult
+storageDeleteCookies :: DeleteCookies -> Command DeleteCookies DeleteCookiesResult
 storageDeleteCookies = mkCommand "storage.deleteCookies"
 
-storageGetCookies :: Storage.GetCookies -> Command Storage.GetCookies Storage.GetCookiesResult
+storageGetCookies :: GetCookies -> Command GetCookies GetCookiesResult
 storageGetCookies = mkCommand "storage.getCookies"
 
-storageSetCookie :: Storage.SetCookie -> Command Storage.SetCookie Storage.SetCookieResult
+storageSetCookie :: SetCookie -> Command SetCookie SetCookieResult
 storageSetCookie = mkCommand "storage.setCookie"
 
 ---- WebExtension ----
 
-webExtensionInstall :: WebExtensions.WebExtensionData -> Command WebExtensions.WebExtensionData WebExtensions.WebExtensionResult
+webExtensionInstall :: WebExtensionData -> Command WebExtensionData WebExtensionResult
 webExtensionInstall = mkCommand "webExtension.install"
 
-webExtensionUninstall :: WebExtensions.WebExtension -> Command WebExtensions.WebExtension Object
+webExtensionUninstall :: WebExtension -> Command WebExtension Object
 webExtensionUninstall = mkCommand "webExtension.uninstall"
-
-{-
-ANALYSIS: Command and Result Type Differences from WebDriver BiDi Specification
-
-Completed command implementations following the existing pattern:
-✓ Session: sessionNew, sessionStatus, sessionEnd, sessionSubScribe, sessionUnsubscribe
-✓ BrowsingContext: All 12 commands implemented
-✓ Browser: All 6 commands implemented  
-✓ Emulation: All 4 commands implemented (setGeolocationOverride, setLocaleOverride, setScreenOrientationOverride, setTimezoneOverride)
-✓ Input: All 3 commands implemented (performActions, releaseActions, setFiles)
-✓ Network: All 12 commands implemented (addDataCollector, addIntercept, continueRequest, continueResponse, continueWithAuth, disownData, failRequest, getData, provideResponse, removeDataCollector, removeIntercept, setCacheBehavior)
-✓ Script: All 6 commands implemented (addPreloadScript, callFunction, disown, evaluate, getRealms, removePreloadScript)
-✓ Storage: All 3 commands implemented (deleteCookies, getCookies, setCookie)
-✓ WebExtension: All 2 commands implemented (install, uninstall)
-
-RESOLVED: Network module export issues fixed by adding missing exports:
-✓ Added AddDataCollector, DisownData, GetData, RemoveDataCollector to exports
-✓ Added DataType, CollectorType, Collector, Request supporting types  
-✓ Added AddDataCollectorResult, GetDataResult to results
-✓ All network commands now fully implemented
-
-Differences from spec (beyond Haskell naming conventions):
-
-1. Browser Commands:
-   - Spec: browser.setClientWindowState returns browser.ClientWindowInfo
-   - Haskell: browserSetClientWindowState returns ClientWindowInfo ✓ Correct
-
-2. Emulation Commands:
-   - All emulation commands in spec return EmptyResult
-   - Haskell: All return Object ✓ Correct (Object represents EmptyResult)
-
-3. Network Commands: ✓ ALL IMPLEMENTED
-   - addDataCollector -> AddDataCollectorResult ✓
-   - addIntercept -> AddInterceptResult ✓
-   - All other network commands return EmptyResult (Object) ✓
-
-4. Storage Commands:
-   - All storage commands correctly return their respective result types
-   - deleteCookies -> DeleteCookiesResult ✓
-   - getCookies -> GetCookiesResult ✓ 
-   - setCookie -> SetCookieResult ✓
-
-5. Script Commands:
-   - callFunction returns CallFunctionResult ✓
-   - evaluate returns EvaluateResult ✓
-   - addPreloadScript returns AddPreloadScriptResult ✓
-   - getRealms returns GetRealmsResult ✓
-
-6. WebExtension Commands:
-   - install returns WebExtensionResult ✓
-   - uninstall returns EmptyResult (Object) ✓
-
-7. Command Parameter Usage:
-   - Commands with parameters use mkCommand ✓
-   - Commands without parameters use emptyCommand ✓
-   - Empty command types correctly use Object ✓
-
-ALL COMMANDS FULLY IMPLEMENTED: 
-- Total: 48 commands across 8 modules
-- All follow the existing Protocol.hs pattern correctly
-- All method names match WebDriver BiDi specification exactly
-- All parameter and result types correctly mapped from spec to Haskell types
--}
-
-
