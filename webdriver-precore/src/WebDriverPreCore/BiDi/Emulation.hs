@@ -1,5 +1,9 @@
 module WebDriverPreCore.BiDi.Emulation
   ( EmulationCommand (..),
+    SetGeolocationOverride (..),
+    SetLocaleOverride (..),
+    SetScreenOrientationOverride (..),
+    SetTimezoneOverride (..),
     GeolocationCoordinates (..),
     GeolocationPositionError (..),
     ScreenOrientationOverride  (..),
@@ -30,27 +34,39 @@ import Prelude (Eq, Float, Show)
 -- Note: emulation module does not have a local end
 
 data EmulationCommand
-  = SetGeolocationOverride
-      { coordinates :: Maybe GeolocationCoordinates,
-        error :: Maybe GeolocationPositionError,
-        contexts :: Maybe [BrowsingContext],
-        userContexts :: Maybe [UserContext]
-      }
-  | SetLocaleOverride
-      { locale :: Maybe Text,
-        contexts :: Maybe [BrowsingContext],
-        userContexts :: Maybe [UserContext]
-      }
-  | SetScreenOrientationOverride
-      { screenOrientation :: Maybe ScreenOrientationOverride,
-        contexts :: Maybe [BrowsingContext],
-        userContexts :: Maybe [UserContext]
-      }
-  | SetTimezoneOverride
-      { timezone :: Maybe Text,
-        contexts :: Maybe [BrowsingContext],
-        userContexts :: Maybe [UserContext]
-      }
+  = SetGeolocationOverrideCmd SetGeolocationOverride
+  | SetLocaleOverrideCmd SetLocaleOverride
+  | SetScreenOrientationOverrideCmd SetScreenOrientationOverride
+  | SetTimezoneOverrideCmd SetTimezoneOverride
+  deriving (Show, Eq, Generic)
+
+data SetGeolocationOverride = MkSetGeolocationOverride
+  { coordinates :: Maybe GeolocationCoordinates,
+    error :: Maybe GeolocationPositionError,
+    contexts :: Maybe [BrowsingContext],
+    userContexts :: Maybe [UserContext]
+  }
+  deriving (Show, Eq, Generic)
+
+data SetLocaleOverride = MkSetLocaleOverride
+  { locale :: Maybe Text,
+    contexts :: Maybe [BrowsingContext],
+    userContexts :: Maybe [UserContext]
+  }
+  deriving (Show, Eq, Generic)
+
+data SetScreenOrientationOverride = MkSetScreenOrientationOverride
+  { screenOrientation :: Maybe ScreenOrientationOverride,
+    contexts :: Maybe [BrowsingContext],
+    userContexts :: Maybe [UserContext]
+  }
+  deriving (Show, Eq, Generic)
+
+data SetTimezoneOverride = MkSetTimezoneOverride
+  { timezone :: Maybe Text,
+    contexts :: Maybe [BrowsingContext],
+    userContexts :: Maybe [UserContext]
+  }
   deriving (Show, Eq, Generic)
 
 data GeolocationCoordinates = MkGeolocationCoordinates

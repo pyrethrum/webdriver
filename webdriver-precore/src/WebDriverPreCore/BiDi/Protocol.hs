@@ -15,8 +15,6 @@ import WebDriverPreCore.BiDi.Session
 import WebDriverPreCore.BiDi.Storage qualified as Storage
 import WebDriverPreCore.BiDi.WebExtensions qualified as WebExtensions
 
-
-
 ---- Session ----
 
 sessionNew :: Capabilities -> Command Capabilities SessionNewResult
@@ -94,17 +92,17 @@ browserSetClientWindowState = mkCommand "browser.setClientWindowState"
 
 ---- Emulation ----
 
-emulationSetGeolocationOverride :: EmulationCommand -> Command EmulationCommand Object
-emulationSetGeolocationOverride params = mkCommand "emulation.setGeolocationOverride" params
+emulationSetGeolocationOverride :: SetGeolocationOverride -> Command SetGeolocationOverride Object
+emulationSetGeolocationOverride = mkCommand "emulation.setGeolocationOverride"
 
-emulationSetLocaleOverride :: EmulationCommand -> Command EmulationCommand Object
-emulationSetLocaleOverride params = mkCommand "emulation.setLocaleOverride" params
+emulationSetLocaleOverride :: SetLocaleOverride -> Command SetLocaleOverride Object
+emulationSetLocaleOverride = mkCommand "emulation.setLocaleOverride"
 
-emulationSetScreenOrientationOverride :: EmulationCommand -> Command EmulationCommand Object
-emulationSetScreenOrientationOverride params = mkCommand "emulation.setScreenOrientationOverride" params
+emulationSetScreenOrientationOverride :: SetScreenOrientationOverride -> Command SetScreenOrientationOverride Object
+emulationSetScreenOrientationOverride = mkCommand "emulation.setScreenOrientationOverride"
 
-emulationSetTimezoneOverride :: EmulationCommand -> Command EmulationCommand Object
-emulationSetTimezoneOverride params = mkCommand "emulation.setTimezoneOverride" params
+emulationSetTimezoneOverride :: SetTimezoneOverride -> Command SetTimezoneOverride Object
+emulationSetTimezoneOverride = mkCommand "emulation.setTimezoneOverride"
 
 ---- Input ----
 
