@@ -17,17 +17,34 @@ import UnliftIO (bracket, throwIO)
 import UnliftIO.Async (Async, async, cancel, waitAny)
 import UnliftIO.STM
 import WebDriverPreCore.BiDi.BiDiPath (BiDiPath (..), getBiDiPath)
-import WebDriverPreCore.BiDi.CoreTypes (JSUInt)
+import WebDriverPreCore.BiDi.Capabilities (Capabilities)
+import WebDriverPreCore.BiDi.Command
+import WebDriverPreCore.BiDi.CoreTypes (JSUInt (..))
+import WebDriverPreCore.BiDi.Protocol qualified as P
 import WebDriverPreCore.BiDi.ResponseEvent (MatchedResponse (..), ResponseError, ResponseObject, decodeResponse, parseResponse)
+import WebDriverPreCore.BiDi.Session (SessionNewResult, SessionStatusResult)
 import WebDriverPreCore.Http qualified as Http
 import WebDriverPreCore.Internal.Utils (txt)
 import Prelude hiding (getLine, log, null, putStrLn)
-import WebDriverPreCore.BiDi.CoreTypes (JSUInt(..))
-import WebDriverPreCore.BiDi.Command
 
--- note: just throws an exception if an error is encountered 
+data Commands = MkCommands
+  { sessionNew :: Capabilities -> IO SessionNewResult,
+    sessionStatus :: IO SessionStatusResult
+  }
+
+mkCommands :: WebDriverBiDiClient -> Commands
+mkCommands client =
+  MkCommands
+    { sessionNew = lift . P.sessionNew,
+      sessionStatus = lift P.sessionStatus
+    }
+  where
+    lift :: forall c r. (FromJSON r, ToJSON c) => Command c r -> IO r
+    lift = sendCommand client
+
+-- note: just throws an exception if an error is encountered
 -- no timeout implemented - will just hang if bidi does not behave
-sendCommand :: forall c r. (FromJSON r, ToJSON c) => WebDriverBiDiClient -> Command c r  -> IO r
+sendCommand :: forall c r. (FromJSON r, ToJSON c) => WebDriverBiDiClient -> Command c r -> IO r
 sendCommand
   MkWebDriverBiDiClient {sendMessage, receiveChannel, nextId}
   command = do
@@ -81,7 +98,7 @@ runWebDriverBiDi bidiPth = do
   sendChan <- newTChanIO
   receiveChan <- newTChanIO
   logChan <- newTChanIO
-  counter <- newTVarIO $ MkJSUInt 1 
+  counter <- newTVarIO $ MkJSUInt 1
 
   loggerAsync <- async . forever $ do
     msg <- atomically $ readTChan logChan
