@@ -1,4 +1,89 @@
-module WebDriverPreCore.BiDi.Protocol where
+module WebDriverPreCore.BiDi.Protocol
+  ( -- * Session Commands
+    sessionNew,
+    sessionStatus,
+    sessionEnd,
+    sessionSubScribe,
+    sessionUnsubscribe,
+
+    -- * BrowsingContext Commands
+    browsingContextActivate,
+    browsingContextCaptureScreenshot,
+    browsingContextClose,
+    browsingContextCreate,
+    browsingContextGetTree,
+    browsingContextHandleUserPrompt,
+    browsingContextLocateNodes,
+    browsingContextNavigate,
+    browsingContextPrint,
+    browsingContextReload,
+    browsingContextSetViewport,
+    browsingContextTraverseHistory,
+
+    -- * Browser Commands
+    browserClose,
+    browserCreateUserContext,
+    browserGetClientWindows,
+    browserGetUserContexts,
+    browserRemoveUserContext,
+    browserSetClientWindowState,
+
+    -- * Emulation Commands
+    emulationSetGeolocationOverride,
+    emulationSetLocaleOverride,
+    emulationSetScreenOrientationOverride,
+    emulationSetTimezoneOverride,
+
+    -- * Input Commands
+    inputPerformActions,
+    inputReleaseActions,
+    inputSetFiles,
+
+    -- * Network Commands
+    networkAddDataCollector,
+    networkAddIntercept,
+    networkContinueRequest,
+    networkContinueResponse,
+    networkContinueWithAuth,
+    networkDisownData,
+    networkFailRequest,
+    networkGetData,
+    networkProvideResponse,
+    networkRemoveDataCollector,
+    networkRemoveIntercept,
+    networkSetCacheBehavior,
+
+    -- * Script Commands
+    scriptAddPreloadScript,
+    scriptCallFunction,
+    scriptDisown,
+    scriptEvaluate,
+    scriptGetRealms,
+    scriptRemovePreloadScript,
+
+    -- * Storage Commands
+    storageDeleteCookies,
+    storageGetCookies,
+    storageSetCookie,
+
+    -- * WebExtension Commands
+    webExtensionInstall,
+    webExtensionUninstall,
+
+    -- * Re-exported modules
+    module WebDriverPreCore.BiDi.Browser,
+    module WebDriverPreCore.BiDi.BrowsingContext,
+    module WebDriverPreCore.BiDi.Capabilities,
+    module WebDriverPreCore.BiDi.Command,
+    module WebDriverPreCore.BiDi.Emulation,
+    module WebDriverPreCore.BiDi.Input,
+    module WebDriverPreCore.BiDi.Network,
+    module WebDriverPreCore.BiDi.Script,
+    module WebDriverPreCore.BiDi.Session,
+    module WebDriverPreCore.BiDi.Storage,
+    module WebDriverPreCore.BiDi.WebExtensions,
+  )
+where
 
 import Data.Aeson
   ( Object,
@@ -14,22 +99,20 @@ import WebDriverPreCore.BiDi.Browser
   )
 import WebDriverPreCore.BiDi.BrowsingContext
   ( Activate,
-    BrowsingContextResult
-      ( CaptureScreenshotResult,
-        CreateResult,
-        GetTreeResult,
-        LocateNodesResult,
-        PrintResult
-      ),
     CaptureScreenshot,
+    CaptureScreenshotResult,
     Close,
     Create,
+    CreateResult,
     GetTree,
+    GetTreeResult,
     HandleUserPrompt,
     LocateNodes,
+    LocateNodesResult,
     Navigate,
     NavigateResult,
     Print,
+    PrintResult,
     Reload,
     SetViewport,
     TraverseHistory,
@@ -71,6 +154,7 @@ import WebDriverPreCore.BiDi.Network
   )
 import WebDriverPreCore.BiDi.Script
   ( AddPreloadScript,
+    AddPreloadScriptResult (..),
     CallFunction,
     CallFunctionResult,
     Disown,
@@ -79,7 +163,6 @@ import WebDriverPreCore.BiDi.Script
     GetRealms,
     GetRealmsResult,
     RemovePreloadScript,
-    AddPreloadScriptResult(..)
   )
 import WebDriverPreCore.BiDi.Session
   ( SessionNewResult,

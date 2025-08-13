@@ -4,7 +4,7 @@ import Config (Config, loadConfig)
 import Control.Concurrent (threadDelay)
 import Control.Exception (Exception (displayException), SomeException, catch)
 import Control.Monad (forever)
-import Data.Aeson (FromJSON, ToJSON, Value, encode, toJSON)
+import Data.Aeson (FromJSON, ToJSON, Value, encode, toJSON, Object)
 import Data.ByteString.Lazy qualified as BL
 import Data.Function ((&))
 import Data.Text as T (Text, pack, unpack)
@@ -19,8 +19,85 @@ import UnliftIO.STM
 import WebDriverPreCore.BiDi.BiDiPath (BiDiPath (..), getBiDiPath)
 import WebDriverPreCore.BiDi.Capabilities (Capabilities)
 import WebDriverPreCore.BiDi.Command
-import WebDriverPreCore.BiDi.CoreTypes (JSUInt (..))
+import WebDriverPreCore.BiDi.CoreTypes (JSUInt (..), BrowsingContext)
 import WebDriverPreCore.BiDi.Protocol qualified as P
+import WebDriverPreCore.BiDi.Protocol
+  ( SessionSubscriptionRequest,
+    SessionSubscribeResult,
+    SessionUnsubscribeParameters,
+    -- BrowsingContext types
+    Activate,
+    CaptureScreenshot,
+    CaptureScreenshotResult,
+    Close,
+    Create,
+    GetTree,
+    HandleUserPrompt,
+    LocateNodes,
+    Navigate,
+    NavigateResult,
+    Print,
+    PrintResult,
+    Reload,
+    SetViewport,
+    TraverseHistory,
+    TraverseHistoryResult,
+    -- Browser types
+    CreateUserContext,
+    UserContextInfo,
+    GetClientWindowsResult,
+    GetUserContextsResult,
+    RemoveUserContext,
+    SetClientWindowState,
+    ClientWindowInfo,
+    -- Emulation types
+    SetGeolocationOverride,
+    SetLocaleOverride,
+    SetScreenOrientationOverride,
+    SetTimezoneOverride,
+    -- Input types
+    PerformActions,
+    ReleaseActions,
+    SetFiles,
+    -- Network types
+    AddDataCollector,
+    AddDataCollectorResult,
+    AddIntercept,
+    AddInterceptResult,
+    ContinueRequest,
+    ContinueResponse,
+    ContinueWithAuth,
+    DisownData,
+    FailRequest,
+    GetData,
+    GetDataResult,
+    ProvideResponse,
+    RemoveDataCollector,
+    RemoveIntercept,
+    SetCacheBehavior,
+    -- Script types
+    AddPreloadScript,
+    AddPreloadScriptResult,
+    CallFunction,
+    CallFunctionResult,
+    Disown,
+    Evaluate,
+    EvaluateResult,
+    GetRealms,
+    GetRealmsResult,
+    RemovePreloadScript,
+    -- Storage types
+    DeleteCookies,
+    DeleteCookiesResult,
+    GetCookies,
+    GetCookiesResult,
+    SetCookie,
+    SetCookieResult,
+    -- WebExtension types
+    WebExtensionData,
+    WebExtensionResult,
+    WebExtension, GetTreeResult, LocateNodesResult, CreateResult
+  )
 import WebDriverPreCore.BiDi.ResponseEvent (MatchedResponse (..), ResponseError, ResponseObject, decodeResponse, parseResponse)
 import WebDriverPreCore.BiDi.Session (SessionNewResult, SessionStatusResult)
 import WebDriverPreCore.Http qualified as Http
@@ -28,15 +105,151 @@ import WebDriverPreCore.Internal.Utils (txt)
 import Prelude hiding (getLine, log, null, putStrLn)
 
 data Commands = MkCommands
-  { sessionNew :: Capabilities -> IO SessionNewResult,
-    sessionStatus :: IO SessionStatusResult
+  { -- Session commands
+    sessionNew :: Capabilities -> IO SessionNewResult,
+    sessionStatus :: IO SessionStatusResult,
+    sessionEnd :: IO Object,
+    sessionSubScribe :: SessionSubscriptionRequest -> IO SessionSubscribeResult,
+    sessionUnsubscribe :: SessionUnsubscribeParameters -> IO Object,
+    
+    -- BrowsingContext commands
+    browsingContextActivate :: Activate -> IO Object,
+    browsingContextCaptureScreenshot :: CaptureScreenshot -> IO CaptureScreenshotResult,
+    browsingContextClose :: Close -> IO Object,
+    browsingContextCreate :: Create -> IO CreateResult,
+    browsingContextGetTree :: GetTree -> IO GetTreeResult,
+    browsingContextHandleUserPrompt :: HandleUserPrompt -> IO Object,
+    browsingContextLocateNodes :: LocateNodes -> IO LocateNodesResult,
+    browsingContextNavigate :: Navigate -> IO NavigateResult,
+    browsingContextPrint :: Print -> IO PrintResult,
+    browsingContextReload :: Reload -> IO Object,
+    browsingContextSetViewport :: SetViewport -> IO Object,
+    browsingContextTraverseHistory :: TraverseHistory -> IO TraverseHistoryResult,
+    
+    -- Browser commands
+    browserClose :: IO Object,
+    browserCreateUserContext :: CreateUserContext -> IO UserContextInfo,
+    browserGetClientWindows :: IO GetClientWindowsResult,
+    browserGetUserContexts :: IO GetUserContextsResult,
+    browserRemoveUserContext :: RemoveUserContext -> IO Object,
+    browserSetClientWindowState :: SetClientWindowState -> IO ClientWindowInfo,
+    
+    -- Emulation commands
+    emulationSetGeolocationOverride :: SetGeolocationOverride -> IO Object,
+    emulationSetLocaleOverride :: SetLocaleOverride -> IO Object,
+    emulationSetScreenOrientationOverride :: SetScreenOrientationOverride -> IO Object,
+    emulationSetTimezoneOverride :: SetTimezoneOverride -> IO Object,
+    
+    -- Input commands
+    inputPerformActions :: PerformActions -> IO Object,
+    inputReleaseActions :: ReleaseActions -> IO Object,
+    inputSetFiles :: SetFiles -> IO Object,
+    
+    -- Network commands
+    networkAddDataCollector :: AddDataCollector -> IO AddDataCollectorResult,
+    networkAddIntercept :: AddIntercept -> IO AddInterceptResult,
+    networkContinueRequest :: ContinueRequest -> IO Object,
+    networkContinueResponse :: ContinueResponse -> IO Object,
+    networkContinueWithAuth :: ContinueWithAuth -> IO Object,
+    networkDisownData :: DisownData -> IO Object,
+    networkFailRequest :: FailRequest -> IO Object,
+    networkGetData :: GetData -> IO GetDataResult,
+    networkProvideResponse :: ProvideResponse -> IO Object,
+    networkRemoveDataCollector :: RemoveDataCollector -> IO Object,
+    networkRemoveIntercept :: RemoveIntercept -> IO Object,
+    networkSetCacheBehavior :: SetCacheBehavior -> IO Object,
+    
+    -- Script commands
+    scriptAddPreloadScript :: AddPreloadScript -> IO AddPreloadScriptResult,
+    scriptCallFunction :: CallFunction -> IO CallFunctionResult,
+    scriptDisown :: Disown -> IO Object,
+    scriptEvaluate :: Evaluate -> IO EvaluateResult,
+    scriptGetRealms :: GetRealms -> IO GetRealmsResult,
+    scriptRemovePreloadScript :: RemovePreloadScript -> IO Object,
+    
+    -- Storage commands
+    storageDeleteCookies :: DeleteCookies -> IO DeleteCookiesResult,
+    storageGetCookies :: GetCookies -> IO GetCookiesResult,
+    storageSetCookie :: SetCookie -> IO SetCookieResult,
+    
+    -- WebExtension commands
+    webExtensionInstall :: WebExtensionData -> IO WebExtensionResult,
+    webExtensionUninstall :: WebExtension -> IO Object
   }
 
 mkCommands :: WebDriverBiDiClient -> Commands
 mkCommands client =
   MkCommands
-    { sessionNew = lift . P.sessionNew,
-      sessionStatus = lift P.sessionStatus
+    { -- Session commands
+      sessionNew = lift . P.sessionNew,
+      sessionStatus = lift P.sessionStatus,
+      sessionEnd = lift P.sessionEnd,
+      sessionSubScribe = lift . P.sessionSubScribe,
+      sessionUnsubscribe = lift . P.sessionUnsubscribe,
+      
+      -- BrowsingContext commands
+      browsingContextActivate = lift . P.browsingContextActivate,
+      browsingContextCaptureScreenshot = lift . P.browsingContextCaptureScreenshot,
+      browsingContextClose = lift . P.browsingContextClose,
+      browsingContextCreate = lift . P.browsingContextCreate,
+      browsingContextGetTree = lift . P.browsingContextGetTree,
+      browsingContextHandleUserPrompt = lift . P.browsingContextHandleUserPrompt,
+      browsingContextLocateNodes = lift . P.browsingContextLocateNodes,
+      browsingContextNavigate = lift . P.browsingContextNavigate,
+      browsingContextPrint = lift . P.browsingContextPrint,
+      browsingContextReload = lift . P.browsingContextReload,
+      browsingContextSetViewport = lift . P.browsingContextSetViewport,
+      browsingContextTraverseHistory = lift . P.browsingContextTraverseHistory,
+      
+      -- Browser commands
+      browserClose = lift P.browserClose,
+      browserCreateUserContext = lift . P.browserCreateUserContext,
+      browserGetClientWindows = lift P.browserGetClientWindows,
+      browserGetUserContexts = lift P.browserGetUserContexts,
+      browserRemoveUserContext = lift . P.browserRemoveUserContext,
+      browserSetClientWindowState = lift . P.browserSetClientWindowState,
+      
+      -- Emulation commands
+      emulationSetGeolocationOverride = lift . P.emulationSetGeolocationOverride,
+      emulationSetLocaleOverride = lift . P.emulationSetLocaleOverride,
+      emulationSetScreenOrientationOverride = lift . P.emulationSetScreenOrientationOverride,
+      emulationSetTimezoneOverride = lift . P.emulationSetTimezoneOverride,
+      
+      -- Input commands
+      inputPerformActions = lift . P.inputPerformActions,
+      inputReleaseActions = lift . P.inputReleaseActions,
+      inputSetFiles = lift . P.inputSetFiles,
+      
+      -- Network commands
+      networkAddDataCollector = lift . P.networkAddDataCollector,
+      networkAddIntercept = lift . P.networkAddIntercept,
+      networkContinueRequest = lift . P.networkContinueRequest,
+      networkContinueResponse = lift . P.networkContinueResponse,
+      networkContinueWithAuth = lift . P.networkContinueWithAuth,
+      networkDisownData = lift . P.networkDisownData,
+      networkFailRequest = lift . P.networkFailRequest,
+      networkGetData = lift . P.networkGetData,
+      networkProvideResponse = lift . P.networkProvideResponse,
+      networkRemoveDataCollector = lift . P.networkRemoveDataCollector,
+      networkRemoveIntercept = lift . P.networkRemoveIntercept,
+      networkSetCacheBehavior = lift . P.networkSetCacheBehavior,
+      
+      -- Script commands
+      scriptAddPreloadScript = lift . P.scriptAddPreloadScript,
+      scriptCallFunction = lift . P.scriptCallFunction,
+      scriptDisown = lift . P.scriptDisown,
+      scriptEvaluate = lift . P.scriptEvaluate,
+      scriptGetRealms = lift . P.scriptGetRealms,
+      scriptRemovePreloadScript = lift . P.scriptRemovePreloadScript,
+      
+      -- Storage commands
+      storageDeleteCookies = lift . P.storageDeleteCookies,
+      storageGetCookies = lift . P.storageGetCookies,
+      storageSetCookie = lift . P.storageSetCookie,
+      
+      -- WebExtension commands
+      webExtensionInstall = lift . P.webExtensionInstall,
+      webExtensionUninstall = lift . P.webExtensionUninstall
     }
   where
     lift :: forall c r. (FromJSON r, ToJSON c) => Command c r -> IO r

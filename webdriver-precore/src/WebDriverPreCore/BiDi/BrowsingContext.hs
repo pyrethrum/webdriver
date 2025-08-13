@@ -272,14 +272,39 @@ data Viewport = MkViewport
 
 -- | Result of a browsing context command
 data BrowsingContextResult
-  = CaptureScreenshotResult Text
-  | CreateResult BrowsingContext
-  | GetTreeResult [Info]
-  | LocateNodesResult [NodeRemoteValue]
+  = CaptureScreenshotResult CaptureScreenshotResult
+  | CreateResult CreateResult
+  | GetTreeResult GetTreeResult
+  | LocateNodesResult LocateNodesResult
   | NavigateResult NavigateResult
-  | PrintResult Text
+  | PrintResult PrintResult
   | TraverseHistoryResult TraverseHistoryResult
   deriving (Show, Eq, Generic)
+
+newtype CreateResult = MkCreateResult
+  { browsingContext :: BrowsingContext
+  }
+  deriving newtype (Show, Eq)
+
+newtype GetTreeResult = MkGetTreeResult
+  { info :: [Info]
+  }
+  deriving newtype (Show, Eq)
+
+newtype LocateNodesResult = MkLocateNodesResult
+  { nodeRemoteValues :: [NodeRemoteValue]
+  }
+  deriving newtype (Show, Eq)
+
+newtype CaptureScreenshotResult = MkCaptureScreenshotResult
+  { base64Text :: Text
+  }
+  deriving newtype (Show, Eq)
+
+newtype PrintResult = MkPrintResult
+  { base64Text :: Text
+  }
+  deriving newtype (Show, Eq)
 
 data Info = MkInfo
   { children :: Maybe [Info],
