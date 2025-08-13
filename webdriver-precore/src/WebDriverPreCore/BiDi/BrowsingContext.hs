@@ -1,6 +1,6 @@
 module WebDriverPreCore.BiDi.BrowsingContext where
 
-import Data.Aeson (KeyValue (..), ToJSON (..), Value, object)
+import Data.Aeson (KeyValue (..), ToJSON (..), Value, object, FromJSON)
 import Data.Map qualified as Map
 import Data.Maybe (catMaybes)
 import Data.Text (Text)
@@ -43,28 +43,14 @@ instance BiDiMethod BrowsingContextCommand where
     SetViewport _ -> "browsingContext.setViewport"
     TraverseHistory _ -> "browsingContext.traverseHistory"
 
-instance ToJSON BrowsingContextCommand where
-  toJSON :: BrowsingContextCommand -> Value
-  toJSON = \case
-    -- Activate cmd -> toJSON cmd
-    -- CaptureScreenshot cmd -> toJSON cmd
-    -- Close cmd -> toJSON cmd
-    Create cmd -> toJSON cmd
-    -- GetTree cmd -> toJSON cmd
-    -- HandleUserPrompt cmd -> toJSON cmd
-    -- LocateNodes cmd -> toJSON cmd
-    -- Navigate cmd -> toJSON cmd
-    -- Print cmd -> toJSON cmd
-    -- Reload cmd -> toJSON cmd
-    -- SetViewport cmd -> toJSON cmd
-    -- TraverseHistory cmd -> toJSON cmd
-    _ -> error "Unsupported browsing context command type for JSON serialization"
 
 -- |  for activate command
 newtype Activate = MkActivate
   { context :: BrowsingContext
   }
   deriving (Show, Eq, Generic)
+
+instance ToJSON Activate
 
 -- |  for captureScreenshot command
 data CaptureScreenshot = MkCaptureScreenshot
@@ -300,6 +286,8 @@ newtype CaptureScreenshotResult = MkCaptureScreenshotResult
   { base64Text :: Text
   }
   deriving newtype (Show, Eq)
+
+instance FromJSON CaptureScreenshotResult where
 
 newtype PrintResult = MkPrintResult
   { base64Text :: Text
