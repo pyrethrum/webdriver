@@ -32,9 +32,7 @@ instance ToJSON SessionCommand where
 newtype Subscription = MkSubscription {subscriptionId :: Text}
   deriving (Show, Eq, Generic)
 
-instance ToJSON Subscription where
-  toJSON :: Subscription -> Value
-  toJSON (MkSubscription subId) = String subId
+instance FromJSON Subscription 
 
 -- | Subscription Request
 data SessionSubscriptionRequest = MkSessionSubscriptionRequest
@@ -110,8 +108,12 @@ data SessionStatusResult = MkSessionStatusResult
   }
   deriving (Show, Eq, Generic)
 
+instance FromJSON SessionStatusResult
+
 -- | Session Subscribe Result
 newtype SessionSubscribeResult = MkSessionSubscribeResult
   { subscription :: Subscription
   }
   deriving (Show, Eq, Generic)
+
+instance FromJSON SessionSubscribeResult

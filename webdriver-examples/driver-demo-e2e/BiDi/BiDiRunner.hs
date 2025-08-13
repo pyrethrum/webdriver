@@ -19,7 +19,7 @@ import UnliftIO.STM
 import WebDriverPreCore.BiDi.BiDiPath (BiDiPath (..), getBiDiPath)
 import WebDriverPreCore.BiDi.Capabilities (Capabilities)
 import WebDriverPreCore.BiDi.Command
-import WebDriverPreCore.BiDi.CoreTypes (JSUInt (..), BrowsingContext)
+import WebDriverPreCore.BiDi.CoreTypes (JSUInt (..))
 import WebDriverPreCore.BiDi.Protocol qualified as P
 import WebDriverPreCore.BiDi.Protocol
   ( SessionSubscriptionRequest,
@@ -31,9 +31,12 @@ import WebDriverPreCore.BiDi.Protocol
     CaptureScreenshotResult,
     Close,
     Create,
+    CreateResult,
     GetTree,
+    GetTreeResult, 
     HandleUserPrompt,
     LocateNodes,
+    LocateNodesResult,
     Navigate,
     NavigateResult,
     Print,
@@ -96,8 +99,9 @@ import WebDriverPreCore.BiDi.Protocol
     -- WebExtension types
     WebExtensionData,
     WebExtensionResult,
-    WebExtension, GetTreeResult, LocateNodesResult, CreateResult
+    WebExtension
   )
+
 import WebDriverPreCore.BiDi.ResponseEvent (MatchedResponse (..), ResponseError, ResponseObject, decodeResponse, parseResponse)
 import WebDriverPreCore.BiDi.Session (SessionNewResult, SessionStatusResult)
 import WebDriverPreCore.Http qualified as Http
@@ -133,7 +137,7 @@ data Commands = MkCommands
     browserGetUserContexts :: IO GetUserContextsResult,
     browserRemoveUserContext :: RemoveUserContext -> IO Object,
     browserSetClientWindowState :: SetClientWindowState -> IO ClientWindowInfo,
-    
+
     -- Emulation commands
     emulationSetGeolocationOverride :: SetGeolocationOverride -> IO Object,
     emulationSetLocaleOverride :: SetLocaleOverride -> IO Object,
