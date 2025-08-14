@@ -1,13 +1,13 @@
 module WebDriverPreCore.BiDi.BrowsingContext where
 
-import Data.Aeson (KeyValue (..), ToJSON (..), Value, object, FromJSON)
+import Data.Aeson (FromJSON, KeyValue (..), ToJSON (..), Value, genericToJSON, object)
 import Data.Map qualified as Map
 import Data.Maybe (catMaybes)
 import Data.Text (Text)
 import GHC.Generics
 import WebDriverPreCore.BiDi.CoreTypes (BiDiMethod (bidiMethod), BrowsingContext, JSInt, JSUInt, NodeRemoteValue)
-import WebDriverPreCore.Internal.AesonUtils (opt)
-import Prelude (Bool, Eq, Float, Maybe, Semigroup ((<>)), Show, error, ($))
+import WebDriverPreCore.Internal.AesonUtils (lwrFirstOptions, opt)
+import Prelude (Bool, Eq, Float, Maybe, Semigroup ((<>)), Show, ($))
 
 -- ######### REMOTE #########
 
@@ -43,7 +43,6 @@ instance BiDiMethod BrowsingContextCommand where
     SetViewport _ -> "browsingContext.setViewport"
     TraverseHistory _ -> "browsingContext.traverseHistory"
 
-
 -- |  for activate command
 newtype Activate = MkActivate
   { context :: BrowsingContext
@@ -55,26 +54,49 @@ instance ToJSON Activate
 -- |  for captureScreenshot command
 data CaptureScreenshot = MkCaptureScreenshot
   { context :: BrowsingContext,
-    origin :: Maybe Text, -- "viewport" / "document"
+    origin :: Maybe ScreenShotOrigin,
     format :: Maybe ImageFormat,
     clip :: Maybe ClipRectangle
   }
   deriving (Show, Eq, Generic)
 
+instance ToJSON CaptureScreenshot
+
+data ScreenShotOrigin = Viewport | Document deriving (Show, Eq, Generic)
+
+instance ToJSON ScreenShotOrigin where
+  toJSON :: ScreenShotOrigin -> Value
+  toJSON = genericToJSON lwrFirstOptions
+
 -- | Clip rectangle for screenshots
 data ClipRectangle
   = BoxClipRectangle
-      { clipType :: Text, -- "box"
-        x :: Float,
+      { x :: Float,
         y :: Float,
         width :: Float,
         height :: Float
       }
   | ElementClipRectangle
-      { clipType :: Text, -- "element"
-        element :: Text -- script.SharedReference
+      { element :: Text -- script.SharedReference
       }
   deriving (Show, Eq, Generic)
+
+instance ToJSON ClipRectangle where
+  toJSON :: ClipRectangle -> Value
+  toJSON = \case
+    BoxClipRectangle {x, y, width, height} ->
+      object
+        [ "type" .= "box",
+          "x" .= x,
+          "y" .= y,
+          "width" .= width,
+          "height" .= height
+        ]
+    ElementClipRectangle {element} ->
+      object
+        [ "type" .= "element",
+          "element" .= element
+        ]
 
 -- | Image format specification
 data ImageFormat = MkImageFormat
@@ -83,12 +105,16 @@ data ImageFormat = MkImageFormat
   }
   deriving (Show, Eq, Generic)
 
+instance ToJSON ImageFormat
+
 -- |  for close command
 data Close = MkClose
   { context :: BrowsingContext,
     promptUnload :: Maybe Bool
   }
   deriving (Show, Eq, Generic)
+
+instance ToJSON Close
 
 -- |  for create command
 data Create = MkCreate
@@ -271,28 +297,47 @@ newtype CreateResult = MkCreateResult
   { browsingContext :: BrowsingContext
   }
   deriving newtype (Show, Eq)
+  deriving stock (Generic)
+
+instance FromJSON CreateResult
+
+instance FromJSON GetTreeResult
+
+instance FromJSON LocateNodesResult
+
+instance FromJSON PrintResult
+
+instance FromJSON Info
+
+instance FromJSON NavigateResult
+
+instance FromJSON TraverseHistoryResult
 
 newtype GetTreeResult = MkGetTreeResult
   { info :: [Info]
   }
   deriving newtype (Show, Eq)
+  deriving stock (Generic)
 
 newtype LocateNodesResult = MkLocateNodesResult
   { nodeRemoteValues :: [NodeRemoteValue]
   }
   deriving newtype (Show, Eq)
+  deriving stock (Generic)
 
 newtype CaptureScreenshotResult = MkCaptureScreenshotResult
   { base64Text :: Text
   }
   deriving newtype (Show, Eq)
+  deriving stock (Generic)
 
-instance FromJSON CaptureScreenshotResult where
+instance FromJSON CaptureScreenshotResult
 
 newtype PrintResult = MkPrintResult
   { base64Text :: Text
   }
   deriving newtype (Show, Eq)
+  deriving stock (Generic)
 
 data Info = MkInfo
   { children :: Maybe [Info],

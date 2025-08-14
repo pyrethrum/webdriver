@@ -6,6 +6,7 @@ module WebDriverPreCore.Internal.AesonUtils
     emptyObj,
     lookup,
     lookupTxt,
+    lwrFirstOptions,
     nonEmpty,
     opt,
     empty,
@@ -31,7 +32,7 @@ import Data.Aeson
     ToJSON (),
     Value (..),
     eitherDecodeStrict, (.:?),
-    Object
+    Object, Options (..), defaultOptions
   )
 import Data.Aeson qualified as A
 import Data.Aeson.Encode.Pretty (encodePretty)
@@ -60,6 +61,7 @@ import Prelude
 import Control.Monad (MonadFail(..))
 import Data.Set qualified as S
 import Data.Aeson.Key (fromString)
+import Data.Char (toLower)
 
 -- Aeson stuff
 -- TODO move to separte library
@@ -85,6 +87,19 @@ objectOrThrow errMsg val =
   case A.toJSON val of
     Object obj -> obj
     _ -> error $ unpack errMsg
+
+
+
+lowerFirst :: String -> String
+lowerFirst = \case
+  c : cs -> toLower c : cs
+  [] -> []
+
+lwrFirstOptions :: Options
+lwrFirstOptions = defaultOptions
+        { constructorTagModifier = lowerFirst
+        }
+
 
 
 -- https://blog.ssanj.net/posts/2019-09-24-pretty-printing-json-in-haskell.html
