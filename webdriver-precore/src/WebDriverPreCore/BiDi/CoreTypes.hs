@@ -12,14 +12,14 @@ module WebDriverPreCore.BiDi.CoreTypes
   )
 where
 
-import Data.Aeson (FromJSON (..), Object, ToJSON, Value (..))
+import Data.Aeson (FromJSON (..), Object, ToJSON, Value (..), (.:?))
+import Data.Aeson.Types (Parser, withObject)
 import Data.Int (Int64)
 import Data.Map qualified as Map
 import Data.Text (Text)
 import Data.Word (Word64)
 import GHC.Generics (Generic)
-import Prelude 
-import Data.Aeson.Types (Parser, withObject)
+import Prelude
 
 -- | Core types for the WebDriver BiDi (Bidirectional) protocol.
 
@@ -35,17 +35,27 @@ newtype BrowsingContext = BrowsingContext Text deriving (Show, Eq, Generic, ToJS
 -- Node type used by BrowsingContext and Script
 
 data NodeRemoteValue = MkNodeRemoteValue
-  { typ :: Text, -- "node"
-    sharedId :: Maybe SharedId,
+  { sharedId :: Maybe SharedId,
     handle :: Maybe Handle,
     internalId :: Maybe InternalId,
     value :: Maybe NodeProperties
   }
   deriving (Show, Eq, Generic)
 
-newtype Handle = MkHandle Text deriving newtype (Show, Eq)
+instance FromJSON NodeRemoteValue where
+  parseJSON :: Value -> Parser NodeRemoteValue
+  parseJSON = withObject "NodeRemoteValue" $ \obj -> do
+    sharedId <- obj .:? "sharedId"
+    handle <- obj .:? "handle"
+    internalId <- obj .:? "internalId"
+    value <- obj .:? "value"
+    pure $ MkNodeRemoteValue {..}
 
-newtype InternalId = MkInternalId Text deriving newtype (Show, Eq)
+newtype Handle = MkHandle Text deriving newtype (Show, Eq, FromJSON)
+
+newtype InternalId
+  = MkInternalId Text
+  deriving newtype (Show, Eq, FromJSON)
 
 data NodeProperties = MkNodeProperties
   { nodeType :: JSUInt,
@@ -60,6 +70,8 @@ data NodeProperties = MkNodeProperties
   }
   deriving (Show, Eq, Generic)
 
+instance FromJSON NodeProperties
+
 newtype SharedId = MkSharedId Text deriving newtype (Show, Eq, ToJSON, FromJSON)
 
 newtype EmptyResult = MkEmptyResult {extensible :: Object} deriving (Show, Eq, Generic)
@@ -67,7 +79,6 @@ newtype EmptyResult = MkEmptyResult {extensible :: Object} deriving (Show, Eq, G
 instance FromJSON EmptyResult where
   parseJSON :: Value -> Parser EmptyResult
   parseJSON = withObject "EmptyResult" $ fmap MkEmptyResult . pure
-    
 
 class BiDiMethod a where
   bidiMethod :: a -> Text
