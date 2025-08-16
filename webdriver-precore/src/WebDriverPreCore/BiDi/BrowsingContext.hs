@@ -1,12 +1,12 @@
 module WebDriverPreCore.BiDi.BrowsingContext where
 
-import Data.Aeson (FromJSON, KeyValue (..), ToJSON (..), Value, genericToJSON, object, (.=))
+import Data.Aeson (FromJSON, KeyValue (..), ToJSON (..), Value, object, (.=))
 import Data.Map qualified as Map
 import Data.Maybe (catMaybes)
 import Data.Text (Text)
 import GHC.Generics
 import WebDriverPreCore.BiDi.CoreTypes (BiDiMethod (bidiMethod), BrowsingContext, JSInt, JSUInt, NodeRemoteValue)
-import WebDriverPreCore.Internal.AesonUtils (lwrFirstOptions, opt)
+import WebDriverPreCore.Internal.AesonUtils (enumCamelCase, opt)
 import Prelude (Bool, Eq, Float, Maybe, Semigroup ((<>)), Show, ($))
 
 -- ######### REMOTE #########
@@ -66,7 +66,7 @@ data ScreenShotOrigin = Viewport | Document deriving (Show, Eq, Generic)
 
 instance ToJSON ScreenShotOrigin where
   toJSON :: ScreenShotOrigin -> Value
-  toJSON = genericToJSON lwrFirstOptions
+  toJSON = enumCamelCase
 
 -- | Clip rectangle for screenshots
 data ClipRectangle
@@ -176,6 +176,8 @@ data Navigate = MkNavigate
   }
   deriving (Show, Eq, Generic)
 
+instance ToJSON Navigate
+
 -- |  for print command
 data Print = MkPrint
   { context :: BrowsingContext,
@@ -278,6 +280,10 @@ instance ToJSON Locator where
 -- | Readiness state of a browsing context
 data ReadinessState = None | Interactive | Complete
   deriving (Show, Eq, Generic)
+
+instance ToJSON ReadinessState where
+  toJSON :: ReadinessState -> Value
+  toJSON = enumCamelCase
 
 -- | User prompt types
 data UserPromptType = Alert | BeforeUnload | Confirm | Prompt

@@ -4,9 +4,9 @@ module WebDriverPreCore.Internal.AesonUtils
     asText,
     bodyText',
     emptyObj,
+    enumCamelCase,
     lookup,
     lookupTxt,
-    lwrFirstOptions,
     nonEmpty,
     opt,
     empty,
@@ -62,6 +62,7 @@ import Control.Monad (MonadFail(..))
 import Data.Set qualified as S
 import Data.Aeson.Key (fromString)
 import Data.Char (toLower)
+import GHC.Generics (Generic, Rep)
 
 -- Aeson stuff
 -- TODO move to separte library
@@ -101,6 +102,8 @@ lwrFirstOptions = defaultOptions
         }
 
 
+enumCamelCase :: ( (Generic a, A.GToJSON' Value A.Zero (Rep a)))  =>a -> Value
+enumCamelCase = A.genericToJSON lwrFirstOptions
 
 -- https://blog.ssanj.net/posts/2019-09-24-pretty-printing-json-in-haskell.html
 lsbToText :: LBS.ByteString -> Text
