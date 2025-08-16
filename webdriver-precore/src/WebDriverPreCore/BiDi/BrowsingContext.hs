@@ -5,7 +5,7 @@ import Data.Map qualified as Map
 import Data.Maybe (catMaybes)
 import Data.Text (Text)
 import GHC.Generics
-import WebDriverPreCore.BiDi.CoreTypes (BiDiMethod (bidiMethod), BrowsingContext, JSInt, JSUInt, NodeRemoteValue)
+import WebDriverPreCore.BiDi.CoreTypes (BrowsingContext, JSInt, JSUInt, NodeRemoteValue)
 import WebDriverPreCore.Internal.AesonUtils (enumCamelCase, opt)
 import Prelude (Bool, Eq, Float, Maybe, Semigroup ((<>)), Show, ($))
 
@@ -26,22 +26,6 @@ data BrowsingContextCommand
   | SetViewport SetViewport
   | TraverseHistory TraverseHistory
   deriving (Show, Eq, Generic)
-
-instance BiDiMethod BrowsingContextCommand where
-  bidiMethod :: BrowsingContextCommand -> Text
-  bidiMethod = \case
-    Activate _ -> "browsingContext.activate"
-    CaptureScreenshot _ -> "browsingContext.captureScreenshot"
-    Close _ -> "browsingContext.close"
-    Create _ -> "browsingContext.create"
-    GetTree _ -> "browsingContext.getTree"
-    HandleUserPrompt _ -> "browsingContext.handleUserPrompt"
-    LocateNodes _ -> "browsingContext.locateNodes"
-    Navigate _ -> "browsingContext.navigate"
-    Print _ -> "browsingContext.print"
-    Reload _ -> "browsingContext.reload"
-    SetViewport _ -> "browsingContext.setViewport"
-    TraverseHistory _ -> "browsingContext.traverseHistory"
 
 -- |  for activate command
 newtype Activate = MkActivate

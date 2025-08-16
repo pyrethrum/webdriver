@@ -7,8 +7,7 @@ module WebDriverPreCore.BiDi.CoreTypes
     JSUInt (..),
     NodeProperties (..),
     NodeRemoteValue (..),
-    SharedId (..),
-    BiDiMethod (..),
+    SharedId (..)
   )
 where
 
@@ -79,6 +78,3 @@ newtype EmptyResult = MkEmptyResult {extensible :: Object} deriving (Show, Eq, G
 instance FromJSON EmptyResult where
   parseJSON :: Value -> Parser EmptyResult
   parseJSON = withObject "EmptyResult" $ fmap MkEmptyResult . pure
-
-class BiDiMethod a where
-  bidiMethod :: a -> Text
