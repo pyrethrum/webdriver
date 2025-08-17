@@ -206,6 +206,14 @@ newtype BrowsingContextId = MkBrowsingContextId Text
 instance FromJSON BrowsingContextId
 instance ToJSON BrowsingContextId
 
+-- | Text matching type for InnerText locator
+data MatchType = Full | Partial
+  deriving (Show, Eq, Generic)
+
+instance ToJSON MatchType where
+  toJSON :: MatchType -> Value
+  toJSON = enumCamelCase
+
 -- | Different types of locators for elements
 data Locator
   = Accessibility
@@ -221,7 +229,7 @@ data Locator
   | InnerText
       { value :: Text,
         ignoreCase :: Maybe Bool,
-        matchType :: Maybe Text, -- "full" / "partial"
+        matchType :: Maybe MatchType,
         maxDepth :: Maybe JSUInt
       }
   | XPath
