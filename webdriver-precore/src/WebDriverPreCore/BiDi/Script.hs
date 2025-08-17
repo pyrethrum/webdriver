@@ -55,6 +55,8 @@ module WebDriverPreCore.BiDi.Script
 where
 
 import Data.Aeson (ToJSON (..), Value, object, (.=))
+import Data.Aeson.KeyMap (KeyMap)
+import Data.Aeson.Types (Object, Pair)
 import Data.Map.Strict qualified as Map
 import Data.Maybe (catMaybes)
 import Data.Text (Text)
@@ -68,9 +70,7 @@ import WebDriverPreCore.BiDi.CoreTypes
     NodeRemoteValue (..),
   )
 import WebDriverPreCore.Internal.AesonUtils (enumCamelCase, opt)
-import Prelude (Bool (..), Double, Either (..), Eq (..), Maybe (..), Semigroup (..), Show, ($), undefined)
-import Data.Aeson.Types (Object, Pair)
-import Data.Aeson.KeyMap (KeyMap)
+import Prelude (Bool (..), Double, Either (..), Eq (..), Maybe (..), Semigroup (..), Show, undefined, ($))
 
 -- ######### REMOTE #########
 
@@ -802,23 +802,22 @@ instance ToJSON GetRealmsResult
 instance ToJSON RealmInfo where
   toJSON :: RealmInfo -> Value
   toJSON ri =
-    undefined
-    -- baseObj <> typeAndSpecificProps {-  -}
+    object $ baseObj <> typeAndSpecificProps
     where
       base = ri.base
-      baseObj :: [Pair] 
+      baseObj :: [Pair]
       baseObj =
-          [ "realm" .= base.realm,
-            "origin" .= base.origin
-          ]
-      
+        [ "realm" .= base.realm,
+          "origin" .= base.origin
+        ]
+
       typeAndSpecificProps :: [Pair]
-      typeAndSpecificProps =  case ri of
-        Window {context, sandbox} -> 
+      typeAndSpecificProps = case ri of
+        Window {context, sandbox} ->
           [ "type" .= WindowRealm,
             "context" .= context
           ]
-          <> catMaybes [opt "sandbox" sandbox]
+            <> catMaybes [opt "sandbox" sandbox]
         ri' -> case ri' of
           DedicatedWorker {owners} ->
             [ "type" .= DedicatedWorkerRealm,
