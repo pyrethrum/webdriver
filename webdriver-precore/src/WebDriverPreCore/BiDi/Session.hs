@@ -4,10 +4,9 @@ import Data.Aeson (FromJSON (..), ToJSON (..), Value (..), object, withObject, (
 import Data.Aeson.Types (Parser)
 import Data.Text (Text)
 import GHC.Generics (Generic)
-import WebDriverPreCore.Internal.AesonUtils (emptyObj)
+import WebDriverPreCore.BiDi.Capabilities (Capabilities, CapabilitiesResult)
+import WebDriverPreCore.Internal.AesonUtils (emptyObj, enumCamelCase)
 import Prelude (Applicative ((<*>)), Bool (..), Eq (..), Maybe (..), Show (..), ($), (<$>))
-import WebDriverPreCore.BiDi.Capabilities (CapabilitiesResult, Capabilities)
-
 
 -- ######### Remote #########
 
@@ -32,7 +31,9 @@ instance ToJSON SessionCommand where
 newtype Subscription = MkSubscription {subscriptionId :: Text}
   deriving (Show, Eq, Generic)
 
-instance FromJSON Subscription 
+instance ToJSON Subscription where
+  toJSON :: Subscription -> Value
+  toJSON = enumCamelCase
 
 -- | Subscription Request
 data SessionSubscriptionRequest = MkSessionSubscriptionRequest
@@ -99,7 +100,6 @@ instance FromJSON SessionNewResult where
     MkSessionNewResult
       <$> v .: "sessionId"
       <*> v .: "capabilities"
-
 
 -- | Session Status Result
 data SessionStatusResult = MkSessionStatusResult

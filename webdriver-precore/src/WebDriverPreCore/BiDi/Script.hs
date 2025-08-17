@@ -571,138 +571,159 @@ instance ToJSON RemoteValue where
     PrimitiveValue prim -> toJSON prim
     SymbolValue {handle} ->
       object $
-        catMaybes
-          [ Just ("type" .= ("symbol" :: Text)),
-            opt "handle" handle
-          ]
+        ["type" .= "symbol"]
+          <> catMaybes
+            [ opt "handle" handle
+            ]
     ArrayValue {handle, value} ->
       object $
-        catMaybes
-          [ Just ("type" .= ("array" :: Text)),
-            opt "handle" handle,
-            opt "value" value
-          ]
+        ["type" .= "array"]
+          <> catMaybes
+            [ opt "handle" handle,
+              opt "value" value
+            ]
     ObjectValue {handle, values} ->
       object $
-        catMaybes
-          [ Just ("type" .= ("object" :: Text)),
-            opt "handle" handle,
-            opt "value" values
-          ]
+        ["type" .= "object"]
+          <> catMaybes
+            [ opt "handle" handle,
+              opt "value" values
+            ]
     FunctionValue {handle} ->
       object $
-        catMaybes
-          [ Just ("type" .= ("function" :: Text)),
-            opt "handle" handle
-          ]
+        ["type" .= "function"]
+          <> catMaybes
+            [ opt "handle" handle
+            ]
     RegExpValue {handle, pattern', flags} ->
       object $
-        catMaybes
-          [ Just ("type" .= ("regexp" :: Text)),
-            opt "handle" handle,
-            Just
-              ( "value"
-                  .= object
-                    [ "pattern" .= pattern',
-                      "flags" .= flags
-                    ]
-              )
-          ]
+        ["type" .= "regexp"]
+          <> catMaybes
+            [ opt "handle" handle,
+              Just
+                ( "value"
+                    .= object
+                      [ "pattern" .= pattern',
+                        "flags" .= flags
+                      ]
+                )
+            ]
     DateValue {handle, dateValue} ->
       object $
-        catMaybes
-          [ Just ("type" .= ("date" :: Text)),
-            opt "handle" handle,
-            Just ("value" .= dateValue)
-          ]
+        ["type" .= "date"]
+          <> catMaybes
+            [ opt "handle" handle,
+              Just ("value" .= dateValue)
+            ]
     MapValue {handle, values} ->
       object $
-        catMaybes
-          [ Just ("type" .= ("map" :: Text)),
-            opt "handle" handle,
-            opt "value" values
-          ]
+        ["type" .= "map"]
+          <> catMaybes
+            [ opt "handle" handle,
+              opt "value" values
+            ]
     SetValue {handle, value} ->
       object $
-        catMaybes
-          [ Just ("type" .= ("set" :: Text)),
-            opt "handle" handle,
-            opt "value" value
-          ]
+        ["type" .= "set"]
+          <> catMaybes
+            [ opt "handle" handle,
+              opt "value" value
+            ]
     WeakMapValue {handle} ->
       object $
-        catMaybes
-          [ Just ("type" .= ("weakmap" :: Text)),
-            opt "handle" handle
-          ]
+        ["type" .= "weakmap"]
+          <> catMaybes
+            [ opt "handle" handle
+            ]
     GeneratorValue {handle} ->
       object $
-        catMaybes
-          [ Just ("type" .= ("generator" :: Text)),
-            opt "handle" handle
-          ]
+        ["type" .= "generator"]
+          <> catMaybes
+            [ opt "handle" handle
+            ]
     ErrorValue {handle} ->
       object $
-        catMaybes
-          [ Just ("type" .= ("error" :: Text)),
-            opt "handle" handle
-          ]
+        ["type" .= "error"]
+          <> catMaybes
+            [ opt "handle" handle
+            ]
     ProxyValue {handle} ->
       object $
-        catMaybes
-          [ Just ("type" .= ("proxy" :: Text)),
-            opt "handle" handle
-          ]
+        ["type" .= "proxy"]
+          <> catMaybes
+            [ opt "handle" handle
+            ]
     PromiseValue {handle} ->
       object $
-        catMaybes
-          [ Just ("type" .= ("promise" :: Text)),
-            opt "handle" handle
-          ]
+        ["type" .= "promise"]
+          <> catMaybes
+            [ opt "handle" handle
+            ]
     TypedArrayValue {handle} ->
       object $
-        catMaybes
-          [ Just ("type" .= ("typedarray" :: Text)),
-            opt "handle" handle
-          ]
+        ["type" .= "typedarray"]
+          <> catMaybes
+            [ opt "handle" handle
+            ]
     ArrayBufferValue {handle} ->
       object $
-        catMaybes
-          [ Just ("type" .= ("arraybuffer" :: Text)),
-            opt "handle" handle
-          ]
+        ["type" .= "arraybuffer"]
+          <> catMaybes
+            [ opt "handle" handle
+            ]
     NodeListValue {handle, value} ->
       object $
-        catMaybes
-          [ Just ("type" .= ("nodelist" :: Text)),
-            opt "handle" handle,
-            opt "value" value
-          ]
+        ["type" .= "nodelist"]
+          <> catMaybes
+            [ opt "handle" handle,
+              opt "value" value
+            ]
     HTMLCollectionValue {handle, value} ->
       object $
-        catMaybes
-          [ Just ("type" .= ("htmlcollection" :: Text)),
-            opt "handle" handle,
-            opt "value" value
-          ]
-    NodeValue _ -> object ["type" .= ("node" :: Text)] -- Skip complex NodeRemoteValue for now
+        ["type" .= "htmlcollection"]
+          <> catMaybes
+            [ opt "handle" handle,
+              opt "value" value
+            ]
+    NodeValue _ -> object ["type" .= "node"] -- Skip complex NodeRemoteValue for now
     WindowProxyValue {winProxyValues, handle} ->
       object $
-        catMaybes
-          [ Just ("type" .= ("window" :: Text)),
-            Just ("value" .= winProxyValues),
-            opt "handle" handle
-          ]
+        [ "type" .= "window",
+          "value" .= winProxyValues
+        ]
+          <> catMaybes
+            [ opt "handle" handle
+            ]
 
 instance ToJSON PrimitiveProtocolValue where
   toJSON = \case
-    UndefinedValue -> object ["type" .= ("undefined" :: Text)]
-    NullValue -> object ["type" .= ("null" :: Text)]
-    StringValue str -> object ["type" .= ("string" :: Text), "value" .= str]
-    NumberValue (Left num) -> object ["type" .= ("number" :: Text), "value" .= num]
-    NumberValue (Right special) -> object ["type" .= ("number" :: Text), "value" .= special]
-    BooleanValue bool -> object ["type" .= ("boolean" :: Text), "value" .= bool]
-    BigIntValue str -> object ["type" .= ("bigint" :: Text), "value" .= str]
+    UndefinedValue -> object ["type" .= "undefined"]
+    NullValue -> object ["type" .= "null"]
+    StringValue str ->
+      object
+        [ "type" .= "string",
+          "value" .= str
+        ]
+    NumberValue (Left num) ->
+      object
+        [ "type" .= "number",
+          "value" .= num
+        ]
+    NumberValue (Right special) ->
+      object
+        [ "type" .= "number",
+          "value" .= special
+        ]
+    BooleanValue bool ->
+      object
+        [ "type" .= "boolean",
+          "value" .= bool
+        ]
+    BigIntValue str ->
+      object
+        [ "type" .= "bigint",
+          "value" .= str
+        ]
 
 instance ToJSON SpecialNumber where
   toJSON = \case
@@ -745,14 +766,14 @@ instance ToJSON ListLocalValue
 instance ToJSON ArrayLocalValue where
   toJSON (MkArrayLocalValue _ value) =
     object
-      [ "type" .= ("array" :: Text),
+      [ "type" .= "array",
         "value" .= value
       ]
 
 instance ToJSON DateLocalValue where
   toJSON (MkDateLocalValue value) =
     object
-      [ "type" .= ("date" :: Text),
+      [ "type" .= "date",
         "value" .= value
       ]
 
@@ -761,14 +782,14 @@ instance ToJSON MappingLocalValue
 instance ToJSON MapLocalValue where
   toJSON (MkMapLocalValue _ value) =
     object
-      [ "type" .= ("map" :: Text),
+      [ "type" .= "map",
         "value" .= value
       ]
 
 instance ToJSON ObjectLocalValue where
   toJSON (MkObjectLocalValue _ value) =
     object
-      [ "type" .= ("object" :: Text),
+      [ "type" .= "object",
         "value" .= value
       ]
 
@@ -777,14 +798,14 @@ instance ToJSON RegExpValue
 instance ToJSON RegExpLocalValue where
   toJSON (MkRegExpLocalValue _ value) =
     object
-      [ "type" .= ("regexp" :: Text),
+      [ "type" .= "regexp",
         "value" .= value
       ]
 
 instance ToJSON SetLocalValue where
   toJSON (MkSetLocalValue _ value) =
     object
-      [ "type" .= ("set" :: Text),
+      [ "type" .= "set",
         "value" .= value
       ]
 
@@ -849,13 +870,13 @@ instance ToJSON EvaluateResult where
   toJSON = \case
     EvaluateResultSuccess {result, realm} ->
       object
-        [ "type" .= ("success" :: Text),
+        [ "type" .= "success",
           "result" .= result,
           "realm" .= realm
         ]
     EvaluateResultException {exceptionDetails, realm} ->
       object
-        [ "type" .= ("exception" :: Text),
+        [ "type" .= "exception",
           "exceptionDetails" .= exceptionDetails,
           "realm" .= realm
         ]
@@ -871,17 +892,17 @@ instance ToJSON ScriptEvent where
   toJSON = \case
     MessageEvent {params} ->
       object
-        [ "method" .= ("script.message" :: Text),
+        [ "method" .= "script.message",
           "params" .= params
         ]
     RealmCreatedEvent realmInfo ->
       object
-        [ "method" .= ("script.realmCreated" :: Text),
+        [ "method" .= "script.realmCreated",
           "params" .= realmInfo
         ]
     RealmDestroyed realm ->
       object
-        [ "method" .= ("script.realmDestroyed" :: Text),
+        [ "method" .= "script.realmDestroyed",
           "params" .= object ["realm" .= realm]
         ]
 
@@ -893,7 +914,7 @@ instance ToJSON Source
 instance ToJSON ChannelValue where
   toJSON (MkChannelValue _ value) =
     object
-      [ "type" .= ("channel" :: Text),
+      [ "type" .= "channel",
         "value" .= value
       ]
 

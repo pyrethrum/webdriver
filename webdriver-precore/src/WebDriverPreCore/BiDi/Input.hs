@@ -33,7 +33,7 @@ import GHC.Generics (Generic)
 import WebDriverPreCore.BiDi.BrowsingContext qualified as BrowsingContext
 import WebDriverPreCore.BiDi.Script qualified as Script
 import Prelude (Bool, Double, Eq, Int, Maybe, Show)
-import Data.Aeson (ToJSON (..))
+import Data.Aeson (ToJSON (..), Value, object, (.=))
 import WebDriverPreCore.Internal.AesonUtils (enumCamelCase)
 
 -- ######### Local #########
@@ -47,10 +47,20 @@ data InputCommand =
 
 -- Element Origin
 data ElementOrigin = MkElementOrigin
-  { elementType :: Text, -- will be "element"
+  { 
     element :: Script.SharedReference
   }
   deriving (Show, Eq, Generic)
+
+
+instance ToJSON ElementOrigin where
+  toJSON :: ElementOrigin -> Value
+  toJSON (MkElementOrigin element) =
+    object
+      [ "elementType" .=  "element",
+        "element" .= element
+      ]
+
 
 data PerformActions = MkPerformActions
   { context :: BrowsingContext.BrowsingContextId,
@@ -189,6 +199,13 @@ data Origin
   | ElementOriginRef ElementOrigin
   deriving (Show, Eq, Generic)
 
+instance ToJSON Origin where
+  toJSON :: Origin -> Value
+  toJSON = \case
+    ViewportOriginPointerType -> "viewport"
+    PointerOrigin -> "pointer"
+    ElementOriginRef elementOrigin -> toJSON elementOrigin
+
 -- ReleaseActions
 newtype ReleaseActions = MkReleaseActions
   { context :: BrowsingContext.BrowsingContextId
@@ -226,7 +243,6 @@ instance ToJSON SetFiles
 instance ToJSON SourceActions
 instance ToJSON FileDialogOpened
 instance ToJSON FileDialogInfo
-instance ToJSON ElementOrigin
 instance ToJSON NoneSourceActions
 instance ToJSON KeySourceActions
 instance ToJSON PointerSourceActions
