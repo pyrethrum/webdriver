@@ -54,9 +54,10 @@ module WebDriverPreCore.BiDi.Script
   )
 where
 
-import Data.Aeson (FromJSON (..), ToJSON (..), Value, object, (.=))
+import Data.Aeson (FromJSON (..), ToJSON (..), Value (..), object, withObject, (.:), (.:?), (.=))
 import Data.Aeson.KeyMap (KeyMap)
-import Data.Aeson.Types (Object, Pair)
+import Data.Aeson.Types (Object, Pair, Parser)
+import Data.Functor ((<&>))
 import Data.Map.Strict qualified as Map
 import Data.Maybe (catMaybes)
 import Data.Text (Text)
@@ -70,7 +71,7 @@ import WebDriverPreCore.BiDi.CoreTypes
     NodeRemoteValue (..),
   )
 import WebDriverPreCore.Internal.AesonUtils (enumCamelCase, opt)
-import Prelude (Bool (..), Double, Either (..), Eq (..), Maybe (..), Semigroup (..), Show, undefined, ($))
+import Prelude (Applicative (..), Bool (..), Double, Either (..), Eq (..), Maybe (..), MonadFail (..), Semigroup (..), Show (..), undefined, ($), (<$>))
 
 -- ######### REMOTE #########
 
@@ -97,26 +98,24 @@ data AddPreloadScript = MkAddPreloadScript
 data RemoteValue
   = PrimitiveValue PrimitiveProtocolValue
   | SymbolValue
-      { typ :: Text, -- "symbol"
+      { -- "symbol"
         handle :: Maybe Handle,
         internalId :: Maybe InternalId
       }
   | ArrayValue
-      { typ :: Text, -- "array"
+      { -- "array"
         handle :: Maybe Handle,
         internalId :: Maybe InternalId,
         value :: Maybe [RemoteValue]
       }
   | ObjectValue
-      { typ :: Text,
-        handle :: Maybe Handle,
+      { handle :: Maybe Handle,
         internalId :: Maybe InternalId,
         -- change to value from / to JSON
         values :: Maybe [(Either RemoteValue Text, RemoteValue)]
       }
   | FunctionValue
-      { typ :: Text,
-        handle :: Maybe Handle,
+      { handle :: Maybe Handle,
         internalId :: Maybe InternalId
       }
   | RegExpValue
@@ -131,72 +130,101 @@ data RemoteValue
         dateValue :: Text
       }
   | MapValue
-      { typ :: Text,
-        handle :: Maybe Handle,
+      { handle :: Maybe Handle,
         internalId :: Maybe InternalId,
         values :: Maybe [(Either RemoteValue Text, RemoteValue)]
       }
   | SetValue
-      { typ :: Text,
-        handle :: Maybe Handle,
+      { handle :: Maybe Handle,
         internalId :: Maybe InternalId,
         value :: Maybe [RemoteValue]
       }
   | WeakMapValue
-      { typ :: Text,
-        handle :: Maybe Handle,
+      { handle :: Maybe Handle,
         internalId :: Maybe InternalId
       }
   | GeneratorValue
-      { typ :: Text,
-        handle :: Maybe Handle,
+      { handle :: Maybe Handle,
         internalId :: Maybe InternalId
       }
   | ErrorValue
-      { typ :: Text,
-        handle :: Maybe Handle,
+      { handle :: Maybe Handle,
         internalId :: Maybe InternalId
       }
   | ProxyValue
-      { typ :: Text,
-        handle :: Maybe Handle,
+      { handle :: Maybe Handle,
         internalId :: Maybe InternalId
       }
   | PromiseValue
-      { typ :: Text,
-        handle :: Maybe Handle,
+      { handle :: Maybe Handle,
         internalId :: Maybe InternalId
       }
   | TypedArrayValue
-      { typ :: Text,
-        handle :: Maybe Handle,
+      { handle :: Maybe Handle,
         internalId :: Maybe InternalId
       }
   | ArrayBufferValue
-      { typ :: Text,
-        handle :: Maybe Handle,
+      { handle :: Maybe Handle,
         internalId :: Maybe InternalId
       }
   | NodeListValue
-      { typ :: Text,
-        handle :: Maybe Handle,
+      { handle :: Maybe Handle,
         internalId :: Maybe InternalId,
         value :: Maybe [RemoteValue]
       }
   | HTMLCollectionValue
-      { typ :: Text,
-        handle :: Maybe Handle,
+      { handle :: Maybe Handle,
         internalId :: Maybe InternalId,
         value :: Maybe [RemoteValue]
       }
   | NodeValue NodeRemoteValue
   | WindowProxyValue
-      { typ :: Text, -- "window"
+      { -- "window"
         winProxyValues :: WindowProxyProperties,
         handle :: Maybe Handle, -- Optional handle
         internalId :: Maybe InternalId -- Optional internal ID
       }
   deriving (Show, Eq, Generic)
+
+UP TO HERE
+instance FromJSON RemoteValue where
+  parseJSON :: Value -> Parser RemoteValue
+  parseJSON = withObject "RemoteValue" $ \obj -> do
+    let simpleParser :: forall a. (a -> RemoteValue) -> Parser RemoteValue
+        simpleParser c = c <$> parseJSON (Object obj)
+    typ <- obj .: "type"
+    handle <- obj .:? "handle"
+    internalId <- obj .:? "internalId"
+    case typ of
+      "primitive" -> PrimitiveValue <$> parseJSON (Object obj)
+      "node" -> NodeValue <$> parseJSON (Object obj)
+      "window" ->
+        WindowProxyValue
+          <$> ( (WindowProxyProperties <$> obj .: "value")
+                  <*> optional (obj .:? "handle")
+                  <*> optional (obj .:? "internalId")
+              )
+            <*> optional (obj .:? "handle")
+            <*> optional (obj .:? "internalId")
+      _ -> pure $ case typ of
+        "symbol" -> SymbolValue {..}
+        "array" -> ArrayValue {..}
+        "object" -> ObjectValue {..}
+        "function" -> FunctionValue {..}
+        "regexp" -> RegExpValue {..}
+        "date" -> DateValue {..}
+        "map" -> MapValue {..}
+        "set" -> SetValue {..}
+        "weakmap" -> WeakMapValue {..}
+        "generator" -> GeneratorValue {..}
+        "error" -> ErrorValue {..}
+        "proxy" -> ProxyValue {..}
+        "promise" -> PromiseValue {..}
+        "typedarray" -> TypedArrayValue {..}
+        "arraybuffer" -> ArrayBufferValue {..}
+        "nodelist" -> NodeListValue {..}
+        "htmlcollection" -> HTMLCollectionValue {..}
+      _ -> fail $ "Unknown RemoteValue type: " <> show typ
 
 -- | WindowProxy remote value representation
 data PrimitiveProtocolValue
@@ -941,9 +969,7 @@ instance ToJSON ChannelProperties
 
 instance FromJSON PrimitiveProtocolValue
 
-instance FromJSON RemoteValue
-
--- Complex result types 
+-- Complex result types
 instance FromJSON AddPreloadScriptResult
 
 instance FromJSON CallFunctionResult
