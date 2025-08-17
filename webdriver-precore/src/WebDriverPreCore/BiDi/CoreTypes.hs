@@ -11,7 +11,7 @@ module WebDriverPreCore.BiDi.CoreTypes
   )
 where
 
-import Data.Aeson (FromJSON (..), Object, ToJSON (..), Value (..), (.:?), object)
+import Data.Aeson (FromJSON (..), Object, ToJSON (..), Value (..), (.:?))
 import Data.Aeson.Types (Parser, withObject)
 import Data.Int (Int64)
 import Data.Map qualified as Map

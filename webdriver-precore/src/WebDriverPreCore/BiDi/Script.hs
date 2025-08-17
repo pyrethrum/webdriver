@@ -55,12 +55,10 @@ module WebDriverPreCore.BiDi.Script
 where
 
 import Data.Aeson (FromJSON (..), ToJSON (..), Value (..), object, withObject, (.:), (.:?), (.=))
-import Data.Aeson.KeyMap (KeyMap)
-import Data.Aeson.Types (Object, Pair, Parser)
-import Data.Functor ((<&>))
+import Data.Aeson.Types (Pair, Parser)
 import Data.Map.Strict qualified as Map
 import Data.Maybe (catMaybes)
-import Data.Text (Text)
+import Data.Text (Text, unpack)
 import GHC.Generics
 import WebDriverPreCore.BiDi.CoreTypes
   ( BrowsingContext,
@@ -70,8 +68,8 @@ import WebDriverPreCore.BiDi.CoreTypes
     JSUInt,
     NodeRemoteValue (..),
   )
-import WebDriverPreCore.Internal.AesonUtils (enumCamelCase, opt)
-import Prelude (Applicative (..), Bool (..), Double, Either (..), Eq (..), Maybe (..), MonadFail (..), Semigroup (..), Show (..), undefined, ($), (<$>))
+import WebDriverPreCore.Internal.AesonUtils (enumCamelCase, opt, jsonToText)
+import Prelude (Applicative (..), Bool (..), Double, Either (..), Eq (..), Maybe (..), MonadFail (..), Semigroup (..), Show (..), ($), (<$>))
 
 -- ######### REMOTE #########
 
@@ -180,51 +178,61 @@ data RemoteValue
   | NodeValue NodeRemoteValue
   | WindowProxyValue
       { -- "window"
-        winProxyValues :: WindowProxyProperties,
+        winProxyValue :: WindowProxyProperties,
         handle :: Maybe Handle, -- Optional handle
         internalId :: Maybe InternalId -- Optional internal ID
       }
   deriving (Show, Eq, Generic)
 
-UP TO HERE
 instance FromJSON RemoteValue where
   parseJSON :: Value -> Parser RemoteValue
   parseJSON = withObject "RemoteValue" $ \obj -> do
-    let simpleParser :: forall a. (a -> RemoteValue) -> Parser RemoteValue
-        simpleParser c = c <$> parseJSON (Object obj)
     typ <- obj .: "type"
     handle <- obj .:? "handle"
     internalId <- obj .:? "internalId"
     case typ of
       "primitive" -> PrimitiveValue <$> parseJSON (Object obj)
       "node" -> NodeValue <$> parseJSON (Object obj)
-      "window" ->
-        WindowProxyValue
-          <$> ( (WindowProxyProperties <$> obj .: "value")
-                  <*> optional (obj .:? "handle")
-                  <*> optional (obj .:? "internalId")
-              )
-            <*> optional (obj .:? "handle")
-            <*> optional (obj .:? "internalId")
-      _ -> pure $ case typ of
-        "symbol" -> SymbolValue {..}
-        "array" -> ArrayValue {..}
-        "object" -> ObjectValue {..}
-        "function" -> FunctionValue {..}
-        "regexp" -> RegExpValue {..}
-        "date" -> DateValue {..}
-        "map" -> MapValue {..}
-        "set" -> SetValue {..}
-        "weakmap" -> WeakMapValue {..}
-        "generator" -> GeneratorValue {..}
-        "error" -> ErrorValue {..}
-        "proxy" -> ProxyValue {..}
-        "promise" -> PromiseValue {..}
-        "typedarray" -> TypedArrayValue {..}
-        "arraybuffer" -> ArrayBufferValue {..}
-        "nodelist" -> NodeListValue {..}
-        "htmlcollection" -> HTMLCollectionValue {..}
-      _ -> fail $ "Unknown RemoteValue type: " <> show typ
+      "array" -> do
+        value <- obj .:? "value"
+        pure $ ArrayValue {..}
+      "object" -> do
+        values <- obj .:? "values"
+        pure $ ObjectValue {..}
+      "regexp" -> do
+        value <- obj .: "value"
+        pattern' <- value .: "pattern"
+        flags <- value .:? "flags"
+        pure $ RegExpValue {..}
+      "date" -> do
+        value <- obj .: "value"
+        dateValue <- value .: "value"
+        pure $ DateValue {..}
+      "map" -> do
+        values <- obj .:? "value"
+        pure $ MapValue {..}
+      "set" -> do
+        value <- obj .:? "value"
+        pure $ SetValue {..}
+      "window" -> do
+        winProxyValue <- obj .: "value"
+        pure $ WindowProxyValue {..}
+      "nodelist" -> do
+        value <- obj .:? "value"
+        pure $ NodeListValue {..}
+      "htmlcollection" -> do
+        value <- obj .:? "value"
+        pure $ HTMLCollectionValue {..}
+      "function" -> pure $ FunctionValue {..}
+      "symbol" -> pure $ SymbolValue {..}
+      "weakmap" -> pure $ WeakMapValue {..}
+      "generator" -> pure $ GeneratorValue {..}
+      "error" -> pure $ ErrorValue {..}
+      "proxy" -> pure $ ProxyValue {..}
+      "promise" -> pure $ PromiseValue {..}
+      "typedarray" -> pure $ TypedArrayValue {..}
+      "arraybuffer" -> pure $ ArrayBufferValue {..}
+      _ -> fail $ "Unknown RemoteValue type: " <> show typ <> "\n" <> (unpack $ jsonToText $ Object obj)
 
 -- | WindowProxy remote value representation
 data PrimitiveProtocolValue
@@ -254,7 +262,7 @@ instance ToJSON SpecialNumber where
 
 -- | Properties of a WindowProxy remote value
 newtype WindowProxyProperties = MkWindowProxyProperties
-  { contextId :: Text -- BrowsingContext ID
+  { context :: BrowsingContext
   }
   deriving (Show, Eq, Generic)
 
@@ -743,10 +751,10 @@ instance ToJSON RemoteValue where
               opt "value" value
             ]
     NodeValue _ -> object ["type" .= "node"] -- Skip complex NodeRemoteValue for now
-    WindowProxyValue {winProxyValues, handle} ->
+    WindowProxyValue {winProxyValue, handle} ->
       object $
         [ "type" .= "window",
-          "value" .= winProxyValues
+          "value" .= winProxyValue
         ]
           <> catMaybes
             [ opt "handle" handle

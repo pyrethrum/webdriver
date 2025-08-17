@@ -5,7 +5,7 @@ import Data.Aeson.Types (Parser)
 import Data.Text (Text)
 import GHC.Generics (Generic)
 import WebDriverPreCore.BiDi.Capabilities (Capabilities, CapabilitiesResult)
-import WebDriverPreCore.Internal.AesonUtils (emptyObj, enumCamelCase)
+import WebDriverPreCore.Internal.AesonUtils (emptyObj)
 import Prelude (Applicative ((<*>)), Bool (..), Eq (..), Maybe (..), Show (..), ($), (<$>))
 
 -- ######### Remote #########
