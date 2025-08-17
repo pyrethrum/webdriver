@@ -203,8 +203,8 @@ data TraverseHistory = MkTraverseHistory
 newtype BrowsingContextId = MkBrowsingContextId Text
   deriving (Show, Eq, Generic)
 
-instance ToJSON BrowsingContextId
 instance FromJSON BrowsingContextId
+instance ToJSON BrowsingContextId
 
 -- | Different types of locators for elements
 data Locator

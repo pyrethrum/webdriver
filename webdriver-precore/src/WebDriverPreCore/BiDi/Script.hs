@@ -215,11 +215,24 @@ data SpecialNumber
   | NegativeInfinity
   deriving (Show, Eq, Generic)
 
+instance FromJSON SpecialNumber
+
+instance ToJSON SpecialNumber where
+  toJSON = \case
+    NaN -> "NaN"
+    NegativeZero -> "-0"
+    Infinity -> "Infinity"
+    NegativeInfinity -> "-Infinity"
+
 -- | Properties of a WindowProxy remote value
 newtype WindowProxyProperties = MkWindowProxyProperties
   { contextId :: Text -- BrowsingContext ID
   }
   deriving (Show, Eq, Generic)
+
+instance FromJSON WindowProxyProperties
+
+instance ToJSON WindowProxyProperties
 
 -- CallFunction command
 data CallFunction = MkCallFunction
@@ -329,6 +342,11 @@ data SetLocalValue = MkSetLocalValue
 
 data ResultOwnership = Root | None deriving (Show, Eq, Generic)
 
+instance FromJSON ResultOwnership
+
+instance ToJSON ResultOwnership where
+  toJSON = enumCamelCase
+
 -- | RealmType represents the different types of Realm
 data RealmType
   = WindowRealm
@@ -341,12 +359,30 @@ data RealmType
   | WorkletRealm
   deriving (Show, Eq, Generic)
 
+instance FromJSON RealmType
+
+instance ToJSON RealmType where
+  toJSON :: RealmType -> Value
+  toJSON = \case
+    WindowRealm -> "window"
+    DedicatedWorkerRealm -> "dedicated-worker"
+    SharedWorkerRealm -> "shared-worker"
+    ServiceWorkerRealm -> "service-worker"
+    WorkerRealm -> "worker"
+    PaintWorkletRealm -> "paint-worklet"
+    AudioWorkletRealm -> "audio-worklet"
+    WorkletRealm -> "worklet"
+
 data SerializationOptions = SerializationOptions
   { maxDomDepth :: Maybe (Maybe JSUInt), -- .default 0
     maxObjectDepth :: Maybe (Maybe JSUInt), -- .default null
     includeShadowTree :: Maybe Text -- "none", "open", "all" .default "none"
   }
   deriving (Show, Eq, Generic)
+
+instance FromJSON SerializationOptions
+
+instance ToJSON SerializationOptions
 
 -- Disown command
 data Disown = MkDisown
@@ -361,6 +397,10 @@ data Target
   deriving (Show, Eq, Generic)
 
 newtype Realm = MkRealm Text deriving (Show, Eq, Generic)
+
+instance FromJSON Realm
+
+instance ToJSON Realm
 
 -- Evaluate command
 data Evaluate = MkEvaluate
@@ -386,6 +426,10 @@ newtype RemovePreloadScript = MkRemovePreloadScript
   deriving (Show, Eq, Generic)
 
 newtype PreloadScript = MkPreloadScript Text deriving (Show, Generic, Eq)
+
+instance FromJSON PreloadScript
+
+instance ToJSON PreloadScript
 
 -- Target specification
 
@@ -533,22 +577,7 @@ instance ToJSON GetRealms where
           opt "type" realmType
         ]
 
-instance ToJSON PreloadScript
-
-instance ToJSON Realm
-
 -- RealmType uses specific string values as per spec
-instance ToJSON RealmType where
-  toJSON :: RealmType -> Value
-  toJSON = \case
-    WindowRealm -> "window"
-    DedicatedWorkerRealm -> "dedicated-worker"
-    SharedWorkerRealm -> "shared-worker"
-    ServiceWorkerRealm -> "service-worker"
-    WorkerRealm -> "worker"
-    PaintWorkletRealm -> "paint-worklet"
-    AudioWorkletRealm -> "audio-worklet"
-    WorkletRealm -> "worklet"
 
 -- Simple sum types
 instance ToJSON Target where
@@ -724,20 +753,6 @@ instance ToJSON PrimitiveProtocolValue where
         [ "type" .= "bigint",
           "value" .= str
         ]
-
-instance ToJSON SpecialNumber where
-  toJSON = \case
-    NaN -> "NaN"
-    NegativeZero -> "-0"
-    Infinity -> "Infinity"
-    NegativeInfinity -> "-Infinity"
-
-instance ToJSON WindowProxyProperties
-
-instance ToJSON ResultOwnership where
-  toJSON = enumCamelCase
-
-instance ToJSON SerializationOptions
 
 -- Local Value types
 instance ToJSON LocalValue where
@@ -923,23 +938,10 @@ instance ToJSON ChannelProperties
 -- FromJSON instances for Script module
 
 -- Basic types
-instance FromJSON PreloadScript
-
-instance FromJSON Realm
-
-instance FromJSON SpecialNumber
-
-instance FromJSON WindowProxyProperties
 
 instance FromJSON PrimitiveProtocolValue
 
 instance FromJSON RemoteValue
-
-instance FromJSON ResultOwnership
-
-instance FromJSON RealmType
-
-instance FromJSON SerializationOptions
 
 -- Complex result types 
 instance FromJSON AddPreloadScriptResult

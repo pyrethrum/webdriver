@@ -49,8 +49,15 @@ data BrowserCommand
   | SetClientWindowState SetClientWindowState
   deriving (Show, Eq, Generic)
 
+instance ToJSON BrowserCommand where
+  toJSON = enumCamelCase
+
 newtype ClientWindow = MkClientWindow Text
   deriving (Show, Eq, Generic)
+
+instance FromJSON ClientWindow
+
+instance ToJSON ClientWindow
 
 data ClientWindowInfo = MkClientWindowInfo
   { active :: Bool,
@@ -63,6 +70,10 @@ data ClientWindowInfo = MkClientWindowInfo
   }
   deriving (Show, Eq, Generic)
 
+instance FromJSON ClientWindowInfo
+
+instance ToJSON ClientWindowInfo
+
 data ClientWindowState
   = WindowFullscreen
   | WindowMaximized
@@ -70,13 +81,26 @@ data ClientWindowState
   | WindowNormal
   deriving (Show, Eq, Generic)
 
+instance FromJSON ClientWindowState
+
+instance ToJSON ClientWindowState where
+  toJSON = enumCamelCase
+
 newtype UserContext = MkUserContext Text
   deriving (Show, Eq, Generic)
+
+instance FromJSON UserContext
+
+instance ToJSON UserContext
 
 newtype UserContextInfo = MkUserContextInfo
   { userContext :: UserContext
   }
   deriving (Show, Eq, Generic)
+
+instance FromJSON UserContextInfo
+
+instance ToJSON UserContextInfo
 
 data CreateUserContext = MkCreateUserContext
   { acceptInsecureCerts :: Maybe Bool,
@@ -85,10 +109,14 @@ data CreateUserContext = MkCreateUserContext
   }
   deriving (Show, Eq, Generic)
 
+instance ToJSON CreateUserContext
+
 newtype RemoveUserContext = MkRemoveUserContext
   { userContext :: UserContext
   }
   deriving (Show, Eq, Generic)
+
+instance ToJSON RemoveUserContext
 
 data SetClientWindowState = MkSetClientWindowState
   { clientWindow :: ClientWindow,
@@ -96,16 +124,28 @@ data SetClientWindowState = MkSetClientWindowState
   }
   deriving (Show, Eq, Generic)
 
+instance ToJSON SetClientWindowState
+
 data WindowState
   = ClientWindowNamedState NamedState
   | ClientWindowRectState RectState
   deriving (Show, Eq, Generic)
+
+instance FromJSON WindowState
+
+instance ToJSON WindowState where
+  toJSON = enumCamelCase
 
 data NamedState
   = NamedFullscreen
   | NamedMaximized
   | NamedMinimized
   deriving (Show, Eq, Generic)
+
+instance FromJSON NamedState
+
+instance ToJSON NamedState where
+  toJSON = enumCamelCase
 
 data RectState = MkRectState
   { state :: NormalState,
@@ -116,8 +156,16 @@ data RectState = MkRectState
   }
   deriving (Show, Eq, Generic)
 
+instance FromJSON RectState
+
+instance ToJSON RectState
+
 data NormalState = NormalState
   deriving (Show, Eq, Generic)
+
+instance FromJSON NormalState
+
+instance ToJSON NormalState
 
 -- ######### Local #########
 
@@ -131,56 +179,23 @@ data BrowserResult
   | SetClientWindowStateResult ClientWindowInfo 
   deriving (Show, Eq, Generic)
 
+instance ToJSON BrowserResult where
+  toJSON = enumCamelCase
+
 newtype GetClientWindowsResult = MkGetClientWindowsResult
   { clientWindows :: [ClientWindowInfo]
   }
   deriving (Show, Eq, Generic)
+
+instance FromJSON GetClientWindowsResult
+
+instance ToJSON GetClientWindowsResult
 
 newtype GetUserContextsResult = MkGetUserContextsResult
   { userContexts :: [UserContextInfo]
   }
   deriving (Show, Eq, Generic)
 
--- ToJSON instances
-instance ToJSON BrowserCommand where
-  toJSON = enumCamelCase
-
--- Simple newtype instances
-instance ToJSON UserContext
-instance ToJSON UserContextInfo
-instance ToJSON CreateUserContext
-instance ToJSON RemoveUserContext
-instance ToJSON SetClientWindowState
-instance ToJSON GetClientWindowsResult
-instance ToJSON GetUserContextsResult
-instance ToJSON ClientWindow
-instance ToJSON ClientWindowInfo
-instance ToJSON RectState
-instance ToJSON NormalState
-
--- Sum type instances
-instance ToJSON ClientWindowState where
-  toJSON = enumCamelCase
-
-instance ToJSON WindowState where
-  toJSON = enumCamelCase
-
-instance ToJSON NamedState where
-  toJSON = enumCamelCase
-
--- BrowserResult should work now that EmptyResult has ToJSON
-instance ToJSON BrowserResult where
-  toJSON = enumCamelCase
-
--- FromJSON instances for Browser module
-instance FromJSON UserContext
-instance FromJSON UserContextInfo
-instance FromJSON ClientWindow
-instance FromJSON ClientWindowInfo
-instance FromJSON GetClientWindowsResult
 instance FromJSON GetUserContextsResult
-instance FromJSON ClientWindowState
-instance FromJSON WindowState
-instance FromJSON NamedState
-instance FromJSON RectState
-instance FromJSON NormalState
+
+instance ToJSON GetUserContextsResult

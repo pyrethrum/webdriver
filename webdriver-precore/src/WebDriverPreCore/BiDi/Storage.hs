@@ -40,6 +40,10 @@ data PartitionKey = MkPartitionKey
   }
   deriving (Show, Eq, Generic)
 
+instance FromJSON PartitionKey
+
+instance ToJSON PartitionKey
+
 -- | Result of getting cookies
 data GetCookiesResult = MkGetCookiesResult
   { cookies :: [Network.Cookie],
@@ -47,17 +51,23 @@ data GetCookiesResult = MkGetCookiesResult
   }
   deriving (Show, Eq, Generic)
 
+instance FromJSON GetCookiesResult
+
 -- | Result of setting a cookie
 newtype SetCookieResult = MkSetCookieResult
   { partitionKey :: PartitionKey
   }
   deriving (Show, Eq, Generic)
 
+instance FromJSON SetCookieResult
+
 -- | Result of deleting cookies
 newtype DeleteCookiesResult = MkDeleteCookiesResult
   { partitionKey :: PartitionKey
   }
   deriving (Show, Eq, Generic)
+
+instance FromJSON DeleteCookiesResult
 
 -- ######### Local #########
 
@@ -75,6 +85,8 @@ data GetCookies = MkGetCookies
   }
   deriving (Show, Eq, Generic)
 
+instance ToJSON GetCookies
+
 -- | Filter for cookie operations
 data CookieFilter = MkCookieFilter
   { name :: Maybe Text,
@@ -89,17 +101,31 @@ data CookieFilter = MkCookieFilter
   }
   deriving (Show, Eq, Generic)
 
+instance FromJSON CookieFilter
+
+instance ToJSON CookieFilter
+
 -- | Descriptor for a partition
 data PartitionDescriptor
   = BrowsingContextPartition BrowsingContextPartitionDescriptor
   | StorageKeyPartition StorageKeyPartitionDescriptor
   deriving (Show, Eq, Generic)
 
+instance FromJSON PartitionDescriptor
+
+instance ToJSON PartitionDescriptor where
+  toJSON :: PartitionDescriptor -> Value
+  toJSON = enumCamelCase
+
 -- | Browsing context partition descriptor
 newtype BrowsingContextPartitionDescriptor = MkBrowsingContextPartitionDescriptor
   { context :: BrowsingContext.BrowsingContextId
   }
   deriving (Show, Eq, Generic)
+
+instance FromJSON BrowsingContextPartitionDescriptor
+
+instance ToJSON BrowsingContextPartitionDescriptor
 
 -- | Storage key partition descriptor
 data StorageKeyPartitionDescriptor = MkStorageKeyPartitionDescriptor
@@ -108,12 +134,18 @@ data StorageKeyPartitionDescriptor = MkStorageKeyPartitionDescriptor
   }
   deriving (Show, Eq, Generic)
 
+instance FromJSON StorageKeyPartitionDescriptor
+
+instance ToJSON StorageKeyPartitionDescriptor
+
 -- | Parameters for setting a cookie
 data SetCookie = MkSetCookie
   { cookie :: PartialCookie,
     partition :: Maybe PartitionDescriptor
   }
   deriving (Show, Eq, Generic)
+
+instance ToJSON SetCookie
 
 -- | Partial cookie for setting
 data PartialCookie = MkPartialCookie
@@ -128,6 +160,10 @@ data PartialCookie = MkPartialCookie
   }
   deriving (Show, Eq, Generic)
 
+instance FromJSON PartialCookie
+
+instance ToJSON PartialCookie
+
 -- | Parameters for deleting cookies
 data DeleteCookies = MkDeleteCookies
   { filter :: Maybe CookieFilter,
@@ -135,35 +171,4 @@ data DeleteCookies = MkDeleteCookies
   }
   deriving (Show, Eq, Generic)
 
--- ToJSON instances
 instance ToJSON DeleteCookies
-
-instance ToJSON GetCookies
-
-instance ToJSON SetCookie
-
--- Supporting types
-instance ToJSON CookieFilter
-
-instance ToJSON PartitionDescriptor where
-  toJSON :: PartitionDescriptor -> Value
-  toJSON = enumCamelCase
-
-instance ToJSON BrowsingContextPartitionDescriptor
-
-instance ToJSON StorageKeyPartitionDescriptor
-
-instance ToJSON PartialCookie
-
-instance ToJSON PartitionKey
-
--- FromJSON instances for Storage module
-instance FromJSON GetCookiesResult
-instance FromJSON SetCookieResult
-instance FromJSON DeleteCookiesResult
-instance FromJSON CookieFilter
-instance FromJSON PartitionDescriptor
-instance FromJSON BrowsingContextPartitionDescriptor
-instance FromJSON StorageKeyPartitionDescriptor
-instance FromJSON PartialCookie
-instance FromJSON PartitionKey

@@ -30,6 +30,9 @@ data WebExtensionCommand
   | Uninstall WebExtension
   deriving (Show, Eq, Generic)
 
+instance ToJSON WebExtensionCommand where
+  toJSON = enumCamelCase
+
 -- WebExtension type
 newtype WebExtension = MkWebExtension Text
   deriving newtype (Show, Eq, ToJSON, FromJSON)
@@ -41,39 +44,17 @@ data WebExtensionData
   | ExtensionBase64Encoded Text
   deriving (Show, Eq, Generic)
 
+instance FromJSON WebExtensionData
+
+instance ToJSON WebExtensionData where
+  toJSON :: WebExtensionData -> Value
+  toJSON = enumCamelCase
+
 -- Path type for extension data
 data WebExtensionPath = MkWebExtensionPath
   { path :: Text
   }
   deriving (Show, Eq, Generic)
-
--- ArchivePath type for extension data
-data WebExtensionArchivePath = MkWebExtensionArchivePath
-  { path :: Text
-  }
-  deriving (Show, Eq, Generic)
-
--- Base64Encoded type for extension data
-data WebExtensionBase64Encoded = MkWebExtensionBase64Encoded
-  { value :: Text
-  }
-  deriving (Show, Eq, Generic)
-
--- ######### Remote #########
-
--- | Represents a command to install a web extension
-data WebExtensionResult = WebExtensionInstallResult
-  { extension :: WebExtension
-  }
-  deriving (Show, Eq, Generic, ToJSON)
-
--- ToJSON instances
-instance ToJSON WebExtensionCommand where
-  toJSON = enumCamelCase
-
-instance ToJSON WebExtensionData where
-  toJSON :: WebExtensionData -> Value
-  toJSON = enumCamelCase
 
 instance ToJSON WebExtensionPath where
   toJSON :: WebExtensionPath -> Value
@@ -83,6 +64,14 @@ instance ToJSON WebExtensionPath where
         "path" .= path
       ]
 
+-- ArchivePath type for extension data
+data WebExtensionArchivePath = MkWebExtensionArchivePath
+  { path :: Text
+  }
+  deriving (Show, Eq, Generic)
+
+instance FromJSON WebExtensionArchivePath
+
 instance ToJSON WebExtensionArchivePath where
   toJSON :: WebExtensionArchivePath -> Value
   toJSON (MkWebExtensionArchivePath path) =
@@ -90,6 +79,14 @@ instance ToJSON WebExtensionArchivePath where
       [ "type" .= "archivePath",
         "path" .= path
       ]
+
+-- Base64Encoded type for extension data
+data WebExtensionBase64Encoded = MkWebExtensionBase64Encoded
+  { value :: Text
+  }
+  deriving (Show, Eq, Generic)
+
+instance FromJSON WebExtensionBase64Encoded
 
 instance ToJSON WebExtensionBase64Encoded where
   toJSON :: WebExtensionBase64Encoded -> Value
@@ -99,8 +96,12 @@ instance ToJSON WebExtensionBase64Encoded where
         "value" .= value
       ]
 
--- FromJSON instances for WebExtensions module
+-- ######### Remote #########
+
+-- | Represents a command to install a web extension
+data WebExtensionResult = WebExtensionInstallResult
+  { extension :: WebExtension
+  }
+  deriving (Show, Eq, Generic, ToJSON)
+
 instance FromJSON WebExtensionResult
-instance FromJSON WebExtensionData
-instance FromJSON WebExtensionArchivePath
-instance FromJSON WebExtensionBase64Encoded

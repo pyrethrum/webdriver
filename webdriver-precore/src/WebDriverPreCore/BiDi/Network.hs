@@ -93,15 +93,25 @@ data AddDataCollector = MkAddDataCollector
   }
   deriving (Show, Eq, Generic)
 
+instance ToJSON AddDataCollector
+
 -- TODO - not sure what this is about
 -- network.DataType = "response"
 newtype DataType = MkDataType {dataType :: Text}
   deriving (Show, Eq, Generic)
 
+instance FromJSON DataType
+
+instance ToJSON DataType
+
 -- TODO - not sure what this is about
 -- network.CollectorType = "blob"
 newtype CollectorType = MkCollectorType {collectorType :: Text}
   deriving (Show, Eq, Generic)
+
+instance FromJSON CollectorType
+
+instance ToJSON CollectorType
 
 data DisownData = MkDisownData
   { dataType :: DataType,
@@ -110,11 +120,19 @@ data DisownData = MkDisownData
   }
   deriving (Show, Eq, Generic)
 
+instance ToJSON DisownData
+
 newtype Collector = MkCollector {collector :: Text}
   deriving (Show, Eq, Generic)
 
+instance FromJSON Collector
+
+instance ToJSON Collector
+
 newtype Request = MkRequest {request :: Text}
   deriving (Show, Eq, Generic)
+
+instance ToJSON Request
 
 data GetData = MkGetData
   { dataType :: DataType,
@@ -124,10 +142,14 @@ data GetData = MkGetData
   }
   deriving (Show, Eq, Generic)
 
+instance ToJSON GetData
+
 data RemoveDataCollector = MkRemoveDataCollector
   { collector :: Collector
   }
   deriving (Show, Eq, Generic)
+
+instance ToJSON RemoveDataCollector
 
 -- | AddIntercept parameters
 data AddIntercept = MkAddIntercept
@@ -137,12 +159,19 @@ data AddIntercept = MkAddIntercept
   }
   deriving (Show, Eq, Generic)
 
+instance ToJSON AddIntercept
+
 -- | Intercept phases for network requests
 data InterceptPhase
   = BeforeRequestSent
   | ResponseStarted
   | AuthRequired
   deriving (Show, Eq, Generic)
+
+instance FromJSON InterceptPhase
+
+instance ToJSON InterceptPhase where
+  toJSON = enumCamelCase
 
 -- | URL pattern for interception
 data UrlPattern = MkUrlPattern
@@ -153,6 +182,10 @@ data UrlPattern = MkUrlPattern
     search :: Maybe Text
   }
   deriving (Show, Eq, Generic)
+
+instance FromJSON UrlPattern
+
+instance ToJSON UrlPattern
 
 -- | ContinueRequest parameters
 data ContinueRequest = MkContinueRequest
@@ -165,14 +198,26 @@ data ContinueRequest = MkContinueRequest
   }
   deriving (Show, Eq, Generic)
 
+instance ToJSON ContinueRequest
+
 newtype RequestId = MkRequestId {id :: Text}
   deriving (Show, Eq, Generic)
+
+instance FromJSON RequestId
+
+instance ToJSON RequestId
 
 -- | BytesValue can be either string or base64-encoded
 data BytesValue
   = StringValue Text
   | Base64Value Text
   deriving (Show, Eq, Generic)
+
+instance FromJSON BytesValue
+
+instance ToJSON BytesValue where
+  toJSON (StringValue val) = object ["type" .= ("string" :: Text), "value" .= val]
+  toJSON (Base64Value val) = object ["type" .= ("base64" :: Text), "value" .= val]
 
 -- | Cookie information
 data Cookie = MkCookie
@@ -188,6 +233,10 @@ data Cookie = MkCookie
   }
   deriving (Show, Eq, Generic)
 
+instance FromJSON Cookie
+
+instance ToJSON Cookie
+
 data SameSite
   = Strict
   | Lax
@@ -195,12 +244,21 @@ data SameSite
   | Default
   deriving (Show, Eq, Generic)
 
+instance FromJSON SameSite
+
+instance ToJSON SameSite where
+  toJSON = enumCamelCase
+
 -- | Headers for requests and responses
 data Header = MkHeader
   { headerName :: Text,
     headerValue :: BytesValue
   }
   deriving (Show, Eq, Generic)
+
+instance FromJSON Header
+
+instance ToJSON Header
 
 -- | ContinueResponse parameters
 data ContinueResponse = MkContinueResponse
@@ -391,84 +449,4 @@ newtype AddDataCollectorResult = MkAddDataCollectorResult
   }
   deriving (Show, Eq, Generic)
 
--- ToJSON instances
 
--- First, add generic deriving instances for simple record types
-instance ToJSON UrlPattern
-instance ToJSON RequestId
-instance ToJSON Cookie
-instance ToJSON Header
-instance ToJSON ContinueRequest
-instance ToJSON ContinueResponse
-instance ToJSON Intercept
-instance ToJSON AuthCredentials
-instance ToJSON DisownData
-instance ToJSON FailRequest
-instance ToJSON GetData
-instance ToJSON ProvideResponse
-instance ToJSON RemoveDataCollector
-instance ToJSON RemoveIntercept
-instance ToJSON DataType
-instance ToJSON CollectorType
-instance ToJSON Collector
-instance ToJSON Request
-instance ToJSON GetDataResult
-instance ToJSON FetchError
-instance ToJSON ResponseContent
-instance ToJSON AuthChallenge
-instance ToJSON ResponseData
-
--- Sum types use enumCamelCase  
-instance ToJSON InterceptPhase where
-  toJSON = enumCamelCase
-
-instance ToJSON SameSite where
-  toJSON = enumCamelCase
-
-instance ToJSON AuthResponse where
-  toJSON = enumCamelCase
-
-instance ToJSON CacheBehavior where
-  toJSON = enumCamelCase
-
-instance ToJSON InitiatorType where
-  toJSON = enumCamelCase
-
--- BytesValue needs special handling for the type field
-instance ToJSON BytesValue where
-  toJSON (StringValue val) = object ["type" .= ("string" :: Text), "value" .= val]
-  toJSON (Base64Value val) = object ["type" .= ("base64" :: Text), "value" .= val]
-
--- Types that only depend on BrowsingContext (which should have ToJSON)
-instance ToJSON SetCacheBehavior 
-instance ToJSON AddIntercept
-instance ToJSON ContinueWithAuth
-
--- AddDataCollector depends on UserContext which now has ToJSON
-instance ToJSON AddDataCollector
-
--- Simple wrappers that should work
-instance ToJSON ResponseCompleted
-instance ToJSON ResponseStarted  
-instance ToJSON AddDataCollectorResult
-instance ToJSON AddInterceptResult
-
--- NetworkCommand uses enumCamelCase for the command type
-instance ToJSON NetworkCommand where
-  toJSON = enumCamelCase
-
--- FromJSON instances for Network module
-instance FromJSON DataType
-instance FromJSON CollectorType
-instance FromJSON Collector
-instance FromJSON AddDataCollectorResult
-instance FromJSON AddInterceptResult
-instance FromJSON GetDataResult
-instance FromJSON Intercept
-instance FromJSON RequestId
-instance FromJSON BytesValue
-instance FromJSON Cookie
-instance FromJSON SameSite
-instance FromJSON Header
-instance FromJSON InterceptPhase
-instance FromJSON UrlPattern
