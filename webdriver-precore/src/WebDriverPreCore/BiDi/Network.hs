@@ -63,7 +63,7 @@ import WebDriverPreCore.BiDi.Browser (UserContext)
 import WebDriverPreCore.BiDi.CoreTypes (BrowsingContext, EmptyResult, JSUInt)
 import WebDriverPreCore.BiDi.Script (StackTrace)
 import Prelude (Bool, Eq, Maybe, Show)
-import Data.Aeson (FromJSON, ToJSON (..), (.=), object)
+import Data.Aeson (FromJSON, ToJSON (..), (.=), object, Value)
 import WebDriverPreCore.Internal.AesonUtils (enumCamelCase)
 
 -- ######### REMOTE #########
@@ -271,6 +271,8 @@ data ContinueResponse = MkContinueResponse
   }
   deriving (Show, Eq, Generic)
 
+instance ToJSON ContinueResponse
+
 -- | ContinueWithAuth parameters
 data ContinueWithAuth = MkContinueWithAuth
   { intercept :: Intercept,
@@ -279,9 +281,12 @@ data ContinueWithAuth = MkContinueWithAuth
   }
   deriving (Show, Eq, Generic)
 
+instance ToJSON ContinueWithAuth
+
 -- | Network intercept identifier
 newtype Intercept = MkIntercept Text
-  deriving (Show, Eq, Generic)
+  deriving (Show, Eq, Generic, FromJSON, ToJSON)
+
 
 -- | Auth credentials for authentication
 data AuthCredentials = MkAuthCredentials
@@ -290,6 +295,8 @@ data AuthCredentials = MkAuthCredentials
   }
   deriving (Show, Eq, Generic)
 
+instance ToJSON AuthCredentials
+
 -- | Authentication response type
 data AuthResponse
   = DefaultResponse
@@ -297,12 +304,19 @@ data AuthResponse
   | Provide
   deriving (Show, Eq, Generic)
 
+  
+instance ToJSON AuthResponse where
+  toJSON :: AuthResponse -> Value
+  toJSON = enumCamelCase
+
 -- | FailRequest parameters
 data FailRequest = MkFailRequest
   { intercept :: Intercept,
     errorText :: Text
   }
   deriving (Show, Eq, Generic)
+
+instance ToJSON FailRequest
 
 -- | ProvideResponse parameters
 data ProvideResponse = MkProvideResponse
@@ -315,11 +329,15 @@ data ProvideResponse = MkProvideResponse
   }
   deriving (Show, Eq, Generic)
 
+instance ToJSON ProvideResponse
+
 -- | RemoveIntercept parameters
 newtype RemoveIntercept = MkRemoveIntercept
   { intercept :: Intercept
   }
   deriving (Show, Eq, Generic)
+
+instance ToJSON RemoveIntercept
 
 -- | SetCacheBehavior parameters
 data SetCacheBehavior = MkSetCacheBehavior
@@ -328,12 +346,18 @@ data SetCacheBehavior = MkSetCacheBehavior
   }
   deriving (Show, Eq, Generic)
 
+instance ToJSON SetCacheBehavior
+
 -- | Cache behavior options
 data CacheBehavior
   = DefaultCacheBehavior
   | BypassCache
   | ForceCacheIgnoreNoStore
   deriving (Show, Eq, Generic)
+
+instance ToJSON CacheBehavior where
+  toJSON :: CacheBehavior -> Value
+  toJSON = enumCamelCase
 
 -- ######### LOCAL #########
 
@@ -354,6 +378,8 @@ data NetworkResult
 
 newtype AddInterceptResult = MkAddInterceptResult {addedIntercept :: Intercept}
   deriving (Show, Eq, Generic)
+
+instance FromJSON AddInterceptResult
 
 data NetworkEvent
   = AuthRequiredEvent AuthRequired
@@ -444,9 +470,12 @@ newtype GetDataResult = MkGetDataResult
   }
   deriving (Show, Eq, Generic)
 
+instance FromJSON GetDataResult
+
 newtype AddDataCollectorResult = MkAddDataCollectorResult
   { collector :: Collector
   }
   deriving (Show, Eq, Generic)
 
+instance FromJSON AddDataCollectorResult
 
