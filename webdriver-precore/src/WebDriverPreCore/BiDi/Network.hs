@@ -63,7 +63,7 @@ import WebDriverPreCore.BiDi.Browser (UserContext)
 import WebDriverPreCore.BiDi.CoreTypes (BrowsingContext, EmptyResult, JSUInt)
 import WebDriverPreCore.BiDi.Script (StackTrace)
 import Prelude (Bool, Eq, Maybe, Show)
-import Data.Aeson (ToJSON (..), (.=), object)
+import Data.Aeson (FromJSON, ToJSON (..), (.=), object)
 import WebDriverPreCore.Internal.AesonUtils (enumCamelCase)
 
 -- ######### REMOTE #########
@@ -456,3 +456,19 @@ instance ToJSON AddInterceptResult
 -- NetworkCommand uses enumCamelCase for the command type
 instance ToJSON NetworkCommand where
   toJSON = enumCamelCase
+
+-- FromJSON instances for Network module
+instance FromJSON DataType
+instance FromJSON CollectorType
+instance FromJSON Collector
+instance FromJSON AddDataCollectorResult
+instance FromJSON AddInterceptResult
+instance FromJSON GetDataResult
+instance FromJSON Intercept
+instance FromJSON RequestId
+instance FromJSON BytesValue
+instance FromJSON Cookie
+instance FromJSON SameSite
+instance FromJSON Header
+instance FromJSON InterceptPhase
+instance FromJSON UrlPattern

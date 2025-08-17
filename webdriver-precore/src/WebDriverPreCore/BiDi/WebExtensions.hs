@@ -3,7 +3,7 @@
 
 module WebDriverPreCore.BiDi.WebExtensions where
 
-import Data.Aeson (ToJSON (..), Value, object, (.=))
+import Data.Aeson (FromJSON, ToJSON (..), Value, object, (.=))
 import Data.Text (Text)
 import GHC.Generics (Generic)
 import WebDriverPreCore.Internal.AesonUtils (enumCamelCase)
@@ -32,7 +32,7 @@ data WebExtensionCommand
 
 -- WebExtension type
 newtype WebExtension = MkWebExtension Text
-  deriving newtype (Show, Eq, ToJSON)
+  deriving newtype (Show, Eq, ToJSON, FromJSON)
 
 -- ExtensionData represents different ways to provide extension data
 data WebExtensionData
@@ -98,3 +98,9 @@ instance ToJSON WebExtensionBase64Encoded where
       [ "type" .= "base64",
         "value" .= value
       ]
+
+-- FromJSON instances for WebExtensions module
+instance FromJSON WebExtensionResult
+instance FromJSON WebExtensionData
+instance FromJSON WebExtensionArchivePath
+instance FromJSON WebExtensionBase64Encoded

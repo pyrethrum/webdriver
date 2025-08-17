@@ -23,7 +23,7 @@ import GHC.Generics (Generic)
 import Prelude (Bool (..), Eq (..), Int, Maybe, Show (..))
 import WebDriverPreCore.BiDi.Capabilities (UserPromptHandler, ProxyConfiguration)
 import WebDriverPreCore.BiDi.CoreTypes (EmptyResult)
-import Data.Aeson (ToJSON (..))
+import Data.Aeson (FromJSON, ToJSON (..))
 import WebDriverPreCore.Internal.AesonUtils (enumCamelCase)
 
 {-
@@ -171,3 +171,16 @@ instance ToJSON NamedState where
 -- BrowserResult should work now that EmptyResult has ToJSON
 instance ToJSON BrowserResult where
   toJSON = enumCamelCase
+
+-- FromJSON instances for Browser module
+instance FromJSON UserContext
+instance FromJSON UserContextInfo
+instance FromJSON ClientWindow
+instance FromJSON ClientWindowInfo
+instance FromJSON GetClientWindowsResult
+instance FromJSON GetUserContextsResult
+instance FromJSON ClientWindowState
+instance FromJSON WindowState
+instance FromJSON NamedState
+instance FromJSON RectState
+instance FromJSON NormalState

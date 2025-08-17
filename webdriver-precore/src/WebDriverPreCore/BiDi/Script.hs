@@ -54,7 +54,7 @@ module WebDriverPreCore.BiDi.Script
   )
 where
 
-import Data.Aeson (ToJSON (..), Value, object, (.=))
+import Data.Aeson (FromJSON (..), ToJSON (..), Value, object, (.=))
 import Data.Aeson.KeyMap (KeyMap)
 import Data.Aeson.Types (Object, Pair)
 import Data.Map.Strict qualified as Map
@@ -919,3 +919,43 @@ instance ToJSON ChannelValue where
       ]
 
 instance ToJSON ChannelProperties
+
+-- FromJSON instances for Script module
+
+-- Basic types
+instance FromJSON PreloadScript
+
+instance FromJSON Realm
+
+instance FromJSON SpecialNumber
+
+instance FromJSON WindowProxyProperties
+
+instance FromJSON PrimitiveProtocolValue
+
+instance FromJSON RemoteValue
+
+instance FromJSON ResultOwnership
+
+instance FromJSON RealmType
+
+instance FromJSON SerializationOptions
+
+-- Complex result types 
+instance FromJSON AddPreloadScriptResult
+
+instance FromJSON CallFunctionResult
+
+instance FromJSON GetRealmsResult
+
+instance FromJSON RealmInfo
+
+instance FromJSON BaseRealmInfo
+
+instance FromJSON EvaluateResult
+
+instance FromJSON ExceptionDetails
+
+instance FromJSON StackTrace
+
+instance FromJSON StackFrame

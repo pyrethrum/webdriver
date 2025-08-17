@@ -29,11 +29,8 @@ instance ToJSON SessionCommand where
 
 -- | Subscription
 newtype Subscription = MkSubscription {subscriptionId :: Text}
-  deriving (Show, Eq, Generic)
+  deriving (Show, Eq, Generic, FromJSON, ToJSON)
 
-instance ToJSON Subscription where
-  toJSON :: Subscription -> Value
-  toJSON = enumCamelCase
 
 -- | Subscription Request
 data SessionSubscriptionRequest = MkSessionSubscriptionRequest

@@ -16,7 +16,7 @@ create types to represent the remote and local end for storage:
 8. leave this comment at the top of the file
 -}
 
-import Data.Aeson (ToJSON (..), Value)
+import Data.Aeson (FromJSON, ToJSON (..), Value)
 import Data.Text (Text)
 import GHC.Generics (Generic)
 import WebDriverPreCore.BiDi.BrowsingContext qualified as BrowsingContext
@@ -156,3 +156,14 @@ instance ToJSON StorageKeyPartitionDescriptor
 instance ToJSON PartialCookie
 
 instance ToJSON PartitionKey
+
+-- FromJSON instances for Storage module
+instance FromJSON GetCookiesResult
+instance FromJSON SetCookieResult
+instance FromJSON DeleteCookiesResult
+instance FromJSON CookieFilter
+instance FromJSON PartitionDescriptor
+instance FromJSON BrowsingContextPartitionDescriptor
+instance FromJSON StorageKeyPartitionDescriptor
+instance FromJSON PartialCookie
+instance FromJSON PartitionKey
