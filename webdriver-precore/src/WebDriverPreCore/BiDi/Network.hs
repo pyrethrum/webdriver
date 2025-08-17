@@ -63,6 +63,8 @@ import WebDriverPreCore.BiDi.Browser (UserContext)
 import WebDriverPreCore.BiDi.CoreTypes (BrowsingContext, EmptyResult, JSUInt)
 import WebDriverPreCore.BiDi.Script (StackTrace)
 import Prelude (Bool, Eq, Maybe, Show)
+import Data.Aeson (ToJSON (..), (.=), object)
+import WebDriverPreCore.Internal.AesonUtils (enumCamelCase)
 
 -- ######### REMOTE #########
 
@@ -388,3 +390,69 @@ newtype AddDataCollectorResult = MkAddDataCollectorResult
   { collector :: Collector
   }
   deriving (Show, Eq, Generic)
+
+-- ToJSON instances
+
+-- First, add generic deriving instances for simple record types
+instance ToJSON UrlPattern
+instance ToJSON RequestId
+instance ToJSON Cookie
+instance ToJSON Header
+instance ToJSON ContinueRequest
+instance ToJSON ContinueResponse
+instance ToJSON Intercept
+instance ToJSON AuthCredentials
+instance ToJSON DisownData
+instance ToJSON FailRequest
+instance ToJSON GetData
+instance ToJSON ProvideResponse
+instance ToJSON RemoveDataCollector
+instance ToJSON RemoveIntercept
+instance ToJSON DataType
+instance ToJSON CollectorType
+instance ToJSON Collector
+instance ToJSON Request
+instance ToJSON GetDataResult
+instance ToJSON FetchError
+instance ToJSON ResponseContent
+instance ToJSON AuthChallenge
+instance ToJSON ResponseData
+
+-- Sum types use enumCamelCase  
+instance ToJSON InterceptPhase where
+  toJSON = enumCamelCase
+
+instance ToJSON SameSite where
+  toJSON = enumCamelCase
+
+instance ToJSON AuthResponse where
+  toJSON = enumCamelCase
+
+instance ToJSON CacheBehavior where
+  toJSON = enumCamelCase
+
+instance ToJSON InitiatorType where
+  toJSON = enumCamelCase
+
+-- BytesValue needs special handling for the type field
+instance ToJSON BytesValue where
+  toJSON (StringValue val) = object ["type" .= ("string" :: Text), "value" .= val]
+  toJSON (Base64Value val) = object ["type" .= ("base64" :: Text), "value" .= val]
+
+-- Types that only depend on BrowsingContext (which should have ToJSON)
+instance ToJSON SetCacheBehavior 
+instance ToJSON AddIntercept
+instance ToJSON ContinueWithAuth
+
+-- AddDataCollector depends on UserContext which now has ToJSON
+instance ToJSON AddDataCollector
+
+-- Simple wrappers that should work
+instance ToJSON ResponseCompleted
+instance ToJSON ResponseStarted  
+instance ToJSON AddDataCollectorResult
+instance ToJSON AddInterceptResult
+
+-- NetworkCommand uses enumCamelCase for the command type
+instance ToJSON NetworkCommand where
+  toJSON = enumCamelCase

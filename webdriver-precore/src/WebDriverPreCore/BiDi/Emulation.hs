@@ -29,6 +29,8 @@ import GHC.Generics (Generic)
 import WebDriverPreCore.BiDi.Browser (UserContext)
 import WebDriverPreCore.BiDi.CoreTypes (BrowsingContext)
 import Prelude (Eq, Float, Show)
+import Data.Aeson (ToJSON (..))
+import WebDriverPreCore.Internal.AesonUtils (enumCamelCase)
 
 -- ######### Remote #########
 -- Note: emulation module does not have a local end
@@ -100,3 +102,21 @@ data ScreenOrientationType
   | LandscapePrimary
   | LandscapeSecondary
   deriving (Show, Eq, Generic)
+
+-- ToJSON instances
+instance ToJSON EmulationCommand where
+  toJSON = enumCamelCase
+
+instance ToJSON SetGeolocationOverride
+instance ToJSON SetLocaleOverride
+instance ToJSON SetScreenOrientationOverride
+instance ToJSON SetTimezoneOverride
+instance ToJSON GeolocationCoordinates
+instance ToJSON GeolocationPositionError
+instance ToJSON ScreenOrientationOverride
+
+instance ToJSON ScreenOrientationNatural where
+  toJSON = enumCamelCase
+
+instance ToJSON ScreenOrientationType where
+  toJSON = enumCamelCase

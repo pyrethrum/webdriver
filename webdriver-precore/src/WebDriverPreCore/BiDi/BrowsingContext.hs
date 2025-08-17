@@ -203,6 +203,8 @@ data TraverseHistory = MkTraverseHistory
 newtype BrowsingContextId = MkBrowsingContextId Text
   deriving (Show, Eq, Generic)
 
+instance ToJSON BrowsingContextId
+
 -- | Different types of locators for elements
 data Locator
   = Accessibility
@@ -443,3 +445,15 @@ newtype Navigation = MkNavigation
   { navigationId :: Text
   }
   deriving (Show, Eq, Generic)
+
+-- Additional ToJSON instances for missing types
+instance ToJSON Print
+instance ToJSON Reload
+instance ToJSON SetViewport
+instance ToJSON TraverseHistory
+instance ToJSON PrintMargin
+instance ToJSON PrintPage
+instance ToJSON Viewport
+instance ToJSON UserPromptClosed
+instance ToJSON UserPromptOpened
+instance ToJSON Navigation

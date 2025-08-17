@@ -33,6 +33,8 @@ import GHC.Generics (Generic)
 import WebDriverPreCore.BiDi.BrowsingContext qualified as BrowsingContext
 import WebDriverPreCore.BiDi.Script qualified as Script
 import Prelude (Bool, Double, Eq, Int, Maybe, Show)
+import Data.Aeson (ToJSON (..))
+import WebDriverPreCore.Internal.AesonUtils (enumCamelCase)
 
 -- ######### Local #########
 
@@ -213,3 +215,43 @@ data FileDialogInfo = MkFileDialogInfo
     multiple :: Bool
   }
   deriving (Show, Eq, Generic)
+
+-- ToJSON instances
+instance ToJSON InputCommand where
+  toJSON = enumCamelCase
+
+instance ToJSON PerformActions
+instance ToJSON ReleaseActions
+instance ToJSON SetFiles
+instance ToJSON SourceActions
+instance ToJSON FileDialogOpened
+instance ToJSON FileDialogInfo
+instance ToJSON ElementOrigin
+instance ToJSON NoneSourceActions
+instance ToJSON KeySourceActions
+instance ToJSON PointerSourceActions
+instance ToJSON WheelSourceActions
+instance ToJSON Pointer
+instance ToJSON PointerCommonProperties
+
+-- All the various action types  
+instance ToJSON PauseAction
+instance ToJSON KeyDownAction
+instance ToJSON KeyUpAction
+instance ToJSON PointerUpAction
+instance ToJSON PointerDownAction
+instance ToJSON PointerMoveAction
+instance ToJSON WheelScrollAction
+
+-- Sum type instances with enumCamelCase
+instance ToJSON PointerType where
+  toJSON = enumCamelCase
+
+instance ToJSON KeySourceAction where
+  toJSON = enumCamelCase
+
+instance ToJSON PointerSourceAction where
+  toJSON = enumCamelCase
+
+instance ToJSON WheelSourceAction where
+  toJSON = enumCamelCase

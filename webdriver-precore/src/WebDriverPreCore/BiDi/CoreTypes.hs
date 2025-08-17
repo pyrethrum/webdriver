@@ -11,7 +11,7 @@ module WebDriverPreCore.BiDi.CoreTypes
   )
 where
 
-import Data.Aeson (FromJSON (..), Object, ToJSON, Value (..), (.:?))
+import Data.Aeson (FromJSON (..), Object, ToJSON (..), Value (..), (.:?), object)
 import Data.Aeson.Types (Parser, withObject)
 import Data.Int (Int64)
 import Data.Map qualified as Map
@@ -50,7 +50,7 @@ instance FromJSON NodeRemoteValue where
     value <- obj .:? "value"
     pure $ MkNodeRemoteValue {..}
 
-newtype Handle = MkHandle Text deriving newtype (Show, Eq, FromJSON)
+newtype Handle = MkHandle Text deriving newtype (Show, Eq, FromJSON, ToJSON)
 
 newtype InternalId
   = MkInternalId Text
@@ -78,3 +78,7 @@ newtype EmptyResult = MkEmptyResult {extensible :: Object} deriving (Show, Eq, G
 instance FromJSON EmptyResult where
   parseJSON :: Value -> Parser EmptyResult
   parseJSON = withObject "EmptyResult" $ fmap MkEmptyResult . pure
+
+instance ToJSON EmptyResult where
+  toJSON :: EmptyResult -> Value
+  toJSON (MkEmptyResult obj) = Object obj

@@ -23,6 +23,8 @@ import GHC.Generics (Generic)
 import Prelude (Bool (..), Eq (..), Int, Maybe, Show (..))
 import WebDriverPreCore.BiDi.Capabilities (UserPromptHandler, ProxyConfiguration)
 import WebDriverPreCore.BiDi.CoreTypes (EmptyResult)
+import Data.Aeson (ToJSON (..))
+import WebDriverPreCore.Internal.AesonUtils (enumCamelCase)
 
 {-
 create types to represent the remote and local ends for browser:
@@ -138,3 +140,34 @@ newtype GetUserContextsResult = MkGetUserContextsResult
   { userContexts :: [UserContextInfo]
   }
   deriving (Show, Eq, Generic)
+
+-- ToJSON instances
+instance ToJSON BrowserCommand where
+  toJSON = enumCamelCase
+
+-- Simple newtype instances
+instance ToJSON UserContext
+instance ToJSON UserContextInfo
+instance ToJSON CreateUserContext
+instance ToJSON RemoveUserContext
+instance ToJSON SetClientWindowState
+instance ToJSON GetClientWindowsResult
+instance ToJSON GetUserContextsResult
+instance ToJSON ClientWindow
+instance ToJSON ClientWindowInfo
+instance ToJSON RectState
+instance ToJSON NormalState
+
+-- Sum type instances
+instance ToJSON ClientWindowState where
+  toJSON = enumCamelCase
+
+instance ToJSON WindowState where
+  toJSON = enumCamelCase
+
+instance ToJSON NamedState where
+  toJSON = enumCamelCase
+
+-- BrowserResult should work now that EmptyResult has ToJSON
+instance ToJSON BrowserResult where
+  toJSON = enumCamelCase
