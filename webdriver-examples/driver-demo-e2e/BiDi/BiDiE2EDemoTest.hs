@@ -12,7 +12,6 @@ import Data.Text (Text)
 import WebDriverPreCore.Internal.Utils (txt)
 import WebDriverPreCore.BiDi.BiDiPath (parseUrl)
 
--- WORK IN PROGRESS
 
 -- >>> demo_parseUrl
 -- "Right\n  MkBiDiPath\n    { host = \"127.0.0.1\"\n    , port = 9222\n    , path = \"/session/e43698d9-b02a-4284-a936-12041deb3552\"\n    }"
@@ -29,21 +28,14 @@ unit_newBidiSessionViaHttp = do
     (logShow "new session response:\n" ses)
     (Http.deleteSession ses.sessionId)
 
-
--- unit_bidiSession :: IO ()
--- unit_bidiSession = do
---   cfg <- loadConfig
---   ses <- newHttpSession $ httpBidiCapabilities cfg
---   let sesTxt = prettyPack ses
---       wsUrl = fromMaybe (error $ "WebSocket URL not provided in session response\n" <> sesTxt) ses.webSocketUrl
---   log "new session response:\n" ses
---   let wsUrl = case ses.webSocketUrl of
---     Just url -> url
---     Nothing -> (error "WebSocket URL not provided in session response")
-
-  -- let bidiCOnfig = WebDriverBiDiConfig
-  --       { host = cfg.host,
-  --         port = cfg.port,
-  --         path = "/session/" <> ses.sessionId <> "/bidi"
-  --       }
-
+data DemoUtils = MkDemoUtils
+  { sleep :: IO ()
+  }
+-- >>> demoNewTab
+demoNewTab :: IO ()
+demoNewTab = do
+  cfg <- loadConfig
+  ses <- Http.newSessionFull $ httpBidiCapabilities cfg
+  finally
+    (logShow "new session response:\n" ses)
+    (Http.deleteSession ses.sessionId)

@@ -108,6 +108,10 @@ import WebDriverPreCore.Http qualified as Http
 import WebDriverPreCore.Internal.Utils (txt)
 import Prelude hiding (getLine, log, null, putStrLn)
 
+withCommands :: (Commands -> IO a) -> IO a
+withCommands action =
+  withBiDiSession $ action . mkCommands 
+
 data Commands = MkCommands
   { -- Session commands
     sessionNew :: Capabilities -> IO SessionNewResult,
@@ -185,79 +189,79 @@ mkCommands :: WebDriverBiDiClient -> Commands
 mkCommands client =
   MkCommands
     { -- Session commands
-      sessionNew = lift . P.sessionNew,
-      sessionStatus = lift P.sessionStatus,
-      sessionEnd = lift P.sessionEnd,
-      sessionSubScribe = lift . P.sessionSubScribe,
-      sessionUnsubscribe = lift . P.sessionUnsubscribe,
+      sessionNew = send . P.sessionNew,
+      sessionStatus = send P.sessionStatus,
+      sessionEnd = send P.sessionEnd,
+      sessionSubScribe = send . P.sessionSubScribe,
+      sessionUnsubscribe = send . P.sessionUnsubscribe,
       
       -- BrowsingContext commands
-      browsingContextActivate = lift . P.browsingContextActivate,
-      browsingContextCaptureScreenshot = lift . P.browsingContextCaptureScreenshot,
-      browsingContextClose = lift . P.browsingContextClose,
-      browsingContextCreate = lift . P.browsingContextCreate,
-      browsingContextGetTree = lift . P.browsingContextGetTree,
-      browsingContextHandleUserPrompt = lift . P.browsingContextHandleUserPrompt,
-      browsingContextLocateNodes = lift . P.browsingContextLocateNodes,
-      browsingContextNavigate = lift . P.browsingContextNavigate,
-      browsingContextPrint = lift . P.browsingContextPrint,
-      browsingContextReload = lift . P.browsingContextReload,
-      browsingContextSetViewport = lift . P.browsingContextSetViewport,
-      browsingContextTraverseHistory = lift . P.browsingContextTraverseHistory,
+      browsingContextActivate = send . P.browsingContextActivate,
+      browsingContextCaptureScreenshot = send . P.browsingContextCaptureScreenshot,
+      browsingContextClose = send . P.browsingContextClose,
+      browsingContextCreate = send . P.browsingContextCreate,
+      browsingContextGetTree = send . P.browsingContextGetTree,
+      browsingContextHandleUserPrompt = send . P.browsingContextHandleUserPrompt,
+      browsingContextLocateNodes = send . P.browsingContextLocateNodes,
+      browsingContextNavigate = send . P.browsingContextNavigate,
+      browsingContextPrint = send . P.browsingContextPrint,
+      browsingContextReload = send . P.browsingContextReload,
+      browsingContextSetViewport = send . P.browsingContextSetViewport,
+      browsingContextTraverseHistory = send . P.browsingContextTraverseHistory,
       
       -- Browser commands
-      browserClose = lift P.browserClose,
-      browserCreateUserContext = lift . P.browserCreateUserContext,
-      browserGetClientWindows = lift P.browserGetClientWindows,
-      browserGetUserContexts = lift P.browserGetUserContexts,
-      browserRemoveUserContext = lift . P.browserRemoveUserContext,
-      browserSetClientWindowState = lift . P.browserSetClientWindowState,
+      browserClose = send P.browserClose,
+      browserCreateUserContext = send . P.browserCreateUserContext,
+      browserGetClientWindows = send P.browserGetClientWindows,
+      browserGetUserContexts = send P.browserGetUserContexts,
+      browserRemoveUserContext = send . P.browserRemoveUserContext,
+      browserSetClientWindowState = send . P.browserSetClientWindowState,
       
       -- Emulation commands
-      emulationSetGeolocationOverride = lift . P.emulationSetGeolocationOverride,
-      emulationSetLocaleOverride = lift . P.emulationSetLocaleOverride,
-      emulationSetScreenOrientationOverride = lift . P.emulationSetScreenOrientationOverride,
-      emulationSetTimezoneOverride = lift . P.emulationSetTimezoneOverride,
+      emulationSetGeolocationOverride = send . P.emulationSetGeolocationOverride,
+      emulationSetLocaleOverride = send . P.emulationSetLocaleOverride,
+      emulationSetScreenOrientationOverride = send . P.emulationSetScreenOrientationOverride,
+      emulationSetTimezoneOverride = send . P.emulationSetTimezoneOverride,
       
       -- Input commands
-      inputPerformActions = lift . P.inputPerformActions,
-      inputReleaseActions = lift . P.inputReleaseActions,
-      inputSetFiles = lift . P.inputSetFiles,
+      inputPerformActions = send . P.inputPerformActions,
+      inputReleaseActions = send . P.inputReleaseActions,
+      inputSetFiles = send . P.inputSetFiles,
       
       -- Network commands
-      networkAddDataCollector = lift . P.networkAddDataCollector,
-      networkAddIntercept = lift . P.networkAddIntercept,
-      networkContinueRequest = lift . P.networkContinueRequest,
-      networkContinueResponse = lift . P.networkContinueResponse,
-      networkContinueWithAuth = lift . P.networkContinueWithAuth,
-      networkDisownData = lift . P.networkDisownData,
-      networkFailRequest = lift . P.networkFailRequest,
-      networkGetData = lift . P.networkGetData,
-      networkProvideResponse = lift . P.networkProvideResponse,
-      networkRemoveDataCollector = lift . P.networkRemoveDataCollector,
-      networkRemoveIntercept = lift . P.networkRemoveIntercept,
-      networkSetCacheBehavior = lift . P.networkSetCacheBehavior,
+      networkAddDataCollector = send . P.networkAddDataCollector,
+      networkAddIntercept = send . P.networkAddIntercept,
+      networkContinueRequest = send . P.networkContinueRequest,
+      networkContinueResponse = send . P.networkContinueResponse,
+      networkContinueWithAuth = send . P.networkContinueWithAuth,
+      networkDisownData = send . P.networkDisownData,
+      networkFailRequest = send . P.networkFailRequest,
+      networkGetData = send . P.networkGetData,
+      networkProvideResponse = send . P.networkProvideResponse,
+      networkRemoveDataCollector = send . P.networkRemoveDataCollector,
+      networkRemoveIntercept = send . P.networkRemoveIntercept,
+      networkSetCacheBehavior = send . P.networkSetCacheBehavior,
       
       -- Script commands
-      scriptAddPreloadScript = lift . P.scriptAddPreloadScript,
-      scriptCallFunction = lift . P.scriptCallFunction,
-      scriptDisown = lift . P.scriptDisown,
-      scriptEvaluate = lift . P.scriptEvaluate,
-      scriptGetRealms = lift . P.scriptGetRealms,
-      scriptRemovePreloadScript = lift . P.scriptRemovePreloadScript,
+      scriptAddPreloadScript = send . P.scriptAddPreloadScript,
+      scriptCallFunction = send . P.scriptCallFunction,
+      scriptDisown = send . P.scriptDisown,
+      scriptEvaluate = send . P.scriptEvaluate,
+      scriptGetRealms = send . P.scriptGetRealms,
+      scriptRemovePreloadScript = send . P.scriptRemovePreloadScript,
       
       -- Storage commands
-      storageDeleteCookies = lift . P.storageDeleteCookies,
-      storageGetCookies = lift . P.storageGetCookies,
-      storageSetCookie = lift . P.storageSetCookie,
+      storageDeleteCookies = send . P.storageDeleteCookies,
+      storageGetCookies = send . P.storageGetCookies,
+      storageSetCookie = send . P.storageSetCookie,
       
       -- WebExtension commands
-      webExtensionInstall = lift . P.webExtensionInstall,
-      webExtensionUninstall = lift . P.webExtensionUninstall
+      webExtensionInstall = send . P.webExtensionInstall,
+      webExtensionUninstall = send . P.webExtensionUninstall
     }
   where
-    lift :: forall c r. (FromJSON r, ToJSON c) => Command c r -> IO r
-    lift = sendCommand client
+    send :: forall c r. (FromJSON r, ToJSON c) => Command c r -> IO r
+    send = sendCommand client
 
 -- note: just throws an exception if an error is encountered
 -- no timeout implemented - will just hang if bidi does not behave

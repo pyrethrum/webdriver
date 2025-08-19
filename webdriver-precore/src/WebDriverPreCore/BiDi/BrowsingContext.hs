@@ -105,9 +105,12 @@ data Create = MkCreate
   { createType :: CreateType,
     referenceContext :: Maybe BrowsingContext,
     background :: Maybe Bool,
-    userContext :: Maybe Text -- browser.UserContext
+    userContext :: Maybe UserContext
   }
   deriving (Show, Eq, Generic)
+
+newtype UserContext = MkUserContext Text
+  deriving (Show, Eq, ToJSON, FromJSON)
 
 instance ToJSON Create where
   toJSON :: Create -> Value
@@ -290,9 +293,7 @@ data CreateType = Tab | Window
 
 instance ToJSON CreateType where
   toJSON :: CreateType -> Value
-  toJSON = \case
-    Tab -> "tab"
-    Window -> "window"
+  toJSON = enumCamelCase
 
 -- | Print margin
 data PrintMargin = MkPrintMargin
