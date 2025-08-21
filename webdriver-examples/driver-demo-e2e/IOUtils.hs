@@ -6,6 +6,9 @@ module IOUtils
     logShow,
     logM,
     logShowM,
+    DemoUtils(..),
+    demoUtils,
+    doNothingUtils,
     sleep1,
     sleep2,
     (===),
@@ -22,6 +25,35 @@ import Data.Text.IO qualified as TIO
 import Test.Tasty.HUnit as HUnit (Assertion, HasCallStack, (@=?))
 import WebDriverPreCore.Internal.Utils (txt)
 import Prelude hiding (log)
+
+data DemoUtils = MkDemoUtils
+  { sleep :: Int -> IO (),
+    logTxt :: Text -> IO (),
+    log :: Text -> Text -> IO (),
+    logShow :: forall a. (Show a) => Text -> a -> IO (),
+    logM :: Text -> IO Text -> IO (),
+    logShowM :: forall a. (Show a) => Text -> IO a -> IO ()
+  }
+
+demoUtils :: DemoUtils
+demoUtils = MkDemoUtils
+  { sleep = sleepMs,
+    logTxt,
+    log,
+    logShow,
+    logM,
+    logShowM
+  }
+
+doNothingUtils :: DemoUtils
+doNothingUtils = MkDemoUtils
+  { sleep = \_ -> pure (),
+    logTxt = \_ -> pure (),
+    log = \_ _ -> pure (),
+    logShow = \_ _ -> pure (),
+    logM = \_ _ -> pure (),
+    logShowM = \_ _ -> pure ()
+  }
 
 sleepMs :: Int -> IO ()
 sleepMs = threadDelay . (*) 1_000

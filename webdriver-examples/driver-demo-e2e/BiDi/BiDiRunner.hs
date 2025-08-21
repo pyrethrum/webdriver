@@ -124,6 +124,7 @@ data Commands = MkCommands
     browsingContextActivate :: Activate -> IO Object,
     browsingContextCaptureScreenshot :: CaptureScreenshot -> IO CaptureScreenshotResult,
     browsingContextClose :: Close -> IO Object,
+    -- | Create a browsing context
     browsingContextCreate :: Create -> IO CreateResult,
     browsingContextGetTree :: GetTree -> IO GetTreeResult,
     browsingContextHandleUserPrompt :: HandleUserPrompt -> IO Object,
