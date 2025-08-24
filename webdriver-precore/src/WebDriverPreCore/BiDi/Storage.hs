@@ -26,13 +26,6 @@ import Prelude (Bool, Eq, Int, Maybe, Show)
 
 -- ######### Remote #########
 
--- | Represents a storage result
-data StorageResult
-  = DeleteCookiesResult DeleteCookiesResult
-  | GetCookiesResult GetCookiesResult
-  | SetCookieResult SetCookieResult
-  deriving (Show, Eq, Generic)
-
 -- | Partition key for storage operations
 data PartitionKey = MkPartitionKey
   { userContext :: Maybe Text,
@@ -70,13 +63,6 @@ newtype DeleteCookiesResult = MkDeleteCookiesResult
 instance FromJSON DeleteCookiesResult
 
 -- ######### Local #########
-
--- | Storage commands
-data StorageCommand
-  = DeleteCookies DeleteCookies
-  | GetCookies GetCookies
-  | SetCookie SetCookie
-  deriving (Show, Eq, Generic)
 
 -- | Parameters for getting cookies
 data GetCookies = MkGetCookies

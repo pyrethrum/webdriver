@@ -11,22 +11,6 @@ import Prelude (Bool, Eq, Float, Maybe, Semigroup ((<>)), Show, ($))
 
 -- ######### REMOTE #########
 
--- | Commands for browsing context operations
-data BrowsingContextCommand
-  = Activate Activate
-  | CaptureScreenshot CaptureScreenshot
-  | Close Close
-  | Create Create
-  | GetTree GetTree
-  | HandleUserPrompt HandleUserPrompt
-  | LocateNodes LocateNodes
-  | Navigate Navigate
-  | Print Print
-  | Reload Reload
-  | SetViewport SetViewport
-  | TraverseHistory TraverseHistory
-  deriving (Show, Eq, Generic)
-
 -- |  for activate command
 newtype Activate = MkActivate
   { context :: BrowsingContext
@@ -319,17 +303,6 @@ data Viewport = MkViewport
   deriving (Show, Eq, Generic)
 
 -- ######### Local #########
-
--- | Result of a browsing context command
-data BrowsingContextResult
-  = CaptureScreenshotResult CaptureScreenshotResult
-  | CreateResult CreateResult
-  | GetTreeResult GetTreeResult
-  | LocateNodesResult LocateNodesResult
-  | NavigateResult NavigateResult
-  | PrintResult PrintResult
-  | TraverseHistoryResult TraverseHistoryResult
-  deriving (Show, Eq, Generic)
 
 newtype CreateResult = MkCreateResult
   { browsingContext :: BrowsingContext

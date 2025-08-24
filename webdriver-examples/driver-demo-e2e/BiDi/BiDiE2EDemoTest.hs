@@ -63,7 +63,19 @@ runDemo action =
 newTab :: DemoUtils -> Commands -> IO ()
 newTab MkDemoUtils {..} MkCommands {..} = do
   logTxt "About to open tab"
-  bc <- browsingContextCreate $ MkCreate Tab Nothing Nothing Nothing
-  logShow "Browsing Context" bc
-  sleep 3_000
+  let bcParams =
+        MkCreate
+          { createType = Tab,
+            referenceContext = Nothing,
+            background = Nothing,
+            userContext = Nothing
+          }
+  bc <- browsingContextCreate bcParams
+  logShow "Browsing Context (Tab)" bc
+  sleep 1_000
+
+  bcWin <- browsingContextCreate bcParams { createType = Window }
+  logShow "Browsing Context (Window)" bcWin
+
+  sleep 1_000
   pure ()

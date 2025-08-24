@@ -1,5 +1,5 @@
 module WebDriverPreCore.BiDi.Emulation
-  ( EmulationCommand (..),
+  ( 
     SetGeolocationOverride (..),
     SetLocaleOverride (..),
     SetScreenOrientationOverride (..),
@@ -33,14 +33,8 @@ import Data.Aeson (ToJSON (..))
 import WebDriverPreCore.Internal.AesonUtils (enumCamelCase)
 
 -- ######### Remote #########
--- Note: emulation module does not have a local end
 
-data EmulationCommand
-  = SetGeolocationOverrideCmd SetGeolocationOverride
-  | SetLocaleOverrideCmd SetLocaleOverride
-  | SetScreenOrientationOverrideCmd SetScreenOrientationOverride
-  | SetTimezoneOverrideCmd SetTimezoneOverride
-  deriving (Show, Eq, Generic)
+-- Note: emulation module does not have a local end
 
 data SetGeolocationOverride = MkSetGeolocationOverride
   { coordinates :: Maybe GeolocationCoordinates,
@@ -104,8 +98,6 @@ data ScreenOrientationType
   deriving (Show, Eq, Generic)
 
 -- ToJSON instances
-instance ToJSON EmulationCommand where
-  toJSON = enumCamelCase
 
 instance ToJSON SetGeolocationOverride
 instance ToJSON SetLocaleOverride

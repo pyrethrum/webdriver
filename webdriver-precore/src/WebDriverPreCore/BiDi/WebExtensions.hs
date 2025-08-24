@@ -24,15 +24,6 @@ create types to represent the remote end for storage as prer the cddl in this fi
 
 -- ######### Remote #########
 
--- WebExtensionCommand represents possible commands
-data WebExtensionCommand
-  = Install WebExtensionData
-  | Uninstall WebExtension
-  deriving (Show, Eq, Generic)
-
-instance ToJSON WebExtensionCommand where
-  toJSON = enumCamelCase
-
 -- WebExtension type
 newtype WebExtension = MkWebExtension Text
   deriving newtype (Show, Eq, ToJSON, FromJSON)
@@ -96,7 +87,7 @@ instance ToJSON WebExtensionBase64Encoded where
         "value" .= value
       ]
 
--- ######### Remote #########
+-- ######### Local #########
 
 -- | Represents a command to install a web extension
 data WebExtensionResult = WebExtensionInstallResult

@@ -1,6 +1,5 @@
 module WebDriverPreCore.BiDi.Network
   ( -- * NetworkCommand
-    NetworkCommand (..),
     AddDataCollector (..),
     AddIntercept (..),
     InterceptPhase (..),
@@ -24,7 +23,7 @@ module WebDriverPreCore.BiDi.Network
     RemoveIntercept (..),
     SetCacheBehavior (..),
     CacheBehavior (..),
-    
+
     -- * Additional Network Types
     DataType (..),
     CollectorType (..),
@@ -32,7 +31,6 @@ module WebDriverPreCore.BiDi.Network
     Request (..),
 
     -- * NetworkResult
-    NetworkResult (..),
     AddDataCollectorResult (..),
     AddInterceptResult (..),
     GetDataResult (..),
@@ -56,33 +54,18 @@ where
 -- for WebDriverPreCore. It is currently a placeholder for future implementation.
 
 -- Data structures for network protocol
+
+import Data.Aeson (FromJSON, ToJSON (..), Value, object, (.=))
 import Data.Text (Text)
 import Data.Word (Word)
 import GHC.Generics (Generic)
 import WebDriverPreCore.BiDi.Browser (UserContext)
-import WebDriverPreCore.BiDi.CoreTypes (BrowsingContext, EmptyResult, JSUInt)
+import WebDriverPreCore.BiDi.CoreTypes (BrowsingContext, JSUInt)
 import WebDriverPreCore.BiDi.Script (StackTrace)
-import Prelude (Bool, Eq, Maybe, Show)
-import Data.Aeson (FromJSON, ToJSON (..), (.=), object, Value)
 import WebDriverPreCore.Internal.AesonUtils (enumCamelCase)
+import Prelude (Bool, Eq, Maybe, Show)
 
 -- ######### REMOTE #########
-
--- | NetworkCommand type for remote end operations
-data NetworkCommand
-  = AddDataCollector AddDataCollector
-  | AddIntercept AddIntercept
-  | ContinueRequest ContinueRequest
-  | ContinueResponse ContinueResponse
-  | ContinueWithAuth ContinueWithAuth
-  | DisownData DisownData
-  | FailRequest FailRequest
-  | GetData GetData
-  | ProvideResponse ProvideResponse
-  | RemoveDataCollector RemoveDataCollector
-  | RemoveIntercept RemoveIntercept
-  | SetCacheBehavior SetCacheBehavior
-  deriving (Show, Eq, Generic)
 
 data AddDataCollector = MkAddDataCollector
   { dataTypes :: [DataType],
@@ -287,7 +270,6 @@ instance ToJSON ContinueWithAuth
 newtype Intercept = MkIntercept Text
   deriving (Show, Eq, Generic, FromJSON, ToJSON)
 
-
 -- | Auth credentials for authentication
 data AuthCredentials = MkAuthCredentials
   { password :: Text,
@@ -304,7 +286,6 @@ data AuthResponse
   | Provide
   deriving (Show, Eq, Generic)
 
-  
 instance ToJSON AuthResponse where
   toJSON :: AuthResponse -> Value
   toJSON = enumCamelCase
@@ -359,22 +340,7 @@ instance ToJSON CacheBehavior where
   toJSON :: CacheBehavior -> Value
   toJSON = enumCamelCase
 
--- ######### LOCAL #########
-
-data NetworkResult
-  = AddDataCollectorResult AddDataCollectorResult
-  | AddInterceptResult AddInterceptResult
-  | ContinueRequestResult EmptyResult
-  | ContinueResponseResult EmptyResult
-  | ContinueWithAuthResult EmptyResult
-  | DisownDataResult EmptyResult
-  | FailRequestResult EmptyResult
-  | GetDataResult GetDataResult
-  | ProvideResponseResult EmptyResult
-  | RemoveDataCollectorResult EmptyResult
-  | RemoveInterceptResult EmptyResult
-  | SetCacheBehaviorResult EmptyResult
-  deriving (Show, Eq, Generic)
+-- ######### Local #########
 
 newtype AddInterceptResult = MkAddInterceptResult {addedIntercept :: Intercept}
   deriving (Show, Eq, Generic)
@@ -478,4 +444,3 @@ newtype AddDataCollectorResult = MkAddDataCollectorResult
   deriving (Show, Eq, Generic)
 
 instance FromJSON AddDataCollectorResult
-

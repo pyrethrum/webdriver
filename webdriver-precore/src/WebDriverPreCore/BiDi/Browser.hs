@@ -1,7 +1,5 @@
 module WebDriverPreCore.BiDi.Browser
-  ( BrowserCommand (..),
-    BrowserResult (..),
-    ClientWindow (..),
+  ( ClientWindow (..),
     ClientWindowInfo (..),
     ClientWindowState (..),
     CreateUserContext (..),
@@ -18,13 +16,12 @@ module WebDriverPreCore.BiDi.Browser
   )
 where
 
+import Data.Aeson (FromJSON, ToJSON (..))
 import Data.Text (Text)
 import GHC.Generics (Generic)
-import Prelude (Bool (..), Eq (..), Int, Maybe, Show (..))
-import WebDriverPreCore.BiDi.Capabilities (UserPromptHandler, ProxyConfiguration)
-import WebDriverPreCore.BiDi.CoreTypes (EmptyResult)
-import Data.Aeson (FromJSON, ToJSON (..))
+import WebDriverPreCore.BiDi.Capabilities (ProxyConfiguration, UserPromptHandler)
 import WebDriverPreCore.Internal.AesonUtils (enumCamelCase)
+import Prelude (Bool (..), Eq (..), Int, Maybe, Show (..))
 
 {-
 create types to represent the remote and local ends for browser:
@@ -39,18 +36,6 @@ then local under the -- ######### Local ######### header
 -}
 
 -- ######### Remote #########
-
-data BrowserCommand
-  = Close
-  | CreateUserContext CreateUserContext
-  | GetClientWindows
-  | GetUserContexts
-  | RemoveUserContext RemoveUserContext
-  | SetClientWindowState SetClientWindowState
-  deriving (Show, Eq, Generic)
-
-instance ToJSON BrowserCommand where
-  toJSON = enumCamelCase
 
 newtype ClientWindow = MkClientWindow Text
   deriving (Show, Eq, Generic)
@@ -168,19 +153,6 @@ instance FromJSON NormalState
 instance ToJSON NormalState
 
 -- ######### Local #########
-
--- Note includes more than spec spec seems inconsistant
-data BrowserResult
-  = CreateUserContextResult UserContextInfo
-  | GetClientWindowsResult GetClientWindowsResult
-  | GetUserContextsResult GetUserContextsResult
-  | CloseResult EmptyResult
-  | RemoveUserContextResult EmptyResult
-  | SetClientWindowStateResult ClientWindowInfo 
-  deriving (Show, Eq, Generic)
-
-instance ToJSON BrowserResult where
-  toJSON = enumCamelCase
 
 newtype GetClientWindowsResult = MkGetClientWindowsResult
   { clientWindows :: [ClientWindowInfo]

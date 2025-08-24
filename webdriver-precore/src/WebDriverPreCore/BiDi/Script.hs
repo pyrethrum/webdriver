@@ -30,7 +30,6 @@ module WebDriverPreCore.BiDi.Script
     AddPreloadScriptResult (..),
     CallFunctionResult (..),
     GetRealmsResult (..),
-    ScriptResult (..),
     RealmInfo (..),
     BaseRealmInfo (..),
     EvaluateResult (..),
@@ -49,8 +48,7 @@ module WebDriverPreCore.BiDi.Script
     RemoteReference (..),
     SharedReference (..),
     RemoteObjectReference (..),
-    SharedId (..),
-    ScriptCommand (..),
+    SharedId (..)
   )
 where
 
@@ -62,7 +60,6 @@ import Data.Text (Text, unpack)
 import GHC.Generics
 import WebDriverPreCore.BiDi.CoreTypes
   ( BrowsingContext,
-    EmptyResult,
     Handle,
     InternalId (..),
     JSUInt,
@@ -72,16 +69,6 @@ import WebDriverPreCore.Internal.AesonUtils (enumCamelCase, opt, jsonToText)
 import Prelude (Applicative (..), Bool (..), Double, Either (..), Eq (..), Maybe (..), MonadFail (..), Semigroup (..), Show (..), ($), (<$>))
 
 -- ######### REMOTE #########
-
--- Script Command types
-data ScriptCommand
-  = AddPreloadScript AddPreloadScript
-  | CallFunction CallFunction
-  | Disown Disown
-  | Evaluate Evaluate
-  | GetRealms GetRealms
-  | RemovePreloadScript RemovePreloadScript
-  deriving (Show, Eq, Generic)
 
 -- AddPreloadScript command
 data AddPreloadScript = MkAddPreloadScript
@@ -471,15 +458,6 @@ instance ToJSON PreloadScript
 
 -- ######### Local #########
 
-data ScriptResult
-  = AddPreloadScriptResult AddPreloadScriptResult
-  | CallFunctionResult CallFunctionResult
-  | DisownResult EmptyResult
-  | EvaluateResult EvaluateResult
-  | GetRealmsResult GetRealmsResult
-  | RemovePreloadScriptResult EmptyResult
-  deriving (Show, Eq, Generic)
-
 newtype AddPreloadScriptResult = MkAddPreloadScriptResult
   { script :: PreloadScript
   }
@@ -624,10 +602,6 @@ instance ToJSON Target where
 instance ToJSON Disown
 
 instance ToJSON RemovePreloadScript
-
--- ScriptCommand - enable when all dependencies are ready
-instance ToJSON ScriptCommand where
-  toJSON = enumCamelCase
 
 -- Remote Value types - simplified to avoid orphan instances
 instance ToJSON RemoteValue where
@@ -859,10 +833,6 @@ instance ToJSON SetLocalValue where
       [ "type" .= "set",
         "value" .= value
       ]
-
--- Result types
-instance ToJSON ScriptResult where
-  toJSON = enumCamelCase
 
 instance ToJSON AddPreloadScriptResult
 

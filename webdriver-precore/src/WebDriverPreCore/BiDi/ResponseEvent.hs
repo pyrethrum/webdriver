@@ -8,18 +8,12 @@ import Data.ByteString.Lazy (ByteString)
 import Data.Function ((&))
 import Data.Text (Text, pack)
 import GHC.Generics (Generic)
-import WebDriverPreCore.BiDi.Browser (BrowserResult)
-import WebDriverPreCore.BiDi.BrowsingContext (BrowsingContextEvent, BrowsingContextResult)
+import WebDriverPreCore.BiDi.BrowsingContext (BrowsingContextEvent)
 import WebDriverPreCore.BiDi.Command (Command)
 import WebDriverPreCore.BiDi.CoreTypes (EmptyResult (..), JSUInt)
 import WebDriverPreCore.BiDi.Error (ErrorCode)
-import WebDriverPreCore.BiDi.Input (FileDialogInfo, FileDialogOpened)
+import WebDriverPreCore.BiDi.Input (FileDialogOpened)
 import WebDriverPreCore.BiDi.Log (Entry)
-import WebDriverPreCore.BiDi.Network (NetworkResult (..))
-import WebDriverPreCore.BiDi.Script (ScriptResult)
-import WebDriverPreCore.BiDi.Session (SessionResult (..))
-import WebDriverPreCore.BiDi.Storage (StorageResult (..))
-import WebDriverPreCore.BiDi.WebExtensions (WebExtensionResult (..))
 import WebDriverPreCore.Internal.AesonUtils (parseObjectMaybe, subtractProps, jsonToText)
 import WebDriverPreCore.Internal.Utils (txt)
 import Prelude
@@ -158,20 +152,6 @@ data EventData
       Generic
     )
 
-data ResultData
-  = BrowsingContextResult BrowsingContextResult
-  | BrowserResult BrowserResult
-  | EmulationResult EmptyResult
-  | InputResult FileDialogInfo
-  | NetworkResult NetworkResult
-  | ScriptResult ScriptResult
-  | SessionResult SessionResult
-  | StorageResult StorageResult
-  | WebExtensionResult WebExtensionResult
-  deriving
-    ( Show,
-      Generic
-    )
 
 -- instance FromJSON ResultData where
 --   parseJSON :: Value -> Parser ResultData
