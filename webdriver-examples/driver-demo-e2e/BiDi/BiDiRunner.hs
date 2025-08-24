@@ -103,7 +103,7 @@ import WebDriverPreCore.BiDi.Protocol
     SetViewport,
     TraverseHistory,
     TraverseHistoryResult,
-    UserContextInfo,
+    UserContext,
     WebExtension,
     WebExtensionData,
     WebExtensionResult, BrowsingContext,
@@ -142,7 +142,7 @@ data Commands = MkCommands
     browsingContextTraverseHistory :: TraverseHistory -> IO TraverseHistoryResult,
     -- Browser commands
     browserClose :: IO Object,
-    browserCreateUserContext :: CreateUserContext -> IO UserContextInfo,
+    browserCreateUserContext :: CreateUserContext -> IO UserContext,
     browserGetClientWindows :: IO GetClientWindowsResult,
     browserGetUserContexts :: IO GetUserContextsResult,
     browserRemoveUserContext :: RemoveUserContext -> IO Object,

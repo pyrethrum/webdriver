@@ -19,6 +19,8 @@ module WebDriverPreCore.Internal.AesonUtils
     parseOpt,
     prettyPrintJson,
     parseJson,
+    resultToEither,
+    parseObjectEither
   )
 where
 
@@ -37,13 +39,13 @@ import Data.Aeson
 import Data.Aeson qualified as A
 import Data.Aeson.Encode.Pretty (encodePretty)
 import Data.Aeson.KeyMap qualified as AKM
-import Data.Aeson.Types (Parser, parseMaybe)
+import Data.Aeson.Types (Parser, parseMaybe, parse)
 import Data.ByteString.Lazy qualified as LBS
 import Data.Either (Either, either)
 import Data.Function (($), (&), (.))
 import Data.Functor (Functor, (<$>))
 import Data.String (String)
-import Data.Text (Text, unpack)
+import Data.Text (Text, unpack, pack)
 import Data.Text qualified as T
 import Data.Text.Encoding (decodeUtf8, encodeUtf8)
 import Data.Text.IO qualified as T
@@ -56,7 +58,7 @@ import Prelude
     pure,
     (<>),
     (>>=),
-    Bool (..), Foldable (..), not, error
+    Bool (..), Foldable (..), not, error, Either (..)
   )
 import Control.Monad (MonadFail(..))
 import Data.Set qualified as S
@@ -79,6 +81,15 @@ parseObject :: Text -> Value -> Parser A.Object
 parseObject errMsg val = case val of
   Object obj -> pure obj
   _ -> fail $ unpack errMsg
+
+
+resultToEither :: forall a. Result a -> Either Text a
+resultToEither = \case
+  Success a -> Right a
+  Error e -> Left $ pack e
+
+parseObjectEither :: Object -> Either Text Object
+parseObjectEither = resultToEither . parse parseJSON . Object
 
 parseObjectMaybe :: FromJSON a => Object -> Maybe a
 parseObjectMaybe = parseMaybe parseJSON . Object

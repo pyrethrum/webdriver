@@ -10,8 +10,6 @@ module WebDriverPreCore.BiDi.Browser
     RectState (..),
     RemoveUserContext (..),
     SetClientWindowState (..),
-    UserContext (..),
-    UserContextInfo (..),
     WindowState (..),
   )
 where
@@ -22,6 +20,7 @@ import GHC.Generics (Generic)
 import WebDriverPreCore.BiDi.Capabilities (ProxyConfiguration, UserPromptHandler)
 import WebDriverPreCore.Internal.AesonUtils (enumCamelCase)
 import Prelude (Bool (..), Eq (..), Int, Maybe, Show (..))
+import WebDriverPreCore.BiDi.CoreTypes (UserContext)
 
 {-
 create types to represent the remote and local ends for browser:
@@ -70,22 +69,6 @@ instance FromJSON ClientWindowState
 
 instance ToJSON ClientWindowState where
   toJSON = enumCamelCase
-
-newtype UserContext = MkUserContext Text
-  deriving (Show, Eq, Generic)
-
-instance FromJSON UserContext
-
-instance ToJSON UserContext
-
-newtype UserContextInfo = MkUserContextInfo
-  { userContext :: UserContext
-  }
-  deriving (Show, Eq, Generic)
-
-instance FromJSON UserContextInfo
-
-instance ToJSON UserContextInfo
 
 data CreateUserContext = MkCreateUserContext
   { acceptInsecureCerts :: Maybe Bool,
@@ -164,7 +147,7 @@ instance FromJSON GetClientWindowsResult
 instance ToJSON GetClientWindowsResult
 
 newtype GetUserContextsResult = MkGetUserContextsResult
-  { userContexts :: [UserContextInfo]
+  { userContexts :: [UserContext]
   }
   deriving (Show, Eq, Generic)
 

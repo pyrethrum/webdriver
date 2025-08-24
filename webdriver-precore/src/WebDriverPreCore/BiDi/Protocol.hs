@@ -95,8 +95,7 @@ import WebDriverPreCore.BiDi.Browser
     GetClientWindowsResult,
     GetUserContextsResult,
     RemoveUserContext,
-    SetClientWindowState,
-    UserContextInfo,
+    SetClientWindowState, 
   )
 import WebDriverPreCore.BiDi.BrowsingContext
   ( Activate,
@@ -185,7 +184,7 @@ import WebDriverPreCore.BiDi.WebExtensions
     WebExtensionData,
     WebExtensionResult (..),
   )
-import WebDriverPreCore.BiDi.CoreTypes as BrowsingContext (BrowsingContext(..))
+import WebDriverPreCore.BiDi.CoreTypes as BrowsingContext (BrowsingContext(..), UserContext)
 
 ---- Session ----
 
@@ -247,7 +246,7 @@ browsingContextTraverseHistory = mkCommand "browsingContext.traverseHistory"
 browserClose :: Command Object Object
 browserClose = emptyCommand "browser.close"
 
-browserCreateUserContext :: CreateUserContext -> Command CreateUserContext UserContextInfo
+browserCreateUserContext :: CreateUserContext -> Command CreateUserContext UserContext
 browserCreateUserContext = mkCommand "browser.createUserContext"
 
 browserGetClientWindows :: Command Object GetClientWindowsResult

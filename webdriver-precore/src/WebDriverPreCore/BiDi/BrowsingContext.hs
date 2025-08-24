@@ -5,7 +5,7 @@ import Data.Map qualified as Map
 import Data.Maybe (catMaybes)
 import Data.Text (Text)
 import GHC.Generics
-import WebDriverPreCore.BiDi.CoreTypes (BrowsingContext, JSInt, JSUInt, NodeRemoteValue)
+import WebDriverPreCore.BiDi.CoreTypes (BrowsingContext, JSInt, JSUInt, NodeRemoteValue, UserContext)
 import WebDriverPreCore.Internal.AesonUtils (enumCamelCase, opt)
 import Prelude (Bool, Eq, Float, Maybe, Semigroup ((<>)), Show, ($))
 
@@ -92,9 +92,6 @@ data Create = MkCreate
     userContext :: Maybe UserContext
   }
   deriving (Show, Eq, Generic)
-
-newtype UserContext = MkUserContext Text
-  deriving (Show, Eq, ToJSON, FromJSON)
 
 instance ToJSON Create where
   toJSON :: Create -> Value

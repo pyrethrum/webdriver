@@ -8,6 +8,7 @@ module WebDriverPreCore.BiDi.CoreTypes
     NodeProperties (..),
     NodeRemoteValue (..),
     SharedId (..),
+    UserContext (..)
   )
 where
 
@@ -37,6 +38,16 @@ instance FromJSON BrowsingContext where
     \obj -> obj .: "context" >>= pure . MkBrowsingContext
 
 -- Node type used by BrowsingContext and Script
+
+newtype UserContext = MkUserContext Text
+  deriving (Show, Eq, ToJSON)
+
+instance FromJSON UserContext where
+  parseJSON :: Value -> Parser UserContext
+  parseJSON = withObject "UserContext" $ \obj -> do
+    result <- obj .: "result"
+    context <- result .: "userContext"
+    pure $ MkUserContext context
 
 data NodeRemoteValue = MkNodeRemoteValue
   { sharedId :: Maybe SharedId,

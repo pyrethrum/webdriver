@@ -14,7 +14,7 @@ import WebDriverPreCore.BiDi.CoreTypes (EmptyResult (..), JSUInt)
 import WebDriverPreCore.BiDi.Error (ErrorCode)
 import WebDriverPreCore.BiDi.Input (FileDialogOpened)
 import WebDriverPreCore.BiDi.Log (Entry)
-import WebDriverPreCore.Internal.AesonUtils (parseObjectMaybe, subtractProps, jsonToText)
+import WebDriverPreCore.Internal.AesonUtils (jsonToText, parseObjectMaybe, subtractProps, parseObjectEither)
 import WebDriverPreCore.Internal.Utils (txt)
 import Prelude
 
@@ -30,15 +30,15 @@ matchResponseObject msgId = \case
       matchedResult
       (id' == msgId)
     where
-      success :: Maybe (Success a)
-      success = parseObjectMaybe obj
+      success :: Either Text Object
+      success = parseObjectEither obj
 
       matchedResult :: Either ResponseError (Maybe (MatchedResponse a))
       matchedResult =
         success
-          & maybe
-            (Left $ ParseError obj)
-            (\s -> Right . Just $ MkMatchedResponse s.result obj)
+          & either
+            (\e -> Left $ ParseError { object = obj, error = e })
+            (\o -> Right . Just $ MkMatchedResponse { response = o, object = o })
 
 decodeResponse :: ByteString -> Either JSONEncodeError ResponseObject
 decodeResponse =
@@ -66,7 +66,10 @@ newtype JSONEncodeError = MkJSONEncodeError Text deriving (Show, Eq, Generic)
 data ResponseError
   = BiDIError Error
   | EncodeError JSONEncodeError
-  | ParseError Object
+  | ParseError
+      { object :: Object,
+        error :: Text
+      }
   | BiDiTimeoutError {ms :: Int}
   deriving (Show, Eq, Generic)
 
@@ -78,7 +81,11 @@ displayResponseError c err =
     <> case err of
       BiDIError e -> "BiDi driver error: \n" <> txt e
       EncodeError (MkJSONEncodeError e) -> "Failed to encode driver response to JSON: \n" <> txt e
-      ParseError o -> "Failed to decode JSON returned by driver to response type: \n" <> jsonToText (Object o)
+      ParseError {object, error = e} ->
+        "Failed to decode JSON returned by driver to response type: \n"
+          <> jsonToText (Object object)
+          <> "\nError message: \n"
+          <> e
       BiDiTimeoutError {ms} -> "Timed out waiting for matching command response from driver (" <> txt ms <> "milliseconds)"
 
 data Success a = MkSuccess
@@ -151,7 +158,6 @@ data EventData
     ( Show,
       Generic
     )
-
 
 -- instance FromJSON ResultData where
 --   parseJSON :: Value -> Parser ResultData
