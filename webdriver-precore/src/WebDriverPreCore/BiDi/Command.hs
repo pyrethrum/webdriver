@@ -10,14 +10,14 @@ import Data.Aeson
 import Data.Text (Text)
 import WebDriverPreCore.BiDi.CoreTypes (JSUInt)
 import WebDriverPreCore.Internal.AesonUtils (objectOrThrow)
-import Prelude (Maybe (..), maybe, (<>))
+import Prelude (Maybe (..), maybe, (<>), Show, Eq)
 import Data.Aeson.KeyMap qualified as KM
 
 data Command c r = MkCommand
   { method :: Text,
     params :: c,
     extended :: Maybe Object
-  }
+  } deriving (Show, Eq)
 
 mkCommand :: forall c r. Text -> c -> Command c r
 mkCommand method params = MkCommand {method, params, extended = Nothing}

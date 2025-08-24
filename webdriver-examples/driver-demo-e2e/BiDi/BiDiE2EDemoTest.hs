@@ -1,24 +1,20 @@
 module BiDi.BiDiE2EDemoTest where
 
-
-import Config (loadConfig)
-import Control.Exception (finally)
 -- custom import needed to disambiguate capabilities
-import Http.HttpAPI qualified as Http
-import IOUtils (DemoUtils (..), demoUtils)
-import Prelude hiding (putStrLn, log)
-import BiDi.BiDiRunner (httpBidiCapabilities, Commands(..), withCommands)
+
+import BiDi.BiDiRunner (Commands (..), withCommands)
+import Control.Exception (finally)
 import Data.Text (Text)
-import WebDriverPreCore.Internal.Utils (txt)
+import IOUtils (DemoUtils (..), Logger (..), getLogger, sleepMs)
 import WebDriverPreCore.BiDi.BiDiPath (parseUrl)
 import WebDriverPreCore.BiDi.BrowsingContext
-
+import WebDriverPreCore.Internal.Utils (txt)
+import Prelude hiding (log, putStrLn)
 
 -- >>> demo_parseUrl
 -- "Right\n  MkBiDiPath\n    { host = \"127.0.0.1\"\n    , port = 9222\n    , path = \"/session/e43698d9-b02a-4284-a936-12041deb3552\"\n    }"
 demo_parseUrl :: Text
 demo_parseUrl = txt $ parseUrl "ws://127.0.0.1:9222/session/e43698d9-b02a-4284-a936-12041deb3552"
-
 
 -- -- >>> unit_newBidiSessionViaHttp
 -- unit_newBidiSessionViaHttp :: IO ()
@@ -29,34 +25,45 @@ demo_parseUrl = txt $ parseUrl "ws://127.0.0.1:9222/session/e43698d9-b02a-4284-a
 --     (logShow "new session response:\n" ses)
 --     (Http.deleteSession ses.sessionId)
 
+bidiDemoUtils :: IO DemoUtils
+bidiDemoUtils =
+  do
+    MkLogger {log = log', stop} <- getLogger
+    let logTxt = log'
+        log l t = logTxt $ l <> ": " <> t
+        logShow :: forall a. (Show a) => Text -> a -> IO ()
+        logShow l = log l . txt
+        logM l mt = mt >>= log l
+        logShowM :: forall a. (Show a) => Text -> IO a -> IO ()
+        logShowM l t = t >>= logShow l
+    pure $
+      MkDemoUtils
+        { sleep = sleepMs,
+          logTxt,
+          log,
+          logShow,
+          logM,
+          logShowM,
+          stopLogger = stop
+        }
 
 runExample :: DemoUtils -> (DemoUtils -> Commands -> IO ()) -> IO ()
-runExample utils action = withCommands $ action utils
+runExample utils action =
+  withCommands (Just utils.logTxt) $ action utils
 
 runDemo :: (DemoUtils -> Commands -> IO ()) -> IO ()
-runDemo = runExample demoUtils
+runDemo action =
+  do
+    demoUtils <- bidiDemoUtils
+    finally
+      (runExample demoUtils action)
+      (demoUtils.stopLogger)
 
-
-
--- >>> demoNewTab
--- *** Exception: JSONParseError
---   (fromList
---      [ ( "id" , Number 1.0 )
---      , ( "result"
---        , Object
---            (fromList
---               [ ( "context" , String "bbe1d55b-88d7-4e00-b4f2-d20478af3bb8" ) ])
---        )
---      , ( "type" , String "success" )
---      ])
-demoNewTab :: IO ()
-demoNewTab = runDemo newTab
-
+-- >>> runDemo newTab
 newTab :: DemoUtils -> Commands -> IO ()
-newTab MkDemoUtils{..} MkCommands {..} = do
-  logTxt ""
+newTab MkDemoUtils {..} MkCommands {..} = do
+  logTxt "About to open tab"
   bc <- browsingContextCreate $ MkCreate Tab Nothing Nothing Nothing
   logShow "Browsing Context" bc
   sleep 3_000
   pure ()
-  

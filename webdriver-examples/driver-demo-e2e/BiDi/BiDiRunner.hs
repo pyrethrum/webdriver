@@ -2,115 +2,123 @@ module BiDi.BiDiRunner where
 
 import Config (Config, loadConfig)
 import Control.Concurrent (threadDelay)
-import Control.Exception (Exception (displayException), SomeException, catch)
+import Control.Exception (Exception (displayException), Handler (..), SomeException, catch, catches)
 import Control.Monad (forever)
-import Data.Aeson (FromJSON, ToJSON, Value, encode, toJSON, Object)
+import Data.Aeson (FromJSON, Object, ToJSON, Value, encode, toJSON)
 import Data.ByteString.Lazy qualified as BL
 import Data.Function ((&))
+import Data.Maybe (fromMaybe)
 import Data.Text as T (Text, pack, unpack)
 import Data.Text.IO as T (putStrLn)
 import Http.HttpAPI (FullCapabilities, SessionResponse (..), deleteSession, newSessionFull)
 import Http.HttpAPI qualified as Caps (Capabilities (..))
-import Network.WebSockets (receiveData, runClient, sendTextData)
+-- BrowsingContext types
+
+-- Browser types
+
+-- Emulation types
+
+-- Input types
+
+-- Network types
+
+-- Script types
+
+-- Storage types
+
+-- WebExtension types
+
+import Network.WebSockets (receiveData, runClient, sendClose, sendTextData)
 import RuntimeConst (httpCapabilities, httpFullCapabilities)
-import UnliftIO (bracket, throwIO)
-import UnliftIO.Async (Async, async, cancel, waitAny)
+import UnliftIO (AsyncCancelled, bracket, throwIO, waitAnyCancel)
+import UnliftIO.Async (Async, async, cancel)
 import UnliftIO.STM
 import WebDriverPreCore.BiDi.BiDiPath (BiDiPath (..), getBiDiPath)
 import WebDriverPreCore.BiDi.Capabilities (Capabilities)
 import WebDriverPreCore.BiDi.Command
 import WebDriverPreCore.BiDi.CoreTypes (JSUInt (..))
-import WebDriverPreCore.BiDi.Protocol qualified as P
 import WebDriverPreCore.BiDi.Protocol
-  ( SessionSubscriptionRequest,
-    SessionSubscribeResult,
-    SessionUnsubscribeParameters,
-    -- BrowsingContext types
-    Activate,
+  ( Activate,
+    AddDataCollector,
+    AddDataCollectorResult,
+    AddIntercept,
+    AddInterceptResult,
+    AddPreloadScript,
+    AddPreloadScriptResult,
+    CallFunction,
+    CallFunctionResult,
     CaptureScreenshot,
     CaptureScreenshotResult,
+    ClientWindowInfo,
     Close,
+    ContinueRequest,
+    ContinueResponse,
+    ContinueWithAuth,
     Create,
     CreateResult,
+    CreateUserContext,
+    DeleteCookies,
+    DeleteCookiesResult,
+    Disown,
+    DisownData,
+    Evaluate,
+    EvaluateResult,
+    FailRequest,
+    GetClientWindowsResult,
+    GetCookies,
+    GetCookiesResult,
+    GetData,
+    GetDataResult,
+    GetRealms,
+    GetRealmsResult,
     GetTree,
-    GetTreeResult, 
+    GetTreeResult,
+    GetUserContextsResult,
     HandleUserPrompt,
     LocateNodes,
     LocateNodesResult,
     Navigate,
     NavigateResult,
+    PerformActions,
     Print,
     PrintResult,
+    ProvideResponse,
+    ReleaseActions,
     Reload,
-    SetViewport,
-    TraverseHistory,
-    TraverseHistoryResult,
-    -- Browser types
-    CreateUserContext,
-    UserContextInfo,
-    GetClientWindowsResult,
-    GetUserContextsResult,
+    RemoveDataCollector,
+    RemoveIntercept,
+    RemovePreloadScript,
     RemoveUserContext,
+    SessionSubscribeResult,
+    SessionSubscriptionRequest,
+    SessionUnsubscribeParameters,
+    SetCacheBehavior,
     SetClientWindowState,
-    ClientWindowInfo,
-    -- Emulation types
+    SetCookie,
+    SetCookieResult,
+    SetFiles,
     SetGeolocationOverride,
     SetLocaleOverride,
     SetScreenOrientationOverride,
     SetTimezoneOverride,
-    -- Input types
-    PerformActions,
-    ReleaseActions,
-    SetFiles,
-    -- Network types
-    AddDataCollector,
-    AddDataCollectorResult,
-    AddIntercept,
-    AddInterceptResult,
-    ContinueRequest,
-    ContinueResponse,
-    ContinueWithAuth,
-    DisownData,
-    FailRequest,
-    GetData,
-    GetDataResult,
-    ProvideResponse,
-    RemoveDataCollector,
-    RemoveIntercept,
-    SetCacheBehavior,
-    -- Script types
-    AddPreloadScript,
-    AddPreloadScriptResult,
-    CallFunction,
-    CallFunctionResult,
-    Disown,
-    Evaluate,
-    EvaluateResult,
-    GetRealms,
-    GetRealmsResult,
-    RemovePreloadScript,
-    -- Storage types
-    DeleteCookies,
-    DeleteCookiesResult,
-    GetCookies,
-    GetCookiesResult,
-    SetCookie,
-    SetCookieResult,
-    -- WebExtension types
+    SetViewport,
+    TraverseHistory,
+    TraverseHistoryResult,
+    UserContextInfo,
+    WebExtension,
     WebExtensionData,
     WebExtensionResult,
-    WebExtension
   )
-
-import WebDriverPreCore.BiDi.ResponseEvent (MatchedResponse (..), ResponseError, ResponseObject, decodeResponse, parseResponse)
+import WebDriverPreCore.BiDi.Protocol qualified as P
+import WebDriverPreCore.BiDi.ResponseEvent (JSONEncodeError, MatchedResponse (..), ResponseObject, decodeResponse, displayResponseError, parseResponse)
 import WebDriverPreCore.BiDi.Session (SessionNewResult, SessionStatusResult)
 import WebDriverPreCore.Http qualified as Http
 import WebDriverPreCore.Internal.Utils (txt)
 import Prelude hiding (getLine, log, null, putStrLn)
 
-withCommands :: (Commands -> IO a) -> IO a
-withCommands action =
-  withBiDiSession $ action . mkCommands 
+withCommands :: Maybe (Text -> IO ()) -> (Commands -> IO a) -> IO a
+withCommands mLogger action =
+  withBiDiSession mLogger $ action . mkCommands
 
 data Commands = MkCommands
   { -- Session commands
@@ -119,7 +127,6 @@ data Commands = MkCommands
     sessionEnd :: IO Object,
     sessionSubScribe :: SessionSubscriptionRequest -> IO SessionSubscribeResult,
     sessionUnsubscribe :: SessionUnsubscribeParameters -> IO Object,
-    
     -- BrowsingContext commands
     browsingContextActivate :: Activate -> IO Object,
     browsingContextCaptureScreenshot :: CaptureScreenshot -> IO CaptureScreenshotResult,
@@ -134,7 +141,6 @@ data Commands = MkCommands
     browsingContextReload :: Reload -> IO Object,
     browsingContextSetViewport :: SetViewport -> IO Object,
     browsingContextTraverseHistory :: TraverseHistory -> IO TraverseHistoryResult,
-    
     -- Browser commands
     browserClose :: IO Object,
     browserCreateUserContext :: CreateUserContext -> IO UserContextInfo,
@@ -142,18 +148,15 @@ data Commands = MkCommands
     browserGetUserContexts :: IO GetUserContextsResult,
     browserRemoveUserContext :: RemoveUserContext -> IO Object,
     browserSetClientWindowState :: SetClientWindowState -> IO ClientWindowInfo,
-
     -- Emulation commands
     emulationSetGeolocationOverride :: SetGeolocationOverride -> IO Object,
     emulationSetLocaleOverride :: SetLocaleOverride -> IO Object,
     emulationSetScreenOrientationOverride :: SetScreenOrientationOverride -> IO Object,
     emulationSetTimezoneOverride :: SetTimezoneOverride -> IO Object,
-    
     -- Input commands
     inputPerformActions :: PerformActions -> IO Object,
     inputReleaseActions :: ReleaseActions -> IO Object,
     inputSetFiles :: SetFiles -> IO Object,
-    
     -- Network commands
     networkAddDataCollector :: AddDataCollector -> IO AddDataCollectorResult,
     networkAddIntercept :: AddIntercept -> IO AddInterceptResult,
@@ -167,7 +170,6 @@ data Commands = MkCommands
     networkRemoveDataCollector :: RemoveDataCollector -> IO Object,
     networkRemoveIntercept :: RemoveIntercept -> IO Object,
     networkSetCacheBehavior :: SetCacheBehavior -> IO Object,
-    
     -- Script commands
     scriptAddPreloadScript :: AddPreloadScript -> IO AddPreloadScriptResult,
     scriptCallFunction :: CallFunction -> IO CallFunctionResult,
@@ -175,12 +177,10 @@ data Commands = MkCommands
     scriptEvaluate :: Evaluate -> IO EvaluateResult,
     scriptGetRealms :: GetRealms -> IO GetRealmsResult,
     scriptRemovePreloadScript :: RemovePreloadScript -> IO Object,
-    
     -- Storage commands
     storageDeleteCookies :: DeleteCookies -> IO DeleteCookiesResult,
     storageGetCookies :: GetCookies -> IO GetCookiesResult,
     storageSetCookie :: SetCookie -> IO SetCookieResult,
-    
     -- WebExtension commands
     webExtensionInstall :: WebExtensionData -> IO WebExtensionResult,
     webExtensionUninstall :: WebExtension -> IO Object
@@ -195,7 +195,6 @@ mkCommands client =
       sessionEnd = send P.sessionEnd,
       sessionSubScribe = send . P.sessionSubScribe,
       sessionUnsubscribe = send . P.sessionUnsubscribe,
-      
       -- BrowsingContext commands
       browsingContextActivate = send . P.browsingContextActivate,
       browsingContextCaptureScreenshot = send . P.browsingContextCaptureScreenshot,
@@ -209,7 +208,6 @@ mkCommands client =
       browsingContextReload = send . P.browsingContextReload,
       browsingContextSetViewport = send . P.browsingContextSetViewport,
       browsingContextTraverseHistory = send . P.browsingContextTraverseHistory,
-      
       -- Browser commands
       browserClose = send P.browserClose,
       browserCreateUserContext = send . P.browserCreateUserContext,
@@ -217,18 +215,15 @@ mkCommands client =
       browserGetUserContexts = send P.browserGetUserContexts,
       browserRemoveUserContext = send . P.browserRemoveUserContext,
       browserSetClientWindowState = send . P.browserSetClientWindowState,
-      
       -- Emulation commands
       emulationSetGeolocationOverride = send . P.emulationSetGeolocationOverride,
       emulationSetLocaleOverride = send . P.emulationSetLocaleOverride,
       emulationSetScreenOrientationOverride = send . P.emulationSetScreenOrientationOverride,
       emulationSetTimezoneOverride = send . P.emulationSetTimezoneOverride,
-      
       -- Input commands
       inputPerformActions = send . P.inputPerformActions,
       inputReleaseActions = send . P.inputReleaseActions,
       inputSetFiles = send . P.inputSetFiles,
-      
       -- Network commands
       networkAddDataCollector = send . P.networkAddDataCollector,
       networkAddIntercept = send . P.networkAddIntercept,
@@ -242,7 +237,6 @@ mkCommands client =
       networkRemoveDataCollector = send . P.networkRemoveDataCollector,
       networkRemoveIntercept = send . P.networkRemoveIntercept,
       networkSetCacheBehavior = send . P.networkSetCacheBehavior,
-      
       -- Script commands
       scriptAddPreloadScript = send . P.scriptAddPreloadScript,
       scriptCallFunction = send . P.scriptCallFunction,
@@ -250,23 +244,21 @@ mkCommands client =
       scriptEvaluate = send . P.scriptEvaluate,
       scriptGetRealms = send . P.scriptGetRealms,
       scriptRemovePreloadScript = send . P.scriptRemovePreloadScript,
-      
       -- Storage commands
       storageDeleteCookies = send . P.storageDeleteCookies,
       storageGetCookies = send . P.storageGetCookies,
       storageSetCookie = send . P.storageSetCookie,
-      
       -- WebExtension commands
       webExtensionInstall = send . P.webExtensionInstall,
       webExtensionUninstall = send . P.webExtensionUninstall
     }
   where
-    send :: forall c r. (FromJSON r, ToJSON c) => Command c r -> IO r
+    send :: forall c r. (FromJSON r, ToJSON c, Show c) => Command c r -> IO r
     send = sendCommand client
 
 -- note: just throws an exception if an error is encountered
 -- no timeout implemented - will just hang if bidi does not behave
-sendCommand :: forall c r. (FromJSON r, ToJSON c) => WebDriverBiDiClient -> Command c r -> IO r
+sendCommand :: forall c r. (FromJSON r, ToJSON c, Show c) => WebDriverBiDiClient -> Command c r -> IO r
 sendCommand
   MkWebDriverBiDiClient {sendMessage, receiveChannel, nextId}
   command = do
@@ -279,25 +271,31 @@ sendCommand
         response <- atomically $ readTChan receiveChannel
         parseResponse id' response
           & either
-            (error . unpack . txt)
+            ( -- format and throw
+              error . unpack . displayResponseError command
+            )
             ( maybe
-                (matchedResponse id')
-                (pure . (.response))
+                ( -- recurse
+                  matchedResponse id'
+                )
+                ( -- get response
+                  pure . (.response)
+                )
             )
 
-withBiDiSession :: (WebDriverBiDiClient -> IO a) -> IO a
-withBiDiSession action =
+withBiDiSession :: Maybe (Text -> IO ()) -> (WebDriverBiDiClient -> IO a) -> IO a
+withBiDiSession mLogger action =
   bracket
     httpSession
     (deleteSession . (.sessionId))
     \s' -> do
       let bidiPath = getBiDiPath s' & either (error . T.unpack) id
-      withBiDi bidiPath action
+      withBiDi mLogger bidiPath action
 
-withBiDi :: BiDiPath -> (WebDriverBiDiClient -> IO a) -> IO a
-withBiDi bidiPath action =
+withBiDi :: Maybe (Text -> IO ()) -> BiDiPath -> (WebDriverBiDiClient -> IO a) -> IO a
+withBiDi mLogger bidiPath action =
   bracket
-    (runWebDriverBiDi bidiPath)
+    (getBiDiClient mLogger bidiPath)
     ( \client ->
         putStrLn "Ending BiDi session - will need some clean up here"
           >> client.disconnect
@@ -309,24 +307,19 @@ data WebDriverBiDiClient = MkWebDriverBiDiClient
   { log :: Text -> IO (),
     nextId :: IO JSUInt,
     sendMessage :: forall a. (ToJSON a) => a -> IO (),
-    receiveChannel :: TChan (Either ResponseError ResponseObject),
+    receiveChannel :: TChan (Either JSONEncodeError ResponseObject),
     disconnect :: IO ()
   }
 
 -- | Run WebDriver BiDi client and return a client interface
-runWebDriverBiDi :: BiDiPath -> IO WebDriverBiDiClient
-runWebDriverBiDi bidiPth = do
+getBiDiClient :: Maybe (Text -> IO ()) -> BiDiPath -> IO WebDriverBiDiClient
+getBiDiClient mLogger bidiPth = do
   -- Create communication channels
   sendChan <- newTChanIO
   receiveChan <- newTChanIO
-  logChan <- newTChanIO
   counter <- newTVarIO $ MkJSUInt 1
 
-  loggerAsync <- async . forever $ do
-    msg <- atomically $ readTChan logChan
-    putStrLn $ "[LOG] " <> msg
-
-  let log = atomically . writeTChan logChan
+  let log = fromMaybe (const $ pure ()) mLogger
 
   clientAsync <- startClient bidiPth log sendChan receiveChan
 
@@ -340,36 +333,37 @@ runWebDriverBiDi bidiPth = do
         sendMessage = atomically . writeTChan sendChan . toJSON,
         receiveChannel = receiveChan,
         disconnect = do
-          log "Disconnecting client... TODO: implement proper cleanup"
+          log "Disconnecting client"
           cancel clientAsync
-          threadDelay 1000_000
-          cancel loggerAsync
       }
 
-startClient :: BiDiPath -> (Text -> IO ()) -> TChan Value -> TChan (Either ResponseError ResponseObject) -> IO (Async ())
+startClient :: BiDiPath -> (Text -> IO ()) -> TChan Value -> TChan (Either JSONEncodeError ResponseObject) -> IO (Async ())
 startClient pth@MkBiDiPath {host, port, path} log sendChan receiveChan =
   async $ do
     log $ "Connecting to WebDriver at " <> txt pth
-    catch
-      runSocketClient
-      ( \(e :: SomeException) -> do
-          log $ "WebSocket failure: " <> pack (displayException e)
-          -- flush log channelnewSessionFull .
-          threadDelay 1000_000
-          throwIO e
-      )
+    runSocketClient
+      `catches` [ Handler
+                    (\(_e :: AsyncCancelled) -> threadDelay 1000_000 >> pure ()),
+                  Handler
+                    ( \(e :: SomeException) -> do
+                        log $ "WebSocket failure: " <> pack (displayException e)
+                        -- flush log channelnewSessionFull .
+                        threadDelay 1000_000
+                        throwIO e
+                    )
+                ]
   where
     runSocketClient = runClient (unpack host) port (unpack path) $ \conn -> do
-      log "WebSocket connection established!"
+      log "WebSocket connection established"
 
       let runForever = asyncForever log
 
-      receiver <- runForever "receiver" $ do
+      receiver <- runForever "Receiver" $ do
         msg <- receiveData conn
         log $ "Received raw data: " <> pack (take 100 (show msg)) <> "..."
         atomically . writeTChan receiveChan $ decodeResponse msg
 
-      sender <- runForever "sender" $ do
+      sender <- runForever "Sender" $ do
         msgToSend <- atomically $ readTChan sendChan
         log $ "Sending Message: " <> pack (show msgToSend)
         catchLog
@@ -378,9 +372,16 @@ startClient pth@MkBiDiPath {host, port, path} log sendChan receiveChan =
           (sendTextData conn (BL.toStrict $ encode msgToSend))
 
       -- Wait for any thread to fail (they shouldn't unless there's an error)
-      waitAny [receiver, sender]
-      threadDelay 1_000_000 -- Wait a bit before closing
-      putStrLn "One of the WebSocket threads terminated, closing connection."
+      (waitAnyCancel [receiver, sender] >> log "One of the WebSocket threads terminated")
+        `catch` \(_e :: AsyncCancelled) -> pure ()
+      
+      -- Send close frame to cleanly close the WebSocket connection
+      log "Closing webSocket connection"
+      sendClose conn ("Connection closing" :: Text)
+        `catch` \(e :: SomeException) -> 
+          log $ "Failed to send close frame: " <> pack (show e)
+      
+
 
 httpSession :: IO SessionResponse
 httpSession = loadConfig >>= newSessionFull . httpBidiCapabilities
@@ -398,18 +399,21 @@ httpBidiCapabilities cfg =
     }
 
 catchLog :: Text -> (Text -> IO ()) -> IO () -> IO ()
-catchLog message log action =
-  action `catch` \(e :: SomeException) -> do
-    log $ message <> ": " <> pack (show e)
-    threadDelay 1000_000 -- Wait a bit before rethrowing
-    throwIO e
+catchLog name log action =
+  action
+    `catches` [ Handler $ \(e :: AsyncCancelled) -> do
+                  log $ name <> " thread cancelled"
+                  throwIO e,
+                Handler $ \(e :: SomeException) -> do
+                  log $ "Exception thrown in " <> name <> " thread" <> ": " <> pack (show e)
+                  throwIO e
+              ]
 
 asyncForever :: (Text -> IO ()) -> Text -> IO () -> IO (Async ())
 asyncForever log name action = async $ do
-  log message
-  forever $ catchLog message log action
-  where
-    message = "Starting " <> name <> " thread"
+  log $ "Starting " <> name <> " thread"
+  forever $
+    catchLog name log action
 
 newHttpSession :: FullCapabilities -> IO SessionResponse
 newHttpSession = newSessionFull

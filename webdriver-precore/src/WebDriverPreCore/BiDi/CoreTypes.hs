@@ -7,11 +7,11 @@ module WebDriverPreCore.BiDi.CoreTypes
     JSUInt (..),
     NodeProperties (..),
     NodeRemoteValue (..),
-    SharedId (..)
+    SharedId (..),
   )
 where
 
-import Data.Aeson (FromJSON (..), Object, ToJSON (..), Value (..), (.:?))
+import Data.Aeson (FromJSON (..), Object, ToJSON (..), Value (..), (.:), (.:?))
 import Data.Aeson.Types (Parser, withObject)
 import Data.Int (Int64)
 import Data.Map qualified as Map
@@ -29,7 +29,12 @@ newtype JSUInt = MkJSUInt Word64 deriving newtype (Show, Eq, Enum, FromJSON, ToJ
 newtype JSInt = MkJSInt Int64 deriving newtype (Show, Eq, FromJSON, ToJSON) -- JSINt  :: -9007199254740991..9007199254740991 - Int64  -9223372036854775808 to 9223372036854775807
 
 -- Main BrowsingContext types
-newtype BrowsingContext = BrowsingContext Text deriving (Show, Eq, Generic, ToJSON, FromJSON)
+newtype BrowsingContext = MkBrowsingContext {context :: Text} deriving (Show, Eq, Generic, ToJSON)
+
+instance FromJSON BrowsingContext where
+  parseJSON :: Value -> Parser BrowsingContext
+  parseJSON = withObject "BrowsingContext" $
+    \obj -> obj .: "context" >>= pure . MkBrowsingContext
 
 -- Node type used by BrowsingContext and Script
 

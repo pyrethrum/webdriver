@@ -10,6 +10,7 @@ import Data.Text (Text, pack)
 import GHC.Generics (Generic)
 import WebDriverPreCore.BiDi.Browser (BrowserResult)
 import WebDriverPreCore.BiDi.BrowsingContext (BrowsingContextEvent, BrowsingContextResult)
+import WebDriverPreCore.BiDi.Command (Command)
 import WebDriverPreCore.BiDi.CoreTypes (EmptyResult (..), JSUInt)
 import WebDriverPreCore.BiDi.Error (ErrorCode)
 import WebDriverPreCore.BiDi.Input (FileDialogInfo, FileDialogOpened)
@@ -19,11 +20,12 @@ import WebDriverPreCore.BiDi.Script (ScriptResult)
 import WebDriverPreCore.BiDi.Session (SessionResult (..))
 import WebDriverPreCore.BiDi.Storage (StorageResult (..))
 import WebDriverPreCore.BiDi.WebExtensions (WebExtensionResult (..))
-import WebDriverPreCore.Internal.AesonUtils (parseObjectMaybe, subtractProps)
+import WebDriverPreCore.Internal.AesonUtils (parseObjectMaybe, subtractProps, jsonToText)
+import WebDriverPreCore.Internal.Utils (txt)
 import Prelude
 
-parseResponse :: (FromJSON r) => JSUInt -> Either ResponseError ResponseObject -> Either ResponseError (Maybe (MatchedResponse r))
-parseResponse id' response = response >>= matchResponseObject id'
+parseResponse :: (FromJSON r) => JSUInt -> Either JSONEncodeError ResponseObject -> Either ResponseError (Maybe (MatchedResponse r))
+parseResponse id' response = first EncodeError response >>= matchResponseObject id'
 
 matchResponseObject :: forall a. (FromJSON a) => JSUInt -> ResponseObject -> Either ResponseError (Maybe (MatchedResponse a))
 matchResponseObject msgId = \case
@@ -38,15 +40,19 @@ matchResponseObject msgId = \case
       success = parseObjectMaybe obj
 
       matchedResult :: Either ResponseError (Maybe (MatchedResponse a))
-      matchedResult = success & maybe (Left $ JSONParseError obj) (\s -> Right . Just $ MkMatchedResponse s.result obj)
+      matchedResult =
+        success
+          & maybe
+            (Left $ ParseError obj)
+            (\s -> Right . Just $ MkMatchedResponse s.result obj)
 
-decodeResponse :: ByteString -> Either ResponseError ResponseObject
+decodeResponse :: ByteString -> Either JSONEncodeError ResponseObject
 decodeResponse =
   (=<<) parseResponseObj . packLeft . eitherDecode
   where
-    packLeft = first (JSONEncodeError . pack)
+    packLeft = first (MkJSONEncodeError . pack)
 
-    parseResponseObj :: Object -> Either ResponseError ResponseObject
+    parseResponseObj :: Object -> Either JSONEncodeError ResponseObject
     parseResponseObj =
       packLeft . parseEither (\o' -> maybe NoID WithID <$> o' .:? "id" <*> pure o')
 
@@ -61,15 +67,25 @@ data ResponseObject
   | WithID {id :: JSUInt, object :: Object}
   deriving (Show, Generic)
 
+newtype JSONEncodeError = MkJSONEncodeError Text deriving (Show, Eq, Generic)
+
 data ResponseError
-  = JSONParseError Object
-  | JSONEncodeError Text
-  | BiDiTimeoutError
-      { message :: Text,
-        ms :: Int
-      }
-  | BiDIError Error
+  = BiDIError Error
+  | EncodeError JSONEncodeError
+  | ParseError Object
+  | BiDiTimeoutError {ms :: Int}
   deriving (Show, Eq, Generic)
+
+displayResponseError :: (Show c) => Command c r -> ResponseError -> Text
+displayResponseError c err =
+  "Error executing BiDi command: "
+    <> (txt c)
+    <> "\n"
+    <> case err of
+      BiDIError e -> "BiDi driver error: \n" <> txt e
+      EncodeError (MkJSONEncodeError e) -> "Failed to encode driver response to JSON: \n" <> txt e
+      ParseError o -> "Failed to decode JSON returned by driver to response type: \n" <> jsonToText (Object o)
+      BiDiTimeoutError {ms} -> "Timed out waiting for matching command response from driver (" <> txt ms <> "milliseconds)"
 
 data Success a = MkSuccess
   { id :: JSUInt,
