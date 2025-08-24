@@ -71,6 +71,7 @@ module WebDriverPreCore.BiDi.Protocol
     webExtensionUninstall,
 
     -- * Re-exported modules
+    module BrowsingContext,
     module WebDriverPreCore.BiDi.Browser,
     module WebDriverPreCore.BiDi.BrowsingContext,
     module WebDriverPreCore.BiDi.Capabilities,
@@ -89,8 +90,8 @@ import Data.Aeson
   ( Object,
   )
 import WebDriverPreCore.BiDi.Browser
-  ( ClientWindowInfo,
-    CreateUserContext,
+  ( ClientWindowInfo(..),
+    CreateUserContext(..),
     GetClientWindowsResult,
     GetUserContextsResult,
     RemoveUserContext,
@@ -102,8 +103,8 @@ import WebDriverPreCore.BiDi.BrowsingContext
     CaptureScreenshot,
     CaptureScreenshotResult,
     Close,
-    Create,
-    CreateResult,
+    Create(..),
+    CreateType (..),
     GetTree,
     GetTreeResult,
     HandleUserPrompt,
@@ -184,6 +185,7 @@ import WebDriverPreCore.BiDi.WebExtensions
     WebExtensionData,
     WebExtensionResult (..),
   )
+import WebDriverPreCore.BiDi.CoreTypes as BrowsingContext (BrowsingContext(..))
 
 ---- Session ----
 
@@ -213,7 +215,7 @@ browsingContextCaptureScreenshot = mkCommand "browsingContext.captureScreenshot"
 browsingContextClose :: Close -> Command Close Object
 browsingContextClose = mkCommand "browsingContext.close"
 
-browsingContextCreate :: Create -> Command Create CreateResult
+browsingContextCreate :: Create -> Command Create BrowsingContext
 browsingContextCreate = mkCommand "browsingContext.create"
 
 browsingContextGetTree :: GetTree -> Command GetTree GetTreeResult

@@ -55,7 +55,6 @@ import WebDriverPreCore.BiDi.Protocol
     ContinueResponse,
     ContinueWithAuth,
     Create,
-    CreateResult,
     CreateUserContext,
     DeleteCookies,
     DeleteCookiesResult,
@@ -107,7 +106,7 @@ import WebDriverPreCore.BiDi.Protocol
     UserContextInfo,
     WebExtension,
     WebExtensionData,
-    WebExtensionResult,
+    WebExtensionResult, BrowsingContext,
   )
 import WebDriverPreCore.BiDi.Protocol qualified as P
 import WebDriverPreCore.BiDi.ResponseEvent (JSONEncodeError, MatchedResponse (..), ResponseObject, decodeResponse, displayResponseError, parseResponse)
@@ -132,7 +131,7 @@ data Commands = MkCommands
     browsingContextCaptureScreenshot :: CaptureScreenshot -> IO CaptureScreenshotResult,
     browsingContextClose :: Close -> IO Object,
     -- | Create a browsing context
-    browsingContextCreate :: Create -> IO CreateResult,
+    browsingContextCreate :: Create -> IO BrowsingContext,
     browsingContextGetTree :: GetTree -> IO GetTreeResult,
     browsingContextHandleUserPrompt :: HandleUserPrompt -> IO Object,
     browsingContextLocateNodes :: LocateNodes -> IO LocateNodesResult,

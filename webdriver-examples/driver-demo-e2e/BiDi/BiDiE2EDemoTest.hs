@@ -7,9 +7,10 @@ import Control.Exception (finally)
 import Data.Text (Text)
 import IOUtils (DemoUtils (..), Logger (..), getLogger, sleepMs)
 import WebDriverPreCore.BiDi.BiDiPath (parseUrl)
-import WebDriverPreCore.BiDi.BrowsingContext
+import WebDriverPreCore.BiDi.Protocol
 import WebDriverPreCore.Internal.Utils (txt)
 import Prelude hiding (log, putStrLn)
+
 
 -- >>> demo_parseUrl
 -- "Right\n  MkBiDiPath\n    { host = \"127.0.0.1\"\n    , port = 9222\n    , path = \"/session/e43698d9-b02a-4284-a936-12041deb3552\"\n    }"
@@ -59,23 +60,42 @@ runDemo action =
       (runExample demoUtils action)
       (demoUtils.stopLogger)
 
--- >>> runDemo newTab
-newTab :: DemoUtils -> Commands -> IO ()
-newTab MkDemoUtils {..} MkCommands {..} = do
+-- >>> runDemo browsingContext
+browsingContext :: DemoUtils -> Commands -> IO ()
+browsingContext MkDemoUtils {..} MkCommands {..} = do
   logTxt "About to open tab"
   let bcParams =
         MkCreate
           { createType = Tab,
+            background = False,
             referenceContext = Nothing,
-            background = Nothing,
             userContext = Nothing
           }
+      pause = sleep 3_000
   bc <- browsingContextCreate bcParams
-  logShow "Browsing Context (Tab)" bc
-  sleep 1_000
+  logShow "Browsing context (Tab)" bc
+  pause
 
-  bcWin <- browsingContextCreate bcParams { createType = Window }
-  logShow "Browsing Context (Window)" bcWin
+  bcWin <- browsingContextCreate bcParams {createType = Window}
+  logShow "Browsing context (Window)" bcWin
+  pause
 
-  sleep 1_000
+  bcWithContext <- browsingContextCreate bcParams {referenceContext = Just bc}
+  logShow "Browsing context (with reference context) - next to first tab created" bcWithContext
+  pause
+
+  bg <-
+    browsingContextCreate
+      bcParams
+        { background = True,
+          referenceContext = Just bcWin
+        }
+  logShow "Background browsing context created on front window" bg
+  pause
+
+  uc <- browserCreateUserContext MkCreateUserContext { acceptInsecureCerts = Nothing,
+    proxy = Nothing,
+    unhandledPromptBehavior = Nothing
+  }
+
   pure ()

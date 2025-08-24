@@ -87,8 +87,8 @@ instance ToJSON Close
 -- |  for create command
 data Create = MkCreate
   { createType :: CreateType,
+    background :: Bool,
     referenceContext :: Maybe BrowsingContext,
-    background :: Maybe Bool,
     userContext :: Maybe UserContext
   }
   deriving (Show, Eq, Generic)
@@ -98,13 +98,13 @@ newtype UserContext = MkUserContext Text
 
 instance ToJSON Create where
   toJSON :: Create -> Value
-  toJSON (MkCreate createType referenceContext background userContext) =
+  toJSON (MkCreate {createType, referenceContext, background, userContext}) =
     object $
-      [ "type" .= createType
+      [ "type" .= createType,
+        "background" .= background
       ]
         <> catMaybes
           [ opt "referenceContext" referenceContext,
-            opt "background" background,
             opt "userContext" userContext
           ]
 
@@ -191,6 +191,7 @@ newtype BrowsingContextId = MkBrowsingContextId Text
   deriving (Show, Eq, Generic)
 
 instance FromJSON BrowsingContextId
+
 instance ToJSON BrowsingContextId
 
 -- | Text matching type for InnerText locator
@@ -303,11 +304,6 @@ data Viewport = MkViewport
   deriving (Show, Eq, Generic)
 
 -- ######### Local #########
-
-newtype CreateResult = MkCreateResult
-  { browsingContext :: BrowsingContext
-  }
-  deriving newtype (Show, Eq, FromJSON)
 
 instance FromJSON NavigateResult
 
@@ -431,12 +427,21 @@ newtype Navigation = MkNavigation
 
 -- Additional ToJSON instances for missing types
 instance ToJSON Print
+
 instance ToJSON Reload
+
 instance ToJSON SetViewport
+
 instance ToJSON TraverseHistory
+
 instance ToJSON PrintMargin
+
 instance ToJSON PrintPage
+
 instance ToJSON Viewport
+
 instance ToJSON UserPromptClosed
+
 instance ToJSON UserPromptOpened
+
 instance ToJSON Navigation
