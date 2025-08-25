@@ -88,7 +88,7 @@ resultToEither = \case
   Success a -> Right a
   Error e -> Left $ pack e
 
-parseObjectEither :: Object -> Either Text Object
+parseObjectEither :: FromJSON a =>  Object -> Either Text a
 parseObjectEither = resultToEither . parse parseJSON . Object
 
 parseObjectMaybe :: FromJSON a => Object -> Maybe a

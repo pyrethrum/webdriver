@@ -98,7 +98,7 @@ import WebDriverPreCore.BiDi.Browser
     SetClientWindowState, 
   )
 import WebDriverPreCore.BiDi.BrowsingContext
-  ( Activate,
+  ( 
     CaptureScreenshot,
     CaptureScreenshotResult,
     Close,
@@ -205,7 +205,7 @@ sessionUnsubscribe = mkCommand "session.unsubscribe"
 
 ---- Browsing Context ----
 
-browsingContextActivate :: Activate -> Command Activate Object
+browsingContextActivate :: BrowsingContext -> Command BrowsingContext Object
 browsingContextActivate = mkCommand "browsingContext.activate"
 
 browsingContextCaptureScreenshot :: CaptureScreenshot -> Command CaptureScreenshot CaptureScreenshotResult

@@ -57,6 +57,7 @@ getLogger = do
 
 data DemoUtils = MkDemoUtils
   { sleep :: Int -> IO (),
+    pause :: IO (),
     logTxt :: Text -> IO (),
     log :: Text -> Text -> IO (),
     logShow :: forall a. (Show a) => Text -> a -> IO (),
@@ -73,6 +74,7 @@ demoUtils = MkDemoUtils
     logShow,
     logM,
     logShowM,
+    pause = sleepMs 3_000,
     stopLogger = pure ()
   }
 
@@ -84,6 +86,7 @@ doNothingUtils = MkDemoUtils
     logShow = \_ _ -> pure (),
     logM = \_ _ -> pure (),
     logShowM = \_ _ -> pure (),
+    pause = pure (),
     stopLogger = pure ()
   }
 

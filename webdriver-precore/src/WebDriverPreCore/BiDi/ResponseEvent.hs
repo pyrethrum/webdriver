@@ -14,7 +14,7 @@ import WebDriverPreCore.BiDi.CoreTypes (EmptyResult (..), JSUInt)
 import WebDriverPreCore.BiDi.Error (ErrorCode)
 import WebDriverPreCore.BiDi.Input (FileDialogOpened)
 import WebDriverPreCore.BiDi.Log (Entry)
-import WebDriverPreCore.Internal.AesonUtils (jsonToText, parseObjectMaybe, subtractProps, parseObjectEither)
+import WebDriverPreCore.Internal.AesonUtils (jsonToText, subtractProps, parseObjectEither)
 import WebDriverPreCore.Internal.Utils (txt)
 import Prelude
 
@@ -30,7 +30,7 @@ matchResponseObject msgId = \case
       matchedResult
       (id' == msgId)
     where
-      success :: Either Text Object
+      success :: Either Text (Success a)
       success = parseObjectEither obj
 
       matchedResult :: Either ResponseError (Maybe (MatchedResponse a))
@@ -38,7 +38,7 @@ matchResponseObject msgId = \case
         success
           & either
             (\e -> Left $ ParseError { object = obj, error = e })
-            (\o -> Right . Just $ MkMatchedResponse { response = o, object = o })
+            (\s -> Right . Just $ MkMatchedResponse { response = s.result, object = obj })
 
 decodeResponse :: ByteString -> Either JSONEncodeError ResponseObject
 decodeResponse =
@@ -82,7 +82,7 @@ displayResponseError c err =
       BiDIError e -> "BiDi driver error: \n" <> txt e
       EncodeError (MkJSONEncodeError e) -> "Failed to encode driver response to JSON: \n" <> txt e
       ParseError {object, error = e} ->
-        "Failed to decode JSON returned by driver to response type: \n"
+        "Failed to decode the 'result' property of JSON returned by driver to response type: \n"
           <> jsonToText (Object object)
           <> "\nError message: \n"
           <> e

@@ -39,14 +39,13 @@ instance FromJSON BrowsingContext where
 
 -- Node type used by BrowsingContext and Script
 
-newtype UserContext = MkUserContext Text
+newtype UserContext = MkUserContext {userContext :: Text}
   deriving (Show, Eq, ToJSON)
 
 instance FromJSON UserContext where
   parseJSON :: Value -> Parser UserContext
   parseJSON = withObject "UserContext" $ \obj -> do
-    result <- obj .: "result"
-    context <- result .: "userContext"
+    context <- obj .: "userContext"
     pure $ MkUserContext context
 
 data NodeRemoteValue = MkNodeRemoteValue

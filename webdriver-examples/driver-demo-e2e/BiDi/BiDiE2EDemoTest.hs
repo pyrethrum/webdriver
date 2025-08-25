@@ -45,6 +45,7 @@ bidiDemoUtils =
           logShow,
           logM,
           logShowM,
+          pause = sleepMs pauseMs,
           stopLogger = stop
         }
 
@@ -60,27 +61,33 @@ runDemo action =
       (runExample demoUtils action)
       (demoUtils.stopLogger)
 
--- >>> runDemo browsingContext
--- *** Exception: Error executing BiDi command: MkCommand
---   { method = "browser.createUserContext"
---   , params =
---       MkCreateUserContext
---         { acceptInsecureCerts = Nothing
---         , proxy = Nothing
---         , unhandledPromptBehavior = Nothing
---         }
---   , extended = Nothing
---   }
--- Failed to decode JSON returned by driver to response type: 
--- {
---     "id": 5,
---     "result": {
---         "userContext": "362bab4d-cca2-4d46-96e7-6029ddd8383d"
---     },
---     "type": "success"
--- }
-browsingContext :: DemoUtils -> Commands -> IO ()
-browsingContext MkDemoUtils {..} MkCommands {..} = do
+pauseMs :: Int
+pauseMs = 3_000
+
+-- TODO: Session find out 
+
+{- 
+##### BrowsingContext #####
+
+4. browsingContextCreate
+1. browsingContextActivate
+2. browsingContextCaptureScreenshot
+3. browsingContextClose
+5. browsingContextGetTree
+6. browsingContextHandleUserPrompt
+7. browsingContextLocateNodes
+8. browsingContextNavigate
+9. browsingContextPrint
+10. browsingContextReload
+11. browsingContextSetViewport
+12. browsingContextTraverseHistory
+
+-}
+
+-- >>> runDemo browsingContext1
+-- *** Exception: thread blocked indefinitely in an STM transaction
+browsingContext1 :: DemoUtils -> Commands -> IO ()
+browsingContext1 MkDemoUtils {..} MkCommands {..} = do
   logTxt "New browsing context - Tab"
   let bcParams =
         MkCreate
@@ -89,7 +96,6 @@ browsingContext MkDemoUtils {..} MkCommands {..} = do
             referenceContext = Nothing,
             userContext = Nothing
           }
-      pause = sleep 3_000
   bc <- browsingContextCreate bcParams
   logShow "Browsing context - Tab" bc
   pause
@@ -114,11 +120,15 @@ browsingContext MkDemoUtils {..} MkCommands {..} = do
   logShow "Background browsing context created on front window" bg
   pause
 
-  logTxt "New browsing context - Window with user context"
+  logTxt "New user context"
   uc <- browserCreateUserContext MkCreateUserContext { acceptInsecureCerts = Nothing,
     proxy = Nothing,
     unhandledPromptBehavior = Nothing
   }
+  logShow "User context created" uc
+  pause 
+
+  logTxt "New browsing context - Window with user context"
   bcWinWithUC <-
     browsingContextCreate
       bcParams
@@ -126,5 +136,10 @@ browsingContext MkDemoUtils {..} MkCommands {..} = do
           userContext = Just uc
         }
   logShow "Browsing context - Window with user context" bcWinWithUC
+  pause
+
+  logTxt "Activate initial browsing context"
+  browsingContextActivate bc
+  pause
 
   pure ()
