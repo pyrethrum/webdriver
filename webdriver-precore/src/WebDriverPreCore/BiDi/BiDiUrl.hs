@@ -1,4 +1,4 @@
-module WebDriverPreCore.BiDi.BiDiPath where
+module WebDriverPreCore.BiDi.BiDiUrl where
 
 import Data.Function ((&))
 import Data.Text (Text, breakOn, pack, splitOn, unpack)
@@ -7,20 +7,20 @@ import WebDriverPreCore.Http.SpecDefinition (SessionResponse(..))
 import WebDriverPreCore.Internal.Utils (txt)
 import Prelude
 
-getBiDiPath :: SessionResponse -> Either Text BiDiPath
-getBiDiPath r =
+getBiDiUrl :: SessionResponse -> Either Text BiDiUrl
+getBiDiUrl r =
   r.webSocketUrl
     & maybe
       (Left $ "WebSocket URL not provided in session response:\n" <> txt r)
       parseUrl
 
-parseUrl :: Text -> Either Text BiDiPath
+parseUrl :: Text -> Either Text BiDiUrl
 parseUrl url = do
   (_scheme, hostPortPath) <- splitScheme
   (host, portPath) <- splitHost hostPortPath
   (port, path) <- portAndPath portPath
   Right $
-    MkBiDiPath
+    MkBiDiUrl
       { host,
         port,
         path
@@ -61,7 +61,7 @@ parseUrl url = do
     failParser msg = Left $ "Failed to parse URL: " <> url <> "\n" <> msg
 
 -- | WebDriver BiDi client configuration
-data BiDiPath = MkBiDiPath
+data BiDiUrl = MkBiDiUrl
   { host :: Text,
     port :: Int,
     path :: Text

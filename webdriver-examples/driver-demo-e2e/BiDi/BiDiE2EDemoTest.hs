@@ -6,14 +6,13 @@ import BiDi.BiDiRunner (Commands (..), withCommands)
 import Control.Exception (finally)
 import Data.Text (Text)
 import IOUtils (DemoUtils (..), Logger (..), getLogger, sleepMs)
-import WebDriverPreCore.BiDi.BiDiPath (parseUrl)
-import WebDriverPreCore.BiDi.Protocol (Create(..), CreateUserContext(..), CreateType(..))
+import WebDriverPreCore.BiDi.BiDiUrl (parseUrl)
+import WebDriverPreCore.BiDi.Protocol (Create (..), CreateType (..))
 import WebDriverPreCore.Internal.Utils (txt)
 import Prelude hiding (log, putStrLn)
 
-
 -- >>> demo_parseUrl
--- "Right\n  MkBiDiPath\n    { host = \"127.0.0.1\"\n    , port = 9222\n    , path = \"/session/e43698d9-b02a-4284-a936-12041deb3552\"\n    }"
+-- "Right\n  MkBiDiUrl\n    { host = \"127.0.0.1\"\n    , port = 9222\n    , path = \"/session/e43698d9-b02a-4284-a936-12041deb3552\"\n    }"
 demo_parseUrl :: Text
 demo_parseUrl = txt $ parseUrl "ws://127.0.0.1:9222/session/e43698d9-b02a-4284-a936-12041deb3552"
 
@@ -59,14 +58,17 @@ runDemo action =
     demoUtils <- bidiDemoUtils
     finally
       (runExample demoUtils action)
-      (demoUtils.stopLogger)
+      (
+        demoUtils.stopLogger
+        )
 
 pauseMs :: Int
-pauseMs = 3_000
+-- pauseMs = 3_000
+pauseMs = 0
 
--- TODO: Session find out 
+-- TODO: Session find out
 
-{- 
+{-
 ##### BrowsingContext #####
 
 4. browsingContextCreate
@@ -100,6 +102,8 @@ browsingContext1 MkDemoUtils {..} MkCommands {..} = do
   logShow "Browsing context - Tab" bc
   pause
 
+  {-
+
   logTxt "New browsing context - Window"
   bcWin <- browsingContextCreate bcParams {createType = Window}
   logShow "Browsing context - Window" bcWin
@@ -121,12 +125,15 @@ browsingContext1 MkDemoUtils {..} MkCommands {..} = do
   pause
 
   logTxt "New user context"
-  uc <- browserCreateUserContext MkCreateUserContext { acceptInsecureCerts = Nothing,
-    proxy = Nothing,
-    unhandledPromptBehavior = Nothing
-  }
+  uc <-
+    browserCreateUserContext
+      MkCreateUserContext
+        { acceptInsecureCerts = Nothing,
+          proxy = Nothing,
+          unhandledPromptBehavior = Nothing
+        }
   logShow "User context created" uc
-  pause 
+  pause
 
   logTxt "New browsing context - Window with user context"
   bcWinWithUC <-
@@ -138,6 +145,7 @@ browsingContext1 MkDemoUtils {..} MkCommands {..} = do
   logShow "Browsing context - Window with user context" bcWinWithUC
   pause
 
+  -}
   logTxt "Activate initial browsing context"
   browsingContextActivate bc
   pause

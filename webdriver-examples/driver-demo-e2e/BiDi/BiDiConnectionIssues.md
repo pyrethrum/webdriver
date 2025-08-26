@@ -56,7 +56,7 @@ biDiDemo :: IO ()
 biDiDemo = do
   _path <- sessionViaHttp
   newBidiSessionDemo
-    MkBiDiPath
+    MkBiDiUrl
       { host = "127.0.0.1",
         port = 9222,
         path = "/session"
@@ -79,7 +79,7 @@ biDiDemo :: IO ()
 biDiDemo = do
   _path <- sessionViaHttp
   newBidiSessionDemo
-    MkBiDiPath
+    MkBiDiUrl
       { host = "127.0.0.1",
         port = 9222,
         path = "/"
@@ -104,7 +104,7 @@ biDiDemo :: IO ()
 biDiDemo = do
   _path <- sessionViaHttp
   newBidiSessionDemo
-    MkBiDiPath
+    MkBiDiUrl
       { host = "127.0.0.1",
         port = 9222,
         path = ""
@@ -129,7 +129,7 @@ biDiDemo = do
 ```bash
 ...
 [LOG] Creating new session...
-[LOG] Connecting to WebDriver at MkBiDiPath
+[LOG] Connecting to WebDriver at MkBiDiUrl
   { host = "127.0.0.1"
   , port = 9222
   , path = "/session/393792e3-973e-4c17-8dd9-56b890bc7ab1"
@@ -151,7 +151,7 @@ biDiDemo = do
 biDiDemo :: IO ()
 biDiDemo =
    newBidiSessionDemo
-    MkBiDiPath
+    MkBiDiUrl
       { host = "127.0.0.1",
         port = 9222,
         path = "/session"

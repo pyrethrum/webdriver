@@ -17,7 +17,7 @@ import RuntimeConst (httpCapabilities, httpFullCapabilities)
 import UnliftIO (AsyncCancelled, bracket, throwIO, waitAnyCancel)
 import UnliftIO.Async (Async, async, cancel)
 import UnliftIO.STM
-import WebDriverPreCore.BiDi.BiDiPath (BiDiPath (..), getBiDiPath)
+import WebDriverPreCore.BiDi.BiDiUrl (BiDiUrl (..), getBiDiUrl)
 import WebDriverPreCore.BiDi.Capabilities (Capabilities)
 import WebDriverPreCore.BiDi.Command
 import WebDriverPreCore.BiDi.CoreTypes (JSUInt (..))
@@ -101,7 +101,7 @@ import Prelude hiding (getLine, log, null, putStrLn)
 
 withCommands :: Maybe (Text -> IO ()) -> (Commands -> IO a) -> IO a
 withCommands mLogger action =
-  withBiDiSession mLogger $ action . mkCommands
+  withNewBiDiSession mLogger $ action . mkCommands
 
 data Commands = MkCommands
   { -- Session commands
@@ -266,19 +266,19 @@ sendCommand
                 )
             )
 
-withBiDiSession :: Maybe (Text -> IO ()) -> (WebDriverBiDiClient -> IO a) -> IO a
-withBiDiSession mLogger action =
+withNewBiDiSession :: Maybe (Text -> IO ()) -> (WebDriverBiDiClient -> IO a) -> IO a
+withNewBiDiSession mLogger action =
   bracket
     httpSession
     (deleteSession . (.sessionId))
     \s' -> do
-      let bidiPath = getBiDiPath s' & either (error . T.unpack) id
-      withBiDi mLogger bidiPath action
+      let bidiUrl = getBiDiUrl s' & either (error . T.unpack) id
+      withRunningBiDiSession mLogger bidiUrl action
 
-withBiDi :: Maybe (Text -> IO ()) -> BiDiPath -> (WebDriverBiDiClient -> IO a) -> IO a
-withBiDi mLogger bidiPath action =
+withRunningBiDiSession :: Maybe (Text -> IO ()) -> BiDiUrl -> (WebDriverBiDiClient -> IO a) -> IO a
+withRunningBiDiSession mLogger bidiUrl action =
   bracket
-    (getBiDiClient mLogger bidiPath)
+    (getBiDiClient mLogger bidiUrl)
     ( \client ->
         (fromMaybe (const $ pure ()) mLogger) "Ending BiDi session"
           >> client.disconnect
@@ -289,13 +289,13 @@ withBiDi mLogger bidiPath action =
 data WebDriverBiDiClient = MkWebDriverBiDiClient
   { log :: Text -> IO (),
     nextId :: IO JSUInt,
-    sendMessage :: forall a. (ToJSON a) => a -> IO (),
+    sendMessage :: forall a. (ToJSON a, Show a) => a -> IO (),
     receiveChannel :: TChan (Either JSONEncodeError ResponseObject),
     disconnect :: IO ()
   }
 
 -- | Run WebDriver BiDi client and return a client interface
-getBiDiClient :: Maybe (Text -> IO ()) -> BiDiPath -> IO WebDriverBiDiClient
+getBiDiClient :: Maybe (Text -> IO ()) -> BiDiUrl -> IO WebDriverBiDiClient
 getBiDiClient mLogger bidiPth = do
   -- Create communication channels
   sendChan <- newTChanIO
@@ -313,15 +313,19 @@ getBiDiClient mLogger bidiPth = do
           i <- readTVar counter
           writeTVar counter $ succ i
           pure i,
-        sendMessage = atomically . writeTChan sendChan . toJSON,
+        sendMessage = \a -> do
+          log $ "Before Writing to sendChan: " <> txt a
+          let m = toJSON a
+          log $ "Writing to sendChan: " <> txt m
+          atomically . writeTChan sendChan $ m,
         receiveChannel = receiveChan,
         disconnect = do
           log "Disconnecting client"
           cancel clientAsync
       }
 
-startClient :: BiDiPath -> (Text -> IO ()) -> TChan Value -> TChan (Either JSONEncodeError ResponseObject) -> IO (Async ())
-startClient pth@MkBiDiPath {host, port, path} log sendChan receiveChan =
+startClient :: BiDiUrl -> (Text -> IO ()) -> TChan Value -> TChan (Either JSONEncodeError ResponseObject) -> IO (Async ())
+startClient pth@MkBiDiUrl {host, port, path} log sendChan receiveChan =
   async $ do
     log $ "Connecting to WebDriver at " <> txt pth
     runSocketClient
