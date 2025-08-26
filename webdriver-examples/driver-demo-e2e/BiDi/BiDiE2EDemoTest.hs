@@ -10,6 +10,7 @@ import WebDriverPreCore.BiDi.BiDiUrl (parseUrl)
 import WebDriverPreCore.BiDi.Protocol (Create (..), CreateType (..))
 import WebDriverPreCore.Internal.Utils (txt)
 import Prelude hiding (log, putStrLn)
+import Control.Concurrent (threadDelay)
 
 -- >>> demo_parseUrl
 -- "Right\n  MkBiDiUrl\n    { host = \"127.0.0.1\"\n    , port = 9222\n    , path = \"/session/e43698d9-b02a-4284-a936-12041deb3552\"\n    }"
@@ -59,6 +60,7 @@ runDemo action =
     finally
       (runExample demoUtils action)
       (
+        threadDelay 2_000_000 >>
         demoUtils.stopLogger
         )
 

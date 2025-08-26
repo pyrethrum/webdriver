@@ -8,7 +8,7 @@ import Data.Aeson (FromJSON, Object, ToJSON, Value, encode, toJSON)
 import Data.ByteString.Lazy qualified as BL
 import Data.Function ((&))
 import Data.Maybe (fromMaybe)
-import Data.Text as T (Text, pack, unpack)
+import Data.Text as T (Text, pack, unpack, take)
 import Http.HttpAPI (FullCapabilities, SessionResponse (..), deleteSession, newSessionFull)
 import Http.HttpAPI qualified as Caps (Capabilities (..))
 
@@ -296,7 +296,7 @@ data WebDriverBiDiClient = MkWebDriverBiDiClient
 
 -- | Run WebDriver BiDi client and return a client interface
 getBiDiClient :: Maybe (Text -> IO ()) -> BiDiUrl -> IO WebDriverBiDiClient
-getBiDiClient mLogger bidiPth = do
+getBiDiClient mLogger bidiUrl = do
   -- Create communication channels
   sendChan <- newTChanIO
   receiveChan <- newTChanIO
@@ -304,7 +304,7 @@ getBiDiClient mLogger bidiPth = do
 
   let log = fromMaybe (const $ pure ()) mLogger
 
-  clientAsync <- startClient bidiPth log sendChan receiveChan
+  clientAsync <- startClient bidiUrl log sendChan receiveChan
 
   pure $
     MkWebDriverBiDiClient
@@ -314,7 +314,8 @@ getBiDiClient mLogger bidiPth = do
           writeTVar counter $ succ i
           pure i,
         sendMessage = \a -> do
-          log $ "Before Writing to sendChan: " <> txt a
+          log $ "Before Writing to sendChan:" 
+          log $ txt a
           let m = toJSON a
           log $ "Writing to sendChan: " <> txt m
           atomically . writeTChan sendChan $ m,
@@ -347,12 +348,12 @@ startClient pth@MkBiDiUrl {host, port, path} log sendChan receiveChan =
 
       receiver <- runForever "Receiver" $ do
         msg <- receiveData conn
-        log $ "Received raw data: " <> pack (take 100 (show msg)) <> "..."
+        log $ "Received raw data: " <> T.take 100 (txt msg) <> "..."
         atomically . writeTChan receiveChan $ decodeResponse msg
 
       sender <- runForever "Sender" $ do
         msgToSend <- atomically $ readTChan sendChan
-        log $ "Sending Message: " <> pack (show msgToSend)
+        log $ "Sending Message: " <> txt msgToSend
         catchLog
           "Message Send Failed"
           log
