@@ -3,14 +3,14 @@ module BiDi.BiDiE2EDemoTest where
 -- custom import needed to disambiguate capabilities
 
 import BiDi.BiDiRunner (Commands (..), withCommands)
+import Control.Concurrent (threadDelay)
 import Control.Exception (finally)
 import Data.Text (Text)
-import IOUtils (DemoUtils (..), Logger (..), getLogger, sleepMs)
+import IOUtils (DemoUtils (..), Logger (..), sleepMs, withAsyncLogger)
 import WebDriverPreCore.BiDi.BiDiUrl (parseUrl)
 import WebDriverPreCore.BiDi.Protocol (Create (..), CreateType (..))
 import WebDriverPreCore.Internal.Utils (txt)
 import Prelude hiding (log, putStrLn)
-import Control.Concurrent (threadDelay)
 
 -- >>> demo_parseUrl
 -- "Right\n  MkBiDiUrl\n    { host = \"127.0.0.1\"\n    , port = 9222\n    , path = \"/session/e43698d9-b02a-4284-a936-12041deb3552\"\n    }"
@@ -26,28 +26,27 @@ demo_parseUrl = txt $ parseUrl "ws://127.0.0.1:9222/session/e43698d9-b02a-4284-a
 --     (logShow "new session response:\n" ses)
 --     (Http.deleteSession ses.sessionId)
 
-bidiDemoUtils :: IO DemoUtils
-bidiDemoUtils =
+bidiDemoUtils :: Logger -> IO DemoUtils
+bidiDemoUtils MkLogger {log = log', stop} =
   do
-    MkLogger {log = log', stop} <- getLogger
     let logTxt = log'
         log l t = logTxt $ l <> ": " <> t
         logShow :: forall a. (Show a) => Text -> a -> IO ()
         logShow l = log l . txt
-        logM l mt = mt >>= log l
-        logShowM :: forall a. (Show a) => Text -> IO a -> IO ()
-        logShowM l t = t >>= logShow l
     pure $
       MkDemoUtils
         { sleep = sleepMs,
-          logTxt,
           log,
           logShow,
-          logM,
-          logShowM,
+          logM = \l mt -> mt >>= log l,
+          logShowM = \l t -> t >>= logShow l,
+          logTxt,
           pause = sleepMs pauseMs,
           stopLogger = stop
         }
+
+withLogUtils :: (DemoUtils -> IO ()) -> IO ()
+withLogUtils action = withAsyncLogger $ (=<<) action . bidiDemoUtils
 
 runExample :: DemoUtils -> (DemoUtils -> Commands -> IO ()) -> IO ()
 runExample utils action =
@@ -59,10 +58,9 @@ runDemo action =
     demoUtils <- bidiDemoUtils
     finally
       (runExample demoUtils action)
-      (
-        threadDelay 2_000_000 >>
-        demoUtils.stopLogger
-        )
+      ( threadDelay 2_000_000
+          >> demoUtils.stopLogger
+      )
 
 pauseMs :: Int
 -- pauseMs = 3_000
@@ -89,7 +87,9 @@ pauseMs = 0
 -}
 
 -- >>> runDemo browsingContext1
+
 -- *** Exception: thread blocked indefinitely in an STM transaction
+
 browsingContext1 :: DemoUtils -> Commands -> IO ()
 browsingContext1 MkDemoUtils {..} MkCommands {..} = do
   logTxt "New browsing context - Tab"

@@ -10,7 +10,7 @@ module IOUtils
     Logger(..),
     demoUtils,
     doNothingUtils,
-    getLogger,
+    withAsyncLogger,
     sleep1,
     sleep2,
     (===),
@@ -27,7 +27,7 @@ import Data.Text.IO qualified as TIO
 import Test.Tasty.HUnit as HUnit (Assertion, HasCallStack, (@=?))
 import WebDriverPreCore.Internal.Utils (txt)
 import Prelude hiding (log)
-import UnliftIO (newTChanIO, atomically, readTChan, writeTChan, isEmptyTChan, cancel)
+import UnliftIO (newTChanIO, atomically, readTChan, writeTChan, isEmptyTChan, cancel, Async, withAsync, wait)
 import UnliftIO.Async (async)
 import Control.Monad (forever)
 
@@ -37,7 +37,7 @@ data Logger = MkLogger
     stop :: IO ()
   }
 
-getLogger :: IO Logger
+getLogger :: IO (Logger, Async ())
 getLogger = do
   logChan <- newTChanIO
   loggerAsync <- async . forever $ do
@@ -53,7 +53,13 @@ getLogger = do
           else do
             threadDelay 10_000
             stop' $ succ attempt
-  pure $ MkLogger {log = log', stop = stop' 0}
+  pure $ (MkLogger {log = log', stop = stop' 0}, loggerAsync)
+
+withAsyncLogger :: (Logger -> IO ()) -> IO ()
+withAsyncLogger action = do
+  (logger, loggerAsync) <- getLogger
+  action logger
+  wait loggerAsync
 
 data DemoUtils = MkDemoUtils
   { sleep :: Int -> IO (),
