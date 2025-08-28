@@ -314,8 +314,10 @@ getBiDiClient mLogger bidiUrl = do
           writeTVar counter $ succ i
           pure i,
         sendMessage = \a -> do
-          log $ "Before Writing to sendChan:" 
-          log $ txt a
+          log $ "Before forcing message" 
+          let !r = txt a
+          log $ "After forcing message" 
+          log $ r
           let m = toJSON a
           log $ "Writing to sendChan: " <> txt m
           atomically . writeTChan sendChan $ m,

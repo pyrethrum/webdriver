@@ -6,8 +6,8 @@ module IOUtils
     logShow,
     logM,
     logShowM,
-    DemoUtils(..),
-    Logger(..),
+    DemoUtils (..),
+    Logger (..),
     demoUtils,
     doNothingUtils,
     withAsyncLogger,
@@ -19,47 +19,54 @@ where
 
 import Const (second, seconds)
 import Control.Concurrent (threadDelay)
+import Control.Monad (forever)
 import Data.Base64.Types qualified as B64T
 import Data.ByteString qualified as BS
 import Data.ByteString.Base64 qualified as B64
 import Data.Text (Text)
 import Data.Text.IO qualified as TIO
 import Test.Tasty.HUnit as HUnit (Assertion, HasCallStack, (@=?))
+import UnliftIO (Async, TChan, atomically, cancel, isEmptyTChan, newTChanIO, readTChan, wait, withAsync, writeTChan, finally)
+import UnliftIO.Async (async)
 import WebDriverPreCore.Internal.Utils (txt)
 import Prelude hiding (log)
-import UnliftIO (newTChanIO, atomically, readTChan, writeTChan, isEmptyTChan, cancel, Async, withAsync, wait)
-import UnliftIO.Async (async)
-import Control.Monad (forever)
-
 
 data Logger = MkLogger
   { log :: Text -> IO (),
     stop :: IO ()
   }
 
-getLogger :: IO (Logger, Async ())
-getLogger = do
-  logChan <- newTChanIO
-  loggerAsync <- async . forever $ do
-    msg <- atomically $ readTChan logChan
-    TIO.putStrLn $ "[LOG] " <> msg
-  let log' = atomically . writeTChan logChan
-      stop' :: Int -> IO ()
-      stop' attempt = do
-        empty <- atomically $ isEmptyTChan logChan
-        if empty || attempt > 1000
-          then
-            cancel loggerAsync
-          else do
-            threadDelay 10_000
-            stop' $ succ attempt
-  pure $ (MkLogger {log = log', stop = stop' 0}, loggerAsync)
+loggerAsync :: TChan Text -> IO (Async ())
+loggerAsync logChan = async . forever $ do
+  msg <- atomically $ readTChan logChan
+  TIO.putStrLn $ "[LOG] " <> msg
+
+mkLogger :: TChan Text -> Async () -> IO Logger
+mkLogger logChan loggerAsync' =
+  pure $
+    MkLogger
+      { log = atomically . writeTChan logChan,
+        stop = stop' 0
+      }
+  where
+    stop' :: Int -> IO ()
+    stop' attempt = do
+      empty <- atomically $ isEmptyTChan logChan
+      if empty || attempt > 1000
+        then
+          cancel loggerAsync'
+        else do
+          threadDelay 10_000
+          stop' $ succ attempt
 
 withAsyncLogger :: (Logger -> IO ()) -> IO ()
 withAsyncLogger action = do
-  (logger, loggerAsync) <- getLogger
-  action logger
-  wait loggerAsync
+  logChan <- newTChanIO
+  asyncLogger <- loggerAsync logChan
+  logger <- mkLogger logChan asyncLogger
+  finally 
+    (action logger)
+    (wait asyncLogger)
 
 data DemoUtils = MkDemoUtils
   { sleep :: Int -> IO (),
@@ -73,28 +80,30 @@ data DemoUtils = MkDemoUtils
   }
 
 demoUtils :: DemoUtils
-demoUtils = MkDemoUtils
-  { sleep = sleepMs,
-    logTxt,
-    log,
-    logShow,
-    logM,
-    logShowM,
-    pause = sleepMs 3_000,
-    stopLogger = pure ()
-  }
+demoUtils =
+  MkDemoUtils
+    { sleep = sleepMs,
+      logTxt,
+      log,
+      logShow,
+      logM,
+      logShowM,
+      pause = sleepMs 3_000,
+      stopLogger = pure ()
+    }
 
 doNothingUtils :: DemoUtils
-doNothingUtils = MkDemoUtils
-  { sleep = \_ -> pure (),
-    logTxt = \_ -> pure (),
-    log = \_ _ -> pure (),
-    logShow = \_ _ -> pure (),
-    logM = \_ _ -> pure (),
-    logShowM = \_ _ -> pure (),
-    pause = pure (),
-    stopLogger = pure ()
-  }
+doNothingUtils =
+  MkDemoUtils
+    { sleep = \_ -> pure (),
+      logTxt = \_ -> pure (),
+      log = \_ _ -> pure (),
+      logShow = \_ _ -> pure (),
+      logM = \_ _ -> pure (),
+      logShowM = \_ _ -> pure (),
+      pause = pure (),
+      stopLogger = pure ()
+    }
 
 sleepMs :: Int -> IO ()
 sleepMs = threadDelay . (*) 1_000

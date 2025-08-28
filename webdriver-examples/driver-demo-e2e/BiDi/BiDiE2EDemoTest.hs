@@ -45,22 +45,16 @@ bidiDemoUtils MkLogger {log = log', stop} =
           stopLogger = stop
         }
 
-withLogUtils :: (DemoUtils -> IO ()) -> IO ()
-withLogUtils action = withAsyncLogger $ (=<<) action . bidiDemoUtils
+withDemoUtils :: (DemoUtils -> IO ()) -> IO ()
+withDemoUtils action = withAsyncLogger $ (=<<) action . bidiDemoUtils
 
 runExample :: DemoUtils -> (DemoUtils -> Commands -> IO ()) -> IO ()
 runExample utils action =
   withCommands (Just utils.logTxt) $ action utils
 
 runDemo :: (DemoUtils -> Commands -> IO ()) -> IO ()
-runDemo action =
-  do
-    demoUtils <- bidiDemoUtils
-    finally
-      (runExample demoUtils action)
-      ( threadDelay 2_000_000
-          >> demoUtils.stopLogger
-      )
+runDemo = withDemoUtils . flip runExample
+
 
 pauseMs :: Int
 -- pauseMs = 3_000
@@ -87,9 +81,7 @@ pauseMs = 0
 -}
 
 -- >>> runDemo browsingContext1
-
--- *** Exception: thread blocked indefinitely in an STM transaction
-
+-- *** Exception: CommandData will always be an Object
 browsingContext1 :: DemoUtils -> Commands -> IO ()
 browsingContext1 MkDemoUtils {..} MkCommands {..} = do
   logTxt "New browsing context - Tab"
@@ -149,7 +141,8 @@ browsingContext1 MkDemoUtils {..} MkCommands {..} = do
 
   -}
   logTxt "Activate initial browsing context"
-  browsingContextActivate bc
+  o <- browsingContextActivate bc
+  logShow "Activate result" o
   pause
 
   pure ()
