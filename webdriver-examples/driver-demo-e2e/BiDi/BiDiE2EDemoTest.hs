@@ -81,7 +81,10 @@ pauseMs = 0
 -}
 
 -- >>> runDemo browsingContext1
--- *** Exception: CommandData will always be an Object
+-- *** Exception: Failed to send command MkCommand {method = "browsingContext.activate", params = MkBrowsingContext {context = "6524c0ce-4d49-454d-bbc1-10abdc575721"}, extended = Nothing}: Trying to treat non-object JSON value as an Object
+-- CommandData will always be an Object
+-- The actual JSON type was: String
+-- The actual JSON value was: "6524c0ce-4d49-454d-bbc1-10abdc575721"
 browsingContext1 :: DemoUtils -> Commands -> IO ()
 browsingContext1 MkDemoUtils {..} MkCommands {..} = do
   logTxt "New browsing context - Tab"

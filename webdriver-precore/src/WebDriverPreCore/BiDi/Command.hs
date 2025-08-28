@@ -36,4 +36,4 @@ commandValue MkCommand {method, params, extended} id' =
       "params" .= maybe cmdObj (cmdObj <>) extended
     ]
   where
-    cmdObj = objectOrThrow "CommandData will always be an Object" params
+    cmdObj = objectOrThrow "CommandData must always be an Object, not any other JSON type" params

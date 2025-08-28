@@ -246,7 +246,9 @@ sendCommand
   MkWebDriverBiDiClient {sendMessage, receiveChannel, nextId}
   command = do
     id' <- nextId
-    sendMessage $ commandValue command id'
+    (sendMessage $ commandValue command id')
+      `catch` \(e :: SomeException) -> do
+        error $ "Failed to send command " <> show command <> ": " <> displayException e
     matchedResponse id'
     where
       matchedResponse :: JSUInt -> IO r

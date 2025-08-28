@@ -20,51 +20,58 @@ module WebDriverPreCore.Internal.AesonUtils
     prettyPrintJson,
     parseJson,
     resultToEither,
-    parseObjectEither
+    parseObjectEither,
   )
 where
 
 -- \| Utility functions for working with Aeson (JSON) values.
 import Control.Exception (Exception (displayException), SomeException, try)
+import Control.Monad (MonadFail (..))
 import Data.Aeson
   ( FromJSON (..),
     Key,
     KeyValue ((.=)),
+    Object,
+    Options (..),
     Result (..),
     ToJSON (),
     Value (..),
-    eitherDecodeStrict, (.:?),
-    Object, Options (..), defaultOptions
+    defaultOptions,
+    eitherDecodeStrict,
+    (.:?),
   )
 import Data.Aeson qualified as A
 import Data.Aeson.Encode.Pretty (encodePretty)
+import Data.Aeson.Key (fromString)
 import Data.Aeson.KeyMap qualified as AKM
-import Data.Aeson.Types (Parser, parseMaybe, parse)
+import Data.Aeson.Types (Parser, parse, parseMaybe)
 import Data.ByteString.Lazy qualified as LBS
+import Data.Char (toLower)
 import Data.Either (Either, either)
 import Data.Function (($), (&), (.))
 import Data.Functor (Functor, (<$>))
+import Data.Set qualified as S
 import Data.String (String)
-import Data.Text (Text, unpack, pack)
+import Data.Text (Text, pack, unpack)
 import Data.Text qualified as T
 import Data.Text.Encoding (decodeUtf8, encodeUtf8)
 import Data.Text.IO qualified as T
 import GHC.Base (IO)
+import GHC.Generics (Generic, Rep)
 import GHC.Show (Show (..))
 import System.IO (print)
 import Prelude
-  ( Maybe (..),
+  ( Bool (..),
+    Either (..),
+    Foldable (..),
+    Maybe (..),
+    error,
     maybe,
+    not,
     pure,
     (<>),
     (>>=),
-    Bool (..), Foldable (..), not, error, Either (..)
   )
-import Control.Monad (MonadFail(..))
-import Data.Set qualified as S
-import Data.Aeson.Key (fromString)
-import Data.Char (toLower)
-import GHC.Generics (Generic, Rep)
 
 -- Aeson stuff
 -- TODO move to separte library
@@ -82,25 +89,42 @@ parseObject errMsg val = case val of
   Object obj -> pure obj
   _ -> fail $ unpack errMsg
 
-
 resultToEither :: forall a. Result a -> Either Text a
 resultToEither = \case
   Success a -> Right a
   Error e -> Left $ pack e
 
-parseObjectEither :: FromJSON a =>  Object -> Either Text a
+parseObjectEither :: (FromJSON a) => Object -> Either Text a
 parseObjectEither = resultToEither . parse parseJSON . Object
 
-parseObjectMaybe :: FromJSON a => Object -> Maybe a
+parseObjectMaybe :: (FromJSON a) => Object -> Maybe a
 parseObjectMaybe = parseMaybe parseJSON . Object
 
-objectOrThrow :: ToJSON a => Text -> a -> A.Object
-objectOrThrow errMsg val = 
-  case A.toJSON val of
-    Object obj -> obj
-    _ -> error $ unpack errMsg
+aesonConstructorName :: Value -> Text
+aesonConstructorName = \case
+  Object _ -> "Object"
+  Array _ -> "Array"
+  String _ -> "String"
+  Number _ -> "Number"
+  Bool _ -> "Bool"
+  Null -> "Null"
 
-
+objectOrThrow :: (ToJSON a) => Text -> a -> A.Object
+objectOrThrow errMsg val =
+  let val' = A.toJSON val
+   in case val' of
+        Object obj -> obj
+        _ ->
+          error . unpack $
+            "Trying to treat non-object JSON value as an Object"
+              <> "\n"
+              <> errMsg
+              <> "\n"
+              <> "The actual JSON type was: "
+              <> aesonConstructorName val'
+              <> "\n"
+              <> "The actual JSON value was: "
+              <> jsonToText val'
 
 lowerFirst :: String -> String
 lowerFirst = \case
@@ -108,12 +132,12 @@ lowerFirst = \case
   [] -> []
 
 lwrFirstOptions :: Options
-lwrFirstOptions = defaultOptions
-        { constructorTagModifier = lowerFirst
-        }
+lwrFirstOptions =
+  defaultOptions
+    { constructorTagModifier = lowerFirst
+    }
 
-
-enumCamelCase :: ( (Generic a, A.GToJSON' Value A.Zero (Rep a)))  =>a -> Value
+enumCamelCase :: (Generic a, A.GToJSON' Value A.Zero (Rep a)) => a -> Value
 enumCamelCase = A.genericToJSON lwrFirstOptions
 
 -- https://blog.ssanj.net/posts/2019-09-24-pretty-printing-json-in-haskell.html
@@ -156,7 +180,6 @@ lookup k v =
 nonEmpty :: Value -> Bool
 nonEmpty = not . empty
 
-
 emptyObj :: Value
 emptyObj = Object AKM.empty
 
@@ -164,18 +187,19 @@ empty :: Value -> Bool
 empty = \case
   Object o -> AKM.null o
   Array a -> null a
-  String t -> T.null t 
+  String t -> T.null t
   Null -> True
   Bool _ -> False
   Number _ -> False
 
 forceNonEmpty :: Value -> Maybe Value
-forceNonEmpty v = if empty v
-  then Nothing
-  else Just v
+forceNonEmpty v =
+  if empty v
+    then Nothing
+    else Just v
 
-parseOpt :: forall a. FromJSON a => A.Object -> Key -> Parser (Maybe a)
-parseOpt o k = do 
+parseOpt :: forall a. (FromJSON a) => A.Object -> Key -> Parser (Maybe a)
+parseOpt o k = do
   mv <- o .:? k
   case mv >>= forceNonEmpty of
     Nothing -> pure Nothing
@@ -183,9 +207,5 @@ parseOpt o k = do
 
 subtractProps :: [Text] -> Object -> Object
 subtractProps keys obj = AKM.filterWithKey (\k _ -> k `S.member` keySet) obj
-  where 
+  where
     keySet = S.fromList $ fromString . unpack <$> keys
-
-
-
-
