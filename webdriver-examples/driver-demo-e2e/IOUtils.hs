@@ -8,9 +8,12 @@ module IOUtils
     logShowM,
     DemoUtils (..),
     Logger (..),
+    mkLogger,
     demoUtils,
     doNothingUtils,
-    withAsyncLogger,
+    -- withAsyncLogger,
+    bidiDemoUtils,
+    printLoop,
     sleep1,
     sleep2,
     (===),
@@ -37,8 +40,28 @@ data Logger = MkLogger
     waitEmpty :: IO ()
   }
 
-printLoop :: TChan Text -> IO ()
-printLoop logChan = printLoop'
+
+pauseMs :: Int
+pauseMs = 0
+
+bidiDemoUtils :: Logger -> DemoUtils
+bidiDemoUtils MkLogger {log = log'} =
+  let logTxt = log'
+      log l t = logTxt $ l <> ": " <> t
+      logShow :: forall a. (Show a) => Text -> a -> IO ()
+      logShow l = log l . txt
+   in MkDemoUtils
+        { sleep = sleepMs,
+          log,
+          logShow,
+          logM = \l mt -> mt >>= log l,
+          logShowM = \l t -> t >>= logShow l,
+          logTxt,
+          pause = sleepMs pauseMs
+        }
+
+printLoop :: TChan Text -> IO (Async ())
+printLoop logChan = async printLoop'
   where
     printLoop' = do
       msg <- atomically $ readTChan logChan
@@ -61,17 +84,17 @@ mkLogger logChan =
         threadDelay 10_000
         waitEmpty' $ succ attempt
 
-withAsyncLogger :: (Logger -> IO ()) -> IO ()
-withAsyncLogger action = do
-  logChan <- newTChanIO
-  withAsync (printLoop logChan) $ \_ -> do
-    logger <- mkLogger logChan
-    finally
-      ( action logger `catch` \(e :: SomeException) -> do
-          logger.log $ "Exception encountered: " <> txt e
-          throw e
-      )
-      logger.waitEmpty
+-- withAsyncLogger :: (Logger -> IO ()) -> IO ()
+-- withAsyncLogger action = do
+--   logChan <- newTChanIO
+--   withAsync (printLoop logChan) $ \_ -> do
+--     logger <- mkLogger logChan
+--     finally
+--       ( action logger `catch` \(e :: SomeException) -> do
+--           logger.log $ "Exception encountered: " <> txt e
+--           throw e
+--       )
+--       logger.waitEmpty
 
 data DemoUtils = MkDemoUtils
   { sleep :: Int -> IO (),

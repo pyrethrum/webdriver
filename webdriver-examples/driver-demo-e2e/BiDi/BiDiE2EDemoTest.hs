@@ -6,7 +6,7 @@ import BiDi.BiDiRunner (Commands (..), withCommands)
 import Control.Concurrent (threadDelay)
 import Control.Exception (finally)
 import Data.Text (Text)
-import IOUtils (DemoUtils (..), Logger (..), sleepMs, withAsyncLogger)
+import IOUtils (DemoUtils (..), Logger (..), sleepMs)
 import WebDriverPreCore.BiDi.BiDiUrl (parseUrl)
 import WebDriverPreCore.BiDi.Protocol (Create (..), CreateType (..))
 import WebDriverPreCore.Internal.Utils (txt)
@@ -46,15 +46,22 @@ bidiDemoUtils MkLogger {log = log'} =
         }
 
 
-runExample :: DemoUtils -> (DemoUtils -> Commands -> IO ()) -> IO ()
-runExample utils action =
-  withCommands (Just utils.logTxt) $ action utils
+runExample :: (DemoUtils -> Commands -> IO ()) -> IO ()
+runExample action =
+  withCommands $ action 
 
-withDemoUtils :: (DemoUtils -> IO ()) -> IO ()
-withDemoUtils action = withAsyncLogger $ (=<<) action . bidiDemoUtils
+-- runExample :: DemoUtils -> (DemoUtils -> Commands -> IO ()) -> IO ()
+-- runExample utils action =
+--   withCommands $ action utils
+
+-- withDemoUtils :: (DemoUtils -> IO ()) -> IO ()
+-- withDemoUtils action = withAsyncLogger $ (=<<) action . bidiDemoUtils
+
+-- runDemo :: (DemoUtils -> Commands -> IO ()) -> IO ()
+-- runDemo = flip runExample
 
 runDemo :: (DemoUtils -> Commands -> IO ()) -> IO ()
-runDemo = withDemoUtils . flip runExample
+runDemo = runExample
 
 
 pauseMs :: Int
@@ -82,7 +89,7 @@ pauseMs = 0
 -}
 
 -- >>> runDemo browsingContext1
--- *** Exception: thread blocked indefinitely in an STM transaction
+-- *** Exception: ProgressCancelledException
 browsingContext1 :: DemoUtils -> Commands -> IO ()
 browsingContext1 MkDemoUtils {..} MkCommands {..} = do
   logTxt "New browsing context - Tab"
