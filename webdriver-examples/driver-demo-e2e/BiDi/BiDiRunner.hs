@@ -311,6 +311,7 @@ withBiDiClient mLogger bidiUrl action = do
             sendMessage = \a -> do
               log "ABOUT TO SEND"
               let val = toJSON a
+              log "ABOUT TO SEND 2"
               log $ "Writing to sendChan: " <> txt val
               atomically . writeTChan sendChan $ val,
             receiveChannel = receiveChan
@@ -330,14 +331,14 @@ startClient pth@MkBiDiUrl {host, port, path} log sendChan receiveChan =
     runSocketClient = runClient (unpack host) port (unpack path) $ \conn -> do
       log "WebSocket connection established"
 
-      let runForever = asyncForever log
+      let asyncLoop = loopForever log
 
-      receiver <- runForever "Receiver" $ do
+      receiver <- asyncLoop "Receiver" $ do
         msg <- receiveData conn
         log $ "Received raw data: " <> T.take 100 (txt msg) <> "..."
         atomically . writeTChan receiveChan $ decodeResponse msg
 
-      sender <- runForever "Sender" $ do
+      sender <- asyncLoop "Sender" $ do
         msgToSend <- atomically $ readTChan sendChan
         log $ "Sending Message: " <> txt msgToSend
         catchLog
@@ -384,11 +385,11 @@ catchLog name log action =
                   throwIO e
               ]
 
-asyncForever :: (Text -> IO ()) -> Text -> IO () -> IO (Async ())
-asyncForever log name action = async $ do
+loopForever :: (Text -> IO ()) -> Text -> IO () -> IO (Async ())
+loopForever log name action = async $ do
   log $ "Starting " <> name <> " thread"
-  forever $
-    catchLog name log action
+  let loop = catchLog name log action >> loop
+  loop
 
 newHttpSession :: FullCapabilities -> IO SessionResponse
 newHttpSession = newSessionFull

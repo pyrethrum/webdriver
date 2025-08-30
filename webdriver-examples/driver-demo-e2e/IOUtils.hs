@@ -20,7 +20,7 @@ where
 import Const (second, seconds)
 import Control.Concurrent (threadDelay)
 import Control.Exception (throw)
-import Control.Monad (forever)
+import Control.Monad (forever, unless)
 import Data.Base64.Types qualified as B64T
 import Data.ByteString qualified as BS
 import Data.ByteString.Base64 qualified as B64
@@ -34,46 +34,44 @@ import Prelude hiding (log)
 
 data Logger = MkLogger
   { log :: Text -> IO (),
-    stop :: IO ()
+    waitEmpty :: IO ()
   }
 
-loggerAsync :: TChan Text -> IO (Async ())
-loggerAsync logChan = async . forever $ do
-  msg <- atomically $ readTChan logChan
-  TIO.putStrLn $ "[LOG] " <> msg
+printLoop :: TChan Text -> IO ()
+printLoop logChan = printLoop'
+  where
+    printLoop' = do
+      msg <- atomically $ readTChan logChan
+      TIO.putStrLn $ "Next log....."
+      TIO.putStrLn $ "[LOG] " <> msg
+      printLoop'
 
-mkLogger :: TChan Text -> Async () -> IO Logger
-mkLogger logChan loggerAsync' =
+mkLogger :: TChan Text -> IO Logger
+mkLogger logChan =
   pure $
     MkLogger
       { log = atomically . writeTChan logChan,
-        stop = stop' 0
+        waitEmpty = waitEmpty' 0
       }
   where
-    stop' :: Int -> IO ()
-    stop' attempt = do
+    waitEmpty' :: Int -> IO ()
+    waitEmpty' attempt = do
       empty <- atomically $ isEmptyTChan logChan
-      if empty || attempt > 1000
-        then
-          cancel loggerAsync'
-        else do
-          threadDelay 10_000
-          stop' $ succ attempt
+      unless (empty || attempt > 1000) $ do
+        threadDelay 10_000
+        waitEmpty' $ succ attempt
 
 withAsyncLogger :: (Logger -> IO ()) -> IO ()
 withAsyncLogger action = do
   logChan <- newTChanIO
-  asyncLogger <- loggerAsync logChan
-  logger <- mkLogger logChan asyncLogger
-  finally
-    ( action logger `catch` \(e :: SomeException) -> do
-        logger.log $ "Exception encountered: " <> txt e
-        throw e
-    )
-    ( do
-        logger.stop
-        wait asyncLogger
-    )
+  withAsync (printLoop logChan) $ \_ -> do
+    logger <- mkLogger logChan
+    finally
+      ( action logger `catch` \(e :: SomeException) -> do
+          logger.log $ "Exception encountered: " <> txt e
+          throw e
+      )
+      logger.waitEmpty
 
 data DemoUtils = MkDemoUtils
   { sleep :: Int -> IO (),
@@ -82,8 +80,7 @@ data DemoUtils = MkDemoUtils
     log :: Text -> Text -> IO (),
     logShow :: forall a. (Show a) => Text -> a -> IO (),
     logM :: Text -> IO Text -> IO (),
-    logShowM :: forall a. (Show a) => Text -> IO a -> IO (),
-    stopLogger :: IO ()
+    logShowM :: forall a. (Show a) => Text -> IO a -> IO ()
   }
 
 demoUtils :: DemoUtils
@@ -95,8 +92,7 @@ demoUtils =
       logShow,
       logM,
       logShowM,
-      pause = sleepMs 3_000,
-      stopLogger = pure ()
+      pause = sleepMs 3_000
     }
 
 doNothingUtils :: DemoUtils
@@ -108,8 +104,7 @@ doNothingUtils =
       logShow = \_ _ -> pure (),
       logM = \_ _ -> pure (),
       logShowM = \_ _ -> pure (),
-      pause = pure (),
-      stopLogger = pure ()
+      pause = pure ()
     }
 
 sleepMs :: Int -> IO ()

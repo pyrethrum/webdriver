@@ -28,7 +28,7 @@ demo_parseUrl = txt $ parseUrl "ws://127.0.0.1:9222/session/e43698d9-b02a-4284-a
 
 
 bidiDemoUtils :: Logger -> IO DemoUtils
-bidiDemoUtils MkLogger {log = log', stop} =
+bidiDemoUtils MkLogger {log = log'} =
   do
     let logTxt = log'
         log l t = logTxt $ l <> ": " <> t
@@ -42,8 +42,7 @@ bidiDemoUtils MkLogger {log = log', stop} =
           logM = \l mt -> mt >>= log l,
           logShowM = \l t -> t >>= logShow l,
           logTxt,
-          pause = sleepMs pauseMs,
-          stopLogger = stop
+          pause = sleepMs pauseMs
         }
 
 
