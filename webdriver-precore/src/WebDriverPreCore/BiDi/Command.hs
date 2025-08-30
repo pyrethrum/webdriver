@@ -12,6 +12,7 @@ import WebDriverPreCore.BiDi.CoreTypes (JSUInt)
 import WebDriverPreCore.Internal.AesonUtils (objectOrThrow)
 import Prelude (Maybe (..), maybe, (<>), Show, Eq)
 import Data.Aeson.KeyMap qualified as KM
+import WebDriverPreCore.Internal.Utils (txt)
 
 data Command c r = MkCommand
   { method :: Text,
@@ -36,4 +37,4 @@ commandValue MkCommand {method, params, extended} id' =
       "params" .= maybe cmdObj (cmdObj <>) extended
     ]
   where
-    cmdObj = objectOrThrow "CommandData must always be an Object, not any other JSON type" params
+    cmdObj = objectOrThrow ("Failed setting command parameters for method: " <> method) params

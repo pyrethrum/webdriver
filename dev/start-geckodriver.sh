@@ -27,12 +27,8 @@ nohup geckodriver \
 disown
 echo "geckodriver started with PID $! at http://127.0.0.1:$PORT"
 
-# Wait to ensure geckodriver is up and running and detached (neeeded when running from a task)
-sleep 1
-
-
 # Port checking alternatives
-echo "Checking ports..."
+echo "Checking port..."
 check_port() {
   (timeout 1 bash -c '</dev/tcp/127.0.0.1/'$1) 2>/dev/null && \
     echo "Port $1 is open" || \
@@ -40,4 +36,5 @@ check_port() {
 }
 
 check_port $PORT
-check_port $WEBSOCKET_PORT
+# check_port $WEBSOCKET_PORT
+# websocket port 0 (dynamic) will always fail)

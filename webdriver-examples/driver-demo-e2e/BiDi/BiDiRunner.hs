@@ -2,20 +2,20 @@ module BiDi.BiDiRunner where
 
 import Config (Config, loadConfig)
 import Control.Concurrent (threadDelay)
-import Control.Exception (Exception (displayException), Handler (..), SomeException, catch, catches)
+import Control.Exception (Exception (displayException), Handler (..), SomeException, catch, catches, throw)
+import Control.Exception.Backtrace (displayBacktraces)
 import Control.Monad (forever)
 import Data.Aeson (FromJSON, Object, ToJSON, Value, encode, toJSON)
 import Data.ByteString.Lazy qualified as BL
 import Data.Function ((&))
 import Data.Maybe (fromMaybe)
-import Data.Text as T (Text, pack, unpack, take)
+import Data.Text as T (Text, pack, take, unpack)
 import Http.HttpAPI (FullCapabilities, SessionResponse (..), deleteSession, newSessionFull)
 import Http.HttpAPI qualified as Caps (Capabilities (..))
-
 import Network.WebSockets (receiveData, runClient, sendClose, sendTextData)
 import RuntimeConst (httpCapabilities, httpFullCapabilities)
 import UnliftIO (AsyncCancelled, bracket, throwIO, waitAnyCancel)
-import UnliftIO.Async (Async, async, cancel)
+import UnliftIO.Async (Async, async, cancel, wait)
 import UnliftIO.STM
 import WebDriverPreCore.BiDi.BiDiUrl (BiDiUrl (..), getBiDiUrl)
 import WebDriverPreCore.BiDi.Capabilities (Capabilities)
@@ -241,32 +241,35 @@ mkCommands client =
 
 -- note: just throws an exception if an error is encountered
 -- no timeout implemented - will just hang if bidi does not behave
+
 sendCommand :: forall c r. (FromJSON r, ToJSON c, Show c) => WebDriverBiDiClient -> Command c r -> IO r
-sendCommand
-  MkWebDriverBiDiClient {sendMessage, receiveChannel, nextId}
-  command = do
-    id' <- nextId
-    (sendMessage $ commandValue command id')
-      `catch` \(e :: SomeException) -> do
-        error $ "Failed to send command " <> show command <> ": " <> displayException e
-    matchedResponse id'
-    where
-      matchedResponse :: JSUInt -> IO r
-      matchedResponse id' = do
-        response <- atomically $ readTChan receiveChannel
-        parseResponse id' response
-          & either
-            ( -- format and throw
-              error . unpack . displayResponseError command
-            )
-            ( maybe
-                ( -- recurse
-                  matchedResponse id'
-                )
-                ( -- get response
-                  pure . (.response)
-                )
-            )
+sendCommand MkWebDriverBiDiClient {sendMessage, receiveChannel, nextId} command = do
+  id' <- nextId
+  (sendMessage $ commandValue command id')
+    `catch` \(e :: SomeException) -> do
+      error $
+        "Failed to send command \n"
+          <> unpack (txt command)
+          <> "\n ---- Exception -----\n"
+          <> displayException e
+  matchedResponse id'
+  where
+    matchedResponse :: JSUInt -> IO r
+    matchedResponse id' = do
+      response <- atomically $ readTChan receiveChannel
+      parseResponse id' response
+        & either
+          ( -- format and throw
+            error . unpack . displayResponseError command
+          )
+          ( maybe
+              ( -- recurse
+                matchedResponse id'
+              )
+              ( -- get response
+                pure . (.response)
+              )
+          )
 
 withNewBiDiSession :: Maybe (Text -> IO ()) -> (WebDriverBiDiClient -> IO a) -> IO a
 withNewBiDiSession mLogger action =
@@ -279,71 +282,50 @@ withNewBiDiSession mLogger action =
 
 withRunningBiDiSession :: Maybe (Text -> IO ()) -> BiDiUrl -> (WebDriverBiDiClient -> IO a) -> IO a
 withRunningBiDiSession mLogger bidiUrl action =
-  bracket
-    (getBiDiClient mLogger bidiUrl)
-    ( \client ->
-        (fromMaybe (const $ pure ()) mLogger) "Ending BiDi session"
-          >> client.disconnect
-    )
-    action
+  (withBiDiClient mLogger bidiUrl action)
 
 -- | WebDriver BiDi client with communication channels
 data WebDriverBiDiClient = MkWebDriverBiDiClient
   { log :: Text -> IO (),
     nextId :: IO JSUInt,
     sendMessage :: forall a. (ToJSON a, Show a) => a -> IO (),
-    receiveChannel :: TChan (Either JSONEncodeError ResponseObject),
-    disconnect :: IO ()
+    receiveChannel :: TChan (Either JSONEncodeError ResponseObject)
   }
 
 -- | Run WebDriver BiDi client and return a client interface
-getBiDiClient :: Maybe (Text -> IO ()) -> BiDiUrl -> IO WebDriverBiDiClient
-getBiDiClient mLogger bidiUrl = do
+withBiDiClient :: Maybe (Text -> IO ()) -> BiDiUrl -> (WebDriverBiDiClient -> IO a) -> IO a
+withBiDiClient mLogger bidiUrl action = do
   -- Create communication channels
   sendChan <- newTChanIO
   receiveChan <- newTChanIO
   counter <- newTVarIO $ MkJSUInt 1
 
   let log = fromMaybe (const $ pure ()) mLogger
-
   clientAsync <- startClient bidiUrl log sendChan receiveChan
-
-  pure $
-    MkWebDriverBiDiClient
-      { log,
-        nextId = atomically $ do
-          i <- readTVar counter
-          writeTVar counter $ succ i
-          pure i,
-        sendMessage = \a -> do
-          log $ "Before forcing message" 
-          let !r = txt a
-          log $ "After forcing message" 
-          log $ r
-          let m = toJSON a
-          log $ "Writing to sendChan: " <> txt m
-          atomically . writeTChan sendChan $ m,
-        receiveChannel = receiveChan,
-        disconnect = do
-          log "Disconnecting client"
-          cancel clientAsync
-      }
+  let wdClient =
+        MkWebDriverBiDiClient
+          { log,
+            nextId = atomically $ do
+              modifyTVar' counter succ
+              readTVar counter,
+            sendMessage = \a -> do
+              log "ABOUT TO SEND"
+              let val = toJSON a
+              log $ "Writing to sendChan: " <> txt val
+              atomically . writeTChan sendChan $ val,
+            receiveChannel = receiveChan
+          }
+  result <- action wdClient
+  log "Disconnecting client"
+  cancel clientAsync
+  wait clientAsync
+  pure result
 
 startClient :: BiDiUrl -> (Text -> IO ()) -> TChan Value -> TChan (Either JSONEncodeError ResponseObject) -> IO (Async ())
 startClient pth@MkBiDiUrl {host, port, path} log sendChan receiveChan =
   async $ do
     log $ "Connecting to WebDriver at " <> txt pth
     runSocketClient
-      `catches` [ Handler
-                    (\(_e :: AsyncCancelled) -> threadDelay 1000_000 >> pure ()),
-                  Handler
-                    ( \(e :: SomeException) -> do
-                        log $ "WebSocket failure: " <> pack (displayException e)
-                        -- flush log channelnewSessionFull .
-                        threadDelay 1000_000
-                        throwIO e
-                    )
-                ]
   where
     runSocketClient = runClient (unpack host) port (unpack path) $ \conn -> do
       log "WebSocket connection established"
@@ -365,13 +347,16 @@ startClient pth@MkBiDiUrl {host, port, path} log sendChan receiveChan =
 
       -- Wait for any thread to fail (they shouldn't unless there's an error)
       (waitAnyCancel [receiver, sender] >> log "One of the WebSocket threads terminated")
-        `catch` \(_e :: AsyncCancelled) -> pure ()
+        `catch` \(e :: AsyncCancelled) -> do
+          log "WebSocket threads cancelled"
+          throw e
 
       -- Send close frame to cleanly close the WebSocket connection
       log "Closing webSocket connection"
       sendClose conn ("Connection closing" :: Text)
-        `catch` \(e :: SomeException) ->
+        `catch` \(e :: SomeException) -> do
           log $ "Failed to send close frame: " <> pack (show e)
+          throw e
 
 httpSession :: IO SessionResponse
 httpSession = loadConfig >>= newSessionFull . httpBidiCapabilities
@@ -395,7 +380,7 @@ catchLog name log action =
                   log $ name <> " thread cancelled"
                   throwIO e,
                 Handler $ \(e :: SomeException) -> do
-                  log $ "Exception thrown in " <> name <> " thread" <> ": " <> pack (show e)
+                  log $ "Exception thrown in " <> name <> " thread" <> ": " <> (pack $ displayException e)
                   throwIO e
               ]
 

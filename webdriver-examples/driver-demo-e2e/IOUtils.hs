@@ -19,6 +19,7 @@ where
 
 import Const (second, seconds)
 import Control.Concurrent (threadDelay)
+import Control.Exception (throw)
 import Control.Monad (forever)
 import Data.Base64.Types qualified as B64T
 import Data.ByteString qualified as BS
@@ -26,7 +27,7 @@ import Data.ByteString.Base64 qualified as B64
 import Data.Text (Text)
 import Data.Text.IO qualified as TIO
 import Test.Tasty.HUnit as HUnit (Assertion, HasCallStack, (@=?))
-import UnliftIO (Async, TChan, atomically, cancel, isEmptyTChan, newTChanIO, readTChan, wait, withAsync, writeTChan, finally)
+import UnliftIO (Async, Exception (..), SomeException, TChan, atomically, cancel, catch, finally, isEmptyTChan, newTChanIO, readTChan, wait, withAsync, writeTChan)
 import UnliftIO.Async (async)
 import WebDriverPreCore.Internal.Utils (txt)
 import Prelude hiding (log)
@@ -64,9 +65,15 @@ withAsyncLogger action = do
   logChan <- newTChanIO
   asyncLogger <- loggerAsync logChan
   logger <- mkLogger logChan asyncLogger
-  finally 
-    (action logger)
-    (wait asyncLogger)
+  finally
+    ( action logger `catch` \(e :: SomeException) -> do
+        logger.log $ "Exception encountered: " <> txt e
+        throw e
+    )
+    ( do
+        logger.stop
+        wait asyncLogger
+    )
 
 data DemoUtils = MkDemoUtils
   { sleep :: Int -> IO (),

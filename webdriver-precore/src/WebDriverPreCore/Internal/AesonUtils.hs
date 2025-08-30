@@ -116,9 +116,9 @@ objectOrThrow errMsg val =
         Object obj -> obj
         _ ->
           error . unpack $
-            "Trying to treat non-object JSON value as an Object"
+            errMsg
               <> "\n"
-              <> errMsg
+              <> "JSON Value must be of JSON type: Object"
               <> "\n"
               <> "The actual JSON type was: "
               <> aesonConstructorName val'

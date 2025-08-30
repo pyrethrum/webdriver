@@ -26,6 +26,7 @@ demo_parseUrl = txt $ parseUrl "ws://127.0.0.1:9222/session/e43698d9-b02a-4284-a
 --     (logShow "new session response:\n" ses)
 --     (Http.deleteSession ses.sessionId)
 
+
 bidiDemoUtils :: Logger -> IO DemoUtils
 bidiDemoUtils MkLogger {log = log', stop} =
   do
@@ -45,12 +46,13 @@ bidiDemoUtils MkLogger {log = log', stop} =
           stopLogger = stop
         }
 
-withDemoUtils :: (DemoUtils -> IO ()) -> IO ()
-withDemoUtils action = withAsyncLogger $ (=<<) action . bidiDemoUtils
 
 runExample :: DemoUtils -> (DemoUtils -> Commands -> IO ()) -> IO ()
 runExample utils action =
   withCommands (Just utils.logTxt) $ action utils
+
+withDemoUtils :: (DemoUtils -> IO ()) -> IO ()
+withDemoUtils action = withAsyncLogger $ (=<<) action . bidiDemoUtils
 
 runDemo :: (DemoUtils -> Commands -> IO ()) -> IO ()
 runDemo = withDemoUtils . flip runExample
@@ -81,10 +83,7 @@ pauseMs = 0
 -}
 
 -- >>> runDemo browsingContext1
--- *** Exception: Failed to send command MkCommand {method = "browsingContext.activate", params = MkBrowsingContext {context = "6524c0ce-4d49-454d-bbc1-10abdc575721"}, extended = Nothing}: Trying to treat non-object JSON value as an Object
--- CommandData will always be an Object
--- The actual JSON type was: String
--- The actual JSON value was: "6524c0ce-4d49-454d-bbc1-10abdc575721"
+-- *** Exception: thread blocked indefinitely in an STM transaction
 browsingContext1 :: DemoUtils -> Commands -> IO ()
 browsingContext1 MkDemoUtils {..} MkCommands {..} = do
   logTxt "New browsing context - Tab"
