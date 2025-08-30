@@ -88,8 +88,19 @@ pauseMs = 0
 
 -}
 
+{-
+TODO: 
+  - wait empty logic is wrong ~hanging for 10 secs
+  - mock failer for testin
+  - Parameterisable logger
+  - make serialisation strict
+-}
+
 -- >>> runDemo browsingContext1
--- *** Exception: ProgressCancelledException
+-- *** Exception: Failed setting command parameters for method: browsingContext.activate
+-- JSON Value must be of JSON type: Object
+-- The actual JSON type was: String
+-- The actual JSON value was: "d5d3cc21-099c-417b-97e0-371ec5a0a13a"
 browsingContext1 :: DemoUtils -> Commands -> IO ()
 browsingContext1 MkDemoUtils {..} MkCommands {..} = do
   logTxt "New browsing context - Tab"
