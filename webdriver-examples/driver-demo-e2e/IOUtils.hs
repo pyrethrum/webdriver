@@ -13,7 +13,6 @@ module IOUtils
     doNothingUtils,
     -- withAsyncLogger,
     bidiDemoUtils,
-    printLoop,
     sleep1,
     sleep2,
     (===),
@@ -59,14 +58,7 @@ bidiDemoUtils MkLogger {log = log'} =
           pause = sleepMs pauseMs
         }
 
-printLoop :: TChan Text -> IO (Async ())
-printLoop logChan = async printLoop'
-  where
-    printLoop' = do
-      msg <- atomically $ readTChan logChan
-      TIO.putStrLn $ "Next log....."
-      TIO.putStrLn $ "[LOG] " <> msg
-      printLoop'
+
 
 mkLogger :: TChan Text -> IO Logger
 mkLogger logChan =

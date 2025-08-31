@@ -11,6 +11,7 @@ import Data.Function ((&))
 import Data.Maybe (fromMaybe)
 import Data.Text as T (Text, pack, take, unpack)
 import Data.Text.IO (putStrLn)
+import Data.Text.IO qualified as TIO
 import GHC.Base (undefined)
 import Http.HttpAPI (FullCapabilities, SessionResponse (..), deleteSession, newSessionFull)
 import Http.HttpAPI qualified as Caps (Capabilities (..))
@@ -301,8 +302,8 @@ data Channels = MkChannels
   }
 
 -- | Run WebDriver BiDi client and return a client interface
-withBiDiClient :: BiDiUrl -> (DemoUtils -> WebDriverBiDiClient -> IO ()) -> IO ()
-withBiDiClient bidiUrl action = do
+withBiDiClient :: BiDiUrl -> (Logger -> DemoUtils) -> (DemoUtils -> WebDriverBiDiClient -> IO ()) -> IO ()
+withBiDiClient bidiUrl demoUtils action = do
   -- Create communication channels
   sendChan <- newTChanIO
   receiveChan <- newTChanIO
@@ -310,7 +311,12 @@ withBiDiClient bidiUrl action = do
   counter <- newTVarIO $ MkJSUInt 0
   logger@MkLogger {log} <- mkLogger logChan
 
-  let channels = MkChannels {sendChan, receiveChan, logChan}
+  let channels =
+        MkChannels
+          { sendChan,
+            receiveChan,
+            logChan
+          }
       wdClient =
         MkWebDriverBiDiClient
           { log = logger.log,
@@ -327,38 +333,52 @@ withBiDiClient bidiUrl action = do
           }
       demoUtils = bidiDemoUtils logger
       socketAction = action demoUtils wdClient
-  socketRunners <- testSocketRunners logger channels
+      socketRunners = testSocketLoops logger channels
   withClient bidiUrl logger socketRunners socketAction
 
-data SocketRunners = MkSocketRunners
+data SocketLoops = MkSocketLoops
   { sendLoop :: Connection -> IO (Async ()),
     receiveLoop :: Connection -> IO (Async ()),
     printLoop :: IO (Async ())
   }
 
-testSocketRunners :: Logger -> Channels -> IO SocketRunners
-testSocketRunners MkLogger {log} channels =
-  pure $
-    MkSocketRunners
-      { sendLoop = \conn -> asyncLoop "Sender" $ do
-          msgToSend <- atomically $ readTChan channels.sendChan
-          log $ "Sending Message: " <> txt msgToSend
-          catchLog
-            "Message Send Failed"
-            log
-            (sendTextData conn (BL.toStrict $ encode msgToSend)),
-        --
-        receiveLoop = \conn -> asyncLoop "Receiver" $ do
-          msg <- receiveData conn
-          log $ "Received raw data: " <> T.take 100 (txt msg) <> "..."
-          atomically . writeTChan channels.receiveChan $ decodeResponse msg,
-        --
-        printLoop = Utils.printLoop channels.logChan
-      }
+printLoop :: TChan Text -> IO (Async ())
+printLoop logChan = async printLoop'
+  where
+    printLoop' = do
+      msg <- atomically $ readTChan logChan
+      TIO.putStrLn $ "Next log....."
+      TIO.putStrLn $ "[LOG] " <> msg
+      printLoop'
+
+testSocketLoops :: Logger -> Channels -> SocketLoops
+testSocketLoops MkLogger {log} channels =
+  MkSocketLoops
+    { sendLoop = \conn -> asyncLoop "Sender" $ do
+        msgToSend <- atomically $ readTChan channels.sendChan
+        log $ "Sending Message: " <> txt msgToSend
+        catchLog
+          "Message Send Failed"
+          log
+          (sendTextData conn (BL.toStrict $ encode msgToSend)),
+      --
+      receiveLoop = \conn -> asyncLoop "Receiver" $ do
+        msg <- receiveData conn
+        log $ "Received raw data: " <> T.take 100 (txt msg) <> "..."
+        atomically . writeTChan channels.receiveChan $ decodeResponse msg,
+      --
+      printLoop =
+        let printLoop' = do
+              msg <- atomically $ readTChan channels.logChan
+              TIO.putStrLn $ "Next log....."
+              TIO.putStrLn $ "[LOG] " <> msg
+              printLoop'
+         in async printLoop'
+    }
   where
     asyncLoop = loopForever log
 
-withClient :: BiDiUrl -> Logger -> SocketRunners -> IO () -> IO ()
+withClient :: BiDiUrl -> Logger -> SocketLoops -> IO () -> IO ()
 withClient
   pth@MkBiDiUrl {host, port, path}
   logger
@@ -374,7 +394,7 @@ withClient
         log "WebSocket connection established"
 
         result <- async action
-        
+
         log "Disconnecting client"
         (asy, ethresult) <- waitAnyCatchCancel [receiveLoop, sendLoop, result]
         logger.waitEmpty
