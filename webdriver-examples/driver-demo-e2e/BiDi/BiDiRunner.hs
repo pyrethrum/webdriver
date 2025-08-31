@@ -10,9 +10,11 @@ import Data.ByteString.Lazy qualified as BL
 import Data.Function ((&))
 import Data.Maybe (fromMaybe)
 import Data.Text as T (Text, pack, take, unpack)
+import Data.Text.IO (putStrLn)
 import Http.HttpAPI (FullCapabilities, SessionResponse (..), deleteSession, newSessionFull)
 import Http.HttpAPI qualified as Caps (Capabilities (..))
-import IOUtils (DemoUtils, Logger (..), bidiDemoUtils, mkLogger, printLoop)
+import IOUtils (DemoUtils, Logger (..), bidiDemoUtils, mkLogger)
+import IOUtils qualified as Utils
 import Network.WebSockets (Connection, receiveData, runClient, sendClose, sendTextData)
 import RuntimeConst (httpCapabilities, httpFullCapabilities)
 import UnliftIO (AsyncCancelled, bracket, throwIO, waitAnyCancel, waitAnyCatchCancel, waitEither)
@@ -99,7 +101,8 @@ import WebDriverPreCore.BiDi.Session (SessionNewResult, SessionStatusResult)
 import WebDriverPreCore.Http qualified as Http
 import WebDriverPreCore.Internal.Utils (txt)
 import Prelude hiding (getLine, log, null, putStrLn)
-import Data.Text.IO (putStrLn)
+import Network.Socket (socket)
+import GHC.Base (undefined)
 
 withCommands :: (DemoUtils -> Commands -> IO ()) -> IO ()
 withCommands action =
@@ -281,11 +284,7 @@ withNewBiDiSession action =
     (deleteSession . (.sessionId))
     \s' -> do
       let bidiUrl = getBiDiUrl s' & either (error . T.unpack) id
-      withRunningBiDiSession bidiUrl action
-
-withRunningBiDiSession :: BiDiUrl -> (DemoUtils -> WebDriverBiDiClient -> IO ()) -> IO ()
-withRunningBiDiSession bidiUrl action =
-  (withBiDiClient bidiUrl action)
+      withBiDiClient bidiUrl action
 
 -- | WebDriver BiDi client with communication channels
 data WebDriverBiDiClient = MkWebDriverBiDiClient
@@ -331,10 +330,52 @@ withBiDiClient bidiUrl action = do
   withClient bidiUrl logger socketAction channels
 
 data SocketRunners = MkSocketRunners
-  { sendLoop :: Async (),
-    receiveLoop :: Async (),
-    connection :: Connection
+  { sendLoop :: Connection -> Async (),
+    receiveLoop :: Connection -> Async (),
+    printLoop :: Async ()
   }
+
+testSocketRunners :: Logger -> Channels -> SocketRunners
+testSocketRunners = undefined
+
+withClient' :: BiDiUrl -> Logger -> SocketRunners -> IO () -> IO ()
+withClient' 
+   pth@MkBiDiUrl {host, port, path} 
+   logger 
+   socketRunners
+   action =
+  do
+    let log = logger.log
+
+    log $ "Connecting to WebDriver at " <> txt pth
+    runClient (unpack host) port (unpack path) $ \conn -> do
+      let printLoop = socketRunners.printLoop
+          receiveLoop = socketRunners.receiveLoop conn
+          sendLoop = socketRunners.sendLoop conn
+
+      log "WebSocket connection established"
+
+      result <- async action
+      log "Disconnecting client"
+      (asy, ethresult) <- waitAnyCatchCancel [receiveLoop, sendLoop, result]
+      logger.waitEmpty
+      prntErr <- waitCatch printLoop
+      ethresult
+        & either
+          ( \e -> do
+              -- the logger is dead now so print direc to the console instead
+              putStrLn $ "One of the BiDi client threads failed: " <> pack (displayException e)
+              throw e
+          )
+          (pure)
+      prntErr
+        & either
+          ( \e -> do
+              putStrLn $ "The printLoop thread failed: " <> pack (displayException e)
+              throw e
+          )
+          (pure)
+      cancel asy
 
 withClient :: BiDiUrl -> Logger -> IO () -> Channels -> IO ()
 withClient pth@MkBiDiUrl {host, port, path} logger action channels =
@@ -342,7 +383,7 @@ withClient pth@MkBiDiUrl {host, port, path} logger action channels =
     let log = logger.log
     log $ "Connecting to WebDriver at " <> txt pth
     runClient (unpack host) port (unpack path) $ \conn -> do
-      printLoop' <- printLoop channels.logChan
+      printLoop' <- Utils.printLoop channels.logChan
       log "WebSocket connection established"
 
       let asyncLoop = loopForever log
@@ -367,19 +408,21 @@ withClient pth@MkBiDiUrl {host, port, path} logger action channels =
       prntErr <- waitCatch printLoop'
       ethresult
         & either
-          (\e -> do
-            -- the logger is dead now so print direc to the console instead
-            putStrLn $ "One of the BiDi client threads failed: " <> pack (displayException e)
-            throw e)
+          ( \e -> do
+              -- the logger is dead now so print direc to the console instead
+              putStrLn $ "One of the BiDi client threads failed: " <> pack (displayException e)
+              throw e
+          )
           (pure)
       prntErr
         & either
-          (\e -> do
-            putStrLn $ "The printLoop thread failed: " <> pack (displayException e)
-            throw e)
+          ( \e -> do
+              putStrLn $ "The printLoop thread failed: " <> pack (displayException e)
+              throw e
+          )
           (pure)
       cancel asy
-     
+
 {-
       -- Wait for any thread to fail (they shouldn't unless there's an error)
       (waitAnyCancel [receiver, sender] >> log "One of the WebSocket threads terminated")
