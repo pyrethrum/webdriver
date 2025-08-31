@@ -79,7 +79,7 @@ mkLogger logChan =
     waitEmpty' :: Int -> IO ()
     waitEmpty' attempt = do
       empty <- atomically $ isEmptyTChan logChan
-      unless (empty || attempt > 1000) $ do
+      unless (empty || attempt > 500) $ do
         threadDelay 10_000
         waitEmpty' $ succ attempt
 

@@ -99,7 +99,7 @@ TODO:
 -- *** Exception: Failed setting command parameters for method: browsingContext.activate
 -- JSON Value must be of JSON type: Object
 -- The actual JSON type was: String
--- The actual JSON value was: "7454f0fb-5974-4015-8377-ebf37a2fb51d"
+-- The actual JSON value was: "f3fb0eca-608a-41f1-bf6b-717e14c50dda"
 browsingContext1 :: DemoUtils -> Commands -> IO ()
 browsingContext1 MkDemoUtils {..} MkCommands {..} = do
   logTxt "New browsing context - Tab"
