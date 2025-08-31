@@ -176,7 +176,7 @@ data Commands = MkCommands
     webExtensionUninstall :: WebExtension -> IO Object
   }
 
-mkCommands :: WebDriverBiDiClient -> Commands
+mkCommands :: BiDiMethods -> Commands
 mkCommands client =
   MkCommands
     { -- Session commands
@@ -249,10 +249,10 @@ mkCommands client =
 -- note: just throws an exception if an error is encountered
 -- no timeout implemented - will just hang if bidi does not behave
 
-sendCommand :: forall c r. (FromJSON r, ToJSON c, Show c) => WebDriverBiDiClient -> Command c r -> IO r
-sendCommand MkWebDriverBiDiClient {sendMessage, receiveChannel, nextId} command = do
+sendCommand :: forall c r. (FromJSON r, ToJSON c, Show c) => BiDiMethods -> Command c r -> IO r
+sendCommand MkBiDiMethods {send, getNext, nextId} command = do
   id' <- nextId
-  (sendMessage $ commandValue command id')
+  (send $ commandValue command id')
     `catch` \(e :: SomeException) -> do
       error $
         "Failed to send command \n"
@@ -263,7 +263,7 @@ sendCommand MkWebDriverBiDiClient {sendMessage, receiveChannel, nextId} command 
   where
     matchedResponse :: JSUInt -> IO r
     matchedResponse id' = do
-      response <- atomically $ readTChan receiveChannel
+      response <- getNext
       parseResponse id' response
         & either
           ( -- format and throw
@@ -278,7 +278,7 @@ sendCommand MkWebDriverBiDiClient {sendMessage, receiveChannel, nextId} command 
               )
           )
 
-withNewBiDiSession :: (DemoUtils -> WebDriverBiDiClient -> IO ()) -> IO ()
+withNewBiDiSession :: (DemoUtils -> BiDiMethods -> IO ()) -> IO ()
 withNewBiDiSession action =
   bracket
     httpSession
@@ -288,72 +288,93 @@ withNewBiDiSession action =
       withBiDiClient bidiUrl action
 
 -- | WebDriver BiDi client with communication channels
-data WebDriverBiDiClient = MkWebDriverBiDiClient
-  { log :: Text -> IO (),
-    nextId :: IO JSUInt,
-    sendMessage :: forall a. (ToJSON a, Show a) => a -> IO (),
-    receiveChannel :: TChan (Either JSONEncodeError ResponseObject)
+data BiDiMethods = MkBiDiMethods
+  { nextId :: IO JSUInt,
+    send :: forall a. (ToJSON a, Show a) => a -> IO (),
+    getNext :: IO (Either JSONEncodeError ResponseObject)
   }
 
 data Channels = MkChannels
   { sendChan :: TChan Value,
     receiveChan :: TChan (Either JSONEncodeError ResponseObject),
-    logChan :: TChan Text
+    logChan :: TChan Text,
+    counterVar :: TVar JSUInt
+  }
+
+mkChannels :: IO Channels
+mkChannels =
+  MkChannels
+    <$> newTChanIO
+    <*> newTChanIO
+    <*> newTChanIO
+    <*> newTVarIO (MkJSUInt 0)
+
+mkBiDIMethods :: Channels -> (Text -> IO ()) -> BiDiMethods
+mkBiDIMethods channels log =
+  MkBiDiMethods
+    { nextId = atomically $ do
+        modifyTVar' channels.counterVar succ
+        readTVar channels.counterVar,
+      send = \a -> do
+        log $ "Sending Message: " <> txt (toJSON a)
+        atomically . writeTChan channels.sendChan $ toJSON a,
+      getNext = atomically $ readTChan channels.receiveChan
+    }
+
+data BiDiClientParams = MkBiDiClientParams
+  { logger :: Logger,
+    messageLoops :: MessageLoops,
+    biDiMethods :: BiDiMethods,
+    demoUtils :: DemoUtils
   }
 
 -- | Run WebDriver BiDi client and return a client interface
-withBiDiClient :: BiDiUrl ->  (DemoUtils -> WebDriverBiDiClient -> IO ()) -> IO ()
+withBiDiClient' :: BiDiClientParams -> BiDiUrl -> (DemoUtils -> BiDiMethods -> IO ()) -> IO ()
+withBiDiClient'
+  MkBiDiClientParams
+    { biDiMethods,
+      logger,
+      messageLoops,
+      demoUtils
+    }
+  bidiUrl
+  action =
+    withClient bidiUrl logger messageLoops $ action demoUtils biDiMethods
+
+mkDemoBiDiClientParams :: Int -> IO BiDiClientParams
+mkDemoBiDiClientParams pauseMs = do
+  c <- mkChannels
+  logger@MkLogger {log} <- mkLogger (c.logChan)
+  pure $
+    MkBiDiClientParams
+      { biDiMethods = mkBiDIMethods c log,
+        logger,
+        messageLoops = testMessageLoops log c,
+        demoUtils = bidiDemoUtils log pauseMs
+      }
+
+-- | Run WebDriver BiDi client and return a client interface
+withBiDiClient :: BiDiUrl -> (DemoUtils -> BiDiMethods -> IO ()) -> IO ()
 withBiDiClient bidiUrl action = do
   -- Create communication channels
-  sendChan <- newTChanIO
-  receiveChan <- newTChanIO
-  logChan <- newTChanIO
-  counter <- newTVarIO $ MkJSUInt 0
-  logger@MkLogger {log} <- mkLogger logChan
+  c <- mkChannels
+  logger@MkLogger {log} <- mkLogger (c.logChan)
 
-  let channels =
-        MkChannels
-          { sendChan,
-            receiveChan,
-            logChan
-          }
-      wdClient =
-        MkWebDriverBiDiClient
-          { log = logger.log,
-            nextId = atomically $ do
-              modifyTVar' counter succ
-              readTVar counter,
-            sendMessage = \a -> do
-              log "ABOUT TO SEND"
-              let val = toJSON a
-              log "ABOUT TO SEND 2"
-              log $ "Writing to sendChan: " <> txt val
-              atomically . writeTChan sendChan $ val,
-            receiveChannel = receiveChan
-          }
-      demoUtils = bidiDemoUtils logger
-      socketAction = action demoUtils wdClient
-      socketRunners = testSocketLoops logger channels
-  withClient bidiUrl logger socketRunners socketAction
+  let biDiMethods = mkBiDIMethods c log
+      demoUtils = bidiDemoUtils log 0
+      socketAction = action demoUtils biDiMethods
+      messageLoops = testMessageLoops log c
+  withClient bidiUrl logger messageLoops socketAction
 
-data SocketLoops = MkSocketLoops
+data MessageLoops = MkMessageLoops
   { sendLoop :: Connection -> IO (Async ()),
-    receiveLoop :: Connection -> IO (Async ()),
+    getLoop :: Connection -> IO (Async ()),
     printLoop :: IO (Async ())
   }
 
-printLoop :: TChan Text -> IO (Async ())
-printLoop logChan = async printLoop'
-  where
-    printLoop' = do
-      msg <- atomically $ readTChan logChan
-      TIO.putStrLn $ "Next log....."
-      TIO.putStrLn $ "[LOG] " <> msg
-      printLoop'
-
-testSocketLoops :: Logger -> Channels -> SocketLoops
-testSocketLoops MkLogger {log} channels =
-  MkSocketLoops
+testMessageLoops :: (Text -> IO ()) -> Channels -> MessageLoops
+testMessageLoops log channels =
+  MkMessageLoops
     { sendLoop = \conn -> asyncLoop "Sender" $ do
         msgToSend <- atomically $ readTChan channels.sendChan
         log $ "Sending Message: " <> txt msgToSend
@@ -362,7 +383,7 @@ testSocketLoops MkLogger {log} channels =
           log
           (sendTextData conn (BL.toStrict $ encode msgToSend)),
       --
-      receiveLoop = \conn -> asyncLoop "Receiver" $ do
+      getLoop = \conn -> asyncLoop "Receiver" $ do
         msg <- receiveData conn
         log $ "Received raw data: " <> T.take 100 (txt msg) <> "..."
         atomically . writeTChan channels.receiveChan $ decodeResponse msg,
@@ -378,7 +399,7 @@ testSocketLoops MkLogger {log} channels =
   where
     asyncLoop = loopForever log
 
-withClient :: BiDiUrl -> Logger -> SocketLoops -> IO () -> IO ()
+withClient :: BiDiUrl -> Logger -> MessageLoops -> IO () -> IO ()
 withClient
   pth@MkBiDiUrl {host, port, path}
   logger
@@ -388,7 +409,7 @@ withClient
       log $ "Connecting to WebDriver at " <> txt pth
       runClient (unpack host) port (unpack path) $ \conn -> do
         printLoop <- socketRunners.printLoop
-        receiveLoop <- socketRunners.receiveLoop conn
+        getLoop <- socketRunners.getLoop conn
         sendLoop <- socketRunners.sendLoop conn
 
         log "WebSocket connection established"
@@ -396,7 +417,7 @@ withClient
         result <- async action
 
         log "Disconnecting client"
-        (asy, ethresult) <- waitAnyCatchCancel [receiveLoop, sendLoop, result]
+        (asy, ethresult) <- waitAnyCatchCancel [getLoop, sendLoop, result]
         logger.waitEmpty
         prntErr <- waitCatch printLoop
         ethresult
@@ -500,7 +521,7 @@ Looking at the `sendCommand` function in BiDiRunner.hs:
 
 ```haskell
 sendCommand :: forall c r. (FromJSON r, ToJSON c, Show c) => WebDriverBiDiClient -> Command c r -> IO r
-sendCommand MkWebDriverBiDiClient {sendMessage, receiveChannel, nextId} command = do
+sendCommand MkBiDiMethods {sendMessage, receiveChannel, nextId} command = do
   id' <- nextId
   sendMessage $ commandValue command id'
   matchedResponse id'

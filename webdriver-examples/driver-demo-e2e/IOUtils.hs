@@ -10,7 +10,7 @@ module IOUtils
     Logger (..),
     mkLogger,
     demoUtils,
-    doNothingUtils,
+    noOpUtils,
     -- withAsyncLogger,
     bidiDemoUtils,
     sleep1,
@@ -38,27 +38,21 @@ data Logger = MkLogger
     waitEmpty :: IO ()
   }
 
-
-pauseMs :: Int
-pauseMs = 0
-
-bidiDemoUtils :: Logger -> DemoUtils
-bidiDemoUtils MkLogger {log = log'} =
-  let logTxt = log'
-      log l t = logTxt $ l <> ": " <> t
-      logShow :: forall a. (Show a) => Text -> a -> IO ()
-      logShow l = log l . txt
+bidiDemoUtils :: (Text -> IO ()) -> Int -> DemoUtils
+bidiDemoUtils baseLog pauseMs =
+  let logTxt' = baseLog
+      log' l t = logTxt $ l <> ": " <> t
+      logShow' :: forall a. (Show a) => Text -> a -> IO ()
+      logShow' l = log' l . txt
    in MkDemoUtils
         { sleep = sleepMs,
-          log,
-          logShow,
-          logM = \l mt -> mt >>= log l,
+          log = log',
+          logShow = logShow',
+          logM = \l mt -> mt >>= log' l,
           logShowM = \l t -> t >>= logShow l,
-          logTxt,
+          logTxt = logTxt',
           pause = sleepMs pauseMs
         }
-
-
 
 mkLogger :: TChan Text -> IO Logger
 mkLogger logChan =
@@ -97,8 +91,8 @@ data DemoUtils = MkDemoUtils
     logShowM :: forall a. (Show a) => Text -> IO a -> IO ()
   }
 
-demoUtils :: DemoUtils
-demoUtils =
+demoUtils :: Int -> DemoUtils
+demoUtils pauseMs =
   MkDemoUtils
     { sleep = sleepMs,
       logTxt,
@@ -106,20 +100,22 @@ demoUtils =
       logShow,
       logM,
       logShowM,
-      pause = sleepMs 3_000
+      pause = sleepMs pauseMs
     }
 
-doNothingUtils :: DemoUtils
-doNothingUtils =
+noOpUtils :: DemoUtils
+noOpUtils =
   MkDemoUtils
-    { sleep = \_ -> pure (),
-      logTxt = \_ -> pure (),
-      log = \_ _ -> pure (),
-      logShow = \_ _ -> pure (),
-      logM = \_ _ -> pure (),
-      logShowM = \_ _ -> pure (),
+    { sleep = const $ pure (),
+      logTxt = const $ pure (),
+      log = const2 $ pure (),
+      logShow = const2 $ pure (),
+      logM = const2 $ pure (),
+      logShowM = const2 $ pure (),
       pause = pure ()
     }
+  where
+    const2 = const . const
 
 sleepMs :: Int -> IO ()
 sleepMs = threadDelay . (*) 1_000
