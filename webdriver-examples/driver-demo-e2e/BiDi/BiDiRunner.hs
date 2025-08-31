@@ -302,8 +302,8 @@ data Channels = MkChannels
   }
 
 -- | Run WebDriver BiDi client and return a client interface
-withBiDiClient :: BiDiUrl -> (Logger -> DemoUtils) -> (DemoUtils -> WebDriverBiDiClient -> IO ()) -> IO ()
-withBiDiClient bidiUrl demoUtils action = do
+withBiDiClient :: BiDiUrl ->  (DemoUtils -> WebDriverBiDiClient -> IO ()) -> IO ()
+withBiDiClient bidiUrl action = do
   -- Create communication channels
   sendChan <- newTChanIO
   receiveChan <- newTChanIO
