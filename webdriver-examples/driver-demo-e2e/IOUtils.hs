@@ -40,7 +40,7 @@ data Logger = MkLogger
 bidiDemoUtils :: (Text -> IO ()) -> Int -> DemoUtils
 bidiDemoUtils baseLog pauseMs =
   let logTxt' = baseLog
-      log' l t = logTxt $ l <> ": " <> t
+      log' l t = logTxt' $ l <> ": " <> t
       logShow' :: forall a. (Show a) => Text -> a -> IO ()
       logShow' l = log' l . txt
    in MkDemoUtils

@@ -86,14 +86,14 @@ demo name action = MkBiDiDemo {name, action}
 --   { method = "browsingContext.activate"
 --   , params =
 --       MkBrowsingContext
---         { context = "93cf4fe2-309d-4812-8386-78df409747de" }
+--         { context = "8edd24bf-0f4e-43fa-ac3e-cb092d03882a" }
 --   , extended = Nothing
 --   }
 --  ---- Exception -----
 -- Failed setting command parameters for method: browsingContext.activate
 -- JSON Value must be of JSON type: Object
 -- The actual JSON type was: String
--- The actual JSON value was: "93cf4fe2-309d-4812-8386-78df409747de"
+-- The actual JSON value was: "8edd24bf-0f4e-43fa-ac3e-cb092d03882a"
 browsingContext1 :: BiDiDemo
 browsingContext1 =
   demo "Browsing Context 1" action
