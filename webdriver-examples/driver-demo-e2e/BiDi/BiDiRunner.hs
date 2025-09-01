@@ -1,27 +1,20 @@
 module BiDi.BiDiRunner where
 
 import Config (Config, loadConfig)
-import Control.Concurrent (threadDelay)
 import Control.Exception (Exception (displayException), Handler (..), SomeException, catch, catches, throw)
-import Control.Exception.Backtrace (displayBacktraces)
-import Control.Monad (forever)
 import Data.Aeson (FromJSON, Object, ToJSON, Value, encode, toJSON)
 import Data.ByteString.Lazy qualified as BL
 import Data.Function ((&))
-import Data.Maybe (fromMaybe)
 import Data.Text as T (Text, pack, take, unpack)
 import Data.Text.IO (putStrLn)
 import Data.Text.IO qualified as TIO
-import GHC.Base (undefined)
 import Http.HttpAPI (FullCapabilities, SessionResponse (..), deleteSession, newSessionFull)
 import Http.HttpAPI qualified as Caps (Capabilities (..))
 import IOUtils (DemoUtils, Logger (..), bidiDemoUtils, mkLogger)
-import IOUtils qualified as Utils
-import Network.Socket (socket)
-import Network.WebSockets (Connection, receiveData, runClient, sendClose, sendTextData)
+import Network.WebSockets (Connection, receiveData, runClient, sendTextData)
 import RuntimeConst (httpCapabilities, httpFullCapabilities)
-import UnliftIO (AsyncCancelled, bracket, throwIO, waitAnyCancel, waitAnyCatchCancel, waitEither)
-import UnliftIO.Async (Async, async, cancel, wait, waitCatch)
+import UnliftIO (AsyncCancelled, bracket, throwIO, waitAnyCatchCancel)
+import UnliftIO.Async (Async, async, cancel, waitCatch)
 import UnliftIO.STM
 import WebDriverPreCore.BiDi.BiDiUrl (BiDiUrl (..), getBiDiUrl)
 import WebDriverPreCore.BiDi.Capabilities (Capabilities)
@@ -105,10 +98,10 @@ import WebDriverPreCore.Http qualified as Http
 import WebDriverPreCore.Internal.Utils (txt)
 import Prelude hiding (getLine, log, null, putStrLn)
 
-withCommands :: (DemoUtils -> Commands -> IO ()) -> IO ()
-withCommands action =
+withCommands :: BiDiClientParams -> (DemoUtils -> Commands -> IO ()) -> IO ()
+withCommands params action =
   -- withNewBiDiSession $ action . mkCommands
-  withNewBiDiSession $ \utils -> action utils . mkCommands
+  withNewBiDiSession params $ \utils -> action utils . mkCommands
 
 data Commands = MkCommands
   { -- Session commands
@@ -278,14 +271,26 @@ sendCommand MkBiDiMethods {send, getNext, nextId} command = do
               )
           )
 
-withNewBiDiSession :: (DemoUtils -> BiDiMethods -> IO ()) -> IO ()
-withNewBiDiSession action =
+mkDemoBiDiClientParams :: Int -> IO BiDiClientParams
+mkDemoBiDiClientParams pauseMs = do
+  c <- mkChannels
+  logger@MkLogger {log} <- mkLogger (c.logChan)
+  pure $
+    MkBiDiClientParams
+      { biDiMethods = mkBiDIMethods c log,
+        logger,
+        messageLoops = testMessageLoops log c,
+        demoUtils = bidiDemoUtils log pauseMs
+      }
+
+withNewBiDiSession :: BiDiClientParams -> (DemoUtils -> BiDiMethods -> IO ()) -> IO ()
+withNewBiDiSession params action =
   bracket
     httpSession
     (deleteSession . (.sessionId))
     \s' -> do
       let bidiUrl = getBiDiUrl s' & either (error . T.unpack) id
-      withBiDiClient bidiUrl action
+      withBiDiClient params bidiUrl action
 
 -- | WebDriver BiDi client with communication channels
 data BiDiMethods = MkBiDiMethods
@@ -329,8 +334,8 @@ data BiDiClientParams = MkBiDiClientParams
   }
 
 -- | Run WebDriver BiDi client and return a client interface
-withBiDiClient' :: BiDiClientParams -> BiDiUrl -> (DemoUtils -> BiDiMethods -> IO ()) -> IO ()
-withBiDiClient'
+withBiDiClient :: BiDiClientParams -> BiDiUrl -> (DemoUtils -> BiDiMethods -> IO ()) -> IO ()
+withBiDiClient
   MkBiDiClientParams
     { biDiMethods,
       logger,
@@ -341,30 +346,6 @@ withBiDiClient'
   action =
     withClient bidiUrl logger messageLoops $ action demoUtils biDiMethods
 
-mkDemoBiDiClientParams :: Int -> IO BiDiClientParams
-mkDemoBiDiClientParams pauseMs = do
-  c <- mkChannels
-  logger@MkLogger {log} <- mkLogger (c.logChan)
-  pure $
-    MkBiDiClientParams
-      { biDiMethods = mkBiDIMethods c log,
-        logger,
-        messageLoops = testMessageLoops log c,
-        demoUtils = bidiDemoUtils log pauseMs
-      }
-
--- | Run WebDriver BiDi client and return a client interface
-withBiDiClient :: BiDiUrl -> (DemoUtils -> BiDiMethods -> IO ()) -> IO ()
-withBiDiClient bidiUrl action = do
-  -- Create communication channels
-  c <- mkChannels
-  logger@MkLogger {log} <- mkLogger (c.logChan)
-
-  let biDiMethods = mkBiDIMethods c log
-      demoUtils = bidiDemoUtils log 0
-      socketAction = action demoUtils biDiMethods
-      messageLoops = testMessageLoops log c
-  withClient bidiUrl logger messageLoops socketAction
 
 data MessageLoops = MkMessageLoops
   { sendLoop :: Connection -> IO (Async ()),
@@ -439,20 +420,6 @@ withClient
     where
       log = logger.log
 
-{-
-      -- Wait for any thread to fail (they shouldn't unless there's an error)
-      (waitAnyCancel [receiver, sender] >> log "One of the WebSocket threads terminated")
-        `catch` \(e :: AsyncCancelled) -> do
-          log "WebSocket threads cancelled"
-          throw e
-
-      -- Send close frame to cleanly close the WebSocket connection
-      log "Closing webSocket connection"
-      sendClose conn ("Connection closing" :: Text)
-        `catch` \(e :: SomeException) -> do
-          log $ "Failed to send close frame: " <> pack (show e)
-          throw e
-          -}
 
 httpSession :: IO SessionResponse
 httpSession = loadConfig >>= newSessionFull . httpBidiCapabilities
@@ -489,77 +456,3 @@ loopForever log name action = async $ do
 
 newHttpSession :: FullCapabilities -> IO SessionResponse
 newHttpSession = newSessionFull
-
--- TODO: handle driver not running - getting STM Eadlock
-{-
-theGhostJW: last session ended with this exception: Exception: thread blocked indefinitely in an STM transaction
-how could this happen?
-
-GitHub Copilot: I can see you're getting an STM deadlock exception when running the BiDi demo. Let me investigate the codebase to understand what might be causing this issue. Now let me look at the BiDiRunner code more specifically to understand the STM usage: Now let me look at the specific parts where STM transactions occur and check for potential deadlock issues: Let me check if GeckoDriver is actually running by checking the terminal output:
-
-theGhostJW: it is not running because I have restarted
-
-GitHub Copilot: I understand the issue now. The STM deadlock is happening because GeckoDriver isn't running, so the WebSocket connection cannot be established. Let me start GeckoDriver for you and then explain what's causing the STM deadlock. Perfect! Now GeckoDriver is running. Let me explain what was causing the STM deadlock:
-
-## Why the STM Deadlock Occurred
-
-The **"thread blocked indefinitely in an STM transaction"** exception happens when an STM transaction is waiting for a condition that will never be satisfied. In your BiDi demo, here's what was happening:
-
-### The Problem Chain:
-
-1. **WebSocket Connection Failure**: When GeckoDriver isn't running, the WebSocket connection in BiDiRunner.hs fails to establish
-2. **Receiver Thread Dies**: The receiver thread that reads from the WebSocket and writes to `receiveChan` terminates due to the connection failure
-3. **Sender Thread May Also Die**: The sender thread may also terminate
-4. **STM Deadlock**: In `sendCommand` function (line 270 of BiDiRunner.hs), this line blocks forever:
-   ```haskell
-   response <- atomically $ readTChan receiveChannel
-   ```
-
-### Why the STM Transaction Blocks Indefinitely:
-
-Looking at the `sendCommand` function in BiDiRunner.hs:
-
-```haskell
-sendCommand :: forall c r. (FromJSON r, ToJSON c, Show c) => WebDriverBiDiClient -> Command c r -> IO r
-sendCommand MkBiDiMethods {sendMessage, receiveChannel, nextId} command = do
-  id' <- nextId
-  sendMessage $ commandValue command id'
-  matchedResponse id'
-  where
-    matchedResponse :: JSUInt -> IO r
-    matchedResponse id' = do
-      response <- atomically $ readTChan receiveChannel  -- ← BLOCKS HERE
-      -- ... rest of function
-```
-
-When the receiver thread dies (because GeckoDriver isn't running), no new messages are being written to `receiveChannel`. The `readTChan` operation waits for data that will never come, causing the STM system to detect this as a deadlock.
-
-### The Architecture:
-
-The BiDi client uses this architecture:
-- **Sender Thread**: Reads from `sendChan` and sends messages over WebSocket
-- **Receiver Thread**: Receives WebSocket messages and writes to `receiveChan`
-- **Main Thread**: Writes to `sendChan` and reads from `receiveChan`
-
-When the WebSocket connection fails, both worker threads die, leaving the main thread stuck waiting for responses that will never arrive.
-
-### Solution:
-
-Now that GeckoDriver is running, you should be able to run your demo successfully:
-
-```haskell
--- This should now work:
-runDemo browsingContext
-```
-
-### Prevention:
-
-To make the code more robust against this issue, you could:
-
-1. **Add timeouts** to STM transactions
-2. **Better error handling** in the WebSocket connection logic
-3. **Connection health checks** before sending commands
-4. **Graceful degradation** when the connection fails
-
-But for now, ensuring GeckoDriver is running before executing the BiDi demo should resolve the immediate issue.
--}

@@ -2,9 +2,7 @@ module BiDi.BiDiE2EDemoTest where
 
 -- custom import needed to disambiguate capabilities
 
-import BiDi.BiDiRunner (Commands (..), withCommands)
-import Control.Concurrent (threadDelay)
-import Control.Exception (finally)
+import BiDi.BiDiRunner (Commands (..), withCommands, mkDemoBiDiClientParams)
 import Data.Text (Text)
 import IOUtils (DemoUtils (..), Logger (..), sleepMs)
 import WebDriverPreCore.BiDi.BiDiUrl (parseUrl)
@@ -46,26 +44,12 @@ bidiDemoUtils MkLogger {log = log'} =
         }
 
 
-runExample :: (DemoUtils -> Commands -> IO ()) -> IO ()
-runExample action =
-  withCommands $ action 
-
--- runExample :: DemoUtils -> (DemoUtils -> Commands -> IO ()) -> IO ()
--- runExample utils action =
---   withCommands $ action utils
-
--- withDemoUtils :: (DemoUtils -> IO ()) -> IO ()
--- withDemoUtils action = withAsyncLogger $ (=<<) action . bidiDemoUtils
-
--- runDemo :: (DemoUtils -> Commands -> IO ()) -> IO ()
--- runDemo = flip runExample
-
 runDemo :: (DemoUtils -> Commands -> IO ()) -> IO ()
-runDemo = runExample
+runDemo action =
+  mkDemoBiDiClientParams pauseMs >>= \p -> withCommands p action
 
 
 pauseMs :: Int
--- pauseMs = 3_000
 pauseMs = 0
 
 -- TODO: Session find out
@@ -99,7 +83,7 @@ TODO:
 -- *** Exception: Failed setting command parameters for method: browsingContext.activate
 -- JSON Value must be of JSON type: Object
 -- The actual JSON type was: String
--- The actual JSON value was: "21bc2288-ffae-4a29-853a-e5a4b5bf6e27"
+-- The actual JSON value was: "f8635116-427f-4841-8f9a-b031ac2821c2"
 browsingContext1 :: DemoUtils -> Commands -> IO ()
 browsingContext1 MkDemoUtils {..} MkCommands {..} = do
   logTxt "New browsing context - Tab"

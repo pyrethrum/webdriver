@@ -28,8 +28,7 @@ import Data.ByteString.Base64 qualified as B64
 import Data.Text (Text)
 import Data.Text.IO qualified as TIO
 import Test.Tasty.HUnit as HUnit (Assertion, HasCallStack, (@=?))
-import UnliftIO (Async, TChan, atomically, isEmptyTChan, readTChan, writeTChan)
-import UnliftIO.Async (async)
+import UnliftIO (TChan, atomically, isEmptyTChan, writeTChan)
 import WebDriverPreCore.Internal.Utils (txt)
 import Prelude hiding (log)
 
