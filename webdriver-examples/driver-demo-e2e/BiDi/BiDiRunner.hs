@@ -10,6 +10,7 @@ import Data.Text as T (Text, pack, take, unpack)
 import Data.Text.IO (putStrLn)
 import Data.Text.IO qualified as TIO
 import Data.Word (Word64)
+import Debug.Trace
 import Http.HttpAPI (FullCapabilities, SessionResponse (..), deleteSession, newSessionFull)
 import Http.HttpAPI qualified as Caps (Capabilities (..))
 import IOUtils (DemoUtils, Logger (..), bidiDemoUtils, mkLogger)
@@ -285,6 +286,19 @@ mkDemoBiDiClientParams pauseMs = do
         demoUtils = bidiDemoUtils log pauseMs
       }
 
+mkFailBidiClientParams :: Int -> Word64 -> Word64 -> Word64 -> IO BiDiClientParams
+mkFailBidiClientParams pauseMs failSendCount failGetCount failPrintCount = do
+  c <- mkChannels
+  logger@MkLogger {log} <- mkLogger (c.logChan)
+  messageLoops <- failMessageLoops log c failSendCount failGetCount failPrintCount
+  pure $
+    MkBiDiClientParams
+      { biDiMethods = mkBiDIMethods c log,
+        logger,
+        messageLoops,
+        demoUtils = bidiDemoUtils log pauseMs
+      }
+
 withNewBiDiSession :: BiDiClientParams -> (DemoUtils -> BiDiMethods -> IO ()) -> IO ()
 withNewBiDiSession params action =
   bracket
@@ -324,8 +338,8 @@ nxtCounter var = atomically $ do
   modifyTVar' var succ
   readTVar var
 
-mkAtomicCounter :: IO JSUInt
-mkAtomicCounter = counterVar >>= nxtCounter
+mkAtomicCounter :: TVar JSUInt -> IO JSUInt
+mkAtomicCounter counterVar' = nxtCounter counterVar'
 
 mkBiDIMethods :: Channels -> (Text -> IO ()) -> BiDiMethods
 mkBiDIMethods channels log =
@@ -357,14 +371,23 @@ withBiDiClient
   action =
     withClient bidiUrl logger messageLoops $ action demoUtils biDiMethods
 
-failAction :: Word64 -> (a -> IO ()) -> IO ((a -> IO ()))
-failAction failCallCount action = do
-  let counter = mkAtomicCounter
+failAction :: Text -> Word64 -> (a -> IO ()) -> IO ((a -> IO ()))
+failAction lbl failCallCount action = do
+  counterVar' <- counterVar
+  let counter = mkAtomicCounter counterVar'
   pure $ \a -> do
     n <- counter
+    traceShowM $ "Counter value " <> unpack lbl <> ":"
+    traceShowM n
+    traceShowM $ "Fail value " <> unpack lbl <> ":"
+    traceShowM failCallCount
     if (coerce n) == failCallCount
-      then error "Forced failure for testing"
-      else action a
+      then do
+        error $ "Forced failure for testing " <> unpack lbl
+        traceShowM $ "BANG: " <> unpack lbl
+      else do
+        traceShowM "OK"
+        action a
 
 data MessageActions = MkMessageActions
   { sendAction :: Connection -> IO (),
@@ -372,13 +395,18 @@ data MessageActions = MkMessageActions
     printAction :: IO ()
   }
 
-failMessageActions :: MessageActions -> Word64 -> Word64 -> Word64 -> MessageActions
+failMessageActions :: MessageActions -> Word64 -> Word64 -> Word64 -> IO MessageActions
 failMessageActions MkMessageActions {sendAction, getAction, printAction} failSendCount failGetCount failPrintCount =
-  MkMessageActions
-    { sendAction = failAction failSendCount . sendAction actions,
-      getAction = failAction failGetCount . getAction actions,
-      printAction = failAction failPrintCount printAction
-    }
+  do
+    send <- failAction "send" failSendCount sendAction
+    get <- failAction "get" failGetCount getAction
+    print' <- failAction "print" failPrintCount $ const printAction
+    pure $
+      MkMessageActions
+        { sendAction = send,
+          getAction = get,
+          printAction = print' 1
+        }
 
 demoMessageActions :: (Text -> IO ()) -> Channels -> MessageActions
 demoMessageActions log channels =
@@ -421,6 +449,11 @@ data MessageLoops = MkMessageLoops
 demoMessageLoops :: (Text -> IO ()) -> Channels -> MessageLoops
 demoMessageLoops log channels =
   loopActions log $ demoMessageActions log channels
+
+failMessageLoops :: (Text -> IO ()) -> Channels -> Word64 -> Word64 -> Word64 -> IO MessageLoops
+failMessageLoops log channels failSendCount failGetCount failPrintCount =
+  loopActions log
+    <$> failMessageActions (demoMessageActions log channels) failSendCount failGetCount failPrintCount
 
 withClient :: BiDiUrl -> Logger -> MessageLoops -> IO () -> IO ()
 withClient
