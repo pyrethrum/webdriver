@@ -16,7 +16,7 @@ import IOUtils (DemoUtils, Logger (..), bidiDemoUtils, mkLogger)
 import Network.WebSockets (Connection, receiveData, runClient, sendTextData)
 import RuntimeConst (httpCapabilities, httpFullCapabilities)
 import UnliftIO (AsyncCancelled, bracket, throwIO, waitAnyCatchCancel)
-import UnliftIO.Async (Async, async, cancel, waitCatch)
+import UnliftIO.Async (Async, async, cancel)
 import UnliftIO.STM
 import WebDriverPreCore.BiDi.BiDiUrl (BiDiUrl (..), getBiDiUrl)
 import WebDriverPreCore.BiDi.Capabilities (Capabilities)
