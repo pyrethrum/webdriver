@@ -2,14 +2,14 @@ module BiDi.BiDiE2EDemoTest where
 
 -- custom import needed to disambiguate capabilities
 
-import BiDi.BiDiRunner (Commands (..), mkDemoBiDiClientParams, withCommands, mkFailBidiClientParams)
+import BiDi.BiDiRunner (Commands (..), mkDemoBiDiClientParams, mkFailBidiClientParams, withCommands)
 import Data.Text (Text)
+import Data.Word (Word64)
 import IOUtils (DemoUtils (..))
 import WebDriverPreCore.BiDi.BiDiUrl (parseUrl)
-import WebDriverPreCore.BiDi.Protocol (Create (..), CreateType (..))
+import WebDriverPreCore.BiDi.Protocol (Create (..), CreateType (..), CreateUserContext (..))
 import WebDriverPreCore.Internal.Utils (txt)
 import Prelude hiding (log, putStrLn)
-import Data.Word (Word64)
 
 -- >>> demo_parseUrl
 -- "Right\n  MkBiDiUrl\n    { host = \"127.0.0.1\"\n    , port = 9222\n    , path = \"/session/e43698d9-b02a-4284-a936-12041deb3552\"\n    }"
@@ -33,7 +33,6 @@ getFailDemo d = runFailDemo d 0 2 0
 
 printFailDemo :: BiDiDemo -> IO ()
 printFailDemo d = runFailDemo d 0 0 3
-
 
 pauseMs :: Int
 pauseMs = 0
@@ -66,6 +65,8 @@ demo name action = MkBiDiDemo {name, action}
 
 -}
 
+-- ###########################################################################
+
 -- Failure Demos :: TODO turn into tests ---
 
 -- >>> printFailDemo browsingContext1
@@ -77,7 +78,7 @@ demo name action = MkBiDiDemo {name, action}
 -- >>> sendFailDemo browsingContext1
 -- *** Exception: Forced failure for testing: send (call #2)
 
-
+-- ###########################################################################
 
 -- >>> runDemo browsingContext1
 -- *** Exception: Failed to send command 
@@ -85,14 +86,14 @@ demo name action = MkBiDiDemo {name, action}
 --   { method = "browsingContext.activate"
 --   , params =
 --       MkBrowsingContext
---         { context = "280e08f1-2cb2-4d56-ada4-6ecb50f81e24" }
+--         { context = "93cf4fe2-309d-4812-8386-78df409747de" }
 --   , extended = Nothing
 --   }
 --  ---- Exception -----
 -- Failed setting command parameters for method: browsingContext.activate
 -- JSON Value must be of JSON type: Object
 -- The actual JSON type was: String
--- The actual JSON value was: "280e08f1-2cb2-4d56-ada4-6ecb50f81e24"
+-- The actual JSON value was: "93cf4fe2-309d-4812-8386-78df409747de"
 browsingContext1 :: BiDiDemo
 browsingContext1 =
   demo "Browsing Context 1" action
@@ -110,8 +111,6 @@ browsingContext1 =
       bc <- browsingContextCreate bcParams
       logShow "Browsing context - Tab" bc
       pause
-
-      {-
 
       logTxt "New browsing context - Window"
       bcWin <- browsingContextCreate bcParams {createType = Window}
@@ -154,7 +153,6 @@ browsingContext1 =
       logShow "Browsing context - Window with user context" bcWinWithUC
       pause
 
-      -}
       logTxt "Activate initial browsing context"
       o <- browsingContextActivate bc
       logShow "Activate result" o

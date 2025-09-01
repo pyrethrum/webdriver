@@ -10,7 +10,6 @@ import Data.Text as T (Text, pack, take, unpack)
 import Data.Text.IO (putStrLn)
 import Data.Text.IO qualified as TIO
 import Data.Word (Word64)
-import Debug.Trace
 import Http.HttpAPI (FullCapabilities, SessionResponse (..), deleteSession, newSessionFull)
 import Http.HttpAPI qualified as Caps (Capabilities (..))
 import IOUtils (DemoUtils, Logger (..), bidiDemoUtils, mkLogger)
@@ -280,7 +279,7 @@ mkDemoBiDiClientParams pauseMs = do
   logger@MkLogger {log} <- mkLogger (c.logChan)
   pure $
     MkBiDiClientParams
-      { biDiMethods = mkBiDIMethods c log,
+      { biDiMethods = mkBiDIMethods c,
         logger,
         messageLoops = demoMessageLoops log c,
         demoUtils = bidiDemoUtils log pauseMs
@@ -293,7 +292,7 @@ mkFailBidiClientParams pauseMs failSendCount failGetCount failPrintCount = do
   messageLoops <- failMessageLoops log c failSendCount failGetCount failPrintCount
   pure $
     MkBiDiClientParams
-      { biDiMethods = mkBiDIMethods c log,
+      { biDiMethods = mkBiDIMethods c,
         logger,
         messageLoops,
         demoUtils = bidiDemoUtils log pauseMs
@@ -341,8 +340,8 @@ nxtCounter var = atomically $ do
 mkAtomicCounter :: TVar JSUInt -> IO JSUInt
 mkAtomicCounter counterVar' = nxtCounter counterVar'
 
-mkBiDIMethods :: Channels -> (Text -> IO ()) -> BiDiMethods
-mkBiDIMethods channels log =
+mkBiDIMethods :: Channels -> BiDiMethods
+mkBiDIMethods channels =
   MkBiDiMethods
     { nextId = nxtCounter channels.counterVar,
       send = \a -> do
@@ -453,20 +452,19 @@ withClient :: BiDiUrl -> Logger -> MessageLoops -> IO () -> IO ()
 withClient
   pth@MkBiDiUrl {host, port, path}
   logger
-  socketRunners
+  messageLoops
   action =
     do
       log $ "Connecting to WebDriver at " <> txt pth
       runClient (unpack host) port (unpack path) $ \conn -> do
-        printLoop <- socketRunners.printLoop
-        getLoop <- socketRunners.getLoop conn
-        sendLoop <- socketRunners.sendLoop conn
+        printLoop <- messageLoops.printLoop
+        getLoop <- messageLoops.getLoop conn
+        sendLoop <- messageLoops.sendLoop conn
 
         log "WebSocket connection established"
 
         result <- async action
 
-        log "Disconnecting client"
         (asy, ethresult) <- waitAnyCatchCancel [getLoop, sendLoop, result, printLoop]
         logger.waitEmpty
         ethresult
@@ -478,6 +476,7 @@ withClient
             )
             (pure)
         cancel asy
+        putStrLn "Disconnecting client"
     where
       log = logger.log
 
@@ -511,8 +510,9 @@ catchLog name log action =
 loopForever :: (Text -> IO ()) -> Text -> IO () -> IO (Async ())
 loopForever log name action = async $ do
   log $ "Starting " <> name <> " thread"
-  let loop = catchLog name log action >> loop
   loop
+  where
+    loop = catchLog name log action >> loop
 
 newHttpSession :: FullCapabilities -> IO SessionResponse
 newHttpSession = newSessionFull
