@@ -15,34 +15,6 @@ import Prelude hiding (log, putStrLn)
 demo_parseUrl :: Text
 demo_parseUrl = txt $ parseUrl "ws://127.0.0.1:9222/session/e43698d9-b02a-4284-a936-12041deb3552"
 
--- -- >>> unit_newBidiSessionViaHttp
--- unit_newBidiSessionViaHttp :: IO ()
--- unit_newBidiSessionViaHttp = do
---   cfg <- loadConfig
---   ses <- Http.newSessionFull $ httpBidiCapabilities cfg
---   finally
---     (logShow "new session response:\n" ses)
---     (Http.deleteSession ses.sessionId)
-
-
-bidiDemoUtils :: Logger -> IO DemoUtils
-bidiDemoUtils MkLogger {log = log'} =
-  do
-    let logTxt = log'
-        log l t = logTxt $ l <> ": " <> t
-        logShow :: forall a. (Show a) => Text -> a -> IO ()
-        logShow l = log l . txt
-    pure $
-      MkDemoUtils
-        { sleep = sleepMs,
-          log,
-          logShow,
-          logM = \l mt -> mt >>= log l,
-          logShowM = \l t -> t >>= logShow l,
-          logTxt,
-          pause = sleepMs pauseMs
-        }
-
 
 runDemo :: (DemoUtils -> Commands -> IO ()) -> IO ()
 runDemo action =
@@ -74,7 +46,6 @@ pauseMs = 0
 
 {-
 TODO: 
-  - Parameterisable logger
   - mock failer for testin
   - make serialisation strict
 -}

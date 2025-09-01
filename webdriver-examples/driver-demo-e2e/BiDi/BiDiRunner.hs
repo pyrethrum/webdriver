@@ -4,10 +4,12 @@ import Config (Config, loadConfig)
 import Control.Exception (Exception (displayException), Handler (..), SomeException, catch, catches, throw)
 import Data.Aeson (FromJSON, Object, ToJSON, Value, encode, toJSON)
 import Data.ByteString.Lazy qualified as BL
+import Data.Coerce (coerce)
 import Data.Function ((&))
 import Data.Text as T (Text, pack, take, unpack)
 import Data.Text.IO (putStrLn)
 import Data.Text.IO qualified as TIO
+import Data.Word (Word64)
 import Http.HttpAPI (FullCapabilities, SessionResponse (..), deleteSession, newSessionFull)
 import Http.HttpAPI qualified as Caps (Capabilities (..))
 import IOUtils (DemoUtils, Logger (..), bidiDemoUtils, mkLogger)
@@ -279,7 +281,7 @@ mkDemoBiDiClientParams pauseMs = do
     MkBiDiClientParams
       { biDiMethods = mkBiDIMethods c log,
         logger,
-        messageLoops = testMessageLoops log c,
+        messageLoops = demoMessageLoops log c,
         demoUtils = bidiDemoUtils log pauseMs
       }
 
@@ -312,14 +314,23 @@ mkChannels =
     <$> newTChanIO
     <*> newTChanIO
     <*> newTChanIO
-    <*> newTVarIO (MkJSUInt 0)
+    <*> counterVar
+
+counterVar :: IO (TVar JSUInt)
+counterVar = newTVarIO $ MkJSUInt 0
+
+nxtCounter :: TVar JSUInt -> IO JSUInt
+nxtCounter var = atomically $ do
+  modifyTVar' var succ
+  readTVar var
+
+mkAtomicCounter :: IO JSUInt
+mkAtomicCounter = counterVar >>= nxtCounter
 
 mkBiDIMethods :: Channels -> (Text -> IO ()) -> BiDiMethods
 mkBiDIMethods channels log =
   MkBiDiMethods
-    { nextId = atomically $ do
-        modifyTVar' channels.counterVar succ
-        readTVar channels.counterVar,
+    { nextId = nxtCounter channels.counterVar,
       send = \a -> do
         log $ "Sending Message: " <> txt (toJSON a)
         atomically . writeTChan channels.sendChan $ toJSON a,
@@ -346,17 +357,33 @@ withBiDiClient
   action =
     withClient bidiUrl logger messageLoops $ action demoUtils biDiMethods
 
+failAction :: Word64 -> (a -> IO ()) -> IO ((a -> IO ()))
+failAction failCallCount action = do
+  let counter = mkAtomicCounter
+  pure $ \a -> do
+    n <- counter
+    if (coerce n) == failCallCount
+      then error "Forced failure for testing"
+      else action a
 
-data MessageLoops = MkMessageLoops
-  { sendLoop :: Connection -> IO (Async ()),
-    getLoop :: Connection -> IO (Async ()),
-    printLoop :: IO (Async ())
+data MessageActions = MkMessageActions
+  { sendAction :: Connection -> IO (),
+    getAction :: Connection -> IO (),
+    printAction :: IO ()
   }
 
-testMessageLoops :: (Text -> IO ()) -> Channels -> MessageLoops
-testMessageLoops log channels =
-  MkMessageLoops
-    { sendLoop = \conn -> asyncLoop "Sender" $ do
+failMessageActions :: MessageActions -> Word64 -> Word64 -> Word64 -> MessageActions
+failMessageActions MkMessageActions {sendAction, getAction, printAction} failSendCount failGetCount failPrintCount =
+  MkMessageActions
+    { sendAction = failAction failSendCount . sendAction actions,
+      getAction = failAction failGetCount . getAction actions,
+      printAction = failAction failPrintCount printAction
+    }
+
+demoMessageActions :: (Text -> IO ()) -> Channels -> MessageActions
+demoMessageActions log channels =
+  MkMessageActions
+    { sendAction = \conn -> do
         msgToSend <- atomically $ readTChan channels.sendChan
         log $ "Sending Message: " <> txt msgToSend
         catchLog
@@ -364,21 +391,36 @@ testMessageLoops log channels =
           log
           (sendTextData conn (BL.toStrict $ encode msgToSend)),
       --
-      getLoop = \conn -> asyncLoop "Receiver" $ do
+      getAction = \conn -> do
         msg <- receiveData conn
         log $ "Received raw data: " <> T.take 100 (txt msg) <> "..."
         atomically . writeTChan channels.receiveChan $ decodeResponse msg,
       --
-      printLoop =
-        let printLoop' = do
-              msg <- atomically $ readTChan channels.logChan
-              TIO.putStrLn $ "Next log....."
-              TIO.putStrLn $ "[LOG] " <> msg
-              printLoop'
-         in async printLoop'
+      printAction = do
+        msg <- atomically $ readTChan channels.logChan
+        TIO.putStrLn $ "Next log....."
+        TIO.putStrLn $ "[LOG] " <> msg
+    }
+
+loopActions :: (Text -> IO ()) -> MessageActions -> MessageLoops
+loopActions log MkMessageActions {..} =
+  MkMessageLoops
+    { sendLoop = \conn -> asyncLoop "Sender" $ sendAction conn,
+      getLoop = \conn -> asyncLoop "Receiver" $ getAction conn,
+      printLoop = asyncLoop "Logger" printAction
     }
   where
     asyncLoop = loopForever log
+
+data MessageLoops = MkMessageLoops
+  { sendLoop :: Connection -> IO (Async ()),
+    getLoop :: Connection -> IO (Async ()),
+    printLoop :: IO (Async ())
+  }
+
+demoMessageLoops :: (Text -> IO ()) -> Channels -> MessageLoops
+demoMessageLoops log channels =
+  loopActions log $ demoMessageActions log channels
 
 withClient :: BiDiUrl -> Logger -> MessageLoops -> IO () -> IO ()
 withClient
@@ -419,7 +461,6 @@ withClient
         cancel asy
     where
       log = logger.log
-
 
 httpSession :: IO SessionResponse
 httpSession = loadConfig >>= newSessionFull . httpBidiCapabilities
