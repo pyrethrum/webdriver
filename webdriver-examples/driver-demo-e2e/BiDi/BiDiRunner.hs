@@ -346,8 +346,9 @@ mkBiDIMethods channels log =
   MkBiDiMethods
     { nextId = nxtCounter channels.counterVar,
       send = \a -> do
-        log $ "Sending Message: " <> txt (toJSON a)
-        atomically . writeTChan channels.sendChan $ toJSON a,
+        -- make strict so serialisation errors come from here and not in the logger
+        let !json = toJSON a
+        atomically . writeTChan channels.sendChan $ json,
       getNext = atomically $ readTChan channels.receiveChan
     }
 

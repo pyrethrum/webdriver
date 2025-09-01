@@ -66,12 +66,6 @@ demo name action = MkBiDiDemo {name, action}
 
 -}
 
-{-
-TODO:
-  - mock failer for testin
-  - make serialisation strict
--}
-
 -- Failure Demos :: TODO turn into tests ---
 
 -- >>> printFailDemo browsingContext1
@@ -83,17 +77,22 @@ TODO:
 -- >>> sendFailDemo browsingContext1
 -- *** Exception: Forced failure for testing: send (call #2)
 
+
+
 -- >>> runDemo browsingContext1
--- *** Exception: Failed setting command parameters for method: browsingContext.activate
+-- *** Exception: Failed to send command 
+-- MkCommand
+--   { method = "browsingContext.activate"
+--   , params =
+--       MkBrowsingContext
+--         { context = "280e08f1-2cb2-4d56-ada4-6ecb50f81e24" }
+--   , extended = Nothing
+--   }
+--  ---- Exception -----
+-- Failed setting command parameters for method: browsingContext.activate
 -- JSON Value must be of JSON type: Object
 -- The actual JSON type was: String
--- The actual JSON value was: "b5362963-c1ed-41e4-af74-4603395ed51e"
-
--- *** Exception: Failed setting command parameters for method: browsingContext.activate
-
--- JSON Value must be of JSON type: Object
--- The actual JSON type was: String
--- The actual JSON value was: "7a68d552-033a-4018-a4dd-3214d9ca7a20"
+-- The actual JSON value was: "280e08f1-2cb2-4d56-ada4-6ecb50f81e24"
 browsingContext1 :: BiDiDemo
 browsingContext1 =
   demo "Browsing Context 1" action
