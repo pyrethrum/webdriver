@@ -15,7 +15,7 @@ import Http.HttpAPI qualified as Caps (Capabilities (..))
 import IOUtils (DemoUtils, Logger (..), bidiDemoUtils, mkLogger)
 import Network.WebSockets (Connection, receiveData, runClient, sendTextData)
 import RuntimeConst (httpCapabilities, httpFullCapabilities)
-import UnliftIO (AsyncCancelled, bracket, throwIO, waitAnyCatchCancel)
+import UnliftIO (AsyncCancelled, bracket, throwIO, waitAnyCatch)
 import UnliftIO.Async (Async, async, cancel)
 import UnliftIO.STM
 import WebDriverPreCore.BiDi.BiDiUrl (BiDiUrl (..), getBiDiUrl)
@@ -97,6 +97,7 @@ import WebDriverPreCore.BiDi.Protocol qualified as P
 import WebDriverPreCore.BiDi.ResponseEvent (JSONEncodeError, MatchedResponse (..), ResponseObject, decodeResponse, displayResponseError, parseResponse)
 import WebDriverPreCore.BiDi.Session (SessionNewResult, SessionStatusResult)
 import WebDriverPreCore.Http qualified as Http
+import WebDriverPreCore.Internal.AesonUtils (jsonToText)
 import WebDriverPreCore.Internal.Utils (txt)
 import Prelude hiding (getLine, log, null, putStrLn)
 
@@ -250,7 +251,7 @@ sendCommand MkBiDiMethods {send, getNext, nextId} command = do
   (send $ commandValue command id')
     `catch` \(e :: SomeException) -> do
       error $
-        "Failed to send command \n"
+        "Send command failed: \n"
           <> unpack (txt command)
           <> "\n ---- Exception -----\n"
           <> displayException e
@@ -407,7 +408,7 @@ demoMessageActions log channels =
   MkMessageActions
     { sendAction = \conn -> do
         msgToSend <- atomically $ readTChan channels.sendChan
-        log $ "Sending Message: " <> txt msgToSend
+        log $ "Sending Message: " <> jsonToText msgToSend
         catchLog
           "Message Send Failed"
           log
@@ -465,17 +466,23 @@ withClient
 
         result <- async action
 
-        (asy, ethresult) <- waitAnyCatchCancel [getLoop, sendLoop, result, printLoop]
+        (_asy, ethresult) <- waitAnyCatch [getLoop, sendLoop, result, printLoop]
+
+        -- cancelMany not reexported by UnliftIO
+        cancel getLoop
+        cancel sendLoop
+        cancel result
+
         logger.waitEmpty
+        cancel printLoop
         ethresult
           & either
             ( \e -> do
                 -- the logger is dead now so print direc to the console instead
-                putStrLn $ "One of the BiDi client threads failed: " <> pack (displayException e)
+                putStrLn $ "One of the BiDi client threads failed: \n" <> pack (displayException e)
                 throw e
             )
             (pure)
-        cancel asy
         putStrLn "Disconnecting client"
     where
       log = logger.log

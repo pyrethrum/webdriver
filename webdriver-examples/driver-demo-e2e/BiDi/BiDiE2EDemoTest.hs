@@ -81,19 +81,19 @@ demo name action = MkBiDiDemo {name, action}
 -- ###########################################################################
 
 -- >>> runDemo browsingContext1
--- *** Exception: Failed to send command 
+-- *** Exception: Send command failed: 
 -- MkCommand
 --   { method = "browsingContext.activate"
 --   , params =
 --       MkBrowsingContext
---         { context = "8edd24bf-0f4e-43fa-ac3e-cb092d03882a" }
+--         { context = "5a25df51-5ff9-429f-af49-d914a6f7acf5" }
 --   , extended = Nothing
 --   }
 --  ---- Exception -----
 -- Failed setting command parameters for method: browsingContext.activate
 -- JSON Value must be of JSON type: Object
 -- The actual JSON type was: String
--- The actual JSON value was: "8edd24bf-0f4e-43fa-ac3e-cb092d03882a"
+-- The actual JSON value was: "5a25df51-5ff9-429f-af49-d914a6f7acf5"
 browsingContext1 :: BiDiDemo
 browsingContext1 =
   demo "Browsing Context 1" action
