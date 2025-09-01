@@ -37,6 +37,8 @@ data Logger = MkLogger
     waitEmpty :: IO ()
   }
 
+--  TODO : deprectate static logTxt et al
+
 bidiDemoUtils :: (Text -> IO ()) -> Int -> DemoUtils
 bidiDemoUtils baseLog pauseMs =
   let logTxt' = baseLog
