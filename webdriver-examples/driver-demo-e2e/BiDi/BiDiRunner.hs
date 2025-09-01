@@ -91,7 +91,7 @@ import WebDriverPreCore.BiDi.Protocol
     UserContext,
     WebExtension,
     WebExtensionData,
-    WebExtensionResult,
+    WebExtensionResult, Activate,
   )
 import WebDriverPreCore.BiDi.Protocol qualified as P
 import WebDriverPreCore.BiDi.ResponseEvent (JSONEncodeError, MatchedResponse (..), ResponseObject, decodeResponse, displayResponseError, parseResponse)
@@ -114,7 +114,7 @@ data Commands = MkCommands
     sessionSubScribe :: SessionSubscriptionRequest -> IO SessionSubscribeResult,
     sessionUnsubscribe :: SessionUnsubscribeParameters -> IO Object,
     -- BrowsingContext commands
-    browsingContextActivate :: BrowsingContext -> IO Object,
+    browsingContextActivate :: Activate -> IO Object,
     browsingContextCaptureScreenshot :: CaptureScreenshot -> IO CaptureScreenshotResult,
     browsingContextClose :: Close -> IO Object,
     -- | Create a browsing context

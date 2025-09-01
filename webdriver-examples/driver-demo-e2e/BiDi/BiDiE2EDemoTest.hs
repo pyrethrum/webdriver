@@ -7,7 +7,7 @@ import Data.Text (Text)
 import Data.Word (Word64)
 import IOUtils (DemoUtils (..))
 import WebDriverPreCore.BiDi.BiDiUrl (parseUrl)
-import WebDriverPreCore.BiDi.Protocol (Create (..), CreateType (..), CreateUserContext (..))
+import WebDriverPreCore.BiDi.Protocol (Create (..), CreateType (..), CreateUserContext (..), Activate (..))
 import WebDriverPreCore.Internal.Utils (txt)
 import Prelude hiding (log, putStrLn)
 
@@ -81,19 +81,6 @@ demo name action = MkBiDiDemo {name, action}
 -- ###########################################################################
 
 -- >>> runDemo browsingContext1
--- *** Exception: Send command failed: 
--- MkCommand
---   { method = "browsingContext.activate"
---   , params =
---       MkBrowsingContext
---         { context = "5a25df51-5ff9-429f-af49-d914a6f7acf5" }
---   , extended = Nothing
---   }
---  ---- Exception -----
--- Failed setting command parameters for method: browsingContext.activate
--- JSON Value must be of JSON type: Object
--- The actual JSON type was: String
--- The actual JSON value was: "5a25df51-5ff9-429f-af49-d914a6f7acf5"
 browsingContext1 :: BiDiDemo
 browsingContext1 =
   demo "Browsing Context 1" action
@@ -154,7 +141,7 @@ browsingContext1 =
       pause
 
       logTxt "Activate initial browsing context"
-      o <- browsingContextActivate bc
+      o <- browsingContextActivate $ MkActivate bc
       logShow "Activate result" o
       pause
 

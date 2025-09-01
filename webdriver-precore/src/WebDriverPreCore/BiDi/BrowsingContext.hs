@@ -11,6 +11,14 @@ import Prelude (Bool, Eq, Float, Maybe, Semigroup ((<>)), Show, ($))
 
 -- ######### REMOTE #########
 
+-- |  for activate command
+newtype Activate = MkActivate
+  { context :: BrowsingContext
+  }
+  deriving (Show, Eq, Generic)
+
+instance ToJSON Activate
+
 -- |  for captureScreenshot command
 data CaptureScreenshot = MkCaptureScreenshot
   { context :: BrowsingContext,
