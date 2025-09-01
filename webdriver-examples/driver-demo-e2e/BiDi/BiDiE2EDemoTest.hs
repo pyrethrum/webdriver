@@ -29,7 +29,7 @@ sendFailDemo :: BiDiDemo -> IO ()
 sendFailDemo d = runFailDemo d 2 0 0
 
 getFailDemo :: BiDiDemo -> IO ()
-getFailDemo d = runFailDemo d 0 3 0
+getFailDemo d = runFailDemo d 0 2 0
 
 printFailDemo :: BiDiDemo -> IO ()
 printFailDemo d = runFailDemo d 0 0 3
@@ -46,7 +46,7 @@ data BiDiDemo = MkBiDiDemo
 demo :: Text -> (DemoUtils -> Commands -> IO ()) -> BiDiDemo
 demo name action = MkBiDiDemo {name, action}
 
--- TODO: Session find ou
+-- TODO: Session find out about newSession Firefox threads
 
 {-
 ##### BrowsingContext #####
@@ -72,17 +72,22 @@ TODO:
   - make serialisation strict
 -}
 
+-- Failure Demos :: TODO turn into tests ---
+
 -- >>> printFailDemo browsingContext1
--- *** Exception: Failed setting command parameters for method: browsingContext.activate
--- JSON Value must be of JSON type: Object
--- The actual JSON type was: String
--- The actual JSON value was: "cd976441-549e-4318-b40b-ac0d237e480f"
+-- *** Exception: Forced failure for testing: print (call #3)
+
+-- >>> getFailDemo browsingContext1
+-- *** Exception: Forced failure for testing: get (call #2)
+
+-- >>> sendFailDemo browsingContext1
+-- *** Exception: Forced failure for testing: send (call #2)
 
 -- >>> runDemo browsingContext1
 -- *** Exception: Failed setting command parameters for method: browsingContext.activate
 -- JSON Value must be of JSON type: Object
 -- The actual JSON type was: String
--- The actual JSON value was: "c560e7dc-320c-4384-9bfb-37735468712d"
+-- The actual JSON value was: "b5362963-c1ed-41e4-af74-4603395ed51e"
 
 -- *** Exception: Failed setting command parameters for method: browsingContext.activate
 

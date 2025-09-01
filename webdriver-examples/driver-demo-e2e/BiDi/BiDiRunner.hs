@@ -377,16 +377,10 @@ failAction lbl failCallCount action = do
   let counter = mkAtomicCounter counterVar'
   pure $ \a -> do
     n <- counter
-    traceShowM $ "Counter value " <> unpack lbl <> ":"
-    traceShowM n
-    traceShowM $ "Fail value " <> unpack lbl <> ":"
-    traceShowM failCallCount
     if (coerce n) == failCallCount
       then do
-        error $ "Forced failure for testing " <> unpack lbl
-        traceShowM $ "BANG: " <> unpack lbl
+        error $ "Forced failure for testing: " <> unpack lbl <> " (call #" <> show n <> ")"
       else do
-        traceShowM "OK"
         action a
 
 data MessageActions = MkMessageActions
@@ -426,7 +420,6 @@ demoMessageActions log channels =
       --
       printAction = do
         msg <- atomically $ readTChan channels.logChan
-        TIO.putStrLn $ "Next log....."
         TIO.putStrLn $ "[LOG] " <> msg
     }
 
@@ -473,21 +466,13 @@ withClient
         result <- async action
 
         log "Disconnecting client"
-        (asy, ethresult) <- waitAnyCatchCancel [getLoop, sendLoop, result]
+        (asy, ethresult) <- waitAnyCatchCancel [getLoop, sendLoop, result, printLoop]
         logger.waitEmpty
-        prntErr <- waitCatch printLoop
         ethresult
           & either
             ( \e -> do
                 -- the logger is dead now so print direc to the console instead
                 putStrLn $ "One of the BiDi client threads failed: " <> pack (displayException e)
-                throw e
-            )
-            (pure)
-        prntErr
-          & either
-            ( \e -> do
-                putStrLn $ "The printLoop thread failed: " <> pack (displayException e)
                 throw e
             )
             (pure)
