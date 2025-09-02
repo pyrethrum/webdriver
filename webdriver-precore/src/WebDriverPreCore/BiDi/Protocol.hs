@@ -90,34 +90,33 @@ import Data.Aeson
   ( Object,
   )
 import WebDriverPreCore.BiDi.Browser
-  ( ClientWindowInfo(..),
-    CreateUserContext(..),
-    GetClientWindowsResult,
-    GetUserContextsResult,
-    RemoveUserContext,
-    SetClientWindowState, 
+  ( ClientWindowInfo (..),
+    CreateUserContext (..),
+    GetClientWindowsResult (..),
+    GetUserContextsResult (..),
+    RemoveUserContext (..),
+    SetClientWindowState (..),
   )
 import WebDriverPreCore.BiDi.BrowsingContext
-  ( 
-    Activate(..),
-    CaptureScreenshot,
+  ( Activate (..),
+    CaptureScreenshot (..),
     CaptureScreenshotResult,
-    Close,
-    Create(..),
+    Close (..),
+    Create (..),
     CreateType (..),
-    GetTree,
-    GetTreeResult,
-    HandleUserPrompt,
-    LocateNodes,
-    LocateNodesResult,
-    Navigate,
-    NavigateResult,
-    Print,
-    PrintResult,
-    Reload,
-    SetViewport,
-    TraverseHistory,
-    TraverseHistoryResult,
+    GetTree (..),
+    GetTreeResult (..),
+    HandleUserPrompt (..),
+    LocateNodes (..),
+    LocateNodesResult (..),
+    Navigate (..),
+    NavigateResult (..),
+    Print (..),
+    PrintResult (..),
+    Reload (..),
+    SetViewport (..),
+    TraverseHistory (..),
+    TraverseHistoryResult (..),
   )
 import WebDriverPreCore.BiDi.Capabilities (Capabilities)
 import WebDriverPreCore.BiDi.Command
@@ -125,6 +124,7 @@ import WebDriverPreCore.BiDi.Command
     emptyCommand,
     mkCommand,
   )
+import WebDriverPreCore.BiDi.CoreTypes as BrowsingContext (BrowsingContext (..), UserContext)
 import WebDriverPreCore.BiDi.Emulation
   ( SetGeolocationOverride,
     SetLocaleOverride,
@@ -185,7 +185,6 @@ import WebDriverPreCore.BiDi.WebExtensions
     WebExtensionData,
     WebExtensionResult (..),
   )
-import WebDriverPreCore.BiDi.CoreTypes as BrowsingContext (BrowsingContext(..), UserContext)
 
 ---- Session ----
 

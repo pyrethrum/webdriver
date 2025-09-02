@@ -416,7 +416,8 @@ demoMessageActions log channels =
       --
       getAction = \conn -> do
         msg <- receiveData conn
-        log $ "Received raw data: " <> T.take 100 (txt msg) <> "..."
+        -- log $ "Received raw data: " <> T.take 100 (txt msg) <> "..."
+        log $ "Received raw data: " <> txt msg
         atomically . writeTChan channels.receiveChan $ decodeResponse msg,
       --
       printAction = do

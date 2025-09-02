@@ -82,7 +82,15 @@ data Close = MkClose
   }
   deriving (Show, Eq, Generic)
 
-instance ToJSON Close
+instance ToJSON Close where
+  toJSON :: Close -> Value
+  toJSON (MkClose {context, promptUnload}) =
+    object $
+      [ "context" .= context
+      ]
+        <> catMaybes
+          [ opt "promptUnload" promptUnload
+          ]
 
 -- |  for create command
 data Create = MkCreate
