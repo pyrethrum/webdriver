@@ -1,13 +1,14 @@
 module WebDriverPreCore.BiDi.BrowsingContext where
 
-import Data.Aeson (FromJSON, KeyValue (..), ToJSON (..), Value, object, (.=))
+import Data.Aeson (FromJSON (..), KeyValue (..), ToJSON (..), Value, object, (.=), withObject, (.:))
 import Data.Map qualified as Map
 import Data.Maybe (catMaybes)
-import Data.Text (Text)
+import Data.Text (Text, unpack)
 import GHC.Generics
 import WebDriverPreCore.BiDi.CoreTypes (BrowsingContext, JSInt, JSUInt, NodeRemoteValue, UserContext)
 import WebDriverPreCore.Internal.AesonUtils (enumCamelCase, opt)
-import Prelude (Bool, Eq, Float, Maybe, Semigroup ((<>)), Show, ($))
+import Prelude (Bool, Eq, Float, Maybe, Semigroup ((<>)), Show, ($), Applicative (..), flip, Functor (..), (.))
+import Data.Aeson.Types (Parser)
 
 -- ######### REMOTE #########
 
@@ -28,7 +29,17 @@ data CaptureScreenshot = MkCaptureScreenshot
   }
   deriving (Show, Eq, Generic)
 
-instance ToJSON CaptureScreenshot
+instance ToJSON CaptureScreenshot where
+  toJSON :: CaptureScreenshot -> Value
+  toJSON (MkCaptureScreenshot {context, origin, format, clip}) =
+    object $
+      [ "context" .= context
+      ]
+        <> catMaybes
+          [ opt "origin" origin,
+            opt "format" format,
+            opt "clip" clip
+          ]
 
 data ScreenShotOrigin = Viewport | Document deriving (Show, Eq, Generic)
 
@@ -73,7 +84,15 @@ data ImageFormat = MkImageFormat
   }
   deriving (Show, Eq, Generic)
 
-instance ToJSON ImageFormat
+instance ToJSON ImageFormat where
+  toJSON :: ImageFormat -> Value
+  toJSON (MkImageFormat {imageType, quality}) =
+    object $
+      [ "type" .= imageType
+      ]
+        <> catMaybes
+          [ opt "quality" quality
+          ]
 
 -- |  for close command
 data Close = MkClose
@@ -315,9 +334,13 @@ instance FromJSON NavigateResult
 instance FromJSON TraverseHistoryResult
 
 newtype GetTreeResult = MkGetTreeResult
-  { info :: [Info]
+  { contexts :: [Info]
   }
-  deriving newtype (Show, Eq, FromJSON)
+  deriving stock (Show, Eq, Generic)
+
+instance FromJSON GetTreeResult
+
+
 
 newtype LocateNodesResult = MkLocateNodesResult
   { nodeRemoteValues :: [NodeRemoteValue]
@@ -327,7 +350,15 @@ newtype LocateNodesResult = MkLocateNodesResult
 newtype CaptureScreenshotResult = MkCaptureScreenshotResult
   { base64Text :: Text
   }
-  deriving newtype (Show, Eq, FromJSON)
+  deriving newtype (Show, Eq)
+
+
+parseTextData :: Text -> Value -> Parser Text
+parseTextData description = withObject (unpack description) $ flip (.:) "data"
+
+instance FromJSON CaptureScreenshotResult where
+  parseJSON :: Value -> Parser CaptureScreenshotResult
+  parseJSON = fmap MkCaptureScreenshotResult . parseTextData "CaptureScreenshotResult"
 
 newtype PrintResult = MkPrintResult
   { base64Text :: Text

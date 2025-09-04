@@ -6,7 +6,7 @@ import Data.Aeson (FromJSON, Object, ToJSON, Value, encode, toJSON)
 import Data.ByteString.Lazy qualified as BL
 import Data.Coerce (coerce)
 import Data.Function ((&))
-import Data.Text as T (Text, pack, take, unpack)
+import Data.Text as T (Text, pack, unpack)
 import Data.Text.IO (putStrLn)
 import Data.Text.IO qualified as TIO
 import Data.Word (Word64)

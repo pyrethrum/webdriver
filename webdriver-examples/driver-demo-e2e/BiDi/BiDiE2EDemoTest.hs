@@ -11,14 +11,17 @@ import WebDriverPreCore.BiDi.Protocol
   ( Activate (..),
     BrowsingContext,
     CaptureScreenshot (..),
+    ClipRectangle (..),
     Close (..),
     Create (..),
     CreateType (..),
     CreateUserContext (..),
+    ScreenShotOrigin (..),
+    ImageFormat (..), 
+    GetTree(..)
   )
 import WebDriverPreCore.Internal.Utils (txt)
 import Prelude hiding (log, putStrLn)
-import GHC.IO.Device (IODevice(close))
 
 -- >>> demo_parseUrl
 -- "Right\n  MkBiDiUrl\n    { host = \"127.0.0.1\"\n    , port = 9222\n    , path = \"/session/e43698d9-b02a-4284-a936-12041deb3552\"\n    }"
@@ -44,7 +47,7 @@ printFailDemo :: BiDiDemo -> IO ()
 printFailDemo d = runFailDemo d 0 0 3
 
 pauseMs :: Int
-pauseMs = 0
+pauseMs = 3_000
 
 data BiDiDemo = MkBiDiDemo
   { name :: Text,
@@ -61,9 +64,8 @@ demo name action = MkBiDiDemo {name, action}
 
 4. browsingContextCreate :: DONE
 1. browsingContextActivate : DONE
-2. browsingContextCaptureScreenshot
-3. browsingContextClose
-  - promptUnload ~ Nothing :: DONE
+2. browsingContextCaptureScreenshot :: DONE
+3. browsingContextClose :: DONE
 5. browsingContextGetTree
 6. browsingContextHandleUserPrompt
 7. browsingContextLocateNodes
@@ -187,48 +189,88 @@ newWindowContext MkDemoUtils {..} MkCommands {..} = do
 closeContext :: DemoUtils -> Commands -> BrowsingContext -> IO ()
 closeContext MkDemoUtils {..} MkCommands {..} bc = do
   logTxt "Close browsing context"
-  co <- browsingContextClose $ MkClose { context = bc, promptUnload = Nothing }
+  co <- browsingContextClose $ MkClose {context = bc, promptUnload = Nothing}
   logShow "Close result" co
   pause
 
 -- >>> runDemo browsingContextCaptureScreenshotClose
--- *** Exception: Error executing BiDi command: MkCommand
---   { method = "browsingContext.captureScreenshot"
---   , params =
---       MkCaptureScreenshot
---         { context =
---             MkBrowsingContext
---               { context = "2aa71228-c600-4458-b68f-0b70443c40fb" }
---         , origin = Nothing
---         , format = Nothing
---         , clip = Nothing
---         }
---   , extended = Nothing
---   }
--- Failed to decode the 'result' property of JSON returned by driver to response type: 
--- {
---     "error": "invalid argument",
---     "id": 2,
---     "message": "Expected \"origin\" to be one of document,viewport, got [object Null] null",
---     "stacktrace": "RemoteError@chrome://remote/content/shared/RemoteError.sys.mjs:8:8\nWebDriverError@chrome://remote/content/shared/webdriver/Errors.sys.mjs:199:5\nInvalidArgumentError@chrome://remote/content/shared/webdriver/Errors.sys.mjs:401:5\nassert.that/<@chrome://remote/content/shared/webdriver/Assert.sys.mjs:581:13\ncaptureScreenshot@chrome://remote/content/webdriver-bidi/modules/root/browsingContext.sys.mjs:386:6\nhandleCommand@chrome://remote/content/shared/messagehandler/MessageHandler.sys.mjs:260:33\nexecute@chrome://remote/content/shared/webdriver/Session.sys.mjs:410:32\nonPacket@chrome://remote/content/webdriver-bidi/WebDriverBiDiConnection.sys.mjs:236:37\nonMessage@chrome://remote/content/server/WebSocketTransport.sys.mjs:127:18\nhandleEvent@chrome://remote/content/server/WebSocketTransport.sys.mjs:109:14\n",
---     "type": "error"
--- }
--- Error message: 
--- key "result" not found
 browsingContextCaptureScreenshotClose :: BiDiDemo
 browsingContextCaptureScreenshotClose =
-  demo "Browsing Context - Capture Screenshot" action
+  demo "Browsing Context - Capture Screenshot / Close" action
   where
     action :: DemoUtils -> Commands -> IO ()
     action utils@MkDemoUtils {..} cmds@MkCommands {..} = do
       bc <- newWindowContext utils cmds
 
-      logTxt "Capture screenshot"
+      logTxt "Capture screenshot - default"
       screenshot <- browsingContextCaptureScreenshot $ MkCaptureScreenshot bc Nothing Nothing Nothing
       logShow "Screenshot captured" screenshot
       pause
 
+      logTxt "Capture screenshot - document, format png"
+      screenshotDoc <-
+        browsingContextCaptureScreenshot $
+          MkCaptureScreenshot
+            { context = bc,
+              origin = (Just Document),
+              format = Just $ MkImageFormat {
+                imageType = "png",
+                quality = Just 0.75
+              },
+              clip = Nothing
+            }
+      logShow "Screenshot captured" screenshotDoc
+      pause
+
+      logTxt "Capture screenshot - viewport, clip"
+      screenshotViewport <-
+        browsingContextCaptureScreenshot $
+          MkCaptureScreenshot
+            { context = bc,
+              origin = (Just Viewport),
+              format = Nothing,
+              clip = Just $ BoxClipRectangle {x = 0, y = 0, width = 300, height = 300}
+            }
+      logShow "Screenshot captured" screenshotViewport
+      pause
+
       logTxt "Close browsing context - unload prompt False"
-      co <- browsingContextClose $ MkClose { context = bc, promptUnload = Just False }
+      co <- browsingContextClose $ MkClose {context = bc, promptUnload = Just False}
       logShow "Close result" co
       pause
+
+
+
+-- >>> runDemo browsingContextClosePromptUnload
+browsingContextClosePromptUnload :: BiDiDemo
+browsingContextClosePromptUnload = 
+  demo "Browsing Context - Close with unload prompt" action
+  where
+    action :: DemoUtils -> Commands -> IO ()
+    action utils@MkDemoUtils {..} cmds@MkCommands {..} = do
+      bc <- newWindowContext utils cmds
+
+      -- promptUnload doesn't seem to do anything ??
+      logTxt "Close browsing context - unload prompt True"
+      co <- browsingContextClose $ MkClose {context = bc, promptUnload = Just True}
+      logShow "Close result" co
+      pause
+
+
+-- >>> runDemo browsingContextGetTree
+browsingContextGetTree :: BiDiDemo
+browsingContextGetTree =
+  demo "Browsing Context - Get Tree" action
+  where
+    action :: DemoUtils -> Commands -> IO ()
+    action utils@MkDemoUtils {..} cmds@MkCommands {..} = do
+      logTxt "Get browsing context tree - all"
+      tree <- browsingContextGetTree $ MkGetTree Nothing Nothing
+      logShow "Browsing context tree" tree
+      pause
+
+      -- -- TODO: run with child context
+      -- let childContext = MkBrowsingContext "child"
+      -- treeChild <- browsingContextGetTree $ MkGetTree Nothing (Just childContext)
+      -- logShow "Browsing context tree - child" treeChild
+      -- pause

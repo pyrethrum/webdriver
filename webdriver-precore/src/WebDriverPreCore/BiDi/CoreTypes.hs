@@ -8,12 +8,13 @@ module WebDriverPreCore.BiDi.CoreTypes
     NodeProperties (..),
     NodeRemoteValue (..),
     SharedId (..),
-    UserContext (..)
+    UserContext (..),
   )
 where
 
 import Data.Aeson (FromJSON (..), Object, ToJSON (..), Value (..), (.:), (.:?))
 import Data.Aeson.Types (Parser, withObject)
+import Data.Function ((&))
 import Data.Int (Int64)
 import Data.Map qualified as Map
 import Data.Text (Text)
@@ -34,8 +35,11 @@ newtype BrowsingContext = MkBrowsingContext {context :: Text} deriving (Show, Eq
 
 instance FromJSON BrowsingContext where
   parseJSON :: Value -> Parser BrowsingContext
-  parseJSON = withObject "BrowsingContext" $
-    \obj -> obj .: "context" >>= pure . MkBrowsingContext
+  parseJSON =
+    \case
+      String s -> pure $ MkBrowsingContext s
+      Object obj -> MkBrowsingContext <$> obj .: "context"
+      v -> fail $ "Expected BrowsingContext as String or Object, but got: " ++ show v
 
 -- Node type used by BrowsingContext and Script
 
