@@ -62,6 +62,29 @@ data BiDiDemo = MkBiDiDemo
 demo :: Text -> (DemoUtils -> Commands -> IO ()) -> BiDiDemo
 demo name action = MkBiDiDemo {name, action}
 
+newWindowContext :: DemoUtils -> Commands -> IO BrowsingContext
+newWindowContext MkDemoUtils {..} MkCommands {..} = do
+  logTxt "New browsing context - Window"
+  bcWin <- browsingContextCreate bcParams {createType = Window}
+  logShow "Browsing context - Window" bcWin
+  pause
+  pure bcWin
+  where
+    bcParams =
+      MkCreate
+        { createType = Tab,
+          background = False,
+          referenceContext = Nothing,
+          userContext = Nothing
+        }
+
+closeContext :: DemoUtils -> Commands -> BrowsingContext -> IO ()
+closeContext MkDemoUtils {..} MkCommands {..} bc = do
+  logTxt "Close browsing context"
+  co <- browsingContextClose $ MkClose {context = bc, promptUnload = Nothing}
+  logShow "Close result" co
+  pause
+
 -- TODO: Session find out about newSession Firefox threads
 
 {-
@@ -89,6 +112,7 @@ demo name action = MkBiDiDemo {name, action}
 -- Failure Demos :: TODO turn into tests ---
 
 -- >>> printFailDemo browsingContextCreateActivateClose
+
 -- *** Exception: Forced failure for testing: print (call #3)
 
 -- >>> getFailDemo browsingContextCreateActivateClose
@@ -175,29 +199,6 @@ browsingContextCreateActivateCloseDemo =
             }
       logShow "Close result" co
       pause
-
-newWindowContext :: DemoUtils -> Commands -> IO BrowsingContext
-newWindowContext MkDemoUtils {..} MkCommands {..} = do
-  logTxt "New browsing context - Window"
-  bcWin <- browsingContextCreate bcParams {createType = Window}
-  logShow "Browsing context - Window" bcWin
-  pause
-  pure bcWin
-  where
-    bcParams =
-      MkCreate
-        { createType = Tab,
-          background = False,
-          referenceContext = Nothing,
-          userContext = Nothing
-        }
-
-closeContext :: DemoUtils -> Commands -> BrowsingContext -> IO ()
-closeContext MkDemoUtils {..} MkCommands {..} bc = do
-  logTxt "Close browsing context"
-  co <- browsingContextClose $ MkClose {context = bc, promptUnload = Nothing}
-  logShow "Close result" co
-  pause
 
 -- >>> runDemo browsingContextCaptureScreenshotCloseDemo
 browsingContextCaptureScreenshotCloseDemo :: BiDiDemo
@@ -352,7 +353,7 @@ browsingContextGetTreeDemo =
 -- >>> runDemo browsingContextHandleUserPromptDemo
 browsingContextHandleUserPromptDemo :: BiDiDemo
 browsingContextHandleUserPromptDemo =
-  demo "Browsing Context - Handle User Prompt" action
+  demo "Browsing Context - Handle User Prompt and Evaluate Script" action
   where
     action :: DemoUtils -> Commands -> IO ()
     action utils@MkDemoUtils {..} cmds@MkCommands {..} = do
