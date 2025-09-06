@@ -1,6 +1,7 @@
 module WebDriverPreCore.BiDi.Script
   ( -- * ScriptCommand
     AddPreloadScript (..),
+    ContextTarget (..),
     RemoteValue (..),
     PrimitiveProtocolValue (..),
     SpecialNumber (..),
@@ -22,6 +23,7 @@ module WebDriverPreCore.BiDi.Script
     Disown (..),
     Target (..),
     Realm (..),
+    Sandbox (..),
     Evaluate (..),
     GetRealms (..),
     RemovePreloadScript (..),
@@ -67,6 +69,7 @@ import WebDriverPreCore.BiDi.CoreTypes
   )
 import WebDriverPreCore.Internal.AesonUtils (enumCamelCase, opt, jsonToText)
 import Prelude (Applicative (..), Bool (..), Double, Either (..), Eq (..), Maybe (..), MonadFail (..), Semigroup (..), Show (..), ($), (<$>))
+import Data.ByteString.Builder (generic)
 
 -- ######### REMOTE #########
 
@@ -179,6 +182,8 @@ instance FromJSON RemoteValue where
     internalId <- obj .:? "internalId"
     case typ of
       "primitive" -> PrimitiveValue <$> parseJSON (Object obj)
+      "undefined" -> pure $ PrimitiveValue UndefinedValue
+      --  TODO handle other primative values
       "node" -> NodeValue <$> parseJSON (Object obj)
       "array" -> do
         value <- obj .:? "value"
@@ -241,6 +246,7 @@ data SpecialNumber
 instance FromJSON SpecialNumber
 
 instance ToJSON SpecialNumber where
+  toJSON :: SpecialNumber -> Value
   toJSON = \case
     NaN -> "NaN"
     NegativeZero -> "-0"
@@ -416,12 +422,26 @@ data Disown = MkDisown
 
 data Target
   = RealmTarget Realm
-  | ContextTarget BrowsingContext
+  | ContextTarget ContextTarget
   deriving (Show, Eq, Generic)
 
-newtype Realm = MkRealm Text deriving (Show, Eq, Generic)
+newtype Realm = MkRealm { realm :: Text } deriving (Show, Eq, Generic, FromJSON)
 
-instance FromJSON Realm
+data ContextTarget = MkContextTarget { context :: BrowsingContext, 
+   sandbox :: Maybe Sandbox } deriving (Show, Eq, Generic)
+
+instance FromJSON ContextTarget
+
+instance ToJSON ContextTarget where
+  toJSON :: ContextTarget -> Value
+  toJSON = genericToJSON defaultOptions {omitNothingFields = True}
+
+data Sandbox = MkSandbox Text deriving (Show, Eq, Generic)
+
+instance FromJSON Sandbox
+
+instance ToJSON Sandbox
+
 
 instance ToJSON Realm
 
@@ -429,7 +449,9 @@ instance ToJSON Realm
 -- Simple sum types
 instance ToJSON Target where
   toJSON :: Target -> Value
-  toJSON = undefined
+  toJSON = \case
+    RealmTarget r -> toJSON r
+    ContextTarget ct -> toJSON ct
 
 
 {-
@@ -520,16 +542,31 @@ data BaseRealmInfo = BaseRealmInfo
 
 data EvaluateResult
   = EvaluateResultSuccess
-      { typ :: Text, -- "success"
+      { 
         result :: RemoteValue,
         realm :: Realm
       }
   | EvaluateResultException
-      { typ :: Text, -- "exception"
+      { 
         exceptionDetails :: ExceptionDetails,
         realm :: Realm
       }
   deriving (Show, Eq, Generic)
+
+instance FromJSON EvaluateResult where
+  parseJSON :: Value -> Parser EvaluateResult
+  parseJSON = withObject "EvaluateResult" $ \o -> do
+    typ <- o .: "type"
+    case typ of
+      "success" -> do
+        result <- o .: "result"
+        realm <- o .: "realm"
+        pure $ EvaluateResultSuccess {result, realm}
+      "exception" -> do
+        exceptionDetails <- o .: "exceptionDetails"
+        realm <- o .: "realm"
+        pure $ EvaluateResultException {exceptionDetails, realm}
+      _ -> fail $ "Unknown EvaluateResult type: " <> unpack typ
 
 data ExceptionDetails = ExceptionDetails
   { columnNumber :: JSUInt,
@@ -975,7 +1012,7 @@ instance FromJSON RealmInfo
 
 instance FromJSON BaseRealmInfo
 
-instance FromJSON EvaluateResult
+
 
 instance FromJSON ExceptionDetails
 

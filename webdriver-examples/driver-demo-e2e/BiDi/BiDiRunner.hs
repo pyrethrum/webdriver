@@ -23,7 +23,8 @@ import WebDriverPreCore.BiDi.Capabilities (Capabilities)
 import WebDriverPreCore.BiDi.Command
 import WebDriverPreCore.BiDi.CoreTypes (JSUInt (..))
 import WebDriverPreCore.BiDi.Protocol
-  ( AddDataCollector,
+  ( Activate,
+    AddDataCollector,
     AddDataCollectorResult,
     AddIntercept,
     AddInterceptResult,
@@ -91,7 +92,7 @@ import WebDriverPreCore.BiDi.Protocol
     UserContext,
     WebExtension,
     WebExtensionData,
-    WebExtensionResult, Activate,
+    WebExtensionResult,
   )
 import WebDriverPreCore.BiDi.Protocol qualified as P
 import WebDriverPreCore.BiDi.ResponseEvent (JSONEncodeError, MatchedResponse (..), ResponseObject, decodeResponse, displayResponseError, parseResponse)
@@ -100,6 +101,7 @@ import WebDriverPreCore.Http qualified as Http
 import WebDriverPreCore.Internal.AesonUtils (jsonToText)
 import WebDriverPreCore.Internal.Utils (txt)
 import Prelude hiding (getLine, log, null, putStrLn)
+import Control.Monad (void)
 
 withCommands :: BiDiClientParams -> (DemoUtils -> Commands -> IO ()) -> IO ()
 withCommands params action =
@@ -161,6 +163,7 @@ data Commands = MkCommands
     scriptCallFunction :: CallFunction -> IO CallFunctionResult,
     scriptDisown :: Disown -> IO Object,
     scriptEvaluate :: Evaluate -> IO EvaluateResult,
+    scriptEvaluateNoWait :: Evaluate -> IO (),
     scriptGetRealms :: GetRealms -> IO GetRealmsResult,
     scriptRemovePreloadScript :: RemovePreloadScript -> IO Object,
     -- Storage commands
@@ -228,6 +231,7 @@ mkCommands client =
       scriptCallFunction = send . P.scriptCallFunction,
       scriptDisown = send . P.scriptDisown,
       scriptEvaluate = send . P.scriptEvaluate,
+      scriptEvaluateNoWait = sendCommandNoWait client . P.scriptEvaluate, -- alias
       scriptGetRealms = send . P.scriptGetRealms,
       scriptRemovePreloadScript = send . P.scriptRemovePreloadScript,
       -- Storage commands
@@ -245,29 +249,38 @@ mkCommands client =
 -- note: just throws an exception if an error is encountered
 -- no timeout implemented - will just hang if bidi does not behave
 
-sendCommand :: forall c r. (FromJSON r, ToJSON c, Show c) => BiDiMethods -> Command c r -> IO r
-sendCommand MkBiDiMethods {send, getNext, nextId} command = do
+sendCommandNoWait :: forall c r. (ToJSON c, Show c) => BiDiMethods -> Command c r -> IO ()
+sendCommandNoWait m = void . sendCommandNoWait' m
+
+sendCommandNoWait' :: forall c r. (ToJSON c, Show c) => BiDiMethods -> Command c r -> IO (JSUInt, Value)
+sendCommandNoWait' MkBiDiMethods {send, nextId} command = do
   id' <- nextId
-  (send $ commandValue command id')
+  let cValue = commandValue command id'
+  (send cValue)
     `catch` \(e :: SomeException) -> do
       error $
         "Send command failed: \n"
           <> unpack (txt command)
           <> "\n ---- Exception -----\n"
           <> displayException e
-  matchedResponse id'
+  pure (id', cValue)
+
+sendCommand :: forall c r. (FromJSON r, ToJSON c, Show c) => BiDiMethods -> Command c r -> IO r
+sendCommand m@MkBiDiMethods {getNext} command = do
+  (id', cValue) <- sendCommandNoWait' m command
+  matchedResponse cValue id'
   where
-    matchedResponse :: JSUInt -> IO r
-    matchedResponse id' = do
+    matchedResponse :: Value -> JSUInt -> IO r
+    matchedResponse cValue id' = do
       response <- getNext
       parseResponse id' response
         & either
           ( -- format and throw
-            error . unpack . displayResponseError command
+            error . unpack . displayResponseError command cValue
           )
           ( maybe
               ( -- recurse
-                matchedResponse id'
+                matchedResponse cValue id'
               )
               ( -- get response
                 pure . (.response)

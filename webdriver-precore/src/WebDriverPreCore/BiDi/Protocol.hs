@@ -157,16 +157,23 @@ import WebDriverPreCore.BiDi.Network
     SetCacheBehavior,
   )
 import WebDriverPreCore.BiDi.Script
-  ( AddPreloadScript,
+  ( AddPreloadScript(..),
     AddPreloadScriptResult (..),
-    CallFunction,
-    CallFunctionResult,
-    Disown,
-    Evaluate,
-    EvaluateResult,
-    GetRealms,
-    GetRealmsResult,
-    RemovePreloadScript,
+    CallFunction (..),
+    CallFunctionResult (..),
+    Disown (..),
+    Evaluate (..),
+    EvaluateResult (..),
+    GetRealms (..),
+    GetRealmsResult (..),
+    RemovePreloadScript (..),
+    RemoteValue (..),
+    PrimitiveProtocolValue (..),
+    SpecialNumber (..),
+    Target (..),
+    Realm (..),
+    ContextTarget (..),
+    Sandbox (..)
   )
 import WebDriverPreCore.BiDi.Session
   ( SessionNewResult,
@@ -188,6 +195,8 @@ import WebDriverPreCore.BiDi.WebExtensions
     WebExtensionData,
     WebExtensionResult (..),
   )
+
+
 
 ---- Session ----
 

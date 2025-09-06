@@ -1,6 +1,6 @@
 module WebDriverPreCore.BiDi.ResponseEvent where
 
-import Data.Aeson (FromJSON (parseJSON), Object, Value (..), eitherDecode, withObject, (.:), (.:?))
+import Data.Aeson (FromJSON (parseJSON), Object, ToJSON (toJSON), Value (..), eitherDecode, withObject, (.:), (.:?))
 import Data.Aeson.Types (Parser, parseEither)
 import Data.Bifunctor (Bifunctor (..))
 import Data.Bool (bool)
@@ -9,12 +9,12 @@ import Data.Function ((&))
 import Data.Text (Text, pack)
 import GHC.Generics (Generic)
 import WebDriverPreCore.BiDi.BrowsingContext (BrowsingContextEvent)
-import WebDriverPreCore.BiDi.Command (Command)
+import WebDriverPreCore.BiDi.Command (Command, commandValue)
 import WebDriverPreCore.BiDi.CoreTypes (EmptyResult (..), JSUInt)
 import WebDriverPreCore.BiDi.Error (ErrorCode)
 import WebDriverPreCore.BiDi.Input (FileDialogOpened)
 import WebDriverPreCore.BiDi.Log (Entry)
-import WebDriverPreCore.Internal.AesonUtils (jsonToText, subtractProps, parseObjectEither)
+import WebDriverPreCore.Internal.AesonUtils (jsonToText, parseObjectEither, subtractProps)
 import WebDriverPreCore.Internal.Utils (txt)
 import Prelude
 
@@ -37,8 +37,8 @@ matchResponseObject msgId = \case
       matchedResult =
         success
           & either
-            (\e -> Left $ ParseError { object = obj, error = e })
-            (\s -> Right . Just $ MkMatchedResponse { response = s.result, object = obj })
+            (\e -> Left $ ParseError {object = obj, error = e})
+            (\s -> Right . Just $ MkMatchedResponse {response = s.result, object = obj})
 
 decodeResponse :: ByteString -> Either JSONEncodeError ResponseObject
 decodeResponse =
@@ -73,10 +73,13 @@ data ResponseError
   | BiDiTimeoutError {ms :: Int}
   deriving (Show, Eq, Generic)
 
-displayResponseError :: (Show c) => Command c r -> ResponseError -> Text
-displayResponseError c err =
+displayResponseError :: (Show c) => Command c r -> Value -> ResponseError -> Text
+displayResponseError c json err =
   "Error executing BiDi command: "
     <> (txt c)
+    <> "\n"
+    <> "With JSON: \n"
+    <> (jsonToText json)
     <> "\n"
     <> case err of
       BiDIError e -> "BiDi driver error: \n" <> txt e

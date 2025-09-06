@@ -6,6 +6,7 @@ import BiDi.BiDiRunner (Commands (..), mkDemoBiDiClientParams, mkFailBidiClientP
 import Data.Text (Text)
 import Data.Word (Word64)
 import IOUtils (DemoUtils (..))
+import UnliftIO (async, cancel, wait)
 import WebDriverPreCore.BiDi.BiDiUrl (parseUrl)
 import WebDriverPreCore.BiDi.Protocol
   ( Activate (..),
@@ -13,6 +14,7 @@ import WebDriverPreCore.BiDi.Protocol
     CaptureScreenshot (..),
     ClipRectangle (..),
     Close (..),
+    ContextTarget (..),
     Create (..),
     CreateType (..),
     CreateUserContext (..),
@@ -22,9 +24,12 @@ import WebDriverPreCore.BiDi.Protocol
     Navigate (..),
     ScreenShotOrigin (..),
   )
-import WebDriverPreCore.BiDi.Script (Target (..), Evaluate (..))
+import WebDriverPreCore.BiDi.Script (Evaluate (..), Target (..))
 import WebDriverPreCore.Internal.Utils (txt)
 import Prelude hiding (log, putStrLn)
+
+pauseMs :: Int
+pauseMs = 0
 
 -- >>> demo_parseUrl
 -- "Right\n  MkBiDiUrl\n    { host = \"127.0.0.1\"\n    , port = 9222\n    , path = \"/session/e43698d9-b02a-4284-a936-12041deb3552\"\n    }"
@@ -49,9 +54,6 @@ getFailDemo d = runFailDemo d 0 2 0
 printFailDemo :: BiDiDemo -> IO ()
 printFailDemo d = runFailDemo d 0 0 3
 
-pauseMs :: Int
-pauseMs = 3_000
-
 data BiDiDemo = MkBiDiDemo
   { name :: Text,
     action :: DemoUtils -> Commands -> IO ()
@@ -70,14 +72,13 @@ demo name action = MkBiDiDemo {name, action}
 2. browsingContextCaptureScreenshot :: DONE
 3. browsingContextClose :: DONE
 5. browsingContextGetTree :: DONE*
-6. browsingContextHandleUserPrompt
+6. browsingContextHandleUserPrompt :: DONE
 7. browsingContextLocateNodes
 8. browsingContextNavigate
 9. browsingContextPrint
 10. browsingContextReload
 11. browsingContextSetViewport
 12. browsingContextTraverseHistory
-
 
 -- TODO when using script - get browsingContextGetTree with originalOpener
 
@@ -87,15 +88,14 @@ demo name action = MkBiDiDemo {name, action}
 
 -- Failure Demos :: TODO turn into tests ---
 
--- >>> printFailDemo browsingContext1
-
+-- >>> printFailDemo browsingContextCreateActivateClose
 -- *** Exception: Forced failure for testing: print (call #3)
 
--- >>> getFailDemo browsingContext1
+-- >>> getFailDemo browsingContextCreateActivateClose
 
 -- *** Exception: Forced failure for testing: get (call #2)
 
--- >>> sendFailDemo browsingContext1
+-- >>> sendFailDemo browsingContextCreateActivateClose
 
 -- *** Exception: Forced failure for testing: send (call #2)
 
@@ -294,7 +294,7 @@ browsingContextGetTree =
         browsingContextGetTree
           MkGetTree
             { maxDepth = Nothing,
-              root = Nothing  -- Get all contexts to see the relationship
+              root = Nothing -- Get all contexts to see the relationship
             }
       logShow "Browsing context tree - WebDriver created (originalOpener should be null)" treeWithOpener
       pause
@@ -347,121 +347,119 @@ browsingContextGetTree =
       logTxt "3. referenceContext is only for tab positioning, not hierarchy"
       pause
 
-
-
+-- TODO: remove all unneeded From / ToJSON instances
 
 -- >>> runDemo browsingContextHandleUserPrompt
--- *** Exception: Error executing BiDi command: MkCommand
---   { method = "script.evaluate"
---   , params =
---       MkEvaluate
---         { expression = "alert('This is a test alert from BiDi!')"
---         , target =
---             ContextTarget
---               MkBrowsingContext
---                 { context = "c57717d3-1d39-41c4-a4b1-811d00e5c0c5" }
---         , awaitPromise = False
---         , resultOwnership = Nothing
---         , serializationOptions = Nothing
---         }
---   , extended = Nothing
---   }
--- Failed to decode the 'result' property of JSON returned by driver to response type: 
--- {
---     "error": "invalid argument",
---     "id": 2,
---     "message": "No context or realm provided",
---     "stacktrace": "RemoteError@chrome://remote/content/shared/RemoteError.sys.mjs:8:8\nWebDriverError@chrome://remote/content/shared/webdriver/Errors.sys.mjs:199:5\nInvalidArgumentError@chrome://remote/content/shared/webdriver/Errors.sys.mjs:401:5\n#assertTarget@chrome://remote/content/webdriver-bidi/modules/root/script.sys.mjs:826:13\nevaluate@chrome://remote/content/webdriver-bidi/modules/root/script.sys.mjs:549:63\nhandleCommand@chrome://remote/content/shared/messagehandler/MessageHandler.sys.mjs:260:33\nexecute@chrome://remote/content/shared/webdriver/Session.sys.mjs:410:32\nonPacket@chrome://remote/content/webdriver-bidi/WebDriverBiDiConnection.sys.mjs:236:37\nonMessage@chrome://remote/content/server/WebSocketTransport.sys.mjs:127:18\nhandleEvent@chrome://remote/content/server/WebSocketTransport.sys.mjs:109:14\n",
---     "type": "error"
--- }
--- Error message: 
--- key "result" not found
 browsingContextHandleUserPrompt :: BiDiDemo
 browsingContextHandleUserPrompt =
   demo "Browsing Context - Handle User Prompt" action
   where
     action :: DemoUtils -> Commands -> IO ()
-    action utils@MkDemoUtils {..} cmds = do
+    action utils@MkDemoUtils {..} cmds@MkCommands {..} = do
       bc <- newWindowContext utils cmds
 
-      -- logTxt "Navigate to data URL with test content"
-      -- cmds.browsingContextNavigate $ MkNavigate { 
-      --   context = bc, 
-      --   url = "data:text/html,<html><body><button onclick=\"alert('Hello from BiDi!'); \">Click me for alert</button><button onclick=\"confirm('Are you sure?')\">Click me for confirm</button><button onclick=\"prompt('Enter your name:')\">Click me for prompt</button></body></html>", wait = Nothing }
-      -- pause
-
       logTxt "Test 1: Create and handle an alert dialog"
-      cmds.scriptEvaluate $ MkEvaluate
-        { expression = "alert('This is a test alert from BiDi!')",
-          target = ContextTarget bc,
-          awaitPromise = False,
-          resultOwnership = Nothing,
-          serializationOptions = Nothing
-        }
+
+      scriptEvaluateNoWait $
+        MkEvaluate
+          { expression = "alert('Hello from Pyrethrum BiDi!')",
+            target =
+              ContextTarget $
+                MkContextTarget
+                  { context = bc,
+                    sandbox = Nothing
+                  },
+            awaitPromise = False,
+            resultOwnership = Nothing,
+            serializationOptions = Nothing
+          }
       pause
 
+      -- Wait for the alert to be displayed (in a productions system, more sophisticated polling would be needed)
+      sleep 500
+
       logTxt "Accept the alert dialog"
-      acceptResult <- cmds.browsingContextHandleUserPrompt $ MkHandleUserPrompt
-        { context = bc,
-          accept = Just True,
-          userText = Nothing
-        }
+      acceptResult <-
+        browsingContextHandleUserPrompt $
+          MkHandleUserPrompt
+            { context = bc,
+              accept = Just True,
+              userText = Nothing
+            }
       logShow "Alert accept result" acceptResult
       pause
 
       logTxt "Test 2: Create and handle a confirm dialog"
-      _ <- cmds.scriptEvaluate $ MkEvaluate
-        { expression = "confirm('Do you want to continue?')",
-          target = ContextTarget bc,
-          awaitPromise = False,
-          resultOwnership = Nothing,
-          serializationOptions = Nothing
-        }
+      scriptEvaluateNoWait $
+        MkEvaluate
+          { expression = "confirm('Hello from Pyrethrum BiDi. Do you want to continue?')",
+            target = ContextTarget $ MkContextTarget {context = bc, sandbox = Nothing},
+            awaitPromise = False,
+            resultOwnership = Nothing,
+            serializationOptions = Nothing
+          }
       pause
 
+      -- Wait for the alert to be displayed (in a productions system, more sophisticated polling would be needed)
+      sleep 500
+
       logTxt "Dismiss the confirm dialog"
-      dismissResult <- cmds.browsingContextHandleUserPrompt $ MkHandleUserPrompt
-        { context = bc,
-          accept = Just False,
-          userText = Nothing
-        }
+      dismissResult <-
+        browsingContextHandleUserPrompt $
+          MkHandleUserPrompt
+            { context = bc,
+              accept = Just False,
+              userText = Nothing
+            }
       logShow "Confirm dismiss result" dismissResult
       pause
 
       logTxt "Test 3: Create and handle a prompt dialog with user input"
-      _ <- cmds.scriptEvaluate $ MkEvaluate
-        { expression = "prompt('What is your name?', 'Default Name')",
-          target = ContextTarget bc,
-          awaitPromise = False,
-          resultOwnership = Nothing,
-          serializationOptions = Nothing
-        }
+      scriptEvaluateNoWait $
+        MkEvaluate
+          { expression = "prompt('What is your name?', 'Default Name')",
+            target = ContextTarget $ MkContextTarget {context = bc, sandbox = Nothing},
+            awaitPromise = False,
+            resultOwnership = Nothing,
+            serializationOptions = Nothing
+          }
       pause
 
+      -- Wait for the alert to be displayed (in a productions system, more sophisticated polling would be needed)
+      sleep 500
+
       logTxt "Accept prompt with custom text"
-      promptResult <- cmds.browsingContextHandleUserPrompt $ MkHandleUserPrompt
-        { context = bc,
-          accept = Just True,
-          userText = Just "John Doe from BiDi"
-        }
+      promptResult <-
+        browsingContextHandleUserPrompt $
+          MkHandleUserPrompt
+            { context = bc,
+              accept = Just True,
+              userText = Just "John Doe from BiDi"
+            }
       logShow "Prompt accept with text result" promptResult
       pause
 
       logTxt "Test 4: Create and dismiss a prompt dialog"
-      _ <- cmds.scriptEvaluate $ MkEvaluate
-        { expression = "prompt('Enter your age:')",
-          target = ContextTarget bc,
-          awaitPromise = False,
-          resultOwnership = Nothing,
-          serializationOptions = Nothing
-        }
+      scriptEvaluateNoWait $
+        MkEvaluate
+          { expression = "prompt('Enter your age:')",
+            target = ContextTarget $ MkContextTarget {context = bc, sandbox = Nothing},
+            awaitPromise = False,
+            resultOwnership = Nothing,
+            serializationOptions = Nothing
+          }
       pause
 
+      -- Wait for the alert to be displayed (in a productions system, more sophisticated polling would be needed)
+      sleep 500
+
       logTxt "Dismiss the prompt dialog"
-      dismissPromptResult <- cmds.browsingContextHandleUserPrompt $ MkHandleUserPrompt
-        { context = bc,
-          accept = Just False,
-          userText = Nothing
-        }
+      dismissPromptResult <-
+        browsingContextHandleUserPrompt $
+          MkHandleUserPrompt
+            { context = bc,
+              accept = Just False,
+              userText = Nothing
+            }
       logShow "Prompt dismiss result" dismissPromptResult
       pause

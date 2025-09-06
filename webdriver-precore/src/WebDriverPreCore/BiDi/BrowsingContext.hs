@@ -1,14 +1,15 @@
 module WebDriverPreCore.BiDi.BrowsingContext where
 
-import Data.Aeson (FromJSON (..), KeyValue (..), ToJSON (..), Value, object, (.=), withObject, (.:))
+import Data.Aeson (FromJSON (..), KeyValue (..), ToJSON (..), Value, object, (.=), withObject, (.:), genericToJSON, Options (..), defaultOptions)
 import Data.Map qualified as Map
 import Data.Maybe (catMaybes)
 import Data.Text (Text, unpack)
 import GHC.Generics
 import WebDriverPreCore.BiDi.CoreTypes (BrowsingContext, JSInt, JSUInt, NodeRemoteValue, UserContext)
 import WebDriverPreCore.Internal.AesonUtils (enumCamelCase, opt)
-import Prelude (Bool, Eq, Float, Maybe, Semigroup ((<>)), Show, ($), Applicative (..), flip, Functor (..), (.))
+import Prelude (Bool (..), Eq, Float, Maybe, Semigroup ((<>)), Show, ($), Applicative (..), flip, Functor (..), (.))
 import Data.Aeson.Types (Parser)
+import Data.ByteString.Builder (generic)
 
 -- ######### REMOTE #########
 
@@ -149,8 +150,10 @@ data HandleUserPrompt = MkHandleUserPrompt
   }
   deriving (Show, Eq, Generic)
 
-instance ToJSON HandleUserPrompt
-
+instance ToJSON HandleUserPrompt where
+  toJSON :: HandleUserPrompt -> Value
+  toJSON = genericToJSON defaultOptions {omitNothingFields = True} 
+  
 -- |  for locateNodes command
 data LocateNodes = MkLocateNodes
   { context :: BrowsingContext,
