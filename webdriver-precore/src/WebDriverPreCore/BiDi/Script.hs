@@ -52,8 +52,8 @@ module WebDriverPreCore.BiDi.Script
   )
 where
 
-import Data.Aeson (FromJSON (..), ToJSON (..), Value (..), object, withObject, (.:), (.:?), (.=))
-import Data.Aeson.Types (Pair, Parser)
+import Data.Aeson (FromJSON (..), ToJSON (..), Value (..), object, withObject, (.:), (.:?), (.=), defaultOptions, genericToJSON)
+import Data.Aeson.Types (Pair, Parser, omitNothingFields)
 import Data.Map.Strict qualified as Map
 import Data.Maybe (catMaybes)
 import Data.Text (Text, unpack)
@@ -425,6 +425,24 @@ instance FromJSON Realm
 
 instance ToJSON Realm
 
+
+-- Simple sum types
+instance ToJSON Target where
+  toJSON :: Target -> Value
+  toJSON = undefined
+
+
+{-
+
+script.EvaluateParameters = {
+  expression: text,
+  target: script.Target,
+  awaitPromise: bool,
+  ? resultOwnership: script.ResultOwnership,
+  ? serializationOptions: script.SerializationOptions,
+  ? userActivation: bool .default false,
+}
+-}
 -- Evaluate command
 data Evaluate = MkEvaluate
   { expression :: Text,
@@ -434,6 +452,10 @@ data Evaluate = MkEvaluate
     serializationOptions :: Maybe SerializationOptions
   }
   deriving (Show, Eq, Generic)
+
+instance ToJSON Evaluate where
+  toJSON :: Evaluate -> Value
+  toJSON = genericToJSON defaultOptions {omitNothingFields = True}
 
 -- GetRealms command
 data GetRealms = MkGetRealms
@@ -579,7 +601,7 @@ instance ToJSON AddPreloadScript
 
 instance ToJSON CallFunction
 
-instance ToJSON Evaluate
+
 
 -- GetRealms has a typ field that needs special handling
 instance ToJSON GetRealms where
@@ -592,11 +614,6 @@ instance ToJSON GetRealms where
         ]
 
 -- RealmType uses specific string values as per spec
-
--- Simple sum types
-instance ToJSON Target where
-  toJSON :: Target -> Value
-  toJSON = enumCamelCase
 
 -- Command types
 instance ToJSON Disown

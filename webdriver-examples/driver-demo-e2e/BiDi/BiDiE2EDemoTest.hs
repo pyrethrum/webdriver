@@ -16,10 +16,13 @@ import WebDriverPreCore.BiDi.Protocol
     Create (..),
     CreateType (..),
     CreateUserContext (..),
+    GetTree (..),
+    HandleUserPrompt (..),
+    ImageFormat (..),
+    Navigate (..),
     ScreenShotOrigin (..),
-    ImageFormat (..), 
-    GetTree(..)
   )
+import WebDriverPreCore.BiDi.Script (Target (..), Evaluate (..))
 import WebDriverPreCore.Internal.Utils (txt)
 import Prelude hiding (log, putStrLn)
 
@@ -66,7 +69,7 @@ demo name action = MkBiDiDemo {name, action}
 1. browsingContextActivate : DONE
 2. browsingContextCaptureScreenshot :: DONE
 3. browsingContextClose :: DONE
-5. browsingContextGetTree
+5. browsingContextGetTree :: DONE*
 6. browsingContextHandleUserPrompt
 7. browsingContextLocateNodes
 8. browsingContextNavigate
@@ -74,6 +77,9 @@ demo name action = MkBiDiDemo {name, action}
 10. browsingContextReload
 11. browsingContextSetViewport
 12. browsingContextTraverseHistory
+
+
+-- TODO when using script - get browsingContextGetTree with originalOpener
 
 -}
 
@@ -213,10 +219,12 @@ browsingContextCaptureScreenshotClose =
           MkCaptureScreenshot
             { context = bc,
               origin = (Just Document),
-              format = Just $ MkImageFormat {
-                imageType = "png",
-                quality = Just 0.75
-              },
+              format =
+                Just $
+                  MkImageFormat
+                    { imageType = "png",
+                      quality = Just 0.75
+                    },
               clip = Nothing
             }
       logShow "Screenshot captured" screenshotDoc
@@ -239,11 +247,9 @@ browsingContextCaptureScreenshotClose =
       logShow "Close result" co
       pause
 
-
-
 -- >>> runDemo browsingContextClosePromptUnload
 browsingContextClosePromptUnload :: BiDiDemo
-browsingContextClosePromptUnload = 
+browsingContextClosePromptUnload =
   demo "Browsing Context - Close with unload prompt" action
   where
     action :: DemoUtils -> Commands -> IO ()
@@ -255,7 +261,6 @@ browsingContextClosePromptUnload =
       co <- browsingContextClose $ MkClose {context = bc, promptUnload = Just True}
       logShow "Close result" co
       pause
-
 
 -- >>> runDemo browsingContextGetTree
 browsingContextGetTree :: BiDiDemo
@@ -269,8 +274,194 @@ browsingContextGetTree =
       logShow "Browsing context tree" tree
       pause
 
-      -- -- TODO: run with child context
-      -- let childContext = MkBrowsingContext "child"
-      -- treeChild <- browsingContextGetTree $ MkGetTree Nothing (Just childContext)
-      -- logShow "Browsing context tree - child" treeChild
+      logTxt "Create opener browsing context (Window)"
+      openerContext <- newWindowContext utils cmds
+
+      logTxt "Create opened browsing context (Tab with opener reference)"
+      openedContext <-
+        browsingContextCreate $
+          MkCreate
+            { createType = Tab,
+              background = False,
+              referenceContext = Just openerContext,
+              userContext = Nothing
+            }
+      logShow "Opened browsing context" openedContext
+      pause
+
+      logTxt "Get browsing context tree - WebDriver created contexts (originalOpener likely null)"
+      treeWithOpener <-
+        browsingContextGetTree
+          MkGetTree
+            { maxDepth = Nothing,
+              root = Nothing  -- Get all contexts to see the relationship
+            }
+      logShow "Browsing context tree - WebDriver created (originalOpener should be null)" treeWithOpener
+      pause
+
+      -- TODO: when using Scripts - get browsingContextGetTree with originalOpener
+      logTxt "NOTE: originalOpener is null because WebDriver.create doesn't set opener relationships"
+      logTxt "originalOpener is only set when web content opens windows via window.open(), not WebDriver commands"
+      pause
+
+      logTxt "IMPORTANT: referenceContext does NOT create parent-child relationships!"
+      logTxt "Parent-child relationships only exist between main documents and their iframes"
+      logTxt "All WebDriver-created tabs/windows are top-level contexts with no parent"
+      pause
+
+      logTxt "Demonstrating: All created contexts are top-level (no parent, no children)"
+      logTxt "Get tree from 'opener' context - will show NO children (not a parent)"
+      treeFromOpener <-
+        browsingContextGetTree
+          MkGetTree
+            { maxDepth = Nothing,
+              root = Just openerContext
+            }
+      logShow "Tree from opener context (no children expected)" treeFromOpener
+      pause
+
+      logTxt "Get tree from 'opened' context - will show NO parent (top-level)"
+      treeFromOpened <-
+        browsingContextGetTree
+          MkGetTree
+            { maxDepth = Nothing,
+              root = Just openedContext
+            }
+      logShow "Tree from opened context (no parent expected)" treeFromOpened
+      pause
+
+      logTxt "Get full tree - shows all top-level contexts as siblings"
+      fullTree <-
+        browsingContextGetTree
+          MkGetTree
+            { maxDepth = Nothing,
+              root = Nothing
+            }
+      logShow "Full tree (all contexts are top-level siblings)" fullTree
+      pause
+
+      -- TODO: when using IFrames - get parent-child relationships
+      logTxt "To see parent-child relationships, you need:"
+      logTxt "1. Navigate to a page with iframes"
+      logTxt "2. The main document = parent, iframes = children"
+      logTxt "3. referenceContext is only for tab positioning, not hierarchy"
+      pause
+
+
+
+
+-- >>> runDemo browsingContextHandleUserPrompt
+-- *** Exception: Error executing BiDi command: MkCommand
+--   { method = "script.evaluate"
+--   , params =
+--       MkEvaluate
+--         { expression = "alert('This is a test alert from BiDi!')"
+--         , target =
+--             ContextTarget
+--               MkBrowsingContext
+--                 { context = "c57717d3-1d39-41c4-a4b1-811d00e5c0c5" }
+--         , awaitPromise = False
+--         , resultOwnership = Nothing
+--         , serializationOptions = Nothing
+--         }
+--   , extended = Nothing
+--   }
+-- Failed to decode the 'result' property of JSON returned by driver to response type: 
+-- {
+--     "error": "invalid argument",
+--     "id": 2,
+--     "message": "No context or realm provided",
+--     "stacktrace": "RemoteError@chrome://remote/content/shared/RemoteError.sys.mjs:8:8\nWebDriverError@chrome://remote/content/shared/webdriver/Errors.sys.mjs:199:5\nInvalidArgumentError@chrome://remote/content/shared/webdriver/Errors.sys.mjs:401:5\n#assertTarget@chrome://remote/content/webdriver-bidi/modules/root/script.sys.mjs:826:13\nevaluate@chrome://remote/content/webdriver-bidi/modules/root/script.sys.mjs:549:63\nhandleCommand@chrome://remote/content/shared/messagehandler/MessageHandler.sys.mjs:260:33\nexecute@chrome://remote/content/shared/webdriver/Session.sys.mjs:410:32\nonPacket@chrome://remote/content/webdriver-bidi/WebDriverBiDiConnection.sys.mjs:236:37\nonMessage@chrome://remote/content/server/WebSocketTransport.sys.mjs:127:18\nhandleEvent@chrome://remote/content/server/WebSocketTransport.sys.mjs:109:14\n",
+--     "type": "error"
+-- }
+-- Error message: 
+-- key "result" not found
+browsingContextHandleUserPrompt :: BiDiDemo
+browsingContextHandleUserPrompt =
+  demo "Browsing Context - Handle User Prompt" action
+  where
+    action :: DemoUtils -> Commands -> IO ()
+    action utils@MkDemoUtils {..} cmds = do
+      bc <- newWindowContext utils cmds
+
+      -- logTxt "Navigate to data URL with test content"
+      -- cmds.browsingContextNavigate $ MkNavigate { 
+      --   context = bc, 
+      --   url = "data:text/html,<html><body><button onclick=\"alert('Hello from BiDi!'); \">Click me for alert</button><button onclick=\"confirm('Are you sure?')\">Click me for confirm</button><button onclick=\"prompt('Enter your name:')\">Click me for prompt</button></body></html>", wait = Nothing }
       -- pause
+
+      logTxt "Test 1: Create and handle an alert dialog"
+      cmds.scriptEvaluate $ MkEvaluate
+        { expression = "alert('This is a test alert from BiDi!')",
+          target = ContextTarget bc,
+          awaitPromise = False,
+          resultOwnership = Nothing,
+          serializationOptions = Nothing
+        }
+      pause
+
+      logTxt "Accept the alert dialog"
+      acceptResult <- cmds.browsingContextHandleUserPrompt $ MkHandleUserPrompt
+        { context = bc,
+          accept = Just True,
+          userText = Nothing
+        }
+      logShow "Alert accept result" acceptResult
+      pause
+
+      logTxt "Test 2: Create and handle a confirm dialog"
+      _ <- cmds.scriptEvaluate $ MkEvaluate
+        { expression = "confirm('Do you want to continue?')",
+          target = ContextTarget bc,
+          awaitPromise = False,
+          resultOwnership = Nothing,
+          serializationOptions = Nothing
+        }
+      pause
+
+      logTxt "Dismiss the confirm dialog"
+      dismissResult <- cmds.browsingContextHandleUserPrompt $ MkHandleUserPrompt
+        { context = bc,
+          accept = Just False,
+          userText = Nothing
+        }
+      logShow "Confirm dismiss result" dismissResult
+      pause
+
+      logTxt "Test 3: Create and handle a prompt dialog with user input"
+      _ <- cmds.scriptEvaluate $ MkEvaluate
+        { expression = "prompt('What is your name?', 'Default Name')",
+          target = ContextTarget bc,
+          awaitPromise = False,
+          resultOwnership = Nothing,
+          serializationOptions = Nothing
+        }
+      pause
+
+      logTxt "Accept prompt with custom text"
+      promptResult <- cmds.browsingContextHandleUserPrompt $ MkHandleUserPrompt
+        { context = bc,
+          accept = Just True,
+          userText = Just "John Doe from BiDi"
+        }
+      logShow "Prompt accept with text result" promptResult
+      pause
+
+      logTxt "Test 4: Create and dismiss a prompt dialog"
+      _ <- cmds.scriptEvaluate $ MkEvaluate
+        { expression = "prompt('Enter your age:')",
+          target = ContextTarget bc,
+          awaitPromise = False,
+          resultOwnership = Nothing,
+          serializationOptions = Nothing
+        }
+      pause
+
+      logTxt "Dismiss the prompt dialog"
+      dismissPromptResult <- cmds.browsingContextHandleUserPrompt $ MkHandleUserPrompt
+        { context = bc,
+          accept = Just False,
+          userText = Nothing
+        }
+      logShow "Prompt dismiss result" dismissPromptResult
+      pause
