@@ -101,9 +101,9 @@ demo name action = MkBiDiDemo {name, action}
 
 -- ###########################################################################
 
--- >>> runDemo browsingContextCreateActivateClose
-browsingContextCreateActivateClose :: BiDiDemo
-browsingContextCreateActivateClose =
+-- >>> runDemo browsingContextCreateActivateCloseDemo
+browsingContextCreateActivateCloseDemo :: BiDiDemo
+browsingContextCreateActivateCloseDemo =
   demo "Browsing Context - Create Activate Close" action
   where
     action :: DemoUtils -> Commands -> IO ()
@@ -199,9 +199,9 @@ closeContext MkDemoUtils {..} MkCommands {..} bc = do
   logShow "Close result" co
   pause
 
--- >>> runDemo browsingContextCaptureScreenshotClose
-browsingContextCaptureScreenshotClose :: BiDiDemo
-browsingContextCaptureScreenshotClose =
+-- >>> runDemo browsingContextCaptureScreenshotCloseDemo
+browsingContextCaptureScreenshotCloseDemo :: BiDiDemo
+browsingContextCaptureScreenshotCloseDemo =
   demo "Browsing Context - Capture Screenshot / Close" action
   where
     action :: DemoUtils -> Commands -> IO ()
@@ -247,9 +247,9 @@ browsingContextCaptureScreenshotClose =
       logShow "Close result" co
       pause
 
--- >>> runDemo browsingContextClosePromptUnload
-browsingContextClosePromptUnload :: BiDiDemo
-browsingContextClosePromptUnload =
+-- >>> runDemo browsingContextClosePromptUnloadDemo
+browsingContextClosePromptUnloadDemo :: BiDiDemo
+browsingContextClosePromptUnloadDemo =
   demo "Browsing Context - Close with unload prompt" action
   where
     action :: DemoUtils -> Commands -> IO ()
@@ -262,9 +262,9 @@ browsingContextClosePromptUnload =
       logShow "Close result" co
       pause
 
--- >>> runDemo browsingContextGetTree
-browsingContextGetTree :: BiDiDemo
-browsingContextGetTree =
+-- >>> runDemo browsingContextGetTreeDemo
+browsingContextGetTreeDemo :: BiDiDemo
+browsingContextGetTreeDemo =
   demo "Browsing Context - Get Tree" action
   where
     action :: DemoUtils -> Commands -> IO ()
@@ -349,9 +349,9 @@ browsingContextGetTree =
 
 -- TODO: remove all unneeded From / ToJSON instances
 
--- >>> runDemo browsingContextHandleUserPrompt
-browsingContextHandleUserPrompt :: BiDiDemo
-browsingContextHandleUserPrompt =
+-- >>> runDemo browsingContextHandleUserPromptDemo
+browsingContextHandleUserPromptDemo :: BiDiDemo
+browsingContextHandleUserPromptDemo =
   demo "Browsing Context - Handle User Prompt" action
   where
     action :: DemoUtils -> Commands -> IO ()
