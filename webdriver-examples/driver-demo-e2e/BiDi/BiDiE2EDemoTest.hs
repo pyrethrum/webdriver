@@ -10,7 +10,6 @@ import IOUtils (DemoUtils (..))
 import WebDriverPreCore.BiDi.BiDiUrl (parseUrl)
 import WebDriverPreCore.BiDi.BrowsingContext (LocateNodes (..), LocateNodesResult (..), Locator (..), Print (..), PrintMargin (..), PrintPage (..), PrintResult (..), ReadinessState (..), SetViewport (..), Viewport (..))
 import WebDriverPreCore.BiDi.CoreTypes (JSInt (..), JSUInt (..), NodeRemoteValue (..), SharedId (..))
-import WebDriverPreCore.BiDi.Script (SharedReference (..), SharedId (..))
 import WebDriverPreCore.BiDi.Protocol
   ( Activate (..),
     BrowsingContext (..),
@@ -25,13 +24,13 @@ import WebDriverPreCore.BiDi.Protocol
     HandleUserPrompt (..),
     ImageFormat (..),
     Navigate (..),
+    Orientation (..),
+    PageRange (..),
     Reload (..),
     ScreenShotOrigin (..),
-    Orientation (..),
     TraverseHistory (..),
-    PageRange (..)
   )
-import WebDriverPreCore.BiDi.Script (Evaluate (..), Target (..))
+import WebDriverPreCore.BiDi.Script (Evaluate (..), SharedId (..), SharedReference (..), Target (..))
 import WebDriverPreCore.Internal.Utils (txt)
 import Prelude hiding (log, putStrLn)
 
@@ -109,6 +108,14 @@ closeContext MkDemoUtils {..} MkCommands {..} bc = do
 10. browsingContextReload :: DONE
 11. browsingContextSetViewport :: DONE
 12. browsingContextTraverseHistory :: DONE
+
+##### Script #####
+1. scriptAddPreloadScript,
+2. scriptCallFunction,
+3. scriptDisown,
+4. scriptEvaluate,
+5. scriptGetRealms,
+6. scriptRemovePreloadScript
 
 -- TODO when using script - get browsingContextGetTree with originalOpener
   -- list not supported yet in geckodriver
@@ -565,7 +572,9 @@ browsingNavigateReloadTraverseHistoryDemo =
       closeContext utils cmds bc
 
 -- >>> runDemo browsingContextLocateNodesDemo
+
 -- *** Exception: Error executing BiDi command: MkCommand
+
 --   { method = "browsingContext.locateNodes"
 --   , params =
 --       MkLocateNodes
@@ -580,7 +589,7 @@ browsingNavigateReloadTraverseHistoryDemo =
 --         }
 --   , extended = Nothing
 --   }
--- With JSON: 
+-- With JSON:
 -- {
 --     "id": 18,
 --     "method": "browsingContext.locateNodes",
@@ -592,7 +601,7 @@ browsingNavigateReloadTraverseHistoryDemo =
 --         }
 --     }
 -- }
--- Failed to decode the 'result' property of JSON returned by driver to response type: 
+-- Failed to decode the 'result' property of JSON returned by driver to response type:
 -- {
 --     "error": "invalid argument",
 --     "id": 18,
@@ -600,7 +609,7 @@ browsingNavigateReloadTraverseHistoryDemo =
 --     "stacktrace": "RemoteError@chrome://remote/content/shared/RemoteError.sys.mjs:8:8\nWebDriverError@chrome://remote/content/shared/webdriver/Errors.sys.mjs:199:5\nInvalidArgumentError@chrome://remote/content/shared/webdriver/Errors.sys.mjs:401:5\nassert.that/<@chrome://remote/content/shared/webdriver/Assert.sys.mjs:581:13\nlocateNodes@chrome://remote/content/webdriver-bidi/modules/root/browsingContext.sys.mjs:1052:6\nhandleCommand@chrome://remote/content/shared/messagehandler/MessageHandler.sys.mjs:260:33\nexecute@chrome://remote/content/shared/webdriver/Session.sys.mjs:410:32\nonPacket@chrome://remote/content/webdriver-bidi/WebDriverBiDiConnection.sys.mjs:236:37\nonMessage@chrome://remote/content/server/WebSocketTransport.sys.mjs:127:18\nhandleEvent@chrome://remote/content/server/WebSocketTransport.sys.mjs:109:14\n",
 --     "type": "error"
 -- }
--- Error message: 
+-- Error message:
 -- key "result" not found
 browsingContextLocateNodesDemo :: BiDiDemo
 browsingContextLocateNodesDemo =
@@ -872,44 +881,44 @@ browsingContextLocateNodesDemo =
       logShow "Browsing context tree" treeResult
       pause
 
-      -- Test Context Selector (this requires child browsing contexts like iframes)
-      {- TODO: Context selector not supported yet in geckodriver
-      case treeResult of
-        MkGetTreeResult infoList -> do
-          -- Look for any child contexts in the tree
-          let allChildContexts = concatMap extractChildContexts infoList
-          case allChildContexts of
-            (childContext : _) -> do
-              logTxt "Test 15: Context Selector - Find container element of iframe"
-              contextResult <-
-                browsingContextLocateNodes $
-                  MkLocateNodes
-                    { context = bc,
-                      locator = Context {context = childContext},
-                      maxNodeCount = Nothing,
-                      serializationOptions = Nothing,
-                      startNodes = Nothing
-                    }
-              logShow "Context Selector result - iframe container" contextResult
-              pause
-            [] -> do
-              logTxt "No child browsing contexts found, skipping Context selector test"
-              logTxt "Note: Context selector finds the DOM element that contains an iframe"
-              pause
+-- Test Context Selector (this requires child browsing contexts like iframes)
+{- TODO: Context selector not supported yet in geckodriver
+  case treeResult of
+    MkGetTreeResult infoList -> do
+      -- Look for any child contexts in the tree
+      let allChildContexts = concatMap extractChildContexts infoList
+      case allChildContexts of
+        (childContext : _) -> do
+          logTxt "Test 15: Context Selector - Find container element of iframe"
+          contextResult <-
+            browsingContextLocateNodes $
+              MkLocateNodes
+                { context = bc,
+                  locator = Context {context = childContext},
+                  maxNodeCount = Nothing,
+                  serializationOptions = Nothing,
+                  startNodes = Nothing
+                }
+          logShow "Context Selector result - iframe container" contextResult
+          pause
+        [] -> do
+          logTxt "No child browsing contexts found, skipping Context selector test"
+          logTxt "Note: Context selector finds the DOM element that contains an iframe"
+          pause
 
-      pause
+  pause
 
-    -- Helper function to extract child contexts from browse context tree
-    extractChildContexts :: Info -> [BrowsingContext]
-    extractChildContexts =
-      ( maybe
-          []
-          \childInfos ->
-            ((.context) <$> childInfos)
-              <> concatMap extractChildContexts childInfos
-      )
-        . (.children)
-      -}
+-- Helper function to extract child contexts from browse context tree
+extractChildContexts :: Info -> [BrowsingContext]
+extractChildContexts =
+  ( maybe
+      []
+      \childInfos ->
+        ((.context) <$> childInfos)
+          <> concatMap extractChildContexts childInfos
+  )
+    . (.children)
+  -}
 
 -- >>> runDemo browsingContextPrintAndSetViewportDemo
 browsingContextPrintAndSetViewportDemo :: BiDiDemo
@@ -1105,7 +1114,7 @@ browsingContextPrintAndSetViewportDemo =
               margin = Nothing,
               orientation = Nothing,
               page = Nothing,
-              pageRanges = Just $ [Range { fromPage = 1, toPage = 2 } ],
+              pageRanges = Just $ [Range {fromPage = 1, toPage = 2}],
               scale = Nothing,
               shrinkToFit = Nothing
             }
