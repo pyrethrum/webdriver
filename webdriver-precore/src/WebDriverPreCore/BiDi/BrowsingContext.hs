@@ -1,15 +1,15 @@
 module WebDriverPreCore.BiDi.BrowsingContext where
 
-import Data.Aeson (FromJSON (..), KeyValue (..), Options (..), ToJSON (..), Value, defaultOptions, genericToJSON, object, withObject, (.:), (.=))
+import Data.Aeson (FromJSON (..), KeyValue (..), Options (..), ToJSON (..), Value (..), defaultOptions, genericToJSON, object, withObject, (.:), (.=))
 import Data.Aeson.Types (Parser)
 import Data.Map qualified as Map
 import Data.Maybe (catMaybes)
-import Data.Text (Text, unpack)
+import Data.Text (Text, unpack, pack)
 import GHC.Generics
 import WebDriverPreCore.BiDi.CoreTypes (BrowsingContext, JSInt, JSUInt, NodeRemoteValue, UserContext)
 import WebDriverPreCore.BiDi.Script (SharedReference)
 import WebDriverPreCore.Internal.AesonUtils (enumCamelCase, opt, toJSONOmitNothing)
-import Prelude (Bool (..), Eq, Float, Functor (..), Maybe, Semigroup ((<>)), Show, flip, ($), (.))
+import Prelude (Bool (..), Eq, Float, Functor (..), Maybe, Semigroup ((<>)), Show (..), Word, flip, ($), (.), fromIntegral)
 
 -- ######### REMOTE #########
 
@@ -185,9 +185,9 @@ data Print = MkPrint
   { context :: BrowsingContext,
     background :: Maybe Bool,
     margin :: Maybe PrintMargin,
-    orientation :: Maybe Text, -- "portrait" / "landscape"
+    orientation :: Maybe Orientation,
     page :: Maybe PrintPage,
-    pageRanges :: Maybe [Value], -- Mix of JSUInt and Text
+    pageRanges :: Maybe [PageRange], 
     scale :: Maybe Float,
     shrinkToFit :: Maybe Bool
   }
@@ -196,6 +196,27 @@ data Print = MkPrint
 instance ToJSON Print where
   toJSON :: Print -> Value
   toJSON = toJSONOmitNothing
+
+data Orientation = Portrait | Landscape deriving (Show, Eq, Generic)
+
+instance ToJSON Orientation where
+  toJSON :: Orientation -> Value
+  toJSON = enumCamelCase
+
+data PageRange
+  = Page Word
+  | Range
+      { fromPage :: Word,
+        toPage :: Word
+      }
+      deriving (Show, Eq)
+
+instance ToJSON PageRange where
+   toJSON :: PageRange -> Value
+   toJSON = \case
+     Page p -> Number $ fromIntegral p
+     Range {fromPage, toPage} -> String (pack (show fromPage <> "-" <> show toPage))
+     
 
 -- |  for reload command
 data Reload = MkReload

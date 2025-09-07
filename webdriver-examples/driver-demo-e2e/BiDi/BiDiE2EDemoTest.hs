@@ -13,7 +13,7 @@ import WebDriverPreCore.BiDi.CoreTypes (JSInt (..), JSUInt (..), NodeRemoteValue
 import WebDriverPreCore.BiDi.Script (SharedReference (..), SharedId (..))
 import WebDriverPreCore.BiDi.Protocol
   ( Activate (..),
-    BrowsingContext,
+    BrowsingContext (..),
     CaptureScreenshot (..),
     ClipRectangle (..),
     Close (..),
@@ -27,14 +27,16 @@ import WebDriverPreCore.BiDi.Protocol
     Navigate (..),
     Reload (..),
     ScreenShotOrigin (..),
+    Orientation (..),
     TraverseHistory (..),
+    PageRange (..)
   )
 import WebDriverPreCore.BiDi.Script (Evaluate (..), Target (..))
 import WebDriverPreCore.Internal.Utils (txt)
 import Prelude hiding (log, putStrLn)
 
 pauseMs :: Int
-pauseMs = 3_000
+pauseMs = 0
 
 -- >>> demo_parseUrl
 -- "Right\n  MkBiDiUrl\n    { host = \"127.0.0.1\"\n    , port = 9222\n    , path = \"/session/e43698d9-b02a-4284-a936-12041deb3552\"\n    }"
@@ -910,44 +912,6 @@ browsingContextLocateNodesDemo =
       -}
 
 -- >>> runDemo browsingContextPrintAndSetViewportDemo
--- *** Exception: Error executing BiDi command: MkCommand
---   { method = "browsingContext.print"
---   , params =
---       MkPrint
---         { context =
---             MkBrowsingContext
---               { context = "662a4078-76fd-4d7b-8bf3-4908bfeb48c5" }
---         , background = Nothing
---         , margin = Nothing
---         , orientation = Nothing
---         , page = Nothing
---         , pageRanges = Just [ String "1,3" ]
---         , scale = Nothing
---         , shrinkToFit = Nothing
---         }
---   , extended = Nothing
---   }
--- With JSON: 
--- {
---     "id": 15,
---     "method": "browsingContext.print",
---     "params": {
---         "context": "662a4078-76fd-4d7b-8bf3-4908bfeb48c5",
---         "pageRanges": [
---             "1,3"
---         ]
---     }
--- }
--- Failed to decode the 'result' property of JSON returned by driver to response type: 
--- {
---     "error": "invalid argument",
---     "id": 15,
---     "message": "Expected \"range\" to be of the form <int> or <int>-<int>, got [object String] \"1,3\"",
---     "stacktrace": "RemoteError@chrome://remote/content/shared/RemoteError.sys.mjs:8:8\nWebDriverError@chrome://remote/content/shared/webdriver/Errors.sys.mjs:199:5\nInvalidArgumentError@chrome://remote/content/shared/webdriver/Errors.sys.mjs:401:5\nassert.that/<@chrome://remote/content/shared/webdriver/Assert.sys.mjs:581:13\nparseRanges/<@chrome://remote/content/shared/PDF.sys.mjs:202:38\nparseRanges@chrome://remote/content/shared/PDF.sys.mjs:202:14\nprint.getPrintSettings@chrome://remote/content/shared/PDF.sys.mjs:152:32\nprint@chrome://remote/content/webdriver-bidi/modules/root/browsingContext.sys.mjs:1373:44\nhandleCommand@chrome://remote/content/shared/messagehandler/MessageHandler.sys.mjs:260:33\nexecute@chrome://remote/content/shared/webdriver/Session.sys.mjs:410:32\nonPacket@chrome://remote/content/webdriver-bidi/WebDriverBiDiConnection.sys.mjs:236:37\nonMessage@chrome://remote/content/server/WebSocketTransport.sys.mjs:127:18\nhandleEvent@chrome://remote/content/server/WebSocketTransport.sys.mjs:109:14\n",
---     "type": "error"
--- }
--- Error message: 
--- key "result" not found
 browsingContextPrintAndSetViewportDemo :: BiDiDemo
 browsingContextPrintAndSetViewportDemo =
   demo "Browsing Context - Print and Set Viewport" action
@@ -981,7 +945,7 @@ browsingContextPrintAndSetViewportDemo =
                       right = Just 1.5,
                       top = Just 2.0
                     },
-              orientation = Just "portrait",
+              orientation = Just Portrait,
               page = Nothing,
               pageRanges = Nothing,
               scale = Nothing,
@@ -997,7 +961,7 @@ browsingContextPrintAndSetViewportDemo =
             { context = bc,
               background = Just True,
               margin = Nothing,
-              orientation = Just "landscape",
+              orientation = Just Landscape,
               page =
                 Just $
                   MkPrintPage
@@ -1101,7 +1065,7 @@ browsingContextPrintAndSetViewportDemo =
             { context = bc,
               background = Nothing,
               margin = Nothing,
-              orientation = Just "portrait",
+              orientation = Just Portrait,
               page = Nothing,
               pageRanges = Nothing,
               scale = Just 1.0,
@@ -1125,7 +1089,7 @@ browsingContextPrintAndSetViewportDemo =
               margin = Nothing,
               orientation = Nothing,
               page = Nothing,
-              pageRanges = Just ["1"],
+              pageRanges = Just [Page 1],
               scale = Nothing,
               shrinkToFit = Nothing
             }
@@ -1141,7 +1105,7 @@ browsingContextPrintAndSetViewportDemo =
               margin = Nothing,
               orientation = Nothing,
               page = Nothing,
-              pageRanges = Just ["1-2"],
+              pageRanges = Just $ [Range { fromPage = 1, toPage = 2 } ],
               scale = Nothing,
               shrinkToFit = Nothing
             }
@@ -1157,7 +1121,7 @@ browsingContextPrintAndSetViewportDemo =
               margin = Nothing,
               orientation = Nothing,
               page = Nothing,
-              pageRanges = Just ["1,3"],
+              pageRanges = Just [Range 1 2, Page 3],
               scale = Nothing,
               shrinkToFit = Nothing
             }

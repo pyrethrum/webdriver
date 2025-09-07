@@ -113,6 +113,8 @@ import WebDriverPreCore.BiDi.BrowsingContext
     LocateNodesResult (..),
     Navigate (..),
     NavigateResult (..),
+    Orientation (..),
+    PageRange (..),
     Print (..),
     PrintResult (..),
     Reload (..),
@@ -157,23 +159,23 @@ import WebDriverPreCore.BiDi.Network
     SetCacheBehavior,
   )
 import WebDriverPreCore.BiDi.Script
-  ( AddPreloadScript(..),
+  ( AddPreloadScript (..),
     AddPreloadScriptResult (..),
     CallFunction (..),
     CallFunctionResult (..),
+    ContextTarget (..),
     Disown (..),
     Evaluate (..),
     EvaluateResult (..),
     GetRealms (..),
     GetRealmsResult (..),
-    RemovePreloadScript (..),
-    RemoteValue (..),
     PrimitiveProtocolValue (..),
+    Realm (..),
+    RemoteValue (..),
+    RemovePreloadScript (..),
+    Sandbox (..),
     SpecialNumber (..),
     Target (..),
-    Realm (..),
-    ContextTarget (..),
-    Sandbox (..)
   )
 import WebDriverPreCore.BiDi.Session
   ( SessionNewResult,
@@ -195,8 +197,6 @@ import WebDriverPreCore.BiDi.WebExtensions
     WebExtensionData,
     WebExtensionResult (..),
   )
-
-
 
 ---- Session ----
 
