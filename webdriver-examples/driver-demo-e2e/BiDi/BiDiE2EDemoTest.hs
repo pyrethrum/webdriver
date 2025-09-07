@@ -97,10 +97,10 @@ closeContext MkDemoUtils {..} MkCommands {..} bc = do
 {-
 ##### BrowsingContext #####
 
-4. browsingContextCreate :: DONE
-1. browsingContextActivate : DONE
-2. browsingContextCaptureScreenshot :: DONE
-3. browsingContextClose :: DONE
+1. browsingContextCreate :: DONE
+2. browsingContextActivate :: DONE
+3. browsingContextCaptureScreenshot :: DONE
+4. browsingContextClose :: DONE
 5. browsingContextGetTree :: DONE*
 6. browsingContextHandleUserPrompt :: DONE
 7. browsingContextLocateNodes :: DONE
