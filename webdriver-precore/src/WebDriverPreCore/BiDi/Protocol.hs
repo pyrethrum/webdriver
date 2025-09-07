@@ -109,6 +109,7 @@ import WebDriverPreCore.BiDi.BrowsingContext
     GetTreeResult (..),
     HandleUserPrompt (..),
     ImageFormat (..),
+    Info (..),
     LocateNodes (..),
     LocateNodesResult (..),
     Navigate (..),

@@ -21,8 +21,10 @@ import WebDriverPreCore.BiDi.Protocol
     CreateType (..),
     CreateUserContext (..),
     GetTree (..),
+    GetTreeResult (..),
     HandleUserPrompt (..),
     ImageFormat (..),
+    Info (..),
     Navigate (..),
     Orientation (..),
     PageRange (..),
@@ -30,7 +32,7 @@ import WebDriverPreCore.BiDi.Protocol
     ScreenShotOrigin (..),
     TraverseHistory (..),
   )
-import WebDriverPreCore.BiDi.Script (Evaluate (..), SharedId (..), SharedReference (..), Target (..))
+import WebDriverPreCore.BiDi.Script (Evaluate (..), SerializationOptions (..), SharedId (..), SharedReference (..), Target (..))
 import WebDriverPreCore.Internal.Utils (txt)
 import Prelude hiding (log, putStrLn)
 
@@ -91,6 +93,15 @@ closeContext MkDemoUtils {..} MkCommands {..} bc = do
   logShow "Close result" co
   pause
 
+rootContext :: DemoUtils -> Commands -> IO BrowsingContext
+rootContext MkDemoUtils {..} MkCommands {..} = do
+  logTxt "Get root browsing context"
+  tree <- browsingContextGetTree $ MkGetTree Nothing Nothing
+  logShow "Browsing context tree" tree
+  case tree of
+    MkGetTreeResult (info : _) -> pure $ info.context
+    _ -> error "No browsing contexts found"
+
 -- TODO: Session find out about newSession Firefox threads
 
 {-
@@ -145,6 +156,8 @@ TODO: stuff to add to haddock notes
 
 -- *** Exception: Forced failure for testing: send (call #2)
 
+-- ###########################################################################
+-- ############################  Browsing Context ############################
 -- ###########################################################################
 
 -- >>> runDemo browsingContextCreateActivateCloseDemo
@@ -229,7 +242,7 @@ browsingContextCaptureScreenshotCloseDemo =
   where
     action :: DemoUtils -> Commands -> IO ()
     action utils@MkDemoUtils {..} cmds@MkCommands {..} = do
-      bc <- newWindowContext utils cmds
+      bc <- rootContext utils cmds
 
       logTxt "Capture screenshot - default"
       screenshot <- browsingContextCaptureScreenshot $ MkCaptureScreenshot bc Nothing Nothing Nothing
@@ -273,11 +286,11 @@ browsingContextCaptureScreenshotCloseDemo =
 -- >>> runDemo browsingContextClosePromptUnloadDemo
 browsingContextClosePromptUnloadDemo :: BiDiDemo
 browsingContextClosePromptUnloadDemo =
-  demo "Browsing Context - Close with unload prompt" action
+  demo "Browsing Context - Close with Unload Prompt" action
   where
     action :: DemoUtils -> Commands -> IO ()
     action utils@MkDemoUtils {..} cmds@MkCommands {..} = do
-      bc <- newWindowContext utils cmds
+      bc <- rootContext utils cmds
 
       -- TODO :: promptUnload doesn't seem to do anything ??
       logTxt "Close browsing context - unload prompt True"
@@ -379,7 +392,7 @@ browsingContextHandleUserPromptDemo =
   where
     action :: DemoUtils -> Commands -> IO ()
     action utils@MkDemoUtils {..} cmds@MkCommands {..} = do
-      bc <- newWindowContext utils cmds
+      bc <- rootContext utils cmds
 
       logTxt "Test 1: Create and handle an alert dialog"
 
@@ -486,7 +499,7 @@ browsingNavigateReloadTraverseHistoryDemo =
   where
     action :: DemoUtils -> Commands -> IO ()
     action utils@MkDemoUtils {..} cmds@MkCommands {..} = do
-      bc <- newWindowContext utils cmds
+      bc <- rootContext utils cmds
 
       logTxt "Navigate to The Internet - Main Page"
       navResult1 <- browsingContextNavigate $ MkNavigate {context = bc, url = "https://the-internet.herokuapp.com/", wait = Nothing}
@@ -569,55 +582,14 @@ browsingNavigateReloadTraverseHistoryDemo =
       logShow "Navigation result - back to main" navResultFinal
       pause
 
-      closeContext utils cmds bc
-
 -- >>> runDemo browsingContextLocateNodesDemo
-
--- *** Exception: Error executing BiDi command: MkCommand
-
---   { method = "browsingContext.locateNodes"
---   , params =
---       MkLocateNodes
---         { context =
---             MkBrowsingContext
---               { context = "2e6c74d3-7ff5-4c46-ac8e-4abe6f51d1f3" }
---         , locator =
---             Context { context = MkBrowsingContext { context = "19327352833" } }
---         , maxNodeCount = Nothing
---         , serializationOptions = Nothing
---         , startNodes = Nothing
---         }
---   , extended = Nothing
---   }
--- With JSON:
--- {
---     "id": 18,
---     "method": "browsingContext.locateNodes",
---     "params": {
---         "context": "2e6c74d3-7ff5-4c46-ac8e-4abe6f51d1f3",
---         "locator": {
---             "context": "19327352833",
---             "type": "context"
---         }
---     }
--- }
--- Failed to decode the 'result' property of JSON returned by driver to response type:
--- {
---     "error": "invalid argument",
---     "id": 18,
---     "message": "Expected \"locator.type\" to be one of accessibility,css,innerText,xpath, got [object String] \"context\"",
---     "stacktrace": "RemoteError@chrome://remote/content/shared/RemoteError.sys.mjs:8:8\nWebDriverError@chrome://remote/content/shared/webdriver/Errors.sys.mjs:199:5\nInvalidArgumentError@chrome://remote/content/shared/webdriver/Errors.sys.mjs:401:5\nassert.that/<@chrome://remote/content/shared/webdriver/Assert.sys.mjs:581:13\nlocateNodes@chrome://remote/content/webdriver-bidi/modules/root/browsingContext.sys.mjs:1052:6\nhandleCommand@chrome://remote/content/shared/messagehandler/MessageHandler.sys.mjs:260:33\nexecute@chrome://remote/content/shared/webdriver/Session.sys.mjs:410:32\nonPacket@chrome://remote/content/webdriver-bidi/WebDriverBiDiConnection.sys.mjs:236:37\nonMessage@chrome://remote/content/server/WebSocketTransport.sys.mjs:127:18\nhandleEvent@chrome://remote/content/server/WebSocketTransport.sys.mjs:109:14\n",
---     "type": "error"
--- }
--- Error message:
--- key "result" not found
 browsingContextLocateNodesDemo :: BiDiDemo
 browsingContextLocateNodesDemo =
   demo "Browsing Context - Locate Nodes with All Selectors and Options" action
   where
     action :: DemoUtils -> Commands -> IO ()
     action utils@MkDemoUtils {..} cmds@MkCommands {..} = do
-      bc <- newWindowContext utils cmds
+      bc <- rootContext utils cmds
 
       logTxt "Navigate to The Internet - Login Page for comprehensive selector testing"
       navResult1 <- browsingContextNavigate $ MkNavigate {context = bc, url = "https://the-internet.herokuapp.com/login", wait = Just Complete}
@@ -927,7 +899,7 @@ browsingContextPrintAndSetViewportDemo =
   where
     action :: DemoUtils -> Commands -> IO ()
     action utils@MkDemoUtils {..} cmds@MkCommands {..} = do
-      bc <- newWindowContext utils cmds
+      bc <- rootContext utils cmds
 
       logTxt "Navigate to The Internet - Main Page for content"
       navResult <- browsingContextNavigate $ MkNavigate {context = bc, url = "https://the-internet.herokuapp.com/", wait = Just Complete}
@@ -1135,6 +1107,342 @@ browsingContextPrintAndSetViewportDemo =
               shrinkToFit = Nothing
             }
       logTxt $ "Print result - pages 1 and 3: " <> case printSpecificPages of MkPrintResult {base64Text} -> base64Text
+      pause
+
+      closeContext utils cmds bc
+
+-- ###########################################################################
+-- ################################# Script ##################################
+-- ###########################################################################
+
+-- >>> runDemo scriptEvaluateAllPrimitiveTypesDemo
+scriptEvaluateAllPrimitiveTypesDemo :: BiDiDemo
+scriptEvaluateAllPrimitiveTypesDemo =
+  demo "Script - Evaluate All PrimitiveProtocolValue Types" action
+  where
+    action :: DemoUtils -> Commands -> IO ()
+    action utils@MkDemoUtils {..} cmds@MkCommands {..} = do
+      bc <- rootContext utils cmds
+      let baseEval =
+            MkEvaluate
+              { expression = "alert('Hello from Pyrethrum BiDi!')",
+                target =
+                  ContextTarget $
+                    MkContextTarget
+                      { context = bc,
+                        sandbox = Nothing
+                      },
+                awaitPromise = True,
+                resultOwnership = Nothing,
+                serializationOptions = Nothing
+              }
+
+      logTxt "Test 1: Undefined evaluation - returns UndefinedValue"
+      r1 <- scriptEvaluate $ baseEval { expression = "undefined" }
+      logShow "Script evaluation result - undefined" r1
+      pause
+
+      logTxt "Test 2: Null evaluation - returns NullValue"
+      r2 <- scriptEvaluate $ baseEval { expression = "null" }
+      logShow "Script evaluation result - null" r2
+      pause
+
+      logTxt "Test 3: String evaluation - returns StringValue"
+      r3 <- scriptEvaluate $ baseEval { expression = "'Hello from BiDi Script!'" }
+      logShow "Script evaluation result - string" r3
+      pause
+
+      logTxt "Test 4: String evaluation with escape characters"
+      r4 <- scriptEvaluate $ baseEval { expression = "'Line 1\\nLine 2\\tTabbed'" }
+      logShow "Script evaluation result - string with escapes" r4
+      pause
+
+      logTxt "Test 5: Number evaluation - integer"
+      r5 <- scriptEvaluate $ baseEval { expression = "42" }
+      logShow "Script evaluation result - number (integer)" r5
+      pause
+
+      logTxt "Test 6: Number evaluation - float"
+      r6 <- scriptEvaluate $ baseEval { expression = "3.14159" }
+      logShow "Script evaluation result - number (float)" r6
+      pause
+
+      logTxt "Test 7: Number evaluation - negative"
+      r7 <- scriptEvaluate $ baseEval { expression = "-123.456" }
+      logShow "Script evaluation result - number (negative)" r7
+      pause
+
+      logTxt "Test 8: Number evaluation - zero"
+      r8 <- scriptEvaluate $ baseEval { expression = "0" }
+      logShow "Script evaluation result - number (zero)" r8
+      pause
+
+      logTxt "Test 9: Special Number - NaN"
+      r9 <- scriptEvaluate $ baseEval { expression = "NaN" }
+      logShow "Script evaluation result - NaN" r9
+      pause
+
+      logTxt "Test 10: Special Number - Negative Zero"
+      r10 <- scriptEvaluate $ baseEval { expression = "-0" }
+      logShow "Script evaluation result - negative zero" r10
+      pause
+
+      logTxt "Test 11: Special Number - Infinity"
+      r11 <- scriptEvaluate $ baseEval { expression = "Infinity" }
+      logShow "Script evaluation result - Infinity" r11
+      pause
+
+      logTxt "Test 12: Special Number - Negative Infinity"
+      r12 <- scriptEvaluate $ baseEval { expression = "-Infinity" }
+      logShow "Script evaluation result - Negative Infinity" r12
+      pause
+
+      logTxt "Test 13: Special Number - Division by zero (Infinity)"
+      r13 <- scriptEvaluate $ baseEval { expression = "1 / 0" }
+      logShow "Script evaluation result - 1/0 = Infinity" r13
+      pause
+
+      logTxt "Test 14: Special Number - Invalid operation (NaN)"
+      r14 <- scriptEvaluate $ baseEval { expression = "Math.sqrt(-1)" }
+      logShow "Script evaluation result - sqrt(-1) = NaN" r14
+      pause
+
+      logTxt "Test 15: Boolean evaluation - true"
+      r15 <- scriptEvaluate $ baseEval { expression = "true" }
+      logShow "Script evaluation result - boolean true" r15
+      pause
+
+      logTxt "Test 16: Boolean evaluation - false"
+      r16 <- scriptEvaluate $ baseEval { expression = "false" }
+      logShow "Script evaluation result - boolean false" r16
+      pause
+
+      logTxt "Test 17: Boolean evaluation - truthy expression"
+      r17 <- scriptEvaluate $ baseEval { expression = "!!'hello'" }
+      logShow "Script evaluation result - !!string = true" r17
+      pause
+
+      logTxt "Test 18: Boolean evaluation - falsy expression"
+      r18 <- scriptEvaluate $ baseEval { expression = "!!0" }
+      logShow "Script evaluation result - !!0 = false" r18
+      pause
+
+      logTxt "Test 19: BigInt evaluation - small BigInt"
+      r19 <- scriptEvaluate $ baseEval { expression = "42n" }
+      logShow "Script evaluation result - BigInt 42n" r19
+      pause
+
+      logTxt "Test 20: BigInt evaluation - large BigInt"
+      r20 <- scriptEvaluate $ baseEval { expression = "9007199254740991n" }
+      logShow "Script evaluation result - BigInt (Number.MAX_SAFE_INTEGER)" r20
+      pause
+
+      logTxt "Test 21: BigInt evaluation - very large BigInt"
+      r21 <- scriptEvaluate $ baseEval { expression = "12345678901234567890123456789012345678901234567890n" }
+      logShow "Script evaluation result - very large BigInt" r21
+      pause
+
+      logTxt "Test 22: BigInt evaluation - negative BigInt"
+      r22 <- scriptEvaluate $ baseEval { expression = "-9007199254740991n" }
+      logShow "Script evaluation result - negative BigInt" r22
+      pause
+
+      logTxt "Test 23: BigInt evaluation - zero BigInt"
+      r23 <- scriptEvaluate $ baseEval { expression = "0n" }
+      logShow "Script evaluation result - BigInt zero" r23
+      pause
+
+      logTxt "Test 24: BigInt evaluation - BigInt arithmetic"
+      r24 <- scriptEvaluate $ baseEval { expression = "BigInt(123) * BigInt(456)" }
+      logShow "Script evaluation result - BigInt arithmetic" r24
+      pause
+
+      logTxt "Test 25: Complex expression evaluation - mixed types in comparison"
+      r25 <- scriptEvaluate $ baseEval { expression = "typeof 'string' === 'string'" }
+      logShow "Script evaluation result - typeof comparison" r25
+      pause
+
+      logTxt "Test 26: Complex expression evaluation - Number.isNaN"
+      r26 <- scriptEvaluate $ baseEval { expression = "Number.isNaN(NaN)" }
+      logShow "Script evaluation result - Number.isNaN(NaN)" r26
+      pause
+
+      logTxt "Test 27: Complex expression evaluation - Number.isFinite"
+      r27 <- scriptEvaluate $ baseEval { expression = "Number.isFinite(42)" }
+      logShow "Script evaluation result - Number.isFinite(42)" r27
+      pause
+
+      logTxt "Test 28: Empty string evaluation"
+      r28 <- scriptEvaluate $ baseEval { expression = "''" }
+      logShow "Script evaluation result - empty string" r28
+      pause
+
+      logTxt "Test 29: Unicode string evaluation"
+      r29 <- scriptEvaluate $ baseEval { expression = "'Hello 🌍 World! αβγ 中文'" }
+      logShow "Script evaluation result - unicode string" r29
+      pause
+
+      logTxt "Test 30: Mathematical constants"
+      r30 <- scriptEvaluate $ baseEval { expression = "Math.PI" }
+      logShow "Script evaluation result - Math.PI" r30
+      pause
+
+      closeContext utils cmds bc
+
+-- >>> runDemo scriptEvaluateAdvancedDemo  
+scriptEvaluateAdvancedDemo :: BiDiDemo
+scriptEvaluateAdvancedDemo =
+  demo "Script - Evaluate Advanced Types and Edge Cases" action
+  where
+    action :: DemoUtils -> Commands -> IO ()
+    action utils@MkDemoUtils {..} cmds@MkCommands {..} = do
+      bc <- rootContext utils cmds
+      let baseEval =
+            MkEvaluate
+              { expression = "",
+                target =
+                  ContextTarget $
+                    MkContextTarget
+                      { context = bc,
+                        sandbox = Nothing
+                      },
+                awaitPromise = False,
+                resultOwnership = Nothing,
+                serializationOptions = Nothing
+              }
+
+      logTxt "Advanced Test 1: Array evaluation (non-primitive)"
+      a1 <- scriptEvaluate $ baseEval { expression = "[1, 2, 3, 'hello', true, null]" }
+      logShow "Script evaluation result - array" a1
+      pause
+
+      logTxt "Advanced Test 2: Object evaluation (non-primitive)"
+      a2 <- scriptEvaluate $ baseEval { expression = "{ name: 'BiDi', version: 1.0, active: true }" }
+      logShow "Script evaluation result - object" a2
+      pause
+
+      logTxt "Advanced Test 3: Function evaluation (non-primitive)"
+      a3 <- scriptEvaluate $ baseEval { expression = "function greet(name) { return 'Hello, ' + name; }" }
+      logShow "Script evaluation result - function" a3
+      pause
+
+      logTxt "Advanced Test 4: Date evaluation (non-primitive)"
+      a4 <- scriptEvaluate $ baseEval { expression = "new Date('2024-01-15T10:30:00Z')" }
+      logShow "Script evaluation result - date" a4
+      pause
+
+      logTxt "Advanced Test 5: RegExp evaluation (non-primitive)"
+      a5 <- scriptEvaluate $ baseEval { expression = "/^[a-z]+$/gi" }
+      logShow "Script evaluation result - regexp" a5
+      pause
+
+      logTxt "Advanced Test 6: Promise evaluation - resolved (awaitPromise=False)"
+      a6 <- scriptEvaluate $ baseEval { expression = "Promise.resolve('resolved value')" }
+      logShow "Script evaluation result - promise (not awaited)" a6
+      pause
+
+      logTxt "Advanced Test 7: Promise evaluation - resolved (awaitPromise=True)"  
+      a7 <- scriptEvaluate $ baseEval { expression = "Promise.resolve('resolved value')", awaitPromise = True }
+      logShow "Script evaluation result - promise (awaited)" a7
+      pause
+
+      logTxt "Advanced Test 8: Symbol evaluation (non-primitive)"
+      a8 <- scriptEvaluate $ baseEval { expression = "Symbol('test-symbol')" }
+      logShow "Script evaluation result - symbol" a8
+      pause
+
+      logTxt "Advanced Test 9: Error evaluation"
+      a9 <- scriptEvaluate $ baseEval { expression = "new Error('Test error message')" }
+      logShow "Script evaluation result - error object" a9
+      pause
+
+      logTxt "Advanced Test 10: Throw error evaluation (should produce exception result)"
+      a10 <- scriptEvaluate $ baseEval { expression = "throw new Error('Intentional test error')" }
+      logShow "Script evaluation result - thrown error" a10
+      pause
+
+      logTxt "Advanced Test 11: DOM element evaluation (if available)"
+      a11 <- scriptEvaluate $ baseEval { expression = "document.body || 'no document.body'" }
+      logShow "Script evaluation result - DOM element or fallback" a11
+      pause
+
+      logTxt "Advanced Test 12: Window proxy evaluation"
+      a12 <- scriptEvaluate $ baseEval { expression = "window" }
+      logShow "Script evaluation result - window proxy" a12
+      pause
+
+      logTxt "Advanced Test 13: Map evaluation (ES6 collection)"
+      a13 <- scriptEvaluate $ baseEval { expression = "new Map([['key1', 'value1'], ['key2', 42]])" }
+      logShow "Script evaluation result - Map" a13
+      pause
+
+      logTxt "Advanced Test 14: Set evaluation (ES6 collection)"
+      a14 <- scriptEvaluate $ baseEval { expression = "new Set([1, 2, 3, 1, 2])" }
+      logShow "Script evaluation result - Set" a14
+      pause
+
+      logTxt "Advanced Test 15: WeakMap evaluation (ES6 collection)"
+      a15 <- scriptEvaluate $ baseEval { expression = "new WeakMap()" }
+      logShow "Script evaluation result - WeakMap" a15
+      pause
+
+      logTxt "Advanced Test 16: WeakSet evaluation (ES6 collection)"
+      a16 <- scriptEvaluate $ baseEval { expression = "new WeakSet()" }
+      logShow "Script evaluation result - WeakSet" a16
+      pause
+
+      logTxt "Advanced Test 17: Generator function evaluation"
+      a17 <- scriptEvaluate $ baseEval { expression = "function* gen() { yield 1; yield 2; }" }
+      logShow "Script evaluation result - generator function" a17
+      pause
+
+      logTxt "Advanced Test 18: Generator evaluation"
+      a18 <- scriptEvaluate $ baseEval { expression = "(function* gen() { yield 1; yield 2; })()" }
+      logShow "Script evaluation result - generator" a18
+      pause
+
+      logTxt "Advanced Test 19: Proxy evaluation"
+      a19 <- scriptEvaluate $ baseEval { expression = "new Proxy({}, { get: (target, prop) => 'proxied: ' + prop })" }
+      logShow "Script evaluation result - proxy" a19
+      pause
+
+      logTxt "Advanced Test 20: ArrayBuffer evaluation (typed arrays)"
+      a20 <- scriptEvaluate $ baseEval { expression = "new ArrayBuffer(16)" }
+      logShow "Script evaluation result - ArrayBuffer" a20
+      pause
+
+      logTxt "Advanced Test 21: Typed array evaluation (Uint8Array)"
+      a21 <- scriptEvaluate $ baseEval { expression = "new Uint8Array([1, 2, 3, 4, 5])" }
+      logShow "Script evaluation result - Uint8Array" a21
+      pause
+
+      logTxt "Advanced Test 22: Complex expression with mixed primitive types"
+      a22 <- scriptEvaluate $ baseEval { expression = "({ str: 'text', num: 42, bool: true, nul: null, undef: undefined, big: 123n })" }
+      logShow "Script evaluation result - object with all primitive types" a22
+      pause
+
+      -- logTxt "Advanced Test 23: Serialization options test - limited depth"
+      -- a23 <- scriptEvaluate $ baseEval 
+      --   { expression = "({ level1: { level2: { level3: { deep: 'value' } } } })",
+      --     serializationOptions = Just $ object ["maxDomDepth" .= (2 :: Int), "maxObjectDepth" .= (2 :: Int)]
+      --   }
+      -- logShow "Script evaluation result - limited serialization depth" a23
+      -- pause
+
+      logTxt "Advanced Test 24: Result ownership test"
+      a24 <- scriptEvaluate $ baseEval 
+        { expression = "({ data: 'for ownership test' })",
+          resultOwnership = Just "root"
+        }
+      logShow "Script evaluation result - with ownership" a24
+      pause
+
+      logTxt "Advanced Test 25: Sandbox evaluation"
+      a25 <- scriptEvaluate $ baseEval 
+        { expression = "typeof sandbox_test_var",
+          target = ContextTarget $ MkContextTarget { context = bc, sandbox = Just "test-sandbox" }
+        }
+      logShow "Script evaluation result - in sandbox" a25
       pause
 
       closeContext utils cmds bc
