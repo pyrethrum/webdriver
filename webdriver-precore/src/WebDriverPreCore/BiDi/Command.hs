@@ -12,7 +12,6 @@ import WebDriverPreCore.BiDi.CoreTypes (JSUInt)
 import WebDriverPreCore.Internal.AesonUtils (objectOrThrow)
 import Prelude (Maybe (..), maybe, (<>), Show, Eq)
 import Data.Aeson.KeyMap qualified as KM
-import WebDriverPreCore.Internal.Utils (txt)
 
 data Command c r = MkCommand
   { method :: Text,

@@ -52,7 +52,8 @@ bidiDemoUtils baseLog pauseMs =
           logM = \l mt -> mt >>= log' l,
           logShowM = \l t -> t >>= logShow l,
           logTxt = logTxt',
-          pause = sleepMs pauseMs
+          pause = sleepMs pauseMs,
+          pauseMinMs = sleepMs . max pauseMs
         }
 
 mkLogger :: TChan Text -> IO Logger
@@ -85,6 +86,7 @@ mkLogger logChan =
 data DemoUtils = MkDemoUtils
   { sleep :: Int -> IO (),
     pause :: IO (),
+    pauseMinMs :: Int -> IO (),
     logTxt :: Text -> IO (),
     log :: Text -> Text -> IO (),
     logShow :: forall a. (Show a) => Text -> a -> IO (),
@@ -101,7 +103,8 @@ demoUtils pauseMs =
       logShow,
       logM,
       logShowM,
-      pause = sleepMs pauseMs
+      pause = sleepMs pauseMs,
+      pauseMinMs = sleepMs . max pauseMs
     }
 
 noOpUtils :: DemoUtils
@@ -113,7 +116,9 @@ noOpUtils =
       logShow = const2 $ pure (),
       logM = const2 $ pure (),
       logShowM = const2 $ pure (),
-      pause = pure ()
+      pause = pure (),
+      -- even for no-op, ensure sleep for passed in ms
+      pauseMinMs = sleepMs
     }
   where
     const2 = const . const

@@ -69,7 +69,6 @@ import WebDriverPreCore.BiDi.CoreTypes
   )
 import WebDriverPreCore.Internal.AesonUtils (enumCamelCase, opt, jsonToText)
 import Prelude (Applicative (..), Bool (..), Double, Either (..), Eq (..), Maybe (..), MonadFail (..), Semigroup (..), Show (..), ($), (<$>))
-import Data.ByteString.Builder (generic)
 
 -- ######### REMOTE #########
 
@@ -312,6 +311,7 @@ newtype SharedId = MkShareId
   { id :: Text -- SharedId
   }
   deriving (Show, Eq, Generic)
+  deriving newtype (ToJSON) 
 
 -- | List of local values
 newtype ListLocalValue = MkListLocalValue [LocalValue]
@@ -836,8 +836,6 @@ instance ToJSON RemoteReference
 instance ToJSON SharedReference
 
 instance ToJSON RemoteObjectReference
-
-instance ToJSON SharedId
 
 instance ToJSON ListLocalValue
 

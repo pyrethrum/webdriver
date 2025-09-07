@@ -1,15 +1,15 @@
 module WebDriverPreCore.BiDi.BrowsingContext where
 
-import Data.Aeson (FromJSON (..), KeyValue (..), ToJSON (..), Value, object, (.=), withObject, (.:), genericToJSON, Options (..), defaultOptions)
+import Data.Aeson (FromJSON (..), KeyValue (..), Options (..), ToJSON (..), Value, defaultOptions, genericToJSON, object, withObject, (.:), (.=))
+import Data.Aeson.Types (Parser)
 import Data.Map qualified as Map
 import Data.Maybe (catMaybes)
 import Data.Text (Text, unpack)
 import GHC.Generics
 import WebDriverPreCore.BiDi.CoreTypes (BrowsingContext, JSInt, JSUInt, NodeRemoteValue, UserContext)
-import WebDriverPreCore.Internal.AesonUtils (enumCamelCase, opt)
-import Prelude (Bool (..), Eq, Float, Maybe, Semigroup ((<>)), Show, ($), Applicative (..), flip, Functor (..), (.))
-import Data.Aeson.Types (Parser)
-import Data.ByteString.Builder (generic)
+import WebDriverPreCore.BiDi.Script (SharedReference)
+import WebDriverPreCore.Internal.AesonUtils (enumCamelCase, opt, toJSONOmitNothing)
+import Prelude (Bool (..), Eq, Float, Functor (..), Maybe, Semigroup ((<>)), Show, flip, ($), (.))
 
 -- ######### REMOTE #########
 
@@ -152,19 +152,21 @@ data HandleUserPrompt = MkHandleUserPrompt
 
 instance ToJSON HandleUserPrompt where
   toJSON :: HandleUserPrompt -> Value
-  toJSON = genericToJSON defaultOptions {omitNothingFields = True} 
-  
+  toJSON = genericToJSON defaultOptions {omitNothingFields = True}
+
 -- |  for locateNodes command
 data LocateNodes = MkLocateNodes
   { context :: BrowsingContext,
     locator :: Locator,
     maxNodeCount :: Maybe JSUInt,
     serializationOptions :: Maybe Value, -- script.SerializationOptions
-    startNodes :: Maybe [Text] -- script.SharedReference
+    startNodes :: Maybe [SharedReference] -- script.SharedReference
   }
   deriving (Show, Eq, Generic)
 
-instance ToJSON LocateNodes
+instance ToJSON LocateNodes where
+  toJSON :: LocateNodes -> Value
+  toJSON = toJSONOmitNothing
 
 -- |  for navigate command
 data Navigate = MkNavigate
@@ -174,7 +176,9 @@ data Navigate = MkNavigate
   }
   deriving (Show, Eq, Generic)
 
-instance ToJSON Navigate
+instance ToJSON Navigate where
+  toJSON :: Navigate -> Value
+  toJSON = toJSONOmitNothing
 
 -- |  for print command
 data Print = MkPrint
@@ -189,6 +193,10 @@ data Print = MkPrint
   }
   deriving (Show, Eq, Generic)
 
+instance ToJSON Print where
+  toJSON :: Print -> Value
+  toJSON = toJSONOmitNothing
+
 -- |  for reload command
 data Reload = MkReload
   { context :: BrowsingContext,
@@ -196,6 +204,10 @@ data Reload = MkReload
     wait :: Maybe ReadinessState
   }
   deriving (Show, Eq, Generic)
+
+instance ToJSON Reload where
+  toJSON :: Reload -> Value
+  toJSON = toJSONOmitNothing
 
 -- |  for setViewport command
 data SetViewport = MkSetViewport
@@ -256,10 +268,15 @@ instance ToJSON Locator where
   toJSON :: Locator -> Value
   toJSON = \case
     Accessibility {name, role} ->
-      object
+      object $
         [ "type" .= "accessibility",
-          "name" .= name,
-          "role" .= role
+          "value"
+            .= ( object $
+                   catMaybes
+                     [ opt "name" name,
+                       opt "role" role
+                     ]
+               )
         ]
     CSS {value} ->
       object
@@ -343,18 +360,18 @@ newtype GetTreeResult = MkGetTreeResult
 
 instance FromJSON GetTreeResult
 
-
-
 newtype LocateNodesResult = MkLocateNodesResult
-  { nodeRemoteValues :: [NodeRemoteValue]
+  { nodes :: [NodeRemoteValue]
   }
-  deriving newtype (Show, Eq, FromJSON)
+  deriving newtype (Show, Eq)
+  deriving stock (Generic)
+
+instance FromJSON LocateNodesResult
 
 newtype CaptureScreenshotResult = MkCaptureScreenshotResult
   { base64Text :: Text
   }
   deriving newtype (Show, Eq)
-
 
 parseTextData :: Text -> Value -> Parser Text
 parseTextData description = withObject (unpack description) $ flip (.:) "data"
@@ -366,7 +383,11 @@ instance FromJSON CaptureScreenshotResult where
 newtype PrintResult = MkPrintResult
   { base64Text :: Text
   }
-  deriving newtype (Show, Eq, FromJSON)
+  deriving newtype (Show, Eq)
+
+instance FromJSON PrintResult where
+  parseJSON :: Value -> Parser PrintResult
+  parseJSON = fmap MkPrintResult . parseTextData "PrintResult"
 
 data Info = MkInfo
   { children :: Maybe [Info],
@@ -463,11 +484,6 @@ newtype Navigation = MkNavigation
   { navigationId :: Text
   }
   deriving (Show, Eq, Generic)
-
--- Additional ToJSON instances for missing types
-instance ToJSON Print
-
-instance ToJSON Reload
 
 instance ToJSON SetViewport
 

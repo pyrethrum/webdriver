@@ -1,6 +1,6 @@
 module WebDriverPreCore.BiDi.ResponseEvent where
 
-import Data.Aeson (FromJSON (parseJSON), Object, ToJSON (toJSON), Value (..), eitherDecode, withObject, (.:), (.:?))
+import Data.Aeson (FromJSON (parseJSON), Object, Value (..), eitherDecode, withObject, (.:), (.:?))
 import Data.Aeson.Types (Parser, parseEither)
 import Data.Bifunctor (Bifunctor (..))
 import Data.Bool (bool)
@@ -9,7 +9,7 @@ import Data.Function ((&))
 import Data.Text (Text, pack)
 import GHC.Generics (Generic)
 import WebDriverPreCore.BiDi.BrowsingContext (BrowsingContextEvent)
-import WebDriverPreCore.BiDi.Command (Command, commandValue)
+import WebDriverPreCore.BiDi.Command (Command)
 import WebDriverPreCore.BiDi.CoreTypes (EmptyResult (..), JSUInt)
 import WebDriverPreCore.BiDi.Error (ErrorCode)
 import WebDriverPreCore.BiDi.Input (FileDialogOpened)

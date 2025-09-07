@@ -21,6 +21,8 @@ module WebDriverPreCore.Internal.AesonUtils
     parseJson,
     resultToEither,
     parseObjectEither,
+    toJSONOmitNothing,
+    parseJSONOmitNothing
   )
 where
 
@@ -75,6 +77,13 @@ import Prelude
 
 -- Aeson stuff
 -- TODO move to separte library
+
+toJSONOmitNothing :: ( Generic a, A.GToJSON' Value A.Zero (Rep a)) =>a -> Value
+toJSONOmitNothing = A.genericToJSON  defaultOptions {omitNothingFields = True}
+
+parseJSONOmitNothing :: (Generic a, A.GFromJSON A.Zero (Rep a)) => Value -> Parser a
+parseJSONOmitNothing = A.genericParseJSON defaultOptions {omitNothingFields = True}
+
 
 asText :: Value -> Result Text
 asText = \case

@@ -62,7 +62,7 @@ import GHC.Enum (Bounded)
 import GHC.Float (Double)
 import GHC.Generics (Generic)
 import GHC.IO (FilePath)
-import WebDriverPreCore.Internal.AesonUtils (opt, parseOpt)
+import WebDriverPreCore.Internal.AesonUtils (opt, parseOpt, toJSONOmitNothing, parseJSONOmitNothing)
 import Prelude (Bool (..), Enum, Eq (..), Int, Maybe (..), Show (..), maybe)
 
 {- references:
@@ -423,10 +423,12 @@ data PerfLoggingPrefs = MkPerfLoggingPrefs
   deriving (Show, Eq, Generic)
 
 instance ToJSON PerfLoggingPrefs where
-  toJSON = genericToJSON defaultOptions {omitNothingFields = True}
+  toJSON :: PerfLoggingPrefs -> Value
+  toJSON = toJSONOmitNothing
 
 instance FromJSON PerfLoggingPrefs where
-  parseJSON = genericParseJSON defaultOptions {omitNothingFields = True}
+  parseJSON :: Value -> Parser PerfLoggingPrefs
+  parseJSON = parseJSONOmitNothing
 
 data MobileEmulation = MkMobileEmulation
   { deviceName :: Maybe Text,
@@ -436,10 +438,12 @@ data MobileEmulation = MkMobileEmulation
   deriving (Show, Eq, Generic)
 
 instance FromJSON MobileEmulation where
-  parseJSON = genericParseJSON defaultOptions {omitNothingFields = True}
+  parseJSON :: Value -> Parser MobileEmulation
+  parseJSON = parseJSONOmitNothing
 
 instance ToJSON MobileEmulation where
-  toJSON = genericToJSON defaultOptions {omitNothingFields = True}
+  toJSON :: MobileEmulation -> Value
+  toJSON = toJSONOmitNothing
 
 -- | Browser log levels as defined in vendor specs
 data LogLevel
@@ -499,7 +503,8 @@ instance FromJSON LogSettings where
       pure MkLogSettings {..}
 
 instance ToJSON LogSettings where
-  toJSON = genericToJSON defaultOptions {omitNothingFields = True}
+  toJSON :: LogSettings -> Value
+  toJSON = toJSONOmitNothing
 
 data DeviceMetrics = MkDeviceMetrics
   { width :: Int,
@@ -521,7 +526,8 @@ instance FromJSON DeviceMetrics where
       pure MkDeviceMetrics {..}
 
 instance ToJSON DeviceMetrics where
-  toJSON = genericToJSON defaultOptions {omitNothingFields = True}
+  toJSON :: DeviceMetrics -> Value
+  toJSON = toJSONOmitNothing
 
 -- | ToJSON Instance for VendorSpecific
 
