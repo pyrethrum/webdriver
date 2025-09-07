@@ -50,11 +50,11 @@ module WebDriverPreCore.BiDi.Script
     RemoteReference (..),
     SharedReference (..),
     RemoteObjectReference (..),
-    SharedId (..)
+    SharedId (..),
   )
 where
 
-import Data.Aeson (FromJSON (..), ToJSON (..), Value (..), object, withObject, (.:), (.:?), (.=), defaultOptions, genericToJSON)
+import Data.Aeson (FromJSON (..), ToJSON (..), Value (..), defaultOptions, genericToJSON, object, withObject, (.:), (.:?), (.=))
 import Data.Aeson.Types (Pair, Parser, omitNothingFields)
 import Data.Map.Strict qualified as Map
 import Data.Maybe (catMaybes)
@@ -67,8 +67,8 @@ import WebDriverPreCore.BiDi.CoreTypes
     JSUInt,
     NodeRemoteValue (..),
   )
-import WebDriverPreCore.Internal.AesonUtils (enumCamelCase, opt, jsonToText)
-import Prelude (Applicative (..), Bool (..), Double, Either (..), Eq (..), Maybe (..), MonadFail (..), Semigroup (..), Show (..), ($), (<$>))
+import WebDriverPreCore.Internal.AesonUtils (enumCamelCase, jsonToText, opt)
+import Prelude (Applicative (..), Bool (..), Double, Either (..), Eq (..), Maybe (..), MonadFail (..), Semigroup (..), Show (..), realToFrac, ($), (.), (<$>))
 
 -- ######### REMOTE #########
 
@@ -180,9 +180,23 @@ instance FromJSON RemoteValue where
     handle <- obj .:? "handle"
     internalId <- obj .:? "internalId"
     case typ of
-      "primitive" -> PrimitiveValue <$> parseJSON (Object obj)
       "undefined" -> pure $ PrimitiveValue UndefinedValue
-      --  TODO handle other primative values
+      "null" -> pure $ PrimitiveValue NullValue
+      "string" -> PrimitiveValue . StringValue <$> obj .: "value"
+      "number" ->
+        PrimitiveValue . NumberValue <$> do
+          v <- obj .: "value"
+          case v of
+            Number n -> pure $ Left (realToFrac n)
+            String s -> case s of
+              "NaN" -> pure $ Right NaN
+              "-0" -> pure $ Right NegativeZero
+              "Infinity" -> pure $ Right Infinity
+              "-Infinity" -> pure $ Right NegativeInfinity
+              _ -> fail $ "Unknown SpecialNumber string: " <> unpack s
+            _ -> fail $ "Expected number or special number string, got: " <> show v
+      "boolean" -> PrimitiveValue . BooleanValue <$> obj .: "value"
+      "bigint" -> PrimitiveValue . BigIntValue <$> obj .: "value"
       "node" -> NodeValue <$> parseJSON (Object obj)
       "array" -> do
         value <- obj .:? "value"
@@ -196,8 +210,7 @@ instance FromJSON RemoteValue where
         flags <- value .:? "flags"
         pure $ RegExpValue {..}
       "date" -> do
-        value <- obj .: "value"
-        dateValue <- value .: "value"
+        dateValue <- obj .: "value"
         pure $ DateValue {..}
       "map" -> do
         values <- obj .:? "value"
@@ -311,7 +324,7 @@ newtype SharedId = MkShareId
   { id :: Text -- SharedId
   }
   deriving (Show, Eq, Generic)
-  deriving newtype (ToJSON) 
+  deriving newtype (ToJSON)
 
 -- | List of local values
 newtype ListLocalValue = MkListLocalValue [LocalValue]
@@ -369,12 +382,23 @@ data SetLocalValue = MkSetLocalValue
   }
   deriving (Show, Eq, Generic)
 
-data ResultOwnership = Root | None deriving (Show, Eq, Generic)
+-- OwnershipNone ~ None - renamed to avoid clash with BrowsingContext None
+data ResultOwnership = Root | OwnershipNone deriving (Show, Eq, Generic)
 
-instance FromJSON ResultOwnership
+instance FromJSON ResultOwnership where
+  parseJSON :: Value -> Parser ResultOwnership
+  parseJSON = withObject "ResultOwnership" $ \obj -> do
+    typ <- obj .: "type"
+    case typ of
+      "root" -> pure Root
+      "none" -> pure OwnershipNone
+      _ -> fail $ "Unknown ResultOwnership type: " <> unpack typ
 
 instance ToJSON ResultOwnership where
-  toJSON = enumCamelCase
+  toJSON :: ResultOwnership -> Value
+  toJSON = \case
+    Root -> "root"
+    OwnershipNone -> "none"
 
 -- | RealmType represents the different types of Realm
 data RealmType
@@ -425,10 +449,13 @@ data Target
   | ContextTarget ContextTarget
   deriving (Show, Eq, Generic)
 
-newtype Realm = MkRealm { realm :: Text } deriving (Show, Eq, Generic, FromJSON)
+newtype Realm = MkRealm {realm :: Text} deriving (Show, Eq, Generic, FromJSON)
 
-data ContextTarget = MkContextTarget { context :: BrowsingContext, 
-   sandbox :: Maybe Sandbox } deriving (Show, Eq, Generic)
+data ContextTarget = MkContextTarget
+  { context :: BrowsingContext,
+    sandbox :: Maybe Sandbox
+  }
+  deriving (Show, Eq, Generic)
 
 instance FromJSON ContextTarget
 
@@ -442,9 +469,7 @@ instance FromJSON Sandbox
 
 instance ToJSON Sandbox
 
-
 instance ToJSON Realm
-
 
 -- Simple sum types
 instance ToJSON Target where
@@ -452,7 +477,6 @@ instance ToJSON Target where
   toJSON = \case
     RealmTarget r -> toJSON r
     ContextTarget ct -> toJSON ct
-
 
 {-
 
@@ -542,13 +566,11 @@ data BaseRealmInfo = BaseRealmInfo
 
 data EvaluateResult
   = EvaluateResultSuccess
-      { 
-        result :: RemoteValue,
+      { result :: RemoteValue,
         realm :: Realm
       }
   | EvaluateResultException
-      { 
-        exceptionDetails :: ExceptionDetails,
+      { exceptionDetails :: ExceptionDetails,
         realm :: Realm
       }
   deriving (Show, Eq, Generic)
@@ -637,8 +659,6 @@ data ChannelProperties = MkChannelProperties
 instance ToJSON AddPreloadScript
 
 instance ToJSON CallFunction
-
-
 
 -- GetRealms has a typ field that needs special handling
 instance ToJSON GetRealms where
@@ -1009,8 +1029,6 @@ instance FromJSON GetRealmsResult
 instance FromJSON RealmInfo
 
 instance FromJSON BaseRealmInfo
-
-
 
 instance FromJSON ExceptionDetails
 

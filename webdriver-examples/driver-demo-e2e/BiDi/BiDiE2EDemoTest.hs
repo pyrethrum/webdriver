@@ -11,30 +11,12 @@ import WebDriverPreCore.BiDi.BiDiUrl (parseUrl)
 import WebDriverPreCore.BiDi.BrowsingContext (LocateNodes (..), LocateNodesResult (..), Locator (..), Print (..), PrintMargin (..), PrintPage (..), PrintResult (..), ReadinessState (..), SetViewport (..), Viewport (..))
 import WebDriverPreCore.BiDi.CoreTypes (JSInt (..), JSUInt (..), NodeRemoteValue (..), SharedId (..))
 import WebDriverPreCore.BiDi.Protocol
-  ( Activate (..),
-    BrowsingContext (..),
-    CaptureScreenshot (..),
-    ClipRectangle (..),
-    Close (..),
-    ContextTarget (..),
-    Create (..),
-    CreateType (..),
-    CreateUserContext (..),
-    GetTree (..),
-    GetTreeResult (..),
-    HandleUserPrompt (..),
-    ImageFormat (..),
-    Info (..),
-    Navigate (..),
-    Orientation (..),
-    PageRange (..),
-    Reload (..),
-    ScreenShotOrigin (..),
-    TraverseHistory (..),
-  )
+import WebDriverPreCore.BiDi.Protocol qualified as ReadinessState (ReadinessState (..))
+
 import WebDriverPreCore.BiDi.Script (Evaluate (..), SerializationOptions (..), SharedId (..), SharedReference (..), Target (..))
 import WebDriverPreCore.Internal.Utils (txt)
 import Prelude hiding (log, putStrLn)
+
 
 pauseMs :: Int
 pauseMs = 0
@@ -1287,9 +1269,68 @@ scriptEvaluateAllPrimitiveTypesDemo =
       logShow "Script evaluation result - Math.PI" r30
       pause
 
-      closeContext utils cmds bc
-
 -- >>> runDemo scriptEvaluateAdvancedDemo  
+-- *** Exception: Error executing BiDi command: MkCommand
+--   { method = "script.evaluate"
+--   , params =
+--       MkEvaluate
+--         { expression = "new Map([['key1', 'value1'], ['key2', 42]])"
+--         , target =
+--             ContextTarget
+--               MkContextTarget
+--                 { context =
+--                     MkBrowsingContext
+--                       { context = "53718957-0c2b-4ef3-a82a-e88d53ac4583" }
+--                 , sandbox = Nothing
+--                 }
+--         , awaitPromise = False
+--         , resultOwnership = Nothing
+--         , serializationOptions = Nothing
+--         }
+--   , extended = Nothing
+--   }
+-- With JSON: 
+-- {
+--     "id": 14,
+--     "method": "script.evaluate",
+--     "params": {
+--         "awaitPromise": false,
+--         "expression": "new Map([['key1', 'value1'], ['key2', 42]])",
+--         "target": {
+--             "context": "53718957-0c2b-4ef3-a82a-e88d53ac4583"
+--         }
+--     }
+-- }
+-- Failed to decode the 'result' property of JSON returned by driver to response type: 
+-- {
+--     "id": 14,
+--     "result": {
+--         "realm": "f60914c4-331d-457c-b709-1e7a4ac30dd7",
+--         "result": {
+--             "type": "map",
+--             "value": [
+--                 [
+--                     "key1",
+--                     {
+--                         "type": "string",
+--                         "value": "value1"
+--                     }
+--                 ],
+--                 [
+--                     "key2",
+--                     {
+--                         "type": "number",
+--                         "value": 42
+--                     }
+--                 ]
+--             ]
+--         },
+--         "type": "success"
+--     },
+--     "type": "success"
+-- }
+-- Error message: 
+-- expected an object with a single property where the property key should be either "Left" or "Right"
 scriptEvaluateAdvancedDemo :: BiDiDemo
 scriptEvaluateAdvancedDemo =
   demo "Script - Evaluate Advanced Types and Edge Cases" action
@@ -1432,7 +1473,7 @@ scriptEvaluateAdvancedDemo =
       logTxt "Advanced Test 24: Result ownership test"
       a24 <- scriptEvaluate $ baseEval 
         { expression = "({ data: 'for ownership test' })",
-          resultOwnership = Just "root"
+          resultOwnership = Just Root
         }
       logShow "Script evaluation result - with ownership" a24
       pause
@@ -1444,5 +1485,3 @@ scriptEvaluateAdvancedDemo =
         }
       logShow "Script evaluation result - in sandbox" a25
       pause
-
-      closeContext utils cmds bc
