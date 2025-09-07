@@ -1270,67 +1270,6 @@ scriptEvaluateAllPrimitiveTypesDemo =
       pause
 
 -- >>> runDemo scriptEvaluateAdvancedDemo  
--- *** Exception: Error executing BiDi command: MkCommand
---   { method = "script.evaluate"
---   , params =
---       MkEvaluate
---         { expression = "new Map([['key1', 'value1'], ['key2', 42]])"
---         , target =
---             ContextTarget
---               MkContextTarget
---                 { context =
---                     MkBrowsingContext
---                       { context = "53718957-0c2b-4ef3-a82a-e88d53ac4583" }
---                 , sandbox = Nothing
---                 }
---         , awaitPromise = False
---         , resultOwnership = Nothing
---         , serializationOptions = Nothing
---         }
---   , extended = Nothing
---   }
--- With JSON: 
--- {
---     "id": 14,
---     "method": "script.evaluate",
---     "params": {
---         "awaitPromise": false,
---         "expression": "new Map([['key1', 'value1'], ['key2', 42]])",
---         "target": {
---             "context": "53718957-0c2b-4ef3-a82a-e88d53ac4583"
---         }
---     }
--- }
--- Failed to decode the 'result' property of JSON returned by driver to response type: 
--- {
---     "id": 14,
---     "result": {
---         "realm": "f60914c4-331d-457c-b709-1e7a4ac30dd7",
---         "result": {
---             "type": "map",
---             "value": [
---                 [
---                     "key1",
---                     {
---                         "type": "string",
---                         "value": "value1"
---                     }
---                 ],
---                 [
---                     "key2",
---                     {
---                         "type": "number",
---                         "value": 42
---                     }
---                 ]
---             ]
---         },
---         "type": "success"
---     },
---     "type": "success"
--- }
--- Error message: 
--- expected an object with a single property where the property key should be either "Left" or "Right"
 scriptEvaluateAdvancedDemo :: BiDiDemo
 scriptEvaluateAdvancedDemo =
   demo "Script - Evaluate Advanced Types and Edge Cases" action
@@ -1462,13 +1401,13 @@ scriptEvaluateAdvancedDemo =
       logShow "Script evaluation result - object with all primitive types" a22
       pause
 
-      -- logTxt "Advanced Test 23: Serialization options test - limited depth"
-      -- a23 <- scriptEvaluate $ baseEval 
-      --   { expression = "({ level1: { level2: { level3: { deep: 'value' } } } })",
-      --     serializationOptions = Just $ object ["maxDomDepth" .= (2 :: Int), "maxObjectDepth" .= (2 :: Int)]
-      --   }
-      -- logShow "Script evaluation result - limited serialization depth" a23
-      -- pause
+      logTxt "Advanced Test 23: Serialization options test - limited depth"
+      a23 <- scriptEvaluate $ baseEval 
+        { expression = "({ level1: { level2: { level3: { deep: 'value' } } } })",
+          serializationOptions = Just $ object ["maxDomDepth" .= (2 :: Int), "maxObjectDepth" .= (2 :: Int)]
+        }
+      logShow "Script evaluation result - limited serialization depth" a23
+      pause
 
       logTxt "Advanced Test 24: Result ownership test"
       a24 <- scriptEvaluate $ baseEval 
@@ -1481,7 +1420,7 @@ scriptEvaluateAdvancedDemo =
       logTxt "Advanced Test 25: Sandbox evaluation"
       a25 <- scriptEvaluate $ baseEval 
         { expression = "typeof sandbox_test_var",
-          target = ContextTarget $ MkContextTarget { context = bc, sandbox = Just "test-sandbox" }
+          target = ContextTarget $ MkContextTarget { context = bc, sandbox = Just $ MkSandbox "test-sandbox" }
         }
       logShow "Script evaluation result - in sandbox" a25
       pause

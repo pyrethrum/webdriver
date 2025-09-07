@@ -54,11 +54,14 @@ module WebDriverPreCore.BiDi.Script
   )
 where
 
+import Control.Applicative ((<|>))
 import Data.Aeson (FromJSON (..), ToJSON (..), Value (..), defaultOptions, genericToJSON, object, withObject, (.:), (.:?), (.=))
 import Data.Aeson.Types (Pair, Parser, omitNothingFields)
+import Data.Function ((&))
 import Data.Map.Strict qualified as Map
 import Data.Maybe (catMaybes)
 import Data.Text (Text, unpack)
+import Data.Vector qualified as V
 import GHC.Generics
 import WebDriverPreCore.BiDi.CoreTypes
   ( BrowsingContext,
@@ -67,8 +70,8 @@ import WebDriverPreCore.BiDi.CoreTypes
     JSUInt,
     NodeRemoteValue (..),
   )
-import WebDriverPreCore.Internal.AesonUtils (enumCamelCase, jsonToText, opt)
-import Prelude (Applicative (..), Bool (..), Double, Either (..), Eq (..), Maybe (..), MonadFail (..), Semigroup (..), Show (..), realToFrac, ($), (.), (<$>))
+import WebDriverPreCore.Internal.AesonUtils (jsonToText, opt, enumCamelCase)
+import Prelude (Applicative (..), Bool (..), Double, Either (..), Eq (..), Maybe (..), MonadFail (..), Semigroup (..), Show (..), Traversable (..), mapM, realToFrac, ($), (.), (<$>))
 
 -- ######### REMOTE #########
 
@@ -127,6 +130,10 @@ data RemoteValue
         value :: Maybe [RemoteValue]
       }
   | WeakMapValue
+      { handle :: Maybe Handle,
+        internalId :: Maybe InternalId
+      }
+  | WeakSetValue
       { handle :: Maybe Handle,
         internalId :: Maybe InternalId
       }
@@ -213,8 +220,20 @@ instance FromJSON RemoteValue where
         dateValue <- obj .: "value"
         pure $ DateValue {..}
       "map" -> do
-        values <- obj .:? "value"
+        maybeValues <- obj .:? "value"
+        values <- traverse (mapM parseMapEntry) maybeValues
         pure $ MapValue {..}
+        where
+          parseMapEntry :: Value -> Parser (Either RemoteValue Text, RemoteValue)
+          parseMapEntry val = case val of
+            Array arr -> case V.toList arr of
+              [keyVal, valueVal] -> do
+                -- try parse Text first, then RemoteValue
+                key <- (Right <$> parseJSON keyVal) <|> (Left <$> parseJSON keyVal)
+                value <- parseJSON valueVal
+                pure (key, value)
+              _ -> fail "Map entry must be an array with exactly 2 elements"
+            _ -> fail "Map entry must be an array"
       "set" -> do
         value <- obj .:? "value"
         pure $ SetValue {..}
@@ -230,6 +249,7 @@ instance FromJSON RemoteValue where
       "function" -> pure $ FunctionValue {..}
       "symbol" -> pure $ SymbolValue {..}
       "weakmap" -> pure $ WeakMapValue {..}
+      "weakset" -> pure $ WeakSetValue {..}
       "generator" -> pure $ GeneratorValue {..}
       "error" -> pure $ ErrorValue {..}
       "proxy" -> pure $ ProxyValue {..}
@@ -429,13 +449,22 @@ instance ToJSON RealmType where
 data SerializationOptions = SerializationOptions
   { maxDomDepth :: Maybe (Maybe JSUInt), -- .default 0
     maxObjectDepth :: Maybe (Maybe JSUInt), -- .default null
-    includeShadowTree :: Maybe Text -- "none", "open", "all" .default "none"
+    includeShadowTree :: Maybe IncludeShadowTree -- "none", "open", "all" .default "none"
   }
   deriving (Show, Eq, Generic)
 
-instance FromJSON SerializationOptions
+instance ToJSON SerializationOptions where
+  toJSON :: SerializationOptions -> Value
+  toJSON = genericToJSON defaultOptions {omitNothingFields = True}
 
-instance ToJSON SerializationOptions
+data IncludeShadowTree = ShadowTreeNone | Open | All deriving (Show, Eq, Generic)
+
+instance ToJSON IncludeShadowTree where
+  toJSON :: IncludeShadowTree -> Value
+  toJSON = \case
+    ShadowTreeNone -> "none" -- name changed to avoid clash with BrowsingContext None
+    Open -> "open"
+    All -> "all"
 
 -- Disown command
 data Disown = MkDisown
@@ -462,12 +491,10 @@ instance FromJSON ContextTarget
 instance ToJSON ContextTarget where
   toJSON :: ContextTarget -> Value
   toJSON = genericToJSON defaultOptions {omitNothingFields = True}
-
-data Sandbox = MkSandbox Text deriving (Show, Eq, Generic)
-
-instance FromJSON Sandbox
-
-instance ToJSON Sandbox
+newtype Sandbox = MkSandbox Text 
+   deriving (Show, Eq)
+   deriving newtype (ToJSON, FromJSON)
+  
 
 instance ToJSON Realm
 
