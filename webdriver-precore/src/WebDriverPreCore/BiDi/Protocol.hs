@@ -164,7 +164,6 @@ import WebDriverPreCore.BiDi.Script
   ( AddPreloadScript (..),
     AddPreloadScriptResult (..),
     CallFunction (..),
-    CallFunctionResult (..),
     ContextTarget (..),
     Disown (..),
     Evaluate (..),
@@ -178,6 +177,7 @@ import WebDriverPreCore.BiDi.Script
     ResultOwnership (..),
     Sandbox (..),
     SerializationOptions (..),
+    IncludeShadowTree (..),
     SharedId (..),
     SharedReference (..),
     SpecialNumber (..),
@@ -347,7 +347,7 @@ networkSetCacheBehavior = mkCommand "network.setCacheBehavior"
 scriptAddPreloadScript :: AddPreloadScript -> Command AddPreloadScript AddPreloadScriptResult
 scriptAddPreloadScript = mkCommand "script.addPreloadScript"
 
-scriptCallFunction :: CallFunction -> Command CallFunction CallFunctionResult
+scriptCallFunction :: CallFunction -> Command CallFunction EvaluateResult
 scriptCallFunction = mkCommand "script.callFunction"
 
 scriptDisown :: Disown -> Command Disown Object

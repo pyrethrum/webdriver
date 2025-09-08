@@ -32,7 +32,6 @@ import WebDriverPreCore.BiDi.Protocol
     AddPreloadScriptResult,
     BrowsingContext,
     CallFunction,
-    CallFunctionResult,
     CaptureScreenshot,
     CaptureScreenshotResult,
     ClientWindowInfo,
@@ -160,7 +159,7 @@ data Commands = MkCommands
     networkSetCacheBehavior :: SetCacheBehavior -> IO Object,
     -- Script commands
     scriptAddPreloadScript :: AddPreloadScript -> IO AddPreloadScriptResult,
-    scriptCallFunction :: CallFunction -> IO CallFunctionResult,
+    scriptCallFunction :: CallFunction -> IO EvaluateResult,
     scriptDisown :: Disown -> IO Object,
     scriptEvaluate :: Evaluate -> IO EvaluateResult,
     scriptEvaluateNoWait :: Evaluate -> IO (),

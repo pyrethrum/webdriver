@@ -14,6 +14,7 @@ module WebDriverPreCore.BiDi.Script
     MappingLocalValue (..),
     MapLocalValue (..),
     ObjectLocalValue (..),
+    IncludeShadowTree (..),
     RegExpValue (..),
     RegExpLocalValue (..),
     SetLocalValue (..),
@@ -30,7 +31,6 @@ module WebDriverPreCore.BiDi.Script
 
     -- * ScriptResult
     AddPreloadScriptResult (..),
-    CallFunctionResult (..),
     GetRealmsResult (..),
     RealmInfo (..),
     BaseRealmInfo (..),
@@ -57,7 +57,6 @@ where
 import Control.Applicative ((<|>))
 import Data.Aeson (FromJSON (..), ToJSON (..), Value (..), defaultOptions, genericToJSON, object, withObject, (.:), (.:?), (.=))
 import Data.Aeson.Types (Pair, Parser, omitNothingFields)
-import Data.Function ((&))
 import Data.Map.Strict qualified as Map
 import Data.Maybe (catMaybes)
 import Data.Text (Text, unpack)
@@ -70,7 +69,7 @@ import WebDriverPreCore.BiDi.CoreTypes
     JSUInt,
     NodeRemoteValue (..),
   )
-import WebDriverPreCore.Internal.AesonUtils (jsonToText, opt, enumCamelCase)
+import WebDriverPreCore.Internal.AesonUtils (jsonToText, opt)
 import Prelude (Applicative (..), Bool (..), Double, Either (..), Eq (..), Maybe (..), MonadFail (..), Semigroup (..), Show (..), Traversable (..), mapM, realToFrac, ($), (.), (<$>))
 
 -- ######### REMOTE #########
@@ -78,7 +77,7 @@ import Prelude (Applicative (..), Bool (..), Double, Either (..), Eq (..), Maybe
 -- AddPreloadScript command
 data AddPreloadScript = MkAddPreloadScript
   { functionDeclaration :: Text,
-    arguments :: Maybe [RemoteValue],
+    arguments :: Maybe [ChannelValue],
     contexts :: Maybe [BrowsingContext],
     sandbox :: Maybe Text
   }
@@ -446,7 +445,7 @@ instance ToJSON RealmType where
     AudioWorkletRealm -> "audio-worklet"
     WorkletRealm -> "worklet"
 
-data SerializationOptions = SerializationOptions
+data SerializationOptions = MkSerializationOptions
   { maxDomDepth :: Maybe (Maybe JSUInt), -- .default 0
     maxObjectDepth :: Maybe (Maybe JSUInt), -- .default null
     includeShadowTree :: Maybe IncludeShadowTree -- "none", "open", "all" .default "none"
@@ -555,13 +554,6 @@ instance ToJSON PreloadScript
 
 newtype AddPreloadScriptResult = MkAddPreloadScriptResult
   { script :: PreloadScript
-  }
-  deriving (Show, Eq, Generic)
-
-data CallFunctionResult = MkCallFunctionResult
-  { result :: RemoteValue,
-    realm :: Realm,
-    stackTrace :: Maybe StackTrace
   }
   deriving (Show, Eq, Generic)
 
@@ -704,6 +696,8 @@ instance ToJSON Disown
 
 instance ToJSON RemovePreloadScript
 
+{-
+-- TODO :: REMOVE IF NOT NEEDED
 -- Remote Value types - simplified to avoid orphan instances
 instance ToJSON RemoteValue where
   toJSON :: RemoteValue -> Value
@@ -768,6 +762,12 @@ instance ToJSON RemoteValue where
           <> catMaybes
             [ opt "handle" handle,
               opt "value" value
+            ]
+    WeakSetValue {handle} ->
+      object $
+        ["type" .= "weakset"]
+          <> catMaybes
+            [ opt "handle" handle
             ]
     WeakMapValue {handle} ->
       object $
@@ -834,7 +834,7 @@ instance ToJSON RemoteValue where
           <> catMaybes
             [ opt "handle" handle
             ]
-
+-}
 instance ToJSON PrimitiveProtocolValue where
   toJSON = \case
     UndefinedValue -> object ["type" .= "undefined"]
@@ -935,7 +935,6 @@ instance ToJSON SetLocalValue where
 
 instance ToJSON AddPreloadScriptResult
 
-instance ToJSON CallFunctionResult
 
 instance ToJSON GetRealmsResult
 
@@ -985,48 +984,10 @@ instance ToJSON RealmInfo where
 
 instance ToJSON BaseRealmInfo
 
-instance ToJSON EvaluateResult where
-  toJSON :: EvaluateResult -> Value
-  toJSON = \case
-    EvaluateResultSuccess {result, realm} ->
-      object
-        [ "type" .= "success",
-          "result" .= result,
-          "realm" .= realm
-        ]
-    EvaluateResultException {exceptionDetails, realm} ->
-      object
-        [ "type" .= "exception",
-          "exceptionDetails" .= exceptionDetails,
-          "realm" .= realm
-        ]
-
-instance ToJSON ExceptionDetails
 
 instance ToJSON StackTrace
 
 instance ToJSON StackFrame
-
--- Event types
-instance ToJSON ScriptEvent where
-  toJSON = \case
-    MessageEvent {params} ->
-      object
-        [ "method" .= "script.message",
-          "params" .= params
-        ]
-    RealmCreatedEvent realmInfo ->
-      object
-        [ "method" .= "script.realmCreated",
-          "params" .= realmInfo
-        ]
-    RealmDestroyed realm ->
-      object
-        [ "method" .= "script.realmDestroyed",
-          "params" .= object ["realm" .= realm]
-        ]
-
-instance ToJSON Message
 
 instance ToJSON Source
 
@@ -1048,8 +1009,6 @@ instance FromJSON PrimitiveProtocolValue
 
 -- Complex result types
 instance FromJSON AddPreloadScriptResult
-
-instance FromJSON CallFunctionResult
 
 instance FromJSON GetRealmsResult
 
