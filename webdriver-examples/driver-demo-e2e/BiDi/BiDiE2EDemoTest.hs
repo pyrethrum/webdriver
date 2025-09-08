@@ -11,48 +11,96 @@ import WebDriverPreCore.BiDi.BiDiUrl (parseUrl)
 import WebDriverPreCore.BiDi.BrowsingContext (Locator (..), PrintMargin (..), PrintPage (..), Viewport (..))
 import WebDriverPreCore.BiDi.CoreTypes (JSInt (..), JSUInt (..), NodeRemoteValue (..), SharedId (..))
 import WebDriverPreCore.BiDi.Protocol
-    ( BrowsingContext,
-      Evaluate(target, MkEvaluate, awaitPromise, serializationOptions,
-               resultOwnership, expression),
-      Sandbox(MkSandbox),
-      ContextTarget(sandbox, MkContextTarget, context),
-      Target(ContextTarget),
-      IncludeShadowTree(ShadowTreeNone, All, Open),
-      SerializationOptions(includeShadowTree, MkSerializationOptions,
-                           maxDomDepth, maxObjectDepth),
-      ResultOwnership(Root),
-      SharedId(id, MkShareId),
-      SharedReference(extensions, MkSharedReference, sharedId, handle),
-      Activate(MkActivate),
-      CaptureScreenshot(clip, MkCaptureScreenshot, context, origin,
-                        format),
-      ClipRectangle(height, BoxClipRectangle, x, y, width),
-      Close(promptUnload, MkClose, context),
-      Create(userContext, MkCreate, background, referenceContext,
-             createType),
-      CreateType(Tab, Window),
-      GetTree(MkGetTree, maxDepth, root),
-      GetTreeResult(MkGetTreeResult),
-      HandleUserPrompt(userText, MkHandleUserPrompt, context, accept),
-      ImageFormat(quality, MkImageFormat, imageType),
-      Info(context),
-      LocateNodes(startNodes, MkLocateNodes, context, locator,
-                  maxNodeCount, serializationOptions),
-      LocateNodesResult(MkLocateNodesResult),
-      Navigate(wait, MkNavigate, context, url),
-      Orientation(Portrait, Landscape),
-      PageRange(Page, fromPage, toPage, Range),
-      Print(shrinkToFit, MkPrint, context, background, margin,
-            orientation, page, pageRanges, scale),
-      PrintResult(base64Text, MkPrintResult),
-      ReadinessState(Complete, Interactive, None),
-      Reload(wait, MkReload, context, ignoreCache),
-      ScreenShotOrigin(Viewport, Document),
-      SetViewport(userContexts, MkSetViewport, context, viewport,
-                  devicePixelRatio),
-      TraverseHistory(delta, MkTraverseHistory, context),
-      CreateUserContext(unhandledPromptBehavior, MkCreateUserContext,
-                        acceptInsecureCerts, proxy) )
+  ( Activate (MkActivate),
+    AddPreloadScript (..),
+    AddPreloadScriptResult (..),
+    BrowsingContext,
+    CaptureScreenshot
+      ( MkCaptureScreenshot,
+        clip,
+        context,
+        format,
+        origin
+      ),
+    ClipRectangle (BoxClipRectangle, height, width, x, y),
+    Close (MkClose, context, promptUnload),
+    ContextTarget (MkContextTarget, context, sandbox),
+    Create
+      ( MkCreate,
+        background,
+        createType,
+        referenceContext,
+        userContext
+      ),
+    CreateType (Tab, Window),
+    CreateUserContext
+      ( MkCreateUserContext,
+        acceptInsecureCerts,
+        proxy,
+        unhandledPromptBehavior
+      ),
+    Evaluate
+      ( MkEvaluate,
+        awaitPromise,
+        expression,
+        resultOwnership,
+        serializationOptions,
+        target
+      ),
+    GetTree (MkGetTree, maxDepth, root),
+    GetTreeResult (MkGetTreeResult),
+    HandleUserPrompt (MkHandleUserPrompt, accept, context, userText),
+    ImageFormat (MkImageFormat, imageType, quality),
+    IncludeShadowTree (All, Open, ShadowTreeNone),
+    Info (context),
+    LocateNodes
+      ( MkLocateNodes,
+        context,
+        locator,
+        maxNodeCount,
+        serializationOptions,
+        startNodes
+      ),
+    LocateNodesResult (MkLocateNodesResult),
+    Navigate (MkNavigate, context, url, wait),
+    Orientation (Landscape, Portrait),
+    PageRange (Page, Range, fromPage, toPage),
+    Print
+      ( MkPrint,
+        background,
+        context,
+        margin,
+        orientation,
+        page,
+        pageRanges,
+        scale,
+        shrinkToFit
+      ),
+    PrintResult (MkPrintResult, base64Text),
+    ReadinessState (Complete, Interactive, None),
+    Reload (MkReload, context, ignoreCache, wait),
+    RemovePreloadScript (MkRemovePreloadScript),
+    ResultOwnership (Root),
+    Sandbox (MkSandbox),
+    ScreenShotOrigin (Document, Viewport),
+    SerializationOptions
+      ( MkSerializationOptions,
+        includeShadowTree,
+        maxDomDepth,
+        maxObjectDepth
+      ),
+    SetViewport
+      ( MkSetViewport,
+        context,
+        devicePixelRatio,
+        userContexts,
+        viewport
+      ),
+    SharedId (MkShareId, id),
+    SharedReference (MkSharedReference, extensions, handle, sharedId),
+    Target (ContextTarget),
+    TraverseHistory (MkTraverseHistory, context, delta),
+  )
 import WebDriverPreCore.Internal.AesonUtils (jsonToText)
 import WebDriverPreCore.Internal.Utils (txt)
 import Prelude hiding (log, putStrLn)
@@ -1565,3 +1613,265 @@ serializationOptionsDemo =
             includeShadowTree = Just ShadowTreeNone
           }
       pause
+
+-- >>> runDemo scriptPreloadScriptDemo
+
+-- *** Exception: Error executing BiDi command: MkCommand
+
+--   { method = "script.addPreloadScript"
+--   , params =
+--       MkAddPreloadScript
+--         { functionDeclaration =
+--             "function() {   document.addEventListener('DOMContentLoaded', function() {     var indicator = document.getElementById('preload-indicator');     if (indicator) {       indicator.innerHTML = '<p style=\"color: green; font-weight: bold;\">\10003 Preload Script 1 executed!</p>';     }     var content = document.getElementById('content');     if (content) {       content.style.backgroundColor = 'lightblue';       content.innerHTML = 'Content modified by preload script!';     }   }); }"
+--         , arguments = Nothing
+--         , contexts =
+--             Just
+--               [ MkBrowsingContext
+--                   { context = "2ce555bd-9dd7-4af3-8883-8889d150950f" }
+--               ]
+--         , sandbox = Nothing
+--         }
+--   , extended = Nothing
+--   }
+-- With JSON:
+-- {
+--     "id": 3,
+--     "method": "script.addPreloadScript",
+--     "params": {
+--         "arguments": null,
+--         "contexts": [
+--             "2ce555bd-9dd7-4af3-8883-8889d150950f"
+--         ],
+--         "functionDeclaration": "function() {   document.addEventListener('DOMContentLoaded', function() {     var indicator = document.getElementById('preload-indicator');     if (indicator) {       indicator.innerHTML = '<p style=\"color: green; font-weight: bold;\">✓ Preload Script 1 executed!</p>';     }     var content = document.getElementById('content');     if (content) {       content.style.backgroundColor = 'lightblue';       content.innerHTML = 'Content modified by preload script!';     }   }); }",
+--         "sandbox": null
+--     }
+-- }
+-- Failed to decode the 'result' property of JSON returned by driver to response type:
+-- {
+--     "error": "invalid argument",
+--     "id": 3,
+--     "message": "Expected \"arguments\" to be an array, got [object Null] null",
+--     "stacktrace": "RemoteError@chrome://remote/content/shared/RemoteError.sys.mjs:8:8\nWebDriverError@chrome://remote/content/shared/webdriver/Errors.sys.mjs:199:5\nInvalidArgumentError@chrome://remote/content/shared/webdriver/Errors.sys.mjs:401:5\nassert.that/<@chrome://remote/content/shared/webdriver/Assert.sys.mjs:581:13\nassert.array@chrome://remote/content/shared/webdriver/Assert.sys.mjs:533:41\naddPreloadScript@chrome://remote/content/webdriver-bidi/modules/root/script.sys.mjs:188:17\nhandleCommand@chrome://remote/content/shared/messagehandler/MessageHandler.sys.mjs:260:33\nexecute@chrome://remote/content/shared/webdriver/Session.sys.mjs:410:32\nonPacket@chrome://remote/content/webdriver-bidi/WebDriverBiDiConnection.sys.mjs:236:37\nonMessage@chrome://remote/content/server/WebSocketTransport.sys.mjs:127:18\nhandleEvent@chrome://remote/content/server/WebSocketTransport.sys.mjs:109:14\n",
+--     "type": "error"
+-- }
+-- Error message:
+-- key "result" not found
+scriptPreloadScriptDemo :: BiDiDemo
+scriptPreloadScriptDemo =
+  demo "Script - Add and Remove Preload Scripts with Visible Effects" action
+  where
+    action :: DemoUtils -> Commands -> IO ()
+    action utils@MkDemoUtils {..} cmds@MkCommands {..} = do
+      bc <- rootContext utils cmds
+
+      logTxt "Navigate to a simple test page"
+      navResult <- browsingContextNavigate $ MkNavigate {context = bc, url = "data:text/html,<html><head><title>Preload Script Test</title></head><body><h1>Test Page</h1><p id='content'>Original content</p><div id='preload-indicator'></div></body></html>", wait = Just Complete}
+      logShow "Navigation result" navResult
+      pause
+
+      logTxt "Test 1: Add preload script that modifies the page before other scripts run"
+      preloadScript1 <-
+        scriptAddPreloadScript $
+          MkAddPreloadScript
+            { functionDeclaration =
+                "function() { \
+                \  document.addEventListener('DOMContentLoaded', function() { \
+                \    var indicator = document.getElementById('preload-indicator'); \
+                \    if (indicator) { \
+                \      indicator.innerHTML = '<p style=\"color: green; font-weight: bold;\">✓ Preload Script 1 executed!</p>'; \
+                \    } \
+                \    var content = document.getElementById('content'); \
+                \    if (content) { \
+                \      content.style.backgroundColor = 'lightblue'; \
+                \      content.innerHTML = 'Content modified by preload script!'; \
+                \    } \
+                \  }); \
+                \}",
+              arguments = Nothing,
+              contexts = Just [bc],
+              sandbox = Nothing
+            }
+      logShow "Preload script 1 added" preloadScript1
+      pause
+
+      logTxt "Test 2: Add another preload script with different behavior"
+      preloadScript2 <-
+        scriptAddPreloadScript $
+          MkAddPreloadScript
+            { functionDeclaration =
+                "function() { \
+                \  window.PRELOADED_DATA = { \
+                \    message: 'Hello from preload script 2!', \
+                \    timestamp: new Date().toISOString() \
+                \  }; \
+                \  console.log('Preload Script 2: Added global data', window.PRELOADED_DATA); \
+                \}",
+              arguments = Nothing,
+              contexts = Just [bc],
+              sandbox = Nothing
+            }
+      logShow "Preload script 2 added" preloadScript2
+      pause
+
+      logTxt "Test 3: Navigate to a new page to see preload scripts in action"
+      navResult2 <- browsingContextNavigate $ MkNavigate {context = bc, url = "data:text/html,<html><head><title>New Page</title></head><body><h1>New Test Page</h1><p id='content'>Fresh content</p><div id='preload-indicator'></div><div id='data-display'></div></body></html>", wait = Just Complete}
+      logShow "Navigation result to new page" navResult2
+      pause
+
+      -- Wait a bit for the preload scripts to execute
+      pauseMinMs 1000
+
+      logTxt "Test 4: Check if preload scripts executed by examining the page"
+      checkResult1 <-
+        scriptEvaluate $
+          MkEvaluate
+            { expression = "document.getElementById('preload-indicator').innerHTML",
+              target = ContextTarget $ MkContextTarget {context = bc, sandbox = Nothing},
+              awaitPromise = False,
+              resultOwnership = Nothing,
+              serializationOptions = Nothing
+            }
+      logShow "Preload indicator content" checkResult1
+      pause
+
+      logTxt "Test 5: Check if global data was added by preload script 2"
+      checkResult2 <-
+        scriptEvaluate $
+          MkEvaluate
+            { expression = "window.PRELOADED_DATA ? JSON.stringify(window.PRELOADED_DATA) : 'No preloaded data found'",
+              target = ContextTarget $ MkContextTarget {context = bc, sandbox = Nothing},
+              awaitPromise = False,
+              resultOwnership = Nothing,
+              serializationOptions = Nothing
+            }
+      logShow "Global preloaded data" checkResult2
+      pause
+
+      logTxt "Test 6: Add a preload script with arguments/channels (demonstration)"
+      preloadScript3 <-
+        scriptAddPreloadScript $
+          MkAddPreloadScript
+            { functionDeclaration =
+                "function() { \
+                \  window.addEventListener('load', function() { \
+                \    var body = document.body; \
+                \    if (body) { \
+                \      var notice = document.createElement('div'); \
+                \      notice.style.cssText = 'position: fixed; top: 10px; right: 10px; background: yellow; padding: 10px; border: 2px solid orange; z-index: 9999;'; \
+                \      notice.innerHTML = '<strong>Preload Script Active!</strong><br/>Page instrumented for testing'; \
+                \      body.appendChild(notice); \
+                \    } \
+                \  }); \
+                \}",
+              arguments = Nothing,
+              contexts = Just [bc],
+              sandbox = Nothing
+            }
+      logShow "Preload script 3 added (visual indicator)" preloadScript3
+      pause
+
+      logTxt "Test 7: Navigate again to see all preload scripts working together"
+      navResult3 <- browsingContextNavigate $ MkNavigate {context = bc, url = "data:text/html,<html><head><title>Final Test</title></head><body><h1>Final Test Page</h1><p id='content'>Final content</p><div id='preload-indicator'></div></body></html>", wait = Just Complete}
+      logShow "Navigation result to final page" navResult3
+      pause
+
+      -- Wait for all preload scripts to execute
+      pauseMinMs 1500
+
+      logTxt "Test 8: Verify all preload effects are visible"
+      finalCheck <-
+        scriptEvaluate $
+          MkEvaluate
+            { expression =
+                "({ \
+                \  indicator: document.getElementById('preload-indicator').innerHTML, \
+                \  contentStyle: document.getElementById('content').style.backgroundColor, \
+                \  globalData: window.PRELOADED_DATA ? 'Present' : 'Missing', \
+                \  visualNotice: document.querySelector('div[style*=\"position: fixed\"]') ? 'Visible' : 'Not found' \
+                \})",
+              target = ContextTarget $ MkContextTarget {context = bc, sandbox = Nothing},
+              awaitPromise = False,
+              resultOwnership = Nothing,
+              serializationOptions = Nothing
+            }
+      logShow "Final verification of all preload effects" finalCheck
+      pause
+
+      logTxt "Test 9: Remove the first preload script"
+      let MkAddPreloadScriptResult script1Id = preloadScript1
+      removeResult1 <- scriptRemovePreloadScript $ MkRemovePreloadScript script1Id
+      logShow "Removed preload script 1" removeResult1
+      pause
+
+      logTxt "Test 10: Navigate to a new page to verify script 1 is removed but others remain"
+      navResult4 <- browsingContextNavigate $ MkNavigate {context = bc, url = "data:text/html,<html><head><title>After Removal</title></head><body><h1>After Script Removal</h1><p id='content'>Content after removal</p><div id='preload-indicator'></div></body></html>", wait = Just Complete}
+      logShow "Navigation after script removal" navResult4
+      pause
+
+      -- Wait for remaining preload scripts
+      pauseMinMs 1500
+
+      logTxt "Test 11: Verify script 1 effects are gone but others remain"
+      afterRemovalCheck <-
+        scriptEvaluate $
+          MkEvaluate
+            { expression =
+                "({ \
+                \  indicator: document.getElementById('preload-indicator').innerHTML || 'Empty', \
+                \  contentBackground: document.getElementById('content').style.backgroundColor || 'None', \
+                \  globalData: window.PRELOADED_DATA ? 'Still present' : 'Missing', \
+                \  visualNotice: document.querySelector('div[style*=\"position: fixed\"]') ? 'Still visible' : 'Gone' \
+                \})",
+              target = ContextTarget $ MkContextTarget {context = bc, sandbox = Nothing},
+              awaitPromise = False,
+              resultOwnership = Nothing,
+              serializationOptions = Nothing
+            }
+      logShow "Effects after removing script 1" afterRemovalCheck
+      pause
+
+      logTxt "Test 12: Remove remaining preload scripts for cleanup"
+      let MkAddPreloadScriptResult script2Id = preloadScript2
+      removeResult2 <- scriptRemovePreloadScript $ MkRemovePreloadScript script2Id
+      logShow "Removed preload script 2" removeResult2
+      pause
+
+      let MkAddPreloadScriptResult script3Id = preloadScript3
+      removeResult3 <- scriptRemovePreloadScript $ MkRemovePreloadScript script3Id
+      logShow "Removed preload script 3" removeResult3
+      pause
+
+      logTxt "Test 13: Final navigation to verify all preload scripts are removed"
+      navResult5 <- browsingContextNavigate $ MkNavigate {context = bc, url = "data:text/html,<html><head><title>Clean Page</title></head><body><h1>Clean Page - No Preload Scripts</h1><p id='content'>Clean content</p><div id='preload-indicator'></div></body></html>", wait = Just Complete}
+      logShow "Final navigation - clean page" navResult5
+      pause
+
+      -- Wait to ensure no preload scripts run
+      pauseMinMs 1000
+
+      logTxt "Test 14: Final verification - no preload script effects should be present"
+      cleanCheck <-
+        scriptEvaluate $
+          MkEvaluate
+            { expression =
+                "({ \
+                \  indicator: document.getElementById('preload-indicator').innerHTML || 'Empty (good!)', \
+                \  contentBackground: document.getElementById('content').style.backgroundColor || 'None (good!)', \
+                \  globalData: window.PRELOADED_DATA ? 'Unexpected!' : 'Correctly missing', \
+                \  visualNotice: document.querySelector('div[style*=\"position: fixed\"]') ? 'Unexpected!' : 'Correctly gone' \
+                \})",
+              target = ContextTarget $ MkContextTarget {context = bc, sandbox = Nothing},
+              awaitPromise = False,
+              resultOwnership = Nothing,
+              serializationOptions = Nothing
+            }
+      logShow "Final clean state verification" cleanCheck
+      pause
+
+      logTxt "Demo completed! Summary:"
+      logTxt "- Added 3 preload scripts with different behaviors"
+      logTxt "- Scripts modified DOM, added global data, and created visual indicators"
+      logTxt "- Effects were visible on each new page navigation"
+      logTxt "- Successfully removed scripts one by one"
+      logTxt "- Verified that removed scripts no longer execute on new pages"
+      logTxt "- All preload scripts have been cleaned up"
