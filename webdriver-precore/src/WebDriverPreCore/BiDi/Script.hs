@@ -69,7 +69,7 @@ import WebDriverPreCore.BiDi.CoreTypes
     JSUInt,
     NodeRemoteValue (..),
   )
-import WebDriverPreCore.Internal.AesonUtils (jsonToText, opt)
+import WebDriverPreCore.Internal.AesonUtils (jsonToText, opt, toJSONOmitNothing)
 import Prelude (Applicative (..), Bool (..), Double, Either (..), Eq (..), Maybe (..), MonadFail (..), Semigroup (..), Show (..), Traversable (..), mapM, realToFrac, ($), (.), (<$>))
 
 -- ######### REMOTE #########
@@ -675,7 +675,9 @@ data ChannelProperties = MkChannelProperties
 
 -- Simple newtypes
 -- ToJSON instances for missing command types
-instance ToJSON AddPreloadScript
+instance ToJSON AddPreloadScript where 
+  toJSON :: AddPreloadScript -> Value
+  toJSON = toJSONOmitNothing
 
 instance ToJSON CallFunction
 

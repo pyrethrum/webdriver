@@ -61,7 +61,7 @@ import WebDriverPreCore.BiDi.Protocol
         serializationOptions,
         startNodes
       ),
-    LocateNodesResult (MkLocateNodesResult),
+    LocateNodesResult (MkLocateNodesResult), 
     Navigate (MkNavigate, context, url, wait),
     Orientation (Landscape, Portrait),
     PageRange (Page, Range, fromPage, toPage),
@@ -157,7 +157,7 @@ newWindowContext MkDemoUtils {..} MkCommands {..} = do
 
 closeContext :: DemoUtils -> Commands -> BrowsingContext -> IO ()
 closeContext MkDemoUtils {..} MkCommands {..} bc = do
-  logTxt "Close browsing context"
+  logTxt "Close browsing context"3_000
   co <- browsingContextClose $ MkClose {context = bc, promptUnload = Nothing}
   logShow "Close result" co
   pause
@@ -1615,47 +1615,6 @@ serializationOptionsDemo =
       pause
 
 -- >>> runDemo scriptPreloadScriptDemo
-
--- *** Exception: Error executing BiDi command: MkCommand
-
---   { method = "script.addPreloadScript"
---   , params =
---       MkAddPreloadScript
---         { functionDeclaration =
---             "function() {   document.addEventListener('DOMContentLoaded', function() {     var indicator = document.getElementById('preload-indicator');     if (indicator) {       indicator.innerHTML = '<p style=\"color: green; font-weight: bold;\">\10003 Preload Script 1 executed!</p>';     }     var content = document.getElementById('content');     if (content) {       content.style.backgroundColor = 'lightblue';       content.innerHTML = 'Content modified by preload script!';     }   }); }"
---         , arguments = Nothing
---         , contexts =
---             Just
---               [ MkBrowsingContext
---                   { context = "2ce555bd-9dd7-4af3-8883-8889d150950f" }
---               ]
---         , sandbox = Nothing
---         }
---   , extended = Nothing
---   }
--- With JSON:
--- {
---     "id": 3,
---     "method": "script.addPreloadScript",
---     "params": {
---         "arguments": null,
---         "contexts": [
---             "2ce555bd-9dd7-4af3-8883-8889d150950f"
---         ],
---         "functionDeclaration": "function() {   document.addEventListener('DOMContentLoaded', function() {     var indicator = document.getElementById('preload-indicator');     if (indicator) {       indicator.innerHTML = '<p style=\"color: green; font-weight: bold;\">✓ Preload Script 1 executed!</p>';     }     var content = document.getElementById('content');     if (content) {       content.style.backgroundColor = 'lightblue';       content.innerHTML = 'Content modified by preload script!';     }   }); }",
---         "sandbox": null
---     }
--- }
--- Failed to decode the 'result' property of JSON returned by driver to response type:
--- {
---     "error": "invalid argument",
---     "id": 3,
---     "message": "Expected \"arguments\" to be an array, got [object Null] null",
---     "stacktrace": "RemoteError@chrome://remote/content/shared/RemoteError.sys.mjs:8:8\nWebDriverError@chrome://remote/content/shared/webdriver/Errors.sys.mjs:199:5\nInvalidArgumentError@chrome://remote/content/shared/webdriver/Errors.sys.mjs:401:5\nassert.that/<@chrome://remote/content/shared/webdriver/Assert.sys.mjs:581:13\nassert.array@chrome://remote/content/shared/webdriver/Assert.sys.mjs:533:41\naddPreloadScript@chrome://remote/content/webdriver-bidi/modules/root/script.sys.mjs:188:17\nhandleCommand@chrome://remote/content/shared/messagehandler/MessageHandler.sys.mjs:260:33\nexecute@chrome://remote/content/shared/webdriver/Session.sys.mjs:410:32\nonPacket@chrome://remote/content/webdriver-bidi/WebDriverBiDiConnection.sys.mjs:236:37\nonMessage@chrome://remote/content/server/WebSocketTransport.sys.mjs:127:18\nhandleEvent@chrome://remote/content/server/WebSocketTransport.sys.mjs:109:14\n",
---     "type": "error"
--- }
--- Error message:
--- key "result" not found
 scriptPreloadScriptDemo :: BiDiDemo
 scriptPreloadScriptDemo =
   demo "Script - Add and Remove Preload Scripts with Visible Effects" action
@@ -1867,11 +1826,3 @@ scriptPreloadScriptDemo =
             }
       logShow "Final clean state verification" cleanCheck
       pause
-
-      logTxt "Demo completed! Summary:"
-      logTxt "- Added 3 preload scripts with different behaviors"
-      logTxt "- Scripts modified DOM, added global data, and created visual indicators"
-      logTxt "- Effects were visible on each new page navigation"
-      logTxt "- Successfully removed scripts one by one"
-      logTxt "- Verified that removed scripts no longer execute on new pages"
-      logTxt "- All preload scripts have been cleaned up"
