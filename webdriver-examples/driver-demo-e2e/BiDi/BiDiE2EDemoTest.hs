@@ -3,13 +3,15 @@ module BiDi.BiDiE2EDemoTest where
 -- custom import needed to disambiguate capabilities
 
 import BiDi.BiDiRunner (Commands (..), mkDemoBiDiClientParams, mkFailBidiClientParams, withCommands)
+import Control.Exception (Exception, throwIO)
 import Data.Aeson (ToJSON (..), Value (Null), object, (.=))
-import Data.Text (Text)
+import Data.Text (Text, isInfixOf)
 import Data.Word (Word64)
 import IOUtils (DemoUtils (..))
 import WebDriverPreCore.BiDi.BiDiUrl (parseUrl)
 import WebDriverPreCore.BiDi.BrowsingContext (Locator (..), PrintMargin (..), PrintPage (..), Viewport (..))
 import WebDriverPreCore.BiDi.CoreTypes (JSInt (..), JSUInt (..), NodeRemoteValue (..), SharedId (..))
+import WebDriverPreCore.BiDi.Script (EvaluateResult (..), PrimitiveProtocolValue (..), RemoteValue (..))
 import WebDriverPreCore.BiDi.Protocol
   ( Activate (MkActivate),
     AddPreloadScript (..),
@@ -47,6 +49,7 @@ import WebDriverPreCore.BiDi.Protocol
         serializationOptions,
         target
       ),
+
     GetTree (MkGetTree, maxDepth, root),
     GetTreeResult (MkGetTreeResult),
     HandleUserPrompt (MkHandleUserPrompt, accept, context, userText),
@@ -157,7 +160,7 @@ newWindowContext MkDemoUtils {..} MkCommands {..} = do
 
 closeContext :: DemoUtils -> Commands -> BrowsingContext -> IO ()
 closeContext MkDemoUtils {..} MkCommands {..} bc = do
-  logTxt "Close browsing context"3_000
+  logTxt "Close browsing context"
   co <- browsingContextClose $ MkClose {context = bc, promptUnload = Nothing}
   logShow "Close result" co
   pause
@@ -170,6 +173,48 @@ rootContext MkDemoUtils {..} MkCommands {..} = do
   case tree of
     MkGetTreeResult (info : _) -> pure $ info.context
     _ -> error "No browsing contexts found"
+
+-- | Custom exception for text validation failures
+data TextValidationError = TextValidationError
+  { expectedText :: Text,
+    actualText :: Text
+  }
+  deriving (Show)
+
+instance Exception TextValidationError
+
+-- | Check if expected text is present in DOM, throw error if not found
+chkText :: DemoUtils -> Commands -> BrowsingContext -> Text -> IO ()
+chkText MkDemoUtils {..} MkCommands {..} bc expectedText = do
+  logTxt $ "Checking DOM contains: " <> expectedText
+  
+  -- Get the full DOM text content
+  domResult <- scriptEvaluate $ 
+    MkEvaluate
+      { expression = "document.body ? document.body.innerText || document.body.textContent || '' : ''",
+        target = ContextTarget $ MkContextTarget {context = bc, sandbox = Nothing},
+        awaitPromise = False,
+        resultOwnership = Nothing,
+        serializationOptions = Nothing
+      }
+  
+  case domResult of
+    EvaluateResultSuccess {result = PrimitiveValue (StringValue actualText)} -> do
+      if expectedText `isInfixOf` actualText
+        then logTxt $ "✓ Found expected text: " <> expectedText
+        else do
+          logTxt $ "✗ Expected text not found!"
+          logTxt $ "Expected: " <> expectedText
+          logTxt $ "Actual DOM text: " <> actualText
+          throwIO $ TextValidationError {expectedText, actualText}
+    
+    EvaluateResultSuccess {result = otherResult} -> do
+      logShow "Unexpected result type" otherResult
+      throwIO $ TextValidationError {expectedText, actualText = "Non-string result"}
+    
+    EvaluateResultException {exceptionDetails} -> do
+      logShow "Script evaluation failed" exceptionDetails
+      throwIO $ TextValidationError {expectedText, actualText = "Script evaluation failed"}
 
 -- TODO: Session find out about newSession Firefox threads
 
@@ -1617,11 +1662,12 @@ serializationOptionsDemo =
 -- >>> runDemo scriptPreloadScriptDemo
 scriptPreloadScriptDemo :: BiDiDemo
 scriptPreloadScriptDemo =
-  demo "Script - Add and Remove Preload Scripts with Visible Effects" action
+  demo "Script - Add and Remove Preload Scripts" action
   where
     action :: DemoUtils -> Commands -> IO ()
     action utils@MkDemoUtils {..} cmds@MkCommands {..} = do
       bc <- rootContext utils cmds
+      let chkDOM = chkText utils cmds bc
 
       logTxt "Navigate to a simple test page"
       navResult <- browsingContextNavigate $ MkNavigate {context = bc, url = "data:text/html,<html><head><title>Preload Script Test</title></head><body><h1>Test Page</h1><p id='content'>Original content</p><div id='preload-indicator'></div></body></html>", wait = Just Complete}
@@ -1680,30 +1726,28 @@ scriptPreloadScriptDemo =
       -- Wait a bit for the preload scripts to execute
       pauseMinMs 1000
 
-      logTxt "Test 4: Check if preload scripts executed by examining the page"
-      checkResult1 <-
-        scriptEvaluate $
-          MkEvaluate
-            { expression = "document.getElementById('preload-indicator').innerHTML",
-              target = ContextTarget $ MkContextTarget {context = bc, sandbox = Nothing},
-              awaitPromise = False,
-              resultOwnership = Nothing,
-              serializationOptions = Nothing
-            }
-      logShow "Preload indicator content" checkResult1
+      logTxt "Test 4: Check if preload script 1 executed (DOM modifications)"
+      chkDOM "✓ Preload Script 1 executed!"
+      chkDOM "Content modified by preload script!"
       pause
 
-      logTxt "Test 5: Check if global data was added by preload script 2"
-      checkResult2 <-
-        scriptEvaluate $
-          MkEvaluate
-            { expression = "window.PRELOADED_DATA ? JSON.stringify(window.PRELOADED_DATA) : 'No preloaded data found'",
-              target = ContextTarget $ MkContextTarget {context = bc, sandbox = Nothing},
-              awaitPromise = False,
-              resultOwnership = Nothing,
-              serializationOptions = Nothing
-            }
-      logShow "Global preloaded data" checkResult2
+      logTxt "Test 5: Check if preload script 2 executed (global data creation)"
+      -- Check if global data was added by evaluating a script that outputs to DOM
+      scriptEvaluateNoWait $
+        MkEvaluate
+          { expression = "if (window.PRELOADED_DATA) { \
+                         \  document.body.innerHTML += '<div id=\"global-data-check\">Global data present: ' + JSON.stringify(window.PRELOADED_DATA) + '</div>'; \
+                         \} else { \
+                         \  document.body.innerHTML += '<div id=\"global-data-check\">No global data found</div>'; \
+                         \}",
+            target = ContextTarget $ MkContextTarget {context = bc, sandbox = Nothing},
+            awaitPromise = False,
+            resultOwnership = Nothing,
+            serializationOptions = Nothing
+          }
+      pauseMinMs 500
+      chkDOM "Global data present:"
+      chkDOM "Hello from preload script 2!"
       pause
 
       logTxt "Test 6: Add a preload script with arguments/channels (demonstration)"
@@ -1738,22 +1782,26 @@ scriptPreloadScriptDemo =
       pauseMinMs 1500
 
       logTxt "Test 8: Verify all preload effects are visible"
-      finalCheck <-
-        scriptEvaluate $
-          MkEvaluate
-            { expression =
-                "({ \
-                \  indicator: document.getElementById('preload-indicator').innerHTML, \
-                \  contentStyle: document.getElementById('content').style.backgroundColor, \
-                \  globalData: window.PRELOADED_DATA ? 'Present' : 'Missing', \
-                \  visualNotice: document.querySelector('div[style*=\"position: fixed\"]') ? 'Visible' : 'Not found' \
-                \})",
-              target = ContextTarget $ MkContextTarget {context = bc, sandbox = Nothing},
-              awaitPromise = False,
-              resultOwnership = Nothing,
-              serializationOptions = Nothing
-            }
-      logShow "Final verification of all preload effects" finalCheck
+      chkDOM "✓ Preload Script 1 executed!"
+      chkDOM "Content modified by preload script!"
+
+      -- Check if the visual notice from script 3 is present
+      chkDOM "Preload Script Active!"
+      chkDOM "Page instrumented for testing"
+
+      -- Verify global data is still present
+      scriptEvaluateNoWait $
+        MkEvaluate
+          { expression = "if (window.PRELOADED_DATA) { \
+                         \  document.body.innerHTML += '<div>Final check: Global data confirmed</div>'; \
+                         \}",
+            target = ContextTarget $ MkContextTarget {context = bc, sandbox = Nothing},
+            awaitPromise = False,
+            resultOwnership = Nothing,
+            serializationOptions = Nothing
+          }
+      pauseMinMs 500
+      chkDOM "Final check: Global data confirmed"
       pause
 
       logTxt "Test 9: Remove the first preload script"
@@ -1771,22 +1819,27 @@ scriptPreloadScriptDemo =
       pauseMinMs 1500
 
       logTxt "Test 11: Verify script 1 effects are gone but others remain"
-      afterRemovalCheck <-
-        scriptEvaluate $
-          MkEvaluate
-            { expression =
-                "({ \
-                \  indicator: document.getElementById('preload-indicator').innerHTML || 'Empty', \
-                \  contentBackground: document.getElementById('content').style.backgroundColor || 'None', \
-                \  globalData: window.PRELOADED_DATA ? 'Still present' : 'Missing', \
-                \  visualNotice: document.querySelector('div[style*=\"position: fixed\"]') ? 'Still visible' : 'Gone' \
-                \})",
-              target = ContextTarget $ MkContextTarget {context = bc, sandbox = Nothing},
-              awaitPromise = False,
-              resultOwnership = Nothing,
-              serializationOptions = Nothing
-            }
-      logShow "Effects after removing script 1" afterRemovalCheck
+      -- Script 1 effects should be gone (no DOM modifications)
+      -- But we can't easily check for absence, so let's check what should still be there
+      
+      -- Script 2 global data should still be present
+      scriptEvaluateNoWait $
+        MkEvaluate
+          { expression = "if (window.PRELOADED_DATA) { \
+                         \  document.body.innerHTML += '<div>Script 2 data still present</div>'; \
+                         \} else { \
+                         \  document.body.innerHTML += '<div>Script 2 data missing</div>'; \
+                         \}",
+            target = ContextTarget $ MkContextTarget {context = bc, sandbox = Nothing},
+            awaitPromise = False,
+            resultOwnership = Nothing,
+            serializationOptions = Nothing
+          }
+      pauseMinMs 500
+      chkDOM "Script 2 data still present"
+      
+      -- Script 3 visual notice should still be visible
+      chkDOM "Preload Script Active!"
       pause
 
       logTxt "Test 12: Remove remaining preload scripts for cleanup"
@@ -1809,20 +1862,19 @@ scriptPreloadScriptDemo =
       pauseMinMs 1000
 
       logTxt "Test 14: Final verification - no preload script effects should be present"
-      cleanCheck <-
-        scriptEvaluate $
-          MkEvaluate
-            { expression =
-                "({ \
-                \  indicator: document.getElementById('preload-indicator').innerHTML || 'Empty (good!)', \
-                \  contentBackground: document.getElementById('content').style.backgroundColor || 'None (good!)', \
-                \  globalData: window.PRELOADED_DATA ? 'Unexpected!' : 'Correctly missing', \
-                \  visualNotice: document.querySelector('div[style*=\"position: fixed\"]') ? 'Unexpected!' : 'Correctly gone' \
-                \})",
-              target = ContextTarget $ MkContextTarget {context = bc, sandbox = Nothing},
-              awaitPromise = False,
-              resultOwnership = Nothing,
-              serializationOptions = Nothing
-            }
-      logShow "Final clean state verification" cleanCheck
+      -- Add a marker to verify the page is clean and no preload scripts ran
+      scriptEvaluateNoWait $
+        MkEvaluate
+          { expression = "if (!window.PRELOADED_DATA && !document.querySelector('div[style*=\"position: fixed\"]')) { \
+                         \  document.body.innerHTML += '<div>Clean state confirmed: No preload effects</div>'; \
+                         \} else { \
+                         \  document.body.innerHTML += '<div>Warning: Unexpected preload effects detected</div>'; \
+                         \}",
+            target = ContextTarget $ MkContextTarget {context = bc, sandbox = Nothing},
+            awaitPromise = False,
+            resultOwnership = Nothing,
+            serializationOptions = Nothing
+          }
+      pauseMinMs 500
+      chkDOM "Clean state confirmed: No preload effects"
       pause
