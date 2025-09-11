@@ -1660,8 +1660,10 @@ serializationOptionsDemo =
 -- >>> runDemo scriptPreloadScriptDemo
 scriptPreloadScriptDemo :: BiDiDemo
 scriptPreloadScriptDemo =
-  -- TODO: add  ? userContexts: [+browser.UserContext],
-  demo "Script I - Comprehensive MkAddPreloadScript Properties Demo" action
+  -- • functionDeclaration property - basic JavaScript function execution
+  -- • contexts property - targeting specific browsing contexts vs all contexts
+  -- • sandbox property - script isolation and sandboxing
+  demo "Script I - Basic Preload Script Properties" action
   where
     action :: DemoUtils -> Commands -> IO ()
     action utils@MkDemoUtils {..} cmds@MkCommands {..} = do
@@ -1672,7 +1674,6 @@ scriptPreloadScriptDemo =
       navResult <- browsingContextNavigate $ MkNavigate {context = bc, url = "data:text/html,<html><head><title>Preload Script Test</title></head><body><h1>Test Page</h1><p id='content'>Original content</p><div id='preload-indicator'></div></body></html>", wait = Just Complete}
       logShow "Navigation result" navResult
       pause
-
 
       logTxt "Test 1: Basic preload script with functionDeclaration and contexts"
       preloadScript1 <-
@@ -1721,7 +1722,7 @@ scriptPreloadScriptDemo =
       logShow "Sandboxed preload script added" preloadScriptSandbox
       pause
 
-      logTxt "Test 4: Preload script with all contexts (global scope)"
+      logTxt "Test 3: Preload script with all contexts (global scope)"
       preloadScript2 <-
         scriptAddPreloadScript $
           MkAddPreloadScript
@@ -1740,7 +1741,7 @@ scriptPreloadScriptDemo =
       logShow "Global preload script added" preloadScript2
       pause
 
-      logTxt "Test 5: Navigate to a new page to see all preload scripts in action"
+      logTxt "Test 4: Navigate to a new page to see all preload scripts in action"
       navResult2 <-
         browsingContextNavigate $
           MkNavigate
@@ -1754,17 +1755,17 @@ scriptPreloadScriptDemo =
       -- Wait a bit for the preload scripts to execute
       pauseMinMs 3_000
 
-      logTxt "Test 6: Check if basic preload script executed (DOM modifications)"
+      logTxt "Test 5: Check if basic preload script executed (DOM modifications)"
       chkDOM "✓ Basic Preload Script executed!"
       chkDOM "Content modified by basic preload script!"
       pause
 
-      logTxt "Test 7: Check if sandboxed script executed (isolated execution)"
+      logTxt "Test 6: Check if sandboxed script executed (isolated execution)"
       chkDOM "Sandboxed Script:"
       chkDOM "Executed in isolated environment"
       pause
 
-      logTxt "Test 9: Check if global preload script executed (all contexts)"
+      logTxt "Test 7: Check if global preload script executed (all contexts)"
       -- Check if global data was added by evaluating a script that outputs to DOM
       scriptEvaluateNoWait $
         MkEvaluate
@@ -1784,7 +1785,7 @@ scriptPreloadScriptDemo =
       chkDOM "Hello from global preload script!"
       pause
 
-      logTxt "Test 10: Verify sandbox isolation by checking if sandboxed variables are isolated"
+      logTxt "Test 8: Verify sandbox isolation by checking if sandboxed variables are isolated"
       scriptEvaluateNoWait $
         MkEvaluate
           { expression =
@@ -1803,10 +1804,23 @@ scriptPreloadScriptDemo =
       chkDOM "✓ Sandbox isolation confirmed"
       pause
 
-      logTxt "Test 11: Create a new browsing context to test multiple contexts behavior"
+-- >>> runDemo scriptPreloadScriptMultiContextDemo
+scriptPreloadScriptMultiContextDemo :: BiDiDemo
+scriptPreloadScriptMultiContextDemo =
+  -- • contexts property - multiple browsing context management and targeting
+  -- • scriptRemovePreloadScript - selective script removal and cleanup
+  -- • Cross-context script behavior and isolation verification
+  demo "Script II - Multi-Context and Cleanup" action
+  where
+    action :: DemoUtils -> Commands -> IO ()
+    action utils@MkDemoUtils {..} cmds@MkCommands {..} = do
+      bc <- rootContext utils cmds
+      let chkDOM = chkText utils cmds bc
+
+      logTxt "Create a new browsing context to test multiple contexts behavior"
       newContext <- newWindowContext utils cmds
 
-      logTxt "Test 12: Add a preload script specific to the new context only"
+      logTxt "Add a preload script specific to the new context only"
       preloadScriptNewContext <-
         scriptAddPreloadScript $
           MkAddPreloadScript
@@ -1829,8 +1843,25 @@ scriptPreloadScriptDemo =
       logShow "Context-specific preload script added" preloadScriptNewContext
       pause
 
-      logTxt "Test 13: Navigate to new context to see context-specific script behavior"
-      -- Navigate both contexts to observe differences
+      logTxt "Add a global preload script for comparison"
+      globalScript <-
+        scriptAddPreloadScript $
+          MkAddPreloadScript
+            { functionDeclaration =
+                "function() { \
+                \  window.GLOBAL_PRELOAD_DATA = { \
+                \    message: 'Global script active', \
+                \    timestamp: new Date().toISOString() \
+                \  }; \
+                \}",
+              arguments = Nothing,
+              contexts = Nothing, -- Apply to all contexts
+              sandbox = Nothing
+            }
+      logShow "Global preload script added" globalScript
+      pause
+
+      logTxt "Navigate both contexts to see context-specific script behavior"
       navResult3 <- browsingContextNavigate $ MkNavigate {context = bc, url = "data:text/html,<html><head><title>Original Context</title></head><body><h1>Original Context Page</h1><p id='content'>Original context content</p><div id='preload-indicator'></div></body></html>", wait = Just Complete}
       logShow "Navigation result - original context" navResult3
       pause
@@ -1842,14 +1873,11 @@ scriptPreloadScriptDemo =
       -- Wait for all preload scripts to execute
       pauseMinMs 1500
 
-      logTxt "Test 14: Verify original context has basic, sandboxed, channel, and global scripts"
-      chkDOM "✓ Basic Preload Script executed!"
-      chkDOM "Sandboxed Script:"
-
+      logTxt "Verify original context has only global script (no context-specific script)"
       scriptEvaluateNoWait $
         MkEvaluate
           { expression =
-              "if (window.PRELOADED_DATA) { \
+              "if (window.GLOBAL_PRELOAD_DATA) { \
               \  document.body.innerHTML += '<div>Original context global data confirmed</div>'; \
               \}",
             target = ContextTarget $ MkContextTarget {context = bc, sandbox = Nothing},
@@ -1861,7 +1889,7 @@ scriptPreloadScriptDemo =
       chkDOM "Original context global data confirmed"
       pause
 
-      logTxt "Test 15: Check new context has only global and context-specific scripts"
+      logTxt "Check new context has both global and context-specific scripts"
       -- Switch to new context for validation
       browsingContextActivate $ MkActivate newContext
       pauseMinMs 500
@@ -1870,7 +1898,7 @@ scriptPreloadScriptDemo =
       scriptEvaluateNoWait $
         MkEvaluate
           { expression =
-              "if (window.PRELOADED_DATA) { \
+              "if (window.GLOBAL_PRELOAD_DATA) { \
               \  document.body.innerHTML += '<div>New context has global data</div>'; \
               \} else { \
               \  document.body.innerHTML += '<div>New context missing global data</div>'; \
@@ -1908,31 +1936,29 @@ scriptPreloadScriptDemo =
         _ -> logTxt "Could not read new context DOM content"
       pause
 
-      logTxt "Test 16: Remove basic preload script and test selective removal"
-      let MkAddPreloadScriptResult script1Id = preloadScript1
-      removeResult1 <- scriptRemovePreloadScript $ MkRemovePreloadScript script1Id
-      logShow "Removed basic preload script" removeResult1
+      logTxt "Test selective script removal - Remove context-specific script"
+      let MkAddPreloadScriptResult scriptNewContextId = preloadScriptNewContext
+      removeResultNewContext <- scriptRemovePreloadScript $ MkRemovePreloadScript scriptNewContextId
+      logShow "Removed new context preload script" removeResultNewContext
       pause
 
-      logTxt "Test 17: Navigate original context to verify basic script removed but others remain"
+      logTxt "Navigate original context to verify global script still works"
       browsingContextActivate $ MkActivate bc
       pauseMinMs 500
 
-      navResult4 <- browsingContextNavigate $ MkNavigate {context = bc, url = "data:text/html,<html><head><title>After Basic Removal</title></head><body><h1>After Basic Script Removal</h1><p id='content'>Content after basic removal</p><div id='preload-indicator'></div></body></html>", wait = Just Complete}
-      logShow "Navigation after basic script removal" navResult4
+      navResult4 <- browsingContextNavigate $ MkNavigate {context = bc, url = "data:text/html,<html><head><title>After Context Removal</title></head><body><h1>After Context Script Removal</h1><p id='content'>Content after context removal</p><div id='preload-indicator'></div></body></html>", wait = Just Complete}
+      logShow "Navigation after context script removal" navResult4
       pause
 
       -- Wait for remaining preload scripts
       pauseMinMs 1500
 
-      logTxt "Test 18: Verify sandboxed, channel, and global scripts still work"
-      chkDOM "Sandboxed Script:"
-
+      logTxt "Verify global script still works after context-specific removal"
       scriptEvaluateNoWait $
         MkEvaluate
           { expression =
-              "if (window.PRELOADED_DATA) { \
-              \  document.body.innerHTML += '<div>Global script still active after basic removal</div>'; \
+              "if (window.GLOBAL_PRELOAD_DATA) { \
+              \  document.body.innerHTML += '<div>Global script still active after context removal</div>'; \
               \}",
             target = ContextTarget $ MkContextTarget {context = bc, sandbox = Nothing},
             awaitPromise = False,
@@ -1940,26 +1966,16 @@ scriptPreloadScriptDemo =
             serializationOptions = Nothing
           }
       pauseMinMs 500
-      chkDOM "Global script still active after basic removal"
+      chkDOM "Global script still active after context removal"
       pause
 
-      logTxt "Test 19: Remove all remaining preload scripts for complete cleanup"
-      let MkAddPreloadScriptResult script2Id = preloadScript2
-      removeResult2 <- scriptRemovePreloadScript $ MkRemovePreloadScript script2Id
-      logShow "Removed global preload script" removeResult2
+      logTxt "Remove global preload script for complete cleanup"
+      let MkAddPreloadScriptResult globalScriptId = globalScript
+      removeResultGlobal <- scriptRemovePreloadScript $ MkRemovePreloadScript globalScriptId
+      logShow "Removed global preload script" removeResultGlobal
       pause
 
-      let MkAddPreloadScriptResult scriptSandboxId = preloadScriptSandbox
-      removeResultSandbox <- scriptRemovePreloadScript $ MkRemovePreloadScript scriptSandboxId
-      logShow "Removed sandbox preload script" removeResultSandbox
-      pause
-
-      let MkAddPreloadScriptResult scriptNewContextId = preloadScriptNewContext
-      removeResultNewContext <- scriptRemovePreloadScript $ MkRemovePreloadScript scriptNewContextId
-      logShow "Removed new context preload script" removeResultNewContext
-      pause
-
-      logTxt "Test 20: Final navigation to verify complete cleanup"
+      logTxt "Final navigation to verify complete cleanup"
       navResult5 <- browsingContextNavigate $ MkNavigate {context = bc, url = "data:text/html,<html><head><title>Clean Page</title></head><body><h1>Clean Page - No Preload Scripts</h1><p id='content'>Clean content</p><div id='preload-indicator'></div></body></html>", wait = Just Complete}
       logShow "Final navigation - clean page" navResult5
       pause
@@ -1967,11 +1983,11 @@ scriptPreloadScriptDemo =
       -- Wait to ensure no preload scripts run
       pauseMinMs 1000
 
-      logTxt "Test 21: Final verification - no preload script effects should be present"
+      logTxt "Final verification - no preload script effects should be present"
       scriptEvaluateNoWait $
         MkEvaluate
           { expression =
-              "if (!window.PRELOADED_DATA && !document.querySelector('div[style*=\"position: fixed\"]') && !document.querySelector('#sandbox-notice') && !document.querySelector('#channel-info')) { \
+              "if (!window.GLOBAL_PRELOAD_DATA && !document.querySelector('div[style*=\"position: fixed\"]') && !document.querySelector('#sandbox-notice')) { \
               \  document.body.innerHTML += '<div>✓ Complete cleanup confirmed: No preload effects</div>'; \
               \} else { \
               \  document.body.innerHTML += '<div>⚠ Warning: Some preload effects still detected</div>'; \
@@ -1985,7 +2001,7 @@ scriptPreloadScriptDemo =
       chkDOM "✓ Complete cleanup confirmed: No preload effects"
       pause
 
-      logTxt "Test 22: Cleanup - close the new context"
+      logTxt "Cleanup - close the new context"
       closeContext utils cmds newContext
 
 -- >>> runDemo scriptChannelArgumentDemo
