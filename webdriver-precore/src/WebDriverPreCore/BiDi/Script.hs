@@ -67,7 +67,7 @@ import WebDriverPreCore.BiDi.CoreTypes
     Handle,
     InternalId (..),
     JSUInt,
-    NodeRemoteValue (..),
+    NodeRemoteValue (..), UserContext,
   )
 import WebDriverPreCore.Internal.AesonUtils (jsonToText, opt, toJSONOmitNothing)
 import Prelude (Applicative (..), Bool (..), Double, Either (..), Eq (..), Maybe (..), MonadFail (..), Semigroup (..), Show (..), Traversable (..), mapM, realToFrac, ($), (.), (<$>))
@@ -79,6 +79,7 @@ data AddPreloadScript = MkAddPreloadScript
   { functionDeclaration :: Text,
     arguments :: Maybe [ChannelValue],
     contexts :: Maybe [BrowsingContext],
+    userContexts :: Maybe [UserContext],
     sandbox :: Maybe Text
   }
   deriving (Show, Eq, Generic)

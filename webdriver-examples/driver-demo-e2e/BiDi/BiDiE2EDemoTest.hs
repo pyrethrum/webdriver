@@ -82,6 +82,7 @@ import WebDriverPreCore.BiDi.Protocol
     ReadinessState (Complete, Interactive, None),
     Reload (MkReload, context, ignoreCache, wait),
     RemovePreloadScript (MkRemovePreloadScript),
+    RemoveUserContext (MkRemoveUserContext),
     ResultOwnership (Root),
     Sandbox (MkSandbox),
     ScreenShotOrigin (Document, Viewport),
@@ -104,7 +105,6 @@ import WebDriverPreCore.BiDi.Protocol
     TraverseHistory (MkTraverseHistory, context, delta),
   )
 import WebDriverPreCore.BiDi.Script (Channel (..), ChannelProperties (..), ChannelValue (..), EvaluateResult (..), PrimitiveProtocolValue (..), RemoteValue (..))
-import WebDriverPreCore.Http (HttpSpec (Post))
 import WebDriverPreCore.Internal.AesonUtils (jsonToText)
 import WebDriverPreCore.Internal.Utils (txt)
 import Prelude hiding (log, putStrLn)
@@ -273,12 +273,12 @@ chkDomContains = chkDomContains' 10_000 100
 12. browsingContextTraverseHistory :: DONE
 
 ##### Script #####
-1. scriptAddPreloadScript,
+1. scriptAddPreloadScript :: DONE
 2. scriptCallFunction,
 3. scriptDisown,
 4. scriptEvaluate :: DONE
 5. scriptGetRealms,
-6. scriptRemovePreloadScript
+6. scriptRemovePreloadScript :: DONE
 
 -- TODO when using script - get browsingContextGetTree with originalOpener
   -- list not supported yet in geckodriver
@@ -368,7 +368,7 @@ browsingContextCreateActivateCloseDemo =
           bcParams
             { createType = Window,
               userContext = Just uc
-            }
+            }:: DONE
       logShow "Browsing context - Window with user context" bcWinWithUC
       pause
 
@@ -1734,6 +1734,7 @@ scriptPreloadScriptDemo =
                 \  }); \
                 \}",
               arguments = Nothing,
+              userContexts = Nothing,
               contexts = Just [bc],
               sandbox = Nothing
             }
@@ -1756,6 +1757,7 @@ scriptPreloadScriptDemo =
                 \  }); \
                 \}",
               arguments = Nothing,
+              userContexts = Nothing,
               contexts = Just [bc],
               sandbox = Just "isolated-sandbox"
             }
@@ -1775,6 +1777,7 @@ scriptPreloadScriptDemo =
                 \  console.log('Global Preload Script: Added global data', window.PRELOADED_DATA); \
                 \}",
               arguments = Nothing,
+              userContexts = Nothing,
               contexts = Nothing, -- Apply to all contexts
               sandbox = Nothing
             }
@@ -1874,6 +1877,7 @@ scriptPreloadScriptMultiContextDemo =
                 \  }); \
                 \}",
               arguments = Nothing,
+              userContexts = Nothing,
               contexts = Just [newContext], -- Only apply to new context
               sandbox = Nothing
             }
@@ -1892,6 +1896,7 @@ scriptPreloadScriptMultiContextDemo =
                 \  }; \
                 \}",
               arguments = Nothing,
+              userContexts = Nothing,
               contexts = Nothing, -- Apply to all contexts
               sandbox = Nothing
             }
@@ -2088,6 +2093,7 @@ scriptChannelArgumentDemo =
                 \}",
               arguments = Just [channelValue],
               contexts = Just [bc],
+              userContexts = Nothing,
               sandbox = Nothing
             }
       logShow "Preload script with channel added" preloadScriptWithChannel
@@ -2132,4 +2138,407 @@ scriptChannelArgumentDemo =
             then logTxt "⚠ Warning: Channel script effects still present after removal"
             else logTxt "✓ Confirmed: Clean state - no channel script effects"
         _ -> logTxt "Could not verify clean state"
+      pause
+
+-- >>> runDemo scriptUserContextsDemo
+scriptUserContextsDemo :: BiDiDemo
+scriptUserContextsDemo =
+  demo "Script IV - UserContexts Property Exclusive Demo" action
+  where
+    action :: DemoUtils -> Commands -> IO ()
+    action utils@MkDemoUtils {..} cmds@MkCommands {..} = do
+      bc <- rootContext utils cmds
+
+      logTxt "Creating multiple user contexts to demonstrate userContexts property"
+      
+      logTxt "Create User Context 1 - isolated environment"
+      userContext1 <-
+        browserCreateUserContext
+          MkCreateUserContext
+            { acceptInsecureCerts = Just True,
+              proxy = Nothing,
+              unhandledPromptBehavior = Nothing
+            }
+      logShow "User Context 1 created" userContext1
+      pause
+
+      logTxt "Create User Context 2 - different configuration"
+      userContext2 <-
+        browserCreateUserContext
+          MkCreateUserContext
+            { acceptInsecureCerts = Just False,
+              proxy = Nothing,
+              unhandledPromptBehavior = Nothing
+            }
+      logShow "User Context 2 created" userContext2
+      pause
+
+      logTxt "Create User Context 3 - additional isolation"
+      userContext3 <-
+        browserCreateUserContext
+          MkCreateUserContext
+            { acceptInsecureCerts = Nothing,
+              proxy = Nothing,
+              unhandledPromptBehavior = Nothing
+            }
+      logShow "User Context 3 created" userContext3
+      pause
+
+      logTxt "Get all existing user contexts to verify creation"
+      allUserContexts <- browserGetUserContexts
+      logShow "All user contexts available" allUserContexts
+      pause
+
+      logTxt "Test 1: Add preload script targeting specific user contexts only"
+      preloadScriptSpecificUsers <-
+        scriptAddPreloadScript $
+          MkAddPreloadScript
+            { functionDeclaration =
+                "function() { \
+                \  window.USER_CONTEXT_SPECIFIC_DATA = { \
+                \    message: 'This script targets specific user contexts only!', \
+                \    timestamp: new Date().toISOString(), \
+                \    source: 'userContexts-specific-script' \
+                \  }; \
+                \  document.addEventListener('DOMContentLoaded', function() { \
+                \    var indicator = document.createElement('div'); \
+                \    indicator.id = 'user-context-indicator'; \
+                \    indicator.style.cssText = 'background: purple; color: white; padding: 15px; margin: 10px; border: 3px solid indigo; border-radius: 5px;'; \
+                \    indicator.innerHTML = '<strong>✓ UserContexts Script Active!</strong><br/>Targeting specific user contexts: [UC1, UC2]'; \
+                \    document.body.appendChild(indicator); \
+                \  }); \
+                \}",
+              arguments = Nothing,
+              contexts = Nothing, -- Apply to all browsing contexts
+              userContexts = Just [userContext1, userContext2], -- Only these user contexts
+              sandbox = Nothing
+            }
+      logShow "UserContexts-specific preload script added" preloadScriptSpecificUsers
+      pause
+
+      logTxt "Test 2: Add preload script with no userContexts restriction (global)"
+      preloadScriptGlobal <-
+        scriptAddPreloadScript $
+          MkAddPreloadScript
+            { functionDeclaration =
+                "function() { \
+                \  window.GLOBAL_USER_CONTEXT_DATA = { \
+                \    message: 'Global script - all user contexts', \
+                \    timestamp: new Date().toISOString() \
+                \  }; \
+                \  document.addEventListener('DOMContentLoaded', function() { \
+                \    var indicator = document.createElement('div'); \
+                \    indicator.id = 'global-indicator'; \
+                \    indicator.style.cssText = 'background: gray; color: white; padding: 10px; margin: 5px; border: 2px solid black;'; \
+                \    indicator.innerHTML = '<strong>Global Script Active</strong><br/>No userContexts restriction'; \
+                \    document.body.appendChild(indicator); \
+                \  }); \
+                \}",
+              arguments = Nothing,
+              contexts = Nothing,
+              userContexts = Nothing, -- Apply to all user contexts
+              sandbox = Nothing
+            }
+      logShow "Global (no userContexts restriction) preload script added" preloadScriptGlobal
+      pause
+
+      logTxt "Test 3: Add preload script targeting only UserContext3"
+      preloadScriptSingleUser <-
+        scriptAddPreloadScript $
+          MkAddPreloadScript
+            { functionDeclaration =
+                "function() { \
+                \  window.SINGLE_USER_CONTEXT_DATA = { \
+                \    message: 'Single user context script - UC3 only!', \
+                \    userContext: 'UC3', \
+                \    timestamp: new Date().toISOString() \
+                \  }; \
+                \  document.addEventListener('DOMContentLoaded', function() { \
+                \    var indicator = document.createElement('div'); \
+                \    indicator.id = 'single-user-indicator'; \
+                \    indicator.style.cssText = 'background: orange; color: black; padding: 12px; margin: 8px; border: 2px solid darkorange; font-weight: bold;'; \
+                \    indicator.innerHTML = '<strong>✓ Single UserContext Script!</strong><br/>Only UserContext3 targeted'; \
+                \    document.body.appendChild(indicator); \
+                \  }); \
+                \}",
+              arguments = Nothing,
+              contexts = Nothing,
+              userContexts = Just [userContext3], -- Only userContext3
+              sandbox = Nothing
+            }
+      logShow "Single UserContext (UC3) preload script added" preloadScriptSingleUser
+      pause
+
+      logTxt "Create browsing contexts in different user contexts to test script targeting"
+      
+      logTxt "Create browsing context in UserContext1"
+      bcUserContext1 <-
+        browsingContextCreate $
+          MkCreate
+            { createType = Tab,
+              background = False,
+              referenceContext = Nothing,
+              userContext = Just userContext1
+            }
+      logShow "Browsing context in UserContext1" bcUserContext1
+      pause
+
+      logTxt "Create browsing context in UserContext2"
+      bcUserContext2 <-
+        browsingContextCreate $
+          MkCreate
+            { createType = Tab,
+              background = False,
+              referenceContext = Nothing,
+              userContext = Just userContext2
+            }
+      logShow "Browsing context in UserContext2" bcUserContext2
+      pause
+
+      logTxt "Create browsing context in UserContext3"
+      bcUserContext3 <-
+        browsingContextCreate $
+          MkCreate
+            { createType = Tab,
+              background = False,
+              referenceContext = Nothing,
+              userContext = Just userContext3
+            }
+      logShow "Browsing context in UserContext3" bcUserContext3
+      pause
+
+      logTxt "Test script execution in UserContext1 - should have specific AND global scripts"
+      browsingContextActivate $ MkActivate bcUserContext1
+      pauseMinMs 500
+      
+      navResultUC1 <- browsingContextNavigate $ MkNavigate {context = bcUserContext1, url = "data:text/html,<html><head><title>UserContext1 Test</title></head><body><h1>UserContext1 Page</h1><div id='content'>Testing UserContext1</div></body></html>", wait = Just Complete}
+      logShow "Navigation in UserContext1" navResultUC1
+      pauseMinMs 1500 -- Wait for preload scripts
+
+      logTxt "Verify UserContext1 has both global and specific scripts"
+      scriptEvaluateNoWait $
+        MkEvaluate
+          { expression =
+              "var results = []; \
+              \if (window.GLOBAL_USER_CONTEXT_DATA) results.push('Global script active'); \
+              \if (window.USER_CONTEXT_SPECIFIC_DATA) results.push('Specific script active'); \
+              \if (window.SINGLE_USER_CONTEXT_DATA) results.push('Single script active'); \
+              \document.body.innerHTML += '<div id=\"uc1-results\">UC1 Results: ' + results.join(', ') + '</div>';",
+            target = ContextTarget $ MkContextTarget {context = bcUserContext1, sandbox = Nothing},
+            awaitPromise = False,
+            resultOwnership = Nothing,
+            serializationOptions = Nothing
+          }
+      
+      -- Check UserContext1 content
+      domContentUC1 <-
+        scriptEvaluate $
+          MkEvaluate
+            { expression = "document.body ? document.body.innerText || document.body.textContent || '' : ''",
+              target = ContextTarget $ MkContextTarget {context = bcUserContext1, sandbox = Nothing},
+              awaitPromise = False,
+              resultOwnership = Nothing,
+              serializationOptions = Nothing
+            }
+
+      case domContentUC1 of
+        EvaluateResultSuccess {result = PrimitiveValue (StringValue uc1Text)} -> do
+          logTxt $ "UserContext1 content: " <> uc1Text
+          if "Specific script active" `isInfixOf` uc1Text
+            then logTxt "✓ UserContext1: Specific userContexts script executed"
+            else logTxt "✗ UserContext1: Missing specific userContexts script"
+          if "Global script active" `isInfixOf` uc1Text
+            then logTxt "✓ UserContext1: Global script executed"
+            else logTxt "✗ UserContext1: Missing global script"
+          if "Single script active" `isInfixOf` uc1Text
+            then logTxt "✗ UserContext1: Unexpected single UC3 script execution"
+            else logTxt "✓ UserContext1: Correctly excluded single UC3 script"
+        _ -> logTxt "Could not read UserContext1 content"
+      pause
+
+      logTxt "Test script execution in UserContext2 - should have specific AND global scripts"
+      browsingContextActivate $ MkActivate bcUserContext2
+      pauseMinMs 500
+      
+      navResultUC2 <- browsingContextNavigate $ MkNavigate {context = bcUserContext2, url = "data:text/html,<html><head><title>UserContext2 Test</title></head><body><h1>UserContext2 Page</h1><div id='content'>Testing UserContext2</div></body></html>", wait = Just Complete}
+      logShow "Navigation in UserContext2" navResultUC2
+      pauseMinMs 1500 -- Wait for preload scripts
+
+      logTxt "Verify UserContext2 has both global and specific scripts"
+      scriptEvaluateNoWait $
+        MkEvaluate
+          { expression =
+              "var results = []; \
+              \if (window.GLOBAL_USER_CONTEXT_DATA) results.push('Global script active'); \
+              \if (window.USER_CONTEXT_SPECIFIC_DATA) results.push('Specific script active'); \
+              \if (window.SINGLE_USER_CONTEXT_DATA) results.push('Single script active'); \
+              \document.body.innerHTML += '<div id=\"uc2-results\">UC2 Results: ' + results.join(', ') + '</div>';",
+            target = ContextTarget $ MkContextTarget {context = bcUserContext2, sandbox = Nothing},
+            awaitPromise = False,
+            resultOwnership = Nothing,
+            serializationOptions = Nothing
+          }
+      
+      -- Check UserContext2 content
+      domContentUC2 <-
+        scriptEvaluate $
+          MkEvaluate
+            { expression = "document.body ? document.body.innerText || document.body.textContent || '' : ''",
+              target = ContextTarget $ MkContextTarget {context = bcUserContext2, sandbox = Nothing},
+              awaitPromise = False,
+              resultOwnership = Nothing,
+              serializationOptions = Nothing
+            }
+
+      case domContentUC2 of
+        EvaluateResultSuccess {result = PrimitiveValue (StringValue uc2Text)} -> do
+          logTxt $ "UserContext2 content: " <> uc2Text
+          if "Specific script active" `isInfixOf` uc2Text
+            then logTxt "✓ UserContext2: Specific userContexts script executed"
+            else logTxt "✗ UserContext2: Missing specific userContexts script"
+          if "Global script active" `isInfixOf` uc2Text
+            then logTxt "✓ UserContext2: Global script executed"
+            else logTxt "✗ UserContext2: Missing global script"
+          if "Single script active" `isInfixOf` uc2Text
+            then logTxt "✗ UserContext2: Unexpected single UC3 script execution"
+            else logTxt "✓ UserContext2: Correctly excluded single UC3 script"
+        _ -> logTxt "Could not read UserContext2 content"
+      pause
+
+      logTxt "Test script execution in UserContext3 - should have global AND single scripts, NOT specific"
+      browsingContextActivate $ MkActivate bcUserContext3
+      pauseMinMs 500
+      
+      navResultUC3 <- browsingContextNavigate $ MkNavigate {context = bcUserContext3, url = "data:text/html,<html><head><title>UserContext3 Test</title></head><body><h1>UserContext3 Page</h1><div id='content'>Testing UserContext3</div></body></html>", wait = Just Complete}
+      logShow "Navigation in UserContext3" navResultUC3
+      pauseMinMs 1500 -- Wait for preload scripts
+
+      logTxt "Verify UserContext3 has global and single scripts, but NOT specific"
+      scriptEvaluateNoWait $
+        MkEvaluate
+          { expression =
+              "var results = []; \
+              \if (window.GLOBAL_USER_CONTEXT_DATA) results.push('Global script active'); \
+              \if (window.USER_CONTEXT_SPECIFIC_DATA) results.push('Specific script active'); \
+              \if (window.SINGLE_USER_CONTEXT_DATA) results.push('Single script active'); \
+              \document.body.innerHTML += '<div id=\"uc3-results\">UC3 Results: ' + results.join(', ') + '</div>';",
+            target = ContextTarget $ MkContextTarget {context = bcUserContext3, sandbox = Nothing},
+            awaitPromise = False,
+            resultOwnership = Nothing,
+            serializationOptions = Nothing
+          }
+      
+      -- Check UserContext3 content
+      domContentUC3 <-
+        scriptEvaluate $
+          MkEvaluate
+            { expression = "document.body ? document.body.innerText || document.body.textContent || '' : ''",
+              target = ContextTarget $ MkContextTarget {context = bcUserContext3, sandbox = Nothing},
+              awaitPromise = False,
+              resultOwnership = Nothing,
+              serializationOptions = Nothing
+            }
+
+      case domContentUC3 of
+        EvaluateResultSuccess {result = PrimitiveValue (StringValue uc3Text)} -> do
+          logTxt $ "UserContext3 content: " <> uc3Text
+          if "Specific script active" `isInfixOf` uc3Text
+            then logTxt "✗ UserContext3: Unexpected specific userContexts script execution"
+            else logTxt "✓ UserContext3: Correctly excluded specific userContexts script (UC1,UC2 only)"
+          if "Global script active" `isInfixOf` uc3Text
+            then logTxt "✓ UserContext3: Global script executed"
+            else logTxt "✗ UserContext3: Missing global script"
+          if "Single script active" `isInfixOf` uc3Text
+            then logTxt "✓ UserContext3: Single UC3 script executed correctly"
+            else logTxt "✗ UserContext3: Missing single UC3 script"
+        _ -> logTxt "Could not read UserContext3 content"
+      pause
+
+      logTxt "Test original browsing context (default user context) - should only have global script"
+      browsingContextActivate $ MkActivate bc
+      pauseMinMs 500
+      
+      navResultOriginal <- browsingContextNavigate $ MkNavigate {context = bc, url = "data:text/html,<html><head><title>Original Context Test</title></head><body><h1>Original Context Page</h1><div id='content'>Testing Original Default Context</div></body></html>", wait = Just Complete}
+      logShow "Navigation in original context" navResultOriginal
+      pauseMinMs 1500 -- Wait for preload scripts
+
+      logTxt "Verify original context has only global script (no user context restrictions)"
+      scriptEvaluateNoWait $
+        MkEvaluate
+          { expression =
+              "var results = []; \
+              \if (window.GLOBAL_USER_CONTEXT_DATA) results.push('Global script active'); \
+              \if (window.USER_CONTEXT_SPECIFIC_DATA) results.push('Specific script active'); \
+              \if (window.SINGLE_USER_CONTEXT_DATA) results.push('Single script active'); \
+              \document.body.innerHTML += '<div id=\"original-results\">Original Results: ' + results.join(', ') + '</div>';",
+            target = ContextTarget $ MkContextTarget {context = bc, sandbox = Nothing},
+            awaitPromise = False,
+            resultOwnership = Nothing,
+            serializationOptions = Nothing
+          }
+      
+      -- Check original context content
+      domContentOriginal <-
+        scriptEvaluate $
+          MkEvaluate
+            { expression = "document.body ? document.body.innerText || document.body.textContent || '' : ''",
+              target = ContextTarget $ MkContextTarget {context = bc, sandbox = Nothing},
+              awaitPromise = False,
+              resultOwnership = Nothing,
+              serializationOptions = Nothing
+            }
+
+      case domContentOriginal of
+        EvaluateResultSuccess {result = PrimitiveValue (StringValue originalText)} -> do
+          logTxt $ "Original context content: " <> originalText
+          if "Specific script active" `isInfixOf` originalText
+            then logTxt "✗ Original context: Unexpected specific userContexts script execution"
+            else logTxt "✓ Original context: Correctly excluded specific userContexts script"
+          if "Global script active" `isInfixOf` originalText
+            then logTxt "✓ Original context: Global script executed"
+            else logTxt "✗ Original context: Missing global script"
+          if "Single script active" `isInfixOf` originalText
+            then logTxt "✗ Original context: Unexpected single UC3 script execution"
+            else logTxt "✓ Original context: Correctly excluded single UC3 script"
+        _ -> logTxt "Could not read original context content"
+      pause
+
+      logTxt "Summary of userContexts property demonstration:"
+      logTxt "• userContexts = Just [UC1, UC2]: Script executes only in those user contexts"
+      logTxt "• userContexts = Just [UC3]: Script executes only in UC3"
+      logTxt "• userContexts = Nothing: Script executes in all user contexts (global)"
+      logTxt "• Default context behavior: Only receives scripts with userContexts = Nothing"
+      pause
+
+      logTxt "Cleanup - Remove all preload scripts"
+      let MkAddPreloadScriptResult scriptSpecificId = preloadScriptSpecificUsers
+      let MkAddPreloadScriptResult scriptGlobalId = preloadScriptGlobal
+      let MkAddPreloadScriptResult scriptSingleId = preloadScriptSingleUser
+      
+      removeSpecific <- scriptRemovePreloadScript $ MkRemovePreloadScript scriptSpecificId
+      logShow "Removed specific userContexts script" removeSpecific
+      removeGlobal <- scriptRemovePreloadScript $ MkRemovePreloadScript scriptGlobalId
+      logShow "Removed global script" removeGlobal
+      removeSingle <- scriptRemovePreloadScript $ MkRemovePreloadScript scriptSingleId
+      logShow "Removed single userContext script" removeSingle
+      pause
+
+      logTxt "Cleanup - Close user context browsing contexts"
+      closeContext utils cmds bcUserContext1
+      closeContext utils cmds bcUserContext2
+      closeContext utils cmds bcUserContext3
+      pause
+
+      logTxt "Cleanup - Remove user contexts"
+      removeUC1 <- browserRemoveUserContext $ MkRemoveUserContext userContext1
+      logShow "Removed UserContext1" removeUC1
+      removeUC2 <- browserRemoveUserContext $ MkRemoveUserContext userContext2
+      logShow "Removed UserContext2" removeUC2
+      removeUC3 <- browserRemoveUserContext $ MkRemoveUserContext userContext3
+      logShow "Removed UserContext3" removeUC3
+      pause
+
+      logTxt "Final verification - check remaining user contexts"
+      finalUserContexts <- browserGetUserContexts
+      logShow "Remaining user contexts after cleanup" finalUserContexts
       pause
