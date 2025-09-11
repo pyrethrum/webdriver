@@ -3,9 +3,10 @@ module BiDi.BiDiE2EDemoTest where
 -- custom import needed to disambiguate capabilities
 
 import BiDi.BiDiRunner (Commands (..), mkDemoBiDiClientParams, mkFailBidiClientParams, withCommands)
-import Control.Exception (Exception, throwIO)
+import Control.Exception (Exception, catch, throwIO)
 import Data.Aeson (ToJSON (..), Value (Null), object, (.=))
 import Data.Text (Text, isInfixOf)
+import Data.Time.Clock.POSIX (POSIXTime, getPOSIXTime)
 import Data.Word (Word64)
 import IOUtils (DemoUtils (..))
 import WebDriverPreCore.BiDi.BiDiUrl (parseUrl)
@@ -103,6 +104,7 @@ import WebDriverPreCore.BiDi.Protocol
     TraverseHistory (MkTraverseHistory, context, delta),
   )
 import WebDriverPreCore.BiDi.Script (Channel (..), ChannelProperties (..), ChannelValue (..), EvaluateResult (..), PrimitiveProtocolValue (..), RemoteValue (..))
+import WebDriverPreCore.Http (HttpSpec (Post))
 import WebDriverPreCore.Internal.AesonUtils (jsonToText)
 import WebDriverPreCore.Internal.Utils (txt)
 import Prelude hiding (log, putStrLn)
@@ -174,45 +176,83 @@ rootContext MkDemoUtils {..} MkCommands {..} = do
     _ -> error "No browsing contexts found"
 
 -- | Custom exception for text validation failures
-data TextValidationError = TextValidationError
-  { expectedText :: Text,
+data TextValidationError = MkTextValidationError
+  { message :: Text,
+    expectedText :: Text,
     actualText :: Text
   }
   deriving (Show)
 
 instance Exception TextValidationError
 
--- | Check if expected text is present in DOM, throw error if not found
-chkText :: DemoUtils -> Commands -> BrowsingContext -> Text -> IO ()
-chkText MkDemoUtils {..} MkCommands {..} bc expectedText = do
-  logTxt $ "Checking DOM contains: " <> expectedText
+-- | Check if expected text is present in DOM with timeout and retry, throw error if not found
+chkDomContains' :: Int -> Int -> DemoUtils -> Commands -> BrowsingContext -> Text -> IO ()
+chkDomContains' timeoutMs pauseIntervalMs MkDemoUtils {..} MkCommands {..} bc expectedText = do
+  startTime <- getPOSIXTime
+  logTxt $ "Checking DOM contains: " <> expectedText <> " (timeout: " <> txt timeoutMs <> "ms, pause: " <> txt pauseIntervalMs <> "ms)"
+  checkLoop $ startTime + (fromIntegral timeoutMs / 1000.0)
 
-  -- Get the full DOM text content
-  domResult <-
-    scriptEvaluate $
-      MkEvaluate
-        { expression = "document.body ? document.body.innerText || document.body.textContent || '' : ''",
-          target = ContextTarget $ MkContextTarget {context = bc, sandbox = Nothing},
-          awaitPromise = False,
-          resultOwnership = Nothing,
-          serializationOptions = Nothing
-        }
-
-  case domResult of
-    EvaluateResultSuccess {result = PrimitiveValue (StringValue actualText)} -> do
-      if expectedText `isInfixOf` actualText
-        then logTxt $ "✓ Found expected text: " <> expectedText
+  where
+    checkLoop :: POSIXTime -> IO ()
+    checkLoop endTime = do
+      currentTime <- getPOSIXTime
+      if currentTime > endTime
+        then do
+          throwIO $
+            MkTextValidationError
+              { message = "✗ Timeout reached! Expected text not found after " <> txt timeoutMs <> "ms",
+                expectedText,
+                actualText = ""
+              }
         else do
-          logTxt $ "✗ Expected text not found!"
-          logTxt $ "Expected: " <> expectedText
-          logTxt $ "Actual DOM text: " <> actualText
-          throwIO $ TextValidationError {expectedText, actualText}
-    EvaluateResultSuccess {result = otherResult} -> do
-      logShow "Unexpected result type" otherResult
-      throwIO $ TextValidationError {expectedText, actualText = "Non-string result"}
-    EvaluateResultException {exceptionDetails} -> do
-      logShow "Script evaluation failed" exceptionDetails
-      throwIO $ TextValidationError {expectedText, actualText = "Script evaluation failed"}
+          result <-
+            (validateDomText >> pure ()) `catch` \(_ :: TextValidationError) -> do
+              pauseMinMs pauseIntervalMs
+              checkLoop endTime
+          pure result
+
+    validateDomText :: IO ()
+    validateDomText = do
+      -- Get the full DOM text content
+      domResult <-
+        scriptEvaluate $
+          MkEvaluate
+            { expression = "document.body ? document.body.innerText || document.body.textContent || '' : ''",
+              target = ContextTarget $ MkContextTarget {context = bc, sandbox = Nothing},
+              awaitPromise = False,
+              resultOwnership = Nothing,
+              serializationOptions = Nothing
+            }
+
+      case domResult of
+        EvaluateResultSuccess {result = PrimitiveValue (StringValue actualText)} -> do
+          if expectedText `isInfixOf` actualText
+            then logTxt $ "✓ Found expected text: " <> expectedText
+            else do
+              throwIO $
+                MkTextValidationError
+                  { message = "✗ Expected text not in DOM",
+                    expectedText,
+                    actualText
+                  }
+        EvaluateResultSuccess {result = otherResult} -> do
+          throwIO $
+            MkTextValidationError
+              { message = "Unexpected result type: " <> txt otherResult,
+                expectedText,
+                actualText = "Non-string result"
+              }
+        EvaluateResultException {exceptionDetails} -> do
+          throwIO $
+            MkTextValidationError
+              { message = "✗ Script evaluation failed",
+                expectedText,
+                actualText = txt exceptionDetails
+              }
+
+-- | Check if expected text is present in DOM with default timeout and retry settings
+chkDomContains :: DemoUtils -> Commands -> BrowsingContext -> Text -> IO ()
+chkDomContains = chkDomContains' 10_000 100
 
 -- TODO: Session find out about newSession Firefox threads
 
@@ -1668,7 +1708,7 @@ scriptPreloadScriptDemo =
     action :: DemoUtils -> Commands -> IO ()
     action utils@MkDemoUtils {..} cmds@MkCommands {..} = do
       bc <- rootContext utils cmds
-      let chkDOM = chkText utils cmds bc
+      let chkDOM = chkDomContains utils cmds bc
 
       logTxt "Navigate to a simple test page"
       navResult <- browsingContextNavigate $ MkNavigate {context = bc, url = "data:text/html,<html><head><title>Preload Script Test</title></head><body><h1>Test Page</h1><p id='content'>Original content</p><div id='preload-indicator'></div></body></html>", wait = Just Complete}
@@ -1753,7 +1793,6 @@ scriptPreloadScriptDemo =
       pause
 
       -- Wait a bit for the preload scripts to execute
-      pauseMinMs 3_000
 
       logTxt "Test 5: Check if basic preload script executed (DOM modifications)"
       chkDOM "✓ Basic Preload Script executed!"
@@ -1780,7 +1819,6 @@ scriptPreloadScriptDemo =
             resultOwnership = Nothing,
             serializationOptions = Nothing
           }
-      pauseMinMs 500
       chkDOM "Global data present:"
       chkDOM "Hello from global preload script!"
       pause
@@ -1800,7 +1838,6 @@ scriptPreloadScriptDemo =
             resultOwnership = Nothing,
             serializationOptions = Nothing
           }
-      pauseMinMs 500
       chkDOM "✓ Sandbox isolation confirmed"
       pause
 
@@ -1815,7 +1852,7 @@ scriptPreloadScriptMultiContextDemo =
     action :: DemoUtils -> Commands -> IO ()
     action utils@MkDemoUtils {..} cmds@MkCommands {..} = do
       bc <- rootContext utils cmds
-      let chkDOM = chkText utils cmds bc
+      let chkDOM = chkDomContains utils cmds bc
 
       logTxt "Create a new browsing context to test multiple contexts behavior"
       newContext <- newWindowContext utils cmds
@@ -1885,7 +1922,6 @@ scriptPreloadScriptMultiContextDemo =
             resultOwnership = Nothing,
             serializationOptions = Nothing
           }
-      pauseMinMs 500
       chkDOM "Original context global data confirmed"
       pause
 
@@ -1965,7 +2001,6 @@ scriptPreloadScriptMultiContextDemo =
             resultOwnership = Nothing,
             serializationOptions = Nothing
           }
-      pauseMinMs 500
       chkDOM "Global script still active after context removal"
       pause
 
@@ -1997,7 +2032,6 @@ scriptPreloadScriptMultiContextDemo =
             resultOwnership = Nothing,
             serializationOptions = Nothing
           }
-      pauseMinMs 500
       chkDOM "✓ Complete cleanup confirmed: No preload effects"
       pause
 
@@ -2007,12 +2041,12 @@ scriptPreloadScriptMultiContextDemo =
 -- >>> runDemo scriptChannelArgumentDemo
 scriptChannelArgumentDemo :: BiDiDemo
 scriptChannelArgumentDemo =
-  demo "Script - Channel Argument Test" action
+  demo "Script III - Channel Argument Test" action
   where
     action :: DemoUtils -> Commands -> IO ()
     action utils@MkDemoUtils {..} cmds@MkCommands {..} = do
       bc <- rootContext utils cmds
-      let chkDOM = chkText utils cmds bc
+      let chkDOM = chkDomContains utils cmds bc
 
       logTxt "Navigate to a simple test page for channel test"
       navResult <- browsingContextNavigate $ MkNavigate {context = bc, url = "data:text/html,<html><head><title>Channel Test</title></head><body><h1>Channel Test Page</h1><div id='output'></div></body></html>", wait = Just Complete}
@@ -2064,9 +2098,7 @@ scriptChannelArgumentDemo =
       logShow "Navigation result for execution" navResult2
       pause
 
-      -- Wait for preload script to execute
-      pauseMinMs 1000
-
+  
       logTxt "Check if channel argument was received successfully"
       chkDOM "✓ Channel Argument Success"
       chkDOM "Received channel object"
@@ -2083,10 +2115,7 @@ scriptChannelArgumentDemo =
       logShow "Final clean navigation" navResultFinal
       pause
 
-      -- Wait and verify no script effects
-      pauseMinMs 1000
-
-      -- Check DOM is clean (no channel script effects)
+      -- Check DOM is clean (no channel script effects
       domContent <-
         scriptEvaluate $
           MkEvaluate
