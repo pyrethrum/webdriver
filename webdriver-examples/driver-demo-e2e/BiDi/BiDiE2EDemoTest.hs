@@ -11,7 +11,6 @@ import IOUtils (DemoUtils (..))
 import WebDriverPreCore.BiDi.BiDiUrl (parseUrl)
 import WebDriverPreCore.BiDi.BrowsingContext (Locator (..), PrintMargin (..), PrintPage (..), Viewport (..))
 import WebDriverPreCore.BiDi.CoreTypes (JSInt (..), JSUInt (..), NodeRemoteValue (..), SharedId (..))
-import WebDriverPreCore.BiDi.Script (Channel (..), ChannelProperties (..), ChannelValue (..), EvaluateResult (..), PrimitiveProtocolValue (..), RemoteValue (..))
 import WebDriverPreCore.BiDi.Protocol
   ( Activate (MkActivate),
     AddPreloadScript (..),
@@ -49,7 +48,6 @@ import WebDriverPreCore.BiDi.Protocol
         serializationOptions,
         target
       ),
-
     GetTree (MkGetTree, maxDepth, root),
     GetTreeResult (MkGetTreeResult),
     HandleUserPrompt (MkHandleUserPrompt, accept, context, userText),
@@ -64,7 +62,7 @@ import WebDriverPreCore.BiDi.Protocol
         serializationOptions,
         startNodes
       ),
-    LocateNodesResult (MkLocateNodesResult), 
+    LocateNodesResult (MkLocateNodesResult),
     Navigate (MkNavigate, context, url, wait),
     Orientation (Landscape, Portrait),
     PageRange (Page, Range, fromPage, toPage),
@@ -104,6 +102,7 @@ import WebDriverPreCore.BiDi.Protocol
     Target (ContextTarget),
     TraverseHistory (MkTraverseHistory, context, delta),
   )
+import WebDriverPreCore.BiDi.Script (Channel (..), ChannelProperties (..), ChannelValue (..), EvaluateResult (..), PrimitiveProtocolValue (..), RemoteValue (..))
 import WebDriverPreCore.Internal.AesonUtils (jsonToText)
 import WebDriverPreCore.Internal.Utils (txt)
 import Prelude hiding (log, putStrLn)
@@ -187,17 +186,18 @@ instance Exception TextValidationError
 chkText :: DemoUtils -> Commands -> BrowsingContext -> Text -> IO ()
 chkText MkDemoUtils {..} MkCommands {..} bc expectedText = do
   logTxt $ "Checking DOM contains: " <> expectedText
-  
+
   -- Get the full DOM text content
-  domResult <- scriptEvaluate $ 
-    MkEvaluate
-      { expression = "document.body ? document.body.innerText || document.body.textContent || '' : ''",
-        target = ContextTarget $ MkContextTarget {context = bc, sandbox = Nothing},
-        awaitPromise = False,
-        resultOwnership = Nothing,
-        serializationOptions = Nothing
-      }
-  
+  domResult <-
+    scriptEvaluate $
+      MkEvaluate
+        { expression = "document.body ? document.body.innerText || document.body.textContent || '' : ''",
+          target = ContextTarget $ MkContextTarget {context = bc, sandbox = Nothing},
+          awaitPromise = False,
+          resultOwnership = Nothing,
+          serializationOptions = Nothing
+        }
+
   case domResult of
     EvaluateResultSuccess {result = PrimitiveValue (StringValue actualText)} -> do
       if expectedText `isInfixOf` actualText
@@ -207,11 +207,9 @@ chkText MkDemoUtils {..} MkCommands {..} bc expectedText = do
           logTxt $ "Expected: " <> expectedText
           logTxt $ "Actual DOM text: " <> actualText
           throwIO $ TextValidationError {expectedText, actualText}
-    
     EvaluateResultSuccess {result = otherResult} -> do
       logShow "Unexpected result type" otherResult
       throwIO $ TextValidationError {expectedText, actualText = "Non-string result"}
-    
     EvaluateResultException {exceptionDetails} -> do
       logShow "Script evaluation failed" exceptionDetails
       throwIO $ TextValidationError {expectedText, actualText = "Script evaluation failed"}
@@ -1660,84 +1658,13 @@ serializationOptionsDemo =
       pause
 
 -- >>> runDemo scriptPreloadScriptDemo
--- *** Exception: Error executing BiDi command: MkCommand
---   { method = "script.addPreloadScript"
---   , params =
---       MkAddPreloadScript
---         { functionDeclaration =
---             "function(channelArg) {   window.addEventListener('load', function() {     var channelInfo = document.createElement('div');     channelInfo.id = 'channel-info';     channelInfo.style.cssText = 'background: lightgreen; padding: 10px; margin: 5px; border: 2px solid green;';     channelInfo.innerHTML = '<strong>Channel Argument:</strong> Received channel for communication';     document.body.appendChild(channelInfo);         // Store channel reference for potential communication     if (channelArg && typeof channelArg === 'object') {       window.testChannel = channelArg;       console.log('Channel argument received:', channelArg);     }   }); }"
---         , arguments =
---             Just
---               [ MkChannelValue
---                   { typ = "channel"
---                   , value =
---                       MkChannelProperties
---                         { channel = "test-channel"
---                         , serializationOptions = Nothing
---                         , ownership = Nothing
---                         }
---                   }
---               ]
---         , contexts =
---             Just
---               [ MkBrowsingContext
---                   { context = "c9bc3566-f05a-435a-9e38-d3bbb537d9df" }
---               ]
---         , sandbox = Nothing
---         }
---   , extended = Nothing
---   }
--- With JSON: 
--- {
---     "id": 5,
---     "method": "script.addPreloadScript",
---     "params": {
---         "arguments": [
---             {
---                 "type": "channel",
---                 "value": {
---                     "channel": "test-channel",
---                     "ownership": null,
---                     "serializationOptions": null
---                 }
---             }
---         ],
---         "contexts": [
---             "c9bc3566-f05a-435a-9e38-d3bbb537d9df"
---         ],
---         "functionDeclaration": "function(channelArg) {   window.addEventListener('load', function() {     var channelInfo = document.createElement('div');     channelInfo.id = 'channel-info';     channelInfo.style.cssText = 'background: lightgreen; padding: 10px; margin: 5px; border: 2px solid green;';     channelInfo.innerHTML = '<strong>Channel Argument:</strong> Received channel for communication';     document.body.appendChild(channelInfo);         // Store channel reference for potential communication     if (channelArg && typeof channelArg === 'object') {       window.testChannel = channelArg;       console.log('Channel argument received:', channelArg);     }   }); }"
---     }
--- }
--- Failed to decode the 'result' property of JSON returned by driver to response type: 
--- {
---     "error": "invalid argument",
---     "id": 5,
---     "message": "Expected \"options\" to be an object, got [object Null] null",
---     "stacktrace": "RemoteError@chrome://remote/content/shared/RemoteError.sys.mjs:8:8\nWebDriverError@chrome://remote/content/shared/webdriver/Errors.sys.mjs:199:5\nInvalidArgumentError@chrome://remote/content/shared/webdriver/Errors.sys.mjs:401:5\nassert.that/<@chrome://remote/content/shared/webdriver/Assert.sys.mjs:581:13\nassert.object@chrome://remote/content/shared/webdriver/Assert.sys.mjs:454:10\nsetDefaultAndAssertSerializationOptions@chrome://remote/content/webdriver-bidi/RemoteValue.sys.mjs:966:15\n#assertChannelArgument@chrome://remote/content/webdriver-bidi/modules/root/script.sys.mjs:768:10\naddPreloadScript/<@chrome://remote/content/webdriver-bidi/modules/root/script.sys.mjs:198:34\naddPreloadScript@chrome://remote/content/webdriver-bidi/modules/root/script.sys.mjs:193:22\nhandleCommand@chrome://remote/content/shared/messagehandler/MessageHandler.sys.mjs:260:33\nexecute@chrome://remote/content/shared/webdriver/Session.sys.mjs:410:32\nonPacket@chrome://remote/content/webdriver-bidi/WebDriverBiDiConnection.sys.mjs:236:37\nonMessage@chrome://remote/content/server/WebSocketTransport.sys.mjs:127:18\nhandleEvent@chrome://remote/content/server/WebSocketTransport.sys.mjs:109:14\n",
---     "type": "error"
--- }
--- Error message: 
--- key "result" not found
 scriptPreloadScriptDemo :: BiDiDemo
 scriptPreloadScriptDemo =
   -- TODO: add  ? userContexts: [+browser.UserContext],
-  demo "Script - Comprehensive MkAddPreloadScript Properties Demo" action
+  demo "Script I - Comprehensive MkAddPreloadScript Properties Demo" action
   where
     action :: DemoUtils -> Commands -> IO ()
     action utils@MkDemoUtils {..} cmds@MkCommands {..} = do
-      {- This demo comprehensively demonstrates all MkAddPreloadScript properties:
-         1. functionDeclaration: JavaScript function to execute on page load
-         2. arguments: Maybe [ChannelValue] - Channel-based communication arguments  
-         3. contexts: Maybe [BrowsingContext] - Specific contexts vs global (Nothing)
-         4. sandbox: Maybe Text - Script isolation in named sandboxes vs no isolation (Nothing)
-         
-         Additional features demonstrated:
-         - DOM validation using chkText function for verification
-         - Multiple browsing contexts with context-specific scripts
-         - Script removal and cleanup verification
-         - Sandbox isolation testing
-         - Channel arguments for script communication
-      -}
       bc <- rootContext utils cmds
       let chkDOM = chkText utils cmds bc
 
@@ -1745,6 +1672,7 @@ scriptPreloadScriptDemo =
       navResult <- browsingContextNavigate $ MkNavigate {context = bc, url = "data:text/html,<html><head><title>Preload Script Test</title></head><body><h1>Test Page</h1><p id='content'>Original content</p><div id='preload-indicator'></div></body></html>", wait = Just Complete}
       logShow "Navigation result" navResult
       pause
+
 
       logTxt "Test 1: Basic preload script with functionDeclaration and contexts"
       preloadScript1 <-
@@ -1793,43 +1721,6 @@ scriptPreloadScriptDemo =
       logShow "Sandboxed preload script added" preloadScriptSandbox
       pause
 
-      logTxt "Test 3: Preload script with arguments (ChannelValue for communication)"
-      let channel = Channel "test-channel"
-          channelValue = MkChannelValue 
-            { typ = "channel",
-              value = MkChannelProperties
-                { channel = channel,
-                  serializationOptions = Nothing,
-                  ownership = Nothing
-                }
-            }
-      
-      preloadScriptWithArgs <-
-        scriptAddPreloadScript $
-          MkAddPreloadScript
-            { functionDeclaration =
-                "function(channelArg) { \
-                \  window.addEventListener('load', function() { \
-                \    var channelInfo = document.createElement('div'); \
-                \    channelInfo.id = 'channel-info'; \
-                \    channelInfo.style.cssText = 'background: lightgreen; padding: 10px; margin: 5px; border: 2px solid green;'; \
-                \    channelInfo.innerHTML = '<strong>Channel Argument:</strong> Received channel for communication'; \
-                \    document.body.appendChild(channelInfo); \
-                \    \
-                \    // Store channel reference for potential communication \
-                \    if (channelArg && typeof channelArg === 'object') { \
-                \      window.testChannel = channelArg; \
-                \      console.log('Channel argument received:', channelArg); \
-                \    } \
-                \  }); \
-                \}",
-              arguments = Just [channelValue],
-              contexts = Just [bc],
-              sandbox = Nothing
-            }
-      logShow "Preload script with channel arguments added" preloadScriptWithArgs
-      pause
-
       logTxt "Test 4: Preload script with all contexts (global scope)"
       preloadScript2 <-
         scriptAddPreloadScript $
@@ -1843,19 +1734,25 @@ scriptPreloadScriptDemo =
                 \  console.log('Global Preload Script: Added global data', window.PRELOADED_DATA); \
                 \}",
               arguments = Nothing,
-              contexts = Nothing,  -- Apply to all contexts
+              contexts = Nothing, -- Apply to all contexts
               sandbox = Nothing
             }
       logShow "Global preload script added" preloadScript2
       pause
 
-      logTxt "Test 5: Navigate to a new page to see all preload scripts in action"  
-      navResult2 <- browsingContextNavigate $ MkNavigate {context = bc, url = "data:text/html,<html><head><title>New Page</title></head><body><h1>New Test Page</h1><p id='content'>Fresh content</p><div id='preload-indicator'></div><div id='data-display'></div></body></html>", wait = Just Complete}
+      logTxt "Test 5: Navigate to a new page to see all preload scripts in action"
+      navResult2 <-
+        browsingContextNavigate $
+          MkNavigate
+            { context = bc,
+              url = "data:text/html,<html><head><title>New Page</title></head><body><h1>New Test Page</h1><p id='content'>Fresh content</p><div id='preload-indicator'></div><div id='data-display'></div></body></html>",
+              wait = Just Complete
+            }
       logShow "Navigation result to new page" navResult2
       pause
 
       -- Wait a bit for the preload scripts to execute
-      pauseMinMs 1500
+      pauseMinMs 3_000
 
       logTxt "Test 6: Check if basic preload script executed (DOM modifications)"
       chkDOM "✓ Basic Preload Script executed!"
@@ -1867,20 +1764,16 @@ scriptPreloadScriptDemo =
       chkDOM "Executed in isolated environment"
       pause
 
-      logTxt "Test 8: Check if channel argument script executed"
-      chkDOM "Channel Argument:"
-      chkDOM "Received channel for communication"
-      pause
-
       logTxt "Test 9: Check if global preload script executed (all contexts)"
       -- Check if global data was added by evaluating a script that outputs to DOM
       scriptEvaluateNoWait $
         MkEvaluate
-          { expression = "if (window.PRELOADED_DATA) { \
-                         \  document.body.innerHTML += '<div id=\"global-data-check\">Global data present: ' + JSON.stringify(window.PRELOADED_DATA) + '</div>'; \
-                         \} else { \
-                         \  document.body.innerHTML += '<div id=\"global-data-check\">No global data found</div>'; \
-                         \}",
+          { expression =
+              "if (window.PRELOADED_DATA) { \
+              \  document.body.innerHTML += '<div id=\"global-data-check\">Global data present: ' + JSON.stringify(window.PRELOADED_DATA) + '</div>'; \
+              \} else { \
+              \  document.body.innerHTML += '<div id=\"global-data-check\">No global data found</div>'; \
+              \}",
             target = ContextTarget $ MkContextTarget {context = bc, sandbox = Nothing},
             awaitPromise = False,
             resultOwnership = Nothing,
@@ -1894,12 +1787,13 @@ scriptPreloadScriptDemo =
       logTxt "Test 10: Verify sandbox isolation by checking if sandboxed variables are isolated"
       scriptEvaluateNoWait $
         MkEvaluate
-          { expression = "var isolationTest = 'main context variable'; \
-                         \if (typeof window.sandboxedVariable !== 'undefined') { \
-                         \  document.body.innerHTML += '<div>WARNING: Sandbox leak detected - sandboxedVariable accessible</div>'; \
-                         \} else { \
-                         \  document.body.innerHTML += '<div>✓ Sandbox isolation confirmed - sandboxedVariable not accessible</div>'; \
-                         \}",
+          { expression =
+              "var isolationTest = 'main context variable'; \
+              \if (typeof window.sandboxedVariable !== 'undefined') { \
+              \  document.body.innerHTML += '<div>WARNING: Sandbox leak detected - sandboxedVariable accessible</div>'; \
+              \} else { \
+              \  document.body.innerHTML += '<div>✓ Sandbox isolation confirmed - sandboxedVariable not accessible</div>'; \
+              \}",
             target = ContextTarget $ MkContextTarget {context = bc, sandbox = Nothing},
             awaitPromise = False,
             resultOwnership = Nothing,
@@ -1911,7 +1805,7 @@ scriptPreloadScriptDemo =
 
       logTxt "Test 11: Create a new browsing context to test multiple contexts behavior"
       newContext <- newWindowContext utils cmds
-      
+
       logTxt "Test 12: Add a preload script specific to the new context only"
       preloadScriptNewContext <-
         scriptAddPreloadScript $
@@ -1929,7 +1823,7 @@ scriptPreloadScriptDemo =
                 \  }); \
                 \}",
               arguments = Nothing,
-              contexts = Just [newContext],  -- Only apply to new context
+              contexts = Just [newContext], -- Only apply to new context
               sandbox = Nothing
             }
       logShow "Context-specific preload script added" preloadScriptNewContext
@@ -1951,13 +1845,13 @@ scriptPreloadScriptDemo =
       logTxt "Test 14: Verify original context has basic, sandboxed, channel, and global scripts"
       chkDOM "✓ Basic Preload Script executed!"
       chkDOM "Sandboxed Script:"
-      chkDOM "Channel Argument:"
-      
+
       scriptEvaluateNoWait $
         MkEvaluate
-          { expression = "if (window.PRELOADED_DATA) { \
-                         \  document.body.innerHTML += '<div>Original context global data confirmed</div>'; \
-                         \}",
+          { expression =
+              "if (window.PRELOADED_DATA) { \
+              \  document.body.innerHTML += '<div>Original context global data confirmed</div>'; \
+              \}",
             target = ContextTarget $ MkContextTarget {context = bc, sandbox = Nothing},
             awaitPromise = False,
             resultOwnership = Nothing,
@@ -1971,35 +1865,37 @@ scriptPreloadScriptDemo =
       -- Switch to new context for validation
       browsingContextActivate $ MkActivate newContext
       pauseMinMs 500
-      
+
       -- Check new context content using scripts that add to DOM
       scriptEvaluateNoWait $
         MkEvaluate
-          { expression = "if (window.PRELOADED_DATA) { \
-                         \  document.body.innerHTML += '<div>New context has global data</div>'; \
-                         \} else { \
-                         \  document.body.innerHTML += '<div>New context missing global data</div>'; \
-                         \} \
-                         \if (document.querySelector('div[style*=\"position: fixed\"]')) { \
-                         \  document.body.innerHTML += '<div>New context has fixed position element</div>'; \
-                         \}",
+          { expression =
+              "if (window.PRELOADED_DATA) { \
+              \  document.body.innerHTML += '<div>New context has global data</div>'; \
+              \} else { \
+              \  document.body.innerHTML += '<div>New context missing global data</div>'; \
+              \} \
+              \if (document.querySelector('div[style*=\"position: fixed\"]')) { \
+              \  document.body.innerHTML += '<div>New context has fixed position element</div>'; \
+              \}",
             target = ContextTarget $ MkContextTarget {context = newContext, sandbox = Nothing},
             awaitPromise = False,
             resultOwnership = Nothing,
             serializationOptions = Nothing
           }
       pauseMinMs 500
-      
+
       -- For new context validation, we need to get DOM content from the new context
-      domContentNew <- scriptEvaluate $ 
-        MkEvaluate
-          { expression = "document.body ? document.body.innerText || document.body.textContent || '' : ''",
-            target = ContextTarget $ MkContextTarget {context = newContext, sandbox = Nothing},
-            awaitPromise = False,
-            resultOwnership = Nothing,
-            serializationOptions = Nothing
-          }
-      
+      domContentNew <-
+        scriptEvaluate $
+          MkEvaluate
+            { expression = "document.body ? document.body.innerText || document.body.textContent || '' : ''",
+              target = ContextTarget $ MkContextTarget {context = newContext, sandbox = Nothing},
+              awaitPromise = False,
+              resultOwnership = Nothing,
+              serializationOptions = Nothing
+            }
+
       case domContentNew of
         EvaluateResultSuccess {result = PrimitiveValue (StringValue newContextText)} -> do
           logTxt $ "New context DOM content: " <> newContextText
@@ -2021,7 +1917,7 @@ scriptPreloadScriptDemo =
       logTxt "Test 17: Navigate original context to verify basic script removed but others remain"
       browsingContextActivate $ MkActivate bc
       pauseMinMs 500
-      
+
       navResult4 <- browsingContextNavigate $ MkNavigate {context = bc, url = "data:text/html,<html><head><title>After Basic Removal</title></head><body><h1>After Basic Script Removal</h1><p id='content'>Content after basic removal</p><div id='preload-indicator'></div></body></html>", wait = Just Complete}
       logShow "Navigation after basic script removal" navResult4
       pause
@@ -2029,15 +1925,15 @@ scriptPreloadScriptDemo =
       -- Wait for remaining preload scripts
       pauseMinMs 1500
 
-      logTxt "Test 18: Verify sandboxed, channel, and global scripts still work"      
+      logTxt "Test 18: Verify sandboxed, channel, and global scripts still work"
       chkDOM "Sandboxed Script:"
-      chkDOM "Channel Argument:"
-      
+
       scriptEvaluateNoWait $
         MkEvaluate
-          { expression = "if (window.PRELOADED_DATA) { \
-                         \  document.body.innerHTML += '<div>Global script still active after basic removal</div>'; \
-                         \}",
+          { expression =
+              "if (window.PRELOADED_DATA) { \
+              \  document.body.innerHTML += '<div>Global script still active after basic removal</div>'; \
+              \}",
             target = ContextTarget $ MkContextTarget {context = bc, sandbox = Nothing},
             awaitPromise = False,
             resultOwnership = Nothing,
@@ -2058,11 +1954,6 @@ scriptPreloadScriptDemo =
       logShow "Removed sandbox preload script" removeResultSandbox
       pause
 
-      let MkAddPreloadScriptResult scriptArgsId = preloadScriptWithArgs
-      removeResultArgs <- scriptRemovePreloadScript $ MkRemovePreloadScript scriptArgsId
-      logShow "Removed channel arguments preload script" removeResultArgs
-      pause
-
       let MkAddPreloadScriptResult scriptNewContextId = preloadScriptNewContext
       removeResultNewContext <- scriptRemovePreloadScript $ MkRemovePreloadScript scriptNewContextId
       logShow "Removed new context preload script" removeResultNewContext
@@ -2079,11 +1970,12 @@ scriptPreloadScriptDemo =
       logTxt "Test 21: Final verification - no preload script effects should be present"
       scriptEvaluateNoWait $
         MkEvaluate
-          { expression = "if (!window.PRELOADED_DATA && !document.querySelector('div[style*=\"position: fixed\"]') && !document.querySelector('#sandbox-notice') && !document.querySelector('#channel-info')) { \
-                         \  document.body.innerHTML += '<div>✓ Complete cleanup confirmed: No preload effects</div>'; \
-                         \} else { \
-                         \  document.body.innerHTML += '<div>⚠ Warning: Some preload effects still detected</div>'; \
-                         \}",
+          { expression =
+              "if (!window.PRELOADED_DATA && !document.querySelector('div[style*=\"position: fixed\"]') && !document.querySelector('#sandbox-notice') && !document.querySelector('#channel-info')) { \
+              \  document.body.innerHTML += '<div>✓ Complete cleanup confirmed: No preload effects</div>'; \
+              \} else { \
+              \  document.body.innerHTML += '<div>⚠ Warning: Some preload effects still detected</div>'; \
+              \}",
             target = ContextTarget $ MkContextTarget {context = bc, sandbox = Nothing},
             awaitPromise = False,
             resultOwnership = Nothing,
@@ -2095,3 +1987,104 @@ scriptPreloadScriptDemo =
 
       logTxt "Test 22: Cleanup - close the new context"
       closeContext utils cmds newContext
+
+-- >>> runDemo scriptChannelArgumentDemo
+scriptChannelArgumentDemo :: BiDiDemo
+scriptChannelArgumentDemo =
+  demo "Script - Channel Argument Test" action
+  where
+    action :: DemoUtils -> Commands -> IO ()
+    action utils@MkDemoUtils {..} cmds@MkCommands {..} = do
+      bc <- rootContext utils cmds
+      let chkDOM = chkText utils cmds bc
+
+      logTxt "Navigate to a simple test page for channel test"
+      navResult <- browsingContextNavigate $ MkNavigate {context = bc, url = "data:text/html,<html><head><title>Channel Test</title></head><body><h1>Channel Test Page</h1><div id='output'></div></body></html>", wait = Just Complete}
+      logShow "Navigation result" navResult
+      pause
+
+      logTxt "Create channel value for preload script arguments"
+      let channelValue =
+            MkChannelValue
+              { value =
+                  MkChannelProperties
+                    { channel = Channel "test-channel",
+                      serializationOptions = Nothing,
+                      ownership = Nothing
+                    }
+              }
+
+      logTxt "Add preload script with channel argument"
+      preloadScriptWithChannel <-
+        scriptAddPreloadScript $
+          MkAddPreloadScript
+            { functionDeclaration =
+                "function(channelArg) { \
+                \  console.log('Channel arg received:', channelArg); \
+                \  window.addEventListener('DOMContentLoaded', function() { \
+                \    var output = document.getElementById('output'); \
+                \    if (output) { \
+                \      var div = document.createElement('div'); \
+                \      div.id = 'channel-result'; \
+                \      div.style.cssText = 'background: lightgreen; padding: 10px; border: 2px solid green; margin: 5px;'; \
+                \      if (channelArg) { \
+                \        div.innerHTML = '<strong>✓ Channel Argument Success:</strong> Received channel object'; \
+                \      } else { \
+                \        div.innerHTML = '<strong>✗ Channel Argument Failed:</strong> No channel received'; \
+                \      } \
+                \      output.appendChild(div); \
+                \    } \
+                \  }); \
+                \}",
+              arguments = Just [channelValue],
+              contexts = Just [bc],
+              sandbox = Nothing
+            }
+      logShow "Preload script with channel added" preloadScriptWithChannel
+      pause
+
+      logTxt "Navigate to trigger preload script execution"
+      navResult2 <- browsingContextNavigate $ MkNavigate {context = bc, url = "data:text/html,<html><head><title>Channel Test Execution</title></head><body><h1>Testing Channel Arguments</h1><div id='output'></div></body></html>", wait = Just Complete}
+      logShow "Navigation result for execution" navResult2
+      pause
+
+      -- Wait for preload script to execute
+      pauseMinMs 1000
+
+      logTxt "Check if channel argument was received successfully"
+      chkDOM "✓ Channel Argument Success"
+      chkDOM "Received channel object"
+      pause
+
+      logTxt "Clean up - remove the channel preload script"
+      let MkAddPreloadScriptResult scriptId = preloadScriptWithChannel
+      removeResult <- scriptRemovePreloadScript $ MkRemovePreloadScript scriptId
+      logShow "Removed channel preload script" removeResult
+      pause
+
+      logTxt "Final verification - navigate to clean page"
+      navResultFinal <- browsingContextNavigate $ MkNavigate {context = bc, url = "data:text/html,<html><head><title>Clean Final</title></head><body><h1>Clean Page</h1><div id='output'></div></body></html>", wait = Just Complete}
+      logShow "Final clean navigation" navResultFinal
+      pause
+
+      -- Wait and verify no script effects
+      pauseMinMs 1000
+
+      -- Check DOM is clean (no channel script effects)
+      domContent <-
+        scriptEvaluate $
+          MkEvaluate
+            { expression = "document.body ? document.body.innerText || document.body.textContent || '' : ''",
+              target = ContextTarget $ MkContextTarget {context = bc, sandbox = Nothing},
+              awaitPromise = False,
+              resultOwnership = Nothing,
+              serializationOptions = Nothing
+            }
+
+      case domContent of
+        EvaluateResultSuccess {result = PrimitiveValue (StringValue cleanText)} -> do
+          if "Channel Argument Success" `isInfixOf` cleanText
+            then logTxt "⚠ Warning: Channel script effects still present after removal"
+            else logTxt "✓ Confirmed: Clean state - no channel script effects"
+        _ -> logTxt "Could not verify clean state"
+      pause

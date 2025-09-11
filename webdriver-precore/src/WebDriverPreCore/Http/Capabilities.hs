@@ -33,9 +33,6 @@ import Data.Aeson
     Object,
     ToJSON (toJSON),
     Value,
-    defaultOptions,
-    genericParseJSON,
-    genericToJSON,
     object,
     withObject,
     withText,
@@ -47,7 +44,6 @@ import Data.Aeson.Types
   ( Pair,
     Parser,
     Value (..),
-    omitNothingFields,
     parseField,
     parseFieldMaybe,
   )

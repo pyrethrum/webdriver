@@ -658,8 +658,8 @@ data Source = MkSource
   }
   deriving (Show, Eq, Generic)
 
-data ChannelValue = MkChannelValue
-  { typ :: Text, -- "channel"
+newtype ChannelValue = MkChannelValue
+  { 
     value :: ChannelProperties
   }
   deriving (Show, Eq, Generic)
@@ -995,13 +995,16 @@ instance ToJSON Source
 
 -- ChannelValue has typ field that needs manual handling
 instance ToJSON ChannelValue where
-  toJSON (MkChannelValue _ value) =
+  toJSON :: ChannelValue -> Value
+  toJSON (MkChannelValue value) =
     object
       [ "type" .= "channel",
         "value" .= value
       ]
 
-instance ToJSON ChannelProperties
+instance ToJSON ChannelProperties where
+  toJSON :: ChannelProperties -> Value
+  toJSON = toJSONOmitNothing
 
 -- FromJSON instances for Script module
 
