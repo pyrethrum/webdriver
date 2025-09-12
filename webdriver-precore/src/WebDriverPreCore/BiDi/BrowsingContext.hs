@@ -1,31 +1,17 @@
 module WebDriverPreCore.BiDi.BrowsingContext where
 
+import Data.Aeson (FromJSON (..), KeyValue (..), Options (..), ToJSON (..), Value (..), defaultOptions, genericToJSON, object, withObject, (.:), (.=))
+import Data.Aeson.Types (Parser)
 import Data.Map qualified as Map
-import Data.Text (Text)
+import Data.Maybe (catMaybes)
+import Data.Text (Text, unpack, pack)
 import GHC.Generics
-import WebDriverPreCore.BiDi.CoreTypes (BrowsingContext, JSUInt, NodeRemoteValue, JSInt)
-import Prelude (Bool, Maybe, Show, Eq, Float)
-import Data.Aeson (Value)
-
+import WebDriverPreCore.BiDi.CoreTypes (BrowsingContext, JSInt, JSUInt, NodeRemoteValue, UserContext)
+import WebDriverPreCore.BiDi.Script (SharedReference)
+import WebDriverPreCore.Internal.AesonUtils (enumCamelCase, opt, toJSONOmitNothing)
+import Prelude (Bool (..), Eq, Float, Functor (..), Maybe, Semigroup ((<>)), Show (..), Word, flip, ($), (.), fromIntegral)
 
 -- ######### REMOTE #########
-
--- | Commands for browsing context operations
-data BrowsingContextCommand
-  = Activate Activate
-  | CaptureScreenshot CaptureScreenshot
-  | Close Close
-  | Create Create
-  | GetTree GetTree
-  | HandleUserPrompt HandleUserPrompt
-  | LocateNodes LocateNodes
-  | Navigate Navigate
-  | Print Print
-  | Reload Reload
-  | SetViewport SetViewport
-  | TraverseHistory TraverseHistory
-  deriving (Show, Eq, Generic)
-
 
 -- |  for activate command
 newtype Activate = MkActivate
@@ -33,29 +19,64 @@ newtype Activate = MkActivate
   }
   deriving (Show, Eq, Generic)
 
+instance ToJSON Activate
+
 -- |  for captureScreenshot command
 data CaptureScreenshot = MkCaptureScreenshot
   { context :: BrowsingContext,
-    origin :: Maybe Text, -- "viewport" / "document"
+    origin :: Maybe ScreenShotOrigin,
     format :: Maybe ImageFormat,
     clip :: Maybe ClipRectangle
   }
   deriving (Show, Eq, Generic)
 
+instance ToJSON CaptureScreenshot where
+  toJSON :: CaptureScreenshot -> Value
+  toJSON (MkCaptureScreenshot {context, origin, format, clip}) =
+    object $
+      [ "context" .= context
+      ]
+        <> catMaybes
+          [ opt "origin" origin,
+            opt "format" format,
+            opt "clip" clip
+          ]
+
+data ScreenShotOrigin = Viewport | Document deriving (Show, Eq, Generic)
+
+instance ToJSON ScreenShotOrigin where
+  toJSON :: ScreenShotOrigin -> Value
+  toJSON = enumCamelCase
+
 -- | Clip rectangle for screenshots
 data ClipRectangle
   = BoxClipRectangle
-      { clipType :: Text, -- "box"
-        x :: Float,
+      { x :: Float,
         y :: Float,
         width :: Float,
         height :: Float
       }
   | ElementClipRectangle
-      { clipType :: Text, -- "element"
-        element :: Text -- script.SharedReference
+      { element :: Text -- script.SharedReference
       }
   deriving (Show, Eq, Generic)
+
+instance ToJSON ClipRectangle where
+  toJSON :: ClipRectangle -> Value
+  toJSON = \case
+    BoxClipRectangle {x, y, width, height} ->
+      object
+        [ "type" .= "box",
+          "x" .= x,
+          "y" .= y,
+          "width" .= width,
+          "height" .= height
+        ]
+    ElementClipRectangle {element} ->
+      object
+        [ "type" .= "element",
+          "element" .= element
+        ]
 
 -- | Image format specification
 data ImageFormat = MkImageFormat
@@ -64,6 +85,16 @@ data ImageFormat = MkImageFormat
   }
   deriving (Show, Eq, Generic)
 
+instance ToJSON ImageFormat where
+  toJSON :: ImageFormat -> Value
+  toJSON (MkImageFormat {imageType, quality}) =
+    object $
+      [ "type" .= imageType
+      ]
+        <> catMaybes
+          [ opt "quality" quality
+          ]
+
 -- |  for close command
 data Close = MkClose
   { context :: BrowsingContext,
@@ -71,14 +102,36 @@ data Close = MkClose
   }
   deriving (Show, Eq, Generic)
 
+instance ToJSON Close where
+  toJSON :: Close -> Value
+  toJSON (MkClose {context, promptUnload}) =
+    object $
+      [ "context" .= context
+      ]
+        <> catMaybes
+          [ opt "promptUnload" promptUnload
+          ]
+
 -- |  for create command
 data Create = MkCreate
   { createType :: CreateType,
+    background :: Bool,
     referenceContext :: Maybe BrowsingContext,
-    background :: Maybe Bool,
-    userContext :: Maybe Text -- browser.UserContext
+    userContext :: Maybe UserContext
   }
   deriving (Show, Eq, Generic)
+
+instance ToJSON Create where
+  toJSON :: Create -> Value
+  toJSON (MkCreate {createType, referenceContext, background, userContext}) =
+    object $
+      [ "type" .= createType,
+        "background" .= background
+      ]
+        <> catMaybes
+          [ opt "referenceContext" referenceContext,
+            opt "userContext" userContext
+          ]
 
 -- |  for getTree command
 data GetTree = MkGetTree
@@ -86,6 +139,8 @@ data GetTree = MkGetTree
     root :: Maybe BrowsingContext
   }
   deriving (Show, Eq, Generic)
+
+instance ToJSON GetTree
 
 -- |  for handleUserPrompt command
 data HandleUserPrompt = MkHandleUserPrompt
@@ -95,15 +150,23 @@ data HandleUserPrompt = MkHandleUserPrompt
   }
   deriving (Show, Eq, Generic)
 
+instance ToJSON HandleUserPrompt where
+  toJSON :: HandleUserPrompt -> Value
+  toJSON = genericToJSON defaultOptions {omitNothingFields = True}
+
 -- |  for locateNodes command
 data LocateNodes = MkLocateNodes
   { context :: BrowsingContext,
     locator :: Locator,
     maxNodeCount :: Maybe JSUInt,
     serializationOptions :: Maybe Value, -- script.SerializationOptions
-    startNodes :: Maybe [Text] -- script.SharedReference
+    startNodes :: Maybe [SharedReference] -- script.SharedReference
   }
   deriving (Show, Eq, Generic)
+
+instance ToJSON LocateNodes where
+  toJSON :: LocateNodes -> Value
+  toJSON = toJSONOmitNothing
 
 -- |  for navigate command
 data Navigate = MkNavigate
@@ -113,18 +176,47 @@ data Navigate = MkNavigate
   }
   deriving (Show, Eq, Generic)
 
+instance ToJSON Navigate where
+  toJSON :: Navigate -> Value
+  toJSON = toJSONOmitNothing
+
 -- |  for print command
 data Print = MkPrint
   { context :: BrowsingContext,
     background :: Maybe Bool,
     margin :: Maybe PrintMargin,
-    orientation :: Maybe Text, -- "portrait" / "landscape"
+    orientation :: Maybe Orientation,
     page :: Maybe PrintPage,
-    pageRanges :: Maybe [Value], -- Mix of JSUInt and Text
+    pageRanges :: Maybe [PageRange], 
     scale :: Maybe Float,
     shrinkToFit :: Maybe Bool
   }
   deriving (Show, Eq, Generic)
+
+instance ToJSON Print where
+  toJSON :: Print -> Value
+  toJSON = toJSONOmitNothing
+
+data Orientation = Portrait | Landscape deriving (Show, Eq, Generic)
+
+instance ToJSON Orientation where
+  toJSON :: Orientation -> Value
+  toJSON = enumCamelCase
+
+data PageRange
+  = Page Word
+  | Range
+      { fromPage :: Word,
+        toPage :: Word
+      }
+      deriving (Show, Eq)
+
+instance ToJSON PageRange where
+   toJSON :: PageRange -> Value
+   toJSON = \case
+     Page p -> Number $ fromIntegral p
+     Range {fromPage, toPage} -> String (pack (show fromPage <> "-" <> show toPage))
+     
 
 -- |  for reload command
 data Reload = MkReload
@@ -133,6 +225,10 @@ data Reload = MkReload
     wait :: Maybe ReadinessState
   }
   deriving (Show, Eq, Generic)
+
+instance ToJSON Reload where
+  toJSON :: Reload -> Value
+  toJSON = toJSONOmitNothing
 
 -- |  for setViewport command
 data SetViewport = MkSetViewport
@@ -154,37 +250,88 @@ data TraverseHistory = MkTraverseHistory
 newtype BrowsingContextId = MkBrowsingContextId Text
   deriving (Show, Eq, Generic)
 
+instance FromJSON BrowsingContextId
+
+instance ToJSON BrowsingContextId
+
+-- | Text matching type for InnerText locator
+data MatchType = Full | Partial
+  deriving (Show, Eq, Generic)
+
+instance ToJSON MatchType where
+  toJSON :: MatchType -> Value
+  toJSON = enumCamelCase
+
 -- | Different types of locators for elements
 data Locator
   = Accessibility
-      { typ :: Text, -- "accessibility"
-        name :: Maybe Text,
+      { name :: Maybe Text,
         role :: Maybe Text
       }
-  | Css
-      { typ :: Text, -- "css"
-        value :: Text
+  | CSS
+      { value :: Text
       }
   | Context
-      { typ :: Text, -- "context"
-        context :: BrowsingContext
+      { context :: BrowsingContext
       }
   | InnerText
-      { typ :: Text, -- "innerText"
-        value :: Text,
+      { value :: Text,
         ignoreCase :: Maybe Bool,
-        matchType :: Maybe Text, -- "full" / "partial"
+        matchType :: Maybe MatchType,
         maxDepth :: Maybe JSUInt
       }
   | XPath
-      { typ :: Text, -- "xpath"
-        value :: Text
+      { value :: Text
       }
-  deriving (Show, Eq, Generic)
+  deriving (Show, Eq)
+
+instance ToJSON Locator where
+  toJSON :: Locator -> Value
+  toJSON = \case
+    Accessibility {name, role} ->
+      object $
+        [ "type" .= "accessibility",
+          "value"
+            .= ( object $
+                   catMaybes
+                     [ opt "name" name,
+                       opt "role" role
+                     ]
+               )
+        ]
+    CSS {value} ->
+      object
+        [ "type" .= "css",
+          "value" .= value
+        ]
+    Context {context} ->
+      object
+        [ "type" .= "context",
+          "context" .= context
+        ]
+    InnerText {value, ignoreCase, matchType, maxDepth} ->
+      object $
+        [ "type" .= "innerText",
+          "value" .= value
+        ]
+          <> catMaybes
+            [ opt "ignoreCase" ignoreCase,
+              opt "matchType" matchType,
+              opt "maxDepth" maxDepth
+            ]
+    XPath {value} ->
+      object
+        [ "type" .= "xpath",
+          "value" .= value
+        ]
 
 -- | Readiness state of a browsing context
 data ReadinessState = None | Interactive | Complete
   deriving (Show, Eq, Generic)
+
+instance ToJSON ReadinessState where
+  toJSON :: ReadinessState -> Value
+  toJSON = enumCamelCase
 
 -- | User prompt types
 data UserPromptType = Alert | BeforeUnload | Confirm | Prompt
@@ -194,7 +341,11 @@ data UserPromptType = Alert | BeforeUnload | Confirm | Prompt
 data CreateType = Tab | Window
   deriving (Show, Eq, Generic)
 
--- | Print margin 
+instance ToJSON CreateType where
+  toJSON :: CreateType -> Value
+  toJSON = enumCamelCase
+
+-- | Print margin
 data PrintMargin = MkPrintMargin
   { bottom :: Maybe Float,
     left :: Maybe Float,
@@ -203,7 +354,7 @@ data PrintMargin = MkPrintMargin
   }
   deriving (Show, Eq, Generic)
 
--- | Print page 
+-- | Print page
 data PrintPage = MkPrintPage
   { height :: Maybe Float,
     width :: Maybe Float
@@ -217,19 +368,47 @@ data Viewport = MkViewport
   }
   deriving (Show, Eq, Generic)
 
-
 -- ######### Local #########
 
--- | Result of a browsing context command
-data BrowsingContextResult
-  = CaptureScreenshotResult Text
-  | CreateResult BrowsingContext
-  | GetTreeResult [Info]
-  | LocateNodesResult [NodeRemoteValue]
-  | NavigateResult NavigateResult
-  | PrintResult Text
-  | TraverseHistoryResult TraverseHistoryResult
-  deriving (Show, Eq, Generic)
+instance FromJSON NavigateResult
+
+instance FromJSON TraverseHistoryResult
+
+newtype GetTreeResult = MkGetTreeResult
+  { contexts :: [Info]
+  }
+  deriving stock (Show, Eq, Generic)
+
+instance FromJSON GetTreeResult
+
+newtype LocateNodesResult = MkLocateNodesResult
+  { nodes :: [NodeRemoteValue]
+  }
+  deriving newtype (Show, Eq)
+  deriving stock (Generic)
+
+instance FromJSON LocateNodesResult
+
+newtype CaptureScreenshotResult = MkCaptureScreenshotResult
+  { base64Text :: Text
+  }
+  deriving newtype (Show, Eq)
+
+parseTextData :: Text -> Value -> Parser Text
+parseTextData description = withObject (unpack description) $ flip (.:) "data"
+
+instance FromJSON CaptureScreenshotResult where
+  parseJSON :: Value -> Parser CaptureScreenshotResult
+  parseJSON = fmap MkCaptureScreenshotResult . parseTextData "CaptureScreenshotResult"
+
+newtype PrintResult = MkPrintResult
+  { base64Text :: Text
+  }
+  deriving newtype (Show, Eq)
+
+instance FromJSON PrintResult where
+  parseJSON :: Value -> Parser PrintResult
+  parseJSON = fmap MkPrintResult . parseTextData "PrintResult"
 
 data Info = MkInfo
   { children :: Maybe [Info],
@@ -242,6 +421,8 @@ data Info = MkInfo
   }
   deriving (Show, Eq, Generic)
 
+instance FromJSON Info
+
 data NavigateResult = MkNavigateResult
   { navigation :: Maybe Text,
     url :: Text
@@ -249,8 +430,7 @@ data NavigateResult = MkNavigateResult
   deriving (Show, Eq, Generic)
 
 data TraverseHistoryResult = MkTraverseHistoryResult
-  { 
-    extensions :: Maybe (Map.Map Text Value)
+  { extensions :: Maybe (Map.Map Text Value)
   }
   deriving (Show, Eq, Generic)
 
@@ -259,6 +439,7 @@ data BrowsingContextEvent
   = ContextCreated Info
   | ContextDestroyed Info
   | DomContentLoaded NavigationInfo
+  | DownloadEnd
   | DownloadWillBegin DownloadWillBegin
   | FragmentNavigated NavigationInfo
   | HistoryUpdated HistoryUpdated
@@ -279,6 +460,14 @@ data NavigationInfo = MkNavigationInfo
   }
   deriving (Show, Eq, Generic)
 
+data DownloadEnd
+  = DownloadCompleted
+      { filePath :: Maybe Text,
+        navigationInfo :: NavigationInfo
+      }
+  | DownloadCanceled {navigationInfo :: NavigationInfo}
+  deriving (Show, Eq, Generic)
+
 data DownloadWillBegin = MkDownloadWillBegin
   { suggestedFilename :: Text,
     context :: BrowsingContext,
@@ -290,6 +479,7 @@ data DownloadWillBegin = MkDownloadWillBegin
 
 data HistoryUpdated = MkHistoryUpdated
   { context :: BrowsingContext,
+    timestamp :: JSUInt,
     url :: Text
   }
   deriving (Show, Eq, Generic)
@@ -315,3 +505,19 @@ newtype Navigation = MkNavigation
   { navigationId :: Text
   }
   deriving (Show, Eq, Generic)
+
+instance ToJSON SetViewport
+
+instance ToJSON TraverseHistory
+
+instance ToJSON PrintMargin
+
+instance ToJSON PrintPage
+
+instance ToJSON Viewport
+
+instance ToJSON UserPromptClosed
+
+instance ToJSON UserPromptOpened
+
+instance ToJSON Navigation

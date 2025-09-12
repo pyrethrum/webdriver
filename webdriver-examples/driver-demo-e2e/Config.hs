@@ -15,6 +15,8 @@ import System.Directory (doesFileExist, getCurrentDirectory)
 import System.FilePath (combine, joinPath, splitDirectories, (</>))
 import Prelude
 
+-- TODO - GET Dhall LSP Server working or switch to JSON
+
 isFirefox :: DemoBrowser -> Bool
 isFirefox = \case
   Firefox {} -> True

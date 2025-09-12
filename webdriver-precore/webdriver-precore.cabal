@@ -114,13 +114,20 @@ library
       -- Http
       WebDriverPreCore.Http
       -- BiDi
+      WebDriverPreCore.BiDi.BiDiUrl
       WebDriverPreCore.BiDi.Browser
       WebDriverPreCore.BiDi.BrowsingContext
+      WebDriverPreCore.BiDi.Capabilities
+      WebDriverPreCore.BiDi.Command
+      WebDriverPreCore.BiDi.CoreTypes
       WebDriverPreCore.BiDi.Emulation
+      WebDriverPreCore.BiDi.Error
       WebDriverPreCore.BiDi.Log
       WebDriverPreCore.BiDi.Input
       WebDriverPreCore.BiDi.Network
       WebDriverPreCore.BiDi.Protocol
+      WebDriverPreCore.BiDi.API
+      WebDriverPreCore.BiDi.ResponseEvent
       WebDriverPreCore.BiDi.Script
       WebDriverPreCore.BiDi.Session
       WebDriverPreCore.BiDi.Storage
@@ -134,8 +141,6 @@ library
       WebDriverPreCore.Http.Capabilities
       WebDriverPreCore.Http.Error
       WebDriverPreCore.Http.HttpResponse
-      -- BiDi
-      WebDriverPreCore.BiDi.CoreTypes
   hs-source-dirs: src
   build-depends:
     -- debugging only remove brefore release

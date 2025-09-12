@@ -1,8 +1,13 @@
+{-# LANGUAGE DeriveAnyClass #-}
+{-# LANGUAGE DerivingStrategies #-}
+
 module WebDriverPreCore.BiDi.WebExtensions where
 
-import GHC.Generics (Generic)
+import Data.Aeson (FromJSON, ToJSON (..), Value, object, (.=))
 import Data.Text (Text)
-import Prelude (Show, Eq)
+import GHC.Generics (Generic)
+import WebDriverPreCore.Internal.AesonUtils (enumCamelCase)
+import Prelude (Eq, Show)
 
 {- prompt
 create types to represent the remote end for storage as prer the cddl in this file:
@@ -12,46 +17,82 @@ create types to represent the remote end for storage as prer the cddl in this fi
 3. ordering - order types such that types that are used by a type are declared immediately below that type in the order they are used
 4. derive Show, Eq and Generic for all types
 5. use Text rather than String
-5. use the cddl in this file remote first under the -- ######### Remote ######### header 
+5. use the cddl in this file remote first under the -- ######### Remote ######### header
 7. Avoid using Parameters suffix in type and data constructor names
 8. leave this comment at the top of the file
 -}
 
 -- ######### Remote #########
--- Note: webextensions module does not have a local end
-
--- WebExtensionCommand represents possible commands
-data WebExtensionCommand 
-   = Install WebExtensionData
-   | Uninstall WebExtension
-   deriving (Show, Eq, Generic)
 
 -- WebExtension type
 newtype WebExtension = MkWebExtension Text
-   deriving (Show, Eq, Generic)
+  deriving newtype (Show, Eq, ToJSON, FromJSON)
 
 -- ExtensionData represents different ways to provide extension data
 data WebExtensionData
-   = ExtensionPath Text
-   | ExtensionArchivePath Text
-   | ExtensionBase64Encoded Text
-   deriving (Show, Eq, Generic)
+  = ExtensionPath Text
+  | ExtensionArchivePath Text
+  | ExtensionBase64Encoded Text
+  deriving (Show, Eq, Generic)
+
+instance FromJSON WebExtensionData
+
+instance ToJSON WebExtensionData where
+  toJSON :: WebExtensionData -> Value
+  toJSON = enumCamelCase
 
 -- Path type for extension data
 data WebExtensionPath = MkWebExtensionPath
-   { dataType :: Text  -- "path"
-   , path :: Text
-   } deriving (Show, Eq, Generic)
+  { path :: Text
+  }
+  deriving (Show, Eq, Generic)
+
+instance ToJSON WebExtensionPath where
+  toJSON :: WebExtensionPath -> Value
+  toJSON (MkWebExtensionPath path) =
+    object
+      [ "type" .= "path",
+        "path" .= path
+      ]
 
 -- ArchivePath type for extension data
 data WebExtensionArchivePath = MkWebExtensionArchivePath
-   { dataType :: Text  -- "archivePath"
-   , path :: Text
-   } deriving (Show, Eq, Generic)
+  { path :: Text
+  }
+  deriving (Show, Eq, Generic)
+
+instance FromJSON WebExtensionArchivePath
+
+instance ToJSON WebExtensionArchivePath where
+  toJSON :: WebExtensionArchivePath -> Value
+  toJSON (MkWebExtensionArchivePath path) =
+    object
+      [ "type" .= "archivePath",
+        "path" .= path
+      ]
 
 -- Base64Encoded type for extension data
 data WebExtensionBase64Encoded = MkWebExtensionBase64Encoded
-   { dataType :: Text  -- "base64"
-   , value :: Text
-   } deriving (Show, Eq, Generic)
+  { value :: Text
+  }
+  deriving (Show, Eq, Generic)
 
+instance FromJSON WebExtensionBase64Encoded
+
+instance ToJSON WebExtensionBase64Encoded where
+  toJSON :: WebExtensionBase64Encoded -> Value
+  toJSON (MkWebExtensionBase64Encoded value) =
+    object
+      [ "type" .= "base64",
+        "value" .= value
+      ]
+
+-- ######### Local #########
+
+-- | Represents a command to install a web extension
+data WebExtensionResult = WebExtensionInstallResult
+  { extension :: WebExtension
+  }
+  deriving (Show, Eq, Generic, ToJSON)
+
+instance FromJSON WebExtensionResult

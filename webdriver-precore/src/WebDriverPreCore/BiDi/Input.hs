@@ -1,6 +1,5 @@
 module WebDriverPreCore.BiDi.Input
-  ( InputCommand (..),
-    PerformActions (..),
+  ( PerformActions (..),
     SourceActions (..),
     NoneSourceActions (..),
     KeySourceActions (..),
@@ -24,31 +23,33 @@ module WebDriverPreCore.BiDi.Input
     FileDialogInfo (..),
     ElementOrigin (..),
     Pointer (..),
-    PointerType (..)
+    PointerType (..),
   )
 where
 
+import Data.Aeson (ToJSON (..), Value, object, (.=))
 import Data.Text (Text)
 import GHC.Generics (Generic)
 import WebDriverPreCore.BiDi.BrowsingContext qualified as BrowsingContext
 import WebDriverPreCore.BiDi.Script qualified as Script
+import WebDriverPreCore.Internal.AesonUtils (enumCamelCase)
 import Prelude (Bool, Double, Eq, Int, Maybe, Show)
 
 -- ######### Local #########
 
--- Command types
-data InputCommand = 
-   InputPerformActions PerformActions | 
-   InputReleaseActions ReleaseActions | 
-   InputSetFiles SetFiles
-  deriving (Show, Eq, Generic)
-
 -- Element Origin
 data ElementOrigin = MkElementOrigin
-  { elementType :: Text, -- will be "element"
-    element :: Script.SharedReference
+  { element :: Script.SharedReference
   }
   deriving (Show, Eq, Generic)
+
+instance ToJSON ElementOrigin where
+  toJSON :: ElementOrigin -> Value
+  toJSON (MkElementOrigin element) =
+    object
+      [ "elementType" .= "element",
+        "element" .= element
+      ]
 
 data PerformActions = MkPerformActions
   { context :: BrowsingContext.BrowsingContextId,
@@ -187,6 +188,13 @@ data Origin
   | ElementOriginRef ElementOrigin
   deriving (Show, Eq, Generic)
 
+instance ToJSON Origin where
+  toJSON :: Origin -> Value
+  toJSON = \case
+    ViewportOriginPointerType -> "viewport"
+    PointerOrigin -> "pointer"
+    ElementOriginRef elementOrigin -> toJSON elementOrigin
+
 -- ReleaseActions
 newtype ReleaseActions = MkReleaseActions
   { context :: BrowsingContext.BrowsingContextId
@@ -213,3 +221,55 @@ data FileDialogInfo = MkFileDialogInfo
     multiple :: Bool
   }
   deriving (Show, Eq, Generic)
+
+instance ToJSON PerformActions
+
+instance ToJSON ReleaseActions
+
+instance ToJSON SetFiles
+
+instance ToJSON SourceActions
+
+instance ToJSON FileDialogOpened
+
+instance ToJSON FileDialogInfo
+
+instance ToJSON NoneSourceActions
+
+instance ToJSON KeySourceActions
+
+instance ToJSON PointerSourceActions
+
+instance ToJSON WheelSourceActions
+
+instance ToJSON Pointer
+
+instance ToJSON PointerCommonProperties
+
+-- All the various action types
+instance ToJSON PauseAction
+
+instance ToJSON KeyDownAction
+
+instance ToJSON KeyUpAction
+
+instance ToJSON PointerUpAction
+
+instance ToJSON PointerDownAction
+
+instance ToJSON PointerMoveAction
+
+instance ToJSON WheelScrollAction
+
+-- Sum type instances with enumCamelCase
+instance ToJSON PointerType where
+  toJSON = enumCamelCase
+
+instance ToJSON KeySourceAction where
+  toJSON = enumCamelCase
+
+instance ToJSON PointerSourceAction where
+  toJSON = enumCamelCase
+
+instance ToJSON WheelSourceAction where
+  toJSON = enumCamelCase

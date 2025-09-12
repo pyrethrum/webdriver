@@ -1,69 +1,137 @@
-module WebDriverPreCore.BiDi.Network (
-  -- * NetworkCommand
-  NetworkCommand (..),
-  AddIntercept (..),
-  InterceptPhase (..),
-  UrlPattern (..),
-  ContinueRequest (..),
-  RequestId (..),
-  BytesValue (..),
-  Cookie (..),
-  SameSite (..),
-  Header (..),
-  ContinueResponse (..),
-  ContinueWithAuth (..),
-  Intercept (..),
-  AuthCredentials (..),
-  AuthResponse (..),
-  FailRequest (..),
-  ProvideResponse (..),
-  RemoveIntercept (..),
-  SetCacheBehavior (..),
-  CacheBehavior (..),
+module WebDriverPreCore.BiDi.Network
+  ( -- * NetworkCommand
+    AddDataCollector (..),
+    AddIntercept (..),
+    InterceptPhase (..),
+    UrlPattern (..),
+    ContinueRequest (..),
+    RequestId (..),
+    BytesValue (..),
+    Cookie (..),
+    SameSite (..),
+    Header (..),
+    ContinueResponse (..),
+    ContinueWithAuth (..),
+    Intercept (..),
+    AuthCredentials (..),
+    AuthResponse (..),
+    DisownData (..),
+    FailRequest (..),
+    GetData (..),
+    ProvideResponse (..),
+    RemoveDataCollector (..),
+    RemoveIntercept (..),
+    SetCacheBehavior (..),
+    CacheBehavior (..),
 
-  -- * NetworkResult
-  AddInterceptResult (..),
+    -- * Additional Network Types
+    DataType (..),
+    CollectorType (..),
+    Collector (..),
+    Request (..),
 
-  -- * NetworkEvent
-  NetworkEvent (..),
-  AuthRequired (..),
-  ResponseData (..),
-  ResponseContent (..),
-  AuthChallenge (..),
-  BeforeRequestSent (..),
-  Initiator (..),
-  InitiatorType (..),
-  FetchError (..),
-  ResponseCompleted (..),
-  ResponseStarted (..),
-) where
+    -- * NetworkResult
+    AddDataCollectorResult (..),
+    AddInterceptResult (..),
+    GetDataResult (..),
+
+    -- * NetworkEvent
+    NetworkEvent (..),
+    AuthRequired (..),
+    ResponseData (..),
+    ResponseContent (..),
+    AuthChallenge (..),
+    BeforeRequestSent (..),
+    Initiator (..),
+    InitiatorType (..),
+    FetchError (..),
+    ResponseCompleted (..),
+    ResponseStarted (..),
+  )
+where
 
 -- This module provides functionality related to BiDi (Bidirectional) network operations
 -- for WebDriverPreCore. It is currently a placeholder for future implementation.
 
 -- Data structures for network protocol
+
+import Data.Aeson (FromJSON, ToJSON (..), Value, object, (.=))
 import Data.Text (Text)
 import Data.Word (Word)
 import GHC.Generics (Generic)
-import WebDriverPreCore.BiDi.CoreTypes (BrowsingContext, JSUInt)
+import WebDriverPreCore.BiDi.CoreTypes (BrowsingContext, JSUInt, UserContext)
 import WebDriverPreCore.BiDi.Script (StackTrace)
+import WebDriverPreCore.Internal.AesonUtils (enumCamelCase)
 import Prelude (Bool, Eq, Maybe, Show)
-
--- https://www.w3.org/TR/2025/WD-webdriver-bidi-20250512/#module-network
 
 -- ######### REMOTE #########
 
--- | NetworkCommand type for remote end operations
-data NetworkCommand
-  = AddIntercept AddIntercept
-  | ContinueRequest ContinueRequest
-  | ContinueResponse ContinueResponse
-  | ContinueWithAuth ContinueWithAuth
-  | FailRequest FailRequest
-  | ProvideResponse ProvideResponse
-  | RemoveIntercept RemoveIntercept
-  | SetCacheBehavior SetCacheBehavior
+data AddDataCollector = MkAddDataCollector
+  { dataTypes :: [DataType],
+    maxEncodedDataSize :: JSUInt,
+    collectorType :: Maybe CollectorType,
+    contexts :: Maybe [BrowsingContext],
+    userContexts :: Maybe [UserContext]
+  }
   deriving (Show, Eq, Generic)
+
+instance ToJSON AddDataCollector
+
+-- TODO - not sure what this is about
+-- network.DataType = "response"
+newtype DataType = MkDataType {dataType :: Text}
+  deriving (Show, Eq, Generic)
+
+instance FromJSON DataType
+
+instance ToJSON DataType
+
+-- TODO - not sure what this is about
+-- network.CollectorType = "blob"
+newtype CollectorType = MkCollectorType {collectorType :: Text}
+  deriving (Show, Eq, Generic)
+
+instance FromJSON CollectorType
+
+instance ToJSON CollectorType
+
+data DisownData = MkDisownData
+  { dataType :: DataType,
+    collector :: Collector,
+    request :: Request
+  }
+  deriving (Show, Eq, Generic)
+
+instance ToJSON DisownData
+
+newtype Collector = MkCollector {collector :: Text}
+  deriving (Show, Eq, Generic)
+
+instance FromJSON Collector
+
+instance ToJSON Collector
+
+newtype Request = MkRequest {request :: Text}
+  deriving (Show, Eq, Generic)
+
+instance ToJSON Request
+
+data GetData = MkGetData
+  { dataType :: DataType,
+    collector :: Maybe Collector,
+    disown :: Bool,
+    request :: Request
+  }
+  deriving (Show, Eq, Generic)
+
+instance ToJSON GetData
+
+data RemoveDataCollector = MkRemoveDataCollector
+  { collector :: Collector
+  }
+  deriving (Show, Eq, Generic)
+
+instance ToJSON RemoveDataCollector
 
 -- | AddIntercept parameters
 data AddIntercept = MkAddIntercept
@@ -73,12 +141,19 @@ data AddIntercept = MkAddIntercept
   }
   deriving (Show, Eq, Generic)
 
+instance ToJSON AddIntercept
+
 -- | Intercept phases for network requests
 data InterceptPhase
   = BeforeRequestSent
   | ResponseStarted
   | AuthRequired
   deriving (Show, Eq, Generic)
+
+instance FromJSON InterceptPhase
+
+instance ToJSON InterceptPhase where
+  toJSON = enumCamelCase
 
 -- | URL pattern for interception
 data UrlPattern = MkUrlPattern
@@ -89,6 +164,10 @@ data UrlPattern = MkUrlPattern
     search :: Maybe Text
   }
   deriving (Show, Eq, Generic)
+
+instance FromJSON UrlPattern
+
+instance ToJSON UrlPattern
 
 -- | ContinueRequest parameters
 data ContinueRequest = MkContinueRequest
@@ -101,14 +180,26 @@ data ContinueRequest = MkContinueRequest
   }
   deriving (Show, Eq, Generic)
 
+instance ToJSON ContinueRequest
+
 newtype RequestId = MkRequestId {id :: Text}
   deriving (Show, Eq, Generic)
+
+instance FromJSON RequestId
+
+instance ToJSON RequestId
 
 -- | BytesValue can be either string or base64-encoded
 data BytesValue
   = StringValue Text
   | Base64Value Text
   deriving (Show, Eq, Generic)
+
+instance FromJSON BytesValue
+
+instance ToJSON BytesValue where
+  toJSON (StringValue val) = object ["type" .= ("string" :: Text), "value" .= val]
+  toJSON (Base64Value val) = object ["type" .= ("base64" :: Text), "value" .= val]
 
 -- | Cookie information
 data Cookie = MkCookie
@@ -124,11 +215,21 @@ data Cookie = MkCookie
   }
   deriving (Show, Eq, Generic)
 
+instance FromJSON Cookie
+
+instance ToJSON Cookie
+
 data SameSite
   = Strict
   | Lax
   | None
+  | Default
   deriving (Show, Eq, Generic)
+
+instance FromJSON SameSite
+
+instance ToJSON SameSite where
+  toJSON = enumCamelCase
 
 -- | Headers for requests and responses
 data Header = MkHeader
@@ -136,6 +237,10 @@ data Header = MkHeader
     headerValue :: BytesValue
   }
   deriving (Show, Eq, Generic)
+
+instance FromJSON Header
+
+instance ToJSON Header
 
 -- | ContinueResponse parameters
 data ContinueResponse = MkContinueResponse
@@ -148,6 +253,8 @@ data ContinueResponse = MkContinueResponse
   }
   deriving (Show, Eq, Generic)
 
+instance ToJSON ContinueResponse
+
 -- | ContinueWithAuth parameters
 data ContinueWithAuth = MkContinueWithAuth
   { intercept :: Intercept,
@@ -156,9 +263,11 @@ data ContinueWithAuth = MkContinueWithAuth
   }
   deriving (Show, Eq, Generic)
 
+instance ToJSON ContinueWithAuth
+
 -- | Network intercept identifier
 newtype Intercept = MkIntercept Text
-  deriving (Show, Eq, Generic)
+  deriving (Show, Eq, Generic, FromJSON, ToJSON)
 
 -- | Auth credentials for authentication
 data AuthCredentials = MkAuthCredentials
@@ -167,12 +276,18 @@ data AuthCredentials = MkAuthCredentials
   }
   deriving (Show, Eq, Generic)
 
+instance ToJSON AuthCredentials
+
 -- | Authentication response type
 data AuthResponse
-  = Default
+  = DefaultResponse
   | Cancel
   | Provide
   deriving (Show, Eq, Generic)
+
+instance ToJSON AuthResponse where
+  toJSON :: AuthResponse -> Value
+  toJSON = enumCamelCase
 
 -- | FailRequest parameters
 data FailRequest = MkFailRequest
@@ -180,6 +295,8 @@ data FailRequest = MkFailRequest
     errorText :: Text
   }
   deriving (Show, Eq, Generic)
+
+instance ToJSON FailRequest
 
 -- | ProvideResponse parameters
 data ProvideResponse = MkProvideResponse
@@ -192,11 +309,15 @@ data ProvideResponse = MkProvideResponse
   }
   deriving (Show, Eq, Generic)
 
+instance ToJSON ProvideResponse
+
 -- | RemoveIntercept parameters
 newtype RemoveIntercept = MkRemoveIntercept
   { intercept :: Intercept
   }
   deriving (Show, Eq, Generic)
+
+instance ToJSON RemoveIntercept
 
 -- | SetCacheBehavior parameters
 data SetCacheBehavior = MkSetCacheBehavior
@@ -205,6 +326,8 @@ data SetCacheBehavior = MkSetCacheBehavior
   }
   deriving (Show, Eq, Generic)
 
+instance ToJSON SetCacheBehavior
+
 -- | Cache behavior options
 data CacheBehavior
   = DefaultCacheBehavior
@@ -212,10 +335,16 @@ data CacheBehavior
   | ForceCacheIgnoreNoStore
   deriving (Show, Eq, Generic)
 
--- ######### LOCAL #########
+instance ToJSON CacheBehavior where
+  toJSON :: CacheBehavior -> Value
+  toJSON = enumCamelCase
+
+-- ######### Local #########
 
 newtype AddInterceptResult = MkAddInterceptResult {addedIntercept :: Intercept}
   deriving (Show, Eq, Generic)
+
+instance FromJSON AddInterceptResult
 
 data NetworkEvent
   = AuthRequiredEvent AuthRequired
@@ -296,7 +425,21 @@ newtype ResponseCompleted = MkResponseCompleted
   deriving (Show, Eq, Generic)
 
 -- | ResponseStarted parameters
-newtype ResponseStarted = MkResponseStarted
+data ResponseStarted = MkResponseStarted
   { startedResponse :: ResponseData
   }
   deriving (Show, Eq, Generic)
+
+newtype GetDataResult = MkGetDataResult
+  { bytes :: BytesValue
+  }
+  deriving (Show, Eq, Generic)
+
+instance FromJSON GetDataResult
+
+newtype AddDataCollectorResult = MkAddDataCollectorResult
+  { collector :: Collector
+  }
+  deriving (Show, Eq, Generic)
+
+instance FromJSON AddDataCollectorResult

@@ -1,7 +1,5 @@
 module WebDriverPreCore.BiDi.Browser
-  ( BrowserCommand (..),
-    BrowserResult (..),
-    ClientWindow (..),
+  ( ClientWindow (..),
     ClientWindowInfo (..),
     ClientWindowState (..),
     CreateUserContext (..),
@@ -12,16 +10,17 @@ module WebDriverPreCore.BiDi.Browser
     RectState (..),
     RemoveUserContext (..),
     SetClientWindowState (..),
-    UserContext (..),
-    UserContextInfo (..),
     WindowState (..),
   )
 where
 
+import Data.Aeson (FromJSON, ToJSON (..))
 import Data.Text (Text)
 import GHC.Generics (Generic)
+import WebDriverPreCore.BiDi.Capabilities (ProxyConfiguration, UserPromptHandler)
+import WebDriverPreCore.Internal.AesonUtils (enumCamelCase)
 import Prelude (Bool (..), Eq (..), Int, Maybe, Show (..))
-import WebDriverPreCore.BiDi.Session (ProxyConfiguration)
+import WebDriverPreCore.BiDi.CoreTypes (UserContext)
 
 {-
 create types to represent the remote and local ends for browser:
@@ -37,17 +36,12 @@ then local under the -- ######### Local ######### header
 
 -- ######### Remote #########
 
-data BrowserCommand
-  = Close
-  | CreateUserContext CreateUserContext
-  | GetClientWindows
-  | GetUserContexts
-  | RemoveUserContext RemoveUserContext
-  | SetClientWindowState SetClientWindowState
-  deriving (Show, Eq, Generic)
-
 newtype ClientWindow = MkClientWindow Text
   deriving (Show, Eq, Generic)
+
+instance FromJSON ClientWindow
+
+instance ToJSON ClientWindow
 
 data ClientWindowInfo = MkClientWindowInfo
   { active :: Bool,
@@ -60,6 +54,10 @@ data ClientWindowInfo = MkClientWindowInfo
   }
   deriving (Show, Eq, Generic)
 
+instance FromJSON ClientWindowInfo
+
+instance ToJSON ClientWindowInfo
+
 data ClientWindowState
   = WindowFullscreen
   | WindowMaximized
@@ -67,24 +65,26 @@ data ClientWindowState
   | WindowNormal
   deriving (Show, Eq, Generic)
 
-newtype UserContext = MkUserContext Text
-  deriving (Show, Eq, Generic)
+instance FromJSON ClientWindowState
 
-newtype UserContextInfo = MkUserContextInfo
-  { userContext :: UserContext
-  }
-  deriving (Show, Eq, Generic)
+instance ToJSON ClientWindowState where
+  toJSON = enumCamelCase
 
 data CreateUserContext = MkCreateUserContext
   { acceptInsecureCerts :: Maybe Bool,
-    proxy :: Maybe ProxyConfiguration
+    proxy :: Maybe ProxyConfiguration,
+    unhandledPromptBehavior :: Maybe UserPromptHandler
   }
   deriving (Show, Eq, Generic)
+
+instance ToJSON CreateUserContext
 
 newtype RemoveUserContext = MkRemoveUserContext
   { userContext :: UserContext
   }
   deriving (Show, Eq, Generic)
+
+instance ToJSON RemoveUserContext
 
 data SetClientWindowState = MkSetClientWindowState
   { clientWindow :: ClientWindow,
@@ -92,16 +92,28 @@ data SetClientWindowState = MkSetClientWindowState
   }
   deriving (Show, Eq, Generic)
 
+instance ToJSON SetClientWindowState
+
 data WindowState
   = ClientWindowNamedState NamedState
   | ClientWindowRectState RectState
   deriving (Show, Eq, Generic)
+
+instance FromJSON WindowState
+
+instance ToJSON WindowState where
+  toJSON = enumCamelCase
 
 data NamedState
   = NamedFullscreen
   | NamedMaximized
   | NamedMinimized
   deriving (Show, Eq, Generic)
+
+instance FromJSON NamedState
+
+instance ToJSON NamedState where
+  toJSON = enumCamelCase
 
 data RectState = MkRectState
   { state :: NormalState,
@@ -112,23 +124,33 @@ data RectState = MkRectState
   }
   deriving (Show, Eq, Generic)
 
+instance FromJSON RectState
+
+instance ToJSON RectState
+
 data NormalState = NormalState
   deriving (Show, Eq, Generic)
 
--- ######### Local #########
+instance FromJSON NormalState
 
-data BrowserResult
-  = CreateUserContextResult UserContextInfo
-  | GetClientWindowsResult GetClientWindowsResult
-  | GetUserContextsResult GetUserContextsResult
-  deriving (Show, Eq, Generic)
+instance ToJSON NormalState
+
+-- ######### Local #########
 
 newtype GetClientWindowsResult = MkGetClientWindowsResult
   { clientWindows :: [ClientWindowInfo]
   }
   deriving (Show, Eq, Generic)
 
+instance FromJSON GetClientWindowsResult
+
+instance ToJSON GetClientWindowsResult
+
 newtype GetUserContextsResult = MkGetUserContextsResult
-  { userContexts :: [UserContextInfo]
+  { userContexts :: [UserContext]
   }
   deriving (Show, Eq, Generic)
+
+instance FromJSON GetUserContextsResult
+
+instance ToJSON GetUserContextsResult

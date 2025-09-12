@@ -100,7 +100,7 @@ common commonGhcOptions
     -fbyte-code-and-object-code
     -fno-break-points
     -haddock
-    -fdefer-type-errors
+    -- -fdefer-type-errors
 
 
 test-suite driver-demo-e2e
@@ -126,6 +126,7 @@ test-suite driver-demo-e2e
     , tasty-discover
     , text
     , time
+    , unliftio
     , webdriver-precore
     , websockets
     , wuss
@@ -138,7 +139,12 @@ test-suite driver-demo-e2e
     , Http.HttpAPI
     , Http.HttpE2EDemoTest
     , BiDi.BiDiRunner
-    , BiDi.BiDiE2EDemoTest
+    , BiDi.DemoUtils
+    , BiDi.WussDemo
+    , BiDi.Demos.BrowsingContextDemos
+    , BiDi.Demos.NetworkDemos
+    , BiDi.Demos.OtherDemos
+    , BiDi.Demos.ScriptDemos
     , RuntimeConst
   build-tool-depends:
     tasty-discover:tasty-discover

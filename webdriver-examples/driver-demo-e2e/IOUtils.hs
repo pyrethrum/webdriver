@@ -6,40 +6,129 @@ module IOUtils
     logShow,
     logM,
     logShowM,
-    ppTxt,
+    DemoUtils (..),
+    Logger (..),
+    mkLogger,
+    demoUtils,
+    noOpUtils,
+    -- withAsyncLogger,
+    bidiDemoUtils,
     sleep1,
     sleep2,
     (===),
   )
 where
-import Control.Concurrent (threadDelay)
-import qualified Data.ByteString as BS
-import qualified Data.ByteString.Base64 as B64
-import qualified Data.Base64.Types as B64T
-import Data.Text (Text)
-import System.IO (FilePath, IO)
-import Data.Int (Int)
-import Control.Applicative (pure)
-import Data.Function ((.), ($))
-import GHC.Num (Num(..))
 
-import Data.Text.IO qualified as TIO
-import Text.Show.Pretty qualified as P
-import Test.Tasty.HUnit as HUnit (Assertion, HasCallStack, (@=?))
-import Data.Semigroup (Semigroup (..))
-import Data.Text (pack)
-import Prelude (Show, Eq, (>>=))
 import Const (second, seconds)
+import Control.Concurrent (threadDelay)
+import Control.Monad (unless)
+import Data.Base64.Types qualified as B64T
+import Data.ByteString qualified as BS
+import Data.ByteString.Base64 qualified as B64
+import Data.Text (Text)
+import Data.Text.IO qualified as TIO
+import Test.Tasty.HUnit as HUnit (Assertion, HasCallStack, (@=?))
+import UnliftIO (TChan, atomically, isEmptyTChan, writeTChan)
+import WebDriverPreCore.Internal.Utils (txt)
+import Prelude hiding (log)
 
+data Logger = MkLogger
+  { log :: Text -> IO (),
+    waitEmpty :: IO ()
+  }
+
+--  TODO : deprectate static logTxt et al
+
+bidiDemoUtils :: (Text -> IO ()) -> Int -> DemoUtils
+bidiDemoUtils baseLog pauseMs =
+  let logTxt' = baseLog
+      log' l t = logTxt' $ l <> ": " <> t
+      logShow' :: forall a. (Show a) => Text -> a -> IO ()
+      logShow' l = log' l . txt
+   in MkDemoUtils
+        { sleep = sleepMs,
+          log = log',
+          logShow = logShow',
+          logM = \l mt -> mt >>= log' l,
+          logShowM = \l t -> t >>= logShow l,
+          logTxt = logTxt',
+          pause = sleepMs pauseMs,
+          pauseMinMs = sleepMs . max pauseMs
+        }
+
+mkLogger :: TChan Text -> IO Logger
+mkLogger logChan =
+  pure $
+    MkLogger
+      { log = atomically . writeTChan logChan,
+        waitEmpty = waitEmpty' 0
+      }
+  where
+    waitEmpty' :: Int -> IO ()
+    waitEmpty' attempt = do
+      empty <- atomically $ isEmptyTChan logChan
+      unless (empty || attempt > 500) $ do
+        threadDelay 10_000
+        waitEmpty' $ succ attempt
+
+-- withAsyncLogger :: (Logger -> IO ()) -> IO ()
+-- withAsyncLogger action = do
+--   logChan <- newTChanIO
+--   withAsync (printLoop logChan) $ \_ -> do
+--     logger <- mkLogger logChan
+--     finally
+--       ( action logger `catch` \(e :: SomeException) -> do
+--           logger.log $ "Exception encountered: " <> txt e
+--           throw e
+--       )
+--       logger.waitEmpty
+
+data DemoUtils = MkDemoUtils
+  { sleep :: Int -> IO (),
+    pause :: IO (),
+    pauseMinMs :: Int -> IO (),
+    logTxt :: Text -> IO (),
+    log :: Text -> Text -> IO (),
+    logShow :: forall a. (Show a) => Text -> a -> IO (),
+    logM :: Text -> IO Text -> IO (),
+    logShowM :: forall a. (Show a) => Text -> IO a -> IO ()
+  }
+
+demoUtils :: Int -> DemoUtils
+demoUtils pauseMs =
+  MkDemoUtils
+    { sleep = sleepMs,
+      logTxt,
+      log,
+      logShow,
+      logM,
+      logShowM,
+      pause = sleepMs pauseMs,
+      pauseMinMs = sleepMs . max pauseMs
+    }
+
+noOpUtils :: DemoUtils
+noOpUtils =
+  MkDemoUtils
+    { sleep = const $ pure (),
+      logTxt = const $ pure (),
+      log = const2 $ pure (),
+      logShow = const2 $ pure (),
+      logM = const2 $ pure (),
+      logShowM = const2 $ pure (),
+      pause = pure (),
+      -- even for no-op, ensure sleep for passed in ms
+      pauseMinMs = sleepMs
+    }
+  where
+    const2 = const . const
 
 sleepMs :: Int -> IO ()
-sleepMs = threadDelay . (* 1_000)
+sleepMs = threadDelay . (*) 1_000
 
 encodeFileToBase64 :: FilePath -> IO Text
-encodeFileToBase64 filePath = do
-  contents <- BS.readFile filePath
-  pure . B64T.extractBase64 $ B64.encodeBase64 contents
-
+encodeFileToBase64 filePath =
+  B64T.extractBase64 . B64.encodeBase64 <$> BS.readFile filePath
 
 logTxt :: Text -> IO ()
 logTxt = TIO.putStrLn
@@ -47,11 +136,8 @@ logTxt = TIO.putStrLn
 log :: Text -> Text -> IO ()
 log l t = logTxt $ l <> ": " <> t
 
-ppTxt :: Show a => a -> Text
-ppTxt = pack . P.ppShow
-
 logShow :: (Show a) => Text -> a -> IO ()
-logShow l = log l . ppTxt
+logShow l = log l . txt
 
 logM :: Text -> IO Text -> IO ()
 logM l t = t >>= log l
