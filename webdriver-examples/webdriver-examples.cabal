@@ -139,8 +139,11 @@ test-suite driver-demo-e2e
     , Http.HttpAPI
     , Http.HttpE2EDemoTest
     , BiDi.BiDiRunner
-    , BiDi.BiDiE2EDemoTest
+    , BiDi.DemoUtils
     , BiDi.WussDemo
+    , BiDi.Demos.BrowsingContextDemos
+    , BiDi.Demos.OtherDemos
+    , BiDi.Demos.ScriptDemos
     , RuntimeConst
   build-tool-depends:
     tasty-discover:tasty-discover
