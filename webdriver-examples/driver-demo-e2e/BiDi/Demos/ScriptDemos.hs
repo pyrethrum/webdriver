@@ -1297,3 +1297,156 @@ scriptUserContextsDemo =
       finalUserContexts <- browserGetUserContexts
       logShow "Remaining user contexts after cleanup" finalUserContexts
       pause
+
+-- >>> runDemo scriptCallFunctionDemo
+scriptCallFunctionDemo :: BiDiDemo
+scriptCallFunctionDemo =
+  demo "Script V - script.callFunction Core Scenarios" action
+  where
+    action :: DemoUtils -> Commands -> IO ()
+    action utils@MkDemoUtils {..} cmds@MkCommands {..} = do
+      bc <- rootContext utils cmds
+
+      logTxt "Navigate to a simple page for function call tests"
+      navResult <-
+        browsingContextNavigate $
+          MkNavigate
+            { context = bc,
+              url = "data:text/html,<html><head><title>CallFunction Demo</title></head><body><h1>CallFunction Demo</h1><div id='output'></div></body></html>",
+              wait = Just Complete
+            }
+      logShow "Navigation result" navResult
+      pause
+
+      let baseTarget = ContextTarget $ MkContextTarget {context = bc, sandbox = Nothing}
+
+      -- Test 1: Basic synchronous function returning a string
+      logTxt "Test 1: Basic synchronous function (string result)"
+      r1 <-
+        scriptCallFunction $
+          MkCallFunction
+            { functionDeclaration = "function() { return 'Hello from callFunction!'; }",
+              awaitPromise = False,
+              target = baseTarget,
+              arguments = Nothing,
+              resultOwnership = Nothing,
+              serializationOptions = Nothing,
+              this = Nothing
+            }
+      logShow "callFunction result - basic string" r1
+      pause
+
+      -- Test 2: Function with arguments (numbers) and arithmetic
+      logTxt "Test 2: Function with numeric arguments"
+      let numArg n = PrimitiveLocalValue (NumberValue (Left n))
+      r2 <-
+        scriptCallFunction $
+          MkCallFunction
+            { functionDeclaration = "function(a, b) { return a + b + 0.5; }",
+              awaitPromise = False,
+              target = baseTarget,
+              arguments = Just [numArg 41, numArg 1],
+              resultOwnership = Nothing,
+              serializationOptions = Nothing,
+              this = Nothing
+            }
+      logShow "callFunction result - arithmetic" r2
+      pause
+
+      -- Test 3: Promise-returning function with awaitPromise=True
+      logTxt "Test 3: Promise-returning function (awaitPromise=True)"
+      r3 <-
+        scriptCallFunction $
+          MkCallFunction
+            { functionDeclaration = "async function(name) { return new Promise(r => setTimeout(()=> r('Hi ' + name), 50)); }",
+              awaitPromise = True,
+              target = baseTarget,
+              arguments = Just [PrimitiveLocalValue (StringValue "BiDi")],
+              resultOwnership = Nothing,
+              serializationOptions = Nothing,
+              this = Nothing
+            }
+      logShow "callFunction result - awaited promise" r3
+      pause
+
+      -- Test 4: Function throwing an error (exception path)
+      logTxt "Test 4: Function throwing an exception"
+      r4 <-
+        scriptCallFunction $
+          MkCallFunction
+            { functionDeclaration = "function() { throw new Error('Boom from callFunction'); }",
+              awaitPromise = False,
+              target = baseTarget,
+              arguments = Nothing,
+              resultOwnership = Nothing,
+              serializationOptions = Nothing,
+              this = Nothing
+            }
+      logShow "callFunction result - exception" r4
+      pause
+
+      -- Test 5: Function with resultOwnership = Root to obtain a handle (if remote value)
+      logTxt "Test 5: Object result with ownership=Root"
+      r5 <-
+        scriptCallFunction $
+          MkCallFunction
+            { functionDeclaration = "function() { return { message: 'Owned object', time: Date.now() }; }",
+              awaitPromise = False,
+              target = baseTarget,
+              arguments = Nothing,
+              resultOwnership = Just Root,
+              serializationOptions = Nothing,
+              this = Nothing
+            }
+      logShow "callFunction result - owned object" r5
+      pause
+
+      -- Test 6: Function with serializationOptions limiting object depth
+      logTxt "Test 6: serializationOptions (maxObjectDepth=1)"
+      r6 <-
+        scriptCallFunction $
+          MkCallFunction
+            { functionDeclaration = "function() { return { level1: { level2: { value: 42 } }, keep: 'yes' }; }",
+              awaitPromise = False,
+              target = baseTarget,
+              arguments = Nothing,
+              resultOwnership = Nothing,
+              serializationOptions =
+                Just
+                  MkSerializationOptions
+                    { maxDomDepth = Nothing,
+                      maxObjectDepth = Just (Just (MkJSUInt 1)),
+                      includeShadowTree = Just ShadowTreeNone
+                    },
+              this = Nothing
+            }
+      logShow "callFunction result - limited serialization" r6
+      pause
+
+      -- Test 7: Using 'this' binding (object as this) and argument to access property
+      logTxt "Test 7: Using 'this' binding to access property"
+      let objLocal =
+            ObjectLocalValue
+              MkObjectLocalValue
+                { value =
+                    MkMappingLocalValue
+                      [ (Right "greeting", PrimitiveLocalValue (StringValue "Hello")),
+                        (Right "name", PrimitiveLocalValue (StringValue "World"))
+                      ]
+                }
+      r7 <-
+        scriptCallFunction $
+          MkCallFunction
+            { functionDeclaration = "function(extra) { return this.greeting + ', ' + this.name + extra; }",
+              awaitPromise = False,
+              target = baseTarget,
+              arguments = Just [PrimitiveLocalValue (StringValue "!!!")],
+              resultOwnership = Nothing,
+              serializationOptions = Nothing,
+              this = Just objLocal
+            }
+      logShow "callFunction result - this binding" r7
+      pause
+
+      logTxt "script.callFunction demo complete"
+      pause

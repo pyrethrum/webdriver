@@ -369,14 +369,14 @@ newtype MappingLocalValue = MkMappingLocalValue [(Either LocalValue Text, LocalV
 
 -- | Map local value
 data MapLocalValue = MkMapLocalValue
-  { typ :: Text, -- "map"
+  { 
     value :: MappingLocalValue
   }
   deriving (Show, Eq, Generic)
 
 -- | Object local value
 data ObjectLocalValue = MkObjectLocalValue
-  { typ :: Text, -- "object"
+  { 
     value :: MappingLocalValue
   }
   deriving (Show, Eq, Generic)
@@ -390,7 +390,7 @@ data RegExpValue = MkRegExpValue
 
 -- | RegExp local value
 data RegExpLocalValue = MkRegExpLocalValue
-  { typ :: Text, -- "regexp"
+  { 
     value :: RegExpValue
   }
   deriving (Show, Eq, Generic)
@@ -680,7 +680,9 @@ instance ToJSON AddPreloadScript where
   toJSON :: AddPreloadScript -> Value
   toJSON = toJSONOmitNothing
 
-instance ToJSON CallFunction
+instance ToJSON CallFunction where
+  toJSON :: CallFunction -> Value
+  toJSON = toJSONOmitNothing
 
 -- GetRealms has a typ field that needs special handling
 instance ToJSON GetRealms where
@@ -839,6 +841,7 @@ instance ToJSON RemoteValue where
             ]
 -}
 instance ToJSON PrimitiveProtocolValue where
+  toJSON :: PrimitiveProtocolValue -> Value
   toJSON = \case
     UndefinedValue -> object ["type" .= "undefined"]
     NullValue -> object ["type" .= "null"]
@@ -870,13 +873,14 @@ instance ToJSON PrimitiveProtocolValue where
 
 -- Local Value types
 instance ToJSON LocalValue where
+  toJSON :: LocalValue -> Value
   toJSON = \case
     RemoteReference ref -> toJSON ref
     PrimitiveLocalValue prim -> toJSON prim
     ChannelValue channel -> toJSON channel
     ArrayLocalValue arr -> toJSON arr
     DateLocalValue date -> toJSON date
-    MapLocalValue map -> toJSON map
+    MapLocalValue mapVal -> toJSON mapVal
     ObjectLocalValue obj -> toJSON obj
     RegExpLocalValue regex -> toJSON regex
     SetLocalValue set -> toJSON set
@@ -904,17 +908,31 @@ instance ToJSON DateLocalValue where
         "value" .= value
       ]
 
-instance ToJSON MappingLocalValue
+instance ToJSON MappingLocalValue where
+  toJSON :: MappingLocalValue -> Value
+  toJSON (MkMappingLocalValue pairs) = 
+    toJSON $ pairToArray <$> pairs
+    where
+      pairToArray :: (Either LocalValue Text, LocalValue) -> [Value]
+      pairToArray (key, value) = [keyToJson key, toJSON value]
+      
+      keyToJson :: Either LocalValue Text -> Value
+      keyToJson (Left localVal) = toJSON localVal
+      keyToJson (Right text) = toJSON text
+  
+  
 
 instance ToJSON MapLocalValue where
-  toJSON (MkMapLocalValue _ value) =
+  toJSON :: MapLocalValue -> Value
+  toJSON (MkMapLocalValue value) =
     object
       [ "type" .= "map",
         "value" .= value
       ]
 
 instance ToJSON ObjectLocalValue where
-  toJSON (MkObjectLocalValue _ value) =
+  toJSON :: ObjectLocalValue -> Value
+  toJSON (MkObjectLocalValue value) =
     object
       [ "type" .= "object",
         "value" .= value
@@ -923,7 +941,7 @@ instance ToJSON ObjectLocalValue where
 instance ToJSON RegExpValue
 
 instance ToJSON RegExpLocalValue where
-  toJSON (MkRegExpLocalValue _ value) =
+  toJSON (MkRegExpLocalValue value) =
     object
       [ "type" .= "regexp",
         "value" .= value
