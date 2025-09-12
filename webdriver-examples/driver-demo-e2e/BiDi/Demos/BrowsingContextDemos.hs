@@ -10,6 +10,22 @@ import WebDriverPreCore.BiDi.CoreTypes (JSInt (..), JSUInt (..), NodeRemoteValue
 import WebDriverPreCore.BiDi.Protocol
 import Prelude hiding (log, putStrLn)
 
+
+{- 
+1. browsingContextCreate :: DONE
+2. browsingContextActivate :: DONE
+3. browsingContextCaptureScreenshot :: DONE
+4. browsingContextClose :: DONE
+5. browsingContextGetTree :: DONE*
+6. browsingContextHandleUserPrompt :: DONE
+7. browsingContextLocateNodes :: DONE
+8. browsingContextNavigate :: DONE
+9. browsingContextPrint :: DONE
+10. browsingContextReload :: DONE
+11. browsingContextSetViewport :: DONE
+12. browsingContextTraverseHistory :: DONE
+-}
+
 -- >>> runDemo browsingContextCreateActivateCloseDemo
 browsingContextCreateActivateCloseDemo :: BiDiDemo
 browsingContextCreateActivateCloseDemo =
