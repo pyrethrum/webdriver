@@ -2,44 +2,13 @@ module BiDi.Demos.ScriptDemos where
 
 -- custom import needed to disambiguate capabilities
 
-
-import BiDi.DemoUtils
 import BiDi.BiDiRunner (Commands (..))
+import BiDi.DemoUtils
 import Data.Aeson (ToJSON (..))
-import Data.Text ( isInfixOf)
+import Data.Text (isInfixOf)
 import IOUtils (DemoUtils (..))
 import WebDriverPreCore.BiDi.CoreTypes (JSUInt (..))
 import WebDriverPreCore.BiDi.Protocol
-    ( CreateUserContext(unhandledPromptBehavior, MkCreateUserContext,
-                        acceptInsecureCerts, proxy),
-      RemoveUserContext(MkRemoveUserContext),
-      Activate(MkActivate),
-      Create(userContext, MkCreate, createType, background,
-             referenceContext),
-      CreateType(Tab),
-      Navigate(wait, MkNavigate, context, url),
-      ReadinessState(Complete),
-      AddPreloadScript(sandbox, MkAddPreloadScript, functionDeclaration,
-                       arguments, contexts, userContexts),
-      AddPreloadScriptResult(MkAddPreloadScriptResult),
-      ContextTarget(sandbox, MkContextTarget, context),
-      Evaluate(expression, MkEvaluate, awaitPromise,
-               serializationOptions, resultOwnership, target),
-      EvaluateResult(result, EvaluateResultSuccess),
-      IncludeShadowTree(ShadowTreeNone, All, Open),
-      PrimitiveProtocolValue(StringValue),
-      RemoteValue(PrimitiveValue),
-      RemovePreloadScript(MkRemovePreloadScript),
-      ResultOwnership(Root),
-      Sandbox(MkSandbox),
-      SerializationOptions(includeShadowTree, MkSerializationOptions,
-                           maxDomDepth, maxObjectDepth),
-      Target(ContextTarget),
-      Channel(Channel),
-      ChannelProperties(ownership, MkChannelProperties, channel,
-                        serializationOptions),
-      ChannelValue(value, MkChannelValue) )
-
 import WebDriverPreCore.Internal.AesonUtils (jsonToText)
 import Prelude hiding (log, putStrLn)
 
@@ -895,7 +864,6 @@ scriptChannelArgumentDemo =
       logShow "Navigation result for execution" navResult2
       pause
 
-  
       logTxt "Check if channel argument was received successfully"
       chkDOM "✓ Channel Argument Success"
       chkDOM "Received channel object"
@@ -941,7 +909,7 @@ scriptUserContextsDemo =
       bc <- rootContext utils cmds
 
       logTxt "Creating multiple user contexts to demonstrate userContexts property"
-      
+
       logTxt "Create User Context 1 - isolated environment"
       userContext1 <-
         browserCreateUserContext
@@ -1061,7 +1029,7 @@ scriptUserContextsDemo =
       pause
 
       logTxt "Create browsing contexts in different user contexts to test script targeting"
-      
+
       logTxt "Create browsing context in UserContext1"
       bcUserContext1 <-
         browsingContextCreate $
@@ -1101,11 +1069,10 @@ scriptUserContextsDemo =
       logTxt "Test script execution in UserContext1 - should have specific AND global scripts"
       browsingContextActivate $ MkActivate bcUserContext1
       pauseMinMs 500
-      
+
       navResultUC1 <- browsingContextNavigate $ MkNavigate {context = bcUserContext1, url = "data:text/html,<html><head><title>UserContext1 Test</title></head><body><h1>UserContext1 Page</h1><div id='content'>Testing UserContext1</div></body></html>", wait = Just Complete}
       logShow "Navigation in UserContext1" navResultUC1
       pauseMinMs 1500 -- Wait for preload scripts
-
       logTxt "Verify UserContext1 has both global and specific scripts"
       scriptEvaluateNoWait $
         MkEvaluate
@@ -1120,7 +1087,7 @@ scriptUserContextsDemo =
             resultOwnership = Nothing,
             serializationOptions = Nothing
           }
-      
+
       -- Check UserContext1 content
       domContentUC1 <-
         scriptEvaluate $
@@ -1150,11 +1117,10 @@ scriptUserContextsDemo =
       logTxt "Test script execution in UserContext2 - should have specific AND global scripts"
       browsingContextActivate $ MkActivate bcUserContext2
       pauseMinMs 500
-      
+
       navResultUC2 <- browsingContextNavigate $ MkNavigate {context = bcUserContext2, url = "data:text/html,<html><head><title>UserContext2 Test</title></head><body><h1>UserContext2 Page</h1><div id='content'>Testing UserContext2</div></body></html>", wait = Just Complete}
       logShow "Navigation in UserContext2" navResultUC2
       pauseMinMs 1500 -- Wait for preload scripts
-
       logTxt "Verify UserContext2 has both global and specific scripts"
       scriptEvaluateNoWait $
         MkEvaluate
@@ -1169,7 +1135,7 @@ scriptUserContextsDemo =
             resultOwnership = Nothing,
             serializationOptions = Nothing
           }
-      
+
       -- Check UserContext2 content
       domContentUC2 <-
         scriptEvaluate $
@@ -1199,11 +1165,10 @@ scriptUserContextsDemo =
       logTxt "Test script execution in UserContext3 - should have global AND single scripts, NOT specific"
       browsingContextActivate $ MkActivate bcUserContext3
       pauseMinMs 500
-      
+
       navResultUC3 <- browsingContextNavigate $ MkNavigate {context = bcUserContext3, url = "data:text/html,<html><head><title>UserContext3 Test</title></head><body><h1>UserContext3 Page</h1><div id='content'>Testing UserContext3</div></body></html>", wait = Just Complete}
       logShow "Navigation in UserContext3" navResultUC3
       pauseMinMs 1500 -- Wait for preload scripts
-
       logTxt "Verify UserContext3 has global and single scripts, but NOT specific"
       scriptEvaluateNoWait $
         MkEvaluate
@@ -1218,7 +1183,7 @@ scriptUserContextsDemo =
             resultOwnership = Nothing,
             serializationOptions = Nothing
           }
-      
+
       -- Check UserContext3 content
       domContentUC3 <-
         scriptEvaluate $
@@ -1248,11 +1213,10 @@ scriptUserContextsDemo =
       logTxt "Test original browsing context (default user context) - should only have global script"
       browsingContextActivate $ MkActivate bc
       pauseMinMs 500
-      
+
       navResultOriginal <- browsingContextNavigate $ MkNavigate {context = bc, url = "data:text/html,<html><head><title>Original Context Test</title></head><body><h1>Original Context Page</h1><div id='content'>Testing Original Default Context</div></body></html>", wait = Just Complete}
       logShow "Navigation in original context" navResultOriginal
       pauseMinMs 1500 -- Wait for preload scripts
-
       logTxt "Verify original context has only global script (no user context restrictions)"
       scriptEvaluateNoWait $
         MkEvaluate
@@ -1267,7 +1231,7 @@ scriptUserContextsDemo =
             resultOwnership = Nothing,
             serializationOptions = Nothing
           }
-      
+
       -- Check original context content
       domContentOriginal <-
         scriptEvaluate $
@@ -1305,7 +1269,7 @@ scriptUserContextsDemo =
       let MkAddPreloadScriptResult scriptSpecificId = preloadScriptSpecificUsers
       let MkAddPreloadScriptResult scriptGlobalId = preloadScriptGlobal
       let MkAddPreloadScriptResult scriptSingleId = preloadScriptSingleUser
-      
+
       removeSpecific <- scriptRemovePreloadScript $ MkRemovePreloadScript scriptSpecificId
       logShow "Removed specific userContexts script" removeSpecific
       removeGlobal <- scriptRemovePreloadScript $ MkRemovePreloadScript scriptGlobalId

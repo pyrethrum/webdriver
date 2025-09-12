@@ -93,7 +93,7 @@ import WebDriverPreCore.BiDi.Protocol
     WebExtensionData,
     WebExtensionResult,
   )
-import WebDriverPreCore.BiDi.Protocol qualified as P
+import WebDriverPreCore.BiDi.API qualified as P
 import WebDriverPreCore.BiDi.ResponseEvent (JSONEncodeError, MatchedResponse (..), ResponseObject, decodeResponse, displayResponseError, parseResponse)
 import WebDriverPreCore.BiDi.Session (SessionNewResult, SessionStatusResult)
 import WebDriverPreCore.Http qualified as Http

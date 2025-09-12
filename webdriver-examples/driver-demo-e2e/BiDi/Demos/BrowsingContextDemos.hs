@@ -8,34 +8,6 @@ import IOUtils (DemoUtils (..))
 import WebDriverPreCore.BiDi.BrowsingContext (Locator (..), PrintMargin (..), PrintPage (..), Viewport (..))
 import WebDriverPreCore.BiDi.CoreTypes (JSInt (..), JSUInt (..), NodeRemoteValue (..), SharedId (..))
 import WebDriverPreCore.BiDi.Protocol
-  ( Activate (MkActivate),
-    CaptureScreenshot (..),
-    ClipRectangle (..),
-    Close (..),
-    ContextTarget (..),
-    Create (..),
-    CreateType (Tab, Window),
-    CreateUserContext (..),
-    Evaluate (..),
-    GetTree (MkGetTree, maxDepth, root),
-    HandleUserPrompt (..),
-    ImageFormat (MkImageFormat, imageType, quality),
-    LocateNodes (..),
-    LocateNodesResult (MkLocateNodesResult),
-    Navigate (..),
-    Orientation (Landscape, Portrait),
-    PageRange (Page, Range, fromPage, toPage),
-    Print (..),
-    PrintResult (MkPrintResult, base64Text),
-    ReadinessState (Complete, Interactive, None),
-    Reload (..),
-    ScreenShotOrigin (..),
-    SetViewport (..),
-    SharedId (MkShareId, id),
-    SharedReference (..),
-    Target (..),
-    TraverseHistory (..),
-  )
 import Prelude hiding (log, putStrLn)
 
 -- >>> runDemo browsingContextCreateActivateCloseDemo

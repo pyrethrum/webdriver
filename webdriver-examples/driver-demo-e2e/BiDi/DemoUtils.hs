@@ -5,7 +5,6 @@ import Control.Exception (Exception, catch, throwIO)
 import Data.Text (Text, isInfixOf)
 import Data.Time.Clock.POSIX (POSIXTime, getPOSIXTime)
 import IOUtils (DemoUtils (..))
-import WebDriverPreCore.BiDi.BiDiUrl (parseUrl)
 import WebDriverPreCore.BiDi.Protocol
   ( BrowsingContext,
     Close (MkClose, context, promptUnload),
@@ -37,11 +36,6 @@ import Prelude hiding (log, putStrLn)
 
 pauseMs :: Int
 pauseMs = 0
-
--- >>> demo_parseUrl
--- "Right\n  MkBiDiUrl\n    { host = \"127.0.0.1\"\n    , port = 9222\n    , path = \"/session/e43698d9-b02a-4284-a936-12041deb3552\"\n    }"
-demo_parseUrl :: Text
-demo_parseUrl = txt $ parseUrl "ws://127.0.0.1:9222/session/e43698d9-b02a-4284-a936-12041deb3552"
 
 data BiDiDemo = MkBiDiDemo
   { name :: Text,
