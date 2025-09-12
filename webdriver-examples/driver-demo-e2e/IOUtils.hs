@@ -136,6 +136,9 @@ logTxt = TIO.putStrLn
 log :: Text -> Text -> IO ()
 log l t = logTxt $ l <> ": " <> t
 
+ppTxt :: Show a => a -> Text
+ppTxt = pack . P.ppShow
+
 logShow :: (Show a) => Text -> a -> IO ()
 logShow l = log l . txt
 
