@@ -1,5 +1,6 @@
 module BiDi.Demos.NetworkDemos where
 
+{-
 import BiDi.BiDiRunner (Commands (..))
 import BiDi.DemoUtils
 import Data.Aeson (ToJSON (..))
@@ -11,6 +12,8 @@ import WebDriverPreCore.BiDi.Protocol
 import qualified WebDriverPreCore.BiDi.Network as Network
 import WebDriverPreCore.Internal.AesonUtils (jsonToText)
 import Prelude hiding (log, putStrLn)
+
+-}
 
 {-
 
