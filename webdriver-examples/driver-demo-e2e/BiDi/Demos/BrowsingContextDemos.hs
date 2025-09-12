@@ -1,93 +1,41 @@
 module BiDi.Demos.BrowsingContextDemos where
 
-import BiDi.DemoUtils
 import BiDi.BiDiRunner (Commands (..))
-import Data.Aeson (ToJSON (..), Value (Null), object, (.=))
+import BiDi.DemoUtils
+import Data.Aeson (Value (Null), object, (.=))
 import Data.Text (Text)
 import IOUtils (DemoUtils (..))
 import WebDriverPreCore.BiDi.BrowsingContext (Locator (..), PrintMargin (..), PrintPage (..), Viewport (..))
 import WebDriverPreCore.BiDi.CoreTypes (JSInt (..), JSUInt (..), NodeRemoteValue (..), SharedId (..))
 import WebDriverPreCore.BiDi.Protocol
   ( Activate (MkActivate),
-    BrowsingContext,
-    CaptureScreenshot
-      ( MkCaptureScreenshot,
-        clip,
-        context,
-        format,
-        origin
-      ),
-    ClipRectangle (BoxClipRectangle, height, width, x, y),
-    Close (MkClose, context, promptUnload),
+    CaptureScreenshot (..),
+    ClipRectangle (..),
+    Close (..),
     ContextTarget (..),
-    Create
-      ( MkCreate,
-        background,
-        createType,
-        referenceContext,
-        userContext
-      ),
+    Create (..),
     CreateType (Tab, Window),
-    CreateUserContext
-      ( MkCreateUserContext,
-        acceptInsecureCerts,
-        proxy,
-        unhandledPromptBehavior
-      ),
-    Evaluate
-      ( MkEvaluate,
-        awaitPromise,
-        expression,
-        resultOwnership,
-        serializationOptions,
-        target
-      ),
+    CreateUserContext (..),
+    Evaluate (..),
     GetTree (MkGetTree, maxDepth, root),
-    GetTreeResult (MkGetTreeResult),
-    HandleUserPrompt (MkHandleUserPrompt, accept, context, userText),
+    HandleUserPrompt (..),
     ImageFormat (MkImageFormat, imageType, quality),
-    Info (context),
-    LocateNodes
-      ( MkLocateNodes,
-        context,
-        locator,
-        maxNodeCount,
-        serializationOptions,
-        startNodes
-      ),
+    LocateNodes (..),
     LocateNodesResult (MkLocateNodesResult),
-    Navigate (MkNavigate, context, url, wait),
+    Navigate (..),
     Orientation (Landscape, Portrait),
     PageRange (Page, Range, fromPage, toPage),
-    Print
-      ( MkPrint,
-        background,
-        context,
-        margin,
-        orientation,
-        page,
-        pageRanges,
-        scale,
-        shrinkToFit
-      ),
+    Print (..),
     PrintResult (MkPrintResult, base64Text),
     ReadinessState (Complete, Interactive, None),
-    Reload (MkReload, context, ignoreCache, wait),
-    RemoveUserContext (MkRemoveUserContext),
-    ScreenShotOrigin (Document, Viewport),
-    SetViewport
-      ( MkSetViewport,
-        context,
-        devicePixelRatio,
-        userContexts,
-        viewport
-      ),
+    Reload (..),
+    ScreenShotOrigin (..),
+    SetViewport (..),
     SharedId (MkShareId, id),
-    SharedReference (MkSharedReference, extensions, handle, sharedId),
-    Target(..),
-    TraverseHistory (MkTraverseHistory, context, delta),
+    SharedReference (..),
+    Target (..),
+    TraverseHistory (..),
   )
-import WebDriverPreCore.Internal.Utils (txt)
 import Prelude hiding (log, putStrLn)
 
 -- >>> runDemo browsingContextCreateActivateCloseDemo

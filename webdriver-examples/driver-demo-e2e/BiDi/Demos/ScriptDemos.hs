@@ -4,111 +4,43 @@ module BiDi.Demos.ScriptDemos where
 
 
 import BiDi.DemoUtils
-import BiDi.BiDiRunner (Commands (..), mkDemoBiDiClientParams, mkFailBidiClientParams, withCommands)
-import Control.Exception (Exception, catch, throwIO)
-import Data.Aeson (ToJSON (..), Value (Null), object, (.=))
-import Data.Text (Text, isInfixOf)
-import Data.Time.Clock.POSIX (POSIXTime, getPOSIXTime)
-import Data.Word (Word64)
+import BiDi.BiDiRunner (Commands (..))
+import Data.Aeson (ToJSON (..))
+import Data.Text ( isInfixOf)
 import IOUtils (DemoUtils (..))
-import WebDriverPreCore.BiDi.BiDiUrl (parseUrl)
-import WebDriverPreCore.BiDi.BrowsingContext (Locator (..), PrintMargin (..), PrintPage (..), Viewport (..))
-import WebDriverPreCore.BiDi.CoreTypes (JSInt (..), JSUInt (..), NodeRemoteValue (..), SharedId (..))
+import WebDriverPreCore.BiDi.CoreTypes (JSUInt (..))
 import WebDriverPreCore.BiDi.Protocol
-  ( Activate (MkActivate),
-    AddPreloadScript (..),
-    AddPreloadScriptResult (..),
-    BrowsingContext,
-    CaptureScreenshot
-      ( MkCaptureScreenshot,
-        clip,
-        context,
-        format,
-        origin
-      ),
-    ClipRectangle (BoxClipRectangle, height, width, x, y),
-    Close (MkClose, context, promptUnload),
-    ContextTarget (MkContextTarget, context, sandbox),
-    Create
-      ( MkCreate,
-        background,
-        createType,
-        referenceContext,
-        userContext
-      ),
-    CreateType (Tab, Window),
-    CreateUserContext
-      ( MkCreateUserContext,
-        acceptInsecureCerts,
-        proxy,
-        unhandledPromptBehavior
-      ),
-    Evaluate
-      ( MkEvaluate,
-        awaitPromise,
-        expression,
-        resultOwnership,
-        serializationOptions,
-        target
-      ),
-    GetTree (MkGetTree, maxDepth, root),
-    GetTreeResult (MkGetTreeResult),
-    HandleUserPrompt (MkHandleUserPrompt, accept, context, userText),
-    ImageFormat (MkImageFormat, imageType, quality),
-    IncludeShadowTree (All, Open, ShadowTreeNone),
-    Info (context),
-    LocateNodes
-      ( MkLocateNodes,
-        context,
-        locator,
-        maxNodeCount,
-        serializationOptions,
-        startNodes
-      ),
-    LocateNodesResult (MkLocateNodesResult),
-    Navigate (MkNavigate, context, url, wait),
-    Orientation (Landscape, Portrait),
-    PageRange (Page, Range, fromPage, toPage),
-    Print
-      ( MkPrint,
-        background,
-        context,
-        margin,
-        orientation,
-        page,
-        pageRanges,
-        scale,
-        shrinkToFit
-      ),
-    PrintResult (MkPrintResult, base64Text),
-    ReadinessState (Complete, Interactive, None),
-    Reload (MkReload, context, ignoreCache, wait),
-    RemovePreloadScript (MkRemovePreloadScript),
-    RemoveUserContext (MkRemoveUserContext),
-    ResultOwnership (Root),
-    Sandbox (MkSandbox),
-    ScreenShotOrigin (Document, Viewport),
-    SerializationOptions
-      ( MkSerializationOptions,
-        includeShadowTree,
-        maxDomDepth,
-        maxObjectDepth
-      ),
-    SetViewport
-      ( MkSetViewport,
-        context,
-        devicePixelRatio,
-        userContexts,
-        viewport
-      ),
-    SharedId (MkShareId, id),
-    SharedReference (MkSharedReference, extensions, handle, sharedId),
-    Target (ContextTarget),
-    TraverseHistory (MkTraverseHistory, context, delta),
-  )
-import WebDriverPreCore.BiDi.Script (Channel (..), ChannelProperties (..), ChannelValue (..), EvaluateResult (..), PrimitiveProtocolValue (..), RemoteValue (..))
+    ( CreateUserContext(unhandledPromptBehavior, MkCreateUserContext,
+                        acceptInsecureCerts, proxy),
+      RemoveUserContext(MkRemoveUserContext),
+      Activate(MkActivate),
+      Create(userContext, MkCreate, createType, background,
+             referenceContext),
+      CreateType(Tab),
+      Navigate(wait, MkNavigate, context, url),
+      ReadinessState(Complete),
+      AddPreloadScript(sandbox, MkAddPreloadScript, functionDeclaration,
+                       arguments, contexts, userContexts),
+      AddPreloadScriptResult(MkAddPreloadScriptResult),
+      ContextTarget(sandbox, MkContextTarget, context),
+      Evaluate(expression, MkEvaluate, awaitPromise,
+               serializationOptions, resultOwnership, target),
+      EvaluateResult(result, EvaluateResultSuccess),
+      IncludeShadowTree(ShadowTreeNone, All, Open),
+      PrimitiveProtocolValue(StringValue),
+      RemoteValue(PrimitiveValue),
+      RemovePreloadScript(MkRemovePreloadScript),
+      ResultOwnership(Root),
+      Sandbox(MkSandbox),
+      SerializationOptions(includeShadowTree, MkSerializationOptions,
+                           maxDomDepth, maxObjectDepth),
+      Target(ContextTarget),
+      Channel(Channel),
+      ChannelProperties(ownership, MkChannelProperties, channel,
+                        serializationOptions),
+      ChannelValue(value, MkChannelValue) )
+
 import WebDriverPreCore.Internal.AesonUtils (jsonToText)
-import WebDriverPreCore.Internal.Utils (txt)
 import Prelude hiding (log, putStrLn)
 
 {-

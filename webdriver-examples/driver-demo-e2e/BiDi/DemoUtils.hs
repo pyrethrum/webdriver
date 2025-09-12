@@ -1,14 +1,11 @@
 module BiDi.DemoUtils where
 
-import BiDi.BiDiRunner (Commands (..), mkDemoBiDiClientParams, mkFailBidiClientParams, withCommands)
+import BiDi.BiDiRunner (Commands (..), mkDemoBiDiClientParams, withCommands)
 import Control.Exception (Exception, catch, throwIO)
 import Data.Text (Text, isInfixOf)
 import Data.Time.Clock.POSIX (POSIXTime, getPOSIXTime)
-import Data.Word (Word64)
 import IOUtils (DemoUtils (..))
 import WebDriverPreCore.BiDi.BiDiUrl (parseUrl)
-import WebDriverPreCore.BiDi.BrowsingContext (Locator (..), PrintMargin (..), PrintPage (..), Viewport (..))
-import WebDriverPreCore.BiDi.CoreTypes (JSInt (..), JSUInt (..), NodeRemoteValue (..), SharedId (..))
 import WebDriverPreCore.BiDi.Protocol
   ( BrowsingContext,
     Close (MkClose, context, promptUnload),
@@ -29,7 +26,7 @@ import WebDriverPreCore.BiDi.Protocol
         serializationOptions,
         target
       ),
-    GetTree (MkGetTree, maxDepth, root),
+    GetTree (MkGetTree),
     GetTreeResult (MkGetTreeResult),
     Info (context),
     Target (ContextTarget)
