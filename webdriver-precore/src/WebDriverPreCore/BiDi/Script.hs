@@ -610,7 +610,7 @@ instance FromJSON EvaluateResult where
         pure $ EvaluateResultException {exceptionDetails, realm}
       _ -> fail $ "Unknown EvaluateResult type: " <> unpack typ
 
-data ExceptionDetails = ExceptionDetails
+data ExceptionDetails = MkExceptionDetails
   { columnNumber :: JSUInt,
     exception :: RemoteValue,
     lineNumber :: JSUInt,
@@ -619,7 +619,7 @@ data ExceptionDetails = ExceptionDetails
   }
   deriving (Show, Eq, Generic)
 
-data StackTrace = StackTrace
+data StackTrace = MkStackTrace
   { callFrames :: [StackFrame]
   }
   deriving (Show, Eq, Generic)
@@ -1036,12 +1036,31 @@ instance FromJSON AddPreloadScriptResult
 
 instance FromJSON GetRealmsResult
 
-instance FromJSON RealmInfo
+instance FromJSON RealmInfo where
+  parseJSON :: Value -> Parser RealmInfo
+  parseJSON = withObject "RealmInfo" $ \o -> do
+    typ <- o .: "type"
+    base <- BaseRealmInfo <$> o .: "realm" <*> o .: "origin"
+    case typ of
+      "window" -> do
+        context <- o .: "context"
+        sandbox <- o .:? "sandbox"
+        pure $ Window {base, context, sandbox}
+      "dedicated-worker" -> do
+        owners <- o .: "owners"
+        pure $ DedicatedWorker {base, owners}
+      "shared-worker" -> pure $ SharedWorker {base}
+      "service-worker" -> pure $ ServiceWorker {base}
+      "worker" -> pure $ Worker {base}
+      "paint-worklet" -> pure $ PaintWorklet {base}
+      "audio-worklet" -> pure $ AudioWorklet {base}
+      "worklet" -> pure $ Worklet {base}
+      _ -> fail $ "Unknown RealmInfo type: " <> unpack typ
 
-instance FromJSON BaseRealmInfo
+instance FromJSON BaseRealmInfo 
 
 instance FromJSON ExceptionDetails
 
 instance FromJSON StackTrace
 
-instance FromJSON StackFrame
+instance FromJSON StackFrame 

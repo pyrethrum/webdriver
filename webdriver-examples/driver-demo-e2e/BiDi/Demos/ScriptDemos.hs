@@ -5,10 +5,12 @@ module BiDi.Demos.ScriptDemos where
 import BiDi.BiDiRunner (Commands (..))
 import BiDi.DemoUtils
 import Data.Aeson (ToJSON (..))
-import Data.Text (isInfixOf)
+import Data.Maybe (catMaybes)
+import Data.Text (isInfixOf, pack)
 import IOUtils (DemoUtils (..))
 import WebDriverPreCore.BiDi.CoreTypes (JSUInt (..))
 import WebDriverPreCore.BiDi.Protocol
+import qualified WebDriverPreCore.BiDi.Script as Script
 import WebDriverPreCore.Internal.AesonUtils (jsonToText)
 import Prelude hiding (log, putStrLn)
 
@@ -16,10 +18,10 @@ import Prelude hiding (log, putStrLn)
 
 ##### Script #####
 1. scriptAddPreloadScript :: DONE
-2. scriptCallFunction,
-3. scriptDisown,
+2. scriptCallFunction :: DONE
+3. scriptDisown :: DONE
 4. scriptEvaluate :: DONE
-5. scriptGetRealms,
+5. scriptGetRealms :: DONE
 6. scriptRemovePreloadScript :: DONE
 
 -- TODO when using script - get browsingContextGetTree with originalOpener
@@ -1449,4 +1451,169 @@ scriptCallFunctionDemo =
       pause
 
       logTxt "script.callFunction demo complete"
+      pause
+
+-- >>> runDemo scriptGetRealmsAndDisownDemo
+scriptGetRealmsAndDisownDemo :: BiDiDemo
+scriptGetRealmsAndDisownDemo =
+  demo "Script VI - getRealms and disown Integration" action
+  where
+    action :: DemoUtils -> Commands -> IO ()
+    action utils@MkDemoUtils {..} cmds@MkCommands {..} = do
+      bc <- rootContext utils cmds
+
+      logTxt "Navigate to a test page for realms and ownership demo"
+      navResult <-
+        browsingContextNavigate $
+          MkNavigate
+            { context = bc,
+              url = "data:text/html,<html><head><title>Realms and Ownership Demo</title></head><body><h1>Realms and Ownership Demo</h1><div id='output'></div></body></html>",
+              wait = Just Complete
+            }
+      logShow "Navigation result" navResult
+      pause
+
+      logTxt "Test 1: Get all realms without filtering"
+      allRealms <-
+        scriptGetRealms $
+          MkGetRealms
+            { context = Nothing, -- All contexts
+              realmType = Nothing -- All realm types
+            }
+      logShow "All available realms" allRealms
+      pause
+
+      logTxt "Test 2: Get realms for specific browsing context"
+      contextRealms <-
+        scriptGetRealms $
+          MkGetRealms
+            { context = Just bc,
+              realmType = Nothing
+            }
+      logShow "Realms for current browsing context" contextRealms
+      pause
+
+      logTxt "Test 3: Get only window realms"
+      windowRealms <-
+        scriptGetRealms $
+          MkGetRealms
+            { context = Nothing,
+              realmType = Just Script.WindowRealm
+            }
+      logShow "Window realms only" windowRealms
+      pause
+
+      -- Extract the first available realm for subsequent tests
+      let MkGetRealmsResult realms = allRealms
+      case realms of
+        [] -> logTxt "No realms available for ownership testing"
+        (firstRealmInfo : _) -> do
+          let targetRealm = case firstRealmInfo of
+                Script.Window {base = Script.BaseRealmInfo {realm = r}} -> r
+                Script.DedicatedWorker {base = Script.BaseRealmInfo {realm = r}} -> r
+                Script.SharedWorker {base = Script.BaseRealmInfo {realm = r}} -> r
+                Script.ServiceWorker {base = Script.BaseRealmInfo {realm = r}} -> r
+                Script.Worker {base = Script.BaseRealmInfo {realm = r}} -> r
+                Script.PaintWorklet {base = Script.BaseRealmInfo {realm = r}} -> r
+                Script.AudioWorklet {base = Script.BaseRealmInfo {realm = r}} -> r
+                Script.Worklet {base = Script.BaseRealmInfo {realm = r}} -> r
+
+          logTxt $ "Test 4: Create owned objects in realm: " <> pack (show targetRealm)
+
+          logTxt "Create first owned object (array)"
+          ownedArray <-
+            scriptEvaluate $
+              MkEvaluate
+                { expression = "[1, 2, 3, 'owned', { nested: 'data' }]",
+                  target = RealmTarget targetRealm,
+                  awaitPromise = False,
+                  resultOwnership = Just Root,
+                  serializationOptions = Nothing
+                }
+          logShow "Owned array result" ownedArray
+          pause
+
+          logTxt "Create second owned object (function)"
+          ownedFunction <-
+            scriptEvaluate $
+              MkEvaluate
+                { expression = "function ownedFunc() { return 'I am owned!'; }",
+                  target = RealmTarget targetRealm,
+                  awaitPromise = False,
+                  resultOwnership = Just Root,
+                  serializationOptions = Nothing
+                }
+          logShow "Owned function result" ownedFunction
+          pause
+
+          logTxt "Create third owned object (complex object)"
+          ownedObject <-
+            scriptEvaluate $
+              MkEvaluate
+                { expression = "({ id: Math.random(), message: 'Complex owned object', timestamp: Date.now(), data: [1,2,3] })",
+                  target = RealmTarget targetRealm,
+                  awaitPromise = False,
+                  resultOwnership = Just Root,
+                  serializationOptions = Nothing
+                }
+          logShow "Owned object result" ownedObject
+          pause
+
+          -- Extract handles from the evaluation results
+          let extractHandle = \case
+                EvaluateResultSuccess {result = rv} -> case rv of
+                  ArrayValue {handle = Just h} -> Just h
+                  ObjectValue {handle = Just h} -> Just h
+                  FunctionValue {handle = Just h} -> Just h
+                  SymbolValue {handle = Just h} -> Just h
+                  RegExpValue {handle = Just h} -> Just h
+                  DateValue {handle = Just h} -> Just h
+                  MapValue {handle = Just h} -> Just h
+                  SetValue {handle = Just h} -> Just h
+                  WeakMapValue {handle = Just h} -> Just h
+                  WeakSetValue {handle = Just h} -> Just h
+                  GeneratorValue {handle = Just h} -> Just h
+                  ErrorValue {handle = Just h} -> Just h
+                  ProxyValue {handle = Just h} -> Just h
+                  PromiseValue {handle = Just h} -> Just h
+                  TypedArrayValue {handle = Just h} -> Just h
+                  ArrayBufferValue {handle = Just h} -> Just h
+                  NodeListValue {handle = Just h} -> Just h
+                  HTMLCollectionValue {handle = Just h} -> Just h
+                  WindowProxyValue {handle = Just h} -> Just h
+                  _ -> Nothing
+                _ -> Nothing
+
+          let handles = catMaybes [extractHandle ownedArray, extractHandle ownedFunction, extractHandle ownedObject]
+
+          if null handles
+            then logTxt "No handles available for disown testing"
+            else do
+              logTxt $ "Test 5: Disown " <> pack (show (length handles)) <> " handles using scriptDisown"
+              logShow "Handles to disown" handles
+
+              disownResult <-
+                scriptDisown $
+                  MkDisown
+                    { handles = handles,
+                      target = RealmTarget targetRealm
+                    }
+              logShow "Disown operation result" disownResult
+              pause
+
+              logTxt "Test 6: Verification of disown operation complete"
+              logTxt "Note: Disowned handles should no longer be accessible from the script context"
+              pause
+
+          logTxt "Test 7: Get realms again to ensure realm is still active"
+          finalRealms <-
+            scriptGetRealms $
+              MkGetRealms
+                { context = Just bc,
+                  realmType = Just Script.WindowRealm
+                }
+          logShow "Final realms check" finalRealms
+          pause
+
+          logTxt "Demonstration complete: getRealms discovered realms, objects were created with ownership, and scriptDisown released the handles"
       pause
