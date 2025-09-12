@@ -14,7 +14,7 @@ module WebDriverPreCore.BiDi.Network
     ContinueWithAuth (..),
     Intercept (..),
     AuthCredentials (..),
-    AuthResponse (..),
+    AuthAction (..),
     DisownData (..),
     FailRequest (..),
     GetData (..),
@@ -55,7 +55,7 @@ where
 
 -- Data structures for network protocol
 
-import Data.Aeson (FromJSON, ToJSON (..), Value, object, (.=))
+import Data.Aeson (FromJSON, ToJSON (..), object, (.=))
 import Data.Text (Text)
 import Data.Word (Word)
 import GHC.Generics (Generic)
@@ -119,7 +119,7 @@ instance ToJSON Request
 data GetData = MkGetData
   { dataType :: DataType,
     collector :: Maybe Collector,
-    disown :: Bool,
+    disown :: Maybe Bool,
     request :: Request
   }
   deriving (Show, Eq, Generic)
@@ -136,7 +136,7 @@ instance ToJSON RemoveDataCollector
 -- | AddIntercept parameters
 data AddIntercept = MkAddIntercept
   { phases :: [InterceptPhase],
-    contexts :: [BrowsingContext],
+    contexts :: Maybe [BrowsingContext],
     urlPatterns :: Maybe [UrlPattern]
   }
   deriving (Show, Eq, Generic)
@@ -255,15 +255,26 @@ data ContinueResponse = MkContinueResponse
 
 instance ToJSON ContinueResponse
 
--- | ContinueWithAuth parameters
+-- | ContinueWithAuth parameters - using union type approach from spec
 data ContinueWithAuth = MkContinueWithAuth
-  { intercept :: Intercept,
-    authCredentials :: Maybe AuthCredentials,
-    response :: AuthResponse
+  { request :: Request,
+    authAction :: AuthAction
   }
   deriving (Show, Eq, Generic)
 
 instance ToJSON ContinueWithAuth
+
+-- | Auth action - matches spec's union type structure
+data AuthAction
+  = ProvideCredentials AuthCredentials
+  | DefaultAuth
+  | CancelAuth
+  deriving (Show, Eq, Generic)
+
+instance ToJSON AuthAction where
+  toJSON (ProvideCredentials creds) = object ["action" .= ("provideCredentials" :: Text), "credentials" .= creds]
+  toJSON DefaultAuth = object ["action" .= ("default" :: Text)]
+  toJSON CancelAuth = object ["action" .= ("cancel" :: Text)]
 
 -- | Network intercept identifier
 newtype Intercept = MkIntercept Text
@@ -271,28 +282,16 @@ newtype Intercept = MkIntercept Text
 
 -- | Auth credentials for authentication
 data AuthCredentials = MkAuthCredentials
-  { password :: Text,
-    username :: Text
+  { username :: Text,
+    password :: Text
   }
   deriving (Show, Eq, Generic)
 
 instance ToJSON AuthCredentials
 
--- | Authentication response type
-data AuthResponse
-  = DefaultResponse
-  | Cancel
-  | Provide
-  deriving (Show, Eq, Generic)
-
-instance ToJSON AuthResponse where
-  toJSON :: AuthResponse -> Value
-  toJSON = enumCamelCase
-
 -- | FailRequest parameters
 data FailRequest = MkFailRequest
-  { intercept :: Intercept,
-    errorText :: Text
+  { request :: Request
   }
   deriving (Show, Eq, Generic)
 
@@ -321,8 +320,8 @@ instance ToJSON RemoveIntercept
 
 -- | SetCacheBehavior parameters
 data SetCacheBehavior = MkSetCacheBehavior
-  { behavior :: CacheBehavior,
-    context :: Maybe BrowsingContext
+  { cacheBehavior :: CacheBehavior,
+    contexts :: Maybe [BrowsingContext]
   }
   deriving (Show, Eq, Generic)
 
@@ -332,12 +331,11 @@ instance ToJSON SetCacheBehavior
 data CacheBehavior
   = DefaultCacheBehavior
   | BypassCache
-  | ForceCacheIgnoreNoStore
   deriving (Show, Eq, Generic)
 
 instance ToJSON CacheBehavior where
-  toJSON :: CacheBehavior -> Value
-  toJSON = enumCamelCase
+  toJSON DefaultCacheBehavior = "default"
+  toJSON BypassCache = "bypass"
 
 -- ######### Local #########
 

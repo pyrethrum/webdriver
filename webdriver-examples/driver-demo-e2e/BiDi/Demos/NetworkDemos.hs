@@ -1,37 +1,1036 @@
 module BiDi.Demos.NetworkDemos where
 
-{-
 import BiDi.BiDiRunner (Commands (..))
 import BiDi.DemoUtils
-import Data.Aeson (ToJSON (..))
-import Data.Maybe (catMaybes)
-import Data.Text (isInfixOf, pack)
 import IOUtils (DemoUtils (..))
 import WebDriverPreCore.BiDi.CoreTypes (JSUInt (..))
 import WebDriverPreCore.BiDi.Protocol
 import qualified WebDriverPreCore.BiDi.Network as Network
-import WebDriverPreCore.Internal.AesonUtils (jsonToText)
-import Prelude hiding (log, putStrLn)
-
--}
+import Prelude hiding (log)
 
 {-
 
 ##### Network #####
-1. networkAddDataCollector :: TODO
-2. networkAddIntercept :: TODO
-3. networkContinueRequest :: TODO
-4. networkContinueResponse :: TODO
-5. networkContinueWithAuth :: TODO
-6. networkDisownData :: TODO
-7. networkFailRequest :: TODO
-8. networkGetData :: TODO
-9. networkProvideResponse :: TODO
-10. networkRemoveDataCollector :: TODO
-11. networkRemoveIntercept :: TODO
-12. networkSetCacheBehavior :: TODO
+1. networkAddDataCollector :: DONE
+2. networkAddIntercept :: DONE
+3. networkContinueRequest :: DONE
+4. networkContinueResponse :: DONE
+5. networkContinueWithAuth :: DONE
+6. networkDisownData :: DONE
+7. networkFailRequest :: DONE
+8. networkGetData :: DONE
+9. networkProvideResponse :: DONE
+10. networkRemoveDataCollector :: DONE
+11. networkRemoveIntercept :: DONE
+12. networkSetCacheBehavior :: DONE
+
+NOTE: Network module commands have limited support in Geckodriver (Firefox WebDriver).
+Most network commands are still in development and will result in "unknown command" errors.
+These demos are primarily for testing parameter structures and will work when
+WebDriver implementations complete network module support.
+
+Current support status:
+- Chrome/Chromium: Partial support for some network commands
+- Firefox/Geckodriver: Limited support (some events, experimental intercepts)
+- Safari: No support for network commands yet
+
+Key Mozilla tracking bugs:
+- Bug 1971763: network.addDataCollector (partial implementation)
+- Bug 1826191: network.addIntercept (experimental support)
+- Search: https://bugzilla.mozilla.org/buglist.cgi?quicksearch=webdriver%20bidi%20network
 
 -}
 
--- Placeholder for future network demo implementations
--- Following the same structure as ScriptDemos and BrowsingContextDemos
+-- >>> runDemo networkDataCollectorDemo
+-- NOTE: This demo will fail with Geckodriver as network commands are not yet implemented.
+-- The error "unknown command" indicates the WebDriver implementation doesn't support
+-- the network.addDataCollector command yet. This is expected with current Geckodriver versions.
+--
+-- Previous error output for reference:
+-- *** Exception: Error executing BiDi command: MkCommand
+--   { method = "network.addDataCollector"
+--   , params =
+--       MkAddDataCollector
+--         { dataTypes = [ MkDataType { dataType = "response" } ]
+--         , maxEncodedDataSize = 1024
+--         , collectorType = Nothing
+--         , contexts = Nothing
+--         , userContexts = Nothing
+--         }
+--   , extended = Nothing
+--   }
+-- With JSON: 
+-- {
+--     "id": 2,
+--     "method": "network.addDataCollector",
+--     "params": {
+--         "collectorType": null,
+--         "contexts": null,
+--         "dataTypes": [
+--             {
+--                 "dataType": "response"
+--             }
+--         ],
+--         "maxEncodedDataSize": 1024,
+--         "userContexts": null
+--     }
+-- }
+-- Failed to decode the 'result' property of JSON returned by driver to response type: 
+-- {
+--     "error": "unknown command",
+--     "id": 2,
+--     "message": "network.addDataCollector",
+--     "stacktrace": "RemoteError@chrome://remote/content/shared/RemoteError.sys.mjs:8:8\nWebDriverError@chrome://remote/content/shared/webdriver/Errors.sys.mjs:199:5\nUnknownCommandError@chrome://remote/content/shared/webdriver/Errors.sys.mjs:893:5\nexecute@chrome://remote/content/shared/webdriver/Session.sys.mjs:407:13\nonPacket@chrome://remote/content/webdriver-bidi/WebDriverBiDiConnection.sys.mjs:236:37\nonMessage@chrome://remote/content/server/WebSocketTransport.sys.mjs:127:18\nhandleEvent@chrome://remote/content/server/WebSocketTransport.sys.mjs:109:14\n",
+--     "type": "error"
+-- }
+-- Error message: 
+-- key "result" not found
+networkDataCollectorDemo :: BiDiDemo
+networkDataCollectorDemo =
+  demo "Network I - Data Collector Management" action
+  where
+    action :: DemoUtils -> Commands -> IO ()
+    action utils@MkDemoUtils {..} cmds@MkCommands {..} = do
+      bc <- rootContext utils cmds
+
+      logTxt "Test 1: Add data collector with minimal parameters"
+      collector1 <-
+        networkAddDataCollector $
+          Network.MkAddDataCollector
+            { dataTypes = [Network.MkDataType "response"],
+              maxEncodedDataSize = MkJSUInt 1024,
+              collectorType = Nothing,
+              contexts = Nothing,
+              userContexts = Nothing
+            }
+      logShow "Basic data collector added" collector1
+      pause
+
+      logTxt "Test 2: Add data collector with specific collector type"
+      collector2 <-
+        networkAddDataCollector $
+          Network.MkAddDataCollector
+            { dataTypes = [Network.MkDataType "request", Network.MkDataType "response"],
+              maxEncodedDataSize = MkJSUInt 2048,
+              collectorType = Just (Network.MkCollectorType "blob"),
+              contexts = Nothing,
+              userContexts = Nothing
+            }
+      logShow "Typed data collector added" collector2
+      pause
+
+      logTxt "Test 3: Add data collector targeting specific browsing context"
+      collector3 <-
+        networkAddDataCollector $
+          Network.MkAddDataCollector
+            { dataTypes = [Network.MkDataType "response"],
+              maxEncodedDataSize = MkJSUInt 4096,
+              collectorType = Just (Network.MkCollectorType "stream"),
+              contexts = Just [bc],
+              userContexts = Nothing
+            }
+      logShow "Context-specific data collector added" collector3
+      pause
+
+      logTxt "Test 4: Create user context for targeted data collection"
+      userContext <-
+        browserCreateUserContext
+          MkCreateUserContext
+            { acceptInsecureCerts = Nothing,
+              proxy = Nothing,
+              unhandledPromptBehavior = Nothing
+            }
+      logShow "User context created" userContext
+      pause
+
+      logTxt "Test 5: Add data collector targeting specific user context"
+      collector4 <-
+        networkAddDataCollector $
+          Network.MkAddDataCollector
+            { dataTypes = [Network.MkDataType "request"],
+              maxEncodedDataSize = MkJSUInt 8192,
+              collectorType = Nothing,
+              contexts = Nothing,
+              userContexts = Just [userContext]
+            }
+      logShow "User context-specific data collector added" collector4
+      pause
+
+      logTxt "Test 6: Add data collector with multiple data types and large size"
+      collector5 <-
+        networkAddDataCollector $
+          Network.MkAddDataCollector
+            { dataTypes = [Network.MkDataType "request", Network.MkDataType "response", Network.MkDataType "websocket"],
+              maxEncodedDataSize = MkJSUInt 16384,
+              collectorType = Just (Network.MkCollectorType "buffer"),
+              contexts = Just [bc],
+              userContexts = Just [userContext]
+            }
+      logShow "Multi-type data collector added" collector5
+      pause
+
+      logTxt "Navigation to trigger some network activity for data collection"
+      navResult <-
+        browsingContextNavigate $
+          MkNavigate
+            { context = bc,
+              url = "data:text/html,<html><head><title>Network Test</title></head><body><h1>Network Activity Test</h1><script>fetch('data:text/plain,hello').then(r=>r.text()).then(console.log)</script></body></html>",
+              wait = Just Complete
+            }
+      logShow "Navigation result" navResult
+      pauseMinMs 1000 -- Allow time for network activity
+      pause
+
+      logTxt "Test 7: Remove data collectors"
+      let Network.MkAddDataCollectorResult collectorId1 = collector1
+      removeResult1 <- networkRemoveDataCollector $ Network.MkRemoveDataCollector collectorId1
+      logShow "Removed basic data collector" removeResult1
+      pause
+
+      let Network.MkAddDataCollectorResult collectorId2 = collector2
+      removeResult2 <- networkRemoveDataCollector $ Network.MkRemoveDataCollector collectorId2
+      logShow "Removed typed data collector" removeResult2
+      pause
+
+      let Network.MkAddDataCollectorResult collectorId3 = collector3
+      removeResult3 <- networkRemoveDataCollector $ Network.MkRemoveDataCollector collectorId3
+      logShow "Removed context-specific data collector" removeResult3
+      pause
+
+      let Network.MkAddDataCollectorResult collectorId4 = collector4
+      removeResult4 <- networkRemoveDataCollector $ Network.MkRemoveDataCollector collectorId4
+      logShow "Removed user context-specific data collector" removeResult4
+      pause
+
+      let Network.MkAddDataCollectorResult collectorId5 = collector5
+      removeResult5 <- networkRemoveDataCollector $ Network.MkRemoveDataCollector collectorId5
+      logShow "Removed multi-type data collector" removeResult5
+      pause
+
+      logTxt "Cleanup - remove user context"
+      removeUC <- browserRemoveUserContext $ MkRemoveUserContext userContext
+      logShow "Removed user context" removeUC
+      pause
+
+-- >>> runDemo networkInterceptDemo
+-- NOTE: This demo will fail with "unknown command" errors on Geckodriver
+-- as network.addIntercept and network.removeIntercept are not yet implemented.
+networkInterceptDemo :: BiDiDemo
+networkInterceptDemo =
+  demo "Network II - Request/Response Interception" action
+  where
+    action :: DemoUtils -> Commands -> IO ()
+    action utils@MkDemoUtils {..} cmds@MkCommands {..} = do
+      bc <- rootContext utils cmds
+
+      logTxt "Test 1: Add intercept for BeforeRequestSent phase"
+      intercept1 <-
+        networkAddIntercept $
+          Network.MkAddIntercept
+            { phases = [Network.BeforeRequestSent],
+              contexts = Just [bc],
+              urlPatterns = Nothing
+            }
+      logShow "BeforeRequestSent intercept added" intercept1
+      pause
+
+      logTxt "Test 2: Add intercept for ResponseStarted phase with URL patterns"
+      intercept2 <-
+        networkAddIntercept $
+          Network.MkAddIntercept
+            { phases = [Network.ResponseStarted],
+              contexts = Just [bc],
+              urlPatterns = Just
+                [ Network.MkUrlPattern
+                    { protocol = Just "https",
+                      hostname = Nothing,
+                      port = Nothing,
+                      pathname = Nothing,
+                      search = Nothing
+                    }
+                ]
+            }
+      logShow "ResponseStarted intercept with HTTPS pattern added" intercept2
+      pause
+
+      logTxt "Test 3: Add intercept for AuthRequired phase with specific hostname"
+      intercept3 <-
+        networkAddIntercept $
+          Network.MkAddIntercept
+            { phases = [Network.AuthRequired],
+              contexts = Just [bc],
+              urlPatterns = Just
+                [ Network.MkUrlPattern
+                    { protocol = Nothing,
+                      hostname = Just "example.com",
+                      port = Nothing,
+                      pathname = Nothing,
+                      search = Nothing
+                    }
+                ]
+            }
+      logShow "AuthRequired intercept for example.com added" intercept3
+      pause
+
+      logTxt "Test 4: Add intercept for multiple phases"
+      intercept4 <-
+        networkAddIntercept $
+          Network.MkAddIntercept
+            { phases = [Network.BeforeRequestSent, Network.ResponseStarted],
+              contexts = Just [bc],
+              urlPatterns = Nothing
+            }
+      logShow "Multi-phase intercept added" intercept4
+      pause
+
+      logTxt "Test 5: Add intercept with comprehensive URL pattern"
+      intercept5 <-
+        networkAddIntercept $
+          Network.MkAddIntercept
+            { phases = [Network.BeforeRequestSent],
+              contexts = Just [bc],
+              urlPatterns = Just
+                [ Network.MkUrlPattern
+                    { protocol = Just "https",
+                      hostname = Just "api.example.com",
+                      port = Just "443",
+                      pathname = Just "/v1/*",
+                      search = Just "key=*"
+                    }
+                ]
+            }
+      logShow "Comprehensive URL pattern intercept added" intercept5
+      pause
+
+      logTxt "Test 6: Add intercept with multiple URL patterns"
+      intercept6 <-
+        networkAddIntercept $
+          Network.MkAddIntercept
+            { phases = [Network.ResponseStarted],
+              contexts = Just [bc],
+              urlPatterns = Just
+                [ Network.MkUrlPattern
+                    { protocol = Just "http",
+                      hostname = Nothing,
+                      port = Nothing,
+                      pathname = Nothing,
+                      search = Nothing
+                    },
+                  Network.MkUrlPattern
+                    { protocol = Just "https",
+                      hostname = Nothing,
+                      port = Nothing,
+                      pathname = Nothing,
+                      search = Nothing
+                    }
+                ]
+            }
+      logShow "Multi-pattern intercept added" intercept6
+      pause
+
+      logTxt "Test 7: Add intercept with no contexts (global intercept)"
+      intercept7 <-
+        networkAddIntercept $
+          Network.MkAddIntercept
+            { phases = [Network.BeforeRequestSent],
+              contexts = Nothing,
+              urlPatterns = Nothing
+            }
+      logShow "Global intercept added" intercept7
+      pause
+
+      logTxt "Navigation to trigger potential intercepts (data URL - won't match most patterns)"
+      navResult <-
+        browsingContextNavigate $
+          MkNavigate
+            { context = bc,
+              url = "data:text/html,<html><head><title>Intercept Test</title></head><body><h1>Testing Network Intercepts</h1><script>fetch('data:text/plain,test').then(r=>r.text()).then(console.log)</script></body></html>",
+              wait = Just Complete
+            }
+      logShow "Navigation result" navResult
+      pauseMinMs 1000 -- Allow time for potential intercepts
+      pause
+
+      logTxt "Test 7: Remove intercepts"
+      let Network.MkAddInterceptResult interceptId1 = intercept1
+      removeResult1 <- networkRemoveIntercept $ Network.MkRemoveIntercept interceptId1
+      logShow "Removed BeforeRequestSent intercept" removeResult1
+      pause
+
+      let Network.MkAddInterceptResult interceptId2 = intercept2
+      removeResult2 <- networkRemoveIntercept $ Network.MkRemoveIntercept interceptId2
+      logShow "Removed ResponseStarted intercept" removeResult2
+      pause
+
+      let Network.MkAddInterceptResult interceptId3 = intercept3
+      removeResult3 <- networkRemoveIntercept $ Network.MkRemoveIntercept interceptId3
+      logShow "Removed AuthRequired intercept" removeResult3
+      pause
+
+      let Network.MkAddInterceptResult interceptId4 = intercept4
+      removeResult4 <- networkRemoveIntercept $ Network.MkRemoveIntercept interceptId4
+      logShow "Removed multi-phase intercept" removeResult4
+      pause
+
+      let Network.MkAddInterceptResult interceptId5 = intercept5
+      removeResult5 <- networkRemoveIntercept $ Network.MkRemoveIntercept interceptId5
+      logShow "Removed comprehensive pattern intercept" removeResult5
+      pause
+
+      let Network.MkAddInterceptResult interceptId6 = intercept6
+      removeResult6 <- networkRemoveIntercept $ Network.MkRemoveIntercept interceptId6
+      logShow "Removed multi-pattern intercept" removeResult6
+      pause
+
+      let Network.MkAddInterceptResult interceptId7 = intercept7
+      removeResult7 <- networkRemoveIntercept $ Network.MkRemoveIntercept interceptId7
+      logShow "Removed global intercept" removeResult7
+      pause
+
+-- >>> runDemo networkRequestResponseModificationDemo
+-- NOTE: This demo will fail with "unknown command" errors on Geckodriver
+-- as network.continueRequest and network.continueResponse are not yet implemented.
+networkRequestResponseModificationDemo :: BiDiDemo
+networkRequestResponseModificationDemo =
+  demo "Network III - Request and Response Modification" action
+  where
+    action :: DemoUtils -> Commands -> IO ()
+    action utils@MkDemoUtils {..} cmds@MkCommands {..} = do
+      _bc <- rootContext utils cmds
+
+      logTxt "Note: This demo shows parameter usage. Actual request/response modification requires active intercepts and network events."
+
+      logTxt "Test 1: networkContinueRequest with basic parameters"
+      let exampleRequestId = Network.MkRequestId "example-request-id-001"
+      continueReq1 <-
+        networkContinueRequest $
+          Network.MkContinueRequest
+            { request = exampleRequestId,
+              body = Nothing,
+              cookies = Nothing,
+              headers = Nothing,
+              method = Nothing,
+              url = Nothing
+            }
+      logShow "Basic request continuation result" continueReq1
+      pause
+
+      logTxt "Test 2: networkContinueRequest with modified headers and method"
+      continueReq2 <-
+        networkContinueRequest $
+          Network.MkContinueRequest
+            { request = exampleRequestId,
+              body = Nothing,
+              cookies = Nothing,
+              headers = Just
+                [ Network.MkHeader
+                    { headerName = "X-Custom-Header",
+                      headerValue = Network.StringValue "modified-request"
+                    },
+                  Network.MkHeader
+                    { headerName = "User-Agent",
+                      headerValue = Network.StringValue "BiDi-WebDriver-Test/1.0"
+                    }
+                ],
+              method = Just "POST",
+              url = Nothing
+            }
+      logShow "Modified headers and method continuation result" continueReq2
+      pause
+
+      logTxt "Test 3: networkContinueRequest with body and URL modification"
+      continueReq3 <-
+        networkContinueRequest $
+          Network.MkContinueRequest
+            { request = exampleRequestId,
+              body = Just (Network.StringValue "modified request body"),
+              cookies = Nothing,
+              headers = Nothing,
+              method = Nothing,
+              url = Just "https://modified.example.com/api/test"
+            }
+      logShow "Body and URL modification continuation result" continueReq3
+      pause
+
+      logTxt "Test 4: networkContinueRequest with cookies"
+      continueReq4 <-
+        networkContinueRequest $
+          Network.MkContinueRequest
+            { request = exampleRequestId,
+              body = Nothing,
+              cookies = Just
+                [ Network.MkCookie
+                    { name = "session_id",
+                      value = Network.StringValue "modified-session-123",
+                      domain = "example.com",
+                      path = "/",
+                      size = 100,
+                      httpOnly = True,
+                      secure = True,
+                      sameSite = Network.Strict,
+                      expiry = Nothing
+                    },
+                  Network.MkCookie
+                    { name = "user_pref",
+                      value = Network.Base64Value "bW9kaWZpZWQ=",
+                      domain = "example.com",
+                      path = "/app",
+                      size = 50,
+                      httpOnly = False,
+                      secure = False,
+                      sameSite = Network.Lax,
+                      expiry = Just 1735689600
+                    }
+                ],
+              headers = Nothing,
+              method = Nothing,
+              url = Nothing
+            }
+      logShow "Cookie modification continuation result" continueReq4
+      pause
+
+      logTxt "Test 5: networkContinueResponse with basic parameters"
+      continueResp1 <-
+        networkContinueResponse $
+          Network.MkContinueResponse
+            { request = exampleRequestId,
+              body = Nothing,
+              cookies = Nothing,
+              headers = Nothing,
+              reasonPhrase = Nothing,
+              statusCode = Nothing
+            }
+      logShow "Basic response continuation result" continueResp1
+      pause
+
+      logTxt "Test 6: networkContinueResponse with status code and reason phrase"
+      continueResp2 <-
+        networkContinueResponse $
+          Network.MkContinueResponse
+            { request = exampleRequestId,
+              body = Nothing,
+              cookies = Nothing,
+              headers = Nothing,
+              reasonPhrase = Just "Modified OK",
+              statusCode = Just (MkJSUInt 200)
+            }
+      logShow "Status modification continuation result" continueResp2
+      pause
+
+      logTxt "Test 7: networkContinueResponse with modified response body and headers"
+      continueResp3 <-
+        networkContinueResponse $
+          Network.MkContinueResponse
+            { request = exampleRequestId,
+              body = Just (Network.StringValue "Modified response body content"),
+              cookies = Nothing,
+              headers = Just
+                [ Network.MkHeader
+                    { headerName = "Content-Type",
+                      headerValue = Network.StringValue "text/plain; charset=utf-8"
+                    },
+                  Network.MkHeader
+                    { headerName = "X-Modified-Response",
+                      headerValue = Network.StringValue "true"
+                    },
+                  Network.MkHeader
+                    { headerName = "Cache-Control",
+                      headerValue = Network.StringValue "no-cache, no-store"
+                    }
+                ],
+              reasonPhrase = Just "Custom Response",
+              statusCode = Just (MkJSUInt 202)
+            }
+      logShow "Complete response modification result" continueResp3
+      pause
+
+      logTxt "Test 8: networkContinueResponse with response cookies"
+      continueResp4 <-
+        networkContinueResponse $
+          Network.MkContinueResponse
+            { request = exampleRequestId,
+              body = Nothing,
+              cookies = Just
+                [ Network.MkCookie
+                    { name = "response_token",
+                      value = Network.StringValue "resp-token-456",
+                      domain = "api.example.com",
+                      path = "/",
+                      size = 80,
+                      httpOnly = True,
+                      secure = True,
+                      sameSite = Network.None,
+                      expiry = Just 1767225600
+                    }
+                ],
+              headers = Nothing,
+              reasonPhrase = Nothing,
+              statusCode = Nothing
+            }
+      logShow "Response cookie modification result" continueResp4
+      pause
+
+-- >>> runDemo networkAuthAndFailureDemo
+-- NOTE: This demo will fail with "unknown command" errors on Geckodriver
+-- as network.continueWithAuth and network.failRequest are not yet implemented.
+networkAuthAndFailureDemo :: BiDiDemo
+networkAuthAndFailureDemo =
+  demo "Network IV - Authentication and Request Failure Handling" action
+  where
+    action :: DemoUtils -> Commands -> IO ()
+    action utils@MkDemoUtils {..} cmds@MkCommands {..} = do
+      _bc <- rootContext utils cmds
+
+      logTxt "Note: This demo shows parameter usage. Actual auth/failure handling requires active intercepts and auth events."
+
+      let exampleRequest = Network.MkRequest "example-request-auth-001"
+
+      logTxt "Test 1: networkContinueWithAuth with default response (no credentials)"
+      authResult1 <-
+        networkContinueWithAuth $
+          Network.MkContinueWithAuth
+            { request = exampleRequest,
+              authAction = Network.DefaultAuth
+            }
+      logShow "Default auth response result" authResult1
+      pause
+
+      logTxt "Test 2: networkContinueWithAuth with cancel response"
+      authResult2 <-
+        networkContinueWithAuth $
+          Network.MkContinueWithAuth
+            { request = exampleRequest,
+              authAction = Network.CancelAuth
+            }
+      logShow "Cancel auth response result" authResult2
+      pause
+
+      logTxt "Test 3: networkContinueWithAuth with provided credentials"
+      authResult3 <-
+        networkContinueWithAuth $
+          Network.MkContinueWithAuth
+            { request = exampleRequest,
+              authAction = Network.ProvideCredentials
+                Network.MkAuthCredentials
+                  { username = "test_user",
+                    password = "test_password_123"
+                  }
+            }
+      logShow "Provided credentials auth result" authResult3
+      pause
+
+      logTxt "Test 4: networkContinueWithAuth with different credentials"
+      authResult4 <-
+        networkContinueWithAuth $
+          Network.MkContinueWithAuth
+            { request = exampleRequest,
+              authAction = Network.ProvideCredentials
+                Network.MkAuthCredentials
+                  { username = "admin@example.com",
+                    password = "super_secure_password_456"
+                  }
+            }
+      logShow "Admin credentials auth result" authResult4
+      pause
+
+      logTxt "Test 5: networkFailRequest with basic request"
+      failResult1 <-
+        networkFailRequest $
+          Network.MkFailRequest
+            { request = Network.MkRequest "example-request-fail-001"
+            }
+      logShow "Basic failure result" failResult1
+      pause
+
+      logTxt "Test 6: networkFailRequest with different request"
+      failResult2 <-
+        networkFailRequest $
+          Network.MkFailRequest
+            { request = Network.MkRequest "example-request-fail-002"
+            }
+      logShow "Second failure result" failResult2
+      pause
+
+      logTxt "Test 7: networkFailRequest with another request"
+      failResult3 <-
+        networkFailRequest $
+          Network.MkFailRequest
+            { request = Network.MkRequest "example-request-fail-003"
+            }
+      logShow "Third failure result" failResult3
+      pause
+
+      logTxt "Test 8: networkFailRequest with final request"
+      failResult4 <-
+        networkFailRequest $
+          Network.MkFailRequest
+            { request = Network.MkRequest "example-request-fail-004"
+            }
+      logShow "SSL failure result" failResult4
+      pause
+
+-- >>> runDemo networkProvideResponseDemo
+-- NOTE: This demo will fail with "unknown command" errors on Geckodriver
+-- as network.provideResponse is not yet implemented.
+networkProvideResponseDemo :: BiDiDemo
+networkProvideResponseDemo =
+  demo "Network V - Custom Response Provision" action
+  where
+    action :: DemoUtils -> Commands -> IO ()
+    action utils@MkDemoUtils {..} cmds@MkCommands {..} = do
+      _bc <- rootContext utils cmds
+
+      logTxt "Note: This demo shows parameter usage. Actual response provision requires active intercepts."
+
+      let exampleIntercept = Network.MkIntercept "example-intercept-002"
+
+      logTxt "Test 1: networkProvideResponse with minimal parameters"
+      provideResult1 <-
+        networkProvideResponse $
+          Network.MkProvideResponse
+            { intercept = exampleIntercept,
+              body = Nothing,
+              cookies = Nothing,
+              headers = Nothing,
+              reasonPhrase = "OK",
+              statusCode = 200
+            }
+      logShow "Minimal custom response result" provideResult1
+      pause
+
+      logTxt "Test 2: networkProvideResponse with JSON content"
+      provideResult2 <-
+        networkProvideResponse $
+          Network.MkProvideResponse
+            { intercept = exampleIntercept,
+              body = Just (Network.StringValue "{\"message\": \"Custom JSON response\", \"status\": \"success\"}"),
+              cookies = Nothing,
+              headers = Just
+                [ Network.MkHeader
+                    { headerName = "Content-Type",
+                      headerValue = Network.StringValue "application/json"
+                    },
+                  Network.MkHeader
+                    { headerName = "X-Custom-Provider",
+                      headerValue = Network.StringValue "BiDi-WebDriver"
+                    }
+                ],
+              reasonPhrase = "OK",
+              statusCode = 200
+            }
+      logShow "JSON custom response result" provideResult2
+      pause
+
+      logTxt "Test 3: networkProvideResponse with HTML content and redirect"
+      provideResult3 <-
+        networkProvideResponse $
+          Network.MkProvideResponse
+            { intercept = exampleIntercept,
+              body = Just (Network.StringValue "<html><body><h1>Redirected Page</h1><p>This is a custom redirect response.</p></body></html>"),
+              cookies = Nothing,
+              headers = Just
+                [ Network.MkHeader
+                    { headerName = "Content-Type",
+                      headerValue = Network.StringValue "text/html; charset=utf-8"
+                    },
+                  Network.MkHeader
+                    { headerName = "Location",
+                      headerValue = Network.StringValue "https://custom.example.com/redirected"
+                    }
+                ],
+              reasonPhrase = "Found",
+              statusCode = 302
+            }
+      logShow "HTML redirect response result" provideResult3
+      pause
+
+      logTxt "Test 4: networkProvideResponse with binary content (base64)"
+      provideResult4 <-
+        networkProvideResponse $
+          Network.MkProvideResponse
+            { intercept = exampleIntercept,
+              body = Just (Network.Base64Value "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8/5+hHgAHggJ/PchI7wAAAABJRU5ErkJggg=="),
+              cookies = Nothing,
+              headers = Just
+                [ Network.MkHeader
+                    { headerName = "Content-Type",
+                      headerValue = Network.StringValue "image/png"
+                    },
+                  Network.MkHeader
+                    { headerName = "Content-Length",
+                      headerValue = Network.StringValue "95"
+                    }
+                ],
+              reasonPhrase = "OK",
+              statusCode = 200
+            }
+      logShow "Binary content response result" provideResult4
+      pause
+
+      logTxt "Test 5: networkProvideResponse with error status and cookies"
+      provideResult5 <-
+        networkProvideResponse $
+          Network.MkProvideResponse
+            { intercept = exampleIntercept,
+              body = Just (Network.StringValue "{\"error\": \"Unauthorized access\", \"code\": 401}"),
+              cookies = Just
+                [ Network.MkCookie
+                    { name = "auth_error",
+                      value = Network.StringValue "unauthorized_attempt",
+                      domain = "secure.example.com",
+                      path = "/",
+                      size = 120,
+                      httpOnly = True,
+                      secure = True,
+                      sameSite = Network.Strict,
+                      expiry = Nothing
+                    }
+                ],
+              headers = Just
+                [ Network.MkHeader
+                    { headerName = "Content-Type",
+                      headerValue = Network.StringValue "application/json"
+                    },
+                  Network.MkHeader
+                    { headerName = "WWW-Authenticate",
+                      headerValue = Network.StringValue "Bearer realm=\"secure\""
+                    }
+                ],
+              reasonPhrase = "Unauthorized",
+              statusCode = 401
+            }
+      logShow "Error status with cookies response result" provideResult5
+      pause
+
+      logTxt "Test 6: networkProvideResponse with server error"
+      provideResult6 <-
+        networkProvideResponse $
+          Network.MkProvideResponse
+            { intercept = exampleIntercept,
+              body = Just (Network.StringValue "Internal Server Error - Custom maintenance page"),
+              cookies = Nothing,
+              headers = Just
+                [ Network.MkHeader
+                    { headerName = "Content-Type",
+                      headerValue = Network.StringValue "text/plain"
+                    },
+                  Network.MkHeader
+                    { headerName = "Retry-After",
+                      headerValue = Network.StringValue "3600"
+                    }
+                ],
+              reasonPhrase = "Internal Server Error",
+              statusCode = 500
+            }
+      logShow "Server error response result" provideResult6
+      pause
+
+-- >>> runDemo networkDataRetrievalDemo
+-- NOTE: This demo will fail with "unknown command" errors on Geckodriver
+-- as network.getData and network.disownData are not yet implemented.
+networkDataRetrievalDemo :: BiDiDemo
+networkDataRetrievalDemo =
+  demo "Network VI - Data Retrieval and Ownership" action
+  where
+    action :: DemoUtils -> Commands -> IO ()
+    action utils@MkDemoUtils {..} cmds@MkCommands {..} = do
+      bc <- rootContext utils cmds
+
+      logTxt "Test 1: Add data collector to generate some data"
+      collector <-
+        networkAddDataCollector $
+          Network.MkAddDataCollector
+            { dataTypes = [Network.MkDataType "response"],
+              maxEncodedDataSize = MkJSUInt 2048,
+              collectorType = Just (Network.MkCollectorType "buffer"),
+              contexts = Just [bc],
+              userContexts = Nothing
+            }
+      logShow "Data collector for retrieval demo" collector
+      pause
+
+      let Network.MkAddDataCollectorResult collectorId = collector
+      let exampleRequest = Network.MkRequest "example-request-id-for-data"
+
+      logTxt "Test 2: networkGetData with basic parameters (disown=False)"
+      getData1 <-
+        networkGetData $
+          Network.MkGetData
+            { dataType = Network.MkDataType "response",
+              collector = Just collectorId,
+              disown = Just False,
+              request = exampleRequest
+            }
+      logShow "Get data without disowning result" getData1
+      pause
+
+      logTxt "Test 3: networkGetData with disown=True"
+      getData2 <-
+        networkGetData $
+          Network.MkGetData
+            { dataType = Network.MkDataType "response",
+              collector = Just collectorId,
+              disown = Just True,
+              request = exampleRequest
+            }
+      logShow "Get data with disowning result" getData2
+      pause
+
+      logTxt "Test 4: networkGetData without specifying collector or disown (default False)"
+      getData3 <-
+        networkGetData $
+          Network.MkGetData
+            { dataType = Network.MkDataType "response",
+              collector = Nothing,
+              disown = Nothing,
+              request = exampleRequest
+            }
+      logShow "Get data without collector specification result" getData3
+      pause
+
+      logTxt "Test 5: networkGetData for different data type"
+      getData4 <-
+        networkGetData $
+          Network.MkGetData
+            { dataType = Network.MkDataType "request",
+              collector = Just collectorId,
+              disown = Just False,
+              request = exampleRequest
+            }
+      logShow "Get request data result" getData4
+      pause
+
+      logTxt "Test 6: networkDisownData - explicitly disown specific data"
+      disownResult <-
+        networkDisownData $
+          Network.MkDisownData
+            { dataType = Network.MkDataType "response",
+              collector = collectorId,
+              request = exampleRequest
+            }
+      logShow "Disown data result" disownResult
+      pause
+
+      logTxt "Test 7: networkDisownData for different data type"
+      disownResult2 <-
+        networkDisownData $
+          Network.MkDisownData
+            { dataType = Network.MkDataType "request",
+              collector = collectorId,
+              request = exampleRequest
+            }
+      logShow "Disown request data result" disownResult2
+      pause
+
+      logTxt "Cleanup - remove data collector"
+      removeResult <- networkRemoveDataCollector $ Network.MkRemoveDataCollector collectorId
+      logShow "Removed data collector" removeResult
+      pause
+
+-- >>> runDemo networkCacheBehaviorDemo
+-- NOTE: This demo will fail with "unknown command" errors on Geckodriver
+-- as network.setCacheBehavior is not yet implemented.
+networkCacheBehaviorDemo :: BiDiDemo
+networkCacheBehaviorDemo =
+  demo "Network VII - Cache Behavior Management" action
+  where
+    action :: DemoUtils -> Commands -> IO ()
+    action utils@MkDemoUtils {..} cmds@MkCommands {..} = do
+      bc <- rootContext utils cmds
+
+      logTxt "Test 1: Set cache behavior to default (global)"
+      cacheResult1 <-
+        networkSetCacheBehavior $
+          Network.MkSetCacheBehavior
+            { cacheBehavior = Network.DefaultCacheBehavior,
+              contexts = Nothing
+            }
+      logShow "Set default cache behavior (global) result" cacheResult1
+      pause
+
+      logTxt "Test 2: Set cache behavior to bypass cache (global)"
+      cacheResult2 <-
+        networkSetCacheBehavior $
+          Network.MkSetCacheBehavior
+            { cacheBehavior = Network.BypassCache,
+              contexts = Nothing
+            }
+      logShow "Set bypass cache behavior (global) result" cacheResult2
+      pause
+
+      logTxt "Test 3: Set cache behavior to default for specific context"
+      cacheResult3 <-
+        networkSetCacheBehavior $
+          Network.MkSetCacheBehavior
+            { cacheBehavior = Network.DefaultCacheBehavior,
+              contexts = Just [bc]
+            }
+      logShow "Set default cache behavior (context-specific) result" cacheResult3
+      pause
+
+      logTxt "Test 4: Set cache behavior to bypass cache for specific context"
+      cacheResult4 <-
+        networkSetCacheBehavior $
+          Network.MkSetCacheBehavior
+            { cacheBehavior = Network.BypassCache,
+              contexts = Just [bc]
+            }
+      logShow "Set bypass cache behavior (context-specific) result" cacheResult4
+      pause
+
+      logTxt "Test 5: Create new context to test cache behavior isolation"
+      newContext <- newWindowContext utils cmds
+
+      logTxt "Test 6: Set different cache behavior for new context"
+      cacheResult5 <-
+        networkSetCacheBehavior $
+          Network.MkSetCacheBehavior
+            { cacheBehavior = Network.BypassCache,
+              contexts = Just [newContext]
+            }
+      logShow "Set bypass cache behavior for new context result" cacheResult5
+      pause
+
+      logTxt "Test 7: Set cache behavior for multiple contexts"
+      cacheResult6 <-
+        networkSetCacheBehavior $
+          Network.MkSetCacheBehavior
+            { cacheBehavior = Network.DefaultCacheBehavior,
+              contexts = Just [bc, newContext]
+            }
+      logShow "Set default cache behavior for multiple contexts result" cacheResult6
+      pause
+
+      logTxt "Test 8: Navigate both contexts to test cache behavior"
+      navResult1 <-
+        browsingContextNavigate $
+          MkNavigate
+            { context = bc,
+              url = "data:text/html,<html><head><title>Cache Test 1</title></head><body><h1>Testing Cache Behavior - Context 1</h1></body></html>",
+              wait = Just Complete
+            }
+      logShow "Navigation result - original context" navResult1
+      pause
+
+      navResult2 <-
+        browsingContextNavigate $
+          MkNavigate
+            { context = newContext,
+              url = "data:text/html,<html><head><title>Cache Test 2</title></head><body><h1>Testing Cache Behavior - Context 2</h1></body></html>",
+              wait = Just Complete
+            }
+      logShow "Navigation result - new context" navResult2
+      pause
+
+      logTxt "Test 9: Reset cache behavior to default for all contexts"
+      cacheResult7 <-
+        networkSetCacheBehavior $
+          Network.MkSetCacheBehavior
+            { cacheBehavior = Network.DefaultCacheBehavior,
+              contexts = Nothing
+            }
+      logShow "Reset to default cache behavior (global) result" cacheResult7
+      pause
+
+      logTxt "Cleanup - close new context"
+      closeContext utils cmds newContext
