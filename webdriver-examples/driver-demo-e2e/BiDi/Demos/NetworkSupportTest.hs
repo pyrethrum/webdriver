@@ -6,7 +6,7 @@ import Control.Exception (Exception (displayException), SomeException, throwIO, 
 import Data.Text (isInfixOf, pack, toLower)
 import IOUtils (DemoUtils (..))
 import WebDriverPreCore.BiDi.CoreTypes (JSUInt (..))
-import WebDriverPreCore.BiDi.Network qualified as Network
+import WebDriverPreCore.BiDi.Protocol
 import Prelude hiding (log)
 
 -- Test which network commands are actually supported by the current driver
@@ -29,8 +29,8 @@ networkSupportTest =
       result1 <-
         try $
           networkAddDataCollector $
-            Network.MkAddDataCollector
-              { dataTypes = [Network.MkDataType "response"],
+            MkAddDataCollector
+              { dataTypes = [MkDataType "response"],
                 maxEncodedDataSize = MkJSUInt 1024,
                 collectorType = Nothing,
                 contexts = Nothing,
@@ -44,8 +44,8 @@ networkSupportTest =
       result2 <-
         try $
           networkAddIntercept $
-            Network.MkAddIntercept
-              { phases = [Network.BeforeRequestSent],
+            MkAddIntercept
+              { phases = [BeforeRequestSent],
                 contexts = Just [bc],
                 urlPatterns = Nothing
               }
@@ -57,8 +57,8 @@ networkSupportTest =
       result3 <-
         try $
           networkSetCacheBehavior $
-            Network.MkSetCacheBehavior
-              { cacheBehavior = Network.DefaultCacheBehavior,
+            MkSetCacheBehavior
+              { cacheBehavior = DefaultCacheBehavior,
                 contexts = Nothing
               }
       handleCommandResult result3
@@ -69,8 +69,8 @@ networkSupportTest =
       result4 <-
         try $
           networkContinueRequest $
-            Network.MkContinueRequest
-              { request = Network.MkRequestId "test-request-id",
+            MkContinueRequest
+              { request = MkRequestId "test-request-id",
                 body = Nothing,
                 cookies = Nothing,
                 headers = Nothing,

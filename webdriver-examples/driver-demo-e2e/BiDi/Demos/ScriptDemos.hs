@@ -13,6 +13,7 @@ import WebDriverPreCore.BiDi.Protocol
 import qualified WebDriverPreCore.BiDi.Script as Script
 import WebDriverPreCore.Internal.AesonUtils (jsonToText)
 import Prelude hiding (log, putStrLn)
+import WebDriverPreCore.BiDi.CoreTypes (StringValue(..))
 
 {-
 
@@ -728,7 +729,7 @@ scriptPreloadScriptMultiContextDemo =
             }
 
       case domContentNew of
-        EvaluateResultSuccess {result = PrimitiveValue (StringValue newContextText)} -> do
+        EvaluateResultSuccess {result = PrimitiveValue (StringValue (MkStringValue newContextText))} -> do
           logTxt $ "New context DOM content: " <> newContextText
           if "New context has global data" `isInfixOf` newContextText
             then logTxt "✓ New context has global script effects"
@@ -894,7 +895,7 @@ scriptChannelArgumentDemo =
             }
 
       case domContent of
-        EvaluateResultSuccess {result = PrimitiveValue (StringValue cleanText)} -> do
+        EvaluateResultSuccess {result = PrimitiveValue (StringValue (MkStringValue cleanText))} -> do
           if "Channel Argument Success" `isInfixOf` cleanText
             then logTxt "⚠ Warning: Channel script effects still present after removal"
             else logTxt "✓ Confirmed: Clean state - no channel script effects"
@@ -1102,7 +1103,7 @@ scriptUserContextsDemo =
             }
 
       case domContentUC1 of
-        EvaluateResultSuccess {result = PrimitiveValue (StringValue uc1Text)} -> do
+        EvaluateResultSuccess {result = PrimitiveValue (StringValue (MkStringValue uc1Text))} -> do
           logTxt $ "UserContext1 content: " <> uc1Text
           if "Specific script active" `isInfixOf` uc1Text
             then logTxt "✓ UserContext1: Specific userContexts script executed"
@@ -1150,7 +1151,7 @@ scriptUserContextsDemo =
             }
 
       case domContentUC2 of
-        EvaluateResultSuccess {result = PrimitiveValue (StringValue uc2Text)} -> do
+        EvaluateResultSuccess {result = PrimitiveValue (StringValue (MkStringValue uc2Text))} -> do
           logTxt $ "UserContext2 content: " <> uc2Text
           if "Specific script active" `isInfixOf` uc2Text
             then logTxt "✓ UserContext2: Specific userContexts script executed"
@@ -1198,7 +1199,7 @@ scriptUserContextsDemo =
             }
 
       case domContentUC3 of
-        EvaluateResultSuccess {result = PrimitiveValue (StringValue uc3Text)} -> do
+        EvaluateResultSuccess {result = PrimitiveValue (StringValue (MkStringValue uc3Text))} -> do
           logTxt $ "UserContext3 content: " <> uc3Text
           if "Specific script active" `isInfixOf` uc3Text
             then logTxt "✗ UserContext3: Unexpected specific userContexts script execution"
@@ -1246,7 +1247,7 @@ scriptUserContextsDemo =
             }
 
       case domContentOriginal of
-        EvaluateResultSuccess {result = PrimitiveValue (StringValue originalText)} -> do
+        EvaluateResultSuccess {result = PrimitiveValue (StringValue (MkStringValue originalText))} -> do
           logTxt $ "Original context content: " <> originalText
           if "Specific script active" `isInfixOf` originalText
             then logTxt "✗ Original context: Unexpected specific userContexts script execution"
@@ -1363,7 +1364,7 @@ scriptCallFunctionDemo =
             { functionDeclaration = "async function(name) { return new Promise(r => setTimeout(()=> r('Hi ' + name), 50)); }",
               awaitPromise = True,
               target = baseTarget,
-              arguments = Just [PrimitiveLocalValue (StringValue "BiDi")],
+              arguments = Just [PrimitiveLocalValue (StringValue (MkStringValue "BiDi"))],
               resultOwnership = Nothing,
               serializationOptions = Nothing,
               this = Nothing
@@ -1432,8 +1433,8 @@ scriptCallFunctionDemo =
               MkObjectLocalValue
                 { value =
                     MkMappingLocalValue
-                      [ (Right "greeting", PrimitiveLocalValue (StringValue "Hello")),
-                        (Right "name", PrimitiveLocalValue (StringValue "World"))
+                      [ (Right "greeting", PrimitiveLocalValue (StringValue (MkStringValue "Hello"))),
+                        (Right "name", PrimitiveLocalValue (StringValue (MkStringValue "World")))
                       ]
                 }
       r7 <-
@@ -1442,7 +1443,7 @@ scriptCallFunctionDemo =
             { functionDeclaration = "function(extra) { return this.greeting + ', ' + this.name + extra; }",
               awaitPromise = False,
               target = baseTarget,
-              arguments = Just [PrimitiveLocalValue (StringValue "!!!")],
+              arguments = Just [PrimitiveLocalValue (StringValue (MkStringValue "!!!"))],
               resultOwnership = Nothing,
               serializationOptions = Nothing,
               this = Just objLocal

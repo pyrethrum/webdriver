@@ -33,6 +33,7 @@ import WebDriverPreCore.BiDi.Protocol
 import WebDriverPreCore.BiDi.Script (EvaluateResult (..), PrimitiveProtocolValue (..), RemoteValue (..))
 import WebDriverPreCore.Internal.Utils (txt)
 import Prelude hiding (log, putStrLn)
+import WebDriverPreCore.BiDi.CoreTypes (StringValue(..))
 
 pauseMs :: Int
 pauseMs = 0
@@ -131,7 +132,7 @@ chkDomContains' timeoutMs pauseIntervalMs MkDemoUtils {..} MkCommands {..} bc ex
             }
 
       case domResult of
-        EvaluateResultSuccess {result = PrimitiveValue (StringValue actualText)} -> do
+        EvaluateResultSuccess {result = PrimitiveValue (StringValue (MkStringValue actualText))} -> do
           if expectedText `isInfixOf` actualText
             then logTxt $ "✓ Found expected text: " <> expectedText
             else do

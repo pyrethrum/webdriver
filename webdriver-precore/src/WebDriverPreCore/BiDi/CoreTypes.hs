@@ -8,11 +8,13 @@ module WebDriverPreCore.BiDi.CoreTypes
     NodeProperties (..),
     NodeRemoteValue (..),
     SharedId (..),
+    StringValue (..),
     UserContext (..),
   )
 where
 
-import Data.Aeson (FromJSON (..), Object, ToJSON (..), Value (..), (.:), (.:?))
+import Control.Monad (unless)
+import Data.Aeson (FromJSON (..), Object, ToJSON (..), Value (..), object, (.:), (.:?), (.=))
 import Data.Aeson.Types (Parser, withObject)
 import Data.Int (Int64)
 import Data.Map qualified as Map
@@ -86,6 +88,26 @@ data NodeProperties = MkNodeProperties
     shadowRoot :: Maybe NodeRemoteValue -- null allowed
   }
   deriving (Show, Eq, Generic)
+
+newtype StringValue = MkStringValue {value :: Text}
+  deriving (Show, Eq, Generic)
+
+instance ToJSON StringValue where
+  toJSON :: StringValue -> Value
+  toJSON (MkStringValue val) =
+    object
+      [ "type" .= ("string" :: Text),
+        "value" .= val
+      ]
+
+instance FromJSON StringValue where
+  parseJSON :: Value -> Parser StringValue
+  parseJSON = withObject "StringValue" $ \obj -> do
+    typ <- obj .: "type"
+    unless (typ == "string") $
+      fail $
+        "Expected type 'string' but got: " <> show typ
+    MkStringValue <$> obj .: "value"
 
 instance FromJSON NodeProperties
 

@@ -69,6 +69,7 @@ import WebDriverPreCore.BiDi.CoreTypes
     JSUInt,
     NodeRemoteValue (..), UserContext,
   )
+import WebDriverPreCore.BiDi.CoreTypes (StringValue(..))
 import WebDriverPreCore.Internal.AesonUtils (jsonToText, opt, toJSONOmitNothing)
 import Prelude (Applicative (..), Bool (..), Double, Either (..), Eq (..), Maybe (..), MonadFail (..), Semigroup (..), Show (..), Traversable (..), mapM, realToFrac, ($), (.), (<$>))
 
@@ -189,7 +190,7 @@ instance FromJSON RemoteValue where
     case typ of
       "undefined" -> pure $ PrimitiveValue UndefinedValue
       "null" -> pure $ PrimitiveValue NullValue
-      "string" -> PrimitiveValue . StringValue <$> obj .: "value"
+      "string" -> PrimitiveValue . StringValue . MkStringValue <$> obj .: "value"
       "number" ->
         PrimitiveValue . NumberValue <$> do
           v <- obj .: "value"
@@ -262,7 +263,7 @@ instance FromJSON RemoteValue where
 data PrimitiveProtocolValue
   = UndefinedValue
   | NullValue
-  | StringValue Text
+  | StringValue StringValue
   | NumberValue (Either Double SpecialNumber)
   | BooleanValue Bool
   | BigIntValue Text

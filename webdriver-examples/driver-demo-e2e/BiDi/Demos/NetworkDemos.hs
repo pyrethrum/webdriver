@@ -4,8 +4,8 @@ import BiDi.BiDiRunner (Commands (..))
 import BiDi.DemoUtils
 import IOUtils (DemoUtils (..))
 import WebDriverPreCore.BiDi.CoreTypes (JSUInt (..))
+import WebDriverPreCore.BiDi.CoreTypes (StringValue (MkStringValue))
 import WebDriverPreCore.BiDi.Protocol
-import qualified WebDriverPreCore.BiDi.Network as Network
 import Prelude hiding (log)
 
 {-
@@ -42,6 +42,44 @@ Key Mozilla tracking bugs:
 -}
 
 -- >>> runDemo networkDataCollectorDemo
+-- *** Exception: Error executing BiDi command: MkCommand
+--   { method = "network.addDataCollector"
+--   , params =
+--       MkAddDataCollector
+--         { dataTypes = [ MkDataType { dataType = "response" } ]
+--         , maxEncodedDataSize = 1024
+--         , collectorType = Nothing
+--         , contexts = Nothing
+--         , userContexts = Nothing
+--         }
+--   , extended = Nothing
+--   }
+-- With JSON: 
+-- {
+--     "id": 2,
+--     "method": "network.addDataCollector",
+--     "params": {
+--         "collectorType": null,
+--         "contexts": null,
+--         "dataTypes": [
+--             {
+--                 "dataType": "response"
+--             }
+--         ],
+--         "maxEncodedDataSize": 1024,
+--         "userContexts": null
+--     }
+-- }
+-- Failed to decode the 'result' property of JSON returned by driver to response type: 
+-- {
+--     "error": "unknown command",
+--     "id": 2,
+--     "message": "network.addDataCollector",
+--     "stacktrace": "RemoteError@chrome://remote/content/shared/RemoteError.sys.mjs:8:8\nWebDriverError@chrome://remote/content/shared/webdriver/Errors.sys.mjs:199:5\nUnknownCommandError@chrome://remote/content/shared/webdriver/Errors.sys.mjs:893:5\nexecute@chrome://remote/content/shared/webdriver/Session.sys.mjs:407:13\nonPacket@chrome://remote/content/webdriver-bidi/WebDriverBiDiConnection.sys.mjs:236:37\nonMessage@chrome://remote/content/server/WebSocketTransport.sys.mjs:127:18\nhandleEvent@chrome://remote/content/server/WebSocketTransport.sys.mjs:109:14\n",
+--     "type": "error"
+-- }
+-- Error message: 
+-- key "result" not found
 networkDataCollectorDemo :: BiDiDemo
 networkDataCollectorDemo =
   demo "Network I - Data Collector Management" action
@@ -53,8 +91,8 @@ networkDataCollectorDemo =
       logTxt "Test 1: Add data collector with minimal parameters"
       collector1 <-
         networkAddDataCollector $
-          Network.MkAddDataCollector
-            { dataTypes = [Network.MkDataType "response"],
+          MkAddDataCollector
+            { dataTypes = [MkDataType "response"],
               maxEncodedDataSize = MkJSUInt 1024,
               collectorType = Nothing,
               contexts = Nothing,
@@ -66,10 +104,10 @@ networkDataCollectorDemo =
       logTxt "Test 2: Add data collector with specific collector type"
       collector2 <-
         networkAddDataCollector $
-          Network.MkAddDataCollector
-            { dataTypes = [Network.MkDataType "request", Network.MkDataType "response"],
+          MkAddDataCollector
+            { dataTypes = [MkDataType "request", MkDataType "response"],
               maxEncodedDataSize = MkJSUInt 2048,
-              collectorType = Just (Network.MkCollectorType "blob"),
+              collectorType = Just (MkCollectorType "blob"),
               contexts = Nothing,
               userContexts = Nothing
             }
@@ -79,10 +117,10 @@ networkDataCollectorDemo =
       logTxt "Test 3: Add data collector targeting specific browsing context"
       collector3 <-
         networkAddDataCollector $
-          Network.MkAddDataCollector
-            { dataTypes = [Network.MkDataType "response"],
+          MkAddDataCollector
+            { dataTypes = [MkDataType "response"],
               maxEncodedDataSize = MkJSUInt 4096,
-              collectorType = Just (Network.MkCollectorType "stream"),
+              collectorType = Just (MkCollectorType "stream"),
               contexts = Just [bc],
               userContexts = Nothing
             }
@@ -103,8 +141,8 @@ networkDataCollectorDemo =
       logTxt "Test 5: Add data collector targeting specific user context"
       collector4 <-
         networkAddDataCollector $
-          Network.MkAddDataCollector
-            { dataTypes = [Network.MkDataType "request"],
+          MkAddDataCollector
+            { dataTypes = [MkDataType "request"],
               maxEncodedDataSize = MkJSUInt 8192,
               collectorType = Nothing,
               contexts = Nothing,
@@ -116,10 +154,10 @@ networkDataCollectorDemo =
       logTxt "Test 6: Add data collector with multiple data types and large size"
       collector5 <-
         networkAddDataCollector $
-          Network.MkAddDataCollector
-            { dataTypes = [Network.MkDataType "request", Network.MkDataType "response", Network.MkDataType "websocket"],
+          MkAddDataCollector
+            { dataTypes = [MkDataType "request", MkDataType "response", MkDataType "websocket"],
               maxEncodedDataSize = MkJSUInt 16384,
-              collectorType = Just (Network.MkCollectorType "buffer"),
+              collectorType = Just (MkCollectorType "buffer"),
               contexts = Just [bc],
               userContexts = Just [userContext]
             }
@@ -139,28 +177,28 @@ networkDataCollectorDemo =
       pause
 
       logTxt "Test 7: Remove data collectors"
-      let Network.MkAddDataCollectorResult collectorId1 = collector1
-      removeResult1 <- networkRemoveDataCollector $ Network.MkRemoveDataCollector collectorId1
+      let MkAddDataCollectorResult collectorId1 = collector1
+      removeResult1 <- networkRemoveDataCollector $ MkRemoveDataCollector collectorId1
       logShow "Removed basic data collector" removeResult1
       pause
 
-      let Network.MkAddDataCollectorResult collectorId2 = collector2
-      removeResult2 <- networkRemoveDataCollector $ Network.MkRemoveDataCollector collectorId2
+      let MkAddDataCollectorResult collectorId2 = collector2
+      removeResult2 <- networkRemoveDataCollector $ MkRemoveDataCollector collectorId2
       logShow "Removed typed data collector" removeResult2
       pause
 
-      let Network.MkAddDataCollectorResult collectorId3 = collector3
-      removeResult3 <- networkRemoveDataCollector $ Network.MkRemoveDataCollector collectorId3
+      let MkAddDataCollectorResult collectorId3 = collector3
+      removeResult3 <- networkRemoveDataCollector $ MkRemoveDataCollector collectorId3
       logShow "Removed context-specific data collector" removeResult3
       pause
 
-      let Network.MkAddDataCollectorResult collectorId4 = collector4
-      removeResult4 <- networkRemoveDataCollector $ Network.MkRemoveDataCollector collectorId4
+      let MkAddDataCollectorResult collectorId4 = collector4
+      removeResult4 <- networkRemoveDataCollector $ MkRemoveDataCollector collectorId4
       logShow "Removed user context-specific data collector" removeResult4
       pause
 
-      let Network.MkAddDataCollectorResult collectorId5 = collector5
-      removeResult5 <- networkRemoveDataCollector $ Network.MkRemoveDataCollector collectorId5
+      let MkAddDataCollectorResult collectorId5 = collector5
+      removeResult5 <- networkRemoveDataCollector $ MkRemoveDataCollector collectorId5
       logShow "Removed multi-type data collector" removeResult5
       pause
 
@@ -170,57 +208,6 @@ networkDataCollectorDemo =
       pause
 
 -- >>> runDemo networkInterceptDemo
--- *** Exception: Error executing BiDi command: MkCommand
---   { method = "network.addIntercept"
---   , params =
---       MkAddIntercept
---         { phases = [ ResponseStarted ]
---         , contexts =
---             Just
---               [ MkBrowsingContext
---                   { context = "ff35c4f2-ec1b-4027-b205-326f5d707b61" }
---               ]
---         , urlPatterns =
---             Just
---               [ MkUrlPattern
---                   { protocol = Just "https"
---                   , hostname = Nothing
---                   , port = Nothing
---                   , pathname = Nothing
---                   , search = Nothing
---                   }
---               ]
---         }
---   , extended = Nothing
---   }
--- With JSON: 
--- {
---     "id": 3,
---     "method": "network.addIntercept",
---     "params": {
---         "contexts": [
---             "ff35c4f2-ec1b-4027-b205-326f5d707b61"
---         ],
---         "phases": [
---             "responseStarted"
---         ],
---         "urlPatterns": [
---             {
---                 "protocol": "https"
---             }
---         ]
---     }
--- }
--- Failed to decode the 'result' property of JSON returned by driver to response type: 
--- {
---     "error": "invalid argument",
---     "id": 3,
---     "message": "Expected \"urlPattern\" type to be one of pattern,string, got undefined",
---     "stacktrace": "RemoteError@chrome://remote/content/shared/RemoteError.sys.mjs:8:8\nWebDriverError@chrome://remote/content/shared/webdriver/Errors.sys.mjs:199:5\nInvalidArgumentError@chrome://remote/content/shared/webdriver/Errors.sys.mjs:401:5\nparseURLPattern@chrome://remote/content/shared/webdriver/URLPattern.sys.mjs:190:13\naddIntercept/parsedPatterns<@chrome://remote/content/webdriver-bidi/modules/root/network.sys.mjs:443:12\naddIntercept@chrome://remote/content/webdriver-bidi/modules/root/network.sys.mjs:442:40\nhandleCommand@chrome://remote/content/shared/messagehandler/MessageHandler.sys.mjs:260:33\nexecute@chrome://remote/content/shared/webdriver/Session.sys.mjs:410:32\nonPacket@chrome://remote/content/webdriver-bidi/WebDriverBiDiConnection.sys.mjs:236:37\nonMessage@chrome://remote/content/server/WebSocketTransport.sys.mjs:127:18\nhandleEvent@chrome://remote/content/server/WebSocketTransport.sys.mjs:109:14\n",
---     "type": "error"
--- }
--- Error message: 
--- key "result" not found
 networkInterceptDemo :: BiDiDemo
 networkInterceptDemo =
   demo "Network II - Request/Response Interception" action
@@ -232,8 +219,8 @@ networkInterceptDemo =
       logTxt "Test 1: Add intercept for BeforeRequestSent phase"
       intercept1 <-
         networkAddIntercept $
-          Network.MkAddIntercept
-            { phases = [Network.BeforeRequestSent],
+          MkAddIntercept
+            { phases = [BeforeRequestSent],
               contexts = Just [bc],
               urlPatterns = Nothing
             }
@@ -243,36 +230,30 @@ networkInterceptDemo =
       logTxt "Test 2: Add intercept for ResponseStarted phase with URL patterns"
       intercept2 <-
         networkAddIntercept $
-          Network.MkAddIntercept
-            { phases = [Network.ResponseStarted],
+          MkAddIntercept
+            { phases = [ResponseStarted],
               contexts = Just [bc],
               urlPatterns = Just
-                [ Network.MkUrlPattern
+                [ UrlPatternPattern (MkUrlPatternPattern
                     { protocol = Just "https",
                       hostname = Nothing,
                       port = Nothing,
                       pathname = Nothing,
                       search = Nothing
-                    }
+                    })
                 ]
             }
       logShow "ResponseStarted intercept with HTTPS pattern added" intercept2
       pause
 
-      logTxt "Test 3: Add intercept for AuthRequired phase with specific hostname"
+      logTxt "Test 3: Add intercept for AuthRequired phase with specific hostname (using string pattern)"
       intercept3 <-
         networkAddIntercept $
-          Network.MkAddIntercept
-            { phases = [Network.AuthRequired],
+          MkAddIntercept
+            { phases = [AuthRequired],
               contexts = Just [bc],
               urlPatterns = Just
-                [ Network.MkUrlPattern
-                    { protocol = Nothing,
-                      hostname = Just "example.com",
-                      port = Nothing,
-                      pathname = Nothing,
-                      search = Nothing
-                    }
+                [ UrlPatternString (MkUrlPatternString "https://example.com/\\*")
                 ]
             }
       logShow "AuthRequired intercept for example.com added" intercept3
@@ -281,8 +262,8 @@ networkInterceptDemo =
       logTxt "Test 4: Add intercept for multiple phases"
       intercept4 <-
         networkAddIntercept $
-          Network.MkAddIntercept
-            { phases = [Network.BeforeRequestSent, Network.ResponseStarted],
+          MkAddIntercept
+            { phases = [BeforeRequestSent, ResponseStarted],
               contexts = Just [bc],
               urlPatterns = Nothing
             }
@@ -292,43 +273,37 @@ networkInterceptDemo =
       logTxt "Test 5: Add intercept with comprehensive URL pattern"
       intercept5 <-
         networkAddIntercept $
-          Network.MkAddIntercept
-            { phases = [Network.BeforeRequestSent],
+          MkAddIntercept
+            { phases = [BeforeRequestSent],
               contexts = Just [bc],
               urlPatterns = Just
-                [ Network.MkUrlPattern
+                [ UrlPatternPattern (MkUrlPatternPattern
                     { protocol = Just "https",
                       hostname = Just "api.example.com",
                       port = Just "443",
-                      pathname = Just "/v1/*",
-                      search = Just "key=*"
-                    }
+                      pathname = Just "/v1/\\*",
+                      search = Just "key=\\*"
+                    })
                 ]
             }
       logShow "Comprehensive URL pattern intercept added" intercept5
       pause
 
-      logTxt "Test 6: Add intercept with multiple URL patterns"
+      logTxt "Test 6: Add intercept with multiple URL patterns (demonstrating both pattern types)"
       intercept6 <-
         networkAddIntercept $
-          Network.MkAddIntercept
-            { phases = [Network.ResponseStarted],
+          MkAddIntercept
+            { phases = [ResponseStarted],
               contexts = Just [bc],
               urlPatterns = Just
-                [ Network.MkUrlPattern
+                [ UrlPatternPattern (MkUrlPatternPattern
                     { protocol = Just "http",
                       hostname = Nothing,
                       port = Nothing,
                       pathname = Nothing,
                       search = Nothing
-                    },
-                  Network.MkUrlPattern
-                    { protocol = Just "https",
-                      hostname = Nothing,
-                      port = Nothing,
-                      pathname = Nothing,
-                      search = Nothing
-                    }
+                    }),
+                  UrlPatternString (MkUrlPatternString "https://api.example.com/")
                 ]
             }
       logShow "Multi-pattern intercept added" intercept6
@@ -337,8 +312,8 @@ networkInterceptDemo =
       logTxt "Test 7: Add intercept with no contexts (global intercept)"
       intercept7 <-
         networkAddIntercept $
-          Network.MkAddIntercept
-            { phases = [Network.BeforeRequestSent],
+          MkAddIntercept
+            { phases = [BeforeRequestSent],
               contexts = Nothing,
               urlPatterns = Nothing
             }
@@ -358,44 +333,78 @@ networkInterceptDemo =
       pause
 
       logTxt "Test 7: Remove intercepts"
-      let Network.MkAddInterceptResult interceptId1 = intercept1
-      removeResult1 <- networkRemoveIntercept $ Network.MkRemoveIntercept interceptId1
+      let MkAddInterceptResult interceptId1 = intercept1
+      removeResult1 <- networkRemoveIntercept $ MkRemoveIntercept interceptId1
       logShow "Removed BeforeRequestSent intercept" removeResult1
       pause
 
-      let Network.MkAddInterceptResult interceptId2 = intercept2
-      removeResult2 <- networkRemoveIntercept $ Network.MkRemoveIntercept interceptId2
+      let MkAddInterceptResult interceptId2 = intercept2
+      removeResult2 <- networkRemoveIntercept $ MkRemoveIntercept interceptId2
       logShow "Removed ResponseStarted intercept" removeResult2
       pause
 
-      let Network.MkAddInterceptResult interceptId3 = intercept3
-      removeResult3 <- networkRemoveIntercept $ Network.MkRemoveIntercept interceptId3
+      let MkAddInterceptResult interceptId3 = intercept3
+      removeResult3 <- networkRemoveIntercept $ MkRemoveIntercept interceptId3
       logShow "Removed AuthRequired intercept" removeResult3
       pause
 
-      let Network.MkAddInterceptResult interceptId4 = intercept4
-      removeResult4 <- networkRemoveIntercept $ Network.MkRemoveIntercept interceptId4
+      let MkAddInterceptResult interceptId4 = intercept4
+      removeResult4 <- networkRemoveIntercept $ MkRemoveIntercept interceptId4
       logShow "Removed multi-phase intercept" removeResult4
       pause
 
-      let Network.MkAddInterceptResult interceptId5 = intercept5
-      removeResult5 <- networkRemoveIntercept $ Network.MkRemoveIntercept interceptId5
+      let MkAddInterceptResult interceptId5 = intercept5
+      removeResult5 <- networkRemoveIntercept $ MkRemoveIntercept interceptId5
       logShow "Removed comprehensive pattern intercept" removeResult5
       pause
 
-      let Network.MkAddInterceptResult interceptId6 = intercept6
-      removeResult6 <- networkRemoveIntercept $ Network.MkRemoveIntercept interceptId6
+      let MkAddInterceptResult interceptId6 = intercept6
+      removeResult6 <- networkRemoveIntercept $ MkRemoveIntercept interceptId6
       logShow "Removed multi-pattern intercept" removeResult6
       pause
 
-      let Network.MkAddInterceptResult interceptId7 = intercept7
-      removeResult7 <- networkRemoveIntercept $ Network.MkRemoveIntercept interceptId7
+      let MkAddInterceptResult interceptId7 = intercept7
+      removeResult7 <- networkRemoveIntercept $ MkRemoveIntercept interceptId7
       logShow "Removed global intercept" removeResult7
       pause
 
 -- >>> runDemo networkRequestResponseModificationDemo
--- NOTE: This demo will fail with "unknown command" errors on Geckodriver
--- as network.continueRequest and network.continueResponse are not yet implemented.
+-- *** Exception: Error executing BiDi command: MkCommand
+--   { method = "network.continueRequest"
+--   , params =
+--       MkContinueRequest
+--         { request = MkRequestId { id = "example-request-id-001" }
+--         , body = Nothing
+--         , cookies = Nothing
+--         , headers = Nothing
+--         , method = Nothing
+--         , url = Nothing
+--         }
+--   , extended = Nothing
+--   }
+-- With JSON: 
+-- {
+--     "id": 2,
+--     "method": "network.continueRequest",
+--     "params": {
+--         "body": null,
+--         "cookies": null,
+--         "headers": null,
+--         "method": null,
+--         "request": "example-request-id-001",
+--         "url": null
+--     }
+-- }
+-- Failed to decode the 'result' property of JSON returned by driver to response type: 
+-- {
+--     "error": "no such request",
+--     "id": 2,
+--     "message": "Blocked request with id example-request-id-001 not found",
+--     "stacktrace": "RemoteError@chrome://remote/content/shared/RemoteError.sys.mjs:8:8\nWebDriverError@chrome://remote/content/shared/webdriver/Errors.sys.mjs:199:5\nNoSuchRequestError@chrome://remote/content/shared/webdriver/Errors.sys.mjs:698:5\ncontinueRequest@chrome://remote/content/webdriver-bidi/modules/root/network.sys.mjs:548:13\nhandleCommand@chrome://remote/content/shared/messagehandler/MessageHandler.sys.mjs:260:33\nexecute@chrome://remote/content/shared/webdriver/Session.sys.mjs:410:32\nonPacket@chrome://remote/content/webdriver-bidi/WebDriverBiDiConnection.sys.mjs:236:37\nonMessage@chrome://remote/content/server/WebSocketTransport.sys.mjs:127:18\nhandleEvent@chrome://remote/content/server/WebSocketTransport.sys.mjs:109:14\n",
+--     "type": "error"
+-- }
+-- Error message: 
+-- key "result" not found
 networkRequestResponseModificationDemo :: BiDiDemo
 networkRequestResponseModificationDemo =
   demo "Network III - Request and Response Modification" action
@@ -407,10 +416,10 @@ networkRequestResponseModificationDemo =
       logTxt "Note: This demo shows parameter usage. Actual request/response modification requires active intercepts and network events."
 
       logTxt "Test 1: networkContinueRequest with basic parameters"
-      let exampleRequestId = Network.MkRequestId "example-request-id-001"
+      let exampleRequestId = MkRequestId "example-request-id-001"
       continueReq1 <-
         networkContinueRequest $
-          Network.MkContinueRequest
+          MkContinueRequest
             { request = exampleRequestId,
               body = Nothing,
               cookies = Nothing,
@@ -424,18 +433,18 @@ networkRequestResponseModificationDemo =
       logTxt "Test 2: networkContinueRequest with modified headers and method"
       continueReq2 <-
         networkContinueRequest $
-          Network.MkContinueRequest
+          MkContinueRequest
             { request = exampleRequestId,
               body = Nothing,
               cookies = Nothing,
               headers = Just
-                [ Network.MkHeader
+                [ MkHeader
                     { headerName = "X-Custom-Header",
-                      headerValue = Network.StringValue "modified-request"
+                      headerValue = TextBytesValue $ MkStringValue "modified-request"
                     },
-                  Network.MkHeader
+                  MkHeader
                     { headerName = "User-Agent",
-                      headerValue = Network.StringValue "BiDi-WebDriver-Test/1.0"
+                      headerValue = TextBytesValue $ MkStringValue "BiDi-WebDriver-Test/1.0"
                     }
                 ],
               method = Just "POST",
@@ -447,9 +456,9 @@ networkRequestResponseModificationDemo =
       logTxt "Test 3: networkContinueRequest with body and URL modification"
       continueReq3 <-
         networkContinueRequest $
-          Network.MkContinueRequest
+          MkContinueRequest
             { request = exampleRequestId,
-              body = Just (Network.StringValue "modified request body"),
+              body = Just (TextBytesValue $ MkStringValue "modified request body"),
               cookies = Nothing,
               headers = Nothing,
               method = Nothing,
@@ -461,30 +470,30 @@ networkRequestResponseModificationDemo =
       logTxt "Test 4: networkContinueRequest with cookies"
       continueReq4 <-
         networkContinueRequest $
-          Network.MkContinueRequest
+          MkContinueRequest
             { request = exampleRequestId,
               body = Nothing,
               cookies = Just
-                [ Network.MkCookie
+                [ MkCookie
                     { name = "session_id",
-                      value = Network.StringValue "modified-session-123",
+                      value = TextBytesValue $ MkStringValue "modified-session-123",
                       domain = "example.com",
                       path = "/",
                       size = 100,
                       httpOnly = True,
                       secure = True,
-                      sameSite = Network.Strict,
+                      sameSite = Strict,
                       expiry = Nothing
                     },
-                  Network.MkCookie
+                  MkCookie
                     { name = "user_pref",
-                      value = Network.Base64Value "bW9kaWZpZWQ=",
+                      value = Base64Value "bW9kaWZpZWQ=",
                       domain = "example.com",
                       path = "/app",
                       size = 50,
                       httpOnly = False,
                       secure = False,
-                      sameSite = Network.Lax,
+                      sameSite = Lax,
                       expiry = Just 1735689600
                     }
                 ],
@@ -498,7 +507,7 @@ networkRequestResponseModificationDemo =
       logTxt "Test 5: networkContinueResponse with basic parameters"
       continueResp1 <-
         networkContinueResponse $
-          Network.MkContinueResponse
+          MkContinueResponse
             { request = exampleRequestId,
               body = Nothing,
               cookies = Nothing,
@@ -512,7 +521,7 @@ networkRequestResponseModificationDemo =
       logTxt "Test 6: networkContinueResponse with status code and reason phrase"
       continueResp2 <-
         networkContinueResponse $
-          Network.MkContinueResponse
+          MkContinueResponse
             { request = exampleRequestId,
               body = Nothing,
               cookies = Nothing,
@@ -526,22 +535,22 @@ networkRequestResponseModificationDemo =
       logTxt "Test 7: networkContinueResponse with modified response body and headers"
       continueResp3 <-
         networkContinueResponse $
-          Network.MkContinueResponse
+          MkContinueResponse
             { request = exampleRequestId,
-              body = Just (Network.StringValue "Modified response body content"),
+              body = Just (TextBytesValue (MkStringValue "Modified response body content")),
               cookies = Nothing,
               headers = Just
-                [ Network.MkHeader
+                [ MkHeader
                     { headerName = "Content-Type",
-                      headerValue = Network.StringValue "text/plain; charset=utf-8"
+                      headerValue = TextBytesValue (MkStringValue "text/plain; charset=utf-8")
                     },
-                  Network.MkHeader
+                  MkHeader
                     { headerName = "X-Modified-Response",
-                      headerValue = Network.StringValue "true"
+                      headerValue = TextBytesValue (MkStringValue "true")
                     },
-                  Network.MkHeader
+                  MkHeader
                     { headerName = "Cache-Control",
-                      headerValue = Network.StringValue "no-cache, no-store"
+                      headerValue = TextBytesValue (MkStringValue "no-cache, no-store")
                     }
                 ],
               reasonPhrase = Just "Custom Response",
@@ -553,19 +562,19 @@ networkRequestResponseModificationDemo =
       logTxt "Test 8: networkContinueResponse with response cookies"
       continueResp4 <-
         networkContinueResponse $
-          Network.MkContinueResponse
+          MkContinueResponse
             { request = exampleRequestId,
               body = Nothing,
               cookies = Just
-                [ Network.MkCookie
+                [ MkCookie
                     { name = "response_token",
-                      value = Network.StringValue "resp-token-456",
+                      value = TextBytesValue (MkStringValue "resp-token-456"),
                       domain = "api.example.com",
                       path = "/",
                       size = 80,
                       httpOnly = True,
                       secure = True,
-                      sameSite = Network.None,
+                      sameSite = Default, -- Note: using Default instead of None to avoid conflict
                       expiry = Just 1767225600
                     }
                 ],
@@ -589,14 +598,14 @@ networkAuthAndFailureDemo =
 
       logTxt "Note: This demo shows parameter usage. Actual auth/failure handling requires active intercepts and auth events."
 
-      let exampleRequest = Network.MkRequest "example-request-auth-001"
+      let exampleRequest = MkRequest "example-request-auth-001"
 
       logTxt "Test 1: networkContinueWithAuth with default response (no credentials)"
       authResult1 <-
         networkContinueWithAuth $
-          Network.MkContinueWithAuth
+          MkContinueWithAuth
             { request = exampleRequest,
-              authAction = Network.DefaultAuth
+              authAction = DefaultAuth
             }
       logShow "Default auth response result" authResult1
       pause
@@ -604,9 +613,9 @@ networkAuthAndFailureDemo =
       logTxt "Test 2: networkContinueWithAuth with cancel response"
       authResult2 <-
         networkContinueWithAuth $
-          Network.MkContinueWithAuth
+          MkContinueWithAuth
             { request = exampleRequest,
-              authAction = Network.CancelAuth
+              authAction = CancelAuth
             }
       logShow "Cancel auth response result" authResult2
       pause
@@ -614,10 +623,10 @@ networkAuthAndFailureDemo =
       logTxt "Test 3: networkContinueWithAuth with provided credentials"
       authResult3 <-
         networkContinueWithAuth $
-          Network.MkContinueWithAuth
+          MkContinueWithAuth
             { request = exampleRequest,
-              authAction = Network.ProvideCredentials
-                Network.MkAuthCredentials
+              authAction = ProvideCredentials
+                MkAuthCredentials
                   { username = "test_user",
                     password = "test_password_123"
                   }
@@ -628,10 +637,10 @@ networkAuthAndFailureDemo =
       logTxt "Test 4: networkContinueWithAuth with different credentials"
       authResult4 <-
         networkContinueWithAuth $
-          Network.MkContinueWithAuth
+          MkContinueWithAuth
             { request = exampleRequest,
-              authAction = Network.ProvideCredentials
-                Network.MkAuthCredentials
+              authAction = ProvideCredentials
+                MkAuthCredentials
                   { username = "admin@example.com",
                     password = "super_secure_password_456"
                   }
@@ -642,8 +651,8 @@ networkAuthAndFailureDemo =
       logTxt "Test 5: networkFailRequest with basic request"
       failResult1 <-
         networkFailRequest $
-          Network.MkFailRequest
-            { request = Network.MkRequest "example-request-fail-001"
+          MkFailRequest
+            { request = MkRequest "example-request-fail-001"
             }
       logShow "Basic failure result" failResult1
       pause
@@ -651,8 +660,8 @@ networkAuthAndFailureDemo =
       logTxt "Test 6: networkFailRequest with different request"
       failResult2 <-
         networkFailRequest $
-          Network.MkFailRequest
-            { request = Network.MkRequest "example-request-fail-002"
+          MkFailRequest
+            { request = MkRequest "example-request-fail-002"
             }
       logShow "Second failure result" failResult2
       pause
@@ -660,8 +669,8 @@ networkAuthAndFailureDemo =
       logTxt "Test 7: networkFailRequest with another request"
       failResult3 <-
         networkFailRequest $
-          Network.MkFailRequest
-            { request = Network.MkRequest "example-request-fail-003"
+          MkFailRequest
+            { request = MkRequest "example-request-fail-003"
             }
       logShow "Third failure result" failResult3
       pause
@@ -669,8 +678,8 @@ networkAuthAndFailureDemo =
       logTxt "Test 8: networkFailRequest with final request"
       failResult4 <-
         networkFailRequest $
-          Network.MkFailRequest
-            { request = Network.MkRequest "example-request-fail-004"
+          MkFailRequest
+            { request = MkRequest "example-request-fail-004"
             }
       logShow "SSL failure result" failResult4
       pause
@@ -688,12 +697,12 @@ networkProvideResponseDemo =
 
       logTxt "Note: This demo shows parameter usage. Actual response provision requires active intercepts."
 
-      let exampleIntercept = Network.MkIntercept "example-intercept-002"
+      let exampleIntercept = MkIntercept "example-intercept-002"
 
       logTxt "Test 1: networkProvideResponse with minimal parameters"
       provideResult1 <-
         networkProvideResponse $
-          Network.MkProvideResponse
+          MkProvideResponse
             { intercept = exampleIntercept,
               body = Nothing,
               cookies = Nothing,
@@ -707,18 +716,18 @@ networkProvideResponseDemo =
       logTxt "Test 2: networkProvideResponse with JSON content"
       provideResult2 <-
         networkProvideResponse $
-          Network.MkProvideResponse
+          MkProvideResponse
             { intercept = exampleIntercept,
-              body = Just (Network.StringValue "{\"message\": \"Custom JSON response\", \"status\": \"success\"}"),
+              body = Just (TextBytesValue (MkStringValue "{\"message\": \"Custom JSON response\", \"status\": \"success\"}")),
               cookies = Nothing,
               headers = Just
-                [ Network.MkHeader
+                [ MkHeader
                     { headerName = "Content-Type",
-                      headerValue = Network.StringValue "application/json"
+                      headerValue = TextBytesValue (MkStringValue "application/json")
                     },
-                  Network.MkHeader
+                  MkHeader
                     { headerName = "X-Custom-Provider",
-                      headerValue = Network.StringValue "BiDi-WebDriver"
+                      headerValue = TextBytesValue (MkStringValue "BiDi-WebDriver")
                     }
                 ],
               reasonPhrase = "OK",
@@ -730,18 +739,18 @@ networkProvideResponseDemo =
       logTxt "Test 3: networkProvideResponse with HTML content and redirect"
       provideResult3 <-
         networkProvideResponse $
-          Network.MkProvideResponse
+          MkProvideResponse
             { intercept = exampleIntercept,
-              body = Just (Network.StringValue "<html><body><h1>Redirected Page</h1><p>This is a custom redirect response.</p></body></html>"),
+              body = Just (TextBytesValue (MkStringValue "<html><body><h1>Redirected Page</h1><p>This is a custom redirect response.</p></body></html>")),
               cookies = Nothing,
               headers = Just
-                [ Network.MkHeader
+                [ MkHeader
                     { headerName = "Content-Type",
-                      headerValue = Network.StringValue "text/html; charset=utf-8"
+                      headerValue = TextBytesValue (MkStringValue "text/html; charset=utf-8")
                     },
-                  Network.MkHeader
+                  MkHeader
                     { headerName = "Location",
-                      headerValue = Network.StringValue "https://custom.example.com/redirected"
+                      headerValue = TextBytesValue (MkStringValue "https://custom.example.com/redirected")
                     }
                 ],
               reasonPhrase = "Found",
@@ -753,18 +762,18 @@ networkProvideResponseDemo =
       logTxt "Test 4: networkProvideResponse with binary content (base64)"
       provideResult4 <-
         networkProvideResponse $
-          Network.MkProvideResponse
+          MkProvideResponse
             { intercept = exampleIntercept,
-              body = Just (Network.Base64Value "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8/5+hHgAHggJ/PchI7wAAAABJRU5ErkJggg=="),
+              body = Just (Base64Value "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8/5+hHgAHggJ/PchI7wAAAABJRU5ErkJggg=="),
               cookies = Nothing,
               headers = Just
-                [ Network.MkHeader
+                [ MkHeader
                     { headerName = "Content-Type",
-                      headerValue = Network.StringValue "image/png"
+                      headerValue = TextBytesValue (MkStringValue "image/png")
                     },
-                  Network.MkHeader
+                  MkHeader
                     { headerName = "Content-Length",
-                      headerValue = Network.StringValue "95"
+                      headerValue = TextBytesValue (MkStringValue "95")
                     }
                 ],
               reasonPhrase = "OK",
@@ -776,30 +785,30 @@ networkProvideResponseDemo =
       logTxt "Test 5: networkProvideResponse with error status and cookies"
       provideResult5 <-
         networkProvideResponse $
-          Network.MkProvideResponse
+          MkProvideResponse
             { intercept = exampleIntercept,
-              body = Just (Network.StringValue "{\"error\": \"Unauthorized access\", \"code\": 401}"),
+              body = Just (TextBytesValue (MkStringValue "{\"error\": \"Unauthorized access\", \"code\": 401}")),
               cookies = Just
-                [ Network.MkCookie
+                [ MkCookie
                     { name = "auth_error",
-                      value = Network.StringValue "unauthorized_attempt",
+                      value = TextBytesValue (MkStringValue "unauthorized_attempt"),
                       domain = "secure.example.com",
                       path = "/",
                       size = 120,
                       httpOnly = True,
                       secure = True,
-                      sameSite = Network.Strict,
+                      sameSite = Strict,
                       expiry = Nothing
                     }
                 ],
               headers = Just
-                [ Network.MkHeader
+                [ MkHeader
                     { headerName = "Content-Type",
-                      headerValue = Network.StringValue "application/json"
+                      headerValue = TextBytesValue (MkStringValue "application/json")
                     },
-                  Network.MkHeader
+                  MkHeader
                     { headerName = "WWW-Authenticate",
-                      headerValue = Network.StringValue "Bearer realm=\"secure\""
+                      headerValue = TextBytesValue (MkStringValue "Bearer realm=\"secure\"")
                     }
                 ],
               reasonPhrase = "Unauthorized",
@@ -811,18 +820,18 @@ networkProvideResponseDemo =
       logTxt "Test 6: networkProvideResponse with server error"
       provideResult6 <-
         networkProvideResponse $
-          Network.MkProvideResponse
+          MkProvideResponse
             { intercept = exampleIntercept,
-              body = Just (Network.StringValue "Internal Server Error - Custom maintenance page"),
+              body = Just (TextBytesValue (MkStringValue "Internal Server Error - Custom maintenance page")),
               cookies = Nothing,
               headers = Just
-                [ Network.MkHeader
+                [ MkHeader
                     { headerName = "Content-Type",
-                      headerValue = Network.StringValue "text/plain"
+                      headerValue = TextBytesValue (MkStringValue "text/plain")
                     },
-                  Network.MkHeader
+                  MkHeader
                     { headerName = "Retry-After",
-                      headerValue = Network.StringValue "3600"
+                      headerValue = TextBytesValue (MkStringValue "3600")
                     }
                 ],
               reasonPhrase = "Internal Server Error",
@@ -845,24 +854,24 @@ networkDataRetrievalDemo =
       logTxt "Test 1: Add data collector to generate some data"
       collector <-
         networkAddDataCollector $
-          Network.MkAddDataCollector
-            { dataTypes = [Network.MkDataType "response"],
+          MkAddDataCollector
+            { dataTypes = [MkDataType "response"],
               maxEncodedDataSize = MkJSUInt 2048,
-              collectorType = Just (Network.MkCollectorType "buffer"),
+              collectorType = Just (MkCollectorType "buffer"),
               contexts = Just [bc],
               userContexts = Nothing
             }
       logShow "Data collector for retrieval demo" collector
       pause
 
-      let Network.MkAddDataCollectorResult collectorId = collector
-      let exampleRequest = Network.MkRequest "example-request-id-for-data"
+      let MkAddDataCollectorResult collectorId = collector
+      let exampleRequest = MkRequest "example-request-id-for-data"
 
       logTxt "Test 2: networkGetData with basic parameters (disown=False)"
       getData1 <-
         networkGetData $
-          Network.MkGetData
-            { dataType = Network.MkDataType "response",
+          MkGetData
+            { dataType = MkDataType "response",
               collector = Just collectorId,
               disown = Just False,
               request = exampleRequest
@@ -873,8 +882,8 @@ networkDataRetrievalDemo =
       logTxt "Test 3: networkGetData with disown=True"
       getData2 <-
         networkGetData $
-          Network.MkGetData
-            { dataType = Network.MkDataType "response",
+          MkGetData
+            { dataType = MkDataType "response",
               collector = Just collectorId,
               disown = Just True,
               request = exampleRequest
@@ -885,8 +894,8 @@ networkDataRetrievalDemo =
       logTxt "Test 4: networkGetData without specifying collector or disown (default False)"
       getData3 <-
         networkGetData $
-          Network.MkGetData
-            { dataType = Network.MkDataType "response",
+          MkGetData
+            { dataType = MkDataType "response",
               collector = Nothing,
               disown = Nothing,
               request = exampleRequest
@@ -897,8 +906,8 @@ networkDataRetrievalDemo =
       logTxt "Test 5: networkGetData for different data type"
       getData4 <-
         networkGetData $
-          Network.MkGetData
-            { dataType = Network.MkDataType "request",
+          MkGetData
+            { dataType = MkDataType "request",
               collector = Just collectorId,
               disown = Just False,
               request = exampleRequest
@@ -909,8 +918,8 @@ networkDataRetrievalDemo =
       logTxt "Test 6: networkDisownData - explicitly disown specific data"
       disownResult <-
         networkDisownData $
-          Network.MkDisownData
-            { dataType = Network.MkDataType "response",
+          MkDisownData
+            { dataType = MkDataType "response",
               collector = collectorId,
               request = exampleRequest
             }
@@ -920,8 +929,8 @@ networkDataRetrievalDemo =
       logTxt "Test 7: networkDisownData for different data type"
       disownResult2 <-
         networkDisownData $
-          Network.MkDisownData
-            { dataType = Network.MkDataType "request",
+          MkDisownData
+            { dataType = MkDataType "request",
               collector = collectorId,
               request = exampleRequest
             }
@@ -929,7 +938,7 @@ networkDataRetrievalDemo =
       pause
 
       logTxt "Cleanup - remove data collector"
-      removeResult <- networkRemoveDataCollector $ Network.MkRemoveDataCollector collectorId
+      removeResult <- networkRemoveDataCollector $ MkRemoveDataCollector collectorId
       logShow "Removed data collector" removeResult
       pause
 
@@ -947,8 +956,8 @@ networkCacheBehaviorDemo =
       logTxt "Test 1: Set cache behavior to default (global)"
       cacheResult1 <-
         networkSetCacheBehavior $
-          Network.MkSetCacheBehavior
-            { cacheBehavior = Network.DefaultCacheBehavior,
+          MkSetCacheBehavior
+            { cacheBehavior = DefaultCacheBehavior,
               contexts = Nothing
             }
       logShow "Set default cache behavior (global) result" cacheResult1
@@ -957,8 +966,8 @@ networkCacheBehaviorDemo =
       logTxt "Test 2: Set cache behavior to bypass cache (global)"
       cacheResult2 <-
         networkSetCacheBehavior $
-          Network.MkSetCacheBehavior
-            { cacheBehavior = Network.BypassCache,
+          MkSetCacheBehavior
+            { cacheBehavior = BypassCache,
               contexts = Nothing
             }
       logShow "Set bypass cache behavior (global) result" cacheResult2
@@ -967,8 +976,8 @@ networkCacheBehaviorDemo =
       logTxt "Test 3: Set cache behavior to default for specific context"
       cacheResult3 <-
         networkSetCacheBehavior $
-          Network.MkSetCacheBehavior
-            { cacheBehavior = Network.DefaultCacheBehavior,
+          MkSetCacheBehavior
+            { cacheBehavior = DefaultCacheBehavior,
               contexts = Just [bc]
             }
       logShow "Set default cache behavior (context-specific) result" cacheResult3
@@ -977,8 +986,8 @@ networkCacheBehaviorDemo =
       logTxt "Test 4: Set cache behavior to bypass cache for specific context"
       cacheResult4 <-
         networkSetCacheBehavior $
-          Network.MkSetCacheBehavior
-            { cacheBehavior = Network.BypassCache,
+          MkSetCacheBehavior
+            { cacheBehavior = BypassCache,
               contexts = Just [bc]
             }
       logShow "Set bypass cache behavior (context-specific) result" cacheResult4
@@ -990,8 +999,8 @@ networkCacheBehaviorDemo =
       logTxt "Test 6: Set different cache behavior for new context"
       cacheResult5 <-
         networkSetCacheBehavior $
-          Network.MkSetCacheBehavior
-            { cacheBehavior = Network.BypassCache,
+          MkSetCacheBehavior
+            { cacheBehavior = BypassCache,
               contexts = Just [newContext]
             }
       logShow "Set bypass cache behavior for new context result" cacheResult5
@@ -1000,8 +1009,8 @@ networkCacheBehaviorDemo =
       logTxt "Test 7: Set cache behavior for multiple contexts"
       cacheResult6 <-
         networkSetCacheBehavior $
-          Network.MkSetCacheBehavior
-            { cacheBehavior = Network.DefaultCacheBehavior,
+          MkSetCacheBehavior
+            { cacheBehavior = DefaultCacheBehavior,
               contexts = Just [bc, newContext]
             }
       logShow "Set default cache behavior for multiple contexts result" cacheResult6
@@ -1031,8 +1040,8 @@ networkCacheBehaviorDemo =
       logTxt "Test 9: Reset cache behavior to default for all contexts"
       cacheResult7 <-
         networkSetCacheBehavior $
-          Network.MkSetCacheBehavior
-            { cacheBehavior = Network.DefaultCacheBehavior,
+          MkSetCacheBehavior
+            { cacheBehavior = DefaultCacheBehavior,
               contexts = Nothing
             }
       logShow "Reset to default cache behavior (global) result" cacheResult7

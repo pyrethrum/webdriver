@@ -5,7 +5,9 @@ module WebDriverPreCore.BiDi.Network
     AddDataCollector (..),
     AddIntercept (..),
     InterceptPhase (..),
+    UrlPattern (..),
     UrlPatternPattern (..),
+    UrlPatternString (..),
     ContinueRequest (..),
     RequestId (..),
     BytesValue (..),
@@ -62,7 +64,7 @@ import Data.Aeson.KeyMap qualified as KeyMap
 import Data.Aeson.Types (Parser)
 import Data.Text (Text)
 import GHC.Generics (Generic (to))
-import WebDriverPreCore.BiDi.CoreTypes (BrowsingContext, JSUInt, UserContext)
+import WebDriverPreCore.BiDi.CoreTypes (BrowsingContext, JSUInt, UserContext, StringValue (..))
 import WebDriverPreCore.BiDi.Script (StackTrace)
 import WebDriverPreCore.Internal.AesonUtils (enumCamelCase, objectOrThrow, toJSONOmitNothing)
 import Prelude
@@ -140,7 +142,7 @@ instance ToJSON RemoveDataCollector
 data AddIntercept = MkAddIntercept
   { phases :: [InterceptPhase],
     contexts :: Maybe [BrowsingContext],
-    urlPatterns :: Maybe [UrlPatternPattern]
+    urlPatterns :: Maybe [UrlPattern]
   }
   deriving (Show, Eq, Generic)
 
@@ -165,7 +167,11 @@ data UrlPattern
   | UrlPatternString UrlPatternString
   deriving (Show, Eq, Generic)
 
-instance ToJSON UrlPattern
+instance ToJSON UrlPattern where
+  toJSON :: UrlPattern -> Value
+  toJSON = \case
+    UrlPatternPattern p -> toJSON p
+    UrlPatternString s -> toJSON s
 
 newtype UrlPatternString = MkUrlPatternString {patternString :: Text}
   deriving (Show, Eq, Generic)
@@ -214,14 +220,15 @@ newtype RequestId = MkRequestId {id :: Text}
 
 -- | BytesValue can be either string or base64-encoded
 data BytesValue
-  = StringValue Text
+  = TextBytesValue StringValue
   | Base64Value Text
   deriving (Show, Eq, Generic)
 
 instance FromJSON BytesValue
 
 instance ToJSON BytesValue where
-  toJSON (StringValue val) = object ["type" .= ("string" :: Text), "value" .= val]
+  toJSON :: BytesValue -> Value
+  toJSON (TextBytesValue val) = toJSON val
   toJSON (Base64Value val) = object ["type" .= ("base64" :: Text), "value" .= val]
 
 -- | Cookie information
