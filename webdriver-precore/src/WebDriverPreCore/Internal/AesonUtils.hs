@@ -84,7 +84,6 @@ toJSONOmitNothing = A.genericToJSON  defaultOptions {omitNothingFields = True}
 parseJSONOmitNothing :: (Generic a, A.GFromJSON A.Zero (Rep a)) => Value -> Parser a
 parseJSONOmitNothing = A.genericParseJSON defaultOptions {omitNothingFields = True}
 
-
 asText :: Value -> Result Text
 asText = \case
   String t -> Success t

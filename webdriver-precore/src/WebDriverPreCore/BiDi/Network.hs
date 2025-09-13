@@ -1,9 +1,11 @@
+{-# OPTIONS_GHC -Wno-unused-imports #-}
+
 module WebDriverPreCore.BiDi.Network
   ( -- * NetworkCommand
     AddDataCollector (..),
     AddIntercept (..),
     InterceptPhase (..),
-    UrlPattern (..),
+    UrlPatternPattern (..),
     ContinueRequest (..),
     RequestId (..),
     BytesValue (..),
@@ -55,14 +57,15 @@ where
 
 -- Data structures for network protocol
 
-import Data.Aeson (FromJSON, ToJSON (..), object, (.=))
+import Data.Aeson (FromJSON (..), ToJSON (..), Value (..), object, withObject, (.:), (.=))
+import Data.Aeson.KeyMap qualified as KeyMap
+import Data.Aeson.Types (Parser)
 import Data.Text (Text)
-import Data.Word (Word)
-import GHC.Generics (Generic)
+import GHC.Generics (Generic (to))
 import WebDriverPreCore.BiDi.CoreTypes (BrowsingContext, JSUInt, UserContext)
 import WebDriverPreCore.BiDi.Script (StackTrace)
-import WebDriverPreCore.Internal.AesonUtils (enumCamelCase)
-import Prelude (Bool, Eq, Maybe, Show)
+import WebDriverPreCore.Internal.AesonUtils (enumCamelCase, objectOrThrow, toJSONOmitNothing)
+import Prelude
 
 -- ######### REMOTE #########
 
@@ -137,11 +140,13 @@ instance ToJSON RemoveDataCollector
 data AddIntercept = MkAddIntercept
   { phases :: [InterceptPhase],
     contexts :: Maybe [BrowsingContext],
-    urlPatterns :: Maybe [UrlPattern]
+    urlPatterns :: Maybe [UrlPatternPattern]
   }
   deriving (Show, Eq, Generic)
 
-instance ToJSON AddIntercept
+instance ToJSON AddIntercept where
+  toJSON :: AddIntercept -> Value
+  toJSON = toJSONOmitNothing
 
 -- | Intercept phases for network requests
 data InterceptPhase
@@ -155,8 +160,26 @@ instance FromJSON InterceptPhase
 instance ToJSON InterceptPhase where
   toJSON = enumCamelCase
 
+data UrlPattern
+  = UrlPatternPattern UrlPatternPattern
+  | UrlPatternString UrlPatternString
+  deriving (Show, Eq, Generic)
+
+instance ToJSON UrlPattern
+
+newtype UrlPatternString = MkUrlPatternString {patternString :: Text}
+  deriving (Show, Eq, Generic)
+
+instance ToJSON UrlPatternString where
+  toJSON :: UrlPatternString -> Value
+  toJSON (MkUrlPatternString p) =
+    object
+      [ "type" .= ("string" :: Text),
+        "pattern" .= p
+      ]
+
 -- | URL pattern for interception
-data UrlPattern = MkUrlPattern
+data UrlPatternPattern = MkUrlPatternPattern
   { protocol :: Maybe Text,
     hostname :: Maybe Text,
     port :: Maybe Text,
@@ -165,9 +188,12 @@ data UrlPattern = MkUrlPattern
   }
   deriving (Show, Eq, Generic)
 
-instance FromJSON UrlPattern
-
-instance ToJSON UrlPattern
+instance ToJSON UrlPatternPattern where
+  toJSON :: UrlPatternPattern -> Value
+  toJSON p =
+    object $
+      ["type" .= "pattern"]
+        <> (KeyMap.toList . objectOrThrow "UrlPatternPattern" $ toJSONOmitNothing p)
 
 -- | ContinueRequest parameters
 data ContinueRequest = MkContinueRequest
@@ -184,10 +210,7 @@ instance ToJSON ContinueRequest
 
 newtype RequestId = MkRequestId {id :: Text}
   deriving (Show, Eq, Generic)
-
-instance FromJSON RequestId
-
-instance ToJSON RequestId
+  deriving newtype (FromJSON, ToJSON)
 
 -- | BytesValue can be either string or base64-encoded
 data BytesValue
@@ -339,10 +362,16 @@ instance ToJSON CacheBehavior where
 
 -- ######### Local #########
 
-newtype AddInterceptResult = MkAddInterceptResult {addedIntercept :: Intercept}
+newtype AddInterceptResult = MkAddInterceptResult
+  { -- name changed to avoid conflict with field name in AddIntercept
+    addedIntercept :: Intercept
+  }
   deriving (Show, Eq, Generic)
 
-instance FromJSON AddInterceptResult
+instance FromJSON AddInterceptResult where
+  parseJSON =
+    withObject "AddInterceptResult" $ \obj ->
+      MkAddInterceptResult <$> obj .: "intercept"
 
 data NetworkEvent
   = AuthRequiredEvent AuthRequired

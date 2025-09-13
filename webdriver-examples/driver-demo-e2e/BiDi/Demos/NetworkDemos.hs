@@ -42,49 +42,6 @@ Key Mozilla tracking bugs:
 -}
 
 -- >>> runDemo networkDataCollectorDemo
--- NOTE: This demo will fail with Geckodriver as network commands are not yet implemented.
--- The error "unknown command" indicates the WebDriver implementation doesn't support
--- the network.addDataCollector command yet. This is expected with current Geckodriver versions.
---
--- Previous error output for reference:
--- *** Exception: Error executing BiDi command: MkCommand
---   { method = "network.addDataCollector"
---   , params =
---       MkAddDataCollector
---         { dataTypes = [ MkDataType { dataType = "response" } ]
---         , maxEncodedDataSize = 1024
---         , collectorType = Nothing
---         , contexts = Nothing
---         , userContexts = Nothing
---         }
---   , extended = Nothing
---   }
--- With JSON: 
--- {
---     "id": 2,
---     "method": "network.addDataCollector",
---     "params": {
---         "collectorType": null,
---         "contexts": null,
---         "dataTypes": [
---             {
---                 "dataType": "response"
---             }
---         ],
---         "maxEncodedDataSize": 1024,
---         "userContexts": null
---     }
--- }
--- Failed to decode the 'result' property of JSON returned by driver to response type: 
--- {
---     "error": "unknown command",
---     "id": 2,
---     "message": "network.addDataCollector",
---     "stacktrace": "RemoteError@chrome://remote/content/shared/RemoteError.sys.mjs:8:8\nWebDriverError@chrome://remote/content/shared/webdriver/Errors.sys.mjs:199:5\nUnknownCommandError@chrome://remote/content/shared/webdriver/Errors.sys.mjs:893:5\nexecute@chrome://remote/content/shared/webdriver/Session.sys.mjs:407:13\nonPacket@chrome://remote/content/webdriver-bidi/WebDriverBiDiConnection.sys.mjs:236:37\nonMessage@chrome://remote/content/server/WebSocketTransport.sys.mjs:127:18\nhandleEvent@chrome://remote/content/server/WebSocketTransport.sys.mjs:109:14\n",
---     "type": "error"
--- }
--- Error message: 
--- key "result" not found
 networkDataCollectorDemo :: BiDiDemo
 networkDataCollectorDemo =
   demo "Network I - Data Collector Management" action
@@ -213,8 +170,57 @@ networkDataCollectorDemo =
       pause
 
 -- >>> runDemo networkInterceptDemo
--- NOTE: This demo will fail with "unknown command" errors on Geckodriver
--- as network.addIntercept and network.removeIntercept are not yet implemented.
+-- *** Exception: Error executing BiDi command: MkCommand
+--   { method = "network.addIntercept"
+--   , params =
+--       MkAddIntercept
+--         { phases = [ ResponseStarted ]
+--         , contexts =
+--             Just
+--               [ MkBrowsingContext
+--                   { context = "ff35c4f2-ec1b-4027-b205-326f5d707b61" }
+--               ]
+--         , urlPatterns =
+--             Just
+--               [ MkUrlPattern
+--                   { protocol = Just "https"
+--                   , hostname = Nothing
+--                   , port = Nothing
+--                   , pathname = Nothing
+--                   , search = Nothing
+--                   }
+--               ]
+--         }
+--   , extended = Nothing
+--   }
+-- With JSON: 
+-- {
+--     "id": 3,
+--     "method": "network.addIntercept",
+--     "params": {
+--         "contexts": [
+--             "ff35c4f2-ec1b-4027-b205-326f5d707b61"
+--         ],
+--         "phases": [
+--             "responseStarted"
+--         ],
+--         "urlPatterns": [
+--             {
+--                 "protocol": "https"
+--             }
+--         ]
+--     }
+-- }
+-- Failed to decode the 'result' property of JSON returned by driver to response type: 
+-- {
+--     "error": "invalid argument",
+--     "id": 3,
+--     "message": "Expected \"urlPattern\" type to be one of pattern,string, got undefined",
+--     "stacktrace": "RemoteError@chrome://remote/content/shared/RemoteError.sys.mjs:8:8\nWebDriverError@chrome://remote/content/shared/webdriver/Errors.sys.mjs:199:5\nInvalidArgumentError@chrome://remote/content/shared/webdriver/Errors.sys.mjs:401:5\nparseURLPattern@chrome://remote/content/shared/webdriver/URLPattern.sys.mjs:190:13\naddIntercept/parsedPatterns<@chrome://remote/content/webdriver-bidi/modules/root/network.sys.mjs:443:12\naddIntercept@chrome://remote/content/webdriver-bidi/modules/root/network.sys.mjs:442:40\nhandleCommand@chrome://remote/content/shared/messagehandler/MessageHandler.sys.mjs:260:33\nexecute@chrome://remote/content/shared/webdriver/Session.sys.mjs:410:32\nonPacket@chrome://remote/content/webdriver-bidi/WebDriverBiDiConnection.sys.mjs:236:37\nonMessage@chrome://remote/content/server/WebSocketTransport.sys.mjs:127:18\nhandleEvent@chrome://remote/content/server/WebSocketTransport.sys.mjs:109:14\n",
+--     "type": "error"
+-- }
+-- Error message: 
+-- key "result" not found
 networkInterceptDemo :: BiDiDemo
 networkInterceptDemo =
   demo "Network II - Request/Response Interception" action

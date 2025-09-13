@@ -2,12 +2,12 @@ module BiDi.Demos.NetworkSupportTest where
 
 import BiDi.BiDiRunner (Commands (..))
 import BiDi.DemoUtils
-import Control.Exception (SomeException, try, Exception (displayException))
+import Control.Exception (Exception (displayException), SomeException, throwIO, try)
+import Data.Text (isInfixOf, pack, toLower)
 import IOUtils (DemoUtils (..))
 import WebDriverPreCore.BiDi.CoreTypes (JSUInt (..))
 import WebDriverPreCore.BiDi.Network qualified as Network
 import Prelude hiding (log)
-import Data.Text (pack, isInfixOf)
 
 -- Test which network commands are actually supported by the current driver
 
@@ -64,7 +64,7 @@ networkSupportTest =
       handleCommandResult result3
       pause
 
-      -- Test 4: continueRequest (requires active intercept, so will likely fail differently)
+      -- Test 4: continueRequest (requires active intercept, so will fail with "no such request")
       logTxt "Test 4: network.continueRequest"
       result4 <-
         try $
@@ -80,15 +80,23 @@ networkSupportTest =
       handleCommandResult result4
       pause
 
-      logTxt "Support test completed. Commands marked with ❌ are not implemented in the current driver."
-      logTxt "Commands marked with ⚠️ are implemented but failed for other reasons (expected)."
+      logTxt "Support test completed."
+      logTxt "❌ = Command not implemented in driver"
+      logTxt "✅ = Command supported and works (or exists but needs active request)"
+      logTxt "⚠️ = Command supported but failed for unexpected reason"
       where
         handleCommandResult :: Either SomeException a -> IO ()
         handleCommandResult = either handleError (const $ logTxt "✅ SUPPORTED")
           where
             handleError (e :: SomeException) =
-              let errTxt = pack $ displayException e
-              in
-              if "unknown command" `isInfixOf` errTxt
-                then logShow "❌ NOT SUPPORTED (unknown command)" e
-                else logShow "⚠️ SUPPORTED but failed" e
+              let errTxt = toLower . pack $ displayException e
+                  errTxtIncludes = (`isInfixOf` errTxt)
+               in if
+                    | errTxtIncludes "unknown command" || errTxtIncludes "not supported" ->
+                        logShow "❌ NOT SUPPORTED (unknown command)" e
+                    | errTxtIncludes "no such request" || errTxtIncludes "not found" ->
+                        logTxt "✅ SUPPORTED (command exists but no active request - expected)"
+                    | otherwise ->
+                        do
+                          logShow "⚠️ SUPPORTED but failed" e
+                          throwIO e
