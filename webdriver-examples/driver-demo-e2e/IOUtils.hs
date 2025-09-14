@@ -1,6 +1,8 @@
 module IOUtils
   ( sleepMs,
     encodeFileToBase64,
+    exceptionTextIncludes,
+    lwrTxtIncludes,
     logTxt,
     log,
     logShow,
@@ -25,12 +27,13 @@ import Control.Monad (unless)
 import Data.Base64.Types qualified as B64T
 import Data.ByteString qualified as BS
 import Data.ByteString.Base64 qualified as B64
-import Data.Text (Text)
+import Data.Text (Text, pack, toLower, isInfixOf)
 import Data.Text.IO qualified as TIO
 import Test.Tasty.HUnit as HUnit (Assertion, HasCallStack, (@=?))
 import UnliftIO (TChan, atomically, isEmptyTChan, writeTChan)
 import WebDriverPreCore.Internal.Utils (txt)
 import Prelude hiding (log)
+import Control.Exception (SomeException, Exception (..))
 
 data Logger = MkLogger
   { log :: Text -> IO (),
@@ -71,17 +74,11 @@ mkLogger logChan =
         threadDelay 10_000
         waitEmpty' $ succ attempt
 
--- withAsyncLogger :: (Logger -> IO ()) -> IO ()
--- withAsyncLogger action = do
---   logChan <- newTChanIO
---   withAsync (printLoop logChan) $ \_ -> do
---     logger <- mkLogger logChan
---     finally
---       ( action logger `catch` \(e :: SomeException) -> do
---           logger.log $ "Exception encountered: " <> txt e
---           throw e
---       )
---       logger.waitEmpty
+exceptionTextIncludes :: Text -> SomeException -> Bool
+exceptionTextIncludes expected = lwrTxtIncludes expected . pack . displayException
+
+lwrTxtIncludes :: Text -> Text -> Bool
+lwrTxtIncludes expected = (toLower expected `isInfixOf`) . toLower
 
 data DemoUtils = MkDemoUtils
   { sleep :: Int -> IO (),
@@ -161,3 +158,4 @@ sleep2 = sleepMs $ 2 * seconds
   a ->
   Assertion
 (===) = (@=?)
+

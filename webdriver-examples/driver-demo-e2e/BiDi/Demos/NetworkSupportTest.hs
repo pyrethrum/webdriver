@@ -2,9 +2,8 @@ module BiDi.Demos.NetworkSupportTest where
 
 import BiDi.BiDiRunner (Commands (..))
 import BiDi.DemoUtils
-import Control.Exception (Exception (displayException), SomeException, throwIO, try)
-import Data.Text (isInfixOf, pack, toLower, Text)
-import IOUtils (DemoUtils (..))
+import Control.Exception (SomeException, throwIO, try)
+import IOUtils (DemoUtils (..), exceptionTextIncludes)
 import WebDriverPreCore.BiDi.CoreTypes (JSUInt (..))
 import WebDriverPreCore.BiDi.Protocol
 import Prelude hiding (log)
@@ -89,20 +88,13 @@ networkSupportTest =
         handleCommandResult = either handleError (const $ logTxt "✅ SUPPORTED")
           where
             handleError (e :: SomeException) =
-              let errTxt = toLower . pack $ displayException e
-                  errTxtIncludes = (`isInfixOf` errTxt)
+              let errIncludes = any (flip exceptionTextIncludes e)
                in if
-                    | errTxtIncludes "unknown command" || errTxtIncludes "not supported" ->
+                    | errIncludes ["unknown command", "not supported"] ->
                         logShow "❌ NOT SUPPORTED (unknown command)" e
-                    | errTxtIncludes "no such request" || errTxtIncludes "not found" ->
+                    | errIncludes ["no such request", "not found"] ->
                         logTxt "✅ SUPPORTED (command exists but no active request - expected)"
                     | otherwise ->
                         do
                           logShow "⚠️ SUPPORTED but failed" e
                           throwIO e
-
-exceptionTextIncludes :: Text -> SomeException -> Bool
-exceptionTextIncludes expected = lwrTxtIncludes expected . pack . displayException
-
-lwrTxtIncludes :: Text -> Text -> Bool
-lwrTxtIncludes expected = (toLower expected `isInfixOf`) . toLower

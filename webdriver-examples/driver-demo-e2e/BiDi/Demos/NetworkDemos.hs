@@ -335,7 +335,7 @@ networkInterceptDemo =
       logTxt "Test 7: Remove intercepts"
       let MkAddInterceptResult interceptId1 = intercept1
       removeResult1 <- networkRemoveIntercept $ MkRemoveIntercept interceptId1
-      logShow "Removed BeforeRequestSent intercept" removeResult1MkUrlPatternPattern
+      logShow "Removed BeforeRequestSent intercept" removeResult1
       pause
 
       let MkAddInterceptResult interceptId2 = intercept2
