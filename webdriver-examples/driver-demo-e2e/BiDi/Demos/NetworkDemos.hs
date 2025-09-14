@@ -335,7 +335,7 @@ networkInterceptDemo =
       logTxt "Test 7: Remove intercepts"
       let MkAddInterceptResult interceptId1 = intercept1
       removeResult1 <- networkRemoveIntercept $ MkRemoveIntercept interceptId1
-      logShow "Removed BeforeRequestSent intercept" removeResult1
+      logShow "Removed BeforeRequestSent intercept" removeResult1MkUrlPatternPattern
       pause
 
       let MkAddInterceptResult interceptId2 = intercept2
@@ -368,7 +368,7 @@ networkInterceptDemo =
       logShow "Removed global intercept" removeResult7
       pause
 
--- >>> runDemo networkRequestResponseModificationDemo
+-- >>> runDemo networkRequestResponseModificationDemoMkUrlPatternPattern
 -- *** Exception: Error executing BiDi command: MkCommand
 --   { method = "network.continueRequest"
 --   , params =
@@ -586,8 +586,38 @@ networkRequestResponseModificationDemo =
       pause
 
 -- >>> runDemo networkAuthAndFailureDemo
--- NOTE: This demo will fail with "unknown command" errors on Geckodriver
--- as network.continueWithAuth and network.failRequest are not yet implemented.
+-- *** Exception: Error executing BiDi command: MkCommand
+--   { method = "network.continueWithAuth"
+--   , params =
+--       MkContinueWithAuth
+--         { request = MkRequest { request = "example-request-auth-001" }
+--         , authAction = DefaultAuth
+--         }
+--   , extended = Nothing
+--   }
+-- With JSON: 
+-- {
+--     "id": 2,
+--     "method": "network.continueWithAuth",
+--     "params": {
+--         "authAction": {
+--             "action": "default"
+--         },
+--         "request": {
+--             "request": "example-request-auth-001"
+--         }
+--     }
+-- }
+-- Failed to decode the 'result' property of JSON returned by driver to response type: 
+-- {
+--     "error": "invalid argument",
+--     "id": 2,
+--     "message": "Expected \"request\" to be a string, got [object Object]",
+--     "stacktrace": "RemoteError@chrome://remote/content/shared/RemoteError.sys.mjs:8:8\nWebDriverError@chrome://remote/content/shared/webdriver/Errors.sys.mjs:199:5\nInvalidArgumentError@chrome://remote/content/shared/webdriver/Errors.sys.mjs:401:5\nassert.that/<@chrome://remote/content/shared/webdriver/Assert.sys.mjs:581:13\nassert.string@chrome://remote/content/shared/webdriver/Assert.sys.mjs:430:53\ncontinueWithAuth@chrome://remote/content/webdriver-bidi/modules/root/network.sys.mjs:796:17\nhandleCommand@chrome://remote/content/shared/messagehandler/MessageHandler.sys.mjs:260:33\nexecute@chrome://remote/content/shared/webdriver/Session.sys.mjs:410:32\nonPacket@chrome://remote/content/webdriver-bidi/WebDriverBiDiConnection.sys.mjs:236:37\nonMessage@chrome://remote/content/server/WebSocketTransport.sys.mjs:127:18\nhandleEvent@chrome://remote/content/server/WebSocketTransport.sys.mjs:109:14\n",
+--     "type": "error"
+-- }
+-- Error message: 
+-- key "result" not found
 networkAuthAndFailureDemo :: BiDiDemo
 networkAuthAndFailureDemo =
   demo "Network IV - Authentication and Request Failure Handling" action

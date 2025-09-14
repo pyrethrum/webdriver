@@ -3,7 +3,7 @@ module BiDi.Demos.NetworkSupportTest where
 import BiDi.BiDiRunner (Commands (..))
 import BiDi.DemoUtils
 import Control.Exception (Exception (displayException), SomeException, throwIO, try)
-import Data.Text (isInfixOf, pack, toLower)
+import Data.Text (isInfixOf, pack, toLower, Text)
 import IOUtils (DemoUtils (..))
 import WebDriverPreCore.BiDi.CoreTypes (JSUInt (..))
 import WebDriverPreCore.BiDi.Protocol
@@ -100,3 +100,9 @@ networkSupportTest =
                         do
                           logShow "⚠️ SUPPORTED but failed" e
                           throwIO e
+
+exceptionTextIncludes :: Text -> SomeException -> Bool
+exceptionTextIncludes expected = lwrTxtIncludes expected . pack . displayException
+
+lwrTxtIncludes :: Text -> Text -> Bool
+lwrTxtIncludes expected = (toLower expected `isInfixOf`) . toLower
