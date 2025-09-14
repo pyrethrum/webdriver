@@ -68,7 +68,7 @@ import Data.Text (Text)
 import GHC.Generics (Generic (to))
 import WebDriverPreCore.BiDi.CoreTypes (BrowsingContext, JSUInt, StringValue (..), UserContext)
 import WebDriverPreCore.BiDi.Script (StackTrace)
-import WebDriverPreCore.Internal.AesonUtils (enumCamelCase, objectOrThrow, toJSONOmitNothing)
+import WebDriverPreCore.Internal.AesonUtils (addProps, enumCamelCase, objectOrThrow, toJSONOmitNothing)
 import Prelude
 
 -- ######### REMOTE #########
@@ -121,7 +121,6 @@ instance ToJSON Collector
 newtype Request = MkRequest {request :: Text}
   deriving (Show, Eq, Generic)
   deriving newtype (ToJSON)
-
 
 data GetData = MkGetData
   { dataType :: DataType,
@@ -198,10 +197,7 @@ data UrlPatternPattern = MkUrlPatternPattern
 
 instance ToJSON UrlPatternPattern where
   toJSON :: UrlPatternPattern -> Value
-  toJSON p =
-    object $
-      ["type" .= "pattern"]
-        <> (KeyMap.toList . objectOrThrow "UrlPatternPattern" $ toJSONOmitNothing p)
+  toJSON p = addProps "UrlPatternPattern" ["type" .= "pattern"] $ toJSONOmitNothing p
 
 -- | ContinueRequest parameters
 data ContinueRequest = MkContinueRequest
@@ -218,7 +214,6 @@ instance ToJSON ContinueRequest where
   toJSON :: ContinueRequest -> Value
   toJSON = toJSONOmitNothing
 
-
 data CookieHeader = MkCookieHeader
   { cookieHeaderName :: Text,
     cookieHeaderValue :: BytesValue
@@ -229,8 +224,7 @@ instance ToJSON CookieHeader where
   toJSON :: CookieHeader -> Value
   toJSON h =
     object
-      [ 
-        "name" .= h.cookieHeaderName,
+      [ "name" .= h.cookieHeaderName,
         "value" .= h.cookieHeaderValue
       ]
 
@@ -272,14 +266,28 @@ instance ToJSON Cookie
 data SameSite
   = Strict
   | Lax
-  | None
+  | SameSiteNone
   | Default
   deriving (Show, Eq, Generic)
 
-instance FromJSON SameSite
+instance FromJSON SameSite where 
+  parseJSON :: Value -> Parser SameSite
+  parseJSON = withObject "SameSite" $ \obj -> do
+    t <- obj .: "type"
+    case t of
+      "strict" -> pure Strict
+      "lax" -> pure Lax
+      "none" -> pure SameSiteNone
+      "default" -> pure Default
+      _ -> fail $ "Invalid SameSite type: " <> show t
 
 instance ToJSON SameSite where
-  toJSON = enumCamelCase
+  toJSON :: SameSite -> Value
+  toJSON = \case
+    Strict -> "strict"
+    Lax -> "lax"
+    SameSiteNone -> "none"
+    Default -> "default"
 
 -- | Headers for requests and responses
 data Header = MkHeader
@@ -308,7 +316,7 @@ data ContinueResponse = MkContinueResponse
   }
   deriving (Show, Eq, Generic)
 
-instance ToJSON ContinueResponse where 
+instance ToJSON ContinueResponse where
   toJSON :: ContinueResponse -> Value
   toJSON = toJSONOmitNothing
 
@@ -337,7 +345,10 @@ data ContinueWithAuth = MkContinueWithAuth
   }
   deriving (Show, Eq, Generic)
 
-instance ToJSON ContinueWithAuth
+instance ToJSON ContinueWithAuth where
+  toJSON :: ContinueWithAuth -> Value
+  toJSON (MkContinueWithAuth req action) =
+    addProps "ContinueWithAuth" ["request" .= req] $ toJSON action
 
 -- | Auth action - matches spec's union type structure
 data AuthAction
@@ -347,9 +358,10 @@ data AuthAction
   deriving (Show, Eq, Generic)
 
 instance ToJSON AuthAction where
-  toJSON (ProvideCredentials creds) = object ["action" .= ("provideCredentials" :: Text), "credentials" .= creds]
-  toJSON DefaultAuth = object ["action" .= ("default" :: Text)]
-  toJSON CancelAuth = object ["action" .= ("cancel" :: Text)]
+  toJSON :: AuthAction -> Value
+  toJSON (ProvideCredentials creds) = object ["action" .= "provideCredentials", "credentials" .= creds]
+  toJSON DefaultAuth = object ["action" .= "default"]
+  toJSON CancelAuth = object ["action" .= "cancel"]
 
 -- | Network intercept identifier
 newtype Intercept = MkIntercept Text
@@ -362,7 +374,14 @@ data AuthCredentials = MkAuthCredentials
   }
   deriving (Show, Eq, Generic)
 
-instance ToJSON AuthCredentials
+instance ToJSON AuthCredentials where
+  toJSON :: AuthCredentials -> Value
+  toJSON (MkAuthCredentials user pass) =
+    object
+      [ "type" .= "password",
+        "username" .= user,
+        "password" .= pass
+      ]
 
 -- | FailRequest parameters
 data FailRequest = MkFailRequest
@@ -374,7 +393,9 @@ instance ToJSON FailRequest
 
 -- | ProvideResponse parameters
 data ProvideResponse = MkProvideResponse
-  { intercept :: Intercept,
+  { 
+    request :: Request,
+    intercept :: Intercept,
     body :: Maybe BytesValue,
     cookies :: Maybe [Cookie],
     headers :: Maybe [Header],
@@ -383,7 +404,9 @@ data ProvideResponse = MkProvideResponse
   }
   deriving (Show, Eq, Generic)
 
-instance ToJSON ProvideResponse
+instance ToJSON ProvideResponse where
+  toJSON :: ProvideResponse -> Value
+  toJSON = toJSONOmitNothing
 
 -- | RemoveIntercept parameters
 newtype RemoveIntercept = MkRemoveIntercept

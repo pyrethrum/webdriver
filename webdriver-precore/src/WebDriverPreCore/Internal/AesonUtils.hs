@@ -22,7 +22,8 @@ module WebDriverPreCore.Internal.AesonUtils
     resultToEither,
     parseObjectEither,
     toJSONOmitNothing,
-    parseJSONOmitNothing
+    parseJSONOmitNothing,
+    addProps,
   )
 where
 
@@ -40,13 +41,15 @@ import Data.Aeson
     Value (..),
     defaultOptions,
     eitherDecodeStrict,
+    object,
     (.:?),
   )
 import Data.Aeson qualified as A
 import Data.Aeson.Encode.Pretty (encodePretty)
 import Data.Aeson.Key (fromString)
 import Data.Aeson.KeyMap qualified as AKM
-import Data.Aeson.Types (Parser, parse, parseMaybe)
+import Data.Aeson.KeyMap qualified as KeyMap
+import Data.Aeson.Types (Pair, Parser, parse, parseMaybe)
 import Data.ByteString.Lazy qualified as LBS
 import Data.Char (toLower)
 import Data.Either (Either, either)
@@ -78,8 +81,8 @@ import Prelude
 -- Aeson stuff
 -- TODO move to separte library
 
-toJSONOmitNothing :: ( Generic a, A.GToJSON' Value A.Zero (Rep a)) =>a -> Value
-toJSONOmitNothing = A.genericToJSON  defaultOptions {omitNothingFields = True}
+toJSONOmitNothing :: (Generic a, A.GToJSON' Value A.Zero (Rep a)) => a -> Value
+toJSONOmitNothing = A.genericToJSON defaultOptions {omitNothingFields = True}
 
 parseJSONOmitNothing :: (Generic a, A.GFromJSON A.Zero (Rep a)) => Value -> Parser a
 parseJSONOmitNothing = A.genericParseJSON defaultOptions {omitNothingFields = True}
@@ -217,3 +220,7 @@ subtractProps :: [Text] -> Object -> Object
 subtractProps keys obj = AKM.filterWithKey (\k _ -> k `S.member` keySet) obj
   where
     keySet = S.fromList $ fromString . unpack <$> keys
+
+addProps :: Text -> [Pair] -> Value -> Value
+addProps errMsg ps v =
+  object $ ps <> KeyMap.toList (objectOrThrow errMsg v)

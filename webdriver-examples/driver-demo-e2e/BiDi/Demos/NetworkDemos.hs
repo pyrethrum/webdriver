@@ -9,6 +9,7 @@ import IOUtils (DemoUtils (..), exceptionTextIncludes)
 import WebDriverPreCore.BiDi.CoreTypes (JSUInt (..), StringValue (MkStringValue))
 import WebDriverPreCore.BiDi.Protocol
 import Prelude hiding (log)
+import WebDriverPreCore.BiDi.Network (SameSite(SameSiteNone))
 
 {-
 
@@ -386,73 +387,9 @@ handleNoSuchRequestError :: (Text -> IO ()) -> IO () -> IO ()
 handleNoSuchRequestError log action = catch action $ \e -> do
   unless (exceptionTextIncludes "no such request" e) $
     throwIO e
-  log "Expected error ~ request not initialised"
+  log "Expected \"no such request\" error ~ request not initialised"
 
 -- >>> runDemo networkRequestResponseModificationDemo
--- *** Exception: Error executing BiDi command: MkCommand
---   { method = "network.continueResponse"
---   , params =
---       MkContinueResponse
---         { request = MkRequestId { id = "example-request-id-001" }
---         , body = Nothing
---         , cookies =
---             Just
---               [ MkCookie
---                   { name = "response_token"
---                   , value = TextBytesValue MkStringValue { value = "resp-token-456" }
---                   , domain = "api.example.com"
---                   , path = "/"
---                   , size = 80
---                   , httpOnly = True
---                   , secure = True
---                   , sameSite = Default
---                   , expiry = Just 1767225600
---                   }
---               ]
---         , headers = Nothing
---         , reasonPhrase = Nothing
---         , statusCode = Nothing
---         }
---   , extended = Nothing
---   }
--- With JSON: 
--- {
---     "id": 9,
---     "method": "network.continueResponse",
---     "params": {
---         "body": null,
---         "cookies": [
---             {
---                 "domain": "api.example.com",
---                 "expiry": 1767225600,
---                 "httpOnly": true,
---                 "name": "response_token",
---                 "path": "/",
---                 "sameSite": "default",
---                 "secure": true,
---                 "size": 80,
---                 "value": {
---                     "type": "string",
---                     "value": "resp-token-456"
---                 }
---             }
---         ],
---         "headers": null,
---         "reasonPhrase": null,
---         "request": "example-request-id-001",
---         "statusCode": null
---     }
--- }
--- Failed to decode the 'result' property of JSON returned by driver to response type: 
--- {
---     "error": "invalid argument",
---     "id": 9,
---     "message": "Expected set-cookie header \"expiry\" to be a string, got 1767225600",
---     "stacktrace": "RemoteError@chrome://remote/content/shared/RemoteError.sys.mjs:8:8\nWebDriverError@chrome://remote/content/shared/webdriver/Errors.sys.mjs:199:5\nInvalidArgumentError@chrome://remote/content/shared/webdriver/Errors.sys.mjs:401:5\nassert.that/<@chrome://remote/content/shared/webdriver/Assert.sys.mjs:581:13\nassert.string@chrome://remote/content/shared/webdriver/Assert.sys.mjs:430:53\n#assertSetCookieHeader@chrome://remote/content/webdriver-bidi/modules/root/network.sys.mjs:1266:19\ncontinueResponse@chrome://remote/content/webdriver-bidi/modules/root/network.sys.mjs:667:36\nhandleCommand@chrome://remote/content/shared/messagehandler/MessageHandler.sys.mjs:260:33\nexecute@chrome://remote/content/shared/webdriver/Session.sys.mjs:410:32\nonPacket@chrome://remote/content/webdriver-bidi/WebDriverBiDiConnection.sys.mjs:236:37\nonMessage@chrome://remote/content/server/WebSocketTransport.sys.mjs:127:18\nhandleEvent@chrome://remote/content/server/WebSocketTransport.sys.mjs:109:14\n",
---     "type": "error"
--- }
--- Error message: 
--- key "result" not found
 networkRequestResponseModificationDemo :: BiDiDemo
 networkRequestResponseModificationDemo =
   demo "Network III - Request and Response Modification" action
@@ -622,7 +559,8 @@ networkRequestResponseModificationDemo =
                           path = Just "/",
                           httpOnly = Just True,
                           secure = Just True,
-                          sameSite = Just Default,
+                          -- Gheckodriver: 'default' is not accepted, must use 'lax', 'none', or 'strict'
+                          sameSite = Just SameSiteNone,
                           expiry = Just "1767225600", -- Note: expiry is now Text, not Word
                           maxAge = Nothing
                         }
@@ -635,69 +573,6 @@ networkRequestResponseModificationDemo =
       pause
 
 -- >>> runDemo networkAuthAndFailureDemo
--- NETWORK WIP UP TO HERE
--- *** Exception: Error executing BiDi command: MkCommand
---   { method = "network.continueWithAuth"
---   , params =
---       MkContinueWithAuth
---         { request = MkRequest { request = "example-request-auth-001" }
---         , authAction = DefaultAuth
---         }
---   , extended = Nothing
---   }
--- With JSON: 
--- {
---     "id": 2,
---     "method": "network.continueWithAuth",
---     "params": {
---         "authAction": {
---             "action": "default"
---         },
---         "request": "example-request-auth-001"
---     }
--- }
--- Failed to decode the 'result' property of JSON returned by driver to response type: 
--- {
---     "error": "invalid argument",
---     "id": 2,
---     "message": "Expected \"action\" to be one of cancel,default,provideCredentials got undefined",
---     "stacktrace": "RemoteError@chrome://remote/content/shared/RemoteError.sys.mjs:8:8\nWebDriverError@chrome://remote/content/shared/webdriver/Errors.sys.mjs:199:5\nInvalidArgumentError@chrome://remote/content/shared/webdriver/Errors.sys.mjs:401:5\ncontinueWithAuth@chrome://remote/content/webdriver-bidi/modules/root/network.sys.mjs:802:13\nhandleCommand@chrome://remote/content/shared/messagehandler/MessageHandler.sys.mjs:260:33\nexecute@chrome://remote/content/shared/webdriver/Session.sys.mjs:410:32\nonPacket@chrome://remote/content/webdriver-bidi/WebDriverBiDiConnection.sys.mjs:236:37\nonMessage@chrome://remote/content/server/WebSocketTransport.sys.mjs:127:18\nhandleEvent@chrome://remote/content/server/WebSocketTransport.sys.mjs:109:14\n",
---     "type": "error"
--- }
--- Error message: 
--- key "result" not found
-
---   { method = "network.continueWithAuth"
---   , params =
---       MkContinueWithAuth
---         { request = MkRequest { request = "example-request-auth-001" }
---         , authAction = DefaultAuth
---         }
---   , extended = Nothing
---   }
--- With JSON:
--- {
---     "id": 2,
---     "method": "network.continueWithAuth",
---     "params": {
---         "authAction": {
---             "action": "default"
---         },
---         "request": {
---             "request": "example-request-auth-001"
---         }
---     }
--- }
--- Failed to decode the 'result' property of JSON returned by driver to response type:
--- {
---     "error": "invalid argument",
---     "id": 2,
---     "message": "Expected \"request\" to be a string, got [object Object]",
---     "stacktrace": "RemoteError@chrome://remote/content/shared/RemoteError.sys.mjs:8:8\nWebDriverError@chrome://remote/content/shared/webdriver/Errors.sys.mjs:199:5\nInvalidArgumentError@chrome://remote/content/shared/webdriver/Errors.sys.mjs:401:5\nassert.that/<@chrome://remote/content/shared/webdriver/Assert.sys.mjs:581:13\nassert.string@chrome://remote/content/shared/webdriver/Assert.sys.mjs:430:53\ncontinueWithAuth@chrome://remote/content/webdriver-bidi/modules/root/network.sys.mjs:796:17\nhandleCommand@chrome://remote/content/shared/messagehandler/MessageHandler.sys.mjs:260:33\nexecute@chrome://remote/content/shared/webdriver/Session.sys.mjs:410:32\nonPacket@chrome://remote/content/webdriver-bidi/WebDriverBiDiConnection.sys.mjs:236:37\nonMessage@chrome://remote/content/server/WebSocketTransport.sys.mjs:127:18\nhandleEvent@chrome://remote/content/server/WebSocketTransport.sys.mjs:109:14\n",
---     "type": "error"
--- }
--- Error message:
--- key "result" not found
 networkAuthAndFailureDemo :: BiDiDemo
 networkAuthAndFailureDemo =
   demo "Network IV - Authentication and Request Failure Handling" action
@@ -709,96 +584,138 @@ networkAuthAndFailureDemo =
       logTxt "Note: This demo shows parameter usage. Actual auth/failure handling requires active intercepts and auth events."
 
       let exampleRequest = MkRequest "example-request-auth-001"
+          handleNoSuchRequest = handleNoSuchRequestError logTxt
 
       logTxt "Test 1: networkContinueWithAuth with default response (no credentials)"
-      authResult1 <-
-        networkContinueWithAuth $
-          MkContinueWithAuth
-            { request = exampleRequest,
-              authAction = DefaultAuth
-            }
-      logShow "Default auth response result" authResult1
+      handleNoSuchRequest $ do
+        authResult1 <-
+          networkContinueWithAuth $
+            MkContinueWithAuth
+              { request = exampleRequest,
+                authAction = DefaultAuth
+              }
+        logShow "Default auth response result" authResult1
       pause
 
       logTxt "Test 2: networkContinueWithAuth with cancel response"
-      authResult2 <-
-        networkContinueWithAuth $
-          MkContinueWithAuth
-            { request = exampleRequest,
-              authAction = CancelAuth
-            }
-      logShow "Cancel auth response result" authResult2
+      handleNoSuchRequest $ do
+        authResult2 <-
+          networkContinueWithAuth $
+            MkContinueWithAuth
+              { request = exampleRequest,
+                authAction = CancelAuth
+              }
+        logShow "Cancel auth response result" authResult2
       pause
 
       logTxt "Test 3: networkContinueWithAuth with provided credentials"
-      authResult3 <-
-        networkContinueWithAuth $
-          MkContinueWithAuth
-            { request = exampleRequest,
-              authAction =
-                ProvideCredentials
-                  MkAuthCredentials
-                    { username = "test_user",
-                      password = "test_password_123"
-                    }
-            }
-      logShow "Provided credentials auth result" authResult3
+      handleNoSuchRequest $ do
+        authResult3 <-
+          networkContinueWithAuth $
+            MkContinueWithAuth
+              { request = exampleRequest,
+                authAction =
+                  ProvideCredentials
+                    MkAuthCredentials
+                      { username = "test_user",
+                        password = "test_password_123"
+                      }
+              }
+        logShow "Provided credentials auth result" authResult3
       pause
 
       logTxt "Test 4: networkContinueWithAuth with different credentials"
-      authResult4 <-
-        networkContinueWithAuth $
-          MkContinueWithAuth
-            { request = exampleRequest,
-              authAction =
-                ProvideCredentials
-                  MkAuthCredentials
-                    { username = "admin@example.com",
-                      password = "super_secure_password_456"
-                    }
-            }
-      logShow "Admin credentials auth result" authResult4
+      handleNoSuchRequest $ do
+        authResult4 <-
+          networkContinueWithAuth $
+            MkContinueWithAuth
+              { request = exampleRequest,
+                authAction =
+                  ProvideCredentials
+                    MkAuthCredentials
+                      { username = "admin@example.com",
+                        password = "super_secure_password_456"
+                      }
+              }
+        logShow "Admin credentials auth result" authResult4
       pause
 
       logTxt "Test 5: networkFailRequest with basic request"
-      failResult1 <-
-        networkFailRequest $
-          MkFailRequest
-            { request = MkRequest "example-request-fail-001"
-            }
-      logShow "Basic failure result" failResult1
+      handleNoSuchRequest $ do
+        failResult1 <-
+          networkFailRequest $
+            MkFailRequest
+              { request = MkRequest "example-request-fail-001"
+              }
+        logShow "Basic failure result" failResult1
       pause
 
       logTxt "Test 6: networkFailRequest with different request"
-      failResult2 <-
-        networkFailRequest $
-          MkFailRequest
-            { request = MkRequest "example-request-fail-002"
-            }
-      logShow "Second failure result" failResult2
+      handleNoSuchRequest $ do
+        failResult2 <-
+          networkFailRequest $
+            MkFailRequest
+              { request = MkRequest "example-request-fail-002"
+              }
+        logShow "Second failure result" failResult2
       pause
 
       logTxt "Test 7: networkFailRequest with another request"
-      failResult3 <-
-        networkFailRequest $
-          MkFailRequest
-            { request = MkRequest "example-request-fail-003"
-            }
-      logShow "Third failure result" failResult3
+      handleNoSuchRequest $ do
+        failResult3 <-
+          networkFailRequest $
+            MkFailRequest
+              { request = MkRequest "example-request-fail-003"
+              }
+        logShow "Third failure result" failResult3
       pause
 
       logTxt "Test 8: networkFailRequest with final request"
-      failResult4 <-
-        networkFailRequest $
-          MkFailRequest
-            { request = MkRequest "example-request-fail-004"
-            }
-      logShow "SSL failure result" failResult4
+      handleNoSuchRequest $ do
+        failResult4 <-
+          networkFailRequest $
+            MkFailRequest
+              { request = MkRequest "example-request-fail-004"
+              }
+        logShow "SSL failure result" failResult4
       pause
 
 -- >>> runDemo networkProvideResponseDemo
--- NOTE: This demo will fail with "unknown command" errors on Geckodriver
--- as network.provideResponse is not yet implemented.
+-- *** Exception: Error executing BiDi command: MkCommand
+--   { method = "network.provideResponse"
+--   , params =
+--       MkProvideResponse
+--         { request = MkRequest { request = "fake-request-002" }
+--         , intercept = MkIntercept "example-intercept-002"
+--         , body = Nothing
+--         , cookies = Nothing
+--         , headers = Nothing
+--         , reasonPhrase = "OK"
+--         , statusCode = 200
+--         }
+--   , extended = Nothing
+--   }
+-- With JSON: 
+-- {
+--     "id": 2,
+--     "method": "network.provideResponse",
+--     "params": {
+--         "intercept": "example-intercept-002",
+--         "reasonPhrase": "OK",
+--         "request": "fake-request-002",
+--         "statusCode": 200
+--     }
+-- }
+-- Failed to decode the 'result' property of JSON returned by driver to response type: 
+-- {
+--     "error": "no such request",
+--     "id": 2,
+--     "message": "Blocked request with id fake-request-002 not found",
+--     "stacktrace": "RemoteError@chrome://remote/content/shared/RemoteError.sys.mjs:8:8\nWebDriverError@chrome://remote/content/shared/webdriver/Errors.sys.mjs:199:5\nNoSuchRequestError@chrome://remote/content/shared/webdriver/Errors.sys.mjs:698:5\nprovideResponse@chrome://remote/content/webdriver-bidi/modules/root/network.sys.mjs:980:13\nhandleCommand@chrome://remote/content/shared/messagehandler/MessageHandler.sys.mjs:260:33\nexecute@chrome://remote/content/shared/webdriver/Session.sys.mjs:410:32\nonPacket@chrome://remote/content/webdriver-bidi/WebDriverBiDiConnection.sys.mjs:236:37\nonMessage@chrome://remote/content/server/WebSocketTransport.sys.mjs:127:18\nhandleEvent@chrome://remote/content/server/WebSocketTransport.sys.mjs:109:14\n",
+--     "type": "error"
+-- }
+-- Error message: 
+-- key "result" not found
 networkProvideResponseDemo :: BiDiDemo
 networkProvideResponseDemo =
   demo "Network V - Custom Response Provision" action
@@ -809,13 +726,17 @@ networkProvideResponseDemo =
 
       logTxt "Note: This demo shows parameter usage. Actual response provision requires active intercepts."
 
-      let exampleIntercept = MkIntercept "example-intercept-002"
+      let 
+        intercept = MkIntercept "example-intercept-002"
+        request = MkRequest "fake-request-002"
+        handleNoSuchRequest = handleNoSuchRequestError logTxt
 
       logTxt "Test 1: networkProvideResponse with minimal parameters"
       provideResult1 <-
         networkProvideResponse $
           MkProvideResponse
-            { intercept = exampleIntercept,
+            { request,
+              intercept,
               body = Nothing,
               cookies = Nothing,
               headers = Nothing,
@@ -829,7 +750,8 @@ networkProvideResponseDemo =
       provideResult2 <-
         networkProvideResponse $
           MkProvideResponse
-            { intercept = exampleIntercept,
+            { request,
+              intercept,
               body = Just (TextBytesValue (MkStringValue "{\"message\": \"Custom JSON response\", \"status\": \"success\"}")),
               cookies = Nothing,
               headers =
@@ -853,7 +775,8 @@ networkProvideResponseDemo =
       provideResult3 <-
         networkProvideResponse $
           MkProvideResponse
-            { intercept = exampleIntercept,
+            { request,
+              intercept,
               body = Just (TextBytesValue (MkStringValue "<html><body><h1>Redirected Page</h1><p>This is a custom redirect response.</p></body></html>")),
               cookies = Nothing,
               headers =
@@ -877,7 +800,8 @@ networkProvideResponseDemo =
       provideResult4 <-
         networkProvideResponse $
           MkProvideResponse
-            { intercept = exampleIntercept,
+            { request,
+              intercept,
               body = Just (Base64Value "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8/5+hHgAHggJ/PchI7wAAAABJRU5ErkJggg=="),
               cookies = Nothing,
               headers =
@@ -901,7 +825,8 @@ networkProvideResponseDemo =
       provideResult5 <-
         networkProvideResponse $
           MkProvideResponse
-            { intercept = exampleIntercept,
+            { request,
+              intercept,
               body = Just (TextBytesValue (MkStringValue "{\"error\": \"Unauthorized access\", \"code\": 401}")),
               cookies =
                 Just
@@ -938,7 +863,8 @@ networkProvideResponseDemo =
       provideResult6 <-
         networkProvideResponse $
           MkProvideResponse
-            { intercept = exampleIntercept,
+            { request,
+              intercept,
               body = Just (TextBytesValue (MkStringValue "Internal Server Error - Custom maintenance page")),
               cookies = Nothing,
               headers =
