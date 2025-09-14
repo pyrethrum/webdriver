@@ -27,64 +27,11 @@ import WebDriverPreCore.BiDi.Network (SameSite(SameSiteNone))
 11. networkRemoveIntercept :: DONE
 12. networkSetCacheBehavior :: DONE
 
-NOTE: Network module commands have limited support in Geckodriver (Firefox WebDriver).
-Most network commands are still in development and will result in "unknown command" errors.
-These demos are primarily for testing parameter structures and will work when
-WebDriver implementations complete network module support.
-
-Current support status:
-- Chrome/Chromium: Partial support for some network commands
-- Firefox/Geckodriver: Limited support (some events, experimental intercepts)
-- Safari: No support for network commands yet
-
-Key Mozilla tracking bugs:
-- Bug 1971763: network.addDataCollector (partial implementation)
-- Bug 1826191: network.addIntercept (experimental support)
-- Search: https://bugzilla.mozilla.org/buglist.cgi?quicksearch=webdriver%20bidi%20network
-
 -}
 
+
+-- not supported in geckodriver yet
 -- >>> runDemo networkDataCollectorDemo
-
--- *** Exception: Error executing BiDi command: MkCommand
-
---   { method = "network.addDataCollector"
---   , params =
---       MkAddDataCollector
---         { dataTypes = [ MkDataType { dataType = "response" } ]
---         , maxEncodedDataSize = 1024
---         , collectorType = Nothing
---         , contexts = Nothing
---         , userContexts = Nothing
---         }
---   , extended = Nothing
---   }
--- With JSON:
--- {
---     "id": 2,
---     "method": "network.addDataCollector",
---     "params": {
---         "collectorType": null,
---         "contexts": null,
---         "dataTypes": [
---             {
---                 "dataType": "response"
---             }
---         ],
---         "maxEncodedDataSize": 1024,
---         "userContexts": null
---     }
--- }
--- Failed to decode the 'result' property of JSON returned by driver to response type:
--- {
---     "error": "unknown command",
---     "id": 2,
---     "message": "network.addDataCollector",
---     "stacktrace": "RemoteError@chrome://remote/content/shared/RemoteError.sys.mjs:8:8\nWebDriverError@chrome://remote/content/shared/webdriver/Errors.sys.mjs:199:5\nUnknownCommandError@chrome://remote/content/shared/webdriver/Errors.sys.mjs:893:5\nexecute@chrome://remote/content/shared/webdriver/Session.sys.mjs:407:13\nonPacket@chrome://remote/content/webdriver-bidi/WebDriverBiDiConnection.sys.mjs:236:37\nonMessage@chrome://remote/content/server/WebSocketTransport.sys.mjs:127:18\nhandleEvent@chrome://remote/content/server/WebSocketTransport.sys.mjs:109:14\n",
---     "type": "error"
--- }
--- Error message:
--- key "result" not found
 networkDataCollectorDemo :: BiDiDemo
 networkDataCollectorDemo =
   demo "Network I - Data Collector Management" action
@@ -143,6 +90,7 @@ networkDataCollectorDemo =
       logShow "User context created" userContext
       pause
 
+-- not supported in geckodriver yet
       logTxt "Test 5: Add data collector targeting specific user context"
       collector4 <-
         networkAddDataCollector $
@@ -681,41 +629,6 @@ networkAuthAndFailureDemo =
       pause
 
 -- >>> runDemo networkProvideResponseDemo
--- *** Exception: Error executing BiDi command: MkCommand
---   { method = "network.provideResponse"
---   , params =
---       MkProvideResponse
---         { request = MkRequest { request = "fake-request-002" }
---         , intercept = MkIntercept "example-intercept-002"
---         , body = Nothing
---         , cookies = Nothing
---         , headers = Nothing
---         , reasonPhrase = "OK"
---         , statusCode = 200
---         }
---   , extended = Nothing
---   }
--- With JSON: 
--- {
---     "id": 2,
---     "method": "network.provideResponse",
---     "params": {
---         "intercept": "example-intercept-002",
---         "reasonPhrase": "OK",
---         "request": "fake-request-002",
---         "statusCode": 200
---     }
--- }
--- Failed to decode the 'result' property of JSON returned by driver to response type: 
--- {
---     "error": "no such request",
---     "id": 2,
---     "message": "Blocked request with id fake-request-002 not found",
---     "stacktrace": "RemoteError@chrome://remote/content/shared/RemoteError.sys.mjs:8:8\nWebDriverError@chrome://remote/content/shared/webdriver/Errors.sys.mjs:199:5\nNoSuchRequestError@chrome://remote/content/shared/webdriver/Errors.sys.mjs:698:5\nprovideResponse@chrome://remote/content/webdriver-bidi/modules/root/network.sys.mjs:980:13\nhandleCommand@chrome://remote/content/shared/messagehandler/MessageHandler.sys.mjs:260:33\nexecute@chrome://remote/content/shared/webdriver/Session.sys.mjs:410:32\nonPacket@chrome://remote/content/webdriver-bidi/WebDriverBiDiConnection.sys.mjs:236:37\nonMessage@chrome://remote/content/server/WebSocketTransport.sys.mjs:127:18\nhandleEvent@chrome://remote/content/server/WebSocketTransport.sys.mjs:109:14\n",
---     "type": "error"
--- }
--- Error message: 
--- key "result" not found
 networkProvideResponseDemo :: BiDiDemo
 networkProvideResponseDemo =
   demo "Network V - Custom Response Provision" action
@@ -732,161 +645,166 @@ networkProvideResponseDemo =
         handleNoSuchRequest = handleNoSuchRequestError logTxt
 
       logTxt "Test 1: networkProvideResponse with minimal parameters"
-      provideResult1 <-
-        networkProvideResponse $
-          MkProvideResponse
-            { request,
-              intercept,
-              body = Nothing,
-              cookies = Nothing,
-              headers = Nothing,
-              reasonPhrase = "OK",
-              statusCode = 200
-            }
-      logShow "Minimal custom response result" provideResult1
+      handleNoSuchRequest $ do
+        provideResult1 <-
+          networkProvideResponse $
+            MkProvideResponse
+              { request,
+                intercept,
+                body = Nothing,
+                cookies = Nothing,
+                headers = Nothing,
+                reasonPhrase = "OK",
+                statusCode = 200
+              }
+        logShow "Minimal custom response result" provideResult1
       pause
 
       logTxt "Test 2: networkProvideResponse with JSON content"
-      provideResult2 <-
-        networkProvideResponse $
-          MkProvideResponse
-            { request,
-              intercept,
-              body = Just (TextBytesValue (MkStringValue "{\"message\": \"Custom JSON response\", \"status\": \"success\"}")),
-              cookies = Nothing,
-              headers =
-                Just
-                  [ MkHeader
-                      { headerName = "Content-Type",
-                        headerValue = TextBytesValue (MkStringValue "application/json")
-                      },
-                    MkHeader
-                      { headerName = "X-Custom-Provider",
-                        headerValue = TextBytesValue (MkStringValue "BiDi-WebDriver")
-                      }
-                  ],
-              reasonPhrase = "OK",
-              statusCode = 200
-            }
-      logShow "JSON custom response result" provideResult2
+      handleNoSuchRequest $ do
+        provideResult2 <-
+          networkProvideResponse $
+            MkProvideResponse
+              { request,
+                intercept,
+                body = Just (TextBytesValue (MkStringValue "{\"message\": \"Custom JSON response\", \"status\": \"success\"}")),
+                cookies = Nothing,
+                headers =
+                  Just
+                    [ MkHeader
+                        { headerName = "Content-Type",
+                          headerValue = TextBytesValue (MkStringValue "application/json")
+                        },
+                      MkHeader
+                        { headerName = "X-Custom-Provider",
+                          headerValue = TextBytesValue (MkStringValue "BiDi-WebDriver")
+                        }
+                    ],
+                reasonPhrase = "OK",
+                statusCode = 200
+              }
+        logShow "JSON custom response result" provideResult2
       pause
 
       logTxt "Test 3: networkProvideResponse with HTML content and redirect"
-      provideResult3 <-
-        networkProvideResponse $
-          MkProvideResponse
-            { request,
-              intercept,
-              body = Just (TextBytesValue (MkStringValue "<html><body><h1>Redirected Page</h1><p>This is a custom redirect response.</p></body></html>")),
-              cookies = Nothing,
-              headers =
-                Just
-                  [ MkHeader
-                      { headerName = "Content-Type",
-                        headerValue = TextBytesValue (MkStringValue "text/html; charset=utf-8")
-                      },
-                    MkHeader
-                      { headerName = "Location",
-                        headerValue = TextBytesValue (MkStringValue "https://custom.example.com/redirected")
-                      }
-                  ],
-              reasonPhrase = "Found",
-              statusCode = 302
-            }
-      logShow "HTML redirect response result" provideResult3
+      handleNoSuchRequest $ do
+        provideResult3 <-
+          networkProvideResponse $
+            MkProvideResponse
+              { request,
+                intercept,
+                body = Just (TextBytesValue (MkStringValue "<html><body><h1>Redirected Page</h1><p>This is a custom redirect response.</p></body></html>")),
+                cookies = Nothing,
+                headers =
+                  Just
+                    [ MkHeader
+                        { headerName = "Content-Type",
+                          headerValue = TextBytesValue (MkStringValue "text/html; charset=utf-8")
+                        },
+                      MkHeader
+                        { headerName = "Location",
+                          headerValue = TextBytesValue (MkStringValue "https://custom.example.com/redirected")
+                        }
+                    ],
+                reasonPhrase = "Found",
+                statusCode = 302
+              }
+        logShow "HTML redirect response result" provideResult3
       pause
 
       logTxt "Test 4: networkProvideResponse with binary content (base64)"
-      provideResult4 <-
-        networkProvideResponse $
-          MkProvideResponse
-            { request,
-              intercept,
-              body = Just (Base64Value "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8/5+hHgAHggJ/PchI7wAAAABJRU5ErkJggg=="),
-              cookies = Nothing,
-              headers =
-                Just
-                  [ MkHeader
-                      { headerName = "Content-Type",
-                        headerValue = TextBytesValue (MkStringValue "image/png")
-                      },
-                    MkHeader
-                      { headerName = "Content-Length",
-                        headerValue = TextBytesValue (MkStringValue "95")
-                      }
-                  ],
-              reasonPhrase = "OK",
-              statusCode = 200
-            }
-      logShow "Binary content response result" provideResult4
+      handleNoSuchRequest $ do
+        provideResult4 <-
+          networkProvideResponse $
+            MkProvideResponse
+              { request,
+                intercept,
+                body = Just (Base64Value "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8/5+hHgAHggJ/PchI7wAAAABJRU5ErkJggg=="),
+                cookies = Nothing,
+                headers =
+                  Just
+                    [ MkHeader
+                        { headerName = "Content-Type",
+                          headerValue = TextBytesValue (MkStringValue "image/png")
+                        },
+                      MkHeader
+                        { headerName = "Content-Length",
+                          headerValue = TextBytesValue (MkStringValue "95")
+                        }
+                    ],
+                reasonPhrase = "OK",
+                statusCode = 200
+              }
+        logShow "Binary content response result" provideResult4
       pause
 
       logTxt "Test 5: networkProvideResponse with error status and cookies"
-      provideResult5 <-
-        networkProvideResponse $
-          MkProvideResponse
-            { request,
-              intercept,
-              body = Just (TextBytesValue (MkStringValue "{\"error\": \"Unauthorized access\", \"code\": 401}")),
-              cookies =
-                Just
-                  [ MkCookie
-                      { name = "auth_error",
-                        value = TextBytesValue (MkStringValue "unauthorized_attempt"),
-                        domain = "secure.example.com",
-                        path = "/",
-                        size = 120,
-                        httpOnly = True,
-                        secure = True,
-                        sameSite = Strict,
-                        expiry = Nothing
-                      }
-                  ],
-              headers =
-                Just
-                  [ MkHeader
-                      { headerName = "Content-Type",
-                        headerValue = TextBytesValue (MkStringValue "application/json")
-                      },
-                    MkHeader
-                      { headerName = "WWW-Authenticate",
-                        headerValue = TextBytesValue (MkStringValue "Bearer realm=\"secure\"")
-                      }
-                  ],
-              reasonPhrase = "Unauthorized",
-              statusCode = 401
-            }
-      logShow "Error status with cookies response result" provideResult5
+      handleNoSuchRequest $ do
+        provideResult5 <-
+          networkProvideResponse $
+            MkProvideResponse
+              { request,
+                intercept,
+                body = Just (TextBytesValue (MkStringValue "{\"error\": \"Unauthorized access\", \"code\": 401}")),
+                cookies =
+                  Just
+                    [ MkCookie
+                        { name = "auth_error",
+                          value = TextBytesValue (MkStringValue "unauthorized_attempt"),
+                          domain = "secure.example.com",
+                          path = "/",
+                          size = 120,
+                          httpOnly = True,
+                          secure = True,
+                          sameSite = Strict,
+                          expiry = Nothing
+                        }
+                    ],
+                headers =
+                  Just
+                    [ MkHeader
+                        { headerName = "Content-Type",
+                          headerValue = TextBytesValue (MkStringValue "application/json")
+                        },
+                      MkHeader
+                        { headerName = "WWW-Authenticate",
+                          headerValue = TextBytesValue (MkStringValue "Bearer realm=\"secure\"")
+                        }
+                    ],
+                reasonPhrase = "Unauthorized",
+                statusCode = 401
+              }
+        logShow "Error status with cookies response result" provideResult5
       pause
 
       logTxt "Test 6: networkProvideResponse with server error"
-      provideResult6 <-
-        networkProvideResponse $
-          MkProvideResponse
-            { request,
-              intercept,
-              body = Just (TextBytesValue (MkStringValue "Internal Server Error - Custom maintenance page")),
-              cookies = Nothing,
-              headers =
-                Just
-                  [ MkHeader
-                      { headerName = "Content-Type",
-                        headerValue = TextBytesValue (MkStringValue "text/plain")
-                      },
-                    MkHeader
-                      { headerName = "Retry-After",
-                        headerValue = TextBytesValue (MkStringValue "3600")
-                      }
-                  ],
-              reasonPhrase = "Internal Server Error",
-              statusCode = 500
-            }
-      logShow "Server error response result" provideResult6
+      handleNoSuchRequest $ do
+        provideResult6 <-
+          networkProvideResponse $
+            MkProvideResponse
+              { request,
+                intercept,
+                body = Just (TextBytesValue (MkStringValue "Internal Server Error - Custom maintenance page")),
+                cookies = Nothing,
+                headers =
+                  Just
+                    [ MkHeader
+                        { headerName = "Content-Type",
+                          headerValue = TextBytesValue (MkStringValue "text/plain")
+                        },
+                      MkHeader
+                        { headerName = "Retry-After",
+                          headerValue = TextBytesValue (MkStringValue "3600")
+                        }
+                    ],
+                reasonPhrase = "Internal Server Error",
+                statusCode = 500
+              }
+        logShow "Server error response result" provideResult6
       pause
 
+-- not supported in geckodriver yet
 -- >>> runDemo networkDataRetrievalDemo
--- NOTE: This demo will fail with "unknown command" errors on Geckodriver
--- as network.getData and network.disownData are not yet implemented.
 networkDataRetrievalDemo :: BiDiDemo
 networkDataRetrievalDemo =
   demo "Network VI - Data Retrieval and Ownership" action
@@ -987,8 +905,6 @@ networkDataRetrievalDemo =
       pause
 
 -- >>> runDemo networkCacheBehaviorDemo
--- NOTE: This demo will fail with "unknown command" errors on Geckodriver
--- as network.setCacheBehavior is not yet implemented.
 networkCacheBehaviorDemo :: BiDiDemo
 networkCacheBehaviorDemo =
   demo "Network VII - Cache Behavior Management" action
