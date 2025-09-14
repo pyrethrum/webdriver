@@ -14,6 +14,8 @@ module WebDriverPreCore.BiDi.Network
     Cookie (..),
     SameSite (..),
     Header (..),
+    CookieHeader (..),
+    SetCookieHeader (..),
     ContinueResponse (..),
     ContinueWithAuth (..),
     Intercept (..),
@@ -64,7 +66,7 @@ import Data.Aeson.KeyMap qualified as KeyMap
 import Data.Aeson.Types (Parser)
 import Data.Text (Text)
 import GHC.Generics (Generic (to))
-import WebDriverPreCore.BiDi.CoreTypes (BrowsingContext, JSUInt, UserContext, StringValue (..))
+import WebDriverPreCore.BiDi.CoreTypes (BrowsingContext, JSUInt, StringValue (..), UserContext)
 import WebDriverPreCore.BiDi.Script (StackTrace)
 import WebDriverPreCore.Internal.AesonUtils (enumCamelCase, objectOrThrow, toJSONOmitNothing)
 import Prelude
@@ -118,8 +120,8 @@ instance ToJSON Collector
 
 newtype Request = MkRequest {request :: Text}
   deriving (Show, Eq, Generic)
+  deriving newtype (ToJSON)
 
-instance ToJSON Request
 
 data GetData = MkGetData
   { dataType :: DataType,
@@ -205,14 +207,32 @@ instance ToJSON UrlPatternPattern where
 data ContinueRequest = MkContinueRequest
   { request :: RequestId,
     body :: Maybe BytesValue,
-    cookies :: Maybe [Cookie],
+    cookies :: Maybe [CookieHeader],
     headers :: Maybe [Header],
     method :: Maybe Text,
     url :: Maybe Text
   }
   deriving (Show, Eq, Generic)
 
-instance ToJSON ContinueRequest
+instance ToJSON ContinueRequest where
+  toJSON :: ContinueRequest -> Value
+  toJSON = toJSONOmitNothing
+
+
+data CookieHeader = MkCookieHeader
+  { cookieHeaderName :: Text,
+    cookieHeaderValue :: BytesValue
+  }
+  deriving (Show, Eq, Generic)
+
+instance ToJSON CookieHeader where
+  toJSON :: CookieHeader -> Value
+  toJSON h =
+    object
+      [ 
+        "name" .= h.cookieHeaderName,
+        "value" .= h.cookieHeaderValue
+      ]
 
 newtype RequestId = MkRequestId {id :: Text}
   deriving (Show, Eq, Generic)
@@ -268,22 +288,47 @@ data Header = MkHeader
   }
   deriving (Show, Eq, Generic)
 
-instance FromJSON Header
-
-instance ToJSON Header
+instance ToJSON Header where
+  toJSON :: Header -> Value
+  toJSON h =
+    object
+      [ "type" .= "network.Header",
+        "name" .= h.headerName,
+        "value" .= h.headerValue
+      ]
 
 -- | ContinueResponse parameters
 data ContinueResponse = MkContinueResponse
   { request :: RequestId,
     body :: Maybe BytesValue,
-    cookies :: Maybe [Cookie],
+    cookies :: Maybe [SetCookieHeader],
     headers :: Maybe [Header],
     reasonPhrase :: Maybe Text,
     statusCode :: Maybe JSUInt
   }
   deriving (Show, Eq, Generic)
 
-instance ToJSON ContinueResponse
+instance ToJSON ContinueResponse where 
+  toJSON :: ContinueResponse -> Value
+  toJSON = toJSONOmitNothing
+
+-- | Partial cookie for setting
+data SetCookieHeader = MkSetCookieHeader
+  { name :: Text,
+    value :: BytesValue,
+    domain :: Maybe Text,
+    httpOnly :: Maybe Bool,
+    expiry :: Maybe Text,
+    maxAge :: Maybe JSUInt,
+    path :: Maybe Text,
+    secure :: Maybe Bool,
+    sameSite :: Maybe SameSite
+  }
+  deriving (Show, Eq, Generic)
+
+instance ToJSON SetCookieHeader where
+  toJSON :: SetCookieHeader -> Value
+  toJSON = toJSONOmitNothing
 
 -- | ContinueWithAuth parameters - using union type approach from spec
 data ContinueWithAuth = MkContinueWithAuth

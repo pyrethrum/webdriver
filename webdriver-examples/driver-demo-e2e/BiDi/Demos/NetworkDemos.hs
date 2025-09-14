@@ -2,9 +2,11 @@ module BiDi.Demos.NetworkDemos where
 
 import BiDi.BiDiRunner (Commands (..))
 import BiDi.DemoUtils
-import IOUtils (DemoUtils (..))
-import WebDriverPreCore.BiDi.CoreTypes (JSUInt (..))
-import WebDriverPreCore.BiDi.CoreTypes (StringValue (MkStringValue))
+import Control.Exception
+import Control.Monad (unless)
+import Data.Text (Text)
+import IOUtils (DemoUtils (..), exceptionTextIncludes)
+import WebDriverPreCore.BiDi.CoreTypes (JSUInt (..), StringValue (MkStringValue))
 import WebDriverPreCore.BiDi.Protocol
 import Prelude hiding (log)
 
@@ -42,7 +44,9 @@ Key Mozilla tracking bugs:
 -}
 
 -- >>> runDemo networkDataCollectorDemo
+
 -- *** Exception: Error executing BiDi command: MkCommand
+
 --   { method = "network.addDataCollector"
 --   , params =
 --       MkAddDataCollector
@@ -54,7 +58,7 @@ Key Mozilla tracking bugs:
 --         }
 --   , extended = Nothing
 --   }
--- With JSON: 
+-- With JSON:
 -- {
 --     "id": 2,
 --     "method": "network.addDataCollector",
@@ -70,7 +74,7 @@ Key Mozilla tracking bugs:
 --         "userContexts": null
 --     }
 -- }
--- Failed to decode the 'result' property of JSON returned by driver to response type: 
+-- Failed to decode the 'result' property of JSON returned by driver to response type:
 -- {
 --     "error": "unknown command",
 --     "id": 2,
@@ -78,7 +82,7 @@ Key Mozilla tracking bugs:
 --     "stacktrace": "RemoteError@chrome://remote/content/shared/RemoteError.sys.mjs:8:8\nWebDriverError@chrome://remote/content/shared/webdriver/Errors.sys.mjs:199:5\nUnknownCommandError@chrome://remote/content/shared/webdriver/Errors.sys.mjs:893:5\nexecute@chrome://remote/content/shared/webdriver/Session.sys.mjs:407:13\nonPacket@chrome://remote/content/webdriver-bidi/WebDriverBiDiConnection.sys.mjs:236:37\nonMessage@chrome://remote/content/server/WebSocketTransport.sys.mjs:127:18\nhandleEvent@chrome://remote/content/server/WebSocketTransport.sys.mjs:109:14\n",
 --     "type": "error"
 -- }
--- Error message: 
+-- Error message:
 -- key "result" not found
 networkDataCollectorDemo :: BiDiDemo
 networkDataCollectorDemo =
@@ -233,15 +237,18 @@ networkInterceptDemo =
           MkAddIntercept
             { phases = [ResponseStarted],
               contexts = Just [bc],
-              urlPatterns = Just
-                [ UrlPatternPattern (MkUrlPatternPattern
-                    { protocol = Just "https",
-                      hostname = Nothing,
-                      port = Nothing,
-                      pathname = Nothing,
-                      search = Nothing
-                    })
-                ]
+              urlPatterns =
+                Just
+                  [ UrlPatternPattern
+                      ( MkUrlPatternPattern
+                          { protocol = Just "https",
+                            hostname = Nothing,
+                            port = Nothing,
+                            pathname = Nothing,
+                            search = Nothing
+                          }
+                      )
+                  ]
             }
       logShow "ResponseStarted intercept with HTTPS pattern added" intercept2
       pause
@@ -252,9 +259,10 @@ networkInterceptDemo =
           MkAddIntercept
             { phases = [AuthRequired],
               contexts = Just [bc],
-              urlPatterns = Just
-                [ UrlPatternString (MkUrlPatternString "https://example.com/\\*")
-                ]
+              urlPatterns =
+                Just
+                  [ UrlPatternString (MkUrlPatternString "https://example.com/\\*")
+                  ]
             }
       logShow "AuthRequired intercept for example.com added" intercept3
       pause
@@ -276,15 +284,18 @@ networkInterceptDemo =
           MkAddIntercept
             { phases = [BeforeRequestSent],
               contexts = Just [bc],
-              urlPatterns = Just
-                [ UrlPatternPattern (MkUrlPatternPattern
-                    { protocol = Just "https",
-                      hostname = Just "api.example.com",
-                      port = Just "443",
-                      pathname = Just "/v1/\\*",
-                      search = Just "key=\\*"
-                    })
-                ]
+              urlPatterns =
+                Just
+                  [ UrlPatternPattern
+                      ( MkUrlPatternPattern
+                          { protocol = Just "https",
+                            hostname = Just "api.example.com",
+                            port = Just "443",
+                            pathname = Just "/v1/\\*",
+                            search = Just "key=\\*"
+                          }
+                      )
+                  ]
             }
       logShow "Comprehensive URL pattern intercept added" intercept5
       pause
@@ -295,16 +306,19 @@ networkInterceptDemo =
           MkAddIntercept
             { phases = [ResponseStarted],
               contexts = Just [bc],
-              urlPatterns = Just
-                [ UrlPatternPattern (MkUrlPatternPattern
-                    { protocol = Just "http",
-                      hostname = Nothing,
-                      port = Nothing,
-                      pathname = Nothing,
-                      search = Nothing
-                    }),
-                  UrlPatternString (MkUrlPatternString "https://api.example.com/")
-                ]
+              urlPatterns =
+                Just
+                  [ UrlPatternPattern
+                      ( MkUrlPatternPattern
+                          { protocol = Just "http",
+                            hostname = Nothing,
+                            port = Nothing,
+                            pathname = Nothing,
+                            search = Nothing
+                          }
+                      ),
+                    UrlPatternString (MkUrlPatternString "https://api.example.com/")
+                  ]
             }
       logShow "Multi-pattern intercept added" intercept6
       pause
@@ -368,39 +382,73 @@ networkInterceptDemo =
       logShow "Removed global intercept" removeResult7
       pause
 
--- >>> runDemo networkRequestResponseModificationDemoMkUrlPatternPattern
+handleNoSuchRequestError :: (Text -> IO ()) -> IO () -> IO ()
+handleNoSuchRequestError log action = catch action $ \e -> do
+  unless (exceptionTextIncludes "no such request" e) $
+    throwIO e
+  log "Expected error ~ request not initialised"
+
+-- >>> runDemo networkRequestResponseModificationDemo
 -- *** Exception: Error executing BiDi command: MkCommand
---   { method = "network.continueRequest"
+--   { method = "network.continueResponse"
 --   , params =
---       MkContinueRequest
+--       MkContinueResponse
 --         { request = MkRequestId { id = "example-request-id-001" }
 --         , body = Nothing
---         , cookies = Nothing
+--         , cookies =
+--             Just
+--               [ MkCookie
+--                   { name = "response_token"
+--                   , value = TextBytesValue MkStringValue { value = "resp-token-456" }
+--                   , domain = "api.example.com"
+--                   , path = "/"
+--                   , size = 80
+--                   , httpOnly = True
+--                   , secure = True
+--                   , sameSite = Default
+--                   , expiry = Just 1767225600
+--                   }
+--               ]
 --         , headers = Nothing
---         , method = Nothing
---         , url = Nothing
+--         , reasonPhrase = Nothing
+--         , statusCode = Nothing
 --         }
 --   , extended = Nothing
 --   }
 -- With JSON: 
 -- {
---     "id": 2,
---     "method": "network.continueRequest",
+--     "id": 9,
+--     "method": "network.continueResponse",
 --     "params": {
 --         "body": null,
---         "cookies": null,
+--         "cookies": [
+--             {
+--                 "domain": "api.example.com",
+--                 "expiry": 1767225600,
+--                 "httpOnly": true,
+--                 "name": "response_token",
+--                 "path": "/",
+--                 "sameSite": "default",
+--                 "secure": true,
+--                 "size": 80,
+--                 "value": {
+--                     "type": "string",
+--                     "value": "resp-token-456"
+--                 }
+--             }
+--         ],
 --         "headers": null,
---         "method": null,
+--         "reasonPhrase": null,
 --         "request": "example-request-id-001",
---         "url": null
+--         "statusCode": null
 --     }
 -- }
 -- Failed to decode the 'result' property of JSON returned by driver to response type: 
 -- {
---     "error": "no such request",
---     "id": 2,
---     "message": "Blocked request with id example-request-id-001 not found",
---     "stacktrace": "RemoteError@chrome://remote/content/shared/RemoteError.sys.mjs:8:8\nWebDriverError@chrome://remote/content/shared/webdriver/Errors.sys.mjs:199:5\nNoSuchRequestError@chrome://remote/content/shared/webdriver/Errors.sys.mjs:698:5\ncontinueRequest@chrome://remote/content/webdriver-bidi/modules/root/network.sys.mjs:548:13\nhandleCommand@chrome://remote/content/shared/messagehandler/MessageHandler.sys.mjs:260:33\nexecute@chrome://remote/content/shared/webdriver/Session.sys.mjs:410:32\nonPacket@chrome://remote/content/webdriver-bidi/WebDriverBiDiConnection.sys.mjs:236:37\nonMessage@chrome://remote/content/server/WebSocketTransport.sys.mjs:127:18\nhandleEvent@chrome://remote/content/server/WebSocketTransport.sys.mjs:109:14\n",
+--     "error": "invalid argument",
+--     "id": 9,
+--     "message": "Expected set-cookie header \"expiry\" to be a string, got 1767225600",
+--     "stacktrace": "RemoteError@chrome://remote/content/shared/RemoteError.sys.mjs:8:8\nWebDriverError@chrome://remote/content/shared/webdriver/Errors.sys.mjs:199:5\nInvalidArgumentError@chrome://remote/content/shared/webdriver/Errors.sys.mjs:401:5\nassert.that/<@chrome://remote/content/shared/webdriver/Assert.sys.mjs:581:13\nassert.string@chrome://remote/content/shared/webdriver/Assert.sys.mjs:430:53\n#assertSetCookieHeader@chrome://remote/content/webdriver-bidi/modules/root/network.sys.mjs:1266:19\ncontinueResponse@chrome://remote/content/webdriver-bidi/modules/root/network.sys.mjs:667:36\nhandleCommand@chrome://remote/content/shared/messagehandler/MessageHandler.sys.mjs:260:33\nexecute@chrome://remote/content/shared/webdriver/Session.sys.mjs:410:32\nonPacket@chrome://remote/content/webdriver-bidi/WebDriverBiDiConnection.sys.mjs:236:37\nonMessage@chrome://remote/content/server/WebSocketTransport.sys.mjs:127:18\nhandleEvent@chrome://remote/content/server/WebSocketTransport.sys.mjs:109:14\n",
 --     "type": "error"
 -- }
 -- Error message: 
@@ -417,175 +465,177 @@ networkRequestResponseModificationDemo =
 
       logTxt "Test 1: networkContinueRequest with basic parameters"
       let exampleRequestId = MkRequestId "example-request-id-001"
-      continueReq1 <-
-        networkContinueRequest $
-          MkContinueRequest
-            { request = exampleRequestId,
-              body = Nothing,
-              cookies = Nothing,
-              headers = Nothing,
-              method = Nothing,
-              url = Nothing
-            }
-      logShow "Basic request continuation result" continueReq1
+          handleNoSuchRequest = handleNoSuchRequestError logTxt
+
+      -- this will fail because we are continuing a non-existant bogus request
+      handleNoSuchRequest $ do
+        continueReq1 <-
+          networkContinueRequest $
+            MkContinueRequest
+              { request = exampleRequestId,
+                body = Nothing,
+                cookies = Nothing,
+                headers = Nothing,
+                method = Nothing,
+                url = Nothing
+              }
+        logShow "Basic request continuation result" continueReq1
       pause
 
       logTxt "Test 2: networkContinueRequest with modified headers and method"
-      continueReq2 <-
-        networkContinueRequest $
-          MkContinueRequest
-            { request = exampleRequestId,
-              body = Nothing,
-              cookies = Nothing,
-              headers = Just
-                [ MkHeader
-                    { headerName = "X-Custom-Header",
-                      headerValue = TextBytesValue $ MkStringValue "modified-request"
-                    },
-                  MkHeader
-                    { headerName = "User-Agent",
-                      headerValue = TextBytesValue $ MkStringValue "BiDi-WebDriver-Test/1.0"
-                    }
-                ],
-              method = Just "POST",
-              url = Nothing
-            }
-      logShow "Modified headers and method continuation result" continueReq2
+      handleNoSuchRequest $ do
+        continueReq2 <-
+          networkContinueRequest $
+            MkContinueRequest
+              { request = exampleRequestId,
+                body = Nothing,
+                cookies = Nothing,
+                headers =
+                  Just
+                    [ MkHeader
+                        { headerName = "X-Custom-Header",
+                          headerValue = TextBytesValue $ MkStringValue "modified-request"
+                        },
+                      MkHeader
+                        { headerName = "User-Agent",
+                          headerValue = TextBytesValue $ MkStringValue "BiDi-WebDriver-Test/1.0"
+                        }
+                    ],
+                method = Just "POST",
+                url = Nothing
+              }
+        logShow "Modified headers and method continuation result" continueReq2
       pause
 
       logTxt "Test 3: networkContinueRequest with body and URL modification"
-      continueReq3 <-
-        networkContinueRequest $
-          MkContinueRequest
-            { request = exampleRequestId,
-              body = Just (TextBytesValue $ MkStringValue "modified request body"),
-              cookies = Nothing,
-              headers = Nothing,
-              method = Nothing,
-              url = Just "https://modified.example.com/api/test"
-            }
-      logShow "Body and URL modification continuation result" continueReq3
+      handleNoSuchRequest $ do
+        continueReq3 <-
+          networkContinueRequest $
+            MkContinueRequest
+              { request = exampleRequestId,
+                body = Just (TextBytesValue $ MkStringValue "modified request body"),
+                cookies = Nothing,
+                headers = Nothing,
+                method = Nothing,
+                url = Just "https://modified.example.com/api/test"
+              }
+        logShow "Body and URL modification continuation result" continueReq3
       pause
 
       logTxt "Test 4: networkContinueRequest with cookies"
-      continueReq4 <-
-        networkContinueRequest $
-          MkContinueRequest
-            { request = exampleRequestId,
-              body = Nothing,
-              cookies = Just
-                [ MkCookie
-                    { name = "session_id",
-                      value = TextBytesValue $ MkStringValue "modified-session-123",
-                      domain = "example.com",
-                      path = "/",
-                      size = 100,
-                      httpOnly = True,
-                      secure = True,
-                      sameSite = Strict,
-                      expiry = Nothing
-                    },
-                  MkCookie
-                    { name = "user_pref",
-                      value = Base64Value "bW9kaWZpZWQ=",
-                      domain = "example.com",
-                      path = "/app",
-                      size = 50,
-                      httpOnly = False,
-                      secure = False,
-                      sameSite = Lax,
-                      expiry = Just 1735689600
-                    }
-                ],
-              headers = Nothing,
-              method = Nothing,
-              url = Nothing
-            }
-      logShow "Cookie modification continuation result" continueReq4
+      handleNoSuchRequest $ do
+        continueReq4 <-
+          networkContinueRequest $
+            MkContinueRequest
+              { request = exampleRequestId,
+                body = Nothing,
+                cookies =
+                  Just
+                    [ MkCookieHeader
+                        { cookieHeaderName = "session_id",
+                          cookieHeaderValue = TextBytesValue $ MkStringValue "modified-session-123"
+                        },
+                      MkCookieHeader
+                        { cookieHeaderName = "user_pref",
+                          cookieHeaderValue = Base64Value "bW9kaWZpZWQ="
+                        }
+                    ],
+                headers = Nothing,
+                method = Nothing,
+                url = Nothing
+              }
+        logShow "Cookie modification continuation result" continueReq4
       pause
 
       logTxt "Test 5: networkContinueResponse with basic parameters"
-      continueResp1 <-
-        networkContinueResponse $
-          MkContinueResponse
-            { request = exampleRequestId,
-              body = Nothing,
-              cookies = Nothing,
-              headers = Nothing,
-              reasonPhrase = Nothing,
-              statusCode = Nothing
-            }
-      logShow "Basic response continuation result" continueResp1
+      handleNoSuchRequest $ do
+        continueResp1 <-
+          networkContinueResponse $
+            MkContinueResponse
+              { request = exampleRequestId,
+                body = Nothing,
+                cookies = Nothing,
+                headers = Nothing,
+                reasonPhrase = Nothing,
+                statusCode = Nothing
+              }
+        logShow "Basic response continuation result" continueResp1
       pause
 
       logTxt "Test 6: networkContinueResponse with status code and reason phrase"
-      continueResp2 <-
-        networkContinueResponse $
-          MkContinueResponse
-            { request = exampleRequestId,
-              body = Nothing,
-              cookies = Nothing,
-              headers = Nothing,
-              reasonPhrase = Just "Modified OK",
-              statusCode = Just (MkJSUInt 200)
-            }
-      logShow "Status modification continuation result" continueResp2
+      handleNoSuchRequest $ do
+        continueResp2 <-
+          networkContinueResponse $
+            MkContinueResponse
+              { request = exampleRequestId,
+                body = Nothing,
+                cookies = Nothing,
+                headers = Nothing,
+                reasonPhrase = Just "Modified OK",
+                statusCode = Just (MkJSUInt 200)
+              }
+        logShow "Status modification continuation result" continueResp2
       pause
 
       logTxt "Test 7: networkContinueResponse with modified response body and headers"
-      continueResp3 <-
-        networkContinueResponse $
-          MkContinueResponse
-            { request = exampleRequestId,
-              body = Just (TextBytesValue (MkStringValue "Modified response body content")),
-              cookies = Nothing,
-              headers = Just
-                [ MkHeader
-                    { headerName = "Content-Type",
-                      headerValue = TextBytesValue (MkStringValue "text/plain; charset=utf-8")
-                    },
-                  MkHeader
-                    { headerName = "X-Modified-Response",
-                      headerValue = TextBytesValue (MkStringValue "true")
-                    },
-                  MkHeader
-                    { headerName = "Cache-Control",
-                      headerValue = TextBytesValue (MkStringValue "no-cache, no-store")
-                    }
-                ],
-              reasonPhrase = Just "Custom Response",
-              statusCode = Just (MkJSUInt 202)
-            }
-      logShow "Complete response modification result" continueResp3
+      handleNoSuchRequest $ do
+        continueResp3 <-
+          networkContinueResponse $
+            MkContinueResponse
+              { request = exampleRequestId,
+                body = Just (TextBytesValue (MkStringValue "Modified response body content")),
+                cookies = Nothing,
+                headers =
+                  Just
+                    [ MkHeader
+                        { headerName = "Content-Type",
+                          headerValue = TextBytesValue (MkStringValue "text/plain; charset=utf-8")
+                        },
+                      MkHeader
+                        { headerName = "X-Modified-Response",
+                          headerValue = TextBytesValue (MkStringValue "true")
+                        },
+                      MkHeader
+                        { headerName = "Cache-Control",
+                          headerValue = TextBytesValue (MkStringValue "no-cache, no-store")
+                        }
+                    ],
+                reasonPhrase = Just "Custom Response",
+                statusCode = Just (MkJSUInt 202)
+              }
+        logShow "Complete response modification result" continueResp3
       pause
 
       logTxt "Test 8: networkContinueResponse with response cookies"
-      continueResp4 <-
-        networkContinueResponse $
-          MkContinueResponse
-            { request = exampleRequestId,
-              body = Nothing,
-              cookies = Just
-                [ MkCookie
-                    { name = "response_token",
-                      value = TextBytesValue (MkStringValue "resp-token-456"),
-                      domain = "api.example.com",
-                      path = "/",
-                      size = 80,
-                      httpOnly = True,
-                      secure = True,
-                      sameSite = Default, -- Note: using Default instead of None to avoid conflict
-                      expiry = Just 1767225600
-                    }
-                ],
-              headers = Nothing,
-              reasonPhrase = Nothing,
-              statusCode = Nothing
-            }
-      logShow "Response cookie modification result" continueResp4
+      handleNoSuchRequest $ do
+        continueResp4 <-
+          networkContinueResponse $
+            MkContinueResponse
+              { request = exampleRequestId,
+                body = Nothing,
+                cookies =
+                  Just
+                    [ MkSetCookieHeader
+                        { name = "response_token",
+                          value = TextBytesValue (MkStringValue "resp-token-456"),
+                          domain = Just "api.example.com",
+                          path = Just "/",
+                          httpOnly = Just True,
+                          secure = Just True,
+                          sameSite = Just Default,
+                          expiry = Just "1767225600", -- Note: expiry is now Text, not Word
+                          maxAge = Nothing
+                        }
+                    ],
+                headers = Nothing,
+                reasonPhrase = Nothing,
+                statusCode = Nothing
+              }
+        logShow "Response cookie modification result" continueResp4
       pause
 
 -- >>> runDemo networkAuthAndFailureDemo
+-- NETWORK WIP UP TO HERE
 -- *** Exception: Error executing BiDi command: MkCommand
 --   { method = "network.continueWithAuth"
 --   , params =
@@ -603,12 +653,42 @@ networkRequestResponseModificationDemo =
 --         "authAction": {
 --             "action": "default"
 --         },
+--         "request": "example-request-auth-001"
+--     }
+-- }
+-- Failed to decode the 'result' property of JSON returned by driver to response type: 
+-- {
+--     "error": "invalid argument",
+--     "id": 2,
+--     "message": "Expected \"action\" to be one of cancel,default,provideCredentials got undefined",
+--     "stacktrace": "RemoteError@chrome://remote/content/shared/RemoteError.sys.mjs:8:8\nWebDriverError@chrome://remote/content/shared/webdriver/Errors.sys.mjs:199:5\nInvalidArgumentError@chrome://remote/content/shared/webdriver/Errors.sys.mjs:401:5\ncontinueWithAuth@chrome://remote/content/webdriver-bidi/modules/root/network.sys.mjs:802:13\nhandleCommand@chrome://remote/content/shared/messagehandler/MessageHandler.sys.mjs:260:33\nexecute@chrome://remote/content/shared/webdriver/Session.sys.mjs:410:32\nonPacket@chrome://remote/content/webdriver-bidi/WebDriverBiDiConnection.sys.mjs:236:37\nonMessage@chrome://remote/content/server/WebSocketTransport.sys.mjs:127:18\nhandleEvent@chrome://remote/content/server/WebSocketTransport.sys.mjs:109:14\n",
+--     "type": "error"
+-- }
+-- Error message: 
+-- key "result" not found
+
+--   { method = "network.continueWithAuth"
+--   , params =
+--       MkContinueWithAuth
+--         { request = MkRequest { request = "example-request-auth-001" }
+--         , authAction = DefaultAuth
+--         }
+--   , extended = Nothing
+--   }
+-- With JSON:
+-- {
+--     "id": 2,
+--     "method": "network.continueWithAuth",
+--     "params": {
+--         "authAction": {
+--             "action": "default"
+--         },
 --         "request": {
 --             "request": "example-request-auth-001"
 --         }
 --     }
 -- }
--- Failed to decode the 'result' property of JSON returned by driver to response type: 
+-- Failed to decode the 'result' property of JSON returned by driver to response type:
 -- {
 --     "error": "invalid argument",
 --     "id": 2,
@@ -616,7 +696,7 @@ networkRequestResponseModificationDemo =
 --     "stacktrace": "RemoteError@chrome://remote/content/shared/RemoteError.sys.mjs:8:8\nWebDriverError@chrome://remote/content/shared/webdriver/Errors.sys.mjs:199:5\nInvalidArgumentError@chrome://remote/content/shared/webdriver/Errors.sys.mjs:401:5\nassert.that/<@chrome://remote/content/shared/webdriver/Assert.sys.mjs:581:13\nassert.string@chrome://remote/content/shared/webdriver/Assert.sys.mjs:430:53\ncontinueWithAuth@chrome://remote/content/webdriver-bidi/modules/root/network.sys.mjs:796:17\nhandleCommand@chrome://remote/content/shared/messagehandler/MessageHandler.sys.mjs:260:33\nexecute@chrome://remote/content/shared/webdriver/Session.sys.mjs:410:32\nonPacket@chrome://remote/content/webdriver-bidi/WebDriverBiDiConnection.sys.mjs:236:37\nonMessage@chrome://remote/content/server/WebSocketTransport.sys.mjs:127:18\nhandleEvent@chrome://remote/content/server/WebSocketTransport.sys.mjs:109:14\n",
 --     "type": "error"
 -- }
--- Error message: 
+-- Error message:
 -- key "result" not found
 networkAuthAndFailureDemo :: BiDiDemo
 networkAuthAndFailureDemo =
@@ -655,11 +735,12 @@ networkAuthAndFailureDemo =
         networkContinueWithAuth $
           MkContinueWithAuth
             { request = exampleRequest,
-              authAction = ProvideCredentials
-                MkAuthCredentials
-                  { username = "test_user",
-                    password = "test_password_123"
-                  }
+              authAction =
+                ProvideCredentials
+                  MkAuthCredentials
+                    { username = "test_user",
+                      password = "test_password_123"
+                    }
             }
       logShow "Provided credentials auth result" authResult3
       pause
@@ -669,11 +750,12 @@ networkAuthAndFailureDemo =
         networkContinueWithAuth $
           MkContinueWithAuth
             { request = exampleRequest,
-              authAction = ProvideCredentials
-                MkAuthCredentials
-                  { username = "admin@example.com",
-                    password = "super_secure_password_456"
-                  }
+              authAction =
+                ProvideCredentials
+                  MkAuthCredentials
+                    { username = "admin@example.com",
+                      password = "super_secure_password_456"
+                    }
             }
       logShow "Admin credentials auth result" authResult4
       pause
@@ -750,16 +832,17 @@ networkProvideResponseDemo =
             { intercept = exampleIntercept,
               body = Just (TextBytesValue (MkStringValue "{\"message\": \"Custom JSON response\", \"status\": \"success\"}")),
               cookies = Nothing,
-              headers = Just
-                [ MkHeader
-                    { headerName = "Content-Type",
-                      headerValue = TextBytesValue (MkStringValue "application/json")
-                    },
-                  MkHeader
-                    { headerName = "X-Custom-Provider",
-                      headerValue = TextBytesValue (MkStringValue "BiDi-WebDriver")
-                    }
-                ],
+              headers =
+                Just
+                  [ MkHeader
+                      { headerName = "Content-Type",
+                        headerValue = TextBytesValue (MkStringValue "application/json")
+                      },
+                    MkHeader
+                      { headerName = "X-Custom-Provider",
+                        headerValue = TextBytesValue (MkStringValue "BiDi-WebDriver")
+                      }
+                  ],
               reasonPhrase = "OK",
               statusCode = 200
             }
@@ -773,16 +856,17 @@ networkProvideResponseDemo =
             { intercept = exampleIntercept,
               body = Just (TextBytesValue (MkStringValue "<html><body><h1>Redirected Page</h1><p>This is a custom redirect response.</p></body></html>")),
               cookies = Nothing,
-              headers = Just
-                [ MkHeader
-                    { headerName = "Content-Type",
-                      headerValue = TextBytesValue (MkStringValue "text/html; charset=utf-8")
-                    },
-                  MkHeader
-                    { headerName = "Location",
-                      headerValue = TextBytesValue (MkStringValue "https://custom.example.com/redirected")
-                    }
-                ],
+              headers =
+                Just
+                  [ MkHeader
+                      { headerName = "Content-Type",
+                        headerValue = TextBytesValue (MkStringValue "text/html; charset=utf-8")
+                      },
+                    MkHeader
+                      { headerName = "Location",
+                        headerValue = TextBytesValue (MkStringValue "https://custom.example.com/redirected")
+                      }
+                  ],
               reasonPhrase = "Found",
               statusCode = 302
             }
@@ -796,16 +880,17 @@ networkProvideResponseDemo =
             { intercept = exampleIntercept,
               body = Just (Base64Value "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8/5+hHgAHggJ/PchI7wAAAABJRU5ErkJggg=="),
               cookies = Nothing,
-              headers = Just
-                [ MkHeader
-                    { headerName = "Content-Type",
-                      headerValue = TextBytesValue (MkStringValue "image/png")
-                    },
-                  MkHeader
-                    { headerName = "Content-Length",
-                      headerValue = TextBytesValue (MkStringValue "95")
-                    }
-                ],
+              headers =
+                Just
+                  [ MkHeader
+                      { headerName = "Content-Type",
+                        headerValue = TextBytesValue (MkStringValue "image/png")
+                      },
+                    MkHeader
+                      { headerName = "Content-Length",
+                        headerValue = TextBytesValue (MkStringValue "95")
+                      }
+                  ],
               reasonPhrase = "OK",
               statusCode = 200
             }
@@ -818,29 +903,31 @@ networkProvideResponseDemo =
           MkProvideResponse
             { intercept = exampleIntercept,
               body = Just (TextBytesValue (MkStringValue "{\"error\": \"Unauthorized access\", \"code\": 401}")),
-              cookies = Just
-                [ MkCookie
-                    { name = "auth_error",
-                      value = TextBytesValue (MkStringValue "unauthorized_attempt"),
-                      domain = "secure.example.com",
-                      path = "/",
-                      size = 120,
-                      httpOnly = True,
-                      secure = True,
-                      sameSite = Strict,
-                      expiry = Nothing
-                    }
-                ],
-              headers = Just
-                [ MkHeader
-                    { headerName = "Content-Type",
-                      headerValue = TextBytesValue (MkStringValue "application/json")
-                    },
-                  MkHeader
-                    { headerName = "WWW-Authenticate",
-                      headerValue = TextBytesValue (MkStringValue "Bearer realm=\"secure\"")
-                    }
-                ],
+              cookies =
+                Just
+                  [ MkCookie
+                      { name = "auth_error",
+                        value = TextBytesValue (MkStringValue "unauthorized_attempt"),
+                        domain = "secure.example.com",
+                        path = "/",
+                        size = 120,
+                        httpOnly = True,
+                        secure = True,
+                        sameSite = Strict,
+                        expiry = Nothing
+                      }
+                  ],
+              headers =
+                Just
+                  [ MkHeader
+                      { headerName = "Content-Type",
+                        headerValue = TextBytesValue (MkStringValue "application/json")
+                      },
+                    MkHeader
+                      { headerName = "WWW-Authenticate",
+                        headerValue = TextBytesValue (MkStringValue "Bearer realm=\"secure\"")
+                      }
+                  ],
               reasonPhrase = "Unauthorized",
               statusCode = 401
             }
@@ -854,16 +941,17 @@ networkProvideResponseDemo =
             { intercept = exampleIntercept,
               body = Just (TextBytesValue (MkStringValue "Internal Server Error - Custom maintenance page")),
               cookies = Nothing,
-              headers = Just
-                [ MkHeader
-                    { headerName = "Content-Type",
-                      headerValue = TextBytesValue (MkStringValue "text/plain")
-                    },
-                  MkHeader
-                    { headerName = "Retry-After",
-                      headerValue = TextBytesValue (MkStringValue "3600")
-                    }
-                ],
+              headers =
+                Just
+                  [ MkHeader
+                      { headerName = "Content-Type",
+                        headerValue = TextBytesValue (MkStringValue "text/plain")
+                      },
+                    MkHeader
+                      { headerName = "Retry-After",
+                        headerValue = TextBytesValue (MkStringValue "3600")
+                      }
+                  ],
               reasonPhrase = "Internal Server Error",
               statusCode = 500
             }

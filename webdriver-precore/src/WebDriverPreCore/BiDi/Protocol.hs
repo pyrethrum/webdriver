@@ -45,6 +45,8 @@ module WebDriverPreCore.BiDi.Protocol
     Cookie (..),
     SameSite (Strict, Lax, Default), -- Explicitly exclude None to avoid conflict with BrowsingContext.None
     Header (..),
+    CookieHeader (..),
+    SetCookieHeader (..),
   )
 where
 
@@ -142,6 +144,8 @@ import WebDriverPreCore.BiDi.Network
     Cookie (..),
     SameSite (Strict, Lax, Default), -- Explicitly exclude None to avoid conflict with BrowsingContext.None
     Header (..),
+    CookieHeader (..),
+    SetCookieHeader (..),
   )
 import WebDriverPreCore.BiDi.Script
   ( AddPreloadScript (..),

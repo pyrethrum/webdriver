@@ -21,7 +21,7 @@ import Data.Text (Text)
 import GHC.Generics (Generic)
 import WebDriverPreCore.BiDi.BrowsingContext qualified as BrowsingContext
 import WebDriverPreCore.BiDi.Network qualified as Network
-import WebDriverPreCore.Internal.AesonUtils (enumCamelCase)
+import WebDriverPreCore.Internal.AesonUtils (enumCamelCase, toJSONOmitNothing)
 import Prelude (Bool, Eq, Int, Maybe, Show)
 
 -- ######### Remote #########
@@ -131,24 +131,26 @@ data SetCookie = MkSetCookie
   }
   deriving (Show, Eq, Generic)
 
-instance ToJSON SetCookie
+instance ToJSON SetCookie where
+  toJSON :: SetCookie -> Value
+  toJSON = toJSONOmitNothing
 
 -- | Partial cookie for setting
 data PartialCookie = MkPartialCookie
   { name :: Text,
     value :: Network.BytesValue,
-    domain :: Text,
+    domain :: Maybe Text,
     path :: Maybe Text,
     httpOnly :: Maybe Bool,
     secure :: Maybe Bool,
     sameSite :: Maybe Network.SameSite,
-    expiry :: Maybe Int
+    expiry :: Maybe Text
   }
   deriving (Show, Eq, Generic)
 
-instance FromJSON PartialCookie
-
-instance ToJSON PartialCookie
+instance ToJSON PartialCookie where
+  toJSON :: PartialCookie -> Value
+  toJSON = toJSONOmitNothing
 
 -- | Parameters for deleting cookies
 data DeleteCookies = MkDeleteCookies
