@@ -32,7 +32,7 @@ import Data.Text (Text)
 import GHC.Generics (Generic)
 import WebDriverPreCore.BiDi.BrowsingContext qualified as BrowsingContext
 import WebDriverPreCore.BiDi.Script qualified as Script
-import WebDriverPreCore.Internal.AesonUtils (enumCamelCase)
+import WebDriverPreCore.Internal.AesonUtils (enumCamelCase, toJSONOmitNothing)
 import Prelude (Bool, Double, Eq, Int, Maybe, Show)
 
 -- ######### Local #########
@@ -57,12 +57,16 @@ data PerformActions = MkPerformActions
   }
   deriving (Show, Eq, Generic)
 
+instance ToJSON PerformActions
+
 data SourceActions
   = NoneSourceActions PauseAction
   | KeySourceActions KeySourceActions
   | PointerSourceActions PointerSourceActions
   | WheelSourceActions WheelSourceActions
   deriving (Show, Eq, Generic)
+
+instance ToJSON SourceActions
 
 data NoneSourceActions = MkNoneSourceActions
   { noneType :: Text, -- will be "none"
@@ -71,6 +75,8 @@ data NoneSourceActions = MkNoneSourceActions
   }
   deriving (Show, Eq, Generic)
 
+instance ToJSON NoneSourceActions
+
 data KeySourceActions = MkKeySourceActions
   { keyType :: Text, -- will be "key"
     keyId :: Text,
@@ -78,11 +84,16 @@ data KeySourceActions = MkKeySourceActions
   }
   deriving (Show, Eq, Generic)
 
+instance ToJSON KeySourceActions
+
 data KeySourceAction
   = KeyPauseAction PauseAction
   | KeyDownAction KeyDownAction
   | KeyUpAction KeyUpAction
   deriving (Show, Eq, Generic)
+
+instance ToJSON KeySourceAction where
+  toJSON = enumCamelCase
 
 data PointerSourceActions = MkPointerSourceActions
   { pointerType :: Text, -- will be "pointer"
@@ -92,13 +103,20 @@ data PointerSourceActions = MkPointerSourceActions
   }
   deriving (Show, Eq, Generic)
 
+instance ToJSON PointerSourceActions
+
 data PointerType = MousePointer | PenPointer | TouchPointer
   deriving (Show, Eq, Generic)
+
+instance ToJSON PointerType where
+  toJSON = enumCamelCase
 
 data Pointer = MkPointer
   { pointerType :: Maybe PointerType -- default "mouse"
   }
   deriving (Show, Eq, Generic)
+
+instance ToJSON Pointer
 
 data PointerSourceAction
   = PointerPauseAction PauseAction
@@ -107,6 +125,9 @@ data PointerSourceAction
   | PointerMoveAction PointerMoveAction
   deriving (Show, Eq, Generic)
 
+instance ToJSON PointerSourceAction where
+  toJSON = enumCamelCase
+
 data WheelSourceActions = MkWheelSourceActions
   { wheelType :: Text, -- will be "wheel"
     wheelId :: Text,
@@ -114,45 +135,86 @@ data WheelSourceActions = MkWheelSourceActions
   }
   deriving (Show, Eq, Generic)
 
+instance ToJSON WheelSourceActions
+
 data WheelSourceAction
   = WheelPauseAction PauseAction
   | WheelScrollAction WheelScrollAction
   deriving (Show, Eq, Generic)
 
-data PauseAction = MkPauseAction
-  { pauseType :: Text, -- will be "pause"
+instance ToJSON WheelSourceAction where
+  toJSON = enumCamelCase
+
+newtype PauseAction = MkPauseAction
+  { 
     duration :: Maybe Int
   }
   deriving (Show, Eq, Generic)
 
-data KeyDownAction = MkKeyDownAction
-  { keyDownType :: Text, -- will be "keyDown"
-    value :: Text
+instance ToJSON PauseAction  where
+  toJSON :: PauseAction -> Value
+  toJSON (MkPauseAction duration) =
+    object
+      [ "type" .= "pause",
+        "duration" .= duration
+      ]
+
+newtype KeyDownAction = MkKeyDownAction
+  { value :: Text
   }
   deriving (Show, Eq, Generic)
 
-data KeyUpAction = MkKeyUpAction
-  { keyUpType :: Text, -- will be "keyUp"
-    value :: Text
+instance ToJSON KeyDownAction where
+  toJSON :: KeyDownAction -> Value
+  toJSON (MkKeyDownAction value) =
+    object
+      [ "type" .= "keyDown",
+        "value" .= value
+      ]
+
+newtype KeyUpAction = MkKeyUpAction
+  { value :: Text
   }
   deriving (Show, Eq, Generic)
 
-data PointerUpAction = MkPointerUpAction
-  { pointerUpType :: Text, -- will be "pointerUp"
-    button :: Int
+instance ToJSON KeyUpAction where
+  toJSON :: KeyUpAction -> Value
+  toJSON (MkKeyUpAction value) =
+    object
+      [ "type" .= "keyUp",
+        "value" .= value
+      ]
+
+newtype PointerUpAction = MkPointerUpAction
+  { button :: Int
   }
   deriving (Show, Eq, Generic)
+
+instance ToJSON PointerUpAction where
+  toJSON :: PointerUpAction -> Value
+  toJSON (MkPointerUpAction button) =
+    object
+      [ "type" .= "pointerUp",
+        "button" .= button
+      ]
 
 data PointerDownAction = MkPointerDownAction
-  { pointerDownType :: Text, -- will be "pointerDown"
-    button :: Int,
+  { button :: Int,
     pointerCommonProperties :: PointerCommonProperties
   }
   deriving (Show, Eq, Generic)
 
+instance ToJSON PointerDownAction where
+  toJSON :: PointerDownAction -> Value
+  toJSON (MkPointerDownAction button pointerCommonProperties) =
+    object
+      [ "type" .= "pointerDown",
+        "button" .= button,
+        "pointerCommonProperties" .= pointerCommonProperties
+      ]
+
 data PointerMoveAction = MkPointerMoveAction
-  { pointerMoveType :: Text, -- will be "pointerMove"
-    x :: Double,
+  { x :: Double,
     y :: Double,
     duration :: Maybe Int,
     origin :: Maybe Origin,
@@ -160,9 +222,20 @@ data PointerMoveAction = MkPointerMoveAction
   }
   deriving (Show, Eq, Generic)
 
+instance ToJSON PointerMoveAction where
+  toJSON :: PointerMoveAction -> Value
+  toJSON (MkPointerMoveAction x y duration origin pointerCommonProperties) =
+    object
+      [ "type" .= "pointerMove",
+        "x" .= x,
+        "y" .= y,
+        "duration" .= duration,
+        "origin" .= origin,
+        "pointerCommonProperties" .= pointerCommonProperties
+      ]
+
 data WheelScrollAction = MkWheelScrollAction
-  { scrollType :: Text, -- will be "scroll"
-    x :: Int,
+  { x :: Int,
     y :: Int,
     deltaX :: Int,
     deltaY :: Int,
@@ -170,6 +243,19 @@ data WheelScrollAction = MkWheelScrollAction
     origin :: Maybe Origin -- default "viewport"
   }
   deriving (Show, Eq, Generic)
+
+instance ToJSON WheelScrollAction where
+  toJSON :: WheelScrollAction -> Value
+  toJSON (MkWheelScrollAction x y deltaX deltaY duration origin) =
+    object
+      [ "type" .= "scroll",
+        "x" .= x,
+        "y" .= y,
+        "deltaX" .= deltaX,
+        "deltaY" .= deltaY,
+        "duration" .= duration,
+        "origin" .= origin
+      ]
 
 data PointerCommonProperties = MkPointerCommonProperties
   { width :: Maybe Int, -- default 1
@@ -181,6 +267,10 @@ data PointerCommonProperties = MkPointerCommonProperties
     azimuthAngle :: Maybe Double -- default 0.0, range 0..2π
   }
   deriving (Show, Eq, Generic)
+
+instance ToJSON PointerCommonProperties where
+  toJSON :: PointerCommonProperties -> Value
+  toJSON = toJSONOmitNothing
 
 data Origin
   = ViewportOriginPointerType
@@ -201,6 +291,8 @@ newtype ReleaseActions = MkReleaseActions
   }
   deriving (Show, Eq, Generic)
 
+instance ToJSON ReleaseActions
+
 data SetFiles = MkSetFiles
   { context :: BrowsingContext.BrowsingContextId,
     element :: Script.SharedReference,
@@ -208,10 +300,14 @@ data SetFiles = MkSetFiles
   }
   deriving (Show, Eq, Generic)
 
+instance ToJSON SetFiles
+
 data FileDialogOpened = MkFileDialogOpened
   { params :: FileDialogInfo
   }
   deriving (Show, Eq, Generic)
+
+instance ToJSON FileDialogOpened
 
 -- ######### Local #########
 
@@ -222,54 +318,4 @@ data FileDialogInfo = MkFileDialogInfo
   }
   deriving (Show, Eq, Generic)
 
-instance ToJSON PerformActions
-
-instance ToJSON ReleaseActions
-
-instance ToJSON SetFiles
-
-instance ToJSON SourceActions
-
-instance ToJSON FileDialogOpened
-
 instance ToJSON FileDialogInfo
-
-instance ToJSON NoneSourceActions
-
-instance ToJSON KeySourceActions
-
-instance ToJSON PointerSourceActions
-
-instance ToJSON WheelSourceActions
-
-instance ToJSON Pointer
-
-instance ToJSON PointerCommonProperties
-
--- All the various action types
-instance ToJSON PauseAction
-
-instance ToJSON KeyDownAction
-
-instance ToJSON KeyUpAction
-
-instance ToJSON PointerUpAction
-
-instance ToJSON PointerDownAction
-
-instance ToJSON PointerMoveAction
-
-instance ToJSON WheelScrollAction
-
--- Sum type instances with enumCamelCase
-instance ToJSON PointerType where
-  toJSON = enumCamelCase
-
-instance ToJSON KeySourceAction where
-  toJSON = enumCamelCase
-
-instance ToJSON PointerSourceAction where
-  toJSON = enumCamelCase
-
-instance ToJSON WheelSourceAction where
-  toJSON = enumCamelCase

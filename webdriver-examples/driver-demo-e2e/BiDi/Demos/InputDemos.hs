@@ -48,6 +48,189 @@ coreToScriptSharedId :: Core.SharedId -> Script.SharedId
 coreToScriptSharedId (Core.MkSharedId txt) = Script.MkShareId {Script.id = txt}
 
 -- >>> runDemo inputKeyboardDemo
+-- *** Exception: Error executing BiDi command: MkCommand
+--   { method = "input.performActions"
+--   , params =
+--       MkPerformActions
+--         { context =
+--             MkBrowsingContextId "131475b2-cddf-4171-9124-671f8891cea1"
+--         , actions =
+--             [ KeySourceActions
+--                 MkKeySourceActions
+--                   { keyType = "key"
+--                   , keyId = "keyboard1"
+--                   , keyActions =
+--                       [ KeyPauseAction MkPauseAction { duration = Just 100 }
+--                       , KeyDownAction MkKeyDownAction { value = "t" }
+--                       , KeyUpAction MkKeyUpAction { value = "t" }
+--                       , KeyDownAction MkKeyDownAction { value = "o" }
+--                       , KeyUpAction MkKeyUpAction { value = "o" }
+--                       , KeyDownAction MkKeyDownAction { value = "m" }
+--                       , KeyUpAction MkKeyUpAction { value = "m" }
+--                       , KeyDownAction MkKeyDownAction { value = "s" }
+--                       , KeyUpAction MkKeyUpAction { value = "s" }
+--                       , KeyDownAction MkKeyDownAction { value = "m" }
+--                       , KeyUpAction MkKeyUpAction { value = "m" }
+--                       , KeyDownAction MkKeyDownAction { value = "i" }
+--                       , KeyUpAction MkKeyUpAction { value = "i" }
+--                       , KeyDownAction MkKeyDownAction { value = "t" }
+--                       , KeyUpAction MkKeyUpAction { value = "t" }
+--                       , KeyDownAction MkKeyDownAction { value = "h" }
+--                       , KeyUpAction MkKeyUpAction { value = "h" }
+--                       ]
+--                   }
+--             ]
+--         }
+--   , extended = Nothing
+--   }
+-- With JSON: 
+-- {
+--     "id": 3,
+--     "method": "input.performActions",
+--     "params": {
+--         "actions": [
+--             {
+--                 "contents": {
+--                     "keyActions": [
+--                         {
+--                             "contents": {
+--                                 "duration": 100,
+--                                 "type": "pause"
+--                             },
+--                             "tag": "keyPauseAction"
+--                         },
+--                         {
+--                             "contents": {
+--                                 "type": "keyDown",
+--                                 "value": "t"
+--                             },
+--                             "tag": "keyDownAction"
+--                         },
+--                         {
+--                             "contents": {
+--                                 "type": "keyUp",
+--                                 "value": "t"
+--                             },
+--                             "tag": "keyUpAction"
+--                         },
+--                         {
+--                             "contents": {
+--                                 "type": "keyDown",
+--                                 "value": "o"
+--                             },
+--                             "tag": "keyDownAction"
+--                         },
+--                         {
+--                             "contents": {
+--                                 "type": "keyUp",
+--                                 "value": "o"
+--                             },
+--                             "tag": "keyUpAction"
+--                         },
+--                         {
+--                             "contents": {
+--                                 "type": "keyDown",
+--                                 "value": "m"
+--                             },
+--                             "tag": "keyDownAction"
+--                         },
+--                         {
+--                             "contents": {
+--                                 "type": "keyUp",
+--                                 "value": "m"
+--                             },
+--                             "tag": "keyUpAction"
+--                         },
+--                         {
+--                             "contents": {
+--                                 "type": "keyDown",
+--                                 "value": "s"
+--                             },
+--                             "tag": "keyDownAction"
+--                         },
+--                         {
+--                             "contents": {
+--                                 "type": "keyUp",
+--                                 "value": "s"
+--                             },
+--                             "tag": "keyUpAction"
+--                         },
+--                         {
+--                             "contents": {
+--                                 "type": "keyDown",
+--                                 "value": "m"
+--                             },
+--                             "tag": "keyDownAction"
+--                         },
+--                         {
+--                             "contents": {
+--                                 "type": "keyUp",
+--                                 "value": "m"
+--                             },
+--                             "tag": "keyUpAction"
+--                         },
+--                         {
+--                             "contents": {
+--                                 "type": "keyDown",
+--                                 "value": "i"
+--                             },
+--                             "tag": "keyDownAction"
+--                         },
+--                         {
+--                             "contents": {
+--                                 "type": "keyUp",
+--                                 "value": "i"
+--                             },
+--                             "tag": "keyUpAction"
+--                         },
+--                         {
+--                             "contents": {
+--                                 "type": "keyDown",
+--                                 "value": "t"
+--                             },
+--                             "tag": "keyDownAction"
+--                         },
+--                         {
+--                             "contents": {
+--                                 "type": "keyUp",
+--                                 "value": "t"
+--                             },
+--                             "tag": "keyUpAction"
+--                         },
+--                         {
+--                             "contents": {
+--                                 "type": "keyDown",
+--                                 "value": "h"
+--                             },
+--                             "tag": "keyDownAction"
+--                         },actionSequence.actions\
+--                         {
+--                             "contents": {
+--                                 "type": "keyUp",
+--                                 "value": "h"
+--                             },
+--                             "tag": "keyUpAction"
+--                         }
+--                     ],
+--                     "keyId": "keyboard1",
+--                     "keyType": "key"
+--                 },
+--                 "tag": "KeySourceActions"
+--             }
+--         ],
+--         "context": "131475b2-cddf-4171-9124-671f8891cea1"
+--     }
+-- }
+-- Failed to decode the 'result' property of JSON returned by driver to response type: 
+-- {
+--     "error": "invalid argument",
+--     "id": 3,
+--     "message": "Expected \"actionSequence.actions\" to be an array, got [object Undefined] undefined",
+--     "stacktrace": "RemoteError@chrome://remote/content/shared/RemoteError.sys.mjs:8:8\nWebDriverError@chrome://remote/content/shared/webdriver/Errors.sys.mjs:199:5\nInvalidArgumentError@chrome://remote/content/shared/webdriver/Errors.sys.mjs:401:5\nassert.that/<@chrome://remote/content/shared/webdriver/Assert.sys.mjs:581:13\nassert.array@chrome://remote/content/shared/webdriver/Assert.sys.mjs:533:41\nfromJSON@chrome://remote/content/shared/webdriver/Actions.sys.mjs:2816:17\nfromJSON@chrome://remote/content/shared/webdriver/Actions.sys.mjs:2666:49\nperformActions@chrome://remote/content/webdriver-bidi/modules/root/input.sys.mjs:281:50\nhandleCommand@chrome://remote/content/shared/messagehandler/MessageHandler.sys.mjs:260:33\nexecute@chrome://remote/content/shared/webdriver/Session.sys.mjs:410:32\nonPacket@chrome://remote/content/webdriver-bidi/WebDriverBiDiConnection.sys.mjs:236:37\nonMessage@chrome://remote/content/server/WebSocketTransport.sys.mjs:127:18\nhandleEvent@chrome://remote/content/server/WebSocketTransport.sys.mjs:109:14\n",
+--     "type": "error"
+-- }
+-- Error message: 
+-- key "result" not found
 inputKeyboardDemo :: BiDiDemo
 inputKeyboardDemo =
   demo "Input I - Keyboard Actions" action
@@ -72,23 +255,23 @@ inputKeyboardDemo =
                       { keyType = "key",
                         keyId = "keyboard1",
                         keyActions =
-                          [ KeyPauseAction $ MkPauseAction {pauseType = "pause", duration = Just 100},
-                            KeyDownAction $ MkKeyDownAction {keyDownType = "keyDown", value = "t"},
-                            KeyUpAction $ MkKeyUpAction {keyUpType = "keyUp", value = "t"},
-                            KeyDownAction $ MkKeyDownAction {keyDownType = "keyDown", value = "o"},
-                            KeyUpAction $ MkKeyUpAction {keyUpType = "keyUp", value = "o"},
-                            KeyDownAction $ MkKeyDownAction {keyDownType = "keyDown", value = "m"},
-                            KeyUpAction $ MkKeyUpAction {keyUpType = "keyUp", value = "m"},
-                            KeyDownAction $ MkKeyDownAction {keyDownType = "keyDown", value = "s"},
-                            KeyUpAction $ MkKeyUpAction {keyUpType = "keyUp", value = "s"},
-                            KeyDownAction $ MkKeyDownAction {keyDownType = "keyDown", value = "m"},
-                            KeyUpAction $ MkKeyUpAction {keyUpType = "keyUp", value = "m"},
-                            KeyDownAction $ MkKeyDownAction {keyDownType = "keyDown", value = "i"},
-                            KeyUpAction $ MkKeyUpAction {keyUpType = "keyUp", value = "i"},
-                            KeyDownAction $ MkKeyDownAction {keyDownType = "keyDown", value = "t"},
-                            KeyUpAction $ MkKeyUpAction {keyUpType = "keyUp", value = "t"},
-                            KeyDownAction $ MkKeyDownAction {keyDownType = "keyDown", value = "h"},
-                            KeyUpAction $ MkKeyUpAction {keyUpType = "keyUp", value = "h"}
+                          [ KeyPauseAction $ MkPauseAction $ Just 100,
+                            KeyDownAction $ MkKeyDownAction "t",
+                            KeyUpAction $ MkKeyUpAction "t",
+                            KeyDownAction $ MkKeyDownAction "o",
+                            KeyUpAction $ MkKeyUpAction "o",
+                            KeyDownAction $ MkKeyDownAction "m",
+                            KeyUpAction $ MkKeyUpAction "m",
+                            KeyDownAction $ MkKeyDownAction "s",
+                            KeyUpAction $ MkKeyUpAction "s",
+                            KeyDownAction $ MkKeyDownAction "m",
+                            KeyUpAction $ MkKeyUpAction "m",
+                            KeyDownAction $ MkKeyDownAction "i",
+                            KeyUpAction $ MkKeyUpAction "i",
+                            KeyDownAction $ MkKeyDownAction "t",
+                            KeyUpAction $ MkKeyUpAction "t",
+                            KeyDownAction $ MkKeyDownAction "h",
+                            KeyUpAction $ MkKeyUpAction "h"
                           ]
                       }
                 ]
@@ -108,34 +291,34 @@ inputKeyboardDemo =
                         keyId = "keyboard1",
                         keyActions =
                           [ -- Tab key to move to password field
-                            KeyDownAction $ MkKeyDownAction {keyDownType = "keyDown", value = "\xE004"}, -- Tab
-                            KeyUpAction $ MkKeyUpAction {keyUpType = "keyUp", value = "\xE004"},
-                            KeyPauseAction $ MkPauseAction {pauseType = "pause", duration = Just 200},
+                            KeyDownAction $ MkKeyDownAction "\xE004", -- Tab
+                            KeyUpAction $ MkKeyUpAction "\xE004",
+                            KeyPauseAction $ MkPauseAction $ Just 200,
                             -- Type password
-                            KeyDownAction $ MkKeyDownAction {keyDownType = "keyDown", value = "S"},
-                            KeyUpAction $ MkKeyUpAction {keyUpType = "keyUp", value = "S"},
-                            KeyDownAction $ MkKeyDownAction {keyDownType = "keyDown", value = "u"},
-                            KeyUpAction $ MkKeyUpAction {keyUpType = "keyUp", value = "u"},
-                            KeyDownAction $ MkKeyDownAction {keyDownType = "keyDown", value = "p"},
-                            KeyUpAction $ MkKeyUpAction {keyUpType = "keyUp", value = "p"},
-                            KeyDownAction $ MkKeyDownAction {keyDownType = "keyDown", value = "e"},
-                            KeyUpAction $ MkKeyUpAction {keyUpType = "keyUp", value = "e"},
-                            KeyDownAction $ MkKeyDownAction {keyDownType = "keyDown", value = "r"},
-                            KeyUpAction $ MkKeyUpAction {keyUpType = "keyUp", value = "r"},
-                            KeyDownAction $ MkKeyDownAction {keyDownType = "keyDown", value = "S"},
-                            KeyUpAction $ MkKeyUpAction {keyUpType = "keyUp", value = "S"},
-                            KeyDownAction $ MkKeyDownAction {keyDownType = "keyDown", value = "e"},
-                            KeyUpAction $ MkKeyUpAction {keyUpType = "keyUp", value = "e"},
-                            KeyDownAction $ MkKeyDownAction {keyDownType = "keyDown", value = "c"},
-                            KeyUpAction $ MkKeyUpAction {keyUpType = "keyUp", value = "c"},
-                            KeyDownAction $ MkKeyDownAction {keyDownType = "keyDown", value = "r"},
-                            KeyUpAction $ MkKeyUpAction {keyUpType = "keyUp", value = "r"},
-                            KeyDownAction $ MkKeyDownAction {keyDownType = "keyDown", value = "e"},
-                            KeyUpAction $ MkKeyUpAction {keyUpType = "keyUp", value = "e"},
-                            KeyDownAction $ MkKeyDownAction {keyDownType = "keyDown", value = "t"},
-                            KeyUpAction $ MkKeyUpAction {keyUpType = "keyUp", value = "t"},
-                            KeyDownAction $ MkKeyDownAction {keyDownType = "keyDown", value = "!"},
-                            KeyUpAction $ MkKeyUpAction {keyUpType = "keyUp", value = "!"}
+                            KeyDownAction $ MkKeyDownAction "S",
+                            KeyUpAction $ MkKeyUpAction "S",
+                            KeyDownAction $ MkKeyDownAction "u",
+                            KeyUpAction $ MkKeyUpAction "u",
+                            KeyDownAction $ MkKeyDownAction "p",
+                            KeyUpAction $ MkKeyUpAction "p",
+                            KeyDownAction $ MkKeyDownAction "e",
+                            KeyUpAction $ MkKeyUpAction "e",
+                            KeyDownAction $ MkKeyDownAction "r",
+                            KeyUpAction $ MkKeyUpAction "r",
+                            KeyDownAction $ MkKeyDownAction "S",
+                            KeyUpAction $ MkKeyUpAction "S",
+                            KeyDownAction $ MkKeyDownAction "e",
+                            KeyUpAction $ MkKeyUpAction "e",
+                            KeyDownAction $ MkKeyDownAction "c",
+                            KeyUpAction $ MkKeyUpAction "c",
+                            KeyDownAction $ MkKeyDownAction "r",
+                            KeyUpAction $ MkKeyUpAction "r",
+                            KeyDownAction $ MkKeyDownAction "e",
+                            KeyUpAction $ MkKeyUpAction "e",
+                            KeyDownAction $ MkKeyDownAction "t",
+                            KeyUpAction $ MkKeyUpAction "t",
+                            KeyDownAction $ MkKeyDownAction "!",
+                            KeyUpAction $ MkKeyUpAction "!"
                           ]
                       }
                 ]
@@ -155,28 +338,28 @@ inputKeyboardDemo =
                         keyId = "keyboard1",
                         keyActions =
                           [ -- Shift+Tab to go back to username field
-                            KeyDownAction $ MkKeyDownAction {keyDownType = "keyDown", value = "\xE008"}, -- Shift
-                            KeyDownAction $ MkKeyDownAction {keyDownType = "keyDown", value = "\xE004"}, -- Tab
-                            KeyUpAction $ MkKeyUpAction {keyUpType = "keyUp", value = "\xE004"},
-                            KeyUpAction $ MkKeyUpAction {keyUpType = "keyUp", value = "\xE008"},
-                            KeyPauseAction $ MkPauseAction {pauseType = "pause", duration = Just 200},
+                            KeyDownAction $ MkKeyDownAction "\xE008", -- Shift
+                            KeyDownAction $ MkKeyDownAction "\xE004", -- Tab
+                            KeyUpAction $ MkKeyUpAction "\xE004",
+                            KeyUpAction $ MkKeyUpAction "\xE008",
+                            KeyPauseAction $ MkPauseAction $ Just 200,
                             -- Ctrl+A to select all
-                            KeyDownAction $ MkKeyDownAction {keyDownType = "keyDown", value = "\xE009"}, -- Ctrl
-                            KeyDownAction $ MkKeyDownAction {keyDownType = "keyDown", value = "a"},
-                            KeyUpAction $ MkKeyUpAction {keyUpType = "keyUp", value = "a"},
-                            KeyUpAction $ MkKeyUpAction {keyUpType = "keyUp", value = "\xE009"},
-                            KeyPauseAction $ MkPauseAction {pauseType = "pause", duration = Just 200},
+                            KeyDownAction $ MkKeyDownAction "\xE009", -- Ctrl
+                            KeyDownAction $ MkKeyDownAction "a",
+                            KeyUpAction $ MkKeyUpAction "a",
+                            KeyUpAction $ MkKeyUpAction "\xE009",
+                            KeyPauseAction $ MkPauseAction $ Just 200,
                             -- Type new username
-                            KeyDownAction $ MkKeyDownAction {keyDownType = "keyDown", value = "a"},
-                            KeyUpAction $ MkKeyUpAction {keyUpType = "keyUp", value = "a"},
-                            KeyDownAction $ MkKeyDownAction {keyDownType = "keyDown", value = "d"},
-                            KeyUpAction $ MkKeyUpAction {keyUpType = "keyUp", value = "d"},
-                            KeyDownAction $ MkKeyDownAction {keyDownType = "keyDown", value = "m"},
-                            KeyUpAction $ MkKeyUpAction {keyUpType = "keyUp", value = "m"},
-                            KeyDownAction $ MkKeyDownAction {keyDownType = "keyDown", value = "i"},
-                            KeyUpAction $ MkKeyUpAction {keyUpType = "keyUp", value = "i"},
-                            KeyDownAction $ MkKeyDownAction {keyDownType = "keyDown", value = "n"},
-                            KeyUpAction $ MkKeyUpAction {keyUpType = "keyUp", value = "n"}
+                            KeyDownAction $ MkKeyDownAction "a",
+                            KeyUpAction $ MkKeyUpAction "a",
+                            KeyDownAction $ MkKeyDownAction "d",
+                            KeyUpAction $ MkKeyUpAction "d",
+                            KeyDownAction $ MkKeyDownAction "m",
+                            KeyUpAction $ MkKeyUpAction "m",
+                            KeyDownAction $ MkKeyDownAction "i",
+                            KeyUpAction $ MkKeyUpAction "i",
+                            KeyDownAction $ MkKeyDownAction "n",
+                            KeyUpAction $ MkKeyUpAction "n"
                           ]
                       }
                 ]
@@ -214,7 +397,7 @@ inputPointerDemo =
                         pointerActions =
                           [ PointerMoveAction $
                               MkPointerMoveAction
-                                { pointerMoveType = "pointerMove",
+                                { 
                                   x = 50,
                                   y = 150,
                                   duration = Just 500,
@@ -223,13 +406,13 @@ inputPointerDemo =
                                 },
                             PointerDownAction $
                               MkPointerDownAction
-                                { pointerDownType = "pointerDown",
+                                { 
                                   button = 0, -- Left mouse button
                                   pointerCommonProperties = defaultPointerProps
                                 },
                             PointerUpAction $
                               MkPointerUpAction
-                                { pointerUpType = "pointerUp",
+                                { 
                                   button = 0
                                 }
                           ]
@@ -253,14 +436,14 @@ inputPointerDemo =
                         pointerActions =
                           [ PointerMoveAction $
                               MkPointerMoveAction
-                                { pointerMoveType = "pointerMove",
+                                { 
                                   x = 50,
                                   y = 170,
                                   duration = Just 750,
                                   origin = Just ViewportOriginPointerType,
                                   pointerCommonProperties = defaultPointerProps
                                 },
-                            PointerPauseAction $ MkPauseAction {pauseType = "pause", duration = Just 1000}
+                            PointerPauseAction $ MkPauseAction $ Just 1000
                           ]
                       }
                 ]
@@ -282,7 +465,7 @@ inputPointerDemo =
                         pointerActions =
                           [ PointerMoveAction $
                               MkPointerMoveAction
-                                { pointerMoveType = "pointerMove",
+                                { 
                                   x = 50,
                                   y = 150,
                                   duration = Just 300,
@@ -292,26 +475,26 @@ inputPointerDemo =
                             -- First click
                             PointerDownAction $
                               MkPointerDownAction
-                                { pointerDownType = "pointerDown",
+                                { 
                                   button = 0,
                                   pointerCommonProperties = defaultPointerProps
                                 },
                             PointerUpAction $
                               MkPointerUpAction
-                                { pointerUpType = "pointerUp",
+                                { 
                                   button = 0
                                 },
-                            PointerPauseAction $ MkPauseAction {pauseType = "pause", duration = Just 100},
+                            PointerPauseAction $ MkPauseAction $ Just 100,
                             -- Second click
                             PointerDownAction $
                               MkPointerDownAction
-                                { pointerDownType = "pointerDown",
+                                { 
                                   button = 0,
                                   pointerCommonProperties = defaultPointerProps
                                 },
                             PointerUpAction $
                               MkPointerUpAction
-                                { pointerUpType = "pointerUp",
+                                { 
                                   button = 0
                                 }
                           ]
@@ -335,7 +518,7 @@ inputPointerDemo =
                         pointerActions =
                           [ PointerMoveAction $
                               MkPointerMoveAction
-                                { pointerMoveType = "pointerMove",
+                                { 
                                   x = 200,
                                   y = 300,
                                   duration = Just 400,
@@ -344,16 +527,16 @@ inputPointerDemo =
                                 },
                             PointerDownAction $
                               MkPointerDownAction
-                                { pointerDownType = "pointerDown",
+                                { 
                                   button = 2, -- Right mouse button
                                   pointerCommonProperties = defaultPointerProps
                                 },
                             PointerUpAction $
                               MkPointerUpAction
-                                { pointerUpType = "pointerUp",
+                                { 
                                   button = 2
                                 },
-                            PointerPauseAction $ MkPauseAction {pauseType = "pause", duration = Just 500}
+                            PointerPauseAction $ MkPauseAction $ Just 500
                           ]
                       }
                 ]
@@ -390,7 +573,7 @@ inputWheelDemo =
                         wheelActions =
                           [ WheelScrollAction $
                               MkWheelScrollAction
-                                { scrollType = "scroll",
+                                { 
                                   x = 400,
                                   y = 300,
                                   deltaX = 0,
@@ -416,10 +599,10 @@ inputWheelDemo =
                       { wheelType = "wheel",
                         wheelId = "wheel1",
                         wheelActions =
-                          [ WheelPauseAction $ MkPauseAction {pauseType = "pause", duration = Just 1000},
+                          [ WheelPauseAction $ MkPauseAction $ Just 1000,
                             WheelScrollAction $
                               MkWheelScrollAction
-                                { scrollType = "scroll",
+                                { 
                                   x = 400,
                                   y = 300,
                                   deltaX = 0,
@@ -447,7 +630,7 @@ inputWheelDemo =
                         wheelActions =
                           [ WheelScrollAction $
                               MkWheelScrollAction
-                                { scrollType = "scroll",
+                                { 
                                   x = 400,
                                   y = 300,
                                   deltaX = 100,
@@ -492,7 +675,7 @@ inputCombinedActionsDemo =
                         pointerActions =
                           [ PointerMoveAction $
                               MkPointerMoveAction
-                                { pointerMoveType = "pointerMove",
+                                { 
                                   x = 200,
                                   y = 150,
                                   duration = Just 300,
@@ -501,13 +684,13 @@ inputCombinedActionsDemo =
                                 },
                             PointerDownAction $
                               MkPointerDownAction
-                                { pointerDownType = "pointerDown",
+                                { 
                                   button = 0,
                                   pointerCommonProperties = defaultPointerProps
                                 },
                             PointerUpAction $
                               MkPointerUpAction
-                                { pointerUpType = "pointerUp",
+                                { 
                                   button = 0
                                 }
                           ]
@@ -517,15 +700,15 @@ inputCombinedActionsDemo =
                       { keyType = "key",
                         keyId = "keyboard1",
                         keyActions =
-                          [ KeyPauseAction $ MkPauseAction {pauseType = "pause", duration = Just 200},
-                            KeyDownAction $ MkKeyDownAction {keyDownType = "keyDown", value = "u"},
-                            KeyUpAction $ MkKeyUpAction {keyUpType = "keyUp", value = "u"},
-                            KeyDownAction $ MkKeyDownAction {keyDownType = "keyDown", value = "s"},
-                            KeyUpAction $ MkKeyUpAction {keyUpType = "keyUp", value = "s"},
-                            KeyDownAction $ MkKeyDownAction {keyDownType = "keyDown", value = "e"},
-                            KeyUpAction $ MkKeyUpAction {keyUpType = "keyUp", value = "e"},
-                            KeyDownAction $ MkKeyDownAction {keyDownType = "keyDown", value = "r"},
-                            KeyUpAction $ MkKeyUpAction {keyUpType = "keyUp", value = "r"}
+                          [ KeyPauseAction $ MkPauseAction $ Just 200,
+                            KeyDownAction $ MkKeyDownAction "u",
+                            KeyUpAction $ MkKeyUpAction "u",
+                            KeyDownAction $ MkKeyDownAction "s",
+                            KeyUpAction $ MkKeyUpAction "s",
+                            KeyDownAction $ MkKeyDownAction "e",
+                            KeyUpAction $ MkKeyUpAction "e",
+                            KeyDownAction $ MkKeyDownAction "r",
+                            KeyUpAction $ MkKeyUpAction "r"
                           ]
                       }
                 ]
@@ -540,7 +723,7 @@ inputCombinedActionsDemo =
             { context = bcToId bc,
               actions =
                 [ NoneSourceActions $
-                    MkPauseAction {pauseType = "pause", duration = Just 1000}
+                    MkPauseAction $ Just 1000
                 ]
             }
       logShow "Pause all input result" pauseAllInput
@@ -560,7 +743,7 @@ inputCombinedActionsDemo =
                         pointerActions =
                           [ PointerMoveAction $
                               MkPointerMoveAction
-                                { pointerMoveType = "pointerMove",
+                                { 
                                   x = 200,
                                   y = 180,
                                   duration = Just 250,
@@ -569,13 +752,13 @@ inputCombinedActionsDemo =
                                 },
                             PointerDownAction $
                               MkPointerDownAction
-                                { pointerDownType = "pointerDown",
+                                { 
                                   button = 0,
                                   pointerCommonProperties = defaultPointerProps
                                 },
                             PointerUpAction $
                               MkPointerUpAction
-                                { pointerUpType = "pointerUp",
+                                { 
                                   button = 0
                                 }
                           ]
@@ -585,18 +768,18 @@ inputCombinedActionsDemo =
                       { keyType = "key",
                         keyId = "keyboard1",
                         keyActions =
-                          [ KeyPauseAction $ MkPauseAction {pauseType = "pause", duration = Just 300},
-                            KeyDownAction $ MkKeyDownAction {keyDownType = "keyDown", value = "p"},
-                            KeyUpAction $ MkKeyUpAction {keyUpType = "keyUp", value = "p"},
-                            KeyDownAction $ MkKeyDownAction {keyDownType = "keyDown", value = "a"},
-                            KeyUpAction $ MkKeyUpAction {keyUpType = "keyUp", value = "a"},
-                            KeyDownAction $ MkKeyDownAction {keyDownType = "keyDown", value = "s"},
-                            KeyUpAction $ MkKeyUpAction {keyUpType = "keyUp", value = "s"},
-                            KeyDownAction $ MkKeyDownAction {keyDownType = "keyDown", value = "s"},
-                            KeyUpAction $ MkKeyUpAction {keyUpType = "keyUp", value = "s"},
-                            KeyPauseAction $ MkPauseAction {pauseType = "pause", duration = Just 200},
-                            KeyDownAction $ MkKeyDownAction {keyDownType = "keyDown", value = "\xE007"}, -- Enter
-                            KeyUpAction $ MkKeyUpAction {keyUpType = "keyUp", value = "\xE007"}
+                          [ KeyPauseAction $ MkPauseAction $ Just 300,
+                            KeyDownAction $ MkKeyDownAction "p",
+                            KeyUpAction $ MkKeyUpAction "p",
+                            KeyDownAction $ MkKeyDownAction "a",
+                            KeyUpAction $ MkKeyUpAction "a",
+                            KeyDownAction $ MkKeyDownAction "s",
+                            KeyUpAction $ MkKeyUpAction "s",
+                            KeyDownAction $ MkKeyDownAction "s",
+                            KeyUpAction $ MkKeyUpAction "s",
+                            KeyPauseAction $ MkPauseAction $ Just 200,
+                            KeyDownAction $ MkKeyDownAction "\xE007", -- Enter
+                            KeyUpAction $ MkKeyUpAction "\xE007"
                           ]
                       }
                 ]
@@ -631,14 +814,14 @@ inputReleaseActionsDemo =
                       { keyType = "key",
                         keyId = "keyboard1",
                         keyActions =
-                          [ KeyDownAction $ MkKeyDownAction {keyDownType = "keyDown", value = "t"},
-                            KeyUpAction $ MkKeyUpAction {keyUpType = "keyUp", value = "t"},
-                            KeyDownAction $ MkKeyDownAction {keyDownType = "keyDown", value = "e"},
-                            KeyUpAction $ MkKeyUpAction {keyUpType = "keyUp", value = "e"},
-                            KeyDownAction $ MkKeyDownAction {keyDownType = "keyDown", value = "s"},
-                            KeyUpAction $ MkKeyUpAction {keyUpType = "keyUp", value = "s"},
-                            KeyDownAction $ MkKeyDownAction {keyDownType = "keyDown", value = "t"},
-                            KeyUpAction $ MkKeyUpAction {keyUpType = "keyUp", value = "t"}
+                          [ KeyDownAction $ MkKeyDownAction "t",
+                            KeyUpAction $ MkKeyUpAction "t",
+                            KeyDownAction $ MkKeyDownAction "e",
+                            KeyUpAction $ MkKeyUpAction "e",
+                            KeyDownAction $ MkKeyDownAction "s",
+                            KeyUpAction $ MkKeyUpAction "s",
+                            KeyDownAction $ MkKeyDownAction "t",
+                            KeyUpAction $ MkKeyUpAction "t"
                           ]
                       },
                   PointerSourceActions $
@@ -649,7 +832,7 @@ inputReleaseActionsDemo =
                         pointerActions =
                           [ PointerMoveAction $
                               MkPointerMoveAction
-                                { pointerMoveType = "pointerMove",
+                                { 
                                   x = 200,
                                   y = 100,
                                   duration = Just 200,
@@ -679,12 +862,12 @@ inputReleaseActionsDemo =
                       { keyType = "key",
                         keyId = "keyboard2", -- Different ID to show it's a fresh start
                         keyActions =
-                          [ KeyDownAction $ MkKeyDownAction {keyDownType = "keyDown", value = "n"},
-                            KeyUpAction $ MkKeyUpAction {keyUpType = "keyUp", value = "n"},
-                            KeyDownAction $ MkKeyDownAction {keyDownType = "keyDown", value = "e"},
-                            KeyUpAction $ MkKeyUpAction {keyUpType = "keyUp", value = "e"},
-                            KeyDownAction $ MkKeyDownAction {keyDownType = "keyDown", value = "w"},
-                            KeyUpAction $ MkKeyUpAction {keyUpType = "keyUp", value = "w"}
+                          [ KeyDownAction $ MkKeyDownAction "n",
+                            KeyUpAction $ MkKeyUpAction "n",
+                            KeyDownAction $ MkKeyDownAction "e",
+                            KeyUpAction $ MkKeyUpAction "e",
+                            KeyDownAction $ MkKeyDownAction "w",
+                            KeyUpAction $ MkKeyUpAction "w"
                           ]
                       }
                 ]
