@@ -112,7 +112,11 @@ data KeySourceAction
   deriving (Show, Eq, Generic)
 
 instance ToJSON KeySourceAction where
-  toJSON = enumCamelCase
+  toJSON :: KeySourceAction -> Value
+  toJSON = \case
+    KeyPauseAction keyPauseAction -> toJSON keyPauseAction
+    KeyDownAction keyDownAction -> toJSON keyDownAction
+    KeyUpAction keyUpAction -> toJSON keyUpAction
 
 data PointerSourceActions = MkPointerSourceActions
   { pointerId :: Text,
