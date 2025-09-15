@@ -28,6 +28,7 @@ module WebDriverPreCore.BiDi.Input
 where
 
 import Data.Aeson (ToJSON (..), Value, object, (.=))
+import Data.Maybe (fromMaybe)
 import Data.Text (Text)
 import GHC.Generics (Generic)
 import WebDriverPreCore.BiDi.BrowsingContext qualified as BrowsingContext
@@ -47,7 +48,7 @@ instance ToJSON ElementOrigin where
   toJSON :: ElementOrigin -> Value
   toJSON (MkElementOrigin element) =
     object
-      [ "elementType" .= "element",
+      [ "type" .= "element",
         "element" .= element
       ]
 
@@ -66,25 +67,43 @@ data SourceActions
   | WheelSourceActions WheelSourceActions
   deriving (Show, Eq, Generic)
 
-instance ToJSON SourceActions
+instance ToJSON SourceActions where
+  toJSON :: SourceActions -> Value
+  toJSON = \case
+    NoneSourceActions noneSourceActions -> toJSON noneSourceActions
+    KeySourceActions keySourceActions -> toJSON keySourceActions
+    PointerSourceActions pointerSourceActions -> toJSON pointerSourceActions
+    WheelSourceActions wheelSourceActions -> toJSON wheelSourceActions
 
 data NoneSourceActions = MkNoneSourceActions
-  { noneType :: Text, -- will be "none"
-    noneId :: Text,
+  { noneId :: Text,
     noneActions :: [PauseAction]
   }
   deriving (Show, Eq, Generic)
 
-instance ToJSON NoneSourceActions
+instance ToJSON NoneSourceActions where
+  toJSON :: NoneSourceActions -> Value
+  toJSON (MkNoneSourceActions noneId noneActions) =
+    object
+      [ "type" .= "none",
+        "id" .= noneId,
+        "actions" .= noneActions
+      ]
 
 data KeySourceActions = MkKeySourceActions
-  { keyType :: Text, -- will be "key"
-    keyId :: Text,
+  { keyId :: Text,
     keyActions :: [KeySourceAction]
   }
   deriving (Show, Eq, Generic)
 
-instance ToJSON KeySourceActions
+instance ToJSON KeySourceActions where
+  toJSON :: KeySourceActions -> Value
+  toJSON (MkKeySourceActions keyId keyActions) =
+    object
+      [ "type" .= "key",
+        "id" .= keyId,
+        "actions" .= keyActions
+      ]
 
 data KeySourceAction
   = KeyPauseAction PauseAction
@@ -96,27 +115,43 @@ instance ToJSON KeySourceAction where
   toJSON = enumCamelCase
 
 data PointerSourceActions = MkPointerSourceActions
-  { pointerType :: Text, -- will be "pointer"
-    pointerId :: Text,
+  { pointerId :: Text,
     pointer :: Maybe Pointer,
     pointerActions :: [PointerSourceAction]
   }
   deriving (Show, Eq, Generic)
 
-instance ToJSON PointerSourceActions
+instance ToJSON PointerSourceActions where
+  toJSON :: PointerSourceActions -> Value
+  toJSON (MkPointerSourceActions pointerId pointer pointerActions) =
+    object
+      [ "type" .= "pointer",
+        "id" .= pointerId,
+        "pointer" .= pointer,
+        "actions" .= pointerActions
+      ]
 
 data PointerType = MousePointer | PenPointer | TouchPointer
   deriving (Show, Eq, Generic)
 
 instance ToJSON PointerType where
-  toJSON = enumCamelCase
+  toJSON :: PointerType -> Value
+  toJSON = \case
+    MousePointer -> "mouse"
+    PenPointer -> "pen"
+    TouchPointer -> "touch"
 
 data Pointer = MkPointer
   { pointerType :: Maybe PointerType -- default "mouse"
   }
   deriving (Show, Eq, Generic)
 
-instance ToJSON Pointer
+instance ToJSON Pointer where
+  toJSON :: Pointer -> Value
+  toJSON MkPointer {pointerType} =
+    object
+      [ "pointerType" .= fromMaybe MousePointer pointerType
+      ]
 
 data PointerSourceAction
   = PointerPauseAction PauseAction
@@ -129,13 +164,19 @@ instance ToJSON PointerSourceAction where
   toJSON = enumCamelCase
 
 data WheelSourceActions = MkWheelSourceActions
-  { wheelType :: Text, -- will be "wheel"
-    wheelId :: Text,
+  { wheelId :: Text,
     wheelActions :: [WheelSourceAction]
   }
   deriving (Show, Eq, Generic)
 
-instance ToJSON WheelSourceActions
+instance ToJSON WheelSourceActions where
+  toJSON :: WheelSourceActions -> Value
+  toJSON (MkWheelSourceActions wheelId wheelActions) =
+    object
+      [ "type" .= "wheel",
+        "id" .= wheelId,
+        "actions" .= wheelActions
+      ]
 
 data WheelSourceAction
   = WheelPauseAction PauseAction
@@ -143,15 +184,17 @@ data WheelSourceAction
   deriving (Show, Eq, Generic)
 
 instance ToJSON WheelSourceAction where
-  toJSON = enumCamelCase
+  toJSON :: WheelSourceAction -> Value
+  toJSON = \case
+    WheelPauseAction wheelPauseAction -> toJSON wheelPauseAction
+    WheelScrollAction wheelScrollAction -> toJSON wheelScrollAction
 
 newtype PauseAction = MkPauseAction
-  { 
-    duration :: Maybe Int
+  { duration :: Maybe Int
   }
   deriving (Show, Eq, Generic)
 
-instance ToJSON PauseAction  where
+instance ToJSON PauseAction where
   toJSON :: PauseAction -> Value
   toJSON (MkPauseAction duration) =
     object

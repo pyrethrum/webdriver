@@ -3,24 +3,24 @@ module BiDi.Demos.InputDemos where
 import BiDi.BiDiRunner (Commands (..))
 import BiDi.DemoUtils
 import IOUtils (DemoUtils (..))
-import WebDriverPreCore.BiDi.Protocol
-import WebDriverPreCore.BiDi.Input
 import WebDriverPreCore.BiDi.BrowsingContext (BrowsingContextId (..), Locator (..))
 import WebDriverPreCore.BiDi.CoreTypes (NodeRemoteValue (..))
-import qualified WebDriverPreCore.BiDi.CoreTypes as Core
-import qualified WebDriverPreCore.BiDi.Script as Script
+import WebDriverPreCore.BiDi.CoreTypes qualified as Core
+import WebDriverPreCore.BiDi.Input
+import WebDriverPreCore.BiDi.Protocol
+import WebDriverPreCore.BiDi.Script qualified as Script
 import Prelude hiding (log)
 
 {-
 Input Module Commands (3 total):
 
 1. input.performActions - Performs a specified sequence of user input actions ✓
-2. input.releaseActions - Resets the input state associated with the current session ✓  
+2. input.releaseActions - Resets the input state associated with the current session ✓
 3. input.setFiles - Sets the files property of a given input element with type file to a set of file paths ✓
 
 Demo coverage:
 - inputKeyboardDemo - Key input actions
-- inputPointerDemo - Mouse/pointer actions  
+- inputPointerDemo - Mouse/pointer actions
 - inputWheelDemo - Wheel/scroll actions
 - inputCombinedActionsDemo - Multiple action types together
 - inputReleaseActionsDemo - Release input state
@@ -33,22 +33,25 @@ bcToId (MkBrowsingContext ctx) = MkBrowsingContextId ctx
 
 -- Helper function to create default pointer common properties
 defaultPointerProps :: PointerCommonProperties
-defaultPointerProps = MkPointerCommonProperties
-  { width = Nothing,
-    height = Nothing,
-    pressure = Nothing,
-    tangentialPressure = Nothing,
-    twist = Nothing,
-    altitudeAngle = Nothing,
-    azimuthAngle = Nothing
-  }
+defaultPointerProps =
+  MkPointerCommonProperties
+    { width = Nothing,
+      height = Nothing,
+      pressure = Nothing,
+      tangentialPressure = Nothing,
+      twist = Nothing,
+      altitudeAngle = Nothing,
+      azimuthAngle = Nothing
+    }
 
 -- Helper function to convert CoreTypes SharedId to Script SharedId
 coreToScriptSharedId :: Core.SharedId -> Script.SharedId
 coreToScriptSharedId (Core.MkSharedId txt) = Script.MkShareId {Script.id = txt}
 
 -- >>> runDemo inputKeyboardDemo
+
 -- *** Exception: Error executing BiDi command: MkCommand
+
 --   { method = "input.performActions"
 --   , params =
 --       MkPerformActions
@@ -83,7 +86,7 @@ coreToScriptSharedId (Core.MkSharedId txt) = Script.MkShareId {Script.id = txt}
 --         }
 --   , extended = Nothing
 --   }
--- With JSON: 
+-- With JSON:
 -- {
 --     "id": 3,
 --     "method": "input.performActions",
@@ -155,7 +158,7 @@ coreToScriptSharedId (Core.MkSharedId txt) = Script.MkShareId {Script.id = txt}
 --                             },
 --                             "tag": "keyUpAction"
 --                         },
---                         {
+--                         {pointerType
 --                             "contents": {
 --                                 "type": "keyDown",
 --                                 "value": "m"
@@ -221,7 +224,7 @@ coreToScriptSharedId (Core.MkSharedId txt) = Script.MkShareId {Script.id = txt}
 --         "context": "131475b2-cddf-4171-9124-671f8891cea1"
 --     }
 -- }
--- Failed to decode the 'result' property of JSON returned by driver to response type: 
+-- Failed to decode the 'result' property of JSON returned by driver to response type:
 -- {
 --     "error": "invalid argument",
 --     "id": 3,
@@ -229,7 +232,7 @@ coreToScriptSharedId (Core.MkSharedId txt) = Script.MkShareId {Script.id = txt}
 --     "stacktrace": "RemoteError@chrome://remote/content/shared/RemoteError.sys.mjs:8:8\nWebDriverError@chrome://remote/content/shared/webdriver/Errors.sys.mjs:199:5\nInvalidArgumentError@chrome://remote/content/shared/webdriver/Errors.sys.mjs:401:5\nassert.that/<@chrome://remote/content/shared/webdriver/Assert.sys.mjs:581:13\nassert.array@chrome://remote/content/shared/webdriver/Assert.sys.mjs:533:41\nfromJSON@chrome://remote/content/shared/webdriver/Actions.sys.mjs:2816:17\nfromJSON@chrome://remote/content/shared/webdriver/Actions.sys.mjs:2666:49\nperformActions@chrome://remote/content/webdriver-bidi/modules/root/input.sys.mjs:281:50\nhandleCommand@chrome://remote/content/shared/messagehandler/MessageHandler.sys.mjs:260:33\nexecute@chrome://remote/content/shared/webdriver/Session.sys.mjs:410:32\nonPacket@chrome://remote/content/webdriver-bidi/WebDriverBiDiConnection.sys.mjs:236:37\nonMessage@chrome://remote/content/server/WebSocketTransport.sys.mjs:127:18\nhandleEvent@chrome://remote/content/server/WebSocketTransport.sys.mjs:109:14\n",
 --     "type": "error"
 -- }
--- Error message: 
+-- Error message:
 -- key "result" not found
 inputKeyboardDemo :: BiDiDemo
 inputKeyboardDemo =
@@ -252,8 +255,7 @@ inputKeyboardDemo =
               actions =
                 [ KeySourceActions $
                     MkKeySourceActions
-                      { keyType = "key",
-                        keyId = "keyboard1",
+                      { keyId = "keyboard1",
                         keyActions =
                           [ KeyPauseAction $ MkPauseAction $ Just 100,
                             KeyDownAction $ MkKeyDownAction "t",
@@ -287,8 +289,7 @@ inputKeyboardDemo =
               actions =
                 [ KeySourceActions $
                     MkKeySourceActions
-                      { keyType = "key",
-                        keyId = "keyboard1",
+                      { keyId = "keyboard1",
                         keyActions =
                           [ -- Tab key to move to password field
                             KeyDownAction $ MkKeyDownAction "\xE004", -- Tab
@@ -334,8 +335,7 @@ inputKeyboardDemo =
               actions =
                 [ KeySourceActions $
                     MkKeySourceActions
-                      { keyType = "key",
-                        keyId = "keyboard1",
+                      { keyId = "keyboard1",
                         keyActions =
                           [ -- Shift+Tab to go back to username field
                             KeyDownAction $ MkKeyDownAction "\xE008", -- Shift
@@ -391,14 +391,12 @@ inputPointerDemo =
               actions =
                 [ PointerSourceActions $
                     MkPointerSourceActions
-                      { pointerType = "pointer",
-                        pointerId = "mouse1",
+                      { pointerId = "mouse1",
                         pointer = Just $ MkPointer {pointerType = Just MousePointer},
                         pointerActions =
                           [ PointerMoveAction $
                               MkPointerMoveAction
-                                { 
-                                  x = 50,
+                                { x = 50,
                                   y = 150,
                                   duration = Just 500,
                                   origin = Just ViewportOriginPointerType,
@@ -406,14 +404,12 @@ inputPointerDemo =
                                 },
                             PointerDownAction $
                               MkPointerDownAction
-                                { 
-                                  button = 0, -- Left mouse button
+                                { button = 0, -- Left mouse button
                                   pointerCommonProperties = defaultPointerProps
                                 },
                             PointerUpAction $
                               MkPointerUpAction
-                                { 
-                                  button = 0
+                                { button = 0
                                 }
                           ]
                       }
@@ -430,14 +426,12 @@ inputPointerDemo =
               actions =
                 [ PointerSourceActions $
                     MkPointerSourceActions
-                      { pointerType = "pointer",
-                        pointerId = "mouse1",
+                      { pointerId = "mouse1",
                         pointer = Just $ MkPointer {pointerType = Just MousePointer},
                         pointerActions =
                           [ PointerMoveAction $
                               MkPointerMoveAction
-                                { 
-                                  x = 50,
+                                { x = 50,
                                   y = 170,
                                   duration = Just 750,
                                   origin = Just ViewportOriginPointerType,
@@ -459,14 +453,12 @@ inputPointerDemo =
               actions =
                 [ PointerSourceActions $
                     MkPointerSourceActions
-                      { pointerType = "pointer",
-                        pointerId = "mouse1",
+                      { pointerId = "mouse1",
                         pointer = Just $ MkPointer {pointerType = Just MousePointer},
                         pointerActions =
                           [ PointerMoveAction $
                               MkPointerMoveAction
-                                { 
-                                  x = 50,
+                                { x = 50,
                                   y = 150,
                                   duration = Just 300,
                                   origin = Just ViewportOriginPointerType,
@@ -475,27 +467,23 @@ inputPointerDemo =
                             -- First click
                             PointerDownAction $
                               MkPointerDownAction
-                                { 
-                                  button = 0,
+                                { button = 0,
                                   pointerCommonProperties = defaultPointerProps
                                 },
                             PointerUpAction $
                               MkPointerUpAction
-                                { 
-                                  button = 0
+                                { button = 0
                                 },
                             PointerPauseAction $ MkPauseAction $ Just 100,
                             -- Second click
                             PointerDownAction $
                               MkPointerDownAction
-                                { 
-                                  button = 0,
+                                { button = 0,
                                   pointerCommonProperties = defaultPointerProps
                                 },
                             PointerUpAction $
                               MkPointerUpAction
-                                { 
-                                  button = 0
+                                { button = 0
                                 }
                           ]
                       }
@@ -512,14 +500,12 @@ inputPointerDemo =
               actions =
                 [ PointerSourceActions $
                     MkPointerSourceActions
-                      { pointerType = "pointer",
-                        pointerId = "mouse1",
+                      { pointerId = "mouse1",
                         pointer = Just $ MkPointer {pointerType = Just MousePointer},
                         pointerActions =
                           [ PointerMoveAction $
                               MkPointerMoveAction
-                                { 
-                                  x = 200,
+                                { x = 200,
                                   y = 300,
                                   duration = Just 400,
                                   origin = Just ViewportOriginPointerType,
@@ -527,14 +513,12 @@ inputPointerDemo =
                                 },
                             PointerDownAction $
                               MkPointerDownAction
-                                { 
-                                  button = 2, -- Right mouse button
+                                { button = 2, -- Right mouse button
                                   pointerCommonProperties = defaultPointerProps
                                 },
                             PointerUpAction $
                               MkPointerUpAction
-                                { 
-                                  button = 2
+                                { button = 2
                                 },
                             PointerPauseAction $ MkPauseAction $ Just 500
                           ]
@@ -568,13 +552,11 @@ inputWheelDemo =
               actions =
                 [ WheelSourceActions $
                     MkWheelSourceActions
-                      { wheelType = "wheel",
-                        wheelId = "wheel1",
+                      { wheelId = "wheel1",
                         wheelActions =
                           [ WheelScrollAction $
                               MkWheelScrollAction
-                                { 
-                                  x = 400,
+                                { x = 400,
                                   y = 300,
                                   deltaX = 0,
                                   deltaY = 300,
@@ -596,14 +578,12 @@ inputWheelDemo =
               actions =
                 [ WheelSourceActions $
                     MkWheelSourceActions
-                      { wheelType = "wheel",
-                        wheelId = "wheel1",
+                      { wheelId = "wheel1",
                         wheelActions =
                           [ WheelPauseAction $ MkPauseAction $ Just 1000,
                             WheelScrollAction $
                               MkWheelScrollAction
-                                { 
-                                  x = 400,
+                                { x = 400,
                                   y = 300,
                                   deltaX = 0,
                                   deltaY = -200,
@@ -625,13 +605,11 @@ inputWheelDemo =
               actions =
                 [ WheelSourceActions $
                     MkWheelSourceActions
-                      { wheelType = "wheel",
-                        wheelId = "wheel1",
+                      { wheelId = "wheel1",
                         wheelActions =
                           [ WheelScrollAction $
                               MkWheelScrollAction
-                                { 
-                                  x = 400,
+                                { x = 400,
                                   y = 300,
                                   deltaX = 100,
                                   deltaY = 0,
@@ -669,14 +647,12 @@ inputCombinedActionsDemo =
               actions =
                 [ PointerSourceActions $
                     MkPointerSourceActions
-                      { pointerType = "pointer",
-                        pointerId = "mouse1",
+                      { pointerId = "mouse1",
                         pointer = Just $ MkPointer {pointerType = Just MousePointer},
                         pointerActions =
                           [ PointerMoveAction $
                               MkPointerMoveAction
-                                { 
-                                  x = 200,
+                                { x = 200,
                                   y = 150,
                                   duration = Just 300,
                                   origin = Just ViewportOriginPointerType,
@@ -684,21 +660,18 @@ inputCombinedActionsDemo =
                                 },
                             PointerDownAction $
                               MkPointerDownAction
-                                { 
-                                  button = 0,
+                                { button = 0,
                                   pointerCommonProperties = defaultPointerProps
                                 },
                             PointerUpAction $
                               MkPointerUpAction
-                                { 
-                                  button = 0
+                                { button = 0
                                 }
                           ]
                       },
                   KeySourceActions $
                     MkKeySourceActions
-                      { keyType = "key",
-                        keyId = "keyboard1",
+                      { keyId = "keyboard1",
                         keyActions =
                           [ KeyPauseAction $ MkPauseAction $ Just 200,
                             KeyDownAction $ MkKeyDownAction "u",
@@ -723,7 +696,8 @@ inputCombinedActionsDemo =
             { context = bcToId bc,
               actions =
                 [ NoneSourceActions $
-                    MkPauseAction $ Just 1000
+                    MkPauseAction $
+                      Just 1000
                 ]
             }
       logShow "Pause all input result" pauseAllInput
@@ -737,14 +711,12 @@ inputCombinedActionsDemo =
               actions =
                 [ PointerSourceActions $
                     MkPointerSourceActions
-                      { pointerType = "pointer",
-                        pointerId = "mouse1",
+                      { pointerId = "mouse1",
                         pointer = Just $ MkPointer {pointerType = Just MousePointer},
                         pointerActions =
                           [ PointerMoveAction $
                               MkPointerMoveAction
-                                { 
-                                  x = 200,
+                                { x = 200,
                                   y = 180,
                                   duration = Just 250,
                                   origin = Just ViewportOriginPointerType,
@@ -752,21 +724,18 @@ inputCombinedActionsDemo =
                                 },
                             PointerDownAction $
                               MkPointerDownAction
-                                { 
-                                  button = 0,
+                                { button = 0,
                                   pointerCommonProperties = defaultPointerProps
                                 },
                             PointerUpAction $
                               MkPointerUpAction
-                                { 
-                                  button = 0
+                                { button = 0
                                 }
                           ]
                       },
                   KeySourceActions $
                     MkKeySourceActions
-                      { keyType = "key",
-                        keyId = "keyboard1",
+                      { keyId = "keyboard1",
                         keyActions =
                           [ KeyPauseAction $ MkPauseAction $ Just 300,
                             KeyDownAction $ MkKeyDownAction "p",
@@ -811,8 +780,7 @@ inputReleaseActionsDemo =
               actions =
                 [ KeySourceActions $
                     MkKeySourceActions
-                      { keyType = "key",
-                        keyId = "keyboard1",
+                      { keyId = "keyboard1",
                         keyActions =
                           [ KeyDownAction $ MkKeyDownAction "t",
                             KeyUpAction $ MkKeyUpAction "t",
@@ -826,14 +794,12 @@ inputReleaseActionsDemo =
                       },
                   PointerSourceActions $
                     MkPointerSourceActions
-                      { pointerType = "pointer",
-                        pointerId = "mouse1",
+                      { pointerId = "mouse1",
                         pointer = Just $ MkPointer {pointerType = Just MousePointer},
                         pointerActions =
                           [ PointerMoveAction $
                               MkPointerMoveAction
-                                { 
-                                  x = 200,
+                                { x = 200,
                                   y = 100,
                                   duration = Just 200,
                                   origin = Just ViewportOriginPointerType,
@@ -859,8 +825,7 @@ inputReleaseActionsDemo =
               actions =
                 [ KeySourceActions $
                     MkKeySourceActions
-                      { keyType = "key",
-                        keyId = "keyboard2", -- Different ID to show it's a fresh start
+                      { keyId = "keyboard2", -- Different ID to show it's a fresh start
                         keyActions =
                           [ KeyDownAction $ MkKeyDownAction "n",
                             KeyUpAction $ MkKeyUpAction "n",
@@ -967,7 +932,6 @@ inputSetFilesDemo =
                   }
             logShow "Set various files result" setVariousFilesResult
             pause
-
           _ -> do
             logTxt "Could not find file input element or extract sharedId"
             pause
