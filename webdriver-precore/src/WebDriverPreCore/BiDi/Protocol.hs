@@ -92,7 +92,10 @@ import WebDriverPreCore.BiDi.Command
     emptyCommand,
     mkCommand,
   )
-import WebDriverPreCore.BiDi.CoreTypes as BrowsingContext (BrowsingContext (..), UserContext)
+import WebDriverPreCore.BiDi.CoreTypes as BrowsingContext (
+  BrowsingContext (..), 
+  UserContext (..),
+  SharedId (..))
 import WebDriverPreCore.BiDi.Emulation
   ( SetGeolocationOverride,
     SetLocaleOverride,
@@ -172,7 +175,6 @@ import WebDriverPreCore.BiDi.Script
     Sandbox (..),
     SerializationOptions (..),
     IncludeShadowTree (..),
-    SharedId (..),
     SharedReference (..),
     SpecialNumber (..),
     Target (..),

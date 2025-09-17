@@ -44,10 +44,6 @@ defaultPointerProps =
       azimuthAngle = Nothing
     }
 
--- Helper function to convert CoreTypes SharedId to Script SharedId
-coreToScriptSharedId :: Core.SharedId -> Script.SharedId
-coreToScriptSharedId (Core.MkSharedId txt) = Script.MkShareId {Script.id = txt}
-
 -- >>> runDemo inputKeyboardDemo
 inputKeyboardDemo :: BiDiDemo
 inputKeyboardDemo =
@@ -60,42 +56,62 @@ inputKeyboardDemo =
       logTxt "Navigate to The Internet - Form Authentication for keyboard testing"
       navResult <- browsingContextNavigate $ MkNavigate {context = bc, url = "https://the-internet.herokuapp.com/login", wait = Just Complete}
       logShow "Navigation result" navResult
-      pauseMinMs 5_000
-
-      logTxt "Focus the username field before typing"
-      focusUsernameField <-
-        inputPerformActions $
-          MkPerformActions
-            { context = bcToId bc,
-              actions =
-                [ PointerSourceActions $
-                    MkPointerSourceActions
-                      { pointerId = "mouse1",
-                        pointer = Just $ MkPointer {pointerType = Just MousePointer},
-                        pointerActions =
-                          [ PointerMoveAction $
-                              MkPointerMoveAction
-                                { x = 200,
-                                  y = 150,
-                                  duration = Just 300,
-                                  origin = Just ViewportOriginPointerType,
-                                  pointerCommonProperties = defaultPointerProps
-                                },
-                            PointerDownAction $
-                              MkPointerDownAction
-                                { button = 0,
-                                  pointerCommonProperties = defaultPointerProps
-                                },
-                            PointerUpAction $
-                              MkPointerUpAction
-                                { button = 0
-                                }
-                          ]
-                      }
-                ]
-            }
-      logShow "Focus username field result" focusUsernameField
       pause
+
+      logTxt "Locate the username field using CSS selector"
+      usernameFieldResult <-
+        browsingContextLocateNodes $
+          MkLocateNodes
+            { context = bc,
+              locator = CSS {value = "#username"},
+              maxNodeCount = Nothing,
+              serializationOptions = Nothing,
+              startNodes = Nothing
+            }
+      logShow "Username field search result" usernameFieldResult
+      pause
+
+      -- Extract the element's shared reference for clicking
+      case usernameFieldResult of
+        MkLocateNodesResult nodes -> case nodes of
+          (MkNodeRemoteValue {sharedId = Just (Core.MkSharedId elementId)} : _) -> do
+            logTxt "Focus the username field by clicking on it using element reference"
+            focusUsernameField <-
+              inputPerformActions $
+                MkPerformActions
+                  { context = bcToId bc,
+                    actions =
+                      [ PointerSourceActions $
+                          MkPointerSourceActions
+                            { pointerId = "mouse1",
+                              pointer = Just $ MkPointer {pointerType = Just MousePointer},
+                              pointerActions =
+                                [ PointerMoveAction $
+                                    MkPointerMoveAction
+                                      { x = 0, -- Relative to element center
+                                        y = 0, -- Relative to element center
+                                        duration = Just 300,
+                                        origin = Just $ ElementOriginRef $ MkElementOrigin $ Script.MkSharedReference {sharedId = (Core.MkSharedId elementId), handle = Nothing, extensions = Nothing},
+                                        pointerCommonProperties = defaultPointerProps
+                                      },
+                                  PointerDownAction $
+                                    MkPointerDownAction
+                                      { button = 0,
+                                        pointerCommonProperties = defaultPointerProps
+                                      },
+                                  PointerUpAction $
+                                    MkPointerUpAction
+                                      { button = 0
+                                      }
+                                ]
+                            }
+                      ]
+                  }
+            logShow "Focus username field result" focusUsernameField
+            pause
+          _ -> do
+            logTxt "Could not find username element or extract sharedId"
+            pause
 
       logTxt "Test 1: Basic key actions - Type in username field"
       basicKeyActions <-
@@ -739,7 +755,7 @@ inputSetFilesDemo =
               inputSetFiles $
                 MkSetFiles
                   { context = bcToId bc,
-                    element = Script.MkSharedReference {sharedId = coreToScriptSharedId (Core.MkSharedId elementId), handle = Nothing, extensions = Nothing},
+                    element = Script.MkSharedReference {sharedId = (Core.MkSharedId elementId), handle = Nothing, extensions = Nothing},
                     files = testFiles
                   }
             logShow "Set files result" setFilesResult
@@ -750,7 +766,7 @@ inputSetFilesDemo =
               inputSetFiles $
                 MkSetFiles
                   { context = bcToId bc,
-                    element = Script.MkSharedReference {sharedId = coreToScriptSharedId (Core.MkSharedId elementId), handle = Nothing, extensions = Nothing},
+                    element = Script.MkSharedReference {sharedId = (Core.MkSharedId elementId), handle = Nothing, extensions = Nothing},
                     files = ["/tmp/single_file.txt"]
                   }
             logShow "Set single file result" setSingleFileResult
@@ -761,7 +777,7 @@ inputSetFilesDemo =
               inputSetFiles $
                 MkSetFiles
                   { context = bcToId bc,
-                    element = Script.MkSharedReference {sharedId = coreToScriptSharedId (Core.MkSharedId elementId), handle = Nothing, extensions = Nothing},
+                    element = Script.MkSharedReference {sharedId = (Core.MkSharedId elementId), handle = Nothing, extensions = Nothing},
                     files = []
                   }
             logShow "Clear files result" clearFilesResult
@@ -772,7 +788,7 @@ inputSetFilesDemo =
               inputSetFiles $
                 MkSetFiles
                   { context = bcToId bc,
-                    element = Script.MkSharedReference {sharedId = coreToScriptSharedId (Core.MkSharedId elementId), handle = Nothing, extensions = Nothing},
+                    element = Script.MkSharedReference {sharedId = (Core.MkSharedId elementId), handle = Nothing, extensions = Nothing},
                     files =
                       [ "/tmp/document.pdf",
                         "/tmp/image.jpg",

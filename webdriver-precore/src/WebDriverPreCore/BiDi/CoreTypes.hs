@@ -111,7 +111,11 @@ instance FromJSON StringValue where
 
 instance FromJSON NodeProperties
 
-newtype SharedId = MkSharedId Text deriving newtype (Show, Eq, ToJSON, FromJSON)
+newtype SharedId = MkSharedId
+  { id :: Text -- SharedId
+  }
+  deriving (Show, Eq, Generic)
+  deriving newtype (ToJSON, FromJSON)
 
 newtype EmptyResult = MkEmptyResult {extensible :: Object} deriving (Show, Eq, Generic)
 

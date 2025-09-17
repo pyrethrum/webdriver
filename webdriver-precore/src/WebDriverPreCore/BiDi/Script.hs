@@ -67,7 +67,7 @@ import WebDriverPreCore.BiDi.CoreTypes
     Handle,
     InternalId (..),
     JSUInt,
-    NodeRemoteValue (..), UserContext,
+    NodeRemoteValue (..), UserContext, SharedId,
   )
 import WebDriverPreCore.BiDi.CoreTypes (StringValue(..))
 import WebDriverPreCore.Internal.AesonUtils (jsonToText, opt, toJSONOmitNothing)
@@ -340,12 +340,6 @@ data RemoteObjectReference = MkRemoteObjectReference
     extensions :: Maybe (Map.Map Text Value) -- "extensions" field is optional
   }
   deriving (Show, Eq, Generic)
-
-newtype SharedId = MkShareId
-  { id :: Text -- SharedId
-  }
-  deriving (Show, Eq, Generic)
-  deriving newtype (ToJSON)
 
 -- | List of local values
 newtype ListLocalValue = MkListLocalValue [LocalValue]

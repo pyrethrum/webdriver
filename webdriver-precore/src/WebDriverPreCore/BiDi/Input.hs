@@ -33,7 +33,7 @@ import Data.Text (Text)
 import GHC.Generics (Generic)
 import WebDriverPreCore.BiDi.BrowsingContext qualified as BrowsingContext
 import WebDriverPreCore.BiDi.Script qualified as Script
-import WebDriverPreCore.Internal.AesonUtils (enumCamelCase, toJSONOmitNothing)
+import WebDriverPreCore.Internal.AesonUtils (toJSONOmitNothing)
 import Prelude (Bool, Double, Eq, Int, Maybe, Show)
 
 -- ######### Local #########
