@@ -60,6 +60,41 @@ inputKeyboardDemo =
       logTxt "Navigate to The Internet - Form Authentication for keyboard testing"
       navResult <- browsingContextNavigate $ MkNavigate {context = bc, url = "https://the-internet.herokuapp.com/login", wait = Just Complete}
       logShow "Navigation result" navResult
+      pauseMinMs 5_000
+
+      logTxt "Focus the username field before typing"
+      focusUsernameField <-
+        inputPerformActions $
+          MkPerformActions
+            { context = bcToId bc,
+              actions =
+                [ PointerSourceActions $
+                    MkPointerSourceActions
+                      { pointerId = "mouse1",
+                        pointer = Just $ MkPointer {pointerType = Just MousePointer},
+                        pointerActions =
+                          [ PointerMoveAction $
+                              MkPointerMoveAction
+                                { x = 200,
+                                  y = 150,
+                                  duration = Just 300,
+                                  origin = Just ViewportOriginPointerType,
+                                  pointerCommonProperties = defaultPointerProps
+                                },
+                            PointerDownAction $
+                              MkPointerDownAction
+                                { button = 0,
+                                  pointerCommonProperties = defaultPointerProps
+                                },
+                            PointerUpAction $
+                              MkPointerUpAction
+                                { button = 0
+                                }
+                          ]
+                      }
+                ]
+            }
+      logShow "Focus username field result" focusUsernameField
       pause
 
       logTxt "Test 1: Basic key actions - Type in username field"

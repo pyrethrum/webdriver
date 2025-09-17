@@ -58,7 +58,13 @@ data PerformActions = MkPerformActions
   }
   deriving (Show, Eq, Generic)
 
-instance ToJSON PerformActions
+instance ToJSON PerformActions where
+  toJSON :: PerformActions -> Value
+  toJSON (MkPerformActions context actions) =
+    object
+      [ "context" .= context,
+        "actions" .= actions
+      ]
 
 data SourceActions
   = NoneSourceActions PauseAction
@@ -154,7 +160,7 @@ instance ToJSON Pointer where
   toJSON :: Pointer -> Value
   toJSON MkPointer {pointerType} =
     object
-      [ "pointerType" .= fromMaybe MousePointer pointerType
+      [ "type" .= fromMaybe MousePointer pointerType
       ]
 
 data PointerSourceAction
@@ -165,7 +171,12 @@ data PointerSourceAction
   deriving (Show, Eq, Generic)
 
 instance ToJSON PointerSourceAction where
-  toJSON = enumCamelCase
+  toJSON :: PointerSourceAction -> Value
+  toJSON = \case
+    PointerPauseAction pointerPauseAction -> toJSON pointerPauseAction
+    PointerDownAction pointerDownAction -> toJSON pointerDownAction
+    PointerUpAction pointerUpAction -> toJSON pointerUpAction
+    PointerMoveAction pointerMoveAction -> toJSON pointerMoveAction
 
 data WheelSourceActions = MkWheelSourceActions
   { wheelId :: Text,
