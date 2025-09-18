@@ -123,7 +123,7 @@ inputKeyboardDemo =
                     MkKeySourceActions
                       { keyId = "keyboard1",
                         keyActions =
-                          [ KeyPauseAction $ MkPauseAction $ Just 100,
+                          [ KeyPauseAction . MkPauseAction $ Just 100,
                             KeyDownAction $ MkKeyDownAction "t",
                             KeyUpAction $ MkKeyUpAction "t",
                             KeyDownAction $ MkKeyDownAction "o",
@@ -160,7 +160,7 @@ inputKeyboardDemo =
                           [ -- Tab key to move to password field
                             KeyDownAction $ MkKeyDownAction "\xE004", -- Tab
                             KeyUpAction $ MkKeyUpAction "\xE004",
-                            KeyPauseAction $ MkPauseAction $ Just 200,
+                            KeyPauseAction . MkPauseAction $ Just 200,
                             -- Type password
                             KeyDownAction $ MkKeyDownAction "S",
                             KeyUpAction $ MkKeyUpAction "S",
@@ -208,13 +208,13 @@ inputKeyboardDemo =
                             KeyDownAction $ MkKeyDownAction "\xE004", -- Tab
                             KeyUpAction $ MkKeyUpAction "\xE004",
                             KeyUpAction $ MkKeyUpAction "\xE008",
-                            KeyPauseAction $ MkPauseAction $ Just 200,
+                            KeyPauseAction . MkPauseAction $ Just 200,
                             -- Ctrl+A to select all
                             KeyDownAction $ MkKeyDownAction "\xE009", -- Ctrl
                             KeyDownAction $ MkKeyDownAction "a",
                             KeyUpAction $ MkKeyUpAction "a",
                             KeyUpAction $ MkKeyUpAction "\xE009",
-                            KeyPauseAction $ MkPauseAction $ Just 200,
+                            KeyPauseAction . MkPauseAction $ Just 200,
                             -- Type new username
                             KeyDownAction $ MkKeyDownAction "a",
                             KeyUpAction $ MkKeyUpAction "a",
@@ -539,7 +539,7 @@ inputCombinedActionsDemo =
                     MkKeySourceActions
                       { keyId = "keyboard1",
                         keyActions =
-                          [ KeyPauseAction $ MkPauseAction $ Just 200,
+                          [ KeyPauseAction . MkPauseAction $ Just 200,
                             KeyDownAction $ MkKeyDownAction "u",
                             KeyUpAction $ MkKeyUpAction "u",
                             KeyDownAction $ MkKeyDownAction "s",
@@ -603,7 +603,7 @@ inputCombinedActionsDemo =
                     MkKeySourceActions
                       { keyId = "keyboard1",
                         keyActions =
-                          [ KeyPauseAction $ MkPauseAction $ Just 300,
+                          [ KeyPauseAction . MkPauseAction $ Just 300,
                             KeyDownAction $ MkKeyDownAction "p",
                             KeyUpAction $ MkKeyUpAction "p",
                             KeyDownAction $ MkKeyDownAction "a",
@@ -612,7 +612,7 @@ inputCombinedActionsDemo =
                             KeyUpAction $ MkKeyUpAction "s",
                             KeyDownAction $ MkKeyDownAction "s",
                             KeyUpAction $ MkKeyUpAction "s",
-                            KeyPauseAction $ MkPauseAction $ Just 200,
+                            KeyPauseAction . MkPauseAction $ Just 200,
                             KeyDownAction $ MkKeyDownAction "\xE007", -- Enter
                             KeyUpAction $ MkKeyUpAction "\xE007"
                           ]
