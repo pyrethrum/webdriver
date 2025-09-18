@@ -86,23 +86,20 @@ inputKeyboardDemo =
                             { pointerId = "mouse1",
                               pointer = Just $ MkPointer {pointerType = Just MousePointer},
                               pointerActions =
-                                [ PointerMoveAction $
-                                    MkPointerMoveAction
-                                      { x = 0, -- Relative to element center
-                                        y = 0, -- Relative to element center
-                                        duration = Just 300,
-                                        origin = Just $ ElementOriginRef $ MkElementOrigin $ Script.MkSharedReference {sharedId = (Core.MkSharedId elementId), handle = Nothing, extensions = Nothing},
-                                        pointerCommonProperties = defaultPointerProps
-                                      },
-                                  PointerDownAction $
-                                    MkPointerDownAction
-                                      { button = 0,
-                                        pointerCommonProperties = defaultPointerProps
-                                      },
-                                  PointerUpAction $
-                                    MkPointerUpAction
-                                      { button = 0
-                                      }
+                                [ PointerMove
+                                    { x = 0, -- Relative to element center
+                                      y = 0, -- Relative to element center
+                                      duration = Just 300,
+                                      origin = Just $ ElementOriginRef $ MkElementOrigin $ Script.MkSharedReference {sharedId = (Core.MkSharedId elementId), handle = Nothing, extensions = Nothing},
+                                      pointerCommonProperties = defaultPointerProps
+                                    },
+                                  PointerDown
+                                    { button = 0,
+                                      pointerCommonProperties = defaultPointerProps
+                                    },
+                                  PointerUp
+                                    { button = 0
+                                    }
                                 ]
                             }
                       ]
@@ -260,23 +257,20 @@ inputPointerDemo =
                       { pointerId = "mouse1",
                         pointer = Just $ MkPointer {pointerType = Just MousePointer},
                         pointerActions =
-                          [ PointerMoveAction $
-                              MkPointerMoveAction
-                                { x = 50,
-                                  y = 150,
-                                  duration = Just 500,
-                                  origin = Just ViewportOriginPointerType,
-                                  pointerCommonProperties = defaultPointerProps
-                                },
-                            PointerDownAction $
-                              MkPointerDownAction
-                                { button = 0, -- Left mouse button
-                                  pointerCommonProperties = defaultPointerProps
-                                },
-                            PointerUpAction $
-                              MkPointerUpAction
-                                { button = 0
-                                }
+                          [ PointerMove
+                              { x = 50,
+                                y = 150,
+                                duration = Just 500,
+                                origin = Just ViewportOriginPointerType,
+                                pointerCommonProperties = defaultPointerProps
+                              },
+                            PointerDown
+                              { button = 0, -- Left mouse button
+                                pointerCommonProperties = defaultPointerProps
+                              },
+                            PointerUp
+                              { button = 0
+                              }
                           ]
                       }
                 ]
@@ -295,15 +289,14 @@ inputPointerDemo =
                       { pointerId = "mouse1",
                         pointer = Just $ MkPointer {pointerType = Just MousePointer},
                         pointerActions =
-                          [ PointerMoveAction $
-                              MkPointerMoveAction
-                                { x = 50,
-                                  y = 170,
-                                  duration = Just 750,
-                                  origin = Just ViewportOriginPointerType,
-                                  pointerCommonProperties = defaultPointerProps
-                                },
-                            PointerPauseAction $ MkPauseAction $ Just 1000
+                          [ PointerMove
+                              { x = 50,
+                                y = 170,
+                                duration = Just 750,
+                                origin = Just ViewportOriginPointerType,
+                                pointerCommonProperties = defaultPointerProps
+                              },
+                            Pause {duration = Just 1000}
                           ]
                       }
                 ]
@@ -322,35 +315,30 @@ inputPointerDemo =
                       { pointerId = "mouse1",
                         pointer = Just $ MkPointer {pointerType = Just MousePointer},
                         pointerActions =
-                          [ PointerMoveAction $
-                              MkPointerMoveAction
-                                { x = 50,
-                                  y = 150,
-                                  duration = Just 300,
-                                  origin = Just ViewportOriginPointerType,
-                                  pointerCommonProperties = defaultPointerProps
-                                },
+                          [ PointerMove
+                              { x = 50,
+                                y = 150,
+                                duration = Just 300,
+                                origin = Just ViewportOriginPointerType,
+                                pointerCommonProperties = defaultPointerProps
+                              },
                             -- First click
-                            PointerDownAction $
-                              MkPointerDownAction
-                                { button = 0,
-                                  pointerCommonProperties = defaultPointerProps
-                                },
-                            PointerUpAction $
-                              MkPointerUpAction
-                                { button = 0
-                                },
-                            PointerPauseAction $ MkPauseAction $ Just 100,
+                            PointerDown
+                              { button = 0,
+                                pointerCommonProperties = defaultPointerProps
+                              },
+                            PointerUp
+                              { button = 0
+                              },
+                            Pause {duration = Just 100},
                             -- Second click
-                            PointerDownAction $
-                              MkPointerDownAction
-                                { button = 0,
-                                  pointerCommonProperties = defaultPointerProps
-                                },
-                            PointerUpAction $
-                              MkPointerUpAction
-                                { button = 0
-                                }
+                            PointerDown
+                              { button = 0,
+                                pointerCommonProperties = defaultPointerProps
+                              },
+                            PointerUp
+                              { button = 0
+                              }
                           ]
                       }
                 ]
@@ -369,24 +357,21 @@ inputPointerDemo =
                       { pointerId = "mouse1",
                         pointer = Just $ MkPointer {pointerType = Just MousePointer},
                         pointerActions =
-                          [ PointerMoveAction $
-                              MkPointerMoveAction
-                                { x = 200,
-                                  y = 300,
-                                  duration = Just 400,
-                                  origin = Just ViewportOriginPointerType,
-                                  pointerCommonProperties = defaultPointerProps
-                                },
-                            PointerDownAction $
-                              MkPointerDownAction
-                                { button = 2, -- Right mouse button
-                                  pointerCommonProperties = defaultPointerProps
-                                },
-                            PointerUpAction $
-                              MkPointerUpAction
-                                { button = 2
-                                },
-                            PointerPauseAction $ MkPauseAction $ Just 500
+                          [ PointerMove
+                              { x = 200,
+                                y = 300,
+                                duration = Just 400,
+                                origin = Just ViewportOriginPointerType,
+                                pointerCommonProperties = defaultPointerProps
+                              },
+                            PointerDown
+                              { button = 2, -- Right mouse button
+                                pointerCommonProperties = defaultPointerProps
+                              },
+                            PointerUp
+                              { button = 2
+                              },
+                            Pause {duration = Just 500}
                           ]
                       }
                 ]
@@ -516,23 +501,20 @@ inputCombinedActionsDemo =
                       { pointerId = "mouse1",
                         pointer = Just $ MkPointer {pointerType = Just MousePointer},
                         pointerActions =
-                          [ PointerMoveAction $
-                              MkPointerMoveAction
-                                { x = 200,
-                                  y = 150,
-                                  duration = Just 300,
-                                  origin = Just ViewportOriginPointerType,
-                                  pointerCommonProperties = defaultPointerProps
-                                },
-                            PointerDownAction $
-                              MkPointerDownAction
-                                { button = 0,
-                                  pointerCommonProperties = defaultPointerProps
-                                },
-                            PointerUpAction $
-                              MkPointerUpAction
-                                { button = 0
-                                }
+                          [ PointerMove
+                              { x = 200,
+                                y = 150,
+                                duration = Just 300,
+                                origin = Just ViewportOriginPointerType,
+                                pointerCommonProperties = defaultPointerProps
+                              },
+                            PointerDown
+                              { button = 0,
+                                pointerCommonProperties = defaultPointerProps
+                              },
+                            PointerUp
+                              { button = 0
+                              }
                           ]
                       },
                   KeySourceActions $
@@ -580,23 +562,20 @@ inputCombinedActionsDemo =
                       { pointerId = "mouse1",
                         pointer = Just $ MkPointer {pointerType = Just MousePointer},
                         pointerActions =
-                          [ PointerMoveAction $
-                              MkPointerMoveAction
-                                { x = 200,
-                                  y = 180,
-                                  duration = Just 250,
-                                  origin = Just ViewportOriginPointerType,
-                                  pointerCommonProperties = defaultPointerProps
-                                },
-                            PointerDownAction $
-                              MkPointerDownAction
-                                { button = 0,
-                                  pointerCommonProperties = defaultPointerProps
-                                },
-                            PointerUpAction $
-                              MkPointerUpAction
-                                { button = 0
-                                }
+                          [ PointerMove
+                              { x = 200,
+                                y = 180,
+                                duration = Just 250,
+                                origin = Just ViewportOriginPointerType,
+                                pointerCommonProperties = defaultPointerProps
+                              },
+                            PointerDown
+                              { button = 0,
+                                pointerCommonProperties = defaultPointerProps
+                              },
+                            PointerUp
+                              { button = 0
+                              }
                           ]
                       },
                   KeySourceActions $
@@ -663,14 +642,13 @@ inputReleaseActionsDemo =
                       { pointerId = "mouse1",
                         pointer = Just $ MkPointer {pointerType = Just MousePointer},
                         pointerActions =
-                          [ PointerMoveAction $
-                              MkPointerMoveAction
-                                { x = 200,
-                                  y = 100,
-                                  duration = Just 200,
-                                  origin = Just ViewportOriginPointerType,
-                                  pointerCommonProperties = defaultPointerProps
-                                }
+                          [ PointerMove
+                              { x = 200,
+                                y = 100,
+                                duration = Just 200,
+                                origin = Just ViewportOriginPointerType,
+                                pointerCommonProperties = defaultPointerProps
+                              }
                           ]
                       }
                 ]

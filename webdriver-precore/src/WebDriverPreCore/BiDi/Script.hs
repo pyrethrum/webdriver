@@ -49,8 +49,7 @@ module WebDriverPreCore.BiDi.Script
     PreloadScript (..),
     RemoteReference (..),
     SharedReference (..),
-    RemoteObjectReference (..),
-    SharedId (..),
+    RemoteObjectReference (..)
   )
 where
 

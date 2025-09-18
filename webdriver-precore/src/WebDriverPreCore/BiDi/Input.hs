@@ -11,9 +11,6 @@ module WebDriverPreCore.BiDi.Input
     PauseAction (..),
     KeyDownAction (..),
     KeyUpAction (..),
-    PointerUpAction (..),
-    PointerDownAction (..),
-    PointerMoveAction (..),
     WheelScrollAction (..),
     PointerCommonProperties (..),
     Origin (..),
@@ -164,19 +161,53 @@ instance ToJSON Pointer where
       ]
 
 data PointerSourceAction
-  = PointerPauseAction PauseAction
-  | PointerDownAction PointerDownAction
-  | PointerUpAction PointerUpAction
-  | PointerMoveAction PointerMoveAction
+  = Pause
+      { duration :: Maybe Int
+      }
+  | PointerDown
+      { button :: Int,
+        pointerCommonProperties :: PointerCommonProperties
+      }
+  | PointerUp
+      { button :: Int
+      }
+  | PointerMove
+      { x :: Double,
+        y :: Double,
+        duration :: Maybe Int,
+        origin :: Maybe Origin,
+        pointerCommonProperties :: PointerCommonProperties
+      }
   deriving (Show, Eq, Generic)
 
 instance ToJSON PointerSourceAction where
   toJSON :: PointerSourceAction -> Value
   toJSON = \case
-    PointerPauseAction pointerPauseAction -> toJSON pointerPauseAction
-    PointerDownAction pointerDownAction -> toJSON pointerDownAction
-    PointerUpAction pointerUpAction -> toJSON pointerUpAction
-    PointerMoveAction pointerMoveAction -> toJSON pointerMoveAction
+    Pause {duration} ->
+      object
+        [ "type" .= "pause",
+          "duration" .= duration
+        ]
+    PointerDown {button, pointerCommonProperties} ->
+      object
+        [ "type" .= "pointerDown",
+          "button" .= button,
+          "pointerCommonProperties" .= pointerCommonProperties
+        ]
+    PointerUp {button} ->
+      object
+        [ "type" .= "pointerUp",
+          "button" .= button
+        ]
+    PointerMove {x, y, duration, origin, pointerCommonProperties} ->
+      object
+        [ "type" .= "pointerMove",
+          "x" .= x,
+          "y" .= y,
+          "duration" .= duration,
+          "origin" .= origin,
+          "pointerCommonProperties" .= pointerCommonProperties
+        ]
 
 data WheelSourceActions = MkWheelSourceActions
   { wheelId :: Text,
@@ -241,55 +272,6 @@ instance ToJSON KeyUpAction where
     object
       [ "type" .= "keyUp",
         "value" .= value
-      ]
-
-newtype PointerUpAction = MkPointerUpAction
-  { button :: Int
-  }
-  deriving (Show, Eq, Generic)
-
-instance ToJSON PointerUpAction where
-  toJSON :: PointerUpAction -> Value
-  toJSON (MkPointerUpAction button) =
-    object
-      [ "type" .= "pointerUp",
-        "button" .= button
-      ]
-
-data PointerDownAction = MkPointerDownAction
-  { button :: Int,
-    pointerCommonProperties :: PointerCommonProperties
-  }
-  deriving (Show, Eq, Generic)
-
-instance ToJSON PointerDownAction where
-  toJSON :: PointerDownAction -> Value
-  toJSON (MkPointerDownAction button pointerCommonProperties) =
-    object
-      [ "type" .= "pointerDown",
-        "button" .= button,
-        "pointerCommonProperties" .= pointerCommonProperties
-      ]
-
-data PointerMoveAction = MkPointerMoveAction
-  { x :: Double,
-    y :: Double,
-    duration :: Maybe Int,
-    origin :: Maybe Origin,
-    pointerCommonProperties :: PointerCommonProperties
-  }
-  deriving (Show, Eq, Generic)
-
-instance ToJSON PointerMoveAction where
-  toJSON :: PointerMoveAction -> Value
-  toJSON (MkPointerMoveAction x y duration origin pointerCommonProperties) =
-    object
-      [ "type" .= "pointerMove",
-        "x" .= x,
-        "y" .= y,
-        "duration" .= duration,
-        "origin" .= origin,
-        "pointerCommonProperties" .= pointerCommonProperties
       ]
 
 data WheelScrollAction = MkWheelScrollAction
