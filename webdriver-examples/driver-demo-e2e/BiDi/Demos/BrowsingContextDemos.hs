@@ -6,7 +6,7 @@ import Data.Aeson (Value (Null), object, (.=))
 import Data.Text (Text)
 import IOUtils (DemoUtils (..))
 import WebDriverPreCore.BiDi.BrowsingContext (Locator (..), PrintMargin (..), PrintPage (..), Viewport (..))
-import WebDriverPreCore.BiDi.CoreTypes (JSInt (..), JSUInt (..), NodeRemoteValue (..), SharedId (..))
+import WebDriverPreCore.BiDi.CoreTypes (JSInt (..), JSUInt (..), NodeRemoteValue (..))
 import WebDriverPreCore.BiDi.Protocol
 import Prelude hiding (log, putStrLn)
 
@@ -637,7 +637,7 @@ browsingContextLocateNodesDemo =
                     locator = CSS {value = "a"},
                     maxNodeCount = Nothing,
                     serializationOptions = Nothing,
-                    startNodes = Just [MkSharedReference {sharedId = MkShareId {id = nodeId}, handle = Nothing, extensions = Nothing}]
+                    startNodes = Just [MkSharedReference {sharedId = MkSharedId {id = nodeId}, handle = Nothing, extensions = Nothing}]
                   }
             logShow "StartNodes result - links within div.example" startNodesResult
             pause
@@ -656,7 +656,7 @@ browsingContextLocateNodesDemo =
                             "maxObjectDepth" .= Null,
                             "includeShadowTree" .= ("none" :: Text)
                           ],
-                    startNodes = Just [MkSharedReference {sharedId = MkShareId {id = nodeId}, handle = Nothing, extensions = Nothing}]
+                    startNodes = Just [MkSharedReference {sharedId = MkSharedId {id = nodeId}, handle = Nothing, extensions = Nothing}]
                   }
             logShow "StartNodes with XPath - text nodes within parent (max 5)" startNodesTextResult
             pause
