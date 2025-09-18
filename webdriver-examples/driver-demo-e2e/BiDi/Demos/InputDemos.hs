@@ -10,6 +10,7 @@ import WebDriverPreCore.BiDi.Input
 import WebDriverPreCore.BiDi.Protocol
 import WebDriverPreCore.BiDi.Script qualified as Script
 import Prelude hiding (log)
+import TestPagesBase64 (textAreaPageBase64)
 
 {-
 Input Module Commands (3 total):
@@ -45,6 +46,7 @@ defaultPointerProps =
     }
 
 -- >>> runDemo inputKeyboardDemo
+-- *** Exception: CloseRequest 1000 ""
 inputKeyboardDemo :: BiDiDemo
 inputKeyboardDemo =
   demo "Input I - Keyboard Actions" action
@@ -53,30 +55,30 @@ inputKeyboardDemo =
     action utils@MkDemoUtils {..} cmds@MkCommands {..} = do
       bc <- rootContext utils cmds
 
-      logTxt "Navigate to The Internet - Form Authentication for keyboard testing"
-      navResult <- browsingContextNavigate $ MkNavigate {context = bc, url = "https://the-internet.herokuapp.com/login", wait = Just Complete}
+      logTxt "Navigate to base64-encoded page for keyboard testing"
+      navResult <- browsingContextNavigate $ MkNavigate {context = bc, url = textAreaPageBase64, wait = Just Complete}
       logShow "Navigation result" navResult
       pause
 
-      logTxt "Locate the username field using CSS selector"
-      usernameFieldResult <-
+      logTxt "Locate the text area 1 field using CSS selector"
+      textArea <-
         browsingContextLocateNodes $
           MkLocateNodes
             { context = bc,
-              locator = CSS {value = "#username"},
+              locator = CSS {value = "#textArea"},
               maxNodeCount = Nothing,
               serializationOptions = Nothing,
               startNodes = Nothing
             }
-      logShow "Username field search result" usernameFieldResult
+      logShow "Text area 1 field search result" textArea
       pause
 
       -- Extract the element's shared reference for clicking
-      case usernameFieldResult of
+      case textArea of
         MkLocateNodesResult nodes -> case nodes of
           (MkNodeRemoteValue {sharedId = Just (Core.MkSharedId elementId)} : _) -> do
-            logTxt "Focus the username field by clicking on it using element reference"
-            focusUsernameField <-
+            logTxt "Focus the text area by clicking on it using element reference"
+            focusTextArea <-
               inputPerformActions $
                 MkPerformActions
                   { context = bcToId bc,
@@ -104,13 +106,13 @@ inputKeyboardDemo =
                             }
                       ]
                   }
-            logShow "Focus username field result" focusUsernameField
+            logShow "Focus text area result" focusTextArea
             pause
           _ -> do
-            logTxt "Could not find username element or extract sharedId"
+            logTxt "Could not find text area 1 element or extract sharedId"
             pause
 
-      logTxt "Test 1: Basic key actions - Type in username field"
+      logTxt "Test 1: Basic key actions - Type in text area"
       basicKeyActions <-
         inputPerformActions $
           MkPerformActions
@@ -144,7 +146,7 @@ inputKeyboardDemo =
       logShow "Basic key actions result" basicKeyActions
       pause
 
-      logTxt "Test 2: Special keys - Tab to password field and type password"
+      logTxt "Test 2: Special keys - Tab to text area 2 field and type message"
       specialKeyActions <-
         inputPerformActions $
           MkPerformActions
@@ -154,21 +156,67 @@ inputKeyboardDemo =
                     MkKeySourceActions
                       { keyId = "keyboard1",
                         keyActions =
-                          [ -- Tab key to move to password field
+                          [ -- Tab key to move to text area 2 field
                             KeyDownAction $ MkKeyDownAction "\xE004", -- Tab
                             KeyUpAction $ MkKeyUpAction "\xE004",
                             KeyPauseAction . MkPauseAction $ Just 200,
-                            -- Type password
-                            KeyDownAction $ MkKeyDownAction "S",
-                            KeyUpAction $ MkKeyUpAction "S",
-                            KeyDownAction $ MkKeyDownAction "u",
-                            KeyUpAction $ MkKeyUpAction "u",
-                            KeyDownAction $ MkKeyDownAction "p",
-                            KeyUpAction $ MkKeyUpAction "p",
-                            KeyDownAction $ MkKeyDownAction "e",
-                            KeyUpAction $ MkKeyUpAction "e",
+                            -- Type Hi From BiDi!
+                            KeyDownAction $ MkKeyDownAction "H",
+                            KeyUpAction $ MkKeyUpAction "H",
+                            KeyDownAction $ MkKeyDownAction "i",
+                            KeyUpAction $ MkKeyUpAction "i",
+                            KeyDownAction $ MkKeyDownAction " ",
+                            KeyUpAction $ MkKeyUpAction " ",
+                            KeyDownAction $ MkKeyDownAction "F",
+                            KeyUpAction $ MkKeyUpAction "F",
                             KeyDownAction $ MkKeyDownAction "r",
                             KeyUpAction $ MkKeyUpAction "r",
+                            KeyDownAction $ MkKeyDownAction "o",
+                            KeyUpAction $ MkKeyUpAction "o",
+                            KeyDownAction $ MkKeyDownAction "m",
+                            KeyUpAction $ MkKeyUpAction "m",
+                            KeyDownAction $ MkKeyDownAction " ",
+                            KeyUpAction $ MkKeyUpAction " ",
+                            KeyDownAction $ MkKeyDownAction "B",
+                            KeyUpAction $ MkKeyUpAction "B",
+                            KeyDownAction $ MkKeyDownAction "i",
+                            KeyUpAction $ MkKeyUpAction "i",
+                            KeyDownAction $ MkKeyDownAction "D",
+                            KeyUpAction $ MkKeyUpAction "D",
+                            KeyDownAction $ MkKeyDownAction "i",
+                            KeyUpAction $ MkKeyUpAction "i",
+                            KeyDownAction $ MkKeyDownAction "!",
+                            KeyUpAction $ MkKeyUpAction "!"
+                          ]
+                      }
+                ]
+            }
+      logShow "Special key actions result" specialKeyActions
+      pause
+
+      logTxt "Test 3: Modifier keys - Ctrl+A to select all in text area 1 field"
+
+      inputPerformActions $
+          MkPerformActions
+            { context = bcToId bc,
+              actions =
+                [ KeySourceActions $
+                    MkKeySourceActions
+                      { keyId = "keyboard1",
+                        keyActions =
+                          [ -- Shift+Tab to go back to text area 1 field
+                            KeyDownAction $ MkKeyDownAction "\xE008", -- Shift
+                            KeyDownAction $ MkKeyDownAction "\xE004", -- Tab
+                            KeyUpAction $ MkKeyUpAction "\xE004",
+                            KeyUpAction $ MkKeyUpAction "\xE008",
+                            KeyPauseAction . MkPauseAction $ Just 200,
+                            -- Ctrl+A to select all
+                            KeyDownAction $ MkKeyDownAction "\xE009", -- Ctrl
+                            KeyDownAction $ MkKeyDownAction "a",
+                            KeyUpAction $ MkKeyUpAction "a",
+                            KeyUpAction $ MkKeyUpAction "\xE009",
+                            KeyPauseAction . MkPauseAction $ Just 200,
+                            -- Type new text
                             KeyDownAction $ MkKeyDownAction "S",
                             KeyUpAction $ MkKeyUpAction "S",
                             KeyDownAction $ MkKeyDownAction "e",
@@ -190,7 +238,7 @@ inputKeyboardDemo =
       logShow "Special key actions result" specialKeyActions
       pause
 
-      logTxt "Test 3: Modifier keys - Ctrl+A to select all in username field"
+      logTxt "Test 4: Modifier keys - Ctrl+A to select all in text area 2 field"
       modifierKeyActions <-
         inputPerformActions $
           MkPerformActions
@@ -200,7 +248,7 @@ inputKeyboardDemo =
                     MkKeySourceActions
                       { keyId = "keyboard1",
                         keyActions =
-                          [ -- Shift+Tab to go back to username field
+                          [ -- Shift+Tab to go back to text area 2 field
                             KeyDownAction $ MkKeyDownAction "\xE008", -- Shift
                             KeyDownAction $ MkKeyDownAction "\xE004", -- Tab
                             KeyUpAction $ MkKeyUpAction "\xE004",
@@ -212,7 +260,7 @@ inputKeyboardDemo =
                             KeyUpAction $ MkKeyUpAction "a",
                             KeyUpAction $ MkKeyUpAction "\xE009",
                             KeyPauseAction . MkPauseAction $ Just 200,
-                            -- Type new username
+                            -- Type new text
                             KeyDownAction $ MkKeyDownAction "a",
                             KeyUpAction $ MkKeyUpAction "a",
                             KeyDownAction $ MkKeyDownAction "d",
