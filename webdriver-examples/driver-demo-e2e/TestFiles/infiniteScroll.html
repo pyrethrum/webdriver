@@ -38,8 +38,7 @@
     function generateLineContent(lineNum) {
       const alphabet = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
       const letter = alphabet[(lineNum - 1) % 26];
-      const repeatCount = Math.floor((lineNum - 1) / 26) + 1;
-      return letter.repeat(repeatCount * 5); // Repeat letter 5 times, then 10, then 15, etc.
+      return letter.repeat(500); // Repeat letter 5 times, then 10, then 15, etc.
     }
 
     function loadContent() {

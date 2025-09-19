@@ -579,6 +579,41 @@ inputWheelDemo =
       closeContext utils cmds bc
 
 -- >>> runDemo inputCombinedActionsDemo
+-- *** Exception: Error executing BiDi command: MkCommand
+--   { method = "input.performActions"
+--   , params =
+--       MkPerformActions
+--         { context =
+--             MkBrowsingContextId "96aa45af-9f1d-4a4d-a21d-e2533ccb49f5"
+--         , actions =
+--             [ NoneSourceActions MkPauseAction { duration = Just 1000 } ]
+--         }
+--   , extended = Nothing
+--   }
+-- With JSON: 
+-- {
+--     "id": 5,
+--     "method": "input.performActions",
+--     "params": {
+--         "actions": [
+--             {
+--                 "duration": 1000,
+--                 "type": "pause"
+--             }
+--         ],
+--         "context": "96aa45af-9f1d-4a4d-a21d-e2533ccb49f5"
+--     }
+-- }
+-- Failed to decode the 'result' property of JSON returned by driver to response type: 
+-- {
+--     "error": "invalid argument",
+--     "id": 5,
+--     "message": "Expected \"actionSequence.actions\" to be an array, got [object Undefined] undefined",
+--     "stacktrace": "RemoteError@chrome://remote/content/shared/RemoteError.sys.mjs:8:8\nWebDriverError@chrome://remote/content/shared/webdriver/Errors.sys.mjs:199:5\nInvalidArgumentError@chrome://remote/content/shared/webdriver/Errors.sys.mjs:401:5\nassert.that/<@chrome://remote/content/shared/webdriver/Assert.sys.mjs:581:13\nassert.array@chrome://remote/content/shared/webdriver/Assert.sys.mjs:533:41\nfromJSON@chrome://remote/content/shared/webdriver/Actions.sys.mjs:2816:17\nfromJSON@chrome://remote/content/shared/webdriver/Actions.sys.mjs:2666:49\nperformActions@chrome://remote/content/webdriver-bidi/modules/root/input.sys.mjs:281:50\nhandleCommand@chrome://remote/content/shared/messagehandler/MessageHandler.sys.mjs:260:33\nexecute@chrome://remote/content/shared/webdriver/Session.sys.mjs:410:32\nonPacket@chrome://remote/content/webdriver-bidi/WebDriverBiDiConnection.sys.mjs:236:37\nonMessage@chrome://remote/content/server/WebSocketTransport.sys.mjs:127:18\nhandleEvent@chrome://remote/content/server/WebSocketTransport.sys.mjs:109:14\n",
+--     "type": "error"
+-- }
+-- Error message: 
+-- key "result" not found
 inputCombinedActionsDemo :: BiDiDemo
 inputCombinedActionsDemo =
   demo "Input IV - Combined Actions" action
@@ -586,11 +621,33 @@ inputCombinedActionsDemo =
     action :: DemoUtils -> Commands -> IO ()
     action utils@MkDemoUtils {..} cmds@MkCommands {..} = do
       bc <- rootContext utils cmds
+      testPage <- textAreaUrl
 
-      logTxt "Navigate to The Internet - Login page for combined actions testing"
-      navResult <- browsingContextNavigate $ MkNavigate {context = bc, url = "https://the-internet.herokuapp.com/login", wait = Just Complete}
+      logTxt "Navigate to text area page for keyboard testing"
+      navResult <- browsingContextNavigate $ MkNavigate {context = bc, url = testPage, wait = Just Complete}
       logShow "Navigation result" navResult
       pause
+
+      logTxt "Locate the text area 1 field using CSS selector"
+      textArea' <-
+        browsingContextLocateNodes $
+          MkLocateNodes
+            { context = bc,
+              locator = CSS {value = "#textArea"},
+              maxNodeCount = Nothing,
+              serializationOptions = Nothing,
+              startNodes = Nothing
+            }
+      logShow "Text area 1 field search result" textArea'
+      pause
+
+      -- Extract the element's shared reference for clicking
+      let MkLocateNodesResult nodes = textArea'
+
+          textAreaId :: SharedId
+          textAreaId = case nodes of
+            [textArea] -> fromJust textArea.sharedId
+            _ -> error "Failed to locate text area 1"
 
       logTxt "Test 1: Combined keyboard and pointer actions - Click username field and type"
       clickAndType <-
@@ -598,42 +655,52 @@ inputCombinedActionsDemo =
           MkPerformActions
             { context = bcToId bc,
               actions =
-                [ PointerSourceActions $
-                    MkPointerSourceActions
-                      { pointerId = "mouse1",
-                        pointer = Just $ MkPointer {pointerType = Just MousePointer},
-                        pointerActions =
-                          [ PointerMove
-                              { x = 200,
-                                y = 150,
-                                duration = Just 300,
-                                origin = Just ViewportOriginPointerType,
-                                pointerCommonProperties = defaultPointerProps
-                              },
-                            PointerDown
-                              { button = 0,
-                                pointerCommonProperties = defaultPointerProps
-                              },
-                            PointerUp
-                              { button = 0
-                              }
-                          ]
-                      },
-                  KeySourceActions $
-                    MkKeySourceActions
-                      { keyId = "keyboard1",
-                        keyActions =
-                          [ KeyPause {duration = Just 200},
-                            KeyDown "u",
-                            KeyUp "u",
-                            KeyDown "s",
-                            KeyUp "s",
-                            KeyDown "e",
-                            KeyUp "e",
-                            KeyDown "r",
-                            KeyUp "r"
-                          ]
-                      }
+                [ PointerSourceActions
+                    ( MkPointerSourceActions
+                        { pointerId = "mouse1",
+                          pointer = Just $ MkPointer {pointerType = Just MousePointer},
+                          pointerActions =
+                            [ PointerMove
+                                { x = 5,
+                                  y = 5,
+                                  duration = Just 300,
+                                  origin =
+                                    Just $
+                                      ElementOrigin $
+                                        MkSharedReference
+                                          { -- use a safe function instead in prod
+                                            sharedId = textAreaId,
+                                            handle = Nothing,
+                                            extensions = Nothing
+                                          },
+                                  pointerCommonProperties = defaultPointerProps
+                                },
+                              PointerDown
+                                { button = 0,
+                                  pointerCommonProperties = defaultPointerProps
+                                },
+                              PointerUp
+                                { button = 0
+                                }
+                            ]
+                        }
+                    ),
+                  KeySourceActions
+                    ( MkKeySourceActions
+                        { keyId = "keyboard1",
+                          keyActions =
+                            [ KeyPause {duration = Just 200},
+                              KeyDown "u",
+                              KeyUp "u",
+                              KeyDown "s",
+                              KeyUp "s",
+                              KeyDown "e",
+                              KeyUp "e",
+                              KeyDown "r",
+                              KeyUp "r"
+                            ]
+                        }
+                    )
                 ]
             }
       logShow "Click and type result" clickAndType
