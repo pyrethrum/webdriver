@@ -14,13 +14,14 @@ module WebDriverPreCore.BiDi.Browser
   )
 where
 
-import Data.Aeson (FromJSON, ToJSON (..))
+import Data.Aeson (FromJSON (..), ToJSON (..), Value)
 import Data.Text (Text)
 import GHC.Generics (Generic)
 import WebDriverPreCore.BiDi.Capabilities (ProxyConfiguration, UserPromptHandler)
-import WebDriverPreCore.Internal.AesonUtils (enumCamelCase)
+import WebDriverPreCore.Internal.AesonUtils (enumCamelCase, fromJSONCamelCase)
 import Prelude (Bool (..), Eq (..), Int, Maybe, Show (..))
 import WebDriverPreCore.BiDi.CoreTypes (UserContext)
+import Data.Aeson.Types (Parser)
 
 {-
 create types to represent the remote and local ends for browser:
@@ -54,20 +55,23 @@ data ClientWindowInfo = MkClientWindowInfo
   }
   deriving (Show, Eq, Generic)
 
-instance FromJSON ClientWindowInfo
+instance FromJSON ClientWindowInfo 
 
 instance ToJSON ClientWindowInfo
 
 data ClientWindowState
-  = WindowFullscreen
-  | WindowMaximized
-  | WindowMinimized
-  | WindowNormal
+  = Fullscreen
+  | Maximized
+  | Minimized
+  | Normal
   deriving (Show, Eq, Generic)
 
-instance FromJSON ClientWindowState
+instance FromJSON ClientWindowState where
+  parseJSON :: Value -> Parser ClientWindowState
+  parseJSON = fromJSONCamelCase
 
 instance ToJSON ClientWindowState where
+  toJSON :: ClientWindowState -> Value
   toJSON = enumCamelCase
 
 data CreateUserContext = MkCreateUserContext
