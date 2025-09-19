@@ -144,6 +144,7 @@ test-suite driver-demo-e2e
     , BiDi.WussDemo
     , BiDi.Demos.BrowserDemos
     , BiDi.Demos.BrowsingContextDemos
+    , BiDi.Demos.EmulationDemos
     , BiDi.Demos.InputDemos
     , BiDi.Demos.NetworkDemos
     , BiDi.Demos.NetworkSupportTest
