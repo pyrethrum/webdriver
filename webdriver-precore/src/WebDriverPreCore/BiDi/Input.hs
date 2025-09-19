@@ -9,8 +9,6 @@ module WebDriverPreCore.BiDi.Input
     WheelSourceActions (..),
     WheelSourceAction (..),
     PauseAction (..),
-    KeyDownAction (..),
-    KeyUpAction (..),
     WheelScrollAction (..),
     PointerCommonProperties (..),
     Origin (..),
@@ -109,17 +107,35 @@ instance ToJSON KeySourceActions where
       ]
 
 data KeySourceAction
-  = KeyPauseAction PauseAction
-  | KeyDownAction KeyDownAction
-  | KeyUpAction KeyUpAction
+  = KeyPause
+      { duration :: Maybe Int
+      }
+  | KeyDown
+      { value :: Text
+      }
+  | KeyUp
+      { value :: Text
+      }
   deriving (Show, Eq, Generic)
 
 instance ToJSON KeySourceAction where
   toJSON :: KeySourceAction -> Value
   toJSON = \case
-    KeyPauseAction keyPauseAction -> toJSON keyPauseAction
-    KeyDownAction keyDownAction -> toJSON keyDownAction
-    KeyUpAction keyUpAction -> toJSON keyUpAction
+    KeyPause {duration} ->
+      object
+        [ "type" .= "pause",
+          "duration" .= duration
+        ]
+    KeyDown {value} ->
+      object
+        [ "type" .= "keyDown",
+          "value" .= value
+        ]
+    KeyUp {value} ->
+      object
+        [ "type" .= "keyUp",
+          "value" .= value
+        ]
 
 data PointerSourceActions = MkPointerSourceActions
   { pointerId :: Text,
@@ -246,32 +262,6 @@ instance ToJSON PauseAction where
     object
       [ "type" .= "pause",
         "duration" .= duration
-      ]
-
-newtype KeyDownAction = MkKeyDownAction
-  { value :: Text
-  }
-  deriving (Show, Eq, Generic)
-
-instance ToJSON KeyDownAction where
-  toJSON :: KeyDownAction -> Value
-  toJSON (MkKeyDownAction value) =
-    object
-      [ "type" .= "keyDown",
-        "value" .= value
-      ]
-
-newtype KeyUpAction = MkKeyUpAction
-  { value :: Text
-  }
-  deriving (Show, Eq, Generic)
-
-instance ToJSON KeyUpAction where
-  toJSON :: KeyUpAction -> Value
-  toJSON (MkKeyUpAction value) =
-    object
-      [ "type" .= "keyUp",
-        "value" .= value
       ]
 
 data WheelScrollAction = MkWheelScrollAction
