@@ -15,6 +15,12 @@ fileUrl filename = do
   absPath <- makeCanonicalPath $ "webdriver-examples/driver-demo-e2e/TestFiles/" <> filename
   pure $ "file://" <> pack absPath
 
+-- | Get absolute file path for upload test files
+uploadFilePath :: FilePath -> IO Text
+uploadFilePath filename = do
+  absPath <- makeCanonicalPath $ "webdriver-examples/driver-demo-e2e/TestFiles/uploadFiles/" <> filename
+  pure $ pack absPath
+
 -- | Create a data URI test page by prepending "data:text/html," to the given HTML content
 mkPage :: Text -> Text
 mkPage = (<>) "data:text/html,"

@@ -4,7 +4,7 @@ import BiDi.BiDiRunner (Commands (..))
 import BiDi.DemoUtils
 import Data.Maybe (fromJust)
 import IOUtils (DemoUtils (..))
-import TestPages (checkboxesUrl, infiniteScrollUrl, textAreaUrl)
+import TestPages (checkboxesUrl, infiniteScrollUrl, textAreaUrl, fileUrl, uploadFilePath)
 import WebDriverPreCore.BiDi.BrowsingContext (BrowsingContextId (..), Locator (..))
 import WebDriverPreCore.BiDi.CoreTypes (NodeRemoteValue (..))
 import WebDriverPreCore.BiDi.CoreTypes qualified as Core
@@ -53,10 +53,10 @@ inputKeyboardDemo =
     action :: DemoUtils -> Commands -> IO ()
     action utils@MkDemoUtils {..} cmds@MkCommands {..} = do
       bc <- rootContext utils cmds
-      fileUrl <- textAreaUrl
+      textAreaPageUrl <- textAreaUrl
 
       logTxt "Navigate to text area page for keyboard testing"
-      navResult <- browsingContextNavigate $ MkNavigate {context = bc, url = fileUrl, wait = Just Complete}
+      navResult <- browsingContextNavigate $ MkNavigate {context = bc, url = textAreaPageUrl, wait = Just Complete}
       logShow "Navigation result" navResult
       pause
 
@@ -928,50 +928,6 @@ inputReleaseActionsDemo =
       closeContext utils cmds bc
 
 -- >>> runDemo inputSetFilesDemo
--- *** Exception: Error executing BiDi command: MkCommand
---   { method = "input.setFiles"
---   , params =
---       MkSetFiles
---         { context =
---             MkBrowsingContextId "227e759a-1b44-42b3-bb64-a43c7e363f5b"
---         , element =
---             MkSharedReference
---               { sharedId =
---                   MkSharedId { id = "b5493c16-f263-41f6-b41d-b6185f2d57a3" }
---               , handle = Nothing
---               , extensions = Nothing
---               }
---         , files = [ "/tmp/test1.txt" , "/tmp/test2.txt" ]
---         }
---   , extended = Nothing
---   }
--- With JSON: 
--- {
---     "id": 4,
---     "method": "input.setFiles",
---     "params": {
---         "context": "227e759a-1b44-42b3-bb64-a43c7e363f5b",
---         "element": {
---             "extensions": null,
---             "handle": null,
---             "sharedId": "b5493c16-f263-41f6-b41d-b6185f2d57a3"
---         },
---         "files": [
---             "/tmp/test1.txt",
---             "/tmp/test2.txt"
---         ]
---     }
--- }
--- Failed to decode the 'result' property of JSON returned by driver to response type: 
--- {
---     "error": "unable to set file input",
---     "id": 4,
---     "message": "Element should have an attribute \"multiple\" set when trying to set more than 1 file",
---     "stacktrace": "RemoteError@chrome://remote/content/shared/RemoteError.sys.mjs:8:8\nWebDriverError@chrome://remote/content/shared/webdriver/Errors.sys.mjs:199:5\nUnableToSetFileInputError@chrome://remote/content/shared/webdriver/Errors.sys.mjs:844:5\nsetFiles@chrome://remote/content/webdriver-bidi/modules/windowglobal/input.sys.mjs:190:13\n",
---     "type": "error"
--- }
--- Error message: 
--- key "result" not found
 inputSetFilesDemo :: BiDiDemo
 inputSetFilesDemo =
   demo "Input VI - Set Files for File Upload" action
@@ -979,85 +935,126 @@ inputSetFilesDemo =
     action :: DemoUtils -> Commands -> IO ()
     action utils@MkDemoUtils {..} cmds@MkCommands {..} = do
       bc <- rootContext utils cmds
+      uploadUrl <- fileUrl "upload.html"
 
-      logTxt "Navigate to The Internet - File Upload page"
-      navResult <- browsingContextNavigate $ MkNavigate {context = bc, url = "https://the-internet.herokuapp.com/upload", wait = Just Complete}
+      logTxt "Navigate to upload.html test page"
+      navResult <- browsingContextNavigate $ MkNavigate {context = bc, url = uploadUrl, wait = Just Complete}
       logShow "Navigation result" navResult
       pause
 
-      logTxt "Test 1: Find the file input element using browsingContextLocateNodes"
-      fileInputResult <-
+      logTxt "Test 1: Find the single file input element"
+      singleFileInputResult <-
         browsingContextLocateNodes $
           MkLocateNodes
             { context = bc,
-              locator = CSS {value = "input[type='file']"},
+              locator = CSS {value = "#singleUpload"},
               maxNodeCount = Nothing,
               serializationOptions = Nothing,
               startNodes = Nothing
             }
-      logShow "File input element search result" fileInputResult
+      logShow "Single file input element search result" singleFileInputResult
       pause
 
-      -- Extract the element's shared reference for use with setFiles
-      case fileInputResult of
+      logTxt "Test 2: Find the multiple file input element"
+      multipleFileInputResult <-
+        browsingContextLocateNodes $
+          MkLocateNodes
+            { context = bc,
+              locator = CSS {value = "#multipleUpload"},
+              maxNodeCount = Nothing,
+              serializationOptions = Nothing,
+              startNodes = Nothing
+            }
+      logShow "Multiple file input element search result" multipleFileInputResult
+      pause
+
+      -- Extract the single file input's shared reference
+      case singleFileInputResult of
         MkLocateNodesResult nodes -> case nodes of
-          (MkNodeRemoteValue {sharedId = Just (Core.MkSharedId elementId)} : _) -> do
-            logTxt "Test 2: Create test files (using data URLs to simulate files)"
-            let testFiles =
-                  [ "/tmp/test1.txt", -- These would be actual file paths on the system
-                    "/tmp/test2.txt"
-                  ]
-
-            logTxt "Test 3: Set files on the file input element"
-            setFilesResult <-
-              inputSetFiles $
-                MkSetFiles
-                  { context = bcToId bc,
-                    element = MkSharedReference {sharedId = (Core.MkSharedId elementId), handle = Nothing, extensions = Nothing},
-                    files = testFiles
-                  }
-            logShow "Set files result" setFilesResult
-            pause
-
-            logTxt "Test 4: Set a single file"
+          (MkNodeRemoteValue {sharedId = Just (Core.MkSharedId singleElementId)} : _) -> do
+            logTxt "Test 3: Set a single file on the single file input"
+            singleDocPath <- uploadFilePath "single_document.txt"
             setSingleFileResult <-
               inputSetFiles $
                 MkSetFiles
                   { context = bcToId bc,
-                    element = MkSharedReference {sharedId = (Core.MkSharedId elementId), handle = Nothing, extensions = Nothing},
-                    files = ["/tmp/single_file.txt"]
+                    element = MkSharedReference {sharedId = (Core.MkSharedId singleElementId), handle = Nothing, extensions = Nothing},
+                    files = [singleDocPath]
                   }
             logShow "Set single file result" setSingleFileResult
             pause
 
-            logTxt "Test 5: Clear files by setting empty list"
-            clearFilesResult <-
+            logTxt "Test 4: Clear the single file input"
+            clearSingleFileResult <-
               inputSetFiles $
                 MkSetFiles
                   { context = bcToId bc,
-                    element = MkSharedReference {sharedId = (Core.MkSharedId elementId), handle = Nothing, extensions = Nothing},
+                    element = MkSharedReference {sharedId = (Core.MkSharedId singleElementId), handle = Nothing, extensions = Nothing},
                     files = []
                   }
-            logShow "Clear files result" clearFilesResult
+            logShow "Clear single file result" clearSingleFileResult
+            pause
+          _ -> do
+            logTxt "Could not find single file input element or extract sharedId"
             pause
 
-            logTxt "Test 6: Set files with different extensions"
+      -- Extract the multiple file input's shared reference
+      case multipleFileInputResult of
+        MkLocateNodesResult nodes -> case nodes of
+          (MkNodeRemoteValue {sharedId = Just (Core.MkSharedId multipleElementId)} : _) -> do
+            logTxt "Test 5: Set multiple files on the multiple file input"
+            doc1Path <- uploadFilePath "document1.txt"
+            doc2Path <- uploadFilePath "document2.pdf"
+            imagePath <- uploadFilePath "image.jpg"
+            setMultipleFilesResult <-
+              inputSetFiles $
+                MkSetFiles
+                  { context = bcToId bc,
+                    element = MkSharedReference {sharedId = (Core.MkSharedId multipleElementId), handle = Nothing, extensions = Nothing},
+                    files = [doc1Path, doc2Path, imagePath]
+                  }
+            logShow "Set multiple files result" setMultipleFilesResult
+            pause
+
+            logTxt "Test 6: Set files with different extensions on multiple input"
+            spreadsheetPath <- uploadFilePath "spreadsheet.xlsx"
+            presentationPath <- uploadFilePath "presentation.pptx"
+            archivePath <- uploadFilePath "archive.zip"
+            videoPath <- uploadFilePath "video.mp4"
             setVariousFilesResult <-
               inputSetFiles $
                 MkSetFiles
                   { context = bcToId bc,
-                    element = MkSharedReference {sharedId = (Core.MkSharedId elementId), handle = Nothing, extensions = Nothing},
-                    files =
-                      [ "/tmp/document.pdf",
-                        "/tmp/image.jpg",
-                        "/tmp/spreadsheet.xlsx",
-                        "/tmp/presentation.pptx"
-                      ]
+                    element = MkSharedReference {sharedId = (Core.MkSharedId multipleElementId), handle = Nothing, extensions = Nothing},
+                    files = [spreadsheetPath, presentationPath, archivePath, videoPath]
                   }
             logShow "Set various files result" setVariousFilesResult
             pause
+
+            logTxt "Test 7: Clear the multiple file input"
+            clearMultipleFilesResult <-
+              inputSetFiles $
+                MkSetFiles
+                  { context = bcToId bc,
+                    element = MkSharedReference {sharedId = (Core.MkSharedId multipleElementId), handle = Nothing, extensions = Nothing},
+                    files = []
+                  }
+            logShow "Clear multiple files result" clearMultipleFilesResult
+            pause
+
+            logTxt "Test 8: Set a single file on the multiple input (should work)"
+            finalTestPath <- uploadFilePath "final_test.txt"
+            setSingleOnMultipleResult <-
+              inputSetFiles $
+                MkSetFiles
+                  { context = bcToId bc,
+                    element = MkSharedReference {sharedId = (Core.MkSharedId multipleElementId), handle = Nothing, extensions = Nothing},
+                    files = [finalTestPath]
+                  }
+            logShow "Set single file on multiple input result" setSingleOnMultipleResult
+            pause
           _ -> do
-            logTxt "Could not find file input element or extract sharedId"
+            logTxt "Could not find multiple file input element or extract sharedId"
             pause
 
       closeContext utils cmds bc

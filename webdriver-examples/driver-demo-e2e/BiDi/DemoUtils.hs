@@ -36,7 +36,7 @@ import Prelude hiding (log, putStrLn)
 import WebDriverPreCore.BiDi.CoreTypes (StringValue(..))
 
 pauseMs :: Int
-pauseMs = 1_000
+pauseMs = 0
 
 data BiDiDemo = MkBiDiDemo
   { name :: Text,
