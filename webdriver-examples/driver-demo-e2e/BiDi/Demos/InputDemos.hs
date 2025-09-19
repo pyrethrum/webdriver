@@ -779,23 +779,75 @@ inputReleaseActionsDemo =
     action :: DemoUtils -> Commands -> IO ()
     action utils@MkDemoUtils {..} cmds@MkCommands {..} = do
       bc <- rootContext utils cmds
+      testPage <- textAreaUrl
 
-      logTxt "Navigate to simple page for release actions testing"
-      navResult <- browsingContextNavigate $ MkNavigate {context = bc, url = "data:text/html,<html><body><h1>Release Actions Test</h1><input type='text' placeholder='Type here' style='font-size: 20px; padding: 10px;'></body></html>", wait = Just Complete}
+      logTxt "Navigate to text area page for keyboard testing"
+      navResult <- browsingContextNavigate $ MkNavigate {context = bc, url = testPage, wait = Just Complete}
       logShow "Navigation result" navResult
       pause
 
-      logTxt "Test 1: Perform some input actions to have input state"
+      logTxt "Locate the text area 1 field using CSS selector"
+      textArea' <-
+        browsingContextLocateNodes $
+          MkLocateNodes
+            { context = bc,
+              locator = CSS {value = "#textArea"},
+              maxNodeCount = Nothing,
+              serializationOptions = Nothing,
+              startNodes = Nothing
+            }
+      logShow "Text area 1 field search result" textArea'
+      pause
+
+      -- Extract the element's shared reference for clicking
+      let MkLocateNodesResult nodes = textArea'
+
+          textAreaId :: SharedId
+          textAreaId = case nodes of
+            [textArea] -> fromJust textArea.sharedId
+            _ -> error "Failed to locate text area 1"
+
+      logTxt "Test 1: Focus text area and perform some input actions to have input state"
       setupActions <-
         inputPerformActions $
           MkPerformActions
             { context = bcToId bc,
               actions =
-                [ KeySourceActions $
+                [ PointerSourceActions $
+                    MkPointerSourceActions
+                      { pointerId = "mouse1",
+                        pointer = Just $ MkPointer {pointerType = Just MousePointer},
+                        pointerActions =
+                          [ PointerMove
+                              { x = 0, -- Relative to element center
+                                y = 0, -- Relative to element center
+                                duration = Just 300,
+                                origin =
+                                  Just $
+                                    ElementOrigin $
+                                      MkSharedReference
+                                        { -- use a safe function instead in prod
+                                          sharedId = textAreaId,
+                                          handle = Nothing,
+                                          extensions = Nothing
+                                        },
+                                pointerCommonProperties = defaultPointerProps
+                              },
+                            PointerDown
+                              { button = 0,
+                                pointerCommonProperties = defaultPointerProps
+                              },
+                            PointerUp
+                              { button = 0
+                              }
+                          ]
+                      },
+                  KeySourceActions $
                     MkKeySourceActions
                       { keyId = "keyboard1",
                         keyActions =
-                          [ KeyDown "t",
+                          [ KeyPause {duration = Just 100},
+                            KeyDown "t",
                             KeyUp "t",
                             KeyDown "e",
                             KeyUp "e",
@@ -803,20 +855,6 @@ inputReleaseActionsDemo =
                             KeyUp "s",
                             KeyDown "t",
                             KeyUp "t"
-                          ]
-                      },
-                  PointerSourceActions $
-                    MkPointerSourceActions
-                      { pointerId = "mouse1",
-                        pointer = Just $ MkPointer {pointerType = Just MousePointer},
-                        pointerActions =
-                          [ PointerMove
-                              { x = 200,
-                                y = 100,
-                                duration = Just 200,
-                                origin = Just ViewportOriginPointerType,
-                                pointerCommonProperties = defaultPointerProps
-                              }
                           ]
                       }
                 ]
@@ -829,17 +867,47 @@ inputReleaseActionsDemo =
       logShow "Release actions result" releaseResult
       pause
 
-      logTxt "Test 3: Perform actions again after release to confirm state is reset"
+      logTxt "Test 3: Focus text area again and perform actions after release to confirm state is reset"
       postReleaseActions <-
         inputPerformActions $
           MkPerformActions
             { context = bcToId bc,
               actions =
-                [ KeySourceActions $
+                [ PointerSourceActions $
+                    MkPointerSourceActions
+                      { pointerId = "mouse2", -- Different ID to show it's a fresh start
+                        pointer = Just $ MkPointer {pointerType = Just MousePointer},
+                        pointerActions =
+                          [ PointerMove
+                              { x = 0, -- Relative to element center
+                                y = 0, -- Relative to element center
+                                duration = Just 300,
+                                origin =
+                                  Just $
+                                    ElementOrigin $
+                                      MkSharedReference
+                                        { -- use a safe function instead in prod
+                                          sharedId = textAreaId,
+                                          handle = Nothing,
+                                          extensions = Nothing
+                                        },
+                                pointerCommonProperties = defaultPointerProps
+                              },
+                            PointerDown
+                              { button = 0,
+                                pointerCommonProperties = defaultPointerProps
+                              },
+                            PointerUp
+                              { button = 0
+                              }
+                          ]
+                      },
+                  KeySourceActions $
                     MkKeySourceActions
                       { keyId = "keyboard2", -- Different ID to show it's a fresh start
                         keyActions =
-                          [ KeyDown "n",
+                          [ KeyPause {duration = Just 100},
+                            KeyDown "n",
                             KeyUp "n",
                             KeyDown "e",
                             KeyUp "e",
@@ -860,6 +928,50 @@ inputReleaseActionsDemo =
       closeContext utils cmds bc
 
 -- >>> runDemo inputSetFilesDemo
+-- *** Exception: Error executing BiDi command: MkCommand
+--   { method = "input.setFiles"
+--   , params =
+--       MkSetFiles
+--         { context =
+--             MkBrowsingContextId "227e759a-1b44-42b3-bb64-a43c7e363f5b"
+--         , element =
+--             MkSharedReference
+--               { sharedId =
+--                   MkSharedId { id = "b5493c16-f263-41f6-b41d-b6185f2d57a3" }
+--               , handle = Nothing
+--               , extensions = Nothing
+--               }
+--         , files = [ "/tmp/test1.txt" , "/tmp/test2.txt" ]
+--         }
+--   , extended = Nothing
+--   }
+-- With JSON: 
+-- {
+--     "id": 4,
+--     "method": "input.setFiles",
+--     "params": {
+--         "context": "227e759a-1b44-42b3-bb64-a43c7e363f5b",
+--         "element": {
+--             "extensions": null,
+--             "handle": null,
+--             "sharedId": "b5493c16-f263-41f6-b41d-b6185f2d57a3"
+--         },
+--         "files": [
+--             "/tmp/test1.txt",
+--             "/tmp/test2.txt"
+--         ]
+--     }
+-- }
+-- Failed to decode the 'result' property of JSON returned by driver to response type: 
+-- {
+--     "error": "unable to set file input",
+--     "id": 4,
+--     "message": "Element should have an attribute \"multiple\" set when trying to set more than 1 file",
+--     "stacktrace": "RemoteError@chrome://remote/content/shared/RemoteError.sys.mjs:8:8\nWebDriverError@chrome://remote/content/shared/webdriver/Errors.sys.mjs:199:5\nUnableToSetFileInputError@chrome://remote/content/shared/webdriver/Errors.sys.mjs:844:5\nsetFiles@chrome://remote/content/webdriver-bidi/modules/windowglobal/input.sys.mjs:190:13\n",
+--     "type": "error"
+-- }
+-- Error message: 
+-- key "result" not found
 inputSetFilesDemo :: BiDiDemo
 inputSetFilesDemo =
   demo "Input VI - Set Files for File Upload" action
