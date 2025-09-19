@@ -21,14 +21,15 @@ module WebDriverPreCore.BiDi.Input
   )
 where
 
-import Data.Aeson (ToJSON (..), Value, object, (.=))
+import Data.Aeson (ToJSON (..), Value (Object), object, (.=))
+import Data.Aeson.KeyMap qualified
 import Data.Maybe (fromMaybe)
 import Data.Text (Text)
 import GHC.Generics (Generic)
 import WebDriverPreCore.BiDi.BrowsingContext qualified as BrowsingContext
 import WebDriverPreCore.BiDi.Script qualified as Script
 import WebDriverPreCore.Internal.AesonUtils (toJSONOmitNothing)
-import Prelude (Bool, Double, Eq, Int, Maybe, Show)
+import Prelude (Bool, Double, Eq, Int, Maybe, Show, ($), (++))
 
 -- ######### Local #########
 
@@ -47,7 +48,7 @@ instance ToJSON PerformActions where
       ]
 
 data SourceActions
-  = NoneSourceActions PauseAction
+  = NoneSourceActions NoneSourceActions
   | KeySourceActions KeySourceActions
   | PointerSourceActions PointerSourceActions
   | WheelSourceActions WheelSourceActions
@@ -135,7 +136,7 @@ instance ToJSON PointerSourceActions where
     object
       [ "type" .= "pointer",
         "id" .= pointerId,
-        "pointer" .= pointer,
+        "parameters" .= pointer,
         "actions" .= pointerActions
       ]
 
@@ -158,7 +159,7 @@ instance ToJSON Pointer where
   toJSON :: Pointer -> Value
   toJSON MkPointer {pointerType} =
     object
-      [ "type" .= fromMaybe MousePointer pointerType
+      [ "pointerType" .= fromMaybe MousePointer pointerType
       ]
 
 data PointerSourceAction
@@ -190,25 +191,40 @@ instance ToJSON PointerSourceAction where
           "duration" .= duration
         ]
     PointerDown {button, pointerCommonProperties} ->
-      object
-        [ "type" .= "pointerDown",
-          "button" .= button,
-          "pointerCommonProperties" .= pointerCommonProperties
-        ]
+      case toJSON pointerCommonProperties of
+        Object props ->
+          object $
+            [ "type" .= "pointerDown",
+              "button" .= button
+            ] ++ [(k, v) | (k, v) <- Data.Aeson.KeyMap.toList props]
+        _ -> 
+          object
+            [ "type" .= "pointerDown",
+              "button" .= button
+            ]
     PointerUp {button} ->
       object
         [ "type" .= "pointerUp",
           "button" .= button
         ]
     PointerMove {x, y, duration, origin, pointerCommonProperties} ->
-      object
-        [ "type" .= "pointerMove",
-          "x" .= x,
-          "y" .= y,
-          "duration" .= duration,
-          "origin" .= origin,
-          "pointerCommonProperties" .= pointerCommonProperties
-        ]
+      case toJSON pointerCommonProperties of
+        Object props ->
+          object $
+            [ "type" .= "pointerMove",
+              "x" .= x,
+              "y" .= y,
+              "duration" .= duration,
+              "origin" .= origin
+            ] ++ [(k, v) | (k, v) <- Data.Aeson.KeyMap.toList props]
+        _ -> 
+          object
+            [ "type" .= "pointerMove",
+              "x" .= x,
+              "y" .= y,
+              "duration" .= duration,
+              "origin" .= origin
+            ]
 
 data WheelSourceActions = MkWheelSourceActions
   { wheelId :: Text,
