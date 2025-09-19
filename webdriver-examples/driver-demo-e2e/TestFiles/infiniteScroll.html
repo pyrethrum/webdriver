@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <title>Infinite Scroll Page</title>
+  <link rel="stylesheet" href="textArea.css">
+  <style>
+    body { margin: 0; padding: 20px; min-height: 100vh; }
+    .container { max-width: 800px; margin: 0 auto; }
+    .content-item { 
+      padding: 20px; 
+      border-bottom: 1px solid #eee; 
+      font-size: 18px;
+      line-height: 1.5;
+    }
+    #loading { 
+      text-align: center; 
+      padding: 20px; 
+      font-style: italic; 
+      color: #666; 
+    }
+  </style>
+</head>
+
+<body>
+  <div class="container">
+    <h1>Infinite Scroll Test Page</h1>
+    <div id="content"></div>
+    <div id="loading" style="display: none; text-align: center; padding: 20px;">Loading more content...</div>
+  </div>
+
+  <script>
+    const contentDiv = document.getElementById('content');
+    const loadingDiv = document.getElementById('loading');
+    let currentLine = 1;
+    let isLoading = false;
+
+    function generateLineContent(lineNum) {
+      const alphabet = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+      const letter = alphabet[(lineNum - 1) % 26];
+      const repeatCount = Math.floor((lineNum - 1) / 26) + 1;
+      return letter.repeat(repeatCount * 5); // Repeat letter 5 times, then 10, then 15, etc.
+    }
+
+    function loadContent() {
+      if (isLoading) return;
+      
+      isLoading = true;
+      const fragment = document.createDocumentFragment();
+      
+      for (let i = 0; i < 5; i++) { // Load 5 items at once
+        const div = document.createElement('div');
+        div.className = 'content-item';
+        div.textContent = generateLineContent(currentLine);
+        fragment.appendChild(div);
+        currentLine++;
+      }
+      
+      contentDiv.appendChild(fragment);
+      isLoading = false;
+    }
+
+    function handleScroll() {
+      const scrollPosition = window.innerHeight + window.scrollY;
+      const documentHeight = document.documentElement.scrollHeight;
+      
+      if (scrollPosition >= documentHeight - 100 && !isLoading) {
+        loadingDiv.style.display = 'block';
+        loadingDiv.textContent = 'Loading more content...';
+        
+        setTimeout(() => {
+          loadContent();
+          loadingDiv.style.display = 'none';
+        }, 300);
+      }
+    }
+
+    // Initial load
+    loadContent();
+    
+    window.addEventListener('scroll', handleScroll);
+  </script>
+</body>
+
+</html>

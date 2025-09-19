@@ -4,7 +4,7 @@ import BiDi.BiDiRunner (Commands (..))
 import BiDi.DemoUtils
 import Data.Maybe (fromJust)
 import IOUtils (DemoUtils (..))
-import TestPages (textAreaUrl)
+import TestPages (checkboxesUrl, infiniteScrollUrl, textAreaUrl)
 import WebDriverPreCore.BiDi.BrowsingContext (BrowsingContextId (..), Locator (..))
 import WebDriverPreCore.BiDi.CoreTypes (NodeRemoteValue (..))
 import WebDriverPreCore.BiDi.CoreTypes qualified as Core
@@ -78,45 +78,46 @@ inputKeyboardDemo =
 
           textAreaId :: SharedId
           textAreaId = case nodes of
-             [textArea] -> fromJust textArea.sharedId
-             _ ->  error "Failed to locate text area 1"
+            [textArea] -> fromJust textArea.sharedId
+            _ -> error "Failed to locate text area 1"
 
-          clickTextArea1 = inputPerformActions $ MkPerformActions
-                            { context = bcToId bc,
-                              actions =
-                                [ PointerSourceActions $
-                                    MkPointerSourceActions
-                                      { pointerId = "mouse1",
-                                        pointer = Just $ MkPointer {pointerType = Just MousePointer},
-                                        pointerActions =
-                                          [ PointerMove
-                                              { x = 0, -- Relative to element center
-                                                y = 0, -- Relative to element center
-                                                duration = Just 300,
-                                                origin =
-                                                  Just $
-                                                    ElementOrigin $
-                                                      MkSharedReference
-                                                        { -- use a safe function instead in prod
-                                                          sharedId = textAreaId,
-                                                          handle = Nothing,
-                                                          extensions = Nothing
-                                                        },
-                                                pointerCommonProperties = defaultPointerProps
-                                              },
-                                            PointerDown
-                                              { button = 0,
-                                                pointerCommonProperties = defaultPointerProps
-                                              },
-                                            PointerUp
-                                              { button = 0
-                                              }
-                                          ]
-                                      }
-                                ]
-                            }
+          clickTextArea1 =
+            inputPerformActions $
+              MkPerformActions
+                { context = bcToId bc,
+                  actions =
+                    [ PointerSourceActions $
+                        MkPointerSourceActions
+                          { pointerId = "mouse1",
+                            pointer = Just $ MkPointer {pointerType = Just MousePointer},
+                            pointerActions =
+                              [ PointerMove
+                                  { x = 0, -- Relative to element center
+                                    y = 0, -- Relative to element center
+                                    duration = Just 300,
+                                    origin =
+                                      Just $
+                                        ElementOrigin $
+                                          MkSharedReference
+                                            { -- use a safe function instead in prod
+                                              sharedId = textAreaId,
+                                              handle = Nothing,
+                                              extensions = Nothing
+                                            },
+                                    pointerCommonProperties = defaultPointerProps
+                                  },
+                                PointerDown
+                                  { button = 0,
+                                    pointerCommonProperties = defaultPointerProps
+                                  },
+                                PointerUp
+                                  { button = 0
+                                  }
+                              ]
+                          }
+                    ]
+                }
 
-  
       logTxt "Focus the text area by clicking on it using element reference"
       focusTextArea <- clickTextArea1
       logShow "Focus text area result" focusTextArea
@@ -124,127 +125,128 @@ inputKeyboardDemo =
 
       logTxt "Test 1: Basic key actions - Type in text area"
       basicKeyActions <-
-          inputPerformActions $
-            MkPerformActions
-              { context = bcToId bc,
-                actions =
-                  [ KeySourceActions $
-                      MkKeySourceActions
-                        { keyId = "keyboard1",
-                          keyActions =
-                            [ KeyPause {duration = Just 100},
-                              KeyDown "t",
-                              KeyUp "t",
-                              KeyDown "o",
-                              KeyUp "o",
-                              KeyDown "m",
-                              KeyUp "m",
-                              KeyDown "s",
-                              KeyUp "s",
-                              KeyDown "m",
-                              KeyUp "m",
-                              KeyDown "i",
-                              KeyUp "i",
-                              KeyDown "t",
-                              KeyUp "t",
-                              KeyDown "h",
-                              KeyUp "h"
-                            ]
-                        }
-                  ]
-              }
+        inputPerformActions $
+          MkPerformActions
+            { context = bcToId bc,
+              actions =
+                [ KeySourceActions $
+                    MkKeySourceActions
+                      { keyId = "keyboard1",
+                        keyActions =
+                          [ KeyPause {duration = Just 100},
+                            KeyDown "t",
+                            KeyUp "t",
+                            KeyDown "o",
+                            KeyUp "o",
+                            KeyDown "m",
+                            KeyUp "m",
+                            KeyDown "s",
+                            KeyUp "s",
+                            KeyDown "m",
+                            KeyUp "m",
+                            KeyDown "i",
+                            KeyUp "i",
+                            KeyDown "t",
+                            KeyUp "t",
+                            KeyDown "h",
+                            KeyUp "h"
+                          ]
+                      }
+                ]
+            }
       logShow "Basic key actions result" basicKeyActions
       pause
 
       logTxt "Test 2: Special keys - Tab to text area 2 field and type message"
       specialKeyActions <-
-          inputPerformActions $
-            MkPerformActions
-              { context = bcToId bc,
-                actions =
-                  [ KeySourceActions $
-                      MkKeySourceActions
-                        { keyId = "keyboard1",
-                          keyActions =
-                            [ -- Tab key to move to text area 2 field
-                              KeyDown "\xE004", -- Tab
-                              KeyUp "\xE004",
-                              KeyPause {duration = Just 200},
-                              -- Type Hi From BiDi!
-                              KeyDown "H",
-                              KeyUp "H",
-                              KeyDown "i",
-                              KeyUp "i",
-                              KeyDown " ",
-                              KeyUp " ",
-                              KeyDown "F",
-                              KeyUp "F",
-                              KeyDown "r",
-                              KeyUp "r",
-                              KeyDown "o",
-                              KeyUp "o",
-                              KeyDown "m",
-                              KeyUp "m",
-                              KeyDown " ",
-                              KeyUp " ",
-                              KeyDown "B",
-                              KeyUp "B",
-                              KeyDown "i",
-                              KeyUp "i",
-                              KeyDown "D",
-                              KeyUp "D",
-                              KeyDown "i",
-                              KeyUp "i",
-                              KeyDown "!",
-                              KeyUp "!"
-                            ]
-                        }
-                  ]
-              }
+        inputPerformActions $
+          MkPerformActions
+            { context = bcToId bc,
+              actions =
+                [ KeySourceActions $
+                    MkKeySourceActions
+                      { keyId = "keyboard1",
+                        keyActions =
+                          [ -- Tab key to move to text area 2 field
+                            KeyDown "\xE004", -- Tab
+                            KeyUp "\xE004",
+                            KeyPause {duration = Just 200},
+                            -- Type Hi From BiDi!
+                            KeyDown "H",
+                            KeyUp "H",
+                            KeyDown "i",
+                            KeyUp "i",
+                            KeyDown " ",
+                            KeyUp " ",
+                            KeyDown "F",
+                            KeyUp "F",
+                            KeyDown "r",
+                            KeyUp "r",
+                            KeyDown "o",
+                            KeyUp "o",
+                            KeyDown "m",
+                            KeyUp "m",
+                            KeyDown " ",
+                            KeyUp " ",
+                            KeyDown "B",
+                            KeyUp "B",
+                            KeyDown "i",
+                            KeyUp "i",
+                            KeyDown "D",
+                            KeyUp "D",
+                            KeyDown "i",
+                            KeyUp "i",
+                            KeyDown "!",
+                            KeyUp "!"
+                          ]
+                      }
+                ]
+            }
       logShow "Special key actions result" specialKeyActions
       pause
 
       logTxt "Test 3: Modifier keys - Ctrl+A to select all in text area 1 field"
 
-      _ <- inputPerformActions $
-        MkPerformActions
-          { context = bcToId bc,
-            actions =
-              [ KeySourceActions $
-                  MkKeySourceActions
-                    { keyId = "keyboard1",
-                      keyActions =
-                        [ -- Shift+Tab to go back to text area 1 field
-                          KeyDown "\xE008", -- Shift
-                          KeyDown "\xE004", -- Tab
-                          KeyUp "\xE004",
-                          KeyUp "\xE008",
-                          KeyPause {duration = Just 200},
-                          -- Ctrl+A to select all
-                          KeyDown "\xE009", -- Ctrl
-                          KeyDown "a",
-                          KeyUp "a",
-                          KeyUp "\xE009",
-                          KeyPause {duration = Just 200},
-                          -- Type new text
-                          KeyDown "S",
-                          KeyUp "S",
-                          KeyDown "e",
-                          KeyUp "e",
-                          KeyDown "c",
-                          KeyUp "c",
-                          KeyDown "r",
-                          KeyUp "r",
-                          KeyDown "e",
-                          KeyUp "e",
-                          KeyDown "t",
-                          KeyUp "t",
-                          KeyDown "!",
-                          KeyUp "!"
-                        ]
-                    }
-              ]
-          }
+      _ <-
+        inputPerformActions $
+          MkPerformActions
+            { context = bcToId bc,
+              actions =
+                [ KeySourceActions $
+                    MkKeySourceActions
+                      { keyId = "keyboard1",
+                        keyActions =
+                          [ -- Shift+Tab to go back to text area 1 field
+                            KeyDown "\xE008", -- Shift
+                            KeyDown "\xE004", -- Tab
+                            KeyUp "\xE004",
+                            KeyUp "\xE008",
+                            KeyPause {duration = Just 200},
+                            -- Ctrl+A to select all
+                            KeyDown "\xE009", -- Ctrl
+                            KeyDown "a",
+                            KeyUp "a",
+                            KeyUp "\xE009",
+                            KeyPause {duration = Just 200},
+                            -- Type new text
+                            KeyDown "S",
+                            KeyUp "S",
+                            KeyDown "e",
+                            KeyUp "e",
+                            KeyDown "c",
+                            KeyUp "c",
+                            KeyDown "r",
+                            KeyUp "r",
+                            KeyDown "e",
+                            KeyUp "e",
+                            KeyDown "t",
+                            KeyUp "t",
+                            KeyDown "!",
+                            KeyUp "!"
+                          ]
+                      }
+                ]
+            }
       logShow "Special key actions result" specialKeyActions
       pause
 
@@ -297,13 +299,14 @@ inputPointerDemo =
     action :: DemoUtils -> Commands -> IO ()
     action utils@MkDemoUtils {..} cmds@MkCommands {..} = do
       bc <- rootContext utils cmds
+      chkBoxPage <- checkboxesUrl
 
-      logTxt "Navigate to The Internet - Checkboxes for pointer testing"
+      logTxt "Navigate to Checkboxes for pointer testing"
       navResult <-
         browsingContextNavigate $
           MkNavigate
             { context = bc,
-              url = "https://the-internet.herokuapp.com/checkboxes",
+              url = chkBoxPage,
               wait = Just Complete
             }
       logShow "Navigation result" navResult
@@ -367,6 +370,27 @@ inputPointerDemo =
       logShow "Pointer hover result" pointerHover
       pause
 
+      logTxt "Locate the first checkbox using CSS selector"
+      checkbox1' <-
+        browsingContextLocateNodes $
+          MkLocateNodes
+            { context = bc,
+              locator = CSS {value = "#checkbox1"},
+              maxNodeCount = Nothing,
+              serializationOptions = Nothing,
+              startNodes = Nothing
+            }
+      logShow "First checkbox search result" checkbox1'
+      pause
+
+      -- Extract the element's shared reference for clicking
+      let MkLocateNodesResult nodes = checkbox1'
+
+          checkbox1Id :: SharedId
+          checkbox1Id = case nodes of
+            [checkbox1] -> fromJust checkbox1.sharedId
+            _ -> error "Failed to locate first checkbox"
+
       logTxt "Test 3: Double click - Double click on first checkbox"
       doubleClick <-
         inputPerformActions $
@@ -379,10 +403,18 @@ inputPointerDemo =
                         pointer = Just $ MkPointer {pointerType = Just MousePointer},
                         pointerActions =
                           [ PointerMove
-                              { x = 50,
-                                y = 150,
+                              { x = 0, -- Relative to element center
+                                y = 0, -- Relative to element center
                                 duration = Just 300,
-                                origin = Just ViewportOriginPointerType,
+                                origin =
+                                  Just $
+                                    ElementOrigin $
+                                      MkSharedReference
+                                        { -- use a safe function instead in prod
+                                          sharedId = checkbox1Id,
+                                          handle = Nothing,
+                                          extensions = Nothing
+                                        },
                                 pointerCommonProperties = defaultPointerProps
                               },
                             -- First click
@@ -452,9 +484,16 @@ inputWheelDemo =
     action :: DemoUtils -> Commands -> IO ()
     action utils@MkDemoUtils {..} cmds@MkCommands {..} = do
       bc <- rootContext utils cmds
+      infiniteScroll <- infiniteScrollUrl
 
       logTxt "Navigate to The Internet - Infinite Scroll for wheel testing"
-      navResult <- browsingContextNavigate $ MkNavigate {context = bc, url = "https://the-internet.herokuapp.com/infinite_scroll", wait = Just Complete}
+      navResult <-
+        browsingContextNavigate $
+          MkNavigate
+            { context = bc,
+              url = infiniteScroll,
+              wait = Just Complete
+            }
       logShow "Navigation result" navResult
       pause
 
