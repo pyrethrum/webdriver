@@ -16,7 +16,6 @@ module WebDriverPreCore.BiDi.Input
     SetFiles (..),
     FileDialogOpened (..),
     FileDialogInfo (..),
-    ElementOrigin (..),
     Pointer (..),
     PointerType (..),
   )
@@ -32,20 +31,6 @@ import WebDriverPreCore.Internal.AesonUtils (toJSONOmitNothing)
 import Prelude (Bool, Double, Eq, Int, Maybe, Show)
 
 -- ######### Local #########
-
--- Element Origin
-data ElementOrigin = MkElementOrigin
-  { element :: Script.SharedReference
-  }
-  deriving (Show, Eq, Generic)
-
-instance ToJSON ElementOrigin where
-  toJSON :: ElementOrigin -> Value
-  toJSON (MkElementOrigin element) =
-    object
-      [ "type" .= "element",
-        "element" .= element
-      ]
 
 data PerformActions = MkPerformActions
   { context :: BrowsingContext.BrowsingContextId,
@@ -305,7 +290,7 @@ instance ToJSON PointerCommonProperties where
 data Origin
   = ViewportOriginPointerType
   | PointerOrigin
-  | ElementOriginRef ElementOrigin
+  | ElementOrigin Script.SharedReference
   deriving (Show, Eq, Generic)
 
 instance ToJSON Origin where
@@ -313,7 +298,11 @@ instance ToJSON Origin where
   toJSON = \case
     ViewportOriginPointerType -> "viewport"
     PointerOrigin -> "pointer"
-    ElementOriginRef elementOrigin -> toJSON elementOrigin
+    ElementOrigin element ->
+      object
+        [ "type" .= "element",
+          "element" .= element
+        ]
 
 -- ReleaseActions
 newtype ReleaseActions = MkReleaseActions
