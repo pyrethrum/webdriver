@@ -118,7 +118,6 @@ test-suite driver-demo-e2e
     , dhall
     , directory
     , filepath
-    , neat-interpolation
     , network
     , pretty-show ^>=1.10
     , req
@@ -136,7 +135,6 @@ test-suite driver-demo-e2e
     , Const
     , IOUtils
     , TestPages
-    , TestPagesBase64
     , Http.HttpRunnerMinimalForDocs
     , Http.HttpRunner
     , Http.HttpAPI

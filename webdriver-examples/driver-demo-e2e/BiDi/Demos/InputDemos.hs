@@ -10,7 +10,7 @@ import WebDriverPreCore.BiDi.Input
 import WebDriverPreCore.BiDi.Protocol
 import WebDriverPreCore.BiDi.Script qualified as Script
 import Prelude hiding (log)
-import TestPagesBase64 (textAreaPageBase64)
+import TestPages (textAreaUrl)
 
 {-
 Input Module Commands (3 total):
@@ -46,7 +46,6 @@ defaultPointerProps =
     }
 
 -- >>> runDemo inputKeyboardDemo
--- *** Exception: CloseRequest 1000 ""
 inputKeyboardDemo :: BiDiDemo
 inputKeyboardDemo =
   demo "Input I - Keyboard Actions" action
@@ -54,9 +53,10 @@ inputKeyboardDemo =
     action :: DemoUtils -> Commands -> IO ()
     action utils@MkDemoUtils {..} cmds@MkCommands {..} = do
       bc <- rootContext utils cmds
-
-      logTxt "Navigate to base64-encoded page for keyboard testing"
-      navResult <- browsingContextNavigate $ MkNavigate {context = bc, url = textAreaPageBase64, wait = Just Complete}
+      fileUrl <- textAreaUrl
+      
+      logTxt "Navigate to text area page for keyboard testing"
+      navResult <- browsingContextNavigate $ MkNavigate {context = bc, url = fileUrl, wait = Just Complete}
       logShow "Navigation result" navResult
       pause
 
