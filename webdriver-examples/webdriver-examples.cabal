@@ -134,7 +134,7 @@ test-suite driver-demo-e2e
       Config
     , Const
     , IOUtils
-    , TestPages
+    , TestData
     , Http.HttpRunnerMinimalForDocs
     , Http.HttpRunner
     , Http.HttpAPI

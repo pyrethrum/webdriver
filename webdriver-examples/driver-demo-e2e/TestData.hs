@@ -1,8 +1,11 @@
 module TestData where
 
-import Data.Text (Text, pack)
+import Data.Text (Text, pack, unpack)
 import System.Directory (canonicalizePath)
 import Prelude
+import Data.ByteString qualified as BS
+import Data.ByteString.Base64 qualified as B64
+import Data.Base64.Types qualified as B64T
 
 testDir :: FilePath
 testDir = "webdriver-examples/driver-demo-e2e/TestFiles/"
@@ -24,6 +27,12 @@ demoExtensionDirPath = testPath "demoExtension/"
 
 demoExtensionZipPath :: IO Text
 demoExtensionZipPath = testPath "demoExtension.zip"
+
+demoExtensionAsBase64 :: IO Text
+demoExtensionAsBase64 = do
+  zipPath <- demoExtensionZipPath
+  zipContent <- BS.readFile (unpack zipPath)
+  pure $ B64T.extractBase64 $ B64.encodeBase64 zipContent
 
 textAreaUrl :: IO Text
 textAreaUrl = fileUrl "textArea.html"

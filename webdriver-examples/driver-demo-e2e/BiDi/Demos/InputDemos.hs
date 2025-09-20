@@ -4,7 +4,7 @@ import BiDi.BiDiRunner (Commands (..))
 import BiDi.DemoUtils
 import Data.Maybe (fromJust)
 import IOUtils (DemoUtils (..))
-import TestPages (checkboxesUrl, infiniteScrollUrl, textAreaUrl, fileUrl, uploadFilePath)
+import TestData (checkboxesUrl, infiniteScrollUrl, textAreaUrl, fileUrl, uploadFilePath)
 import WebDriverPreCore.BiDi.BrowsingContext (Locator (..))
 import WebDriverPreCore.BiDi.CoreTypes (NodeRemoteValue (..))
 import WebDriverPreCore.BiDi.CoreTypes qualified as Core
