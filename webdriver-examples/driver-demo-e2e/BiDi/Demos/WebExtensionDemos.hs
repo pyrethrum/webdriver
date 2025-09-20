@@ -60,35 +60,6 @@ webExtensionInstallPathDemo =
       pause
 
 -- >>> runDemo webExtensionInstallArchiveDemo
--- *** Exception: Error executing BiDi command: MkCommand
---   { method = "webExtension.install"
---   , params =
---       ExtensionArchivePath
---         "/home/john-walker/repos/webdriver/webdriver-examples/driver-demo-e2e/TestFiles/demoExtension.zip"
---   , extended = Nothing
---   }
--- With JSON: 
--- {
---     "id": 1,
---     "method": "webExtension.install",
---     "params": {
---         "extensionData": {
---             "path": "/home/john-walker/repos/webdriver/webdriver-examples/driver-demo-e2e/TestFiles/demoExtension.zip",
---             "type": "archivePath"
---         },
---         "method": "webExtension.install"
---     }
--- }
--- Failed to decode the 'result' property of JSON returned by driver to response type: 
--- {
---     "error": "invalid web extension",
---     "id": 1,
---     "message": "Could not install Add-on: File /home/john-walker/repos/webdriver/webdriver-examples/driver-demo-e2e/TestFiles/demoExtension.zip does not contain a valid manifest",
---     "stacktrace": "RemoteError@chrome://remote/content/shared/RemoteError.sys.mjs:8:8\nWebDriverError@chrome://remote/content/shared/webdriver/Errors.sys.mjs:202:5\nInvalidWebExtensionError@chrome://remote/content/shared/webdriver/Errors.sys.mjs:488:5\ninstallAddon@chrome://remote/content/shared/Addon.sys.mjs:56:11\n",
---     "type": "error"
--- }
--- Error message: 
--- key "result" not found
 webExtensionInstallArchiveDemo :: BiDiDemo
 webExtensionInstallArchiveDemo =
   demo "WebExtension - Install from Archive" action
