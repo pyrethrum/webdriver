@@ -9,6 +9,11 @@ import WebDriverPreCore.BiDi.Protocol
 import Prelude hiding (log, putStrLn)
 
 {-
+Note: many of these demos will fail if the WebDriver server does not support BiDi sessions directly.
+For example, geckodriver currently does not support BiDi sessions directly, so commands like
+`session.new` and `session.end` will fail. However, commands like `session.status`, `session.subscribe`,
+and `session.unsubscribe` may still work if a BiDi session is already established via a WebDriver classic session.
+  
 Session Module Commands (5 total):
 
 1. session.status - Returns information about whether a remote end is in a state to create new sessions
@@ -16,34 +21,6 @@ Session Module Commands (5 total):
 3. session.end - Ends the current session
 4. session.subscribe - Enables certain events either globally or for a set of navigables
 5. session.unsubscribe - Disables events either globally or for a set of navigables
-
-Session Module Types:
-- session.CapabilitiesRequest - Capabilities requested for a session
-- session.CapabilityRequest - Specific set of requested capabilities
-- session.ProxyConfiguration - Proxy configuration with various types (direct, manual, pac, etc.)
-- session.UserPromptHandler - Configuration for user prompt handling
-- session.UserPromptHandlerType - Behavior of user prompt handler (accept/dismiss/ignore)
-- session.Subscription - Unique subscription identifier
-- session.SubscriptionRequest - Request to subscribe/unsubscribe from events
-- session.UnsubscribeByIDRequest - Remove subscriptions by ID
-- session.UnsubscribeByAttributesRequest - Remove subscriptions by attributes
-
-Key Concepts:
-- Session lifecycle management
-- BiDi vs HTTP session differences
-- Event subscription and management
-- Capability negotiation and matching
-- Proxy configuration types
-- User prompt automation
-- WebSocket connection management
-
-Complexity factors:
-- Session creation and negotiation
-- Event subscription filtering by context/user context
-- Complex capability matching algorithms
-- Proxy configuration validation
-- User prompt handler configuration
-- Subscription management and cleanup
 -}
 
 -- >>> runDemo sessionStatusDemo
@@ -65,6 +42,31 @@ sessionStatusDemo =
       pause
 
 -- >>> runDemo sessionNewDemo
+-- *** Exception: Error executing BiDi command: MkCommand
+--   { method = "session.new"
+--   , params =
+--       MkCapabilities { alwaysMatch = Nothing , firstMatch = [] }
+--   , extended = Nothing
+--   }
+-- With JSON: 
+-- {
+--     "id": 1,
+--     "method": "session.new",
+--     "params": {
+--         "capabilities": {},
+--         "firstMatch": []
+--     }
+-- }
+-- Failed to decode the 'result' property of JSON returned by driver to response type: 
+-- {
+--     "error": "session not created",
+--     "id": 1,
+--     "message": "Maximum number of active sessions",
+--     "stacktrace": "RemoteError@chrome://remote/content/shared/RemoteError.sys.mjs:8:8\nWebDriverError@chrome://remote/content/shared/webdriver/Errors.sys.mjs:202:5\nSessionNotCreatedError@chrome://remote/content/shared/webdriver/Errors.sys.mjs:814:5\ncreateSession@chrome://remote/content/webdriver-bidi/WebDriverBiDi.sys.mjs:127:13\nonPacket@chrome://remote/content/webdriver-bidi/WebDriverBiDiConnection.sys.mjs:206:55\nonMessage@chrome://remote/content/server/WebSocketTransport.sys.mjs:127:18\nhandleEvent@chrome://remote/content/server/WebSocketTransport.sys.mjs:109:14\n",
+--     "type": "error"
+-- }
+-- Error message: 
+-- key "result" not found
 sessionNewDemo :: BiDiDemo
 sessionNewDemo =
   demo "Session - New Session Creation" action
@@ -86,6 +88,27 @@ sessionNewDemo =
       pause
 
 -- >>> runDemo sessionEndDemo  
+-- *** Exception: Error executing BiDi command: MkCommand
+--   { method = "session.end"
+--   , params = fromList []
+--   , extended = Nothing
+--   }
+-- With JSON: 
+-- {
+--     "id": 1,
+--     "method": "session.end",
+--     "params": {}
+-- }
+-- Failed to decode the 'result' property of JSON returned by driver to response type: 
+-- {
+--     "error": "unsupported operation",
+--     "id": 1,
+--     "message": "Ending a session started with WebDriver classic is not supported. Use the WebDriver classic \"Delete Session\" command instead.",
+--     "stacktrace": "RemoteError@chrome://remote/content/shared/RemoteError.sys.mjs:8:8\nWebDriverError@chrome://remote/content/shared/webdriver/Errors.sys.mjs:202:5\nUnsupportedOperationError@chrome://remote/content/shared/webdriver/Errors.sys.mjs:978:5\nend@chrome://remote/content/webdriver-bidi/modules/root/session.sys.mjs:72:13\nhandleCommand@chrome://remote/content/shared/messagehandler/MessageHandler.sys.mjs:260:33\nexecute@chrome://remote/content/shared/webdriver/Session.sys.mjs:410:32\nonPacket@chrome://remote/content/webdriver-bidi/WebDriverBiDiConnection.sys.mjs:236:37\nonMessage@chrome://remote/content/server/WebSocketTransport.sys.mjs:127:18\nhandleEvent@chrome://remote/content/server/WebSocketTransport.sys.mjs:109:14\n",
+--     "type": "error"
+-- }
+-- Error message: 
+-- key "result" not found
 sessionEndDemo :: BiDiDemo
 sessionEndDemo =
   demo "Session - End Session" action
@@ -119,19 +142,34 @@ sessionSubscribeDemo =
 
       logTxt "Test 2: Subscribe to network events for specific context"
       let contextSubscription = MkSessionSubscriptionRequest
-            { events = ["network.requestWillBeSent", "network.responseReceived"],
-              contexts = Just [bc.context],
+            { events = ["network.fetchError", "network.responseCompleted"],
+              contexts = Just [bc],
               userContexts = Nothing
             }
       sub2 <- sessionSubScribe contextSubscription
       logShow "Context-specific subscription" sub2
       pause
 
+      
       logTxt "Test 3: Subscribe to script events for user context"
+      -- Get current user contexts or create a new one if needed
+      userContextsResult <- browserGetUserContexts
+      logShow "Current user contexts" userContextsResult
+      
+      -- Create a new user context for demonstration
+      currentUserContext <- 
+        browserCreateUserContext
+          MkCreateUserContext
+            { insecureCerts = Nothing,
+              proxy = Nothing,
+              unhandledPromptBehavior = Nothing
+            }
+      logShow "Created user context" currentUserContext
+      
       let userContextSubscription = MkSessionSubscriptionRequest
             { events = ["script.realmCreated"],
               contexts = Nothing,
-              userContexts = Just ["default"]
+              userContexts = Just [currentUserContext]
             }
       sub3 <- sessionSubScribe userContextSubscription
       logShow "User context subscription" sub3
@@ -155,16 +193,27 @@ sessionUnsubscribeDemo =
       pause
 
       logTxt "Test 1: Unsubscribe by subscription ID"
-      let unsubByID = UnsubscribeByID $ MkSessionUnsubscribeByIDRequest
+      let unsubByID = UnsubscribeByID
             { subscriptions = [subResult.subscription]
             }
       result1 <- sessionUnsubscribe unsubByID
       logShow "Unsubscribed by ID" result1
       pause
 
+      logTxt "Now, Subscribe to network events for specific context"
+      let contextSubscription = MkSessionSubscriptionRequest
+            { events = ["network.responseCompleted"],
+              contexts = Nothing,
+              userContexts = Nothing
+            }
+      sub2 <- sessionSubScribe contextSubscription
+      logShow "Context-specific subscription" sub2
+      pause
+
+
       logTxt "Test 2: Unsubscribe by attributes (alternative method)"
-      let unsubByAttrs = UnsubscribeByAttributes $ MkSessionUnsubscribeByAttributesRequest
-            { unsubEvents = ["network.requestWillBeSent"],
+      let unsubByAttrs = UnsubscribeByAttributes
+            { unsubEvents = ["network.responseCompleted"],
               unsubContexts = Nothing
             }
       result2 <- sessionUnsubscribe unsubByAttrs
@@ -172,6 +221,54 @@ sessionUnsubscribeDemo =
       pause
 
 -- >>> runDemo sessionCapabilityNegotiationDemo
+-- *** Exception: Error executing BiDi command: MkCommand
+--   { method = "session.new"
+--   , params =
+--       MkCapabilities
+--         { alwaysMatch =
+--             Just
+--               MkCapability
+--                 { acceptInsecureCerts = Just True
+--                 , browserName = Just "firefox"
+--                 , browserVersion = Nothing
+--                 , webSocketUrl = True
+--                 , platformName = Just "linux"
+--                 , proxy = Nothing
+--                 , unhandledPromptBehavior = Nothing
+--                 }
+--         , firstMatch = []
+--         }
+--   , extended = Nothing
+--   }
+-- With JSON: 
+-- {
+--     "id": 1,
+--     "method": "session.new",
+--     "params": {
+--         "capabilities": {
+--             "alwaysMatch": {
+--                 "acceptInsecureCerts": true,
+--                 "browserName": "firefox",
+--                 "browserVersion": null,
+--                 "platformName": "linux",
+--                 "proxy": null,
+--                 "unhandledPromptBehavior": null,
+--                 "webSocketUrl": true
+--             }
+--         },
+--         "firstMatch": []
+--     }
+-- }
+-- Failed to decode the 'result' property of JSON returned by driver to response type: 
+-- {
+--     "error": "session not created",
+--     "id": 1,
+--     "message": "Maximum number of active sessions",
+--     "stacktrace": "RemoteError@chrome://remote/content/shared/RemoteError.sys.mjs:8:8\nWebDriverError@chrome://remote/content/shared/webdriver/Errors.sys.mjs:202:5\nSessionNotCreatedError@chrome://remote/content/shared/webdriver/Errors.sys.mjs:814:5\ncreateSession@chrome://remote/content/webdriver-bidi/WebDriverBiDi.sys.mjs:127:13\nonPacket@chrome://remote/content/webdriver-bidi/WebDriverBiDiConnection.sys.mjs:206:55\nonMessage@chrome://remote/content/server/WebSocketTransport.sys.mjs:127:18\nhandleEvent@chrome://remote/content/server/WebSocketTransport.sys.mjs:109:14\n",
+--     "type": "error"
+-- }
+-- Error message: 
+-- key "result" not found
 sessionCapabilityNegotiationDemo :: BiDiDemo
 sessionCapabilityNegotiationDemo =
   demo "Session - Capability Negotiation" action
@@ -263,7 +360,7 @@ sessionCompleteLifecycleDemo =
       pause
 
       logTxt "Step 5: Clean up subscriptions"
-      let cleanup = UnsubscribeByID $ MkSessionUnsubscribeByIDRequest
+      let cleanup = UnsubscribeByID
             { subscriptions = [subResult.subscription]
             }
       cleanupResult <- sessionUnsubscribe cleanup

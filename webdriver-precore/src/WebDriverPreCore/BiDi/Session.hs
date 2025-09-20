@@ -5,7 +5,9 @@ import Data.Aeson.Types (Parser)
 import Data.Text (Text)
 import GHC.Generics (Generic)
 import WebDriverPreCore.BiDi.Capabilities (CapabilitiesResult)
-import Prelude (Applicative ((<*>)), Bool (..), Eq (..), Maybe (..), Show (..), ($), (<$>))
+import Prelude (Applicative ((<*>)), Bool (..), Eq (..), Maybe (..), Show (..), ($), (<$>), (++), maybe, Semigroup (..))
+import WebDriverPreCore.Internal.AesonUtils (toJSONOmitNothing)
+import WebDriverPreCore.BiDi.CoreTypes (BrowsingContext, UserContext)
 
 -- ######### Remote #########
 
@@ -17,37 +19,32 @@ newtype Subscription = MkSubscription {subscriptionId :: Text}
 -- | Subscription Request
 data SessionSubscriptionRequest = MkSessionSubscriptionRequest
   { events :: [Text],
-    contexts :: Maybe [Text],
-    userContexts :: Maybe [Text]
+    contexts :: Maybe [BrowsingContext],
+    userContexts :: Maybe [UserContext]
   }
   deriving (Show, Eq, Generic)
 
-instance ToJSON SessionSubscriptionRequest
+instance ToJSON SessionSubscriptionRequest where
+  toJSON :: SessionSubscriptionRequest -> Value
+  toJSON = toJSONOmitNothing
 
 -- | Unsubscribe Parameters
-data SessionUnsubscribeParameters
-  = UnsubscribeByID SessionUnsubscribeByIDRequest
-  | UnsubscribeByAttributes SessionUnsubscribeByAttributesRequest
+data SessionUnsubscribe
+  = UnsubscribeByID 
+      { subscriptions :: [Subscription] }
+  | UnsubscribeByAttributes 
+      { unsubEvents :: [Text], 
+        unsubContexts :: Maybe [BrowsingContext] }
   deriving (Show, Eq, Generic)
 
-instance ToJSON SessionUnsubscribeParameters
-
--- | Unsubscribe By ID Request
-newtype SessionUnsubscribeByIDRequest = MkSessionUnsubscribeByIDRequest
-  { subscriptions :: [Subscription]
-  }
-  deriving (Show, Eq, Generic)
-
-instance ToJSON SessionUnsubscribeByIDRequest
-
--- | Unsubscribe By Attributes Request
-data SessionUnsubscribeByAttributesRequest = MkSessionUnsubscribeByAttributesRequest
-  { unsubEvents :: [Text],
-    unsubContexts :: Maybe [Text]
-  }
-  deriving (Show, Eq, Generic)
-
-instance ToJSON SessionUnsubscribeByAttributesRequest
+instance ToJSON SessionUnsubscribe where
+  toJSON :: SessionUnsubscribe -> Value
+  toJSON (UnsubscribeByID {subscriptions}) = 
+    object ["subscriptions" .= subscriptions]
+  toJSON (UnsubscribeByAttributes {unsubEvents, unsubContexts}) = 
+    object $ 
+      [ "events" .= unsubEvents ] <>
+       maybe [] (\contexts -> ["contexts" .= contexts]) unsubContexts
 
 -- ######### Local #########
 

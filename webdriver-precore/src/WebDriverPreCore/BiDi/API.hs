@@ -90,7 +90,7 @@ sessionEnd = emptyCommand "session.end"
 sessionSubScribe :: SessionSubscriptionRequest -> Command SessionSubscriptionRequest SessionSubscribeResult
 sessionSubScribe = mkCommand "session.subscribe"
 
-sessionUnsubscribe :: SessionUnsubscribeParameters -> Command SessionUnsubscribeParameters Object
+sessionUnsubscribe :: SessionUnsubscribe -> Command SessionUnsubscribe Object
 sessionUnsubscribe = mkCommand "session.unsubscribe"
 
 ---- Browsing Context ----

@@ -200,7 +200,7 @@ import WebDriverPreCore.BiDi.Session
     SessionStatusResult (..),
     SessionSubscribeResult (..),
     SessionSubscriptionRequest (..),
-    SessionUnsubscribeParameters (..),
+    SessionUnsubscribe (..),
   )
 import WebDriverPreCore.BiDi.Storage
   ( DeleteCookies (..),

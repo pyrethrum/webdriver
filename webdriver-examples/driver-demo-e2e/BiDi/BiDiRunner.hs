@@ -75,7 +75,7 @@ import WebDriverPreCore.BiDi.Protocol
     RemoveUserContext,
     SessionSubscribeResult,
     SessionSubscriptionRequest,
-    SessionUnsubscribeParameters,
+    SessionUnsubscribe,
     SetCacheBehavior,
     SetClientWindowState,
     SetCookie,
@@ -113,7 +113,7 @@ data Commands = MkCommands
     sessionStatus :: IO SessionStatusResult,
     sessionEnd :: IO Object,
     sessionSubScribe :: SessionSubscriptionRequest -> IO SessionSubscribeResult,
-    sessionUnsubscribe :: SessionUnsubscribeParameters -> IO Object,
+    sessionUnsubscribe :: SessionUnsubscribe -> IO Object,
     -- BrowsingContext commands
     browsingContextActivate :: Activate -> IO Object,
     browsingContextCaptureScreenshot :: CaptureScreenshot -> IO CaptureScreenshotResult,
