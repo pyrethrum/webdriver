@@ -129,10 +129,11 @@ emulationSetScreenOrientationOverrideDemo =
   demo "Emulation - Set Screen Orientation Override" action
   where
     action :: DemoUtils -> Commands -> IO ()
+    action MkDemoUtils {..}  _ = do -- empty action for now
+      {-  TODO Not supported by geckodriver - add expectations when we gget to errors
     action utils@MkDemoUtils {..} cmds@MkCommands {..} = do
       bc <- rootContext utils cmds
 
-      {-  TODO Not supported by geckodriver - add expectations when we gget to errors
       logTxt "Test 1: Set orientation to portrait primary"
       let portraitOrientation = MkScreenOrientationOverride
             { natural = PortraitNatural,
@@ -192,9 +193,10 @@ emulationSetTimezoneOverrideDemo =
   demo "Emulation - Set Timezone Override" action
   where
     action :: DemoUtils -> Commands -> IO ()
+    action MkDemoUtils {..}  _ = do -- empty action for now
+      {-  TODO Not supported by geckodriver - add expectations when we gget to errors  
     action utils@MkDemoUtils {..} cmds@MkCommands {..} = do
       bc <- rootContext utils cmds
-      {-  TODO Not supported by geckodriver - add expectations when we gget to errors  
       logTxt "Test 1: Set timezone to New York"
       let nyTimezone = MkSetTimezoneOverride
             { timezone = Just "America/New_York",
@@ -252,8 +254,9 @@ emulationCompleteWorkflowDemo =
   demo "Emulation - Complete Workflow Demo" action
   where
     action :: DemoUtils -> Commands -> IO ()
-    action utils@MkDemoUtils {..} cmds@MkCommands {..} = do
+    action MkDemoUtils {..}  _ = do -- empty action for now
       {-  TODO Not supported by geckodriver - add expectations when we get to errors 
+    action utils@MkDemoUtils {..} cmds@MkCommands {..} = do
       logTxt "=== Creating multiple browsing contexts for emulation demo ==="
       bc1 <- rootContext utils cmds
       bc2 <- newWindowContext utils cmds
@@ -428,5 +431,6 @@ emulationCompleteWorkflowDemo =
       pause
 
       logTxt "=== Cleaning up contexts ==="
-      -}
       closeContext utils cmds bc2
+      -}
+      pause
