@@ -2,10 +2,8 @@ module BiDi.Demos.EmulationDemos where
 
 import BiDi.BiDiRunner (Commands (..))
 import BiDi.DemoUtils
-import Data.Text (Text)
 import IOUtils (DemoUtils (..))
--- import WebDriverPreCore.BiDi.Protocol
-import WebDriverPreCore.BiDi.Emulation as Emulation
+import WebDriverPreCore.BiDi.Protocol
 import Prelude hiding (log, putStrLn)
 
 {-
@@ -134,10 +132,11 @@ emulationSetScreenOrientationOverrideDemo =
     action utils@MkDemoUtils {..} cmds@MkCommands {..} = do
       bc <- rootContext utils cmds
 
+      {-  TODO Not supported by geckodriver - add expectations when we gget to errors
       logTxt "Test 1: Set orientation to portrait primary"
       let portraitOrientation = MkScreenOrientationOverride
-            { natural = Emulation.Portrait,
-              screenOrientationType = Emulation.PortraitPrimary
+            { natural = PortraitNatural,
+              screenOrientationType = PortraitPrimary
             }
       let portraitOverride = MkSetScreenOrientationOverride
             { screenOrientation = Just portraitOrientation,
@@ -150,8 +149,8 @@ emulationSetScreenOrientationOverrideDemo =
 
       logTxt "Test 2: Set orientation to landscape primary"
       let landscapeOrientation = MkScreenOrientationOverride
-            { natural = Emulation.Landscape,
-              screenOrientationType = Emulation.LandscapePrimary
+            { natural = LandscapeNatural,
+              screenOrientationType = LandscapePrimary
             }
       let landscapeOverride = MkSetScreenOrientationOverride
             { screenOrientation = Just landscapeOrientation,
@@ -164,8 +163,8 @@ emulationSetScreenOrientationOverrideDemo =
 
       logTxt "Test 3: Set orientation to portrait secondary"
       let portraitSecondaryOrientation = MkScreenOrientationOverride
-            { natural = Emulation.Portrait,
-              screenOrientationType = Emulation.PortraitSecondary
+            { natural = PortraitNatural,
+              screenOrientationType = PortraitSecondary
             }
       let portraitSecondaryOverride = MkSetScreenOrientationOverride
             { screenOrientation = Just portraitSecondaryOrientation,
@@ -184,6 +183,7 @@ emulationSetScreenOrientationOverrideDemo =
             }
       result4 <- emulationSetScreenOrientationOverride clearOrientation
       logShow "Orientation override cleared" result4
+      -}
       pause
 
 -- >>> runDemo emulationSetTimezoneOverrideDemo
@@ -194,7 +194,7 @@ emulationSetTimezoneOverrideDemo =
     action :: DemoUtils -> Commands -> IO ()
     action utils@MkDemoUtils {..} cmds@MkCommands {..} = do
       bc <- rootContext utils cmds
-
+      {-  TODO Not supported by geckodriver - add expectations when we gget to errors  
       logTxt "Test 1: Set timezone to New York"
       let nyTimezone = MkSetTimezoneOverride
             { timezone = Just "America/New_York",
@@ -243,6 +243,7 @@ emulationSetTimezoneOverrideDemo =
             }
       result5 <- emulationSetTimezoneOverride clearTimezone
       logShow "Timezone override cleared" result5
+      -}
       pause
 
 -- >>> runDemo emulationCompleteWorkflowDemo
@@ -252,6 +253,7 @@ emulationCompleteWorkflowDemo =
   where
     action :: DemoUtils -> Commands -> IO ()
     action utils@MkDemoUtils {..} cmds@MkCommands {..} = do
+      {-  TODO Not supported by geckodriver - add expectations when we get to errors 
       logTxt "=== Creating multiple browsing contexts for emulation demo ==="
       bc1 <- rootContext utils cmds
       bc2 <- newWindowContext utils cmds
@@ -297,8 +299,8 @@ emulationCompleteWorkflowDemo =
 
       -- Set portrait orientation
       let portraitOrientation = MkScreenOrientationOverride
-            { natural = Emulation.Portrait,
-              screenOrientationType = Emulation.PortraitPrimary
+            { natural = PortraitNatural,
+              screenOrientationType = PortraitPrimary
             }
       let orientationOverride1 = MkSetScreenOrientationOverride
             { screenOrientation = Just portraitOrientation,
@@ -349,8 +351,8 @@ emulationCompleteWorkflowDemo =
 
       -- Set landscape orientation
       let landscapeOrientation = MkScreenOrientationOverride
-            { natural = Emulation.Landscape,
-              screenOrientationType = Emulation.LandscapePrimary
+            { natural = LandscapeNatural,
+              screenOrientationType = LandscapePrimary
             }
       let orientationOverride2 = MkSetScreenOrientationOverride
             { screenOrientation = Just landscapeOrientation,
@@ -426,4 +428,5 @@ emulationCompleteWorkflowDemo =
       pause
 
       logTxt "=== Cleaning up contexts ==="
+      -}
       closeContext utils cmds bc2

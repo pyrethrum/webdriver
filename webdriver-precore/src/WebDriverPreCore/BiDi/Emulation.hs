@@ -28,7 +28,7 @@ import Data.Text (Text)
 import GHC.Generics (Generic)
 import WebDriverPreCore.BiDi.CoreTypes (BrowsingContext, UserContext)
 import Prelude (Eq, Float, Show)
-import Data.Aeson (ToJSON (..))
+import Data.Aeson (ToJSON (..), Value)
 import WebDriverPreCore.Internal.AesonUtils (enumCamelCase)
 
 -- ######### Remote #########
@@ -86,8 +86,14 @@ data ScreenOrientationOverride = MkScreenOrientationOverride
   }
   deriving (Show, Eq, Generic)
 
-data ScreenOrientationNatural = Portrait | Landscape
+data ScreenOrientationNatural = PortraitNatural | LandscapeNatural
   deriving (Show, Eq, Generic)
+
+instance ToJSON ScreenOrientationNatural where
+  toJSON :: ScreenOrientationNatural -> Value
+  toJSON = \case
+    PortraitNatural -> "portrait"
+    LandscapeNatural -> "landscape"
 
 data ScreenOrientationType
   = PortraitPrimary
@@ -96,7 +102,11 @@ data ScreenOrientationType
   | LandscapeSecondary
   deriving (Show, Eq, Generic)
 
--- ToJSON instances
+
+instance ToJSON ScreenOrientationType where
+  toJSON :: ScreenOrientationType -> Value
+  toJSON = enumCamelCase
+
 
 instance ToJSON SetGeolocationOverride
 instance ToJSON SetLocaleOverride
@@ -105,9 +115,3 @@ instance ToJSON SetTimezoneOverride
 instance ToJSON GeolocationCoordinates
 instance ToJSON GeolocationPositionError
 instance ToJSON ScreenOrientationOverride
-
-instance ToJSON ScreenOrientationNatural where
-  toJSON = enumCamelCase
-
-instance ToJSON ScreenOrientationType where
-  toJSON = enumCamelCase

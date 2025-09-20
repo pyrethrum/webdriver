@@ -63,7 +63,7 @@ import Data.Text qualified as T
 import Data.Text.Encoding (decodeUtf8, encodeUtf8)
 import Data.Text.IO qualified as T
 import GHC.Base (IO)
-import GHC.Generics (Generic (from), Rep)
+import GHC.Generics (Generic, Rep)
 import GHC.Show (Show (..))
 import System.IO (print)
 import Prelude
