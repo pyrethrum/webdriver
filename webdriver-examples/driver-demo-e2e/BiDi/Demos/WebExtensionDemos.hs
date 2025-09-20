@@ -4,12 +4,10 @@ import BiDi.BiDiRunner (Commands (..))
 import BiDi.DemoUtils
 import IOUtils (DemoUtils (..))
 import WebDriverPreCore.BiDi.WebExtensions
-import WebDriverPreCore.BiDi.Protocol
 import WebDriverPreCore.Internal.Utils (txt)
-import Data.Text (Text)
-import Data.Aeson (toJSON)
 import Control.Exception (SomeException, catch)
 import Prelude hiding (log, putStrLn)
+import qualified Data.Aeson.KeyMap as AKM
 
 {-
 WebExtension Module Commands (2 total):
@@ -43,6 +41,30 @@ Complexity factors:
 -}
 
 -- >>> runDemo webExtensionInstallPathDemo
+-- *** Exception: Error executing BiDi command: MkCommand
+--   { method = "webExtension.install"
+--   , params = ExtensionPath "/path/to/extension"
+--   , extended = Nothing
+--   }
+-- With JSON: 
+-- {
+--     "id": 1,
+--     "method": "webExtension.install",
+--     "params": {
+--         "contents": "/path/to/extension",
+--         "tag": "extensionPath"
+--     }
+-- }
+-- Failed to decode the 'result' property of JSON returned by driver to response type: 
+-- {
+--     "error": "invalid argument",
+--     "id": 1,
+--     "message": "Expected \"extensionData\" to be an object, got [object Undefined] undefined",
+--     "stacktrace": "RemoteError@chrome://remote/content/shared/RemoteError.sys.mjs:8:8\nWebDriverError@chrome://remote/content/shared/webdriver/Errors.sys.mjs:202:5\nInvalidArgumentError@chrome://remote/content/shared/webdriver/Errors.sys.mjs:404:5\nassert.that/<@chrome://remote/content/shared/webdriver/Assert.sys.mjs:581:13\nassert.object@chrome://remote/content/shared/webdriver/Assert.sys.mjs:454:10\ninstall@chrome://remote/content/webdriver-bidi/modules/root/webExtension.sys.mjs:101:17\nhandleCommand@chrome://remote/content/shared/messagehandler/MessageHandler.sys.mjs:260:33\nexecute@chrome://remote/content/shared/webdriver/Session.sys.mjs:410:32\nonPacket@chrome://remote/content/webdriver-bidi/WebDriverBiDiConnection.sys.mjs:236:37\nonMessage@chrome://remote/content/server/WebSocketTransport.sys.mjs:127:18\nhandleEvent@chrome://remote/content/server/WebSocketTransport.sys.mjs:109:14\n",
+--     "type": "error"
+-- }
+-- Error message: 
+-- key "result" not found
 webExtensionInstallPathDemo :: BiDiDemo
 webExtensionInstallPathDemo =
   demo "WebExtension - Install from Path" action
@@ -124,11 +146,11 @@ webExtensionUninstallDemo =
 
       logTxt "Test 2: Attempt to uninstall non-existent extension"
       let fakeExtension = MkWebExtension "non-existent-extension-id"
-      fakeResult <- webExtensionUninstall fakeExtension `catch` \(e :: SomeException) -> do
-        logTxt $ "Expected error for non-existent extension: " <> txt e
-        -- Return a fake result for demo purposes  
-        pure $ toJSON ()
-      logShow "Fake uninstall attempt" fakeResult
+      webExtensionUninstall fakeExtension 
+       `catch` \(e :: SomeException) -> do
+         logShow "Expected error for non-existent extension: " e
+         pure AKM.empty
+
       pause
 
 -- >>> runDemo webExtensionValidationDemo
@@ -201,19 +223,13 @@ webExtensionCompleteLifecycleDemo =
       pause
 
       logTxt "Step 4: Uninstall all extensions"
-      uninstall1 <- webExtensionUninstall pathExtId `catch` \(e :: SomeException) -> do
-        logTxt $ "Uninstall demo 1: " <> txt e
-        pure $ toJSON ()
+      uninstall1 <- webExtensionUninstall pathExtId 
       logShow "First extension uninstalled" uninstall1
 
-      uninstall2 <- webExtensionUninstall archiveExtId `catch` \(e :: SomeException) -> do
-        logTxt $ "Uninstall demo 2: " <> txt e
-        pure $ toJSON ()
+      uninstall2 <- webExtensionUninstall archiveExtId 
       logShow "Second extension uninstalled" uninstall2
 
-      uninstall3 <- webExtensionUninstall base64ExtId `catch` \(e :: SomeException) -> do
-        logTxt $ "Uninstall demo 3: " <> txt e
-        pure $ toJSON ()
+      uninstall3 <- webExtensionUninstall base64ExtId 
       logShow "Third extension uninstalled" uninstall3
       pause
 

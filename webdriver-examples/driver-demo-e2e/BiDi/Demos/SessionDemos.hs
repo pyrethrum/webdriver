@@ -4,10 +4,8 @@ import BiDi.BiDiRunner (Commands (..))
 import BiDi.DemoUtils
 import IOUtils (DemoUtils (..))
 import WebDriverPreCore.BiDi.Session
-import WebDriverPreCore.BiDi.Capabilities (Capabilities(..), Capability(..))
+import WebDriverPreCore.BiDi.Capabilities (UserPromptHandler(..), UserPromptHandlerType(..))
 import WebDriverPreCore.BiDi.Protocol
-import WebDriverPreCore.Internal.Utils (txt)
-import Data.Text (Text)
 import Prelude hiding (log, putStrLn)
 
 {-
@@ -83,8 +81,8 @@ sessionNewDemo =
       pause
 
       logTxt "Session information:"
-      logTxt $ "Session ID: " <> (.sessionId) newSession
-      logShow "Capabilities result" (.capabilities) newSession
+      logTxt $ "Session ID: " <> newSession.sessionId
+      logShow "Capabilities result" newSession.capabilities
       pause
 
 -- >>> runDemo sessionEndDemo  
@@ -122,7 +120,7 @@ sessionSubscribeDemo =
       logTxt "Test 2: Subscribe to network events for specific context"
       let contextSubscription = MkSessionSubscriptionRequest
             { events = ["network.requestWillBeSent", "network.responseReceived"],
-              contexts = Just [bc],
+              contexts = Just [bc.context],
               userContexts = Nothing
             }
       sub2 <- sessionSubScribe contextSubscription
@@ -158,7 +156,7 @@ sessionUnsubscribeDemo =
 
       logTxt "Test 1: Unsubscribe by subscription ID"
       let unsubByID = UnsubscribeByID $ MkSessionUnsubscribeByIDRequest
-            { subscriptions = [(.subscription) subResult]
+            { subscriptions = [subResult.subscription]
             }
       result1 <- sessionUnsubscribe unsubByID
       logShow "Unsubscribed by ID" result1
@@ -183,6 +181,10 @@ sessionCapabilityNegotiationDemo =
       logTxt "Test 1: Session with alwaysMatch capabilities"
       let alwaysMatchCap = MkCapability
             { acceptInsecureCerts = Just True,
+              browserName = Just "firefox",
+              browserVersion = Nothing,
+              webSocketUrl = True,
+              platformName = Just "linux",
               proxy = Nothing,
               unhandledPromptBehavior = Nothing
             }
@@ -197,13 +199,28 @@ sessionCapabilityNegotiationDemo =
       logTxt "Test 2: Session with firstMatch capabilities"
       let firstMatchCap1 = MkCapability
             { acceptInsecureCerts = Just False,
-              proxy = Nothing,
+              browserName = Just "firefox",
+              browserVersion = Just "130.0",
+              webSocketUrl = True,
+              platformName = Just "linux",
+              proxy = Just DirectProxyConfiguration,
               unhandledPromptBehavior = Nothing
             }
       let firstMatchCap2 = MkCapability
             { acceptInsecureCerts = Just True,
+              browserName = Nothing,
+              browserVersion = Nothing,
+              webSocketUrl = True,
+              platformName = Nothing,
               proxy = Nothing,
-              unhandledPromptBehavior = Nothing
+              unhandledPromptBehavior = Just $ MkUserPromptHandler
+                { alert = Just Accept,
+                  beforeUnload = Just Dismiss,
+                  confirm = Just Accept,
+                  defaultHandler = Just Ignore,
+                  fileHandler = Nothing,
+                  prompt = Just Accept
+                }
             }
       let firstMatchCapabilities = MkCapabilities
             { alwaysMatch = Nothing,
@@ -247,7 +264,7 @@ sessionCompleteLifecycleDemo =
 
       logTxt "Step 5: Clean up subscriptions"
       let cleanup = UnsubscribeByID $ MkSessionUnsubscribeByIDRequest
-            { subscriptions = [(.subscription) subResult]
+            { subscriptions = [subResult.subscription]
             }
       cleanupResult <- sessionUnsubscribe cleanup
       logShow "Cleanup result" cleanupResult

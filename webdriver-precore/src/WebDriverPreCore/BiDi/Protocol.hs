@@ -91,7 +91,7 @@ import WebDriverPreCore.BiDi.Capabilities (
   Capability(..), 
   ProxyConfiguration(..))
 import WebDriverPreCore.BiDi.Command
-  ( Command,
+  ( Command (..),
     emptyCommand,
     mkCommand,
   )
@@ -112,9 +112,9 @@ import WebDriverPreCore.BiDi.Emulation
     SetTimezoneOverride (..),
   )
 import WebDriverPreCore.BiDi.Input
-  ( PerformActions,
-    ReleaseActions,
-    SetFiles,
+  ( PerformActions (..),
+    ReleaseActions (..),
+    SetFiles (..),
   )
 import WebDriverPreCore.BiDi.Network
   ( AddDataCollector (..),
@@ -159,7 +159,7 @@ import WebDriverPreCore.BiDi.Network
     RemoveIntercept (..),
     Request (..),
     RequestId (..),
-    SameSite (Default, Lax, Strict),
+    SameSite (..),
     SetCacheBehavior (..),
     SetCookieHeader (..),
     UrlPattern (..),
@@ -196,22 +196,22 @@ import WebDriverPreCore.BiDi.Script
     Target (..),
   )
 import WebDriverPreCore.BiDi.Session
-  ( SessionNewResult,
-    SessionStatusResult,
-    SessionSubscribeResult,
-    SessionSubscriptionRequest,
-    SessionUnsubscribeParameters,
+  ( SessionNewResult (..),
+    SessionStatusResult (..),
+    SessionSubscribeResult (..),
+    SessionSubscriptionRequest (..),
+    SessionUnsubscribeParameters (..),
   )
 import WebDriverPreCore.BiDi.Storage
-  ( DeleteCookies,
+  ( DeleteCookies (..),
     DeleteCookiesResult (..),
-    GetCookies,
+    GetCookies (..),
     GetCookiesResult (..),
-    SetCookie,
+    SetCookie (..),
     SetCookieResult (..),
   )
 import WebDriverPreCore.BiDi.WebExtensions
-  ( WebExtension,
-    WebExtensionData,
+  ( WebExtension (..),
+    WebExtensionData (..),
     WebExtensionResult (..),
   )
