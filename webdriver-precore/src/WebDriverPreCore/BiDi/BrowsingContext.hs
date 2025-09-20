@@ -246,13 +246,6 @@ data TraverseHistory = MkTraverseHistory
   }
   deriving (Show, Eq, Generic)
 
--- | Represents a browsing context identifier
-newtype BrowsingContextId = MkBrowsingContextId Text
-  deriving (Show, Eq, Generic)
-
-instance FromJSON BrowsingContextId
-
-instance ToJSON BrowsingContextId
 
 -- | Text matching type for InnerText locator
 data MatchType = Full | Partial

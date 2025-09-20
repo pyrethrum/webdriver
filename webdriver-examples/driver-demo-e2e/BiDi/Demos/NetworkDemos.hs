@@ -83,7 +83,7 @@ networkDataCollectorDemo =
       userContext <-
         browserCreateUserContext
           MkCreateUserContext
-            { acceptInsecureCerts = Nothing,
+            { insecureCerts = Nothing,
               proxy = Nothing,
               unhandledPromptBehavior = Nothing
             }

@@ -14,7 +14,14 @@ module WebDriverPreCore.BiDi.CoreTypes
 where
 
 import Control.Monad (unless)
-import Data.Aeson (FromJSON (..), Object, ToJSON (..), Value (..), object, (.:), (.:?), (.=))
+import Data.Aeson
+  ( FromJSON (..),
+    Object,
+    ToJSON (..),
+    Value (..),
+    (.:),
+    (.:?),
+  )
 import Data.Aeson.Types (Parser, withObject)
 import Data.Int (Int64)
 import Data.Map qualified as Map
@@ -32,7 +39,8 @@ newtype JSUInt = MkJSUInt Word64 deriving newtype (Show, Eq, Enum, FromJSON, ToJ
 newtype JSInt = MkJSInt Int64 deriving newtype (Show, Eq, FromJSON, ToJSON) -- JSINt  :: -9007199254740991..9007199254740991 - Int64  -9223372036854775808 to 9223372036854775807
 
 -- Main BrowsingContext types
-newtype BrowsingContext = MkBrowsingContext {context :: Text} deriving (Show, Eq, Generic, ToJSON)
+newtype BrowsingContext = MkBrowsingContext {context :: Text}
+  deriving (Show, Eq, Generic, ToJSON)
 
 instance FromJSON BrowsingContext where
   parseJSON :: Value -> Parser BrowsingContext
@@ -95,10 +103,7 @@ newtype StringValue = MkStringValue {value :: Text}
 instance ToJSON StringValue where
   toJSON :: StringValue -> Value
   toJSON (MkStringValue val) =
-    object
-      [ "type" .= ("string" :: Text),
-        "value" .= val
-      ]
+    String val
 
 instance FromJSON StringValue where
   parseJSON :: Value -> Parser StringValue

@@ -69,7 +69,7 @@ browsingContextCreateActivateCloseDemo =
       uc <-
         browserCreateUserContext
           MkCreateUserContext
-            { acceptInsecureCerts = Nothing,
+            { insecureCerts = Nothing,
               proxy = Nothing,
               unhandledPromptBehavior = Nothing
             }

@@ -917,7 +917,7 @@ scriptUserContextsDemo =
       userContext1 <-
         browserCreateUserContext
           MkCreateUserContext
-            { acceptInsecureCerts = Just True,
+            { insecureCerts = Just True,
               proxy = Nothing,
               unhandledPromptBehavior = Nothing
             }
@@ -928,7 +928,7 @@ scriptUserContextsDemo =
       userContext2 <-
         browserCreateUserContext
           MkCreateUserContext
-            { acceptInsecureCerts = Just False,
+            { insecureCerts = Just False,
               proxy = Nothing,
               unhandledPromptBehavior = Nothing
             }
@@ -939,7 +939,7 @@ scriptUserContextsDemo =
       userContext3 <-
         browserCreateUserContext
           MkCreateUserContext
-            { acceptInsecureCerts = Nothing,
+            { insecureCerts = Nothing,
               proxy = Nothing,
               unhandledPromptBehavior = Nothing
             }

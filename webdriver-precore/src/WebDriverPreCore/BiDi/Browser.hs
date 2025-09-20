@@ -14,12 +14,13 @@ module WebDriverPreCore.BiDi.Browser
   )
 where
 
-import Data.Aeson (FromJSON (..), ToJSON (..), Value)
+import Data.Aeson (FromJSON (..), ToJSON (..), Value, object)
+import Data.Maybe (catMaybes)
 import Data.Text (Text)
 import GHC.Generics (Generic)
 import WebDriverPreCore.BiDi.Capabilities (ProxyConfiguration, UserPromptHandler)
-import WebDriverPreCore.Internal.AesonUtils (enumCamelCase, fromJSONCamelCase)
-import Prelude (Bool (..), Eq (..), Int, Maybe, Show (..))
+import WebDriverPreCore.Internal.AesonUtils (enumCamelCase, fromJSONCamelCase, opt)
+import Prelude (Bool (..), Eq (..), Int, Maybe, Show, ($))
 import WebDriverPreCore.BiDi.CoreTypes (UserContext)
 import Data.Aeson.Types (Parser)
 
@@ -75,13 +76,21 @@ instance ToJSON ClientWindowState where
   toJSON = enumCamelCase
 
 data CreateUserContext = MkCreateUserContext
-  { acceptInsecureCerts :: Maybe Bool,
+  { -- renamed from acceptInsecureCerts to insecureCerts to avoid name collision with Capabilities
+    insecureCerts :: Maybe Bool,
     proxy :: Maybe ProxyConfiguration,
     unhandledPromptBehavior :: Maybe UserPromptHandler
   }
   deriving (Show, Eq, Generic)
 
-instance ToJSON CreateUserContext
+instance ToJSON CreateUserContext where
+  toJSON :: CreateUserContext -> Value
+  toJSON MkCreateUserContext {insecureCerts, proxy, unhandledPromptBehavior} = object $
+    catMaybes
+      [ opt "acceptInsecureCerts" insecureCerts,
+        opt "proxy" proxy,
+        opt "unhandledPromptBehavior" unhandledPromptBehavior
+      ]
 
 newtype RemoveUserContext = MkRemoveUserContext
   { userContext :: UserContext
@@ -117,6 +126,7 @@ data NamedState
 instance FromJSON NamedState
 
 instance ToJSON NamedState where
+  toJSON :: NamedState -> Value
   toJSON = enumCamelCase
 
 data RectState = MkRectState

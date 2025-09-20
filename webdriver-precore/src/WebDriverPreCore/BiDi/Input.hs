@@ -26,15 +26,15 @@ import Data.Aeson.KeyMap qualified
 import Data.Maybe (fromMaybe)
 import Data.Text (Text)
 import GHC.Generics (Generic)
-import WebDriverPreCore.BiDi.BrowsingContext qualified as BrowsingContext
 import WebDriverPreCore.BiDi.Script qualified as Script
 import WebDriverPreCore.Internal.AesonUtils (toJSONOmitNothing)
 import Prelude (Bool, Double, Eq, Int, Maybe, Show, ($), (++))
+import WebDriverPreCore.BiDi.CoreTypes (BrowsingContext(..))
 
 -- ######### Local #########
 
 data PerformActions = MkPerformActions
-  { context :: BrowsingContext.BrowsingContextId,
+  { context :: BrowsingContext,
     actions :: [SourceActions]
   }
   deriving (Show, Eq, Generic)
@@ -322,14 +322,14 @@ instance ToJSON Origin where
 
 -- ReleaseActions
 newtype ReleaseActions = MkReleaseActions
-  { context :: BrowsingContext.BrowsingContextId
+  { context :: BrowsingContext
   }
   deriving (Show, Eq, Generic)
 
 instance ToJSON ReleaseActions
 
 data SetFiles = MkSetFiles
-  { context :: BrowsingContext.BrowsingContextId,
+  { context :: BrowsingContext,
     element :: Script.SharedReference,
     files :: [Text]
   }
@@ -347,7 +347,7 @@ instance ToJSON FileDialogOpened
 -- ######### Local #########
 
 data FileDialogInfo = MkFileDialogInfo
-  { context :: BrowsingContext.BrowsingContextId,
+  { context :: BrowsingContext,
     element :: Maybe Script.SharedReference,
     multiple :: Bool
   }

@@ -61,7 +61,7 @@ where
 
 -- Data structures for network protocol
 
-import Data.Aeson (FromJSON (..), ToJSON (..), Value (..), object, withObject, (.:), (.=))
+import Data.Aeson (FromJSON (..), ToJSON (..), Value (..), object, withObject, (.:), (.=), withText)
 import Data.Aeson.KeyMap qualified as KeyMap
 import Data.Aeson.Types (Parser)
 import Data.Text (Text)
@@ -238,12 +238,29 @@ data BytesValue
   | Base64Value Text
   deriving (Show, Eq, Generic)
 
-instance FromJSON BytesValue
+instance FromJSON BytesValue where
+  parseJSON :: Value -> Parser BytesValue
+  parseJSON v = do
+    obj <- withObject "BytesValue" pure v
+    typ <- obj .: "type"
+    case typ of
+      "string" -> TextBytesValue <$> parseJSON v
+      "base64" -> Base64Value <$> obj .: "value"
+      _ -> fail $ "Invalid BytesValue type: " <> show typ
 
 instance ToJSON BytesValue where
   toJSON :: BytesValue -> Value
-  toJSON (TextBytesValue val) = toJSON val
-  toJSON (Base64Value val) = object ["type" .= ("base64" :: Text), "value" .= val]
+  toJSON = \case
+    TextBytesValue val ->
+      object
+        [ "type" .= "string",
+          "value" .= val
+        ]
+    Base64Value val ->
+      object
+        [ "type" .= "base64",
+          "value" .= val
+        ]
 
 -- | Cookie information
 data Cookie = MkCookie
@@ -270,16 +287,15 @@ data SameSite
   | Default
   deriving (Show, Eq, Generic)
 
-instance FromJSON SameSite where 
+instance FromJSON SameSite where
   parseJSON :: Value -> Parser SameSite
-  parseJSON = withObject "SameSite" $ \obj -> do
-    t <- obj .: "type"
-    case t of
+  parseJSON = 
+    withText "SameSite" $ \case
       "strict" -> pure Strict
       "lax" -> pure Lax
       "none" -> pure SameSiteNone
       "default" -> pure Default
-      _ -> fail $ "Invalid SameSite type: " <> show t
+      _ -> fail "Invalid SameSite value"
 
 instance ToJSON SameSite where
   toJSON :: SameSite -> Value
@@ -393,8 +409,7 @@ instance ToJSON FailRequest
 
 -- | ProvideResponse parameters
 data ProvideResponse = MkProvideResponse
-  { 
-    request :: Request,
+  { request :: Request,
     intercept :: Intercept,
     body :: Maybe BytesValue,
     cookies :: Maybe [Cookie],

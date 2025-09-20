@@ -5,7 +5,7 @@ import BiDi.DemoUtils
 import Data.Maybe (fromJust)
 import IOUtils (DemoUtils (..))
 import TestPages (checkboxesUrl, infiniteScrollUrl, textAreaUrl, fileUrl, uploadFilePath)
-import WebDriverPreCore.BiDi.BrowsingContext (BrowsingContextId (..), Locator (..))
+import WebDriverPreCore.BiDi.BrowsingContext (Locator (..))
 import WebDriverPreCore.BiDi.CoreTypes (NodeRemoteValue (..))
 import WebDriverPreCore.BiDi.CoreTypes qualified as Core
 import WebDriverPreCore.BiDi.Input
@@ -28,9 +28,6 @@ Demo coverage:
 - inputSetFilesDemo - File upload functionality
 -}
 
--- Helper function to convert BrowsingContext to BrowsingContextId
-bcToId :: BrowsingContext -> BrowsingContextId
-bcToId (MkBrowsingContext ctx) = MkBrowsingContextId ctx
 
 -- Helper function to create default pointer common properties
 defaultPointerProps :: PointerCommonProperties
@@ -84,7 +81,7 @@ inputKeyboardDemo =
           clickTextArea1 =
             inputPerformActions $
               MkPerformActions
-                { context = bcToId bc,
+                { context = bc,
                   actions =
                     [ PointerSourceActions $
                         MkPointerSourceActions
@@ -127,7 +124,7 @@ inputKeyboardDemo =
       basicKeyActions <-
         inputPerformActions $
           MkPerformActions
-            { context = bcToId bc,
+            { context = bc,
               actions =
                 [ KeySourceActions $
                     MkKeySourceActions
@@ -161,7 +158,7 @@ inputKeyboardDemo =
       specialKeyActions <-
         inputPerformActions $
           MkPerformActions
-            { context = bcToId bc,
+            { context = bc,
               actions =
                 [ KeySourceActions $
                     MkKeySourceActions
@@ -210,7 +207,7 @@ inputKeyboardDemo =
       _ <-
         inputPerformActions $
           MkPerformActions
-            { context = bcToId bc,
+            { context = bc,
               actions =
                 [ KeySourceActions $
                     MkKeySourceActions
@@ -254,7 +251,7 @@ inputKeyboardDemo =
       modifierKeyActions <-
         inputPerformActions $
           MkPerformActions
-            { context = bcToId bc,
+            { context = bc,
               actions =
                 [ KeySourceActions $
                     MkKeySourceActions
@@ -316,7 +313,7 @@ inputPointerDemo =
       basicPointerClick <-
         inputPerformActions $
           MkPerformActions
-            { context = bcToId bc,
+            { context = bc,
               actions =
                 [ PointerSourceActions $
                     MkPointerSourceActions
@@ -348,7 +345,7 @@ inputPointerDemo =
       pointerHover <-
         inputPerformActions $
           MkPerformActions
-            { context = bcToId bc,
+            { context = bc,
               actions =
                 [ PointerSourceActions $
                     MkPointerSourceActions
@@ -395,7 +392,7 @@ inputPointerDemo =
       doubleClick <-
         inputPerformActions $
           MkPerformActions
-            { context = bcToId bc,
+            { context = bc,
               actions =
                 [ PointerSourceActions $
                     MkPointerSourceActions
@@ -445,7 +442,7 @@ inputPointerDemo =
       rightClick <-
         inputPerformActions $
           MkPerformActions
-            { context = bcToId bc,
+            { context = bc,
               actions =
                 [ PointerSourceActions $
                     MkPointerSourceActions
@@ -501,7 +498,7 @@ inputWheelDemo =
       scrollDown <-
         inputPerformActions $
           MkPerformActions
-            { context = bcToId bc,
+            { context = bc,
               actions =
                 [ WheelSourceActions $
                     MkWheelSourceActions
@@ -527,7 +524,7 @@ inputWheelDemo =
       scrollUp <-
         inputPerformActions $
           MkPerformActions
-            { context = bcToId bc,
+            { context = bc,
               actions =
                 [ WheelSourceActions $
                     MkWheelSourceActions
@@ -554,7 +551,7 @@ inputWheelDemo =
       horizontalScroll <-
         inputPerformActions $
           MkPerformActions
-            { context = bcToId bc,
+            { context = bc,
               actions =
                 [ WheelSourceActions $
                     MkWheelSourceActions
@@ -618,7 +615,7 @@ inputCombinedActionsDemo =
       clickAndType <-
         inputPerformActions $
           MkPerformActions
-            { context = bcToId bc,
+            { context = bc,
               actions =
                 [ PointerSourceActions
                     ( MkPointerSourceActions
@@ -675,7 +672,7 @@ inputCombinedActionsDemo =
       pauseAllInput <-
         inputPerformActions $
           MkPerformActions
-            { context = bcToId bc,
+            { context = bc,
               actions =
                 [ NoneSourceActions $
                     MkNoneSourceActions
@@ -712,7 +709,7 @@ inputCombinedActionsDemo =
       complexCombination <-
         inputPerformActions $
           MkPerformActions
-            { context = bcToId bc,
+            { context = bc,
               actions =
                 [ PointerSourceActions $
                     MkPointerSourceActions
@@ -811,7 +808,7 @@ inputReleaseActionsDemo =
       setupActions <-
         inputPerformActions $
           MkPerformActions
-            { context = bcToId bc,
+            { context = bc,
               actions =
                 [ PointerSourceActions $
                     MkPointerSourceActions
@@ -863,7 +860,7 @@ inputReleaseActionsDemo =
       pause
 
       logTxt "Test 2: Release all input actions state"
-      releaseResult <- inputReleaseActions $ MkReleaseActions {context = bcToId bc}
+      releaseResult <- inputReleaseActions $ MkReleaseActions {context = bc}
       logShow "Release actions result" releaseResult
       pause
 
@@ -871,7 +868,7 @@ inputReleaseActionsDemo =
       postReleaseActions <-
         inputPerformActions $
           MkPerformActions
-            { context = bcToId bc,
+            { context = bc,
               actions =
                 [ PointerSourceActions $
                     MkPointerSourceActions
@@ -921,7 +918,7 @@ inputReleaseActionsDemo =
       pause
 
       logTxt "Test 4: Release actions again to demonstrate multiple releases"
-      releaseResult2 <- inputReleaseActions $ MkReleaseActions {context = bcToId bc}
+      releaseResult2 <- inputReleaseActions $ MkReleaseActions {context = bc}
       logShow "Second release actions result" releaseResult2
       pause
 
@@ -977,7 +974,7 @@ inputSetFilesDemo =
             setSingleFileResult <-
               inputSetFiles $
                 MkSetFiles
-                  { context = bcToId bc,
+                  { context = bc,
                     element = MkSharedReference {sharedId = (Core.MkSharedId singleElementId), handle = Nothing, extensions = Nothing},
                     files = [singleDocPath]
                   }
@@ -988,7 +985,7 @@ inputSetFilesDemo =
             clearSingleFileResult <-
               inputSetFiles $
                 MkSetFiles
-                  { context = bcToId bc,
+                  { context = bc,
                     element = MkSharedReference {sharedId = (Core.MkSharedId singleElementId), handle = Nothing, extensions = Nothing},
                     files = []
                   }
@@ -1009,7 +1006,7 @@ inputSetFilesDemo =
             setMultipleFilesResult <-
               inputSetFiles $
                 MkSetFiles
-                  { context = bcToId bc,
+                  { context = bc,
                     element = MkSharedReference {sharedId = (Core.MkSharedId multipleElementId), handle = Nothing, extensions = Nothing},
                     files = [doc1Path, doc2Path, imagePath]
                   }
@@ -1024,7 +1021,7 @@ inputSetFilesDemo =
             setVariousFilesResult <-
               inputSetFiles $
                 MkSetFiles
-                  { context = bcToId bc,
+                  { context = bc,
                     element = MkSharedReference {sharedId = (Core.MkSharedId multipleElementId), handle = Nothing, extensions = Nothing},
                     files = [spreadsheetPath, presentationPath, archivePath, videoPath]
                   }
@@ -1035,7 +1032,7 @@ inputSetFilesDemo =
             clearMultipleFilesResult <-
               inputSetFiles $
                 MkSetFiles
-                  { context = bcToId bc,
+                  { context = bc,
                     element = MkSharedReference {sharedId = (Core.MkSharedId multipleElementId), handle = Nothing, extensions = Nothing},
                     files = []
                   }
@@ -1047,7 +1044,7 @@ inputSetFilesDemo =
             setSingleOnMultipleResult <-
               inputSetFiles $
                 MkSetFiles
-                  { context = bcToId bc,
+                  { context = bc,
                     element = MkSharedReference {sharedId = (Core.MkSharedId multipleElementId), handle = Nothing, extensions = Nothing},
                     files = [finalTestPath]
                   }

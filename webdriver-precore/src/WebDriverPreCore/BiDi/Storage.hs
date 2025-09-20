@@ -16,13 +16,15 @@ create types to represent the remote and local end for storage:
 8. leave this comment at the top of the file
 -}
 
-import Data.Aeson (FromJSON, ToJSON (..), Value)
+import Data.Aeson (FromJSON (..), ToJSON (..), Value (..), object, withObject, (.:), (.=))
+import Data.Aeson.Types (Parser)
+import Data.Maybe (catMaybes)
 import Data.Text (Text)
 import GHC.Generics (Generic)
-import WebDriverPreCore.BiDi.BrowsingContext qualified as BrowsingContext
+import WebDriverPreCore.BiDi.CoreTypes (BrowsingContext, UserContext)
 import WebDriverPreCore.BiDi.Network qualified as Network
-import WebDriverPreCore.Internal.AesonUtils (enumCamelCase, toJSONOmitNothing)
-import Prelude (Bool, Eq, Int, Maybe, Show)
+import WebDriverPreCore.Internal.AesonUtils (fromJSONCamelCase, opt, toJSONOmitNothing)
+import Prelude (Bool, Eq, Int, Maybe, Semigroup ((<>)), Show, fail, show, ($), (++), (<$>), (<*>))
 
 -- ######### Remote #########
 
@@ -71,7 +73,9 @@ data GetCookies = MkGetCookies
   }
   deriving (Show, Eq, Generic)
 
-instance ToJSON GetCookies
+instance ToJSON GetCookies where
+  toJSON :: GetCookies -> Value
+  toJSON = toJSONOmitNothing
 
 -- | Filter for cookie operations
 data CookieFilter = MkCookieFilter
@@ -87,42 +91,50 @@ data CookieFilter = MkCookieFilter
   }
   deriving (Show, Eq, Generic)
 
-instance FromJSON CookieFilter
+instance FromJSON CookieFilter where
+  parseJSON :: Value -> Parser CookieFilter
+  parseJSON = fromJSONCamelCase
 
-instance ToJSON CookieFilter
+instance ToJSON CookieFilter where
+  toJSON :: CookieFilter -> Value
+  toJSON = toJSONOmitNothing
 
 -- | Descriptor for a partition
 data PartitionDescriptor
-  = BrowsingContextPartition BrowsingContextPartitionDescriptor
-  | StorageKeyPartition StorageKeyPartitionDescriptor
+  = BrowsingContextPartition
+      { context :: BrowsingContext
+      }
+  | StorageKeyPartition
+      { userContext :: Maybe UserContext,
+        sourceOrigin :: Maybe Text
+      }
   deriving (Show, Eq, Generic)
 
-instance FromJSON PartitionDescriptor
+instance FromJSON PartitionDescriptor where
+  parseJSON :: Value -> Parser PartitionDescriptor
+  parseJSON = withObject "PartitionDescriptor" $ \o -> do
+    typ <- o .: "type"
+    case typ of
+      "context" -> BrowsingContextPartition <$> o .: "context"
+      "storageKey" -> StorageKeyPartition <$> o .: "userContext" <*> o .: "sourceOrigin"
+      _ -> fail $ "Unknown partition type: " ++ show typ
 
 instance ToJSON PartitionDescriptor where
   toJSON :: PartitionDescriptor -> Value
-  toJSON = enumCamelCase
-
--- | Browsing context partition descriptor
-newtype BrowsingContextPartitionDescriptor = MkBrowsingContextPartitionDescriptor
-  { context :: BrowsingContext.BrowsingContextId
-  }
-  deriving (Show, Eq, Generic)
-
-instance FromJSON BrowsingContextPartitionDescriptor
-
-instance ToJSON BrowsingContextPartitionDescriptor
-
--- | Storage key partition descriptor
-data StorageKeyPartitionDescriptor = MkStorageKeyPartitionDescriptor
-  { userContext :: Maybe Text,
-    sourceOrigin :: Maybe Text
-  }
-  deriving (Show, Eq, Generic)
-
-instance FromJSON StorageKeyPartitionDescriptor
-
-instance ToJSON StorageKeyPartitionDescriptor
+  toJSON = \case
+    BrowsingContextPartition ctx ->
+      object
+        [ "type" .= "context",
+          "context" .= ctx
+        ]
+    StorageKeyPartition userCtx srcOrigin ->
+      object $
+        [ "type" .= "storageKey"
+        ]
+          <> catMaybes
+            [ opt "userContext" userCtx,
+              opt "sourceOrigin" srcOrigin
+            ]
 
 -- | Parameters for setting a cookie
 data SetCookie = MkSetCookie
@@ -139,7 +151,7 @@ instance ToJSON SetCookie where
 data PartialCookie = MkPartialCookie
   { name :: Text,
     value :: Network.BytesValue,
-    domain :: Maybe Text,
+    domain :: Text,
     path :: Maybe Text,
     httpOnly :: Maybe Bool,
     secure :: Maybe Bool,
@@ -159,4 +171,6 @@ data DeleteCookies = MkDeleteCookies
   }
   deriving (Show, Eq, Generic)
 
-instance ToJSON DeleteCookies
+instance ToJSON DeleteCookies where
+  toJSON :: DeleteCookies -> Value
+  toJSON = toJSONOmitNothing

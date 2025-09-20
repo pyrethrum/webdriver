@@ -86,7 +86,10 @@ import WebDriverPreCore.BiDi.BrowsingContext
     TraverseHistory (..),
     TraverseHistoryResult (..),
   )
-import WebDriverPreCore.BiDi.Capabilities (Capabilities)
+import WebDriverPreCore.BiDi.Capabilities (
+  Capabilities(..), 
+  Capability(..), 
+  ProxyConfiguration(..))
 import WebDriverPreCore.BiDi.Command
   ( Command,
     emptyCommand,

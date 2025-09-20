@@ -48,7 +48,7 @@ browserCreateUserContextDemo =
     action MkDemoUtils {..} MkCommands {..} = do
       logTxt "Creating basic user context"
       let basicUserContext = MkCreateUserContext 
-            { acceptInsecureCerts = Nothing,
+            { insecureCerts = Nothing,
               proxy = Nothing,
               unhandledPromptBehavior = Nothing
             }
@@ -56,8 +56,8 @@ browserCreateUserContextDemo =
       logShow "Basic user context created" uc1
       pause
 
-      logTxt "Creating user context with accept insecure certs"
-      let secureUserContext = basicUserContext { acceptInsecureCerts = Just True }
+      logTxt "Creating user context with insecure certs"
+      let secureUserContext = basicUserContext { insecureCerts = Just True }
       uc2 <- browserCreateUserContext secureUserContext
       logShow "User context with insecure certs" uc2
       pause
@@ -125,7 +125,7 @@ browserRemoveUserContextDemo =
     action MkDemoUtils {..} MkCommands {..} = do
       logTxt "Creating a user context to remove"
       let userContextParams = MkCreateUserContext 
-            { acceptInsecureCerts = Nothing,
+            { insecureCerts = Nothing,
               proxy = Nothing,
               unhandledPromptBehavior = Nothing
             }
@@ -156,14 +156,14 @@ browserCompleteWorkflowDemo =
 
       logTxt "Step 2: Create multiple user contexts"
       let userContext1 = MkCreateUserContext 
-            { acceptInsecureCerts = Nothing,
+            { insecureCerts = Nothing,
               proxy = Nothing,
               unhandledPromptBehavior = Nothing
             }
       uc1 <- browserCreateUserContext userContext1
       logShow "User context 1 created" uc1
 
-      let userContext2 = userContext1 { acceptInsecureCerts = Just True }
+      let userContext2 = userContext1 { insecureCerts = Just True }
       uc2 <- browserCreateUserContext userContext2
       logShow "User context 2 created (with insecure certs)" uc2
       pause
@@ -241,6 +241,7 @@ browserCompleteWorkflowDemo =
       logShow "Final client windows" finalWindows
       logShow "Final user contexts" finalContexts
 
+-- will fail with: "Closing the browser in a session started with WebDriver classic is not supported. 
 -- >>> runDemo browserCloseDemo
 browserCloseDemo :: BiDiDemo
 browserCloseDemo =
