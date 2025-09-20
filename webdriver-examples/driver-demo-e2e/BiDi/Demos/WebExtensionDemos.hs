@@ -73,7 +73,6 @@ webExtensionInstallArchiveDemo =
       pause
 
 
-
 -- >>> runDemo webExtensionInstallBase64Demo
 webExtensionInstallBase64Demo :: BiDiDemo
 webExtensionInstallBase64Demo =
@@ -89,12 +88,7 @@ webExtensionInstallBase64Demo =
       logShow "Extension installed from base64" result1
       pause
 
-      logTxt "Test 2: Install extension from base64 (alternative data)"
-      let altBase64Data = "UEsDBAoAAAAAAIdWJlMAAAAAAAAAAAAAAAAJAAAAbWFuaWZlc3QuanNvbntcIm5hbWVcIjpcIkRlbW8gRXh0ZW5zaW9uXCIsXCJ2ZXJzaW9uXCI6XCIxLjBcIn0="
-      let altBase64Extension = ExtensionBase64Encoded altBase64Data
-      result2 <- webExtensionInstall altBase64Extension
-      logShow "Alternative base64 extension installed" result2
-      pause
+
 
 -- -- >>> runDemo webExtensionUninstallDemo
 -- webExtensionUninstallDemo :: BiDiDemo
