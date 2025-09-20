@@ -4,27 +4,26 @@ import Data.Text (Text, pack)
 import System.Directory (canonicalizePath)
 import Prelude
 
+testDir :: FilePath
+testDir = "webdriver-examples/driver-demo-e2e/TestFiles/"
 
--- | Convert a relative path to a canonical absolute path (resolves symlinks too)
-makeCanonicalPath :: FilePath -> IO FilePath  
-makeCanonicalPath = canonicalizePath
+testPath :: FilePath -> IO Text
+testPath filename = pack <$> canonicalizePath (testDir <> filename)
 
 
 fileUrl :: FilePath -> IO Text
-fileUrl filename = do
-  absPath <- makeCanonicalPath $ "webdriver-examples/driver-demo-e2e/TestFiles/" <> filename
-  pure $ "file://" <> pack absPath
+fileUrl = fmap ((<>) "file://") . testPath
 
 -- | Get absolute file path for upload test files
 uploadFilePath :: FilePath -> IO Text
-uploadFilePath filename = do
-  absPath <- makeCanonicalPath $ "webdriver-examples/driver-demo-e2e/TestFiles/uploadFiles/" <> filename
-  pure $ pack absPath
+uploadFilePath filename = pack <$> canonicalizePath (testDir <> "uploadFiles/" <> filename)
 
--- | Create a data URI test page by prepending "data:text/html," to the given HTML content
-mkPage :: Text -> Text
-mkPage = (<>) "data:text/html,"
 
+demoExtensionDirPath :: IO Text
+demoExtensionDirPath = testPath "demoExtension/"
+
+demoExtensionZipPath :: IO Text
+demoExtensionZipPath = testPath "demoExtension.zip"
 
 textAreaUrl :: IO Text
 textAreaUrl = fileUrl "textArea.html"

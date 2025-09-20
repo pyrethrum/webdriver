@@ -211,7 +211,8 @@ import WebDriverPreCore.BiDi.Storage
     SetCookieResult (..),
   )
 import WebDriverPreCore.BiDi.WebExtensions
-  ( WebExtension (..),
-    WebExtensionData (..),
+  ( WebExtensionID (..),
+    WebExtensionInstall (..),
+    WebExtensionUninstall (..),
     WebExtensionResult (..),
   )

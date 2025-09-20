@@ -6,7 +6,6 @@ module WebDriverPreCore.BiDi.WebExtensions where
 import Data.Aeson (FromJSON, ToJSON (..), Value, object, (.=))
 import Data.Text (Text)
 import GHC.Generics (Generic)
-import WebDriverPreCore.Internal.AesonUtils (enumCamelCase)
 import Prelude (Eq, Show)
 
 {- prompt
@@ -25,73 +24,62 @@ create types to represent the remote end for storage as prer the cddl in this fi
 -- ######### Remote #########
 
 -- WebExtension type
-newtype WebExtension = MkWebExtension Text
-  deriving newtype (Show, Eq, ToJSON, FromJSON)
+newtype WebExtensionID = MkWebExtensionID Text
+  deriving newtype (Show, Eq, FromJSON, ToJSON)
+
+
 
 -- ExtensionData represents different ways to provide extension data
-data WebExtensionData
+data WebExtensionInstall
   = ExtensionPath Text
   | ExtensionArchivePath Text
   | ExtensionBase64Encoded Text
   deriving (Show, Eq, Generic)
 
-instance FromJSON WebExtensionData
+instance ToJSON WebExtensionInstall where
+  toJSON :: WebExtensionInstall -> Value
+  toJSON ex =
+    object
+      [ "method" .= "webExtension.install",
+        "extensionData" .= extensionData
+      ]
+    where
+      extensionData = case ex of
+        ExtensionPath path ->
+          object
+            [ "type" .= "path",
+              "path" .= path
+            ]
+        ExtensionArchivePath path ->
+          object
+            [ "type" .= "archivePath",
+              "path" .= path
+            ]
+        ExtensionBase64Encoded value ->
+          object
+            [ "type" .= "base64",
+              "value" .= value
+            ]
 
-instance ToJSON WebExtensionData where
-  toJSON :: WebExtensionData -> Value
-  toJSON = enumCamelCase
-
--- Path type for extension data
-data WebExtensionPath = MkWebExtensionPath
-  { path :: Text
+newtype WebExtensionUninstall = MkWebExtensionUninstall
+  { extension :: WebExtensionID
   }
   deriving (Show, Eq, Generic)
 
-instance ToJSON WebExtensionPath where
-  toJSON :: WebExtensionPath -> Value
-  toJSON (MkWebExtensionPath path) =
+instance ToJSON WebExtensionUninstall where
+  toJSON :: WebExtensionUninstall -> Value
+  toJSON (MkWebExtensionUninstall extId) =
     object
-      [ "type" .= "path",
-        "path" .= path
+      [ "method" .= "webExtension.uninstall",
+        "extension" .= extId
       ]
 
--- ArchivePath type for extension data
-data WebExtensionArchivePath = MkWebExtensionArchivePath
-  { path :: Text
-  }
-  deriving (Show, Eq, Generic)
-
-instance FromJSON WebExtensionArchivePath
-
-instance ToJSON WebExtensionArchivePath where
-  toJSON :: WebExtensionArchivePath -> Value
-  toJSON (MkWebExtensionArchivePath path) =
-    object
-      [ "type" .= "archivePath",
-        "path" .= path
-      ]
-
--- Base64Encoded type for extension data
-data WebExtensionBase64Encoded = MkWebExtensionBase64Encoded
-  { value :: Text
-  }
-  deriving (Show, Eq, Generic)
-
-instance FromJSON WebExtensionBase64Encoded
-
-instance ToJSON WebExtensionBase64Encoded where
-  toJSON :: WebExtensionBase64Encoded -> Value
-  toJSON (MkWebExtensionBase64Encoded value) =
-    object
-      [ "type" .= "base64",
-        "value" .= value
-      ]
 
 -- ######### Local #########
 
 -- | Represents a command to install a web extension
 data WebExtensionResult = WebExtensionInstallResult
-  { extension :: WebExtension
+  { extension :: WebExtensionID
   }
   deriving (Show, Eq, Generic, ToJSON)
 

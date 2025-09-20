@@ -8,6 +8,7 @@ import WebDriverPreCore.Internal.Utils (txt)
 import Control.Exception (SomeException, catch)
 import Prelude hiding (log, putStrLn)
 import qualified Data.Aeson.KeyMap as AKM
+import TestPages (demoExtensionDirPath, demoExtensionZipPath)
 
 {-
 WebExtension Module Commands (2 total):
@@ -41,30 +42,6 @@ Complexity factors:
 -}
 
 -- >>> runDemo webExtensionInstallPathDemo
--- *** Exception: Error executing BiDi command: MkCommand
---   { method = "webExtension.install"
---   , params = ExtensionPath "/path/to/extension"
---   , extended = Nothing
---   }
--- With JSON: 
--- {
---     "id": 1,
---     "method": "webExtension.install",
---     "params": {
---         "contents": "/path/to/extension",
---         "tag": "extensionPath"
---     }
--- }
--- Failed to decode the 'result' property of JSON returned by driver to response type: 
--- {
---     "error": "invalid argument",
---     "id": 1,
---     "message": "Expected \"extensionData\" to be an object, got [object Undefined] undefined",
---     "stacktrace": "RemoteError@chrome://remote/content/shared/RemoteError.sys.mjs:8:8\nWebDriverError@chrome://remote/content/shared/webdriver/Errors.sys.mjs:202:5\nInvalidArgumentError@chrome://remote/content/shared/webdriver/Errors.sys.mjs:404:5\nassert.that/<@chrome://remote/content/shared/webdriver/Assert.sys.mjs:581:13\nassert.object@chrome://remote/content/shared/webdriver/Assert.sys.mjs:454:10\ninstall@chrome://remote/content/webdriver-bidi/modules/root/webExtension.sys.mjs:101:17\nhandleCommand@chrome://remote/content/shared/messagehandler/MessageHandler.sys.mjs:260:33\nexecute@chrome://remote/content/shared/webdriver/Session.sys.mjs:410:32\nonPacket@chrome://remote/content/webdriver-bidi/WebDriverBiDiConnection.sys.mjs:236:37\nonMessage@chrome://remote/content/server/WebSocketTransport.sys.mjs:127:18\nhandleEvent@chrome://remote/content/server/WebSocketTransport.sys.mjs:109:14\n",
---     "type": "error"
--- }
--- Error message: 
--- key "result" not found
 webExtensionInstallPathDemo :: BiDiDemo
 webExtensionInstallPathDemo =
   demo "WebExtension - Install from Path" action
@@ -72,18 +49,46 @@ webExtensionInstallPathDemo =
     action :: DemoUtils -> Commands -> IO ()
     action MkDemoUtils {..} MkCommands {..} = do
       logTxt "Test 1: Install extension from filesystem path"
-      let pathExtension = ExtensionPath "/path/to/extension"
-      result1 <- webExtensionInstall pathExtension
-      logShow "Extension installed from path" result1
+      exPath <- demoExtensionDirPath
+      result <- webExtensionInstall $ ExtensionPath exPath
+      logShow "Extension installed from path" result
       pause
 
-      logTxt "Test 2: Install extension from development directory"
-      let devExtension = ExtensionPath "/home/user/dev/my-extension"
-      result2 <- webExtensionInstall devExtension
-      logShow "Development extension installed" result2
+      logTxt "Test 2: Uninstall the extension"
+      uninstallResult <- webExtensionUninstall $ MkWebExtensionUninstall result.extension
+      logShow "Extension uninstalled" uninstallResult
       pause
 
 -- >>> runDemo webExtensionInstallArchiveDemo
+-- *** Exception: Error executing BiDi command: MkCommand
+--   { method = "webExtension.install"
+--   , params =
+--       ExtensionArchivePath
+--         "/home/john-walker/repos/webdriver/webdriver-examples/driver-demo-e2e/TestFiles/demoExtension.zip"
+--   , extended = Nothing
+--   }
+-- With JSON: 
+-- {
+--     "id": 1,
+--     "method": "webExtension.install",
+--     "params": {
+--         "extensionData": {
+--             "path": "/home/john-walker/repos/webdriver/webdriver-examples/driver-demo-e2e/TestFiles/demoExtension.zip",
+--             "type": "archivePath"
+--         },
+--         "method": "webExtension.install"
+--     }
+-- }
+-- Failed to decode the 'result' property of JSON returned by driver to response type: 
+-- {
+--     "error": "invalid web extension",
+--     "id": 1,
+--     "message": "Could not install Add-on: File /home/john-walker/repos/webdriver/webdriver-examples/driver-demo-e2e/TestFiles/demoExtension.zip does not contain a valid manifest",
+--     "stacktrace": "RemoteError@chrome://remote/content/shared/RemoteError.sys.mjs:8:8\nWebDriverError@chrome://remote/content/shared/webdriver/Errors.sys.mjs:202:5\nInvalidWebExtensionError@chrome://remote/content/shared/webdriver/Errors.sys.mjs:488:5\ninstallAddon@chrome://remote/content/shared/Addon.sys.mjs:56:11\n",
+--     "type": "error"
+-- }
+-- Error message: 
+-- key "result" not found
 webExtensionInstallArchiveDemo :: BiDiDemo
 webExtensionInstallArchiveDemo =
   demo "WebExtension - Install from Archive" action
@@ -91,16 +96,12 @@ webExtensionInstallArchiveDemo =
     action :: DemoUtils -> Commands -> IO ()
     action MkDemoUtils {..} MkCommands {..} = do
       logTxt "Test 1: Install extension from zip archive"
-      let archiveExtension = ExtensionArchivePath "/path/to/extension.zip"
-      result1 <- webExtensionInstall archiveExtension
+      zipPath <- demoExtensionZipPath
+      result1 <- webExtensionInstall $ ExtensionArchivePath zipPath
       logShow "Extension installed from archive" result1
       pause
 
-      logTxt "Test 2: Install extension from crx file"
-      let crxExtension = ExtensionArchivePath "/downloads/extension.crx"
-      result2 <- webExtensionInstall crxExtension
-      logShow "CRX extension installed" result2
-      pause
+
 
 -- >>> runDemo webExtensionInstallBase64Demo
 webExtensionInstallBase64Demo :: BiDiDemo
@@ -124,113 +125,113 @@ webExtensionInstallBase64Demo =
       logShow "Alternative base64 extension installed" result2
       pause
 
--- >>> runDemo webExtensionUninstallDemo
-webExtensionUninstallDemo :: BiDiDemo
-webExtensionUninstallDemo =
-  demo "WebExtension - Uninstall Extension" action
-  where
-    action :: DemoUtils -> Commands -> IO ()
-    action MkDemoUtils {..} MkCommands {..} = do
-      logTxt "First, install an extension to demonstrate uninstallation"
-      let testExtension = ExtensionPath "/tmp/test-extension"
-      installResult <- webExtensionInstall testExtension
-      logShow "Test extension installed" installResult
+-- -- >>> runDemo webExtensionUninstallDemo
+-- webExtensionUninstallDemo :: BiDiDemo
+-- webExtensionUninstallDemo =
+--   demo "WebExtension - Uninstall Extension" action
+--   where
+--     action :: DemoUtils -> Commands -> IO ()
+--     action MkDemoUtils {..} MkCommands {..} = do
+--       logTxt "First, install an extension to demonstrate uninstallation"
+--       let testExtension = ExtensionPath "/tmp/test-extension"
+--       installResult <- webExtensionInstall testExtension
+--       logShow "Test extension installed" installResult
       
-      let extensionId = (.extension) installResult
-      pause
+--       let extensionId = (.extension) installResult
+--       pause
 
-      logTxt "Test 1: Uninstall the extension"
-      uninstallResult <- webExtensionUninstall extensionId
-      logShow "Extension uninstalled" uninstallResult
-      pause
+--       logTxt "Test 1: Uninstall the extension"
+--       uninstallResult <- webExtensionUninstall extensionId
+--       logShow "Extension uninstalled" uninstallResult
+--       pause
 
-      logTxt "Test 2: Attempt to uninstall non-existent extension"
-      let fakeExtension = MkWebExtension "non-existent-extension-id"
-      webExtensionUninstall fakeExtension 
-       `catch` \(e :: SomeException) -> do
-         logShow "Expected error for non-existent extension: " e
-         pure AKM.empty
+--       logTxt "Test 2: Attempt to uninstall non-existent extension"
+--       let fakeExtension = MkWebExtension "non-existent-extension-id"
+--       webExtensionUninstall fakeExtension 
+--        `catch` \(e :: SomeException) -> do
+--          logShow "Expected error for non-existent extension: " e
+--          pure AKM.empty
 
-      pause
+--       pause
 
 -- >>> runDemo webExtensionValidationDemo
-webExtensionValidationDemo :: BiDiDemo
-webExtensionValidationDemo =
-  demo "WebExtension - Extension Validation" action
-  where
-    action :: DemoUtils -> Commands -> IO ()
-    action MkDemoUtils {..} MkCommands {..} = do
-      logTxt "Test 1: Valid extension installation"
-      let validExtension = ExtensionPath "/valid/extension/path"
-      validResult <- webExtensionInstall validExtension `catch` \(e :: SomeException) -> do
-        logTxt $ "Installation error (expected for demo): " <> txt e
-        -- Return demo result
-        pure $ WebExtensionInstallResult { extension = MkWebExtension "demo-extension-id" }
-      logShow "Valid extension result" validResult
-      pause
+-- webExtensionValidationDemo :: BiDiDemo
+-- webExtensionValidationDemo =
+--   demo "WebExtension - Extension Validation" action
+--   where
+--     action :: DemoUtils -> Commands -> IO ()
+--     action MkDemoUtils {..} MkCommands {..} = do
+--       logTxt "Test 1: Valid extension installation"
+--       let validExtension = ExtensionPath "/valid/extension/path"
+--       validResult <- webExtensionInstall validExtension `catch` \(e :: SomeException) -> do
+--         logTxt $ "Installation error (expected for demo): " <> txt e
+--         -- Return demo result
+--         pure $ WebExtensionInstallResult { extension = MkWebExtension "demo-extension-id" }
+--       logShow "Valid extension result" validResult
+--       pause
 
-      logTxt "Test 2: Invalid extension path"
-      let invalidExtension = ExtensionPath "/non/existent/path"
-      invalidResult <- webExtensionInstall invalidExtension `catch` \(e :: SomeException) -> do
-        logTxt $ "Installation failed as expected: " <> txt e
-        pure $ WebExtensionInstallResult { extension = MkWebExtension "failed-extension" }
-      logShow "Invalid extension handling" invalidResult
-      pause
+--       logTxt "Test 2: Invalid extension path"
+--       let invalidExtension = ExtensionPath "/non/existent/path"
+--       invalidResult <- webExtensionInstall invalidExtension `catch` \(e :: SomeException) -> do
+--         logTxt $ "Installation failed as expected: " <> txt e
+--         pure $ WebExtensionInstallResult { extension = MkWebExtension "failed-extension" }
+--       logShow "Invalid extension handling" invalidResult
+--       pause
 
-      logTxt "Test 3: Malformed base64 data"
-      let malformedBase64 = ExtensionBase64Encoded "invalid-base64-data!!!"
-      malformedResult <- webExtensionInstall malformedBase64 `catch` \(e :: SomeException) -> do
-        logTxt $ "Base64 error (expected): " <> txt e
-        pure $ WebExtensionInstallResult { extension = MkWebExtension "malformed-extension" }
-      logShow "Malformed base64 handling" malformedResult
-      pause
+--       logTxt "Test 3: Malformed base64 data"
+--       let malformedBase64 = ExtensionBase64Encoded "invalid-base64-data!!!"
+--       malformedResult <- webExtensionInstall malformedBase64 `catch` \(e :: SomeException) -> do
+--         logTxt $ "Base64 error (expected): " <> txt e
+--         pure $ WebExtensionInstallResult { extension = MkWebExtension "malformed-extension" }
+--       logShow "Malformed base64 handling" malformedResult
+--       pause
 
--- >>> runDemo webExtensionCompleteLifecycleDemo
-webExtensionCompleteLifecycleDemo :: BiDiDemo
-webExtensionCompleteLifecycleDemo =
-  demo "WebExtension - Complete Lifecycle" action
-  where
-    action :: DemoUtils -> Commands -> IO ()
-    action MkDemoUtils {..} MkCommands {..} = do
-      logTxt "Step 1: Install extension from path"
-      let pathExtension = ExtensionPath "/demo/extension"
-      installResult1 <- webExtensionInstall pathExtension `catch` \(e :: SomeException) -> do
-        logTxt $ "Install demo path: " <> txt e
-        pure $ WebExtensionInstallResult { extension = MkWebExtension "demo-path-ext" }
-      logShow "Path extension installed" installResult1
+-- -- >>> runDemo webExtensionCompleteLifecycleDemo
+-- webExtensionCompleteLifecycleDemo :: BiDiDemo
+-- webExtensionCompleteLifecycleDemo =
+--   demo "WebExtension - Complete Lifecycle" action
+--   where
+--     action :: DemoUtils -> Commands -> IO ()
+--     action MkDemoUtils {..} MkCommands {..} = do
+--       logTxt "Step 1: Install extension from path"
+--       let pathExtension = ExtensionPath "/demo/extension"
+--       installResult1 <- webExtensionInstall pathExtension `catch` \(e :: SomeException) -> do
+--         logTxt $ "Install demo path: " <> txt e
+--         pure $ WebExtensionInstallResult { extension = MkWebExtension "demo-path-ext" }
+--       logShow "Path extension installed" installResult1
       
-      let pathExtId = (.extension) installResult1
-      pause
+--       let pathExtId = (.extension) installResult1
+--       pause
 
-      logTxt "Step 2: Install extension from archive"
-      let archiveExtension = ExtensionArchivePath "/demo/extension.zip"
-      installResult2 <- webExtensionInstall archiveExtension `catch` \(e :: SomeException) -> do
-        logTxt $ "Install demo archive: " <> txt e
-        pure $ WebExtensionInstallResult { extension = MkWebExtension "demo-archive-ext" }
-      logShow "Archive extension installed" installResult2
+--       logTxt "Step 2: Install extension from archive"
+--       let archiveExtension = ExtensionArchivePath "/demo/extension.zip"
+--       installResult2 <- webExtensionInstall archiveExtension `catch` \(e :: SomeException) -> do
+--         logTxt $ "Install demo archive: " <> txt e
+--         pure $ WebExtensionInstallResult { extension = MkWebExtension "demo-archive-ext" }
+--       logShow "Archive extension installed" installResult2
       
-      let archiveExtId = (.extension) installResult2
-      pause
+--       let archiveExtId = (.extension) installResult2
+--       pause
 
-      logTxt "Step 3: Install extension from base64"
-      let base64Extension = ExtensionBase64Encoded "UEsDBAoAAAAAAIdWJlMAAAA="
-      installResult3 <- webExtensionInstall base64Extension `catch` \(e :: SomeException) -> do
-        logTxt $ "Install demo base64: " <> txt e
-        pure $ WebExtensionInstallResult { extension = MkWebExtension "demo-base64-ext" }
-      logShow "Base64 extension installed" installResult3
+--       logTxt "Step 3: Install extension from base64"
+--       let base64Extension = ExtensionBase64Encoded "UEsDBAoAAAAAAIdWJlMAAAA="
+--       installResult3 <- webExtensionInstall base64Extension `catch` \(e :: SomeException) -> do
+--         logTxt $ "Install demo base64: " <> txt e
+--         pure $ WebExtensionInstallResult { extension = MkWebExtension "demo-base64-ext" }
+--       logShow "Base64 extension installed" installResult3
       
-      let base64ExtId = (.extension) installResult3
-      pause
+--       let base64ExtId = (.extension) installResult3
+--       pause
 
-      logTxt "Step 4: Uninstall all extensions"
-      uninstall1 <- webExtensionUninstall pathExtId 
-      logShow "First extension uninstalled" uninstall1
+--       logTxt "Step 4: Uninstall all extensions"
+--       uninstall1 <- webExtensionUninstall pathExtId 
+--       logShow "First extension uninstalled" uninstall1
 
-      uninstall2 <- webExtensionUninstall archiveExtId 
-      logShow "Second extension uninstalled" uninstall2
+--       uninstall2 <- webExtensionUninstall archiveExtId 
+--       logShow "Second extension uninstalled" uninstall2
 
-      uninstall3 <- webExtensionUninstall base64ExtId 
-      logShow "Third extension uninstalled" uninstall3
-      pause
+--       uninstall3 <- webExtensionUninstall base64ExtId 
+--       logShow "Third extension uninstalled" uninstall3
+--       pause
 
-      logTxt "Extension lifecycle demo complete"
+--       logTxt "Extension lifecycle demo complete"

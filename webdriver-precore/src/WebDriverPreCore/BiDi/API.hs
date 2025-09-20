@@ -74,6 +74,7 @@ where
 
 import WebDriverPreCore.BiDi.Protocol
 import Data.Aeson (Object)
+import WebDriverPreCore.BiDi.WebExtensions (WebExtensionUninstall)
 
 ---- Session ----
 
@@ -246,8 +247,8 @@ storageSetCookie = mkCommand "storage.setCookie"
 
 ---- WebExtension ----
 
-webExtensionInstall :: WebExtensionData -> Command WebExtensionData WebExtensionResult
+webExtensionInstall :: WebExtensionInstall -> Command WebExtensionInstall WebExtensionResult
 webExtensionInstall = mkCommand "webExtension.install"
 
-webExtensionUninstall :: WebExtension -> Command WebExtension Object
+webExtensionUninstall :: WebExtensionUninstall -> Command WebExtensionUninstall Object
 webExtensionUninstall = mkCommand "webExtension.uninstall"

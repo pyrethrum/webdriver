@@ -89,9 +89,9 @@ import WebDriverPreCore.BiDi.Protocol
     TraverseHistory,
     TraverseHistoryResult,
     UserContext,
-    WebExtension,
-    WebExtensionData,
-    WebExtensionResult,
+    WebExtensionID,
+    WebExtensionInstall,
+    WebExtensionResult, WebExtensionUninstall,
   )
 import WebDriverPreCore.BiDi.API qualified as P
 import WebDriverPreCore.BiDi.ResponseEvent (JSONEncodeError, MatchedResponse (..), ResponseObject, decodeResponse, displayResponseError, parseResponse)
@@ -170,8 +170,8 @@ data Commands = MkCommands
     storageGetCookies :: GetCookies -> IO GetCookiesResult,
     storageSetCookie :: SetCookie -> IO SetCookieResult,
     -- WebExtension commands
-    webExtensionInstall :: WebExtensionData -> IO WebExtensionResult,
-    webExtensionUninstall :: WebExtension -> IO Object
+    webExtensionInstall :: WebExtensionInstall -> IO WebExtensionResult,
+    webExtensionUninstall :: WebExtensionUninstall -> IO Object
   }
 
 mkCommands :: BiDiMethods -> Commands
