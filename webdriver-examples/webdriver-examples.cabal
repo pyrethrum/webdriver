@@ -150,6 +150,9 @@ test-suite driver-demo-e2e
     , BiDi.Demos.NetworkSupportTest
     , BiDi.Demos.OtherDemos
     , BiDi.Demos.ScriptDemos
+    , BiDi.Demos.SessionDemos
+    , BiDi.Demos.StorageDemos
+    , BiDi.Demos.WebExtensionDemos
     , RuntimeConst
   build-tool-depends:
     tasty-discover:tasty-discover
