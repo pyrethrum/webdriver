@@ -4,6 +4,7 @@ import BiDi.BiDiRunner (Commands (..))
 import BiDi.DemoUtils
 import IOUtils (DemoUtils (..))
 import WebDriverPreCore.BiDi.Session
+import WebDriverPreCore.BiDi.Capabilities (Capabilities(..), Capability(..))
 import WebDriverPreCore.BiDi.Protocol
 import WebDriverPreCore.Internal.Utils (txt)
 import Data.Text (Text)
@@ -47,62 +48,209 @@ Complexity factors:
 - Subscription management and cleanup
 -}
 
--- TODO: Implement session.status demo
--- Demonstrates checking remote end readiness
--- Should show:
--- - Basic status check
--- - Ready state interpretation
--- - Implementation-specific messages
+-- >>> runDemo sessionStatusDemo
+sessionStatusDemo :: BiDiDemo
+sessionStatusDemo =
+  demo "Session - Status Check" action
+  where
+    action :: DemoUtils -> Commands -> IO ()
+    action MkDemoUtils {..} MkCommands {..} = do
+      logTxt "Checking session status"
+      status <- sessionStatus
+      logShow "Session status" status
+      pause
 
--- TODO: Implement session.new demo (BiDi-only session)
--- Demonstrates creating new BiDi sessions
--- Should show:
--- - Basic session creation
--- - Capability negotiation (acceptInsecureCerts, proxy, etc.)
--- - WebSocket URL handling
--- - Session ID management
+      logTxt "Interpreting status result"
+      case status of
+        MkSessionStatusResult True msg -> logTxt $ "✓ Session is ready: " <> msg
+        MkSessionStatusResult False msg -> logTxt $ "✗ Session not ready: " <> msg
+      pause
 
--- TODO: Implement session.end demo
--- Demonstrates proper session termination
--- Should show:
--- - Graceful session shutdown
--- - Resource cleanup
--- - WebSocket connection closure
+-- >>> runDemo sessionNewDemo
+sessionNewDemo :: BiDiDemo
+sessionNewDemo =
+  demo "Session - New Session Creation" action
+  where
+    action :: DemoUtils -> Commands -> IO ()
+    action MkDemoUtils {..} MkCommands {..} = do
+      logTxt "Creating new BiDi session with basic capabilities"
+      let basicCapabilities = MkCapabilities
+            { alwaysMatch = Nothing,
+              firstMatch = []
+            }
+      newSession <- sessionNew basicCapabilities
+      logShow "New session created" newSession
+      pause
 
--- TODO: Implement session.subscribe demo
--- Demonstrates event subscription management
--- Should show:
--- - Global event subscription
--- - Context-specific subscriptions
--- - User context filtering
--- - Multiple event types
--- - Subscription ID tracking
+      logTxt "Session information:"
+      logTxt $ "Session ID: " <> (.sessionId) newSession
+      logShow "Capabilities result" (.capabilities) newSession
+      pause
 
--- TODO: Implement session.unsubscribe demo
--- Demonstrates event unsubscription
--- Should show:
--- - Unsubscribe by subscription ID
--- - Unsubscribe by attributes (deprecated)
--- - Partial unsubscription
--- - Subscription cleanup
+-- >>> runDemo sessionEndDemo  
+sessionEndDemo :: BiDiDemo
+sessionEndDemo =
+  demo "Session - End Session" action
+  where
+    action :: DemoUtils -> Commands -> IO ()
+    action MkDemoUtils {..} MkCommands {..} = do
+      logTxt "⚠️  WARNING: This will end the current session!"
+      logTxt "Ending current session gracefully"
+      result <- sessionEnd
+      logShow "Session end result" result
+      pause
 
--- TODO: Implement capability negotiation demo
--- Demonstrates various capability scenarios
--- Should show:
--- - alwaysMatch vs firstMatch processing
--- - Proxy configuration types
--- - Browser-specific capabilities
--- - Capability validation and errors
+-- >>> runDemo sessionSubscribeDemo
+sessionSubscribeDemo :: BiDiDemo
+sessionSubscribeDemo =
+  demo "Session - Event Subscription" action
+  where
+    action :: DemoUtils -> Commands -> IO ()
+    action utils@MkDemoUtils {..} cmds@MkCommands {..} = do
+      bc <- rootContext utils cmds
 
--- TODO: Implement user prompt handler demo
--- Demonstrates automated prompt handling
--- Should show:
--- - Different prompt types (alert, confirm, beforeUnload, etc.)
--- - Handler behaviors (accept, dismiss, ignore)
--- - Default vs specific handlers
+      logTxt "Test 1: Subscribe to browsing context events globally"
+      let globalSubscription = MkSessionSubscriptionRequest
+            { events = ["browsingContext.contextCreated", "browsingContext.contextDestroyed"],
+              contexts = Nothing,
+              userContexts = Nothing
+            }
+      sub1 <- sessionSubScribe globalSubscription
+      logShow "Global subscription" sub1
+      pause
 
--- Demo helper for session management
--- TODO: Implement helper functions for session lifecycle
+      logTxt "Test 2: Subscribe to network events for specific context"
+      let contextSubscription = MkSessionSubscriptionRequest
+            { events = ["network.requestWillBeSent", "network.responseReceived"],
+              contexts = Just [bc],
+              userContexts = Nothing
+            }
+      sub2 <- sessionSubScribe contextSubscription
+      logShow "Context-specific subscription" sub2
+      pause
 
--- Demo helper for event subscription
--- TODO: Implement helper functions for subscription management
+      logTxt "Test 3: Subscribe to script events for user context"
+      let userContextSubscription = MkSessionSubscriptionRequest
+            { events = ["script.realmCreated"],
+              contexts = Nothing,
+              userContexts = Just ["default"]
+            }
+      sub3 <- sessionSubScribe userContextSubscription
+      logShow "User context subscription" sub3
+      pause
+
+-- >>> runDemo sessionUnsubscribeDemo
+sessionUnsubscribeDemo :: BiDiDemo
+sessionUnsubscribeDemo =
+  demo "Session - Event Unsubscription" action
+  where
+    action :: DemoUtils -> Commands -> IO ()
+    action MkDemoUtils {..} MkCommands {..} = do
+      logTxt "First, create a subscription to demonstrate unsubscription"
+      let subscription = MkSessionSubscriptionRequest
+            { events = ["browsingContext.contextCreated"],
+              contexts = Nothing,
+              userContexts = Nothing
+            }
+      subResult <- sessionSubScribe subscription
+      logShow "Created subscription" subResult
+      pause
+
+      logTxt "Test 1: Unsubscribe by subscription ID"
+      let unsubByID = UnsubscribeByID $ MkSessionUnsubscribeByIDRequest
+            { subscriptions = [(.subscription) subResult]
+            }
+      result1 <- sessionUnsubscribe unsubByID
+      logShow "Unsubscribed by ID" result1
+      pause
+
+      logTxt "Test 2: Unsubscribe by attributes (alternative method)"
+      let unsubByAttrs = UnsubscribeByAttributes $ MkSessionUnsubscribeByAttributesRequest
+            { unsubEvents = ["network.requestWillBeSent"],
+              unsubContexts = Nothing
+            }
+      result2 <- sessionUnsubscribe unsubByAttrs
+      logShow "Unsubscribed by attributes" result2
+      pause
+
+-- >>> runDemo sessionCapabilityNegotiationDemo
+sessionCapabilityNegotiationDemo :: BiDiDemo
+sessionCapabilityNegotiationDemo =
+  demo "Session - Capability Negotiation" action
+  where
+    action :: DemoUtils -> Commands -> IO ()
+    action MkDemoUtils {..} MkCommands {..} = do
+      logTxt "Test 1: Session with alwaysMatch capabilities"
+      let alwaysMatchCap = MkCapability
+            { acceptInsecureCerts = Just True,
+              proxy = Nothing,
+              unhandledPromptBehavior = Nothing
+            }
+      let alwaysMatchCapabilities = MkCapabilities
+            { alwaysMatch = Just alwaysMatchCap,
+              firstMatch = []
+            }
+      session1 <- sessionNew alwaysMatchCapabilities
+      logShow "Session with alwaysMatch" session1
+      pause
+
+      logTxt "Test 2: Session with firstMatch capabilities"
+      let firstMatchCap1 = MkCapability
+            { acceptInsecureCerts = Just False,
+              proxy = Nothing,
+              unhandledPromptBehavior = Nothing
+            }
+      let firstMatchCap2 = MkCapability
+            { acceptInsecureCerts = Just True,
+              proxy = Nothing,
+              unhandledPromptBehavior = Nothing
+            }
+      let firstMatchCapabilities = MkCapabilities
+            { alwaysMatch = Nothing,
+              firstMatch = [firstMatchCap1, firstMatchCap2]
+            }
+      session2 <- sessionNew firstMatchCapabilities
+      logShow "Session with firstMatch" session2
+      pause
+
+-- >>> runDemo sessionCompleteLifecycleDemo
+sessionCompleteLifecycleDemo :: BiDiDemo
+sessionCompleteLifecycleDemo =
+  demo "Session - Complete Lifecycle Management" action
+  where
+    action :: DemoUtils -> Commands -> IO ()
+    action MkDemoUtils {..} MkCommands {..} = do
+      logTxt "Step 1: Check initial session status"
+      initialStatus <- sessionStatus
+      logShow "Initial status" initialStatus
+      pause
+
+      logTxt "Step 2: Subscribe to key events"
+      let subscription = MkSessionSubscriptionRequest
+            { events = ["browsingContext.contextCreated", "browsingContext.navigationStarted"],
+              contexts = Nothing,
+              userContexts = Nothing
+            }
+      subResult <- sessionSubScribe subscription
+      logShow "Event subscription" subResult
+      pause
+
+      logTxt "Step 3: Perform some operations (context creation)"
+      -- This would normally create contexts and generate events
+      logTxt "Events would be generated during normal operations..."
+      pause
+
+      logTxt "Step 4: Check status after operations"
+      operationStatus <- sessionStatus
+      logShow "Status after operations" operationStatus
+      pause
+
+      logTxt "Step 5: Clean up subscriptions"
+      let cleanup = UnsubscribeByID $ MkSessionUnsubscribeByIDRequest
+            { subscriptions = [(.subscription) subResult]
+            }
+      cleanupResult <- sessionUnsubscribe cleanup
+      logShow "Cleanup result" cleanupResult
+      pause
+
+      logTxt "Session lifecycle demo complete"

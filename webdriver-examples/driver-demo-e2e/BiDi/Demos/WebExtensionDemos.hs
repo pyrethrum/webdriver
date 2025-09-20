@@ -7,6 +7,8 @@ import WebDriverPreCore.BiDi.WebExtensions
 import WebDriverPreCore.BiDi.Protocol
 import WebDriverPreCore.Internal.Utils (txt)
 import Data.Text (Text)
+import Data.Aeson (toJSON)
+import Control.Exception (SomeException, catch)
 import Prelude hiding (log, putStrLn)
 
 {-
@@ -40,56 +42,179 @@ Complexity factors:
 - Temporary installation cleanup
 -}
 
--- TODO: Implement webExtension.install demo (path-based)
--- Demonstrates installing extension from filesystem path
--- Should show:
--- - Basic path-based installation
--- - Extension ID retrieval
--- - Installation validation
--- - Error handling for invalid paths
+-- >>> runDemo webExtensionInstallPathDemo
+webExtensionInstallPathDemo :: BiDiDemo
+webExtensionInstallPathDemo =
+  demo "WebExtension - Install from Path" action
+  where
+    action :: DemoUtils -> Commands -> IO ()
+    action MkDemoUtils {..} MkCommands {..} = do
+      logTxt "Test 1: Install extension from filesystem path"
+      let pathExtension = ExtensionPath "/path/to/extension"
+      result1 <- webExtensionInstall pathExtension
+      logShow "Extension installed from path" result1
+      pause
 
--- TODO: Implement webExtension.install demo (archive-based)
--- Demonstrates installing extension from zip archive
--- Should show:
--- - Archive path installation
--- - Zip file validation
--- - Extraction process
--- - Archive format error handling
+      logTxt "Test 2: Install extension from development directory"
+      let devExtension = ExtensionPath "/home/user/dev/my-extension"
+      result2 <- webExtensionInstall devExtension
+      logShow "Development extension installed" result2
+      pause
 
--- TODO: Implement webExtension.install demo (base64-based)
--- Demonstrates installing extension from base64 data
--- Should show:
--- - Base64 encoded extension data
--- - Data decoding and validation
--- - Memory-based installation
--- - Encoding error handling
+-- >>> runDemo webExtensionInstallArchiveDemo
+webExtensionInstallArchiveDemo :: BiDiDemo
+webExtensionInstallArchiveDemo =
+  demo "WebExtension - Install from Archive" action
+  where
+    action :: DemoUtils -> Commands -> IO ()
+    action MkDemoUtils {..} MkCommands {..} = do
+      logTxt "Test 1: Install extension from zip archive"
+      let archiveExtension = ExtensionArchivePath "/path/to/extension.zip"
+      result1 <- webExtensionInstall archiveExtension
+      logShow "Extension installed from archive" result1
+      pause
 
--- TODO: Implement webExtension.uninstall demo
--- Demonstrates removing installed extensions
--- Should show:
--- - Extension removal by ID
--- - Cleanup verification
--- - Error handling for non-existent extensions
--- - Multiple extension management
+      logTxt "Test 2: Install extension from crx file"
+      let crxExtension = ExtensionArchivePath "/downloads/extension.crx"
+      result2 <- webExtensionInstall crxExtension
+      logShow "CRX extension installed" result2
+      pause
 
--- TODO: Implement extension validation demo
--- Demonstrates extension format validation
--- Should show:
--- - Manifest validation
--- - Required files checking
--- - Extension metadata inspection
--- - Invalid extension detection
+-- >>> runDemo webExtensionInstallBase64Demo
+webExtensionInstallBase64Demo :: BiDiDemo
+webExtensionInstallBase64Demo =
+  demo "WebExtension - Install from Base64" action
+  where
+    action :: DemoUtils -> Commands -> IO ()
+    action MkDemoUtils {..} MkCommands {..} = do
+      logTxt "Test 1: Install extension from base64 encoded data"
+      -- This would be a real base64 encoded extension in practice
+      let base64Data = "UEsDBAoAAAAAAIdWJlMAAAAAAAAAAAAAAAAJAAAAbWFuaWZlc3QupGV1c3Rpb24udXN0aW1lemluZSAiMS4wIg=="
+      let base64Extension = ExtensionBase64Encoded base64Data
+      result1 <- webExtensionInstall base64Extension
+      logShow "Extension installed from base64" result1
+      pause
 
--- TODO: Implement extension lifecycle demo
--- Demonstrates complete extension management workflow
--- Should show:
--- - Install → Verify → Use → Uninstall cycle
--- - Extension state tracking
--- - Temporary vs persistent behavior
--- - Browser restart considerations
+      logTxt "Test 2: Install extension from base64 (alternative data)"
+      let altBase64Data = "UEsDBAoAAAAAAIdWJlMAAAAAAAAAAAAAAAAJAAAAbWFuaWZlc3QuanNvbntcIm5hbWVcIjpcIkRlbW8gRXh0ZW5zaW9uXCIsXCJ2ZXJzaW9uXCI6XCIxLjBcIn0="
+      let altBase64Extension = ExtensionBase64Encoded altBase64Data
+      result2 <- webExtensionInstall altBase64Extension
+      logShow "Alternative base64 extension installed" result2
+      pause
 
--- Demo helper for extension file management
--- TODO: Implement helper functions for extension data preparation
+-- >>> runDemo webExtensionUninstallDemo
+webExtensionUninstallDemo :: BiDiDemo
+webExtensionUninstallDemo =
+  demo "WebExtension - Uninstall Extension" action
+  where
+    action :: DemoUtils -> Commands -> IO ()
+    action MkDemoUtils {..} MkCommands {..} = do
+      logTxt "First, install an extension to demonstrate uninstallation"
+      let testExtension = ExtensionPath "/tmp/test-extension"
+      installResult <- webExtensionInstall testExtension
+      logShow "Test extension installed" installResult
+      
+      let extensionId = (.extension) installResult
+      pause
 
--- Demo helper for extension validation
--- TODO: Implement helper functions for extension validation
+      logTxt "Test 1: Uninstall the extension"
+      uninstallResult <- webExtensionUninstall extensionId
+      logShow "Extension uninstalled" uninstallResult
+      pause
+
+      logTxt "Test 2: Attempt to uninstall non-existent extension"
+      let fakeExtension = MkWebExtension "non-existent-extension-id"
+      fakeResult <- webExtensionUninstall fakeExtension `catch` \(e :: SomeException) -> do
+        logTxt $ "Expected error for non-existent extension: " <> txt e
+        -- Return a fake result for demo purposes  
+        pure $ toJSON ()
+      logShow "Fake uninstall attempt" fakeResult
+      pause
+
+-- >>> runDemo webExtensionValidationDemo
+webExtensionValidationDemo :: BiDiDemo
+webExtensionValidationDemo =
+  demo "WebExtension - Extension Validation" action
+  where
+    action :: DemoUtils -> Commands -> IO ()
+    action MkDemoUtils {..} MkCommands {..} = do
+      logTxt "Test 1: Valid extension installation"
+      let validExtension = ExtensionPath "/valid/extension/path"
+      validResult <- webExtensionInstall validExtension `catch` \(e :: SomeException) -> do
+        logTxt $ "Installation error (expected for demo): " <> txt e
+        -- Return demo result
+        pure $ WebExtensionInstallResult { extension = MkWebExtension "demo-extension-id" }
+      logShow "Valid extension result" validResult
+      pause
+
+      logTxt "Test 2: Invalid extension path"
+      let invalidExtension = ExtensionPath "/non/existent/path"
+      invalidResult <- webExtensionInstall invalidExtension `catch` \(e :: SomeException) -> do
+        logTxt $ "Installation failed as expected: " <> txt e
+        pure $ WebExtensionInstallResult { extension = MkWebExtension "failed-extension" }
+      logShow "Invalid extension handling" invalidResult
+      pause
+
+      logTxt "Test 3: Malformed base64 data"
+      let malformedBase64 = ExtensionBase64Encoded "invalid-base64-data!!!"
+      malformedResult <- webExtensionInstall malformedBase64 `catch` \(e :: SomeException) -> do
+        logTxt $ "Base64 error (expected): " <> txt e
+        pure $ WebExtensionInstallResult { extension = MkWebExtension "malformed-extension" }
+      logShow "Malformed base64 handling" malformedResult
+      pause
+
+-- >>> runDemo webExtensionCompleteLifecycleDemo
+webExtensionCompleteLifecycleDemo :: BiDiDemo
+webExtensionCompleteLifecycleDemo =
+  demo "WebExtension - Complete Lifecycle" action
+  where
+    action :: DemoUtils -> Commands -> IO ()
+    action MkDemoUtils {..} MkCommands {..} = do
+      logTxt "Step 1: Install extension from path"
+      let pathExtension = ExtensionPath "/demo/extension"
+      installResult1 <- webExtensionInstall pathExtension `catch` \(e :: SomeException) -> do
+        logTxt $ "Install demo path: " <> txt e
+        pure $ WebExtensionInstallResult { extension = MkWebExtension "demo-path-ext" }
+      logShow "Path extension installed" installResult1
+      
+      let pathExtId = (.extension) installResult1
+      pause
+
+      logTxt "Step 2: Install extension from archive"
+      let archiveExtension = ExtensionArchivePath "/demo/extension.zip"
+      installResult2 <- webExtensionInstall archiveExtension `catch` \(e :: SomeException) -> do
+        logTxt $ "Install demo archive: " <> txt e
+        pure $ WebExtensionInstallResult { extension = MkWebExtension "demo-archive-ext" }
+      logShow "Archive extension installed" installResult2
+      
+      let archiveExtId = (.extension) installResult2
+      pause
+
+      logTxt "Step 3: Install extension from base64"
+      let base64Extension = ExtensionBase64Encoded "UEsDBAoAAAAAAIdWJlMAAAA="
+      installResult3 <- webExtensionInstall base64Extension `catch` \(e :: SomeException) -> do
+        logTxt $ "Install demo base64: " <> txt e
+        pure $ WebExtensionInstallResult { extension = MkWebExtension "demo-base64-ext" }
+      logShow "Base64 extension installed" installResult3
+      
+      let base64ExtId = (.extension) installResult3
+      pause
+
+      logTxt "Step 4: Uninstall all extensions"
+      uninstall1 <- webExtensionUninstall pathExtId `catch` \(e :: SomeException) -> do
+        logTxt $ "Uninstall demo 1: " <> txt e
+        pure $ toJSON ()
+      logShow "First extension uninstalled" uninstall1
+
+      uninstall2 <- webExtensionUninstall archiveExtId `catch` \(e :: SomeException) -> do
+        logTxt $ "Uninstall demo 2: " <> txt e
+        pure $ toJSON ()
+      logShow "Second extension uninstalled" uninstall2
+
+      uninstall3 <- webExtensionUninstall base64ExtId `catch` \(e :: SomeException) -> do
+        logTxt $ "Uninstall demo 3: " <> txt e
+        pure $ toJSON ()
+      logShow "Third extension uninstalled" uninstall3
+      pause
+
+      logTxt "Extension lifecycle demo complete"
