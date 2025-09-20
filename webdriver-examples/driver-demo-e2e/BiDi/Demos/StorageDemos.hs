@@ -4,7 +4,7 @@ import BiDi.BiDiRunner (Commands (..))
 import BiDi.DemoUtils
 import IOUtils (DemoUtils (..))
 import WebDriverPreCore.BiDi.Storage
-import WebDriverPreCore.BiDi.Network (Cookie)
+import WebDriverPreCore.BiDi.Network (Cookie, BytesValue(..), SameSite(SameSiteNone))
 import WebDriverPreCore.BiDi.BrowsingContext (BrowsingContextId)
 import WebDriverPreCore.BiDi.Protocol
 import WebDriverPreCore.Internal.Utils (txt)
@@ -40,53 +40,337 @@ Complexity factors:
 - Integration with browsing contexts and user contexts
 -}
 
--- TODO: Implement storage.getCookies demo
--- Demonstrates retrieving cookies with various filter criteria
--- Should show:
--- - Getting all cookies (no filter)
--- - Filtering by name, domain, path
--- - Context-based vs storage-key-based partitions
--- - Cookie property inspection (httpOnly, secure, sameSite, etc.)
+-- >>> runDemo storageGetCookiesDemo
+storageGetCookiesDemo :: BiDiDemo
+storageGetCookiesDemo =
+  demo "Storage - Get Cookies" action
+  where
+    action :: DemoUtils -> Commands -> IO ()
+    action utils@MkDemoUtils {..} cmds@MkCommands {..} = do
+      bc <- rootContext utils cmds
 
--- TODO: Implement storage.setCookie demo  
--- Demonstrates setting cookies in different storage partitions
--- Should show:
--- - Basic cookie creation
--- - Setting cookies with various attributes (domain, path, secure, etc.)
--- - Cross-origin cookie considerations
--- - User context isolation
+      logTxt "Test 1: Get all cookies (no filter)"
+      let getAllCookies = MkGetCookies 
+            { filter = Nothing,
+              partition = Just $ BrowsingContextPartition $ MkBrowsingContextPartitionDescriptor bc
+            }
+      result1 <- storageGetCookies getAllCookies
+      logShow "All cookies" result1
+      pause
 
--- TODO: Implement storage.deleteCookies demo
--- Demonstrates deleting cookies with filter criteria
--- Should show:
--- - Deleting specific cookies by name
--- - Bulk deletion with filters
--- - Partition-specific deletion
--- - Verification of deletion success
+      logTxt "Test 2: Get cookies with name filter"
+      let nameFilter = MkCookieFilter
+            { name = Just "test-cookie",
+              value = Nothing,
+              domain = Nothing,
+              path = Nothing,
+              size = Nothing,
+              httpOnly = Nothing,
+              secure = Nothing,
+              sameSite = Nothing,
+              expiry = Nothing
+            }
+      let filteredCookies = MkGetCookies
+            { filter = Just nameFilter,
+              partition = Just $ BrowsingContextPartition $ MkBrowsingContextPartitionDescriptor bc
+            }
+      result2 <- storageGetCookies filteredCookies
+      logShow "Filtered cookies by name" result2
+      pause
 
--- TODO: Implement partition key demo
--- Demonstrates different ways to specify storage partitions
--- Should show:
--- - Context-based partitions (using browsing context)
--- - Storage-key-based partitions (using userContext, sourceOrigin)
--- - Default partition behavior
--- - Cross-context storage isolation
+      logTxt "Test 3: Get secure cookies only"
+      let secureFilter = MkCookieFilter
+            { name = Nothing,
+              value = Nothing,
+              domain = Nothing,
+              path = Nothing,
+              size = Nothing,
+              httpOnly = Nothing,
+              secure = Just True,
+              sameSite = Nothing,
+              expiry = Nothing
+            }
+      let secureCookies = MkGetCookies
+            { filter = Just secureFilter,
+              partition = Just $ BrowsingContextPartition $ MkBrowsingContextPartitionDescriptor bc
+            }
+      result3 <- storageGetCookies secureCookies
+      logShow "Secure cookies only" result3
+      pause
 
--- TODO: Implement cookie filter demo
--- Demonstrates various cookie filtering options
--- Should show:
--- - Name-based filtering
--- - Domain and path filtering  
--- - Security attribute filtering (httpOnly, secure)
--- - SameSite policy filtering
--- - Size and expiry filtering
--- - Complex multi-criteria filters
+-- >>> runDemo storageSetCookieDemo
+storageSetCookieDemo :: BiDiDemo
+storageSetCookieDemo =
+  demo "Storage - Set Cookie" action
+  where
+    action :: DemoUtils -> Commands -> IO ()
+    action utils@MkDemoUtils {..} cmds@MkCommands {..} = do
+      bc <- rootContext utils cmds
 
--- Demo helper for partition descriptor creation
--- TODO: Implement helper functions for creating partition descriptors
+      logTxt "Test 1: Set basic cookie"
+      let basicCookie = MkPartialCookie
+            { name = "demo-cookie",
+              value = TextBytesValue "demo-value",
+              domain = Nothing,
+              path = Nothing,
+              httpOnly = Nothing,
+              secure = Nothing,
+              sameSite = Nothing,
+              expiry = Nothing
+            }
+      let setCookieBasic = MkSetCookie
+            { cookie = basicCookie,
+              partition = Just $ BrowsingContextPartition $ MkBrowsingContextPartitionDescriptor bc
+            }
+      result1 <- storageSetCookie setCookieBasic
+      logShow "Basic cookie set" result1
+      pause
 
--- Demo helper for cookie filter creation  
--- TODO: Implement helper functions for creating cookie filters
+      logTxt "Test 2: Set secure HTTP-only cookie"
+      let secureCookie = MkPartialCookie
+            { name = "secure-cookie",
+              value = TextBytesValue "secure-value",
+              domain = Just "example.com",
+              path = Just "/",
+              httpOnly = Just True,
+              secure = Just True,
+              sameSite = Just Strict,
+              expiry = Nothing
+            }
+      let setCookieSecure = MkSetCookie
+            { cookie = secureCookie,
+              partition = Just $ BrowsingContextPartition $ MkBrowsingContextPartitionDescriptor bc
+            }
+      result2 <- storageSetCookie setCookieSecure
+      logShow "Secure cookie set" result2
+      pause
 
--- Demo helper for cookie validation
--- TODO: Implement helper functions for validating cookie operations
+      logTxt "Test 3: Set cookie with storage key partition"
+      let partitionCookie = MkPartialCookie
+            { name = "partition-cookie",
+              value = TextBytesValue "partition-value",
+              domain = Nothing,
+              path = Nothing,
+              httpOnly = Nothing,
+              secure = Nothing,
+              sameSite = Nothing,
+              expiry = Nothing
+            }
+      let storageKeyPartition = StorageKeyPartition $ MkStorageKeyPartitionDescriptor
+            { userContext = Just "default",
+              sourceOrigin = Just "https://example.com"
+            }
+      let setCookiePartition = MkSetCookie
+            { cookie = partitionCookie,
+              partition = Just storageKeyPartition
+            }
+      result3 <- storageSetCookie setCookiePartition
+      logShow "Partition cookie set" result3
+      pause
+
+-- >>> runDemo storageDeleteCookiesDemo
+storageDeleteCookiesDemo :: BiDiDemo
+storageDeleteCookiesDemo =
+  demo "Storage - Delete Cookies" action
+  where
+    action :: DemoUtils -> Commands -> IO ()
+    action utils@MkDemoUtils {..} cmds@MkCommands {..} = do
+      bc <- rootContext utils cmds
+
+      logTxt "Test 1: Delete cookies by name"
+      let nameFilter = MkCookieFilter
+            { name = Just "demo-cookie",
+              value = Nothing,
+              domain = Nothing,
+              path = Nothing,
+              size = Nothing,
+              httpOnly = Nothing,
+              secure = Nothing,
+              sameSite = Nothing,
+              expiry = Nothing
+            }
+      let deleteCookiesByName = MkDeleteCookies
+            { filter = Just nameFilter,
+              partition = Just $ BrowsingContextPartition $ MkBrowsingContextPartitionDescriptor bc
+            }
+      result1 <- storageDeleteCookies deleteCookiesByName
+      logShow "Cookies deleted by name" result1
+      pause
+
+      logTxt "Test 2: Delete all cookies in partition"
+      let deleteAllCookies = MkDeleteCookies
+            { filter = Nothing,
+              partition = Just $ BrowsingContextPartition $ MkBrowsingContextPartitionDescriptor bc
+            }
+      result2 <- storageDeleteCookies deleteAllCookies
+      logShow "All cookies deleted" result2
+      pause
+
+      logTxt "Test 3: Delete secure cookies only"
+      let secureFilter = MkCookieFilter
+            { name = Nothing,
+              value = Nothing,
+              domain = Nothing,
+              path = Nothing,
+              size = Nothing,
+              httpOnly = Nothing,
+              secure = Just True,
+              sameSite = Nothing,
+              expiry = Nothing
+            }
+      let deleteSecureCookies = MkDeleteCookies
+            { filter = Just secureFilter,
+              partition = Just $ BrowsingContextPartition $ MkBrowsingContextPartitionDescriptor bc
+            }
+      result3 <- storageDeleteCookies deleteSecureCookies
+      logShow "Secure cookies deleted" result3
+      pause
+
+-- >>> runDemo storagePartitionKeyDemo
+storagePartitionKeyDemo :: BiDiDemo
+storagePartitionKeyDemo =
+  demo "Storage - Partition Key Management" action
+  where
+    action :: DemoUtils -> Commands -> IO ()
+    action utils@MkDemoUtils {..} cmds@MkCommands {..} = do
+      bc <- rootContext utils cmds
+
+      logTxt "Test 1: Context-based partition"
+      let contextPartition = BrowsingContextPartition $ MkBrowsingContextPartitionDescriptor bc
+      let getCookiesContext = MkGetCookies
+            { filter = Nothing,
+              partition = Just contextPartition
+            }
+      result1 <- storageGetCookies getCookiesContext
+      logShow "Context partition cookies" result1
+      pause
+
+      logTxt "Test 2: Storage key partition (default user context)"
+      let storageKeyPartition1 = StorageKeyPartition $ MkStorageKeyPartitionDescriptor
+            { userContext = Just "default",
+              sourceOrigin = Nothing
+            }
+      let getCookiesStorageKey1 = MkGetCookies
+            { filter = Nothing,
+              partition = Just storageKeyPartition1
+            }
+      result2 <- storageGetCookies getCookiesStorageKey1
+      logShow "Storage key partition (default)" result2
+      pause
+
+      logTxt "Test 3: Storage key partition with origin"
+      let storageKeyPartition2 = StorageKeyPartition $ MkStorageKeyPartitionDescriptor
+            { userContext = Just "custom-context",
+              sourceOrigin = Just "https://example.com"
+            }
+      let getCookiesStorageKey2 = MkGetCookies
+            { filter = Nothing,
+              partition = Just storageKeyPartition2
+            }
+      result3 <- storageGetCookies getCookiesStorageKey2
+      logShow "Storage key partition with origin" result3
+      pause
+
+-- >>> runDemo storageCompleteWorkflowDemo
+storageCompleteWorkflowDemo :: BiDiDemo
+storageCompleteWorkflowDemo =
+  demo "Storage - Complete Cookie Workflow" action
+  where
+    action :: DemoUtils -> Commands -> IO ()
+    action utils@MkDemoUtils {..} cmds@MkCommands {..} = do
+      bc <- rootContext utils cmds
+
+      logTxt "Step 1: Check initial cookies"
+      let getAllCookies = MkGetCookies 
+            { filter = Nothing,
+              partition = Just $ BrowsingContextPartition $ MkBrowsingContextPartitionDescriptor bc
+            }
+      initial <- storageGetCookies getAllCookies
+      logShow "Initial cookies" initial
+      pause
+
+      logTxt "Step 2: Set test cookies"
+      let testCookie1 = MkPartialCookie
+            { name = "workflow-cookie-1",
+              value = TextBytesValue "value1",
+              domain = Nothing,
+              path = Just "/",
+              httpOnly = Just False,
+              secure = Just False,
+              sameSite = Just Lax,
+              expiry = Nothing
+            }
+      let setCookie1 = MkSetCookie
+            { cookie = testCookie1,
+              partition = Just $ BrowsingContextPartition $ MkBrowsingContextPartitionDescriptor bc
+            }
+      set1 <- storageSetCookie setCookie1
+      logShow "First cookie set" set1
+
+      let testCookie2 = MkPartialCookie
+            { name = "workflow-cookie-2",
+              value = TextBytesValue "value2",
+              domain = Nothing,
+              path = Just "/test",
+              httpOnly = Just True,
+              secure = Just False,
+              sameSite = Just Strict,
+              expiry = Nothing
+            }
+      let setCookie2 = MkSetCookie
+            { cookie = testCookie2,
+              partition = Just $ BrowsingContextPartition $ MkBrowsingContextPartitionDescriptor bc
+            }
+      set2 <- storageSetCookie setCookie2
+      logShow "Second cookie set" set2
+      pause
+
+      logTxt "Step 3: Verify cookies were set"
+      afterSet <- storageGetCookies getAllCookies
+      logShow "Cookies after setting" afterSet
+      pause
+
+      logTxt "Step 4: Filter cookies by path"
+      let pathFilter = MkCookieFilter
+            { name = Nothing,
+              value = Nothing,
+              domain = Nothing,
+              path = Just "/test",
+              size = Nothing,
+              httpOnly = Nothing,
+              secure = Nothing,
+              sameSite = Nothing,
+              expiry = Nothing
+            }
+      let getFilteredCookies = MkGetCookies
+            { filter = Just pathFilter,
+              partition = Just $ BrowsingContextPartition $ MkBrowsingContextPartitionDescriptor bc
+            }
+      filtered <- storageGetCookies getFilteredCookies
+      logShow "Cookies filtered by path" filtered
+      pause
+
+      logTxt "Step 5: Delete specific cookie"
+      let deleteFilter = MkCookieFilter
+            { name = Just "workflow-cookie-1",
+              value = Nothing,
+              domain = Nothing,
+              path = Nothing,
+              size = Nothing,
+              httpOnly = Nothing,
+              secure = Nothing,
+              sameSite = Nothing,
+              expiry = Nothing
+            }
+      let deleteCookie = MkDeleteCookies
+            { filter = Just deleteFilter,
+              partition = Just $ BrowsingContextPartition $ MkBrowsingContextPartitionDescriptor bc
+            }
+      deleted <- storageDeleteCookies deleteCookie
+      logShow "Cookie deleted" deleted
+      pause
+
+      logTxt "Step 6: Verify deletion"
+      final <- storageGetCookies getAllCookies
+      logShow "Final cookies" final
+      pause
