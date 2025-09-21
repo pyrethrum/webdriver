@@ -13,7 +13,7 @@ Note: many of these demos will fail if the WebDriver server does not support BiD
 For example, geckodriver currently does not support BiDi sessions directly, so commands like
 `session.new` and `session.end` will fail. However, commands like `session.status`, `session.subscribe`,
 and `session.unsubscribe` may still work if a BiDi session is already established via a WebDriver classic session.
-  
+
 Session Module Commands (5 total):
 
 1. session.status - Returns information about whether a remote end is in a state to create new sessions
@@ -22,6 +22,8 @@ Session Module Commands (5 total):
 4. session.subscribe - Enables certain events either globally or for a set of navigables
 5. session.unsubscribe - Disables events either globally or for a set of navigables
 -}
+
+-- TODO: change from text to typed events
 
 -- >>> runDemo sessionStatusDemo
 sessionStatusDemo :: BiDiDemo
