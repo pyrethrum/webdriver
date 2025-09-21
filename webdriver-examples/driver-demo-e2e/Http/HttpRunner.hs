@@ -116,7 +116,7 @@ callWebDriver wantLog MkRequestParams {url, method, body, port = prt} =
 
 -- ############# Utils #############
 
-responseStatusText :: Network.HTTP.Req.JsonResponse Value -> Text
+responseStatusText :: JsonResponse Value -> Text
 responseStatusText = decodeUtf8Lenient . responseStatusMessage
 
 
