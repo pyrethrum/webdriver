@@ -3,15 +3,13 @@ module WebDriverPreCore.BiDi.ResponseEvent where
 import Data.Aeson (FromJSON (parseJSON), Object, Value (..), eitherDecode, withObject, (.:), (.:?))
 import Data.Aeson.Types (Parser, parseEither)
 import Data.Bifunctor (Bifunctor (..))
-import Data.Bool (bool)
 import Data.ByteString.Lazy (ByteString)
-import Data.Function ((&))
 import Data.Text (Text, pack)
 import GHC.Generics (Generic)
 import WebDriverPreCore.BiDi.BrowsingContext (BrowsingContextEvent)
 import WebDriverPreCore.BiDi.Command (Command)
 import WebDriverPreCore.BiDi.CoreTypes (EmptyResult (..), JSUInt)
-import WebDriverPreCore.BiDi.Error (ErrorCode, DriverError (..))
+import WebDriverPreCore.BiDi.Error (DriverError (..))
 import WebDriverPreCore.BiDi.Input (FileDialogOpened)
 import WebDriverPreCore.BiDi.Log (Entry)
 import WebDriverPreCore.Internal.AesonUtils (jsonToText, parseObjectEither, subtractProps)
@@ -25,20 +23,14 @@ matchResponseObject :: forall a. (FromJSON a) => JSUInt -> ResponseObject -> Eit
 matchResponseObject msgId = \case
   NoID {} -> Right Nothing
   WithID id' obj ->
-    bool
-      (Right Nothing)
-      matchedResult
-      (id' == msgId)
-    where
-      success :: Either Text (Success a)
-      success = parseObjectEither obj
-
-      matchedResult :: Either ResponseError (Maybe (MatchedResponse a))
-      matchedResult =
-        success
-          & either
-            (\e -> Left $ ParseError {object = obj, error = e})
-            (\s -> Right . Just $ MkMatchedResponse {response = s.result, object = obj})
+    if id' == msgId
+      then
+        bimap
+          (\e -> ParseError {object = obj, error = e})
+          (\s -> Just $ MkMatchedResponse {response = s.result, object = obj})
+          (parseObjectEither obj :: Either Text (Success a))
+      else
+        Right Nothing
 
 decodeResponse :: ByteString -> Either JSONDecodeError ResponseObject
 decodeResponse =
@@ -110,7 +102,6 @@ instance (FromJSON a) => FromJSON (Success a) where
           extensions = MkEmptyResult $ subtractProps ["id", "result"] o
         }
 
-
 -- typ :: Text, -- "event"
 data Event = MkEvent
   { eventData :: EventData,
@@ -128,5 +119,3 @@ data EventData
     ( Show,
       Generic
     )
-
-
