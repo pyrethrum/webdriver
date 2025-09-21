@@ -2,7 +2,7 @@ module BiDi.BiDiRunner where
 
 import Config (Config, loadConfig)
 import Control.Exception (Exception (displayException), Handler (..), SomeException, catch, catches, throw)
-import Control.Monad (void)
+import Control.Monad (void, forM_, when)
 import Data.Aeson (FromJSON, Object, ToJSON, Value, encode, toJSON)
 import Data.ByteString.Lazy qualified as BL
 import Data.Coerce (coerce)
@@ -95,7 +95,7 @@ import WebDriverPreCore.BiDi.Protocol
     WebExtensionResult,
     WebExtensionUninstall,
   )
-import WebDriverPreCore.BiDi.Response (JSONDecodeError, MatchedResponse (..), ResponseObject, decodeResponse, displayResponseError, parseResponse)
+import WebDriverPreCore.BiDi.Response (JSONDecodeError, MatchedResponse (..), ResponseObject(..), decodeResponse, displayResponseError, parseResponse)
 import WebDriverPreCore.BiDi.Session (SessionNewResult, SessionStatusResult)
 import WebDriverPreCore.Http qualified as Http
 import WebDriverPreCore.Internal.AesonUtils (jsonToText)
@@ -324,21 +324,40 @@ withNewBiDiSession params action =
 data BiDiMethods = MkBiDiMethods
   { nextId :: IO JSUInt,
     send :: forall a. (ToJSON a, Show a) => a -> IO (),
-    getNext :: IO (Either JSONDecodeError ResponseObject)
+    getNext :: IO (Either JSONDecodeError ResponseObject),
+    subscribeToEvents :: ((Text, Value) -> Bool) -> IO EventSubscription,
+    unsubscribeFromEvents :: EventSubscription -> IO ()
+  }
+
+-- | Event subscription handle
+data EventSubscription = MkEventSubscription
+  { subscriptionId :: Text,
+    eventQueue :: TChan (Text, Value),  -- Changed from Event to (Text, Value)
+    eventFilter :: (Text, Value) -> Bool,  -- Changed from Event to (Text, Value)
+    isActive :: TVar Bool
+  }
+
+-- | Event broadcast system - maintains list of active subscribers
+data EventBroadcaster = MkEventBroadcaster
+  { subscribers :: TVar [EventSubscription],
+    nextSubId :: TVar Int
   }
 
 data Channels = MkChannels
   { sendChan :: TChan Value,
     receiveChan :: TChan (Either JSONDecodeError ResponseObject),
+    eventBroadcaster :: EventBroadcaster,  -- New: for event broadcasting
     logChan :: TChan Text,
     counterVar :: TVar JSUInt
   }
 
 mkChannels :: IO Channels
-mkChannels =
+mkChannels = do
+  eventBroadcaster <- MkEventBroadcaster <$> newTVarIO [] <*> newTVarIO 1
   MkChannels
     <$> newTChanIO
     <*> newTChanIO
+    <*> pure eventBroadcaster
     <*> newTChanIO
     <*> counterVar
 
@@ -361,8 +380,57 @@ mkBiDIMethods channels =
         -- make strict so serialisation errors come from here and not in the logger
         let !json = toJSON a
         atomically . writeTChan channels.sendChan $ json,
-      getNext = atomically $ readTChan channels.receiveChan
+      getNext = atomically $ readTChan channels.receiveChan,
+      subscribeToEvents = subscribeToEventsImpl channels.eventBroadcaster,
+      unsubscribeFromEvents = unsubscribeFromEventsImpl channels.eventBroadcaster
     }
+
+-- | Subscribe to events with a filter function
+subscribeToEventsImpl :: EventBroadcaster -> ((Text, Value) -> Bool) -> IO EventSubscription
+subscribeToEventsImpl (MkEventBroadcaster subscribers nextSubId) eventFilter = atomically $ do
+  subId <- readTVar nextSubId
+  modifyTVar' nextSubId (+1)
+  eventQueue <- newTChan
+  isActive <- newTVar True
+  let subscription = MkEventSubscription
+        { subscriptionId = T.pack $ "sub-" <> show subId,
+          eventQueue = eventQueue,
+          eventFilter = eventFilter,
+          isActive = isActive
+        }
+  modifyTVar' subscribers (subscription :)
+  pure subscription
+
+-- | Unsubscribe from events
+unsubscribeFromEventsImpl :: EventBroadcaster -> EventSubscription -> IO ()
+unsubscribeFromEventsImpl (MkEventBroadcaster subscribers _) subscription = atomically $ do
+  writeTVar subscription.isActive False
+  modifyTVar' subscribers (filter (\s -> s.subscriptionId /= subscription.subscriptionId))
+
+-- | Broadcast an event to all active subscribers
+broadcastEvent :: EventBroadcaster -> (Text, Value) -> IO ()
+broadcastEvent (MkEventBroadcaster subscribers _) event = do
+  activeSubs <- readTVarIO subscribers
+  atomically $ do
+    forM_ activeSubs $ \sub -> do
+      active <- readTVar sub.isActive
+      when (active && sub.eventFilter event) $ do
+        writeTChan sub.eventQueue event
+
+-- | Parse incoming WebSocket message to determine if it's an event or command response
+-- For now, we'll use a simple heuristic: messages with "id" are responses, others are events
+parseIncomingMessage :: (Text -> IO ()) -> Value -> IO (Either ResponseObject (Text, Value))
+parseIncomingMessage log json = do
+  let jsonBytes = encode json
+  -- Try to parse as command response first
+  case decodeResponse jsonBytes of
+    Right responseObj -> do
+      log $ "Parsed as command response: " <> jsonToText json
+      pure $ Left responseObj
+    Left _ -> do
+      -- TODO :: Treat as potential event - we'll improve this later when Event has FromJSON
+      log $ "Treating as event: " <> jsonToText json
+      pure $ Right ("event", json)
 
 data BiDiClientParams = MkBiDiClientParams
   { logger :: Logger,
