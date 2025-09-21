@@ -5,7 +5,7 @@ import Data.Aeson.Types (Parser)
 import Data.Text (Text)
 import GHC.Generics (Generic)
 import WebDriverPreCore.BiDi.Capabilities (CapabilitiesResult)
-import Prelude (Applicative ((<*>)), Bool (..), Eq (..), Maybe (..), Show (..), ($), (<$>), (++), maybe, Semigroup (..))
+import Prelude (Applicative ((<*>)), Bool (..), Eq (..), Maybe (..), Show (..), ($), (<$>), maybe, Semigroup (..))
 import WebDriverPreCore.Internal.AesonUtils (toJSONOmitNothing)
 import WebDriverPreCore.BiDi.CoreTypes (BrowsingContext, UserContext)
 

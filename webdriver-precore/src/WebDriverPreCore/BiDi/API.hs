@@ -74,7 +74,6 @@ where
 
 import WebDriverPreCore.BiDi.Protocol
 import Data.Aeson (Object)
-import WebDriverPreCore.BiDi.WebExtensions (WebExtensionUninstall)
 
 ---- Session ----
 

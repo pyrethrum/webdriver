@@ -1,17 +1,20 @@
 module WebDriverPreCore.BiDi.Error
   ( ErrorCode (..),
+    DriverError (..),
     toErrorCodeText,
     fromErrorCodeText,
     errorDescription,
   )
 where
 
-import Data.Aeson (FromJSON, Value (..))
+import Data.Aeson (FromJSON, Value (..), withObject, (.:))
 import Data.Aeson.Types (FromJSON (..), Parser)
+import Data.Function ((&))
 import Data.Text (Text, unpack)
 import GHC.Generics (Generic)
+import WebDriverPreCore.BiDi.CoreTypes
+import WebDriverPreCore.Internal.AesonUtils (subtractProps)
 import Prelude
-import Data.Function ((&))
 
 -- TODO same as HTTP round trip tests and description coverage
 
@@ -152,7 +155,6 @@ fromErrorCodeText = \case
   "unsupported operation" -> Just UnsupportedOperation
   _ -> Nothing
 
-
 errorDescription :: ErrorCode -> Text
 errorDescription = \case
   InvalidArgument -> "Tried to perform an action with an invalid argument"
@@ -185,7 +187,47 @@ errorDescription = \case
   UnknownError -> "An unknown error occurred"
   UnsupportedOperation -> "The operation requested is not supported"
 
+data Error = BiDiError
+  { errorCode :: ErrorCode,
+    errorMessage :: Text,
+    errorDescription :: Text,
+    errorStackTrace :: Maybe Text
+  }
+  deriving (Show, Eq, Generic)
 
+-- typ :: Text, -- "error"
+data DriverError = MkDriverError
+  { id :: Maybe JSUInt,
+    error :: ErrorCode,
+    message :: Text,
+    stacktrace :: Maybe Text,
+    extensions :: EmptyResult
+  }
+  deriving (Show, Generic, Eq)
+
+instance FromJSON DriverError where
+  parseJSON :: Value -> Parser DriverError
+  parseJSON = withObject "Driver Error" $ \o -> do
+    id' <- o .: "id"
+    error' <- o .: "error"
+    message <- o .: "message"
+    stacktrace <- o .: "stacktrace"
+    pure $
+      MkDriverError
+        { id = id',
+          error = error',
+          message,
+          stacktrace,
+          extensions =
+            MkEmptyResult $
+              subtractProps
+                [ "id",
+                  "error",
+                  "message",
+                  "stacktrace"
+                ]
+                o
+        }
 
 -- {
 --     "error": "session not created",
@@ -194,3 +236,19 @@ errorDescription = \case
 --     "stacktrace": "RemoteError@chrome://remote/content/shared/RemoteError.sys.mjs:8:8\nWebDriverError@chrome://remote/content/shared/webdriver/Errors.sys.mjs:202:5\nSessionNotCreatedError@chrome://remote/content/shared/webdriver/Errors.sys.mjs:814:5\ncreateSession@chrome://remote/content/webdriver-bidi/WebDriverBiDi.sys.mjs:127:13\nonPacket@chrome://remote/content/webdriver-bidi/WebDriverBiDiConnection.sys.mjs:206:55\nonMessage@chrome://remote/content/server/WebSocketTransport.sys.mjs:127:18\nhandleEvent@chrome://remote/content/server/WebSocketTransport.sys.mjs:109:14\n",
 --     "type": "error"
 -- }
+
+-- parseWebDriverError :: HttpResponse -> ErrorClassification
+-- parseWebDriverError resp =
+--   case getError resp.body of
+--     Nothing -> NotAnError resp
+--     Just err ->
+--       case errorCodeToErrorType err of
+--         Right et -> WebDriverError et (errorDescription et) resp
+--         Left _ -> UnrecognisedError resp
+
+-- parseWebDriverErrorType :: HttpResponse -> Maybe WebDriverErrorType
+-- parseWebDriverErrorType resp =
+--   case parseWebDriverError resp of
+--     WebDriverError {error} -> Just error
+--     NotAnError {} -> Nothing
+--     UnrecognisedError {} -> Nothing

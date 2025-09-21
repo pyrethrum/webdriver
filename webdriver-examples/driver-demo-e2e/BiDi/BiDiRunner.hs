@@ -89,12 +89,11 @@ import WebDriverPreCore.BiDi.Protocol
     TraverseHistory,
     TraverseHistoryResult,
     UserContext,
-    WebExtensionID,
     WebExtensionInstall,
     WebExtensionResult, WebExtensionUninstall,
   )
 import WebDriverPreCore.BiDi.API qualified as P
-import WebDriverPreCore.BiDi.ResponseEvent (JSONEncodeError, MatchedResponse (..), ResponseObject, decodeResponse, displayResponseError, parseResponse)
+import WebDriverPreCore.BiDi.ResponseEvent (JSONDecodeError, MatchedResponse (..), ResponseObject, decodeResponse, displayResponseError, parseResponse)
 import WebDriverPreCore.BiDi.Session (SessionNewResult, SessionStatusResult)
 import WebDriverPreCore.Http qualified as Http
 import WebDriverPreCore.Internal.AesonUtils (jsonToText)
@@ -324,12 +323,12 @@ withNewBiDiSession params action =
 data BiDiMethods = MkBiDiMethods
   { nextId :: IO JSUInt,
     send :: forall a. (ToJSON a, Show a) => a -> IO (),
-    getNext :: IO (Either JSONEncodeError ResponseObject)
+    getNext :: IO (Either JSONDecodeError ResponseObject)
   }
 
 data Channels = MkChannels
   { sendChan :: TChan Value,
-    receiveChan :: TChan (Either JSONEncodeError ResponseObject),
+    receiveChan :: TChan (Either JSONDecodeError ResponseObject),
     logChan :: TChan Text,
     counterVar :: TVar JSUInt
   }
