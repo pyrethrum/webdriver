@@ -95,7 +95,7 @@ import WebDriverPreCore.BiDi.Protocol
     WebExtensionResult,
     WebExtensionUninstall,
   )
-import WebDriverPreCore.BiDi.ResponseEvent (JSONDecodeError, MatchedResponse (..), ResponseObject, decodeResponse, displayResponseError, parseResponse)
+import WebDriverPreCore.BiDi.Response (JSONDecodeError, MatchedResponse (..), ResponseObject, decodeResponse, displayResponseError, parseResponse)
 import WebDriverPreCore.BiDi.Session (SessionNewResult, SessionStatusResult)
 import WebDriverPreCore.Http qualified as Http
 import WebDriverPreCore.Internal.AesonUtils (jsonToText)

@@ -1,4 +1,4 @@
-module WebDriverPreCore.BiDi.ResponseEvent where
+module WebDriverPreCore.BiDi.Response where
 
 import Data.Aeson (FromJSON (parseJSON), Object, Value (..), eitherDecode, withObject, (.:), (.:?))
 import Data.Aeson.Types (Parser, parseEither)
@@ -7,12 +7,9 @@ import Data.ByteString.Lazy (ByteString)
 import Data.Function ((&))
 import Data.Text (Text, pack)
 import GHC.Generics (Generic)
-import WebDriverPreCore.BiDi.BrowsingContext (BrowsingContextEvent)
 import WebDriverPreCore.BiDi.Command (Command)
 import WebDriverPreCore.BiDi.CoreTypes (EmptyResult (..), JSUInt)
 import WebDriverPreCore.BiDi.Error (DriverError (..))
-import WebDriverPreCore.BiDi.Input (FileDialogOpened)
-import WebDriverPreCore.BiDi.Log (Entry)
 import WebDriverPreCore.Internal.AesonUtils (jsonToText, parseObjectEither, parseObjectMaybe, subtractProps)
 import WebDriverPreCore.Internal.Utils (txt)
 import Prelude
@@ -111,21 +108,3 @@ instance (FromJSON a) => FromJSON (Success a) where
           result,
           extensions = MkEmptyResult $ subtractProps ["id", "result"] o
         }
-
--- typ :: Text, -- "event"
-data Event = MkEvent
-  { eventData :: EventData,
-    extensions :: EmptyResult
-  }
-  deriving (Show, Generic)
-
-data EventData
-  = BrowsingContextEvent BrowsingContextEvent
-  | -- | InputEvent InputEvent
-    InputEvent FileDialogOpened
-  | -- method: "log.entryAdded"
-    LogEvent Entry
-  deriving
-    ( Show,
-      Generic
-    )

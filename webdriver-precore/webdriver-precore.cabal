@@ -122,12 +122,13 @@ library
       WebDriverPreCore.BiDi.CoreTypes
       WebDriverPreCore.BiDi.Emulation
       WebDriverPreCore.BiDi.Error
+      WebDriverPreCore.BiDi.Event
       WebDriverPreCore.BiDi.Log
       WebDriverPreCore.BiDi.Input
       WebDriverPreCore.BiDi.Network
       WebDriverPreCore.BiDi.Protocol
       WebDriverPreCore.BiDi.API
-      WebDriverPreCore.BiDi.ResponseEvent
+      WebDriverPreCore.BiDi.Response
       WebDriverPreCore.BiDi.Script
       WebDriverPreCore.BiDi.Session
       WebDriverPreCore.BiDi.Storage
