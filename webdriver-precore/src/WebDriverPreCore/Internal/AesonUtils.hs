@@ -221,9 +221,9 @@ parseOpt o k = do
     Just v -> Just <$> A.parseJSON v
 
 subtractProps :: [Text] -> Object -> Object
-subtractProps keys obj = AKM.filterWithKey (\k _ -> k `S.member` keySet) obj
+subtractProps keys obj = AKM.filterWithKey (\k _ -> k `S.notMember` excludeSet) obj
   where
-    keySet = S.fromList $ fromString . unpack <$> keys
+    excludeSet = S.fromList $ fromString . unpack <$> keys
 
 addProps :: Text -> [Pair] -> Value -> Value
 addProps errMsg ps v =

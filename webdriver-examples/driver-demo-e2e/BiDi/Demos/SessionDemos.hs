@@ -59,16 +59,17 @@ sessionStatusDemo =
 --         "firstMatch": []
 --     }
 -- }
--- Failed to decode the 'result' property of JSON returned by driver to response type: 
--- {
---     "error": "session not created",
---     "id": 1,
---     "message": "Maximum number of active sessions",
---     "stacktrace": "RemoteError@chrome://remote/content/shared/RemoteError.sys.mjs:8:8\nWebDriverError@chrome://remote/content/shared/webdriver/Errors.sys.mjs:202:5\nSessionNotCreatedError@chrome://remote/content/shared/webdriver/Errors.sys.mjs:814:5\ncreateSession@chrome://remote/content/webdriver-bidi/WebDriverBiDi.sys.mjs:127:13\nonPacket@chrome://remote/content/webdriver-bidi/WebDriverBiDiConnection.sys.mjs:206:55\nonMessage@chrome://remote/content/server/WebSocketTransport.sys.mjs:127:18\nhandleEvent@chrome://remote/content/server/WebSocketTransport.sys.mjs:109:14\n",
---     "type": "error"
--- }
--- Error message: 
--- key "result" not found
+-- BiDi driver error: 
+-- MkDriverError
+--   { id = Just 1
+--   , error = SessionNotCreated
+--   , description = "Failed to create a new session"
+--   , message = "Maximum number of active sessions"
+--   , stacktrace =
+--       Just
+--         "RemoteError@chrome://remote/content/shared/RemoteError.sys.mjs:8:8\nWebDriverError@chrome://remote/content/shared/webdriver/Errors.sys.mjs:202:5\nSessionNotCreatedError@chrome://remote/content/shared/webdriver/Errors.sys.mjs:814:5\ncreateSession@chrome://remote/content/webdriver-bidi/WebDriverBiDi.sys.mjs:127:13\nonPacket@chrome://remote/content/webdriver-bidi/WebDriverBiDiConnection.sys.mjs:206:55\nonMessage@chrome://remote/content/server/WebSocketTransport.sys.mjs:127:18\nhandleEvent@chrome://remote/content/server/WebSocketTransport.sys.mjs:109:14\n"
+--   , extensions = MkEmptyResult { extensible = fromList [] }
+--   }
 sessionNewDemo :: BiDiDemo
 sessionNewDemo =
   demo "Session - New Session Creation" action
@@ -101,16 +102,20 @@ sessionNewDemo =
 --     "method": "session.end",
 --     "params": {}
 -- }
--- Failed to decode the 'result' property of JSON returned by driver to response type: 
--- {
---     "error": "unsupported operation",
---     "id": 1,
---     "message": "Ending a session started with WebDriver classic is not supported. Use the WebDriver classic \"Delete Session\" command instead.",
---     "stacktrace": "RemoteError@chrome://remote/content/shared/RemoteError.sys.mjs:8:8\nWebDriverError@chrome://remote/content/shared/webdriver/Errors.sys.mjs:202:5\nUnsupportedOperationError@chrome://remote/content/shared/webdriver/Errors.sys.mjs:978:5\nend@chrome://remote/content/webdriver-bidi/modules/root/session.sys.mjs:72:13\nhandleCommand@chrome://remote/content/shared/messagehandler/MessageHandler.sys.mjs:260:33\nexecute@chrome://remote/content/shared/webdriver/Session.sys.mjs:410:32\nonPacket@chrome://remote/content/webdriver-bidi/WebDriverBiDiConnection.sys.mjs:236:37\nonMessage@chrome://remote/content/server/WebSocketTransport.sys.mjs:127:18\nhandleEvent@chrome://remote/content/server/WebSocketTransport.sys.mjs:109:14\n",
---     "type": "error"
--- }
--- Error message: 
--- key "result" not found
+-- BiDi driver error: 
+-- MkDriverError
+--   { id = Just 1
+--   , error = UnsupportedOperation
+--   , description = "The operation requested is not supported"
+--   , message =
+--       "Ending a session started with WebDriver classic is not supported. Use the WebDriver classic \"Delete Session\" command instead."
+--   , stacktrace =
+--       Just
+--         "RemoteError@chrome://remote/content/shared/RemoteError.sys.mjs:8:8\nWebDriverError@chrome://remote/content/shared/webdriver/Errors.sys.mjs:202:5\nUnsupportedOperationError@chrome://remote/content/shared/webdriver/Errors.sys.mjs:978:5\nend@chrome://remote/content/webdriver-bidi/modules/root/session.sys.mjs:72:13\nhandleCommand@chrome://remote/content/shared/messagehandler/MessageHandler.sys.mjs:260:33\nexecute@chrome://remote/content/shared/webdriver/Session.sys.mjs:410:32\nonPacket@chrome://remote/content/webdriver-bidi/WebDriverBiDiConnection.sys.mjs:236:37\nonMessage@chrome://remote/content/server/WebSocketTransport.sys.mjs:127:18\nhandleEvent@chrome://remote/content/server/WebSocketTransport.sys.mjs:109:14\n"
+--   , extensions =
+--       MkEmptyResult
+--         { extensible = fromList [ ( "type" , String "error" ) ] }
+--   }
 sessionEndDemo :: BiDiDemo
 sessionEndDemo =
   demo "Session - End Session" action

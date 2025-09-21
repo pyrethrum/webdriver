@@ -2,6 +2,7 @@ module BiDi.BiDiRunner where
 
 import Config (Config, loadConfig)
 import Control.Exception (Exception (displayException), Handler (..), SomeException, catch, catches, throw)
+import Control.Monad (void)
 import Data.Aeson (FromJSON, Object, ToJSON, Value, encode, toJSON)
 import Data.ByteString.Lazy qualified as BL
 import Data.Coerce (coerce)
@@ -18,6 +19,7 @@ import RuntimeConst (httpCapabilities, httpFullCapabilities)
 import UnliftIO (AsyncCancelled, bracket, throwIO, waitAnyCatch)
 import UnliftIO.Async (Async, async, cancel)
 import UnliftIO.STM
+import WebDriverPreCore.BiDi.API qualified as P
 import WebDriverPreCore.BiDi.BiDiUrl (BiDiUrl (..), getBiDiUrl)
 import WebDriverPreCore.BiDi.Capabilities (Capabilities)
 import WebDriverPreCore.BiDi.Command
@@ -90,16 +92,15 @@ import WebDriverPreCore.BiDi.Protocol
     TraverseHistoryResult,
     UserContext,
     WebExtensionInstall,
-    WebExtensionResult, WebExtensionUninstall,
+    WebExtensionResult,
+    WebExtensionUninstall,
   )
-import WebDriverPreCore.BiDi.API qualified as P
 import WebDriverPreCore.BiDi.ResponseEvent (JSONDecodeError, MatchedResponse (..), ResponseObject, decodeResponse, displayResponseError, parseResponse)
 import WebDriverPreCore.BiDi.Session (SessionNewResult, SessionStatusResult)
 import WebDriverPreCore.Http qualified as Http
 import WebDriverPreCore.Internal.AesonUtils (jsonToText)
 import WebDriverPreCore.Internal.Utils (txt)
 import Prelude hiding (getLine, log, null, putStrLn)
-import Control.Monad (void)
 
 withCommands :: BiDiClientParams -> (DemoUtils -> Commands -> IO ()) -> IO ()
 withCommands params action =
@@ -272,13 +273,13 @@ sendCommand m@MkBiDiMethods {getNext} command = do
     matchedResponse cValue id' = do
       response <- getNext
       parseResponse id' response
-        & either
-          ( -- format and throw
-            error . unpack . displayResponseError command cValue
+        & maybe
+          ( -- recurse
+            matchedResponse cValue id'
           )
-          ( maybe
-              ( -- recurse
-                matchedResponse cValue id'
+          ( either
+              ( -- format and throw
+                error . unpack . displayResponseError command cValue
               )
               ( -- get response
                 pure . (.response)

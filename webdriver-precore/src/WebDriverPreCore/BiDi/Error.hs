@@ -16,7 +16,9 @@ import WebDriverPreCore.BiDi.CoreTypes
 import WebDriverPreCore.Internal.AesonUtils (subtractProps)
 import Prelude
 
+-- UNIT TESTS
 -- TODO same as HTTP round trip tests and description coverage
+-- TODO: basic test to deliberately cause an error and check it is parsed correctly (eg no such element)
 
 data ErrorCode
   = -- | Tried to perform an action with an invalid argument
@@ -199,6 +201,7 @@ data Error = BiDiError
 data DriverError = MkDriverError
   { id :: Maybe JSUInt,
     error :: ErrorCode,
+    description :: Text,
     message :: Text,
     stacktrace :: Maybe Text,
     extensions :: EmptyResult
@@ -216,39 +219,19 @@ instance FromJSON DriverError where
       MkDriverError
         { id = id',
           error = error',
+          description = errorDescription error',
           message,
           stacktrace,
           extensions =
             MkEmptyResult $
               subtractProps
                 [ "id",
+                  "type",
                   "error",
+                  "description",
                   "message",
                   "stacktrace"
                 ]
                 o
         }
 
--- {
---     "error": "session not created",
---     "id": 1,
---     "message": "Maximum number of active sessions",
---     "stacktrace": "RemoteError@chrome://remote/content/shared/RemoteError.sys.mjs:8:8\nWebDriverError@chrome://remote/content/shared/webdriver/Errors.sys.mjs:202:5\nSessionNotCreatedError@chrome://remote/content/shared/webdriver/Errors.sys.mjs:814:5\ncreateSession@chrome://remote/content/webdriver-bidi/WebDriverBiDi.sys.mjs:127:13\nonPacket@chrome://remote/content/webdriver-bidi/WebDriverBiDiConnection.sys.mjs:206:55\nonMessage@chrome://remote/content/server/WebSocketTransport.sys.mjs:127:18\nhandleEvent@chrome://remote/content/server/WebSocketTransport.sys.mjs:109:14\n",
---     "type": "error"
--- }
-
--- parseWebDriverError :: HttpResponse -> ErrorClassification
--- parseWebDriverError resp =
---   case getError resp.body of
---     Nothing -> NotAnError resp
---     Just err ->
---       case errorCodeToErrorType err of
---         Right et -> WebDriverError et (errorDescription et) resp
---         Left _ -> UnrecognisedError resp
-
--- parseWebDriverErrorType :: HttpResponse -> Maybe WebDriverErrorType
--- parseWebDriverErrorType resp =
---   case parseWebDriverError resp of
---     WebDriverError {error} -> Just error
---     NotAnError {} -> Nothing
---     UnrecognisedError {} -> Nothing

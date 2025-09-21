@@ -4,6 +4,7 @@ import Data.Aeson (FromJSON (parseJSON), Object, Value (..), eitherDecode, withO
 import Data.Aeson.Types (Parser, parseEither)
 import Data.Bifunctor (Bifunctor (..))
 import Data.ByteString.Lazy (ByteString)
+import Data.Function ((&))
 import Data.Text (Text, pack)
 import GHC.Generics (Generic)
 import WebDriverPreCore.BiDi.BrowsingContext (BrowsingContextEvent)
@@ -12,25 +13,34 @@ import WebDriverPreCore.BiDi.CoreTypes (EmptyResult (..), JSUInt)
 import WebDriverPreCore.BiDi.Error (DriverError (..))
 import WebDriverPreCore.BiDi.Input (FileDialogOpened)
 import WebDriverPreCore.BiDi.Log (Entry)
-import WebDriverPreCore.Internal.AesonUtils (jsonToText, parseObjectEither, subtractProps)
+import WebDriverPreCore.Internal.AesonUtils (jsonToText, parseObjectEither, parseObjectMaybe, subtractProps)
 import WebDriverPreCore.Internal.Utils (txt)
 import Prelude
 
-parseResponse :: (FromJSON r) => JSUInt -> Either JSONDecodeError ResponseObject -> Either ResponseError (Maybe (MatchedResponse r))
-parseResponse id' response = first EncodeError response >>= matchResponseObject id'
+parseResponse :: (FromJSON r) => JSUInt -> Either JSONDecodeError ResponseObject -> Maybe (Either ResponseError (MatchedResponse r))
+parseResponse id' =
+  either
+    (Just . Left . DecodeError)
+    (matchResponseObject id')
 
-matchResponseObject :: forall a. (FromJSON a) => JSUInt -> ResponseObject -> Either ResponseError (Maybe (MatchedResponse a))
+matchResponseObject :: forall a. (FromJSON a) => JSUInt -> ResponseObject -> Maybe (Either ResponseError (MatchedResponse a))
 matchResponseObject msgId = \case
-  NoID {} -> Right Nothing
+  NoID {} -> Nothing
   WithID id' obj ->
     if id' == msgId
       then
-        bimap
-          (\e -> ParseError {object = obj, error = e})
-          (\s -> Just $ MkMatchedResponse {response = s.result, object = obj})
-          (parseObjectEither obj :: Either Text (Success a))
+        Just $
+          bimap
+            ( \e ->
+                (parseObjectMaybe obj :: Maybe DriverError)
+                  & maybe
+                    (ParseError {object = obj, error = e})
+                    BiDIError
+            )
+            (\s -> MkMatchedResponse {response = s.result, object = obj})
+            (parseObjectEither obj :: Either Text (Success a))
       else
-        Right Nothing
+        Nothing
 
 decodeResponse :: ByteString -> Either JSONDecodeError ResponseObject
 decodeResponse =
@@ -57,7 +67,7 @@ newtype JSONDecodeError = MkJSONDecodeError Text deriving (Show, Eq, Generic)
 
 data ResponseError
   = BiDIError DriverError
-  | EncodeError JSONDecodeError
+  | DecodeError JSONDecodeError
   | ParseError
       { object :: Object,
         error :: Text
@@ -75,7 +85,7 @@ displayResponseError c json err =
     <> "\n"
     <> case err of
       BiDIError e -> "BiDi driver error: \n" <> txt e
-      EncodeError (MkJSONDecodeError e) -> "Failed to encode driver response to JSON: \n" <> txt e
+      DecodeError (MkJSONDecodeError e) -> "Failed to encode driver response to JSON: \n" <> txt e
       ParseError {object, error = e} ->
         "Failed to decode the 'result' property of JSON returned by driver to response type: \n"
           <> jsonToText (Object object)
