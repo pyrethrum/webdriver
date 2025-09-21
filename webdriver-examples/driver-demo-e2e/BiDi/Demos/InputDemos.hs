@@ -4,7 +4,7 @@ import BiDi.BiDiRunner (Commands (..))
 import BiDi.DemoUtils
 import Data.Maybe (fromJust)
 import IOUtils (DemoUtils (..))
-import TestData (checkboxesUrl, infiniteScrollUrl, textAreaUrl, fileUrl, uploadFilePath)
+import TestData (checkboxesUrl, fileUrl, infiniteScrollUrl, textAreaUrl, uploadFilePath)
 import WebDriverPreCore.BiDi.BrowsingContext (Locator (..))
 import WebDriverPreCore.BiDi.CoreTypes (NodeRemoteValue (..))
 import WebDriverPreCore.BiDi.CoreTypes qualified as Core
@@ -27,7 +27,6 @@ Demo coverage:
 - inputReleaseActionsDemo - Release input state
 - inputSetFilesDemo - File upload functionality
 -}
-
 
 -- Helper function to create default pointer common properties
 defaultPointerProps :: PointerCommonProperties
@@ -203,47 +202,45 @@ inputKeyboardDemo =
       pause
 
       logTxt "Test 3: Modifier keys - Ctrl+A to select all in text area 1 field"
-
-      _ <-
-        inputPerformActions $
-          MkPerformActions
-            { context = bc,
-              actions =
-                [ KeySourceActions $
-                    MkKeySourceActions
-                      { keyId = "keyboard1",
-                        keyActions =
-                          [ -- Shift+Tab to go back to text area 1 field
-                            KeyDown "\xE008", -- Shift
-                            KeyDown "\xE004", -- Tab
-                            KeyUp "\xE004",
-                            KeyUp "\xE008",
-                            KeyPause {duration = Just 200},
-                            -- Ctrl+A to select all
-                            KeyDown "\xE009", -- Ctrl
-                            KeyDown "a",
-                            KeyUp "a",
-                            KeyUp "\xE009",
-                            KeyPause {duration = Just 200},
-                            -- Type new text
-                            KeyDown "S",
-                            KeyUp "S",
-                            KeyDown "e",
-                            KeyUp "e",
-                            KeyDown "c",
-                            KeyUp "c",
-                            KeyDown "r",
-                            KeyUp "r",
-                            KeyDown "e",
-                            KeyUp "e",
-                            KeyDown "t",
-                            KeyUp "t",
-                            KeyDown "!",
-                            KeyUp "!"
-                          ]
-                      }
-                ]
-            }
+      inputPerformActions
+        $ MkPerformActions
+          { context = bc,
+            actions =
+              [ KeySourceActions $
+                  MkKeySourceActions
+                    { keyId = "keyboard1",
+                      keyActions =
+                        [ -- Shift+Tab to go back to text area 1 field
+                          KeyDown "\xE008", -- Shift
+                          KeyDown "\xE004", -- Tab
+                          KeyUp "\xE004",
+                          KeyUp "\xE008",
+                          KeyPause {duration = Just 200},
+                          -- Ctrl+A to select all
+                          KeyDown "\xE009", -- Ctrl
+                          KeyDown "a",
+                          KeyUp "a",
+                          KeyUp "\xE009",
+                          KeyPause {duration = Just 200},
+                          -- Type new text
+                          KeyDown "S",
+                          KeyUp "S",
+                          KeyDown "e",
+                          KeyUp "e",
+                          KeyDown "c",
+                          KeyUp "c",
+                          KeyDown "r",
+                          KeyUp "r",
+                          KeyDown "e",
+                          KeyUp "e",
+                          KeyDown "t",
+                          KeyUp "t",
+                          KeyDown "!",
+                          KeyUp "!"
+                        ]
+                    }
+              ]
+          }
       logShow "Special key actions result" specialKeyActions
       pause
 
