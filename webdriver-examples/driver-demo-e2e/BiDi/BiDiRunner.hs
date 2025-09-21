@@ -102,6 +102,10 @@ import WebDriverPreCore.Internal.AesonUtils (jsonToText)
 import WebDriverPreCore.Internal.Utils (txt)
 import Prelude hiding (getLine, log, null, putStrLn)
 
+-- TODO: geric command
+-- TODO: handle event
+
+
 withCommands :: BiDiClientParams -> (DemoUtils -> Commands -> IO ()) -> IO ()
 withCommands params action =
   -- withNewBiDiSession $ action . mkCommands
@@ -340,7 +344,7 @@ data EventSubscription = MkEventSubscription
 -- | Event broadcast system - maintains list of active subscribers
 data EventBroadcaster = MkEventBroadcaster
   { subscribers :: TVar [EventSubscription],
-    nextSubId :: TVar Int
+    nextId :: IO JSUInt
   }
 
 data Channels = MkChannels
@@ -353,11 +357,15 @@ data Channels = MkChannels
 
 mkChannels :: IO Channels
 mkChannels = do
-  eventBroadcaster <- MkEventBroadcaster <$> newTVarIO [] <*> newTVarIO 1
+  subs <- newTVarIO []
+  counterVar' <- counterVar
   MkChannels
     <$> newTChanIO
     <*> newTChanIO
-    <*> pure eventBroadcaster
+    <*> pure $ MkEventBroadcaster {
+      subscribers = subs,
+      nextId = nxtCounter counterVar'
+    }
     <*> newTChanIO
     <*> counterVar
 

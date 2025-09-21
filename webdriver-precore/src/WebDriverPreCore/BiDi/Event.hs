@@ -24,3 +24,46 @@ data EventData
     ( Show,
       Generic
     )
+
+{-
+{
+  "type": "event",
+  "method": "module.eventName",
+  "params": {
+    // Event-specific parameters
+  }
+}
+
+
+Event = {
+  type: "event",
+  EventData,
+  Extensible
+}
+
+{
+  "type": "event", 
+  "method": "browsingContext.navigationStarted",
+  "params": {
+    "context": "context-id",
+    "navigation": "navigation-id", 
+    "timestamp": 1234567890,
+    "url": "https://example.com"
+  }
+}
+
+{
+  "type": "event",
+  "method": "log.entryAdded", 
+  "params": {
+    "level": "info",
+    "text": "Hello world",
+    "timestamp": 1234567890,
+    "source": {
+      "realm": "realm-id",
+      "context": "context-id"
+    }
+  }
+}
+
+-}
