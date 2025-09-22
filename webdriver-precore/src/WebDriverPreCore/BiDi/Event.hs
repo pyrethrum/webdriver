@@ -52,6 +52,8 @@ Event = {
   }
 }
 
+method which is a string literal of the form [module name].[event name]. This is the event name.I
+
 {
   "type": "event",
   "method": "log.entryAdded", 

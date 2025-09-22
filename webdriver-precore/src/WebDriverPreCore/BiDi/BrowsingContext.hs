@@ -403,6 +403,7 @@ instance FromJSON PrintResult where
   parseJSON :: Value -> Parser PrintResult
   parseJSON = fmap MkPrintResult . parseTextData "PrintResult"
 
+-- TODO - fix types
 data Info = MkInfo
   { children :: Maybe [Info],
     clientWindow :: Text, -- browser.ClientWindow

@@ -5,6 +5,7 @@ module WebDriverPreCore.BiDi.Protocol
     module WebDriverPreCore.BiDi.BrowsingContext,
     module WebDriverPreCore.BiDi.Capabilities,
     module WebDriverPreCore.BiDi.Command,
+    module WebDriverPreCore.BiDi.Event,
     module WebDriverPreCore.BiDi.Emulation,
     module WebDriverPreCore.BiDi.Input,
     module WebDriverPreCore.BiDi.Script,
@@ -43,7 +44,7 @@ module WebDriverPreCore.BiDi.Protocol
     CacheBehavior (..),
     BytesValue (..),
     Cookie (..),
-    SameSite (Strict, Lax, Default), -- Explicitly exclude None to avoid conflict with BrowsingContext.None
+    SameSite (..), 
     Header (..),
     CookieHeader (..),
     SetCookieHeader (..),
@@ -111,6 +112,12 @@ import WebDriverPreCore.BiDi.Emulation
     SetScreenOrientationOverride (..),
     SetTimezoneOverride (..),
   )
+
+import WebDriverPreCore.BiDi.Event
+  ( Event (..),
+    EventData (..),
+  )
+
 import WebDriverPreCore.BiDi.Input
   ( PerformActions (..),
     ReleaseActions (..),
@@ -201,6 +208,7 @@ import WebDriverPreCore.BiDi.Session
     SessionSubscribeResult (..),
     SessionSubscriptionRequest (..),
     SessionUnsubscribe (..),
+    Subscription (..)
   )
 import WebDriverPreCore.BiDi.Storage
   ( DeleteCookies (..),
