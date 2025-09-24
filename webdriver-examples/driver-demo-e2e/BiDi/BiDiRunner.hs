@@ -340,7 +340,12 @@ data BiDiMethods = MkBiDiMethods
 data EventSubscription = MkEventSubscription
   { subscription :: Subscription,
     queue :: TChan Event,
+    -- change to event list to be consistent with subscribe
     filter :: Event -> Bool
+    -- onEvent :: Event -> IO ()
+    -- create separate SubscriptionParams data type same as this but without queue
+    -- subscribe would have subscription params 
+    -- unsubscribe would have subscription
   }
 
 -- | Event broadcast system - maintains list of active subscriptions
