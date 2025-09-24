@@ -103,7 +103,7 @@ import WebDriverPreCore.BiDi.Response (JSONDecodeError, MatchedResponse (..), Re
 import WebDriverPreCore.Http qualified as Http
 import WebDriverPreCore.Internal.AesonUtils (jsonToText)
 import WebDriverPreCore.Internal.Utils (txt)
-import Prelude hiding (getLine, log, null, putStrLn)
+import Prelude hiding (getLine, log, null, putStrLn, print)
 
 -- TODO: geric command
 -- TODO: handle event
@@ -304,6 +304,7 @@ mkDemoBiDiClientParams pauseMs = do
         demoUtils = bidiDemoUtils log pauseMs
       }
 
+-- TODO Add fail event
 mkFailBidiClientParams :: Int -> Word64 -> Word64 -> Word64 -> IO BiDiClientParams
 mkFailBidiClientParams pauseMs failSendCount failGetCount failPrintCount = do
   c <- mkChannels
@@ -462,28 +463,28 @@ failAction lbl failCallCount action = do
         action a
 
 data MessageActions = MkMessageActions
-  { sendAction :: Connection -> IO (),
-    getAction :: Connection -> IO (),
-    printAction :: IO ()
+  { send :: Connection -> IO (),
+    get :: Connection -> IO (),
+    print :: IO ()
   }
 
 failMessageActions :: MessageActions -> Word64 -> Word64 -> Word64 -> IO MessageActions
-failMessageActions MkMessageActions {sendAction, getAction, printAction} failSendCount failGetCount failPrintCount =
+failMessageActions a failSendCount failGetCount failPrintCount =
   do
-    send <- failAction "send" failSendCount sendAction
-    get <- failAction "get" failGetCount getAction
-    print' <- failAction "print" failPrintCount $ const printAction
+    send <- failAction "send" failSendCount a.send
+    get <- failAction "get" failGetCount a.get
+    print' <- failAction "print" failPrintCount $ const a.print
     pure $
       MkMessageActions
-        { sendAction = send,
-          getAction = get,
-          printAction = print' 1
+        { send,
+          get,
+          print = print' 1
         }
 
 demoMessageActions :: (Text -> IO ()) -> Channels -> MessageActions
 demoMessageActions log channels =
   MkMessageActions
-    { sendAction = \conn -> do
+    { send = \conn -> do
         msgToSend <- atomically $ readTChan channels.sendChan
         log $ "Sending Message: " <> jsonToText msgToSend
         catchLog
@@ -491,13 +492,13 @@ demoMessageActions log channels =
           log
           (sendTextData conn (BL.toStrict $ encode msgToSend)),
       --
-      getAction = \conn -> do
+      get = \conn -> do
         msg <- receiveData conn
         -- log $ "Received raw data: " <> T.take 100 (txt msg) <> "..."
         log $ "Received raw data: " <> txt msg
         atomically . writeTChan channels.receiveChan $ decodeResponse msg,
       --
-      printAction = do
+      print = do
         msg <- atomically $ readTChan channels.logChan
         TIO.putStrLn $ "[LOG] " <> msg
     }
@@ -505,9 +506,9 @@ demoMessageActions log channels =
 loopActions :: (Text -> IO ()) -> MessageActions -> MessageLoops
 loopActions log MkMessageActions {..} =
   MkMessageLoops
-    { sendLoop = \conn -> asyncLoop "Sender" $ sendAction conn,
-      getLoop = \conn -> asyncLoop "Receiver" $ getAction conn,
-      printLoop = asyncLoop "Logger" printAction
+    { sendLoop = \conn -> asyncLoop "Sender" $ send conn,
+      getLoop = \conn -> asyncLoop "Receiver" $ get conn,
+      printLoop = asyncLoop "Logger" print
     }
   where
     asyncLoop = loopForever log
