@@ -331,38 +331,37 @@ data BiDiMethods = MkBiDiMethods
   { nextId :: IO JSUInt,
     send :: forall a. (ToJSON a, Show a) => a -> IO (),
     getNext :: IO (Either JSONDecodeError ResponseObject),
-    subscribeToEvents :: Subscription -> (Event -> Bool) -> IO EventSubscription,
-    unsubscribeFromEvents :: EventSubscription -> IO ()
+    subscribe :: Subscription -> (Event -> Bool) -> STM EventSubscription,
+    unsubscribe :: EventSubscription -> STM ()
   }
 
 -- | Event subscription handle
 data EventSubscription = MkEventSubscription
   { subscription :: Subscription,
     queue :: TChan Event,
-    filter :: Event -> Bool,
-    active :: TVar Bool
+    filter :: Event -> Bool
   }
 
--- | Event broadcast system - maintains list of active subscribers
-newtype EventBroadcaster = MkEventBroadcaster
-  { subscribers :: TVar [EventSubscription]
+-- | Event broadcast system - maintains list of active subscriptions
+newtype Subscriptions = MkSubscriptions
+  { subscriptions :: TVar [EventSubscription]
   }
 
 data Channels = MkChannels
   { sendChan :: TChan Value,
     receiveChan :: TChan (Either JSONDecodeError ResponseObject),
-    eventBroadcaster :: EventBroadcaster, -- New: for event broadcasting
+    eventBroadcaster :: Subscriptions, 
     logChan :: TChan Text,
     counterVar :: TVar JSUInt
   }
 
 mkChannels :: IO Channels
 mkChannels = do
-  subscribers <- newTVarIO []
+  subscriptions <- newTVarIO []
   MkChannels
     <$> newTChanIO
     <*> newTChanIO
-    <*> (pure $ MkEventBroadcaster {subscribers})
+    <*> (pure $ MkSubscriptions {subscriptions})
     <*> newTChanIO
     <*> counterVar
 
@@ -383,38 +382,34 @@ mkBiDIMethods channels =
         let !json = toJSON a
         atomically . writeTChan channels.sendChan $ json,
       getNext = atomically $ readTChan channels.receiveChan,
-      subscribeToEvents = subscribeToEventsImpl channels.eventBroadcaster,
-      unsubscribeFromEvents = unsubscribeFromEventsImpl channels.eventBroadcaster
+      subscribe = subscribe channels.eventBroadcaster,
+      unsubscribe = unsubscribe channels.eventBroadcaster
     }
 
 -- | Subscribe to events with a filter function
-subscribeToEventsImpl :: EventBroadcaster -> Subscription -> (Event -> Bool) -> IO EventSubscription
-subscribeToEventsImpl MkEventBroadcaster {subscribers} subscription filter' = atomically $ do
+subscribe :: Subscriptions -> Subscription -> (Event -> Bool) -> STM EventSubscription
+subscribe MkSubscriptions {subscriptions} subscription filter' = do
   queue <- newTChan
-  active <- newTVar True
   let es =
         MkEventSubscription
           { subscription,
             queue,
-            filter = filter',
-            active
+            filter = filter'
           }
-  modifyTVar' subscribers (es :)
+  modifyTVar' subscriptions (es :)
   pure es
 
 -- | Unsubscribe from events
-unsubscribeFromEventsImpl :: EventBroadcaster -> EventSubscription -> IO ()
-unsubscribeFromEventsImpl (MkEventBroadcaster subscribers) MkEventSubscription {subscription, active} = atomically $ do
-  writeTVar active False
-  modifyTVar' subscribers $ filter ((/=) subscription . (.subscription))
+unsubscribe :: Subscriptions -> EventSubscription -> STM ()
+unsubscribe (MkSubscriptions subscriptions) MkEventSubscription {subscription} =
+  modifyTVar' subscriptions $ filter ((/=) subscription . (.subscription))
 
--- | Broadcast an event to all active subscribers
-broadcastEvent :: EventBroadcaster -> Event -> STM ()
-broadcastEvent (MkEventBroadcaster subscribers) event = do
-  activeSubs <- readTVar subscribers
-  forM_ activeSubs $ \sub -> do
-    active <- readTVar sub.active
-    when (active && sub.filter event) $ do
+-- | Broadcast an event to all active subscriptions
+broadcastEvent :: Subscriptions -> Event -> STM ()
+broadcastEvent (MkSubscriptions subscriptions) event = do
+  subs <- readTVar subscriptions
+  forM_ subs $ \sub -> 
+    when (sub.filter event) $ 
       writeTChan sub.queue event
 
 -- | Parse incoming WebSocket message to determine if it's an event or command response
