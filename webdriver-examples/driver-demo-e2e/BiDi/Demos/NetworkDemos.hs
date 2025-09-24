@@ -9,7 +9,6 @@ import IOUtils (DemoUtils (..), exceptionTextIncludes)
 import WebDriverPreCore.BiDi.CoreTypes (JSUInt (..), StringValue (MkStringValue))
 import WebDriverPreCore.BiDi.Protocol
 import Prelude hiding (log)
-import WebDriverPreCore.BiDi.Network (SameSite(SameSiteNone))
 
 {-
 

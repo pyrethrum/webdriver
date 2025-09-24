@@ -331,16 +331,16 @@ data BiDiMethods = MkBiDiMethods
   { nextId :: IO JSUInt,
     send :: forall a. (ToJSON a, Show a) => a -> IO (),
     getNext :: IO (Either JSONDecodeError ResponseObject),
-    subscribeToEvents :: ((Text, Value) -> Bool) -> IO EventSubscription,
+    subscribeToEvents :: Subscription -> (Event -> Bool) -> IO EventSubscription,
     unsubscribeFromEvents :: EventSubscription -> IO ()
   }
 
 -- | Event subscription handle
 data EventSubscription = MkEventSubscription
   { subscription :: Subscription,
-    eventQueue :: TChan Event,
-    eventFilter :: Event -> Bool,
-    isActive :: TVar Bool
+    queue :: TChan Event,
+    filter :: Event -> Bool,
+    active :: TVar Bool
   }
 
 -- | Event broadcast system - maintains list of active subscribers
@@ -358,7 +358,6 @@ data Channels = MkChannels
 
 mkChannels :: IO Channels
 mkChannels = do
-  eventCounterVar' <- counterVar
   subscribers <- newTVarIO []
   MkChannels
     <$> newTChanIO
@@ -389,36 +388,34 @@ mkBiDIMethods channels =
     }
 
 -- | Subscribe to events with a filter function
-subscribeToEventsImpl :: Subscription -> EventBroadcaster -> (Event -> Bool) -> IO EventSubscription
-subscribeToEventsImpl subscription MkEventBroadcaster {subscribers} eventFilter = atomically $ do
-  eventQueue <- newTChan
-  isActive <- newTVar True
+subscribeToEventsImpl :: EventBroadcaster -> Subscription -> (Event -> Bool) -> IO EventSubscription
+subscribeToEventsImpl MkEventBroadcaster {subscribers} subscription filter' = atomically $ do
+  queue <- newTChan
+  active <- newTVar True
   let es =
         MkEventSubscription
           { subscription,
-            eventQueue = eventQueue,
-            eventFilter = eventFilter,
-            -- TODO : may not need this
-            isActive = isActive
+            queue,
+            filter = filter',
+            active
           }
   modifyTVar' subscribers (es :)
   pure es
 
 -- | Unsubscribe from events
 unsubscribeFromEventsImpl :: EventBroadcaster -> EventSubscription -> IO ()
-unsubscribeFromEventsImpl (MkEventBroadcaster subscribers) subscription = atomically $ do
-  writeTVar subscription.isActive False
-  modifyTVar' subscribers (filter ((/=) subscription))
+unsubscribeFromEventsImpl (MkEventBroadcaster subscribers) MkEventSubscription {subscription, active} = atomically $ do
+  writeTVar active False
+  modifyTVar' subscribers $ filter ((/=) subscription . (.subscription))
 
 -- | Broadcast an event to all active subscribers
-broadcastEvent :: EventBroadcaster -> Event -> IO ()
+broadcastEvent :: EventBroadcaster -> Event -> STM ()
 broadcastEvent (MkEventBroadcaster subscribers) event = do
-  activeSubs <- readTVarIO subscribers
-  atomically $ do
-    forM_ activeSubs $ \sub -> do
-      active <- readTVar sub.isActive
-      when (active && sub.eventFilter event) $ do
-        writeTChan sub.eventQueue event
+  activeSubs <- readTVar subscribers
+  forM_ activeSubs $ \sub -> do
+    active <- readTVar sub.active
+    when (active && sub.filter event) $ do
+      writeTChan sub.queue event
 
 -- | Parse incoming WebSocket message to determine if it's an event or command response
 -- For now, we'll use a simple heuristic: messages with "id" are responses, others are events
