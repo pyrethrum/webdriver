@@ -4,34 +4,34 @@ import Data.Aeson (FromJSON, ToJSON (..), Value)
 import GHC.Generics (Generic)
 import WebDriverPreCore.BiDi.BrowsingContext (BrowsingContextEvent (..))
 import WebDriverPreCore.BiDi.Input (FileDialogOpened)
-import WebDriverPreCore.BiDi.Log (Entry)
+import WebDriverPreCore.BiDi.Log (LogEntry)
 import Prelude
+import Data.Set (Set)
 
 mkSubscription :: forall m r. FromJSON r => SubscriptionType -> (r -> m ()) -> Subscription m
 mkSubscription = MkSubscription 
+
+mkSubscriptionN :: Set SubscriptionType -> (Event -> m ()) -> Subscription m
+mkSubscriptionN = MkNSubscription
 
 data Subscription m where
   MkSubscription :: forall m r. (FromJSON r) =>
     { subscription :: SubscriptionType,
       action :: r -> m ()
     } ->
+    Subscription m 
+  MkNSubscription :: { 
+      subscriptions:: Set SubscriptionType,
+      nAction :: Event -> m ()
+    } ->
     Subscription m
-
-mkSubscription2 :: forall m r. (FromJSON r) => SubscriptionType -> (r -> m ()) -> Subscription2 m
-mkSubscription2 = MkSubscription2 
-
-data Subscription2 m =
-  MkSubscription2 
-    { subscription :: SubscriptionType,
-      action :: forall r. (FromJSON r) => r -> m ()
-    } 
 
 data Event
   = BrowsingContextEvent BrowsingContextEvent
   | -- | InputEvent InputEvent
     InputEvent FileDialogOpened
   | -- method: "log.entryAdded"
-    LogEvent Entry
+    LogEvent LogEntry
   deriving
     ( Show,
       Eq,

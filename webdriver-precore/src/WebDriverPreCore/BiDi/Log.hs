@@ -7,7 +7,7 @@ module WebDriverPreCore.BiDi.Log (
   GenericLogEntry (..),
   ConsoleLogEntry (..),
   JavascriptLogEntry (..),
-  Entry (..),
+  LogEntry (..),
   EntryAdded (..),
   LogEvent (..),
 
@@ -20,6 +20,7 @@ import WebDriverPreCore.BiDi.CoreTypes (JSUInt)
 import Data.Aeson (FromJSON, Value (..), (.:))
 import Data.Aeson.Types (Parser, FromJSON (..))
 import Control.Monad (MonadFail(..))
+import WebDriverPreCore.Internal.AesonUtils (fromJSONCamelCase, parseJSONOmitNothing)
 
 -- ######### Local ######### 
 -- Note: log module does not have a remote end
@@ -27,6 +28,10 @@ import Control.Monad (MonadFail(..))
 -- | Represents the log level
 data Level = Debug | Info | Warn | Error
   deriving (Show, Eq, Generic)
+
+instance FromJSON Level where
+   parseJSON :: Value -> Parser Level
+   parseJSON = fromJSONCamelCase
 
 -- | Base structure for all log entries
 data BaseLogEntry = MkBaseLogEntry
@@ -37,11 +42,18 @@ data BaseLogEntry = MkBaseLogEntry
   , stackTrace :: Maybe StackTrace
   } deriving (Show, Eq, Generic)
 
+instance FromJSON BaseLogEntry where
+  parseJSON :: Value -> Parser BaseLogEntry
+  parseJSON = parseJSONOmitNothing
+
+
 -- | Generic log entry type
 data GenericLogEntry = MkGenericLogEntry
   { baseEntry :: BaseLogEntry
   , entryType :: Text
   } deriving (Show, Eq, Generic)
+
+instance FromJSON GenericLogEntry 
 
 -- | Console log entry type
 data ConsoleLogEntry = MkConsoleLogEntry
@@ -50,20 +62,26 @@ data ConsoleLogEntry = MkConsoleLogEntry
   , args :: [RemoteValue]
   } deriving (Show, Eq, Generic)
 
+instance FromJSON ConsoleLogEntry 
+
+
 -- | JavaScript log entry type
 newtype JavascriptLogEntry = MkJavascriptLogEntry
   { baseEntry :: BaseLogEntry
   } deriving (Show, Eq, Generic)
 
+instance FromJSON JavascriptLogEntry
+
 -- | Union type for all log entry types
-data Entry
+data LogEntry
   = GenericEntry GenericLogEntry
   | ConsoleEntry ConsoleLogEntry
   | JavascriptEntry JavascriptLogEntry
   deriving (Show, Eq, Generic)
 
-instance FromJSON Entry where
-  parseJSON :: Value -> Parser Entry
+
+instance FromJSON LogEntry where
+  parseJSON :: Value -> Parser LogEntry
   parseJSON = \case
     v@(Object obj) -> do
       entryType <- obj .: "type"
@@ -76,7 +94,7 @@ instance FromJSON Entry where
 
 -- | Event emitted when a log entry is added
 newtype EntryAdded = MkEntryAdded
-  { params :: Entry
+  { params :: LogEntry
   } deriving (Show, Eq, Generic)
 
 -- | Union type for all log events

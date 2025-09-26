@@ -69,7 +69,7 @@ import WebDriverPreCore.BiDi.CoreTypes
     NodeRemoteValue (..), UserContext, SharedId,
   )
 import WebDriverPreCore.BiDi.CoreTypes (StringValue(..))
-import WebDriverPreCore.Internal.AesonUtils (jsonToText, opt, toJSONOmitNothing)
+import WebDriverPreCore.Internal.AesonUtils (jsonToText, opt, toJSONOmitNothing, parseJSONOmitNothing)
 import Prelude (Applicative (..), Bool (..), Double, Either (..), Eq (..), Maybe (..), MonadFail (..), Semigroup (..), Show (..), Traversable (..), mapM, realToFrac, ($), (.), (<$>))
 
 -- ######### REMOTE #########
@@ -652,6 +652,10 @@ data Source = MkSource
     context :: Maybe BrowsingContext
   }
   deriving (Show, Eq, Generic)
+
+instance FromJSON Source where
+  parseJSON :: Value -> Parser Source
+  parseJSON = parseJSONOmitNothing
 
 newtype ChannelValue = MkChannelValue
   { 

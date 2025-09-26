@@ -2,7 +2,7 @@ module BiDi.BiDiRunner where
 
 import Config (Config, loadConfig)
 import Control.Exception (Exception (displayException), Handler (..), SomeException, catch, catches, throw)
-import Control.Monad (forM_, void, when)
+import Control.Monad (void)
 import Data.Aeson (FromJSON, Object, ToJSON, Value, encode, toJSON)
 import Data.ByteString.Lazy qualified as BL
 import Data.Coerce (coerce)
@@ -24,6 +24,7 @@ import WebDriverPreCore.BiDi.BiDiUrl (BiDiUrl (..), getBiDiUrl)
 import WebDriverPreCore.BiDi.Capabilities (Capabilities)
 import WebDriverPreCore.BiDi.Command
 import WebDriverPreCore.BiDi.CoreTypes (JSUInt (..))
+import WebDriverPreCore.BiDi.Event (Subscription)
 import WebDriverPreCore.BiDi.Protocol
   ( Activate,
     AddDataCollector,
@@ -103,7 +104,7 @@ import WebDriverPreCore.BiDi.Response (JSONDecodeError, MatchedResponse (..), Re
 import WebDriverPreCore.Http qualified as Http
 import WebDriverPreCore.Internal.AesonUtils (jsonToText)
 import WebDriverPreCore.Internal.Utils (txt)
-import Prelude hiding (getLine, log, null, putStrLn, print)
+import Prelude hiding (getLine, log, null, print, putStrLn)
 
 -- TODO: geric command
 -- TODO: handle event
@@ -332,44 +333,28 @@ data BiDiMethods = MkBiDiMethods
   { nextId :: IO JSUInt,
     send :: forall a. (ToJSON a, Show a) => a -> IO (),
     getNext :: IO (Either JSONDecodeError ResponseObject),
-    subscribe :: SubscriptionId -> (Event -> Bool) -> STM EventSubscription,
-    unsubscribe :: EventSubscription -> STM ()
-  }
-
--- | Event subscription handle
-data EventSubscription = MkEventSubscription
-  { subscription :: SubscriptionId,
-    queue :: TChan Event,
-    -- change to event list to be consistent with subscribe
-    filter :: Event -> Bool
-    -- onEvent :: Event -> IO ()
-    -- create separate SubscriptionParams data type same as this but without queue
-    -- subscribe would have subscription params 
-    -- unsubscribe would have subscription
-  }
-
--- | Event broadcast system - maintains list of active subscriptions
-newtype Subscriptions = MkSubscriptions
-  { subscriptions :: TVar [EventSubscription]
+    subscribe :: Subscribed IO -> IO (),
+    unsubscribe :: SubscriptionId -> IO ()
   }
 
 data Channels = MkChannels
   { sendChan :: TChan Value,
     receiveChan :: TChan (Either JSONDecodeError ResponseObject),
-    eventBroadcaster :: Subscriptions, 
+    eventChan :: TChan Object,
     logChan :: TChan Text,
-    counterVar :: TVar JSUInt
+    counterVar :: TVar JSUInt,
+    subscriptions :: TVar [Subscribed IO]
   }
 
 mkChannels :: IO Channels
-mkChannels = do
-  subscriptions <- newTVarIO []
+mkChannels =
   MkChannels
     <$> newTChanIO
     <*> newTChanIO
-    <*> (pure $ MkSubscriptions {subscriptions})
+    <*> newTChanIO
     <*> newTChanIO
     <*> counterVar
+    <*> newTVarIO []
 
 counterVar :: IO (TVar JSUInt)
 counterVar = newTVarIO $ MkJSUInt 0
@@ -380,43 +365,28 @@ mkAtomicCounter var = atomically $ do
   readTVar var
 
 mkBiDIMethods :: Channels -> BiDiMethods
-mkBiDIMethods channels =
+mkBiDIMethods c =
   MkBiDiMethods
-    { nextId = mkAtomicCounter channels.counterVar,
+    { nextId = mkAtomicCounter c.counterVar,
       send = \a -> do
         -- make strict so serialisation errors come from here and not in the logger
         let !json = toJSON a
-        atomically . writeTChan channels.sendChan $ json,
-      getNext = atomically $ readTChan channels.receiveChan,
-      subscribe = subscribe channels.eventBroadcaster,
-      unsubscribe = unsubscribe channels.eventBroadcaster
+        atomically . writeTChan c.sendChan $ json,
+      getNext = atomically $ readTChan c.receiveChan,
+      subscribe = atomically . modifyTVar' c.subscriptions . (:),
+      unsubscribe = \sid -> atomically . modifyTVar' c.subscriptions . filter $ \s -> s.subscriptionId /= sid
     }
 
+data Subscribed m = MkSubscribed
+  { subscriptionId :: SubscriptionId,
+    subscription :: Subscription m
+  }
 -- | Subscribe to events with a filter function
-subscribe :: Subscriptions -> SubscriptionId -> (Event -> Bool) -> STM EventSubscription
-subscribe MkSubscriptions {subscriptions} subscription filter' = do
-  queue <- newTChan
-  let es =
-        MkEventSubscription
-          { subscription,
-            queue,
-            filter = filter'
-          }
-  modifyTVar' subscriptions (es :)
-  pure es
+subscribe :: Subscribed IO -> TVar [Subscribed IO] -> STM (TVar [Subscribed IO])
+subscribe subscribed subscriptions = do
+  modifyTVar' subscriptions (subscribed :)
+  pure subscriptions
 
--- | Unsubscribe from events
-unsubscribe :: Subscriptions -> EventSubscription -> STM ()
-unsubscribe (MkSubscriptions subscriptions) MkEventSubscription {subscription} =
-  modifyTVar' subscriptions $ filter ((/=) subscription . (.subscription))
-
--- | Broadcast an event to all active subscriptions
-broadcastEvent :: Subscriptions -> Event -> STM ()
-broadcastEvent (MkSubscriptions subscriptions) event = do
-  subs <- readTVar subscriptions
-  forM_ subs $ \sub -> 
-    when (sub.filter event) $ 
-      writeTChan sub.queue event
 
 -- | Parse incoming WebSocket message to determine if it's an event or command response
 -- For now, we'll use a simple heuristic: messages with "id" are responses, others are events

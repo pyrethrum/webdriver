@@ -68,12 +68,16 @@ module WebDriverPreCore.BiDi.API
 
     -- * WebExtension Commands
     webExtensionInstall,
-    webExtensionUninstall
+    webExtensionUninstall,
+
+    -- * Subscriptions
+    subscribeLogEntryAdded,
+    subscribeBrowserContextCreated
   )
 where
 
 import WebDriverPreCore.BiDi.Protocol
-import Data.Aeson (Object, FromJSON)
+import Data.Aeson (Object)
 import WebDriverPreCore.BiDi.Log
 import WebDriverPreCore.BiDi.Event
 
@@ -263,7 +267,10 @@ webExtensionInstall = mkCommand "webExtension.install"
 webExtensionUninstall :: WebExtensionUninstall -> Command WebExtensionUninstall Object
 webExtensionUninstall = mkCommand "webExtension.uninstall"
 
--- ############## Events ##############
+-- ############## Subscriptions (Events) ##############
 
-subscribeLogEntryAdded :: (Entry -> m ()) -> Subscription m
+subscribeLogEntryAdded :: (LogEntry -> m ()) -> Subscription m
 subscribeLogEntryAdded  = mkSubscription LogEntryAdded
+
+subscribeBrowserContextCreated :: (Info -> m ()) -> Subscription m
+subscribeBrowserContextCreated = mkSubscription BrowsingContextContextCreated
