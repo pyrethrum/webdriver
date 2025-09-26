@@ -381,12 +381,12 @@ data Subscribed m = MkSubscribed
   { subscriptionId :: SubscriptionId,
     subscription :: Subscription m
   }
+
 -- | Subscribe to events with a filter function
 subscribe :: Subscribed IO -> TVar [Subscribed IO] -> STM (TVar [Subscribed IO])
 subscribe subscribed subscriptions = do
   modifyTVar' subscriptions (subscribed :)
   pure subscriptions
-
 
 -- | Parse incoming WebSocket message to determine if it's an event or command response
 -- For now, we'll use a simple heuristic: messages with "id" are responses, others are events
@@ -440,20 +440,23 @@ failAction lbl failCallCount action = do
 data MessageActions = MkMessageActions
   { send :: Connection -> IO (),
     get :: Connection -> IO (),
-    print :: IO ()
+    print :: IO (),
+    eventHandler :: IO ()
   }
 
-failMessageActions :: MessageActions -> Word64 -> Word64 -> Word64 -> IO MessageActions
-failMessageActions a failSendCount failGetCount failPrintCount =
+failMessageActions :: MessageActions -> Word64 -> Word64 -> Word64 -> Word64 -> IO MessageActions
+failMessageActions a failSendCount failGetCount failPrintCount failEventCount =
   do
     send <- failAction "send" failSendCount a.send
     get <- failAction "get" failGetCount a.get
     print' <- failAction "print" failPrintCount $ const a.print
+    eventHandler' <- failAction "eventhandler" failEventCount $ const a.eventhandler
     pure $
       MkMessageActions
         { send,
           get,
-          print = print' 1
+          print = print' 1,
+          eventHandler = eventHandler' 1
         }
 
 demoMessageActions :: (Text -> IO ()) -> Channels -> MessageActions
@@ -471,11 +474,29 @@ demoMessageActions log channels =
         msg <- receiveData conn
         -- log $ "Received raw data: " <> T.take 100 (txt msg) <> "..."
         log $ "Received raw data: " <> txt msg
-        atomically . writeTChan channels.receiveChan $ decodeResponse msg,
+        let writeReceiveChan = atomically . writeTChan channels.receiveChan
+            writeEventChan = atomically . writeTChan channels.eventChan
+            r = decodeResponse msg
+        case r of
+          Left {} -> writeReceiveChan r
+          Right r' -> case r' of
+            NoID obj -> writeEventChan obj
+            WithID {} -> writeReceiveChan r,
       --
       print = do
         msg <- atomically $ readTChan channels.logChan
-        TIO.putStrLn $ "[LOG] " <> msg
+        TIO.putStrLn $ "[LOG] " <> msg,
+      --
+      eventHandler = do
+        obj <- atomically $ readTChan channels.eventChan
+        log $ "Event received: " <> jsonToText (toJSON obj)
+        subs <- readTVarIO channels.subscriptions
+
+       -- TODO
+       -- finish this
+       -- set up async loops and emptying the event chan
+       -- add subscribe unsubscribe to API object
+       -- start demos
     }
 
 loopActions :: (Text -> IO ()) -> MessageActions -> MessageLoops
