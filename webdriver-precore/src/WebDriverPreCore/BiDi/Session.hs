@@ -5,20 +5,30 @@ import Data.Aeson.Types (Parser)
 import Data.Text (Text)
 import GHC.Generics (Generic)
 import WebDriverPreCore.BiDi.Capabilities (CapabilitiesResult)
-import Prelude (Applicative ((<*>)), Bool (..), Eq (..), Maybe (..), Show (..), ($), (<$>), maybe, Semigroup (..))
-import WebDriverPreCore.Internal.AesonUtils (toJSONOmitNothing)
 import WebDriverPreCore.BiDi.CoreTypes (BrowsingContext, UserContext)
+import WebDriverPreCore.BiDi.Event (SubscriptionType)
+import WebDriverPreCore.Internal.AesonUtils (toJSONOmitNothing)
+import Prelude
+  ( Applicative ((<*>)),
+    Bool (..),
+    Eq (..),
+    Maybe (..),
+    Semigroup (..),
+    Show (..),
+    maybe,
+    ($),
+    (<$>),
+  )
 
 -- ######### Remote #########
 
 -- | Subscription
-newtype Subscription = MkSubscription {subscriptionId :: Text}
+newtype SubscriptionId = MkSubscription {subscriptionId :: Text}
   deriving (Show, Eq, Generic, FromJSON, ToJSON)
-
 
 -- | Subscription Request
 data SessionSubscriptionRequest = MkSessionSubscriptionRequest
-  { events :: [Text],
+  { events :: [SubscriptionType],
     contexts :: Maybe [BrowsingContext],
     userContexts :: Maybe [UserContext]
   }
@@ -30,21 +40,22 @@ instance ToJSON SessionSubscriptionRequest where
 
 -- | Unsubscribe Parameters
 data SessionUnsubscribe
-  = UnsubscribeByID 
-      { subscriptions :: [Subscription] }
-  | UnsubscribeByAttributes 
-      { unsubEvents :: [Text], 
-        unsubContexts :: Maybe [BrowsingContext] }
+  = UnsubscribeByID
+      {subscriptions :: [SubscriptionId]}
+  | UnsubscribeByAttributes
+      { unsubEvents :: [Text],
+        unsubContexts :: Maybe [BrowsingContext]
+      }
   deriving (Show, Eq, Generic)
 
 instance ToJSON SessionUnsubscribe where
   toJSON :: SessionUnsubscribe -> Value
-  toJSON (UnsubscribeByID {subscriptions}) = 
+  toJSON (UnsubscribeByID {subscriptions}) =
     object ["subscriptions" .= subscriptions]
-  toJSON (UnsubscribeByAttributes {unsubEvents, unsubContexts}) = 
-    object $ 
-      [ "events" .= unsubEvents ] <>
-       maybe [] (\contexts -> ["contexts" .= contexts]) unsubContexts
+  toJSON (UnsubscribeByAttributes {unsubEvents, unsubContexts}) =
+    object $
+      ["events" .= unsubEvents]
+        <> maybe [] (\contexts -> ["contexts" .= contexts]) unsubContexts
 
 -- ######### Local #########
 
@@ -81,7 +92,7 @@ instance FromJSON SessionStatusResult
 
 -- | Session Subscribe Result
 newtype SessionSubscribeResult = MkSessionSubscribeResult
-  { subscription :: Subscription
+  { subscription :: SubscriptionId
   }
   deriving (Show, Eq, Generic)
 

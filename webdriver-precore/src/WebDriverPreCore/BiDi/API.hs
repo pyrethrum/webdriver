@@ -73,7 +73,18 @@ module WebDriverPreCore.BiDi.API
 where
 
 import WebDriverPreCore.BiDi.Protocol
-import Data.Aeson (Object)
+import Data.Aeson (Object, FromJSON)
+import WebDriverPreCore.BiDi.Log
+import WebDriverPreCore.BiDi.Event
+
+
+-- TODO: generic commands
+-- TODO: generic subscribe
+-- TODO: generic unsubscribe
+-- TODO: generic event
+
+
+--- ############## Commands ##############
 
 ---- Session ----
 
@@ -251,3 +262,8 @@ webExtensionInstall = mkCommand "webExtension.install"
 
 webExtensionUninstall :: WebExtensionUninstall -> Command WebExtensionUninstall Object
 webExtensionUninstall = mkCommand "webExtension.uninstall"
+
+-- ############## Events ##############
+
+subscribeLogEntryAdded :: (Entry -> m ()) -> Subscription m
+subscribeLogEntryAdded  = mkSubscription LogEntryAdded

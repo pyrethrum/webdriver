@@ -15,8 +15,11 @@ module WebDriverPreCore.BiDi.Log (
 import Data.Text (Text)
 import GHC.Generics (Generic)
 import WebDriverPreCore.BiDi.Script (Source, StackTrace, RemoteValue)
-import Prelude (Show, Eq, Maybe)
+import Prelude (Show, Eq, Maybe, Semigroup (..), (<$>), ($))
 import WebDriverPreCore.BiDi.CoreTypes (JSUInt)
+import Data.Aeson (FromJSON, Value (..), (.:))
+import Data.Aeson.Types (Parser, FromJSON (..))
+import Control.Monad (MonadFail(..))
 
 -- ######### Local ######### 
 -- Note: log module does not have a remote end
@@ -58,6 +61,18 @@ data Entry
   | ConsoleEntry ConsoleLogEntry
   | JavascriptEntry JavascriptLogEntry
   deriving (Show, Eq, Generic)
+
+instance FromJSON Entry where
+  parseJSON :: Value -> Parser Entry
+  parseJSON = \case
+    v@(Object obj) -> do
+      entryType <- obj .: "type"
+      case entryType of
+        "generic" -> GenericEntry <$> parseJSON v
+        "console" -> ConsoleEntry <$> parseJSON v
+        "javascript" -> JavascriptEntry <$> parseJSON v
+        _ -> fail $ "Unknown log entry type: " <> entryType
+    _ -> fail "Expected log entry to be an object"  
 
 -- | Event emitted when a log entry is added
 newtype EntryAdded = MkEntryAdded

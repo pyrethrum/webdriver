@@ -115,7 +115,8 @@ import WebDriverPreCore.BiDi.Emulation
 
 import WebDriverPreCore.BiDi.Event
   ( Event (..),
-    EventData (..),
+    SubscriptionType (..)
+  
   )
 
 import WebDriverPreCore.BiDi.Input
@@ -208,7 +209,7 @@ import WebDriverPreCore.BiDi.Session
     SessionSubscribeResult (..),
     SessionSubscriptionRequest (..),
     SessionUnsubscribe (..),
-    Subscription (..)
+    SubscriptionId (..)
   )
 import WebDriverPreCore.BiDi.Storage
   ( DeleteCookies (..),

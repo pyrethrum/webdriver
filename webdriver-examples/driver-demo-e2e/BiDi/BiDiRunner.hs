@@ -91,7 +91,7 @@ import WebDriverPreCore.BiDi.Protocol
     SetScreenOrientationOverride,
     SetTimezoneOverride,
     SetViewport,
-    Subscription,
+    SubscriptionId,
     TraverseHistory,
     TraverseHistoryResult,
     UserContext,
@@ -332,13 +332,13 @@ data BiDiMethods = MkBiDiMethods
   { nextId :: IO JSUInt,
     send :: forall a. (ToJSON a, Show a) => a -> IO (),
     getNext :: IO (Either JSONDecodeError ResponseObject),
-    subscribe :: Subscription -> (Event -> Bool) -> STM EventSubscription,
+    subscribe :: SubscriptionId -> (Event -> Bool) -> STM EventSubscription,
     unsubscribe :: EventSubscription -> STM ()
   }
 
 -- | Event subscription handle
 data EventSubscription = MkEventSubscription
-  { subscription :: Subscription,
+  { subscription :: SubscriptionId,
     queue :: TChan Event,
     -- change to event list to be consistent with subscribe
     filter :: Event -> Bool
@@ -393,7 +393,7 @@ mkBiDIMethods channels =
     }
 
 -- | Subscribe to events with a filter function
-subscribe :: Subscriptions -> Subscription -> (Event -> Bool) -> STM EventSubscription
+subscribe :: Subscriptions -> SubscriptionId -> (Event -> Bool) -> STM EventSubscription
 subscribe MkSubscriptions {subscriptions} subscription filter' = do
   queue <- newTChan
   let es =

@@ -1,20 +1,32 @@
 module WebDriverPreCore.BiDi.Event where
 
+import Data.Aeson (FromJSON, ToJSON (..), Value)
 import GHC.Generics (Generic)
-import WebDriverPreCore.BiDi.BrowsingContext (BrowsingContextEvent)
-import WebDriverPreCore.BiDi.CoreTypes (EmptyResult)
+import WebDriverPreCore.BiDi.BrowsingContext (BrowsingContextEvent (..))
 import WebDriverPreCore.BiDi.Input (FileDialogOpened)
 import WebDriverPreCore.BiDi.Log (Entry)
 import Prelude
 
--- typ :: Text, -- "event"
-data Event = MkEvent
-  { eventData :: EventData,
-    extensions :: EmptyResult
-  }
-  deriving (Show, Generic)
+mkSubscription :: forall m r. FromJSON r => SubscriptionType -> (r -> m ()) -> Subscription m
+mkSubscription = MkSubscription 
 
-data EventData
+data Subscription m where
+  MkSubscription :: forall m r. (FromJSON r) =>
+    { subscription :: SubscriptionType,
+      action :: r -> m ()
+    } ->
+    Subscription m
+
+mkSubscription2 :: forall m r. (FromJSON r) => SubscriptionType -> (r -> m ()) -> Subscription2 m
+mkSubscription2 = MkSubscription2 
+
+data Subscription2 m =
+  MkSubscription2 
+    { subscription :: SubscriptionType,
+      action :: forall r. (FromJSON r) => r -> m ()
+    } 
+
+data Event
   = BrowsingContextEvent BrowsingContextEvent
   | -- | InputEvent InputEvent
     InputEvent FileDialogOpened
@@ -22,8 +34,74 @@ data EventData
     LogEvent Entry
   deriving
     ( Show,
+      Eq,
       Generic
     )
+
+data SubscriptionType
+  = -- Log module
+    LogEntryAdded
+  | -- BrowsingContext module
+    BrowsingContextContextCreated
+  | BrowsingContextContextDestroyed
+  | BrowsingContextNavigationStarted
+  | BrowsingContextFragmentNavigated
+  | BrowsingContextHistoryUpdated
+  | BrowsingContextDomContentLoaded
+  | BrowsingContextLoad
+  | BrowsingContextDownloadWillBegin
+  | BrowsingContextDownloadEnd
+  | BrowsingContextNavigationAborted
+  | BrowsingContextNavigationCommitted
+  | BrowsingContextNavigationFailed
+  | BrowsingContextUserPromptClosed
+  | BrowsingContextUserPromptOpened
+  | -- Network module
+    NetworkAuthRequired
+  | NetworkBeforeRequestSent
+  | NetworkFetchError
+  | NetworkResponseCompleted
+  | NetworkResponseStarted
+  | -- Script module
+    ScriptMessage
+  | ScriptRealmCreated
+  | ScriptRealmDestroyed
+  | -- Input module
+    InputFileDialogOpened
+  deriving (Show, Eq, Generic)
+
+instance ToJSON SubscriptionType where
+  toJSON :: SubscriptionType -> Value
+  toJSON = \case
+    -- Log module
+    LogEntryAdded -> "log.entryAdded"
+    -- BrowsingContext module
+    BrowsingContextContextCreated -> "browsingContext.contextCreated"
+    BrowsingContextContextDestroyed -> "browsingContext.contextDestroyed"
+    BrowsingContextNavigationStarted -> "browsingContext.navigationStarted"
+    BrowsingContextFragmentNavigated -> "browsingContext.fragmentNavigated"
+    BrowsingContextHistoryUpdated -> "browsingContext.historyUpdated"
+    BrowsingContextDomContentLoaded -> "browsingContext.domContentLoaded"
+    BrowsingContextLoad -> "browsingContext.load"
+    BrowsingContextDownloadWillBegin -> "browsingContext.downloadWillBegin"
+    BrowsingContextDownloadEnd -> "browsingContext.downloadEnd"
+    BrowsingContextNavigationAborted -> "browsingContext.navigationAborted"
+    BrowsingContextNavigationCommitted -> "browsingContext.navigationCommitted"
+    BrowsingContextNavigationFailed -> "browsingContext.navigationFailed"
+    BrowsingContextUserPromptClosed -> "browsingContext.userPromptClosed"
+    BrowsingContextUserPromptOpened -> "browsingContext.userPromptOpened"
+    -- Network module
+    NetworkAuthRequired -> "network.authRequired"
+    NetworkBeforeRequestSent -> "network.beforeRequestSent"
+    NetworkFetchError -> "network.fetchError"
+    NetworkResponseCompleted -> "network.responseCompleted"
+    NetworkResponseStarted -> "network.responseStarted"
+    -- Script module
+    ScriptMessage -> "script.message"
+    ScriptRealmCreated -> "script.realmCreated"
+    ScriptRealmDestroyed -> "script.realmDestroyed"
+    -- Input module
+    InputFileDialogOpened -> "input.fileDialogOpened"
 
 {-
 {
@@ -34,7 +112,6 @@ data EventData
   }
 }
 
-
 Event = {
   type: "event",
   EventData,
@@ -42,11 +119,11 @@ Event = {
 }
 
 {
-  "type": "event", 
+  "type": "event",
   "method": "browsingContext.navigationStarted",
   "params": {
     "context": "context-id",
-    "navigation": "navigation-id", 
+    "navigation": "navigation-id",
     "timestamp": 1234567890,
     "url": "https://example.com"
   }
@@ -56,7 +133,7 @@ method which is a string literal of the form [module name].[event name]. This is
 
 {
   "type": "event",
-  "method": "log.entryAdded", 
+  "method": "log.entryAdded",
   "params": {
     "level": "info",
     "text": "Hello world",

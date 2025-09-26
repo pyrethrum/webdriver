@@ -446,6 +446,7 @@ data BrowsingContextEvent
   | UserPromptOpened UserPromptOpened
   deriving (Show, Eq, Generic)
 
+
 data NavigationInfo = MkNavigationInfo
   { context :: BrowsingContext,
     navigation :: Maybe Navigation,
