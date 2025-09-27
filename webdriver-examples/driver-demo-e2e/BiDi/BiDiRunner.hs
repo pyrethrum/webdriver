@@ -105,6 +105,9 @@ import WebDriverPreCore.Http qualified as Http
 import WebDriverPreCore.Internal.AesonUtils (jsonToText)
 import WebDriverPreCore.Internal.Utils (txt)
 import Prelude hiding (getLine, log, null, print, putStrLn)
+import WebDriverPreCore.BiDi.Event (SubscriptionType)
+import GHC.Generics (Generic)
+import Data.Aeson.Types (Parser, FromJSON (..))
 
 -- TODO: geric command
 -- TODO: handle event
@@ -491,13 +494,60 @@ demoMessageActions log channels =
         obj <- atomically $ readTChan channels.eventChan
         log $ "Event received: " <> jsonToText (toJSON obj)
         subs <- readTVarIO channels.subscriptions
-
+        undefined
        -- TODO
        -- finish this
        -- set up async loops and emptying the event chan
        -- add subscribe unsubscribe to API object
        -- start demos
     }
+
+data EventProps = MkEventProps
+  { msgType :: Text,
+    method :: SubscriptionType,
+    params :: Value
+  } deriving (Show, Generic)
+
+instance FromJSON EventProps where
+  parseJSON :: Value -> Parser EventProps
+  parseJSON = withObject "EventProps" $ \o ->
+    MkEventProps
+      <$> o .: "type"
+      <*> o .: "method"
+      <*> o .: "params"
+
+applySubscriptions :: Object -> TVar [Subscribed IO] -> IO ()
+applySubscriptions obj subscriptions = do
+  ethEvent & either
+    ( \err -> 
+        error . 
+          unpack $ "Failed to parse event: " 
+          <> pack err
+          <> "\n"
+          <> objToText obj
+    )
+    ( \MkEventProps{msgType, method, params} -> do
+        when (msgType /= "event") $
+          error . unpack $ "Not an event message: " <> msgType <> "\n" <> objToText obj
+        
+
+        log $ "Parsed event: " <> txt (show eventProps)
+        handleEvent eventProps
+    )
+  subs <- readTVarIO subscriptions
+  mapM_ applySub subs
+  where
+    ethEvent :: Either String EventProps
+    ethEvent = parseEither parseJSON (Object obj)
+    applySub :: Subscribed IO -> IO ()
+    applySub MkSubscribed {subscription, action} = undefined
+      -- case subscription of
+      --   MkSubscription {subscription = subType, action = act} ->
+
+applySubscription :: SubscriptionType -> Value -> Subscribed IO -> IO ()
+applySubscription event val = \case
+  MkSubscribed {subscription = subType, action = act} -> do
+    when (subType == event) $ act val-
 
 loopActions :: (Text -> IO ()) -> MessageActions -> MessageLoops
 loopActions log MkMessageActions {..} =

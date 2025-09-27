@@ -15,6 +15,7 @@ module WebDriverPreCore.Internal.AesonUtils
     jsonPrettyString,
     jsonToText,
     objectOrThrow,
+    objToText,
     parseObject,
     parseObjectMaybe,
     parseOpt,
@@ -25,6 +26,7 @@ module WebDriverPreCore.Internal.AesonUtils
     toJSONOmitNothing,
     parseJSONOmitNothing,
     addProps,
+    objToString,
   )
 where
 
@@ -158,6 +160,12 @@ fromJSONCamelCase = A.genericParseJSON lwrFirstOptions
 -- https://blog.ssanj.net/posts/2019-09-24-pretty-printing-json-in-haskell.html
 lsbToText :: LBS.ByteString -> Text
 lsbToText = decodeUtf8 . LBS.toStrict
+
+objToString :: Object -> String
+objToString = unpack . objToText
+
+objToText :: Object -> Text
+objToText = jsonToText . Object
 
 jsonToText :: Value -> Text
 jsonToText = lsbToText . encodePretty

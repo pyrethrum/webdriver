@@ -7,6 +7,7 @@ import WebDriverPreCore.BiDi.Input (FileDialogOpened)
 import WebDriverPreCore.BiDi.Log (LogEntry)
 import Prelude
 import Data.Set (Set)
+import Data.Type.Equality (apply)
 
 mkSubscription :: forall m r. FromJSON r => SubscriptionType -> (r -> m ()) -> Subscription m
 mkSubscription = MkSubscription 
