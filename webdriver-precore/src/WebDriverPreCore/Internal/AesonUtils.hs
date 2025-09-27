@@ -21,12 +21,12 @@ module WebDriverPreCore.Internal.AesonUtils
     parseOpt,
     prettyPrintJson,
     parseJson,
-    resultToEither,
     parseObjectEither,
     toJSONOmitNothing,
     parseJSONOmitNothing,
     addProps,
     objToString,
+    parseThrow,
   )
 where
 
@@ -52,7 +52,7 @@ import Data.Aeson.Encode.Pretty (encodePretty)
 import Data.Aeson.Key (fromString)
 import Data.Aeson.KeyMap qualified as AKM
 import Data.Aeson.KeyMap qualified as KeyMap
-import Data.Aeson.Types (Pair, Parser, parse, parseMaybe)
+import Data.Aeson.Types (Pair, Parser, parse, parseMaybe, parseEither)
 import Data.ByteString.Lazy qualified as LBS
 import Data.Char (toLower)
 import Data.Either (Either, either)
@@ -80,6 +80,7 @@ import Prelude
     (<>),
     (>>=),
   )
+import Data.Bifunctor (first)
 
 -- Aeson stuff
 -- TODO move to separte library
@@ -103,13 +104,21 @@ parseObject errMsg val = case val of
   Object obj -> pure obj
   _ -> fail $ unpack errMsg
 
-resultToEither :: forall a. Result a -> Either Text a
-resultToEither = \case
-  Success a -> Right a
-  Error e -> Left $ pack e
+parseThrow :: (FromJSON a, MonadFail m) => Text -> Value -> m a
+parseThrow errMsg val = parseEither parseJSON val
+  & either 
+     (\err -> fail . unpack $ 
+       errMsg 
+       <> "Parser error was: " 
+       <> "\n" 
+       <> pack err
+       <> "\n" 
+       <> "The actual JSON value was: " 
+       <> jsonToText val) 
+      pure
 
 parseObjectEither :: (FromJSON a) => Object -> Either Text a
-parseObjectEither = resultToEither . parse parseJSON . Object
+parseObjectEither = first pack . parseEither parseJSON . Object
 
 parseObjectMaybe :: (FromJSON a) => Object -> Maybe a
 parseObjectMaybe = parseMaybe parseJSON . Object

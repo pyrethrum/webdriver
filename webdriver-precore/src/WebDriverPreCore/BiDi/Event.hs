@@ -1,13 +1,13 @@
 module WebDriverPreCore.BiDi.Event where
 
-import Data.Aeson (FromJSON, ToJSON (..), Value)
+import Data.Aeson (FromJSON (..), ToJSON (..), Value (..))
 import GHC.Generics (Generic)
 import WebDriverPreCore.BiDi.BrowsingContext (BrowsingContextEvent (..))
 import WebDriverPreCore.BiDi.Input (FileDialogOpened)
 import WebDriverPreCore.BiDi.Log (LogEntry)
 import Prelude
 import Data.Set (Set)
-import Data.Type.Equality (apply)
+import Data.Aeson.Types (Parser)
 
 mkSubscription :: forall m r. FromJSON r => SubscriptionType -> (r -> m ()) -> Subscription m
 mkSubscription = MkSubscription 
@@ -38,6 +38,8 @@ data Event
       Eq,
       Generic
     )
+
+instance FromJSON Event
 
 data SubscriptionType
   = -- Log module
@@ -104,6 +106,39 @@ instance ToJSON SubscriptionType where
     -- Input module
     InputFileDialogOpened -> "input.fileDialogOpened"
 
+instance FromJSON SubscriptionType where
+  parseJSON :: Value -> Parser SubscriptionType
+  parseJSON = \case
+    -- Log module
+    String "log.entryAdded" -> pure LogEntryAdded
+    -- BrowsingContext module
+    String "browsingContext.contextCreated" -> pure BrowsingContextContextCreated
+    String "browsingContext.contextDestroyed" -> pure BrowsingContextContextDestroyed
+    String "browsingContext.navigationStarted" -> pure BrowsingContextNavigationStarted
+    String "browsingContext.fragmentNavigated" -> pure BrowsingContextFragmentNavigated
+    String "browsingContext.historyUpdated" -> pure BrowsingContextHistoryUpdated
+    String "browsingContext.domContentLoaded" -> pure BrowsingContextDomContentLoaded
+    String "browsingContext.load" -> pure BrowsingContextLoad
+    String "browsingContext.downloadWillBegin" -> pure BrowsingContextDownloadWillBegin
+    String "browsingContext.downloadEnd" -> pure BrowsingContextDownloadEnd
+    String "browsingContext.navigationAborted" -> pure BrowsingContextNavigationAborted
+    String "browsingContext.navigationCommitted" -> pure BrowsingContextNavigationCommitted
+    String "browsingContext.navigationFailed" -> pure BrowsingContextNavigationFailed
+    String "browsingContext.userPromptClosed" -> pure BrowsingContextUserPromptClosed
+    String "browsingContext.userPromptOpened" -> pure BrowsingContextUserPromptOpened
+    -- Network module
+    String "network.authRequired" -> pure NetworkAuthRequired
+    String "network.beforeRequestSent" -> pure NetworkBeforeRequestSent
+    String "network.fetchError" -> pure NetworkFetchError
+    String "network.responseCompleted" -> pure NetworkResponseCompleted
+    String "network.responseStarted" -> pure NetworkResponseStarted
+    -- Script module
+    String "script.message" -> pure ScriptMessage
+    String "script.realmCreated" -> pure ScriptRealmCreated
+    String "script.realmDestroyed" -> pure ScriptRealmDestroyed
+    -- Input module
+    String "input.fileDialogOpened" -> pure InputFileDialogOpened
+    _ -> fail "Invalid SubscriptionType"
 {-
 {
   "type": "event",

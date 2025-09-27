@@ -2,15 +2,18 @@ module BiDi.BiDiRunner where
 
 import Config (Config, loadConfig)
 import Control.Exception (Exception (displayException), Handler (..), SomeException, catch, catches, throw)
-import Control.Monad (void)
-import Data.Aeson (FromJSON, Object, ToJSON, Value, encode, toJSON)
+import Control.Monad (void, when)
+import Data.Aeson (FromJSON, Object, ToJSON, Value (..), encode, toJSON, withObject, (.:))
+import Data.Aeson.Types (FromJSON (..), Parser)
 import Data.ByteString.Lazy qualified as BL
 import Data.Coerce (coerce)
+import Data.Foldable (traverse_)
 import Data.Function ((&))
 import Data.Text as T (Text, pack, unpack)
 import Data.Text.IO (putStrLn)
 import Data.Text.IO qualified as TIO
 import Data.Word (Word64)
+import GHC.Generics (Generic)
 import Http.HttpAPI (FullCapabilities, SessionResponse (..), deleteSession, newSessionFull)
 import Http.HttpAPI qualified as Caps (Capabilities (..))
 import IOUtils (DemoUtils, Logger (..), bidiDemoUtils, mkLogger)
@@ -24,7 +27,7 @@ import WebDriverPreCore.BiDi.BiDiUrl (BiDiUrl (..), getBiDiUrl)
 import WebDriverPreCore.BiDi.Capabilities (Capabilities)
 import WebDriverPreCore.BiDi.Command
 import WebDriverPreCore.BiDi.CoreTypes (JSUInt (..))
-import WebDriverPreCore.BiDi.Event (Subscription)
+import WebDriverPreCore.BiDi.Event (Subscription (..), SubscriptionType)
 import WebDriverPreCore.BiDi.Protocol
   ( Activate,
     AddDataCollector,
@@ -102,12 +105,9 @@ import WebDriverPreCore.BiDi.Protocol
   )
 import WebDriverPreCore.BiDi.Response (JSONDecodeError, MatchedResponse (..), ResponseObject (..), decodeResponse, displayResponseError, parseResponse)
 import WebDriverPreCore.Http qualified as Http
-import WebDriverPreCore.Internal.AesonUtils (jsonToText)
+import WebDriverPreCore.Internal.AesonUtils (jsonToText, objToText, parseThrow)
 import WebDriverPreCore.Internal.Utils (txt)
 import Prelude hiding (getLine, log, null, print, putStrLn)
-import WebDriverPreCore.BiDi.Event (SubscriptionType)
-import GHC.Generics (Generic)
-import Data.Aeson.Types (Parser, FromJSON (..))
 
 -- TODO: geric command
 -- TODO: handle event
@@ -309,11 +309,17 @@ mkDemoBiDiClientParams pauseMs = do
       }
 
 -- TODO Add fail event
-mkFailBidiClientParams :: Int -> Word64 -> Word64 -> Word64 -> IO BiDiClientParams
-mkFailBidiClientParams pauseMs failSendCount failGetCount failPrintCount = do
+mkFailBidiClientParams ::
+  Int ->
+  Word64 ->
+  Word64 ->
+  Word64 ->
+  Word64 ->
+  IO BiDiClientParams
+mkFailBidiClientParams pauseMs failSendCount failGetCount failPrintCount failEventCount = do
   c <- mkChannels
   logger@MkLogger {log} <- mkLogger (c.logChan)
-  messageLoops <- failMessageLoops log c failSendCount failGetCount failPrintCount
+  messageLoops <- failMessageLoops log c failSendCount failGetCount failPrintCount failEventCount
   pure $
     MkBiDiClientParams
       { biDiMethods = mkBiDIMethods c,
@@ -453,7 +459,7 @@ failMessageActions a failSendCount failGetCount failPrintCount failEventCount =
     send <- failAction "send" failSendCount a.send
     get <- failAction "get" failGetCount a.get
     print' <- failAction "print" failPrintCount $ const a.print
-    eventHandler' <- failAction "eventhandler" failEventCount $ const a.eventhandler
+    eventHandler' <- failAction "eventhandler" failEventCount $ const a.eventHandler
     pure $
       MkMessageActions
         { send,
@@ -495,18 +501,19 @@ demoMessageActions log channels =
         log $ "Event received: " <> jsonToText (toJSON obj)
         subs <- readTVarIO channels.subscriptions
         undefined
-       -- TODO
-       -- finish this
-       -- set up async loops and emptying the event chan
-       -- add subscribe unsubscribe to API object
-       -- start demos
+        -- TODO
+        -- finish this
+        -- set up async loops and emptying the event chan
+        -- add subscribe unsubscribe to API object
+        -- start demos
     }
 
 data EventProps = MkEventProps
   { msgType :: Text,
     method :: SubscriptionType,
     params :: Value
-  } deriving (Show, Generic)
+  }
+  deriving (Show, Generic)
 
 instance FromJSON EventProps where
   parseJSON :: Value -> Parser EventProps
@@ -516,38 +523,29 @@ instance FromJSON EventProps where
       <*> o .: "method"
       <*> o .: "params"
 
-applySubscriptions :: Object -> TVar [Subscribed IO] -> IO ()
-applySubscriptions obj subscriptions = do
-  ethEvent & either
-    ( \err -> 
-        error . 
-          unpack $ "Failed to parse event: " 
-          <> pack err
-          <> "\n"
-          <> objToText obj
-    )
-    ( \MkEventProps{msgType, method, params} -> do
-        when (msgType /= "event") $
-          error . unpack $ "Not an event message: " <> msgType <> "\n" <> objToText obj
-        
+applySubscriptions :: (Text -> IO ()) -> Object -> TVar [Subscribed IO] -> IO ()
+applySubscriptions log obj subscriptions = do
+  eventProps@MkEventProps {msgType, method, params} <-
+    parseThrow "Could not parse event properties" (Object obj)
+  when (msgType /= "event") $
+    fail . unpack $
+      "Not an event message: " <> msgType <> "\n" <> objToText obj
 
-        log $ "Parsed event: " <> txt (show eventProps)
-        handleEvent eventProps
-    )
+  log $ "Parsed event: " <> txt (show eventProps)
   subs <- readTVarIO subscriptions
-  mapM_ applySub subs
-  where
-    ethEvent :: Either String EventProps
-    ethEvent = parseEither parseJSON (Object obj)
-    applySub :: Subscribed IO -> IO ()
-    applySub MkSubscribed {subscription, action} = undefined
-      -- case subscription of
-      --   MkSubscription {subscription = subType, action = act} ->
+  traverse_ (applySubscription method params) subs
 
 applySubscription :: SubscriptionType -> Value -> Subscribed IO -> IO ()
-applySubscription event val = \case
-  MkSubscribed {subscription = subType, action = act} -> do
-    when (subType == event) $ act val-
+applySubscription subType val sub =
+  case sub.subscription of
+    MkSubscription {subscription, action} ->
+      when (subscription == subType) $ do
+        prms <- parseThrow ("could not parse event params for " <> txt subscription) val
+        action prms
+    MkNSubscription {subscriptions, nAction} -> do
+      when (subType `elem` subscriptions) $ do
+        prms <- parseThrow ("could not parse event params for " <> txt subType) val
+        nAction prms
 
 loopActions :: (Text -> IO ()) -> MessageActions -> MessageLoops
 loopActions log MkMessageActions {..} =
@@ -569,10 +567,22 @@ demoMessageLoops :: (Text -> IO ()) -> Channels -> MessageLoops
 demoMessageLoops log channels =
   loopActions log $ demoMessageActions log channels
 
-failMessageLoops :: (Text -> IO ()) -> Channels -> Word64 -> Word64 -> Word64 -> IO MessageLoops
-failMessageLoops log channels failSendCount failGetCount failPrintCount =
+failMessageLoops ::
+  (Text -> IO ()) ->
+  Channels ->
+  Word64 ->
+  Word64 ->
+  Word64 ->
+  Word64 ->
+  IO MessageLoops
+failMessageLoops log channels failSendCount failGetCount failPrintCount failEventCount =
   loopActions log
-    <$> failMessageActions (demoMessageActions log channels) failSendCount failGetCount failPrintCount
+    <$> failMessageActions
+      (demoMessageActions log channels)
+      failSendCount
+      failGetCount
+      failPrintCount
+      failEventCount
 
 withClient :: BiDiUrl -> Logger -> MessageLoops -> IO () -> IO ()
 withClient
