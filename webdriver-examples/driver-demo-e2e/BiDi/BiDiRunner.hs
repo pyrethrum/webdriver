@@ -499,13 +499,7 @@ demoMessageActions log channels =
       eventHandler = do
         obj <- atomically $ readTChan channels.eventChan
         log $ "Event received: " <> jsonToText (toJSON obj)
-        subs <- readTVarIO channels.subscriptions
-        undefined
-        -- TODO
-        -- finish this
-        -- set up async loops and emptying the event chan
-        -- add subscribe unsubscribe to API object
-        -- start demos
+        applySubscriptions log obj channels.subscriptions
     }
 
 data EventProps = MkEventProps
@@ -529,7 +523,10 @@ applySubscriptions log obj subscriptions = do
     parseThrow "Could not parse event properties" (Object obj)
   when (msgType /= "event") $
     fail . unpack $
-      "Not an event message: " <> msgType <> "\n" <> objToText obj
+      "Event message expected. This is not an event message: "
+        <> msgType
+        <> "\n"
+        <> objToText obj
 
   log $ "Parsed event: " <> txt (show eventProps)
   subs <- readTVarIO subscriptions
@@ -550,8 +547,8 @@ applySubscription subType val sub =
 loopActions :: (Text -> IO ()) -> MessageActions -> MessageLoops
 loopActions log MkMessageActions {..} =
   MkMessageLoops
-    { sendLoop = \conn -> asyncLoop "Sender" $ send conn,
-      getLoop = \conn -> asyncLoop "Receiver" $ get conn,
+    { sendLoop = asyncLoop "Sender" . send,
+      getLoop = asyncLoop "Receiver" . get,
       printLoop = asyncLoop "Logger" print
     }
   where
