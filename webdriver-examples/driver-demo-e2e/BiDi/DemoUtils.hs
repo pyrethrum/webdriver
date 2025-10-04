@@ -1,8 +1,8 @@
 module BiDi.DemoUtils where
 
-import BiDi.BiDiRunner (Commands (..), mkDemoBiDiClientParams, withCommands)
+import BiDi.BiDiRunner (BiDiActions (..), mkDemoBiDiClientParams, withCommands)
 import Control.Exception (Exception, catch, throwIO, throw)
-import Data.Text (Text, isInfixOf)
+import Data.Text (Text, isInfixOf, unpack)
 import Data.Time.Clock.POSIX (POSIXTime, getPOSIXTime)
 import IOUtils (DemoUtils (..))
 import WebDriverPreCore.BiDi.Protocol
@@ -37,26 +37,27 @@ import WebDriverPreCore.BiDi.CoreTypes (StringValue(..))
 import Const (seconds)
 import WebDriverPreCore.BiDi.Protocol (Subscription)
 import WebDriverPreCore.BiDi.Protocol (Subscription(..))
-import UnliftIO (newEmptyTMVarIO, tryPutTMVar, atomically, Async)
+import UnliftIO (newEmptyTMVarIO, tryPutTMVar, atomically, Async, race_, readTMVar)
 import Control.Concurrent (threadDelay)
 import Data.Coerce (coerce)
+import UnliftIO.Async (async)
 
 pauseMs :: Int
 pauseMs = 0
 
 data BiDiDemo = MkBiDiDemo
   { name :: Text,
-    action :: DemoUtils -> Commands -> IO ()
+    action :: DemoUtils -> BiDiActions -> IO ()
   }
 
-demo :: Text -> (DemoUtils -> Commands -> IO ()) -> BiDiDemo
+demo :: Text -> (DemoUtils -> BiDiActions -> IO ()) -> BiDiDemo
 demo name action = MkBiDiDemo {name, action}
 
 runDemo :: BiDiDemo -> IO ()
 runDemo d =
   mkDemoBiDiClientParams pauseMs >>= \p -> withCommands p d.action
 
-newWindowContext :: DemoUtils -> Commands -> IO BrowsingContext
+newWindowContext :: DemoUtils -> BiDiActions -> IO BrowsingContext
 newWindowContext MkDemoUtils {..} MkCommands {..} = do
   logTxt "New browsing context - Window"
   bcWin <- browsingContextCreate bcParams {createType = Window}
@@ -72,14 +73,14 @@ newWindowContext MkDemoUtils {..} MkCommands {..} = do
           userContext = Nothing
         }
 
-closeContext :: DemoUtils -> Commands -> BrowsingContext -> IO ()
+closeContext :: DemoUtils -> BiDiActions -> BrowsingContext -> IO ()
 closeContext MkDemoUtils {..} MkCommands {..} bc = do
   logTxt "Close browsing context"
   co <- browsingContextClose $ MkClose {context = bc, promptUnload = Nothing}
   logShow "Close result" co
   pause
 
-rootContext :: DemoUtils -> Commands -> IO BrowsingContext
+rootContext :: DemoUtils -> BiDiActions -> IO BrowsingContext
 rootContext MkDemoUtils {..} MkCommands {..} = do
   logTxt "Get root browsing context"
   tree <- browsingContextGetTree $ MkGetTree Nothing Nothing
@@ -99,7 +100,7 @@ data TextValidationError = MkTextValidationError
 instance Exception TextValidationError
 
 -- | Check if expected text is present in DOM with timeout and retry, throw error if not found
-chkDomContains' :: Int -> Int -> DemoUtils -> Commands -> BrowsingContext -> Text -> IO ()
+chkDomContains' :: Int -> Int -> DemoUtils -> BiDiActions -> BrowsingContext -> Text -> IO ()
 chkDomContains' timeoutMs pauseIntervalMs MkDemoUtils {..} MkCommands {..} bc expectedText = do
   startTime <- getPOSIXTime
   logTxt $ "Checking DOM contains: " <> expectedText <> " (timeout: " <> txt timeoutMs <> "ms, pause: " <> txt pauseIntervalMs <> "ms)"
@@ -164,7 +165,7 @@ chkDomContains' timeoutMs pauseIntervalMs MkDemoUtils {..} MkCommands {..} bc ex
               }
 
 -- | Check if expected text is present in DOM with default timeout and retry settings
-chkDomContains :: DemoUtils -> Commands -> BrowsingContext -> Text -> IO ()
+chkDomContains :: DemoUtils -> BiDiActions -> BrowsingContext -> Text -> IO ()
 chkDomContains = chkDomContains' 10_000 100
 
 newtype Timeout = MkTimeout {timeoutMs :: Int} deriving (Show, Eq)
@@ -172,18 +173,16 @@ newtype Timeout = MkTimeout {timeoutMs :: Int} deriving (Show, Eq)
 seconds :: Int -> Timeout 
 seconds  = MkTimeout . (*) 1000
 
-testSubscription :: Timeout -> Subscription IO -> Subscription IO
-testSubscription timeout MkSubscription {action, subscription} = do
-  started <- newEmptyTMVarIO
-  finished <- newEmptyTMVarIO
-  let intercept = \r -> do
-        atomically $ tryPutTMVar started True
-        finally 
-        action r
-        atomically $ tryPutTMVar finished True
-      actionaDone = atomically $ readTMVar finished
-      timedout = do 
-        threadDelay (coerce timeout * 1000)
-        throwIO $ userError "Timeout waiting for subscription event: " <> show subscription
+timeLimit :: forall a. Timeout -> Text -> (a -> IO ()) -> IO (a -> IO ())
+timeLimit (MkTimeout ms) eventDesc action  = do
+    triggered <- newEmptyTMVarIO
+    let 
+      waitTriggered = atomically $ readTMVar triggered
+      waitLimit = threadDelay ms >> (fail . unpack $ "Timeout: " <> eventDesc)
+      interceptedAction = \a -> do
+        atomically $ tryPutTMVar triggered ()
+        action a
+    async $ race_ waitLimit waitTriggered
+    pure interceptedAction
 
-  race_ timedout timerDone
+

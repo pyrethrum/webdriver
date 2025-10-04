@@ -48,7 +48,7 @@ dummyDemo :: BiDiDemo
 dummyDemo =
   demo "Browsing Context - Capture Screenshot, Close" action
   where
-    action :: DemoUtils -> Commands -> IO ()
+    action :: DemoUtils -> BiDiActions -> IO ()
     action utils@MkDemoUtils {pause} cmds = do
       rootContext utils cmds
       pause

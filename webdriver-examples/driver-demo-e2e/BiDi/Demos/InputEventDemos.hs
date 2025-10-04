@@ -1,6 +1,6 @@
 module BiDi.Demos.InputEventDemos where
 
-import BiDi.BiDiRunner (Commands (..))
+import BiDi.BiDiRunner (BiDiActions (..))
 import BiDi.DemoUtils
 import Data.Aeson (Value (Null), object, (.=))
 import Data.Text (Text)

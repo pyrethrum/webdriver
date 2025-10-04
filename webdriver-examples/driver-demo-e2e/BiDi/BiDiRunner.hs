@@ -112,12 +112,12 @@ import Prelude hiding (getLine, log, null, print, putStrLn)
 -- TODO: geric command
 -- TODO: handle event
 
-withCommands :: BiDiClientParams -> (DemoUtils -> Commands -> IO ()) -> IO ()
+withCommands :: BiDiClientParams -> (DemoUtils -> BiDiActions -> IO ()) -> IO ()
 withCommands params action =
   -- withNewBiDiSession $ action . mkCommands
   withNewBiDiSession params $ \utils -> action utils . mkCommands
 
-data Commands = MkCommands
+data BiDiActions = MkCommands
   { -- Session commands
     sessionNew :: Capabilities -> IO SessionNewResult,
     sessionStatus :: IO SessionStatusResult,
@@ -184,7 +184,7 @@ data Commands = MkCommands
     webExtensionUninstall :: WebExtensionUninstall -> IO Object
   }
 
-mkCommands :: BiDiMethods -> Commands
+mkCommands :: BiDiMethods -> BiDiActions
 mkCommands client =
   MkCommands
     { -- Session commands

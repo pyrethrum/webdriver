@@ -2,7 +2,7 @@ module BiDi.Demos.ScriptDemos where
 
 -- custom import needed to disambiguate capabilities
 
-import BiDi.BiDiRunner (Commands (..))
+import BiDi.BiDiRunner (BiDiActions (..))
 import BiDi.DemoUtils
 import Data.Aeson (ToJSON (..))
 import Data.Maybe (catMaybes)
@@ -35,7 +35,7 @@ scriptEvaluateAllPrimitiveTypesDemo :: BiDiDemo
 scriptEvaluateAllPrimitiveTypesDemo =
   demo "Script - Evaluate All PrimitiveProtocolValue Types" action
   where
-    action :: DemoUtils -> Commands -> IO ()
+    action :: DemoUtils -> BiDiActions -> IO ()
     action utils@MkDemoUtils {..} cmds@MkCommands {..} = do
       bc <- rootContext utils cmds
       let baseEval =
@@ -207,7 +207,7 @@ scriptEvaluateAdvancedDemo :: BiDiDemo
 scriptEvaluateAdvancedDemo =
   demo "Script - Evaluate Advanced Types and Edge Cases" action
   where
-    action :: DemoUtils -> Commands -> IO ()
+    action :: DemoUtils -> BiDiActions -> IO ()
     action utils@MkDemoUtils {..} cmds@MkCommands {..} = do
       bc <- rootContext utils cmds
       let baseEval =
@@ -376,7 +376,7 @@ serializationOptionsDemo :: BiDiDemo
 serializationOptionsDemo =
   demo "Serialization Options - Various Configurations" action
   where
-    action :: DemoUtils -> Commands -> IO ()
+    action :: DemoUtils -> BiDiActions -> IO ()
     action MkDemoUtils {..} _cmds = do
       let logJSON hdr = log (hdr <> ":\n") . jsonToText . toJSON
 
@@ -468,7 +468,7 @@ scriptPreloadScriptDemo =
   -- • sandbox property - script isolation and sandboxing
   demo "Script I - Basic Preload Script Properties" action
   where
-    action :: DemoUtils -> Commands -> IO ()
+    action :: DemoUtils -> BiDiActions -> IO ()
     action utils@MkDemoUtils {..} cmds@MkCommands {..} = do
       bc <- rootContext utils cmds
       let chkDOM = chkDomContains utils cmds bc
@@ -615,7 +615,7 @@ scriptPreloadScriptMultiContextDemo =
   -- • Cross-context script behavior and isolation verification
   demo "Script II - Multi-Context and Cleanup" action
   where
-    action :: DemoUtils -> Commands -> IO ()
+    action :: DemoUtils -> BiDiActions -> IO ()
     action utils@MkDemoUtils {..} cmds@MkCommands {..} = do
       bc <- rootContext utils cmds
       let chkDOM = chkDomContains utils cmds bc
@@ -811,7 +811,7 @@ scriptChannelArgumentDemo :: BiDiDemo
 scriptChannelArgumentDemo =
   demo "Script III - Channel Argument Test" action
   where
-    action :: DemoUtils -> Commands -> IO ()
+    action :: DemoUtils -> BiDiActions -> IO ()
     action utils@MkDemoUtils {..} cmds@MkCommands {..} = do
       bc <- rootContext utils cmds
       let chkDOM = chkDomContains utils cmds bc
@@ -907,7 +907,7 @@ scriptUserContextsDemo :: BiDiDemo
 scriptUserContextsDemo =
   demo "Script IV - UserContexts Property Exclusive Demo" action
   where
-    action :: DemoUtils -> Commands -> IO ()
+    action :: DemoUtils -> BiDiActions -> IO ()
     action utils@MkDemoUtils {..} cmds@MkCommands {..} = do
       bc <- rootContext utils cmds
 
@@ -1306,7 +1306,7 @@ scriptCallFunctionDemo :: BiDiDemo
 scriptCallFunctionDemo =
   demo "Script V - script.callFunction Core Scenarios" action
   where
-    action :: DemoUtils -> Commands -> IO ()
+    action :: DemoUtils -> BiDiActions -> IO ()
     action utils@MkDemoUtils {..} cmds@MkCommands {..} = do
       bc <- rootContext utils cmds
 
@@ -1459,7 +1459,7 @@ scriptGetRealmsAndDisownDemo :: BiDiDemo
 scriptGetRealmsAndDisownDemo =
   demo "Script VI - getRealms and disown Integration" action
   where
-    action :: DemoUtils -> Commands -> IO ()
+    action :: DemoUtils -> BiDiActions -> IO ()
     action utils@MkDemoUtils {..} cmds@MkCommands {..} = do
       bc <- rootContext utils cmds
 

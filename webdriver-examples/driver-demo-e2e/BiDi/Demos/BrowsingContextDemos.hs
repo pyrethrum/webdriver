@@ -1,6 +1,6 @@
 module BiDi.Demos.BrowsingContextDemos where
 
-import BiDi.BiDiRunner (Commands (..))
+import BiDi.BiDiRunner (BiDiActions (..))
 import BiDi.DemoUtils
 import Data.Aeson (Value (Null), object, (.=))
 import Data.Text (Text)
@@ -31,7 +31,7 @@ browsingContextCreateActivateCloseDemo :: BiDiDemo
 browsingContextCreateActivateCloseDemo =
   demo "Browsing Context - Create, Activate, Close" action
   where
-    action :: DemoUtils -> Commands -> IO ()
+    action :: DemoUtils -> BiDiActions -> IO ()
     action MkDemoUtils {..} MkCommands {..} = do
       logTxt "New browsing context - Tab"
       let bcParams =
@@ -106,7 +106,7 @@ browsingContextCaptureScreenshotCloseDemo :: BiDiDemo
 browsingContextCaptureScreenshotCloseDemo =
   demo "Browsing Context - Capture Screenshot, Close" action
   where
-    action :: DemoUtils -> Commands -> IO ()
+    action :: DemoUtils -> BiDiActions -> IO ()
     action utils@MkDemoUtils {..} cmds@MkCommands {..} = do
       bc <- rootContext utils cmds
 
@@ -154,7 +154,7 @@ browsingContextClosePromptUnloadDemo :: BiDiDemo
 browsingContextClosePromptUnloadDemo =
   demo "Browsing Context - Close with Unload Prompt" action
   where
-    action :: DemoUtils -> Commands -> IO ()
+    action :: DemoUtils -> BiDiActions -> IO ()
     action utils@MkDemoUtils {..} cmds@MkCommands {..} = do
       bc <- rootContext utils cmds
 
@@ -169,7 +169,7 @@ browsingContextGetTreeDemo :: BiDiDemo
 browsingContextGetTreeDemo =
   demo "Browsing Context - Get Tree" action
   where
-    action :: DemoUtils -> Commands -> IO ()
+    action :: DemoUtils -> BiDiActions -> IO ()
     action utils@MkDemoUtils {..} cmds@MkCommands {..} = do
       logTxt "Get browsing context tree - all"
       tree <- browsingContextGetTree $ MkGetTree Nothing Nothing
@@ -254,7 +254,7 @@ browsingContextHandleUserPromptDemo :: BiDiDemo
 browsingContextHandleUserPromptDemo =
   demo "Browsing Context - Handle User Prompt" action
   where
-    action :: DemoUtils -> Commands -> IO ()
+    action :: DemoUtils -> BiDiActions -> IO ()
     action utils@MkDemoUtils {..} cmds@MkCommands {..} = do
       bc <- rootContext utils cmds
 
@@ -361,7 +361,7 @@ browsingNavigateReloadTraverseHistoryDemo :: BiDiDemo
 browsingNavigateReloadTraverseHistoryDemo =
   demo "Browsing Context - Navigate, Reload, Traverse History" action
   where
-    action :: DemoUtils -> Commands -> IO ()
+    action :: DemoUtils -> BiDiActions -> IO ()
     action utils@MkDemoUtils {..} cmds@MkCommands {..} = do
       bc <- rootContext utils cmds
 
@@ -451,7 +451,7 @@ browsingContextLocateNodesDemo :: BiDiDemo
 browsingContextLocateNodesDemo =
   demo "Browsing Context - Locate Nodes with All Selectors and Options" action
   where
-    action :: DemoUtils -> Commands -> IO ()
+    action :: DemoUtils -> BiDiActions -> IO ()
     action utils@MkDemoUtils {..} cmds@MkCommands {..} = do
       bc <- rootContext utils cmds
 
@@ -681,7 +681,7 @@ browsingContextPrintAndSetViewportDemo :: BiDiDemo
 browsingContextPrintAndSetViewportDemo =
   demo "Browsing Context - Print and Set Viewport" action
   where
-    action :: DemoUtils -> Commands -> IO ()
+    action :: DemoUtils -> BiDiActions -> IO ()
     action utils@MkDemoUtils {..} cmds@MkCommands {..} = do
       bc <- rootContext utils cmds
 

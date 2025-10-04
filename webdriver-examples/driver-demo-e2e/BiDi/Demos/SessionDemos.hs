@@ -1,6 +1,6 @@
 module BiDi.Demos.SessionDemos where
 
-import BiDi.BiDiRunner (Commands (..))
+import BiDi.BiDiRunner (BiDiActions (..))
 import BiDi.DemoUtils
 import IOUtils (DemoUtils (..))
 import WebDriverPreCore.BiDi.Session
@@ -30,7 +30,7 @@ sessionStatusDemo :: BiDiDemo
 sessionStatusDemo =
   demo "Session - Status Check" action
   where
-    action :: DemoUtils -> Commands -> IO ()
+    action :: DemoUtils -> BiDiActions -> IO ()
     action MkDemoUtils {..} MkCommands {..} = do
       logTxt "Checking session status"
       status <- sessionStatus
@@ -74,7 +74,7 @@ sessionNewDemo :: BiDiDemo
 sessionNewDemo =
   demo "Session - New Session Creation" action
   where
-    action :: DemoUtils -> Commands -> IO ()
+    action :: DemoUtils -> BiDiActions -> IO ()
     action MkDemoUtils {..} MkCommands {..} = do
       logTxt "Creating new BiDi session with basic capabilities"
       let basicCapabilities = MkCapabilities
@@ -120,7 +120,7 @@ sessionEndDemo :: BiDiDemo
 sessionEndDemo =
   demo "Session - End Session" action
   where
-    action :: DemoUtils -> Commands -> IO ()
+    action :: DemoUtils -> BiDiActions -> IO ()
     action MkDemoUtils {..} MkCommands {..} = do
       logTxt "⚠️  WARNING: This will end the current session!"
       logTxt "Ending current session gracefully"
@@ -133,7 +133,7 @@ sessionSubscribeDemo :: BiDiDemo
 sessionSubscribeDemo =
   demo "Session - Event Subscription" action
   where
-    action :: DemoUtils -> Commands -> IO ()
+    action :: DemoUtils -> BiDiActions -> IO ()
     action utils@MkDemoUtils {..} cmds@MkCommands {..} = do
       bc <- rootContext utils cmds
 
@@ -187,7 +187,7 @@ sessionUnsubscribeDemo :: BiDiDemo
 sessionUnsubscribeDemo =
   demo "Session - Event Unsubscription" action
   where
-    action :: DemoUtils -> Commands -> IO ()
+    action :: DemoUtils -> BiDiActions -> IO ()
     action MkDemoUtils {..} MkCommands {..} = do
       logTxt "First, create a subscription to demonstrate unsubscription"
       let subscription = MkSessionSubscriptionRequest
@@ -280,7 +280,7 @@ sessionCapabilityNegotiationDemo :: BiDiDemo
 sessionCapabilityNegotiationDemo =
   demo "Session - Capability Negotiation" action
   where
-    action :: DemoUtils -> Commands -> IO ()
+    action :: DemoUtils -> BiDiActions -> IO ()
     action MkDemoUtils {..} MkCommands {..} = do
       logTxt "Test 1: Session with alwaysMatch capabilities"
       let alwaysMatchCap = MkCapability
@@ -339,7 +339,7 @@ sessionCompleteLifecycleDemo :: BiDiDemo
 sessionCompleteLifecycleDemo =
   demo "Session - Complete Lifecycle Management" action
   where
-    action :: DemoUtils -> Commands -> IO ()
+    action :: DemoUtils -> BiDiActions -> IO ()
     action MkDemoUtils {..} MkCommands {..} = do
       logTxt "Step 1: Check initial session status"
       initialStatus <- sessionStatus

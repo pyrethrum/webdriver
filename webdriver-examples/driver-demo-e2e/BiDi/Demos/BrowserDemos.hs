@@ -1,6 +1,6 @@
 module BiDi.Demos.BrowserDemos where
 
-import BiDi.BiDiRunner (Commands (..))
+import BiDi.BiDiRunner (BiDiActions (..))
 import BiDi.DemoUtils
 import IOUtils (DemoUtils (..))
 import WebDriverPreCore.BiDi.Browser
@@ -32,7 +32,7 @@ browserGetClientWindowsDemo :: BiDiDemo
 browserGetClientWindowsDemo =
   demo "Browser - Get Client Windows" action
   where
-    action :: DemoUtils -> Commands -> IO ()
+    action :: DemoUtils -> BiDiActions -> IO ()
     action MkDemoUtils {..} MkCommands {..} = do
       logTxt "Getting current client windows"
       clientWindows <- browserGetClientWindows
@@ -44,7 +44,7 @@ browserCreateUserContextDemo :: BiDiDemo
 browserCreateUserContextDemo =
   demo "Browser - Create User Context" action
   where
-    action :: DemoUtils -> Commands -> IO ()
+    action :: DemoUtils -> BiDiActions -> IO ()
     action MkDemoUtils {..} MkCommands {..} = do
       logTxt "Creating basic user context"
       let basicUserContext = MkCreateUserContext 
@@ -67,7 +67,7 @@ browserGetUserContextsDemo :: BiDiDemo
 browserGetUserContextsDemo =
   demo "Browser - Get User Contexts" action
   where
-    action :: DemoUtils -> Commands -> IO ()
+    action :: DemoUtils -> BiDiActions -> IO ()
     action MkDemoUtils {..} MkCommands {..} = do
       logTxt "Getting all user contexts"
       userContexts <- browserGetUserContexts
@@ -79,7 +79,7 @@ browserSetClientWindowStateDemo :: BiDiDemo
 browserSetClientWindowStateDemo =
   demo "Browser - Set Client Window State" action
   where
-    action :: DemoUtils -> Commands -> IO ()
+    action :: DemoUtils -> BiDiActions -> IO ()
     action MkDemoUtils {..} MkCommands {..} = do
       logTxt "Getting current client windows to find one to modify"
       clientWindows <- browserGetClientWindows
@@ -121,7 +121,7 @@ browserRemoveUserContextDemo :: BiDiDemo
 browserRemoveUserContextDemo =
   demo "Browser - Remove User Context" action
   where
-    action :: DemoUtils -> Commands -> IO ()
+    action :: DemoUtils -> BiDiActions -> IO ()
     action MkDemoUtils {..} MkCommands {..} = do
       logTxt "Creating a user context to remove"
       let userContextParams = MkCreateUserContext 
@@ -144,7 +144,7 @@ browserCompleteWorkflowDemo :: BiDiDemo
 browserCompleteWorkflowDemo =
   demo "Browser - Complete Workflow" action
   where
-    action :: DemoUtils -> Commands -> IO ()
+    action :: DemoUtils -> BiDiActions -> IO ()
     action MkDemoUtils {..} MkCommands {..} = do
       
       logTxt "Step 1: Get initial state"
@@ -247,7 +247,7 @@ browserCloseDemo :: BiDiDemo
 browserCloseDemo =
   demo "Browser - Close (CAUTION: Terminates Session)" action
   where
-    action :: DemoUtils -> Commands -> IO ()
+    action :: DemoUtils -> BiDiActions -> IO ()
     action MkDemoUtils {..} MkCommands {..} = do
 
       logTxt "Getting final browser state before closing..."

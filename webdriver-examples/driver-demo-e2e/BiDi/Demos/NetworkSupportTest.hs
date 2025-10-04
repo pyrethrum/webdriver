@@ -1,6 +1,6 @@
 module BiDi.Demos.NetworkSupportTest where
 
-import BiDi.BiDiRunner (Commands (..))
+import BiDi.BiDiRunner (BiDiActions (..))
 import BiDi.DemoUtils
 import Control.Exception (SomeException, throwIO, try)
 import IOUtils (DemoUtils (..), exceptionTextIncludes)
@@ -15,7 +15,7 @@ networkSupportTest :: BiDiDemo
 networkSupportTest =
   demo "Network Support Test - Check which commands are implemented" action
   where
-    action :: DemoUtils -> Commands -> IO ()
+    action :: DemoUtils -> BiDiActions -> IO ()
     action utils@MkDemoUtils {..} cmds@MkCommands {..} = do
       bc <- rootContext utils cmds
 

@@ -1,6 +1,6 @@
 module BiDi.Demos.BrowsingContextEventDemos where
 
-import BiDi.BiDiRunner (Commands (..))
+import BiDi.BiDiRunner (BiDiActions (..))
 import BiDi.DemoUtils
 import Data.Aeson (Value (Null), object, (.=))
 import Data.Text (Text)
@@ -36,6 +36,6 @@ browsingContextEventDemo :: BiDiDemo
 browsingContextEventDemo =
   demo "Browsing Context Events" action
   where
-    action :: DemoUtils -> Commands -> IO ()
+    action :: DemoUtils -> BiDiActions -> IO ()
     action MkDemoUtils {..} MkCommands {..} = do
       undefined

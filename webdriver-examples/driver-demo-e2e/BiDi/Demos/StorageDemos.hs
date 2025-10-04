@@ -1,6 +1,6 @@
 module BiDi.Demos.StorageDemos where
 
-import BiDi.BiDiRunner (Commands (..))
+import BiDi.BiDiRunner (BiDiActions (..))
 import BiDi.DemoUtils
 import IOUtils (DemoUtils (..))
 import WebDriverPreCore.BiDi.CoreTypes (StringValue (MkStringValue))
@@ -42,7 +42,7 @@ storageGetCookiesDemo :: BiDiDemo
 storageGetCookiesDemo =
   demo "Storage - Get Cookies" action
   where
-    action :: DemoUtils -> Commands -> IO ()
+    action :: DemoUtils -> BiDiActions -> IO ()
     action utils@MkDemoUtils {..} cmds@MkCommands {..} = do
       bc <- rootContext utils cmds
 
@@ -105,7 +105,7 @@ storageSetCookieDemo :: BiDiDemo
 storageSetCookieDemo =
   demo "Storage - Set Cookie" action
   where
-    action :: DemoUtils -> Commands -> IO ()
+    action :: DemoUtils -> BiDiActions -> IO ()
     action utils@MkDemoUtils {..} cmds@MkCommands {..} = do
       bc <- rootContext utils cmds
 
@@ -178,7 +178,7 @@ storageDeleteCookiesDemo :: BiDiDemo
 storageDeleteCookiesDemo =
   demo "Storage - Delete Cookies" action
   where
-    action :: DemoUtils -> Commands -> IO ()
+    action :: DemoUtils -> BiDiActions -> IO ()
     action utils@MkDemoUtils {..} cmds@MkCommands {..} = do
       bc <- rootContext utils cmds
 
@@ -241,7 +241,7 @@ storagePartitionKeyDemo :: BiDiDemo
 storagePartitionKeyDemo =
   demo "Storage - Partition Key Management" action
   where
-    action :: DemoUtils -> Commands -> IO ()
+    action :: DemoUtils -> BiDiActions -> IO ()
     action utils@MkDemoUtils {..} cmds@MkCommands {..} = do
       bc <- rootContext utils cmds
 
@@ -301,7 +301,7 @@ storageCompleteWorkflowDemo :: BiDiDemo
 storageCompleteWorkflowDemo =
   demo "Storage - Complete Cookie Workflow" action
   where
-    action :: DemoUtils -> Commands -> IO ()
+    action :: DemoUtils -> BiDiActions -> IO ()
     action utils@MkDemoUtils {..} cmds@MkCommands {..} = do
       bc <- rootContext utils cmds
 

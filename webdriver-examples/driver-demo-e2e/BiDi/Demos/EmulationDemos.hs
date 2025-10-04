@@ -1,6 +1,6 @@
 module BiDi.Demos.EmulationDemos where
 
-import BiDi.BiDiRunner (Commands (..))
+import BiDi.BiDiRunner (BiDiActions (..))
 import BiDi.DemoUtils
 import IOUtils (DemoUtils (..))
 import WebDriverPreCore.BiDi.Protocol
@@ -27,7 +27,7 @@ emulationSetGeolocationOverrideDemo :: BiDiDemo
 emulationSetGeolocationOverrideDemo =
   demo "Emulation - Set Geolocation Override" action
   where
-    action :: DemoUtils -> Commands -> IO ()
+    action :: DemoUtils -> BiDiActions -> IO ()
     action utils@MkDemoUtils {..} cmds@MkCommands {..} = do
       bc <- rootContext utils cmds
 
@@ -79,7 +79,7 @@ emulationSetLocaleOverrideDemo :: BiDiDemo
 emulationSetLocaleOverrideDemo =
   demo "Emulation - Set Locale Override" action
   where
-    action :: DemoUtils -> Commands -> IO ()
+    action :: DemoUtils -> BiDiActions -> IO ()
     action utils@MkDemoUtils {..} cmds@MkCommands {..} = do
       bc <- rootContext utils cmds
 
@@ -128,7 +128,7 @@ emulationSetScreenOrientationOverrideDemo :: BiDiDemo
 emulationSetScreenOrientationOverrideDemo =
   demo "Emulation - Set Screen Orientation Override" action
   where
-    action :: DemoUtils -> Commands -> IO ()
+    action :: DemoUtils -> BiDiActions -> IO ()
     action MkDemoUtils {..}  _ = do -- empty action for now
       {-  TODO Not supported by geckodriver - add expectations when we gget to errors
     action utils@MkDemoUtils {..} cmds@MkCommands {..} = do
@@ -192,7 +192,7 @@ emulationSetTimezoneOverrideDemo :: BiDiDemo
 emulationSetTimezoneOverrideDemo =
   demo "Emulation - Set Timezone Override" action
   where
-    action :: DemoUtils -> Commands -> IO ()
+    action :: DemoUtils -> BiDiActions -> IO ()
     action MkDemoUtils {..}  _ = do -- empty action for now
       {-  TODO Not supported by geckodriver - add expectations when we gget to errors  
     action utils@MkDemoUtils {..} cmds@MkCommands {..} = do
@@ -253,7 +253,7 @@ emulationCompleteWorkflowDemo :: BiDiDemo
 emulationCompleteWorkflowDemo =
   demo "Emulation - Complete Workflow Demo" action
   where
-    action :: DemoUtils -> Commands -> IO ()
+    action :: DemoUtils -> BiDiActions -> IO ()
     action MkDemoUtils {..}  _ = do -- empty action for now
       {-  TODO Not supported by geckodriver - add expectations when we get to errors 
     action utils@MkDemoUtils {..} cmds@MkCommands {..} = do

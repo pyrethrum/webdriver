@@ -1,6 +1,6 @@
 module BiDi.Demos.NetworkDemos where
 
-import BiDi.BiDiRunner (Commands (..))
+import BiDi.BiDiRunner (BiDiActions (..))
 import BiDi.DemoUtils
 import Control.Exception
 import Control.Monad (unless)
@@ -35,7 +35,7 @@ networkDataCollectorDemo :: BiDiDemo
 networkDataCollectorDemo =
   demo "Network I - Data Collector Management" action
   where
-    action :: DemoUtils -> Commands -> IO ()
+    action :: DemoUtils -> BiDiActions -> IO ()
     action utils@MkDemoUtils {..} cmds@MkCommands {..} = do
       bc <- rootContext utils cmds
 
@@ -164,7 +164,7 @@ networkInterceptDemo :: BiDiDemo
 networkInterceptDemo =
   demo "Network II - Request/Response Interception" action
   where
-    action :: DemoUtils -> Commands -> IO ()
+    action :: DemoUtils -> BiDiActions -> IO ()
     action utils@MkDemoUtils {..} cmds@MkCommands {..} = do
       bc <- rootContext utils cmds
 
@@ -341,7 +341,7 @@ networkRequestResponseModificationDemo :: BiDiDemo
 networkRequestResponseModificationDemo =
   demo "Network III - Request and Response Modification" action
   where
-    action :: DemoUtils -> Commands -> IO ()
+    action :: DemoUtils -> BiDiActions -> IO ()
     action utils@MkDemoUtils {..} cmds@MkCommands {..} = do
       _bc <- rootContext utils cmds
 
@@ -524,7 +524,7 @@ networkAuthAndFailureDemo :: BiDiDemo
 networkAuthAndFailureDemo =
   demo "Network IV - Authentication and Request Failure Handling" action
   where
-    action :: DemoUtils -> Commands -> IO ()
+    action :: DemoUtils -> BiDiActions -> IO ()
     action utils@MkDemoUtils {..} cmds@MkCommands {..} = do
       _bc <- rootContext utils cmds
 
@@ -632,7 +632,7 @@ networkProvideResponseDemo :: BiDiDemo
 networkProvideResponseDemo =
   demo "Network V - Custom Response Provision" action
   where
-    action :: DemoUtils -> Commands -> IO ()
+    action :: DemoUtils -> BiDiActions -> IO ()
     action utils@MkDemoUtils {..} cmds@MkCommands {..} = do
       _bc <- rootContext utils cmds
 
@@ -808,7 +808,7 @@ networkDataRetrievalDemo :: BiDiDemo
 networkDataRetrievalDemo =
   demo "Network VI - Data Retrieval and Ownership" action
   where
-    action :: DemoUtils -> Commands -> IO ()
+    action :: DemoUtils -> BiDiActions -> IO ()
     action utils@MkDemoUtils {..} cmds@MkCommands {..} = do
       bc <- rootContext utils cmds
 
@@ -908,7 +908,7 @@ networkCacheBehaviorDemo :: BiDiDemo
 networkCacheBehaviorDemo =
   demo "Network VII - Cache Behavior Management" action
   where
-    action :: DemoUtils -> Commands -> IO ()
+    action :: DemoUtils -> BiDiActions -> IO ()
     action utils@MkDemoUtils {..} cmds@MkCommands {..} = do
       bc <- rootContext utils cmds
 

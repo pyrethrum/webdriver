@@ -1,6 +1,6 @@
 module BiDi.Demos.InputDemos where
 
-import BiDi.BiDiRunner (Commands (..))
+import BiDi.BiDiRunner (BiDiActions (..))
 import BiDi.DemoUtils
 import Data.Maybe (fromJust)
 import IOUtils (DemoUtils (..))
@@ -46,7 +46,7 @@ inputKeyboardDemo :: BiDiDemo
 inputKeyboardDemo =
   demo "Input I - Keyboard Actions" action
   where
-    action :: DemoUtils -> Commands -> IO ()
+    action :: DemoUtils -> BiDiActions -> IO ()
     action utils@MkDemoUtils {..} cmds@MkCommands {..} = do
       bc <- rootContext utils cmds
       textAreaPageUrl <- textAreaUrl
@@ -290,7 +290,7 @@ inputPointerDemo :: BiDiDemo
 inputPointerDemo =
   demo "Input II - Pointer/Mouse Actions" action
   where
-    action :: DemoUtils -> Commands -> IO ()
+    action :: DemoUtils -> BiDiActions -> IO ()
     action utils@MkDemoUtils {..} cmds@MkCommands {..} = do
       bc <- rootContext utils cmds
       chkBoxPage <- checkboxesUrl
@@ -475,7 +475,7 @@ inputWheelDemo :: BiDiDemo
 inputWheelDemo =
   demo "Input III - Wheel/Scroll Actions" action
   where
-    action :: DemoUtils -> Commands -> IO ()
+    action :: DemoUtils -> BiDiActions -> IO ()
     action utils@MkDemoUtils {..} cmds@MkCommands {..} = do
       bc <- rootContext utils cmds
       infiniteScroll <- infiniteScrollUrl
@@ -577,7 +577,7 @@ inputCombinedActionsDemo :: BiDiDemo
 inputCombinedActionsDemo =
   demo "Input IV - Combined Actions" action
   where
-    action :: DemoUtils -> Commands -> IO ()
+    action :: DemoUtils -> BiDiActions -> IO ()
     action utils@MkDemoUtils {..} cmds@MkCommands {..} = do
       bc <- rootContext utils cmds
       testPage <- textAreaUrl
@@ -770,7 +770,7 @@ inputReleaseActionsDemo :: BiDiDemo
 inputReleaseActionsDemo =
   demo "Input V - Release Actions" action
   where
-    action :: DemoUtils -> Commands -> IO ()
+    action :: DemoUtils -> BiDiActions -> IO ()
     action utils@MkDemoUtils {..} cmds@MkCommands {..} = do
       bc <- rootContext utils cmds
       testPage <- textAreaUrl
@@ -926,7 +926,7 @@ inputSetFilesDemo :: BiDiDemo
 inputSetFilesDemo =
   demo "Input VI - Set Files for File Upload" action
   where
-    action :: DemoUtils -> Commands -> IO ()
+    action :: DemoUtils -> BiDiActions -> IO ()
     action utils@MkDemoUtils {..} cmds@MkCommands {..} = do
       bc <- rootContext utils cmds
       uploadUrl <- fileUrl "upload.html"

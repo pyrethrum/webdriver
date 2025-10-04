@@ -1,6 +1,6 @@
 module BiDi.Demos.WebExtensionDemos where
 
-import BiDi.BiDiRunner (Commands (..))
+import BiDi.BiDiRunner (BiDiActions (..))
 import BiDi.DemoUtils
 import Control.Exception (SomeException, catch)
 import Data.Aeson.KeyMap qualified as AKM
@@ -21,7 +21,7 @@ webExtensionInstallPathDemo :: BiDiDemo
 webExtensionInstallPathDemo =
   demo "WebExtension - Install from Path" action
   where
-    action :: DemoUtils -> Commands -> IO ()
+    action :: DemoUtils -> BiDiActions -> IO ()
     action MkDemoUtils {..} MkCommands {..} = do
       logTxt "Test 1: Install extension from filesystem path"
       exPath <- demoExtensionDirPath
@@ -46,7 +46,7 @@ webExtensionInstallArchiveDemo :: BiDiDemo
 webExtensionInstallArchiveDemo =
   demo "WebExtension - Install from Archive" action
   where
-    action :: DemoUtils -> Commands -> IO ()
+    action :: DemoUtils -> BiDiActions -> IO ()
     action MkDemoUtils {..} MkCommands {..} = do
       logTxt "Test 1: Install extension from zip archive"
       zipPath <- demoExtensionZipPath
@@ -59,7 +59,7 @@ webExtensionInstallBase64Demo :: BiDiDemo
 webExtensionInstallBase64Demo =
   demo "WebExtension - Install from Base64" action
   where
-    action :: DemoUtils -> Commands -> IO ()
+    action :: DemoUtils -> BiDiActions -> IO ()
     action MkDemoUtils {..} MkCommands {..} = do
       logTxt "Test 1: Install extension from base64 encoded data"
 
@@ -73,7 +73,7 @@ webExtensionValidationDemo :: BiDiDemo
 webExtensionValidationDemo =
   demo "WebExtension - Extension Validation" action
   where
-    action :: DemoUtils -> Commands -> IO ()
+    action :: DemoUtils -> BiDiActions -> IO ()
     action MkDemoUtils {..} MkCommands {..} = do
       logTxt "Test 1: Invalid extension path"
       let invalidExtension = ExtensionPath "/non/existent/path"
