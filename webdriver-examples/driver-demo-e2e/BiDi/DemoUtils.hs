@@ -1,7 +1,7 @@
 module BiDi.DemoUtils where
 
 import BiDi.BiDiRunner (Commands (..), mkDemoBiDiClientParams, withCommands)
-import Control.Exception (Exception, catch, throwIO)
+import Control.Exception (Exception, catch, throwIO, throw)
 import Data.Text (Text, isInfixOf)
 import Data.Time.Clock.POSIX (POSIXTime, getPOSIXTime)
 import IOUtils (DemoUtils (..))
@@ -34,6 +34,12 @@ import WebDriverPreCore.BiDi.Script (EvaluateResult (..), PrimitiveProtocolValue
 import WebDriverPreCore.Internal.Utils (txt)
 import Prelude hiding (log, putStrLn)
 import WebDriverPreCore.BiDi.CoreTypes (StringValue(..))
+import Const (seconds)
+import WebDriverPreCore.BiDi.Protocol (Subscription)
+import WebDriverPreCore.BiDi.Protocol (Subscription(..))
+import UnliftIO (newEmptyTMVarIO, tryPutTMVar, atomically, Async)
+import Control.Concurrent (threadDelay)
+import Data.Coerce (coerce)
 
 pauseMs :: Int
 pauseMs = 0
@@ -160,3 +166,24 @@ chkDomContains' timeoutMs pauseIntervalMs MkDemoUtils {..} MkCommands {..} bc ex
 -- | Check if expected text is present in DOM with default timeout and retry settings
 chkDomContains :: DemoUtils -> Commands -> BrowsingContext -> Text -> IO ()
 chkDomContains = chkDomContains' 10_000 100
+
+newtype Timeout = MkTimeout {timeoutMs :: Int} deriving (Show, Eq)
+
+seconds :: Int -> Timeout 
+seconds  = MkTimeout . (*) 1000
+
+testSubscription :: Timeout -> Subscription IO -> Async ()
+testSubscription timeout MkSubscription {action, subscription} = do
+  started <- newEmptyTMVarIO
+  finished <- newEmptyTMVarIO
+  let intercept = \r -> do
+        atomically $ tryPutTMVar started True
+        finally 
+        action r
+        atomically $ tryPutTMVar finished True
+      timerDone = atomically $ readTMVar finished
+      timedout = do 
+        threadDelay (coerce timeout * 1000)
+        throwIO $ userError "Timeout waiting for subscription event: " <> show subscription
+
+  race_ timedout timerDone

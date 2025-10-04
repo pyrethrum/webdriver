@@ -29,3 +29,13 @@ BrowsingContext Events TODO:
 13. browsingContext.userPromptClosed :: TODO
 14. browsingContext.userPromptOpened :: TODO
 -}
+
+
+-- >>> runDemo browsingContextEventDemo
+browsingContextEventDemo :: BiDiDemo
+browsingContextEventDemo =
+  demo "Browsing Context Events" action
+  where
+    action :: DemoUtils -> Commands -> IO ()
+    action MkDemoUtils {..} MkCommands {..} = do
+      undefined
