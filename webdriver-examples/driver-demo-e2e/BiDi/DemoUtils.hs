@@ -172,7 +172,7 @@ newtype Timeout = MkTimeout {timeoutMs :: Int} deriving (Show, Eq)
 seconds :: Int -> Timeout 
 seconds  = MkTimeout . (*) 1000
 
-testSubscription :: Timeout -> Subscription IO -> Async ()
+testSubscription :: Timeout -> Subscription IO -> Subscription IO
 testSubscription timeout MkSubscription {action, subscription} = do
   started <- newEmptyTMVarIO
   finished <- newEmptyTMVarIO
@@ -181,7 +181,7 @@ testSubscription timeout MkSubscription {action, subscription} = do
         finally 
         action r
         atomically $ tryPutTMVar finished True
-      timerDone = atomically $ readTMVar finished
+      actionaDone = atomically $ readTMVar finished
       timedout = do 
         threadDelay (coerce timeout * 1000)
         throwIO $ userError "Timeout waiting for subscription event: " <> show subscription
