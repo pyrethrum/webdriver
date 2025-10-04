@@ -187,7 +187,9 @@ data BiDiActions = MkCommands
 mkCommands :: BiDiMethods -> BiDiActions
 mkCommands client =
   MkCommands
-    { -- Session commands
+    { 
+      -- ########## COMMANDS ##########
+      -- Session commands
       sessionNew = send . P.sessionNew,
       sessionStatus = send P.sessionStatus,
       sessionEnd = send P.sessionEnd,
@@ -240,7 +242,7 @@ mkCommands client =
       scriptCallFunction = send . P.scriptCallFunction,
       scriptDisown = send . P.scriptDisown,
       scriptEvaluate = send . P.scriptEvaluate,
-      scriptEvaluateNoWait = sendCommandNoWait client . P.scriptEvaluate, -- alias
+      scriptEvaluateNoWait = sendCommandNoWait client . P.scriptEvaluate, 
       scriptGetRealms = send . P.scriptGetRealms,
       scriptRemovePreloadScript = send . P.scriptRemovePreloadScript,
       -- Storage commands
@@ -250,6 +252,8 @@ mkCommands client =
       -- WebExtension commands
       webExtensionInstall = send . P.webExtensionInstall,
       webExtensionUninstall = send . P.webExtensionUninstall
+
+      -- ########## EVENTS ##########
     }
   where
     send :: forall c r. (FromJSON r, ToJSON c, Show c) => Command c r -> IO r
@@ -295,6 +299,13 @@ sendCommand m@MkBiDiMethods {getNext} command = do
                 pure . (.response)
               )
           )
+
+-- sendSubscription :: BiDiMethods -> Subscription IO -> IO ()
+-- sendSubscription MkBiDiMethods{subscribe} =  \case 
+--   sub@MkSubscription {subscription = subscriptionId} -> do
+--     let subed = MkSubscribed {subscriptionId, subscription = sub}
+--     subscribe subed
+--   MkNSubscription {subscriptions, nAction} -> undefined
 
 mkDemoBiDiClientParams :: Int -> IO BiDiClientParams
 mkDemoBiDiClientParams pauseMs = do
@@ -342,7 +353,7 @@ data BiDiMethods = MkBiDiMethods
   { nextId :: IO JSUInt,
     send :: forall a. (ToJSON a, Show a) => a -> IO (),
     getNext :: IO (Either JSONDecodeError ResponseObject),
-    subscribe :: Subscribed IO -> IO (),
+    subscribe :: Subscription IO -> IO SubscriptionId,
     unsubscribe :: SubscriptionId -> IO ()
   }
 
@@ -386,16 +397,20 @@ mkBiDIMethods c =
       unsubscribe = \sid -> atomically . modifyTVar' c.subscriptions . filter $ \s -> s.subscriptionId /= sid
     }
 
-data Subscribed m = MkSubscribed
-  { subscriptionId :: SubscriptionId,
-    subscription :: Subscription m
-  }
+subscribe ::  TVar [Subscribed IO] -> Subscription IO -> IO SubscriptionId
+subscribe allSubs sub = error "TODO"
 
 -- | Subscribe to events with a filter function
 subscribe :: Subscribed IO -> TVar [Subscribed IO] -> STM (TVar [Subscribed IO])
 subscribe subscribed subscriptions = do
   modifyTVar' subscriptions (subscribed :)
   pure subscriptions
+  
+data Subscribed m = MkSubscribed
+  { subscriptionId :: SubscriptionId,
+    subscription :: Subscription m
+  }
+
 
 -- | Parse incoming WebSocket message to determine if it's an event or command response
 -- For now, we'll use a simple heuristic: messages with "id" are responses, others are events
