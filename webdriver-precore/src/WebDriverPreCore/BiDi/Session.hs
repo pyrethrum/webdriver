@@ -5,8 +5,7 @@ import Data.Aeson.Types (Parser)
 import Data.Text (Text)
 import GHC.Generics (Generic)
 import WebDriverPreCore.BiDi.Capabilities (CapabilitiesResult)
-import WebDriverPreCore.BiDi.CoreTypes (BrowsingContext, UserContext)
-import WebDriverPreCore.BiDi.Event (SubscriptionType)
+import WebDriverPreCore.BiDi.CoreTypes (BrowsingContext, UserContext, SubscriptionType)
 import WebDriverPreCore.Internal.AesonUtils (toJSONOmitNothing)
 import Prelude
   ( Applicative ((<*>)),
@@ -23,7 +22,7 @@ import Prelude
 -- ######### Remote #########
 
 -- | Subscription
-newtype SubscriptionId = MkSubscription {subscriptionId :: Text}
+newtype SubscriptionId = MkSubscriptionId {subscriptionId :: Text}
   deriving (Show, Eq, Generic, FromJSON, ToJSON)
 
 -- | Subscription Request

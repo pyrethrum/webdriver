@@ -6,10 +6,13 @@ import Data.Map qualified as Map
 import Data.Maybe (catMaybes)
 import Data.Text (Text, unpack, pack)
 import GHC.Generics
-import WebDriverPreCore.BiDi.CoreTypes (BrowsingContext, JSInt, JSUInt, NodeRemoteValue, UserContext)
+import WebDriverPreCore.BiDi.CoreTypes (BrowsingContext, JSInt, JSUInt, NodeRemoteValue, UserContext, SubscriptionType (..))
 import WebDriverPreCore.BiDi.Script (SharedReference)
-import WebDriverPreCore.Internal.AesonUtils (enumCamelCase, opt, toJSONOmitNothing)
-import Prelude (Bool (..), Eq, Float, Functor (..), Maybe, Semigroup ((<>)), Show (..), Word, flip, ($), (.), fromIntegral)
+import WebDriverPreCore.Internal.AesonUtils (enumCamelCase, opt, toJSONOmitNothing, parseJSONOmitNothing, fromJSONCamelCase)
+import Prelude (Bool (..), Eq, Float, Functor (..), Maybe, Semigroup ((<>)), Show (..), Word, flip, ($), (.), fromIntegral, Applicative (..), MonadFail (..))
+import Data.Function ((&))
+import Data.Functor ((<&>))
+import WebDriverPreCore.BiDi.Capabilities (UserPromptHandlerType)
 
 -- ######### REMOTE #########
 
@@ -330,6 +333,14 @@ instance ToJSON ReadinessState where
 data UserPromptType = Alert | BeforeUnload | Confirm | Prompt
   deriving (Show, Eq, Generic)
 
+instance ToJSON UserPromptType where
+  toJSON :: UserPromptType -> Value
+  toJSON = enumCamelCase
+
+instance FromJSON UserPromptType where
+  parseJSON :: Value -> Parser UserPromptType
+  parseJSON = fromJSONCamelCase
+
 -- | Type of browsing context to create
 data CreateType = Tab | Window
   deriving (Show, Eq, Generic)
@@ -446,6 +457,30 @@ data BrowsingContextEvent
   | UserPromptOpened UserPromptOpened
   deriving (Show, Eq, Generic)
 
+instance FromJSON BrowsingContextEvent where
+  parseJSON :: Value -> Parser BrowsingContextEvent
+  parseJSON val = val & (withObject "BrowsingContextEvent" $ \o -> do
+    typ <- o .: "type" 
+    case typ of
+      BrowsingContextContextCreated -> parsedVal ContextCreated
+      BrowsingContextContextDestroyed -> parsedVal ContextDestroyed
+      BrowsingContextDomContentLoaded -> parsedVal DomContentLoaded
+      BrowsingContextDownloadEnd -> pure DownloadEnd
+      BrowsingContextDownloadWillBegin -> parsedVal DownloadWillBegin
+      BrowsingContextFragmentNavigated -> parsedVal FragmentNavigated
+      BrowsingContextHistoryUpdated -> parsedVal HistoryUpdated
+      BrowsingContextLoad -> parsedVal Load
+      BrowsingContextNavigationAborted -> parsedVal NavigationAborted
+      BrowsingContextNavigationCommitted -> parsedVal NavigationCommitted
+      BrowsingContextNavigationFailed -> parsedVal NavigationFailed
+      BrowsingContextNavigationStarted -> parsedVal NavigationStarted
+      BrowsingContextUserPromptClosed -> parsedVal UserPromptClosed
+      BrowsingContextUserPromptOpened -> parsedVal UserPromptOpened
+      _ -> fail $ "Unknown BrowsingContextEvent type: " <> show typ)
+    where
+      parsedVal :: forall a b. FromJSON a => (a -> b) -> Parser b
+      parsedVal = (<&>) (parseJSON val)
+
 
 data NavigationInfo = MkNavigationInfo
   { context :: BrowsingContext,
@@ -454,6 +489,10 @@ data NavigationInfo = MkNavigationInfo
     url :: Text
   }
   deriving (Show, Eq, Generic)
+
+instance FromJSON NavigationInfo where
+  parseJSON :: Value -> Parser NavigationInfo
+  parseJSON = parseJSONOmitNothing
 
 data DownloadEnd
   = DownloadCompleted
@@ -472,6 +511,10 @@ data DownloadWillBegin = MkDownloadWillBegin
   }
   deriving (Show, Eq, Generic)
 
+instance FromJSON DownloadWillBegin where
+  parseJSON :: Value -> Parser DownloadWillBegin
+  parseJSON = parseJSONOmitNothing
+
 data HistoryUpdated = MkHistoryUpdated
   { context :: BrowsingContext,
     timestamp :: JSUInt,
@@ -479,27 +522,39 @@ data HistoryUpdated = MkHistoryUpdated
   }
   deriving (Show, Eq, Generic)
 
+instance FromJSON HistoryUpdated
+
+
 data UserPromptClosed = MkUserPromptClosed
   { context :: BrowsingContext,
     accepted :: Bool,
-    typ :: Text, -- UserPromptType
+    promptType :: UserPromptType,
     userText :: Maybe Text
   }
   deriving (Show, Eq, Generic)
 
+instance FromJSON UserPromptClosed where
+  parseJSON :: Value -> Parser UserPromptClosed
+  parseJSON = parseJSONOmitNothing
+
 data UserPromptOpened = MkUserPromptOpened
   { context :: BrowsingContext,
-    handler :: Text, -- session.UserPromptHandlerType
+    handler :: UserPromptHandlerType, 
     message :: Text,
-    typ :: Text, -- UserPromptType
+    promptType :: UserPromptType,
     defaultValue :: Maybe Text
   }
   deriving (Show, Eq, Generic)
+
+instance FromJSON UserPromptOpened where
+  parseJSON :: Value -> Parser UserPromptOpened
+  parseJSON = parseJSONOmitNothing
 
 newtype Navigation = MkNavigation
   { navigationId :: Text
   }
   deriving (Show, Eq, Generic)
+  deriving newtype (FromJSON)
 
 instance ToJSON SetViewport
 

@@ -27,7 +27,7 @@ import WebDriverPreCore.BiDi.BiDiUrl (BiDiUrl (..), getBiDiUrl)
 import WebDriverPreCore.BiDi.Capabilities (Capabilities)
 import WebDriverPreCore.BiDi.Command
 import WebDriverPreCore.BiDi.CoreTypes (JSUInt (..))
-import WebDriverPreCore.BiDi.Event (Subscription (..), SubscriptionType)
+import WebDriverPreCore.BiDi.Event (Subscription (..))
 import WebDriverPreCore.BiDi.Protocol
   ( Activate,
     AddDataCollector,
@@ -101,7 +101,7 @@ import WebDriverPreCore.BiDi.Protocol
     UserContext,
     WebExtensionInstall,
     WebExtensionResult,
-    WebExtensionUninstall,
+    WebExtensionUninstall, SubscriptionType,
   )
 import WebDriverPreCore.BiDi.Response (JSONDecodeError, MatchedResponse (..), ResponseObject (..), decodeResponse, displayResponseError, parseResponse)
 import WebDriverPreCore.Http qualified as Http

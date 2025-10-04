@@ -1,184 +1,46 @@
 module WebDriverPreCore.BiDi.Event where
 
-import Data.Aeson (FromJSON (..), ToJSON (..), Value (..))
+import Data.Aeson (FromJSON (..))
+import Data.Set (Set)
 import GHC.Generics (Generic)
 import WebDriverPreCore.BiDi.BrowsingContext (BrowsingContextEvent (..))
+import WebDriverPreCore.BiDi.CoreTypes (SubscriptionType)
 import WebDriverPreCore.BiDi.Input (FileDialogOpened)
 import WebDriverPreCore.BiDi.Log (LogEntry)
+import WebDriverPreCore.BiDi.Network (NetworkEvent (..))
+import WebDriverPreCore.BiDi.Script (ScriptEvent (..))
 import Prelude
-import Data.Set (Set)
-import Data.Aeson.Types (Parser)
 
-mkSubscription :: forall m r. FromJSON r => SubscriptionType -> (r -> m ()) -> Subscription m
-mkSubscription = MkSubscription 
+mkSubscription :: forall m r. (FromJSON r) => SubscriptionType -> (r -> m ()) -> Subscription m
+mkSubscription = MkSubscription
 
 mkSubscriptionN :: Set SubscriptionType -> (Event -> m ()) -> Subscription m
 mkSubscriptionN = MkNSubscription
 
 data Subscription m where
-  MkSubscription :: forall m r. (FromJSON r) =>
+  MkSubscription ::
+    forall m r.
+    (FromJSON r) =>
     { subscription :: SubscriptionType,
       action :: r -> m ()
     } ->
-    Subscription m 
-  MkNSubscription :: { 
-      subscriptions:: Set SubscriptionType,
+    Subscription m
+  MkNSubscription ::
+    { subscriptions :: Set SubscriptionType,
       nAction :: Event -> m ()
     } ->
     Subscription m
 
 data Event
   = BrowsingContextEvent BrowsingContextEvent
-  | -- | InputEvent InputEvent
-    InputEvent FileDialogOpened
-  | -- method: "log.entryAdded"
-    LogEvent LogEntry
+  | InputEvent FileDialogOpened
+  | LogEvent LogEntry
+  | NetworkEvent NetworkEvent
+  | ScriptEvent ScriptEvent
   deriving
     ( Show,
       Eq,
       Generic
     )
 
-instance FromJSON Event
-
-data SubscriptionType
-  = -- Log module
-    LogEntryAdded
-  | -- BrowsingContext module
-    BrowsingContextContextCreated
-  | BrowsingContextContextDestroyed
-  | BrowsingContextNavigationStarted
-  | BrowsingContextFragmentNavigated
-  | BrowsingContextHistoryUpdated
-  | BrowsingContextDomContentLoaded
-  | BrowsingContextLoad
-  | BrowsingContextDownloadWillBegin
-  | BrowsingContextDownloadEnd
-  | BrowsingContextNavigationAborted
-  | BrowsingContextNavigationCommitted
-  | BrowsingContextNavigationFailed
-  | BrowsingContextUserPromptClosed
-  | BrowsingContextUserPromptOpened
-  | -- Network module
-    NetworkAuthRequired
-  | NetworkBeforeRequestSent
-  | NetworkFetchError
-  | NetworkResponseCompleted
-  | NetworkResponseStarted
-  | -- Script module
-    ScriptMessage
-  | ScriptRealmCreated
-  | ScriptRealmDestroyed
-  | -- Input module
-    InputFileDialogOpened
-  deriving (Show, Eq, Generic)
-
-instance ToJSON SubscriptionType where
-  toJSON :: SubscriptionType -> Value
-  toJSON = \case
-    -- Log module
-    LogEntryAdded -> "log.entryAdded"
-    -- BrowsingContext module
-    BrowsingContextContextCreated -> "browsingContext.contextCreated"
-    BrowsingContextContextDestroyed -> "browsingContext.contextDestroyed"
-    BrowsingContextNavigationStarted -> "browsingContext.navigationStarted"
-    BrowsingContextFragmentNavigated -> "browsingContext.fragmentNavigated"
-    BrowsingContextHistoryUpdated -> "browsingContext.historyUpdated"
-    BrowsingContextDomContentLoaded -> "browsingContext.domContentLoaded"
-    BrowsingContextLoad -> "browsingContext.load"
-    BrowsingContextDownloadWillBegin -> "browsingContext.downloadWillBegin"
-    BrowsingContextDownloadEnd -> "browsingContext.downloadEnd"
-    BrowsingContextNavigationAborted -> "browsingContext.navigationAborted"
-    BrowsingContextNavigationCommitted -> "browsingContext.navigationCommitted"
-    BrowsingContextNavigationFailed -> "browsingContext.navigationFailed"
-    BrowsingContextUserPromptClosed -> "browsingContext.userPromptClosed"
-    BrowsingContextUserPromptOpened -> "browsingContext.userPromptOpened"
-    -- Network module
-    NetworkAuthRequired -> "network.authRequired"
-    NetworkBeforeRequestSent -> "network.beforeRequestSent"
-    NetworkFetchError -> "network.fetchError"
-    NetworkResponseCompleted -> "network.responseCompleted"
-    NetworkResponseStarted -> "network.responseStarted"
-    -- Script module
-    ScriptMessage -> "script.message"
-    ScriptRealmCreated -> "script.realmCreated"
-    ScriptRealmDestroyed -> "script.realmDestroyed"
-    -- Input module
-    InputFileDialogOpened -> "input.fileDialogOpened"
-
-instance FromJSON SubscriptionType where
-  parseJSON :: Value -> Parser SubscriptionType
-  parseJSON = \case
-    -- Log module
-    String "log.entryAdded" -> pure LogEntryAdded
-    -- BrowsingContext module
-    String "browsingContext.contextCreated" -> pure BrowsingContextContextCreated
-    String "browsingContext.contextDestroyed" -> pure BrowsingContextContextDestroyed
-    String "browsingContext.navigationStarted" -> pure BrowsingContextNavigationStarted
-    String "browsingContext.fragmentNavigated" -> pure BrowsingContextFragmentNavigated
-    String "browsingContext.historyUpdated" -> pure BrowsingContextHistoryUpdated
-    String "browsingContext.domContentLoaded" -> pure BrowsingContextDomContentLoaded
-    String "browsingContext.load" -> pure BrowsingContextLoad
-    String "browsingContext.downloadWillBegin" -> pure BrowsingContextDownloadWillBegin
-    String "browsingContext.downloadEnd" -> pure BrowsingContextDownloadEnd
-    String "browsingContext.navigationAborted" -> pure BrowsingContextNavigationAborted
-    String "browsingContext.navigationCommitted" -> pure BrowsingContextNavigationCommitted
-    String "browsingContext.navigationFailed" -> pure BrowsingContextNavigationFailed
-    String "browsingContext.userPromptClosed" -> pure BrowsingContextUserPromptClosed
-    String "browsingContext.userPromptOpened" -> pure BrowsingContextUserPromptOpened
-    -- Network module
-    String "network.authRequired" -> pure NetworkAuthRequired
-    String "network.beforeRequestSent" -> pure NetworkBeforeRequestSent
-    String "network.fetchError" -> pure NetworkFetchError
-    String "network.responseCompleted" -> pure NetworkResponseCompleted
-    String "network.responseStarted" -> pure NetworkResponseStarted
-    -- Script module
-    String "script.message" -> pure ScriptMessage
-    String "script.realmCreated" -> pure ScriptRealmCreated
-    String "script.realmDestroyed" -> pure ScriptRealmDestroyed
-    -- Input module
-    String "input.fileDialogOpened" -> pure InputFileDialogOpened
-    _ -> fail "Invalid SubscriptionType"
-{-
-{
-  "type": "event",
-  "method": "module.eventName",
-  "params": {
-    // Event-specific parameters
-  }
-}
-
-Event = {
-  type: "event",
-  EventData,
-  Extensible
-}
-
-{
-  "type": "event",
-  "method": "browsingContext.navigationStarted",
-  "params": {
-    "context": "context-id",
-    "navigation": "navigation-id",
-    "timestamp": 1234567890,
-    "url": "https://example.com"
-  }
-}
-
-method which is a string literal of the form [module name].[event name]. This is the event name.I
-
-{
-  "type": "event",
-  "method": "log.entryAdded",
-  "params": {
-    "level": "info",
-    "text": "Hello world",
-    "timestamp": 1234567890,
-    "source": {
-      "realm": "realm-id",
-      "context": "context-id"
-    }
-  }
-}
-
--}
+instance FromJSON Event 

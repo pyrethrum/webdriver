@@ -44,7 +44,7 @@ module WebDriverPreCore.BiDi.Protocol
     CacheBehavior (..),
     BytesValue (..),
     Cookie (..),
-    SameSite (..), 
+    SameSite (..),
     Header (..),
     CookieHeader (..),
     SetCookieHeader (..),
@@ -87,10 +87,11 @@ import WebDriverPreCore.BiDi.BrowsingContext
     TraverseHistory (..),
     TraverseHistoryResult (..),
   )
-import WebDriverPreCore.BiDi.Capabilities (
-  Capabilities(..), 
-  Capability(..), 
-  ProxyConfiguration(..))
+import WebDriverPreCore.BiDi.Capabilities
+  ( Capabilities (..),
+    Capability (..),
+    ProxyConfiguration (..),
+  )
 import WebDriverPreCore.BiDi.Command
   ( Command (..),
     emptyCommand,
@@ -99,26 +100,24 @@ import WebDriverPreCore.BiDi.Command
 import WebDriverPreCore.BiDi.CoreTypes as BrowsingContext
   ( BrowsingContext (..),
     SharedId (..),
+    SubscriptionType (..),
     UserContext (..),
   )
 import WebDriverPreCore.BiDi.Emulation
   ( GeolocationCoordinates (..),
     GeolocationPositionError (..),
     ScreenOrientationNatural (..),
-    ScreenOrientationType (..),
     ScreenOrientationOverride (..),
+    ScreenOrientationType (..),
     SetGeolocationOverride (..),
     SetLocaleOverride (..),
     SetScreenOrientationOverride (..),
     SetTimezoneOverride (..),
   )
-
 import WebDriverPreCore.BiDi.Event
   ( Event (..),
-    SubscriptionType (..)
-  
+    Subscription (..)
   )
-
 import WebDriverPreCore.BiDi.Input
   ( PerformActions (..),
     ReleaseActions (..),
@@ -209,7 +208,7 @@ import WebDriverPreCore.BiDi.Session
     SessionSubscribeResult (..),
     SessionSubscriptionRequest (..),
     SessionUnsubscribe (..),
-    SubscriptionId (..)
+    SubscriptionId (..),
   )
 import WebDriverPreCore.BiDi.Storage
   ( DeleteCookies (..),
@@ -222,6 +221,6 @@ import WebDriverPreCore.BiDi.Storage
 import WebDriverPreCore.BiDi.WebExtensions
   ( WebExtensionID (..),
     WebExtensionInstall (..),
-    WebExtensionUninstall (..),
     WebExtensionResult (..),
+    WebExtensionUninstall (..),
   )

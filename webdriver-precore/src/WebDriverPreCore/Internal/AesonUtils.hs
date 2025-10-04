@@ -52,7 +52,7 @@ import Data.Aeson.Encode.Pretty (encodePretty)
 import Data.Aeson.Key (fromString)
 import Data.Aeson.KeyMap qualified as AKM
 import Data.Aeson.KeyMap qualified as KeyMap
-import Data.Aeson.Types (Pair, Parser, parse, parseMaybe, parseEither)
+import Data.Aeson.Types (Pair, Parser, parseMaybe, parseEither)
 import Data.ByteString.Lazy qualified as LBS
 import Data.Char (toLower)
 import Data.Either (Either, either)
@@ -70,7 +70,6 @@ import GHC.Show (Show (..))
 import System.IO (print)
 import Prelude
   ( Bool (..),
-    Either (..),
     Foldable (..),
     Maybe (..),
     error,

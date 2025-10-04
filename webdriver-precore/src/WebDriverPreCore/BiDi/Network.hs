@@ -61,14 +61,17 @@ where
 
 -- Data structures for network protocol
 
-import Data.Aeson (FromJSON (..), ToJSON (..), Value (..), object, withObject, (.:), (.=), withText)
+import Data.Aeson (FromArgs, FromJSON (..), ToJSON (..), Value (..), object, withObject, withText, (.:), (.=))
 import Data.Aeson.KeyMap qualified as KeyMap
-import Data.Aeson.Types (Parser)
-import Data.Text (Text)
+import Data.Aeson.Types (Parser, parse)
+import Data.Function ((&))
+import Data.Functor ((<&>))
+import Data.Text (Text, toLower)
 import GHC.Generics (Generic (to))
-import WebDriverPreCore.BiDi.CoreTypes (BrowsingContext, JSUInt, StringValue (..), UserContext)
+import WebDriverPreCore.BiDi.BrowsingContext (Navigation)
+import WebDriverPreCore.BiDi.CoreTypes (BrowsingContext, JSUInt, StringValue (..), SubscriptionType (..), UserContext)
 import WebDriverPreCore.BiDi.Script (StackTrace)
-import WebDriverPreCore.Internal.AesonUtils (addProps, enumCamelCase, objectOrThrow, toJSONOmitNothing)
+import WebDriverPreCore.Internal.AesonUtils (addProps, enumCamelCase, fromJSONCamelCase, objectOrThrow, parseJSONOmitNothing, toJSONOmitNothing)
 import Prelude
 
 -- ######### REMOTE #########
@@ -289,7 +292,7 @@ data SameSite
 
 instance FromJSON SameSite where
   parseJSON :: Value -> Parser SameSite
-  parseJSON = 
+  parseJSON =
     withText "SameSite" $ \case
       "strict" -> pure Strict
       "lax" -> pure Lax
@@ -311,6 +314,8 @@ data Header = MkHeader
     headerValue :: BytesValue
   }
   deriving (Show, Eq, Generic)
+
+instance FromJSON Header
 
 instance ToJSON Header where
   toJSON :: Header -> Value
@@ -459,6 +464,7 @@ newtype AddInterceptResult = MkAddInterceptResult
   deriving (Show, Eq, Generic)
 
 instance FromJSON AddInterceptResult where
+  parseJSON :: Value -> Parser AddInterceptResult
   parseJSON =
     withObject "AddInterceptResult" $ \obj ->
       MkAddInterceptResult <$> obj .: "intercept"
@@ -471,11 +477,117 @@ data NetworkEvent
   | ResponseStartedEvent ResponseStarted
   deriving (Show, Eq, Generic)
 
--- | AuthRequired parameters
-newtype AuthRequired = MkAuthRequired
-  { authRequiredResponse :: ResponseData
+-- data BaseNetworkEventParameters = MkBaseNetworkEventParameters
+--   { context :: BrowsingContext,
+--     isBlocked :: Bool,
+--     navigation :: Maybe Navigation,
+--     redirectCount :: JSUInt,
+--     request :: RequestData,
+--     timestamp :: JSUInt,
+--     intercepts :: Maybe [Intercept]
+--   }
+--   deriving (Show, Eq, Generic)
+
+-- instance FromJSON BaseNetworkEventParameters where
+--   parseJSON :: Value -> Parser BaseNetworkEventParameters
+--   parseJSON = parseJSONOmitNothing
+
+data HTTPMethod
+  = GET
+  | POST
+  | PUT
+  | DELETE
+  | HEAD
+  | OPTIONS
+  | PATCH
+  | TRACE
+  | CONNECT
+  deriving (Show, Eq, Generic)
+
+instance FromJSON HTTPMethod where
+  parseJSON :: Value -> Parser HTTPMethod
+  parseJSON = withText "Method" $ \t ->
+    case toLower t of
+      "get" -> pure GET
+      "post" -> pure POST
+      "put" -> pure PUT
+      "delete" -> pure DELETE
+      "head" -> pure HEAD
+      "options" -> pure OPTIONS
+      "patch" -> pure PATCH
+      "trace" -> pure TRACE
+      "connect" -> pure CONNECT
+      _ -> fail $ "Unknown HTTP method: " <> show t
+
+data RequestData = MkRequestData
+  { requestId :: RequestId,
+    url :: Text,
+    method :: HTTPMethod,
+    headers :: [Header],
+    cookies :: Maybe [Cookie],
+    headerSize :: JSUInt,
+    bodySize :: Maybe JSUInt,
+    destination :: Text,
+    initiatorType :: Maybe InitiatorType,
+    timings :: Maybe FetchTimingInfo
   }
   deriving (Show, Eq, Generic)
+
+instance FromJSON RequestData where
+  parseJSON :: Value -> Parser RequestData
+  parseJSON = parseJSONOmitNothing
+
+data FetchTimingInfo = MkFetchTimingInfo
+  { timeOrigin :: Double,
+    requestTime :: Double,
+    redirectStart :: Double,
+    redirectEnd :: Double,
+    fetchStart :: Double,
+    dnsStart :: Double,
+    dnsEnd :: Double,
+    connectStart :: Double,
+    connectEnd :: Double,
+    tlsStart :: Double,
+    requestStart :: Double,
+    responseStart :: Double,
+    responseEnd :: Double
+  }
+  deriving (Show, Eq, Generic)
+
+instance FromJSON FetchTimingInfo
+
+instance FromJSON NetworkEvent where
+  parseJSON :: Value -> Parser NetworkEvent
+  parseJSON val =
+    val
+      & ( withObject "NetworkEvent" $ \obj -> do
+            eventType <- obj .: "type"
+            case eventType of
+              NetworkAuthRequired -> parseVal AuthRequiredEvent
+              NetworkBeforeRequestSent -> parseVal BeforeRequestSentEvent
+              NetworkFetchError -> parseVal FetchError
+              NetworkResponseCompleted -> parseVal ResponseCompleted
+              NetworkResponseStarted -> parseVal ResponseStartedEvent
+              _ -> fail $ "Unknown NetworkEvent type: " <> show eventType
+        )
+    where
+      parseVal :: forall a b. (FromJSON a) => (a -> b) -> Parser b
+      parseVal = (<&>) (parseJSON val)
+
+-- | AuthRequired parameters
+data AuthRequired = MkAuthRequired
+  { context :: BrowsingContext,
+    isBlocked :: Bool,
+    navigation :: Maybe Navigation,
+    redirectCount :: JSUInt,
+    request :: RequestData,
+    timestamp :: JSUInt,
+    intercepts :: Maybe [Intercept],
+    response :: ResponseData
+  }
+  deriving (Show, Eq, Generic)
+
+instance FromJSON AuthRequired
 
 -- | Response data
 data ResponseData = MkResponseData
@@ -494,11 +606,15 @@ data ResponseData = MkResponseData
   }
   deriving (Show, Eq, Generic)
 
+instance FromJSON ResponseData where
+  parseJSON :: Value -> Parser ResponseData
+  parseJSON = parseJSONOmitNothing
+
 -- | Response content information
 newtype ResponseContent = MkResponseContent
   { contentSize :: JSUInt
   }
-  deriving (Show, Eq, Generic)
+  deriving (Show, Eq, Generic, FromJSON)
 
 data AuthChallenge = MkAuthChallenge
   { authScheme :: Text,
@@ -506,11 +622,24 @@ data AuthChallenge = MkAuthChallenge
   }
   deriving (Show, Eq, Generic)
 
+instance FromJSON AuthChallenge
+
 -- | BeforeRequestSent parameters
-newtype BeforeRequestSent = MkBeforeRequestSent
-  { beforeRequestInitiator :: Maybe Initiator
+data BeforeRequestSent = MkBeforeRequestSent
+  { context :: BrowsingContext,
+    isBlocked :: Bool,
+    navigation :: Maybe Navigation,
+    redirectCount :: JSUInt,
+    request :: RequestData,
+    timestamp :: JSUInt,
+    intercepts :: Maybe [Intercept],
+    beforeRequestInitiator :: Maybe Initiator
   }
   deriving (Show, Eq, Generic)
+
+instance FromJSON BeforeRequestSent where
+  parseJSON :: Value -> Parser BeforeRequestSent
+  parseJSON = parseJSONOmitNothing
 
 data Initiator = MkInitiator
   { initiatorColumnNumber :: Maybe Word,
@@ -521,31 +650,112 @@ data Initiator = MkInitiator
   }
   deriving (Show, Eq, Generic)
 
+instance FromJSON Initiator where
+  parseJSON :: Value -> Parser Initiator
+  parseJSON = parseJSONOmitNothing
+
 -- | Information about what initiated a request
 data InitiatorType
-  = Parser
+  = Audio
+  | Beacon
+  | Body
+  | CSS
+  | EarlyHints
+  | Embed
+  | Fetch
+  | Font
+  | Frame
+  | IFrame
+  | Image
+  | Img
+  | Input
+  | Link
+  | ObjectElement
+  | Ping
   | Script
-  | Preflight
+  | Track
+  | Video
+  | XMLHttpRequest
   | Other
   deriving (Show, Eq, Generic)
 
+instance FromJSON InitiatorType where
+  parseJSON :: Value -> Parser InitiatorType
+  parseJSON = withText "InitiatorType" $ \t ->
+    case toLower t of
+      "audio" -> pure Audio
+      "beacon" -> pure Beacon
+      "body" -> pure Body
+      "css" -> pure CSS
+      "early-hints" -> pure EarlyHints
+      "embed" -> pure Embed
+      "fetch" -> pure Fetch
+      "font" -> pure Font
+      "frame" -> pure Frame
+      "iframe" -> pure IFrame
+      "image" -> pure Image
+      "img" -> pure Img
+      "input" -> pure Input
+      "link" -> pure Link
+      "object" -> pure ObjectElement
+      "ping" -> pure Ping
+      "script" -> pure Script
+      "track" -> pure Track
+      "video" -> pure Video
+      "xmlhttprequest" -> pure XMLHttpRequest
+      "other" -> pure Other
+      _ -> fail $ "Unknown InitiatorType: " <> show t
+
 -- | FetchError parameters
-newtype FetchError = MkFetchError
-  { fetchErrorText :: Text
+data FetchError = MkFetchError
+  { context :: BrowsingContext,
+    isBlocked :: Bool,
+    navigation :: Maybe Navigation,
+    redirectCount :: JSUInt,
+    request :: RequestData,
+    timestamp :: JSUInt,
+    intercepts :: Maybe [Intercept],
+    errorText :: Text
   }
   deriving (Show, Eq, Generic)
 
+instance FromJSON FetchError where
+  parseJSON :: Value -> Parser FetchError
+  parseJSON = parseJSONOmitNothing
+
 -- | ResponseCompleted parameters
-newtype ResponseCompleted = MkResponseCompleted
-  { completedResponse :: ResponseData
+data ResponseCompleted = MkResponseCompleted
+  { context :: BrowsingContext,
+    isBlocked :: Bool,
+    navigation :: Maybe Navigation,
+    redirectCount :: JSUInt,
+    request :: RequestData,
+    timestamp :: JSUInt,
+    intercepts :: Maybe [Intercept],
+    completedResponse :: ResponseData
   }
   deriving (Show, Eq, Generic)
+
+instance FromJSON ResponseCompleted where
+  parseJSON :: Value -> Parser ResponseCompleted
+  parseJSON = parseJSONOmitNothing
 
 -- | ResponseStarted parameters
 data ResponseStarted = MkResponseStarted
-  { startedResponse :: ResponseData
+  { context :: BrowsingContext,
+    isBlocked :: Bool,
+    navigation :: Maybe Navigation,
+    redirectCount :: JSUInt,
+    request :: RequestData,
+    timestamp :: JSUInt,
+    intercepts :: Maybe [Intercept],
+    startedResponse :: ResponseData
   }
   deriving (Show, Eq, Generic)
+
+instance FromJSON ResponseStarted where
+  parseJSON :: Value -> Parser ResponseStarted
+  parseJSON = parseJSONOmitNothing
 
 newtype GetDataResult = MkGetDataResult
   { bytes :: BytesValue

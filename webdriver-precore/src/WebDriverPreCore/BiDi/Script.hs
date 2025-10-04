@@ -49,7 +49,7 @@ module WebDriverPreCore.BiDi.Script
     PreloadScript (..),
     RemoteReference (..),
     SharedReference (..),
-    RemoteObjectReference (..)
+    RemoteObjectReference (..),
   )
 where
 
@@ -61,15 +61,8 @@ import Data.Maybe (catMaybes)
 import Data.Text (Text, unpack)
 import Data.Vector qualified as V
 import GHC.Generics
-import WebDriverPreCore.BiDi.CoreTypes
-  ( BrowsingContext,
-    Handle,
-    InternalId (..),
-    JSUInt,
-    NodeRemoteValue (..), UserContext, SharedId,
-  )
-import WebDriverPreCore.BiDi.CoreTypes (StringValue(..))
-import WebDriverPreCore.Internal.AesonUtils (jsonToText, opt, toJSONOmitNothing, parseJSONOmitNothing)
+import WebDriverPreCore.BiDi.CoreTypes (BrowsingContext, Handle, InternalId (..), JSUInt, NodeRemoteValue (..), SharedId, StringValue (..), UserContext)
+import WebDriverPreCore.Internal.AesonUtils (jsonToText, opt, parseJSONOmitNothing, toJSONOmitNothing)
 import Prelude (Applicative (..), Bool (..), Double, Either (..), Eq (..), Maybe (..), MonadFail (..), Semigroup (..), Show (..), Traversable (..), mapM, realToFrac, ($), (.), (<$>))
 
 -- ######### REMOTE #########
@@ -333,6 +326,10 @@ data SharedReference = MkSharedReference
   }
   deriving (Show, Eq, Generic)
 
+instance FromJSON SharedReference where
+  parseJSON :: Value -> Parser SharedReference
+  parseJSON = parseJSONOmitNothing
+
 data RemoteObjectReference = MkRemoteObjectReference
   { handle :: Handle,
     shartedId :: Maybe SharedId,
@@ -363,15 +360,13 @@ newtype MappingLocalValue = MkMappingLocalValue [(Either LocalValue Text, LocalV
 
 -- | Map local value
 data MapLocalValue = MkMapLocalValue
-  { 
-    value :: MappingLocalValue
+  { value :: MappingLocalValue
   }
   deriving (Show, Eq, Generic)
 
 -- | Object local value
 data ObjectLocalValue = MkObjectLocalValue
-  { 
-    value :: MappingLocalValue
+  { value :: MappingLocalValue
   }
   deriving (Show, Eq, Generic)
 
@@ -384,8 +379,7 @@ data RegExpValue = MkRegExpValue
 
 -- | RegExp local value
 data RegExpLocalValue = MkRegExpLocalValue
-  { 
-    value :: RegExpValue
+  { value :: RegExpValue
   }
   deriving (Show, Eq, Generic)
 
@@ -485,10 +479,10 @@ instance FromJSON ContextTarget
 instance ToJSON ContextTarget where
   toJSON :: ContextTarget -> Value
   toJSON = genericToJSON defaultOptions {omitNothingFields = True}
-newtype Sandbox = MkSandbox Text 
-   deriving (Show, Eq)
-   deriving newtype (ToJSON, FromJSON)
-  
+
+newtype Sandbox = MkSandbox Text
+  deriving (Show, Eq)
+  deriving newtype (ToJSON, FromJSON)
 
 instance ToJSON Realm
 
@@ -572,6 +566,27 @@ data RealmInfo
   | Worklet {base :: BaseRealmInfo}
   deriving (Show, Eq, Generic)
 
+instance FromJSON RealmInfo where
+  parseJSON :: Value -> Parser RealmInfo
+  parseJSON = withObject "RealmInfo" $ \o -> do
+    typ <- o .: "type"
+    base <- BaseRealmInfo <$> o .: "realm" <*> o .: "origin"
+    case typ of
+      "window" -> do
+        context <- o .: "context"
+        sandbox <- o .:? "sandbox"
+        pure $ Window {base, context, sandbox}
+      "dedicated-worker" -> do
+        owners <- o .: "owners"
+        pure $ DedicatedWorker {base, owners}
+      "shared-worker" -> pure $ SharedWorker {base}
+      "service-worker" -> pure $ ServiceWorker {base}
+      "worker" -> pure $ Worker {base}
+      "paint-worklet" -> pure $ PaintWorklet {base}
+      "audio-worklet" -> pure $ AudioWorklet {base}
+      "worklet" -> pure $ Worklet {base}
+      _ -> fail $ "Unknown RealmInfo type: " <> unpack typ
+
 data BaseRealmInfo = BaseRealmInfo
   { realm :: Realm,
     origin :: Text
@@ -635,7 +650,26 @@ data ScriptEvent
       }
   | RealmCreatedEvent RealmInfo
   | RealmDestroyed Realm
-  deriving (Show, Generic)
+  deriving (Show, Eq, Generic)
+
+instance FromJSON ScriptEvent where
+  parseJSON :: Value -> Parser ScriptEvent
+  parseJSON = withObject "ScriptEvent" $ \o -> do
+    typ <- o .: "method"
+    case typ of
+      "script.message" -> do
+        params' <- o .: "params"
+        MessageEvent {method, params} <- pure MessageEvent {method = typ, params = params'}
+        pure $ MessageEvent {..}
+      "script.realmCreated" -> do
+        params <- o .: "params"
+        realmInfo <- parseJSON params
+        pure $ RealmCreatedEvent realmInfo
+      "script.realmDestroyed" -> do
+        params <- o .: "params"
+        realm <- params .: "realm"
+        pure $ RealmDestroyed realm
+      _ -> fail $ "Unknown ScriptEvent method: " <> unpack typ
 
 data Message = MkMessage
   { channel :: Channel,
@@ -644,8 +678,16 @@ data Message = MkMessage
   }
   deriving (Show, Eq, Generic)
 
--- Channel types
-newtype Channel = Channel Text deriving newtype (Show, Eq, ToJSON)
+instance FromJSON Message
+
+
+newtype Channel = Channel {channelId :: Text}
+  deriving newtype
+    ( Show,
+      Eq,
+      ToJSON,
+      FromJSON
+    )
 
 data Source = MkSource
   { realm :: Realm,
@@ -658,8 +700,7 @@ instance FromJSON Source where
   parseJSON = parseJSONOmitNothing
 
 newtype ChannelValue = MkChannelValue
-  { 
-    value :: ChannelProperties
+  { value :: ChannelProperties
   }
   deriving (Show, Eq, Generic)
 
@@ -674,7 +715,7 @@ data ChannelProperties = MkChannelProperties
 
 -- Simple newtypes
 -- ToJSON instances for missing command types
-instance ToJSON AddPreloadScript where 
+instance ToJSON AddPreloadScript where
   toJSON :: AddPreloadScript -> Value
   toJSON = toJSONOmitNothing
 
@@ -908,17 +949,15 @@ instance ToJSON DateLocalValue where
 
 instance ToJSON MappingLocalValue where
   toJSON :: MappingLocalValue -> Value
-  toJSON (MkMappingLocalValue pairs) = 
+  toJSON (MkMappingLocalValue pairs) =
     toJSON $ pairToArray <$> pairs
     where
       pairToArray :: (Either LocalValue Text, LocalValue) -> [Value]
       pairToArray (key, value) = [keyToJson key, toJSON value]
-      
+
       keyToJson :: Either LocalValue Text -> Value
       keyToJson (Left localVal) = toJSON localVal
       keyToJson (Right text) = toJSON text
-  
-  
 
 instance ToJSON MapLocalValue where
   toJSON :: MapLocalValue -> Value
@@ -953,7 +992,6 @@ instance ToJSON SetLocalValue where
       ]
 
 instance ToJSON AddPreloadScriptResult
-
 
 instance ToJSON GetRealmsResult
 
@@ -1003,7 +1041,6 @@ instance ToJSON RealmInfo where
 
 instance ToJSON BaseRealmInfo
 
-
 instance ToJSON StackTrace
 
 instance ToJSON StackFrame
@@ -1034,31 +1071,10 @@ instance FromJSON AddPreloadScriptResult
 
 instance FromJSON GetRealmsResult
 
-instance FromJSON RealmInfo where
-  parseJSON :: Value -> Parser RealmInfo
-  parseJSON = withObject "RealmInfo" $ \o -> do
-    typ <- o .: "type"
-    base <- BaseRealmInfo <$> o .: "realm" <*> o .: "origin"
-    case typ of
-      "window" -> do
-        context <- o .: "context"
-        sandbox <- o .:? "sandbox"
-        pure $ Window {base, context, sandbox}
-      "dedicated-worker" -> do
-        owners <- o .: "owners"
-        pure $ DedicatedWorker {base, owners}
-      "shared-worker" -> pure $ SharedWorker {base}
-      "service-worker" -> pure $ ServiceWorker {base}
-      "worker" -> pure $ Worker {base}
-      "paint-worklet" -> pure $ PaintWorklet {base}
-      "audio-worklet" -> pure $ AudioWorklet {base}
-      "worklet" -> pure $ Worklet {base}
-      _ -> fail $ "Unknown RealmInfo type: " <> unpack typ
-
-instance FromJSON BaseRealmInfo 
+instance FromJSON BaseRealmInfo
 
 instance FromJSON ExceptionDetails
 
 instance FromJSON StackTrace
 
-instance FromJSON StackFrame 
+instance FromJSON StackFrame

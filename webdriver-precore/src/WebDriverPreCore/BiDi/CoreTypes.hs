@@ -9,6 +9,7 @@ module WebDriverPreCore.BiDi.CoreTypes
     NodeRemoteValue (..),
     SharedId (..),
     StringValue (..),
+    SubscriptionType (..),
     UserContext (..),
   )
 where
@@ -140,3 +141,103 @@ instance FromJSON EmptyResult where
 instance ToJSON EmptyResult where
   toJSON :: EmptyResult -> Value
   toJSON (MkEmptyResult obj) = Object obj
+
+
+data SubscriptionType
+  = -- Log module
+    LogEntryAdded
+  | -- BrowsingContext module
+    BrowsingContextContextCreated
+  | BrowsingContextContextDestroyed
+  | BrowsingContextNavigationStarted
+  | BrowsingContextFragmentNavigated
+  | BrowsingContextHistoryUpdated
+  | BrowsingContextDomContentLoaded
+  | BrowsingContextLoad
+  | BrowsingContextDownloadWillBegin
+  | BrowsingContextDownloadEnd
+  | BrowsingContextNavigationAborted
+  | BrowsingContextNavigationCommitted
+  | BrowsingContextNavigationFailed
+  | BrowsingContextUserPromptClosed
+  | BrowsingContextUserPromptOpened
+  | -- Network module
+    NetworkAuthRequired
+  | NetworkBeforeRequestSent
+  | NetworkFetchError
+  | NetworkResponseCompleted
+  | NetworkResponseStarted
+  | -- Script module
+    ScriptMessage
+  | ScriptRealmCreated
+  | ScriptRealmDestroyed
+  | -- Input module
+    InputFileDialogOpened
+  deriving (Show, Eq, Generic)
+
+instance ToJSON SubscriptionType where
+  toJSON :: SubscriptionType -> Value
+  toJSON = \case
+    -- Log module
+    LogEntryAdded -> "log.entryAdded"
+    -- BrowsingContext module
+    BrowsingContextContextCreated -> "browsingContext.contextCreated"
+    BrowsingContextContextDestroyed -> "browsingContext.contextDestroyed"
+    BrowsingContextNavigationStarted -> "browsingContext.navigationStarted"
+    BrowsingContextFragmentNavigated -> "browsingContext.fragmentNavigated"
+    BrowsingContextHistoryUpdated -> "browsingContext.historyUpdated"
+    BrowsingContextDomContentLoaded -> "browsingContext.domContentLoaded"
+    BrowsingContextLoad -> "browsingContext.load"
+    BrowsingContextDownloadWillBegin -> "browsingContext.downloadWillBegin"
+    BrowsingContextDownloadEnd -> "browsingContext.downloadEnd"
+    BrowsingContextNavigationAborted -> "browsingContext.navigationAborted"
+    BrowsingContextNavigationCommitted -> "browsingContext.navigationCommitted"
+    BrowsingContextNavigationFailed -> "browsingContext.navigationFailed"
+    BrowsingContextUserPromptClosed -> "browsingContext.userPromptClosed"
+    BrowsingContextUserPromptOpened -> "browsingContext.userPromptOpened"
+    -- Network module
+    NetworkAuthRequired -> "network.authRequired"
+    NetworkBeforeRequestSent -> "network.beforeRequestSent"
+    NetworkFetchError -> "network.fetchError"
+    NetworkResponseCompleted -> "network.responseCompleted"
+    NetworkResponseStarted -> "network.responseStarted"
+    -- Script module
+    ScriptMessage -> "script.message"
+    ScriptRealmCreated -> "script.realmCreated"
+    ScriptRealmDestroyed -> "script.realmDestroyed"
+    -- Input module
+    InputFileDialogOpened -> "input.fileDialogOpened"
+
+instance FromJSON SubscriptionType where
+  parseJSON :: Value -> Parser SubscriptionType
+  parseJSON = \case
+    -- Log module
+    String "log.entryAdded" -> pure LogEntryAdded
+    -- BrowsingContext module
+    String "browsingContext.contextCreated" -> pure BrowsingContextContextCreated
+    String "browsingContext.contextDestroyed" -> pure BrowsingContextContextDestroyed
+    String "browsingContext.navigationStarted" -> pure BrowsingContextNavigationStarted
+    String "browsingContext.fragmentNavigated" -> pure BrowsingContextFragmentNavigated
+    String "browsingContext.historyUpdated" -> pure BrowsingContextHistoryUpdated
+    String "browsingContext.domContentLoaded" -> pure BrowsingContextDomContentLoaded
+    String "browsingContext.load" -> pure BrowsingContextLoad
+    String "browsingContext.downloadWillBegin" -> pure BrowsingContextDownloadWillBegin
+    String "browsingContext.downloadEnd" -> pure BrowsingContextDownloadEnd
+    String "browsingContext.navigationAborted" -> pure BrowsingContextNavigationAborted
+    String "browsingContext.navigationCommitted" -> pure BrowsingContextNavigationCommitted
+    String "browsingContext.navigationFailed" -> pure BrowsingContextNavigationFailed
+    String "browsingContext.userPromptClosed" -> pure BrowsingContextUserPromptClosed
+    String "browsingContext.userPromptOpened" -> pure BrowsingContextUserPromptOpened
+    -- Network module
+    String "network.authRequired" -> pure NetworkAuthRequired
+    String "network.beforeRequestSent" -> pure NetworkBeforeRequestSent
+    String "network.fetchError" -> pure NetworkFetchError
+    String "network.responseCompleted" -> pure NetworkResponseCompleted
+    String "network.responseStarted" -> pure NetworkResponseStarted
+    -- Script module
+    String "script.message" -> pure ScriptMessage
+    String "script.realmCreated" -> pure ScriptRealmCreated
+    String "script.realmDestroyed" -> pure ScriptRealmDestroyed
+    -- Input module
+    String "input.fileDialogOpened" -> pure InputFileDialogOpened
+    _ -> fail "Invalid SubscriptionType"

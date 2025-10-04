@@ -21,15 +21,17 @@ module WebDriverPreCore.BiDi.Input
   )
 where
 
-import Data.Aeson (ToJSON (..), Value (Object), object, (.=))
+import Data.Aeson (ToJSON (..), Value (Object), object, (.=), FromJSON (..))
 import Data.Aeson.KeyMap qualified
 import Data.Maybe (fromMaybe)
 import Data.Text (Text)
 import GHC.Generics (Generic)
 import WebDriverPreCore.BiDi.Script qualified as Script
-import WebDriverPreCore.Internal.AesonUtils (toJSONOmitNothing)
+import WebDriverPreCore.Internal.AesonUtils (toJSONOmitNothing, parseJSONOmitNothing)
 import Prelude (Bool, Double, Eq, Int, Maybe, Show, ($), (++))
 import WebDriverPreCore.BiDi.CoreTypes (BrowsingContext(..))
+import Data.Aeson.Types (Parser)
+import WebDriverPreCore.BiDi.Script (SharedReference)
 
 -- ######### Local #########
 
@@ -342,15 +344,19 @@ data FileDialogOpened = MkFileDialogOpened
   }
   deriving (Show, Eq, Generic)
 
-instance ToJSON FileDialogOpened
+instance FromJSON FileDialogOpened
 
 -- ######### Local #########
 
 data FileDialogInfo = MkFileDialogInfo
   { context :: BrowsingContext,
-    element :: Maybe Script.SharedReference,
+    element :: Maybe SharedReference,
     multiple :: Bool
   }
   deriving (Show, Eq, Generic)
+
+instance FromJSON FileDialogInfo where
+  parseJSON :: Value -> Parser FileDialogInfo
+  parseJSON = parseJSONOmitNothing
 
 instance ToJSON FileDialogInfo
