@@ -65,6 +65,8 @@ import WebDriverPreCore.BiDi.CoreTypes (BrowsingContext, Handle, InternalId (..)
 import WebDriverPreCore.Internal.AesonUtils (jsonToText, opt, parseJSONOmitNothing, toJSONOmitNothing)
 import Prelude (Applicative (..), Bool (..), Double, Either (..), Eq (..), Maybe (..), MonadFail (..), Semigroup (..), Show (..), Traversable (..), mapM, realToFrac, ($), (.), (<$>))
 
+-- TODO :: amke all imports exports explict
+
 -- ######### REMOTE #########
 
 -- AddPreloadScript command
@@ -493,17 +495,6 @@ instance ToJSON Target where
     RealmTarget r -> toJSON r
     ContextTarget ct -> toJSON ct
 
-{-
-
-script.EvaluateParameters = {
-  expression: text,
-  target: script.Target,
-  awaitPromise: bool,
-  ? resultOwnership: script.ResultOwnership,
-  ? serializationOptions: script.SerializationOptions,
-  ? userActivation: bool .default false,
-}
--}
 -- Evaluate command
 data Evaluate = MkEvaluate
   { expression :: Text,
