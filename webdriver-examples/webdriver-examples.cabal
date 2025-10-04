@@ -147,10 +147,14 @@ test-suite driver-demo-e2e
     , BiDi.Demos.BrowsingContextEventDemos
     , BiDi.Demos.EmulationDemos
     , BiDi.Demos.InputDemos
+    , BiDi.Demos.InputEventDemos
+    , BiDi.Demos.LogEventDemos
     , BiDi.Demos.NetworkDemos
+    , BiDi.Demos.NetworkEventDemos
     , BiDi.Demos.NetworkSupportTest
     , BiDi.Demos.OtherDemos
     , BiDi.Demos.ScriptDemos
+    , BiDi.Demos.ScriptEventDemos
     , BiDi.Demos.SessionDemos
     , BiDi.Demos.StorageDemos
     , BiDi.Demos.WebExtensionDemos
