@@ -143,7 +143,7 @@ sessionSubscribeDemo =
               browsingContexts = Nothing,
               userContexts = Nothing
             }
-      sub1 <- sessionSubScribe globalSubscription
+      sub1 <- sessionSubscribe globalSubscription
       logShow "Global subscription" sub1
       pause
 
@@ -153,7 +153,7 @@ sessionSubscribeDemo =
               browsingContexts = Just [bc],
               userContexts = Nothing
             }
-      sub2 <- sessionSubScribe contextSubscription
+      sub2 <- sessionSubscribe contextSubscription
       logShow "Context-specific subscription" sub2
       pause
 
@@ -178,7 +178,7 @@ sessionSubscribeDemo =
               browsingContexts = Nothing,
               userContexts = Just [currentUserContext]
             }
-      sub3 <- sessionSubScribe userContextSubscription
+      sub3 <- sessionSubscribe userContextSubscription
       logShow "User context subscription" sub3
       pause
 
@@ -195,7 +195,7 @@ sessionUnsubscribeDemo =
               browsingContexts = Nothing,
               userContexts = Nothing
             }
-      subResult <- sessionSubScribe subscription
+      subResult <- sessionSubscribe subscription
       logShow "Created subscription" subResult
       pause
 
@@ -213,7 +213,7 @@ sessionUnsubscribeDemo =
               browsingContexts = Nothing,
               userContexts = Nothing
             }
-      sub2 <- sessionSubScribe contextSubscription
+      sub2 <- sessionSubscribe contextSubscription
       logShow "Context-specific subscription" sub2
       pause
 
@@ -352,7 +352,7 @@ sessionCompleteLifecycleDemo =
               browsingContexts = Nothing,
               userContexts = Nothing
             }
-      subResult <- sessionSubScribe subscription
+      subResult <- sessionSubscribe subscription
       logShow "Event subscription" subResult
       pause
 

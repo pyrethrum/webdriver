@@ -11,20 +11,21 @@ import WebDriverPreCore.BiDi.Network (NetworkEvent (..))
 import WebDriverPreCore.BiDi.Script (ScriptEvent (..))
 import Prelude
 
+
 data Subscription m where
   SingleSubscription ::
     forall m r.
     (FromJSON r) =>
     { subscriptionType :: SubscriptionType,
-      browsingContexts :: Maybe [BrowsingContext],
-      userContexts :: Maybe [UserContext],
+      browsingContexts :: [BrowsingContext],
+      userContexts :: [UserContext],
       action :: r -> m ()
     } ->
     Subscription m
   MultiSubscription ::
     { subscriptionTypes :: Set SubscriptionType,
-      browsingContexts :: Maybe [BrowsingContext],
-      userContexts :: Maybe [UserContext],
+      browsingContexts :: [BrowsingContext],
+      userContexts :: [UserContext],
       nAction :: Event -> m ()
     } ->
     Subscription m

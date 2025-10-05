@@ -3,7 +3,7 @@ module WebDriverPreCore.BiDi.API
     sessionNew,
     sessionStatus,
     sessionEnd,
-    sessionSubScribe,
+    sessionSubscribe,
     sessionUnsubscribe,
 
     -- * BrowsingContext Commands
@@ -177,8 +177,8 @@ sessionStatus = emptyCommand "session.status"
 sessionEnd :: Command Object Object
 sessionEnd = emptyCommand "session.end"
 
-sessionSubScribe :: SessionSubscriptionRequest -> Command SessionSubscriptionRequest SessionSubscribeResult
-sessionSubScribe = mkCommand "session.subscribe"
+sessionSubscribe :: SessionSubscriptionRequest -> Command SessionSubscriptionRequest SessionSubscribeResult
+sessionSubscribe = mkCommand "session.subscribe"
 
 sessionUnsubscribe :: SessionUnsubscribe -> Command SessionUnsubscribe Object
 sessionUnsubscribe = mkCommand "session.unsubscribe"
@@ -346,15 +346,15 @@ webExtensionUninstall = mkCommand "webExtension.uninstall"
 -- ############## Subscriptions (Events) ##############
 
 subscribeLogEntryAdded ::
-  Maybe [BrowsingContext] ->
-  Maybe [UserContext] ->
+  [BrowsingContext] ->
+  [UserContext] ->
   (LogEntry -> m ()) ->
   Subscription m
 subscribeLogEntryAdded = SingleSubscription LogEntryAdded
 
 subscribeBrowserContextCreated ::
-  Maybe [BrowsingContext] ->
-  Maybe [UserContext] ->
+  [BrowsingContext] ->
+  [UserContext] ->
   (Info -> m ()) ->
   Subscription m
 subscribeBrowserContextCreated = SingleSubscription BrowsingContextContextCreated
