@@ -4,29 +4,27 @@ import Data.Aeson (FromJSON (..))
 import Data.Set (Set)
 import GHC.Generics (Generic)
 import WebDriverPreCore.BiDi.BrowsingContext (BrowsingContextEvent (..))
-import WebDriverPreCore.BiDi.CoreTypes (SubscriptionType)
+import WebDriverPreCore.BiDi.CoreTypes (BrowsingContext, SubscriptionType, UserContext)
 import WebDriverPreCore.BiDi.Input (FileDialogOpened)
 import WebDriverPreCore.BiDi.Log (LogEntry)
 import WebDriverPreCore.BiDi.Network (NetworkEvent (..))
 import WebDriverPreCore.BiDi.Script (ScriptEvent (..))
 import Prelude
 
-mkSubscription :: forall m r. (FromJSON r) => SubscriptionType -> (r -> m ()) -> Subscription m
-mkSubscription = MkSubscription
-
-mkSubscriptionN :: Set SubscriptionType -> (Event -> m ()) -> Subscription m
-mkSubscriptionN = MkNSubscription
-
 data Subscription m where
-  MkSubscription ::
+  SingleSubscription ::
     forall m r.
     (FromJSON r) =>
-    { subscription :: SubscriptionType,
+    { subscriptionType :: SubscriptionType,
+      browsingContexts :: Maybe [BrowsingContext],
+      userContexts :: Maybe [UserContext],
       action :: r -> m ()
     } ->
     Subscription m
-  MkNSubscription ::
-    { subscriptions :: Set SubscriptionType,
+  MultiSubscription ::
+    { subscriptionTypes :: Set SubscriptionType,
+      browsingContexts :: Maybe [BrowsingContext],
+      userContexts :: Maybe [UserContext],
       nAction :: Event -> m ()
     } ->
     Subscription m
@@ -43,4 +41,4 @@ data Event
       Generic
     )
 
-instance FromJSON Event 
+instance FromJSON Event

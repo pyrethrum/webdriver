@@ -72,21 +72,97 @@ module WebDriverPreCore.BiDi.API
 
     -- * Subscriptions
     subscribeLogEntryAdded,
-    subscribeBrowserContextCreated
+    subscribeBrowserContextCreated,
   )
 where
 
-import WebDriverPreCore.BiDi.Protocol
 import Data.Aeson (Object)
-import WebDriverPreCore.BiDi.Log
+import Data.Maybe (Maybe)
 import WebDriverPreCore.BiDi.Event
-
+import WebDriverPreCore.BiDi.Log
+import WebDriverPreCore.BiDi.Protocol
+    ( SubscriptionType(..),
+      UserContext,
+      BrowsingContext,
+      Capabilities,
+      emptyCommand,
+      mkCommand,
+      Command,
+      AddPreloadScript,
+      AddPreloadScriptResult,
+      CallFunction,
+      Disown,
+      Evaluate,
+      EvaluateResult,
+      GetRealms,
+      GetRealmsResult,
+      RemovePreloadScript,
+      Activate,
+      CaptureScreenshot,
+      CaptureScreenshotResult,
+      Close,
+      Create,
+      GetTree,
+      GetTreeResult,
+      HandleUserPrompt,
+      Info,
+      LocateNodes,
+      LocateNodesResult,
+      Navigate,
+      NavigateResult,
+      Print,
+      PrintResult,
+      Reload,
+      SetViewport,
+      TraverseHistory,
+      TraverseHistoryResult,
+      PerformActions,
+      ReleaseActions,
+      SetFiles,
+      AddDataCollector,
+      AddDataCollectorResult,
+      AddIntercept,
+      AddInterceptResult,
+      ContinueRequest,
+      ContinueResponse,
+      ContinueWithAuth,
+      DisownData,
+      FailRequest,
+      GetData,
+      GetDataResult,
+      ProvideResponse,
+      RemoveDataCollector,
+      RemoveIntercept,
+      SetCacheBehavior,
+      DeleteCookies,
+      DeleteCookiesResult,
+      GetCookies,
+      GetCookiesResult,
+      SetCookie,
+      SetCookieResult,
+      ClientWindowInfo,
+      CreateUserContext,
+      GetClientWindowsResult,
+      GetUserContextsResult,
+      RemoveUserContext,
+      SetClientWindowState,
+      SetGeolocationOverride,
+      SetLocaleOverride,
+      SetScreenOrientationOverride,
+      SetTimezoneOverride,
+      WebExtensionInstall,
+      WebExtensionResult,
+      WebExtensionUninstall,
+      SessionSubscribeResult,
+      SessionStatusResult,
+      SessionNewResult,
+      SessionUnsubscribe,
+      SessionSubscriptionRequest )
 
 -- TODO: generic commands
 -- TODO: generic subscribe
 -- TODO: generic unsubscribe
 -- TODO: generic event
-
 
 --- ############## Commands ##############
 
@@ -269,8 +345,16 @@ webExtensionUninstall = mkCommand "webExtension.uninstall"
 
 -- ############## Subscriptions (Events) ##############
 
-subscribeLogEntryAdded :: (LogEntry -> m ()) -> Subscription m
-subscribeLogEntryAdded  = mkSubscription LogEntryAdded
+subscribeLogEntryAdded ::
+  Maybe [BrowsingContext] ->
+  Maybe [UserContext] ->
+  (LogEntry -> m ()) ->
+  Subscription m
+subscribeLogEntryAdded = SingleSubscription LogEntryAdded
 
-subscribeBrowserContextCreated :: (Info -> m ()) -> Subscription m
-subscribeBrowserContextCreated = mkSubscription BrowsingContextContextCreated
+subscribeBrowserContextCreated ::
+  Maybe [BrowsingContext] ->
+  Maybe [UserContext] ->
+  (Info -> m ()) ->
+  Subscription m
+subscribeBrowserContextCreated = SingleSubscription BrowsingContextContextCreated

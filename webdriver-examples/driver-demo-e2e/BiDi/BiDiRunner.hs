@@ -19,7 +19,7 @@ import Http.HttpAPI qualified as Caps (Capabilities (..))
 import IOUtils (DemoUtils, Logger (..), bidiDemoUtils, mkLogger)
 import Network.WebSockets (Connection, receiveData, runClient, sendTextData)
 import RuntimeConst (httpCapabilities, httpFullCapabilities)
-import UnliftIO (AsyncCancelled, bracket, throwIO, waitAnyCatch)
+import UnliftIO (AsyncCancelled, bracket, catchAny, throwIO, waitAnyCatch)
 import UnliftIO.Async (Async, async, cancel)
 import UnliftIO.STM
 import WebDriverPreCore.BiDi.API qualified as P
@@ -96,18 +96,21 @@ import WebDriverPreCore.BiDi.Protocol
     SetTimezoneOverride,
     SetViewport,
     SubscriptionId,
+    SubscriptionType(..),
     TraverseHistory,
     TraverseHistoryResult,
     UserContext,
     WebExtensionInstall,
     WebExtensionResult,
-    WebExtensionUninstall, SubscriptionType,
+    WebExtensionUninstall,
   )
 import WebDriverPreCore.BiDi.Response (JSONDecodeError, MatchedResponse (..), ResponseObject (..), decodeResponse, displayResponseError, parseResponse)
+import WebDriverPreCore.BiDi.Session (SubscriptionId (..))
 import WebDriverPreCore.Http qualified as Http
 import WebDriverPreCore.Internal.AesonUtils (jsonToText, objToText, parseThrow)
 import WebDriverPreCore.Internal.Utils (txt)
 import Prelude hiding (getLine, log, null, print, putStrLn)
+import WebDriverPreCore.BiDi.Session (SessionSubscriptionRequest(..))
 
 -- TODO: geric command
 -- TODO: handle event
@@ -187,8 +190,7 @@ data BiDiActions = MkCommands
 mkCommands :: BiDiMethods -> BiDiActions
 mkCommands client =
   MkCommands
-    { 
-      -- ########## COMMANDS ##########
+    { -- ########## COMMANDS ##########
       -- Session commands
       sessionNew = send . P.sessionNew,
       sessionStatus = send P.sessionStatus,
@@ -242,7 +244,7 @@ mkCommands client =
       scriptCallFunction = send . P.scriptCallFunction,
       scriptDisown = send . P.scriptDisown,
       scriptEvaluate = send . P.scriptEvaluate,
-      scriptEvaluateNoWait = sendCommandNoWait client . P.scriptEvaluate, 
+      scriptEvaluateNoWait = sendCommandNoWait client . P.scriptEvaluate,
       scriptGetRealms = send . P.scriptGetRealms,
       scriptRemovePreloadScript = send . P.scriptRemovePreloadScript,
       -- Storage commands
@@ -252,7 +254,6 @@ mkCommands client =
       -- WebExtension commands
       webExtensionInstall = send . P.webExtensionInstall,
       webExtensionUninstall = send . P.webExtensionUninstall
-
       -- ########## EVENTS ##########
     }
   where
@@ -301,7 +302,7 @@ sendCommand m@MkBiDiMethods {getNext} command = do
           )
 
 -- sendSubscription :: BiDiMethods -> Subscription IO -> IO ()
--- sendSubscription MkBiDiMethods{subscribe} =  \case 
+-- sendSubscription MkBiDiMethods{subscribe} =  \case
 --   sub@MkSubscription {subscription = subscriptionId} -> do
 --     let subed = MkSubscribed {subscriptionId, subscription = sub}
 --     subscribe subed
@@ -363,7 +364,7 @@ data Channels = MkChannels
     eventChan :: TChan Object,
     logChan :: TChan Text,
     counterVar :: TVar JSUInt,
-    subscriptions :: TVar [Subscribed IO]
+    subscriptions :: TVar [ActiveSubscription IO]
   }
 
 mkChannels :: IO Channels
@@ -388,29 +389,91 @@ mkBiDIMethods :: Channels -> BiDiMethods
 mkBiDIMethods c =
   MkBiDiMethods
     { nextId = mkAtomicCounter c.counterVar,
-      send = \a -> do
-        -- make strict so serialisation errors come from here and not in the logger
-        let !json = toJSON a
-        atomically . writeTChan c.sendChan $ json,
+      send,
       getNext = atomically $ readTChan c.receiveChan,
-      subscribe = atomically . modifyTVar' c.subscriptions . (:),
+      subscribe = undefined, -- atomically . modifyTVar' c.subscriptions . (:),
       unsubscribe = \sid -> atomically . modifyTVar' c.subscriptions . filter $ \s -> s.subscriptionId /= sid
     }
+  where
+    send :: forall a. (ToJSON a) => a -> IO ()
+    send a = do
+      -- make strict so serialisation errors come from here and not in the logger
+      let !json = toJSON a
+      atomically . writeTChan c.sendChan $ json
 
-subscribe ::  TVar [Subscribed IO] -> Subscription IO -> IO SubscriptionId
-subscribe allSubs sub = error "TODO"
+data SubscriptionContexts = MkSubscriptionContexts
+  { browsingContexts :: Maybe [BrowsingContext],
+    userContexts :: Maybe [UserContext]
+  }
+  deriving (Show, Eq)
 
--- | Subscribe to events with a filter function
-subscribe :: Subscribed IO -> TVar [Subscribed IO] -> STM (TVar [Subscribed IO])
-subscribe subscribed subscriptions = do
-  modifyTVar' subscriptions (subscribed :)
-  pure subscriptions
-  
-data Subscribed m = MkSubscribed
+subscribe ::
+  TVar [ActiveSubscription IO] ->
+  (forall a. (ToJSON a, Show a) => a -> IO ()) ->
+  Maybe [BrowsingContext] ->
+  Maybe [UserContext] ->
+  Subscription IO ->
+  IO SubscriptionId
+subscribe allSubs send browsingContexts userContexts subscription = do
+  -- subscribe with a dummy id first
+  atomically $ subscribeWithId dummySubId
+  catchAny
+    ( do
+        -- send the subscription command
+        -- sessionSubScribe
+        -- subId <- send subscription
+        -- -- swap in the real id
+        -- atomically $ do
+        --   unsubscribe' dummySubId
+        --   subscribeWithId subId
+        -- pure subId
+        undefined
+    )
+    ( \e -> do
+        -- on error, remove the dummy subscription
+        atomically $ unsubscribe' dummySubId
+        throwIO e
+    )
+  where
+    dummySubId = MkSubscriptionId "dummy"
+
+    subscribeWithId :: SubscriptionId -> STM ()
+    subscribeWithId subId =
+      modifyTVar' allSubs (MkActiveSubscription subId subscription :)
+
+    unsubscribe' :: SubscriptionId -> STM ()
+    unsubscribe' = unsubscribe allSubs
+
+    subscribeParams :: SessionSubscriptionRequest
+    subscribeParams =  MkSessionSubscriptionRequest {
+      events  = case subscription of 
+        ,
+      browsingContexts,
+      userContexts 
+    }
+
+
+-- swapInTrueSub :: SubscriptionId -> STM ()
+-- MkNSubscription {subscriptions, nAction} -> do
+--   let subed = MkSubscribed {subscriptionId = 0, subscription = MkNSubscription {subscriptions, nAction}}
+--   atomically . modifyTVar' allSubs $ (subed :)
+--   pure 0
+
+-- -- | Subscribe to events with a filter function
+-- subscribe :: Subscribed IO -> TVar [Subscribed IO] -> STM (TVar [Subscribed IO])
+-- subscribe subscribed subscriptions = do
+--   modifyTVar' subscriptions (subscribed :)
+--   pure subscriptions
+
+unsubscribe :: TVar [ActiveSubscription IO] -> SubscriptionId -> STM ()
+unsubscribe allSubs subId = 
+  modifyTVar' allSubs (filter ((/=) subId . (.subscriptionId)))
+
+
+data ActiveSubscription m = MkActiveSubscription
   { subscriptionId :: SubscriptionId,
     subscription :: Subscription m
   }
-
 
 -- | Parse incoming WebSocket message to determine if it's an event or command response
 -- For now, we'll use a simple heuristic: messages with "id" are responses, others are events
@@ -532,7 +595,7 @@ instance FromJSON EventProps where
       <*> o .: "method"
       <*> o .: "params"
 
-applySubscriptions :: (Text -> IO ()) -> Object -> TVar [Subscribed IO] -> IO ()
+applySubscriptions :: (Text -> IO ()) -> Object -> TVar [ActiveSubscription IO] -> IO ()
 applySubscriptions log obj subscriptions = do
   eventProps@MkEventProps {msgType, method, params} <-
     parseThrow "Could not parse event properties" (Object obj)
@@ -547,15 +610,15 @@ applySubscriptions log obj subscriptions = do
   subs <- readTVarIO subscriptions
   traverse_ (applySubscription method params) subs
 
-applySubscription :: SubscriptionType -> Value -> Subscribed IO -> IO ()
+applySubscription :: SubscriptionType -> Value -> ActiveSubscription IO -> IO ()
 applySubscription subType val sub =
   case sub.subscription of
-    MkSubscription {subscription, action} ->
-      when (subscription == subType) $ do
-        prms <- parseThrow ("could not parse event params for " <> txt subscription) val
+    SingleSubscription {subscriptionType, action} ->
+      when (subscriptionType == subType) $ do
+        prms <- parseThrow ("could not parse event params for " <> txt subscriptionType) val
         action prms
-    MkNSubscription {subscriptions, nAction} -> do
-      when (subType `elem` subscriptions) $ do
+    MultiSubscription {subscriptionTypes, nAction} -> do
+      when (subType `elem` subscriptionTypes) $ do
         prms <- parseThrow ("could not parse event params for " <> txt subType) val
         nAction prms
 

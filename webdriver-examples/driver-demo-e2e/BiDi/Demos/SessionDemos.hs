@@ -140,7 +140,7 @@ sessionSubscribeDemo =
       logTxt "Test 1: Subscribe to browsing context events globally"
       let globalSubscription = MkSessionSubscriptionRequest
             { events = [BrowsingContextContextCreated, BrowsingContextContextDestroyed],
-              contexts = Nothing,
+              browsingContexts = Nothing,
               userContexts = Nothing
             }
       sub1 <- sessionSubScribe globalSubscription
@@ -150,7 +150,7 @@ sessionSubscribeDemo =
       logTxt "Test 2: Subscribe to network events for specific context"
       let contextSubscription = MkSessionSubscriptionRequest
             { events = [NetworkFetchError, NetworkResponseCompleted],
-              contexts = Just [bc],
+              browsingContexts = Just [bc],
               userContexts = Nothing
             }
       sub2 <- sessionSubScribe contextSubscription
@@ -175,7 +175,7 @@ sessionSubscribeDemo =
       
       let userContextSubscription = MkSessionSubscriptionRequest
             { events = [ScriptRealmCreated],
-              contexts = Nothing,
+              browsingContexts = Nothing,
               userContexts = Just [currentUserContext]
             }
       sub3 <- sessionSubScribe userContextSubscription
@@ -192,7 +192,7 @@ sessionUnsubscribeDemo =
       logTxt "First, create a subscription to demonstrate unsubscription"
       let subscription = MkSessionSubscriptionRequest
             { events = [BrowsingContextContextCreated],
-              contexts = Nothing,
+              browsingContexts = Nothing,
               userContexts = Nothing
             }
       subResult <- sessionSubScribe subscription
@@ -210,7 +210,7 @@ sessionUnsubscribeDemo =
       logTxt "Now, Subscribe to network events for specific context"
       let contextSubscription = MkSessionSubscriptionRequest
             { events = [NetworkResponseCompleted],
-              contexts = Nothing,
+              browsingContexts = Nothing,
               userContexts = Nothing
             }
       sub2 <- sessionSubScribe contextSubscription
@@ -349,7 +349,7 @@ sessionCompleteLifecycleDemo =
       logTxt "Step 2: Subscribe to key events"
       let subscription = MkSessionSubscriptionRequest
             { events = [BrowsingContextContextCreated, BrowsingContextNavigationStarted],
-              contexts = Nothing,
+              browsingContexts = Nothing,
               userContexts = Nothing
             }
       subResult <- sessionSubScribe subscription

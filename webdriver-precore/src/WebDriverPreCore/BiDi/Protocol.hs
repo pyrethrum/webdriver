@@ -1,6 +1,6 @@
 module WebDriverPreCore.BiDi.Protocol
   ( -- * Re-exported modules
-    module BrowsingContext,
+    module CoreTypes,
     module WebDriverPreCore.BiDi.Browser,
     module WebDriverPreCore.BiDi.BrowsingContext,
     module WebDriverPreCore.BiDi.Capabilities,
@@ -97,7 +97,7 @@ import WebDriverPreCore.BiDi.Command
     emptyCommand,
     mkCommand,
   )
-import WebDriverPreCore.BiDi.CoreTypes as BrowsingContext
+import WebDriverPreCore.BiDi.CoreTypes as CoreTypes
   ( BrowsingContext (..),
     SharedId (..),
     SubscriptionType (..),

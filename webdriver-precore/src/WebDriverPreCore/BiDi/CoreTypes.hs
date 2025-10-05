@@ -123,13 +123,12 @@ newtype SharedId = MkSharedId
   deriving (Show, Eq, Generic)
   deriving newtype (ToJSON, FromJSON)
 
-
--- work backwards from use case 
+-- work backwards from use case
 -- for all return types have the option of bringing back whole value
 -- TypeOnly, Value Only, TypeAndValue
 -- return type should not need empty return types:
 -- TODO: need 3 newtypes EmptyParams, EmptyResult, and Extensible ~ update API accordingly
--- TODO: revisit and demos for setExtended 
+-- TODO: revisit and demos for setExtended
 -- TODO: getExtended - maybe just return value as well
 
 newtype EmptyResult = MkEmptyResult {extensible :: Object} deriving (Show, Eq, Generic)
@@ -142,12 +141,10 @@ instance ToJSON EmptyResult where
   toJSON :: EmptyResult -> Value
   toJSON (MkEmptyResult obj) = Object obj
 
-
 data SubscriptionType
   = -- Log module
     LogEntryAdded
-  | -- BrowsingContext module
-    BrowsingContextContextCreated
+  | BrowsingContextContextCreated
   | BrowsingContextContextDestroyed
   | BrowsingContextNavigationStarted
   | BrowsingContextFragmentNavigated
