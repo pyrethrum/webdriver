@@ -261,7 +261,7 @@ mkCommands client =
       webExtensionUninstall = send . P.webExtensionUninstall,
       -- ########## EVENTS ##########
 
-      subscribeLogEntryAdded = subscribe . P.subscribeLogEntryAdded
+      subscribeLogEntryAdded = \bc uc a -> subscribe $ P.subscribeLogEntryAdded bc uc a
       -- subscribeLogEntryAdded browsingContexts userContexts action =
       --   subscribe client.subscribe browsingContexts userContexts $
       --     SingleSubscription {subscriptionType = LogEntryAdded, action}
@@ -270,10 +270,11 @@ mkCommands client =
     send :: forall c r. (FromJSON r, ToJSON c, Show c) => Command c r -> IO r
     send = sendCommand client
 
+    sessionSubscribe :: SessionSubscriptionRequest -> IO SessionSubscribeResult
     sessionSubscribe = send . P.sessionSubscribe
 
-    subscribe :: forall a. ([BrowsingContext] -> [UserContext] -> (a -> IO ()) -> Subscription IO) -> [BrowsingContext] -> [UserContext] -> (a -> IO ()) -> IO SubscriptionId
-    subscribe s = client.subscribe sessionSubscribe
+    subscribe :: forall a. Subscription IO -> IO SubscriptionId
+    subscribe = client.subscribe sessionSubscribe 
 
 -- note: just throws an exception if an error is encountered
 -- no timeout implemented - will just hang if bidi does not behave
