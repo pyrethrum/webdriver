@@ -34,6 +34,7 @@ import UnliftIO (TChan, atomically, isEmptyTChan, writeTChan)
 import WebDriverPreCore.Internal.Utils (txt)
 import Prelude hiding (log)
 import Control.Exception (SomeException, Exception (..))
+import BiDi.DemoUtils (timeLimitLog)
 
 data Logger = MkLogger
   { log :: Text -> IO (),
@@ -56,7 +57,8 @@ bidiDemoUtils baseLog pauseMs =
           logShowM = \l t -> t >>= logShow l,
           logTxt = logTxt',
           pause = sleepMs pauseMs,
-          pauseMinMs = sleepMs . max pauseMs
+          pauseMinMs = sleepMs . max pauseMs,
+          timeLimitLog = timeLimitLog logShow'
         }
 
 mkLogger :: TChan Text -> IO Logger
@@ -88,7 +90,9 @@ data DemoUtils = MkDemoUtils
     log :: Text -> Text -> IO (),
     logShow :: forall a. (Show a) => Text -> a -> IO (),
     logM :: Text -> IO Text -> IO (),
-    logShowM :: forall a. (Show a) => Text -> IO a -> IO ()
+    logShowM :: forall a. (Show a) => Text -> IO a -> IO (),
+    -- timeout functions for tesing events
+    timeLimitLog :: forall a. Show a => Text -> IO (a -> IO ())
   }
 
 demoUtils :: Int -> DemoUtils
@@ -101,7 +105,8 @@ demoUtils pauseMs =
       logM,
       logShowM,
       pause = sleepMs pauseMs,
-      pauseMinMs = sleepMs . max pauseMs
+      pauseMinMs = sleepMs . max pauseMs,
+      timeLimitLog = timeLimitLog logShow
     }
 
 noOpUtils :: DemoUtils
@@ -115,7 +120,8 @@ noOpUtils =
       logShowM = const2 $ pure (),
       pause = pure (),
       -- even for no-op, ensure sleep for passed in ms
-      pauseMinMs = sleepMs
+      pauseMinMs = sleepMs,
+      timeLimitLog = timeLimitLog logShow
     }
   where
     const2 = const . const

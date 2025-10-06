@@ -28,6 +28,7 @@ import WebDriverPreCore.BiDi.Capabilities (Capabilities)
 import WebDriverPreCore.BiDi.Command
 import WebDriverPreCore.BiDi.CoreTypes (JSUInt (..))
 import WebDriverPreCore.BiDi.Event (Subscription (..))
+import WebDriverPreCore.BiDi.Log (LogEntry)
 import WebDriverPreCore.BiDi.Protocol
   ( Activate,
     AddDataCollector,
@@ -66,6 +67,7 @@ import WebDriverPreCore.BiDi.Protocol
     GetTreeResult,
     GetUserContextsResult,
     HandleUserPrompt,
+    Info,
     LocateNodes,
     LocateNodesResult,
     Navigate,
@@ -109,8 +111,6 @@ import WebDriverPreCore.Http qualified as Http
 import WebDriverPreCore.Internal.AesonUtils (jsonToText, objToText, parseThrow)
 import WebDriverPreCore.Internal.Utils (txt)
 import Prelude hiding (getLine, log, null, print, putStrLn)
-import GHC.Base (IO(IO))
-import WebDriverPreCore.BiDi.Log (LogEntry)
 
 -- TODO: geric command
 -- TODO: handle event
@@ -185,11 +185,12 @@ data BiDiActions = MkCommands
     -- WebExtension commands
     webExtensionInstall :: WebExtensionInstall -> IO WebExtensionResult,
     webExtensionUninstall :: WebExtensionUninstall -> IO Object,
+    -- ########## EVENTS ##########
 
-     -- ########## EVENTS ##########
-
-    subscribeLogEntryAdded :: [BrowsingContext] -> [UserContext] -> (LogEntry -> IO ()) -> IO SubscriptionId
-  
+    subscribeLogEntryAdded :: (LogEntry -> IO ()) -> IO SubscriptionId,
+    subscribeLogEntryAdded' :: [BrowsingContext] -> [UserContext] -> (LogEntry -> IO ()) -> IO SubscriptionId,
+    subscribeBrowsingContextCreated :: (Info -> IO ()) -> IO SubscriptionId,
+    subscribeBrowsingContextCreated' :: [BrowsingContext] -> [UserContext] -> (Info -> IO ()) -> IO SubscriptionId
   }
 
 mkCommands :: BiDiMethods -> BiDiActions
@@ -259,12 +260,14 @@ mkCommands client =
       -- WebExtension commands
       webExtensionInstall = send . P.webExtensionInstall,
       webExtensionUninstall = send . P.webExtensionUninstall,
-      -- ########## EVENTS ##########
+      --
+      -- ############## Subscriptions (Events) ##############
 
-      subscribeLogEntryAdded = \bc uc a -> subscribe $ P.subscribeLogEntryAdded bc uc a
-      -- subscribeLogEntryAdded browsingContexts userContexts action =
-      --   subscribe client.subscribe browsingContexts userContexts $
-      --     SingleSubscription {subscriptionType = LogEntryAdded, action}
+      subscribeLogEntryAdded = sendSub P.subscribeLogEntryAdded,
+      subscribeLogEntryAdded' = sendSub' P.subscribeLogEntryAdded,
+      --
+      subscribeBrowsingContextCreated = sendSub P.subscribeBrowsingContextCreated,
+      subscribeBrowsingContextCreated' = sendSub' P.subscribeBrowsingContextCreated
     }
   where
     send :: forall c r. (FromJSON r, ToJSON c, Show c) => Command c r -> IO r
@@ -273,8 +276,29 @@ mkCommands client =
     sessionSubscribe :: SessionSubscriptionRequest -> IO SessionSubscribeResult
     sessionSubscribe = send . P.sessionSubscribe
 
-    subscribe :: forall a. Subscription IO -> IO SubscriptionId
-    subscribe = client.subscribe sessionSubscribe 
+    sendSub ::
+      forall a.
+      ( [BrowsingContext] ->
+        [UserContext] ->
+        (a -> IO ()) ->
+        Subscription IO
+      ) ->
+      (a -> IO ()) ->
+      IO SubscriptionId
+    sendSub apiSubscription = client.subscribe sessionSubscribe . apiSubscription [] []
+
+    sendSub' ::
+      forall a.
+      ( [BrowsingContext] ->
+        [UserContext] ->
+        (a -> IO ()) ->
+        Subscription IO
+      ) ->
+      [BrowsingContext] ->
+      [UserContext] ->
+      (a -> IO ()) ->
+      IO SubscriptionId
+    sendSub' apiSubscription bcs ucs action = client.subscribe sessionSubscribe (apiSubscription bcs ucs action)
 
 -- note: just throws an exception if an error is encountered
 -- no timeout implemented - will just hang if bidi does not behave
@@ -316,7 +340,6 @@ sendCommand m@MkBiDiMethods {getNext} command = do
                 pure . (.response)
               )
           )
-
 
 mkDemoBiDiClientParams :: Int -> IO BiDiClientParams
 mkDemoBiDiClientParams pauseMs = do

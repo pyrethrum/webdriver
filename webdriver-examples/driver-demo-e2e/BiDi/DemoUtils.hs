@@ -186,3 +186,6 @@ timeLimit (MkTimeout ms) eventDesc action  = do
     pure interceptedAction
 
 
+timeLimitLog :: forall a. Show a => (Show a => Text -> a -> IO ()) -> Timeout -> Text  -> IO (a -> IO ())
+timeLimitLog logShow timeout eventDesc = do
+    timeLimit timeout eventDesc (logShow ("Completed: " <> eventDesc))

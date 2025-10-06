@@ -2,12 +2,7 @@ module BiDi.Demos.BrowsingContextEventDemos where
 
 import BiDi.BiDiRunner (BiDiActions (..))
 import BiDi.DemoUtils
-import Data.Aeson (Value (Null), object, (.=))
-import Data.Text (Text)
 import IOUtils (DemoUtils (..))
-import WebDriverPreCore.BiDi.BrowsingContext (BrowsingContextEvent (..), Locator (..), PrintMargin (..), PrintPage (..), Viewport (..))
-import WebDriverPreCore.BiDi.CoreTypes (JSInt (..), JSUInt (..), NodeRemoteValue (..))
-import WebDriverPreCore.BiDi.Protocol
 import Prelude hiding (log, putStrLn)
 
 
