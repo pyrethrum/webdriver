@@ -170,7 +170,7 @@ data SubscriptionType
   | ScriptRealmDestroyed
   | -- Input module
     InputFileDialogOpened
-  deriving (Show, Eq, Generic)
+  deriving (Show, Eq, Generic, Enum, Bounded)
 
 instance ToJSON SubscriptionType where
   toJSON :: SubscriptionType -> Value
