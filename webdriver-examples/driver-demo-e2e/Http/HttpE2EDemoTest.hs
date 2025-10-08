@@ -325,7 +325,7 @@ unit_demoWindowRecs = withSession \ses -> do
             height = 400
           }
   logShowM "set window rect" $ setWindowRect ses wr
-  sleep $ 2 & Const.seconds
+  sleep $ 2 * Const.seconds
   r <- getWindowRect ses
   logShow "window rect" r
 

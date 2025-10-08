@@ -678,7 +678,7 @@ scriptPreloadScriptMultiContextDemo =
       pause
 
       -- Wait for all preload scripts to execute
-      pauseMin $ 1500 & milliseconds
+      pauseMin $ 1500 * milliseconds
 
       logTxt "Verify original context has only global script (no context-specific script)"
       scriptEvaluateNoWait $
@@ -698,7 +698,7 @@ scriptPreloadScriptMultiContextDemo =
       logTxt "Check new context has both global and context-specific scripts"
       -- Switch to new context for validation
       browsingContextActivate $ MkActivate newContext
-      pauseMin $ 500 & milliseconds
+      pauseMin $ 500 * milliseconds
 
       -- Check new context content using scripts that add to DOM
       scriptEvaluateNoWait $
@@ -717,7 +717,7 @@ scriptPreloadScriptMultiContextDemo =
             resultOwnership = Nothing,
             serializationOptions = Nothing
           }
-      pauseMin $ 500 & milliseconds
+      pauseMin $ 500 * milliseconds
 
       -- For new context validation, we need to get DOM content from the new context
       domContentNew <-
@@ -750,14 +750,14 @@ scriptPreloadScriptMultiContextDemo =
 
       logTxt "Navigate original context to verify global script still works"
       browsingContextActivate $ MkActivate bc
-      pauseMin $ 500 & milliseconds
+      pauseMin $ 500 * milliseconds
 
       navResult4 <- browsingContextNavigate $ MkNavigate {context = bc, url = "data:text/html,<html><head><title>After Context Removal</title></head><body><h1>After Context Script Removal</h1><p id='content'>Content after context removal</p><div id='preload-indicator'></div></body></html>", wait = Just Complete}
       logShow "Navigation after context script removal" navResult4
       pause
 
       -- Wait for remaining preload scripts
-      pauseMin $ 1500 & milliseconds
+      pauseMin $ 1500 * milliseconds
 
       logTxt "Verify global script still works after context-specific removal"
       scriptEvaluateNoWait $
@@ -786,7 +786,7 @@ scriptPreloadScriptMultiContextDemo =
       pause
 
       -- Wait to ensure no preload scripts run
-      pauseMin $ 1000 & milliseconds
+      pauseMin $ 1000 * milliseconds
 
       logTxt "Final verification - no preload script effects should be present"
       scriptEvaluateNoWait $
@@ -1073,11 +1073,11 @@ scriptUserContextsDemo =
 
       logTxt "Test script execution in UserContext1 - should have specific AND global scripts"
       browsingContextActivate $ MkActivate bcUserContext1
-      pauseMin $ 500 & milliseconds
+      pauseMin $ 500 * milliseconds
 
       navResultUC1 <- browsingContextNavigate $ MkNavigate {context = bcUserContext1, url = "data:text/html,<html><head><title>UserContext1 Test</title></head><body><h1>UserContext1 Page</h1><div id='content'>Testing UserContext1</div></body></html>", wait = Just Complete}
       logShow "Navigation in UserContext1" navResultUC1
-      pauseMin $ 1500 & milliseconds -- Wait for preload scripts
+      pauseMin $ 1500 * milliseconds -- Wait for preload scripts
       logTxt "Verify UserContext1 has both global and specific scripts"
       scriptEvaluateNoWait $
         MkEvaluate
@@ -1121,11 +1121,11 @@ scriptUserContextsDemo =
 
       logTxt "Test script execution in UserContext2 - should have specific AND global scripts"
       browsingContextActivate $ MkActivate bcUserContext2
-      pauseMin $ 500 & milliseconds
+      pauseMin $ 500 * milliseconds
 
       navResultUC2 <- browsingContextNavigate $ MkNavigate {context = bcUserContext2, url = "data:text/html,<html><head><title>UserContext2 Test</title></head><body><h1>UserContext2 Page</h1><div id='content'>Testing UserContext2</div></body></html>", wait = Just Complete}
       logShow "Navigation in UserContext2" navResultUC2
-      pauseMin $ 1500 & milliseconds -- Wait for preload scripts
+      pauseMin $ 1500 * milliseconds -- Wait for preload scripts
       logTxt "Verify UserContext2 has both global and specific scripts"
       scriptEvaluateNoWait $
         MkEvaluate
@@ -1169,11 +1169,11 @@ scriptUserContextsDemo =
 
       logTxt "Test script execution in UserContext3 - should have global AND single scripts, NOT specific"
       browsingContextActivate $ MkActivate bcUserContext3
-      pauseMin $ 500 & milliseconds
+      pauseMin $ 500 * milliseconds
 
       navResultUC3 <- browsingContextNavigate $ MkNavigate {context = bcUserContext3, url = "data:text/html,<html><head><title>UserContext3 Test</title></head><body><h1>UserContext3 Page</h1><div id='content'>Testing UserContext3</div></body></html>", wait = Just Complete}
       logShow "Navigation in UserContext3" navResultUC3
-      pauseMin $ 1500 & milliseconds -- Wait for preload scripts
+      pauseMin $ 1500 * milliseconds -- Wait for preload scripts
       logTxt "Verify UserContext3 has global and single scripts, but NOT specific"
       scriptEvaluateNoWait $
         MkEvaluate
@@ -1217,11 +1217,11 @@ scriptUserContextsDemo =
 
       logTxt "Test original browsing context (default user context) - should only have global script"
       browsingContextActivate $ MkActivate bc
-      pauseMin $ 500 & milliseconds
+      pauseMin $ 500 * milliseconds
 
       navResultOriginal <- browsingContextNavigate $ MkNavigate {context = bc, url = "data:text/html,<html><head><title>Original Context Test</title></head><body><h1>Original Context Page</h1><div id='content'>Testing Original Default Context</div></body></html>", wait = Just Complete}
       logShow "Navigation in original context" navResultOriginal
-      pauseMin $ 1500 & milliseconds -- Wait for preload scripts
+      pauseMin $ 1500 * milliseconds -- Wait for preload scripts
       logTxt "Verify original context has only global script (no user context restrictions)"
       scriptEvaluateNoWait $
         MkEvaluate

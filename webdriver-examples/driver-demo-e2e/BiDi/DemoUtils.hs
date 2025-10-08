@@ -107,7 +107,7 @@ chkDomContains' :: Timeout -> Timeout -> DemoUtils -> BiDiActions -> BrowsingCon
 chkDomContains' timeout pause' MkDemoUtils {..} MkCommands {..} bc expectedText = do
   startTime <- getPOSIXTime
   logTxt $ "Checking DOM contains: " <> expectedText <> " (timeout: " <> txt timeout <> "ms, pause: " <> txt pause' <> "ms)"
-  checkLoop $ startTime + (fromIntegral timeout.timeoutMs / 1000.0)
+  checkLoop $ startTime + (fromIntegral timeout.microseconds / 1000000)
 
   where
     checkLoop :: POSIXTime -> IO ()
@@ -169,7 +169,7 @@ chkDomContains' timeout pause' MkDemoUtils {..} MkCommands {..} bc expectedText 
 
 -- | Check if expected text is present in DOM with default timeout and retry settings
 chkDomContains :: DemoUtils -> BiDiActions -> BrowsingContext -> Text -> IO ()
-chkDomContains = chkDomContains' (10 & seconds) (MkTimeout 100)
+chkDomContains = chkDomContains' (10 * seconds) (MkTimeout 100)
 
 
 

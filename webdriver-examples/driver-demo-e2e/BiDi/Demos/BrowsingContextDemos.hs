@@ -276,7 +276,7 @@ browsingContextHandleUserPromptDemo =
             serializationOptions = Nothing
           }
       -- Wait for the alert to be displayed (in a production automation more sophisticated polling must be used)
-      pauseMin $ 500 & milliseconds
+      pauseMin $ 500 * milliseconds
 
       logTxt "Accept the alert dialog"
       acceptResult <-
@@ -299,7 +299,7 @@ browsingContextHandleUserPromptDemo =
             serializationOptions = Nothing
           }
       -- Wait for the alert to be displayed (in a production automation more sophisticated polling must be used)
-      pauseMin $ 500 & milliseconds
+      pauseMin $ 500 * milliseconds
 
       logTxt "Dismiss the confirm dialog"
       dismissResult <-
@@ -322,7 +322,7 @@ browsingContextHandleUserPromptDemo =
             serializationOptions = Nothing
           }
       -- Wait for the alert to be displayed (in a productions system, more sophisticated polling would be needed)
-      pauseMin $ 500 & milliseconds
+      pauseMin $ 500 * milliseconds
 
       logTxt "Accept prompt with custom text"
       promptResult <-
@@ -345,7 +345,7 @@ browsingContextHandleUserPromptDemo =
             serializationOptions = Nothing
           }
       -- Wait for the alert to be displayed (in a productions system, more sophisticated polling would be needed)
-      pauseMin $ 500 & milliseconds
+      pauseMin $ 500 * milliseconds
 
       logTxt "Dismiss the prompt dialog"
       dismissPromptResult <-

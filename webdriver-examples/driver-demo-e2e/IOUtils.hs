@@ -161,7 +161,7 @@ timeLimitLog' logShow' timeout eventDesc = do
 
 timeLimitLog :: forall a. Show a => (Show a => Text -> a -> IO ()) -> Text  -> IO (a -> IO ())
 timeLimitLog logShow' eventDesc = do
-    timeLimit (10 & seconds) eventDesc (logShow' $ "Completed: " <> eventDesc)
+    timeLimit (10 * seconds) eventDesc (logShow' $ "Completed: " <> eventDesc)
 
 encodeFileToBase64 :: FilePath -> IO Text
 encodeFileToBase64 filePath =
@@ -183,10 +183,10 @@ logShowM :: (Show a) => Text -> IO a -> IO ()
 logShowM l t = t >>= logShow l
 
 sleep1 :: IO ()
-sleep1 = sleep $ 1 & second
+sleep1 = sleep $ 1 * second
 
 sleep2 :: IO ()
-sleep2 = sleep $ 2 & seconds
+sleep2 = sleep $ 2 * seconds
 
 
 -- todo: test extras - split off
