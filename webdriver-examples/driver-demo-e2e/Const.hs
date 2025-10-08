@@ -32,7 +32,7 @@ module Const
     hours,
     defaultRequest,
     millisecond,
-    milliseconds
+    milliseconds,
   )
 where
 
@@ -110,32 +110,32 @@ divCss = CSS "div"
 
 -- ################### time ##################
 
-newtype Timeout = MkTimeout {timeoutMs :: Int} 
+newtype Timeout = MkTimeout {microseconds :: Int}
   deriving (Show, Eq)
   deriving newtype (Num)
 
-millisecond :: Int -> Timeout
-millisecond = MkTimeout
+millisecond :: Timeout
+millisecond = MkTimeout 1_000
 
-milliseconds :: Int -> Timeout
+milliseconds :: Timeout
 milliseconds = millisecond
 
-second :: Int -> Timeout
-second = MkTimeout . (*) 1_000
+second :: Timeout
+second = 1_000 * milliseconds
 
-seconds :: Int -> Timeout
+seconds :: Timeout
 seconds = second
 
-minute :: Int -> Timeout
-minute = MkTimeout . (*) 60_000
+minute :: Timeout
+minute = 60 * seconds
 
-minutes :: Int -> Timeout
+minutes :: Timeout
 minutes = minute
 
-hour :: Int -> Timeout
-hour = MkTimeout . (*) 3_600_000
+hour :: Timeout
+hour = 60 * minutes
 
-hours :: Int -> Timeout
+hours :: Timeout
 hours = hour
 
 -- ################### request ##################
