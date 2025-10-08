@@ -63,7 +63,7 @@ module Http.HttpAPI
     elementClick,
     getElementText,
     setWindowRect,
-    sleepMs,
+    sleep,
     switchToWindow,
     switchToFrame,
     switchToParentFrame,
@@ -100,7 +100,7 @@ import Data.Text  as T (Text)
 import WebDriverPreCore.Http (DriverStatus, ElementId, Selector, SessionId, SessionResponse(..))
 import WebDriverPreCore.Http qualified as W
 import Prelude hiding (log)
-import IOUtils (sleepMs, encodeFileToBase64)
+import IOUtils (sleep, encodeFileToBase64)
 import Http.HttpRunner (run)
 
 -- ############# API #############

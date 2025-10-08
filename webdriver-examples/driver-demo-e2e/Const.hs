@@ -1,5 +1,6 @@
 module Const
   ( ReqRequestParams (..),
+    Timeout (..),
     theInternet,
     subDomain,
     alertsUrl,
@@ -30,6 +31,8 @@ module Const
     hour,
     hours,
     defaultRequest,
+    millisecond,
+    milliseconds
   )
 where
 
@@ -46,8 +49,9 @@ import Network.HTTP.Req as R
     http,
   )
 import WebDriverPreCore.Http as WPC
-  ( Selector (..))
-import Prelude (Int, Semigroup (..), Num (..))
+  ( Selector (..),
+  )
+import Prelude (Eq, Int, Num (..), Semigroup (..), Show, (.))
 
 -- ################### urls ##################
 
@@ -69,7 +73,6 @@ framesUrl = subDomain "nested_frames"
 inputsUrl :: Text
 inputsUrl = subDomain "inputs"
 
-
 loginUrl :: Text
 loginUrl = subDomain "login"
 
@@ -79,7 +82,6 @@ checkBoxesUrl = subDomain "checkboxes"
 shadowDomUrl :: Text
 shadowDomUrl = subDomain "shadowdom"
 
-
 -- ################### selectors  ##################
 
 checkBoxesLinkCss :: Selector
@@ -87,7 +89,6 @@ checkBoxesLinkCss = CSS "#content > ul:nth-child(4) > li:nth-child(6) > a:nth-ch
 
 checkBoxesCss :: Selector
 checkBoxesCss = CSS "input[type='checkbox']"
-
 
 topFrameCSS :: Selector
 topFrameCSS = CSS "frame[name='frame-top']"
@@ -107,25 +108,34 @@ jsPromptXPath = XPath "//button[text()='Click for JS Prompt']"
 divCss :: Selector
 divCss = CSS "div"
 
-
 -- ################### time ##################
 
-second :: Int
-second = 1_000
+newtype Timeout = MkTimeout {timeoutMs :: Int} 
+  deriving (Show, Eq)
+  deriving newtype (Num)
 
-seconds :: Int
+millisecond :: Int -> Timeout
+millisecond = MkTimeout
+
+milliseconds :: Int -> Timeout
+milliseconds = millisecond
+
+second :: Int -> Timeout
+second = MkTimeout . (*) 1_000
+
+seconds :: Int -> Timeout
 seconds = second
 
-minute :: Int
-minute = 60 * seconds
+minute :: Int -> Timeout
+minute = MkTimeout . (*) 60_000
 
-minutes :: Int
+minutes :: Int -> Timeout
 minutes = minute
 
-hour :: Int
-hour = 60 * minutes
+hour :: Int -> Timeout
+hour = MkTimeout . (*) 3_600_000
 
-hours :: Int
+hours :: Int -> Timeout
 hours = hour
 
 -- ################### request ##################

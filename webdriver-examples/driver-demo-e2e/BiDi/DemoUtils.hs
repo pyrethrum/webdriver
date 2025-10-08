@@ -4,7 +4,6 @@ import BiDi.BiDiRunner (BiDiActions (..), mkDemoBiDiClientParams, withCommands)
 import Control.Exception (Exception, catch, throwIO, throw)
 import Data.Text (Text, isInfixOf, unpack)
 import Data.Time.Clock.POSIX (POSIXTime, getPOSIXTime)
-import IOUtils (DemoUtils (..))
 import WebDriverPreCore.BiDi.Protocol
   ( BrowsingContext,
     Close (MkClose, context, promptUnload),
@@ -34,16 +33,19 @@ import WebDriverPreCore.BiDi.Script (EvaluateResult (..), PrimitiveProtocolValue
 import WebDriverPreCore.Internal.Utils (txt)
 import Prelude hiding (log, putStrLn)
 import WebDriverPreCore.BiDi.CoreTypes (StringValue(..))
-import Const (seconds)
+import Const (seconds, Timeout (..))
 import WebDriverPreCore.BiDi.Protocol (Subscription)
 import WebDriverPreCore.BiDi.Protocol (Subscription(..))
 import UnliftIO (newEmptyTMVarIO, tryPutTMVar, atomically, Async, race_, readTMVar)
 import Control.Concurrent (threadDelay)
 import Data.Coerce (coerce)
 import UnliftIO.Async (async)
+import IOUtils (DemoUtils (..))
+import Data.Function ((&))
 
-pauseMs :: Int
-pauseMs = 0
+
+pauseMs :: Timeout
+pauseMs = MkTimeout 0
 
 data BiDiDemo = MkBiDiDemo
   { name :: Text,
@@ -56,6 +58,7 @@ demo name action = MkBiDiDemo {name, action}
 runDemo :: BiDiDemo -> IO ()
 runDemo d =
   mkDemoBiDiClientParams pauseMs >>= \p -> withCommands p d.action
+
 
 newWindowContext :: DemoUtils -> BiDiActions -> IO BrowsingContext
 newWindowContext MkDemoUtils {..} MkCommands {..} = do
@@ -100,11 +103,11 @@ data TextValidationError = MkTextValidationError
 instance Exception TextValidationError
 
 -- | Check if expected text is present in DOM with timeout and retry, throw error if not found
-chkDomContains' :: Int -> Int -> DemoUtils -> BiDiActions -> BrowsingContext -> Text -> IO ()
-chkDomContains' timeoutMs pauseIntervalMs MkDemoUtils {..} MkCommands {..} bc expectedText = do
+chkDomContains' :: Timeout -> Timeout -> DemoUtils -> BiDiActions -> BrowsingContext -> Text -> IO ()
+chkDomContains' timeout pause' MkDemoUtils {..} MkCommands {..} bc expectedText = do
   startTime <- getPOSIXTime
-  logTxt $ "Checking DOM contains: " <> expectedText <> " (timeout: " <> txt timeoutMs <> "ms, pause: " <> txt pauseIntervalMs <> "ms)"
-  checkLoop $ startTime + (fromIntegral timeoutMs / 1000.0)
+  logTxt $ "Checking DOM contains: " <> expectedText <> " (timeout: " <> txt timeout <> "ms, pause: " <> txt pause' <> "ms)"
+  checkLoop $ startTime + (fromIntegral timeout.timeoutMs / 1000.0)
 
   where
     checkLoop :: POSIXTime -> IO ()
@@ -114,14 +117,14 @@ chkDomContains' timeoutMs pauseIntervalMs MkDemoUtils {..} MkCommands {..} bc ex
         then do
           throwIO $
             MkTextValidationError
-              { message = "✗ Timeout reached! Expected text not found after " <> txt timeoutMs <> "ms",
+              { message = "✗ Timeout reached! Expected text not found after " <> txt timeout <> "ms",
                 expectedText,
                 actualText = ""
               }
         else do
           result <-
             (validateDomText >> pure ()) `catch` \(_ :: TextValidationError) -> do
-              pauseMinMs pauseIntervalMs
+              pauseMin pause'
               checkLoop endTime
           pure result
 
@@ -166,26 +169,7 @@ chkDomContains' timeoutMs pauseIntervalMs MkDemoUtils {..} MkCommands {..} bc ex
 
 -- | Check if expected text is present in DOM with default timeout and retry settings
 chkDomContains :: DemoUtils -> BiDiActions -> BrowsingContext -> Text -> IO ()
-chkDomContains = chkDomContains' 10_000 100
-
-newtype Timeout = MkTimeout {timeoutMs :: Int} deriving (Show, Eq)
-
-seconds :: Int -> Timeout 
-seconds  = MkTimeout . (*) 1000
-
-timeLimit :: forall a. Timeout -> Text -> (a -> IO ()) -> IO (a -> IO ())
-timeLimit (MkTimeout ms) eventDesc action  = do
-    triggered <- newEmptyTMVarIO
-    let 
-      waitTriggered = atomically $ readTMVar triggered
-      waitLimit = threadDelay ms >> (fail . unpack $ "Timeout: " <> eventDesc)
-      interceptedAction = \a -> do
-        atomically $ tryPutTMVar triggered ()
-        action a
-    async $ race_ waitLimit waitTriggered
-    pure interceptedAction
+chkDomContains = chkDomContains' (10 & seconds) (MkTimeout 100)
 
 
-timeLimitLog :: forall a. Show a => (Show a => Text -> a -> IO ()) -> Timeout -> Text  -> IO (a -> IO ())
-timeLimitLog logShow timeout eventDesc = do
-    timeLimit timeout eventDesc (logShow ("Completed: " <> eventDesc))
+

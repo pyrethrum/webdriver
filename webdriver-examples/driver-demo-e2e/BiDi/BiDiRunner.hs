@@ -111,6 +111,7 @@ import WebDriverPreCore.Http qualified as Http
 import WebDriverPreCore.Internal.AesonUtils (jsonToText, objToText, parseThrow)
 import WebDriverPreCore.Internal.Utils (txt)
 import Prelude hiding (getLine, log, null, print, putStrLn)
+import Const (Timeout)
 
 -- TODO: geric command
 -- TODO: handle event
@@ -341,7 +342,7 @@ sendCommand m@MkBiDiMethods {getNext} command = do
               )
           )
 
-mkDemoBiDiClientParams :: Int -> IO BiDiClientParams
+mkDemoBiDiClientParams :: Timeout -> IO BiDiClientParams
 mkDemoBiDiClientParams pauseMs = do
   c <- mkChannels
   logger@MkLogger {log} <- mkLogger (c.logChan)
@@ -355,7 +356,7 @@ mkDemoBiDiClientParams pauseMs = do
 
 -- TODO Add fail event
 mkFailBidiClientParams ::
-  Int ->
+  Timeout ->
   Word64 ->
   Word64 ->
   Word64 ->

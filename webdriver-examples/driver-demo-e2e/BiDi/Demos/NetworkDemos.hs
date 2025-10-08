@@ -9,6 +9,8 @@ import IOUtils (DemoUtils (..), exceptionTextIncludes)
 import WebDriverPreCore.BiDi.CoreTypes (JSUInt (..), StringValue (MkStringValue))
 import WebDriverPreCore.BiDi.Protocol
 import Prelude hiding (log)
+import Data.Function ((&))
+import Const (second)
 
 {-
 
@@ -125,7 +127,7 @@ networkDataCollectorDemo =
               wait = Just Complete
             }
       logShow "Navigation result" navResult
-      pauseMinMs 1000 -- Allow time for network activity
+      pauseMin $ 1 & second
       pause
 
       logTxt "Test 7: Remove data collectors"
@@ -291,7 +293,7 @@ networkInterceptDemo =
               wait = Just Complete
             }
       logShow "Navigation result" navResult
-      pauseMinMs 1000 -- Allow time for potential intercepts
+      pauseMin $ 1 & second
       pause
 
       logTxt "Test 7: Remove intercepts"

@@ -10,6 +10,7 @@ import Data.Set qualified as Set
 import Data.Text (isInfixOf)
 import Data.Time.Clock.POSIX (getPOSIXTime)
 import RuntimeConst ( httpFullCapabilities)
+import Const qualified as Const
 import Const
   ( alertsUrl,
     anyElmCss,
@@ -29,8 +30,6 @@ import Const
     loginUrl,
     midFrameCss,
     midFrameTitle,
-    second,
-    seconds,
     shadowDomUrl,
     theInternet,
     topFrameCSS,
@@ -116,7 +115,7 @@ import Http.HttpAPI
     sendAlertText,
     setTimeouts,
     setWindowRect,
-    sleepMs,
+    sleep,
     status,
     switchToFrame,
     switchToParentFrame,
@@ -138,8 +137,12 @@ import Test.Tasty.HUnit (Assertion, assertBool)
 import WebDriverPreCore.Http (minFullCapabilities)
 import WebDriverPreCore.Internal.Utils (txt)
 import Prelude hiding (log)
+import Data.Function ((&))
 
 -- #################### The Tests ######################
+
+seconds :: Int
+seconds = 1000
 
 -- >>> unit_demoNewSession
 unit_demoNewSession :: IO ()
@@ -322,7 +325,7 @@ unit_demoWindowRecs = withSession \ses -> do
             height = 400
           }
   logShowM "set window rect" $ setWindowRect ses wr
-  sleepMs $ 2 * seconds
+  sleep $ 2 & Const.seconds
   r <- getWindowRect ses
   logShow "window rect" r
 
@@ -639,7 +642,7 @@ unit_demoPointerNoneActions =
                 { id = "NullAction",
                   noneActions =
                     [ Nothing,
-                      Just $ 1 * second,
+                      Just $ 1 * seconds,
                       Just $ 4 * seconds,
                       Nothing,
                       Nothing

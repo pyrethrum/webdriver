@@ -1,5 +1,5 @@
 module IOUtils
-  ( sleepMs,
+  ( sleep,
     encodeFileToBase64,
     exceptionTextIncludes,
     lwrTxtIncludes,
@@ -21,20 +21,23 @@ module IOUtils
   )
 where
 
-import Const (second, seconds)
+import Const (second, seconds, Timeout (..))
 import Control.Concurrent (threadDelay)
 import Control.Monad (unless)
 import Data.Base64.Types qualified as B64T
 import Data.ByteString qualified as BS
 import Data.ByteString.Base64 qualified as B64
-import Data.Text (Text, pack, toLower, isInfixOf)
+import Data.Text (Text, pack, toLower, isInfixOf, unpack)
 import Data.Text.IO qualified as TIO
 import Test.Tasty.HUnit as HUnit (Assertion, HasCallStack, (@=?))
-import UnliftIO (TChan, atomically, isEmptyTChan, writeTChan)
+import UnliftIO (TChan, atomically, isEmptyTChan, writeTChan, readTMVar, tryPutTMVar, async, race_)
 import WebDriverPreCore.Internal.Utils (txt)
 import Prelude hiding (log)
 import Control.Exception (SomeException, Exception (..))
-import BiDi.DemoUtils (timeLimitLog)
+import GHC.Base (coerce)
+import UnliftIO.STM (newEmptyTMVarIO)
+import Data.Function ((&))
+
 
 data Logger = MkLogger
   { log :: Text -> IO (),
@@ -43,22 +46,23 @@ data Logger = MkLogger
 
 --  TODO : deprectate static logTxt et al
 
-bidiDemoUtils :: (Text -> IO ()) -> Int -> DemoUtils
-bidiDemoUtils baseLog pauseMs =
+bidiDemoUtils :: (Text -> IO ()) -> Timeout -> DemoUtils
+bidiDemoUtils baseLog pause =
   let logTxt' = baseLog
       log' l t = logTxt' $ l <> ": " <> t
       logShow' :: forall a. (Show a) => Text -> a -> IO ()
       logShow' l = log' l . txt
    in MkDemoUtils
-        { sleep = sleepMs,
+        { sleep = sleep,
           log = log',
           logShow = logShow',
           logM = \l mt -> mt >>= log' l,
           logShowM = \l t -> t >>= logShow l,
           logTxt = logTxt',
-          pause = sleepMs pauseMs,
-          pauseMinMs = sleepMs . max pauseMs,
-          timeLimitLog = timeLimitLog logShow'
+          pause = sleep pause,
+          pauseMin = pauseMin pause,
+          timeLimitLog = timeLimitLog logShow',
+          timeLimitLog' = timeLimitLog' logShow'
         }
 
 mkLogger :: TChan Text -> IO Logger
@@ -83,51 +87,81 @@ lwrTxtIncludes :: Text -> Text -> Bool
 lwrTxtIncludes expected = (toLower expected `isInfixOf`) . toLower
 
 data DemoUtils = MkDemoUtils
-  { sleep :: Int -> IO (),
+  { sleep :: Timeout -> IO (),
     pause :: IO (),
-    pauseMinMs :: Int -> IO (),
+    pauseMin :: Timeout -> IO (),
     logTxt :: Text -> IO (),
     log :: Text -> Text -> IO (),
     logShow :: forall a. (Show a) => Text -> a -> IO (),
     logM :: Text -> IO Text -> IO (),
     logShowM :: forall a. (Show a) => Text -> IO a -> IO (),
     -- timeout functions for tesing events
-    timeLimitLog :: forall a. Show a => Text -> IO (a -> IO ())
+    timeLimitLog :: forall a. Show a => Text -> IO (a -> IO ()),
+    timeLimitLog' :: forall a. Show a => Timeout -> Text -> IO (a -> IO ())
   }
 
-demoUtils :: Int -> DemoUtils
-demoUtils pauseMs =
+-- TODO :: DELETE THIS
+demoUtils :: Timeout -> DemoUtils
+demoUtils pause =
   MkDemoUtils
-    { sleep = sleepMs,
+    { sleep = sleep,
       logTxt,
       log,
       logShow,
       logM,
       logShowM,
-      pause = sleepMs pauseMs,
-      pauseMinMs = sleepMs . max pauseMs,
-      timeLimitLog = timeLimitLog logShow
+      pause = sleep pause,
+      pauseMin = pauseMin pause,
+      timeLimitLog = timeLimitLog logShow,
+      timeLimitLog' = timeLimitLog' logShow
     }
 
 noOpUtils :: DemoUtils
 noOpUtils =
   MkDemoUtils
-    { sleep = const $ pure (),
-      logTxt = const $ pure (),
-      log = const2 $ pure (),
-      logShow = const2 $ pure (),
-      logM = const2 $ pure (),
-      logShowM = const2 $ pure (),
+    { sleep = noOp1,
+      logTxt = noOp1,
+      log = noOp2,
+      logShow = noOp2,
+      logM = noOp2,
+      logShowM = noOp2,
       pause = pure (),
       -- even for no-op, ensure sleep for passed in ms
-      pauseMinMs = sleepMs,
-      timeLimitLog = timeLimitLog logShow
+      pauseMin = sleep,
+      timeLimitLog = timeLimitLog logShow,
+      timeLimitLog' = timeLimitLog' logShow
     }
   where
-    const2 = const . const
+    noOp1 = const $ pure ()
+    noOp2 = const . const $ pure ()
 
-sleepMs :: Int -> IO ()
-sleepMs = threadDelay . (*) 1_000
+
+sleep :: Timeout -> IO ()
+sleep = threadDelay . (*) 1_000 . coerce
+
+pauseMin :: Timeout -> Timeout -> IO ()
+pauseMin defaultSleep = sleep . MkTimeout . max (coerce defaultSleep) . coerce
+
+timeLimit :: forall a. Timeout -> Text -> (a -> IO ()) -> IO (a -> IO ())
+timeLimit (MkTimeout ms) eventDesc action  = do
+    triggered <- newEmptyTMVarIO
+    let 
+      waitTriggered = atomically $ readTMVar triggered
+      waitLimit = threadDelay ms >> (fail . unpack $ "Timeout: " <> eventDesc)
+      interceptedAction = \a -> do
+        atomically $ tryPutTMVar triggered ()
+        action a
+    async $ race_ waitLimit waitTriggered
+    pure interceptedAction
+
+
+timeLimitLog' :: forall a. Show a => (Show a => Text -> a -> IO ()) -> Timeout -> Text  -> IO (a -> IO ())
+timeLimitLog' logShow' timeout eventDesc = do
+    timeLimit timeout eventDesc (logShow' $ "Completed: " <> eventDesc)
+
+timeLimitLog :: forall a. Show a => (Show a => Text -> a -> IO ()) -> Text  -> IO (a -> IO ())
+timeLimitLog logShow' eventDesc = do
+    timeLimit (10 & seconds) eventDesc (logShow' $ "Completed: " <> eventDesc)
 
 encodeFileToBase64 :: FilePath -> IO Text
 encodeFileToBase64 filePath =
@@ -149,10 +183,11 @@ logShowM :: (Show a) => Text -> IO a -> IO ()
 logShowM l t = t >>= logShow l
 
 sleep1 :: IO ()
-sleep1 = sleepMs $ 1 * second
+sleep1 = sleep $ 1 & second
 
 sleep2 :: IO ()
-sleep2 = sleepMs $ 2 * seconds
+sleep2 = sleep $ 2 & seconds
+
 
 -- todo: test extras - split off
 

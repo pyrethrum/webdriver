@@ -9,6 +9,8 @@ import WebDriverPreCore.BiDi.BrowsingContext (Locator (..), PrintMargin (..), Pr
 import WebDriverPreCore.BiDi.CoreTypes (JSInt (..), JSUInt (..), NodeRemoteValue (..))
 import WebDriverPreCore.BiDi.Protocol
 import Prelude hiding (log, putStrLn)
+import Const (milliseconds)
+import Data.Function ((&))
 
 
 {- 
@@ -274,7 +276,7 @@ browsingContextHandleUserPromptDemo =
             serializationOptions = Nothing
           }
       -- Wait for the alert to be displayed (in a production automation more sophisticated polling must be used)
-      pauseMinMs 500
+      pauseMin $ 500 & milliseconds
 
       logTxt "Accept the alert dialog"
       acceptResult <-
@@ -297,7 +299,7 @@ browsingContextHandleUserPromptDemo =
             serializationOptions = Nothing
           }
       -- Wait for the alert to be displayed (in a production automation more sophisticated polling must be used)
-      pauseMinMs 500
+      pauseMin $ 500 & milliseconds
 
       logTxt "Dismiss the confirm dialog"
       dismissResult <-
@@ -320,7 +322,7 @@ browsingContextHandleUserPromptDemo =
             serializationOptions = Nothing
           }
       -- Wait for the alert to be displayed (in a productions system, more sophisticated polling would be needed)
-      pauseMinMs 500
+      pauseMin $ 500 & milliseconds
 
       logTxt "Accept prompt with custom text"
       promptResult <-
@@ -343,7 +345,7 @@ browsingContextHandleUserPromptDemo =
             serializationOptions = Nothing
           }
       -- Wait for the alert to be displayed (in a productions system, more sophisticated polling would be needed)
-      pauseMinMs 500
+      pauseMin $ 500 & milliseconds
 
       logTxt "Dismiss the prompt dialog"
       dismissPromptResult <-
