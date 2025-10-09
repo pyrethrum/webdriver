@@ -4,6 +4,9 @@ import BiDi.BiDiRunner (BiDiActions (..))
 import BiDi.DemoUtils
 import IOUtils (DemoUtils (..))
 import Prelude hiding (log, putStrLn)
+import WebDriverPreCore.BiDi.Protocol (Create(..))
+import WebDriverPreCore.BiDi.Protocol (CreateType(..))
+import Const (seconds)
 
 
 {- 
@@ -26,6 +29,8 @@ BrowsingContext Events TODO:
 -}
 
 
+--  TODO aake sure all demos only use Protocol, not sub modules
+
 -- >>> runDemo browsingContextEventDemo
 browsingContextEventDemo :: BiDiDemo
 browsingContextEventDemo =
@@ -33,4 +38,17 @@ browsingContextEventDemo =
   where
     action :: DemoUtils -> BiDiActions -> IO ()
     action MkDemoUtils {..} MkCommands {..} = do
-      undefined
+      subId <- subscribeBrowsingContextCreated ( logShow "Event: browsingContext.contextCreated" )
+      logShow "Subscription id:" subId
+
+      logTxt "New browsing context - Tab"
+      let bcParams =
+            MkCreate
+              { createType = Tab,
+                background = False,
+                referenceContext = Nothing,
+                userContext = Nothing
+              }
+      bc <- browsingContextCreate bcParams
+      logShow "Browsing context - Tab" bc
+      pauseMin $ 5 * seconds

@@ -137,7 +137,7 @@ noOpUtils =
 
 
 sleep :: Timeout -> IO ()
-sleep = threadDelay . (*) 1_000 . coerce
+sleep = threadDelay . coerce
 
 pauseMin :: Timeout -> Timeout -> IO ()
 pauseMin defaultSleep = sleep . MkTimeout . max (coerce defaultSleep) . coerce

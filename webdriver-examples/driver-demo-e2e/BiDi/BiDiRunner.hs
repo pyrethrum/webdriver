@@ -195,7 +195,7 @@ data BiDiActions = MkCommands
   }
 
 mkCommands :: BiDiMethods -> BiDiActions
-mkCommands client =
+mkCommands socket =
   MkCommands
     { -- ########## COMMANDS ##########
       -- Session commands
@@ -251,7 +251,7 @@ mkCommands client =
       scriptCallFunction = send . P.scriptCallFunction,
       scriptDisown = send . P.scriptDisown,
       scriptEvaluate = send . P.scriptEvaluate,
-      scriptEvaluateNoWait = sendCommandNoWait client . P.scriptEvaluate,
+      scriptEvaluateNoWait = sendCommandNoWait socket . P.scriptEvaluate,
       scriptGetRealms = send . P.scriptGetRealms,
       scriptRemovePreloadScript = send . P.scriptRemovePreloadScript,
       -- Storage commands
@@ -272,7 +272,7 @@ mkCommands client =
     }
   where
     send :: forall c r. (FromJSON r, ToJSON c, Show c) => Command c r -> IO r
-    send = sendCommand client
+    send = sendCommand socket
 
     sessionSubscribe :: SessionSubscriptionRequest -> IO SessionSubscribeResult
     sessionSubscribe = send . P.sessionSubscribe
@@ -286,7 +286,7 @@ mkCommands client =
       ) ->
       (a -> IO ()) ->
       IO SubscriptionId
-    sendSub apiSubscription = client.subscribe sessionSubscribe . apiSubscription [] []
+    sendSub apiSubscription = socket.subscribe sessionSubscribe . apiSubscription [] []
 
     sendSub' ::
       forall a.
@@ -299,7 +299,7 @@ mkCommands client =
       [UserContext] ->
       (a -> IO ()) ->
       IO SubscriptionId
-    sendSub' apiSubscription bcs ucs action = client.subscribe sessionSubscribe (apiSubscription bcs ucs action)
+    sendSub' apiSubscription bcs ucs action = socket.subscribe sessionSubscribe (apiSubscription bcs ucs action)
 
 -- note: just throws an exception if an error is encountered
 -- no timeout implemented - will just hang if bidi does not behave
@@ -443,12 +443,12 @@ subscribe ::
   (SessionSubscriptionRequest -> IO SessionSubscribeResult) ->
   Subscription IO ->
   IO SubscriptionId
-subscribe allSubs bidiSubscribe subscription = do
+subscribe allSubs socketSubscribe subscription = do
   -- subscribe with a dummy id first so we don't miss any messages
   atomically $ subscribeWithId dummySubId
   catchAny
     ( do
-        sub <- bidiSubscribe subscribeParams
+        sub <- socketSubscribe subscribeParams
         let subId = sub.subscription
         -- swap in the real id
         atomically $ do
