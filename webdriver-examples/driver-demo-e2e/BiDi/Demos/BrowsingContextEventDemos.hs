@@ -38,7 +38,7 @@ browsingContextEventDemo =
   where
     action :: DemoUtils -> BiDiActions -> IO ()
     action MkDemoUtils {..} MkCommands {..} = do
-      subId <- subscribeBrowsingContextCreated ( logShow "Event: browsingContext.contextCreated" )
+      subId <- subscribeBrowsingContextCreated (logShow "Event: browsingContext.contextCreated")
       logShow "Subscription id:" subId
 
       logTxt "New browsing context - Tab"

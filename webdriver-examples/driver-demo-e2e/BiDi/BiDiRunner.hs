@@ -625,7 +625,7 @@ applySubscriptions log obj subscriptions = do
         <> "\n"
         <> objToText obj
 
-  log $ "Parsed event: " <> txt (show eventProps)
+  log $ "Parsed event: " <> txt eventProps
   subs <- readTVarIO subscriptions
   traverse_ (applySubscription method params) subs
 
@@ -646,7 +646,8 @@ loopActions log MkMessageActions {..} =
   MkMessageLoops
     { sendLoop = asyncLoop "Sender" . send,
       getLoop = asyncLoop "Receiver" . get,
-      printLoop = asyncLoop "Logger" print
+      printLoop = asyncLoop "Logger" print,
+      eventLoop = asyncLoop "EventHandler" eventHandler
     }
   where
     asyncLoop = loopForever log
@@ -654,7 +655,8 @@ loopActions log MkMessageActions {..} =
 data MessageLoops = MkMessageLoops
   { sendLoop :: Connection -> IO (Async ()),
     getLoop :: Connection -> IO (Async ()),
-    printLoop :: IO (Async ())
+    printLoop :: IO (Async ()),
+    eventLoop :: IO (Async ())
   }
 
 demoMessageLoops :: (Text -> IO ()) -> Channels -> MessageLoops
@@ -688,6 +690,7 @@ withClient
       log $ "Connecting to WebDriver at " <> txt pth
       runClient (unpack host) port (unpack path) $ \conn -> do
         printLoop <- messageLoops.printLoop
+        eventLoop <- messageLoops.eventLoop
         getLoop <- messageLoops.getLoop conn
         sendLoop <- messageLoops.sendLoop conn
 
@@ -695,19 +698,20 @@ withClient
 
         result <- async action
 
-        (_asy, ethresult) <- waitAnyCatch [getLoop, sendLoop, result, printLoop]
+        (_asy, ethresult) <- waitAnyCatch [getLoop, sendLoop, result, printLoop, eventLoop]
 
         -- cancelMany not reexported by UnliftIO
         cancel getLoop
         cancel sendLoop
         cancel result
+        cancel eventLoop
 
         logger.waitEmpty
         cancel printLoop
         ethresult
           & either
             ( \e -> do
-                -- the logger is dead now so print direc to the console instead
+                -- the logger is dead now so print direct to the console instead
                 putStrLn $ "One of the BiDi client threads failed: \n" <> pack (displayException e)
                 throw e
             )
