@@ -108,6 +108,7 @@ parseThrow errMsg val = parseEither parseJSON val
   & either 
      (\err -> fail . unpack $ 
        errMsg 
+       <> "\n" 
        <> "Parser error was: " 
        <> "\n" 
        <> pack err

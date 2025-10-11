@@ -460,26 +460,29 @@ data BrowsingContextEvent
 instance FromJSON BrowsingContextEvent where
   parseJSON :: Value -> Parser BrowsingContextEvent
   parseJSON val = val & (withObject "BrowsingContextEvent" $ \o -> do
-    typ <- o .: "type" 
+    typ <- o .: "method" 
+    params <- o .: "params"
+    let
+      parsedPrms :: forall a b. FromJSON a => (a -> b) -> Parser b
+      parsedPrms = (<&>) (parseJSON params)
     case typ of
-      BrowsingContextContextCreated -> parsedVal ContextCreated
-      BrowsingContextContextDestroyed -> parsedVal ContextDestroyed
-      BrowsingContextDomContentLoaded -> parsedVal DomContentLoaded
+      BrowsingContextContextCreated -> parsedPrms ContextCreated
+      BrowsingContextContextDestroyed -> parsedPrms ContextDestroyed
+      BrowsingContextDomContentLoaded -> parsedPrms DomContentLoaded
       BrowsingContextDownloadEnd -> pure DownloadEnd
-      BrowsingContextDownloadWillBegin -> parsedVal DownloadWillBegin
-      BrowsingContextFragmentNavigated -> parsedVal FragmentNavigated
-      BrowsingContextHistoryUpdated -> parsedVal HistoryUpdated
-      BrowsingContextLoad -> parsedVal Load
-      BrowsingContextNavigationAborted -> parsedVal NavigationAborted
-      BrowsingContextNavigationCommitted -> parsedVal NavigationCommitted
-      BrowsingContextNavigationFailed -> parsedVal NavigationFailed
-      BrowsingContextNavigationStarted -> parsedVal NavigationStarted
-      BrowsingContextUserPromptClosed -> parsedVal UserPromptClosed
-      BrowsingContextUserPromptOpened -> parsedVal UserPromptOpened
+      BrowsingContextDownloadWillBegin -> parsedPrms DownloadWillBegin
+      BrowsingContextFragmentNavigated -> parsedPrms FragmentNavigated
+      BrowsingContextHistoryUpdated -> parsedPrms HistoryUpdated
+      BrowsingContextLoad -> parsedPrms Load
+      BrowsingContextNavigationAborted -> parsedPrms NavigationAborted
+      BrowsingContextNavigationCommitted -> parsedPrms NavigationCommitted
+      BrowsingContextNavigationFailed -> parsedPrms NavigationFailed
+      BrowsingContextNavigationStarted -> parsedPrms NavigationStarted
+      BrowsingContextUserPromptClosed -> parsedPrms UserPromptClosed
+      BrowsingContextUserPromptOpened -> parsedPrms UserPromptOpened
       _ -> fail $ "Unknown BrowsingContextEvent type: " <> show typ)
     where
-      parsedVal :: forall a b. FromJSON a => (a -> b) -> Parser b
-      parsedVal = (<&>) (parseJSON val)
+
 
 
 data NavigationInfo = MkNavigationInfo

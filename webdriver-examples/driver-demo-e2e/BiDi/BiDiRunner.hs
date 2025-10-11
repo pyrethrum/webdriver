@@ -25,11 +25,6 @@ import UnliftIO.Async (Async, async, cancel)
 import UnliftIO.STM
 import WebDriverPreCore.BiDi.API qualified as P
 import WebDriverPreCore.BiDi.BiDiUrl (BiDiUrl (..), getBiDiUrl)
-import WebDriverPreCore.BiDi.Capabilities (Capabilities)
-import WebDriverPreCore.BiDi.Command
-import WebDriverPreCore.BiDi.CoreTypes (JSUInt (..))
-import WebDriverPreCore.BiDi.Event (Subscription (..))
-import WebDriverPreCore.BiDi.Log (LogEntry)
 import WebDriverPreCore.BiDi.BrowsingContext
   ( DownloadWillBegin,
     HistoryUpdated,
@@ -37,7 +32,12 @@ import WebDriverPreCore.BiDi.BrowsingContext
     UserPromptClosed,
     UserPromptOpened,
   )
+import WebDriverPreCore.BiDi.Capabilities (Capabilities)
+import WebDriverPreCore.BiDi.Command
+import WebDriverPreCore.BiDi.CoreTypes (JSUInt (..))
+import WebDriverPreCore.BiDi.Event (Subscription (..))
 import WebDriverPreCore.BiDi.Input (FileDialogOpened)
+import WebDriverPreCore.BiDi.Log (LogEntry)
 import WebDriverPreCore.BiDi.Network
   ( AuthRequired,
     BeforeRequestSent,
@@ -122,12 +122,12 @@ import WebDriverPreCore.BiDi.Protocol
     WebExtensionResult,
     WebExtensionUninstall,
   )
+import WebDriverPreCore.BiDi.Response (JSONDecodeError, MatchedResponse (..), ResponseObject (..), decodeResponse, displayResponseError, parseResponse)
 import WebDriverPreCore.BiDi.Script
   ( Message,
     Realm,
     RealmInfo,
   )
-import WebDriverPreCore.BiDi.Response (JSONDecodeError, MatchedResponse (..), ResponseObject (..), decodeResponse, displayResponseError, parseResponse)
 import WebDriverPreCore.BiDi.Session (SessionUnsubscribe (..))
 import WebDriverPreCore.Http qualified as Http
 import WebDriverPreCore.Internal.AesonUtils (jsonToText, objToText, parseThrow)
@@ -441,8 +441,6 @@ mkCommands socket =
       IO SubscriptionId
     sendSub' apiSubscription bcs ucs action = socket.subscribe sessionSubscribe (apiSubscription bcs ucs action)
 
-
-
 -- note: just throws an exception if an error is encountered
 -- no timeout implemented - will just hang if bidi does not behave
 
@@ -748,21 +746,28 @@ demoMessageActions log channels =
 data EventProps = MkEventProps
   { msgType :: Text,
     method :: SubscriptionType,
-    params :: Value
+    params :: Value,
+    fullObj :: Value
   }
   deriving (Show, Generic)
 
 instance FromJSON EventProps where
   parseJSON :: Value -> Parser EventProps
-  parseJSON = withObject "EventProps" $ \o ->
-    MkEventProps
-      <$> o .: "type"
-      <*> o .: "method"
-      <*> o .: "params"
+  parseJSON v =
+    withObject
+      "EventProps"
+      ( \o ->
+          MkEventProps
+            <$> o .: "type"
+            <*> o .: "method"
+            <*> o .: "params"
+            <*> pure v
+      )
+      v
 
 applySubscriptions :: (Text -> IO ()) -> Object -> TVar [ActiveSubscription IO] -> IO ()
 applySubscriptions log obj subscriptions = do
-  eventProps@MkEventProps {msgType, method, params} <-
+  eventProps@MkEventProps {msgType, method, params, fullObj} <-
     parseThrow "Could not parse event properties" (Object obj)
   when (msgType /= "event") $
     fail . unpack $
@@ -773,18 +778,18 @@ applySubscriptions log obj subscriptions = do
 
   log $ "Parsed event: " <> txt eventProps
   subs <- readTVarIO subscriptions
-  traverse_ (applySubscription method params) subs
+  traverse_ (applySubscription method params fullObj) subs
 
-applySubscription :: SubscriptionType -> Value -> ActiveSubscription IO -> IO ()
-applySubscription subType val sub =
+applySubscription :: SubscriptionType -> Value -> Value -> ActiveSubscription IO -> IO ()
+applySubscription subType params fullObj sub =
   case sub.subscription of
     SingleSubscription {subscriptionType, action} ->
       when (subscriptionType == subType) $ do
-        prms <- parseThrow ("could not parse event params for " <> txt subscriptionType) val
+        prms <- parseThrow ("could not parse event params for " <> txt subscriptionType) params
         action prms
     MultiSubscription {subscriptionTypes, nAction} -> do
       when (subType `elem` subscriptionTypes) $ do
-        prms <- parseThrow ("could not parse event params for " <> txt subType) val
+        prms <- parseThrow ("could not parse Event for " <> txt subType) fullObj
         nAction prms
 
 loopActions :: (Text -> IO ()) -> MessageActions -> MessageLoops

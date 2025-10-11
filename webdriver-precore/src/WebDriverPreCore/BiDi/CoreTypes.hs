@@ -238,4 +238,4 @@ instance FromJSON SubscriptionType where
     String "script.realmDestroyed" -> pure ScriptRealmDestroyed
     -- Input module
     String "input.fileDialogOpened" -> pure InputFileDialogOpened
-    _ -> fail "Invalid SubscriptionType"
+    st -> fail $ "Invalid SubscriptionType: " <> show st

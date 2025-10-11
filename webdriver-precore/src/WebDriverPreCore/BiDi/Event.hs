@@ -1,7 +1,9 @@
 module WebDriverPreCore.BiDi.Event where
 
-import Data.Aeson (FromJSON (..))
+import Data.Aeson (FromJSON (..), Value (..), withObject, (.:))
+import Data.Aeson.Types (Parser, parse)
 import Data.Set (Set)
+import Data.Text (Text, isPrefixOf, unpack)
 import GHC.Generics (Generic)
 import WebDriverPreCore.BiDi.BrowsingContext (BrowsingContextEvent (..))
 import WebDriverPreCore.BiDi.CoreTypes (BrowsingContext, SubscriptionType, UserContext)
@@ -41,4 +43,20 @@ data Event
       Generic
     )
 
-instance FromJSON Event
+instance FromJSON Event where
+  parseJSON :: Value -> Parser Event
+  parseJSON = withObject "Event" $ \o -> do
+    m :: Text <- o .: "method"
+    let methodPrefix :: Text -> Bool
+        methodPrefix = (`isPrefixOf` m)
+        parseVal :: forall a. FromJSON a => Parser a
+        parseVal = parseJSON (Object o)
+    if
+      | methodPrefix "browsingContext" -> BrowsingContextEvent <$> parseVal
+      | methodPrefix "input" -> InputEvent <$> parseVal
+      | methodPrefix "log" -> LogEvent <$> parseVal
+      | methodPrefix "network" -> NetworkEvent <$> parseVal
+      | methodPrefix "script" -> ScriptEvent <$> parseVal
+      | otherwise -> fail $ "Unknown event type: " <> unpack m
+    
+
