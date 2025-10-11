@@ -441,27 +441,7 @@ mkCommands socket =
       IO SubscriptionId
     sendSub' apiSubscription bcs ucs action = socket.subscribe sessionSubscribe (apiSubscription bcs ucs action)
 
-    sendMSub ::
-      ( [BrowsingContext] ->
-        [UserContext] ->
-        (Event -> IO ()) ->
-        Subscription IO
-      ) ->
-      (Event -> IO ()) ->
-      IO SubscriptionId
-    sendMSub apiSubscription = socket.subscribe sessionSubscribe . apiSubscription [] []
 
-    sendMSub' ::
-      ( [BrowsingContext] ->
-        [UserContext] ->
-        (Event -> IO ()) ->
-        Subscription IO
-      ) ->
-      [BrowsingContext] ->
-      [UserContext] ->
-      (Event -> IO ()) ->
-      IO SubscriptionId
-    sendMSub' apiSubscription bcs ucs action = socket.subscribe sessionSubscribe (apiSubscription bcs ucs action)
 
 -- note: just throws an exception if an error is encountered
 -- no timeout implemented - will just hang if bidi does not behave
