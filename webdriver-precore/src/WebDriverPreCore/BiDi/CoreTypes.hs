@@ -142,9 +142,8 @@ instance ToJSON EmptyResult where
   toJSON (MkEmptyResult obj) = Object obj
 
 data SubscriptionType
-  = -- Log module
-    LogEntryAdded
-  | BrowsingContextContextCreated
+  = -- BrowsingContext module
+    BrowsingContextContextCreated
   | BrowsingContextContextDestroyed
   | BrowsingContextNavigationStarted
   | BrowsingContextFragmentNavigated
@@ -158,6 +157,8 @@ data SubscriptionType
   | BrowsingContextNavigationFailed
   | BrowsingContextUserPromptClosed
   | BrowsingContextUserPromptOpened
+  | -- Log module
+    LogEntryAdded
   | -- Network module
     NetworkAuthRequired
   | NetworkBeforeRequestSent

@@ -73,14 +73,39 @@ module WebDriverPreCore.BiDi.API
     -- * Subscriptions
     subscribeLogEntryAdded,
     subscribeBrowsingContextCreated,
+    subscribeBrowsingContextDestroyed,
+    subscribeBrowsingContextNavigationStarted,
+    subscribeBrowsingContextFragmentNavigated,
+    subscribeBrowsingContextHistoryUpdated,
+    subscribeBrowsingContextDomContentLoaded,
+    subscribeBrowsingContextLoad,
+    subscribeBrowsingContextDownloadWillBegin,
+    subscribeBrowsingContextDownloadEnd,
+    subscribeBrowsingContextNavigationAborted,
+    subscribeBrowsingContextNavigationCommitted,
+    subscribeBrowsingContextNavigationFailed,
+    subscribeBrowsingContextUserPromptClosed,
+    subscribeBrowsingContextUserPromptOpened,
+    subscribeNetworkAuthRequired,
+    subscribeNetworkBeforeRequestSent,
+    subscribeNetworkFetchError,
+    subscribeNetworkResponseCompleted,
+    subscribeNetworkResponseStarted,
+    subscribeScriptMessage,
+    subscribeScriptRealmCreated,
+    subscribeScriptRealmDestroyed,
+    subscribeInputFileDialogOpened,
     subscribeMany
   )
 where
 
 import Data.Aeson (Object)
-import Data.Maybe (Maybe)
+import WebDriverPreCore.BiDi.BrowsingContext (NavigationInfo, DownloadWillBegin, HistoryUpdated, UserPromptClosed, UserPromptOpened)
 import WebDriverPreCore.BiDi.Event
+import WebDriverPreCore.BiDi.Input (FileDialogOpened)
 import WebDriverPreCore.BiDi.Log
+import WebDriverPreCore.BiDi.Network (AuthRequired, BeforeRequestSent, FetchError, ResponseCompleted, ResponseStarted)
+import WebDriverPreCore.BiDi.Script (Message, RealmInfo, Realm)
 import WebDriverPreCore.BiDi.Protocol
   ( Activate,
     AddDataCollector,
@@ -356,6 +381,8 @@ subscribeMany ::
   Subscription m
 subscribeMany = MultiSubscription
 
+---- BrowsingContext ----
+
 subscribeBrowsingContextCreated ::
   [BrowsingContext] ->
   [UserContext] ->
@@ -370,9 +397,164 @@ subscribeBrowsingContextDestroyed ::
   Subscription m
 subscribeBrowsingContextDestroyed = SingleSubscription BrowsingContextContextDestroyed
 
+subscribeBrowsingContextNavigationStarted ::
+  [BrowsingContext] ->
+  [UserContext] ->
+  (NavigationInfo -> m ()) ->
+  Subscription m
+subscribeBrowsingContextNavigationStarted = SingleSubscription BrowsingContextNavigationStarted
+
+subscribeBrowsingContextFragmentNavigated ::
+  [BrowsingContext] ->
+  [UserContext] ->
+  (NavigationInfo -> m ()) ->
+  Subscription m
+subscribeBrowsingContextFragmentNavigated = SingleSubscription BrowsingContextFragmentNavigated
+
+subscribeBrowsingContextHistoryUpdated ::
+  [BrowsingContext] ->
+  [UserContext] ->
+  (HistoryUpdated -> m ()) ->
+  Subscription m
+subscribeBrowsingContextHistoryUpdated = SingleSubscription BrowsingContextHistoryUpdated
+
+subscribeBrowsingContextDomContentLoaded ::
+  [BrowsingContext] ->
+  [UserContext] ->
+  (NavigationInfo -> m ()) ->
+  Subscription m
+subscribeBrowsingContextDomContentLoaded = SingleSubscription BrowsingContextDomContentLoaded
+
+subscribeBrowsingContextLoad ::
+  [BrowsingContext] ->
+  [UserContext] ->
+  (NavigationInfo -> m ()) ->
+  Subscription m
+subscribeBrowsingContextLoad = SingleSubscription BrowsingContextLoad
+
+subscribeBrowsingContextDownloadWillBegin ::
+  [BrowsingContext] ->
+  [UserContext] ->
+  (DownloadWillBegin -> m ()) ->
+  Subscription m
+subscribeBrowsingContextDownloadWillBegin = SingleSubscription BrowsingContextDownloadWillBegin
+
+subscribeBrowsingContextDownloadEnd ::
+  [BrowsingContext] ->
+  [UserContext] ->
+  (() -> m ()) ->
+  Subscription m
+subscribeBrowsingContextDownloadEnd = SingleSubscription BrowsingContextDownloadEnd
+
+subscribeBrowsingContextNavigationAborted ::
+  [BrowsingContext] ->
+  [UserContext] ->
+  (NavigationInfo -> m ()) ->
+  Subscription m
+subscribeBrowsingContextNavigationAborted = SingleSubscription BrowsingContextNavigationAborted
+
+subscribeBrowsingContextNavigationCommitted ::
+  [BrowsingContext] ->
+  [UserContext] ->
+  (NavigationInfo -> m ()) ->
+  Subscription m
+subscribeBrowsingContextNavigationCommitted = SingleSubscription BrowsingContextNavigationCommitted
+
+subscribeBrowsingContextNavigationFailed ::
+  [BrowsingContext] ->
+  [UserContext] ->
+  (NavigationInfo -> m ()) ->
+  Subscription m
+subscribeBrowsingContextNavigationFailed = SingleSubscription BrowsingContextNavigationFailed
+
+subscribeBrowsingContextUserPromptClosed ::
+  [BrowsingContext] ->
+  [UserContext] ->
+  (UserPromptClosed -> m ()) ->
+  Subscription m
+subscribeBrowsingContextUserPromptClosed = SingleSubscription BrowsingContextUserPromptClosed
+
+subscribeBrowsingContextUserPromptOpened ::
+  [BrowsingContext] ->
+  [UserContext] ->
+  (UserPromptOpened -> m ()) ->
+  Subscription m
+subscribeBrowsingContextUserPromptOpened = SingleSubscription BrowsingContextUserPromptOpened
+
+---- Log ----
+
 subscribeLogEntryAdded ::
   [BrowsingContext] ->
   [UserContext] ->
   (LogEntry -> m ()) ->
   Subscription m
 subscribeLogEntryAdded = SingleSubscription LogEntryAdded
+
+---- Network ----
+
+subscribeNetworkAuthRequired ::
+  [BrowsingContext] ->
+  [UserContext] ->
+  (AuthRequired -> m ()) ->
+  Subscription m
+subscribeNetworkAuthRequired = SingleSubscription NetworkAuthRequired
+
+subscribeNetworkBeforeRequestSent ::
+  [BrowsingContext] ->
+  [UserContext] ->
+  (BeforeRequestSent -> m ()) ->
+  Subscription m
+subscribeNetworkBeforeRequestSent = SingleSubscription NetworkBeforeRequestSent
+
+subscribeNetworkFetchError ::
+  [BrowsingContext] ->
+  [UserContext] ->
+  (FetchError -> m ()) ->
+  Subscription m
+subscribeNetworkFetchError = SingleSubscription NetworkFetchError
+
+subscribeNetworkResponseCompleted ::
+  [BrowsingContext] ->
+  [UserContext] ->
+  (ResponseCompleted -> m ()) ->
+  Subscription m
+subscribeNetworkResponseCompleted = SingleSubscription NetworkResponseCompleted
+
+subscribeNetworkResponseStarted ::
+  [BrowsingContext] ->
+  [UserContext] ->
+  (ResponseStarted -> m ()) ->
+  Subscription m
+subscribeNetworkResponseStarted = SingleSubscription NetworkResponseStarted
+
+---- Script ----
+
+subscribeScriptMessage ::
+  [BrowsingContext] ->
+  [UserContext] ->
+  (Message -> m ()) ->
+  Subscription m
+subscribeScriptMessage = SingleSubscription ScriptMessage
+
+subscribeScriptRealmCreated ::
+  [BrowsingContext] ->
+  [UserContext] ->
+  (RealmInfo -> m ()) ->
+  Subscription m
+subscribeScriptRealmCreated = SingleSubscription ScriptRealmCreated
+
+subscribeScriptRealmDestroyed ::
+  [BrowsingContext] ->
+  [UserContext] ->
+  (Realm -> m ()) ->
+  Subscription m
+subscribeScriptRealmDestroyed = SingleSubscription ScriptRealmDestroyed
+
+---- Input ----
+
+subscribeInputFileDialogOpened ::
+  [BrowsingContext] ->
+  [UserContext] ->
+  (FileDialogOpened -> m ()) ->
+  Subscription m
+subscribeInputFileDialogOpened = SingleSubscription InputFileDialogOpened
