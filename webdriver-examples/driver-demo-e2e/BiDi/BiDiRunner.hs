@@ -30,6 +30,21 @@ import WebDriverPreCore.BiDi.Command
 import WebDriverPreCore.BiDi.CoreTypes (JSUInt (..))
 import WebDriverPreCore.BiDi.Event (Subscription (..))
 import WebDriverPreCore.BiDi.Log (LogEntry)
+import WebDriverPreCore.BiDi.BrowsingContext
+  ( DownloadWillBegin,
+    HistoryUpdated,
+    NavigationInfo,
+    UserPromptClosed,
+    UserPromptOpened,
+  )
+import WebDriverPreCore.BiDi.Input (FileDialogOpened)
+import WebDriverPreCore.BiDi.Network
+  ( AuthRequired,
+    BeforeRequestSent,
+    FetchError,
+    ResponseCompleted,
+    ResponseStarted,
+  )
 import WebDriverPreCore.BiDi.Protocol
   ( Activate,
     AddDataCollector,
@@ -106,6 +121,11 @@ import WebDriverPreCore.BiDi.Protocol
     WebExtensionInstall,
     WebExtensionResult,
     WebExtensionUninstall,
+  )
+import WebDriverPreCore.BiDi.Script
+  ( Message,
+    Realm,
+    RealmInfo,
   )
 import WebDriverPreCore.BiDi.Response (JSONDecodeError, MatchedResponse (..), ResponseObject (..), decodeResponse, displayResponseError, parseResponse)
 import WebDriverPreCore.BiDi.Session (SessionUnsubscribe (..))
@@ -194,12 +214,59 @@ data BiDiActions = MkCommands
 
     subscribeMany :: [SubscriptionType] -> (Event -> IO ()) -> IO SubscriptionId,
     subscribeMany' :: [BrowsingContext] -> [UserContext] -> [SubscriptionType] -> (Event -> IO ()) -> IO SubscriptionId,
-    --
+    -- Log
     subscribeLogEntryAdded :: (LogEntry -> IO ()) -> IO SubscriptionId,
     subscribeLogEntryAdded' :: [BrowsingContext] -> [UserContext] -> (LogEntry -> IO ()) -> IO SubscriptionId,
-    --
+    -- BrowsingContext
     subscribeBrowsingContextCreated :: (Info -> IO ()) -> IO SubscriptionId,
     subscribeBrowsingContextCreated' :: [BrowsingContext] -> [UserContext] -> (Info -> IO ()) -> IO SubscriptionId,
+    subscribeBrowsingContextDestroyed :: (Info -> IO ()) -> IO SubscriptionId,
+    subscribeBrowsingContextDestroyed' :: [BrowsingContext] -> [UserContext] -> (Info -> IO ()) -> IO SubscriptionId,
+    subscribeBrowsingContextNavigationStarted :: (NavigationInfo -> IO ()) -> IO SubscriptionId,
+    subscribeBrowsingContextNavigationStarted' :: [BrowsingContext] -> [UserContext] -> (NavigationInfo -> IO ()) -> IO SubscriptionId,
+    subscribeBrowsingContextFragmentNavigated :: (NavigationInfo -> IO ()) -> IO SubscriptionId,
+    subscribeBrowsingContextFragmentNavigated' :: [BrowsingContext] -> [UserContext] -> (NavigationInfo -> IO ()) -> IO SubscriptionId,
+    subscribeBrowsingContextHistoryUpdated :: (HistoryUpdated -> IO ()) -> IO SubscriptionId,
+    subscribeBrowsingContextHistoryUpdated' :: [BrowsingContext] -> [UserContext] -> (HistoryUpdated -> IO ()) -> IO SubscriptionId,
+    subscribeBrowsingContextDomContentLoaded :: (NavigationInfo -> IO ()) -> IO SubscriptionId,
+    subscribeBrowsingContextDomContentLoaded' :: [BrowsingContext] -> [UserContext] -> (NavigationInfo -> IO ()) -> IO SubscriptionId,
+    subscribeBrowsingContextLoad :: (NavigationInfo -> IO ()) -> IO SubscriptionId,
+    subscribeBrowsingContextLoad' :: [BrowsingContext] -> [UserContext] -> (NavigationInfo -> IO ()) -> IO SubscriptionId,
+    subscribeBrowsingContextDownloadWillBegin :: (DownloadWillBegin -> IO ()) -> IO SubscriptionId,
+    subscribeBrowsingContextDownloadWillBegin' :: [BrowsingContext] -> [UserContext] -> (DownloadWillBegin -> IO ()) -> IO SubscriptionId,
+    subscribeBrowsingContextDownloadEnd :: (() -> IO ()) -> IO SubscriptionId,
+    subscribeBrowsingContextDownloadEnd' :: [BrowsingContext] -> [UserContext] -> (() -> IO ()) -> IO SubscriptionId,
+    subscribeBrowsingContextNavigationAborted :: (NavigationInfo -> IO ()) -> IO SubscriptionId,
+    subscribeBrowsingContextNavigationAborted' :: [BrowsingContext] -> [UserContext] -> (NavigationInfo -> IO ()) -> IO SubscriptionId,
+    subscribeBrowsingContextNavigationCommitted :: (NavigationInfo -> IO ()) -> IO SubscriptionId,
+    subscribeBrowsingContextNavigationCommitted' :: [BrowsingContext] -> [UserContext] -> (NavigationInfo -> IO ()) -> IO SubscriptionId,
+    subscribeBrowsingContextNavigationFailed :: (NavigationInfo -> IO ()) -> IO SubscriptionId,
+    subscribeBrowsingContextNavigationFailed' :: [BrowsingContext] -> [UserContext] -> (NavigationInfo -> IO ()) -> IO SubscriptionId,
+    subscribeBrowsingContextUserPromptClosed :: (UserPromptClosed -> IO ()) -> IO SubscriptionId,
+    subscribeBrowsingContextUserPromptClosed' :: [BrowsingContext] -> [UserContext] -> (UserPromptClosed -> IO ()) -> IO SubscriptionId,
+    subscribeBrowsingContextUserPromptOpened :: (UserPromptOpened -> IO ()) -> IO SubscriptionId,
+    subscribeBrowsingContextUserPromptOpened' :: [BrowsingContext] -> [UserContext] -> (UserPromptOpened -> IO ()) -> IO SubscriptionId,
+    -- Network
+    subscribeNetworkAuthRequired :: (AuthRequired -> IO ()) -> IO SubscriptionId,
+    subscribeNetworkAuthRequired' :: [BrowsingContext] -> [UserContext] -> (AuthRequired -> IO ()) -> IO SubscriptionId,
+    subscribeNetworkBeforeRequestSent :: (BeforeRequestSent -> IO ()) -> IO SubscriptionId,
+    subscribeNetworkBeforeRequestSent' :: [BrowsingContext] -> [UserContext] -> (BeforeRequestSent -> IO ()) -> IO SubscriptionId,
+    subscribeNetworkFetchError :: (FetchError -> IO ()) -> IO SubscriptionId,
+    subscribeNetworkFetchError' :: [BrowsingContext] -> [UserContext] -> (FetchError -> IO ()) -> IO SubscriptionId,
+    subscribeNetworkResponseCompleted :: (ResponseCompleted -> IO ()) -> IO SubscriptionId,
+    subscribeNetworkResponseCompleted' :: [BrowsingContext] -> [UserContext] -> (ResponseCompleted -> IO ()) -> IO SubscriptionId,
+    subscribeNetworkResponseStarted :: (ResponseStarted -> IO ()) -> IO SubscriptionId,
+    subscribeNetworkResponseStarted' :: [BrowsingContext] -> [UserContext] -> (ResponseStarted -> IO ()) -> IO SubscriptionId,
+    -- Script
+    subscribeScriptMessage :: (Message -> IO ()) -> IO SubscriptionId,
+    subscribeScriptMessage' :: [BrowsingContext] -> [UserContext] -> (Message -> IO ()) -> IO SubscriptionId,
+    subscribeScriptRealmCreated :: (RealmInfo -> IO ()) -> IO SubscriptionId,
+    subscribeScriptRealmCreated' :: [BrowsingContext] -> [UserContext] -> (RealmInfo -> IO ()) -> IO SubscriptionId,
+    subscribeScriptRealmDestroyed :: (Realm -> IO ()) -> IO SubscriptionId,
+    subscribeScriptRealmDestroyed' :: [BrowsingContext] -> [UserContext] -> (Realm -> IO ()) -> IO SubscriptionId,
+    -- Input
+    subscribeInputFileDialogOpened :: (FileDialogOpened -> IO ()) -> IO SubscriptionId,
+    subscribeInputFileDialogOpened' :: [BrowsingContext] -> [UserContext] -> (FileDialogOpened -> IO ()) -> IO SubscriptionId,
     --
     unsubscribe :: SubscriptionId -> IO ()
   }
@@ -276,12 +343,59 @@ mkCommands socket =
 
       subscribeMany = \sts -> subscribeMany' [] [] sts,
       subscribeMany',
-      --
+      -- Log
       subscribeLogEntryAdded = sendSub P.subscribeLogEntryAdded,
       subscribeLogEntryAdded' = sendSub' P.subscribeLogEntryAdded,
-      --
+      -- BrowsingContext
       subscribeBrowsingContextCreated = sendSub P.subscribeBrowsingContextCreated,
       subscribeBrowsingContextCreated' = sendSub' P.subscribeBrowsingContextCreated,
+      subscribeBrowsingContextDestroyed = sendSub P.subscribeBrowsingContextDestroyed,
+      subscribeBrowsingContextDestroyed' = sendSub' P.subscribeBrowsingContextDestroyed,
+      subscribeBrowsingContextNavigationStarted = sendSub P.subscribeBrowsingContextNavigationStarted,
+      subscribeBrowsingContextNavigationStarted' = sendSub' P.subscribeBrowsingContextNavigationStarted,
+      subscribeBrowsingContextFragmentNavigated = sendSub P.subscribeBrowsingContextFragmentNavigated,
+      subscribeBrowsingContextFragmentNavigated' = sendSub' P.subscribeBrowsingContextFragmentNavigated,
+      subscribeBrowsingContextHistoryUpdated = sendSub P.subscribeBrowsingContextHistoryUpdated,
+      subscribeBrowsingContextHistoryUpdated' = sendSub' P.subscribeBrowsingContextHistoryUpdated,
+      subscribeBrowsingContextDomContentLoaded = sendSub P.subscribeBrowsingContextDomContentLoaded,
+      subscribeBrowsingContextDomContentLoaded' = sendSub' P.subscribeBrowsingContextDomContentLoaded,
+      subscribeBrowsingContextLoad = sendSub P.subscribeBrowsingContextLoad,
+      subscribeBrowsingContextLoad' = sendSub' P.subscribeBrowsingContextLoad,
+      subscribeBrowsingContextDownloadWillBegin = sendSub P.subscribeBrowsingContextDownloadWillBegin,
+      subscribeBrowsingContextDownloadWillBegin' = sendSub' P.subscribeBrowsingContextDownloadWillBegin,
+      subscribeBrowsingContextDownloadEnd = sendSub P.subscribeBrowsingContextDownloadEnd,
+      subscribeBrowsingContextDownloadEnd' = sendSub' P.subscribeBrowsingContextDownloadEnd,
+      subscribeBrowsingContextNavigationAborted = sendSub P.subscribeBrowsingContextNavigationAborted,
+      subscribeBrowsingContextNavigationAborted' = sendSub' P.subscribeBrowsingContextNavigationAborted,
+      subscribeBrowsingContextNavigationCommitted = sendSub P.subscribeBrowsingContextNavigationCommitted,
+      subscribeBrowsingContextNavigationCommitted' = sendSub' P.subscribeBrowsingContextNavigationCommitted,
+      subscribeBrowsingContextNavigationFailed = sendSub P.subscribeBrowsingContextNavigationFailed,
+      subscribeBrowsingContextNavigationFailed' = sendSub' P.subscribeBrowsingContextNavigationFailed,
+      subscribeBrowsingContextUserPromptClosed = sendSub P.subscribeBrowsingContextUserPromptClosed,
+      subscribeBrowsingContextUserPromptClosed' = sendSub' P.subscribeBrowsingContextUserPromptClosed,
+      subscribeBrowsingContextUserPromptOpened = sendSub P.subscribeBrowsingContextUserPromptOpened,
+      subscribeBrowsingContextUserPromptOpened' = sendSub' P.subscribeBrowsingContextUserPromptOpened,
+      -- Network
+      subscribeNetworkAuthRequired = sendSub P.subscribeNetworkAuthRequired,
+      subscribeNetworkAuthRequired' = sendSub' P.subscribeNetworkAuthRequired,
+      subscribeNetworkBeforeRequestSent = sendSub P.subscribeNetworkBeforeRequestSent,
+      subscribeNetworkBeforeRequestSent' = sendSub' P.subscribeNetworkBeforeRequestSent,
+      subscribeNetworkFetchError = sendSub P.subscribeNetworkFetchError,
+      subscribeNetworkFetchError' = sendSub' P.subscribeNetworkFetchError,
+      subscribeNetworkResponseCompleted = sendSub P.subscribeNetworkResponseCompleted,
+      subscribeNetworkResponseCompleted' = sendSub' P.subscribeNetworkResponseCompleted,
+      subscribeNetworkResponseStarted = sendSub P.subscribeNetworkResponseStarted,
+      subscribeNetworkResponseStarted' = sendSub' P.subscribeNetworkResponseStarted,
+      -- Script
+      subscribeScriptMessage = sendSub P.subscribeScriptMessage,
+      subscribeScriptMessage' = sendSub' P.subscribeScriptMessage,
+      subscribeScriptRealmCreated = sendSub P.subscribeScriptRealmCreated,
+      subscribeScriptRealmCreated' = sendSub' P.subscribeScriptRealmCreated,
+      subscribeScriptRealmDestroyed = sendSub P.subscribeScriptRealmDestroyed,
+      subscribeScriptRealmDestroyed' = sendSub' P.subscribeScriptRealmDestroyed,
+      -- Input
+      subscribeInputFileDialogOpened = sendSub P.subscribeInputFileDialogOpened,
+      subscribeInputFileDialogOpened' = sendSub' P.subscribeInputFileDialogOpened,
       --
       unsubscribe = socket.unsubscribe sessionUnsubscribe
     }
