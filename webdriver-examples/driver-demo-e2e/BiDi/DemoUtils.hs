@@ -124,7 +124,7 @@ chkDomContains' timeout pause' MkDemoUtils {..} MkCommands {..} bc expectedText 
         else do
           result <-
             (validateDomText >> pure ()) `catch` \(_ :: TextValidationError) -> do
-              pauseMin pause'
+              pauseAtLeast pause'
               checkLoop endTime
           pure result
 

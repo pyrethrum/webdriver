@@ -60,7 +60,7 @@ bidiDemoUtils baseLog pause =
           logShowM = \l t -> t >>= logShow l,
           logTxt = logTxt',
           pause = sleep pause,
-          pauseMin = pauseMin pause,
+          pauseAtLeast = pauseAtLeast pause,
           timeLimitLog = timeLimitLog logShow',
           timeLimitLog' = timeLimitLog' logShow'
         }
@@ -89,7 +89,7 @@ lwrTxtIncludes expected = (toLower expected `isInfixOf`) . toLower
 data DemoUtils = MkDemoUtils
   { sleep :: Timeout -> IO (),
     pause :: IO (),
-    pauseMin :: Timeout -> IO (),
+    pauseAtLeast :: Timeout -> IO (),
     logTxt :: Text -> IO (),
     log :: Text -> Text -> IO (),
     logShow :: forall a. (Show a) => Text -> a -> IO (),
@@ -111,7 +111,7 @@ demoUtils pause =
       logM,
       logShowM,
       pause = sleep pause,
-      pauseMin = pauseMin pause,
+      pauseAtLeast = pauseAtLeast pause,
       timeLimitLog = timeLimitLog logShow,
       timeLimitLog' = timeLimitLog' logShow
     }
@@ -127,7 +127,7 @@ noOpUtils =
       logShowM = noOp2,
       pause = pure (),
       -- even for no-op, ensure sleep for passed in ms
-      pauseMin = sleep,
+      pauseAtLeast = sleep,
       timeLimitLog = timeLimitLog logShow,
       timeLimitLog' = timeLimitLog' logShow
     }
@@ -139,8 +139,8 @@ noOpUtils =
 sleep :: Timeout -> IO ()
 sleep = threadDelay . coerce
 
-pauseMin :: Timeout -> Timeout -> IO ()
-pauseMin defaultSleep = sleep . MkTimeout . max (coerce defaultSleep) . coerce
+pauseAtLeast :: Timeout -> Timeout -> IO ()
+pauseAtLeast defaultSleep = sleep . MkTimeout . max (coerce defaultSleep) . coerce
 
 timeLimit :: forall a. Timeout -> Text -> (a -> IO ()) -> IO (a -> IO ())
 timeLimit (MkTimeout ms) eventDesc action  = do

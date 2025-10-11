@@ -11,7 +11,6 @@ import WebDriverPreCore.BiDi.Network (NetworkEvent (..))
 import WebDriverPreCore.BiDi.Script (ScriptEvent (..))
 import Prelude
 
-
 data Subscription m where
   SingleSubscription ::
     forall m r.
@@ -23,9 +22,9 @@ data Subscription m where
     } ->
     Subscription m
   MultiSubscription ::
-    { subscriptionTypes :: Set SubscriptionType,
-      browsingContexts :: [BrowsingContext],
+    { browsingContexts :: [BrowsingContext],
       userContexts :: [UserContext],
+      subscriptionTypes :: [SubscriptionType],
       nAction :: Event -> m ()
     } ->
     Subscription m

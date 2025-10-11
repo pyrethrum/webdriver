@@ -72,7 +72,8 @@ module WebDriverPreCore.BiDi.API
 
     -- * Subscriptions
     subscribeLogEntryAdded,
-    subscribeBrowsingContextCreated
+    subscribeBrowsingContextCreated,
+    subscribeMany
   )
 where
 
@@ -164,6 +165,7 @@ import WebDriverPreCore.BiDi.Protocol
 -- TODO: generic subscribe
 -- TODO: generic unsubscribe
 -- TODO: generic event
+-- TODO: do Something about Objects -newtype?
 
 --- ############## Commands ##############
 
@@ -346,12 +348,13 @@ webExtensionUninstall = mkCommand "webExtension.uninstall"
 
 -- ############## Subscriptions (Events) ##############
 
-subscribeLogEntryAdded ::
+subscribeMany :: 
   [BrowsingContext] ->
   [UserContext] ->
-  (LogEntry -> m ()) ->
+  [SubscriptionType] ->
+  (Event -> m ()) ->
   Subscription m
-subscribeLogEntryAdded = SingleSubscription LogEntryAdded
+subscribeMany = MultiSubscription
 
 subscribeBrowsingContextCreated ::
   [BrowsingContext] ->
@@ -359,3 +362,17 @@ subscribeBrowsingContextCreated ::
   (Info -> m ()) ->
   Subscription m
 subscribeBrowsingContextCreated = SingleSubscription BrowsingContextContextCreated
+
+subscribeBrowsingContextDestroyed ::
+  [BrowsingContext] ->
+  [UserContext] ->
+  (Info -> m ()) ->
+  Subscription m
+subscribeBrowsingContextDestroyed = SingleSubscription BrowsingContextContextDestroyed
+
+subscribeLogEntryAdded ::
+  [BrowsingContext] ->
+  [UserContext] ->
+  (LogEntry -> m ()) ->
+  Subscription m
+subscribeLogEntryAdded = SingleSubscription LogEntryAdded

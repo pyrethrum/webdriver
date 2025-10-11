@@ -127,7 +127,7 @@ networkDataCollectorDemo =
               wait = Just Complete
             }
       logShow "Navigation result" navResult
-      pauseMin $ 1 * second
+      pauseAtLeast $ 1 * second
       pause
 
       logTxt "Test 7: Remove data collectors"
@@ -293,7 +293,7 @@ networkInterceptDemo =
               wait = Just Complete
             }
       logShow "Navigation result" navResult
-      pauseMin $ 1 * second
+      pauseAtLeast $ 1 * second
       pause
 
       logTxt "Test 7: Remove intercepts"

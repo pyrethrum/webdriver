@@ -1,12 +1,12 @@
 module BiDi.Demos.BrowsingContextEventDemos where
 
-import BiDi.BiDiRunner (BiDiActions (..))
+import BiDi.BiDiRunner (BiDiActions (..), BiDiMethods (unsubscribe))
 import BiDi.DemoUtils
 import IOUtils (DemoUtils (..))
 import Prelude hiding (log, putStrLn)
 import WebDriverPreCore.BiDi.Protocol (Create(..))
 import WebDriverPreCore.BiDi.Protocol (CreateType(..))
-import Const (seconds)
+import Const (seconds, second)
 
 
 {- 
@@ -38,7 +38,7 @@ browsingContextEventDemo =
   where
     action :: DemoUtils -> BiDiActions -> IO ()
     action MkDemoUtils {..} MkCommands {..} = do
-      subId <- subscribeBrowsingContextCreated (logShow "Event: browsingContext.contextCreated")
+      subId <- subscribeBrowsingContextCreated (logShow "Event Subscription Fired: browsingContext.contextCreated")
       logShow "Subscription id:" subId
 
       logTxt "New browsing context - Tab"
@@ -50,5 +50,39 @@ browsingContextEventDemo =
                 userContext = Nothing
               }
       bc <- browsingContextCreate bcParams
-      logShow "Browsing context - Tab" bc
-      pauseMin $ 5 * seconds
+      logShow "Browsing context - Tab II" bc
+ 
+      logShow "Unsubscribing from browsingContext.contextCreated event" subId
+      unsubscribe subId
+      
+      bc2 <- browsingContextCreate bcParams
+      logShow "Browsing context - Tab III (No Event Triggered)" bc2
+      pauseAtLeast $ 1 * second
+
+-- >>> runDemo browsingContextEventDemo
+browsingContextEventDemoMulti :: BiDiDemo
+browsingContextEventDemoMulti =
+  demo "Browsing Context Events" action
+  where
+    action :: DemoUtils -> BiDiActions -> IO ()
+    action MkDemoUtils {..} MkCommands {..} = do
+      subId <- subscribeBrowsingContextCreated (logShow "Event Subscription Fired: browsingContext.contextCreated")
+      logShow "Subscription id:" subId
+
+      logTxt "New browsing context - Tab"
+      let bcParams =
+            MkCreate
+              { createType = Tab,
+                background = False,
+                referenceContext = Nothing,
+                userContext = Nothing
+              }
+      bc <- browsingContextCreate bcParams
+      logShow "Browsing context - Tab II" bc
+ 
+      logShow "Unsubscribing from browsingContext.contextCreated event" subId
+      unsubscribe subId
+      
+      bc2 <- browsingContextCreate bcParams
+      logShow "Browsing context - Tab III (No Event Triggered)" bc2
+      pauseAtLeast $ 1 * second

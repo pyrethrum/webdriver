@@ -1,6 +1,7 @@
 module BiDi.BiDiRunner where
 
 import Config (Config, loadConfig)
+import Const (Timeout)
 import Control.Exception (Exception (displayException), Handler (..), SomeException, catch, catches, throw)
 import Control.Monad (void, when)
 import Data.Aeson (FromJSON, Object, ToJSON, Value (..), encode, toJSON, withObject, (.:))
@@ -107,11 +108,11 @@ import WebDriverPreCore.BiDi.Protocol
     WebExtensionUninstall,
   )
 import WebDriverPreCore.BiDi.Response (JSONDecodeError, MatchedResponse (..), ResponseObject (..), decodeResponse, displayResponseError, parseResponse)
+import WebDriverPreCore.BiDi.Session (SessionUnsubscribe (..))
 import WebDriverPreCore.Http qualified as Http
 import WebDriverPreCore.Internal.AesonUtils (jsonToText, objToText, parseThrow)
 import WebDriverPreCore.Internal.Utils (txt)
 import Prelude hiding (getLine, log, null, print, putStrLn)
-import Const (Timeout)
 
 -- TODO: geric command
 -- TODO: handle event
@@ -126,6 +127,9 @@ data BiDiActions = MkCommands
     sessionNew :: Capabilities -> IO SessionNewResult,
     sessionStatus :: IO SessionStatusResult,
     sessionEnd :: IO Object,
+    -- sessionSubscribe and sessionUnsubscribe are exposed for demo commands but they would not be used normally
+    -- in client code. They would be called via the subscribe/unsubscribe methods below so the runner can
+    -- locally track subscriptions
     sessionSubscribe :: SessionSubscriptionRequest -> IO SessionSubscribeResult,
     sessionUnsubscribe :: SessionUnsubscribe -> IO Object,
     -- BrowsingContext commands
@@ -188,10 +192,16 @@ data BiDiActions = MkCommands
     webExtensionUninstall :: WebExtensionUninstall -> IO Object,
     -- ########## EVENTS ##########
 
+    subscribeMany :: [SubscriptionType] -> (Event -> IO ()) -> IO SubscriptionId,
+    subscribeMany' :: [BrowsingContext] -> [UserContext] -> [SubscriptionType] -> (Event -> IO ()) -> IO SubscriptionId,
+    --
     subscribeLogEntryAdded :: (LogEntry -> IO ()) -> IO SubscriptionId,
     subscribeLogEntryAdded' :: [BrowsingContext] -> [UserContext] -> (LogEntry -> IO ()) -> IO SubscriptionId,
+    --
     subscribeBrowsingContextCreated :: (Info -> IO ()) -> IO SubscriptionId,
-    subscribeBrowsingContextCreated' :: [BrowsingContext] -> [UserContext] -> (Info -> IO ()) -> IO SubscriptionId
+    subscribeBrowsingContextCreated' :: [BrowsingContext] -> [UserContext] -> (Info -> IO ()) -> IO SubscriptionId,
+    --
+    unsubscribe :: SubscriptionId -> IO ()
   }
 
 mkCommands :: BiDiMethods -> BiDiActions
@@ -202,7 +212,7 @@ mkCommands socket =
       sessionNew = send . P.sessionNew,
       sessionStatus = send P.sessionStatus,
       sessionEnd = send P.sessionEnd,
-      sessionSubscribe = send . P.sessionSubscribe,
+      sessionSubscribe,
       sessionUnsubscribe = send . P.sessionUnsubscribe,
       -- BrowsingContext commands
       browsingContextActivate = send . P.browsingContextActivate,
@@ -264,11 +274,16 @@ mkCommands socket =
       --
       -- ############## Subscriptions (Events) ##############
 
+      subscribeMany = \sts -> subscribeMany' [] [] sts,
+      subscribeMany',
+      --
       subscribeLogEntryAdded = sendSub P.subscribeLogEntryAdded,
       subscribeLogEntryAdded' = sendSub' P.subscribeLogEntryAdded,
       --
       subscribeBrowsingContextCreated = sendSub P.subscribeBrowsingContextCreated,
-      subscribeBrowsingContextCreated' = sendSub' P.subscribeBrowsingContextCreated
+      subscribeBrowsingContextCreated' = sendSub' P.subscribeBrowsingContextCreated,
+      --
+      unsubscribe = socket.unsubscribe sessionUnsubscribe
     }
   where
     send :: forall c r. (FromJSON r, ToJSON c, Show c) => Command c r -> IO r
@@ -276,6 +291,17 @@ mkCommands socket =
 
     sessionSubscribe :: SessionSubscriptionRequest -> IO SessionSubscribeResult
     sessionSubscribe = send . P.sessionSubscribe
+
+    sessionUnsubscribe :: SessionUnsubscribe -> IO Object
+    sessionUnsubscribe = send . P.sessionUnsubscribe
+
+    subscribeMany' ::
+      [BrowsingContext] ->
+      [UserContext] ->
+      [SubscriptionType] ->
+      (Event -> IO ()) ->
+      IO SubscriptionId
+    subscribeMany' bcs ucs sts = socket.subscribe sessionSubscribe . P.subscribeMany bcs ucs sts
 
     sendSub ::
       forall a.
@@ -300,6 +326,28 @@ mkCommands socket =
       (a -> IO ()) ->
       IO SubscriptionId
     sendSub' apiSubscription bcs ucs action = socket.subscribe sessionSubscribe (apiSubscription bcs ucs action)
+
+    sendMSub ::
+      ( [BrowsingContext] ->
+        [UserContext] ->
+        (Event -> IO ()) ->
+        Subscription IO
+      ) ->
+      (Event -> IO ()) ->
+      IO SubscriptionId
+    sendMSub apiSubscription = socket.subscribe sessionSubscribe . apiSubscription [] []
+
+    sendMSub' ::
+      ( [BrowsingContext] ->
+        [UserContext] ->
+        (Event -> IO ()) ->
+        Subscription IO
+      ) ->
+      [BrowsingContext] ->
+      [UserContext] ->
+      (Event -> IO ()) ->
+      IO SubscriptionId
+    sendMSub' apiSubscription bcs ucs action = socket.subscribe sessionSubscribe (apiSubscription bcs ucs action)
 
 -- note: just throws an exception if an error is encountered
 -- no timeout implemented - will just hang if bidi does not behave
@@ -354,7 +402,7 @@ mkDemoBiDiClientParams pauseMs = do
         demoUtils = bidiDemoUtils log pauseMs
       }
 
--- TODO Add fail event
+-- TODO Add fail for event test
 mkFailBidiClientParams ::
   Timeout ->
   Word64 ->
@@ -392,7 +440,7 @@ data BiDiMethods = MkBiDiMethods
       (SessionSubscriptionRequest -> IO SessionSubscribeResult) ->
       Subscription IO ->
       IO SubscriptionId,
-    unsubscribe :: SubscriptionId -> IO ()
+    unsubscribe :: (SessionUnsubscribe -> IO Object) -> SubscriptionId -> IO ()
   }
 
 data Channels = MkChannels
@@ -429,7 +477,7 @@ mkBiDIMethods c =
       send,
       getNext = atomically $ readTChan c.receiveChan,
       subscribe = subscribe c.subscriptions,
-      unsubscribe = atomically . unsubscribe c.subscriptions
+      unsubscribe = unsubscribe c.subscriptions
     }
   where
     send :: forall a. (ToJSON a) => a -> IO ()
@@ -469,7 +517,7 @@ subscribe allSubs socketSubscribe subscription = do
       modifyTVar' allSubs (MkActiveSubscription subId subscription :)
 
     unsubscribeDummy :: STM ()
-    unsubscribeDummy = unsubscribe allSubs dummySubId
+    unsubscribeDummy = removeSubscription allSubs dummySubId
 
     toMaybe = \case
       [] -> Nothing
@@ -485,9 +533,13 @@ subscribe allSubs socketSubscribe subscription = do
           userContexts = toMaybe subscription.userContexts
         }
 
-unsubscribe :: TVar [ActiveSubscription IO] -> SubscriptionId -> STM ()
-unsubscribe allSubs subId =
-  modifyTVar' allSubs (filter ((/=) subId . (.subscriptionId)))
+removeSubscription :: TVar [ActiveSubscription IO] -> SubscriptionId -> STM ()
+removeSubscription allSubs subId = modifyTVar' allSubs $ filter ((subId /=) . (.subscriptionId))
+
+unsubscribe :: TVar [ActiveSubscription IO] -> (SessionUnsubscribe -> IO Object) -> SubscriptionId -> IO ()
+unsubscribe allSubs socketUnsubscribe subId = do
+  socketUnsubscribe $ UnsubscribeByID [subId]
+  atomically $ removeSubscription allSubs subId
 
 data ActiveSubscription m = MkActiveSubscription
   { subscriptionId :: SubscriptionId,
