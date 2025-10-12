@@ -134,7 +134,7 @@ browsingContextEventDemoFilteredSubscriptions =
         subscribeBrowsingContextNavigationStarted' [bc1] [] $
           logShow "Navigation Started Event Fired (should only fire for browsing context 1)"
       logShow "Subscribed to navigationStarted for browsing context 1:" subId
-      pausehttps://github.com/mozilla/geckodriver/issues/2236
+      pause
 
       logTxt "Navigating both contexts to different URLs"
 
