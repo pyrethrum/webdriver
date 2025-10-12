@@ -93,4 +93,72 @@ browsingContextEventDemoMulti =
 
       browsingContextClose $ MkClose bc2 Nothing
       logShow "Browsing context destroyed - Tab III (No Event Triggered)" bc2
+
+-- >>> runDemo browsingContextEventDemoFilteredSubscriptions
+browsingContextEventDemoFilteredSubscriptions :: BiDiDemo
+browsingContextEventDemoFilteredSubscriptions =
+  demo "Browsing Context Events - Filtered Subscriptions per Context" action
+  where
+    action :: DemoUtils -> BiDiActions -> IO ()
+    action MkDemoUtils {..} MkCommands {..} = do
+      logTxt "Creating two initial browsing contexts"
+      
+      let createParams =
+            MkCreate
+              { createType = Tab,
+                background = False,
+                referenceContext = Nothing,
+                userContext = Nothing
+              }
+      
+      -- Create first parent context
+      parentContext1 <- browsingContextCreate createParams
+      logShow "Created parent context 1:" parentContext1
+      
+      -- Create second parent context
+      parentContext2 <- browsingContextCreate createParams
+      logShow "Created parent context 2:" parentContext2
+      
+      logTxt "Setting up filtered subscriptions"
+      
+      -- Subscribe to contextCreated events only for parentContext1
+      subIdCreated1 <- subscribeBrowsingContextCreated' [parentContext1] [] $ logShow "Created Event Fired" 
+      logShow "Subscribed to contextCreated for parent context 1:" subIdCreated1
+      
+      -- Subscribe to contextDestroyed events only for parentContext2
+      subIdDestroyed2 <- subscribeBrowsingContextDestroyed' [parentContext2] [] $ logShow "Destroyed Event Fired"
+      logShow "Subscribed to contextDestroyed for parent context 2:" subIdDestroyed2
+      pause
+      
+      logTxt "Creating child contexts"
+      
+      -- Create a child context in parentContext1
+      logTxt "Creating child in parent context 1 (should trigger PARENT 1 - Created Event)"
+      let childParams1 = createParams {referenceContext = Just parentContext1}
+      childContext1 <- browsingContextCreate childParams1
+      logShow "Created child context 1:" childContext1
+      pause
+      
+      -- Create a child context in parentContext2
+      logTxt "Creating child in parent context 2 - no subscription"
+      let childParams2 = createParams {referenceContext = Just parentContext2}
+      childContext2 <- browsingContextCreate childParams2
+      logShow "Created child context 2:" childContext2
+      pause
+      
+      logTxt "Closing child contexts"
+      
+      -- Close child context 1 (should trigger PARENT 1 - Destroyed Event)
+      logTxt "Closing child context 1 - no subscription"
+      browsingContextClose $ MkClose childContext1 Nothing
+      pause
+      
+      -- Close child context 2 (should trigger PARENT 2 - Destroyed Event)
+      logTxt "Closing child context 2 (should trigger PARENT 2 - Destroyed Event)"
+      browsingContextClose $ MkClose childContext2 Nothing
+      pause
+
+      pauseAtLeast $ 2 * seconds
+      
+
   
