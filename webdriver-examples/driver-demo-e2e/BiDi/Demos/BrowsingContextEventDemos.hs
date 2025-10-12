@@ -219,7 +219,6 @@ browsingContextEventDemoUserContextFiltered =
 
 
 -- >>> runDemo browsingContextEventCreatedestroyed
--- *** Exception: user error (Timeout: BrowsingContextContextCreated)
 browsingContextEventCreatedestroyed :: BiDiDemo
 browsingContextEventCreatedestroyed =
   demo "Browsing Context Events - Created and Destroyed" action
@@ -228,26 +227,26 @@ browsingContextEventCreatedestroyed =
     action MkDemoUtils {..} MkCommands {..} = do
       
       logTxt "Subscribing to contextCreated and contextDestroyed events"
-      createdEventFired <- timeLimitLog BrowsingContextContextCreated
+      (createdEventFired, waitCreateEventFired) <- timeLimitLog BrowsingContextContextCreated
       subscribeBrowsingContextCreated createdEventFired
 
-      manyCreatedEventFired <- timeLimitLog BrowsingContextContextCreated
+      (manyCreatedEventFired, waitManyCreatedEventFired) <- timeLimitLog BrowsingContextContextCreated
       subscribeMany [BrowsingContextContextCreated] manyCreatedEventFired
 
-      -- deliberate fails
+      -- -- deliberate fails
 
-      navStartedEventFired <- timeLimitLog BrowsingContextNavigationStarted
-      subscribeBrowsingContextNavigationStarted navStartedEventFired
+      -- (navStartedEventFired, waitNavStartedEventFired) <- timeLimitLog BrowsingContextNavigationStarted
+      -- subscribeBrowsingContextNavigationStarted navStartedEventFired
 
-      manyNavStartedEventFired <- timeLimitLog BrowsingContextNavigationStarted
-      subscribeMany [BrowsingContextNavigationStarted] manyNavStartedEventFired
+      -- (manyNavStartedEventFired, waitManyNavStartedEventFired) <- timeLimitLog BrowsingContextNavigationStarted
+      -- subscribeMany [BrowsingContextNavigationStarted] manyNavStartedEventFired
 
-      ----
+      -- ----
 
-      destroyedEventFired <- timeLimitLog BrowsingContextContextDestroyed
+      (destroyedEventFired, waitDestroyedEventFired) <- timeLimitLog BrowsingContextContextDestroyed
       subscribeBrowsingContextDestroyed destroyedEventFired
 
-      manyDestroyedEventFired <- timeLimitLog BrowsingContextContextDestroyed
+      (manyDestroyedEventFired, waitManyDestroyedEventFired) <- timeLimitLog BrowsingContextContextDestroyed
       subscribeMany [BrowsingContextContextDestroyed] manyDestroyedEventFired
 
       logTxt "Creating a browsing context"
@@ -266,4 +265,11 @@ browsingContextEventCreatedestroyed =
       browsingContextClose $ MkClose bc Nothing     
       logShow "Closed browsing context:" bc
 
-      pauseAtLeast $ 10 * seconds
+      sequence_
+        [ waitCreateEventFired,
+          waitManyCreatedEventFired,
+          waitDestroyedEventFired,
+          waitManyDestroyedEventFired -- ,
+          -- waitNavStartedEventFired,
+          -- waitManyNavStartedEventFired
+        ]

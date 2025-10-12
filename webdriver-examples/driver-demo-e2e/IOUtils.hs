@@ -101,8 +101,8 @@ data DemoUtils = MkDemoUtils
     logM :: Text -> IO Text -> IO (),
     logShowM :: forall a. (Show a) => Text -> IO a -> IO (),
     -- timeout functions for tesing events
-    timeLimitLog :: forall a b. (Show a, Show b) => b -> IO (a -> IO ()),
-    timeLimitLog' :: forall a b. (Show a, Show b) => Timeout -> b -> IO (a -> IO ())
+    timeLimitLog :: forall a b. (Show a, Show b) => b -> IO (a -> IO (), IO ()),
+    timeLimitLog' :: forall a b. (Show a, Show b) => Timeout -> b -> IO (a -> IO (), IO ())
   }
 
 -- TODO :: DELETE THIS
@@ -152,11 +152,12 @@ sleep = threadDelay . coerce
 pauseAtLeast :: Timeout -> Timeout -> IO ()
 pauseAtLeast defaultSleep = sleep . MkTimeout . max (coerce defaultSleep) . coerce
 
-timeLimit :: forall a b. Show b => Timeout -> b -> (a -> IO Bool) -> IO (a -> IO ())
+
+timeLimit :: forall a b. Show b => Timeout -> b -> (a -> IO Bool) -> IO (a -> IO (), IO ())
 timeLimit (MkTimeout mu) eventDesc action = do
   triggered <- newEmptyTMVarIO
   let waitTriggered = atomically $ readTMVar triggered
-      waitLimit = threadDelay mu >> (fail . unpack $ "Timeout: " <> txt eventDesc)
+      waitLimit = threadDelay mu >> (fail . unpack $ "Timeout - Expected event did not fire: " <> txt eventDesc)
       interceptedAction = \a -> do
         result <- action a
         when result $
@@ -164,14 +165,13 @@ timeLimit (MkTimeout mu) eventDesc action = do
             atomically $
               tryPutTMVar triggered ()
         pure ()
-  async $ race_ waitLimit waitTriggered
-  pure $ interceptedAction
+  pure $ (interceptedAction, race_ waitLimit waitTriggered)
 
-timeLimitLog' :: forall a b. Show b => (b -> a -> IO Bool) -> Timeout -> b -> IO (a -> IO ())
+timeLimitLog' :: forall a b. Show b => (b -> a -> IO Bool) -> Timeout -> b -> IO (a -> IO (), IO ())
 timeLimitLog' prd timeout b =
   timeLimit timeout b (\a -> prd b a >> pure True)
 
-timeLimitLog :: forall a b. Show b => (b -> a -> IO Bool) -> b -> IO (a -> IO ())
+timeLimitLog :: forall a b. Show b => (b -> a -> IO Bool) -> b -> IO (a -> IO (), IO ())
 timeLimitLog prd = timeLimitLog' prd (10 * seconds)
 
 encodeFileToBase64 :: FilePath -> IO Text
