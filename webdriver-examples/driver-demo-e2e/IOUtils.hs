@@ -37,6 +37,8 @@ import Control.Exception (SomeException, Exception (..))
 import GHC.Base (coerce)
 import UnliftIO.STM (newEmptyTMVarIO)
 import Data.Function ((&))
+import WebDriverPreCore.BiDi.Protocol (EvaluateResult(result))
+import Control.Monad (when)
 
 
 data Logger = MkLogger
@@ -142,26 +144,27 @@ sleep = threadDelay . coerce
 pauseAtLeast :: Timeout -> Timeout -> IO ()
 pauseAtLeast defaultSleep = sleep . MkTimeout . max (coerce defaultSleep) . coerce
 
-timeLimit :: forall a. Timeout -> Text -> (a -> IO ()) -> IO (a -> IO ())
+timeLimit :: forall a. Timeout -> Text -> (a -> IO Bool) -> IO (a -> IO ())
 timeLimit (MkTimeout ms) eventDesc action  = do
     triggered <- newEmptyTMVarIO
     let 
       waitTriggered = atomically $ readTMVar triggered
       waitLimit = threadDelay ms >> (fail . unpack $ "Timeout: " <> eventDesc)
       interceptedAction = \a -> do
-        atomically $ tryPutTMVar triggered ()
+        result <- action a
+        when result $
+          atomically $ tryPutTMVar triggered ()
         action a
     async $ race_ waitLimit waitTriggered
     pure interceptedAction
 
 
 timeLimitLog' :: forall a. Show a => (Show a => Text -> a -> IO ()) -> Timeout -> Text  -> IO (a -> IO ())
-timeLimitLog' logShow' timeout eventDesc = do
-    timeLimit timeout eventDesc (logShow' $ "Completed: " <> eventDesc)
+timeLimitLog' logShow' timeout eventDesc = 
+    timeLimit timeout eventDesc (logShow' $ "Event Fired:\n" <> eventDesc)
 
 timeLimitLog :: forall a. Show a => (Show a => Text -> a -> IO ()) -> Text  -> IO (a -> IO ())
-timeLimitLog logShow' eventDesc = do
-    timeLimit (10 * seconds) eventDesc (logShow' $ "Completed: " <> eventDesc)
+timeLimitLog logShow'  =  timeLimitLog' logShow' (10 * seconds) 
 
 encodeFileToBase64 :: FilePath -> IO Text
 encodeFileToBase64 filePath =

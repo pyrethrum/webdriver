@@ -157,8 +157,6 @@ browsingContextEventDemoUserContextFiltered =
     action :: DemoUtils -> BiDiActions -> IO ()
     action MkDemoUtils {..} MkCommands {..} = do
       logTxt "Creating two user contexts"
-
-      -- Create first user context
       uc1 <-
         browserCreateUserContext
           MkCreateUserContext
@@ -168,7 +166,6 @@ browsingContextEventDemoUserContextFiltered =
             }
       logShow "Created user context 1:" uc1
 
-      -- Create second user context
       uc2 <-
         browserCreateUserContext
           MkCreateUserContext
@@ -179,8 +176,6 @@ browsingContextEventDemoUserContextFiltered =
       logShow "Created user context 2:" uc2
 
       logTxt "Subscribing to contextCreated events only for user context 1"
-
-      -- Subscribe to contextCreated events only for user context 1
       subId <-
         subscribeBrowsingContextCreated' [] [uc1] $
           logShow $
@@ -190,7 +185,6 @@ browsingContextEventDemoUserContextFiltered =
 
       logTxt "Creating browsing contexts in both user contexts"
 
-      -- Create browsing context in user context 1 (SHOULD trigger event)
       logTxt "Creating browsing context in user context 1 (SHOULD trigger event)"
       let createParams1 =
             MkCreate
@@ -203,7 +197,6 @@ browsingContextEventDemoUserContextFiltered =
       logShow "Created browsing context 1:" bc1
       pause
 
-      -- Create browsing context in user context 2 (should NOT trigger event)
       logTxt "Creating browsing context in user context 2 (should NOT trigger event)"
       let createParams2 =
             MkCreate
@@ -222,3 +215,38 @@ browsingContextEventDemoUserContextFiltered =
       logTxt "Creating browsing context after unsubscribe (should NOT trigger event)"
       bc4 <- browsingContextCreate createParams1
       logShow "Created browsing context 4 (no event):" bc4
+
+
+
+-- >>> runDemo browsingContextEventCreatedestroyed
+browsingContextEventCreatedestroyed :: BiDiDemo
+browsingContextEventCreatedestroyed =
+  demo "Browsing Context Events - Created and Destroyed" action
+  where
+    action :: DemoUtils -> BiDiActions -> IO ()
+    action MkDemoUtils {..} MkCommands {..} = do 
+      logWhenFired <- timeLimitLog "browsingContext.contextCreated"
+      subscribeBrowsingContextCreated logWhenFired 
+
+      logEVentFired <- timeLimitLog "browsingContext.contextDestroyed"
+      subscribeMany [BrowsingContextContextCreated, BrowsingContextContextDestroyed] (logShow "Event Subscription Fired: browsingContext.contextCreated or contextDestroyed")
+
+
+      logWhenFired2 <- timeLimitLog "browsingContext.contextDestroyed"
+      subscribeBrowsingContextDestroyed logWhenFired2
+
+      logTxt "Creating a browsing context (should trigger contextCreated event)"
+      let createParams =
+            MkCreate
+              { createType = Tab,
+                background = False,
+                referenceContext = Nothing,
+                userContext = Nothing
+              }
+      bc <- browsingContextCreate createParams
+
+      logShow "Created browsing context:" bc
+
+      logTxt "Closing the browsing context (should trigger contextDestroyed event)"
+      browsingContextClose $ MkClose bc Nothing     
+      logShow "Closed browsing context:" bc
