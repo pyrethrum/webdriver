@@ -4,14 +4,14 @@ import BiDi.BiDiRunner (BiDiActions (..), BiDiMethods (unsubscribe))
 import BiDi.DemoUtils
 import Const (second, seconds)
 import IOUtils (DemoUtils (..))
-import WebDriverPreCore.BiDi.BrowsingContext (Close (..), Navigate (..))
+import WebDriverPreCore.BiDi.BrowsingContext (Close (..), Navigate (..), BrowsingContextEvent (NavigationStarted))
 import WebDriverPreCore.BiDi.Protocol
   ( BrowsingContext (..),
     Create (..),
     CreateType (..),
     CreateUserContext (..),
     UserContext (..),
-    SubscriptionType (BrowsingContextContextCreated, BrowsingContextContextDestroyed),
+    SubscriptionType (BrowsingContextContextCreated, BrowsingContextContextDestroyed, BrowsingContextNavigationStarted),
   )
 import WebDriverPreCore.Internal.Utils (txt)
 import Prelude hiding (log, putStrLn)
@@ -219,23 +219,38 @@ browsingContextEventDemoUserContextFiltered =
 
 
 -- >>> runDemo browsingContextEventCreatedestroyed
+-- *** Exception: user error (Timeout: BrowsingContextContextCreated)
 browsingContextEventCreatedestroyed :: BiDiDemo
 browsingContextEventCreatedestroyed =
   demo "Browsing Context Events - Created and Destroyed" action
   where
     action :: DemoUtils -> BiDiActions -> IO ()
-    action MkDemoUtils {..} MkCommands {..} = do 
-      logWhenFired <- timeLimitLog "browsingContext.contextCreated"
-      subscribeBrowsingContextCreated logWhenFired 
+    action MkDemoUtils {..} MkCommands {..} = do
+      
+      logTxt "Subscribing to contextCreated and contextDestroyed events"
+      createdEventFired <- timeLimitLog BrowsingContextContextCreated
+      subscribeBrowsingContextCreated createdEventFired
 
-      logEVentFired <- timeLimitLog "browsingContext.contextDestroyed"
-      subscribeMany [BrowsingContextContextCreated, BrowsingContextContextDestroyed] (logShow "Event Subscription Fired: browsingContext.contextCreated or contextDestroyed")
+      manyCreatedEventFired <- timeLimitLog BrowsingContextContextCreated
+      subscribeMany [BrowsingContextContextCreated] manyCreatedEventFired
 
+      -- deliberate fails
 
-      logWhenFired2 <- timeLimitLog "browsingContext.contextDestroyed"
-      subscribeBrowsingContextDestroyed logWhenFired2
+      navStartedEventFired <- timeLimitLog BrowsingContextNavigationStarted
+      subscribeBrowsingContextNavigationStarted navStartedEventFired
 
-      logTxt "Creating a browsing context (should trigger contextCreated event)"
+      manyNavStartedEventFired <- timeLimitLog BrowsingContextNavigationStarted
+      subscribeMany [BrowsingContextNavigationStarted] manyNavStartedEventFired
+
+      ----
+
+      destroyedEventFired <- timeLimitLog BrowsingContextContextDestroyed
+      subscribeBrowsingContextDestroyed destroyedEventFired
+
+      manyDestroyedEventFired <- timeLimitLog BrowsingContextContextDestroyed
+      subscribeMany [BrowsingContextContextDestroyed] manyDestroyedEventFired
+
+      logTxt "Creating a browsing context"
       let createParams =
             MkCreate
               { createType = Tab,
@@ -247,6 +262,8 @@ browsingContextEventCreatedestroyed =
 
       logShow "Created browsing context:" bc
 
-      logTxt "Closing the browsing context (should trigger contextDestroyed event)"
+      logTxt "Closing the browsing context"
       browsingContextClose $ MkClose bc Nothing     
       logShow "Closed browsing context:" bc
+
+      pauseAtLeast $ 10 * seconds
