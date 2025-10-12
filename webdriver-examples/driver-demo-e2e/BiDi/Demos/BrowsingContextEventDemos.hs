@@ -4,8 +4,16 @@ import BiDi.BiDiRunner (BiDiActions (..), BiDiMethods (unsubscribe))
 import BiDi.DemoUtils
 import Const (second, seconds)
 import IOUtils (DemoUtils (..))
-import WebDriverPreCore.BiDi.BrowsingContext (Close (..))
-import WebDriverPreCore.BiDi.Protocol (BrowsingContext (context), Create (..), CreateType (..), SubscriptionType (BrowsingContextContextCreated, BrowsingContextContextDestroyed))
+import WebDriverPreCore.BiDi.BrowsingContext (Close (..), Navigate (..))
+import WebDriverPreCore.BiDi.Protocol
+  ( BrowsingContext (..),
+    Create (..),
+    CreateType (..),
+    CreateUserContext (..),
+    UserContext (..),
+    SubscriptionType (BrowsingContextContextCreated, BrowsingContextContextDestroyed),
+  )
+import WebDriverPreCore.Internal.Utils (txt)
 import Prelude hiding (log, putStrLn)
 
 {-
@@ -97,12 +105,12 @@ browsingContextEventDemoMulti =
 -- >>> runDemo browsingContextEventDemoFilteredSubscriptions
 browsingContextEventDemoFilteredSubscriptions :: BiDiDemo
 browsingContextEventDemoFilteredSubscriptions =
-  demo "Browsing Context Events - Filtered Subscriptions per Context" action
+  demo "Browsing Context Events - Filtered Navigation Subscriptions - Filter not working - not working: https://github.com/mozilla/geckodriver/issues/2236" action
   where
     action :: DemoUtils -> BiDiActions -> IO ()
     action MkDemoUtils {..} MkCommands {..} = do
-      logTxt "Creating two initial browsing contexts"
-      
+      logTxt "Creating two browsing contexts"
+
       let createParams =
             MkCreate
               { createType = Tab,
@@ -110,55 +118,107 @@ browsingContextEventDemoFilteredSubscriptions =
                 referenceContext = Nothing,
                 userContext = Nothing
               }
-      
-      -- Create first parent context
-      parentContext1 <- browsingContextCreate createParams
-      logShow "Created parent context 1:" parentContext1
-      
-      -- Create second parent context
-      parentContext2 <- browsingContextCreate createParams
-      logShow "Created parent context 2:" parentContext2
-      
-      logTxt "Setting up filtered subscriptions"
-      
-      -- Subscribe to contextCreated events only for parentContext1
-      subIdCreated1 <- subscribeBrowsingContextCreated' [parentContext1] [] $ logShow "Created Event Fired" 
-      logShow "Subscribed to contextCreated for parent context 1:" subIdCreated1
-      
-      -- Subscribe to contextDestroyed events only for parentContext2
-      subIdDestroyed2 <- subscribeBrowsingContextDestroyed' [parentContext2] [] $ logShow "Destroyed Event Fired"
-      logShow "Subscribed to contextDestroyed for parent context 2:" subIdDestroyed2
-      pause
-      
-      logTxt "Creating child contexts"
-      
-      -- Create a child context in parentContext1
-      logTxt "Creating child in parent context 1 (should trigger PARENT 1 - Created Event)"
-      let childParams1 = createParams {referenceContext = Just parentContext1}
-      childContext1 <- browsingContextCreate childParams1
-      logShow "Created child context 1:" childContext1
-      pause
-      
-      -- Create a child context in parentContext2
-      logTxt "Creating child in parent context 2 - no subscription"
-      let childParams2 = createParams {referenceContext = Just parentContext2}
-      childContext2 <- browsingContextCreate childParams2
-      logShow "Created child context 2:" childContext2
-      pause
-      
-      logTxt "Closing child contexts"
-      
-      -- Close child context 1 (should trigger PARENT 1 - Destroyed Event)
-      logTxt "Closing child context 1 - no subscription"
-      browsingContextClose $ MkClose childContext1 Nothing
-      pause
-      
-      -- Close child context 2 (should trigger PARENT 2 - Destroyed Event)
-      logTxt "Closing child context 2 (should trigger PARENT 2 - Destroyed Event)"
-      browsingContextClose $ MkClose childContext2 Nothing
+
+      -- Create first browsing context
+      bc1 <- browsingContextCreate createParams
+      logShow "Created browsing context 1:" bc1
+
+      -- Create second browsing context
+      bc2 <- browsingContextCreate createParams
+      logShow "Created browsing context 2:" bc2
+
+      logTxt "Subscribing to navigationStarted events only for browsing context 1"
+
+      -- Subscribe to navigationStarted events only for parentContext1
+      subId <-
+        subscribeBrowsingContextNavigationStarted' [bc1] [] $
+          logShow "Navigation Started Event Fired (should only fire for browsing context 1)"
+      logShow "Subscribed to navigationStarted for browsing context 1:" subId
+      pausehttps://github.com/mozilla/geckodriver/issues/2236
+
+      logTxt "Navigating both contexts to different URLs"
+
+      -- Navigate browsing context 1 (should trigger event)
+      logTxt "Navigating browsing context 1 to checkboxes.html (SHOULD trigger event)"
+      browsingContextNavigate $ MkNavigate bc1 "file:///home/john-walker/repos/webdriver/webdriver-examples/driver-demo-e2e/TestFiles/checkboxes.html" Nothing
       pause
 
-      pauseAtLeast $ 2 * seconds
-      
+      -- Navigate browsing context 2 (should NOT trigger event)
+      logTxt "Navigating browsing context 2 to textArea.html (should NOT trigger event)"
+      browsingContextNavigate $ MkNavigate bc2 "file:///home/john-walker/repos/webdriver/webdriver-examples/driver-demo-e2e/TestFiles/textArea.html" Nothing
+      pause
 
-  
+
+-- >>> runDemo browsingContextEventDemoUserContextFiltered
+browsingContextEventDemoUserContextFiltered :: BiDiDemo
+browsingContextEventDemoUserContextFiltered =
+  demo "Browsing Context Events - Filtered User Context Subscriptions" action
+  where
+    action :: DemoUtils -> BiDiActions -> IO ()
+    action MkDemoUtils {..} MkCommands {..} = do
+      logTxt "Creating two user contexts"
+
+      -- Create first user context
+      uc1 <-
+        browserCreateUserContext
+          MkCreateUserContext
+            { insecureCerts = Nothing,
+              proxy = Nothing,
+              unhandledPromptBehavior = Nothing
+            }
+      logShow "Created user context 1:" uc1
+
+      -- Create second user context
+      uc2 <-
+        browserCreateUserContext
+          MkCreateUserContext
+            { insecureCerts = Nothing,
+              proxy = Nothing,
+              unhandledPromptBehavior = Nothing
+            }
+      logShow "Created user context 2:" uc2
+
+      logTxt "Subscribing to contextCreated events only for user context 1"
+
+      -- Subscribe to contextCreated events only for user context 1
+      subId <-
+        subscribeBrowsingContextCreated' [] [uc1] $
+          logShow $
+            "Context Created Event Fired - should only fire for user context: " <> txt uc1.userContext
+      logShow "Subscribed to contextCreated for user context 1:" subId
+      pause
+
+      logTxt "Creating browsing contexts in both user contexts"
+
+      -- Create browsing context in user context 1 (SHOULD trigger event)
+      logTxt "Creating browsing context in user context 1 (SHOULD trigger event)"
+      let createParams1 =
+            MkCreate
+              { createType = Tab,
+                background = False,
+                referenceContext = Nothing,
+                userContext = Just uc1
+              }
+      bc1 <- browsingContextCreate createParams1
+      logShow "Created browsing context 1:" bc1
+      pause
+
+      -- Create browsing context in user context 2 (should NOT trigger event)
+      logTxt "Creating browsing context in user context 2 (should NOT trigger event)"
+      let createParams2 =
+            MkCreate
+              { createType = Tab,
+                background = False,
+                referenceContext = Nothing,
+                userContext = Just uc2
+              }
+      bc2 <- browsingContextCreate createParams2
+      logShow "Created browsing context 2:" bc2
+      pause
+
+      logShow "Unsubscribing from events" subId
+      unsubscribe subId
+
+      logTxt "Creating browsing context after unsubscribe (should NOT trigger event)"
+      bc4 <- browsingContextCreate createParams1
+      logShow "Created browsing context 4 (no event):" bc4
