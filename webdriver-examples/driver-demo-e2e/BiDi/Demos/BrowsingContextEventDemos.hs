@@ -32,7 +32,7 @@ BrowsingContext Events TODO:
 -- >>> runDemo browsingContextEventDemo
 browsingContextEventDemo :: BiDiDemo
 browsingContextEventDemo =
-  demo "Browsing Context Events" action
+  demo "Browsing Context Create - Subscribe Unsubscribe" action
   where
     action :: DemoUtils -> BiDiActions -> IO ()
     action MkDemoUtils {..} MkCommands {..} = do
@@ -60,7 +60,7 @@ browsingContextEventDemo =
 -- >>> runDemo browsingContextEventDemoMulti
 browsingContextEventDemoMulti :: BiDiDemo
 browsingContextEventDemoMulti =
-  demo "Browsing Context Events" action
+  demo "Browsing Context Events - Subscribe Unsubscribe Using subscribeMany" action
   where
     action :: DemoUtils -> BiDiActions -> IO ()
     action MkDemoUtils {..} MkCommands {..} = do
