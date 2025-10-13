@@ -4,35 +4,73 @@ import BiDi.BiDiRunner (BiDiActions (..), BiDiMethods (unsubscribe))
 import BiDi.DemoUtils
 import Const (second, seconds)
 import IOUtils (DemoUtils (..))
-import WebDriverPreCore.BiDi.BrowsingContext (BrowsingContextEvent (NavigationStarted), Close (..), Navigate (..))
+import TestData (checkboxesUrl, textAreaUrl, promptUrl, fragmentUrl, downloadUrl)
+import WebDriverPreCore.BiDi.BrowsingContext 
+  ( BrowsingContextEvent (NavigationStarted), 
+    Close (..), 
+    Navigate (..), 
+    HandleUserPrompt (..),
+    UserPromptType (..),
+    DownloadWillBegin (..),
+    UserPromptOpened (..),
+    UserPromptClosed (..),
+    NavigationInfo (..),
+    HistoryUpdated (..)
+  )
 import WebDriverPreCore.BiDi.Protocol
   ( BrowsingContext (..),
     Create (..),
     CreateType (..),
     CreateUserContext (..),
-    SubscriptionType (BrowsingContextContextCreated, BrowsingContextContextDestroyed, BrowsingContextNavigationStarted),
+    SubscriptionType 
+      ( BrowsingContextContextCreated, 
+        BrowsingContextContextDestroyed, 
+        BrowsingContextNavigationStarted,
+        BrowsingContextNavigationCommitted,
+        BrowsingContextNavigationFailed,
+        BrowsingContextNavigationAborted,
+        BrowsingContextDomContentLoaded,
+        BrowsingContextLoad,
+        BrowsingContextFragmentNavigated,
+        BrowsingContextHistoryUpdated,
+        BrowsingContextUserPromptOpened,
+        BrowsingContextUserPromptClosed,
+        BrowsingContextDownloadWillBegin,
+        BrowsingContextDownloadEnd
+      ),
     UserContext (..),
+    ContextTarget (..),
+    Evaluate (..)
   )
+import WebDriverPreCore.BiDi.Script 
+  ( EvaluateResult (..), 
+    PrimitiveProtocolValue (..), 
+    RemoteValue (..),
+    Target (ContextTarget)
+  )
+import WebDriverPreCore.BiDi.CoreTypes (StringValue (..))
 import WebDriverPreCore.Internal.Utils (txt)
 import Prelude hiding (log, putStrLn)
 
 {-
-BrowsingContext Events TODO:
+BrowsingContext Events Implemented:
 
-1. browsingContext.contextCreated :: TODO
-2. browsingContext.contextDestroyed :: TODO
-3. browsingContext.domContentLoaded :: TODO
-4. browsingContext.downloadEnd :: TODO
-5. browsingContext.downloadWillBegin :: TODO
-6. browsingContext.fragmentNavigated :: TODO
-7. browsingContext.historyUpdated :: TODO
-8. browsingContext.load :: TODO
-9. browsingContext.navigationAborted :: TODO
-10. browsingContext.navigationCommitted :: TODO
-11. browsingContext.navigationFailed :: TODO
-12. browsingContext.navigationStarted :: TODO
-13. browsingContext.userPromptClosed :: TODO
-14. browsingContext.userPromptOpened :: TODO
+1. browsingContext.contextCreated :: ✓ browsingContextEventCreatedestroyed
+2. browsingContext.contextDestroyed :: ✓ browsingContextEventCreatedestroyed
+3. browsingContext.navigationStarted :: ✓ browsingContextEventNavigationLifecycle
+4. browsingContext.navigationCommitted :: ✓ browsingContextEventNavigationLifecycle
+5. browsingContext.domContentLoaded :: ✓ browsingContextEventNavigationLifecycle
+6. browsingContext.load :: ✓ browsingContextEventNavigationLifecycle
+7. browsingContext.fragmentNavigated :: ✓ browsingContextEventFragmentNavigation
+8. browsingContext.userPromptOpened :: ✓ browsingContextEventUserPrompts, browsingContextEventUserPromptsVariants
+9. browsingContext.userPromptClosed :: ✓ browsingContextEventUserPrompts, browsingContextEventUserPromptsVariants
+10. browsingContext.historyUpdated :: ✓ browsingContextEventHistoryUpdated
+
+Events TODO:
+11. browsingContext.navigationAborted :: TODO (requires page that aborts navigation)
+12. browsingContext.navigationFailed :: TODO (requires invalid URL/network error)
+13. browsingContext.downloadWillBegin :: TODO (requires actual download trigger)
+14. browsingContext.downloadEnd :: TODO (requires actual download completion)
 -}
 
 --  TODO aake sure all demos only use Protocol, not sub modules
@@ -261,4 +299,261 @@ browsingContextEventCreatedestroyed =
       sequence_
         [ waitDestroyedEventFired,
           waitManyDestroyedEventFired
+        ]
+
+-- >>> runDemo browsingContextEventNavigationLifecycle
+browsingContextEventNavigationLifecycle :: BiDiDemo
+browsingContextEventNavigationLifecycle =
+  demo "Browsing Context Events - Navigation Lifecycle (Started, Committed, DomContentLoaded, Load)" action
+  where
+    action :: DemoUtils -> BiDiActions -> IO ()
+    action MkDemoUtils {..} MkCommands {..} = do
+      logTxt "Subscribe to navigation lifecycle events"
+      
+      (startedEventFired, waitStartedEventFired) <- timeLimitLog BrowsingContextNavigationStarted
+      subscribeBrowsingContextNavigationStarted startedEventFired
+
+      (committedEventFired, waitCommittedEventFired) <- timeLimitLog BrowsingContextNavigationCommitted
+      subscribeBrowsingContextNavigationCommitted committedEventFired
+
+      (domContentLoadedEventFired, waitDomContentLoadedEventFired) <- timeLimitLog BrowsingContextDomContentLoaded
+      subscribeBrowsingContextDomContentLoaded domContentLoadedEventFired
+
+      (loadEventFired, waitLoadEventFired) <- timeLimitLog BrowsingContextLoad
+      subscribeBrowsingContextLoad loadEventFired
+
+      (manyEventFired, waitManyEventFired) <- timeLimitLog BrowsingContextNavigationStarted
+      subscribeMany 
+        [ BrowsingContextNavigationStarted,
+          BrowsingContextNavigationCommitted,
+          BrowsingContextDomContentLoaded,
+          BrowsingContextLoad
+        ] 
+        manyEventFired
+
+      logTxt "Navigating to checkboxes page"
+      url <- checkboxesUrl
+      bc <- rootContext MkDemoUtils {..} MkCommands {..}
+      browsingContextNavigate $ MkNavigate bc url Nothing
+
+      sequence_
+        [ waitStartedEventFired,
+          waitCommittedEventFired,
+          waitDomContentLoadedEventFired,
+          waitLoadEventFired,
+          waitManyEventFired
+        ]
+
+-- >>> runDemo browsingContextEventFragmentNavigation
+browsingContextEventFragmentNavigation :: BiDiDemo
+browsingContextEventFragmentNavigation =
+  demo "Browsing Context Events - Fragment Navigation" action
+  where
+    action :: DemoUtils -> BiDiActions -> IO ()
+    action MkDemoUtils {..} MkCommands {..} = do
+      logTxt "Navigate to fragment page"
+      url <- fragmentUrl
+      bc <- rootContext MkDemoUtils {..} MkCommands {..}
+      browsingContextNavigate $ MkNavigate bc url Nothing
+      pause
+
+      logTxt "Subscribe to FragmentNavigated event"
+      
+      (fragmentEventFired, waitFragmentEventFired) <- timeLimitLog BrowsingContextFragmentNavigated
+      subscribeBrowsingContextFragmentNavigated fragmentEventFired
+
+      (manyFragmentEventFired, waitManyFragmentEventFired) <- timeLimitLog BrowsingContextFragmentNavigated
+      subscribeMany [BrowsingContextFragmentNavigated] manyFragmentEventFired
+
+      logTxt "Navigate to fragment #section2"
+      browsingContextNavigate $ MkNavigate bc (url <> "#section2") Nothing
+
+      sequence_
+        [ waitFragmentEventFired,
+          waitManyFragmentEventFired
+        ]
+
+-- >>> runDemo browsingContextEventUserPrompts
+browsingContextEventUserPrompts :: BiDiDemo
+browsingContextEventUserPrompts =
+  demo "Browsing Context Events - User Prompt Opened and Closed" action
+  where
+    action :: DemoUtils -> BiDiActions -> IO ()
+    action MkDemoUtils {..} MkCommands {..} = do
+      logTxt "Navigate to prompt page"
+      url <- promptUrl
+      bc <- rootContext MkDemoUtils {..} MkCommands {..}
+      browsingContextNavigate $ MkNavigate bc url Nothing
+      pause
+
+      logTxt "Subscribe to UserPromptOpened event"
+      
+      (openedEventFired, waitOpenedEventFired) <- timeLimitLog BrowsingContextUserPromptOpened
+      subscribeBrowsingContextUserPromptOpened openedEventFired
+
+      (manyOpenedEventFired, waitManyOpenedEventFired) <- timeLimitLog BrowsingContextUserPromptOpened
+      subscribeMany [BrowsingContextUserPromptOpened] manyOpenedEventFired
+
+      logTxt "Trigger alert prompt via script"
+      scriptEvaluate $
+        MkEvaluate
+          { expression = "alert('Test alert')",
+            target = ContextTarget $ MkContextTarget {context = bc, sandbox = Nothing},
+            awaitPromise = False,
+            resultOwnership = Nothing,
+            serializationOptions = Nothing
+          }
+
+      sequence_
+        [ waitOpenedEventFired,
+          waitManyOpenedEventFired
+        ]
+
+      logTxt "Subscribe to UserPromptClosed event"
+      
+      (closedEventFired, waitClosedEventFired) <- timeLimitLog BrowsingContextUserPromptClosed
+      subscribeBrowsingContextUserPromptClosed closedEventFired
+
+      (manyClosedEventFired, waitManyClosedEventFired) <- timeLimitLog BrowsingContextUserPromptClosed
+      subscribeMany [BrowsingContextUserPromptClosed] manyClosedEventFired
+
+      logTxt "Accept the alert prompt"
+      browsingContextHandleUserPrompt $
+        MkHandleUserPrompt
+          { context = bc,
+            accept = Just True,
+            userText = Nothing
+          }
+
+      sequence_
+        [ waitClosedEventFired,
+          waitManyClosedEventFired
+        ]
+
+-- >>> runDemo browsingContextEventUserPromptsVariants
+browsingContextEventUserPromptsVariants :: BiDiDemo
+browsingContextEventUserPromptsVariants =
+  demo "Browsing Context Events - User Prompt Types (Alert, Confirm, Prompt)" action
+  where
+    action :: DemoUtils -> BiDiActions -> IO ()
+    action MkDemoUtils {..} MkCommands {..} = do
+      logTxt "Navigate to prompt page"
+      url <- promptUrl
+      bc <- rootContext MkDemoUtils {..} MkCommands {..}
+      browsingContextNavigate $ MkNavigate bc url Nothing
+      pause
+
+      logTxt "Subscribe to UserPromptOpened and UserPromptClosed events"
+      subscribeBrowsingContextUserPromptOpened $ logShow "UserPromptOpened"
+      subscribeBrowsingContextUserPromptClosed $ logShow "UserPromptClosed"
+
+      -- Test Alert
+      logTxt "Testing Alert prompt"
+      scriptEvaluate $
+        MkEvaluate
+          { expression = "alert('Alert message')",
+            target = ContextTarget $ MkContextTarget {context = bc, sandbox = Nothing},
+            awaitPromise = False,
+            resultOwnership = Nothing,
+            serializationOptions = Nothing
+          }
+      pause
+      browsingContextHandleUserPrompt $ MkHandleUserPrompt bc (Just True) Nothing
+      pause
+
+      -- Test Confirm - Accept
+      logTxt "Testing Confirm prompt - Accept"
+      scriptEvaluate $
+        MkEvaluate
+          { expression = "confirm('Confirm message')",
+            target = ContextTarget $ MkContextTarget {context = bc, sandbox = Nothing},
+            awaitPromise = False,
+            resultOwnership = Nothing,
+            serializationOptions = Nothing
+          }
+      pause
+      browsingContextHandleUserPrompt $ MkHandleUserPrompt bc (Just True) Nothing
+      pause
+
+      -- Test Confirm - Dismiss
+      logTxt "Testing Confirm prompt - Dismiss"
+      scriptEvaluate $
+        MkEvaluate
+          { expression = "confirm('Confirm dismiss message')",
+            target = ContextTarget $ MkContextTarget {context = bc, sandbox = Nothing},
+            awaitPromise = False,
+            resultOwnership = Nothing,
+            serializationOptions = Nothing
+          }
+      pause
+      browsingContextHandleUserPrompt $ MkHandleUserPrompt bc (Just False) Nothing
+      pause
+
+      -- Test Prompt - with user text
+      logTxt "Testing Prompt with user text"
+      scriptEvaluate $
+        MkEvaluate
+          { expression = "prompt('Enter your name:', 'default')",
+            target = ContextTarget $ MkContextTarget {context = bc, sandbox = Nothing},
+            awaitPromise = False,
+            resultOwnership = Nothing,
+            serializationOptions = Nothing
+          }
+      pause
+      browsingContextHandleUserPrompt $ MkHandleUserPrompt bc (Just True) (Just "John Doe")
+      pause
+
+      -- Test Prompt - dismissed
+      logTxt "Testing Prompt dismissed"
+      scriptEvaluate $
+        MkEvaluate
+          { expression = "prompt('This will be dismissed')",
+            target = ContextTarget $ MkContextTarget {context = bc, sandbox = Nothing},
+            awaitPromise = False,
+            resultOwnership = Nothing,
+            serializationOptions = Nothing
+          }
+      pause
+      browsingContextHandleUserPrompt $ MkHandleUserPrompt bc (Just False) Nothing
+      pause
+
+-- >>> runDemo browsingContextEventHistoryUpdated
+browsingContextEventHistoryUpdated :: BiDiDemo
+browsingContextEventHistoryUpdated =
+  demo "Browsing Context Events - History Updated" action
+  where
+    action :: DemoUtils -> BiDiActions -> IO ()
+    action MkDemoUtils {..} MkCommands {..} = do
+      logTxt "Navigate to checkboxes page"
+      url1 <- checkboxesUrl
+      bc <- rootContext MkDemoUtils {..} MkCommands {..}
+      browsingContextNavigate $ MkNavigate bc url1 Nothing
+      pause
+
+      logTxt "Navigate to fragment page"
+      url2 <- fragmentUrl
+      browsingContextNavigate $ MkNavigate bc url2 Nothing
+      pause
+
+      logTxt "Subscribe to HistoryUpdated event"
+      
+      (historyEventFired, waitHistoryEventFired) <- timeLimitLog BrowsingContextHistoryUpdated
+      subscribeBrowsingContextHistoryUpdated historyEventFired
+
+      (manyHistoryEventFired, waitManyHistoryEventFired) <- timeLimitLog BrowsingContextHistoryUpdated
+      subscribeMany [BrowsingContextHistoryUpdated] manyHistoryEventFired
+
+      logTxt "Navigate back in history"
+      scriptEvaluate $
+        MkEvaluate
+          { expression = "history.back()",
+            target = ContextTarget $ MkContextTarget {context = bc, sandbox = Nothing},
+            awaitPromise = False,
+            resultOwnership = Nothing,
+            serializationOptions = Nothing
+          }
+
+      sequence_
+        [ waitHistoryEventFired,
+          waitManyHistoryEventFired
         ]

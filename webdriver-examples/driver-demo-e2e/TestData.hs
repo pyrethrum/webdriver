@@ -42,3 +42,12 @@ checkboxesUrl = fileUrl "checkboxes.html"
 
 infiniteScrollUrl :: IO Text
 infiniteScrollUrl = fileUrl "infiniteScroll.html"
+
+promptUrl :: IO Text
+promptUrl = fileUrl "prompt.html"
+
+fragmentUrl :: IO Text
+fragmentUrl = fileUrl "fragment.html"
+
+downloadUrl :: IO Text
+downloadUrl = fileUrl "download.html"
