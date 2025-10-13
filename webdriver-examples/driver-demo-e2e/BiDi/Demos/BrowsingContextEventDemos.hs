@@ -4,14 +4,14 @@ import BiDi.BiDiRunner (BiDiActions (..), BiDiMethods (unsubscribe))
 import BiDi.DemoUtils
 import Const (second, seconds)
 import IOUtils (DemoUtils (..))
-import WebDriverPreCore.BiDi.BrowsingContext (Close (..), Navigate (..), BrowsingContextEvent (NavigationStarted))
+import WebDriverPreCore.BiDi.BrowsingContext (BrowsingContextEvent (NavigationStarted), Close (..), Navigate (..))
 import WebDriverPreCore.BiDi.Protocol
   ( BrowsingContext (..),
     Create (..),
     CreateType (..),
     CreateUserContext (..),
-    UserContext (..),
     SubscriptionType (BrowsingContextContextCreated, BrowsingContextContextDestroyed, BrowsingContextNavigationStarted),
+    UserContext (..),
   )
 import WebDriverPreCore.Internal.Utils (txt)
 import Prelude hiding (log, putStrLn)
@@ -148,7 +148,6 @@ browsingContextEventDemoFilteredSubscriptions =
       browsingContextNavigate $ MkNavigate bc2 "file:///home/john-walker/repos/webdriver/webdriver-examples/driver-demo-e2e/TestFiles/textArea.html" Nothing
       pause
 
-
 -- >>> runDemo browsingContextEventDemoUserContextFiltered
 browsingContextEventDemoUserContextFiltered :: BiDiDemo
 browsingContextEventDemoUserContextFiltered =
@@ -216,8 +215,6 @@ browsingContextEventDemoUserContextFiltered =
       bc4 <- browsingContextCreate createParams1
       logShow "Created browsing context 4 (no event):" bc4
 
-
-
 -- >>> runDemo browsingContextEventCreatedestroyed
 browsingContextEventCreatedestroyed :: BiDiDemo
 browsingContextEventCreatedestroyed =
@@ -225,29 +222,13 @@ browsingContextEventCreatedestroyed =
   where
     action :: DemoUtils -> BiDiActions -> IO ()
     action MkDemoUtils {..} MkCommands {..} = do
-      
-      logTxt "Subscribing to contextCreated and contextDestroyed events"
+
+      logTxt "Subscribe to ContextCreated event"
       (createdEventFired, waitCreateEventFired) <- timeLimitLog BrowsingContextContextCreated
       subscribeBrowsingContextCreated createdEventFired
 
       (manyCreatedEventFired, waitManyCreatedEventFired) <- timeLimitLog BrowsingContextContextCreated
       subscribeMany [BrowsingContextContextCreated] manyCreatedEventFired
-
-      -- -- deliberate fails
-
-      -- (navStartedEventFired, waitNavStartedEventFired) <- timeLimitLog BrowsingContextNavigationStarted
-      -- subscribeBrowsingContextNavigationStarted navStartedEventFired
-
-      -- (manyNavStartedEventFired, waitManyNavStartedEventFired) <- timeLimitLog BrowsingContextNavigationStarted
-      -- subscribeMany [BrowsingContextNavigationStarted] manyNavStartedEventFired
-
-      -- ----
-
-      (destroyedEventFired, waitDestroyedEventFired) <- timeLimitLog BrowsingContextContextDestroyed
-      subscribeBrowsingContextDestroyed destroyedEventFired
-
-      (manyDestroyedEventFired, waitManyDestroyedEventFired) <- timeLimitLog BrowsingContextContextDestroyed
-      subscribeMany [BrowsingContextContextDestroyed] manyDestroyedEventFired
 
       logTxt "Creating a browsing context"
       let createParams =
@@ -258,18 +239,26 @@ browsingContextEventCreatedestroyed =
                 userContext = Nothing
               }
       bc <- browsingContextCreate createParams
-
       logShow "Created browsing context:" bc
-
-      logTxt "Closing the browsing context"
-      browsingContextClose $ MkClose bc Nothing     
-      logShow "Closed browsing context:" bc
 
       sequence_
         [ waitCreateEventFired,
-          waitManyCreatedEventFired,
-          waitDestroyedEventFired,
-          waitManyDestroyedEventFired -- ,
-          -- waitNavStartedEventFired,
-          -- waitManyNavStartedEventFired
+          waitManyCreatedEventFired
+        ]
+
+      logTxt "Subscribe to ContextDestroyed event"
+
+      (destroyedEventFired, waitDestroyedEventFired) <- timeLimitLog BrowsingContextContextDestroyed
+      subscribeBrowsingContextDestroyed destroyedEventFired
+
+      (manyDestroyedEventFired, waitManyDestroyedEventFired) <- timeLimitLog BrowsingContextContextDestroyed
+      subscribeMany [BrowsingContextContextDestroyed] manyDestroyedEventFired
+
+      logTxt "Closing the browsing context"
+      browsingContextClose $ MkClose bc Nothing
+      logShow "Closed browsing context:" bc
+
+      sequence_
+        [ waitDestroyedEventFired,
+          waitManyDestroyedEventFired
         ]
