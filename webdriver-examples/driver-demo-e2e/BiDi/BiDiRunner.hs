@@ -27,6 +27,7 @@ import WebDriverPreCore.BiDi.API qualified as P
 import WebDriverPreCore.BiDi.BiDiUrl (BiDiUrl (..), getBiDiUrl)
 import WebDriverPreCore.BiDi.BrowsingContext
   ( DownloadWillBegin,
+    DownloadEnd,
     HistoryUpdated,
     NavigationInfo,
     UserPromptClosed,
@@ -234,8 +235,8 @@ data BiDiActions = MkCommands
     subscribeBrowsingContextLoad' :: [BrowsingContext] -> [UserContext] -> (NavigationInfo -> IO ()) -> IO SubscriptionId,
     subscribeBrowsingContextDownloadWillBegin :: (DownloadWillBegin -> IO ()) -> IO SubscriptionId,
     subscribeBrowsingContextDownloadWillBegin' :: [BrowsingContext] -> [UserContext] -> (DownloadWillBegin -> IO ()) -> IO SubscriptionId,
-    subscribeBrowsingContextDownloadEnd :: (() -> IO ()) -> IO SubscriptionId,
-    subscribeBrowsingContextDownloadEnd' :: [BrowsingContext] -> [UserContext] -> (() -> IO ()) -> IO SubscriptionId,
+    subscribeBrowsingContextDownloadEnd :: (DownloadEnd -> IO ()) -> IO SubscriptionId,
+    subscribeBrowsingContextDownloadEnd' :: [BrowsingContext] -> [UserContext] -> (DownloadEnd -> IO ()) -> IO SubscriptionId,
     subscribeBrowsingContextNavigationAborted :: (NavigationInfo -> IO ()) -> IO SubscriptionId,
     subscribeBrowsingContextNavigationAborted' :: [BrowsingContext] -> [UserContext] -> (NavigationInfo -> IO ()) -> IO SubscriptionId,
     subscribeBrowsingContextNavigationCommitted :: (NavigationInfo -> IO ()) -> IO SubscriptionId,

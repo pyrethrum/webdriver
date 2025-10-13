@@ -51,3 +51,9 @@ fragmentUrl = fileUrl "fragment.html"
 
 downloadUrl :: IO Text
 downloadUrl = fileUrl "download.html"
+
+slowLoadUrl :: IO Text
+slowLoadUrl = fileUrl "slowLoad.html"
+
+downloadLinkUrl :: IO Text
+downloadLinkUrl = fileUrl "downloadLink.html"

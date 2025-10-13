@@ -505,6 +505,28 @@ data DownloadEnd
   | DownloadCanceled {navigationInfo :: NavigationInfo}
   deriving (Show, Eq, Generic)
 
+instance FromJSON DownloadEnd where
+  parseJSON :: Value -> Parser DownloadEnd
+  parseJSON = withObject "DownloadEnd" $ \v -> do
+    status <- v .: "status"
+    case status of
+      "complete" -> do
+        filePath <- v .: "filepath"
+        context <- v .: "context"
+        navigation <- v .: "navigation"
+        timestamp <- v .: "timestamp"
+        url <- v .: "url"
+        let navigationInfo = MkNavigationInfo {context, navigation, timestamp, url}
+        pure $ DownloadCompleted {filePath, navigationInfo}
+      "canceled" -> do
+        context <- v .: "context"
+        navigation <- v .: "navigation"
+        timestamp <- v .: "timestamp"
+        url <- v .: "url"
+        let navigationInfo = MkNavigationInfo {context, navigation, timestamp, url}
+        pure $ DownloadCanceled {navigationInfo}
+      _ -> fail $ "Unknown DownloadEnd status: " <> unpack status
+
 data DownloadWillBegin = MkDownloadWillBegin
   { suggestedFilename :: Text,
     context :: BrowsingContext,

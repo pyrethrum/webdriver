@@ -2,9 +2,9 @@ module BiDi.Demos.BrowsingContextEventDemos where
 
 import BiDi.BiDiRunner (BiDiActions (..), BiDiMethods (unsubscribe))
 import BiDi.DemoUtils
-import Const (second, seconds)
+import Const (second, seconds, Timeout (..))
 import IOUtils (DemoUtils (..))
-import TestData (checkboxesUrl, textAreaUrl, promptUrl, fragmentUrl, downloadUrl)
+import TestData (checkboxesUrl, textAreaUrl, promptUrl, fragmentUrl, downloadUrl, slowLoadUrl, downloadLinkUrl)
 import WebDriverPreCore.BiDi.BrowsingContext 
   ( BrowsingContextEvent (NavigationStarted), 
     Close (..), 
@@ -12,10 +12,12 @@ import WebDriverPreCore.BiDi.BrowsingContext
     HandleUserPrompt (..),
     UserPromptType (..),
     DownloadWillBegin (..),
+    DownloadEnd (..),
     UserPromptOpened (..),
     UserPromptClosed (..),
     NavigationInfo (..),
-    HistoryUpdated (..)
+    HistoryUpdated (..),
+    Reload (..)
   )
 import WebDriverPreCore.BiDi.Protocol
   ( BrowsingContext (..),
@@ -53,7 +55,7 @@ import WebDriverPreCore.Internal.Utils (txt)
 import Prelude hiding (log, putStrLn)
 
 {-
-BrowsingContext Events Implemented:
+BrowsingContext Events - All Implemented ✓
 
 1. browsingContext.contextCreated :: ✓ browsingContextEventCreatedestroyed
 2. browsingContext.contextDestroyed :: ✓ browsingContextEventCreatedestroyed
@@ -65,12 +67,10 @@ BrowsingContext Events Implemented:
 8. browsingContext.userPromptOpened :: ✓ browsingContextEventUserPrompts, browsingContextEventUserPromptsVariants
 9. browsingContext.userPromptClosed :: ✓ browsingContextEventUserPrompts, browsingContextEventUserPromptsVariants
 10. browsingContext.historyUpdated :: ✓ browsingContextEventHistoryUpdated
-
-Events TODO:
-11. browsingContext.navigationAborted :: TODO (requires page that aborts navigation)
-12. browsingContext.navigationFailed :: TODO (requires invalid URL/network error)
-13. browsingContext.downloadWillBegin :: TODO (requires actual download trigger)
-14. browsingContext.downloadEnd :: TODO (requires actual download completion)
+11. browsingContext.navigationAborted :: ✓ browsingContextEventNavigationAborted
+12. browsingContext.navigationFailed :: ✓ browsingContextEventNavigationFailed
+13. browsingContext.downloadWillBegin :: ✓ browsingContextEventDownloadWillBegin
+14. browsingContext.downloadEnd :: ✓ browsingContextEventDownloadEnd
 -}
 
 --  TODO aake sure all demos only use Protocol, not sub modules
@@ -556,4 +556,145 @@ browsingContextEventHistoryUpdated =
       sequence_
         [ waitHistoryEventFired,
           waitManyHistoryEventFired
+        ]
+
+-- >>> runDemo browsingContextEventNavigationAborted
+browsingContextEventNavigationAborted :: BiDiDemo
+browsingContextEventNavigationAborted =
+  demo "Browsing Context Events - Navigation Aborted" action
+  where
+    action :: DemoUtils -> BiDiActions -> IO ()
+    action MkDemoUtils {..} MkCommands {..} = do
+      logTxt "Subscribe to NavigationAborted event"
+      
+      (abortedEventFired, waitAbortedEventFired) <- timeLimitLog BrowsingContextNavigationAborted
+      subscribeBrowsingContextNavigationAborted abortedEventFired
+
+      (manyAbortedEventFired, waitManyAbortedEventFired) <- timeLimitLog BrowsingContextNavigationAborted
+      subscribeMany [BrowsingContextNavigationAborted] manyAbortedEventFired
+
+      logTxt "Start navigation to slow loading page"
+      url <- slowLoadUrl
+      bc <- rootContext MkDemoUtils {..} MkCommands {..}
+      
+      -- Start navigation in background (non-blocking)
+      scriptEvaluate $
+        MkEvaluate
+          { expression = "setTimeout(() => { window.location.href = '" <> url <> "'; }, 100)",
+            target = ContextTarget $ MkContextTarget {context = bc, sandbox = Nothing},
+            awaitPromise = False,
+            resultOwnership = Nothing,
+            serializationOptions = Nothing
+          }
+      
+      -- Give the navigation a moment to start
+      pauseAtLeast (MkTimeout 200)
+      
+      logTxt "Abort navigation by navigating to different page"
+      url2 <- checkboxesUrl
+      browsingContextNavigate $ MkNavigate bc url2 Nothing
+
+      sequence_
+        [ waitAbortedEventFired,
+          waitManyAbortedEventFired
+        ]
+
+-- >>> runDemo browsingContextEventNavigationFailed
+browsingContextEventNavigationFailed :: BiDiDemo
+browsingContextEventNavigationFailed =
+  demo "Browsing Context Events - Navigation Failed" action
+  where
+    action :: DemoUtils -> BiDiActions -> IO ()
+    action MkDemoUtils {..} MkCommands {..} = do
+      logTxt "Subscribe to NavigationFailed event"
+      
+      (failedEventFired, waitFailedEventFired) <- timeLimitLog BrowsingContextNavigationFailed
+      subscribeBrowsingContextNavigationFailed failedEventFired
+
+      (manyFailedEventFired, waitManyFailedEventFired) <- timeLimitLog BrowsingContextNavigationFailed
+      subscribeMany [BrowsingContextNavigationFailed] manyFailedEventFired
+
+      logTxt "Navigate to invalid URL to trigger navigation failure"
+      bc <- rootContext MkDemoUtils {..} MkCommands {..}
+      
+      -- Try to navigate to an invalid URL
+      browsingContextNavigate $ MkNavigate bc "http://invalid-domain-that-does-not-exist-12345.test" Nothing
+
+      sequence_
+        [ waitFailedEventFired,
+          waitManyFailedEventFired
+        ]
+
+-- >>> runDemo browsingContextEventDownloadWillBegin
+browsingContextEventDownloadWillBegin :: BiDiDemo
+browsingContextEventDownloadWillBegin =
+  demo "Browsing Context Events - Download Will Begin" action
+  where
+    action :: DemoUtils -> BiDiActions -> IO ()
+    action MkDemoUtils {..} MkCommands {..} = do
+      logTxt "Navigate to download link page"
+      url <- downloadLinkUrl
+      bc <- rootContext MkDemoUtils {..} MkCommands {..}
+      browsingContextNavigate $ MkNavigate bc url Nothing
+      pause
+
+      logTxt "Subscribe to DownloadWillBegin event"
+      
+      (downloadEventFired, waitDownloadEventFired) <- timeLimitLog BrowsingContextDownloadWillBegin
+      subscribeBrowsingContextDownloadWillBegin downloadEventFired
+
+      (manyDownloadEventFired, waitManyDownloadEventFired) <- timeLimitLog BrowsingContextDownloadWillBegin
+      subscribeMany [BrowsingContextDownloadWillBegin] manyDownloadEventFired
+
+      logTxt "Click download link via script"
+      scriptEvaluate $
+        MkEvaluate
+          { expression = "document.getElementById('downloadLink').click()",
+            target = ContextTarget $ MkContextTarget {context = bc, sandbox = Nothing},
+            awaitPromise = False,
+            resultOwnership = Nothing,
+            serializationOptions = Nothing
+          }
+
+      sequence_
+        [ waitDownloadEventFired,
+          waitManyDownloadEventFired
+        ]
+
+-- >>> runDemo browsingContextEventDownloadEnd
+browsingContextEventDownloadEnd :: BiDiDemo
+browsingContextEventDownloadEnd =
+  demo "Browsing Context Events - Download End (Complete and Canceled)" action
+  where
+    action :: DemoUtils -> BiDiActions -> IO ()
+    action MkDemoUtils {..} MkCommands {..} = do
+      logTxt "Navigate to download link page"
+      url <- downloadLinkUrl
+      bc <- rootContext MkDemoUtils {..} MkCommands {..}
+      browsingContextNavigate $ MkNavigate bc url Nothing
+      pause
+
+      logTxt "Subscribe to DownloadWillBegin and DownloadEnd events"
+      
+      subscribeBrowsingContextDownloadWillBegin $ logShow "DownloadWillBegin"
+      
+      (downloadEndEventFired, waitDownloadEndEventFired) <- timeLimitLog BrowsingContextDownloadEnd
+      subscribeBrowsingContextDownloadEnd downloadEndEventFired
+
+      (manyDownloadEndEventFired, waitManyDownloadEndEventFired) <- timeLimitLog BrowsingContextDownloadEnd
+      subscribeMany [BrowsingContextDownloadEnd] manyDownloadEndEventFired
+
+      logTxt "Trigger download via JavaScript (blob download should complete quickly)"
+      scriptEvaluate $
+        MkEvaluate
+          { expression = "triggerDownload()",
+            target = ContextTarget $ MkContextTarget {context = bc, sandbox = Nothing},
+            awaitPromise = False,
+            resultOwnership = Nothing,
+            serializationOptions = Nothing
+          }
+
+      sequence_
+        [ waitDownloadEndEventFired,
+          waitManyDownloadEndEventFired
         ]

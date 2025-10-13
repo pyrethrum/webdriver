@@ -100,7 +100,7 @@ module WebDriverPreCore.BiDi.API
 where
 
 import Data.Aeson (Object)
-import WebDriverPreCore.BiDi.BrowsingContext (NavigationInfo, DownloadWillBegin, HistoryUpdated, UserPromptClosed, UserPromptOpened)
+import WebDriverPreCore.BiDi.BrowsingContext (NavigationInfo, DownloadWillBegin, DownloadEnd, HistoryUpdated, UserPromptClosed, UserPromptOpened)
 import WebDriverPreCore.BiDi.Event
 import WebDriverPreCore.BiDi.Input (FileDialogOpened)
 import WebDriverPreCore.BiDi.Log
@@ -442,7 +442,7 @@ subscribeBrowsingContextDownloadWillBegin = SingleSubscription BrowsingContextDo
 subscribeBrowsingContextDownloadEnd ::
   [BrowsingContext] ->
   [UserContext] ->
-  (() -> m ()) ->
+  (DownloadEnd -> m ()) ->
   Subscription m
 subscribeBrowsingContextDownloadEnd = SingleSubscription BrowsingContextDownloadEnd
 
