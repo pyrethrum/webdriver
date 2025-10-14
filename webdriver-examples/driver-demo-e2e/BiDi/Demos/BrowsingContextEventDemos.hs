@@ -2,55 +2,55 @@ module BiDi.Demos.BrowsingContextEventDemos where
 
 import BiDi.BiDiRunner (BiDiActions (..), BiDiMethods (unsubscribe))
 import BiDi.DemoUtils
-import Const (second, seconds, Timeout (..))
+import Const (Timeout (..), minute, second, seconds)
 import IOUtils (DemoUtils (..))
-import TestData (checkboxesUrl, textAreaUrl, promptUrl, fragmentUrl, downloadUrl, slowLoadUrl, downloadLinkUrl)
-import WebDriverPreCore.BiDi.BrowsingContext 
-  ( BrowsingContextEvent (NavigationStarted), 
-    Close (..), 
-    Navigate (..), 
-    HandleUserPrompt (..),
-    UserPromptType (..),
-    DownloadWillBegin (..),
+import TestData (checkboxesUrl, downloadLinkUrl, downloadUrl, fragmentUrl, promptUrl, slowLoadUrl, textAreaUrl)
+import WebDriverPreCore.BiDi.BrowsingContext
+  ( BrowsingContextEvent (NavigationStarted),
+    Close (..),
     DownloadEnd (..),
-    UserPromptOpened (..),
-    UserPromptClosed (..),
-    NavigationInfo (..),
+    DownloadWillBegin (..),
+    HandleUserPrompt (..),
     HistoryUpdated (..),
-    Reload (..)
+    Navigate (..),
+    NavigationInfo (..),
+    Reload (..),
+    UserPromptClosed (..),
+    UserPromptOpened (..),
+    UserPromptType (..),
   )
+import WebDriverPreCore.BiDi.CoreTypes (StringValue (..))
 import WebDriverPreCore.BiDi.Protocol
   ( BrowsingContext (..),
+    ContextTarget (..),
     Create (..),
     CreateType (..),
     CreateUserContext (..),
-    SubscriptionType 
-      ( BrowsingContextContextCreated, 
-        BrowsingContextContextDestroyed, 
-        BrowsingContextNavigationStarted,
-        BrowsingContextNavigationCommitted,
-        BrowsingContextNavigationFailed,
-        BrowsingContextNavigationAborted,
+    Evaluate (..),
+    SubscriptionType
+      ( BrowsingContextContextCreated,
+        BrowsingContextContextDestroyed,
         BrowsingContextDomContentLoaded,
-        BrowsingContextLoad,
+        BrowsingContextDownloadEnd,
+        BrowsingContextDownloadWillBegin,
         BrowsingContextFragmentNavigated,
         BrowsingContextHistoryUpdated,
-        BrowsingContextUserPromptOpened,
+        BrowsingContextLoad,
+        BrowsingContextNavigationAborted,
+        BrowsingContextNavigationCommitted,
+        BrowsingContextNavigationFailed,
+        BrowsingContextNavigationStarted,
         BrowsingContextUserPromptClosed,
-        BrowsingContextDownloadWillBegin,
-        BrowsingContextDownloadEnd
+        BrowsingContextUserPromptOpened
       ),
     UserContext (..),
-    ContextTarget (..),
-    Evaluate (..)
   )
-import WebDriverPreCore.BiDi.Script 
-  ( EvaluateResult (..), 
-    PrimitiveProtocolValue (..), 
+import WebDriverPreCore.BiDi.Script
+  ( EvaluateResult (..),
+    PrimitiveProtocolValue (..),
     RemoteValue (..),
-    Target (ContextTarget)
+    Target (ContextTarget),
   )
-import WebDriverPreCore.BiDi.CoreTypes (StringValue (..))
 import WebDriverPreCore.Internal.Utils (txt)
 import Prelude hiding (log, putStrLn)
 
@@ -83,7 +83,7 @@ browsingContextEventDemo =
     action :: DemoUtils -> BiDiActions -> IO ()
     action MkDemoUtils {..} MkCommands {..} = do
       subId <- subscribeBrowsingContextCreated (logShow "Event Subscription Fired: browsingContext.contextCreated")
-      logShow "Subscription id:" subId
+      logShow "Subscription id" subId
 
       logTxt "New browsing context - Tab"
       let bcParams =
@@ -111,7 +111,7 @@ browsingContextEventDemoMulti =
     action :: DemoUtils -> BiDiActions -> IO ()
     action MkDemoUtils {..} MkCommands {..} = do
       subId <- subscribeMany [BrowsingContextContextCreated, BrowsingContextContextDestroyed] (logShow "Event Subscription Fired: browsingContext.contextCreated or contextDestroyed")
-      logShow "Subscription id:" subId
+      logShow "Subscription id" subId
 
       logTxt "New browsing context - Tab"
       let bcParams =
@@ -143,7 +143,7 @@ browsingContextEventDemoMulti =
 -- >>> runDemo browsingContextEventDemoFilteredSubscriptions
 browsingContextEventDemoFilteredSubscriptions :: BiDiDemo
 browsingContextEventDemoFilteredSubscriptions =
-  demo "Browsing Context Events - Filtered Navigation Subscriptions - Filter not working - not working: https://github.com/mozilla/geckodriver/issues/2236" action
+  demo "Browsing Context Events - Filtered Navigation Subscriptions - Filter not working - not working: https://bugzilla.mozilla.org/show_bug.cgi?id=1994293" action
   where
     action :: DemoUtils -> BiDiActions -> IO ()
     action MkDemoUtils {..} MkCommands {..} = do
@@ -159,19 +159,20 @@ browsingContextEventDemoFilteredSubscriptions =
 
       -- Create first browsing context
       bc1 <- browsingContextCreate createParams
-      logShow "Created browsing context 1:" bc1
+      logShow "Created browsing context 1" bc1
 
       -- Create second browsing context
       bc2 <- browsingContextCreate createParams
-      logShow "Created browsing context 2:" bc2
+      logShow "Created browsing context 2" bc2
 
       logTxt "Subscribing to navigationStarted events only for browsing context 1"
 
       -- Subscribe to navigationStarted events only for parentContext1
       subId <-
         subscribeBrowsingContextNavigationStarted' [bc1] [] $
-          logShow "Navigation Started Event Fired (should only fire for browsing context 1)"
-      logShow "Subscribed to navigationStarted for browsing context 1:" subId
+          logShow $
+            "Navigation Started Event Fired (should only fire for browsing context 1: " <> bc1.context <> ")"
+      logShow "Subscribed to navigationStarted for browsing context 1" subId
       pause
 
       logTxt "Navigating both contexts to different URLs"
@@ -201,7 +202,7 @@ browsingContextEventDemoUserContextFiltered =
               proxy = Nothing,
               unhandledPromptBehavior = Nothing
             }
-      logShow "Created user context 1:" uc1
+      logShow "Created user context 1" uc1
 
       uc2 <-
         browserCreateUserContext
@@ -210,14 +211,14 @@ browsingContextEventDemoUserContextFiltered =
               proxy = Nothing,
               unhandledPromptBehavior = Nothing
             }
-      logShow "Created user context 2:" uc2
+      logShow "Created user context 2" uc2
 
       logTxt "Subscribing to contextCreated events only for user context 1"
       subId <-
         subscribeBrowsingContextCreated' [] [uc1] $
           logShow $
             "Context Created Event Fired - should only fire for user context: " <> txt uc1.userContext
-      logShow "Subscribed to contextCreated for user context 1:" subId
+      logShow "Subscribed to contextCreated for user context 1" subId
       pause
 
       logTxt "Creating browsing contexts in both user contexts"
@@ -231,7 +232,7 @@ browsingContextEventDemoUserContextFiltered =
                 userContext = Just uc1
               }
       bc1 <- browsingContextCreate createParams1
-      logShow "Created browsing context 1:" bc1
+      logShow "Created browsing context 1" bc1
       pause
 
       logTxt "Creating browsing context in user context 2 (should NOT trigger event)"
@@ -243,7 +244,7 @@ browsingContextEventDemoUserContextFiltered =
                 userContext = Just uc2
               }
       bc2 <- browsingContextCreate createParams2
-      logShow "Created browsing context 2:" bc2
+      logShow "Created browsing context 2" bc2
       pause
 
       logShow "Unsubscribing from events" subId
@@ -251,16 +252,15 @@ browsingContextEventDemoUserContextFiltered =
 
       logTxt "Creating browsing context after unsubscribe (should NOT trigger event)"
       bc4 <- browsingContextCreate createParams1
-      logShow "Created browsing context 4 (no event):" bc4
+      logShow "Created browsing context 4 (no event)" bc4
 
--- >>> runDemo browsingContextEventCreatedestroyed
-browsingContextEventCreatedestroyed :: BiDiDemo
-browsingContextEventCreatedestroyed =
+-- >>> runDemo browsingContextEventCreateDestroy
+browsingContextEventCreateDestroy :: BiDiDemo
+browsingContextEventCreateDestroy =
   demo "Browsing Context Events - Created and Destroyed" action
   where
     action :: DemoUtils -> BiDiActions -> IO ()
     action MkDemoUtils {..} MkCommands {..} = do
-
       logTxt "Subscribe to ContextCreated event"
       (createdEventFired, waitCreateEventFired) <- timeLimitLog BrowsingContextContextCreated
       subscribeBrowsingContextCreated createdEventFired
@@ -277,7 +277,7 @@ browsingContextEventCreatedestroyed =
                 userContext = Nothing
               }
       bc <- browsingContextCreate createParams
-      logShow "Created browsing context:" bc
+      logShow "Created browsing context" bc
 
       sequence_
         [ waitCreateEventFired,
@@ -294,7 +294,7 @@ browsingContextEventCreatedestroyed =
 
       logTxt "Closing the browsing context"
       browsingContextClose $ MkClose bc Nothing
-      logShow "Closed browsing context:" bc
+      logShow "Closed browsing context" bc
 
       sequence_
         [ waitDestroyedEventFired,
@@ -307,41 +307,47 @@ browsingContextEventNavigationLifecycle =
   demo "Browsing Context Events - Navigation Lifecycle (Started, Committed, DomContentLoaded, Load)" action
   where
     action :: DemoUtils -> BiDiActions -> IO ()
-    action MkDemoUtils {..} MkCommands {..} = do
+    action utils@MkDemoUtils {..} cmds@MkCommands {..} = do
       logTxt "Subscribe to navigation lifecycle events"
-      
+
       (startedEventFired, waitStartedEventFired) <- timeLimitLog BrowsingContextNavigationStarted
       subscribeBrowsingContextNavigationStarted startedEventFired
+
+      (manyStartedEventFired, waitManyStartedEventFired) <- timeLimitLog BrowsingContextNavigationStarted
+      subscribeMany [BrowsingContextNavigationStarted] manyStartedEventFired
 
       (committedEventFired, waitCommittedEventFired) <- timeLimitLog BrowsingContextNavigationCommitted
       subscribeBrowsingContextNavigationCommitted committedEventFired
 
+      (manyCommittedEventFired, waitManyCommittedEventFired) <- timeLimitLog BrowsingContextNavigationCommitted
+      subscribeMany [BrowsingContextNavigationCommitted] manyCommittedEventFired
+
       (domContentLoadedEventFired, waitDomContentLoadedEventFired) <- timeLimitLog BrowsingContextDomContentLoaded
       subscribeBrowsingContextDomContentLoaded domContentLoadedEventFired
+
+      (manyDomContentLoadedEventFired, waitManyDomContentLoadedEventFired) <- timeLimitLog BrowsingContextDomContentLoaded
+      subscribeMany [BrowsingContextDomContentLoaded] manyDomContentLoadedEventFired
 
       (loadEventFired, waitLoadEventFired) <- timeLimitLog BrowsingContextLoad
       subscribeBrowsingContextLoad loadEventFired
 
-      (manyEventFired, waitManyEventFired) <- timeLimitLog BrowsingContextNavigationStarted
-      subscribeMany 
-        [ BrowsingContextNavigationStarted,
-          BrowsingContextNavigationCommitted,
-          BrowsingContextDomContentLoaded,
-          BrowsingContextLoad
-        ] 
-        manyEventFired
+      (manyLoadEventFired, waitManyLoadEventFired) <- timeLimitLog BrowsingContextLoad
+      subscribeMany [BrowsingContextLoad] manyLoadEventFired
 
       logTxt "Navigating to checkboxes page"
       url <- checkboxesUrl
-      bc <- rootContext MkDemoUtils {..} MkCommands {..}
+      bc <- rootContext utils cmds
       browsingContextNavigate $ MkNavigate bc url Nothing
 
       sequence_
         [ waitStartedEventFired,
+          waitManyStartedEventFired,
           waitCommittedEventFired,
+          waitManyCommittedEventFired,
           waitDomContentLoadedEventFired,
+          waitManyDomContentLoadedEventFired,
           waitLoadEventFired,
-          waitManyEventFired
+          waitManyLoadEventFired
         ]
 
 -- >>> runDemo browsingContextEventFragmentNavigation
@@ -350,15 +356,15 @@ browsingContextEventFragmentNavigation =
   demo "Browsing Context Events - Fragment Navigation" action
   where
     action :: DemoUtils -> BiDiActions -> IO ()
-    action MkDemoUtils {..} MkCommands {..} = do
+    action utils@MkDemoUtils {..} cmds@MkCommands {..} = do
       logTxt "Navigate to fragment page"
       url <- fragmentUrl
-      bc <- rootContext MkDemoUtils {..} MkCommands {..}
+      bc <- rootContext utils cmds
       browsingContextNavigate $ MkNavigate bc url Nothing
       pause
 
       logTxt "Subscribe to FragmentNavigated event"
-      
+
       (fragmentEventFired, waitFragmentEventFired) <- timeLimitLog BrowsingContextFragmentNavigated
       subscribeBrowsingContextFragmentNavigated fragmentEventFired
 
@@ -374,30 +380,66 @@ browsingContextEventFragmentNavigation =
         ]
 
 -- >>> runDemo browsingContextEventUserPrompts
+-- *** Exception: CloseRequest 1000 ""
+
+-- *** Exception: Error executing BiDi command: MkCommand
+
+--   { method = "browsingContext.handleUserPrompt"
+--   , params =
+--       MkHandleUserPrompt
+--         { context =
+--             MkBrowsingContext
+--               { context = "65607047-c172-4220-8d45-7dab42362abb" }
+--         , accept = Just True
+--         , userText = Nothing
+--         }
+--   , extended = Nothing
+--   }
+-- With JSON:
+-- {
+--     "id": 8,
+--     "method": "browsingContext.handleUserPrompt",
+--     "params": {
+--         "accept": true,
+--         "context": "65607047-c172-4220-8d45-7dab42362abb"
+--     }
+-- }
+-- BiDi driver error:
+-- MkDriverError
+--   { id = Just 8
+--   , error = NoSuchAlert
+--   , description =
+--       "Tried to interact with an alert that doesn't exist"
+--   , message = ""
+--   , stacktrace =
+--       Just
+--         "RemoteError@chrome://remote/content/shared/RemoteError.sys.mjs:8:8\nWebDriverError@chrome://remote/content/shared/webdriver/Errors.sys.mjs:202:5\nNoSuchAlertError@chrome://remote/content/shared/webdriver/Errors.sys.mjs:538:5\nhandleUserPrompt@chrome://remote/content/webdriver-bidi/modules/root/browsingContext.sys.mjs:933:11\nhandleCommand@chrome://remote/content/shared/messagehandler/MessageHandler.sys.mjs:260:33\nexecute@chrome://remote/content/shared/webdriver/Session.sys.mjs:410:32\nonPacket@chrome://remote/content/webdriver-bidi/WebDriverBiDiConnection.sys.mjs:236:37\nonMessage@chrome://remote/content/server/WebSocketTransport.sys.mjs:127:18\nhandleEvent@chrome://remote/content/server/WebSocketTransport.sys.mjs:109:14\n"
+--   , extensions = MkEmptyResult { extensible = fromList [] }
+--   }
 browsingContextEventUserPrompts :: BiDiDemo
 browsingContextEventUserPrompts =
   demo "Browsing Context Events - User Prompt Opened and Closed" action
   where
     action :: DemoUtils -> BiDiActions -> IO ()
-    action MkDemoUtils {..} MkCommands {..} = do
+    action utils@MkDemoUtils {..} cmds@MkCommands {..} = do
       logTxt "Navigate to prompt page"
       url <- promptUrl
-      bc <- rootContext MkDemoUtils {..} MkCommands {..}
+      bc <- rootContext utils cmds
       browsingContextNavigate $ MkNavigate bc url Nothing
       pause
 
       logTxt "Subscribe to UserPromptOpened event"
-      
+
       (openedEventFired, waitOpenedEventFired) <- timeLimitLog BrowsingContextUserPromptOpened
       subscribeBrowsingContextUserPromptOpened openedEventFired
 
       (manyOpenedEventFired, waitManyOpenedEventFired) <- timeLimitLog BrowsingContextUserPromptOpened
       subscribeMany [BrowsingContextUserPromptOpened] manyOpenedEventFired
 
-      logTxt "Trigger alert prompt via script"
+      logTxt "Click alert button to trigger prompt"
       scriptEvaluate $
         MkEvaluate
-          { expression = "alert('Test alert')",
+          { expression = "document.getElementById('alertBtn').click()",
             target = ContextTarget $ MkContextTarget {context = bc, sandbox = Nothing},
             awaitPromise = False,
             resultOwnership = Nothing,
@@ -410,13 +452,14 @@ browsingContextEventUserPrompts =
         ]
 
       logTxt "Subscribe to UserPromptClosed event"
-      
+
       (closedEventFired, waitClosedEventFired) <- timeLimitLog BrowsingContextUserPromptClosed
       subscribeBrowsingContextUserPromptClosed closedEventFired
 
       (manyClosedEventFired, waitManyClosedEventFired) <- timeLimitLog BrowsingContextUserPromptClosed
       subscribeMany [BrowsingContextUserPromptClosed] manyClosedEventFired
 
+      pauseAtLeast $ 5 * seconds
       logTxt "Accept the alert prompt"
       browsingContextHandleUserPrompt $
         MkHandleUserPrompt
@@ -436,10 +479,10 @@ browsingContextEventUserPromptsVariants =
   demo "Browsing Context Events - User Prompt Types (Alert, Confirm, Prompt)" action
   where
     action :: DemoUtils -> BiDiActions -> IO ()
-    action MkDemoUtils {..} MkCommands {..} = do
+    action utils@MkDemoUtils {..} cmds@MkCommands {..} = do
       logTxt "Navigate to prompt page"
       url <- promptUrl
-      bc <- rootContext MkDemoUtils {..} MkCommands {..}
+      bc <- rootContext utils cmds
       browsingContextNavigate $ MkNavigate bc url Nothing
       pause
 
@@ -523,10 +566,10 @@ browsingContextEventHistoryUpdated =
   demo "Browsing Context Events - History Updated" action
   where
     action :: DemoUtils -> BiDiActions -> IO ()
-    action MkDemoUtils {..} MkCommands {..} = do
+    action utils@MkDemoUtils {..} cmds@MkCommands {..} = do
       logTxt "Navigate to checkboxes page"
       url1 <- checkboxesUrl
-      bc <- rootContext MkDemoUtils {..} MkCommands {..}
+      bc <- rootContext utils cmds
       browsingContextNavigate $ MkNavigate bc url1 Nothing
       pause
 
@@ -536,7 +579,7 @@ browsingContextEventHistoryUpdated =
       pause
 
       logTxt "Subscribe to HistoryUpdated event"
-      
+
       (historyEventFired, waitHistoryEventFired) <- timeLimitLog BrowsingContextHistoryUpdated
       subscribeBrowsingContextHistoryUpdated historyEventFired
 
@@ -564,9 +607,9 @@ browsingContextEventNavigationAborted =
   demo "Browsing Context Events - Navigation Aborted" action
   where
     action :: DemoUtils -> BiDiActions -> IO ()
-    action MkDemoUtils {..} MkCommands {..} = do
+    action utils@MkDemoUtils {..} cmds@MkCommands {..} = do
       logTxt "Subscribe to NavigationAborted event"
-      
+
       (abortedEventFired, waitAbortedEventFired) <- timeLimitLog BrowsingContextNavigationAborted
       subscribeBrowsingContextNavigationAborted abortedEventFired
 
@@ -575,8 +618,8 @@ browsingContextEventNavigationAborted =
 
       logTxt "Start navigation to slow loading page"
       url <- slowLoadUrl
-      bc <- rootContext MkDemoUtils {..} MkCommands {..}
-      
+      bc <- rootContext utils cmds
+
       -- Start navigation in background (non-blocking)
       scriptEvaluate $
         MkEvaluate
@@ -586,10 +629,10 @@ browsingContextEventNavigationAborted =
             resultOwnership = Nothing,
             serializationOptions = Nothing
           }
-      
+
       -- Give the navigation a moment to start
       pauseAtLeast (MkTimeout 200)
-      
+
       logTxt "Abort navigation by navigating to different page"
       url2 <- checkboxesUrl
       browsingContextNavigate $ MkNavigate bc url2 Nothing
@@ -605,9 +648,9 @@ browsingContextEventNavigationFailed =
   demo "Browsing Context Events - Navigation Failed" action
   where
     action :: DemoUtils -> BiDiActions -> IO ()
-    action MkDemoUtils {..} MkCommands {..} = do
+    action utils@MkDemoUtils {..} cmds@MkCommands {..} = do
       logTxt "Subscribe to NavigationFailed event"
-      
+
       (failedEventFired, waitFailedEventFired) <- timeLimitLog BrowsingContextNavigationFailed
       subscribeBrowsingContextNavigationFailed failedEventFired
 
@@ -615,8 +658,8 @@ browsingContextEventNavigationFailed =
       subscribeMany [BrowsingContextNavigationFailed] manyFailedEventFired
 
       logTxt "Navigate to invalid URL to trigger navigation failure"
-      bc <- rootContext MkDemoUtils {..} MkCommands {..}
-      
+      bc <- rootContext utils cmds
+
       -- Try to navigate to an invalid URL
       browsingContextNavigate $ MkNavigate bc "http://invalid-domain-that-does-not-exist-12345.test" Nothing
 
@@ -631,15 +674,15 @@ browsingContextEventDownloadWillBegin =
   demo "Browsing Context Events - Download Will Begin" action
   where
     action :: DemoUtils -> BiDiActions -> IO ()
-    action MkDemoUtils {..} MkCommands {..} = do
+    action utils@MkDemoUtils {..} cmds@MkCommands {..} = do
       logTxt "Navigate to download link page"
       url <- downloadLinkUrl
-      bc <- rootContext MkDemoUtils {..} MkCommands {..}
+      bc <- rootContext utils cmds
       browsingContextNavigate $ MkNavigate bc url Nothing
       pause
 
       logTxt "Subscribe to DownloadWillBegin event"
-      
+
       (downloadEventFired, waitDownloadEventFired) <- timeLimitLog BrowsingContextDownloadWillBegin
       subscribeBrowsingContextDownloadWillBegin downloadEventFired
 
@@ -667,17 +710,17 @@ browsingContextEventDownloadEnd =
   demo "Browsing Context Events - Download End (Complete and Canceled)" action
   where
     action :: DemoUtils -> BiDiActions -> IO ()
-    action MkDemoUtils {..} MkCommands {..} = do
+    action utils@MkDemoUtils {..} cmds@MkCommands {..} = do
       logTxt "Navigate to download link page"
       url <- downloadLinkUrl
-      bc <- rootContext MkDemoUtils {..} MkCommands {..}
+      bc <- rootContext utils cmds
       browsingContextNavigate $ MkNavigate bc url Nothing
       pause
 
       logTxt "Subscribe to DownloadWillBegin and DownloadEnd events"
-      
+
       subscribeBrowsingContextDownloadWillBegin $ logShow "DownloadWillBegin"
-      
+
       (downloadEndEventFired, waitDownloadEndEventFired) <- timeLimitLog BrowsingContextDownloadEnd
       subscribeBrowsingContextDownloadEnd downloadEndEventFired
 

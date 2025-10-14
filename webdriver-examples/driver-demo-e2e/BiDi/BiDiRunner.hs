@@ -10,7 +10,7 @@ import Data.ByteString.Lazy qualified as BL
 import Data.Coerce (coerce)
 import Data.Foldable (Foldable (toList), traverse_)
 import Data.Function ((&))
-import Data.Text as T (Text, pack, unpack)
+import Data.Text as T (Text, pack, unpack, take)
 import Data.Text.IO (putStrLn)
 import Data.Text.IO qualified as TIO
 import Data.Word (Word64)
@@ -723,7 +723,7 @@ demoMessageActions log channels =
       --
       get = \conn -> do
         msg <- receiveData conn
-        -- log $ "Received raw data: " <> T.take 100 (txt msg) <> "..."
+        log $ "Received raw data: " <> T.take 100 (txt msg) <> "..."
         log $ "Received raw data: " <> txt msg
         let writeReceiveChan = atomically . writeTChan channels.receiveChan
             writeEventChan = atomically . writeTChan channels.eventChan
@@ -777,7 +777,7 @@ applySubscriptions log obj subscriptions = do
         <> "\n"
         <> objToText obj
 
-  log $ "Parsed event: " <> txt eventProps
+  -- log $ "Parsed event: " <> txt eventProps
   subs <- readTVarIO subscriptions
   traverse_ (applySubscription method params fullObj) subs
 

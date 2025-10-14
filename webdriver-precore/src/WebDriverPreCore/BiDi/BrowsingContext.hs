@@ -1,18 +1,18 @@
 module WebDriverPreCore.BiDi.BrowsingContext where
 
-import Data.Aeson (FromJSON (..), KeyValue (..), Options (..), ToJSON (..), Value (..), defaultOptions, genericToJSON, object, withObject, (.:), (.=))
+import Data.Aeson (FromJSON (..), GFromJSON, KeyValue (..), Options (..), ToJSON (..), Value (..), Zero, defaultOptions, genericParseJSON, genericToJSON, object, withObject, (.:), (.=))
 import Data.Aeson.Types (Parser)
-import Data.Map qualified as Map
-import Data.Maybe (catMaybes)
-import Data.Text (Text, unpack, pack)
-import GHC.Generics
-import WebDriverPreCore.BiDi.CoreTypes (BrowsingContext, JSInt, JSUInt, NodeRemoteValue, UserContext, SubscriptionType (..))
-import WebDriverPreCore.BiDi.Script (SharedReference)
-import WebDriverPreCore.Internal.AesonUtils (enumCamelCase, opt, toJSONOmitNothing, parseJSONOmitNothing, fromJSONCamelCase)
-import Prelude (Bool (..), Eq, Float, Functor (..), Maybe, Semigroup ((<>)), Show (..), Word, flip, ($), (.), fromIntegral, Applicative (..), MonadFail (..))
 import Data.Function ((&))
 import Data.Functor ((<&>))
+import Data.Map qualified as Map
+import Data.Maybe (catMaybes)
+import Data.Text (Text, pack, unpack)
+import GHC.Generics
 import WebDriverPreCore.BiDi.Capabilities (UserPromptHandlerType)
+import WebDriverPreCore.BiDi.CoreTypes (BrowsingContext, JSInt, JSUInt, NodeRemoteValue, SubscriptionType (..), UserContext)
+import WebDriverPreCore.BiDi.Script (SharedReference)
+import WebDriverPreCore.Internal.AesonUtils (enumCamelCase, fromJSONCamelCase, opt, parseJSONOmitNothing, toJSONOmitNothing)
+import Prelude (Applicative (..), Bool (..), Eq, Float, Functor (..), Maybe, MonadFail (..), Semigroup ((<>)), Show (..), Word, flip, fromIntegral, ($), (.))
 
 -- ######### REMOTE #########
 
@@ -190,7 +190,7 @@ data Print = MkPrint
     margin :: Maybe PrintMargin,
     orientation :: Maybe Orientation,
     page :: Maybe PrintPage,
-    pageRanges :: Maybe [PageRange], 
+    pageRanges :: Maybe [PageRange],
     scale :: Maybe Float,
     shrinkToFit :: Maybe Bool
   }
@@ -212,14 +212,13 @@ data PageRange
       { fromPage :: Word,
         toPage :: Word
       }
-      deriving (Show, Eq)
+  deriving (Show, Eq)
 
 instance ToJSON PageRange where
-   toJSON :: PageRange -> Value
-   toJSON = \case
-     Page p -> Number $ fromIntegral p
-     Range {fromPage, toPage} -> String (pack (show fromPage <> "-" <> show toPage))
-     
+  toJSON :: PageRange -> Value
+  toJSON = \case
+    Page p -> Number $ fromIntegral p
+    Range {fromPage, toPage} -> String (pack (show fromPage <> "-" <> show toPage))
 
 -- |  for reload command
 data Reload = MkReload
@@ -248,7 +247,6 @@ data TraverseHistory = MkTraverseHistory
     delta :: JSInt
   }
   deriving (Show, Eq, Generic)
-
 
 -- | Text matching type for InnerText locator
 data MatchType = Full | Partial
@@ -459,31 +457,31 @@ data BrowsingContextEvent
 
 instance FromJSON BrowsingContextEvent where
   parseJSON :: Value -> Parser BrowsingContextEvent
-  parseJSON val = val & (withObject "BrowsingContextEvent" $ \o -> do
-    typ <- o .: "method" 
-    params <- o .: "params"
-    let
-      parsedPrms :: forall a b. FromJSON a => (a -> b) -> Parser b
-      parsedPrms = (<&>) (parseJSON params)
-    case typ of
-      BrowsingContextContextCreated -> parsedPrms ContextCreated
-      BrowsingContextContextDestroyed -> parsedPrms ContextDestroyed
-      BrowsingContextDomContentLoaded -> parsedPrms DomContentLoaded
-      BrowsingContextDownloadEnd -> pure DownloadEnd
-      BrowsingContextDownloadWillBegin -> parsedPrms DownloadWillBegin
-      BrowsingContextFragmentNavigated -> parsedPrms FragmentNavigated
-      BrowsingContextHistoryUpdated -> parsedPrms HistoryUpdated
-      BrowsingContextLoad -> parsedPrms Load
-      BrowsingContextNavigationAborted -> parsedPrms NavigationAborted
-      BrowsingContextNavigationCommitted -> parsedPrms NavigationCommitted
-      BrowsingContextNavigationFailed -> parsedPrms NavigationFailed
-      BrowsingContextNavigationStarted -> parsedPrms NavigationStarted
-      BrowsingContextUserPromptClosed -> parsedPrms UserPromptClosed
-      BrowsingContextUserPromptOpened -> parsedPrms UserPromptOpened
-      _ -> fail $ "Unknown BrowsingContextEvent type: " <> show typ)
+  parseJSON val =
+    val
+      & ( withObject "BrowsingContextEvent" $ \o -> do
+            typ <- o .: "method"
+            params <- o .: "params"
+            let parsedPrms :: forall a b. (FromJSON a) => (a -> b) -> Parser b
+                parsedPrms = (<&>) (parseJSON params)
+            case typ of
+              BrowsingContextContextCreated -> parsedPrms ContextCreated
+              BrowsingContextContextDestroyed -> parsedPrms ContextDestroyed
+              BrowsingContextDomContentLoaded -> parsedPrms DomContentLoaded
+              BrowsingContextDownloadEnd -> pure DownloadEnd
+              BrowsingContextDownloadWillBegin -> parsedPrms DownloadWillBegin
+              BrowsingContextFragmentNavigated -> parsedPrms FragmentNavigated
+              BrowsingContextHistoryUpdated -> parsedPrms HistoryUpdated
+              BrowsingContextLoad -> parsedPrms Load
+              BrowsingContextNavigationAborted -> parsedPrms NavigationAborted
+              BrowsingContextNavigationCommitted -> parsedPrms NavigationCommitted
+              BrowsingContextNavigationFailed -> parsedPrms NavigationFailed
+              BrowsingContextNavigationStarted -> parsedPrms NavigationStarted
+              BrowsingContextUserPromptClosed -> parsedPrms UserPromptClosed
+              BrowsingContextUserPromptOpened -> parsedPrms UserPromptOpened
+              _ -> fail $ "Unknown BrowsingContextEvent type: " <> show typ
+        )
     where
-
-
 
 data NavigationInfo = MkNavigationInfo
   { context :: BrowsingContext,
@@ -549,7 +547,6 @@ data HistoryUpdated = MkHistoryUpdated
 
 instance FromJSON HistoryUpdated
 
-
 data UserPromptClosed = MkUserPromptClosed
   { context :: BrowsingContext,
     accepted :: Bool,
@@ -558,13 +555,23 @@ data UserPromptClosed = MkUserPromptClosed
   }
   deriving (Show, Eq, Generic)
 
+promptParser :: forall a. (Generic a, GFromJSON Zero (Rep a)) => Value -> Parser a
+promptParser =
+  genericParseJSON
+    defaultOptions
+      { fieldLabelModifier = \case
+          "promptType" -> "type"
+          other -> other,
+        omitNothingFields = True
+      }
+
 instance FromJSON UserPromptClosed where
   parseJSON :: Value -> Parser UserPromptClosed
-  parseJSON = parseJSONOmitNothing
+  parseJSON = promptParser
 
 data UserPromptOpened = MkUserPromptOpened
   { context :: BrowsingContext,
-    handler :: UserPromptHandlerType, 
+    handler :: UserPromptHandlerType,
     message :: Text,
     promptType :: UserPromptType,
     defaultValue :: Maybe Text
@@ -573,7 +580,7 @@ data UserPromptOpened = MkUserPromptOpened
 
 instance FromJSON UserPromptOpened where
   parseJSON :: Value -> Parser UserPromptOpened
-  parseJSON = parseJSONOmitNothing
+  parseJSON = promptParser
 
 newtype Navigation = MkNavigation
   { navigationId :: Text
