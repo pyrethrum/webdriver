@@ -55,7 +55,7 @@ import WebDriverPreCore.Internal.Utils (txt)
 import Prelude hiding (log, putStrLn)
 
 {-
-BrowsingContext Events - All Implemented ✓
+BrowsingContext Events - Implementation Status
 
 1. browsingContext.contextCreated :: ✓ browsingContextEventCreatedestroyed
 2. browsingContext.contextDestroyed :: ✓ browsingContextEventCreatedestroyed
@@ -66,8 +66,8 @@ BrowsingContext Events - All Implemented ✓
 7. browsingContext.fragmentNavigated :: ✓ browsingContextEventFragmentNavigation
 8. browsingContext.userPromptOpened :: ✓ browsingContextEventUserPrompts, browsingContextEventUserPromptsVariants
 9. browsingContext.userPromptClosed :: ✓ browsingContextEventUserPrompts, browsingContextEventUserPromptsVariants
-10. browsingContext.historyUpdated :: ✓ browsingContextEventHistoryUpdated
-11. browsingContext.navigationAborted :: ✓ browsingContextEventNavigationAborted
+10. browsingContext.historyUpdated :: ✗ browsingContextEventHistoryUpdated (not implemented in geckodriver - bug 1906050)
+11. browsingContext.navigationAborted :: ✗ browsingContextEventNavigationAborted (not implemented in geckodriver - bug 1874362)
 12. browsingContext.navigationFailed :: ✓ browsingContextEventNavigationFailed
 13. browsingContext.downloadWillBegin :: ✓ browsingContextEventDownloadWillBegin
 14. browsingContext.downloadEnd :: ✓ browsingContextEventDownloadEnd
@@ -584,43 +584,16 @@ browsingContextEventHistoryUpdated =
         ]
 
 -- >>> runDemo browsingContextEventNavigationAborted
--- *** Exception: Error executing BiDi command: MkCommand
---   { method = "session.subscribe"
---   , params =
---       MkSessionSubscriptionRequest
---         { events = [ BrowsingContextNavigationAborted ]
---         , browsingContexts = Nothing
---         , userContexts = Nothing
---         }
---   , extended = Nothing
---   }
--- With JSON: 
--- {
---     "id": 1,
---     "method": "session.subscribe",
---     "params": {
---         "events": [
---             "browsingContext.navigationAborted"
---         ]
---     }
--- }
--- BiDi driver error: 
--- MkDriverError
---   { id = Just 1
---   , error = InvalidArgument
---   , description =
---       "Tried to perform an action with an invalid argument"
---   , message =
---       "browsingContext.navigationAborted is not a valid event name"
---   , stacktrace =
---       Just
---         "RemoteError@chrome://remote/content/shared/RemoteError.sys.mjs:8:8\nWebDriverError@chrome://remote/content/shared/webdriver/Errors.sys.mjs:202:5\nInvalidArgumentError@chrome://remote/content/shared/webdriver/Errors.sys.mjs:404:5\n#assertModuleSupportsEvent@chrome://remote/content/webdriver-bidi/modules/root/session.sys.mjs:240:13\n#obtainEvents@chrome://remote/content/webdriver-bidi/modules/root/session.sys.mjs:835:38\nsubscribe/<@chrome://remote/content/webdriver-bidi/modules/root/session.sys.mjs:122:25\nsubscribe@chrome://remote/content/webdriver-bidi/modules/root/session.sys.mjs:121:12\nhandleCommand@chrome://remote/content/shared/messagehandler/MessageHandler.sys.mjs:260:33\nexecute@chrome://remote/content/shared/webdriver/Session.sys.mjs:410:32\nonPacket@chrome://remote/content/webdriver-bidi/WebDriverBiDiConnection.sys.mjs:236:37\nonMessage@chrome://remote/content/server/WebSocketTransport.sys.mjs:127:18\nhandleEvent@chrome://remote/content/server/WebSocketTransport.sys.mjs:109:14\n"
---   , extensions = MkEmptyResult { extensible = fromList [] }
---   }
 browsingContextEventNavigationAborted :: BiDiDemo
 browsingContextEventNavigationAborted =
   demo "Browsing Context Events - Navigation Aborted" action
   where
+    -- NOTE: browsingContext.navigationAborted event is not yet implemented in geckodriver
+    -- The subscription fails with InvalidArgument error:
+    -- "browsingContext.navigationAborted is not a valid event name"
+    -- This event is defined in the WebDriver BiDi spec but not yet supported by geckodriver
+    -- See: https://bugzilla.mozilla.org/show_bug.cgi?id=1874362
+    -- Status: NEW (as of 2025-09-17)
     action :: DemoUtils -> BiDiActions -> IO ()
     action utils@MkDemoUtils {..} cmds@MkCommands {..} = do
       logTxt "Subscribe to NavigationAborted event"
