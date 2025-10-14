@@ -2,7 +2,7 @@ module BiDi.Demos.BrowsingContextEventDemos where
 
 import BiDi.BiDiRunner (BiDiActions (..), BiDiMethods (unsubscribe))
 import BiDi.DemoUtils
-import Const (Timeout (..), minute, second, seconds)
+import Const (Timeout (..), milliseconds)
 import IOUtils (DemoUtils (..))
 import TestData (checkboxesUrl, downloadLinkUrl, downloadUrl, fragmentUrl, promptUrl, slowLoadUrl, textAreaUrl)
 import WebDriverPreCore.BiDi.BrowsingContext
@@ -380,42 +380,6 @@ browsingContextEventFragmentNavigation =
         ]
 
 -- >>> runDemo browsingContextEventUserPrompts
--- *** Exception: CloseRequest 1000 ""
-
--- *** Exception: Error executing BiDi command: MkCommand
-
---   { method = "browsingContext.handleUserPrompt"
---   , params =
---       MkHandleUserPrompt
---         { context =
---             MkBrowsingContext
---               { context = "65607047-c172-4220-8d45-7dab42362abb" }
---         , accept = Just True
---         , userText = Nothing
---         }
---   , extended = Nothing
---   }
--- With JSON:
--- {
---     "id": 8,
---     "method": "browsingContext.handleUserPrompt",
---     "params": {
---         "accept": true,
---         "context": "65607047-c172-4220-8d45-7dab42362abb"
---     }
--- }
--- BiDi driver error:
--- MkDriverError
---   { id = Just 8
---   , error = NoSuchAlert
---   , description =
---       "Tried to interact with an alert that doesn't exist"
---   , message = ""
---   , stacktrace =
---       Just
---         "RemoteError@chrome://remote/content/shared/RemoteError.sys.mjs:8:8\nWebDriverError@chrome://remote/content/shared/webdriver/Errors.sys.mjs:202:5\nNoSuchAlertError@chrome://remote/content/shared/webdriver/Errors.sys.mjs:538:5\nhandleUserPrompt@chrome://remote/content/webdriver-bidi/modules/root/browsingContext.sys.mjs:933:11\nhandleCommand@chrome://remote/content/shared/messagehandler/MessageHandler.sys.mjs:260:33\nexecute@chrome://remote/content/shared/webdriver/Session.sys.mjs:410:32\nonPacket@chrome://remote/content/webdriver-bidi/WebDriverBiDiConnection.sys.mjs:236:37\nonMessage@chrome://remote/content/server/WebSocketTransport.sys.mjs:127:18\nhandleEvent@chrome://remote/content/server/WebSocketTransport.sys.mjs:109:14\n"
---   , extensions = MkEmptyResult { extensible = fromList [] }
---   }
 browsingContextEventUserPrompts :: BiDiDemo
 browsingContextEventUserPrompts =
   demo "Browsing Context Events - User Prompt Opened and Closed" action
@@ -437,7 +401,7 @@ browsingContextEventUserPrompts =
       subscribeMany [BrowsingContextUserPromptOpened] manyOpenedEventFired
 
       logTxt "Click alert button to trigger prompt"
-      scriptEvaluate $
+      scriptEvaluateNoWait $
         MkEvaluate
           { expression = "document.getElementById('alertBtn').click()",
             target = ContextTarget $ MkContextTarget {context = bc, sandbox = Nothing},
@@ -459,7 +423,7 @@ browsingContextEventUserPrompts =
       (manyClosedEventFired, waitManyClosedEventFired) <- timeLimitLog BrowsingContextUserPromptClosed
       subscribeMany [BrowsingContextUserPromptClosed] manyClosedEventFired
 
-      pauseAtLeast $ 5 * seconds
+      pauseAtLeast $ 500 * milliseconds
       logTxt "Accept the alert prompt"
       browsingContextHandleUserPrompt $
         MkHandleUserPrompt
@@ -492,7 +456,7 @@ browsingContextEventUserPromptsVariants =
 
       -- Test Alert
       logTxt "Testing Alert prompt"
-      scriptEvaluate $
+      scriptEvaluateNoWait $
         MkEvaluate
           { expression = "alert('Alert message')",
             target = ContextTarget $ MkContextTarget {context = bc, sandbox = Nothing},
@@ -500,13 +464,13 @@ browsingContextEventUserPromptsVariants =
             resultOwnership = Nothing,
             serializationOptions = Nothing
           }
-      pause
+      pauseAtLeast $ 500 * milliseconds
       browsingContextHandleUserPrompt $ MkHandleUserPrompt bc (Just True) Nothing
       pause
 
       -- Test Confirm - Accept
       logTxt "Testing Confirm prompt - Accept"
-      scriptEvaluate $
+      scriptEvaluateNoWait $
         MkEvaluate
           { expression = "confirm('Confirm message')",
             target = ContextTarget $ MkContextTarget {context = bc, sandbox = Nothing},
@@ -514,13 +478,13 @@ browsingContextEventUserPromptsVariants =
             resultOwnership = Nothing,
             serializationOptions = Nothing
           }
-      pause
+      pauseAtLeast $ 500 * milliseconds
       browsingContextHandleUserPrompt $ MkHandleUserPrompt bc (Just True) Nothing
       pause
 
       -- Test Confirm - Dismiss
       logTxt "Testing Confirm prompt - Dismiss"
-      scriptEvaluate $
+      scriptEvaluateNoWait $
         MkEvaluate
           { expression = "confirm('Confirm dismiss message')",
             target = ContextTarget $ MkContextTarget {context = bc, sandbox = Nothing},
@@ -528,13 +492,13 @@ browsingContextEventUserPromptsVariants =
             resultOwnership = Nothing,
             serializationOptions = Nothing
           }
-      pause
+      pauseAtLeast $ 500 * milliseconds
       browsingContextHandleUserPrompt $ MkHandleUserPrompt bc (Just False) Nothing
       pause
 
       -- Test Prompt - with user text
       logTxt "Testing Prompt with user text"
-      scriptEvaluate $
+      scriptEvaluateNoWait $
         MkEvaluate
           { expression = "prompt('Enter your name:', 'default')",
             target = ContextTarget $ MkContextTarget {context = bc, sandbox = Nothing},
@@ -542,13 +506,13 @@ browsingContextEventUserPromptsVariants =
             resultOwnership = Nothing,
             serializationOptions = Nothing
           }
-      pause
+      pauseAtLeast $ 500 * milliseconds
       browsingContextHandleUserPrompt $ MkHandleUserPrompt bc (Just True) (Just "John Doe")
       pause
 
       -- Test Prompt - dismissed
       logTxt "Testing Prompt dismissed"
-      scriptEvaluate $
+      scriptEvaluateNoWait $
         MkEvaluate
           { expression = "prompt('This will be dismissed')",
             target = ContextTarget $ MkContextTarget {context = bc, sandbox = Nothing},
@@ -556,11 +520,12 @@ browsingContextEventUserPromptsVariants =
             resultOwnership = Nothing,
             serializationOptions = Nothing
           }
-      pause
+      pauseAtLeast $ 500 * milliseconds
       browsingContextHandleUserPrompt $ MkHandleUserPrompt bc (Just False) Nothing
       pause
 
 -- >>> runDemo browsingContextEventHistoryUpdated
+-- *** Exception: user error (Timeout - Expected event did not fire: BrowsingContextHistoryUpdated)
 browsingContextEventHistoryUpdated :: BiDiDemo
 browsingContextEventHistoryUpdated =
   demo "Browsing Context Events - History Updated" action
@@ -573,10 +538,14 @@ browsingContextEventHistoryUpdated =
       browsingContextNavigate $ MkNavigate bc url1 Nothing
       pause
 
+      pauseAtLeast $ 500 * milliseconds
+
       logTxt "Navigate to fragment page"
       url2 <- fragmentUrl
       browsingContextNavigate $ MkNavigate bc url2 Nothing
       pause
+
+      pauseAtLeast $ 500 * milliseconds
 
       logTxt "Subscribe to HistoryUpdated event"
 
@@ -596,6 +565,7 @@ browsingContextEventHistoryUpdated =
             serializationOptions = Nothing
           }
 
+      logTxt "Navigated back in history"
       sequence_
         [ waitHistoryEventFired,
           waitManyHistoryEventFired
