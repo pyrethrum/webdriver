@@ -631,38 +631,6 @@ browsingContextEventNavigationAborted =
         ]
 
 -- >>> runDemo browsingContextEventNavigationFailed
--- *** Exception: Error executing BiDi command: MkCommand
---   { method = "browsingContext.navigate"
---   , params =
---       MkNavigate
---         { context =
---             MkBrowsingContext
---               { context = "054c7640-ee73-4df2-9d0e-332eb504e164" }
---         , url = "https://invalid-domain-that-does-not-exist-12345"
---         , wait = Nothing
---         }
---   , extended = Nothing
---   }
--- With JSON: 
--- {
---     "id": 4,
---     "method": "browsingContext.navigate",
---     "params": {
---         "context": "054c7640-ee73-4df2-9d0e-332eb504e164",
---         "url": "https://invalid-domain-that-does-not-exist-12345"
---     }
--- }
--- BiDi driver error: 
--- MkDriverError
---   { id = Just 4
---   , error = UnknownError
---   , description = "An unknown error occurred"
---   , message = "Error: NS_ERROR_UNKNOWN_HOST"
---   , stacktrace =
---       Just
---         "onLocationChange@chrome://remote/content/shared/Navigate.sys.mjs:449:26\n"
---   , extensions = MkEmptyResult { extensible = fromList [] }
---   }
 browsingContextEventNavigationFailed :: BiDiDemo
 browsingContextEventNavigationFailed =
   demo "Browsing Context Events - Navigation Failed (NOT WORKING - geckodriver issue)" action
@@ -706,39 +674,6 @@ browsingContextEventNavigationFailed =
         ]
 
 -- >>> runDemo browsingContextEventDownloadWillBegin
--- *** Exception: Error executing BiDi command: MkCommand
---   { method = "session.subscribe"
---   , params =
---       MkSessionSubscriptionRequest
---         { events = [ BrowsingContextDownloadWillBegin ]
---         , browsingContexts = Nothing
---         , userContexts = Nothing
---         }
---   , extended = Nothing
---   }
--- With JSON: 
--- {
---     "id": 3,
---     "method": "session.subscribe",
---     "params": {
---         "events": [
---             "browsingContext.downloadWillBegin"
---         ]
---     }
--- }
--- BiDi driver error: 
--- MkDriverError
---   { id = Just 3
---   , error = InvalidArgument
---   , description =
---       "Tried to perform an action with an invalid argument"
---   , message =
---       "browsingContext.downloadWillBegin is not a valid event name"
---   , stacktrace =
---       Just
---         "RemoteError@chrome://remote/content/shared/RemoteError.sys.mjs:8:8\nWebDriverError@chrome://remote/content/shared/webdriver/Errors.sys.mjs:202:5\nInvalidArgumentError@chrome://remote/content/shared/webdriver/Errors.sys.mjs:404:5\n#assertModuleSupportsEvent@chrome://remote/content/webdriver-bidi/modules/root/session.sys.mjs:240:13\n#obtainEvents@chrome://remote/content/webdriver-bidi/modules/root/session.sys.mjs:835:38\nsubscribe/<@chrome://remote/content/webdriver-bidi/modules/root/session.sys.mjs:122:25\nsubscribe@chrome://remote/content/webdriver-bidi/modules/root/session.sys.mjs:121:12\nhandleCommand@chrome://remote/content/shared/messagehandler/MessageHandler.sys.mjs:260:33\nexecute@chrome://remote/content/shared/webdriver/Session.sys.mjs:410:32\nonPacket@chrome://remote/content/webdriver-bidi/WebDriverBiDiConnection.sys.mjs:236:37\nonMessage@chrome://remote/content/server/WebSocketTransport.sys.mjs:127:18\nhandleEvent@chrome://remote/content/server/WebSocketTransport.sys.mjs:109:14\n"
---   , extensions = MkEmptyResult { extensible = fromList [] }
---   }
 browsingContextEventDownloadWillBegin :: BiDiDemo
 browsingContextEventDownloadWillBegin =
   demo "Browsing Context Events - Download Will Begin (NOT IMPLEMENTED)" action
