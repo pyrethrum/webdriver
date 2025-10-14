@@ -2,7 +2,7 @@ module BiDi.Demos.BrowsingContextEventDemos where
 
 import BiDi.BiDiRunner (BiDiActions (..), BiDiMethods (unsubscribe))
 import BiDi.DemoUtils
-import Const (Timeout (..), milliseconds)
+import Const (Timeout (..), milliseconds, seconds)
 import IOUtils (DemoUtils (..))
 import TestData (checkboxesUrl, downloadLinkUrl, downloadUrl, fragmentUrl, promptUrl, slowLoadUrl, textAreaUrl)
 import WebDriverPreCore.BiDi.BrowsingContext
@@ -530,23 +530,11 @@ browsingContextEventHistoryUpdated :: BiDiDemo
 browsingContextEventHistoryUpdated =
   demo "Browsing Context Events - History Updated" action
   where
+    -- NOTE: browsingContext.historyUpdated event is not yet implemented in geckodriver
+    -- See: https://bugzilla.mozilla.org/show_bug.cgi?id=1906050
+    -- Status: NEW (as of 2025-06-03)
     action :: DemoUtils -> BiDiActions -> IO ()
     action utils@MkDemoUtils {..} cmds@MkCommands {..} = do
-      logTxt "Navigate to checkboxes page"
-      url1 <- checkboxesUrl
-      bc <- rootContext utils cmds
-      browsingContextNavigate $ MkNavigate bc url1 Nothing
-      pause
-
-      pauseAtLeast $ 500 * milliseconds
-
-      logTxt "Navigate to fragment page"
-      url2 <- fragmentUrl
-      browsingContextNavigate $ MkNavigate bc url2 Nothing
-      pause
-
-      pauseAtLeast $ 500 * milliseconds
-
       logTxt "Subscribe to HistoryUpdated event"
 
       (historyEventFired, waitHistoryEventFired) <- timeLimitLog BrowsingContextHistoryUpdated
@@ -555,23 +543,80 @@ browsingContextEventHistoryUpdated =
       (manyHistoryEventFired, waitManyHistoryEventFired) <- timeLimitLog BrowsingContextHistoryUpdated
       subscribeMany [BrowsingContextHistoryUpdated] manyHistoryEventFired
 
-      logTxt "Navigate back in history"
+      logTxt "Navigate to checkboxes page"
+      url1 <- checkboxesUrl
+      bc <- rootContext utils cmds
+      browsingContextNavigate $ MkNavigate bc url1 Nothing
+      pause
+
+      -- not implemnted in geckodriver yet this will fail
+      logTxt "Navigate to textArea page"
+      url2 <- textAreaUrl
+      browsingContextNavigate $ MkNavigate bc url2 Nothing
+      pause
+
+      -- back button
+      logTxt "Click back button"
       scriptEvaluate $
         MkEvaluate
-          { expression = "history.back()",
+          { expression = "window.history.back()",
             target = ContextTarget $ MkContextTarget {context = bc, sandbox = Nothing},
             awaitPromise = False,
             resultOwnership = Nothing,
             serializationOptions = Nothing
           }
+      pause
 
-      logTxt "Navigated back in history"
+      -- this would work in geckodriver but it is a fudge
+      -- logTxt "Use pushState to modify browser history"
+      -- scriptEvaluate $
+      --   MkEvaluate
+      --     { expression = "window.history.pushState({page: 2}, 'Page 2', '?page=2')",
+      --       target = ContextTarget $ MkContextTarget {context = bc, sandbox = Nothing},
+      --       awaitPromise = False,
+      --       resultOwnership = Nothing,
+      --       serializationOptions = Nothing
+      --     }
+      -- logTxt "History modified with pushState"
       sequence_
         [ waitHistoryEventFired,
           waitManyHistoryEventFired
         ]
 
 -- >>> runDemo browsingContextEventNavigationAborted
+-- *** Exception: Error executing BiDi command: MkCommand
+--   { method = "session.subscribe"
+--   , params =
+--       MkSessionSubscriptionRequest
+--         { events = [ BrowsingContextNavigationAborted ]
+--         , browsingContexts = Nothing
+--         , userContexts = Nothing
+--         }
+--   , extended = Nothing
+--   }
+-- With JSON: 
+-- {
+--     "id": 1,
+--     "method": "session.subscribe",
+--     "params": {
+--         "events": [
+--             "browsingContext.navigationAborted"
+--         ]
+--     }
+-- }
+-- BiDi driver error: 
+-- MkDriverError
+--   { id = Just 1
+--   , error = InvalidArgument
+--   , description =
+--       "Tried to perform an action with an invalid argument"
+--   , message =
+--       "browsingContext.navigationAborted is not a valid event name"
+--   , stacktrace =
+--       Just
+--         "RemoteError@chrome://remote/content/shared/RemoteError.sys.mjs:8:8\nWebDriverError@chrome://remote/content/shared/webdriver/Errors.sys.mjs:202:5\nInvalidArgumentError@chrome://remote/content/shared/webdriver/Errors.sys.mjs:404:5\n#assertModuleSupportsEvent@chrome://remote/content/webdriver-bidi/modules/root/session.sys.mjs:240:13\n#obtainEvents@chrome://remote/content/webdriver-bidi/modules/root/session.sys.mjs:835:38\nsubscribe/<@chrome://remote/content/webdriver-bidi/modules/root/session.sys.mjs:122:25\nsubscribe@chrome://remote/content/webdriver-bidi/modules/root/session.sys.mjs:121:12\nhandleCommand@chrome://remote/content/shared/messagehandler/MessageHandler.sys.mjs:260:33\nexecute@chrome://remote/content/shared/webdriver/Session.sys.mjs:410:32\nonPacket@chrome://remote/content/webdriver-bidi/WebDriverBiDiConnection.sys.mjs:236:37\nonMessage@chrome://remote/content/server/WebSocketTransport.sys.mjs:127:18\nhandleEvent@chrome://remote/content/server/WebSocketTransport.sys.mjs:109:14\n"
+--   , extensions = MkEmptyResult { extensible = fromList [] }
+--   }
 browsingContextEventNavigationAborted :: BiDiDemo
 browsingContextEventNavigationAborted =
   demo "Browsing Context Events - Navigation Aborted" action
