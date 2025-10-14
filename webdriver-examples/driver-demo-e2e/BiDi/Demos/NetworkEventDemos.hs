@@ -20,10 +20,12 @@ import Prelude hiding (log, putStrLn)
 Network Events - Implementation Status:
 
 1. network.authRequired :: ✓ networkEventAuthRequired
-2. network.beforeRequestSent :: ✓ networkEventBeforeRequestSent, networkEventRequestResponseLifecycle
+2. network.beforeRequestSent :: ⚠ networkEventBeforeRequestSent, networkEventRequestResponseLifecycle
+   (GeckoDriver incomplete - may timeout, see https://bugzilla.mozilla.org/show_bug.cgi?id=1790366)
 3. network.fetchError :: ✓ networkEventFetchError
 4. network.responseCompleted :: ✓ networkEventResponseCompleted, networkEventRequestResponseLifecycle
-5. network.responseStarted :: ✓ networkEventResponseStarted, networkEventRequestResponseLifecycle
+5. network.responseStarted :: ⚠ networkEventResponseStarted, networkEventRequestResponseLifecycle
+   (GeckoDriver incomplete - may timeout, see https://bugzilla.mozilla.org/show_bug.cgi?id=1790369)
 -}
 
 -- >>> runDemo networkEventBeforeRequestSent
@@ -32,6 +34,11 @@ networkEventBeforeRequestSent :: BiDiDemo
 networkEventBeforeRequestSent =
   demo "Network Events - Before Request Sent" action
   where
+    -- NOTE: GeckoDriver has incomplete support for network.beforeRequestSent event
+    -- See: https://bugzilla.mozilla.org/show_bug.cgi?id=1790366 (11 open dependencies as of Oct 2025)
+    -- The event subscription and API implementation are correct, but GeckoDriver may not fire
+    -- this event for navigation requests (browsingContext.navigate).
+    -- Related: Bug #1899417 - Missing network events for navigation requests of discarded contexts
     action :: DemoUtils -> BiDiActions -> IO ()
     action utils@MkDemoUtils {..} cmds@MkCommands {..} = do
       logTxt "Subscribe to BeforeRequestSent event"
@@ -55,10 +62,16 @@ networkEventBeforeRequestSent =
       closeContext utils cmds bc
 
 -- >>> runDemo networkEventResponseStarted
+-- *** Exception: user error (Timeout - Expected event did not fire: NetworkResponseStarted)
 networkEventResponseStarted :: BiDiDemo
 networkEventResponseStarted =
   demo "Network Events - Response Started" action
   where
+    -- NOTE: GeckoDriver has incomplete support for network.responseStarted event
+    -- See: https://bugzilla.mozilla.org/show_bug.cgi?id=1790369 (9 open dependencies as of Oct 2025)
+    -- The event subscription and API implementation are correct, but GeckoDriver may not fire
+    -- this event for navigation requests (browsingContext.navigate).
+    -- Related: Bug #1899417 - Missing network events for navigation requests of discarded contexts
     action :: DemoUtils -> BiDiActions -> IO ()
     action utils@MkDemoUtils {..} cmds@MkCommands {..} = do
       logTxt "Subscribe to ResponseStarted event"
@@ -169,6 +182,8 @@ networkEventRequestResponseLifecycle :: BiDiDemo
 networkEventRequestResponseLifecycle =
   demo "Network Events - Complete Request/Response Lifecycle" action
   where
+    -- NOTE: This demo may timeout waiting for NetworkBeforeRequestSent due to incomplete
+    -- GeckoDriver support. See networkEventBeforeRequestSent comment above for details.
     action :: DemoUtils -> BiDiActions -> IO ()
     action utils@MkDemoUtils {..} cmds@MkCommands {..} = do
       logTxt "Subscribe to all network lifecycle events"
