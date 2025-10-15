@@ -57,3 +57,6 @@ slowLoadUrl = fileUrl "slowLoad.html"
 
 downloadLinkUrl :: IO Text
 downloadLinkUrl = fileUrl "downloadLink.html"
+
+consoleLogUrl :: IO Text
+consoleLogUrl = fileUrl "consoleLog.html"

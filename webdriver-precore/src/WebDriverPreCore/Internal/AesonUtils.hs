@@ -1,6 +1,7 @@
 module WebDriverPreCore.Internal.AesonUtils
   ( aesonTypeError,
     aesonTypeErrorMessage,
+    asObject,
     asText,
     bodyText',
     emptyObj,
@@ -52,7 +53,8 @@ import Data.Aeson.Encode.Pretty (encodePretty)
 import Data.Aeson.Key (fromString)
 import Data.Aeson.KeyMap qualified as AKM
 import Data.Aeson.KeyMap qualified as KeyMap
-import Data.Aeson.Types (Pair, Parser, parseMaybe, parseEither)
+import Data.Aeson.Types (Pair, Parser, parse, parseEither, parseMaybe)
+import Data.Bifunctor (first)
 import Data.ByteString.Lazy qualified as LBS
 import Data.Char (toLower)
 import Data.Either (Either, either)
@@ -79,7 +81,6 @@ import Prelude
     (<>),
     (>>=),
   )
-import Data.Bifunctor (first)
 
 -- Aeson stuff
 -- TODO move to separte library
@@ -104,17 +105,20 @@ parseObject errMsg val = case val of
   _ -> fail $ unpack errMsg
 
 parseThrow :: (FromJSON a, MonadFail m) => Text -> Value -> m a
-parseThrow errMsg val = parseEither parseJSON val
-  & either 
-     (\err -> fail . unpack $ 
-       errMsg 
-       <> "\n" 
-       <> "Parser error was: " 
-       <> "\n" 
-       <> pack err
-       <> "\n" 
-       <> "The actual JSON value was: " 
-       <> jsonToText val) 
+parseThrow errMsg val =
+  parseEither parseJSON val
+    & either
+      ( \err ->
+          fail . unpack $
+            errMsg
+              <> "\n"
+              <> "Parser error was: "
+              <> "\n"
+              <> pack err
+              <> "\n"
+              <> "The actual JSON value was: "
+              <> jsonToText val
+      )
       pure
 
 parseObjectEither :: (FromJSON a) => Object -> Either Text a
@@ -132,13 +136,13 @@ aesonConstructorName = \case
   Bool _ -> "Bool"
   Null -> "Null"
 
-objectOrThrow :: (ToJSON a) => Text -> a -> A.Object
-objectOrThrow errMsg val =
+asObject :: (ToJSON a) => Text -> a -> Parser A.Object
+asObject errMsg val =
   let val' = A.toJSON val
    in case val' of
-        Object obj -> obj
+        Object obj -> pure obj
         _ ->
-          error . unpack $
+          fail . unpack $
             errMsg
               <> "\n"
               <> "JSON Value must be of JSON type: Object"
@@ -148,6 +152,14 @@ objectOrThrow errMsg val =
               <> "\n"
               <> "The actual JSON value was: "
               <> jsonToText val'
+
+objectOrThrow :: (ToJSON a) => Text -> a -> A.Object
+objectOrThrow errMsg val =
+  case result of
+    Error e -> error . unpack $ errMsg <> "\n" <> "Error was: " <> pack e
+    Success o -> o
+  where
+    result = parse (asObject errMsg) $ A.toJSON val
 
 lowerFirst :: String -> String
 lowerFirst = \case
