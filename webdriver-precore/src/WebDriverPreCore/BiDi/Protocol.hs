@@ -8,6 +8,7 @@ module WebDriverPreCore.BiDi.Protocol
     module WebDriverPreCore.BiDi.Event,
     module WebDriverPreCore.BiDi.Emulation,
     module WebDriverPreCore.BiDi.Input,
+    module WebDriverPreCore.BiDi.Log,
     module WebDriverPreCore.BiDi.Script,
     module WebDriverPreCore.BiDi.Session,
     module WebDriverPreCore.BiDi.Storage,
@@ -123,6 +124,16 @@ import WebDriverPreCore.BiDi.Input
     ReleaseActions (..),
     SetFiles (..),
   )
+
+import WebDriverPreCore.BiDi.Log
+  ( ConsoleLogEntry (..),
+    GenericLogEntry (..),
+    Level (..),
+    LogEvent (..),
+    LogEntry (..),
+    BaseLogEntry (..),
+  )
+
 import WebDriverPreCore.BiDi.Network
   ( AddDataCollector (..),
     AddDataCollectorResult (..),

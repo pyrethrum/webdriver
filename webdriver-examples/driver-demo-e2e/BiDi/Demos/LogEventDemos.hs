@@ -1,25 +1,31 @@
 module BiDi.Demos.LogEventDemos where
 
 import BiDi.BiDiRunner (BiDiActions (..))
-import BiDi.DemoUtils
+import BiDi.DemoUtils ( demo, rootContext, BiDiDemo )
 import Data.Maybe (fromJust)
 import IOUtils (DemoUtils (..))
-import TestData (checkboxesUrl, consoleLogUrl, badJavaScriptUrl)
+import TestData (badJavaScriptUrl, consoleLogUrl)
 import WebDriverPreCore.BiDi.BrowsingContext (Locator (..))
 import WebDriverPreCore.BiDi.CoreTypes (NodeRemoteValue (..))
 import WebDriverPreCore.BiDi.Input
 import WebDriverPreCore.BiDi.Protocol
   ( ContextTarget (..),
     Evaluate (..),
-    Navigate (..),
-    SubscriptionType (LogEntryAdded),
-    Target (..),
     LocateNodes (..),
     LocateNodesResult (..),
+    Navigate (..),
+    SharedId,
     SharedReference (..),
-    SharedId
+    SubscriptionType (LogEntryAdded),
+    Target (..),
+    LogEntry (..), 
+    Event(..),
+    LogEvent(..)
   )
 import Prelude hiding (log, putStrLn)
+import Data.Text (Text)
+import Control.Monad ((>=>))
+import Data.Coerce (coerce)
 
 {-
 Log Events - Implementation Status
@@ -33,19 +39,6 @@ Log Events - Implementation Status
 7. Combined tests :: ✓ logEventConsoleLogCombined, logEventJavascriptErrorCombined, logEventConsoleWarnCombined
 -}
 
--- Helper function to create default pointer common properties
-defaultPointerProps :: PointerCommonProperties
-defaultPointerProps =
-  MkPointerCommonProperties
-    { width = Nothing,
-      height = Nothing,
-      pressure = Nothing,
-      tangentialPressure = Nothing,
-      twist = Nothing,
-      altitudeAngle = Nothing,
-      azimuthAngle = Nothing
-    }
-
 -- >>> runDemo logEventConsoleEntries
 logEventConsoleEntries :: BiDiDemo
 logEventConsoleEntries =
@@ -56,10 +49,10 @@ logEventConsoleEntries =
       logTxt "Subscribe to LogEntryAdded event"
 
       (logEventFired, waitLogEventFired) <- timeLimitLog LogEntryAdded
-      subscribeLogEntryAdded logEventFired
+      subscribeLogEntryAdded $ chkIsConsoleEntry logTxt >=> logEventFired
 
       (manyLogEventFired, waitManyLogEventFired) <- timeLimitLog LogEntryAdded
-      subscribeMany [LogEntryAdded] manyLogEventFired
+      subscribeMany [LogEntryAdded] $ chkEventIsConsoleEntry logTxt >=> manyLogEventFired
 
       logTxt "Navigate to console log test page"
       url <- consoleLogUrl
@@ -74,7 +67,6 @@ logEventConsoleEntries =
           waitManyLogEventFired
         ]
 
-
 -- >>> runDemo logEventConsoleLevelDebug
 logEventConsoleLevelDebug :: BiDiDemo
 logEventConsoleLevelDebug =
@@ -83,13 +75,13 @@ logEventConsoleLevelDebug =
     action :: DemoUtils -> BiDiActions -> IO ()
     action utils@MkDemoUtils {..} cmds@MkCommands {..} = do
       bc <- rootContext utils cmds
- 
+
       logTxt "Subscribe to LogEntryAdded event"
       (logEventFired, waitLogEventFired) <- timeLimitLog LogEntryAdded
-      subscribeLogEntryAdded logEventFired
+      subscribeLogEntryAdded $ chkIsConsoleEntry logTxt >=> logEventFired
 
       (manyLogEventFired, waitManyLogEventFired) <- timeLimitLog LogEntryAdded
-      subscribeMany [LogEntryAdded] manyLogEventFired
+      subscribeMany [LogEntryAdded] $ chkEventIsConsoleEntry logTxt >=> manyLogEventFired
 
       logTxt "Triggering console.debug()"
       scriptEvaluate $
@@ -116,10 +108,10 @@ logEventConsoleLevelInfo =
 
       logTxt "Subscribe to LogEntryAdded event"
       (logEventFired, waitLogEventFired) <- timeLimitLog LogEntryAdded
-      subscribeLogEntryAdded logEventFired
+      subscribeLogEntryAdded $ chkIsConsoleEntry logTxt >=> logEventFired
 
       (manyLogEventFired, waitManyLogEventFired) <- timeLimitLog LogEntryAdded
-      subscribeMany [LogEntryAdded] manyLogEventFired
+      subscribeMany [LogEntryAdded] $ chkEventIsConsoleEntry logTxt >=> manyLogEventFired
 
       logTxt "Triggering console.info()"
       scriptEvaluate $
@@ -146,10 +138,10 @@ logEventConsoleLevelWarn =
 
       logTxt "Subscribe to LogEntryAdded event"
       (logEventFired, waitLogEventFired) <- timeLimitLog LogEntryAdded
-      subscribeLogEntryAdded logEventFired
+      subscribeLogEntryAdded $ chkIsConsoleEntry logTxt >=> logEventFired
 
       (manyLogEventFired, waitManyLogEventFired) <- timeLimitLog LogEntryAdded
-      subscribeMany [LogEntryAdded] manyLogEventFired
+      subscribeMany [LogEntryAdded] $ chkEventIsConsoleEntry logTxt >=> manyLogEventFired
 
       logTxt "Triggering console.warn()"
       scriptEvaluate $
@@ -176,10 +168,10 @@ logEventConsoleLevelError =
 
       logTxt "Subscribe to LogEntryAdded event"
       (logEventFired, waitLogEventFired) <- timeLimitLog LogEntryAdded
-      subscribeLogEntryAdded logEventFired
+      subscribeLogEntryAdded $ chkIsConsoleEntry logTxt >=> logEventFired
 
       (manyLogEventFired, waitManyLogEventFired) <- timeLimitLog LogEntryAdded
-      subscribeMany [LogEntryAdded] manyLogEventFired
+      subscribeMany [LogEntryAdded] $ chkEventIsConsoleEntry logTxt >=> manyLogEventFired
 
       logTxt "Triggering console.error()"
       scriptEvaluate $
@@ -194,47 +186,6 @@ logEventConsoleLevelError =
         [ waitLogEventFired,
           waitManyLogEventFired
         ]
-
--- >>> runDemo logEventGenericEntry
-logEventGenericEntry :: BiDiDemo
-logEventGenericEntry =
-  demo "Log Events - Generic Log Entry" action
-  where
-    -- Generic log entries are less common and typically generated by browser internals
-    -- or specific browser features. This demo shows how to subscribe to all log events
-    -- and observe generic entries if they occur.
-    action :: DemoUtils -> BiDiActions -> IO ()
-    action utils@MkDemoUtils {..} cmds@MkCommands {..} = do
-      logTxt "Subscribe to LogEntryAdded event (all types)"
-      (logEventFired, waitLogEventFired) <- timeLimitLog LogEntryAdded
-      subscribeLogEntryAdded logEventFired
-
-      (manyLogEventFired, waitManyLogEventFired) <- timeLimitLog LogEntryAdded
-      subscribeMany [LogEntryAdded] manyLogEventFired
-
-      logTxt "Navigate to checkboxes page"
-      url <- checkboxesUrl
-      bc <- rootContext utils cmds
-      browsingContextNavigate $ MkNavigate bc url Nothing
-      pause
-
-      logTxt "Generate various log entries"
-      scriptEvaluate $
-        MkEvaluate
-          { expression = "console.log('This generates a console log entry')",
-            target = ContextTarget $ MkContextTarget {context = bc, sandbox = Nothing},
-            awaitPromise = False,
-            resultOwnership = Nothing,
-            serializationOptions = Nothing
-          }
-      sequence_
-        [ waitLogEventFired,
-          waitManyLogEventFired
-        ]
-
-      logTxt "Note: Generic log entries are browser-generated and may not occur in this demo"
-      logTxt "The subscription will capture console and javascript entries as demonstrated"
-
 
 -- >>> runDemo logEventJavascriptErrorFromButton
 logEventJavascriptErrorFromButton :: BiDiDemo
@@ -251,10 +202,10 @@ logEventJavascriptErrorFromButton =
 
       logTxt "Subscribe to LogEntryAdded event"
       (logEventFired, waitLogEventFired) <- timeLimitLog LogEntryAdded
-      subscribeLogEntryAdded logEventFired
+      subscribeLogEntryAdded $ chkIsJavaScriptEntry logTxt >=> logEventFired
 
       (manyLogEventFired, waitManyLogEventFired) <- timeLimitLog LogEntryAdded
-      subscribeMany [LogEntryAdded] manyLogEventFired
+      subscribeMany [LogEntryAdded] $ chkEventIsJavaScriptEntry logTxt >=> manyLogEventFired
 
       logTxt "Locate the 'Bad JS' button"
       buttonResult <-
@@ -316,3 +267,87 @@ logEventJavascriptErrorFromButton =
           waitManyLogEventFired
         ]
 
+{-
+Doesn't work - can't work out how to generate a generic log entry
+-- >>> runDemo logEventGenericEntry
+logEventGenericEntry :: BiDiDemo
+logEventGenericEntry =
+  demo "Log Events - Generic Log Entry" action
+  where
+    -- Generic log entries are less common and typically generated by browser internals
+    -- or specific browser features. This demo shows how to subscribe to all log events
+    -- and observe generic entries if they occur.
+    action :: DemoUtils -> BiDiActions -> IO ()
+    action utils@MkDemoUtils {..} cmds@MkCommands {..} = do
+      logTxt "Subscribe to LogEntryAdded event (all types)"
+      (logEventFired, waitLogEventFired) <- timeLimitLog LogEntryAdded
+      subscribeLogEntryAdded logEventFired
+
+      (manyLogEventFired, waitManyLogEventFired) <- timeLimitLog LogEntryAdded
+      subscribeMany [LogEntryAdded] manyLogEventFired
+
+      logTxt "Navigate to checkboxes page"
+      url <- checkboxesUrl
+      bc <- rootContext utils cmds
+      browsingContextNavigate $ MkNavigate bc url Nothing
+      pause
+
+      logTxt "Generate various log entries"
+      scriptEvaluate $
+        MkEvaluate
+          { expression = "console.log('This generates a console log entry')",
+            target = ContextTarget $ MkContextTarget {context = bc, sandbox = Nothing},
+            awaitPromise = False,
+            resultOwnership = Nothing,
+            serializationOptions = Nothing
+          }
+      sequence_
+        [ waitLogEventFired,
+          waitManyLogEventFired
+        ]
+
+      logTxt "Note: Generic log entries are browser-generated and may not occur in this demo"
+      logTxt "The subscription will capture console and javascript entries as demonstrated"
+-}
+
+
+-- Helpers
+
+defaultPointerProps :: PointerCommonProperties
+defaultPointerProps =
+  MkPointerCommonProperties
+    { width = Nothing,
+      height = Nothing,
+      pressure = Nothing,
+      tangentialPressure = Nothing,
+      twist = Nothing,
+      altitudeAngle = Nothing,
+      azimuthAngle = Nothing
+    }
+
+
+chkIsConsoleEntry :: (Text -> IO ()) -> LogEntry -> IO LogEntry
+chkIsConsoleEntry log =
+  \case
+    entry@ConsoleEntry {} -> log "Received Console Log Entry" >> pure entry
+    entry -> fail $ "Expected Console Log Entry But Got: " <> show entry
+
+chkIsJavaScriptEntry :: (Text -> IO ()) -> LogEntry -> IO LogEntry
+chkIsJavaScriptEntry log =
+  \case
+    entry@JavascriptEntry {} -> log "Received JavaScript Log Entry" >> pure entry
+    entry -> fail $ "Expected JavaScript Log Entry But Got: " <> show entry
+
+
+chkEventIsConsoleEntry :: (Text -> IO ()) -> Event -> IO LogEntry
+chkEventIsConsoleEntry log =
+  \case
+    LogEvent event -> log "Received Log Event" >> chkIsConsoleEntry log (coerce event)
+    event -> fail $ "Expected Console Event But Got: " <> show event
+
+
+chkEventIsJavaScriptEntry :: (Text -> IO ()) -> Event -> IO LogEntry
+chkEventIsJavaScriptEntry log =
+  \case
+    LogEvent event -> log "Received Log Event" >> chkIsJavaScriptEntry log (coerce event)
+    event -> fail $ "Expected JavaScript Event But Got: " <> show event

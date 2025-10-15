@@ -34,7 +34,7 @@ data Subscription m where
 data Event
   = BrowsingContextEvent BrowsingContextEvent
   | InputEvent FileDialogOpened
-  | LogEventWrapper LogEvent
+  | LogEvent LogEvent
   | NetworkEvent NetworkEvent
   | ScriptEvent ScriptEvent
   deriving
@@ -54,7 +54,7 @@ instance FromJSON Event where
     if
       | methodPrefix "browsingContext" -> BrowsingContextEvent <$> parseVal
       | methodPrefix "input" -> InputEvent <$> parseVal
-      | methodPrefix "log" -> LogEventWrapper <$> parseVal
+      | methodPrefix "log" -> LogEvent <$> parseVal
       | methodPrefix "network" -> NetworkEvent <$> parseVal
       | methodPrefix "script" -> ScriptEvent <$> parseVal
       | otherwise -> fail $ "Unknown event type: " <> unpack m
