@@ -61,7 +61,7 @@ where
 
 -- Data structures for network protocol
 
-import Data.Aeson (FromArgs, FromJSON (..), ToJSON (..), Value (..), object, withObject, withText, (.:), (.=), Options (..), defaultOptions, genericParseJSON)
+import Data.Aeson (FromArgs, FromJSON (..), ToJSON (..), Value (..), object, withObject, withText, (.:), (.=), Options (..), defaultOptions, genericParseJSON, (.:?))
 import Data.Aeson.KeyMap qualified as KeyMap
 import Data.Aeson.Types (Parser, parse)
 import Data.Function ((&))
@@ -620,17 +620,32 @@ data ResponseData = MkResponseData
 
 instance FromJSON ResponseData where
   parseJSON :: Value -> Parser ResponseData
-  parseJSON = parseJSONOmitNothing
+  parseJSON = withObject "ResponseData" $ \obj -> do
+    responseUrl <- obj .: "url"
+    responseProtocol <- obj .: "protocol"
+    responseStatus <- obj .: "status"
+    responseStatusText <- obj .: "statusText"
+    responseFromCache <- obj .: "fromCache"
+    responseHeaders <- obj .: "headers"
+    responseMimeType <- obj .: "mimeType"
+    responseBytesReceived <- obj .: "bytesReceived"
+    responseHeadersSize <- obj .:? "headersSize"
+    responseBodySize <- obj .:? "bodySize"
+    responseContent <- obj .: "content"
+    responseAuthChallenges <- obj .:? "authChallenges"
+    pure MkResponseData {..}
 
 -- | Response content information
 newtype ResponseContent = MkResponseContent
-  { contentSize :: JSUInt
+  { size :: JSUInt
   }
-  deriving (Show, Eq, Generic, FromJSON)
+  deriving (Show, Eq, Generic)
+
+instance FromJSON ResponseContent
 
 data AuthChallenge = MkAuthChallenge
-  { authScheme :: Text,
-    authRealm :: Text
+  { scheme :: Text,
+    realm :: Text
   }
   deriving (Show, Eq, Generic)
 
@@ -744,7 +759,7 @@ data ResponseCompleted = MkResponseCompleted
     request :: RequestData,
     timestamp :: JSUInt,
     intercepts :: Maybe [Intercept],
-    completedResponse :: ResponseData
+    response :: ResponseData
   }
   deriving (Show, Eq, Generic)
 
@@ -761,7 +776,7 @@ data ResponseStarted = MkResponseStarted
     request :: RequestData,
     timestamp :: JSUInt,
     intercepts :: Maybe [Intercept],
-    startedResponse :: ResponseData
+    response :: ResponseData
   }
   deriving (Show, Eq, Generic)
 

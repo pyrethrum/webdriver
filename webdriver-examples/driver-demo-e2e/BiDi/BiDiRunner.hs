@@ -269,7 +269,9 @@ data BiDiActions = MkCommands
     subscribeInputFileDialogOpened :: (FileDialogOpened -> IO ()) -> IO SubscriptionId,
     subscribeInputFileDialogOpened' :: [BrowsingContext] -> [UserContext] -> (FileDialogOpened -> IO ()) -> IO SubscriptionId,
     --
-    unsubscribe :: SubscriptionId -> IO ()
+    unsubscribe :: SubscriptionId -> IO (),
+    -- 
+    sendCommandNoWait :: forall c r. (ToJSON c, Show c) => Command c r -> IO ()
   }
 
 mkCommands :: BiDiMethods -> BiDiActions
@@ -398,7 +400,9 @@ mkCommands socket =
       subscribeInputFileDialogOpened = sendSub P.subscribeInputFileDialogOpened,
       subscribeInputFileDialogOpened' = sendSub' P.subscribeInputFileDialogOpened,
       --
-      unsubscribe = socket.unsubscribe sessionUnsubscribe
+      unsubscribe = socket.unsubscribe sessionUnsubscribe,
+      --
+      sendCommandNoWait = sendCommandNoWait socket
     }
   where
     send :: forall c r. (FromJSON r, ToJSON c, Show c) => Command c r -> IO r
