@@ -173,7 +173,7 @@ networkEventFetchError =
       let invalidUrl = "http://invalid-domain-that-does-not-exist-12345.com"
       scriptEvaluate $
         MkEvaluate
-          { expression = "fetch('" <> invalidUrl <> "').catch(() => {})",
+          { expression = "fetch('" <> invalidUrl <> "')",
             target = ContextTarget $ MkContextTarget {context = bc, sandbox = Nothing},
             awaitPromise = False,
             resultOwnership = Nothing,
@@ -218,8 +218,6 @@ networkEventAuthRequired =
           waitManyAuthReqEventFired
         ]
 
-      closeContext utils cmds bc
-
 -- >>> runDemo networkEventRequestResponseLifecycle
 networkEventRequestResponseLifecycle :: BiDiDemo
 networkEventRequestResponseLifecycle =
@@ -249,7 +247,7 @@ networkEventRequestResponseLifecycle =
       let apiUrl = "https://jsonplaceholder.typicode.com/posts/1"
       scriptEvaluate $
         MkEvaluate
-          { expression = "fetch('" <> apiUrl <> "').catch(() => {})",
+          { expression = "fetch('" <> apiUrl <> "')",
             target = ContextTarget $ MkContextTarget {context = bc, sandbox = Nothing},
             awaitPromise = False,
             resultOwnership = Nothing,
