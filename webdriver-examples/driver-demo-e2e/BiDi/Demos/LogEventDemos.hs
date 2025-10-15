@@ -2,13 +2,10 @@ module BiDi.Demos.LogEventDemos where
 
 import BiDi.BiDiRunner (BiDiActions (..))
 import BiDi.DemoUtils
-import Const (milliseconds)
 import IOUtils (DemoUtils (..))
 import TestData (checkboxesUrl, consoleLogUrl)
-import WebDriverPreCore.BiDi.Log (LogEntry (..))
 import WebDriverPreCore.BiDi.Protocol
-  ( BrowsingContext (..),
-    ContextTarget (..),
+  ( ContextTarget (..),
     Evaluate (..),
     Navigate (..),
     SubscriptionType (LogEntryAdded),
@@ -21,9 +18,11 @@ Log Events - Implementation Status
 
 1. log.entryAdded (generic) :: ✓ logEventGenericEntry
 2. log.entryAdded (console) :: ✓ logEventConsoleEntries
-3. log.entryAdded (javascript) :: ✓ logEventJavascriptErrors
-4. All log levels :: ✓ logEventConsoleLevels
+3. log.entryAdded (javascript) :: ✓ logEventJavascriptError, logEventJavascriptTypeError, logEventJavascriptReferenceError
+4. Console log levels :: ✓ logEventConsoleLevelDebug, logEventConsoleLevelInfo, logEventConsoleLevelWarn, logEventConsoleLevelError
 5. Multiple args :: ✓ logEventConsoleMultipleArgs
+6. Context filtering :: ✓ logEventFilteredByContext
+7. Combined tests :: ✓ logEventConsoleLogCombined, logEventJavascriptErrorCombined, logEventConsoleWarnCombined
 -}
 
 
@@ -57,10 +56,10 @@ logEventConsoleEntries =
         ]
 
 
--- >>> runDemo logEventConsoleLevels
-logEventConsoleLevels :: BiDiDemo
-logEventConsoleLevels =
-  demo "Log Events - Console Log Levels (Debug, Info, Warn, Error)" action
+-- >>> runDemo logEventConsoleLevelDebug
+logEventConsoleLevelDebug :: BiDiDemo
+logEventConsoleLevelDebug =
+  demo "Log Events - Console Debug Level" action
   where
     action :: DemoUtils -> BiDiActions -> IO ()
     action utils@MkDemoUtils {..} cmds@MkCommands {..} = do
@@ -71,9 +70,12 @@ logEventConsoleLevels =
       pause
 
       logTxt "Subscribe to LogEntryAdded event"
-      subscribeLogEntryAdded $ logShow "Console Log Event"
+      (logEventFired, waitLogEventFired) <- timeLimitLog LogEntryAdded
+      subscribeLogEntryAdded logEventFired
 
-      -- Test Debug level
+      (manyLogEventFired, waitManyLogEventFired) <- timeLimitLog LogEntryAdded
+      subscribeMany [LogEntryAdded] manyLogEventFired
+
       logTxt "Triggering console.debug()"
       scriptEvaluate $
         MkEvaluate
@@ -83,9 +85,31 @@ logEventConsoleLevels =
             resultOwnership = Nothing,
             serializationOptions = Nothing
           }
-      pauseAtLeast $ 500 * milliseconds
+      sequence_
+        [ waitLogEventFired,
+          waitManyLogEventFired
+        ]
 
-      -- Test Info level
+-- >>> runDemo logEventConsoleLevelInfo
+logEventConsoleLevelInfo :: BiDiDemo
+logEventConsoleLevelInfo =
+  demo "Log Events - Console Info Level" action
+  where
+    action :: DemoUtils -> BiDiActions -> IO ()
+    action utils@MkDemoUtils {..} cmds@MkCommands {..} = do
+      logTxt "Navigate to console log test page"
+      url <- consoleLogUrl
+      bc <- rootContext utils cmds
+      browsingContextNavigate $ MkNavigate bc url Nothing
+      pause
+
+      logTxt "Subscribe to LogEntryAdded event"
+      (logEventFired, waitLogEventFired) <- timeLimitLog LogEntryAdded
+      subscribeLogEntryAdded logEventFired
+
+      (manyLogEventFired, waitManyLogEventFired) <- timeLimitLog LogEntryAdded
+      subscribeMany [LogEntryAdded] manyLogEventFired
+
       logTxt "Triggering console.info()"
       scriptEvaluate $
         MkEvaluate
@@ -95,9 +119,31 @@ logEventConsoleLevels =
             resultOwnership = Nothing,
             serializationOptions = Nothing
           }
-      pauseAtLeast $ 500 * milliseconds
+      sequence_
+        [ waitLogEventFired,
+          waitManyLogEventFired
+        ]
 
-      -- Test Warn level
+-- >>> runDemo logEventConsoleLevelWarn
+logEventConsoleLevelWarn :: BiDiDemo
+logEventConsoleLevelWarn =
+  demo "Log Events - Console Warn Level" action
+  where
+    action :: DemoUtils -> BiDiActions -> IO ()
+    action utils@MkDemoUtils {..} cmds@MkCommands {..} = do
+      logTxt "Navigate to console log test page"
+      url <- consoleLogUrl
+      bc <- rootContext utils cmds
+      browsingContextNavigate $ MkNavigate bc url Nothing
+      pause
+
+      logTxt "Subscribe to LogEntryAdded event"
+      (logEventFired, waitLogEventFired) <- timeLimitLog LogEntryAdded
+      subscribeLogEntryAdded logEventFired
+
+      (manyLogEventFired, waitManyLogEventFired) <- timeLimitLog LogEntryAdded
+      subscribeMany [LogEntryAdded] manyLogEventFired
+
       logTxt "Triggering console.warn()"
       scriptEvaluate $
         MkEvaluate
@@ -107,9 +153,31 @@ logEventConsoleLevels =
             resultOwnership = Nothing,
             serializationOptions = Nothing
           }
-      pauseAtLeast $ 500 * milliseconds
+      sequence_
+        [ waitLogEventFired,
+          waitManyLogEventFired
+        ]
 
-      -- Test Error level
+-- >>> runDemo logEventConsoleLevelError
+logEventConsoleLevelError :: BiDiDemo
+logEventConsoleLevelError =
+  demo "Log Events - Console Error Level" action
+  where
+    action :: DemoUtils -> BiDiActions -> IO ()
+    action utils@MkDemoUtils {..} cmds@MkCommands {..} = do
+      logTxt "Navigate to console log test page"
+      url <- consoleLogUrl
+      bc <- rootContext utils cmds
+      browsingContextNavigate $ MkNavigate bc url Nothing
+      pause
+
+      logTxt "Subscribe to LogEntryAdded event"
+      (logEventFired, waitLogEventFired) <- timeLimitLog LogEntryAdded
+      subscribeLogEntryAdded logEventFired
+
+      (manyLogEventFired, waitManyLogEventFired) <- timeLimitLog LogEntryAdded
+      subscribeMany [LogEntryAdded] manyLogEventFired
+
       logTxt "Triggering console.error()"
       scriptEvaluate $
         MkEvaluate
@@ -119,7 +187,10 @@ logEventConsoleLevels =
             resultOwnership = Nothing,
             serializationOptions = Nothing
           }
-      pause
+      sequence_
+        [ waitLogEventFired,
+          waitManyLogEventFired
+        ]
 
 -- >>> runDemo logEventConsoleMultipleArgs
 logEventConsoleMultipleArgs :: BiDiDemo
@@ -135,7 +206,11 @@ logEventConsoleMultipleArgs =
       pause
 
       logTxt "Subscribe to LogEntryAdded event"
-      subscribeLogEntryAdded $ logShow "Console Log Event with Args"
+      (logEventFired, waitLogEventFired) <- timeLimitLog LogEntryAdded
+      subscribeLogEntryAdded logEventFired
+
+      (manyLogEventFired, waitManyLogEventFired) <- timeLimitLog LogEntryAdded
+      subscribeMany [LogEntryAdded] manyLogEventFired
 
       logTxt "Triggering console.log() with multiple arguments"
       scriptEvaluate $
@@ -146,12 +221,15 @@ logEventConsoleMultipleArgs =
             resultOwnership = Nothing,
             serializationOptions = Nothing
           }
-      pause
+      sequence_
+        [ waitLogEventFired,
+          waitManyLogEventFired
+        ]
 
--- >>> runDemo logEventJavascriptErrors
-logEventJavascriptErrors :: BiDiDemo
-logEventJavascriptErrors =
-  demo "Log Events - JavaScript Errors" action
+-- >>> runDemo logEventJavascriptError
+logEventJavascriptError :: BiDiDemo
+logEventJavascriptError =
+  demo "Log Events - JavaScript Error" action
   where
     action :: DemoUtils -> BiDiActions -> IO ()
     action utils@MkDemoUtils {..} cmds@MkCommands {..} = do
@@ -162,7 +240,11 @@ logEventJavascriptErrors =
       pause
 
       logTxt "Subscribe to LogEntryAdded event"
-      subscribeLogEntryAdded $ logShow "JavaScript Error Event"
+      (logEventFired, waitLogEventFired) <- timeLimitLog LogEntryAdded
+      subscribeLogEntryAdded logEventFired
+
+      (manyLogEventFired, waitManyLogEventFired) <- timeLimitLog LogEntryAdded
+      subscribeMany [LogEntryAdded] manyLogEventFired
 
       logTxt "Triggering JavaScript Error"
       scriptEvaluateNoWait $
@@ -173,7 +255,30 @@ logEventJavascriptErrors =
             resultOwnership = Nothing,
             serializationOptions = Nothing
           }
+      sequence_
+        [ waitLogEventFired,
+          waitManyLogEventFired
+        ]
+
+-- >>> runDemo logEventJavascriptTypeError
+logEventJavascriptTypeError :: BiDiDemo
+logEventJavascriptTypeError =
+  demo "Log Events - JavaScript TypeError" action
+  where
+    action :: DemoUtils -> BiDiActions -> IO ()
+    action utils@MkDemoUtils {..} cmds@MkCommands {..} = do
+      logTxt "Navigate to console log test page"
+      url <- consoleLogUrl
+      bc <- rootContext utils cmds
+      browsingContextNavigate $ MkNavigate bc url Nothing
       pause
+
+      logTxt "Subscribe to LogEntryAdded event"
+      (logEventFired, waitLogEventFired) <- timeLimitLog LogEntryAdded
+      subscribeLogEntryAdded logEventFired
+
+      (manyLogEventFired, waitManyLogEventFired) <- timeLimitLog LogEntryAdded
+      subscribeMany [LogEntryAdded] manyLogEventFired
 
       logTxt "Triggering TypeError"
       scriptEvaluateNoWait $
@@ -184,7 +289,31 @@ logEventJavascriptErrors =
             resultOwnership = Nothing,
             serializationOptions = Nothing
           }
+      sequence_
+        [ waitLogEventFired,
+          waitManyLogEventFired
+        ]
+
+-- >>> runDemo logEventJavascriptReferenceError
+-- *** Exception: user error (Timeout - Expected event did not fire: LogEntryAdded)
+logEventJavascriptReferenceError :: BiDiDemo
+logEventJavascriptReferenceError =
+  demo "Log Events - JavaScript ReferenceError" action
+  where
+    action :: DemoUtils -> BiDiActions -> IO ()
+    action utils@MkDemoUtils {..} cmds@MkCommands {..} = do
+      logTxt "Navigate to console log test page"
+      url <- consoleLogUrl
+      bc <- rootContext utils cmds
+      browsingContextNavigate $ MkNavigate bc url Nothing
       pause
+
+      logTxt "Subscribe to LogEntryAdded event"
+      (logEventFired, waitLogEventFired) <- timeLimitLog LogEntryAdded
+      subscribeLogEntryAdded logEventFired
+
+      (manyLogEventFired, waitManyLogEventFired) <- timeLimitLog LogEntryAdded
+      subscribeMany [LogEntryAdded] manyLogEventFired
 
       logTxt "Triggering ReferenceError"
       scriptEvaluateNoWait $
@@ -195,7 +324,10 @@ logEventJavascriptErrors =
             resultOwnership = Nothing,
             serializationOptions = Nothing
           }
-      pause
+      sequence_
+        [ waitLogEventFired,
+          waitManyLogEventFired
+        ]
 
 -- >>> runDemo logEventGenericEntry
 logEventGenericEntry :: BiDiDemo
@@ -208,7 +340,11 @@ logEventGenericEntry =
     action :: DemoUtils -> BiDiActions -> IO ()
     action utils@MkDemoUtils {..} cmds@MkCommands {..} = do
       logTxt "Subscribe to LogEntryAdded event (all types)"
-      subscribeLogEntryAdded $ logShow "Log Event (any type)"
+      (logEventFired, waitLogEventFired) <- timeLimitLog LogEntryAdded
+      subscribeLogEntryAdded logEventFired
+
+      (manyLogEventFired, waitManyLogEventFired) <- timeLimitLog LogEntryAdded
+      subscribeMany [LogEntryAdded] manyLogEventFired
 
       logTxt "Navigate to checkboxes page"
       url <- checkboxesUrl
@@ -225,7 +361,10 @@ logEventGenericEntry =
             resultOwnership = Nothing,
             serializationOptions = Nothing
           }
-      pause
+      sequence_
+        [ waitLogEventFired,
+          waitManyLogEventFired
+        ]
 
       logTxt "Note: Generic log entries are browser-generated and may not occur in this demo"
       logTxt "The subscription will capture console and javascript entries as demonstrated"
@@ -248,11 +387,11 @@ logEventFilteredByContext =
       pause
 
       logTxt "Subscribe to LogEntryAdded events only for browsing context 1"
-      subscribeLogEntryAdded' [bc1] [] $
-        logShow $
-          "Log Event from Context 1 (SHOULD fire - context: " <> bc1.context <> ")"
+      (logEventFired, waitLogEventFired) <- timeLimitLog LogEntryAdded
+      subscribeLogEntryAdded' [bc1] [] logEventFired
 
-      pauseAtLeast $ 500 * milliseconds
+      (manyLogEventFired, waitManyLogEventFired) <- timeLimitLog LogEntryAdded
+      subscribeMany' [bc1] [] [LogEntryAdded] manyLogEventFired
 
       logTxt "Trigger console.log in browsing context 1 (SHOULD trigger event)"
       scriptEvaluate $
@@ -263,7 +402,10 @@ logEventFilteredByContext =
             resultOwnership = Nothing,
             serializationOptions = Nothing
           }
-      pause
+      sequence_
+        [ waitLogEventFired,
+          waitManyLogEventFired
+        ]
 
       logTxt "Trigger console.log in browsing context 2 (should NOT trigger event)"
       scriptEvaluate $
@@ -276,10 +418,10 @@ logEventFilteredByContext =
           }
       pause
 
--- >>> runDemo logEventConsoleAndJavascriptCombined
-logEventConsoleAndJavascriptCombined :: BiDiDemo
-logEventConsoleAndJavascriptCombined =
-  demo "Log Events - Console and JavaScript Errors Combined" action
+-- >>> runDemo logEventConsoleLogCombined
+logEventConsoleLogCombined :: BiDiDemo
+logEventConsoleLogCombined =
+  demo "Log Events - Console Log (Combined Test)" action
   where
     action :: DemoUtils -> BiDiActions -> IO ()
     action utils@MkDemoUtils {..} cmds@MkCommands {..} = do
@@ -289,15 +431,12 @@ logEventConsoleAndJavascriptCombined =
       browsingContextNavigate $ MkNavigate bc url Nothing
       pause
 
-      logTxt "Subscribe to LogEntryAdded event (captures both console and javascript entries)"
-      subscribeLogEntryAdded $ \entry ->
-        case entry of
-          ConsoleEntry consoleEntry ->
-            logShow "Console Log Entry" consoleEntry
-          JavascriptEntry jsEntry ->
-            logShow "JavaScript Error Entry" jsEntry
-          GenericEntry genericEntry ->
-            logShow "Generic Log Entry" genericEntry
+      logTxt "Subscribe to LogEntryAdded event"
+      (logEventFired, waitLogEventFired) <- timeLimitLog LogEntryAdded
+      subscribeLogEntryAdded logEventFired
+
+      (manyLogEventFired, waitManyLogEventFired) <- timeLimitLog LogEntryAdded
+      subscribeMany [LogEntryAdded] manyLogEventFired
 
       logTxt "Trigger console.log"
       scriptEvaluate $
@@ -308,7 +447,30 @@ logEventConsoleAndJavascriptCombined =
             resultOwnership = Nothing,
             serializationOptions = Nothing
           }
-      pauseAtLeast $ 500 * milliseconds
+      sequence_
+        [ waitLogEventFired,
+          waitManyLogEventFired
+        ]
+
+-- >>> runDemo logEventJavascriptErrorCombined
+logEventJavascriptErrorCombined :: BiDiDemo
+logEventJavascriptErrorCombined =
+  demo "Log Events - JavaScript Error (Combined Test)" action
+  where
+    action :: DemoUtils -> BiDiActions -> IO ()
+    action utils@MkDemoUtils {..} cmds@MkCommands {..} = do
+      logTxt "Navigate to console log test page"
+      url <- consoleLogUrl
+      bc <- rootContext utils cmds
+      browsingContextNavigate $ MkNavigate bc url Nothing
+      pause
+
+      logTxt "Subscribe to LogEntryAdded event"
+      (logEventFired, waitLogEventFired) <- timeLimitLog LogEntryAdded
+      subscribeLogEntryAdded logEventFired
+
+      (manyLogEventFired, waitManyLogEventFired) <- timeLimitLog LogEntryAdded
+      subscribeMany [LogEntryAdded] manyLogEventFired
 
       logTxt "Trigger JavaScript error"
       scriptEvaluateNoWait $
@@ -319,7 +481,30 @@ logEventConsoleAndJavascriptCombined =
             resultOwnership = Nothing,
             serializationOptions = Nothing
           }
-      pauseAtLeast $ 500 * milliseconds
+      sequence_
+        [ waitLogEventFired,
+          waitManyLogEventFired
+        ]
+
+-- >>> runDemo logEventConsoleWarnCombined
+logEventConsoleWarnCombined :: BiDiDemo
+logEventConsoleWarnCombined =
+  demo "Log Events - Console Warn (Combined Test)" action
+  where
+    action :: DemoUtils -> BiDiActions -> IO ()
+    action utils@MkDemoUtils {..} cmds@MkCommands {..} = do
+      logTxt "Navigate to console log test page"
+      url <- consoleLogUrl
+      bc <- rootContext utils cmds
+      browsingContextNavigate $ MkNavigate bc url Nothing
+      pause
+
+      logTxt "Subscribe to LogEntryAdded event"
+      (logEventFired, waitLogEventFired) <- timeLimitLog LogEntryAdded
+      subscribeLogEntryAdded logEventFired
+
+      (manyLogEventFired, waitManyLogEventFired) <- timeLimitLog LogEntryAdded
+      subscribeMany [LogEntryAdded] manyLogEventFired
 
       logTxt "Trigger console.warn"
       scriptEvaluate $
@@ -330,4 +515,7 @@ logEventConsoleAndJavascriptCombined =
             resultOwnership = Nothing,
             serializationOptions = Nothing
           }
-      pause
+      sequence_
+        [ waitLogEventFired,
+          waitManyLogEventFired
+        ]
