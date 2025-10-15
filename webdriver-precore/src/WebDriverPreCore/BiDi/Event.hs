@@ -8,7 +8,7 @@ import GHC.Generics (Generic)
 import WebDriverPreCore.BiDi.BrowsingContext (BrowsingContextEvent (..))
 import WebDriverPreCore.BiDi.CoreTypes (BrowsingContext, SubscriptionType, UserContext)
 import WebDriverPreCore.BiDi.Input (FileDialogOpened)
-import WebDriverPreCore.BiDi.Log (LogEntry)
+import WebDriverPreCore.BiDi.Log (LogEvent)
 import WebDriverPreCore.BiDi.Network (NetworkEvent (..))
 import WebDriverPreCore.BiDi.Script (ScriptEvent (..))
 import Prelude
@@ -34,7 +34,7 @@ data Subscription m where
 data Event
   = BrowsingContextEvent BrowsingContextEvent
   | InputEvent FileDialogOpened
-  | LogEvent LogEntry
+  | LogEventWrapper LogEvent
   | NetworkEvent NetworkEvent
   | ScriptEvent ScriptEvent
   deriving
@@ -54,7 +54,7 @@ instance FromJSON Event where
     if
       | methodPrefix "browsingContext" -> BrowsingContextEvent <$> parseVal
       | methodPrefix "input" -> InputEvent <$> parseVal
-      | methodPrefix "log" -> LogEvent <$> parseVal
+      | methodPrefix "log" -> LogEventWrapper <$> parseVal
       | methodPrefix "network" -> NetworkEvent <$> parseVal
       | methodPrefix "script" -> ScriptEvent <$> parseVal
       | otherwise -> fail $ "Unknown event type: " <> unpack m

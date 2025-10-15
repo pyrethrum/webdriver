@@ -7,19 +7,21 @@ module WebDriverPreCore.BiDi.Log
     GenericLogEntry (..),
     ConsoleLogEntry (..),
     JavascriptLogEntry (..),
-    LogEntry (..)
+    LogEntry (..),
+    LogEvent (..)
   )
 where
 
 import Control.Monad (MonadFail (..))
 import Data.Aeson (FromJSON, Value (..), withObject, (.:))
 import Data.Aeson.Types (FromJSON (..), Parser)
+import Data.Functor ((<&>))
 import Data.Text (Text)
 import GHC.Generics (Generic)
 import WebDriverPreCore.BiDi.CoreTypes (JSUInt)
 import WebDriverPreCore.BiDi.Script (RemoteValue, Source, StackTrace)
-import WebDriverPreCore.Internal.AesonUtils (asObject, fromJSONCamelCase, objectOrThrow, parseJSONOmitNothing)
-import Prelude (Eq, Maybe, Semigroup (..), Show, ($), (<$>))
+import WebDriverPreCore.Internal.AesonUtils (fromJSONCamelCase, parseJSONOmitNothing)
+import Prelude (Eq, Maybe, Semigroup (..), Show, ($), (<$>), (.))
 
 -- ######### Local #########
 -- Note: log module does not have a remote end
@@ -98,42 +100,30 @@ data LogEntry
   | JavascriptEntry JavascriptLogEntry
   deriving (Show, Eq, Generic)
 
+-- | Event wrapper for log entries (consistent with other event types)
+newtype LogEvent = MkLogEvent LogEntry
+  deriving (Show, Eq, Generic)
+
+instance FromJSON LogEvent where
+  parseJSON :: Value -> Parser LogEvent
+  parseJSON = withObject "LogEvent" $ \o -> do
+    params <- o .: "params"
+    entryType <- params .: "type"
+    let parsedPrms :: forall a b. (FromJSON a) => (a -> b) -> Parser b
+        parsedPrms = (<&>) (parseJSON (Object params))
+    case entryType of
+      "generic" -> parsedPrms (MkLogEvent . GenericEntry)
+      "console" -> parsedPrms (MkLogEvent . ConsoleEntry)
+      "javascript" -> parsedPrms (MkLogEvent . JavascriptEntry)
+      _ -> fail $ "Unknown log entry type: " <> entryType
+
 instance FromJSON LogEntry where
   parseJSON :: Value -> Parser LogEntry
-  parseJSON = withObject "LogEntry" $ \obj -> do
-    -- params <- obj .: "params"
-    entryType <- obj .: "type"
-    -- let paramVal = Object params\
-    let val = Object obj
+  parseJSON = withObject "LogEntry" $ \o -> do
+    entryType <- o .: "type"
+    let val = Object o
     case entryType of
       "generic" -> GenericEntry <$> parseJSON val
       "console" -> ConsoleEntry <$> parseJSON val
       "javascript" -> JavascriptEntry <$> parseJSON val
       _ -> fail $ "Unknown log entry type: " <> entryType
-
-
-  {-  
-
-  {
-    "method": "log.entryAdded",
-    "params": {
-        "args": [
-            {
-                "type": "string",
-                "value": "Console log test page loaded"
-            }
-        ],
-        "level": "info",
-        "method": "log",
-        "source": {
-            "context": "60af8cb2-2bb0-4b17-a2e0-5bb1af2f1224",
-            "realm": "0bcbcdba-74c5-4238-8e8d-4936e1d9a93d"
-        },
-        "text": "Console log test page loaded",
-        "timestamp": 1760511242278,
-        "type": "console"
-    },
-    "type": "event"
-})
-  
-  -}

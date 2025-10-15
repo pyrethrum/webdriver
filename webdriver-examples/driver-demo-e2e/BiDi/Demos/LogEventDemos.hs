@@ -29,30 +29,6 @@ Log Events - Implementation Status
 
 
 -- >>> runDemo logEventConsoleEntries
--- *** Exception: user error (could not parse Event for (in MultiSubscription) for LogEntryAdded
--- Parser error was: 
--- Error in $: Unknown log entry type: event
--- The actual JSON value was: {
---     "method": "log.entryAdded",
---     "params": {
---         "args": [
---             {
---                 "type": "string",
---                 "value": "Console log test page loaded"
---             }
---         ],
---         "level": "info",
---         "method": "log",
---         "source": {
---             "context": "e66f70fd-a7df-453b-bf10-05c6af6a36fd",
---             "realm": "7e38b77e-480d-4366-a639-f4e29943c963"
---         },
---         "text": "Console log test page loaded",
---         "timestamp": 1760554633689,
---         "type": "console"
---     },
---     "type": "event"
--- })
 logEventConsoleEntries :: BiDiDemo
 logEventConsoleEntries =
   demo "Log Events - Console Log Entries" action
@@ -80,27 +56,8 @@ logEventConsoleEntries =
           waitManyLogEventFired
         ]
 
+
 -- >>> runDemo logEventConsoleLevels
--- *** Exception: user error (could not parse event params for LogEntryAdded
--- Parser error was: 
--- Error in $: parsing WebDriverPreCore.BiDi.Log.ConsoleLogEntry(MkConsoleLogEntry) failed, key "baseEntry" not found
--- The actual JSON value was: {
---     "args": [
---         {
---             "type": "string",
---             "value": "Console log test page loaded"
---         }
---     ],
---     "level": "info",
---     "method": "log",
---     "source": {
---         "context": "710ae8cc-10b8-429a-8897-7c67a2c45399",
---         "realm": "020280cb-2bf9-41c1-8735-d4abd81c84fd"
---     },
---     "text": "Console log test page loaded",
---     "timestamp": 1760505862819,
---     "type": "console"
--- })
 logEventConsoleLevels :: BiDiDemo
 logEventConsoleLevels =
   demo "Log Events - Console Log Levels (Debug, Info, Warn, Error)" action
@@ -165,26 +122,6 @@ logEventConsoleLevels =
       pause
 
 -- >>> runDemo logEventConsoleMultipleArgs
--- *** Exception: user error (could not parse event params for LogEntryAdded
--- Parser error was: 
--- Error in $: parsing WebDriverPreCore.BiDi.Log.ConsoleLogEntry(MkConsoleLogEntry) failed, key "baseEntry" not found
--- The actual JSON value was: {
---     "args": [
---         {
---             "type": "string",
---             "value": "Console log test page loaded"
---         }
---     ],
---     "level": "info",
---     "method": "log",
---     "source": {
---         "context": "4bcf5b35-cc8d-489d-908a-f76ac29fbc0e",
---         "realm": "2c88b0b2-1d99-4b53-8889-a29e70676581"
---     },
---     "text": "Console log test page loaded",
---     "timestamp": 1760505868414,
---     "type": "console"
--- })
 logEventConsoleMultipleArgs :: BiDiDemo
 logEventConsoleMultipleArgs =
   demo "Log Events - Console Log with Multiple Arguments" action
@@ -261,26 +198,6 @@ logEventJavascriptErrors =
       pause
 
 -- >>> runDemo logEventGenericEntry
--- *** Exception: user error (could not parse event params for LogEntryAdded
--- Parser error was: 
--- Error in $: parsing WebDriverPreCore.BiDi.Log.ConsoleLogEntry(MkConsoleLogEntry) failed, key "baseEntry" not found
--- The actual JSON value was: {
---     "args": [
---         {
---             "type": "string",
---             "value": "This generates a console log entry"
---         }
---     ],
---     "level": "info",
---     "method": "log",
---     "source": {
---         "context": "63ea773b-2679-4f85-97d9-d8027cce5030",
---         "realm": "ed33e509-3075-4485-bea7-9e730e4ee1f1"
---     },
---     "text": "This generates a console log entry",
---     "timestamp": 1760505884322,
---     "type": "console"
--- })
 logEventGenericEntry :: BiDiDemo
 logEventGenericEntry =
   demo "Log Events - Generic Log Entry" action
@@ -314,26 +231,6 @@ logEventGenericEntry =
       logTxt "The subscription will capture console and javascript entries as demonstrated"
 
 -- >>> runDemo logEventFilteredByContext
--- *** Exception: user error (could not parse event params for LogEntryAdded
--- Parser error was: 
--- Error in $: parsing WebDriverPreCore.BiDi.Log.ConsoleLogEntry(MkConsoleLogEntry) failed, key "baseEntry" not found
--- The actual JSON value was: {
---     "args": [
---         {
---             "type": "string",
---             "value": "Console log test page loaded"
---         }
---     ],
---     "level": "info",
---     "method": "log",
---     "source": {
---         "context": "8f92b91f-0ea6-49a4-8e39-44b1563fb094",
---         "realm": "2674338b-d5af-462b-93b5-74a5276b7500"
---     },
---     "text": "Console log test page loaded",
---     "timestamp": 1760505891971,
---     "type": "console"
--- })
 logEventFilteredByContext :: BiDiDemo
 logEventFilteredByContext =
   demo "Log Events - Filtered by Browsing Context" action
@@ -380,26 +277,6 @@ logEventFilteredByContext =
       pause
 
 -- >>> runDemo logEventConsoleAndJavascriptCombined
--- *** Exception: user error (could not parse event params for LogEntryAdded
--- Parser error was: 
--- Error in $: parsing WebDriverPreCore.BiDi.Log.ConsoleLogEntry(MkConsoleLogEntry) failed, key "baseEntry" not found
--- The actual JSON value was: {
---     "args": [
---         {
---             "type": "string",
---             "value": "Console log test page loaded"
---         }
---     ],
---     "level": "info",
---     "method": "log",
---     "source": {
---         "context": "a5599baa-87bd-4fcd-a6b3-220321f3def9",
---         "realm": "e5676e4b-5612-408c-bbec-dcea699c6ef4"
---     },
---     "text": "Console log test page loaded",
---     "timestamp": 1760505919876,
---     "type": "console"
--- })
 logEventConsoleAndJavascriptCombined :: BiDiDemo
 logEventConsoleAndJavascriptCombined =
   demo "Log Events - Console and JavaScript Errors Combined" action
