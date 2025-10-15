@@ -46,7 +46,7 @@ data Event
 instance FromJSON Event where
   parseJSON :: Value -> Parser Event
   parseJSON = withObject "Event" $ \o -> do
-    m :: Text <- o .: "method"
+    m <- o .: "method"
     let methodPrefix :: Text -> Bool
         methodPrefix = (`isPrefixOf` m)
         parseVal :: forall a. FromJSON a => Parser a

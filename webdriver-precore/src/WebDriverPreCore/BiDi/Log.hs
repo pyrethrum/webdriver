@@ -7,9 +7,7 @@ module WebDriverPreCore.BiDi.Log
     GenericLogEntry (..),
     ConsoleLogEntry (..),
     JavascriptLogEntry (..),
-    LogEntry (..),
-    EntryAdded (..),
-    LogEvent (..),
+    LogEntry (..)
   )
 where
 
@@ -113,17 +111,6 @@ instance FromJSON LogEntry where
       "javascript" -> JavascriptEntry <$> parseJSON val
       _ -> fail $ "Unknown log entry type: " <> entryType
 
--- | Event emitted when a log entry is added
-newtype EntryAdded = MkEntryAdded
-  { params :: LogEntry
-  }
-  deriving (Show, Eq, Generic)
-
--- | Union type for all log events
-newtype LogEvent = MkLogEvent
-  { entryAdded :: EntryAdded
-  }
-  deriving (Show, Eq, Generic)
 
   {-  
 

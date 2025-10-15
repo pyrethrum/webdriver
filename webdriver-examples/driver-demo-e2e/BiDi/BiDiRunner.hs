@@ -781,7 +781,7 @@ applySubscriptions log obj subscriptions = do
         <> "\n"
         <> objToText obj
 
-  -- log $ "Parsed event: " <> txt eventProps
+  log $ "Parsed event: " <> txt eventProps
   subs <- readTVarIO subscriptions
   traverse_ (applySubscription method params fullObj) subs
 
@@ -790,11 +790,11 @@ applySubscription subType params fullObj sub =
   case sub.subscription of
     SingleSubscription {subscriptionType, action} ->
       when (subscriptionType == subType) $ do
-        prms <- parseThrow ("could not parse event params for " <> txt subscriptionType) params
+        prms <- parseThrow ("could not parse event params (in SingleSubscription) for " <> txt subscriptionType) params
         action prms
     MultiSubscription {subscriptionTypes, nAction} -> do
       when (subType `elem` subscriptionTypes) $ do
-        prms <- parseThrow ("could not parse Event for " <> txt subType) fullObj
+        prms <- parseThrow ("could not parse Event for (in MultiSubscription) for " <> txt subType) fullObj
         nAction prms
 
 loopActions :: (Text -> IO ()) -> MessageActions -> MessageLoops

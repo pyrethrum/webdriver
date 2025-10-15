@@ -26,8 +26,10 @@ Log Events - Implementation Status
 5. Multiple args :: ✓ logEventConsoleMultipleArgs
 -}
 
+
+
 -- >>> runDemo logEventConsoleEntries
--- *** Exception: user error (could not parse Event for LogEntryAdded
+-- *** Exception: user error (could not parse Event for (in MultiSubscription) for LogEntryAdded
 -- Parser error was: 
 -- Error in $: Unknown log entry type: event
 -- The actual JSON value was: {
@@ -42,11 +44,11 @@ Log Events - Implementation Status
 --         "level": "info",
 --         "method": "log",
 --         "source": {
---             "context": "60af8cb2-2bb0-4b17-a2e0-5bb1af2f1224",
---             "realm": "0bcbcdba-74c5-4238-8e8d-4936e1d9a93d"
+--             "context": "e66f70fd-a7df-453b-bf10-05c6af6a36fd",
+--             "realm": "7e38b77e-480d-4366-a639-f4e29943c963"
 --         },
 --         "text": "Console log test page loaded",
---         "timestamp": 1760511242278,
+--         "timestamp": 1760554633689,
 --         "type": "console"
 --     },
 --     "type": "event"
