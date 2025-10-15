@@ -2,17 +2,24 @@ module BiDi.Demos.LogEventDemos where
 
 import BiDi.BiDiRunner (BiDiActions (..))
 import BiDi.DemoUtils
+import Data.Maybe (fromJust)
 import IOUtils (DemoUtils (..))
-import TestData (checkboxesUrl, consoleLogUrl)
+import TestData (checkboxesUrl, consoleLogUrl, badJavaScriptUrl)
+import WebDriverPreCore.BiDi.BrowsingContext (Locator (..))
+import WebDriverPreCore.BiDi.CoreTypes (NodeRemoteValue (..))
+import WebDriverPreCore.BiDi.Input
 import WebDriverPreCore.BiDi.Protocol
   ( ContextTarget (..),
     Evaluate (..),
     Navigate (..),
     SubscriptionType (LogEntryAdded),
-    Target (..)
+    Target (..),
+    LocateNodes (..),
+    LocateNodesResult (..),
+    SharedReference (..),
+    SharedId
   )
 import Prelude hiding (log, putStrLn)
-import Const (milliseconds)
 
 {-
 Log Events - Implementation Status
@@ -26,7 +33,18 @@ Log Events - Implementation Status
 7. Combined tests :: ✓ logEventConsoleLogCombined, logEventJavascriptErrorCombined, logEventConsoleWarnCombined
 -}
 
-
+-- Helper function to create default pointer common properties
+defaultPointerProps :: PointerCommonProperties
+defaultPointerProps =
+  MkPointerCommonProperties
+    { width = Nothing,
+      height = Nothing,
+      pressure = Nothing,
+      tangentialPressure = Nothing,
+      twist = Nothing,
+      altitudeAngle = Nothing,
+      azimuthAngle = Nothing
+    }
 
 -- >>> runDemo logEventConsoleEntries
 logEventConsoleEntries :: BiDiDemo
@@ -64,12 +82,8 @@ logEventConsoleLevelDebug =
   where
     action :: DemoUtils -> BiDiActions -> IO ()
     action utils@MkDemoUtils {..} cmds@MkCommands {..} = do
-      logTxt "Navigate to console log test page"
-      url <- consoleLogUrl
       bc <- rootContext utils cmds
-      browsingContextNavigate $ MkNavigate bc url Nothing
-      pause
-
+ 
       logTxt "Subscribe to LogEntryAdded event"
       (logEventFired, waitLogEventFired) <- timeLimitLog LogEntryAdded
       subscribeLogEntryAdded logEventFired
@@ -98,11 +112,7 @@ logEventConsoleLevelInfo =
   where
     action :: DemoUtils -> BiDiActions -> IO ()
     action utils@MkDemoUtils {..} cmds@MkCommands {..} = do
-      logTxt "Navigate to console log test page"
-      url <- consoleLogUrl
       bc <- rootContext utils cmds
-      browsingContextNavigate $ MkNavigate bc url Nothing
-      pause
 
       logTxt "Subscribe to LogEntryAdded event"
       (logEventFired, waitLogEventFired) <- timeLimitLog LogEntryAdded
@@ -132,11 +142,7 @@ logEventConsoleLevelWarn =
   where
     action :: DemoUtils -> BiDiActions -> IO ()
     action utils@MkDemoUtils {..} cmds@MkCommands {..} = do
-      logTxt "Navigate to console log test page"
-      url <- consoleLogUrl
       bc <- rootContext utils cmds
-      browsingContextNavigate $ MkNavigate bc url Nothing
-      pause
 
       logTxt "Subscribe to LogEntryAdded event"
       (logEventFired, waitLogEventFired) <- timeLimitLog LogEntryAdded
@@ -166,11 +172,7 @@ logEventConsoleLevelError =
   where
     action :: DemoUtils -> BiDiActions -> IO ()
     action utils@MkDemoUtils {..} cmds@MkCommands {..} = do
-      logTxt "Navigate to console log test page"
-      url <- consoleLogUrl
       bc <- rootContext utils cmds
-      browsingContextNavigate $ MkNavigate bc url Nothing
-      pause
 
       logTxt "Subscribe to LogEntryAdded event"
       (logEventFired, waitLogEventFired) <- timeLimitLog LogEntryAdded
@@ -183,140 +185,6 @@ logEventConsoleLevelError =
       scriptEvaluate $
         MkEvaluate
           { expression = "console.error('Error level message')",
-            target = ContextTarget $ MkContextTarget {context = bc, sandbox = Nothing},
-            awaitPromise = False,
-            resultOwnership = Nothing,
-            serializationOptions = Nothing
-          }
-      sequence_
-        [ waitLogEventFired,
-          waitManyLogEventFired
-        ]
-
--- >>> runDemo logEventConsoleMultipleArgs
-logEventConsoleMultipleArgs :: BiDiDemo
-logEventConsoleMultipleArgs =
-  demo "Log Events - Console Log with Multiple Arguments" action
-  where
-    action :: DemoUtils -> BiDiActions -> IO ()
-    action utils@MkDemoUtils {..} cmds@MkCommands {..} = do
-      logTxt "Navigate to console log test page"
-      url <- consoleLogUrl
-      bc <- rootContext utils cmds
-      browsingContextNavigate $ MkNavigate bc url Nothing
-      pause
-
-      logTxt "Subscribe to LogEntryAdded event"
-      (logEventFired, waitLogEventFired) <- timeLimitLog LogEntryAdded
-      subscribeLogEntryAdded logEventFired
-
-      (manyLogEventFired, waitManyLogEventFired) <- timeLimitLog LogEntryAdded
-      subscribeMany [LogEntryAdded] manyLogEventFired
-
-      logTxt "Triggering console.log() with multiple arguments"
-      scriptEvaluate $
-        MkEvaluate
-          { expression = "console.log('String:', 123, true, null, {key: 'value'}, [1, 2, 3])",
-            target = ContextTarget $ MkContextTarget {context = bc, sandbox = Nothing},
-            awaitPromise = False,
-            resultOwnership = Nothing,
-            serializationOptions = Nothing
-          }
-      sequence_
-        [ waitLogEventFired,
-          waitManyLogEventFired
-        ]
-
--- >>> runDemo logEventJavascriptError
-logEventJavascriptError :: BiDiDemo
-logEventJavascriptError =
-  demo "Log Events - JavaScript Error" action
-  where
-    action :: DemoUtils -> BiDiActions -> IO ()
-    action utils@MkDemoUtils {..} cmds@MkCommands {..} = do
-      logTxt "Navigate to console log test page"
-      url <- consoleLogUrl
-      bc <- rootContext utils cmds
-      browsingContextNavigate $ MkNavigate bc url Nothing
-      pause
-
-      logTxt "Subscribe to LogEntryAdded event"
-      (logEventFired, waitLogEventFired) <- timeLimitLog LogEntryAdded
-      subscribeLogEntryAdded logEventFired
-
-      (manyLogEventFired, waitManyLogEventFired) <- timeLimitLog LogEntryAdded
-      subscribeMany [LogEntryAdded] manyLogEventFired
-
-      logTxt "Triggering JavaScript Error"
-      scriptEvaluateNoWait $
-        MkEvaluate
-          { expression = "throw new Error('Test error for log event')",
-            target = ContextTarget $ MkContextTarget {context = bc, sandbox = Nothing},
-            awaitPromise = False,
-            resultOwnership = Nothing,
-            serializationOptions = Nothing
-          }
-      sequence_
-        [ waitLogEventFired,
-          waitManyLogEventFired
-        ]
-
--- >>> runDemo logEventJavascriptTypeError
-logEventJavascriptTypeError :: BiDiDemo
-logEventJavascriptTypeError =
-  demo "Log Events - JavaScript TypeError" action
-  where
-    action :: DemoUtils -> BiDiActions -> IO ()
-    action utils@MkDemoUtils {..} cmds@MkCommands {..} = do
-      bc <- rootContext utils cmds
-
-
-      logTxt "Subscribe to LogEntryAdded event"
-      (logEventFired, waitLogEventFired) <- timeLimitLog LogEntryAdded
-      subscribeLogEntryAdded logEventFired
-
-      (manyLogEventFired, waitManyLogEventFired) <- timeLimitLog LogEntryAdded
-      subscribeMany [LogEntryAdded] manyLogEventFired
-
-      logTxt "Triggering TypeError"
-      scriptEvaluateNoWait $
-        MkEvaluate
-          { expression = "console.log('!!! HELLO FROM JS !!!!')",
-            target = ContextTarget $ MkContextTarget {context = bc, sandbox = Nothing},
-            awaitPromise = False,
-            resultOwnership = Nothing,
-            serializationOptions = Nothing
-          }
-      logTxt "TypeError DONE"
-      sequence_
-        [ waitLogEventFired,
-          waitManyLogEventFired
-        ]
-
--- >>> runDemo logEventJavascriptReferenceError
-logEventJavascriptReferenceError :: BiDiDemo
-logEventJavascriptReferenceError =
-  demo "Log Events - JavaScript ReferenceError" action
-  where
-    action :: DemoUtils -> BiDiActions -> IO ()
-    action utils@MkDemoUtils {..} cmds@MkCommands {..} = do
-      logTxt "Navigate to console log test page"
-      url <- consoleLogUrl
-      bc <- rootContext utils cmds
-      browsingContextNavigate $ MkNavigate bc url Nothing
-      pause
-
-      logTxt "Subscribe to LogEntryAdded event"
-      (logEventFired, waitLogEventFired) <- timeLimitLog LogEntryAdded
-      subscribeLogEntryAdded logEventFired
-
-      (manyLogEventFired, waitManyLogEventFired) <- timeLimitLog LogEntryAdded
-      subscribeMany [LogEntryAdded] manyLogEventFired
-
-      logTxt "Triggering ReferenceError"
-      scriptEvaluateNoWait $
-        MkEvaluate
-          { expression = "throw new ReferenceError('Test reference error')",
             target = ContextTarget $ MkContextTarget {context = bc, sandbox = Nothing},
             awaitPromise = False,
             resultOwnership = Nothing,
@@ -366,4 +234,85 @@ logEventGenericEntry =
 
       logTxt "Note: Generic log entries are browser-generated and may not occur in this demo"
       logTxt "The subscription will capture console and javascript entries as demonstrated"
+
+
+-- >>> runDemo logEventJavascriptErrorFromButton
+logEventJavascriptErrorFromButton :: BiDiDemo
+logEventJavascriptErrorFromButton =
+  demo "Log Events - JavaScript Error from Button Click" action
+  where
+    action :: DemoUtils -> BiDiActions -> IO ()
+    action utils@MkDemoUtils {..} cmds@MkCommands {..} = do
+      logTxt "Navigate to Bad JavaScript test page"
+      url <- badJavaScriptUrl
+      bc <- rootContext utils cmds
+      browsingContextNavigate $ MkNavigate bc url Nothing
+      pause
+
+      logTxt "Subscribe to LogEntryAdded event"
+      (logEventFired, waitLogEventFired) <- timeLimitLog LogEntryAdded
+      subscribeLogEntryAdded logEventFired
+
+      (manyLogEventFired, waitManyLogEventFired) <- timeLimitLog LogEntryAdded
+      subscribeMany [LogEntryAdded] manyLogEventFired
+
+      logTxt "Locate the 'Bad JS' button"
+      buttonResult <-
+        browsingContextLocateNodes $
+          MkLocateNodes
+            { context = bc,
+              locator = CSS {value = "#badJsButton"},
+              maxNodeCount = Nothing,
+              serializationOptions = Nothing,
+              startNodes = Nothing
+            }
+      logShow "Button search result" buttonResult
+
+      let MkLocateNodesResult nodes = buttonResult
+          buttonId :: SharedId
+          buttonId = case nodes of
+            [button] -> fromJust button.sharedId
+            _ -> error "Failed to locate Bad JS button"
+
+      logTxt "Click the 'Bad JS' button to trigger JavaScript error"
+      inputPerformActions $
+        MkPerformActions
+          { context = bc,
+            actions =
+              [ PointerSourceActions $
+                  MkPointerSourceActions
+                    { pointerId = "mouse1",
+                      pointer = Just $ MkPointer {pointerType = Just MousePointer},
+                      pointerActions =
+                        [ PointerMove
+                            { x = 0,
+                              y = 0,
+                              duration = Just 300,
+                              origin =
+                                Just $
+                                  ElementOrigin $
+                                    MkSharedReference
+                                      { sharedId = buttonId,
+                                        handle = Nothing,
+                                        extensions = Nothing
+                                      },
+                              pointerCommonProperties = defaultPointerProps
+                            },
+                          PointerDown
+                            { button = 0,
+                              pointerCommonProperties = defaultPointerProps
+                            },
+                          PointerUp
+                            { button = 0
+                            }
+                        ]
+                    }
+              ]
+          }
+
+      logTxt "Waiting for JavaScript error log events..."
+      sequence_
+        [ waitLogEventFired,
+          waitManyLogEventFired
+        ]
 

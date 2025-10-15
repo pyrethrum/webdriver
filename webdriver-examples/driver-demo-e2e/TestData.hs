@@ -60,3 +60,6 @@ downloadLinkUrl = fileUrl "downloadLink.html"
 
 consoleLogUrl :: IO Text
 consoleLogUrl = fileUrl "consoleLog.html"
+
+badJavaScriptUrl :: IO Text
+badJavaScriptUrl = fileUrl "badJavaScript.html"
