@@ -61,7 +61,7 @@ where
 
 -- Data structures for network protocol
 
-import Data.Aeson (FromArgs, FromJSON (..), ToJSON (..), Value (..), object, withObject, withText, (.:), (.=))
+import Data.Aeson (FromArgs, FromJSON (..), ToJSON (..), Value (..), object, withObject, withText, (.:), (.=), Options (..), defaultOptions, genericParseJSON)
 import Data.Aeson.KeyMap qualified as KeyMap
 import Data.Aeson.Types (Parser, parse)
 import Data.Function ((&))
@@ -70,7 +70,7 @@ import Data.Text (Text, toLower)
 import GHC.Generics (Generic (to))
 import WebDriverPreCore.BiDi.BrowsingContext (Navigation)
 import WebDriverPreCore.BiDi.CoreTypes (BrowsingContext, JSUInt, StringValue (..), SubscriptionType (..), UserContext)
-import WebDriverPreCore.BiDi.Script (StackTrace)
+import WebDriverPreCore.BiDi.Script (ScriptEvent (params), StackTrace)
 import WebDriverPreCore.Internal.AesonUtils (addProps, enumCamelCase, fromJSONCamelCase, objectOrThrow, parseJSONOmitNothing, toJSONOmitNothing)
 import Prelude
 
@@ -315,7 +315,12 @@ data Header = MkHeader
   }
   deriving (Show, Eq, Generic)
 
-instance FromJSON Header
+instance FromJSON Header where
+  parseJSON :: Value -> Parser Header
+  parseJSON = withObject "Header" $ \obj -> do
+    headerName <- obj .: "name"
+    headerValue <- obj .: "value"
+    pure $ MkHeader {headerName, headerValue}
 
 instance ToJSON Header where
   toJSON :: Header -> Value
@@ -477,6 +482,24 @@ data NetworkEvent
   | ResponseStartedEvent ResponseStarted
   deriving (Show, Eq, Generic)
 
+instance FromJSON NetworkEvent where
+  parseJSON :: Value -> Parser NetworkEvent
+  parseJSON val =
+    val
+      & ( withObject "NetworkEvent" $ \obj -> do
+            eventType <- obj .: "method"
+            params <- obj .: "params"
+            let parseParams :: forall a b. (FromJSON a) => (a -> b) -> Parser b
+                parseParams = (<&>) (parseJSON params)
+            case eventType of
+              NetworkAuthRequired -> parseParams AuthRequiredEvent
+              NetworkBeforeRequestSent -> parseParams BeforeRequestSentEvent
+              NetworkFetchError -> parseParams FetchError
+              NetworkResponseCompleted -> parseParams ResponseCompleted
+              NetworkResponseStarted -> parseParams ResponseStartedEvent
+              _ -> fail $ "Unknown NetworkEvent type: " <> show eventType
+        )
+
 -- data BaseNetworkEventParameters = MkBaseNetworkEventParameters
 --   { context :: BrowsingContext,
 --     isBlocked :: Bool,
@@ -520,12 +543,12 @@ instance FromJSON HTTPMethod where
       _ -> fail $ "Unknown HTTP method: " <> show t
 
 data RequestData = MkRequestData
-  { requestId :: RequestId,
+  { request :: RequestId,
     url :: Text,
     method :: HTTPMethod,
     headers :: [Header],
     cookies :: Maybe [Cookie],
-    headerSize :: JSUInt,
+    headersSize :: JSUInt,
     bodySize :: Maybe JSUInt,
     destination :: Text,
     initiatorType :: Maybe InitiatorType,
@@ -536,6 +559,13 @@ data RequestData = MkRequestData
 instance FromJSON RequestData where
   parseJSON :: Value -> Parser RequestData
   parseJSON = parseJSONOmitNothing
+  -- parseJSON =   genericParseJSON
+  --   defaultOptions
+  --     { fieldLabelModifier = \case
+  --         "promptType" -> "type"
+  --         other -> other,
+  --       omitNothingFields = True
+  --     }
 
 data FetchTimingInfo = MkFetchTimingInfo
   { timeOrigin :: Double,
@@ -555,24 +585,6 @@ data FetchTimingInfo = MkFetchTimingInfo
   deriving (Show, Eq, Generic)
 
 instance FromJSON FetchTimingInfo
-
-instance FromJSON NetworkEvent where
-  parseJSON :: Value -> Parser NetworkEvent
-  parseJSON val =
-    val
-      & ( withObject "NetworkEvent" $ \obj -> do
-            eventType <- obj .: "type"
-            case eventType of
-              NetworkAuthRequired -> parseVal AuthRequiredEvent
-              NetworkBeforeRequestSent -> parseVal BeforeRequestSentEvent
-              NetworkFetchError -> parseVal FetchError
-              NetworkResponseCompleted -> parseVal ResponseCompleted
-              NetworkResponseStarted -> parseVal ResponseStartedEvent
-              _ -> fail $ "Unknown NetworkEvent type: " <> show eventType
-        )
-    where
-      parseVal :: forall a b. (FromJSON a) => (a -> b) -> Parser b
-      parseVal = (<&>) (parseJSON val)
 
 -- | AuthRequired parameters
 data AuthRequired = MkAuthRequired
