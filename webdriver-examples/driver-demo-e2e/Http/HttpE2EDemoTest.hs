@@ -137,7 +137,6 @@ import Test.Tasty.HUnit (Assertion, assertBool)
 import WebDriverPreCore.Http (minFullCapabilities)
 import WebDriverPreCore.Internal.Utils (txt)
 import Prelude hiding (log)
-import Data.Function ((&))
 
 -- #################### The Tests ######################
 

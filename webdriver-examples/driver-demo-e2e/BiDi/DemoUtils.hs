@@ -1,8 +1,8 @@
 module BiDi.DemoUtils where
 
 import BiDi.BiDiRunner (BiDiActions (..), mkDemoBiDiClientParams, withCommands)
-import Control.Exception (Exception, catch, throwIO, throw)
-import Data.Text (Text, isInfixOf, unpack)
+import Control.Exception (Exception, catch, throwIO)
+import Data.Text (Text, isInfixOf)
 import Data.Time.Clock.POSIX (POSIXTime, getPOSIXTime)
 import WebDriverPreCore.BiDi.Protocol
   ( BrowsingContext,
@@ -34,14 +34,7 @@ import WebDriverPreCore.Internal.Utils (txt)
 import Prelude hiding (log, putStrLn)
 import WebDriverPreCore.BiDi.CoreTypes (StringValue(..))
 import Const (seconds, Timeout (..))
-import WebDriverPreCore.BiDi.Protocol (Subscription)
-import WebDriverPreCore.BiDi.Protocol (Subscription(..))
-import UnliftIO (newEmptyTMVarIO, tryPutTMVar, atomically, Async, race_, readTMVar)
-import Control.Concurrent (threadDelay)
-import Data.Coerce (coerce)
-import UnliftIO.Async (async)
 import IOUtils (DemoUtils (..))
-import Data.Function ((&))
 
 
 pauseMs :: Timeout

@@ -2,7 +2,6 @@ module WebDriverPreCore.BiDi.BrowsingContext where
 
 import Data.Aeson (FromJSON (..), GFromJSON, KeyValue (..), Options (..), ToJSON (..), Value (..), Zero, defaultOptions, genericParseJSON, genericToJSON, object, withObject, (.:), (.=))
 import Data.Aeson.Types (Parser)
-import Data.Function ((&))
 import Data.Functor ((<&>))
 import Data.Map qualified as Map
 import Data.Maybe (catMaybes)

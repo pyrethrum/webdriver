@@ -1,8 +1,7 @@
 module WebDriverPreCore.BiDi.Event where
 
 import Data.Aeson (FromJSON (..), Value (..), withObject, (.:))
-import Data.Aeson.Types (Parser, parse)
-import Data.Set (Set)
+import Data.Aeson.Types (Parser)
 import Data.Text (Text, isPrefixOf, unpack)
 import GHC.Generics (Generic)
 import WebDriverPreCore.BiDi.BrowsingContext (BrowsingContextEvent (..))

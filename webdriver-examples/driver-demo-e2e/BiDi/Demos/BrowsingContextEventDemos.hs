@@ -1,26 +1,16 @@
 module BiDi.Demos.BrowsingContextEventDemos where
 
-import BiDi.BiDiRunner (BiDiActions (..), BiDiMethods (unsubscribe))
+import BiDi.BiDiRunner (BiDiActions (..))
 import BiDi.DemoUtils
-import Const (Timeout (..), milliseconds, seconds)
+import Const (Timeout (..), milliseconds)
 import Data.Text (unpack)
 import IOUtils (DemoUtils (..))
-import TestData (checkboxesUrl, downloadLinkUrl, downloadUrl, fragmentUrl, promptUrl, slowLoadUrl, textAreaUrl)
+import TestData (checkboxesUrl, downloadLinkUrl, fragmentUrl, promptUrl, slowLoadUrl, textAreaUrl)
 import WebDriverPreCore.BiDi.BrowsingContext
-  ( BrowsingContextEvent (NavigationStarted),
-    Close (..),
-    DownloadEnd (..),
-    DownloadWillBegin (..),
+  ( Close (..),
     HandleUserPrompt (..),
-    HistoryUpdated (..),
     Navigate (..),
-    NavigationInfo (..),
-    Reload (..),
-    UserPromptClosed (..),
-    UserPromptOpened (..),
-    UserPromptType (..),
   )
-import WebDriverPreCore.BiDi.CoreTypes (StringValue (..))
 import WebDriverPreCore.BiDi.Protocol
   ( BrowsingContext (..),
     ContextTarget (..),
@@ -47,10 +37,7 @@ import WebDriverPreCore.BiDi.Protocol
     UserContext (..),
   )
 import WebDriverPreCore.BiDi.Script
-  ( EvaluateResult (..),
-    PrimitiveProtocolValue (..),
-    RemoteValue (..),
-    Target (ContextTarget),
+  ( Target (ContextTarget),
   )
 import WebDriverPreCore.Internal.Utils (txt)
 import Prelude hiding (log, putStrLn)

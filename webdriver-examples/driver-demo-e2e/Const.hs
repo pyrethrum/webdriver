@@ -51,7 +51,7 @@ import Network.HTTP.Req as R
 import WebDriverPreCore.Http as WPC
   ( Selector (..),
   )
-import Prelude (Eq, Int, Num (..), Semigroup (..), Show, (.))
+import Prelude (Eq, Int, Num (..), Semigroup (..), Show)
 
 -- ################### urls ##################
 

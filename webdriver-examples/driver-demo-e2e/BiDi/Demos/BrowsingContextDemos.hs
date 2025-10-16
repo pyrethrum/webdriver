@@ -10,7 +10,6 @@ import WebDriverPreCore.BiDi.CoreTypes (JSInt (..), JSUInt (..), NodeRemoteValue
 import WebDriverPreCore.BiDi.Protocol
 import Prelude hiding (log, putStrLn)
 import Const (milliseconds)
-import Data.Function ((&))
 
 
 {- 

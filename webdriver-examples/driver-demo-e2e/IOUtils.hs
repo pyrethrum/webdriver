@@ -28,14 +28,12 @@ import Control.Monad (unless, void, when)
 import Data.Base64.Types qualified as B64T
 import Data.ByteString qualified as BS
 import Data.ByteString.Base64 qualified as B64
-import Data.Function ((&))
 import Data.Text (Text, isInfixOf, pack, toLower, unpack)
 import Data.Text.IO qualified as TIO
 import GHC.Base (coerce)
 import Test.Tasty.HUnit as HUnit (Assertion, HasCallStack, (@=?))
-import UnliftIO (TChan, async, atomically, isEmptyTChan, race_, readTMVar, tryPutTMVar, writeTChan)
+import UnliftIO (TChan, atomically, isEmptyTChan, race_, readTMVar, tryPutTMVar, writeTChan)
 import UnliftIO.STM (newEmptyTMVarIO)
-import WebDriverPreCore.BiDi.Protocol (EvaluateResult (result))
 import WebDriverPreCore.Internal.Utils (txt)
 import Prelude hiding (log)
 

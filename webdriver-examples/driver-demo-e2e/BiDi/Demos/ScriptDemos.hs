@@ -15,7 +15,6 @@ import WebDriverPreCore.Internal.AesonUtils (jsonToText)
 import Prelude hiding (log, putStrLn)
 import WebDriverPreCore.BiDi.CoreTypes (StringValue(..))
 import Const (milliseconds)
-import Data.Function ((&))
 
 {-
 
