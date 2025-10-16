@@ -34,7 +34,7 @@ Script Events - Implementation Status
 -- Parser error was: 
 -- Error in $: parsing Text failed, expected String, but encountered Object
 -- The actual JSON value was: {
---     "realm": "c5913f19-6681-46c3-a5ea-0e8279fbd5e9"
+--     "realm": "02417f88-b2d2-4853-842c-cf3672921490"
 -- })
 scriptEventRealmLifecycle :: BiDiDemo
 scriptEventRealmLifecycle =

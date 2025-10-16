@@ -3,6 +3,7 @@ module BiDi.Demos.BrowsingContextEventDemos where
 import BiDi.BiDiRunner (BiDiActions (..), BiDiMethods (unsubscribe))
 import BiDi.DemoUtils
 import Const (Timeout (..), milliseconds, seconds)
+import Data.Text (unpack)
 import IOUtils (DemoUtils (..))
 import TestData (checkboxesUrl, downloadLinkUrl, downloadUrl, fragmentUrl, promptUrl, slowLoadUrl, textAreaUrl)
 import WebDriverPreCore.BiDi.BrowsingContext
@@ -110,7 +111,11 @@ browsingContextEventDemoMulti =
   where
     action :: DemoUtils -> BiDiActions -> IO ()
     action MkDemoUtils {..} MkCommands {..} = do
-      subId <- subscribeMany [BrowsingContextContextCreated, BrowsingContextContextDestroyed] (logShow "Event Subscription Fired: browsingContext.contextCreated or contextDestroyed")
+      subId <-
+        subscribeMany
+          [BrowsingContextContextCreated, BrowsingContextContextDestroyed]
+          (logShow "Event Subscription Fired: browsingContext.contextCreated or contextDestroyed")
+
       logShow "Subscription id" subId
 
       logTxt "New browsing context - Tab"
@@ -143,7 +148,7 @@ browsingContextEventDemoMulti =
 -- >>> runDemo browsingContextEventDemoFilteredSubscriptions
 browsingContextEventDemoFilteredSubscriptions :: BiDiDemo
 browsingContextEventDemoFilteredSubscriptions =
-  demo "Browsing Context Events - Filtered Navigation Subscriptions - Filter not working - not working: https://bugzilla.mozilla.org/show_bug.cgi?id=1994293" action
+  demo "Browsing Context Events - Filtered Navigation Subscriptions" action
   where
     action :: DemoUtils -> BiDiActions -> IO ()
     action MkDemoUtils {..} MkCommands {..} = do
@@ -153,7 +158,7 @@ browsingContextEventDemoFilteredSubscriptions =
             MkCreate
               { createType = Tab,
                 background = False,
-                referenceContext = Nothing,
+                referenceContext = Nothing,Filter
                 userContext = Nothing
               }
 
@@ -182,10 +187,34 @@ browsingContextEventDemoFilteredSubscriptions =
       browsingContextNavigate $ MkNavigate bc1 "file:///home/john-walker/repos/webdriver/webdriver-examples/driver-demo-e2e/TestFiles/checkboxes.html" Nothing
       pause
 
+      logTxt "Resubscribe singleton and many filtered by bc1 (should not fire)"
+
+      subIdre <-
+        subscribeBrowsingContextNavigationStarted' [bc1] [] $
+          \_n -> error $ "Navigation Started Event Fired (should only fire for browsing context 1 this should not happen filtering on bc1: " <> unpack bc1.context <> ")"
+      logShow "Subscribed to navigationStarted for browsing context 1" subIdre
+      pause
+
+      subIdm <-
+        subscribeMany'
+          [bc1]
+          []
+          [BrowsingContextContextCreated, BrowsingContextContextDestroyed]
+          (logShow "Event Subscription Fired: browsingContext.contextCreated or contextDestroyed")
+
+      logShow "Subscribed to multi navigation started for browsing context 1" subIdm
+
       -- Navigate browsing context 2 (should NOT trigger event)
       logTxt "Navigating browsing context 2 to textArea.html (should NOT trigger event)"
-      browsingContextNavigate $ MkNavigate bc2 "file:///home/john-walker/repos/webdriver/webdriver-examples/driver-demo-e2e/TestFiles/textArea.html" Nothing
-      pause
+      browsingContextNavigate $
+        MkNavigate
+          { context = bc2,
+            url = "file:///home/john-walker/repos/webdriver/webdriver-examples/driver-demo-e2e/TestFiles/textArea.html",
+            wait = Nothing
+          }
+
+      -- make sure negative tests have time to fail
+      pauseAtLeast $ 500 * milliseconds
 
 -- >>> runDemo browsingContextEventDemoUserContextFiltered
 browsingContextEventDemoUserContextFiltered :: BiDiDemo
@@ -254,6 +283,11 @@ browsingContextEventDemoUserContextFiltered =
       bc4 <- browsingContextCreate createParams1
       logShow "Created browsing context 4 (no event)" bc4
 
+
+      -- Navigate browsing context 1 (should trigger event)
+      logTxt "Navigating browsing context 1 to checkboxes.html (SHOULD trigger event)"
+      browsingContextNavigate $ MkNavigate bc1 "file:///home/john-walker/repos/webdriver/webdriver-examples/driver-demo-e2e/TestFiles/checkboxes.html" Nothing
+      pause
 -- >>> runDemo browsingContextEventCreateDestroy
 browsingContextEventCreateDestroy :: BiDiDemo
 browsingContextEventCreateDestroy =
@@ -525,7 +559,9 @@ browsingContextEventUserPromptsVariants =
       pause
 
 -- >>> runDemo browsingContextEventHistoryUpdated
+
 -- *** Exception: user error (Timeout - Expected event did not fire: BrowsingContextHistoryUpdated)
+
 browsingContextEventHistoryUpdated :: BiDiDemo
 browsingContextEventHistoryUpdated =
   demo "Browsing Context Events - History Updated" action

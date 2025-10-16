@@ -626,7 +626,7 @@ subscribe allSubs socketSubscribe subscription = do
         { events = case subscription of
             SingleSubscription {subscriptionType} -> [subscriptionType]
             MultiSubscription {subscriptionTypes} -> toList subscriptionTypes,
-          browsingContexts = toMaybe subscription.browsingContexts,
+          contexts = toMaybe subscription.browsingContexts,
           userContexts = toMaybe subscription.userContexts
         }
 

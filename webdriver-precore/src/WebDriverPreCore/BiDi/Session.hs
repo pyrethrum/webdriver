@@ -28,7 +28,7 @@ newtype SubscriptionId = MkSubscriptionId {subscriptionId :: Text}
 -- | Subscription Request
 data SessionSubscriptionRequest = MkSessionSubscriptionRequest
   { events :: [SubscriptionType],
-    browsingContexts :: Maybe [BrowsingContext],
+    contexts :: Maybe [BrowsingContext],
     userContexts :: Maybe [UserContext]
   }
   deriving (Show, Eq, Generic)
