@@ -1,31 +1,33 @@
-# BiDi
+# TODO
 
-## old directory
-- [X] Http dir
-- [X] rename modules
-- [X] compile
-- [X] get tests demo working 
-- [X] fix tasks
+## BiDi
+- [ ] split off BiDi
+  - [ ] new cabal file
+  - [ ] move shared files
+- [ ] demos => test
+- [ ] specific code TODOs - TODO tree
+- [ ] update to latest spec
+- [ ] remove unneeded instances to and fromJSON
+- [ ] Claude reconcile / review
 
-## new directory
-- [X] BidiSpec Module 
-- [X] Autogenerate to start with
-- [ ] Fix and demo
-- [ ] BidiExamples - the Internet
-  - [ ] script from and to Json all types   
-  - [ ] remove all instances of `typ :: Text` and updat From/To JSON
-- [ ] clean up `MessageParameters` 
-- [ ] final diff (get latest version)
+## http
+- [ ] test => demos => test
+- [ ] switch to local http files
+- [ ] switch to local http files
+- [ ] switch to command (leave legacy)
+- [ ] update too latest spec
+- [ ] switch to protocol and API - keep legacy
+- [ ] remove unneeded instances to and fromJSON
 
-## finally 
-- [ ] update READMEs
-  - [ ] add links to implementation report
-  - [ ] config notes
+## docs - 
+- [ ] demos index
+- [ ] config explaind
+- [ ] update haddock
+- [ ] update readme
+- [ ] lookup / document dealing with diffferent versions
 - [ ] check docs urls
-- [ ] check all licence fiiles
-- [ ] add update method to release notes also branch into pyrethrum Web - the ddl genrator
-- [ ] update dev-container including dhall extensions
+- [ ] check all licence files
 
-## other
+## CI
  - [ ] use one base container for dev-container and CI (update)
  - [ ] reteest dev-container

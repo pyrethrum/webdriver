@@ -98,7 +98,7 @@ data DemoUtils = MkDemoUtils
     logShow :: forall a. (Show a) => Text -> a -> IO (),
     logM :: Text -> IO Text -> IO (),
     logShowM :: forall a. (Show a) => Text -> IO a -> IO (),
-    -- timeout functions for tesing events
+    -- timeout functions for testing events TODO: rename
     timeLimitLog :: forall a b. (Show a, Show b) => b -> IO (a -> IO (), IO ()),
     timeLimitLog' :: forall a b. (Show a, Show b) => Timeout -> b -> IO (a -> IO (), IO ())
   }
