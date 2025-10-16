@@ -1,7 +1,7 @@
 # TODO
 
-## BiDi
-- [ ] split off BiDi
+## bidi
+- [ ] split off bidi
   - [ ] new cabal file
   - [ ] move shared files
 - [ ] demos => test
@@ -30,4 +30,23 @@
 
 ## CI
  - [ ] use one base container for dev-container and CI (update)
- - [ ] reteest dev-container
+ - [ ] retest dev-container
+
+## Extend testing
+- [ ] chrome
+  - [ ] container
+  - [ ] CI
+- [ ] edge
+  - [ ] container
+  - [ ] CI
+
+## release http
+- [ ] hackage
+- [ ] change log
+- [ ] announce
+
+## release bidi
+- [ ] hackage
+- [ ] change log
+- [ ] announce
+
