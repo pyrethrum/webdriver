@@ -105,7 +105,7 @@ import WebDriverPreCore.BiDi.Event
 import WebDriverPreCore.BiDi.Input (FileDialogOpened)
 import WebDriverPreCore.BiDi.Log
 import WebDriverPreCore.BiDi.Network (AuthRequired, BeforeRequestSent, FetchError, ResponseCompleted, ResponseStarted)
-import WebDriverPreCore.BiDi.Script (Message, RealmInfo, Realm)
+import WebDriverPreCore.BiDi.Script (Message, RealmInfo)
 import WebDriverPreCore.BiDi.Protocol
   ( Activate,
     AddDataCollector,
@@ -187,6 +187,7 @@ import WebDriverPreCore.BiDi.Protocol
   )
 
 -- TODO: generic commands
+-- TODO: noWait - runner only
 -- TODO: generic subscribe
 -- TODO: generic unsubscribe
 -- TODO: generic event
