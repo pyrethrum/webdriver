@@ -24,6 +24,7 @@ module WebDriverPreCore.BiDi.Script
     Disown (..),
     Target (..),
     Realm (..),
+    RealmDestroyed (..),
     Sandbox (..),
     Evaluate (..),
     GetRealms (..),
@@ -640,7 +641,7 @@ data ScriptEvent
         params :: Message
       }
   | RealmCreatedEvent RealmInfo
-  | RealmDestroyed Realm
+  | RealmDestroyed RealmDestroyed
   deriving (Show, Eq, Generic)
 
 instance FromJSON ScriptEvent where
@@ -658,8 +659,8 @@ instance FromJSON ScriptEvent where
         pure $ RealmCreatedEvent realmInfo
       "script.realmDestroyed" -> do
         params <- o .: "params"
-        realm <- params .: "realm"
-        pure $ RealmDestroyed realm
+        realmid <- params .: "realm"
+        pure . RealmDestroyed $ MkRealmDestroyed realmid
       _ -> fail $ "Unknown ScriptEvent method: " <> unpack typ
 
 data Message = MkMessage
@@ -669,8 +670,13 @@ data Message = MkMessage
   }
   deriving (Show, Eq, Generic)
 
-instance FromJSON Message
-
+instance FromJSON Message where
+  parseJSON :: Value -> Parser Message
+  parseJSON = withObject "Message" $ \o -> do
+    channel <- o .: "channel"
+    messageData <- o .: "data"
+    source <- o .: "source"
+    pure $ MkMessage {channel, messageData, source}
 
 newtype Channel = Channel {channelId :: Text}
   deriving newtype
@@ -1069,3 +1075,7 @@ instance FromJSON ExceptionDetails
 instance FromJSON StackTrace
 
 instance FromJSON StackFrame
+
+newtype RealmDestroyed = MkRealmDestroyed {realm :: Realm} deriving (Show, Eq, Generic)
+
+instance FromJSON RealmDestroyed

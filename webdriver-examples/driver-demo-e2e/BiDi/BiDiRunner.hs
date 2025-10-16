@@ -121,12 +121,12 @@ import WebDriverPreCore.BiDi.Protocol
     UserContext,
     WebExtensionInstall,
     WebExtensionResult,
-    WebExtensionUninstall,
+    WebExtensionUninstall, 
+    RealmDestroyed,
   )
 import WebDriverPreCore.BiDi.Response (JSONDecodeError, MatchedResponse (..), ResponseObject (..), decodeResponse, displayResponseError, parseResponse)
 import WebDriverPreCore.BiDi.Script
   ( Message,
-    Realm,
     RealmInfo,
   )
 import WebDriverPreCore.BiDi.Session (SessionUnsubscribe (..))
@@ -263,8 +263,8 @@ data BiDiActions = MkCommands
     subscribeScriptMessage' :: [BrowsingContext] -> [UserContext] -> (Message -> IO ()) -> IO SubscriptionId,
     subscribeScriptRealmCreated :: (RealmInfo -> IO ()) -> IO SubscriptionId,
     subscribeScriptRealmCreated' :: [BrowsingContext] -> [UserContext] -> (RealmInfo -> IO ()) -> IO SubscriptionId,
-    subscribeScriptRealmDestroyed :: (Realm -> IO ()) -> IO SubscriptionId,
-    subscribeScriptRealmDestroyed' :: [BrowsingContext] -> [UserContext] -> (Realm -> IO ()) -> IO SubscriptionId,
+    subscribeScriptRealmDestroyed :: (RealmDestroyed -> IO ()) -> IO SubscriptionId,
+    subscribeScriptRealmDestroyed' :: [BrowsingContext] -> [UserContext] -> (RealmDestroyed -> IO ()) -> IO SubscriptionId,
     -- Input
     subscribeInputFileDialogOpened :: (FileDialogOpened -> IO ()) -> IO SubscriptionId,
     subscribeInputFileDialogOpened' :: [BrowsingContext] -> [UserContext] -> (FileDialogOpened -> IO ()) -> IO SubscriptionId,

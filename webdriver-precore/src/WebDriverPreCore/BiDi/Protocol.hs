@@ -204,6 +204,7 @@ import WebDriverPreCore.BiDi.Script
     ObjectLocalValue (..),
     PrimitiveProtocolValue (..),
     Realm (..),
+    RealmDestroyed (..),
     RemoteValue (..),
     RemovePreloadScript (..),
     ResultOwnership (..),

@@ -2,7 +2,6 @@ module BiDi.Demos.ScriptEventDemos where
 
 import BiDi.BiDiRunner (BiDiActions (..))
 import BiDi.DemoUtils
-import Const (milliseconds)
 import IOUtils (DemoUtils (..))
 import TestData (checkboxesUrl, scriptRealmUrl)
 import WebDriverPreCore.BiDi.Protocol
@@ -21,21 +20,7 @@ import WebDriverPreCore.BiDi.Script
   )
 import Prelude hiding (log, putStrLn)
 
-{-
-Script Events - Implementation Status
-
-1. script.message :: ✓ scriptEventMessage
-2. script.realmCreated :: ✓ scriptEventRealmLifecycle
-3. script.realmDestroyed :: ✓ scriptEventRealmLifecycle
--}
-
 -- >>> runDemo scriptEventRealmLifecycle
--- *** Exception: user error (could not parse event params (in SingleSubscription) for ScriptRealmDestroyed
--- Parser error was: 
--- Error in $: parsing Text failed, expected String, but encountered Object
--- The actual JSON value was: {
---     "realm": "02417f88-b2d2-4853-842c-cf3672921490"
--- })
 scriptEventRealmLifecycle :: BiDiDemo
 scriptEventRealmLifecycle =
   demo "Script Events - Realm Created and Destroyed" action
@@ -95,24 +80,6 @@ scriptEventRealmLifecycle =
         ]
 
 -- >>> runDemo scriptEventMessage
--- *** Exception: user error (could not parse Event for (in MultiSubscription) for ScriptMessage
--- Parser error was: 
--- Error in $.params: parsing WebDriverPreCore.BiDi.Script.Message(MkMessage) failed, key "messageData" not found
--- The actual JSON value was: {
---     "method": "script.message",
---     "params": {
---         "channel": "testChannel",
---         "data": {
---             "type": "string",
---             "value": "Message from preload script via channel"
---         },
---         "source": {
---             "context": "9dcfe98a-fcd2-4efb-9964-2c6fc677d4a5",
---             "realm": "4d83fc54-db98-4d1f-aaa7-d32205fc5cd2"
---         }
---     },
---     "type": "event"
--- })
 scriptEventMessage :: BiDiDemo
 scriptEventMessage =
   demo "Script Events - Message via Channel" action

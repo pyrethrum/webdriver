@@ -66,3 +66,6 @@ scriptRealmUrl = fileUrl "scriptRealm.html"
 
 badJavaScriptUrl :: IO Text
 badJavaScriptUrl = fileUrl "badJavaScript.html"
+
+uploadUrl :: IO Text
+uploadUrl = fileUrl "upload.html"

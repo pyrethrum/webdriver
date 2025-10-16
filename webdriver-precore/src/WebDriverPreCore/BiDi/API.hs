@@ -183,7 +183,7 @@ import WebDriverPreCore.BiDi.Protocol
     WebExtensionResult,
     WebExtensionUninstall,
     emptyCommand,
-    mkCommand,
+    mkCommand, RealmDestroyed,
   )
 
 -- TODO: generic commands
@@ -546,7 +546,7 @@ subscribeScriptRealmCreated = SingleSubscription ScriptRealmCreated
 subscribeScriptRealmDestroyed ::
   [BrowsingContext] ->
   [UserContext] ->
-  (Realm -> m ()) ->
+  (RealmDestroyed -> m ()) ->
   Subscription m
 subscribeScriptRealmDestroyed = SingleSubscription ScriptRealmDestroyed
 

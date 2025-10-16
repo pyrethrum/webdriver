@@ -158,7 +158,7 @@ browsingContextEventDemoFilteredSubscriptions =
             MkCreate
               { createType = Tab,
                 background = False,
-                referenceContext = Nothing,Filter
+                referenceContext = Nothing,
                 userContext = Nothing
               }
 
