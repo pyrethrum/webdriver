@@ -28,6 +28,10 @@
 - [ ] check docs urls
 - [ ] check all licence files
 
+## prep
+- [ ] check hlint and why it isn't firing as it use to
+- [ ] run weeder
+
 ## CI
  - [ ] use one base container for dev-container and CI (update)
  - [ ] retest dev-container
