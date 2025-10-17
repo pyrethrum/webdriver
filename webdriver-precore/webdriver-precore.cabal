@@ -159,7 +159,7 @@ library
 test-suite test
   import: commonExtensions, commonGhcOptions
   type: exitcode-stdio-1.0
-  main-is: Driver.hs
+  main-is: Test.hs
   hs-source-dirs: test
   build-depends:
   build-depends:
@@ -188,19 +188,19 @@ test-suite test
     , websockets
     , wuss
   other-modules:
-   -- true unit/propertytests
-    ApiCoverageTest,
-    ErrorCoverageTest,
-    JSONParsingTest,
+   -- true unit/property tests
+    ApiCoverageTest
+    , ErrorCoverageTest
+    , JSONParsingTest
     -- demos 
-      Config
+    , Config
     , Const
     , IOUtils
     , TestData
     , Http.HttpRunnerMinimalForDocs
     , Http.HttpRunner
     , Http.HttpAPI
-    , Http.HttpE2EDemoTest
+    , Http.HttpDemo
     , BiDi.BiDiRunner
     , BiDi.DemoUtils
     , BiDi.WussDemo
@@ -221,6 +221,4 @@ test-suite test
     , BiDi.Demos.StorageDemos
     , BiDi.Demos.WebExtensionDemos
     , RuntimeConst
-  build-tool-depends:
-    tasty-discover:tasty-discover
   default-language: Haskell2010

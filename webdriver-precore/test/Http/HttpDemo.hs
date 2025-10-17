@@ -1,4 +1,4 @@
-module Http.HttpE2EDemoTest where
+module Http.HttpDemo where
 
 -- minFirefoxSession,
 
