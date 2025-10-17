@@ -144,9 +144,7 @@ library
       WebDriverPreCore.Http.HttpResponse
   hs-source-dirs: src
   build-depends:
-    -- debugging only remove brefore release
     pretty-show ^>=1.10,
-    --
     aeson         >=1.4   && <2.3, 
     aeson-pretty  >=0.8   && <0.9,
     base          >=4.16  && <5,
@@ -164,24 +162,65 @@ test-suite test
   main-is: Driver.hs
   hs-source-dirs: test
   build-depends:
-    , aeson
+  build-depends:
+    aeson
+    , aeson-pretty
     , base
+    , base64
+    , bytestring
     , containers
-    , directory     >=1.3   && <1.4
-    , ghc
-    , pretty-show
-    , text
-    , tasty
-    , tasty-hunit
-    , tasty-quickcheck
-    , tasty-discover
+    , dhall
+    , directory >=1.3 && <1.4
     , falsify
-    , webdriver-precore
+    , filepath
+    , ghc
+    , network
+    , pretty-show ^>=1.10
     , raw-strings-qq
+    , req
+    , tasty
+    , tasty-discover
+    , tasty-hunit
+    , time
+    , text
+    , unliftio
+    , webdriver-precore
+    , websockets
+    , wuss
   other-modules:
+   -- true unit/propertytests
     ApiCoverageTest,
     ErrorCoverageTest,
     JSONParsingTest,
+    -- demos 
+      Config
+    , Const
+    , IOUtils
+    , TestData
+    , Http.HttpRunnerMinimalForDocs
+    , Http.HttpRunner
+    , Http.HttpAPI
+    , Http.HttpE2EDemoTest
+    , BiDi.BiDiRunner
+    , BiDi.DemoUtils
+    , BiDi.WussDemo
+    , BiDi.Demos.BrowserDemos
+    , BiDi.Demos.BrowsingContextDemos
+    , BiDi.Demos.BrowsingContextEventDemos
+    , BiDi.Demos.EmulationDemos
+    , BiDi.Demos.InputDemos
+    , BiDi.Demos.InputEventDemos
+    , BiDi.Demos.LogEventDemos
+    , BiDi.Demos.NetworkDemos
+    , BiDi.Demos.NetworkEventDemos
+    , BiDi.Demos.NetworkSupportTest
+    , BiDi.Demos.OtherDemos
+    , BiDi.Demos.ScriptDemos
+    , BiDi.Demos.ScriptEventDemos
+    , BiDi.Demos.SessionDemos
+    , BiDi.Demos.StorageDemos
+    , BiDi.Demos.WebExtensionDemos
+    , RuntimeConst
   build-tool-depends:
     tasty-discover:tasty-discover
   default-language: Haskell2010
