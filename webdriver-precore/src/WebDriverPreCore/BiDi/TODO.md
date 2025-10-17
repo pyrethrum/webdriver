@@ -1,9 +1,9 @@
 # TODO
 
 ## bidi
-- [ ] split off bidi
-  - [ ] new cabal file
-  - [ ] move shared files
+- [NA] split off bidi
+  - [NA]  new cabal file
+  - [NA]  move shared files
 - [ ] demos => test
 - [ ] specific code TODOs - TODO tree
 - [ ] update to latest spec
@@ -18,6 +18,10 @@
 - [ ] update too latest spec
 - [ ] switch to protocol and API - keep legacy
 - [ ] remove unneeded instances to and fromJSON
+
+## update 
+  - update bidi to latest spec
+  - update http to latest spec
 
 ## docs - 
 - [ ] demos index
