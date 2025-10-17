@@ -53,7 +53,7 @@ configDir :: IO FilePath
 configDir = do
   currentDir <- getCurrentDirectory
   case findWebDriverRoot currentDir of
-    Just root -> pure $ root </> "webdriver-examples" </> "driver-demo-e2e" </> ".config"
+    Just root -> pure $ root </> "webdriver-precore" </> "test" </> ".config"
     Nothing ->
       error $
         "Could not find 'webdriver' root directory from: "

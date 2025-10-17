@@ -8,5 +8,5 @@ dist-newstyle/
 .gitignore
 
 # ignore the user dhall config file
-webdriver-examples/driver-demo-e2e/.config/config.dhall
+webdriver-precore/test/.config/config.dhall
 
