@@ -1,2 +1,0 @@
-Document 1 content for multiple file upload testing.
-This is the first document in the multiple files test.

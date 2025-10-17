@@ -1,2 +1,0 @@
-This is the final test file for upload testing.
-Used to test single file on multiple input.
