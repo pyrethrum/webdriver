@@ -31,47 +31,6 @@ import Const (second)
 
 
 -- >>> runDemo networkDataCollectorDemo
--- *** Exception: Error executing BiDi command: MkCommand
---   { method = "network.addDataCollector"
---   , params =
---       MkAddDataCollector
---         { dataTypes =
---             [ MkDataType { dataType = "request" }
---             , MkDataType { dataType = "response" }
---             ]
---         , maxEncodedDataSize = 2048
---         , collectorType = Just MkCollectorType { collectorType = "blob" }
---         , contexts = Nothing
---         , userContexts = Nothing
---         }
---   , extended = Nothing
---   }
--- With JSON: 
--- {
---     "id": 3,
---     "method": "network.addDataCollector",
---     "params": {
---         "collectorType": "blob",
---         "dataTypes": [
---             "request",
---             "response"
---         ],
---         "maxEncodedDataSize": 2048
---     }
--- }
--- BiDi driver error: 
--- MkDriverError
---   { id = Just 3
---   , error = InvalidArgument
---   , description =
---       "Tried to perform an action with an invalid argument"
---   , message =
---       "Expected \"dataTypes\" values to be one of response, got [object String] \"request\""
---   , stacktrace =
---       Just
---         "RemoteError@chrome://remote/content/shared/RemoteError.sys.mjs:8:8\nWebDriverError@chrome://remote/content/shared/webdriver/Errors.sys.mjs:202:5\nInvalidArgumentError@chrome://remote/content/shared/webdriver/Errors.sys.mjs:404:5\naddDataCollector@chrome://remote/content/webdriver-bidi/modules/root/network.sys.mjs:514:15\nhandleCommand@chrome://remote/content/shared/messagehandler/MessageHandler.sys.mjs:260:33\nexecute@chrome://remote/content/shared/webdriver/Session.sys.mjs:410:32\nonPacket@chrome://remote/content/webdriver-bidi/WebDriverBiDiConnection.sys.mjs:236:37\nonMessage@chrome://remote/content/server/WebSocketTransport.sys.mjs:127:18\nhandleEvent@chrome://remote/content/server/WebSocketTransport.sys.mjs:109:14\n"
---   , extensions = MkEmptyResult { extensible = fromList [] }
---   }
 networkDataCollectorDemo :: BiDiDemo
 networkDataCollectorDemo =
   demo "Network I - Data Collector Management" action
@@ -93,31 +52,32 @@ networkDataCollectorDemo =
       logShow "Basic data collector added" collector1
       pause
 
-      logTxt "Test 2: Add data collector with specific collector type"
-      collector2 <-
-        networkAddDataCollector $
-          MkAddDataCollector
-            { dataTypes = [MkDataType "request", MkDataType "response"],
-              maxEncodedDataSize = MkJSUInt 2048,
-              collectorType = Just (MkCollectorType "blob"),
-              contexts = Nothing,
-              userContexts = Nothing
-            }
-      logShow "Typed data collector added" collector2
-      pause
+      -- not allowable in spec yet MkDataType must always be: request
+      -- logTxt "Test 2: Add data collector with specific collector type"
+      -- collector2 <-
+      --   networkAddDataCollector $
+      --     MkAddDataCollector
+      --       { dataTypes = [MkDataType "request", MkDataType "response"],
+      --         maxEncodedDataSize = MkJSUInt 2048,
+      --         collectorType = Just (MkCollectorType "blob"),
+      --         contexts = Nothing,
+      --         userContexts = Nothing
+      --       }
+      -- logShow "Typed data collector added" collector2
+      -- pause
 
-      logTxt "Test 3: Add data collector targeting specific browsing context"
-      collector3 <-
-        networkAddDataCollector $
-          MkAddDataCollector
-            { dataTypes = [MkDataType "response"],
-              maxEncodedDataSize = MkJSUInt 4096,
-              collectorType = Just (MkCollectorType "stream"),
-              contexts = Just [bc],
-              userContexts = Nothing
-            }
-      logShow "Context-specific data collector added" collector3
-      pause
+      -- logTxt "Test 3: Add data collector targeting specific browsing context"
+      -- collector3 <-
+      --   networkAddDataCollector $
+      --     MkAddDataCollector
+      --       { dataTypes = [MkDataType "response"],
+      --         maxEncodedDataSize = MkJSUInt 4096,
+      --         collectorType = Just (MkCollectorType "stream"),
+      --         contexts = Just [bc],
+      --         userContexts = Nothing
+      --       }
+      -- logShow "Context-specific data collector added" collector3
+      -- pause
 
       logTxt "Test 4: Create user context for targeted data collection"
       userContext <-
@@ -130,32 +90,31 @@ networkDataCollectorDemo =
       logShow "User context created" userContext
       pause
 
--- not supported in geckodriver yet
-      logTxt "Test 5: Add data collector targeting specific user context"
-      collector4 <-
-        networkAddDataCollector $
-          MkAddDataCollector
-            { dataTypes = [MkDataType "request"],
-              maxEncodedDataSize = MkJSUInt 8192,
-              collectorType = Nothing,
-              contexts = Nothing,
-              userContexts = Just [userContext]
-            }
-      logShow "User context-specific data collector added" collector4
-      pause
+      -- logTxt "Test 5: Add data collector targeting specific user context"
+      -- collector4 <-
+      --   networkAddDataCollector $
+      --     MkAddDataCollector
+      --       { dataTypes = [MkDataType "request"],
+      --         maxEncodedDataSize = MkJSUInt 8192,
+      --         collectorType = Nothing,
+      --         contexts = Nothing,
+      --         userContexts = Just [userContext]
+      --       }
+      -- logShow "User context-specific data collector added" collector4
+      -- pause
 
-      logTxt "Test 6: Add data collector with multiple data types and large size"
-      collector5 <-
-        networkAddDataCollector $
-          MkAddDataCollector
-            { dataTypes = [MkDataType "request", MkDataType "response", MkDataType "websocket"],
-              maxEncodedDataSize = MkJSUInt 16384,
-              collectorType = Just (MkCollectorType "buffer"),
-              contexts = Just [bc],
-              userContexts = Just [userContext]
-            }
-      logShow "Multi-type data collector added" collector5
-      pause
+      -- logTxt "Test 6: Add data collector with multiple data types and large size"
+      -- collector5 <-
+      --   networkAddDataCollector $
+      --     MkAddDataCollector
+      --       { dataTypes = [MkDataType "request", MkDataType "response", MkDataType "websocket"],
+      --         maxEncodedDataSize = MkJSUInt 16384,
+      --         collectorType = Just (MkCollectorType "buffer"),
+      --         contexts = Just [bc],
+      --         userContexts = Just [userContext]
+      --       }
+      -- logShow "Multi-type data collector added" collector5
+      -- pause
 
       logTxt "Navigation to trigger some network activity for data collection"
       navResult <-
@@ -175,25 +134,25 @@ networkDataCollectorDemo =
       logShow "Removed basic data collector" removeResult1
       pause
 
-      let MkAddDataCollectorResult collectorId2 = collector2
-      removeResult2 <- networkRemoveDataCollector $ MkRemoveDataCollector collectorId2
-      logShow "Removed typed data collector" removeResult2
-      pause
+      -- let MkAddDataCollectorResult collectorId2 = collector2
+      -- removeResult2 <- networkRemoveDataCollector $ MkRemoveDataCollector collectorId2
+      -- logShow "Removed typed data collector" removeResult2
+      -- pause
 
-      let MkAddDataCollectorResult collectorId3 = collector3
-      removeResult3 <- networkRemoveDataCollector $ MkRemoveDataCollector collectorId3
-      logShow "Removed context-specific data collector" removeResult3
-      pause
+      -- let MkAddDataCollectorResult collectorId3 = collector3
+      -- removeResult3 <- networkRemoveDataCollector $ MkRemoveDataCollector collectorId3
+      -- logShow "Removed context-specific data collector" removeResult3
+      -- pause
 
-      let MkAddDataCollectorResult collectorId4 = collector4
-      removeResult4 <- networkRemoveDataCollector $ MkRemoveDataCollector collectorId4
-      logShow "Removed user context-specific data collector" removeResult4
-      pause
+      -- let MkAddDataCollectorResult collectorId4 = collector4
+      -- removeResult4 <- networkRemoveDataCollector $ MkRemoveDataCollector collectorId4
+      -- logShow "Removed user context-specific data collector" removeResult4
+      -- pause
 
-      let MkAddDataCollectorResult collectorId5 = collector5
-      removeResult5 <- networkRemoveDataCollector $ MkRemoveDataCollector collectorId5
-      logShow "Removed multi-type data collector" removeResult5
-      pause
+      -- let MkAddDataCollectorResult collectorId5 = collector5
+      -- removeResult5 <- networkRemoveDataCollector $ MkRemoveDataCollector collectorId5
+      -- logShow "Removed multi-type data collector" removeResult5
+      -- pause
 
       logTxt "Cleanup - remove user context"
       removeUC <- browserRemoveUserContext $ MkRemoveUserContext userContext
@@ -378,6 +337,39 @@ handleNoSuchRequestError log action = catch action $ \e -> do
   log "Expected \"no such request\" error ~ request not initialised"
 
 -- >>> runDemo networkRequestResponseModificationDemo
+-- *** Exception: Error executing BiDi command: MkCommand
+--   { method = "network.continueRequest"
+--   , params =
+--       MkContinueRequest
+--         { request = MkRequestId { id = "example-request-id-001" }
+--         , body = Nothing
+--         , cookies = Nothing
+--         , headers = Nothing
+--         , method = Nothing
+--         , url = Nothing
+--         }
+--   , extended = Nothing
+--   }
+-- With JSON: 
+-- {
+--     "id": 2,
+--     "method": "network.continueRequest",
+--     "params": {
+--         "request": "example-request-id-001"
+--     }
+-- }
+-- BiDi driver error: 
+-- MkDriverError
+--   { id = Just 2
+--   , error = NoSuchRequest
+--   , description = "Tried to continue an unknown request"
+--   , message =
+--       "Blocked request with id example-request-id-001 not found"
+--   , stacktrace =
+--       Just
+--         "RemoteError@chrome://remote/content/shared/RemoteError.sys.mjs:8:8\nWebDriverError@chrome://remote/content/shared/webdriver/Errors.sys.mjs:202:5\nNoSuchRequestError@chrome://remote/content/shared/webdriver/Errors.sys.mjs:733:5\ncontinueRequest@chrome://remote/content/webdriver-bidi/modules/root/network.sys.mjs:776:13\nhandleCommand@chrome://remote/content/shared/messagehandler/MessageHandler.sys.mjs:260:33\nexecute@chrome://remote/content/shared/webdriver/Session.sys.mjs:410:32\nonPacket@chrome://remote/content/webdriver-bidi/WebDriverBiDiConnection.sys.mjs:236:37\nonMessage@chrome://remote/content/server/WebSocketTransport.sys.mjs:127:18\nhandleEvent@chrome://remote/content/server/WebSocketTransport.sys.mjs:109:14\n"
+--   , extensions = MkEmptyResult { extensible = fromList [] }
+--   }
 networkRequestResponseModificationDemo :: BiDiDemo
 networkRequestResponseModificationDemo =
   demo "Network III - Request and Response Modification" action
