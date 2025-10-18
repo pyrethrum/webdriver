@@ -902,5 +902,3 @@ browsingContextPrintAndSetViewportDemo =
             }
       logTxt $ "Print result - pages 1 and 3: " <> case printSpecificPages of MkPrintResult {base64Text} -> base64Text
       pause
-
-      closeContext utils cmds bc

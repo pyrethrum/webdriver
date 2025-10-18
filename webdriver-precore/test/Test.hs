@@ -36,23 +36,23 @@ tests :: TestTree
 tests =
   testGroup
     "Tests"
-    -- [ unitTests,
-    --   propertyTests,
-    --   bidiDemos
-    -- ]
-
-    [ bidiTest
-        "Browsing Context"
-        [ BrowsingContext.browsingContextCreateActivateCloseDemo,
-          BrowsingContext.browsingContextCaptureScreenshotCloseDemo,
-          BrowsingContext.browsingContextClosePromptUnloadDemo,
-          BrowsingContext.browsingContextGetTreeDemo,
-          BrowsingContext.browsingContextHandleUserPromptDemo,
-          BrowsingContext.browsingNavigateReloadTraverseHistoryDemo,
-          BrowsingContext.browsingContextLocateNodesDemo,
-          BrowsingContext.browsingContextPrintAndSetViewportDemo
-        ]
+    [ unitTests,
+      propertyTests,
+      bidiDemos
     ]
+
+-- [ bidiTest
+--     "Browsing Context"
+--     [ BrowsingContext.browsingContextCreateActivateCloseDemo,
+--       BrowsingContext.browsingContextCaptureScreenshotCloseDemo,
+--       BrowsingContext.browsingContextClosePromptUnloadDemo,
+--       BrowsingContext.browsingContextGetTreeDemo,
+--       BrowsingContext.browsingContextHandleUserPromptDemo,
+--       BrowsingContext.browsingNavigateReloadTraverseHistoryDemo,
+--       BrowsingContext.browsingContextLocateNodesDemo,
+--       BrowsingContext.browsingContextPrintAndSetViewportDemo
+--     ]
+-- ]
 
 unitTests :: TestTree
 unitTests =
@@ -105,7 +105,7 @@ bidiDemos =
               Browser.browserRemoveUserContextDemo,
               Browser.browserCompleteWorkflowDemo,
               biDiError
-                "Use the WebDriver classic \"Delete Session\" command instead"
+                "Closing the browser in a session started with WebDriver classic is not supported"
                 Browser.browserCloseDemo
             ],
           bidiTest
@@ -259,8 +259,18 @@ biDiError errorFragment MkBiDiDemo {name, action} =
           Left (e :: SomeException) -> do
             let errText = txt $ show e
             if errorFragment `T.isInfixOf` errText
-              then utils.logTxt $ "Caught expected error: " <> errText
-              else fail $ "Error did not contain expected fragment. Got: " <> unpack errText
+              then utils.logTxt $ "Caught expected error:\n" <> errText
+              else
+                fail $
+                  "Error did not contain expected fragment."
+                    <> "\n"
+                    <> "Actual Error was:"
+                    <> "\n"
+                    <> unpack errText
+                    <> "\n"
+                    <> " Expected Fragment was: "
+                    <> "\n"
+                    <> unpack errorFragment
           Right _ ->
             fail "Expected error, but action completed successfully."
     }

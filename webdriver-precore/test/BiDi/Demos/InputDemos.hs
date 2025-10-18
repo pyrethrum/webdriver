@@ -12,21 +12,6 @@ import WebDriverPreCore.BiDi.Input
 import WebDriverPreCore.BiDi.Protocol
 import Prelude hiding (log)
 
-{-
-Input Module Commands (3 total):
-
-1. input.performActions - Performs a specified sequence of user input actions ✓
-2. input.releaseActions - Resets the input state associated with the current session ✓
-3. input.setFiles - Sets the files property of a given input element with type file to a set of file paths ✓
-
-Demo coverage:
-- inputKeyboardDemo - Key input actions
-- inputPointerDemo - Mouse/pointer actions
-- inputWheelDemo - Wheel/scroll actions
-- inputCombinedActionsDemo - Multiple action types together
-- inputReleaseActionsDemo - Release input state
-- inputSetFilesDemo - File upload functionality
--}
 
 -- Helper function to create default pointer common properties
 defaultPointerProps :: PointerCommonProperties

@@ -37,8 +37,9 @@ import Const (seconds, Timeout (..))
 import IOUtils (DemoUtils (..))
 
 
+-- TODO: deprecate 
 pauseMs :: Timeout
-pauseMs = MkTimeout 1000000
+pauseMs = MkTimeout 0
 
 data BiDiDemo = MkBiDiDemo
   { name :: Text,
