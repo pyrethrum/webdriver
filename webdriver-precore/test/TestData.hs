@@ -6,12 +6,13 @@ import Prelude
 import Data.ByteString qualified as BS
 import Data.ByteString.Base64 qualified as B64
 import Data.Base64.Types qualified as B64T
+import System.FilePath ((</>))
 
 testDir :: FilePath
-testDir = "webdriver-examples/driver-demo-e2e/TestFiles/"
+testDir = "webdriver-precore/test/TestFiles"
 
 testPath :: FilePath -> IO Text
-testPath filename = pack <$> canonicalizePath (testDir <> filename)
+testPath filename = pack <$> canonicalizePath (testDir </> filename)
 
 
 fileUrl :: FilePath -> IO Text
@@ -19,7 +20,7 @@ fileUrl = fmap ((<>) "file://") . testPath
 
 -- | Get absolute file path for upload test files
 uploadFilePath :: FilePath -> IO Text
-uploadFilePath filename = pack <$> canonicalizePath (testDir <> "uploadFiles/" <> filename)
+uploadFilePath filename = pack <$> canonicalizePath (testDir </> "uploadFiles" </> filename)
 
 
 demoExtensionDirPath :: IO Text
