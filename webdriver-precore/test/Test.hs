@@ -213,14 +213,21 @@ bidiDemos =
               biDiError
                 "Expected event did not fire: BrowsingContextHistoryUpdated"
                 BrowsingContextEvent.browsingContextEventHistoryUpdated,
-              BrowsingContextEvent.browsingContextEventNavigationAborted,
+              -- not supporrted in geckodriver yet
+              biDiError
+                "browsingContext.navigationAborted is not a valid event name"
+                BrowsingContextEvent.browsingContextEventNavigationAborted,
               BrowsingContextEvent.browsingContextEventNavigationFailed,
               BrowsingContextEvent.browsingContextEventDownloadWillBegin,
-              BrowsingContextEvent.browsingContextEventDownloadEnd
+              biDiError
+                "browsingContext.downloadEnd is not a valid event name"
+                BrowsingContextEvent.browsingContextEventDownloadEnd
             ],
           bidiTest
             "Input Events"
-            [ InputEvent.inputEventFileDialogOpened
+            [ biDiError
+                "input.fileDialogOpened is not a valid event name"
+                InputEvent.inputEventFileDialogOpened
             ],
           bidiTest
             "Log Events"

@@ -193,11 +193,12 @@ browsingContextEventDemoFilteredSubscriptions =
       logShow "Subscribed to multi navigation started for browsing context 1" subIdm
 
       -- Navigate browsing context 2 (should NOT trigger event)
+      txturl <- textAreaUrl
       logTxt "Navigating browsing context 2 to textArea.html (should NOT trigger event)"
       browsingContextNavigate $
         MkNavigate
           { context = bc2,
-            url = "file:///home/john-walker/repos/webdriver/webdriver-examples/driver-demo-e2e/TestFiles/textArea.html",
+            url = txturl,
             wait = Nothing
           }
 
