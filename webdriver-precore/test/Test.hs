@@ -1,11 +1,14 @@
 module Main where
 
-import GHC.IO (IO)
 import Test.Tasty (TestTree, defaultMain, testGroup)
 import Test.Tasty.HUnit (testCase)
 import qualified ApiCoverageTest as API
 import qualified ErrorCoverageTest as Error
 import qualified JSONParsingTest as JSON
+import BiDi.DemoUtils (BiDiDemo(..), runDemo')
+import Const (Timeout(MkTimeout, microseconds))
+import Prelude
+import Data.Text (unpack)
 
 main :: IO ()
 main = defaultMain tests
@@ -41,3 +44,11 @@ propertyTests =
         [ JSON.test_round_trip
         ]
     ]
+
+fromBidiDemo :: BiDiDemo -> TestTree
+fromBidiDemo demo = 
+  testCase (unpack demo.name) $ runDemo' MkTimeout {microseconds = 0} demo
+
+
+bidiDemos :: TestTree
+bidiDemos =

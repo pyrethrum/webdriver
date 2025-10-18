@@ -48,9 +48,12 @@ data BiDiDemo = MkBiDiDemo
 demo :: Text -> (DemoUtils -> BiDiActions -> IO ()) -> BiDiDemo
 demo name action = MkBiDiDemo {name, action}
 
+runDemo' :: Timeout -> BiDiDemo -> IO ()
+runDemo' pauseMs' d =
+  mkDemoBiDiClientParams pauseMs' >>= \p -> withCommands p d.action
+
 runDemo :: BiDiDemo -> IO ()
-runDemo d =
-  mkDemoBiDiClientParams pauseMs >>= \p -> withCommands p d.action
+runDemo = runDemo' pauseMs
 
 
 newWindowContext :: DemoUtils -> BiDiActions -> IO BrowsingContext
