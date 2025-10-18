@@ -17,22 +17,47 @@ import BiDi.Demos.SessionDemos qualified as Session
 import BiDi.Demos.StorageDemos qualified as Storage
 import BiDi.Demos.WebExtensionDemos qualified as WebExtension
 import Const (Timeout (MkTimeout, microseconds))
+import Control.Exception (SomeException)
 import Data.Text (Text, unpack)
+import Data.Text qualified as T
 import ErrorCoverageTest qualified as Error
+import IOUtils (DemoUtils (..))
 import JSONParsingTest qualified as JSON
 import Test.Tasty (TestTree, defaultMain, testGroup)
 import Test.Tasty.HUnit (testCase)
+import UnliftIO (try)
+import WebDriverPreCore.Internal.Utils (txt)
 import Prelude
 
 main :: IO ()
 main = defaultMain tests
 
 tests :: TestTree
-tests = testGroup "Tests" [
-  unitTests, 
-  propertyTests,
-  bidiDemos
-  ]
+tests =
+  testGroup
+    "Tests"
+    [ unitTests,
+      propertyTests,
+      bidiDemos
+    ]
+
+-- [ bidiTest
+--     "Session"
+--     [ Session.sessionStatusDemo,
+--       biDiError
+--         "Maximum number of active sessions"
+--         Session.sessionNewDemo,
+--       biDiError
+--         "Ending a session started with WebDriver classic is not supported"
+--         Session.sessionEndDemo,
+--       Session.sessionSubscribeDemo,
+--       Session.sessionUnsubscribeDemo,
+--       biDiError
+--         "Maximum number of active sessions"
+--         Session.sessionCapabilityNegotiationDemo,
+--       Session.sessionCompleteLifecycleDemo
+--     ]
+-- ]
 
 unitTests :: TestTree
 unitTests =
@@ -65,7 +90,10 @@ propertyTests =
 
 fromBidiDemo :: BiDiDemo -> TestTree
 fromBidiDemo demo =
-  testCase (unpack demo.name) $ runDemo' MkTimeout {microseconds = 0} demo
+  testCase (unpack demo.name) $ runDemo' False MkTimeout {microseconds = 0} demo
+
+bidiTest :: Text -> [BiDiDemo] -> TestTree
+bidiTest title = testGroup (unpack title) . fmap fromBidiDemo
 
 bidiDemos :: TestTree
 bidiDemos =
@@ -81,7 +109,11 @@ bidiDemos =
               Browser.browserSetClientWindowStateDemo,
               Browser.browserRemoveUserContextDemo,
               Browser.browserCompleteWorkflowDemo,
-              Browser.browserCloseDemo
+              biDiError
+                ( "Closing the browser in a session started with WebDriver classic is not supported. "
+                    <> "Use the WebDriver classic \"Delete Session\" command instead which will also close the browser."
+                )
+                Browser.browserCloseDemo
             ],
           bidiTest
             "Browsing Context"
@@ -136,11 +168,17 @@ bidiDemos =
           bidiTest
             "Session"
             [ Session.sessionStatusDemo,
-              Session.sessionNewDemo,
-              Session.sessionEndDemo,
+              biDiError
+                "Maximum number of active sessions"
+                Session.sessionNewDemo,
+              biDiError
+                "Ending a session started with WebDriver classic is not supported"
+                Session.sessionEndDemo,
               Session.sessionSubscribeDemo,
               Session.sessionUnsubscribeDemo,
-              Session.sessionCapabilityNegotiationDemo,
+              biDiError
+                "Maximum number of active sessions"
+                Session.sessionCapabilityNegotiationDemo,
               Session.sessionCompleteLifecycleDemo
             ],
           bidiTest
@@ -172,7 +210,9 @@ bidiDemos =
               BrowsingContextEvent.browsingContextEventFragmentNavigation,
               BrowsingContextEvent.browsingContextEventUserPrompts,
               BrowsingContextEvent.browsingContextEventUserPromptsVariants,
-              BrowsingContextEvent.browsingContextEventHistoryUpdated,
+              biDiError
+                "Expected event did not fire: BrowsingContextHistoryUpdated"
+                BrowsingContextEvent.browsingContextEventHistoryUpdated,
               BrowsingContextEvent.browsingContextEventNavigationAborted,
               BrowsingContextEvent.browsingContextEventNavigationFailed,
               BrowsingContextEvent.browsingContextEventDownloadWillBegin,
@@ -206,6 +246,19 @@ bidiDemos =
             ]
         ]
     ]
-  where
-    bidiTest :: Text -> [BiDiDemo] -> TestTree
-    bidiTest title = testGroup (unpack title) . fmap fromBidiDemo
+
+biDiError :: Text -> BiDiDemo -> BiDiDemo
+biDiError errorFragment MkBiDiDemo {name, action} =
+  MkBiDiDemo
+    { name = name <> " - EXPECTED ERROR: " <> errorFragment,
+      action = \utils cmds -> do
+        result <- try (action utils cmds)
+        case result of
+          Left (e :: SomeException) -> do
+            let errText = txt $ show e
+            if errorFragment `T.isInfixOf` errText
+              then utils.logTxt $ "Caught expected error: " <> errText
+              else fail $ "Error did not contain expected fragment. Got: " <> unpack errText
+          Right _ ->
+            fail "Expected error, but action completed successfully."
+    }

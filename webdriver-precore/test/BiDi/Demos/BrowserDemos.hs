@@ -241,12 +241,12 @@ browserCompleteWorkflowDemo =
       logShow "Final client windows" finalWindows
       logShow "Final user contexts" finalContexts
 
--- will fail with: "Closing the browser in a session started with WebDriver classic is not supported. 
 -- >>> runDemo browserCloseDemo
 browserCloseDemo :: BiDiDemo
 browserCloseDemo =
   demo "Browser - Close (CAUTION: Terminates Session)" action
   where
+    -- will fail with: "Closing the browser in a session started with WebDriver classic is not supported."
     action :: DemoUtils -> BiDiActions -> IO ()
     action MkDemoUtils {..} MkCommands {..} = do
 

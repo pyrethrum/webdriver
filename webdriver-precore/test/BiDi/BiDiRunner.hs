@@ -487,10 +487,12 @@ sendCommand m@MkBiDiMethods {getNext} command = do
               )
           )
 
-mkDemoBiDiClientParams :: Timeout -> IO BiDiClientParams
-mkDemoBiDiClientParams pauseMs = do
+mkDemoBiDiClientParams :: Bool -> Timeout -> IO BiDiClientParams
+mkDemoBiDiClientParams logging pauseMs = do
   c <- mkChannels
-  logger@MkLogger {log} <- mkLogger (c.logChan)
+  logger@MkLogger {log} <- if logging 
+    then mkLogger (c.logChan)
+    else pure MkLogger { log = const $ pure () , waitEmpty = pure () }
   pure $
     MkBiDiClientParams
       { biDiMethods = mkBiDIMethods c,
@@ -872,7 +874,7 @@ withClient
                 throw e
             )
             (pure)
-        putStrLn "Disconnecting client"
+        -- putStrLn "Disconnecting client"
     where
       log = logger.log
 

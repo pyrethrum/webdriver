@@ -1,30 +1,46 @@
 module TestData where
 
-import Data.Text (Text, pack, unpack)
-import System.Directory (canonicalizePath)
-import Prelude
+import Data.Base64.Types qualified as B64T
 import Data.ByteString qualified as BS
 import Data.ByteString.Base64 qualified as B64
-import Data.Base64.Types qualified as B64T
+import Data.Text (Text, pack, unpack)
+import IOUtils (findWebDriverRoot)
+import System.Directory (canonicalizePath, getCurrentDirectory)
 import System.FilePath ((</>))
+import WebDriverPreCore.Internal.Utils (db)
+import Prelude
 
-testDir :: FilePath
-testDir = "webdriver-precore/test/TestFiles"
+
+testFilesDir :: IO FilePath
+testFilesDir = do
+  currentDir <- getCurrentDirectory
+  case findWebDriverRoot currentDir of
+    Just root -> pure $ root </> testFilesSubDir 
+    Nothing ->
+      error $
+        "Could not find 'webdriver' root directory from: "
+          <> currentDir
+          <> "\n tests are expected to be run from the 'webdriver' directory or "
+          <> testFilesSubDir
+  where
+    testFilesSubDir = "webdriver-precore" </> "test" </> "TestFiles"
 
 testPath :: FilePath -> IO Text
-testPath filename = pack <$> canonicalizePath (testDir </> filename)
+testPath filename = 
+   pack . (</> filename) <$> testFilesDir
 
 
 fileUrl :: FilePath -> IO Text
-fileUrl = fmap ((<>) "file://") . testPath
+fileUrl fp = fmap ((<>) "file://") (testPath fp)
 
 -- | Get absolute file path for upload test files
 uploadFilePath :: FilePath -> IO Text
-uploadFilePath filename = pack <$> canonicalizePath (testDir </> "uploadFiles" </> filename)
-
+uploadFilePath filename = do 
+  testDir <- testFilesDir
+  pure . pack $ testDir </> "uploadFiles" </> filename
 
 demoExtensionDirPath :: IO Text
-demoExtensionDirPath = testPath "demoExtension/"
+demoExtensionDirPath = testPath "demoExtension"
 
 demoExtensionZipPath :: IO Text
 demoExtensionZipPath = testPath "demoExtension.zip"

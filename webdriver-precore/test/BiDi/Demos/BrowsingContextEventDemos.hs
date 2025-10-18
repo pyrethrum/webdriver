@@ -170,8 +170,9 @@ browsingContextEventDemoFilteredSubscriptions =
       logTxt "Navigating both contexts to different URLs"
 
       -- Navigate browsing context 1 (should trigger event)
+      chkBxsUrl <- checkboxesUrl
       logTxt "Navigating browsing context 1 to checkboxes.html (SHOULD trigger event)"
-      browsingContextNavigate $ MkNavigate bc1 "file:///home/john-walker/repos/webdriver/webdriver-examples/driver-demo-e2e/TestFiles/checkboxes.html" Nothing
+      browsingContextNavigate $ MkNavigate bc1 chkBxsUrl Nothing
       pause
 
       logTxt "Resubscribe singleton and many filtered by bc1 (should not fire)"
@@ -272,8 +273,9 @@ browsingContextEventDemoUserContextFiltered =
 
 
       -- Navigate browsing context 1 (should trigger event)
+      chkBxsUrl <- checkboxesUrl
       logTxt "Navigating browsing context 1 to checkboxes.html (SHOULD trigger event)"
-      browsingContextNavigate $ MkNavigate bc1 "file:///home/john-walker/repos/webdriver/webdriver-examples/driver-demo-e2e/TestFiles/checkboxes.html" Nothing
+      browsingContextNavigate $ MkNavigate bc1 chkBxsUrl Nothing
       pause
 -- >>> runDemo browsingContextEventCreateDestroy
 browsingContextEventCreateDestroy :: BiDiDemo
@@ -546,9 +548,7 @@ browsingContextEventUserPromptsVariants =
       pause
 
 -- >>> runDemo browsingContextEventHistoryUpdated
-
 -- *** Exception: user error (Timeout - Expected event did not fire: BrowsingContextHistoryUpdated)
-
 browsingContextEventHistoryUpdated :: BiDiDemo
 browsingContextEventHistoryUpdated =
   demo "Browsing Context Events - History Updated" action

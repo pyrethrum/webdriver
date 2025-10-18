@@ -85,25 +85,21 @@ data AddDataCollector = MkAddDataCollector
   }
   deriving (Show, Eq, Generic)
 
-instance ToJSON AddDataCollector
+instance ToJSON AddDataCollector where
+  toJSON :: AddDataCollector -> Value
+  toJSON = toJSONOmitNothing
 
 -- TODO - not sure what this is about
 -- network.DataType = "response"
 newtype DataType = MkDataType {dataType :: Text}
   deriving (Show, Eq, Generic)
-
-instance FromJSON DataType
-
-instance ToJSON DataType
+  deriving newtype (FromJSON, ToJSON)
 
 -- TODO - not sure what this is about
 -- network.CollectorType = "blob"
 newtype CollectorType = MkCollectorType {collectorType :: Text}
   deriving (Show, Eq, Generic)
-
-instance FromJSON CollectorType
-
-instance ToJSON CollectorType
+  deriving newtype (FromJSON, ToJSON)
 
 data DisownData = MkDisownData
   { dataType :: DataType,
@@ -116,10 +112,7 @@ instance ToJSON DisownData
 
 newtype Collector = MkCollector {collector :: Text}
   deriving (Show, Eq, Generic)
-
-instance FromJSON Collector
-
-instance ToJSON Collector
+  deriving newtype (FromJSON, ToJSON)
 
 newtype Request = MkRequest {request :: Text}
   deriving (Show, Eq, Generic)

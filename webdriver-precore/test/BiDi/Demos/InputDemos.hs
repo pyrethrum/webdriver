@@ -1050,5 +1050,3 @@ inputSetFilesDemo =
           _ -> do
             logTxt "Could not find multiple file input element or extract sharedId"
             pause
-
-      closeContext utils cmds bc

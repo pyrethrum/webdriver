@@ -18,6 +18,7 @@ module IOUtils
     sleep1,
     sleep2,
     (===),
+    findWebDriverRoot,
   )
 where
 
@@ -36,11 +37,24 @@ import UnliftIO (TChan, atomically, isEmptyTChan, race_, readTMVar, tryPutTMVar,
 import UnliftIO.STM (newEmptyTMVarIO)
 import WebDriverPreCore.Internal.Utils (txt)
 import Prelude hiding (log)
+import System.FilePath (splitDirectories, joinPath, (</>))
 
 data Logger = MkLogger
   { log :: Text -> IO (),
     waitEmpty :: IO ()
   }
+
+
+findWebDriverRoot :: FilePath -> Maybe FilePath
+findWebDriverRoot path =
+  if rootDir `elem` dirs
+    then Just webDriverPath
+    else Nothing
+  where
+    rootDir = "webdriver"
+    dirs = splitDirectories path
+    webDriverPath = (joinPath $ takeWhile (/= rootDir) dirs) </> rootDir
+
 
 --  TODO : deprectate static logTxt et al
 

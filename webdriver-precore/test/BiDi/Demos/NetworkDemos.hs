@@ -30,8 +30,48 @@ import Const (second)
 -}
 
 
--- not supported in geckodriver yet
 -- >>> runDemo networkDataCollectorDemo
+-- *** Exception: Error executing BiDi command: MkCommand
+--   { method = "network.addDataCollector"
+--   , params =
+--       MkAddDataCollector
+--         { dataTypes =
+--             [ MkDataType { dataType = "request" }
+--             , MkDataType { dataType = "response" }
+--             ]
+--         , maxEncodedDataSize = 2048
+--         , collectorType = Just MkCollectorType { collectorType = "blob" }
+--         , contexts = Nothing
+--         , userContexts = Nothing
+--         }
+--   , extended = Nothing
+--   }
+-- With JSON: 
+-- {
+--     "id": 3,
+--     "method": "network.addDataCollector",
+--     "params": {
+--         "collectorType": "blob",
+--         "dataTypes": [
+--             "request",
+--             "response"
+--         ],
+--         "maxEncodedDataSize": 2048
+--     }
+-- }
+-- BiDi driver error: 
+-- MkDriverError
+--   { id = Just 3
+--   , error = InvalidArgument
+--   , description =
+--       "Tried to perform an action with an invalid argument"
+--   , message =
+--       "Expected \"dataTypes\" values to be one of response, got [object String] \"request\""
+--   , stacktrace =
+--       Just
+--         "RemoteError@chrome://remote/content/shared/RemoteError.sys.mjs:8:8\nWebDriverError@chrome://remote/content/shared/webdriver/Errors.sys.mjs:202:5\nInvalidArgumentError@chrome://remote/content/shared/webdriver/Errors.sys.mjs:404:5\naddDataCollector@chrome://remote/content/webdriver-bidi/modules/root/network.sys.mjs:514:15\nhandleCommand@chrome://remote/content/shared/messagehandler/MessageHandler.sys.mjs:260:33\nexecute@chrome://remote/content/shared/webdriver/Session.sys.mjs:410:32\nonPacket@chrome://remote/content/webdriver-bidi/WebDriverBiDiConnection.sys.mjs:236:37\nonMessage@chrome://remote/content/server/WebSocketTransport.sys.mjs:127:18\nhandleEvent@chrome://remote/content/server/WebSocketTransport.sys.mjs:109:14\n"
+--   , extensions = MkEmptyResult { extensible = fromList [] }
+--   }
 networkDataCollectorDemo :: BiDiDemo
 networkDataCollectorDemo =
   demo "Network I - Data Collector Management" action

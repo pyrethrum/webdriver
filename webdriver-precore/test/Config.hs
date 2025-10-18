@@ -10,7 +10,7 @@ import Control.Monad (unless, when)
 import Data.Text as T (Text, pack, unlines)
 import Data.Text.IO qualified as T
 import Dhall (FromDhall, Generic, ToDhall, auto, input)
-import IOUtils (logShow)
+import IOUtils (logShow, findWebDriverRoot)
 import System.Directory (doesFileExist, getCurrentDirectory)
 import System.FilePath (combine, joinPath, splitDirectories, (</>))
 import Prelude
@@ -39,27 +39,19 @@ instance FromDhall Config
 
 instance ToDhall Config
 
-findWebDriverRoot :: FilePath -> Maybe FilePath
-findWebDriverRoot path =
-  if rootDir `elem` dirs
-    then Just webDriverPath
-    else Nothing
-  where
-    rootDir = "webdriver"
-    dirs = splitDirectories path
-    webDriverPath = (joinPath $ takeWhile (/= rootDir) dirs) </> rootDir
-
 configDir :: IO FilePath
 configDir = do
   currentDir <- getCurrentDirectory
   case findWebDriverRoot currentDir of
-    Just root -> pure $ root </> "webdriver-precore" </> "test" </> ".config"
+    Just root -> pure $ root </> testSubDir </> ".config"
     Nothing ->
       error $
         "Could not find 'webdriver' root directory from: "
           <> currentDir
           <> "\n tests are expected to be run from the 'webdriver' directory or "
-          <> ("webdriver" </> "webdriver-examples")
+          <> testSubDir
+  where 
+    testSubDir =  "webdriver-precore" </> "test" 
 
 initialiseTestConfig :: IO ()
 initialiseTestConfig = do
