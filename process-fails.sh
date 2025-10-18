@@ -67,8 +67,8 @@ while IFS= read -r line; do
           file_name=$(basename "$file_path")
           module_name=$(basename "$file_name" .hs)
           
-          # Create clickable link (VS Code format)
-          clickable_link="$file_path:$line_number"
+          # Create clickable link with file:// protocol and full path
+          clickable_link="file://$file_path:$line_number"
           
           # Write header and content to output
           echo "" >> "$output_file"

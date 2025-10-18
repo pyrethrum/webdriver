@@ -11,25 +11,6 @@ import WebDriverPreCore.BiDi.Protocol
 import Prelude hiding (log)
 import Const (second)
 
-{-
-
-##### Network #####
-1. networkAddDataCollector :: DONE
-2. networkAddIntercept :: DONE
-3. networkContinueRequest :: DONE
-4. networkContinueResponse :: DONE
-5. networkContinueWithAuth :: DONE
-6. networkDisownData :: DONE
-7. networkFailRequest :: DONE
-8. networkGetData :: DONE
-9. networkProvideResponse :: DONE
-10. networkRemoveDataCollector :: DONE
-11. networkRemoveIntercept :: DONE
-12. networkSetCacheBehavior :: DONE
-
--}
-
-
 -- >>> runDemo networkDataCollectorDemo
 networkDataCollectorDemo :: BiDiDemo
 networkDataCollectorDemo =
@@ -53,6 +34,7 @@ networkDataCollectorDemo =
       pause
 
       -- not allowable in spec yet MkDataType must always be: request
+      -- leaving this code here, expecting spec change 
       -- logTxt "Test 2: Add data collector with specific collector type"
       -- collector2 <-
       --   networkAddDataCollector $

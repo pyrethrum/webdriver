@@ -110,9 +110,7 @@ bidiDemos =
               Browser.browserRemoveUserContextDemo,
               Browser.browserCompleteWorkflowDemo,
               biDiError
-                ( "Closing the browser in a session started with WebDriver classic is not supported. "
-                    <> "Use the WebDriver classic \"Delete Session\" command instead which will also close the browser."
-                )
+                "Use the WebDriver classic \"Delete Session\" command instead"
                 Browser.browserCloseDemo
             ],
           bidiTest
@@ -217,7 +215,9 @@ bidiDemos =
               biDiError
                 "browsingContext.navigationAborted is not a valid event name"
                 BrowsingContextEvent.browsingContextEventNavigationAborted,
-              BrowsingContextEvent.browsingContextEventNavigationFailed,
+              biDiError
+                "Error: NS_ERROR_UNKNOWN_HOST"
+                BrowsingContextEvent.browsingContextEventNavigationFailed,
               BrowsingContextEvent.browsingContextEventDownloadWillBegin,
               biDiError
                 "browsingContext.downloadEnd is not a valid event name"
