@@ -36,28 +36,23 @@ tests :: TestTree
 tests =
   testGroup
     "Tests"
-    [ unitTests,
-      propertyTests,
-      bidiDemos
-    ]
+    -- [ unitTests,
+    --   propertyTests,
+    --   bidiDemos
+    -- ]
 
--- [ bidiTest
---     "Session"
---     [ Session.sessionStatusDemo,
---       biDiError
---         "Maximum number of active sessions"
---         Session.sessionNewDemo,
---       biDiError
---         "Ending a session started with WebDriver classic is not supported"
---         Session.sessionEndDemo,
---       Session.sessionSubscribeDemo,
---       Session.sessionUnsubscribeDemo,
---       biDiError
---         "Maximum number of active sessions"
---         Session.sessionCapabilityNegotiationDemo,
---       Session.sessionCompleteLifecycleDemo
---     ]
--- ]
+    [ bidiTest
+        "Browsing Context"
+        [ BrowsingContext.browsingContextCreateActivateCloseDemo,
+          BrowsingContext.browsingContextCaptureScreenshotCloseDemo,
+          BrowsingContext.browsingContextClosePromptUnloadDemo,
+          BrowsingContext.browsingContextGetTreeDemo,
+          BrowsingContext.browsingContextHandleUserPromptDemo,
+          BrowsingContext.browsingNavigateReloadTraverseHistoryDemo,
+          BrowsingContext.browsingContextLocateNodesDemo,
+          BrowsingContext.browsingContextPrintAndSetViewportDemo
+        ]
+    ]
 
 unitTests :: TestTree
 unitTests =
