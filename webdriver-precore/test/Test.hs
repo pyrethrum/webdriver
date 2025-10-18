@@ -1,20 +1,38 @@
 module Main where
 
+import ApiCoverageTest qualified as API
+import BiDi.DemoUtils (BiDiDemo (..), runDemo')
+import BiDi.Demos.BrowserDemos qualified as Browser
+import BiDi.Demos.BrowsingContextDemos qualified as BrowsingContext
+import BiDi.Demos.BrowsingContextEventDemos qualified as BrowsingContextEvent
+import BiDi.Demos.EmulationDemos qualified as Emulation
+import BiDi.Demos.InputDemos qualified as Input
+import BiDi.Demos.InputEventDemos qualified as InputEvent
+import BiDi.Demos.LogEventDemos qualified as LogEvent
+import BiDi.Demos.NetworkDemos qualified as Network
+import BiDi.Demos.NetworkEventDemos qualified as NetworkEvent
+import BiDi.Demos.ScriptDemos qualified as Script
+import BiDi.Demos.ScriptEventDemos qualified as ScriptEvent
+import BiDi.Demos.SessionDemos qualified as Session
+import BiDi.Demos.StorageDemos qualified as Storage
+import BiDi.Demos.WebExtensionDemos qualified as WebExtension
+import Const (Timeout (MkTimeout, microseconds))
+import Data.Text (Text, unpack)
+import ErrorCoverageTest qualified as Error
+import JSONParsingTest qualified as JSON
 import Test.Tasty (TestTree, defaultMain, testGroup)
 import Test.Tasty.HUnit (testCase)
-import qualified ApiCoverageTest as API
-import qualified ErrorCoverageTest as Error
-import qualified JSONParsingTest as JSON
-import BiDi.DemoUtils (BiDiDemo(..), runDemo')
-import Const (Timeout(MkTimeout, microseconds))
 import Prelude
-import Data.Text (unpack)
 
 main :: IO ()
 main = defaultMain tests
 
 tests :: TestTree
-tests = testGroup "Tests" [unitTests, propertyTests]
+tests = testGroup "Tests" [
+  unitTests, 
+  propertyTests,
+  bidiDemos
+  ]
 
 unitTests :: TestTree
 unitTests =
@@ -46,9 +64,148 @@ propertyTests =
     ]
 
 fromBidiDemo :: BiDiDemo -> TestTree
-fromBidiDemo demo = 
+fromBidiDemo demo =
   testCase (unpack demo.name) $ runDemo' MkTimeout {microseconds = 0} demo
-
 
 bidiDemos :: TestTree
 bidiDemos =
+  testGroup
+    "BiDi Demos"
+    [ testGroup
+        "BiDi Commands"
+        [ bidiTest
+            "Browser"
+            [ Browser.browserGetClientWindowsDemo,
+              Browser.browserCreateUserContextDemo,
+              Browser.browserGetUserContextsDemo,
+              Browser.browserSetClientWindowStateDemo,
+              Browser.browserRemoveUserContextDemo,
+              Browser.browserCompleteWorkflowDemo,
+              Browser.browserCloseDemo
+            ],
+          bidiTest
+            "Browsing Context"
+            [ BrowsingContext.browsingContextCreateActivateCloseDemo,
+              BrowsingContext.browsingContextCaptureScreenshotCloseDemo,
+              BrowsingContext.browsingContextClosePromptUnloadDemo,
+              BrowsingContext.browsingContextGetTreeDemo,
+              BrowsingContext.browsingContextHandleUserPromptDemo,
+              BrowsingContext.browsingNavigateReloadTraverseHistoryDemo,
+              BrowsingContext.browsingContextLocateNodesDemo,
+              BrowsingContext.browsingContextPrintAndSetViewportDemo
+            ],
+          bidiTest
+            "Emulation"
+            [ Emulation.emulationSetGeolocationOverrideDemo,
+              Emulation.emulationSetLocaleOverrideDemo,
+              Emulation.emulationSetScreenOrientationOverrideDemo,
+              Emulation.emulationSetTimezoneOverrideDemo,
+              Emulation.emulationCompleteWorkflowDemo
+            ],
+          bidiTest
+            "Input"
+            [ Input.inputKeyboardDemo,
+              Input.inputPointerDemo,
+              Input.inputWheelDemo,
+              Input.inputCombinedActionsDemo,
+              Input.inputReleaseActionsDemo,
+              Input.inputSetFilesDemo
+            ],
+          bidiTest
+            "Network"
+            [ Network.networkDataCollectorDemo,
+              Network.networkInterceptDemo,
+              Network.networkRequestResponseModificationDemo,
+              Network.networkAuthAndFailureDemo,
+              Network.networkProvideResponseDemo,
+              Network.networkDataRetrievalDemo,
+              Network.networkCacheBehaviorDemo
+            ],
+          bidiTest
+            "Script"
+            [ Script.scriptEvaluateAllPrimitiveTypesDemo,
+              Script.scriptEvaluateAdvancedDemo,
+              Script.serializationOptionsDemo,
+              Script.scriptPreloadScriptDemo,
+              Script.scriptPreloadScriptMultiContextDemo,
+              Script.scriptChannelArgumentDemo,
+              Script.scriptUserContextsDemo,
+              Script.scriptCallFunctionDemo,
+              Script.scriptGetRealmsAndDisownDemo
+            ],
+          bidiTest
+            "Session"
+            [ Session.sessionStatusDemo,
+              Session.sessionNewDemo,
+              Session.sessionEndDemo,
+              Session.sessionSubscribeDemo,
+              Session.sessionUnsubscribeDemo,
+              Session.sessionCapabilityNegotiationDemo,
+              Session.sessionCompleteLifecycleDemo
+            ],
+          bidiTest
+            "Storage"
+            [ Storage.storageGetCookiesDemo,
+              Storage.storageSetCookieDemo,
+              Storage.storageDeleteCookiesDemo,
+              Storage.storagePartitionKeyDemo,
+              Storage.storageCompleteWorkflowDemo
+            ],
+          bidiTest
+            "WebExtension"
+            [ WebExtension.webExtensionInstallPathDemo,
+              WebExtension.webExtensionInstallArchiveDemo,
+              WebExtension.webExtensionInstallBase64Demo,
+              WebExtension.webExtensionValidationDemo
+            ]
+        ],
+      testGroup
+        "BiDi Events"
+        [ bidiTest
+            "Browsing Context Events"
+            [ BrowsingContextEvent.browsingContextEventDemo,
+              BrowsingContextEvent.browsingContextEventDemoMulti,
+              BrowsingContextEvent.browsingContextEventDemoFilteredSubscriptions,
+              BrowsingContextEvent.browsingContextEventDemoUserContextFiltered,
+              BrowsingContextEvent.browsingContextEventCreateDestroy,
+              BrowsingContextEvent.browsingContextEventNavigationLifecycle,
+              BrowsingContextEvent.browsingContextEventFragmentNavigation,
+              BrowsingContextEvent.browsingContextEventUserPrompts,
+              BrowsingContextEvent.browsingContextEventUserPromptsVariants,
+              BrowsingContextEvent.browsingContextEventHistoryUpdated,
+              BrowsingContextEvent.browsingContextEventNavigationAborted,
+              BrowsingContextEvent.browsingContextEventNavigationFailed,
+              BrowsingContextEvent.browsingContextEventDownloadWillBegin,
+              BrowsingContextEvent.browsingContextEventDownloadEnd
+            ],
+          bidiTest
+            "Input Events"
+            [ InputEvent.inputEventFileDialogOpened
+            ],
+          bidiTest
+            "Log Events"
+            [ LogEvent.logEventConsoleEntries,
+              LogEvent.logEventConsoleLevelDebug,
+              LogEvent.logEventConsoleLevelInfo,
+              LogEvent.logEventConsoleLevelWarn,
+              LogEvent.logEventConsoleLevelError,
+              LogEvent.logEventJavascriptErrorFromButton
+            ],
+          bidiTest
+            "Network Events"
+            [ NetworkEvent.networkEventBeforeRequestSent,
+              NetworkEvent.networkEventRequestResponseLifecycle,
+              NetworkEvent.networkEventFetchError,
+              NetworkEvent.networkEventAuthRequired
+            ],
+          bidiTest
+            "Script Events"
+            [ ScriptEvent.scriptEventRealmLifecycle,
+              ScriptEvent.scriptEventMessage,
+              ScriptEvent.scriptEventMessageRuntime
+            ]
+        ]
+    ]
+  where
+    bidiTest :: Text -> [BiDiDemo] -> TestTree
+    bidiTest title = testGroup (unpack title) . fmap fromBidiDemo
