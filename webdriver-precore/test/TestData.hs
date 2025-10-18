@@ -86,3 +86,33 @@ badJavaScriptUrl = fileUrl "badJavaScript.html"
 
 uploadUrl :: IO Text
 uploadUrl = fileUrl "upload.html"
+
+navigation1Url :: IO Text
+navigation1Url = fileUrl "navigation1.html"
+
+navigation2Url :: IO Text
+navigation2Url = fileUrl "navigation2.html"
+
+navigation3Url :: IO Text
+navigation3Url = fileUrl "navigation3.html"
+
+navigation4Url :: IO Text
+navigation4Url = fileUrl "navigation4.html"
+
+navigation5Url :: IO Text
+navigation5Url = fileUrl "navigation5.html"
+
+navigation6Url :: IO Text
+navigation6Url = fileUrl "navigation6.html"
+
+loginUrl :: IO Text
+loginUrl = fileUrl "login.html"
+
+framesUrl :: IO Text
+framesUrl = fileUrl "frames.html"
+
+nestedFramesUrl :: IO Text
+nestedFramesUrl = fileUrl "nestedFrames.html"
+
+contentPageUrl :: IO Text
+contentPageUrl = fileUrl "contentPage.html"

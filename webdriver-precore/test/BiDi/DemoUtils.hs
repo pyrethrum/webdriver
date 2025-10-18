@@ -38,7 +38,7 @@ import IOUtils (DemoUtils (..))
 
 
 pauseMs :: Timeout
-pauseMs = MkTimeout 0
+pauseMs = MkTimeout 1000000
 
 data BiDiDemo = MkBiDiDemo
   { name :: Text,

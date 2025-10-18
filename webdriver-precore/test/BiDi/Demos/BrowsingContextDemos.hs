@@ -5,6 +5,7 @@ import BiDi.DemoUtils
 import Data.Aeson (Value (Null), object, (.=))
 import Data.Text (Text)
 import IOUtils (DemoUtils (..))
+import TestData (contentPageUrl, framesUrl, loginUrl, navigation1Url, navigation2Url, navigation3Url, navigation4Url, navigation5Url, navigation6Url, nestedFramesUrl)
 import WebDriverPreCore.BiDi.BrowsingContext (Locator (..), PrintMargin (..), PrintPage (..), Viewport (..))
 import WebDriverPreCore.BiDi.CoreTypes (JSInt (..), JSUInt (..), NodeRemoteValue (..))
 import WebDriverPreCore.BiDi.Protocol
@@ -366,85 +367,91 @@ browsingNavigateReloadTraverseHistoryDemo =
     action utils@MkDemoUtils {..} cmds@MkCommands {..} = do
       bc <- rootContext utils cmds
 
-      logTxt "Navigate to The Internet - Main Page"
-      navResult1 <- browsingContextNavigate $ MkNavigate {context = bc, url = "https://the-internet.herokuapp.com/", wait = Nothing}
-      logShow "Navigation result - Main page" navResult1
+      nav1 <- navigation1Url
+      logTxt "Navigate to Navigation 1"
+      navResult1 <- browsingContextNavigate $ MkNavigate {context = bc, url = nav1, wait = Nothing}
+      logShow "Navigation result - Navigation 1" navResult1
       pause
 
-      logTxt "Navigate to Checkboxes page"
-      navResult2 <- browsingContextNavigate $ MkNavigate {context = bc, url = "https://the-internet.herokuapp.com/checkboxes", wait = Just Interactive}
-      logShow "Navigation result - Checkboxes" navResult2
+      nav2 <- navigation2Url
+      logTxt "Navigate to Navigation 2"
+      navResult2 <- browsingContextNavigate $ MkNavigate {context = bc, url = nav2, wait = Just Interactive}
+      logShow "Navigation result - Navigation 2" navResult2
       pause
 
-      logTxt "Navigate to JavaScript Alerts page"
-      navResult3 <- browsingContextNavigate $ MkNavigate {context = bc, url = "https://the-internet.herokuapp.com/javascript_alerts", wait = Just Complete}
-      logShow "Navigation result - JavaScript Alerts" navResult3
+      nav3 <- navigation3Url
+      logTxt "Navigate to Navigation 3"
+      navResult3 <- browsingContextNavigate $ MkNavigate {context = bc, url = nav3, wait = Just Complete}
+      logShow "Navigation result - Navigation 3" navResult3
       pause
 
-      logTxt "Navigate to Inputs page"
-      navResult4 <- browsingContextNavigate $ MkNavigate {context = bc, url = "https://the-internet.herokuapp.com/inputs", wait = Just None}
-      logShow "Navigation result - Inputs" navResult4
+      nav4 <- navigation4Url
+      logTxt "Navigate to Navigation 4"
+      navResult4 <- browsingContextNavigate $ MkNavigate {context = bc, url = nav4, wait = Just None}
+      logShow "Navigation result - Navigation 4" navResult4
       pause
 
-      logTxt "Reload current page (Inputs) - default options"
+      logTxt "Reload current page (Navigation 4) - default options"
       reloadResult1 <- browsingContextReload $ MkReload {context = bc, ignoreCache = Nothing, wait = Nothing}
       logShow "Reload result - default" reloadResult1
       pause
 
-      logTxt "Navigate to Login page"
-      navResult5 <- browsingContextNavigate $ MkNavigate {context = bc, url = "https://the-internet.herokuapp.com/login", wait = Nothing}
-      logShow "Navigation result - Login" navResult5
+      nav5 <- navigation5Url
+      logTxt "Navigate to Navigation 5"
+      navResult5 <- browsingContextNavigate $ MkNavigate {context = bc, url = nav5, wait = Nothing}
+      logShow "Navigation result - Navigation 5" navResult5
       pause
 
       -- ignore cache not supported yet in geckodriver
-      -- logTxt "Reload current page (Login) - ignore cache"
+      -- logTxt "Reload current page (Navigation 5) - ignore cache"
       -- reloadResult2 <- browsingContextReload $ MkReload {context = bc, ignoreCache = Just True, wait = Nothing}
       -- logShow "Reload result - ignore cache" reloadResult2
       -- pause
 
-      logTxt "Navigate to Infinite Scroll page"
-      navResult6 <- browsingContextNavigate $ MkNavigate {context = bc, url = "https://the-internet.herokuapp.com/infinite_scroll", wait = Nothing}
-      logShow "Navigation result - Infinite Scroll" navResult6
+      nav6 <- navigation6Url
+      logTxt "Navigate to Navigation 6"
+      navResult6 <- browsingContextNavigate $ MkNavigate {context = bc, url = nav6, wait = Nothing}
+      logShow "Navigation result - Navigation 6" navResult6
       pause
 
-      logTxt "Reload current page (Infinite Scroll) - wait for complete"
+      logTxt "Reload current page (Navigation 6) - wait for complete"
       reloadResult3 <- browsingContextReload $ MkReload {context = bc, ignoreCache = Nothing, wait = Just Complete}
       logShow "Reload result - wait complete" reloadResult3
       pause
 
-      logTxt "Test history traversal - Go back 1 step (to Login)"
+      logTxt "Test history traversal - Go back 1 step (to Navigation 5)"
       historyResult1 <- browsingContextTraverseHistory $ MkTraverseHistory {context = bc, delta = MkJSInt (-1)}
       logShow "History traversal result - back 1" historyResult1
       pause
 
-      logTxt "Go back 2 more steps (to JavaScript Alerts)"
+      logTxt "Go back 2 more steps (to Navigation 3)"
       historyResult2 <- browsingContextTraverseHistory $ MkTraverseHistory {context = bc, delta = MkJSInt (-2)}
       logShow "History traversal result - back 2" historyResult2
       pause
 
-      logTxt "Go back 1 more step (to Checkboxes)"
+      logTxt "Go back 1 more step (to Navigation 2)"
       historyResult3 <- browsingContextTraverseHistory $ MkTraverseHistory {context = bc, delta = MkJSInt (-1)}
       logShow "History traversal result - back 1" historyResult3
       pause
 
-      logTxt "Go forward 1 step (to JavaScript Alerts)"
+      logTxt "Go forward 1 step (to Navigation 3)"
       historyResult4 <- browsingContextTraverseHistory $ MkTraverseHistory {context = bc, delta = MkJSInt 1}
       logShow "History traversal result - forward 1" historyResult4
       pause
 
-      logTxt "Go forward 2 steps (to Login)"
+      logTxt "Go forward 2 steps (to Navigation 5)"
       historyResult5 <- browsingContextTraverseHistory $ MkTraverseHistory {context = bc, delta = MkJSInt 2}
       logShow "History traversal result - forward 2" historyResult5
       pause
 
-      logTxt "Go forward 1 step (to Infinite Scroll)"
+      logTxt "Go forward 1 step (to Navigation 6)"
       historyResult6 <- browsingContextTraverseHistory $ MkTraverseHistory {context = bc, delta = MkJSInt 1}
       logShow "History traversal result - forward 1" historyResult6
       pause
 
-      logTxt "Final navigation - back to main page"
-      navResultFinal <- browsingContextNavigate $ MkNavigate {context = bc, url = "https://the-internet.herokuapp.com/", wait = Just Complete}
-      logShow "Navigation result - back to main" navResultFinal
+      logTxt "Final navigation - back to Navigation 1"
+      navResultFinal <- browsingContextNavigate $ MkNavigate {context = bc, url = nav1, wait = Just Complete}
+      logShow "Navigation result - back to Navigation 1" navResultFinal
       pause
 
 -- >>> runDemo browsingContextLocateNodesDemo
@@ -456,8 +463,9 @@ browsingContextLocateNodesDemo =
     action utils@MkDemoUtils {..} cmds@MkCommands {..} = do
       bc <- rootContext utils cmds
 
-      logTxt "Navigate to The Internet - Login Page for comprehensive selector testing"
-      navResult1 <- browsingContextNavigate $ MkNavigate {context = bc, url = "https://the-internet.herokuapp.com/login", wait = Just Complete}
+      loginPage <- loginUrl
+      logTxt "Navigate to Login Page for comprehensive selector testing"
+      navResult1 <- browsingContextNavigate $ MkNavigate {context = bc, url = loginPage, wait = Just Complete}
       logShow "Navigation result - Login page" navResult1
       pause
 
@@ -555,8 +563,9 @@ browsingContextLocateNodesDemo =
       pause
 
       -- Navigate to a page with more accessibility content for better testing
-      logTxt "Navigate to The Internet - Frames page for accessibility and context testing"
-      navResult2 <- browsingContextNavigate $ MkNavigate {context = bc, url = "https://the-internet.herokuapp.com/frames", wait = Just Complete}
+      framesPage <- framesUrl
+      logTxt "Navigate to Frames page for accessibility and context testing"
+      navResult2 <- browsingContextNavigate $ MkNavigate {context = bc, url = framesPage, wait = Just Complete}
       logShow "Navigation result - Frames page" navResult2
       pause
 
@@ -666,8 +675,9 @@ browsingContextLocateNodesDemo =
             pause
 
       -- Navigate to a simpler page for Context selector test
-      logTxt "Navigate to The Internet - Nested Frames for Context selector testing"
-      navResult3 <- browsingContextNavigate $ MkNavigate {context = bc, url = "https://the-internet.herokuapp.com/nested_frames", wait = Just Complete}
+      nestedFrames <- nestedFramesUrl
+      logTxt "Navigate to Nested Frames for Context selector testing"
+      navResult3 <- browsingContextNavigate $ MkNavigate {context = bc, url = nestedFrames, wait = Just Complete}
       logShow "Navigation result - Nested Frames page" navResult3
       pause
 
@@ -686,8 +696,9 @@ browsingContextPrintAndSetViewportDemo =
     action utils@MkDemoUtils {..} cmds@MkCommands {..} = do
       bc <- rootContext utils cmds
 
-      logTxt "Navigate to The Internet - Main Page for content"
-      navResult <- browsingContextNavigate $ MkNavigate {context = bc, url = "https://the-internet.herokuapp.com/", wait = Just Complete}
+      contentPage <- contentPageUrl
+      logTxt "Navigate to Content Page for print and viewport testing"
+      navResult <- browsingContextNavigate $ MkNavigate {context = bc, url = contentPage, wait = Just Complete}
       logShow "Navigation result" navResult
       pause
 
@@ -840,10 +851,8 @@ browsingContextPrintAndSetViewportDemo =
       logTxt $ "Print result - after viewport changes: " <> case printAfterViewport of MkPrintResult {base64Text} -> base64Text
       pause
 
-      -- Navigate to a longer page to demonstrate pageRanges effectively
-      logTxt "Navigate to a longer page for pageRanges demonstration"
-      navResultLong <- browsingContextNavigate $ MkNavigate {context = bc, url = "https://the-internet.herokuapp.com/large", wait = Just Complete}
-      logShow "Navigation result - large page" navResultLong
+      -- Already on content page which has large content - no need to navigate again
+      logTxt "Content page already loaded with large content for pageRanges demonstration"
       pause
 
       logTxt "Test 10: Print with pageRanges - Only first page"
