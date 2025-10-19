@@ -44,6 +44,7 @@ module WebDriverPreCore.BiDi.Network
     -- * NetworkEvent
     NetworkEvent (..),
     AuthRequired (..),
+    RequestData (..),
     ResponseData (..),
     ResponseContent (..),
     AuthChallenge (..),

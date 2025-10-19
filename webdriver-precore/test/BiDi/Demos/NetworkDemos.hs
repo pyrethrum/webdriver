@@ -5,9 +5,11 @@ import BiDi.DemoUtils
 import IOUtils (DemoUtils (..))
 import WebDriverPreCore.BiDi.CoreTypes (JSUInt (..))
 import WebDriverPreCore.BiDi.Protocol
+import WebDriverPreCore.BiDi.Network qualified as Net
 import Prelude hiding (log)
 import Const (second)
-import TestServer (withTestServer)
+import TestServer (withTestServer, testServerHomeUrl)
+import UnliftIO.STM (newTVarIO, atomically, readTVar, writeTVar)
 
 -- >>> runDemo networkDataCollectorDemo
 networkDataCollectorDemo :: BiDiDemo
@@ -462,44 +464,7 @@ networkProvideResponseDemo =
         logTxt "Example: 500 Internal Server Error with retry-after header"
         pause
 
--- not supported in geckodriver yet
 -- >>> runDemo networkDataRetrievalDemo
--- *** Exception: Error executing BiDi command: MkCommand
---   { method = "network.getData"
---   , params =
---       MkGetData
---         { dataType = MkDataType { dataType = "response" }
---         , collector =
---             Just
---               MkCollector { collector = "715339d5-13bc-4d61-b241-0462b59a2797" }
---         , disown = Just False
---         , request = MkRequest { request = "example-request-id-for-data" }
---         }
---   , extended = Nothing
---   }
--- With JSON: 
--- {
---     "id": 3,
---     "method": "network.getData",
---     "params": {
---         "collector": "715339d5-13bc-4d61-b241-0462b59a2797",
---         "dataType": "response",
---         "disown": false,
---         "request": "example-request-id-for-data"
---     }
--- }
--- BiDi driver error: 
--- MkDriverError
---   { id = Just 3
---   , error = NoSuchNetworkData
---   , description = "Tried to reference unknown data"
---   , message =
---       "Network data for request id example-request-id-for-data and DataType response not found"
---   , stacktrace =
---       Just
---         "RemoteError@chrome://remote/content/shared/RemoteError.sys.mjs:8:8\nWebDriverError@chrome://remote/content/shared/webdriver/Errors.sys.mjs:202:5\nNoSuchNetworkDataError@chrome://remote/content/shared/webdriver/Errors.sys.mjs:700:5\ngetData@chrome://remote/content/webdriver-bidi/modules/root/network.sys.mjs:1227:13\nhandleCommand@chrome://remote/content/shared/messagehandler/MessageHandler.sys.mjs:260:33\nexecute@chrome://remote/content/shared/webdriver/Session.sys.mjs:410:32\nonPacket@chrome://remote/content/webdriver-bidi/WebDriverBiDiConnection.sys.mjs:236:37\nonMessage@chrome://remote/content/server/WebSocketTransport.sys.mjs:127:18\nhandleEvent@chrome://remote/content/server/WebSocketTransport.sys.mjs:109:14\n"
---   , extensions = MkEmptyResult { extensible = fromList [] }
---   }
 networkDataRetrievalDemo :: BiDiDemo
 networkDataRetrievalDemo =
   demo "Network VI - Data Retrieval and Ownership" action
@@ -508,96 +473,89 @@ networkDataRetrievalDemo =
     action utils@MkDemoUtils {..} cmds@MkCommands {..} = do
       bc <- rootContext utils cmds
 
-      logTxt "Test 1: Add data collector to generate some data"
-      collector <-
+      logTxt "Test 1: Add data collector to capture network data"
+      MkAddDataCollectorResult collectorId <-
         networkAddDataCollector $
           MkAddDataCollector
             { dataTypes = [MkDataType "response"],
               maxEncodedDataSize = MkJSUInt 2048,
-              collectorType = Just (MkCollectorType "blob"),
+              collectorType = Nothing,
               contexts = Just [bc],
               userContexts = Nothing
             }
-      logShow "Data collector for retrieval demo" collector
+      logShow "Data collector created" collectorId
       pause
 
-      let MkAddDataCollectorResult collectorId = collector
-      let exampleRequest = MkRequest "example-request-id-for-data"
-
-      logTxt "Test 2: networkGetData with basic parameters (disown=False)"
-      getData1 <-
-        networkGetData $
-          MkGetData
-            { dataType = MkDataType "response",
-              collector = Just collectorId,
-              disown = Just False,
-              request = exampleRequest
-            }
-      logShow "Get data without disowning result" getData1
+      logTxt "Test 2: Subscribe to network.responseCompleted event to capture request ID"
+      requestIdVar <- newTVarIO Nothing
+      (responseCompletedFired, waitResponseCompleted) <- timeLimitLog NetworkResponseCompleted
+      subscribeNetworkResponseCompleted $ \event -> do
+        let Net.MkResponseCompleted {request = Net.MkRequestData {request = requestId}} = event
+        logShow "Captured request ID from event" requestId
+        atomically $ writeTVar requestIdVar (Just requestId)
+        responseCompletedFired event
       pause
 
-      logTxt "Test 3: networkGetData with disown=True"
-      getData2 <-
-        networkGetData $
-          MkGetData
-            { dataType = MkDataType "response",
-              collector = Just collectorId,
-              disown = Just True,
-              request = exampleRequest
-            }
-      logShow "Get data with disowning result" getData2
-      pause
+      logTxt "Test 3: Navigate to trigger a real network request"
+      withTestServer $ do
+        navResult <-
+          browsingContextNavigate $
+            MkNavigate
+              { context = bc,
+                url = testServerHomeUrl,
+                wait = Just Complete
+              }
+        logShow "Navigation result" navResult
+        pauseAtLeast $ 1 * second
+        
+        logTxt "Waiting for response completed event..."
+        waitResponseCompleted
 
-      logTxt "Test 4: networkGetData without specifying collector or disown (default False)"
-      getData3 <-
-        networkGetData $
-          MkGetData
-            { dataType = MkDataType "response",
-              collector = Nothing,
-              disown = Nothing,
-              request = exampleRequest
-            }
-      logShow "Get data without collector specification result" getData3
-      pause
+      logTxt "Test 4: Retrieve the captured request ID"
+      maybeRequestId <- atomically $ readTVar requestIdVar
+      case maybeRequestId of
+        Nothing -> logTxt "ERROR: No request ID was captured from events"
+        Just (MkRequestId requestIdText) -> do
+          let capturedRequest = MkRequest requestIdText
+          logShow "Using captured request ID" capturedRequest
+          pause
 
-      logTxt "Test 5: networkGetData for different data type"
-      getData4 <-
-        networkGetData $
-          MkGetData
-            { dataType = MkDataType "request",
-              collector = Just collectorId,
-              disown = Just False,
-              request = exampleRequest
-            }
-      logShow "Get request data result" getData4
-      pause
+          logTxt "Test 5: networkGetData with disown=False"
+          getData1 <-
+            networkGetData $
+              MkGetData
+                { dataType = MkDataType "response",
+                  collector = Just collectorId,
+                  disown = Just False,
+                  request = capturedRequest
+                }
+          logShow "Get data without disowning result" getData1
+          pause
 
-      logTxt "Test 6: networkDisownData - explicitly disown specific data"
-      disownResult <-
-        networkDisownData $
-          MkDisownData
-            { dataType = MkDataType "response",
-              collector = collectorId,
-              request = exampleRequest
-            }
-      logShow "Disown data result" disownResult
-      pause
+          logTxt "Test 6: networkGetData with disown=True"
+          getData2 <-
+            networkGetData $
+              MkGetData
+                { dataType = MkDataType "response",
+                  collector = Just collectorId,
+                  disown = Just True,
+                  request = capturedRequest
+                }
+          logShow "Get data with disowning result" getData2
+          pause
 
-      logTxt "Test 7: networkDisownData for different data type"
-      disownResult2 <-
-        networkDisownData $
-          MkDisownData
-            { dataType = MkDataType "request",
-              collector = collectorId,
-              request = exampleRequest
-            }
-      logShow "Disown request data result" disownResult2
-      pause
+          logTxt "Test 7: networkDisownData - explicitly disown specific data"
+          disownResult <-
+            networkDisownData $
+              MkDisownData
+                { dataType = MkDataType "response",
+                  collector = collectorId,
+                  request = capturedRequest
+                }
+          logShow "Disown data result" disownResult
+          pause
 
-      logTxt "Cleanup - remove data collector"
-      removeResult <- networkRemoveDataCollector $ MkRemoveDataCollector collectorId
-      logShow "Removed data collector" removeResult
-      pause
+
 
 -- >>> runDemo networkCacheBehaviorDemo
 networkCacheBehaviorDemo :: BiDiDemo
