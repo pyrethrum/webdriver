@@ -83,7 +83,7 @@ networkEventFetchError =
         logTxt "Trigger fetch error using invalid URL"
         scriptEvaluate $
           MkEvaluate
-            { expression = "fetch('" <> malformedResponseUrl <> "')",
+            { expression = "fetch('" <> "http://192.0.2.1:1/" <> "')",
               target = ContextTarget $ MkContextTarget {context = bc, sandbox = Nothing},
               awaitPromise = False,
               resultOwnership = Nothing,
