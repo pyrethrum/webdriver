@@ -32,18 +32,17 @@ import Data.ByteString.Base64 qualified as B64
 import Data.Text (Text, isInfixOf, pack, toLower, unpack)
 import Data.Text.IO qualified as TIO
 import GHC.Base (coerce)
+import System.FilePath (joinPath, splitDirectories, (</>))
 import Test.Tasty.HUnit as HUnit (Assertion, HasCallStack, (@=?))
 import UnliftIO (TChan, atomically, isEmptyTChan, race_, readTMVar, tryPutTMVar, writeTChan)
 import UnliftIO.STM (newEmptyTMVarIO)
 import WebDriverPreCore.Internal.Utils (txt)
 import Prelude hiding (log)
-import System.FilePath (splitDirectories, joinPath, (</>))
 
 data Logger = MkLogger
   { log :: Text -> IO (),
     waitEmpty :: IO ()
   }
-
 
 findWebDriverRoot :: FilePath -> Maybe FilePath
 findWebDriverRoot path =
@@ -55,32 +54,30 @@ findWebDriverRoot path =
     dirs = splitDirectories path
     webDriverPath = (joinPath $ takeWhile (/= rootDir) dirs) </> rootDir
 
-
 --  TODO : deprectate static logTxt et al
 
 bidiDemoUtils :: (Text -> IO ()) -> Timeout -> DemoUtils
 bidiDemoUtils baseLog pause =
-   MkDemoUtils
-        { sleep = sleep,
-          log = log',
-          logShow = logShow',
-          logM = \l mt -> mt >>= log' l,
-          logShowM = \l t -> t >>= logShow' l,
-          logTxt = logTxt',
-          pause = sleep pause,
-          pauseAtLeast = pauseAtLeast pause,
-          timeLimitLog = timeLimitLog hasEventFired,
-          timeLimitLog' = timeLimitLog' hasEventFired
-        }
-  where 
-      logTxt' = baseLog
-      log' l t = logTxt' $ l <> ": " <> t
-      logShow' :: forall a. (Show a) => Text -> a -> IO ()
-      logShow' l = log' l . txt
-      hasEventFired :: forall a b. (Show a, Show b) => b -> a -> IO Bool
-      hasEventFired b a = logShow' ("!!!!! " <> txt b <> " Event Fired !!!!!\n") a >> pure True
-
-
+  MkDemoUtils
+    { sleep = sleep,
+      log = log',
+      logShow = logShow',
+      logM = \l mt -> mt >>= log' l,
+      logShowM = \l t -> t >>= logShow' l,
+      logTxt = logTxt',
+      pause = sleep pause,
+      pauseAtLeast = pauseAtLeast pause,
+      timeLimitLog = timeLimitLog hasEventFired,
+      timeLimitLogMany = timeLimitLogMany hasEventFired,
+      timeLimitLog' = \msg tmo -> timeLimitLog' msg hasEventFired tmo 
+    }
+  where
+    logTxt' = baseLog
+    log' l t = logTxt' $ l <> ": " <> t
+    logShow' :: forall a. (Show a) => Text -> a -> IO ()
+    logShow' l = log' l . txt
+    hasEventFired :: forall a b. (Show a, Show b) => b -> a -> IO Bool
+    hasEventFired b a = logShow' ("!!!!! " <> txt b <> " Event Fired !!!!!\n") a >> pure True
 
 mkLogger :: TChan Text -> IO Logger
 mkLogger logChan =
@@ -114,7 +111,8 @@ data DemoUtils = MkDemoUtils
     logShowM :: forall a. (Show a) => Text -> IO a -> IO (),
     -- timeout functions for testing events TODO: rename
     timeLimitLog :: forall a b. (Show a, Show b) => b -> IO (a -> IO (), IO ()),
-    timeLimitLog' :: forall a b. (Show a, Show b) => Timeout -> b -> IO (a -> IO (), IO ())
+    timeLimitLogMany :: forall a b. (Show a, Show b) => b -> IO (a -> IO (), IO ()),
+    timeLimitLog' :: forall a b. (Show a, Show b) => Text -> Timeout -> b -> IO (a -> IO (), IO ())
   }
 
 -- TODO :: DELETE THIS
@@ -130,11 +128,12 @@ demoUtils pause =
       pause = sleep pause,
       pauseAtLeast = pauseAtLeast pause,
       timeLimitLog = timeLimitLog hasEventFired,
-      timeLimitLog' = timeLimitLog' hasEventFired
+      timeLimitLogMany = timeLimitLogMany hasEventFired,
+      timeLimitLog' = \msg tmo -> timeLimitLog' msg hasEventFired tmo 
     }
-  where 
-      hasEventFired :: forall a b. (Show a, Show b) => b -> a -> IO Bool
-      hasEventFired b a = logShow (txt b) a >> pure True
+  where
+    hasEventFired :: forall a b. (Show a, Show b) => b -> a -> IO Bool
+    hasEventFired b a = logShow (txt b) a >> pure True
 
 noOpUtils :: DemoUtils
 noOpUtils =
@@ -149,7 +148,8 @@ noOpUtils =
       -- even for no-op, ensure sleep for passed in ms
       pauseAtLeast = sleep,
       timeLimitLog = timeLimitLog hasEventFired,
-      timeLimitLog' = timeLimitLog' hasEventFired
+      timeLimitLogMany = timeLimitLogMany hasEventFired,
+      timeLimitLog' = \msg tmo -> timeLimitLog' msg hasEventFired tmo 
     }
   where
     noOp1 = const $ pure ()
@@ -164,12 +164,11 @@ sleep = threadDelay . coerce
 pauseAtLeast :: Timeout -> Timeout -> IO ()
 pauseAtLeast defaultSleep = sleep . MkTimeout . max (coerce defaultSleep) . coerce
 
-
-timeLimit :: forall a b. Show b => Timeout -> b -> (a -> IO Bool) -> IO (a -> IO (), IO ())
-timeLimit (MkTimeout mu) eventDesc action = do
+timeLimit :: forall a b. (Show b) => Text -> Timeout -> b -> (a -> IO Bool) -> IO (a -> IO (), IO ())
+timeLimit timeoutMsg (MkTimeout mu) eventDesc action = do
   triggered <- newEmptyTMVarIO
   let waitTriggered = atomically $ readTMVar triggered
-      waitLimit = threadDelay mu >> (fail . unpack $ "Timeout - Expected event did not fire: " <> txt eventDesc)
+      waitLimit = threadDelay mu >> (fail . unpack $ "Timeout - " <> timeoutMsg <> ": " <> txt eventDesc)
       interceptedAction = \a -> do
         result <- action a
         when result $
@@ -179,12 +178,15 @@ timeLimit (MkTimeout mu) eventDesc action = do
         pure ()
   pure $ (interceptedAction, race_ waitLimit waitTriggered)
 
-timeLimitLog' :: forall a b. Show b => (b -> a -> IO Bool) -> Timeout -> b -> IO (a -> IO (), IO ())
-timeLimitLog' prd timeout b =
-  timeLimit timeout b (\a -> prd b a >> pure True)
+timeLimitLog' :: forall a b. (Show b) => Text -> (b -> a -> IO Bool) -> Timeout -> b -> IO (a -> IO (), IO ())
+timeLimitLog' timeoutMsg prd timeout b =
+  timeLimit timeoutMsg timeout b (\a -> prd b a >> pure True)
 
-timeLimitLog :: forall a b. Show b => (b -> a -> IO Bool) -> b -> IO (a -> IO (), IO ())
-timeLimitLog prd = timeLimitLog' prd (10 * seconds)
+timeLimitLog :: forall a b. (Show b) => (b -> a -> IO Bool) -> b -> IO (a -> IO (), IO ())
+timeLimitLog prd = timeLimitLog' "Expected event did not fire" prd (10 * seconds)
+
+timeLimitLogMany :: forall a b. (Show b) => (b -> a -> IO Bool) -> b -> IO (a -> IO (), IO ())
+timeLimitLogMany prd = timeLimitLog' "Expected event(s) did not fire (Many Subscription)" prd (10 * seconds)
 
 encodeFileToBase64 :: FilePath -> IO Text
 encodeFileToBase64 filePath =
