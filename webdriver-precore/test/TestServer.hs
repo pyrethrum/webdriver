@@ -2,7 +2,7 @@ module TestServer
   ( withTestServer,
     authTestUrl,
     invalidUrl,
-    testServerHome,
+    testServerHomeUrl,
   )
 where
 
@@ -19,11 +19,11 @@ import UnliftIO (finally)
 import UnliftIO.Process (createProcess, cwd, proc, terminateProcess)
 import Prelude
 
-testServerHome :: Text
-testServerHome = "http://localhost:8000/"
+testServerHomeUrl :: Text
+testServerHomeUrl = "http://localhost:8000/"
 
 subPage :: Text -> Text
-subPage subPath = testServerHome <> "/" <> subPath
+subPage subPath = testServerHomeUrl <> "/" <> subPath
 
 authTestUrl :: Text
 authTestUrl = subPage "authtest"
@@ -36,8 +36,8 @@ invalidUrl = subPage "invalid-page"
 pingUntilReady :: Text -> IO ()
 pingUntilReady url = do
   startTime <- getCurrentTime
-  let expiryTime :: UTCTime = addUTCTime 10 startTime
-  tryPing expiryTime
+  let plusTenSecs = addUTCTime 10 startTime
+  tryPing plusTenSecs
   where
     tryPing expiryTime = do
       currentTime <- getCurrentTime
@@ -68,7 +68,7 @@ withTestServer action = do
     Just webdriverRoot -> do
       let serverStart = (proc "cabal" ["run", "test-server"]) {cwd = Just webdriverRoot}
       (_, _, _, handle) <- createProcess serverStart
-      pingUntilReady testServerHome
+      pingUntilReady testServerHomeUrl
       finally
         action
         $ terminateProcess handle

@@ -235,7 +235,7 @@ bidiDemos =
             ],
           bidiTest
             "Network Events"
-            [ NetworkEvent.networkEventBeforeRequestSent,
+            [ 
               NetworkEvent.networkEventRequestResponseLifecycle,
               NetworkEvent.networkEventFetchError,
               NetworkEvent.networkEventAuthRequired

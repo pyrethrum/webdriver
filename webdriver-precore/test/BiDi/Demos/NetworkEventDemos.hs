@@ -18,53 +18,8 @@ import WebDriverPreCore.BiDi.Protocol
     Target (..), mkCommand,
   )
 import Prelude hiding (log, putStrLn)
-import TestServer (withTestServer, authTestUrl, invalidUrl)
+import TestServer (withTestServer, authTestUrl, invalidUrl, testServerHomeUrl)
 import Const (seconds)
-
-apiUrl :: Text
-apiUrl = "https://jsonplaceholder.typicode.com/posts/1"
-
--- >>> runDemo networkEventBeforeRequestSent
-networkEventBeforeRequestSent :: BiDiDemo
-networkEventBeforeRequestSent =
-  demo "Network Events - Before Request Sent" action
-  where
-    -- NOTE: GeckoDriver has incomplete support for network.beforeRequestSent event
-    -- See: https://bugzilla.mozilla.org/show_bug.cgi?id=1790366 (11 open dependencies as of Oct 2025)
-    -- The event subscription and API implementation are correct, but GeckoDriver may not fire
-    -- this event for navigation requests (browsingContext.navigate).
-    -- Related: Bug #1899417 - Missing network events for navigation requests of discarded contexts
-    -- WORKAROUND: Using fetch() to trigger network events instead of navigation
-    action :: DemoUtils -> BiDiActions -> IO ()
-    action utils@MkDemoUtils {..} cmds@MkCommands {..} = do
-      logTxt "Subscribe to BeforeRequestSent event"
-      (beforeReqEventFired, waitBeforeReqEventFired) <- timeLimitLog NetworkBeforeRequestSent
-      subscribeNetworkBeforeRequestSent beforeReqEventFired
-
-      (manyBeforeReqEventFired, waitManyBeforeReqEventFired) <- timeLimitLog NetworkBeforeRequestSent
-      subscribeMany [NetworkBeforeRequestSent] manyBeforeReqEventFired
-
-      bc <- newWindowContext utils cmds
-      logTxt "Navigate to initial page (about:blank)"
-      browsingContextNavigate $ MkNavigate bc "about:blank" Nothing
-      pause
-
-      logTxt "Trigger network request using fetch() to public API"
-      scriptEvaluate $
-        MkEvaluate
-          { expression = "fetch('" <> apiUrl <> "')",
-            target = ContextTarget $ MkContextTarget {context = bc, sandbox = Nothing},
-            awaitPromise = False,
-            resultOwnership = Nothing,
-            serializationOptions = Nothing
-          }
-      logTxt "Waiting for network events..."
-
-      sequence_
-        [ waitBeforeReqEventFired,
-          waitManyBeforeReqEventFired
-        ]
-
 
 -- >>> runDemo networkEventRequestResponseLifecycle
 networkEventRequestResponseLifecycle :: BiDiDemo
@@ -86,32 +41,31 @@ networkEventRequestResponseLifecycle =
       (respCompletedEventFired, waitNetworkResponseCompletedEventFired) <- timeLimitLog NetworkResponseCompleted
       subscribeNetworkResponseCompleted respCompletedEventFired
 
-      bc <- newWindowContext utils cmds
-      logTxt "Navigate to initial page (about:blank)"
-      browsingContextNavigate $ MkNavigate bc "about:blank" Nothing
-      pause
+      bc <- rootContext utils cmds
 
-      logTxt "Trigger network request to demonstrate complete network lifecycle"
-      scriptEvaluate $
-        MkEvaluate
-          { expression = "fetch('" <> apiUrl <> "')",
-            target = ContextTarget $ MkContextTarget {context = bc, sandbox = Nothing},
-            awaitPromise = False,
-            resultOwnership = Nothing,
-            serializationOptions = Nothing
-          }
-      logTxt "Waiting for all network lifecycle events..."
+      pauseAtLeast $ 5 * seconds
+      withTestServer $ do
+        pauseAtLeast $ 5 * seconds
+        logTxt "Trigger network request to demonstrate complete network lifecycle"
+        scriptEvaluate $
+          MkEvaluate
+            { expression = "fetch('" <> testServerHomeUrl <> "')",
+              target = ContextTarget $ MkContextTarget {context = bc, sandbox = Nothing},
+              awaitPromise = False,
+              resultOwnership = Nothing,
+              serializationOptions = Nothing
+            }
+        logTxt "Waiting for all network lifecycle events..."
 
-      sequence_
-        [ waitBeforeReqEventFired,
-          waitRespStartedEventFired,
-          waitNetworkResponseCompletedEventFired
-        ]
-      
+        sequence_
+          [ waitBeforeReqEventFired,
+            waitRespStartedEventFired,
+            waitNetworkResponseCompletedEventFired
+          ]
+        
 
 
 -- >>> runDemo networkEventFetchError
--- *** Exception: user error (Timeout - Expected event did not fire: NetworkFetchError)
 networkEventFetchError :: BiDiDemo
 networkEventFetchError =
   demo "Network Events - Fetch Error" action
