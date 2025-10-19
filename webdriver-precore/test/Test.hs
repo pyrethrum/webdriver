@@ -136,7 +136,8 @@ bidiDemos =
             "Network"
             [ Network.networkDataCollectorDemo,
               Network.networkInterceptDemo,
-              Network.networkRequestResponseModificationDemo,
+              Network.networkRequestModificationDemo,
+              Network.networkResponseModificationDemo,
               Network.networkAuthAndFailureDemo,
               Network.networkProvideResponseDemo,
               Network.networkDataRetrievalDemo,

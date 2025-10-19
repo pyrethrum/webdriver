@@ -281,7 +281,7 @@ networkInterceptDemo =
       removeResult1 <- networkRemoveIntercept $ MkRemoveIntercept interceptId1
       logShow "Removed BeforeRequestSent intercept" removeResult1
       pause
-
+     
       let MkAddInterceptResult interceptId2 = intercept2
       removeResult2 <- networkRemoveIntercept $ MkRemoveIntercept interceptId2
       logShow "Removed ResponseStarted intercept" removeResult2
@@ -312,18 +312,17 @@ networkInterceptDemo =
       logShow "Removed global intercept" removeResult7
       pause
 
--- >>> runDemo networkRequestResponseModificationDemo
--- *** Exception: user error (Timeout - Expected event did not fire: NetworkBeforeRequestSent)
-networkRequestResponseModificationDemo :: BiDiDemo
-networkRequestResponseModificationDemo =
-  demo "Network III - Request and Response Modification" action
+-- >>> runDemo networkRequestModificationDemo
+networkRequestModificationDemo :: BiDiDemo
+networkRequestModificationDemo =
+  demo "Network III - Request Modification" action
   where
     action :: DemoUtils -> BiDiActions -> IO ()
     action utils@MkDemoUtils {..} cmds@MkCommands {..} = do
       bc <- rootContext utils cmds
 
       withTestServer $ do
-        logTxt "Test Server running - ready to intercept and modify network traffic"
+        logTxt "Test Server running - ready to intercept and modify network requests"
         pause
 
         -- Test 1: networkContinueRequest with basic parameters
@@ -421,17 +420,30 @@ networkRequestResponseModificationDemo =
         logShow "Removed intercept" removeIntercept2
         pause
 
-        -- Test 3: networkContinueResponse with basic parameters
-        logTxt "Test 3: Add ResponseStarted intercept and continue response without modifications"
-        intercept3 <-
+-- >>> runDemo networkResponseModificationDemo
+networkResponseModificationDemo :: BiDiDemo
+networkResponseModificationDemo =
+  demo "Network IV - Response Modification" action
+  where
+    action :: DemoUtils -> BiDiActions -> IO ()
+    action utils@MkDemoUtils {..} cmds@MkCommands {..} = do
+      bc <- rootContext utils cmds
+
+      withTestServer $ do
+        logTxt "Test Server running - ready to intercept and modify network responses"
+        pause
+
+        -- Test 1: networkContinueResponse with basic parameters
+        logTxt "Test 1: Add ResponseStarted intercept and continue response without modifications"
+        intercept1 <-
           networkAddIntercept $
             MkAddIntercept
               { phases = [ResponseStarted],
                 contexts = Just [bc],
                 urlPatterns = Nothing
               }
-        let MkAddInterceptResult interceptId3 = intercept3
-        logShow "ResponseStarted intercept added" interceptId3
+        let MkAddInterceptResult interceptId1 = intercept1
+        logShow "ResponseStarted intercept added" interceptId1
         pause
 
         (respStartedFired1, waitRespStarted1) <- timeLimitLog NetworkResponseStarted
@@ -451,32 +463,32 @@ networkRequestResponseModificationDemo =
               }
           respStartedFired1 event
 
-        navResult3 <-
+        navResult1 <-
           browsingContextNavigate $
             MkNavigate
               { context = bc,
                 url = testServerHomeUrl,
                 wait = Just Complete
               }
-        logShow "Navigation result" navResult3
+        logShow "Navigation result" navResult1
         waitRespStarted1
         pause
 
-        removeIntercept3 <- networkRemoveIntercept $ MkRemoveIntercept interceptId3
-        logShow "Removed intercept" removeIntercept3
+        removeIntercept1 <- networkRemoveIntercept $ MkRemoveIntercept interceptId1
+        logShow "Removed intercept" removeIntercept1
         pause
 
-        -- Test 4: networkContinueResponse with modified status and headers
-        logTxt "Test 4: Intercept and modify response status code and headers"
-        intercept4 <-
+        -- Test 2: networkContinueResponse with modified status and headers
+        logTxt "Test 2: Intercept and modify response status code and headers"
+        intercept2 <-
           networkAddIntercept $
             MkAddIntercept
               { phases = [ResponseStarted],
                 contexts = Just [bc],
                 urlPatterns = Nothing
               }
-        let MkAddInterceptResult interceptId4 = intercept4
-        logShow "ResponseStarted intercept added" interceptId4
+        let MkAddInterceptResult interceptId2 = intercept2
+        logShow "ResponseStarted intercept added" interceptId2
         pause
 
         (respStartedFired2, waitRespStarted2) <- timeLimitLog NetworkResponseStarted
@@ -499,27 +511,27 @@ networkRequestResponseModificationDemo =
               }
           respStartedFired2 event
 
-        navResult4 <-
+        navResult2 <-
           browsingContextNavigate $
             MkNavigate
               { context = bc,
                 url = testServerHomeUrl,
                 wait = Just Complete
               }
-        logShow "Navigation with modified response result" navResult4
+        logShow "Navigation with modified response result" navResult2
         waitRespStarted2
         pause
 
-        removeIntercept4 <- networkRemoveIntercept $ MkRemoveIntercept interceptId4
-        logShow "Removed intercept" removeIntercept4
+        removeIntercept2 <- networkRemoveIntercept $ MkRemoveIntercept interceptId2
+        logShow "Removed intercept" removeIntercept2
         pause
 
-        logTxt "Network request/response modification demo completed"
+        logTxt "Network response modification demo completed"
 
 -- >>> runDemo networkAuthAndFailureDemo
 networkAuthAndFailureDemo :: BiDiDemo
 networkAuthAndFailureDemo =
-  demo "Network IV - Authentication and Request Failure Handling" action
+  demo "Network V - Authentication and Request Failure Handling" action
   where
     action :: DemoUtils -> BiDiActions -> IO ()
     action utils@MkDemoUtils {..} cmds = do
@@ -570,7 +582,7 @@ networkAuthAndFailureDemo =
 -- >>> runDemo networkProvideResponseDemo
 networkProvideResponseDemo :: BiDiDemo
 networkProvideResponseDemo =
-  demo "Network V - Custom Response Provision" action
+  demo "Network VI - Custom Response Provision" action
   where
     action :: DemoUtils -> BiDiActions -> IO ()
     action utils@MkDemoUtils {..} cmds = do
@@ -613,7 +625,7 @@ networkProvideResponseDemo =
 -- >>> runDemo networkDataRetrievalDemo
 networkDataRetrievalDemo :: BiDiDemo
 networkDataRetrievalDemo =
-  demo "Network VI - Data Retrieval and Ownership" action
+  demo "Network VII - Data Retrieval and Ownership" action
   where
     action :: DemoUtils -> BiDiActions -> IO ()
     action utils@MkDemoUtils {..} cmds@MkCommands {..} = do
@@ -681,7 +693,7 @@ networkDataRetrievalDemo =
 -- >>> runDemo networkDisownDataDemo
 networkDisownDataDemo :: BiDiDemo
 networkDisownDataDemo =
-  demo "Network VI - Data Retrieval and Disown" action
+  demo "Network VIII - Data Retrieval and Disown" action
   where
     action :: DemoUtils -> BiDiActions -> IO ()
     action utils@MkDemoUtils {..} cmds@MkCommands {..} = do
@@ -760,7 +772,7 @@ networkDisownDataDemo =
 -- >>> runDemo networkCacheBehaviorDemo
 networkCacheBehaviorDemo :: BiDiDemo
 networkCacheBehaviorDemo =
-  demo "Network VII - Cache Behavior Management" action
+  demo "Network IX - Cache Behavior Management" action
   where
     action :: DemoUtils -> BiDiActions -> IO ()
     action utils@MkDemoUtils {..} cmds@MkCommands {..} = do

@@ -38,7 +38,7 @@ import Prelude hiding (log, putStrLn)
 
 -- TODO: deprecate
 pauseMs :: Timeout
-pauseMs = MkTimeout 5000000
+pauseMs = MkTimeout 0
 
 data BiDiDemo = MkBiDiDemo
   { name :: Text,
