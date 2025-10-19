@@ -7,6 +7,7 @@ import qualified Data.ByteString.Char8 as BS
 import qualified Data.ByteString.Base64 as B64
 import qualified Data.ByteString.Lazy as BL
 import qualified Data.Text.Lazy.Encoding as TLE
+import Data.Text (Text)
 
 main :: IO ()
 main = do
@@ -44,3 +45,6 @@ parseBasicAuth authHeader =
                 _ -> Nothing
             Left _ -> Nothing
     else Nothing
+
+helloHtml :: Text
+helloHtml = 

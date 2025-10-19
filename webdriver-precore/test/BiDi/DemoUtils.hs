@@ -1,22 +1,22 @@
 module BiDi.DemoUtils where
 
 import BiDi.BiDiRunner (BiDiActions (..), mkDemoBiDiClientParams, withCommands)
+import Const (Timeout (..), seconds)
 import Control.Exception (Exception, catch, throwIO)
 import Data.Text (Text, isInfixOf)
 import Data.Time.Clock.POSIX (POSIXTime, getPOSIXTime)
-import System.Directory (getCurrentDirectory)
-import UnliftIO (bracket)
-import UnliftIO.Process (proc, cwd, createProcess, terminateProcess)
+import IOUtils (DemoUtils (..))
+import WebDriverPreCore.BiDi.CoreTypes (StringValue (..))
 import WebDriverPreCore.BiDi.Protocol
   ( BrowsingContext,
     Close (MkClose, context, promptUnload),
     ContextTarget (MkContextTarget, context, sandbox),
     Create
       ( MkCreate,
+        background,
         createType,
         referenceContext,
-        userContext,
-        background
+        userContext
       ),
     CreateType (Tab, Window),
     Evaluate
@@ -30,19 +30,15 @@ import WebDriverPreCore.BiDi.Protocol
     GetTree (MkGetTree),
     GetTreeResult (MkGetTreeResult),
     Info (context),
-    Target (ContextTarget)
+    Target (ContextTarget),
   )
 import WebDriverPreCore.BiDi.Script (EvaluateResult (..), PrimitiveProtocolValue (..), RemoteValue (..))
 import WebDriverPreCore.Internal.Utils (txt)
 import Prelude hiding (log, putStrLn)
-import WebDriverPreCore.BiDi.CoreTypes (StringValue(..))
-import Const (seconds, Timeout (..))
-import IOUtils (DemoUtils (..), findWebDriverRoot)
 
-
--- TODO: deprecate 
+-- TODO: deprecate
 pauseMs :: Timeout
-pauseMs = MkTimeout 0
+pauseMs = MkTimeout 5000000
 
 data BiDiDemo = MkBiDiDemo
   { name :: Text,
@@ -58,7 +54,6 @@ runDemo' logging pauseMs' d =
 
 runDemo :: BiDiDemo -> IO ()
 runDemo = runDemo' True pauseMs
-
 
 newWindowContext :: DemoUtils -> BiDiActions -> IO BrowsingContext
 newWindowContext MkDemoUtils {..} MkCommands {..} = do
@@ -108,7 +103,6 @@ chkDomContains' timeout pause' MkDemoUtils {..} MkCommands {..} bc expectedText 
   startTime <- getPOSIXTime
   logTxt $ "Checking DOM contains: " <> expectedText <> " (timeout: " <> txt timeout <> "ms, pause: " <> txt pause' <> "ms)"
   checkLoop $ startTime + (fromIntegral timeout.microseconds / 1000000)
-
   where
     checkLoop :: POSIXTime -> IO ()
     checkLoop endTime = do
@@ -170,23 +164,3 @@ chkDomContains' timeout pause' MkDemoUtils {..} MkCommands {..} bc expectedText 
 -- | Check if expected text is present in DOM with default timeout and retry settings
 chkDomContains :: DemoUtils -> BiDiActions -> BrowsingContext -> Text -> IO ()
 chkDomContains = chkDomContains' (10 * seconds) (MkTimeout 100)
-
-
--- | Run an IO action with the test server running
-withTestServer :: forall a. IO a -> IO a
-withTestServer action = do
-  currentDir <- getCurrentDirectory
-  case findWebDriverRoot currentDir of
-    Nothing ->
-      error $
-        "Could not find 'webdriver' root directory from: "
-          <> currentDir
-          <> "\n withTestServer expects to be run from the 'webdriver' directory"
-    Just webdriverRoot -> do
-      let processConfig = (proc "cabal" ["run", "test-server"]) {cwd = Just webdriverRoot}
-      bracket
-        (createProcess processConfig)
-        (\(_, _, _, ph) -> terminateProcess ph)
-        (const action)
-
-

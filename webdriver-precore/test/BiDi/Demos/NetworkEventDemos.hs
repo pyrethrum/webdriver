@@ -18,6 +18,8 @@ import WebDriverPreCore.BiDi.Protocol
     Target (..), mkCommand,
   )
 import Prelude hiding (log, putStrLn)
+import TestServer (withTestServer, authTestUrl)
+import Const (seconds)
 
 apiUrl :: Text
 apiUrl = "https://jsonplaceholder.typicode.com/posts/1"
@@ -158,17 +160,17 @@ networkEventAuthRequired =
       subscribeMany [NetworkAuthRequired] manyAuthReqEventFired
 
       bc <- rootContext utils cmds
-      logTxt "Note: This demo requires a URL with HTTP basic authentication"
-      logTxt "Using httpbin.org for auth testing"
-      let authUrl = "https://httpbin.org/basic-auth/user/passwd"
-  
-      -- need to hand roll a custom command to avoid waiting for navigation to complete
-      -- navigation is blocked by the auth challenge popup
-      sendCommandNoWait . mkCommand "browsingContext.navigate" $ MkNavigate { context = bc, url = authUrl, wait = Nothing }
 
-      logTxt "Waiting for auth required events..."
+      logTxt "Navigate to auth-protected URL to trigger AuthRequired event"
 
-      sequence_
-        [ waitAuthReqEventFired,
-          waitManyAuthReqEventFired
-        ]
+      withTestServer $ do
+        pauseAtLeast $ 5 * seconds
+        sendCommandNoWait . mkCommand "browsingContext.navigate" $ MkNavigate { context = bc, url = authTestUrl, wait = Nothing }
+
+        logTxt "Waiting for auth required events..."
+        pause
+
+        sequence_
+          [ waitAuthReqEventFired,
+            waitManyAuthReqEventFired
+          ]
