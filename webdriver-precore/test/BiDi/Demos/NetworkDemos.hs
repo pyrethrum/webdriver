@@ -6,7 +6,7 @@ import Const (second)
 import IOUtils (DemoUtils (..))
 import TestServer (testServerHomeUrl, withTestServer)
 import UnliftIO.STM (atomically, newTVarIO, readTVar, writeTVar)
-import WebDriverPreCore.BiDi.CoreTypes (JSUInt (..))
+import WebDriverPreCore.BiDi.CoreTypes (JSUInt (..), StringValue (..))
 import WebDriverPreCore.BiDi.Network qualified as Net
 import WebDriverPreCore.BiDi.Protocol
 import Prelude hiding (log)
@@ -312,63 +312,209 @@ networkInterceptDemo =
       logShow "Removed global intercept" removeResult7
       pause
 
--- handleNoSuchRequestError :: (Text -> IO ()) -> IO () -> IO ()
--- handleNoSuchRequestError log action = catch action $ \e -> do
---   unless (exceptionTextIncludes "no such request" e) $
---     throwIO e
---   log "Expected \"no such request\" error ~ request not initialised"
-
 -- >>> runDemo networkRequestResponseModificationDemo
+-- *** Exception: user error (Timeout - Expected event did not fire: NetworkBeforeRequestSent)
 networkRequestResponseModificationDemo :: BiDiDemo
 networkRequestResponseModificationDemo =
   demo "Network III - Request and Response Modification" action
   where
     action :: DemoUtils -> BiDiActions -> IO ()
-    action utils@MkDemoUtils {..} cmds = do
-      _bc <- rootContext utils cmds
-
-      logTxt "Note: This demo demonstrates network request/response modification commands."
-      logTxt "These commands require active intercepts and real network requests to function properly."
+    action utils@MkDemoUtils {..} cmds@MkCommands {..} = do
+      bc <- rootContext utils cmds
 
       withTestServer $ do
         logTxt "Test Server running - ready to intercept and modify network traffic"
         pause
 
-        -- TODO: Implement actual intercept handlers to capture real request IDs
-        -- The following tests demonstrate the parameter structure for each command
-        -- but cannot execute without real intercepted requests
-
-        logTxt "Test 1: networkContinueRequest with basic parameters (requires intercepted request)"
-        logTxt "This would continue an intercepted request without modifications"
+        -- Test 1: networkContinueRequest with basic parameters
+        logTxt "Test 1: Add BeforeRequestSent intercept and continue request without modifications"
+        intercept1 <-
+          networkAddIntercept $
+            MkAddIntercept
+              { phases = [BeforeRequestSent],
+                contexts = Just [bc],
+                urlPatterns = Nothing
+              }
+        let MkAddInterceptResult interceptId1 = intercept1
+        logShow "BeforeRequestSent intercept added" interceptId1
         pause
 
-        logTxt "Test 2: networkContinueRequest with modified headers and method"
-        logTxt "Example: Adding X-Custom-Header and changing method to POST"
+        requestIdVar1 <- newTVarIO Nothing
+        (beforeReqFired1, waitBeforeReq1) <- timeLimitLog NetworkBeforeRequestSent
+        subscribeNetworkBeforeRequestSent $ \event -> do
+          let Net.MkBeforeRequestSent {request = Net.MkRequestData {request = reqId}} = event
+          logShow "Captured request ID from BeforeRequestSent" reqId
+          atomically $ writeTVar requestIdVar1 (Just reqId)
+          
+          logTxt "Continuing request without modifications"
+          networkContinueRequest $
+            MkContinueRequest
+              { request = reqId,
+                body = Nothing,
+                cookies = Nothing,
+                headers = Nothing,
+                method = Nothing,
+                url = Nothing
+              }
+          beforeReqFired1 event
+
+        navResult1 <-
+          browsingContextNavigate $
+            MkNavigate
+              { context = bc,
+                url = testServerHomeUrl,
+                wait = Just Complete
+              }
+        logShow "Navigation result" navResult1
+        waitBeforeReq1
         pause
 
-        logTxt "Test 3: networkContinueRequest with body and URL modification"
-        logTxt "Example: Modifying request body and redirecting to different URL"
+        removeIntercept1 <- networkRemoveIntercept $ MkRemoveIntercept interceptId1
+        logShow "Removed intercept" removeIntercept1
         pause
 
-        logTxt "Test 4: networkContinueRequest with cookies"
-        logTxt "Example: Modifying request cookies (session_id, user_pref)"
+        -- Test 2: networkContinueRequest with modified headers and method
+        logTxt "Test 2: Intercept and modify request headers and method"
+        intercept2 <-
+          networkAddIntercept $
+            MkAddIntercept
+              { phases = [BeforeRequestSent],
+                contexts = Just [bc],
+                urlPatterns = Nothing
+              }
+        let MkAddInterceptResult interceptId2 = intercept2
+        logShow "BeforeRequestSent intercept added" interceptId2
         pause
 
-        logTxt "Test 5: networkContinueResponse with basic parameters"
-        logTxt "This would continue an intercepted response without modifications"
+        (beforeReqFired2, waitBeforeReq2) <- timeLimitLog NetworkBeforeRequestSent
+        subscribeNetworkBeforeRequestSent $ \event -> do
+          let Net.MkBeforeRequestSent {request = Net.MkRequestData {request = reqId}} = event
+          logShow "Modifying request with custom headers" reqId
+          
+          networkContinueRequest $
+            MkContinueRequest
+              { request = reqId,
+                body = Nothing,
+                cookies = Nothing,
+                headers =
+                  Just
+                    [ MkHeader "X-Custom-Header" (TextBytesValue $ MkStringValue "custom-value"),
+                      MkHeader "X-Test-Demo" (TextBytesValue $ MkStringValue "modification-test")
+                    ],
+                method = Just "GET",
+                url = Nothing
+              }
+          beforeReqFired2 event
+
+        navResult2 <-
+          browsingContextNavigate $
+            MkNavigate
+              { context = bc,
+                url = testServerHomeUrl,
+                wait = Just Complete
+              }
+        logShow "Navigation with modified headers result" navResult2
+        waitBeforeReq2
         pause
 
-        logTxt "Test 6: networkContinueResponse with status code and reason phrase"
-        logTxt "Example: Changing status to 200 Modified OK"
+        removeIntercept2 <- networkRemoveIntercept $ MkRemoveIntercept interceptId2
+        logShow "Removed intercept" removeIntercept2
         pause
 
-        logTxt "Test 7: networkContinueResponse with modified response body and headers"
-        logTxt "Example: Changing Content-Type, adding custom headers, modifying body"
+        -- Test 3: networkContinueResponse with basic parameters
+        logTxt "Test 3: Add ResponseStarted intercept and continue response without modifications"
+        intercept3 <-
+          networkAddIntercept $
+            MkAddIntercept
+              { phases = [ResponseStarted],
+                contexts = Just [bc],
+                urlPatterns = Nothing
+              }
+        let MkAddInterceptResult interceptId3 = intercept3
+        logShow "ResponseStarted intercept added" interceptId3
         pause
 
-        logTxt "Test 8: networkContinueResponse with response cookies"
-        logTxt "Example: Setting response cookies with security attributes"
+        (respStartedFired1, waitRespStarted1) <- timeLimitLog NetworkResponseStarted
+        subscribeNetworkResponseStarted $ \event -> do
+          let Net.MkResponseStarted {request = Net.MkRequestData {request = reqId}} = event
+          logShow "Captured request ID from ResponseStarted" reqId
+          
+          logTxt "Continuing response without modifications"
+          networkContinueResponse $
+            MkContinueResponse
+              { request = reqId,
+                body = Nothing,
+                cookies = Nothing,
+                headers = Nothing,
+                reasonPhrase = Nothing,
+                statusCode = Nothing
+              }
+          respStartedFired1 event
+
+        navResult3 <-
+          browsingContextNavigate $
+            MkNavigate
+              { context = bc,
+                url = testServerHomeUrl,
+                wait = Just Complete
+              }
+        logShow "Navigation result" navResult3
+        waitRespStarted1
         pause
+
+        removeIntercept3 <- networkRemoveIntercept $ MkRemoveIntercept interceptId3
+        logShow "Removed intercept" removeIntercept3
+        pause
+
+        -- Test 4: networkContinueResponse with modified status and headers
+        logTxt "Test 4: Intercept and modify response status code and headers"
+        intercept4 <-
+          networkAddIntercept $
+            MkAddIntercept
+              { phases = [ResponseStarted],
+                contexts = Just [bc],
+                urlPatterns = Nothing
+              }
+        let MkAddInterceptResult interceptId4 = intercept4
+        logShow "ResponseStarted intercept added" interceptId4
+        pause
+
+        (respStartedFired2, waitRespStarted2) <- timeLimitLog NetworkResponseStarted
+        subscribeNetworkResponseStarted $ \event -> do
+          let Net.MkResponseStarted {request = Net.MkRequestData {request = reqId}} = event
+          logShow "Modifying response with custom status and headers" reqId
+          
+          networkContinueResponse $
+            MkContinueResponse
+              { request = reqId,
+                body = Nothing,
+                cookies = Nothing,
+                headers =
+                  Just
+                    [ MkHeader "X-Modified-Response" (TextBytesValue $ MkStringValue "true"),
+                      MkHeader "X-Custom-Header" (TextBytesValue $ MkStringValue "response-modified")
+                    ],
+                reasonPhrase = Just "OK Modified",
+                statusCode = Just (MkJSUInt 200)
+              }
+          respStartedFired2 event
+
+        navResult4 <-
+          browsingContextNavigate $
+            MkNavigate
+              { context = bc,
+                url = testServerHomeUrl,
+                wait = Just Complete
+              }
+        logShow "Navigation with modified response result" navResult4
+        waitRespStarted2
+        pause
+
+        removeIntercept4 <- networkRemoveIntercept $ MkRemoveIntercept interceptId4
+        logShow "Removed intercept" removeIntercept4
+        pause
+
+        logTxt "Network request/response modification demo completed"
 
 -- >>> runDemo networkAuthAndFailureDemo
 networkAuthAndFailureDemo :: BiDiDemo
