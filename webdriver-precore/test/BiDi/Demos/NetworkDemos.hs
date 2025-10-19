@@ -5,7 +5,7 @@ import BiDi.DemoUtils
 import Const (second)
 import IOUtils (DemoUtils (..))
 import TestServer (boringHelloUrl, boringHelloUrl2, testServerHomeUrl, withTestServer)
-import UnliftIO.STM (atomically, newTVarIO, readTVar, writeTVar)
+import UnliftIO.STM (atomically, newTVarIO, readTVar, writeTVar, newEmptyTMVarIO)
 import WebDriverPreCore.BiDi.CoreTypes (JSUInt (..), StringValue (..))
 import WebDriverPreCore.BiDi.Network qualified as Net
 import WebDriverPreCore.BiDi.Protocol
@@ -313,7 +313,6 @@ networkInterceptDemo =
       pause
 
 -- >>> runDemo networkRequestModificationDemo
--- *** Exception: user error (Timeout - Expected event did not fire: NetworkBeforeRequestSent)
 networkRequestModificationDemo :: BiDiDemo
 networkRequestModificationDemo =
   demo "Network III - Request Modification" action
@@ -326,11 +325,12 @@ networkRequestModificationDemo =
         logTxt "Subscribe first, then intercept and modify request headers and method"
         
         (beforeReqFired2, waitBeforeReq2) <- timeLimitLog NetworkBeforeRequestSent
-        
+
         -- Subscribe BEFORE adding intercept
         subscribeNetworkBeforeRequestSent
           ( \event -> do
               let Net.MkBeforeRequestSent {request = Net.MkRequestData {request = reqId}} = event
+              
               logShow "Modifying request with custom headers" reqId
 
               networkContinueRequest $
