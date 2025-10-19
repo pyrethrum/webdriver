@@ -2,14 +2,14 @@ module BiDi.Demos.NetworkDemos where
 
 import BiDi.BiDiRunner (BiDiActions (..))
 import BiDi.DemoUtils
-import IOUtils (DemoUtils (..))
-import WebDriverPreCore.BiDi.CoreTypes (JSUInt (..))
-import WebDriverPreCore.BiDi.Protocol
-import WebDriverPreCore.BiDi.Network qualified as Net
-import Prelude hiding (log)
 import Const (second)
-import TestServer (withTestServer, testServerHomeUrl)
-import UnliftIO.STM (newTVarIO, atomically, readTVar, writeTVar)
+import IOUtils (DemoUtils (..))
+import TestServer (testServerHomeUrl, withTestServer)
+import UnliftIO.STM (atomically, newTVarIO, readTVar, writeTVar)
+import WebDriverPreCore.BiDi.CoreTypes (JSUInt (..))
+import WebDriverPreCore.BiDi.Network qualified as Net
+import WebDriverPreCore.BiDi.Protocol
+import Prelude hiding (log)
 
 -- >>> runDemo networkDataCollectorDemo
 networkDataCollectorDemo :: BiDiDemo
@@ -34,7 +34,7 @@ networkDataCollectorDemo =
       pause
 
       -- not allowable in spec yet MkDataType must always be: request
-      -- leaving this code here, expecting spec change 
+      -- leaving this code here, expecting spec change
       -- logTxt "Test 2: Add data collector with specific collector type"
       -- collector2 <-
       --   networkAddDataCollector $
@@ -507,7 +507,75 @@ networkDataRetrievalDemo =
               }
         logShow "Navigation result" navResult
         pauseAtLeast $ 1 * second
-        
+
+        logTxt "Waiting for response completed event..."
+        waitResponseCompleted
+
+      logTxt "Test 4: Retrieve the captured request ID"
+      maybeRequestId <- atomically $ readTVar requestIdVar
+      case maybeRequestId of
+        Nothing -> logTxt "ERROR: No request ID was captured from events"
+        Just (MkRequestId requestIdText) -> do
+          let capturedRequest = MkRequest requestIdText
+          logShow "Using captured request ID" capturedRequest
+          pause
+
+          logTxt "Test 6: networkGetData with disown=True"
+          getData2 <-
+            networkGetData $
+              MkGetData
+                { dataType = MkDataType "response",
+                  collector = Just collectorId,
+                  disown = Just True,
+                  request = capturedRequest
+                }
+          logShow "Get data with disowning result" getData2
+          pause
+
+-- >>> runDemo networkDisownDataDemo
+networkDisownDataDemo :: BiDiDemo
+networkDisownDataDemo =
+  demo "Network VI - Data Retrieval and Disown" action
+  where
+    action :: DemoUtils -> BiDiActions -> IO ()
+    action utils@MkDemoUtils {..} cmds@MkCommands {..} = do
+      bc <- rootContext utils cmds
+
+      logTxt "Test 1: Add data collector to capture network data"
+      MkAddDataCollectorResult collectorId <-
+        networkAddDataCollector $
+          MkAddDataCollector
+            { dataTypes = [MkDataType "response"],
+              maxEncodedDataSize = MkJSUInt 2048,
+              collectorType = Nothing,
+              contexts = Just [bc],
+              userContexts = Nothing
+            }
+      logShow "Data collector created" collectorId
+      pause
+
+      logTxt "Test 2: Subscribe to network.responseCompleted event to capture request ID"
+      requestIdVar <- newTVarIO Nothing
+      (responseCompletedFired, waitResponseCompleted) <- timeLimitLog NetworkResponseCompleted
+      subscribeNetworkResponseCompleted $ \event -> do
+        let Net.MkResponseCompleted {request = Net.MkRequestData {request = requestId}} = event
+        logShow "Captured request ID from event" requestId
+        atomically $ writeTVar requestIdVar (Just requestId)
+        responseCompletedFired event
+      pause
+
+      logTxt "Test 3: Navigate to trigger a real network request"
+      withTestServer $ do
+        navResult <-
+          browsingContextNavigate $
+            MkNavigate
+              { context = bc,
+                url = testServerHomeUrl,
+                wait = Just Complete
+              }
+        logShow "Navigation result" navResult
+        pauseAtLeast $ 1 * second
+
         logTxt "Waiting for response completed event..."
         waitResponseCompleted
 
@@ -532,19 +600,7 @@ networkDataRetrievalDemo =
           logShow "Get data without disowning result" getData1
           pause
 
-          logTxt "Test 6: networkGetData with disown=True"
-          getData2 <-
-            networkGetData $
-              MkGetData
-                { dataType = MkDataType "response",
-                  collector = Just collectorId,
-                  disown = Just True,
-                  request = capturedRequest
-                }
-          logShow "Get data with disowning result" getData2
-          pause
-
-          logTxt "Test 7: networkDisownData - explicitly disown specific data"
+          logTxt "Test 6: networkDisownData - explicitly disown specific data"
           disownResult <-
             networkDisownData $
               MkDisownData
@@ -554,8 +610,6 @@ networkDataRetrievalDemo =
                 }
           logShow "Disown data result" disownResult
           pause
-
-
 
 -- >>> runDemo networkCacheBehaviorDemo
 networkCacheBehaviorDemo :: BiDiDemo
