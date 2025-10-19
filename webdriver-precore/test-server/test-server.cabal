@@ -90,6 +90,7 @@ common commonGhcOptions
 executable test-server
   import: commonExtensions, commonGhcOptions
   main-is: TestServer.hs
+  other-modules: TestPages
   hs-source-dirs: src
   build-depends:
     base                 >=4.16  && <5,

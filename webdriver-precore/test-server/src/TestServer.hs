@@ -7,12 +7,17 @@ import qualified Data.ByteString.Char8 as BS
 import qualified Data.ByteString.Base64 as B64
 import qualified Data.ByteString.Lazy as BL
 import qualified Data.Text.Lazy.Encoding as TLE
-import Data.Text (Text)
+import TestPages (helloHtml)
 
 main :: IO ()
 main = do
-  putStrLn "Serving authtest on http://localhost:8000/authtest ..."
+  putStrLn "Serving on http://localhost:8000 ..."
+  putStrLn "  - / (root)"
+  putStrLn "  - /authtest"
   scotty 8000 $ do
+    get "/" $ do
+      html helloHtml
+    
     get "/authtest" $ do
       hdr <- header "Authorization"
       case hdr of
@@ -44,7 +49,4 @@ parseBasicAuth authHeader =
                 (u, p) | not (BS.null p) -> Just (u, BS.drop 1 p)
                 _ -> Nothing
             Left _ -> Nothing
-    else Nothing
-
-helloHtml :: Text
-helloHtml = 
+    else Nothing 
