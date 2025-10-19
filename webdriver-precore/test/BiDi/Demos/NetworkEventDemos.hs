@@ -18,7 +18,7 @@ import WebDriverPreCore.BiDi.Protocol
     Target (..), mkCommand,
   )
 import Prelude hiding (log, putStrLn)
-import TestServer (withTestServer, authTestUrl)
+import TestServer (withTestServer, authTestUrl, invalidUrl)
 import Const (seconds)
 
 apiUrl :: Text
@@ -111,6 +111,7 @@ networkEventRequestResponseLifecycle =
 
 
 -- >>> runDemo networkEventFetchError
+-- *** Exception: user error (Timeout - Expected event did not fire: NetworkFetchError)
 networkEventFetchError :: BiDiDemo
 networkEventFetchError =
   demo "Network Events - Fetch Error" action
@@ -126,17 +127,17 @@ networkEventFetchError =
 
       bc <- rootContext utils cmds
 
-      logTxt "Trigger fetch error using invalid URL"
-      let invalidUrl = "http://invalid-domain-that-does-not-exist-12345.com"
-      scriptEvaluate $
-        MkEvaluate
-          { expression = "fetch('" <> invalidUrl <> "')",
-            target = ContextTarget $ MkContextTarget {context = bc, sandbox = Nothing},
-            awaitPromise = False,
-            resultOwnership = Nothing,
-            serializationOptions = Nothing
-          }
-      logTxt "Waiting for fetch error events..."
+      withTestServer $ do
+        logTxt "Trigger fetch error using invalid URL"
+        scriptEvaluate $
+          MkEvaluate
+            { expression = "fetch('" <> invalidUrl <> "')",
+              target = ContextTarget $ MkContextTarget {context = bc, sandbox = Nothing},
+              awaitPromise = False,
+              resultOwnership = Nothing,
+              serializationOptions = Nothing
+            }
+        logTxt "Waiting for fetch error events..."
 
       sequence_
         [ waitFetchErrorEventFired,
@@ -164,7 +165,6 @@ networkEventAuthRequired =
       logTxt "Navigate to auth-protected URL to trigger AuthRequired event"
 
       withTestServer $ do
-        pauseAtLeast $ 5 * seconds
         sendCommandNoWait . mkCommand "browsingContext.navigate" $ MkNavigate { context = bc, url = authTestUrl, wait = Nothing }
 
         logTxt "Waiting for auth required events..."
