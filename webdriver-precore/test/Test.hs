@@ -41,18 +41,14 @@ tests =
       bidiDemos
     ]
 
--- [ bidiTest
---     "Browsing Context"
---     [ BrowsingContext.browsingContextCreateActivateCloseDemo,
---       BrowsingContext.browsingContextCaptureScreenshotCloseDemo,
---       BrowsingContext.browsingContextClosePromptUnloadDemo,
---       BrowsingContext.browsingContextGetTreeDemo,
---       BrowsingContext.browsingContextHandleUserPromptDemo,
---       BrowsingContext.browsingNavigateReloadTraverseHistoryDemo,
---       BrowsingContext.browsingContextLocateNodesDemo,
---       BrowsingContext.browsingContextPrintAndSetViewportDemo
---     ]
--- ]
+-- -- [  bidiTest
+--             "Network Events"
+--             [ 
+--               NetworkEvent.networkEventRequestResponseLifecycle,
+--               NetworkEvent.networkEventFetchError,
+--               NetworkEvent.networkEventAuthRequired
+--             ]
+-- -- ]
 
 unitTests :: TestTree
 unitTests =

@@ -2,8 +2,10 @@ module BiDi.Demos.NetworkEventDemos where
 
 import BiDi.BiDiRunner (BiDiActions (..))
 import BiDi.DemoUtils
+import Const (seconds)
 import Data.Text (Text)
 import IOUtils (DemoUtils (..))
+import TestServer (authTestUrl, invalidUrl, testServerHomeUrl, withTestServer)
 import WebDriverPreCore.BiDi.Protocol
   ( ContextTarget (..),
     Evaluate (..),
@@ -15,11 +17,10 @@ import WebDriverPreCore.BiDi.Protocol
         NetworkResponseCompleted,
         NetworkResponseStarted
       ),
-    Target (..), mkCommand,
+    Target (..),
+    mkCommand,
   )
 import Prelude hiding (log, putStrLn)
-import TestServer (withTestServer, authTestUrl, invalidUrl, testServerHomeUrl)
-import Const (seconds)
 
 -- >>> runDemo networkEventRequestResponseLifecycle
 networkEventRequestResponseLifecycle :: BiDiDemo
@@ -43,9 +44,7 @@ networkEventRequestResponseLifecycle =
 
       bc <- rootContext utils cmds
 
-      pauseAtLeast $ 5 * seconds
       withTestServer $ do
-        pauseAtLeast $ 5 * seconds
         logTxt "Trigger network request to demonstrate complete network lifecycle"
         scriptEvaluate $
           MkEvaluate
@@ -62,26 +61,25 @@ networkEventRequestResponseLifecycle =
             waitRespStartedEventFired,
             waitNetworkResponseCompletedEventFired
           ]
-        
-
 
 -- >>> runDemo networkEventFetchError
+-- *** Exception: user error (Timeout - Expected event did not fire: NetworkFetchError)
 networkEventFetchError :: BiDiDemo
 networkEventFetchError =
   demo "Network Events - Fetch Error" action
   where
     action :: DemoUtils -> BiDiActions -> IO ()
     action utils@MkDemoUtils {..} cmds@MkCommands {..} = do
-      logTxt "Subscribe to FetchError event"
-      (fetchErrorEventFired, waitFetchErrorEventFired) <- timeLimitLog NetworkFetchError
-      subscribeNetworkFetchError fetchErrorEventFired
-
-      (manyFetchErrorEventFired, waitManyFetchErrorEventFired) <- timeLimitLog NetworkFetchError
-      subscribeMany [NetworkFetchError] manyFetchErrorEventFired
-
-      bc <- rootContext utils cmds
-
       withTestServer $ do
+        logTxt "Subscribe to FetchError event"
+        (fetchErrorEventFired, waitFetchErrorEventFired) <- timeLimitLog NetworkFetchError
+        subscribeNetworkFetchError fetchErrorEventFired
+
+        (manyFetchErrorEventFired, waitManyFetchErrorEventFired) <- timeLimitLog NetworkFetchError
+        subscribeMany [NetworkFetchError] manyFetchErrorEventFired
+
+        bc <- rootContext utils cmds
+
         logTxt "Trigger fetch error using invalid URL"
         scriptEvaluate $
           MkEvaluate
@@ -93,12 +91,10 @@ networkEventFetchError =
             }
         logTxt "Waiting for fetch error events..."
 
-      sequence_
-        [ waitFetchErrorEventFired,
-          waitManyFetchErrorEventFired
-        ]
-        
-      
+        sequence_
+          [ waitFetchErrorEventFired,
+            waitManyFetchErrorEventFired
+          ]
 
 -- >>> runDemo networkEventAuthRequired
 networkEventAuthRequired :: BiDiDemo
@@ -119,7 +115,7 @@ networkEventAuthRequired =
       logTxt "Navigate to auth-protected URL to trigger AuthRequired event"
 
       withTestServer $ do
-        sendCommandNoWait . mkCommand "browsingContext.navigate" $ MkNavigate { context = bc, url = authTestUrl, wait = Nothing }
+        sendCommandNoWait . mkCommand "browsingContext.navigate" $ MkNavigate {context = bc, url = authTestUrl, wait = Nothing}
 
         logTxt "Waiting for auth required events..."
         pause
