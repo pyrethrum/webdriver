@@ -3,6 +3,7 @@ module TestServer
     authTestUrl,
     invalidUrl,
     testServerHomeUrl,
+    malformedResponseUrl,
   )
 where
 
@@ -30,6 +31,9 @@ authTestUrl = subPage "authtest"
 
 invalidUrl :: Text
 invalidUrl = subPage "invalid-page"
+
+malformedResponseUrl :: Text
+malformedResponseUrl = subPage "malformed-response"
 
 -- | Ping the test server until it responds with 200 OK
 -- Throws an exception if the server doesn't respond within 10 seconds

@@ -5,7 +5,7 @@ import BiDi.DemoUtils
 import Const (seconds)
 import Data.Text (Text)
 import IOUtils (DemoUtils (..))
-import TestServer (authTestUrl, invalidUrl, testServerHomeUrl, withTestServer)
+import TestServer (authTestUrl, invalidUrl, testServerHomeUrl, withTestServer, malformedResponseUrl)
 import WebDriverPreCore.BiDi.Protocol
   ( ContextTarget (..),
     Evaluate (..),
@@ -83,7 +83,7 @@ networkEventFetchError =
         logTxt "Trigger fetch error using invalid URL"
         scriptEvaluate $
           MkEvaluate
-            { expression = "fetch('" <> invalidUrl <> "')",
+            { expression = "fetch('" <> malformedResponseUrl <> "')",
               target = ContextTarget $ MkContextTarget {context = bc, sandbox = Nothing},
               awaitPromise = False,
               resultOwnership = Nothing,

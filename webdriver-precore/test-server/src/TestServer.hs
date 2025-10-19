@@ -1,23 +1,24 @@
 module Main where
 
-import Prelude
-import Web.Scotty
+import Data.ByteString.Base64 qualified as B64
+import Data.ByteString.Char8 qualified as BS
+import Data.ByteString.Lazy qualified as BL
+import Data.Text.Lazy.Encoding qualified as TLE
 import Network.HTTP.Types.Status
-import qualified Data.ByteString.Char8 as BS
-import qualified Data.ByteString.Base64 as B64
-import qualified Data.ByteString.Lazy as BL
-import qualified Data.Text.Lazy.Encoding as TLE
 import TestPages (helloHtml)
+import Web.Scotty
+import Prelude
 
 main :: IO ()
 main = do
   putStrLn "Serving on http://localhost:8000 ..."
   putStrLn "  - / (root)"
   putStrLn "  - /authtest"
+  putStrLn "  - /malformed-response"
   scotty 8000 $ do
     get "/" $ do
       html helloHtml
-    
+
     get "/authtest" $ do
       hdr <- header "Authorization"
       case hdr of
@@ -37,6 +38,10 @@ main = do
               setHeader "WWW-Authenticate" "Basic realm=\"Test Realm\""
               text "Invalid Authorization header."
 
+    get "/malformed-response" $ do
+      -- Send invalid chunked encoding or abruptly close connection
+      raw $ BL.fromStrict "HTTP/1.1 200 OK\r\nContent-Length: 999999\r\n\r\nIncomplete"
+
 -- Parse Basic authorization header: "Basic base64(user:pass)"
 parseBasicAuth :: BS.ByteString -> Maybe (BS.ByteString, BS.ByteString)
 parseBasicAuth authHeader =
@@ -49,4 +54,4 @@ parseBasicAuth authHeader =
                 (u, p) | not (BS.null p) -> Just (u, BS.drop 1 p)
                 _ -> Nothing
             Left _ -> Nothing
-    else Nothing 
+    else Nothing
