@@ -5,9 +5,8 @@ import Data.ByteString qualified as BS
 import Data.ByteString.Base64 qualified as B64
 import Data.Text (Text, pack, unpack)
 import IOUtils (findWebDriverRoot)
-import System.Directory (canonicalizePath, getCurrentDirectory)
+import System.Directory (getCurrentDirectory)
 import System.FilePath ((</>))
-import WebDriverPreCore.Internal.Utils (db)
 import Prelude
 
 

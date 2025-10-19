@@ -4,6 +4,8 @@ module TestServer
     invalidUrl,
     testServerHomeUrl,
     malformedResponseUrl,
+    boringHelloUrl,
+    boringHelloUrl2,
   )
 where
 
@@ -12,7 +14,7 @@ import Control.Exception (SomeException, catch, throwIO)
 import Control.Monad (void, when)
 import Data.Text (Text)
 import Data.Text qualified as T
-import Data.Time (NominalDiffTime, UTCTime, addUTCTime, getCurrentTime)
+import Data.Time (addUTCTime, getCurrentTime)
 import IOUtils (findWebDriverRoot)
 import Network.HTTP.Req (GET (..), NoReqBody (..), defaultHttpConfig, http, ignoreResponse, port, req, runReq)
 import System.Directory (getCurrentDirectory)
@@ -31,6 +33,12 @@ authTestUrl = subPage "authtest"
 
 invalidUrl :: Text
 invalidUrl = subPage "invalid-page"
+
+boringHelloUrl :: Text
+boringHelloUrl = subPage "boringHello"
+
+boringHelloUrl2 :: Text
+boringHelloUrl2 = subPage "boringHello2"
 
 malformedResponseUrl :: Text
 malformedResponseUrl = subPage "malformed-response"
@@ -65,7 +73,7 @@ withTestServer action = do
   currentDir <- getCurrentDirectory
   case findWebDriverRoot currentDir of
     Nothing ->
-      error $
+      fail $
         "Could not find 'webdriver' root directory from: "
           <> currentDir
           <> "\n withTestServer expects to be run from the 'webdriver' directory"

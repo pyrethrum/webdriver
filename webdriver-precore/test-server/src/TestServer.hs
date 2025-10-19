@@ -19,6 +19,12 @@ main = do
     get "/" $ do
       html helloHtml
 
+    get "/boringHello" $ do
+      html "<html><body><h1>Hello</h1></body></html>"
+
+    get "/boringHello2" $ do
+      html "<html><body><h1>Hello Again</h1></body></html>"
+
     get "/authtest" $ do
       hdr <- header "Authorization"
       case hdr of

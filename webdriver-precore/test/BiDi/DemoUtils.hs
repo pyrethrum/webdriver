@@ -36,7 +36,7 @@ import WebDriverPreCore.BiDi.Script (EvaluateResult (..), PrimitiveProtocolValue
 import WebDriverPreCore.Internal.Utils (txt)
 import Prelude hiding (log, putStrLn)
 
--- TODO: deprecate
+-- TODO: deprecate - move to config - rename to demoPause
 pauseMs :: Timeout
 pauseMs = MkTimeout 0
 
