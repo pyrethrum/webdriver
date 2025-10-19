@@ -289,7 +289,7 @@ browsingContextEventCreateDestroy =
       (createdEventFired, waitCreateEventFired) <- timeLimitLog BrowsingContextContextCreated
       subscribeBrowsingContextCreated createdEventFired
 
-      (manyCreatedEventFired, waitManyCreatedEventFired) <- timeLimitLog BrowsingContextContextCreated
+      (manyCreatedEventFired, waitManyCreatedEventFired) <- timeLimitLogMany BrowsingContextContextCreated
       subscribeMany [BrowsingContextContextCreated] manyCreatedEventFired
 
       logTxt "Creating a browsing context"
@@ -313,7 +313,7 @@ browsingContextEventCreateDestroy =
       (destroyedEventFired, waitDestroyedEventFired) <- timeLimitLog BrowsingContextContextDestroyed
       subscribeBrowsingContextDestroyed destroyedEventFired
 
-      (manyDestroyedEventFired, waitManyDestroyedEventFired) <- timeLimitLog BrowsingContextContextDestroyed
+      (manyDestroyedEventFired, waitManyDestroyedEventFired) <- timeLimitLogMany BrowsingContextContextDestroyed
       subscribeMany [BrowsingContextContextDestroyed] manyDestroyedEventFired
 
       logTxt "Closing the browsing context"
@@ -337,25 +337,25 @@ browsingContextEventNavigationLifecycle =
       (startedEventFired, waitStartedEventFired) <- timeLimitLog BrowsingContextNavigationStarted
       subscribeBrowsingContextNavigationStarted startedEventFired
 
-      (manyStartedEventFired, waitManyStartedEventFired) <- timeLimitLog BrowsingContextNavigationStarted
+      (manyStartedEventFired, waitManyStartedEventFired) <- timeLimitLogMany BrowsingContextNavigationStarted
       subscribeMany [BrowsingContextNavigationStarted] manyStartedEventFired
 
       (committedEventFired, waitCommittedEventFired) <- timeLimitLog BrowsingContextNavigationCommitted
       subscribeBrowsingContextNavigationCommitted committedEventFired
 
-      (manyCommittedEventFired, waitManyCommittedEventFired) <- timeLimitLog BrowsingContextNavigationCommitted
+      (manyCommittedEventFired, waitManyCommittedEventFired) <- timeLimitLogMany BrowsingContextNavigationCommitted
       subscribeMany [BrowsingContextNavigationCommitted] manyCommittedEventFired
 
       (domContentLoadedEventFired, waitDomContentLoadedEventFired) <- timeLimitLog BrowsingContextDomContentLoaded
       subscribeBrowsingContextDomContentLoaded domContentLoadedEventFired
 
-      (manyDomContentLoadedEventFired, waitManyDomContentLoadedEventFired) <- timeLimitLog BrowsingContextDomContentLoaded
+      (manyDomContentLoadedEventFired, waitManyDomContentLoadedEventFired) <- timeLimitLogMany BrowsingContextDomContentLoaded
       subscribeMany [BrowsingContextDomContentLoaded] manyDomContentLoadedEventFired
 
       (loadEventFired, waitLoadEventFired) <- timeLimitLog BrowsingContextLoad
       subscribeBrowsingContextLoad loadEventFired
 
-      (manyLoadEventFired, waitManyLoadEventFired) <- timeLimitLog BrowsingContextLoad
+      (manyLoadEventFired, waitManyLoadEventFired) <- timeLimitLogMany BrowsingContextLoad
       subscribeMany [BrowsingContextLoad] manyLoadEventFired
 
       logTxt "Navigating to checkboxes page"
@@ -392,7 +392,7 @@ browsingContextEventFragmentNavigation =
       (fragmentEventFired, waitFragmentEventFired) <- timeLimitLog BrowsingContextFragmentNavigated
       subscribeBrowsingContextFragmentNavigated fragmentEventFired
 
-      (manyFragmentEventFired, waitManyFragmentEventFired) <- timeLimitLog BrowsingContextFragmentNavigated
+      (manyFragmentEventFired, waitManyFragmentEventFired) <- timeLimitLogMany BrowsingContextFragmentNavigated
       subscribeMany [BrowsingContextFragmentNavigated] manyFragmentEventFired
 
       logTxt "Navigate to fragment #section2"
@@ -421,7 +421,7 @@ browsingContextEventUserPrompts =
       (openedEventFired, waitOpenedEventFired) <- timeLimitLog BrowsingContextUserPromptOpened
       subscribeBrowsingContextUserPromptOpened openedEventFired
 
-      (manyOpenedEventFired, waitManyOpenedEventFired) <- timeLimitLog BrowsingContextUserPromptOpened
+      (manyOpenedEventFired, waitManyOpenedEventFired) <- timeLimitLogMany BrowsingContextUserPromptOpened
       subscribeMany [BrowsingContextUserPromptOpened] manyOpenedEventFired
 
       logTxt "Click alert button to trigger prompt"
@@ -444,7 +444,7 @@ browsingContextEventUserPrompts =
       (closedEventFired, waitClosedEventFired) <- timeLimitLog BrowsingContextUserPromptClosed
       subscribeBrowsingContextUserPromptClosed closedEventFired
 
-      (manyClosedEventFired, waitManyClosedEventFired) <- timeLimitLog BrowsingContextUserPromptClosed
+      (manyClosedEventFired, waitManyClosedEventFired) <- timeLimitLogMany BrowsingContextUserPromptClosed
       subscribeMany [BrowsingContextUserPromptClosed] manyClosedEventFired
 
       pauseAtLeast $ 500 * milliseconds
@@ -564,7 +564,7 @@ browsingContextEventHistoryUpdated =
       (historyEventFired, waitHistoryEventFired) <- timeLimitLog BrowsingContextHistoryUpdated
       subscribeBrowsingContextHistoryUpdated historyEventFired
 
-      (manyHistoryEventFired, waitManyHistoryEventFired) <- timeLimitLog BrowsingContextHistoryUpdated
+      (manyHistoryEventFired, waitManyHistoryEventFired) <- timeLimitLogMany BrowsingContextHistoryUpdated
       subscribeMany [BrowsingContextHistoryUpdated] manyHistoryEventFired
 
       logTxt "Navigate to checkboxes page"
@@ -625,7 +625,7 @@ browsingContextEventNavigationAborted =
       (abortedEventFired, waitAbortedEventFired) <- timeLimitLog BrowsingContextNavigationAborted
       subscribeBrowsingContextNavigationAborted abortedEventFired
 
-      (manyAbortedEventFired, waitManyAbortedEventFired) <- timeLimitLog BrowsingContextNavigationAborted
+      (manyAbortedEventFired, waitManyAbortedEventFired) <- timeLimitLogMany BrowsingContextNavigationAborted
       subscribeMany [BrowsingContextNavigationAborted] manyAbortedEventFired
 
       logTxt "Start navigation to slow loading page"
@@ -681,7 +681,7 @@ browsingContextEventNavigationFailed =
       (failedEventFired, waitFailedEventFired) <- timeLimitLog BrowsingContextNavigationFailed
       subscribeBrowsingContextNavigationFailed failedEventFired
 
-      (manyFailedEventFired, waitManyFailedEventFired) <- timeLimitLog BrowsingContextNavigationFailed
+      (manyFailedEventFired, waitManyFailedEventFired) <- timeLimitLogMany BrowsingContextNavigationFailed
       subscribeMany [BrowsingContextNavigationFailed] manyFailedEventFired
 
       logTxt "Attempting to navigate to invalid URL"
@@ -720,7 +720,7 @@ browsingContextEventDownloadWillBegin =
       (downloadEventFired, waitDownloadEventFired) <- timeLimitLog BrowsingContextDownloadWillBegin
       subscribeBrowsingContextDownloadWillBegin downloadEventFired
 
-      (manyDownloadEventFired, waitManyDownloadEventFired) <- timeLimitLog BrowsingContextDownloadWillBegin
+      (manyDownloadEventFired, waitManyDownloadEventFired) <- timeLimitLogMany BrowsingContextDownloadWillBegin
       subscribeMany [BrowsingContextDownloadWillBegin] manyDownloadEventFired
 
       logTxt "Click download link via script"
@@ -767,7 +767,7 @@ browsingContextEventDownloadEnd =
       (downloadEndEventFired, waitDownloadEndEventFired) <- timeLimitLog BrowsingContextDownloadEnd
       subscribeBrowsingContextDownloadEnd downloadEndEventFired
 
-      (manyDownloadEndEventFired, waitManyDownloadEndEventFired) <- timeLimitLog BrowsingContextDownloadEnd
+      (manyDownloadEndEventFired, waitManyDownloadEndEventFired) <- timeLimitLogMany BrowsingContextDownloadEnd
       subscribeMany [BrowsingContextDownloadEnd] manyDownloadEndEventFired
 
       logTxt "Trigger download via JavaScript (blob download should complete quickly)"
