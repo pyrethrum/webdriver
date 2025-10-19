@@ -313,38 +313,7 @@ networkInterceptDemo =
       pause
 
 -- >>> runDemo networkRequestModificationDemo
--- *** Exception: Error executing BiDi command: MkCommand
---   { method = "network.continueRequest"
---   , params =
---       MkContinueRequest
---         { request = MkRequestId { id = "21" }
---         , body = Nothing
---         , cookies = Nothing
---         , headers = Nothing
---         , method = Nothing
---         , url = Nothing
---         }
---   , extended = Nothing
---   }
--- With JSON: 
--- {
---     "id": 12,
---     "method": "network.continueRequest",
---     "params": {
---         "request": "21"
---     }
--- }
--- BiDi driver error: 
--- MkDriverError
---   { id = Just 12
---   , error = NoSuchRequest
---   , description = "Tried to continue an unknown request"
---   , message = "Blocked request with id 21 not found"
---   , stacktrace =
---       Just
---         "RemoteError@chrome://remote/content/shared/RemoteError.sys.mjs:8:8\nWebDriverError@chrome://remote/content/shared/webdriver/Errors.sys.mjs:202:5\nNoSuchRequestError@chrome://remote/content/shared/webdriver/Errors.sys.mjs:733:5\ncontinueRequest@chrome://remote/content/webdriver-bidi/modules/root/network.sys.mjs:776:13\nhandleCommand@chrome://remote/content/shared/messagehandler/MessageHandler.sys.mjs:260:33\nexecute@chrome://remote/content/shared/webdriver/Session.sys.mjs:410:32\nonPacket@chrome://remote/content/webdriver-bidi/WebDriverBiDiConnection.sys.mjs:236:37\nonMessage@chrome://remote/content/server/WebSocketTransport.sys.mjs:127:18\nhandleEvent@chrome://remote/content/server/WebSocketTransport.sys.mjs:109:14\n"
---   , extensions = MkEmptyResult { extensible = fromList [] }
---   }
+-- *** Exception: user error (Timeout - Expected event did not fire: NetworkBeforeRequestSent)
 networkRequestModificationDemo :: BiDiDemo
 networkRequestModificationDemo =
   demo "Network III - Request Modification" action
@@ -354,73 +323,11 @@ networkRequestModificationDemo =
       bc <- rootContext utils cmds
 
       withTestServer $ do
-        logTxt "Test Server running - ready to intercept and modify network requests"
-        pause
-
-        -- Test 1: networkContinueRequest with basic parameters
-        logTxt "Test 1: Add BeforeRequestSent intercept and continue request without modifications"
-        intercept1 <-
-          networkAddIntercept $
-            MkAddIntercept
-              { phases = [BeforeRequestSent],
-                contexts = Just [bc],
-                urlPatterns = Nothing
-              }
-        let MkAddInterceptResult interceptId1 = intercept1
-        logShow "BeforeRequestSent intercept added" interceptId1
-        pause
-
-        requestIdVar1 <- newTVarIO Nothing
-        (beforeReqFired1, waitBeforeReq1) <- timeLimitLog NetworkBeforeRequestSent
-        subscribeNetworkBeforeRequestSent
-          ( \event -> do
-              let Net.MkBeforeRequestSent {request = Net.MkRequestData {request = reqId}} = event
-              logShow "Captured request ID from BeforeRequestSent" reqId
-              atomically $ writeTVar requestIdVar1 (Just reqId)
-
-              logTxt "Continuing request without modifications"
-              c <- networkContinueRequest $
-                MkContinueRequest
-                  { request = reqId,
-                    body = Nothing,
-                    cookies = Nothing,
-                    headers = Nothing,
-                    method = Nothing,
-                    url = Nothing
-                  }
-              logShow "Request continued without modifications" c
-              beforeReqFired1 event
-          )
-
-        logTxt $ "Navigation to:" <> boringHelloUrl
-        navResult1 <-
-          browsingContextNavigate $
-            MkNavigate
-              { context = bc,
-                url = boringHelloUrl,
-                wait = Just Complete
-              }
-        logShow "Navigation result" navResult1
-        waitBeforeReq1
-        pause
-
-        removeIntercept1 <- networkRemoveIntercept $ MkRemoveIntercept interceptId1
-        logShow "Removed intercept" removeIntercept1
-        pause
-
-        logTxt "Test 2: Intercept and modify request headers and method"
-        intercept2 <-
-          networkAddIntercept $
-            MkAddIntercept
-              { phases = [BeforeRequestSent],
-                contexts = Just [bc],
-                urlPatterns = Nothing
-              }
-        let MkAddInterceptResult interceptId2 = intercept2
-        logShow "BeforeRequestSent intercept added" interceptId2
-        pause
-
+        logTxt "Subscribe first, then intercept and modify request headers and method"
+        
         (beforeReqFired2, waitBeforeReq2) <- timeLimitLog NetworkBeforeRequestSent
+        
+        -- Subscribe BEFORE adding intercept
         subscribeNetworkBeforeRequestSent
           ( \event -> do
               let Net.MkBeforeRequestSent {request = Net.MkRequestData {request = reqId}} = event
@@ -441,6 +348,18 @@ networkRequestModificationDemo =
                   }
               beforeReqFired2 event
           )
+        
+        -- Add intercept AFTER subscription
+        intercept2 <-
+          networkAddIntercept $
+            MkAddIntercept
+              { phases = [BeforeRequestSent],
+                contexts = Just [bc],
+                urlPatterns = Nothing
+              }
+        let MkAddInterceptResult interceptId2 = intercept2
+        logShow "BeforeRequestSent intercept added" interceptId2
+        pause
 
         navResult2 <-
           browsingContextNavigate $
