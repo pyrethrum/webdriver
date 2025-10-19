@@ -464,6 +464,42 @@ networkProvideResponseDemo =
 
 -- not supported in geckodriver yet
 -- >>> runDemo networkDataRetrievalDemo
+-- *** Exception: Error executing BiDi command: MkCommand
+--   { method = "network.getData"
+--   , params =
+--       MkGetData
+--         { dataType = MkDataType { dataType = "response" }
+--         , collector =
+--             Just
+--               MkCollector { collector = "715339d5-13bc-4d61-b241-0462b59a2797" }
+--         , disown = Just False
+--         , request = MkRequest { request = "example-request-id-for-data" }
+--         }
+--   , extended = Nothing
+--   }
+-- With JSON: 
+-- {
+--     "id": 3,
+--     "method": "network.getData",
+--     "params": {
+--         "collector": "715339d5-13bc-4d61-b241-0462b59a2797",
+--         "dataType": "response",
+--         "disown": false,
+--         "request": "example-request-id-for-data"
+--     }
+-- }
+-- BiDi driver error: 
+-- MkDriverError
+--   { id = Just 3
+--   , error = NoSuchNetworkData
+--   , description = "Tried to reference unknown data"
+--   , message =
+--       "Network data for request id example-request-id-for-data and DataType response not found"
+--   , stacktrace =
+--       Just
+--         "RemoteError@chrome://remote/content/shared/RemoteError.sys.mjs:8:8\nWebDriverError@chrome://remote/content/shared/webdriver/Errors.sys.mjs:202:5\nNoSuchNetworkDataError@chrome://remote/content/shared/webdriver/Errors.sys.mjs:700:5\ngetData@chrome://remote/content/webdriver-bidi/modules/root/network.sys.mjs:1227:13\nhandleCommand@chrome://remote/content/shared/messagehandler/MessageHandler.sys.mjs:260:33\nexecute@chrome://remote/content/shared/webdriver/Session.sys.mjs:410:32\nonPacket@chrome://remote/content/webdriver-bidi/WebDriverBiDiConnection.sys.mjs:236:37\nonMessage@chrome://remote/content/server/WebSocketTransport.sys.mjs:127:18\nhandleEvent@chrome://remote/content/server/WebSocketTransport.sys.mjs:109:14\n"
+--   , extensions = MkEmptyResult { extensible = fromList [] }
+--   }
 networkDataRetrievalDemo :: BiDiDemo
 networkDataRetrievalDemo =
   demo "Network VI - Data Retrieval and Ownership" action
@@ -478,7 +514,7 @@ networkDataRetrievalDemo =
           MkAddDataCollector
             { dataTypes = [MkDataType "response"],
               maxEncodedDataSize = MkJSUInt 2048,
-              collectorType = Just (MkCollectorType "buffer"),
+              collectorType = Just (MkCollectorType "blob"),
               contexts = Just [bc],
               userContexts = Nothing
             }
