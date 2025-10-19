@@ -4,6 +4,9 @@ import BiDi.BiDiRunner (BiDiActions (..), mkDemoBiDiClientParams, withCommands)
 import Control.Exception (Exception, catch, throwIO)
 import Data.Text (Text, isInfixOf)
 import Data.Time.Clock.POSIX (POSIXTime, getPOSIXTime)
+import System.Directory (getCurrentDirectory)
+import UnliftIO (bracket)
+import UnliftIO.Process (proc, cwd, createProcess, terminateProcess)
 import WebDriverPreCore.BiDi.Protocol
   ( BrowsingContext,
     Close (MkClose, context, promptUnload),
@@ -34,7 +37,7 @@ import WebDriverPreCore.Internal.Utils (txt)
 import Prelude hiding (log, putStrLn)
 import WebDriverPreCore.BiDi.CoreTypes (StringValue(..))
 import Const (seconds, Timeout (..))
-import IOUtils (DemoUtils (..))
+import IOUtils (DemoUtils (..), findWebDriverRoot)
 
 
 -- TODO: deprecate 
@@ -168,5 +171,22 @@ chkDomContains' timeout pause' MkDemoUtils {..} MkCommands {..} bc expectedText 
 chkDomContains :: DemoUtils -> BiDiActions -> BrowsingContext -> Text -> IO ()
 chkDomContains = chkDomContains' (10 * seconds) (MkTimeout 100)
 
+
+-- | Run an IO action with the test server running
+withTestServer :: forall a. IO a -> IO a
+withTestServer action = do
+  currentDir <- getCurrentDirectory
+  case findWebDriverRoot currentDir of
+    Nothing ->
+      error $
+        "Could not find 'webdriver' root directory from: "
+          <> currentDir
+          <> "\n withTestServer expects to be run from the 'webdriver' directory"
+    Just webdriverRoot -> do
+      let processConfig = (proc "cabal" ["run", "test-server"]) {cwd = Just webdriverRoot}
+      bracket
+        (createProcess processConfig)
+        (\(_, _, _, ph) -> terminateProcess ph)
+        (const action)
 
 
