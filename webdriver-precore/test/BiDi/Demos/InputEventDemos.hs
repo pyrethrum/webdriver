@@ -51,7 +51,7 @@ inputEventFileDialogOpened =
       (fileDialogEventFired, waitFileDialogEventFired) <- timeLimitLog InputFileDialogOpened
       subscribeInputFileDialogOpened fileDialogEventFired
 
-      (manyFileDialogEventFired, waitManyFileDialogEventFired) <- timeLimitLog InputFileDialogOpened
+      (manyFileDialogEventFired, waitManyFileDialogEventFired) <- timeLimitLogMany InputFileDialogOpened
       subscribeMany [InputFileDialogOpened] manyFileDialogEventFired
 
       bc <- newWindowContext utils cmds

@@ -32,13 +32,13 @@ scriptEventRealmLifecycle =
       (realmCreatedEventFired, waitRealmCreatedEventFired) <- timeLimitLog ScriptRealmCreated
       subscribeScriptRealmCreated realmCreatedEventFired
 
-      (manyRealmCreatedEventFired, waitManyRealmCreatedEventFired) <- timeLimitLog ScriptRealmCreated
+      (manyRealmCreatedEventFired, waitManyRealmCreatedEventFired) <- timeLimitLogMany ScriptRealmCreated
       subscribeMany [ScriptRealmCreated] manyRealmCreatedEventFired
 
       (realmDestroyedEventFired, waitRealmDestroyedEventFired) <- timeLimitLog ScriptRealmDestroyed
       subscribeScriptRealmDestroyed realmDestroyedEventFired
 
-      (manyRealmDestroyedEventFired, waitManyRealmDestroyedEventFired) <- timeLimitLog ScriptRealmDestroyed
+      (manyRealmDestroyedEventFired, waitManyRealmDestroyedEventFired) <- timeLimitLogMany ScriptRealmDestroyed
       subscribeMany [ScriptRealmDestroyed] manyRealmDestroyedEventFired
 
       logTxt "Navigate to script realm test page"
@@ -91,7 +91,7 @@ scriptEventMessage =
       (messageEventFired, waitMessageEventFired) <- timeLimitLog ScriptMessage
       subscribeScriptMessage messageEventFired
 
-      (manyMessageEventFired, waitManyMessageEventFired) <- timeLimitLog ScriptMessage
+      (manyMessageEventFired, waitManyMessageEventFired) <- timeLimitLogMany ScriptMessage
       subscribeMany [ScriptMessage] manyMessageEventFired
 
       logTxt "Navigate to checkboxes page"

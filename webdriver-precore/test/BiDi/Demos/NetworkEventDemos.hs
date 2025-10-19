@@ -75,7 +75,7 @@ networkEventFetchError =
         (fetchErrorEventFired, waitFetchErrorEventFired) <- timeLimitLog NetworkFetchError
         subscribeNetworkFetchError fetchErrorEventFired
 
-        (manyFetchErrorEventFired, waitManyFetchErrorEventFired) <- timeLimitLog NetworkFetchError
+        (manyFetchErrorEventFired, waitManyFetchErrorEventFired) <- timeLimitLogMany NetworkFetchError
         subscribeMany [NetworkFetchError] manyFetchErrorEventFired
 
         bc <- rootContext utils cmds
@@ -107,7 +107,7 @@ networkEventAuthRequired =
       (authReqEventFired, waitAuthReqEventFired) <- timeLimitLog NetworkAuthRequired
       subscribeNetworkAuthRequired authReqEventFired
 
-      (manyAuthReqEventFired, waitManyAuthReqEventFired) <- timeLimitLog NetworkAuthRequired
+      (manyAuthReqEventFired, waitManyAuthReqEventFired) <- timeLimitLogMany NetworkAuthRequired
       subscribeMany [NetworkAuthRequired] manyAuthReqEventFired
 
       bc <- rootContext utils cmds

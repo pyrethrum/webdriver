@@ -51,7 +51,7 @@ logEventConsoleEntries =
       (logEventFired, waitLogEventFired) <- timeLimitLog LogEntryAdded
       subscribeLogEntryAdded $ chkIsConsoleEntry logTxt >=> logEventFired
 
-      (manyLogEventFired, waitManyLogEventFired) <- timeLimitLog LogEntryAdded
+      (manyLogEventFired, waitManyLogEventFired) <- timeLimitLogMany LogEntryAdded
       subscribeMany [LogEntryAdded] $ chkEventIsConsoleEntry logTxt >=> manyLogEventFired
 
       logTxt "Navigate to console log test page"
@@ -80,7 +80,7 @@ logEventConsoleLevelDebug =
       (logEventFired, waitLogEventFired) <- timeLimitLog LogEntryAdded
       subscribeLogEntryAdded $ chkIsConsoleEntry logTxt >=> logEventFired
 
-      (manyLogEventFired, waitManyLogEventFired) <- timeLimitLog LogEntryAdded
+      (manyLogEventFired, waitManyLogEventFired) <- timeLimitLogMany LogEntryAdded
       subscribeMany [LogEntryAdded] $ chkEventIsConsoleEntry logTxt >=> manyLogEventFired
 
       logTxt "Triggering console.debug()"
@@ -110,7 +110,7 @@ logEventConsoleLevelInfo =
       (logEventFired, waitLogEventFired) <- timeLimitLog LogEntryAdded
       subscribeLogEntryAdded $ chkIsConsoleEntry logTxt >=> logEventFired
 
-      (manyLogEventFired, waitManyLogEventFired) <- timeLimitLog LogEntryAdded
+      (manyLogEventFired, waitManyLogEventFired) <- timeLimitLogMany LogEntryAdded
       subscribeMany [LogEntryAdded] $ chkEventIsConsoleEntry logTxt >=> manyLogEventFired
 
       logTxt "Triggering console.info()"
@@ -140,7 +140,7 @@ logEventConsoleLevelWarn =
       (logEventFired, waitLogEventFired) <- timeLimitLog LogEntryAdded
       subscribeLogEntryAdded $ chkIsConsoleEntry logTxt >=> logEventFired
 
-      (manyLogEventFired, waitManyLogEventFired) <- timeLimitLog LogEntryAdded
+      (manyLogEventFired, waitManyLogEventFired) <- timeLimitLogMany LogEntryAdded
       subscribeMany [LogEntryAdded] $ chkEventIsConsoleEntry logTxt >=> manyLogEventFired
 
       logTxt "Triggering console.warn()"
@@ -170,7 +170,7 @@ logEventConsoleLevelError =
       (logEventFired, waitLogEventFired) <- timeLimitLog LogEntryAdded
       subscribeLogEntryAdded $ chkIsConsoleEntry logTxt >=> logEventFired
 
-      (manyLogEventFired, waitManyLogEventFired) <- timeLimitLog LogEntryAdded
+      (manyLogEventFired, waitManyLogEventFired) <- timeLimitLogMany LogEntryAdded
       subscribeMany [LogEntryAdded] $ chkEventIsConsoleEntry logTxt >=> manyLogEventFired
 
       logTxt "Triggering console.error()"
@@ -204,7 +204,7 @@ logEventJavascriptErrorFromButton =
       (logEventFired, waitLogEventFired) <- timeLimitLog LogEntryAdded
       subscribeLogEntryAdded $ chkIsJavaScriptEntry logTxt >=> logEventFired
 
-      (manyLogEventFired, waitManyLogEventFired) <- timeLimitLog LogEntryAdded
+      (manyLogEventFired, waitManyLogEventFired) <- timeLimitLogMany LogEntryAdded
       subscribeMany [LogEntryAdded] $ chkEventIsJavaScriptEntry logTxt >=> manyLogEventFired
 
       logTxt "Locate the 'Bad JS' button"
@@ -283,7 +283,7 @@ logEventGenericEntry =
       (logEventFired, waitLogEventFired) <- timeLimitLog LogEntryAdded
       subscribeLogEntryAdded logEventFired
 
-      (manyLogEventFired, waitManyLogEventFired) <- timeLimitLog LogEntryAdded
+      (manyLogEventFired, waitManyLogEventFired) <- timeLimitLogMany LogEntryAdded
       subscribeMany [LogEntryAdded] manyLogEventFired
 
       logTxt "Navigate to checkboxes page"
