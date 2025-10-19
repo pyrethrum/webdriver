@@ -40,7 +40,8 @@ main = do
 
     get "/malformed-response" $ do
       -- Send invalid chunked encoding or abruptly close connection
-      raw $ BL.fromStrict "HTTP/1.1 200 OK\r\nContent-Length: 999999\r\n\r\nIncomplete"
+        setHeader "Content-Length" "99999"  -- Promise 99999 bytes
+        text "short"  -- But only send 5 bytes, then connection closes
 
 -- Parse Basic authorization header: "Basic base64(user:pass)"
 parseBasicAuth :: BS.ByteString -> Maybe (BS.ByteString, BS.ByteString)

@@ -63,7 +63,6 @@ networkEventRequestResponseLifecycle =
           ]
 
 -- >>> runDemo networkEventFetchError
--- *** Exception: user error (Timeout - Expected event did not fire: NetworkFetchError)
 networkEventFetchError :: BiDiDemo
 networkEventFetchError =
   demo "Network Events - Fetch Error" action
@@ -83,7 +82,7 @@ networkEventFetchError =
         logTxt "Trigger fetch error using invalid URL"
         scriptEvaluate $
           MkEvaluate
-            { expression = "fetch('" <> "http://192.0.2.1:1/" <> "')",
+            { expression = "fetch('" <> malformedResponseUrl <> "')",
               target = ContextTarget $ MkContextTarget {context = bc, sandbox = Nothing},
               awaitPromise = False,
               resultOwnership = Nothing,
