@@ -201,7 +201,7 @@ data BiDiActions = MkCommands
     scriptCallFunction :: CallFunction -> IO EvaluateResult,
     scriptDisown :: Disown -> IO Object,
     scriptEvaluate :: Evaluate -> IO EvaluateResult,
-    scriptEvaluateNoWait :: Evaluate -> IO (),
+    scriptEvaluateNoWait :: Evaluate -> IO CommandRequestInfo,
     scriptGetRealms :: GetRealms -> IO GetRealmsResult,
     scriptRemovePreloadScript :: RemovePreloadScript -> IO Object,
     -- Storage commands
@@ -271,7 +271,7 @@ data BiDiActions = MkCommands
     --
     unsubscribe :: SubscriptionId -> IO (),
     -- 
-    sendCommandNoWait :: forall c r. (ToJSON c, Show c) => Command c r -> IO ()
+    sendCommandNoWait :: forall c r. (ToJSON c, Show c) => Command c r -> IO CommandRequestInfo
   }
 
 mkCommands :: BiDiMethods -> BiDiActions
@@ -449,38 +449,41 @@ mkCommands socket =
 -- note: just throws an exception if an error is encountered
 -- no timeout implemented - will just hang if bidi does not behave
 
-sendCommandNoWait :: forall c r. (ToJSON c, Show c) => BiDiMethods -> Command c r -> IO ()
-sendCommandNoWait m = void . sendCommandNoWait' m
+data CommandRequestInfo = MkCommandRequestInfo
+  { id :: JSUInt,
+    request :: Value
+  }
+  deriving (Show, Generic)
 
-sendCommandNoWait' :: forall c r. (ToJSON c, Show c) => BiDiMethods -> Command c r -> IO (JSUInt, Value)
-sendCommandNoWait' MkBiDiMethods {send, nextId} command = do
+sendCommandNoWait :: forall c r. (ToJSON c, Show c) => BiDiMethods -> Command c r -> IO CommandRequestInfo
+sendCommandNoWait MkBiDiMethods {send, nextId} command = do
   id' <- nextId
-  let cValue = commandValue command id'
-  (send cValue)
+  let request = commandValue command id'
+  (send request)
     `catch` \(e :: SomeException) -> do
       error $
         "Send command failed: \n"
           <> unpack (txt command)
           <> "\n ---- Exception -----\n"
           <> displayException e
-  pure (id', cValue)
+  pure $ MkCommandRequestInfo{id = id', request}
 
 sendCommand :: forall c r. (FromJSON r, ToJSON c, Show c) => BiDiMethods -> Command c r -> IO r
 sendCommand m@MkBiDiMethods {getNext} command = do
-  (id', cValue) <- sendCommandNoWait' m command
-  matchedResponse cValue id'
+  MkCommandRequestInfo{id = id', request} <- sendCommandNoWait m command
+  matchedResponse request id'
   where
     matchedResponse :: Value -> JSUInt -> IO r
-    matchedResponse cValue id' = do
+    matchedResponse request id' = do
       response <- getNext
       parseResponse id' response
         & maybe
           ( -- recurse
-            matchedResponse cValue id'
+            matchedResponse request id'
           )
           ( either
               ( -- format and throw
-                error . unpack . displayResponseError command cValue
+                error . unpack . displayResponseError command request
               )
               ( -- get response
                 pure . (.response)

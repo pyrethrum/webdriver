@@ -20,10 +20,10 @@ main = do
       html helloHtml
 
     get "/boringHello" $ do
-      html "<html><body><h1>Hello</h1></body></html>"
+      html "<html><body><h1>Hello from Boring Hello</h1></body></html>"
 
     get "/boringHello2" $ do
-      html "<html><body><h1>Hello Again</h1></body></html>"
+      html "<html><body><h1>Hello Again from Boring Hello 2</h1></body></html>"
 
     get "/authtest" $ do
       hdr <- header "Authorization"

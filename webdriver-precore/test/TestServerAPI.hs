@@ -1,4 +1,4 @@
-module TestServer
+module TestServerAPI
   ( withTestServer,
     authTestUrl,
     invalidUrl,

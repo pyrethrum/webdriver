@@ -3,7 +3,7 @@ module BiDi.Demos.NetworkEventDemos where
 import BiDi.BiDiRunner (BiDiActions (..))
 import BiDi.DemoUtils
 import IOUtils (DemoUtils (..))
-import TestServer (authTestUrl, testServerHomeUrl, withTestServer, malformedResponseUrl)
+import TestServerAPI (authTestUrl, testServerHomeUrl, withTestServer, malformedResponseUrl)
 import WebDriverPreCore.BiDi.Protocol
   ( ContextTarget (..),
     Evaluate (..),

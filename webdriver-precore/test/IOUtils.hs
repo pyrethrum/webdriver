@@ -168,7 +168,7 @@ timeLimit :: forall a b. (Show b) => Text -> Timeout -> b -> (a -> IO Bool) -> I
 timeLimit timeoutMsg (MkTimeout mu) eventDesc action = do
   triggered <- newEmptyTMVarIO
   let waitTriggered = atomically $ readTMVar triggered
-      waitLimit = threadDelay mu >> (fail . unpack $ "Timeout - " <> timeoutMsg <> ": " <> txt eventDesc)
+      waitLimit = threadDelay mu >> (fail . unpack $ "Timeout - " <> timeoutMsg <> ": " <> txt eventDesc <>  " after " <> txt (mu `div` 1000) <> " milliseconds")
       interceptedAction = \a -> do
         result <- action a
         when result $

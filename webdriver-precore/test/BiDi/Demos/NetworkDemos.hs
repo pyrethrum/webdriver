@@ -1,15 +1,16 @@
 module BiDi.Demos.NetworkDemos where
 
-import BiDi.BiDiRunner (BiDiActions (..))
+import BiDi.BiDiRunner (BiDiActions (..), CommandRequestInfo (..))
 import BiDi.DemoUtils
 import Const (second)
 import IOUtils (DemoUtils (..))
-import TestServer (boringHelloUrl, boringHelloUrl2, testServerHomeUrl, withTestServer)
+import TestServerAPI (boringHelloUrl, boringHelloUrl2, testServerHomeUrl, withTestServer)
 import UnliftIO.STM (atomically, newTVarIO, readTVar, writeTVar, newEmptyTMVarIO)
 import WebDriverPreCore.BiDi.CoreTypes (JSUInt (..), StringValue (..))
 import WebDriverPreCore.BiDi.Network qualified as Net
 import WebDriverPreCore.BiDi.Protocol
 import Prelude hiding (log)
+import UnliftIO (newTMVarIO, putTMVar, readTMVar)
 
 -- >>> runDemo networkDataCollectorDemo
 networkDataCollectorDemo :: BiDiDemo
@@ -313,6 +314,7 @@ networkInterceptDemo =
       pause
 
 -- >>> runDemo networkRequestModificationDemo
+-- *** Exception: CloseRequest 1000 ""
 networkRequestModificationDemo :: BiDiDemo
 networkRequestModificationDemo =
   demo "Network III - Request Modification" action
@@ -327,25 +329,11 @@ networkRequestModificationDemo =
         (beforeReqFired2, waitBeforeReq2) <- timeLimitLog NetworkBeforeRequestSent
 
         -- Subscribe BEFORE adding intercept
-        subscribeNetworkBeforeRequestSent
+        reqIdMVar <- newTMVarIO Nothing
+        subscribeNetworkBeforeRequestSent 
           ( \event -> do
               let Net.MkBeforeRequestSent {request = Net.MkRequestData {request = reqId}} = event
-              
-              logShow "Modifying request with custom headers" reqId
-
-              networkContinueRequest $
-                MkContinueRequest
-                  { request = reqId,
-                    body = Nothing,
-                    cookies = Nothing,
-                    headers =
-                      Just
-                        [ MkHeader "X-Custom-Header" (TextBytesValue $ MkStringValue "custom-value"),
-                          MkHeader "X-Test-Demo" (TextBytesValue $ MkStringValue "modification-test")
-                        ],
-                    method = Just "GET",
-                    url = Nothing
-                  }
+              atomically $ putTMVar reqIdMVar (Just reqId)
               beforeReqFired2 event
           )
         
@@ -361,14 +349,26 @@ networkRequestModificationDemo =
         logShow "BeforeRequestSent intercept added" interceptId2
         pause
 
-        navResult2 <-
-          browsingContextNavigate $
-            MkNavigate
+        sendCommandNoWait . mkCommand "browsingContext.navigate" $  MkNavigate
               { context = bc,
-                url = boringHelloUrl2,
+                url = boringHelloUrl,
                 wait = Just Complete
               }
-        logShow "Navigation with modified headers result" navResult2
+
+        reqId <- atomically $ readTMVar reqIdMVar
+
+        logShow ("Switching urls to " <> boringHelloUrl2) reqId
+
+        networkContinueRequest $
+                MkContinueRequest
+                  { request = MkRequestId reqId,
+                    body = Nothing,
+                    cookies = Nothing,
+                    headers = Nothing,
+                    method = Just "GET",
+                    url = Just boringHelloUrl2
+                  }
+    
         waitBeforeReq2
         pause
 

@@ -197,7 +197,7 @@ test-suite test
     , Const
     , IOUtils
     , TestData
-    , TestServer
+    , TestServerAPI
     , Http.HttpRunnerMinimalForDocs
     , Http.HttpRunner
     , Http.HttpAPI
