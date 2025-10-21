@@ -375,38 +375,6 @@ networkRequestModificationDemo =
         pause
 
 -- >>> runDemo networkResponseModificationDemo
--- *** Exception: Error executing BiDi command: MkCommand
---   { method = "network.continueResponse"
---   , params =
---       MkContinueResponse
---         { request = MkRequestId { id = "9" }
---         , body = Nothing
---         , cookies = Nothing
---         , headers = Nothing
---         , reasonPhrase = Nothing
---         , statusCode = Nothing
---         }
---   , extended = Nothing
---   }
--- With JSON: 
--- {
---     "id": 11,
---     "method": "network.continueResponse",
---     "params": {
---         "request": "9"
---     }
--- }
--- BiDi driver error: 
--- MkDriverError
---   { id = Just 11
---   , error = NoSuchRequest
---   , description = "Tried to continue an unknown request"
---   , message = "Blocked request with id 9 not found"
---   , stacktrace =
---       Just
---         "RemoteError@chrome://remote/content/shared/RemoteError.sys.mjs:8:8\nWebDriverError@chrome://remote/content/shared/webdriver/Errors.sys.mjs:202:5\nNoSuchRequestError@chrome://remote/content/shared/webdriver/Errors.sys.mjs:733:5\ncontinueResponse@chrome://remote/content/webdriver-bidi/modules/root/network.sys.mjs:936:13\nhandleCommand@chrome://remote/content/shared/messagehandler/MessageHandler.sys.mjs:260:33\nexecute@chrome://remote/content/shared/webdriver/Session.sys.mjs:410:32\nonPacket@chrome://remote/content/webdriver-bidi/WebDriverBiDiConnection.sys.mjs:236:37\nonMessage@chrome://remote/content/server/WebSocketTransport.sys.mjs:127:18\nhandleEvent@chrome://remote/content/server/WebSocketTransport.sys.mjs:109:14\n"
---   , extensions = MkEmptyResult { extensible = fromList [] }
---   }
 networkResponseModificationDemo :: BiDiDemo
 networkResponseModificationDemo =
   demo "Network IV - Response Modification" action
@@ -416,103 +384,56 @@ networkResponseModificationDemo =
       bc <- rootContext utils cmds
 
       withTestServer $ do
-        logTxt "Test Server running - ready to intercept and modify network responses"
-        pause
+        logTxt "Subscribe first, then intercept and modify response body"
+        
+        (respStartedFired, waitRespStarted) <- timeLimitLog NetworkResponseStarted
 
-        -- Test 1: networkContinueResponse with basic parameters
-        logTxt "Test 1: Add ResponseStarted intercept and continue response without modifications"
-        intercept1 <-
+        reqIdMVar <- newEmptyTMVarIO
+        subscribeNetworkResponseStarted 
+          ( \event -> do
+              let Net.MkResponseStarted {request = Net.MkRequestData {request = reqId}} = event
+              atomically $ putTMVar reqIdMVar reqId
+              respStartedFired event
+          )
+        
+        -- Add intercept AFTER subscription
+        intercept <-
           networkAddIntercept $
             MkAddIntercept
               { phases = [ResponseStarted],
                 contexts = Just [bc],
                 urlPatterns = Nothing
               }
-        let MkAddInterceptResult interceptId1 = intercept1
-        logShow "ResponseStarted intercept added" interceptId1
+        let MkAddInterceptResult interceptId = intercept
+        logShow "ResponseStarted intercept added" interceptId
         pause
 
-        (respStartedFired1, waitRespStarted1) <- timeLimitLog NetworkResponseStarted
-        subscribeNetworkResponseStarted $ \event -> do
-          let Net.MkResponseStarted {request = Net.MkRequestData {request = reqId}} = event
-          logShow "Captured request ID from ResponseStarted" reqId
-
-          logTxt "Continuing response without modifications"
-          networkContinueResponse $
-            MkContinueResponse
-              { request = reqId,
-                body = Nothing,
-                cookies = Nothing,
-                headers = Nothing,
-                reasonPhrase = Nothing,
-                statusCode = Nothing
-              }
-          respStartedFired1 event
-
-        navResult1 <-
-          browsingContextNavigate $
-            MkNavigate
+        sendCommandNoWait . mkCommand "browsingContext.navigate" $  MkNavigate
               { context = bc,
-                url = testServerHomeUrl,
+                url = boringHelloUrl,
                 wait = Just Complete
               }
-        logShow "Navigation result" navResult1
-        waitRespStarted1
+
+        reqId <- atomically $ readTMVar reqIdMVar
+
+        logShow "Modifying response body with mocked HTML" reqId
+
+        networkContinueResponse $
+                MkContinueResponse
+                  { request = reqId,
+                    body = Just $ TextBytesValue $ MkStringValue "<html><body><h1>You've been Mocked!</h1></body></html>",
+                    cookies = Nothing,
+                    headers = Just [MkHeader "Content-Type" (TextBytesValue $ MkStringValue "text/html")],
+                    reasonPhrase = Nothing,
+                    statusCode = Nothing
+                  }
+    
+        waitRespStarted
         pause
 
-        removeIntercept1 <- networkRemoveIntercept $ MkRemoveIntercept interceptId1
-        logShow "Removed intercept" removeIntercept1
+        removeIntercept <- networkRemoveIntercept $ MkRemoveIntercept interceptId
+        logShow "Removed intercept" removeIntercept
         pause
-
-        -- Test 2: networkContinueResponse with modified status and headers
-        logTxt "Test 2: Intercept and modify response status code and headers"
-        intercept2 <-
-          networkAddIntercept $
-            MkAddIntercept
-              { phases = [ResponseStarted],
-                contexts = Just [bc],
-                urlPatterns = Nothing
-              }
-        let MkAddInterceptResult interceptId2 = intercept2
-        logShow "ResponseStarted intercept added" interceptId2
-        pause
-
-        (respStartedFired2, waitRespStarted2) <- timeLimitLog NetworkResponseStarted
-        subscribeNetworkResponseStarted $ \event -> do
-          let Net.MkResponseStarted {request = Net.MkRequestData {request = reqId}} = event
-          logShow "Modifying response with custom status and headers" reqId
-
-          networkContinueResponse $
-            MkContinueResponse
-              { request = reqId,
-                body = Nothing,
-                cookies = Nothing,
-                headers =
-                  Just
-                    [ MkHeader "X-Modified-Response" (TextBytesValue $ MkStringValue "true"),
-                      MkHeader "X-Custom-Header" (TextBytesValue $ MkStringValue "response-modified")
-                    ],
-                reasonPhrase = Just "OK Modified",
-                statusCode = Just (MkJSUInt 200)
-              }
-          respStartedFired2 event
-
-        navResult2 <-
-          browsingContextNavigate $
-            MkNavigate
-              { context = bc,
-                url = testServerHomeUrl,
-                wait = Just Complete
-              }
-        logShow "Navigation with modified response result" navResult2
-        waitRespStarted2
-        pause
-
-        removeIntercept2 <- networkRemoveIntercept $ MkRemoveIntercept interceptId2
-        logShow "Removed intercept" removeIntercept2
-        pause
-
-        logTxt "Network response modification demo completed"
 
 -- >>> runDemo networkAuthAndFailureDemo
 networkAuthAndFailureDemo :: BiDiDemo
