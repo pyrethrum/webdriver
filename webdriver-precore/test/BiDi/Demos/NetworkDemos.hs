@@ -314,7 +314,6 @@ networkInterceptDemo =
       pause
 
 -- >>> runDemo networkRequestModificationDemo
--- *** Exception: CloseRequest 1000 ""
 networkRequestModificationDemo :: BiDiDemo
 networkRequestModificationDemo =
   demo "Network III - Request Modification" action
@@ -328,12 +327,11 @@ networkRequestModificationDemo =
         
         (beforeReqFired2, waitBeforeReq2) <- timeLimitLog NetworkBeforeRequestSent
 
-        -- Subscribe BEFORE adding intercept
-        reqIdMVar <- newTMVarIO Nothing
+        reqIdMVar <- newEmptyTMVarIO
         subscribeNetworkBeforeRequestSent 
           ( \event -> do
               let Net.MkBeforeRequestSent {request = Net.MkRequestData {request = reqId}} = event
-              atomically $ putTMVar reqIdMVar (Just reqId)
+              atomically $ putTMVar reqIdMVar reqId
               beforeReqFired2 event
           )
         
@@ -361,7 +359,7 @@ networkRequestModificationDemo =
 
         networkContinueRequest $
                 MkContinueRequest
-                  { request = MkRequestId reqId,
+                  { request = reqId,
                     body = Nothing,
                     cookies = Nothing,
                     headers = Nothing,
@@ -377,6 +375,38 @@ networkRequestModificationDemo =
         pause
 
 -- >>> runDemo networkResponseModificationDemo
+-- *** Exception: Error executing BiDi command: MkCommand
+--   { method = "network.continueResponse"
+--   , params =
+--       MkContinueResponse
+--         { request = MkRequestId { id = "9" }
+--         , body = Nothing
+--         , cookies = Nothing
+--         , headers = Nothing
+--         , reasonPhrase = Nothing
+--         , statusCode = Nothing
+--         }
+--   , extended = Nothing
+--   }
+-- With JSON: 
+-- {
+--     "id": 11,
+--     "method": "network.continueResponse",
+--     "params": {
+--         "request": "9"
+--     }
+-- }
+-- BiDi driver error: 
+-- MkDriverError
+--   { id = Just 11
+--   , error = NoSuchRequest
+--   , description = "Tried to continue an unknown request"
+--   , message = "Blocked request with id 9 not found"
+--   , stacktrace =
+--       Just
+--         "RemoteError@chrome://remote/content/shared/RemoteError.sys.mjs:8:8\nWebDriverError@chrome://remote/content/shared/webdriver/Errors.sys.mjs:202:5\nNoSuchRequestError@chrome://remote/content/shared/webdriver/Errors.sys.mjs:733:5\ncontinueResponse@chrome://remote/content/webdriver-bidi/modules/root/network.sys.mjs:936:13\nhandleCommand@chrome://remote/content/shared/messagehandler/MessageHandler.sys.mjs:260:33\nexecute@chrome://remote/content/shared/webdriver/Session.sys.mjs:410:32\nonPacket@chrome://remote/content/webdriver-bidi/WebDriverBiDiConnection.sys.mjs:236:37\nonMessage@chrome://remote/content/server/WebSocketTransport.sys.mjs:127:18\nhandleEvent@chrome://remote/content/server/WebSocketTransport.sys.mjs:109:14\n"
+--   , extensions = MkEmptyResult { extensible = fromList [] }
+--   }
 networkResponseModificationDemo :: BiDiDemo
 networkResponseModificationDemo =
   demo "Network IV - Response Modification" action

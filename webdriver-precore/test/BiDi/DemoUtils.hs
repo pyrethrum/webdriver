@@ -37,8 +37,8 @@ import WebDriverPreCore.Internal.Utils (txt)
 import Prelude hiding (log, putStrLn)
 
 -- TODO: deprecate - move to config - rename to demoPause
-pauseMs :: Timeout
-pauseMs = MkTimeout 0
+demoPause :: Timeout
+demoPause = 2 * seconds
 
 data BiDiDemo = MkBiDiDemo
   { name :: Text,
@@ -53,7 +53,7 @@ runDemo' logging pauseMs' d =
   mkDemoBiDiClientParams logging pauseMs' >>= \p -> withCommands p d.action
 
 runDemo :: BiDiDemo -> IO ()
-runDemo = runDemo' True pauseMs
+runDemo = runDemo' True demoPause
 
 newWindowContext :: DemoUtils -> BiDiActions -> IO BrowsingContext
 newWindowContext MkDemoUtils {..} MkCommands {..} = do
