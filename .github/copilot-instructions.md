@@ -14,6 +14,7 @@ Provide project context and coding guidelines that AI should follow when generat
 - Use record syntax with OverloadedRecordDot
 - Use `maybe`, `either`, `fromMaybe` rather than explicit case statements for `Maybe` and `Either`
 - Use `LambdaCase`
+- Never use `return` always use `pure` instead
 
 ## Avoid
 - String type (prefer Text)

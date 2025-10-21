@@ -2,7 +2,7 @@ module BiDi.Demos.NetworkDemos where
 
 import BiDi.BiDiRunner (BiDiActions (..), CommandRequestInfo (..))
 import BiDi.DemoUtils
-import Const (second)
+import Const (second, seconds)
 import IOUtils (DemoUtils (..))
 import TestServerAPI (boringHelloUrl, boringHelloUrl2, testServerHomeUrl, withTestServer)
 import UnliftIO.STM (atomically, newTVarIO, readTVar, writeTVar, newEmptyTMVarIO)
@@ -377,14 +377,26 @@ networkRequestModificationDemo =
 -- >>> runDemo networkResponseModificationDemo
 networkResponseModificationDemo :: BiDiDemo
 networkResponseModificationDemo =
-  demo "Network IV - Response Modification" action
+  demo "Network IV - Response Modification (Headers & Status Only)" action
   where
     action :: DemoUtils -> BiDiActions -> IO ()
     action utils@MkDemoUtils {..} cmds@MkCommands {..} = do
       bc <- rootContext utils cmds
 
       withTestServer $ do
-        logTxt "Subscribe first, then intercept and modify response body"
+        logTxt "NOTE: ResponseStarted phase can only modify status/headers, NOT body"
+        logTxt "To modify body, use networkProvideResponse in BeforeRequestSent phase"
+        pause
+
+        logTxt "Disable cache to ensure we see network requests"
+        networkSetCacheBehavior $
+          MkSetCacheBehavior
+            { cacheBehavior = BypassCache,
+              contexts = Just [bc]
+            }
+        pause
+
+        logTxt "Subscribe to ResponseStarted and modify status + headers"
         
         (respStartedFired, waitRespStarted) <- timeLimitLog NetworkResponseStarted
 
@@ -396,7 +408,6 @@ networkResponseModificationDemo =
               respStartedFired event
           )
         
-        -- Add intercept AFTER subscription
         intercept <-
           networkAddIntercept $
             MkAddIntercept
@@ -416,20 +427,41 @@ networkResponseModificationDemo =
 
         reqId <- atomically $ readTMVar reqIdMVar
 
-        logShow "Modifying response body with mocked HTML" reqId
+        logShow "Modifying response: status 404, custom headers" reqId
+
+
+        fix this MkContinueResponse differs from spec
+
+-- network.ContinueResponseParameters = {
+--   request: network.Request,
+--   ?cookies: [*network.SetCookieHeader]
+--   ?credentials: network.AuthCredentials,
+--   ?headers: [*network.Header],
+--   ?reasonPhrase: text,
+--   ?statusCode: js-uint,
+-- }
 
         networkContinueResponse $
                 MkContinueResponse
                   { request = reqId,
-                    body = Just $ TextBytesValue $ MkStringValue "<html><body><h1>You've been Mocked!</h1></body></html>",
+                    body = Nothing,
                     cookies = Nothing,
-                    headers = Just [MkHeader "Content-Type" (TextBytesValue $ MkStringValue "text/html")],
-                    reasonPhrase = Nothing,
-                    statusCode = Nothing
+                    headers = Just 
+                      [ MkHeader "X-Modified-By" (TextBytesValue $ MkStringValue "WebDriver-BiDi-Demo"),
+                        MkHeader "X-Custom-Status" (TextBytesValue $ MkStringValue "Mocked-404"),
+                        MkHeader "X-Intercept-Time" (TextBytesValue $ MkStringValue "2025-10-22")
+                      ],
+                    reasonPhrase = Just "Not Found",
+                    statusCode = Just (MkJSUInt 404)
                   }
     
         waitRespStarted
-        pause
+        
+        logTxt "Open DevTools Network tab (F12) - you should see:"
+        logTxt "  - Status: 404 Not Found (request shown in red)"
+        logTxt "  - Custom headers: X-Modified-By, X-Custom-Status, X-Intercept-Time"
+        logTxt "  - Body: Still shows the ORIGINAL HTML from the server"
+        pauseAtLeast $ 5 * second
 
         removeIntercept <- networkRemoveIntercept $ MkRemoveIntercept interceptId
         logShow "Removed intercept" removeIntercept
