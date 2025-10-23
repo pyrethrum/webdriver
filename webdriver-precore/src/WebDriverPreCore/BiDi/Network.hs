@@ -328,8 +328,8 @@ instance ToJSON Header where
 -- | ContinueResponse parameters
 data ContinueResponse = MkContinueResponse
   { request :: RequestId,
-    body :: Maybe BytesValue,
     cookies :: Maybe [SetCookieHeader],
+    credentials :: Maybe AuthCredentials,
     headers :: Maybe [Header],
     reasonPhrase :: Maybe Text,
     statusCode :: Maybe JSUInt
