@@ -384,10 +384,6 @@ networkResponseModificationDemo =
       bc <- rootContext utils cmds
 
       withTestServer $ do
-        logTxt "NOTE: ResponseStarted phase can only modify status/headers, NOT body"
-        logTxt "To modify body, use networkProvideResponse in BeforeRequestSent phase"
-        pause
-
         logTxt "Disable cache to ensure we see network requests"
         networkSetCacheBehavior $
           MkSetCacheBehavior
@@ -429,23 +425,11 @@ networkResponseModificationDemo =
 
         logShow "Modifying response: status 404, custom headers" reqId
 
-
-        fix this MkContinueResponse differs from spec
-
--- network.ContinueResponseParameters = {
---   request: network.Request,
---   ?cookies: [*network.SetCookieHeader]
---   ?credentials: network.AuthCredentials,
---   ?headers: [*network.Header],
---   ?reasonPhrase: text,
---   ?statusCode: js-uint,
--- }
-
         networkContinueResponse $
                 MkContinueResponse
                   { request = reqId,
-                    body = Nothing,
                     cookies = Nothing,
+                    credentials = Nothing,
                     headers = Just 
                       [ MkHeader "X-Modified-By" (TextBytesValue $ MkStringValue "WebDriver-BiDi-Demo"),
                         MkHeader "X-Custom-Status" (TextBytesValue $ MkStringValue "Mocked-404"),
