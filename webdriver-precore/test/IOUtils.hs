@@ -13,12 +13,12 @@ module IOUtils
     mkLogger,
     demoUtils,
     noOpUtils,
-    -- withAsyncLogger,
     bidiDemoUtils,
     sleep1,
     sleep2,
     (===),
     findWebDriverRoot,
+    withLogFileLogger,
   )
 where
 
@@ -29,12 +29,14 @@ import Control.Monad (unless, void, when)
 import Data.Base64.Types qualified as B64T
 import Data.ByteString qualified as BS
 import Data.ByteString.Base64 qualified as B64
+import Data.Function ((&))
 import Data.Text (Text, isInfixOf, pack, toLower, unpack)
 import Data.Text.IO qualified as TIO
 import GHC.Base (coerce)
 import System.FilePath (joinPath, splitDirectories, (</>))
 import Test.Tasty.HUnit as HUnit (Assertion, HasCallStack, (@=?))
-import UnliftIO (TChan, atomically, isEmptyTChan, race_, readTMVar, tryPutTMVar, writeTChan)
+import UnliftIO (Handle, IOMode (..), TChan, atomically, isEmptyTChan, race_, readTMVar, tryPutTMVar, withFile, writeTChan)
+import UnliftIO.Directory (getCurrentDirectory)
 import UnliftIO.STM (newEmptyTMVarIO)
 import WebDriverPreCore.Internal.Utils (txt)
 import Prelude hiding (log)
@@ -54,6 +56,15 @@ findWebDriverRoot path =
     dirs = splitDirectories path
     webDriverPath = (joinPath $ takeWhile (/= rootDir) dirs) </> rootDir
 
+withLogFileLogger :: ((Text -> IO ()) -> IO ()) -> IO ()
+withLogFileLogger action = do
+  lgPath <- getLogPath <$> getCurrentDirectory
+  withFile lgPath WriteMode $
+    action . TIO.hPutStrLn
+  where
+    lgName = "eval.log"
+    getLogPath = maybe lgName (</> lgName) . findWebDriverRoot
+
 --  TODO : deprectate static logTxt et al
 
 bidiDemoUtils :: (Text -> IO ()) -> Timeout -> DemoUtils
@@ -69,7 +80,7 @@ bidiDemoUtils baseLog pause =
       pauseAtLeast = pauseAtLeast pause,
       timeLimitLog = timeLimitLog hasEventFired,
       timeLimitLogMany = timeLimitLogMany hasEventFired,
-      timeLimitLog' = \msg tmo -> timeLimitLog' msg hasEventFired tmo 
+      timeLimitLog' = \msg tmo -> timeLimitLog' msg hasEventFired tmo
     }
   where
     logTxt' = baseLog
@@ -129,7 +140,7 @@ demoUtils pause =
       pauseAtLeast = pauseAtLeast pause,
       timeLimitLog = timeLimitLog hasEventFired,
       timeLimitLogMany = timeLimitLogMany hasEventFired,
-      timeLimitLog' = \msg tmo -> timeLimitLog' msg hasEventFired tmo 
+      timeLimitLog' = \msg tmo -> timeLimitLog' msg hasEventFired tmo
     }
   where
     hasEventFired :: forall a b. (Show a, Show b) => b -> a -> IO Bool
@@ -149,7 +160,7 @@ noOpUtils =
       pauseAtLeast = sleep,
       timeLimitLog = timeLimitLog hasEventFired,
       timeLimitLogMany = timeLimitLogMany hasEventFired,
-      timeLimitLog' = \msg tmo -> timeLimitLog' msg hasEventFired tmo 
+      timeLimitLog' = \msg tmo -> timeLimitLog' msg hasEventFired tmo
     }
   where
     noOp1 = const $ pure ()
@@ -168,7 +179,7 @@ timeLimit :: forall a b. (Show b) => Text -> Timeout -> b -> (a -> IO Bool) -> I
 timeLimit timeoutMsg (MkTimeout mu) eventDesc action = do
   triggered <- newEmptyTMVarIO
   let waitTriggered = atomically $ readTMVar triggered
-      waitLimit = threadDelay mu >> (fail . unpack $ "Timeout - " <> timeoutMsg <> ": " <> txt eventDesc <>  " after " <> txt (mu `div` 1000) <> " milliseconds")
+      waitLimit = threadDelay mu >> (fail . unpack $ "Timeout - " <> timeoutMsg <> ": " <> txt eventDesc <> " after " <> txt (mu `div` 1000) <> " milliseconds")
       interceptedAction = \a -> do
         result <- action a
         when result $
