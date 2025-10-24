@@ -57,8 +57,9 @@ printToFileAndLog :: (Text -> IO ()) -> Printer
 printToFileAndLog printToFile =
   MkPrinter
     { printLog = \msg -> do
-        printToFile msg
-        TIO.putStrLn msg
+        let logMsg = "[LOG] " <> msg
+        printToFile logMsg
+        TIO.putStrLn logMsg
     }
 
 runDemo :: BiDiDemo -> IO ()

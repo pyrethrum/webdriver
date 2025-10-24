@@ -401,8 +401,7 @@ networkResponseModificationDemo =
           ( \event -> do
               let Net.MkResponseStarted {request = Net.MkRequestData {request = reqId}} = event
               atomically $ putTMVar reqIdMVar reqId
-              logShow "Captured request ID from event" reqId
-              -- respStartedFired event
+              -- beforeReqFired2 event
           )
         
         intercept <-
@@ -416,7 +415,7 @@ networkResponseModificationDemo =
         logShow "ResponseStarted intercept added" interceptId
         pause
 
-        pauseAtLeast $ 15 * seconds
+        pauseAtLeast $ 10 * seconds
 
         sendCommandNoWait . mkCommand "browsingContext.navigate" $  MkNavigate
               { context = bc,
@@ -443,12 +442,7 @@ networkResponseModificationDemo =
                   }
     
         -- waitRespStarted
-        
-        logTxt "Open DevTools Network tab (F12) - you should see:"
-        logTxt "  - Status: 404 Not Found (request shown in red)"
-        logTxt "  - Custom headers: X-Modified-By, X-Custom-Status, X-Intercept-Time"
-        logTxt "  - Body: Still shows the ORIGINAL HTML from the server"
-        pauseAtLeast $ 35 * seconds
+        pauseAtLeast $ 10 * seconds
 
         removeIntercept <- networkRemoveIntercept $ MkRemoveIntercept interceptId
         logShow "Removed intercept" removeIntercept
