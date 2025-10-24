@@ -384,6 +384,7 @@ networkResponseModificationDemo =
     action utils@MkDemoUtils {..} cmds@MkCommands {..} = do
       bc <- rootContext utils cmds
 
+      HERE TRY Setting id
       withTestServer $ do
         logTxt "Disable cache to ensure we see network requests"
         networkSetCacheBehavior $
