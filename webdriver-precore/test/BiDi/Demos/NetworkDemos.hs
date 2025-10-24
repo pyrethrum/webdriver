@@ -3,14 +3,15 @@ module BiDi.Demos.NetworkDemos where
 import BiDi.BiDiRunner (BiDiActions (..))
 import BiDi.DemoUtils
 import Const (second, seconds)
+import Http.HttpAPI (navigateTo)
 import IOUtils (DemoUtils (..))
 import TestServerAPI (boringHelloUrl, boringHelloUrl2, testServerHomeUrl, withTestServer)
-import UnliftIO.STM (atomically, newTVarIO, readTVar, writeTVar, newEmptyTMVarIO)
+import UnliftIO (putTMVar, readTMVar)
+import UnliftIO.STM (atomically, newEmptyTMVarIO, newTVarIO, readTVar, writeTVar)
 import WebDriverPreCore.BiDi.CoreTypes (JSUInt (..), StringValue (..))
 import WebDriverPreCore.BiDi.Network qualified as Net
 import WebDriverPreCore.BiDi.Protocol
 import Prelude hiding (log)
-import UnliftIO (putTMVar, readTMVar)
 
 -- >>> runDemo networkDataCollectorDemo
 networkDataCollectorDemo :: BiDiDemo
@@ -324,17 +325,17 @@ networkRequestModificationDemo =
 
       withTestServer $ do
         logTxt "Subscribe first, then intercept and modify request headers and method"
-        
+
         (beforeReqFired2, waitBeforeReq2) <- timeLimitLog NetworkBeforeRequestSent
 
         reqIdMVar <- newEmptyTMVarIO
-        subscribeNetworkBeforeRequestSent 
+        subscribeNetworkBeforeRequestSent
           ( \event -> do
               let Net.MkBeforeRequestSent {request = Net.MkRequestData {request = reqId}} = event
               atomically $ putTMVar reqIdMVar reqId
               beforeReqFired2 event
           )
-        
+
         -- Add intercept AFTER subscription
         intercept2 <-
           networkAddIntercept $
@@ -347,26 +348,27 @@ networkRequestModificationDemo =
         logShow "BeforeRequestSent intercept added" interceptId2
         pause
 
-        sendCommandNoWait . mkCommand "browsingContext.navigate" $  MkNavigate
-              { context = bc,
-                url = boringHelloUrl,
-                wait = Just Complete
-              }
+        sendCommandNoWait . mkCommand "browsingContext.navigate" $
+          MkNavigate
+            { context = bc,
+              url = boringHelloUrl,
+              wait = Just Complete
+            }
 
         reqId <- atomically $ readTMVar reqIdMVar
 
         logShow ("Switching urls to " <> boringHelloUrl2) reqId
 
         networkContinueRequest $
-                MkContinueRequest
-                  { request = reqId,
-                    body = Nothing,
-                    cookies = Nothing,
-                    headers = Nothing,
-                    method = Just "GET",
-                    url = Just boringHelloUrl2
-                  }
-    
+          MkContinueRequest
+            { request = reqId,
+              body = Nothing,
+              cookies = Nothing,
+              headers = Nothing,
+              method = Just "GET",
+              url = Just boringHelloUrl2
+            }
+
         waitBeforeReq2
         pause
 
@@ -393,17 +395,17 @@ networkResponseModificationDemo =
         pause
 
         logTxt "Subscribe to ResponseStarted and modify status + headers"
-        
+
         -- (respStartedFired, waitRespStarted) <- timeLimitLog NetworkResponseStarted
 
         reqIdMVar <- newEmptyTMVarIO
-        subscribeNetworkResponseStarted 
+        subscribeNetworkResponseStarted
           ( \event -> do
               let Net.MkResponseStarted {request = Net.MkRequestData {request = reqId}} = event
               atomically $ putTMVar reqIdMVar reqId
               -- beforeReqFired2 event
           )
-        
+
         intercept <-
           networkAddIntercept $
             MkAddIntercept
@@ -417,30 +419,38 @@ networkResponseModificationDemo =
 
         pauseAtLeast $ 10 * seconds
 
-        sendCommandNoWait . mkCommand "browsingContext.navigate" $  MkNavigate
-              { context = bc,
-                url = boringHelloUrl,
-                wait = Just Complete
-              }
+        sendCommandNoWait . mkCommand "browsingContext.navigate" $
+          MkNavigate
+            { context = bc,
+              url = boringHelloUrl,
+              wait = Just Complete
+            }
 
         reqId <- atomically $ readTMVar reqIdMVar
 
         logShow "Modifying response: status 404, custom headers" reqId
 
-        networkContinueResponse $
-                MkContinueResponse
-                  { request = reqId,
-                    cookies = Nothing,
-                    credentials = Nothing,
-                    headers = Just 
-                      [ MkHeader "X-Modified-By" (TextBytesValue $ MkStringValue "WebDriver-BiDi-Demo"),
-                        MkHeader "X-Custom-Status" (TextBytesValue $ MkStringValue "Mocked-404"),
-                        MkHeader "X-Intercept-Time" (TextBytesValue $ MkStringValue "2025-10-22")
-                      ],
-                    reasonPhrase = Just "Not Found",
-                    statusCode = Just (MkJSUInt 404)
-                  }
-    
+        browsingContextNavigate $
+          MkNavigate
+            { context = bc,
+              url = boringHelloUrl,
+              wait = Just Complete
+            }
+
+        -- networkContinueResponse $
+        --         MkContinueResponse
+        --           { request = reqId,
+        --             cookies = Nothing,
+        --             credentials = Nothing,
+        --             headers = Just
+        --               [ MkHeader "X-Modified-By" (TextBytesValue $ MkStringValue "WebDriver-BiDi-Demo"),
+        --                 MkHeader "X-Custom-Status" (TextBytesValue $ MkStringValue "Mocked-404"),
+        --                 MkHeader "X-Intercept-Time" (TextBytesValue $ MkStringValue "2025-10-22")
+        --               ],
+        --             reasonPhrase = Just "Not Found",
+        --             statusCode = Just (MkJSUInt 404)
+        --           }
+
         -- waitRespStarted
         pauseAtLeast $ 10 * seconds
 
