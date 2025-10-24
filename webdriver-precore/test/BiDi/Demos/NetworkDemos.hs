@@ -463,7 +463,7 @@ networkResponseModificationDemo =
             }
 
         -- waitRespStarted
-        pauseAtLeast $ 30 * seconds
+        pauseAtLeast $ 40 * seconds
 
         removeIntercept <- networkRemoveIntercept $ MkRemoveIntercept interceptId
         logShow "Removed intercept" removeIntercept
