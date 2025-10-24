@@ -12,6 +12,7 @@ import WebDriverPreCore.BiDi.CoreTypes (JSUInt (..), StringValue (..))
 import WebDriverPreCore.BiDi.Network qualified as Net
 import WebDriverPreCore.BiDi.Protocol
 import Prelude hiding (log)
+import Data.Coerce (coerce)
 
 -- >>> runDemo networkDataCollectorDemo
 networkDataCollectorDemo :: BiDiDemo
@@ -417,7 +418,7 @@ networkResponseModificationDemo =
         logShow "ResponseStarted intercept added" interceptId
         pause
 
-        pauseAtLeast $ 10 * seconds
+        pauseAtLeast $ 5 * seconds
 
         sendCommandNoWait . mkCommand "browsingContext.navigate" $
           MkNavigate
@@ -430,29 +431,41 @@ networkResponseModificationDemo =
 
         logShow "Modifying response: status 404, custom headers" reqId
 
-        browsingContextNavigate $
+        networkContinueResponse $
+          MkContinueResponse
+            { request = reqId,
+              cookies = Just [ MkSetCookieHeader { 
+                                name = "session_id"
+                              , value = TextBytesValue $ MkStringValue "abc123"
+                              , domain = Nothing
+                              , path = Nothing
+                              , expiry = Nothing
+                              , httpOnly = Just True
+                              , secure = Just True
+                              , maxAge = Nothing
+                              , sameSite = Nothing
+                                }
+                            ],
+              credentials = Nothing,
+              headers =
+                Just
+                  [ MkHeader "X-Modified-By" (TextBytesValue $ MkStringValue "WebDriver-BiDi-Demo"),
+                    MkHeader "X-Custom-Status" (TextBytesValue $ MkStringValue "Mocked-404"),
+                    MkHeader "X-Intercept-Time" (TextBytesValue $ MkStringValue "2025-10-22")
+                  ],
+              reasonPhrase = Just "Not Found",
+              statusCode = Just (MkJSUInt 404)
+            }
+
+        sendCommandNoWait . mkCommand "browsingContext.navigate" $
           MkNavigate
             { context = bc,
               url = boringHelloUrl,
               wait = Just Complete
             }
 
-        -- networkContinueResponse $
-        --         MkContinueResponse
-        --           { request = reqId,
-        --             cookies = Nothing,
-        --             credentials = Nothing,
-        --             headers = Just
-        --               [ MkHeader "X-Modified-By" (TextBytesValue $ MkStringValue "WebDriver-BiDi-Demo"),
-        --                 MkHeader "X-Custom-Status" (TextBytesValue $ MkStringValue "Mocked-404"),
-        --                 MkHeader "X-Intercept-Time" (TextBytesValue $ MkStringValue "2025-10-22")
-        --               ],
-        --             reasonPhrase = Just "Not Found",
-        --             statusCode = Just (MkJSUInt 404)
-        --           }
-
         -- waitRespStarted
-        pauseAtLeast $ 10 * seconds
+        pauseAtLeast $ 20 * seconds
 
         removeIntercept <- networkRemoveIntercept $ MkRemoveIntercept interceptId
         logShow "Removed intercept" removeIntercept
