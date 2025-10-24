@@ -3,31 +3,32 @@ module BiDi.BiDiRunner where
 import Config (Config, loadConfig)
 import Const (Timeout)
 import Control.Exception (Exception (displayException), Handler (..), SomeException, catch, catches, throw)
-import Control.Monad (void, when)
+import Control.Monad (forever, unless, when)
 import Data.Aeson (FromJSON, Object, ToJSON, Value (..), encode, toJSON, withObject, (.:))
 import Data.Aeson.Types (FromJSON (..), Parser)
 import Data.ByteString.Lazy qualified as BL
 import Data.Coerce (coerce)
 import Data.Foldable (Foldable (toList), traverse_)
 import Data.Function ((&))
-import Data.Text as T (Text, pack, unpack, take)
+import Data.Maybe (isJust)
+import Data.Text as T (Text, pack, take, unpack)
 import Data.Text.IO (putStrLn)
-import Data.Text.IO qualified as TIO
 import Data.Word (Word64)
 import GHC.Generics (Generic)
 import Http.HttpAPI (FullCapabilities, SessionResponse (..), deleteSession, newSessionFull)
 import Http.HttpAPI qualified as Caps (Capabilities (..))
-import IOUtils (DemoUtils, Logger (..), bidiDemoUtils, mkLogger)
+import IOUtils (DemoUtils, QueLog (..), bidiDemoUtils)
 import Network.WebSockets (Connection, receiveData, runClient, sendTextData)
 import RuntimeConst (httpCapabilities, httpFullCapabilities)
 import UnliftIO (AsyncCancelled, bracket, catchAny, throwIO, waitAnyCatch)
 import UnliftIO.Async (Async, async, cancel)
+import UnliftIO.Concurrent (threadDelay)
 import UnliftIO.STM
 import WebDriverPreCore.BiDi.API qualified as P
 import WebDriverPreCore.BiDi.BiDiUrl (BiDiUrl (..), getBiDiUrl)
 import WebDriverPreCore.BiDi.BrowsingContext
-  ( DownloadWillBegin,
-    DownloadEnd,
+  ( DownloadEnd,
+    DownloadWillBegin,
     HistoryUpdated,
     NavigationInfo,
     UserPromptClosed,
@@ -93,6 +94,7 @@ import WebDriverPreCore.BiDi.Protocol
     Print,
     PrintResult,
     ProvideResponse,
+    RealmDestroyed,
     ReleaseActions,
     Reload,
     RemoveDataCollector,
@@ -121,8 +123,7 @@ import WebDriverPreCore.BiDi.Protocol
     UserContext,
     WebExtensionInstall,
     WebExtensionResult,
-    WebExtensionUninstall, 
-    RealmDestroyed,
+    WebExtensionUninstall,
   )
 import WebDriverPreCore.BiDi.Response (JSONDecodeError, MatchedResponse (..), ResponseObject (..), decodeResponse, displayResponseError, parseResponse)
 import WebDriverPreCore.BiDi.Script
@@ -270,7 +271,7 @@ data BiDiActions = MkCommands
     subscribeInputFileDialogOpened' :: [BrowsingContext] -> [UserContext] -> (FileDialogOpened -> IO ()) -> IO SubscriptionId,
     --
     unsubscribe :: SubscriptionId -> IO (),
-    -- 
+    --
     sendCommandNoWait :: forall c r. (ToJSON c, Show c) => Command c r -> IO CommandRequestInfo
   }
 
@@ -466,11 +467,11 @@ sendCommandNoWait MkBiDiMethods {send, nextId} command = do
           <> unpack (txt command)
           <> "\n ---- Exception -----\n"
           <> displayException e
-  pure $ MkCommandRequestInfo{id = id', request}
+  pure $ MkCommandRequestInfo {id = id', request}
 
 sendCommand :: forall c r. (FromJSON r, ToJSON c, Show c) => BiDiMethods -> Command c r -> IO r
 sendCommand m@MkBiDiMethods {getNext} command = do
-  MkCommandRequestInfo{id = id', request} <- sendCommandNoWait m command
+  MkCommandRequestInfo {id = id', request} <- sendCommandNoWait m command
   matchedResponse request id'
   where
     matchedResponse :: Value -> JSUInt -> IO r
@@ -490,38 +491,54 @@ sendCommand m@MkBiDiMethods {getNext} command = do
               )
           )
 
-mkDemoBiDiClientParams :: Bool -> Timeout -> IO BiDiClientParams
-mkDemoBiDiClientParams logging pauseMs = do
-  c <- mkChannels
-  logger@MkLogger {log} <- if logging 
-    then mkLogger (c.logChan)
-    else pure MkLogger { log = const $ pure () , waitEmpty = pure () }
-  pure $
-    MkBiDiClientParams
-      { biDiMethods = mkBiDIMethods c,
-        logger,
-        messageLoops = demoMessageLoops log c,
-        demoUtils = bidiDemoUtils log pauseMs
-      }
+doNothingLogQueue :: LogQueue
+doNothingLogQueue =
+  MkLogQueue
+    { waitEmpty = pure (),
+      queueLog = MkQueLog . const $ pure (),
+      -- just block the print thread forever
+      deQueueLog = do
+        forever $ threadDelay 1_000_000
+        pure ""
+    }
+
+mkDemoBiDiClientParams :: Maybe Printer -> Timeout -> IO BiDiClientParams
+mkDemoBiDiClientParams mPrinter pauseTimeout =
+  do
+    c <- mkChannels
+    let logQueue =
+          mPrinter
+            & maybe
+              doNothingLogQueue
+              (const $ c.logQueue)
+
+    pure $
+      MkBiDiClientParams
+        { biDiMethods = mkBiDIMethods c,
+          logQueue,
+          messageLoops = demoMessageLoops mPrinter c,
+          demoUtils = bidiDemoUtils c.logQueue.queueLog pauseTimeout
+        }
 
 -- TODO Add fail for event test
 mkFailBidiClientParams ::
+  Maybe Printer ->
   Timeout ->
   Word64 ->
   Word64 ->
   Word64 ->
   Word64 ->
   IO BiDiClientParams
-mkFailBidiClientParams pauseMs failSendCount failGetCount failPrintCount failEventCount = do
+mkFailBidiClientParams mPrinter pauseTimeout failSendCount failGetCount failPrintCount failEventCount = do
   c <- mkChannels
-  logger@MkLogger {log} <- mkLogger (c.logChan)
-  messageLoops <- failMessageLoops log c failSendCount failGetCount failPrintCount failEventCount
+  messageLoops <- failMessageLoops mPrinter c failSendCount failGetCount failPrintCount failEventCount
   pure $
     MkBiDiClientParams
       { biDiMethods = mkBiDIMethods c,
-        logger,
+        -- no logging
+        logQueue = c.logQueue,
         messageLoops,
-        demoUtils = bidiDemoUtils log pauseMs
+        demoUtils = bidiDemoUtils c.logQueue.queueLog pauseTimeout
       }
 
 withNewBiDiSession :: BiDiClientParams -> (DemoUtils -> BiDiMethods -> IO ()) -> IO ()
@@ -549,20 +566,35 @@ data Channels = MkChannels
   { sendChan :: TChan Value,
     receiveChan :: TChan (Either JSONDecodeError ResponseObject),
     eventChan :: TChan Object,
-    logChan :: TChan Text,
     counterVar :: TVar JSUInt,
-    subscriptions :: TVar [ActiveSubscription IO]
+    subscriptions :: TVar [ActiveSubscription IO],
+    logQueue :: LogQueue
   }
 
 mkChannels :: IO Channels
-mkChannels =
+mkChannels = do
+  logChan <- newTChanIO
+  let waitEmpty' :: Int -> IO ()
+      waitEmpty' attempt = do
+        empty <- atomically $ isEmptyTChan logChan
+        unless (empty || attempt > 500) $ do
+          threadDelay 10_000
+          waitEmpty' $ succ attempt
+      logQ :: LogQueue
+      logQ =
+        MkLogQueue
+          { queueLog = MkQueLog $ atomically . writeTChan logChan,
+            deQueueLog = atomically $ readTChan logChan,
+            waitEmpty = waitEmpty' 0
+          }
+
   MkChannels
     <$> newTChanIO
     <*> newTChanIO
     <*> newTChanIO
-    <*> newTChanIO
     <*> counterVar
     <*> newTVarIO []
+    <*> (pure logQ)
 
 counterVar :: IO (TVar JSUInt)
 counterVar = newTVarIO $ MkJSUInt 0
@@ -666,7 +698,7 @@ parseIncomingMessage log json = do
       pure $ Right undefined
 
 data BiDiClientParams = MkBiDiClientParams
-  { logger :: Logger,
+  { logQueue :: LogQueue,
     messageLoops :: MessageLoops,
     biDiMethods :: BiDiMethods,
     demoUtils :: DemoUtils
@@ -677,13 +709,13 @@ withBiDiClient :: BiDiClientParams -> BiDiUrl -> (DemoUtils -> BiDiMethods -> IO
 withBiDiClient
   MkBiDiClientParams
     { biDiMethods,
-      logger,
+      logQueue,
       messageLoops,
       demoUtils
     }
   bidiUrl
   action =
-    withClient bidiUrl logger messageLoops $ action demoUtils biDiMethods
+    withClient bidiUrl logQueue messageLoops $ action demoUtils biDiMethods
 
 failAction :: Text -> Word64 -> (a -> IO ()) -> IO ((a -> IO ()))
 failAction lbl failCallCount action = do
@@ -719,23 +751,23 @@ failMessageActions a failSendCount failGetCount failPrintCount failEventCount =
           eventHandler = eventHandler' 1
         }
 
-demoMessageActions :: (Text -> IO ()) -> Channels -> MessageActions
-demoMessageActions log channels =
+demoMessageActions :: Maybe Printer -> Channels -> MessageActions
+demoMessageActions mPrinter MkChannels {sendChan, receiveChan, eventChan, logQueue, subscriptions} =
   MkMessageActions
     { send = \conn -> do
-        msgToSend <- atomically $ readTChan channels.sendChan
-        log $ "Sending Message: " <> jsonToText msgToSend
+        msgToSend <- atomically $ readTChan sendChan
+        queueLog $ "Sending Message: " <> jsonToText msgToSend
         catchLog
           "Message Send Failed"
-          log
+          queueLog
           (sendTextData conn (BL.toStrict $ encode msgToSend)),
       --
       get = \conn -> do
         msg <- receiveData conn
-        log $ "Received raw data: " <> T.take 100 (txt msg) <> "..."
-        log $ "Received raw data: " <> txt msg
-        let writeReceiveChan = atomically . writeTChan channels.receiveChan
-            writeEventChan = atomically . writeTChan channels.eventChan
+        queueLog $ "Received raw data: " <> T.take 100 (txt msg) <> "..."
+        queueLog $ "Received raw data: " <> txt msg
+        let writeReceiveChan = atomically . writeTChan receiveChan
+            writeEventChan = atomically . writeTChan eventChan
             r = decodeResponse msg
         case r of
           Left {} -> writeReceiveChan r
@@ -743,15 +775,20 @@ demoMessageActions log channels =
             NoID obj -> writeEventChan obj
             WithID {} -> writeReceiveChan r,
       --
-      print = do
-        msg <- atomically $ readTChan channels.logChan
-        TIO.putStrLn $ "[LOG] " <> msg,
+      print =
+        maybe
+          (pure ())
+          (logQueue.deQueueLog >>=)
+          ((.printLog) <$> mPrinter),
       --
       eventHandler = do
-        obj <- atomically $ readTChan channels.eventChan
-        log $ "Event received: " <> jsonToText (toJSON obj)
-        applySubscriptions log obj channels.subscriptions
+        obj <- atomically $ readTChan eventChan
+        queueLog $ "Event received: " <> jsonToText (toJSON obj)
+        applySubscriptions queueLog obj subscriptions
     }
+  where
+    queueLog :: Text -> IO ()
+    queueLog = when (isJust mPrinter) . coerce logQueue.queueLog
 
 data EventProps = MkEventProps
   { msgType :: Text,
@@ -802,8 +839,8 @@ applySubscription subType params fullObj sub =
         prms <- parseThrow ("could not parse Event for (in MultiSubscription) for " <> txt subType) fullObj
         nAction prms
 
-loopActions :: (Text -> IO ()) -> MessageActions -> MessageLoops
-loopActions log MkMessageActions {..} =
+loopActions :: QueLog -> MessageActions -> MessageLoops
+loopActions ql MkMessageActions {..} =
   MkMessageLoops
     { sendLoop = asyncLoop "Sender" . send,
       getLoop = asyncLoop "Receiver" . get,
@@ -811,7 +848,7 @@ loopActions log MkMessageActions {..} =
       eventLoop = asyncLoop "EventHandler" eventHandler
     }
   where
-    asyncLoop = loopForever log
+    asyncLoop = loopForever ql.queueLog
 
 data MessageLoops = MkMessageLoops
   { sendLoop :: Connection -> IO (Async ()),
@@ -820,31 +857,41 @@ data MessageLoops = MkMessageLoops
     eventLoop :: IO (Async ())
   }
 
-demoMessageLoops :: (Text -> IO ()) -> Channels -> MessageLoops
-demoMessageLoops log channels =
-  loopActions log $ demoMessageActions log channels
+newtype Printer = MkPrinter
+  { printLog :: Text -> IO ()
+  }
+
+demoMessageLoops :: Maybe Printer -> Channels -> MessageLoops
+demoMessageLoops mPrnter channels =
+  loopActions channels.logQueue.queueLog $ demoMessageActions mPrnter channels
 
 failMessageLoops ::
-  (Text -> IO ()) ->
+  Maybe Printer ->
   Channels ->
   Word64 ->
   Word64 ->
   Word64 ->
   Word64 ->
   IO MessageLoops
-failMessageLoops log channels failSendCount failGetCount failPrintCount failEventCount =
-  loopActions log
+failMessageLoops mPrinter channels failSendCount failGetCount failPrintCount failEventCount =
+  loopActions channels.logQueue.queueLog
     <$> failMessageActions
-      (demoMessageActions log channels)
+      (demoMessageActions mPrinter channels)
       failSendCount
       failGetCount
       failPrintCount
       failEventCount
 
-withClient :: BiDiUrl -> Logger -> MessageLoops -> IO () -> IO ()
+data LogQueue = MkLogQueue
+  { queueLog :: QueLog,
+    deQueueLog :: IO Text,
+    waitEmpty :: IO ()
+  }
+
+withClient :: BiDiUrl -> LogQueue -> MessageLoops -> IO () -> IO ()
 withClient
   pth@MkBiDiUrl {host, port, path}
-  logger
+  logQueue
   messageLoops
   action =
     do
@@ -867,7 +914,7 @@ withClient
         cancel result
         cancel eventLoop
 
-        logger.waitEmpty
+        logQueue.waitEmpty
         cancel printLoop
         ethresult
           & either
@@ -876,10 +923,10 @@ withClient
                 putStrLn $ "One of the BiDi client threads failed: \n" <> pack (displayException e)
                 throw e
             )
-            (pure)
-        -- putStrLn "Disconnecting client"
+            pure
     where
-      log = logger.log
+      log :: Text -> IO ()
+      log = coerce logQueue.queueLog
 
 httpSession :: IO SessionResponse
 httpSession = loadConfig >>= newSessionFull . httpBidiCapabilities
@@ -909,11 +956,11 @@ catchLog name log action =
 
 -- like forever but, unlike forever, it fails if an exception is thrown
 loopForever :: (Text -> IO ()) -> Text -> IO () -> IO (Async ())
-loopForever log name action = async $ do
-  log $ "Starting " <> name <> " thread"
+loopForever queueLog name action = async $ do
+  queueLog $ "Starting " <> name <> " thread"
   loop
   where
-    loop = catchLog name log action >> loop
+    loop = catchLog name queueLog action >> loop
 
 newHttpSession :: FullCapabilities -> IO SessionResponse
 newHttpSession = newSessionFull

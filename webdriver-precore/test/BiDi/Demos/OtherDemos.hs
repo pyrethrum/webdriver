@@ -19,7 +19,7 @@ parseUrlDemo = txt $ parseUrl "ws://127.0.0.1:9222/session/e43698d9-b02a-4284-a9
 
 runFailDemo :: BiDiDemo -> Word64 -> Word64 -> Word64 -> Word64 -> IO ()
 runFailDemo d failSendCount failGetCount failPrintCount failEventCount = do
-  mkFailBidiClientParams demoPause failSendCount failGetCount failPrintCount failEventCount >>= \p -> withCommands p d.action
+  mkFailBidiClientParams Nothing demoPause failSendCount failGetCount failPrintCount failEventCount >>= \p -> withCommands p d.action
 
 -- example fail demos :: to be turned into tests later
 sendFailDemo :: BiDiDemo -> IO ()

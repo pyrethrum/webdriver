@@ -81,7 +81,7 @@ propertyTests =
 
 fromBidiDemo :: BiDiDemo -> TestTree
 fromBidiDemo demo =
-  testCase (unpack demo.name) $ runDemo' False MkTimeout {microseconds = 0} demo
+  testCase (unpack demo.name) $ runDemo' Nothing MkTimeout {microseconds = 0} demo
 
 bidiTest :: Text -> [BiDiDemo] -> TestTree
 bidiTest title = testGroup (unpack title) . fmap fromBidiDemo

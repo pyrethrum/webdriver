@@ -1,11 +1,11 @@
 module BiDi.DemoUtils where
 
-import BiDi.BiDiRunner (BiDiActions (..), mkDemoBiDiClientParams, withCommands)
+import BiDi.BiDiRunner (BiDiActions (..), mkDemoBiDiClientParams, withCommands, Printer (..))
 import Const (Timeout (..), seconds)
 import Control.Exception (Exception, catch, throwIO)
 import Data.Text (Text, isInfixOf)
 import Data.Time.Clock.POSIX (POSIXTime, getPOSIXTime)
-import IOUtils (DemoUtils (..))
+import IOUtils (DemoUtils (..), withLogFileLogger)
 import WebDriverPreCore.BiDi.CoreTypes (StringValue (..))
 import WebDriverPreCore.BiDi.Protocol
   ( BrowsingContext,
@@ -35,6 +35,7 @@ import WebDriverPreCore.BiDi.Protocol
 import WebDriverPreCore.BiDi.Script (EvaluateResult (..), PrimitiveProtocolValue (..), RemoteValue (..))
 import WebDriverPreCore.Internal.Utils (txt)
 import Prelude hiding (log, putStrLn)
+import qualified Data.Text.IO as TIO
 
 -- TODO: deprecate - move to config - rename to demoPause
 demoPause :: Timeout
@@ -48,12 +49,22 @@ data BiDiDemo = MkBiDiDemo
 demo :: Text -> (DemoUtils -> BiDiActions -> IO ()) -> BiDiDemo
 demo name action = MkBiDiDemo {name, action}
 
-runDemo' :: Bool -> Timeout -> BiDiDemo -> IO ()
+runDemo' :: Maybe Printer -> Timeout -> BiDiDemo -> IO ()
 runDemo' logging pauseMs' d =
-  mkDemoBiDiClientParams logging pauseMs' >>= \p -> withCommands p d.action
+  mkDemoBiDiClientParams logging pauseMs' >>= flip withCommands d.action
+
+printToFileAndLog :: (Text -> IO ()) -> Printer
+printToFileAndLog printToFile =
+  MkPrinter
+    { printLog = \msg -> do
+        printToFile msg
+        TIO.putStrLn msg
+    }
 
 runDemo :: BiDiDemo -> IO ()
-runDemo = runDemo' True demoPause
+runDemo demo' = 
+  withLogFileLogger $ \printToFile ->
+     runDemo' (Just $ printToFileAndLog printToFile) demoPause demo'
 
 newWindowContext :: DemoUtils -> BiDiActions -> IO BrowsingContext
 newWindowContext MkDemoUtils {..} MkCommands {..} = do

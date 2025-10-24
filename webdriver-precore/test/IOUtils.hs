@@ -9,8 +9,6 @@ module IOUtils
     logM,
     logShowM,
     DemoUtils (..),
-    Logger (..),
-    mkLogger,
     demoUtils,
     noOpUtils,
     bidiDemoUtils,
@@ -19,32 +17,28 @@ module IOUtils
     (===),
     findWebDriverRoot,
     withLogFileLogger,
+    QueLog(..),
   )
 where
 
 import Const (Timeout (..), second, seconds)
 import Control.Concurrent (threadDelay)
 import Control.Exception (Exception (..), SomeException)
-import Control.Monad (unless, void, when)
+import Control.Monad (void, when)
 import Data.Base64.Types qualified as B64T
 import Data.ByteString qualified as BS
 import Data.ByteString.Base64 qualified as B64
-import Data.Function ((&))
 import Data.Text (Text, isInfixOf, pack, toLower, unpack)
 import Data.Text.IO qualified as TIO
 import GHC.Base (coerce)
 import System.FilePath (joinPath, splitDirectories, (</>))
 import Test.Tasty.HUnit as HUnit (Assertion, HasCallStack, (@=?))
-import UnliftIO (Handle, IOMode (..), TChan, atomically, isEmptyTChan, race_, readTMVar, tryPutTMVar, withFile, writeTChan)
+import UnliftIO (IOMode (..), atomically, race_, readTMVar, tryPutTMVar, withFile)
 import UnliftIO.Directory (getCurrentDirectory)
 import UnliftIO.STM (newEmptyTMVarIO)
 import WebDriverPreCore.Internal.Utils (txt)
 import Prelude hiding (log)
 
-data Logger = MkLogger
-  { log :: Text -> IO (),
-    waitEmpty :: IO ()
-  }
 
 findWebDriverRoot :: FilePath -> Maybe FilePath
 findWebDriverRoot path =
@@ -67,8 +61,13 @@ withLogFileLogger action = do
 
 --  TODO : deprectate static logTxt et al
 
-bidiDemoUtils :: (Text -> IO ()) -> Timeout -> DemoUtils
-bidiDemoUtils baseLog pause =
+newtype QueLog = MkQueLog
+  { queueLog :: Text -> IO ()
+  }
+
+
+bidiDemoUtils :: QueLog -> Timeout -> DemoUtils
+bidiDemoUtils qlog pause =
   MkDemoUtils
     { sleep = sleep,
       log = log',
@@ -83,27 +82,12 @@ bidiDemoUtils baseLog pause =
       timeLimitLog' = \msg tmo -> timeLimitLog' msg hasEventFired tmo
     }
   where
-    logTxt' = baseLog
+    logTxt' = coerce qlog
     log' l t = logTxt' $ l <> ": " <> t
     logShow' :: forall a. (Show a) => Text -> a -> IO ()
     logShow' l = log' l . txt
     hasEventFired :: forall a b. (Show a, Show b) => b -> a -> IO Bool
     hasEventFired b a = logShow' ("!!!!! " <> txt b <> " Event Fired !!!!!\n") a >> pure True
-
-mkLogger :: TChan Text -> IO Logger
-mkLogger logChan =
-  pure $
-    MkLogger
-      { log = atomically . writeTChan logChan,
-        waitEmpty = waitEmpty' 0
-      }
-  where
-    waitEmpty' :: Int -> IO ()
-    waitEmpty' attempt = do
-      empty <- atomically $ isEmptyTChan logChan
-      unless (empty || attempt > 500) $ do
-        threadDelay 10_000
-        waitEmpty' $ succ attempt
 
 exceptionTextIncludes :: Text -> SomeException -> Bool
 exceptionTextIncludes expected = lwrTxtIncludes expected . pack . displayException

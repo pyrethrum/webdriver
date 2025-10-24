@@ -1,6 +1,6 @@
 module BiDi.Demos.NetworkDemos where
 
-import BiDi.BiDiRunner (BiDiActions (..), CommandRequestInfo (..))
+import BiDi.BiDiRunner (BiDiActions (..))
 import BiDi.DemoUtils
 import Const (second, seconds)
 import IOUtils (DemoUtils (..))
@@ -10,7 +10,7 @@ import WebDriverPreCore.BiDi.CoreTypes (JSUInt (..), StringValue (..))
 import WebDriverPreCore.BiDi.Network qualified as Net
 import WebDriverPreCore.BiDi.Protocol
 import Prelude hiding (log)
-import UnliftIO (newTMVarIO, putTMVar, readTMVar)
+import UnliftIO (putTMVar, readTMVar)
 
 -- >>> runDemo networkDataCollectorDemo
 networkDataCollectorDemo :: BiDiDemo
