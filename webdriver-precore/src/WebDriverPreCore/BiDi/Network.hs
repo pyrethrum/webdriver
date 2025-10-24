@@ -9,7 +9,6 @@ module WebDriverPreCore.BiDi.Network
     UrlPatternPattern (..),
     UrlPatternString (..),
     ContinueRequest (..),
-    RequestId (..),
     BytesValue (..),
     Cookie (..),
     SameSite (..),
@@ -231,10 +230,6 @@ instance FromJSON CookieHeader where
     cookieHeaderName <- obj .: "name"
     cookieHeaderValue <- obj .: "value"
     pure $ MkCookieHeader {cookieHeaderName, cookieHeaderValue}
-
-newtype RequestId = MkRequestId {id :: Text}
-  deriving (Show, Eq, Generic)
-  deriving newtype (FromJSON, ToJSON)
 
 -- | BytesValue can be either string or base64-encoded
 data BytesValue
@@ -674,7 +669,7 @@ instance FromJSON BeforeRequestSent where
 data Initiator = MkInitiator
   { initiatorColumnNumber :: Maybe Word,
     initiatorLineNumber :: Maybe Word,
-    initiatorRequest :: Maybe RequestId,
+    initiatorRequest :: Maybe Request,
     initiatorStackTrace :: Maybe StackTrace,
     initiatorType :: Maybe InitiatorType
   }

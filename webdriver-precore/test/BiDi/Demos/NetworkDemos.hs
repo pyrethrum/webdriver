@@ -425,13 +425,13 @@ networkResponseModificationDemo =
               wait = Just Complete
             }
 
-        reqId <- atomically $ readTMVar reqIdMVar
+        req <- atomically $ readTMVar reqIdMVar
 
-        logShow "Modifying response: status 404, custom headers" reqId
+        logShow "Modifying response: status 404, custom headers" req
 
         networkContinueResponse $
           MkContinueResponse
-            { request = reqId,
+            { request = req,
               cookies = Just [ MkSetCookieHeader { 
                                 name = "bidi-inserted-cookie"
                               , value = TextBytesValue $ MkStringValue "HELLLLO FROMM BIDI"

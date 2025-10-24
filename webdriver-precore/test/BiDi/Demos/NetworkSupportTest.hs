@@ -69,7 +69,7 @@ networkSupportTest =
         try $
           networkContinueRequest $
             MkContinueRequest
-              { request = MkRequestId "test-request-id",
+              { request = MkRequest "test-request-id",
                 body = Nothing,
                 cookies = Nothing,
                 headers = Nothing,
