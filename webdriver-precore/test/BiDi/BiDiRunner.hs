@@ -813,8 +813,8 @@ instance FromJSON EventProps where
       v
 
 applySubscriptions :: (Text -> IO ()) -> Object -> TVar [ActiveSubscription IO] -> IO ()
-applySubscriptions log obj subscriptions = do
-  eventProps@MkEventProps {msgType, method, params, fullObj} <-
+applySubscriptions _log obj subscriptions = do
+  MkEventProps {msgType, method, params, fullObj} <-
     parseThrow "Could not parse event properties" (Object obj)
   when (msgType /= "event") $
     fail . unpack $
@@ -823,7 +823,7 @@ applySubscriptions log obj subscriptions = do
         <> "\n"
         <> objToText obj
 
-  log $ "Parsed event: " <> txt eventProps
+  -- log $ "Parsed event: " <> txt eventProps
   subs <- readTVarIO subscriptions
   traverse_ (applySubscription method params fullObj) subs
 

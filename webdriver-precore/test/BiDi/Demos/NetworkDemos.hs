@@ -2,7 +2,7 @@ module BiDi.Demos.NetworkDemos where
 
 import BiDi.BiDiRunner (BiDiActions (..))
 import BiDi.DemoUtils
-import Const (second, seconds)
+import Const (second)
 import IOUtils (DemoUtils (..))
 import TestServerAPI (boringHelloUrl, boringHelloUrl2, testServerHomeUrl, withTestServer)
 import UnliftIO (putTMVar, readTMVar)
@@ -395,15 +395,19 @@ networkResponseModificationDemo =
 
         logTxt "Subscribe to ResponseStarted and modify status + headers"
 
-        -- (respStartedFired, waitRespStarted) <- timeLimitLog NetworkResponseStarted
+        (respStartedFired, waitRespStarted) <- timeLimitLog NetworkResponseStarted
 
         reqIdMVar <- newEmptyTMVarIO
         subscribeNetworkResponseStarted
           ( \event -> do
               let Net.MkResponseStarted {request = Net.MkRequestData {request = reqId}} = event
               atomically $ putTMVar reqIdMVar reqId
-              -- beforeReqFired2 event
+              respStartedFired event
           )
+
+        (responseEndFired, waitRespCompleted) <- timeLimitLog NetworkResponseCompleted
+        subscribeNetworkResponseCompleted responseEndFired
+       
 
         intercept <-
           networkAddIntercept $
@@ -415,8 +419,6 @@ networkResponseModificationDemo =
         let MkAddInterceptResult interceptId = intercept
         logShow "ResponseStarted intercept added" interceptId
         pause
-
-        pauseAtLeast $ 5 * seconds
 
         sendCommandNoWait . mkCommand "browsingContext.navigate" $
           MkNavigate
@@ -462,8 +464,7 @@ networkResponseModificationDemo =
               wait = Just Complete
             }
 
-        -- waitRespStarted
-        pauseAtLeast $ 40 * seconds
+        sequence_ [waitRespCompleted, waitRespStarted]
 
         removeIntercept <- networkRemoveIntercept $ MkRemoveIntercept interceptId
         logShow "Removed intercept" removeIntercept
