@@ -3,7 +3,6 @@ module BiDi.Demos.NetworkDemos where
 import BiDi.BiDiRunner (BiDiActions (..))
 import BiDi.DemoUtils
 import Const (second, seconds)
-import Http.HttpAPI (navigateTo)
 import IOUtils (DemoUtils (..))
 import TestServerAPI (boringHelloUrl, boringHelloUrl2, testServerHomeUrl, withTestServer)
 import UnliftIO (putTMVar, readTMVar)
@@ -12,7 +11,6 @@ import WebDriverPreCore.BiDi.CoreTypes (JSUInt (..), StringValue (..))
 import WebDriverPreCore.BiDi.Network qualified as Net
 import WebDriverPreCore.BiDi.Protocol
 import Prelude hiding (log)
-import Data.Coerce (coerce)
 
 -- >>> runDemo networkDataCollectorDemo
 networkDataCollectorDemo :: BiDiDemo
@@ -435,8 +433,8 @@ networkResponseModificationDemo =
           MkContinueResponse
             { request = reqId,
               cookies = Just [ MkSetCookieHeader { 
-                                name = "session_id"
-                              , value = TextBytesValue $ MkStringValue "abc123"
+                                name = "bidi-inserted-cookie"
+                              , value = TextBytesValue $ MkStringValue "HELLLLO FROMM BIDI"
                               , domain = Nothing
                               , path = Nothing
                               , expiry = Nothing
@@ -465,7 +463,7 @@ networkResponseModificationDemo =
             }
 
         -- waitRespStarted
-        pauseAtLeast $ 20 * seconds
+        pauseAtLeast $ 30 * seconds
 
         removeIntercept <- networkRemoveIntercept $ MkRemoveIntercept interceptId
         logShow "Removed intercept" removeIntercept
@@ -616,7 +614,7 @@ networkDataRetrievalDemo =
       maybeRequestId <- atomically $ readTVar requestIdVar
       case maybeRequestId of
         Nothing -> logTxt "ERROR: No request ID was captured from events"
-        Just (MkRequestId requestIdText) -> do
+        Just (MkRequest requestIdText) -> do
           let capturedRequest = MkRequest requestIdText
           logShow "Using captured request ID" capturedRequest
           pause
@@ -684,7 +682,7 @@ networkDisownDataDemo =
       maybeRequestId <- atomically $ readTVar requestIdVar
       case maybeRequestId of
         Nothing -> logTxt "ERROR: No request ID was captured from events"
-        Just (MkRequestId requestIdText) -> do
+        Just (MkRequest requestIdText) -> do
           let capturedRequest = MkRequest requestIdText
           logShow "Using captured request ID" capturedRequest
           pause

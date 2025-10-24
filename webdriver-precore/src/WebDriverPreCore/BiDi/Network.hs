@@ -117,7 +117,7 @@ newtype Collector = MkCollector {collector :: Text}
 
 newtype Request = MkRequest {request :: Text}
   deriving (Show, Eq, Generic)
-  deriving newtype (ToJSON)
+  deriving newtype (FromJSON,ToJSON)
 
 data GetData = MkGetData
   { dataType :: DataType,
@@ -198,7 +198,7 @@ instance ToJSON UrlPatternPattern where
 
 -- | ContinueRequest parameters
 data ContinueRequest = MkContinueRequest
-  { request :: RequestId,
+  { request :: Request,
     body :: Maybe BytesValue,
     cookies :: Maybe [CookieHeader],
     headers :: Maybe [Header],
@@ -224,6 +224,13 @@ instance ToJSON CookieHeader where
       [ "name" .= h.cookieHeaderName,
         "value" .= h.cookieHeaderValue
       ]
+
+instance FromJSON CookieHeader where
+  parseJSON :: Value -> Parser CookieHeader
+  parseJSON = withObject "CookieHeader" $ \obj -> do
+    cookieHeaderName <- obj .: "name"
+    cookieHeaderValue <- obj .: "value"
+    pure $ MkCookieHeader {cookieHeaderName, cookieHeaderValue}
 
 newtype RequestId = MkRequestId {id :: Text}
   deriving (Show, Eq, Generic)
@@ -327,7 +334,7 @@ instance ToJSON Header where
 
 -- | ContinueResponse parameters
 data ContinueResponse = MkContinueResponse
-  { request :: RequestId,
+  { request :: Request,
     cookies :: Maybe [SetCookieHeader],
     credentials :: Maybe AuthCredentials,
     headers :: Maybe [Header],
@@ -537,11 +544,13 @@ instance FromJSON HTTPMethod where
       _ -> fail $ "Unknown HTTP method: " <> show t
 
 data RequestData = MkRequestData
-  { request :: RequestId,
+  { request :: Request,
     url :: Text,
     method :: HTTPMethod,
     headers :: [Header],
-    cookies :: Maybe [Cookie],
+    -- not as per spec but geckodriver appears to be returning cookie headers rather than cookies
+    cookies :: Maybe [CookieHeader],
+    -- cookies :: Maybe [Cookie],
     headersSize :: JSUInt,
     bodySize :: Maybe JSUInt,
     destination :: Text,
