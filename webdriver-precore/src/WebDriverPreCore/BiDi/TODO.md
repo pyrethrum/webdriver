@@ -4,7 +4,9 @@
 - [NA] split off bidi
   - [NA]  new cabal file
   - [NA]  move shared files
-- [ ] demos => test
+- [X] demos => test 
+  - All 97 tests passed (220.75s)
+  - All 97 tests passed (181.01s) - headless
 - [ ] pull logger out
 - [ ] specific code TODOs - TODO tree
 - [ ] update to latest spec
