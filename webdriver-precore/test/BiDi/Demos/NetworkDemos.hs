@@ -2,10 +2,9 @@ module BiDi.Demos.NetworkDemos where
 
 import BiDi.BiDiRunner (BiDiActions (..))
 import BiDi.DemoUtils
-import Const (second)
 import IOUtils (DemoUtils (..))
 import TestServerAPI (authTestUrl, boringHelloUrl, boringHelloUrl2, testServerHomeUrl, withTestServer)
-import UnliftIO (putTMVar, readTMVar, writeTMVar)
+import UnliftIO (putTMVar, readTMVar)
 import UnliftIO.STM (atomically, newEmptyTMVarIO, newTVarIO, readTVar, writeTVar)
 import WebDriverPreCore.BiDi.Command (CommandMethod(..))
 import WebDriverPreCore.BiDi.CoreTypes (JSUInt (..), StringValue (..))
@@ -13,7 +12,6 @@ import WebDriverPreCore.BiDi.Network qualified as Net
 import WebDriverPreCore.BiDi.Protocol
 import Prelude hiding (log)
 import WebDriverPreCore.Internal.Utils (txt)
-import GHC.IO.Device (RawIO(write))
 
 -- >>> runDemo networkDataCollectorDemo
 networkDataCollectorDemo :: BiDiDemo
@@ -111,7 +109,6 @@ networkDataCollectorDemo =
               wait = Just Complete
             }
       logShow "Navigation result" navResult
-      pauseAtLeast $ 1 * second
       pause
 
       logTxt "Test 7: Remove data collectors"
@@ -277,7 +274,6 @@ networkInterceptDemo =
               wait = Just Complete
             }
       logShow "Navigation result" navResult
-      pauseAtLeast $ 1 * second
       pause
 
       logTxt "Test 7: Remove intercepts"
@@ -700,7 +696,6 @@ networkFailRequestDemo =
               wait = Nothing
             }
         waitBeforeReq1
-        pauseAtLeast $ 1 * second
         pause
 
         logTxt "Test 4: Fail another request (second demonstration)"
@@ -724,7 +719,6 @@ networkFailRequestDemo =
               wait = Nothing
             }
         waitBeforeReq2
-        pauseAtLeast $ 1 * second
         pause
 
         logTxt "Cleanup: Remove failure intercept"
@@ -732,11 +726,10 @@ networkFailRequestDemo =
         logShow "Removed BeforeRequestSent intercept" removeFailIntercept
         pause
 
--- >>> runDemo networkProvideResponseDemo
--- *** Exception: user error (Timeout - Expected event did not fire: NetworkBeforeRequestSent after 10000 milliseconds)
-networkProvideResponseDemo :: BiDiDemo
-networkProvideResponseDemo =
-  demo "Network VII - Custom Response Provision" action
+-- >>> runDemo networkProvideResponseJSONDemo
+networkProvideResponseJSONDemo :: BiDiDemo
+networkProvideResponseJSONDemo =
+  demo "Network VII-A - Provide JSON Response" action
   where
     action :: DemoUtils -> BiDiActions -> IO ()
     action utils@MkDemoUtils {..} cmds@MkCommands {..} = do
@@ -751,17 +744,15 @@ networkProvideResponseDemo =
             }
         pause
 
-        logTxt "Test 1: Provide custom JSON response - status 200"
+        logTxt "Provide custom JSON response - status 200"
         
-        (beforeReqFired1, waitBeforeReq1) <- timeLimitLog NetworkBeforeRequestSent
-        reqDataVar1 <- newEmptyTMVarIO
+        (beforeReqFired, waitBeforeReq) <- timeLimitLog NetworkBeforeRequestSent
         
         subscribeNetworkBeforeRequestSent $ \event -> do
           let Net.MkBeforeRequestSent {request = Net.MkRequestData {request = reqId}, intercepts = maybeIntercepts} = event
           case maybeIntercepts of
             Just (interceptId : _) -> do
               logShow "Captured request for JSON response" reqId
-              atomically $ putTMVar reqDataVar1 (reqId, interceptId)
               
               let jsonBody = "{\"message\": \"Hello from BiDi!\", \"status\": \"success\", \"data\": [1, 2, 3]}"
               networkProvideResponse $
@@ -776,17 +767,17 @@ networkProvideResponseDemo =
                   }
               logTxt "Provided custom JSON response"
             _ -> pure ()
-          beforeReqFired1 event
+          beforeReqFired event
 
-        intercept1 <-
+        intercept <-
           networkAddIntercept $
             MkAddIntercept
               { phases = [BeforeRequestSent],
                 contexts = Just [bc],
                 urlPatterns = Nothing
               }
-        let MkAddInterceptResult interceptId1 = intercept1
-        logShow "BeforeRequestSent intercept added" interceptId1
+        let MkAddInterceptResult interceptId = intercept
+        logShow "BeforeRequestSent intercept added" interceptId
         pause
 
         sendCommandNoWait . mkCommand BrowsingContextNavigate $
@@ -796,25 +787,40 @@ networkProvideResponseDemo =
               wait = Just Complete
             }
 
-        waitBeforeReq1
-        pauseAtLeast $ 1 * second
+        waitBeforeReq
         pause
 
-        networkRemoveIntercept $ MkRemoveIntercept interceptId1
-        logTxt "Removed intercept 1"
+        networkRemoveIntercept $ MkRemoveIntercept interceptId
+        logTxt "Removed intercept"
         pause
 
-        logTxt "Test 2: Provide HTML response with custom status"
+-- >>> runDemo networkProvideResponseHTMLDemo
+networkProvideResponseHTMLDemo :: BiDiDemo
+networkProvideResponseHTMLDemo =
+  demo "Network VII-B - Provide HTML Response" action
+  where
+    action :: DemoUtils -> BiDiActions -> IO ()
+    action utils@MkDemoUtils {..} cmds@MkCommands {..} = do
+      bc <- rootContext utils cmds
+
+      withTestServer $ do
+        logTxt "Disable cache to ensure we see network requests"
+        networkSetCacheBehavior $
+          MkSetCacheBehavior
+            { cacheBehavior = BypassCache,
+              contexts = Just [bc]
+            }
+        pause
+
+        logTxt "Provide HTML response with custom status"
         
-        (beforeReqFired2, waitBeforeReq2) <- timeLimitLog NetworkBeforeRequestSent
-        reqDataVar2 <- newEmptyTMVarIO
+        (beforeReqFired, waitBeforeReq) <- timeLimitLog NetworkBeforeRequestSent
         
         subscribeNetworkBeforeRequestSent $ \event -> do
           let Net.MkBeforeRequestSent {request = Net.MkRequestData {request = reqId}, intercepts = maybeIntercepts} = event
           case maybeIntercepts of
             Just (interceptId : _) -> do
               logShow "Captured request for HTML response" reqId
-              atomically $ putTMVar reqDataVar2 (reqId, interceptId)
               
               let htmlBody = "<html><head><title>Custom Response</title></head><body><h1>This is a custom HTML response from BiDi!</h1><p>Status: 201 Created</p></body></html>"
               networkProvideResponse $
@@ -833,17 +839,17 @@ networkProvideResponseDemo =
                   }
               logTxt "Provided custom HTML response with status 201"
             _ -> pure ()
-          beforeReqFired2 event
+          beforeReqFired event
 
-        intercept2 <-
+        intercept <-
           networkAddIntercept $
             MkAddIntercept
               { phases = [BeforeRequestSent],
                 contexts = Just [bc],
                 urlPatterns = Nothing
               }
-        let MkAddInterceptResult interceptId2 = intercept2
-        logShow "BeforeRequestSent intercept added" interceptId2
+        let MkAddInterceptResult interceptId = intercept
+        logShow "BeforeRequestSent intercept added" interceptId
         pause
 
         sendCommandNoWait . mkCommand BrowsingContextNavigate $
@@ -853,25 +859,40 @@ networkProvideResponseDemo =
               wait = Just Complete
             }
 
-        waitBeforeReq2
-        pauseAtLeast $ 1 * second
+        waitBeforeReq
         pause
 
-        networkRemoveIntercept $ MkRemoveIntercept interceptId2
-        logTxt "Removed intercept 2"
+        networkRemoveIntercept $ MkRemoveIntercept interceptId
+        logTxt "Removed intercept"
         pause
 
-        logTxt "Test 3: Provide error response with cookies"
+-- >>> runDemo networkProvideResponseWithCookiesDemo
+networkProvideResponseWithCookiesDemo :: BiDiDemo
+networkProvideResponseWithCookiesDemo =
+  demo "Network VII-C - Provide Response with Cookies" action
+  where
+    action :: DemoUtils -> BiDiActions -> IO ()
+    action utils@MkDemoUtils {..} cmds@MkCommands {..} = do
+      bc <- rootContext utils cmds
+
+      withTestServer $ do
+        logTxt "Disable cache to ensure we see network requests"
+        networkSetCacheBehavior $
+          MkSetCacheBehavior
+            { cacheBehavior = BypassCache,
+              contexts = Just [bc]
+            }
+        pause
+
+        logTxt "Provide error response with cookies"
         
-        (beforeReqFired3, waitBeforeReq3) <- timeLimitLog NetworkBeforeRequestSent
-        reqDataVar3 <- newEmptyTMVarIO
+        (beforeReqFired, waitBeforeReq) <- timeLimitLog NetworkBeforeRequestSent
         
         subscribeNetworkBeforeRequestSent $ \event -> do
           let Net.MkBeforeRequestSent {request = Net.MkRequestData {request = reqId}, intercepts = maybeIntercepts} = event
           case maybeIntercepts of
             Just (interceptId : _) -> do
               logShow "Captured request for error response with cookies" reqId
-              atomically $ putTMVar reqDataVar3 (reqId, interceptId)
               
               let errorBody = "{\"error\": \"Unauthorized\", \"message\": \"Please provide valid credentials\"}"
               networkProvideResponse $
@@ -903,17 +924,17 @@ networkProvideResponseDemo =
                   }
               logTxt "Provided 401 error response with cookies"
             _ -> pure ()
-          beforeReqFired3 event
+          beforeReqFired event
 
-        intercept3 <-
+        intercept <-
           networkAddIntercept $
             MkAddIntercept
               { phases = [BeforeRequestSent],
                 contexts = Just [bc],
                 urlPatterns = Nothing
               }
-        let MkAddInterceptResult interceptId3 = intercept3
-        logShow "BeforeRequestSent intercept added" interceptId3
+        let MkAddInterceptResult interceptId = intercept
+        logShow "BeforeRequestSent intercept added" interceptId
         pause
 
         sendCommandNoWait . mkCommand BrowsingContextNavigate $
@@ -923,25 +944,40 @@ networkProvideResponseDemo =
               wait = Just Complete
             }
 
-        waitBeforeReq3
-        pauseAtLeast $ 1 * second
+        waitBeforeReq
         pause
 
-        networkRemoveIntercept $ MkRemoveIntercept interceptId3
-        logTxt "Removed intercept 3"
+        networkRemoveIntercept $ MkRemoveIntercept interceptId
+        logTxt "Removed intercept"
         pause
 
-        logTxt "Test 4: Provide base64 encoded response (simulated image)"
+-- >>> runDemo networkProvideResponseBase64Demo
+networkProvideResponseBase64Demo :: BiDiDemo
+networkProvideResponseBase64Demo =
+  demo "Network VII-D - Provide Base64 Response" action
+  where
+    action :: DemoUtils -> BiDiActions -> IO ()
+    action utils@MkDemoUtils {..} cmds@MkCommands {..} = do
+      bc <- rootContext utils cmds
+
+      withTestServer $ do
+        logTxt "Disable cache to ensure we see network requests"
+        networkSetCacheBehavior $
+          MkSetCacheBehavior
+            { cacheBehavior = BypassCache,
+              contexts = Just [bc]
+            }
+        pause
+
+        logTxt "Provide base64 encoded response (simulated image)"
         
-        (beforeReqFired4, waitBeforeReq4) <- timeLimitLog NetworkBeforeRequestSent
-        reqDataVar4 <- newEmptyTMVarIO
+        (beforeReqFired, waitBeforeReq) <- timeLimitLog NetworkBeforeRequestSent
         
         subscribeNetworkBeforeRequestSent $ \event -> do
           let Net.MkBeforeRequestSent {request = Net.MkRequestData {request = reqId}, intercepts = maybeIntercepts} = event
           case maybeIntercepts of
             Just (interceptId : _) -> do
               logShow "Captured request for base64 response" reqId
-              atomically $ putTMVar reqDataVar4 (reqId, interceptId)
               
               -- Tiny 1x1 red PNG in base64
               let pngBase64 = "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8DwHwAFBQIAX8jx0gAAAABJRU5ErkJggg=="
@@ -961,17 +997,17 @@ networkProvideResponseDemo =
                   }
               logTxt "Provided base64 encoded PNG response"
             _ -> pure ()
-          beforeReqFired4 event
+          beforeReqFired event
 
-        intercept4 <-
+        intercept <-
           networkAddIntercept $
             MkAddIntercept
               { phases = [BeforeRequestSent],
                 contexts = Just [bc],
                 urlPatterns = Nothing
               }
-        let MkAddInterceptResult interceptId4 = intercept4
-        logShow "BeforeRequestSent intercept added" interceptId4
+        let MkAddInterceptResult interceptId = intercept
+        logShow "BeforeRequestSent intercept added" interceptId
         pause
 
         sendCommandNoWait . mkCommand BrowsingContextNavigate $
@@ -981,25 +1017,40 @@ networkProvideResponseDemo =
               wait = Just Complete
             }
 
-        waitBeforeReq4
-        pauseAtLeast $ 1 * second
+        waitBeforeReq
         pause
 
-        networkRemoveIntercept $ MkRemoveIntercept interceptId4
-        logTxt "Removed intercept 4"
+        networkRemoveIntercept $ MkRemoveIntercept interceptId
+        logTxt "Removed intercept"
         pause
 
-        logTxt "Test 5: Provide server error response"
+-- >>> runDemo networkProvideResponseErrorDemo
+networkProvideResponseErrorDemo :: BiDiDemo
+networkProvideResponseErrorDemo =
+  demo "Network VII-E - Provide Error Response" action
+  where
+    action :: DemoUtils -> BiDiActions -> IO ()
+    action utils@MkDemoUtils {..} cmds@MkCommands {..} = do
+      bc <- rootContext utils cmds
+
+      withTestServer $ do
+        logTxt "Disable cache to ensure we see network requests"
+        networkSetCacheBehavior $
+          MkSetCacheBehavior
+            { cacheBehavior = BypassCache,
+              contexts = Just [bc]
+            }
+        pause
+
+        logTxt "Provide server error response"
         
-        (beforeReqFired5, waitBeforeReq5) <- timeLimitLog NetworkBeforeRequestSent
-        reqDataVar5 <- newEmptyTMVarIO
+        (beforeReqFired, waitBeforeReq) <- timeLimitLog NetworkBeforeRequestSent
         
         subscribeNetworkBeforeRequestSent $ \event -> do
           let Net.MkBeforeRequestSent {request = Net.MkRequestData {request = reqId}, intercepts = maybeIntercepts} = event
           case maybeIntercepts of
             Just (interceptId : _) -> do
               logShow "Captured request for server error response" reqId
-              atomically $ putTMVar reqDataVar5 (reqId, interceptId)
               
               let errorBody = "<html><body><h1>500 Internal Server Error</h1><p>Something went wrong on our end.</p></body></html>"
               networkProvideResponse $
@@ -1018,17 +1069,17 @@ networkProvideResponseDemo =
                   }
               logTxt "Provided 500 server error response"
             _ -> pure ()
-          beforeReqFired5 event
+          beforeReqFired event
 
-        intercept5 <-
+        intercept <-
           networkAddIntercept $
             MkAddIntercept
               { phases = [BeforeRequestSent],
                 contexts = Just [bc],
                 urlPatterns = Nothing
               }
-        let MkAddInterceptResult interceptId5 = intercept5
-        logShow "BeforeRequestSent intercept added" interceptId5
+        let MkAddInterceptResult interceptId = intercept
+        logShow "BeforeRequestSent intercept added" interceptId
         pause
 
         sendCommandNoWait . mkCommand BrowsingContextNavigate $
@@ -1038,12 +1089,11 @@ networkProvideResponseDemo =
               wait = Just Complete
             }
 
-        waitBeforeReq5
-        pauseAtLeast $ 1 * second
+        waitBeforeReq
         pause
 
-        networkRemoveIntercept $ MkRemoveIntercept interceptId5
-        logTxt "Removed intercept 5"
+        networkRemoveIntercept $ MkRemoveIntercept interceptId
+        logTxt "Removed intercept"
         pause
 
 -- >>> runDemo networkDataRetrievalDemo
@@ -1088,7 +1138,6 @@ networkDataRetrievalDemo =
                 wait = Just Complete
               }
         logShow "Navigation result" navResult
-        pauseAtLeast $ 1 * second
 
         logTxt "Waiting for response completed event..."
         waitResponseCompleted
@@ -1156,7 +1205,6 @@ networkDisownDataDemo =
                 wait = Just Complete
               }
         logShow "Navigation result" navResult
-        pauseAtLeast $ 1 * second
 
         logTxt "Waiting for response completed event..."
         waitResponseCompleted

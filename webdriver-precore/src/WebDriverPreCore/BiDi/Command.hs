@@ -2,7 +2,6 @@ module WebDriverPreCore.BiDi.Command where
 
 import Data.Aeson
   ( Object,
-    Result (..),
     ToJSON,
     Value (..),
     object,
@@ -10,10 +9,10 @@ import Data.Aeson
   )
 import Data.Aeson.KeyMap qualified as KM
 import Data.Aeson.Types (FromJSON (parseJSON), Parser, ToJSON (..))
-import Data.Text as T (Text, unlines, unpack, intercalate)
+import Data.Text as T (Text, unpack, intercalate)
 import WebDriverPreCore.BiDi.CoreTypes (JSUInt)
 import WebDriverPreCore.Internal.AesonUtils (objectOrThrow, jsonToText)
-import WebDriverPreCore.Internal.Utils (enumerate, txt)
+import WebDriverPreCore.Internal.Utils (enumerate)
 import Prelude
 
 data CommandMethod
