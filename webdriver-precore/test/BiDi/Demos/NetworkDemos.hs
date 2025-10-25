@@ -733,43 +733,317 @@ networkFailRequestDemo =
         pause
 
 -- >>> runDemo networkProvideResponseDemo
+-- *** Exception: user error (Timeout - Expected event did not fire: NetworkBeforeRequestSent after 10000 milliseconds)
 networkProvideResponseDemo :: BiDiDemo
 networkProvideResponseDemo =
   demo "Network VII - Custom Response Provision" action
   where
     action :: DemoUtils -> BiDiActions -> IO ()
-    action utils@MkDemoUtils {..} cmds = do
-      _bc <- rootContext utils cmds
+    action utils@MkDemoUtils {..} cmds@MkCommands {..} = do
+      bc <- rootContext utils cmds
 
       withTestServer $ do
-        logTxt "Test Server running - ready to provide custom responses"
+        logTxt "Disable cache to ensure we see network requests"
+        networkSetCacheBehavior $
+          MkSetCacheBehavior
+            { cacheBehavior = BypassCache,
+              contexts = Just [bc]
+            }
         pause
 
-        -- TODO: Implement actual intercept handlers to capture real request/intercept IDs
-        -- The following tests demonstrate the parameter structure for each command
+        logTxt "Test 1: Provide custom JSON response - status 200"
+        
+        (beforeReqFired1, waitBeforeReq1) <- timeLimitLog NetworkBeforeRequestSent
+        reqDataVar1 <- newEmptyTMVarIO
+        
+        subscribeNetworkBeforeRequestSent $ \event -> do
+          let Net.MkBeforeRequestSent {request = Net.MkRequestData {request = reqId}, intercepts = maybeIntercepts} = event
+          case maybeIntercepts of
+            Just (interceptId : _) -> do
+              logShow "Captured request for JSON response" reqId
+              atomically $ putTMVar reqDataVar1 (reqId, interceptId)
+              
+              let jsonBody = "{\"message\": \"Hello from BiDi!\", \"status\": \"success\", \"data\": [1, 2, 3]}"
+              networkProvideResponse $
+                MkProvideResponse
+                  { request = reqId,
+                    intercept = interceptId,
+                    body = Just $ TextBytesValue $ MkStringValue jsonBody,
+                    cookies = Nothing,
+                    headers = Just [MkHeader "Content-Type" (TextBytesValue $ MkStringValue "application/json")],
+                    reasonPhrase = "OK",
+                    statusCode = 200
+                  }
+              logTxt "Provided custom JSON response"
+            _ -> pure ()
+          beforeReqFired1 event
 
-        logTxt "Test 1: networkProvideResponse with minimal parameters"
-        logTxt "Example: Basic 200 OK response"
+        intercept1 <-
+          networkAddIntercept $
+            MkAddIntercept
+              { phases = [BeforeRequestSent],
+                contexts = Just [bc],
+                urlPatterns = Nothing
+              }
+        let MkAddInterceptResult interceptId1 = intercept1
+        logShow "BeforeRequestSent intercept added" interceptId1
         pause
 
-        logTxt "Test 2: networkProvideResponse with JSON content"
-        logTxt "Example: JSON response with custom headers"
+        sendCommandNoWait . mkCommand BrowsingContextNavigate $
+          MkNavigate
+            { context = bc,
+              url = boringHelloUrl,
+              wait = Just Complete
+            }
+
+        waitBeforeReq1
+        pauseAtLeast $ 1 * second
         pause
 
-        logTxt "Test 3: networkProvideResponse with HTML content and redirect"
-        logTxt "Example: 302 redirect with HTML body and Location header"
+        networkRemoveIntercept $ MkRemoveIntercept interceptId1
+        logTxt "Removed intercept 1"
         pause
 
-        logTxt "Test 4: networkProvideResponse with binary content (base64)"
-        logTxt "Example: PNG image served from base64 data"
+        logTxt "Test 2: Provide HTML response with custom status"
+        
+        (beforeReqFired2, waitBeforeReq2) <- timeLimitLog NetworkBeforeRequestSent
+        reqDataVar2 <- newEmptyTMVarIO
+        
+        subscribeNetworkBeforeRequestSent $ \event -> do
+          let Net.MkBeforeRequestSent {request = Net.MkRequestData {request = reqId}, intercepts = maybeIntercepts} = event
+          case maybeIntercepts of
+            Just (interceptId : _) -> do
+              logShow "Captured request for HTML response" reqId
+              atomically $ putTMVar reqDataVar2 (reqId, interceptId)
+              
+              let htmlBody = "<html><head><title>Custom Response</title></head><body><h1>This is a custom HTML response from BiDi!</h1><p>Status: 201 Created</p></body></html>"
+              networkProvideResponse $
+                MkProvideResponse
+                  { request = reqId,
+                    intercept = interceptId,
+                    body = Just $ TextBytesValue $ MkStringValue htmlBody,
+                    cookies = Nothing,
+                    headers = 
+                        Just 
+                          [ MkHeader "Content-Type" (TextBytesValue $ MkStringValue "text/html; charset=utf-8"),
+                            MkHeader "X-Custom-Header" (TextBytesValue $ MkStringValue "BiDi-Generated")
+                          ],
+                    reasonPhrase = "Created",
+                    statusCode = 201
+                  }
+              logTxt "Provided custom HTML response with status 201"
+            _ -> pure ()
+          beforeReqFired2 event
+
+        intercept2 <-
+          networkAddIntercept $
+            MkAddIntercept
+              { phases = [BeforeRequestSent],
+                contexts = Just [bc],
+                urlPatterns = Nothing
+              }
+        let MkAddInterceptResult interceptId2 = intercept2
+        logShow "BeforeRequestSent intercept added" interceptId2
         pause
 
-        logTxt "Test 5: networkProvideResponse with error status and cookies"
-        logTxt "Example: 401 Unauthorized with auth cookies"
+        sendCommandNoWait . mkCommand BrowsingContextNavigate $
+          MkNavigate
+            { context = bc,
+              url = boringHelloUrl2,
+              wait = Just Complete
+            }
+
+        waitBeforeReq2
+        pauseAtLeast $ 1 * second
         pause
 
-        logTxt "Test 6: networkProvideResponse with server error"
-        logTxt "Example: 500 Internal Server Error with retry-after header"
+        networkRemoveIntercept $ MkRemoveIntercept interceptId2
+        logTxt "Removed intercept 2"
+        pause
+
+        logTxt "Test 3: Provide error response with cookies"
+        
+        (beforeReqFired3, waitBeforeReq3) <- timeLimitLog NetworkBeforeRequestSent
+        reqDataVar3 <- newEmptyTMVarIO
+        
+        subscribeNetworkBeforeRequestSent $ \event -> do
+          let Net.MkBeforeRequestSent {request = Net.MkRequestData {request = reqId}, intercepts = maybeIntercepts} = event
+          case maybeIntercepts of
+            Just (interceptId : _) -> do
+              logShow "Captured request for error response with cookies" reqId
+              atomically $ putTMVar reqDataVar3 (reqId, interceptId)
+              
+              let errorBody = "{\"error\": \"Unauthorized\", \"message\": \"Please provide valid credentials\"}"
+              networkProvideResponse $
+                MkProvideResponse
+                  { request = reqId,
+                    intercept = interceptId,
+                    body = Just $ TextBytesValue $ MkStringValue errorBody,
+                    cookies = 
+                        Just 
+                          [ MkCookie
+                              { name = "session_expired",
+                                value = TextBytesValue $ MkStringValue "true",
+                                domain = "localhost",
+                                path = "/",
+                                size = 4,
+                                httpOnly = True,
+                                secure = False,
+                                sameSite = Strict,
+                                expiry = Nothing
+                              }
+                          ],
+                    headers = 
+                        Just 
+                          [ MkHeader "Content-Type" (TextBytesValue $ MkStringValue "application/json"),
+                            MkHeader "WWW-Authenticate" (TextBytesValue $ MkStringValue "Bearer")
+                          ],
+                    reasonPhrase = "Unauthorized",
+                    statusCode = 401
+                  }
+              logTxt "Provided 401 error response with cookies"
+            _ -> pure ()
+          beforeReqFired3 event
+
+        intercept3 <-
+          networkAddIntercept $
+            MkAddIntercept
+              { phases = [BeforeRequestSent],
+                contexts = Just [bc],
+                urlPatterns = Nothing
+              }
+        let MkAddInterceptResult interceptId3 = intercept3
+        logShow "BeforeRequestSent intercept added" interceptId3
+        pause
+
+        sendCommandNoWait . mkCommand BrowsingContextNavigate $
+          MkNavigate
+            { context = bc,
+              url = testServerHomeUrl,
+              wait = Just Complete
+            }
+
+        waitBeforeReq3
+        pauseAtLeast $ 1 * second
+        pause
+
+        networkRemoveIntercept $ MkRemoveIntercept interceptId3
+        logTxt "Removed intercept 3"
+        pause
+
+        logTxt "Test 4: Provide base64 encoded response (simulated image)"
+        
+        (beforeReqFired4, waitBeforeReq4) <- timeLimitLog NetworkBeforeRequestSent
+        reqDataVar4 <- newEmptyTMVarIO
+        
+        subscribeNetworkBeforeRequestSent $ \event -> do
+          let Net.MkBeforeRequestSent {request = Net.MkRequestData {request = reqId}, intercepts = maybeIntercepts} = event
+          case maybeIntercepts of
+            Just (interceptId : _) -> do
+              logShow "Captured request for base64 response" reqId
+              atomically $ putTMVar reqDataVar4 (reqId, interceptId)
+              
+              -- Tiny 1x1 red PNG in base64
+              let pngBase64 = "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8DwHwAFBQIAX8jx0gAAAABJRU5ErkJggg=="
+              networkProvideResponse $
+                MkProvideResponse
+                  { request = reqId,
+                    intercept = interceptId,
+                    body = Just $ Base64Value pngBase64,
+                    cookies = Nothing,
+                    headers = 
+                        Just 
+                          [ MkHeader "Content-Type" (TextBytesValue $ MkStringValue "image/png"),
+                            MkHeader "Cache-Control" (TextBytesValue $ MkStringValue "no-cache")
+                          ],
+                    reasonPhrase = "OK",
+                    statusCode = 200
+                  }
+              logTxt "Provided base64 encoded PNG response"
+            _ -> pure ()
+          beforeReqFired4 event
+
+        intercept4 <-
+          networkAddIntercept $
+            MkAddIntercept
+              { phases = [BeforeRequestSent],
+                contexts = Just [bc],
+                urlPatterns = Nothing
+              }
+        let MkAddInterceptResult interceptId4 = intercept4
+        logShow "BeforeRequestSent intercept added" interceptId4
+        pause
+
+        sendCommandNoWait . mkCommand BrowsingContextNavigate $
+          MkNavigate
+            { context = bc,
+              url = boringHelloUrl,
+              wait = Just Complete
+            }
+
+        waitBeforeReq4
+        pauseAtLeast $ 1 * second
+        pause
+
+        networkRemoveIntercept $ MkRemoveIntercept interceptId4
+        logTxt "Removed intercept 4"
+        pause
+
+        logTxt "Test 5: Provide server error response"
+        
+        (beforeReqFired5, waitBeforeReq5) <- timeLimitLog NetworkBeforeRequestSent
+        reqDataVar5 <- newEmptyTMVarIO
+        
+        subscribeNetworkBeforeRequestSent $ \event -> do
+          let Net.MkBeforeRequestSent {request = Net.MkRequestData {request = reqId}, intercepts = maybeIntercepts} = event
+          case maybeIntercepts of
+            Just (interceptId : _) -> do
+              logShow "Captured request for server error response" reqId
+              atomically $ putTMVar reqDataVar5 (reqId, interceptId)
+              
+              let errorBody = "<html><body><h1>500 Internal Server Error</h1><p>Something went wrong on our end.</p></body></html>"
+              networkProvideResponse $
+                MkProvideResponse
+                  { request = reqId,
+                    intercept = interceptId,
+                    body = Just $ TextBytesValue $ MkStringValue errorBody,
+                    cookies = Nothing,
+                    headers = 
+                        Just 
+                          [ MkHeader "Content-Type" (TextBytesValue $ MkStringValue "text/html"),
+                            MkHeader "Retry-After" (TextBytesValue $ MkStringValue "3600")
+                          ],
+                    reasonPhrase = "Internal Server Error",
+                    statusCode = 500
+                  }
+              logTxt "Provided 500 server error response"
+            _ -> pure ()
+          beforeReqFired5 event
+
+        intercept5 <-
+          networkAddIntercept $
+            MkAddIntercept
+              { phases = [BeforeRequestSent],
+                contexts = Just [bc],
+                urlPatterns = Nothing
+              }
+        let MkAddInterceptResult interceptId5 = intercept5
+        logShow "BeforeRequestSent intercept added" interceptId5
+        pause
+
+        sendCommandNoWait . mkCommand BrowsingContextNavigate $
+          MkNavigate
+            { context = bc,
+              url = boringHelloUrl2,
+              wait = Just Complete
+            }
+
+        waitBeforeReq5
+        pauseAtLeast $ 1 * second
+        pause
+
+        networkRemoveIntercept $ MkRemoveIntercept interceptId5
+        logTxt "Removed intercept 5"
         pause
 
 -- >>> runDemo networkDataRetrievalDemo
