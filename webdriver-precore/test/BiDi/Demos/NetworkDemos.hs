@@ -591,7 +591,6 @@ networkAuthDemo =
             }
         waitAuthReq1
         unsubscribe sub1
-        pauseAtLeast $ 1 * second
         pause
 
         logTxt "Test 4: Subscribe to AuthRequired event and use default auth handling"
@@ -619,7 +618,6 @@ networkAuthDemo =
             }
         waitAuthReq2
         unsubscribe sub2
-        pauseAtLeast $ 1 * second
         pause
 
         logTxt "Test 6: Subscribe to AuthRequired event and provide credentials"
@@ -652,7 +650,6 @@ networkAuthDemo =
             }
         waitAuthReq3
         unsubscribe sub3
-        pauseAtLeast $ 1 * second
         pause
 
         logTxt "Cleanup: Remove auth intercept"
@@ -743,9 +740,6 @@ networkProvideResponseDemo =
     action :: DemoUtils -> BiDiActions -> IO ()
     action utils@MkDemoUtils {..} cmds = do
       _bc <- rootContext utils cmds
-
-      logTxt "Note: This demo demonstrates custom response provision commands."
-      logTxt "These commands require active intercepts and real network requests to function properly."
 
       withTestServer $ do
         logTxt "Test Server running - ready to provide custom responses"

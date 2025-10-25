@@ -5,6 +5,7 @@
   - [NA]  new cabal file
   - [NA]  move shared files
 - [ ] demos => test
+- [ ] pull logger out
 - [ ] specific code TODOs - TODO tree
 - [ ] update to latest spec
 - [ ] remove unneeded instances to and fromJSON
