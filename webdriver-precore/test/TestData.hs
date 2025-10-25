@@ -115,3 +115,12 @@ nestedFramesUrl = fileUrl "nestedFrames.html"
 
 contentPageUrl :: IO Text
 contentPageUrl = fileUrl "contentPage.html"
+
+indexUrl :: IO Text
+indexUrl = fileUrl "index.html"
+
+shadowDomUrl :: IO Text
+shadowDomUrl = fileUrl "shadowDom.html"
+
+inputsUrl :: IO Text
+inputsUrl = fileUrl "inputs.html"

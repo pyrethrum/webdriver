@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <title>Shadow DOM Test</title>
+  <link rel="stylesheet" href="demo.css">
+</head>
+
+<body>
+  <div class="container">
+    <h1>Shadow DOM Test Page</h1>
+    <div class="example">
+      <h2>Custom Element with Shadow DOM</h2>
+      <my-paragraph></my-paragraph>
+    </div>
+  </div>
+
+  <script>
+    // Define a custom element with shadow DOM
+    class MyParagraph extends HTMLElement {
+      constructor() {
+        super();
+        
+        // Attach shadow DOM
+        const shadow = this.attachShadow({ mode: 'open' });
+        
+        // Create content inside shadow root
+        const wrapper = document.createElement('div');
+        wrapper.setAttribute('class', 'shadow-wrapper');
+        
+        const paragraph = document.createElement('p');
+        paragraph.textContent = 'This text is inside the shadow DOM';
+        paragraph.setAttribute('class', 'shadow-text');
+        
+        const style = document.createElement('style');
+        style.textContent = `
+          .shadow-wrapper {
+            padding: 20px;
+            background-color: #ecf0f1;
+            border-radius: 8px;
+          }
+          .shadow-text {
+            color: #2c3e50;
+            font-size: 1.2em;
+            margin: 0;
+          }
+        `;
+        
+        shadow.appendChild(style);
+        wrapper.appendChild(paragraph);
+        shadow.appendChild(wrapper);
+      }
+    }
+    
+    // Register the custom element
+    customElements.define('my-paragraph', MyParagraph);
+  </script>
+</body>
+
+</html>

@@ -218,3 +218,56 @@ button:hover:before {
   border-radius: 3px;
 }
 
+/* Index page styles */
+.test-links {
+  list-style: none;
+  padding: 0;
+}
+
+.test-links li {
+  margin: 10px 0;
+  padding: 15px;
+  background-color: #f5f5f5;
+  border-radius: 4px;
+  transition: background-color 0.3s;
+}
+
+.test-links li:hover {
+  background-color: #e0e0e0;
+}
+
+.test-links a {
+  text-decoration: none;
+  color: #3498db;
+  font-size: 1.1em;
+  display: block;
+}
+
+/* Shadow DOM page styles */
+.shadow-host {
+  margin: 20px 0;
+  padding: 20px;
+  border: 2px solid #3498db;
+  border-radius: 8px;
+}
+
+.example {
+  margin: 20px 0;
+}
+
+/* Inputs page styles */
+.input-container {
+  margin: 20px 0;
+  padding: 20px;
+  background-color: #f5f5f5;
+  border-radius: 8px;
+}
+
+input[type="number"] {
+  padding: 10px;
+  font-size: 1.1em;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  width: 200px;
+}
+

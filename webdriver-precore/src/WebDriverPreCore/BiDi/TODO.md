@@ -20,6 +20,9 @@
   - before 
     - headed - All 22 tests passed (148.72s)
     - headless - All 22 tests passed (135.98s)
+  - after
+    - 3 out of 22 tests failed (117.57s) (headless)
+  - [ ] remove old constants (links and selectors)
 - [ ] switch to command (leave legacy)
 - [ ] update to latest spec
 - [ ] switch to protocol and API - keep legacy

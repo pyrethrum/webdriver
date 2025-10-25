@@ -11,29 +11,15 @@ import Data.Text (isInfixOf)
 import Data.Time.Clock.POSIX (getPOSIXTime)
 import RuntimeConst ( httpFullCapabilities)
 import Const qualified as Const
-import Const
-  ( alertsUrl,
-    anyElmCss,
-    bottomFrameCss,
-    checkBoxesCss,
-    checkBoxesLinkCss,
-    checkBoxesUrl,
-    contentCss,
-    divCss,
-    framesUrl,
-    h3TagCss,
+import TestData
+  ( checkboxesUrl,
+    indexUrl,
     infiniteScrollUrl,
-    inputTagCss,
     inputsUrl,
-    jsAlertXPath,
-    jsPromptXPath,
     loginUrl,
-    midFrameCss,
-    midFrameTitle,
+    nestedFramesUrl,
+    promptUrl,
     shadowDomUrl,
-    theInternet,
-    topFrameCSS,
-    userNameCss,
   )
 import GHC.IO (catchAny, finally)
 import Http.HttpAPI
@@ -171,8 +157,9 @@ unit_demoSessionDriverStatus = do
 -- >>> unit_demoSendKeysClear
 unit_demoSendKeysClear :: IO ()
 unit_demoSendKeysClear = withSession \ses -> do
-  navigateTo ses loginUrl
-  usr <- findElement ses userNameCss
+  url <- loginUrl
+  navigateTo ses url
+  usr <- findElement ses $ CSS "#username"
 
   logTxt "fill in user name"
   elementSendKeys ses usr "user name"
@@ -185,13 +172,14 @@ unit_demoSendKeysClear = withSession \ses -> do
 -- >>> unit_demoForwardBackRefresh
 unit_demoForwardBackRefresh :: IO ()
 unit_demoForwardBackRefresh = withSession \ses -> do
-  navigateTo ses theInternet
+  url <- indexUrl
+  navigateTo ses url
   logM "current url" $ getCurrentUrl ses
   logM "title" $ getTitle ses
 
   sleep1
 
-  link <- findElement ses checkBoxesLinkCss
+  link <- findElement ses $ CSS "a[href='checkboxes.html']"
   logTxt "navigating to check boxes page"
   elementClick ses link
 
@@ -233,7 +221,8 @@ demoForwardBackRefresh = do
 -- >>> unit_demoWindowHandles
 unit_demoWindowHandles :: IO ()
 unit_demoWindowHandles = withSession \ses -> do
-  navigateTo ses theInternet
+  url <- indexUrl
+  navigateTo ses url
 
   logShowM "window Handle" $ getWindowHandle ses
 
@@ -254,7 +243,8 @@ unit_demoWindowHandles = withSession \ses -> do
 unit_demoWindowSizes :: IO ()
 unit_demoWindowSizes = withSession \ses -> do
   maximizeWindow ses
-  navigateTo ses theInternet
+  url <- indexUrl
+  navigateTo ses url
   sleep1
 
   logShowM "minimizeWindow" $ minimizeWindow ses
@@ -269,15 +259,16 @@ unit_demoWindowSizes = withSession \ses -> do
 -- >>> unit_demoElementPageProps
 unit_demoElementPageProps :: IO ()
 unit_demoElementPageProps = withSession \ses -> do
-  navigateTo ses theInternet
+  url <- indexUrl
+  navigateTo ses url
   logM "current url" $ getCurrentUrl ses
   logM "title" $ getTitle ses
 
-  link <- findElement ses checkBoxesLinkCss
+  link <- findElement ses $ CSS "a[href='checkboxes.html']"
   logM "check box link text" $ getElementText ses link
   elementClick ses link
 
-  cbs <- findElements ses checkBoxesCss
+  cbs <- findElements ses $ CSS "input[type='checkbox']"
   forM_ cbs $ \cb -> do
     logShowM "checkBox checked property" $ getElementProperty ses cb "checked"
     logShowM "getElementAttribute type" $ getElementAttribute ses cb "type"
@@ -288,11 +279,11 @@ unit_demoElementPageProps = withSession \ses -> do
     logShowM "getElementComputedRole" $ getElementComputedRole ses cb
     logShowM "getElementComputedLabel" $ getElementComputedLabel ses cb
 
-  header <- findElement ses h3TagCss
+  header <- findElement ses $ CSS "h3"
   logShowM "header computed role" $ getElementComputedRole ses header
   logShowM "header computed label" $ getElementComputedLabel ses header
 
-  divs <- findElements ses divCss
+  divs <- findElements ses $ CSS "div"
   forM_ divs $ \d ->
     logShowM "div overflow value" $ getElementCssValue ses d "overflow"
 
@@ -330,28 +321,30 @@ unit_demoWindowRecs = withSession \ses -> do
 
   wr === r
 
-  navigateTo ses inputsUrl
-  div' <- findElement ses contentCss
-  input <- findElementFromElement ses div' inputTagCss
+  url <- inputsUrl
+  navigateTo ses url
+  div' <- findElement ses $ CSS "#content"
+  input <- findElementFromElement ses div' $ CSS "input"
   logShow "input tag" input
 
-  els <- findElementsFromElement ses div' anyElmCss
+  els <- findElementsFromElement ses div' $ CSS "*"
   logShow "elements in div" els
 
 -- >>> unit_demoWindowFindElement
 unit_demoWindowFindElement :: IO ()
 unit_demoWindowFindElement = withSession \ses -> do
-  navigateTo ses inputsUrl
-  allElms <- findElements ses anyElmCss
+  url <- inputsUrl
+  navigateTo ses url
+  allElms <- findElements ses $ CSS "*"
 
   chkHasElms allElms
 
   logShow "all elements" allElms
-  div' <- findElement ses contentCss
-  input <- findElementFromElement ses div' inputTagCss
+  div' <- findElement ses $ CSS "#content"
+  input <- findElementFromElement ses div' $ CSS "input"
   logShow "input tag" input
 
-  els <- findElementsFromElement ses div' anyElmCss
+  els <- findElementsFromElement ses div' $ CSS "*"
 
   chkHasElms els
   logShow "elements in div" els
@@ -359,7 +352,8 @@ unit_demoWindowFindElement = withSession \ses -> do
 -- >>> unit_demoFrames
 unit_demoFrames :: IO ()
 unit_demoFrames = withSession \ses -> do
-  navigateTo ses framesUrl
+  url <- nestedFramesUrl
+  navigateTo ses url
 
   logTxt "At top level frame"
   hasBottomFrame <- bottomFameExists ses
@@ -368,7 +362,7 @@ unit_demoFrames = withSession \ses -> do
   assertBool "bottom frame should exist" hasBottomFrame
 
   -- switch frames using element id
-  tf <- findElement ses topFrameCSS
+  tf <- findElement ses $ CSS "frame[name='frame-top-left']"
   logShow "switch to top frame" tf
   switchToFrame ses (FrameElementId tf)
 
@@ -376,13 +370,13 @@ unit_demoFrames = withSession \ses -> do
   logShow "bottom frame exists after switching to top frame" hasBottomFrame'
   assertBool "bottom frame should not exist after switching to top frame" $ not hasBottomFrame'
 
-  mf <- findElement ses midFrameCss
+  mf <- findElement ses $ CSS "frame[name='frame-middle']"
   switchToFrame ses (FrameElementId mf)
 
-  fTitle <- findElement ses midFrameTitle
+  fTitle <- findElement ses $ CSS "h1"
   titleTxt <- getElementText ses fTitle
   log "middle frame title" titleTxt
-  "MIDDLE" === titleTxt
+  "Test Page" === titleTxt
 
   logTxt "switch to top level frame"
   switchToFrame ses TopLevelFrame
@@ -390,12 +384,12 @@ unit_demoFrames = withSession \ses -> do
   logShowM "active element" $ getActiveElement ses
 
   -- drill back down to middle frame (repeat the above steps)
-  tf' <- findElement ses topFrameCSS
+  tf' <- findElement ses $ CSS "frame[name='frame-top-left']"
   logShow "switch back to top frame" tf'
   switchToFrame ses (FrameElementId tf')
   logShowM "active element" $ getActiveElement ses
 
-  mf' <- findElement ses midFrameCss
+  mf' <- findElement ses $ CSS "frame[name='frame-middle']"
   logShow "drill back down to middle frame" mf'
   switchToFrame ses (FrameElementId mf')
   logShowM "active element" $ getActiveElement ses
@@ -420,7 +414,8 @@ unit_demoFrames = withSession \ses -> do
 -- >>> unit_demoShadowDom
 unit_demoShadowDom :: IO ()
 unit_demoShadowDom = withSession \ses -> do
-  navigateTo ses shadowDomUrl
+  url <- shadowDomUrl
+  navigateTo ses url
 
   -- Find the custom element:
   myParagraphId <- findElement ses (CSS "my-paragraph")
@@ -431,13 +426,13 @@ unit_demoShadowDom = withSession \ses -> do
   logShow "shadowRootId" shadowRootId
 
   -- From the shadow root, find all elements
-  allInsideShadow <- findElementsFromShadowRoot ses shadowRootId anyElmCss
+  allInsideShadow <- findElementsFromShadowRoot ses shadowRootId $ CSS "*"
   logShow "shadow root elements" allInsideShadow
 
   chkHasElms allInsideShadow
   logTxt "got root elements"
 
-  srootElm <- findElementFromShadowRoot ses shadowRootId anyElmCss
+  srootElm <- findElementFromShadowRoot ses shadowRootId $ CSS "*"
   logShow "shadow root element" srootElm
 
   -- Retrieve text from the shadow element:
@@ -447,8 +442,9 @@ unit_demoShadowDom = withSession \ses -> do
 unit_demoIsElementSelected :: IO ()
 unit_demoIsElementSelected = withSession \ses -> do
   logShowM "driver status" status
-  navigateTo ses checkBoxesUrl
-  allCbs <- findElements ses checkBoxesCss
+  url <- checkboxesUrl
+  navigateTo ses url
+  allCbs <- findElements ses $ CSS "input[type='checkbox']"
   forM_ allCbs $ \cb -> do
     before <- isElementSelected ses cb
     logShow "checkBox isElementSelected before" before
@@ -465,7 +461,8 @@ unit_demoIsElementSelected = withSession \ses -> do
 -- >>> unit_demoGetPageSourceScreenShot
 unit_demoGetPageSourceScreenShot :: IO ()
 unit_demoGetPageSourceScreenShot = withSession \ses -> do
-  navigateTo ses theInternet
+  url <- indexUrl
+  navigateTo ses url
   logTxt "!!!!! Page Source !!!!!"
   logShowM "page source" $ getPageSource ses
 
@@ -473,13 +470,14 @@ unit_demoGetPageSourceScreenShot = withSession \ses -> do
   logShowM "take screenshot" $ takeScreenshot ses
 
   logTxt "!!!!! Screenshot Element !!!!!"
-  chkBoxLink <- findElement ses checkBoxesLinkCss
+  chkBoxLink <- findElement ses $ CSS "a[href='checkboxes.html']"
   logShowM "take element screenshot" $ takeElementScreenshot ses chkBoxLink
 
 -- >>> unit_demoPrintPage
 unit_demoPrintPage :: IO ()
 unit_demoPrintPage = withSession \ses -> do
-  navigateTo ses theInternet
+  url <- indexUrl
+  navigateTo ses url
   -- pdf (encoded string)
   logM "print page" $ printPage ses
 
@@ -487,13 +485,14 @@ chkHasElms :: (Foldable t) => t a -> Assertion
 chkHasElms els = assertBool "elements should be found" $ not (null els)
 
 bottomFameExists :: SessionId -> IO Bool
-bottomFameExists ses = not . null <$> findElements ses bottomFrameCss
+bottomFameExists ses = not . null <$> findElements ses (CSS "frame[name='frame-bottom']")
 
 --- >>> unit_demoExecuteScript
 unit_demoExecuteScript :: IO ()
 unit_demoExecuteScript =
   withSession \ses -> do
-    navigateTo ses theInternet
+    url <- indexUrl
+    navigateTo ses url
     logShowM "executeScript" $ executeScript ses "return arguments[0];" [String "Hello from Pyrethrum!", Number 2000]
     sleep2
     logTxt "executing asynch alert"
@@ -508,10 +507,10 @@ epochSeconds = round <$> getPOSIXTime
 unit_demoCookies :: IO ()
 unit_demoCookies =
   withSession \ses -> do
-    navigateTo ses theInternet
+    url <- indexUrl
+    navigateTo ses url
     logShowM "cookies" $ getAllCookies ses
 
-    logShowM "getNamedCookie: optimizelyEndUserId" $ getNamedCookie ses "optimizelyEndUserId"
     epocSecs <- epochSeconds
 
     let myCookie =
@@ -519,8 +518,8 @@ unit_demoCookies =
             { name = "myCookie",
               value = "myCookieValue",
               path = Just "/",
-              domain = Just ".the-internet.herokuapp.com",
-              secure = Just True,
+              domain = Nothing,  -- file:// URLs don't have domains
+              secure = Just False,
               sameSite = Just Strict,
               httpOnly = Just False,
               -- expire in 10 mins (Chrome has a 400 day limit)
@@ -539,7 +538,6 @@ unit_demoCookies =
     logShow "cookies after delete" afterRemove
 
     assertBool "cookie should be removed" $ not (any ((== "myCookie") . (.name)) afterRemove)
-    assertBool "there still should be cookies in the list" $ not (null afterRemove)
 
     logShowM "deleteAllCookies" $ deleteAllCookies ses
     afterDeleteAll <- getAllCookies ses
@@ -550,21 +548,22 @@ unit_demoCookies =
 unit_demoAlerts :: IO ()
 unit_demoAlerts =
   withSession \ses -> do
-    navigateTo ses alertsUrl
+    url <- promptUrl
+    navigateTo ses url
 
-    alert <- findElement ses jsAlertXPath
+    alert <- findElement ses $ XPath "//button[@id='alertBtn']"
     elementClick ses alert
 
     sleep2
     at <- getAlertText ses
     logShow "get alert text" at
-    "I am a JS Alert" === at
+    "This is an alert!" === at
 
     sleep2
     logShowM "acceptAlert" $ acceptAlert ses
 
     sleep1
-    prompt <- findElement ses jsPromptXPath
+    prompt <- findElement ses $ XPath "//button[@id='promptBtn']"
     elementClick ses prompt
 
     sleep1
@@ -579,7 +578,8 @@ unit_demoAlerts =
 unit_demoPointerNoneActions :: IO ()
 unit_demoPointerNoneActions =
   withSession \ses -> do
-    navigateTo ses theInternet
+    url <- indexUrl
+    navigateTo ses url
 
     let pointer =
           MkActions
@@ -657,8 +657,9 @@ unit_demoPointerNoneActions =
 unit_demoKeyAndReleaseActions :: IO ()
 unit_demoKeyAndReleaseActions =
   withSession \ses -> do
-    navigateTo ses loginUrl
-    usr <- findElement ses userNameCss
+    url <- loginUrl
+    navigateTo ses url
+    usr <- findElement ses $ CSS "#username"
     elementClick ses usr
 
     let keys =
@@ -694,7 +695,8 @@ unit_demoKeyAndReleaseActions =
 -- >>> unit_demoWheelActions
 unit_demoWheelActions :: IO ()
 unit_demoWheelActions = withSession \ses -> do
-  navigateTo ses infiniteScrollUrl
+  url <- infiniteScrollUrl
+  navigateTo ses url
 
   let wheel =
         MkActions
@@ -739,7 +741,8 @@ unit_demoError = withSession \ses -> do
         script = Just $ 11 * seconds,
         implicit = Just $ 1 * seconds
       }
-  navigateTo ses inputsUrl
+  url <- inputsUrl
+  navigateTo ses url
 
   -- if the runner has mapped the error as expected (using parseWebDriverError) we expect it to rethrow the text of the mapped webdriver error
   -- including  the text:
