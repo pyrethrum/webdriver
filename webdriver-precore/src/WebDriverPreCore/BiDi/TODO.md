@@ -16,9 +16,8 @@
 ## http
 - [ ] test => demos => test
 - [ ] switch to local http files
-- [ ] switch to local http files
 - [ ] switch to command (leave legacy)
-- [ ] update too latest spec
+- [ ] update to latest spec
 - [ ] switch to protocol and API - keep legacy
 - [ ] remove unneeded instances to and fromJSON
 
