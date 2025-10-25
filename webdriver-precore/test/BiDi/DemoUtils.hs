@@ -1,11 +1,12 @@
 module BiDi.DemoUtils where
 
-import BiDi.BiDiRunner (BiDiActions (..), mkDemoBiDiClientParams, withCommands, Printer (..))
+import BiDi.BiDiRunner (BiDiActions (..), mkDemoBiDiClientParams, withCommands)
 import Const (Timeout (..), seconds)
 import Control.Exception (Exception, catch, throwIO)
 import Data.Text (Text, isInfixOf)
 import Data.Time.Clock.POSIX (POSIXTime, getPOSIXTime)
-import IOUtils (DemoUtils (..), withLogFileLogger)
+import IOUtils (DemoUtils (..), QueLog)
+import Logger (withChannelFileLogger)
 import WebDriverPreCore.BiDi.CoreTypes (StringValue (..))
 import WebDriverPreCore.BiDi.Protocol
   ( BrowsingContext,
@@ -35,7 +36,6 @@ import WebDriverPreCore.BiDi.Protocol
 import WebDriverPreCore.BiDi.Script (EvaluateResult (..), PrimitiveProtocolValue (..), RemoteValue (..))
 import WebDriverPreCore.Internal.Utils (txt)
 import Prelude hiding (log, putStrLn)
-import qualified Data.Text.IO as TIO
 
 -- TODO: deprecate - move to config - rename to demoPause
 demoPause :: Timeout
@@ -49,23 +49,14 @@ data BiDiDemo = MkBiDiDemo
 demo :: Text -> (DemoUtils -> BiDiActions -> IO ()) -> BiDiDemo
 demo name action = MkBiDiDemo {name, action}
 
-runDemo' :: Maybe Printer -> Timeout -> BiDiDemo -> IO ()
-runDemo' logging pauseMs' d =
-  mkDemoBiDiClientParams logging pauseMs' >>= flip withCommands d.action
-
-printToFileAndLog :: (Text -> IO ()) -> Printer
-printToFileAndLog printToFile =
-  MkPrinter
-    { printLog = \msg -> do
-        let logMsg = "[LOG] " <> msg
-        printToFile logMsg
-        TIO.putStrLn logMsg
-    }
+runDemo' :: Maybe QueLog -> Timeout -> BiDiDemo -> IO ()
+runDemo' mQueueLog pauseMs' d =
+  mkDemoBiDiClientParams mQueueLog pauseMs' >>= flip withCommands d.action
 
 runDemo :: BiDiDemo -> IO ()
-runDemo demo' = 
-  withLogFileLogger $ \printToFile ->
-     runDemo' (Just $ printToFileAndLog printToFile) demoPause demo'
+runDemo demo' =
+  withChannelFileLogger $ \queueLog ->
+    runDemo' (Just queueLog) demoPause demo'
 
 newWindowContext :: DemoUtils -> BiDiActions -> IO BrowsingContext
 newWindowContext MkDemoUtils {..} MkCommands {..} = do

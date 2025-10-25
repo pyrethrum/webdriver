@@ -17,23 +17,16 @@ parseUrlDemo :: Text
 parseUrlDemo = txt $ parseUrl "ws://127.0.0.1:9222/session/e43698d9-b02a-4284-a936-12041deb3552"
 
 
-runFailDemo :: BiDiDemo -> Word64 -> Word64 -> Word64 -> Word64 -> IO ()
-runFailDemo d failSendCount failGetCount failPrintCount failEventCount = do
-  mkFailBidiClientParams Nothing demoPause failSendCount failGetCount failPrintCount failEventCount >>= \p -> withCommands p d.action
+runFailDemo :: BiDiDemo -> Word64 -> Word64 -> Word64 -> IO ()
+runFailDemo d failSendCount failGetCount failEventCount = do
+  mkFailBidiClientParams Nothing demoPause failSendCount failGetCount failEventCount >>= \p -> withCommands p d.action
 
 -- example fail demos :: to be turned into tests later
 sendFailDemo :: BiDiDemo -> IO ()
-sendFailDemo d = runFailDemo d 2 0 0 0
+sendFailDemo d = runFailDemo d 2 0 0
 
 getFailDemo :: BiDiDemo -> IO ()
-getFailDemo d = runFailDemo d 0 2 0 0
-
-printFailDemo :: BiDiDemo -> IO ()
-printFailDemo d = runFailDemo d 0 0 3 0
-
--- >>> printFailDemo dummyDemo
--- *** Exception: Forced failure for testing: print (call #3)
-
+getFailDemo d = runFailDemo d 0 2 0
 
 -- >>> getFailDemo dummyDemo
 -- *** Exception: Forced failure for testing: get (call #2)

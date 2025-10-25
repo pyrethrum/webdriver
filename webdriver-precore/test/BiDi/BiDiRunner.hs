@@ -2,27 +2,26 @@ module BiDi.BiDiRunner where
 
 import Config (Config, loadConfig)
 import Const (Timeout)
-import Control.Exception (Exception (displayException), Handler (..), SomeException, catch, catches, throw)
-import Control.Monad (forever, unless, when)
+import Control.Exception (Exception (displayException), SomeException, catch, throw)
+import Control.Monad (when)
 import Data.Aeson (FromJSON, Object, ToJSON, Value (..), encode, toJSON, withObject, (.:))
 import Data.Aeson.Types (FromJSON (..), Parser)
 import Data.ByteString.Lazy qualified as BL
 import Data.Coerce (coerce)
 import Data.Foldable (Foldable (toList), traverse_)
 import Data.Function ((&))
-import Data.Maybe (isJust)
+import Data.Maybe (fromMaybe)
 import Data.Text as T (Text, pack, take, unpack)
 import Data.Text.IO (putStrLn)
 import Data.Word (Word64)
 import GHC.Generics (Generic)
 import Http.HttpAPI (FullCapabilities, SessionResponse (..), deleteSession, newSessionFull)
 import Http.HttpAPI qualified as Caps (Capabilities (..))
-import IOUtils (DemoUtils, QueLog (..), bidiDemoUtils)
+import IOUtils (DemoUtils, QueLog (..), bidiDemoUtils, catchLog, loopForever)
 import Network.WebSockets (Connection, receiveData, runClient, sendTextData)
 import RuntimeConst (httpCapabilities, httpFullCapabilities)
-import UnliftIO (AsyncCancelled, bracket, catchAny, throwIO, waitAnyCatch)
+import UnliftIO (bracket, catchAny, throwIO, waitAnyCatch)
 import UnliftIO.Async (Async, async, cancel)
-import UnliftIO.Concurrent (threadDelay)
 import UnliftIO.STM
 import WebDriverPreCore.BiDi.API qualified as P
 import WebDriverPreCore.BiDi.BiDiUrl (BiDiUrl (..), getBiDiUrl)
@@ -516,54 +515,36 @@ matchedResponse command getNext request id' = do
           )
       )
 
-doNothingLogQueue :: LogQueue
-doNothingLogQueue =
-  MkLogQueue
-    { waitEmpty = pure (),
-      queueLog = MkQueLog . const $ pure (),
-      -- just block the print thread forever
-      deQueueLog = do
-        forever $ threadDelay 1_000_000
-        pure ""
-    }
-
-mkDemoBiDiClientParams :: Maybe Printer -> Timeout -> IO BiDiClientParams
-mkDemoBiDiClientParams mPrinter pauseTimeout =
-  do
-    c <- mkChannels
-    let logQueue =
-          mPrinter
-            & maybe
-              doNothingLogQueue
-              (const $ c.logQueue)
-
-    pure $
-      MkBiDiClientParams
-        { biDiMethods = mkBiDIMethods c,
-          logQueue,
-          messageLoops = demoMessageLoops mPrinter c,
-          demoUtils = bidiDemoUtils c.logQueue.queueLog pauseTimeout
-        }
+mkDemoBiDiClientParams :: Maybe QueLog -> Timeout -> IO BiDiClientParams
+mkDemoBiDiClientParams mQueLog pauseTimeout = do
+  let qLog = fromMaybe (MkQueLog $ const $ pure ()) mQueLog
+  c <- mkChannels qLog
+  pure $
+    MkBiDiClientParams
+      { biDiMethods = mkBiDIMethods c,
+        queueLog = qLog,
+        messageLoops = demoMessageLoops mQueLog c,
+        demoUtils = bidiDemoUtils qLog pauseTimeout
+      }
 
 -- TODO Add fail for event test
 mkFailBidiClientParams ::
-  Maybe Printer ->
+  Maybe QueLog ->
   Timeout ->
   Word64 ->
   Word64 ->
   Word64 ->
-  Word64 ->
   IO BiDiClientParams
-mkFailBidiClientParams mPrinter pauseTimeout failSendCount failGetCount failPrintCount failEventCount = do
-  c <- mkChannels
-  messageLoops <- failMessageLoops mPrinter c failSendCount failGetCount failPrintCount failEventCount
+mkFailBidiClientParams mQueLog pauseTimeout failSendCount failGetCount failEventCount = do
+  let qLog = fromMaybe (MkQueLog $ const $ pure ()) mQueLog
+  c <- mkChannels qLog
+  messageLoops <- failMessageLoops mQueLog c failSendCount failGetCount failEventCount
   pure $
     MkBiDiClientParams
       { biDiMethods = mkBiDIMethods c,
-        -- no logging
-        logQueue = c.logQueue,
+        queueLog = qLog,
         messageLoops,
-        demoUtils = bidiDemoUtils c.logQueue.queueLog pauseTimeout
+        demoUtils = bidiDemoUtils qLog pauseTimeout
       }
 
 withNewBiDiSession :: BiDiClientParams -> (DemoUtils -> BiDiMethods -> IO ()) -> IO ()
@@ -593,33 +574,18 @@ data Channels = MkChannels
     eventChan :: TChan Object,
     counterVar :: TVar JSUInt,
     subscriptions :: TVar [ActiveSubscription IO],
-    logQueue :: LogQueue
+    queueLog :: QueLog
   }
 
-mkChannels :: IO Channels
-mkChannels = do
-  logChan <- newTChanIO
-  let waitEmpty' :: Int -> IO ()
-      waitEmpty' attempt = do
-        empty <- atomically $ isEmptyTChan logChan
-        unless (empty || attempt > 500) $ do
-          threadDelay 10_000
-          waitEmpty' $ succ attempt
-      logQ :: LogQueue
-      logQ =
-        MkLogQueue
-          { queueLog = MkQueLog $ atomically . writeTChan logChan,
-            deQueueLog = atomically $ readTChan logChan,
-            waitEmpty = waitEmpty' 0
-          }
-
+mkChannels :: QueLog -> IO Channels
+mkChannels queueLog =
   MkChannels
     <$> newTChanIO
     <*> newTChanIO
     <*> newTChanIO
     <*> counterVar
     <*> newTVarIO []
-    <*> (pure logQ)
+    <*> (pure queueLog)
 
 counterVar :: IO (TVar JSUInt)
 counterVar = newTVarIO $ MkJSUInt 0
@@ -723,7 +689,7 @@ parseIncomingMessage log json = do
       pure $ Right undefined
 
 data BiDiClientParams = MkBiDiClientParams
-  { logQueue :: LogQueue,
+  { queueLog :: QueLog,
     messageLoops :: MessageLoops,
     biDiMethods :: BiDiMethods,
     demoUtils :: DemoUtils
@@ -734,13 +700,13 @@ withBiDiClient :: BiDiClientParams -> BiDiUrl -> (DemoUtils -> BiDiMethods -> IO
 withBiDiClient
   MkBiDiClientParams
     { biDiMethods,
-      logQueue,
+      queueLog,
       messageLoops,
       demoUtils
     }
   bidiUrl
   action =
-    withClient bidiUrl logQueue messageLoops $ action demoUtils biDiMethods
+    withClient bidiUrl queueLog messageLoops $ action demoUtils biDiMethods
 
 failAction :: Text -> Word64 -> (a -> IO ()) -> IO ((a -> IO ()))
 failAction lbl failCallCount action = do
@@ -757,40 +723,37 @@ failAction lbl failCallCount action = do
 data MessageActions = MkMessageActions
   { send :: Connection -> IO (),
     get :: Connection -> IO (),
-    print :: IO (),
     eventHandler :: IO ()
   }
 
-failMessageActions :: MessageActions -> Word64 -> Word64 -> Word64 -> Word64 -> IO MessageActions
-failMessageActions a failSendCount failGetCount failPrintCount failEventCount =
+failMessageActions :: MessageActions -> Word64 -> Word64 -> Word64 -> IO MessageActions
+failMessageActions a failSendCount failGetCount failEventCount =
   do
     send <- failAction "send" failSendCount a.send
     get <- failAction "get" failGetCount a.get
-    print' <- failAction "print" failPrintCount $ const a.print
     eventHandler' <- failAction "eventhandler" failEventCount $ const a.eventHandler
     pure $
       MkMessageActions
         { send,
           get,
-          print = print' 1,
           eventHandler = eventHandler' 1
         }
 
-demoMessageActions :: Maybe Printer -> Channels -> MessageActions
-demoMessageActions mPrinter MkChannels {sendChan, receiveChan, eventChan, logQueue, subscriptions} =
+demoMessageActions :: Maybe QueLog -> Channels -> MessageActions
+demoMessageActions mQueLog MkChannels {sendChan, receiveChan, eventChan, subscriptions} =
   MkMessageActions
     { send = \conn -> do
         msgToSend <- atomically $ readTChan sendChan
-        queueLog $ "Sending Message: " <> jsonToText msgToSend
+        qLog $ "Sending Message: " <> jsonToText msgToSend
         catchLog
           "Message Send Failed"
-          queueLog
+          qLog
           (sendTextData conn (BL.toStrict $ encode msgToSend)),
       --
       get = \conn -> do
         msg <- receiveData conn
-        queueLog $ "Received raw data: " <> T.take 100 (txt msg) <> "..."
-        queueLog $ "Received raw data: " <> txt msg
+        qLog $ "Received raw data: " <> T.take 100 (txt msg) <> "..."
+        qLog $ "Received raw data: " <> txt msg
         let writeReceiveChan = atomically . writeTChan receiveChan
             writeEventChan = atomically . writeTChan eventChan
             r = decodeResponse msg
@@ -800,20 +763,14 @@ demoMessageActions mPrinter MkChannels {sendChan, receiveChan, eventChan, logQue
             NoID obj -> writeEventChan obj
             WithID {} -> writeReceiveChan r,
       --
-      print =
-        maybe
-          (pure ())
-          (logQueue.deQueueLog >>=)
-          ((.printLog) <$> mPrinter),
-      --
       eventHandler = do
         obj <- atomically $ readTChan eventChan
-        queueLog $ "Event received: " <> jsonToText (toJSON obj)
-        applySubscriptions queueLog obj subscriptions
+        qLog $ "Event received: " <> jsonToText (toJSON obj)
+        applySubscriptions qLog obj subscriptions
     }
   where
-    queueLog :: Text -> IO ()
-    queueLog = when (isJust mPrinter) . coerce logQueue.queueLog
+    qLog :: Text -> IO ()
+    qLog = maybe (const $ pure ()) coerce mQueLog
 
 data EventProps = MkEventProps
   { msgType :: Text,
@@ -869,7 +826,6 @@ loopActions ql MkMessageActions {..} =
   MkMessageLoops
     { sendLoop = asyncLoop "Sender" . send,
       getLoop = asyncLoop "Receiver" . get,
-      printLoop = asyncLoop "Logger" print,
       eventLoop = asyncLoop "EventHandler" eventHandler
     }
   where
@@ -878,51 +834,37 @@ loopActions ql MkMessageActions {..} =
 data MessageLoops = MkMessageLoops
   { sendLoop :: Connection -> IO (Async ()),
     getLoop :: Connection -> IO (Async ()),
-    printLoop :: IO (Async ()),
     eventLoop :: IO (Async ())
   }
 
-newtype Printer = MkPrinter
-  { printLog :: Text -> IO ()
-  }
-
-demoMessageLoops :: Maybe Printer -> Channels -> MessageLoops
-demoMessageLoops mPrnter channels =
-  loopActions channels.logQueue.queueLog $ demoMessageActions mPrnter channels
+demoMessageLoops :: Maybe QueLog -> Channels -> MessageLoops
+demoMessageLoops mQueLog channels =
+  loopActions channels.queueLog $ demoMessageActions mQueLog channels
 
 failMessageLoops ::
-  Maybe Printer ->
+  Maybe QueLog ->
   Channels ->
   Word64 ->
   Word64 ->
   Word64 ->
-  Word64 ->
   IO MessageLoops
-failMessageLoops mPrinter channels failSendCount failGetCount failPrintCount failEventCount =
-  loopActions channels.logQueue.queueLog
+failMessageLoops mQueLog channels failSendCount failGetCount failEventCount =
+  loopActions channels.queueLog
     <$> failMessageActions
-      (demoMessageActions mPrinter channels)
+      (demoMessageActions mQueLog channels)
       failSendCount
       failGetCount
-      failPrintCount
       failEventCount
 
-data LogQueue = MkLogQueue
-  { queueLog :: QueLog,
-    deQueueLog :: IO Text,
-    waitEmpty :: IO ()
-  }
-
-withClient :: BiDiUrl -> LogQueue -> MessageLoops -> IO () -> IO ()
+withClient :: BiDiUrl -> QueLog -> MessageLoops -> IO () -> IO ()
 withClient
   pth@MkBiDiUrl {host, port, path}
-  logQueue
+  queueLog
   messageLoops
   action =
     do
       log $ "Connecting to WebDriver at " <> txt pth
       runClient (unpack host) port (unpack path) $ \conn -> do
-        printLoop <- messageLoops.printLoop
         eventLoop <- messageLoops.eventLoop
         getLoop <- messageLoops.getLoop conn
         sendLoop <- messageLoops.sendLoop conn
@@ -931,7 +873,7 @@ withClient
 
         result <- async action
 
-        (_asy, ethresult) <- waitAnyCatch [getLoop, sendLoop, result, printLoop, eventLoop]
+        (_asy, ethresult) <- waitAnyCatch [getLoop, sendLoop, result, eventLoop]
 
         -- cancelMany not reexported by UnliftIO
         cancel getLoop
@@ -939,8 +881,6 @@ withClient
         cancel result
         cancel eventLoop
 
-        logQueue.waitEmpty
-        cancel printLoop
         ethresult
           & either
             ( \e -> do
@@ -951,7 +891,7 @@ withClient
             pure
     where
       log :: Text -> IO ()
-      log = coerce logQueue.queueLog
+      log = coerce queueLog
 
 httpSession :: IO SessionResponse
 httpSession = loadConfig >>= newSessionFull . httpBidiCapabilities
@@ -967,25 +907,6 @@ httpBidiCapabilities cfg =
             { Caps.webSocketUrl = Just True
             }
     }
-
-catchLog :: Text -> (Text -> IO ()) -> IO () -> IO ()
-catchLog name log action =
-  action
-    `catches` [ Handler $ \(e :: AsyncCancelled) -> do
-                  log $ name <> " thread cancelled"
-                  throwIO e,
-                Handler $ \(e :: SomeException) -> do
-                  log $ "Exception thrown in " <> name <> " thread" <> ": " <> (pack $ displayException e)
-                  throwIO e
-              ]
-
--- like forever but, unlike forever, it fails if an exception is thrown
-loopForever :: (Text -> IO ()) -> Text -> IO () -> IO (Async ())
-loopForever queueLog name action = async $ do
-  queueLog $ "Starting " <> name <> " thread"
-  loop
-  where
-    loop = catchLog name queueLog action >> loop
 
 newHttpSession :: FullCapabilities -> IO SessionResponse
 newHttpSession = newSessionFull

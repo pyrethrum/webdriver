@@ -16,14 +16,15 @@ module IOUtils
     sleep2,
     (===),
     findWebDriverRoot,
-    withLogFileLogger,
     QueLog(..),
+    loopForever,
+    catchLog,
   )
 where
 
 import Const (Timeout (..), second, seconds)
 import Control.Concurrent (threadDelay)
-import Control.Exception (Exception (..), SomeException)
+import Control.Exception (Exception (..), Handler (..), SomeException, catches)
 import Control.Monad (void, when)
 import Data.Base64.Types qualified as B64T
 import Data.ByteString qualified as BS
@@ -33,8 +34,8 @@ import Data.Text.IO qualified as TIO
 import GHC.Base (coerce)
 import System.FilePath (joinPath, splitDirectories, (</>))
 import Test.Tasty.HUnit as HUnit (Assertion, HasCallStack, (@=?))
-import UnliftIO (IOMode (..), atomically, race_, readTMVar, tryPutTMVar, withFile)
-import UnliftIO.Directory (getCurrentDirectory)
+import UnliftIO (AsyncCancelled, async, atomically, race_, readTMVar, throwIO, tryPutTMVar)
+import UnliftIO.Async (Async)
 import UnliftIO.STM (newEmptyTMVarIO)
 import WebDriverPreCore.Internal.Utils (txt)
 import Prelude hiding (log)
@@ -49,15 +50,6 @@ findWebDriverRoot path =
     rootDir = "webdriver"
     dirs = splitDirectories path
     webDriverPath = (joinPath $ takeWhile (/= rootDir) dirs) </> rootDir
-
-withLogFileLogger :: ((Text -> IO ()) -> IO ()) -> IO ()
-withLogFileLogger action = do
-  lgPath <- getLogPath <$> getCurrentDirectory
-  withFile lgPath WriteMode $
-    action . TIO.hPutStrLn
-  where
-    lgName = "eval.log"
-    getLogPath = maybe lgName (</> lgName) . findWebDriverRoot
 
 --  TODO : deprectate static logTxt et al
 
@@ -218,3 +210,22 @@ sleep2 = sleep $ 2 * seconds
   a ->
   Assertion
 (===) = (@=?)
+
+catchLog :: Text -> (Text -> IO ()) -> IO () -> IO ()
+catchLog name logAction action =
+  action
+    `catches` [ Handler $ \(e :: AsyncCancelled) -> do
+                  logAction $ name <> " thread cancelled"
+                  throwIO e,
+                Handler $ \(e :: SomeException) -> do
+                  logAction $ "Exception thrown in " <> name <> " thread" <> ": " <> (pack $ displayException e)
+                  throwIO e
+              ]
+
+-- | like forever but, unlike forever, it fails if an exception is thrown
+loopForever :: (Text -> IO ()) -> Text -> IO () -> IO (Async ())
+loopForever queueLog name action = async $ do
+  queueLog $ "Starting " <> name <> " thread"
+  loop
+  where
+    loop = catchLog name queueLog action >> loop
