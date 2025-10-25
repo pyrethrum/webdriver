@@ -146,6 +146,7 @@ bidiDemos =
               Network.networkProvideResponseBase64Demo,
               Network.networkProvideResponseErrorDemo,
               Network.networkDataRetrievalDemo,
+              Network.networkDisownDataDemo,
               Network.networkCacheBehaviorDemo
             ],
           bidiTest
