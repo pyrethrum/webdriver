@@ -7,6 +7,7 @@ import Data.Text.Lazy.Encoding qualified as TLE
 import Network.HTTP.Types.Status
 import TestPages (helloHtml)
 import Web.Scotty
+import Web.Scotty.Cookie (setSimpleCookie)
 import Prelude
 
 main :: IO ()
@@ -17,6 +18,7 @@ main = do
   putStrLn "  - /malformed-response"
   scotty 8000 $ do
     get "/" $ do
+      setSimpleCookie "helloCookie" "Hello from Test Server"
       html helloHtml
 
     get "/boringHello" $ do
@@ -46,8 +48,8 @@ main = do
 
     get "/malformed-response" $ do
       -- Send invalid chunked encoding or abruptly close connection
-        setHeader "Content-Length" "99999"  -- Promise 99999 bytes
-        text "short"  -- But only send 5 bytes, then connection closes
+      setHeader "Content-Length" "99999" -- Promise 99999 bytes
+      text "short" -- But only send 5 bytes, then connection closes
 
 -- Parse Basic authorization header: "Basic base64(user:pass)"
 parseBasicAuth :: BS.ByteString -> Maybe (BS.ByteString, BS.ByteString)

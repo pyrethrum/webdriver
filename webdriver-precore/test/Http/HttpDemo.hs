@@ -21,6 +21,7 @@ import TestData
     promptUrl,
     shadowDomUrl,
   )
+import TestServerAPI (withTestServer, testServerHomeUrl)
 import GHC.IO (catchAny, finally)
 import Http.HttpAPI
   ( Action (..),
@@ -503,9 +504,11 @@ unit_demoExecuteScript =
 epochSeconds :: IO Int
 epochSeconds = round <$> getPOSIXTime
 
--- >>> unit_demoCookies
-unit_demoCookies :: IO ()
-unit_demoCookies =
+-- >>> unit_demoCookiesRemote
+-- *** Exception: user error (WebDriver error thrown:
+--  WebDriverError {error = NoSuchCookie, description = "No cookie matching the given path name was found amongst the associated cookies of session's current browsing context's active document", httpResponse = MkHttpResponse {statusCode = 404, statusMessage = "Not Found", body = Object (fromList [("value",Object (fromList [("error",String "no such cookie"),("message",String "No cookie with name myCookie"),("stacktrace",String "")]))])}})
+unit_demoCookiesRemote :: IO ()
+unit_demoCookiesRemote =
   withSession \ses -> do
     url <- indexUrl
     navigateTo ses url
@@ -543,6 +546,58 @@ unit_demoCookies =
     afterDeleteAll <- getAllCookies ses
     logShow "cookies after delete all" afterDeleteAll
     assertBool "all cookies should be removed" $ null afterDeleteAll
+
+-- >>> unit_demoCookies
+-- *** Exception: user error (WebDriver error thrown:
+--  WebDriverError {error = NoSuchCookie, description = "No cookie matching the given path name was found amongst the associated cookies of session's current browsing context's active document", httpResponse = MkHttpResponse {statusCode = 404, statusMessage = "Not Found", body = Object (fromList [("value",Object (fromList [("error",String "no such cookie"),("message",String "No cookie with name myCookie"),("stacktrace",String "")]))])}})
+unit_demoCookies :: IO ()
+unit_demoCookies =
+  withTestServer $
+    withSession \ses -> do
+      navigateTo ses testServerHomeUrl
+      logShowM "cookies" $ getAllCookies ses
+      sleep2
+      
+      epocSecs <- epochSeconds
+
+      let 
+        cookienName = "myCookie"
+        myCookie =
+            MkCookie
+              { name = cookienName,
+                value = "myCookieValue",
+                path = Just "/", -- Set path to root
+                domain = Just "localhost", -- Let the browser set the domain automatically
+                secure = Just False,
+                sameSite = Just None,
+                httpOnly = Just False,
+                -- expire in 10 mins (Chrome has a 400 day limit)
+                expiry = Nothing
+              }
+
+      
+      logShow "cookie to add" myCookie
+      logShowM "addCookie" $ addCookie ses myCookie
+
+      sleep2
+      sleep2
+      sleep2
+      sleep2
+      logShowM "cookies after add" $ getAllCookies ses
+
+      myCookie' <- getNamedCookie ses cookienName
+      myCookie {expiry = Nothing} === myCookie' {expiry = Nothing}
+
+      logShowM "deleteCookie (myCookie)" $ deleteCookie ses "myCookie"
+      afterRemove <- getAllCookies ses
+      logShow "cookies after delete" afterRemove
+
+      assertBool "cookie should be removed" $ not (any ((== "myCookie") . (.name)) afterRemove)
+
+      logShowM "deleteAllCookies" $ deleteAllCookies ses
+      afterDeleteAll <- getAllCookies ses
+      logShow "cookies after delete all" afterDeleteAll
+      assertBool "all cookies should be removed" $ null afterDeleteAll
 
 -- >>> unit_demoAlerts
 unit_demoAlerts :: IO ()
