@@ -21,6 +21,7 @@ import Control.Exception (SomeException)
 import Data.Text (Text, unpack)
 import Data.Text qualified as T
 import ErrorCoverageTest qualified as Error
+import Http.HttpDemo qualified as Http
 import IOUtils (DemoUtils (..))
 import JSONParsingTest qualified as JSON
 import Test.Tasty (TestTree, defaultMain, testGroup)
@@ -30,25 +31,19 @@ import WebDriverPreCore.Internal.Utils (txt)
 import Prelude
 
 main :: IO ()
-main = defaultMain tests
+main = 
+  -- defaultMain tests
+  defaultMain httpDemos
 
 tests :: TestTree
 tests =
   testGroup
     "Tests"
     [ unitTests,
+      httpDemos,
       propertyTests,
       bidiDemos
     ]
-
--- -- [  bidiTest
---             "Network Events"
---             [ 
---               NetworkEvent.networkEventRequestResponseLifecycle,
---               NetworkEvent.networkEventFetchError,
---               NetworkEvent.networkEventAuthRequired
---             ]
--- -- ]
 
 unitTests :: TestTree
 unitTests =
@@ -77,6 +72,34 @@ propertyTests =
         "JSON Parsing"
         [ JSON.test_round_trip
         ]
+    ]
+
+httpDemos :: TestTree
+httpDemos =
+  testGroup
+    "HTTP Demos"
+    [ testCase "New Session" Http.unit_demoNewSession,
+      testCase "Session Driver Status" Http.unit_demoSessionDriverStatus,
+      testCase "Send Keys Clear" Http.unit_demoSendKeysClear,
+      testCase "Forward Back Refresh" Http.unit_demoForwardBackRefresh,
+      testCase "Window Handles" Http.unit_demoWindowHandles,
+      testCase "Window Sizes" Http.unit_demoWindowSizes,
+      testCase "Element Page Props" Http.unit_demoElementPageProps,
+      testCase "Timeouts" Http.unit_demoTimeouts,
+      testCase "Window Recs" Http.unit_demoWindowRecs,
+      testCase "Window Find Element" Http.unit_demoWindowFindElement,
+      testCase "Frames" Http.unit_demoFrames,
+      testCase "Shadow Dom" Http.unit_demoShadowDom,
+      testCase "Is Element Selected" Http.unit_demoIsElementSelected,
+      testCase "Get Page Source Screenshot" Http.unit_demoGetPageSourceScreenShot,
+      testCase "Print Page" Http.unit_demoPrintPage,
+      testCase "Execute Script" Http.unit_demoExecuteScript,
+      testCase "Cookies" Http.unit_demoCookies,
+      testCase "Alerts" Http.unit_demoAlerts,
+      testCase "Pointer None Actions" Http.unit_demoPointerNoneActions,
+      testCase "Key And Release Actions" Http.unit_demoKeyAndReleaseActions,
+      testCase "Wheel Actions" Http.unit_demoWheelActions,
+      testCase "Error" Http.unit_demoError
     ]
 
 fromBidiDemo :: BiDiDemo -> TestTree
@@ -238,8 +261,7 @@ bidiDemos =
             ],
           bidiTest
             "Network Events"
-            [ 
-              NetworkEvent.networkEventRequestResponseLifecycle,
+            [ NetworkEvent.networkEventRequestResponseLifecycle,
               NetworkEvent.networkEventFetchError,
               NetworkEvent.networkEventAuthRequired
             ],

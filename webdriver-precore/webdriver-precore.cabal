@@ -186,7 +186,6 @@ test-suite test
     , unliftio
     , webdriver-precore
     , websockets
-    , wuss
   other-modules:
    -- true unit/property tests
     ApiCoverageTest
@@ -205,7 +204,6 @@ test-suite test
     , Http.HttpDemo
     , BiDi.BiDiRunner
     , BiDi.DemoUtils
-    , BiDi.WussDemo
     , BiDi.Demos.BrowserDemos
     , BiDi.Demos.BrowsingContextDemos
     , BiDi.Demos.BrowsingContextEventDemos

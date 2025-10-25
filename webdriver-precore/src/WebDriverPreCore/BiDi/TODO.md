@@ -9,6 +9,7 @@
   - All 97 tests passed (181.01s) - headless
 - [x] pull logger out
 - [ ] specific code TODOs - TODO tree
+- [ ] check all exports - should use prtocol and API only
 - [ ] update to latest spec
 - [ ] remove unneeded instances to and fromJSON
 - [ ] Claude reconcile / review
@@ -16,10 +17,16 @@
 ## http
 - [ ] test => demos => test
 - [ ] switch to local http files
+  - before 
+    - headed - All 22 tests passed (148.72s)
+    - headless - All 22 tests passed (135.98s)
 - [ ] switch to command (leave legacy)
 - [ ] update to latest spec
 - [ ] switch to protocol and API - keep legacy
 - [ ] remove unneeded instances to and fromJSON
+- [ ] review demoUtils
+  - [ ] http may not need timeLimitLog et. al. 
+  - [ ] delete static functions
 
 ## update 
   - update bidi to latest spec

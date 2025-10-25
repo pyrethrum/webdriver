@@ -876,11 +876,8 @@ withClient
         (_asy, ethresult) <- waitAnyCatch [getLoop, sendLoop, result, eventLoop]
 
         -- cancelMany not reexported by UnliftIO
-        cancel getLoop
-        cancel sendLoop
-        cancel result
-        cancel eventLoop
-
+        traverse_ cancel [getLoop, sendLoop, result, eventLoop]
+     
         ethresult
           & either
             ( \e -> do
