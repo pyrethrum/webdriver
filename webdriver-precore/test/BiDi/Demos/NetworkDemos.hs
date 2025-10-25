@@ -384,7 +384,6 @@ networkResponseModificationDemo =
     action utils@MkDemoUtils {..} cmds@MkCommands {..} = do
       bc <- rootContext utils cmds
 
-      HERE TRY Setting id
       withTestServer $ do
         logTxt "Disable cache to ensure we see network requests"
         networkSetCacheBehavior $
@@ -398,17 +397,45 @@ networkResponseModificationDemo =
 
         (respStartedFired, waitRespStarted) <- timeLimitLog NetworkResponseStarted
 
-        reqIdMVar <- newEmptyTMVarIO
         subscribeNetworkResponseStarted
           ( \event -> do
-              let Net.MkResponseStarted {request = Net.MkRequestData {request = reqId}} = event
-              atomically $ putTMVar reqIdMVar reqId
+              let Net.MkResponseStarted {request = Net.MkRequestData {request = req}} = event
+
+              logShow "Modifying response: status 404, custom headers" req
+
+              networkContinueResponse $
+                MkContinueResponse
+                  { request = req,
+                    cookies =
+                      Just
+                        [ MkSetCookieHeader
+                            { name = "bidi-inserted-cookie",
+                              value = TextBytesValue $ MkStringValue "HELLLLO FROMM BIDI",
+                              domain = Nothing,
+                              path = Nothing,
+                              expiry = Nothing,
+                              httpOnly = Just True,
+                              secure = Just True,
+                              maxAge = Nothing,
+                              sameSite = Nothing
+                            }
+                        ],
+                    credentials = Nothing,
+                    headers =
+                      Just
+                        [ MkHeader "X-Modified-By" (TextBytesValue $ MkStringValue "WebDriver-BiDi-Demo"),
+                          MkHeader "X-Custom-Status" (TextBytesValue $ MkStringValue "Mocked-404"),
+                          MkHeader "X-Intercept-Time" (TextBytesValue $ MkStringValue "2025-10-22")
+                        ],
+                    reasonPhrase = Just "Not Found",
+                    statusCode = Just (MkJSUInt 404)
+                  }
+
               respStartedFired event
           )
 
         (responseEndFired, waitRespCompleted) <- timeLimitLog NetworkResponseCompleted
         subscribeNetworkResponseCompleted responseEndFired
-       
 
         intercept <-
           networkAddIntercept $
@@ -420,43 +447,6 @@ networkResponseModificationDemo =
         let MkAddInterceptResult interceptId = intercept
         logShow "ResponseStarted intercept added" interceptId
         pause
-
-        sendCommandNoWait . mkCommand "browsingContext.navigate" $
-          MkNavigate
-            { context = bc,
-              url = boringHelloUrl,
-              wait = Just Complete
-            }
-
-        req <- atomically $ readTMVar reqIdMVar
-
-        logShow "Modifying response: status 404, custom headers" req
-
-        networkContinueResponse $
-          MkContinueResponse
-            { request = req,
-              cookies = Just [ MkSetCookieHeader { 
-                                name = "bidi-inserted-cookie"
-                              , value = TextBytesValue $ MkStringValue "HELLLLO FROMM BIDI"
-                              , domain = Nothing
-                              , path = Nothing
-                              , expiry = Nothing
-                              , httpOnly = Just True
-                              , secure = Just True
-                              , maxAge = Nothing
-                              , sameSite = Nothing
-                                }
-                            ],
-              credentials = Nothing,
-              headers =
-                Just
-                  [ MkHeader "X-Modified-By" (TextBytesValue $ MkStringValue "WebDriver-BiDi-Demo"),
-                    MkHeader "X-Custom-Status" (TextBytesValue $ MkStringValue "Mocked-404"),
-                    MkHeader "X-Intercept-Time" (TextBytesValue $ MkStringValue "2025-10-22")
-                  ],
-              reasonPhrase = Just "Not Found",
-              statusCode = Just (MkJSUInt 404)
-            }
 
         sendCommandNoWait . mkCommand "browsingContext.navigate" $
           MkNavigate
