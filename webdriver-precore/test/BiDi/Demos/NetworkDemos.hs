@@ -4,8 +4,8 @@ import BiDi.BiDiRunner (BiDiActions (..))
 import BiDi.DemoUtils
 import Const (second)
 import IOUtils (DemoUtils (..))
-import TestServerAPI (boringHelloUrl, boringHelloUrl2, testServerHomeUrl, withTestServer)
-import UnliftIO (putTMVar, readTMVar)
+import TestServerAPI (authTestUrl, boringHelloUrl, boringHelloUrl2, testServerHomeUrl, withTestServer)
+import UnliftIO (putTMVar, readTMVar, writeTMVar)
 import UnliftIO.STM (atomically, newEmptyTMVarIO, newTVarIO, readTVar, writeTVar)
 import WebDriverPreCore.BiDi.Command (CommandMethod(..))
 import WebDriverPreCore.BiDi.CoreTypes (JSUInt (..), StringValue (..))
@@ -13,6 +13,7 @@ import WebDriverPreCore.BiDi.Network qualified as Net
 import WebDriverPreCore.BiDi.Protocol
 import Prelude hiding (log)
 import WebDriverPreCore.Internal.Utils (txt)
+import GHC.IO.Device (RawIO(write))
 
 -- >>> runDemo networkDataCollectorDemo
 networkDataCollectorDemo :: BiDiDemo
@@ -543,61 +544,201 @@ networkResponseModificationDemo2 =
         logShow "Removed intercept" removeIntercept
         pause
 
--- >>> runDemo networkAuthAndFailureDemo
-networkAuthAndFailureDemo :: BiDiDemo
-networkAuthAndFailureDemo =
-  demo "Network V - Authentication and Request Failure Handling" action
+-- >>> runDemo networkAuthDemo
+networkAuthDemo :: BiDiDemo
+networkAuthDemo =
+  demo "Network V - Authentication Handling" action
   where
     action :: DemoUtils -> BiDiActions -> IO ()
-    action utils@MkDemoUtils {..} cmds = do
-      _bc <- rootContext utils cmds
-
-      logTxt "Note: This demo demonstrates auth and failure handling commands."
-      logTxt "These commands require active intercepts and real network requests to function properly."
+    action utils@MkDemoUtils {..} cmds@MkCommands {..} = do
+      bc <- rootContext utils cmds
 
       withTestServer $ do
-        logTxt "Test Server running - ready for auth and failure scenarios"
+        logTxt "Test 1: Add intercept for AuthRequired phase"
+        authIntercept <-
+          networkAddIntercept $
+            MkAddIntercept
+              { phases = [AuthRequired],
+                contexts = Just [bc],
+                urlPatterns = Nothing
+              }
+        let MkAddInterceptResult authInterceptId = authIntercept
+        logShow "AuthRequired intercept added" authInterceptId
         pause
 
-        -- TODO: Implement actual intercept handlers to capture real request IDs
-        -- The following tests demonstrate the parameter structure for each command
-
-        logTxt "Test 1: networkContinueWithAuth with default response (no credentials)"
-        logTxt "This would use browser's default auth handling"
+        logTxt "Test 2: Subscribe to AuthRequired event and cancel auth (event-based)"
+        (authReqFired1, waitAuthReq1) <- timeLimitLog NetworkAuthRequired
+        
+        sub1 <- subscribeNetworkAuthRequired $ \event -> do
+          let Net.MkAuthRequired {request = Net.MkRequestData {request = reqId}} = event
+          logShow "AuthRequired event captured (will cancel)" reqId
+          
+          networkContinueWithAuth $
+            MkContinueWithAuth
+              { request = reqId,
+                authAction = CancelAuth
+              }
+          logTxt "Auth request cancelled"
+          authReqFired1 event
         pause
 
-        logTxt "Test 2: networkContinueWithAuth with cancel response"
-        logTxt "This would cancel the auth request"
+        logTxt "Test 3: Navigate to auth-protected URL (will be cancelled)"
+        sendCommandNoWait . mkCommand BrowsingContextNavigate $
+          MkNavigate
+            { context = bc,
+              url = authTestUrl,
+              wait = Nothing
+            }
+        waitAuthReq1
+        unsubscribe sub1
+        pauseAtLeast $ 1 * second
         pause
 
-        logTxt "Test 3: networkContinueWithAuth with provided credentials"
-        logTxt "Example: username='test_user', password='test_password_123'"
+        logTxt "Test 4: Subscribe to AuthRequired event and use default auth handling"
+        (authReqFired2, waitAuthReq2) <- timeLimitLog NetworkAuthRequired
+
+        sub2 <- subscribeNetworkAuthRequired $ \event -> do
+          let Net.MkAuthRequired {request = Net.MkRequestData {request = reqId}} = event
+          logShow "AuthRequired event captured (will use default)" reqId
+          
+          networkContinueWithAuth $
+            MkContinueWithAuth
+              { request = reqId,
+                authAction = DefaultAuth
+              }
+          logTxt "Using default auth handling"
+          authReqFired2 event
         pause
 
-        logTxt "Test 4: networkContinueWithAuth with different credentials"
-        logTxt "Example: username='admin@example.com', password='super_secure_password_456'"
+        logTxt "Test 5: Navigate to auth-protected URL (will use default auth)"
+        sendCommandNoWait . mkCommand BrowsingContextNavigate $
+          MkNavigate
+            { context = bc,
+              url = authTestUrl,
+              wait = Nothing
+            }
+        waitAuthReq2
+        unsubscribe sub2
+        pauseAtLeast $ 1 * second
         pause
 
-        logTxt "Test 5: networkFailRequest with basic request"
-        logTxt "This would fail an intercepted request"
+        logTxt "Test 6: Subscribe to AuthRequired event and provide credentials"
+        (authReqFired3, waitAuthReq3) <- timeLimitLog NetworkAuthRequired
+
+        sub3 <- subscribeNetworkAuthRequired $ \event -> do
+          let Net.MkAuthRequired {request = Net.MkRequestData {request = reqId}} = event
+          logShow "AuthRequired event captured (will provide credentials)" reqId
+
+          networkContinueWithAuth $
+            MkContinueWithAuth
+              { request = reqId,
+                authAction =
+                  ProvideCredentials $
+                    MkAuthCredentials
+                      { username = "test_user",
+                        password = "test_password_123"
+                      }
+              }
+          logTxt "Provided credentials: test_user / test_password_123"
+          authReqFired3 event
         pause
 
-        logTxt "Test 6: networkFailRequest with different request"
-        logTxt "Example: Simulating network failure"
+        logTxt "Test 7: Navigate to auth-protected URL (with credentials)"
+        sendCommandNoWait . mkCommand BrowsingContextNavigate $
+          MkNavigate
+            { context = bc,
+              url = authTestUrl,
+              wait = Nothing
+            }
+        waitAuthReq3
+        unsubscribe sub3
+        pauseAtLeast $ 1 * second
         pause
 
-        logTxt "Test 7: networkFailRequest with another request"
-        logTxt "Example: Simulating timeout"
+        logTxt "Cleanup: Remove auth intercept"
+        removeAuthIntercept <- networkRemoveIntercept $ MkRemoveIntercept authInterceptId
+        logShow "Removed AuthRequired intercept" removeAuthIntercept
         pause
 
-        logTxt "Test 8: networkFailRequest with final request"
-        logTxt "Example: Simulating SSL error"
+-- >>> runDemo networkFailRequestDemo
+networkFailRequestDemo :: BiDiDemo
+networkFailRequestDemo =
+  demo "Network VI - Request Failure Handling" action
+  where
+    action :: DemoUtils -> BiDiActions -> IO ()
+    action utils@MkDemoUtils {..} cmds@MkCommands {..} = do
+      bc <- rootContext utils cmds
+
+      withTestServer $ do
+        logTxt "Test 1: Add intercept for BeforeRequestSent phase"
+        failIntercept <-
+          networkAddIntercept $
+            MkAddIntercept
+              { phases = [BeforeRequestSent],
+                contexts = Just [bc],
+                urlPatterns = Nothing
+              }
+        let MkAddInterceptResult failInterceptId = failIntercept
+        logShow "BeforeRequestSent intercept added for failure demo" failInterceptId
+        pause
+
+        logTxt "Test 2: Subscribe to BeforeRequestSent and fail the request"
+        (beforeReqFired1, waitBeforeReq1) <- timeLimitLog NetworkBeforeRequestSent
+        failReqIdVar1 <- newEmptyTMVarIO
+        subscribeNetworkBeforeRequestSent $ \event -> do
+          let Net.MkBeforeRequestSent {request = Net.MkRequestData {request = reqId}} = event
+          logShow "BeforeRequestSent captured (will fail request)" reqId
+          atomically $ putTMVar failReqIdVar1 reqId
+          
+          networkFailRequest $ MkFailRequest {request = reqId}
+          logTxt "Request failed intentionally"
+          beforeReqFired1 event
+        pause
+
+        logTxt "Test 3: Navigate to trigger request failure"
+        sendCommandNoWait . mkCommand BrowsingContextNavigate $
+          MkNavigate
+            { context = bc,
+              url = boringHelloUrl,
+              wait = Nothing
+            }
+        waitBeforeReq1
+        pauseAtLeast $ 1 * second
+        pause
+
+        logTxt "Test 4: Fail another request (second demonstration)"
+        (beforeReqFired2, waitBeforeReq2) <- timeLimitLog NetworkBeforeRequestSent
+        failReqIdVar2 <- newEmptyTMVarIO
+        subscribeNetworkBeforeRequestSent $ \event -> do
+          let Net.MkBeforeRequestSent {request = Net.MkRequestData {request = reqId}} = event
+          logShow "BeforeRequestSent captured (will fail second request)" reqId
+          atomically $ putTMVar failReqIdVar2 reqId
+          
+          networkFailRequest $ MkFailRequest {request = reqId}
+          logTxt "Second request failed intentionally"
+          beforeReqFired2 event
+        pause
+
+        logTxt "Test 5: Navigate to trigger second request failure"
+        sendCommandNoWait . mkCommand BrowsingContextNavigate $
+          MkNavigate
+            { context = bc,
+              url = boringHelloUrl2,
+              wait = Nothing
+            }
+        waitBeforeReq2
+        pauseAtLeast $ 1 * second
+        pause
+
+        logTxt "Cleanup: Remove failure intercept"
+        removeFailIntercept <- networkRemoveIntercept $ MkRemoveIntercept failInterceptId
+        logShow "Removed BeforeRequestSent intercept" removeFailIntercept
         pause
 
 -- >>> runDemo networkProvideResponseDemo
 networkProvideResponseDemo :: BiDiDemo
 networkProvideResponseDemo =
-  demo "Network VI - Custom Response Provision" action
+  demo "Network VII - Custom Response Provision" action
   where
     action :: DemoUtils -> BiDiActions -> IO ()
     action utils@MkDemoUtils {..} cmds = do
@@ -640,7 +781,7 @@ networkProvideResponseDemo =
 -- >>> runDemo networkDataRetrievalDemo
 networkDataRetrievalDemo :: BiDiDemo
 networkDataRetrievalDemo =
-  demo "Network VII - Data Retrieval and Ownership" action
+  demo "Network VIII - Data Retrieval and Ownership" action
   where
     action :: DemoUtils -> BiDiActions -> IO ()
     action utils@MkDemoUtils {..} cmds@MkCommands {..} = do
@@ -708,7 +849,7 @@ networkDataRetrievalDemo =
 -- >>> runDemo networkDisownDataDemo
 networkDisownDataDemo :: BiDiDemo
 networkDisownDataDemo =
-  demo "Network VIII - Data Retrieval and Disown" action
+  demo "Network IX - Data Retrieval and Disown" action
   where
     action :: DemoUtils -> BiDiActions -> IO ()
     action utils@MkDemoUtils {..} cmds@MkCommands {..} = do
@@ -787,7 +928,7 @@ networkDisownDataDemo =
 -- >>> runDemo networkCacheBehaviorDemo
 networkCacheBehaviorDemo :: BiDiDemo
 networkCacheBehaviorDemo =
-  demo "Network IX - Cache Behavior Management" action
+  demo "Network X - Cache Behavior Management" action
   where
     action :: DemoUtils -> BiDiActions -> IO ()
     action utils@MkDemoUtils {..} cmds@MkCommands {..} = do
