@@ -101,6 +101,7 @@ where
 
 import Data.Aeson (Object)
 import WebDriverPreCore.BiDi.BrowsingContext (NavigationInfo, DownloadWillBegin, DownloadEnd, HistoryUpdated, UserPromptClosed, UserPromptOpened)
+import WebDriverPreCore.BiDi.Command (CommandMethod(..), mkCommandTxt)
 import WebDriverPreCore.BiDi.Event
 import WebDriverPreCore.BiDi.Input (FileDialogOpened)
 import WebDriverPreCore.BiDi.Log
@@ -183,7 +184,8 @@ import WebDriverPreCore.BiDi.Protocol
     WebExtensionResult,
     WebExtensionUninstall,
     emptyCommand,
-    mkCommand, RealmDestroyed,
+    mkCommand,
+    RealmDestroyed,
   )
 
 -- TODO: generic commands
@@ -198,179 +200,179 @@ import WebDriverPreCore.BiDi.Protocol
 ---- Session ----
 
 sessionNew :: Capabilities -> Command Capabilities SessionNewResult
-sessionNew = mkCommand "session.new"
+sessionNew = mkCommand SessionNew
 
 sessionStatus :: Command Object SessionStatusResult
-sessionStatus = emptyCommand "session.status"
+sessionStatus = emptyCommand SessionStatus
 
 sessionEnd :: Command Object Object
-sessionEnd = emptyCommand "session.end"
+sessionEnd = emptyCommand SessionEnd
 
 sessionSubscribe :: SessionSubscriptionRequest -> Command SessionSubscriptionRequest SessionSubscribeResult
-sessionSubscribe = mkCommand "session.subscribe"
+sessionSubscribe = mkCommand SessionSubscribe
 
 sessionUnsubscribe :: SessionUnsubscribe -> Command SessionUnsubscribe Object
-sessionUnsubscribe = mkCommand "session.unsubscribe"
+sessionUnsubscribe = mkCommand SessionUnsubscribe
 
 ---- Browsing Context ----
 
 browsingContextActivate :: Activate -> Command Activate Object
-browsingContextActivate = mkCommand "browsingContext.activate"
+browsingContextActivate = mkCommand BrowsingContextActivate
 
 browsingContextCaptureScreenshot :: CaptureScreenshot -> Command CaptureScreenshot CaptureScreenshotResult
-browsingContextCaptureScreenshot = mkCommand "browsingContext.captureScreenshot"
+browsingContextCaptureScreenshot = mkCommand BrowsingContextCaptureScreenshot
 
 browsingContextClose :: Close -> Command Close Object
-browsingContextClose = mkCommand "browsingContext.close"
+browsingContextClose = mkCommand BrowsingContextClose
 
 browsingContextCreate :: Create -> Command Create BrowsingContext
-browsingContextCreate = mkCommand "browsingContext.create"
+browsingContextCreate = mkCommand BrowsingContextCreate
 
 browsingContextGetTree :: GetTree -> Command GetTree GetTreeResult
-browsingContextGetTree = mkCommand "browsingContext.getTree"
+browsingContextGetTree = mkCommand BrowsingContextGetTree
 
 browsingContextHandleUserPrompt :: HandleUserPrompt -> Command HandleUserPrompt Object
-browsingContextHandleUserPrompt = mkCommand "browsingContext.handleUserPrompt"
+browsingContextHandleUserPrompt = mkCommand BrowsingContextHandleUserPrompt
 
 browsingContextLocateNodes :: LocateNodes -> Command LocateNodes LocateNodesResult
-browsingContextLocateNodes = mkCommand "browsingContext.locateNodes"
+browsingContextLocateNodes = mkCommand BrowsingContextLocateNodes
 
 browsingContextNavigate :: Navigate -> Command Navigate NavigateResult
-browsingContextNavigate = mkCommand "browsingContext.navigate"
+browsingContextNavigate = mkCommand BrowsingContextNavigate
 
 browsingContextPrint :: Print -> Command Print PrintResult
-browsingContextPrint = mkCommand "browsingContext.print"
+browsingContextPrint = mkCommand BrowsingContextPrint
 
 browsingContextReload :: Reload -> Command Reload Object
-browsingContextReload = mkCommand "browsingContext.reload"
+browsingContextReload = mkCommand BrowsingContextReload
 
 browsingContextSetViewport :: SetViewport -> Command SetViewport Object
-browsingContextSetViewport = mkCommand "browsingContext.setViewport"
+browsingContextSetViewport = mkCommand BrowsingContextSetViewport
 
 browsingContextTraverseHistory :: TraverseHistory -> Command TraverseHistory TraverseHistoryResult
-browsingContextTraverseHistory = mkCommand "browsingContext.traverseHistory"
+browsingContextTraverseHistory = mkCommand BrowsingContextTraverseHistory
 
 ---- Browser ----
 
 browserClose :: Command Object Object
-browserClose = emptyCommand "browser.close"
+browserClose = emptyCommand BrowserClose
 
 browserCreateUserContext :: CreateUserContext -> Command CreateUserContext UserContext
-browserCreateUserContext = mkCommand "browser.createUserContext"
+browserCreateUserContext = mkCommand BrowserCreateUserContext
 
 browserGetClientWindows :: Command Object GetClientWindowsResult
-browserGetClientWindows = emptyCommand "browser.getClientWindows"
+browserGetClientWindows = emptyCommand BrowserGetClientWindows
 
 browserGetUserContexts :: Command Object GetUserContextsResult
-browserGetUserContexts = emptyCommand "browser.getUserContexts"
+browserGetUserContexts = emptyCommand BrowserGetUserContexts
 
 browserRemoveUserContext :: RemoveUserContext -> Command RemoveUserContext Object
-browserRemoveUserContext = mkCommand "browser.removeUserContext"
+browserRemoveUserContext = mkCommand BrowserRemoveUserContext
 
 browserSetClientWindowState :: SetClientWindowState -> Command SetClientWindowState ClientWindowInfo
-browserSetClientWindowState = mkCommand "browser.setClientWindowState"
+browserSetClientWindowState = mkCommand BrowserSetClientWindowState
 
 ---- Emulation ----
 
 emulationSetGeolocationOverride :: SetGeolocationOverride -> Command SetGeolocationOverride Object
-emulationSetGeolocationOverride = mkCommand "emulation.setGeolocationOverride"
+emulationSetGeolocationOverride = mkCommandTxt "emulation.setGeolocationOverride"
 
 emulationSetLocaleOverride :: SetLocaleOverride -> Command SetLocaleOverride Object
-emulationSetLocaleOverride = mkCommand "emulation.setLocaleOverride"
+emulationSetLocaleOverride = mkCommandTxt "emulation.setLocaleOverride"
 
 emulationSetScreenOrientationOverride :: SetScreenOrientationOverride -> Command SetScreenOrientationOverride Object
-emulationSetScreenOrientationOverride = mkCommand "emulation.setScreenOrientationOverride"
+emulationSetScreenOrientationOverride = mkCommandTxt "emulation.setScreenOrientationOverride"
 
 emulationSetTimezoneOverride :: SetTimezoneOverride -> Command SetTimezoneOverride Object
-emulationSetTimezoneOverride = mkCommand "emulation.setTimezoneOverride"
+emulationSetTimezoneOverride = mkCommandTxt "emulation.setTimezoneOverride"
 
 ---- Input ----
 
 inputPerformActions :: PerformActions -> Command PerformActions Object
-inputPerformActions = mkCommand "input.performActions"
+inputPerformActions = mkCommand InputPerformActions
 
 inputReleaseActions :: ReleaseActions -> Command ReleaseActions Object
-inputReleaseActions = mkCommand "input.releaseActions"
+inputReleaseActions = mkCommand InputReleaseActions
 
 inputSetFiles :: SetFiles -> Command SetFiles Object
-inputSetFiles = mkCommand "input.setFiles"
+inputSetFiles = mkCommand InputSetFiles
 
 ---- Network ----
 
 networkAddDataCollector :: AddDataCollector -> Command AddDataCollector AddDataCollectorResult
-networkAddDataCollector = mkCommand "network.addDataCollector"
+networkAddDataCollector = mkCommandTxt "network.addDataCollector"
 
 networkAddIntercept :: AddIntercept -> Command AddIntercept AddInterceptResult
-networkAddIntercept = mkCommand "network.addIntercept"
+networkAddIntercept = mkCommand NetworkAddIntercept
 
 networkContinueRequest :: ContinueRequest -> Command ContinueRequest Object
-networkContinueRequest = mkCommand "network.continueRequest"
+networkContinueRequest = mkCommand NetworkContinueRequest
 
 networkContinueResponse :: ContinueResponse -> Command ContinueResponse Object
-networkContinueResponse = mkCommand "network.continueResponse"
+networkContinueResponse = mkCommand NetworkContinueResponse
 
 networkContinueWithAuth :: ContinueWithAuth -> Command ContinueWithAuth Object
-networkContinueWithAuth = mkCommand "network.continueWithAuth"
+networkContinueWithAuth = mkCommand NetworkContinueWithAuth
 
 networkDisownData :: DisownData -> Command DisownData Object
-networkDisownData = mkCommand "network.disownData"
+networkDisownData = mkCommandTxt "network.disownData"
 
 networkFailRequest :: FailRequest -> Command FailRequest Object
-networkFailRequest = mkCommand "network.failRequest"
+networkFailRequest = mkCommand NetworkFailRequest
 
 networkGetData :: GetData -> Command GetData GetDataResult
-networkGetData = mkCommand "network.getData"
+networkGetData = mkCommandTxt "network.getData"
 
 networkProvideResponse :: ProvideResponse -> Command ProvideResponse Object
-networkProvideResponse = mkCommand "network.provideResponse"
+networkProvideResponse = mkCommand NetworkProvideResponse
 
 networkRemoveDataCollector :: RemoveDataCollector -> Command RemoveDataCollector Object
-networkRemoveDataCollector = mkCommand "network.removeDataCollector"
+networkRemoveDataCollector = mkCommandTxt "network.removeDataCollector"
 
 networkRemoveIntercept :: RemoveIntercept -> Command RemoveIntercept Object
-networkRemoveIntercept = mkCommand "network.removeIntercept"
+networkRemoveIntercept = mkCommand NetworkRemoveIntercept
 
 networkSetCacheBehavior :: SetCacheBehavior -> Command SetCacheBehavior Object
-networkSetCacheBehavior = mkCommand "network.setCacheBehavior"
+networkSetCacheBehavior = mkCommand NetworkSetCacheBehavior
 
 ---- Script ----
 
 scriptAddPreloadScript :: AddPreloadScript -> Command AddPreloadScript AddPreloadScriptResult
-scriptAddPreloadScript = mkCommand "script.addPreloadScript"
+scriptAddPreloadScript = mkCommand ScriptAddPreloadScript
 
 scriptCallFunction :: CallFunction -> Command CallFunction EvaluateResult
-scriptCallFunction = mkCommand "script.callFunction"
+scriptCallFunction = mkCommand ScriptCallFunction
 
 scriptDisown :: Disown -> Command Disown Object
-scriptDisown = mkCommand "script.disown"
+scriptDisown = mkCommand ScriptDisown
 
 scriptEvaluate :: Evaluate -> Command Evaluate EvaluateResult
-scriptEvaluate = mkCommand "script.evaluate"
+scriptEvaluate = mkCommand ScriptEvaluate
 
 scriptGetRealms :: GetRealms -> Command GetRealms GetRealmsResult
-scriptGetRealms = mkCommand "script.getRealms"
+scriptGetRealms = mkCommand ScriptGetRealms
 
 scriptRemovePreloadScript :: RemovePreloadScript -> Command RemovePreloadScript Object
-scriptRemovePreloadScript = mkCommand "script.removePreloadScript"
+scriptRemovePreloadScript = mkCommand ScriptRemovePreloadScript
 
 ---- Storage ----
 
 storageDeleteCookies :: DeleteCookies -> Command DeleteCookies DeleteCookiesResult
-storageDeleteCookies = mkCommand "storage.deleteCookies"
+storageDeleteCookies = mkCommand StorageDeleteCookies
 
 storageGetCookies :: GetCookies -> Command GetCookies GetCookiesResult
-storageGetCookies = mkCommand "storage.getCookies"
+storageGetCookies = mkCommand StorageGetCookies
 
 storageSetCookie :: SetCookie -> Command SetCookie SetCookieResult
-storageSetCookie = mkCommand "storage.setCookie"
+storageSetCookie = mkCommand StorageSetCookie
 
 ---- WebExtension ----
 
 webExtensionInstall :: WebExtensionInstall -> Command WebExtensionInstall WebExtensionResult
-webExtensionInstall = mkCommand "webExtension.install"
+webExtensionInstall = mkCommandTxt "webExtension.install"
 
 webExtensionUninstall :: WebExtensionUninstall -> Command WebExtensionUninstall Object
-webExtensionUninstall = mkCommand "webExtension.uninstall"
+webExtensionUninstall = mkCommandTxt "webExtension.uninstall"
 
 -- ############## Subscriptions (Events) ##############
 

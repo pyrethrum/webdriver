@@ -4,6 +4,7 @@ import BiDi.BiDiRunner (BiDiActions (..))
 import BiDi.DemoUtils
 import IOUtils (DemoUtils (..))
 import TestServerAPI (authTestUrl, testServerHomeUrl, withTestServer, malformedResponseUrl)
+import WebDriverPreCore.BiDi.Command (CommandMethod(..))
 import WebDriverPreCore.BiDi.Protocol
   ( ContextTarget (..),
     Evaluate (..),
@@ -112,7 +113,7 @@ networkEventAuthRequired =
       logTxt "Navigate to auth-protected URL to trigger AuthRequired event"
 
       withTestServer $ do
-        sendCommandNoWait . mkCommand "browsingContext.navigate" $ MkNavigate {context = bc, url = authTestUrl, wait = Nothing}
+        sendCommandNoWait . mkCommand BrowsingContextNavigate $ MkNavigate {context = bc, url = authTestUrl, wait = Nothing}
 
         logTxt "Waiting for auth required events..."
         pause

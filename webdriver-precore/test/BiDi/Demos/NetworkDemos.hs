@@ -7,10 +7,12 @@ import IOUtils (DemoUtils (..))
 import TestServerAPI (boringHelloUrl, boringHelloUrl2, testServerHomeUrl, withTestServer)
 import UnliftIO (putTMVar, readTMVar)
 import UnliftIO.STM (atomically, newEmptyTMVarIO, newTVarIO, readTVar, writeTVar)
+import WebDriverPreCore.BiDi.Command (CommandMethod(..))
 import WebDriverPreCore.BiDi.CoreTypes (JSUInt (..), StringValue (..))
 import WebDriverPreCore.BiDi.Network qualified as Net
 import WebDriverPreCore.BiDi.Protocol
 import Prelude hiding (log)
+import WebDriverPreCore.Internal.Utils (txt)
 
 -- >>> runDemo networkDataCollectorDemo
 networkDataCollectorDemo :: BiDiDemo
@@ -347,7 +349,7 @@ networkRequestModificationDemo =
         logShow "BeforeRequestSent intercept added" interceptId2
         pause
 
-        sendCommandNoWait . mkCommand "browsingContext.navigate" $
+        sendCommandNoWait . mkCommand BrowsingContextNavigate $
           MkNavigate
             { context = bc,
               url = boringHelloUrl,
@@ -378,7 +380,7 @@ networkRequestModificationDemo =
 -- >>> runDemo networkResponseModificationDemo
 networkResponseModificationDemo :: BiDiDemo
 networkResponseModificationDemo =
-  demo "Network IV - Response Modification (Headers & Status Only)" action
+  demo "Network IV - Response Modification (Headers & Status Only) - modified in subscription" action
   where
     action :: DemoUtils -> BiDiActions -> IO ()
     action utils@MkDemoUtils {..} cmds@MkCommands {..} = do
@@ -392,8 +394,6 @@ networkResponseModificationDemo =
               contexts = Just [bc]
             }
         pause
-
-        logTxt "Subscribe to ResponseStarted and modify status + headers"
 
         (respStartedFired, waitRespStarted) <- timeLimitLog NetworkResponseStarted
 
@@ -434,6 +434,7 @@ networkResponseModificationDemo =
               respStartedFired event
           )
 
+        logTxt "Subscribe to Response Completed - to see the effect of modification"
         (responseEndFired, waitRespCompleted) <- timeLimitLog NetworkResponseCompleted
         subscribeNetworkResponseCompleted responseEndFired
 
@@ -448,14 +449,95 @@ networkResponseModificationDemo =
         logShow "ResponseStarted intercept added" interceptId
         pause
 
-        sendCommandNoWait . mkCommand "browsingContext.navigate" $
+        sendCommandNoWait . mkCommand BrowsingContextNavigate $
           MkNavigate
             { context = bc,
               url = boringHelloUrl,
               wait = Just Complete
             }
 
-        sequence_ [waitRespCompleted, waitRespStarted]
+        sequence_ [waitRespStarted, waitRespCompleted]
+
+        removeIntercept <- networkRemoveIntercept $ MkRemoveIntercept interceptId
+        logShow "Removed intercept" removeIntercept
+        pause
+
+-- >>> runDemo networkResponseModificationDemo
+networkResponseModificationDemo2 :: BiDiDemo
+networkResponseModificationDemo2 =
+  demo "Network IV - Response Modification - with pre-generated id" action
+  where
+    action :: DemoUtils -> BiDiActions -> IO ()
+    action utils@MkDemoUtils {..} cmds@MkCommands {..} = do
+      bc <- rootContext utils cmds
+
+      withTestServer $ do
+        logTxt "Disable cache to ensure we see network requests"
+        networkSetCacheBehavior $
+          MkSetCacheBehavior
+            { cacheBehavior = BypassCache,
+              contexts = Just [bc]
+            }
+        pause
+
+        (responseEndFired, waitRespCompleted) <- timeLimitLog NetworkResponseCompleted
+        subscribeNetworkResponseCompleted responseEndFired
+
+        intercept <-
+          networkAddIntercept $
+            MkAddIntercept
+              { phases = [ResponseStarted],
+                contexts = Just [bc],
+                urlPatterns = Nothing
+              }
+        let MkAddInterceptResult interceptId = intercept
+        logShow "ResponseStarted intercept added" interceptId
+        pause
+
+        let requestId = MkJSUInt 9999 
+
+        logTxt "Modifying response: status 404, custom headers"
+        logShow "Modifying response: status 404, custom headers" 999
+
+        networkContinueResponse $
+          MkContinueResponse
+            { request = MkRequest $ txt requestId,
+              cookies =
+                Just
+                  [ MkSetCookieHeader
+                      { name = "bidi-inserted-cookie",
+                        value = TextBytesValue $ MkStringValue "HELLLLO FROMM BIDI",
+                        domain = Nothing,
+                        path = Nothing,
+                        expiry = Nothing,
+                        httpOnly = Just True,
+                        secure = Just True,
+                        maxAge = Nothing,
+                        sameSite = Nothing
+                      }
+                  ],
+              credentials = Nothing,
+              headers =
+                Just
+                  [ MkHeader "X-Modified-By" (TextBytesValue $ MkStringValue "WebDriver-BiDi-Demo"),
+                    MkHeader "X-Custom-Status" (TextBytesValue $ MkStringValue "Mocked-404"),
+                    MkHeader "X-Intercept-Time" (TextBytesValue $ MkStringValue "2025-10-22")
+                  ],
+              reasonPhrase = Just "Not Found",
+              statusCode = Just (MkJSUInt 404)
+            }
+
+        let 
+          navigateCmd :: Command Navigate NavigateResult
+          navigateCmd = mkCommand BrowsingContextNavigate $
+              MkNavigate
+                { context = bc,
+                  url = boringHelloUrl,
+                  wait = Just Complete
+                }
+        sendCommand' requestId navigateCmd
+
+        waitRespCompleted
 
         removeIntercept <- networkRemoveIntercept $ MkRemoveIntercept interceptId
         logShow "Removed intercept" removeIntercept

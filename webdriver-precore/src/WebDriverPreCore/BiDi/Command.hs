@@ -2,6 +2,7 @@ module WebDriverPreCore.BiDi.Command where
 
 import Data.Aeson
   ( Object,
+    Result (..),
     ToJSON,
     Value (..),
     object,
@@ -9,13 +10,13 @@ import Data.Aeson
   )
 import Data.Aeson.KeyMap qualified as KM
 import Data.Aeson.Types (FromJSON (parseJSON), Parser, ToJSON (..))
-import Data.Text as T (Text, unlines, unpack)
+import Data.Text as T (Text, unlines, unpack, intercalate)
 import WebDriverPreCore.BiDi.CoreTypes (JSUInt)
-import WebDriverPreCore.Internal.AesonUtils (objectOrThrow)
+import WebDriverPreCore.Internal.AesonUtils (objectOrThrow, jsonToText)
 import WebDriverPreCore.Internal.Utils (enumerate, txt)
 import Prelude
 
-data CommandMethodType
+data CommandMethod
   = BrowserClose
   | BrowserCreateUserContext
   | BrowserGetClientWindows
@@ -62,109 +63,116 @@ data CommandMethodType
   | StorageSetCookie
   deriving (Show, Eq, Enum, Bounded)
 
-instance ToJSON CommandMethodType where
-  toJSON :: CommandMethodType -> Value
-  toJSON = \case
-    BrowserClose -> "browser.close"
-    BrowserCreateUserContext -> "browser.createUserContext"
-    BrowserGetClientWindows -> "browser.getClientWindows"
-    BrowserGetUserContexts -> "browser.getUserContexts"
-    BrowserRemoveUserContext -> "browser.removeUserContext"
-    BrowserSetClientWindowState -> "browser.setClientWindowState"
-    BrowsingContextActivate -> "browsingContext.activate"
-    BrowsingContextCaptureScreenshot -> "browsingContext.captureScreenshot"
-    BrowsingContextClose -> "browsingContext.close"
-    BrowsingContextCreate -> "browsingContext.create"
-    BrowsingContextGetTree -> "browsingContext.getTree"
-    BrowsingContextHandleUserPrompt -> "browsingContext.handleUserPrompt"
-    BrowsingContextLocateNodes -> "browsingContext.locateNodes"
-    BrowsingContextNavigate -> "browsingContext.navigate"
-    BrowsingContextPrint -> "browsingContext.print"
-    BrowsingContextReload -> "browsingContext.reload"
-    BrowsingContextSetViewport -> "browsingContext.setViewport"
-    BrowsingContextTraverseHistory -> "browsingContext.traverseHistory"
-    InputPerformActions -> "input.performActions"
-    InputReleaseActions -> "input.releaseActions"
-    InputSetFiles -> "input.setFiles"
-    NetworkAddIntercept -> "network.addIntercept"
-    NetworkContinueRequest -> "network.continueRequest"
-    NetworkContinueResponse -> "network.continueResponse"
-    NetworkContinueWithAuth -> "network.continueWithAuth"
-    NetworkFailRequest -> "network.failRequest"
-    NetworkProvideResponse -> "network.provideResponse"
-    NetworkRemoveIntercept -> "network.removeIntercept"
-    NetworkSetCacheBehavior -> "network.setCacheBehavior"
-    PermissionsSetPermission -> "permissions.setPermission"
-    ScriptAddPreloadScript -> "script.addPreloadScript"
-    ScriptCallFunction -> "script.callFunction"
-    ScriptDisown -> "script.disown"
-    ScriptEvaluate -> "script.evaluate"
-    ScriptGetRealms -> "script.getRealms"
-    ScriptRemovePreloadScript -> "script.removePreloadScript"
-    SessionEnd -> "session.end"
-    SessionNew -> "session.new"
-    SessionStatus -> "session.status"
-    SessionSubscribe -> "session.subscribe"
-    SessionUnsubscribe -> "session.unsubscribe"
-    StorageDeleteCookies -> "storage.deleteCookies"
-    StorageGetCookies -> "storage.getCookies"
-    StorageSetCookie -> "storage.setCookie"
+instance ToJSON CommandMethod where
+  toJSON :: CommandMethod -> Value
+  toJSON = String . toMethodText
 
-instance FromJSON CommandMethodType where
-  parseJSON :: Value -> Parser CommandMethodType
+toMethodText :: CommandMethod -> Text
+toMethodText = \case
+  BrowserClose -> "browser.close"
+  BrowserCreateUserContext -> "browser.createUserContext"
+  BrowserGetClientWindows -> "browser.getClientWindows"
+  BrowserGetUserContexts -> "browser.getUserContexts"
+  BrowserRemoveUserContext -> "browser.removeUserContext"
+  BrowserSetClientWindowState -> "browser.setClientWindowState"
+  BrowsingContextActivate -> "browsingContext.activate"
+  BrowsingContextCaptureScreenshot -> "browsingContext.captureScreenshot"
+  BrowsingContextClose -> "browsingContext.close"
+  BrowsingContextCreate -> "browsingContext.create"
+  BrowsingContextGetTree -> "browsingContext.getTree"
+  BrowsingContextHandleUserPrompt -> "browsingContext.handleUserPrompt"
+  BrowsingContextLocateNodes -> "browsingContext.locateNodes"
+  BrowsingContextNavigate -> "browsingContext.navigate"
+  BrowsingContextPrint -> "browsingContext.print"
+  BrowsingContextReload -> "browsingContext.reload"
+  BrowsingContextSetViewport -> "browsingContext.setViewport"
+  BrowsingContextTraverseHistory -> "browsingContext.traverseHistory"
+  InputPerformActions -> "input.performActions"
+  InputReleaseActions -> "input.releaseActions"
+  InputSetFiles -> "input.setFiles"
+  NetworkAddIntercept -> "network.addIntercept"
+  NetworkContinueRequest -> "network.continueRequest"
+  NetworkContinueResponse -> "network.continueResponse"
+  NetworkContinueWithAuth -> "network.continueWithAuth"
+  NetworkFailRequest -> "network.failRequest"
+  NetworkProvideResponse -> "network.provideResponse"
+  NetworkRemoveIntercept -> "network.removeIntercept"
+  NetworkSetCacheBehavior -> "network.setCacheBehavior"
+  PermissionsSetPermission -> "permissions.setPermission"
+  ScriptAddPreloadScript -> "script.addPreloadScript"
+  ScriptCallFunction -> "script.callFunction"
+  ScriptDisown -> "script.disown"
+  ScriptEvaluate -> "script.evaluate"
+  ScriptGetRealms -> "script.getRealms"
+  ScriptRemovePreloadScript -> "script.removePreloadScript"
+  SessionEnd -> "session.end"
+  SessionNew -> "session.new"
+  SessionStatus -> "session.status"
+  SessionSubscribe -> "session.subscribe"
+  SessionUnsubscribe -> "session.unsubscribe"
+  StorageDeleteCookies -> "storage.deleteCookies"
+  StorageGetCookies -> "storage.getCookies"
+  StorageSetCookie -> "storage.setCookie"
+
+instance FromJSON CommandMethod where
+  parseJSON :: Value -> Parser CommandMethod
   parseJSON = \case
-    String "browser.close" -> pure BrowserClose
-    String "browser.createUserContext" -> pure BrowserCreateUserContext
-    String "browser.getClientWindows" -> pure BrowserGetClientWindows
-    String "browser.getUserContexts" -> pure BrowserGetUserContexts
-    String "browser.removeUserContext" -> pure BrowserRemoveUserContext
-    String "browser.setClientWindowState" -> pure BrowserSetClientWindowState
-    String "browsingContext.activate" -> pure BrowsingContextActivate
-    String "browsingContext.captureScreenshot" -> pure BrowsingContextCaptureScreenshot
-    String "browsingContext.close" -> pure BrowsingContextClose
-    String "browsingContext.create" -> pure BrowsingContextCreate
-    String "browsingContext.getTree" -> pure BrowsingContextGetTree
-    String "browsingContext.handleUserPrompt" -> pure BrowsingContextHandleUserPrompt
-    String "browsingContext.locateNodes" -> pure BrowsingContextLocateNodes
-    String "browsingContext.navigate" -> pure BrowsingContextNavigate
-    String "browsingContext.print" -> pure BrowsingContextPrint
-    String "browsingContext.reload" -> pure BrowsingContextReload
-    String "browsingContext.setViewport" -> pure BrowsingContextSetViewport
-    String "browsingContext.traverseHistory" -> pure BrowsingContextTraverseHistory
-    String "input.performActions" -> pure InputPerformActions
-    String "input.releaseActions" -> pure InputReleaseActions
-    String "input.setFiles" -> pure InputSetFiles
-    String "network.addIntercept" -> pure NetworkAddIntercept
-    String "network.continueRequest" -> pure NetworkContinueRequest
-    String "network.continueResponse" -> pure NetworkContinueResponse
-    String "network.continueWithAuth" -> pure NetworkContinueWithAuth
-    String "network.failRequest" -> pure NetworkFailRequest
-    String "network.provideResponse" -> pure NetworkProvideResponse
-    String "network.removeIntercept" -> pure NetworkRemoveIntercept
-    String "network.setCacheBehavior" -> pure NetworkSetCacheBehavior
-    String "permissions.setPermission" -> pure PermissionsSetPermission
-    String "script.addPreloadScript" -> pure ScriptAddPreloadScript
-    String "script.callFunction" -> pure ScriptCallFunction
-    String "script.disown" -> pure ScriptDisown
-    String "script.evaluate" -> pure ScriptEvaluate
-    String "script.getRealms" -> pure ScriptGetRealms
-    String "script.removePreloadScript" -> pure ScriptRemovePreloadScript
-    String "session.end" -> pure SessionEnd
-    String "session.new" -> pure SessionNew
-    String "session.status" -> pure SessionStatus
-    String "session.subscribe" -> pure SessionSubscribe
-    String "session.unsubscribe" -> pure SessionUnsubscribe
-    String "storage.deleteCookies" -> pure StorageDeleteCookies
-    String "storage.getCookies" -> pure StorageGetCookies
-    String "storage.setCookie" -> pure StorageSetCookie
-    c ->
-      fail . unpack $
-        "Unrecognised CommandMethodType: "
-          <> txt c
-          <> "\n"
-          <> ". Expected one of: "
-          <> "\n"
-          <> (T.unlines $ txt <$> enumerate @CommandMethodType)
+    String c -> case c of
+      "browser.close" -> pure BrowserClose
+      "browser.createUserContext" -> pure BrowserCreateUserContext
+      "browser.getClientWindows" -> pure BrowserGetClientWindows
+      "browser.getUserContexts" -> pure BrowserGetUserContexts
+      "browser.removeUserContext" -> pure BrowserRemoveUserContext
+      "browser.setClientWindowState" -> pure BrowserSetClientWindowState
+      "browsingContext.activate" -> pure BrowsingContextActivate
+      "browsingContext.captureScreenshot" -> pure BrowsingContextCaptureScreenshot
+      "browsingContext.close" -> pure BrowsingContextClose
+      "browsingContext.create" -> pure BrowsingContextCreate
+      "browsingContext.getTree" -> pure BrowsingContextGetTree
+      "browsingContext.handleUserPrompt" -> pure BrowsingContextHandleUserPrompt
+      "browsingContext.locateNodes" -> pure BrowsingContextLocateNodes
+      "browsingContext.navigate" -> pure BrowsingContextNavigate
+      "browsingContext.print" -> pure BrowsingContextPrint
+      "browsingContext.reload" -> pure BrowsingContextReload
+      "browsingContext.setViewport" -> pure BrowsingContextSetViewport
+      "browsingContext.traverseHistory" -> pure BrowsingContextTraverseHistory
+      "input.performActions" -> pure InputPerformActions
+      "input.releaseActions" -> pure InputReleaseActions
+      "input.setFiles" -> pure InputSetFiles
+      "network.addIntercept" -> pure NetworkAddIntercept
+      "network.continueRequest" -> pure NetworkContinueRequest
+      "network.continueResponse" -> pure NetworkContinueResponse
+      "network.continueWithAuth" -> pure NetworkContinueWithAuth
+      "network.failRequest" -> pure NetworkFailRequest
+      "network.provideResponse" -> pure NetworkProvideResponse
+      "network.removeIntercept" -> pure NetworkRemoveIntercept
+      "network.setCacheBehavior" -> pure NetworkSetCacheBehavior
+      "permissions.setPermission" -> pure PermissionsSetPermission
+      "script.addPreloadScript" -> pure ScriptAddPreloadScript
+      "script.callFunction" -> pure ScriptCallFunction
+      "script.disown" -> pure ScriptDisown
+      "script.evaluate" -> pure ScriptEvaluate
+      "script.getRealms" -> pure ScriptGetRealms
+      "script.removePreloadScript" -> pure ScriptRemovePreloadScript
+      "session.end" -> pure SessionEnd
+      "session.new" -> pure SessionNew
+      "session.status" -> pure SessionStatus
+      "session.subscribe" -> pure SessionSubscribe
+      "session.unsubscribe" -> pure SessionUnsubscribe
+      "storage.deleteCookies" -> pure StorageDeleteCookies
+      "storage.getCookies" -> pure StorageGetCookies
+      "storage.setCookie" -> pure StorageSetCookie
+      _ -> failConversion c
+    c -> failConversion $ jsonToText c
+    where
+      failConversion c =
+        fail . unpack $
+          "Unrecognised CommandMethodType: "
+            <> c
+            <> " - "
+            <> "Expected one of: "
+            <> " "
+            <> (T.intercalate ", " $ toMethodText <$> enumerate @CommandMethod)
 
 -- uses txt for method rather than CommandType to allow for workarounds
 -- for unexpected method names
@@ -181,10 +189,10 @@ mkCommandTxt method params = MkCommand {method, params, extended = Nothing}
 emptyCommandTxt :: forall r. Text -> Command Object r
 emptyCommandTxt method = mkCommandTxt method KM.empty
 
-mkCommand :: forall c r. CommandMethodType -> c -> Command c r
-mkCommand method params = MkCommand {method = txt method, params, extended = Nothing}
+mkCommand :: forall c r. CommandMethod -> c -> Command c r
+mkCommand method params = MkCommand {method = toMethodText method, params, extended = Nothing}
 
-emptyCommand :: forall r. CommandMethodType -> Command Object r
+emptyCommand :: forall r. CommandMethod -> Command Object r
 emptyCommand method = mkCommand method KM.empty
 
 extendParams :: Command c r -> Object -> Command c r
