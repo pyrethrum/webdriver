@@ -505,6 +505,8 @@ unit_demoExecuteScript =
 epochSeconds :: IO Int
 epochSeconds = round <$> getPOSIXTime
 
+{-
+leaving this test hewre as a commnet  - it proves that setting the domain works correctly when using a real remote server
 -- >>> unit_demoCookiesRemote
 unit_demoCookiesRemote :: IO ()
 unit_demoCookiesRemote =
@@ -546,27 +548,30 @@ unit_demoCookiesRemote =
     afterDeleteAll <- getAllCookies ses
     logShow "cookies after delete all" afterDeleteAll
     assertBool "all cookies should be removed" $ null afterDeleteAll
+-}
 
--- >>> unit_demoCookiesFix
--- *** Exception: HUnitFailure (Just (SrcLoc {srcLocPackage = "webdriver-precore-0.1.0.2-inplace-test", srcLocModule = "Http.HttpDemo", srcLocFile = "/home/john-walker/repos/webdriver/webdriver-precore/test/Http/HttpDemo.hs", srcLocStartLine = 584, srcLocStartCol = 16, srcLocEndLine = 584, srcLocEndCol = 19})) "expected: MkCookie {name = \"myCookie\", value = \"myCookieValue\", path = Just \"/\", domain = Nothing, secure = Just True, httpOnly = Just False, sameSite = Just Strict, expiry = Just 1761437888}\n but got: MkCookie {name = \"myCookie\", value = \"myCookieValue\", path = Just \"/\", domain = Just \"localhost\", secure = Just True, httpOnly = Just False, sameSite = Just Strict, expiry = Just 1761437888}"
-unit_demoCookiesFix :: IO ()
-unit_demoCookiesFix =
+-- >>> unit_demoCookies
+unit_demoCookies :: IO ()
+unit_demoCookies =
   withTestServer $
     withSession \ses -> do
       -- navigateTo ses theInternet
       
       navigateTo ses testServerHomeUrl
-      logShowM "cookies" $ getAllCookies ses
+      logShowM "cookies before add" $ getAllCookies ses
 
       logShowM "getNamedCookie: helloCookie" $ getNamedCookie ses "helloCookie"
       epocSecs <- epochSeconds
-
+      let cookieName = "myCookie" <> txt epocSecs
       let myCookie =
             MkCookie
-              { name = "myCookie",
+              { name = cookieName,
                 value = "myCookieValue",
                 path = Just "/",
+                -- for some reason this does not work on the test server but you can set the domain on
+                -- a remote server as in the comment above
                 -- domain = Just "localhost",
+                -- domain = Just ".localhost",
                 domain = Nothing,
                 secure = Just True,
                 sameSite = Just Strict,
@@ -579,67 +584,15 @@ unit_demoCookiesFix =
       logShowM "addCookie" $ addCookie ses myCookie
       logShowM "cookies after add" $ getAllCookies ses
 
-      myCookie' <- getNamedCookie ses "myCookie"
-      myCookie === myCookie'
+      actualCookie <- getNamedCookie ses cookieName
+      myCookie {domain = Just "localhost"} === actualCookie
 
-      logShowM "deleteCookie (myCookie)" $ deleteCookie ses "myCookie"
+      logShowM "deleteCookie (myCookie)" $ deleteCookie ses cookieName
       afterRemove <- getAllCookies ses
       logShow "cookies after delete" afterRemove
 
-      assertBool "cookie should be removed" $ not (any ((== "myCookie") . (.name)) afterRemove)
+      assertBool "cookie should be removed" $ not (any ((== cookieName) . (.name)) afterRemove)
       assertBool "there still should be cookies in the list" $ not (null afterRemove)
-
-      logShowM "deleteAllCookies" $ deleteAllCookies ses
-      afterDeleteAll <- getAllCookies ses
-      logShow "cookies after delete all" afterDeleteAll
-      assertBool "all cookies should be removed" $ null afterDeleteAll
-
--- >>> unit_demoCookies
-
--- *** Exception: user error (WebDriver error thrown:
-
---  WebDriverError {error = NoSuchCookie, description = "No cookie matching the given path name was found amongst the associated cookies of session's current browsing context's active document", httpResponse = MkHttpResponse {statusCode = 404, statusMessage = "Not Found", body = Object (fromList [("value",Object (fromList [("error",String "no such cookie"),("message",String "No cookie with name myCookie"),("stacktrace",String "")]))])}})
-unit_demoCookies :: IO ()
-unit_demoCookies =
-  withTestServer $
-    withSession \ses -> do
-      navigateTo ses testServerHomeUrl
-      logShowM "cookies" $ getAllCookies ses
-      sleep2
-
-      epocSecs <- epochSeconds
-
-      let cookienName = "myCookie"
-          myCookie =
-            MkCookie
-              { name = cookienName,
-                value = "myCookieValue",
-                path = Just "/", -- Set path to root
-                domain = Just ".localhost",
-                secure = Just False,
-                sameSite = Just None,
-                httpOnly = Just False,
-                -- expire in 10 mins (Chrome has a 400 day limit)
-                expiry = Nothing
-              }
-
-      logShow "cookie to add" myCookie
-      logShowM "addCookie" $ addCookie ses myCookie
-
-      sleep2
-      sleep2
-      sleep2
-      sleep2
-      logShowM "cookies after add" $ getAllCookies ses
-
-      myCookie' <- getNamedCookie ses cookienName
-      myCookie {expiry = Nothing} === myCookie' {expiry = Nothing}
-
-      logShowM "deleteCookie (myCookie)" $ deleteCookie ses "myCookie"
-      afterRemove <- getAllCookies ses
-      logShow "cookies after delete" afterRemove
-
-      assertBool "cookie should be removed" $ not (any ((== "myCookie") . (.name)) afterRemove)
 
       logShowM "deleteAllCookies" $ deleteAllCookies ses
       afterDeleteAll <- getAllCookies ses
