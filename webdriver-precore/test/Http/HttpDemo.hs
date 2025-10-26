@@ -3,7 +3,7 @@ module Http.HttpDemo where
 -- minFirefoxSession,
 
 import Config (loadConfig)
-import Const (theInternet)
+import Const (theInternet, Timeout (MkTimeout))
 import Const qualified as Const
 import Control.Exception (bracket)
 import Control.Monad (forM_)
@@ -364,14 +364,14 @@ unit_demoFrames = withSession \ses -> do
   assertBool "bottom frame should exist" hasBottomFrame
 
   -- switch frames using element id
-  tf <- findElement ses $ CSS "frame[name='frame-top-left']"
+  tf <- findElement ses $ CSS "frame[name='frame-top']"
   logShow "switch to top frame" tf
   switchToFrame ses (FrameElementId tf)
 
   hasBottomFrame' <- bottomFameExists ses
   logShow "bottom frame exists after switching to top frame" hasBottomFrame'
   assertBool "bottom frame should not exist after switching to top frame" $ not hasBottomFrame'
-
+  
   mf <- findElement ses $ CSS "frame[name='frame-middle']"
   switchToFrame ses (FrameElementId mf)
 
@@ -386,7 +386,7 @@ unit_demoFrames = withSession \ses -> do
   logShowM "active element" $ getActiveElement ses
 
   -- drill back down to middle frame (repeat the above steps)
-  tf' <- findElement ses $ CSS "frame[name='frame-top-left']"
+  tf' <- findElement ses $ CSS "frame[name='frame-top']"
   logShow "switch back to top frame" tf'
   switchToFrame ses (FrameElementId tf')
   logShowM "active element" $ getActiveElement ses
