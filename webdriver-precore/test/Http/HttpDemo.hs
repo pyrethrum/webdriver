@@ -510,6 +510,7 @@ leaving this test hewre as a commnet  - it proves that setting the domain works 
 unit_demoCookiesRemote :: IO ()
 unit_demoCookiesRemote =
   withSession \ses -> do
+    theInternet = "https://the-internet.herokuapp.com/"
     navigateTo ses theInternet
     logShowM "cookies" $ getAllCookies ses
 

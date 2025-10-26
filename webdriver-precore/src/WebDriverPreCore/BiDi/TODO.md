@@ -16,7 +16,7 @@
 
 ## http
 - [ ] test => demos => test
-- [ ] switch to local http files
+- [x] switch to local http files
   - before 
     - headed - All 22 tests passed (148.72s)
     - headless - All 22 tests passed (135.98s)
@@ -24,7 +24,7 @@
     - 3 out of 22 tests failed (117.57s) (headless)
     - All 22 tests passed (109.25s) (headed)
     - All 22 tests passed (96.09s) (headless)
-  - [ ] remove old constants (links and selectors)
+  - [x] remove old constants (links and selectors)
 - [ ] switch to command (leave legacy)
 - [ ] update to latest spec
 - [ ] switch to protocol and API - keep legacy
