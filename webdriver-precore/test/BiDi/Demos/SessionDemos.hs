@@ -31,7 +31,7 @@ sessionStatusDemo =
   demo "Session - Status Check" action
   where
     action :: DemoUtils -> BiDiActions -> IO ()
-    action MkDemoUtils {..} MkCommands {..} = do
+    action MkDemoUtils {..} MkBiDiActions {..} = do
       logTxt "Checking session status"
       status <- sessionStatus
       logShow "Session status" status
@@ -75,7 +75,7 @@ sessionNewDemo =
   demo "Session - New Session Creation" action
   where
     action :: DemoUtils -> BiDiActions -> IO ()
-    action MkDemoUtils {..} MkCommands {..} = do
+    action MkDemoUtils {..} MkBiDiActions {..} = do
       logTxt "Creating new BiDi session with basic capabilities"
       let basicCapabilities = MkCapabilities
             { alwaysMatch = Nothing,
@@ -121,7 +121,7 @@ sessionEndDemo =
   demo "Session - End Session" action
   where
     action :: DemoUtils -> BiDiActions -> IO ()
-    action MkDemoUtils {..} MkCommands {..} = do
+    action MkDemoUtils {..} MkBiDiActions {..} = do
       logTxt "⚠️  WARNING: This will end the current session!"
       logTxt "Ending current session gracefully"
       result <- sessionEnd
@@ -134,8 +134,8 @@ sessionSubscribeDemo =
   demo "Session - Event Subscription" action
   where
     action :: DemoUtils -> BiDiActions -> IO ()
-    action utils@MkDemoUtils {..} cmds@MkCommands {..} = do
-      bc <- rootContext utils cmds
+    action utils@MkDemoUtils {..} bidi@MkBiDiActions {..} = do
+      bc <- rootContext utils bidi
 
       logTxt "Test 1: Subscribe to browsing context events globally"
       let globalSubscription = MkSessionSubscriptionRequest
@@ -188,7 +188,7 @@ sessionUnsubscribeDemo =
   demo "Session - Event Unsubscription" action
   where
     action :: DemoUtils -> BiDiActions -> IO ()
-    action MkDemoUtils {..} MkCommands {..} = do
+    action MkDemoUtils {..} MkBiDiActions {..} = do
       logTxt "First, create a subscription to demonstrate unsubscription"
       let subscription = MkSessionSubscriptionRequest
             { events = [BrowsingContextContextCreated],
@@ -281,7 +281,7 @@ sessionCapabilityNegotiationDemo =
   demo "Session - Capability Negotiation" action
   where
     action :: DemoUtils -> BiDiActions -> IO ()
-    action MkDemoUtils {..} MkCommands {..} = do
+    action MkDemoUtils {..} MkBiDiActions {..} = do
       logTxt "Test 1: Session with alwaysMatch capabilities"
       let alwaysMatchCap = MkCapability
             { acceptInsecureCerts = Just True,
@@ -340,7 +340,7 @@ sessionCompleteLifecycleDemo =
   demo "Session - Complete Lifecycle Management" action
   where
     action :: DemoUtils -> BiDiActions -> IO ()
-    action MkDemoUtils {..} MkCommands {..} = do
+    action MkDemoUtils {..} MkBiDiActions {..} = do
       logTxt "Step 1: Check initial session status"
       initialStatus <- sessionStatus
       logShow "Initial status" initialStatus

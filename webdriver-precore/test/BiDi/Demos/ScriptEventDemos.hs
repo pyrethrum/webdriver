@@ -26,7 +26,7 @@ scriptEventRealmLifecycle =
   demo "Script Events - Realm Created and Destroyed" action
   where
     action :: DemoUtils -> BiDiActions -> IO ()
-    action utils@MkDemoUtils {..} cmds@MkCommands {..} = do
+    action utils@MkDemoUtils {..} bidi@MkBiDiActions {..} = do
       logTxt "Subscribe to RealmCreated and RealmDestroyed events"
 
       (realmCreatedEventFired, waitRealmCreatedEventFired) <- timeLimitLog ScriptRealmCreated
@@ -43,7 +43,7 @@ scriptEventRealmLifecycle =
 
       logTxt "Navigate to script realm test page"
       url <- scriptRealmUrl
-      bc <- rootContext utils cmds
+      bc <- rootContext utils bidi
       browsingContextNavigate $ MkNavigate bc url Nothing
       pause
 
@@ -85,7 +85,7 @@ scriptEventMessage =
   demo "Script Events - Message via Channel" action
   where
     action :: DemoUtils -> BiDiActions -> IO ()
-    action utils@MkDemoUtils {..} cmds@MkCommands {..} = do
+    action utils@MkDemoUtils {..} bidi@MkBiDiActions {..} = do
       logTxt "Subscribe to Message event"
 
       (messageEventFired, waitMessageEventFired) <- timeLimitLog ScriptMessage
@@ -96,7 +96,7 @@ scriptEventMessage =
 
       logTxt "Navigate to checkboxes page"
       url <- checkboxesUrl
-      bc <- rootContext utils cmds
+      bc <- rootContext utils bidi
       browsingContextNavigate $ MkNavigate bc url Nothing
       pause
 
@@ -138,13 +138,13 @@ scriptEventMessageRuntime =
   demo "Script Events - Runtime Message via sendBidiMessage" action
   where
     action :: DemoUtils -> BiDiActions -> IO ()
-    action utils@MkDemoUtils {..} cmds@MkCommands {..} = do
+    action utils@MkDemoUtils {..} bidi@MkBiDiActions {..} = do
       logTxt "Subscribe to Message event"
       subscribeScriptMessage $ logShow "Script Message Event"
 
       logTxt "Navigate to checkboxes page"
       url <- checkboxesUrl
-      bc <- rootContext utils cmds
+      bc <- rootContext utils bidi
       browsingContextNavigate $ MkNavigate bc url Nothing
       pause
 

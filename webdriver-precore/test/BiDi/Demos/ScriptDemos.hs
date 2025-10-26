@@ -37,8 +37,8 @@ scriptEvaluateAllPrimitiveTypesDemo =
   demo "Script - Evaluate All PrimitiveProtocolValue Types" action
   where
     action :: DemoUtils -> BiDiActions -> IO ()
-    action utils@MkDemoUtils {..} cmds@MkCommands {..} = do
-      bc <- rootContext utils cmds
+    action utils@MkDemoUtils {..} bidi@MkBiDiActions {..} = do
+      bc <- rootContext utils bidi
       let baseEval =
             MkEvaluate
               { expression = "alert('Hello from Pyrethrum BiDi!')",
@@ -209,8 +209,8 @@ scriptEvaluateAdvancedDemo =
   demo "Script - Evaluate Advanced Types and Edge Cases" action
   where
     action :: DemoUtils -> BiDiActions -> IO ()
-    action utils@MkDemoUtils {..} cmds@MkCommands {..} = do
-      bc <- rootContext utils cmds
+    action utils@MkDemoUtils {..} bidi@MkBiDiActions {..} = do
+      bc <- rootContext utils bidi
       let baseEval =
             MkEvaluate
               { expression = "",
@@ -378,7 +378,7 @@ serializationOptionsDemo =
   demo "Serialization Options - Various Configurations" action
   where
     action :: DemoUtils -> BiDiActions -> IO ()
-    action MkDemoUtils {..} _cmds = do
+    action MkDemoUtils {..} _bidi = do
       let logJSON hdr = log (hdr <> ":\n") . jsonToText . toJSON
 
       logJSON "JSON for Nothing serializationOptions" $
@@ -470,9 +470,9 @@ scriptPreloadScriptDemo =
   demo "Script I - Basic Preload Script Properties" action
   where
     action :: DemoUtils -> BiDiActions -> IO ()
-    action utils@MkDemoUtils {..} cmds@MkCommands {..} = do
-      bc <- rootContext utils cmds
-      let chkDOM = chkDomContains utils cmds bc
+    action utils@MkDemoUtils {..} bidi@MkBiDiActions {..} = do
+      bc <- rootContext utils bidi
+      let chkDOM = chkDomContains utils bidi bc
 
       logTxt "Navigate to a simple test page"
       navResult <- browsingContextNavigate $ MkNavigate {context = bc, url = "data:text/html,<html><head><title>Preload Script Test</title></head><body><h1>Test Page</h1><p id='content'>Original content</p><div id='preload-indicator'></div></body></html>", wait = Just Complete}
@@ -617,12 +617,12 @@ scriptPreloadScriptMultiContextDemo =
   demo "Script II - Multi-Context and Cleanup" action
   where
     action :: DemoUtils -> BiDiActions -> IO ()
-    action utils@MkDemoUtils {..} cmds@MkCommands {..} = do
-      bc <- rootContext utils cmds
-      let chkDOM = chkDomContains utils cmds bc
+    action utils@MkDemoUtils {..} bidi@MkBiDiActions {..} = do
+      bc <- rootContext utils bidi
+      let chkDOM = chkDomContains utils bidi bc
 
       logTxt "Create a new browsing context to test multiple contexts behavior"
-      newContext <- newWindowContext utils cmds
+      newContext <- newWindowContext utils bidi
 
       logTxt "Add a preload script specific to the new context only"
       preloadScriptNewContext <-
@@ -805,7 +805,7 @@ scriptPreloadScriptMultiContextDemo =
       pause
 
       logTxt "Cleanup - close the new context"
-      closeContext utils cmds newContext
+      closeContext utils bidi newContext
 
 -- >>> runDemo scriptChannelArgumentDemo
 scriptChannelArgumentDemo :: BiDiDemo
@@ -813,9 +813,9 @@ scriptChannelArgumentDemo =
   demo "Script III - Channel Argument Test" action
   where
     action :: DemoUtils -> BiDiActions -> IO ()
-    action utils@MkDemoUtils {..} cmds@MkCommands {..} = do
-      bc <- rootContext utils cmds
-      let chkDOM = chkDomContains utils cmds bc
+    action utils@MkDemoUtils {..} bidi@MkBiDiActions {..} = do
+      bc <- rootContext utils bidi
+      let chkDOM = chkDomContains utils bidi bc
 
       logTxt "Navigate to a simple test page for channel test"
       navResult <- browsingContextNavigate $ MkNavigate {context = bc, url = "data:text/html,<html><head><title>Channel Test</title></head><body><h1>Channel Test Page</h1><div id='output'></div></body></html>", wait = Just Complete}
@@ -909,8 +909,8 @@ scriptUserContextsDemo =
   demo "Script IV - UserContexts Property Exclusive Demo" action
   where
     action :: DemoUtils -> BiDiActions -> IO ()
-    action utils@MkDemoUtils {..} cmds@MkCommands {..} = do
-      bc <- rootContext utils cmds
+    action utils@MkDemoUtils {..} bidi@MkBiDiActions {..} = do
+      bc <- rootContext utils bidi
 
       logTxt "Creating multiple user contexts to demonstrate userContexts property"
 
@@ -1283,9 +1283,9 @@ scriptUserContextsDemo =
       pause
 
       logTxt "Cleanup - Close user context browsing contexts"
-      closeContext utils cmds bcUserContext1
-      closeContext utils cmds bcUserContext2
-      closeContext utils cmds bcUserContext3
+      closeContext utils bidi bcUserContext1
+      closeContext utils bidi bcUserContext2
+      closeContext utils bidi bcUserContext3
       pause
 
       logTxt "Cleanup - Remove user contexts"
@@ -1308,8 +1308,8 @@ scriptCallFunctionDemo =
   demo "Script V - script.callFunction Core Scenarios" action
   where
     action :: DemoUtils -> BiDiActions -> IO ()
-    action utils@MkDemoUtils {..} cmds@MkCommands {..} = do
-      bc <- rootContext utils cmds
+    action utils@MkDemoUtils {..} bidi@MkBiDiActions {..} = do
+      bc <- rootContext utils bidi
 
       logTxt "Navigate to a simple page for function call tests"
       navResult <-
@@ -1461,8 +1461,8 @@ scriptGetRealmsAndDisownDemo =
   demo "Script VI - getRealms and disown Integration" action
   where
     action :: DemoUtils -> BiDiActions -> IO ()
-    action utils@MkDemoUtils {..} cmds@MkCommands {..} = do
-      bc <- rootContext utils cmds
+    action utils@MkDemoUtils {..} bidi@MkBiDiActions {..} = do
+      bc <- rootContext utils bidi
 
       logTxt "Navigate to a test page for realms and ownership demo"
       navResult <-

@@ -46,7 +46,7 @@ inputEventFileDialogOpened =
   demo "Input Events - File Dialog Opened (Single File)" action
   where
     action :: DemoUtils -> BiDiActions -> IO ()
-    action utils@MkDemoUtils {..} cmds@MkCommands {..} = do
+    action utils@MkDemoUtils {..} bidi@MkBiDiActions {..} = do
       logTxt "Subscribe to FileDialogOpened event"
       (fileDialogEventFired, waitFileDialogEventFired) <- timeLimitLog InputFileDialogOpened
       subscribeInputFileDialogOpened fileDialogEventFired
@@ -54,7 +54,7 @@ inputEventFileDialogOpened =
       (manyFileDialogEventFired, waitManyFileDialogEventFired) <- timeLimitLogMany InputFileDialogOpened
       subscribeMany [InputFileDialogOpened] manyFileDialogEventFired
 
-      bc <- newWindowContext utils cmds
+      bc <- newWindowContext utils bidi
       logTxt "Navigating to upload page"
       url <- uploadUrl
       browsingContextNavigate $ MkNavigate bc url Nothing

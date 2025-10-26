@@ -32,8 +32,8 @@ inputKeyboardDemo =
   demo "Input I - Keyboard Actions" action
   where
     action :: DemoUtils -> BiDiActions -> IO ()
-    action utils@MkDemoUtils {..} cmds@MkCommands {..} = do
-      bc <- rootContext utils cmds
+    action utils@MkDemoUtils {..} bidi@MkBiDiActions {..} = do
+      bc <- rootContext utils bidi
       textAreaPageUrl <- textAreaUrl
 
       logTxt "Navigate to text area page for keyboard testing"
@@ -268,7 +268,7 @@ inputKeyboardDemo =
       logShow "Modifier key actions result" modifierKeyActions
       pause
 
-      closeContext utils cmds bc
+      closeContext utils bidi bc
 
 -- >>> runDemo inputPointerDemo
 inputPointerDemo :: BiDiDemo
@@ -276,8 +276,8 @@ inputPointerDemo =
   demo "Input II - Pointer/Mouse Actions" action
   where
     action :: DemoUtils -> BiDiActions -> IO ()
-    action utils@MkDemoUtils {..} cmds@MkCommands {..} = do
-      bc <- rootContext utils cmds
+    action utils@MkDemoUtils {..} bidi@MkBiDiActions {..} = do
+      bc <- rootContext utils bidi
       chkBoxPage <- checkboxesUrl
 
       logTxt "Navigate to Checkboxes for pointer testing"
@@ -453,7 +453,7 @@ inputPointerDemo =
       logShow "Right click result" rightClick
       pause
 
-      closeContext utils cmds bc
+      closeContext utils bidi bc
 
 -- >>> runDemo inputWheelDemo
 inputWheelDemo :: BiDiDemo
@@ -461,8 +461,8 @@ inputWheelDemo =
   demo "Input III - Wheel/Scroll Actions" action
   where
     action :: DemoUtils -> BiDiActions -> IO ()
-    action utils@MkDemoUtils {..} cmds@MkCommands {..} = do
-      bc <- rootContext utils cmds
+    action utils@MkDemoUtils {..} bidi@MkBiDiActions {..} = do
+      bc <- rootContext utils bidi
       infiniteScroll <- infiniteScrollUrl
 
       logTxt "Navigate to The Internet - Infinite Scroll for wheel testing"
@@ -555,7 +555,7 @@ inputWheelDemo =
       logShow "Horizontal scroll result" horizontalScroll
       pause
 
-      closeContext utils cmds bc
+      closeContext utils bidi bc
 
 -- >>> runDemo inputCombinedActionsDemo
 inputCombinedActionsDemo :: BiDiDemo
@@ -563,8 +563,8 @@ inputCombinedActionsDemo =
   demo "Input IV - Combined Actions" action
   where
     action :: DemoUtils -> BiDiActions -> IO ()
-    action utils@MkDemoUtils {..} cmds@MkCommands {..} = do
-      bc <- rootContext utils cmds
+    action utils@MkDemoUtils {..} bidi@MkBiDiActions {..} = do
+      bc <- rootContext utils bidi
       testPage <- textAreaUrl
 
       logTxt "Navigate to text area page for keyboard testing"
@@ -748,7 +748,7 @@ inputCombinedActionsDemo =
       logShow "Complex combination result" complexCombination
       pause
 
-      closeContext utils cmds bc
+      closeContext utils bidi bc
 
 -- >>> runDemo inputReleaseActionsDemo
 inputReleaseActionsDemo :: BiDiDemo
@@ -756,8 +756,8 @@ inputReleaseActionsDemo =
   demo "Input V - Release Actions" action
   where
     action :: DemoUtils -> BiDiActions -> IO ()
-    action utils@MkDemoUtils {..} cmds@MkCommands {..} = do
-      bc <- rootContext utils cmds
+    action utils@MkDemoUtils {..} bidi@MkBiDiActions {..} = do
+      bc <- rootContext utils bidi
       testPage <- textAreaUrl
 
       logTxt "Navigate to text area page for keyboard testing"
@@ -904,7 +904,7 @@ inputReleaseActionsDemo =
       logShow "Second release actions result" releaseResult2
       pause
 
-      closeContext utils cmds bc
+      closeContext utils bidi bc
 
 -- >>> runDemo inputSetFilesDemo
 inputSetFilesDemo :: BiDiDemo
@@ -912,8 +912,8 @@ inputSetFilesDemo =
   demo "Input VI - Set Files for File Upload" action
   where
     action :: DemoUtils -> BiDiActions -> IO ()
-    action utils@MkDemoUtils {..} cmds@MkCommands {..} = do
-      bc <- rootContext utils cmds
+    action utils@MkDemoUtils {..} bidi@MkBiDiActions {..} = do
+      bc <- rootContext utils bidi
       uploadUrl <- fileUrl "upload.html"
 
       logTxt "Navigate to upload.html test page"

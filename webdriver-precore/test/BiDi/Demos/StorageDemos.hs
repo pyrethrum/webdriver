@@ -43,8 +43,8 @@ storageGetCookiesDemo =
   demo "Storage - Get Cookies" action
   where
     action :: DemoUtils -> BiDiActions -> IO ()
-    action utils@MkDemoUtils {..} cmds@MkCommands {..} = do
-      bc <- rootContext utils cmds
+    action utils@MkDemoUtils {..} bidi@MkBiDiActions {..} = do
+      bc <- rootContext utils bidi
 
       logTxt "Test 1: Get all cookies (no filter)"
       let getAllCookies =
@@ -106,8 +106,8 @@ storageSetCookieDemo =
   demo "Storage - Set Cookie" action
   where
     action :: DemoUtils -> BiDiActions -> IO ()
-    action utils@MkDemoUtils {..} cmds@MkCommands {..} = do
-      bc <- rootContext utils cmds
+    action utils@MkDemoUtils {..} bidi@MkBiDiActions {..} = do
+      bc <- rootContext utils bidi
 
       logTxt "Test 1: Set basic cookie"
       let basicCookie =
@@ -179,8 +179,8 @@ storageDeleteCookiesDemo =
   demo "Storage - Delete Cookies" action
   where
     action :: DemoUtils -> BiDiActions -> IO ()
-    action utils@MkDemoUtils {..} cmds@MkCommands {..} = do
-      bc <- rootContext utils cmds
+    action utils@MkDemoUtils {..} bidi@MkBiDiActions {..} = do
+      bc <- rootContext utils bidi
 
       logTxt "Test 1: Delete cookies by name"
       let nameFilter =
@@ -242,8 +242,8 @@ storagePartitionKeyDemo =
   demo "Storage - Partition Key Management" action
   where
     action :: DemoUtils -> BiDiActions -> IO ()
-    action utils@MkDemoUtils {..} cmds@MkCommands {..} = do
-      bc <- rootContext utils cmds
+    action utils@MkDemoUtils {..} bidi@MkBiDiActions {..} = do
+      bc <- rootContext utils bidi
 
       logTxt "Test 1: Context-based partition"
       let contextPartition = BrowsingContextPartition bc
@@ -302,8 +302,8 @@ storageCompleteWorkflowDemo =
   demo "Storage - Complete Cookie Workflow" action
   where
     action :: DemoUtils -> BiDiActions -> IO ()
-    action utils@MkDemoUtils {..} cmds@MkCommands {..} = do
-      bc <- rootContext utils cmds
+    action utils@MkDemoUtils {..} bidi@MkBiDiActions {..} = do
+      bc <- rootContext utils bidi
 
       logTxt "Step 1: Check initial cookies"
       let getAllCookies =

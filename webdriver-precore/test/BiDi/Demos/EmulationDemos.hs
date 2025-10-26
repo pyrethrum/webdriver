@@ -28,8 +28,8 @@ emulationSetGeolocationOverrideDemo =
   demo "Emulation - Set Geolocation Override" action
   where
     action :: DemoUtils -> BiDiActions -> IO ()
-    action utils@MkDemoUtils {..} cmds@MkCommands {..} = do
-      bc <- rootContext utils cmds
+    action utils@MkDemoUtils {..} bidi@MkBiDiActions {..} = do
+      bc <- rootContext utils bidi
 
       logTxt "Test 1: Set geolocation coordinates (New York City)"
       let nycCoordinates = MkGeolocationCoordinates
@@ -80,8 +80,8 @@ emulationSetLocaleOverrideDemo =
   demo "Emulation - Set Locale Override" action
   where
     action :: DemoUtils -> BiDiActions -> IO ()
-    action utils@MkDemoUtils {..} cmds@MkCommands {..} = do
-      bc <- rootContext utils cmds
+    action utils@MkDemoUtils {..} bidi@MkBiDiActions {..} = do
+      bc <- rootContext utils bidi
 
       logTxt "Test 1: Set locale to French (France)"
       let frenchLocale = MkSetLocaleOverride
@@ -131,8 +131,8 @@ emulationSetScreenOrientationOverrideDemo =
     action :: DemoUtils -> BiDiActions -> IO ()
     action MkDemoUtils {..}  _ = do -- empty action for now
       {-  TODO Not supported by geckodriver - add expectations when we gget to errors
-    action utils@MkDemoUtils {..} cmds@MkCommands {..} = do
-      bc <- rootContext utils cmds
+    action utils@MkDemoUtils {..} bidi@MkBiDiActions {..} = do
+      bc <- rootContext utils bidi
 
       logTxt "Test 1: Set orientation to portrait primary"
       let portraitOrientation = MkScreenOrientationOverride
@@ -195,8 +195,8 @@ emulationSetTimezoneOverrideDemo =
     action :: DemoUtils -> BiDiActions -> IO ()
     action MkDemoUtils {..}  _ = do -- empty action for now
       {-  TODO Not supported by geckodriver - add expectations when we gget to errors  
-    action utils@MkDemoUtils {..} cmds@MkCommands {..} = do
-      bc <- rootContext utils cmds
+    action utils@MkDemoUtils {..} bidi@MkBiDiActions {..} = do
+      bc <- rootContext utils bidi
       logTxt "Test 1: Set timezone to New York"
       let nyTimezone = MkSetTimezoneOverride
             { timezone = Just "America/New_York",
@@ -256,10 +256,10 @@ emulationCompleteWorkflowDemo =
     action :: DemoUtils -> BiDiActions -> IO ()
     action MkDemoUtils {..}  _ = do -- empty action for now
       {-  TODO Not supported by geckodriver - add expectations when we get to errors 
-    action utils@MkDemoUtils {..} cmds@MkCommands {..} = do
+    action utils@MkDemoUtils {..} bidi@MkBiDiActions {..} = do
       logTxt "=== Creating multiple browsing contexts for emulation demo ==="
-      bc1 <- rootContext utils cmds
-      bc2 <- newWindowContext utils cmds
+      bc1 <- rootContext utils bidi
+      bc2 <- newWindowContext utils bidi
       pause
 
       logTxt "=== Setting up context 1 with NYC geolocation and US locale ==="
@@ -431,6 +431,6 @@ emulationCompleteWorkflowDemo =
       pause
 
       logTxt "=== Cleaning up contexts ==="
-      closeContext utils cmds bc2
+      closeContext utils bidi bc2
       -}
       pause

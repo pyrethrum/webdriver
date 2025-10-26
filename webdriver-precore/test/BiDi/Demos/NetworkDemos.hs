@@ -19,8 +19,8 @@ networkDataCollectorDemo =
   demo "Network I - Data Collector Management" action
   where
     action :: DemoUtils -> BiDiActions -> IO ()
-    action utils@MkDemoUtils {..} cmds@MkCommands {..} = do
-      bc <- rootContext utils cmds
+    action utils@MkDemoUtils {..} bidi@MkBiDiActions {..} = do
+      bc <- rootContext utils bidi
 
       logTxt "Test 1: Add data collector with minimal parameters"
       collector1 <-
@@ -148,8 +148,8 @@ networkInterceptDemo =
   demo "Network II - Request/Response Interception" action
   where
     action :: DemoUtils -> BiDiActions -> IO ()
-    action utils@MkDemoUtils {..} cmds@MkCommands {..} = do
-      bc <- rootContext utils cmds
+    action utils@MkDemoUtils {..} bidi@MkBiDiActions {..} = do
+      bc <- rootContext utils bidi
 
       logTxt "Test 1: Add intercept for BeforeRequestSent phase"
       intercept1 <-
@@ -318,8 +318,8 @@ networkRequestModificationDemo =
   demo "Network III - Request Modification" action
   where
     action :: DemoUtils -> BiDiActions -> IO ()
-    action utils@MkDemoUtils {..} cmds@MkCommands {..} = do
-      bc <- rootContext utils cmds
+    action utils@MkDemoUtils {..} bidi@MkBiDiActions {..} = do
+      bc <- rootContext utils bidi
 
       withTestServer $ do
         logTxt "Subscribe first, then intercept and modify request headers and method"
@@ -380,8 +380,8 @@ networkResponseModificationDemo =
   demo "Network IV - Response Modification (Headers & Status Only) - modified in subscription" action
   where
     action :: DemoUtils -> BiDiActions -> IO ()
-    action utils@MkDemoUtils {..} cmds@MkCommands {..} = do
-      bc <- rootContext utils cmds
+    action utils@MkDemoUtils {..} bidi@MkBiDiActions {..} = do
+      bc <- rootContext utils bidi
 
       withTestServer $ do
         logTxt "Disable cache to ensure we see network requests"
@@ -465,8 +465,8 @@ networkResponseModificationDemo2 =
   demo "Network IV - Response Modification - with pre-generated id" action
   where
     action :: DemoUtils -> BiDiActions -> IO ()
-    action utils@MkDemoUtils {..} cmds@MkCommands {..} = do
-      bc <- rootContext utils cmds
+    action utils@MkDemoUtils {..} bidi@MkBiDiActions {..} = do
+      bc <- rootContext utils bidi
 
       withTestServer $ do
         logTxt "Disable cache to ensure we see network requests"
@@ -546,8 +546,8 @@ networkAuthDemo =
   demo "Network V - Authentication Handling" action
   where
     action :: DemoUtils -> BiDiActions -> IO ()
-    action utils@MkDemoUtils {..} cmds@MkCommands {..} = do
-      bc <- rootContext utils cmds
+    action utils@MkDemoUtils {..} bidi@MkBiDiActions {..} = do
+      bc <- rootContext utils bidi
 
       withTestServer $ do
         logTxt "Test 1: Add intercept for AuthRequired phase"
@@ -659,8 +659,8 @@ networkFailRequestDemo =
   demo "Network VI - Request Failure Handling" action
   where
     action :: DemoUtils -> BiDiActions -> IO ()
-    action utils@MkDemoUtils {..} cmds@MkCommands {..} = do
-      bc <- rootContext utils cmds
+    action utils@MkDemoUtils {..} bidi@MkBiDiActions {..} = do
+      bc <- rootContext utils bidi
 
       withTestServer $ do
         logTxt "Test 1: Add intercept for BeforeRequestSent phase"
@@ -732,8 +732,8 @@ networkProvideResponseJSONDemo =
   demo "Network VII-A - Provide JSON Response" action
   where
     action :: DemoUtils -> BiDiActions -> IO ()
-    action utils@MkDemoUtils {..} cmds@MkCommands {..} = do
-      bc <- rootContext utils cmds
+    action utils@MkDemoUtils {..} bidi@MkBiDiActions {..} = do
+      bc <- rootContext utils bidi
 
       withTestServer $ do
         logTxt "Disable cache to ensure we see network requests"
@@ -800,8 +800,8 @@ networkProvideResponseHTMLDemo =
   demo "Network VII-B - Provide HTML Response" action
   where
     action :: DemoUtils -> BiDiActions -> IO ()
-    action utils@MkDemoUtils {..} cmds@MkCommands {..} = do
-      bc <- rootContext utils cmds
+    action utils@MkDemoUtils {..} bidi@MkBiDiActions {..} = do
+      bc <- rootContext utils bidi
 
       withTestServer $ do
         logTxt "Disable cache to ensure we see network requests"
@@ -872,8 +872,8 @@ networkProvideResponseWithCookiesDemo =
   demo "Network VII-C - Provide Response with Cookies" action
   where
     action :: DemoUtils -> BiDiActions -> IO ()
-    action utils@MkDemoUtils {..} cmds@MkCommands {..} = do
-      bc <- rootContext utils cmds
+    action utils@MkDemoUtils {..} bidi@MkBiDiActions {..} = do
+      bc <- rootContext utils bidi
 
       withTestServer $ do
         logTxt "Disable cache to ensure we see network requests"
@@ -957,8 +957,8 @@ networkProvideResponseBase64Demo =
   demo "Network VII-D - Provide Base64 Response" action
   where
     action :: DemoUtils -> BiDiActions -> IO ()
-    action utils@MkDemoUtils {..} cmds@MkCommands {..} = do
-      bc <- rootContext utils cmds
+    action utils@MkDemoUtils {..} bidi@MkBiDiActions {..} = do
+      bc <- rootContext utils bidi
 
       withTestServer $ do
         logTxt "Disable cache to ensure we see network requests"
@@ -1030,8 +1030,8 @@ networkProvideResponseErrorDemo =
   demo "Network VII-E - Provide Error Response" action
   where
     action :: DemoUtils -> BiDiActions -> IO ()
-    action utils@MkDemoUtils {..} cmds@MkCommands {..} = do
-      bc <- rootContext utils cmds
+    action utils@MkDemoUtils {..} bidi@MkBiDiActions {..} = do
+      bc <- rootContext utils bidi
 
       withTestServer $ do
         logTxt "Disable cache to ensure we see network requests"
@@ -1102,8 +1102,8 @@ networkDataRetrievalDemo =
   demo "Network VIII - Data Retrieval and Ownership" action
   where
     action :: DemoUtils -> BiDiActions -> IO ()
-    action utils@MkDemoUtils {..} cmds@MkCommands {..} = do
-      bc <- rootContext utils cmds
+    action utils@MkDemoUtils {..} bidi@MkBiDiActions {..} = do
+      bc <- rootContext utils bidi
 
       logTxt "Test 1: Add data collector to capture network data"
       MkAddDataCollectorResult collectorId <-
@@ -1169,8 +1169,8 @@ networkDisownDataDemo =
   demo "Network IX - Data Retrieval and Disown" action
   where
     action :: DemoUtils -> BiDiActions -> IO ()
-    action utils@MkDemoUtils {..} cmds@MkCommands {..} = do
-      bc <- rootContext utils cmds
+    action utils@MkDemoUtils {..} bidi@MkBiDiActions {..} = do
+      bc <- rootContext utils bidi
 
       logTxt "Test 1: Add data collector to capture network data"
       MkAddDataCollectorResult collectorId <-
@@ -1247,8 +1247,8 @@ networkCacheBehaviorDemo =
   demo "Network X - Cache Behavior Management" action
   where
     action :: DemoUtils -> BiDiActions -> IO ()
-    action utils@MkDemoUtils {..} cmds@MkCommands {..} = do
-      bc <- rootContext utils cmds
+    action utils@MkDemoUtils {..} bidi@MkBiDiActions {..} = do
+      bc <- rootContext utils bidi
 
       logTxt "Test 1: Set cache behavior to default (global)"
       cacheResult1 <-
@@ -1291,7 +1291,7 @@ networkCacheBehaviorDemo =
       pause
 
       logTxt "Test 5: Create new context to test cache behavior isolation"
-      newContext <- newWindowContext utils cmds
+      newContext <- newWindowContext utils bidi
 
       logTxt "Test 6: Set different cache behavior for new context"
       cacheResult5 <-
@@ -1345,4 +1345,4 @@ networkCacheBehaviorDemo =
       pause
 
       logTxt "Cleanup - close new context"
-      closeContext utils cmds newContext
+      closeContext utils bidi newContext

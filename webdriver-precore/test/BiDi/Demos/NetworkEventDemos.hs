@@ -29,7 +29,7 @@ networkEventRequestResponseLifecycle =
     -- NOTE: This demo may timeout waiting for NetworkBeforeRequestSent due to incomplete
     -- GeckoDriver support. See networkEventBeforeRequestSent comment above for details.
     action :: DemoUtils -> BiDiActions -> IO ()
-    action utils@MkDemoUtils {..} cmds@MkCommands {..} = do
+    action utils@MkDemoUtils {..} bidi@MkBiDiActions {..} = do
       logTxt "Subscribe to all network lifecycle events"
 
       (beforeReqEventFired, waitBeforeReqEventFired) <- timeLimitLog NetworkBeforeRequestSent
@@ -41,7 +41,7 @@ networkEventRequestResponseLifecycle =
       (respCompletedEventFired, waitNetworkResponseCompletedEventFired) <- timeLimitLog NetworkResponseCompleted
       subscribeNetworkResponseCompleted respCompletedEventFired
 
-      bc <- rootContext utils cmds
+      bc <- rootContext utils bidi
 
       withTestServer $ do
         logTxt "Trigger network request to demonstrate complete network lifecycle"
@@ -67,7 +67,7 @@ networkEventFetchError =
   demo "Network Events - Fetch Error" action
   where
     action :: DemoUtils -> BiDiActions -> IO ()
-    action utils@MkDemoUtils {..} cmds@MkCommands {..} = do
+    action utils@MkDemoUtils {..} bidi@MkBiDiActions {..} = do
       withTestServer $ do
         logTxt "Subscribe to FetchError event"
         (fetchErrorEventFired, waitFetchErrorEventFired) <- timeLimitLog NetworkFetchError
@@ -76,7 +76,7 @@ networkEventFetchError =
         (manyFetchErrorEventFired, waitManyFetchErrorEventFired) <- timeLimitLogMany NetworkFetchError
         subscribeMany [NetworkFetchError] manyFetchErrorEventFired
 
-        bc <- rootContext utils cmds
+        bc <- rootContext utils bidi
 
         logTxt "Trigger fetch error using invalid URL"
         scriptEvaluate $
@@ -100,7 +100,7 @@ networkEventAuthRequired =
   demo "Network Events - Auth Required (requires auth-protected URL)" action
   where
     action :: DemoUtils -> BiDiActions -> IO ()
-    action utils@MkDemoUtils {..} cmds@MkCommands {..} = do
+    action utils@MkDemoUtils {..} bidi@MkBiDiActions {..} = do
       logTxt "Subscribe to AuthRequired event"
       (authReqEventFired, waitAuthReqEventFired) <- timeLimitLog NetworkAuthRequired
       subscribeNetworkAuthRequired authReqEventFired
@@ -108,7 +108,7 @@ networkEventAuthRequired =
       (manyAuthReqEventFired, waitManyAuthReqEventFired) <- timeLimitLogMany NetworkAuthRequired
       subscribeMany [NetworkAuthRequired] manyAuthReqEventFired
 
-      bc <- rootContext utils cmds
+      bc <- rootContext utils bidi
 
       logTxt "Navigate to auth-protected URL to trigger AuthRequired event"
 

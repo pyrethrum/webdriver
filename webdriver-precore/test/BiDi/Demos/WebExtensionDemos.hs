@@ -22,7 +22,7 @@ webExtensionInstallPathDemo =
   demo "WebExtension - Install from Path" action
   where
     action :: DemoUtils -> BiDiActions -> IO ()
-    action MkDemoUtils {..} MkCommands {..} = do
+    action MkDemoUtils {..} MkBiDiActions {..} = do
       logTxt "Test 1: Install extension from filesystem path"
       exPath <- demoExtensionDirPath
       result <- webExtensionInstall $ ExtensionPath exPath
@@ -47,7 +47,7 @@ webExtensionInstallArchiveDemo =
   demo "WebExtension - Install from Archive" action
   where
     action :: DemoUtils -> BiDiActions -> IO ()
-    action MkDemoUtils {..} MkCommands {..} = do
+    action MkDemoUtils {..} MkBiDiActions {..} = do
       logTxt "Test 1: Install extension from zip archive"
       zipPath <- demoExtensionZipPath
       result1 <- webExtensionInstall $ ExtensionArchivePath zipPath
@@ -60,7 +60,7 @@ webExtensionInstallBase64Demo =
   demo "WebExtension - Install from Base64" action
   where
     action :: DemoUtils -> BiDiActions -> IO ()
-    action MkDemoUtils {..} MkCommands {..} = do
+    action MkDemoUtils {..} MkBiDiActions {..} = do
       logTxt "Test 1: Install extension from base64 encoded data"
 
       base64Data <- demoExtensionAsBase64
@@ -74,7 +74,7 @@ webExtensionValidationDemo =
   demo "WebExtension - Extension Validation" action
   where
     action :: DemoUtils -> BiDiActions -> IO ()
-    action MkDemoUtils {..} MkCommands {..} = do
+    action MkDemoUtils {..} MkBiDiActions {..} = do
       logTxt "Test 1: Invalid extension path"
       let invalidExtension = ExtensionPath "/non/existent/path"
       invalidResult <-

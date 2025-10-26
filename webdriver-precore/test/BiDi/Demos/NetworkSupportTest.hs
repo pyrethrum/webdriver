@@ -16,8 +16,8 @@ networkSupportTest =
   demo "Network Support Test - Check which commands are implemented" action
   where
     action :: DemoUtils -> BiDiActions -> IO ()
-    action utils@MkDemoUtils {..} cmds@MkCommands {..} = do
-      bc <- rootContext utils cmds
+    action utils@MkDemoUtils {..} bidi@MkBiDiActions {..} = do
+      bc <- rootContext utils bidi
 
       logTxt "Testing network command support in current WebDriver implementation..."
       logTxt "Commands that fail with 'unknown command' are not yet implemented."

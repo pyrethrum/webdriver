@@ -140,10 +140,10 @@ import Prelude hiding (getLine, log, null, print, putStrLn)
 
 withCommands :: BiDiClientParams -> (DemoUtils -> BiDiActions -> IO ()) -> IO ()
 withCommands params action =
-  -- withNewBiDiSession $ action . mkCommands
-  withNewBiDiSession params $ \utils -> action utils . mkCommands
+  -- withNewBiDiSession $ action . MkBiDiActions
+  withNewBiDiSession params $ \utils -> action utils . mkActions
 
-data BiDiActions = MkCommands
+data BiDiActions = MkBiDiActions
   { -- Session commands
     sessionNew :: Capabilities -> IO SessionNewResult,
     sessionStatus :: IO SessionStatusResult,
@@ -275,9 +275,9 @@ data BiDiActions = MkCommands
     sendCommand' :: forall c r. (FromJSON r, ToJSON c, Show c) => JSUInt -> Command c r -> IO r
   }
 
-mkCommands :: BiDiMethods -> BiDiActions
-mkCommands socket =
-  MkCommands
+mkActions :: BiDiSocket -> BiDiActions
+mkActions socket =
+  MkBiDiActions
     { -- ########## COMMANDS ##########
       -- Session commands
       sessionNew = send . P.sessionNew,
@@ -457,8 +457,8 @@ data CommandRequestInfo = MkCommandRequestInfo
   }
   deriving (Show, Generic)
 
-sendCommandNoWait' :: forall c r. (ToJSON c, Show c) => BiDiMethods -> JSUInt -> Command c r -> IO CommandRequestInfo
-sendCommandNoWait' MkBiDiMethods {send} id' command = do
+sendCommandNoWait' :: forall c r. (ToJSON c, Show c) => BiDiSocket -> JSUInt -> Command c r -> IO CommandRequestInfo
+sendCommandNoWait' MkBiDiSocket {send} id' command = do
   let request = commandValue command id'
   (send request)
     `catch` \(e :: SomeException) -> do
@@ -469,8 +469,8 @@ sendCommandNoWait' MkBiDiMethods {send} id' command = do
           <> displayException e
   pure $ MkCommandRequestInfo {id = id', request}
 
-sendCommandNoWait :: forall c r. (ToJSON c, Show c) => BiDiMethods -> Command c r -> IO CommandRequestInfo
-sendCommandNoWait MkBiDiMethods {send, nextId} command = do
+sendCommandNoWait :: forall c r. (ToJSON c, Show c) => BiDiSocket -> Command c r -> IO CommandRequestInfo
+sendCommandNoWait MkBiDiSocket {send, nextId} command = do
   id' <- nextId
   let request = commandValue command id'
   (send request)
@@ -482,7 +482,7 @@ sendCommandNoWait MkBiDiMethods {send, nextId} command = do
           <> displayException e
   pure $ MkCommandRequestInfo {id = id', request}
 
-sendCommand' :: forall c r. (FromJSON r, ToJSON c, Show c) => BiDiMethods -> JSUInt -> Command c r -> IO r
+sendCommand' :: forall c r. (FromJSON r, ToJSON c, Show c) => BiDiSocket -> JSUInt -> Command c r -> IO r
 sendCommand' bdm id' command =  do
   MkCommandRequestInfo {request} <- sendCommandNoWait' bdm id' command
   matchedResponse' request id'
@@ -490,8 +490,8 @@ sendCommand' bdm id' command =  do
     matchedResponse' :: Value -> JSUInt -> IO r
     matchedResponse' = matchedResponse command bdm.getNext
 
-sendCommand :: forall c r. (FromJSON r, ToJSON c, Show c) => BiDiMethods -> Command c r -> IO r
-sendCommand m@MkBiDiMethods {getNext} command = do
+sendCommand :: forall c r. (FromJSON r, ToJSON c, Show c) => BiDiSocket -> Command c r -> IO r
+sendCommand m@MkBiDiSocket {getNext} command = do
   MkCommandRequestInfo {id = id', request} <- sendCommandNoWait m command
   matchedResponse' request id'
   where
@@ -521,7 +521,7 @@ mkDemoBiDiClientParams mQueLog pauseTimeout = do
   c <- mkChannels qLog
   pure $
     MkBiDiClientParams
-      { biDiMethods = mkBiDIMethods c,
+      { biDiMethods = mkBiDiSocket c,
         queueLog = qLog,
         messageLoops = demoMessageLoops mQueLog c,
         demoUtils = bidiDemoUtils qLog pauseTimeout
@@ -541,13 +541,13 @@ mkFailBidiClientParams mQueLog pauseTimeout failSendCount failGetCount failEvent
   messageLoops <- failMessageLoops mQueLog c failSendCount failGetCount failEventCount
   pure $
     MkBiDiClientParams
-      { biDiMethods = mkBiDIMethods c,
+      { biDiMethods = mkBiDiSocket c,
         queueLog = qLog,
         messageLoops,
         demoUtils = bidiDemoUtils qLog pauseTimeout
       }
 
-withNewBiDiSession :: BiDiClientParams -> (DemoUtils -> BiDiMethods -> IO ()) -> IO ()
+withNewBiDiSession :: BiDiClientParams -> (DemoUtils -> BiDiSocket -> IO ()) -> IO ()
 withNewBiDiSession params action =
   bracket
     httpSession
@@ -557,7 +557,7 @@ withNewBiDiSession params action =
       withBiDiClient params bidiUrl action
 
 -- | WebDriver BiDi client with communication channels
-data BiDiMethods = MkBiDiMethods
+data BiDiSocket = MkBiDiSocket
   { nextId :: IO JSUInt,
     send :: forall a. (ToJSON a, Show a) => a -> IO (),
     getNext :: IO (Either JSONDecodeError ResponseObject),
@@ -595,9 +595,9 @@ mkAtomicCounter var = atomically $ do
   modifyTVar' var succ
   readTVar var
 
-mkBiDIMethods :: Channels -> BiDiMethods
-mkBiDIMethods c =
-  MkBiDiMethods
+mkBiDiSocket :: Channels -> BiDiSocket
+mkBiDiSocket c =
+  MkBiDiSocket
     { nextId = mkAtomicCounter c.counterVar,
       send,
       getNext = atomically $ readTChan c.receiveChan,
@@ -691,12 +691,12 @@ parseIncomingMessage log json = do
 data BiDiClientParams = MkBiDiClientParams
   { queueLog :: QueLog,
     messageLoops :: MessageLoops,
-    biDiMethods :: BiDiMethods,
+    biDiMethods :: BiDiSocket,
     demoUtils :: DemoUtils
   }
 
 -- | Run WebDriver BiDi client and return a client interface
-withBiDiClient :: BiDiClientParams -> BiDiUrl -> (DemoUtils -> BiDiMethods -> IO ()) -> IO ()
+withBiDiClient :: BiDiClientParams -> BiDiUrl -> (DemoUtils -> BiDiSocket -> IO ()) -> IO ()
 withBiDiClient
   MkBiDiClientParams
     { biDiMethods,

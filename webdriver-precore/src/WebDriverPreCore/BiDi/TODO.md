@@ -8,6 +8,7 @@
   - All 97 tests passed (220.75s)
   - All 97 tests passed (181.01s) - headless
 - [x] pull logger out
+- [ ] rename BidiActions/Methods BiDiSocket / BiDiActions
 - [ ] specific code TODOs - TODO tree
 - [ ] check all exports - should use prtocol and API only
 - [ ] update to latest spec

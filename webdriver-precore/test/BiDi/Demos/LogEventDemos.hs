@@ -45,7 +45,7 @@ logEventConsoleEntries =
   demo "Log Events - Console Log Entries" action
   where
     action :: DemoUtils -> BiDiActions -> IO ()
-    action utils@MkDemoUtils {..} cmds@MkCommands {..} = do
+    action utils@MkDemoUtils {..} bidi@MkBiDiActions {..} = do
       logTxt "Subscribe to LogEntryAdded event"
 
       (logEventFired, waitLogEventFired) <- timeLimitLog LogEntryAdded
@@ -56,7 +56,7 @@ logEventConsoleEntries =
 
       logTxt "Navigate to console log test page"
       url <- consoleLogUrl
-      bc <- rootContext utils cmds
+      bc <- rootContext utils bidi
       browsingContextNavigate $ MkNavigate bc url Nothing
 
       -- Page automatically logs on load, so events should fire
@@ -73,8 +73,8 @@ logEventConsoleLevelDebug =
   demo "Log Events - Console Debug Level" action
   where
     action :: DemoUtils -> BiDiActions -> IO ()
-    action utils@MkDemoUtils {..} cmds@MkCommands {..} = do
-      bc <- rootContext utils cmds
+    action utils@MkDemoUtils {..} bidi@MkBiDiActions {..} = do
+      bc <- rootContext utils bidi
 
       logTxt "Subscribe to LogEntryAdded event"
       (logEventFired, waitLogEventFired) <- timeLimitLog LogEntryAdded
@@ -103,8 +103,8 @@ logEventConsoleLevelInfo =
   demo "Log Events - Console Info Level" action
   where
     action :: DemoUtils -> BiDiActions -> IO ()
-    action utils@MkDemoUtils {..} cmds@MkCommands {..} = do
-      bc <- rootContext utils cmds
+    action utils@MkDemoUtils {..} bidi@MkBiDiActions {..} = do
+      bc <- rootContext utils bidi
 
       logTxt "Subscribe to LogEntryAdded event"
       (logEventFired, waitLogEventFired) <- timeLimitLog LogEntryAdded
@@ -133,8 +133,8 @@ logEventConsoleLevelWarn =
   demo "Log Events - Console Warn Level" action
   where
     action :: DemoUtils -> BiDiActions -> IO ()
-    action utils@MkDemoUtils {..} cmds@MkCommands {..} = do
-      bc <- rootContext utils cmds
+    action utils@MkDemoUtils {..} bidi@MkBiDiActions {..} = do
+      bc <- rootContext utils bidi
 
       logTxt "Subscribe to LogEntryAdded event"
       (logEventFired, waitLogEventFired) <- timeLimitLog LogEntryAdded
@@ -163,8 +163,8 @@ logEventConsoleLevelError =
   demo "Log Events - Console Error Level" action
   where
     action :: DemoUtils -> BiDiActions -> IO ()
-    action utils@MkDemoUtils {..} cmds@MkCommands {..} = do
-      bc <- rootContext utils cmds
+    action utils@MkDemoUtils {..} bidi@MkBiDiActions {..} = do
+      bc <- rootContext utils bidi
 
       logTxt "Subscribe to LogEntryAdded event"
       (logEventFired, waitLogEventFired) <- timeLimitLog LogEntryAdded
@@ -193,10 +193,10 @@ logEventJavascriptErrorFromButton =
   demo "Log Events - JavaScript Error from Button Click" action
   where
     action :: DemoUtils -> BiDiActions -> IO ()
-    action utils@MkDemoUtils {..} cmds@MkCommands {..} = do
+    action utils@MkDemoUtils {..} bidi@MkBiDiActions {..} = do
       logTxt "Navigate to Bad JavaScript test page"
       url <- badJavaScriptUrl
-      bc <- rootContext utils cmds
+      bc <- rootContext utils bidi
       browsingContextNavigate $ MkNavigate bc url Nothing
       pause
 
@@ -278,7 +278,7 @@ logEventGenericEntry =
     -- or specific browser features. This demo shows how to subscribe to all log events
     -- and observe generic entries if they occur.
     action :: DemoUtils -> BiDiActions -> IO ()
-    action utils@MkDemoUtils {..} cmds@MkCommands {..} = do
+    action utils@MkDemoUtils {..} bidi@MkBiDiActions {..} = do
       logTxt "Subscribe to LogEntryAdded event (all types)"
       (logEventFired, waitLogEventFired) <- timeLimitLog LogEntryAdded
       subscribeLogEntryAdded logEventFired
@@ -288,7 +288,7 @@ logEventGenericEntry =
 
       logTxt "Navigate to checkboxes page"
       url <- checkboxesUrl
-      bc <- rootContext utils cmds
+      bc <- rootContext utils bidi
       browsingContextNavigate $ MkNavigate bc url Nothing
       pause
 

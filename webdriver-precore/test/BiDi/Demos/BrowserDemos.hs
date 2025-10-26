@@ -33,7 +33,7 @@ browserGetClientWindowsDemo =
   demo "Browser - Get Client Windows" action
   where
     action :: DemoUtils -> BiDiActions -> IO ()
-    action MkDemoUtils {..} MkCommands {..} = do
+    action MkDemoUtils {..} MkBiDiActions {..} = do
       logTxt "Getting current client windows"
       clientWindows <- browserGetClientWindows
       logShow "Client windows" clientWindows
@@ -45,7 +45,7 @@ browserCreateUserContextDemo =
   demo "Browser - Create User Context" action
   where
     action :: DemoUtils -> BiDiActions -> IO ()
-    action MkDemoUtils {..} MkCommands {..} = do
+    action MkDemoUtils {..} MkBiDiActions {..} = do
       logTxt "Creating basic user context"
       let basicUserContext = MkCreateUserContext 
             { insecureCerts = Nothing,
@@ -68,7 +68,7 @@ browserGetUserContextsDemo =
   demo "Browser - Get User Contexts" action
   where
     action :: DemoUtils -> BiDiActions -> IO ()
-    action MkDemoUtils {..} MkCommands {..} = do
+    action MkDemoUtils {..} MkBiDiActions {..} = do
       logTxt "Getting all user contexts"
       userContexts <- browserGetUserContexts
       logShow "User contexts" userContexts
@@ -80,7 +80,7 @@ browserSetClientWindowStateDemo =
   demo "Browser - Set Client Window State" action
   where
     action :: DemoUtils -> BiDiActions -> IO ()
-    action MkDemoUtils {..} MkCommands {..} = do
+    action MkDemoUtils {..} MkBiDiActions {..} = do
       logTxt "Getting current client windows to find one to modify"
       clientWindows <- browserGetClientWindows
       logShow "Available client windows" clientWindows
@@ -122,7 +122,7 @@ browserRemoveUserContextDemo =
   demo "Browser - Remove User Context" action
   where
     action :: DemoUtils -> BiDiActions -> IO ()
-    action MkDemoUtils {..} MkCommands {..} = do
+    action MkDemoUtils {..} MkBiDiActions {..} = do
       logTxt "Creating a user context to remove"
       let userContextParams = MkCreateUserContext 
             { insecureCerts = Nothing,
@@ -145,7 +145,7 @@ browserCompleteWorkflowDemo =
   demo "Browser - Complete Workflow" action
   where
     action :: DemoUtils -> BiDiActions -> IO ()
-    action MkDemoUtils {..} MkCommands {..} = do
+    action MkDemoUtils {..} MkBiDiActions {..} = do
       
       logTxt "Step 1: Get initial state"
       initialWindows <- browserGetClientWindows
@@ -248,7 +248,7 @@ browserCloseDemo =
   where
     -- will fail with: "Closing the browser in a session started with WebDriver classic is not supported."
     action :: DemoUtils -> BiDiActions -> IO ()
-    action MkDemoUtils {..} MkCommands {..} = do
+    action MkDemoUtils {..} MkBiDiActions {..} = do
 
       logTxt "Getting final browser state before closing..."
       finalWindows <- browserGetClientWindows

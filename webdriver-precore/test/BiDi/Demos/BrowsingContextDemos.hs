@@ -34,7 +34,7 @@ browsingContextCreateActivateCloseDemo =
   demo "Browsing Context - Create, Activate, Close" action
   where
     action :: DemoUtils -> BiDiActions -> IO ()
-    action MkDemoUtils {..} MkCommands {..} = do
+    action MkDemoUtils {..} MkBiDiActions {..} = do
       logTxt "New browsing context - Tab"
       let bcParams =
             MkCreate
@@ -109,8 +109,8 @@ browsingContextCaptureScreenshotCloseDemo =
   demo "Browsing Context - Capture Screenshot, Close" action
   where
     action :: DemoUtils -> BiDiActions -> IO ()
-    action utils@MkDemoUtils {..} cmds@MkCommands {..} = do
-      bc <- rootContext utils cmds
+    action utils@MkDemoUtils {..} bidi@MkBiDiActions {..} = do
+      bc <- rootContext utils bidi
 
       logTxt "Capture screenshot - default"
       screenshot <- browsingContextCaptureScreenshot $ MkCaptureScreenshot bc Nothing Nothing Nothing
@@ -157,8 +157,8 @@ browsingContextClosePromptUnloadDemo =
   demo "Browsing Context - Close with Unload Prompt" action
   where
     action :: DemoUtils -> BiDiActions -> IO ()
-    action utils@MkDemoUtils {..} cmds@MkCommands {..} = do
-      bc <- rootContext utils cmds
+    action utils@MkDemoUtils {..} bidi@MkBiDiActions {..} = do
+      bc <- rootContext utils bidi
 
       -- TODO :: promptUnload doesn't seem to do anything ??
       logTxt "Close browsing context - unload prompt True"
@@ -172,14 +172,14 @@ browsingContextGetTreeDemo =
   demo "Browsing Context - Get Tree" action
   where
     action :: DemoUtils -> BiDiActions -> IO ()
-    action utils@MkDemoUtils {..} cmds@MkCommands {..} = do
+    action utils@MkDemoUtils {..} bidi@MkBiDiActions {..} = do
       logTxt "Get browsing context tree - all"
       tree <- browsingContextGetTree $ MkGetTree Nothing Nothing
       logShow "Browsing context tree" tree
       pause
 
       logTxt "Create opener browsing context (Window)"
-      openerContext <- newWindowContext utils cmds
+      openerContext <- newWindowContext utils bidi
 
       logTxt "Create opened browsing context (Tab with opener reference)"
       openedContext <-
@@ -257,8 +257,8 @@ browsingContextHandleUserPromptDemo =
   demo "Browsing Context - Handle User Prompt" action
   where
     action :: DemoUtils -> BiDiActions -> IO ()
-    action utils@MkDemoUtils {..} cmds@MkCommands {..} = do
-      bc <- rootContext utils cmds
+    action utils@MkDemoUtils {..} bidi@MkBiDiActions {..} = do
+      bc <- rootContext utils bidi
 
       logTxt "Test 1: Create and handle an alert dialog"
 
@@ -364,8 +364,8 @@ browsingNavigateReloadTraverseHistoryDemo =
   demo "Browsing Context - Navigate, Reload, Traverse History" action
   where
     action :: DemoUtils -> BiDiActions -> IO ()
-    action utils@MkDemoUtils {..} cmds@MkCommands {..} = do
-      bc <- rootContext utils cmds
+    action utils@MkDemoUtils {..} bidi@MkBiDiActions {..} = do
+      bc <- rootContext utils bidi
 
       nav1 <- navigation1Url
       logTxt "Navigate to Navigation 1"
@@ -460,8 +460,8 @@ browsingContextLocateNodesDemo =
   demo "Browsing Context - Locate Nodes with All Selectors and Options" action
   where
     action :: DemoUtils -> BiDiActions -> IO ()
-    action utils@MkDemoUtils {..} cmds@MkCommands {..} = do
-      bc <- rootContext utils cmds
+    action utils@MkDemoUtils {..} bidi@MkBiDiActions {..} = do
+      bc <- rootContext utils bidi
 
       loginPage <- loginUrl
       logTxt "Navigate to Login Page for comprehensive selector testing"
@@ -693,8 +693,8 @@ browsingContextPrintAndSetViewportDemo =
   demo "Browsing Context - Print and Set Viewport" action
   where
     action :: DemoUtils -> BiDiActions -> IO ()
-    action utils@MkDemoUtils {..} cmds@MkCommands {..} = do
-      bc <- rootContext utils cmds
+    action utils@MkDemoUtils {..} bidi@MkBiDiActions {..} = do
+      bc <- rootContext utils bidi
 
       contentPage <- contentPageUrl
       logTxt "Navigate to Content Page for print and viewport testing"

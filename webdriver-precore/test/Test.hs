@@ -278,8 +278,8 @@ biDiError :: Text -> BiDiDemo -> BiDiDemo
 biDiError errorFragment MkBiDiDemo {name, action} =
   MkBiDiDemo
     { name = name <> " - EXPECTED ERROR: " <> errorFragment,
-      action = \utils cmds -> do
-        result <- try (action utils cmds)
+      action = \utils bidi -> do
+        result <- try (action utils bidi)
         case result of
           Left (e :: SomeException) -> do
             let errText = txt $ show e

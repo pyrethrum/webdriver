@@ -59,7 +59,7 @@ runDemo demo' =
     runDemo' (Just queueLog) demoPause demo'
 
 newWindowContext :: DemoUtils -> BiDiActions -> IO BrowsingContext
-newWindowContext MkDemoUtils {..} MkCommands {..} = do
+newWindowContext MkDemoUtils {..} MkBiDiActions {..} = do
   logTxt "New browsing context - Window"
   bcWin <- browsingContextCreate bcParams {createType = Window}
   logShow "Browsing context - Window" bcWin
@@ -75,14 +75,14 @@ newWindowContext MkDemoUtils {..} MkCommands {..} = do
         }
 
 closeContext :: DemoUtils -> BiDiActions -> BrowsingContext -> IO ()
-closeContext MkDemoUtils {..} MkCommands {..} bc = do
+closeContext MkDemoUtils {..} MkBiDiActions {..} bc = do
   logTxt "Close browsing context"
   co <- browsingContextClose $ MkClose {context = bc, promptUnload = Nothing}
   logShow "Close result" co
   pause
 
 rootContext :: DemoUtils -> BiDiActions -> IO BrowsingContext
-rootContext MkDemoUtils {..} MkCommands {..} = do
+rootContext MkDemoUtils {..} MkBiDiActions {..} = do
   logTxt "Get root browsing context"
   tree <- browsingContextGetTree $ MkGetTree Nothing Nothing
   logShow "Browsing context tree" tree
@@ -102,7 +102,7 @@ instance Exception TextValidationError
 
 -- | Check if expected text is present in DOM with timeout and retry, throw error if not found
 chkDomContains' :: Timeout -> Timeout -> DemoUtils -> BiDiActions -> BrowsingContext -> Text -> IO ()
-chkDomContains' timeout pause' MkDemoUtils {..} MkCommands {..} bc expectedText = do
+chkDomContains' timeout pause' MkDemoUtils {..} MkBiDiActions {..} bc expectedText = do
   startTime <- getPOSIXTime
   logTxt $ "Checking DOM contains: " <> expectedText <> " (timeout: " <> txt timeout <> "ms, pause: " <> txt pause' <> "ms)"
   checkLoop $ startTime + (fromIntegral timeout.microseconds / 1000000)
