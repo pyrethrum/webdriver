@@ -8,15 +8,15 @@
   - All 97 tests passed (220.75s)
   - All 97 tests passed (181.01s) - headless
 - [x] pull logger out
-- [ ] rename BidiActions/Methods BiDiSocket / BiDiActions
+- [x] rename BidiActions/Methods BiDiSocket / BiDiActions
 - [ ] specific code TODOs - TODO tree
 - [ ] check all exports - should use prtocol and API only
 - [ ] update to latest spec
 - [ ] remove unneeded instances to and fromJSON
 - [ ] Claude reconcile / review
+- [ ] fallback
 
 ## http
-- [ ] test => demos => test
 - [x] switch to local http files
   - before 
     - headed - All 22 tests passed (148.72s)
@@ -27,12 +27,20 @@
     - All 22 tests passed (96.09s) (headless)
   - [x] remove old constants (links and selectors)
 - [ ] switch to command (leave legacy)
-- [ ] update to latest spec
+  - [ ] create Protocol
+  - [ ] create API
+    - [ ] legacy in terms of Protocol / API
+  - [ ] rerun tests
+    - [ ] small sample of tests called legacy
+  - [ ] refactor all tests in terms of API / Protocol 
 - [ ] switch to protocol and API - keep legacy
-- [ ] remove unneeded instances to and fromJSON
+- [ ] test => demos => test
 - [ ] review demoUtils
   - [ ] http may not need timeLimitLog et. al. 
   - [ ] delete static functions
+- [ ] update to latest spec
+- [ ] remove unneeded instances to and fromJSON
+- [ ] fallback
 
 ## update 
   - update bidi to latest spec
