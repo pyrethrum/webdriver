@@ -3,7 +3,6 @@ module Http.HttpDemo where
 -- minFirefoxSession,
 
 import Config (loadConfig)
-import Const (theInternet, Timeout (MkTimeout))
 import Const qualified as Const
 import Control.Exception (bracket)
 import Control.Monad (forM_)
