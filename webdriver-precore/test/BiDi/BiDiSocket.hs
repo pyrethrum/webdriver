@@ -12,17 +12,16 @@ module BiDi.BiDiSocket
     matchedResponse,
     subscribe,
     unsubscribe,
-    removeSubscription
+    removeSubscription,
+    counterVar,
+    mkAtomicCounter
   ) where
 
 import Control.Exception (Exception (displayException), SomeException, catch)
-import Control.Monad (when)
-import Data.Aeson (ToJSON, FromJSON, Value (..), encode, toJSON, Object)
-import Data.Coerce (coerce)
+import Data.Aeson (ToJSON, FromJSON, Value (..), toJSON, Object)
 import Data.Foldable (Foldable (toList))
 import Data.Function ((&))
-import Data.Maybe (fromMaybe)
-import Data.Text as T (Text, unpack)
+import Data.Text (unpack)
 import GHC.Generics (Generic)
 import IOUtils (QueLog (..))
 import UnliftIO (catchAny, throwIO)
@@ -31,17 +30,12 @@ import WebDriverPreCore.BiDi.Command
 import WebDriverPreCore.BiDi.CoreTypes (JSUInt (..))
 import WebDriverPreCore.BiDi.Event (Subscription (..))
 import WebDriverPreCore.BiDi.Protocol
-  ( BrowsingContext,
-    Event,
-    MatchedResponse (..),
-    SessionSubscribeResult (..),
+  ( SessionSubscribeResult (..),
     SessionSubscriptionRequest (..),
     SessionUnsubscribe,
     SubscriptionId (..),
-    SubscriptionType (..),
-    UserContext,
   )
-import WebDriverPreCore.BiDi.Response (JSONDecodeError, ResponseObject (..), parseResponse, displayResponseError)
+import WebDriverPreCore.BiDi.Response (JSONDecodeError, ResponseObject (..), parseResponse, displayResponseError, MatchedResponse (..))
 import WebDriverPreCore.BiDi.Session (SessionUnsubscribe (..))
 import WebDriverPreCore.Internal.Utils (txt)
 import Prelude hiding (log)

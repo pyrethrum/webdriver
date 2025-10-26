@@ -12,12 +12,12 @@ module BiDi.BiDiRunner
   ) where
 
 import BiDi.BiDiActions (BiDiActions, mkActions)
-import BiDi.BiDiSocket (BiDiSocket, Channels(..), ActiveSubscription (..), mkChannels, mkBiDiSocket)
+import BiDi.BiDiSocket (BiDiSocket, Channels(..), ActiveSubscription (..), mkChannels, mkBiDiSocket, counterVar, mkAtomicCounter)
 import Config (Config, loadConfig)
 import Const (Timeout)
-import Control.Exception (Exception (displayException), SomeException, catch, throw)
+import Control.Exception (Exception (displayException), throw)
 import Control.Monad (when)
-import Data.Aeson (FromJSON, Object, ToJSON, Value (..), encode, toJSON, withObject, (.:))
+import Data.Aeson (FromJSON, Object, Value (..), encode, toJSON, withObject, (.:))
 import Data.Aeson.Types (FromJSON (..), Parser)
 import Data.ByteString.Lazy qualified as BL
 import Data.Coerce (coerce)
@@ -33,18 +33,16 @@ import Http.HttpAPI qualified as Caps (Capabilities (..))
 import IOUtils (DemoUtils, QueLog (..), bidiDemoUtils, catchLog, loopForever)
 import Network.WebSockets (Connection, receiveData, runClient, sendTextData)
 import RuntimeConst (httpCapabilities, httpFullCapabilities)
-import UnliftIO (bracket, throwIO, waitAnyCatch)
+import UnliftIO (bracket, waitAnyCatch)
 import UnliftIO.Async (Async, async, cancel)
 import UnliftIO.STM
 import WebDriverPreCore.BiDi.BiDiUrl (BiDiUrl (..), getBiDiUrl)
 import WebDriverPreCore.BiDi.CoreTypes (JSUInt (..))
 import WebDriverPreCore.BiDi.Event (Subscription (..))
 import WebDriverPreCore.BiDi.Protocol
-  ( Event,
-    SubscriptionId (..),
-    SubscriptionType (..),
+  ( SubscriptionType (..)
   )
-import WebDriverPreCore.BiDi.Response (JSONDecodeError, ResponseObject (..), decodeResponse)
+import WebDriverPreCore.BiDi.Response (ResponseObject (..), decodeResponse)
 import WebDriverPreCore.Http qualified as Http
 import WebDriverPreCore.Internal.AesonUtils (jsonToText, objToText, parseThrow)
 import WebDriverPreCore.Internal.Utils (txt)
@@ -101,22 +99,7 @@ withNewBiDiSession params action =
 
 
 
--- | Parse incoming WebSocket message to determine if it's an event or command response
--- For now, we'll use a simple heuristic: messages with "id" are responses, others are events
-parseIncomingMessage :: (Text -> IO ()) -> Value -> IO (Either ResponseObject Event)
-parseIncomingMessage log json = do
-  -- todo:: FIX THIS should not encode then decode
-  let jsonBytes = encode json
-  -- Try to parse as command response first
-  case decodeResponse jsonBytes of
-    Right responseObj -> do
-      log $ "Parsed as command response: " <> jsonToText json
-      pure $ Left responseObj
-    Left _ -> do
-      -- TODO :: Treat as potential event - we'll improve this later when Event has FromJSON
-      log $ "Treating as event: " <> jsonToText json
-      -- TODO: implement
-      pure $ Right undefined
+
 
 data BiDiClientParams = MkBiDiClientParams
   { queueLog :: QueLog,
@@ -144,7 +127,7 @@ failAction lbl failCallCount action = do
   let counter = mkAtomicCounter counterVar'
   pure $ \a -> do
     n <- counter
-    if (coerce n) == failCallCount
+    if (coerce n :: Word64) == failCallCount
       then do
         error $ "Forced failure for testing: " <> unpack lbl <> " (call #" <> show n <> ")"
       else do
