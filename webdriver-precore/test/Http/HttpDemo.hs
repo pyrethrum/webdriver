@@ -124,6 +124,7 @@ import Test.Tasty.HUnit (Assertion, assertBool)
 import WebDriverPreCore.Http (minFullCapabilities)
 import WebDriverPreCore.Internal.Utils (txt)
 import Prelude hiding (log)
+import Const (theInternet)
 
 -- #################### The Tests ######################
 
@@ -504,16 +505,15 @@ unit_demoExecuteScript =
 epochSeconds :: IO Int
 epochSeconds = round <$> getPOSIXTime
 
+
 -- >>> unit_demoCookiesRemote
--- *** Exception: user error (WebDriver error thrown:
---  WebDriverError {error = NoSuchCookie, description = "No cookie matching the given path name was found amongst the associated cookies of session's current browsing context's active document", httpResponse = MkHttpResponse {statusCode = 404, statusMessage = "Not Found", body = Object (fromList [("value",Object (fromList [("error",String "no such cookie"),("message",String "No cookie with name myCookie"),("stacktrace",String "")]))])}})
 unit_demoCookiesRemote :: IO ()
 unit_demoCookiesRemote =
   withSession \ses -> do
-    url <- indexUrl
-    navigateTo ses url
+    navigateTo ses theInternet
     logShowM "cookies" $ getAllCookies ses
 
+    logShowM "getNamedCookie: optimizelyEndUserId" $ getNamedCookie ses "optimizelyEndUserId"
     epocSecs <- epochSeconds
 
     let myCookie =
@@ -521,8 +521,8 @@ unit_demoCookiesRemote =
             { name = "myCookie",
               value = "myCookieValue",
               path = Just "/",
-              domain = Nothing,  -- file:// URLs don't have domains
-              secure = Just False,
+              domain = Just ".the-internet.herokuapp.com",
+              secure = Just True,
               sameSite = Just Strict,
               httpOnly = Just False,
               -- expire in 10 mins (Chrome has a 400 day limit)
@@ -541,6 +541,49 @@ unit_demoCookiesRemote =
     logShow "cookies after delete" afterRemove
 
     assertBool "cookie should be removed" $ not (any ((== "myCookie") . (.name)) afterRemove)
+    assertBool "there still should be cookies in the list" $ not (null afterRemove)
+
+    logShowM "deleteAllCookies" $ deleteAllCookies ses
+    afterDeleteAll <- getAllCookies ses
+    logShow "cookies after delete all" afterDeleteAll
+    assertBool "all cookies should be removed" $ null afterDeleteAll
+
+-- >>> unit_demoCookiesFix
+unit_demoCookiesFix :: IO ()
+unit_demoCookiesFix =
+  withSession \ses -> do
+    navigateTo ses theInternet
+    logShowM "cookies" $ getAllCookies ses
+
+    logShowM "getNamedCookie: optimizelyEndUserId" $ getNamedCookie ses "optimizelyEndUserId"
+    epocSecs <- epochSeconds
+
+    let myCookie =
+          MkCookie
+            { name = "myCookie",
+              value = "myCookieValue",
+              path = Just "/",
+              domain = Just ".the-internet.herokuapp.com",
+              secure = Just True,
+              sameSite = Just Strict,
+              httpOnly = Just False,
+              -- expire in 10 mins (Chrome has a 400 day limit)
+              expiry = Just $ epocSecs + 600
+            }
+
+    logShow "cookie to add" myCookie
+    logShowM "addCookie" $ addCookie ses myCookie
+    logShowM "cookies after add" $ getAllCookies ses
+
+    myCookie' <- getNamedCookie ses "myCookie"
+    myCookie === myCookie'
+
+    logShowM "deleteCookie (myCookie)" $ deleteCookie ses "myCookie"
+    afterRemove <- getAllCookies ses
+    logShow "cookies after delete" afterRemove
+
+    assertBool "cookie should be removed" $ not (any ((== "myCookie") . (.name)) afterRemove)
+    assertBool "there still should be cookies in the list" $ not (null afterRemove)
 
     logShowM "deleteAllCookies" $ deleteAllCookies ses
     afterDeleteAll <- getAllCookies ses
@@ -567,7 +610,7 @@ unit_demoCookies =
               { name = cookienName,
                 value = "myCookieValue",
                 path = Just "/", -- Set path to root
-                domain = Just "localhost", -- Let the browser set the domain automatically
+                domain = Just ".localhost", 
                 secure = Just False,
                 sameSite = Just None,
                 httpOnly = Just False,
