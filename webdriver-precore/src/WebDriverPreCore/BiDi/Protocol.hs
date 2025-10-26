@@ -9,6 +9,7 @@ module WebDriverPreCore.BiDi.Protocol
     module WebDriverPreCore.BiDi.Emulation,
     module WebDriverPreCore.BiDi.Input,
     module WebDriverPreCore.BiDi.Log,
+    module WebDriverPreCore.BiDi.Response,
     module WebDriverPreCore.BiDi.Script,
     module WebDriverPreCore.BiDi.Session,
     module WebDriverPreCore.BiDi.Storage,
@@ -50,6 +51,14 @@ module WebDriverPreCore.BiDi.Protocol
     SetCookieHeader (..),
   )
 where
+
+import WebDriverPreCore.BiDi.Response
+  ( JSONDecodeError (..),
+    MatchedResponse (..),
+    ResponseObject (..),
+    parseResponse,
+    displayResponseError
+  )
 
 import WebDriverPreCore.BiDi.Browser
   ( ClientWindowInfo (..),

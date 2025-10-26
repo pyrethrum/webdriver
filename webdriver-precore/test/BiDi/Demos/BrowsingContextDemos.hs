@@ -1,6 +1,6 @@
 module BiDi.Demos.BrowsingContextDemos where
 
-import BiDi.BiDiRunner (BiDiActions (..))
+import BiDi.BiDiActions (BiDiActions (..))
 import BiDi.DemoUtils
 import Data.Aeson (Value (Null), object, (.=))
 import Data.Text (Text)

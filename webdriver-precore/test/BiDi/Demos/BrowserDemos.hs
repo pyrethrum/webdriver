@@ -1,6 +1,6 @@
 module BiDi.Demos.BrowserDemos where
 
-import BiDi.BiDiRunner (BiDiActions (..))
+import BiDi.BiDiActions (BiDiActions (..))
 import BiDi.DemoUtils
 import IOUtils (DemoUtils (..))
 import WebDriverPreCore.BiDi.Browser

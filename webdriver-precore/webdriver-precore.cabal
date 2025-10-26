@@ -106,7 +106,7 @@ common commonGhcOptions
     -fno-warn-unused-do-bind 
     -Wno-overlapping-patterns 
     -fprefer-byte-code 
-    -fdefer-type-errors
+    -- -fdefer-type-errors
 
 library
   import: commonExtensions, commonGhcOptions
@@ -203,6 +203,8 @@ test-suite test
     , Http.HttpAPI
     , Http.HttpDemo
     , BiDi.BiDiRunner
+    , BiDi.BiDiSocket
+    , BiDi.BiDiActions
     , BiDi.DemoUtils
     , BiDi.Demos.BrowserDemos
     , BiDi.Demos.BrowsingContextDemos

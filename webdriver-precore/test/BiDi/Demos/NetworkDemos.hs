@@ -1,6 +1,6 @@
 module BiDi.Demos.NetworkDemos where
 
-import BiDi.BiDiRunner (BiDiActions (..))
+import BiDi.BiDiActions (BiDiActions (..))
 import BiDi.DemoUtils
 import IOUtils (DemoUtils (..))
 import TestServerAPI (authTestUrl, boringHelloUrl, boringHelloUrl2, testServerHomeUrl, withTestServer)

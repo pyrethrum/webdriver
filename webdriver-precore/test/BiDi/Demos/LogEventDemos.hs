@@ -1,6 +1,6 @@
 module BiDi.Demos.LogEventDemos where
 
-import BiDi.BiDiRunner (BiDiActions (..))
+import BiDi.BiDiActions (BiDiActions (..))
 import BiDi.DemoUtils ( demo, rootContext, BiDiDemo )
 import Data.Maybe (fromJust)
 import IOUtils (DemoUtils (..))

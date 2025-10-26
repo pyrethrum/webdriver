@@ -1,6 +1,6 @@
 module BiDi.Demos.WebExtensionDemos where
 
-import BiDi.BiDiRunner (BiDiActions (..))
+import BiDi.BiDiActions (BiDiActions (..))
 import BiDi.DemoUtils
 import Control.Exception (SomeException, catch)
 import Data.Aeson.KeyMap qualified as AKM

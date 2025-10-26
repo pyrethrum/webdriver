@@ -1,6 +1,7 @@
 module BiDi.DemoUtils where
 
-import BiDi.BiDiRunner (BiDiActions (..), mkDemoBiDiClientParams, withCommands)
+import BiDi.BiDiActions (BiDiActions (..))
+import BiDi.BiDiRunner (mkDemoBiDiClientParams, withCommands)
 import Const (Timeout (..), seconds)
 import Control.Exception (Exception, catch, throwIO)
 import Data.Text (Text, isInfixOf)

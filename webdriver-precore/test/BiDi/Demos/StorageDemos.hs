@@ -1,6 +1,6 @@
 module BiDi.Demos.StorageDemos where
 
-import BiDi.BiDiRunner (BiDiActions (..))
+import BiDi.BiDiActions (BiDiActions (..))
 import BiDi.DemoUtils
 import IOUtils (DemoUtils (..))
 import WebDriverPreCore.BiDi.CoreTypes (StringValue (MkStringValue))

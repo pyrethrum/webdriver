@@ -1,6 +1,7 @@
 module BiDi.Demos.OtherDemos where
 
-import BiDi.BiDiRunner 
+import BiDi.BiDiActions (BiDiActions)
+import BiDi.BiDiRunner (mkFailBidiClientParams, withCommands)
 import BiDi.DemoUtils
 import IOUtils
 import Data.Text (Text)

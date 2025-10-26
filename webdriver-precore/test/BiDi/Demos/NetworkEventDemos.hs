@@ -1,6 +1,6 @@
 module BiDi.Demos.NetworkEventDemos where
 
-import BiDi.BiDiRunner (BiDiActions (..))
+import BiDi.BiDiActions (BiDiActions (..))
 import BiDi.DemoUtils
 import IOUtils (DemoUtils (..))
 import TestServerAPI (authTestUrl, testServerHomeUrl, withTestServer, malformedResponseUrl)
