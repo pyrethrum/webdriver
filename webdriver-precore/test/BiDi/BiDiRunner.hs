@@ -52,10 +52,6 @@ withCommands :: BiDiClientParams -> (DemoUtils -> BiDiActions -> IO ()) -> IO ()
 withCommands params action =
   withNewBiDiSession params $ \utils -> action utils . mkActions
 
-
-
-
-
 mkDemoBiDiClientParams :: Maybe QueLog -> Timeout -> IO BiDiClientParams
 mkDemoBiDiClientParams mQueLog pauseTimeout = do
   let qLog = fromMaybe (MkQueLog $ const $ pure ()) mQueLog
@@ -96,10 +92,6 @@ withNewBiDiSession params action =
     \s' -> do
       let bidiUrl = getBiDiUrl s' & either (error . T.unpack) id
       withBiDiClient params bidiUrl action
-
-
-
-
 
 data BiDiClientParams = MkBiDiClientParams
   { queueLog :: QueLog,
