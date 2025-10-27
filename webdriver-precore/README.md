@@ -32,6 +32,65 @@ Adapt and move when ready
     - [4. Launch WebDriver From the Terminal](#4-launch-webdriver-from-the-terminal)
     - [5. Drive the Browser Via the IO API](#5-drive-the-browser-via-the-io-api)
 
+
+```mermaid
+classDiagram
+    class Protocol {
+        <<Core Library>>
+        +Type definitions
+        +Data structures
+        +Command types
+        +Event types
+        +Serialization
+    }
+    
+    class API {
+        <<Core Library>>
+        +sessionNew()
+        +browsingContextNavigate()
+        +scriptEvaluate()
+        +networkAddIntercept()
+        +storageGetCookies()
+    }
+    
+    class BiDiSocket {
+        <<User Implementation>>
+        +send()
+        +getNext()
+        +subscribe()
+        +unsubscribe()
+        +WebSocket communication
+    }
+    
+    class BiDiActions {
+        <<User Implementation>>
+        +High-level workflows
+        +Application-specific actions
+        +Command orchestration
+    }
+    
+    API ..> Protocol : uses
+    BiDiSocket ..> Protocol : uses
+    BiDiActions ..> API : uses
+    BiDiActions ..> Protocol : uses
+    BiDiActions ..> BiDiSocket : uses
+    
+    namespace WebDriver_PreCore {
+        class Protocol
+        class API
+    }
+    
+    namespace User_Implementation {
+        class BiDiSocket
+        class BiDiActions
+    }
+    
+    style Protocol fill:#e3f2fd,stroke:#1976d2,stroke-width:3px,color:#000,rx:10
+    style API fill:#e3f2fd,stroke:#1976d2,stroke-width:3px,color:#000,rx:10
+    style BiDiSocket fill:#fff3e0,stroke:#f57c00,stroke-width:3px,color:#000,rx:10
+    style BiDiActions fill:#fff3e0,stroke:#f57c00,stroke-width:3px,color:#000,rx:10
+```
+
 ## What is This Library?
 
 This library provides a minimal abstraction over the [WebDriver W3C Protocol endpoints](https://www.w3.org/TR/webdriver2/) without providing any implementation. It provides a description of the W3C API as a list of functions that return a [HttpSpec type](#HttpSpec). The intention is that other libraries will provide the actual implementation.

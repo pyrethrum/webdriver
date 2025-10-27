@@ -26,6 +26,10 @@
     - All 22 tests passed (109.25s) (headed)
     - All 22 tests passed (96.09s) (headless)
   - [x] remove old constants (links and selectors)
+- [ ] test => demos => test
+- [ ] review demoUtils
+  - [ ] http may not need timeLimitLog et. al. 
+  - [ ] delete static functions
 - [ ] switch to command (leave legacy)
   - [ ] create Protocol
   - [ ] create API
@@ -34,10 +38,6 @@
     - [ ] small sample of tests called legacy
   - [ ] refactor all tests in terms of API / Protocol 
 - [ ] switch to protocol and API - keep legacy
-- [ ] test => demos => test
-- [ ] review demoUtils
-  - [ ] http may not need timeLimitLog et. al. 
-  - [ ] delete static functions
 - [ ] update to latest spec
 - [ ] remove unneeded instances to and fromJSON
 - [ ] fallback
