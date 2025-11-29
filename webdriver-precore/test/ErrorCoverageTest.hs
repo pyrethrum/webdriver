@@ -9,13 +9,15 @@ import WebDriverPreCore.Http
     ( errorTypeToErrorCode,
       errorDescription,
       errorCodeToErrorType )
+import WebDriverPreCore.BiDi.Error qualified as BiDi
 import GHC.Show (Show (..))
 import Data.Eq (Eq ((==)))
 import Data.Ord (Ord)
 import Data.Function (($), (.), (&))
+import Data.Maybe (maybe)
 import Data.Semigroup ((<>))
 import Data.Functor ((<$>))
-import GHC.Base (error)
+import GHC.Base (error, id)
 import WebDriverPreCore.Internal.Utils(enumerate)
 import Data.Foldable (traverse_)
 import Data.Either (either)
@@ -23,7 +25,7 @@ import Data.Either (either)
 {-
 !! Replace this the endepoints from the spec with every release
 !! remove full stops and replace tabs with " | "
-https://www.w3.org/TR/2025/WD-webdriver2-20250512 - W3C Editor's Draft 10 February 2025
+https://www.w3.org/TR/2025/WD-webdriver2-20251028 - W3C Editor's Draft 10 February 2025
 61 endpoints
 Error Code 	HTTP Status 	JSON Error Code 	Description 
 -}
@@ -107,3 +109,88 @@ unit_round_trip_error_codes = do
       let errorCode = errorTypeToErrorCode errorType
           errorType' = errorCodeToErrorType errorCode
       errorType' & either (error . show) (errorType @=?)
+
+
+--- BiDi Errors
+
+{-
+!! Replace this with the error codes from the BiDi spec with every release
+WebDriver BiDi Spec
+-}
+bidiErrorsFromSpec :: Text
+bidiErrorsFromSpec = pack
+  [r|invalid argument
+invalid selector
+invalid session id
+invalid web extension
+move target out of bounds
+no such alert
+no such network collector
+no such element
+no such frame
+no such handle
+no such history entry
+no such intercept
+no such network data
+no such node
+no such request
+no such script
+no such storage partition
+no such user context
+no such web extension
+session not created
+unable to capture screen
+unable to close browser
+unable to set cookie
+unable to set file input
+unavailable network data
+underspecified storage partition
+unknown command
+unknown error
+unsupported operation
+|]
+
+data BiDiErrorLine = MkBiDiErrorLine
+  { 
+    bidiErrorCode :: Text,
+    bidiDescription :: Text
+  }
+  deriving (Show, Eq, Ord)
+
+-- >>> allBiDiErrorsFromSpec
+allBiDiErrorsFromSpec :: Set BiDiErrorLine
+allBiDiErrorsFromSpec = fromList $ parseBiDiErrorLine <$> filterOut T.null (T.lines bidiErrorsFromSpec)
+ where
+  parseBiDiErrorLine :: Text -> BiDiErrorLine
+  parseBiDiErrorLine line = 
+    let errorCodeText = strip line
+        errorCode = BiDi.fromErrorCodeText errorCodeText & maybe (error $ "Unknown BiDi error code: " <> show errorCodeText) id
+    in MkBiDiErrorLine errorCodeText (BiDi.errorDescription errorCode)
+
+-- >>> allBiDiErrors
+allBiDiErrors :: Set BiDiErrorLine
+allBiDiErrors = fromList $
+ (\et -> MkBiDiErrorLine { 
+    bidiErrorCode  = BiDi.toErrorCodeText et,
+    bidiDescription = BiDi.errorDescription et
+  })  <$> enumerate
+
+-- >>> unit_test_all_bidi_errors_covered
+unit_test_all_bidi_errors_covered :: Assertion
+unit_test_all_bidi_errors_covered = do
+  assertBool ("Missing BiDi errors (in spec not captured by ErrorCode):\n " <> show missing) (S.null missing)
+  assertBool ("Extra BiDi errors (in ErrorCode but not in spec):\n " <> show extra) (S.null extra)
+  where
+    missing = allBiDiErrors `difference` allBiDiErrorsFromSpec
+    extra = allBiDiErrorsFromSpec `difference` allBiDiErrors
+
+
+-- >>> unit_round_trip_bidi_error_codes
+unit_round_trip_bidi_error_codes :: Assertion
+unit_round_trip_bidi_error_codes = do
+  traverse_ checkRoundTripBiDiErrorCodes enumerate
+  where
+    checkRoundTripBiDiErrorCodes errorCode = do
+      let errorCodeText = BiDi.toErrorCodeText errorCode
+          errorCode' = BiDi.fromErrorCodeText errorCodeText
+      errorCode' & maybe (error $ "Failed to parse BiDi error code: " <> show errorCodeText) (errorCode @=?)

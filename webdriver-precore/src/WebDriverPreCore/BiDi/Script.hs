@@ -24,6 +24,7 @@ module WebDriverPreCore.BiDi.Script
     Disown (..),
     Target (..),
     Realm (..),
+    RealmDestroyed (..),
     Sandbox (..),
     Evaluate (..),
     GetRealms (..),
@@ -50,7 +51,6 @@ module WebDriverPreCore.BiDi.Script
     RemoteReference (..),
     SharedReference (..),
     RemoteObjectReference (..),
-    SharedId (..),
   )
 where
 
@@ -62,15 +62,11 @@ import Data.Maybe (catMaybes)
 import Data.Text (Text, unpack)
 import Data.Vector qualified as V
 import GHC.Generics
-import WebDriverPreCore.BiDi.CoreTypes
-  ( BrowsingContext,
-    Handle,
-    InternalId (..),
-    JSUInt,
-    NodeRemoteValue (..), UserContext,
-  )
-import WebDriverPreCore.Internal.AesonUtils (jsonToText, opt, toJSONOmitNothing)
+import WebDriverPreCore.BiDi.CoreTypes (BrowsingContext, Handle, InternalId (..), JSUInt, NodeRemoteValue (..), SharedId, StringValue (..), UserContext)
+import WebDriverPreCore.Internal.AesonUtils (jsonToText, opt, parseJSONOmitNothing, toJSONOmitNothing)
 import Prelude (Applicative (..), Bool (..), Double, Either (..), Eq (..), Maybe (..), MonadFail (..), Semigroup (..), Show (..), Traversable (..), mapM, realToFrac, ($), (.), (<$>))
+
+-- TODO :: amke all imports exports explict
 
 -- ######### REMOTE #########
 
@@ -189,7 +185,7 @@ instance FromJSON RemoteValue where
     case typ of
       "undefined" -> pure $ PrimitiveValue UndefinedValue
       "null" -> pure $ PrimitiveValue NullValue
-      "string" -> PrimitiveValue . StringValue <$> obj .: "value"
+      "string" -> PrimitiveValue . StringValue . MkStringValue <$> obj .: "value"
       "number" ->
         PrimitiveValue . NumberValue <$> do
           v <- obj .: "value"
@@ -262,7 +258,7 @@ instance FromJSON RemoteValue where
 data PrimitiveProtocolValue
   = UndefinedValue
   | NullValue
-  | StringValue Text
+  | StringValue StringValue
   | NumberValue (Either Double SpecialNumber)
   | BooleanValue Bool
   | BigIntValue Text
@@ -333,18 +329,16 @@ data SharedReference = MkSharedReference
   }
   deriving (Show, Eq, Generic)
 
+instance FromJSON SharedReference where
+  parseJSON :: Value -> Parser SharedReference
+  parseJSON = parseJSONOmitNothing
+
 data RemoteObjectReference = MkRemoteObjectReference
   { handle :: Handle,
     shartedId :: Maybe SharedId,
     extensions :: Maybe (Map.Map Text Value) -- "extensions" field is optional
   }
   deriving (Show, Eq, Generic)
-
-newtype SharedId = MkShareId
-  { id :: Text -- SharedId
-  }
-  deriving (Show, Eq, Generic)
-  deriving newtype (ToJSON)
 
 -- | List of local values
 newtype ListLocalValue = MkListLocalValue [LocalValue]
@@ -369,15 +363,13 @@ newtype MappingLocalValue = MkMappingLocalValue [(Either LocalValue Text, LocalV
 
 -- | Map local value
 data MapLocalValue = MkMapLocalValue
-  { 
-    value :: MappingLocalValue
+  { value :: MappingLocalValue
   }
   deriving (Show, Eq, Generic)
 
 -- | Object local value
 data ObjectLocalValue = MkObjectLocalValue
-  { 
-    value :: MappingLocalValue
+  { value :: MappingLocalValue
   }
   deriving (Show, Eq, Generic)
 
@@ -390,8 +382,7 @@ data RegExpValue = MkRegExpValue
 
 -- | RegExp local value
 data RegExpLocalValue = MkRegExpLocalValue
-  { 
-    value :: RegExpValue
+  { value :: RegExpValue
   }
   deriving (Show, Eq, Generic)
 
@@ -491,10 +482,10 @@ instance FromJSON ContextTarget
 instance ToJSON ContextTarget where
   toJSON :: ContextTarget -> Value
   toJSON = genericToJSON defaultOptions {omitNothingFields = True}
-newtype Sandbox = MkSandbox Text 
-   deriving (Show, Eq)
-   deriving newtype (ToJSON, FromJSON)
-  
+
+newtype Sandbox = MkSandbox Text
+  deriving (Show, Eq)
+  deriving newtype (ToJSON, FromJSON)
 
 instance ToJSON Realm
 
@@ -505,17 +496,6 @@ instance ToJSON Target where
     RealmTarget r -> toJSON r
     ContextTarget ct -> toJSON ct
 
-{-
-
-script.EvaluateParameters = {
-  expression: text,
-  target: script.Target,
-  awaitPromise: bool,
-  ? resultOwnership: script.ResultOwnership,
-  ? serializationOptions: script.SerializationOptions,
-  ? userActivation: bool .default false,
-}
--}
 -- Evaluate command
 data Evaluate = MkEvaluate
   { expression :: Text,
@@ -578,6 +558,27 @@ data RealmInfo
   | Worklet {base :: BaseRealmInfo}
   deriving (Show, Eq, Generic)
 
+instance FromJSON RealmInfo where
+  parseJSON :: Value -> Parser RealmInfo
+  parseJSON = withObject "RealmInfo" $ \o -> do
+    typ <- o .: "type"
+    base <- BaseRealmInfo <$> o .: "realm" <*> o .: "origin"
+    case typ of
+      "window" -> do
+        context <- o .: "context"
+        sandbox <- o .:? "sandbox"
+        pure $ Window {base, context, sandbox}
+      "dedicated-worker" -> do
+        owners <- o .: "owners"
+        pure $ DedicatedWorker {base, owners}
+      "shared-worker" -> pure $ SharedWorker {base}
+      "service-worker" -> pure $ ServiceWorker {base}
+      "worker" -> pure $ Worker {base}
+      "paint-worklet" -> pure $ PaintWorklet {base}
+      "audio-worklet" -> pure $ AudioWorklet {base}
+      "worklet" -> pure $ Worklet {base}
+      _ -> fail $ "Unknown RealmInfo type: " <> unpack typ
+
 data BaseRealmInfo = BaseRealmInfo
   { realm :: Realm,
     origin :: Text
@@ -635,13 +636,28 @@ data StackFrame = StackFrame
 -- ScriptEvent types
 
 data ScriptEvent
-  = MessageEvent
-      { method :: Text, -- "script.message"
-        params :: Message
-      }
+  = MessageEvent Message
   | RealmCreatedEvent RealmInfo
-  | RealmDestroyed Realm
-  deriving (Show, Generic)
+  | RealmDestroyed RealmDestroyed
+  deriving (Show, Eq, Generic)
+
+instance FromJSON ScriptEvent where
+  parseJSON :: Value -> Parser ScriptEvent
+  parseJSON = withObject "ScriptEvent" $ \o -> do
+    typ <- o .: "method"
+    case typ of
+      "script.message" -> do
+        params <- o .: "params"
+        pure $ MessageEvent params
+      "script.realmCreated" -> do
+        params <- o .: "params"
+        realmInfo <- parseJSON params
+        pure $ RealmCreatedEvent realmInfo
+      "script.realmDestroyed" -> do
+        params <- o .: "params"
+        realmid <- params .: "realm"
+        pure . RealmDestroyed $ MkRealmDestroyed realmid
+      _ -> fail $ "Unknown ScriptEvent method: " <> unpack typ
 
 data Message = MkMessage
   { channel :: Channel,
@@ -650,8 +666,21 @@ data Message = MkMessage
   }
   deriving (Show, Eq, Generic)
 
--- Channel types
-newtype Channel = Channel Text deriving newtype (Show, Eq, ToJSON)
+instance FromJSON Message where
+  parseJSON :: Value -> Parser Message
+  parseJSON = withObject "Message" $ \o -> do
+    channel <- o .: "channel"
+    messageData <- o .: "data"
+    source <- o .: "source"
+    pure $ MkMessage {channel, messageData, source}
+
+newtype Channel = Channel {channelId :: Text}
+  deriving newtype
+    ( Show,
+      Eq,
+      ToJSON,
+      FromJSON
+    )
 
 data Source = MkSource
   { realm :: Realm,
@@ -659,9 +688,12 @@ data Source = MkSource
   }
   deriving (Show, Eq, Generic)
 
+instance FromJSON Source where
+  parseJSON :: Value -> Parser Source
+  parseJSON = parseJSONOmitNothing
+
 newtype ChannelValue = MkChannelValue
-  { 
-    value :: ChannelProperties
+  { value :: ChannelProperties
   }
   deriving (Show, Eq, Generic)
 
@@ -676,7 +708,7 @@ data ChannelProperties = MkChannelProperties
 
 -- Simple newtypes
 -- ToJSON instances for missing command types
-instance ToJSON AddPreloadScript where 
+instance ToJSON AddPreloadScript where
   toJSON :: AddPreloadScript -> Value
   toJSON = toJSONOmitNothing
 
@@ -701,145 +733,6 @@ instance ToJSON Disown
 
 instance ToJSON RemovePreloadScript
 
-{-
--- TODO :: REMOVE IF NOT NEEDED
--- Remote Value types - simplified to avoid orphan instances
-instance ToJSON RemoteValue where
-  toJSON :: RemoteValue -> Value
-  toJSON = \case
-    PrimitiveValue prim -> toJSON prim
-    SymbolValue {handle} ->
-      object $
-        ["type" .= "symbol"]
-          <> catMaybes
-            [ opt "handle" handle
-            ]
-    ArrayValue {handle, value} ->
-      object $
-        ["type" .= "array"]
-          <> catMaybes
-            [ opt "handle" handle,
-              opt "value" value
-            ]
-    ObjectValue {handle, values} ->
-      object $
-        ["type" .= "object"]
-          <> catMaybes
-            [ opt "handle" handle,
-              opt "value" values
-            ]
-    FunctionValue {handle} ->
-      object $
-        ["type" .= "function"]
-          <> catMaybes
-            [ opt "handle" handle
-            ]
-    RegExpValue {handle, pattern', flags} ->
-      object $
-        ["type" .= "regexp"]
-          <> catMaybes
-            [ opt "handle" handle,
-              Just
-                ( "value"
-                    .= object
-                      [ "pattern" .= pattern',
-                        "flags" .= flags
-                      ]
-                )
-            ]
-    DateValue {handle, dateValue} ->
-      object $
-        ["type" .= "date"]
-          <> catMaybes
-            [ opt "handle" handle,
-              Just ("value" .= dateValue)
-            ]
-    MapValue {handle, values} ->
-      object $
-        ["type" .= "map"]
-          <> catMaybes
-            [ opt "handle" handle,
-              opt "value" values
-            ]
-    SetValue {handle, value} ->
-      object $
-        ["type" .= "set"]
-          <> catMaybes
-            [ opt "handle" handle,
-              opt "value" value
-            ]
-    WeakSetValue {handle} ->
-      object $
-        ["type" .= "weakset"]
-          <> catMaybes
-            [ opt "handle" handle
-            ]
-    WeakMapValue {handle} ->
-      object $
-        ["type" .= "weakmap"]
-          <> catMaybes
-            [ opt "handle" handle
-            ]
-    GeneratorValue {handle} ->
-      object $
-        ["type" .= "generator"]
-          <> catMaybes
-            [ opt "handle" handle
-            ]
-    ErrorValue {handle} ->
-      object $
-        ["type" .= "error"]
-          <> catMaybes
-            [ opt "handle" handle
-            ]
-    ProxyValue {handle} ->
-      object $
-        ["type" .= "proxy"]
-          <> catMaybes
-            [ opt "handle" handle
-            ]
-    PromiseValue {handle} ->
-      object $
-        ["type" .= "promise"]
-          <> catMaybes
-            [ opt "handle" handle
-            ]
-    TypedArrayValue {handle} ->
-      object $
-        ["type" .= "typedarray"]
-          <> catMaybes
-            [ opt "handle" handle
-            ]
-    ArrayBufferValue {handle} ->
-      object $
-        ["type" .= "arraybuffer"]
-          <> catMaybes
-            [ opt "handle" handle
-            ]
-    NodeListValue {handle, value} ->
-      object $
-        ["type" .= "nodelist"]
-          <> catMaybes
-            [ opt "handle" handle,
-              opt "value" value
-            ]
-    HTMLCollectionValue {handle, value} ->
-      object $
-        ["type" .= "htmlcollection"]
-          <> catMaybes
-            [ opt "handle" handle,
-              opt "value" value
-            ]
-    NodeValue _ -> object ["type" .= "node"] -- Skip complex NodeRemoteValue for now
-    WindowProxyValue {winProxyValue, handle} ->
-      object $
-        [ "type" .= "window",
-          "value" .= winProxyValue
-        ]
-          <> catMaybes
-            [ opt "handle" handle
-            ]
--}
 instance ToJSON PrimitiveProtocolValue where
   toJSON :: PrimitiveProtocolValue -> Value
   toJSON = \case
@@ -910,17 +803,15 @@ instance ToJSON DateLocalValue where
 
 instance ToJSON MappingLocalValue where
   toJSON :: MappingLocalValue -> Value
-  toJSON (MkMappingLocalValue pairs) = 
+  toJSON (MkMappingLocalValue pairs) =
     toJSON $ pairToArray <$> pairs
     where
       pairToArray :: (Either LocalValue Text, LocalValue) -> [Value]
       pairToArray (key, value) = [keyToJson key, toJSON value]
-      
+
       keyToJson :: Either LocalValue Text -> Value
       keyToJson (Left localVal) = toJSON localVal
       keyToJson (Right text) = toJSON text
-  
-  
 
 instance ToJSON MapLocalValue where
   toJSON :: MapLocalValue -> Value
@@ -955,7 +846,6 @@ instance ToJSON SetLocalValue where
       ]
 
 instance ToJSON AddPreloadScriptResult
-
 
 instance ToJSON GetRealmsResult
 
@@ -1005,7 +895,6 @@ instance ToJSON RealmInfo where
 
 instance ToJSON BaseRealmInfo
 
-
 instance ToJSON StackTrace
 
 instance ToJSON StackFrame
@@ -1036,31 +925,14 @@ instance FromJSON AddPreloadScriptResult
 
 instance FromJSON GetRealmsResult
 
-instance FromJSON RealmInfo where
-  parseJSON :: Value -> Parser RealmInfo
-  parseJSON = withObject "RealmInfo" $ \o -> do
-    typ <- o .: "type"
-    base <- BaseRealmInfo <$> o .: "realm" <*> o .: "origin"
-    case typ of
-      "window" -> do
-        context <- o .: "context"
-        sandbox <- o .:? "sandbox"
-        pure $ Window {base, context, sandbox}
-      "dedicated-worker" -> do
-        owners <- o .: "owners"
-        pure $ DedicatedWorker {base, owners}
-      "shared-worker" -> pure $ SharedWorker {base}
-      "service-worker" -> pure $ ServiceWorker {base}
-      "worker" -> pure $ Worker {base}
-      "paint-worklet" -> pure $ PaintWorklet {base}
-      "audio-worklet" -> pure $ AudioWorklet {base}
-      "worklet" -> pure $ Worklet {base}
-      _ -> fail $ "Unknown RealmInfo type: " <> unpack typ
-
-instance FromJSON BaseRealmInfo 
+instance FromJSON BaseRealmInfo
 
 instance FromJSON ExceptionDetails
 
 instance FromJSON StackTrace
 
-instance FromJSON StackFrame 
+instance FromJSON StackFrame
+
+newtype RealmDestroyed = MkRealmDestroyed {realm :: Realm} deriving (Show, Eq, Generic)
+
+instance FromJSON RealmDestroyed

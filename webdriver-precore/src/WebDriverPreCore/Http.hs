@@ -36,10 +36,10 @@ module WebDriverPreCore.Http
     module WebDriverPreCore.Http.Error,
 
     -- * Action Types
-    module ActionTypes,
+    -- module ActionTypes,
 
     -- * Auxiliary Spec Types
-    module AuxTypes,
+    -- module AuxTypes,
   )
 where
 import WebDriverPreCore.Http.SpecDefinition as WC3Spec (HttpSpec (..))
@@ -123,28 +123,28 @@ import WebDriverPreCore.Http.Capabilities as CoreCapabilities (FullCapabilities(
 import WebDriverPreCore.Http.Capabilities
 import WebDriverPreCore.Http.Error
 import WebDriverPreCore.Http.HttpResponse
-import WebDriverPreCore.Http.SpecDefinition as ActionTypes
-  ( Action (..),
-    Actions (..),
-    KeyAction (..),
-    Pointer (..),
-    PointerAction (..),
-    PointerOrigin (..),
-    WheelAction (..),
-  )
-import WebDriverPreCore.Http.SpecDefinition as AuxTypes
-  ( Cookie (..),
-    DriverStatus (..),
-    ElementId (..),
-    FrameReference (..),
-    HttpResponse (..),
-    SameSite (..),
-    Selector (..),
-    SessionId (..),
-    SessionResponse (..),
-    Timeouts (..),
-    UrlPath (..),
-    WindowHandle (..),
-    WindowHandleSpec (..),
-    WindowRect (..),
-  )
+-- import WebDriverPreCore.Http.SpecDefinition as ActionTypes
+--   ( Action (..),
+--     Actions (..),
+--     KeyAction (..),
+--     Pointer (..),
+--     PointerAction (..),
+--     PointerOrigin (..),
+--     WheelAction (..),
+--   )
+-- import WebDriverPreCore.Http.SpecDefinition as AuxTypes
+--   ( Cookie (..),
+--     DriverStatus (..),
+--     ElementId (..),
+--     FrameReference (..),
+--     HttpResponse (..),
+--     SameSite (..),
+--     Selector (..),
+--     SessionId (..),
+--     SessionResponse (..),
+--     Timeouts (..),
+--     UrlPath (..),
+--     Handle (..),
+--     WindowHandleSpec (..),
+--     WindowRect (..),
+--   )

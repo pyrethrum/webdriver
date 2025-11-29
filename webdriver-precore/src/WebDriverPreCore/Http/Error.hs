@@ -1,27 +1,29 @@
 {-# OPTIONS_HADDOCK hide #-}
 
-module WebDriverPreCore.Http.Error (
-  WebDriverErrorType(..),
-  ErrorClassification(..),
-  errorDescription,
-  errorCodeToErrorType,
-  errorTypeToErrorCode,
-  parseWebDriverError,
-  parseWebDriverErrorType 
-) where
+module WebDriverPreCore.Http.Error
+  ( WebDriverErrorType (..),
+    ErrorClassification (..),
+    errorDescription,
+    errorCodeToErrorType,
+    errorTypeToErrorCode,
+    parseWebDriverError,
+    parseWebDriverErrorType,
+  )
+where
 
-import Data.Aeson (Value, withObject)
-import Data.Aeson.Types ((.:), parseMaybe)
-import Data.Text (Text)
-import Data.Eq (Eq)
-import GHC.Show (Show)
-import Data.Ord (Ord)
-import Data.Maybe (Maybe (..))
-import WebDriverPreCore.Http.HttpResponse (HttpResponse (..))
-import GHC.Enum ( Bounded, Enum )
+import Control.Monad ((>=>), (>>=))
+import Data.Aeson (FromJSON (..), Options (..), Value, defaultOptions, genericParseJSON, withObject)
+import Data.Aeson.Types (Parser, parseMaybe, (.:))
 import Data.Either (Either (..))
-import Control.Monad ((>>=))
-import Data.Function (($))
+import Data.Eq (Eq)
+import Data.Function ((&))
+import Data.Maybe (Maybe (..), maybe)
+import Data.Ord (Ord)
+import Data.Text (Text)
+import GHC.Enum (Bounded, Enum)
+import GHC.Generics (Generic)
+import GHC.Show (Show)
+import Prelude (Bool (..))
 
 {-
 Error Code 	HTTP Status 	JSON Error Code 	Description
@@ -52,85 +54,77 @@ unexpected alert open 	500 	unexpected alert open 	A modal dialog was open, bloc
 unknown command 	404 	unknown command 	A command could not be executed because the remote end is not aware of it.
 unknown error 	500 	unknown error 	An unknown error occurred in the remote end while processing the command.
 unknown method 	405 	unknown method 	The requested command matched a known URL but did not match any method for that URL.
-unsupported operation 	500 	unsupported operation 	Indicates that a command that should have executed properly cannot be supported for some reason. 
+unsupported operation 	500 	unsupported operation 	Indicates that a command that should have executed properly cannot be supported for some reason.
 -}
 
 -- | Known WevDriver Error Types
--- 
--- [spec](https://www.w3.org/TR/2025/WD-webdriver2-20250512/#errors)
-data WebDriverErrorType =
-  ElementClickIntercepted |
-  ElementNotInteractable |
-  InsecureCertificate |
-  InvalidArgument |
-  InvalidCookieDomain |
-  InvalidElementState |
-  InvalidSelector |
-  InvalidSessionId |
-  JavascriptError |
-  MoveTargetOutOfBounds |
-  NoSuchAlert |
-  NoSuchCookie |
-  NoSuchElement |
-  NoSuchFrame |
-  NoSuchWindow |
-  NoSuchShadowRoot |
-  ScriptTimeoutError |
-  SessionNotCreated |
-  StaleElementReference |
-  DetachedShadowRoot |
-  Timeout |
-  UnableToSetCookie |
-  UnableToCaptureScreen |
-  UnexpectedAlertOpen |
-  UnknownCommand |
-  UnknownError |
-  UnknownMethod |
-  UnsupportedOperation
+--
+-- [spec](https://www.w3.org/TR/2025/WD-webdriver2-20251028/#errors)
+data WebDriverErrorType
+  = ElementClickIntercepted
+  | ElementNotInteractable
+  | InsecureCertificate
+  | InvalidArgument
+  | InvalidCookieDomain
+  | InvalidElementState
+  | InvalidSelector
+  | InvalidSessionId
+  | JavascriptError
+  | MoveTargetOutOfBounds
+  | NoSuchAlert
+  | NoSuchCookie
+  | NoSuchElement
+  | NoSuchFrame
+  | NoSuchWindow
+  | NoSuchShadowRoot
+  | ScriptTimeoutError
+  | SessionNotCreated
+  | StaleElementReference
+  | DetachedShadowRoot
+  | Timeout
+  | UnableToSetCookie
+  | UnableToCaptureScreen
+  | UnexpectedAlertOpen
+  | UnknownCommand
+  | UnknownError
+  | UnknownMethod
+  | UnsupportedOperation
   deriving (Eq, Show, Ord, Bounded, Enum)
 
-
-getError :: Value -> Maybe Text
-getError =
-  parseMaybe $ withObject "root" $ \o ->
-                      o .: "value" >>= withObject "inner" (.: "error")
-                   
-
-
 errorCodeToErrorType :: Text -> Either Text WebDriverErrorType
-errorCodeToErrorType errCode = 
-   case errCode of
-      "element click intercepted" -> r ElementClickIntercepted
-      "element not interactable" -> r ElementNotInteractable
-      "insecure certificate" -> r InsecureCertificate
-      "invalid argument" -> r InvalidArgument
-      "invalid cookie domain" -> r InvalidCookieDomain
-      "invalid element state" -> r InvalidElementState
-      "invalid selector" -> r InvalidSelector
-      "invalid session id" -> r InvalidSessionId
-      "javascript error" -> r JavascriptError
-      "move target out of bounds" -> r MoveTargetOutOfBounds
-      "no such alert" -> r NoSuchAlert
-      "no such cookie" -> r NoSuchCookie
-      "no such element" -> r NoSuchElement
-      "no such frame" -> r NoSuchFrame
-      "no such window" -> r NoSuchWindow
-      "no such shadow root" -> r NoSuchShadowRoot
-      "script timeout" -> r ScriptTimeoutError
-      "session not created" -> r SessionNotCreated
-      "stale element reference" -> r StaleElementReference
-      "detached shadow root" -> r DetachedShadowRoot
-      "timeout" -> r Timeout
-      "unable to set cookie" -> r UnableToSetCookie
-      "unable to capture screen" -> r UnableToCaptureScreen
-      "unexpected alert open" -> r UnexpectedAlertOpen
-      "unknown command" -> r UnknownCommand
-      "unknown error" -> r UnknownError
-      "unknown method" -> r UnknownMethod
-      "unsupported operation" -> r UnsupportedOperation
-      er -> Left er
-    where
-      r = Right
+errorCodeToErrorType errCode =
+  case errCode of
+    "element click intercepted" -> r ElementClickIntercepted
+    "element not interactable" -> r ElementNotInteractable
+    "insecure certificate" -> r InsecureCertificate
+    "invalid argument" -> r InvalidArgument
+    "invalid cookie domain" -> r InvalidCookieDomain
+    "invalid element state" -> r InvalidElementState
+    "invalid selector" -> r InvalidSelector
+    "invalid session id" -> r InvalidSessionId
+    "javascript error" -> r JavascriptError
+    "move target out of bounds" -> r MoveTargetOutOfBounds
+    "no such alert" -> r NoSuchAlert
+    "no such cookie" -> r NoSuchCookie
+    "no such element" -> r NoSuchElement
+    "no such frame" -> r NoSuchFrame
+    "no such window" -> r NoSuchWindow
+    "no such shadow root" -> r NoSuchShadowRoot
+    "script timeout" -> r ScriptTimeoutError
+    "session not created" -> r SessionNotCreated
+    "stale element reference" -> r StaleElementReference
+    "detached shadow root" -> r DetachedShadowRoot
+    "timeout" -> r Timeout
+    "unable to set cookie" -> r UnableToSetCookie
+    "unable to capture screen" -> r UnableToCaptureScreen
+    "unexpected alert open" -> r UnexpectedAlertOpen
+    "unknown command" -> r UnknownCommand
+    "unknown error" -> r UnknownError
+    "unknown method" -> r UnknownMethod
+    "unsupported operation" -> r UnsupportedOperation
+    er -> Left er
+  where
+    r = Right
 
 errorTypeToErrorCode :: WebDriverErrorType -> Text
 errorTypeToErrorCode = \case
@@ -194,30 +188,69 @@ errorDescription = \case
   UnknownMethod -> "The requested command matched a known URL but did not match any method for that URL"
   UnsupportedOperation -> "Indicates that a command that should have executed properly cannot be supported for some reason"
 
-data ErrorClassification = 
-  NotAnError {httpResponse :: HttpResponse} |
-  UnrecognisedError {httpResponse :: HttpResponse} |
-  WebDriverError {
-    error :: WebDriverErrorType,
-    description :: Text,
-    httpResponse :: HttpResponse
-    -- todo find stacktrace
-    -- stacktrace :: Maybe Text
-  } deriving (Eq, Show, Ord)
+data ErrorClassification
+  = ResponeParseError {httpResponse :: Value}
+  | UnrecognisedError {httpResponse :: Value}
+  | WebDriverError
+      { error :: WebDriverErrorType,
+        description :: Text,
+        message :: Text,
+        stacktrace :: Maybe Text,
+        errorData :: Maybe Value,
+        httpResponse :: Value
+      }
+  deriving (Eq, Show, Ord)
 
-parseWebDriverError :: HttpResponse -> ErrorClassification
-parseWebDriverError resp = 
-  case getError resp.body of
-    Nothing -> NotAnError resp
-    Just err -> 
+parseWebDriverError :: Value -> ErrorClassification
+parseWebDriverError val =
+  parseMaybe parseErrorCode val & maybe
+    parserErr
+    \err ->
       case errorCodeToErrorType err of
-        Right et -> WebDriverError et (errorDescription et) resp
-        Left _ -> UnrecognisedError resp
+        Left _ -> UnrecognisedError val
+        Right et -> mkWebDriverError et
+  where
+    parserErr = ResponeParseError val
+    mkWebDriverError :: WebDriverErrorType -> ErrorClassification
+    mkWebDriverError et =
+      parseMaybe (getValue >=> parseJSON) val
+        & maybe
+          parserErr
+          \MkWebDriverErrorRaw {..} ->
+            WebDriverError {error = et, description = errorDescription et, httpResponse = val, ..}
 
-parseWebDriverErrorType :: HttpResponse -> Maybe WebDriverErrorType
-parseWebDriverErrorType resp = 
+getBody :: Value -> Parser Value
+getBody =
+  withObject "body" (.: "body")
+
+getValue :: Value -> Parser Value
+getValue =
+  getBody >=> withObject "body" (.: "value")
+
+parseErrorCode :: Value -> Parser Text
+parseErrorCode =
+  getValue >=> withObject "inner" (.: "error")
+
+parseWebDriverErrorType :: Value -> Maybe WebDriverErrorType
+parseWebDriverErrorType resp =
   case parseWebDriverError resp of
     WebDriverError {error} -> Just error
-    NotAnError {} -> Nothing
+    ResponeParseError {} -> Nothing
     UnrecognisedError {} -> Nothing
-  
+
+data WebDriverErrorRaw = MkWebDriverErrorRaw
+  { error :: Text,
+    message :: Text,
+    stacktrace :: Maybe Text,
+    errorData :: Maybe Value
+  }
+  deriving (Show, Eq, Generic)
+
+instance FromJSON WebDriverErrorRaw where
+  parseJSON :: Value -> Parser WebDriverErrorRaw
+  parseJSON = genericParseJSON defaultOptions {
+    omitNothingFields = True,
+    fieldLabelModifier = \case
+      "errorData" -> "data"
+      other -> other
+    }

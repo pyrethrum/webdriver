@@ -3,7 +3,7 @@ module WebDriverPreCore.BiDi.BiDiUrl where
 import Data.Function ((&))
 import Data.Text (Text, breakOn, pack, splitOn, unpack)
 import Text.Read (readEither)
-import WebDriverPreCore.Http.SpecDefinition (SessionResponse(..))
+import WebDriverPreCore.Http.Protocol (SessionResponse(..))
 import WebDriverPreCore.Internal.Utils (txt)
 import Prelude
 

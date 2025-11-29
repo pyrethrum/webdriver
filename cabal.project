@@ -2,7 +2,7 @@ import: https://www.stackage.org/nightly-2025-02-25/cabal.config
 
 packages: 
   webdriver-precore/*.cabal
-  webdriver-examples/*.cabal
+  webdriver-precore/test-server/*.cabal
 
 with-compiler: ghc-9.10.1
 -- with-compiler: ghc-9.10.1

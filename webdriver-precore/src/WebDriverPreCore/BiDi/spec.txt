@@ -13787,7 +13787,7 @@ browsingContext.LocateNodesParameters = {
    ? maxNodeCount: (js-uint .ge 1),
    ? serializationOptions: script.SerializationOptions,
    ? startNodes: [ + script.SharedReference ]
-}
+}with 
 
 browsingContext.Navigate = (
   method: "browsingContext.navigate",
@@ -13798,7 +13798,7 @@ browsingContext.NavigateParameters = {
   context: browsingContext.BrowsingContext,
   url: text,
   ? wait: browsingContext.ReadinessState,
-}
+}with 
 
 browsingContext.Print = (
   method: "browsingContext.print",
@@ -14501,7 +14501,7 @@ script.HTMLCollectionRemoteValue = {
   ? value: script.ListRemoteValue,
 }
 
-script.NodeRemoteValue = {
+script.NodeRemoteValue = {with 
   type: "node",
   ? sharedId: script.SharedId,
   ? handle: script.Handle,

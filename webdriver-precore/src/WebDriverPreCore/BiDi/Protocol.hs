@@ -1,28 +1,67 @@
 module WebDriverPreCore.BiDi.Protocol
-  (
-    -- * Re-exported modules
-    module BrowsingContext,
+  ( -- * Re-exported modules
+    module CoreTypes,
     module WebDriverPreCore.BiDi.Browser,
     module WebDriverPreCore.BiDi.BrowsingContext,
     module WebDriverPreCore.BiDi.Capabilities,
     module WebDriverPreCore.BiDi.Command,
+    module WebDriverPreCore.BiDi.Event,
     module WebDriverPreCore.BiDi.Emulation,
     module WebDriverPreCore.BiDi.Input,
-    module WebDriverPreCore.BiDi.Network,
+    module WebDriverPreCore.BiDi.Log,
+    module WebDriverPreCore.BiDi.Response,
     module WebDriverPreCore.BiDi.Script,
     module WebDriverPreCore.BiDi.Session,
     module WebDriverPreCore.BiDi.Storage,
     module WebDriverPreCore.BiDi.WebExtensions,
+
+    -- * Network types (exported directly to avoid conflicts)
+    AddDataCollector (..),
+    AddDataCollectorResult (..),
+    AddIntercept (..),
+    AddInterceptResult (..),
+    ContinueRequest (..),
+    ContinueResponse (..),
+    ContinueWithAuth (..),
+    DisownData (..),
+    FailRequest (..),
+    GetData (..),
+    GetDataResult (..),
+    ProvideResponse (..),
+    RemoveDataCollector (..),
+    RemoveIntercept (..),
+    SetCacheBehavior (..),
+    SetExtraHeaders (..),
+    UrlPattern (..),
+    UrlPatternPattern (..),
+    UrlPatternString (..),
+    InterceptPhase (..),
+    Intercept (..),
+    Request (..),
+    DataType (..),
+    CollectorType (..),
+    Collector (..),
+    AuthAction (..),
+    AuthCredentials (..),
+    CacheBehavior (..),
+    BytesValue (..),
+    Cookie (..),
+    SameSite (..),
+    Header (..),
+    CookieHeader (..),
+    SetCookieHeader (..),
   )
 where
 
 import WebDriverPreCore.BiDi.Browser
   ( ClientWindowInfo (..),
     CreateUserContext (..),
+    DownloadBehaviour (..),
     GetClientWindowsResult (..),
     GetUserContextsResult (..),
     RemoveUserContext (..),
     SetClientWindowState (..),
+    SetDownloadBehavior (..),
   )
 import WebDriverPreCore.BiDi.BrowsingContext
   ( Activate (..),
@@ -52,88 +91,166 @@ import WebDriverPreCore.BiDi.BrowsingContext
     TraverseHistory (..),
     TraverseHistoryResult (..),
   )
-import WebDriverPreCore.BiDi.Capabilities (Capabilities)
-import WebDriverPreCore.BiDi.Command
-  ( Command,
-    emptyCommand,
-    mkCommand,
+import WebDriverPreCore.BiDi.Capabilities
+  ( Capabilities (..),
+    Capability (..),
+    ProxyConfiguration (..),
   )
-import WebDriverPreCore.BiDi.CoreTypes as BrowsingContext (BrowsingContext (..), UserContext)
+import WebDriverPreCore.BiDi.Command
+  ( Command (..)
+  )
+import WebDriverPreCore.BiDi.CoreTypes as CoreTypes
+  ( BrowsingContext (..),
+    KnownSubscriptionType (..),
+    SharedId (..),
+    SubscriptionType (..),
+    UnknownSubscriptionType (..),
+    UserContext (..),
+    subscriptionTypeToText,
+  )
 import WebDriverPreCore.BiDi.Emulation
-  ( SetGeolocationOverride,
-    SetLocaleOverride,
-    SetScreenOrientationOverride,
-    SetTimezoneOverride,
+  ( GeolocationCoordinates (..),
+    GeolocationPositionError (..),
+    ScreenArea (..),
+    ScreenOrientationNatural (..),
+    ScreenOrientationOverride (..),
+    ScreenOrientationType (..),
+    SetGeolocationOverride (..),
+    SetLocaleOverride (..),
+    SetScreenOrientationOverride (..),
+    SetScreenSettingsOverride (..),
+    SetTimezoneOverride (..),
+    SetForcedColorsModeThemeOverride (..),
+    SetNetworkConditions (..),
+    SetUserAgentOverride (..),
+    SetScriptingEnabled (..),
+    ForcedColorsModeTheme (..),
+    NetworkConditions (..),
+    NetworkConditionsOffline (..)
+  )
+import WebDriverPreCore.BiDi.Event
+  ( Event (..),
+    Subscription (..),
   )
 import WebDriverPreCore.BiDi.Input
-  ( PerformActions,
-    ReleaseActions,
-    SetFiles,
+  ( PerformActions (..),
+    ReleaseActions (..),
+    SetFiles (..),
+  )
+import WebDriverPreCore.BiDi.Log
+  ( BaseLogEntry (..),
+    ConsoleLogEntry (..),
+    GenericLogEntry (..),
+    Level (..),
+    LogEntry (..),
+    LogEvent (..),
   )
 import WebDriverPreCore.BiDi.Network
-  ( AddDataCollector,
+  ( AddDataCollector (..),
     AddDataCollectorResult (..),
-    AddIntercept,
+    AddIntercept (..),
     AddInterceptResult (..),
-    ContinueRequest,
-    ContinueResponse,
-    ContinueWithAuth,
-    DisownData,
-    FailRequest,
-    GetData,
+    -- URL Pattern types
+
+    -- Intercept types
+
+    -- Request/Response types
+
+    -- Data types
+
+    -- Auth types
+    AuthAction (..),
+    AuthCredentials (..),
+    -- Cache types
+
+    -- Value types
+    BytesValue (..),
+    CacheBehavior (..),
+    Collector (..),
+    CollectorType (..),
+    ContinueRequest (..),
+    ContinueResponse (..),
+    ContinueWithAuth (..),
+    Cookie (..),
+    -- Explicitly exclude None to avoid conflict with BrowsingContext.None
+
+    CookieHeader (..),
+    DataType (..),
+    DisownData (..),
+    FailRequest (..),
+    GetData (..),
     GetDataResult (..),
-    ProvideResponse,
-    RemoveDataCollector,
-    RemoveIntercept,
-    SetCacheBehavior,
+    Header (..),
+    Intercept (..),
+    InterceptPhase (..),
+    ProvideResponse (..),
+    RemoveDataCollector (..),
+    RemoveIntercept (..),
+    Request (..),
+    SameSite (..),
+    SetCacheBehavior (..),
+    SetCookieHeader (..),
+    SetExtraHeaders (..),
+    UrlPattern (..),
+    UrlPatternPattern (..),
+    UrlPatternString (..),
+  )
+import WebDriverPreCore.BiDi.Response
+  ( JSONDecodeError (..),
+    MatchedResponse (..),
+    ResponseObject (..),
+    displayResponseError,
+    parseResponse,
   )
 import WebDriverPreCore.BiDi.Script
   ( AddPreloadScript (..),
     AddPreloadScriptResult (..),
     CallFunction (..),
+    Channel (..),
+    ChannelProperties (..),
+    ChannelValue (..),
     ContextTarget (..),
     Disown (..),
     Evaluate (..),
     EvaluateResult (..),
     GetRealms (..),
     GetRealmsResult (..),
-    ChannelValue (..),
-    ChannelProperties (..),
-    Channel (..),
+    IncludeShadowTree (..),
     LocalValue (..),
-    MappingLocalValue (..),
     MapLocalValue (..),
+    MappingLocalValue (..),
     ObjectLocalValue (..),
     PrimitiveProtocolValue (..),
     Realm (..),
+    RealmDestroyed (..),
     RemoteValue (..),
     RemovePreloadScript (..),
     ResultOwnership (..),
     Sandbox (..),
     SerializationOptions (..),
-    IncludeShadowTree (..),
-    SharedId (..),
     SharedReference (..),
     SpecialNumber (..),
     Target (..),
   )
 import WebDriverPreCore.BiDi.Session
-  ( SessionNewResult,
-    SessionStatusResult,
-    SessionSubscribeResult,
-    SessionSubscriptionRequest,
-    SessionUnsubscribeParameters,
+  ( SessionNewResult (..),
+    SessionStatusResult (..),
+    SessionSubscribeResult (..),
+    SessionSubscibe (..),
+    SessionUnsubscribe (..),
+    SubscriptionId (..),
   )
 import WebDriverPreCore.BiDi.Storage
-  ( DeleteCookies,
+  ( DeleteCookies (..),
     DeleteCookiesResult (..),
-    GetCookies,
+    GetCookies (..),
     GetCookiesResult (..),
-    SetCookie,
+    SetCookie (..),
     SetCookieResult (..),
   )
 import WebDriverPreCore.BiDi.WebExtensions
-  ( WebExtension,
-    WebExtensionData,
+  ( WebExtensionID (..),
+    WebExtensionInstall (..),
     WebExtensionResult (..),
+    WebExtensionUninstall (..),
   )

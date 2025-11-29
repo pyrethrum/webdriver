@@ -1,16 +1,23 @@
 module WebDriverPreCore.BiDi.Error
   ( ErrorCode (..),
+    DriverError (..),
     toErrorCodeText,
     fromErrorCodeText,
+    errorDescription,
   )
 where
 
-import Data.Aeson (FromJSON, Value (..))
+import Data.Aeson (FromJSON, Value (..), withObject, (.:))
 import Data.Aeson.Types (FromJSON (..), Parser)
+import Data.Function ((&))
 import Data.Text (Text, unpack)
 import GHC.Generics (Generic)
+import WebDriverPreCore.BiDi.CoreTypes
+import WebDriverPreCore.Internal.AesonUtils (subtractProps)
 import Prelude
-import Data.Function ((&))
+
+
+-- TODO: basic test to deliberately cause an error and check it is parsed correctly (eg no such element)
 
 data ErrorCode
   = -- | Tried to perform an action with an invalid argument
@@ -71,7 +78,7 @@ data ErrorCode
     UnknownError
   | -- | The operation requested is not supported
     UnsupportedOperation
-  deriving (Show, Eq, Ord, Generic)
+  deriving (Show, Eq, Ord, Enum, Bounded, Generic)
 
 instance FromJSON ErrorCode where
   parseJSON :: Value -> Parser ErrorCode
@@ -148,3 +155,82 @@ fromErrorCodeText = \case
   "unknown error" -> Just UnknownError
   "unsupported operation" -> Just UnsupportedOperation
   _ -> Nothing
+
+errorDescription :: ErrorCode -> Text
+errorDescription = \case
+  InvalidArgument -> "Tried to perform an action with an invalid argument"
+  InvalidSelector -> "Tried to use an invalid selector"
+  InvalidSessionId -> "Tried to use an invalid session ID"
+  InvalidWebExtension -> "Tried to install an invalid web extension"
+  MoveTargetOutOfBounds -> "Tried to move the mouse to a position outside the viewport"
+  NoSuchAlert -> "Tried to interact with an alert that doesn't exist"
+  NoSuchNetworkCollector -> "Tried to remove an unknown collector"
+  NoSuchElement -> "Tried to interact with an element that doesn't exist"
+  NoSuchFrame -> "Tried to switch to a frame that doesn't exist"
+  NoSuchHandle -> "Tried to deserialize an unknown RemoteObjectReference"
+  NoSuchHistoryEntry -> "Tried to navigate to an unknown session history entry"
+  NoSuchIntercept -> "Tried to remove an unknown network intercept"
+  NoSuchNetworkData -> "Tried to reference unknown data"
+  NoSuchNode -> "Tried to deserialize an unknown SharedReference"
+  NoSuchRequest -> "Tried to continue an unknown request"
+  NoSuchScript -> "Tried to remove an unknown preload script"
+  NoSuchStoragePartition -> "Tried to access data in a non-existent storage partition"
+  NoSuchUserContext -> "Tried to reference an unknown user context"
+  NoSuchWebExtension -> "Tried to reference an unknown web extension"
+  SessionNotCreated -> "Failed to create a new session"
+  UnableToCaptureScreen -> "Failed to capture a screenshot"
+  UnableToCloseBrowser -> "Tried to close the browser, but failed to do so"
+  UnableToSetCookie -> "Tried to create a cookie, but the user agent rejected it"
+  UnableToSetFileInput -> "Tried to set a file input, but failed to do so"
+  UnavailableNetworkData -> "Tried to get network data which was not collected or already evicted"
+  UnderspecifiedStoragePartition -> "Tried to interact with data in a storage partition which was not adequately specified"
+  UnknownCommand -> "The command sent is not known"
+  UnknownError -> "An unknown error occurred"
+  UnsupportedOperation -> "The operation requested is not supported"
+
+data Error = BiDiError
+  { errorCode :: ErrorCode,
+    errorMessage :: Text,
+    errorDescription :: Text,
+    errorStackTrace :: Maybe Text
+  }
+  deriving (Show, Eq, Generic)
+
+-- typ :: Text, -- "error"
+data DriverError = MkDriverError
+  { id :: Maybe JSUInt,
+    error :: ErrorCode,
+    description :: Text,
+    message :: Text,
+    stacktrace :: Maybe Text,
+    extensions :: EmptyResult
+  }
+  deriving (Show, Generic, Eq)
+
+instance FromJSON DriverError where
+  parseJSON :: Value -> Parser DriverError
+  parseJSON = withObject "Driver Error" $ \o -> do
+    id' <- o .: "id"
+    error' <- o .: "error"
+    message <- o .: "message"
+    stacktrace <- o .: "stacktrace"
+    pure $
+      MkDriverError
+        { id = id',
+          error = error',
+          description = errorDescription error',
+          message,
+          stacktrace,
+          extensions =
+            MkEmptyResult $
+              subtractProps
+                [ "id",
+                  "type",
+                  "error",
+                  "description",
+                  "message",
+                  "stacktrace"
+                ]
+                o
+        }
+

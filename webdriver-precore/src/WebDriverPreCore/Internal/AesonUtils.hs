@@ -1,9 +1,11 @@
 module WebDriverPreCore.Internal.AesonUtils
   ( aesonTypeError,
     aesonTypeErrorMessage,
+    asObject,
     asText,
     bodyText',
     emptyObj,
+    fromJSONCamelCase,
     enumCamelCase,
     lookup,
     lookupTxt,
@@ -14,15 +16,18 @@ module WebDriverPreCore.Internal.AesonUtils
     jsonPrettyString,
     jsonToText,
     objectOrThrow,
+    objToText,
     parseObject,
     parseObjectMaybe,
     parseOpt,
-    prettyPrintJson,
+    prettyJSON,
     parseJson,
-    resultToEither,
     parseObjectEither,
     toJSONOmitNothing,
-    parseJSONOmitNothing
+    parseJSONOmitNothing,
+    addProps,
+    objToString,
+    parseThrow,
   )
 where
 
@@ -40,13 +45,16 @@ import Data.Aeson
     Value (..),
     defaultOptions,
     eitherDecodeStrict,
+    object,
     (.:?),
   )
 import Data.Aeson qualified as A
 import Data.Aeson.Encode.Pretty (encodePretty)
 import Data.Aeson.Key (fromString)
 import Data.Aeson.KeyMap qualified as AKM
-import Data.Aeson.Types (Parser, parse, parseMaybe)
+import Data.Aeson.KeyMap qualified as KeyMap
+import Data.Aeson.Types (Pair, Parser, parse, parseEither, parseMaybe)
+import Data.Bifunctor (first)
 import Data.ByteString.Lazy qualified as LBS
 import Data.Char (toLower)
 import Data.Either (Either, either)
@@ -57,14 +65,11 @@ import Data.String (String)
 import Data.Text (Text, pack, unpack)
 import Data.Text qualified as T
 import Data.Text.Encoding (decodeUtf8, encodeUtf8)
-import Data.Text.IO qualified as T
 import GHC.Base (IO)
 import GHC.Generics (Generic, Rep)
 import GHC.Show (Show (..))
-import System.IO (print)
 import Prelude
   ( Bool (..),
-    Either (..),
     Foldable (..),
     Maybe (..),
     error,
@@ -72,14 +77,12 @@ import Prelude
     not,
     pure,
     (<>),
-    (>>=),
+    (>>=), id,
   )
 
--- Aeson stuff
--- TODO move to separte library
 
-toJSONOmitNothing :: ( Generic a, A.GToJSON' Value A.Zero (Rep a)) =>a -> Value
-toJSONOmitNothing = A.genericToJSON  defaultOptions {omitNothingFields = True}
+toJSONOmitNothing :: (Generic a, A.GToJSON' Value A.Zero (Rep a)) => a -> Value
+toJSONOmitNothing = A.genericToJSON defaultOptions {omitNothingFields = True}
 
 parseJSONOmitNothing :: (Generic a, A.GFromJSON A.Zero (Rep a)) => Value -> Parser a
 parseJSONOmitNothing = A.genericParseJSON defaultOptions {omitNothingFields = True}
@@ -98,13 +101,25 @@ parseObject errMsg val = case val of
   Object obj -> pure obj
   _ -> fail $ unpack errMsg
 
-resultToEither :: forall a. Result a -> Either Text a
-resultToEither = \case
-  Success a -> Right a
-  Error e -> Left $ pack e
+parseThrow :: (FromJSON a, MonadFail m) => Text -> Value -> m a
+parseThrow errMsg val =
+  parseEither parseJSON val
+    & either
+      ( \err ->
+          fail . unpack $
+            errMsg
+              <> "\n"
+              <> "Parser error was: "
+              <> "\n"
+              <> pack err
+              <> "\n"
+              <> "The actual JSON value was: "
+              <> jsonToText val
+      )
+      pure
 
 parseObjectEither :: (FromJSON a) => Object -> Either Text a
-parseObjectEither = resultToEither . parse parseJSON . Object
+parseObjectEither = first pack . parseEither parseJSON . Object
 
 parseObjectMaybe :: (FromJSON a) => Object -> Maybe a
 parseObjectMaybe = parseMaybe parseJSON . Object
@@ -118,13 +133,13 @@ aesonConstructorName = \case
   Bool _ -> "Bool"
   Null -> "Null"
 
-objectOrThrow :: (ToJSON a) => Text -> a -> A.Object
-objectOrThrow errMsg val =
+asObject :: (ToJSON a) => Text -> a -> Parser A.Object
+asObject errMsg val =
   let val' = A.toJSON val
    in case val' of
-        Object obj -> obj
+        Object obj -> pure obj
         _ ->
-          error . unpack $
+          fail . unpack $
             errMsg
               <> "\n"
               <> "JSON Value must be of JSON type: Object"
@@ -134,6 +149,14 @@ objectOrThrow errMsg val =
               <> "\n"
               <> "The actual JSON value was: "
               <> jsonToText val'
+
+objectOrThrow :: (ToJSON a) => Text -> a -> A.Object
+objectOrThrow errMsg val =
+  case result of
+    Error e -> error . unpack $ errMsg <> "\n" <> "Error was: " <> pack e
+    Success o -> o
+  where
+    result = parse (asObject errMsg) $ A.toJSON val
 
 lowerFirst :: String -> String
 lowerFirst = \case
@@ -149,17 +172,28 @@ lwrFirstOptions =
 enumCamelCase :: (Generic a, A.GToJSON' Value A.Zero (Rep a)) => a -> Value
 enumCamelCase = A.genericToJSON lwrFirstOptions
 
+fromJSONCamelCase :: (Generic a, A.GFromJSON A.Zero (Rep a)) => Value -> Parser a
+fromJSONCamelCase = A.genericParseJSON lwrFirstOptions
+
 -- https://blog.ssanj.net/posts/2019-09-24-pretty-printing-json-in-haskell.html
 lsbToText :: LBS.ByteString -> Text
 lsbToText = decodeUtf8 . LBS.toStrict
 
+objToString :: Object -> String
+objToString = unpack . objToText
+
+objToText :: Object -> Text
+objToText = jsonToText . Object
+
 jsonToText :: Value -> Text
 jsonToText = lsbToText . encodePretty
 
-prettyPrintJson :: Value -> IO ()
-prettyPrintJson v = do
-  e <- (try @SomeException @_) $ T.putStrLn (jsonToText v)
-  either (print . displayException) print e
+prettyJSON :: Text -> Value -> IO Text
+prettyJSON msg v = do
+  r <- try @SomeException @_ (pure (jsonToText v))
+  let jTxt = either (pack . displayException) id r
+  pure $ msg <> "\n" <> jTxt
+
 
 parseJson :: Text -> Either String Value
 parseJson input =
@@ -215,6 +249,10 @@ parseOpt o k = do
     Just v -> Just <$> A.parseJSON v
 
 subtractProps :: [Text] -> Object -> Object
-subtractProps keys obj = AKM.filterWithKey (\k _ -> k `S.member` keySet) obj
+subtractProps keys obj = AKM.filterWithKey (\k _ -> k `S.notMember` excludeSet) obj
   where
-    keySet = S.fromList $ fromString . unpack <$> keys
+    excludeSet = S.fromList $ fromString . unpack <$> keys
+
+addProps :: Text -> [Pair] -> Value -> Value
+addProps errMsg ps v =
+  object $ ps <> KeyMap.toList (objectOrThrow errMsg v)

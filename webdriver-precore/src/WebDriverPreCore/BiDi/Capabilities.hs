@@ -6,8 +6,9 @@ import Data.Text (Text)
 import Data.Vector (fromList)
 import Data.Word (Word8)
 import GHC.Generics (Generic)
-import WebDriverPreCore.Internal.AesonUtils (opt)
+import WebDriverPreCore.Internal.AesonUtils (opt, fromJSONCamelCase)
 import Prelude (Bool (..), Eq (..), Maybe (..), Show (..), ($), (.), (<$>))
+import Data.Aeson.Types (Parser)
 
 
 
@@ -128,7 +129,9 @@ data UserPromptHandlerType
   | Ignore
   deriving (Show, Eq, Generic)
 
-instance FromJSON UserPromptHandlerType
+instance FromJSON UserPromptHandlerType where
+  parseJSON :: Value -> Parser UserPromptHandlerType
+  parseJSON = fromJSONCamelCase
 
 instance ToJSON UserPromptHandlerType where
   toJSON :: UserPromptHandlerType -> Value

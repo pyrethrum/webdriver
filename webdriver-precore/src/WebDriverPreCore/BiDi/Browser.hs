@@ -1,8 +1,8 @@
 module WebDriverPreCore.BiDi.Browser
-  ( ClientWindow (..),
-    ClientWindowInfo (..),
+  ( ClientWindowInfo (..),
     ClientWindowState (..),
     CreateUserContext (..),
+    DownloadBehaviour (..),
     GetClientWindowsResult (..),
     GetUserContextsResult (..),
     NamedState (..),
@@ -10,38 +10,22 @@ module WebDriverPreCore.BiDi.Browser
     RectState (..),
     RemoveUserContext (..),
     SetClientWindowState (..),
+    SetDownloadBehavior (..),
     WindowState (..),
   )
 where
 
-import Data.Aeson (FromJSON, ToJSON (..))
+import Data.Aeson (FromJSON (..), ToJSON (..), Value, object, (.=))
+import Data.Aeson.Types (Parser)
+import Data.Maybe (catMaybes)
 import Data.Text (Text)
 import GHC.Generics (Generic)
 import WebDriverPreCore.BiDi.Capabilities (ProxyConfiguration, UserPromptHandler)
-import WebDriverPreCore.Internal.AesonUtils (enumCamelCase)
-import Prelude (Bool (..), Eq (..), Int, Maybe, Show (..))
-import WebDriverPreCore.BiDi.CoreTypes (UserContext)
-
-{-
-create types to represent the remote and local ends for browser:
-
-1. preface singleton data constructors (ie the constructor for types with only one type constructor) with Mk
-2. use newtypes where possible
-3. ordering - order types such that types that are used by a type are declared immediately below that type in the order they are used
-4. derive Show, Eq and Generic for all types
-5. use the cddl in this file remote first under the -- ######### Remote ######### header
-then local under the -- ######### Local ######### header
-
--}
+import WebDriverPreCore.BiDi.CoreTypes (ClientWindow, UserContext)
+import WebDriverPreCore.Internal.AesonUtils (enumCamelCase, fromJSONCamelCase, opt)
+import Prelude (Bool (..), Eq (..), Int, Maybe, Show, ($), (<>))
 
 -- ######### Remote #########
-
-newtype ClientWindow = MkClientWindow Text
-  deriving (Show, Eq, Generic)
-
-instance FromJSON ClientWindow
-
-instance ToJSON ClientWindow
 
 data ClientWindowInfo = MkClientWindowInfo
   { active :: Bool,
@@ -59,25 +43,37 @@ instance FromJSON ClientWindowInfo
 instance ToJSON ClientWindowInfo
 
 data ClientWindowState
-  = WindowFullscreen
-  | WindowMaximized
-  | WindowMinimized
-  | WindowNormal
+  = Fullscreen
+  | Maximized
+  | Minimized
+  | Normal
   deriving (Show, Eq, Generic)
 
-instance FromJSON ClientWindowState
+instance FromJSON ClientWindowState where
+  parseJSON :: Value -> Parser ClientWindowState
+  parseJSON = fromJSONCamelCase
 
 instance ToJSON ClientWindowState where
+  toJSON :: ClientWindowState -> Value
   toJSON = enumCamelCase
 
 data CreateUserContext = MkCreateUserContext
-  { acceptInsecureCerts :: Maybe Bool,
+  { -- renamed from acceptInsecureCerts to insecureCerts to avoid name collision with Capabilities
+    insecureCerts :: Maybe Bool,
     proxy :: Maybe ProxyConfiguration,
     unhandledPromptBehavior :: Maybe UserPromptHandler
   }
   deriving (Show, Eq, Generic)
 
-instance ToJSON CreateUserContext
+instance ToJSON CreateUserContext where
+  toJSON :: CreateUserContext -> Value
+  toJSON MkCreateUserContext {insecureCerts, proxy, unhandledPromptBehavior} =
+    object $
+      catMaybes
+        [ opt "acceptInsecureCerts" insecureCerts,
+          opt "proxy" proxy,
+          opt "unhandledPromptBehavior" unhandledPromptBehavior
+        ]
 
 newtype RemoveUserContext = MkRemoveUserContext
   { userContext :: UserContext
@@ -102,6 +98,7 @@ data WindowState
 instance FromJSON WindowState
 
 instance ToJSON WindowState where
+  toJSON :: WindowState -> Value
   toJSON = enumCamelCase
 
 data NamedState
@@ -113,6 +110,7 @@ data NamedState
 instance FromJSON NamedState
 
 instance ToJSON NamedState where
+  toJSON :: NamedState -> Value
   toJSON = enumCamelCase
 
 data RectState = MkRectState
@@ -134,6 +132,44 @@ data NormalState = NormalState
 instance FromJSON NormalState
 
 instance ToJSON NormalState
+
+-- SetDownloadBehavior command types
+
+data SetDownloadBehavior = MkSetDownloadBehavior
+  { downloadBehavior :: Maybe DownloadBehaviour,
+    userContexts :: Maybe [UserContext]
+  }
+  deriving (Show, Eq, Generic)
+
+instance ToJSON SetDownloadBehavior where
+  toJSON :: SetDownloadBehavior -> Value
+  toJSON MkSetDownloadBehavior {downloadBehavior, userContexts} =
+    object $
+      ["downloadBehavior" .= downloadBehavior]
+        <> catMaybes
+          [ opt "userContexts" userContexts
+          ]
+
+data DownloadBehaviour
+  = AllowedDownload
+      { destinationFolder :: Text
+      }
+  | DeniedDownload
+  deriving (Show, Eq, Generic)
+
+instance FromJSON DownloadBehaviour
+
+instance ToJSON DownloadBehaviour where
+  toJSON :: DownloadBehaviour -> Value
+  toJSON (AllowedDownload destinationFolder) =
+    object
+      [ "type" .= ("allowed" :: Text),
+        "destinationFolder" .= destinationFolder
+      ]
+  toJSON DeniedDownload =
+    object
+      [ "type" .= ("denied" :: Text)
+      ]
 
 -- ######### Local #########
 

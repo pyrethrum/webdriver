@@ -1,109 +1,42 @@
 module ApiCoverageTest where
 
-import Data.Set as S (Set, difference, fromList, null)
-import Data.Text as T (Text, lines, null, pack, replace, strip, unwords, words, intercalate)
-import GHC.Utils.Misc (filterOut)
-import Test.Tasty.HUnit as HUnit ( assertBool, Assertion )
-import Text.RawString.QQ (r)
-import WebDriverPreCore.Http
-    ( SessionId(Session),
-      ElementId(Element),
-      Selector(CSS),
-      WindowHandle(Handle),
-      WindowRect(Rect),
-      FrameReference(TopLevelFrame),
-      Cookie(MkCookie),
-      Actions(MkActions),
-      Timeouts(..),
-      HttpSpec(description, Get, Post, PostEmpty, Delete, path),
-      minFirefoxCapabilities,
-      acceptAlert,
-      addCookie,
-      back,
-      closeWindow,
-      deleteAllCookies,
-      deleteCookie,
-      deleteSession,
-      dismissAlert,
-      elementClear,
-      elementClick,
-      elementSendKeys,
-      executeScript,
-      executeScriptAsync,
-      findElement,
-      findElementFromElement,
-      findElementFromShadowRoot,
-      findElements,
-      findElementsFromElement,
-      findElementsFromShadowRoot,
-      forward,
-      fullscreenWindow,
-      getActiveElement,
-      getAlertText,
-      getAllCookies,
-      getCurrentUrl,
-      getElementAttribute,
-      getElementComputedLabel,
-      getElementComputedRole,
-      getElementCssValue,
-      getElementProperty,
-      getElementRect,
-      getElementShadowRoot,
-      getElementTagName,
-      getElementText,
-      getNamedCookie,
-      getPageSource,
-      getTimeouts,
-      getTitle,
-      getWindowHandle,
-      getWindowHandles,
-      getWindowRect,
-      isElementEnabled,
-      isElementSelected,
-      maximizeWindow,
-      minimizeWindow,
-      navigateTo,
-      newSession,
-      newWindow,
-      performActions,
-      printPage,
-      refresh,
-      releaseActions,
-      sendAlertText,
-      setTimeouts,
-      setWindowRect,
-      status,
-      switchToFrame,
-      switchToParentFrame,
-      switchToWindow,
-      takeElementScreenshot,
-      takeScreenshot )
-import GHC.Show (Show (..))
 import Data.Eq (Eq)
-import Data.Ord (Ord)
 import Data.Function (($), (.))
-import Data.Semigroup ((<>))
-import Data.List ((!!), drop)
 import Data.Functor ((<$>))
-import Data.Maybe (Maybe(..))
-import WebDriverPreCore.Http (UrlPath(..))
-
+import Data.List (drop, (!!))
+import Data.Maybe (Maybe (..))
+import Data.Ord (Ord)
+import Data.Semigroup ((<>))
+import Data.Set as S (Set, difference, fromList, null)
+import Data.Text as T (Text, intercalate, lines, null, pack, replace, strip, unwords, words)
+import GHC.Show (Show (..))
+import GHC.Utils.Misc (filterOut)
+import Test.Tasty.HUnit as HUnit (Assertion, assertBool)
+import Text.RawString.QQ (r)
+import  WebDriverPreCore.Internal.Utils (UrlPath(..))
+import WebDriverPreCore.Http
+import WebDriverPreCore.Http.Protocol (ElementId (..), FrameReference (..), Handle (..), Script (..), Selector (..), SessionId (..), WindowRect (..), URL(..))
+import WebDriverPreCore.Http.Protocol (Cookie(..))
+import WebDriverPreCore.Http.Protocol (Actions(..))
+import WebDriverPreCore.Http.Protocol (ShadowRootElementId)
+import WebDriverPreCore.Http.Protocol (ShadowRootElementId(..))
 
 {-- TODO use Haddock variable
- Covers Spec Version https://www.w3.org/TR/2025/WD-webdriver2-20250512 
+ Covers Spec Version https://www.w3.org/TR/2025/WD-webdriver2-20251028
  --}
-
 
 {-
 !! Replace this the endepoints from the spec with every release
-https://www.w3.org/TR/2025/WD-webdriver2-20250512 - W3C Editor's Draft 10 February 2025
+https://www.w3.org/TR/2025/WD-webdriver2-20251028 - W3C Editor's Draft 10 February 2025
 61 endpoints
 Method 	URI Template 	Command
 POST 	/session 	New Session
 -}
 endPointsCopiedFromSpc :: Text
-endPointsCopiedFromSpc = pack 
-  [r|POST 	/session 	New Session
+endPointsCopiedFromSpc =
+  pack
+    [r|POST 	/session 	New Session
+
 DELETE 	/session/{session id} 	Delete Session
 GET 	/status 	Status
 GET 	/session/{session id}/timeouts 	Get Timeouts
@@ -189,10 +122,13 @@ elementId :: Text
 elementId = "element_id"
 
 element :: ElementId
-element = Element elementId
+element = MkElement elementId
 
-windowHandle :: WindowHandle
-windowHandle = Handle "window-handle"
+shadowDOMElement :: ShadowRootElementId
+shadowDOMElement = MkShadowRootElementId elementId
+
+windowHandle :: Handle
+windowHandle = MkHandle "window-handle"
 
 selector :: Selector
 selector = CSS "Blahh"
@@ -227,7 +163,7 @@ toSpecLine w3 = case w3 of
 
 allSpecsSample :: Set SpecLine
 allSpecsSample =
-  fromList
+  fromList $
     [ toSpecLine $ newSession minFirefoxCapabilities,
       toSpecLine status,
       toSpecLine $ maximizeWindow session,
@@ -253,7 +189,7 @@ allSpecsSample =
       toSpecLine $ getWindowHandles session,
       toSpecLine $ newWindow session,
       toSpecLine $ switchToWindow session windowHandle,
-      toSpecLine $ navigateTo session "url",
+      toSpecLine $ navigateTo session $ MkUrl "url",
       toSpecLine $ findElement session selector,
       toSpecLine $ getWindowRect session,
       toSpecLine $ elementClick session element,
@@ -263,9 +199,9 @@ allSpecsSample =
       toSpecLine $ getElementAttribute session element name,
       toSpecLine $ getElementCssValue session element name,
       toSpecLine $ setWindowRect session (Rect 0 0 1280 720),
-      toSpecLine $ findElementsFromShadowRoot session element selector,
+      toSpecLine $ findElementsFromShadowRoot session shadowDOMElement selector,
       toSpecLine $ getElementShadowRoot session element,
-      toSpecLine $ findElementFromShadowRoot session element selector,
+      toSpecLine $ findElementFromShadowRoot session shadowDOMElement selector,
       toSpecLine $ getElementTagName session element,
       toSpecLine $ getElementRect session element,
       toSpecLine $ isElementEnabled session element,
@@ -277,8 +213,8 @@ allSpecsSample =
       toSpecLine $ takeScreenshot session,
       toSpecLine $ takeElementScreenshot session element,
       toSpecLine $ printPage session,
-      toSpecLine $ executeScript session "console.log('test');" [],
-      toSpecLine $ executeScriptAsync session "console.log('test');" [],
+      toSpecLine $ executeScript session $ MkScript "console.log('test');" [],
+      toSpecLine $ executeScriptAsync session $ MkScript "console.log('test');" [],
       toSpecLine $ getAllCookies session,
       toSpecLine $ getNamedCookie session name,
       toSpecLine $ addCookie session $ MkCookie "testCookie" "testValue" Nothing Nothing Nothing Nothing Nothing Nothing,

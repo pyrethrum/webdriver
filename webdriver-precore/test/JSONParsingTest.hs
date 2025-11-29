@@ -42,7 +42,7 @@ import Test.Tasty.Falsify
   )
 import Test.Tasty.HUnit (Assertion, (@=?))
 import Text.Show.Pretty (ppShow)
-import WebDriverPreCore.Http (Capabilities (..), DeviceMetrics (..), LogLevel (..), LogSettings (MkLogSettings), MobileEmulation (..), PerfLoggingPrefs (..), Proxy (..), SessionResponse (..), SocksProxy (..), Timeouts (..), VendorSpecific (..))
+import WebDriverPreCore.Http.Protocol 
 import WebDriverPreCore.Internal.AesonUtils (jsonToText)
 import Prelude (Bounded (minBound), Enum, IO, maxBound)
 
@@ -229,7 +229,6 @@ genManualProxy =
   Manual
     <$> genMaybeText
       <*> genMaybeText
-      <*> genMaybeText
       <*> genMaybe genSocksProxy
       <*> (genMaybe genTextList)
 
@@ -398,8 +397,8 @@ emptyTextList ml = null ml || (all T.null) ml
 isNothingProxy :: Proxy -> Bool
 isNothingProxy = \case
   Direct -> False
-  Manual ftpProxy httpProxy sslProxy noProxy socksProxy ->
-    all isNothing [ftpProxy, httpProxy, sslProxy] && isNothing noProxy && isNothing socksProxy
+  Manual httpProxy sslProxy noProxy socksProxy ->
+    all isNothing [httpProxy, sslProxy] && isNothing noProxy && isNothing socksProxy
   AutoDetect -> False
   Pac url -> T.null url
   System -> False
@@ -411,8 +410,7 @@ subEmptyProxy p = subEmt isNothingProxy $ subEmptProps <$> p
     subEmptProps p' = case p' of
       Manual {..} ->
         Manual
-          { ftpProxy = subEmptyTxt ftpProxy,
-            httpProxy = subEmptyTxt httpProxy,
+          { httpProxy = subEmptyTxt httpProxy,
             sslProxy = subEmptyTxt sslProxy,
             noProxy = subEmptyTxtLst noProxy,
             socksProxy
@@ -541,6 +539,3 @@ unit_websocketUrlFromJSon =
         )
 
     decoded = (.webSocketUrl) <$> fromJSON @SessionResponse json
-
-
-

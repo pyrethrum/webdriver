@@ -23,7 +23,7 @@ tested-with: GHC == { 9.8.2, 9.8.4, 9.10.1 }
 synopsis:       A typed wrapper for W3C WebDriver protocol. A base for other libraries.
 
 description:
-  This library provides typed definitions for the endpoints of the @<https://www.w3.org/TR/2025/WD-webdriver2-20250512/ W3C Webdriver>@.
+  This library provides typed definitions for the endpoints of the @<https://www.w3.org/TR/2025/WD-webdriver2-20251028/ W3C Webdriver>@.
 
   It is intended to be used as a base for other libraries that provide a WebDriver client implementation and higher level functions. 
   
@@ -106,13 +106,19 @@ common commonGhcOptions
     -fno-warn-unused-do-bind 
     -Wno-overlapping-patterns 
     -fprefer-byte-code 
-    -fdefer-type-errors
+    -- -fdefer-type-errors
 
 library
   import: commonExtensions, commonGhcOptions
   exposed-modules:
       -- Http
       WebDriverPreCore.Http
+      WebDriverPreCore.Http.API
+      WebDriverPreCore.Http.Command
+      WebDriverPreCore.Http.Protocol
+      -- deprecated
+      WebDriverPreCore.Http.SpecDefinition
+      WebDriverPreCore.Http.HttpResponse
       -- BiDi
       WebDriverPreCore.BiDi.BiDiUrl
       WebDriverPreCore.BiDi.Browser
@@ -122,12 +128,13 @@ library
       WebDriverPreCore.BiDi.CoreTypes
       WebDriverPreCore.BiDi.Emulation
       WebDriverPreCore.BiDi.Error
+      WebDriverPreCore.BiDi.Event
       WebDriverPreCore.BiDi.Log
       WebDriverPreCore.BiDi.Input
       WebDriverPreCore.BiDi.Network
       WebDriverPreCore.BiDi.Protocol
       WebDriverPreCore.BiDi.API
-      WebDriverPreCore.BiDi.ResponseEvent
+      WebDriverPreCore.BiDi.Response
       WebDriverPreCore.BiDi.Script
       WebDriverPreCore.BiDi.Session
       WebDriverPreCore.BiDi.Storage
@@ -137,15 +144,12 @@ library
       WebDriverPreCore.Internal.Utils
   other-modules:
       -- Http
-      WebDriverPreCore.Http.SpecDefinition
       WebDriverPreCore.Http.Capabilities
       WebDriverPreCore.Http.Error
-      WebDriverPreCore.Http.HttpResponse
+      WebDriverPreCore.Internal.HttpBidiCommon
   hs-source-dirs: src
   build-depends:
-    -- debugging only remove brefore release
     pretty-show ^>=1.10,
-    --
     aeson         >=1.4   && <2.3, 
     aeson-pretty  >=0.8   && <0.9,
     base          >=4.16  && <5,
@@ -155,32 +159,85 @@ library
     vector        >=0.12  && <0.14
   default-language: Haskell2010
 
-
+flag legacy-test
+  description: Use legacy deprecated HTTP test implementations
+  default: False
+  manual: True
 
 test-suite test
   import: commonExtensions, commonGhcOptions
+  if flag(legacy-test)
+    cpp-options: -DLEGACY_TEST
   type: exitcode-stdio-1.0
-  main-is: Driver.hs
+  main-is: Test.hs
   hs-source-dirs: test
   build-depends:
-    , aeson
+  build-depends:
+    aeson
+    , aeson-pretty
     , base
+    , base64
+    , bytestring
     , containers
-    , directory     >=1.3   && <1.4
-    , ghc
-    , pretty-show
-    , text
-    , tasty
-    , tasty-hunit
-    , tasty-quickcheck
-    , tasty-discover
+    , dhall
+    , directory >=1.3 && <1.4
     , falsify
-    , webdriver-precore
+    , filepath
+    , ghc
+    , network
+    , pretty-show ^>=1.10
     , raw-strings-qq
+    , req
+    , tasty
+    , tasty-discover
+    , tasty-hunit
+    , time
+    , text
+    , unliftio
+    , webdriver-precore
+    , websockets
   other-modules:
-    ApiCoverageTest,
-    ErrorCoverageTest,
-    JSONParsingTest,
-  build-tool-depends:
-    tasty-discover:tasty-discover
+   -- true unit/property tests
+    ApiCoverageTest
+    , ErrorCoverageTest
+    , JSONParsingTest
+    -- demos 
+    , Config
+    , Const
+    , IOUtils
+    , Logger
+    , TestData
+    , TestServerAPI
+    , Http.HttpRunner
+    , Http.HttpActions
+    , Http.HttpActionsDeprecated
+    , Http.HttpEndpoint
+    , Http.HttpUtils 
+    , Http.DemoUtils
+    , Http.HttpDemo
+    , Http.HttpDemoFallback
+    , BiDi.Runner
+    , BiDi.BiDiSocket
+    , BiDi.BiDiActions
+    , BiDi.DemoUtils
+    , BiDi.Demos.BrowserDemos
+    , BiDi.Demos.BrowsingContextDemos
+    , BiDi.Demos.BrowsingContextEventDemos
+    , BiDi.Demos.EmulationDemos
+    , BiDi.Demos.FallbackDemos
+    , BiDi.Demos.InputDemos
+    , BiDi.Demos.InputEventDemos
+    , BiDi.Demos.LogEventDemos
+    , BiDi.Demos.NetworkDemos
+    , BiDi.Demos.NetworkEventDemos
+    , BiDi.Demos.NetworkSupportTest
+    , BiDi.Demos.OtherDemos
+    , BiDi.Demos.ScriptDemos
+    , BiDi.Demos.ScriptEventDemos
+    , BiDi.Demos.SessionDemos
+    , BiDi.Demos.StorageDemos
+    , BiDi.Demos.WebExtensionDemos
+    , RuntimeConst
+    , Http.HttpUtils
+    , Http.HttpRunnerDeprecated
   default-language: Haskell2010
