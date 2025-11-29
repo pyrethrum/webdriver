@@ -13,11 +13,11 @@ import Data.Function ((&))
 import WebDriverPreCore.Http.HttpResponse (fromBodyValue)
 
 parseResultIO :: forall r. (FromJSON r) => Bool -> Value -> Text -> IO r
-parseResultIO expectNull rsp description =
-  case parse (fromBodyValue expectNull) rsp of
+parseResultIO expectNull body description =
+  case parse (fromBodyValue expectNull) body of
     Error msg ->
       fail $
-        parseWebDriverError rsp & \case
+        parseWebDriverError body & \case
           e@ResponeParseError {} -> unpack description <> "\n" <> "Failed to parse response:\n " <> msg <> "\nin response:" <> ppShow e
           e@UnrecognisedError {} -> "UnrecognisedError:\n " <> "\nin response:" <> ppShow e
           e@WebDriverError {} -> "WebDriver error thrown:\n " <> ppShow e

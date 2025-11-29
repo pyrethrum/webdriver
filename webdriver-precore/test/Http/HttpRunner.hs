@@ -16,7 +16,7 @@ import Network.HTTP.Req
   )
 import UnliftIO (catchAny)
 import WebDriverPreCore.Http.Command (Command (..))
-import WebDriverPreCore.Http.HttpResponse (HttpResponse)
+import WebDriverPreCore.Http.HttpResponse (HttpResponse (..))
 import Prelude hiding (log)
 
 -- ############# Runner #############
@@ -46,7 +46,8 @@ mkRunner driverUrl port da =
 logCall :: forall r. Url 'Http -> Int -> DemoActions -> Command r -> IO Value
 logCall driverUrl port da cmd = do
   logCommand da cmd
-  callWebDriver da $ mkRequest driverUrl port cmd
+  r <- callWebDriver da $ mkRequest driverUrl port cmd
+  pure r.body
 
 runExtended :: forall r. (FromJSON r) => Bool -> Url 'Http -> Int -> DemoActions -> Command r -> IO (Extended r)
 runExtended expectNull driverUrl port da@MkDemoActions {logShow} cmd = do

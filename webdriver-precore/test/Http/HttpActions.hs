@@ -9,7 +9,6 @@ import Data.Text (Text)
 import Http.HttpRunner (Extended, HttpRunner (..))
 import WebDriverPreCore.Http.API qualified as P
 import WebDriverPreCore.Http.Command
-import WebDriverPreCore.Http.HttpResponse (HttpResponse)
 import WebDriverPreCore.Http.Protocol
   ( Actions (..),
     Cookie (..),
@@ -101,7 +100,7 @@ data HttpActions = MkHttpActions
     findElementsFromShadowRoot :: SessionId -> ShadowRootElementId -> Selector -> IO [ElementId],
     -- Fallback methods
     runCommand :: forall a. (FromJSON a) => Command a -> IO (Extended a),
-    runCommand' :: Command () -> IO HttpResponse
+    runCommand' :: Command () -> IO Value
   }
 
 mkActions :: HttpRunner -> HttpActions

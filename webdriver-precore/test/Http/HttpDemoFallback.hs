@@ -17,7 +17,6 @@ import WebDriverPreCore.Http.Protocol
   )
 import WebDriverPreCore.Internal.Utils (UrlPath (..))
 import Prelude hiding (log)
-import WebDriverPreCore.Http.HttpResponse (HttpResponse)
 import WebDriverPreCore.Http.Command (voidCommand)
 
 
@@ -84,7 +83,7 @@ demoFallbackActions =
       let 
         -- type system gets a bit tricky when using record of functions this work around
         -- allows us to get an HttpResponse from a (Command a) for any a
-        runAnyCommand :: forall a. Command a -> IO HttpResponse
+        runAnyCommand :: forall a. Command a -> IO Value
         runAnyCommand = runCommand' . voidCommand
 
       -- Step 4: Navigate to another page using typed Navigate command and getResponse

@@ -202,34 +202,34 @@ data ErrorClassification
   deriving (Eq, Show, Ord)
 
 parseWebDriverError :: Value -> ErrorClassification
-parseWebDriverError val =
-  parseMaybe parseErrorCode val & maybe
+parseWebDriverError body =
+  parseMaybe parseErrorCode body & maybe
     parserErr
     \err ->
       case errorCodeToErrorType err of
-        Left _ -> UnrecognisedError val
+        Left _ -> UnrecognisedError body
         Right et -> mkWebDriverError et
   where
-    parserErr = ResponeParseError val
+    parserErr = ResponeParseError body
     mkWebDriverError :: WebDriverErrorType -> ErrorClassification
     mkWebDriverError et =
-      parseMaybe (getValue >=> parseJSON) val
+      parseMaybe (getValue >=> parseJSON) body
         & maybe
           parserErr
           \MkWebDriverErrorRaw {..} ->
-            WebDriverError {error = et, description = errorDescription et, httpResponse = val, ..}
+            WebDriverError {error = et, description = errorDescription et, httpResponse = body, ..}
 
-getBody :: Value -> Parser Value
-getBody =
-  withObject "body" (.: "body")
+-- getBody :: Value -> Parser Value
+-- getBody =
+--   withObject "body" (.: "body")
 
 getValue :: Value -> Parser Value
 getValue =
-  getBody >=> withObject "body" (.: "value")
+  withObject "value" (.: "value")
 
 parseErrorCode :: Value -> Parser Text
 parseErrorCode =
-  getValue >=> withObject "inner" (.: "error")
+  getValue >=> withObject "error" (.: "error")
 
 parseWebDriverErrorType :: Value -> Maybe WebDriverErrorType
 parseWebDriverErrorType resp =
