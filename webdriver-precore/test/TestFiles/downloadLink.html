@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <title>Download Link Test Page</title>
+  <link rel="stylesheet" href="demo.css">
+</head>
+
+<body>
+  <div class="container">
+    <h1>Download Link Test Page</h1>
+    
+    <div style="margin-top: 20px;">
+      <p>Click the link below to download a file:</p>
+      <a id="downloadLink" href="data:text/plain;charset=utf-8,This%20is%20a%20test%20file%20content%20for%20download%20events." download="test-file.txt" class="btn-success" style="display: inline-block; text-decoration: none; padding: 12px 24px; margin: 10px 0;">
+        Download Text File
+      </a>
+      
+      <button id="downloadBtn" onclick="triggerDownload()">Download via JavaScript</button>
+    </div>
+  </div>
+  
+  <script>
+    function triggerDownload() {
+      const content = 'This is a test file created by JavaScript for download events.';
+      const blob = new Blob([content], { type: 'text/plain' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'javascript-download.txt';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    }
+  </script>
+</body>
+
+</html>

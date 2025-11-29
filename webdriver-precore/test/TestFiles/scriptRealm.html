@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <title>Script Realm Test Page</title>
+  <link rel="stylesheet" href="demo.css">
+</head>
+
+<body>
+  <div class="container">
+    <h1>Script Realm Test Page</h1>
+    
+    <div class="button-group">
+      <button id="createIframe" onclick="createIframe()">Create Iframe (New Realm)</button>
+      <button id="removeIframe" onclick="removeIframe()">Remove Iframe</button>
+    </div>
+
+    <div id="iframe-container"></div>
+    
+    <div id="output"></div>
+  </div>
+
+  <script>
+    function createIframe() {
+      const container = document.getElementById('iframe-container');
+      const iframe = document.createElement('iframe');
+      iframe.id = 'testIframe';
+      iframe.src = 'about:blank';
+      iframe.style.border = '1px solid #ccc';
+      iframe.style.width = '100%';
+      iframe.style.height = '200px';
+      container.appendChild(iframe);
+      
+      // Log to indicate iframe was created
+      console.log('Iframe created - new realm should be created');
+    }
+
+    function removeIframe() {
+      const iframe = document.getElementById('testIframe');
+      if (iframe) {
+        iframe.remove();
+        console.log('Iframe removed - realm should be destroyed');
+      }
+    }
+
+    // Log on page load
+    console.log('Script realm test page loaded');
+  </script>
+</body>
+
+</html>

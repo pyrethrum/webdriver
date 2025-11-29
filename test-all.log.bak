@@ -1,0 +1,1111 @@
+Configuration is affected by the following files:
+- cabal.project
+Build profile: -w ghc-9.10.1 -O1
+In order, the following will be built (use -v for more details):
+ - webdriver-precore-0.1.0.2 (test:test) (file test/Test.hs changed)
+Preprocessing test suite 'test' for webdriver-precore-0.1.0.2...
+Building test suite 'test' for webdriver-precore-0.1.0.2...
+[25 of 32] Compiling TestData         ( test/TestData.hs, /home/john-walker/repos/webdriver/dist-newstyle/build/x86_64-linux/ghc-9.10.1/webdriver-precore-0.1.0.2/t/test/build/test/test-tmp/TestData.o, /home/john-walker/repos/webdriver/dist-newstyle/build/x86_64-linux/ghc-9.10.1/webdriver-precore-0.1.0.2/t/test/build/test/test-tmp/TestData.dyn_o ) [Source file changed]
+test/TestData.hs:8:26-41: warning: [GHC-38856] [-Wunused-imports]
+    The import of ‘canonicalizePath’
+    from module ‘System.Directory’ is redundant
+  |
+8 | import System.Directory (canonicalizePath, getCurrentDirectory)
+  |                          ^^^^^^^^^^^^^^^^
+
+test/TestData.hs:10:1-43: warning: [GHC-66111] [-Wunused-imports]
+    The import of ‘WebDriverPreCore.Internal.Utils’ is redundant
+      except perhaps to import instances from ‘WebDriverPreCore.Internal.Utils’
+    To import instances alone, use: import WebDriverPreCore.Internal.Utils()
+   |
+10 | import WebDriverPreCore.Internal.Utils (db)
+   | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+[26 of 32] Compiling BiDi.Demos.WebExtensionDemos ( test/BiDi/Demos/WebExtensionDemos.hs, /home/john-walker/repos/webdriver/dist-newstyle/build/x86_64-linux/ghc-9.10.1/webdriver-precore-0.1.0.2/t/test/build/test/test-tmp/BiDi/Demos/WebExtensionDemos.o, /home/john-walker/repos/webdriver/dist-newstyle/build/x86_64-linux/ghc-9.10.1/webdriver-precore-0.1.0.2/t/test/build/test/test-tmp/BiDi/Demos/WebExtensionDemos.dyn_o ) [TestData changed]
+[27 of 32] Compiling BiDi.Demos.ScriptEventDemos ( test/BiDi/Demos/ScriptEventDemos.hs, /home/john-walker/repos/webdriver/dist-newstyle/build/x86_64-linux/ghc-9.10.1/webdriver-precore-0.1.0.2/t/test/build/test/test-tmp/BiDi/Demos/ScriptEventDemos.o, /home/john-walker/repos/webdriver/dist-newstyle/build/x86_64-linux/ghc-9.10.1/webdriver-precore-0.1.0.2/t/test/build/test/test-tmp/BiDi/Demos/ScriptEventDemos.dyn_o ) [TestData changed]
+[28 of 32] Compiling BiDi.Demos.LogEventDemos ( test/BiDi/Demos/LogEventDemos.hs, /home/john-walker/repos/webdriver/dist-newstyle/build/x86_64-linux/ghc-9.10.1/webdriver-precore-0.1.0.2/t/test/build/test/test-tmp/BiDi/Demos/LogEventDemos.o, /home/john-walker/repos/webdriver/dist-newstyle/build/x86_64-linux/ghc-9.10.1/webdriver-precore-0.1.0.2/t/test/build/test/test-tmp/BiDi/Demos/LogEventDemos.dyn_o ) [TestData changed]
+[29 of 32] Compiling BiDi.Demos.InputEventDemos ( test/BiDi/Demos/InputEventDemos.hs, /home/john-walker/repos/webdriver/dist-newstyle/build/x86_64-linux/ghc-9.10.1/webdriver-precore-0.1.0.2/t/test/build/test/test-tmp/BiDi/Demos/InputEventDemos.o, /home/john-walker/repos/webdriver/dist-newstyle/build/x86_64-linux/ghc-9.10.1/webdriver-precore-0.1.0.2/t/test/build/test/test-tmp/BiDi/Demos/InputEventDemos.dyn_o ) [TestData changed]
+[30 of 32] Compiling BiDi.Demos.InputDemos ( test/BiDi/Demos/InputDemos.hs, /home/john-walker/repos/webdriver/dist-newstyle/build/x86_64-linux/ghc-9.10.1/webdriver-precore-0.1.0.2/t/test/build/test/test-tmp/BiDi/Demos/InputDemos.o, /home/john-walker/repos/webdriver/dist-newstyle/build/x86_64-linux/ghc-9.10.1/webdriver-precore-0.1.0.2/t/test/build/test/test-tmp/BiDi/Demos/InputDemos.dyn_o ) [Source file changed]
+[31 of 32] Compiling BiDi.Demos.BrowsingContextEventDemos ( test/BiDi/Demos/BrowsingContextEventDemos.hs, /home/john-walker/repos/webdriver/dist-newstyle/build/x86_64-linux/ghc-9.10.1/webdriver-precore-0.1.0.2/t/test/build/test/test-tmp/BiDi/Demos/BrowsingContextEventDemos.o, /home/john-walker/repos/webdriver/dist-newstyle/build/x86_64-linux/ghc-9.10.1/webdriver-precore-0.1.0.2/t/test/build/test/test-tmp/BiDi/Demos/BrowsingContextEventDemos.dyn_o ) [TestData changed]
+[32 of 32] Compiling Main             ( test/Test.hs, /home/john-walker/repos/webdriver/dist-newstyle/build/x86_64-linux/ghc-9.10.1/webdriver-precore-0.1.0.2/t/test/build/test/test-tmp/Main.o, /home/john-walker/repos/webdriver/dist-newstyle/build/x86_64-linux/ghc-9.10.1/webdriver-precore-0.1.0.2/t/test/build/test/test-tmp/Main.dyn_o ) [Source file changed]
+[ 1 of 33] Compiling ApiCoverageTest  ( test/ApiCoverageTest.hs, /home/john-walker/repos/webdriver/dist-newstyle/build/x86_64-linux/ghc-9.10.1/webdriver-precore-0.1.0.2/t/test/build/test/test-tmp/ApiCoverageTest.o, interpreted ) [Missing bytecode]
+[ 3 of 33] Compiling Const            ( test/Const.hs, /home/john-walker/repos/webdriver/dist-newstyle/build/x86_64-linux/ghc-9.10.1/webdriver-precore-0.1.0.2/t/test/build/test/test-tmp/Const.o, interpreted ) [Missing bytecode]
+[ 4 of 33] Compiling ErrorCoverageTest ( test/ErrorCoverageTest.hs, /home/john-walker/repos/webdriver/dist-newstyle/build/x86_64-linux/ghc-9.10.1/webdriver-precore-0.1.0.2/t/test/build/test/test-tmp/ErrorCoverageTest.o, interpreted ) [Missing bytecode]
+[ 6 of 33] Compiling IOUtils          ( test/IOUtils.hs, /home/john-walker/repos/webdriver/dist-newstyle/build/x86_64-linux/ghc-9.10.1/webdriver-precore-0.1.0.2/t/test/build/test/test-tmp/IOUtils.o, interpreted ) [Missing bytecode]
+[ 7 of 33] Compiling Config           ( test/Config.hs, /home/john-walker/repos/webdriver/dist-newstyle/build/x86_64-linux/ghc-9.10.1/webdriver-precore-0.1.0.2/t/test/build/test/test-tmp/Config.o, interpreted ) [Missing bytecode]
+test/Config.hs:15:1-67: warning: [GHC-38856] [-Wunused-imports]
+    The import of ‘joinPath, splitDirectories’
+    from module ‘System.FilePath’ is redundant
+   |
+15 | import System.FilePath (combine, joinPath, splitDirectories, (</>))
+   | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+[ 8 of 33] Compiling Http.HttpRunner  ( test/Http/HttpRunner.hs, /home/john-walker/repos/webdriver/dist-newstyle/build/x86_64-linux/ghc-9.10.1/webdriver-precore-0.1.0.2/t/test/build/test/test-tmp/Http/HttpRunner.o, interpreted ) [Missing bytecode]
+[ 9 of 33] Compiling Http.HttpAPI     ( test/Http/HttpAPI.hs, /home/john-walker/repos/webdriver/dist-newstyle/build/x86_64-linux/ghc-9.10.1/webdriver-precore-0.1.0.2/t/test/build/test/test-tmp/Http/HttpAPI.o, interpreted ) [Missing bytecode]
+[10 of 33] Compiling JSONParsingTest  ( test/JSONParsingTest.hs, /home/john-walker/repos/webdriver/dist-newstyle/build/x86_64-linux/ghc-9.10.1/webdriver-precore-0.1.0.2/t/test/build/test/test-tmp/JSONParsingTest.o, interpreted ) [Missing bytecode]
+[11 of 33] Compiling RuntimeConst     ( test/RuntimeConst.hs, /home/john-walker/repos/webdriver/dist-newstyle/build/x86_64-linux/ghc-9.10.1/webdriver-precore-0.1.0.2/t/test/build/test/test-tmp/RuntimeConst.o, interpreted ) [Missing bytecode]
+[13 of 33] Compiling BiDi.Runner  ( test/BiDi/Runner.hs, /home/john-walker/repos/webdriver/dist-newstyle/build/x86_64-linux/ghc-9.10.1/webdriver-precore-0.1.0.2/t/test/build/test/test-tmp/BiDi/Runner.o, interpreted ) [Missing bytecode]
+[14 of 33] Compiling BiDi.DemoUtils   ( test/BiDi/DemoUtils.hs, /home/john-walker/repos/webdriver/dist-newstyle/build/x86_64-linux/ghc-9.10.1/webdriver-precore-0.1.0.2/t/test/build/test/test-tmp/BiDi/DemoUtils.o, interpreted ) [Missing bytecode]
+[15 of 33] Compiling BiDi.Demos.StorageDemos ( test/BiDi/Demos/StorageDemos.hs, /home/john-walker/repos/webdriver/dist-newstyle/build/x86_64-linux/ghc-9.10.1/webdriver-precore-0.1.0.2/t/test/build/test/test-tmp/BiDi/Demos/StorageDemos.o, interpreted ) [Missing bytecode]
+[16 of 33] Compiling BiDi.Demos.SessionDemos ( test/BiDi/Demos/SessionDemos.hs, /home/john-walker/repos/webdriver/dist-newstyle/build/x86_64-linux/ghc-9.10.1/webdriver-precore-0.1.0.2/t/test/build/test/test-tmp/BiDi/Demos/SessionDemos.o, interpreted ) [Missing bytecode]
+[17 of 33] Compiling BiDi.Demos.ScriptDemos ( test/BiDi/Demos/ScriptDemos.hs, /home/john-walker/repos/webdriver/dist-newstyle/build/x86_64-linux/ghc-9.10.1/webdriver-precore-0.1.0.2/t/test/build/test/test-tmp/BiDi/Demos/ScriptDemos.o, interpreted ) [Missing bytecode]
+[20 of 33] Compiling BiDi.Demos.NetworkEventDemos ( test/BiDi/Demos/NetworkEventDemos.hs, /home/john-walker/repos/webdriver/dist-newstyle/build/x86_64-linux/ghc-9.10.1/webdriver-precore-0.1.0.2/t/test/build/test/test-tmp/BiDi/Demos/NetworkEventDemos.o, interpreted ) [Missing bytecode]
+[21 of 33] Compiling BiDi.Demos.NetworkDemos ( test/BiDi/Demos/NetworkDemos.hs, /home/john-walker/repos/webdriver/dist-newstyle/build/x86_64-linux/ghc-9.10.1/webdriver-precore-0.1.0.2/t/test/build/test/test-tmp/BiDi/Demos/NetworkDemos.o, interpreted ) [Missing bytecode]
+[22 of 33] Compiling BiDi.Demos.EmulationDemos ( test/BiDi/Demos/EmulationDemos.hs, /home/john-walker/repos/webdriver/dist-newstyle/build/x86_64-linux/ghc-9.10.1/webdriver-precore-0.1.0.2/t/test/build/test/test-tmp/BiDi/Demos/EmulationDemos.o, interpreted ) [Missing bytecode]
+[23 of 33] Compiling BiDi.Demos.BrowsingContextDemos ( test/BiDi/Demos/BrowsingContextDemos.hs, /home/john-walker/repos/webdriver/dist-newstyle/build/x86_64-linux/ghc-9.10.1/webdriver-precore-0.1.0.2/t/test/build/test/test-tmp/BiDi/Demos/BrowsingContextDemos.o, interpreted ) [Missing bytecode]
+[24 of 33] Compiling BiDi.Demos.BrowserDemos ( test/BiDi/Demos/BrowserDemos.hs, /home/john-walker/repos/webdriver/dist-newstyle/build/x86_64-linux/ghc-9.10.1/webdriver-precore-0.1.0.2/t/test/build/test/test-tmp/BiDi/Demos/BrowserDemos.o, interpreted ) [Missing bytecode]
+[25 of 33] Compiling TestData         ( test/TestData.hs, /home/john-walker/repos/webdriver/dist-newstyle/build/x86_64-linux/ghc-9.10.1/webdriver-precore-0.1.0.2/t/test/build/test/test-tmp/TestData.o, interpreted ) [Missing bytecode]
+test/TestData.hs:8:26-41: warning: [GHC-38856] [-Wunused-imports]
+    The import of ‘canonicalizePath’
+    from module ‘System.Directory’ is redundant
+  |
+8 | import System.Directory (canonicalizePath, getCurrentDirectory)
+  |                          ^^^^^^^^^^^^^^^^
+
+test/TestData.hs:10:1-43: warning: [GHC-66111] [-Wunused-imports]
+    The import of ‘WebDriverPreCore.Internal.Utils’ is redundant
+      except perhaps to import instances from ‘WebDriverPreCore.Internal.Utils’
+    To import instances alone, use: import WebDriverPreCore.Internal.Utils()
+   |
+10 | import WebDriverPreCore.Internal.Utils (db)
+   | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+[26 of 33] Compiling BiDi.Demos.WebExtensionDemos ( test/BiDi/Demos/WebExtensionDemos.hs, /home/john-walker/repos/webdriver/dist-newstyle/build/x86_64-linux/ghc-9.10.1/webdriver-precore-0.1.0.2/t/test/build/test/test-tmp/BiDi/Demos/WebExtensionDemos.o, interpreted ) [Missing bytecode]
+[27 of 33] Compiling BiDi.Demos.ScriptEventDemos ( test/BiDi/Demos/ScriptEventDemos.hs, /home/john-walker/repos/webdriver/dist-newstyle/build/x86_64-linux/ghc-9.10.1/webdriver-precore-0.1.0.2/t/test/build/test/test-tmp/BiDi/Demos/ScriptEventDemos.o, interpreted ) [Missing bytecode]
+[28 of 33] Compiling BiDi.Demos.LogEventDemos ( test/BiDi/Demos/LogEventDemos.hs, /home/john-walker/repos/webdriver/dist-newstyle/build/x86_64-linux/ghc-9.10.1/webdriver-precore-0.1.0.2/t/test/build/test/test-tmp/BiDi/Demos/LogEventDemos.o, interpreted ) [Missing bytecode]
+[29 of 33] Compiling BiDi.Demos.InputEventDemos ( test/BiDi/Demos/InputEventDemos.hs, /home/john-walker/repos/webdriver/dist-newstyle/build/x86_64-linux/ghc-9.10.1/webdriver-precore-0.1.0.2/t/test/build/test/test-tmp/BiDi/Demos/InputEventDemos.o, interpreted ) [Missing bytecode]
+[30 of 33] Compiling BiDi.Demos.InputDemos ( test/BiDi/Demos/InputDemos.hs, /home/john-walker/repos/webdriver/dist-newstyle/build/x86_64-linux/ghc-9.10.1/webdriver-precore-0.1.0.2/t/test/build/test/test-tmp/BiDi/Demos/InputDemos.o, interpreted ) [Missing bytecode]
+[31 of 33] Compiling BiDi.Demos.BrowsingContextEventDemos ( test/BiDi/Demos/BrowsingContextEventDemos.hs, /home/john-walker/repos/webdriver/dist-newstyle/build/x86_64-linux/ghc-9.10.1/webdriver-precore-0.1.0.2/t/test/build/test/test-tmp/BiDi/Demos/BrowsingContextEventDemos.o, interpreted ) [Missing bytecode]
+[33 of 33] Linking /home/john-walker/repos/webdriver/dist-newstyle/build/x86_64-linux/ghc-9.10.1/webdriver-precore-0.1.0.2/t/test/build/test/test [Objects changed]
+Running 1 test suites...
+Test suite test: RUNNING...
+Tests
+  Unit Tests
+    API Coverage
+      All endpoints covered:                                                                                                                                                                                                                             OK
+    Error Coverage
+      All errors covered:                                                                                                                                                                                                                                OK
+      Round trip error codes:                                                                                                                                                                                                                            OK
+    JSON Parsing
+      WebSocket URL from JSON:                                                                                                                                                                                                                           OK
+  Property Tests
+    JSON Parsing
+      Roundtrip Capabilities Parsing:                                                                                                                                                                                                                    OK (0.03s)
+        1000 successful tests
+  BiDi Demos
+    BiDi Commands
+      Browser
+        Browser - Get Client Windows:                                                                                                                                                                                                                    OK (1.26s)
+        Browser - Create User Context:                                                                                                                                                                                                                   OK (1.28s)
+        Browser - Get User Contexts:                                                                                                                                                                                                                     OK (1.26s)
+        Browser - Set Client Window State:                                                                                                                                                                                                               OK (1.26s)
+        Browser - Remove User Context:                                                                                                                                                                                                                   OK (1.24s)
+        Browser - Complete Workflow:                                                                                                                                                                                                                     OK (1.87s)
+        Browser - Close (CAUTION: Terminates Session) - EXPECTED ERROR: Closing the browser in a session started with WebDriver classic is not supported. Use the WebDriver classic "Delete Session" command instead which will also close the browser.: One of the BiDi client threads failed: 
+user error (Error did not contain expected fragment. Got: "Error executing BiDi command: MkCommand\n  { method = \"browser.close\"\n  , params = fromList []\n  , extended = Nothing\n  }\nWith JSON: \n{\n    \"id\": 3,\n    \"method\": \"browser.close\",\n    \"params\": {}\n}\nBiDi driver error: \nMkDriverError\n  { id = Just 3\n  , error = UnsupportedOperation\n  , description = \"The operation requested is not supported\"\n  , message =\n      \"Closing the browser in a session started with WebDriver classic is not supported. Use the WebDriver classic \\\"Delete Session\\\" command instead which will also close the browser.\"\n  , stacktrace =\n      Just\n        \"RemoteError@chrome://remote/content/shared/RemoteError.sys.mjs:8:8\\nWebDriverError@chrome://remote/content/shared/webdriver/Errors.sys.mjs:202:5\\nUnsupportedOperationError@chrome://remote/content/shared/webdriver/Errors.sys.mjs:978:5\\nclose@chrome://remote/content/webdriver-bidi/modules/root/browser.sys.mjs:120:13\\nhandleCommand@chrome://remote/content/shared/messagehandler/MessageHandler.sys.mjs:260:33\\nexecute@chrome://remote/content/shared/webdriver/Session.sys.mjs:410:32\\nonPacket@chrome://remote/content/webdriver-bidi/WebDriverBiDiConnection.sys.mjs:236:37\\nonMessage@chrome://remote/content/server/WebSocketTransport.sys.mjs:127:18\\nhandleEvent@chrome://remote/content/server/WebSocketTransport.sys.mjs:109:14\\n\"\n  , extensions = MkEmptyResult { extensible = fromList [] }\n  }\nCallStack (from HasCallStack):\n  error, called at test/BiDi/Runner.hs:483:17 in webdriver-precore-0.1.0.2-inplace-test:BiDi.Runner")
+
+FAIL
+          Exception: user error (Error did not contain expected fragment. Got: "Error executing BiDi command: MkCommand\n  { method = \"browser.close\"\n  , params = fromList []\n  , extended = Nothing\n  }\nWith JSON: \n{\n    \"id\": 3,\n    \"method\": \"browser.close\",\n    \"params\": {}\n}\nBiDi driver error: \nMkDriverError\n  { id = Just 3\n  , error = UnsupportedOperation\n  , description = \"The operation requested is not supported\"\n  , message =\n      \"Closing the browser in a session started with WebDriver classic is not supported. Use the WebDriver classic \\\"Delete Session\\\" command instead which will also close the browser.\"\n  , stacktrace =\n      Just\n        \"RemoteError@chrome://remote/content/shared/RemoteError.sys.mjs:8:8\\nWebDriverError@chrome://remote/content/shared/webdriver/Errors.sys.mjs:202:5\\nUnsupportedOperationError@chrome://remote/content/shared/webdriver/Errors.sys.mjs:978:5\\nclose@chrome://remote/content/webdriver-bidi/modules/root/browser.sys.mjs:120:13\\nhandleCommand@chrome://remote/content/shared/messagehandler/MessageHandler.sys.mjs:260:33\\nexecute@chrome://remote/content/shared/webdriver/Session.sys.mjs:410:32\\nonPacket@chrome://remote/content/webdriver-bidi/WebDriverBiDiConnection.sys.mjs:236:37\\nonMessage@chrome://remote/content/server/WebSocketTransport.sys.mjs:127:18\\nhandleEvent@chrome://remote/content/server/WebSocketTransport.sys.mjs:109:14\\n\"\n  , extensions = MkEmptyResult { extensible = fromList [] }\n  }\nCallStack (from HasCallStack):\n  error, called at test/BiDi/Runner.hs:483:17 in webdriver-precore-0.1.0.2-inplace-test:BiDi.Runner")
+          HasCallStack backtrace:
+            collectBacktraces, called at libraries/ghc-internal/src/GHC/Internal/Exception.hs:92:13 in ghc-internal:GHC.Internal.Exception
+            toExceptionWithBacktrace, called at libraries/ghc-internal/src/GHC/Internal/IO.hs:260:11 in ghc-internal:GHC.Internal.IO
+            throwIO, called at ./Control/Concurrent/Async.hs:110:7 in tasty-1.5.3-babb73df148608b74dd5e5163aba2b82b28a6019ee64e8b6cb4d2db23a833b0c:Control.Concurrent.Async
+          
+          
+          Use -p '/Browser - Close (CAUTION: Terminates Session) - EXPECTED ERROR: Closing the browser in a session started with WebDriver classic is not supported. Use the WebDriver classic "Delete Session" command instead which will also close the browser./' to rerun this test only.
+      Browsing Context
+        Browsing Context - Create, Activate, Close:                                                                                                                                                                                                      OK (2.16s)
+        Browsing Context - Capture Screenshot, Close:                                                                                                                                                                                                    OK (1.32s)
+        Browsing Context - Close with Unload Prompt:                                                                                                                                                                                                     OK (1.23s)
+        Browsing Context - Get Tree:                                                                                                                                                                                                                     OK (1.54s)
+        Browsing Context - Handle User Prompt:                                                                                                                                                                                                           OK (3.29s)
+        Browsing Context - Navigate, Reload, Traverse History:                                                                                                                                                                                           OK (8.23s)
+        Browsing Context - Locate Nodes with All Selectors and Options:                                                                                                                                                                                  OK (7.41s)
+        Browsing Context - Print and Set Viewport:                                                                                                                                                                                                       OK (12.60s)
+      Emulation
+        Emulation - Set Geolocation Override:                                                                                                                                                                                                            OK (1.30s)
+        Emulation - Set Locale Override:                                                                                                                                                                                                                 OK (1.27s)
+        Emulation - Set Screen Orientation Override:                                                                                                                                                                                                     OK (1.28s)
+        Emulation - Set Timezone Override:                                                                                                                                                                                                               OK (1.24s)
+        Emulation - Complete Workflow Demo:                                                                                                                                                                                                              OK (1.24s)
+      Input
+        Input I - Keyboard Actions:                                                                                                                                                                                                                      OK (2.91s)
+        Input II - Pointer/Mouse Actions:                                                                                                                                                                                                                OK (5.03s)
+        Input III - Wheel/Scroll Actions:                                                                                                                                                                                                                OK (3.62s)
+        Input IV - Combined Actions:                                                                                                                                                                                                                     OK (3.38s)
+        Input V - Release Actions:                                                                                                                                                                                                                       OK (2.04s)
+        Input VI - Set Files for File Upload:                                                                                                                                                                                                            OK (1.39s)
+      Network
+        Network I - Data Collector Management:                                                                                                                                                                                                           One of the BiDi client threads failed: 
+Error executing BiDi command: MkCommand
+  { method = "network.addDataCollector"
+  , params =
+      MkAddDataCollector
+        { dataTypes = [ MkDataType { dataType = "response" } ]
+        , maxEncodedDataSize = 1024
+        , collectorType = Nothing
+        , contexts = Nothing
+        , userContexts = Nothing
+        }
+  , extended = Nothing
+  }
+With JSON: 
+{
+    "id": 2,
+    "method": "network.addDataCollector",
+    "params": {
+        "collectorType": null,
+        "contexts": null,
+        "dataTypes": [
+            {
+                "dataType": "response"
+            }
+        ],
+        "maxEncodedDataSize": 1024,
+        "userContexts": null
+    }
+}
+BiDi driver error: 
+MkDriverError
+  { id = Just 2
+  , error = InvalidArgument
+  , description =
+      "Tried to perform an action with an invalid argument"
+  , message =
+      "Expected \"dataTypes\" values to be one of response, got [object Object] {\"dataType\":\"response\"}"
+  , stacktrace =
+      Just
+        "RemoteError@chrome://remote/content/shared/RemoteError.sys.mjs:8:8\nWebDriverError@chrome://remote/content/shared/webdriver/Errors.sys.mjs:202:5\nInvalidArgumentError@chrome://remote/content/shared/webdriver/Errors.sys.mjs:404:5\naddDataCollector@chrome://remote/content/webdriver-bidi/modules/root/network.sys.mjs:514:15\nhandleCommand@chrome://remote/content/shared/messagehandler/MessageHandler.sys.mjs:260:33\nexecute@chrome://remote/content/shared/webdriver/Session.sys.mjs:410:32\nonPacket@chrome://remote/content/webdriver-bidi/WebDriverBiDiConnection.sys.mjs:236:37\nonMessage@chrome://remote/content/server/WebSocketTransport.sys.mjs:127:18\nhandleEvent@chrome://remote/content/server/WebSocketTransport.sys.mjs:109:14\n"
+  , extensions = MkEmptyResult { extensible = fromList [] }
+  }
+CallStack (from HasCallStack):
+  error, called at test/BiDi/Runner.hs:483:17 in webdriver-precore-0.1.0.2-inplace-test:BiDi.Runner
+HasCallStack backtrace:
+  collectBacktraces, called at libraries/ghc-internal/src/GHC/Internal/Exception.hs:92:13 in ghc-internal:GHC.Internal.Exception
+  toExceptionWithBacktrace, called at libraries/ghc-internal/src/GHC/Internal/Exception.hs:128:3 in ghc-internal:GHC.Internal.Exception
+
+
+FAIL
+          Exception: Error executing BiDi command: MkCommand
+            { method = "network.addDataCollector"
+            , params =
+                MkAddDataCollector
+                  { dataTypes = [ MkDataType { dataType = "response" } ]
+                  , maxEncodedDataSize = 1024
+                  , collectorType = Nothing
+                  , contexts = Nothing
+                  , userContexts = Nothing
+                  }
+            , extended = Nothing
+            }
+          With JSON: 
+          {
+              "id": 2,
+              "method": "network.addDataCollector",
+              "params": {
+                  "collectorType": null,
+                  "contexts": null,
+                  "dataTypes": [
+                      {
+                          "dataType": "response"
+                      }
+                  ],
+                  "maxEncodedDataSize": 1024,
+                  "userContexts": null
+              }
+          }
+          BiDi driver error: 
+          MkDriverError
+            { id = Just 2
+            , error = InvalidArgument
+            , description =
+                "Tried to perform an action with an invalid argument"
+            , message =
+                "Expected \"dataTypes\" values to be one of response, got [object Object] {\"dataType\":\"response\"}"
+            , stacktrace =
+                Just
+                  "RemoteError@chrome://remote/content/shared/RemoteError.sys.mjs:8:8\nWebDriverError@chrome://remote/content/shared/webdriver/Errors.sys.mjs:202:5\nInvalidArgumentError@chrome://remote/content/shared/webdriver/Errors.sys.mjs:404:5\naddDataCollector@chrome://remote/content/webdriver-bidi/modules/root/network.sys.mjs:514:15\nhandleCommand@chrome://remote/content/shared/messagehandler/MessageHandler.sys.mjs:260:33\nexecute@chrome://remote/content/shared/webdriver/Session.sys.mjs:410:32\nonPacket@chrome://remote/content/webdriver-bidi/WebDriverBiDiConnection.sys.mjs:236:37\nonMessage@chrome://remote/content/server/WebSocketTransport.sys.mjs:127:18\nhandleEvent@chrome://remote/content/server/WebSocketTransport.sys.mjs:109:14\n"
+            , extensions = MkEmptyResult { extensible = fromList [] }
+            }
+          CallStack (from HasCallStack):
+            error, called at test/BiDi/Runner.hs:483:17 in webdriver-precore-0.1.0.2-inplace-test:BiDi.Runner
+          HasCallStack backtrace:
+            collectBacktraces, called at libraries/ghc-internal/src/GHC/Internal/Exception.hs:92:13 in ghc-internal:GHC.Internal.Exception
+            toExceptionWithBacktrace, called at libraries/ghc-internal/src/GHC/Internal/IO.hs:260:11 in ghc-internal:GHC.Internal.IO
+            throwIO, called at ./Control/Concurrent/Async.hs:110:7 in tasty-1.5.3-babb73df148608b74dd5e5163aba2b82b28a6019ee64e8b6cb4d2db23a833b0c:Control.Concurrent.Async
+          
+          
+          Use -p '/Network I - Data Collector Management/' to rerun this test only.
+        Network II - Request/Response Interception:                                                                                                                                                                                                      OK (2.25s)
+        Network III - Request and Response Modification:                                                                                                                                                                                                 One of the BiDi client threads failed: 
+Error executing BiDi command: MkCommand
+  { method = "network.continueRequest"
+  , params =
+      MkContinueRequest
+        { request = MkRequestId { id = "example-request-id-001" }
+        , body = Nothing
+        , cookies = Nothing
+        , headers = Nothing
+        , method = Nothing
+        , url = Nothing
+        }
+  , extended = Nothing
+  }
+With JSON: 
+{
+    "id": 2,
+    "method": "network.continueRequest",
+    "params": {
+        "request": "example-request-id-001"
+    }
+}
+BiDi driver error: 
+MkDriverError
+  { id = Just 2
+  , error = NoSuchRequest
+  , description = "Tried to continue an unknown request"
+  , message =
+      "Blocked request with id example-request-id-001 not found"
+  , stacktrace =
+      Just
+        "RemoteError@chrome://remote/content/shared/RemoteError.sys.mjs:8:8\nWebDriverError@chrome://remote/content/shared/webdriver/Errors.sys.mjs:202:5\nNoSuchRequestError@chrome://remote/content/shared/webdriver/Errors.sys.mjs:733:5\ncontinueRequest@chrome://remote/content/webdriver-bidi/modules/root/network.sys.mjs:776:13\nhandleCommand@chrome://remote/content/shared/messagehandler/MessageHandler.sys.mjs:260:33\nexecute@chrome://remote/content/shared/webdriver/Session.sys.mjs:410:32\nonPacket@chrome://remote/content/webdriver-bidi/WebDriverBiDiConnection.sys.mjs:236:37\nonMessage@chrome://remote/content/server/WebSocketTransport.sys.mjs:127:18\nhandleEvent@chrome://remote/content/server/WebSocketTransport.sys.mjs:109:14\n"
+  , extensions = MkEmptyResult { extensible = fromList [] }
+  }
+CallStack (from HasCallStack):
+  error, called at test/BiDi/Runner.hs:483:17 in webdriver-precore-0.1.0.2-inplace-test:BiDi.Runner
+HasCallStack backtrace:
+  collectBacktraces, called at libraries/ghc-internal/src/GHC/Internal/Exception.hs:92:13 in ghc-internal:GHC.Internal.Exception
+  toExceptionWithBacktrace, called at libraries/ghc-internal/src/GHC/Internal/IO.hs:260:11 in ghc-internal:GHC.Internal.IO
+  throwIO, called at test/BiDi/Demos/NetworkDemos.hs:337:5 in webdriver-precore-0.1.0.2-inplace-test:BiDi.Demos.NetworkDemos
+
+
+FAIL
+          Exception: Error executing BiDi command: MkCommand
+            { method = "network.continueRequest"
+            , params =
+                MkContinueRequest
+                  { request = MkRequestId { id = "example-request-id-001" }
+                  , body = Nothing
+                  , cookies = Nothing
+                  , headers = Nothing
+                  , method = Nothing
+                  , url = Nothing
+                  }
+            , extended = Nothing
+            }
+          With JSON: 
+          {
+              "id": 2,
+              "method": "network.continueRequest",
+              "params": {
+                  "request": "example-request-id-001"
+              }
+          }
+          BiDi driver error: 
+          MkDriverError
+            { id = Just 2
+            , error = NoSuchRequest
+            , description = "Tried to continue an unknown request"
+            , message =
+                "Blocked request with id example-request-id-001 not found"
+            , stacktrace =
+                Just
+                  "RemoteError@chrome://remote/content/shared/RemoteError.sys.mjs:8:8\nWebDriverError@chrome://remote/content/shared/webdriver/Errors.sys.mjs:202:5\nNoSuchRequestError@chrome://remote/content/shared/webdriver/Errors.sys.mjs:733:5\ncontinueRequest@chrome://remote/content/webdriver-bidi/modules/root/network.sys.mjs:776:13\nhandleCommand@chrome://remote/content/shared/messagehandler/MessageHandler.sys.mjs:260:33\nexecute@chrome://remote/content/shared/webdriver/Session.sys.mjs:410:32\nonPacket@chrome://remote/content/webdriver-bidi/WebDriverBiDiConnection.sys.mjs:236:37\nonMessage@chrome://remote/content/server/WebSocketTransport.sys.mjs:127:18\nhandleEvent@chrome://remote/content/server/WebSocketTransport.sys.mjs:109:14\n"
+            , extensions = MkEmptyResult { extensible = fromList [] }
+            }
+          CallStack (from HasCallStack):
+            error, called at test/BiDi/Runner.hs:483:17 in webdriver-precore-0.1.0.2-inplace-test:BiDi.Runner
+          HasCallStack backtrace:
+            collectBacktraces, called at libraries/ghc-internal/src/GHC/Internal/Exception.hs:92:13 in ghc-internal:GHC.Internal.Exception
+            toExceptionWithBacktrace, called at libraries/ghc-internal/src/GHC/Internal/IO.hs:260:11 in ghc-internal:GHC.Internal.IO
+            throwIO, called at ./Control/Concurrent/Async.hs:110:7 in tasty-1.5.3-babb73df148608b74dd5e5163aba2b82b28a6019ee64e8b6cb4d2db23a833b0c:Control.Concurrent.Async
+          
+          
+          Use -p '/Network III - Request and Response Modification/' to rerun this test only.
+        Network IV - Authentication and Request Failure Handling:                                                                                                                                                                                        One of the BiDi client threads failed: 
+Error executing BiDi command: MkCommand
+  { method = "network.continueWithAuth"
+  , params =
+      MkContinueWithAuth
+        { request = MkRequest { request = "example-request-auth-001" }
+        , authAction = DefaultAuth
+        }
+  , extended = Nothing
+  }
+With JSON: 
+{
+    "id": 2,
+    "method": "network.continueWithAuth",
+    "params": {
+        "action": "default",
+        "request": "example-request-auth-001"
+    }
+}
+BiDi driver error: 
+MkDriverError
+  { id = Just 2
+  , error = NoSuchRequest
+  , description = "Tried to continue an unknown request"
+  , message =
+      "Blocked request with id example-request-auth-001 not found"
+  , stacktrace =
+      Just
+        "RemoteError@chrome://remote/content/shared/RemoteError.sys.mjs:8:8\nWebDriverError@chrome://remote/content/shared/webdriver/Errors.sys.mjs:202:5\nNoSuchRequestError@chrome://remote/content/shared/webdriver/Errors.sys.mjs:733:5\ncontinueWithAuth@chrome://remote/content/webdriver-bidi/modules/root/network.sys.mjs:1042:13\nhandleCommand@chrome://remote/content/shared/messagehandler/MessageHandler.sys.mjs:260:33\nexecute@chrome://remote/content/shared/webdriver/Session.sys.mjs:410:32\nonPacket@chrome://remote/content/webdriver-bidi/WebDriverBiDiConnection.sys.mjs:236:37\nonMessage@chrome://remote/content/server/WebSocketTransport.sys.mjs:127:18\nhandleEvent@chrome://remote/content/server/WebSocketTransport.sys.mjs:109:14\n"
+  , extensions = MkEmptyResult { extensible = fromList [] }
+  }
+CallStack (from HasCallStack):
+  error, called at test/BiDi/Runner.hs:483:17 in webdriver-precore-0.1.0.2-inplace-test:BiDi.Runner
+HasCallStack backtrace:
+  collectBacktraces, called at libraries/ghc-internal/src/GHC/Internal/Exception.hs:92:13 in ghc-internal:GHC.Internal.Exception
+  toExceptionWithBacktrace, called at libraries/ghc-internal/src/GHC/Internal/IO.hs:260:11 in ghc-internal:GHC.Internal.IO
+  throwIO, called at test/BiDi/Demos/NetworkDemos.hs:337:5 in webdriver-precore-0.1.0.2-inplace-test:BiDi.Demos.NetworkDemos
+
+
+FAIL
+          Exception: Error executing BiDi command: MkCommand
+            { method = "network.continueWithAuth"
+            , params =
+                MkContinueWithAuth
+                  { request = MkRequest { request = "example-request-auth-001" }
+                  , authAction = DefaultAuth
+                  }
+            , extended = Nothing
+            }
+          With JSON: 
+          {
+              "id": 2,
+              "method": "network.continueWithAuth",
+              "params": {
+                  "action": "default",
+                  "request": "example-request-auth-001"
+              }
+          }
+          BiDi driver error: 
+          MkDriverError
+            { id = Just 2
+            , error = NoSuchRequest
+            , description = "Tried to continue an unknown request"
+            , message =
+                "Blocked request with id example-request-auth-001 not found"
+            , stacktrace =
+                Just
+                  "RemoteError@chrome://remote/content/shared/RemoteError.sys.mjs:8:8\nWebDriverError@chrome://remote/content/shared/webdriver/Errors.sys.mjs:202:5\nNoSuchRequestError@chrome://remote/content/shared/webdriver/Errors.sys.mjs:733:5\ncontinueWithAuth@chrome://remote/content/webdriver-bidi/modules/root/network.sys.mjs:1042:13\nhandleCommand@chrome://remote/content/shared/messagehandler/MessageHandler.sys.mjs:260:33\nexecute@chrome://remote/content/shared/webdriver/Session.sys.mjs:410:32\nonPacket@chrome://remote/content/webdriver-bidi/WebDriverBiDiConnection.sys.mjs:236:37\nonMessage@chrome://remote/content/server/WebSocketTransport.sys.mjs:127:18\nhandleEvent@chrome://remote/content/server/WebSocketTransport.sys.mjs:109:14\n"
+            , extensions = MkEmptyResult { extensible = fromList [] }
+            }
+          CallStack (from HasCallStack):
+            error, called at test/BiDi/Runner.hs:483:17 in webdriver-precore-0.1.0.2-inplace-test:BiDi.Runner
+          HasCallStack backtrace:
+            collectBacktraces, called at libraries/ghc-internal/src/GHC/Internal/Exception.hs:92:13 in ghc-internal:GHC.Internal.Exception
+            toExceptionWithBacktrace, called at libraries/ghc-internal/src/GHC/Internal/IO.hs:260:11 in ghc-internal:GHC.Internal.IO
+            throwIO, called at ./Control/Concurrent/Async.hs:110:7 in tasty-1.5.3-babb73df148608b74dd5e5163aba2b82b28a6019ee64e8b6cb4d2db23a833b0c:Control.Concurrent.Async
+          
+          
+          Use -p '/Network IV - Authentication and Request Failure Handling/' to rerun this test only.
+        Network V - Custom Response Provision:                                                                                                                                                                                                           One of the BiDi client threads failed: 
+Error executing BiDi command: MkCommand
+  { method = "network.provideResponse"
+  , params =
+      MkProvideResponse
+        { request = MkRequest { request = "fake-request-002" }
+        , intercept = MkIntercept "example-intercept-002"
+        , body = Nothing
+        , cookies = Nothing
+        , headers = Nothing
+        , reasonPhrase = "OK"
+        , statusCode = 200
+        }
+  , extended = Nothing
+  }
+With JSON: 
+{
+    "id": 2,
+    "method": "network.provideResponse",
+    "params": {
+        "intercept": "example-intercept-002",
+        "reasonPhrase": "OK",
+        "request": "fake-request-002",
+        "statusCode": 200
+    }
+}
+BiDi driver error: 
+MkDriverError
+  { id = Just 2
+  , error = NoSuchRequest
+  , description = "Tried to continue an unknown request"
+  , message = "Blocked request with id fake-request-002 not found"
+  , stacktrace =
+      Just
+        "RemoteError@chrome://remote/content/shared/RemoteError.sys.mjs:8:8\nWebDriverError@chrome://remote/content/shared/webdriver/Errors.sys.mjs:202:5\nNoSuchRequestError@chrome://remote/content/shared/webdriver/Errors.sys.mjs:733:5\nprovideResponse@chrome://remote/content/webdriver-bidi/modules/root/network.sys.mjs:1391:13\nhandleCommand@chrome://remote/content/shared/messagehandler/MessageHandler.sys.mjs:260:33\nexecute@chrome://remote/content/shared/webdriver/Session.sys.mjs:410:32\nonPacket@chrome://remote/content/webdriver-bidi/WebDriverBiDiConnection.sys.mjs:236:37\nonMessage@chrome://remote/content/server/WebSocketTransport.sys.mjs:127:18\nhandleEvent@chrome://remote/content/server/WebSocketTransport.sys.mjs:109:14\n"
+  , extensions = MkEmptyResult { extensible = fromList [] }
+  }
+CallStack (from HasCallStack):
+  error, called at test/BiDi/Runner.hs:483:17 in webdriver-precore-0.1.0.2-inplace-test:BiDi.Runner
+HasCallStack backtrace:
+  collectBacktraces, called at libraries/ghc-internal/src/GHC/Internal/Exception.hs:92:13 in ghc-internal:GHC.Internal.Exception
+  toExceptionWithBacktrace, called at libraries/ghc-internal/src/GHC/Internal/IO.hs:260:11 in ghc-internal:GHC.Internal.IO
+  throwIO, called at test/BiDi/Demos/NetworkDemos.hs:337:5 in webdriver-precore-0.1.0.2-inplace-test:BiDi.Demos.NetworkDemos
+
+
+FAIL
+          Exception: Error executing BiDi command: MkCommand
+            { method = "network.provideResponse"
+            , params =
+                MkProvideResponse
+                  { request = MkRequest { request = "fake-request-002" }
+                  , intercept = MkIntercept "example-intercept-002"
+                  , body = Nothing
+                  , cookies = Nothing
+                  , headers = Nothing
+                  , reasonPhrase = "OK"
+                  , statusCode = 200
+                  }
+            , extended = Nothing
+            }
+          With JSON: 
+          {
+              "id": 2,
+              "method": "network.provideResponse",
+              "params": {
+                  "intercept": "example-intercept-002",
+                  "reasonPhrase": "OK",
+                  "request": "fake-request-002",
+                  "statusCode": 200
+              }
+          }
+          BiDi driver error: 
+          MkDriverError
+            { id = Just 2
+            , error = NoSuchRequest
+            , description = "Tried to continue an unknown request"
+            , message = "Blocked request with id fake-request-002 not found"
+            , stacktrace =
+                Just
+                  "RemoteError@chrome://remote/content/shared/RemoteError.sys.mjs:8:8\nWebDriverError@chrome://remote/content/shared/webdriver/Errors.sys.mjs:202:5\nNoSuchRequestError@chrome://remote/content/shared/webdriver/Errors.sys.mjs:733:5\nprovideResponse@chrome://remote/content/webdriver-bidi/modules/root/network.sys.mjs:1391:13\nhandleCommand@chrome://remote/content/shared/messagehandler/MessageHandler.sys.mjs:260:33\nexecute@chrome://remote/content/shared/webdriver/Session.sys.mjs:410:32\nonPacket@chrome://remote/content/webdriver-bidi/WebDriverBiDiConnection.sys.mjs:236:37\nonMessage@chrome://remote/content/server/WebSocketTransport.sys.mjs:127:18\nhandleEvent@chrome://remote/content/server/WebSocketTransport.sys.mjs:109:14\n"
+            , extensions = MkEmptyResult { extensible = fromList [] }
+            }
+          CallStack (from HasCallStack):
+            error, called at test/BiDi/Runner.hs:483:17 in webdriver-precore-0.1.0.2-inplace-test:BiDi.Runner
+          HasCallStack backtrace:
+            collectBacktraces, called at libraries/ghc-internal/src/GHC/Internal/Exception.hs:92:13 in ghc-internal:GHC.Internal.Exception
+            toExceptionWithBacktrace, called at libraries/ghc-internal/src/GHC/Internal/IO.hs:260:11 in ghc-internal:GHC.Internal.IO
+            throwIO, called at ./Control/Concurrent/Async.hs:110:7 in tasty-1.5.3-babb73df148608b74dd5e5163aba2b82b28a6019ee64e8b6cb4d2db23a833b0c:Control.Concurrent.Async
+          
+          
+          Use -p '/Network V - Custom Response Provision/' to rerun this test only.
+        Network VI - Data Retrieval and Ownership:                                                                                                                                                                                                       One of the BiDi client threads failed: 
+Error executing BiDi command: MkCommand
+  { method = "network.addDataCollector"
+  , params =
+      MkAddDataCollector
+        { dataTypes = [ MkDataType { dataType = "response" } ]
+        , maxEncodedDataSize = 2048
+        , collectorType = Just MkCollectorType { collectorType = "buffer" }
+        , contexts =
+            Just
+              [ MkBrowsingContext
+                  { context = "d0520764-360a-4209-b01d-de17c1c5117a" }
+              ]
+        , userContexts = Nothing
+        }
+  , extended = Nothing
+  }
+With JSON: 
+{
+    "id": 2,
+    "method": "network.addDataCollector",
+    "params": {
+        "collectorType": {
+            "collectorType": "buffer"
+        },
+        "contexts": [
+            "d0520764-360a-4209-b01d-de17c1c5117a"
+        ],
+        "dataTypes": [
+            {
+                "dataType": "response"
+            }
+        ],
+        "maxEncodedDataSize": 2048,
+        "userContexts": null
+    }
+}
+BiDi driver error: 
+MkDriverError
+  { id = Just 2
+  , error = InvalidArgument
+  , description =
+      "Tried to perform an action with an invalid argument"
+  , message =
+      "Expected \"dataTypes\" values to be one of response, got [object Object] {\"dataType\":\"response\"}"
+  , stacktrace =
+      Just
+        "RemoteError@chrome://remote/content/shared/RemoteError.sys.mjs:8:8\nWebDriverError@chrome://remote/content/shared/webdriver/Errors.sys.mjs:202:5\nInvalidArgumentError@chrome://remote/content/shared/webdriver/Errors.sys.mjs:404:5\naddDataCollector@chrome://remote/content/webdriver-bidi/modules/root/network.sys.mjs:514:15\nhandleCommand@chrome://remote/content/shared/messagehandler/MessageHandler.sys.mjs:260:33\nexecute@chrome://remote/content/shared/webdriver/Session.sys.mjs:410:32\nonPacket@chrome://remote/content/webdriver-bidi/WebDriverBiDiConnection.sys.mjs:236:37\nonMessage@chrome://remote/content/server/WebSocketTransport.sys.mjs:127:18\nhandleEvent@chrome://remote/content/server/WebSocketTransport.sys.mjs:109:14\n"
+  , extensions = MkEmptyResult { extensible = fromList [] }
+  }
+CallStack (from HasCallStack):
+  error, called at test/BiDi/Runner.hs:483:17 in webdriver-precore-0.1.0.2-inplace-test:BiDi.Runner
+HasCallStack backtrace:
+  collectBacktraces, called at libraries/ghc-internal/src/GHC/Internal/Exception.hs:92:13 in ghc-internal:GHC.Internal.Exception
+  toExceptionWithBacktrace, called at libraries/ghc-internal/src/GHC/Internal/Exception.hs:128:3 in ghc-internal:GHC.Internal.Exception
+
+
+FAIL
+          Exception: Error executing BiDi command: MkCommand
+            { method = "network.addDataCollector"
+            , params =
+                MkAddDataCollector
+                  { dataTypes = [ MkDataType { dataType = "response" } ]
+                  , maxEncodedDataSize = 2048
+                  , collectorType = Just MkCollectorType { collectorType = "buffer" }
+                  , contexts =
+                      Just
+                        [ MkBrowsingContext
+                            { context = "d0520764-360a-4209-b01d-de17c1c5117a" }
+                        ]
+                  , userContexts = Nothing
+                  }
+            , extended = Nothing
+            }
+          With JSON: 
+          {
+              "id": 2,
+              "method": "network.addDataCollector",
+              "params": {
+                  "collectorType": {
+                      "collectorType": "buffer"
+                  },
+                  "contexts": [
+                      "d0520764-360a-4209-b01d-de17c1c5117a"
+                  ],
+                  "dataTypes": [
+                      {
+                          "dataType": "response"
+                      }
+                  ],
+                  "maxEncodedDataSize": 2048,
+                  "userContexts": null
+              }
+          }
+          BiDi driver error: 
+          MkDriverError
+            { id = Just 2
+            , error = InvalidArgument
+            , description =
+                "Tried to perform an action with an invalid argument"
+            , message =
+                "Expected \"dataTypes\" values to be one of response, got [object Object] {\"dataType\":\"response\"}"
+            , stacktrace =
+                Just
+                  "RemoteError@chrome://remote/content/shared/RemoteError.sys.mjs:8:8\nWebDriverError@chrome://remote/content/shared/webdriver/Errors.sys.mjs:202:5\nInvalidArgumentError@chrome://remote/content/shared/webdriver/Errors.sys.mjs:404:5\naddDataCollector@chrome://remote/content/webdriver-bidi/modules/root/network.sys.mjs:514:15\nhandleCommand@chrome://remote/content/shared/messagehandler/MessageHandler.sys.mjs:260:33\nexecute@chrome://remote/content/shared/webdriver/Session.sys.mjs:410:32\nonPacket@chrome://remote/content/webdriver-bidi/WebDriverBiDiConnection.sys.mjs:236:37\nonMessage@chrome://remote/content/server/WebSocketTransport.sys.mjs:127:18\nhandleEvent@chrome://remote/content/server/WebSocketTransport.sys.mjs:109:14\n"
+            , extensions = MkEmptyResult { extensible = fromList [] }
+            }
+          CallStack (from HasCallStack):
+            error, called at test/BiDi/Runner.hs:483:17 in webdriver-precore-0.1.0.2-inplace-test:BiDi.Runner
+          HasCallStack backtrace:
+            collectBacktraces, called at libraries/ghc-internal/src/GHC/Internal/Exception.hs:92:13 in ghc-internal:GHC.Internal.Exception
+            toExceptionWithBacktrace, called at libraries/ghc-internal/src/GHC/Internal/IO.hs:260:11 in ghc-internal:GHC.Internal.IO
+            throwIO, called at ./Control/Concurrent/Async.hs:110:7 in tasty-1.5.3-babb73df148608b74dd5e5163aba2b82b28a6019ee64e8b6cb4d2db23a833b0c:Control.Concurrent.Async
+          
+          
+          Use -p '/Network VI - Data Retrieval and Ownership/' to rerun this test only.
+        Network VII - Cache Behavior Management:                                                                                                                                                                                                         OK (1.62s)
+      Script
+        Script - Evaluate All PrimitiveProtocolValue Types:                                                                                                                                                                                              OK (1.30s)
+        Script - Evaluate Advanced Types and Edge Cases:                                                                                                                                                                                                 OK (1.29s)
+        Serialization Options - Various Configurations:                                                                                                                                                                                                  OK (1.23s)
+        Script I - Basic Preload Script Properties:                                                                                                                                                                                                      OK (1.46s)
+        Script II - Multi-Context and Cleanup:                                                                                                                                                                                                           OK (7.28s)
+        Script III - Channel Argument Test:                                                                                                                                                                                                              OK (1.50s)
+        Script IV - UserContexts Property Exclusive Demo:                                                                                                                                                                                                OK (9.82s)
+        Script V - script.callFunction Core Scenarios:                                                                                                                                                                                                   OK (1.31s)
+        Script VI - getRealms and disown Integration:                                                                                                                                                                                                    OK (1.30s)
+      Session
+        Session - Status Check:                                                                                                                                                                                                                          OK (1.33s)
+        Session - New Session Creation - EXPECTED ERROR: Maximum number of active sessions:                                                                                                                                                              OK (1.25s)
+        Session - End Session - EXPECTED ERROR: Ending a session started with WebDriver classic is not supported:                                                                                                                                        OK (1.28s)
+        Session - Event Subscription:                                                                                                                                                                                                                    OK (1.30s)
+        Session - Event Unsubscription:                                                                                                                                                                                                                  OK (1.30s)
+        Session - Capability Negotiation - EXPECTED ERROR: Maximum number of active sessions:                                                                                                                                                            OK (1.23s)
+        Session - Complete Lifecycle Management:                                                                                                                                                                                                         OK (1.31s)
+      Storage
+        Storage - Get Cookies:                                                                                                                                                                                                                           OK (1.25s)
+        Storage - Set Cookie:                                                                                                                                                                                                                            OK (1.29s)
+        Storage - Delete Cookies:                                                                                                                                                                                                                        OK (1.24s)
+        Storage - Partition Key Management:                                                                                                                                                                                                              OK (1.25s)
+        Storage - Complete Cookie Workflow:                                                                                                                                                                                                              OK (1.22s)
+      WebExtension
+        WebExtension - Install from Path:                                                                                                                                                                                                                OK (1.31s)
+        WebExtension - Install from Archive:                                                                                                                                                                                                             OK (1.28s)
+        WebExtension - Install from Base64:                                                                                                                                                                                                              OK (1.27s)
+        WebExtension - Extension Validation:                                                                                                                                                                                                             OK (1.24s)
+    BiDi Events
+      Browsing Context Events
+        Browsing Context Create - Subscribe Unsubscribe:                                                                                                                                                                                                 OK (1.43s)
+        Browsing Context Events - Subscribe Unsubscribe Using subscribeMany:                                                                                                                                                                             OK (1.47s)
+        Browsing Context Events - Filtered Navigation Subscriptions:                                                                                                                                                                                     One of the BiDi client threads failed: 
+Error executing BiDi command: MkCommand
+  { method = "browsingContext.navigate"
+  , params =
+      MkNavigate
+        { context =
+            MkBrowsingContext
+              { context = "5cb2c3f7-c495-4f12-a4e4-76e4744b3f37" }
+        , url =
+            "file:///home/john-walker/repos/webdriver/webdriver-examples/driver-demo-e2e/TestFiles/textArea.html"
+        , wait = Nothing
+        }
+  , extended = Nothing
+  }
+With JSON: 
+{
+    "id": 7,
+    "method": "browsingContext.navigate",
+    "params": {
+        "context": "5cb2c3f7-c495-4f12-a4e4-76e4744b3f37",
+        "url": "file:///home/john-walker/repos/webdriver/webdriver-examples/driver-demo-e2e/TestFiles/textArea.html"
+    }
+}
+BiDi driver error: 
+MkDriverError
+  { id = Just 7
+  , error = UnknownError
+  , description = "An unknown error occurred"
+  , message = "Error: NS_ERROR_FILE_NOT_FOUND"
+  , stacktrace =
+      Just
+        "onLocationChange@chrome://remote/content/shared/Navigate.sys.mjs:450:26\n"
+  , extensions = MkEmptyResult { extensible = fromList [] }
+  }
+CallStack (from HasCallStack):
+  error, called at test/BiDi/Runner.hs:483:17 in webdriver-precore-0.1.0.2-inplace-test:BiDi.Runner
+HasCallStack backtrace:
+  collectBacktraces, called at libraries/ghc-internal/src/GHC/Internal/Exception.hs:92:13 in ghc-internal:GHC.Internal.Exception
+  toExceptionWithBacktrace, called at libraries/ghc-internal/src/GHC/Internal/Exception.hs:128:3 in ghc-internal:GHC.Internal.Exception
+
+
+FAIL
+          Exception: Error executing BiDi command: MkCommand
+            { method = "browsingContext.navigate"
+            , params =
+                MkNavigate
+                  { context =
+                      MkBrowsingContext
+                        { context = "5cb2c3f7-c495-4f12-a4e4-76e4744b3f37" }
+                  , url =
+                      "file:///home/john-walker/repos/webdriver/webdriver-examples/driver-demo-e2e/TestFiles/textArea.html"
+                  , wait = Nothing
+                  }
+            , extended = Nothing
+            }
+          With JSON: 
+          {
+              "id": 7,
+              "method": "browsingContext.navigate",
+              "params": {
+                  "context": "5cb2c3f7-c495-4f12-a4e4-76e4744b3f37",
+                  "url": "file:///home/john-walker/repos/webdriver/webdriver-examples/driver-demo-e2e/TestFiles/textArea.html"
+              }
+          }
+          BiDi driver error: 
+          MkDriverError
+            { id = Just 7
+            , error = UnknownError
+            , description = "An unknown error occurred"
+            , message = "Error: NS_ERROR_FILE_NOT_FOUND"
+            , stacktrace =
+                Just
+                  "onLocationChange@chrome://remote/content/shared/Navigate.sys.mjs:450:26\n"
+            , extensions = MkEmptyResult { extensible = fromList [] }
+            }
+          CallStack (from HasCallStack):
+            error, called at test/BiDi/Runner.hs:483:17 in webdriver-precore-0.1.0.2-inplace-test:BiDi.Runner
+          HasCallStack backtrace:
+            collectBacktraces, called at libraries/ghc-internal/src/GHC/Internal/Exception.hs:92:13 in ghc-internal:GHC.Internal.Exception
+            toExceptionWithBacktrace, called at libraries/ghc-internal/src/GHC/Internal/IO.hs:260:11 in ghc-internal:GHC.Internal.IO
+            throwIO, called at ./Control/Concurrent/Async.hs:110:7 in tasty-1.5.3-babb73df148608b74dd5e5163aba2b82b28a6019ee64e8b6cb4d2db23a833b0c:Control.Concurrent.Async
+          
+          
+          Use -p '/Browsing Context Events - Filtered Navigation Subscriptions/' to rerun this test only.
+        Browsing Context Events - Filtered User Context Subscriptions:                                                                                                                                                                                   OK (1.54s)
+        Browsing Context Events - Created and Destroyed:                                                                                                                                                                                                 OK (1.43s)
+        Browsing Context Events - Navigation Lifecycle (Started, Committed, DomContentLoaded, Load):                                                                                                                                                     OK (1.37s)
+        Browsing Context Events - Fragment Navigation:                                                                                                                                                                                                   OK (1.42s)
+        Browsing Context Events - User Prompt Opened and Closed:                                                                                                                                                                                         OK (1.86s)
+        Browsing Context Events - User Prompt Types (Alert, Confirm, Prompt):                                                                                                                                                                            OK (3.93s)
+        Browsing Context Events - History Updated - EXPECTED ERROR: Expected event did not fire: BrowsingContextHistoryUpdated:                                                                                                                          OK (11.53s)
+        Browsing Context Events - Navigation Aborted:                                                                                                                                                                                                    One of the BiDi client threads failed: 
+Error executing BiDi command: MkCommand
+  { method = "session.subscribe"
+  , params =
+      MkSessionSubscriptionRequest
+        { events = [ BrowsingContextNavigationAborted ]
+        , contexts = Nothing
+        , userContexts = Nothing
+        }
+  , extended = Nothing
+  }
+With JSON: 
+{
+    "id": 1,
+    "method": "session.subscribe",
+    "params": {
+        "events": [
+            "browsingContext.navigationAborted"
+        ]
+    }
+}
+BiDi driver error: 
+MkDriverError
+  { id = Just 1
+  , error = InvalidArgument
+  , description =
+      "Tried to perform an action with an invalid argument"
+  , message =
+      "browsingContext.navigationAborted is not a valid event name"
+  , stacktrace =
+      Just
+        "RemoteError@chrome://remote/content/shared/RemoteError.sys.mjs:8:8\nWebDriverError@chrome://remote/content/shared/webdriver/Errors.sys.mjs:202:5\nInvalidArgumentError@chrome://remote/content/shared/webdriver/Errors.sys.mjs:404:5\n#assertModuleSupportsEvent@chrome://remote/content/webdriver-bidi/modules/root/session.sys.mjs:240:13\n#obtainEvents@chrome://remote/content/webdriver-bidi/modules/root/session.sys.mjs:835:38\nsubscribe/<@chrome://remote/content/webdriver-bidi/modules/root/session.sys.mjs:122:25\nsubscribe@chrome://remote/content/webdriver-bidi/modules/root/session.sys.mjs:121:12\nhandleCommand@chrome://remote/content/shared/messagehandler/MessageHandler.sys.mjs:260:33\nexecute@chrome://remote/content/shared/webdriver/Session.sys.mjs:410:32\nonPacket@chrome://remote/content/webdriver-bidi/WebDriverBiDiConnection.sys.mjs:236:37\nonMessage@chrome://remote/content/server/WebSocketTransport.sys.mjs:127:18\nhandleEvent@chrome://remote/content/server/WebSocketTransport.sys.mjs:109:14\n"
+  , extensions = MkEmptyResult { extensible = fromList [] }
+  }
+CallStack (from HasCallStack):
+  error, called at test/BiDi/Runner.hs:483:17 in webdriver-precore-0.1.0.2-inplace-test:BiDi.Runner
+HasCallStack backtrace:
+  collectBacktraces, called at libraries/ghc-internal/src/GHC/Internal/Exception.hs:92:13 in ghc-internal:GHC.Internal.Exception
+  toExceptionWithBacktrace, called at libraries/ghc-internal/src/GHC/Internal/IO.hs:260:11 in ghc-internal:GHC.Internal.IO
+  throwIO, called at src/UnliftIO/Exception.hs:441:20 in unliftio-0.2.25.0-f3d3164b531ca133ea9e7abaf70c3a9b0dc30e90175754fe5739e4bc65354828:UnliftIO.Exception
+
+
+FAIL
+          Exception: Error executing BiDi command: MkCommand
+            { method = "session.subscribe"
+            , params =
+                MkSessionSubscriptionRequest
+                  { events = [ BrowsingContextNavigationAborted ]
+                  , contexts = Nothing
+                  , userContexts = Nothing
+                  }
+            , extended = Nothing
+            }
+          With JSON: 
+          {
+              "id": 1,
+              "method": "session.subscribe",
+              "params": {
+                  "events": [
+                      "browsingContext.navigationAborted"
+                  ]
+              }
+          }
+          BiDi driver error: 
+          MkDriverError
+            { id = Just 1
+            , error = InvalidArgument
+            , description =
+                "Tried to perform an action with an invalid argument"
+            , message =
+                "browsingContext.navigationAborted is not a valid event name"
+            , stacktrace =
+                Just
+                  "RemoteError@chrome://remote/content/shared/RemoteError.sys.mjs:8:8\nWebDriverError@chrome://remote/content/shared/webdriver/Errors.sys.mjs:202:5\nInvalidArgumentError@chrome://remote/content/shared/webdriver/Errors.sys.mjs:404:5\n#assertModuleSupportsEvent@chrome://remote/content/webdriver-bidi/modules/root/session.sys.mjs:240:13\n#obtainEvents@chrome://remote/content/webdriver-bidi/modules/root/session.sys.mjs:835:38\nsubscribe/<@chrome://remote/content/webdriver-bidi/modules/root/session.sys.mjs:122:25\nsubscribe@chrome://remote/content/webdriver-bidi/modules/root/session.sys.mjs:121:12\nhandleCommand@chrome://remote/content/shared/messagehandler/MessageHandler.sys.mjs:260:33\nexecute@chrome://remote/content/shared/webdriver/Session.sys.mjs:410:32\nonPacket@chrome://remote/content/webdriver-bidi/WebDriverBiDiConnection.sys.mjs:236:37\nonMessage@chrome://remote/content/server/WebSocketTransport.sys.mjs:127:18\nhandleEvent@chrome://remote/content/server/WebSocketTransport.sys.mjs:109:14\n"
+            , extensions = MkEmptyResult { extensible = fromList [] }
+            }
+          CallStack (from HasCallStack):
+            error, called at test/BiDi/Runner.hs:483:17 in webdriver-precore-0.1.0.2-inplace-test:BiDi.Runner
+          HasCallStack backtrace:
+            collectBacktraces, called at libraries/ghc-internal/src/GHC/Internal/Exception.hs:92:13 in ghc-internal:GHC.Internal.Exception
+            toExceptionWithBacktrace, called at libraries/ghc-internal/src/GHC/Internal/IO.hs:260:11 in ghc-internal:GHC.Internal.IO
+            throwIO, called at ./Control/Concurrent/Async.hs:110:7 in tasty-1.5.3-babb73df148608b74dd5e5163aba2b82b28a6019ee64e8b6cb4d2db23a833b0c:Control.Concurrent.Async
+          
+          
+          Use -p '/Browsing Context Events - Navigation Aborted/' to rerun this test only.
+        Browsing Context Events - Navigation Failed (NOT WORKING - geckodriver issue):                                                                                                                                                                   One of the BiDi client threads failed: 
+Error executing BiDi command: MkCommand
+  { method = "browsingContext.navigate"
+  , params =
+      MkNavigate
+        { context =
+            MkBrowsingContext
+              { context = "9d7cd334-e6bf-4a3b-839f-141d4e4c5079" }
+        , url = "https://invalid-domain-that-does-not-exist-12345"
+        , wait = Nothing
+        }
+  , extended = Nothing
+  }
+With JSON: 
+{
+    "id": 4,
+    "method": "browsingContext.navigate",
+    "params": {
+        "context": "9d7cd334-e6bf-4a3b-839f-141d4e4c5079",
+        "url": "https://invalid-domain-that-does-not-exist-12345"
+    }
+}
+BiDi driver error: 
+MkDriverError
+  { id = Just 4
+  , error = UnknownError
+  , description = "An unknown error occurred"
+  , message = "Error: NS_ERROR_UNKNOWN_HOST"
+  , stacktrace =
+      Just
+        "onLocationChange@chrome://remote/content/shared/Navigate.sys.mjs:450:26\n"
+  , extensions = MkEmptyResult { extensible = fromList [] }
+  }
+CallStack (from HasCallStack):
+  error, called at test/BiDi/Runner.hs:483:17 in webdriver-precore-0.1.0.2-inplace-test:BiDi.Runner
+HasCallStack backtrace:
+  collectBacktraces, called at libraries/ghc-internal/src/GHC/Internal/Exception.hs:92:13 in ghc-internal:GHC.Internal.Exception
+  toExceptionWithBacktrace, called at libraries/ghc-internal/src/GHC/Internal/Exception.hs:128:3 in ghc-internal:GHC.Internal.Exception
+
+
+FAIL
+          Exception: Error executing BiDi command: MkCommand
+            { method = "browsingContext.navigate"
+            , params =
+                MkNavigate
+                  { context =
+                      MkBrowsingContext
+                        { context = "9d7cd334-e6bf-4a3b-839f-141d4e4c5079" }
+                  , url = "https://invalid-domain-that-does-not-exist-12345"
+                  , wait = Nothing
+                  }
+            , extended = Nothing
+            }
+          With JSON: 
+          {
+              "id": 4,
+              "method": "browsingContext.navigate",
+              "params": {
+                  "context": "9d7cd334-e6bf-4a3b-839f-141d4e4c5079",
+                  "url": "https://invalid-domain-that-does-not-exist-12345"
+              }
+          }
+          BiDi driver error: 
+          MkDriverError
+            { id = Just 4
+            , error = UnknownError
+            , description = "An unknown error occurred"
+            , message = "Error: NS_ERROR_UNKNOWN_HOST"
+            , stacktrace =
+                Just
+                  "onLocationChange@chrome://remote/content/shared/Navigate.sys.mjs:450:26\n"
+            , extensions = MkEmptyResult { extensible = fromList [] }
+            }
+          CallStack (from HasCallStack):
+            error, called at test/BiDi/Runner.hs:483:17 in webdriver-precore-0.1.0.2-inplace-test:BiDi.Runner
+          HasCallStack backtrace:
+            collectBacktraces, called at libraries/ghc-internal/src/GHC/Internal/Exception.hs:92:13 in ghc-internal:GHC.Internal.Exception
+            toExceptionWithBacktrace, called at libraries/ghc-internal/src/GHC/Internal/IO.hs:260:11 in ghc-internal:GHC.Internal.IO
+            throwIO, called at ./Control/Concurrent/Async.hs:110:7 in tasty-1.5.3-babb73df148608b74dd5e5163aba2b82b28a6019ee64e8b6cb4d2db23a833b0c:Control.Concurrent.Async
+          
+          
+          Use -p '/Browsing Context Events - Navigation Failed (NOT WORKING - geckodriver issue)/' to rerun this test only.
+        Browsing Context Events - Download Will Begin (NOT IMPLEMENTED):                                                                                                                                                                                 OK (1.38s)
+        Browsing Context Events - Download End (Complete and Canceled):                                                                                                                                                                                  One of the BiDi client threads failed: 
+Error executing BiDi command: MkCommand
+  { method = "session.subscribe"
+  , params =
+      MkSessionSubscriptionRequest
+        { events = [ BrowsingContextDownloadEnd ]
+        , contexts = Nothing
+        , userContexts = Nothing
+        }
+  , extended = Nothing
+  }
+With JSON: 
+{
+    "id": 3,
+    "method": "session.subscribe",
+    "params": {
+        "events": [
+            "browsingContext.downloadEnd"
+        ]
+    }
+}
+BiDi driver error: 
+MkDriverError
+  { id = Just 3
+  , error = InvalidArgument
+  , description =
+      "Tried to perform an action with an invalid argument"
+  , message = "browsingContext.downloadEnd is not a valid event name"
+  , stacktrace =
+      Just
+        "RemoteError@chrome://remote/content/shared/RemoteError.sys.mjs:8:8\nWebDriverError@chrome://remote/content/shared/webdriver/Errors.sys.mjs:202:5\nInvalidArgumentError@chrome://remote/content/shared/webdriver/Errors.sys.mjs:404:5\n#assertModuleSupportsEvent@chrome://remote/content/webdriver-bidi/modules/root/session.sys.mjs:240:13\n#obtainEvents@chrome://remote/content/webdriver-bidi/modules/root/session.sys.mjs:835:38\nsubscribe/<@chrome://remote/content/webdriver-bidi/modules/root/session.sys.mjs:122:25\nsubscribe@chrome://remote/content/webdriver-bidi/modules/root/session.sys.mjs:121:12\nhandleCommand@chrome://remote/content/shared/messagehandler/MessageHandler.sys.mjs:260:33\nexecute@chrome://remote/content/shared/webdriver/Session.sys.mjs:410:32\nonPacket@chrome://remote/content/webdriver-bidi/WebDriverBiDiConnection.sys.mjs:236:37\nonMessage@chrome://remote/content/server/WebSocketTransport.sys.mjs:127:18\nhandleEvent@chrome://remote/content/server/WebSocketTransport.sys.mjs:109:14\n"
+  , extensions = MkEmptyResult { extensible = fromList [] }
+  }
+CallStack (from HasCallStack):
+  error, called at test/BiDi/Runner.hs:483:17 in webdriver-precore-0.1.0.2-inplace-test:BiDi.Runner
+HasCallStack backtrace:
+  collectBacktraces, called at libraries/ghc-internal/src/GHC/Internal/Exception.hs:92:13 in ghc-internal:GHC.Internal.Exception
+  toExceptionWithBacktrace, called at libraries/ghc-internal/src/GHC/Internal/IO.hs:260:11 in ghc-internal:GHC.Internal.IO
+  throwIO, called at src/UnliftIO/Exception.hs:441:20 in unliftio-0.2.25.0-f3d3164b531ca133ea9e7abaf70c3a9b0dc30e90175754fe5739e4bc65354828:UnliftIO.Exception
+
+
+FAIL
+          Exception: Error executing BiDi command: MkCommand
+            { method = "session.subscribe"
+            , params =
+                MkSessionSubscriptionRequest
+                  { events = [ BrowsingContextDownloadEnd ]
+                  , contexts = Nothing
+                  , userContexts = Nothing
+                  }
+            , extended = Nothing
+            }
+          With JSON: 
+          {
+              "id": 3,
+              "method": "session.subscribe",
+              "params": {
+                  "events": [
+                      "browsingContext.downloadEnd"
+                  ]
+              }
+          }
+          BiDi driver error: 
+          MkDriverError
+            { id = Just 3
+            , error = InvalidArgument
+            , description =
+                "Tried to perform an action with an invalid argument"
+            , message = "browsingContext.downloadEnd is not a valid event name"
+            , stacktrace =
+                Just
+                  "RemoteError@chrome://remote/content/shared/RemoteError.sys.mjs:8:8\nWebDriverError@chrome://remote/content/shared/webdriver/Errors.sys.mjs:202:5\nInvalidArgumentError@chrome://remote/content/shared/webdriver/Errors.sys.mjs:404:5\n#assertModuleSupportsEvent@chrome://remote/content/webdriver-bidi/modules/root/session.sys.mjs:240:13\n#obtainEvents@chrome://remote/content/webdriver-bidi/modules/root/session.sys.mjs:835:38\nsubscribe/<@chrome://remote/content/webdriver-bidi/modules/root/session.sys.mjs:122:25\nsubscribe@chrome://remote/content/webdriver-bidi/modules/root/session.sys.mjs:121:12\nhandleCommand@chrome://remote/content/shared/messagehandler/MessageHandler.sys.mjs:260:33\nexecute@chrome://remote/content/shared/webdriver/Session.sys.mjs:410:32\nonPacket@chrome://remote/content/webdriver-bidi/WebDriverBiDiConnection.sys.mjs:236:37\nonMessage@chrome://remote/content/server/WebSocketTransport.sys.mjs:127:18\nhandleEvent@chrome://remote/content/server/WebSocketTransport.sys.mjs:109:14\n"
+            , extensions = MkEmptyResult { extensible = fromList [] }
+            }
+          CallStack (from HasCallStack):
+            error, called at test/BiDi/Runner.hs:483:17 in webdriver-precore-0.1.0.2-inplace-test:BiDi.Runner
+          HasCallStack backtrace:
+            collectBacktraces, called at libraries/ghc-internal/src/GHC/Internal/Exception.hs:92:13 in ghc-internal:GHC.Internal.Exception
+            toExceptionWithBacktrace, called at libraries/ghc-internal/src/GHC/Internal/IO.hs:260:11 in ghc-internal:GHC.Internal.IO
+            throwIO, called at ./Control/Concurrent/Async.hs:110:7 in tasty-1.5.3-babb73df148608b74dd5e5163aba2b82b28a6019ee64e8b6cb4d2db23a833b0c:Control.Concurrent.Async
+          
+          
+          Use -p '/Browsing Context Events - Download End (Complete and Canceled)/' to rerun this test only.
+      Input Events
+        Input Events - File Dialog Opened (Single File):                                                                                                                                                                                                 One of the BiDi client threads failed: 
+Error executing BiDi command: MkCommand
+  { method = "session.subscribe"
+  , params =
+      MkSessionSubscriptionRequest
+        { events = [ InputFileDialogOpened ]
+        , contexts = Nothing
+        , userContexts = Nothing
+        }
+  , extended = Nothing
+  }
+With JSON: 
+{
+    "id": 1,
+    "method": "session.subscribe",
+    "params": {
+        "events": [
+            "input.fileDialogOpened"
+        ]
+    }
+}
+BiDi driver error: 
+MkDriverError
+  { id = Just 1
+  , error = InvalidArgument
+  , description =
+      "Tried to perform an action with an invalid argument"
+  , message = "input.fileDialogOpened is not a valid event name"
+  , stacktrace =
+      Just
+        "RemoteError@chrome://remote/content/shared/RemoteError.sys.mjs:8:8\nWebDriverError@chrome://remote/content/shared/webdriver/Errors.sys.mjs:202:5\nInvalidArgumentError@chrome://remote/content/shared/webdriver/Errors.sys.mjs:404:5\n#assertModuleSupportsEvent@chrome://remote/content/webdriver-bidi/modules/root/session.sys.mjs:240:13\n#obtainEvents@chrome://remote/content/webdriver-bidi/modules/root/session.sys.mjs:835:38\nsubscribe/<@chrome://remote/content/webdriver-bidi/modules/root/session.sys.mjs:122:25\nsubscribe@chrome://remote/content/webdriver-bidi/modules/root/session.sys.mjs:121:12\nhandleCommand@chrome://remote/content/shared/messagehandler/MessageHandler.sys.mjs:260:33\nexecute@chrome://remote/content/shared/webdriver/Session.sys.mjs:410:32\nonPacket@chrome://remote/content/webdriver-bidi/WebDriverBiDiConnection.sys.mjs:236:37\nonMessage@chrome://remote/content/server/WebSocketTransport.sys.mjs:127:18\nhandleEvent@chrome://remote/content/server/WebSocketTransport.sys.mjs:109:14\n"
+  , extensions = MkEmptyResult { extensible = fromList [] }
+  }
+CallStack (from HasCallStack):
+  error, called at test/BiDi/Runner.hs:483:17 in webdriver-precore-0.1.0.2-inplace-test:BiDi.Runner
+HasCallStack backtrace:
+  collectBacktraces, called at libraries/ghc-internal/src/GHC/Internal/Exception.hs:92:13 in ghc-internal:GHC.Internal.Exception
+  toExceptionWithBacktrace, called at libraries/ghc-internal/src/GHC/Internal/IO.hs:260:11 in ghc-internal:GHC.Internal.IO
+  throwIO, called at src/UnliftIO/Exception.hs:441:20 in unliftio-0.2.25.0-f3d3164b531ca133ea9e7abaf70c3a9b0dc30e90175754fe5739e4bc65354828:UnliftIO.Exception
+
+
+FAIL
+          Exception: Error executing BiDi command: MkCommand
+            { method = "session.subscribe"
+            , params =
+                MkSessionSubscriptionRequest
+                  { events = [ InputFileDialogOpened ]
+                  , contexts = Nothing
+                  , userContexts = Nothing
+                  }
+            , extended = Nothing
+            }
+          With JSON: 
+          {
+              "id": 1,
+              "method": "session.subscribe",
+              "params": {
+                  "events": [
+                      "input.fileDialogOpened"
+                  ]
+              }
+          }
+          BiDi driver error: 
+          MkDriverError
+            { id = Just 1
+            , error = InvalidArgument
+            , description =
+                "Tried to perform an action with an invalid argument"
+            , message = "input.fileDialogOpened is not a valid event name"
+            , stacktrace =
+                Just
+                  "RemoteError@chrome://remote/content/shared/RemoteError.sys.mjs:8:8\nWebDriverError@chrome://remote/content/shared/webdriver/Errors.sys.mjs:202:5\nInvalidArgumentError@chrome://remote/content/shared/webdriver/Errors.sys.mjs:404:5\n#assertModuleSupportsEvent@chrome://remote/content/webdriver-bidi/modules/root/session.sys.mjs:240:13\n#obtainEvents@chrome://remote/content/webdriver-bidi/modules/root/session.sys.mjs:835:38\nsubscribe/<@chrome://remote/content/webdriver-bidi/modules/root/session.sys.mjs:122:25\nsubscribe@chrome://remote/content/webdriver-bidi/modules/root/session.sys.mjs:121:12\nhandleCommand@chrome://remote/content/shared/messagehandler/MessageHandler.sys.mjs:260:33\nexecute@chrome://remote/content/shared/webdriver/Session.sys.mjs:410:32\nonPacket@chrome://remote/content/webdriver-bidi/WebDriverBiDiConnection.sys.mjs:236:37\nonMessage@chrome://remote/content/server/WebSocketTransport.sys.mjs:127:18\nhandleEvent@chrome://remote/content/server/WebSocketTransport.sys.mjs:109:14\n"
+            , extensions = MkEmptyResult { extensible = fromList [] }
+            }
+          CallStack (from HasCallStack):
+            error, called at test/BiDi/Runner.hs:483:17 in webdriver-precore-0.1.0.2-inplace-test:BiDi.Runner
+          HasCallStack backtrace:
+            collectBacktraces, called at libraries/ghc-internal/src/GHC/Internal/Exception.hs:92:13 in ghc-internal:GHC.Internal.Exception
+            toExceptionWithBacktrace, called at libraries/ghc-internal/src/GHC/Internal/IO.hs:260:11 in ghc-internal:GHC.Internal.IO
+            throwIO, called at ./Control/Concurrent/Async.hs:110:7 in tasty-1.5.3-babb73df148608b74dd5e5163aba2b82b28a6019ee64e8b6cb4d2db23a833b0c:Control.Concurrent.Async
+          
+          
+          Use -p '/Input Events - File Dialog Opened (Single File)/' to rerun this test only.
+      Log Events
+        Log Events - Console Log Entries:                                                                                                                                                                                                                OK (1.38s)
+        Log Events - Console Debug Level:                                                                                                                                                                                                                OK (1.27s)
+        Log Events - Console Info Level:                                                                                                                                                                                                                 OK (1.32s)
+        Log Events - Console Warn Level:                                                                                                                                                                                                                 OK (1.29s)
+        Log Events - Console Error Level:                                                                                                                                                                                                                OK (1.34s)
+        Log Events - JavaScript Error from Button Click:                                                                                                                                                                                                 OK (1.73s)
+      Network Events
+        Network Events - Before Request Sent:                                                                                                                                                                                                            OK (1.65s)
+        Network Events - Complete Request/Response Lifecycle:                                                                                                                                                                                            OK (1.62s)
+        Network Events - Fetch Error:                                                                                                                                                                                                                    OK (1.49s)
+        Network Events - Auth Required (requires auth-protected URL):                                                                                                                                                                                    One of the BiDi client threads failed: 
+user error (Timeout - Expected event did not fire: NetworkAuthRequired)
+HasCallStack backtrace:
+  collectBacktraces, called at libraries/ghc-internal/src/GHC/Internal/Exception.hs:92:13 in ghc-internal:GHC.Internal.Exception
+  toExceptionWithBacktrace, called at libraries/ghc-internal/src/GHC/Internal/IO.hs:260:11 in ghc-internal:GHC.Internal.IO
+  throwIO, called at libraries/ghc-internal/src/GHC/Internal/Control/Exception/Base.hs:195:43 in ghc-internal:GHC.Internal.Control.Exception.Base
+
+
+FAIL
+          Exception: user error (Timeout - Expected event did not fire: NetworkAuthRequired)
+          HasCallStack backtrace:
+            collectBacktraces, called at libraries/ghc-internal/src/GHC/Internal/Exception.hs:92:13 in ghc-internal:GHC.Internal.Exception
+            toExceptionWithBacktrace, called at libraries/ghc-internal/src/GHC/Internal/IO.hs:260:11 in ghc-internal:GHC.Internal.IO
+            throwIO, called at ./Control/Concurrent/Async.hs:110:7 in tasty-1.5.3-babb73df148608b74dd5e5163aba2b82b28a6019ee64e8b6cb4d2db23a833b0c:Control.Concurrent.Async
+          
+          
+          Use -p '/Network Events - Auth Required (requires auth-protected URL)/' to rerun this test only.
+      Script Events
+        Script Events - Realm Created and Destroyed:                                                                                                                                                                                                     OK (1.43s)
+        Script Events - Message via Channel:                                                                                                                                                                                                             OK (1.44s)
+        Script Events - Runtime Message via sendBidiMessage:                                                                                                                                                                                             OK (1.38s)
+
+12 out of 91 tests failed (191.94s)
+Test suite test: FAIL
+Test suite logged to:
+/home/john-walker/repos/webdriver/dist-newstyle/build/x86_64-linux/ghc-9.10.1/webdriver-precore-0.1.0.2/t/test/test/webdriver-precore-0.1.0.2-test.log
+0 of 1 test suites (0 of 1 test cases) passed.
+Error: [Cabal-7125]
+Tests failed for test:test from webdriver-precore-0.1.0.2.
+
