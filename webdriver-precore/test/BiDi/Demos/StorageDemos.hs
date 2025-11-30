@@ -4,37 +4,7 @@ import BiDi.BiDiActions (BiDiActions (..))
 import BiDi.DemoUtils
 import IOUtils (DemoActions (..))
 import WebDriverPreCore.BiDi.Protocol
-import WebDriverPreCore.BiDi.Storage
 import Prelude hiding (log, putStrLn)
-
-{-
-Storage Module Commands (3 total):
-
-1. storage.getCookies - Retrieves zero or more cookies which match a set of provided parameters
-2. storage.setCookie - Sets a cookie in the specified storage partition
-3. storage.deleteCookies - Deletes cookies from the specified storage partition
-
-Storage Module Types:
-- storage.PartitionKey - Uniquely identifies a storage partition
-- storage.CookieFilter - Filter parameters for cookie matching
-- storage.BrowsingContextPartitionDescriptor - Context-based partition descriptor
-- storage.StorageKeyPartitionDescriptor - Storage key-based partition descriptor
-- storage.PartitionDescriptor - Union of partition descriptor types
-
-Key Concepts:
-- Storage partitions: Namespaces for persistent data (cookies, localStorage, etc.)
-- Partition keys: Maps that uniquely identify storage partitions
-- Cookie filtering: Matching cookies based on name, value, domain, path, etc.
-- Cross-origin storage considerations
-- User context isolation
-
-Complexity factors:
-- Multiple partition types and descriptors
-- Complex cookie filtering logic
-- Storage partition key expansion and validation
-- Cookie serialization/deserialization
-- Integration with browsing contexts and user contexts
--}
 
 -- >>> runDemo storageGetCookiesDemo
 storageGetCookiesDemo :: BiDiDemo
@@ -280,7 +250,7 @@ storagePartitionKeyDemo =
               unhandledPromptBehavior = Nothing
             }
       logShow "Custom user context created" customUserContext
-      
+
       let storageKeyPartition2 =
             StorageKeyPartition
               { userContext = Just customUserContext,

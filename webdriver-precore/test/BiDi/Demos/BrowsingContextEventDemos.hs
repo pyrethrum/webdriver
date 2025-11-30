@@ -6,26 +6,22 @@ import Const (Timeout (..), milliseconds)
 import Data.Text (unpack)
 import IOUtils (DemoActions (..))
 import TestData (checkboxesUrl, downloadLinkUrl, fragmentUrl, promptUrl, slowLoadUrl, textAreaUrl)
-import WebDriverPreCore.BiDi.BrowsingContext
-  ( Close (..),
-    HandleUserPrompt (..),
-    Navigate (..),
-  )
 import WebDriverPreCore.BiDi.Protocol
   ( BrowsingContext (..),
+    Close (..),
     ContextTarget (..),
     Create (..),
     CreateType (..),
     CreateUserContext (..),
     Evaluate (..),
+    HandleUserPrompt (..),
     KnownSubscriptionType (..),
+    Navigate (..),
+    Target (ContextTarget),
+    URL(..),
     UserContext (..),
   )
-import WebDriverPreCore.BiDi.Script
-  ( Target (ContextTarget),
-  )
 import WebDriverPreCore.Internal.Utils (txt)
-import WebDriverPreCore.BiDi.CoreTypes (URL(..))
 import Prelude hiding (log, putStrLn)
 
 --  TODO aake sure all demos only use Protocol, not sub modules

@@ -6,17 +6,15 @@ import IOUtils (DemoActions (..))
 import TestData (checkboxesUrl, scriptRealmUrl)
 import WebDriverPreCore.BiDi.Protocol
   ( AddPreloadScript (..),
-    ContextTarget (..),
-    Evaluate (..),
-    Navigate (..),
-    KnownSubscriptionType (ScriptMessage, ScriptRealmCreated, ScriptRealmDestroyed),
-    Target (..)
-  )
-import WebDriverPreCore.BiDi.Script
-  ( Channel (..),
+    Channel (..),
     ChannelProperties (..),
     ChannelValue (..),
-    ResultOwnership (..)
+    ContextTarget (..),
+    Evaluate (..),
+    KnownSubscriptionType (ScriptMessage, ScriptRealmCreated, ScriptRealmDestroyed),
+    Navigate (..),
+    ResultOwnership (..),
+    Target (..)
   )
 import Prelude hiding (log, putStrLn)
 

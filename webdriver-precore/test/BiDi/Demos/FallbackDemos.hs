@@ -8,17 +8,17 @@ import Data.Aeson.KeyMap qualified as KM
 import IOUtils (DemoActions (..))
 import TestData (contentPageUrl)
 import WebDriverPreCore.BiDi.API qualified as API
-import WebDriverPreCore.BiDi.BrowsingContext (Navigate (..))
-import WebDriverPreCore.BiDi.Command (extendCommandAny, mkAnyCommand)
-import WebDriverPreCore.BiDi.CoreTypes (BrowsingContext (..), JSUInt (..))
 import WebDriverPreCore.BiDi.Protocol
-  ( UnknownSubscriptionType (..),
+  ( BrowsingContext (..),
+    JSUInt (..),
+    Navigate (..),
+    URL(..),
+    UnknownSubscriptionType (..),
+    extendCommandAny,
+    mkAnyCommand,
   )
 import WebDriverPreCore.Internal.Utils (txt)
-import Prelude hiding (log, putStrLn)
-import WebDriverPreCore.BiDi.CoreTypes (URL(..))
-
--- >>> runDemo fallbackExtendCommandDemo
+import Prelude hiding (log, putStrLn)-- >>> runDemo fallbackExtendCommandDemo
 fallbackExtendCommandDemo :: BiDiDemo
 fallbackExtendCommandDemo =
   demo "Fallback - Extend Navigate Command with Extra Property" action

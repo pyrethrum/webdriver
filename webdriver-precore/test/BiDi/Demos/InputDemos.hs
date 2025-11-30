@@ -5,8 +5,6 @@ import BiDi.DemoUtils
 import Data.Maybe (fromJust)
 import IOUtils (DemoActions (..))
 import TestData (checkboxesUrl, fileUrl, infiniteScrollUrl, textAreaUrl, uploadFilePath)
-import WebDriverPreCore.BiDi.CoreTypes qualified as Core
-import WebDriverPreCore.BiDi.Input
 import WebDriverPreCore.BiDi.Protocol
 import Prelude hiding (log)
 
@@ -949,14 +947,14 @@ inputSetFilesDemo =
       -- Extract the single file input's shared reference
       case singleFileInputResult of
         MkLocateNodesResult nodes -> case nodes of
-          (MkNodeRemoteValue {sharedId = Just (Core.MkSharedId singleElementId)} : _) -> do
+          (MkNodeRemoteValue {sharedId = Just (MkSharedId singleElementId)} : _) -> do
             logTxt "Test 3: Set a single file on the single file input"
             singleDocPath <- uploadFilePath "single_document.txt"
             setSingleFileResult <-
               inputSetFiles $
                 MkSetFiles
                   { context = bc,
-                    element = MkSharedReference {sharedId = (Core.MkSharedId singleElementId), handle = Nothing, extensions = Nothing},
+                    element = MkSharedReference {sharedId = (MkSharedId singleElementId), handle = Nothing, extensions = Nothing},
                     files = [singleDocPath]
                   }
             logShow "Set single file result" setSingleFileResult
@@ -967,7 +965,7 @@ inputSetFilesDemo =
               inputSetFiles $
                 MkSetFiles
                   { context = bc,
-                    element = MkSharedReference {sharedId = (Core.MkSharedId singleElementId), handle = Nothing, extensions = Nothing},
+                    element = MkSharedReference {sharedId = (MkSharedId singleElementId), handle = Nothing, extensions = Nothing},
                     files = []
                   }
             logShow "Clear single file result" clearSingleFileResult
@@ -979,7 +977,7 @@ inputSetFilesDemo =
       -- Extract the multiple file input's shared reference
       case multipleFileInputResult of
         MkLocateNodesResult nodes -> case nodes of
-          (MkNodeRemoteValue {sharedId = Just (Core.MkSharedId multipleElementId)} : _) -> do
+          (MkNodeRemoteValue {sharedId = Just (MkSharedId multipleElementId)} : _) -> do
             logTxt "Test 5: Set multiple files on the multiple file input"
             doc1Path <- uploadFilePath "document1.txt"
             doc2Path <- uploadFilePath "document2.pdf"
@@ -988,7 +986,7 @@ inputSetFilesDemo =
               inputSetFiles $
                 MkSetFiles
                   { context = bc,
-                    element = MkSharedReference {sharedId = (Core.MkSharedId multipleElementId), handle = Nothing, extensions = Nothing},
+                    element = MkSharedReference {sharedId = (MkSharedId multipleElementId), handle = Nothing, extensions = Nothing},
                     files = [doc1Path, doc2Path, imagePath]
                   }
             logShow "Set multiple files result" setMultipleFilesResult
@@ -1003,7 +1001,7 @@ inputSetFilesDemo =
               inputSetFiles $
                 MkSetFiles
                   { context = bc,
-                    element = MkSharedReference {sharedId = (Core.MkSharedId multipleElementId), handle = Nothing, extensions = Nothing},
+                    element = MkSharedReference {sharedId = (MkSharedId multipleElementId), handle = Nothing, extensions = Nothing},
                     files = [spreadsheetPath, presentationPath, archivePath, videoPath]
                   }
             logShow "Set various files result" setVariousFilesResult
@@ -1014,7 +1012,7 @@ inputSetFilesDemo =
               inputSetFiles $
                 MkSetFiles
                   { context = bc,
-                    element = MkSharedReference {sharedId = (Core.MkSharedId multipleElementId), handle = Nothing, extensions = Nothing},
+                    element = MkSharedReference {sharedId = (MkSharedId multipleElementId), handle = Nothing, extensions = Nothing},
                     files = []
                   }
             logShow "Clear multiple files result" clearMultipleFilesResult
@@ -1026,7 +1024,7 @@ inputSetFilesDemo =
               inputSetFiles $
                 MkSetFiles
                   { context = bc,
-                    element = MkSharedReference {sharedId = (Core.MkSharedId multipleElementId), handle = Nothing, extensions = Nothing},
+                    element = MkSharedReference {sharedId = (MkSharedId multipleElementId), handle = Nothing, extensions = Nothing},
                     files = [finalTestPath]
                   }
             logShow "Set single file on multiple input result" setSingleOnMultipleResult

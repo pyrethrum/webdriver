@@ -4,10 +4,10 @@ import BiDi.BiDiActions (BiDiActions (..))
 import BiDi.DemoUtils
 import IOUtils (DemoActions (..))
 import TestServerAPI (authTestUrl, malformedResponseUrl, testServerHomeUrl, withTestServer)
-import WebDriverPreCore.BiDi.Command (KnownCommand (..), mkCommand)
 import WebDriverPreCore.BiDi.Protocol
   ( ContextTarget (..),
     Evaluate (..),
+    KnownCommand (..), 
     KnownSubscriptionType
       ( NetworkAuthRequired,
         NetworkBeforeRequestSent,
@@ -17,9 +17,10 @@ import WebDriverPreCore.BiDi.Protocol
       ),
     Navigate (..),
     Target (..),
+    URL(..),
+    mkCommand,
   )
 import Prelude hiding (log, putStrLn)
-import WebDriverPreCore.BiDi.CoreTypes (URL(..))
 
 -- >>> runDemo networkEventRequestResponseLifecycle
 networkEventRequestResponseLifecycle :: BiDiDemo

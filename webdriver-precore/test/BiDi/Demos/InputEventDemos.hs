@@ -5,7 +5,6 @@ import BiDi.DemoUtils
 import Data.Maybe (fromJust)
 import IOUtils (DemoActions (..))
 import TestData (uploadUrl)
-import WebDriverPreCore.BiDi.CoreTypes qualified as Core
 import WebDriverPreCore.BiDi.Protocol
 import Prelude hiding (log, putStrLn)
 
@@ -70,7 +69,7 @@ inputEventFileDialogOpened =
       logShow "Upload input element" uploadInput
 
       let MkLocateNodesResult nodes = uploadInput
-          uploadInputId :: Core.SharedId
+          uploadInputId :: SharedId
           uploadInputId = case nodes of
             [input] -> fromJust input.sharedId
             _ -> error "Failed to locate single file upload input"

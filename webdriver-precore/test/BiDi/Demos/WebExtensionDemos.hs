@@ -5,7 +5,7 @@ import BiDi.DemoUtils
 import Control.Exception (SomeException, catch)
 import IOUtils (DemoActions (..))
 import TestData (demoExtensionAsBase64, demoExtensionDirPath, demoExtensionZipPath)
-import WebDriverPreCore.BiDi.WebExtensions
+import WebDriverPreCore.BiDi.Protocol
 import WebDriverPreCore.Internal.Utils (txt)
 import Prelude hiding (log, putStrLn)
 

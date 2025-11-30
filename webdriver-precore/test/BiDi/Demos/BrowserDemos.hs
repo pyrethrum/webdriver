@@ -3,7 +3,6 @@ module BiDi.Demos.BrowserDemos where
 import BiDi.BiDiActions (BiDiActions (..))
 import BiDi.DemoUtils
 import IOUtils (DemoActions (..))
-import WebDriverPreCore.BiDi.Browser
 import WebDriverPreCore.BiDi.Protocol
 import Prelude hiding (log, putStrLn)
 

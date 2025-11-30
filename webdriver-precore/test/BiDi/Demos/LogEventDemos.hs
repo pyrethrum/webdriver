@@ -5,22 +5,29 @@ import BiDi.DemoUtils ( demo, rootContext, BiDiDemo )
 import Data.Maybe (fromJust)
 import IOUtils (DemoActions (..))
 import TestData (badJavaScriptUrl, consoleLogUrl)
-import WebDriverPreCore.BiDi.BrowsingContext (Locator (..))
-import WebDriverPreCore.BiDi.CoreTypes (NodeRemoteValue (..))
-import WebDriverPreCore.BiDi.Input
 import WebDriverPreCore.BiDi.Protocol
   ( ContextTarget (..),
     Evaluate (..),
+    Event(..),
     LocateNodes (..),
     LocateNodesResult (..),
+    Locator (..),
+    LogEntry (..), 
+    LogEvent(..),
     Navigate (..),
+    NodeRemoteValue (..),
+    PointerCommonProperties (..),
+    PointerSourceActions (..),
+    PointerSourceAction (..),
+    KnownSubscriptionType (..),
+    Pointer (..),
+    PointerType (..),
+    Origin (..),
+    PerformActions (..),
+    SourceActions (..),
     SharedId,
     SharedReference (..),
-    KnownSubscriptionType (..),
-    Target (..),
-    LogEntry (..), 
-    Event(..),
-    LogEvent(..)
+    Target (..)
   )
 import Prelude hiding (log, putStrLn)
 import Data.Text (Text)

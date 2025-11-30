@@ -1,7 +1,5 @@
 module BiDi.Demos.ScriptDemos where
 
--- custom import needed to disambiguate capabilities
-
 import BiDi.BiDiActions (BiDiActions (..))
 import BiDi.DemoUtils
 import Data.Aeson (ToJSON (..))
