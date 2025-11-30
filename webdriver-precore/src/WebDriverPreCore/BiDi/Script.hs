@@ -544,7 +544,7 @@ newtype GetRealmsResult = MkGetRealmsResult
   deriving (Show, Eq, Generic)
 
 data RealmInfo
-  = Window
+  = WindowRealmInfo
       { base :: BaseRealmInfo,
         context :: BrowsingContext,
         sandbox :: Maybe Text
@@ -567,7 +567,7 @@ instance FromJSON RealmInfo where
       "window" -> do
         context <- o .: "context"
         sandbox <- o .:? "sandbox"
-        pure $ Window {base, context, sandbox}
+        pure $ WindowRealmInfo {base, context, sandbox}
       "dedicated-worker" -> do
         owners <- o .: "owners"
         pure $ DedicatedWorker {base, owners}
@@ -864,7 +864,7 @@ instance ToJSON RealmInfo where
 
       typeAndSpecificProps :: [Pair]
       typeAndSpecificProps = case ri of
-        Window {context, sandbox} ->
+        WindowRealmInfo {context, sandbox} ->
           [ "type" .= WindowRealm,
             "context" .= context
           ]

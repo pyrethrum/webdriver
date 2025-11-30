@@ -78,11 +78,14 @@ import WebDriverPreCore.BiDi.BrowsingContext
     Info (..),
     LocateNodes (..),
     LocateNodesResult (..),
+    Locator (..),
     Navigate (..),
     NavigateResult (..),
     Orientation (..),
     PageRange (..),
     Print (..),
+    PrintMargin (..),
+    PrintPage (..),
     PrintResult (..),
     ReadinessState (..),
     Reload (..),
@@ -90,6 +93,7 @@ import WebDriverPreCore.BiDi.BrowsingContext
     SetViewport (..),
     TraverseHistory (..),
     TraverseHistoryResult (..),
+    Viewport (..)
   )
 import WebDriverPreCore.BiDi.Capabilities
   ( Capabilities (..),
@@ -97,46 +101,34 @@ import WebDriverPreCore.BiDi.Capabilities
     ProxyConfiguration (..),
   )
 import WebDriverPreCore.BiDi.Command
-  ( Command (..)
+  ( Command (..),
   )
 import WebDriverPreCore.BiDi.CoreTypes as CoreTypes
-  ( BrowsingContext (..),
-    KnownSubscriptionType (..),
-    SharedId (..),
-    SubscriptionType (..),
-    UnknownSubscriptionType (..),
-    UserContext (..),
-    subscriptionTypeToText,
-  )
 import WebDriverPreCore.BiDi.Emulation
-  ( GeolocationCoordinates (..),
+  ( ForcedColorsModeTheme (..),
+    GeolocationCoordinates (..),
     GeolocationPositionError (..),
+    NetworkConditions (..),
+    NetworkConditionsOffline (..),
     ScreenArea (..),
     ScreenOrientationNatural (..),
     ScreenOrientationOverride (..),
     ScreenOrientationType (..),
+    SetForcedColorsModeThemeOverride (..),
     SetGeolocationOverride (..),
     SetLocaleOverride (..),
+    SetNetworkConditions (..),
     SetScreenOrientationOverride (..),
     SetScreenSettingsOverride (..),
-    SetTimezoneOverride (..),
-    SetForcedColorsModeThemeOverride (..),
-    SetNetworkConditions (..),
-    SetUserAgentOverride (..),
     SetScriptingEnabled (..),
-    ForcedColorsModeTheme (..),
-    NetworkConditions (..),
-    NetworkConditionsOffline (..)
+    SetTimezoneOverride (..),
+    SetUserAgentOverride (..),
   )
 import WebDriverPreCore.BiDi.Event
   ( Event (..),
     Subscription (..),
   )
 import WebDriverPreCore.BiDi.Input
-  ( PerformActions (..),
-    ReleaseActions (..),
-    SetFiles (..),
-  )
 import WebDriverPreCore.BiDi.Log
   ( BaseLogEntry (..),
     ConsoleLogEntry (..),
@@ -203,40 +195,11 @@ import WebDriverPreCore.BiDi.Response
     parseResponse,
   )
 import WebDriverPreCore.BiDi.Script
-  ( AddPreloadScript (..),
-    AddPreloadScriptResult (..),
-    CallFunction (..),
-    Channel (..),
-    ChannelProperties (..),
-    ChannelValue (..),
-    ContextTarget (..),
-    Disown (..),
-    Evaluate (..),
-    EvaluateResult (..),
-    GetRealms (..),
-    GetRealmsResult (..),
-    IncludeShadowTree (..),
-    LocalValue (..),
-    MapLocalValue (..),
-    MappingLocalValue (..),
-    ObjectLocalValue (..),
-    PrimitiveProtocolValue (..),
-    Realm (..),
-    RealmDestroyed (..),
-    RemoteValue (..),
-    RemovePreloadScript (..),
-    ResultOwnership (..),
-    Sandbox (..),
-    SerializationOptions (..),
-    SharedReference (..),
-    SpecialNumber (..),
-    Target (..),
-  )
 import WebDriverPreCore.BiDi.Session
   ( SessionNewResult (..),
     SessionStatusResult (..),
-    SessionSubscribeResult (..),
     SessionSubscibe (..),
+    SessionSubscribeResult (..),
     SessionUnsubscribe (..),
     SubscriptionId (..),
   )

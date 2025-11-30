@@ -5,9 +5,7 @@ import BiDi.DemoUtils
 import Data.Maybe (fromJust)
 import IOUtils (DemoActions (..))
 import TestData (uploadUrl)
-import WebDriverPreCore.BiDi.BrowsingContext (Locator (..))
 import WebDriverPreCore.BiDi.CoreTypes qualified as Core
-import WebDriverPreCore.BiDi.Input
 import WebDriverPreCore.BiDi.Protocol
 import Prelude hiding (log, putStrLn)
 

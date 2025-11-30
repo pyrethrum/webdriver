@@ -8,7 +8,6 @@ import TestServerAPI qualified as URLs
 import UnliftIO (putTMVar, readTMVar)
 import UnliftIO.STM (atomically, newEmptyTMVarIO, newTVarIO, readTVar, writeTVar)
 import WebDriverPreCore.BiDi.Command (KnownCommand (..), mkCommand)
-import WebDriverPreCore.BiDi.CoreTypes (JSUInt (..), StringValue (..), URL (..))
 import WebDriverPreCore.BiDi.Network qualified as Net
 import WebDriverPreCore.BiDi.Protocol
 import WebDriverPreCore.Internal.Utils (txt)

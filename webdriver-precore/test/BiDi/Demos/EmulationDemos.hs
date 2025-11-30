@@ -3,7 +3,6 @@ module BiDi.Demos.EmulationDemos where
 import BiDi.BiDiActions (BiDiActions (..))
 import BiDi.DemoUtils
 import IOUtils (DemoActions (..))
-import WebDriverPreCore.BiDi.CoreTypes (JSUInt (..))
 import WebDriverPreCore.BiDi.Protocol
 import Prelude hiding (log, putStrLn)
 

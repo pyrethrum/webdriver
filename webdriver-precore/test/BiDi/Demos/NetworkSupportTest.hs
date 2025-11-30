@@ -4,7 +4,6 @@ import BiDi.BiDiActions (BiDiActions (..))
 import BiDi.DemoUtils
 import Control.Exception (SomeException, throwIO, try)
 import IOUtils (DemoActions (..), exceptionTextIncludes)
-import WebDriverPreCore.BiDi.CoreTypes (JSUInt (..))
 import WebDriverPreCore.BiDi.Protocol
 import Prelude hiding (log)
 

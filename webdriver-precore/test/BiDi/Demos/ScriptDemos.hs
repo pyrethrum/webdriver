@@ -8,11 +8,8 @@ import Data.Aeson (ToJSON (..))
 import Data.Maybe (catMaybes)
 import Data.Text (isInfixOf, pack)
 import IOUtils (DemoActions (..))
-import WebDriverPreCore.BiDi.CoreTypes (JSUInt (..), URL(..))
 import WebDriverPreCore.BiDi.Protocol
-import qualified WebDriverPreCore.BiDi.Script as Script
 import Prelude hiding (log, putStrLn)
-import WebDriverPreCore.BiDi.CoreTypes (StringValue(..))
 import Const (milliseconds)
 
 
@@ -1485,7 +1482,7 @@ scriptGetRealmsAndDisownDemo =
         scriptGetRealms $
           MkGetRealms
             { context = Nothing,
-              realmType = Just Script.WindowRealm
+              realmType = Just WindowRealm
             }
       logShow "Window realms only" windowRealms
       pause
@@ -1496,14 +1493,14 @@ scriptGetRealmsAndDisownDemo =
         [] -> logTxt "No realms available for ownership testing"
         (firstRealmInfo : _) -> do
           let targetRealm = case firstRealmInfo of
-                Script.Window {base = Script.BaseRealmInfo {realm = r}} -> r
-                Script.DedicatedWorker {base = Script.BaseRealmInfo {realm = r}} -> r
-                Script.SharedWorker {base = Script.BaseRealmInfo {realm = r}} -> r
-                Script.ServiceWorker {base = Script.BaseRealmInfo {realm = r}} -> r
-                Script.Worker {base = Script.BaseRealmInfo {realm = r}} -> r
-                Script.PaintWorklet {base = Script.BaseRealmInfo {realm = r}} -> r
-                Script.AudioWorklet {base = Script.BaseRealmInfo {realm = r}} -> r
-                Script.Worklet {base = Script.BaseRealmInfo {realm = r}} -> r
+                WindowRealmInfo {base = BaseRealmInfo {realm = r}} -> r
+                DedicatedWorker {base = BaseRealmInfo {realm = r}} -> r
+                SharedWorker {base = BaseRealmInfo {realm = r}} -> r
+                ServiceWorker {base = BaseRealmInfo {realm = r}} -> r
+                Worker {base = BaseRealmInfo {realm = r}} -> r
+                PaintWorklet {base = BaseRealmInfo {realm = r}} -> r
+                AudioWorklet {base = BaseRealmInfo {realm = r}} -> r
+                Worklet {base = BaseRealmInfo {realm = r}} -> r
 
           logTxt $ "Test 4: Create owned objects in realm: " <> pack (show targetRealm)
 
@@ -1597,7 +1594,7 @@ scriptGetRealmsAndDisownDemo =
             scriptGetRealms $
               MkGetRealms
                 { context = Just bc,
-                  realmType = Just Script.WindowRealm
+                  realmType = Just WindowRealm
                 }
           logShow "Final realms check" finalRealms
           pause

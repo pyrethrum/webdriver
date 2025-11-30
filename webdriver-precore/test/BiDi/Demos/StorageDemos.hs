@@ -3,7 +3,6 @@ module BiDi.Demos.StorageDemos where
 import BiDi.BiDiActions (BiDiActions (..))
 import BiDi.DemoUtils
 import IOUtils (DemoActions (..))
-import WebDriverPreCore.BiDi.CoreTypes (StringValue (MkStringValue))
 import WebDriverPreCore.BiDi.Protocol
 import WebDriverPreCore.BiDi.Storage
 import Prelude hiding (log, putStrLn)

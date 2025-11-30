@@ -7,8 +7,6 @@ import Data.Aeson (Value (Null), object, (.=))
 import Data.Text (Text)
 import IOUtils (DemoActions (..))
 import TestData (contentPageUrl, framesUrl, loginUrl, navigation1Url, navigation2Url, navigation3Url, navigation4Url, navigation5Url, navigation6Url, nestedFramesUrl)
-import WebDriverPreCore.BiDi.BrowsingContext (Locator (..), PrintMargin (..), PrintPage (..), Viewport (..))
-import WebDriverPreCore.BiDi.CoreTypes (JSInt (..), JSUInt (..), NodeRemoteValue (..))
 import WebDriverPreCore.BiDi.Protocol
 import Prelude hiding (log, putStrLn)
 
