@@ -56,10 +56,11 @@
   - [x] rerun tests
     - [x] legacy flag 
     - [x] legacy flag run
-- [ ] update to latest spec
+- [X] add deprecation warning
+- [X] update to latest spec
 - [ ] remove unneeded instances to and fromJSON
 - [X] fallback
-- [ ] demo parsing additional prop on empty return type
+- [X] demo parsing additional prop on empty return type - fallback
 
 ## Extend testing
 
