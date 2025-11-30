@@ -40,22 +40,6 @@ _stopDemoUnusedWarning = runDemo
 -- #################### The Tests ######################
 
 -- >>> runDemo newSessionDemo
--- *** Exception: VanillaHttpException (HttpExceptionRequest Request {
---   host                 = "127.0.0.1"
---   port                 = 4444
---   secure               = False
---   requestHeaders       = [("Accept","application/json"),("Content-Type","application/json; charset=utf-8")]
---   path                 = "/session"
---   queryString          = ""
---   method               = "POST"
---   proxy                = Nothing
---   rawBody              = False
---   redirectCount        = 10
---   responseTimeout      = ResponseTimeoutDefault
---   requestVersion       = HTTP/1.1
---   proxySecureMode      = ProxySecureWithConnect
--- }
---  (ConnectionFailure Network.Socket.connect: <socket: 91>: does not exist (Connection refused)))
 newSessionDemo :: HttpDemo
 newSessionDemo =
   demo "new Session" action
@@ -84,8 +68,6 @@ driverStatusDemo =
       logShowM "driver status" status
 
 -- >>> runDemo demoSendKeysClear
--- *** Exception: user error (WebDriver error thrown:
---  WebDriverError {error = InvalidArgument, description = "The arguments passed to a command are either invalid or malformed", message = "Body was not a JSON Object", stacktrace = Just "", errorData = Nothing, httpResponse = Object (fromList [("value",Object (fromList [("error",String "invalid argument"),("message",String "Body was not a JSON Object"),("stacktrace",String "")]))])})
 demoSendKeysClear :: HttpDemo
 demoSendKeysClear =
   sessionDemo "send keys clear" action
