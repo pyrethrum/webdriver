@@ -96,16 +96,19 @@ import Data.Aeson as A
     Result (..),
     ToJSON (toJSON),
     Value (..),
-    object,
+    object, (.:),
   )
-import Data.Aeson.Types (parse)
-import Data.Text (Text)
+import Data.Aeson.Types (parse, Parser)
+import Data.Text (Text, unpack)
 import WebDriverPreCore.Http.Capabilities as C
-import WebDriverPreCore.Http.HttpResponse (HttpResponse (..), fromBodyValue)
+import WebDriverPreCore.Http.HttpResponse (HttpResponse (..))
 import WebDriverPreCore.Http.Protocol
 import WebDriverPreCore.Internal.AesonUtils (jsonToText)
 import WebDriverPreCore.Internal.Utils (UrlPath (..), newSessionUrl, session)
 import Prelude hiding (id, lookup)
+import Data.Aeson (withObject)
+import Control.Monad (when)
+import Data.Function ((&))
 
 -- |
 --  The 'HttpSpec' type is a specification for a WebDriver Http command.
@@ -164,6 +167,16 @@ delete_ description path =
 -- this is to shim the deprecated API with the new
 getParser :: forall a. (FromJSON a) => Bool -> HttpResponse -> Result a
 getParser expectNull r = parse (fromBodyValue expectNull) r.body
+
+fromBodyValue :: forall a. (FromJSON a) => Bool -> Value -> Parser a
+fromBodyValue expectNull body =
+  body & withObject "body value" \b -> do
+    val <- b .: "value"
+    when (expectNull && val /= Null) $
+      fail $
+        unpack $
+          "Null value expected but got:\n" <> jsonToText val
+    parseJSON $ val
 
 instance (Show a) => Show (HttpSpec a) where
   show :: HttpSpec a -> String

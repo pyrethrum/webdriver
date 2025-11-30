@@ -212,7 +212,6 @@ test-suite test
     , Http.HttpActions
     , Http.HttpActionsDeprecated
     , Http.HttpEndpoint
-    , Http.HttpUtils 
     , Http.DemoUtils
     , Http.HttpDemo
     , Http.HttpDemoFallback

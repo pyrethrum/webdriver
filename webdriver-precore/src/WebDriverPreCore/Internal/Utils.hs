@@ -7,23 +7,18 @@ module WebDriverPreCore.Internal.Utils
     UrlPath (..),
     newSessionUrl,
     session,
-    bodyValue,
-    bodyText,
     db
   )
 where
 
 -- debugging only remove brefore release
 
-import Data.Aeson (Key, Result (..), Value (..))
 import Data.Function ((.))
 import Data.Text (Text, pack, unpack)
 import Debug.Trace (trace)
 import GHC.Enum (Bounded (..), Enum)
 import GHC.Show (Show (..))
 import Text.Show.Pretty qualified as P
-import WebDriverPreCore.Http.HttpResponse (HttpResponse (..))
-import WebDriverPreCore.Internal.AesonUtils (bodyText', lookup)
 import Prelude (Eq (..), Ord, Semigroup, ($), (<>)) 
 
 {-
@@ -49,11 +44,6 @@ newSessionUrl = MkUrlPath [session]
 session :: Text
 session = "session"
 
-bodyValue :: HttpResponse -> Result Value
-bodyValue r = lookup "value" r.body
-
-bodyText :: HttpResponse -> Key -> Result Text
-bodyText r = bodyText' (bodyValue r)
 
 -- debugging
 

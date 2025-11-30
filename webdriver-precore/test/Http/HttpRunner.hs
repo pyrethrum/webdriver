@@ -5,10 +5,9 @@ module Http.HttpRunner
   )
 where
 
-import Data.Aeson (FromJSON (..), Value)
+import Data.Aeson (FromJSON (..), Value, Result (..), withObject, (.:))
 import GHC.Exception (throw)
-import Http.HttpEndpoint (callWebDriver, mkRequest)
-import Http.HttpUtils (parseResultIO)
+import Http.HttpEndpoint (mkRequest, callWebDriver')
 import IOUtils (DemoActions (..))
 import Network.HTTP.Req
   ( Scheme (..),
@@ -16,8 +15,14 @@ import Network.HTTP.Req
   )
 import UnliftIO (catchAny)
 import WebDriverPreCore.Http.Command (Command (..))
-import WebDriverPreCore.Http.HttpResponse (HttpResponse (..))
 import Prelude hiding (log)
+import WebDriverPreCore.Http qualified as HTTP
+import Data.Text (Text, unpack)
+import Data.Aeson.Types (parse, Parser, Value (..))
+import Data.Function ((&))
+import Control.Monad (when)
+import WebDriverPreCore.Internal.AesonUtils (jsonToText)
+import Text.Show.Pretty (ppShow)
 
 -- ############# Runner #############
 
@@ -46,8 +51,8 @@ mkRunner driverUrl port da =
 logCall :: forall r. Url 'Http -> Int -> DemoActions -> Command r -> IO Value
 logCall driverUrl port da cmd = do
   logCommand da cmd
-  r <- callWebDriver da $ mkRequest driverUrl port cmd
-  pure r.body
+  callWebDriver' da $ mkRequest driverUrl port cmd
+
 
 runExtended :: forall r. (FromJSON r) => Bool -> Url 'Http -> Int -> DemoActions -> Command r -> IO (Extended r)
 runExtended expectNull driverUrl port da@MkDemoActions {logShow} cmd = do
@@ -74,3 +79,30 @@ logCommand da@MkDemoActions {logShow} cmd = do
       da.logJSON "body" body
     PostEmpty {} -> pure ()
     Delete {} -> pure ()
+
+
+parseResultIO :: forall r. (FromJSON r) => Bool -> Value -> Text -> IO r
+parseResultIO expectNull body description =
+  case parse (fromBodyValue expectNull) body of
+    Error msg ->
+      fail $
+        HTTP.parseWebDriverError body & \case
+          e@HTTP.ResponeParseError {} -> unpack description <> "\n" <> "Failed to parse response:\n " <> msg <> "\nin response:" <> ppShow e
+          e@HTTP.UnrecognisedError {} -> "UnrecognisedError:\n " <> "\nin response:" <> ppShow e
+          e@HTTP.WebDriverError {} -> "WebDriver error thrown:\n " <> ppShow e
+    Success r -> pure r
+
+
+fromBodyValue :: forall a. (FromJSON a) => Bool -> Value -> Parser a
+fromBodyValue expectNull body =
+  body & withObject "body value" \b -> do
+    val <- b .: "value"
+    when (expectNull && val /= Null) $
+      fail $
+        unpack $
+          "Null value expected but got:\n" <> jsonToText val
+    parseJSON $ val
+
+
+
+

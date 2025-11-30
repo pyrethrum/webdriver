@@ -3,7 +3,8 @@ module Http.HttpEndpoint
     mkRequest,
     -- share with deprecated runner
     fullCommandPath,
-    responseStatusText
+    responseStatusText,
+    callWebDriver'
   )
 where
 
@@ -55,6 +56,27 @@ mkRequest driverUrl port cmd =
 
 fullCommandPath :: Url 'Http -> [Text] -> Url 'Http
 fullCommandPath basePath = F.foldl' (/:) basePath
+
+callWebDriver' :: DemoActions -> ReqRequestParams -> IO Value
+callWebDriver' MkDemoActions {logShow = logShow', logJSON = logJSON'} MkRequestParams {url, method, body, port = prt} =
+  runReq defaultHttpConfig {httpConfigCheckResponse = \_ _ _ -> Nothing} $ do
+    logShow "URL" url
+    r <- req method url body jsonResponse $ R.port prt
+
+    let 
+      body' = responseBody r :: Value
+
+
+    logShow "Status Code" $ responseStatusCode r
+    logShow "Status Message" $ responseStatusText r
+    logJSON "Response Body" body'
+
+    pure body'
+  where
+    logShow :: (Show a) => Text -> a -> Req ()
+    logShow msg = liftIO . logShow' msg
+    logJSON msg = liftIO . logJSON' msg
+
 
 callWebDriver :: DemoActions -> ReqRequestParams -> IO HttpResponse
 callWebDriver MkDemoActions {logShow = logShow', logJSON = logJSON'} MkRequestParams {url, method, body, port = prt} =
