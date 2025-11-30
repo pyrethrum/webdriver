@@ -113,17 +113,18 @@ library
   import: commonExtensions, commonGhcOptions
   exposed-modules:
       -- Http
-      WebDriverPreCore.Http
       WebDriverPreCore.Http.API
-      WebDriverPreCore.Http.Command
       WebDriverPreCore.Http.Protocol
+      WebDriverPreCore.Http.Command
       -- deprecated
+      WebDriverPreCore.Http
       WebDriverPreCore.Http.SpecDefinition
       WebDriverPreCore.Http.HttpResponse
       -- BiDi
       WebDriverPreCore.BiDi.API
       WebDriverPreCore.BiDi.Protocol
       WebDriverPreCore.BiDi.BiDiUrl
+      WebDriverPreCore.BiDi.Error
       -- Utils
       WebDriverPreCore.Internal.AesonUtils
       WebDriverPreCore.Internal.Utils
@@ -139,7 +140,6 @@ library
       WebDriverPreCore.BiDi.Command
       WebDriverPreCore.BiDi.CoreTypes
       WebDriverPreCore.BiDi.Emulation
-      WebDriverPreCore.BiDi.Error
       WebDriverPreCore.BiDi.Event
       WebDriverPreCore.BiDi.Log
       WebDriverPreCore.BiDi.Input

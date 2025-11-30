@@ -29,8 +29,13 @@ import Data.Text (Text, unpack)
 import GHC.Generics (Generic)
 import UnliftIO.STM
 -- todo: get rid of these imports
-import WebDriverPreCore.BiDi.CoreTypes (JSUInt (..))
-import WebDriverPreCore.BiDi.Response (JSONDecodeError, MatchedResponse (..), ResponseObject (..), displayResponseError, parseResponse)
+import WebDriverPreCore.BiDi.Protocol
+  ( JSUInt (..),
+    JSONDecodeError,
+    ResponseObject (..),
+    displayResponseError,
+    parseResponse,
+  )
 import WebDriverPreCore.Internal.Utils (txt)
 ---
 import Prelude hiding (id, log)

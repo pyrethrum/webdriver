@@ -13,7 +13,7 @@ import WebDriverPreCore.Internal.AesonUtils (jsonToText, parseObjectEither, pars
 import WebDriverPreCore.Internal.Utils (txt)
 import Prelude
 
-parseResponse :: (FromJSON r) => JSUInt -> Either JSONDecodeError ResponseObject -> Maybe (Either ResponseError (MatchedResponse r))
+parseResponse :: forall r. (FromJSON r) => JSUInt -> Either JSONDecodeError ResponseObject -> Maybe (Either ResponseError (MatchedResponse r))
 parseResponse id' =
   either
     (Just . Left . DecodeError)
