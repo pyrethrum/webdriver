@@ -15,11 +15,19 @@ import Test.Tasty.HUnit as HUnit (Assertion, assertBool)
 import Text.RawString.QQ (r)
 import  WebDriverPreCore.Internal.Utils (UrlPath(..))
 import WebDriverPreCore.Http
-import WebDriverPreCore.Http.Protocol (ElementId (..), FrameReference (..), Handle (..), Script (..), Selector (..), SessionId (..), WindowRect (..), URL(..))
-import WebDriverPreCore.Http.Protocol (Cookie(..))
-import WebDriverPreCore.Http.Protocol (Actions(..))
-import WebDriverPreCore.Http.Protocol (ShadowRootElementId)
-import WebDriverPreCore.Http.Protocol (ShadowRootElementId(..))
+import WebDriverPreCore.Http.Protocol
+  ( Actions (..),
+    Cookie (..),
+    ElementId (..),
+    FrameReference (..),
+    Handle (..),
+    Script (..),
+    Selector (..),
+    SessionId (..),
+    ShadowRootElementId (..),
+    URL (..),
+    WindowRect (..)
+  )
 
 {-- TODO use Haddock variable
  Covers Spec Version https://www.w3.org/TR/2025/WD-webdriver2-20251028

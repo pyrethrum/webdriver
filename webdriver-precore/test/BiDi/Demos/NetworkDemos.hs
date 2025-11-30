@@ -9,6 +9,30 @@ import UnliftIO (putTMVar, readTMVar)
 import UnliftIO.STM (atomically, newEmptyTMVarIO, newTVarIO, readTVar, writeTVar)
 
 import WebDriverPreCore.BiDi.Protocol
+  ( AddDataCollector (..),
+    AddIntercept (..),
+    AuthCredentials (..),
+    BrowsingContext (..),
+    BytesValue (..),
+    CacheBehavior (..),
+    ContinueRequest (..),
+    ContinueResponse (..),
+    ContinueWithAuth (..),
+    Cookie (..),
+    FailRequest (..),
+    GetData (..),
+    Header (..),
+    InterceptPhase (..),
+    KnownSubscriptionType (..),
+    Navigate (..),
+    ProvideResponse (..),
+    RemoveDataCollector (..),
+    RemoveIntercept (..),
+    SetCacheBehavior (..),
+    SetExtraHeaders (..),
+    URL (..),
+    UrlPattern (..)
+  )
 import WebDriverPreCore.Internal.Utils (txt)
 import Prelude hiding (log)
 

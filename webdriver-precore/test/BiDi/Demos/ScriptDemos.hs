@@ -6,7 +6,31 @@ import Data.Aeson (ToJSON (..))
 import Data.Maybe (catMaybes)
 import Data.Text (isInfixOf, pack)
 import IOUtils (DemoActions (..))
+import WebDriverPreCore.BiDi.Script
+  ( AddPreloadScriptResult (..),
+    ChannelProperties (..),
+    EvaluateResult (..),
+    PrimitiveProtocolValue (..),
+    RemoteValue (..)
+  )
 import WebDriverPreCore.BiDi.Protocol
+  ( AddPreloadScript (..),
+    CallFunction (..),
+    ChannelValue (..),
+    ContextTarget (..),
+    Create (..),
+    CreateUserContext (..),
+    Disown (..),
+    Evaluate (..),
+    GetRealms (..),
+    LocalValue (..),
+    Navigate (..),
+    RealmType (..),
+    RemovePreloadScript (..),
+    ResultOwnership (..),
+    SerializationOptions (..),
+    Target (..)
+  )
 import Prelude hiding (log, putStrLn)
 import Const (milliseconds)
 

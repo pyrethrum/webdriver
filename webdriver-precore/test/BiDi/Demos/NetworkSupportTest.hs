@@ -5,6 +5,16 @@ import BiDi.DemoUtils
 import Control.Exception (SomeException, throwIO, try)
 import IOUtils (DemoActions (..), exceptionTextIncludes)
 import WebDriverPreCore.BiDi.Protocol
+  ( AddDataCollector (..),
+    AddIntercept (..),
+    CacheBehavior (..),
+    ContinueRequest (..),
+    DataType (..),
+    InterceptPhase (..),
+    JSUInt (..),
+    Request (..),
+    SetCacheBehavior (..)
+  )
 import Prelude hiding (log)
 
 -- Test which network commands are actually supported by the current driver

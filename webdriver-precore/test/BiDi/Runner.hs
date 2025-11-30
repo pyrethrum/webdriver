@@ -41,18 +41,18 @@ import UnliftIO (catchAny, throwIO, waitAnyCatch)
 import UnliftIO.Async (Async, async, cancel)
 import UnliftIO.STM
 import WebDriverPreCore.BiDi.BiDiUrl (BiDiUrl (..))
-import WebDriverPreCore.BiDi.CoreTypes (JSUInt (..))
 import WebDriverPreCore.BiDi.Protocol as P
-  ( SessionSubscribeResult (..),
+  ( JSUInt (..),
+    ResponseObject (..),
+    SessionSubscribeResult (..),
     SessionSubscibe (..),
-    SessionUnsubscribe,
+    SessionUnsubscribe (..),
     Subscription (..),
     SubscriptionId (..),
     SubscriptionType (..),
-    subscriptionTypeToText,
+    decodeResponse,
+    subscriptionTypeToText
   )
-import WebDriverPreCore.BiDi.Response (ResponseObject (..), decodeResponse)
-import WebDriverPreCore.BiDi.Session (SessionUnsubscribe (..))
 import WebDriverPreCore.Internal.AesonUtils (jsonToText, objToText, parseThrow)
 import WebDriverPreCore.Internal.Utils (txt)
 import Prelude hiding (getLine, log, null, print, putStrLn)

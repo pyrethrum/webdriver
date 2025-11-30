@@ -8,6 +8,30 @@ import Data.Text (Text)
 import IOUtils (DemoActions (..))
 import TestData (contentPageUrl, framesUrl, loginUrl, navigation1Url, navigation2Url, navigation3Url, navigation4Url, navigation5Url, navigation6Url, nestedFramesUrl)
 import WebDriverPreCore.BiDi.Protocol
+  ( Activate (..),
+    CaptureScreenshot (..),
+    ClipRectangle (..),
+    Close (..),
+    ContextTarget (..),
+    Create (..),
+    CreateType (..),
+    CreateUserContext (..),
+    Evaluate (..),
+    GetTree (..),
+    HandleUserPrompt (..),
+    ImageFormat (..),
+    LocateNodes (..),
+    Locator (..),
+    Navigate (..),
+    Print (..),
+    Reload (..),
+    SetViewport (..),
+    Target (..),
+    TraverseHistory (..),
+    URL (..),
+    UserPromptClosed (..),
+    Viewport (..)
+  )
 import Prelude hiding (log, putStrLn)
 
 -- >>> runDemo browsingContextCreateActivateCloseDemo

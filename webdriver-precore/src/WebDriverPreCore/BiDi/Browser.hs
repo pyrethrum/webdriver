@@ -6,7 +6,6 @@ module WebDriverPreCore.BiDi.Browser
     GetClientWindowsResult (..),
     GetUserContextsResult (..),
     NamedState (..),
-    NormalState (..),
     RectState (..),
     RemoveUserContext (..),
     SetClientWindowState (..),
@@ -15,7 +14,8 @@ module WebDriverPreCore.BiDi.Browser
   )
 where
 
-import Data.Aeson (FromJSON (..), ToJSON (..), Value, object, (.=))
+import Data.Aeson (FromJSON (..), Object, ToJSON (..), Value (..), object, (.=))
+import Data.Aeson.KeyMap (fromList)
 import Data.Aeson.Types (Parser)
 import Data.Maybe (catMaybes)
 import Data.Text (Text)
@@ -23,7 +23,7 @@ import GHC.Generics (Generic)
 import WebDriverPreCore.BiDi.Capabilities (ProxyConfiguration, UserPromptHandler)
 import WebDriverPreCore.BiDi.CoreTypes (ClientWindow, UserContext)
 import WebDriverPreCore.Internal.AesonUtils (enumCamelCase, fromJSONCamelCase, opt)
-import Prelude (Bool (..), Eq (..), Int, Maybe, Show, ($), (<>))
+import Prelude (Bool (..), Eq (..), Int, Maybe, Show, ($), (.), (<>), Applicative (..), MonadFail (..))
 
 -- ######### Remote #########
 
@@ -88,7 +88,17 @@ data SetClientWindowState = MkSetClientWindowState
   }
   deriving (Show, Eq, Generic)
 
-instance ToJSON SetClientWindowState
+instance ToJSON SetClientWindowState where
+  toJSON :: SetClientWindowState -> Value
+  toJSON (MkSetClientWindowState cw ws) =
+    case ws of
+      ClientWindowNamedState ns ->
+        object $ cwProp <> ["state" .= ns]
+      ClientWindowRectState rs ->
+        (object $ cwProp <> ["state" .= "normal"])
+          <> toJSON rs
+    where
+      cwProp = ["clientWindow" .= cw]
 
 data WindowState
   = ClientWindowNamedState NamedState
@@ -102,20 +112,28 @@ instance ToJSON WindowState where
   toJSON = enumCamelCase
 
 data NamedState
-  = NamedFullscreen
-  | NamedMaximized
-  | NamedMinimized
+  = FullscreenState
+  | MaximizedState
+  | MinimizedState
   deriving (Show, Eq, Generic)
 
-instance FromJSON NamedState
+instance FromJSON NamedState where
+  parseJSON :: Value -> Parser NamedState
+  parseJSON = \case
+    String "fullscreen" -> pure FullscreenState
+    String "maximized" -> pure MaximizedState
+    String "minimized" -> pure MinimizedState
+    _ -> fail "Expected one of: fullscreen, maximized, minimized"
 
 instance ToJSON NamedState where
   toJSON :: NamedState -> Value
-  toJSON = enumCamelCase
+  toJSON = \case
+    FullscreenState -> "fullscreen"
+    MaximizedState -> "maximized"
+    MinimizedState -> "minimized"
 
 data RectState = MkRectState
-  { state :: NormalState,
-    width :: Maybe Int,
+  { width :: Maybe Int,
     height :: Maybe Int,
     x :: Maybe Int,
     y :: Maybe Int
@@ -124,14 +142,20 @@ data RectState = MkRectState
 
 instance FromJSON RectState
 
-instance ToJSON RectState
+instance ToJSON RectState where
+  toJSON :: RectState -> Value
+  toJSON =
+    Object . recStateObj
 
-data NormalState = NormalState
-  deriving (Show, Eq, Generic)
-
-instance FromJSON NormalState
-
-instance ToJSON NormalState
+recStateObj :: RectState -> Object
+recStateObj MkRectState {width, height, x, y} =
+  fromList $
+    catMaybes
+      [ opt "width" width,
+        opt "height" height,
+        opt "x" x,
+        opt "y" y
+      ]
 
 -- SetDownloadBehavior command types
 

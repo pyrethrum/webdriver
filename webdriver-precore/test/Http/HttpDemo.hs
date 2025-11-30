@@ -31,6 +31,26 @@ import TestData
   )
 import TestServerAPI (testServerHomeUrl, withTestServer)
 import WebDriverPreCore.Http.Protocol
+  ( Action (..),
+    Actions (..),
+    Cookie (..),
+    FrameReference (..),
+    KeyAction (..),
+    Pointer (..),
+    PointerAction (..),
+    PointerOrigin (..),
+    SameSite (..),
+    Script (..),
+    Selector (..),
+    SessionId (..),
+    SessionResponse (..),
+    Status (..),
+    Timeouts (..),
+    URL (..),
+    WheelAction (..),
+    WindowHandleSpec (..),
+    WindowRect (..)
+  )
 import WebDriverPreCore.Internal.Utils (txt)
 import Prelude hiding (log)
 
@@ -51,7 +71,7 @@ newSessionDemo =
       logShow "capabilities" caps
       bracket
         (newSession caps)
-        (deleteSession . (.sessionId))
+        (\(MkSessionResponse {sessionId = sid}) -> deleteSession sid)
         (logShow "new session response:\n")
 
 -- >>> runDemo driverStatusDemo

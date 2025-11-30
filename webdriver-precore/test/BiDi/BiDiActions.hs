@@ -9,26 +9,18 @@ import BiDi.Runner qualified as Runner
 import Data.Aeson (FromJSON, Object, Value (..))
 import Data.Text (Text)
 import WebDriverPreCore.BiDi.API qualified as API
-import WebDriverPreCore.BiDi.BrowsingContext
-  ( DownloadEnd,
+import WebDriverPreCore.BiDi.Protocol
+  ( Capabilities,
+    Command (..),
+    DownloadEnd,
     DownloadWillBegin,
     HistoryUpdated,
+    JSUInt (..),
     NavigationInfo,
+    Subscription (..),
     UserPromptClosed,
     UserPromptOpened,
-  )
-import WebDriverPreCore.BiDi.Capabilities (Capabilities)
-import WebDriverPreCore.BiDi.Command
-import WebDriverPreCore.BiDi.CoreTypes (JSUInt (..))
-import WebDriverPreCore.BiDi.Event (Subscription (..))
-import WebDriverPreCore.BiDi.Input (FileDialogOpened)
-import WebDriverPreCore.BiDi.Log (LogEntry)
-import WebDriverPreCore.BiDi.Network
-  ( AuthRequired,
-    BeforeRequestSent,
-    FetchError,
-    ResponseCompleted,
-    ResponseStarted,
+    toMethodText
   )
 import WebDriverPreCore.BiDi.Protocol as P
   ( Activate,
@@ -38,6 +30,8 @@ import WebDriverPreCore.BiDi.Protocol as P
     AddInterceptResult,
     AddPreloadScript,
     AddPreloadScriptResult,
+    AuthRequired,
+    BeforeRequestSent,
     BrowsingContext,
     CallFunction,
     CaptureScreenshot,
@@ -57,6 +51,8 @@ import WebDriverPreCore.BiDi.Protocol as P
     EvaluateResult,
     Event,
     FailRequest,
+    FetchError,
+    FileDialogOpened,
     GetClientWindowsResult,
     GetCookies,
     GetCookiesResult,
@@ -72,6 +68,7 @@ import WebDriverPreCore.BiDi.Protocol as P
     KnownSubscriptionType (..),
     LocateNodes,
     LocateNodesResult,
+    LogEntry,
     Navigate,
     NavigateResult,
     PerformActions,
@@ -85,6 +82,8 @@ import WebDriverPreCore.BiDi.Protocol as P
     RemoveIntercept,
     RemovePreloadScript,
     RemoveUserContext,
+    ResponseCompleted,
+    ResponseStarted,
     SessionNewResult,
     SessionStatusResult,
     SessionSubscribeResult (..),
@@ -115,10 +114,8 @@ import WebDriverPreCore.BiDi.Protocol as P
     WebExtensionInstall,
     WebExtensionResult,
     WebExtensionUninstall,
-  )
-import WebDriverPreCore.BiDi.Script
-  ( Message,
-    RealmInfo,
+    Message,
+    RealmInfo
   )
 import Prelude
 

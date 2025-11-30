@@ -102,8 +102,21 @@ import Data.Aeson.Types (parse, Parser)
 import Data.Text (Text, unpack)
 import WebDriverPreCore.Http.Capabilities as C
 import WebDriverPreCore.Http.HttpResponse (HttpResponse (..))
-import WebDriverPreCore.Http.Protocol hiding 
-  ( Command (..)
+import WebDriverPreCore.Http.Protocol
+  ( Actions (..),
+    Cookie (..),
+    ElementId (..),
+    FrameReference (..),
+    Handle (..),
+    Script (..),
+    Selector (..),
+    SessionId (..),
+    SessionResponse (..),
+    ShadowRootElementId (..),
+    Status (..),
+    URL (..),
+    WindowHandleSpec (..),
+    WindowRect (..)
   )
 import WebDriverPreCore.Internal.AesonUtils (jsonToText)
 import WebDriverPreCore.Internal.Utils (UrlPath (..), newSessionUrl, session)

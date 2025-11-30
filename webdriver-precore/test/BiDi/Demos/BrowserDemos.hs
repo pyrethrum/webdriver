@@ -4,6 +4,20 @@ import BiDi.BiDiActions (BiDiActions (..))
 import BiDi.DemoUtils
 import IOUtils (DemoActions (..))
 import WebDriverPreCore.BiDi.Protocol
+  ( Close (..),
+    Create (..),
+    CreateType (..),
+    CreateUserContext (..),
+    DownloadBehaviour (..),
+    NamedState (..),
+    RemoveUserContext (..),
+    SetClientWindowState (..),
+    SetDownloadBehavior (..),
+    UserContext (..),
+    NormalState(..),
+    WindowState (..),
+    RectState (..)
+  )
 import Prelude hiding (log, putStrLn)
 
 -- >>> runDemo browserGetClientWindowsDemo

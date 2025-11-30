@@ -18,33 +18,22 @@ import Logger (withChannelFileLogger)
 import Network.HTTP.Req (http)
 import RuntimeConst (httpCapabilities, httpFullCapabilities)
 import WebDriverPreCore.BiDi.BiDiUrl (BiDiUrl, getBiDiUrl)
-import WebDriverPreCore.BiDi.CoreTypes (StringValue (..))
 import WebDriverPreCore.BiDi.Protocol
-  ( BrowsingContext,
-    Close (MkClose, context, promptUnload),
-    ContextTarget (MkContextTarget, context, sandbox),
-    Create
-      ( MkCreate,
-        background,
-        createType,
-        referenceContext,
-        userContext
-      ),
-    CreateType (Tab, Window),
-    Evaluate
-      ( MkEvaluate,
-        awaitPromise,
-        expression,
-        resultOwnership,
-        serializationOptions,
-        target
-      ),
-    GetTree (MkGetTree),
-    GetTreeResult (MkGetTreeResult),
-    Info (context),
-    Target (ContextTarget),
+  ( BrowsingContext (..),
+    Close (..),
+    ContextTarget (..),
+    Create (..),
+    CreateType (..),
+    Evaluate (..),
+    EvaluateResult (..),
+    GetTree (..),
+    GetTreeResult (..),
+    Info (..),
+    PrimitiveProtocolValue (..),
+    RemoteValue (..),
+    StringValue (..),
+    Target (..)
   )
-import WebDriverPreCore.BiDi.Script (EvaluateResult (..), PrimitiveProtocolValue (..), RemoteValue (..))
 import WebDriverPreCore.Http.Protocol (FullCapabilities (..))
 import WebDriverPreCore.Http.Protocol qualified as Caps (Capabilities (..))
 import WebDriverPreCore.Internal.Utils (txt)

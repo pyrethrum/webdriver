@@ -4,6 +4,23 @@ import BiDi.BiDiActions (BiDiActions (..))
 import BiDi.DemoUtils
 import IOUtils (DemoActions (..))
 import WebDriverPreCore.BiDi.Protocol
+  ( ForcedColorsModeTheme (..),
+    GeolocationCoordinates (..),
+    GeolocationPositionError (..),
+    NetworkConditions (..),
+    Orientation (..),
+    ScreenArea (..),
+    ScreenOrientationOverride (..),
+    SetForcedColorsModeThemeOverride (..),
+    SetGeolocationOverride (..),
+    SetLocaleOverride (..),
+    SetNetworkConditions (..),
+    SetScreenOrientationOverride (..),
+    SetScreenSettingsOverride (..),
+    SetScriptingEnabled (..),
+    SetTimezoneOverride (..),
+    SetUserAgentOverride (..)
+  )
 import Prelude hiding (log, putStrLn)
 
 

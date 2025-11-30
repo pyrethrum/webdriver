@@ -5,7 +5,15 @@ import BiDi.DemoUtils
 import Data.Maybe (fromJust)
 import IOUtils (DemoActions (..))
 import TestData (checkboxesUrl, fileUrl, infiniteScrollUrl, textAreaUrl, uploadFilePath)
+import WebDriverPreCore.BiDi.Input
+  ( PointerCommonProperties (..),
+    SourceActions (..)
+  )
 import WebDriverPreCore.BiDi.Protocol
+  ( PerformActions (..),
+    ReleaseActions (..),
+    SetFiles (..)
+  )
 import Prelude hiding (log)
 
 
