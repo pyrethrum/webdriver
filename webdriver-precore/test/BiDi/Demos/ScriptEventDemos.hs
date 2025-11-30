@@ -11,7 +11,7 @@ import WebDriverPreCore.BiDi.Protocol
     ChannelValue (..),
     ContextTarget (..),
     Evaluate (..),
-    KnownSubscriptionType (ScriptMessage, ScriptRealmCreated, ScriptRealmDestroyed),
+    KnownSubscriptionType (..),
     Navigate (..),
     ResultOwnership (..),
     Target (..)

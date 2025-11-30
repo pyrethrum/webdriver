@@ -8,9 +8,9 @@ import IOUtils (DemoActions (..))
 import TestData (navigation1Url, navigation2Url)
 import WebDriverPreCore.BiDi.BiDiUrl (parseUrl)
 import WebDriverPreCore.BiDi.Protocol
-  ( KnownSubscriptionType (BrowsingContextNavigationStarted),
-    Navigate (MkNavigate, context, url, wait),
-    ReadinessState (Complete),
+  ( KnownSubscriptionType (..),
+    Navigate (..),
+    ReadinessState (..),
   )
 import WebDriverPreCore.Internal.Utils (txt)
 import Prelude hiding (log, putStrLn)

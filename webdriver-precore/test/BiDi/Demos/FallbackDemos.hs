@@ -12,7 +12,7 @@ import WebDriverPreCore.BiDi.Protocol
   ( BrowsingContext (..),
     JSUInt (..),
     Navigate (..),
-    URL(..),
+    URL (..),
     UnknownSubscriptionType (..),
     extendCommandAny,
     mkAnyCommand,

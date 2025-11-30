@@ -8,16 +8,10 @@ import WebDriverPreCore.BiDi.Protocol
   ( ContextTarget (..),
     Evaluate (..),
     KnownCommand (..), 
-    KnownSubscriptionType
-      ( NetworkAuthRequired,
-        NetworkBeforeRequestSent,
-        NetworkFetchError,
-        NetworkResponseCompleted,
-        NetworkResponseStarted
-      ),
+    KnownSubscriptionType (..),
     Navigate (..),
     Target (..),
-    URL(..),
+    URL (..),
     mkCommand,
   )
 import Prelude hiding (log, putStrLn)

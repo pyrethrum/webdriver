@@ -17,8 +17,8 @@ import WebDriverPreCore.BiDi.Protocol
     HandleUserPrompt (..),
     KnownSubscriptionType (..),
     Navigate (..),
-    Target (ContextTarget),
-    URL(..),
+    Target (..),
+    URL (..),
     UserContext (..),
   )
 import WebDriverPreCore.Internal.Utils (txt)

@@ -15,7 +15,7 @@ import WebDriverPreCore.BiDi.Protocol
     SessionUnsubscribe (..),
     SubscriptionType (..),
     UserPromptHandler (..),
-    UserPromptHandlerType (..),
+    UserPromptHandlerType (..)
   )
 import Prelude hiding (log, putStrLn)
 
