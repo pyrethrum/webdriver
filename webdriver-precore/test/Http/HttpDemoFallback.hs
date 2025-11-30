@@ -4,7 +4,7 @@ import Data.Aeson as A (Value (..))
 import Data.Aeson qualified as A
 import Data.Aeson.KeyMap qualified as A
 import Data.Text (Text)
-import Http.DemoUtils (HttpDemo, sessionDemo, runDemo)
+import Http.DemoUtils (HttpDemo, runDemo, sessionDemo)
 import Http.HttpActions (HttpActions (..))
 import Http.HttpRunner (Extended (..))
 import IOUtils (DemoActions (..))
@@ -14,14 +14,15 @@ import WebDriverPreCore.Http.Protocol
   ( Command (..),
     ElementId (..),
     SessionId (..),
+    voidCommand,
   )
 import WebDriverPreCore.Internal.Utils (UrlPath (..))
 import Prelude hiding (log)
-import WebDriverPreCore.Http.Command (voidCommand)
-
 
 -- >>> runDemo demoFallbackActions
+
 -- *** Exception: runCommand not implemented in legacy actions
+
 demoFallbackActions :: HttpDemo
 demoFallbackActions =
   sessionDemo "fallback actions demo" action
@@ -81,24 +82,21 @@ demoFallbackActions =
       logShow "Click response" clickResponse
       pause
 
-      let 
-        -- type system gets a bit tricky when using record of functions this work around
-        -- allows us to get an HttpResponse from a (Command a) for any a
-        runAnyCommand :: forall a. Command a -> IO Value
-        runAnyCommand = runCommand' . voidCommand
+      let -- type system gets a bit tricky when using record of functions this work around
+          -- allows us to get an HttpResponse from a (Command a) for any a
+          runAnyCommand :: forall a. Command a -> IO Value
+          runAnyCommand = runCommand' . voidCommand
 
       -- Step 4: Navigate to another page using typed Navigate command and getResponse
       logTxt "Step 4: Navigate to another page using typed command and getResponse (navigateTo returns Command ())"
       url2 <- textAreaUrl
-      navigateResponse <- runAnyCommand $ A.navigateTo sesId  url2
+      navigateResponse <- runAnyCommand $ A.navigateTo sesId url2
       logShow "Typed navigate response" navigateResponse
       pause
 
       url' <- runAnyCommand $ A.getCurrentUrl sesId
       logShow "Current url" url'
       pause
-
-
 
 -- Helper functions (copied from API.hs since they're not exported)
 
@@ -108,10 +106,5 @@ sessionUri1 s sp = MkUrlPath ["session", s.id, sp]
 elementUri1 :: SessionId -> ElementId -> Text -> UrlPath
 elementUri1 s er ep = MkUrlPath ["session", s.id, "element", er.id, ep]
 
-
-
 _stopDemoUnusedWarning :: HttpDemo -> IO ()
 _stopDemoUnusedWarning = runDemo
-
-
-
