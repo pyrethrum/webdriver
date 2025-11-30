@@ -7,8 +7,7 @@ import TestServerAPI (withTestServer)
 import TestServerAPI qualified as URLs
 import UnliftIO (putTMVar, readTMVar)
 import UnliftIO.STM (atomically, newEmptyTMVarIO, newTVarIO, readTVar, writeTVar)
-import WebDriverPreCore.BiDi.Command (KnownCommand (..), mkCommand)
-import WebDriverPreCore.BiDi.Network qualified as Net
+
 import WebDriverPreCore.BiDi.Protocol
 import WebDriverPreCore.Internal.Utils (txt)
 import Prelude hiding (log)
@@ -368,7 +367,7 @@ networkRequestModificationDemo =
         reqIdMVar <- newEmptyTMVarIO
         subscribeNetworkBeforeRequestSent
           ( \event -> do
-              let Net.MkBeforeRequestSent {request = Net.MkRequestData {request = reqId}} = event
+              let MkBeforeRequestSent {request = MkRequestData {request = reqId}} = event
               atomically $ putTMVar reqIdMVar reqId
               beforeReqFired2 event
           )
@@ -435,7 +434,7 @@ networkResponseModificationDemo =
 
         subscribeNetworkResponseStarted
           ( \event -> do
-              let Net.MkResponseStarted {request = Net.MkRequestData {request = req}} = event
+              let MkResponseStarted {request = MkRequestData {request = req}} = event
 
               logShow "Modifying response: status 404, custom headers" req
 
@@ -603,7 +602,7 @@ networkAuthCancelDemo =
         (authReqFired, waitAuthReq) <- timeLimitLog NetworkAuthRequired
 
         sub <- subscribeNetworkAuthRequired $ \event -> do
-          let Net.MkAuthRequired {request = Net.MkRequestData {request = reqId}} = event
+          let MkAuthRequired {request = MkRequestData {request = reqId}} = event
           logShow "AuthRequired event captured (will cancel)" reqId
 
           networkContinueWithAuth $
@@ -652,7 +651,7 @@ networkAuthWithCredentialsDemo =
         (authReqFired, waitAuthReq) <- timeLimitLog NetworkAuthRequired
 
         sub <- subscribeNetworkAuthRequired $ \event -> do
-          let Net.MkAuthRequired {request = Net.MkRequestData {request = reqId}} = event
+          let MkAuthRequired {request = MkRequestData {request = reqId}} = event
           logShow "AuthRequired event captured (will provide credentials)" reqId
 
           networkContinueWithAuth $
@@ -708,7 +707,7 @@ networkFailRequestDemo =
         (beforeReqFired1, waitBeforeReq1) <- timeLimitLog NetworkBeforeRequestSent
         failReqIdVar1 <- newEmptyTMVarIO
         subscribeNetworkBeforeRequestSent $ \event -> do
-          let Net.MkBeforeRequestSent {request = Net.MkRequestData {request = reqId}} = event
+          let MkBeforeRequestSent {request = MkRequestData {request = reqId}} = event
           logShow "BeforeRequestSent captured (will fail request)" reqId
           atomically $ putTMVar failReqIdVar1 reqId
 
@@ -731,7 +730,7 @@ networkFailRequestDemo =
         (beforeReqFired2, waitBeforeReq2) <- timeLimitLog NetworkBeforeRequestSent
         failReqIdVar2 <- newEmptyTMVarIO
         subscribeNetworkBeforeRequestSent $ \event -> do
-          let Net.MkBeforeRequestSent {request = Net.MkRequestData {request = reqId}} = event
+          let MkBeforeRequestSent {request = MkRequestData {request = reqId}} = event
           logShow "BeforeRequestSent captured (will fail second request)" reqId
           atomically $ putTMVar failReqIdVar2 reqId
 
@@ -778,7 +777,7 @@ networkProvideResponseJSONDemo =
         (beforeReqFired, waitBeforeReq) <- timeLimitLog NetworkBeforeRequestSent
 
         subscribeNetworkBeforeRequestSent $ \event -> do
-          let Net.MkBeforeRequestSent {request = Net.MkRequestData {request = reqId}, intercepts = maybeIntercepts} = event
+          let MkBeforeRequestSent {request = MkRequestData {request = reqId}, intercepts = maybeIntercepts} = event
           case maybeIntercepts of
             Just (interceptId : _) -> do
               logShow "Captured request for JSON response" reqId
@@ -846,7 +845,7 @@ networkProvideResponseHTMLDemo =
         (beforeReqFired, waitBeforeReq) <- timeLimitLog NetworkBeforeRequestSent
 
         subscribeNetworkBeforeRequestSent $ \event -> do
-          let Net.MkBeforeRequestSent {request = Net.MkRequestData {request = reqId}, intercepts = maybeIntercepts} = event
+          let MkBeforeRequestSent {request = MkRequestData {request = reqId}, intercepts = maybeIntercepts} = event
           case maybeIntercepts of
             Just (interceptId : _) -> do
               logShow "Captured request for HTML response" reqId
@@ -918,7 +917,7 @@ networkProvideResponseWithCookiesDemo =
         (beforeReqFired, waitBeforeReq) <- timeLimitLog NetworkBeforeRequestSent
 
         subscribeNetworkBeforeRequestSent $ \event -> do
-          let Net.MkBeforeRequestSent {request = Net.MkRequestData {request = reqId}, intercepts = maybeIntercepts} = event
+          let MkBeforeRequestSent {request = MkRequestData {request = reqId}, intercepts = maybeIntercepts} = event
           case maybeIntercepts of
             Just (interceptId : _) -> do
               logShow "Captured request for error response with cookies" reqId
@@ -1003,7 +1002,7 @@ networkProvideResponseBase64Demo =
         (beforeReqFired, waitBeforeReq) <- timeLimitLog NetworkBeforeRequestSent
 
         subscribeNetworkBeforeRequestSent $ \event -> do
-          let Net.MkBeforeRequestSent {request = Net.MkRequestData {request = reqId}, intercepts = maybeIntercepts} = event
+          let MkBeforeRequestSent {request = MkRequestData {request = reqId}, intercepts = maybeIntercepts} = event
           case maybeIntercepts of
             Just (interceptId : _) -> do
               logShow "Captured request for base64 response" reqId
@@ -1076,7 +1075,7 @@ networkProvideResponseErrorDemo =
         (beforeReqFired, waitBeforeReq) <- timeLimitLog NetworkBeforeRequestSent
 
         subscribeNetworkBeforeRequestSent $ \event -> do
-          let Net.MkBeforeRequestSent {request = Net.MkRequestData {request = reqId}, intercepts = maybeIntercepts} = event
+          let MkBeforeRequestSent {request = MkRequestData {request = reqId}, intercepts = maybeIntercepts} = event
           case maybeIntercepts of
             Just (interceptId : _) -> do
               logShow "Captured request for server error response" reqId
@@ -1151,7 +1150,7 @@ networkDataRetrievalDemo =
       requestIdVar <- newTVarIO Nothing
       (responseCompletedFired, waitResponseCompleted) <- timeLimitLog NetworkResponseCompleted
       subscribeNetworkResponseCompleted $ \event -> do
-        let Net.MkResponseCompleted {request = Net.MkRequestData {request = requestId}} = event
+        let MkResponseCompleted {request = MkRequestData {request = requestId}} = event
         logShow "Captured request ID from event" requestId
         atomically $ writeTVar requestIdVar (Just requestId)
         responseCompletedFired event
@@ -1218,7 +1217,7 @@ networkDisownDataDemo =
       requestIdVar <- newTVarIO Nothing
       (responseCompletedFired, waitResponseCompleted) <- timeLimitLog NetworkResponseCompleted
       subscribeNetworkResponseCompleted $ \event -> do
-        let Net.MkResponseCompleted {request = Net.MkRequestData {request = requestId}} = event
+        let MkResponseCompleted {request = MkRequestData {request = requestId}} = event
         logShow "Captured request ID from event" requestId
         atomically $ writeTVar requestIdVar (Just requestId)
         responseCompletedFired event
@@ -1491,7 +1490,7 @@ networkSetExtraHeadersDemo =
         logTxt "Test 6: Subscribe to network events to verify headers"
         (beforeReqFired, waitBeforeReq) <- timeLimitLog NetworkBeforeRequestSent
         subscribeNetworkBeforeRequestSent $ \event -> do
-          let Net.MkBeforeRequestSent {request = Net.MkRequestData {headers = requestHeaders}} = event
+          let MkBeforeRequestSent {request = MkRequestData {headers = requestHeaders}} = event
           logShow "Request headers" requestHeaders
           beforeReqFired event
         pause

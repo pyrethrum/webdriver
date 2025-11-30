@@ -14,42 +14,9 @@ module WebDriverPreCore.BiDi.Protocol
     module WebDriverPreCore.BiDi.Session,
     module WebDriverPreCore.BiDi.Storage,
     module WebDriverPreCore.BiDi.WebExtensions,
+    module WebDriverPreCore.BiDi.Network,
 
-    -- * Network types (exported directly to avoid conflicts)
-    AddDataCollector (..),
-    AddDataCollectorResult (..),
-    AddIntercept (..),
-    AddInterceptResult (..),
-    ContinueRequest (..),
-    ContinueResponse (..),
-    ContinueWithAuth (..),
-    DisownData (..),
-    FailRequest (..),
-    GetData (..),
-    GetDataResult (..),
-    ProvideResponse (..),
-    RemoveDataCollector (..),
-    RemoveIntercept (..),
-    SetCacheBehavior (..),
-    SetExtraHeaders (..),
-    UrlPattern (..),
-    UrlPatternPattern (..),
-    UrlPatternString (..),
-    InterceptPhase (..),
-    Intercept (..),
-    Request (..),
-    DataType (..),
-    CollectorType (..),
-    Collector (..),
-    AuthAction (..),
-    AuthCredentials (..),
-    CacheBehavior (..),
-    BytesValue (..),
-    Cookie (..),
-    SameSite (..),
-    Header (..),
-    CookieHeader (..),
-    SetCookieHeader (..),
+
   )
 where
 
@@ -101,8 +68,6 @@ import WebDriverPreCore.BiDi.Capabilities
     ProxyConfiguration (..),
   )
 import WebDriverPreCore.BiDi.Command
-  ( Command (..),
-  )
 import WebDriverPreCore.BiDi.CoreTypes as CoreTypes
 import WebDriverPreCore.BiDi.Emulation
   ( ForcedColorsModeTheme (..),
@@ -138,55 +103,7 @@ import WebDriverPreCore.BiDi.Log
     LogEvent (..),
   )
 import WebDriverPreCore.BiDi.Network
-  ( AddDataCollector (..),
-    AddDataCollectorResult (..),
-    AddIntercept (..),
-    AddInterceptResult (..),
-    -- URL Pattern types
 
-    -- Intercept types
-
-    -- Request/Response types
-
-    -- Data types
-
-    -- Auth types
-    AuthAction (..),
-    AuthCredentials (..),
-    -- Cache types
-
-    -- Value types
-    BytesValue (..),
-    CacheBehavior (..),
-    Collector (..),
-    CollectorType (..),
-    ContinueRequest (..),
-    ContinueResponse (..),
-    ContinueWithAuth (..),
-    Cookie (..),
-    -- Explicitly exclude None to avoid conflict with BrowsingContext.None
-
-    CookieHeader (..),
-    DataType (..),
-    DisownData (..),
-    FailRequest (..),
-    GetData (..),
-    GetDataResult (..),
-    Header (..),
-    Intercept (..),
-    InterceptPhase (..),
-    ProvideResponse (..),
-    RemoveDataCollector (..),
-    RemoveIntercept (..),
-    Request (..),
-    SameSite (..),
-    SetCacheBehavior (..),
-    SetCookieHeader (..),
-    SetExtraHeaders (..),
-    UrlPattern (..),
-    UrlPatternPattern (..),
-    UrlPatternString (..),
-  )
 import WebDriverPreCore.BiDi.Response
   ( JSONDecodeError (..),
     MatchedResponse (..),

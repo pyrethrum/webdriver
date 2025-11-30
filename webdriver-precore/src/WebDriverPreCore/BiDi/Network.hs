@@ -682,7 +682,7 @@ data InitiatorType
   = Audio
   | Beacon
   | Body
-  | CSS
+  | CSSInitiatorType
   | EarlyHints
   | Embed
   | Fetch
@@ -709,7 +709,7 @@ instance FromJSON InitiatorType where
       "audio" -> pure Audio
       "beacon" -> pure Beacon
       "body" -> pure Body
-      "css" -> pure CSS
+      "css" -> pure CSSInitiatorType
       "early-hints" -> pure EarlyHints
       "embed" -> pure Embed
       "fetch" -> pure Fetch
