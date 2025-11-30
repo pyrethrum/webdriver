@@ -4,6 +4,19 @@ import BiDi.BiDiActions (BiDiActions (..))
 import BiDi.DemoUtils
 import IOUtils (DemoActions (..))
 import WebDriverPreCore.BiDi.Protocol
+  ( Capabilities (..),
+    Capability (..),
+    CreateUserContext (..),
+    KnownSubscriptionType (..),
+    ProxyConfiguration (..),
+    SessionNewResult (..),
+    SessionStatusResult (..),
+    SessionSubscibe (..),
+    SessionUnsubscribe (..),
+    SubscriptionType (..),
+    UserPromptHandler (..),
+    UserPromptHandlerType (..),
+  )
 import Prelude hiding (log, putStrLn)
 
 -- TODO: change from text to typed events
@@ -27,13 +40,15 @@ sessionStatusDemo =
       pause
 
 -- >>> runDemo sessionNewDemo
+
 -- *** Exception: Error executing BiDi command: MkCommand
+
 --   { method = "session.new"
 --   , params =
 --       MkCapabilities { alwaysMatch = Nothing , firstMatch = [] }
 --   , extended = Nothing
 --   }
--- With JSON: 
+-- With JSON:
 -- {
 --     "id": 1,
 --     "method": "session.new",
@@ -42,7 +57,7 @@ sessionStatusDemo =
 --         "firstMatch": []
 --     }
 -- }
--- BiDi driver error: 
+-- BiDi driver error:
 -- MkDriverError
 --   { id = Just 1
 --   , error = SessionNotCreated
@@ -60,10 +75,11 @@ sessionNewDemo =
     action :: DemoActions -> BiDiActions -> IO ()
     action MkDemoActions {..} MkBiDiActions {..} = do
       logTxt "Creating new BiDi session with basic capabilities"
-      let basicCapabilities = MkCapabilities
-            { alwaysMatch = Nothing,
-              firstMatch = []
-            }
+      let basicCapabilities =
+            MkCapabilities
+              { alwaysMatch = Nothing,
+                firstMatch = []
+              }
       newSession <- sessionNew basicCapabilities
       logShow "New session created" newSession
       pause
@@ -73,14 +89,16 @@ sessionNewDemo =
       logShow "Capabilities result" newSession.capabilities
       pause
 
--- >>> runDemo sessionEndDemo  
--- *** Exception: Error executing BiDi command: With JSON: 
+-- >>> runDemo sessionEndDemo
+
+-- *** Exception: Error executing BiDi command: With JSON:
+
 -- {
 --     "id": 1,
 --     "method": "session.end",
 --     "params": {}
 -- }
--- BiDi driver error: 
+-- BiDi driver error:
 -- MkDriverError
 --   { id = Just 1
 --   , error = UnsupportedOperation
@@ -115,33 +133,34 @@ sessionSubscribeDemo =
       bc <- rootContext utils bidi
 
       logTxt "Test 1: Subscribe to browsing context events globally"
-      let globalSubscription = MkSessionSubscribe
-            { events = KnownSubscriptionType <$> [BrowsingContextContextCreated, BrowsingContextContextDestroyed],
-              contexts = Nothing,
-              userContexts = Nothing
-            }
+      let globalSubscription =
+            MkSessionSubscribe
+              { events = KnownSubscriptionType <$> [BrowsingContextContextCreated, BrowsingContextContextDestroyed],
+                contexts = Nothing,
+                userContexts = Nothing
+              }
       sub1 <- sessionSubscribe globalSubscription
       logShow "Global subscription" sub1
       pause
 
       logTxt "Test 2: Subscribe to network events for specific context"
-      let contextSubscription = MkSessionSubscribe
-            { events = KnownSubscriptionType <$> [NetworkFetchError, NetworkResponseCompleted],
-              contexts = Just [bc],
-              userContexts = Nothing
-            }
+      let contextSubscription =
+            MkSessionSubscribe
+              { events = KnownSubscriptionType <$> [NetworkFetchError, NetworkResponseCompleted],
+                contexts = Just [bc],
+                userContexts = Nothing
+              }
       sub2 <- sessionSubscribe contextSubscription
       logShow "Context-specific subscription" sub2
       pause
 
-      
       logTxt "Test 3: Subscribe to script events for user context"
       -- Get current user contexts or create a new one if needed
       userContextsResult <- browserGetUserContexts
       logShow "Current user contexts" userContextsResult
-      
+
       -- Create a new user context for demonstration
-      currentUserContext <- 
+      currentUserContext <-
         browserCreateUserContext
           MkCreateUserContext
             { insecureCerts = Nothing,
@@ -149,12 +168,13 @@ sessionSubscribeDemo =
               unhandledPromptBehavior = Nothing
             }
       logShow "Created user context" currentUserContext
-      
-      let userContextSubscription = MkSessionSubscribe
-            { events = [KnownSubscriptionType ScriptRealmCreated],
-              contexts = Nothing,
-              userContexts = Just [currentUserContext]
-            }
+
+      let userContextSubscription =
+            MkSessionSubscribe
+              { events = [KnownSubscriptionType ScriptRealmCreated],
+                contexts = Nothing,
+                userContexts = Just [currentUserContext]
+              }
       sub3 <- sessionSubscribe userContextSubscription
       logShow "User context subscription" sub3
       pause
@@ -167,44 +187,49 @@ sessionUnsubscribeDemo =
     action :: DemoActions -> BiDiActions -> IO ()
     action MkDemoActions {..} MkBiDiActions {..} = do
       logTxt "First, create a subscription to demonstrate unsubscription"
-      let subscription = MkSessionSubscribe
-            { events = [KnownSubscriptionType BrowsingContextContextCreated],
-              contexts = Nothing,
-              userContexts = Nothing
-            }
+      let subscription =
+            MkSessionSubscribe
+              { events = [KnownSubscriptionType BrowsingContextContextCreated],
+                contexts = Nothing,
+                userContexts = Nothing
+              }
       subResult <- sessionSubscribe subscription
       logShow "Created subscription" subResult
       pause
 
       logTxt "Test 1: Unsubscribe by subscription ID"
-      let unsubByID = UnsubscribeById
-            { subscriptions = [subResult]
-            }
+      let unsubByID =
+            UnsubscribeById
+              { subscriptions = [subResult]
+              }
       result1 <- sessionUnsubscribe unsubByID
       logShow "Unsubscribed by ID" result1
       pause
 
       logTxt "Now, Subscribe to network events for specific context"
-      let contextSubscription = MkSessionSubscribe
-            { events =  [KnownSubscriptionType NetworkResponseCompleted],
-              contexts = Nothing,
-              userContexts = Nothing
-            }
+      let contextSubscription =
+            MkSessionSubscribe
+              { events = [KnownSubscriptionType NetworkResponseCompleted],
+                contexts = Nothing,
+                userContexts = Nothing
+              }
       sub2 <- sessionSubscribe contextSubscription
       logShow "Context-specific subscription" sub2
       pause
 
-
       logTxt "Test 2: Unsubscribe by attributes (alternative method)"
-      let unsubByAttrs = UnsubscribeByAttributes
-            { unsubEvents = [KnownSubscriptionType NetworkResponseCompleted]
-            }
+      let unsubByAttrs =
+            UnsubscribeByAttributes
+              { unsubEvents = [KnownSubscriptionType NetworkResponseCompleted]
+              }
       result2 <- sessionUnsubscribe unsubByAttrs
       logShow "Unsubscribed by attributes" result2
       pause
 
 -- >>> runDemo sessionCapabilityNegotiationDemo
+
 -- *** Exception: Error executing BiDi command: MkCommand
+
 --   { method = "session.new"
 --   , params =
 --       MkCapabilities
@@ -223,7 +248,7 @@ sessionUnsubscribeDemo =
 --         }
 --   , extended = Nothing
 --   }
--- With JSON: 
+-- With JSON:
 -- {
 --     "id": 1,
 --     "method": "session.new",
@@ -242,7 +267,7 @@ sessionUnsubscribeDemo =
 --         "firstMatch": []
 --     }
 -- }
--- Failed to decode the 'result' property of JSON returned by driver to response type: 
+-- Failed to decode the 'result' property of JSON returned by driver to response type:
 -- {
 --     "error": "session not created",
 --     "id": 1,
@@ -250,7 +275,7 @@ sessionUnsubscribeDemo =
 --     "stacktrace": "RemoteError@chrome://remote/content/shared/RemoteError.sys.mjs:8:8\nWebDriverError@chrome://remote/content/shared/webdriver/Errors.sys.mjs:202:5\nSessionNotCreatedError@chrome://remote/content/shared/webdriver/Errors.sys.mjs:814:5\ncreateSession@chrome://remote/content/webdriver-bidi/WebDriverBiDi.sys.mjs:127:13\nonPacket@chrome://remote/content/webdriver-bidi/WebDriverBiDiConnection.sys.mjs:206:55\nonMessage@chrome://remote/content/server/WebSocketTransport.sys.mjs:127:18\nhandleEvent@chrome://remote/content/server/WebSocketTransport.sys.mjs:109:14\n",
 --     "type": "error"
 -- }
--- Error message: 
+-- Error message:
 -- key "result" not found
 sessionCapabilityNegotiationDemo :: BiDiDemo
 sessionCapabilityNegotiationDemo =
@@ -259,53 +284,60 @@ sessionCapabilityNegotiationDemo =
     action :: DemoActions -> BiDiActions -> IO ()
     action MkDemoActions {..} MkBiDiActions {..} = do
       logTxt "Test 1: Session with alwaysMatch capabilities"
-      let alwaysMatchCap = MkCapability
-            { acceptInsecureCerts = Just True,
-              browserName = Just "firefox",
-              browserVersion = Nothing,
-              webSocketUrl = True,
-              platformName = Just "linux",
-              proxy = Nothing,
-              unhandledPromptBehavior = Nothing
-            }
-      let alwaysMatchCapabilities = MkCapabilities
-            { alwaysMatch = Just alwaysMatchCap,
-              firstMatch = []
-            }
+      let alwaysMatchCap =
+            MkCapability
+              { acceptInsecureCerts = Just True,
+                browserName = Just "firefox",
+                browserVersion = Nothing,
+                webSocketUrl = True,
+                platformName = Just "linux",
+                proxy = Nothing,
+                unhandledPromptBehavior = Nothing
+              }
+      let alwaysMatchCapabilities =
+            MkCapabilities
+              { alwaysMatch = Just alwaysMatchCap,
+                firstMatch = []
+              }
       session1 <- sessionNew alwaysMatchCapabilities
       logShow "Session with alwaysMatch" session1
       pause
 
       logTxt "Test 2: Session with firstMatch capabilities"
-      let firstMatchCap1 = MkCapability
-            { acceptInsecureCerts = Just False,
-              browserName = Just "firefox",
-              browserVersion = Just "130.0",
-              webSocketUrl = True,
-              platformName = Just "linux",
-              proxy = Just DirectProxyConfiguration,
-              unhandledPromptBehavior = Nothing
-            }
-      let firstMatchCap2 = MkCapability
-            { acceptInsecureCerts = Just True,
-              browserName = Nothing,
-              browserVersion = Nothing,
-              webSocketUrl = True,
-              platformName = Nothing,
-              proxy = Nothing,
-              unhandledPromptBehavior = Just $ MkUserPromptHandler
-                { alert = Just Accept,
-                  beforeUnload = Just Dismiss,
-                  confirm = Just Accept,
-                  defaultHandler = Just Ignore,
-                  fileHandler = Nothing,
-                  prompt = Just Accept
-                }
-            }
-      let firstMatchCapabilities = MkCapabilities
-            { alwaysMatch = Nothing,
-              firstMatch = [firstMatchCap1, firstMatchCap2]
-            }
+      let firstMatchCap1 =
+            MkCapability
+              { acceptInsecureCerts = Just False,
+                browserName = Just "firefox",
+                browserVersion = Just "130.0",
+                webSocketUrl = True,
+                platformName = Just "linux",
+                proxy = Just DirectProxyConfiguration,
+                unhandledPromptBehavior = Nothing
+              }
+      let firstMatchCap2 =
+            MkCapability
+              { acceptInsecureCerts = Just True,
+                browserName = Nothing,
+                browserVersion = Nothing,
+                webSocketUrl = True,
+                platformName = Nothing,
+                proxy = Nothing,
+                unhandledPromptBehavior =
+                  Just $
+                    MkUserPromptHandler
+                      { alert = Just Accept,
+                        beforeUnload = Just Dismiss,
+                        confirm = Just Accept,
+                        defaultHandler = Just Ignore,
+                        fileHandler = Nothing,
+                        prompt = Just Accept
+                      }
+              }
+      let firstMatchCapabilities =
+            MkCapabilities
+              { alwaysMatch = Nothing,
+                firstMatch = [firstMatchCap1, firstMatchCap2]
+              }
       session2 <- sessionNew firstMatchCapabilities
       logShow "Session with firstMatch" session2
       pause
@@ -323,11 +355,12 @@ sessionCompleteLifecycleDemo =
       pause
 
       logTxt "Step 2: Subscribe to key events"
-      let subscription = MkSessionSubscribe
-            { events = KnownSubscriptionType <$> [BrowsingContextContextCreated, BrowsingContextNavigationStarted],
-              contexts = Nothing,
-              userContexts = Nothing
-            }
+      let subscription =
+            MkSessionSubscribe
+              { events = KnownSubscriptionType <$> [BrowsingContextContextCreated, BrowsingContextNavigationStarted],
+                contexts = Nothing,
+                userContexts = Nothing
+              }
       subResult <- sessionSubscribe subscription
       logShow "Event subscription" subResult
       pause
@@ -343,9 +376,10 @@ sessionCompleteLifecycleDemo =
       pause
 
       logTxt "Step 5: Clean up subscriptions"
-      let cleanup = UnsubscribeById
-            { subscriptions = [subResult]
-            }
+      let cleanup =
+            UnsubscribeById
+              { subscriptions = [subResult]
+              }
       cleanupResult <- sessionUnsubscribe cleanup
       logShow "Cleanup result" cleanupResult
       pause
