@@ -121,7 +121,18 @@ library
       WebDriverPreCore.Http.SpecDefinition
       WebDriverPreCore.Http.HttpResponse
       -- BiDi
+      WebDriverPreCore.BiDi.API
+      WebDriverPreCore.BiDi.Protocol
       WebDriverPreCore.BiDi.BiDiUrl
+      -- Utils
+      WebDriverPreCore.Internal.AesonUtils
+      WebDriverPreCore.Internal.Utils
+  other-modules:
+      -- Http
+      WebDriverPreCore.Http.Capabilities
+      WebDriverPreCore.Http.Error
+      WebDriverPreCore.Internal.HttpBidiCommon
+      -- BiDI
       WebDriverPreCore.BiDi.Browser
       WebDriverPreCore.BiDi.BrowsingContext
       WebDriverPreCore.BiDi.Capabilities
@@ -133,21 +144,11 @@ library
       WebDriverPreCore.BiDi.Log
       WebDriverPreCore.BiDi.Input
       WebDriverPreCore.BiDi.Network
-      WebDriverPreCore.BiDi.Protocol
-      WebDriverPreCore.BiDi.API
       WebDriverPreCore.BiDi.Response
       WebDriverPreCore.BiDi.Script
       WebDriverPreCore.BiDi.Session
       WebDriverPreCore.BiDi.Storage
       WebDriverPreCore.BiDi.WebExtensions
-      -- Utils
-      WebDriverPreCore.Internal.AesonUtils
-      WebDriverPreCore.Internal.Utils
-  other-modules:
-      -- Http
-      WebDriverPreCore.Http.Capabilities
-      WebDriverPreCore.Http.Error
-      WebDriverPreCore.Internal.HttpBidiCommon
   hs-source-dirs: src
   build-depends:
     pretty-show ^>=1.10,
