@@ -33,10 +33,12 @@ import WebDriverPreCore.BiDi.Protocol
   ( JSUInt (..),
     JSONDecodeError,
     ResponseObject (..),
+    MatchedResponse (..),
     displayResponseError,
     parseResponse,
   )
 import WebDriverPreCore.Internal.Utils (txt)
+
 ---
 import Prelude hiding (id, log)
 
