@@ -14,7 +14,7 @@ module WebDriverPreCore.BiDi.Browser
   )
 where
 
-import Data.Aeson (FromJSON (..), Object, ToJSON (..), Value (..), object, (.=))
+import Data.Aeson (FromJSON (..), ToJSON (..), Value (..), object, (.=), KeyValue)
 import Data.Aeson.KeyMap (fromList)
 import Data.Aeson.Types (Parser)
 import Data.Maybe (catMaybes)
@@ -95,8 +95,8 @@ instance ToJSON SetClientWindowState where
       ClientWindowNamedState ns ->
         object $ cwProp <> ["state" .= ns]
       ClientWindowRectState rs ->
-        (object $ cwProp <> ["state" .= "normal"])
-          <> toJSON rs
+        object $ cwProp <> ["state" .= "normal"]
+          <> recStatePairs rs
     where
       cwProp = ["clientWindow" .= cw]
 
@@ -145,11 +145,11 @@ instance FromJSON RectState
 instance ToJSON RectState where
   toJSON :: RectState -> Value
   toJSON =
-    Object . recStateObj
+    Object . fromList . recStatePairs
 
-recStateObj :: RectState -> Object
-recStateObj MkRectState {width, height, x, y} =
-  fromList $
+
+recStatePairs ::  KeyValue e a => RectState -> [a]
+recStatePairs MkRectState {width, height, x, y} =
     catMaybes
       [ opt "width" width,
         opt "height" height,
