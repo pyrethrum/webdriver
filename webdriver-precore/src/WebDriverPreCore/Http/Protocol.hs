@@ -1,5 +1,7 @@
 module WebDriverPreCore.Http.Protocol
   ( -- * Re-exported modules
+    -- * Command
+    module WebDriverPreCore.Http.Command,
 
     -- * Capabilities
     module WebDriverPreCore.Http.Capabilities,
@@ -59,6 +61,7 @@ import Data.Text qualified as T
 import Data.Word (Word16)
 import GHC.Generics (Generic)
 import WebDriverPreCore.Http.Capabilities
+import WebDriverPreCore.Http.Command
 import WebDriverPreCore.Http.Error
 import WebDriverPreCore.Internal.AesonUtils (nonEmpty, opt, parseObject)
 import WebDriverPreCore.Internal.HttpBidiCommon as Url (URL(..)) 

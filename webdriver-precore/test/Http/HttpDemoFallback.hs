@@ -10,9 +10,10 @@ import Http.HttpRunner (Extended (..))
 import IOUtils (DemoActions (..))
 import TestData (checkboxesUrl, textAreaUrl)
 import WebDriverPreCore.Http.API qualified as A
-import WebDriverPreCore.Http.Command (Command (..))
+import WebDriverPreCore.Http.Command ()
 import WebDriverPreCore.Http.Protocol
-  ( ElementId (..),
+  ( Command (..),
+    ElementId (..),
     SessionId (..),
   )
 import WebDriverPreCore.Internal.Utils (UrlPath (..))

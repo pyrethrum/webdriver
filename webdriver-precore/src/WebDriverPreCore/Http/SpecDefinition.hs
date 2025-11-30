@@ -102,7 +102,9 @@ import Data.Aeson.Types (parse, Parser)
 import Data.Text (Text, unpack)
 import WebDriverPreCore.Http.Capabilities as C
 import WebDriverPreCore.Http.HttpResponse (HttpResponse (..))
-import WebDriverPreCore.Http.Protocol
+import WebDriverPreCore.Http.Protocol hiding 
+  ( Command (..)
+  )
 import WebDriverPreCore.Internal.AesonUtils (jsonToText)
 import WebDriverPreCore.Internal.Utils (UrlPath (..), newSessionUrl, session)
 import Prelude hiding (id, lookup)
@@ -757,7 +759,7 @@ getElementRect sessionId elementId = get "Get Element Rect" (elementUri1 session
 -- |
 --
 -- Return a spec to check if an element is enabled given a 'SessionId' and 'ElementId'.
---
+--SAP will foc
 -- [spec](https://www.w3.org/TR/2025/WD-webdriver2-20251028/#is-element-enabled)
 --
 -- @GET 	\/session\/{session id}\/element\/{element id}\/enabled 	Is Element Enabled@
