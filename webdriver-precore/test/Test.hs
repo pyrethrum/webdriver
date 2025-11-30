@@ -25,7 +25,9 @@ import Data.Text (Text, unpack)
 import ErrorCoverageTest qualified as Error
 import Http.DemoUtils (HttpDemo (..), runDemoWithConfig)
 import Http.HttpDemo qualified as Http
+#ifndef LEGACY_TEST
 import Http.HttpDemoFallback qualified as HttpFallback
+#endif
 import JSONParsingTest qualified as JSON
 import Test.Tasty (TestTree, defaultMain, testGroup)
 import Test.Tasty.HUnit (testCase)
@@ -119,8 +121,11 @@ httpDemos cfg =
             Http.demoPointerNoneActions,
             Http.demoKeyAndReleaseActions,
             Http.demoWheelActions,
-            Http.demoError,
-            HttpFallback.demoFallbackActions
+            Http.demoError
+-- fallback commands not implemented for legacy
+#ifndef LEGACY_TEST
+            , HttpFallback.demoFallbackActions
+#endif
           ]
 
 httpTest :: Config -> Text -> [HttpDemo] -> TestTree

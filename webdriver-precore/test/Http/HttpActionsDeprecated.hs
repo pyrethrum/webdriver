@@ -84,8 +84,8 @@ mkDeprecatedActions MkHttpRunnerDeprecated {run} =
       findElementFromShadowRoot = sessRun2 W.findElementFromShadowRoot,
       findElementsFromShadowRoot = sessRun2 W.findElementsFromShadowRoot,
       -- stubs for new methods that will not be implemented withthsi API
-      runCommand = error "runCommand not implemented in legacy actions",
-      runCommand' = error "runCommand not implemented in legacy actions"
+      runCommand = \_ -> error "runCommand not implemented in legacy actions",
+      runCommand' = \_ -> error "runCommand not implemented in legacy actions"
     }
   where
     sessRun :: forall a r. (Show r) => (P.SessionId -> a -> Legacy.HttpSpec r) -> P.SessionId -> a -> IO r

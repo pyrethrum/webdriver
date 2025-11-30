@@ -84,6 +84,8 @@ driverStatusDemo =
       logShowM "driver status" status
 
 -- >>> runDemo demoSendKeysClear
+-- *** Exception: user error (WebDriver error thrown:
+--  WebDriverError {error = InvalidArgument, description = "The arguments passed to a command are either invalid or malformed", message = "Body was not a JSON Object", stacktrace = Just "", errorData = Nothing, httpResponse = Object (fromList [("value",Object (fromList [("error",String "invalid argument"),("message",String "Body was not a JSON Object"),("stacktrace",String "")]))])})
 demoSendKeysClear :: HttpDemo
 demoSendKeysClear =
   sessionDemo "send keys clear" action
@@ -110,6 +112,7 @@ demoForwardBackRefresh =
     action :: SessionId -> DemoActions -> HttpActions -> IO ()
     action sesId MkDemoActions {..} MkHttpActions {..} = do
       url <- indexUrl
+      logTxt "navigating to index page"
       navigateTo sesId $ url
       logShowM "current url" $ getCurrentUrl sesId
       logM "title" $ getTitle sesId
@@ -146,7 +149,7 @@ demoForwardBackRefresh =
 -- >>> runDemo documentationDemo
 documentationDemo :: HttpDemo
 documentationDemo =
-  sessionDemo "forward back refresh" action
+  sessionDemo "forward back refresh - external doc demo" action
   where
     action :: SessionId -> DemoActions -> HttpActions -> IO ()
     action sesId MkDemoActions {..} MkHttpActions {..} = do

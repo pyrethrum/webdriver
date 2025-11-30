@@ -17,10 +17,6 @@ import Prelude
 newtype URL = MkUrl {url :: Text}
   deriving newtype (Show, Eq, Ord, ToJSON)
 
--- instance ToJSON URL where
---   toJSON :: URL -> Value
---   toJSON MkUrl {url} = object ["url" .= url]
-
 instance FromJSON URL where
   parseJSON :: Value -> Parser URL
   parseJSON = \case

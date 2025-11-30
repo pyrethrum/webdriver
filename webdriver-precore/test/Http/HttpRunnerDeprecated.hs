@@ -6,7 +6,7 @@ module Http.HttpRunnerDeprecated
 where
 
 import Const (ReqRequestParams (..))
-import Data.Aeson (object, Value)
+import Data.Aeson (object)
 import IOUtils (DemoActions (..))
 import Network.HTTP.Req (Scheme (Http), Url)
 import Network.HTTP.Req as R
@@ -28,9 +28,6 @@ import Data.Aeson (Result(..))
 import Data.Text (unpack)
 import Data.Function ((&))
 import WebDriverPreCore.Internal.Utils (UrlPath(..))
-import Control.Exception (SomeException, try, Exception (displayException))
-import qualified Data.Text.IO as T
-import WebDriverPreCore.Internal.AesonUtils (jsonToText)
 
 -- ############# Runner #############
 
@@ -45,14 +42,13 @@ run url port da spec = do
   callWebDriver da (mkRequest url port spec) >>= parseIO spec
 
 logSpec :: (Show a) => DemoActions -> HttpSpec a -> IO ()
-logSpec MkDemoActions {logTxt, logShow} spec = do
+logSpec MkDemoActions {logTxt, logShow, logJSON} spec = do
   logTxt "Request"
   logShow "HttpSpec" spec
   case spec of
     Get {} -> pure ()
     Post {body} -> do
-      logTxt "body PP"
-      prettyPrintJson body
+      logJSON "body PP" body
     PostEmpty {} -> pure ()
     Delete {} -> pure ()
 
@@ -77,9 +73,4 @@ parseIO spec r =
             e@UnrecognisedError {} -> "UnrecognisedError:\n " <> "\nin response:" <> show e
             e@WebDriverError {} -> "WebDriver error thrown:\n " <> show e
       Success a -> pure a
-
-prettyPrintJson :: Value -> IO ()
-prettyPrintJson v = do
-  e <- (try @SomeException @_) $ T.putStrLn (jsonToText v)
-  either (print . displayException) print e
 

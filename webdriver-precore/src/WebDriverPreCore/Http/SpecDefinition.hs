@@ -6,7 +6,7 @@
 --
 -- Here is a longer description of this module, containing some
 -- commentary with @some markup@.
-module WebDriverPreCore.Http.SpecDefinition
+module WebDriverPreCore.Http.SpecDefinition {-# DEPRECATED "HttpResponse - will be removed in a future release ~ 2027-02-01. See ChangeLog.md for upgrade instructions" #-}
   ( -- * The HttpSpec Type
     HttpSpec (..),
 
@@ -284,7 +284,7 @@ setTimeouts sessionRef timeouts =
 --
 -- @POST 	\/session\/{session id}\/url 	Navigate To@
 navigateTo :: SessionId -> URL -> HttpSpec ()
-navigateTo sessionRef = post_ "Navigate To" (sessionUri1 sessionRef "url")
+navigateTo sessionRef url = post_ "Navigate To" (sessionUri1 sessionRef "url")  (object ["url" .= url])
 
 -- |
 --

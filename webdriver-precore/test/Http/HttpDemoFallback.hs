@@ -21,6 +21,7 @@ import WebDriverPreCore.Http.Command (voidCommand)
 
 
 -- >>> runDemo demoFallbackActions
+-- *** Exception: runCommand not implemented in legacy actions
 demoFallbackActions :: HttpDemo
 demoFallbackActions =
   sessionDemo "fallback actions demo" action

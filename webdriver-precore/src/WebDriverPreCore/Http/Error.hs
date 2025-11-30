@@ -11,7 +11,7 @@ module WebDriverPreCore.Http.Error
   )
 where
 
-import Control.Monad ((>=>), (>>=))
+import Control.Monad ((>=>))
 import Data.Aeson (FromJSON (..), Options (..), Value, defaultOptions, genericParseJSON, withObject)
 import Data.Aeson.Types (Parser, parseMaybe, (.:))
 import Data.Either (Either (..))
