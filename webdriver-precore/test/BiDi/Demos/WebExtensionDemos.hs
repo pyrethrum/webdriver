@@ -6,10 +6,11 @@ import Control.Exception (SomeException, catch)
 import IOUtils (DemoActions (..))
 import TestData (demoExtensionAsBase64, demoExtensionDirPath, demoExtensionZipPath)
 import WebDriverPreCore.BiDi.Protocol
-  ( WebExtensionInstall (..),
-    WebExtensionResult (..),
-    WebExtensionUninstall (..)
-  )
+    ( WebExtensionID(..),
+      WebExtensionInstall(..),
+      WebExtensionResult(..),
+      WebExtensionUninstall(..) )
+
 import WebDriverPreCore.Internal.Utils (txt)
 import Prelude hiding (log, putStrLn)
 

@@ -5,17 +5,35 @@ import BiDi.DemoUtils
 import Data.Maybe (fromJust)
 import IOUtils (DemoActions (..))
 import TestData (checkboxesUrl, fileUrl, infiniteScrollUrl, textAreaUrl, uploadFilePath)
-import WebDriverPreCore.BiDi.Input
-  ( PointerCommonProperties (..),
-    SourceActions (..)
-  )
 import WebDriverPreCore.BiDi.Protocol
-  ( PerformActions (..),
-    ReleaseActions (..),
-    SetFiles (..)
-  )
-import Prelude hiding (log)
+    ( LocateNodes(..),
+      LocateNodesResult(..),
+      Locator(..),
+      Navigate(..),
+      ReadinessState(..),
+      NodeRemoteValue(..),
+      SharedId(..),
+      KeySourceAction(..),
+      KeySourceActions(..),
+      NoneSourceActions(..),
+      Origin(..),
+      PauseAction(..),
+      PerformActions(..),
+      Pointer(..),
+      PointerCommonProperties(..),
+      PointerSourceAction(..),
+      PointerSourceActions(..),
+      PointerType(..),
+      ReleaseActions(..),
+      SetFiles(..),
+      SourceActions(..),
+      WheelScrollAction(..),
+      WheelSourceAction(..),
+      WheelSourceActions(..),
+      SharedReference(..) 
+      )
 
+import Prelude hiding (log)
 
 -- Helper function to create default pointer common properties
 defaultPointerProps :: PointerCommonProperties
@@ -191,8 +209,8 @@ inputKeyboardDemo =
       pause
 
       logTxt "Test 3: Modifier keys - Ctrl+A to select all in text area 1 field"
-      inputPerformActions
-        $ MkPerformActions
+      inputPerformActions $
+        MkPerformActions
           { context = bc,
             actions =
               [ KeySourceActions $
@@ -560,7 +578,6 @@ inputWheelDemo =
       pause
 
       closeContext utils bidi bc
-
 
 -- >>> runDemo inputCombinedActionsDemo
 inputCombinedActionsDemo :: BiDiDemo

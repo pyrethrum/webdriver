@@ -8,7 +8,6 @@ import WebDriverPreCore.BiDi.Protocol
     GeolocationCoordinates (..),
     GeolocationPositionError (..),
     NetworkConditions (..),
-    Orientation (..),
     ScreenArea (..),
     ScreenOrientationOverride (..),
     SetForcedColorsModeThemeOverride (..),
@@ -19,10 +18,13 @@ import WebDriverPreCore.BiDi.Protocol
     SetScreenSettingsOverride (..),
     SetScriptingEnabled (..),
     SetTimezoneOverride (..),
-    SetUserAgentOverride (..)
+    SetUserAgentOverride (..),
+    NetworkConditionsOffline(..),
+    ScreenOrientationNatural(..),
+    ScreenOrientationType(..),
+    JSUInt(..)
   )
 import Prelude hiding (log, putStrLn)
-
 
 -- >>> runDemo emulationSetGeolocationOverrideDemo
 emulationSetGeolocationOverrideDemo :: BiDiDemo

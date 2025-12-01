@@ -13,8 +13,8 @@ import WebDriverPreCore.BiDi.Protocol
     RemoveUserContext (..),
     SetClientWindowState (..),
     SetDownloadBehavior (..),
-    UserContext (..),
-    NormalState(..),
+    GetClientWindowsResult (..),
+    ClientWindowInfo (..),
     WindowState (..),
     RectState (..)
   )
@@ -124,7 +124,7 @@ browserSetClientWindowStateDemo =
       let maximizeState =
             MkSetClientWindowState
               { clientWindow = clientWindow,
-                windowState = ClientWindowNamedState NamedMaximized
+                windowState = ClientWindowNamedState MaximizedState
               }
       maxResult <- browserSetClientWindowState maximizeState
       logShow "Maximized window result" maxResult
@@ -137,7 +137,7 @@ browserSetClientWindowStateDemo =
                 windowState =
                   ClientWindowRectState $
                     MkRectState
-                      { state = NormalState,
+                      { 
                         width = Just 800,
                         height = Just 600,
                         x = Just 100,
@@ -237,7 +237,7 @@ browserCompleteWorkflowDemo =
       case updatedWindows.clientWindows of
         [] -> logTxt "No windows to manage"
         (window:_) -> do
-          let clientWindow = window.clientWindow
+          let clientWindow = window.clientWindowJ
 
           logTxt "Maximizing first window"
           let maximizeState = MkSetClientWindowState

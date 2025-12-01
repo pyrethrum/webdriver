@@ -124,7 +124,7 @@ instance FromJSON StringValue where
 instance FromJSON NodeProperties
 
 newtype SharedId = MkSharedId
-  { id :: Text -- SharedId
+  { id :: Text
   }
   deriving (Show, Eq, Generic)
   deriving newtype (ToJSON, FromJSON)

@@ -3,7 +3,6 @@ module BiDi.Demos.StorageDemos where
 import BiDi.BiDiActions (BiDiActions (..))
 import BiDi.DemoUtils
 import IOUtils (DemoActions (..))
-import WebDriverPreCore.BiDi.Network (BytesValue (..))
 import WebDriverPreCore.BiDi.Protocol
   ( CookieFilter (..),
     CreateUserContext (..),
@@ -13,9 +12,10 @@ import WebDriverPreCore.BiDi.Protocol
     PartitionDescriptor (..),
     SameSite (..),
     SetCookie (..),
-    StorageKeyPartition (..),
+    PartitionDescriptor(..),
     StringValue (..),
-    UserContext (..)
+    UserContext (..),
+    BytesValue (..)
   )
 import Prelude hiding (log, putStrLn)
 
