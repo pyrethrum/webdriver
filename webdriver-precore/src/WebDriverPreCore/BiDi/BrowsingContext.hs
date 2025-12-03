@@ -6,12 +6,12 @@ import Data.Functor ((<&>))
 import Data.Map qualified as Map
 import Data.Maybe (catMaybes)
 import Data.Text (Text, pack, unpack)
-import GHC.Generics
+import GHC.Generics ( Generic(Rep) )
 import WebDriverPreCore.BiDi.Capabilities (UserPromptHandlerType)
 import WebDriverPreCore.BiDi.CoreTypes (BrowsingContext, JSInt, JSUInt, NodeRemoteValue, UserContext, KnownSubscriptionType (..), ClientWindow, URL (..))
 import WebDriverPreCore.BiDi.Script (SharedReference)
 import WebDriverPreCore.Internal.AesonUtils (enumCamelCase, fromJSONCamelCase, opt, parseJSONOmitNothing, toJSONOmitNothing)
-import Prelude (Applicative (..), Bool (..), Eq, Float, Functor (..), Maybe, MonadFail (..), Semigroup ((<>)), Show (..), Word, flip, fromIntegral, ($), (.))
+import Prelude
 
 -- ######### REMOTE #########
 
