@@ -21,6 +21,7 @@
 - [ ] unsubscribe by attributes
 - [ ] Claude reconcile / review
 - [ ] fallback
+- [ ] IO only demo
 
 ## http
 
@@ -61,6 +62,7 @@
 - [ ] remove unneeded instances to and fromJSON
 - [X] fallback
 - [X] demo parsing additional prop on empty return type - fallback
+- [ ] IO only demo
 
 ## Extend testing
 

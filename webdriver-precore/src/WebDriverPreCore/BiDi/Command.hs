@@ -11,7 +11,6 @@ import Data.Text as T (Text, intercalate, unpack)
 import WebDriverPreCore.Internal.AesonUtils (jsonToText, objectOrThrow)
 import WebDriverPreCore.Internal.Utils (enumerate)
 import Data.Aeson.KeyMap qualified as KM
-import Prelude
 
 data Command r = MkCommand
   { method :: CommandMethod,

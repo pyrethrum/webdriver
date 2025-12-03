@@ -75,6 +75,8 @@ module WebDriverPreCore.Http.API
     -- * Shadow DOM Methods
     findElementFromShadowRoot,
     findElementsFromShadowRoot,
+
+    -- * TODO Fallabck - may not need anything
   )
 where
 
