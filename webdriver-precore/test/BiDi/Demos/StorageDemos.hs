@@ -1,7 +1,7 @@
 module BiDi.Demos.StorageDemos where
 
 import BiDi.BiDiActions (BiDiActions (..))
-import BiDi.DemoUtils
+import BiDi.DemoUtils ( demo, rootContext, BiDiDemo )
 import IOUtils (DemoActions (..))
 import WebDriverPreCore.BiDi.Protocol
   ( CookieFilter (..),

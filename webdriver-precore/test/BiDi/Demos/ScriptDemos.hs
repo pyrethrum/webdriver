@@ -2,6 +2,12 @@ module BiDi.Demos.ScriptDemos where
 
 import BiDi.BiDiActions (BiDiActions (..))
 import BiDi.DemoUtils
+    ( chkDomContains,
+      closeContext,
+      demo,
+      newWindowContext,
+      rootContext,
+      BiDiDemo )
 import Data.Aeson (ToJSON (..))
 import Data.Maybe (catMaybes)
 import Data.Text (isInfixOf, pack)

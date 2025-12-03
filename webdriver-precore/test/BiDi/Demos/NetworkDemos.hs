@@ -2,61 +2,66 @@ module BiDi.Demos.NetworkDemos where
 
 import BiDi.BiDiActions (BiDiActions (..))
 import BiDi.DemoUtils
+  ( BiDiDemo,
+    closeContext,
+    demo,
+    newWindowContext,
+    rootContext,
+  )
 import IOUtils (DemoActions (..))
 import TestServerAPI (withTestServer)
 import TestServerAPI qualified as URLs
 import UnliftIO (putTMVar, readTMVar)
 import UnliftIO.STM (atomically, newEmptyTMVarIO, newTVarIO, readTVar, writeTVar)
-
 import WebDriverPreCore.BiDi.Protocol
-    ( JSUInt(..),
-      mkCommand,
-      CreateUserContext(..),
-      RemoveUserContext(..),
-      Navigate(..),
-      NavigateResult,
-      ReadinessState(..),
-      Command,
-      KnownCommand(..),
-      KnownSubscriptionType(..),
-      StringValue(..),
-      AddDataCollector(..),
-      AddDataCollectorResult(..),
-      AddIntercept(..),
-      AddInterceptResult(..),
-      AuthAction(..),
-      AuthCredentials(..),
-      AuthRequired(..),
-      BeforeRequestSent(..),
-      BytesValue(..),
-      CacheBehavior(..),
-      CollectorType(..),
-      ContinueRequest(..),
-      ContinueResponse(..),
-      ContinueWithAuth(..),
-      Cookie(..),
-      DataType(..),
-      DisownData(..),
-      FailRequest(..),
-      GetData(..),
-      Header(..),
-      InterceptPhase(..),
-      ProvideResponse(..),
-      RemoveDataCollector(..),
-      RemoveIntercept(..),
-      Request(..),
-      RequestData(..),
-      ResponseCompleted(..),
-      ResponseStarted(..),
-      SameSite(..),
-      SetCacheBehavior(..),
-      SetCookieHeader(..),
-      SetExtraHeaders(..),
-      UrlPattern(..),
-      UrlPatternPattern(..),
-      UrlPatternString(..),
-      URL(..) )
-
+  ( AddDataCollector (..),
+    AddDataCollectorResult (..),
+    AddIntercept (..),
+    AddInterceptResult (..),
+    AuthAction (..),
+    AuthCredentials (..),
+    AuthRequired (..),
+    BeforeRequestSent (..),
+    BytesValue (..),
+    CacheBehavior (..),
+    CollectorType (..),
+    Command,
+    ContinueRequest (..),
+    ContinueResponse (..),
+    ContinueWithAuth (..),
+    Cookie (..),
+    CreateUserContext (..),
+    DataType (..),
+    DisownData (..),
+    FailRequest (..),
+    GetData (..),
+    Header (..),
+    InterceptPhase (..),
+    JSUInt (..),
+    KnownCommand (..),
+    KnownSubscriptionType (..),
+    Navigate (..),
+    NavigateResult,
+    ProvideResponse (..),
+    ReadinessState (..),
+    RemoveDataCollector (..),
+    RemoveIntercept (..),
+    RemoveUserContext (..),
+    Request (..),
+    RequestData (..),
+    ResponseCompleted (..),
+    ResponseStarted (..),
+    SameSite (..),
+    SetCacheBehavior (..),
+    SetCookieHeader (..),
+    SetExtraHeaders (..),
+    StringValue (..),
+    URL (..),
+    UrlPattern (..),
+    UrlPatternPattern (..),
+    UrlPatternString (..),
+    mkCommand,
+  )
 import WebDriverPreCore.Internal.Utils (txt)
 import Prelude hiding (log)
 
@@ -73,7 +78,9 @@ testServerHomeUrl :: URL
 testServerHomeUrl = MkUrl URLs.testServerHomeUrl
 
 -- >>> runDemo networkDataCollectorDemo
--- *** Exception: Error executing BiDi command: With JSON: 
+
+-- *** Exception: Error executing BiDi command: With JSON:
+
 -- {
 --     "id": 3,
 --     "method": "network.addDataCollector",
@@ -86,7 +93,7 @@ testServerHomeUrl = MkUrl URLs.testServerHomeUrl
 --         "maxEncodedDataSize": 2048
 --     }
 -- }
--- BiDi driver error: 
+-- BiDi driver error:
 -- MkDriverError
 --   { id = Just 3
 --   , error = InvalidArgument
@@ -1423,8 +1430,8 @@ networkCacheBehaviorDemo =
       logTxt "Cleanup - close new context"
       closeContext utils bidi newContext
 
+-- *** Exception: Error executing BiDi command: With JSON:
 
--- *** Exception: Error executing BiDi command: With JSON: 
 -- {
 --     "id": 2,
 --     "method": "network.setExtraHeaders",
@@ -1449,7 +1456,7 @@ networkCacheBehaviorDemo =
 --         ]
 --     }
 -- }
--- BiDi driver error: 
+-- BiDi driver error:
 -- MkDriverError
 --   { id = Just 2
 --   , error = UnknownCommand
@@ -1568,4 +1575,3 @@ networkSetExtraHeadersDemo =
         removeUC <- browserRemoveUserContext $ MkRemoveUserContext userContext
         logShow "Removed user context" removeUC
         pause
-
