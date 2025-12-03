@@ -20,7 +20,7 @@ module BiDi.BiDiSocket
   )
 where
 
-import Control.Exception (Exception (displayException), SomeException, catch)
+import UnliftIO.Exception (Exception (..), SomeException, catch)
 import Data.Aeson (FromJSON, Object, ToJSON, Value (..), object, toJSON, (.=))
 import Data.Function ((&))
 import Data.Set (Set)
@@ -28,7 +28,17 @@ import Data.Set qualified as Set
 import Data.Text (Text, unpack)
 import GHC.Generics (Generic)
 import UnliftIO.STM
--- todo: get rid of these imports
+    ( STM,
+      readTVar,
+      readTChan,
+      writeTChan,
+      modifyTVar',
+      atomically,
+      newTChanIO,
+      newTVarIO,
+      TVar,
+      TChan )
+
 import WebDriverPreCore.BiDi.Protocol
   ( JSUInt (..),
     JSONDecodeError,
