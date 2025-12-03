@@ -1,15 +1,7 @@
 module ApiCoverageTest where
 
-import Data.Eq (Eq)
-import Data.Function (($), (.))
-import Data.Functor ((<$>))
-import Data.List (drop, (!!))
-import Data.Maybe (Maybe (..))
-import Data.Ord (Ord)
-import Data.Semigroup ((<>))
 import Data.Set as S (Set, difference, fromList, null)
 import Data.Text as T (Text, intercalate, lines, null, pack, replace, strip, unwords, words)
-import GHC.Show (Show (..))
 import GHC.Utils.Misc (filterOut)
 import Test.Tasty.HUnit as HUnit (Assertion, assertBool)
 import Text.RawString.QQ (r)

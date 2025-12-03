@@ -1,6 +1,6 @@
 module WebDriverPreCore.BiDi.Protocol
   ( -- * Re-exported modules
-    module CoreTypes,
+    module WebDriverPreCore.BiDi.CoreTypes,
     module WebDriverPreCore.BiDi.Browser,
     module WebDriverPreCore.BiDi.BrowsingContext,
     module WebDriverPreCore.BiDi.Capabilities,
@@ -22,7 +22,7 @@ import WebDriverPreCore.BiDi.Browser
 import WebDriverPreCore.BiDi.BrowsingContext
 import WebDriverPreCore.BiDi.Capabilities
 import WebDriverPreCore.BiDi.Command
-import WebDriverPreCore.BiDi.CoreTypes as CoreTypes
+import WebDriverPreCore.BiDi.CoreTypes
 import WebDriverPreCore.BiDi.Emulation
 import WebDriverPreCore.BiDi.Event
 import WebDriverPreCore.BiDi.Input

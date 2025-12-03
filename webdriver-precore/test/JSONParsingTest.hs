@@ -43,20 +43,16 @@ import Test.Tasty.Falsify
 import Test.Tasty.HUnit (Assertion, (@=?))
 import Text.Show.Pretty (ppShow)
 import WebDriverPreCore.Http.Protocol
-  ( BrowserName (..),
-    Capabilities (..),
+  ( Capabilities (..),
     DeviceMetrics (..),
     LogLevel (..),
     LogSettings (..),
     MobileEmulation (..),
-    PageLoadStrategy (..),
     PerfLoggingPrefs (..),
-    PlatformName (..),
     Proxy (..),
     SessionResponse (..),
     SocksProxy (..),
     Timeouts (..),
-    UnhandledPromptBehavior (..),
     VendorSpecific (..)
   )
 import WebDriverPreCore.Internal.AesonUtils (jsonToText)

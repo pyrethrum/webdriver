@@ -112,13 +112,7 @@ module WebDriverPreCore.BiDi.API
   )
 where
 
-import WebDriverPreCore.BiDi.BrowsingContext (DownloadEnd, DownloadWillBegin, HistoryUpdated, NavigationInfo, UserPromptClosed, UserPromptOpened)
-import WebDriverPreCore.BiDi.Command (KnownCommand (..))
-import WebDriverPreCore.BiDi.CoreTypes (KnownSubscriptionType (..))
-import WebDriverPreCore.BiDi.Event
-import WebDriverPreCore.BiDi.Input (FileDialogOpened)
-import WebDriverPreCore.BiDi.Log
-import WebDriverPreCore.BiDi.Network (AuthRequired, BeforeRequestSent, FetchError, ResponseCompleted, ResponseStarted)
+import Data.Aeson (Value)
 import WebDriverPreCore.BiDi.Protocol
   ( Activate,
     AddDataCollector,
@@ -127,6 +121,8 @@ import WebDriverPreCore.BiDi.Protocol
     AddInterceptResult,
     AddPreloadScript,
     AddPreloadScriptResult,
+    AuthRequired,
+    BeforeRequestSent,
     BrowsingContext,
     CallFunction,
     Capabilities,
@@ -144,9 +140,14 @@ import WebDriverPreCore.BiDi.Protocol
     DeleteCookiesResult,
     Disown,
     DisownData,
+    DownloadEnd,
+    DownloadWillBegin,
     Evaluate,
     EvaluateResult,
+    Event,
     FailRequest,
+    FetchError,
+    FileDialogOpened,
     GetClientWindowsResult,
     GetCookies,
     GetCookiesResult,
@@ -158,11 +159,16 @@ import WebDriverPreCore.BiDi.Protocol
     GetTreeResult,
     GetUserContextsResult,
     HandleUserPrompt,
+    HistoryUpdated,
     Info,
+    KnownCommand (..),
+    KnownSubscriptionType (..),
     LocateNodes,
     LocateNodesResult,
+    LogEntry,
     Navigate,
     NavigateResult,
+    NavigationInfo,
     PerformActions,
     Print,
     PrintResult,
@@ -174,10 +180,12 @@ import WebDriverPreCore.BiDi.Protocol
     RemoveIntercept,
     RemovePreloadScript,
     RemoveUserContext,
+    ResponseCompleted,
+    ResponseStarted,
     SessionNewResult,
     SessionStatusResult,
-    SessionSubscribeResult (..),
     SessionSubscibe (..),
+    SessionSubscribeResult (..),
     SessionUnsubscribe (..),
     SetCacheBehavior,
     SetClientWindowState,
@@ -196,14 +204,21 @@ import WebDriverPreCore.BiDi.Protocol
     SetTimezoneOverride,
     SetUserAgentOverride,
     SetViewport,
+    Subscription,
     TraverseHistory,
     TraverseHistoryResult,
+    UnknownSubscriptionType,
     UserContext,
+    UserPromptClosed,
+    UserPromptOpened,
     WebExtensionInstall,
     WebExtensionResult,
-    WebExtensionUninstall, UnknownSubscriptionType,
+    WebExtensionUninstall,
+    mkMultiSubscription,
+    mkSingleSubscription,
+    mkUnknownSubscription,
   )
-import WebDriverPreCore.BiDi.Command as FallbackCommand
+import WebDriverPreCore.BiDi.Protocol as FallbackCommand
   ( emptyCommand,
     extendCommand,
     extendCommandAny,
@@ -212,8 +227,6 @@ import WebDriverPreCore.BiDi.Command as FallbackCommand
     mkCommand,
   )
 import WebDriverPreCore.BiDi.Script (Message, RealmInfo)
-import Data.Aeson (Value)
-
 
 --- ############## Commands ##############
 
@@ -616,6 +629,3 @@ subscribeInputFileDialogOpened ::
   (FileDialogOpened -> m ()) ->
   Subscription m
 subscribeInputFileDialogOpened = mkSingleSubscription InputFileDialogOpened
-
-
-

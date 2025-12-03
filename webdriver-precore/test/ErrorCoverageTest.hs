@@ -10,17 +10,9 @@ import WebDriverPreCore.Http
       errorDescription,
       errorCodeToErrorType )
 import WebDriverPreCore.BiDi.Error qualified as BiDi
-import GHC.Show (Show (..))
-import Data.Eq (Eq ((==)))
-import Data.Ord (Ord)
-import Data.Function (($), (.), (&))
-import Data.Maybe (maybe)
-import Data.Semigroup ((<>))
-import Data.Functor ((<$>))
-import GHC.Base (error, id)
+import Data.Function ((&))
 import WebDriverPreCore.Internal.Utils(enumerate)
 import Data.Foldable (traverse_)
-import Data.Either (either)
 
 {-
 !! Replace this the endepoints from the spec with every release
