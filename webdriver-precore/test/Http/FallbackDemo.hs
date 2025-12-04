@@ -1,4 +1,4 @@
-module Http.HttpDemoFallback where
+module Http.FallbackDemo where
 
 import Data.Aeson as A (Value (..))
 import Data.Aeson qualified as A

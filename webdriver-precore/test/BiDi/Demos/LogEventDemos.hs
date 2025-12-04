@@ -34,18 +34,6 @@ import Data.Text (Text)
 import Control.Monad ((>=>))
 import Data.Coerce (coerce)
 
-{-
-Log Events - Implementation Status
-
-1. log.entryAdded (generic) :: ✓ logEventGenericEntry
-2. log.entryAdded (console) :: ✓ logEventConsoleEntries
-3. log.entryAdded (javascript) :: ✓ logEventJavascriptError, logEventJavascriptTypeError, logEventJavascriptReferenceError
-4. Console log levels :: ✓ logEventConsoleLevelDebug, logEventConsoleLevelInfo, logEventConsoleLevelWarn, logEventConsoleLevelError
-5. Multiple args :: ✓ logEventConsoleMultipleArgs
-6. Context filtering :: ✓ logEventFilteredByContext
-7. Combined tests :: ✓ logEventConsoleLogCombined, logEventJavascriptErrorCombined, logEventConsoleWarnCombined
--}
-
 -- >>> runDemo logEventConsoleEntries
 logEventConsoleEntries :: BiDiDemo
 logEventConsoleEntries =

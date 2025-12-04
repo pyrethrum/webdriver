@@ -26,7 +26,7 @@ import ErrorCoverageTest qualified as Error
 import Http.DemoUtils (HttpDemo (..), runDemoWithConfig)
 import Http.HttpDemo qualified as Http
 #ifndef LEGACY_TEST
-import Http.HttpDemoFallback qualified as HttpFallback
+import Http.FallbackDemo qualified as HttpFallback
 #endif
 import JSONParsingTest qualified as JSON
 import Test.Tasty (TestTree, defaultMain, testGroup)

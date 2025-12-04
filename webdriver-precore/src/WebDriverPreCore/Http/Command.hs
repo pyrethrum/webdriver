@@ -4,13 +4,14 @@ module WebDriverPreCore.Http.Command
   ( Command (..),
     mkPost,
     mkPost',
-    voidCommand
+    voidCommand,
+    loosenCommand
   )
 where
 
 import Data.Aeson as A
   ( ToJSON (..),
-    Value,
+    Value, Object,
   )
 import Data.Text (Text)
 import WebDriverPreCore.Internal.Utils (UrlPath (..))
@@ -53,3 +54,29 @@ data Command r
         path :: UrlPath
       }
   deriving (Show, Eq)
+
+  -- fallback
+
+-- emptyCommand :: forall r. KnownCommand -> Command r
+-- emptyCommand method = MkCommand {method = KnownCommand method, params = Object KM.empty}
+
+loosenCommand :: forall r. Command r -> Command Object
+loosenCommand = \case
+  Get {..} -> Get {..}
+  Post {..} -> Post {..}
+  PostEmpty {..} -> PostEmpty {..}
+  Delete {..} -> Delete {..}
+
+-- extendPost :: 
+
+-- extendCommandAny :: forall r. Object -> Command r -> Command Object
+-- extendCommandAny = extendCommandPriv
+
+-- extendCommand :: forall r. Object -> Command r -> Command r
+-- extendCommand = extendCommandPriv
+
+-- mkAnyCommand :: Text -> Value -> Command Value
+-- mkAnyCommand method = MkCommand (UnknownCommand $ MkUnknownCommand method)
+
+-- extendCommandPriv :: forall r r2. Object -> Command r -> Command r2
+-- extendCommandPriv extended cmd = 

@@ -215,7 +215,7 @@ test-suite test
     , Http.HttpEndpoint
     , Http.DemoUtils
     , Http.HttpDemo
-    , Http.HttpDemoFallback
+    , Http.FallbackDemo
     , BiDi.Runner
     , BiDi.BiDiSocket
     , BiDi.BiDiActions
