@@ -5,18 +5,18 @@ module WebDriverPreCore.Http.Command
     mkPost,
     mkPost',
     voidCommand,
-    loosenCommand
+    loosenCommand,
   )
 where
 
 import Data.Aeson as A
-  ( ToJSON (..), Object,
+  ( Object,
+    ToJSON (..),
   )
 import Data.Text (Text)
+import WebDriverPreCore.Internal.AesonUtils (objectOrThrow)
 import WebDriverPreCore.Internal.Utils (UrlPath (..))
 import Prelude hiding (id, lookup)
-import WebDriverPreCore.Internal.AesonUtils (objectOrThrow)
-
 
 voidCommand :: Command a -> Command ()
 voidCommand = \case
@@ -24,12 +24,11 @@ voidCommand = \case
   Post {..} -> PostEmpty {..}
   PostEmpty {..} -> PostEmpty {..}
   Delete {..} -> Delete {..}
-  
 
 mkPost :: forall a r. (ToJSON a) => Text -> UrlPath -> a -> Command r
 mkPost description path = mkPost' description path (objectOrThrow ("mkPost - " <> description))
 
-mkPost'  :: forall a r. Text -> UrlPath -> (a -> Object) -> a -> Command r
+mkPost' :: forall a r. Text -> UrlPath -> (a -> Object) -> a -> Command r
 mkPost' description path f = Post description path . f
 
 -- |
@@ -55,7 +54,7 @@ data Command r
       }
   deriving (Show, Eq)
 
-  -- fallback
+-- fallback
 
 -- emptyCommand :: forall r. KnownCommand -> Command r
 -- emptyCommand method = MkCommand {method = KnownCommand method, params = Object KM.empty}
@@ -67,7 +66,15 @@ loosenCommand = \case
   PostEmpty {..} -> PostEmpty {..}
   Delete {..} -> Delete {..}
 
--- extendPost :: 
+extendPost :: forall r. Command r -> Object -> Command Object
+extendPost cmd extended =
+  case cmd of
+    Post {description, path, body} -> Post {description, path, body = body <> extended}
+    PostEmpty {description, path} -> Post {description = description, path = path, body = extended}
+    get@Get {} -> 
+        error $ "extendPost called with Get Command (extendPost can only be called with Post or PostEmpty commands): " <> show get
+    del@Delete {} -> 
+        error $ "extendPost called with Delete Command (extendPost can only be called with Post or PostEmpty commands): " <> show del
 
 -- extendCommandAny :: forall r. Object -> Command r -> Command Object
 -- extendCommandAny = extendCommandPriv
@@ -79,4 +86,4 @@ loosenCommand = \case
 -- mkAnyCommand method = MkCommand (UnknownCommand $ MkUnknownCommand method)
 
 -- extendCommandPriv :: forall r r2. Object -> Command r -> Command r2
--- extendCommandPriv extended cmd = 
+-- extendCommandPriv extended cmd =
