@@ -35,7 +35,7 @@ demoFallbackActions =
             Post
               { description = "Navigate To (using fallback)",
                 path = sessionUri1 sesId "url",
-                body = A.object ["url" A..= url]
+                body = A.fromList ["url" A..= url]
               }
 
       logTxt "Step 1: Navigate using runCommand"
@@ -48,7 +48,7 @@ demoFallbackActions =
             Post
               { description = "Find Element (using fallback Value)",
                 path = sessionUri1 sesId "element",
-                body = A.object ["using" A..= ("css selector" :: String), "value" A..= ("#checkbox1" :: String)]
+                body = A.fromList ["using" A..= ("css selector" :: String), "value" A..= ("#checkbox1" :: String)]
               }
 
       logTxt "Step 2: Find checkbox element using Value command and runCommand"
@@ -74,7 +74,7 @@ demoFallbackActions =
             Post
               { description = "Element Click (using fallback)",
                 path = elementUri1 sesId checkboxId "click",
-                body = A.object []
+                body = A.fromList []
               }
 
       logTxt "\nStep 3: Click checkbox using Value command and getResponse"

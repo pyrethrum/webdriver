@@ -76,7 +76,7 @@ logCommand da@MkDemoActions {logShow} cmd = do
   case cmd of
     Get {} -> pure ()
     Post {body} -> do
-      da.logJSON "body" body
+      da.logJSON "body" $ Object body
     PostEmpty {} -> pure ()
     Delete {} -> pure ()
 

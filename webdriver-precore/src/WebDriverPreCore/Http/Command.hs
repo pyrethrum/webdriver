@@ -10,12 +10,12 @@ module WebDriverPreCore.Http.Command
 where
 
 import Data.Aeson as A
-  ( ToJSON (..),
-    Value, Object,
+  ( ToJSON (..), Object,
   )
 import Data.Text (Text)
 import WebDriverPreCore.Internal.Utils (UrlPath (..))
 import Prelude hiding (id, lookup)
+import WebDriverPreCore.Internal.AesonUtils (objectOrThrow)
 
 
 voidCommand :: Command a -> Command ()
@@ -27,9 +27,9 @@ voidCommand = \case
   
 
 mkPost :: forall a r. (ToJSON a) => Text -> UrlPath -> a -> Command r
-mkPost description path = mkPost' description path toJSON
+mkPost description path = mkPost' description path (objectOrThrow ("mkPost - " <> description))
 
-mkPost'  :: forall a r. Text -> UrlPath -> (a -> Value) -> a -> Command r
+mkPost'  :: forall a r. Text -> UrlPath -> (a -> Object) -> a -> Command r
 mkPost' description path f = Post description path . f
 
 -- |
@@ -43,7 +43,7 @@ data Command r
   | Post
       { description :: Text,
         path :: UrlPath,
-        body :: Value
+        body :: Object
       }
   | PostEmpty
       { description :: Text,

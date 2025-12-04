@@ -83,7 +83,6 @@ where
 import Data.Aeson as A
   ( KeyValue ((.=)),
     Value (..),
-    object,
   )
 import Data.Text (Text)
 import WebDriverPreCore.Http.Command (Command (..), mkPost, mkPost')
@@ -107,6 +106,7 @@ import WebDriverPreCore.Http.Protocol
   )
 import WebDriverPreCore.Internal.Utils (UrlPath (..), newSessionUrl, session)
 import Prelude hiding (id, lookup)
+import Data.Aeson.KeyMap (fromList)
 
 -- ######################################################################
 -- ########################### WebDriver API ############################
@@ -176,7 +176,7 @@ setTimeouts sessionRef =
 --
 -- @POST 	\/session\/{session id}\/url 	Navigate To@
 navigateTo :: SessionId -> URL -> Command ()
-navigateTo sessionRef = mkPost' "Navigate To" (sessionUri1 sessionRef "url") (\url -> object ["url" .= url])
+navigateTo sessionRef = mkPost' "Navigate To" (sessionUri1 sessionRef "url") (\url -> fromList ["url" .= url])
 
 -- |
 --
@@ -336,7 +336,7 @@ getNamedCookie sessionId cookieName = Get "Get Named Cookie" (sessionUri2 sessio
 --
 -- @POST 	\/session\/{session id}\/cookie 	Add Cookie@
 addCookie :: SessionId -> Cookie -> Command ()
-addCookie sessionId cookie = Post "Add Cookie" (sessionUri1 sessionId "cookie") (object ["cookie" .= cookie])
+addCookie sessionId cookie = Post "Add Cookie" (sessionUri1 sessionId "cookie") (fromList ["cookie" .= cookie] )
 
 -- |
 --
@@ -416,7 +416,7 @@ getAlertText sessionId = Get "Get Alert Text" (sessionUri2 sessionId "alert" "te
 --
 -- @POST 	\/session\/{session id}\/alert\/text 	Send Alert Text@
 sendAlertText :: SessionId -> Text -> Command ()
-sendAlertText sessionId text = Post "Send Alert Text" (sessionUri2 sessionId "alert" "text") (object ["text" .= text])
+sendAlertText sessionId text = Post "Send Alert Text" (sessionUri2 sessionId "alert" "text") (fromList ["text" .= text])
 
 -- |
 --
@@ -704,7 +704,7 @@ elementClear sessionId elementId = PostEmpty "Element Clear" (elementUri1 sessio
 --
 -- @POST 	\/session\/{session id}\/element\/{element id}\/value 	Element Send Keys@
 elementSendKeys :: SessionId -> ElementId -> Text -> Command ()
-elementSendKeys sessionId elementId keysToSend = Post "Element Send Keys" (elementUri1 sessionId elementId "value") (object ["text" .= keysToSend])
+elementSendKeys sessionId elementId keysToSend = Post "Element Send Keys" (elementUri1 sessionId elementId "value") (fromList ["text" .= keysToSend])
 
 -- |
 --
