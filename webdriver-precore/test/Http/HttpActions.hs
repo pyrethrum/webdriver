@@ -27,7 +27,6 @@ import WebDriverPreCore.Http.Protocol
     WindowHandleSpec (..),
     WindowRect (..),
   )
-import Prelude
 
 data HttpActions = MkHttpActions
   { -- Root methods

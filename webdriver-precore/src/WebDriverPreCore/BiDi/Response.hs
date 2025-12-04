@@ -11,7 +11,6 @@ import WebDriverPreCore.BiDi.CoreTypes (EmptyResult (..), JSUInt)
 import WebDriverPreCore.BiDi.Error (DriverError (..))
 import WebDriverPreCore.Internal.AesonUtils (jsonToText, parseObjectEither, parseObjectMaybe, subtractProps)
 import WebDriverPreCore.Internal.Utils (txt)
-import Prelude
 
 parseResponse :: forall r. (FromJSON r) => JSUInt -> Either JSONDecodeError ResponseObject -> Maybe (Either ResponseError (MatchedResponse r))
 parseResponse id' =

@@ -7,7 +7,6 @@ import Data.Vector (fromList)
 import Data.Word (Word8)
 import GHC.Generics (Generic)
 import WebDriverPreCore.Internal.AesonUtils (opt, fromJSONCamelCase)
-import Prelude (Bool (..), Eq (..), Maybe (..), Show (..), ($), (.), (<$>))
 import Data.Aeson.Types (Parser)
 
 

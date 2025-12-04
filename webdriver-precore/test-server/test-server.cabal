@@ -49,7 +49,6 @@ common commonExtensions
       MultiWayIf
       NamedFieldPuns
       NoFieldSelectors
-      NoImplicitPrelude
       NumericUnderscores
       OverloadedStrings
       OverloadedRecordDot

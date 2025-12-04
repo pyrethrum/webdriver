@@ -10,7 +10,6 @@ import WebDriverPreCore.BiDi.Input (FileDialogOpened)
 import WebDriverPreCore.BiDi.Log (LogEvent)
 import WebDriverPreCore.BiDi.Network (NetworkEvent (..))
 import WebDriverPreCore.BiDi.Script (ScriptEvent (..))
-import Prelude
 
 mkSingleSubscription ::
   forall m r.

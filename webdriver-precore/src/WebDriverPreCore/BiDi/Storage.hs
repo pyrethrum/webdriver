@@ -24,7 +24,6 @@ import GHC.Generics (Generic)
 import WebDriverPreCore.BiDi.CoreTypes (BrowsingContext, UserContext)
 import WebDriverPreCore.BiDi.Network qualified as Network
 import WebDriverPreCore.Internal.AesonUtils (fromJSONCamelCase, opt, toJSONOmitNothing)
-import Prelude (Bool, Eq, Int, Maybe, Semigroup ((<>)), Show, fail, show, ($), (++), (<$>), (<*>))
 
 -- ######### Remote #########
 

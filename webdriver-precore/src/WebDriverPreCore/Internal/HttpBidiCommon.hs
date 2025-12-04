@@ -12,7 +12,6 @@ import Data.Aeson as A
 import Data.Aeson.Types (Parser)
 import Data.Text (Text, unpack)
 import WebDriverPreCore.Internal.Utils (txt)
-import Prelude
 
 newtype URL = MkUrl {url :: Text}
   deriving newtype (Show, Eq, Ord, ToJSON)

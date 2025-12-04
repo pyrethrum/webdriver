@@ -8,7 +8,6 @@ import Network.HTTP.Types.Status
 import TestPages (helloHtml)
 import Web.Scotty
 import Web.Scotty.Cookie (setSimpleCookie)
-import Prelude
 
 main :: IO ()
 main = do

@@ -117,7 +117,6 @@ import WebDriverPreCore.BiDi.Protocol as P
     Message,
     RealmInfo
   )
-import Prelude
 
 data BiDiActions = MkBiDiActions
   { -- Session commands

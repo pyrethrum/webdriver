@@ -6,7 +6,6 @@ where
 
 import Http.HttpRunnerDeprecated (HttpRunnerDeprecated (..))
 
-import Prelude
 import  WebDriverPreCore.Http.Protocol qualified as P
 import WebDriverPreCore.Http.SpecDefinition qualified as W
 import Http.HttpActions (HttpActions (..))

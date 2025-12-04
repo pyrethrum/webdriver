@@ -6,7 +6,6 @@ module WebDriverPreCore.BiDi.WebExtensions where
 import Data.Aeson (FromJSON, ToJSON (..), Value, object, (.=))
 import Data.Text (Text)
 import GHC.Generics (Generic)
-import Prelude (Eq, Show)
 
 {- prompt
 create types to represent the remote end for storage as prer the cddl in this file:

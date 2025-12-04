@@ -14,16 +14,10 @@ where
 import Control.Monad ((>=>))
 import Data.Aeson (FromJSON (..), Options (..), Value, defaultOptions, genericParseJSON, withObject)
 import Data.Aeson.Types (Parser, parseMaybe, (.:))
-import Data.Either (Either (..))
-import Data.Eq (Eq)
 import Data.Function ((&))
-import Data.Maybe (Maybe (..), maybe)
-import Data.Ord (Ord)
 import Data.Text (Text)
-import GHC.Enum (Bounded, Enum)
 import GHC.Generics (Generic)
-import GHC.Show (Show)
-import Prelude (Bool (..))
+import Prelude hiding (error)
 
 {-
 Error Code 	HTTP Status 	JSON Error Code 	Description

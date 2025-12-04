@@ -12,7 +12,6 @@ module WebDriverPreCore.BiDi.Log
   )
 where
 
-import Control.Monad (MonadFail (..))
 import Data.Aeson (FromJSON, Value (..), withObject, (.:))
 import Data.Aeson.Types (FromJSON (..), Parser)
 import Data.Functor ((<&>))
@@ -21,7 +20,6 @@ import GHC.Generics (Generic)
 import WebDriverPreCore.BiDi.CoreTypes (JSUInt)
 import WebDriverPreCore.BiDi.Script (RemoteValue, Source, StackTrace)
 import WebDriverPreCore.Internal.AesonUtils (fromJSONCamelCase, parseJSONOmitNothing)
-import Prelude (Eq, Maybe, Semigroup (..), Show, ($), (<$>), (.))
 
 -- ######### Local #########
 -- Note: log module does not have a remote end

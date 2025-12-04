@@ -13,7 +13,6 @@ import Dhall (FromDhall, Generic, ToDhall, auto, input)
 import IOUtils (findWebDriverRoot)
 import System.Directory (doesFileExist, getCurrentDirectory)
 import System.FilePath (combine, (</>))
-import Prelude
 
 -- TODO - GET Dhall LSP Server working or switch to JSON
 

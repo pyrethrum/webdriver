@@ -64,7 +64,6 @@ import Data.Vector qualified as V
 import GHC.Generics
 import WebDriverPreCore.BiDi.CoreTypes (BrowsingContext, Handle, InternalId (..), JSUInt, NodeRemoteValue (..), SharedId, StringValue (..), UserContext)
 import WebDriverPreCore.Internal.AesonUtils (jsonToText, opt, parseJSONOmitNothing, toJSONOmitNothing)
-import Prelude (Applicative (..), Bool (..), Double, Either (..), Eq (..), Maybe (..), MonadFail (..), Semigroup (..), Show (..), Traversable (..), mapM, realToFrac, ($), (.), (<$>))
 
 -- TODO :: amke all imports exports explict
 

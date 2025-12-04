@@ -6,7 +6,6 @@ module WebDriverPreCore.Http.HttpResponse {-# DEPRECATED "HttpResponse - will be
 
 import Data.Aeson (Value)
 import Data.Text (Text)
-import Prelude
 
 -- | 'HttpResponse' represents a WebDriver HTTP response.
 --

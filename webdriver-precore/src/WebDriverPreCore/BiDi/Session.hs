@@ -7,15 +7,6 @@ import GHC.Generics (Generic)
 import WebDriverPreCore.BiDi.Capabilities (CapabilitiesResult)
 import WebDriverPreCore.BiDi.CoreTypes (BrowsingContext, UserContext, SubscriptionType)
 import WebDriverPreCore.Internal.AesonUtils (toJSONOmitNothing)
-import Prelude
-  ( Applicative ((<*>)),
-    Bool (..),
-    Eq (..),
-    Maybe (..),
-    Show (..),
-    ($),
-    (<$>),
-  )
 
 -- ######### Remote #########
 

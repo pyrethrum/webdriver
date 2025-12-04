@@ -31,7 +31,6 @@ import Http.HttpDemoFallback qualified as HttpFallback
 import JSONParsingTest qualified as JSON
 import Test.Tasty (TestTree, defaultMain, testGroup)
 import Test.Tasty.HUnit (testCase)
-import Prelude
 
 main :: IO ()
 main = do

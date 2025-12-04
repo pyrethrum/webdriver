@@ -21,11 +21,10 @@ module WebDriverPreCore.BiDi.Emulation
   )
 where
 
-import Data.Maybe (Maybe, catMaybes)
+import Data.Maybe (catMaybes)
 import Data.Text (Text)
 import GHC.Generics (Generic)
 import WebDriverPreCore.BiDi.CoreTypes (BrowsingContext, UserContext, JSUInt)
-import Prelude (Bool, Eq, Float, Show, ($), (<>))
 import Data.Aeson (ToJSON (..), object, (.=))
 import WebDriverPreCore.Internal.AesonUtils (opt)
 import Data.Aeson.Types (Value)

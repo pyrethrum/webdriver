@@ -23,7 +23,6 @@ import GHC.Generics (Generic)
 import WebDriverPreCore.BiDi.Capabilities (ProxyConfiguration, UserPromptHandler)
 import WebDriverPreCore.BiDi.CoreTypes (ClientWindow, UserContext)
 import WebDriverPreCore.Internal.AesonUtils (enumCamelCase, fromJSONCamelCase, opt)
-import Prelude (Bool (..), Eq (..), Int, Maybe, Show, ($), (.), (<>), Applicative (..), MonadFail (..))
 
 -- ######### Remote #########
 

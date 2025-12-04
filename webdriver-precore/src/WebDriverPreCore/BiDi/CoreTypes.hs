@@ -30,7 +30,6 @@ import Data.Word (Word64)
 import GHC.Generics (Generic)
 import WebDriverPreCore.Internal.AesonUtils (jsonToText)
 import WebDriverPreCore.Internal.HttpBidiCommon (URL (..))
-import Prelude
 
 newtype ClientWindow = MkClientWindow Text
   deriving newtype (Show, Eq, FromJSON, ToJSON)

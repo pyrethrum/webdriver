@@ -73,7 +73,6 @@ import WebDriverPreCore.BiDi.BrowsingContext (Navigation)
 import WebDriverPreCore.BiDi.CoreTypes (BrowsingContext, JSUInt, StringValue (..), SubscriptionType (..), UserContext, KnownSubscriptionType (..), URL)
 import WebDriverPreCore.BiDi.Script (StackTrace)
 import WebDriverPreCore.Internal.AesonUtils (addProps, enumCamelCase, fromJSONCamelCase, objectOrThrow, parseJSONOmitNothing, toJSONOmitNothing)
-import Prelude
 
 -- ######### REMOTE #########
 

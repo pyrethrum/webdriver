@@ -26,7 +26,6 @@ import UnliftIO
   )
 import UnliftIO.Concurrent (threadDelay)
 import UnliftIO.Directory (getCurrentDirectory)
-import Prelude
 import UnliftIO.IO (hSetBuffering)
 import UnliftIO.IO (BufferMode(..))
 

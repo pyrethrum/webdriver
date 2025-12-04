@@ -20,7 +20,6 @@ import Network.HTTP.Req (GET (..), NoReqBody (..), defaultHttpConfig, http, igno
 import System.Directory (getCurrentDirectory)
 import UnliftIO (finally)
 import UnliftIO.Process (createProcess, cwd, proc, terminateProcess)
-import Prelude
 
 testServerHomeUrl :: Text
 testServerHomeUrl = "http://localhost:8000/"

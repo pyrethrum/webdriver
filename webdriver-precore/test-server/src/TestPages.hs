@@ -2,7 +2,6 @@ module TestPages
   ( helloHtml
   ) where
 
-import Prelude
 import qualified Data.Text.Lazy as TL
 
 helloHtml :: TL.Text

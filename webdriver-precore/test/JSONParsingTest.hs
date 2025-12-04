@@ -3,23 +3,11 @@ module JSONParsingTest where
 import Data.Aeson (Result (Success), ToJSON (toJSON), Value (..), decode, encode, fromJSON)
 import Data.Aeson.KeyMap qualified as KM
 import Data.Bits (FiniteBits)
-import Data.Bool (Bool, (&&), (||))
-import Data.Foldable (all, null)
-import Data.Function (id, ($), (.))
-import Data.Functor ((<$>))
 import Data.Map.Strict qualified as M
-import Data.Maybe (Maybe (..), isNothing)
-import Data.String (String)
+import Data.Maybe (isNothing)
 import Data.Text (Text, unpack)
 import Data.Text qualified as T
-import GHC.Base (Applicative (..), Bool (..), Eq (..), Functor (..), Int, const)
-import GHC.Data.Maybe (maybe)
-import GHC.Float (Double)
-import GHC.IO (FilePath)
-import GHC.Num (Num (..))
 import GHC.Plugins (HasCallStack)
-import GHC.Prelude (Show)
-import GHC.Real (Fractional (..), Integral, fromIntegral)
 import Test.Falsify.Generator as G
   ( Gen,
     bool,
@@ -56,7 +44,7 @@ import WebDriverPreCore.Http.Protocol
     VendorSpecific (..)
   )
 import WebDriverPreCore.Internal.AesonUtils (jsonToText)
-import Prelude (Bounded (minBound), Enum, IO, maxBound)
+import Prelude hiding (log)
 
 -- todo: test extras - split off
 
@@ -92,19 +80,22 @@ genTextValueMap =
     genValue :: G.Gen Value
     genValue =
       G.frequency
-        [ (1, pure $ toJSON False),
-          (1, pure $ toJSON ""),
-          (1, pure $ toJSON 0),
-          (1, pure $ toJSON 1),
-          (1, pure $ toJSON 2),
-          (1, pure $ toJSON 3),
-          (1, pure $ toJSON 4),
-          (1, pure $ toJSON 5),
-          (1, pure $ toJSON 6),
-          (1, pure $ toJSON 7),
-          (1, pure $ toJSON 8),
-          (1, pure $ toJSON 9)
+        [ (1, jv False),
+          (1, jv ""),
+          (1, jv 0),
+          (1, jv 1),
+          (1, jv 2),
+          (1, jv 3),
+          (1, jv 4),
+          (1, jv 5),
+          (1, jv 6),
+          (1, jv 7),
+          (1, jv 8),
+          (1, jv 9)
         ]
+      where 
+        jv :: ToJSON a => a -> G.Gen Value
+        jv = pure . toJSON
 
 genDeviseMetrics :: Gen DeviceMetrics
 genDeviseMetrics = do

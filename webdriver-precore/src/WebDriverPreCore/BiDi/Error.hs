@@ -14,7 +14,6 @@ import Data.Text (Text, unpack)
 import GHC.Generics (Generic)
 import WebDriverPreCore.BiDi.CoreTypes
 import WebDriverPreCore.Internal.AesonUtils (subtractProps)
-import Prelude
 
 
 -- TODO: basic test to deliberately cause an error and check it is parsed correctly (eg no such element)

@@ -13,13 +13,9 @@ where
 
 -- debugging only remove brefore release
 
-import Data.Function ((.))
 import Data.Text (Text, pack, unpack)
 import Debug.Trace (trace)
-import GHC.Enum (Bounded (..), Enum)
-import GHC.Show (Show (..))
 import Text.Show.Pretty qualified as P
-import Prelude (Eq (..), Ord, Semigroup, ($), (<>)) 
 
 {-
   this module is used between the library and testing modules

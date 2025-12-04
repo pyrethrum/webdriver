@@ -24,8 +24,7 @@ module WebDriverPreCore.Http.Capabilities
   )
 where
 
-import Control.Applicative (Applicative (..), asum)
-import Control.Monad (Monad ((>>=)), MonadFail (..))
+import Control.Applicative (asum)
 import Data.Aeson
   ( FromJSON (parseJSON),
     Key,
@@ -47,19 +46,12 @@ import Data.Aeson.Types
     parseField,
     parseFieldMaybe,
   )
-import Data.Function (flip, ($), (.))
-import Data.Functor ((<$>))
 import Data.Map.Strict (Map)
 import Data.Maybe (catMaybes)
-import Data.Semigroup (Semigroup (..))
 import Data.Text (Text)
 import Data.Vector (fromList)
-import GHC.Enum (Bounded)
-import GHC.Float (Double)
 import GHC.Generics (Generic)
-import GHC.IO (FilePath)
 import WebDriverPreCore.Internal.AesonUtils (opt, parseOpt, toJSONOmitNothing, parseJSONOmitNothing)
-import Prelude (Bool (..), Enum, Eq (..), Int, Maybe (..), Show (..), maybe)
 
 {- references:
 - https://https://www.w3.org/TR/2025/WD-webdriver2-20251028/#capabilities

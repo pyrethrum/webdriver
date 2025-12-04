@@ -28,7 +28,6 @@ import Data.Text (Text)
 import GHC.Generics (Generic)
 import WebDriverPreCore.BiDi.Script qualified as Script
 import WebDriverPreCore.Internal.AesonUtils (toJSONOmitNothing, parseJSONOmitNothing)
-import Prelude (Bool, Double, Eq, Int, Maybe, Show, ($), (++))
 import WebDriverPreCore.BiDi.CoreTypes (BrowsingContext(..))
 import Data.Aeson.Types (Parser)
 import WebDriverPreCore.BiDi.Script (SharedReference)

@@ -8,7 +8,6 @@ import IOUtils (findWebDriverRoot)
 import System.Directory (getCurrentDirectory)
 import System.FilePath ((</>))
 import WebDriverPreCore.Http.Protocol (URL (..))
-import Prelude
 
 testFilesDir :: IO FilePath
 testFilesDir = do

@@ -12,7 +12,6 @@ import Logger (withChannelFileLogger)
 import Network.HTTP.Req (http)
 import RuntimeConst (httpFullCapabilities)
 import WebDriverPreCore.Http.Protocol (FullCapabilities, SessionId, SessionResponse (..))
-import Prelude
 
 #ifdef LEGACY_TEST
 import Http.HttpActionsDeprecated qualified as Legacy
