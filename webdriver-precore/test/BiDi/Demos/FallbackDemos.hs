@@ -14,7 +14,7 @@ import WebDriverPreCore.BiDi.Protocol
     Navigate (..),
     URL (..),
     UnknownSubscriptionType (..),
-    extendCommandAny,
+    extendLoosenCommand,
     mkUnknownCommand,
   )
 import WebDriverPreCore.Internal.Utils (txt)
@@ -40,7 +40,7 @@ fallbackExtendCommandDemo =
             }
       
           extraProps = KM.fromList [("customProperty", String "this will be ignored by the driver")]
-          extendedCmd = extendCommandAny extraProps navigateCmd
+          extendedCmd = extendLoosenCommand extraProps navigateCmd
       
       logShow "Extended command (with extra property)" extendedCmd
       pause

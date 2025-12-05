@@ -221,7 +221,7 @@ import WebDriverPreCore.BiDi.Protocol
 import WebDriverPreCore.BiDi.Protocol as FallbackCommand
   ( emptyCommand,
     extendCommand,
-    extendCommandAny,
+    extendLoosenCommand,
     loosenCommand,
     mkUnknownCommand,
     mkCommand,

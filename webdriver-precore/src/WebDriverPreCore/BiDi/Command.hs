@@ -24,24 +24,27 @@ mkCommand method params = MkCommand {method = KnownCommand method, params = obje
 emptyCommand :: forall r. KnownCommand -> Command r
 emptyCommand method = MkCommand {method = KnownCommand method, params = KM.empty}
 
-loosenCommand :: forall r. Command r -> Command Object
-loosenCommand = extendCommandPriv KM.empty 
-
-extendCommandAny :: forall r. Object -> Command r -> Command Object
-extendCommandAny = extendCommandPriv
-
-extendCommand :: forall r. Object -> Command r -> Command r
-extendCommand = extendCommandPriv
-
 mkUnknownCommand :: Text -> Object -> Command Object
 mkUnknownCommand method = MkCommand (UnknownCommand $ MkUnknownCommand method) 
 
-extendCommandPriv :: forall r r2. Object -> Command r -> Command r2
-extendCommandPriv extended MkCommand {method, params} =
+extendLoosenCommand :: forall r. Object -> Command r -> Command Object
+extendLoosenCommand = extendCoerceCommand
+
+extendCommand :: forall r. Object -> Command r -> Command r
+extendCommand = extendCoerceCommand
+
+extendCoerceCommand :: forall r r2. Object -> Command r -> Command r2
+extendCoerceCommand extended MkCommand {method, params} =
   MkCommand
     { method,
       params = params <> extended
     }
+
+loosenCommand :: forall r. Command r -> Command Object
+loosenCommand = coerceCommand
+
+coerceCommand :: forall r r'. Command r -> Command r'
+coerceCommand MkCommand {method, params}  = MkCommand {method, params}  
 
 data CommandMethod = KnownCommand KnownCommand | UnknownCommand UnknownCommand
   deriving (Show, Eq)
