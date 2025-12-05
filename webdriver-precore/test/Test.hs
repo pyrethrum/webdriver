@@ -124,6 +124,8 @@ httpDemos cfg =
 -- fallback commands not implemented for legacy
 #ifndef LEGACY_TEST
             , HttpFallback.demoFallbackActions
+            , HttpFallback.demoFallbackCoercions
+            , HttpFallback.demoExtendPost
 #endif
           ]
 
