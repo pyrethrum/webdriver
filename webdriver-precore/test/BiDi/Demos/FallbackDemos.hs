@@ -15,10 +15,12 @@ import WebDriverPreCore.BiDi.Protocol
     URL (..),
     UnknownSubscriptionType (..),
     extendCommandAny,
-    mkAnyCommand,
+    mkUnknownCommand,
   )
 import WebDriverPreCore.Internal.Utils (txt)
-import Prelude hiding (log, putStrLn)-- >>> runDemo fallbackExtendCommandDemo
+import Prelude hiding (log, putStrLn)
+
+-- >>> runDemo fallbackExtendCommandDemo
 fallbackExtendCommandDemo :: BiDiDemo
 fallbackExtendCommandDemo =
   demo "Fallback - Extend Navigate Command with Extra Property" action
@@ -63,21 +65,19 @@ fallbackMkAnyCommandDemo =
       logTxt "Constructing navigation parameters manually as JSON object"
       
       let MkBrowsingContext contextId = bc
-          navParams = Object $ KM.fromList
+          navParams = KM.fromList
             [ ("context", String contextId),
               ("url", String url.url),
               ("customProperty", String "this will also be ignored by the driver")
             ]
       
-          anyCmd = mkAnyCommand "browsingContext.navigate" navParams
+          anyCmd = mkUnknownCommand "browsingContext.navigate" navParams
       
       logShow "Any command (raw object)" anyCmd
       pause
 
       logTxt "Sending command via sendAnyCommand'..."
-      resultObj <- sendAnyCommand' (MkJSUInt 101) "browsingContext.navigate" $ case navParams of
-        Object obj -> obj
-        _ -> KM.empty
+      resultObj <- sendAnyCommand' (MkJSUInt 101) "browsingContext.navigate" navParams 
       
       logShow "Navigation result object" resultObj
       pause

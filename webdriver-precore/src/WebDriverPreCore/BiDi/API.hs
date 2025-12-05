@@ -223,7 +223,7 @@ import WebDriverPreCore.BiDi.Protocol as FallbackCommand
     extendCommand,
     extendCommandAny,
     loosenCommand,
-    mkAnyCommand,
+    mkUnknownCommand,
     mkCommand,
   )
 import WebDriverPreCore.BiDi.Script (Message, RealmInfo)

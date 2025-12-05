@@ -20,7 +20,7 @@ import WebDriverPreCore.BiDi.Protocol
     Subscription (..),
     UserPromptClosed,
     UserPromptOpened,
-    toMethodText
+    toMethodText,
   )
 import WebDriverPreCore.BiDi.Protocol as P
   ( Activate,
@@ -69,6 +69,7 @@ import WebDriverPreCore.BiDi.Protocol as P
     LocateNodes,
     LocateNodesResult,
     LogEntry,
+    Message,
     Navigate,
     NavigateResult,
     PerformActions,
@@ -76,6 +77,7 @@ import WebDriverPreCore.BiDi.Protocol as P
     PrintResult,
     ProvideResponse,
     RealmDestroyed,
+    RealmInfo,
     ReleaseActions,
     Reload,
     RemoveDataCollector,
@@ -86,8 +88,8 @@ import WebDriverPreCore.BiDi.Protocol as P
     ResponseStarted,
     SessionNewResult,
     SessionStatusResult,
-    SessionSubscribeResult (..),
     SessionSubscibe (..),
+    SessionSubscribeResult (..),
     SessionUnsubscribe (..),
     SetCacheBehavior,
     SetClientWindowState,
@@ -114,8 +116,6 @@ import WebDriverPreCore.BiDi.Protocol as P
     WebExtensionInstall,
     WebExtensionResult,
     WebExtensionUninstall,
-    Message,
-    RealmInfo
   )
 
 data BiDiActions = MkBiDiActions
@@ -426,7 +426,11 @@ mkActions socket =
     unsubscribeMany subIds = runnerUnsubscribe (UnsubscribeById subIds)
 
     toBiDi :: Command r -> Socket.SocketCommand Text r
-    toBiDi MkCommand {method, params} = Socket.MkSocketCommand {method = toMethodText method, params}
+    toBiDi MkCommand {method, params} =
+      Socket.MkSocketCommand
+        { method = toMethodText method,
+          params = Object params
+        }
 
     send :: forall r. (FromJSON r) => Command r -> IO r
     send = Socket.sendCommand socket . toBiDi

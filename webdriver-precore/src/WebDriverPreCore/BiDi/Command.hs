@@ -14,15 +14,15 @@ import Data.Aeson.KeyMap qualified as KM
 
 data Command r = MkCommand
   { method :: CommandMethod,
-    params :: Value
+    params :: Object
   }
   deriving (Show, Eq)
 
 mkCommand :: forall c r. (ToJSON c) => KnownCommand -> c -> Command r
-mkCommand method params = MkCommand {method = KnownCommand method, params = toJSON params}
+mkCommand method params = MkCommand {method = KnownCommand method, params = objectOrThrow ("mkCommand - " <> toMethodText (KnownCommand method)) params}
 
 emptyCommand :: forall r. KnownCommand -> Command r
-emptyCommand method = MkCommand {method = KnownCommand method, params = Object KM.empty}
+emptyCommand method = MkCommand {method = KnownCommand method, params = KM.empty}
 
 loosenCommand :: forall r. Command r -> Command Object
 loosenCommand = extendCommandPriv KM.empty 
@@ -33,16 +33,14 @@ extendCommandAny = extendCommandPriv
 extendCommand :: forall r. Object -> Command r -> Command r
 extendCommand = extendCommandPriv
 
-mkAnyCommand :: Text -> Value -> Command Value
-mkAnyCommand method = MkCommand (UnknownCommand $ MkUnknownCommand method)
+mkUnknownCommand :: Text -> Object -> Command Object
+mkUnknownCommand method = MkCommand (UnknownCommand $ MkUnknownCommand method) 
 
 extendCommandPriv :: forall r r2. Object -> Command r -> Command r2
 extendCommandPriv extended MkCommand {method, params} =
   MkCommand
     { method,
-      params = Object $ case params of
-        Null -> extended
-        obj -> objectOrThrow ("Failed setting command parameters for method: " <> toMethodText method) obj <> extended
+      params = params <> extended
     }
 
 data CommandMethod = KnownCommand KnownCommand | UnknownCommand UnknownCommand
