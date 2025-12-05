@@ -54,6 +54,8 @@ module WebDriverPreCore.BiDi.Network
     FetchError (..),
     ResponseCompleted (..),
     ResponseStarted (..),
+    HTTPMethod (..),
+    FetchTimingInfo (..),
   )
 where
 

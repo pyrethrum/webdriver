@@ -1,7 +1,13 @@
 {-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE DerivingStrategies #-}
 
-module WebDriverPreCore.BiDi.WebExtensions where
+module WebDriverPreCore.BiDi.WebExtensions
+  ( WebExtensionID (..),
+    WebExtensionInstall (..),
+    WebExtensionUninstall (..),
+    WebExtensionResult (..),
+  )
+where
 
 import Data.Aeson (FromJSON, ToJSON (..), Value, object, (.=))
 import Data.Text (Text)

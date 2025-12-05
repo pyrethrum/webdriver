@@ -1,6 +1,18 @@
 {-# LANGUAGE DeriveAnyClass #-}
 
-module WebDriverPreCore.BiDi.Storage where
+module WebDriverPreCore.BiDi.Storage
+  ( PartitionKey (..),
+    GetCookiesResult (..),
+    SetCookieResult (..),
+    DeleteCookiesResult (..),
+    GetCookies (..),
+    CookieFilter (..),
+    PartitionDescriptor (..),
+    SetCookie (..),
+    PartialCookie (..),
+    DeleteCookies (..),
+  )
+where
 
 {-
 create types to represent the remote and local end for storage:

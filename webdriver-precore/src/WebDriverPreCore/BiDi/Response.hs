@@ -1,4 +1,15 @@
-module WebDriverPreCore.BiDi.Response where
+module WebDriverPreCore.BiDi.Response
+  ( parseResponse,
+    matchResponseId,
+    decodeResponse,
+    MatchedResponse (..),
+    ResponseObject (..),
+    JSONDecodeError (..),
+    ResponseError (..),
+    displayResponseError,
+    Success (..),
+  )
+where
 
 import Data.Aeson (FromJSON (parseJSON), Object, Value (..), eitherDecode, withObject, (.:), (.:?))
 import Data.Aeson.Types (Parser, parseEither)

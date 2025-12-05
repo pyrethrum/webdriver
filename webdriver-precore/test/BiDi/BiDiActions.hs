@@ -20,7 +20,7 @@ import WebDriverPreCore.BiDi.Protocol
     Subscription (..),
     UserPromptClosed,
     UserPromptOpened,
-    toMethodText,
+    toCommandText,
   )
 import WebDriverPreCore.BiDi.Protocol as P
   ( Activate,
@@ -428,7 +428,7 @@ mkActions socket =
     toBiDi :: Command r -> Socket.SocketCommand Text r
     toBiDi MkCommand {method, params} =
       Socket.MkSocketCommand
-        { method = toMethodText method,
+        { method = toCommandText method,
           params = Object params
         }
 

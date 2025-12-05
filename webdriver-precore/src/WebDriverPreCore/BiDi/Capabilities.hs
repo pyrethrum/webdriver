@@ -1,4 +1,13 @@
-module WebDriverPreCore.BiDi.Capabilities where
+module WebDriverPreCore.BiDi.Capabilities
+  ( Capabilities (..),
+    Capability (..),
+    ProxyConfiguration (..),
+    SocksProxyConfiguration (..),
+    UserPromptHandler (..),
+    UserPromptHandlerType (..),
+    CapabilitiesResult (..),
+  )
+where
 
 import Data.Aeson (FromJSON (..), ToJSON (..), Value (..), object, (.=))
 import Data.Maybe (catMaybes)

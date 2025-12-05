@@ -1,4 +1,20 @@
-module WebDriverPreCore.BiDi.Command where
+module WebDriverPreCore.BiDi.Command
+  ( Command (..),
+    mkCommand,
+    emptyCommand,
+    mkUnknownCommand,
+    extendLoosenCommand,
+    extendCommand,
+    extendCoerceCommand,
+    loosenCommand,
+    coerceCommand,
+    CommandMethod (..),
+    KnownCommand (..),
+    knownCommandToText,
+    UnknownCommand (..),
+    toCommandText,
+  )
+where
 
 import Control.Applicative (Alternative (..))
 import Data.Aeson
@@ -19,7 +35,7 @@ data Command r = MkCommand
   deriving (Show, Eq)
 
 mkCommand :: forall c r. (ToJSON c) => KnownCommand -> c -> Command r
-mkCommand method params = MkCommand {method = KnownCommand method, params = objectOrThrow ("mkCommand - " <> toMethodText (KnownCommand method)) params}
+mkCommand method params = MkCommand {method = KnownCommand method, params = objectOrThrow ("mkCommand - " <> toCommandText (KnownCommand method)) params}
 
 emptyCommand :: forall r. KnownCommand -> Command r
 emptyCommand method = MkCommand {method = KnownCommand method, params = KM.empty}
@@ -51,7 +67,7 @@ data CommandMethod = KnownCommand KnownCommand | UnknownCommand UnknownCommand
 
 instance ToJSON CommandMethod where
   toJSON :: CommandMethod -> Value
-  toJSON = String . toMethodText
+  toJSON = String . toCommandText
 
 data KnownCommand
   = BrowserClose
@@ -119,7 +135,7 @@ data KnownCommand
 
 instance ToJSON KnownCommand where
   toJSON :: KnownCommand -> Value
-  toJSON = String . knownMethodToText
+  toJSON = String . knownCommandToText
 
 instance FromJSON KnownCommand where
   parseJSON :: Value -> Parser KnownCommand
@@ -198,10 +214,10 @@ instance FromJSON KnownCommand where
             <> " - "
             <> "Expected one of: "
             <> " "
-            <> (T.intercalate ", " $ knownMethodToText <$> enumerate @KnownCommand)
+            <> (T.intercalate ", " $ knownCommandToText <$> enumerate @KnownCommand)
 
-knownMethodToText :: KnownCommand -> Text
-knownMethodToText = \case
+knownCommandToText :: KnownCommand -> Text
+knownCommandToText = \case
   BrowserClose -> "browser.close"
   BrowserCreateUserContext -> "browser.createUserContext"
   BrowserGetClientWindows -> "browser.getClientWindows"
@@ -268,9 +284,9 @@ newtype UnknownCommand = MkUnknownCommand {command :: Text}
   deriving (Show, Eq)
   deriving newtype (FromJSON, ToJSON)
 
-toMethodText :: CommandMethod -> Text
-toMethodText = \case
-  KnownCommand k -> knownMethodToText k
+toCommandText :: CommandMethod -> Text
+toCommandText = \case
+  KnownCommand k -> knownCommandToText k
   UnknownCommand (MkUnknownCommand t) -> t
 
 instance FromJSON CommandMethod where
@@ -287,4 +303,4 @@ instance FromJSON CommandMethod where
             <> " - "
             <> "Expected a string, the standard command types of whcih are: "
             <> " "
-            <> (T.intercalate ", " $ knownMethodToText <$> enumerate @KnownCommand)
+            <> (T.intercalate ", " $ knownCommandToText <$> enumerate @KnownCommand)

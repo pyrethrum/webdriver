@@ -1,4 +1,11 @@
-module WebDriverPreCore.BiDi.Event where
+module WebDriverPreCore.BiDi.Event
+  ( mkSingleSubscription,
+    mkMultiSubscription,
+    mkUnknownSubscription,
+    Subscription (..),
+    Event (..),
+  )
+where
 
 import Data.Aeson (FromJSON (..), Value (..), withObject, (.:))
 import Data.Aeson.Types (Parser)

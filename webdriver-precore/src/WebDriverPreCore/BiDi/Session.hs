@@ -1,4 +1,12 @@
-module WebDriverPreCore.BiDi.Session where
+module WebDriverPreCore.BiDi.Session
+  ( SubscriptionId (..),
+    SessionSubscibe (..),
+    SessionUnsubscribe (..),
+    SessionNewResult (..),
+    SessionStatusResult (..),
+    SessionSubscribeResult (..),
+  )
+where
 
 import Data.Aeson (FromJSON (..), ToJSON (..), Value (..), object, withObject, (.:), (.=))
 import Data.Aeson.Types (Parser)
