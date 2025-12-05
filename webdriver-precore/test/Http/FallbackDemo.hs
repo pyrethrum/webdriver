@@ -3,10 +3,10 @@ module Http.FallbackDemo where
 import Data.Aeson as A (Value (..))
 import Data.Aeson qualified as A
 import Data.Aeson.KeyMap qualified as A
+import Data.Function ((&))
 import Data.Text (Text)
 import Http.DemoUtils (HttpDemo, runDemo, sessionDemo)
 import Http.HttpActions (HttpActions (..))
-import Http.HttpRunner (Extended (..))
 import IOUtils (DemoActions (..))
 import TestData (checkboxesUrl, textAreaUrl)
 import WebDriverPreCore.Http.API qualified as A
@@ -15,8 +15,6 @@ import WebDriverPreCore.Http.Protocol
     ElementId (..),
     SessionId (..),
     coerceCommand,
-    extendPost,
-    extendPostLoosen,
     loosenCommand,
     voidCommand,
   )
@@ -42,7 +40,7 @@ demoFallbackActions =
       logTxt "Navigate using runCommand"
       -- as we haven't put a type signature on navigateCmd, we need to use @() to indicate we expect no return value
       navigateResult <- runCommand @() navigateCmd
-      logShow "Navigate response" navigateResult.fullResponse
+      logShow "Navigate response" navigateResult
       pause
 
       -- Find the checkbox using Value command with runCommand
@@ -55,41 +53,60 @@ demoFallbackActions =
 
       logTxt "Find checkbox element using Value command and runCommand"
       -- as we haven't put a type signature on findElementCmd, we need to use @Value to indicate we expect a Value return type
-      elementResult <- runCommand @Value findElementCmd
-      logShow "Element search result" elementResult.parsed
-      logShow "Full response" elementResult.fullResponse
+      val <- runCommand @Value findElementCmd
+      logShow "Element search result" val
+      logShow "Full response" val
       pause
 
       -- Extract element ID from the Value result
-      let checkboxId = case elementResult.parsed of
-            A.Object obj -> case A.lookup "element-6066-11e4-a52e-4f735466cecf" obj of
-              Just (A.String eid) -> MkElement eid
-              _ -> error "Failed to extract element ID from response"
+      let checkboxId = case val of
+            A.Object obj ->
+              A.lookup "element-6066-11e4-a52e-4f735466cecf" obj
+                & maybe
+                  (error "Failed to extract element ID from response")
+                  ( \case
+                      A.String eid -> MkElement eid
+                      _ -> error "Expected string for element ID"
+                  )
             _ -> error "Expected object in response"
 
       logShow "Extracted element ID" checkboxId
       pause
 
+newtype MyURL = MkMyURL {getMyURL :: Text}
+  deriving (Show, Eq)
+  deriving newtype (A.FromJSON)
+
 -- >>> runDemo demoFallbackCoercions
 demoFallbackCoercions :: HttpDemo
 demoFallbackCoercions =
-  sessionDemo "fallback actions demo" action
+  sessionDemo "fallback coerce commands" action
   where
     action :: SessionId -> DemoActions -> HttpActions -> IO ()
     action sesId MkDemoActions {..} MkHttpActions {runCommand, runCommand'} = do
-      let runAnyCommand :: forall a. Command a -> IO Value
-          runAnyCommand = runCommand' . coerceCommand
-
       -- Navigate to another page using typed Navigate command and getResponse
       logTxt "Navigate to another page using typed command and getResponse (navigateTo returns Command ())"
       url2 <- textAreaUrl
-      navigateResponse <- runCommand' . voidCommand $ A.navigateTo sesId url2
-      logShow "Typed navigate response" navigateResponse
+      runCommand $ A.navigateTo sesId url2
       pause
 
-      url' <- runAnyCommand $ A.getCurrentUrl sesId
-      logShow "Current url" url'
+      logTxt "Return a different type with compatible JSON (runCommand will return MyURL both the parsed and full Aeson Value)"
+      myUrl <- runCommand . coerceCommand @_ @MyURL $ A.getCurrentUrl sesId
+      logShow "Current url - coerced" myUrl
       pause
+
+      logTxt "Return Value rather than url"
+      url' <- runCommand . loosenCommand $ A.getCurrentUrl sesId
+      logShow "Current url - as Value" url'
+      pause
+
+      logTxt "Return void rather than url"
+      urlVoid <- runCommand . voidCommand $ A.getCurrentUrl sesId
+      logShow "Current url - voided" urlVoid
+      pause
+
+
+demoExtendPost :: HttpDemo
 
 -- Helper functions (copied from API.hs since they're not exported)
 

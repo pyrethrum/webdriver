@@ -47,7 +47,7 @@ mkUnknownCommand method = MkCommand (UnknownCommand $ MkUnknownCommand method)
 
 -- fallback modifiers
 
-extendLoosenCommand :: forall r. Object -> Command r -> Command Object
+extendLoosenCommand :: forall r. Object -> Command r -> Command Value
 extendLoosenCommand = extendCoerceCommand
 
 extendCommand :: forall r. Object -> Command r -> Command r
@@ -60,7 +60,7 @@ extendCoerceCommand extended MkCommand {method, params} =
       params = params <> extended
     }
 
-loosenCommand :: forall r. Command r -> Command Object
+loosenCommand :: forall r. Command r -> Command Value
 loosenCommand = coerceCommand
 
 coerceCommand :: forall r r'. Command r -> Command r'

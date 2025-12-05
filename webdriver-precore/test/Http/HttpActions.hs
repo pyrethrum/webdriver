@@ -6,7 +6,7 @@ where
 
 import Data.Aeson (FromJSON, Value)
 import Data.Text (Text)
-import Http.HttpRunner (Extended, HttpRunner (..))
+import Http.HttpRunner (HttpRunner (..))
 import WebDriverPreCore.Http.API qualified as API
 import WebDriverPreCore.Http.Protocol
   ( Actions (..),
@@ -98,26 +98,26 @@ data HttpActions = MkHttpActions
     findElementFromShadowRoot :: SessionId -> ShadowRootElementId -> Selector -> IO ElementId,
     findElementsFromShadowRoot :: SessionId -> ShadowRootElementId -> Selector -> IO [ElementId],
     -- Fallback methods
-    runCommand :: forall a. (FromJSON a) => Command a -> IO (Extended a),
-    runCommand' :: Command () -> IO Value
+    runCommand :: forall a. (FromJSON a) => Command a -> IO a,
+    runCommand' ::forall a. (FromJSON a) => Command a -> IO Value
   }
 
 mkActions :: HttpRunner -> HttpActions
-mkActions MkHttpRunner {run, run', run_, fullResponse} =
+mkActions MkHttpRunner {run,  fullResponse} =
   MkHttpActions
     { -- Root methods
       status = run API.status,
       newSession = run . API.newSession,
  
       -- Session methods
-      deleteSession = run_ . API.deleteSession,
+      deleteSession = run . API.deleteSession,
       getTimeouts = run . API.getTimeouts,
       setTimeouts = sessRun_ API.setTimeouts,
       navigateTo = sessRun_ API.navigateTo,
       getCurrentUrl = run . API.getCurrentUrl,
-      back = run_ . API.back,
-      forward = run_ . API.forward,
-      refresh = run_ . API.refresh,
+      back = run . API.back,
+      forward = run . API.forward,
+      refresh = run . API.refresh,
       getTitle = run . API.getTitle,
       getWindowHandle = run . API.getWindowHandle,
       newWindow = run . API.newWindow,
@@ -131,11 +131,11 @@ mkActions MkHttpRunner {run, run', run_, fullResponse} =
       getAllCookies = run . API.getAllCookies,
       getNamedCookie = sessRun API.getNamedCookie,
       deleteCookie = sessRun_ API.deleteCookie,
-      deleteAllCookies = run_ . API.deleteAllCookies,
+      deleteAllCookies = run . API.deleteAllCookies,
       performActions = sessRun_ API.performActions,
-      releaseActions = run_ . API.releaseActions,
-      dismissAlert = run_ . API.dismissAlert,
-      acceptAlert = run_ . API.acceptAlert,
+      releaseActions = run . API.releaseActions,
+      dismissAlert = run . API.dismissAlert,
+      acceptAlert = run . API.acceptAlert,
       getAlertText = run . API.getAlertText,
       sendAlertText = sessRun_ API.sendAlertText,
       takeScreenshot = run . API.takeScreenshot,
@@ -148,7 +148,7 @@ mkActions MkHttpRunner {run, run', run_, fullResponse} =
       minimizeWindow = run . API.minimizeWindow,
       fullScreenWindow = run . API.fullScreenWindow,
       -- Frame methods
-      switchToParentFrame = run_ . API.switchToParentFrame,
+      switchToParentFrame = run . API.switchToParentFrame,
       -- Element(s) methods
       getActiveElement = run . API.getActiveElement,
       findElement = sessRun API.findElement,
@@ -175,7 +175,7 @@ mkActions MkHttpRunner {run, run', run_, fullResponse} =
       findElementFromShadowRoot = sessRun2 API.findElementFromShadowRoot,
       findElementsFromShadowRoot = sessRun2 API.findElementsFromShadowRoot,
       --
-      runCommand = run',
+      runCommand = run,
       runCommand' = fullResponse
     }
   where
@@ -183,7 +183,7 @@ mkActions MkHttpRunner {run, run', run_, fullResponse} =
     sessRun f s = run . f s
 
     sessRun_ :: forall a. (SessionId -> a -> Command ()) -> SessionId -> a -> IO ()
-    sessRun_ f s = run_ . f s
+    sessRun_ f s = run . f s
 
     sessRun2 :: forall a b r. (FromJSON r) => (SessionId -> a -> b -> Command r) -> SessionId -> a -> b -> IO r
     sessRun2 f s a = run . f s a

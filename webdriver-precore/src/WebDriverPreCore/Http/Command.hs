@@ -14,7 +14,7 @@ where
 
 import Data.Aeson as A
   ( Object,
-    ToJSON (..),
+    ToJSON (..), Value,
   )
 import Data.Text (Text)
 import WebDriverPreCore.Internal.AesonUtils (objectOrThrow)
@@ -60,13 +60,13 @@ coerceCommand = \case
   Delete {description, path} -> Delete {description, path}
 
 
-loosenCommand :: forall r. Command r -> Command Object
+loosenCommand :: forall r. Command r -> Command Value
 loosenCommand = coerceCommand
 
 voidCommand :: Command a -> Command ()
 voidCommand = coerceCommand
 
-extendPostLoosen :: forall r. Command r -> Object -> Command Object
+extendPostLoosen :: forall r. Command r -> Object -> Command Value
 extendPostLoosen = extendCoercePost
 
 extendPost :: forall r. Command r -> Object -> Command r
