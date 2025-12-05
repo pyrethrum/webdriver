@@ -6,6 +6,9 @@ module WebDriverPreCore.Http.Command
     mkPost',
     voidCommand,
     loosenCommand,
+    coerceCommand,
+    extendPost,
+    extendPostLoosen,
   )
 where
 
@@ -56,18 +59,24 @@ data Command r
 
 -- fallback
 
--- emptyCommand :: forall r. KnownCommand -> Command r
--- emptyCommand method = MkCommand {method = KnownCommand method, params = Object KM.empty}
-
 loosenCommand :: forall r. Command r -> Command Object
-loosenCommand = \case
-  Get {..} -> Get {..}
-  Post {..} -> Post {..}
-  PostEmpty {..} -> PostEmpty {..}
-  Delete {..} -> Delete {..}
+loosenCommand = coerceCommand
 
-extendPost :: forall r. Command r -> Object -> Command Object
-extendPost cmd extended =
+coerceCommand  :: forall r r'. Command r -> Command r'
+coerceCommand = \case
+  Get {description, path} -> Get {description, path}
+  Post {description, path, body} -> Post {description, path, body}
+  PostEmpty {description, path} -> PostEmpty {description, path}
+  Delete {description, path} -> Delete {description, path}
+
+extendPostLoosen :: forall r. Command r -> Object -> Command Object
+extendPostLoosen = extendCoercePost
+
+extendPost :: forall r. Command r -> Object -> Command r
+extendPost = extendCoercePost
+
+extendCoercePost :: forall r r2. Command r -> Object -> Command r2
+extendCoercePost cmd extended =
   case cmd of
     Post {description, path, body} -> Post {description, path, body = body <> extended}
     PostEmpty {description, path} -> Post {description = description, path = path, body = extended}
@@ -76,14 +85,3 @@ extendPost cmd extended =
     del@Delete {} -> 
         error $ "extendPost called with Delete Command (extendPost can only be called with Post or PostEmpty commands): " <> show del
 
--- extendCommandAny :: forall r. Object -> Command r -> Command Object
--- extendCommandAny = extendCommandPriv
-
--- extendCommand :: forall r. Object -> Command r -> Command r
--- extendCommand = extendCommandPriv
-
--- mkAnyCommand :: Text -> Value -> Command Value
--- mkAnyCommand method = MkCommand (UnknownCommand $ MkUnknownCommand method)
-
--- extendCommandPriv :: forall r r2. Object -> Command r -> Command r2
--- extendCommandPriv extended cmd =
