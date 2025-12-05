@@ -1,5 +1,5 @@
 module WebDriverPreCore.BiDi.Event
-  ( mkSingleSubscription,
+  ( mkSubscription,
     mkMultiSubscription,
     mkUnknownSubscription,
     Subscription (..),
@@ -18,7 +18,7 @@ import WebDriverPreCore.BiDi.Log (LogEvent)
 import WebDriverPreCore.BiDi.Network (NetworkEvent (..))
 import WebDriverPreCore.BiDi.Script (ScriptEvent (..))
 
-mkSingleSubscription ::
+mkSubscription ::
   forall m r.
   (FromJSON r) =>
   KnownSubscriptionType ->
@@ -26,7 +26,7 @@ mkSingleSubscription ::
   [UserContext] ->
   (r -> m ()) ->
   Subscription m
-mkSingleSubscription subType =
+mkSubscription subType =
   SingleSubscription (KnownSubscriptionType subType)
 
 mkMultiSubscription ::

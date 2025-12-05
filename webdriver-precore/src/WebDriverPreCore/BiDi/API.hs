@@ -106,9 +106,6 @@ module WebDriverPreCore.BiDi.API
 
     -- * Fallback Subscriptions
     subscribeUnknownMany,
-
-    -- * Fallback Commands
-    module FallbackCommand,
   )
 where
 
@@ -214,17 +211,11 @@ import WebDriverPreCore.BiDi.Protocol
     WebExtensionInstall,
     WebExtensionResult,
     WebExtensionUninstall,
-    mkMultiSubscription,
-    mkSingleSubscription,
-    mkUnknownSubscription,
-  )
-import WebDriverPreCore.BiDi.Protocol as FallbackCommand
-  ( emptyCommand,
-    extendCommand,
-    extendLoosenCommand,
-    loosenCommand,
-    mkUnknownCommand,
+    emptyCommand,
     mkCommand,
+    mkMultiSubscription,
+    mkSubscription,
+    mkUnknownSubscription,
   )
 import WebDriverPreCore.BiDi.Script (Message, RealmInfo)
 
@@ -459,98 +450,98 @@ subscribeBrowsingContextCreated ::
   [UserContext] ->
   (Info -> m ()) ->
   Subscription m
-subscribeBrowsingContextCreated = mkSingleSubscription BrowsingContextContextCreated
+subscribeBrowsingContextCreated = mkSubscription BrowsingContextContextCreated
 
 subscribeBrowsingContextDestroyed ::
   [BrowsingContext] ->
   [UserContext] ->
   (Info -> m ()) ->
   Subscription m
-subscribeBrowsingContextDestroyed = mkSingleSubscription BrowsingContextContextDestroyed
+subscribeBrowsingContextDestroyed = mkSubscription BrowsingContextContextDestroyed
 
 subscribeBrowsingContextNavigationStarted ::
   [BrowsingContext] ->
   [UserContext] ->
   (NavigationInfo -> m ()) ->
   Subscription m
-subscribeBrowsingContextNavigationStarted = mkSingleSubscription BrowsingContextNavigationStarted
+subscribeBrowsingContextNavigationStarted = mkSubscription BrowsingContextNavigationStarted
 
 subscribeBrowsingContextFragmentNavigated ::
   [BrowsingContext] ->
   [UserContext] ->
   (NavigationInfo -> m ()) ->
   Subscription m
-subscribeBrowsingContextFragmentNavigated = mkSingleSubscription BrowsingContextFragmentNavigated
+subscribeBrowsingContextFragmentNavigated = mkSubscription BrowsingContextFragmentNavigated
 
 subscribeBrowsingContextHistoryUpdated ::
   [BrowsingContext] ->
   [UserContext] ->
   (HistoryUpdated -> m ()) ->
   Subscription m
-subscribeBrowsingContextHistoryUpdated = mkSingleSubscription BrowsingContextHistoryUpdated
+subscribeBrowsingContextHistoryUpdated = mkSubscription BrowsingContextHistoryUpdated
 
 subscribeBrowsingContextDomContentLoaded ::
   [BrowsingContext] ->
   [UserContext] ->
   (NavigationInfo -> m ()) ->
   Subscription m
-subscribeBrowsingContextDomContentLoaded = mkSingleSubscription BrowsingContextDomContentLoaded
+subscribeBrowsingContextDomContentLoaded = mkSubscription BrowsingContextDomContentLoaded
 
 subscribeBrowsingContextLoad ::
   [BrowsingContext] ->
   [UserContext] ->
   (NavigationInfo -> m ()) ->
   Subscription m
-subscribeBrowsingContextLoad = mkSingleSubscription BrowsingContextLoad
+subscribeBrowsingContextLoad = mkSubscription BrowsingContextLoad
 
 subscribeBrowsingContextDownloadWillBegin ::
   [BrowsingContext] ->
   [UserContext] ->
   (DownloadWillBegin -> m ()) ->
   Subscription m
-subscribeBrowsingContextDownloadWillBegin = mkSingleSubscription BrowsingContextDownloadWillBegin
+subscribeBrowsingContextDownloadWillBegin = mkSubscription BrowsingContextDownloadWillBegin
 
 subscribeBrowsingContextDownloadEnd ::
   [BrowsingContext] ->
   [UserContext] ->
   (DownloadEnd -> m ()) ->
   Subscription m
-subscribeBrowsingContextDownloadEnd = mkSingleSubscription BrowsingContextDownloadEnd
+subscribeBrowsingContextDownloadEnd = mkSubscription BrowsingContextDownloadEnd
 
 subscribeBrowsingContextNavigationAborted ::
   [BrowsingContext] ->
   [UserContext] ->
   (NavigationInfo -> m ()) ->
   Subscription m
-subscribeBrowsingContextNavigationAborted = mkSingleSubscription BrowsingContextNavigationAborted
+subscribeBrowsingContextNavigationAborted = mkSubscription BrowsingContextNavigationAborted
 
 subscribeBrowsingContextNavigationCommitted ::
   [BrowsingContext] ->
   [UserContext] ->
   (NavigationInfo -> m ()) ->
   Subscription m
-subscribeBrowsingContextNavigationCommitted = mkSingleSubscription BrowsingContextNavigationCommitted
+subscribeBrowsingContextNavigationCommitted = mkSubscription BrowsingContextNavigationCommitted
 
 subscribeBrowsingContextNavigationFailed ::
   [BrowsingContext] ->
   [UserContext] ->
   (NavigationInfo -> m ()) ->
   Subscription m
-subscribeBrowsingContextNavigationFailed = mkSingleSubscription BrowsingContextNavigationFailed
+subscribeBrowsingContextNavigationFailed = mkSubscription BrowsingContextNavigationFailed
 
 subscribeBrowsingContextUserPromptClosed ::
   [BrowsingContext] ->
   [UserContext] ->
   (UserPromptClosed -> m ()) ->
   Subscription m
-subscribeBrowsingContextUserPromptClosed = mkSingleSubscription BrowsingContextUserPromptClosed
+subscribeBrowsingContextUserPromptClosed = mkSubscription BrowsingContextUserPromptClosed
 
 subscribeBrowsingContextUserPromptOpened ::
   [BrowsingContext] ->
   [UserContext] ->
   (UserPromptOpened -> m ()) ->
   Subscription m
-subscribeBrowsingContextUserPromptOpened = mkSingleSubscription BrowsingContextUserPromptOpened
+subscribeBrowsingContextUserPromptOpened = mkSubscription BrowsingContextUserPromptOpened
 
 ---- Log ----
 
@@ -559,7 +550,7 @@ subscribeLogEntryAdded ::
   [UserContext] ->
   (LogEntry -> m ()) ->
   Subscription m
-subscribeLogEntryAdded = mkSingleSubscription LogEntryAdded
+subscribeLogEntryAdded = mkSubscription LogEntryAdded
 
 ---- Network ----
 
@@ -568,35 +559,35 @@ subscribeNetworkAuthRequired ::
   [UserContext] ->
   (AuthRequired -> m ()) ->
   Subscription m
-subscribeNetworkAuthRequired = mkSingleSubscription NetworkAuthRequired
+subscribeNetworkAuthRequired = mkSubscription NetworkAuthRequired
 
 subscribeNetworkBeforeRequestSent ::
   [BrowsingContext] ->
   [UserContext] ->
   (BeforeRequestSent -> m ()) ->
   Subscription m
-subscribeNetworkBeforeRequestSent = mkSingleSubscription NetworkBeforeRequestSent
+subscribeNetworkBeforeRequestSent = mkSubscription NetworkBeforeRequestSent
 
 subscribeNetworkFetchError ::
   [BrowsingContext] ->
   [UserContext] ->
   (FetchError -> m ()) ->
   Subscription m
-subscribeNetworkFetchError = mkSingleSubscription NetworkFetchError
+subscribeNetworkFetchError = mkSubscription NetworkFetchError
 
 subscribeNetworkResponseCompleted ::
   [BrowsingContext] ->
   [UserContext] ->
   (ResponseCompleted -> m ()) ->
   Subscription m
-subscribeNetworkResponseCompleted = mkSingleSubscription NetworkResponseCompleted
+subscribeNetworkResponseCompleted = mkSubscription NetworkResponseCompleted
 
 subscribeNetworkResponseStarted ::
   [BrowsingContext] ->
   [UserContext] ->
   (ResponseStarted -> m ()) ->
   Subscription m
-subscribeNetworkResponseStarted = mkSingleSubscription NetworkResponseStarted
+subscribeNetworkResponseStarted = mkSubscription NetworkResponseStarted
 
 ---- Script ----
 
@@ -605,21 +596,21 @@ subscribeScriptMessage ::
   [UserContext] ->
   (Message -> m ()) ->
   Subscription m
-subscribeScriptMessage = mkSingleSubscription ScriptMessage
+subscribeScriptMessage = mkSubscription ScriptMessage
 
 subscribeScriptRealmCreated ::
   [BrowsingContext] ->
   [UserContext] ->
   (RealmInfo -> m ()) ->
   Subscription m
-subscribeScriptRealmCreated = mkSingleSubscription ScriptRealmCreated
+subscribeScriptRealmCreated = mkSubscription ScriptRealmCreated
 
 subscribeScriptRealmDestroyed ::
   [BrowsingContext] ->
   [UserContext] ->
   (RealmDestroyed -> m ()) ->
   Subscription m
-subscribeScriptRealmDestroyed = mkSingleSubscription ScriptRealmDestroyed
+subscribeScriptRealmDestroyed = mkSubscription ScriptRealmDestroyed
 
 ---- Input ----
 
@@ -628,4 +619,4 @@ subscribeInputFileDialogOpened ::
   [UserContext] ->
   (FileDialogOpened -> m ()) ->
   Subscription m
-subscribeInputFileDialogOpened = mkSingleSubscription InputFileDialogOpened
+subscribeInputFileDialogOpened = mkSubscription InputFileDialogOpened

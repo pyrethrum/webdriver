@@ -75,8 +75,6 @@ module WebDriverPreCore.Http.API
     -- * Shadow DOM Methods
     findElementFromShadowRoot,
     findElementsFromShadowRoot,
-
-    -- * TODO Fallabck - may not need anything
   )
 where
 
@@ -85,7 +83,6 @@ import Data.Aeson as A
     Value (..),
   )
 import Data.Text (Text)
-import WebDriverPreCore.Http.Command (Command (..), mkPost, mkPost')
 import WebDriverPreCore.Http.Protocol
   ( Actions (..),
     Cookie (..),
@@ -102,7 +99,10 @@ import WebDriverPreCore.Http.Protocol
     Handle (..),
     WindowHandleSpec (..),
     WindowRect (..), 
-    ShadowRootElementId(..)
+    ShadowRootElementId(..),
+    Command(..),
+    mkPost,
+    mkPost'
   )
 import WebDriverPreCore.Internal.Utils (UrlPath (..), newSessionUrl, session)
 import Prelude hiding (id, lookup)

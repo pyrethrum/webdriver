@@ -20,16 +20,13 @@ import WebDriverPreCore.Internal.Utils (UrlPath (..))
 import Prelude hiding (log)
 
 -- >>> runDemo demoFallbackActions
-
--- *** Exception: runCommand not implemented in legacy actions
-
 demoFallbackActions :: HttpDemo
 demoFallbackActions =
   sessionDemo "fallback actions demo" action
   where
     action :: SessionId -> DemoActions -> HttpActions -> IO ()
     action sesId MkDemoActions {..} MkHttpActions {..} = do
-      -- Step 1: Navigate to checkboxes page using runCommand and log the response
+      -- Navigate to checkboxes page using runCommand and log the response
       url <- checkboxesUrl
       let navigateCmd =
             Post
@@ -43,7 +40,7 @@ demoFallbackActions =
       logShow "Navigate response" navigateResult.fullResponse
       pause
 
-      -- Step 2: Find the checkbox using Value command with runCommand
+      -- Find the checkbox using Value command with runCommand
       let findElementCmd =
             Post
               { description = "Find Element (using fallback Value)",
@@ -67,7 +64,7 @@ demoFallbackActions =
       logShow "Extracted element ID" checkboxId
       pause
 
-      -- Step 3: Click the checkbox using Value command and getResponse
+      -- Click the checkbox using Value command and getResponse
 
       let clickCmd :: Command ()
           clickCmd =
@@ -87,7 +84,7 @@ demoFallbackActions =
           runAnyCommand :: forall a. Command a -> IO Value
           runAnyCommand = runCommand' . voidCommand
 
-      -- Step 4: Navigate to another page using typed Navigate command and getResponse
+      -- Navigate to another page using typed Navigate command and getResponse
       logTxt "Step 4: Navigate to another page using typed command and getResponse (navigateTo returns Command ())"
       url2 <- textAreaUrl
       navigateResponse <- runAnyCommand $ A.navigateTo sesId url2

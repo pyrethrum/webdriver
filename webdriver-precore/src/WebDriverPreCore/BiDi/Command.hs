@@ -34,6 +34,8 @@ data Command r = MkCommand
   }
   deriving (Show, Eq)
 
+-- constructors
+
 mkCommand :: forall c r. (ToJSON c) => KnownCommand -> c -> Command r
 mkCommand method params = MkCommand {method = KnownCommand method, params = objectOrThrow ("mkCommand - " <> toCommandText (KnownCommand method)) params}
 
@@ -42,6 +44,8 @@ emptyCommand method = MkCommand {method = KnownCommand method, params = KM.empty
 
 mkUnknownCommand :: Text -> Object -> Command Object
 mkUnknownCommand method = MkCommand (UnknownCommand $ MkUnknownCommand method) 
+
+-- fallback modifiers
 
 extendLoosenCommand :: forall r. Object -> Command r -> Command Object
 extendLoosenCommand = extendCoerceCommand
@@ -60,7 +64,9 @@ loosenCommand :: forall r. Command r -> Command Object
 loosenCommand = coerceCommand
 
 coerceCommand :: forall r r'. Command r -> Command r'
-coerceCommand MkCommand {method, params}  = MkCommand {method, params}  
+coerceCommand MkCommand {method, params}  = MkCommand {method, params} 
+
+--
 
 data CommandMethod = KnownCommand KnownCommand | UnknownCommand UnknownCommand
   deriving (Show, Eq)
