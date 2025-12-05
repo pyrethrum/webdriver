@@ -14,6 +14,10 @@ import WebDriverPreCore.Http.Protocol
   ( Command (..),
     ElementId (..),
     SessionId (..),
+    coerceCommand,
+    extendPost,
+    extendPostLoosen,
+    loosenCommand,
     voidCommand,
   )
 import WebDriverPreCore.Internal.Utils (UrlPath (..))
@@ -25,7 +29,7 @@ demoFallbackActions =
   sessionDemo "fallback actions demo" action
   where
     action :: SessionId -> DemoActions -> HttpActions -> IO ()
-    action sesId MkDemoActions {..} MkHttpActions {..} = do
+    action sesId MkDemoActions {..} MkHttpActions {runCommand, runCommand'} = do
       -- Navigate to checkboxes page using runCommand and log the response
       url <- checkboxesUrl
       let navigateCmd =
@@ -35,8 +39,9 @@ demoFallbackActions =
                 body = A.fromList ["url" A..= url]
               }
 
-      logTxt "Step 1: Navigate using runCommand"
-      navigateResult <- runCommand (navigateCmd :: Command ())
+      logTxt "Navigate using runCommand"
+      -- as we haven't put a type signature on navigateCmd, we need to use @() to indicate we expect no return value
+      navigateResult <- runCommand @() navigateCmd
       logShow "Navigate response" navigateResult.fullResponse
       pause
 
@@ -48,7 +53,8 @@ demoFallbackActions =
                 body = A.fromList ["using" A..= ("css selector" :: String), "value" A..= ("#checkbox1" :: String)]
               }
 
-      logTxt "Step 2: Find checkbox element using Value command and runCommand"
+      logTxt "Find checkbox element using Value command and runCommand"
+      -- as we haven't put a type signature on findElementCmd, we need to use @Value to indicate we expect a Value return type
       elementResult <- runCommand @Value findElementCmd
       logShow "Element search result" elementResult.parsed
       logShow "Full response" elementResult.fullResponse
@@ -64,30 +70,20 @@ demoFallbackActions =
       logShow "Extracted element ID" checkboxId
       pause
 
-      -- Click the checkbox using Value command and getResponse
-
-      let clickCmd :: Command ()
-          clickCmd =
-            Post
-              { description = "Element Click (using fallback)",
-                path = elementUri1 sesId checkboxId "click",
-                body = A.fromList []
-              }
-
-      logTxt "\nStep 3: Click checkbox using Value command and getResponse"
-      clickResponse <- runCommand' clickCmd
-      logShow "Click response" clickResponse
-      pause
-
-      let -- type system gets a bit tricky when using record of functions this work around
-          -- allows us to get an HttpResponse from a (Command a) for any a
-          runAnyCommand :: forall a. Command a -> IO Value
-          runAnyCommand = runCommand' . voidCommand
+-- >>> runDemo demoFallbackCoercions
+demoFallbackCoercions :: HttpDemo
+demoFallbackCoercions =
+  sessionDemo "fallback actions demo" action
+  where
+    action :: SessionId -> DemoActions -> HttpActions -> IO ()
+    action sesId MkDemoActions {..} MkHttpActions {runCommand, runCommand'} = do
+      let runAnyCommand :: forall a. Command a -> IO Value
+          runAnyCommand = runCommand' . coerceCommand
 
       -- Navigate to another page using typed Navigate command and getResponse
-      logTxt "Step 4: Navigate to another page using typed command and getResponse (navigateTo returns Command ())"
+      logTxt "Navigate to another page using typed command and getResponse (navigateTo returns Command ())"
       url2 <- textAreaUrl
-      navigateResponse <- runAnyCommand $ A.navigateTo sesId url2
+      navigateResponse <- runCommand' . voidCommand $ A.navigateTo sesId url2
       logShow "Typed navigate response" navigateResponse
       pause
 

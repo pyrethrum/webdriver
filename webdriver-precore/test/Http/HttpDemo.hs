@@ -11,7 +11,7 @@ import Data.Set qualified as Set
 import Data.Text (isInfixOf)
 import Data.Time.Clock.POSIX (getPOSIXTime)
 import GHC.IO (catchAny)
-import Http.DemoUtils (HttpDemo, demo, sessionDemo, runDemo)
+import Http.DemoUtils (HttpDemo, demo, runDemo, sessionDemo)
 import Http.HttpActions (HttpActions (..))
 import IOUtils
   ( DemoActions (..),
@@ -49,7 +49,7 @@ import WebDriverPreCore.Http.Protocol
     URL (..),
     WheelAction (..),
     WindowHandleSpec (..),
-    WindowRect (..)
+    WindowRect (..),
   )
 import WebDriverPreCore.Internal.Utils (txt)
 import Prelude hiding (log)
@@ -147,7 +147,7 @@ demoForwardBackRefresh =
 
       logShowM "current url" $ getCurrentUrl sesId
       logM "title" $ getTitle sesId
-      
+
 -- >>> runDemo documentationDemo
 documentationDemo :: HttpDemo
 documentationDemo =
@@ -155,15 +155,14 @@ documentationDemo =
   where
     action :: SessionId -> DemoActions -> HttpActions -> IO ()
     action sesId MkDemoActions {..} MkHttpActions {..} = do
-
       navigateTo sesId $ MkUrl "https://the-internet.herokuapp.com/"
-      
+
       link <- findElement sesId $ CSS "#content > ul:nth-child(4) > li:nth-child(6) > a:nth-child(1)"
       elementClick sesId link
 
       logShowM "current url" $ getCurrentUrl sesId
       logM "title" $ getTitle sesId
-      
+
       logTxt "navigating back"
       back sesId
 
@@ -341,65 +340,76 @@ demoFrames =
   sessionDemo "frames" action
   where
     action :: SessionId -> DemoActions -> HttpActions -> IO ()
-    action sesId MkDemoActions {..} MkHttpActions {..} = do
-      let bottomFameExists = not . null <$> findElements sesId (CSS "frame[name='frame-bottom']")
-      url <- nestedFramesUrl
-      navigateTo sesId $ url
+    action
+      sesId
+      MkDemoActions {logTxt, log, logShow, logShowM}
+      MkHttpActions
+        { navigateTo,
+          switchToFrame,
+          switchToParentFrame,
+          getActiveElement,
+          findElement,
+          findElements,
+          getElementText
+        } = do
+        let bottomFameExists = not . null <$> findElements sesId (CSS "frame[name='frame-bottom']")
+        url <- nestedFramesUrl
+        navigateTo sesId $ url
 
-      logTxt "At top level frame"
-      hasBottomFrame <- bottomFameExists
+        logTxt "At top level frame"
+        hasBottomFrame <- bottomFameExists
 
-      logShow "bottom frame exists" hasBottomFrame
-      assertBool "bottom frame should exist" hasBottomFrame
+        logShow "bottom frame exists" hasBottomFrame
+        assertBool "bottom frame should exist" hasBottomFrame
 
-      -- switch frames using element id
-      tf <- findElement sesId $ CSS "frame[name='frame-top']"
-      logShow "switch to top frame" tf
-      switchToFrame sesId (FrameElementId tf)
+        -- switch frames using element id
+        tf <- findElement sesId $ CSS "frame[name='frame-top']"
+        logShow "switch to top frame" tf
+        switchToFrame sesId (FrameElementId tf)
 
-      hasBottomFrame' <- bottomFameExists
-      logShow "bottom frame exists after switching to top frame" hasBottomFrame'
-      assertBool "bottom frame should not exist after switching to top frame" $ not hasBottomFrame'
+        hasBottomFrame' <- bottomFameExists
+        logShow "bottom frame exists after switching to top frame" hasBottomFrame'
+        assertBool "bottom frame should not exist after switching to top frame" $ not hasBottomFrame'
 
-      mf <- findElement sesId $ CSS "frame[name='frame-middle']"
-      switchToFrame sesId (FrameElementId mf)
+        mf <- findElement sesId $ CSS "frame[name='frame-middle']"
+        switchToFrame sesId (FrameElementId mf)
 
-      fTitle <- findElement sesId $ CSS "h1"
-      titleTxt <- getElementText sesId fTitle
-      log "middle frame title" titleTxt
-      "Test Page" === titleTxt
+        fTitle <- findElement sesId $ CSS "h1"
+        titleTxt <- getElementText sesId fTitle
+        log "middle frame title" titleTxt
+        "Test Page" === titleTxt
 
-      logTxt "switch to top level frame"
-      switchToFrame sesId TopLevelFrame
-      logShowM "bottom frame exists" $ bottomFameExists
+        logTxt "switch to top level frame"
+        switchToFrame sesId TopLevelFrame
+        logShowM "bottom frame exists" $ bottomFameExists
 
-      -- drill back down to middle frame (repeat the above steps)
-      tf' <- findElement sesId $ CSS "frame[name='frame-top']"
-      logShow "switch back to top frame" tf'
-      switchToFrame sesId (FrameElementId tf')
-      logShowM "active element" $ getActiveElement sesId
+        -- drill back down to middle frame (repeat the above steps)
+        tf' <- findElement sesId $ CSS "frame[name='frame-top']"
+        logShow "switch back to top frame" tf'
+        switchToFrame sesId (FrameElementId tf')
+        logShowM "active element" $ getActiveElement sesId
 
-      mf' <- findElement sesId $ CSS "frame[name='frame-middle']"
-      logShow "drill back down to middle frame" mf'
-      switchToFrame sesId (FrameElementId mf')
-      logShowM "active element" $ getActiveElement sesId
+        mf' <- findElement sesId $ CSS "frame[name='frame-middle']"
+        logShow "drill back down to middle frame" mf'
+        switchToFrame sesId (FrameElementId mf')
+        logShowM "active element" $ getActiveElement sesId
 
-      logTxt "switch to parent frame"
-      switchToParentFrame sesId
-      logShowM "active element" $ getActiveElement sesId
+        logTxt "switch to parent frame"
+        switchToParentFrame sesId
+        logShowM "active element" $ getActiveElement sesId
 
-      logTxt "switch to parent frame again"
-      switchToParentFrame sesId
-      logShowM "active element" $ getActiveElement sesId
+        logTxt "switch to parent frame again"
+        switchToParentFrame sesId
+        logShowM "active element" $ getActiveElement sesId
 
-      hasBottomFrame'' <- bottomFameExists
-      logShow "bottom frame exists" hasBottomFrame''
-      assertBool "bottom frame should exist" hasBottomFrame''
+        hasBottomFrame'' <- bottomFameExists
+        logShow "bottom frame exists" hasBottomFrame''
+        assertBool "bottom frame should exist" hasBottomFrame''
 
-      logTxt "Switch to frame 1"
-      switchToFrame sesId $ FrameNumber 1
+        logTxt "Switch to frame 1"
+        switchToFrame sesId $ FrameNumber 1
 
-      logShowM "active element" $ getActiveElement sesId
+        logShowM "active element" $ getActiveElement sesId
 
 -- >>> runDemo demoShadowDom
 demoShadowDom :: HttpDemo
@@ -535,7 +545,7 @@ demoCookies =
                 { name = cookieName,
                   value = "myCookieValue",
                   path = Just "/",
-                  -- can't set the domain on the test server but have been 
+                  -- can't set the domain on the test server but have been
                   -- able to on a remote server
                   domain = Nothing,
                   secure = Just True,
@@ -565,7 +575,6 @@ demoCookies =
         afterDeleteAll <- getAllCookies sesId
         logShow "cookies after delete all" afterDeleteAll
         assertBool "all cookies should be removed" $ null afterDeleteAll
-
 
 -- >>> runDemo demoCookiesWithDomain
 demoCookiesWithDomain :: HttpDemo
@@ -631,8 +640,6 @@ demoAlerts =
 
       dismissAlert sesId
       pause
-
-
 
 -- >>> runDemo demoPointerNoneActions
 demoPointerNoneActions :: HttpDemo
@@ -796,10 +803,7 @@ unit_demoPointerNoneActions =
     logTxt "move and None actions"
     performActions ses pointer
 
-
-
 -}
-
 
 -- >>> runDemo demoKeyAndReleaseActions
 demoKeyAndReleaseActions :: HttpDemo
@@ -917,4 +921,3 @@ demoError =
           let errTxt = txt e
               expectedText = "An element could not be located on the page using the given search parameters"
           assertBool "NoSuchElement error should be mapped" $ expectedText `isInfixOf` errTxt
-

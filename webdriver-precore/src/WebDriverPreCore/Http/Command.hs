@@ -21,13 +21,6 @@ import WebDriverPreCore.Internal.AesonUtils (objectOrThrow)
 import WebDriverPreCore.Internal.Utils (UrlPath (..))
 import Prelude hiding (id, lookup)
 
-voidCommand :: Command a -> Command ()
-voidCommand = \case
-  Get {..} -> Get {..}
-  Post {..} -> PostEmpty {..}
-  PostEmpty {..} -> PostEmpty {..}
-  Delete {..} -> Delete {..}
-
 mkPost :: forall a r. (ToJSON a) => Text -> UrlPath -> a -> Command r
 mkPost description path = mkPost' description path (objectOrThrow ("mkPost - " <> description))
 
@@ -59,15 +52,19 @@ data Command r
 
 -- fallback
 
-loosenCommand :: forall r. Command r -> Command Object
-loosenCommand = coerceCommand
-
 coerceCommand  :: forall r r'. Command r -> Command r'
 coerceCommand = \case
   Get {description, path} -> Get {description, path}
   Post {description, path, body} -> Post {description, path, body}
   PostEmpty {description, path} -> PostEmpty {description, path}
   Delete {description, path} -> Delete {description, path}
+
+
+loosenCommand :: forall r. Command r -> Command Object
+loosenCommand = coerceCommand
+
+voidCommand :: Command a -> Command ()
+voidCommand = coerceCommand
 
 extendPostLoosen :: forall r. Command r -> Object -> Command Object
 extendPostLoosen = extendCoercePost

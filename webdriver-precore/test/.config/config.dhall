@@ -27,7 +27,7 @@ let config : Config =
       , logging = True
       , httpUrl = "127.0.0.1"
       , httpPort = 4444
-      , pauseMS = 2000
+      , pauseMS = 0
       }
 
 in config
