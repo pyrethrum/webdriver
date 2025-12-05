@@ -4,7 +4,6 @@ module Http.HttpRunner
   )
 where
 
-import Control.Monad (when)
 import Data.Aeson (FromJSON (..), Result (..), Value, withObject, (.:))
 import Data.Aeson.Types (Parser, Value (..), parse)
 import Data.Function ((&))
@@ -20,7 +19,6 @@ import Text.Show.Pretty (ppShow)
 import UnliftIO (catchAny)
 import WebDriverPreCore.Http qualified as HTTP
 import WebDriverPreCore.Http.Command (Command (..))
-import WebDriverPreCore.Internal.AesonUtils (jsonToText)
 import Prelude hiding (log)
 
 -- ############# Runner #############

@@ -14,7 +14,10 @@ import WebDriverPreCore.Http.Protocol
   ( Command (..),
     ElementId (..),
     SessionId (..),
+    Timeouts (..),
     coerceCommand,
+    extendPost,
+    extendPostLoosen,
     loosenCommand,
     voidCommand,
   )
@@ -24,10 +27,10 @@ import Prelude hiding (log)
 -- >>> runDemo demoFallbackActions
 demoFallbackActions :: HttpDemo
 demoFallbackActions =
-  sessionDemo "fallback actions demo" action
+  sessionDemo "fallback actions demo - manually construct commands" action
   where
     action :: SessionId -> DemoActions -> HttpActions -> IO ()
-    action sesId MkDemoActions {..} MkHttpActions {runCommand, runCommand'} = do
+    action sesId MkDemoActions {..} MkHttpActions {runCommand} = do
       -- Navigate to checkboxes page using runCommand and log the response
       url <- checkboxesUrl
       let navigateCmd =
@@ -54,7 +57,7 @@ demoFallbackActions =
       logTxt "Find checkbox element using Value command and runCommand"
       -- as we haven't put a type signature on findElementCmd, we need to use @Value to indicate we expect a Value return type
       val <- runCommand @Value findElementCmd
-      logShow "Element search result" val
+      logShow "Element search Result" val
       logShow "Full response" val
       pause
 
@@ -83,14 +86,14 @@ demoFallbackCoercions =
   sessionDemo "fallback coerce commands" action
   where
     action :: SessionId -> DemoActions -> HttpActions -> IO ()
-    action sesId MkDemoActions {..} MkHttpActions {runCommand, runCommand'} = do
+    action sesId MkDemoActions {..} MkHttpActions {runCommand} = do
       -- Navigate to another page using typed Navigate command and getResponse
       logTxt "Navigate to another page using typed command and getResponse (navigateTo returns Command ())"
       url2 <- textAreaUrl
       runCommand $ A.navigateTo sesId url2
       pause
 
-      logTxt "Return a different type with compatible JSON (runCommand will return MyURL both the parsed and full Aeson Value)"
+      logTxt "Return a different type with compatible JSON (runCommand will return MyURL )"
       myUrl <- runCommand . coerceCommand @_ @MyURL $ A.getCurrentUrl sesId
       logShow "Current url - coerced" myUrl
       pause
@@ -105,8 +108,44 @@ demoFallbackCoercions =
       logShow "Current url - voided" urlVoid
       pause
 
-
+-- >>> runDemo demoExtendPost
 demoExtendPost :: HttpDemo
+demoExtendPost =
+  sessionDemo "fallback extend Post commands demo" action
+  where
+    action :: SessionId -> DemoActions -> HttpActions -> IO ()
+    action sesId MkDemoActions {..} MkHttpActions {runCommand'} = do
+      cbxsUrl <- checkboxesUrl
+      runCommand' $ A.navigateTo sesId cbxsUrl
+      
+      -- Step 1: extendPost with a Post command
+      let timeoutsCmd = A.setTimeouts sesId (MkTimeouts (Just 1000) Nothing Nothing)
+          extended1 = A.fromList ["script" A..= (2000 :: Int)]
+          extendedCmd1 = extendPost timeoutsCmd extended1
+      logTxt "Extended Post Command" 
+      logShowM "Extended Post Result" $ runCommand' extendedCmd1
+      
+      -- Step 2: extendPostLoosen with a Post command  
+      let extended2 = A.fromList ["pageLoad" A..= (3000 :: Int)]
+          extendedCmd2 = extendPostLoosen timeoutsCmd extended2
+      logTxt "Extended Post (loosened) Command" 
+      logShowM "Extended Post (loosened) Result" $ runCommand' extendedCmd2
+      
+      -- Step 3: extendPost with a PostEmpty command
+      let backCmd = A.back sesId
+          extended3 = A.fromList ["ignored" A..= String "test"]
+          extendedCmd3 = extendPost backCmd extended3
+      logTxt "Extended PostEmpty Command" 
+      logShowM "Extended PostEmpty Result" $ runCommand' extendedCmd3
+      
+      -- Step 4: extendPostLoosen with a PostEmpty command
+      let refreshCmd = A.refresh sesId
+          extended4 = A.fromList ["alsoIgnored" A..= String "demo"]
+          extendedCmd4 = extendPostLoosen refreshCmd extended4
+      logTxt "Extended PostEmpty (loosened) Command" 
+      logShowM "Extended PostEmpty (loosened) Result" $ runCommand' extendedCmd4
+      
+      pause
 
 -- Helper functions (copied from API.hs since they're not exported)
 
