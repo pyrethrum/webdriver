@@ -5,8 +5,6 @@ module WebDriverPreCore.Internal.Utils
     enumerate,
     -- shared path elements
     UrlPath (..),
-    newSessionUrl,
-    session,
     db
   )
 where
@@ -34,26 +32,7 @@ enumerate = [minBound ..]
 newtype UrlPath = MkUrlPath {segments :: [Text]}
   deriving newtype (Show, Eq, Ord, Semigroup)
 
-newSessionUrl :: UrlPath
-newSessionUrl = MkUrlPath [session]
-
-session :: Text
-session = "session"
-
-
 -- debugging
 
 db :: (Show a) => Text -> a -> a
 db label value = trace (unpack $ label <> ":\n" <> txt value) value
-
-
-{-
-fromBodyValue value = do
-  innerValue <- withObject "body value" (.: "value") value
-  -- Check if the value contains an error field, which indicates a WebDriver error response
-  let hasError = isJust $ parseMaybe (withObject "error check" ((.: "error") :: Object -> Parser Text)) innerValue
-  if hasError
-    then fail "Response contains a WebDriver error"
-    else parseJSON innerValue
-
--}

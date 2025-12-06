@@ -8,18 +8,16 @@ import Data.Aeson.KeyMap qualified as KM
 import IOUtils (DemoActions (..))
 import TestData (contentPageUrl)
 import WebDriverPreCore.BiDi.API qualified as API
-import WebDriverPreCore.BiDi.BrowsingContext
-    ( GetTree(MkGetTree), Navigate(wait, MkNavigate, context, url) )
-import WebDriverPreCore.BiDi.Command
-    ( coerceCommand,
-      extendLoosenCommand,
-      loosenCommand,
-      mkUnknownCommand )
-import WebDriverPreCore.BiDi.CoreTypes
+import WebDriverPreCore.BiDi.Protocol
     ( JSUInt(MkJSUInt),
       BrowsingContext(MkBrowsingContext),
       UnknownSubscriptionType(MkUnknownSubscriptionType),
-      URL(url) )
+      URL(..),
+      GetTree(..), Navigate(..),
+      coerceCommand,
+      extendLoosenCommand,
+      loosenCommand,
+      mkOffSpecCommand )
 import WebDriverPreCore.Internal.Utils (txt)
 import Prelude hiding (log, putStrLn)
 import GHC.Generics (Generic)
@@ -55,9 +53,9 @@ fallbackExtendCommandDemo =
       pause
 
 
--- >>> runDemo fallbackMkUnknownCommandDemo
-fallbackUnknownCommandDemo :: BiDiDemo
-fallbackUnknownCommandDemo =
+-- >>> runDemo fallbackOffSpecCommandDemo
+fallbackOffSpecCommandDemo :: BiDiDemo
+fallbackOffSpecCommandDemo =
   demo "Fallback - Navigate Using mkAnyCommand with Raw Object" action
   where
     action :: DemoActions -> BiDiActions -> IO ()
@@ -75,14 +73,14 @@ fallbackUnknownCommandDemo =
               ("customProperty", String "this will also be ignored by the driver")
             ]
       
-          unknownNav = mkUnknownCommand "browsingContext.navigate" navParams
+          unknownNav = mkOffSpecCommand "browsingContext.navigate" navParams
       
       logShow "Any command (raw object)" unknownNav
       logShowM "Unknown navigate result" $ sendCommand unknownNav
       pause
 
       logTxt "Sending command via sendAnyCommand'..."
-      resultObj <- sendUnknownCommand' (MkJSUInt 101) "browsingContext.navigate" navParams 
+      resultObj <- sendOffSpecCommand' (MkJSUInt 101) "browsingContext.navigate" navParams 
       
       logShow "Navigation result object" resultObj
       pause

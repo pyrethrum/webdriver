@@ -6,7 +6,7 @@ import Config (Config, loadConfig)
 import Data.Text (Text)
 import IOUtils (DemoActions (..))
 import TestData (navigation1Url, navigation2Url)
-import WebDriverPreCore.BiDi.BiDiUrl (parseUrl)
+import BiDi.BiDiUrl (parseUrl)
 import WebDriverPreCore.BiDi.Protocol
   ( KnownSubscriptionType (..),
     Navigate (..),

@@ -1,4 +1,4 @@
-module WebDriverPreCore.Http
+module WebDriverPreCore.Http  {-# DEPRECATED "WebDriverPreCore.Http - will be removed in a future release ~ 2027-02-01 (USE WebDriverPreCore.Http.Protocol instead). See ChangeLog.md for upgrade instructions" #-} 
   ( 
     -- ** The HttpSpec Type
     module WC3Spec,

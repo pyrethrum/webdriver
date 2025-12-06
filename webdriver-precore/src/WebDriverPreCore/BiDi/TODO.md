@@ -13,7 +13,7 @@
 - [x] recocover http session after refactor
 - [x] simplify Command - use value parameter :: THINK MAY NEED TO CHANGE HTTP BACK
 - [NA] not worth it - mostly done finsih when split libraries - needs own types when moved to own library - decouple runner and socket from protocol
-  - [ ] clean up last bidi imports
+  - [X] clean up last bidi imports
 - [ ] specific code TODOs - TODO tree
 - [ ] check all exports - should use prtocol and API only
 - [ ] update to latest spec
@@ -62,7 +62,7 @@
 - [ ] remove unneeded instances to and fromJSON
 - [X] fallback
 - [X] demo parsing additional prop on empty return type - fallback
-- [ ] IO only demo
+- NA - not worht it - IO only demo
 
 ## Extend testing
 

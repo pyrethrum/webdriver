@@ -2,7 +2,7 @@ module WebDriverPreCore.BiDi.Command
   ( Command (..),
     mkCommand,
     emptyCommand,
-    mkUnknownCommand,
+    mkOffSpecCommand,
     extendLoosenCommand,
     extendCommand,
     extendCoerceCommand,
@@ -11,7 +11,7 @@ module WebDriverPreCore.BiDi.Command
     CommandMethod (..),
     KnownCommand (..),
     knownCommandToText,
-    UnknownCommand (..),
+    OffSpecCommand (..),
     toCommandText,
   )
 where
@@ -42,8 +42,8 @@ mkCommand method params = MkCommand {method = KnownCommand method, params = obje
 emptyCommand :: forall r. KnownCommand -> Command r
 emptyCommand method = MkCommand {method = KnownCommand method, params = KM.empty}
 
-mkUnknownCommand :: Text -> Object -> Command Object
-mkUnknownCommand method = MkCommand (UnknownCommand $ MkUnknownCommand method) 
+mkOffSpecCommand :: Text -> Object -> Command Object
+mkOffSpecCommand method = MkCommand (OffSpecCommand $ MkOffSpecCommand method) 
 
 -- fallback modifiers
 
@@ -68,7 +68,7 @@ coerceCommand MkCommand {method, params}  = MkCommand {method, params}
 
 --
 
-data CommandMethod = KnownCommand KnownCommand | UnknownCommand UnknownCommand
+data CommandMethod = KnownCommand KnownCommand | OffSpecCommand OffSpecCommand
   deriving (Show, Eq)
 
 instance ToJSON CommandMethod where
@@ -286,20 +286,22 @@ knownCommandToText = \case
   WebExtensionInstall -> "webExtension.install"
   WebExtensionUninstall -> "webExtension.uninstall"
 
-newtype UnknownCommand = MkUnknownCommand {command :: Text}
+
+
+newtype OffSpecCommand = MkOffSpecCommand {command :: Text}
   deriving (Show, Eq)
   deriving newtype (FromJSON, ToJSON)
 
 toCommandText :: CommandMethod -> Text
 toCommandText = \case
   KnownCommand k -> knownCommandToText k
-  UnknownCommand (MkUnknownCommand t) -> t
+  OffSpecCommand (MkOffSpecCommand t) -> t
 
 instance FromJSON CommandMethod where
   parseJSON :: Value -> Parser CommandMethod
   parseJSON val =
     (KnownCommand <$> parseJSON @KnownCommand val)
-      <|> (UnknownCommand <$> parseJSON @UnknownCommand val)
+      <|> (OffSpecCommand <$> parseJSON @OffSpecCommand val)
       <|> failConversion
     where
       failConversion =

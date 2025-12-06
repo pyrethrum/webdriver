@@ -1,4 +1,4 @@
-module WebDriverPreCore.BiDi.BiDiUrl where
+module BiDi.BiDiUrl  where
 
 import Data.Function ((&))
 import Data.Text (Text, breakOn, pack, splitOn, unpack)

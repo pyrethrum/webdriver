@@ -40,7 +40,7 @@ import Network.WebSockets (Connection, receiveData, runClient, sendTextData)
 import UnliftIO (catchAny, throwIO, waitAnyCatch)
 import UnliftIO.Async (Async, async, cancel)
 import UnliftIO.STM
-import WebDriverPreCore.BiDi.BiDiUrl (BiDiUrl (..))
+import BiDi.BiDiUrl (BiDiUrl (..))
 import WebDriverPreCore.BiDi.Protocol as P
   ( JSUInt (..),
     ResponseObject (..),

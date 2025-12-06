@@ -19,15 +19,19 @@ import WebDriverPreCore.Internal.AesonUtils (subtractProps)
 -- TODO: basic test to deliberately cause an error and check it is parsed correctly (eg no such element)
 
 data ErrorCode
-  = -- | Tried to perform an action with an invalid argument
+  = 
+     -- | Tried to install an invalid web extension
+    InvalidWebExtension
+  | 
+
+   -------- COMMON ERRORS -------- 
+    -- | Tried to perform an action with an invalid argument
     InvalidArgument
   | -- | Tried to use an invalid selector
     InvalidSelector
   | -- | Tried to use an invalid session ID
     InvalidSessionId
-  | -- | Tried to install an invalid web extension
-    InvalidWebExtension
-  | -- | Tried to move the mouse to a position outside the viewport
+  |-- | Tried to move the mouse to a position outside the viewport
     MoveTargetOutOfBounds
   | -- | Tried to interact with an alert that doesn't exist
     NoSuchAlert
@@ -95,7 +99,6 @@ toErrorCodeText = \case
   InvalidArgument -> "invalid argument"
   InvalidSelector -> "invalid selector"
   InvalidSessionId -> "invalid session id"
-  InvalidWebExtension -> "invalid web extension"
   MoveTargetOutOfBounds -> "move target out of bounds"
   NoSuchAlert -> "no such alert"
   NoSuchNetworkCollector -> "no such network collector"
@@ -121,6 +124,7 @@ toErrorCodeText = \case
   UnknownCommand -> "unknown command"
   UnknownError -> "unknown error"
   UnsupportedOperation -> "unsupported operation"
+  InvalidWebExtension -> "invalid web extension"
 
 fromErrorCodeText :: Text -> Maybe ErrorCode
 fromErrorCodeText = \case
@@ -195,7 +199,6 @@ data Error = BiDiError
   }
   deriving (Show, Eq, Generic)
 
--- typ :: Text, -- "error"
 data DriverError = MkDriverError
   { id :: Maybe JSUInt,
     error :: ErrorCode,

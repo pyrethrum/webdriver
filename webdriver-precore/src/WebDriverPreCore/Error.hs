@@ -1,6 +1,6 @@
 {-# OPTIONS_HADDOCK hide #-}
 
-module WebDriverPreCore.Http.Error
+module WebDriverPreCore.Error
   ( WebDriverErrorType (..),
     WebDriverException (..),
     errorDescription,

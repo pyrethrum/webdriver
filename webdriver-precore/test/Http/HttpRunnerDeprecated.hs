@@ -17,9 +17,9 @@ import Network.HTTP.Req as R
     ReqBodyJson (ReqBodyJson),
   )
 import WebDriverPreCore.Http
-  ( ErrorClassification (..),
+  ( WebDriverException (..),
     HttpSpec (..),
-    parseWebDriverError,
+    parseWebDriverException,
   )
 import WebDriverPreCore.Http qualified as W
 import Prelude hiding (log)
@@ -68,9 +68,9 @@ parseIO spec r =
     & \case
       Error msg ->
         fail $
-          parseWebDriverError r.body & \case
-            e@ResponeParseError {} -> unpack spec.description <> "\n" <> "Failed to parse response:\n " <> msg <> "\nin response:" <> show e
-            e@UnrecognisedError {} -> "UnrecognisedError:\n " <> "\nin response:" <> show e
-            e@WebDriverError {} -> "WebDriver error thrown:\n " <> show e
+          parseWebDriverException r.body & \case
+            e@ResponeParseException {} -> unpack spec.description <> "\n" <> "Failed to parse response:\n " <> msg <> "\nin response:" <> show e
+            e@UnrecognisedException {} -> "UnrecognisedError:\n " <> "\nin response:" <> show e
+            e@ProtocolException {} -> "WebDriver Protocol Error thrown:\n " <> show e
       Success a -> pure a
 

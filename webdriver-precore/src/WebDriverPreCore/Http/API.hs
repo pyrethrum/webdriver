@@ -104,7 +104,7 @@ import WebDriverPreCore.Http.Protocol
     mkPost,
     mkPost'
   )
-import WebDriverPreCore.Internal.Utils (UrlPath (..), newSessionUrl, session)
+import WebDriverPreCore.Internal.Utils (UrlPath (..))
 import Prelude hiding (id, lookup)
 import Data.Aeson.KeyMap (fromList)
 
@@ -739,6 +739,12 @@ findElementsFromShadowRoot :: SessionId -> ShadowRootElementId -> Selector -> Co
 findElementsFromShadowRoot sessionId shadowId = mkPost "Find Elements From Shadow Root" (sessionUri3 sessionId "shadow" shadowId.id "elements") 
 
 -- ############################ Helper Functions ##########################################
+
+newSessionUrl :: UrlPath
+newSessionUrl = MkUrlPath [session]
+
+session :: Text
+session = "session"
 
 sessionUri :: Text -> UrlPath
 sessionUri sp = MkUrlPath [session, sp]

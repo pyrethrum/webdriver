@@ -5,6 +5,7 @@ module WebDriverPreCore.BiDi.Protocol
     module WebDriverPreCore.BiDi.BrowsingContext,
     module WebDriverPreCore.BiDi.Capabilities,
     module WebDriverPreCore.BiDi.Command,
+    module WebDriverPreCore.BiDi.Error,
     module WebDriverPreCore.BiDi.Event,
     module WebDriverPreCore.BiDi.Emulation,
     module WebDriverPreCore.BiDi.Input,
@@ -24,6 +25,7 @@ import WebDriverPreCore.BiDi.Capabilities
 import WebDriverPreCore.BiDi.Command
 import WebDriverPreCore.BiDi.CoreTypes
 import WebDriverPreCore.BiDi.Emulation
+import WebDriverPreCore.BiDi.Error
 import WebDriverPreCore.BiDi.Event
 import WebDriverPreCore.BiDi.Input
 import WebDriverPreCore.BiDi.Log

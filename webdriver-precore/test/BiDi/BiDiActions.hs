@@ -118,6 +118,9 @@ import WebDriverPreCore.BiDi.Protocol as P
     WebExtensionUninstall,
   )
 
+_for_implementation_see_mkActions :: Socket.SocketActions -> BiDiActions
+_for_implementation_see_mkActions = mkActions
+
 data BiDiActions = MkBiDiActions
   { -- Session commands
     sessionNew :: Capabilities -> IO SessionNewResult,
@@ -257,8 +260,8 @@ data BiDiActions = MkBiDiActions
     sendCommand :: forall r. (FromJSON r) => Command r -> IO r,
     sendCommand' :: forall r. (FromJSON r) => JSUInt -> Command r -> IO r,
     sendCommandNoWait :: forall r. Command r -> IO Socket.Request,
-    sendUnknownCommand' :: JSUInt -> Text -> Object -> IO Object,
-    sendUnknownCommandNoWait :: Text -> Object -> IO Socket.Request,
+    sendOffSpecCommand' :: JSUInt -> Text -> Object -> IO Object,
+    sendOffSpecCommandNoWait :: Text -> Object -> IO Socket.Request,
     -- fallback subscriptions
     subscribeUnknownMany ::
       [UnknownSubscriptionType] ->
@@ -411,8 +414,8 @@ mkActions socket =
       sendCommand',
       --
       sendCommand = send,
-      sendUnknownCommand',
-      sendUnknownCommandNoWait,
+      sendOffSpecCommand',
+      sendOffSpecCommandNoWait,
       -- fallback subscriptions
       subscribeUnknownMany,
       subscribeUnknownMany'
@@ -443,12 +446,12 @@ mkActions socket =
     sendCommandNoWait :: forall r. Command r -> IO Socket.Request
     sendCommandNoWait = Socket.sendCommandNoWait socket . toBiDi
 
-    sendUnknownCommand' :: JSUInt -> Text -> Object -> IO Object
-    sendUnknownCommand' id' method =
+    sendOffSpecCommand' :: JSUInt -> Text -> Object -> IO Object
+    sendOffSpecCommand' id' method =
       Socket.sendCommand' socket id' . Socket.MkSocketCommand method . Object
 
-    sendUnknownCommandNoWait :: Text -> Object -> IO Socket.Request
-    sendUnknownCommandNoWait method =
+    sendOffSpecCommandNoWait :: Text -> Object -> IO Socket.Request
+    sendOffSpecCommandNoWait method =
       Socket.sendCommandNoWait socket . Socket.MkSocketCommand method . Object
 
     sessionSubscribe :: SessionSubscibe -> IO SessionSubscribeResult

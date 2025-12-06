@@ -119,7 +119,7 @@ import WebDriverPreCore.Http.Protocol
     WindowRect (..)
   )
 import WebDriverPreCore.Internal.AesonUtils (jsonToText)
-import WebDriverPreCore.Internal.Utils (UrlPath (..), newSessionUrl, session)
+import WebDriverPreCore.Internal.Utils (UrlPath (..))
 import Prelude hiding (id, lookup)
 import Data.Aeson (withObject)
 import Control.Monad (when)
@@ -889,3 +889,9 @@ elementUri1 s er ep = sessionUri3 s "element" er.id ep
 
 elementUri2 :: SessionId -> ElementId -> Text -> Text -> UrlPath
 elementUri2 s er ep ep2 = sessionUri4 s "element" er.id ep ep2
+
+newSessionUrl :: UrlPath
+newSessionUrl = MkUrlPath [session]
+
+session :: Text
+session = "session"

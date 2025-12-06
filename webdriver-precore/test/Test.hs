@@ -210,7 +210,7 @@ bidiDemos cfg =
               run
                 "Fallback"
                 [ Fallback.fallbackExtendCommandDemo,
-                  Fallback.fallbackUnknownCommandDemo,
+                  Fallback.fallbackOffSpecCommandDemo,
                   Fallback.fallbackCommandCoercionsDemo,
                   Fallback.fallbackSubscribeUnknownEventDemo,
                   Fallback.fallbackSubscribeUnknownEventFilteredDemo

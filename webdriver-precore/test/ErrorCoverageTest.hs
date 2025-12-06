@@ -9,7 +9,7 @@ import WebDriverPreCore.Http
     ( errorTypeToErrorCode,
       errorDescription,
       errorCodeToErrorType )
-import WebDriverPreCore.BiDi.Error qualified as BiDi
+import WebDriverPreCore.BiDi.Protocol qualified as BiDi
 import Data.Function ((&))
 import WebDriverPreCore.Internal.Utils(enumerate)
 import Data.Foldable (traverse_)

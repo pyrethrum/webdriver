@@ -17,8 +17,9 @@ import Network.HTTP.Req
   )
 import Text.Show.Pretty (ppShow)
 import UnliftIO (catchAny)
-import WebDriverPreCore.Http qualified as HTTP
-import WebDriverPreCore.Http.Command (Command (..))
+
+import WebDriverPreCore.Http.Protocol (Command (..), WebDriverException (..), parseWebDriverException)
+
 import Prelude hiding (log)
 
 -- ############# Runner #############
@@ -62,15 +63,16 @@ logCommand da@MkDemoActions {logShow} cmd = do
     PostEmpty {} -> pure ()
     Delete {} -> pure ()
 
+-- todo: fix to throw proper exceptions when moved to own library
 parseResultIO :: forall r. (FromJSON r) => Value -> Text -> IO r
 parseResultIO body description =
   case parse fromBodyValue body of
     Error msg ->
       fail $
-        HTTP.parseWebDriverError body & \case
-          e@HTTP.ResponeParseError {} -> unpack description <> "\n" <> "Failed to parse response:\n " <> msg <> "\nin response:" <> ppShow e
-          e@HTTP.UnrecognisedError {} -> "UnrecognisedError:\n " <> "\nin response:" <> ppShow e
-          e@HTTP.WebDriverError {} -> "WebDriver error thrown:\n " <> ppShow e
+        parseWebDriverException body & \case
+          e@ResponeParseException {} -> unpack description <> "\n" <> "Failed to parse response:\n " <> msg <> "\nin response:" <> ppShow e
+          e@UnrecognisedException {} -> "UnrecognisedError:\n " <> "\nin response:" <> ppShow e
+          e@ProtocolException {} -> "WebDriver Protocol Error thrown:\n " <> ppShow e
     Success r -> pure r
 
 fromBodyValue :: forall a. (FromJSON a) => Value -> Parser a

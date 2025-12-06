@@ -28,6 +28,9 @@ import WebDriverPreCore.Http.Protocol
     Command
   )
 
+_for_implementation_see_mkActions :: HttpRunner -> HttpActions
+_for_implementation_see_mkActions = mkActions
+
 data HttpActions = MkHttpActions
   { -- Root methods
     status :: IO Status,

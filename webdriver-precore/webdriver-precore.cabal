@@ -114,7 +114,6 @@ library
       -- Http
       WebDriverPreCore.Http.API
       WebDriverPreCore.Http.Protocol
-      WebDriverPreCore.Http.Command
       -- deprecated
       WebDriverPreCore.Http
       WebDriverPreCore.Http.SpecDefinition
@@ -122,14 +121,13 @@ library
       -- BiDi
       WebDriverPreCore.BiDi.API
       WebDriverPreCore.BiDi.Protocol
-      WebDriverPreCore.BiDi.BiDiUrl
-      WebDriverPreCore.BiDi.Error
       -- Utils
       WebDriverPreCore.Internal.AesonUtils
       WebDriverPreCore.Internal.Utils
   other-modules:
       -- Http
       WebDriverPreCore.Http.Capabilities
+      WebDriverPreCore.Http.Command
       WebDriverPreCore.Http.Error
       WebDriverPreCore.Internal.HttpBidiCommon
       -- BiDI
@@ -139,6 +137,7 @@ library
       WebDriverPreCore.BiDi.Command
       WebDriverPreCore.BiDi.CoreTypes
       WebDriverPreCore.BiDi.Emulation
+      WebDriverPreCore.BiDi.Error
       WebDriverPreCore.BiDi.Event
       WebDriverPreCore.BiDi.Log
       WebDriverPreCore.BiDi.Input
@@ -220,6 +219,7 @@ test-suite test
     , BiDi.BiDiSocket
     , BiDi.BiDiActions
     , BiDi.DemoUtils
+    , BiDi.BiDiUrl
     , BiDi.Demos.BrowserDemos
     , BiDi.Demos.BrowsingContextDemos
     , BiDi.Demos.BrowsingContextEventDemos

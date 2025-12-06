@@ -17,7 +17,7 @@ import IOUtils (DemoActions (..), Logger, logNothingLogger, mkDemoActions)
 import Logger (withChannelFileLogger)
 import Network.HTTP.Req (http)
 import RuntimeConst (httpCapabilities, httpFullCapabilities)
-import WebDriverPreCore.BiDi.BiDiUrl (BiDiUrl, getBiDiUrl)
+import BiDi.BiDiUrl (BiDiUrl, getBiDiUrl)
 import WebDriverPreCore.BiDi.Protocol
   ( BrowsingContext (..),
     Close (..),
@@ -118,7 +118,7 @@ newWindowContext MkDemoActions {..} MkBiDiActions {..} = do
         }
 
 closeContext :: DemoActions -> BiDiActions -> BrowsingContext -> IO ()
-closeContext MkDemoActions {..} MkBiDiActions {..} bc = do
+closeContext MkDemoActions {pause, logTxt, logShow} MkBiDiActions {..} bc = do
   logTxt "Close browsing context"
   co <- browsingContextClose $ MkClose {context = bc, promptUnload = Nothing}
   logShow "Close result" co
