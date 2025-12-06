@@ -11,6 +11,7 @@ module WebDriverPreCore.Error
   )
 where
 
+import Control.Exception (Exception)
 import Control.Monad ((>=>))
 import Data.Aeson (FromJSON (..), Options (..), Value, defaultOptions, genericParseJSON, withObject)
 import Data.Aeson.Types (Parser, parseMaybe, (.:))
@@ -18,7 +19,6 @@ import Data.Function ((&))
 import Data.Text (Text)
 import GHC.Generics (Generic)
 import Prelude hiding (error)
-import Control.Exception (Exception)
 
 {-
 Error Code 	HTTP Status 	JSON Error Code 	Description
@@ -84,42 +84,28 @@ data WebDriverErrorType
   | UnknownError
   | UnknownMethod
   | UnsupportedOperation
+  | --- Bidi
+    InvalidWebExtension
+  | NoSuchNetworkCollector
+  | NoSuchHandle
+  | NoSuchHistoryEntry
+  | NoSuchIntercept
+  | NoSuchNetworkData
+  | NoSuchNode
+  | NoSuchRequest
+  | NoSuchScript
+  | NoSuchStoragePartition
+  | NoSuchUserContext
+  | NoSuchWebExtension
+  | UnableToCloseBrowser
+  | UnableToSetFileInput
+  | UnavailableNetworkData
+  | UnderspecifiedStoragePartition
   deriving (Eq, Show, Ord, Bounded, Enum)
 
 errorCodeToErrorType :: Text -> Either Text WebDriverErrorType
-errorCodeToErrorType errCode =
-  case errCode of
-    "element click intercepted" -> r ElementClickIntercepted
-    "element not interactable" -> r ElementNotInteractable
-    "insecure certificate" -> r InsecureCertificate
-    "invalid argument" -> r InvalidArgument
-    "invalid cookie domain" -> r InvalidCookieDomain
-    "invalid element state" -> r InvalidElementState
-    "invalid selector" -> r InvalidSelector
-    "invalid session id" -> r InvalidSessionId
-    "javascript error" -> r JavascriptError
-    "move target out of bounds" -> r MoveTargetOutOfBounds
-    "no such alert" -> r NoSuchAlert
-    "no such cookie" -> r NoSuchCookie
-    "no such element" -> r NoSuchElement
-    "no such frame" -> r NoSuchFrame
-    "no such window" -> r NoSuchWindow
-    "no such shadow root" -> r NoSuchShadowRoot
-    "script timeout" -> r ScriptTimeoutError
-    "session not created" -> r SessionNotCreated
-    "stale element reference" -> r StaleElementReference
-    "detached shadow root" -> r DetachedShadowRoot
-    "timeout" -> r Timeout
-    "unable to set cookie" -> r UnableToSetCookie
-    "unable to capture screen" -> r UnableToCaptureScreen
-    "unexpected alert open" -> r UnexpectedAlertOpen
-    "unknown command" -> r UnknownCommand
-    "unknown error" -> r UnknownError
-    "unknown method" -> r UnknownMethod
-    "unsupported operation" -> r UnsupportedOperation
-    er -> Left er
-  where
-    r = Right
+errorCodeToErrorType =
+  first pack . tryread . unwords . fmap toTitle . words
 
 errorTypeToErrorCode :: WebDriverErrorType -> Text
 errorTypeToErrorCode = \case
@@ -151,6 +137,23 @@ errorTypeToErrorCode = \case
   UnknownError -> "unknown error"
   UnknownMethod -> "unknown method"
   UnsupportedOperation -> "unsupported operation"
+  -- Bidi
+  InvalidWebExtension -> "invalid web extension"
+  NoSuchNetworkCollector -> "no such network collector"
+  NoSuchHandle -> "no such handle"
+  NoSuchHistoryEntry -> "no such history entry"
+  NoSuchIntercept -> "no such intercept"
+  NoSuchNetworkData -> "no such network data"
+  NoSuchNode -> "no such node"
+  NoSuchRequest -> "no such request"
+  NoSuchScript -> "no such script"
+  NoSuchStoragePartition -> "no such storage partition"
+  NoSuchUserContext -> "no such user context"
+  NoSuchWebExtension -> "no such web extension"
+  UnableToCloseBrowser -> "unable to close browser"
+  UnableToSetFileInput -> "unable to set file input"
+  UnavailableNetworkData -> "unavailable network data"
+  UnderspecifiedStoragePartition -> "underspecified storage partition"
 
 errorDescription :: WebDriverErrorType -> Text
 errorDescription = \case
@@ -182,11 +185,28 @@ errorDescription = \case
   UnknownError -> "An unknown error occurred in the remote end while processing the command"
   UnknownMethod -> "The requested command matched a known URL but did not match any method for that URL"
   UnsupportedOperation -> "Indicates that a command that should have executed properly cannot be supported for some reason"
+  -- Bidi
+  InvalidWebExtension -> "Tried to install an invalid web extension"
+  NoSuchNetworkCollector -> "Tried to remove an unknown collector"
+  NoSuchHandle -> "Tried to deserialize an unknown RemoteObjectReference"
+  NoSuchHistoryEntry -> "Tried to navigate to an unknown session history entry"
+  NoSuchIntercept -> "Tried to remove an unknown network intercept"
+  NoSuchNetworkData -> "Tried to reference unknown data"
+  NoSuchNode -> "Tried to deserialize an unknown SharedReference"
+  NoSuchRequest -> "Tried to continue an unknown request"
+  NoSuchScript -> "Tried to remove an unknown preload script"
+  NoSuchStoragePartition -> "Tried to access data in a non-existent storage partition"
+  NoSuchUserContext -> "Tried to reference an unknown user context"
+  NoSuchWebExtension -> "Tried to reference an unknown web extension"
+  UnableToCloseBrowser -> "Tried to close the browser, but failed to do so"
+  UnableToSetFileInput -> "Tried to set a file input, but failed to do so"
+  UnavailableNetworkData -> "Tried to get network data which was not collected or already evicted"
+  UnderspecifiedStoragePartition -> "Tried to interact with data in a storage partition which was not adequately specified"
 
 data WebDriverException
   = ResponeParseException {httpResponse :: Value}
-  | UnrecognisedException  {httpResponse :: Value}
-  | ProtocolException 
+  | UnrecognisedException {httpResponse :: Value}
+  | ProtocolException
       { error :: WebDriverErrorType,
         description :: Text,
         message :: Text,
@@ -216,7 +236,6 @@ parseWebDriverException body =
           \MkWebDriverExceptionRaw {..} ->
             ProtocolException {error = et, description = errorDescription et, httpResponse = body, ..}
 
-
 getValue :: Value -> Parser Value
 getValue =
   withObject "value" (.: "value")
@@ -242,9 +261,11 @@ data WebDriverExceptionRaw = MkWebDriverExceptionRaw
 
 instance FromJSON WebDriverExceptionRaw where
   parseJSON :: Value -> Parser WebDriverExceptionRaw
-  parseJSON = genericParseJSON defaultOptions {
-    omitNothingFields = True,
-    fieldLabelModifier = \case
-      "errorData" -> "data"
-      other -> other
-    }
+  parseJSON =
+    genericParseJSON
+      defaultOptions
+        { omitNothingFields = True,
+          fieldLabelModifier = \case
+            "errorData" -> "data"
+            other -> other
+        }

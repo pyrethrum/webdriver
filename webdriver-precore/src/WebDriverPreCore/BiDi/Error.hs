@@ -22,25 +22,8 @@ data ErrorCode
   = 
      -- | Tried to install an invalid web extension
     InvalidWebExtension
-  | 
-
-   -------- COMMON ERRORS -------- 
-    -- | Tried to perform an action with an invalid argument
-    InvalidArgument
-  | -- | Tried to use an invalid selector
-    InvalidSelector
-  | -- | Tried to use an invalid session ID
-    InvalidSessionId
-  |-- | Tried to move the mouse to a position outside the viewport
-    MoveTargetOutOfBounds
-  | -- | Tried to interact with an alert that doesn't exist
-    NoSuchAlert
   | -- | Tried to remove an unknown collector
     NoSuchNetworkCollector
-  | -- | Tried to interact with an element that doesn't exist
-    NoSuchElement
-  | -- | Tried to switch to a frame that doesn't exist
-    NoSuchFrame
   | -- | Tried to deserialize an unknown RemoteObjectReference
     NoSuchHandle
   | -- | Tried to navigate to an unknown session history entry
@@ -61,10 +44,6 @@ data ErrorCode
     NoSuchUserContext
   | -- | Tried to reference an unknown web extension
     NoSuchWebExtension
-  | -- | Failed to create a new session
-    SessionNotCreated
-  | -- | Failed to capture a screenshot
-    UnableToCaptureScreen
   | -- | Tried to close the browser, but failed to do so
     UnableToCloseBrowser
   | -- | Tried to create a cookie, but the user agent rejected it
@@ -75,6 +54,27 @@ data ErrorCode
     UnavailableNetworkData
   | -- | Tried to interact with data in a storage partition which was not adequately specified
     UnderspecifiedStoragePartition
+  | 
+
+   -------- COMMON ERRORS -------- 
+    -- | Tried to perform an action with an invalid argument
+    InvalidArgument
+  | -- | Tried to use an invalid selector
+    InvalidSelector
+  | -- | Tried to use an invalid session ID
+    InvalidSessionId
+  | -- | Tried to move the mouse to a position outside the viewport
+    MoveTargetOutOfBounds
+  | -- | Tried to interact with an alert that doesn't exist
+    NoSuchAlert
+  | -- | Tried to interact with an element that doesn't exist
+    NoSuchElement
+  | -- | Tried to switch to a frame that doesn't exist
+    NoSuchFrame
+  | -- | Failed to create a new session
+    SessionNotCreated
+  | -- | Failed to capture a screenshot
+    UnableToCaptureScreen
   | -- | The command sent is not known
     UnknownCommand
   | -- | An unknown error occurred
