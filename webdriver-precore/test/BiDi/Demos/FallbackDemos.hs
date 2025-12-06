@@ -3,26 +3,26 @@ module BiDi.Demos.FallbackDemos where
 import BiDi.BiDiActions (BiDiActions (..))
 import BiDi.DemoUtils
 import Const (seconds)
-import Data.Aeson (Value (..))
+import Data.Aeson (Value (..), FromJSON)
 import Data.Aeson.KeyMap qualified as KM
 import IOUtils (DemoActions (..))
 import TestData (contentPageUrl)
 import WebDriverPreCore.BiDi.API qualified as API
-import WebDriverPreCore.BiDi.Protocol
-  ( BrowsingContext (..),
-    GetTree (..),
-    JSUInt (..),
-    Navigate (..),
-    SessionStatusResult (..),
-    URL (..),
-    UnknownSubscriptionType (..),
-    coerceCommand,
-    extendLoosenCommand,
-    loosenCommand,
-    mkUnknownCommand,
-  )
+import WebDriverPreCore.BiDi.BrowsingContext
+    ( GetTree(MkGetTree), Navigate(wait, MkNavigate, context, url) )
+import WebDriverPreCore.BiDi.Command
+    ( coerceCommand,
+      extendLoosenCommand,
+      loosenCommand,
+      mkUnknownCommand )
+import WebDriverPreCore.BiDi.CoreTypes
+    ( JSUInt(MkJSUInt),
+      BrowsingContext(MkBrowsingContext),
+      UnknownSubscriptionType(MkUnknownSubscriptionType),
+      URL(url) )
 import WebDriverPreCore.Internal.Utils (txt)
 import Prelude hiding (log, putStrLn)
+import GHC.Generics (Generic)
 
 -- >>> runDemo fallbackExtendCommandDemo
 fallbackExtendCommandDemo :: BiDiDemo
@@ -87,36 +87,22 @@ fallbackUnknownCommandDemo =
       logShow "Navigation result object" resultObj
       pause
 
+newtype GetTreeResultContextOnly = MkGetTreeResultContextOnly
+  { contexts :: [ContextOnly]
+  }
+  deriving stock (Show, Eq, Generic)
+
+instance FromJSON GetTreeResultContextOnly
+
+data ContextOnly = MkContextOnly
+  { 
+    context :: BrowsingContext
+  }
+  deriving (Show, Eq, Generic)
+
+instance FromJSON ContextOnly
+
 -- >>> runDemo fallbackCommandCoercionsDemo
--- *** Exception: Error executing BiDi command: With JSON: 
--- {
---     "id": 3,
---     "method": "browsingContext.getTree",
---     "params": {
---         "maxDepth": null,
---         "root": null
---     }
--- }
--- Failed to decode the 'result' property of JSON returned by driver to response type: 
--- {
---     "id": 3,
---     "result": {
---         "contexts": [
---             {
---                 "children": [],
---                 "clientWindow": "706f5ddc-838a-467e-8e84-c5c2af95026e",
---                 "context": "34f426a2-176c-414b-a5f3-f546baec2a38",
---                 "originalOpener": null,
---                 "parent": null,
---                 "url": "file:///home/john-walker/repos/webdriver/webdriver-precore/test/TestFiles/contentPage.html",
---                 "userContext": "default"
---             }
---         ]
---     },
---     "type": "success"
--- }
--- Error message: 
--- Error in $.result: parsing WebDriverPreCore.BiDi.Session.SessionStatusResult(MkSessionStatusResult) failed, key "ready" not found
 fallbackCommandCoercionsDemo :: BiDiDemo
 fallbackCommandCoercionsDemo =
   demo "Fallback - Command Coercions" action
@@ -131,8 +117,9 @@ fallbackCommandCoercionsDemo =
       pause
 
       logTxt "Return a different type with compatible JSON (coerceCommand)"
-      status <- sendCommand . coerceCommand @_ @SessionStatusResult $ API.browsingContextGetTree (MkGetTree Nothing Nothing)
-      logShow "Get tree result - coerced to SessionStatusResult" status
+      logShowM 
+        "Get tree result - coerced to JSON compatible GetTreeResultContextOnly" 
+          $ sendCommand . coerceCommand @_ @GetTreeResultContextOnly $ API.browsingContextGetTree (MkGetTree Nothing Nothing)
       pause
 
       logTxt "Return Value rather than GetTreeResult (loosenCommand)"
