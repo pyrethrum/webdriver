@@ -19,7 +19,7 @@ import Data.Function ((&))
 import Data.Text (Text, pack)
 import GHC.Generics (Generic)
 import WebDriverPreCore.BiDi.CoreTypes (EmptyResult (..), JSUInt)
-import WebDriverPreCore.BiDi.Error (DriverError (..))
+import WebDriverPreCore.Error (DriverError (..))
 import WebDriverPreCore.Internal.AesonUtils (jsonToText, parseObjectEither, parseObjectMaybe, subtractProps)
 import WebDriverPreCore.Internal.Utils (txt)
 

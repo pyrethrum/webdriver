@@ -1,4 +1,4 @@
-module WebDriverPreCore.BiDi.Error
+module WebDriverPreCore.Error
   ( ErrorCode (..),
     DriverError (..),
     toErrorCodeText,
@@ -110,6 +110,9 @@ toErrorCodeText = \case
   NoSuchNetworkData -> "no such network data"
   NoSuchNode -> "no such node"
   NoSuchRequest -> "no such request"
+  NoSuchNode -> "Tried to deserialize an unknown SharedReference"
+  NoSuchRequest -> "Tried to continue an unknown request"
+  NoSuchScript -> "Tried to remove an unknown preload script"
   NoSuchScript -> "no such script"
   NoSuchStoragePartition -> "no such storage partition"
   NoSuchUserContext -> "no such user context"
@@ -190,49 +193,3 @@ errorDescription = \case
   UnknownCommand -> "The command sent is not known"
   UnknownError -> "An unknown error occurred"
   UnsupportedOperation -> "The operation requested is not supported"
-
-data Error = BiDiError
-  { errorCode :: ErrorCode,
-    errorMessage :: Text,
-    errorDescription :: Text,
-    errorStackTrace :: Maybe Text
-  }
-  deriving (Show, Eq, Generic)
-
-data DriverError = MkDriverError
-  { id :: Maybe JSUInt,
-    error :: ErrorCode,
-    description :: Text,
-    message :: Text,
-    stacktrace :: Maybe Text,
-    extensions :: EmptyResult
-  }
-  deriving (Show, Generic, Eq)
-
-instance FromJSON DriverError where
-  parseJSON :: Value -> Parser DriverError
-  parseJSON = withObject "Driver Error" $ \o -> do
-    id' <- o .: "id"
-    error' <- o .: "error"
-    message <- o .: "message"
-    stacktrace <- o .: "stacktrace"
-    pure $
-      MkDriverError
-        { id = id',
-          error = error',
-          description = errorDescription error',
-          message,
-          stacktrace,
-          extensions =
-            MkEmptyResult $
-              subtractProps
-                [ "id",
-                  "type",
-                  "error",
-                  "description",
-                  "message",
-                  "stacktrace"
-                ]
-                o
-        }
-

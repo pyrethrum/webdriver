@@ -33,7 +33,7 @@ module WebDriverPreCore.Http  {-# DEPRECATED "WebDriverPreCore.Http - will be re
     module WebDriverPreCore.Http.Capabilities,
 
     -- * Errors
-    module WebDriverPreCore.Http.Error,
+    module WebDriverPreCore.Error,
 
     -- * Action Types
     -- module ActionTypes,
@@ -121,7 +121,7 @@ import WebDriverPreCore.Http.SpecDefinition as ElementInstanceMethods
 import WebDriverPreCore.Http.SpecDefinition as ShadowDOMMethods (findElementFromShadowRoot, findElementsFromShadowRoot)
 import WebDriverPreCore.Http.Capabilities as CoreCapabilities (FullCapabilities(..), Capabilities(..) )
 import WebDriverPreCore.Http.Capabilities
-import WebDriverPreCore.Http.Error
+import WebDriverPreCore.Error
 import WebDriverPreCore.Http.HttpResponse
 -- import WebDriverPreCore.Http.SpecDefinition as ActionTypes
 --   ( Action (..),

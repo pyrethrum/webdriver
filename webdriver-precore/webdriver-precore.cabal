@@ -125,10 +125,11 @@ library
       WebDriverPreCore.Internal.AesonUtils
       WebDriverPreCore.Internal.Utils
   other-modules:
+      -- Shared
+      WebDriverPreCore.Error
       -- Http
       WebDriverPreCore.Http.Capabilities
       WebDriverPreCore.Http.Command
-      WebDriverPreCore.Http.Error
       WebDriverPreCore.Internal.HttpBidiCommon
       -- BiDI
       WebDriverPreCore.BiDi.Browser
@@ -137,7 +138,6 @@ library
       WebDriverPreCore.BiDi.Command
       WebDriverPreCore.BiDi.CoreTypes
       WebDriverPreCore.BiDi.Emulation
-      WebDriverPreCore.BiDi.Error
       WebDriverPreCore.BiDi.Event
       WebDriverPreCore.BiDi.Log
       WebDriverPreCore.BiDi.Input

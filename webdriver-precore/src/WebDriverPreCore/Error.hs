@@ -1,13 +1,13 @@
 {-# OPTIONS_HADDOCK hide #-}
 
 module WebDriverPreCore.Error
-  ( WebDriverErrorType (..),
+  ( ErrorType (..),
     WebDriverException (..),
     errorDescription,
     errorCodeToErrorType,
     errorTypeToErrorCode,
     parseWebDriverException,
-    parseWebDriverErrorType,
+    parseErrorType,
   )
 where
 
@@ -16,7 +16,8 @@ import Control.Monad ((>=>))
 import Data.Aeson (FromJSON (..), Options (..), Value, defaultOptions, genericParseJSON, withObject)
 import Data.Aeson.Types (Parser, parseMaybe, (.:))
 import Data.Function ((&))
-import Data.Text (Text)
+import Data.Text (Text, break, pack, toLower, unpack, toTitle)
+import Data.Char (isUpper)
 import GHC.Generics (Generic)
 import Prelude hiding (error)
 
@@ -55,7 +56,7 @@ unsupported operation 	500 	unsupported operation 	Indicates that a command that
 -- | Known WevDriver Error Types
 --
 -- [spec](https://www.w3.org/TR/2025/WD-webdriver2-20251028/#errors)
-data WebDriverErrorType
+data ErrorType
   = ElementClickIntercepted
   | ElementNotInteractable
   | InsecureCertificate
@@ -72,7 +73,7 @@ data WebDriverErrorType
   | NoSuchFrame
   | NoSuchWindow
   | NoSuchShadowRoot
-  | ScriptTimeoutError
+  | ScriptTimeout
   | SessionNotCreated
   | StaleElementReference
   | DetachedShadowRoot
@@ -103,59 +104,21 @@ data WebDriverErrorType
   | UnderspecifiedStoragePartition
   deriving (Eq, Show, Ord, Bounded, Enum)
 
-errorCodeToErrorType :: Text -> Either Text WebDriverErrorType
+errorCodeToErrorType :: Text -> Either Text ErrorType
 errorCodeToErrorType =
-  first pack . tryread . unwords . fmap toTitle . words
+  first pack . readEither . unwords . fmap toTitle . words
 
-errorTypeToErrorCode :: WebDriverErrorType -> Text
-errorTypeToErrorCode = \case
-  ElementClickIntercepted -> "element click intercepted"
-  ElementNotInteractable -> "element not interactable"
-  InsecureCertificate -> "insecure certificate"
-  InvalidArgument -> "invalid argument"
-  InvalidCookieDomain -> "invalid cookie domain"
-  InvalidElementState -> "invalid element state"
-  InvalidSelector -> "invalid selector"
-  InvalidSessionId -> "invalid session id"
-  JavascriptError -> "javascript error"
-  MoveTargetOutOfBounds -> "move target out of bounds"
-  NoSuchAlert -> "no such alert"
-  NoSuchCookie -> "no such cookie"
-  NoSuchElement -> "no such element"
-  NoSuchFrame -> "no such frame"
-  NoSuchWindow -> "no such window"
-  NoSuchShadowRoot -> "no such shadow root"
-  ScriptTimeoutError -> "script timeout"
-  SessionNotCreated -> "session not created"
-  StaleElementReference -> "stale element reference"
-  DetachedShadowRoot -> "detached shadow root"
-  Timeout -> "timeout"
-  UnableToSetCookie -> "unable to set cookie"
-  UnableToCaptureScreen -> "unable to capture screen"
-  UnexpectedAlertOpen -> "unexpected alert open"
-  UnknownCommand -> "unknown command"
-  UnknownError -> "unknown error"
-  UnknownMethod -> "unknown method"
-  UnsupportedOperation -> "unsupported operation"
-  -- Bidi
-  InvalidWebExtension -> "invalid web extension"
-  NoSuchNetworkCollector -> "no such network collector"
-  NoSuchHandle -> "no such handle"
-  NoSuchHistoryEntry -> "no such history entry"
-  NoSuchIntercept -> "no such intercept"
-  NoSuchNetworkData -> "no such network data"
-  NoSuchNode -> "no such node"
-  NoSuchRequest -> "no such request"
-  NoSuchScript -> "no such script"
-  NoSuchStoragePartition -> "no such storage partition"
-  NoSuchUserContext -> "no such user context"
-  NoSuchWebExtension -> "no such web extension"
-  UnableToCloseBrowser -> "unable to close browser"
-  UnableToSetFileInput -> "unable to set file input"
-  UnavailableNetworkData -> "unavailable network data"
-  UnderspecifiedStoragePartition -> "underspecified storage partition"
+errorTypeToErrorCode :: ErrorType -> Text
+errorTypeToErrorCode =
+  pack . unwords . splitCamel . show
+  where
+    splitCamel = \case
+      [] -> []
+      (x : xs) ->
+        let (w, rest) = break isUpper xs
+         in (toLower x : w) : splitCamel rest
 
-errorDescription :: WebDriverErrorType -> Text
+errorDescription :: ErrorType -> Text
 errorDescription = \case
   ElementClickIntercepted -> "The Element Click command could not be completed because the element receiving the events is obscuring the element that was requested clicked"
   ElementNotInteractable -> "A command could not be completed because the element is not pointer- or keyboard interactable"
@@ -173,7 +136,7 @@ errorDescription = \case
   NoSuchFrame -> "A command to switch to a frame could not be satisfied because the frame could not be found"
   NoSuchWindow -> "A command to switch to a window could not be satisfied because the window could not be found"
   NoSuchShadowRoot -> "The element does not have a shadow root"
-  ScriptTimeoutError -> "A script did not complete before its timeout expired"
+  ScriptTimeout -> "A script did not complete before its timeout expired"
   SessionNotCreated -> "A new session could not be created"
   StaleElementReference -> "A command failed because the referenced element is no longer attached to the DOM"
   DetachedShadowRoot -> "A command failed because the referenced shadow root is no longer attached to the DOM"
@@ -204,15 +167,15 @@ errorDescription = \case
   UnderspecifiedStoragePartition -> "Tried to interact with data in a storage partition which was not adequately specified"
 
 data WebDriverException
-  = ResponeParseException {httpResponse :: Value}
-  | UnrecognisedException {httpResponse :: Value}
+  = ResponeParseException {response :: Value}
+  | UnrecognisedException {response :: Value}
   | ProtocolException
-      { error :: WebDriverErrorType,
+      { error :: ErrorType,
         description :: Text,
         message :: Text,
         stacktrace :: Maybe Text,
         errorData :: Maybe Value,
-        httpResponse :: Value
+        response :: Value
       }
   deriving (Eq, Show, Ord)
 
@@ -228,13 +191,13 @@ parseWebDriverException body =
         Right et -> mkWebDriverException et
   where
     parserErr = ResponeParseException body
-    mkWebDriverException :: WebDriverErrorType -> WebDriverException
+    mkWebDriverException :: ErrorType -> WebDriverException
     mkWebDriverException et =
       parseMaybe (getValue >=> parseJSON) body
         & maybe
           parserErr
           \MkWebDriverExceptionRaw {..} ->
-            ProtocolException {error = et, description = errorDescription et, httpResponse = body, ..}
+            ProtocolException {error = et, description = errorDescription et, response = body, ..}
 
 getValue :: Value -> Parser Value
 getValue =
@@ -244,8 +207,8 @@ parseErrorCode :: Value -> Parser Text
 parseErrorCode =
   getValue >=> withObject "error" (.: "error")
 
-parseWebDriverErrorType :: Value -> Maybe WebDriverErrorType
-parseWebDriverErrorType resp =
+parseErrorType :: Value -> Maybe ErrorType
+parseErrorType resp =
   case parseWebDriverException resp of
     ProtocolException {error} -> Just error
     ResponeParseException {} -> Nothing
@@ -269,3 +232,52 @@ instance FromJSON WebDriverExceptionRaw where
             "errorData" -> "data"
             other -> other
         }
+
+
+{- FROM BIDI
+
+- get compiling 
+   check empty result
+- try known missign Bidi demos
+- review unit tests
+- a couple of integration demos
+  - http - element does not exist 
+  - bidi specific - element does not exist
+
+data DriverError = MkDriverError
+  { id :: Maybe JSUInt,
+    error :: ErrorCode,
+    description :: Text,
+    message :: Text,
+    stacktrace :: Maybe Text,
+    extensions :: EmptyResult
+  }
+  deriving (Show, Generic, Eq)
+
+instance FromJSON DriverError where
+  parseJSON :: Value -> Parser DriverError
+  parseJSON = withObject "Driver Error" $ \o -> do
+    id' <- o .: "id"
+    error' <- o .: "error"
+    message <- o .: "message"
+    stacktrace <- o .: "stacktrace"
+    pure $
+      MkDriverError
+        { id = id',
+          error = error',
+          description = errorDescription error',
+          message,
+          stacktrace,
+          extensions =
+            MkEmptyResult $
+              subtractProps
+                [ "id",
+                  "type",
+                  "error",
+                  "description",
+                  "message",
+                  "stacktrace"
+                ]
+                o
+        }
+-}

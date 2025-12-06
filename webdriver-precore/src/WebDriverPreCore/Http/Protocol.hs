@@ -7,7 +7,7 @@ module WebDriverPreCore.Http.Protocol
     module WebDriverPreCore.Http.Capabilities,
 
     -- * Error
-    module WebDriverPreCore.Http.Error,
+    module WebDriverPreCore.Error,
 
     -- * Core Types
     Cookie (..),
@@ -62,7 +62,7 @@ import Data.Word (Word16)
 import GHC.Generics (Generic)
 import WebDriverPreCore.Http.Capabilities
 import WebDriverPreCore.Http.Command
-import WebDriverPreCore.Http.Error
+import WebDriverPreCore.Error
 import WebDriverPreCore.Internal.AesonUtils (nonEmpty, opt, parseObject)
 import WebDriverPreCore.Internal.HttpBidiCommon as Url (URL(..)) 
 import WebDriverPreCore.Internal.Utils (txt)
