@@ -10,11 +10,15 @@ import TestData (contentPageUrl)
 import WebDriverPreCore.BiDi.API qualified as API
 import WebDriverPreCore.BiDi.Protocol
   ( BrowsingContext (..),
+    GetTree (..),
     JSUInt (..),
     Navigate (..),
+    SessionStatusResult (..),
     URL (..),
     UnknownSubscriptionType (..),
+    coerceCommand,
     extendLoosenCommand,
+    loosenCommand,
     mkUnknownCommand,
   )
 import WebDriverPreCore.Internal.Utils (txt)
@@ -51,9 +55,9 @@ fallbackExtendCommandDemo =
       pause
 
 
--- >>> runDemo fallbackMkAnyCommandDemo
-fallbackMkAnyCommandDemo :: BiDiDemo
-fallbackMkAnyCommandDemo =
+-- >>> runDemo fallbackMkUnknownCommandDemo
+fallbackUnknownCommandDemo :: BiDiDemo
+fallbackUnknownCommandDemo =
   demo "Fallback - Navigate Using mkAnyCommand with Raw Object" action
   where
     action :: DemoActions -> BiDiActions -> IO ()
@@ -71,17 +75,70 @@ fallbackMkAnyCommandDemo =
               ("customProperty", String "this will also be ignored by the driver")
             ]
       
-          anyCmd = mkUnknownCommand "browsingContext.navigate" navParams
+          unknownNav = mkUnknownCommand "browsingContext.navigate" navParams
       
-      logShow "Any command (raw object)" anyCmd
+      logShow "Any command (raw object)" unknownNav
+      logShowM "Unknown navigate result" $ sendCommand unknownNav
       pause
 
       logTxt "Sending command via sendAnyCommand'..."
-      resultObj <- sendAnyCommand' (MkJSUInt 101) "browsingContext.navigate" navParams 
+      resultObj <- sendUnknownCommand' (MkJSUInt 101) "browsingContext.navigate" navParams 
       
       logShow "Navigation result object" resultObj
       pause
 
+-- >>> runDemo fallbackCommandCoercionsDemo
+-- *** Exception: Error executing BiDi command: With JSON: 
+-- {
+--     "id": 3,
+--     "method": "browsingContext.getTree",
+--     "params": {
+--         "maxDepth": null,
+--         "root": null
+--     }
+-- }
+-- Failed to decode the 'result' property of JSON returned by driver to response type: 
+-- {
+--     "id": 3,
+--     "result": {
+--         "contexts": [
+--             {
+--                 "children": [],
+--                 "clientWindow": "706f5ddc-838a-467e-8e84-c5c2af95026e",
+--                 "context": "34f426a2-176c-414b-a5f3-f546baec2a38",
+--                 "originalOpener": null,
+--                 "parent": null,
+--                 "url": "file:///home/john-walker/repos/webdriver/webdriver-precore/test/TestFiles/contentPage.html",
+--                 "userContext": "default"
+--             }
+--         ]
+--     },
+--     "type": "success"
+-- }
+-- Error message: 
+-- Error in $.result: parsing WebDriverPreCore.BiDi.Session.SessionStatusResult(MkSessionStatusResult) failed, key "ready" not found
+fallbackCommandCoercionsDemo :: BiDiDemo
+fallbackCommandCoercionsDemo =
+  demo "Fallback - Command Coercions" action
+  where
+    action :: DemoActions -> BiDiActions -> IO ()
+    action utils@MkDemoActions {..} bidi@MkBiDiActions {..} = do
+      bc <- rootContext utils bidi
+      url <- contentPageUrl
+
+      logTxt "Navigate using typed command"
+      browsingContextNavigate $ MkNavigate {context = bc, url, wait = Nothing}
+      pause
+
+      logTxt "Return a different type with compatible JSON (coerceCommand)"
+      status <- sendCommand . coerceCommand @_ @SessionStatusResult $ API.browsingContextGetTree (MkGetTree Nothing Nothing)
+      logShow "Get tree result - coerced to SessionStatusResult" status
+      pause
+
+      logTxt "Return Value rather than GetTreeResult (loosenCommand)"
+      treeVal <- sendCommand . loosenCommand $ API.browsingContextGetTree (MkGetTree Nothing Nothing)
+      logShow "Get tree result - as Value" treeVal
+      pause
 
 -- >>> runDemo fallbackSubscribeUnknownEventDemo
 fallbackSubscribeUnknownEventDemo :: BiDiDemo

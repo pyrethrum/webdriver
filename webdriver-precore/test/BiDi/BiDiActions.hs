@@ -254,10 +254,11 @@ data BiDiActions = MkBiDiActions
     --
     unsubscribe :: SubscriptionId -> IO (),
     --
+    sendCommand :: forall r. (FromJSON r) => Command r -> IO r,
     sendCommand' :: forall r. (FromJSON r) => JSUInt -> Command r -> IO r,
     sendCommandNoWait :: forall r. Command r -> IO Socket.Request,
-    sendAnyCommand' :: JSUInt -> Text -> Object -> IO Object,
-    sendAnyCommandNoWait :: Text -> Object -> IO Socket.Request,
+    sendUnknownCommand' :: JSUInt -> Text -> Object -> IO Object,
+    sendUnknownCommandNoWait :: Text -> Object -> IO Socket.Request,
     -- fallback subscriptions
     subscribeUnknownMany ::
       [UnknownSubscriptionType] ->
@@ -409,8 +410,9 @@ mkActions socket =
       sendCommandNoWait,
       sendCommand',
       --
-      sendAnyCommand',
-      sendAnyCommandNoWait,
+      sendCommand = send,
+      sendUnknownCommand',
+      sendUnknownCommandNoWait,
       -- fallback subscriptions
       subscribeUnknownMany,
       subscribeUnknownMany'
@@ -441,12 +443,12 @@ mkActions socket =
     sendCommandNoWait :: forall r. Command r -> IO Socket.Request
     sendCommandNoWait = Socket.sendCommandNoWait socket . toBiDi
 
-    sendAnyCommand' :: JSUInt -> Text -> Object -> IO Object
-    sendAnyCommand' id' method =
+    sendUnknownCommand' :: JSUInt -> Text -> Object -> IO Object
+    sendUnknownCommand' id' method =
       Socket.sendCommand' socket id' . Socket.MkSocketCommand method . Object
 
-    sendAnyCommandNoWait :: Text -> Object -> IO Socket.Request
-    sendAnyCommandNoWait method =
+    sendUnknownCommandNoWait :: Text -> Object -> IO Socket.Request
+    sendUnknownCommandNoWait method =
       Socket.sendCommandNoWait socket . Socket.MkSocketCommand method . Object
 
     sessionSubscribe :: SessionSubscibe -> IO SessionSubscribeResult
