@@ -20,7 +20,7 @@
 - [ ] remove unneeded instances to and fromJSON
 - [ ] unsubscribe by attributes
 - [ ] Claude reconcile / review
-- [ ] fallback
+- [X] fallback
 - [ ] IO only demo
 
 ## http
