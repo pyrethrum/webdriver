@@ -10,7 +10,6 @@ module WebDriverPreCore.BiDi.Protocol
     module WebDriverPreCore.BiDi.Emulation,
     module WebDriverPreCore.BiDi.Input,
     module WebDriverPreCore.BiDi.Log,
-    module WebDriverPreCore.BiDi.Response,
     module WebDriverPreCore.BiDi.Script,
     module WebDriverPreCore.BiDi.Session,
     module WebDriverPreCore.BiDi.Storage,
@@ -30,7 +29,6 @@ import WebDriverPreCore.BiDi.Event
 import WebDriverPreCore.BiDi.Input
 import WebDriverPreCore.BiDi.Log
 import WebDriverPreCore.BiDi.Network
-import WebDriverPreCore.BiDi.Response
 import WebDriverPreCore.BiDi.Script
 import WebDriverPreCore.BiDi.Session
 import WebDriverPreCore.BiDi.Storage

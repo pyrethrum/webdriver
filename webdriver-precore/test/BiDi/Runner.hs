@@ -43,19 +43,21 @@ import UnliftIO.STM
 import BiDi.BiDiUrl (BiDiUrl (..))
 import WebDriverPreCore.BiDi.Protocol as P
   ( JSUInt (..),
-    ResponseObject (..),
     SessionSubscribeResult (..),
     SessionSubscibe (..),
     SessionUnsubscribe (..),
     Subscription (..),
     SubscriptionId (..),
     SubscriptionType (..),
-    decodeResponse,
     subscriptionTypeToText
   )
 import WebDriverPreCore.Internal.AesonUtils (jsonToText, objToText, parseThrow)
 import WebDriverPreCore.Internal.Utils (txt)
 import Prelude hiding (getLine, log, null, print, putStrLn)
+import BiDi.Response
+  ( ResponseObject (..),
+    decodeResponse,
+  )
 
 -- | Run WebDriver BiDi client and return a client interface
 withBiDi :: DemoActions -> BiDiUrl -> (DemoActions -> SocketActions -> IO ()) -> IO ()

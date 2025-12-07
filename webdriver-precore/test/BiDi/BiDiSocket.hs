@@ -39,8 +39,8 @@ import UnliftIO.STM
       TVar,
       TChan )
 
-import WebDriverPreCore.BiDi.Protocol
-  ( JSUInt (..),
+import BiDi.Response
+  ( 
     JSONDecodeError,
     ResponseObject (..),
     MatchedResponse (..),
@@ -51,6 +51,7 @@ import WebDriverPreCore.Internal.Utils (txt)
 
 ---
 import Prelude hiding (id, log)
+import WebDriverPreCore.BiDi.Protocol (JSUInt(..))
 
 -- TODO: On split - test / fix / handle - timeouts / exceptions thrown from channel threads
 -- eg test ux when serialisation error in get set handle subscription

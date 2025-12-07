@@ -142,7 +142,6 @@ library
       WebDriverPreCore.BiDi.Log
       WebDriverPreCore.BiDi.Input
       WebDriverPreCore.BiDi.Network
-      WebDriverPreCore.BiDi.Response
       WebDriverPreCore.BiDi.Script
       WebDriverPreCore.BiDi.Session
       WebDriverPreCore.BiDi.Storage
@@ -216,6 +215,7 @@ test-suite test
     , Http.HttpDemo
     , Http.FallbackDemo
     , BiDi.Runner
+    , BiDi.Response
     , BiDi.BiDiSocket
     , BiDi.BiDiActions
     , BiDi.DemoUtils

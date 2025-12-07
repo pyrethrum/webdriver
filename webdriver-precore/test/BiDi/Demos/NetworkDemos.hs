@@ -7,6 +7,7 @@ import BiDi.DemoUtils
     demo,
     newWindowContext,
     rootContext,
+    runDemo
   )
 import IOUtils (DemoActions (..))
 import TestServerAPI (withTestServer)
@@ -64,6 +65,12 @@ import WebDriverPreCore.BiDi.Protocol
   )
 import WebDriverPreCore.Internal.Utils (txt)
 import Prelude hiding (log)
+
+
+-- stop warning for unused demo (its used in eval)
+_rundemo :: BiDiDemo -> IO ()
+_rundemo = runDemo
+
 
 authTestUrl :: URL
 authTestUrl = MkUrl URLs.authTestUrl
@@ -1430,8 +1437,8 @@ networkCacheBehaviorDemo =
       logTxt "Cleanup - close new context"
       closeContext utils bidi newContext
 
--- *** Exception: Error executing BiDi command: With JSON:
-
+-- >>> runDemo networkSetExtraHeadersDemo
+-- *** Exception: Error executing BiDi command: With JSON: 
 -- {
 --     "id": 2,
 --     "method": "network.setExtraHeaders",
@@ -1456,18 +1463,16 @@ networkCacheBehaviorDemo =
 --         ]
 --     }
 -- }
--- BiDi driver error:
--- MkDriverError
---   { id = Just 2
---   , error = UnknownCommand
---   , description = "The command sent is not known"
---   , message = "network.setExtraHeaders"
---   , stacktrace =
---       Just
---         "RemoteError@chrome://remote/content/shared/RemoteError.sys.mjs:8:8\nWebDriverError@chrome://remote/content/shared/webdriver/Errors.sys.mjs:202:5\nUnknownCommandError@chrome://remote/content/shared/webdriver/Errors.sys.mjs:944:5\nexecute@chrome://remote/content/shared/webdriver/Session.sys.mjs:407:13\nonPacket@chrome://remote/content/webdriver-bidi/WebDriverBiDiConnection.sys.mjs:236:37\nonMessage@chrome://remote/content/server/WebSocketTransport.sys.mjs:127:18\nhandleEvent@chrome://remote/content/server/WebSocketTransport.sys.mjs:109:14\n"
---   , extensions = MkEmptyResult { extensible = fromList [] }
---   }
---   }
+-- Failed to decode the 'result' property of JSON returned by driver to response type: 
+-- {
+--     "error": "unknown command",
+--     "id": 2,
+--     "message": "network.setExtraHeaders",
+--     "stacktrace": "RemoteError@chrome://remote/content/shared/RemoteError.sys.mjs:8:8\nWebDriverError@chrome://remote/content/shared/webdriver/Errors.sys.mjs:202:5\nUnknownCommandError@chrome://remote/content/shared/webdriver/Errors.sys.mjs:944:5\nexecute@chrome://remote/content/shared/webdriver/Session.sys.mjs:407:13\nonPacket@chrome://remote/content/webdriver-bidi/WebDriverBiDiConnection.sys.mjs:236:37\nonMessage@chrome://remote/content/server/WebSocketTransport.sys.mjs:127:18\nhandleEvent@chrome://remote/content/server/WebSocketTransport.sys.mjs:109:14\n",
+--     "type": "error"
+-- }
+-- Error message: 
+-- Error in $: key "result" not found
 networkSetExtraHeadersDemo :: BiDiDemo
 networkSetExtraHeadersDemo =
   demo "Network XI - Set Extra Headers -- since https://www.w3.org/TR/2025/WD-webdriver-bidi-20251106" action

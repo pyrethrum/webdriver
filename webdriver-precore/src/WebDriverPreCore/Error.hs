@@ -23,7 +23,6 @@ import GHC.Generics (Generic)
 import Text.Read (readEither)
 import WebDriverPreCore.Internal.HttpBidiCommon (JSUInt (..))
 import Prelude as P hiding (error, words)
-import WebDriverPreCore.Internal.Utils (db)
 
 {-
 Error Code 	HTTP Status 	JSON Error Code 	Description
@@ -120,7 +119,7 @@ instance FromJSON ErrorType where
 
 toErrorType :: Text -> Either Text ErrorType
 toErrorType =
-  first pack . readEither . unpack . db "THE STRING TO READ" . T.concat . db "TITLED" . fmap T.toTitle . T.words
+  first pack . readEither . unpack . T.concat . fmap T.toTitle . T.words
 
 toErrorCode :: ErrorType -> Text
 toErrorCode =
