@@ -22,7 +22,7 @@ import Data.Text (Text)
 import GHC.Generics (Generic)
 import WebDriverPreCore.BiDi.Capabilities (ProxyConfiguration, UserPromptHandler)
 import WebDriverPreCore.BiDi.CoreTypes (ClientWindow, UserContext)
-import WebDriverPreCore.Internal.AesonUtils (enumCamelCase, fromJSONCamelCase, opt)
+import AesonUtils (enumCamelCase, fromJSONCamelCase, opt)
 
 -- ######### Remote #########
 

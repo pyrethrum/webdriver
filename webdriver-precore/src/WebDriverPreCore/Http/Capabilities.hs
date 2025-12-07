@@ -51,7 +51,7 @@ import Data.Maybe (catMaybes)
 import Data.Text (Text)
 import Data.Vector (fromList)
 import GHC.Generics (Generic)
-import WebDriverPreCore.Internal.AesonUtils (opt, parseOpt, toJSONOmitNothing, parseJSONOmitNothing)
+import AesonUtils (opt, parseOpt, toJSONOmitNothing, parseJSONOmitNothing)
 
 {- references:
 - https://https://www.w3.org/TR/2025/WD-webdriver2-20251028/#capabilities

@@ -33,8 +33,8 @@ import UnliftIO.Async (Async)
 import UnliftIO.STM (newEmptyTMVarIO)
 import Prelude hiding (log)
 import Data.Aeson (Value)
-import WebDriverPreCore.Internal.AesonUtils (prettyJSON)
-import WebDriverPreCore.Internal.Utils (txt)
+import AesonUtils (prettyJSON)
+import Utils (txt)
 
 findWebDriverRoot :: FilePath -> Maybe FilePath
 findWebDriverRoot path =

@@ -13,7 +13,7 @@ import Data.Aeson as A
 import Data.Aeson.Types (Parser)
 import Data.Text (Text, unpack)
 import Data.Word (Word64)
-import WebDriverPreCore.Internal.Utils (txt)
+import Utils (txt)
 
 newtype JSUInt = MkJSUInt Word64 deriving newtype (Show, Eq, Enum, FromJSON, ToJSON) -- JSUnit ::  0..9007199254740991  -     Word64 :: 18446744073709551615
 

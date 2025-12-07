@@ -52,7 +52,7 @@ import GHC.Generics ( Generic(Rep) )
 import WebDriverPreCore.BiDi.Capabilities (UserPromptHandlerType)
 import WebDriverPreCore.BiDi.CoreTypes (BrowsingContext, JSInt, JSUInt, NodeRemoteValue, UserContext, KnownSubscriptionType (..), ClientWindow, URL (..))
 import WebDriverPreCore.BiDi.Script (SharedReference)
-import WebDriverPreCore.Internal.AesonUtils (enumCamelCase, fromJSONCamelCase, opt, parseJSONOmitNothing, toJSONOmitNothing)
+import AesonUtils (enumCamelCase, fromJSONCamelCase, opt, parseJSONOmitNothing, toJSONOmitNothing)
 
 -- ######### REMOTE #########
 

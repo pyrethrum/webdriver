@@ -63,9 +63,9 @@ import GHC.Generics (Generic)
 import WebDriverPreCore.Http.Capabilities
 import WebDriverPreCore.Http.Command
 import WebDriverPreCore.Error
-import WebDriverPreCore.Internal.AesonUtils (nonEmpty, opt, parseObject)
+import AesonUtils (nonEmpty, opt, parseObject)
 import WebDriverPreCore.Internal.HttpBidiCommon as Url (URL(..)) 
-import WebDriverPreCore.Internal.Utils (txt)
+import Utils (txt)
 import Prelude hiding (id)
 
 -- | [spec](https://www.w3.org/TR/2025/WD-webdriver2-20251028/#dfn-get-window-handle)

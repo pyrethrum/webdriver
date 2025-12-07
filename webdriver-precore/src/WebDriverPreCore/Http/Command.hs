@@ -17,8 +17,8 @@ import Data.Aeson as A
     ToJSON (..), Value,
   )
 import Data.Text (Text)
-import WebDriverPreCore.Internal.AesonUtils (objectOrThrow)
-import WebDriverPreCore.Internal.Utils (UrlPath (..))
+import AesonUtils (objectOrThrow)
+import Utils (UrlPath (..))
 import Prelude hiding (id, lookup)
 
 mkPost :: forall a r. (ToJSON a) => Text -> UrlPath -> a -> Command r

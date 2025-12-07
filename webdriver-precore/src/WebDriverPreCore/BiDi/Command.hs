@@ -24,8 +24,8 @@ import Data.Aeson
   )
 import Data.Aeson.Types (FromJSON (parseJSON), Parser, ToJSON (..))
 import Data.Text as T (Text, intercalate, unpack)
-import WebDriverPreCore.Internal.AesonUtils (jsonToText, objectOrThrow)
-import WebDriverPreCore.Internal.Utils (enumerate)
+import AesonUtils (jsonToText, objectOrThrow)
+import Utils (enumerate)
 import Data.Aeson.KeyMap qualified as KM
 
 data Command r = MkCommand

@@ -27,7 +27,7 @@ import Data.Maybe (fromMaybe)
 import Data.Text (Text)
 import GHC.Generics (Generic)
 import WebDriverPreCore.BiDi.Script qualified as Script
-import WebDriverPreCore.Internal.AesonUtils (toJSONOmitNothing, parseJSONOmitNothing)
+import AesonUtils (toJSONOmitNothing, parseJSONOmitNothing)
 import WebDriverPreCore.BiDi.CoreTypes (BrowsingContext(..))
 import Data.Aeson.Types (Parser)
 import WebDriverPreCore.BiDi.Script (SharedReference)

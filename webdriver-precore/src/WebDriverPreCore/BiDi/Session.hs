@@ -14,7 +14,7 @@ import Data.Text (Text)
 import GHC.Generics (Generic)
 import WebDriverPreCore.BiDi.Capabilities (CapabilitiesResult)
 import WebDriverPreCore.BiDi.CoreTypes (BrowsingContext, UserContext, SubscriptionType)
-import WebDriverPreCore.Internal.AesonUtils (toJSONOmitNothing)
+import AesonUtils (toJSONOmitNothing)
 
 -- ######### Remote #########
 

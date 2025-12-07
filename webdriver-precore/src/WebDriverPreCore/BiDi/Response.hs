@@ -20,8 +20,8 @@ import Data.Text (Text, pack)
 import GHC.Generics (Generic)
 import WebDriverPreCore.BiDi.CoreTypes (EmptyResult (..), JSUInt)
 import WebDriverPreCore.Error (WebDriverException(..))
-import WebDriverPreCore.Internal.AesonUtils (jsonToText, parseObjectEither, parseObjectMaybe, subtractProps)
-import WebDriverPreCore.Internal.Utils (txt)
+import AesonUtils (jsonToText, parseObjectEither, parseObjectMaybe, subtractProps)
+import Utils (txt)
 
 parseResponse :: forall r. (FromJSON r) => JSUInt -> Either JSONDecodeError ResponseObject -> Maybe (Either ResponseError (MatchedResponse r))
 parseResponse id' =

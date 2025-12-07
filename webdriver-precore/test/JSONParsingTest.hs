@@ -43,7 +43,7 @@ import WebDriverPreCore.Http.Protocol
     Timeouts (..),
     VendorSpecific (..)
   )
-import WebDriverPreCore.Internal.AesonUtils (jsonToText)
+import AesonUtils (jsonToText)
 import Prelude hiding (log)
 
 -- todo: test extras - split off

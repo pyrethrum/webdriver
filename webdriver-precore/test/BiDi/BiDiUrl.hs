@@ -4,7 +4,7 @@ import Data.Function ((&))
 import Data.Text (Text, breakOn, pack, splitOn, unpack)
 import Text.Read (readEither)
 import WebDriverPreCore.Http.Protocol (SessionResponse(..))
-import WebDriverPreCore.Internal.Utils (txt)
+import Utils (txt)
 
 getBiDiUrl :: SessionResponse -> Either Text BiDiUrl
 getBiDiUrl r =

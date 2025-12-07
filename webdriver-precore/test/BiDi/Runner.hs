@@ -51,8 +51,8 @@ import WebDriverPreCore.BiDi.Protocol as P
     SubscriptionType (..),
     subscriptionTypeToText
   )
-import WebDriverPreCore.Internal.AesonUtils (jsonToText, objToText, parseThrow)
-import WebDriverPreCore.Internal.Utils (txt)
+import AesonUtils (jsonToText, objToText, parseThrow)
+import Utils (txt)
 import Prelude hiding (getLine, log, null, print, putStrLn)
 import BiDi.Response
   ( ResponseObject (..),

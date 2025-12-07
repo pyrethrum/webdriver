@@ -21,7 +21,7 @@ import WebDriverPreCore.BiDi.Protocol
     URL (..),
     UserContext (..),
   )
-import WebDriverPreCore.Internal.Utils (txt)
+import Utils (txt)
 import Prelude hiding (log, putStrLn)
 
 --  TODO aake sure all demos only use Protocol, not sub modules

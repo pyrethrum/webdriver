@@ -1,6 +1,6 @@
 {-# OPTIONS_HADDOCK hide #-}
 
-module WebDriverPreCore.Internal.Utils
+module Utils
   ( txt,
     enumerate,
     -- shared path elements

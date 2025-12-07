@@ -1,4 +1,4 @@
-module WebDriverPreCore.Internal.AesonUtils
+module AesonUtils
   ( aesonTypeError,
     aesonTypeErrorMessage,
     asObject,

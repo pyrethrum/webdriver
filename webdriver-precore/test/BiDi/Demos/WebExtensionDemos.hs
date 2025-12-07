@@ -11,7 +11,7 @@ import WebDriverPreCore.BiDi.Protocol
       WebExtensionResult(..),
       WebExtensionUninstall(..) )
 
-import WebDriverPreCore.Internal.Utils (txt)
+import Utils (txt)
 import Prelude hiding (log, putStrLn)
 
 -- >>> runDemo webExtensionInstallPathDemo

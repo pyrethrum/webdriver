@@ -51,7 +51,7 @@ import WebDriverPreCore.Http.Protocol
     WindowHandleSpec (..),
     WindowRect (..),
   )
-import WebDriverPreCore.Internal.Utils (txt)
+import Utils (txt)
 import Prelude hiding (log)
 
 _stopDemoUnusedWarning :: HttpDemo -> IO ()

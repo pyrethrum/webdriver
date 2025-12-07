@@ -47,7 +47,7 @@ import BiDi.Response
     displayResponseError,
     parseResponse,
   )
-import WebDriverPreCore.Internal.Utils (txt)
+import Utils (txt)
 
 ---
 import Prelude hiding (id, log)

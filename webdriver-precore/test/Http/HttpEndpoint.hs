@@ -37,7 +37,7 @@ import Network.HTTP.Req
   )
 import Network.HTTP.Req qualified as R
 import WebDriverPreCore.Http.Protocol (Command (..))
-import WebDriverPreCore.Internal.Utils (UrlPath (..))
+import Utils (UrlPath (..))
 import Prelude hiding (log)
 import WebDriverPreCore.Http (HttpResponse)
 import WebDriverPreCore.Http.HttpResponse (HttpResponse(..))

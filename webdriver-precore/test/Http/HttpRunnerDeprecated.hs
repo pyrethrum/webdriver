@@ -27,7 +27,7 @@ import Http.HttpEndpoint (callWebDriver, fullCommandPath)
 import Data.Aeson (Result(..))
 import Data.Text (unpack)
 import Data.Function ((&))
-import WebDriverPreCore.Internal.Utils (UrlPath(..))
+import Utils (UrlPath(..))
 
 -- ############# Runner #############
 
