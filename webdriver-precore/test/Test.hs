@@ -72,8 +72,8 @@ unitTests =
         "Error Coverage"
         [ testCase "All errors covered" Error.unit_test_all_errors_covered,
           testCase "Round trip error codes" Error.unit_round_trip_error_codes,
-          testCase "All BiDi errors covered" Error.unit_test_all_bidi_errors_covered,
-          testCase "Round trip BiDi error codes" Error.unit_round_trip_bidi_error_codes
+          testCase "All BiDi errors covered" Error.unit_test_all_errors_covered,
+          testCase "Round trip BiDi error codes" Error.unit_round_trip_error_codes
         ],
       testGroup
         "JSON Parsing"

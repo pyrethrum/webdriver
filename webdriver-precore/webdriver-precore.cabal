@@ -127,10 +127,10 @@ library
   other-modules:
       -- Shared
       WebDriverPreCore.Error
+      WebDriverPreCore.Internal.HttpBidiCommon
       -- Http
       WebDriverPreCore.Http.Capabilities
       WebDriverPreCore.Http.Command
-      WebDriverPreCore.Internal.HttpBidiCommon
       -- BiDI
       WebDriverPreCore.BiDi.Browser
       WebDriverPreCore.BiDi.BrowsingContext

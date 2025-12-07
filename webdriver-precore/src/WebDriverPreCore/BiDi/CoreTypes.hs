@@ -26,10 +26,9 @@ import Data.Aeson.Types (Parser, withObject)
 import Data.Int (Int64)
 import Data.Map qualified as Map
 import Data.Text (Text, unpack)
-import Data.Word (Word64)
 import GHC.Generics (Generic)
 import WebDriverPreCore.Internal.AesonUtils (jsonToText)
-import WebDriverPreCore.Internal.HttpBidiCommon (URL (..))
+import WebDriverPreCore.Internal.HttpBidiCommon (URL (..), JSUInt (..))
 
 newtype ClientWindow = MkClientWindow Text
   deriving newtype (Show, Eq, FromJSON, ToJSON)
@@ -37,8 +36,6 @@ newtype ClientWindow = MkClientWindow Text
 -- | Core types for the WebDriver BiDi (Bidirectional) protocol.
 
 -- Base types              -- word 64  18446744073709551615
-
-newtype JSUInt = MkJSUInt Word64 deriving newtype (Show, Eq, Enum, FromJSON, ToJSON) -- JSUnit ::  0..9007199254740991  -     Word64 :: 18446744073709551615
 
 newtype JSInt = MkJSInt Int64 deriving newtype (Show, Eq, FromJSON, ToJSON) -- JSINt  :: -9007199254740991..9007199254740991 - Int64  -9223372036854775808 to 9223372036854775807
 

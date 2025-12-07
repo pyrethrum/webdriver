@@ -4,8 +4,8 @@ module WebDriverPreCore.Error
   ( ErrorType (..),
     WebDriverException (..),
     errorDescription,
-    errorCodeToErrorType,
-    errorTypeToErrorCode,
+    toErrorType,
+    toErrorCode,
     parseWebDriverException,
     parseErrorType,
   )
@@ -15,11 +15,15 @@ import Control.Exception (Exception)
 import Control.Monad ((>=>))
 import Data.Aeson (FromJSON (..), Options (..), Value, defaultOptions, genericParseJSON, withObject)
 import Data.Aeson.Types (Parser, parseMaybe, (.:))
+import Data.Bifunctor (first)
+import Data.Char (isUpper, toLower)
 import Data.Function ((&))
-import Data.Text (Text, break, pack, toLower, unpack, toTitle)
-import Data.Char (isUpper)
+import Data.Text as T (Text, pack, toTitle, unpack, concat, words)
 import GHC.Generics (Generic)
-import Prelude hiding (error)
+import Text.Read (readEither)
+import WebDriverPreCore.Internal.HttpBidiCommon (JSUInt (..))
+import Prelude as P hiding (error, words)
+import WebDriverPreCore.Internal.Utils (db)
 
 {-
 Error Code 	HTTP Status 	JSON Error Code 	Description
@@ -50,7 +54,8 @@ unexpected alert open 	500 	unexpected alert open 	A modal dialog was open, bloc
 unknown command 	404 	unknown command 	A command could not be executed because the remote end is not aware of it.
 unknown error 	500 	unknown error 	An unknown error occurred in the remote end while processing the command.
 unknown method 	405 	unknown method 	The requested command matched a known URL but did not match any method for that URL.
-unsupported operation 	500 	unsupported operation 	Indicates that a command that should have executed properly cannot be supported for some reason.
+unsupported operation 	500 	unsupported operation 	Indicates that a commamodule ErrorCoverageTest where
+nd that should have executed properly cannot be supported for some reason.
 -}
 
 -- | Known WevDriver Error Types
@@ -87,9 +92,10 @@ data ErrorType
   | UnsupportedOperation
   | --- Bidi
     InvalidWebExtension
-  | NoSuchNetworkCollector
+  | NoSuchClientWindow
   | NoSuchHandle
   | NoSuchHistoryEntry
+  | NoSuchNetworkCollector
   | NoSuchIntercept
   | NoSuchNetworkData
   | NoSuchNode
@@ -102,16 +108,25 @@ data ErrorType
   | UnableToSetFileInput
   | UnavailableNetworkData
   | UnderspecifiedStoragePartition
-  deriving (Eq, Show, Ord, Bounded, Enum)
+  deriving (Eq, Read, Show, Ord, Bounded, Enum)
 
-errorCodeToErrorType :: Text -> Either Text ErrorType
-errorCodeToErrorType =
-  first pack . readEither . unwords . fmap toTitle . words
+instance FromJSON ErrorType where
+  parseJSON :: Value -> Parser ErrorType
+  parseJSON = withObject "ErrorType" $ \o -> do
+    errCode <- o .: "error"
+    case toErrorType errCode of
+      Left e -> fail $ "Unknown ErrorType code: " <> unpack e
+      Right et -> pure et
 
-errorTypeToErrorCode :: ErrorType -> Text
-errorTypeToErrorCode =
-  pack . unwords . splitCamel . show
+toErrorType :: Text -> Either Text ErrorType
+toErrorType =
+  first pack . readEither . unpack . db "THE STRING TO READ" . T.concat . db "TITLED" . fmap T.toTitle . T.words
+
+toErrorCode :: ErrorType -> Text
+toErrorCode =
+  pack . P.unwords . splitCamel . show
   where
+    splitCamel :: String -> [String]
     splitCamel = \case
       [] -> []
       (x : xs) ->
@@ -141,7 +156,9 @@ errorDescription = \case
   StaleElementReference -> "A command failed because the referenced element is no longer attached to the DOM"
   DetachedShadowRoot -> "A command failed because the referenced shadow root is no longer attached to the DOM"
   Timeout -> "An operation did not complete before its timeout expired"
-  UnableToSetCookie -> "A command to set a cookie's value could not be satisfied"
+  -- Description from the BiDi spec differs from WebDriver spec
+  -- UnableToSetCookie -> "A command to set a cookie's value could not be satisfied."
+  UnableToSetCookie -> "Tried to create a cookie, but the user agent rejected it"
   UnableToCaptureScreen -> "A screen capture was made impossible"
   UnexpectedAlertOpen -> "A modal dialog was open, blocking this operation"
   UnknownCommand -> "A command could not be executed because the remote end is not aware of it"
@@ -150,11 +167,12 @@ errorDescription = \case
   UnsupportedOperation -> "Indicates that a command that should have executed properly cannot be supported for some reason"
   -- Bidi
   InvalidWebExtension -> "Tried to install an invalid web extension"
+  NoSuchClientWindow -> "Tried to interact with an unknown client window"
   NoSuchNetworkCollector -> "Tried to remove an unknown collector"
   NoSuchHandle -> "Tried to deserialize an unknown RemoteObjectReference"
   NoSuchHistoryEntry -> "Tried to navigate to an unknown session history entry"
   NoSuchIntercept -> "Tried to remove an unknown network intercept"
-  NoSuchNetworkData -> "Tried to reference unknown data"
+  NoSuchNetworkData -> "Tried to reference an unknown network data"
   NoSuchNode -> "Tried to deserialize an unknown SharedReference"
   NoSuchRequest -> "Tried to continue an unknown request"
   NoSuchScript -> "Tried to remove an unknown preload script"
@@ -177,27 +195,31 @@ data WebDriverException
         errorData :: Maybe Value,
         response :: Value
       }
-  deriving (Eq, Show, Ord)
+  deriving (Eq, Show, Ord, Generic)
 
 instance Exception WebDriverException
 
+instance FromJSON WebDriverException
+
 parseWebDriverException :: Value -> WebDriverException
-parseWebDriverException body =
-  parseMaybe parseErrorCode body & maybe
-    parserErr
-    \err ->
-      case errorCodeToErrorType err of
-        Left _ -> UnrecognisedException body
-        Right et -> mkWebDriverException et
+parseWebDriverException response =
+  parseMaybe parseErrorCode response
+    & maybe
+      parserErr
+      ( either
+          (const $ UnrecognisedException response)
+          mkWebDriverException
+          . toErrorType
+      )
   where
-    parserErr = ResponeParseException body
+    parserErr = ResponeParseException response
     mkWebDriverException :: ErrorType -> WebDriverException
     mkWebDriverException et =
-      parseMaybe (getValue >=> parseJSON) body
+      parseMaybe (getValue >=> parseJSON) response
         & maybe
           parserErr
           \MkWebDriverExceptionRaw {..} ->
-            ProtocolException {error = et, description = errorDescription et, response = body, ..}
+            ProtocolException {error = et, description = errorDescription et, response, ..}
 
 getValue :: Value -> Parser Value
 getValue =
@@ -217,6 +239,7 @@ parseErrorType resp =
 data WebDriverExceptionRaw = MkWebDriverExceptionRaw
   { error :: Text,
     message :: Text,
+    biDiId :: Maybe JSUInt,
     stacktrace :: Maybe Text,
     errorData :: Maybe Value
   }
@@ -229,19 +252,19 @@ instance FromJSON WebDriverExceptionRaw where
       defaultOptions
         { omitNothingFields = True,
           fieldLabelModifier = \case
-            "errorData" -> "data"
+            "data" -> "errorData"
+            "id" -> "biDiId"
             other -> other
         }
 
-
 {- FROM BIDI
 
-- get compiling 
+- get compiling
    check empty result
 - try known missign Bidi demos
 - review unit tests
 - a couple of integration demos
-  - http - element does not exist 
+  - http - element does not exist
   - bidi specific - element does not exist
 
 data DriverError = MkDriverError
@@ -271,7 +294,8 @@ instance FromJSON DriverError where
           extensions =
             MkEmptyResult $
               subtractProps
-                [ "id",
+                [ "id",module ErrorCoverageTest where
+
                   "type",
                   "error",
                   "description",

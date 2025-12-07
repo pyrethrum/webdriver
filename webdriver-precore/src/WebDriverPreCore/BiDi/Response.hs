@@ -19,7 +19,7 @@ import Data.Function ((&))
 import Data.Text (Text, pack)
 import GHC.Generics (Generic)
 import WebDriverPreCore.BiDi.CoreTypes (EmptyResult (..), JSUInt)
-import WebDriverPreCore.Error (DriverError (..))
+import WebDriverPreCore.Error (WebDriverException(..))
 import WebDriverPreCore.Internal.AesonUtils (jsonToText, parseObjectEither, parseObjectMaybe, subtractProps)
 import WebDriverPreCore.Internal.Utils (txt)
 
@@ -38,7 +38,7 @@ matchResponseId msgId = \case
         Just $
           bimap
             ( \e ->
-                (parseObjectMaybe obj :: Maybe DriverError)
+                (parseObjectMaybe obj :: Maybe WebDriverException)
                   & maybe
                     (ParseError {object = obj, error = e})
                     BiDIError
@@ -72,7 +72,7 @@ data ResponseObject
 newtype JSONDecodeError = MkJSONDecodeError Text deriving (Show, Eq, Generic)
 
 data ResponseError
-  = BiDIError DriverError
+  = BiDIError WebDriverException
   | DecodeError JSONDecodeError
   | ParseError
       { object :: Object,
