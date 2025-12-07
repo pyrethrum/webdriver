@@ -102,8 +102,7 @@ instance ToJSON DataType where
 instance FromJSON DataType where
   parseJSON :: Value -> Parser DataType
   parseJSON = fromJSONCamelCase
--- TODO - not sure what this is about
--- network.CollectorType = "blob"
+
 newtype CollectorType = MkCollectorType {collectorType :: Text}
   deriving (Show, Eq, Generic)
   deriving newtype (FromJSON, ToJSON)

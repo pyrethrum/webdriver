@@ -1437,6 +1437,7 @@ networkCacheBehaviorDemo =
       logTxt "Cleanup - close new context"
       closeContext utils bidi newContext
 
+HERE FIX THIS AND MAKE ERROR DEMOS -HTTP AND BIDI
 -- >>> runDemo networkSetExtraHeadersDemo
 -- *** Exception: Error executing BiDi command: With JSON: 
 -- {
