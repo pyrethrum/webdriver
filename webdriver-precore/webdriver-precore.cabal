@@ -130,7 +130,7 @@ library
       -- Http
       WebDriverPreCore.Http.API
       WebDriverPreCore.Http.Protocol
-      -- deprecated
+      -- Http deprecated
       WebDriverPreCore.Http
       WebDriverPreCore.Http.SpecDefinition
       WebDriverPreCore.Http.HttpResponse
