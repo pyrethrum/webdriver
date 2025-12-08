@@ -137,9 +137,10 @@ library
       -- BiDi
       WebDriverPreCore.BiDi.API
       WebDriverPreCore.BiDi.Protocol
-  other-modules:
       -- Shared
       WebDriverPreCore.Error
+  other-modules:
+      -- Shared
       WebDriverPreCore.Internal.HttpBidiCommon
       -- Http
       WebDriverPreCore.Http.Capabilities
@@ -224,6 +225,7 @@ test-suite test
     , Http.HttpEndpoint
     , Http.DemoUtils
     , Http.HttpDemo
+    , Http.ErrorDemo
     , Http.FallbackDemo
     , BiDi.Runner
     , BiDi.Response
@@ -231,6 +233,7 @@ test-suite test
     , BiDi.BiDiActions
     , BiDi.DemoUtils
     , BiDi.BiDiUrl
+    , BiDi.ErrorDemo
     , BiDi.Demos.BrowserDemos
     , BiDi.Demos.BrowsingContextDemos
     , BiDi.Demos.BrowsingContextEventDemos

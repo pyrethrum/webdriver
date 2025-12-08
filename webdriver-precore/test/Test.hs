@@ -20,10 +20,12 @@ import BiDi.Demos.ScriptEventDemos qualified as ScriptEvent
 import BiDi.Demos.SessionDemos qualified as Session
 import BiDi.Demos.StorageDemos qualified as Storage
 import BiDi.Demos.WebExtensionDemos qualified as WebExtension
+import BiDi.ErrorDemo qualified as BiDiError
 import Config (Config (..), loadConfig)
 import Data.Text (Text, unpack)
 import ErrorCoverageTest qualified as Error
 import Http.DemoUtils (HttpDemo (..), runDemoWithConfig)
+import Http.ErrorDemo qualified as HttpError
 import Http.HttpDemo qualified as Http
 #ifndef LEGACY_TEST
 import Http.FallbackDemo qualified as HttpFallback
@@ -120,7 +122,8 @@ httpDemos cfg =
             Http.demoPointerNoneActions,
             Http.demoKeyAndReleaseActions,
             Http.demoWheelActions,
-            Http.demoError
+            Http.demoError,
+            HttpError.errorDemo
 -- fallback commands not implemented for legacy
 #ifndef LEGACY_TEST
             , HttpFallback.demoFallbackActions
@@ -182,7 +185,8 @@ bidiDemos cfg =
                   BrowsingContext.browsingNavigateReloadTraverseHistoryDemo,
                   BrowsingContext.browsingContextLocateNodesDemo,
                   BrowsingContext.browsingContextPrintDemo,
-                  BrowsingContext.browsingContextSetViewportDemo
+                  BrowsingContext.browsingContextSetViewportDemo,
+                  BiDiError.errorDemo
                   -- TODO: make conditional - hangs in firefox
                   -- , BrowsingContext.browsingContextSetViewportResetDemo
                 ],

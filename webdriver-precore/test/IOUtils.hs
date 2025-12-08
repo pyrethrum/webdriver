@@ -13,12 +13,13 @@ module IOUtils
     loopForever,
     catchLog,
     defToLogNothing,
+    expectProtocolException,
   )
 where
 
 import Const (Timeout (..), seconds)
 import Control.Concurrent (threadDelay)
-import Control.Exception (Exception (..), Handler (..), SomeException, catches)
+import Control.Exception (Exception (..), Handler (..), SomeException, catches, try)
 import Control.Monad (void, when)
 import Data.Base64.Types qualified as B64T
 import Data.ByteString qualified as BS
@@ -27,7 +28,7 @@ import Data.Maybe (fromMaybe)
 import Data.Text (Text, isInfixOf, pack, toLower, unpack)
 import GHC.Base (coerce)
 import System.FilePath (joinPath, splitDirectories, (</>))
-import Test.Tasty.HUnit as HUnit (Assertion, HasCallStack, (@=?))
+import Test.Tasty.HUnit as HUnit (Assertion, HasCallStack, assertFailure, (@=?))
 import UnliftIO (AsyncCancelled, async, atomically, race_, readTMVar, throwIO, tryPutTMVar)
 import UnliftIO.Async (Async)
 import UnliftIO.STM (newEmptyTMVarIO)
@@ -35,6 +36,7 @@ import Prelude hiding (log)
 import Data.Aeson (Value)
 import AesonUtils (prettyJSON)
 import Utils (txt)
+import WebDriverPreCore.Error (ErrorType, WebDriverException (..))
 
 findWebDriverRoot :: FilePath -> Maybe FilePath
 findWebDriverRoot path =
@@ -192,3 +194,22 @@ loopForever logger name action = async $ do
   loop
   where
     loop = catchLog name logger action >> loop
+
+-- | Utility to test that an action throws a ProtocolException with expected error type
+expectProtocolException :: 
+  (HasCallStack) =>
+  ErrorType -> 
+  IO a -> 
+  IO WebDriverException
+expectProtocolException expectedError action = do
+  result <- Control.Exception.try action
+  case result of
+    Left exc@(ProtocolException {error = actualError}) -> do
+      actualError === expectedError
+      pure exc
+    Left exc -> do
+      HUnit.assertFailure $ "Expected ProtocolException but got: " <> show exc
+      Prelude.error "unreachable"
+    Right _ -> do
+      HUnit.assertFailure $ "Expected ProtocolException with error " <> show expectedError <> " but action succeeded"
+      Prelude.error "unreachable"
