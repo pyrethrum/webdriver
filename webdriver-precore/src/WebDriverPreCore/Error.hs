@@ -11,14 +11,15 @@ module WebDriverPreCore.Error
   )
 where
 
+import AesonUtils (jsonToText)
 import Control.Exception (Exception)
 import Control.Monad ((>=>))
-import Data.Aeson (FromJSON (..), Options (..), Value, defaultOptions, genericParseJSON, withObject)
-import Data.Aeson.Types (Parser, parseMaybe, (.:))
+import Data.Aeson (FromJSON (..), Options (..), Value, defaultOptions, genericParseJSON, withObject, (.:?))
+import Data.Aeson.Types (Parser, parseEither, parseMaybe, (.:))
 import Data.Bifunctor (first)
 import Data.Char (isUpper, toLower)
 import Data.Function ((&))
-import Data.Text as T (Text, pack, toTitle, unpack, concat, words)
+import Data.Text as T (Text, concat, pack, toTitle, unpack, words)
 import GHC.Generics (Generic)
 import Text.Read (readEither)
 import WebDriverPreCore.Internal.HttpBidiCommon (JSUInt (..))
@@ -183,8 +184,12 @@ errorDescription = \case
   UnavailableNetworkData -> "Tried to get network data which was not collected or already evicted"
   UnderspecifiedStoragePartition -> "Tried to interact with data in a storage partition which was not adequately specified"
 
+
 data WebDriverException
-  = ResponeParseException {response :: Value}
+  = ResponeParseException
+      { message :: Text,
+        response :: Value
+      }
   | UnrecognisedException {response :: Value}
   | ProtocolException
       { error :: ErrorType,
@@ -198,35 +203,40 @@ data WebDriverException
 
 instance Exception WebDriverException
 
-instance FromJSON WebDriverException
+instance FromJSON WebDriverException where
+  parseJSON :: Value -> Parser WebDriverException
+  parseJSON = pure . parseWebDriverException
 
 parseWebDriverException :: Value -> WebDriverException
 parseWebDriverException response =
   parseMaybe parseErrorCode response
     & maybe
-      parserErr
+      (parserErr ("Could find 'error' property in response\n" <> jsonToText response))
       ( either
           (const $ UnrecognisedException response)
           mkWebDriverException
           . toErrorType
       )
   where
-    parserErr = ResponeParseException response
+    parserErr message = ResponeParseException {message, response}
     mkWebDriverException :: ErrorType -> WebDriverException
     mkWebDriverException et =
-      parseMaybe (getValue >=> parseJSON) response
-        & maybe
-          parserErr
+      parseEither parseJSON response
+        & either
+          (\msg -> parserErr $ "Error object parsing failed:\n" <> pack msg <> "\n" <> jsonToText response)
           \MkWebDriverExceptionRaw {..} ->
-            ProtocolException {error = et, description = errorDescription et, response, ..}
-
-getValue :: Value -> Parser Value
-getValue =
-  withObject "value" (.: "value")
+            ProtocolException
+              { error = et,
+                description = errorDescription et,
+                response,
+                message,
+                stacktrace,
+                errorData
+              }
 
 parseErrorCode :: Value -> Parser Text
 parseErrorCode =
-  getValue >=> withObject "error" (.: "error")
+  withObject "error" (.: "error")
 
 parseErrorType :: Value -> Maybe ErrorType
 parseErrorType resp =

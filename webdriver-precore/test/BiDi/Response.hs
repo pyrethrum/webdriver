@@ -88,7 +88,7 @@ displayResponseError request err =
     <> "\n"
     <> case err of
       BiDIError e -> "BiDi driver error: \n" <> txt e
-      DecodeError (MkJSONDecodeError e) -> "Failed to encode driver response to JSON: \n" <> txt e
+      DecodeError (MkJSONDecodeError e) -> "Failed to encode driver response to JSON - response is not valid JSON: \n" <> txt e
       ParseError {object, error = e} ->
         "Failed to decode the 'result' property of JSON returned by driver to response type: \n"
           <> jsonToText (Object object)

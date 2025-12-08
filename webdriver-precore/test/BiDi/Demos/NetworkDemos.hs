@@ -1437,7 +1437,7 @@ networkCacheBehaviorDemo =
       logTxt "Cleanup - close new context"
       closeContext utils bidi newContext
 
-HERE FIX THIS AND MAKE ERROR DEMOS -HTTP AND BIDI
+
 -- >>> runDemo networkSetExtraHeadersDemo
 -- *** Exception: Error executing BiDi command: With JSON: 
 -- {
@@ -1464,16 +1464,29 @@ HERE FIX THIS AND MAKE ERROR DEMOS -HTTP AND BIDI
 --         ]
 --     }
 -- }
--- Failed to decode the 'result' property of JSON returned by driver to response type: 
--- {
---     "error": "unknown command",
---     "id": 2,
---     "message": "network.setExtraHeaders",
---     "stacktrace": "RemoteError@chrome://remote/content/shared/RemoteError.sys.mjs:8:8\nWebDriverError@chrome://remote/content/shared/webdriver/Errors.sys.mjs:202:5\nUnknownCommandError@chrome://remote/content/shared/webdriver/Errors.sys.mjs:944:5\nexecute@chrome://remote/content/shared/webdriver/Session.sys.mjs:407:13\nonPacket@chrome://remote/content/webdriver-bidi/WebDriverBiDiConnection.sys.mjs:236:37\nonMessage@chrome://remote/content/server/WebSocketTransport.sys.mjs:127:18\nhandleEvent@chrome://remote/content/server/WebSocketTransport.sys.mjs:109:14\n",
---     "type": "error"
--- }
--- Error message: 
--- Error in $: key "result" not found
+-- BiDi driver error: 
+-- ProtocolException
+--   { error = UnknownCommand
+--   , description =
+--       "A command could not be executed because the remote end is not aware of it"
+--   , message = "network.setExtraHeaders"
+--   , stacktrace =
+--       Just
+--         "RemoteError@chrome://remote/content/shared/RemoteError.sys.mjs:8:8\nWebDriverError@chrome://remote/content/shared/webdriver/Errors.sys.mjs:202:5\nUnknownCommandError@chrome://remote/content/shared/webdriver/Errors.sys.mjs:944:5\nexecute@chrome://remote/content/shared/webdriver/Session.sys.mjs:407:13\nonPacket@chrome://remote/content/webdriver-bidi/WebDriverBiDiConnection.sys.mjs:236:37\nonMessage@chrome://remote/content/server/WebSocketTransport.sys.mjs:127:18\nhandleEvent@chrome://remote/content/server/WebSocketTransport.sys.mjs:109:14\n"
+--   , errorData = Nothing
+--   , response =
+--       Object
+--         (fromList
+--            [ ( "error" , String "unknown command" )
+--            , ( "id" , Number 2.0 )
+--            , ( "message" , String "network.setExtraHeaders" )
+--            , ( "stacktrace"
+--              , String
+--                  "RemoteError@chrome://remote/content/shared/RemoteError.sys.mjs:8:8\nWebDriverError@chrome://remote/content/shared/webdriver/Errors.sys.mjs:202:5\nUnknownCommandError@chrome://remote/content/shared/webdriver/Errors.sys.mjs:944:5\nexecute@chrome://remote/content/shared/webdriver/Session.sys.mjs:407:13\nonPacket@chrome://remote/content/webdriver-bidi/WebDriverBiDiConnection.sys.mjs:236:37\nonMessage@chrome://remote/content/server/WebSocketTransport.sys.mjs:127:18\nhandleEvent@chrome://remote/content/server/WebSocketTransport.sys.mjs:109:14\n"
+--              )
+--            , ( "type" , String "error" )
+--            ])
+--   }
 networkSetExtraHeadersDemo :: BiDiDemo
 networkSetExtraHeadersDemo =
   demo "Network XI - Set Extra Headers -- since https://www.w3.org/TR/2025/WD-webdriver-bidi-20251106" action
