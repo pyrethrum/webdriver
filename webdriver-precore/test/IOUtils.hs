@@ -17,10 +17,12 @@ module IOUtils
   )
 where
 
+import AesonUtils (prettyJSON)
 import Const (Timeout (..), seconds)
 import Control.Concurrent (threadDelay)
 import Control.Exception (Exception (..), Handler (..), SomeException, catches, try)
 import Control.Monad (void, when)
+import Data.Aeson (Value)
 import Data.Base64.Types qualified as B64T
 import Data.ByteString qualified as BS
 import Data.ByteString.Base64 qualified as B64
@@ -32,11 +34,9 @@ import Test.Tasty.HUnit as HUnit (Assertion, HasCallStack, assertFailure, (@=?))
 import UnliftIO (AsyncCancelled, async, atomically, race_, readTMVar, throwIO, tryPutTMVar)
 import UnliftIO.Async (Async)
 import UnliftIO.STM (newEmptyTMVarIO)
-import Prelude hiding (log)
-import Data.Aeson (Value)
-import AesonUtils (prettyJSON)
 import Utils (txt)
 import WebDriverPreCore.Error (ErrorType, WebDriverException (..))
+import Prelude hiding (log)
 
 findWebDriverRoot :: FilePath -> Maybe FilePath
 findWebDriverRoot path =
@@ -47,7 +47,6 @@ findWebDriverRoot path =
     rootDir = "webdriver"
     dirs = splitDirectories path
     webDriverPath = (joinPath $ takeWhile (/= rootDir) dirs) </> rootDir
-
 
 newtype Logger = MkLogger
   { log :: Text -> IO ()
@@ -166,7 +165,6 @@ encodeFileToBase64 :: FilePath -> IO Text
 encodeFileToBase64 filePath =
   B64T.extractBase64 . B64.encodeBase64 <$> BS.readFile filePath
 
-
 (===) ::
   (Eq a, Show a, HasCallStack) =>
   -- | The actual value
@@ -195,21 +193,22 @@ loopForever logger name action = async $ do
   where
     loop = catchLog name logger action >> loop
 
+
+HERE TODO: need to use ResponseError for bidi
 -- | Utility to test that an action throws a ProtocolException with expected error type
-expectProtocolException :: 
+expectProtocolException ::
   (HasCallStack) =>
-  ErrorType -> 
-  IO a -> 
+  ErrorType ->
+  IO a ->
   IO WebDriverException
-expectProtocolException expectedError action = do
-  result <- Control.Exception.try action
-  case result of
-    Left exc@(ProtocolException {error = actualError}) -> do
-      actualError === expectedError
-      pure exc
-    Left exc -> do
-      HUnit.assertFailure $ "Expected ProtocolException but got: " <> show exc
-      Prelude.error "unreachable"
-    Right _ -> do
-      HUnit.assertFailure $ "Expected ProtocolException with error " <> show expectedError <> " but action succeeded"
-      Prelude.error "unreachable"
+expectProtocolException expectedError action =
+  Control.Exception.try action
+    >>= \case
+      Left exc@(ProtocolException {error = actualError}) ->
+        actualError === expectedError >> pure exc
+      Left exc -> do
+        HUnit.assertFailure $ "Expected ProtocolException but got: " <> show exc
+        Prelude.error "unreachable"
+      Right _ -> do 
+        HUnit.assertFailure $ "Expected ProtocolException with error " <> show expectedError <> " but action succeeded"
+        Prelude.error "unreachable"

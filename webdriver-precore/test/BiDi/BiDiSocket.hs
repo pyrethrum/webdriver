@@ -52,6 +52,7 @@ import Utils (txt)
 ---
 import Prelude hiding (id, log)
 import WebDriverPreCore.BiDi.Protocol (JSUInt(..))
+import Control.Exception (throw)
 
 -- TODO: On split - test / fix / handle - timeouts / exceptions thrown from channel threads
 -- eg test ux when serialisation error in get set handle subscription
@@ -194,6 +195,7 @@ matchedRequest getNext request id' = do
       ( either
           ( -- format and throw
             error . unpack . displayResponseError request
+            -- throw
           )
           ( -- get response
             pure . (.response)

@@ -21,6 +21,7 @@ import GHC.Generics (Generic)
 import WebDriverPreCore.BiDi.Protocol (EmptyResult (..), JSUInt, WebDriverException(..))
 import AesonUtils (jsonToText, parseObjectEither, parseObjectMaybe, subtractProps)
 import Utils (txt)
+import Control.Exception (Exception)
 
 parseResponse :: forall r. (FromJSON r) => JSUInt -> Either JSONDecodeError ResponseObject -> Maybe (Either ResponseError (MatchedResponse r))
 parseResponse id' =
@@ -79,6 +80,11 @@ data ResponseError
       }
   | BiDiTimeoutError {ms :: Int}
   deriving (Show, Eq, Generic)
+
+HERE TODO: start by adding request to responseError
+instance Exception ResponseError
+  displayException :: ResponseError -> String
+  displayException = unpack .
 
 displayResponseError :: Value -> ResponseError -> Text
 displayResponseError request err =
