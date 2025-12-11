@@ -5,9 +5,8 @@ module Http.HttpRunner
 where
 
 import Data.Aeson (FromJSON (..), Result (..), Value, withObject, (.:))
-import Data.Aeson.Types (Parser, Value (..), parse)
+import Data.Aeson.Types (Parser, Value (..), parse, parseEither, parseMaybe)
 import Data.Function ((&))
-import Data.Text (Text, unpack)
 import GHC.Exception (throw)
 import Http.HttpEndpoint (callWebDriver', mkRequest)
 import IOUtils (DemoActions (..))
@@ -15,12 +14,11 @@ import Network.HTTP.Req
   ( Scheme (..),
     Url,
   )
-import Text.Show.Pretty (ppShow)
 import UnliftIO (catchAny)
-
-import WebDriverPreCore.Http.Protocol (Command (..), WebDriverException (..), parseWebDriverException)
-
+import WebDriverPreCore.Error ( parseWebDriverException )
+import WebDriverPreCore.Http.Protocol ( Command(..) )
 import Prelude hiding (log)
+import WebDriverPreCore.Error (WebDriverException(..))
 
 -- ############# Runner #############
 
@@ -46,10 +44,10 @@ run driverUrl port da@MkDemoActions {logShow} cmd = do
   rsp <- logCall driverUrl port da cmd
   r <-
     catchAny
-      (parseResultIO rsp cmd.description)
-      ( \e -> do
+      (parseResultIO rsp)
+      ( \e ->
           logShow "Command Execution Failed" e
-          throw e
+            >> throw e
       )
   pure r
 
@@ -64,19 +62,18 @@ logCommand da@MkDemoActions {logShow} cmd = do
     Delete {} -> pure ()
 
 -- todo: fix to throw proper exceptions when moved to own library
-parseResultIO :: forall r. (FromJSON r) => Value -> Text -> IO r
-parseResultIO body description =
-  case parse fromBodyValue body of
-    Error msg ->
-      fail $
-        parseWebDriverException body & \case
-          e@ResponeParseException {} -> unpack description <> "\n" <> "Failed to parse response:\n " <> msg <> "\nin response:" <> ppShow e
-          e@UnrecognisedException {} -> "UnrecognisedError:\n " <> "\nin response:" <> ppShow e
-          e@ProtocolException {} -> "WebDriver Protocol Error thrown:\n " <> ppShow e
-    Success r -> pure r
+parseResultIO :: forall r. (FromJSON r) => Value -> IO r
+parseResultIO body  =
+  parseMaybe valueParser body
+    & maybe
+      ( throw $ ResponseParseException "No value property found in WebDriver response" body
+      )
+      ( \val ->
+          parseEither @_ @r parseJSON val & either
+            (const . throw $ parseWebDriverException val)
+            pure
+      )
+  
 
-fromBodyValue :: forall a. (FromJSON a) => Value -> Parser a
-fromBodyValue body =
-  body & withObject "body value" \b -> do
-    val <- b .: "value"
-    parseJSON val
+valueParser :: Value -> Parser Value
+valueParser body = body & withObject "body value" (.: "value")

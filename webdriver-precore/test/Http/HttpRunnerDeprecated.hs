@@ -1,12 +1,14 @@
 module Http.HttpRunnerDeprecated
   ( run,
     mkRunner,
-    HttpRunnerDeprecated (..)
+    HttpRunnerDeprecated (..),
   )
 where
 
 import Const (ReqRequestParams (..))
-import Data.Aeson (object)
+import Data.Aeson (Result (..), object)
+import Data.Function ((&))
+import Http.HttpEndpoint (callWebDriver, fullCommandPath)
 import IOUtils (DemoActions (..))
 import Network.HTTP.Req (Scheme (Http), Url)
 import Network.HTTP.Req as R
@@ -16,18 +18,14 @@ import Network.HTTP.Req as R
     POST (POST),
     ReqBodyJson (ReqBodyJson),
   )
+import Utils (UrlPath (..))
+import WebDriverPreCore.Error
 import WebDriverPreCore.Http
-  ( WebDriverException (..),
-    HttpSpec (..),
-    parseWebDriverException,
+  ( HttpSpec (..),
   )
 import WebDriverPreCore.Http qualified as W
 import Prelude hiding (log)
-import Http.HttpEndpoint (callWebDriver, fullCommandPath)
-import Data.Aeson (Result(..))
-import Data.Text (unpack)
-import Data.Function ((&))
-import Utils (UrlPath(..))
+import UnliftIO (throwIO)
 
 -- ############# Runner #############
 
@@ -61,16 +59,10 @@ mkRequest driverUrl port spec = case spec of
   where
     url = fullCommandPath driverUrl spec.path.segments
 
-
 parseIO :: HttpSpec a -> W.HttpResponse -> IO a
 parseIO spec r =
   spec.parser r
     & \case
-      Error msg ->
-        fail $
-          parseWebDriverException r.body & \case
-            e@ResponeParseException {} -> unpack spec.description <> "\n" <> "Failed to parse response:\n " <> msg <> "\nin response:" <> show e
-            e@UnrecognisedException {} -> "UnrecognisedError:\n " <> "\nin response:" <> show e
-            e@ProtocolException {} -> "WebDriver Protocol Error thrown:\n " <> show e
+      Error _->
+        throwIO $ parseWebDriverException r.body
       Success a -> pure a
-

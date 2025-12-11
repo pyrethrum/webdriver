@@ -20,39 +20,37 @@ module BiDi.BiDiSocket
   )
 where
 
-import UnliftIO.Exception (Exception (..), SomeException, catch)
+import BiDi.Response
+  ( MatchedResponse (..),
+    ResponseObject (..),
+    parseResponse,
+  )
+---
+
+import Control.Exception (throw)
 import Data.Aeson (FromJSON, Object, ToJSON, Value (..), object, toJSON, (.=))
 import Data.Function ((&))
 import Data.Set (Set)
 import Data.Set qualified as Set
 import Data.Text (Text, unpack)
 import GHC.Generics (Generic)
+import UnliftIO.Exception (Exception (..), SomeException, catch)
 import UnliftIO.STM
-    ( STM,
-      readTVar,
-      readTChan,
-      writeTChan,
-      modifyTVar',
-      atomically,
-      newTChanIO,
-      newTVarIO,
-      TVar,
-      TChan )
-
-import BiDi.Response
-  ( 
-    JSONDecodeError,
-    ResponseObject (..),
-    MatchedResponse (..),
-    displayResponseError,
-    parseResponse,
+  ( STM,
+    TChan,
+    TVar,
+    atomically,
+    modifyTVar',
+    newTChanIO,
+    newTVarIO,
+    readTChan,
+    readTVar,
+    writeTChan,
   )
 import Utils (txt)
-
----
+import WebDriverPreCore.BiDi.Protocol (JSUInt (..))
+import WebDriverPreCore.Error (JSONEncodeException (..))
 import Prelude hiding (id, log)
-import WebDriverPreCore.BiDi.Protocol (JSUInt(..))
-import Control.Exception (throw)
 
 -- TODO: On split - test / fix / handle - timeouts / exceptions thrown from channel threads
 -- eg test ux when serialisation error in get set handle subscription
@@ -95,14 +93,14 @@ newtype SocketSubscriptionType = MkSocketSubscriptionType {subscriptionType :: T
 data SocketActions = MkBiDiSocket
   { nextId :: STM JSUInt,
     send :: forall a. (ToJSON a, Show a) => a -> STM (),
-    getNext :: STM (Either JSONDecodeError ResponseObject),
+    getNext :: STM (Either JSONEncodeException ResponseObject),
     registerSubscription :: SocketSubscription -> SocketSubscriptionId -> STM (),
     unregisterSubscription :: SocketUnregister -> STM ()
   }
 
 data Channels = MkChannels
   { sendChan :: TChan Value,
-    receiveChan :: TChan (Either JSONDecodeError ResponseObject),
+    receiveChan :: TChan (Either JSONEncodeException ResponseObject),
     eventChan :: TChan Object,
     counterVar :: TVar JSUInt,
     subscriptions :: TVar [RegisteredSubscription IO]
@@ -184,23 +182,13 @@ sendCommand m@MkBiDiSocket {getNext} command = do
   MkRequest {id = id', payload} <- sendCommandNoWait m command
   matchedRequest getNext payload id'
 
-matchedRequest :: forall r. (FromJSON r) => STM (Either JSONDecodeError ResponseObject) -> Value -> JSUInt -> IO r
+matchedRequest :: forall r. (FromJSON r) => STM (Either JSONEncodeException ResponseObject) -> Value -> JSUInt -> IO r
 matchedRequest getNext request id' = do
   response <- atomically getNext
   parseResponse id' response
     & maybe
-      ( -- recurse
-        matchedRequest getNext request id'
-      )
-      ( either
-          ( -- format and throw
-            error . unpack . displayResponseError request
-            -- throw
-          )
-          ( -- get response
-            pure . (.response)
-          )
-      )
+      (matchedRequest getNext request id')
+      (either throw (pure . (.response)))
 
 registerSubscription ::
   TVar [RegisteredSubscription IO] ->

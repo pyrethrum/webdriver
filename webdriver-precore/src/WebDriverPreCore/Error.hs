@@ -3,6 +3,7 @@
 module WebDriverPreCore.Error
   ( ErrorType (..),
     WebDriverException (..),
+    JSONEncodeException (..),
     errorDescription,
     toErrorType,
     toErrorCode,
@@ -12,9 +13,8 @@ module WebDriverPreCore.Error
 where
 
 import AesonUtils (jsonToText)
-import Control.Exception (Exception)
-import Control.Monad ((>=>))
-import Data.Aeson (FromJSON (..), Options (..), Value, defaultOptions, genericParseJSON, withObject, (.:?))
+import Control.Exception (Exception (..))
+import Data.Aeson (FromJSON (..), Options (..), Value, defaultOptions, genericParseJSON, withObject)
 import Data.Aeson.Types (Parser, parseEither, parseMaybe, (.:))
 import Data.Bifunctor (first)
 import Data.Char (isUpper, toLower)
@@ -184,13 +184,13 @@ errorDescription = \case
   UnavailableNetworkData -> "Tried to get network data which was not collected or already evicted"
   UnderspecifiedStoragePartition -> "Tried to interact with data in a storage partition which was not adequately specified"
 
-
 data WebDriverException
-  = ResponeParseException
+  = ResponseParseException
       { message :: Text,
         response :: Value
       }
-  | UnrecognisedException {response :: Value}
+  | UnrecognisedErrorTypeException {errorType :: Text, response :: Value}
+  | JSONEncodeException JSONEncodeException
   | ProtocolException
       { error :: ErrorType,
         description :: Text,
@@ -201,7 +201,40 @@ data WebDriverException
       }
   deriving (Eq, Show, Ord, Generic)
 
-instance Exception WebDriverException
+data JSONEncodeException = MkJSONEncodeException
+  { message :: Text,
+    responseText :: Text
+  }
+  deriving (Show, Eq, Ord, Generic)
+
+instance FromJSON JSONEncodeException
+
+instance Exception WebDriverException where
+  displayException :: WebDriverException -> String
+  displayException =
+    unpack . \case
+      ResponseParseException {message, response} ->
+        "Error parsing WebDriver response: "
+          <> message
+          <> "\nResponse was:\n"
+          <> jsonToText response
+      UnrecognisedErrorTypeException {response} ->
+        "Unrecognised WebDriver error type in response:\n"
+          <> jsonToText response
+      JSONEncodeException MkJSONEncodeException {message, responseText} ->
+        "Error converting WebDriver response to JSON: "
+          <> message
+          <> "\nResponse text was:\n"
+          <> responseText
+      ProtocolException {error, description, message, stacktrace} ->
+        "Error executing WebDriver command: "
+          <> "\nError Type: "
+          <> toErrorCode error
+          <> "\nDescription: "
+          <> description
+          <> "\nMessage: "
+          <> message
+          <> maybe "" (\st -> "\nStacktrace: \n" <> st) stacktrace
 
 instance FromJSON WebDriverException where
   parseJSON :: Value -> Parser WebDriverException
@@ -213,13 +246,13 @@ parseWebDriverException response =
     & maybe
       (parserErr ("Could find 'error' property in response\n" <> jsonToText response))
       ( either
-          (const $ UnrecognisedException response)
+          (flip UnrecognisedErrorTypeException response)
           mkWebDriverException
           . toErrorType
       )
   where
-    parserErr message = ResponeParseException {message, response}
-    mkWebDriverException :: ErrorType -> WebDriverException
+    parserErr message = ResponseParseException {message, response}
+    mkWebDriverException :: ErrorType -> WebDriverException {-  -}
     mkWebDriverException et =
       parseEither parseJSON response
         & either
@@ -242,8 +275,9 @@ parseErrorType :: Value -> Maybe ErrorType
 parseErrorType resp =
   case parseWebDriverException resp of
     ProtocolException {error} -> Just error
-    ResponeParseException {} -> Nothing
-    UnrecognisedException {} -> Nothing
+    JSONEncodeException {} -> Nothing
+    ResponseParseException {} -> Nothing
+    UnrecognisedErrorTypeException {} -> Nothing
 
 data WebDriverExceptionRaw = MkWebDriverExceptionRaw
   { error :: Text,

@@ -4,9 +4,7 @@ module BiDi.Response
     decodeResponse,
     MatchedResponse (..),
     ResponseObject (..),
-    JSONDecodeError (..),
-    ResponseError (..),
-    displayResponseError,
+    ResponseException (..),
     Success (..),
   )
 where
@@ -18,18 +16,19 @@ import Data.ByteString.Lazy (ByteString)
 import Data.Function ((&))
 import Data.Text (Text, pack)
 import GHC.Generics (Generic)
-import WebDriverPreCore.BiDi.Protocol (EmptyResult (..), JSUInt, WebDriverException(..))
-import AesonUtils (jsonToText, parseObjectEither, parseObjectMaybe, subtractProps)
+import WebDriverPreCore.BiDi.Protocol (EmptyResult (..), JSUInt, WebDriverException(..), JSONEncodeException(..))
+import AesonUtils (parseObjectEither, parseObjectMaybe, subtractProps)
 import Utils (txt)
-import Control.Exception (Exception)
+import Control.Exception (Exception (..))
+import Data.Text (unpack)
 
-parseResponse :: forall r. (FromJSON r) => JSUInt -> Either JSONDecodeError ResponseObject -> Maybe (Either ResponseError (MatchedResponse r))
+parseResponse :: forall r. (FromJSON r) => JSUInt -> Either JSONEncodeException ResponseObject -> Maybe (Either ResponseException (MatchedResponse r))
 parseResponse id' =
   either
-    (Just . Left . DecodeError)
+    (Just . Left . BiDIError . JSONEncodeException)
     (matchResponseId id')
 
-matchResponseId :: forall a. (FromJSON a) => JSUInt -> ResponseObject -> Maybe (Either ResponseError (MatchedResponse a))
+matchResponseId :: forall a. (FromJSON a) => JSUInt -> ResponseObject -> Maybe (Either ResponseException (MatchedResponse a))
 matchResponseId msgId = \case
   NoID {} -> Nothing
   WithID id' obj ->
@@ -40,7 +39,7 @@ matchResponseId msgId = \case
             ( \e ->
                 (parseObjectMaybe obj :: Maybe WebDriverException)
                   & maybe
-                    (ParseError {object = obj, error = e})
+                    (BiDIError $ ResponseParseException {response = Object obj, message = e})
                     BiDIError
             )
             (\s -> MkMatchedResponse {response = s.result, object = obj})
@@ -48,13 +47,13 @@ matchResponseId msgId = \case
       else
         Nothing
 
-decodeResponse :: ByteString -> Either JSONDecodeError ResponseObject
+decodeResponse :: ByteString -> Either JSONEncodeException ResponseObject
 decodeResponse =
   (=<<) parseResponseObj . packLeft . eitherDecode
   where
-    packLeft = first (MkJSONDecodeError . pack)
+    packLeft = first (MkJSONEncodeException "Failed to parse response" . pack)
 
-    parseResponseObj :: Object -> Either JSONDecodeError ResponseObject
+    parseResponseObj :: Object -> Either JSONEncodeException ResponseObject
     parseResponseObj =
       packLeft . parseEither (\o' -> maybe NoID WithID <$> o' .:? "id" <*> pure o')
 
@@ -69,38 +68,19 @@ data ResponseObject
   | WithID {id :: JSUInt, object :: Object}
   deriving (Show, Generic)
 
-newtype JSONDecodeError = MkJSONDecodeError Text deriving (Show, Eq, Generic)
 
-data ResponseError
+data ResponseException
   = BiDIError WebDriverException
-  | DecodeError JSONDecodeError
-  | ParseError
-      { object :: Object,
-        error :: Text
-      }
   | BiDiTimeoutError {ms :: Int}
   deriving (Show, Eq, Generic)
 
-HERE TODO: start by adding request to responseError
-instance Exception ResponseError
-  displayException :: ResponseError -> String
-  displayException = unpack .
 
-displayResponseError :: Value -> ResponseError -> Text
-displayResponseError request err =
-  "Error executing BiDi command: "
-    <> "With JSON: \n"
-    <> jsonToText request
-    <> "\n"
-    <> case err of
-      BiDIError e -> "BiDi driver error: \n" <> txt e
-      DecodeError (MkJSONDecodeError e) -> "Failed to encode driver response to JSON - response is not valid JSON: \n" <> txt e
-      ParseError {object, error = e} ->
-        "Failed to decode the 'result' property of JSON returned by driver to response type: \n"
-          <> jsonToText (Object object)
-          <> "\nError message: \n"
-          <> e
-      BiDiTimeoutError {ms} -> "Timed out waiting for matching command response from driver (" <> txt ms <> "milliseconds)"
+instance Exception ResponseException where
+  displayException :: ResponseException -> String
+  displayException = \case
+    BiDIError e -> displayException e
+    BiDiTimeoutError {ms} -> unpack $ "Timed out waiting for matching command response from driver (" <> txt ms <> "milliseconds)"
+
 
 data Success a = MkSuccess
   { id :: JSUInt,
