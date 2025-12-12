@@ -2,7 +2,8 @@ module BiDi.Demos.OtherDemos where
 
 import BiDi.BiDiActions (BiDiActions (..))
 import BiDi.DemoUtils
-import Config (Config, loadConfig)
+import Config (Config)
+import ConfigLoader (loadConfig)
 import Data.Text (Text)
 import IOUtils (DemoActions (..))
 import TestData (navigation1Url, navigation2Url)

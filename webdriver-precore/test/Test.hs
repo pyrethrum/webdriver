@@ -21,7 +21,8 @@ import BiDi.Demos.SessionDemos qualified as Session
 import BiDi.Demos.StorageDemos qualified as Storage
 import BiDi.Demos.WebExtensionDemos qualified as WebExtension
 import BiDi.ErrorDemo qualified as BiDiError
-import Config (Config (..), loadConfig)
+import Config (Config (..))
+import ConfigLoader (loadConfig)
 import Data.Text (Text, unpack)
 import ErrorCoverageTest qualified as Error
 import Http.DemoUtils (HttpDemo (..), runDemoWithConfig)

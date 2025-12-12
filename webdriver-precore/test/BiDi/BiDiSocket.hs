@@ -52,7 +52,7 @@ import WebDriverPreCore.BiDi.Protocol (JSUInt (..))
 import WebDriverPreCore.Error (JSONEncodeException (..))
 import Prelude hiding (id, log)
 
--- TODO: On split - test / fix / handle - timeouts / exceptions thrown from channel threads
+-- TODO: On split lib - test / fix / handle - timeouts / exceptions thrown from channel threads
 -- eg test ux when serialisation error in get set handle subscription
 
 data SocketCommand a r = MkSocketCommand

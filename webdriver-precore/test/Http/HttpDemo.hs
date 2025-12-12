@@ -2,7 +2,7 @@ module Http.HttpDemo where
 
 -- minFirefoxSession,
 
-import Config (loadConfig)
+import ConfigLoader (loadConfig)
 import Const (seconds)
 import Control.Exception (bracket)
 import Control.Monad (forM_)

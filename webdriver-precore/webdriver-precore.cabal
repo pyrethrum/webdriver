@@ -176,10 +176,19 @@ flag legacy-test
   default: False
   manual: True
 
+flag debug-local-config
+  description: Use local debug configuration (ignore Dhall file in test/.config)
+  default: False
+  manual: True
+
 test-suite test
   import: commonExtensions, commonGhcOptions
-  if flag(legacy-test)
+  if flag(legacy-test) && flag(debug-local-config)
+    cpp-options: -DLEGACY_TEST -DDEBUG_LOCAL_CONFIG
+  if flag(legacy-test) && !flag(debug-local-config)
     cpp-options: -DLEGACY_TEST
+  if !flag(legacy-test) && flag(debug-local-config)
+    cpp-options: -DDEBUG_LOCAL_CONFIG
   type: exitcode-stdio-1.0
   main-is: Test.hs
   hs-source-dirs: test
@@ -214,7 +223,9 @@ test-suite test
     , JSONParsingTest
     -- demos 
     , Config
+    , ConfigLoader
     , Const
+    , DebugConfig
     , IOUtils
     , Logger
     , TestData

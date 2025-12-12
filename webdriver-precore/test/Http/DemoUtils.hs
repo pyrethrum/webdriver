@@ -2,7 +2,8 @@
 
 module Http.DemoUtils where
 
-import Config (Config (..), loadConfig)
+import Config (Config (..))
+import ConfigLoader (loadConfig)
 import Const (milliseconds)
 import Control.Exception (bracket)
 import Data.Text (Text)
