@@ -172,7 +172,7 @@ bidiDemos cfg =
                     "Closing the browser in a session started with WebDriver classic is not supported"
                     Browser.browserCloseDemo,
                   unknownCommandError
-                    -- since https://www.w3.org/TR/2025/WD-webdriver-bidi-20250918/#command-browser-setDownloadBehavior
+                    -- since https://www.w3.org/TR/2025/WD-webdriver-bidi-20250918/#command-browser-seProtocolExceptiontDownloadBehavior
                     Browser.browserSetDownloadBehaviorDemo
                 ],
               run
@@ -359,4 +359,4 @@ biDiError errorFragment MkBiDiDemo {name, action} =
     }
 
 unknownCommandError :: BiDiDemo -> BiDiDemo
-unknownCommandError = biDiError "The command sent is not known"
+unknownCommandError = biDiError "unknown command"

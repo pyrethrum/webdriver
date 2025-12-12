@@ -69,39 +69,6 @@ browserGetUserContextsDemo =
       pause
 
 -- >>> runDemo browserSetClientWindowStateDemo
--- *** Exception: Error executing BiDi command: MkCommand
---   { method = "browser.setClientWindowState"
---   , params =
---       MkSetClientWindowState
---         { clientWindow =
---             MkClientWindow "c97c99bf-3129-475f-93c3-2a26ebdf8002"
---         , windowState = ClientWindowNamedState NamedMaximized
---         }
---   , extended = Nothing
---   }
--- With JSON: 
--- {
---     "id": 2,
---     "method": "browser.setClientWindowState",
---     "params": {
---         "clientWindow": "c97c99bf-3129-475f-93c3-2a26ebdf8002",
---         "windowState": {
---             "contents": "namedMaximized",
---             "tag": "clientWindowNamedState"
---         }
---     }
--- }
--- BiDi driver error: 
--- MkDriverError
---   { id = Just 2
---   , error = UnknownCommand
---   , description = "The command sent is not known"
---   , message = "browser.setClientWindowState"
---   , stacktrace =
---       Just
---         "RemoteError@chrome://remote/content/shared/RemoteError.sys.mjs:8:8\nWebDriverError@chrome://remote/content/shared/webdriver/Errors.sys.mjs:202:5\nUnknownCommandError@chrome://remote/content/shared/webdriver/Errors.sys.mjs:944:5\nexecute@chrome://remote/content/shared/webdriver/Session.sys.mjs:407:13\nonPacket@chrome://remote/content/webdriver-bidi/WebDriverBiDiConnection.sys.mjs:236:37\nonMessage@chrome://remote/content/server/WebSocketTransport.sys.mjs:127:18\nhandleEvent@chrome://remote/content/server/WebSocketTransport.sys.mjs:109:14\n"
---   , extensions = MkEmptyResult { extensible = fromList [] }
---   }
 browserSetClientWindowStateDemo :: BiDiDemo
 browserSetClientWindowStateDemo =
   demo "Browser - Set Client Window State" action

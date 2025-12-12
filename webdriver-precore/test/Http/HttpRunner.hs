@@ -4,8 +4,8 @@ module Http.HttpRunner
   )
 where
 
-import Data.Aeson (FromJSON (..), Result (..), Value, withObject, (.:))
-import Data.Aeson.Types (Parser, Value (..), parse, parseEither, parseMaybe)
+import Data.Aeson (FromJSON (..), Value, withObject, (.:))
+import Data.Aeson.Types (Parser, Value (..), parseEither, parseMaybe)
 import Data.Function ((&))
 import GHC.Exception (throw)
 import Http.HttpEndpoint (callWebDriver', mkRequest)
