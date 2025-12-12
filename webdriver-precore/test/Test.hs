@@ -231,7 +231,7 @@ bidiDemos cfg =
               run
                 "Network"
                 [ biDiError
-                    "values to be one of response, got [object String] \\\\\\\"request"
+                    "The arguments passed to a command are either invalid or malformed"
                     Network.networkDataCollectorDemo,
                   Network.networkInterceptDemo,
                   Network.networkRequestModificationDemo,
@@ -247,9 +247,8 @@ bidiDemos cfg =
                   Network.networkDataRetrievalDemo,
                   Network.networkDisownDataDemo,
                   Network.networkCacheBehaviorDemo,
-                  unknownCommandError
-                    -- since https://www.w3.org/TR/2025/WD-webdriver-bidi-20251106
-                    Network.networkSetExtraHeadersDemo
+                  -- since https://www.w3.org/TR/2025/WD-webdriver-bidi-20251106
+                  Network.networkSetExtraHeadersDemo
                 ],
               run
                 "Script"
