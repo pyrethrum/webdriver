@@ -183,11 +183,9 @@ flag debug-local-config
 
 test-suite test
   import: commonExtensions, commonGhcOptions
-  if flag(legacy-test) && flag(debug-local-config)
-    cpp-options: -DLEGACY_TEST -DDEBUG_LOCAL_CONFIG
-  if flag(legacy-test) && !flag(debug-local-config)
+  if flag(legacy-test)
     cpp-options: -DLEGACY_TEST
-  if !flag(legacy-test) && flag(debug-local-config)
+  if flag(debug-local-config)
     cpp-options: -DDEBUG_LOCAL_CONFIG
   type: exitcode-stdio-1.0
   main-is: Test.hs
@@ -225,7 +223,6 @@ test-suite test
     , Config
     , ConfigLoader
     , Const
-    , DebugConfig
     , IOUtils
     , Logger
     , TestData
@@ -264,4 +261,7 @@ test-suite test
     , BiDi.Demos.WebExtensionDemos
     , RuntimeConst
     , Http.HttpRunnerDeprecated
+  if flag(debug-local-config)
+    other-modules:
+      DebugConfig
   default-language: Haskell2010

@@ -1,3 +1,5 @@
+{-# LANGUAGE CPP #-}
+
 module ConfigLoader
   ( Config (..),
     DemoBrowser (..),
@@ -6,6 +8,15 @@ module ConfigLoader
   )
 where
 
+import Config ( Config (..),
+    DemoBrowser (..),
+    isFirefox
+  )
+import GHC.Conc (threadDelay)
+
+#ifdef DEBUG_LOCAL_CONFIG
+import DebugConfig (debugConfig)
+#else
 import Control.Monad (unless)
 import Data.Text as T (Text, pack, unlines)
 import Data.Text.IO qualified as T
@@ -13,11 +24,9 @@ import Dhall (auto, input)
 import IOUtils (findWebDriverRoot)
 import System.Directory (doesFileExist, getCurrentDirectory)
 import System.FilePath (combine, (</>))
-import Config ( Config (..),
-    DemoBrowser (..),
-    isFirefox
-  )
+#endif
 
+#ifndef DEBUG_LOCAL_CONFIG
 configDir :: IO FilePath
 configDir = do
   currentDir <- getCurrentDirectory
@@ -92,7 +101,16 @@ readConfig =
 userPath :: IO FilePath
 userPath =
   configDir >>= pure . (flip combine) "config.dhall"
+#endif
 
 loadConfig :: IO Config
 loadConfig =
+#ifdef DEBUG_LOCAL_CONFIG
+  putStrLn "Using debug local config" >>
+  threadDelay 3_000_000 >>
+  pure debugConfig
+#else
+  putStrLn "Loading config from file" >>
+  threadDelay 3_000_000 >>
   initialiseTestConfig >> readConfig
+#endif
