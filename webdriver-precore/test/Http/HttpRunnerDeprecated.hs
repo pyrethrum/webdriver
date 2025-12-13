@@ -20,7 +20,6 @@ import Network.HTTP.Req as R
     POST (POST),
     ReqBodyJson (ReqBodyJson),
   )
-import UnliftIO (throwIO)
 import Utils (UrlPath (..))
 import WebDriverPreCore.Error
 import WebDriverPreCore.Http

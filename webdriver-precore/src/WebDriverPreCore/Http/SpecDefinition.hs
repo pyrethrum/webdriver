@@ -1,4 +1,3 @@
-{-# OPTIONS_HADDOCK hide #-}
 
 -- |
 -- Description : All Webdriver W3C endpoints

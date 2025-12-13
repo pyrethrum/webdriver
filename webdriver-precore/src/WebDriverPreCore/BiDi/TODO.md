@@ -109,6 +109,11 @@
 
 ## docs
 
+- [ ] generate Haddock
+  - [ ] haddock varible for versions
+  - [ ] add urls to bidi
+  - [ ] move intro to haddock
+  - [ ] move demo discussion to demo
 - [ ] document all Fallback functions
 - [ ] demos index
 - [ ] config explaind
@@ -139,6 +144,7 @@
 ## release http / bidi
 
 - [ ] hackage
+- [ ] stackage
 - [ ] announce
 
 

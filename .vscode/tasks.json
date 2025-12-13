@@ -72,9 +72,11 @@
       "command": "cabal",
       "args": [
         "haddock",
-        "all",
-        // open does not work in task but does in terminal
-        "--haddock-option=--hyperlink-source",
+        // only build public library - 'all' will fail due to internal library
+        "webdriver-precore",
+        // --hyperlink-source triggers internal library haddock build which fails (Cabal bug)
+        // hyperlinked source is included automatically when using --haddock-for-hackage for upload
+        // "--haddock-option=--hyperlink-source",
         "--open"
       ],
       "presentation": {

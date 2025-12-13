@@ -1,5 +1,3 @@
-{-# OPTIONS_HADDOCK hide #-}
-
 module WebDriverPreCore.Http.API
   ( -- * Root Methods
     newSession,
