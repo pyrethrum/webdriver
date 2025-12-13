@@ -64,7 +64,7 @@
 ## Clean up
 
 - [X] remove unneeded instances to and fromJSON
-- [ ] Claude reconcile / review
+- [X] Claude reconcile / review
 
 
 ## Extend testing
@@ -81,7 +81,7 @@
    - [ ] add debugConfg.hs.template (and ensure in version control)
  - [ ] update dhall.config
 
-## rename IO Utils DemoRoot
+## rename IO Utils DemoRoot - NOT done N/A
 
 ## other
 
@@ -109,8 +109,6 @@
 
 ## docs
 
-- [ ] redo diagram in drawIO
-- [ ] http diagram
 - [ ] document all Fallback functions
 - [ ] demos index
 - [ ] config explaind
@@ -119,6 +117,8 @@
 - [ ] lookup / document dealing with diffferent versions
 - [ ] check docs urls
 - [ ] check all licence files
+- [ ] redo diagram in drawIO
+- [ ] http diagram
 
 ## prep
 
