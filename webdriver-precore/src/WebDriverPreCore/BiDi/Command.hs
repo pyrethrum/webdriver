@@ -120,7 +120,6 @@ data KnownCommand
   | NetworkRemoveIntercept
   | NetworkSetCacheBehavior
   | NetworkSetExtraHeaders
-  | PermissionsSetPermission
   | ScriptAddPreloadScript
   | ScriptCallFunction
   | ScriptDisown
@@ -192,7 +191,6 @@ instance FromJSON KnownCommand where
         "network.removeIntercept" -> p NetworkRemoveIntercept
         "network.setCacheBehavior" -> p NetworkSetCacheBehavior
         "network.setExtraHeaders" -> p NetworkSetExtraHeaders
-        "permissions.setPermission" -> p PermissionsSetPermission
         "script.addPreloadScript" -> p ScriptAddPreloadScript
         "script.callFunction" -> p ScriptCallFunction
         "script.disown" -> p ScriptDisown
@@ -268,7 +266,6 @@ knownCommandToText = \case
   NetworkRemoveIntercept -> "network.removeIntercept"
   NetworkSetCacheBehavior -> "network.setCacheBehavior"
   NetworkSetExtraHeaders -> "network.setExtraHeaders"
-  PermissionsSetPermission -> "permissions.setPermission"
   ScriptAddPreloadScript -> "script.addPreloadScript"
   ScriptCallFunction -> "script.callFunction"
   ScriptDisown -> "script.disown"

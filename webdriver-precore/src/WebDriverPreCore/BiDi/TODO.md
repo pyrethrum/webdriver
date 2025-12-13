@@ -57,7 +57,6 @@
     - [x] legacy flag run
 - [X] add deprecation warning
 - [X] update to latest spec
-- [ ] remove unneeded instances to and fromJSON
 - [X] fallback
 - [X] demo parsing additional prop on empty return type - fallback
 - [NA] - not worth it - IO only demo
