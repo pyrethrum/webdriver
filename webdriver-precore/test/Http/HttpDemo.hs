@@ -282,6 +282,7 @@ demoTimeouts =
       timeouts === timeouts'
 
 -- >>> runDemo demoWindowRecs
+-- *** Exception: HUnitFailure (Just (SrcLoc {srcLocPackage = "webdriver-precore-0.1.0.2-inplace-test", srcLocModule = "Http.HttpDemo", srcLocFile = "/home/john-walker/repos/webdriver/webdriver-precore/test/Http/HttpDemo.hs", srcLocStartLine = 304, srcLocStartCol = 10, srcLocEndLine = 304, srcLocEndCol = 13})) "expected: Rect {x = 500, y = 300, width = 600, height = 400}\n but got: Rect {x = 0, y = 0, width = 600, height = 400}"
 demoWindowRecs :: HttpDemo
 demoWindowRecs =
   sessionDemo "window recs" action
@@ -296,7 +297,7 @@ demoWindowRecs =
                 height = 400
               }
       logShowM "set window rect" $ setWindowRect sesId wr
-      sleep $ 2 * Const.seconds
+      sleep $ 4 * Const.seconds
       r <- getWindowRect sesId
       logShow "window rect" r
 

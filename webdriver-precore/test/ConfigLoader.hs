@@ -107,10 +107,8 @@ loadConfig :: IO Config
 loadConfig =
 #ifdef DEBUG_LOCAL_CONFIG
   putStrLn "Using debug local config" >>
-  threadDelay 3_000_000 >>
   pure debugConfig
 #else
   putStrLn "Loading config from file" >>
-  threadDelay 3_000_000 >>
   initialiseTestConfig >> readConfig
 #endif

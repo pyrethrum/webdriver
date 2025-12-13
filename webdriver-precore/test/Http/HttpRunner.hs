@@ -61,7 +61,7 @@ logCommand da@MkDemoActions {logShow} cmd = do
     PostEmpty {} -> pure ()
     Delete {} -> pure ()
 
--- todo: fix to throw proper exceptions when moved to own library
+
 parseResultIO :: forall r. (FromJSON r) => Value -> IO r
 parseResultIO body  =
   parseMaybe valueParser body

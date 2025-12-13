@@ -19,7 +19,7 @@ let Config =
 let browser : Browser = 
       Browser.Firefox 
         { headless = False
-        , profilePath = None Text --Some "/home/john-walker/test-firefox-profile" 
+        , profilePath = Some "/home/john-walker/test-firefox-profile" 
         }
 
 let config : Config = 

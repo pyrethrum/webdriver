@@ -6,7 +6,9 @@ module Http.HttpRunnerDeprecated
 where
 
 import Const (ReqRequestParams (..))
-import Data.Aeson (Result (..), object)
+import Control.Exception (throw)
+import Data.Aeson (Result (..), Value, object, withObject, (.:))
+import Data.Aeson.Types (Parser, parseMaybe)
 import Data.Function ((&))
 import Http.HttpEndpoint (callWebDriver, fullCommandPath)
 import IOUtils (DemoActions (..))
@@ -18,6 +20,7 @@ import Network.HTTP.Req as R
     POST (POST),
     ReqBodyJson (ReqBodyJson),
   )
+import UnliftIO (throwIO)
 import Utils (UrlPath (..))
 import WebDriverPreCore.Error
 import WebDriverPreCore.Http
@@ -25,7 +28,6 @@ import WebDriverPreCore.Http
   )
 import WebDriverPreCore.Http qualified as W
 import Prelude hiding (log)
-import UnliftIO (throwIO)
 
 -- ############# Runner #############
 
@@ -63,6 +65,15 @@ parseIO :: HttpSpec a -> W.HttpResponse -> IO a
 parseIO spec r =
   spec.parser r
     & \case
-      Error _->
-        throwIO $ parseWebDriverException r.body
+      Error _ -> throwFailure r.body
       Success a -> pure a
+
+throwFailure :: Value -> IO a
+throwFailure body =
+  parseMaybe valueParser body
+    & maybe
+      (throw $ ResponseParseException "No value property found in WebDriver response" body)
+      (throw . parseWebDriverException)
+
+valueParser :: Value -> Parser Value
+valueParser body = body & withObject "body value" (.: "value")
