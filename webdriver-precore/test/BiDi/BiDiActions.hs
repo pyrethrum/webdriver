@@ -472,7 +472,7 @@ mkActions socket =
       [OffSpecSubscriptionType] ->
       (Value -> IO ()) ->
       IO SubscriptionId
-    subscribeUnknownMany sts = Runner.subscribe socket sessionSubscribe . API.subscribeUnknownMany sts [] []
+    subscribeUnknownMany sts = Runner.subscribe socket sessionSubscribe . API.subscribeOffSpecMany sts [] []
 
     subscribeUnknownMany' ::
       [BrowsingContext] ->
@@ -480,7 +480,7 @@ mkActions socket =
       [OffSpecSubscriptionType] ->
       (Value -> IO ()) ->
       IO SubscriptionId
-    subscribeUnknownMany' bcs ucs sts = Runner.subscribe socket sessionSubscribe . API.subscribeUnknownMany sts bcs ucs
+    subscribeUnknownMany' bcs ucs sts = Runner.subscribe socket sessionSubscribe . API.subscribeOffSpecMany sts bcs ucs
 
     sendSub ::
       ( [BrowsingContext] ->
