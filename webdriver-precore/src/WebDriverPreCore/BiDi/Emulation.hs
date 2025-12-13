@@ -72,6 +72,7 @@ data SetScreenSettingsOverride = MkSetScreenSettingsOverride
 -- Required nullable fields must be included in the JSON with their value (even if null)
 -- Optional fields are omitted when Nothing
 instance ToJSON SetScreenSettingsOverride where
+  toJSON :: SetScreenSettingsOverride -> Value
   toJSON MkSetScreenSettingsOverride {screenArea, contexts, userContexts} =
     object $
       ["screenArea" .= screenArea]
@@ -97,6 +98,7 @@ data SetForcedColorsModeThemeOverride = MkSetForcedColorsModeThemeOverride
   deriving (Show, Eq, Generic)
 
 instance ToJSON SetForcedColorsModeThemeOverride where
+  toJSON :: SetForcedColorsModeThemeOverride -> Value
   toJSON MkSetForcedColorsModeThemeOverride {theme, contexts, userContexts} =
     object $
       ["theme" .= theme]
@@ -113,6 +115,7 @@ data SetNetworkConditions = MkSetNetworkConditions
   deriving (Show, Eq, Generic)
 
 instance ToJSON SetNetworkConditions where
+  toJSON :: SetNetworkConditions -> Value
   toJSON MkSetNetworkConditions {networkConditions, contexts, userContexts} =
     object $
       ["networkConditions" .= networkConditions]
@@ -129,6 +132,7 @@ data SetUserAgentOverride = MkSetUserAgentOverride
   deriving (Show, Eq, Generic)
 
 instance ToJSON SetUserAgentOverride where
+  toJSON :: SetUserAgentOverride -> Value
   toJSON MkSetUserAgentOverride {userAgent, contexts, userContexts} =
     object $
       ["userAgent" .= userAgent]
@@ -145,6 +149,7 @@ data SetScriptingEnabled = MkSetScriptingEnabled
   deriving (Show, Eq, Generic)
 
 instance ToJSON SetScriptingEnabled where
+  toJSON :: SetScriptingEnabled -> Value
   toJSON MkSetScriptingEnabled {enabled, contexts, userContexts} =
     object $
       ["enabled" .= enabled]
@@ -232,6 +237,7 @@ newtype NetworkConditions = MkNetworkConditions NetworkConditionsOffline
   deriving (Show, Eq, Generic)
 
 instance ToJSON NetworkConditions where
+  toJSON :: NetworkConditions -> Value
   toJSON (MkNetworkConditions offline) = toJSON offline
 
 newtype NetworkConditionsOffline = MkNetworkConditionsOffline
