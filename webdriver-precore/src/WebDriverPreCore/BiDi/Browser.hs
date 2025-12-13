@@ -39,8 +39,6 @@ data ClientWindowInfo = MkClientWindowInfo
 
 instance FromJSON ClientWindowInfo
 
-instance ToJSON ClientWindowInfo
-
 data ClientWindowState
   = Fullscreen
   | Maximized
@@ -203,13 +201,9 @@ newtype GetClientWindowsResult = MkGetClientWindowsResult
 
 instance FromJSON GetClientWindowsResult
 
-instance ToJSON GetClientWindowsResult
-
 newtype GetUserContextsResult = MkGetUserContextsResult
   { userContexts :: [UserContext]
   }
   deriving (Show, Eq, Generic)
 
 instance FromJSON GetUserContextsResult
-
-instance ToJSON GetUserContextsResult

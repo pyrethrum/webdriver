@@ -636,9 +636,3 @@ instance ToJSON PrintMargin
 instance ToJSON PrintPage
 
 instance ToJSON Viewport
-
-instance ToJSON UserPromptClosed
-
-instance ToJSON UserPromptOpened
-
-instance ToJSON Navigation

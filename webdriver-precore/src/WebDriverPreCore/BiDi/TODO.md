@@ -64,7 +64,7 @@
 
 ## Clean up
 
-- [ ] remove unneeded instances to and fromJSON
+- [X] remove unneeded instances to and fromJSON
 - [ ] Claude reconcile / review
 
 

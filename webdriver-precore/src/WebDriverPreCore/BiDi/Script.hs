@@ -56,7 +56,7 @@ where
 
 import Control.Applicative ((<|>))
 import Data.Aeson (FromJSON (..), ToJSON (..), Value (..), defaultOptions, genericToJSON, object, withObject, (.:), (.:?), (.=))
-import Data.Aeson.Types (Pair, Parser, omitNothingFields)
+import Data.Aeson.Types (Parser, omitNothingFields)
 import Data.Map.Strict qualified as Map
 import Data.Maybe (catMaybes)
 import Data.Text (Text, unpack)
@@ -843,62 +843,6 @@ instance ToJSON SetLocalValue where
         "value" .= value
       ]
 
-instance ToJSON AddPreloadScriptResult
-
-instance ToJSON GetRealmsResult
-
--- RealmInfo has typ fields that need special handling
-instance ToJSON RealmInfo where
-  toJSON :: RealmInfo -> Value
-  toJSON ri =
-    object $ baseObj <> typeAndSpecificProps
-    where
-      base = ri.base
-      baseObj :: [Pair]
-      baseObj =
-        [ "realm" .= base.realm,
-          "origin" .= base.origin
-        ]
-
-      typeAndSpecificProps :: [Pair]
-      typeAndSpecificProps = case ri of
-        WindowRealmInfo {context, sandbox} ->
-          [ "type" .= WindowRealm,
-            "context" .= context
-          ]
-            <> catMaybes [opt "sandbox" sandbox]
-        ri' -> case ri' of
-          DedicatedWorker {owners} ->
-            [ "type" .= DedicatedWorkerRealm,
-              "owners" .= owners
-            ]
-          SharedWorker {} ->
-            [ "type" .= SharedWorkerRealm
-            ]
-          ServiceWorker {} ->
-            [ "type" .= ServiceWorkerRealm
-            ]
-          Worker {} ->
-            [ "type" .= WorkerRealm
-            ]
-          PaintWorklet {} ->
-            [ "type" .= PaintWorkletRealm
-            ]
-          AudioWorklet {} ->
-            [ "type" .= AudioWorkletRealm
-            ]
-          Worklet {} ->
-            [ "type" .= WorkletRealm
-            ]
-
-instance ToJSON BaseRealmInfo
-
-instance ToJSON StackTrace
-
-instance ToJSON StackFrame
-
-instance ToJSON Source
-
 -- ChannelValue has typ field that needs manual handling
 instance ToJSON ChannelValue where
   toJSON :: ChannelValue -> Value
@@ -919,6 +863,7 @@ instance ToJSON ChannelProperties where
 instance FromJSON PrimitiveProtocolValue
 
 -- Complex result types
+
 instance FromJSON AddPreloadScriptResult
 
 instance FromJSON GetRealmsResult
