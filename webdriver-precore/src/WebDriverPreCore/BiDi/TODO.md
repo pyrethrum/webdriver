@@ -16,12 +16,10 @@
   - [X] clean up last bidi imports
 - [X] specific code TODOs - TODO tree
 - [X] check all exports - should use prtocol and API only
-- [ ] update to latest spec
-- [ ] remove unneeded instances to and fromJSON
+- [X] update to latest spec
 - [X] unsubscribe by attributes
-- [ ] Claude reconcile / review
 - [X] fallback
-- [ ] IO only demo
+- [NA] IO only demo - NA wont do
 
 ## http
 
@@ -49,7 +47,7 @@
   - [x] shadowRoot - need to use parseShodowFieldname
   - [x] legacy in terms of Protocol / API
   - [x] refactor all tests in terms of API / Protocol 
-  - [ ] relook at parse http error
+  - [X] relook at parse http error
 - [x] test => demos => test
 - [x] review demoUtils
   - [x] http may not need timeLimitLog et. al. 
@@ -62,7 +60,13 @@
 - [ ] remove unneeded instances to and fromJSON
 - [X] fallback
 - [X] demo parsing additional prop on empty return type - fallback
-- NA - not worht it - IO only demo
+- [NA] - not worth it - IO only demo
+
+## Clean up
+
+- [ ] remove unneeded instances to and fromJSON
+- [ ] Claude reconcile / review
+
 
 ## Extend testing
 
@@ -73,6 +77,10 @@
   - [ ] container
   - [ ] CI
 - [ ] check if browsingContextSetViewportResetDemo runs
+ - [ ] update debug config
+   - [ ] move to .config folder
+   - [ ] add debugConfg.hs.template (and ensure in version control)
+ - [ ] update dhall.config
 
 ## rename IO Utils DemoRoot
 
