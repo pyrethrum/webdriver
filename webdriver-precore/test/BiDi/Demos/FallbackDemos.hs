@@ -11,7 +11,7 @@ import WebDriverPreCore.BiDi.API qualified as API
 import WebDriverPreCore.BiDi.Protocol
     ( JSUInt(MkJSUInt),
       BrowsingContext(MkBrowsingContext),
-      UnknownSubscriptionType(MkUnknownSubscriptionType),
+      OffSpecSubscriptionType(MkOffSpecSubscriptionType),
       URL(..),
       GetTree(..), Navigate(..),
       coerceCommand,
@@ -138,7 +138,7 @@ fallbackSubscribeUnknownEventDemo =
       logTxt "Demo 3: Subscribe to browsingContext.navigationStarted using subscribeUnknownMany"
       logTxt "This demonstrates subscribing to events as unknown types"
       
-      let unknownEventType = MkUnknownSubscriptionType "browsingContext.navigationStarted"
+      let unknownEventType = MkOffSpecSubscriptionType "browsingContext.navigationStarted"
       
       (unknownEventFired, waitUnknownEventFired) <- timeLimitLog' "navigationStarted (unknown subscription)" (10 * seconds) unknownEventType
       
@@ -182,7 +182,7 @@ fallbackSubscribeUnknownEventFilteredDemo =
       pause
 
       logTxt $ "Subscribing to navigationStarted events ONLY for first context: " <> txt bc
-      let unknownEventType = MkUnknownSubscriptionType "browsingContext.navigationStarted"
+      let unknownEventType = MkOffSpecSubscriptionType "browsingContext.navigationStarted"
       
       (unknownEventFired, waitUnknownEventFired) <- timeLimitLog' "navigationStarted (filtered unknown subscription)" (10 * seconds) unknownEventType
       

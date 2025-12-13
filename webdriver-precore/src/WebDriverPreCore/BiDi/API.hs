@@ -105,7 +105,7 @@ module WebDriverPreCore.BiDi.API
     subscribeMany,
 
     -- * Fallback Subscriptions
-    subscribeUnknownMany,
+    subscribeOffSpecMany,
   )
 where
 
@@ -204,7 +204,7 @@ import WebDriverPreCore.BiDi.Protocol
     Subscription,
     TraverseHistory,
     TraverseHistoryResult,
-    UnknownSubscriptionType,
+    OffSpecSubscriptionType,
     UserContext,
     UserPromptClosed,
     UserPromptOpened,
@@ -215,7 +215,7 @@ import WebDriverPreCore.BiDi.Protocol
     mkCommand,
     mkMultiSubscription,
     mkSubscription,
-    mkUnknownSubscription,
+    mkOffSpecSubscription,
   )
 import WebDriverPreCore.BiDi.Script (Message, RealmInfo)
 
@@ -435,13 +435,13 @@ subscribeMany ::
   Subscription m
 subscribeMany = mkMultiSubscription
 
-subscribeUnknownMany ::
-  [UnknownSubscriptionType] ->
+subscribeOffSpecMany ::
+  [OffSpecSubscriptionType] ->
   [BrowsingContext] ->
   [UserContext] ->
   (Value -> m ()) ->
   Subscription m
-subscribeUnknownMany = mkUnknownSubscription
+subscribeOffSpecMany = mkOffSpecSubscription
 
 ---- BrowsingContext ----
 

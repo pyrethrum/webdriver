@@ -1,10 +1,9 @@
 
 -- |
--- Description : All Webdriver W3C endpoints
+-- Description : All Webdriver W3C endpoints - Deprecated in favour of API
 --
 --
--- Here is a longer description of this module, containing some
--- commentary with @some markup@.
+--
 module WebDriverPreCore.Http.SpecDefinition {-# DEPRECATED "HttpResponse - will be removed in a future release ~ 2027-02-01. See ChangeLog.md for upgrade instructions" #-}
   ( -- * The HttpSpec Type
     HttpSpec (..),

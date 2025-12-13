@@ -12,7 +12,7 @@ module WebDriverPreCore.BiDi.CoreTypes
     SharedId (..),
     StringValue (..),
     SubscriptionType (..),
-    UnknownSubscriptionType (..),
+    OffSpecSubscriptionType (..),
     UserContext (..),
     URL (..),
     subscriptionTypeToText,
@@ -199,10 +199,10 @@ instance FromJSON KnownSubscriptionType where
 
 data SubscriptionType
   = KnownSubscriptionType KnownSubscriptionType
-  | UnknownSubscriptionType UnknownSubscriptionType
+  | OffSpecSubscriptionType OffSpecSubscriptionType
   deriving (Show, Eq, Generic)
 
-newtype UnknownSubscriptionType = MkUnknownSubscriptionType
+newtype OffSpecSubscriptionType = MkOffSpecSubscriptionType
   { method :: Text
   }
   deriving (Show, Eq, Generic)
@@ -244,11 +244,11 @@ subscriptionTypeToText = \case
     ScriptRealmDestroyed -> "script.realmDestroyed"
     -- Input module
     InputFileDialogOpened -> "input.fileDialogOpened"
-  UnknownSubscriptionType MkUnknownSubscriptionType {method} -> method
+  OffSpecSubscriptionType MkOffSpecSubscriptionType {method} -> method
 
 instance FromJSON SubscriptionType where
   parseJSON :: Value -> Parser SubscriptionType
   parseJSON v =
     (KnownSubscriptionType <$> parseJSON @KnownSubscriptionType v)
-      <|> (UnknownSubscriptionType <$> parseJSON @UnknownSubscriptionType v)
+      <|> (OffSpecSubscriptionType <$> parseJSON @OffSpecSubscriptionType v)
       <|> (fail . unpack $ "Invalid SubscriptionType: " <> jsonToText v)

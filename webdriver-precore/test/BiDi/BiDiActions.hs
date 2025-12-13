@@ -111,7 +111,7 @@ import WebDriverPreCore.BiDi.Protocol as P
     SubscriptionId (..),
     TraverseHistory,
     TraverseHistoryResult,
-    UnknownSubscriptionType,
+    OffSpecSubscriptionType,
     UserContext,
     WebExtensionInstall,
     WebExtensionResult,
@@ -264,13 +264,13 @@ data BiDiActions = MkBiDiActions
     sendOffSpecCommandNoWait :: Text -> Object -> IO Socket.Request,
     -- fallback subscriptions
     subscribeUnknownMany ::
-      [UnknownSubscriptionType] ->
+      [OffSpecSubscriptionType] ->
       (Value -> IO ()) ->
       IO SubscriptionId,
     subscribeUnknownMany' ::
       [BrowsingContext] ->
       [UserContext] ->
-      [UnknownSubscriptionType] ->
+      [OffSpecSubscriptionType] ->
       (Value -> IO ()) ->
       IO SubscriptionId
   }
@@ -469,7 +469,7 @@ mkActions socket =
     subscribeMany' bcs ucs sts = Runner.subscribe socket sessionSubscribe . API.subscribeMany sts bcs ucs
 
     subscribeUnknownMany ::
-      [UnknownSubscriptionType] ->
+      [OffSpecSubscriptionType] ->
       (Value -> IO ()) ->
       IO SubscriptionId
     subscribeUnknownMany sts = Runner.subscribe socket sessionSubscribe . API.subscribeUnknownMany sts [] []
@@ -477,7 +477,7 @@ mkActions socket =
     subscribeUnknownMany' ::
       [BrowsingContext] ->
       [UserContext] ->
-      [UnknownSubscriptionType] ->
+      [OffSpecSubscriptionType] ->
       (Value -> IO ()) ->
       IO SubscriptionId
     subscribeUnknownMany' bcs ucs sts = Runner.subscribe socket sessionSubscribe . API.subscribeUnknownMany sts bcs ucs

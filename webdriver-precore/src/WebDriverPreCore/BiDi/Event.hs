@@ -1,7 +1,7 @@
 module WebDriverPreCore.BiDi.Event
   ( mkSubscription,
     mkMultiSubscription,
-    mkUnknownSubscription,
+    mkOffSpecSubscription,
     Subscription (..),
     Event (..),
   )
@@ -12,7 +12,7 @@ import Data.Aeson.Types (Parser)
 import Data.Text (Text, isPrefixOf, unpack)
 import GHC.Generics (Generic)
 import WebDriverPreCore.BiDi.BrowsingContext (BrowsingContextEvent (..))
-import WebDriverPreCore.BiDi.CoreTypes (BrowsingContext, KnownSubscriptionType (..), SubscriptionType (..), UserContext, UnknownSubscriptionType (..))
+import WebDriverPreCore.BiDi.CoreTypes (BrowsingContext, KnownSubscriptionType (..), SubscriptionType (..), UserContext, OffSpecSubscriptionType (..))
 import WebDriverPreCore.BiDi.Input (FileDialogOpened)
 import WebDriverPreCore.BiDi.Log (LogEvent)
 import WebDriverPreCore.BiDi.Network (NetworkEvent (..))
@@ -38,14 +38,14 @@ mkMultiSubscription ::
 mkMultiSubscription ks =
   MultiSubscription (KnownSubscriptionType <$> ks)
 
-mkUnknownSubscription ::
-  [UnknownSubscriptionType] ->
+mkOffSpecSubscription ::
+  [OffSpecSubscriptionType] ->
   [BrowsingContext] ->
   [UserContext] ->
   (Value -> m ()) ->
   Subscription m
-mkUnknownSubscription ks =
-  UnknownSubscription (UnknownSubscriptionType <$> ks)
+mkOffSpecSubscription ks =
+  UnknownSubscription (OffSpecSubscriptionType <$> ks)
 
 data Subscription m where
   SingleSubscription ::
