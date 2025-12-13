@@ -281,8 +281,9 @@ demoTimeouts =
       logShow "updated timeouts" timeouts'
       timeouts === timeouts'
 
+HERE MAKE NOT ON WAYLAND AND HEADED - rest x and y to zero
 -- >>> runDemo demoWindowRecs
--- *** Exception: HUnitFailure (Just (SrcLoc {srcLocPackage = "webdriver-precore-0.1.0.2-inplace-test", srcLocModule = "Http.HttpDemo", srcLocFile = "/home/john-walker/repos/webdriver/webdriver-precore/test/Http/HttpDemo.hs", srcLocStartLine = 304, srcLocStartCol = 10, srcLocEndLine = 304, srcLocEndCol = 13})) "expected: Rect {x = 500, y = 300, width = 600, height = 400}\n but got: Rect {x = 0, y = 0, width = 600, height = 400}"
+-- *** Exception: HUnitFailure (Just (SrcLoc {srcLocPackage = "webdriver-precore-0.1.0.2-inplace-test", srcLocModule = "Http.HttpDemo", srcLocFile = "/home/john-walker/repos/webdriver/webdriver-precore/test/Http/HttpDemo.hs", srcLocStartLine = 319, srcLocStartCol = 10, srcLocEndLine = 319, srcLocEndCol = 13})) "expected: Rect {x = 500, y = 300, width = 600, height = 400}\n but got: Rect {x = 0, y = 0, width = 600, height = 400}"
 demoWindowRecs :: HttpDemo
 demoWindowRecs =
   sessionDemo "window recs" action
