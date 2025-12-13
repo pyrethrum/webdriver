@@ -5,17 +5,17 @@
 W3C
 WebDriver BiDi
 
-W3C Working Draft, 6 November 2025
+W3C Working Draft, 12 December 2025
 More details about this document
 
 This version:
-    https://www.w3.org/TR/2025/WD-webdriver-bidi-20251106/ 
+    https://www.w3.org/TR/2025/WD-webdriver-bidi-20251212/ 
 Latest published version:
     https://www.w3.org/TR/webdriver-bidi/ 
 Editor's Draft:
     https://w3c.github.io/webdriver-bidi/ 
 Previous Versions:
-    https://www.w3.org/TR/2025/WD-webdriver-bidi-20251028/ 
+    https://www.w3.org/TR/2025/WD-webdriver-bidi-20251210/ 
 History:
     https://www.w3.org/standards/history/webdriver-bidi/ 
 Implementation Report:
@@ -82,7 +82,7 @@ Table of Contents
                 7.1.2.4 The session.UserPromptHandler Type
                 7.1.2.5 The session.UserPromptHandlerType Type
                 7.1.2.6 The session.Subscription Type
-                7.1.2.7 The session.SubscriptionRequest Type
+                7.1.2.7 The session.SubscribeParameters Type
                 7.1.2.8 The session.UnsubscribeByIDRequest Type
                 7.1.2.9 The session.UnsubscribeByAttributesRequest Type
             7.1.3 Commands
@@ -152,10 +152,11 @@ Table of Contents
                 7.4.2.2 The emulation.setGeolocationOverride Command
                 7.4.2.3 The emulation.setLocaleOverride Command
                 7.4.2.4 The emulation.setNetworkConditions Command
-                7.4.2.5 The emulation.setScreenOrientationOverride Command
-                7.4.2.6 The emulation.setUserAgentOverride Command
-                7.4.2.7 The emulation.setScriptingEnabled Command
-                7.4.2.8 The emulation.setTimezoneOverride Command
+                7.4.2.5 The emulation.setScreenSettingsOverride Command
+                7.4.2.6 The emulation.setScreenOrientationOverride Command
+                7.4.2.7 The emulation.setUserAgentOverride Command
+                7.4.2.8 The emulation.setScriptingEnabled Command
+                7.4.2.9 The emulation.setTimezoneOverride Command
         7.5 The network Module
             7.5.1 Definition
             7.5.2 Network Data Collection
@@ -1178,10 +1179,10 @@ session.CapabilityRequest = {
 The session.CapabilityRequest type represents a specific set of requested capabilities.
 
 WebDriver BiDi defines additional WebDriver capabilities. The following tables enumerates the capabilities each implementation must support for WebDriver BiDi.
-Capability 	WebSocket URL
-Key 	"webSocketUrl"
-Value type 	boolean
-Description 	Defines the current session’s support for bidirectional connection.
+Capability: 	WebSocket URL
+Key: 	"webSocketUrl"
+Value type: 	boolean
+Description: 	Defines the current session’s support for bidirectional connection.
 The additional capability deserialization algorithm for the "webSocketUrl" capability, with parameter value is:
 
     If value is not a boolean, return error with code invalid argument.
@@ -1269,15 +1270,15 @@ The session.UserPromptHandlerType type represents the behavior of the user promp
 session.Subscription = text
 
 The session.Subscription type represents a unique subscription identifier.
-7.1.2.7. The session.SubscriptionRequest Type
+7.1.2.7. The session.SubscribeParameters Type
 
-session.SubscriptionRequest = {
+session.SubscribeParameters = {
   events: [+text],
   ? contexts: [+browsingContext.BrowsingContext],
   ? userContexts: [+browser.UserContext],
 }
 
-The session.SubscriptionRequest type represents a request to subscribe to or unsubscribe from a specific set of events.
+The session.SubscribeParameters type represents a request to subscribe to a specific set of events.
 7.1.2.8. The session.UnsubscribeByIDRequest Type
 
 session.UnsubscribeByIDRequest = {
@@ -1420,7 +1421,7 @@ Command Type
 
     session.Subscribe = (
       method: "session.subscribe",
-      params: session.SubscriptionRequest
+      params: session.SubscribeParameters
     )
 
 Return Type
@@ -2211,6 +2212,10 @@ An unhandled prompt behavior struct is a struct with:
 A remote end has a viewport overrides map which is a weak map between user contexts and viewport configuration.
 
 A remote end has a locale overrides map which is a weak map between navigables or user contexts and string.
+
+A screen settings is a struct with an item named height which is an integer, an item named width which is an integer, an item named x which is an integer, an item named y which is an integer.
+
+A remote end has a screen settings overrides which is a struct with an item named user context screen settings, which is a weak map between user contexts and screen settings, and an item named navigable screen settings, which is a weak map between navigables and screen settings.
 
 A remote end has a timezone overrides map which is a weak map between navigables or user contexts and string.
 
@@ -4073,6 +4078,7 @@ EmulationCommand = (
   emulation.SetLocaleOverride //
   emulation.SetNetworkConditions //
   emulation.SetScreenOrientationOverride //
+  emulation.SetScreenSettingsOverride //
   emulation.SetScriptingEnabled //
   emulation.SetTimezoneOverride //
   emulation.SetUserAgentOverride
@@ -4374,8 +4380,9 @@ Command Type
       type: "offline"
     }
 
-Result Type
-    EmptyResult 
+Return Type
+
+    emulation.SetNetworkConditionsResult = EmptyResult
 
 To apply network conditions:
 
@@ -4433,7 +4440,103 @@ The remote end steps with command parameters and session are:
 
     Return success with data null.
 
-7.4.2.5. The emulation.setScreenOrientationOverride Command
+7.4.2.5. The emulation.setScreenSettingsOverride Command
+
+The emulation.setScreenSettingsOverride command emulates web-exposed screen area and web-exposed available screen area of the given top-level traversables or user contexts.
+
+Command Type
+
+    emulation.SetScreenSettingsOverride = (
+      method: "emulation.setScreenSettingsOverride",
+      params: emulation.SetScreenSettingsOverrideParameters
+    )
+
+    emulation.ScreenArea = {
+      width: js-uint,
+      height: js-uint
+    }
+
+    emulation.SetScreenSettingsOverrideParameters = {
+      screenArea: emulation.ScreenArea / null,
+      ? contexts: [+browsingContext.BrowsingContext],
+      ? userContexts: [+browser.UserContext],
+    }
+
+Return Type
+
+    emulation.SetScreenSettingsOverrideResult = EmptyResult
+
+The WebDriver BiDi emulated available screen area steps given navigable navigable:
+
+    Let top-level traversable be navigable’s top-level traversable.
+
+    Let user context be top-level traversable’s associated user context.
+
+    If screen settings overrides contains top-level traversable, return screen settings overrides[top-level traversable].
+
+    If screen settings overrides contains user context, return screen settings overrides[user context].
+
+    Return null
+
+The WebDriver BiDi emulated total screen area steps given navigable navigable:
+
+    Let top-level traversable be navigable’s top-level traversable.
+
+    Let user context be top-level traversable’s associated user context.
+
+    If screen settings overrides contains top-level traversable, return screen settings overrides[top-level traversable].
+
+    If screen settings overrides contains user context, return screen settings overrides[user context].
+
+    Return null
+
+The remote end steps with command parameters are:
+
+    If command parameters contains "userContexts" and command parameters contains "contexts", return error with error code invalid argument.
+
+    If command parameters doesn’t contain "userContexts" and command parameters doesn’t contain "contexts", return error with error code invalid argument.
+
+    Let emulated screen area be command parameters["screenArea"].
+
+    If emulated screen area is not null:
+
+        Set emulated screen area["x"] to 0.
+
+        Set emulated screen area["y"] to 0.
+
+    Let navigables be a set.
+
+    If the contexts field of command parameters is present:
+
+        Let navigables be the result of trying to get valid top-level traversables by ids with command parameters["contexts"].
+
+        Let target be navigable screen settings.
+
+        For each navigable of navigables:
+
+            If emulated screen area is null, remove navigable from target.
+
+            Otherwise, set target[navigable] to emulated screen area.
+
+        Return success with data null.
+
+    Otherwise:
+
+        Assert the userContexts field of command parameters is present.
+
+        Let user contexts be the result of trying to get valid user contexts with command parameters["userContexts"].
+
+        Let target be user context screen settings.
+
+        For each user context of user contexts:
+
+            If emulated screen area is null, remove user context from target.
+
+            Otherwise, set target[user context] to emulated screen area.
+
+        Return success with data null.
+
+7.4.2.6. The emulation.setScreenOrientationOverride Command
 
 The emulation.setScreenOrientationOverride command emulates screen orientation of the given top-level traversables or user contexts.
 
@@ -4524,7 +4627,7 @@ The remote end steps with command parameters are:
 
     Return success with data null.
 
-7.4.2.6. The emulation.setUserAgentOverride Command
+7.4.2.7. The emulation.setUserAgentOverride Command
 
 The emulation.setUserAgentOverride command modifies User-Agent on the given top-level traversables or user contexts.
 
@@ -4605,7 +4708,7 @@ The remote end steps given session and command parameters are:
 
     Return success with data null.
 
-7.4.2.7. The emulation.setScriptingEnabled Command
+7.4.2.8. The emulation.setScriptingEnabled Command
 
 The emulation.setScriptingEnabled command emulates disabling JavaScript on web pages.
 
@@ -4671,7 +4774,7 @@ The remote end steps with command parameters are:
 
     Return success with data null.
 
-7.4.2.8. The emulation.setTimezoneOverride Command
+7.4.2.9. The emulation.setTimezoneOverride Command
 
 The emulation.setTimezoneOverride command modifies timezone on the given top-level traversables or user contexts.
 
@@ -5339,6 +5442,7 @@ Remote end definition and local end definition
 
 network.SameSite = "strict" / "lax" / "none" / "default"
 
+
 network.Cookie = {
     name: text,
     value: network.BytesValue,
@@ -5417,8 +5521,10 @@ network.FetchTimingInfo = {
     connectStart: float,
     connectEnd: float,
     tlsStart: float,
+
     requestStart: float,
     responseStart: float,
+
     responseEnd: float,
 }
 
@@ -7914,12 +8020,14 @@ script.RemoteReference = (
 
 script.SharedReference = {
    sharedId: script.SharedId
+
    ? handle: script.Handle,
    Extensible
 }
 
 script.RemoteObjectReference = {
    handle: script.Handle,
+
    ? sharedId: script.SharedId
    Extensible
 }
@@ -9334,6 +9442,7 @@ Command Type
       params: storage.GetCookiesParameters
     )
 
+
     storage.CookieFilter = {
       ? name: text,
       ? value: network.BytesValue,
@@ -9410,6 +9519,7 @@ Command Type
       method: "storage.setCookie",
       params: storage.SetCookieParameters,
     )
+
 
     storage.PartialCookie = {
       name: text,
@@ -10868,33 +10978,35 @@ Terms defined by this specification
         cddl-key for emulation.SetForcedColorsModeThemeOverrideParameters, in § 7.4.2.1
         cddl-key for emulation.SetGeolocationOverrideParameters, in § 7.4.2.2
         cddl-key for emulation.SetLocaleOverrideParameters, in § 7.4.2.3
-        cddl-key for emulation.SetScreenOrientationOverrideParameters, in § 7.4.2.5
-        cddl-key for emulation.SetScriptingEnabledParameters, in § 7.4.2.7
-        cddl-key for emulation.SetTimezoneOverrideParameters, in § 7.4.2.8
-        cddl-key for emulation.SetUserAgentOverrideParameters, in § 7.4.2.6
+        cddl-key for emulation.SetScreenOrientationOverrideParameters, in § 7.4.2.6
+        cddl-key for emulation.SetScreenSettingsOverrideParameters, in § 7.4.2.5
+        cddl-key for emulation.SetScriptingEnabledParameters, in § 7.4.2.8
+        cddl-key for emulation.SetTimezoneOverrideParameters, in § 7.4.2.9
+        cddl-key for emulation.SetUserAgentOverrideParameters, in § 7.4.2.7
         cddl-key for emulation.setNetworkConditionsParameters, in § 7.4.2.4
         cddl-key for network.AddDataCollectorParameters, in § 7.5.5.1
         cddl-key for network.AddInterceptParameters, in § 7.5.5.2
         cddl-key for network.SetCacheBehaviorParameters, in § 7.5.5.12
         cddl-key for network.SetExtraHeadersParameters, in § 7.5.5.13
         cddl-key for script.AddPreloadScriptParameters, in § 7.6.4.1
-        cddl-key for session.SubscriptionRequest, in § 7.1.2.7 
+        cddl-key for session.SubscribeParameters, in § 7.1.2.7 
     contexts
         cddl-key for browsingContext.GetTreeResult, in § 7.3.3.5
         cddl-key for emulation.SetForcedColorsModeThemeOverrideParameters, in § 7.4.2.1
         cddl-key for emulation.SetGeolocationOverrideParameters, in § 7.4.2.2
         cddl-key for emulation.SetLocaleOverrideParameters, in § 7.4.2.3
-        cddl-key for emulation.SetScreenOrientationOverrideParameters, in § 7.4.2.5
-        cddl-key for emulation.SetScriptingEnabledParameters, in § 7.4.2.7
-        cddl-key for emulation.SetTimezoneOverrideParameters, in § 7.4.2.8
-        cddl-key for emulation.SetUserAgentOverrideParameters, in § 7.4.2.6
+        cddl-key for emulation.SetScreenOrientationOverrideParameters, in § 7.4.2.6
+        cddl-key for emulation.SetScreenSettingsOverrideParameters, in § 7.4.2.5
+        cddl-key for emulation.SetScriptingEnabledParameters, in § 7.4.2.8
+        cddl-key for emulation.SetTimezoneOverrideParameters, in § 7.4.2.9
+        cddl-key for emulation.SetUserAgentOverrideParameters, in § 7.4.2.7
         cddl-key for emulation.setNetworkConditionsParameters, in § 7.4.2.4
         cddl-key for network.AddDataCollectorParameters, in § 7.5.5.1
         cddl-key for network.AddInterceptParameters, in § 7.5.5.2
         cddl-key for network.SetCacheBehaviorParameters, in § 7.5.5.12
         cddl-key for network.SetExtraHeadersParameters, in § 7.5.5.13
         cddl-key for script.AddPreloadScriptParameters, in § 7.6.4.1
-        cddl-key for session.SubscriptionRequest, in § 7.1.2.7
+        cddl-key for session.SubscribeParameters, in § 7.1.2.7
         dfn for network-collector, in § 7.5.2 
     "cookie", in § 7.7.3.2
     cookie, in § 7.7.3.2
@@ -11069,9 +11181,10 @@ Terms defined by this specification
     emulation.NetworkConditions, in § 7.4.2.4
     emulation.NetworkConditionsOffline, in § 7.4.2.4
     EmulationResult, in § 7.4.1
-    emulation.ScreenOrientation, in § 7.4.2.5
-    emulation.ScreenOrientationNatural, in § 7.4.2.5
-    emulation.ScreenOrientationType, in § 7.4.2.5
+    emulation.ScreenArea, in § 7.4.2.5
+    emulation.ScreenOrientation, in § 7.4.2.6
+    emulation.ScreenOrientationNatural, in § 7.4.2.6
+    emulation.ScreenOrientationType, in § 7.4.2.6
     "emulation.setForcedColorsModeThemeOverride", in § 7.4.2.1
     emulation.SetForcedColorsModeThemeOverride, in § 7.4.2.1
     emulation.setForcedColorsModeThemeOverride
@@ -11099,36 +11212,44 @@ Terms defined by this specification
         cddl-value for emulation.SetNetworkConditions/method, in § 7.4.2.4
         dfn for commands, in § 7.4.2.4 
     emulation.setNetworkConditionsParameters, in § 7.4.2.4
-    "emulation.setScreenOrientationOverride", in § 7.4.2.5
-    emulation.SetScreenOrientationOverride, in § 7.4.2.5
+    emulation.SetNetworkConditionsResult, in § 7.4.2.4
+    "emulation.setScreenOrientationOverride", in § 7.4.2.6
+    emulation.SetScreenOrientationOverride, in § 7.4.2.6
     emulation.setScreenOrientationOverride
-        cddl-value for emulation.SetScreenOrientationOverride/method, in § 7.4.2.5
-        dfn for commands, in § 7.4.2.5 
-    emulation.SetScreenOrientationOverrideParameters, in § 7.4.2.5
-    emulation.SetScreenOrientationOverrideResult, in § 7.4.2.5
-    "emulation.setScriptingEnabled", in § 7.4.2.7
-    emulation.SetScriptingEnabled, in § 7.4.2.7
-    emulation.setScriptingEnabled
-        cddl-value for emulation.SetScriptingEnabled/method, in § 7.4.2.7
-        dfn for commands, in § 7.4.2.7 
-    emulation.SetScriptingEnabledParameters, in § 7.4.2.7
-    emulation.SetScriptingEnabledResult, in § 7.4.2.7
-    "emulation.setTimezoneOverride", in § 7.4.2.8
-    emulation.SetTimezoneOverride, in § 7.4.2.8
-    emulation.setTimezoneOverride
-        cddl-value for emulation.SetTimezoneOverride/method, in § 7.4.2.8
-        dfn for commands, in § 7.4.2.8 
-    emulation.SetTimezoneOverrideParameters, in § 7.4.2.8
-    emulation.SetTimezoneOverrideResult, in § 7.4.2.8
-    "emulation.setUserAgentOverride", in § 7.4.2.6
-    emulation.SetUserAgentOverride, in § 7.4.2.6
-    emulation.setUserAgentOverride
-        cddl-value for emulation.SetUserAgentOverride/method, in § 7.4.2.6
+        cddl-value for emulation.SetScreenOrientationOverride/method, in § 7.4.2.6
         dfn for commands, in § 7.4.2.6 
-    emulation.SetUserAgentOverrideParameters, in § 7.4.2.6
-    emulation.SetUserAgentOverrideResult, in § 7.4.2.6
-    "enabled", in § 7.4.2.7
-    enabled, in § 7.4.2.7
+    emulation.SetScreenOrientationOverrideParameters, in § 7.4.2.6
+    emulation.SetScreenOrientationOverrideResult, in § 7.4.2.6
+    "emulation.setScreenSettingsOverride", in § 7.4.2.5
+    emulation.SetScreenSettingsOverride, in § 7.4.2.5
+    emulation.setScreenSettingsOverride
+        cddl-value for emulation.SetScreenSettingsOverride/method, in § 7.4.2.5
+        dfn for commands, in § 7.4.2.5 
+    emulation.SetScreenSettingsOverrideParameters, in § 7.4.2.5
+    emulation.SetScreenSettingsOverrideResult, in § 7.4.2.5
+    "emulation.setScriptingEnabled", in § 7.4.2.8
+    emulation.SetScriptingEnabled, in § 7.4.2.8
+    emulation.setScriptingEnabled
+        cddl-value for emulation.SetScriptingEnabled/method, in § 7.4.2.8
+        dfn for commands, in § 7.4.2.8 
+    emulation.SetScriptingEnabledParameters, in § 7.4.2.8
+    emulation.SetScriptingEnabledResult, in § 7.4.2.8
+    "emulation.setTimezoneOverride", in § 7.4.2.9
+    emulation.SetTimezoneOverride, in § 7.4.2.9
+    emulation.setTimezoneOverride
+        cddl-value for emulation.SetTimezoneOverride/method, in § 7.4.2.9
+        dfn for commands, in § 7.4.2.9 
+    emulation.SetTimezoneOverrideParameters, in § 7.4.2.9
+    emulation.SetTimezoneOverrideResult, in § 7.4.2.9
+    "emulation.setUserAgentOverride", in § 7.4.2.7
+    emulation.SetUserAgentOverride, in § 7.4.2.7
+    emulation.setUserAgentOverride
+        cddl-value for emulation.SetUserAgentOverride/method, in § 7.4.2.7
+        dfn for commands, in § 7.4.2.7 
+    emulation.SetUserAgentOverrideParameters, in § 7.4.2.7
+    emulation.SetUserAgentOverrideResult, in § 7.4.2.7
+    "enabled", in § 7.4.2.8
+    enabled, in § 7.4.2.8
     encode a canvas as Base64, in § 7.3.3.2
     end the session, in § 7.1.1
     "error"
@@ -11160,10 +11281,10 @@ Terms defined by this specification
     event names, in § 3.6
     event parameters, in § 3.6
     "events"
-        cddl-key for session.SubscriptionRequest, in § 7.1.2.7
+        cddl-key for session.SubscribeParameters, in § 7.1.2.7
         cddl-key for session.UnsubscribeByAttributesRequest, in § 7.1.2.9 
     events
-        cddl-key for session.SubscriptionRequest, in § 7.1.2.7
+        cddl-key for session.SubscribeParameters, in § 7.1.2.7
         cddl-key for session.UnsubscribeByAttributesRequest, in § 7.1.2.9 
     event type, in § 3.6
     "exception"
@@ -11377,14 +11498,17 @@ Terms defined by this specification
         cddl-key for browsingContext.BoxClipRectangle, in § 7.3.3.2
         cddl-key for browsingContext.PrintPageParameters, in § 7.3.3.9
         cddl-key for browsingContext.Viewport, in § 7.3.3.11
+        cddl-key for emulation.ScreenArea, in § 7.4.2.5
         cddl-key for input.PointerCommonProperties, in § 7.9.3.1 
     height
+        attribute for screen settings, in § 7.3.1
         attribute for viewport-dimensions, in § 7.3.1
         cddl-key for browser.ClientWindowInfo, in § 7.2.3.2
         cddl-key for browser.ClientWindowRectState, in § 7.2.4.6
         cddl-key for browsingContext.BoxClipRectangle, in § 7.3.3.2
         cddl-key for browsingContext.PrintPageParameters, in § 7.3.3.9
         cddl-key for browsingContext.Viewport, in § 7.3.3.11
+        cddl-key for emulation.ScreenArea, in § 7.4.2.5
         cddl-key for input.PointerCommonProperties, in § 7.9.3.1
         dfn for client window, in § 7.2.2 
     host, in § 4
@@ -11570,14 +11694,14 @@ Terms defined by this specification
     known subscription ids, in § 3.6
     "landscape"
         cddl-value for browsingContext.PrintParameters/orientation, in § 7.3.3.9
-        cddl-value for emulation.ScreenOrientationNatural, in § 7.4.2.5 
+        cddl-value for emulation.ScreenOrientationNatural, in § 7.4.2.6 
     landscape
         cddl-value for browsingContext.PrintParameters/orientation, in § 7.3.3.9
-        cddl-value for emulation.ScreenOrientationNatural, in § 7.4.2.5 
-    "landscape-primary", in § 7.4.2.5
-    landscape-primary, in § 7.4.2.5
-    "landscape-secondary", in § 7.4.2.5
-    landscape-secondary, in § 7.4.2.5
+        cddl-value for emulation.ScreenOrientationNatural, in § 7.4.2.6 
+    "landscape-primary", in § 7.4.2.6
+    landscape-primary, in § 7.4.2.6
+    "landscape-secondary", in § 7.4.2.6
+    landscape-secondary, in § 7.4.2.6
     "latitude", in § 7.4.2.2
     latitude
         attribute for geolocation override, in § 7.4.1
@@ -11724,10 +11848,11 @@ Terms defined by this specification
         cddl-key for emulation.SetGeolocationOverride, in § 7.4.2.2
         cddl-key for emulation.SetLocaleOverride, in § 7.4.2.3
         cddl-key for emulation.SetNetworkConditions, in § 7.4.2.4
-        cddl-key for emulation.SetScreenOrientationOverride, in § 7.4.2.5
-        cddl-key for emulation.SetScriptingEnabled, in § 7.4.2.7
-        cddl-key for emulation.SetTimezoneOverride, in § 7.4.2.8
-        cddl-key for emulation.SetUserAgentOverride, in § 7.4.2.6
+        cddl-key for emulation.SetScreenOrientationOverride, in § 7.4.2.6
+        cddl-key for emulation.SetScreenSettingsOverride, in § 7.4.2.5
+        cddl-key for emulation.SetScriptingEnabled, in § 7.4.2.8
+        cddl-key for emulation.SetTimezoneOverride, in § 7.4.2.9
+        cddl-key for emulation.SetUserAgentOverride, in § 7.4.2.7
         cddl-key for input.FileDialogOpened, in § 7.9.4.1
         cddl-key for input.PerformActions, in § 7.9.3.1
         cddl-key for input.ReleaseActions, in § 7.9.3.2
@@ -11811,10 +11936,11 @@ Terms defined by this specification
         cddl-key for emulation.SetGeolocationOverride, in § 7.4.2.2
         cddl-key for emulation.SetLocaleOverride, in § 7.4.2.3
         cddl-key for emulation.SetNetworkConditions, in § 7.4.2.4
-        cddl-key for emulation.SetScreenOrientationOverride, in § 7.4.2.5
-        cddl-key for emulation.SetScriptingEnabled, in § 7.4.2.7
-        cddl-key for emulation.SetTimezoneOverride, in § 7.4.2.8
-        cddl-key for emulation.SetUserAgentOverride, in § 7.4.2.6
+        cddl-key for emulation.SetScreenOrientationOverride, in § 7.4.2.6
+        cddl-key for emulation.SetScreenSettingsOverride, in § 7.4.2.5
+        cddl-key for emulation.SetScriptingEnabled, in § 7.4.2.8
+        cddl-key for emulation.SetTimezoneOverride, in § 7.4.2.9
+        cddl-key for emulation.SetUserAgentOverride, in § 7.4.2.7
         cddl-key for input.FileDialogOpened, in § 7.9.4.1
         cddl-key for input.PerformActions, in § 7.9.3.1
         cddl-key for input.ReleaseActions, in § 7.9.3.2
@@ -11902,15 +12028,16 @@ Terms defined by this specification
     namespaceURI, in § 7.6.3.14
     "NaN", in § 7.6.3.10
     NaN, in § 7.6.3.10
-    "natural", in § 7.4.2.5
+    "natural", in § 7.4.2.6
     natural
         attribute for screen orientation override, in § 7.4.1
-        cddl-key for emulation.ScreenOrientation, in § 7.4.2.5 
+        cddl-key for emulation.ScreenOrientation, in § 7.4.2.6 
     navigable cache behavior, in § 7.5.5.12
     navigable cache behavior map, in § 7.5.1
     navigable headers, in § 7.5.1
     navigable id, in § 7.3.2.1
     navigable network conditions, in § 6
+    navigable screen settings, in § 7.3.1
     navigable user agent, in § 7.4.1
     "navigation"
         cddl-key for browsingContext.BaseNavigationInfo, in § 7.3.2.5
@@ -12251,10 +12378,11 @@ Terms defined by this specification
         cddl-key for emulation.SetGeolocationOverride, in § 7.4.2.2
         cddl-key for emulation.SetLocaleOverride, in § 7.4.2.3
         cddl-key for emulation.SetNetworkConditions, in § 7.4.2.4
-        cddl-key for emulation.SetScreenOrientationOverride, in § 7.4.2.5
-        cddl-key for emulation.SetScriptingEnabled, in § 7.4.2.7
-        cddl-key for emulation.SetTimezoneOverride, in § 7.4.2.8
-        cddl-key for emulation.SetUserAgentOverride, in § 7.4.2.6
+        cddl-key for emulation.SetScreenOrientationOverride, in § 7.4.2.6
+        cddl-key for emulation.SetScreenSettingsOverride, in § 7.4.2.5
+        cddl-key for emulation.SetScriptingEnabled, in § 7.4.2.8
+        cddl-key for emulation.SetTimezoneOverride, in § 7.4.2.9
+        cddl-key for emulation.SetUserAgentOverride, in § 7.4.2.7
         cddl-key for input.FileDialogOpened, in § 7.9.4.1
         cddl-key for input.PerformActions, in § 7.9.3.1
         cddl-key for input.ReleaseActions, in § 7.9.3.2
@@ -12335,10 +12463,11 @@ Terms defined by this specification
         cddl-key for emulation.SetGeolocationOverride, in § 7.4.2.2
         cddl-key for emulation.SetLocaleOverride, in § 7.4.2.3
         cddl-key for emulation.SetNetworkConditions, in § 7.4.2.4
-        cddl-key for emulation.SetScreenOrientationOverride, in § 7.4.2.5
-        cddl-key for emulation.SetScriptingEnabled, in § 7.4.2.7
-        cddl-key for emulation.SetTimezoneOverride, in § 7.4.2.8
-        cddl-key for emulation.SetUserAgentOverride, in § 7.4.2.6
+        cddl-key for emulation.SetScreenOrientationOverride, in § 7.4.2.6
+        cddl-key for emulation.SetScreenSettingsOverride, in § 7.4.2.5
+        cddl-key for emulation.SetScriptingEnabled, in § 7.4.2.8
+        cddl-key for emulation.SetTimezoneOverride, in § 7.4.2.9
+        cddl-key for emulation.SetUserAgentOverride, in § 7.4.2.7
         cddl-key for input.FileDialogOpened, in § 7.9.4.1
         cddl-key for input.PerformActions, in § 7.9.3.1
         cddl-key for input.ReleaseActions, in § 7.9.3.2
@@ -12471,14 +12600,14 @@ Terms defined by this specification
         dfn for listener, in § 4 
     "portrait"
         cddl-value for browsingContext.PrintParameters/orientation, in § 7.3.3.9
-        cddl-value for emulation.ScreenOrientationNatural, in § 7.4.2.5 
+        cddl-value for emulation.ScreenOrientationNatural, in § 7.4.2.6 
     portrait
         cddl-value for browsingContext.PrintParameters/orientation, in § 7.3.3.9
-        cddl-value for emulation.ScreenOrientationNatural, in § 7.4.2.5 
-    "portrait-primary", in § 7.4.2.5
-    portrait-primary, in § 7.4.2.5
-    "portrait-secondary", in § 7.4.2.5
-    portrait-secondary, in § 7.4.2.5
+        cddl-value for emulation.ScreenOrientationNatural, in § 7.4.2.6 
+    "portrait-primary", in § 7.4.2.6
+    portrait-primary, in § 7.4.2.6
+    "portrait-secondary", in § 7.4.2.6
+    portrait-secondary, in § 7.4.2.6
     "positionUnavailable", in § 7.4.2.2
     positionUnavailable, in § 7.4.2.2
     "preflight", in § 7.5.4.12
@@ -12681,10 +12810,14 @@ Terms defined by this specification
     scale, in § 7.3.3.9
     "scheme", in § 7.5.4.1
     scheme, in § 7.5.4.1
-    "screenOrientation", in § 7.4.2.5
-    screenOrientation, in § 7.4.2.5
+    "screenArea", in § 7.4.2.5
+    screenArea, in § 7.4.2.5
+    "screenOrientation", in § 7.4.2.6
+    screenOrientation, in § 7.4.2.6
     screen orientation override, in § 7.4.1
     screen orientation overrides map, in § 7.4.1
+    screen settings, in § 7.3.1
+    screen settings overrides, in § 7.3.1
     "script"
         cddl-key for script.AddPreloadScriptResult, in § 7.6.4.1
         cddl-key for script.RemovePreloadScriptParameters, in § 7.6.4.6
@@ -12918,9 +13051,9 @@ Terms defined by this specification
     session.subscribe
         cddl-value for session.Subscribe/method, in § 7.1.3.4
         dfn for commands, in § 7.1.3.4 
+    session.SubscribeParameters, in § 7.1.2.7
     session.SubscribeResult, in § 7.1.3.4
     session.Subscription, in § 7.1.2.6
-    session.SubscriptionRequest, in § 7.1.2.7
     session.SystemProxyConfiguration, in § 7.1.2.3
     "session.unsubscribe", in § 7.1.3.5
     session.Unsubscribe, in § 7.1.3.5
@@ -12941,7 +13074,7 @@ Terms defined by this specification
         cddl-value for script.SetLocalValue/type, in § 7.6.3.7
         cddl-value for script.SetRemoteValue/type, in § 7.6.3.14 
     set device pixel ratio override, in § 7.3.3.11
-    set emulated screen orientation, in § 7.4.2.5
+    set emulated screen orientation, in § 7.4.2.6
     set internal ids if needed, in § 7.6.3.14
     set of all command names, in § 3.4
     set of sessions for which an event is enabled, in § 3.6
@@ -13145,8 +13278,8 @@ Terms defined by this specification
         cddl-key for browsingContext.HistoryUpdatedParameters, in § 7.3.4.5
         cddl-key for log.BaseLogEntry, in § 7.8.2.1
         cddl-key for network.BaseParameters, in § 7.5.4.3 
-    "timezone", in § 7.4.2.8
-    timezone, in § 7.4.2.8
+    "timezone", in § 7.4.2.9
+    timezone, in § 7.4.2.9
     timezone overrides map, in § 7.3.1
     "timings", in § 7.5.4.15
     timings, in § 7.5.4.15
@@ -13178,7 +13311,7 @@ Terms defined by this specification
         cddl-key for browsingContext.XPathLocator, in § 7.3.2.3
         cddl-key for emulation.GeolocationPositionError, in § 7.4.2.2
         cddl-key for emulation.NetworkConditionsOffline, in § 7.4.2.4
-        cddl-key for emulation.ScreenOrientation, in § 7.4.2.5
+        cddl-key for emulation.ScreenOrientation, in § 7.4.2.6
         cddl-key for input.ElementOrigin, in § 7.9.2.1
         cddl-key for input.KeyDownAction, in § 7.9.3.1
         cddl-key for input.KeySourceActions, in § 7.9.3.1
@@ -13267,7 +13400,7 @@ Terms defined by this specification
         cddl-key for browsingContext.XPathLocator, in § 7.3.2.3
         cddl-key for emulation.GeolocationPositionError, in § 7.4.2.2
         cddl-key for emulation.NetworkConditionsOffline, in § 7.4.2.4
-        cddl-key for emulation.ScreenOrientation, in § 7.4.2.5
+        cddl-key for emulation.ScreenOrientation, in § 7.4.2.6
         cddl-key for input.ElementOrigin, in § 7.9.2.1
         cddl-key for input.KeyDownAction, in § 7.9.3.1
         cddl-key for input.KeySourceActions, in § 7.9.3.1
@@ -13414,10 +13547,10 @@ Terms defined by this specification
         cddl-key for script.CallFunctionParameters, in § 7.6.4.3
         cddl-key for script.EvaluateParameters, in § 7.6.4.4 
     "userAgent"
-        cddl-key for emulation.SetUserAgentOverrideParameters, in § 7.4.2.6
+        cddl-key for emulation.SetUserAgentOverrideParameters, in § 7.4.2.7
         cddl-key for session.NewResult/capabilities, in § 7.1.3.2 
     userAgent
-        cddl-key for emulation.SetUserAgentOverrideParameters, in § 7.4.2.6
+        cddl-key for emulation.SetUserAgentOverrideParameters, in § 7.4.2.7
         cddl-key for session.NewResult/capabilities, in § 7.1.3.2 
     "userContext"
         cddl-key for browser.RemoveUserContextParameters, in § 7.2.4.5
@@ -13446,15 +13579,16 @@ Terms defined by this specification
         cddl-key for emulation.SetForcedColorsModeThemeOverrideParameters, in § 7.4.2.1
         cddl-key for emulation.SetGeolocationOverrideParameters, in § 7.4.2.2
         cddl-key for emulation.SetLocaleOverrideParameters, in § 7.4.2.3
-        cddl-key for emulation.SetScreenOrientationOverrideParameters, in § 7.4.2.5
-        cddl-key for emulation.SetScriptingEnabledParameters, in § 7.4.2.7
-        cddl-key for emulation.SetTimezoneOverrideParameters, in § 7.4.2.8
-        cddl-key for emulation.SetUserAgentOverrideParameters, in § 7.4.2.6
+        cddl-key for emulation.SetScreenOrientationOverrideParameters, in § 7.4.2.6
+        cddl-key for emulation.SetScreenSettingsOverrideParameters, in § 7.4.2.5
+        cddl-key for emulation.SetScriptingEnabledParameters, in § 7.4.2.8
+        cddl-key for emulation.SetTimezoneOverrideParameters, in § 7.4.2.9
+        cddl-key for emulation.SetUserAgentOverrideParameters, in § 7.4.2.7
         cddl-key for emulation.setNetworkConditionsParameters, in § 7.4.2.4
         cddl-key for network.AddDataCollectorParameters, in § 7.5.5.1
         cddl-key for network.SetExtraHeadersParameters, in § 7.5.5.13
         cddl-key for script.AddPreloadScriptParameters, in § 7.6.4.1
-        cddl-key for session.SubscriptionRequest, in § 7.1.2.7 
+        cddl-key for session.SubscribeParameters, in § 7.1.2.7 
     user contexts, in § 7.5.2
     userContexts
         cddl-key for browser.GetUserContextsResult, in § 7.2.4.4
@@ -13463,15 +13597,17 @@ Terms defined by this specification
         cddl-key for emulation.SetForcedColorsModeThemeOverrideParameters, in § 7.4.2.1
         cddl-key for emulation.SetGeolocationOverrideParameters, in § 7.4.2.2
         cddl-key for emulation.SetLocaleOverrideParameters, in § 7.4.2.3
-        cddl-key for emulation.SetScreenOrientationOverrideParameters, in § 7.4.2.5
-        cddl-key for emulation.SetScriptingEnabledParameters, in § 7.4.2.7
-        cddl-key for emulation.SetTimezoneOverrideParameters, in § 7.4.2.8
-        cddl-key for emulation.SetUserAgentOverrideParameters, in § 7.4.2.6
+        cddl-key for emulation.SetScreenOrientationOverrideParameters, in § 7.4.2.6
+        cddl-key for emulation.SetScreenSettingsOverrideParameters, in § 7.4.2.5
+        cddl-key for emulation.SetScriptingEnabledParameters, in § 7.4.2.8
+        cddl-key for emulation.SetTimezoneOverrideParameters, in § 7.4.2.9
+        cddl-key for emulation.SetUserAgentOverrideParameters, in § 7.4.2.7
         cddl-key for emulation.setNetworkConditionsParameters, in § 7.4.2.4
         cddl-key for network.AddDataCollectorParameters, in § 7.5.5.1
         cddl-key for network.SetExtraHeadersParameters, in § 7.5.5.13
         cddl-key for script.AddPreloadScriptParameters, in § 7.6.4.1
-        cddl-key for session.SubscriptionRequest, in § 7.1.2.7 
+        cddl-key for session.SubscribeParameters, in § 7.1.2.7 
+    user context screen settings, in § 7.3.1
     user context to accept insecure certificates override map, in § 6
     user context to proxy configuration map, in § 6
     user context user agent, in § 7.4.1
@@ -13587,8 +13723,10 @@ Terms defined by this specification
     WebDriver BiDi download end, in § 7.3.4.9
     WebDriver BiDi download started, in § 7.3.4.8
     WebDriver BiDi download will begin, in § 7.3.4.8
+    WebDriver BiDi emulated available screen area, in § 7.4.2.5
     WebDriver BiDi emulated language, in § 7.4.2.3
-    WebDriver BiDi emulated User-Agent, in § 7.4.2.6
+    WebDriver BiDi emulated total screen area, in § 7.4.2.5
+    WebDriver BiDi emulated User-Agent, in § 7.4.2.7
     WebDriver BiDi fetch error, in § 7.5.6.3
     WebDriver BiDi file dialog opened, in § 7.9.4.1
     WebDriver BiDi file picker options, in § 7.9.4.1
@@ -13607,7 +13745,7 @@ Terms defined by this specification
     WebDriver BiDi pop state, in § 7.3.3.12
     WebDriver BiDi response completed, in § 7.5.6.4
     WebDriver BiDi response started, in § 7.5.6.5
-    WebDriver BiDi scripting is enabled, in § 7.4.2.7
+    WebDriver BiDi scripting is enabled, in § 7.4.2.8
     WebDriver BiDi user prompt closed, in § 7.3.4.13
     WebDriver BiDi user prompt opened, in § 7.3.4.14
     webExtension, in § 7.10
@@ -13646,14 +13784,17 @@ Terms defined by this specification
         cddl-key for browsingContext.BoxClipRectangle, in § 7.3.3.2
         cddl-key for browsingContext.PrintPageParameters, in § 7.3.3.9
         cddl-key for browsingContext.Viewport, in § 7.3.3.11
+        cddl-key for emulation.ScreenArea, in § 7.4.2.5
         cddl-key for input.PointerCommonProperties, in § 7.9.3.1 
     width
+        attribute for screen settings, in § 7.3.1
         attribute for viewport-dimensions, in § 7.3.1
         cddl-key for browser.ClientWindowInfo, in § 7.2.3.2
         cddl-key for browser.ClientWindowRectState, in § 7.2.4.6
         cddl-key for browsingContext.BoxClipRectangle, in § 7.3.3.2
         cddl-key for browsingContext.PrintPageParameters, in § 7.3.3.9
         cddl-key for browsingContext.Viewport, in § 7.3.3.11
+        cddl-key for emulation.ScreenArea, in § 7.4.2.5
         cddl-key for input.PointerCommonProperties, in § 7.9.3.1
         dfn for client window, in § 7.2.2 
     "window"
@@ -13685,6 +13826,7 @@ Terms defined by this specification
         cddl-key for input.PointerMoveAction, in § 7.9.3.1
         cddl-key for input.WheelScrollAction, in § 7.9.3.1 
     x
+        attribute for screen settings, in § 7.3.1
         cddl-key for browser.ClientWindowInfo, in § 7.2.3.2
         cddl-key for browser.ClientWindowRectState, in § 7.2.4.6
         cddl-key for browsingContext.BoxClipRectangle, in § 7.3.3.2
@@ -13700,6 +13842,7 @@ Terms defined by this specification
         cddl-key for input.PointerMoveAction, in § 7.9.3.1
         cddl-key for input.WheelScrollAction, in § 7.9.3.1 
     y
+        attribute for screen settings, in § 7.3.1
         cddl-key for browser.ClientWindowInfo, in § 7.2.3.2
         cddl-key for browser.ClientWindowRectState, in § 7.2.4.6
         cddl-key for browsingContext.BoxClipRectangle, in § 7.3.3.2
@@ -13740,6 +13883,7 @@ Terms defined by reference
         visual viewport
         visual viewport page left
         visual viewport page top
+        web-exposed available screen area
         web-exposed screen area 
     [DOM] defines the following terms:
         Attr
@@ -14259,7 +14403,7 @@ Normative References
 [SELECTORS-4]
     Elika Etemad; Tab Atkins Jr.. Selectors Level 4. URL: https://drafts.csswg.org/selectors/ 
 [SERVICE-WORKERS]
-    Yoshisato Yanagisawa; Monica CHINTALA. Service Workers. URL: https://w3c.github.io/ServiceWorker/ 
+    Monica CHINTALA; Yoshisato Yanagisawa. Service Workers Nightly. URL: https://w3c.github.io/ServiceWorker/ 
 [SVG2]
     Amelia Bellamy-Royds; et al. Scalable Vector Graphics (SVG) 2. URL: https://svgwg.org/svg2-draft/ 
 [UNICODE]
@@ -14402,7 +14546,7 @@ session.UserPromptHandlerType = "accept" / "dismiss" / "ignore";
 
 session.Subscription = text
 
-session.SubscriptionRequest = {
+session.SubscribeParameters = {
   events: [+text],
   ? contexts: [+browsingContext.BrowsingContext],
   ? userContexts: [+browser.UserContext],
@@ -14438,7 +14582,7 @@ session.End = (
 
 session.Subscribe = (
   method: "session.subscribe",
-  params: session.SubscriptionRequest
+  params: session.SubscribeParameters
 )
 
 session.Unsubscribe = (
@@ -14810,6 +14954,7 @@ EmulationCommand = (
   emulation.SetLocaleOverride //
   emulation.SetNetworkConditions //
   emulation.SetScreenOrientationOverride //
+  emulation.SetScreenSettingsOverride //
   emulation.SetScriptingEnabled //
   emulation.SetTimezoneOverride //
   emulation.SetUserAgentOverride
@@ -14883,6 +15028,22 @@ emulation.NetworkConditions = emulation.NetworkConditionsOffline
 
 emulation.NetworkConditionsOffline = {
   type: "offline"
+}
+
+emulation.SetScreenSettingsOverride = (
+  method: "emulation.setScreenSettingsOverride",
+  params: emulation.SetScreenSettingsOverrideParameters
+)
+
+emulation.ScreenArea = {
+  width: js-uint,
+  height: js-uint
+}
+
+emulation.SetScreenSettingsOverrideParameters = {
+  screenArea: emulation.ScreenArea / null,
+  ? contexts: [+browsingContext.BrowsingContext],
+  ? userContexts: [+browser.UserContext],
 }
 
 emulation.SetScreenOrientationOverride = (
@@ -14977,6 +15138,7 @@ network.Collector = text
 network.CollectorType = "blob"
 
 network.SameSite = "strict" / "lax" / "none" / "default"
+
 
 network.Cookie = {
     name: text,
@@ -15354,12 +15516,14 @@ script.RemoteReference = (
 
 script.SharedReference = {
    sharedId: script.SharedId
+
    ? handle: script.Handle,
    Extensible
 }
 
 script.RemoteObjectReference = {
    handle: script.Handle,
+
    ? sharedId: script.SharedId
    Extensible
 }
@@ -15661,6 +15825,7 @@ storage.GetCookies = (
   params: storage.GetCookiesParameters
 )
 
+
 storage.CookieFilter = {
   ? name: text,
   ? value: network.BytesValue,
@@ -15700,6 +15865,7 @@ storage.SetCookie = (
   method: "storage.setCookie",
   params: storage.SetCookieParameters,
 )
+
 
 storage.PartialCookie = {
   name: text,
@@ -16462,6 +16628,10 @@ emulation.SetGeolocationOverrideResult = EmptyResult
 
 emulation.SetLocaleOverrideResult = EmptyResult
 
+emulation.SetNetworkConditionsResult = EmptyResult
+
+emulation.SetScreenSettingsOverrideResult = EmptyResult
+
 emulation.SetScreenOrientationOverrideResult = EmptyResult
 
 emulation.SetUserAgentOverrideResult = EmptyResult
@@ -16528,6 +16698,7 @@ network.CollectorType = "blob"
 
 network.SameSite = "strict" / "lax" / "none" / "default"
 
+
 network.Cookie = {
     name: text,
     value: network.BytesValue,
@@ -16554,8 +16725,10 @@ network.FetchTimingInfo = {
     connectStart: float,
     connectEnd: float,
     tlsStart: float,
+
     requestStart: float,
     responseStart: float,
+
     responseEnd: float,
 }
 
@@ -16910,12 +17083,14 @@ script.RemoteReference = (
 
 script.SharedReference = {
    sharedId: script.SharedId
+
    ? handle: script.Handle,
    Extensible
 }
 
 script.RemoteObjectReference = {
    handle: script.Handle,
+
    ? sharedId: script.SharedId
    Extensible
 }
