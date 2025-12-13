@@ -119,6 +119,7 @@
 - [ ] check all licence files
 - [ ] redo diagram in drawIO
 - [ ] http diagram
+- [ ] change log
 
 ## prep
 
@@ -138,7 +139,6 @@
 ## release http / bidi
 
 - [ ] hackage
-- [ ] change log
 - [ ] announce
 
 
