@@ -188,7 +188,7 @@ bidiDemos cfg =
                   BrowsingContext.browsingContextPrintDemo,
                   BrowsingContext.browsingContextSetViewportDemo,
                   BiDiError.errorDemo
-                  -- TODO: make conditional - hangs in firefox
+                  -- TODO: WHEN NEW DRIVERS ADDED make conditional - hangs in firefox
                   -- , BrowsingContext.browsingContextSetViewportResetDemo
                 ],
               run

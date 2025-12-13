@@ -46,7 +46,7 @@ import WebDriverPreCore.Http.Protocol
 import AesonUtils (jsonToText)
 import Prelude hiding (log)
 
--- todo: test extras - split off
+-- todo: ON SPLIT - moove to extras library
 
 (===) ::
   (Eq a, Show a, HasCallStack) =>

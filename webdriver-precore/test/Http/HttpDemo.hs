@@ -3,7 +3,6 @@ module Http.HttpDemo where
 -- minFirefoxSession,
 
 import ConfigLoader (loadConfig)
-import Const (seconds)
 import Control.Exception (bracket)
 import Control.Monad (forM_)
 import Data.Aeson (Value (..))
@@ -30,6 +29,7 @@ import TestData
     shadowDomUrl,
   )
 import TestServerAPI (testServerHomeUrl, withTestServer)
+import Utils (txt)
 import WebDriverPreCore.Http.Protocol
   ( Action (..),
     Actions (..),
@@ -51,7 +51,6 @@ import WebDriverPreCore.Http.Protocol
     WindowHandleSpec (..),
     WindowRect (..),
   )
-import Utils (txt)
 import Prelude hiding (log)
 
 _stopDemoUnusedWarning :: HttpDemo -> IO ()
@@ -281,24 +280,29 @@ demoTimeouts =
       logShow "updated timeouts" timeouts'
       timeouts === timeouts'
 
-HERE MAKE NOT ON WAYLAND AND HEADED - rest x and y to zero
 -- >>> runDemo demoWindowRecs
--- *** Exception: HUnitFailure (Just (SrcLoc {srcLocPackage = "webdriver-precore-0.1.0.2-inplace-test", srcLocModule = "Http.HttpDemo", srcLocFile = "/home/john-walker/repos/webdriver/webdriver-precore/test/Http/HttpDemo.hs", srcLocStartLine = 319, srcLocStartCol = 10, srcLocEndLine = 319, srcLocEndCol = 13})) "expected: Rect {x = 500, y = 300, width = 600, height = 400}\n but got: Rect {x = 0, y = 0, width = 600, height = 400}"
 demoWindowRecs :: HttpDemo
 demoWindowRecs =
   sessionDemo "window recs" action
   where
     action :: SessionId -> DemoActions -> HttpActions -> IO ()
     action sesId MkDemoActions {..} MkHttpActions {..} = do
+      {- Note:
+       There is a known issue with geckodriver and Wayland that prevents setting withe x y window position
+       see the links below for more details:
+         - https://github.com/mozilla/geckodriver/issues/2224
+         - https://github.com/SeleniumHQ/selenium/issues/15584
+         - https://bugzilla.mozilla.org/show_bug.cgi?id=1959040
+        This test passes because x and y are set to 0,0.
+      -}
       let wr =
             Rect
-              { x = 500,
-                y = 300,
+              { x = 0,
+                y = 0,
                 width = 600,
                 height = 400
               }
       logShowM "set window rect" $ setWindowRect sesId wr
-      sleep $ 4 * Const.seconds
       r <- getWindowRect sesId
       logShow "window rect" r
 

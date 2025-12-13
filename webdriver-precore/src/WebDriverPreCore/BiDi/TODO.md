@@ -14,11 +14,11 @@
 - [x] simplify Command - use value parameter :: THINK MAY NEED TO CHANGE HTTP BACK
 - [NA] not worth it - mostly done finsih when split libraries - needs own types when moved to own library - decouple runner and socket from protocol
   - [X] clean up last bidi imports
-- [ ] specific code TODOs - TODO tree
-- [ ] check all exports - should use prtocol and API only
+- [X] specific code TODOs - TODO tree
+- [X] check all exports - should use prtocol and API only
 - [ ] update to latest spec
 - [ ] remove unneeded instances to and fromJSON
-- [ ] unsubscribe by attributes
+- [X] unsubscribe by attributes
 - [ ] Claude reconcile / review
 - [X] fallback
 - [ ] IO only demo
@@ -72,6 +72,7 @@
 - [ ] edge
   - [ ] container
   - [ ] CI
+- [ ] check if browsingContextSetViewportResetDemo runs
 
 ## rename IO Utils DemoRoot
 

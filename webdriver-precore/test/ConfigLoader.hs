@@ -12,7 +12,6 @@ import Config ( Config (..),
     DemoBrowser (..),
     isFirefox
   )
-import GHC.Conc (threadDelay)
 
 #ifdef DEBUG_LOCAL_CONFIG
 import DebugConfig (debugConfig)
