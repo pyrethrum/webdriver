@@ -1,3 +1,7 @@
+{-|
+Description : Deprecated
+
+-}
 module WebDriverPreCore.Http.HttpResponse {-# DEPRECATED "HttpResponse - will be removed in a future release ~ 2027-02-01. See ChangeLog.md for upgrade instructions" #-} (
   HttpResponse(..)
 ) where

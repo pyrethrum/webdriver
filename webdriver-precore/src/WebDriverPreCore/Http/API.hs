@@ -28,6 +28,10 @@ For an example of using this package by itself, see "Test.WebDriver.WD". For a
 full test framework integrated with this package, see
 [sandwich-webdriver](https://hackage.haskell.org/package/sandwich-webdriver).
 
+For more information about error handling, see "WebDriverPreCore.SharedDocs#errorHandling#".
+
+For session lifecycle details, see "WebDriverPreCore.SharedDocs#sessionManagement#".
+
 -}
 
 module WebDriverPreCore.Http.API
