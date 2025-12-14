@@ -100,7 +100,6 @@ import Data.Aeson as A
   )
 import Data.Aeson.Types (parse, Parser)
 import Data.Text (Text, unpack)
-import qualified WebDriverPreCore.HTTP.Protocol as NewHttp
 import WebDriverPreCore.HTTP.HttpResponse (HttpResponse (..))
 import WebDriverPreCore.HTTP.Protocol
   ( Actions (..),
