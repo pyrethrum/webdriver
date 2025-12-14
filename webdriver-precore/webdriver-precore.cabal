@@ -25,8 +25,8 @@ synopsis:       A typed wrapper for W3C WebDriver protocol (Http and BiDi). A ba
 description:
   This library provides typed definitions for the WebDriver W3C spec, both @<https://www.w3.org/TR/2025/WD-webdriver2-20251028/ Http>@ and @<https://www.w3.org/TR/2025/WD-webdriver-bidi-20251212/ BiDi>@.
 
-  This is a intended to be used as a base for other libraries that provide a WebDriver client implementation and higher level functions for interacting with web pages. 
-  
+  It is designed as a foundation for building WebDriver client libraries providing type-safe endpoint definitions and response parsers without any client implementation.
+
   If you are looking for a fully implemented web client library, you should check out an alternative such as [haskell-webdriver](https://github.com/haskell-webdriver/haskell-webdriver#readme).
 
   __For complete documentation, module organization, and migration guides, see "WebDriverPreCore".__

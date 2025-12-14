@@ -16,6 +16,89 @@ It is designed as a foundation for building WebDriver client implementations,
 providing type-safe endpoint definitions and response parsers without imposing 
 a specific HTTP or WebSocket client library.
 
+= Module Organisation
+
+Both HTTP and BiDi protocols follow a consistent structure:
+
+== HTTP Protocol
+
+"WebDriverPreCore.Http.API"
+    API functions corresponding to W3C WebDriver endpoints. Each function returns 
+    a 'Command' value representing the HTTP request specification and response type.
+    
+    Example usage:
+    
+    @
+    -- Calling the API function to generate the command payload
+    let navCommand = navigateTo "session-id-123" "https://example.com"
+    
+    -- API function definition
+    navigateTo :: SessionId -> URL -> Command ()
+    navigateTo sessionRef = mkPost' "Navigate To" (sessionUri1 sessionRef "url") ...
+    
+    -- The result of the API function call contains HTTP request details required to send to the driver HTTP endpoint
+    data Command r
+      = Post
+          { description :: Text
+          , path :: UrlPath       -- e.g., "/session/{session id}/url"
+          , body :: Object        -- e.g., {"url": "https://example.com"}
+          }
+      | Get {...} | PostEmpty {...} | Delete {...}
+    @
+
+"WebDriverPreCore.Http.Protocol"
+    Protocol types including 'Command', request parameters, and response types 
+    used by the API functions.
+
+== BiDi Protocol
+
+"WebDriverPreCore.BiDi.API"
+    API functions for BiDi commands and event subscriptions. Each command function 
+    returns a 'Command' value with the WebSocket message specification and response type.
+    
+    Example usage:
+    
+    @
+    -- Calling the API function to generate the command payload
+    let navCommand = browsingContextNavigate MkNavigate 
+          { context = "context-id-123"
+          , url = "https://example.com"
+          , wait = Just Interactive
+          }
+    
+    -- API function definition
+    browsingContextNavigate :: Navigate -> Command NavigateResult
+    browsingContextNavigate = mkCommand BrowsingContextNavigate
+    
+    -- The result of the API function call contains method and params to send to the WebSocket
+    data Command r = MkCommand
+      { method :: CommandMethod    -- e.g., "browsingContext.navigate"
+      , params :: Object           -- e.g., {"context": "...", "url": "..."}
+      }
+    @
+
+"WebDriverPreCore.BiDi.Protocol" 
+    Protocol types including 'Command', 'Event', request parameters, and response types.
+    
+    The 'Navigate' parameter type and 'NavigateResult' response type:
+    
+    @
+    data Navigate = MkNavigate
+      { context :: BrowsingContext
+      , url :: URL
+      , wait :: Maybe ReadinessState
+      }
+    
+    data NavigateResult = MkNavigateResult
+      { navigation :: Maybe Text
+      , url :: URL
+      }
+    @
+
+== Shared
+
+[@WebDriverPreCore.Error@] Error types used by both HTTP and BiDi protocols
+
 = Quick Start
 
 To build a WebDriver client:
@@ -28,7 +111,6 @@ To build a WebDriver client:
 For complete examples, see the 
 [examples directory](https://github.com/pyrethrum/webdriver/blob/main/webdriver-examples/README.md).
 
-= Module Organization
 
 == BiDi Protocol (Recommended for New Projects)
 
