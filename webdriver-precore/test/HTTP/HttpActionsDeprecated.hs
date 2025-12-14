@@ -1,14 +1,14 @@
-module Http.HttpActionsDeprecated
+module HTTP.HttpActionsDeprecated
   ( 
     mkDeprecatedActions,
   )
 where
 
-import Http.HttpRunnerDeprecated (HttpRunnerDeprecated (..))
+import HTTP.HttpRunnerDeprecated (HttpRunnerDeprecated (..))
 
 import  WebDriverPreCore.HTTP.Protocol qualified as P
 import WebDriverPreCore.HTTP.SpecDefinition qualified as W
-import Http.HttpActions (HttpActions (..))
+import HTTP.HttpActions (HttpActions (..))
 import WebDriverPreCore.Http qualified as Legacy
 
 mkDeprecatedActions :: HttpRunnerDeprecated -> HttpActions

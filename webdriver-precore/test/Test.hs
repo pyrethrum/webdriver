@@ -25,11 +25,11 @@ import Config (Config (..))
 import ConfigLoader (loadConfig)
 import Data.Text (Text, unpack)
 import ErrorCoverageTest qualified as Error
-import Http.DemoUtils (HttpDemo (..), runDemoWithConfig)
-import Http.ErrorDemo qualified as HttpError
-import Http.HttpDemo qualified as Http
+import HTTP.DemoUtils (HttpDemo (..), runDemoWithConfig)
+import HTTP.ErrorDemo qualified as HttpError
+import HTTP.HttpDemo qualified as Http
 #ifndef LEGACY_TEST
-import Http.FallbackDemo qualified as HttpFallback
+import HTTP.FallbackDemo qualified as HttpFallback
 #endif
 import JSONParsingTest qualified as JSON
 import Test.Tasty (TestTree, defaultMain, testGroup)

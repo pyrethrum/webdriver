@@ -1,4 +1,4 @@
-module Http.HttpRunner
+module HTTP.HttpRunner
   ( mkRunner,
     HttpRunner (..),
   )
@@ -8,7 +8,7 @@ import Data.Aeson (FromJSON (..), Value, withObject, (.:))
 import Data.Aeson.Types (Parser, Value (..), parseEither, parseMaybe)
 import Data.Function ((&))
 import GHC.Exception (throw)
-import Http.HttpEndpoint (callWebDriver', mkRequest)
+import HTTP.HttpEndpoint (callWebDriver', mkRequest)
 import IOUtils (DemoActions (..))
 import Network.HTTP.Req
   ( Scheme (..),

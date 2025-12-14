@@ -1,13 +1,13 @@
 {-# LANGUAGE CPP #-}
 
-module Http.DemoUtils where
+module HTTP.DemoUtils where
 
 import Config (Config (..))
 import ConfigLoader (loadConfig)
 import Const (milliseconds)
 import Control.Exception (bracket)
 import Data.Text (Text)
-import Http.HttpActions (HttpActions (..))
+import HTTP.HttpActions (HttpActions (..))
 import IOUtils (DemoActions (..), Logger, logNothingLogger, mkDemoActions)
 import Logger (withChannelFileLogger)
 import Network.HTTP.Req (http)
@@ -15,11 +15,11 @@ import RuntimeConst (httpFullCapabilities)
 import WebDriverPreCore.HTTP.Protocol (FullCapabilities, SessionId, SessionResponse (..))
 
 #ifdef LEGACY_TEST
-import Http.HttpActionsDeprecated qualified as Legacy
-import Http.HttpRunnerDeprecated qualified as Legacy
+import HTTP.HttpActionsDeprecated qualified as Legacy
+import HTTP.HttpRunnerDeprecated qualified as Legacy
 #else
-import Http.HttpRunner (mkRunner)
-import Http.HttpActions (mkActions)
+import HTTP.HttpRunner (mkRunner)
+import HTTP.HttpActions (mkActions)
 #endif
 
 data HttpDemo

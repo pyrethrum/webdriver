@@ -1,12 +1,12 @@
-module Http.FallbackDemo where
+module HTTP.FallbackDemo where
 
 import Data.Aeson as A (Value (..))
 import Data.Aeson qualified as A
 import Data.Aeson.KeyMap qualified as A
 import Data.Function ((&))
 import Data.Text (Text)
-import Http.DemoUtils (HttpDemo, runDemo, sessionDemo)
-import Http.HttpActions (HttpActions (..))
+import HTTP.DemoUtils (HttpDemo, runDemo, sessionDemo)
+import HTTP.HttpActions (HttpActions (..))
 import IOUtils (DemoActions (..))
 import TestData (checkboxesUrl, textAreaUrl)
 import WebDriverPreCore.HTTP.API qualified as A

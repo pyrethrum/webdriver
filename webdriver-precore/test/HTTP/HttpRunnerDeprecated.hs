@@ -1,4 +1,4 @@
-module Http.HttpRunnerDeprecated
+module HTTP.HttpRunnerDeprecated
   ( run,
     mkRunner,
     HttpRunnerDeprecated (..),
@@ -10,7 +10,7 @@ import Control.Exception (throw)
 import Data.Aeson (Result (..), Value, object, withObject, (.:))
 import Data.Aeson.Types (Parser, parseMaybe)
 import Data.Function ((&))
-import Http.HttpEndpoint (callWebDriver, fullCommandPath)
+import HTTP.HttpEndpoint (callWebDriver, fullCommandPath)
 import IOUtils (DemoActions (..))
 import Network.HTTP.Req (Scheme (Http), Url)
 import Network.HTTP.Req as R

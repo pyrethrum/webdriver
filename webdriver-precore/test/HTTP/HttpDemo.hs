@@ -1,4 +1,4 @@
-module Http.HttpDemo where
+module HTTP.HttpDemo where
 
 -- minFirefoxSession,
 
@@ -10,8 +10,8 @@ import Data.Set qualified as Set
 import Data.Text (isInfixOf)
 import Data.Time.Clock.POSIX (getPOSIXTime)
 import GHC.IO (catchAny)
-import Http.DemoUtils (HttpDemo, demo, runDemo, sessionDemo)
-import Http.HttpActions (HttpActions (..))
+import HTTP.DemoUtils (HttpDemo, demo, runDemo, sessionDemo)
+import HTTP.HttpActions (HttpActions (..))
 import IOUtils
   ( DemoActions (..),
     (===),

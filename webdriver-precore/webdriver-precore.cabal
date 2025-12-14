@@ -226,14 +226,14 @@ test-suite test
     , Logger
     , TestData
     , TestServerAPI
-    , Http.HttpRunner
-    , Http.HttpActions
-    , Http.HttpActionsDeprecated
-    , Http.HttpEndpoint
-    , Http.DemoUtils
-    , Http.HttpDemo
-    , Http.ErrorDemo
-    , Http.FallbackDemo
+    , HTTP.HttpRunner
+    , HTTP.HttpActions
+    , HTTP.HttpActionsDeprecated
+    , HTTP.HttpEndpoint
+    , HTTP.DemoUtils
+    , HTTP.HttpDemo
+    , HTTP.ErrorDemo
+    , HTTP.FallbackDemo
     , BiDi.Runner
     , BiDi.Response
     , BiDi.BiDiSocket
@@ -259,7 +259,7 @@ test-suite test
     , BiDi.Demos.StorageDemos
     , BiDi.Demos.WebExtensionDemos
     , RuntimeConst
-    , Http.HttpRunnerDeprecated
+    , HTTP.HttpRunnerDeprecated
   if flag(debug-local-config)
     other-modules:
       DebugConfig

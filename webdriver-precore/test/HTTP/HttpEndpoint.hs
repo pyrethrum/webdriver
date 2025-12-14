@@ -1,4 +1,4 @@
-module Http.HttpEndpoint
+module HTTP.HttpEndpoint
   ( callWebDriver,
     mkRequest,
     -- share with deprecated runner

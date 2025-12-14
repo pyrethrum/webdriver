@@ -11,9 +11,9 @@ import Data.Function ((&))
 import Data.Text (Text, isInfixOf, unpack)
 import Data.Time.Clock.POSIX (POSIXTime, getPOSIXTime)
 import Data.Word (Word64)
-import Http.DemoUtils (withSession)
-import Http.HttpActions qualified as HTTPA
-import Http.HttpRunner (mkRunner)
+import HTTP.DemoUtils (withSession)
+import HTTP.HttpActions qualified as HTTPA
+import HTTP.HttpRunner (mkRunner)
 import IOUtils (DemoActions (..), Logger, logNothingLogger, mkDemoActions)
 import Logger (withChannelFileLogger)
 import Network.HTTP.Req (http)

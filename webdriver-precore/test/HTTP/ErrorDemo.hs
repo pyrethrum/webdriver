@@ -1,8 +1,8 @@
-module Http.ErrorDemo where
+module HTTP.ErrorDemo where
 
 import GHC.Utils.Misc (HasCallStack)
-import Http.DemoUtils (HttpDemo, runDemo, sessionDemo)
-import Http.HttpActions (HttpActions (..))
+import HTTP.DemoUtils (HttpDemo, runDemo, sessionDemo)
+import HTTP.HttpActions (HttpActions (..))
 import IOUtils (DemoActions (..), (===))
 import TestData (inputsUrl)
 import WebDriverPreCore.Error (ErrorType (..), WebDriverException (..))
