@@ -12,7 +12,7 @@ import WebDriverPreCore.BiDi.Protocol
 import Data.Function ((&))
 import Utils(enumerate)
 import Data.Foldable (traverse_)
-import WebDriverPreCore.Http.Protocol (ErrorType)
+import WebDriverPreCore.HTTP.Protocol (ErrorType)
 
 {-
 !! Replace this the endepoints from the spec with every release

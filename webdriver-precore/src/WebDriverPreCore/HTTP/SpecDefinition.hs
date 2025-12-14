@@ -1,11 +1,11 @@
 {-|
-Module      : WebDriverPreCore.Http.SpecDefinition 
+Module      : WebDriverPreCore.HTTP.SpecDefinition 
 Description : Deprecated in favour of "WebDriverPreCore.HTTP.API"
 
 
 -}
 
-module WebDriverPreCore.Http.SpecDefinition 
+module WebDriverPreCore.HTTP.SpecDefinition 
   {-# DEPRECATED "Deprecated in favour of \"WebDriverPreCore.HTTP.API\". SpecDefinition module will be removed in a future release ~ 2027-02-01. See ChangeLog.md for upgrade instructions" #-}
   ( -- * The HttpSpec Type
     HttpSpec (..),
@@ -101,7 +101,7 @@ import Data.Aeson as A
 import Data.Aeson.Types (parse, Parser)
 import Data.Text (Text, unpack)
 import qualified WebDriverPreCore.HTTP.Protocol as NewHttp
-import WebDriverPreCore.Http.HttpResponse (HttpResponse (..))
+import WebDriverPreCore.HTTP.HttpResponse (HttpResponse (..))
 import WebDriverPreCore.HTTP.Protocol
   ( Actions (..),
     Cookie (..),

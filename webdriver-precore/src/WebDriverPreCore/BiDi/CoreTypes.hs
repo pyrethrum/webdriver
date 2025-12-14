@@ -28,7 +28,7 @@ import Data.Map qualified as Map
 import Data.Text (Text, unpack)
 import GHC.Generics (Generic)
 import AesonUtils (jsonToText)
-import WebDriverPreCore.Internal.HttpBidiCommon (URL (..), JSUInt (..))
+import WebDriverPreCore.Internal.HTTPBidiCommon (URL (..), JSUInt (..))
 
 newtype ClientWindow = MkClientWindow Text
   deriving newtype (Show, Eq, FromJSON, ToJSON)

@@ -1,6 +1,6 @@
 {-# OPTIONS_HADDOCK hide #-}
 
-module WebDriverPreCore.Http.Capabilities
+module WebDriverPreCore.HTTP.Capabilities
   ( FullCapabilities (..),
     Capabilities (..),
     UnhandledPromptBehavior (..),

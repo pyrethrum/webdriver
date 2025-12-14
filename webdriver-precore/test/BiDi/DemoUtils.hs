@@ -35,8 +35,8 @@ import WebDriverPreCore.BiDi.Protocol
     StringValue (..),
     Target (..)
   )
-import WebDriverPreCore.Http.Protocol (FullCapabilities (..))
-import WebDriverPreCore.Http.Protocol qualified as Caps (Capabilities (..))
+import WebDriverPreCore.HTTP.Protocol (FullCapabilities (..))
+import WebDriverPreCore.HTTP.Protocol qualified as Caps (Capabilities (..))
 import Utils (txt)
 import Prelude hiding (log, putStrLn)
 import qualified Data.Text as T

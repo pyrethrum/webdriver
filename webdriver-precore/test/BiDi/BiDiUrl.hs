@@ -3,7 +3,7 @@ module BiDi.BiDiUrl  where
 import Data.Function ((&))
 import Data.Text (Text, breakOn, pack, splitOn, unpack)
 import Text.Read (readEither)
-import WebDriverPreCore.Http.Protocol (SessionResponse(..))
+import WebDriverPreCore.HTTP.Protocol (SessionResponse(..))
 import Utils (txt)
 
 getBiDiUrl :: SessionResponse -> Either Text BiDiUrl

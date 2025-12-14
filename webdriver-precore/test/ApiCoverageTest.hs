@@ -7,7 +7,7 @@ import Test.Tasty.HUnit as HUnit (Assertion, assertBool)
 import Text.RawString.QQ (r)
 import  Utils (UrlPath(..))
 import WebDriverPreCore.Http
-import WebDriverPreCore.Http.Protocol
+import WebDriverPreCore.HTTP.Protocol
   ( Actions (..),
     Cookie (..),
     ElementId (..),
@@ -17,8 +17,10 @@ import WebDriverPreCore.Http.Protocol
     Selector (..),
     SessionId (..),
     ShadowRootElementId (..),
+    Timeouts (..),
     URL (..),
-    WindowRect (..)
+    WindowRect (..),
+    minFirefoxCapabilities
   )
 
 {-- TODO use Haddock variable

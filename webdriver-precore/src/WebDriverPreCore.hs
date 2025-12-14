@@ -22,7 +22,7 @@ Both HTTP and BiDi protocols follow a consistent structure:
 
 == HTTP Protocol
 
-"WebDriverPreCore.Http.API"
+"WebDriverPreCore.HTTP.API"
     API functions corresponding to W3C WebDriver endpoints. Each function returns 
     a 'Command' value representing the HTTP request specification and response type.
     
@@ -46,7 +46,7 @@ Both HTTP and BiDi protocols follow a consistent structure:
       | Get {...} | PostEmpty {...} | Delete {...}
     @
 
-"WebDriverPreCore.Http.Protocol"
+"WebDriverPreCore.HTTP.Protocol"
     Protocol types including 'Command', request parameters, and response types 
     used by the API functions.
 
@@ -125,9 +125,9 @@ events and real-time updates:
 
 The HTTP protocol provides the traditional request-response pattern:
 
-[@WebDriverPreCore.Http.API@] HTTP endpoint functions for all WebDriver operations
+[@WebDriverPreCore.HTTP.API@] HTTP endpoint functions for all WebDriver operations
 
-[@WebDriverPreCore.Http.Protocol@] HTTP protocol types, specifications, and responses
+[@WebDriverPreCore.HTTP.Protocol@] HTTP protocol types, specifications, and responses
 
 == Shared Modules
 
@@ -139,19 +139,19 @@ The HTTP protocol provides the traditional request-response pattern:
 See @ChangeLog.md@ for detailed migration instructions.
 
 [@WebDriverPreCore.Http@] 
-    __Deprecated:__ Use "WebDriverPreCore.Http.Protocol" instead
+    __Deprecated:__ Use "WebDriverPreCore.HTTP.Protocol" instead
     
     This module re-exported various HTTP protocol components. The functionality 
     has been reorganized into the Protocol module.
 
 [@WebDriverPreCore.Http.SpecDefinition@] 
-    __Deprecated:__ Use "WebDriverPreCore.Http.API" instead
+    __Deprecated:__ Use "WebDriverPreCore.HTTP.API" instead
     
     This module contained the HTTP API endpoint functions. It has been renamed 
     to better reflect the distinction between API (functions) and Protocol (types).
 
 [@WebDriverPreCore.Http.HttpResponse@] 
-    __Deprecated:__ Functionality integrated into "WebDriverPreCore.Http.Protocol"
+    __Deprecated:__ Functionality integrated into "WebDriverPreCore.HTTP.Protocol"
     
     The 'HttpResponse' type is now part of the Protocol module where it belongs
     with other HTTP protocol types.
@@ -168,8 +168,8 @@ If you're using the deprecated modules:
 
 __Replace with:__
 
-> import WebDriverPreCore.Http.API      -- For endpoint functions
-> import WebDriverPreCore.Http.Protocol  -- For types and specs
+> import WebDriverPreCore.HTTP.API      -- For endpoint functions
+> import WebDriverPreCore.HTTP.Protocol  -- For types and specs
 
 The API remains largely unchanged; only import paths need updating.
 
@@ -184,8 +184,8 @@ A minimal WebDriver client needs to:
 Example structure:
 
 @
-import WebDriverPreCore.Http.API qualified as API
-import WebDriverPreCore.Http.Protocol
+import WebDriverPreCore.HTTP.API qualified as API
+import WebDriverPreCore.HTTP.Protocol
 
 runHttpSpec :: HttpSpec a -> IO a
 runHttpSpec spec = do
@@ -216,7 +216,7 @@ module WebDriverPreCore () where
 -- @
 -- import WebDriverPreCore.BiDi.API
 -- import WebDriverPreCore.BiDi.Protocol
--- import WebDriverPreCore.Http.API
--- import WebDriverPreCore.Http.Protocol
+-- import WebDriverPreCore.HTTP.API
+-- import WebDriverPreCore.HTTP.Protocol
 -- import WebDriverPreCore.Error
 -- @

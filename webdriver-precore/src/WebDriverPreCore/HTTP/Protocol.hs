@@ -1,10 +1,10 @@
-module WebDriverPreCore.Http.Protocol
+module WebDriverPreCore.HTTP.Protocol
   ( -- * Re-exported modules
     -- * Command
-    module WebDriverPreCore.Http.Command,
+    module WebDriverPreCore.HTTP.Command,
 
     -- * Capabilities
-    module WebDriverPreCore.Http.Capabilities,
+    module WebDriverPreCore.HTTP.Capabilities,
 
     -- * Error
     module WebDriverPreCore.Error,
@@ -60,11 +60,11 @@ import Data.Text (Text, pack, unpack)
 import Data.Text qualified as T
 import Data.Word (Word16)
 import GHC.Generics (Generic)
-import WebDriverPreCore.Http.Capabilities
-import WebDriverPreCore.Http.Command
+import WebDriverPreCore.HTTP.Capabilities
+import WebDriverPreCore.HTTP.Command
 import WebDriverPreCore.Error
 import AesonUtils (nonEmpty, opt, parseObject)
-import WebDriverPreCore.Internal.HttpBidiCommon as Url (URL(..)) 
+import WebDriverPreCore.Internal.HTTPBidiCommon as Url (URL(..)) 
 import Utils (txt)
 import Prelude hiding (id)
 

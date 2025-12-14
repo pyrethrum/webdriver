@@ -1,10 +1,10 @@
 {-|
-Description : Deprecated in favour of "WebDriverPreCore.Http.Protocol"
+Description : Deprecated in favour of "WebDriverPreCore.HTTP.Protocol"
 
 -}
 
 
-module WebDriverPreCore.Http  {-# DEPRECATED "WebDriverPreCore.Http - will be removed in a future release ~ 2027-02-01 (USE WebDriverPreCore.Http.Protocol instead). See ChangeLog.md for upgrade instructions" #-} 
+module WebDriverPreCore.Http  {-# DEPRECATED "WebDriverPreCore.Http - will be removed in a future release ~ 2027-02-01 (USE WebDriverPreCore.HTTP.Protocol instead). See ChangeLog.md for upgrade instructions" #-} 
   ( 
     -- ** The HttpSpec Type
     module WC3Spec,
@@ -32,11 +32,10 @@ module WebDriverPreCore.Http  {-# DEPRECATED "WebDriverPreCore.Http - will be re
     module ShadowDOMMethods,
 
     -- * HTTP Response
-    module WebDriverPreCore.Http.HttpResponse,
+    module WebDriverPreCore.HTTP.HttpResponse,
 
     -- * Capabilities
     module CoreCapabilities,
-    module WebDriverPreCore.Http.Capabilities,
 
     -- * Errors
     module WebDriverPreCore.Error,
@@ -48,9 +47,9 @@ module WebDriverPreCore.Http  {-# DEPRECATED "WebDriverPreCore.Http - will be re
     -- module AuxTypes,
   )
 where
-import WebDriverPreCore.Http.SpecDefinition as WC3Spec (HttpSpec (..))
-import WebDriverPreCore.Http.SpecDefinition as RootMethods (newSession, newSession', status)
-import WebDriverPreCore.Http.SpecDefinition as SessionMethods
+import WebDriverPreCore.HTTP.SpecDefinition as WC3Spec (HttpSpec (..))
+import WebDriverPreCore.HTTP.SpecDefinition as RootMethods (newSession, newSession', status)
+import WebDriverPreCore.HTTP.SpecDefinition as SessionMethods
   ( acceptAlert,
     addCookie,
     back,
@@ -88,7 +87,7 @@ import WebDriverPreCore.Http.SpecDefinition as SessionMethods
     switchToWindow,
     takeScreenshot,
   )
-import WebDriverPreCore.Http.SpecDefinition as WindowMethods
+import WebDriverPreCore.HTTP.SpecDefinition as WindowMethods
   ( closeWindow,
     fullscreenWindow,
     getWindowHandles,
@@ -99,13 +98,13 @@ import WebDriverPreCore.Http.SpecDefinition as WindowMethods
     setWindowRect,
     switchToWindow,
   )
-import WebDriverPreCore.Http.SpecDefinition as FrameMethods (switchToParentFrame)
-import WebDriverPreCore.Http.SpecDefinition as ElementMethods
+import WebDriverPreCore.HTTP.SpecDefinition as FrameMethods (switchToParentFrame)
+import WebDriverPreCore.HTTP.SpecDefinition as ElementMethods
   ( findElement,
     findElements,
     getActiveElement,
   )
-import WebDriverPreCore.Http.SpecDefinition as ElementInstanceMethods
+import WebDriverPreCore.HTTP.SpecDefinition as ElementInstanceMethods
   ( elementClear,
     elementClick,
     elementSendKeys,
@@ -124,12 +123,12 @@ import WebDriverPreCore.Http.SpecDefinition as ElementInstanceMethods
     isElementSelected,
     takeElementScreenshot,
   )
-import WebDriverPreCore.Http.SpecDefinition as ShadowDOMMethods (findElementFromShadowRoot, findElementsFromShadowRoot)
-import WebDriverPreCore.Http.Capabilities as CoreCapabilities (FullCapabilities(..), Capabilities(..) )
-import WebDriverPreCore.Http.Capabilities
+import WebDriverPreCore.HTTP.SpecDefinition as ShadowDOMMethods (findElementFromShadowRoot, findElementsFromShadowRoot)
+import WebDriverPreCore.HTTP.Protocol as CoreCapabilities (FullCapabilities(..), Capabilities(..) )
+import WebDriverPreCore.HTTP.Protocol
 import WebDriverPreCore.Error
-import WebDriverPreCore.Http.HttpResponse
--- import WebDriverPreCore.Http.SpecDefinition as ActionTypes
+import WebDriverPreCore.HTTP.HttpResponse
+-- import WebDriverPreCore.HTTP.SpecDefinition as ActionTypes
 --   ( Action (..),
 --     Actions (..),
 --     KeyAction (..),
@@ -138,7 +137,7 @@ import WebDriverPreCore.Http.HttpResponse
 --     PointerOrigin (..),
 --     WheelAction (..),
 --   )
--- import WebDriverPreCore.Http.SpecDefinition as AuxTypes
+-- import WebDriverPreCore.HTTP.SpecDefinition as AuxTypes
 --   ( Cookie (..),
 --     DriverStatus (..),
 --     ElementId (..),

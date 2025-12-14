@@ -9,8 +9,8 @@ import Http.DemoUtils (HttpDemo, runDemo, sessionDemo)
 import Http.HttpActions (HttpActions (..))
 import IOUtils (DemoActions (..))
 import TestData (checkboxesUrl, textAreaUrl)
-import WebDriverPreCore.Http.API qualified as A
-import WebDriverPreCore.Http.Protocol
+import WebDriverPreCore.HTTP.API qualified as A
+import WebDriverPreCore.HTTP.Protocol
   ( Command (..),
     ElementId (..),
     SessionId (..),

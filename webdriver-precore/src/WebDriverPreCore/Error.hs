@@ -22,7 +22,7 @@ import Data.Function ((&))
 import Data.Text as T (Text, concat, pack, toTitle, unpack, words)
 import GHC.Generics (Generic)
 import Text.Read (readEither)
-import WebDriverPreCore.Internal.HttpBidiCommon (JSUInt (..))
+import WebDriverPreCore.Internal.HTTPBidiCommon (JSUInt (..))
 import Prelude as P hiding (error, words)
 
 {-

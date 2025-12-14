@@ -36,11 +36,11 @@ import Network.HTTP.Req
     (/:),
   )
 import Network.HTTP.Req qualified as R
-import WebDriverPreCore.Http.Protocol (Command (..))
+import WebDriverPreCore.HTTP.Protocol (Command (..))
 import Utils (UrlPath (..))
 import Prelude hiding (log)
 import WebDriverPreCore.Http (HttpResponse)
-import WebDriverPreCore.Http.HttpResponse (HttpResponse(..))
+import WebDriverPreCore.HTTP.HttpResponse (HttpResponse(..))
 
 -- ############# Runner #############
 

@@ -12,7 +12,7 @@ import IOUtils (DemoActions (..), Logger, logNothingLogger, mkDemoActions)
 import Logger (withChannelFileLogger)
 import Network.HTTP.Req (http)
 import RuntimeConst (httpFullCapabilities)
-import WebDriverPreCore.Http.Protocol (FullCapabilities, SessionId, SessionResponse (..))
+import WebDriverPreCore.HTTP.Protocol (FullCapabilities, SessionId, SessionResponse (..))
 
 #ifdef LEGACY_TEST
 import Http.HttpActionsDeprecated qualified as Legacy

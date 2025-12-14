@@ -6,8 +6,8 @@ where
 
 import Http.HttpRunnerDeprecated (HttpRunnerDeprecated (..))
 
-import  WebDriverPreCore.Http.Protocol qualified as P
-import WebDriverPreCore.Http.SpecDefinition qualified as W
+import  WebDriverPreCore.HTTP.Protocol qualified as P
+import WebDriverPreCore.HTTP.SpecDefinition qualified as W
 import Http.HttpActions (HttpActions (..))
 import WebDriverPreCore.Http qualified as Legacy
 

@@ -30,7 +30,7 @@ import TestData
   )
 import TestServerAPI (testServerHomeUrl, withTestServer)
 import Utils (txt)
-import WebDriverPreCore.Http.Protocol
+import WebDriverPreCore.HTTP.Protocol
   ( Action (..),
     Actions (..),
     Cookie (..),

@@ -6,7 +6,7 @@ module RuntimeConst
 where
 
 import Config as CFG
-import WebDriverPreCore.Http as WPC
+import WebDriverPreCore.HTTP.Protocol as WPC
   ( BrowserName (..),
     Capabilities (..),
     FullCapabilities (..),

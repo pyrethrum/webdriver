@@ -30,7 +30,7 @@ import Test.Tasty.Falsify
   )
 import Test.Tasty.HUnit (Assertion, (@=?))
 import Text.Show.Pretty (ppShow)
-import WebDriverPreCore.Http.Protocol
+import WebDriverPreCore.HTTP.Protocol
   ( Capabilities (..),
     DeviceMetrics (..),
     LogLevel (..),

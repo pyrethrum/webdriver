@@ -7,8 +7,8 @@ where
 import Data.Aeson (FromJSON, Value)
 import Data.Text (Text)
 import Http.HttpRunner (HttpRunner (..))
-import WebDriverPreCore.Http.API qualified as API
-import WebDriverPreCore.Http.Protocol
+import WebDriverPreCore.HTTP.API qualified as API
+import WebDriverPreCore.HTTP.Protocol
   ( Actions (..),
     Cookie (..),
     ElementId (..),

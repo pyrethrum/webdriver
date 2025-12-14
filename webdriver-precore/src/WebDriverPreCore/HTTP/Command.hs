@@ -1,6 +1,6 @@
 {-# OPTIONS_HADDOCK hide #-}
 
-module WebDriverPreCore.Http.Command
+module WebDriverPreCore.HTTP.Command
   ( Command (..),
     mkPost,
     mkPost',

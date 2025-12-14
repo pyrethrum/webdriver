@@ -34,7 +34,7 @@ For session lifecycle details, see "WebDriverPreCore.SharedDocs#sessionManagemen
 
 -}
 
-module WebDriverPreCore.Http.API
+module WebDriverPreCore.HTTP.API
   ( -- * Root Methods
     newSession,
     status,
@@ -117,7 +117,7 @@ import Data.Aeson as A
     Value (..),
   )
 import Data.Text (Text)
-import WebDriverPreCore.Http.Protocol
+import WebDriverPreCore.HTTP.Protocol
   ( Actions (..),
     Cookie (..),
     Status (..),
