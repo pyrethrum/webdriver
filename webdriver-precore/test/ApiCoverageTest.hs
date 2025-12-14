@@ -23,10 +23,6 @@ import WebDriverPreCore.HTTP.Protocol
     minFirefoxCapabilities
   )
 
-{-- TODO use Haddock variable
- Covers Spec Version https://www.w3.org/TR/2025/WD-webdriver2-20251028
- --}
-
 {-
 !! Replace this the endepoints from the spec with every release
 https://www.w3.org/TR/2025/WD-webdriver2-20251028 - W3C Editor's Draft 10 February 2025

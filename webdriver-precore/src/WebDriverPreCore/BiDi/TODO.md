@@ -110,7 +110,7 @@
 ## docs
 
 - [ ] generate Haddock
-  - [ ] haddock varible for versions
+  - [NA] haddock varible for versions - HADDOCK LIMITATION
   - [ ] add urls to bidi
   - [ ] move intro to haddock
   - [ ] move demo discussion to demo

@@ -8,19 +8,30 @@ Stability   : experimental
 
 = Overview
 
-This library provides typed definitions for the 
-@<https://www.w3.org/TR/2025/WD-webdriver2-20251028/ W3C WebDriver>@ protocol,
-supporting both the HTTP and BiDi (Bidirectional) protocols.
+This library provides typed definitions for the W3C WebDriver Protocol,
+supporting both the @<https://www.w3.org/TR/2025/WD-webdriver2-20251028/ HTML>@ and the @<https://www.w3.org/TR/2025/WD-webdriver-bidi-20251212/ BiDi>@ protocols,
 
-It is designed as a foundation for building WebDriver client implementations, 
-providing type-safe endpoint definitions and response parsers without imposing 
-a specific HTTP or WebSocket client library.
+This library is intended as a foundation for building WebDriver client implementations. 
+
+If you are looking for a fully implemented web client library, you should check out an alternative such as [haskell-webdriver](https://github.com/haskell-webdriver/haskell-webdriver#readme)
 
 = Module Organisation
 
-Both HTTP and BiDi protocols follow a consistent structure:
+Both HTTP and BiDi protocols follow a the same module structure. 
 
-== HTTP Protocol
+__An API module__
+
+    Contains functions that generate the payload for each WebDriver endpoint/command
+
+__A Protocol module__
+
+    Contains:
+
+       1. types used by the API functions
+
+       2. fallback functions that allow the user to generate payloads that diverge from API
+
+== HTTP 
 
 "WebDriverPreCore.HTTP.API"
     API functions corresponding to W3C WebDriver endpoints. Each function returns 
@@ -29,28 +40,24 @@ Both HTTP and BiDi protocols follow a consistent structure:
     Example usage:
     
     @
-    -- Calling the API function to generate the command payload
-    let navCommand = navigateTo "session-id-123" "https://example.com"
+    -- Calling the API (navigateTo) function to generate the command payload
+    let goExample :: Command ()
+        goExample = navigateTo "session-id-123" $ MkUrl "https://example.com"
     
-    -- API function definition
-    navigateTo :: SessionId -> URL -> Command ()
-    navigateTo sessionRef = mkPost' "Navigate To" (sessionUri1 sessionRef "url") ...
-    
-    -- The result of the API function call contains HTTP request details required to send to the driver HTTP endpoint
-    data Command r
-      = Post
-          { description :: Text
-          , path :: UrlPath       -- e.g., "/session/{session id}/url"
-          , body :: Object        -- e.g., {"url": "https://example.com"}
-          }
-      | Get {...} | PostEmpty {...} | Delete {...}
+  
+    -- The result of the API function call contains HTTP request details required for the driver ('WebDriverPreCore.HTTP.Protocol.Command') 
+     'Post'
+        { description = "Navigate To",
+        , path = "/session/session-id-123/url" 
+        , body = {"url": "https://example.com"}
+        }
     @
 
 "WebDriverPreCore.HTTP.Protocol"
     Protocol types including 'Command', request parameters, and response types 
     used by the API functions.
 
-== BiDi Protocol
+== BiDi
 
 "WebDriverPreCore.BiDi.API"
     API functions for BiDi commands and event subscriptions. Each command function 
@@ -216,7 +223,17 @@ module WebDriverPreCore () where
 -- @
 -- import WebDriverPreCore.BiDi.API
 -- import WebDriverPreCore.BiDi.Protocol
+--
 -- import WebDriverPreCore.HTTP.API
 -- import WebDriverPreCore.HTTP.Protocol
+--
 -- import WebDriverPreCore.Error
 -- @
+
+
+
+-- $HTMLSpecURL
+-- https://www.w3.org/TR/2025/WD-webdriver2-20251028/
+
+-- $BiDiSpecURL
+-- https://www.w3.org/TR/2025/WD-webdriver-bidi-20251212/
