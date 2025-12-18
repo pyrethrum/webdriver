@@ -3,33 +3,31 @@ module WebDriverPreCore.BiDi.Emulation
     SetGeolocationOverride (..),
     SetLocaleOverride (..),
     SetScreenOrientationOverride (..),
+    SetScreenSettingsOverride (..),
     SetTimezoneOverride (..),
+    SetForcedColorsModeThemeOverride (..),
+    SetNetworkConditions (..),
+    SetUserAgentOverride (..),
+    SetScriptingEnabled (..),
     GeolocationCoordinates (..),
     GeolocationPositionError (..),
+    ScreenArea (..),
     ScreenOrientationOverride  (..),
     ScreenOrientationNatural  (..),
-    ScreenOrientationType  (..)
+    ScreenOrientationType  (..),
+    ForcedColorsModeTheme (..),
+    NetworkConditions (..),
+    NetworkConditionsOffline (..)
   )
 where
 
-{-
-create types to represent the remote  end for emulation:
-
-1. preface singleton data constructors (ie the constructor for types with only one type constructor) with Mk
-2. use newtypes where possible
-3. ordering - order types such that types that are used by a type are declared immediately below that type in the order they are used
-4. derive Show, Eq and Generic for all types
-5. use Text rather than String
-5. use the cddl in this file remote first under the -- ######### Remote ######### header
--}
-
-import Data.Maybe (Maybe)
+import Data.Maybe (catMaybes)
 import Data.Text (Text)
 import GHC.Generics (Generic)
-import WebDriverPreCore.BiDi.CoreTypes (BrowsingContext, UserContext)
-import Prelude (Eq, Float, Show)
-import Data.Aeson (ToJSON (..))
-import WebDriverPreCore.Internal.AesonUtils (enumCamelCase)
+import WebDriverPreCore.BiDi.CoreTypes (BrowsingContext, UserContext, JSUInt)
+import Data.Aeson (ToJSON (..), object, (.=))
+import AesonUtils (opt)
+import Data.Aeson.Types (Value)
 
 -- ######### Remote #########
 
@@ -43,12 +41,16 @@ data SetGeolocationOverride = MkSetGeolocationOverride
   }
   deriving (Show, Eq, Generic)
 
+instance ToJSON SetGeolocationOverride
+
 data SetLocaleOverride = MkSetLocaleOverride
   { locale :: Maybe Text,
     contexts :: Maybe [BrowsingContext],
     userContexts :: Maybe [UserContext]
   }
   deriving (Show, Eq, Generic)
+
+instance ToJSON SetLocaleOverride
 
 data SetScreenOrientationOverride = MkSetScreenOrientationOverride
   { screenOrientation :: Maybe ScreenOrientationOverride,
@@ -57,12 +59,112 @@ data SetScreenOrientationOverride = MkSetScreenOrientationOverride
   }
   deriving (Show, Eq, Generic)
 
+instance ToJSON SetScreenOrientationOverride
+
+data SetScreenSettingsOverride = MkSetScreenSettingsOverride
+  { screenArea :: Maybe ScreenArea,
+    contexts :: Maybe [BrowsingContext],
+    userContexts :: Maybe [UserContext]
+  }
+  deriving (Show, Eq, Generic)
+
+-- Note: screenArea is a required field that can be null, while contexts and userContexts are optional
+-- Required nullable fields must be included in the JSON with their value (even if null)
+-- Optional fields are omitted when Nothing
+instance ToJSON SetScreenSettingsOverride where
+  toJSON :: SetScreenSettingsOverride -> Value
+  toJSON MkSetScreenSettingsOverride {screenArea, contexts, userContexts} =
+    object $
+      ["screenArea" .= screenArea]
+        <> catMaybes
+          [ opt "contexts" contexts,
+            opt "userContexts" userContexts
+          ]
+
 data SetTimezoneOverride = MkSetTimezoneOverride
   { timezone :: Maybe Text,
     contexts :: Maybe [BrowsingContext],
     userContexts :: Maybe [UserContext]
   }
   deriving (Show, Eq, Generic)
+
+instance ToJSON SetTimezoneOverride
+
+data SetForcedColorsModeThemeOverride = MkSetForcedColorsModeThemeOverride
+  { theme :: Maybe ForcedColorsModeTheme,
+    contexts :: Maybe [BrowsingContext],
+    userContexts :: Maybe [UserContext]
+  }
+  deriving (Show, Eq, Generic)
+
+instance ToJSON SetForcedColorsModeThemeOverride where
+  toJSON :: SetForcedColorsModeThemeOverride -> Value
+  toJSON MkSetForcedColorsModeThemeOverride {theme, contexts, userContexts} =
+    object $
+      ["theme" .= theme]
+        <> catMaybes
+          [ opt "contexts" contexts,
+            opt "userContexts" userContexts
+          ]
+
+data SetNetworkConditions = MkSetNetworkConditions
+  { networkConditions :: Maybe NetworkConditions,
+    contexts :: Maybe [BrowsingContext],
+    userContexts :: Maybe [UserContext]
+  }
+  deriving (Show, Eq, Generic)
+
+instance ToJSON SetNetworkConditions where
+  toJSON :: SetNetworkConditions -> Value
+  toJSON MkSetNetworkConditions {networkConditions, contexts, userContexts} =
+    object $
+      ["networkConditions" .= networkConditions]
+        <> catMaybes
+          [ opt "contexts" contexts,
+            opt "userContexts" userContexts
+          ]
+
+data SetUserAgentOverride = MkSetUserAgentOverride
+  { userAgent :: Maybe Text,
+    contexts :: Maybe [BrowsingContext],
+    userContexts :: Maybe [UserContext]
+  }
+  deriving (Show, Eq, Generic)
+
+instance ToJSON SetUserAgentOverride where
+  toJSON :: SetUserAgentOverride -> Value
+  toJSON MkSetUserAgentOverride {userAgent, contexts, userContexts} =
+    object $
+      ["userAgent" .= userAgent]
+        <> catMaybes
+          [ opt "contexts" contexts,
+            opt "userContexts" userContexts
+          ]
+
+data SetScriptingEnabled = MkSetScriptingEnabled
+  { enabled :: Maybe Bool,
+    contexts :: Maybe [BrowsingContext],
+    userContexts :: Maybe [UserContext]
+  }
+  deriving (Show, Eq, Generic)
+
+instance ToJSON SetScriptingEnabled where
+  toJSON :: SetScriptingEnabled -> Value
+  toJSON MkSetScriptingEnabled {enabled, contexts, userContexts} =
+    object $
+      ["enabled" .= enabled]
+        <> catMaybes
+          [ opt "contexts" contexts,
+            opt "userContexts" userContexts
+          ]
+
+data ScreenArea = MkScreenArea
+  { width :: JSUInt,
+    height :: JSUInt
+  }
+  deriving (Show, Eq, Generic)
+
+instance ToJSON ScreenArea
 
 data GeolocationCoordinates = MkGeolocationCoordinates
   { latitude :: Float, -- -90.0 to 90.0
@@ -75,10 +177,14 @@ data GeolocationCoordinates = MkGeolocationCoordinates
   }
   deriving (Show, Eq, Generic)
 
+instance ToJSON GeolocationCoordinates
+
 newtype GeolocationPositionError = MkGeolocationPositionError
   { errorType :: Text -- "positionUnavailable"
   }
   deriving (Show, Eq, Generic)
+
+instance ToJSON GeolocationPositionError
 
 data ScreenOrientationOverride = MkScreenOrientationOverride
   { natural :: ScreenOrientationNatural,
@@ -86,8 +192,22 @@ data ScreenOrientationOverride = MkScreenOrientationOverride
   }
   deriving (Show, Eq, Generic)
 
-data ScreenOrientationNatural = Portrait | Landscape
+instance ToJSON ScreenOrientationOverride where
+  toJSON :: ScreenOrientationOverride -> Value
+  toJSON MkScreenOrientationOverride {natural, screenOrientationType} =
+    object
+      [ "natural" .= natural,
+        "type" .= screenOrientationType
+      ]
+
+data ScreenOrientationNatural = PortraitNatural | LandscapeNatural
   deriving (Show, Eq, Generic)
+
+instance ToJSON ScreenOrientationNatural where
+  toJSON :: ScreenOrientationNatural -> Value
+  toJSON = \case
+    PortraitNatural -> "portrait"
+    LandscapeNatural -> "landscape"
 
 data ScreenOrientationType
   = PortraitPrimary
@@ -96,18 +216,35 @@ data ScreenOrientationType
   | LandscapeSecondary
   deriving (Show, Eq, Generic)
 
--- ToJSON instances
-
-instance ToJSON SetGeolocationOverride
-instance ToJSON SetLocaleOverride
-instance ToJSON SetScreenOrientationOverride
-instance ToJSON SetTimezoneOverride
-instance ToJSON GeolocationCoordinates
-instance ToJSON GeolocationPositionError
-instance ToJSON ScreenOrientationOverride
-
-instance ToJSON ScreenOrientationNatural where
-  toJSON = enumCamelCase
-
 instance ToJSON ScreenOrientationType where
-  toJSON = enumCamelCase
+  toJSON :: ScreenOrientationType -> Value
+  toJSON = \case
+    PortraitPrimary -> "portrait-primary"
+    PortraitSecondary -> "portrait-secondary"
+    LandscapePrimary -> "landscape-primary"
+    LandscapeSecondary -> "landscape-secondary"
+
+data ForcedColorsModeTheme = ForcedColorsLight | ForcedColorsDark
+  deriving (Show, Eq, Generic)
+
+instance ToJSON ForcedColorsModeTheme where
+  toJSON :: ForcedColorsModeTheme -> Value
+  toJSON = \case
+    ForcedColorsLight -> "light"
+    ForcedColorsDark -> "dark"
+
+newtype NetworkConditions = MkNetworkConditions NetworkConditionsOffline
+  deriving (Show, Eq, Generic)
+
+instance ToJSON NetworkConditions where
+  toJSON :: NetworkConditions -> Value
+  toJSON (MkNetworkConditions offline) = toJSON offline
+
+newtype NetworkConditionsOffline = MkNetworkConditionsOffline
+  { networkConditionsType :: Text -- "offline"
+  }
+  deriving (Show, Eq, Generic)
+
+instance ToJSON NetworkConditionsOffline where
+  toJSON :: NetworkConditionsOffline -> Value
+  toJSON _ = toJSON (("type", "offline") :: (Text, Text))

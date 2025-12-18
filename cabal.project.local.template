@@ -1,0 +1,5 @@
+package webdriver-precore
+
+  -- legacy-test - runs Http tests with deprecated functions 
+  flags: +legacy-test
+         +debug-local-config

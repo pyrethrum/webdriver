@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <title>Slow Loading Page</title>
+  <link rel="stylesheet" href="demo.css">
+  <script>
+    // Simulate a slow loading page by delaying the page load
+    window.addEventListener('DOMContentLoaded', function() {
+      // Keep the page busy for a while
+      var start = Date.now();
+      while (Date.now() - start < 5000) {
+        // Busy wait for 5 seconds
+      }
+    });
+  </script>
+</head>
+
+<body>
+  <div class="container">
+    <h1>Slow Loading Page</h1>
+    <p>This page takes time to load, useful for testing navigation abort.</p>
+  </div>
+</body>
+
+</html>

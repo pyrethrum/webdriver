@@ -1,31 +1,151 @@
-# BiDi
+# TODO
 
-## old directory
-- [X] Http dir
-- [X] rename modules
-- [X] compile
-- [X] get tests demo working 
-- [X] fix tasks
+## bidi
 
-## new directory
-- [X] BidiSpec Module 
-- [X] Autogenerate to start with
-- [ ] Fix and demo
-- [ ] BidiExamples - the Internet
-  - [ ] script from and to Json all types   
-  - [ ] remove all instances of `typ :: Text` and updat From/To JSON
-- [ ] clean up `MessageParameters` 
-- [ ] final diff (get latest version)
+- [NA] split off bidi
+  - [NA]  new cabal file
+  - [NA]  move shared files
+- [x] demos => test 
+  - All 97 tests passed (220.75s)
+  - All 97 tests passed (181.01s) - headless
+- [x] pull logger out
+- [x] rename BidiActions/Methods BiDiSocket / BiDiActions
+- [x] recocover http session after refactor
+- [x] simplify Command - use value parameter :: THINK MAY NEED TO CHANGE HTTP BACK
+- [NA] not worth it - mostly done finsih when split libraries - needs own types when moved to own library - decouple runner and socket from protocol
+  - [X] clean up last bidi imports
+- [X] specific code TODOs - TODO tree
+- [X] check all exports - should use prtocol and API only
+- [X] update to latest spec
+- [X] unsubscribe by attributes
+- [X] fallback
+- [NA] IO only demo - NA wont do
 
-## finally 
-- [ ] update READMEs
-  - [ ] add links to implementation report
-  - [ ] config notes
-- [ ] check docs urls
-- [ ] check all licence fiiles
-- [ ] add update method to release notes also branch into pyrethrum Web - the ddl genrator
-- [ ] update dev-container including dhall extensions
+## http
+
+- [x] switch to local http files
+  - before 
+    - headed - All 22 tests passed (148.72s)
+    - headless - All 22 tests passed (135.98s)
+  - after
+    - 3 out of 22 tests failed (117.57s) (headless)
+    - All 22 tests passed (109.25s) (headed)
+    - All 22 tests passed (96.09s) (headless)
+  - [x] remove old constants (links and selectors)
+- [x] switch to command (leave legacy)
+  - [x] create Protocol
+  - [x] create API
+  - [x] make Command fromJson on value
+  - [x] test Script with params / no params
+    - [x] headed - 6 out of 23 tests failed (66.02s)
+    - [x] sleep -> pause
+    - [x] headed - 6 out of 23 tests failed (39.81s)
+    - [x] headless - 6 out of 23 tests failed (30.14s)
+    - [x] first fix
+      - [x] 3 out of 23 tests failed (61.70s) - headed
+      - [x] All 23 tests passed (46.59s) 
+  - [x] shadowRoot - need to use parseShodowFieldname
+  - [x] legacy in terms of Protocol / API
+  - [x] refactor all tests in terms of API / Protocol 
+  - [X] relook at parse http error
+- [x] test => demos => test
+- [x] review demoUtils
+  - [x] http may not need timeLimitLog et. al. 
+  - [x] delete static functions
+  - [x] rerun tests
+    - [x] legacy flag 
+    - [x] legacy flag run
+- [X] add deprecation warning
+- [X] update to latest spec
+- [X] fallback
+- [X] demo parsing additional prop on empty return type - fallback
+- [NA] - not worth it - IO only demo
+
+## Clean up
+
+- [X] remove unneeded instances to and fromJSON
+- [X] Claude reconcile / review
+
+
+## Extend testing
+
+- [ ] chrome
+  - [ ] container
+  - [ ] CI
+- [ ] edge
+  - [ ] container
+  - [ ] CI
+- [ ] check if browsingContextSetViewportResetDemo runs
+ - [ ] update debug config
+   - [ ] move to .config folder
+   - [ ] add debugConfg.hs.template (and ensure in version control)
+ - [ ] update dhall.config
+
+## rename IO Utils DemoRoot - NOT done N/A
 
 ## other
+
+[x] runFailDemo
+[X] deduplicate URL type
+[ ] test with driver not running
+
+## change config - for CI only
+
+- [ ] generate CI Config 
+- [ ] run CI Config if present
+
+## get rid of extended
+
+- [X] http
+  - [X] command
+- [X] bidi
+  - [X] command
+  - [X] subscription
+
+## update 
+
+- [X] update bidi to latest spec
+- [X] update http to latest spec
+
+## docs
+
+- [ ] generate Haddock
+  - [NA] haddock varible for versions - HADDOCK LIMITATION
+  - [ ] add urls to bidi
+  - [ ] move intro to haddock
+  - [ ] move demo discussion to demo
+- [ ] document all Fallback functions
+- [ ] demos index
+- [ ] config explaind
+- [ ] update haddock
+- [ ] update readme
+- [ ] lookup / document dealing with diffferent versions
+- [ ] check docs urls
+- [ ] check all licence files
+- [ ] redo diagram in drawIO
+- [ ] http diagram
+- [ ] change log
+
+## prep
+
+- [ ] spell check
+- [ ] check hlint and why it isn't firing as it use to
+- [ ] run weeder
+
+## CI
+
  - [ ] use one base container for dev-container and CI (update)
- - [ ] reteest dev-container
+ - [ ] retest dev-container
+   - [ ] dhall
+   - [ ] dhall-lsp-server
+ - [ ] chrome
+ - [ ] edge
+
+## release http / bidi
+
+- [ ] hackage
+- [ ] stackage
+- [ ] announce
+
+
+

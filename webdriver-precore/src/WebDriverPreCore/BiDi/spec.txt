@@ -5,17 +5,17 @@
 W3C
 WebDriver BiDi
 
-W3C Working Draft, 18 July 2025
+W3C Working Draft, 12 December 2025
 More details about this document
 
 This version:
-    https://www.w3.org/TR/2025/WD-webdriver-bidi-20250718/ 
+    https://www.w3.org/TR/2025/WD-webdriver-bidi-20251212/ 
 Latest published version:
     https://www.w3.org/TR/webdriver-bidi/ 
 Editor's Draft:
     https://w3c.github.io/webdriver-bidi/ 
 Previous Versions:
-    https://www.w3.org/TR/2025/WD-webdriver-bidi-20250716/ 
+    https://www.w3.org/TR/2025/WD-webdriver-bidi-20251210/ 
 History:
     https://www.w3.org/standards/history/webdriver-bidi/ 
 Implementation Report:
@@ -52,7 +52,7 @@ This is a draft document and may be updated, replaced, or obsoleted by other doc
 
 This document was produced by a group operating under the W3C Patent Policy. W3C maintains a public list of any patent disclosures made in connection with the deliverables of the group; that page also includes instructions for disclosing a patent. An individual who has actual knowledge of a patent that the individual believes contains Essential Claim(s) must disclose the information in accordance with section 6 of the W3C Patent Policy.
 
-This document is governed by the 03 November 2023 W3C Process Document.
+This document is governed by the 18 August 2025 W3C Process Document.
 
 Table of Contents
 
@@ -82,7 +82,7 @@ Table of Contents
                 7.1.2.4 The session.UserPromptHandler Type
                 7.1.2.5 The session.UserPromptHandlerType Type
                 7.1.2.6 The session.Subscription Type
-                7.1.2.7 The session.SubscriptionRequest Type
+                7.1.2.7 The session.SubscribeParameters Type
                 7.1.2.8 The session.UnsubscribeByIDRequest Type
                 7.1.2.9 The session.UnsubscribeByAttributesRequest Type
             7.1.3 Commands
@@ -106,6 +106,7 @@ Table of Contents
                 7.2.4.4 The browser.getUserContexts Command
                 7.2.4.5 The browser.removeUserContext Command
                 7.2.4.6 The browser.setClientWindowState Command
+                7.2.4.7 The browser.setDownloadBehavior Command
         7.3 The browsingContext Module
             7.3.1 Definition
             7.3.2 Types
@@ -147,10 +148,15 @@ Table of Contents
         7.4 The emulation Module
             7.4.1 Definition
             7.4.2 Commands
-                7.4.2.1 The emulation.setGeolocationOverride Command
-                7.4.2.2 The emulation.setLocaleOverride Command
-                7.4.2.3 The emulation.setScreenOrientationOverride Command
-                7.4.2.4 The emulation.setTimezoneOverride Command
+                7.4.2.1 The emulation.setForcedColorsModeThemeOverride Command
+                7.4.2.2 The emulation.setGeolocationOverride Command
+                7.4.2.3 The emulation.setLocaleOverride Command
+                7.4.2.4 The emulation.setNetworkConditions Command
+                7.4.2.5 The emulation.setScreenSettingsOverride Command
+                7.4.2.6 The emulation.setScreenOrientationOverride Command
+                7.4.2.7 The emulation.setUserAgentOverride Command
+                7.4.2.8 The emulation.setScriptingEnabled Command
+                7.4.2.9 The emulation.setTimezoneOverride Command
         7.5 The network Module
             7.5.1 Definition
             7.5.2 Network Data Collection
@@ -188,6 +194,7 @@ Table of Contents
                 7.5.5.10 The network.removeDataCollector Command
                 7.5.5.11 The network.removeIntercept Command
                 7.5.5.12 The network.setCacheBehavior Command
+                7.5.5.13 The network.setExtraHeaders Command
             7.5.6 Events
                 7.5.6.1 The network.authRequired Event
                 7.5.6.2 The network.beforeRequestSent Event
@@ -378,8 +385,10 @@ ErrorResponse = {
 }
 
 ResultData = (
+  BrowserResult /
   BrowsingContextResult /
-  EmptyResult /
+  EmulationResult /
+  InputResult /
   NetworkResult /
   ScriptResult /
   SessionResult /
@@ -486,7 +495,7 @@ no such network collector
 no such intercept
     Tried to remove an unknown network intercept. 
 no such network data
-    Tried to reference an unknown data. 
+    Tried to reference an unknown network data. 
 no such node
     Tried to deserialize an unknown SharedReference. 
 no such request
@@ -566,7 +575,7 @@ The set of sessions for which an event is enabled given event name and navigable
 
     Let sessions be a new set.
 
-    For each session in active BiDI sessions:
+    For each session in active BiDi sessions:
 
         If event is enabled with session, event name and navigables, append session to sessions.
 
@@ -1028,6 +1037,12 @@ A BiDi session has a user context to accept insecure certificates override map, 
 
 A BiDi session has a user context to proxy configuration map, which is a map between user contexts and proxy configuration.
 
+An emulated network conditions struct is a struct with:
+
+    item named offline which is a boolean or null.
+
+A BiDi session has a emulated network conditions which is a struct with an item named default network conditions, which is an emulated network conditions struct or null, an item named user context network conditions, which is a weak map between user contexts and emulated network conditions struct, and a item named navigable network conditions, which is a weak map between navigables and emulated network conditions struct.
+
 When a user context is removed from the set of user contexts, remove user context subscriptions.
 
 To remove user context subscriptions:
@@ -1091,9 +1106,11 @@ SessionCommand = (
 local end definition
 
 SessionResult = (
-   session.NewResult /
-   session.StatusResult /
-   session.SubscribeResult
+  session.EndResult /
+  session.NewResult /
+  session.StatusResult /
+  session.SubscribeResult /
+  session.UnsubscribeResult
 )
 
 To end the session given session:
@@ -1162,10 +1179,10 @@ session.CapabilityRequest = {
 The session.CapabilityRequest type represents a specific set of requested capabilities.
 
 WebDriver BiDi defines additional WebDriver capabilities. The following tables enumerates the capabilities each implementation must support for WebDriver BiDi.
-Capability 	WebSocket URL
-Key 	"webSocketUrl"
-Value type 	boolean
-Description 	Defines the current session’s support for bidirectional connection.
+Capability: 	WebSocket URL
+Key: 	"webSocketUrl"
+Value type: 	boolean
+Description: 	Defines the current session’s support for bidirectional connection.
 The additional capability deserialization algorithm for the "webSocketUrl" capability, with parameter value is:
 
     If value is not a boolean, return error with code invalid argument.
@@ -1253,15 +1270,15 @@ The session.UserPromptHandlerType type represents the behavior of the user promp
 session.Subscription = text
 
 The session.Subscription type represents a unique subscription identifier.
-7.1.2.7. The session.SubscriptionRequest Type
+7.1.2.7. The session.SubscribeParameters Type
 
-session.SubscriptionRequest = {
+session.SubscribeParameters = {
   events: [+text],
   ? contexts: [+browsingContext.BrowsingContext],
   ? userContexts: [+browser.UserContext],
 }
 
-The session.SubscriptionRequest type represents a request to subscribe to or unsubscribe from a specific set of events.
+The session.SubscribeParameters type represents a request to subscribe to a specific set of events.
 7.1.2.8. The session.UnsubscribeByIDRequest Type
 
 session.UnsubscribeByIDRequest = {
@@ -1271,11 +1288,8 @@ session.UnsubscribeByIDRequest = {
 The session.UnsubscribeByIDRequest type represents a request to remove event subscriptions identified by subscription IDs.
 7.1.2.9. The session.UnsubscribeByAttributesRequest Type
 
-Note: contexts param is deprecated and will be removed in the future versions.
-
 session.UnsubscribeByAttributesRequest = {
   events: [+text],
-  ? contexts: [+browsingContext.BrowsingContext],
 }
 
 The session.UnsubscribeByAttributesRequest type represents a request to unsubscribe using subscription attributes.
@@ -1293,7 +1307,7 @@ Command Type
       params: EmptyParams,
     )
 
-Result Type
+Return Type
 
     session.StatusResult = {
       ready: bool,
@@ -1330,7 +1344,7 @@ Command Type
       capabilities: session.CapabilitiesRequest
     }
 
-Result Type
+Return Type
 
     session.NewResult = {
       sessionId: text,
@@ -1381,8 +1395,9 @@ Command Type
       params: EmptyParams
     )
 
-Result Type
-    EmptyResult 
+Return Type
+
+    session.EndResult = EmptyResult
 
 The remote end steps given session and command parameters are:
 
@@ -1406,10 +1421,10 @@ Command Type
 
     session.Subscribe = (
       method: "session.subscribe",
-      params: session.SubscriptionRequest
+      params: session.SubscribeParameters
     )
 
-Result Type
+Return Type
 
     session.SubscribeResult = {
       subscription: session.Subscription,
@@ -1495,8 +1510,6 @@ The session.unsubscribe command disables events either globally or for a set of 
 
 This needs to be generalised to work with realms too.
 
-Note: contexts parameter in UnsubscribeByAttributesRequest is deprecated and will be removed in the future versions.
-
 Command Type
 
     session.Unsubscribe = (
@@ -1506,8 +1519,9 @@ Command Type
 
     session.UnsubscribeParameters = session.UnsubscribeByAttributesRequest / session.UnsubscribeByIDRequest
 
-Result Type
-    EmptyResult 
+Return Type
+
+    session.UnsubscribeResult = EmptyResult
 
 The remote end steps with session and command parameters are:
 
@@ -1519,25 +1533,9 @@ The remote end steps with session and command parameters are:
 
         For each entry name in command parameters["events"], let event names be the union of event names and the result of trying to obtain a set of event names with name.
 
-        Let top-level traversable context ids be a set.
-
-        Let input context ids be create a set with command parameters[contexts].
-
-        If input context ids is not empty:
-
-            Let navigables be the result of trying to get valid navigables by ids with input context ids.
-
-            Set top-level traversables be get top-level traversables with navigables.
-
-            For each navigable in top-level traversables:
-
-                Append navigable’s navigable id to top-level traversable context ids.
-
         Let new subscriptions to be a list.
 
         Let matched events to be a set.
-
-        Let matched contexts to be a set.
 
         For each subscription of session’s subscriptions:
 
@@ -1547,75 +1545,29 @@ The remote end steps with session and command parameters are:
 
                 Continue.
 
-            If top-level traversable context ids is an empty set:
+            If subscription is not global:
 
-                If subscription is not global:
+                append subscription to new subscriptions.
 
-                    append subscription to new subscriptions.
+                Continue.
 
-                    Continue.
+            Let subscription event names be clone of subscription’s event names.
 
-                Let subscription event names be clone of subscription’s event names.
+            For each event name of event names:
 
-                For each event name of event names:
+                If subscription event names contains event name:
 
-                    If subscription event names contains event name:
+                    Append event name to matched events.
 
-                        Append event name to matched events.
+                    Remove event name from subscription event names.
 
-                        Remove event name from subscription event names.
+            If subscription event names is not empty:
 
-                If subscription event names is not empty:
+                Let cloned subscription be a subscription with subscription id set to subscription’s subscription id, event names set to a new set containing subscription event names.
 
-                    Let cloned subscription be a subscription with subscription id set to subscription’s subscription id, event names set to a new set containing subscription event names.
-
-                    append cloned subscription to new subscriptions.
-
-            Otherwise:
-
-                If subscription is global:
-
-                    append subscription to new subscriptions.
-
-                Otherwise, if subscription’s user context ids is not empty, continue.
-
-                Otherwise:
-
-                Note: unsubscribe by contexts is deprecated and will be removed in the future versions.
-
-                    Let event map be an empty map.
-
-                    For each event name in subscription’s event names:
-
-                        Set event map[event name] to clone of subscription’s top-level traversable ids.
-
-                    For each event name in event names:
-
-                        If event map[event name] does not exist, continue.
-
-                        For each top-level traversable id of top-level traversable context ids:
-
-                            If event map[event name] contains top-level traversable id:
-
-                                Append top-level traversable id to matched contexts.
-
-                                Append event name to matched events.
-
-                                Remove top-level traversable id from event map[event name].
-
-                        If event map[event name] is an empty set,
-
-                            Remove event map[event name].
-
-                    For each event name → remaining top-level traversable ids in event map:
-
-                        Let partial subscription be a subscription with subscription id set to subscription’s subscription id, event names set to a new set containing event name, top-level traversable ids set to remaining top-level traversable ids.
-
-                        append partial subscription to new subscriptions.
+                append cloned subscription to new subscriptions.
 
         If matched events is not equal to event names, return error with error code invalid argument.
-
-        If top-level traversable context ids is not empty and matched contexts is not equal to top-level traversable context ids, return error with error code invalid argument.
 
         Set session’s subscriptions to new subscriptions.
 
@@ -1656,14 +1608,20 @@ BrowserCommand = (
   browser.GetClientWindows //
   browser.GetUserContexts //
   browser.RemoveUserContext //
-  browser.SetClientWindowState
+  browser.SetClientWindowState //
+  browser.SetDownloadBehavior
 )
 
 local end definition
 
 BrowserResult = (
-   browser.CreateUserContextResult /
-   browser.GetUserContextsResult
+  browser.CloseResult /
+  browser.CreateUserContextResult /
+  browser.GetClientWindowsResult /
+  browser.GetUserContextsResult /
+  browser.RemoveUserContextResult /
+  browser.SetClientWindowStateResult /
+  browser.SetDownloadBehaviorResult
 )
 
 7.2.2. Windows
@@ -1829,7 +1787,8 @@ Command Type
     )
 
 Return Type
-    EmptyResult 
+
+    browser.CloseResult = EmptyResult
 
 The remote end steps with session and command parameters are:
 
@@ -2000,7 +1959,8 @@ Command Type
     }
 
 Return Type
-    EmptyResult 
+
+    browser.RemoveUserContextResult = EmptyResult
 
 The remote end steps with command parameters are:
 
@@ -2051,7 +2011,8 @@ Command Type
     )
 
 Return Type
-    browser.ClientWindowInfo 
+
+    browser.SetClientWindowStateResult = browser.ClientWindowInfo
 
 The remote end steps with session and command parameters are:
 
@@ -2076,13 +2037,91 @@ The remote end steps with session and command parameters are:
     Return success with data client window info.
 
 Note: For simplicity this models all client window operations as synchronous. Therefore the returned client window dimensions are expected to be those after the window has reached its new state.
+7.2.4.7. The browser.setDownloadBehavior Command
+
+A download behavior struct is a struct with:
+
+    item named allowed which is a boolean;
+
+    item named destinationFolder which is a string or null.
+
+A remote end has a download behavior which is a struct with an item named default download behavior, which is a download behavior struct or null, and an item named user context download behavior, which is a weak map between user contexts and download behavior struct.
+
+Command Type
+
+    browser.SetDownloadBehavior = (
+      method: "browser.setDownloadBehavior",
+      params: browser.SetDownloadBehaviorParameters
+    )
+
+    browser.SetDownloadBehaviorParameters = {
+      downloadBehavior: browser.DownloadBehavior / null,
+      ? userContexts: [+browser.UserContext]
+    }
+
+    browser.DownloadBehavior = {
+      (
+        browser.DownloadBehaviorAllowed //
+        browser.DownloadBehaviorDenied
+      )
+    }
+
+    browser.DownloadBehaviorAllowed = (
+      type: "allowed",
+      destinationFolder: text
+    )
+
+    browser.DownloadBehaviorDenied = (
+      type: "denied"
+    )
+
+Return Type
+
+    browser.SetDownloadBehaviorResult = EmptyResult
+
+To get download behavior given navigable:
+
+    Let user context be navigable’s associated user context.
+
+    If download behavior’s user context download behavior contains user context, return download behavior’s user context download behavior[user context].
+
+    Return download behavior’s default download behavior.
+
+The remote end steps with session and command parameters are:
+
+    If command parameters["downloadBehavior"] is null, let download behavior be null.
+
+    Otherwise:
+
+        If command parameters["downloadBehavior"]["type"] is "allowed", let allowed be true, otherwise let allowed be false.
+
+        If command parameters["downloadBehavior"] contains "destinationFolder", let destinationFolder be command parameters["downloadBehavior"]["destinationFolder"], otherwise let destinationFolder be null.
+
+        Let download behavior be a download behavior struct with allowed set to allowed and destinationFolder set to destinationFolder.
+
+    If the implementation does not support required download behavior, then return error with error code unsupported operation.
+
+    If the userContexts field of command parameters is present:
+
+        Let user contexts be the result of trying to get valid user contexts with command parameters["userContexts"].
+
+        For each user context of user contexts:
+
+            If download behavior is null, remove user context from download behavior’s user context download behavior.
+
+            Otherwise, set download behavior’s user context download behavior[user context] to download behavior.
+
+    Otherwise, set download behavior’s default download behavior to download behavior.
+
+    Return success with data null.
+
 7.3. The browsingContext Module
 
 The browsingContext module contains commands and events relating to navigables.
 
 Note: For historic reasons this module is called browsingContext rather than navigable, and the protocol uses the term context to refer to navigables, particularly as a field in command and response parameters.
 
-The progress of navigation is communicated using an immutable WebDriver BiDi navigation status struct, which has the following items:
+The progress of navigation is communicated using an immutable struct WebDriver BiDi navigation status, which has the following items:
 
 id
     The navigation id for the navigation, or null when the navigation is canceled before making progress. 
@@ -2117,12 +2156,17 @@ BrowsingContextCommand = (
 local end definition
 
 BrowsingContextResult = (
+  browsingContext.ActivateResult /
   browsingContext.CaptureScreenshotResult /
+  browsingContext.CloseResult /
   browsingContext.CreateResult /
   browsingContext.GetTreeResult /
+  browsingContext.HandleUserPromptResult /
   browsingContext.LocateNodesResult /
   browsingContext.NavigateResult /
   browsingContext.PrintResult /
+  browsingContext.ReloadResult /
+  browsingContext.SetViewportResult /
   browsingContext.TraverseHistoryResult
 )
 
@@ -2167,11 +2211,17 @@ An unhandled prompt behavior struct is a struct with:
 
 A remote end has a viewport overrides map which is a weak map between user contexts and viewport configuration.
 
-A remote end has a locale overrides map which is a weak map between navigables or user contexts and string or null.
+A remote end has a locale overrides map which is a weak map between navigables or user contexts and string.
 
-A remote end has a timezone overrides map which is a weak map between navigables or user contexts and string or null.
+A screen settings is a struct with an item named height which is an integer, an item named width which is an integer, an item named x which is an integer, an item named y which is an integer.
+
+A remote end has a screen settings overrides which is a struct with an item named user context screen settings, which is a weak map between user contexts and screen settings, and an item named navigable screen settings, which is a weak map between navigables and screen settings.
+
+A remote end has a timezone overrides map which is a weak map between navigables or user contexts and string.
 
 A remote end has an unhandled prompt behavior overrides map which is a weak map between user contexts and unhandled prompt behavior struct.
+
+A remote end has a scripting enabled overrides map which is a weak map between navigables or user contexts and boolean.
 7.3.2. Types
 7.3.2.1. The browsingContext.BrowsingContext Type
 
@@ -2269,23 +2319,23 @@ To await a navigation given navigable, request, wait condition, and optionally h
 
     property specify how the ignore cache flag works. This needs to consider whether only the first load of a resource bypasses the cache (i.e. whether this is like initially clearing the cache and proceeding like normal), or whether resources not directly loaded by the HTML parser (e.g. loads initiated by scripts or stylesheets) also bypass the cache.
 
-    Let (event received, navigate status) be await given «"navigation started", "navigation failed", "fragment navigated"», and navigation id.
+    Let (event received, navigation status) be await given «"navigation started", "navigation failed", "fragment navigated"», and navigation id.
 
-    Assert: navigate status’s id is navigation id.
+    Assert: navigation status’s id is navigation id.
 
-    If navigate status’s status is "complete":
+    If navigation status’s status is "complete":
 
-        Let body be a map matching the browsingContext.NavigateResult production, with the navigation field set to navigation id, and the url field set to the result of the URL serializer given navigate status’s url.
+        Let body be a map matching the browsingContext.NavigateResult production, with the navigation field set to navigation id, and the url field set to the result of the URL serializer given navigation status’s url.
 
         Return success with data body.
 
     Note: this is the case if the navigation only caused the fragment to change.
 
-    If navigate status’s status is "canceled" return error with error code unknown error.
+    If navigation status’s status is "canceled" return error with error code unknown error.
 
     TODO: is this the right way to handle errors here?
 
-    Assert: navigate status’s status is "pending" and navigation id is not null.
+    Assert: navigation status’s status is "pending" and navigation id is not null.
 
     If wait condition is "committed", let event name be "committed".
 
@@ -2374,7 +2424,7 @@ browsingContext.NavigationInfo = {
 }
 
 The browsingContext.NavigationInfo type provides details of an ongoing navigation.
-To get the navigation info, given navigable and navigation status:
+To get the navigation info, given navigable navigable and navigation status navigation status:
 
     Let navigable id be the navigable id for navigable.
 
@@ -2414,8 +2464,9 @@ Command Type
       context: browsingContext.BrowsingContext
     }
 
-Result Type
-    EmptyResult 
+Return Type
+
+    browsingContext.ActivateResult = EmptyResult
 
 The remote end steps with command parameters are:
 
@@ -2482,7 +2533,7 @@ Command Type
        height: float
     }
 
-Result Type
+Return Type
 
     browsingContext.CaptureScreenshotResult = {
       data: text
@@ -2673,8 +2724,9 @@ Command Type
       ? promptUnload: bool .default false
     }
 
-Result Type
-    EmptyResult 
+Return Type
+
+    browsingContext.CloseResult = EmptyResult
 
 The remote end steps with command parameters are:
 
@@ -2719,7 +2771,7 @@ Command Type
       ? userContext: browser.UserContext
     }
 
-Result Type
+Return Type
 
     browsingContext.CreateResult = {
       context: browsingContext.BrowsingContext
@@ -2787,7 +2839,7 @@ Command Type
       ? root: browsingContext.BrowsingContext,
     }
 
-Result Type
+Return Type
 
     browsingContext.GetTreeResult = {
       contexts: browsingContext.InfoList
@@ -2832,8 +2884,9 @@ Command Type
       ? userText: text,
     }
 
-Result Type
-    EmptyResult 
+Return Type
+
+    browsingContext.HandleUserPromptResult = EmptyResult
 
 The remote end steps with session and command parameters are:
 
@@ -2876,7 +2929,7 @@ Command Type
        ? startNodes: [ + script.SharedReference ]
     }
 
-Result Type
+Return Type
 
     browsingContext.LocateNodesResult = {
         nodes: [ * script.NodeRemoteValue ]
@@ -2936,7 +2989,7 @@ Note: Owing to the unmaintained state of the XPath specification, this algorithm
 
     Return success with data returned nodes.
 
-To locate nodes using  inner text with given context nodes, selector, max depth, match type, ignore case, and maximum returned node count:
+To locate nodes using inner text with given context nodes, selector, max depth, match type, ignore case, and maximum returned node count:
 
     If selector is the empty string, return error with error code invalid selector.
 
@@ -2956,7 +3009,7 @@ To locate nodes using  inner text with given context nodes, selector, max depth,
 
                 Append child to child nodes.
 
-            Extend re turned nodes with the result of trying to locate nodes using inner text with child nodes, selector, max depth, match type, ignore case, and maximum returned node count.
+            Extend returned nodes with the result of trying to locate nodes using inner text with child nodes, selector, max depth, match type, ignore case, and maximum returned node count.
 
         If context node does not implement HTMLElement then continue.
 
@@ -3145,7 +3198,7 @@ Command Type
       ? wait: browsingContext.ReadinessState,
     }
 
-Result Type
+Return Type
 
     browsingContext.NavigateResult = {
       navigation: browsingContext.Navigation / null,
@@ -3214,7 +3267,7 @@ Command Type
       ? width: (float .ge 0.0352) .default 21.59,
     }
 
-Result Type
+Return Type
 
     browsingContext.PrintResult = {
       data: text
@@ -3288,7 +3341,8 @@ Command Type
     }
 
 Return Type
-    browsingContext.NavigateResult 
+
+    browsingContext.ReloadResult = browsingContext.NavigateResult
 
 The remote end steps with command parameters are:
 
@@ -3335,8 +3389,9 @@ Command Type
       height: js-uint,
     }
 
-Result Type
-    EmptyResult 
+Return Type
+
+    browsingContext.SetViewportResult = EmptyResult
 
 To set device pixel ratio override given navigable and device pixel ratio:
 
@@ -3379,6 +3434,12 @@ TODO: Move it as a hook in the html spec instead.
     If navigable is a top-level traversable:
 
         If geolocation overrides map contains user context, set emulated position data with navigable and geolocation overrides map[user context].
+
+        If forced colors mode theme overrides map contains user context:
+
+            Let theme be forced colors mode theme overrides map[user context].
+
+            Set emulated forced colors theme data with navigable and theme.
 
         If screen orientation overrides map contains user context, set emulated screen orientation with navigable and screen orientation overrides map[user context].
 
@@ -3472,8 +3533,7 @@ Command Type
 
 Return Type
 
-    browsingContext.TraverseHistoryResult = {
-    }
+    browsingContext.TraverseHistoryResult = EmptyResult
 
 The remote end steps with command parameters are:
 
@@ -3513,7 +3573,7 @@ The remote end steps with command parameters are:
 
     Return success with data body.
 
-The WebDriver BiDi page show steps given context and navigation status are:
+The WebDriver BiDi page show steps given context and navigation status navigation status are:
 
 Do we want to expose a `browsingContext.pageShow event? In that case we’d need to call this whenever `pageshow` is going to be emitted, not just on bfcache restore, and also add the persisted status to the data.
 
@@ -3521,7 +3581,7 @@ Do we want to expose a `browsingContext.pageShow event? In that case we’d need
 
     Resume with "page show", navigation id, and navigation status.
 
-The WebDriver BiDi pop state steps given context and navigation status are:
+The WebDriver BiDi pop state steps given context and navigation status navigation status are:
 
     Let navigation id be navigation status’s id.
 
@@ -3553,7 +3613,7 @@ To Emit a context created event given session and navigable:
 
     Emit an event with session and body.
 
-The remote end event trigger is the WebDriver BiDi navigable created steps given navigable and opener navigable:
+The remote end event trigger is the WebDriver BiDi navigable created steps given navigable navigable and navigable opener navigable:
 
     Set navigable’s original opener to opener navigable, if opener navigable is provided.
 
@@ -3582,7 +3642,7 @@ Event Type
 
 The remote end event trigger is:
 
-The remote end event trigger is the WebDriver BiDi navigable destroyed steps given navigable:
+The remote end event trigger is the WebDriver BiDi navigable destroyed steps given navigable navigable:
 
     Let params be the result of get the navigable info, given navigable, null, and true.
 
@@ -3618,7 +3678,7 @@ Event Type
      params: browsingContext.NavigationInfo
     )
 
-The remote end event trigger is the WebDriver BiDi navigation started steps given navigable and navigation status:
+The remote end event trigger is the WebDriver BiDi navigation started steps given navigable navigable and navigation status navigation status:
 
     Let params be the result of get the navigation info given navigable and navigation status.
 
@@ -3643,7 +3703,7 @@ Event Type
      params: browsingContext.NavigationInfo
     )
 
-The remote end event trigger is the WebDriver BiDi fragment navigated steps given navigable and navigation status:
+The remote end event trigger is the WebDriver BiDi fragment navigated steps given navigable navigable and navigation status navigation status:
 
     Let params be the result of get the navigation info given navigable and navigation status.
 
@@ -3674,7 +3734,7 @@ Event Type
       url: text
     }
 
-The remote end event trigger is the WebDriver BiDi history updated steps given navigable:
+The remote end event trigger is the WebDriver BiDi history updated steps given navigable navigable:
 
     Let url be the result of running the URL serializer, given navigable’s active browsing context’s active document’s URL.
 
@@ -3699,7 +3759,7 @@ Event Type
      params: browsingContext.NavigationInfo
     )
 
-The remote end event trigger is the WebDriver BiDi DOM content loaded steps given navigable and navigation status:
+The remote end event trigger is the WebDriver BiDi DOM content loaded steps given navigable navigable and navigation status navigation status:
 
     Let params be the result of get the navigation info given navigable and navigation status.
 
@@ -3724,7 +3784,7 @@ Event Type
      params: browsingContext.NavigationInfo
     )
 
-The remote end event trigger is the WebDriver BiDi load complete steps given navigable and navigation status:
+The remote end event trigger is the WebDriver BiDi load complete steps given navigable navigable and navigation status navigation status:
 
     Let params be the result of get the navigation info given navigable and navigation status.
 
@@ -3754,7 +3814,31 @@ Event Type
       browsingContext.BaseNavigationInfo
     }
 
-The remote end event trigger is the WebDriver BiDi download started steps given navigable and navigation status:
+The remote end event trigger is the WebDriver BiDi download will begin steps given navigable navigable and navigation status navigation status:
+
+    Let navigation info be the result of get the navigation info given navigable and navigation status.
+
+    Let params be a map matching the browsingContext.DownloadWillBeginParams production, with the context field set to navigation info["context"], the navigation field set to navigation info["navigation"], the timestamp field set to navigation info["timestamp"], the url field set to navigation info["url"] and suggestedFilename field set to navigation status’s suggestedFilename.
+
+    Let body be a map matching the browsingContext.DownloadWillBegin production, with the params field set to params.
+
+    Let navigation id be navigation status’s id.
+
+    Let related navigables be a set containing navigable.
+
+    Resume with "download started", navigation id, and navigation status.
+
+    For each session in the set of sessions for which an event is enabled given "browsingContext.downloadWillBegin" and related navigables:
+
+        Emit an event with session and body.
+
+    Let download behavior be get download behavior with navigable.
+
+    Return download behavior.
+
+The remote end event trigger is the WebDriver BiDi download started steps given navigable navigable and navigation status navigation status:
+
+Remove after HTML spec switched to WebDriver BiDi download will begin (https://github.com/whatwg/html/pull/11474).
 
     Let navigation info be the result of get the navigation info given navigable and navigation status.
 
@@ -3799,13 +3883,13 @@ Event Type
       browsingContext.BaseNavigationInfo
     )
 
-The remote end event trigger is the WebDriver BiDi download end steps given navigable and navigation status:
+The remote end event trigger is the WebDriver BiDi download end steps given navigable navigable and navigation status navigation status:
 
     Let navigation info be the result of get the navigation info given navigable and navigation status.
 
     Assert navigation info["status"] is equal to either "complete" or "canceled".
 
-    If navigation info["status"] is "complete", let params be a map matching the browsingContext.DownloadCompleteParams production, with the filepath field set to navigation info["downloadedFilepath"], the context field set to navigation info["context"], the navigation field set to navigation info["navigation"], the timestamp field set to navigation info["timestamp"], and the url field set to navigation info["url"].
+    If navigation info["status"] is "complete", let params be a map matching the browsingContext.DownloadCompleteParams production, with the filepath field set to navigation status’s downloadedFilepath, the context field set to navigation info["context"], the navigation field set to navigation info["navigation"], the timestamp field set to navigation info["timestamp"], and the url field set to navigation info["url"].
 
     Note: filepath can be null for completed downloads if the filepath is not available for whatever reason.
 
@@ -3828,7 +3912,7 @@ Event Type
      params: browsingContext.NavigationInfo
     )
 
-The remote end event trigger is the WebDriver BiDi navigation aborted steps given navigable and navigation status:
+The remote end event trigger is the WebDriver BiDi navigation aborted steps given navigable navigable and navigation status navigation status:
 
     Let params be the result of get the navigation info given navigable and navigation status.
 
@@ -3853,7 +3937,7 @@ Event Type
      params: browsingContext.NavigationInfo
     )
 
-The remote end event trigger is the WebDriver BiDi navigation committed steps given navigable and navigation status:
+The remote end event trigger is the WebDriver BiDi navigation committed steps given navigable navigable and navigation status navigation status:
 
     Let params be the result of get the navigation info given navigable and navigation status.
 
@@ -3878,7 +3962,7 @@ Event Type
      params: browsingContext.NavigationInfo
     )
 
-The remote end event trigger is the WebDriver BiDi navigation failed steps given navigable and navigation status:
+The remote end event trigger is the WebDriver BiDi navigation failed steps given navigable navigable and navigation status navigation status:
 
     Let params be the result of get the navigation info given navigable and navigation status.
 
@@ -3910,7 +3994,7 @@ Event Type
       ? userText: text
     }
 
-The remote end event trigger is the WebDriver BiDi user prompt closed steps given window, type, accepted and optional user text (default: null).
+The remote end event trigger is the WebDriver BiDi user prompt closed steps given Window window, string type, boolean accepted and optional text user text (default: null).
 
     Let navigable be window’s navigable.
 
@@ -3959,7 +4043,7 @@ To get navigable’s user prompt handler given type and navigable:
 
     Return handler configuration’s handler.
 
-The remote end event trigger is the WebDriver BiDi user prompt opened steps given window, type, message, and optional default value (default: null).
+The remote end event trigger is the WebDriver BiDi user prompt opened steps given Window window, string type, string message, and optional text default value (default: null).
 
     Let navigable be window’s navigable.
 
@@ -3989,11 +4073,30 @@ The emulation module contains commands and events relating to emulation of brows
 remote end definition
 
 EmulationCommand = (
+  emulation.SetForcedColorsModeThemeOverride //
   emulation.SetGeolocationOverride //
   emulation.SetLocaleOverride //
+  emulation.SetNetworkConditions //
   emulation.SetScreenOrientationOverride //
-  emulation.SetTimezoneOverride
+  emulation.SetScreenSettingsOverride //
+  emulation.SetScriptingEnabled //
+  emulation.SetTimezoneOverride //
+  emulation.SetUserAgentOverride
 )
+
+EmulationResult = (
+  emulation.SetForcedColorsModeThemeOverrideResult /
+  emulation.SetGeolocationOverrideResult /
+  emulation.SetLocaleOverrideResult /
+  emulation.SetScreenOrientationOverrideResult /
+  emulation.SetScriptingEnabledResult /
+  emulation.SetTimezoneOverrideResult /
+  emulation.SetUserAgentOverrideResult
+)
+
+A BiDi session has an emulated user agent which is a struct with an item named default user agent, which is a string or null, an item named user context user agent, which is a weak map between user contexts and string, and an item named navigable user agent, which is a weak map between navigables and string.
+
+A remote end has a forced colors mode theme overrides map which is a weak map between user contexts and string or null.
 
 A geolocation override is a struct with:
 
@@ -4021,7 +4124,66 @@ A screen orientation override is a struct with:
 
 A remote end has a screen orientation overrides map which is a weak map between user contexts and screen orientation override.
 7.4.2. Commands
-7.4.2.1. The emulation.setGeolocationOverride Command
+7.4.2.1. The emulation.setForcedColorsModeThemeOverride Command
+
+The emulation.setForcedColorsModeThemeOverride command modifies forced colors mode theming characteristics on the given top-level traversables or user contexts.
+
+Command Type
+
+    emulation.SetForcedColorsModeThemeOverride = (
+      method: "emulation.setForcedColorsModeThemeOverride",
+      params: emulation.SetForcedColorsModeThemeOverrideParameters
+    )
+
+    emulation.SetForcedColorsModeThemeOverrideParameters = {
+      theme: emulation.ForcedColorsModeTheme / null,
+      ? contexts: [+browsingContext.BrowsingContext],
+      ? userContexts: [+browser.UserContext],
+    }
+
+    emulation.ForcedColorsModeTheme = "light" / "dark"
+
+Return Type
+
+    emulation.SetForcedColorsModeThemeOverrideResult = EmptyResult
+
+Note: Check out the ForcedColorsModeAutomationTheme for the corresponding enum mapping in the CSS specification.
+
+The remote end steps with command parameters are:
+
+    If command parameters contains "userContexts" and command parameters contains "contexts", return error with error code invalid argument.
+
+    If command parameters doesn’t contain "userContexts" and command parameters doesn’t contain "contexts", return error with error code invalid argument.
+
+    Let theme be command parameters["theme"].
+
+    If theme is null, set theme to "none".
+
+    Let navigables be a set.
+
+    If the contexts field of command parameters is present:
+
+        Let navigables be the result of trying to get valid top-level traversables by ids with command parameters["contexts"].
+
+    Otherwise:
+
+        Let user contexts be the result of trying to get valid user contexts with command parameters["userContexts"].
+
+        For each user context of user contexts:
+
+            Set forced colors mode theme overrides map[user context] to theme.
+
+            For each top-level traversable of the list of all top-level traversables whose associated user context is user context:
+
+                Append top-level traversable to navigables.
+
+    For each navigable of navigables:
+
+        Set emulated forced colors theme data with navigable and theme.
+
+    Return success with data null.
+
+7.4.2.2. The emulation.setGeolocationOverride Command
 
 The emulation.setGeolocationOverride command modifies geolocation characteristics on the given top-level traversables or user contexts.
 
@@ -4055,8 +4217,9 @@ Command Type
        type: "positionUnavailable"
     }
 
-Result Type
-    EmptyResult 
+Return Type
+
+    emulation.SetGeolocationOverrideResult = EmptyResult
 
 The remote end steps with command parameters are:
 
@@ -4072,9 +4235,9 @@ The remote end steps with command parameters are:
 
     Otherwise, let emulated position data be command parameters["coordinates"].
 
-    If command parameters contains "userContexts" and command parameters contains "context", return error with error code invalid argument.
+    If command parameters contains "userContexts" and command parameters contains "contexts", return error with error code invalid argument.
 
-    If command parameters doesn’t contain "userContexts" and command parameters doesn’t contain "context", return error with error code invalid argument.
+    If command parameters doesn’t contain "userContexts" and command parameters doesn’t contain "contexts", return error with error code invalid argument.
 
     Let navigables be a set.
 
@@ -4088,7 +4251,9 @@ The remote end steps with command parameters are:
 
         For each user context of user contexts:
 
-            Set geolocation overrides map[user context] to emulated position data.
+            If emulated position data is null, remove the user context from geolocation overrides map.
+
+            Otherwise, set geolocation overrides map[user context] to emulated position data.
 
             For each top-level traversable of the list of all top-level traversables whose associated user context is user context:
 
@@ -4096,11 +4261,15 @@ The remote end steps with command parameters are:
 
     For each navigable of navigables:
 
-        Set emulated position data with navigable and emulated position data.
+        Let user context be navigable’s associated user context.
+
+        If emulated position data is null and geolocation overrides map contains user context, set emulated position data with navigable and geolocation overrides map[user context].
+
+        Otherwise, set emulated position data with navigable and emulated position data.
 
     Return success with data null.
 
-7.4.2.2. The emulation.setLocaleOverride Command
+7.4.2.3. The emulation.setLocaleOverride Command
 
 The emulation.setLocaleOverride command modifies locale on the given top-level traversables or user contexts.
 
@@ -4117,16 +4286,11 @@ Command Type
       ? userContexts: [+browser.UserContext],
     }
 
-Result Type
-    EmptyResult 
+Return Type
 
-The DefaultLocale algorithm is implementation defined. A WebDriver-BiDi remote end must have an implementation that runs the following steps:
+    emulation.SetLocaleOverrideResult = EmptyResult
 
-    Let emulated locale be null.
-
-    Let realm be current Realm Record.
-
-    Let environment settings be the environment settings object whose realm execution context’s Realm component is realm.
+The WebDriver BiDi emulated language steps given an environment settings object environment settings:
 
     Let related navigables be the result of get related navigables given environment settings.
 
@@ -4136,27 +4300,32 @@ The DefaultLocale algorithm is implementation defined. A WebDriver-BiDi remote e
 
         Let user context be top-level traversable’s associated user context.
 
-        If locale overrides map contains top-level traversable, set emulated locale to locale overrides map[top-level traversable].
+        If locale overrides map contains top-level traversable, return locale overrides map[top-level traversable].
 
-        Otherwise, if locale overrides map contains user context, set emulated locale to locale overrides map[user context].
+        If locale overrides map contains user context, return locale overrides map[user context].
 
-    If emulated locale is not null, return emulated locale.
+    Return null
 
-    Return the result of implementation-defined steps in accordance with the requirements of the DefaultLocale specification.
+TODO: Remove the following algorithm once the update for navigator.language/s in the html spec is merged. https://github.com/whatwg/html/pull/11793
+The DefaultLocale algorithm is implementation defined. A WebDriver-BiDi remote end must have an implementation that runs the following steps:
+
+    Let realm be current Realm Record.
+
+    Let environment settings be the environment settings object whose realm execution context’s Realm component is realm.
+
+    Let locale override be the result of WebDriver BiDi emulated language with environment settings.
+
+    If locale override is not null, return locale override. Otherwise, return the result of implementation-defined steps in accordance with the requirements of the DefaultLocale specification.
 
 The remote end steps with command parameters are:
 
-    If command parameters contains "userContexts" and command parameters contains "context", return error with error code invalid argument.
+    If command parameters contains "userContexts" and command parameters contains "contexts", return error with error code invalid argument.
 
-    If command parameters doesn’t contain "userContexts" and command parameters doesn’t contain "context", return error with error code invalid argument.
+    If command parameters doesn’t contain "userContexts" and command parameters doesn’t contain "contexts", return error with error code invalid argument.
 
-    Let emulated locale be null.
+    Let emulated locale be command parameters["locale"].
 
-    If command parameters contains "locale":
-
-        Set emulated locale to command parameters["locale"].
-
-        If IsStructurallyValidLanguageTag(emulated locale) returns false, return error with error code invalid argument.
+    If emulated locale is not null and IsStructurallyValidLanguageTag(emulated locale) returns false, return error with error code invalid argument.
 
     Let navigables be a set.
 
@@ -4172,7 +4341,9 @@ The remote end steps with command parameters are:
 
         For each user context of user contexts:
 
-            Set locale overrides map[user context] to emulated locale.
+            If emulated locale is null, remove user context from locale overrides map.
+
+            Otherwise, set locale overrides map[user context] to emulated locale.
 
             For each top-level traversable of the list of all top-level traversables whose associated user context is user context:
 
@@ -4180,11 +4351,192 @@ The remote end steps with command parameters are:
 
     For each navigable of navigables:
 
-        Set locale overrides map[navigable] to emulated locale.
+        If emulated locale is null, remove navigable from locale overrides map.
+
+        Otherwise, set locale overrides map[navigable] to emulated locale.
 
     Return success with data null.
 
-7.4.2.3. The emulation.setScreenOrientationOverride Command
+7.4.2.4. The emulation.setNetworkConditions Command
+
+The emulation.setNetworkConditions command emulates specific network conditions for the given browsing context or for a user context.
+
+Command Type
+
+    emulation.SetNetworkConditions = (
+      method: "emulation.setNetworkConditions",
+      params: emulation.setNetworkConditionsParameters
+    )
+
+    emulation.setNetworkConditionsParameters = {
+      networkConditions: emulation.NetworkConditions / null,
+      ? contexts: [+browsingContext.BrowsingContext],
+      ? userContexts: [+browser.UserContext],
+    }
+
+    emulation.NetworkConditions = emulation.NetworkConditionsOffline
+
+    emulation.NetworkConditionsOffline = {
+      type: "offline"
+    }
+
+Return Type
+
+    emulation.SetNetworkConditionsResult = EmptyResult
+
+To apply network conditions:
+
+    For each WebSocket object webSocket:
+
+        Let realm be webSocket’s relevant Realm.
+
+        Let environment settings be the environment settings object whose realm execution context’s Realm component is realm.
+
+        If the result of WebDriver BiDi network is offline with environment settings is true:
+
+            Fail the WebSocket connection webSocket.
+
+    For each WebTransport object webTransport:
+
+        Let realm be webSocket’s relevant Realm.
+
+        Let environment settings be the environment settings object whose realm execution context’s Realm component is realm.
+
+        If the result of WebDriver BiDi network is offline with environment settings is true:
+
+            Cleanup WebTransport webTransport.
+
+The remote end steps with command parameters and session are:
+
+    If command parameters contains "userContexts" and command parameters contains "context", return error with error code invalid argument.
+
+    Let emulated network conditions be null.
+
+    If command parameters["networkConditions"] is not null and command parameters["networkConditions"]["type"] equals "offline", set emulated network conditions to a new emulated network conditions struct with offline set to true.
+
+    If the contexts field of command parameters is present:
+
+        Let navigables be the result of trying to get valid top-level traversables by ids with command parameters["contexts"].
+
+        For each navigable of navigables:
+
+            If emulated network conditions is null, remove navigable from session’s emulated network conditions’s navigable network conditions
+
+            Otherwise, set session’s emulated network conditions’s navigable network conditions[navigable] to emulated network conditions.
+
+    If the userContexts field of command parameters is present:
+
+        Let user contexts be the result of trying to get valid user contexts with command parameters["userContexts"].
+
+        For each user context of user contexts:
+
+            If emulated network conditions is null, remove user context from session’s emulated network conditions’s user context network conditions.
+
+            Otherwise, set session’s emulated network conditions’s user context network conditions[user context] to emulated network conditions.
+
+    If command parameters doesn’t contain "userContexts" and command parameters doesn’t contain "context", set session’s emulated network conditions’s default network conditions to emulated network conditions.
+
+    Apply network conditions.
+
+    Return success with data null.
+
+7.4.2.5. The emulation.setScreenSettingsOverride Command
+
+The emulation.setScreenSettingsOverride command emulates web-exposed screen area and web-exposed available screen area of the given top-level traversables or user contexts.
+
+Command Type
+
+    emulation.SetScreenSettingsOverride = (
+      method: "emulation.setScreenSettingsOverride",
+      params: emulation.SetScreenSettingsOverrideParameters
+    )
+
+    emulation.ScreenArea = {
+      width: js-uint,
+      height: js-uint
+    }
+
+    emulation.SetScreenSettingsOverrideParameters = {
+      screenArea: emulation.ScreenArea / null,
+      ? contexts: [+browsingContext.BrowsingContext],
+      ? userContexts: [+browser.UserContext],
+    }
+
+Return Type
+
+    emulation.SetScreenSettingsOverrideResult = EmptyResult
+
+The WebDriver BiDi emulated available screen area steps given navigable navigable:
+
+    Let top-level traversable be navigable’s top-level traversable.
+
+    Let user context be top-level traversable’s associated user context.
+
+    If screen settings overrides contains top-level traversable, return screen settings overrides[top-level traversable].
+
+    If screen settings overrides contains user context, return screen settings overrides[user context].
+
+    Return null
+
+The WebDriver BiDi emulated total screen area steps given navigable navigable:
+
+    Let top-level traversable be navigable’s top-level traversable.
+
+    Let user context be top-level traversable’s associated user context.
+
+    If screen settings overrides contains top-level traversable, return screen settings overrides[top-level traversable].
+
+    If screen settings overrides contains user context, return screen settings overrides[user context].
+
+    Return null
+
+The remote end steps with command parameters are:
+
+    If command parameters contains "userContexts" and command parameters contains "contexts", return error with error code invalid argument.
+
+    If command parameters doesn’t contain "userContexts" and command parameters doesn’t contain "contexts", return error with error code invalid argument.
+
+    Let emulated screen area be command parameters["screenArea"].
+
+    If emulated screen area is not null:
+
+        Set emulated screen area["x"] to 0.
+
+        Set emulated screen area["y"] to 0.
+
+    Let navigables be a set.
+
+    If the contexts field of command parameters is present:
+
+        Let navigables be the result of trying to get valid top-level traversables by ids with command parameters["contexts"].
+
+        Let target be navigable screen settings.
+
+        For each navigable of navigables:
+
+            If emulated screen area is null, remove navigable from target.
+
+            Otherwise, set target[navigable] to emulated screen area.
+
+        Return success with data null.
+
+    Otherwise:
+
+        Assert the userContexts field of command parameters is present.
+
+        Let user contexts be the result of trying to get valid user contexts with command parameters["userContexts"].
+
+        Let target be user context screen settings.
+
+        For each user context of user contexts:
+
+            If emulated screen area is null, remove user context from target.
+
+            Otherwise, set target[user context] to emulated screen area.
+
+        Return success with data null.
+
+7.4.2.6. The emulation.setScreenOrientationOverride Command
 
 The emulation.setScreenOrientationOverride command emulates screen orientation of the given top-level traversables or user contexts.
 
@@ -4209,8 +4561,9 @@ Command Type
       ? userContexts: [+browser.UserContext],
     }
 
-Result Type
-    EmptyResult 
+Return Type
+
+    emulation.SetScreenOrientationOverrideResult = EmptyResult
 
 To set emulated screen orientation given navigable and emulated screen orientation:
 
@@ -4256,7 +4609,9 @@ The remote end steps with command parameters are:
 
         For each user context of user contexts:
 
-            Set screen orientation overrides map[user context] to emulated screen orientation.
+            If emulated screen orientation is null, remove user context from screen orientation overrides map.
+
+            Otherwise, set screen orientation overrides map[user context] to emulated screen orientation.
 
             For each top-level traversable of the list of all top-level traversables whose associated user context is user context:
 
@@ -4264,11 +4619,162 @@ The remote end steps with command parameters are:
 
     For each navigable of navigables:
 
-        Set emulated screen orientation with navigable and emulated screen orientation.
+        Let user context be navigable’s associated user context.
+
+        If emulated screen orientation is null and screen orientation overrides map contains user context, set emulated screen orientation with navigable and screen orientation overrides map[user context].
+
+        Otherwise, set emulated screen orientation with navigable and emulated screen orientation.
 
     Return success with data null.
 
-7.4.2.4. The emulation.setTimezoneOverride Command
+7.4.2.7. The emulation.setUserAgentOverride Command
+
+The emulation.setUserAgentOverride command modifies User-Agent on the given top-level traversables or user contexts.
+
+Command Type
+
+    emulation.SetUserAgentOverride = (
+      method: "emulation.setUserAgentOverride",
+      params: emulation.SetUserAgentOverrideParameters
+    )
+
+    emulation.SetUserAgentOverrideParameters = {
+      userAgent: text / null,
+      ? contexts: [+browsingContext.BrowsingContext],
+      ? userContexts: [+browser.UserContext],
+    }
+
+Return Type
+
+    emulation.SetUserAgentOverrideResult = EmptyResult
+
+The WebDriver BiDi emulated User-Agent steps given environment settings object environment settings are:
+
+    Let related navigables be the result of get related navigables with environment settings.
+
+    For each navigable or related navigables:
+
+        Let top-level navigable be navigable’s top-level traversable.
+
+        Let user context be top-level navigable’s associated user context.
+
+        For each session in active BiDi sessions:
+
+            If session’s emulated user agent’s navigable user agent contains top-level navigable, return session’s emulated user agent’s navigable user agent[top-level navigable].
+
+        For each session in active BiDi sessions:
+
+            If session’s emulated user agent’s user context user agent contains user context, return session’s emulated user agent’s user context user agent[user context].
+
+    For each session in active BiDi sessions:
+
+        Let default emulated user agent be session’s emulated user agent’s default user agent.
+
+        If default emulated user agent is not null, return default emulated user agent.
+
+    Return null.
+
+The remote end steps given session and command parameters are:
+
+    If command parameters contains "userContexts" and command parameters contains "contexts", return error with error code invalid argument.
+
+    Let emulated user agent be command parameters["userAgent"].
+
+    If command parameters contains "contexts":
+
+        Let navigables be the result of trying to get valid top-level traversables by ids with command parameters["contexts"].
+
+        For each navigable of navigables:
+
+            If emulated user agent is null, remove navigable from session’s emulated user agent’s navigable user agent.
+
+            Otherwise, set session’s emulated user agent’s navigable user agent[navigable] to emulated user agent.
+
+        Return success with data null.
+
+    If command parameters contains "userContexts":
+
+        Let user contexts be the result of trying to get valid user contexts with command parameters["userContexts"].
+
+        For each user context of user contexts:
+
+            If emulated user agent is null, remove user context from session’s emulated user agent’s user context user agent.
+
+            Otherwise, set session’s emulated user agent’s user context user agent[user context] to emulated user agent.
+
+        Return success with data null.
+
+    Set session’s emulated user agent’s default user agent to emulated user agent.
+
+    Return success with data null.
+
+7.4.2.8. The emulation.setScriptingEnabled Command
+
+The emulation.setScriptingEnabled command emulates disabling JavaScript on web pages.
+
+Command Type
+
+    emulation.SetScriptingEnabled = (
+      method: "emulation.setScriptingEnabled",
+      params: emulation.SetScriptingEnabledParameters
+    )
+
+    emulation.SetScriptingEnabledParameters = {
+      enabled: false / null,
+      ? contexts: [+browsingContext.BrowsingContext],
+      ? userContexts: [+browser.UserContext],
+    }
+
+Return Type
+
+    emulation.SetScriptingEnabledResult = EmptyResult
+
+Note: only emulation of disabled Javascript is supported.
+The WebDriver BiDi scripting is enabled steps given environment settings object settings are:
+
+    Let navigable be settings’s relevant global object’s associated Document’s node navigable.
+
+    Let top-level traversable be navigable’s top-level traversable.
+
+    If scripting enabled overrides map contains top-level traversable, return scripting enabled overrides map[top-level traversable]
+
+    Let user context be top-level traversable’s associated user context.
+
+    If scripting enabled overrides map contains user context, return scripting enabled overrides map[user context].
+
+    Return true.
+
+The remote end steps with command parameters are:
+
+    If command parameters contains "userContexts" and command parameters contains "contexts", return error with error code invalid argument.
+
+    If command parameters doesn’t contain "userContexts" and command parameters doesn’t contain "contexts", return error with error code invalid argument.
+
+    Let emulated scripting enabled status be command parameters["enabled"].
+
+    If the contexts field of command parameters is present:
+
+        Let navigables be the result of trying to get valid top-level traversables by ids with command parameters["contexts"].
+
+        For each navigable of navigables:
+
+            If emulated scripting enabled status is null, remove navigable from scripting enabled overrides map.
+
+            Otherwise, set scripting enabled overrides map[navigable] to emulated scripting enabled status.
+
+    If the userContexts field of command parameters is present:
+
+        Let user contexts be the result of trying to get valid user contexts with command parameters["userContexts"].
+
+        For each user context of user contexts:
+
+            If emulated scripting enabled status is null, remove user context from scripting enabled overrides map.
+
+            Otherwise set scripting enabled overrides map[user context] to emulated scripting enabled status.
+
+    Return success with data null.
+
+7.4.2.9. The emulation.setTimezoneOverride Command
 
 The emulation.setTimezoneOverride command modifies timezone on the given top-level traversables or user contexts.
 
@@ -4285,8 +4791,9 @@ Command Type
       ? userContexts: [+browser.UserContext],
     }
 
-Result Type
-    EmptyResult 
+Return Type
+
+    emulation.SetTimezoneOverrideResult = EmptyResult
 
 The SystemTimeZoneIdentifier algorithm is implementation defined. A WebDriver-BiDi remote end must have an implementation that runs the following steps:
 
@@ -4314,17 +4821,13 @@ The SystemTimeZoneIdentifier algorithm is implementation defined. A WebDriver-Bi
 
 The remote end steps with command parameters are:
 
-    If command parameters contains "userContexts" and command parameters contains "context", return error with error code invalid argument.
+    If command parameters contains "userContexts" and command parameters contains "contexts", return error with error code invalid argument.
 
-    If command parameters doesn’t contain "userContexts" and command parameters doesn’t contain "context", return error with error code invalid argument.
+    If command parameters doesn’t contain "userContexts" and command parameters doesn’t contain "contexts", return error with error code invalid argument.
 
-    Let emulated timezone be null.
+    Let emulated timezone be command parameters["timezone"].
 
-    If command parameters contains "timezone":
-
-        Set emulated timezone to command parameters["timezone"].
-
-        If IsTimeZoneOffsetString(emulated timezone) returns false and AvailableNamedTimeZoneIdentifiers does not contain emulated timezone, return error with error code invalid argument.
+    If emulated timezone is not null and IsTimeZoneOffsetString(emulated timezone) returns false and AvailableNamedTimeZoneIdentifiers does not contain emulated timezone, return error with error code invalid argument.
 
     Let navigables be a set.
 
@@ -4340,7 +4843,9 @@ The remote end steps with command parameters are:
 
         For each user context of user contexts:
 
-            Set timezone overrides map[user context] to emulated timezone.
+            If emulated timezone is null, remove user context from timezone overrides map.
+
+            Otherwise, set timezone overrides map[user context] to emulated timezone.
 
             For each top-level traversable of the list of all top-level traversables whose associated user context is user context:
 
@@ -4348,7 +4853,9 @@ The remote end steps with command parameters are:
 
     For each navigable of navigables:
 
-        Set timezone overrides map[navigable] to emulated timezone.
+        If emulated timezone is null, remove navigable from timezone overrides map.
+
+        Otherwise, set timezone overrides map[navigable] to emulated timezone.
 
     Return success with data null.
 
@@ -4371,13 +4878,26 @@ NetworkCommand = (
   network.ProvideResponse //
   network.RemoveDataCollector //
   network.RemoveIntercept //
-  network.SetCacheBehavior
+  network.SetCacheBehavior //
+  network.SetExtraHeaders
 )
 
 local end definition
 
 NetworkResult = (
-   network.AddInterceptResult
+  network.AddDataCollectorResult /
+  network.AddInterceptResult /
+  network.ContinueRequestResult /
+  network.ContinueResponseResult /
+  network.ContinueWithAuthResult /
+  network.DisownDataResult /
+  network.FailRequestResult /
+  network.GetDataResult /
+  network.ProvideResponseResult /
+  network.RemoveDataCollectorResult /
+  network.RemoveInterceptResult /
+  network.SetCacheBehaviorResult /
+  network.SetExtraHeadersResult
 )
 
 NetworkEvent = (
@@ -4393,17 +4913,47 @@ A remote end has a before request sent map which is initially an empty map. It�
 A remote end has a default cache behavior which is a string. It is initially "default".
 
 A remote end has a navigable cache behavior map which is a weak map between top-level traversables and strings representing cache behavior. It is initially empty.
+
+A BiDi session has a extra headers which is a struct with an item named default headers, which is a header list (initially set to an empty header list), an item named user context headers, which is a weak map between user contexts and header lists, and a item named navigable headers, which is a weak map between navigables and header lists.
 7.5.2. Network Data Collection
 
-A data is a struct consisting of an item named bytes, which is a network.BytesValue or null, an item named cloned body, which is a body or null, an item named collectors, which is a list of network.Collector, an item named pending, which is a boolean, an item named request, which is a network.Request, an item named size, which is a js-uint or null, an item named type, which is a network.DataType.
+A network data is a struct with:
 
-A collector is a struct consisting of an item named max encoded data size, which is a js-uint, an item named contexts, which is a list of browsingContext.BrowsingContext, an item named data types, which is a list of network.DataType, an item named collector, which is a network.Collector, an item named collector type, which is a network.CollectorType, an item named user contexts, which is a list of browser.UserContext.
+    Item named bytes, which is a network.BytesValue or null,
+
+    Item named cloned body, which is a body or null,
+
+    Item named collectors, which is a list of network.Collector,
+
+    Item named pending, which is a boolean,
+
+    Item named request, which is a request id,
+
+    Item named size, which is a js-uint or null,
+
+    Item named type, which is a network.DataType.
+
+A collector is a struct with:
+
+    Item named max encoded item size, which is a js-uint;
+
+    item named contexts, which is a list of navigable id;
+
+    item named data types, which is a list of network.DataType;
+
+    item named collector, which is a network.Collector;
+
+    item named collector type, which is a network.CollectorType;
+
+    item named user contexts, which is a list of browser.UserContext.
+
+Note: max encoded item size defines the limit per item (response or request), and does not limit the size collected by the specific collector. The total size of all collected resources is limited by max total collected size.
 
 A BiDi session has network collectors which is a map between network.Collector and a collector. It is initially empty.
 
-A remote end has collected network data which is a list of data. It is initially empty.
+A remote end has collected network data which is a list of network data. It is initially empty.
 
-A remote end has a max total data size which is a js-uint representing the size allocated to collect network data in collected network data. Its value is implementation-defined.
+A remote end has a max total collected size which is a js-uint representing the size allocated to collect network data in collected network data. Its value is implementation-defined.
 
 Note: This allows implementations to set resource usage limits. It is expected that the limits are sufficiently large that users can depend on collecting data that is fully decoded and handled by the browser, such as images and fonts used on a webpage.
 To get navigable for request given request:
@@ -4436,15 +4986,33 @@ To match collector for navigable given collector and navigable:
 
     Return true.
 
-To clone network response body given sessions, request and response body:
+To clone network request body given request request:
 
-Note: This hook is intended to be triggered by the fetch spec when the response is set.
+Note: This hook is intended to be triggered by the fetch spec when the request body has been safely extracted. See step 9 of https://fetch.spec.whatwg.org/#concept-fetch
 
-    For each session in sessions:
+    If request’s body is null, return.
+
+    For each session in active BiDi sessions:
 
         If session’s network collectors is not empty:
 
-            Let collected data be a struct with bytes field set to null, cloned body field set to clone with response body, collectors field set to an empty list, pending field set to true, request field set to request’s request id, size field set to null, type field set to "response".
+            Let collected data be a network data with bytes set to null, cloned body set to clone of request’s body, collectors set to an empty list, pending set to true, request set to request’s request id, size set to null, type set to "request".
+
+            Append collected data to collected network data.
+
+            Return.
+
+To clone network response body given request and response body:
+
+Note: This hook is intended to be triggered by the fetch spec when the response is set.
+
+    If response body is null, return.
+
+    For each session in active BiDi sessions:
+
+        If session’s network collectors is not empty:
+
+            Let collected data be a network data with bytes set to null, cloned body set to clone of response body, collectors set to an empty list, pending set to true, request set to request’s request id, size set to null, type set to "response".
 
             Append collected data to collected network data.
 
@@ -4468,15 +5036,47 @@ To maybe abort network response body collection given request:
 
     Resume with "network data collected" and (request’s request id, "response").
 
-To maybe collect network response body given sessions, request and response:
+To maybe collect network request body given request:
+
+    Let collected data be get collected data with request’s request id and "request".
+
+    If collected data is null, return.
+
+    NOTE: This might happen if there are no collectors setup when the request is created, and clone network request body does not clone the corresponding body. Or if the body was null in the first place.
+
+    Maybe collect network data with request, collected data, null and "request".
+
+To maybe collect network response body given request and response:
 
     If response’s status is a redirect status, return.
 
-    Note: For redirects, only the final response body is stored.
+    NOTE: For redirects, only the final response body is stored.
+
+    Let collected data be get collected data with request’s request id and "response".
+
+    If collected data is null, return.
+
+    NOTE: This might happen if there are no collectors setup when the response is created, and clone network response body does not clone the corresponding body. Or if the body was null in the first place.
+
+    Let size be response’s response body info’s encoded size.
+
+    NOTE: There is a discrepancy between the fact that the bytes retrieved from the fetch stream correspond to the decoded data, but the encoded (network) size is used in order to calculate size limits. Implementations might decide to use a storage model such that it uses less size than storing the decoded data, as long as the data returned to clients in getData is identical to the decoded data. The potential tradeoff between storage and performance is up to the implementation.
+
+    Maybe collect network data with request, collected data, size and "response".
+
+To maybe collect network data given request request, network data collected data, js-uint size and network.DataType data type:
+
+    Set collected data’s pending to false.
 
     Let navigable be get navigable for request with request.
 
-    If navigable is null, return.
+    If navigable is null:
+
+        Remove collected data from collected network data.
+
+        Resume with "network data collected" and (request’s request id, data type).
+
+        Return.
 
     This prevents collecting data not related to a navigable. We still need to retrieve the navigable to check against the collector configuration but we could still accept null here.
 
@@ -4484,25 +5084,23 @@ To maybe collect network response body given sessions, request and response:
 
     Let collectors be an empty list.
 
-    For each session in sessions:
+    For each session in active BiDi sessions:
 
         For each collector in session’s network collectors:
 
-            If collector’s data types contains "response" and if match collector for navigable with collector and top-level navigable:
+            If collector’s data types contains data type and if match collector for navigable with collector and top-level navigable:
 
                 Append collector to collectors.
 
-    If collectors is empty, return.
+    If collectors is empty:
 
-    Let collected data be get collected data with request’s request id and "response".
+        Remove collected data from collected network data.
 
-    If collected data is null, return.
+        Resume with "network data collected" and (request’s request id, data type).
 
-    NOTE: This might happen if there are no collectors setup when the response is created, and clone network response body does not clone the corresponding body.
+        Return.
 
     Let bytes be null.
-
-    Let size be null.
 
     Let processBody given nullOrBytes be this step:
 
@@ -4510,9 +5108,7 @@ To maybe collect network response body given sessions, request and response:
 
             Set bytes to serialize protocol bytes with nullOrBytes.
 
-            Set size to response’s response body info’s encoded size.
-
-            Note: There is a discrepancy between the fact that the bytes retrieved from the fetch stream correspond to the decoded data, but the encoded (network) size is used in order to calculate size limits. Implementations might decide to use a storage model such that it uses less size than storing the decoded data, as long as the data returned to clients in getData is identical to the decoded data. The potential tradeoff between storage and performance is up to the implementation.
+            If size is null, set size to bytes’ length.
 
     Let processBodyError be this step: Do nothing.
 
@@ -4522,23 +5118,23 @@ To maybe collect network response body given sessions, request and response:
 
         For collector in collectors:
 
-            If size is less than or equal to collector’s max encoded data size, append collector’s collector to collected data’s collectors.
+            If size is less than or equal to collector’s max encoded item size, append collector’s collector to collected data’s collectors.
 
         If collected data’s collectors is not empty:
 
             Allocate size to record data given size.
 
-    Set collected data’s bytes to bytes.
+            Set collected data’s bytes to bytes.
 
-    Set collected data’s pending to false.
+            Set collected data’s size to size.
 
-    Set collected data’s size to size.
+        Otherwise, remove collected data from collected network data.
 
-    Resume with "network data collected" and (request’s request id, "response").
+    Resume with "network data collected" and (request’s request id, data type).
 
 To allocate size to record data given size:
 
-    Let available size be max total data size.
+    Let available size be max total collected size.
 
     Let already collected data be an empty list.
 
@@ -4657,17 +5253,7 @@ To update the response given session, command and command parameters:
 
     If command parameters contains "headers":
 
-        Let headers be an empty header list.
-
-        For header in command parameters["headers"]:
-
-            Let deserialized header be deserialize header with header.
-
-            If deserialized header’s name does not match the field-name token production, return error with error code "invalid argument".
-
-            If deserialized header’s value does not match the header value production, return error with error code "invalid argument".
-
-            Append deserialized header to headers.
+        Let headers be the result of trying to create a headers list with command parameters["headers"].
 
         Set response’s header list to headers.
 
@@ -4856,6 +5442,7 @@ Remote end definition and local end definition
 
 network.SameSite = "strict" / "lax" / "none" / "default"
 
+
 network.Cookie = {
     name: text,
     value: network.BytesValue,
@@ -4916,7 +5503,7 @@ To serialize cookie header given protocol cookie:
 
 Remote end definition and local end definition
 
-network.DataType = "response"
+network.DataType = "request" / "response"
 
 The network.DataType type represents the different types of network data that can be collected.
 7.5.4.10. The network.FetchTimingInfo Type
@@ -4934,8 +5521,10 @@ network.FetchTimingInfo = {
     connectStart: float,
     connectEnd: float,
     tlsStart: float,
+
     requestStart: float,
     responseStart: float,
+
     responseEnd: float,
 }
 
@@ -5006,6 +5595,22 @@ To deserialize header given protocol header:
     Let value be deserialize protocol bytes with protocol header["value"].
 
     Return a header (name, value).
+
+To create a headers list given protocol headers:
+
+    Let headers be an empty header list.
+
+    For header in protocol headers:
+
+        Let deserialized header be deserialize header with header.
+
+        If deserialized header’s name does not match the field-name token production, return error with error code "invalid argument".
+
+        If deserialized header’s value does not match the header value production, return error with error code "invalid argument".
+
+        Append deserialized header to headers.
+
+    Return success with data headers
 
 7.5.4.12. The network.Initiator Type
 
@@ -5619,9 +6224,11 @@ The remote end steps given session and command parameters are:
 
     Let data types be create a set with command parameters["dataTypes"].
 
-    Let max encoded data size be command parameters ["maxEncodedDataSize"].
+    Let max encoded item size be command parameters ["maxEncodedDataSize"].
 
-    Note: Different implementations might support different encodings, which means the encoded size might be different between browsers. Therefore, for the same data collector configuration, some network data might fit the maxEncodedDataSize only in some implementations.
+    Note: The maxEncodedDataSize parameter represents max encoded item size and limits the size of each request collected by the given collector, not the total collector’s collected size.
+
+    Note: Different implementations might support different encodings, which means the encoded size might be different between browsers. Therefore, for the same data collector configuration, some network data might fit the max encoded item size only in some implementations.
 
     Let collector type be command parameters ["collectorType"].
 
@@ -5631,7 +6238,7 @@ The remote end steps given session and command parameters are:
 
     If input user context ids is not empty and input context ids is not empty, return error with error code invalid argument.
 
-    If max encoded data size is greater than max total data size, return error with error code invalid argument.
+    If max encoded item size is 0 or max encoded item size is greater than max total collected size, return error with error code invalid argument.
 
     If input context ids is not empty:
 
@@ -5647,9 +6254,9 @@ The remote end steps given session and command parameters are:
 
             Let user context be get user context with user context id.
 
-            If user context is null, return error with error code invalid argument.
+            If user context is null, return error with error code no such user context.
 
-    Let collector be a struct with max encoded data size field set to max encoded data size, data types field set to data types, collector field set to collector id, collector type field set to collector type, contexts field set to input context ids, user contexts field set to input user context ids.
+    Let collector be a collector with max encoded item size field set to max encoded item size, data types field set to data types, collector field set to collector id, collector type field set to collector type, contexts field set to input context ids, user contexts field set to input user context ids.
 
     Set session’s network collectors[collector id] to collector.
 
@@ -5738,7 +6345,8 @@ Command Type
     }
 
 Return Type
-    EmptyResult 
+
+    network.ContinueRequestResult = EmptyResult
 
 The remote end steps given session and command parameters are:
 
@@ -5847,7 +6455,8 @@ Command Type
     }
 
 Return Type
-    EmptyResult 
+
+    network.ContinueResponseResult = EmptyResult
 
 The remote end steps given session and command parameters are:
 
@@ -5885,7 +6494,8 @@ Command Type
     )
 
 Return Type
-    EmptyResult 
+
+    network.ContinueWithAuthResult = EmptyResult
 
 The remote end steps given session and command parameters are:
 
@@ -5931,7 +6541,8 @@ Command Type
     }
 
 Return Type
-    EmptyResult 
+
+    network.DisownDataResult = EmptyResult
 
 The remote end steps given session and command parameters are:
 
@@ -5969,7 +6580,8 @@ Command Type
     }
 
 Return Type
-    EmptyResult 
+
+    network.FailRequestResult = EmptyResult
 
 The remote end steps given session and command parameters are:
 
@@ -6084,7 +6696,8 @@ Command Type
     }
 
 Return Type
-    EmptyResult 
+
+    network.ProvideResponseResult = EmptyResult
 
 The remote end steps given session and command parameters are:
 
@@ -6118,7 +6731,8 @@ Command Type
     }
 
 Return Type
-    EmptyResult 
+
+    network.RemoveDataCollectorResult = EmptyResult
 
 The remote end steps given session and command parameters are:
 
@@ -6150,7 +6764,8 @@ Command Type
     }
 
 Return Type
-    EmptyResult 
+
+    network.RemoveInterceptResult = EmptyResult
 
 The remote end steps given session and command parameters are:
 
@@ -6183,9 +6798,10 @@ Command Type
     }
 
 Return Type
-    EmptyResult 
 
-The WebDriver BiDi cache behavior steps given request are:
+    network.SetCacheBehaviorResult = EmptyResult
+
+The WebDriver BiDi cache behavior steps given request request are:
 
     Let navigable be null.
 
@@ -6257,6 +6873,103 @@ The remote end steps given session and command parameters are:
 
     Return success with data null.
 
+7.5.5.13. The network.setExtraHeaders Command
+
+The network.setExtraHeaders command allows specifying headers that will extend, or overwrite, existing request headers.
+
+Command Type
+
+    network.SetExtraHeaders = (
+      method: "network.setExtraHeaders",
+      params: network.SetExtraHeadersParameters
+    )
+
+    network.SetExtraHeadersParameters = {
+      headers: [*network.Header]
+      ? contexts: [+browsingContext.BrowsingContext]
+      ? userContexts: [+browser.UserContext]
+    }
+
+Return Type
+
+    network.SetExtraHeadersResult = EmptyResult
+
+To update headers given request and headers:
+
+    Let request headers be request’s header list.
+
+    For each header in headers:
+
+        Set header in request headers.
+
+        Note: This always overwrites the existing value, if any. In particular it doesn’t append cookies to an existing `Set-Cookie` header.
+
+To update request headers given session, request, and related navigables:
+
+    Assert: related navigables’s size is 0 or 1.
+
+    Note: That means this will not work for workers associated with multiple navigables. In that case it’s unclear in which order to override the headers.
+
+    Update headers with request and session’s extra headers' default headers
+
+    Let user context headers be session’s extra headers' user context headers.
+
+    For navigable in related navigables:
+
+        Let user context be navigable’s associated user context.
+
+        If user context headers contains user context then update headers with request and user context headers[user context]
+
+    Let navigable headers be session’s extra headers' navigable headers.
+
+    For navigable in related navigables:
+
+        Let top-level traversable be navigable’s top-level traversable.
+
+        If navigable headers contains top-level traversable update headers with request and navigable headers[top-level traversable].
+
+The remote end steps given session and command parameters are:
+
+    If command parameters contains "userContexts" and command parameters contains "contexts", return error with error code invalid argument.
+
+    Let headers be the result of trying to create a headers list with command parameters["headers"].
+
+    If command parameters contains "userContexts":
+
+        Let user contexts be an empty list.
+
+        For user context id in command parameters["userContexts"]:
+
+            Let user context be get user context with user context id.
+
+            If user context is null, return error with error code no such user context.
+
+            Append user context to user contexts.
+
+        Let target be session’s extra headers' user context headers
+
+        For user context in user contexts:
+
+            Set target[user context] to headers.
+
+        Return success with data null.
+
+    If command parameters contains "contexts":
+
+        Let navigables be the result of trying to get valid top-level traversables by ids with command parameters["contexts"].
+
+        Let target be session’s extra headers' navigable headers
+
+        For navigable in navigables:
+
+            Set target[navigable] to headers.
+
+        Return success with data null.
+
+    Set session’s extra headers' default headers to headers.
+
+    Return success with data null.
+
 7.5.6. Events
 7.5.6.1. The network.authRequired Event
 
@@ -6272,11 +6985,8 @@ Event Type
       response: network.ResponseData
     }
 
-Return Type
-    EmptyResult 
-
 This event is emitted when the user agent is going to prompt for authorization credentials.
-The remote end event trigger is the WebDriver BiDi auth required steps given request and response:
+The remote end event trigger is the WebDriver BiDi auth required steps given request request and response response:
 
     Let redirect count be request’s redirect count.
 
@@ -6341,13 +7051,45 @@ The steps to check if request originates in user context given request and user 
 
     Return false.
 
-The remote end event trigger is the WebDriver BiDi before request sent steps given request:
+The steps to get emulated network conditions given related navigables are:
+
+    For each navigable of related navigables:
+
+        Let top-level traversable be navigable’s top-level traversable.
+
+        Let user context be top-level traversable’s associated user context.
+
+        For each session in active BiDi sessions:
+
+            If session’s emulated network conditions’s navigable network conditions contains top-level traversable, return session’s emulated network conditions’s navigable network conditions[top-level traversable].
+
+        For each session in active BiDi sessions:
+
+            If session’s emulated network conditions’s user context network conditions contains user context, return session’s emulated network conditions’s user context network conditions[user context].
+
+        For each session in active BiDi sessions:
+
+            If session’s emulated network conditions’s default network conditions is not null, return session’s emulated network conditions’s default network conditions.
+
+    Return null.
+
+The WebDriver BiDi network is offline steps given environment settings object settings are:
+
+    Let navigable be settings’s relevant global object’s associated Document’s node navigable.
+
+    Let emulated network conditions be the result of get emulated network conditions with [navigable].
+
+    If emulated network conditions is not null and emulated network conditions’s offline is true, return true.
+
+    Return false.
+
+The remote end event trigger is the WebDriver BiDi before request sent steps given request request:
 
     For each user context in the set of user contexts:
 
         If the request originates in user context steps with request and user context return true:
 
-            For each session in active BiDI sessions
+            For each session in active BiDi sessions:
 
             Note: user context can be in not more then one user context to accept insecure certificates override map.
 
@@ -6373,6 +7115,8 @@ The remote end event trigger is the WebDriver BiDi before request sent steps giv
 
                     Note: the settings are validated when the user context is created and so are assumed to be valid at this stage; any error accessing the proxy will be reported as a network error when handling the request.
 
+    Maybe collect network request body with request.
+
     If before request sent map does not contain request, set before request sent map[request] to a new set.
 
     Let redirect count be request’s redirect count.
@@ -6385,11 +7129,13 @@ The remote end event trigger is the WebDriver BiDi before request sent steps giv
 
     Let response status be "incomplete".
 
+    For each session in active BiDi sessions:
+
+        Update request headers with session, request and related navigables.
+
     For each session in the set of sessions for which an event is enabled given "network.beforeRequestSent" and related navigables:
 
         Let params be the result of process a network event with session, "network.beforeRequestSent", and request.
-
-        If params is null then continue.
 
         Let initiator be the result of get the initiator with request.
 
@@ -6417,8 +7163,13 @@ The remote end event trigger is the WebDriver BiDi before request sent steps giv
 
         Note: While waiting, no further processing of the request occurs.
 
+    Let emulated network conditions be the result of get emulated network conditions with related navigables.
+
+    If emulated network conditions is not null and emulated network conditions’s offline is true, return (network error, "complete").
+
     Return (response, response status).
 
+Respect return value in Fetch’s "HTTP-network-or-cache fetch" algorithm.
 7.5.6.3. The network.fetchError Event
 
 Event Type
@@ -6434,7 +7185,7 @@ Event Type
     }
 
 This event is emitted when a network request ends in an error.
-The remote end event trigger is the WebDriver BiDi fetch error steps given request:
+The remote end event trigger is the WebDriver BiDi fetch error steps given request request:
 
     If before request sent map[request] does not contain request’s redirect count, then run the WebDriver BiDi before request sent steps with request.
 
@@ -6471,7 +7222,7 @@ Event Type
     }
 
 This event is emitted after the full response body is received.
-The remote end event trigger is the WebDriver BiDi response completed steps given request and response:
+The remote end event trigger is the WebDriver BiDi response completed steps given request request and response response:
 
     Let redirect count be request’s redirect count.
 
@@ -6481,9 +7232,9 @@ The remote end event trigger is the WebDriver BiDi response completed steps give
 
     If request’s client is not null, let related navigables be the result of get related navigables with request’s client. Otherwise let related navigables be an empty set.
 
-    Let sessions be the set of sessions for which an event is enabled given "network.responseCompleted" and related navigables.
+    Maybe collect network response body with request and response.
 
-    Maybe collect network response body with sessions, request and response.
+    Let sessions be the set of sessions for which an event is enabled given "network.responseCompleted" and related navigables.
 
     For each session in sessions:
 
@@ -6516,7 +7267,7 @@ Event Type
     }
 
 This event is emitted after the response headers are received but before the body is complete.
-The remote end event trigger is the WebDriver BiDi response started steps given request and response:
+The remote end event trigger is the WebDriver BiDi response started steps given request request and response response:
 
     Let redirect count be request’s redirect count.
 
@@ -6528,9 +7279,9 @@ The remote end event trigger is the WebDriver BiDi response started steps given 
 
     Let response status be "incomplete".
 
-    Let sessions be the set of sessions for which an event is enabled given "network.responseStarted" and related navigables.
+    Clone network response body with request and response.
 
-    Clone network response body with sessions, request and response.
+    Let sessions be the set of sessions for which an event is enabled given "network.responseStarted" and related navigables.
 
     For each session in sessions:
 
@@ -6582,8 +7333,11 @@ local end definition
 
 ScriptResult = (
   script.AddPreloadScriptResult /
+  script.CallFunctionResult /
+  script.DisownResult /
   script.EvaluateResult /
-  script.GetRealmsResult
+  script.GetRealmsResult /
+  script.RemovePreloadScriptResult
 )
 
 ScriptEvent = (
@@ -7266,12 +8020,14 @@ script.RemoteReference = (
 
 script.SharedReference = {
    sharedId: script.SharedId
+
    ? handle: script.Handle,
    Extensible
 }
 
 script.RemoteObjectReference = {
    handle: script.Handle,
+
    ? sharedId: script.SharedId
    Extensible
 }
@@ -7729,7 +8485,7 @@ To serialize as a remote value given value, serialization options, an ownership 
         Let remote value be a map matching the script.FunctionRemoteValue production in the local end definition, with the handle property set to handle id if it’s not null, or omitted otherwise. 
     Otherwise:
 
-            Assert: type(value) is Object
+            Assert: Type(value) is Object
 
             Let remote value be a map matching the script.ObjectRemoteValue production in the local end definition, with the handle property set to handle id if it’s not null, or omitted otherwise.
 
@@ -8066,7 +8822,8 @@ Command Type
     }
 
 Return Type
-    EmptyResult 
+
+    script.DisownResult = EmptyResult
 
 The remote end steps with command parameters are:
 
@@ -8108,8 +8865,9 @@ Command Type
       ? userActivation: bool .default false,
     }
 
-Result Type
-    script.EvaluateResult 
+Return Type
+
+    script.CallFunctionResult = script.EvaluateResult
 
 TODO: Add timeout argument as described in the script.evaluate.
 
@@ -8129,9 +8887,11 @@ To evaluate function body given function declaration, environment settings, base
 
 Note: the function declaration is parenthesized and evaluated.
 
+    Let bypassDisabledScripting be true.
+
     Let parenthesized function declaration be concatenate «"(", function declaration, ")"»
 
-    Let function script be the result of create a classic script with parenthesized function declaration, environment settings, base URL, and options.
+    Let function script be the result of create a classic script with parenthesized function declaration, environment settings, base URL, options and bypassDisabledScripting.
 
     Prepare to run script with environment settings.
 
@@ -8233,7 +8993,7 @@ Command Type
       ? userActivation: bool .default false,
     }
 
-Result Type
+Return Type
     script.EvaluateResult 
 
 TODO: Add timeout argument. It’s not totally clear how this ought to work; in Chrome it seems like the timeout doesn’t apply to the promise resolve step, but that likely isn’t what clients want.
@@ -8258,7 +9018,9 @@ The remote end steps given session and command parameters are:
 
     Let base URL be the API base URL of environment settings.
 
-    Let script be the result of create a classic script with source, environment settings, base URL, and options.
+    Let bypassDisabledScripting be true.
+
+    Let script be the result of create a classic script with source, environment settings, base URL, options and bypassDisabledScripting.
 
     If command parameters["userActivation"] is true, run activation notification steps.
 
@@ -8300,7 +9062,7 @@ Command Type
       ? type: script.RealmType,
     }
 
-Result Type
+Return Type
 
     script.GetRealmsResult = {
       realms: [*script.RealmInfo]
@@ -8363,7 +9125,8 @@ Command Type
     }
 
 Return Type
-    EmptyResult 
+
+    script.RemovePreloadScriptResult = EmptyResult
 
 The remote end steps given session and command parameters are:
 
@@ -8679,6 +9442,7 @@ Command Type
       params: storage.GetCookiesParameters
     )
 
+
     storage.CookieFilter = {
       ? name: text,
       ? value: network.BytesValue,
@@ -8714,7 +9478,7 @@ Command Type
       ? partition: storage.PartitionDescriptor,
     }
 
-Result Type
+Return Type
 
     storage.GetCookiesResult = {
       cookies: [*network.Cookie],
@@ -8756,6 +9520,7 @@ Command Type
       params: storage.SetCookieParameters,
     )
 
+
     storage.PartialCookie = {
       name: text,
       value: network.BytesValue,
@@ -8773,7 +9538,7 @@ Command Type
       ? partition: storage.PartitionDescriptor,
     }
 
-Result Type
+Return Type
 
     storage.SetCookieResult = {
       partitionKey: storage.PartitionKey
@@ -8833,7 +9598,7 @@ Command Type
       ? partition: storage.PartitionDescriptor,
     }
 
-Result Type
+Return Type
 
     storage.DeleteCookiesResult = {
       partitionKey: storage.PartitionKey
@@ -8951,7 +9716,7 @@ The remote end event trigger is:
 
 Define the following console steps with method, args, and options:
 
-    For each session in active BiDI sessions:
+    For each session in active BiDi sessions:
 
         If method is "error" or "assert", let level be "error". If method is "debug" or "trace" let level be "debug". If method is "warn", let level be "warn". Otherwise let level be "info".
 
@@ -9058,6 +9823,12 @@ InputCommand = (
   input.PerformActions //
   input.ReleaseActions //
   input.SetFiles
+)
+
+InputResult = (
+  input.PerformActionsResult /
+  input.ReleaseActionsResult /
+  input.SetFilesResult
 )
 
 local end definition
@@ -9239,7 +10010,8 @@ Command Type
     input.Origin = "viewport" / "pointer" / input.ElementOrigin
 
 Return Type
-    EmptyResult 
+
+    input.PerformActionsResult = EmptyResult
 
 The remote end steps with session and command parameters are:
 
@@ -9273,7 +10045,8 @@ Command Type
     }
 
 Return Type
-    EmptyResult 
+
+    input.ReleaseActionsResult = EmptyResult
 
 The remote end steps given session, and command parameters are:
 
@@ -9313,7 +10086,8 @@ Command Type
     }
 
 Return Type
-    EmptyResult 
+
+    input.SetFilesResult = EmptyResult
 
 The remote end steps given session and command parameters are:
 
@@ -9367,7 +10141,8 @@ Event Type
        multiple: bool,
     }
 
-The remote end event trigger is the WebDriver BiDi file dialog opened steps, given element and optionally file picker options (default: null):
+A WebDriver BiDi file picker options is a struct with an item named multiple which is a boolean.
+The remote end event trigger is the WebDriver BiDi file dialog opened steps, given element element and optionally WebDriver BiDi file picker options file picker options (default: null):
 
     Let navigable be the element’s node document’s navigable.
 
@@ -9377,9 +10152,7 @@ The remote end event trigger is the WebDriver BiDi file dialog opened steps, giv
 
     If element is not null and element’s multiple attribute is set, set multiple to true.
 
-    If file picker options is not null:
-
-        If file picker options["multiple"] is true, set multiple to true.
+    If file picker options is not null and file picker options’s multiple is true, set multiple to true.
 
     Let related navigables be a set containing navigable.
 
@@ -9430,7 +10203,8 @@ WebExtensionCommand = (
 local end definition
 
 WebExtensionResult = (
-  webExtension.InstallResult
+  webExtension.InstallResult /
+  webExtension.UninstallResult
 )
 
 7.10.2. Types
@@ -9476,7 +10250,7 @@ Command Type
        value: text,
     }
 
-Result Type
+Return Type
 
     webExtension.InstallResult = {
       extension: webExtension.Extension
@@ -9560,6 +10334,10 @@ Command Type
        extension: webExtension.Extension,
     }
 
+Return Type
+
+    webExtension.UninstallResult = EmptyResult
+
 The remote end steps with command parameters are:
 
     Let extension be command parameters["extension"].
@@ -9603,6 +10381,8 @@ The following external specifications define additional WebDriver BiDi modules:
 
     Permissions
 
+    nav-speculation
+
     Web Bluetooth
 
 Index
@@ -9628,10 +10408,10 @@ Terms defined by this specification
         cddl-key for session.NewResult/capabilities, in § 7.1.3.2 
     "accessibility", in § 7.3.2.3
     accessibility, in § 7.3.2.3
-    "accuracy", in § 7.4.2.1
+    "accuracy", in § 7.4.2.2
     accuracy
         attribute for geolocation override, in § 7.4.1
-        cddl-key for emulation.GeolocationCoordinates, in § 7.4.2.1 
+        cddl-key for emulation.GeolocationCoordinates, in § 7.4.2.2 
     "action"
         cddl-key for network.ContinueWithAuthCredentials, in § 7.5.5.5
         cddl-key for network.ContinueWithAuthNoCredentials, in § 7.5.5.5 
@@ -9665,18 +10445,23 @@ Terms defined by this specification
     "all", in § 7.6.3.16
     all, in § 7.6.3.16
     allocate size to record data, in § 7.5.2
-    "altitude", in § 7.4.2.1
+    "allowed", in § 7.2.4.7
+    allowed
+        cddl-value for browser.DownloadBehaviorAllowed/type, in § 7.2.4.7
+        dfn for download-behavior-struct, in § 7.2.4.7 
+    "altitude", in § 7.4.2.2
     altitude
         attribute for geolocation override, in § 7.4.1
-        cddl-key for emulation.GeolocationCoordinates, in § 7.4.2.1 
-    "altitudeAccuracy", in § 7.4.2.1
+        cddl-key for emulation.GeolocationCoordinates, in § 7.4.2.2 
+    "altitudeAccuracy", in § 7.4.2.2
     altitudeAccuracy
         attribute for geolocation override, in § 7.4.1
-        cddl-key for emulation.GeolocationCoordinates, in § 7.4.2.1 
+        cddl-key for emulation.GeolocationCoordinates, in § 7.4.2.2 
     "altitudeAngle", in § 7.9.3.1
     altitudeAngle, in § 7.9.3.1
     "alwaysMatch", in § 7.1.2.1
     alwaysMatch, in § 7.1.2.1
+    apply network conditions, in § 7.4.2.4
     "archivePath", in § 7.10.3.1
     archivePath, in § 7.10.3.1
     "args", in § 7.8.2.1
@@ -9778,6 +10563,7 @@ Terms defined by this specification
     browser.close
         cddl-value for browser.Close/method, in § 7.2.4.1
         dfn for commands, in § 7.2.4.1 
+    browser.CloseResult, in § 7.2.4.1
     BrowserCommand, in § 7.2.1
     "browser.createUserContext", in § 7.2.4.2
     browser.CreateUserContext, in § 7.2.4.2
@@ -9786,6 +10572,9 @@ Terms defined by this specification
         dfn for commands, in § 7.2.4.2 
     browser.CreateUserContextParameters, in § 7.2.4.2
     browser.CreateUserContextResult, in § 7.2.4.2
+    browser.DownloadBehavior, in § 7.2.4.7
+    browser.DownloadBehaviorAllowed, in § 7.2.4.7
+    browser.DownloadBehaviorDenied, in § 7.2.4.7
     "browser.getClientWindows", in § 7.2.4.3
     browser.GetClientWindows, in § 7.2.4.3
     browser.getClientWindows
@@ -9810,6 +10599,7 @@ Terms defined by this specification
         cddl-value for browser.RemoveUserContext/method, in § 7.2.4.5
         dfn for commands, in § 7.2.4.5 
     browser.RemoveUserContextParameters, in § 7.2.4.5
+    browser.RemoveUserContextResult, in § 7.2.4.5
     BrowserResult, in § 7.2.1
     "browser.setClientWindowState", in § 7.2.4.6
     browser.SetClientWindowState, in § 7.2.4.6
@@ -9817,7 +10607,15 @@ Terms defined by this specification
         cddl-value for browser.SetClientWindowState/method, in § 7.2.4.6
         dfn for commands, in § 7.2.4.6 
     browser.SetClientWindowStateParameters, in § 7.2.4.6
-    browser.UserContext, in § 7.2.3.3
+    browser.SetClientWindowStateResult, in § 7.2.4.6
+    "browser.setDownloadBehavior", in § 7.2.4.7
+    browser.SetDownloadBehavior, in § 7.2.4.7
+    browser.setDownloadBehavior, in § 7.2.4.7
+    browser.SetDownloadBehaviorParameters, in § 7.2.4.7
+    browser.SetDownloadBehaviorResult, in § 7.2.4.7
+    browser.UserContext
+        (cddl-type), in § 7.2.3.3
+        definition of, in § 7.2.3.3 
     browser.UserContextInfo, in § 7.2.3.4
     "browserVersion"
         cddl-key for session.CapabilityRequest, in § 7.1.2.2
@@ -9833,6 +10631,7 @@ Terms defined by this specification
         cddl-value for browsingContext.Activate/method, in § 7.3.3.1
         dfn for commands, in § 7.3.3.1 
     browsingContext.ActivateParameters, in § 7.3.3.1
+    browsingContext.ActivateResult, in § 7.3.3.1
     browsingContext.BaseNavigationInfo, in § 7.3.2.5
     browsingContext.BoxClipRectangle, in § 7.3.3.2
     browsingContext.BrowsingContext, in § 7.3.2.1
@@ -9850,6 +10649,7 @@ Terms defined by this specification
         cddl-value for browsingContext.Close/method, in § 7.3.3.3
         dfn for commands, in § 7.3.3.3 
     browsingContext.CloseParameters, in § 7.3.3.3
+    browsingContext.CloseResult, in § 7.3.3.3
     BrowsingContextCommand, in § 7.3.1
     "browsingContext.contextCreated", in § 7.3.4.1
     browsingContext.ContextCreated, in § 7.3.4.1
@@ -9898,6 +10698,7 @@ Terms defined by this specification
         cddl-value for browsingContext.HandleUserPrompt/method, in § 7.3.3.6
         dfn for commands, in § 7.3.3.6 
     browsingContext.HandleUserPromptParameters, in § 7.3.3.6
+    browsingContext.HandleUserPromptResult, in § 7.3.3.6
     "browsingContext.historyUpdated", in § 7.3.4.5
     browsingContext.HistoryUpdated, in § 7.3.4.5
     browsingContext.historyUpdated, in § 7.3.4.5
@@ -9954,6 +10755,7 @@ Terms defined by this specification
         cddl-value for browsingContext.Reload/method, in § 7.3.3.10
         dfn for commands, in § 7.3.3.10 
     browsingContext.ReloadParameters, in § 7.3.3.10
+    browsingContext.ReloadResult, in § 7.3.3.10
     BrowsingContextResult, in § 7.3.1
     "browsingContext.setViewport", in § 7.3.3.11
     browsingContext.SetViewport, in § 7.3.3.11
@@ -9961,6 +10763,7 @@ Terms defined by this specification
         cddl-value for browsingContext.SetViewport/method, in § 7.3.3.11
         dfn for commands, in § 7.3.3.11 
     browsingContext.SetViewportParameters, in § 7.3.3.11
+    browsingContext.SetViewportResult, in § 7.3.3.11
     "browsingContext.traverseHistory", in § 7.3.3.12
     browsingContext.TraverseHistory, in § 7.3.3.12
     browsingContext.traverseHistory
@@ -9989,7 +10792,9 @@ Terms defined by this specification
     "bypass", in § 7.5.5.12
     bypass, in § 7.5.5.12
     "bytes", in § 7.5.5.8
-    bytes, in § 7.5.5.8
+    bytes
+        cddl-key for network.GetDataResult, in § 7.5.5.8
+        dfn for network-data, in § 7.5.2 
     "bytesReceived", in § 7.5.4.17
     bytesReceived, in § 7.5.4.17
     "cacheBehavior", in § 7.5.5.12
@@ -10040,6 +10845,8 @@ Terms defined by this specification
     clientWindows, in § 7.2.4.3
     "clip", in § 7.3.3.2
     clip, in § 7.3.3.2
+    cloned body, in § 7.5.2
+    clone network request body, in § 7.5.2
     clone network response body, in § 7.5.2
     "closed", in § 7.6.3.14
     closed, in § 7.6.3.14
@@ -10056,8 +10863,11 @@ Terms defined by this specification
         cddl-key for network.GetDataParameters, in § 7.5.5.8
         cddl-key for network.RemoveDataCollectorParameters, in § 7.5.5.10
         cddl-key for network.disownDataParameters, in § 7.5.5.6
-        dfn for network, in § 7.5.2 
+        dfn for network, in § 7.5.2
+        dfn for network-collector, in § 7.5.2 
+    collectors, in § 7.5.2
     "collectorType", in § 7.5.5.1
+    collector type, in § 7.5.2
     collectorType, in § 7.5.5.1
     "columnNumber"
         cddl-key for network.Initiator, in § 7.5.4.12
@@ -10165,28 +10975,39 @@ Terms defined by this specification
         cddl-value for storage.BrowsingContextPartitionDescriptor/type, in § 7.7.3.1 
     "contexts"
         cddl-key for browsingContext.GetTreeResult, in § 7.3.3.5
-        cddl-key for emulation.SetGeolocationOverrideParameters, in § 7.4.2.1
-        cddl-key for emulation.SetLocaleOverrideParameters, in § 7.4.2.2
-        cddl-key for emulation.SetScreenOrientationOverrideParameters, in § 7.4.2.3
-        cddl-key for emulation.SetTimezoneOverrideParameters, in § 7.4.2.4
+        cddl-key for emulation.SetForcedColorsModeThemeOverrideParameters, in § 7.4.2.1
+        cddl-key for emulation.SetGeolocationOverrideParameters, in § 7.4.2.2
+        cddl-key for emulation.SetLocaleOverrideParameters, in § 7.4.2.3
+        cddl-key for emulation.SetScreenOrientationOverrideParameters, in § 7.4.2.6
+        cddl-key for emulation.SetScreenSettingsOverrideParameters, in § 7.4.2.5
+        cddl-key for emulation.SetScriptingEnabledParameters, in § 7.4.2.8
+        cddl-key for emulation.SetTimezoneOverrideParameters, in § 7.4.2.9
+        cddl-key for emulation.SetUserAgentOverrideParameters, in § 7.4.2.7
+        cddl-key for emulation.setNetworkConditionsParameters, in § 7.4.2.4
         cddl-key for network.AddDataCollectorParameters, in § 7.5.5.1
         cddl-key for network.AddInterceptParameters, in § 7.5.5.2
         cddl-key for network.SetCacheBehaviorParameters, in § 7.5.5.12
+        cddl-key for network.SetExtraHeadersParameters, in § 7.5.5.13
         cddl-key for script.AddPreloadScriptParameters, in § 7.6.4.1
-        cddl-key for session.SubscriptionRequest, in § 7.1.2.7
-        cddl-key for session.UnsubscribeByAttributesRequest, in § 7.1.2.9 
+        cddl-key for session.SubscribeParameters, in § 7.1.2.7 
     contexts
         cddl-key for browsingContext.GetTreeResult, in § 7.3.3.5
-        cddl-key for emulation.SetGeolocationOverrideParameters, in § 7.4.2.1
-        cddl-key for emulation.SetLocaleOverrideParameters, in § 7.4.2.2
-        cddl-key for emulation.SetScreenOrientationOverrideParameters, in § 7.4.2.3
-        cddl-key for emulation.SetTimezoneOverrideParameters, in § 7.4.2.4
+        cddl-key for emulation.SetForcedColorsModeThemeOverrideParameters, in § 7.4.2.1
+        cddl-key for emulation.SetGeolocationOverrideParameters, in § 7.4.2.2
+        cddl-key for emulation.SetLocaleOverrideParameters, in § 7.4.2.3
+        cddl-key for emulation.SetScreenOrientationOverrideParameters, in § 7.4.2.6
+        cddl-key for emulation.SetScreenSettingsOverrideParameters, in § 7.4.2.5
+        cddl-key for emulation.SetScriptingEnabledParameters, in § 7.4.2.8
+        cddl-key for emulation.SetTimezoneOverrideParameters, in § 7.4.2.9
+        cddl-key for emulation.SetUserAgentOverrideParameters, in § 7.4.2.7
+        cddl-key for emulation.setNetworkConditionsParameters, in § 7.4.2.4
         cddl-key for network.AddDataCollectorParameters, in § 7.5.5.1
         cddl-key for network.AddInterceptParameters, in § 7.5.5.2
         cddl-key for network.SetCacheBehaviorParameters, in § 7.5.5.12
+        cddl-key for network.SetExtraHeadersParameters, in § 7.5.5.13
         cddl-key for script.AddPreloadScriptParameters, in § 7.6.4.1
-        cddl-key for session.SubscriptionRequest, in § 7.1.2.7
-        cddl-key for session.UnsubscribeByAttributesRequest, in § 7.1.2.9 
+        cddl-key for session.SubscribeParameters, in § 7.1.2.7
+        dfn for network-collector, in § 7.5.2 
     "cookie", in § 7.7.3.2
     cookie, in § 7.7.3.2
     "cookies"
@@ -10201,9 +11022,10 @@ Terms defined by this specification
         cddl-key for network.ProvideResponseParameters, in § 7.5.5.9
         cddl-key for network.RequestData, in § 7.5.4.15
         cddl-key for storage.GetCookiesResult, in § 7.7.3.1 
-    "coordinates", in § 7.4.2.1
-    coordinates, in § 7.4.2.1
+    "coordinates", in § 7.4.2.2
+    coordinates, in § 7.4.2.2
     create a channel, in § 7.6.3.2
+    create a headers list, in § 7.5.4.11
     create a sandbox realm, in § 5.1
     "credentials"
         cddl-key for network.ContinueResponseParameters, in § 7.5.5.4
@@ -10214,6 +11036,8 @@ Terms defined by this specification
     "css", in § 7.3.2.3
     css, in § 7.3.2.3
     current stack trace, in § 7.6.3.19
+    "dark", in § 7.4.2.1
+    dark, in § 7.4.2.1
     "data"
         cddl-key for browsingContext.CaptureScreenshotResult, in § 7.3.3.2
         cddl-key for browsingContext.PrintResult, in § 7.3.3.9
@@ -10221,8 +11045,7 @@ Terms defined by this specification
     data
         cddl-key for browsingContext.CaptureScreenshotResult, in § 7.3.3.2
         cddl-key for browsingContext.PrintResult, in § 7.3.3.9
-        cddl-key for script.MessageParameters, in § 7.6.5.1
-        dfn for network, in § 7.5.2 
+        cddl-key for script.MessageParameters, in § 7.6.5.1 
     "dataType"
         cddl-key for network.GetDataParameters, in § 7.5.5.8
         cddl-key for network.disownDataParameters, in § 7.5.5.6 
@@ -10230,6 +11053,7 @@ Terms defined by this specification
         cddl-key for network.GetDataParameters, in § 7.5.5.8
         cddl-key for network.disownDataParameters, in § 7.5.5.6 
     "dataTypes", in § 7.5.5.1
+    data types, in § 7.5.2
     dataTypes, in § 7.5.5.1
     "date", in § 7.6.3.7
     date, in § 7.6.3.7
@@ -10253,6 +11077,10 @@ Terms defined by this specification
         cddl-value for network.SameSite, in § 7.5.4.7
         cddl-value for network.SetCacheBehaviorParameters/cacheBehavior, in § 7.5.5.12 
     default cache behavior, in § 7.5.1
+    default download behavior, in § 7.2.4.7
+    default headers, in § 7.5.1
+    default network conditions, in § 6
+    default user agent, in § 7.4.1
     default user context, in § 6
     "defaultValue", in § 7.3.4.14
     defaultValue, in § 7.3.4.14
@@ -10263,6 +11091,8 @@ Terms defined by this specification
     deltaX, in § 7.9.3.1
     "deltaY", in § 7.9.3.1
     deltaY, in § 7.9.3.1
+    "denied", in § 7.2.4.7
+    denied, in § 7.2.4.7
     deserialize arguments, in § 7.6.4.3
     deserialize filter, in § 7.7.2.1
     deserialize header, in § 7.5.4.11
@@ -10276,6 +11106,10 @@ Terms defined by this specification
     deserialize value list, in § 7.6.3.7
     "destination", in § 7.5.4.15
     destination, in § 7.5.4.15
+    "destinationFolder", in § 7.2.4.7
+    destinationFolder
+        cddl-key for browser.DownloadBehaviorAllowed, in § 7.2.4.7
+        dfn for download-behavior-struct, in § 7.2.4.7 
     "devicePixelRatio", in § 7.3.3.11
     devicePixelRatio
         attribute for viewport-configuration, in § 7.3.1
@@ -10303,6 +11137,10 @@ Terms defined by this specification
         cddl-key for network.SetCookieHeader, in § 7.5.4.18
         cddl-key for storage.CookieFilter, in § 7.7.3.1
         cddl-key for storage.PartialCookie, in § 7.7.3.2 
+    "downloadBehavior", in § 7.2.4.7
+    download behavior, in § 7.2.4.7
+    downloadBehavior, in § 7.2.4.7
+    download behavior struct, in § 7.2.4.7
     downloadedFilepath, in § 7.3
     "duration"
         cddl-key for input.PauseAction, in § 7.9.3.1
@@ -10332,48 +11170,97 @@ Terms defined by this specification
     EmptyParams, in § 3.1
     EmptyResult, in § 3.1
     empty user context, in § 6
+    emulated network conditions, in § 6
+    emulated network conditions struct, in § 6
+    emulated user agent, in § 7.4.1
     emulation, in § 7.4
     EmulationCommand, in § 7.4.1
-    emulation.GeolocationCoordinates, in § 7.4.2.1
-    emulation.GeolocationPositionError, in § 7.4.2.1
-    emulation.ScreenOrientation, in § 7.4.2.3
-    emulation.ScreenOrientationNatural, in § 7.4.2.3
-    emulation.ScreenOrientationType, in § 7.4.2.3
-    "emulation.setGeolocationOverride", in § 7.4.2.1
-    emulation.SetGeolocationOverride, in § 7.4.2.1
-    emulation.setGeolocationOverride
-        cddl-value for emulation.SetGeolocationOverride/method, in § 7.4.2.1
+    emulation.ForcedColorsModeTheme, in § 7.4.2.1
+    emulation.GeolocationCoordinates, in § 7.4.2.2
+    emulation.GeolocationPositionError, in § 7.4.2.2
+    emulation.NetworkConditions, in § 7.4.2.4
+    emulation.NetworkConditionsOffline, in § 7.4.2.4
+    EmulationResult, in § 7.4.1
+    emulation.ScreenArea, in § 7.4.2.5
+    emulation.ScreenOrientation, in § 7.4.2.6
+    emulation.ScreenOrientationNatural, in § 7.4.2.6
+    emulation.ScreenOrientationType, in § 7.4.2.6
+    "emulation.setForcedColorsModeThemeOverride", in § 7.4.2.1
+    emulation.SetForcedColorsModeThemeOverride, in § 7.4.2.1
+    emulation.setForcedColorsModeThemeOverride
+        cddl-value for emulation.SetForcedColorsModeThemeOverride/method, in § 7.4.2.1
         dfn for commands, in § 7.4.2.1 
-    emulation.SetGeolocationOverrideParameters, in § 7.4.2.1
-    "emulation.setLocaleOverride", in § 7.4.2.2
-    emulation.SetLocaleOverride, in § 7.4.2.2
-    emulation.setLocaleOverride
-        cddl-value for emulation.SetLocaleOverride/method, in § 7.4.2.2
+    emulation.SetForcedColorsModeThemeOverrideParameters, in § 7.4.2.1
+    emulation.SetForcedColorsModeThemeOverrideResult, in § 7.4.2.1
+    "emulation.setGeolocationOverride", in § 7.4.2.2
+    emulation.SetGeolocationOverride, in § 7.4.2.2
+    emulation.setGeolocationOverride
+        cddl-value for emulation.SetGeolocationOverride/method, in § 7.4.2.2
         dfn for commands, in § 7.4.2.2 
-    emulation.SetLocaleOverrideParameters, in § 7.4.2.2
-    "emulation.setScreenOrientationOverride", in § 7.4.2.3
-    emulation.SetScreenOrientationOverride, in § 7.4.2.3
-    emulation.setScreenOrientationOverride
-        cddl-value for emulation.SetScreenOrientationOverride/method, in § 7.4.2.3
+    emulation.SetGeolocationOverrideParameters, in § 7.4.2.2
+    emulation.SetGeolocationOverrideResult, in § 7.4.2.2
+    "emulation.setLocaleOverride", in § 7.4.2.3
+    emulation.SetLocaleOverride, in § 7.4.2.3
+    emulation.setLocaleOverride
+        cddl-value for emulation.SetLocaleOverride/method, in § 7.4.2.3
         dfn for commands, in § 7.4.2.3 
-    emulation.SetScreenOrientationOverrideParameters, in § 7.4.2.3
-    "emulation.setTimezoneOverride", in § 7.4.2.4
-    emulation.SetTimezoneOverride, in § 7.4.2.4
-    emulation.setTimezoneOverride
-        cddl-value for emulation.SetTimezoneOverride/method, in § 7.4.2.4
+    emulation.SetLocaleOverrideParameters, in § 7.4.2.3
+    emulation.SetLocaleOverrideResult, in § 7.4.2.3
+    "emulation.setNetworkConditions", in § 7.4.2.4
+    emulation.SetNetworkConditions, in § 7.4.2.4
+    emulation.setNetworkConditions
+        cddl-value for emulation.SetNetworkConditions/method, in § 7.4.2.4
         dfn for commands, in § 7.4.2.4 
-    emulation.SetTimezoneOverrideParameters, in § 7.4.2.4
+    emulation.setNetworkConditionsParameters, in § 7.4.2.4
+    emulation.SetNetworkConditionsResult, in § 7.4.2.4
+    "emulation.setScreenOrientationOverride", in § 7.4.2.6
+    emulation.SetScreenOrientationOverride, in § 7.4.2.6
+    emulation.setScreenOrientationOverride
+        cddl-value for emulation.SetScreenOrientationOverride/method, in § 7.4.2.6
+        dfn for commands, in § 7.4.2.6 
+    emulation.SetScreenOrientationOverrideParameters, in § 7.4.2.6
+    emulation.SetScreenOrientationOverrideResult, in § 7.4.2.6
+    "emulation.setScreenSettingsOverride", in § 7.4.2.5
+    emulation.SetScreenSettingsOverride, in § 7.4.2.5
+    emulation.setScreenSettingsOverride
+        cddl-value for emulation.SetScreenSettingsOverride/method, in § 7.4.2.5
+        dfn for commands, in § 7.4.2.5 
+    emulation.SetScreenSettingsOverrideParameters, in § 7.4.2.5
+    emulation.SetScreenSettingsOverrideResult, in § 7.4.2.5
+    "emulation.setScriptingEnabled", in § 7.4.2.8
+    emulation.SetScriptingEnabled, in § 7.4.2.8
+    emulation.setScriptingEnabled
+        cddl-value for emulation.SetScriptingEnabled/method, in § 7.4.2.8
+        dfn for commands, in § 7.4.2.8 
+    emulation.SetScriptingEnabledParameters, in § 7.4.2.8
+    emulation.SetScriptingEnabledResult, in § 7.4.2.8
+    "emulation.setTimezoneOverride", in § 7.4.2.9
+    emulation.SetTimezoneOverride, in § 7.4.2.9
+    emulation.setTimezoneOverride
+        cddl-value for emulation.SetTimezoneOverride/method, in § 7.4.2.9
+        dfn for commands, in § 7.4.2.9 
+    emulation.SetTimezoneOverrideParameters, in § 7.4.2.9
+    emulation.SetTimezoneOverrideResult, in § 7.4.2.9
+    "emulation.setUserAgentOverride", in § 7.4.2.7
+    emulation.SetUserAgentOverride, in § 7.4.2.7
+    emulation.setUserAgentOverride
+        cddl-value for emulation.SetUserAgentOverride/method, in § 7.4.2.7
+        dfn for commands, in § 7.4.2.7 
+    emulation.SetUserAgentOverrideParameters, in § 7.4.2.7
+    emulation.SetUserAgentOverrideResult, in § 7.4.2.7
+    "enabled", in § 7.4.2.8
+    enabled, in § 7.4.2.8
     encode a canvas as Base64, in § 7.3.3.2
     end the session, in § 7.1.1
     "error"
         cddl-key for ErrorResponse, in § 3.1
-        cddl-key for emulation.SetGeolocationOverrideParameters, in § 7.4.2.1
+        cddl-key for emulation.SetGeolocationOverrideParameters, in § 7.4.2.2
         cddl-value for ErrorResponse/type, in § 3.1
         cddl-value for log.Level, in § 7.8.2.1
         cddl-value for script.ErrorRemoteValue/type, in § 7.6.3.14 
     error
         cddl-key for ErrorResponse, in § 3.1
-        cddl-key for emulation.SetGeolocationOverrideParameters, in § 7.4.2.1
+        cddl-key for emulation.SetGeolocationOverrideParameters, in § 7.4.2.2
         cddl-value for ErrorResponse/type, in § 3.1
         cddl-value for log.Level, in § 7.8.2.1
         cddl-value for script.ErrorRemoteValue/type, in § 7.6.3.14 
@@ -10394,10 +11281,10 @@ Terms defined by this specification
     event names, in § 3.6
     event parameters, in § 3.6
     "events"
-        cddl-key for session.SubscriptionRequest, in § 7.1.2.7
+        cddl-key for session.SubscribeParameters, in § 7.1.2.7
         cddl-key for session.UnsubscribeByAttributesRequest, in § 7.1.2.9 
     events
-        cddl-key for session.SubscriptionRequest, in § 7.1.2.7
+        cddl-key for session.SubscribeParameters, in § 7.1.2.7
         cddl-key for session.UnsubscribeByAttributesRequest, in § 7.1.2.9 
     event type, in § 3.6
     "exception"
@@ -10435,6 +11322,7 @@ Terms defined by this specification
     extension storage partition key attributes, in § 7.7.2.1
     extract a zip archive, in § 7.10.3.1
     extract challenges, in § 7.5.4.1
+    extra headers, in § 7.5.1
     "fetchStart", in § 7.5.4.10
     fetchStart, in § 7.5.4.10
     "file", in § 7.1.2.4
@@ -10455,6 +11343,7 @@ Terms defined by this specification
     firstMatch, in § 7.1.2.1
     "flags", in § 7.6.3.7
     flags, in § 7.6.3.7
+    forced colors mode theme overrides map, in § 7.4.1
     "format", in § 7.3.3.2
     format, in § 7.3.3.2
     "fromCache", in § 7.5.4.17
@@ -10490,7 +11379,9 @@ Terms defined by this specification
     get a sandbox name, in § 5.1
     get a session ID for a WebSocket resource, in § 4
     get collected data, in § 7.5.2
+    get download behavior, in § 7.2.4.7
     get Element from input.ElementOrigin steps, in § 7.9.2.1
+    get emulated network conditions, in § 7.5.6.2
     get exception details, in § 7.6.3.4
     get matching cookies, in § 7.7.2.1
     get navigable for request, in § 7.5.2
@@ -10582,37 +11473,42 @@ Terms defined by this specification
         cddl-key for network.ContinueResponseParameters, in § 7.5.5.4
         cddl-key for network.ProvideResponseParameters, in § 7.5.5.9
         cddl-key for network.RequestData, in § 7.5.4.15
-        cddl-key for network.ResponseData, in § 7.5.4.17 
+        cddl-key for network.ResponseData, in § 7.5.4.17
+        cddl-key for network.SetExtraHeadersParameters, in § 7.5.5.13 
     headers
         cddl-key for network.ContinueRequestParameters, in § 7.5.5.3
         cddl-key for network.ContinueResponseParameters, in § 7.5.5.4
         cddl-key for network.ProvideResponseParameters, in § 7.5.5.9
         cddl-key for network.RequestData, in § 7.5.4.15
-        cddl-key for network.ResponseData, in § 7.5.4.17 
+        cddl-key for network.ResponseData, in § 7.5.4.17
+        cddl-key for network.SetExtraHeadersParameters, in § 7.5.5.13 
     "headersSize"
         cddl-key for network.RequestData, in § 7.5.4.15
         cddl-key for network.ResponseData, in § 7.5.4.17 
     headersSize
         cddl-key for network.RequestData, in § 7.5.4.15
         cddl-key for network.ResponseData, in § 7.5.4.17 
-    "heading", in § 7.4.2.1
+    "heading", in § 7.4.2.2
     heading
         attribute for geolocation override, in § 7.4.1
-        cddl-key for emulation.GeolocationCoordinates, in § 7.4.2.1 
+        cddl-key for emulation.GeolocationCoordinates, in § 7.4.2.2 
     "height"
         cddl-key for browser.ClientWindowInfo, in § 7.2.3.2
         cddl-key for browser.ClientWindowRectState, in § 7.2.4.6
         cddl-key for browsingContext.BoxClipRectangle, in § 7.3.3.2
         cddl-key for browsingContext.PrintPageParameters, in § 7.3.3.9
         cddl-key for browsingContext.Viewport, in § 7.3.3.11
+        cddl-key for emulation.ScreenArea, in § 7.4.2.5
         cddl-key for input.PointerCommonProperties, in § 7.9.3.1 
     height
+        attribute for screen settings, in § 7.3.1
         attribute for viewport-dimensions, in § 7.3.1
         cddl-key for browser.ClientWindowInfo, in § 7.2.3.2
         cddl-key for browser.ClientWindowRectState, in § 7.2.4.6
         cddl-key for browsingContext.BoxClipRectangle, in § 7.3.3.2
         cddl-key for browsingContext.PrintPageParameters, in § 7.3.3.9
         cddl-key for browsingContext.Viewport, in § 7.3.3.11
+        cddl-key for emulation.ScreenArea, in § 7.4.2.5
         cddl-key for input.PointerCommonProperties, in § 7.9.3.1
         dfn for client window, in § 7.2.2 
     host, in § 4
@@ -10691,6 +11587,7 @@ Terms defined by this specification
         cddl-value for input.PerformActions/method, in § 7.9.3.1
         dfn for commands, in § 7.9.3.1 
     input.PerformActionsParameters, in § 7.9.3.1
+    input.PerformActionsResult, in § 7.9.3.1
     input.PointerCommonProperties, in § 7.9.3.1
     input.PointerDownAction, in § 7.9.3.1
     input.PointerMoveAction, in § 7.9.3.1
@@ -10705,12 +11602,15 @@ Terms defined by this specification
         cddl-value for input.ReleaseActions/method, in § 7.9.3.2
         dfn for commands, in § 7.9.3.2 
     input.ReleaseActionsParameters, in § 7.9.3.2
+    input.ReleaseActionsResult, in § 7.9.3.2
+    InputResult, in § 7.9.1
     "input.setFiles", in § 7.9.3.3
     input.SetFiles, in § 7.9.3.3
     input.setFiles
         cddl-value for input.SetFiles/method, in § 7.9.3.3
         dfn for commands, in § 7.9.3.3 
     input.SetFilesParameters, in § 7.9.3.3
+    input.SetFilesResult, in § 7.9.3.3
     input.SourceActions, in § 7.9.3.1
     input.WheelScrollAction, in § 7.9.3.1
     input.WheelSourceAction, in § 7.9.3.1
@@ -10794,24 +11694,26 @@ Terms defined by this specification
     known subscription ids, in § 3.6
     "landscape"
         cddl-value for browsingContext.PrintParameters/orientation, in § 7.3.3.9
-        cddl-value for emulation.ScreenOrientationNatural, in § 7.4.2.3 
+        cddl-value for emulation.ScreenOrientationNatural, in § 7.4.2.6 
     landscape
         cddl-value for browsingContext.PrintParameters/orientation, in § 7.3.3.9
-        cddl-value for emulation.ScreenOrientationNatural, in § 7.4.2.3 
-    "landscape-primary", in § 7.4.2.3
-    landscape-primary, in § 7.4.2.3
-    "landscape-secondary", in § 7.4.2.3
-    landscape-secondary, in § 7.4.2.3
-    "latitude", in § 7.4.2.1
+        cddl-value for emulation.ScreenOrientationNatural, in § 7.4.2.6 
+    "landscape-primary", in § 7.4.2.6
+    landscape-primary, in § 7.4.2.6
+    "landscape-secondary", in § 7.4.2.6
+    landscape-secondary, in § 7.4.2.6
+    "latitude", in § 7.4.2.2
     latitude
         attribute for geolocation override, in § 7.4.1
-        cddl-key for emulation.GeolocationCoordinates, in § 7.4.2.1 
+        cddl-key for emulation.GeolocationCoordinates, in § 7.4.2.2 
     "lax", in § 7.5.4.7
     lax, in § 7.5.4.7
     "left", in § 7.3.3.9
     left, in § 7.3.3.9
     "level", in § 7.8.2.1
     level, in § 7.8.2.1
+    "light", in § 7.4.2.1
+    light, in § 7.4.2.1
     "lineNumber"
         cddl-key for network.Initiator, in § 7.5.4.12
         cddl-key for script.ExceptionDetails, in § 7.6.3.4
@@ -10824,8 +11726,8 @@ Terms defined by this specification
     list of stack frames, in § 7.6.3.19
     list of WebSocket resources, in § 4
     local-cddl, in § 3
-    "locale", in § 7.4.2.2
-    locale, in § 7.4.2.2
+    "locale", in § 7.4.2.3
+    locale, in § 7.4.2.3
     Local end definition, in § 3
     local end definition, in § 3
     locale overrides map, in § 7.3.1
@@ -10850,10 +11752,10 @@ Terms defined by this specification
     log.GenericLogEntry, in § 7.8.2.1
     log.JavascriptLogEntry, in § 7.8.2.1
     log.Level, in § 7.8.2.1
-    "longitude", in § 7.4.2.1
+    "longitude", in § 7.4.2.2
     longitude
         attribute for geolocation override, in § 7.4.1
-        cddl-key for emulation.GeolocationCoordinates, in § 7.4.2.1 
+        cddl-key for emulation.GeolocationCoordinates, in § 7.4.2.2 
     "manual", in § 7.1.2.3
     manual, in § 7.1.2.3
     "map"
@@ -10881,6 +11783,7 @@ Terms defined by this specification
     maxDomDepth, in § 7.6.3.16
     "maxEncodedDataSize", in § 7.5.5.1
     maxEncodedDataSize, in § 7.5.5.1
+    max encoded item size, in § 7.5.2
     maximize client window is supported, in § 7.2.2
     "maximized"
         cddl-value for browser.ClientWindowInfo/state, in § 7.2.3.2
@@ -10893,8 +11796,10 @@ Terms defined by this specification
     maxNodeCount, in § 7.3.3.7
     "maxObjectDepth", in § 7.6.3.16
     maxObjectDepth, in § 7.6.3.16
-    max total data size, in § 7.5.2
+    max total collected size, in § 7.5.2
     maybe abort network response body collection, in § 7.5.2
+    maybe collect network data, in § 7.5.2
+    maybe collect network request body, in § 7.5.2
     maybe collect network response body, in § 7.5.2
     "message"
         cddl-key for ErrorResponse, in § 3.1
@@ -10912,6 +11817,7 @@ Terms defined by this specification
         cddl-key for browser.GetUserContexts, in § 7.2.4.4
         cddl-key for browser.RemoveUserContext, in § 7.2.4.5
         cddl-key for browser.SetClientWindowState, in § 7.2.4.6
+        cddl-key for browser.SetDownloadBehavior, in § 7.2.4.7
         cddl-key for browsingContext.Activate, in § 7.3.3.1
         cddl-key for browsingContext.CaptureScreenshot, in § 7.3.3.2
         cddl-key for browsingContext.Close, in § 7.3.3.3
@@ -10938,10 +11844,15 @@ Terms defined by this specification
         cddl-key for browsingContext.TraverseHistory, in § 7.3.3.12
         cddl-key for browsingContext.UserPromptClosed, in § 7.3.4.13
         cddl-key for browsingContext.UserPromptOpened, in § 7.3.4.14
-        cddl-key for emulation.SetGeolocationOverride, in § 7.4.2.1
-        cddl-key for emulation.SetLocaleOverride, in § 7.4.2.2
-        cddl-key for emulation.SetScreenOrientationOverride, in § 7.4.2.3
-        cddl-key for emulation.SetTimezoneOverride, in § 7.4.2.4
+        cddl-key for emulation.SetForcedColorsModeThemeOverride, in § 7.4.2.1
+        cddl-key for emulation.SetGeolocationOverride, in § 7.4.2.2
+        cddl-key for emulation.SetLocaleOverride, in § 7.4.2.3
+        cddl-key for emulation.SetNetworkConditions, in § 7.4.2.4
+        cddl-key for emulation.SetScreenOrientationOverride, in § 7.4.2.6
+        cddl-key for emulation.SetScreenSettingsOverride, in § 7.4.2.5
+        cddl-key for emulation.SetScriptingEnabled, in § 7.4.2.8
+        cddl-key for emulation.SetTimezoneOverride, in § 7.4.2.9
+        cddl-key for emulation.SetUserAgentOverride, in § 7.4.2.7
         cddl-key for input.FileDialogOpened, in § 7.9.4.1
         cddl-key for input.PerformActions, in § 7.9.3.1
         cddl-key for input.ReleaseActions, in § 7.9.3.2
@@ -10967,6 +11878,7 @@ Terms defined by this specification
         cddl-key for network.ResponseCompleted, in § 7.5.6.4
         cddl-key for network.ResponseStarted, in § 7.5.6.5
         cddl-key for network.SetCacheBehavior, in § 7.5.5.12
+        cddl-key for network.SetExtraHeaders, in § 7.5.5.13
         cddl-key for script.AddPreloadScript, in § 7.6.4.1
         cddl-key for script.CallFunction, in § 7.6.4.3
         cddl-key for script.Disown, in § 7.6.4.2
@@ -10993,6 +11905,7 @@ Terms defined by this specification
         cddl-key for browser.GetUserContexts, in § 7.2.4.4
         cddl-key for browser.RemoveUserContext, in § 7.2.4.5
         cddl-key for browser.SetClientWindowState, in § 7.2.4.6
+        cddl-key for browser.SetDownloadBehavior, in § 7.2.4.7
         cddl-key for browsingContext.Activate, in § 7.3.3.1
         cddl-key for browsingContext.CaptureScreenshot, in § 7.3.3.2
         cddl-key for browsingContext.Close, in § 7.3.3.3
@@ -11019,10 +11932,15 @@ Terms defined by this specification
         cddl-key for browsingContext.TraverseHistory, in § 7.3.3.12
         cddl-key for browsingContext.UserPromptClosed, in § 7.3.4.13
         cddl-key for browsingContext.UserPromptOpened, in § 7.3.4.14
-        cddl-key for emulation.SetGeolocationOverride, in § 7.4.2.1
-        cddl-key for emulation.SetLocaleOverride, in § 7.4.2.2
-        cddl-key for emulation.SetScreenOrientationOverride, in § 7.4.2.3
-        cddl-key for emulation.SetTimezoneOverride, in § 7.4.2.4
+        cddl-key for emulation.SetForcedColorsModeThemeOverride, in § 7.4.2.1
+        cddl-key for emulation.SetGeolocationOverride, in § 7.4.2.2
+        cddl-key for emulation.SetLocaleOverride, in § 7.4.2.3
+        cddl-key for emulation.SetNetworkConditions, in § 7.4.2.4
+        cddl-key for emulation.SetScreenOrientationOverride, in § 7.4.2.6
+        cddl-key for emulation.SetScreenSettingsOverride, in § 7.4.2.5
+        cddl-key for emulation.SetScriptingEnabled, in § 7.4.2.8
+        cddl-key for emulation.SetTimezoneOverride, in § 7.4.2.9
+        cddl-key for emulation.SetUserAgentOverride, in § 7.4.2.7
         cddl-key for input.FileDialogOpened, in § 7.9.4.1
         cddl-key for input.PerformActions, in § 7.9.3.1
         cddl-key for input.ReleaseActions, in § 7.9.3.2
@@ -11048,6 +11966,7 @@ Terms defined by this specification
         cddl-key for network.ResponseCompleted, in § 7.5.6.4
         cddl-key for network.ResponseStarted, in § 7.5.6.5
         cddl-key for network.SetCacheBehavior, in § 7.5.5.12
+        cddl-key for network.SetExtraHeaders, in § 7.5.5.13
         cddl-key for script.AddPreloadScript, in § 7.6.4.1
         cddl-key for script.CallFunction, in § 7.6.4.3
         cddl-key for script.Disown, in § 7.6.4.2
@@ -11086,7 +12005,9 @@ Terms defined by this specification
     "move target out of bounds", in § 3.5
     move target out of bounds, in § 3.5
     "multiple", in § 7.9.4.1
-    multiple, in § 7.9.4.1
+    multiple
+        cddl-key for input.FileDialogInfo, in § 7.9.4.1
+        dfn for WebDriver BiDi file picker options, in § 7.9.4.1 
     "name"
         cddl-key for browsingContext.AccessibilityLocator/value, in § 7.3.2.3
         cddl-key for network.Cookie, in § 7.5.4.7
@@ -11107,13 +12028,17 @@ Terms defined by this specification
     namespaceURI, in § 7.6.3.14
     "NaN", in § 7.6.3.10
     NaN, in § 7.6.3.10
-    "natural", in § 7.4.2.3
+    "natural", in § 7.4.2.6
     natural
         attribute for screen orientation override, in § 7.4.1
-        cddl-key for emulation.ScreenOrientation, in § 7.4.2.3 
+        cddl-key for emulation.ScreenOrientation, in § 7.4.2.6 
     navigable cache behavior, in § 7.5.5.12
     navigable cache behavior map, in § 7.5.1
+    navigable headers, in § 7.5.1
     navigable id, in § 7.3.2.1
+    navigable network conditions, in § 6
+    navigable screen settings, in § 7.3.1
+    navigable user agent, in § 7.4.1
     "navigation"
         cddl-key for browsingContext.BaseNavigationInfo, in § 7.3.2.5
         cddl-key for browsingContext.NavigateResult, in § 7.3.3.8
@@ -11149,23 +12074,33 @@ Terms defined by this specification
     network.BeforeRequestSent, in § 7.5.6.2
     network.beforeRequestSent, in § 7.5.6.2
     network.BeforeRequestSentParameters, in § 7.5.6.2
-    network.BytesValue, in § 7.5.4.4
-    network.Collector, in § 7.5.4.5
+    network.BytesValue
+        (cddl-type), in § 7.5.4.4
+        definition of, in § 7.5.4.4 
+    network.Collector
+        (cddl-type), in § 7.5.4.5
+        definition of, in § 7.5.4.5 
     network collectors, in § 7.5.2
-    network.CollectorType, in § 7.5.4.6
+    network.CollectorType
+        (cddl-type), in § 7.5.4.6
+        definition of, in § 7.5.4.6 
     NetworkCommand, in § 7.5.1
+    "networkConditions", in § 7.4.2.4
+    networkConditions, in § 7.4.2.4
     "network.continueRequest", in § 7.5.5.3
     network.ContinueRequest, in § 7.5.5.3
     network.continueRequest
         cddl-value for network.ContinueRequest/method, in § 7.5.5.3
         dfn for commands, in § 7.5.5.3 
     network.ContinueRequestParameters, in § 7.5.5.3
+    network.ContinueRequestResult, in § 7.5.5.3
     "network.continueResponse", in § 7.5.5.4
     network.ContinueResponse, in § 7.5.5.4
     network.continueResponse
         cddl-value for network.ContinueResponse/method, in § 7.5.5.4
         dfn for commands, in § 7.5.5.4 
     network.ContinueResponseParameters, in § 7.5.5.4
+    network.ContinueResponseResult, in § 7.5.5.4
     "network.continueWithAuth", in § 7.5.5.5
     network.ContinueWithAuth, in § 7.5.5.5
     network.continueWithAuth
@@ -11174,15 +12109,20 @@ Terms defined by this specification
     network.ContinueWithAuthCredentials, in § 7.5.5.5
     network.ContinueWithAuthNoCredentials, in § 7.5.5.5
     network.ContinueWithAuthParameters, in § 7.5.5.5
+    network.ContinueWithAuthResult, in § 7.5.5.5
     network.Cookie, in § 7.5.4.7
     network.CookieHeader, in § 7.5.4.8
-    network.DataType, in § 7.5.4.9
+    network data, in § 7.5.2
+    network.DataType
+        (cddl-type), in § 7.5.4.9
+        definition of, in § 7.5.4.9 
     "network.disownData", in § 7.5.5.6
     network.DisownData, in § 7.5.5.6
     network.disownData
         cddl-value for network.DisownData/method, in § 7.5.5.6
         dfn for commands, in § 7.5.5.6 
     network.disownDataParameters, in § 7.5.5.6
+    network.DisownDataResult, in § 7.5.5.6
     NetworkEvent, in § 7.5.1
     "network.failRequest", in § 7.5.5.7
     network.FailRequest, in § 7.5.5.7
@@ -11190,6 +12130,7 @@ Terms defined by this specification
         cddl-value for network.FailRequest/method, in § 7.5.5.7
         dfn for commands, in § 7.5.5.7 
     network.FailRequestParameters, in § 7.5.5.7
+    network.FailRequestResult, in § 7.5.5.7
     "network.fetchError", in § 7.5.6.3
     network.FetchError, in § 7.5.6.3
     network.fetchError, in § 7.5.6.3
@@ -11213,18 +12154,21 @@ Terms defined by this specification
         cddl-value for network.ProvideResponse/method, in § 7.5.5.9
         dfn for commands, in § 7.5.5.9 
     network.ProvideResponseParameters, in § 7.5.5.9
+    network.ProvideResponseResult, in § 7.5.5.9
     "network.removeDataCollector", in § 7.5.5.10
     network.RemoveDataCollector, in § 7.5.5.10
     network.removeDataCollector
         cddl-value for network.RemoveDataCollector/method, in § 7.5.5.10
         dfn for commands, in § 7.5.5.10 
     network.RemoveDataCollectorParameters, in § 7.5.5.10
+    network.RemoveDataCollectorResult, in § 7.5.5.10
     "network.removeIntercept", in § 7.5.5.11
     network.RemoveIntercept, in § 7.5.5.11
     network.removeIntercept
         cddl-value for network.RemoveIntercept/method, in § 7.5.5.11
         dfn for commands, in § 7.5.5.11 
     network.RemoveInterceptParameters, in § 7.5.5.11
+    network.RemoveInterceptResult, in § 7.5.5.11
     network.Request, in § 7.5.4.14
     network.RequestData, in § 7.5.4.15
     "network.responseCompleted", in § 7.5.6.4
@@ -11245,7 +12189,15 @@ Terms defined by this specification
         cddl-value for network.SetCacheBehavior/method, in § 7.5.5.12
         dfn for commands, in § 7.5.5.12 
     network.SetCacheBehaviorParameters, in § 7.5.5.12
+    network.SetCacheBehaviorResult, in § 7.5.5.12
     network.SetCookieHeader, in § 7.5.4.18
+    "network.setExtraHeaders", in § 7.5.5.13
+    network.SetExtraHeaders, in § 7.5.5.13
+    network.setExtraHeaders
+        cddl-value for network.SetExtraHeaders/method, in § 7.5.5.13
+        dfn for commands, in § 7.5.5.13 
+    network.SetExtraHeadersParameters, in § 7.5.5.13
+    network.SetExtraHeadersResult, in § 7.5.5.13
     network.StringValue, in § 7.5.4.4
     network.UrlPattern, in § 7.5.4.19
     network.UrlPatternPattern, in § 7.5.4.19
@@ -11343,6 +12295,10 @@ Terms defined by this specification
         cddl-value for script.ObjectLocalValue/type, in § 7.6.3.7
         cddl-value for script.ObjectRemoteValue/type, in § 7.6.3.14 
     obtain a set of event names, in § 3.6
+    "offline", in § 7.4.2.4
+    offline
+        cddl-value for emulation.NetworkConditionsOffline/type, in § 7.4.2.4
+        dfn for emulated-network-conditions-struct, in § 6 
     "open"
         cddl-value for script.NodeProperties/mode, in § 7.6.3.14
         cddl-value for script.SerializationOptions/includeShadowTree, in § 7.6.3.16 
@@ -11391,6 +12347,7 @@ Terms defined by this specification
         cddl-key for browser.GetUserContexts, in § 7.2.4.4
         cddl-key for browser.RemoveUserContext, in § 7.2.4.5
         cddl-key for browser.SetClientWindowState, in § 7.2.4.6
+        cddl-key for browser.SetDownloadBehavior, in § 7.2.4.7
         cddl-key for browsingContext.Activate, in § 7.3.3.1
         cddl-key for browsingContext.CaptureScreenshot, in § 7.3.3.2
         cddl-key for browsingContext.Close, in § 7.3.3.3
@@ -11417,10 +12374,15 @@ Terms defined by this specification
         cddl-key for browsingContext.TraverseHistory, in § 7.3.3.12
         cddl-key for browsingContext.UserPromptClosed, in § 7.3.4.13
         cddl-key for browsingContext.UserPromptOpened, in § 7.3.4.14
-        cddl-key for emulation.SetGeolocationOverride, in § 7.4.2.1
-        cddl-key for emulation.SetLocaleOverride, in § 7.4.2.2
-        cddl-key for emulation.SetScreenOrientationOverride, in § 7.4.2.3
-        cddl-key for emulation.SetTimezoneOverride, in § 7.4.2.4
+        cddl-key for emulation.SetForcedColorsModeThemeOverride, in § 7.4.2.1
+        cddl-key for emulation.SetGeolocationOverride, in § 7.4.2.2
+        cddl-key for emulation.SetLocaleOverride, in § 7.4.2.3
+        cddl-key for emulation.SetNetworkConditions, in § 7.4.2.4
+        cddl-key for emulation.SetScreenOrientationOverride, in § 7.4.2.6
+        cddl-key for emulation.SetScreenSettingsOverride, in § 7.4.2.5
+        cddl-key for emulation.SetScriptingEnabled, in § 7.4.2.8
+        cddl-key for emulation.SetTimezoneOverride, in § 7.4.2.9
+        cddl-key for emulation.SetUserAgentOverride, in § 7.4.2.7
         cddl-key for input.FileDialogOpened, in § 7.9.4.1
         cddl-key for input.PerformActions, in § 7.9.3.1
         cddl-key for input.ReleaseActions, in § 7.9.3.2
@@ -11443,6 +12405,7 @@ Terms defined by this specification
         cddl-key for network.ResponseCompleted, in § 7.5.6.4
         cddl-key for network.ResponseStarted, in § 7.5.6.5
         cddl-key for network.SetCacheBehavior, in § 7.5.5.12
+        cddl-key for network.SetExtraHeaders, in § 7.5.5.13
         cddl-key for script.AddPreloadScript, in § 7.6.4.1
         cddl-key for script.CallFunction, in § 7.6.4.3
         cddl-key for script.Disown, in § 7.6.4.2
@@ -11469,6 +12432,7 @@ Terms defined by this specification
         cddl-key for browser.GetUserContexts, in § 7.2.4.4
         cddl-key for browser.RemoveUserContext, in § 7.2.4.5
         cddl-key for browser.SetClientWindowState, in § 7.2.4.6
+        cddl-key for browser.SetDownloadBehavior, in § 7.2.4.7
         cddl-key for browsingContext.Activate, in § 7.3.3.1
         cddl-key for browsingContext.CaptureScreenshot, in § 7.3.3.2
         cddl-key for browsingContext.Close, in § 7.3.3.3
@@ -11495,10 +12459,15 @@ Terms defined by this specification
         cddl-key for browsingContext.TraverseHistory, in § 7.3.3.12
         cddl-key for browsingContext.UserPromptClosed, in § 7.3.4.13
         cddl-key for browsingContext.UserPromptOpened, in § 7.3.4.14
-        cddl-key for emulation.SetGeolocationOverride, in § 7.4.2.1
-        cddl-key for emulation.SetLocaleOverride, in § 7.4.2.2
-        cddl-key for emulation.SetScreenOrientationOverride, in § 7.4.2.3
-        cddl-key for emulation.SetTimezoneOverride, in § 7.4.2.4
+        cddl-key for emulation.SetForcedColorsModeThemeOverride, in § 7.4.2.1
+        cddl-key for emulation.SetGeolocationOverride, in § 7.4.2.2
+        cddl-key for emulation.SetLocaleOverride, in § 7.4.2.3
+        cddl-key for emulation.SetNetworkConditions, in § 7.4.2.4
+        cddl-key for emulation.SetScreenOrientationOverride, in § 7.4.2.6
+        cddl-key for emulation.SetScreenSettingsOverride, in § 7.4.2.5
+        cddl-key for emulation.SetScriptingEnabled, in § 7.4.2.8
+        cddl-key for emulation.SetTimezoneOverride, in § 7.4.2.9
+        cddl-key for emulation.SetUserAgentOverride, in § 7.4.2.7
         cddl-key for input.FileDialogOpened, in § 7.9.4.1
         cddl-key for input.PerformActions, in § 7.9.3.1
         cddl-key for input.ReleaseActions, in § 7.9.3.2
@@ -11521,6 +12490,7 @@ Terms defined by this specification
         cddl-key for network.ResponseCompleted, in § 7.5.6.4
         cddl-key for network.ResponseStarted, in § 7.5.6.5
         cddl-key for network.SetCacheBehavior, in § 7.5.5.12
+        cddl-key for network.SetExtraHeaders, in § 7.5.5.13
         cddl-key for script.AddPreloadScript, in § 7.6.4.1
         cddl-key for script.CallFunction, in § 7.6.4.3
         cddl-key for script.Disown, in § 7.6.4.2
@@ -11599,7 +12569,9 @@ Terms defined by this specification
     pause, in § 7.9.3.1
     "pen", in § 7.9.3.1
     pen, in § 7.9.3.1
-    pending, in § 7.3
+    pending
+        definition of, in § 7.3
+        dfn for network-data, in § 7.5.2 
     "phases", in § 7.5.5.2
     phases, in § 7.5.5.2
     "platformName"
@@ -11628,16 +12600,16 @@ Terms defined by this specification
         dfn for listener, in § 4 
     "portrait"
         cddl-value for browsingContext.PrintParameters/orientation, in § 7.3.3.9
-        cddl-value for emulation.ScreenOrientationNatural, in § 7.4.2.3 
+        cddl-value for emulation.ScreenOrientationNatural, in § 7.4.2.6 
     portrait
         cddl-value for browsingContext.PrintParameters/orientation, in § 7.3.3.9
-        cddl-value for emulation.ScreenOrientationNatural, in § 7.4.2.3 
-    "portrait-primary", in § 7.4.2.3
-    portrait-primary, in § 7.4.2.3
-    "portrait-secondary", in § 7.4.2.3
-    portrait-secondary, in § 7.4.2.3
-    "positionUnavailable", in § 7.4.2.1
-    positionUnavailable, in § 7.4.2.1
+        cddl-value for emulation.ScreenOrientationNatural, in § 7.4.2.6 
+    "portrait-primary", in § 7.4.2.6
+    portrait-primary, in § 7.4.2.6
+    "portrait-secondary", in § 7.4.2.6
+    portrait-secondary, in § 7.4.2.6
+    "positionUnavailable", in § 7.4.2.2
+    positionUnavailable, in § 7.4.2.2
     "preflight", in § 7.5.4.12
     preflight, in § 7.5.4.12
     Preload script, in § 7.6.2
@@ -11747,7 +12719,8 @@ Terms defined by this specification
         cddl-key for network.Initiator, in § 7.5.4.12
         cddl-key for network.ProvideResponseParameters, in § 7.5.5.9
         cddl-key for network.RequestData, in § 7.5.4.15
-        cddl-key for network.disownDataParameters, in § 7.5.5.6 
+        cddl-key for network.disownDataParameters, in § 7.5.5.6
+        cddl-value for network.DataType, in § 7.5.4.9 
     request
         cddl-key for network.BaseParameters, in § 7.5.4.3
         cddl-key for network.ContinueRequestParameters, in § 7.5.5.3
@@ -11758,7 +12731,9 @@ Terms defined by this specification
         cddl-key for network.Initiator, in § 7.5.4.12
         cddl-key for network.ProvideResponseParameters, in § 7.5.5.9
         cddl-key for network.RequestData, in § 7.5.4.15
-        cddl-key for network.disownDataParameters, in § 7.5.5.6 
+        cddl-key for network.disownDataParameters, in § 7.5.5.6
+        cddl-value for network.DataType, in § 7.5.4.9
+        dfn for network-data, in § 7.5.2 
     request id, in § 7.5.4.14
     request originates in user context, in § 7.5.6.2
     "requestStart", in § 7.5.4.10
@@ -11835,10 +12810,14 @@ Terms defined by this specification
     scale, in § 7.3.3.9
     "scheme", in § 7.5.4.1
     scheme, in § 7.5.4.1
-    "screenOrientation", in § 7.4.2.3
-    screenOrientation, in § 7.4.2.3
+    "screenArea", in § 7.4.2.5
+    screenArea, in § 7.4.2.5
+    "screenOrientation", in § 7.4.2.6
+    screenOrientation, in § 7.4.2.6
     screen orientation override, in § 7.4.1
     screen orientation overrides map, in § 7.4.1
+    screen settings, in § 7.3.1
+    screen settings overrides, in § 7.3.1
     "script"
         cddl-key for script.AddPreloadScriptResult, in § 7.6.4.1
         cddl-key for script.RemovePreloadScriptParameters, in § 7.6.4.6
@@ -11868,6 +12847,7 @@ Terms defined by this specification
         cddl-value for script.CallFunction/method, in § 7.6.4.3
         dfn for commands, in § 7.6.4.3 
     script.CallFunctionParameters, in § 7.6.4.3
+    script.CallFunctionResult, in § 7.6.4.3
     script.Channel
         (cddl-type), in § 7.6.3.1
         definition of, in § 7.6.3.1 
@@ -11884,6 +12864,7 @@ Terms defined by this specification
         cddl-value for script.Disown/method, in § 7.6.4.2
         dfn for commands, in § 7.6.4.2 
     script.DisownParameters, in § 7.6.4.2
+    script.DisownResult, in § 7.6.4.2
     script.ErrorRemoteValue, in § 7.6.3.14
     "script.evaluate", in § 7.6.4.4
     script.Evaluate, in § 7.6.4.4
@@ -11907,6 +12888,7 @@ Terms defined by this specification
     script.GetRealmsResult, in § 7.6.4.5
     script.Handle, in § 7.6.3.5
     script.HTMLCollectionRemoteValue, in § 7.6.3.14
+    scripting enabled overrides map, in § 7.3.1
     script.InternalId, in § 7.6.3.6
     script.ListLocalValue, in § 7.6.3.7
     script.ListRemoteValue, in § 7.6.3.14
@@ -11960,6 +12942,7 @@ Terms defined by this specification
         cddl-value for script.RemovePreloadScript/method, in § 7.6.4.6
         dfn for commands, in § 7.6.4.6 
     script.RemovePreloadScriptParameters, in § 7.6.4.6
+    script.RemovePreloadScriptResult, in § 7.6.4.6
     ScriptResult, in § 7.6.1
     script.ResultOwnership, in § 7.6.3.15
     script.SerializationOptions, in § 7.6.3.16
@@ -12040,6 +13023,7 @@ Terms defined by this specification
     session.end
         cddl-value for session.End/method, in § 7.1.3.3
         dfn for commands, in § 7.1.3.3 
+    session.EndResult, in § 7.1.3.3
     "sessionId", in § 7.1.3.2
     sessionId, in § 7.1.3.2
     session.ManualProxyConfiguration, in § 7.1.2.3
@@ -12067,9 +13051,9 @@ Terms defined by this specification
     session.subscribe
         cddl-value for session.Subscribe/method, in § 7.1.3.4
         dfn for commands, in § 7.1.3.4 
+    session.SubscribeParameters, in § 7.1.2.7
     session.SubscribeResult, in § 7.1.3.4
     session.Subscription, in § 7.1.2.6
-    session.SubscriptionRequest, in § 7.1.2.7
     session.SystemProxyConfiguration, in § 7.1.2.3
     "session.unsubscribe", in § 7.1.3.5
     session.Unsubscribe, in § 7.1.3.5
@@ -12079,6 +13063,7 @@ Terms defined by this specification
     session.UnsubscribeByAttributesRequest, in § 7.1.2.9
     session.UnsubscribeByIDRequest, in § 7.1.2.8
     session.UnsubscribeParameters, in § 7.1.3.5
+    session.UnsubscribeResult, in § 7.1.3.5
     session.UserPromptHandler, in § 7.1.2.4
     session.UserPromptHandlerType, in § 7.1.2.5
     session WebSocket connections, in § 4
@@ -12089,7 +13074,7 @@ Terms defined by this specification
         cddl-value for script.SetLocalValue/type, in § 7.6.3.7
         cddl-value for script.SetRemoteValue/type, in § 7.6.3.14 
     set device pixel ratio override, in § 7.3.3.11
-    set emulated screen orientation, in § 7.4.2.3
+    set emulated screen orientation, in § 7.4.2.6
     set internal ids if needed, in § 7.6.3.14
     set of all command names, in § 3.4
     set of sessions for which an event is enabled, in § 3.6
@@ -12124,7 +13109,8 @@ Terms defined by this specification
     size
         cddl-key for network.Cookie, in § 7.5.4.7
         cddl-key for network.ResponseContent, in § 7.5.4.16
-        cddl-key for storage.CookieFilter, in § 7.7.3.1 
+        cddl-key for storage.CookieFilter, in § 7.7.3.1
+        dfn for network-data, in § 7.5.2 
     "socksProxy", in § 7.1.2.3
     socksProxy, in § 7.1.2.3
     "socksVersion", in § 7.1.2.3
@@ -12141,10 +13127,10 @@ Terms defined by this specification
     sourceOrigin
         cddl-key for storage.PartitionKey, in § 7.7.2.1
         cddl-key for storage.StorageKeyPartitionDescriptor, in § 7.7.3.1 
-    "speed", in § 7.4.2.1
+    "speed", in § 7.4.2.2
     speed
         attribute for geolocation override, in § 7.4.1
-        cddl-key for emulation.GeolocationCoordinates, in § 7.4.2.1 
+        cddl-key for emulation.GeolocationCoordinates, in § 7.4.2.2 
     "sslProxy", in § 7.1.2.3
     sslProxy, in § 7.1.2.3
     stack frame, in § 7.6.3.19
@@ -12276,6 +13262,8 @@ Terms defined by this specification
     text
         cddl-key for log.BaseLogEntry, in § 7.8.2.1
         cddl-key for script.ExceptionDetails, in § 7.6.3.4 
+    "theme", in § 7.4.2.1
+    theme, in § 7.4.2.1
     "this", in § 7.6.4.3
     this, in § 7.6.4.3
     "timeOrigin", in § 7.5.4.10
@@ -12290,8 +13278,8 @@ Terms defined by this specification
         cddl-key for browsingContext.HistoryUpdatedParameters, in § 7.3.4.5
         cddl-key for log.BaseLogEntry, in § 7.8.2.1
         cddl-key for network.BaseParameters, in § 7.5.4.3 
-    "timezone", in § 7.4.2.4
-    timezone, in § 7.4.2.4
+    "timezone", in § 7.4.2.9
+    timezone, in § 7.4.2.9
     timezone overrides map, in § 7.3.1
     "timings", in § 7.5.4.15
     timings, in § 7.5.4.15
@@ -12308,6 +13296,8 @@ Terms defined by this specification
         cddl-key for CommandResponse, in § 3.1
         cddl-key for ErrorResponse, in § 3.1
         cddl-key for Event, in § 3.1
+        cddl-key for browser.DownloadBehaviorAllowed, in § 7.2.4.7
+        cddl-key for browser.DownloadBehaviorDenied, in § 7.2.4.7
         cddl-key for browsingContext.AccessibilityLocator, in § 7.3.2.3
         cddl-key for browsingContext.BoxClipRectangle, in § 7.3.3.2
         cddl-key for browsingContext.ContextLocator, in § 7.3.2.3
@@ -12319,8 +13309,9 @@ Terms defined by this specification
         cddl-key for browsingContext.UserPromptClosedParameters, in § 7.3.4.13
         cddl-key for browsingContext.UserPromptOpenedParameters, in § 7.3.4.14
         cddl-key for browsingContext.XPathLocator, in § 7.3.2.3
-        cddl-key for emulation.GeolocationPositionError, in § 7.4.2.1
-        cddl-key for emulation.ScreenOrientation, in § 7.4.2.3
+        cddl-key for emulation.GeolocationPositionError, in § 7.4.2.2
+        cddl-key for emulation.NetworkConditionsOffline, in § 7.4.2.4
+        cddl-key for emulation.ScreenOrientation, in § 7.4.2.6
         cddl-key for input.ElementOrigin, in § 7.9.2.1
         cddl-key for input.KeyDownAction, in § 7.9.3.1
         cddl-key for input.KeySourceActions, in § 7.9.3.1
@@ -12394,6 +13385,8 @@ Terms defined by this specification
         cddl-key for CommandResponse, in § 3.1
         cddl-key for ErrorResponse, in § 3.1
         cddl-key for Event, in § 3.1
+        cddl-key for browser.DownloadBehaviorAllowed, in § 7.2.4.7
+        cddl-key for browser.DownloadBehaviorDenied, in § 7.2.4.7
         cddl-key for browsingContext.AccessibilityLocator, in § 7.3.2.3
         cddl-key for browsingContext.BoxClipRectangle, in § 7.3.3.2
         cddl-key for browsingContext.ContextLocator, in § 7.3.2.3
@@ -12405,8 +13398,9 @@ Terms defined by this specification
         cddl-key for browsingContext.UserPromptClosedParameters, in § 7.3.4.13
         cddl-key for browsingContext.UserPromptOpenedParameters, in § 7.3.4.14
         cddl-key for browsingContext.XPathLocator, in § 7.3.2.3
-        cddl-key for emulation.GeolocationPositionError, in § 7.4.2.1
-        cddl-key for emulation.ScreenOrientation, in § 7.4.2.3
+        cddl-key for emulation.GeolocationPositionError, in § 7.4.2.2
+        cddl-key for emulation.NetworkConditionsOffline, in § 7.4.2.4
+        cddl-key for emulation.ScreenOrientation, in § 7.4.2.6
         cddl-key for input.ElementOrigin, in § 7.9.2.1
         cddl-key for input.KeyDownAction, in § 7.9.3.1
         cddl-key for input.KeySourceActions, in § 7.9.3.1
@@ -12474,7 +13468,8 @@ Terms defined by this specification
         cddl-key for storage.StorageKeyPartitionDescriptor, in § 7.7.3.1
         cddl-key for webExtension.ExtensionArchivePath, in § 7.10.3.1
         cddl-key for webExtension.ExtensionBase64Encoded, in § 7.10.3.1
-        cddl-key for webExtension.ExtensionPath, in § 7.10.3.1 
+        cddl-key for webExtension.ExtensionPath, in § 7.10.3.1
+        dfn for network-data, in § 7.5.2 
     "typedarray", in § 7.6.3.14
     typedarray, in § 7.6.3.14
     "unable to capture screen", in § 3.5
@@ -12519,6 +13514,8 @@ Terms defined by this specification
     "unsupported operation", in § 3.5
     unsupported operation, in § 3.5
     unwrapped, in § 5.2
+    update headers, in § 7.5.5.13
+    update request headers, in § 7.5.5.13
     update the response, in § 7.5.3
     "url"
         cddl-key for browsingContext.BaseNavigationInfo, in § 7.3.2.5
@@ -12549,8 +13546,12 @@ Terms defined by this specification
     userActivation
         cddl-key for script.CallFunctionParameters, in § 7.6.4.3
         cddl-key for script.EvaluateParameters, in § 7.6.4.4 
-    "userAgent", in § 7.1.3.2
-    userAgent, in § 7.1.3.2
+    "userAgent"
+        cddl-key for emulation.SetUserAgentOverrideParameters, in § 7.4.2.7
+        cddl-key for session.NewResult/capabilities, in § 7.1.3.2 
+    userAgent
+        cddl-key for emulation.SetUserAgentOverrideParameters, in § 7.4.2.7
+        cddl-key for session.NewResult/capabilities, in § 7.1.3.2 
     "userContext"
         cddl-key for browser.RemoveUserContextParameters, in § 7.2.4.5
         cddl-key for browser.UserContextInfo, in § 7.2.3.4
@@ -12566,30 +13567,50 @@ Terms defined by this specification
         cddl-key for browsingContext.Info, in § 7.3.2.2
         cddl-key for storage.PartitionKey, in § 7.7.2.1
         cddl-key for storage.StorageKeyPartitionDescriptor, in § 7.7.3.1 
+    user context download behavior, in § 7.2.4.7
+    user context headers, in § 7.5.1
     user context id, in § 6
     user context ids, in § 3.6
+    user context network conditions, in § 6
     "userContexts"
         cddl-key for browser.GetUserContextsResult, in § 7.2.4.4
+        cddl-key for browser.SetDownloadBehaviorParameters, in § 7.2.4.7
         cddl-key for browsingContext.SetViewportParameters, in § 7.3.3.11
-        cddl-key for emulation.SetGeolocationOverrideParameters, in § 7.4.2.1
-        cddl-key for emulation.SetLocaleOverrideParameters, in § 7.4.2.2
-        cddl-key for emulation.SetScreenOrientationOverrideParameters, in § 7.4.2.3
-        cddl-key for emulation.SetTimezoneOverrideParameters, in § 7.4.2.4
+        cddl-key for emulation.SetForcedColorsModeThemeOverrideParameters, in § 7.4.2.1
+        cddl-key for emulation.SetGeolocationOverrideParameters, in § 7.4.2.2
+        cddl-key for emulation.SetLocaleOverrideParameters, in § 7.4.2.3
+        cddl-key for emulation.SetScreenOrientationOverrideParameters, in § 7.4.2.6
+        cddl-key for emulation.SetScreenSettingsOverrideParameters, in § 7.4.2.5
+        cddl-key for emulation.SetScriptingEnabledParameters, in § 7.4.2.8
+        cddl-key for emulation.SetTimezoneOverrideParameters, in § 7.4.2.9
+        cddl-key for emulation.SetUserAgentOverrideParameters, in § 7.4.2.7
+        cddl-key for emulation.setNetworkConditionsParameters, in § 7.4.2.4
         cddl-key for network.AddDataCollectorParameters, in § 7.5.5.1
+        cddl-key for network.SetExtraHeadersParameters, in § 7.5.5.13
         cddl-key for script.AddPreloadScriptParameters, in § 7.6.4.1
-        cddl-key for session.SubscriptionRequest, in § 7.1.2.7 
+        cddl-key for session.SubscribeParameters, in § 7.1.2.7 
+    user contexts, in § 7.5.2
     userContexts
         cddl-key for browser.GetUserContextsResult, in § 7.2.4.4
+        cddl-key for browser.SetDownloadBehaviorParameters, in § 7.2.4.7
         cddl-key for browsingContext.SetViewportParameters, in § 7.3.3.11
-        cddl-key for emulation.SetGeolocationOverrideParameters, in § 7.4.2.1
-        cddl-key for emulation.SetLocaleOverrideParameters, in § 7.4.2.2
-        cddl-key for emulation.SetScreenOrientationOverrideParameters, in § 7.4.2.3
-        cddl-key for emulation.SetTimezoneOverrideParameters, in § 7.4.2.4
+        cddl-key for emulation.SetForcedColorsModeThemeOverrideParameters, in § 7.4.2.1
+        cddl-key for emulation.SetGeolocationOverrideParameters, in § 7.4.2.2
+        cddl-key for emulation.SetLocaleOverrideParameters, in § 7.4.2.3
+        cddl-key for emulation.SetScreenOrientationOverrideParameters, in § 7.4.2.6
+        cddl-key for emulation.SetScreenSettingsOverrideParameters, in § 7.4.2.5
+        cddl-key for emulation.SetScriptingEnabledParameters, in § 7.4.2.8
+        cddl-key for emulation.SetTimezoneOverrideParameters, in § 7.4.2.9
+        cddl-key for emulation.SetUserAgentOverrideParameters, in § 7.4.2.7
+        cddl-key for emulation.setNetworkConditionsParameters, in § 7.4.2.4
         cddl-key for network.AddDataCollectorParameters, in § 7.5.5.1
+        cddl-key for network.SetExtraHeadersParameters, in § 7.5.5.13
         cddl-key for script.AddPreloadScriptParameters, in § 7.6.4.1
-        cddl-key for session.SubscriptionRequest, in § 7.1.2.7 
+        cddl-key for session.SubscribeParameters, in § 7.1.2.7 
+    user context screen settings, in § 7.3.1
     user context to accept insecure certificates override map, in § 6
     user context to proxy configuration map, in § 6
+    user context user agent, in § 7.4.1
     "username", in § 7.5.4.2
     username, in § 7.5.4.2
     "userText"
@@ -12701,8 +13722,14 @@ Terms defined by this specification
     WebDriver BiDi DOM content loaded, in § 7.3.4.6
     WebDriver BiDi download end, in § 7.3.4.9
     WebDriver BiDi download started, in § 7.3.4.8
+    WebDriver BiDi download will begin, in § 7.3.4.8
+    WebDriver BiDi emulated available screen area, in § 7.4.2.5
+    WebDriver BiDi emulated language, in § 7.4.2.3
+    WebDriver BiDi emulated total screen area, in § 7.4.2.5
+    WebDriver BiDi emulated User-Agent, in § 7.4.2.7
     WebDriver BiDi fetch error, in § 7.5.6.3
     WebDriver BiDi file dialog opened, in § 7.9.4.1
+    WebDriver BiDi file picker options, in § 7.9.4.1
     WebDriver BiDi fragment navigated, in § 7.3.4.4
     WebDriver BiDi history updated, in § 7.3.4.5
     WebDriver BiDi load complete, in § 7.3.4.7
@@ -12713,10 +13740,12 @@ Terms defined by this specification
     WebDriver BiDi navigation failed, in § 7.3.4.12
     WebDriver BiDi navigation started, in § 7.3.4.3
     WebDriver BiDi navigation status, in § 7.3
+    WebDriver BiDi network is offline, in § 7.5.6.2
     WebDriver BiDi page show, in § 7.3.3.12
     WebDriver BiDi pop state, in § 7.3.3.12
     WebDriver BiDi response completed, in § 7.5.6.4
     WebDriver BiDi response started, in § 7.5.6.5
+    WebDriver BiDi scripting is enabled, in § 7.4.2.8
     WebDriver BiDi user prompt closed, in § 7.3.4.13
     WebDriver BiDi user prompt opened, in § 7.3.4.14
     webExtension, in § 7.10
@@ -12740,6 +13769,7 @@ Terms defined by this specification
         cddl-value for webExtension.Uninstall/method, in § 7.10.3.2
         dfn for commands, in § 7.10.3.2 
     webExtension.UninstallParameters, in § 7.10.3.2
+    webExtension.UninstallResult, in § 7.10.3.2
     WebSocket connection, in § 4
     WebSocket connections not associated with a session, in § 4
     WebSocket listener, in § 4
@@ -12754,14 +13784,17 @@ Terms defined by this specification
         cddl-key for browsingContext.BoxClipRectangle, in § 7.3.3.2
         cddl-key for browsingContext.PrintPageParameters, in § 7.3.3.9
         cddl-key for browsingContext.Viewport, in § 7.3.3.11
+        cddl-key for emulation.ScreenArea, in § 7.4.2.5
         cddl-key for input.PointerCommonProperties, in § 7.9.3.1 
     width
+        attribute for screen settings, in § 7.3.1
         attribute for viewport-dimensions, in § 7.3.1
         cddl-key for browser.ClientWindowInfo, in § 7.2.3.2
         cddl-key for browser.ClientWindowRectState, in § 7.2.4.6
         cddl-key for browsingContext.BoxClipRectangle, in § 7.3.3.2
         cddl-key for browsingContext.PrintPageParameters, in § 7.3.3.9
         cddl-key for browsingContext.Viewport, in § 7.3.3.11
+        cddl-key for emulation.ScreenArea, in § 7.4.2.5
         cddl-key for input.PointerCommonProperties, in § 7.9.3.1
         dfn for client window, in § 7.2.2 
     "window"
@@ -12793,6 +13826,7 @@ Terms defined by this specification
         cddl-key for input.PointerMoveAction, in § 7.9.3.1
         cddl-key for input.WheelScrollAction, in § 7.9.3.1 
     x
+        attribute for screen settings, in § 7.3.1
         cddl-key for browser.ClientWindowInfo, in § 7.2.3.2
         cddl-key for browser.ClientWindowRectState, in § 7.2.4.6
         cddl-key for browsingContext.BoxClipRectangle, in § 7.3.3.2
@@ -12808,6 +13842,7 @@ Terms defined by this specification
         cddl-key for input.PointerMoveAction, in § 7.9.3.1
         cddl-key for input.WheelScrollAction, in § 7.9.3.1 
     y
+        attribute for screen settings, in § 7.3.1
         cddl-key for browser.ClientWindowInfo, in § 7.2.3.2
         cddl-key for browser.ClientWindowRectState, in § 7.2.4.6
         cddl-key for browsingContext.BoxClipRectangle, in § 7.3.3.2
@@ -12828,6 +13863,10 @@ Terms defined by reference
         Cookie store 
     [CORE-AAM-1.1] defines the following terms:
         computed role 
+    [CSS-COLOR-ADJUST-1] defines the following terms:
+        ForcedColorsModeAutomationTheme
+        forced colors mode
+        set emulated forced colors theme data 
     [CSS-PAINT-API-1] defines the following terms:
         PaintWorkletGlobalScope 
     [CSS-VALUES-3] defines the following terms:
@@ -12844,6 +13883,7 @@ Terms defined by reference
         visual viewport
         visual viewport page left
         visual viewport page top
+        web-exposed available screen area
         web-exposed screen area 
     [DOM] defines the following terms:
         Attr
@@ -12858,6 +13898,7 @@ Terms defined by reference
         children
         document
         document element
+        element
         evaluate
         mode
         node document
@@ -12962,6 +14003,7 @@ Terms defined by reference
         response
         response body info
         secure connection start time
+        set
         start time
         status
         status message
@@ -13088,6 +14130,7 @@ Terms defined by reference
         user interaction task source
         visibility state
         visible
+        webtransport
         width
         worker event loop
         worklet global scopes 
@@ -13128,7 +14171,8 @@ Terms defined by reference
         is
         is empty
         item
-        length
+        length (for byte sequence)
+        length (for string)
         list
         map
         parse JSON into Infra values
@@ -13290,6 +14334,10 @@ Terms defined by reference
         TypeError
         platform object
         this 
+    [WEBSOCKETS] defines the following terms:
+        WebSocket 
+    [WEBTRANSPORT] defines the following terms:
+        Cleanup WebTransport 
 
 References
 Normative References
@@ -13302,12 +14350,14 @@ Normative References
     A. Barth. HTTP State Management Mechanism. April 2011. Proposed Standard. URL: https://httpwg.org/specs/rfc6265.html 
 [CORE-AAM-1.1]
     Joanmarie Diggs; et al. Core Accessibility API Mappings 1.1. URL: https://w3c.github.io/core-aam/ 
+[CSS-COLOR-ADJUST-1]
+    Elika Etemad; et al. CSS Color Adjustment Module Level 1. URL: https://drafts.csswg.org/css-color-adjust-1/ 
 [CSS-PAINT-API-1]
     Ian Kilpatrick; Dean Jackson. CSS Painting API Level 1. URL: https://drafts.css-houdini.org/css-paint-api-1/ 
 [CSS2]
     Bert Bos; et al. Cascading Style Sheets Level 2 Revision 1 (CSS 2.1) Specification. URL: https://drafts.csswg.org/css2/ 
 [CSSOM-VIEW-1]
-    Simon Pieters. CSSOM View Module. URL: https://drafts.csswg.org/cssom-view/ 
+    Simon Fraser; Emilio Cobos Álvarez. CSSOM View Module. URL: https://drafts.csswg.org/cssom-view/ 
 [DOM]
     Anne van Kesteren. DOM Standard. Living Standard. URL: https://dom.spec.whatwg.org/ 
 [ECMA-402]
@@ -13353,7 +14403,7 @@ Normative References
 [SELECTORS-4]
     Elika Etemad; Tab Atkins Jr.. Selectors Level 4. URL: https://drafts.csswg.org/selectors/ 
 [SERVICE-WORKERS]
-    Yoshisato Yanagisawa; Monica CHINTALA. Service Workers. URL: https://w3c.github.io/ServiceWorker/ 
+    Monica CHINTALA; Yoshisato Yanagisawa. Service Workers Nightly. URL: https://w3c.github.io/ServiceWorker/ 
 [SVG2]
     Amelia Bellamy-Royds; et al. Scalable Vector Graphics (SVG) 2. URL: https://svgwg.org/svg2-draft/ 
 [UNICODE]
@@ -13368,6 +14418,10 @@ Normative References
     Simon Stewart; David Burns. WebDriver. URL: https://w3c.github.io/webdriver/ 
 [WEBIDL]
     Edgar Chen; Timothy Gu. Web IDL Standard. Living Standard. URL: https://webidl.spec.whatwg.org/ 
+[WEBSOCKETS]
+    Adam Rice. WebSockets Standard. Living Standard. URL: https://websockets.spec.whatwg.org/ 
+[WEBTRANSPORT]
+    Nidhi Jaju; Victor Vasiliev; Jan-Ivar Bruaroey. WebTransport. URL: https://w3c.github.io/webtransport/ 
 
 Informative References
 
@@ -13492,7 +14546,7 @@ session.UserPromptHandlerType = "accept" / "dismiss" / "ignore";
 
 session.Subscription = text
 
-session.SubscriptionRequest = {
+session.SubscribeParameters = {
   events: [+text],
   ? contexts: [+browsingContext.BrowsingContext],
   ? userContexts: [+browser.UserContext],
@@ -13504,7 +14558,6 @@ session.UnsubscribeByIDRequest = {
 
 session.UnsubscribeByAttributesRequest = {
   events: [+text],
-  ? contexts: [+browsingContext.BrowsingContext],
 }
 
 session.Status = (
@@ -13529,7 +14582,7 @@ session.End = (
 
 session.Subscribe = (
   method: "session.subscribe",
-  params: session.SubscriptionRequest
+  params: session.SubscribeParameters
 )
 
 session.Unsubscribe = (
@@ -13545,7 +14598,8 @@ BrowserCommand = (
   browser.GetClientWindows //
   browser.GetUserContexts //
   browser.RemoveUserContext //
-  browser.SetClientWindowState
+  browser.SetClientWindowState //
+  browser.SetDownloadBehavior
 )
 
 browser.ClientWindow = text;
@@ -13621,6 +14675,32 @@ browser.ClientWindowRectState = (
   ? height: js-uint,
   ? x: js-int,
   ? y: js-int,
+)
+
+browser.SetDownloadBehavior = (
+  method: "browser.setDownloadBehavior",
+  params: browser.SetDownloadBehaviorParameters
+)
+
+browser.SetDownloadBehaviorParameters = {
+  downloadBehavior: browser.DownloadBehavior / null,
+  ? userContexts: [+browser.UserContext]
+}
+
+browser.DownloadBehavior = {
+  (
+    browser.DownloadBehaviorAllowed //
+    browser.DownloadBehaviorDenied
+  )
+}
+
+browser.DownloadBehaviorAllowed = (
+  type: "allowed",
+  destinationFolder: text
+)
+
+browser.DownloadBehaviorDenied = (
+  type: "denied"
 )
 
 BrowsingContextCommand = (
@@ -13869,11 +14949,30 @@ browsingContext.TraverseHistoryParameters = {
 }
 
 EmulationCommand = (
+  emulation.SetForcedColorsModeThemeOverride //
   emulation.SetGeolocationOverride //
   emulation.SetLocaleOverride //
+  emulation.SetNetworkConditions //
   emulation.SetScreenOrientationOverride //
-  emulation.SetTimezoneOverride
+  emulation.SetScreenSettingsOverride //
+  emulation.SetScriptingEnabled //
+  emulation.SetTimezoneOverride //
+  emulation.SetUserAgentOverride
 )
+
+
+emulation.SetForcedColorsModeThemeOverride = (
+  method: "emulation.setForcedColorsModeThemeOverride",
+  params: emulation.SetForcedColorsModeThemeOverrideParameters
+)
+
+emulation.SetForcedColorsModeThemeOverrideParameters = {
+  theme: emulation.ForcedColorsModeTheme / null,
+  ? contexts: [+browsingContext.BrowsingContext],
+  ? userContexts: [+browser.UserContext],
+}
+
+emulation.ForcedColorsModeTheme = "light" / "dark"
 
 emulation.SetGeolocationOverride = (
   method: "emulation.setGeolocationOverride",
@@ -13914,6 +15013,39 @@ emulation.SetLocaleOverrideParameters = {
   ? userContexts: [+browser.UserContext],
 }
 
+emulation.SetNetworkConditions = (
+  method: "emulation.setNetworkConditions",
+  params: emulation.setNetworkConditionsParameters
+)
+
+emulation.setNetworkConditionsParameters = {
+  networkConditions: emulation.NetworkConditions / null,
+  ? contexts: [+browsingContext.BrowsingContext],
+  ? userContexts: [+browser.UserContext],
+}
+
+emulation.NetworkConditions = emulation.NetworkConditionsOffline
+
+emulation.NetworkConditionsOffline = {
+  type: "offline"
+}
+
+emulation.SetScreenSettingsOverride = (
+  method: "emulation.setScreenSettingsOverride",
+  params: emulation.SetScreenSettingsOverrideParameters
+)
+
+emulation.ScreenArea = {
+  width: js-uint,
+  height: js-uint
+}
+
+emulation.SetScreenSettingsOverrideParameters = {
+  screenArea: emulation.ScreenArea / null,
+  ? contexts: [+browsingContext.BrowsingContext],
+  ? userContexts: [+browser.UserContext],
+}
+
 emulation.SetScreenOrientationOverride = (
   method: "emulation.setScreenOrientationOverride",
   params: emulation.SetScreenOrientationOverrideParameters
@@ -13929,6 +15061,28 @@ emulation.ScreenOrientation = {
 
 emulation.SetScreenOrientationOverrideParameters = {
   screenOrientation: emulation.ScreenOrientation / null,
+  ? contexts: [+browsingContext.BrowsingContext],
+  ? userContexts: [+browser.UserContext],
+}
+
+emulation.SetUserAgentOverride = (
+  method: "emulation.setUserAgentOverride",
+  params: emulation.SetUserAgentOverrideParameters
+)
+
+emulation.SetUserAgentOverrideParameters = {
+  userAgent: text / null,
+  ? contexts: [+browsingContext.BrowsingContext],
+  ? userContexts: [+browser.UserContext],
+}
+
+emulation.SetScriptingEnabled = (
+  method: "emulation.setScriptingEnabled",
+  params: emulation.SetScriptingEnabledParameters
+)
+
+emulation.SetScriptingEnabledParameters = {
+  enabled: false / null,
   ? contexts: [+browsingContext.BrowsingContext],
   ? userContexts: [+browser.UserContext],
 }
@@ -13956,7 +15110,8 @@ NetworkCommand = (
   network.ProvideResponse //
   network.RemoveDataCollector //
   network.RemoveIntercept //
-  network.SetCacheBehavior
+  network.SetCacheBehavior //
+  network.SetExtraHeaders
 )
 
 
@@ -13984,6 +15139,7 @@ network.CollectorType = "blob"
 
 network.SameSite = "strict" / "lax" / "none" / "default"
 
+
 network.Cookie = {
     name: text,
     value: network.BytesValue,
@@ -14002,7 +15158,7 @@ network.CookieHeader = {
     value: network.BytesValue,
 }
 
-network.DataType = "response"
+network.DataType = "request" / "response"
 
 network.Header = {
   name: text,
@@ -14194,6 +15350,17 @@ network.SetCacheBehaviorParameters = {
   ? contexts: [+browsingContext.BrowsingContext]
 }
 
+network.SetExtraHeaders = (
+  method: "network.setExtraHeaders",
+  params: network.SetExtraHeadersParameters
+)
+
+network.SetExtraHeadersParameters = {
+  headers: [*network.Header]
+  ? contexts: [+browsingContext.BrowsingContext]
+  ? userContexts: [+browser.UserContext]
+}
+
 ScriptCommand = (
   script.AddPreloadScript //
   script.CallFunction //
@@ -14349,12 +15516,14 @@ script.RemoteReference = (
 
 script.SharedReference = {
    sharedId: script.SharedId
+
    ? handle: script.Handle,
    Extensible
 }
 
 script.RemoteObjectReference = {
    handle: script.Handle,
+
    ? sharedId: script.SharedId
    Extensible
 }
@@ -14656,6 +15825,7 @@ storage.GetCookies = (
   params: storage.GetCookiesParameters
 )
 
+
 storage.CookieFilter = {
   ? name: text,
   ? value: network.BytesValue,
@@ -14696,6 +15866,7 @@ storage.SetCookie = (
   params: storage.SetCookieParameters,
 )
 
+
 storage.PartialCookie = {
   name: text,
   value: network.BytesValue,
@@ -14727,6 +15898,12 @@ InputCommand = (
   input.PerformActions //
   input.ReleaseActions //
   input.SetFiles
+)
+
+InputResult = (
+  input.PerformActionsResult /
+  input.ReleaseActionsResult /
+  input.SetFilesResult
 )
 
 input.ElementOrigin = {
@@ -14963,8 +16140,10 @@ ErrorResponse = {
 }
 
 ResultData = (
+  BrowserResult /
   BrowsingContextResult /
-  EmptyResult /
+  EmulationResult /
+  InputResult /
   NetworkResult /
   ScriptResult /
   SessionResult /
@@ -15026,9 +16205,11 @@ ErrorCode = "invalid argument" /
             "unsupported operation"
 
 SessionResult = (
-   session.NewResult /
-   session.StatusResult /
-   session.SubscribeResult
+  session.EndResult /
+  session.NewResult /
+  session.StatusResult /
+  session.SubscribeResult /
+  session.UnsubscribeResult
 )
 
 session.CapabilitiesRequest = {
@@ -15124,13 +16305,22 @@ session.NewResult = {
   }
 }
 
+session.EndResult = EmptyResult
+
 session.SubscribeResult = {
   subscription: session.Subscription,
 }
 
+session.UnsubscribeResult = EmptyResult
+
 BrowserResult = (
-   browser.CreateUserContextResult /
-   browser.GetUserContextsResult
+  browser.CloseResult /
+  browser.CreateUserContextResult /
+  browser.GetClientWindowsResult /
+  browser.GetUserContextsResult /
+  browser.RemoveUserContextResult /
+  browser.SetClientWindowStateResult /
+  browser.SetDownloadBehaviorResult
 )
 
 browser.ClientWindow = text;
@@ -15151,6 +16341,8 @@ browser.UserContextInfo = {
   userContext: browser.UserContext
 }
 
+browser.CloseResult = EmptyResult
+
 browser.CreateUserContextResult = browser.UserContextInfo
 
 browser.GetClientWindowsResult = {
@@ -15161,13 +16353,24 @@ browser.GetUserContextsResult = {
   userContexts: [ + browser.UserContextInfo]
 }
 
+browser.RemoveUserContextResult = EmptyResult
+
+browser.SetClientWindowStateResult = browser.ClientWindowInfo
+
+browser.SetDownloadBehaviorResult = EmptyResult
+
 BrowsingContextResult = (
+  browsingContext.ActivateResult /
   browsingContext.CaptureScreenshotResult /
+  browsingContext.CloseResult /
   browsingContext.CreateResult /
   browsingContext.GetTreeResult /
+  browsingContext.HandleUserPromptResult /
   browsingContext.LocateNodesResult /
   browsingContext.NavigateResult /
   browsingContext.PrintResult /
+  browsingContext.ReloadResult /
+  browsingContext.SetViewportResult /
   browsingContext.TraverseHistoryResult
 )
 
@@ -15258,9 +16461,13 @@ browsingContext.NavigationInfo = {
 
 browsingContext.UserPromptType = "alert" / "beforeunload" / "confirm" / "prompt";
 
+browsingContext.ActivateResult = EmptyResult
+
 browsingContext.CaptureScreenshotResult = {
   data: text
 }
+
+browsingContext.CloseResult = EmptyResult
 
 browsingContext.CreateResult = {
   context: browsingContext.BrowsingContext
@@ -15269,6 +16476,8 @@ browsingContext.CreateResult = {
 browsingContext.GetTreeResult = {
   contexts: browsingContext.InfoList
 }
+
+browsingContext.HandleUserPromptResult = EmptyResult
 
 browsingContext.LocateNodesResult = {
     nodes: [ * script.NodeRemoteValue ]
@@ -15283,8 +16492,11 @@ browsingContext.PrintResult = {
   data: text
 }
 
-browsingContext.TraverseHistoryResult = {
-}
+browsingContext.ReloadResult = browsingContext.NavigateResult
+
+browsingContext.SetViewportResult = EmptyResult
+
+browsingContext.TraverseHistoryResult = EmptyResult
 
 browsingContext.ContextCreated = (
  method: "browsingContext.contextCreated",
@@ -15400,8 +16612,48 @@ browsingContext.UserPromptOpenedParameters = {
   ? defaultValue: text
 }
 
+EmulationResult = (
+  emulation.SetForcedColorsModeThemeOverrideResult /
+  emulation.SetGeolocationOverrideResult /
+  emulation.SetLocaleOverrideResult /
+  emulation.SetScreenOrientationOverrideResult /
+  emulation.SetScriptingEnabledResult /
+  emulation.SetTimezoneOverrideResult /
+  emulation.SetUserAgentOverrideResult
+)
+
+emulation.SetForcedColorsModeThemeOverrideResult = EmptyResult
+
+emulation.SetGeolocationOverrideResult = EmptyResult
+
+emulation.SetLocaleOverrideResult = EmptyResult
+
+emulation.SetNetworkConditionsResult = EmptyResult
+
+emulation.SetScreenSettingsOverrideResult = EmptyResult
+
+emulation.SetScreenOrientationOverrideResult = EmptyResult
+
+emulation.SetUserAgentOverrideResult = EmptyResult
+
+emulation.SetScriptingEnabledResult = EmptyResult
+
+emulation.SetTimezoneOverrideResult = EmptyResult
+
 NetworkResult = (
-   network.AddInterceptResult
+  network.AddDataCollectorResult /
+  network.AddInterceptResult /
+  network.ContinueRequestResult /
+  network.ContinueResponseResult /
+  network.ContinueWithAuthResult /
+  network.DisownDataResult /
+  network.FailRequestResult /
+  network.GetDataResult /
+  network.ProvideResponseResult /
+  network.RemoveDataCollectorResult /
+  network.RemoveInterceptResult /
+  network.SetCacheBehaviorResult /
+  network.SetExtraHeadersResult
 )
 
 NetworkEvent = (
@@ -15446,6 +16698,7 @@ network.CollectorType = "blob"
 
 network.SameSite = "strict" / "lax" / "none" / "default"
 
+
 network.Cookie = {
     name: text,
     value: network.BytesValue,
@@ -15459,7 +16712,7 @@ network.Cookie = {
     Extensible,
 }
 
-network.DataType = "response"
+network.DataType = "request" / "response"
 
 network.FetchTimingInfo = {
     timeOrigin: float,
@@ -15472,8 +16725,10 @@ network.FetchTimingInfo = {
     connectStart: float,
     connectEnd: float,
     tlsStart: float,
+
     requestStart: float,
     responseStart: float,
+
     responseEnd: float,
 }
 
@@ -15534,9 +16789,29 @@ network.AddInterceptResult = {
   intercept: network.Intercept
 }
 
+network.ContinueRequestResult = EmptyResult
+
+network.ContinueResponseResult = EmptyResult
+
+network.ContinueWithAuthResult = EmptyResult
+
+network.DisownDataResult = EmptyResult
+
+network.FailRequestResult = EmptyResult
+
 network.GetDataResult = {
   bytes: network.BytesValue,
 }
+
+network.ProvideResponseResult = EmptyResult
+
+network.RemoveDataCollectorResult = EmptyResult
+
+network.RemoveInterceptResult = EmptyResult
+
+network.SetCacheBehaviorResult = EmptyResult
+
+network.SetExtraHeadersResult = EmptyResult
 
 network.AuthRequired = (
   method: "network.authRequired",
@@ -15590,8 +16865,11 @@ network.ResponseStartedParameters = {
 
 ScriptResult = (
   script.AddPreloadScriptResult /
+  script.CallFunctionResult /
+  script.DisownResult /
   script.EvaluateResult /
-  script.GetRealmsResult
+  script.GetRealmsResult /
+  script.RemovePreloadScriptResult
 )
 
 ScriptEvent = (
@@ -15805,12 +17083,14 @@ script.RemoteReference = (
 
 script.SharedReference = {
    sharedId: script.SharedId
+
    ? handle: script.Handle,
    Extensible
 }
 
 script.RemoteObjectReference = {
    handle: script.Handle,
+
    ? sharedId: script.SharedId
    Extensible
 }
@@ -16018,9 +17298,15 @@ script.AddPreloadScriptResult = {
   script: script.PreloadScript
 }
 
+script.DisownResult = EmptyResult
+
+script.CallFunctionResult = script.EvaluateResult
+
 script.GetRealmsResult = {
   realms: [*script.RealmInfo]
 }
+
+script.RemovePreloadScriptResult = EmptyResult
 
 script.Message = (
   method: "script.message",
@@ -16119,6 +17405,12 @@ InputEvent = (
   input.FileDialogOpened
 )
 
+input.PerformActionsResult = EmptyResult
+
+input.ReleaseActionsResult = EmptyResult
+
+input.SetFilesResult = EmptyResult
+
 input.FileDialogOpened = (
    method: "input.fileDialogOpened",
    params: input.FileDialogInfo
@@ -16131,7 +17423,8 @@ input.FileDialogInfo = {
 }
 
 WebExtensionResult = (
-  webExtension.InstallResult
+  webExtension.InstallResult /
+  webExtension.UninstallResult
 )
 
 webExtension.Extension = text
@@ -16139,6 +17432,8 @@ webExtension.Extension = text
 webExtension.InstallResult = {
   extension: webExtension.Extension
 }
+
+webExtension.UninstallResult = EmptyResult
 
 Issues Index
 Surely there’s a better mechanism for doing this "wait for an event" thing.
@@ -16185,6 +17480,8 @@ Do we want to expose a `browsingContext.pageShow event? In that case we’d need
 ↵
 It’s unclear if we ought to only fire this event for browsing contexts that have active documents; navigation can also cause contexts to become inaccessible but not yet get discarded because bfcache.
 ↵
+Remove after HTML spec switched to WebDriver BiDi download will begin (https://github.com/whatwg/html/pull/11474).
+↵
 Move this algorithm to screen orientation specification.
 ↵
 This prevents collecting data not related to a navigable. We still need to retrieve the navigable to check against the collector configuration but we could still accept null here.
@@ -16200,6 +17497,8 @@ Consider including the `sharedId` of the document node that initiated the reques
 consider a "request already sent" error.
 ↵
 Allow setting the precise kind of error [Issue #508]
+↵
+Respect return value in Fetch’s "HTTP-network-or-cache fetch" algorithm.
 ↵
 This has the wrong error code
 ↵

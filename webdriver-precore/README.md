@@ -32,6 +32,76 @@ Adapt and move when ready
     - [4. Launch WebDriver From the Terminal](#4-launch-webdriver-from-the-terminal)
     - [5. Drive the Browser Via the IO API](#5-drive-the-browser-via-the-io-api)
 
+
+```mermaid
+classDiagram
+    class Protocol {
+        <<Core Library>>
+        +Type definitions
+        +Data structures
+        +Command types
+        +Event types
+        +Serialization
+    }
+    
+    class API {
+        <<Core Library>>
+        +sessionNew()
+        +browsingContextNavigate()
+        +scriptEvaluate()
+        +networkAddIntercept()
+        +storageGetCookies()
+    }
+    
+    class Socket {
+        <<User Implementation>>
+        +send()
+        +getNext()
+        +subscribe()
+        +unsubscribe()
+        +WebSocket communication
+    }
+    
+    class Actions {
+        <<User Implementation>>
+        +High-level workflows
+        +Application-specific actions
+        +Command orchestration
+    }
+    
+    class Runner {
+        <<User Implementation>>
+        +Test orchestration
+        +Session management
+        +Action execution
+    }
+    
+    class Tests {
+        <<User Implementation>>
+        +Tests
+    }
+    
+    API ..> Protocol : uses
+    Socket ..> Protocol : uses
+    Actions ..> API : uses
+    Actions ..> Protocol : uses
+    Actions ..> Socket : uses
+    Runner ..> Protocol : uses
+    Runner ..> Socket : uses
+    Tests ..> Actions : uses
+    Tests ..> Protocol : uses
+    TestExecutor ..> Runner : uses
+    TestExecutor ..> Tests : uses
+    
+    style Protocol fill:#e3f2fd,stroke:#1976d2,stroke-width:3px,color:#000,rx:10
+    style API fill:#e3f2fd,stroke:#1976d2,stroke-width:3px,color:#000,rx:10
+    style Socket fill:#fff3e0,stroke:#f57c00,stroke-width:3px,color:#000,rx:10
+    style Actions fill:#fff3e0,stroke:#f57c00,stroke-width:3px,color:#000,rx:10
+    style Runner fill:#fff3e0,stroke:#f57c00,stroke-width:3px,color:#000,rx:10
+    style Tests fill:#fff3e0,stroke:#f57c00,stroke-width:3px,color:#000,rx:10
+    style TestExecutor fill:#fff3e0,stroke:#f57c00,stroke-width:3px,color:#000,rx:10
+```
+
 ## What is This Library?
 
 This library provides a minimal abstraction over the [WebDriver W3C Protocol endpoints](https://www.w3.org/TR/webdriver2/) without providing any implementation. It provides a description of the W3C API as a list of functions that return a [HttpSpec type](#HttpSpec). The intention is that other libraries will provide the actual implementation.

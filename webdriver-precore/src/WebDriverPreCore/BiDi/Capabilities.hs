@@ -1,4 +1,13 @@
-module WebDriverPreCore.BiDi.Capabilities where
+module WebDriverPreCore.BiDi.Capabilities
+  ( Capabilities (..),
+    Capability (..),
+    ProxyConfiguration (..),
+    SocksProxyConfiguration (..),
+    UserPromptHandler (..),
+    UserPromptHandlerType (..),
+    CapabilitiesResult (..),
+  )
+where
 
 import Data.Aeson (FromJSON (..), ToJSON (..), Value (..), object, (.=))
 import Data.Maybe (catMaybes)
@@ -6,8 +15,8 @@ import Data.Text (Text)
 import Data.Vector (fromList)
 import Data.Word (Word8)
 import GHC.Generics (Generic)
-import WebDriverPreCore.Internal.AesonUtils (opt)
-import Prelude (Bool (..), Eq (..), Maybe (..), Show (..), ($), (.), (<$>))
+import AesonUtils (opt, fromJSONCamelCase)
+import Data.Aeson.Types (Parser)
 
 
 
@@ -128,7 +137,9 @@ data UserPromptHandlerType
   | Ignore
   deriving (Show, Eq, Generic)
 
-instance FromJSON UserPromptHandlerType
+instance FromJSON UserPromptHandlerType where
+  parseJSON :: Value -> Parser UserPromptHandlerType
+  parseJSON = fromJSONCamelCase
 
 instance ToJSON UserPromptHandlerType where
   toJSON :: UserPromptHandlerType -> Value

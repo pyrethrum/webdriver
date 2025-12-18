@@ -22,12 +22,18 @@
     {
       "label": "test all",
       "type": "shell",
-      "command": "cabal",
-      "args": [
-        "test",
-        "all",
-        "--test-show-details=streaming"
-      ],
+      "command": "cabal test all --test-show-details=streaming 2>&1 | tee test-all.log",
+      "presentation": {
+        "reveal": "always",
+        "panel": "shared",
+        "showReuseMessage": false
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "test legacy Http",
+      "type": "shell",
+      "command": "cabal test all --flags=\"legacy-test\" --test-show-details=streaming 2>&1 | tee test-all.log",
       "presentation": {
         "reveal": "always",
         "panel": "shared",
@@ -38,12 +44,7 @@
     {
       "label": "test precore",
       "type": "shell",
-      "command": "cabal",
-      "args": [
-        "test",
-        "webdriver-precore",
-        "--test-show-details=streaming"
-      ],
+      "command": "cabal test webdriver-precore --test-show-details=streaming 2>&1 | tee test-precore.log",
       "presentation": {
         "reveal": "always",
         "panel": "shared",
@@ -71,9 +72,11 @@
       "command": "cabal",
       "args": [
         "haddock",
-        "all",
-        // open does not work in task but does in terminal
-        "--haddock-option=--hyperlink-source",
+        // only build public library - 'all' will fail due to internal library
+        "webdriver-precore",
+        // --hyperlink-source triggers internal library haddock build which fails (Cabal bug)
+        // hyperlinked source is included automatically when using --haddock-for-hackage for upload
+        // "--haddock-option=--hyperlink-source",
         "--open"
       ],
       "presentation": {

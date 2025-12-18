@@ -3,7 +3,7 @@ module WebDriverPreCore.BiDi.API
     sessionNew,
     sessionStatus,
     sessionEnd,
-    sessionSubScribe,
+    sessionSubscribe,
     sessionUnsubscribe,
 
     -- * BrowsingContext Commands
@@ -27,12 +27,18 @@ module WebDriverPreCore.BiDi.API
     browserGetUserContexts,
     browserRemoveUserContext,
     browserSetClientWindowState,
+    browserSetDownloadBehavior,
 
     -- * Emulation Commands
+    emulationSetForcedColorsModeThemeOverride,
     emulationSetGeolocationOverride,
     emulationSetLocaleOverride,
+    emulationSetNetworkConditions,
     emulationSetScreenOrientationOverride,
+    emulationSetScreenSettingsOverride,
+    emulationSetScriptingEnabled,
     emulationSetTimezoneOverride,
+    emulationSetUserAgentOverride,
 
     -- * Input Commands
     inputPerformActions,
@@ -52,6 +58,7 @@ module WebDriverPreCore.BiDi.API
     networkRemoveDataCollector,
     networkRemoveIntercept,
     networkSetCacheBehavior,
+    networkSetExtraHeaders,
 
     -- * Script Commands
     scriptAddPreloadScript,
@@ -68,186 +75,548 @@ module WebDriverPreCore.BiDi.API
 
     -- * WebExtension Commands
     webExtensionInstall,
-    webExtensionUninstall
+    webExtensionUninstall,
+
+    -- * Subscriptions
+    subscribeLogEntryAdded,
+    subscribeBrowsingContextCreated,
+    subscribeBrowsingContextDestroyed,
+    subscribeBrowsingContextNavigationStarted,
+    subscribeBrowsingContextFragmentNavigated,
+    subscribeBrowsingContextHistoryUpdated,
+    subscribeBrowsingContextDomContentLoaded,
+    subscribeBrowsingContextLoad,
+    subscribeBrowsingContextDownloadWillBegin,
+    subscribeBrowsingContextDownloadEnd,
+    subscribeBrowsingContextNavigationAborted,
+    subscribeBrowsingContextNavigationCommitted,
+    subscribeBrowsingContextNavigationFailed,
+    subscribeBrowsingContextUserPromptClosed,
+    subscribeBrowsingContextUserPromptOpened,
+    subscribeNetworkAuthRequired,
+    subscribeNetworkBeforeRequestSent,
+    subscribeNetworkFetchError,
+    subscribeNetworkResponseCompleted,
+    subscribeNetworkResponseStarted,
+    subscribeScriptMessage,
+    subscribeScriptRealmCreated,
+    subscribeScriptRealmDestroyed,
+    subscribeInputFileDialogOpened,
+    subscribeMany,
+
+    -- * Fallback Subscriptions
+    subscribeOffSpecMany,
   )
 where
 
+import Data.Aeson (Value)
 import WebDriverPreCore.BiDi.Protocol
-import Data.Aeson (Object)
+  ( Activate,
+    AddDataCollector,
+    AddDataCollectorResult,
+    AddIntercept,
+    AddInterceptResult,
+    AddPreloadScript,
+    AddPreloadScriptResult,
+    AuthRequired,
+    BeforeRequestSent,
+    BrowsingContext,
+    CallFunction,
+    Capabilities,
+    CaptureScreenshot,
+    CaptureScreenshotResult,
+    ClientWindowInfo,
+    Close,
+    Command,
+    ContinueRequest,
+    ContinueResponse,
+    ContinueWithAuth,
+    Create,
+    CreateUserContext,
+    DeleteCookies,
+    DeleteCookiesResult,
+    Disown,
+    DisownData,
+    DownloadEnd,
+    DownloadWillBegin,
+    Evaluate,
+    EvaluateResult,
+    Event,
+    FailRequest,
+    FetchError,
+    FileDialogOpened,
+    GetClientWindowsResult,
+    GetCookies,
+    GetCookiesResult,
+    GetData,
+    GetDataResult,
+    GetRealms,
+    GetRealmsResult,
+    GetTree,
+    GetTreeResult,
+    GetUserContextsResult,
+    HandleUserPrompt,
+    HistoryUpdated,
+    Info,
+    KnownCommand (..),
+    KnownSubscriptionType (..),
+    LocateNodes,
+    LocateNodesResult,
+    LogEntry,
+    Navigate,
+    NavigateResult,
+    NavigationInfo,
+    PerformActions,
+    Print,
+    PrintResult,
+    ProvideResponse,
+    RealmDestroyed,
+    ReleaseActions,
+    Reload,
+    RemoveDataCollector,
+    RemoveIntercept,
+    RemovePreloadScript,
+    RemoveUserContext,
+    ResponseCompleted,
+    ResponseStarted,
+    SessionNewResult,
+    SessionStatusResult,
+    SessionSubscibe (..),
+    SessionSubscribeResult (..),
+    SessionUnsubscribe (..),
+    SetCacheBehavior,
+    SetClientWindowState,
+    SetCookie,
+    SetCookieResult,
+    SetDownloadBehavior,
+    SetExtraHeaders,
+    SetFiles,
+    SetForcedColorsModeThemeOverride,
+    SetGeolocationOverride,
+    SetLocaleOverride,
+    SetNetworkConditions,
+    SetScreenOrientationOverride,
+    SetScreenSettingsOverride,
+    SetScriptingEnabled,
+    SetTimezoneOverride,
+    SetUserAgentOverride,
+    SetViewport,
+    Subscription,
+    TraverseHistory,
+    TraverseHistoryResult,
+    OffSpecSubscriptionType,
+    UserContext,
+    UserPromptClosed,
+    UserPromptOpened,
+    WebExtensionInstall,
+    WebExtensionResult,
+    WebExtensionUninstall,
+    emptyCommand,
+    mkCommand,
+    mkMultiSubscription,
+    mkSubscription,
+    mkOffSpecSubscription,
+  )
+import WebDriverPreCore.BiDi.Script (Message, RealmInfo)
+
+--- ############## Commands ##############
 
 ---- Session ----
 
-sessionNew :: Capabilities -> Command Capabilities SessionNewResult
-sessionNew = mkCommand "session.new"
+sessionNew :: Capabilities -> Command SessionNewResult
+sessionNew = mkCommand SessionNew
 
-sessionStatus :: Command Object SessionStatusResult
-sessionStatus = emptyCommand "session.status"
+sessionStatus :: Command SessionStatusResult
+sessionStatus = emptyCommand SessionStatus
 
-sessionEnd :: Command Object Object
-sessionEnd = emptyCommand "session.end"
+sessionEnd :: Command ()
+sessionEnd = emptyCommand SessionEnd
 
-sessionSubScribe :: SessionSubscriptionRequest -> Command SessionSubscriptionRequest SessionSubscribeResult
-sessionSubScribe = mkCommand "session.subscribe"
+sessionSubscribe :: SessionSubscibe -> Command SessionSubscribeResult
+sessionSubscribe = mkCommand SessionSubscribe
 
-sessionUnsubscribe :: SessionUnsubscribeParameters -> Command SessionUnsubscribeParameters Object
-sessionUnsubscribe = mkCommand "session.unsubscribe"
+sessionUnsubscribe :: SessionUnsubscribe -> Command ()
+sessionUnsubscribe = mkCommand SessionUnsubscribe
 
 ---- Browsing Context ----
 
-browsingContextActivate :: Activate -> Command Activate Object
-browsingContextActivate = mkCommand "browsingContext.activate"
+browsingContextActivate :: Activate -> Command ()
+browsingContextActivate = mkCommand BrowsingContextActivate
 
-browsingContextCaptureScreenshot :: CaptureScreenshot -> Command CaptureScreenshot CaptureScreenshotResult
-browsingContextCaptureScreenshot = mkCommand "browsingContext.captureScreenshot"
+browsingContextCaptureScreenshot :: CaptureScreenshot -> Command CaptureScreenshotResult
+browsingContextCaptureScreenshot = mkCommand BrowsingContextCaptureScreenshot
 
-browsingContextClose :: Close -> Command Close Object
-browsingContextClose = mkCommand "browsingContext.close"
+browsingContextClose :: Close -> Command ()
+browsingContextClose = mkCommand BrowsingContextClose
 
-browsingContextCreate :: Create -> Command Create BrowsingContext
-browsingContextCreate = mkCommand "browsingContext.create"
+browsingContextCreate :: Create -> Command BrowsingContext
+browsingContextCreate = mkCommand BrowsingContextCreate
 
-browsingContextGetTree :: GetTree -> Command GetTree GetTreeResult
-browsingContextGetTree = mkCommand "browsingContext.getTree"
+browsingContextGetTree :: GetTree -> Command GetTreeResult
+browsingContextGetTree = mkCommand BrowsingContextGetTree
 
-browsingContextHandleUserPrompt :: HandleUserPrompt -> Command HandleUserPrompt Object
-browsingContextHandleUserPrompt = mkCommand "browsingContext.handleUserPrompt"
+browsingContextHandleUserPrompt :: HandleUserPrompt -> Command ()
+browsingContextHandleUserPrompt = mkCommand BrowsingContextHandleUserPrompt
 
-browsingContextLocateNodes :: LocateNodes -> Command LocateNodes LocateNodesResult
-browsingContextLocateNodes = mkCommand "browsingContext.locateNodes"
+browsingContextLocateNodes :: LocateNodes -> Command LocateNodesResult
+browsingContextLocateNodes = mkCommand BrowsingContextLocateNodes
 
-browsingContextNavigate :: Navigate -> Command Navigate NavigateResult
-browsingContextNavigate = mkCommand "browsingContext.navigate"
+browsingContextNavigate :: Navigate -> Command NavigateResult
+browsingContextNavigate = mkCommand BrowsingContextNavigate
 
-browsingContextPrint :: Print -> Command Print PrintResult
-browsingContextPrint = mkCommand "browsingContext.print"
+browsingContextPrint :: Print -> Command PrintResult
+browsingContextPrint = mkCommand BrowsingContextPrint
 
-browsingContextReload :: Reload -> Command Reload Object
-browsingContextReload = mkCommand "browsingContext.reload"
+browsingContextReload :: Reload -> Command ()
+browsingContextReload = mkCommand BrowsingContextReload
 
-browsingContextSetViewport :: SetViewport -> Command SetViewport Object
-browsingContextSetViewport = mkCommand "browsingContext.setViewport"
+browsingContextSetViewport :: SetViewport -> Command ()
+browsingContextSetViewport = mkCommand BrowsingContextSetViewport
 
-browsingContextTraverseHistory :: TraverseHistory -> Command TraverseHistory TraverseHistoryResult
-browsingContextTraverseHistory = mkCommand "browsingContext.traverseHistory"
+browsingContextTraverseHistory :: TraverseHistory -> Command TraverseHistoryResult
+browsingContextTraverseHistory = mkCommand BrowsingContextTraverseHistory
 
 ---- Browser ----
 
-browserClose :: Command Object Object
-browserClose = emptyCommand "browser.close"
+browserClose :: Command ()
+browserClose = emptyCommand BrowserClose
 
-browserCreateUserContext :: CreateUserContext -> Command CreateUserContext UserContext
-browserCreateUserContext = mkCommand "browser.createUserContext"
+browserCreateUserContext :: CreateUserContext -> Command UserContext
+browserCreateUserContext = mkCommand BrowserCreateUserContext
 
-browserGetClientWindows :: Command Object GetClientWindowsResult
-browserGetClientWindows = emptyCommand "browser.getClientWindows"
+browserGetClientWindows :: Command GetClientWindowsResult
+browserGetClientWindows = emptyCommand BrowserGetClientWindows
 
-browserGetUserContexts :: Command Object GetUserContextsResult
-browserGetUserContexts = emptyCommand "browser.getUserContexts"
+browserGetUserContexts :: Command GetUserContextsResult
+browserGetUserContexts = emptyCommand BrowserGetUserContexts
 
-browserRemoveUserContext :: RemoveUserContext -> Command RemoveUserContext Object
-browserRemoveUserContext = mkCommand "browser.removeUserContext"
+browserRemoveUserContext :: RemoveUserContext -> Command ()
+browserRemoveUserContext = mkCommand BrowserRemoveUserContext
 
-browserSetClientWindowState :: SetClientWindowState -> Command SetClientWindowState ClientWindowInfo
-browserSetClientWindowState = mkCommand "browser.setClientWindowState"
+browserSetClientWindowState :: SetClientWindowState -> Command ClientWindowInfo
+browserSetClientWindowState = mkCommand BrowserSetClientWindowState
+
+-- since 18-09-2025 https://www.w3.org/TR/2025/WD-webdriver-bidi-20250918
+browserSetDownloadBehavior :: SetDownloadBehavior -> Command ()
+browserSetDownloadBehavior = mkCommand BrowserSetDownloadBehavior
 
 ---- Emulation ----
 
-emulationSetGeolocationOverride :: SetGeolocationOverride -> Command SetGeolocationOverride Object
-emulationSetGeolocationOverride = mkCommand "emulation.setGeolocationOverride"
+-- since 29-07-2025 https://www.w3.org/TR/2025/WD-webdriver-bidi-20250729
+emulationSetForcedColorsModeThemeOverride :: SetForcedColorsModeThemeOverride -> Command ()
+emulationSetForcedColorsModeThemeOverride = mkCommand EmulationSetForcedColorsModeThemeOverride
 
-emulationSetLocaleOverride :: SetLocaleOverride -> Command SetLocaleOverride Object
-emulationSetLocaleOverride = mkCommand "emulation.setLocaleOverride"
+emulationSetGeolocationOverride :: SetGeolocationOverride -> Command ()
+emulationSetGeolocationOverride = mkCommand EmulationSetGeolocationOverride
 
-emulationSetScreenOrientationOverride :: SetScreenOrientationOverride -> Command SetScreenOrientationOverride Object
-emulationSetScreenOrientationOverride = mkCommand "emulation.setScreenOrientationOverride"
+emulationSetLocaleOverride :: SetLocaleOverride -> Command ()
+emulationSetLocaleOverride = mkCommand EmulationSetLocaleOverride
 
-emulationSetTimezoneOverride :: SetTimezoneOverride -> Command SetTimezoneOverride Object
-emulationSetTimezoneOverride = mkCommand "emulation.setTimezoneOverride"
+-- since 07-10-2025 https://www.w3.org/TR/2025/WD-webdriver-bidi-20251007
+emulationSetNetworkConditions :: SetNetworkConditions -> Command ()
+emulationSetNetworkConditions = mkCommand EmulationSetNetworkConditions
+
+emulationSetScreenOrientationOverride :: SetScreenOrientationOverride -> Command ()
+emulationSetScreenOrientationOverride = mkCommand EmulationSetScreenOrientationOverride
+
+-- since 20-11-2025 https://www.w3.org/TR/2025/WD-webdriver-bidi-20251120
+emulationSetScreenSettingsOverride :: SetScreenSettingsOverride -> Command ()
+emulationSetScreenSettingsOverride = mkCommand EmulationSetScreenSettingsOverride
+
+-- since 11-08-2025 https://www.w3.org/TR/2025/WD-webdriver-bidi-20250811
+emulationSetScriptingEnabled :: SetScriptingEnabled -> Command ()
+emulationSetScriptingEnabled = mkCommand EmulationSetScriptingEnabled
+
+emulationSetTimezoneOverride :: SetTimezoneOverride -> Command ()
+emulationSetTimezoneOverride = mkCommand EmulationSetTimezoneOverride
+
+-- since 10-09-2025 https://www.w3.org/TR/2025/WD-webdriver-bidi-20250910
+emulationSetUserAgentOverride :: SetUserAgentOverride -> Command ()
+emulationSetUserAgentOverride = mkCommand EmulationSetUserAgentOverride
 
 ---- Input ----
 
-inputPerformActions :: PerformActions -> Command PerformActions Object
-inputPerformActions = mkCommand "input.performActions"
+inputPerformActions :: PerformActions -> Command ()
+inputPerformActions = mkCommand InputPerformActions
 
-inputReleaseActions :: ReleaseActions -> Command ReleaseActions Object
-inputReleaseActions = mkCommand "input.releaseActions"
+inputReleaseActions :: ReleaseActions -> Command ()
+inputReleaseActions = mkCommand InputReleaseActions
 
-inputSetFiles :: SetFiles -> Command SetFiles Object
-inputSetFiles = mkCommand "input.setFiles"
+inputSetFiles :: SetFiles -> Command ()
+inputSetFiles = mkCommand InputSetFiles
 
 ---- Network ----
 
-networkAddDataCollector :: AddDataCollector -> Command AddDataCollector AddDataCollectorResult
-networkAddDataCollector = mkCommand "network.addDataCollector"
+networkAddDataCollector :: AddDataCollector -> Command AddDataCollectorResult
+networkAddDataCollector = mkCommand NetworkAddDataCollector
 
-networkAddIntercept :: AddIntercept -> Command AddIntercept AddInterceptResult
-networkAddIntercept = mkCommand "network.addIntercept"
+networkAddIntercept :: AddIntercept -> Command AddInterceptResult
+networkAddIntercept = mkCommand NetworkAddIntercept
 
-networkContinueRequest :: ContinueRequest -> Command ContinueRequest Object
-networkContinueRequest = mkCommand "network.continueRequest"
+networkContinueRequest :: ContinueRequest -> Command ()
+networkContinueRequest = mkCommand NetworkContinueRequest
 
-networkContinueResponse :: ContinueResponse -> Command ContinueResponse Object
-networkContinueResponse = mkCommand "network.continueResponse"
+networkContinueResponse :: ContinueResponse -> Command ()
+networkContinueResponse = mkCommand NetworkContinueResponse
 
-networkContinueWithAuth :: ContinueWithAuth -> Command ContinueWithAuth Object
-networkContinueWithAuth = mkCommand "network.continueWithAuth"
+networkContinueWithAuth :: ContinueWithAuth -> Command ()
+networkContinueWithAuth = mkCommand NetworkContinueWithAuth
 
-networkDisownData :: DisownData -> Command DisownData Object
-networkDisownData = mkCommand "network.disownData"
+networkDisownData :: DisownData -> Command ()
+networkDisownData = mkCommand NetworkDisownData
 
-networkFailRequest :: FailRequest -> Command FailRequest Object
-networkFailRequest = mkCommand "network.failRequest"
+networkFailRequest :: FailRequest -> Command ()
+networkFailRequest = mkCommand NetworkFailRequest
 
-networkGetData :: GetData -> Command GetData GetDataResult
-networkGetData = mkCommand "network.getData"
+networkGetData :: GetData -> Command GetDataResult
+networkGetData = mkCommand NetworkGetData
 
-networkProvideResponse :: ProvideResponse -> Command ProvideResponse Object
-networkProvideResponse = mkCommand "network.provideResponse"
+networkProvideResponse :: ProvideResponse -> Command ()
+networkProvideResponse = mkCommand NetworkProvideResponse
 
-networkRemoveDataCollector :: RemoveDataCollector -> Command RemoveDataCollector Object
-networkRemoveDataCollector = mkCommand "network.removeDataCollector"
+networkRemoveDataCollector :: RemoveDataCollector -> Command ()
+networkRemoveDataCollector = mkCommand NetworkRemoveDataCollector
 
-networkRemoveIntercept :: RemoveIntercept -> Command RemoveIntercept Object
-networkRemoveIntercept = mkCommand "network.removeIntercept"
+networkRemoveIntercept :: RemoveIntercept -> Command ()
+networkRemoveIntercept = mkCommand NetworkRemoveIntercept
 
-networkSetCacheBehavior :: SetCacheBehavior -> Command SetCacheBehavior Object
-networkSetCacheBehavior = mkCommand "network.setCacheBehavior"
+networkSetCacheBehavior :: SetCacheBehavior -> Command ()
+networkSetCacheBehavior = mkCommand NetworkSetCacheBehavior
+
+networkSetExtraHeaders :: SetExtraHeaders -> Command ()
+networkSetExtraHeaders = mkCommand NetworkSetExtraHeaders
 
 ---- Script ----
 
-scriptAddPreloadScript :: AddPreloadScript -> Command AddPreloadScript AddPreloadScriptResult
-scriptAddPreloadScript = mkCommand "script.addPreloadScript"
+scriptAddPreloadScript :: AddPreloadScript -> Command AddPreloadScriptResult
+scriptAddPreloadScript = mkCommand ScriptAddPreloadScript
 
-scriptCallFunction :: CallFunction -> Command CallFunction EvaluateResult
-scriptCallFunction = mkCommand "script.callFunction"
+scriptCallFunction :: CallFunction -> Command EvaluateResult
+scriptCallFunction = mkCommand ScriptCallFunction
 
-scriptDisown :: Disown -> Command Disown Object
-scriptDisown = mkCommand "script.disown"
+scriptDisown :: Disown -> Command ()
+scriptDisown = mkCommand ScriptDisown
 
-scriptEvaluate :: Evaluate -> Command Evaluate EvaluateResult
-scriptEvaluate = mkCommand "script.evaluate"
+scriptEvaluate :: Evaluate -> Command EvaluateResult
+scriptEvaluate = mkCommand ScriptEvaluate
 
-scriptGetRealms :: GetRealms -> Command GetRealms GetRealmsResult
-scriptGetRealms = mkCommand "script.getRealms"
+scriptGetRealms :: GetRealms -> Command GetRealmsResult
+scriptGetRealms = mkCommand ScriptGetRealms
 
-scriptRemovePreloadScript :: RemovePreloadScript -> Command RemovePreloadScript Object
-scriptRemovePreloadScript = mkCommand "script.removePreloadScript"
+scriptRemovePreloadScript :: RemovePreloadScript -> Command ()
+scriptRemovePreloadScript = mkCommand ScriptRemovePreloadScript
 
 ---- Storage ----
 
-storageDeleteCookies :: DeleteCookies -> Command DeleteCookies DeleteCookiesResult
-storageDeleteCookies = mkCommand "storage.deleteCookies"
+storageDeleteCookies :: DeleteCookies -> Command DeleteCookiesResult
+storageDeleteCookies = mkCommand StorageDeleteCookies
 
-storageGetCookies :: GetCookies -> Command GetCookies GetCookiesResult
-storageGetCookies = mkCommand "storage.getCookies"
+storageGetCookies :: GetCookies -> Command GetCookiesResult
+storageGetCookies = mkCommand StorageGetCookies
 
-storageSetCookie :: SetCookie -> Command SetCookie SetCookieResult
-storageSetCookie = mkCommand "storage.setCookie"
+storageSetCookie :: SetCookie -> Command SetCookieResult
+storageSetCookie = mkCommand StorageSetCookie
 
 ---- WebExtension ----
 
-webExtensionInstall :: WebExtensionData -> Command WebExtensionData WebExtensionResult
-webExtensionInstall = mkCommand "webExtension.install"
+webExtensionInstall :: WebExtensionInstall -> Command WebExtensionResult
+webExtensionInstall = mkCommand WebExtensionInstall
 
-webExtensionUninstall :: WebExtension -> Command WebExtension Object
-webExtensionUninstall = mkCommand "webExtension.uninstall"
+webExtensionUninstall :: WebExtensionUninstall -> Command ()
+webExtensionUninstall = mkCommand WebExtensionUninstall
+
+-- ############## Subscriptions (Events) ##############
+
+subscribeMany ::
+  [KnownSubscriptionType] ->
+  [BrowsingContext] ->
+  [UserContext] ->
+  (Event -> m ()) ->
+  Subscription m
+subscribeMany = mkMultiSubscription
+
+subscribeOffSpecMany ::
+  [OffSpecSubscriptionType] ->
+  [BrowsingContext] ->
+  [UserContext] ->
+  (Value -> m ()) ->
+  Subscription m
+subscribeOffSpecMany = mkOffSpecSubscription
+
+---- BrowsingContext ----
+
+subscribeBrowsingContextCreated ::
+  [BrowsingContext] ->
+  [UserContext] ->
+  (Info -> m ()) ->
+  Subscription m
+subscribeBrowsingContextCreated = mkSubscription BrowsingContextContextCreated
+
+subscribeBrowsingContextDestroyed ::
+  [BrowsingContext] ->
+  [UserContext] ->
+  (Info -> m ()) ->
+  Subscription m
+subscribeBrowsingContextDestroyed = mkSubscription BrowsingContextContextDestroyed
+
+subscribeBrowsingContextNavigationStarted ::
+  [BrowsingContext] ->
+  [UserContext] ->
+  (NavigationInfo -> m ()) ->
+  Subscription m
+subscribeBrowsingContextNavigationStarted = mkSubscription BrowsingContextNavigationStarted
+
+subscribeBrowsingContextFragmentNavigated ::
+  [BrowsingContext] ->
+  [UserContext] ->
+  (NavigationInfo -> m ()) ->
+  Subscription m
+subscribeBrowsingContextFragmentNavigated = mkSubscription BrowsingContextFragmentNavigated
+
+subscribeBrowsingContextHistoryUpdated ::
+  [BrowsingContext] ->
+  [UserContext] ->
+  (HistoryUpdated -> m ()) ->
+  Subscription m
+subscribeBrowsingContextHistoryUpdated = mkSubscription BrowsingContextHistoryUpdated
+
+subscribeBrowsingContextDomContentLoaded ::
+  [BrowsingContext] ->
+  [UserContext] ->
+  (NavigationInfo -> m ()) ->
+  Subscription m
+subscribeBrowsingContextDomContentLoaded = mkSubscription BrowsingContextDomContentLoaded
+
+subscribeBrowsingContextLoad ::
+  [BrowsingContext] ->
+  [UserContext] ->
+  (NavigationInfo -> m ()) ->
+  Subscription m
+subscribeBrowsingContextLoad = mkSubscription BrowsingContextLoad
+
+subscribeBrowsingContextDownloadWillBegin ::
+  [BrowsingContext] ->
+  [UserContext] ->
+  (DownloadWillBegin -> m ()) ->
+  Subscription m
+subscribeBrowsingContextDownloadWillBegin = mkSubscription BrowsingContextDownloadWillBegin
+
+subscribeBrowsingContextDownloadEnd ::
+  [BrowsingContext] ->
+  [UserContext] ->
+  (DownloadEnd -> m ()) ->
+  Subscription m
+subscribeBrowsingContextDownloadEnd = mkSubscription BrowsingContextDownloadEnd
+
+subscribeBrowsingContextNavigationAborted ::
+  [BrowsingContext] ->
+  [UserContext] ->
+  (NavigationInfo -> m ()) ->
+  Subscription m
+subscribeBrowsingContextNavigationAborted = mkSubscription BrowsingContextNavigationAborted
+
+subscribeBrowsingContextNavigationCommitted ::
+  [BrowsingContext] ->
+  [UserContext] ->
+  (NavigationInfo -> m ()) ->
+  Subscription m
+subscribeBrowsingContextNavigationCommitted = mkSubscription BrowsingContextNavigationCommitted
+
+subscribeBrowsingContextNavigationFailed ::
+  [BrowsingContext] ->
+  [UserContext] ->
+  (NavigationInfo -> m ()) ->
+  Subscription m
+subscribeBrowsingContextNavigationFailed = mkSubscription BrowsingContextNavigationFailed
+
+subscribeBrowsingContextUserPromptClosed ::
+  [BrowsingContext] ->
+  [UserContext] ->
+  (UserPromptClosed -> m ()) ->
+  Subscription m
+subscribeBrowsingContextUserPromptClosed = mkSubscription BrowsingContextUserPromptClosed
+
+subscribeBrowsingContextUserPromptOpened ::
+  [BrowsingContext] ->
+  [UserContext] ->
+  (UserPromptOpened -> m ()) ->
+  Subscription m
+subscribeBrowsingContextUserPromptOpened = mkSubscription BrowsingContextUserPromptOpened
+
+---- Log ----
+
+subscribeLogEntryAdded ::
+  [BrowsingContext] ->
+  [UserContext] ->
+  (LogEntry -> m ()) ->
+  Subscription m
+subscribeLogEntryAdded = mkSubscription LogEntryAdded
+
+---- Network ----
+
+subscribeNetworkAuthRequired ::
+  [BrowsingContext] ->
+  [UserContext] ->
+  (AuthRequired -> m ()) ->
+  Subscription m
+subscribeNetworkAuthRequired = mkSubscription NetworkAuthRequired
+
+subscribeNetworkBeforeRequestSent ::
+  [BrowsingContext] ->
+  [UserContext] ->
+  (BeforeRequestSent -> m ()) ->
+  Subscription m
+subscribeNetworkBeforeRequestSent = mkSubscription NetworkBeforeRequestSent
+
+subscribeNetworkFetchError ::
+  [BrowsingContext] ->
+  [UserContext] ->
+  (FetchError -> m ()) ->
+  Subscription m
+subscribeNetworkFetchError = mkSubscription NetworkFetchError
+
+subscribeNetworkResponseCompleted ::
+  [BrowsingContext] ->
+  [UserContext] ->
+  (ResponseCompleted -> m ()) ->
+  Subscription m
+subscribeNetworkResponseCompleted = mkSubscription NetworkResponseCompleted
+
+subscribeNetworkResponseStarted ::
+  [BrowsingContext] ->
+  [UserContext] ->
+  (ResponseStarted -> m ()) ->
+  Subscription m
+subscribeNetworkResponseStarted = mkSubscription NetworkResponseStarted
+
+---- Script ----
+
+subscribeScriptMessage ::
+  [BrowsingContext] ->
+  [UserContext] ->
+  (Message -> m ()) ->
+  Subscription m
+subscribeScriptMessage = mkSubscription ScriptMessage
+
+subscribeScriptRealmCreated ::
+  [BrowsingContext] ->
+  [UserContext] ->
+  (RealmInfo -> m ()) ->
+  Subscription m
+subscribeScriptRealmCreated = mkSubscription ScriptRealmCreated
+
+subscribeScriptRealmDestroyed ::
+  [BrowsingContext] ->
+  [UserContext] ->
+  (RealmDestroyed -> m ()) ->
+  Subscription m
+subscribeScriptRealmDestroyed = mkSubscription ScriptRealmDestroyed
+
+---- Input ----
+
+subscribeInputFileDialogOpened ::
+  [BrowsingContext] ->
+  [UserContext] ->
+  (FileDialogOpened -> m ()) ->
+  Subscription m
+subscribeInputFileDialogOpened = mkSubscription InputFileDialogOpened
