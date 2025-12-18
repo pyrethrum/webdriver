@@ -1,6 +1,0 @@
-packages: .
-   ../webdriver-precore
-   
--- import: https://www.stackage.org/nightly-2025-06-15/cabal.config
-
-tests: True
