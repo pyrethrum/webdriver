@@ -6,9 +6,7 @@ import Data.Maybe (fromJust)
 import IOUtils (DemoActions (..))
 import TestData (checkboxesUrl, fileUrl, infiniteScrollUrl, textAreaUrl, uploadFilePath)
 import WebDriverPreCore.BiDi.Protocol
-  ( ClientWindowInfo (..),
-    GetClientWindowsResult (..),
-    KeySourceAction (..),
+  ( KeySourceAction (..),
     KeySourceActions (..),
     LocateNodes (..),
     LocateNodesResult (..),
@@ -33,16 +31,12 @@ import WebDriverPreCore.BiDi.Protocol
     WheelScrollAction (..),
     WheelSourceAction (..),
     WheelSourceActions (..),
-    NamedState(..),
-    SetClientWindowState(..),
-    WindowState(..),
     Viewport (..),
     SetViewport (..), 
     BrowsingContext(..),
     JSUInt(..)
   )
 import Prelude hiding (log)
-import Const (seconds)
 
 
 -- Helper function to create default pointer common properties
