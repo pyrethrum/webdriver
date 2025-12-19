@@ -67,56 +67,31 @@ __A Protocol module__
     
     @
     -- Calling the API function to generate the command payload
-    let navCommand = browsingContextNavigate MkNavigate 
+    let navCommand :: Command NavigateResult
+        navCommand = browsingContextNavigate MkNavigate 
           { context = "context-id-123"
           , url = "https://example.com"
           , wait = Just Interactive
           }
     
-    -- API function definition
-    browsingContextNavigate :: Navigate -> Command NavigateResult
-    browsingContextNavigate = mkCommand BrowsingContextNavigate
-    
-    -- The result of the API function call contains method and params to send to the WebSocket
-    data Command r = MkCommand
-      { method :: CommandMethod    -- e.g., "browsingContext.navigate"
-      , params :: Object           -- e.g., {"context": "...", "url": "..."}
-      }
+    -- The result is a Command value with the method and params to send to the WebSocket
+       navCommand = MkCommand
+         { method = KnownCommand BrowsingContextNavigate
+         , params = fromList [("context", String "context-id-123"), 
+                              ("url", String "https://example.com"), 
+                              ("wait", String "interactive")]
+    --   }
     @
 
 "WebDriverPreCore.BiDi.Protocol" 
     Protocol types including 'Command', 'Event', request parameters, and response types.
-    
-    The 'Navigate' parameter type and 'NavigateResult' response type:
-    
-    @
-    data Navigate = MkNavigate
-      { context :: BrowsingContext
-      , url :: URL
-      , wait :: Maybe ReadinessState
-      }
-    
-    data NavigateResult = MkNavigateResult
-      { navigation :: Maybe Text
-      , url :: URL
-      }
-    @
 
 == Shared
 
 [@WebDriverPreCore.Error@] Error types used by both HTTP and BiDi protocols
 
-= Quick Start
+= Implementing a WebDriver Client
 
-To build a WebDriver client:
-
-1. Use the API functions to get 'HttpSpec' or 'BiDiSpec' values
-2. Pattern match on these specs to extract HTTP\/WebSocket details
-3. Send the corresponding requests to your WebDriver server
-4. Parse responses using the provided parser functions
-
-For complete examples, see the 
-[examples directory](https://github.com/pyrethrum/webdriver/blob/main/webdriver-examples/README.md).
 
 
 == BiDi Protocol (Recommended for New Projects)
