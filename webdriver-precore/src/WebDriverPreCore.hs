@@ -92,6 +92,26 @@ __A Protocol module__
 
 = Implementing a WebDriver Client
 
+Implementing a WebDriver client involves:
+
+1. Writing a runner to send HTTP requests or WebSocket messages to WebDriver
+2. Creating some kind of abstraction, such as handles, a typeclass, or the use of an effects library to send commands genrated by the API functions and parse the responses
+3. Handling errors using the shared error types
+
+Example implementations for both BiDi and HTTP runners (using [the handle pattern](https://jaspervdj.be/posts/2018-03-08-handle-pattern.html)) can be found in the [webdriver-examples](https://github.com/pyrethrum/webdriver/tree/main/webdriver-precore/test#readme).
+
+The handle pattern has been chosen for these examples due to its simplicity.Command
+
+== Example Implementation
+
+Using navigation as an example with both protocols, the client implmentation is implemented as follows:
+
+=== HTTP
+
+___The Runner:___ takes commands and sends HTTP requests to the driver and parses responses (implemented in [HTTP.HttpRunner](https://github.com/pyrethrum/webdriver/blob/main/webdriver-precore/test/HTTP/HttpRunner.hs))
+
+
+=== BiDi
 
 
 == BiDi Protocol (Recommended for New Projects)
