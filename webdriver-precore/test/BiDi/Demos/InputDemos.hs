@@ -32,13 +32,18 @@ import WebDriverPreCore.BiDi.Protocol
     SourceActions (..),
     WheelScrollAction (..),
     WheelSourceAction (..),
-    WheelSourceActions (..), 
+    WheelSourceActions (..),
     NamedState(..),
     SetClientWindowState(..),
-    WindowState(..)
+    WindowState(..),
+    Viewport (..),
+    SetViewport (..), 
+    BrowsingContext(..),
+    JSUInt(..)
   )
 import Prelude hiding (log)
-import Control.Monad (void)
+import Const (seconds)
+
 
 -- Helper function to create default pointer common properties
 defaultPointerProps :: PointerCommonProperties
@@ -297,21 +302,28 @@ inputKeyboardDemo =
 
       closeContext utils bidi bc
 
--- will throw exception if there are no windows loaded
-maximiseFirstWindow :: BiDiActions -> IO ()
-maximiseFirstWindow MkBiDiActions {..} = do
-  clientWindows <- browserGetClientWindows
-  let fstWin = case clientWindows.clientWindows of
-        [] -> error "No client windows to maximise"
-        (w : _) -> w
-  void $ browserSetClientWindowState
-    MkSetClientWindowState
-      { clientWindow = fstWin.clientWindow,
-        windowState = ClientWindowNamedState MaximizedState
-      }
+-- Sets the viewport (rendering area) dimensions.
+-- Note: This does NOT resize the browser window itself in Firefox/geckodriver
+-- because browser.setClientWindowState is not yet supported.onfi
+-- The viewport change affects coordinate calculations but isn't visually obvious.
+enlargeViewport :: BiDiActions -> BrowsingContext -> IO ()
+enlargeViewport MkBiDiActions {..} bc = do
+    browsingContextSetViewport $
+          MkSetViewport
+            { context = Just bc,
+              viewport =
+                Just $
+                  Just $
+                    MkViewport
+                      { width = MkJSUInt 1920,
+                        height = MkJSUInt 1080
+                      },
+              devicePixelRatio = Nothing,
+              userContexts = Nothing
+            }
+
 
 -- >>> runDemo inputPointerDemo
--- *** Exception: BiDIError (ProtocolException {error = UnknownCommand, description = "A command could not be executed because the remote end is not aware of it", message = "browser.setClientWindowState", stacktrace = Just "RemoteError@chrome://remote/content/shared/RemoteError.sys.mjs:8:8\nWebDriverError@chrome://remote/content/shared/webdriver/Errors.sys.mjs:202:5\nUnknownCommandError@chrome://remote/content/shared/webdriver/Errors.sys.mjs:944:5\nexecute@chrome://remote/content/shared/webdriver/Session.sys.mjs:420:13\nonPacket@chrome://remote/content/webdriver-bidi/WebDriverBiDiConnection.sys.mjs:236:37\nonMessage@chrome://remote/content/server/WebSocketTransport.sys.mjs:127:18\nhandleEvent@chrome://remote/content/server/WebSocketTransport.sys.mjs:109:14\n", errorData = Nothing, response = Object (fromList [("error",String "unknown command"),("id",Number 4.0),("message",String "browser.setClientWindowState"),("stacktrace",String "RemoteError@chrome://remote/content/shared/RemoteError.sys.mjs:8:8\nWebDriverError@chrome://remote/content/shared/webdriver/Errors.sys.mjs:202:5\nUnknownCommandError@chrome://remote/content/shared/webdriver/Errors.sys.mjs:944:5\nexecute@chrome://remote/content/shared/webdriver/Session.sys.mjs:420:13\nonPacket@chrome://remote/content/webdriver-bidi/WebDriverBiDiConnection.sys.mjs:236:37\nonMessage@chrome://remote/content/server/WebSocketTransport.sys.mjs:127:18\nhandleEvent@chrome://remote/content/server/WebSocketTransport.sys.mjs:109:14\n"),("type",String "error")])})
 inputPointerDemo :: BiDiDemo
 inputPointerDemo =
   demo "Input II - Pointer/Mouse Actions" action
@@ -332,7 +344,9 @@ inputPointerDemo =
       logShow "Navigation result" navResult
       pause
 
-      maximiseFirstWindow bidi
+      logTxt "Setting viewport to 1920x1080 (note: window won't visibly resize in Firefox)"
+      enlargeViewport bidi bc
+      pause
 
       logTxt "Test 1: Basic pointer click - Move and click checkbox"
       basicPointerClick <-
@@ -508,6 +522,11 @@ inputWheelDemo =
       bc <- rootContext utils bidi
       infiniteScroll <- infiniteScrollUrl
 
+
+      logTxt "Setting viewport to 1920x1080 (note: window won't visibly resize in Firefox)"
+      enlargeViewport bidi bc
+      pause
+
       logTxt "Navigate to The Internet - Infinite Scroll for wheel testing"
       navResult <-
         browsingContextNavigate $
@@ -614,6 +633,12 @@ inputCombinedActionsDemo =
       navResult <- browsingContextNavigate $ MkNavigate {context = bc, url = testPage, wait = Just Complete}
       logShow "Navigation result" navResult
       pause
+
+
+      logTxt "Setting viewport to 1920x1080 (note: window won't visibly resize in Firefox)"
+      enlargeViewport bidi bc
+      pause
+
 
       logTxt "Locate the text area 1 field using CSS selector"
       textArea' <-
