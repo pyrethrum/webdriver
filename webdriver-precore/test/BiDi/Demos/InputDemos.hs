@@ -6,34 +6,39 @@ import Data.Maybe (fromJust)
 import IOUtils (DemoActions (..))
 import TestData (checkboxesUrl, fileUrl, infiniteScrollUrl, textAreaUrl, uploadFilePath)
 import WebDriverPreCore.BiDi.Protocol
-    ( LocateNodes(..),
-      LocateNodesResult(..),
-      Locator(..),
-      Navigate(..),
-      ReadinessState(..),
-      NodeRemoteValue(..),
-      SharedId(..),
-      KeySourceAction(..),
-      KeySourceActions(..),
-      NoneSourceActions(..),
-      Origin(..),
-      PauseAction(..),
-      PerformActions(..),
-      Pointer(..),
-      PointerCommonProperties(..),
-      PointerSourceAction(..),
-      PointerSourceActions(..),
-      PointerType(..),
-      ReleaseActions(..),
-      SetFiles(..),
-      SourceActions(..),
-      WheelScrollAction(..),
-      WheelSourceAction(..),
-      WheelSourceActions(..),
-      SharedReference(..) 
-      )
-
+  ( ClientWindowInfo (..),
+    GetClientWindowsResult (..),
+    KeySourceAction (..),
+    KeySourceActions (..),
+    LocateNodes (..),
+    LocateNodesResult (..),
+    Locator (..),
+    Navigate (..),
+    NodeRemoteValue (..),
+    NoneSourceActions (..),
+    Origin (..),
+    PauseAction (..),
+    PerformActions (..),
+    Pointer (..),
+    PointerCommonProperties (..),
+    PointerSourceAction (..),
+    PointerSourceActions (..),
+    PointerType (..),
+    ReadinessState (..),
+    ReleaseActions (..),
+    SetFiles (..),
+    SharedId (..),
+    SharedReference (..),
+    SourceActions (..),
+    WheelScrollAction (..),
+    WheelSourceAction (..),
+    WheelSourceActions (..), 
+    NamedState(..),
+    SetClientWindowState(..),
+    WindowState(..)
+  )
 import Prelude hiding (log)
+import Control.Monad (void)
 
 -- Helper function to create default pointer common properties
 defaultPointerProps :: PointerCommonProperties
@@ -292,7 +297,21 @@ inputKeyboardDemo =
 
       closeContext utils bidi bc
 
+-- will throw exception if there are no windows loaded
+maximiseFirstWindow :: BiDiActions -> IO ()
+maximiseFirstWindow MkBiDiActions {..} = do
+  clientWindows <- browserGetClientWindows
+  let fstWin = case clientWindows.clientWindows of
+        [] -> error "No client windows to maximise"
+        (w : _) -> w
+  void $ browserSetClientWindowState
+    MkSetClientWindowState
+      { clientWindow = fstWin.clientWindow,
+        windowState = ClientWindowNamedState MaximizedState
+      }
+
 -- >>> runDemo inputPointerDemo
+-- *** Exception: BiDIError (ProtocolException {error = UnknownCommand, description = "A command could not be executed because the remote end is not aware of it", message = "browser.setClientWindowState", stacktrace = Just "RemoteError@chrome://remote/content/shared/RemoteError.sys.mjs:8:8\nWebDriverError@chrome://remote/content/shared/webdriver/Errors.sys.mjs:202:5\nUnknownCommandError@chrome://remote/content/shared/webdriver/Errors.sys.mjs:944:5\nexecute@chrome://remote/content/shared/webdriver/Session.sys.mjs:420:13\nonPacket@chrome://remote/content/webdriver-bidi/WebDriverBiDiConnection.sys.mjs:236:37\nonMessage@chrome://remote/content/server/WebSocketTransport.sys.mjs:127:18\nhandleEvent@chrome://remote/content/server/WebSocketTransport.sys.mjs:109:14\n", errorData = Nothing, response = Object (fromList [("error",String "unknown command"),("id",Number 4.0),("message",String "browser.setClientWindowState"),("stacktrace",String "RemoteError@chrome://remote/content/shared/RemoteError.sys.mjs:8:8\nWebDriverError@chrome://remote/content/shared/webdriver/Errors.sys.mjs:202:5\nUnknownCommandError@chrome://remote/content/shared/webdriver/Errors.sys.mjs:944:5\nexecute@chrome://remote/content/shared/webdriver/Session.sys.mjs:420:13\nonPacket@chrome://remote/content/webdriver-bidi/WebDriverBiDiConnection.sys.mjs:236:37\nonMessage@chrome://remote/content/server/WebSocketTransport.sys.mjs:127:18\nhandleEvent@chrome://remote/content/server/WebSocketTransport.sys.mjs:109:14\n"),("type",String "error")])})
 inputPointerDemo :: BiDiDemo
 inputPointerDemo =
   demo "Input II - Pointer/Mouse Actions" action
@@ -312,6 +331,8 @@ inputPointerDemo =
             }
       logShow "Navigation result" navResult
       pause
+
+      maximiseFirstWindow bidi
 
       logTxt "Test 1: Basic pointer click - Move and click checkbox"
       basicPointerClick <-

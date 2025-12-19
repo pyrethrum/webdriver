@@ -4,7 +4,7 @@ Description : W3C WebDriver Protocol Typed Definitions
 Copyright   : (c) 2025 John Walker, Adrian Glouftsis
 License     : BSD-3-Clause
 Maintainer  : theghostjw@gmail.com
-Stability   : experimental
+Stability   : experimental 
 
 = Overview
 
