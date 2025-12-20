@@ -8,8 +8,7 @@ Stability   : experimental
 
 = Overview
 
-This library provides typed definitions for the W3C WebDriver Protocol,
-supporting both the @<https://www.w3.org/TR/2025/WD-webdriver2-20251028/ HTML>@ and the @<https://www.w3.org/TR/2025/WD-webdriver-bidi-20251212/ BiDi>@ protocols,
+This library provides typed definitions for the W3C WebDriver Protocol, supporting both the $HTMLSpecURL and the $BiDiSpecURL protocols.
 
 This library is intended as a foundation for building WebDriver client implementations. 
 
@@ -34,6 +33,7 @@ __A Protocol module__
 == HTTP 
 
 "WebDriverPreCore.HTTP.API"
+
     API functions corresponding to W3C WebDriver endpoints. Each function returns 
     a 'Command' value representing the HTTP request specification and response type.
     
@@ -54,14 +54,15 @@ __A Protocol module__
     @
 
 "WebDriverPreCore.HTTP.Protocol"
+
     Protocol types including 'Command', request parameters, and response types 
     used by the API functions.
 
 == BiDi
 
 "WebDriverPreCore.BiDi.API"
-    API functions for BiDi commands and event subscriptions. Each command function 
-    returns a 'Command' value with the WebSocket message specification and response type.
+
+    API functions for BiDi commands and event subscriptions. Each command function returns a 'Command' value with the WebSocket message specification and response type.
     
     Example usage:
     
@@ -80,15 +81,16 @@ __A Protocol module__
          , params = fromList [("context", String "context-id-123"), 
                               ("url", String "https://example.com"), 
                               ("wait", String "interactive")]
-    --   }
+    }
     @
 
 "WebDriverPreCore.BiDi.Protocol" 
-    Protocol types including 'Command', 'Event', request parameters, and response types.
+
+  Protocol types including 'Command', 'Event', request parameters, and response types.
 
 == Shared
 
-[@WebDriverPreCore.Error@] Error types used by both HTTP and BiDi protocols
+"WebDriverPreCore.Error" Error types used by both HTTP and BiDi protocols
 
 = Implementing a WebDriver Client
 
@@ -98,9 +100,7 @@ Implementing a WebDriver client involves:
 2. Creating some kind of abstraction, such as handles, a typeclass, or the use of an effects library to send commands genrated by the API functions and parse the responses
 3. Handling errors using the shared error types
 
-Example implementations for both BiDi and HTTP runners (using [the handle pattern](https://jaspervdj.be/posts/2018-03-08-handle-pattern.html)) can be found in the [webdriver-examples](https://github.com/pyrethrum/webdriver/tree/main/webdriver-precore/test#readme).
-
-The handle pattern has been chosen for these examples due to its simplicity.Command
+Example implementations for both BiDi and HTTP runners, in this caase, using [the handle pattern](https://jaspervdj.be/posts/2018-03-08-handle-pattern.html)), can be found in the [test repository](https://github.com/pyrethrum/webdriver/tree/main/webdriver-precore/test#readme) for this package.
 
 == Example Implementation
 
@@ -108,34 +108,58 @@ Using navigation as an example with both protocols, the client implmentation is 
 
 === HTTP
 
-___The Runner:___ takes commands and sends HTTP requests to the driver and parses responses (implemented in [HTTP.HttpRunner](https://github.com/pyrethrum/webdriver/blob/main/webdriver-precore/test/HTTP/HttpRunner.hs))
+__The Runner__ takes commands and sends HTTP requests to the driver and parses responses (implemented in [HTTP.HttpRunner](https://github.com/pyrethrum/webdriver/blob/main/webdriver-precore/test/HTTP/HttpRunner.hs))
+
+__An Actions Type__ mirrors the type API functions with the response wrapped in IO (implemented in [HTTP.HttpActions](https://github.com/pyrethrum/webdriver/blob/main/webdriver-precore/test/HTTP/HttpActions.hs))
+
+__An Actions Implementation__ an instance of the Actions type that uses the runner to send commands (implemented in [HTTP.HttpActions](https://github.com/pyrethrum/webdriver/blob/main/webdriver-precore/test/HTTP/HttpActions.hs))
+
+@
+import WebDriverPreCore.HTTP.API qualified as API
+import WebDriverPreCore.HTTP.Protocol (SessionId, URL)
+
+-- The Actions type
+data HttpActions = MkHttpActions
+  { navigateTo :: SessionId -> URL -> IO ()
+  , ...
+  }
+
+-- The Actions implementation
+mkActions :: HttpRunner -> HttpActions
+mkActions runner = MkHttpActions
+  { navigateTo = \sessionId url -> do
+      let command = API.navigateTo sessionId url
+      runner.runHttpCommand command
+  , ...
+  }
+@
+
+With the above in place, a /run/ or /withActions/ function can be created to provide the user a means to perfom WebDriver operations.
+
+==== User's Module
+
+@
+import Client.HTTP.Actions
+import WebDriverPreCore.HTTP.Protocol 
+import HTTP.HttpRunner (mkRunner)
+import HTTP.DemoUtils (HttpDemo, demo, runDemo, sessionDemo)
+import HTTP.HttpActions (HttpActions (..))
+
+-- >>> runDemo navigate
+demoForwardBackRefresh :: HttpDemo
+demoForwardBackRefresh =
+  sessionDemo "navigate" action
+  where
+    action :: SessionId -> HttpActions -> IO ()
+    action sesId MkHttpActions {..} = do
+      navigateTo sesId $ MkUrl "https://example.com/index.html "
+
+@
+
+Full example is available in the [test repository]((https://github.com/pyrethrum/webdriver/blob/main/webdriver-precore/test/HTTP/HttpDemo.hs)   
 
 
-=== BiDi
-
-
-== BiDi Protocol (Recommended for New Projects)
-
-The BiDi protocol provides modern, bidirectional communication with support for
-events and real-time updates:
-
-[@WebDriverPreCore.BiDi.API@] BiDi command functions for all WebDriver operations
-
-[@WebDriverPreCore.BiDi.Protocol@] BiDi protocol types, commands, events, and responses
-
-== HTTP Protocol (Stable)
-
-The HTTP protocol provides the traditional request-response pattern:
-
-[@WebDriverPreCore.HTTP.API@] HTTP endpoint functions for all WebDriver operations
-
-[@WebDriverPreCore.HTTP.Protocol@] HTTP protocol types, specifications, and responses
-
-== Shared Modules
-
-[@WebDriverPreCore.Error@] Error types used by both protocols
-
-== Deprecated Modules (Removal planned ~ 2027-02-01)
+= Deprecated Modules (Removal planned ~ 2027-02-01)
 
 ⚠️  The following modules are deprecated. Please migrate to their replacements.
 See @ChangeLog.md@ for detailed migration instructions.
@@ -146,68 +170,19 @@ See @ChangeLog.md@ for detailed migration instructions.
     This module re-exported various HTTP protocol components. The functionality 
     has been reorganized into the Protocol module.
 
-[@WebDriverPreCore.Http.SpecDefinition@] 
+[@WebDriverPreCore.HTTP.SpecDefinition@] (formerly @WebDriverPreCore.Http.SpecDefinition@)
     __Deprecated:__ Use "WebDriverPreCore.HTTP.API" instead
     
     This module contained the HTTP API endpoint functions. It has been renamed 
     to better reflect the distinction between API (functions) and Protocol (types).
 
 [@WebDriverPreCore.Http.HttpResponse@] 
-    __Deprecated:__ Functionality integrated into "WebDriverPreCore.HTTP.Protocol"
-    
-    The 'HttpResponse' type is now part of the Protocol module where it belongs
-    with other HTTP protocol types.
+    __Deprecated:__ This type is implementation specific and has been removed. The parser supplied in this type is now implicit, as the return types of all Commands are instances of 'FromJSON'.
 
-= Migration Guide
 
-== From Deprecated HTTP Modules
+= Migration For Depricated Modules
 
-If you're using the deprecated modules:
-
-> import WebDriverPreCore.Http
-> import WebDriverPreCore.Http.SpecDefinition
-> import WebDriverPreCore.Http.HttpResponse
-
-__Replace with:__
-
-> import WebDriverPreCore.HTTP.API      -- For endpoint functions
-> import WebDriverPreCore.HTTP.Protocol  -- For types and specs
-
-The API remains largely unchanged; only import paths need updating.
-
-= Building a WebDriver Client
-
-A minimal WebDriver client needs to:
-
-1. __Send requests:__ Extract HTTP method, URL, and body from 'HttpSpec' or command from 'BiDiSpec'
-2. __Parse responses:__ Use the parser provided in the spec
-3. __Handle errors:__ Process 'WebDriverPreCore.Error.WebDriverError' values
-
-Example structure:
-
-@
-import WebDriverPreCore.HTTP.API qualified as API
-import WebDriverPreCore.HTTP.Protocol
-
-runHttpSpec :: HttpSpec a -> IO a
-runHttpSpec spec = do
-  response <- sendHttpRequest spec.method spec.endpoint spec.body
-  case spec.parser response of
-    Left err -> throwIO err
-    Right val -> pure val
-@
-
-= Further Reading
-
-* [Project repository](https://github.com/pyrethrum/webdriver)
-* [Examples](https://github.com/pyrethrum/webdriver/blob/main/webdriver-examples/README.md)
-* [W3C WebDriver Specification](https://www.w3.org/TR/webdriver2/)
-
-= Alternatives
-
-If you need a complete, ready-to-use WebDriver client library, consider
-[haskell-webdriver](https://github.com/haskell-webdriver/haskell-webdriver#readme).
-
+See the [ChangeLog](https://github.com/pyrethrum/webdriver/blob/main/webdriver-precore/ChangeLog.md) for details
 -}
 
 module WebDriverPreCore () where
@@ -224,8 +199,6 @@ module WebDriverPreCore () where
 --
 -- import WebDriverPreCore.Error
 -- @
-
-
 
 -- $HTMLSpecURL
 -- https://www.w3.org/TR/2025/WD-webdriver2-20251028/
