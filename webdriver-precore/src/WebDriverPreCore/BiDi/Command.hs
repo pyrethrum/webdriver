@@ -1,5 +1,8 @@
 module WebDriverPreCore.BiDi.Command
   ( Command (..),
+    CommandMethod (..), 
+    KnownCommand (..), 
+    OffSpecCommand (..), 
     mkCommand,
     emptyCommand,
     mkOffSpecCommand,
@@ -8,73 +11,47 @@ module WebDriverPreCore.BiDi.Command
     extendCoerceCommand,
     loosenCommand,
     coerceCommand,
-    CommandMethod (..),
-    KnownCommand (..),
     knownCommandToText,
-    OffSpecCommand (..),
     toCommandText,
   )
 where
 
+import AesonUtils (jsonToText, objectOrThrow)
 import Control.Applicative (Alternative (..))
 import Data.Aeson
   ( Object,
     ToJSON,
     Value (..),
   )
+import Data.Aeson.KeyMap qualified as KM
 import Data.Aeson.Types (FromJSON (parseJSON), Parser, ToJSON (..))
 import Data.Text as T (Text, intercalate, unpack)
-import AesonUtils (jsonToText, objectOrThrow)
 import Utils (enumerate)
-import Data.Aeson.KeyMap qualified as KM
 
+-- |  A BiDi Command to be sent over the WebSocket connection.
+--
+-- All functions in "WebDriverPreCore.BiDi.API" return values of this type.
+--
+-- The command contains the method name and parameters to be serialized as JSON and a phantom response type @r@, which is always an instance of 'FromJSON'.
 data Command r = MkCommand
-  { method :: CommandMethod,
+  { -- | An identifier for the command to be invoked
+    method :: CommandMethod,
+    -- | The JSON payload to be sent
     params :: Object
   }
   deriving (Show, Eq)
 
--- constructors
-
-mkCommand :: forall c r. (ToJSON c) => KnownCommand -> c -> Command r
-mkCommand method params = MkCommand {method = KnownCommand method, params = objectOrThrow ("mkCommand - " <> toCommandText (KnownCommand method)) params}
-
-emptyCommand :: forall r. KnownCommand -> Command r
-emptyCommand method = MkCommand {method = KnownCommand method, params = KM.empty}
-
-mkOffSpecCommand :: Text -> Object -> Command Object
-mkOffSpecCommand method = MkCommand (OffSpecCommand $ MkOffSpecCommand method) 
-
--- fallback modifiers
-
-extendLoosenCommand :: forall r. Object -> Command r -> Command Value
-extendLoosenCommand = extendCoerceCommand
-
-extendCommand :: forall r. Object -> Command r -> Command r
-extendCommand = extendCoerceCommand
-
-extendCoerceCommand :: forall r r2. Object -> Command r -> Command r2
-extendCoerceCommand extended MkCommand {method, params} =
-  MkCommand
-    { method,
-      params = params <> extended
-    }
-
-loosenCommand :: forall r. Command r -> Command Value
-loosenCommand = coerceCommand
-
-coerceCommand :: forall r r'. Command r -> Command r'
-coerceCommand MkCommand {method, params}  = MkCommand {method, params} 
-
---
-
-data CommandMethod = KnownCommand KnownCommand | OffSpecCommand OffSpecCommand
+-- | The method name of a BiDi command. This library provides known commands as 'KnownCommand' values, but users can also create off-spec commands using 'OffSpecCommand' as a fallback, when the driver supports commands not yet implemented in this library.
+data CommandMethod
+  = KnownCommand KnownCommand
+  | OffSpecCommand OffSpecCommand
   deriving (Show, Eq)
 
 instance ToJSON CommandMethod where
   toJSON :: CommandMethod -> Value
   toJSON = String . toCommandText
 
+-- | The method name of a BiDi command known to this library.
 data KnownCommand
   = BrowserClose
   | BrowserCreateUserContext
@@ -137,6 +114,44 @@ data KnownCommand
   | WebExtensionInstall
   | WebExtensionUninstall
   deriving (Show, Eq, Enum, Bounded)
+
+
+-- | The method name of a BiDi command not yet implemented in this library
+newtype OffSpecCommand = MkOffSpecCommand {command :: Text}
+  deriving (Show, Eq)
+  deriving newtype (FromJSON, ToJSON)
+
+-- constructors
+
+mkCommand :: forall c r. (ToJSON c) => KnownCommand -> c -> Command r
+mkCommand method params = MkCommand {method = KnownCommand method, params = objectOrThrow ("mkCommand - " <> toCommandText (KnownCommand method)) params}
+
+emptyCommand :: forall r. KnownCommand -> Command r
+emptyCommand method = MkCommand {method = KnownCommand method, params = KM.empty}
+
+mkOffSpecCommand :: Text -> Object -> Command Object
+mkOffSpecCommand method = MkCommand (OffSpecCommand $ MkOffSpecCommand method)
+
+-- fallback modifiers
+
+extendLoosenCommand :: forall r. Object -> Command r -> Command Value
+extendLoosenCommand = extendCoerceCommand
+
+extendCommand :: forall r. Object -> Command r -> Command r
+extendCommand = extendCoerceCommand
+
+extendCoerceCommand :: forall r r2. Object -> Command r -> Command r2
+extendCoerceCommand extended MkCommand {method, params} =
+  MkCommand
+    { method,
+      params = params <> extended
+    }
+
+loosenCommand :: forall r. Command r -> Command Value
+loosenCommand = coerceCommand
+
+coerceCommand :: forall r r'. Command r -> Command r'
+coerceCommand MkCommand {method, params} = MkCommand {method, params}
 
 instance ToJSON KnownCommand where
   toJSON :: KnownCommand -> Value
@@ -282,12 +297,6 @@ knownCommandToText = \case
   StorageSetCookie -> "storage.setCookie"
   WebExtensionInstall -> "webExtension.install"
   WebExtensionUninstall -> "webExtension.uninstall"
-
-
-
-newtype OffSpecCommand = MkOffSpecCommand {command :: Text}
-  deriving (Show, Eq)
-  deriving newtype (FromJSON, ToJSON)
 
 toCommandText :: CommandMethod -> Text
 toCommandText = \case

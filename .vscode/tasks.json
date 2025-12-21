@@ -77,7 +77,7 @@
         // --hyperlink-source triggers internal library haddock build which fails (Cabal bug)
         // hyperlinked source is included automatically when using --haddock-for-hackage for upload
         // "--haddock-option=--hyperlink-source",
-        "--open"
+        // "--open" - doesn't work in task
       ],
       "presentation": {
         "reveal": "always",
