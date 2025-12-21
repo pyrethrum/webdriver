@@ -135,8 +135,6 @@ library
       -- HTTP
       WebDriverPreCore.HTTP.API
       WebDriverPreCore.HTTP.Protocol
-      -- Shared
-      WebDriverPreCore.Error
       -- Deprecated (to be removed ~ 2027-02-01)
       WebDriverPreCore.Http
       WebDriverPreCore.HTTP.SpecDefinition
@@ -162,6 +160,8 @@ library
       WebDriverPreCore.BiDi.Session
       WebDriverPreCore.BiDi.Storage
       WebDriverPreCore.BiDi.WebExtensions
+      -- Shared
+      WebDriverPreCore.Error
   hs-source-dirs: src
   build-depends:
     webdriver-precore:utils-internal,
