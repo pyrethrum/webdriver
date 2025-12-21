@@ -13,7 +13,7 @@ import WebDriverPreCore.HTTP.API qualified as A
 import WebDriverPreCore.HTTP.Protocol
   ( Command (..),
     ElementId (..),
-    SessionId (..),
+    Session (..),
     Timeouts (..),
     coerceCommand,
     extendPost,
@@ -29,7 +29,7 @@ demoFallbackActions :: HttpDemo
 demoFallbackActions =
   sessionDemo "fallback actions demo - manually construct commands" action
   where
-    action :: SessionId -> DemoActions -> HttpActions -> IO ()
+    action :: Session -> DemoActions -> HttpActions -> IO ()
     action sesId MkDemoActions {..} MkHttpActions {runCommand} = do
       -- Navigate to checkboxes page using runCommand and log the response
       url <- checkboxesUrl
@@ -85,7 +85,7 @@ demoFallbackCoercions :: HttpDemo
 demoFallbackCoercions =
   sessionDemo "fallback coerce commands" action
   where
-    action :: SessionId -> DemoActions -> HttpActions -> IO ()
+    action :: Session -> DemoActions -> HttpActions -> IO ()
     action sesId MkDemoActions {..} MkHttpActions {runCommand} = do
       -- Navigate to another page using typed Navigate command and getResponse
       logTxt "Navigate to another page using typed command and getResponse (navigateTo returns Command ())"
@@ -113,7 +113,7 @@ demoExtendPost :: HttpDemo
 demoExtendPost =
   sessionDemo "fallback extend Post commands demo" action
   where
-    action :: SessionId -> DemoActions -> HttpActions -> IO ()
+    action :: Session -> DemoActions -> HttpActions -> IO ()
     action sesId MkDemoActions {..} MkHttpActions {runCommand'} = do
       cbxsUrl <- checkboxesUrl
       runCommand' $ A.navigateTo sesId cbxsUrl
@@ -149,10 +149,10 @@ demoExtendPost =
 
 -- Helper functions (copied from API.hs since they're not exported)
 
-sessionUri1 :: SessionId -> Text -> UrlPath
+sessionUri1 :: Session -> Text -> UrlPath
 sessionUri1 s sp = MkUrlPath ["session", s.id, sp]
 
-elementUri1 :: SessionId -> ElementId -> Text -> UrlPath
+elementUri1 :: Session -> ElementId -> Text -> UrlPath
 elementUri1 s er ep = MkUrlPath ["session", s.id, "element", er.id, ep]
 
 _stopDemoUnusedWarning :: HttpDemo -> IO ()

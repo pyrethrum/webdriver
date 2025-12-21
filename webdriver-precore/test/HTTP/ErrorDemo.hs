@@ -10,7 +10,7 @@ import UnliftIO (try)
 import WebDriverPreCore.HTTP.Protocol
   ( ErrorType (..),
     Selector (..),
-    SessionId,
+    Session,
     Timeouts (..),
     WebDriverException (..),
   )
@@ -25,7 +25,7 @@ errorDemo :: HttpDemo
 errorDemo =
   sessionDemo "Http Error Demo" action
   where
-    action :: SessionId -> DemoActions -> HttpActions -> IO ()
+    action :: Session -> DemoActions -> HttpActions -> IO ()
     action sesId MkDemoActions {..} MkHttpActions {..} = do
       -- Set short timeouts
       setTimeouts sesId $

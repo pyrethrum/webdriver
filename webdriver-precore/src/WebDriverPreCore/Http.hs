@@ -145,7 +145,7 @@ import WebDriverPreCore.HTTP.HttpResponse
 --     HttpResponse (..),
 --     SameSite (..),
 --     Selector (..),
---     SessionId (..),
+--     Session (..),
 --     SessionResponse (..),
 --     Timeouts (..),
 --     UrlPath (..),

@@ -67,7 +67,7 @@ __2. A Protocol module__
 "WebDriverPreCore.HTTP.Protocol"
 
     Protocol types including 'WebDriverPreCore.HTTP.Protocol.Command', request parameters, and response and error types 
-      referenced by the API functions, such as URL, and SessionId
+      referenced by the API functions, such as URL, and Session
 
 == BiDi
 
@@ -124,11 +124,11 @@ __An Actions Implementation__ an instance of the Actions type that uses the runn
 
 @
 import WebDriverPreCore.HTTP.API qualified as API
-import WebDriverPreCore.HTTP.Protocol (SessionId, URL)
+import WebDriverPreCore.HTTP.Protocol (Session, URL)
 
 -- The Actions type
 data HttpActions = MkHttpActions
-  { navigateTo :: SessionId -> URL -> IO ()
+  { navigateTo :: Session -> URL -> IO ()
   , ...
   }
 
@@ -158,7 +158,7 @@ demoForwardBackRefresh :: HttpDemo
 demoForwardBackRefresh =
   sessionDemo "navigate" action
   where
-    action :: SessionId -> HttpActions -> IO ()
+    action :: Session -> HttpActions -> IO ()
     action sesId MkHttpActions {..} = do
       navigateTo sesId $ MkUrl "https://example.com/index.html"
 

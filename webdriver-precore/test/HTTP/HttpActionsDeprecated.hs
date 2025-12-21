@@ -87,8 +87,8 @@ mkDeprecatedActions MkHttpRunnerDeprecated {run} =
       runCommand' = \_ -> error "runCommand not implemented in legacy actions"
     }
   where
-    sessRun :: forall a r. (Show r) => (P.SessionId -> a -> Legacy.HttpSpec r) -> P.SessionId -> a -> IO r
+    sessRun :: forall a r. (Show r) => (P.Session -> a -> Legacy.HttpSpec r) -> P.Session -> a -> IO r
     sessRun f s = run . f s
 
-    sessRun2 :: forall a b r. (Show r) => (P.SessionId -> a -> b -> Legacy.HttpSpec r) -> P.SessionId -> a -> b -> IO r
+    sessRun2 :: forall a b r. (Show r) => (P.Session -> a -> b -> Legacy.HttpSpec r) -> P.Session -> a -> b -> IO r
     sessRun2 f s a = run . f s a

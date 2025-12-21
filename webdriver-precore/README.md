@@ -308,7 +308,7 @@ module IOAPI where
 
 import Data.Aeson (Value)
 import Data.Text  as T (Text)
-import WebDriverPreCore.Http (DriverStatus, ElementId, Selector, SessionId)
+import WebDriverPreCore.Http (DriverStatus, ElementId, Selector, Session)
 import WebDriverPreCore.Http qualified as W
 import Prelude hiding (log)
 import IOUtils (sleepMs, encodeFileToBase64)
@@ -317,22 +317,22 @@ import HttpRunner (run)
 status :: IO DriverStatus
 status = run W.status
 
-newSession :: W.FullCapabilities -> IO SessionId
+newSession :: W.FullCapabilities -> IO Session
 newSession = run . W.newSession
 
-getTimeouts :: SessionId -> IO W.Timeouts
+getTimeouts :: Session -> IO W.Timeouts
 getTimeouts = run . W.getTimeouts
 
-setTimeouts :: SessionId -> W.Timeouts -> IO ()
+setTimeouts :: Session -> W.Timeouts -> IO ()
 setTimeouts s = run . W.setTimeouts s
 
-getCurrentUrl :: SessionId -> IO Text
+getCurrentUrl :: Session -> IO Text
 getCurrentUrl = run . W.getCurrentUrl
 
-getTitle :: SessionId -> IO Text
+getTitle :: Session -> IO Text
 getTitle = run . W.getTitle
 
-maximizeWindow :: SessionId -> IO W.WindowRect
+maximizeWindow :: Session -> IO W.WindowRect
 maximizeWindow = run . W.maximizeWindow
 
 -- ... and 50+ more API functions

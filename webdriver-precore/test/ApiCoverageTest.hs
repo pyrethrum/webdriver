@@ -15,7 +15,7 @@ import WebDriverPreCore.HTTP.Protocol
     Handle (..),
     Script (..),
     Selector (..),
-    SessionId (..),
+    Session (..),
     ShadowRootElementId (..),
     Timeouts (..),
     URL (..),
@@ -113,8 +113,8 @@ specLinesFromSpec = fromList $ parseLine <$> filterOut T.null (strip <$> T.lines
 sessionId :: Text
 sessionId = "session_id"
 
-session :: SessionId
-session = Session sessionId
+session :: Session
+session = MkSession sessionId
 
 elementId :: Text
 elementId = "element_id"
