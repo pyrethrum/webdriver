@@ -230,6 +230,7 @@ test-suite test
     , TestData
     , TestServerAPI
     , HTTP.Runner
+    , HTTP.HttpClient
     , HTTP.HttpActions
     , HTTP.HttpActionsDeprecated
     , HTTP.DemoUtils
