@@ -1,0 +1,22 @@
+module DebugConfig (
+  debugConfig
+) where
+
+import Config
+  ( Config (..),
+    DemoBrowser (..),
+  )
+
+debugConfig :: Config
+debugConfig =
+  MkConfig
+    { browser =
+        Firefox
+          { headless = True,
+            profilePath = Just "[YOUR FIREFOX PROFILE PATH HERE]"
+          },
+      logging = True,
+      httpUrl = "127.0.0.1",
+      httpPort = 4444,
+      pauseMS = 0
+    }
