@@ -12,101 +12,19 @@ Adapt and move when ready
 [![Stackage Nightly](http://stackage.org/package/path/badge/nightly)](http://stackage.org/nightly/package/path) 
 -->
 
-- [webdriver-precore](#webdriver-precore)
-  - [What is This Library?](#what-is-this-library)
-  - [Why This Library?](#why-this-library)
-    - [Core Principles](#core-principles)
-    - [Library Non-Goals](#library-non-goals)
-    - [Acknowledgements](#acknowledgements)
-- [Minimal Example](#minimal-example)
-  - [1. Implementing a runner](#1-implementing-a-runner)
-      - [Main Types (Used in the Runner)](#main-types-used-in-the-runner)
-        - [HttpSpec](#httpspec)
-        - [HttpResponse](#httpresponse)
-      - [The Runner](#the-runner)
-    - [1.1 Convert HttpSpec to params for req](#11-convert-httpspec-to-params-for-req)
-    - [1.2 Call the WebDriver](#12-call-the-webdriver)
-    - [1.3 Parse HttpResponse Using the Parser Provided in the HttpSpec](#13-parse-httpresponse-using-the-parser-provided-in-the-httpspec)
-    - [2. Applying the Runner to the HttpSpec Functions](#2-applying-the-runner-to-the-httpspec-functions)
-    - [3. Install a Vendor Provided WebDriver](#3-install-a-vendor-provided-webdriver)
-    - [4. Launch WebDriver From the Terminal](#4-launch-webdriver-from-the-terminal)
-    - [5. Drive the Browser Via the IO API](#5-drive-the-browser-via-the-io-api)
-
-
-```mermaid
-classDiagram
-    class Protocol {
-        <<Core Library>>
-        +Type definitions
-        +Data structures
-        +Command types
-        +Event types
-        +Serialization
-    }
-    
-    class API {
-        <<Core Library>>
-        +sessionNew()
-        +browsingContextNavigate()
-        +scriptEvaluate()
-        +networkAddIntercept()
-        +storageGetCookies()
-    }
-    
-    class Socket {
-        <<User Implementation>>
-        +send()
-        +getNext()
-        +subscribe()
-        +unsubscribe()
-        +WebSocket communication
-    }
-    
-    class Actions {
-        <<User Implementation>>
-        +High-level workflows
-        +Application-specific actions
-        +Command orchestration
-    }
-    
-    class Runner {
-        <<User Implementation>>
-        +Test orchestration
-        +Session management
-        +Action execution
-    }
-    
-    class Tests {
-        <<User Implementation>>
-        +Tests
-    }
-    
-    API ..> Protocol : uses
-    Socket ..> Protocol : uses
-    Actions ..> API : uses
-    Actions ..> Protocol : uses
-    Actions ..> Socket : uses
-    Runner ..> Protocol : uses
-    Runner ..> Socket : uses
-    Tests ..> Actions : uses
-    Tests ..> Protocol : uses
-    TestExecutor ..> Runner : uses
-    TestExecutor ..> Tests : uses
-    
-    style Protocol fill:#e3f2fd,stroke:#1976d2,stroke-width:3px,color:#000,rx:10
-    style API fill:#e3f2fd,stroke:#1976d2,stroke-width:3px,color:#000,rx:10
-    style Socket fill:#fff3e0,stroke:#f57c00,stroke-width:3px,color:#000,rx:10
-    style Actions fill:#fff3e0,stroke:#f57c00,stroke-width:3px,color:#000,rx:10
-    style Runner fill:#fff3e0,stroke:#f57c00,stroke-width:3px,color:#000,rx:10
-    style Tests fill:#fff3e0,stroke:#f57c00,stroke-width:3px,color:#000,rx:10
-    style TestExecutor fill:#fff3e0,stroke:#f57c00,stroke-width:3px,color:#000,rx:10
-```
 
 ## What is This Library?
 
-This library provides a minimal abstraction over the [WebDriver W3C Protocol endpoints](https://www.w3.org/TR/webdriver2/) without providing any implementation. It provides a description of the W3C API as a list of functions that return a [HttpSpec type](#HttpSpec). The intention is that other libraries will provide the actual implementation.
 
-You can not use this library directly to drive a browser. If you are looking for a fully featured library to drive a browser, you may be interested in an alternative library such as [haskell-webdriver](https://hackage.haskell.org/package/webdriver), a Selenium 2 client that is actively maintained.
+This library provides typed definitions for the W3C WebDriver Protocol, supporting both the [HTML](HTMLSpecURL) and the [BiDi](BiDiSpecURL) protocols.
+
+This library is intended as a foundation for building WebDriver client implementations. __It is type constructors only__, and does not include any executable client code.
+
+If you are writing a webdriver client, this library will save you the effort of analysing the specs and implementing the protocol types and JSON instances.
+
+If you are looking for a library to enable you to interact with web pages directly then you need a fully implemented web client library __which this library is not__.
+
+For a fully implemented webdriver client, consider an alternative such as [haskell-webdriver](https://github.com/haskell-webdriver/haskell-webdriver#readme)
 
 ## Why This Library?
 
