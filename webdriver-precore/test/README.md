@@ -30,6 +30,7 @@ Key simplifications compared to a production-ready framework:
 - Minimal robustness features 
   - no advanced waits or retry mechanisms
   - no timeout on BiDi socket commands
+- [The handle pattern](https://jaspervdj.be/posts/2018-03-08-handle-pattern.html) is used due to its simplicity. Alternative abstractions could have UX advantages
 
 The demos cover all W3C WebDriver endpoints for [HTTP](https://www.w3.org/TR/webdriver2/#endpoints) protocol and [BiDi](https://www.w3.org/TR/webdriver-bidi/) commands and events.
 
