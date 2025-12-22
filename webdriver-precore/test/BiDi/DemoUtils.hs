@@ -13,7 +13,7 @@ import Data.Time.Clock.POSIX (POSIXTime, getPOSIXTime)
 import Data.Word (Word64)
 import HTTP.DemoUtils (withSession)
 import HTTP.HttpActions qualified as HTTPA
-import HTTP.HttpRunner (mkRunner)
+import HTTP.Runner (mkRunner)
 import IOUtils (DemoActions (..), Logger, logNothingLogger, mkDemoActions)
 import Logger (withChannelFileLogger)
 import Network.HTTP.Req (http)

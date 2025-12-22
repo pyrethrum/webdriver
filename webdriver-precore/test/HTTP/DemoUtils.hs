@@ -18,7 +18,7 @@ import WebDriverPreCore.HTTP.Protocol (FullCapabilities, Session, SessionRespons
 import HTTP.HttpActionsDeprecated qualified as Legacy
 import HTTP.HttpRunnerDeprecated qualified as Legacy
 #else
-import HTTP.HttpRunner (mkRunner)
+import HTTP.Runner (mkRunner)
 import HTTP.HttpActions (mkActions)
 #endif
 

@@ -10,7 +10,7 @@ import Control.Exception (throw)
 import Data.Aeson (Result (..), Value, object, withObject, (.:))
 import Data.Aeson.Types (Parser, parseMaybe)
 import Data.Function ((&))
-import HTTP.HttpRunner (callWebDriver, fullCommandPath)
+import HTTP.Runner (callWebDriver, fullCommandPath)
 import IOUtils (DemoActions (..))
 import Network.HTTP.Req (Scheme (Http), Url)
 import Network.HTTP.Req as R

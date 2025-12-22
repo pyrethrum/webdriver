@@ -1,4 +1,4 @@
-module HTTP.HttpRunner
+module HTTP.Runner
   ( mkRunner,
     HttpRunner (..),
     -- share with deprecated runner

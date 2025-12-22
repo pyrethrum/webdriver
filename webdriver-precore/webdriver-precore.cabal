@@ -229,7 +229,7 @@ test-suite test
     , Logger
     , TestData
     , TestServerAPI
-    , HTTP.HttpRunner
+    , HTTP.Runner
     , HTTP.HttpActions
     , HTTP.HttpActionsDeprecated
     , HTTP.DemoUtils
