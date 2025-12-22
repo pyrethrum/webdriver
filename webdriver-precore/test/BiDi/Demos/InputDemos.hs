@@ -6,34 +6,38 @@ import Data.Maybe (fromJust)
 import IOUtils (DemoActions (..))
 import TestData (checkboxesUrl, fileUrl, infiniteScrollUrl, textAreaUrl, uploadFilePath)
 import WebDriverPreCore.BiDi.Protocol
-    ( LocateNodes(..),
-      LocateNodesResult(..),
-      Locator(..),
-      Navigate(..),
-      ReadinessState(..),
-      NodeRemoteValue(..),
-      SharedId(..),
-      KeySourceAction(..),
-      KeySourceActions(..),
-      NoneSourceActions(..),
-      Origin(..),
-      PauseAction(..),
-      PerformActions(..),
-      Pointer(..),
-      PointerCommonProperties(..),
-      PointerSourceAction(..),
-      PointerSourceActions(..),
-      PointerType(..),
-      ReleaseActions(..),
-      SetFiles(..),
-      SourceActions(..),
-      WheelScrollAction(..),
-      WheelSourceAction(..),
-      WheelSourceActions(..),
-      SharedReference(..) 
-      )
-
+  ( KeySourceAction (..),
+    KeySourceActions (..),
+    LocateNodes (..),
+    LocateNodesResult (..),
+    Locator (..),
+    Navigate (..),
+    NodeRemoteValue (..),
+    NoneSourceActions (..),
+    Origin (..),
+    PauseAction (..),
+    PerformActions (..),
+    Pointer (..),
+    PointerCommonProperties (..),
+    PointerSourceAction (..),
+    PointerSourceActions (..),
+    PointerType (..),
+    ReadinessState (..),
+    ReleaseActions (..),
+    SetFiles (..),
+    SharedId (..),
+    SharedReference (..),
+    SourceActions (..),
+    WheelScrollAction (..),
+    WheelSourceAction (..),
+    WheelSourceActions (..),
+    Viewport (..),
+    SetViewport (..), 
+    BrowsingContext(..),
+    JSUInt(..)
+  )
 import Prelude hiding (log)
+
 
 -- Helper function to create default pointer common properties
 defaultPointerProps :: PointerCommonProperties
@@ -292,6 +296,27 @@ inputKeyboardDemo =
 
       closeContext utils bidi bc
 
+-- Sets the viewport (rendering area) dimensions.
+-- Note: This does NOT resize the browser window itself in Firefox/geckodriver
+-- because browser.setClientWindowState is not yet supported.onfi
+-- The viewport change affects coordinate calculations but isn't visually obvious.
+enlargeViewport :: BiDiActions -> BrowsingContext -> IO ()
+enlargeViewport MkBiDiActions {..} bc = do
+    browsingContextSetViewport $
+          MkSetViewport
+            { context = Just bc,
+              viewport =
+                Just $
+                  Just $
+                    MkViewport
+                      { width = MkJSUInt 1920,
+                        height = MkJSUInt 1080
+                      },
+              devicePixelRatio = Nothing,
+              userContexts = Nothing
+            }
+
+
 -- >>> runDemo inputPointerDemo
 inputPointerDemo :: BiDiDemo
 inputPointerDemo =
@@ -311,6 +336,10 @@ inputPointerDemo =
               wait = Just Complete
             }
       logShow "Navigation result" navResult
+      pause
+
+      logTxt "Setting viewport to 1920x1080 (note: window won't visibly resize in Firefox)"
+      enlargeViewport bidi bc
       pause
 
       logTxt "Test 1: Basic pointer click - Move and click checkbox"
@@ -487,6 +516,11 @@ inputWheelDemo =
       bc <- rootContext utils bidi
       infiniteScroll <- infiniteScrollUrl
 
+
+      logTxt "Setting viewport to 1920x1080 (note: window won't visibly resize in Firefox)"
+      enlargeViewport bidi bc
+      pause
+
       logTxt "Navigate to The Internet - Infinite Scroll for wheel testing"
       navResult <-
         browsingContextNavigate $
@@ -593,6 +627,12 @@ inputCombinedActionsDemo =
       navResult <- browsingContextNavigate $ MkNavigate {context = bc, url = testPage, wait = Just Complete}
       logShow "Navigation result" navResult
       pause
+
+
+      logTxt "Setting viewport to 1920x1080 (note: window won't visibly resize in Firefox)"
+      enlargeViewport bidi bc
+      pause
+
 
       logTxt "Locate the text area 1 field using CSS selector"
       textArea' <-

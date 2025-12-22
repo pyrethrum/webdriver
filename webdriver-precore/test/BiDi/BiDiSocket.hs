@@ -48,8 +48,7 @@ import UnliftIO.STM
     writeTChan,
   )
 import Utils (txt)
-import WebDriverPreCore.BiDi.Protocol (JSUInt (..))
-import WebDriverPreCore.Error (JSONEncodeException (..))
+import WebDriverPreCore.BiDi.Protocol (JSUInt (..), JSONEncodeException (..))
 import Prelude hiding (id, log)
 
 -- TODO: ON LIBRARY SPLIT - test / fix / handle - timeouts / exceptions thrown from channel threads

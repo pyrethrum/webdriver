@@ -21,11 +21,11 @@ import Network.HTTP.Req as R
     ReqBodyJson (ReqBodyJson),
   )
 import Utils (UrlPath (..))
-import WebDriverPreCore.Error
 import WebDriverPreCore.Http
   ( HttpSpec (..),
   )
 import WebDriverPreCore.Http qualified as W
+import WebDriverPreCore.HTTP.Protocol (parseWebDriverException, WebDriverException(..))
 import Prelude hiding (log)
 
 -- ############# Runner #############

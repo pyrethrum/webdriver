@@ -42,7 +42,7 @@ import WebDriverPreCore.HTTP.Protocol
     SameSite (..),
     Script (..),
     Selector (..),
-    SessionId (..),
+    Session (..),
     SessionResponse (..),
     Status (..),
     Timeouts (..),
@@ -78,7 +78,7 @@ driverStatusDemo :: HttpDemo
 driverStatusDemo =
   sessionDemo "driver status" action
   where
-    action :: SessionId -> DemoActions -> HttpActions -> IO ()
+    action :: Session -> DemoActions -> HttpActions -> IO ()
     action sesId MkDemoActions {..} MkHttpActions {..} = do
       log "new session:" $ txt sesId
       s <- status
@@ -91,7 +91,7 @@ demoSendKeysClear :: HttpDemo
 demoSendKeysClear =
   sessionDemo "send keys clear" action
   where
-    action :: SessionId -> DemoActions -> HttpActions -> IO ()
+    action :: Session -> DemoActions -> HttpActions -> IO ()
     action sesId MkDemoActions {..} MkHttpActions {..} = do
       url <- loginUrl
       navigateTo sesId $ url
@@ -110,7 +110,7 @@ demoForwardBackRefresh :: HttpDemo
 demoForwardBackRefresh =
   sessionDemo "forward back refresh" action
   where
-    action :: SessionId -> DemoActions -> HttpActions -> IO ()
+    action :: Session -> DemoActions -> HttpActions -> IO ()
     action sesId MkDemoActions {..} MkHttpActions {..} = do
       url <- indexUrl
       logTxt "navigating to index page"
@@ -152,7 +152,7 @@ documentationDemo :: HttpDemo
 documentationDemo =
   sessionDemo "forward back refresh - external doc demo" action
   where
-    action :: SessionId -> DemoActions -> HttpActions -> IO ()
+    action :: Session -> DemoActions -> HttpActions -> IO ()
     action sesId MkDemoActions {..} MkHttpActions {..} = do
       navigateTo sesId $ MkUrl "https://the-internet.herokuapp.com/"
 
@@ -183,7 +183,7 @@ demoWindowHandles :: HttpDemo
 demoWindowHandles =
   sessionDemo "window handles" action
   where
-    action :: SessionId -> DemoActions -> HttpActions -> IO ()
+    action :: Session -> DemoActions -> HttpActions -> IO ()
     action sesId MkDemoActions {..} MkHttpActions {..} = do
       url <- indexUrl
       navigateTo sesId $ url
@@ -208,7 +208,7 @@ demoWindowSizes :: HttpDemo
 demoWindowSizes =
   sessionDemo "window sizes" action
   where
-    action :: SessionId -> DemoActions -> HttpActions -> IO ()
+    action :: Session -> DemoActions -> HttpActions -> IO ()
     action sesId MkDemoActions {..} MkHttpActions {..} = do
       maximizeWindow sesId
       url <- indexUrl
@@ -229,7 +229,7 @@ demoElementPageProps :: HttpDemo
 demoElementPageProps =
   sessionDemo "element page props" action
   where
-    action :: SessionId -> DemoActions -> HttpActions -> IO ()
+    action :: Session -> DemoActions -> HttpActions -> IO ()
     action sesId MkDemoActions {..} MkHttpActions {..} = do
       url <- indexUrl
       navigateTo sesId $ url
@@ -264,7 +264,7 @@ demoTimeouts :: HttpDemo
 demoTimeouts =
   sessionDemo "timeouts" action
   where
-    action :: SessionId -> DemoActions -> HttpActions -> IO ()
+    action :: Session -> DemoActions -> HttpActions -> IO ()
     action sesId MkDemoActions {..} MkHttpActions {..} = do
       log "new session" $ txt sesId
       logShowM "timeouts" $ getTimeouts sesId
@@ -285,7 +285,7 @@ demoWindowRecs :: HttpDemo
 demoWindowRecs =
   sessionDemo "window recs" action
   where
-    action :: SessionId -> DemoActions -> HttpActions -> IO ()
+    action :: Session -> DemoActions -> HttpActions -> IO ()
     action sesId MkDemoActions {..} MkHttpActions {..} = do
       {- Note:
        There is a known issue with geckodriver and Wayland that prevents setting withe x y window position
@@ -322,7 +322,7 @@ demoWindowFindElement :: HttpDemo
 demoWindowFindElement =
   sessionDemo "window find element" action
   where
-    action :: SessionId -> DemoActions -> HttpActions -> IO ()
+    action :: Session -> DemoActions -> HttpActions -> IO ()
     action sesId MkDemoActions {..} MkHttpActions {..} = do
       url <- inputsUrl
       navigateTo sesId $ url
@@ -345,7 +345,7 @@ demoFrames :: HttpDemo
 demoFrames =
   sessionDemo "frames" action
   where
-    action :: SessionId -> DemoActions -> HttpActions -> IO ()
+    action :: Session -> DemoActions -> HttpActions -> IO ()
     action
       sesId
       MkDemoActions {logTxt, log, logShow, logShowM}
@@ -422,7 +422,7 @@ demoShadowDom :: HttpDemo
 demoShadowDom =
   sessionDemo "shadow dom" action
   where
-    action :: SessionId -> DemoActions -> HttpActions -> IO ()
+    action :: Session -> DemoActions -> HttpActions -> IO ()
     action sesId MkDemoActions {..} MkHttpActions {..} = do
       url <- shadowDomUrl
       navigateTo sesId $ url
@@ -453,7 +453,7 @@ demoIsElementSelected :: HttpDemo
 demoIsElementSelected =
   sessionDemo "is element selected" action
   where
-    action :: SessionId -> DemoActions -> HttpActions -> IO ()
+    action :: Session -> DemoActions -> HttpActions -> IO ()
     action sesId MkDemoActions {..} MkHttpActions {..} = do
       logShowM "driver status" status
       url <- checkboxesUrl
@@ -477,7 +477,7 @@ demoGetPageSourceScreenShot :: HttpDemo
 demoGetPageSourceScreenShot =
   sessionDemo "get page source screenshot" action
   where
-    action :: SessionId -> DemoActions -> HttpActions -> IO ()
+    action :: Session -> DemoActions -> HttpActions -> IO ()
     action sesId MkDemoActions {..} MkHttpActions {..} = do
       url <- indexUrl
       navigateTo sesId $ url
@@ -496,7 +496,7 @@ demoPrintPage :: HttpDemo
 demoPrintPage =
   sessionDemo "print page" action
   where
-    action :: SessionId -> DemoActions -> HttpActions -> IO ()
+    action :: Session -> DemoActions -> HttpActions -> IO ()
     action sesId MkDemoActions {..} MkHttpActions {..} = do
       url <- indexUrl
       navigateTo sesId $ url
@@ -511,7 +511,7 @@ demoExecuteScript :: HttpDemo
 demoExecuteScript =
   sessionDemo "execute script" action
   where
-    action :: SessionId -> DemoActions -> HttpActions -> IO ()
+    action :: Session -> DemoActions -> HttpActions -> IO ()
     action sesId MkDemoActions {..} MkHttpActions {..} = do
       url <- indexUrl
       navigateTo sesId $ url
@@ -538,7 +538,7 @@ demoCookies :: HttpDemo
 demoCookies =
   sessionDemo "cookies" action
   where
-    action :: SessionId -> DemoActions -> HttpActions -> IO ()
+    action :: Session -> DemoActions -> HttpActions -> IO ()
     action sesId MkDemoActions {..} MkHttpActions {..} = do
       withTestServer $ do
         navigateTo sesId $ MkUrl testServerHomeUrl
@@ -587,7 +587,7 @@ demoCookiesWithDomain :: HttpDemo
 demoCookiesWithDomain =
   sessionDemo "cookies with domain" action
   where
-    action :: SessionId -> DemoActions -> HttpActions -> IO ()
+    action :: Session -> DemoActions -> HttpActions -> IO ()
     action sesId MkDemoActions {..} MkHttpActions {..} = do
       navigateTo sesId $ MkUrl "https://example.com"
       logShowM "cookies before add" $ getAllCookies sesId
@@ -620,7 +620,7 @@ demoAlerts :: HttpDemo
 demoAlerts =
   sessionDemo "alerts" action
   where
-    action :: SessionId -> DemoActions -> HttpActions -> IO ()
+    action :: Session -> DemoActions -> HttpActions -> IO ()
     action sesId MkDemoActions {..} MkHttpActions {..} = do
       url <- promptUrl
       navigateTo sesId $ url
@@ -652,7 +652,7 @@ demoPointerNoneActions :: HttpDemo
 demoPointerNoneActions =
   sessionDemo "pointer none actions" action
   where
-    action :: SessionId -> DemoActions -> HttpActions -> IO ()
+    action :: Session -> DemoActions -> HttpActions -> IO ()
     action sesId MkDemoActions {..} MkHttpActions {..} = do
       url <- indexUrl
       navigateTo sesId $ url
@@ -816,7 +816,7 @@ demoKeyAndReleaseActions :: HttpDemo
 demoKeyAndReleaseActions =
   sessionDemo "key and release actions" action
   where
-    action :: SessionId -> DemoActions -> HttpActions -> IO ()
+    action :: Session -> DemoActions -> HttpActions -> IO ()
     action sesId MkDemoActions {..} MkHttpActions {..} = do
       url <- loginUrl
       navigateTo sesId $ url
@@ -858,7 +858,7 @@ demoWheelActions :: HttpDemo
 demoWheelActions =
   sessionDemo "wheel actions" action
   where
-    action :: SessionId -> DemoActions -> HttpActions -> IO ()
+    action :: Session -> DemoActions -> HttpActions -> IO ()
     action sesId MkDemoActions {..} MkHttpActions {..} = do
       url <- infiniteScrollUrl
       navigateTo sesId $ url
@@ -898,7 +898,7 @@ demoError :: HttpDemo
 demoError =
   sessionDemo "error" action
   where
-    action :: SessionId -> DemoActions -> HttpActions -> IO ()
+    action :: Session -> DemoActions -> HttpActions -> IO ()
     action sesId MkDemoActions {..} MkHttpActions {..} = do
       -- this tests error mapping of one error type by checking the text of the error
       -- thrown by the runner with a deliberately incorrect selector

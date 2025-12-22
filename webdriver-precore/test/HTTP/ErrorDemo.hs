@@ -4,12 +4,17 @@ import GHC.Utils.Misc (HasCallStack)
 import HTTP.DemoUtils (HttpDemo, runDemo, sessionDemo)
 import HTTP.HttpActions (HttpActions (..))
 import IOUtils (DemoActions (..), (===))
-import TestData (inputsUrl)
-import WebDriverPreCore.Error (ErrorType (..), WebDriverException (..))
-import WebDriverPreCore.HTTP.Protocol (Selector (..), SessionId, Timeouts (..))
-import Prelude hiding (log)
-import UnliftIO (try)
 import Test.Tasty.HUnit (assertFailure)
+import TestData (inputsUrl)
+import UnliftIO (try)
+import WebDriverPreCore.HTTP.Protocol
+  ( ErrorType (..),
+    Selector (..),
+    Session,
+    Timeouts (..),
+    WebDriverException (..),
+  )
+import Prelude hiding (log)
 
 -- stop warning for unused demo (its used in eval)
 _rundemo :: HttpDemo -> IO ()
@@ -20,7 +25,7 @@ errorDemo :: HttpDemo
 errorDemo =
   sessionDemo "Http Error Demo" action
   where
-    action :: SessionId -> DemoActions -> HttpActions -> IO ()
+    action :: Session -> DemoActions -> HttpActions -> IO ()
     action sesId MkDemoActions {..} MkHttpActions {..} = do
       -- Set short timeouts
       setTimeouts sesId $
@@ -35,12 +40,11 @@ errorDemo =
 
       -- Try to find non-existent element and expect NoSuchElement error
       exc <-
-        expectProtocolException NoSuchElement .
-          findElement sesId $
-            CSS "#id-that-does-not-exist"
+        expectProtocolException NoSuchElement
+          . findElement sesId
+          $ CSS "#id-that-does-not-exist"
 
       logShow "Caught expected exception" exc
-
 
 expectProtocolException ::
   (HasCallStack) =>

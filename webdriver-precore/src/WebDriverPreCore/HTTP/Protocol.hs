@@ -19,7 +19,7 @@ module WebDriverPreCore.HTTP.Protocol
     SameSite (..),
     Script (..),
     Selector (..),
-    SessionId (..),
+    Session (..),
     SessionResponse (..),
     Timeouts (..),
     Handle (..),
@@ -152,11 +152,11 @@ instance FromJSON ShadowRootElementId where
       fmap MkShadowRootElementId . (.: shadowRootFieldName)
 
 -- | [spec](https://www.w3.org/TR/2025/WD-webdriver2-20251028/#dfn-new-sessions)
-newtype SessionId = Session {id :: Text}
+newtype Session = MkSession {id :: Text}
   deriving (Show, Eq, Generic)
 
 data SessionResponse = MkSessionResponse
-  { sessionId :: SessionId,
+  { sessionId :: Session,
     webSocketUrl :: Maybe Text,
     capabilities :: Capabilities,
     extensions :: Maybe (M.Map Text Value)
@@ -198,7 +198,7 @@ instance FromJSON SessionResponse where
     withObject
       "SessionResponse.value"
       ( \valueObj -> do
-          sessionId <- Session <$> valueObj .: "sessionId"
+          sessionId <- MkSession <$> valueObj .: "sessionId"
           --
           capabilitiesVal' :: Value <- valueObj .: "capabilities"
           allCapsObject <- parseObject "capabilities property returned from newSession should be an object" capabilitiesVal'

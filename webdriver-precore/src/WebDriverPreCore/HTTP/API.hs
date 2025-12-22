@@ -1,5 +1,8 @@
+{-# LANGUAGE CPP #-}
+
 {-|
 
+-- TODO: FIX
 Once upon a time, the main browser automation tool was Selenium. Users of
 this package had to start a Selenium session themselves, making sure to
 configure it with a browser-specific driver program like @chromedriver@ or
@@ -126,7 +129,7 @@ import WebDriverPreCore.HTTP.Protocol
     FullCapabilities,
     Script,
     Selector (..),
-    SessionId (..),
+    Session (..),
     SessionResponse (..),
     Timeouts,
     URL,
@@ -153,7 +156,7 @@ import Data.Aeson.KeyMap (fromList)
 --
 -- 'newSession'' can be used if 'FullCapabilities' doesn't meet your requirements.
 --
--- [spec](https://www.w3.org/TR/2025/WD-webdriver2-20251028/#new-session)
+-- [spec](HTMLSpecURL#new-session)
 --
 --  @POST 	\/session 	New Session@
 newSession :: FullCapabilities -> Command SessionResponse
@@ -163,7 +166,7 @@ newSession = mkPost "New Session" newSessionUrl
 --
 -- Return a spec to get the status of the driver.
 --
--- [spec](https://www.w3.org/TR/2025/WD-webdriver2-20251028/#status)
+-- [spec](HTMLSpecURL#status)
 --
 -- @GET 	\/status 	Status@
 status :: Command Status
@@ -173,603 +176,603 @@ status = Get "Status" $ MkUrlPath ["status"]
 
 -- |
 --
--- Return a spec to delete a session given a 'SessionId'.
+-- Return a spec to delete a session given a 'Session'.
 --
--- [spec](https://www.w3.org/TR/2025/WD-webdriver2-20251028/#delete-session)
+-- [spec](HTMLSpecURL#delete-session)
 --
 -- @DELETE 	\/session\/{session id} 	Delete Session@
-deleteSession :: SessionId -> Command ()
+deleteSession :: Session -> Command ()
 deleteSession sessionRef = Delete "Delete Session" $ sessionUri sessionRef.id
 
 -- |
 --
--- Return a spec to get the timeouts of a session given a 'SessionId'.
+-- Return a spec to get the timeouts of a session given a 'Session'.
 --
--- [spec](https://www.w3.org/TR/2025/WD-webdriver2-20251028/#get-timeouts)
+-- [spec](HTMLSpecURL#get-timeouts)
 --
 -- @GET 	\/session\/{session id}\/timeouts 	Get Timeouts@
-getTimeouts :: SessionId -> Command Timeouts
+getTimeouts :: Session -> Command Timeouts
 getTimeouts sessionRef = Get "Get Timeouts" $ sessionUri1 sessionRef "timeouts"
 
 -- |
 --
--- Return a spec to set the timeouts of a session given a 'SessionId' and 'Timeouts'.
+-- Return a spec to set the timeouts of a session given a 'Session' and 'Timeouts'.
 --
--- [spec](https://www.w3.org/TR/2025/WD-webdriver2-20251028/#set-timeouts)
+-- [spec](HTMLSpecURL#set-timeouts)
 --
 -- @POST 	\/session\/{session id}\/timeouts 	Set Timeouts@
-setTimeouts :: SessionId -> Timeouts -> Command ()
+setTimeouts :: Session -> Timeouts -> Command ()
 setTimeouts sessionRef =
   mkPost "Set Timeouts" (sessionUri1 sessionRef "timeouts")
 
 -- |
 --
--- Return a spec to navigate to a URL given a 'SessionId' and a 'Text' URL.
+-- Return a spec to navigate to a URL given a 'Session' and a 'Text' URL.
 --
--- [spec](https://www.w3.org/TR/2025/WD-webdriver2-20251028/#navigate-to)
+-- [spec](HTMLSpecURL#navigate-to)
 --
 -- @POST 	\/session\/{session id}\/url 	Navigate To@
-navigateTo :: SessionId -> URL -> Command ()
+navigateTo :: Session -> URL -> Command ()
 navigateTo sessionRef = mkPost' "Navigate To" (sessionUri1 sessionRef "url") (\url -> fromList ["url" .= url])
 
 -- |
 --
--- Return a spec to get the current URL of a session given a 'SessionId'.
+-- Return a spec to get the current URL of a session given a 'Session'.
 --
--- [spec](https://www.w3.org/TR/2025/WD-webdriver2-20251028/#get-current-url)
+-- [spec](HTMLSpecURL#get-current-url)
 --
 -- @GET 	\/session\/{session id}\/url 	Get Current URL@
-getCurrentUrl :: SessionId -> Command URL
+getCurrentUrl :: Session -> Command URL
 getCurrentUrl sessionRef = Get "Get Current URL" (sessionUri1 sessionRef "url")
 
 -- |
 --
--- Return a spec to navigate back in the browser history given a 'SessionId'.
+-- Return a spec to navigate back in the browser history given a 'Session'.
 --
--- [spec](https://www.w3.org/TR/2025/WD-webdriver2-20251028/#back)
+-- [spec](HTMLSpecURL#back)
 --
 -- @POST 	\/session\/{session id}\/back 	Back@
-back :: SessionId -> Command ()
+back :: Session -> Command ()
 back sessionRef = PostEmpty "Back" (sessionUri1 sessionRef "back")
 
 -- |
 --
--- Return a spec to navigate forward in the browser history given a 'SessionId'.
+-- Return a spec to navigate forward in the browser history given a 'Session'.
 --
--- [spec](https://www.w3.org/TR/2025/WD-webdriver2-20251028/#forward)
+-- [spec](HTMLSpecURL#forward)
 --
 -- @POST 	\/session\/{session id}\/forward 	Forward@
-forward :: SessionId -> Command ()
+forward :: Session -> Command ()
 forward sessionRef = PostEmpty "Forward" (sessionUri1 sessionRef "forward")
 
 -- |
 --
--- Return a spec to refresh the current page given a 'SessionId'.
+-- Return a spec to refresh the current page given a 'Session'.
 --
--- [spec](https://www.w3.org/TR/2025/WD-webdriver2-20251028/#refresh)
+-- [spec](HTMLSpecURL#refresh)
 --
 -- @POST 	\/session\/{session id}\/refresh 	Refresh@
-refresh :: SessionId -> Command ()
+refresh :: Session -> Command ()
 refresh sessionRef = PostEmpty "Refresh" (sessionUri1 sessionRef "refresh")
 
 -- |
 --
--- Return a spec to get the title of the current page given a 'SessionId'.
+-- Return a spec to get the title of the current page given a 'Session'.
 --
--- [spec](https://www.w3.org/TR/2025/WD-webdriver2-20251028/#get-title)
+-- [spec](HTMLSpecURL#get-title)
 --
 -- @GET 	\/session\/{session id}\/title 	Get Title@
-getTitle :: SessionId -> Command Text
+getTitle :: Session -> Command Text
 getTitle sessionRef = Get "Get Title" (sessionUri1 sessionRef "title")
 
 -- |
 --
--- Return a spec to get the current window handle given a 'SessionId'.
+-- Return a spec to get the current window handle given a 'Session'.
 --
--- [spec](https://www.w3.org/TR/2025/WD-webdriver2-20251028/#get-window-handle)
+-- [spec](HTMLSpecURL#get-window-handle)
 --
 -- @GET 	\/session\/{session id}\/window 	Get Window Handle@
-getWindowHandle :: SessionId -> Command Handle
+getWindowHandle :: Session -> Command Handle
 getWindowHandle sessionRef = Get "Get Window Handle" (sessionUri1 sessionRef "window")
 
 -- |
 --
--- Return a spec to create a new window given a 'SessionId'.
+-- Return a spec to create a new window given a 'Session'.
 --
--- [spec](https://www.w3.org/TR/2025/WD-webdriver2-20251028/#new-window)
+-- [spec](HTMLSpecURL#new-window)
 --
 -- @POST 	\/session\/{session id}\/window\/new 	New Window@
-newWindow :: SessionId -> Command WindowHandleSpec
+newWindow :: Session -> Command WindowHandleSpec
 newWindow sessionRef = PostEmpty "New Window" (sessionUri2 sessionRef "window" "new")
 
 -- |
 --
--- Return a spec to close the current window given a 'SessionId'.
+-- Return a spec to close the current window given a 'Session'.
 --
--- [spec](https://www.w3.org/TR/2025/WD-webdriver2-20251028/#close-window)
+-- [spec](HTMLSpecURL#close-window)
 --
 -- @DELETE 	\/session\/{session id}\/window 	Close Window@
-closeWindow :: SessionId -> Command [Handle]
+closeWindow :: Session -> Command [Handle]
 closeWindow sessionRef = Delete "Close Window" (sessionUri1 sessionRef "window")
 
 -- |
 --
--- Return a spec to switch to a different window given a 'SessionId' and 'WindowHandle'.
+-- Return a spec to switch to a different window given a 'Session' and 'WindowHandle'.
 --
--- [spec](https://www.w3.org/TR/2025/WD-webdriver2-20251028/#switch-to-window)
+-- [spec](HTMLSpecURL#switch-to-window)
 --
 -- @POST 	\/session\/{session id}\/window 	Switch To Window@
-switchToWindow :: SessionId -> Handle -> Command ()
+switchToWindow :: Session -> Handle -> Command ()
 switchToWindow sessionRef = mkPost "Switch To Window" (sessionUri1 sessionRef "window")
 
 -- |
 --
--- Return a spec to switch to a different frame given a 'SessionId' and 'FrameReference'.
+-- Return a spec to switch to a different frame given a 'Session' and 'FrameReference'.
 --
--- [spec](https://www.w3.org/TR/2025/WD-webdriver2-20251028/#switch-to-frame)
+-- [spec](HTMLSpecURL#switch-to-frame)
 --
 -- @POST 	\/session\/{session id}\/frame 	Switch To Frame@
-switchToFrame :: SessionId -> FrameReference -> Command ()
+switchToFrame :: Session -> FrameReference -> Command ()
 switchToFrame sessionRef = mkPost "Switch To Frame" (sessionUri1 sessionRef "frame")
 
 -- |
 --
--- Return a spec to get the source of the current page given a 'SessionId'.
+-- Return a spec to get the source of the current page given a 'Session'.
 --
--- [spec](https://www.w3.org/TR/2025/WD-webdriver2-20251028/#get-page-source)
+-- [spec](HTMLSpecURL#get-page-source)
 --
 -- @GET 	\/session\/{session id}\/source 	Get Page Source@
-getPageSource :: SessionId -> Command Text
+getPageSource :: Session -> Command Text
 getPageSource sessionId = Get "Get Page Source" (sessionUri1 sessionId "source")
 
 -- |
 --
--- Return a spec to execute a script in the context of the current page given a 'SessionId', 'Text' script, and a list of 'Value' arguments.
+-- Return a spec to execute a script in the context of the current page given a 'Session', 'Text' script, and a list of 'Value' arguments.
 --
--- [spec](https://www.w3.org/TR/2025/WD-webdriver2-20251028/#execute-script)
+-- [spec](HTMLSpecURL#execute-script)
 --
 -- @POST 	\/session\/{session id}\/execute\/sync 	Execute Script@
-executeScript :: SessionId -> Script -> Command Value
+executeScript :: Session -> Script -> Command Value
 executeScript sessionId = mkPost "Execute Script" (sessionUri2 sessionId "execute" "sync")
 
 -- |
 --
--- Return a spec to execute an asynchronous script in the context of the current page given a 'SessionId', 'Text' script, and a list of 'Value' arguments.
+-- Return a spec to execute an asynchronous script in the context of the current page given a 'Session', 'Text' script, and a list of 'Value' arguments.
 --
--- [spec](https://www.w3.org/TR/2025/WD-webdriver2-20251028/#execute-async-script)
+-- [spec](HTMLSpecURL#execute-async-script)
 --
 -- @POST 	\/session\/{session id}\/execute\/async 	Execute Async Script@
-executeScriptAsync :: SessionId -> Script -> Command Value
+executeScriptAsync :: Session -> Script -> Command Value
 executeScriptAsync sessionId = mkPost "Execute Async Script" (sessionUri2 sessionId "execute" "async")
 
 -- |
 --
--- Return a spec to get all cookies of the current page given a 'SessionId'.
+-- Return a spec to get all cookies of the current page given a 'Session'.
 --
--- [spec](https://www.w3.org/TR/2025/WD-webdriver2-20251028/#get-all-cookies)
+-- [spec](HTMLSpecURL#get-all-cookies)
 --
 -- @GET 	\/session\/{session id}\/cookie 	Get All Cookies@
-getAllCookies :: SessionId -> Command [Cookie]
+getAllCookies :: Session -> Command [Cookie]
 getAllCookies sessionId = Get "Get All Cookies" (sessionUri1 sessionId "cookie")
 
 -- |
 --
--- Return a spec to get a named cookie of the current page given a 'SessionId' and cookie name.
+-- Return a spec to get a named cookie of the current page given a 'Session' and cookie name.
 --
--- [spec](https://www.w3.org/TR/2025/WD-webdriver2-20251028/#get-named-cookie)
+-- [spec](HTMLSpecURL#get-named-cookie)
 --
 -- @GET 	\/session\/{session id}\/cookie\/{name} 	Get Named Cookie@
-getNamedCookie :: SessionId -> Text -> Command Cookie
+getNamedCookie :: Session -> Text -> Command Cookie
 getNamedCookie sessionId cookieName = Get "Get Named Cookie" (sessionUri2 sessionId "cookie" cookieName)
 
 -- |
 --
--- Return a spec to add a cookie to the current page given a 'SessionId' and 'Cookie'.
+-- Return a spec to add a cookie to the current page given a 'Session' and 'Cookie'.
 --
--- [spec](https://www.w3.org/TR/2025/WD-webdriver2-20251028/#add-cookie)
+-- [spec](HTMLSpecURL#add-cookie)
 --
 -- @POST 	\/session\/{session id}\/cookie 	Add Cookie@
-addCookie :: SessionId -> Cookie -> Command ()
+addCookie :: Session -> Cookie -> Command ()
 addCookie sessionId cookie = Post "Add Cookie" (sessionUri1 sessionId "cookie") (fromList ["cookie" .= cookie] )
 
 -- |
 --
--- Return a spec to delete a named cookie from the current page given a 'SessionId' and cookie name.
+-- Return a spec to delete a named cookie from the current page given a 'Session' and cookie name.
 --
--- [spec](https://www.w3.org/TR/2025/WD-webdriver2-20251028/#delete-cookie)
+-- [spec](HTMLSpecURL#delete-cookie)
 --
 -- @DELETE 	\/session\/{session id}\/cookie\/{name} 	Delete Cookie@
-deleteCookie :: SessionId -> Text -> Command ()
+deleteCookie :: Session -> Text -> Command ()
 deleteCookie sessionId cookieName = Delete "Delete Cookie" (sessionUri2 sessionId "cookie" cookieName)
 
 -- |
 --
--- Return a spec to delete all cookies from the current page given a 'SessionId'.
+-- Return a spec to delete all cookies from the current page given a 'Session'.
 --
--- [spec](https://www.w3.org/TR/2025/WD-webdriver2-20251028/#delete-all-cookies)
+-- [spec](HTMLSpecURL#delete-all-cookies)
 --
 -- @DELETE 	\/session\/{session id}\/cookie 	Delete All Cookies@
-deleteAllCookies :: SessionId -> Command ()
+deleteAllCookies :: Session -> Command ()
 deleteAllCookies sessionId = Delete "Delete All Cookies" (sessionUri1 sessionId "cookie")
 
 -- |
 --
--- Return a spec to perform actions on the current page given a 'SessionId' and 'Actions'.
+-- Return a spec to perform actions on the current page given a 'Session' and 'Actions'.
 --
--- [spec](https://www.w3.org/TR/2025/WD-webdriver2-20251028/#perform-actions)
+-- [spec](HTMLSpecURL#perform-actions)
 --
 -- @POST 	\/session\/{session id}\/actions 	Perform Actions@
-performActions :: SessionId -> Actions -> Command ()
+performActions :: Session -> Actions -> Command ()
 performActions sessionId = mkPost "Perform Actions" (sessionUri1 sessionId "actions")
 
 -- |
 --
--- Return a spec to release actions on the current page given a 'SessionId'.
+-- Return a spec to release actions on the current page given a 'Session'.
 --
--- [spec](https://www.w3.org/TR/2025/WD-webdriver2-20251028/#release-actions)
+-- [spec](HTMLSpecURL#release-actions)
 --
 -- @DELETE 	\/session\/{session id}\/actions 	Release Actions@
-releaseActions :: SessionId -> Command ()
+releaseActions :: Session -> Command ()
 releaseActions sessionId = Delete "Release Actions" (sessionUri1 sessionId "actions")
 
 -- |
 --
--- Return a spec to dismiss an alert on the current page given a 'SessionId'.
+-- Return a spec to dismiss an alert on the current page given a 'Session'.
 --
--- [spec](https://www.w3.org/TR/2025/WD-webdriver2-20251028/#dismiss-alert)
+-- [spec](HTMLSpecURL#dismiss-alert)
 --
 -- @POST 	\/session\/{session id}\/alert\/dismiss 	Dismiss Alert@
-dismissAlert :: SessionId -> Command ()
+dismissAlert :: Session -> Command ()
 dismissAlert sessionId = PostEmpty "Dismiss Alert" (sessionUri2 sessionId "alert" "dismiss")
 
 -- |
 --
--- Return a spec to accept an alert on the current page given a 'SessionId'.
+-- Return a spec to accept an alert on the current page given a 'Session'.
 --
--- [spec](https://www.w3.org/TR/2025/WD-webdriver2-20251028/#accept-alert)
+-- [spec](HTMLSpecURL#accept-alert)
 --
 -- @POST 	\/session\/{session id}\/alert\/accept 	Accept Alert@
-acceptAlert :: SessionId -> Command ()
+acceptAlert :: Session -> Command ()
 acceptAlert sessionId = PostEmpty "Accept Alert" (sessionUri2 sessionId "alert" "accept")
 
 -- |
 --
--- Return a spec to get the text of an alert on the current page given a 'SessionId'.
+-- Return a spec to get the text of an alert on the current page given a 'Session'.
 --
--- [spec](https://www.w3.org/TR/2025/WD-webdriver2-20251028/#get-alert-text)
+-- [spec](HTMLSpecURL#get-alert-text)
 --
 -- @GET 	\/session\/{session id}\/alert\/text 	Get Alert Text@
-getAlertText :: SessionId -> Command Text
+getAlertText :: Session -> Command Text
 getAlertText sessionId = Get "Get Alert Text" (sessionUri2 sessionId "alert" "text")
 
 -- |
 --
--- Return a spec to send text to an alert on the current page given a 'SessionId' and 'Text'.
+-- Return a spec to send text to an alert on the current page given a 'Session' and 'Text'.
 --
--- [spec](https://www.w3.org/TR/2025/WD-webdriver2-20251028/#send-alert-text)
+-- [spec](HTMLSpecURL#send-alert-text)
 --
 -- @POST 	\/session\/{session id}\/alert\/text 	Send Alert Text@
-sendAlertText :: SessionId -> Text -> Command ()
+sendAlertText :: Session -> Text -> Command ()
 sendAlertText sessionId text = Post "Send Alert Text" (sessionUri2 sessionId "alert" "text") (fromList ["text" .= text])
 
 -- |
 --
--- Return a spec to take a screenshot of the current page given a 'SessionId'.
+-- Return a spec to take a screenshot of the current page given a 'Session'.
 --
--- [spec](https://www.w3.org/TR/2025/WD-webdriver2-20251028/#take-screenshot)
+-- [spec](HTMLSpecURL#take-screenshot)
 --
 -- @GET 	\/session\/{session id}\/screenshot 	Take Screenshot@
-takeScreenshot :: SessionId -> Command Text
+takeScreenshot :: Session -> Command Text
 takeScreenshot sessionId = Get "Take Screenshot" (sessionUri1 sessionId "screenshot")
 
 -- |
 --
--- Return a spec to print the current page given a 'SessionId'.
+-- Return a spec to print the current page given a 'Session'.
 --
--- [spec](https://www.w3.org/TR/2025/WD-webdriver2-20251028/#print-page)
+-- [spec](HTMLSpecURL#print-page)
 --
 -- @POST 	\/session\/{session id}\/print 	Print Page@
-printPage :: SessionId -> Command Text
+printPage :: Session -> Command Text
 printPage sessionId = PostEmpty "Print Page" (sessionUri1 sessionId "print")
 
 -- ############################ Window Methods ##########################################
 
 -- |
 --
--- Return a spec to get all window handles of the current session given a 'SessionId'.
+-- Return a spec to get all window handles of the current session given a 'Session'.
 --
--- [spec](https://www.w3.org/TR/2025/WD-webdriver2-20251028/#get-window-handles)
+-- [spec](HTMLSpecURL#get-window-handles)
 --
 -- @GET 	\/session\/{session id}\/window\/handles 	Get Window Handles@
-getWindowHandles :: SessionId -> Command [Handle]
+getWindowHandles :: Session -> Command [Handle]
 getWindowHandles sessionRef = Get "Get Window Handles" (sessionUri2 sessionRef "window" "handles")
 
 -- |
 --
--- Return a spec to get the window rect of the current window given a 'SessionId'.
+-- Return a spec to get the window rect of the current window given a 'Session'.
 --
--- [spec](https://www.w3.org/TR/2025/WD-webdriver2-20251028/#get-window-rect)
+-- [spec](HTMLSpecURL#get-window-rect)
 --
 -- @GET 	\/session\/{session id}\/window\/rect 	Get Window Rect@
-getWindowRect :: SessionId -> Command WindowRect
+getWindowRect :: Session -> Command WindowRect
 getWindowRect sessionRef = Get "Get Window Rect" (sessionUri2 sessionRef "window" "rect")
 
 -- |
 --
--- Return a spec to set the window rect of the current window given a 'SessionId' and 'WindowRect'.
+-- Return a spec to set the window rect of the current window given a 'Session' and 'WindowRect'.
 --
--- [spec](https://www.w3.org/TR/2025/WD-webdriver2-20251028/#set-window-rect)
+-- [spec](HTMLSpecURL#set-window-rect)
 --
 -- @POST 	\/session\/{session id}\/window\/rect 	Set Window Rect@
-setWindowRect :: SessionId -> WindowRect -> Command WindowRect
+setWindowRect :: Session -> WindowRect -> Command WindowRect
 setWindowRect sessionRef = mkPost "Set Window Rect" (sessionUri2 sessionRef "window" "rect")
 
 -- |
 --
--- Return a spec to maximize the current window given a 'SessionId'.
+-- Return a spec to maximize the current window given a 'Session'.
 --
--- [spec](https://www.w3.org/TR/2025/WD-webdriver2-20251028/#maximize-window)
+-- [spec](HTMLSpecURL#maximize-window)
 --
 -- @POST 	\/session\/{session id}\/window\/maximize 	Maximize Window@
-maximizeWindow :: SessionId -> Command WindowRect
+maximizeWindow :: Session -> Command WindowRect
 maximizeWindow sessionRef = PostEmpty "Maximize Window" (windowUri1 sessionRef "maximize")
 
 -- |
 --
--- Return a spec to minimize the current window given a 'SessionId'.
+-- Return a spec to minimize the current window given a 'Session'.
 --
--- [spec](https://www.w3.org/TR/2025/WD-webdriver2-20251028/#minimize-window)
+-- [spec](HTMLSpecURL#minimize-window)
 --
 -- @POST 	\/session\/{session id}\/window\/minimize 	Minimize Window@
-minimizeWindow :: SessionId -> Command WindowRect
+minimizeWindow :: Session -> Command WindowRect
 minimizeWindow sessionRef = PostEmpty "Minimize Window" (windowUri1 sessionRef "minimize")
 
 -- |
 --
--- Return a spec to fullscreen the current window given a 'SessionId'.
+-- Return a spec to fullscreen the current window given a 'Session'.
 --
--- [spec](https://www.w3.org/TR/2025/WD-webdriver2-20251028/#fullscreen-window)
+-- [spec](HTMLSpecURL#fullscreen-window)
 --
 -- @POST 	\/session\/{session id}\/window\/fullscreen 	Fullscreen Window@
-fullScreenWindow :: SessionId -> Command WindowRect
+fullScreenWindow :: Session -> Command WindowRect
 fullScreenWindow sessionRef = PostEmpty "Fullscreen Window" (windowUri1 sessionRef "fullscreen")
 
 -- ############################ Frame Methods ##########################################
 
 -- |
 --
--- Return a spec to switch to the parent frame given a 'SessionId'.
+-- Return a spec to switch to the parent frame given a 'Session'.
 --
--- [spec](https://www.w3.org/TR/2025/WD-webdriver2-20251028/#switch-to-parent-frame)
+-- [spec](HTMLSpecURL#switch-to-parent-frame)
 --
 -- @POST 	\/session\/{session id}\/frame\/parent 	Switch To Parent Frame@
-switchToParentFrame :: SessionId -> Command ()
+switchToParentFrame :: Session -> Command ()
 switchToParentFrame sessionRef = PostEmpty "Switch To Parent Frame" (sessionUri2 sessionRef "frame" "parent")
 
 -- ############################ Element(s) Methods ##########################################
 
 -- |
 --
--- Return a spec to get the active element of the current page given a 'SessionId'.
+-- Return a spec to get the active element of the current page given a 'Session'.
 --
--- [spec](https://www.w3.org/TR/2025/WD-webdriver2-20251028/#get-active-element)
+-- [spec](HTMLSpecURL#get-active-element)
 --
 -- @GET 	\/session\/{session id}\/element\/active 	Get Active Element@
-getActiveElement :: SessionId -> Command ElementId
+getActiveElement :: Session -> Command ElementId
 getActiveElement sessionId = Get "Get Active Element" (sessionUri2 sessionId "element" "active")
 
 -- |
 --
--- Return a spec to find an element on the current page given a 'SessionId' and 'Selector'.
+-- Return a spec to find an element on the current page given a 'Session' and 'Selector'.
 --
--- [spec](https://www.w3.org/TR/2025/WD-webdriver2-20251028/#find-element)
+-- [spec](HTMLSpecURL#find-element)
 --
 -- @POST 	\/session\/{session id}\/element 	Find Element@
-findElement :: SessionId -> Selector -> Command ElementId
+findElement :: Session -> Selector -> Command ElementId
 findElement sessionRef = mkPost "Find Element" (sessionUri1 sessionRef "element")
 
 -- |
 --
--- Return a spec to find elements on the current page given a 'SessionId' and 'Selector'.
+-- Return a spec to find elements on the current page given a 'Session' and 'Selector'.
 --
--- [spec](https://www.w3.org/TR/2025/WD-webdriver2-20251028/#find-elements)
+-- [spec](HTMLSpecURL#find-elements)
 --
 -- @POST 	\/session\/{session id}\/elements 	Find Elements@
-findElements :: SessionId -> Selector -> Command [ElementId]
+findElements :: Session -> Selector -> Command [ElementId]
 findElements sessionRef = mkPost "Find Elements" (sessionUri1 sessionRef "elements")
 
 -- ############################ Element Instance Methods ##########################################
 
 -- |
 --
--- Return a spec to get the shadow root of an element given a 'SessionId' and 'ElementId'.
+-- Return a spec to get the shadow root of an element given a 'Session' and 'ElementId'.
 --
--- [spec](https://www.w3.org/TR/2025/WD-webdriver2-20251028/#get-element-shadow-root)
+-- [spec](HTMLSpecURL#get-element-shadow-root)
 --
 -- @GET 	\/session\/{session id}\/element\/{element id}\/shadow 	Get Element Shadow Root@
-getElementShadowRoot :: SessionId -> ElementId -> Command ShadowRootElementId
+getElementShadowRoot :: Session -> ElementId -> Command ShadowRootElementId
 getElementShadowRoot sessionId elementId = Get "Get Element Shadow Root" (elementUri1 sessionId elementId "shadow")
 
 -- |
 --
--- Return a spec to find an element from another element given a 'SessionId', 'ElementId', and 'Selector'.
+-- Return a spec to find an element from another element given a 'Session', 'ElementId', and 'Selector'.
 --
--- [spec](https://www.w3.org/TR/2025/WD-webdriver2-20251028/#find-element-from-element)
+-- [spec](HTMLSpecURL#find-element-from-element)
 --
 -- @POST 	\/session\/{session id}\/element\/{element id}\/element 	Find Element From Element@
-findElementFromElement :: SessionId -> ElementId -> Selector -> Command ElementId
+findElementFromElement :: Session -> ElementId -> Selector -> Command ElementId
 findElementFromElement sessionId elementId = mkPost "Find Element From Element" (elementUri1 sessionId elementId "element") 
 
 -- |
 --
--- Return a spec to find elements from another element given a 'SessionId', 'ElementId', and 'Selector'.
+-- Return a spec to find elements from another element given a 'Session', 'ElementId', and 'Selector'.
 --
--- [spec](https://www.w3.org/TR/2025/WD-webdriver2-20251028/#find-elements-from-element)
+-- [spec](HTMLSpecURL#find-elements-from-element)
 --
 -- @POST 	\/session\/{session id}\/element\/{element id}\/elements 	Find Elements From Element@
-findElementsFromElement :: SessionId -> ElementId -> Selector -> Command [ElementId]
+findElementsFromElement :: Session -> ElementId -> Selector -> Command [ElementId]
 findElementsFromElement sessionId elementId = mkPost "Find Elements From Element" (elementUri1 sessionId elementId "elements")
 
 -- |
 --
--- Return a spec to check if an element is selected given a 'SessionId' and 'ElementId'.
+-- Return a spec to check if an element is selected given a 'Session' and 'ElementId'.
 --
--- [spec](https://www.w3.org/TR/2025/WD-webdriver2-20251028/#is-element-selected)
+-- [spec](HTMLSpecURL#is-element-selected)
 --
 -- @GET 	\/session\/{session id}\/element\/{element id}\/selected 	Is Element Selected@
-isElementSelected :: SessionId -> ElementId -> Command Bool
+isElementSelected :: Session -> ElementId -> Command Bool
 isElementSelected sessionId elementId = Get "Is Element Selected" (elementUri1 sessionId elementId "selected")
 
 -- |
 --
--- Return a spec to get an attribute of an element given a 'SessionId', 'ElementId', and attribute name.
+-- Return a spec to get an attribute of an element given a 'Session', 'ElementId', and attribute name.
 --
--- [spec](https://www.w3.org/TR/2025/WD-webdriver2-20251028/#get-element-attribute)
+-- [spec](HTMLSpecURL#get-element-attribute)
 --
 -- @GET 	\/session\/{session id}\/element\/{element id}\/attribute\/{name} 	Get Element Attribute@
-getElementAttribute :: SessionId -> ElementId -> Text -> Command Text
+getElementAttribute :: Session -> ElementId -> Text -> Command Text
 getElementAttribute sessionId elementId attributeName = Get "Get Element Attribute" (elementUri2 sessionId elementId "attribute" attributeName)
 
 -- |
 --
--- Return a spec to get a property of an element given a 'SessionId', 'ElementId', and property name.
+-- Return a spec to get a property of an element given a 'Session', 'ElementId', and property name.
 --
--- [spec](https://www.w3.org/TR/2025/WD-webdriver2-20251028/#get-element-property)
+-- [spec](HTMLSpecURL#get-element-property)
 --
 -- @GET 	\/session\/{session id}\/element\/{element id}\/property\/{name} 	Get Element Property@
-getElementProperty :: SessionId -> ElementId -> Text -> Command Value
+getElementProperty :: Session -> ElementId -> Text -> Command Value
 getElementProperty sessionId elementId propertyName = Get "Get Element Property" (elementUri2 sessionId elementId "property" propertyName)
 
 -- |
 --
--- Return a spec to get the CSS value of an element given a 'SessionId', 'ElementId', and CSS property name.
+-- Return a spec to get the CSS value of an element given a 'Session', 'ElementId', and CSS property name.
 --
--- [spec](https://www.w3.org/TR/2025/WD-webdriver2-20251028/#get-element-css-value)
+-- [spec](HTMLSpecURL#get-element-css-value)
 --
 -- @GET 	\/session\/{session id}\/element\/{element id}\/css\/{property name} 	Get Element CSS Value@
-getElementCssValue :: SessionId -> ElementId -> Text -> Command Text
+getElementCssValue :: Session -> ElementId -> Text -> Command Text
 getElementCssValue sessionId elementId propertyName = Get "Get Element CSS Value" (elementUri2 sessionId elementId "css" propertyName)
 
 -- |
 --
--- Return a spec to get the text of an element given a 'SessionId' and 'ElementId'.
+-- Return a spec to get the text of an element given a 'Session' and 'ElementId'.
 --
--- [spec](https://www.w3.org/TR/2025/WD-webdriver2-20251028/#get-element-text)
+-- [spec](HTMLSpecURL#get-element-text)
 --
 -- @GET 	\/session\/{session id}\/element\/{element id}\/text 	Get Element Text@
-getElementText :: SessionId -> ElementId -> Command Text
+getElementText :: Session -> ElementId -> Command Text
 getElementText sessionId elementId = Get "Get Element Text" (elementUri1 sessionId elementId "text")
 
 -- |
 --
--- Return a spec to get the tag name of an element given a 'SessionId' and 'ElementId'.
+-- Return a spec to get the tag name of an element given a 'Session' and 'ElementId'.
 --
--- [spec](https://www.w3.org/TR/2025/WD-webdriver2-20251028/#get-element-tag-name)
+-- [spec](HTMLSpecURL#get-element-tag-name)
 --
 -- @GET 	\/session\/{session id}\/element\/{element id}\/name 	Get Element Tag Name@
-getElementTagName :: SessionId -> ElementId -> Command Text
+getElementTagName :: Session -> ElementId -> Command Text
 getElementTagName sessionId elementId = Get "Get Element Tag Name" (elementUri1 sessionId elementId "name")
 
 -- |
 --
--- Return a spec to get the rect of an element given a 'SessionId' and 'ElementId'.
+-- Return a spec to get the rect of an element given a 'Session' and 'ElementId'.
 --
--- [spec](https://www.w3.org/TR/2025/WD-webdriver2-20251028/#get-element-rect)
+-- [spec](HTMLSpecURL#get-element-rect)
 --
 -- @GET 	\/session\/{session id}\/element\/{element id}\/rect 	Get Element Rect@
-getElementRect :: SessionId -> ElementId -> Command WindowRect
+getElementRect :: Session -> ElementId -> Command WindowRect
 getElementRect sessionId elementId = Get "Get Element Rect" (elementUri1 sessionId elementId "rect")
 
 -- |
 --
--- Return a spec to check if an element is enabled given a 'SessionId' and 'ElementId'.
+-- Return a spec to check if an element is enabled given a 'Session' and 'ElementId'.
 --
--- [spec](https://www.w3.org/TR/2025/WD-webdriver2-20251028/#is-element-enabled)
+-- [spec](HTMLSpecURL#is-element-enabled)
 --
 -- @GET 	\/session\/{session id}\/element\/{element id}\/enabled 	Is Element Enabled@
-isElementEnabled :: SessionId -> ElementId -> Command Bool
+isElementEnabled :: Session -> ElementId -> Command Bool
 isElementEnabled sessionId elementId = Get "Is Element Enabled" (elementUri1 sessionId elementId "enabled")
 
 -- |
 --
--- Return a spec to get the computed role of an element given a 'SessionId' and 'ElementId'.
+-- Return a spec to get the computed role of an element given a 'Session' and 'ElementId'.
 --
--- [spec](https://www.w3.org/TR/2025/WD-webdriver2-20251028/#get-computed-role)
+-- [spec](HTMLSpecURL#get-computed-role)
 --
 -- @GET 	\/session\/{session id}\/element\/{element id}\/computedrole 	Get Computed Role@
-getElementComputedRole :: SessionId -> ElementId -> Command Text
+getElementComputedRole :: Session -> ElementId -> Command Text
 getElementComputedRole sessionId elementId = Get "Get Computed Role" (elementUri1 sessionId elementId "computedrole")
 
 -- |
 --
--- Return a spec to get the computed label of an element given a 'SessionId' and 'ElementId'.
+-- Return a spec to get the computed label of an element given a 'Session' and 'ElementId'.
 --
--- [spec](https://www.w3.org/TR/2025/WD-webdriver2-20251028/#get-computed-label)
+-- [spec](HTMLSpecURL#get-computed-label)
 --
 -- @GET 	\/session\/{session id}\/element\/{element id}\/computedlabel 	Get Computed Label@
-getElementComputedLabel :: SessionId -> ElementId -> Command Text
+getElementComputedLabel :: Session -> ElementId -> Command Text
 getElementComputedLabel sessionId elementId = Get "Get Computed Label" (elementUri1 sessionId elementId "computedlabel")
 
 -- |
 --
--- Return a spec to click an element given a 'SessionId' and 'ElementId'.
+-- Return a spec to click an element given a 'Session' and 'ElementId'.
 --
--- [spec](https://www.w3.org/TR/2025/WD-webdriver2-20251028/#element-click)
+-- [spec](HTMLSpecURL#element-click)
 --
 -- @POST 	\/session\/{session id}\/element\/{element id}\/click 	Element Click@
-elementClick :: SessionId -> ElementId -> Command ()
+elementClick :: Session -> ElementId -> Command ()
 elementClick sessionId elementId = PostEmpty "Element Click" (elementUri1 sessionId elementId "click")
 
 -- |
 --
--- Return a spec to clear an element given a 'SessionId' and 'ElementId'.
+-- Return a spec to clear an element given a 'Session' and 'ElementId'.
 --
--- [spec](https://www.w3.org/TR/2025/WD-webdriver2-20251028/#element-clear)
+-- [spec](HTMLSpecURL#element-clear)
 --
 -- @POST 	\/session\/{session id}\/element\/{element id}\/clear 	Element Clear@
-elementClear :: SessionId -> ElementId -> Command ()
+elementClear :: Session -> ElementId -> Command ()
 elementClear sessionId elementId = PostEmpty "Element Clear" (elementUri1 sessionId elementId "clear")
 
 -- |
 --
--- Return a spec to send keys to an element given a 'SessionId', 'ElementId', and keys to send.
+-- Return a spec to send keys to an element given a 'Session', 'ElementId', and keys to send.
 --
--- [spec](https://www.w3.org/TR/2025/WD-webdriver2-20251028/#element-send-keys)
+-- [spec](HTMLSpecURL#element-send-keys)
 --
 -- @POST 	\/session\/{session id}\/element\/{element id}\/value 	Element Send Keys@
-elementSendKeys :: SessionId -> ElementId -> Text -> Command ()
+elementSendKeys :: Session -> ElementId -> Text -> Command ()
 elementSendKeys sessionId elementId keysToSend = Post "Element Send Keys" (elementUri1 sessionId elementId "value") (fromList ["text" .= keysToSend])
 
 -- |
 --
--- Return a spec to take a screenshot of an element given a 'SessionId' and 'ElementId'.
+-- Return a spec to take a screenshot of an element given a 'Session' and 'ElementId'.
 --
--- [spec](https://www.w3.org/TR/2025/WD-webdriver2-20251028/#take-element-screenshot)
+-- [spec](HTMLSpecURL#take-element-screenshot)
 --
 -- @GET 	\/session\/{session id}\/element\/{element id}\/screenshot 	Take Element Screenshot@
-takeElementScreenshot :: SessionId -> ElementId -> Command Text
+takeElementScreenshot :: Session -> ElementId -> Command Text
 takeElementScreenshot sessionId elementId = Get "Take Element Screenshot" (elementUri1 sessionId elementId "screenshot")
 
 -- ############################ Shadow DOM Methods ##########################################
 
 -- |
 --
--- Return a spec to find an element from the shadow root given a 'SessionId', 'ElementId', and 'Selector'.
+-- Return a spec to find an element from the shadow root given a 'Session', 'ElementId', and 'Selector'.
 --
--- [spec](https://www.w3.org/TR/2025/WD-webdriver2-20251028/#find-element-from-shadow-root)
+-- [spec](HTMLSpecURL#find-element-from-shadow-root)
 --
 -- @POST 	\/session\/{session id}\/shadow\/{shadow id}\/element 	Find Element From Shadow Root@
-findElementFromShadowRoot :: SessionId -> ShadowRootElementId -> Selector -> Command ElementId
+findElementFromShadowRoot :: Session -> ShadowRootElementId -> Selector -> Command ElementId
 findElementFromShadowRoot sessionId shadowId  = mkPost "Find Element From Shadow Root" (sessionUri3 sessionId "shadow" shadowId.id "element") 
 
 -- |
 --
--- Return a spec to find elements from the shadow root given a 'SessionId', 'ElementId', and 'Selector'.
+-- Return a spec to find elements from the shadow root given a 'Session', 'ElementId', and 'Selector'.
 --
--- [spec](https://www.w3.org/TR/2025/WD-webdriver2-20251028/#find-elements-from-shadow-root)
+-- [spec](HTMLSpecURL#find-elements-from-shadow-root)
 --
 -- @POST 	\/session\/{session id}\/shadow\/{shadow id}\/elements 	Find Elements From Shadow Root@
-findElementsFromShadowRoot :: SessionId -> ShadowRootElementId -> Selector -> Command [ElementId]
+findElementsFromShadowRoot :: Session -> ShadowRootElementId -> Selector -> Command [ElementId]
 findElementsFromShadowRoot sessionId shadowId = mkPost "Find Elements From Shadow Root" (sessionUri3 sessionId "shadow" shadowId.id "elements") 
 
 -- ############################ Helper Functions ##########################################
@@ -783,26 +786,26 @@ session = "session"
 sessionUri :: Text -> UrlPath
 sessionUri sp = MkUrlPath [session, sp]
 
-sessionUri1 :: SessionId -> Text -> UrlPath
+sessionUri1 :: Session -> Text -> UrlPath
 sessionUri1 s sp = MkUrlPath [session, s.id, sp]
 
-sessionUri2 :: SessionId -> Text -> Text -> UrlPath
+sessionUri2 :: Session -> Text -> Text -> UrlPath
 sessionUri2 s sp sp2 = MkUrlPath [session, s.id, sp, sp2]
 
-sessionUri3 :: SessionId -> Text -> Text -> Text -> UrlPath
+sessionUri3 :: Session -> Text -> Text -> Text -> UrlPath
 sessionUri3 s sp sp2 sp3 = MkUrlPath [session, s.id, sp, sp2, sp3]
 
-sessionUri4 :: SessionId -> Text -> Text -> Text -> Text -> UrlPath
+sessionUri4 :: Session -> Text -> Text -> Text -> Text -> UrlPath
 sessionUri4 s sp sp2 sp3 sp4 = MkUrlPath [session, s.id, sp, sp2, sp3, sp4]
 
-elementUri1 :: SessionId -> ElementId -> Text -> UrlPath
+elementUri1 :: Session -> ElementId -> Text -> UrlPath
 elementUri1 s er ep = sessionUri3 s "element" er.id ep
 
-elementUri2 :: SessionId -> ElementId -> Text -> Text -> UrlPath
+elementUri2 :: Session -> ElementId -> Text -> Text -> UrlPath
 elementUri2 s er ep ep2 = sessionUri4 s "element" er.id ep ep2
 
 window :: Text
 window = "window"
 
-windowUri1 :: SessionId -> Text -> UrlPath
+windowUri1 :: Session -> Text -> UrlPath
 windowUri1 sr sp = sessionUri2 sr window sp

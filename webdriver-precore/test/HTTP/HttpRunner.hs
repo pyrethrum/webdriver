@@ -15,10 +15,8 @@ import Network.HTTP.Req
     Url,
   )
 import UnliftIO (catchAny)
-import WebDriverPreCore.Error ( parseWebDriverException )
-import WebDriverPreCore.HTTP.Protocol ( Command(..) )
+import WebDriverPreCore.HTTP.Protocol ( Command(..), WebDriverException(..), parseWebDriverException)
 import Prelude hiding (log)
-import WebDriverPreCore.Error (WebDriverException(..))
 
 -- ############# Runner #############
 

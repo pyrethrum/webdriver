@@ -12,7 +12,7 @@ import IOUtils (DemoActions (..), Logger, logNothingLogger, mkDemoActions)
 import Logger (withChannelFileLogger)
 import Network.HTTP.Req (http)
 import RuntimeConst (httpFullCapabilities)
-import WebDriverPreCore.HTTP.Protocol (FullCapabilities, SessionId, SessionResponse (..))
+import WebDriverPreCore.HTTP.Protocol (FullCapabilities, Session, SessionResponse (..))
 
 #ifdef LEGACY_TEST
 import HTTP.HttpActionsDeprecated qualified as Legacy
@@ -30,7 +30,7 @@ data HttpDemo
   | SessionDemo
       { name :: Text,
         sessionAction ::
-          SessionId ->
+          Session ->
           DemoActions ->
           HttpActions ->
           IO ()
@@ -39,7 +39,7 @@ data HttpDemo
 demo :: Text -> (DemoActions -> HttpActions -> IO ()) -> HttpDemo
 demo = Demo
 
-sessionDemo :: Text -> (SessionId -> DemoActions -> HttpActions -> IO ()) -> HttpDemo
+sessionDemo :: Text -> (Session -> DemoActions -> HttpActions -> IO ()) -> HttpDemo
 sessionDemo = SessionDemo
 
 runDemo :: HttpDemo -> IO ()

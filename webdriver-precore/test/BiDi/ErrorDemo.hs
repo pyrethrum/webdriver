@@ -18,13 +18,13 @@ import WebDriverPreCore.BiDi.Protocol
     ReadinessState (..),
     SharedId (..),
     SharedReference (..),
-    SourceActions (..)
+    SourceActions (..),
+    ErrorType (..),
+    WebDriverException(..)
   )
-import WebDriverPreCore.Error (ErrorType (..))
 import Prelude hiding (log)
 import GHC.Utils.Misc (HasCallStack)
 import BiDi.Response (ResponseException (..))
-import WebDriverPreCore.Error (WebDriverException(..))
 import qualified Test.Tasty.HUnit as HUnit
 import UnliftIO.Exception (try)
 
