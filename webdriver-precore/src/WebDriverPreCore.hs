@@ -14,7 +14,9 @@ This library provides typed definitions for the W3C WebDriver Protocol, supporti
 
 This library is intended as a foundation for building WebDriver client implementations. __It is type constructors only__, and does not include any executable client code.
 
-If you are writing a webdriver client, this library will save you the effort of analysing the specs and implementing the protocol types and JSON instances. If you are looking for a library to enable you to interact with web pages directly then you need a fully implemented web client library __which this library is not__. For a fully implemented webdriver client, consider an alternative such as [haskell-webdriver](https://github.com/haskell-webdriver/haskell-webdriver#readme)
+If you are writing a webdriver client, this library will save you the effort of analysing the specs and implementing the protocol types and JSON instances.
+
+If you are looking for a library to enable you to interact with web pages directly then you need a fully implemented web client library __which this library is not__. For a fully implemented webdriver client, consider an alternative such as [haskell-webdriver](https://github.com/haskell-webdriver/haskell-webdriver#readme)
 
 = Which Protocol?
 
@@ -27,15 +29,15 @@ Note that the Bidi protocol is [still evolving](https://github.com/w3c/webdriver
 For an introduction to WebDriver Bidi and its use cases, see:
 
 - [WebDriver BiDi: Future of browser automation](https://www.youtube.com/watch?v=6oXic6dcn9w)
-- [Example of WebDriver BiDi implementation in wdio (typescript) framework](https://youtu.be/2TBrFgSkqNE?si=6vl1RlPSjcA18YBy)
+- [Example of WebDriver BiDi implementation in wdio (TypeScript) framework](https://youtu.be/2TBrFgSkqNE?si=6vl1RlPSjcA18YBy)
 
 = Module Organisation
 
-Both HTTP and BiDi protocols follow a the same module structure. Each has tow modules:
+Both HTTP and BiDi protocols follow a the same module structure. Each has two modules:
 
 __1. An API module__
 
-    Contains functions that generate the payload for each endpoint/command in the the relvant WebDriver specification.
+    Contains type constructors that generate a payload corresponding to each endpoint/command in the relevant WebDriver specification.
 
 __2. A Protocol module__
     Contains:
@@ -67,7 +69,7 @@ __2. A Protocol module__
 "WebDriverPreCore.HTTP.Protocol"
 
     Protocol types including 'WebDriverPreCore.HTTP.Protocol.Command', request parameters, and response and error types 
-      referenced by the API functions, such as URL, and Session
+      such as URL, and Session.
 
 == BiDi
 
@@ -98,22 +100,20 @@ __2. A Protocol module__
 "WebDriverPreCore.BiDi.Protocol" 
 
   Protocol types including 'Command', 'Event', request parameters, and response and error types
-   referenced by the API functions.
+   such as 'KnownCommand'.
 
 = Using this Library to Implement a WebDriver Client
 
 Implementing a WebDriver client involves:
 
 1. Writing a runner to send HTTP requests or WebSocket messages to WebDriver
-2. Creating some kind of abstraction, such as handles, a typeclass, or the use of an effects library to send commands genrated by the API functions and parse the responses
+2. Creating some kind of abstraction, such as handles, a typeclass, or the use of an effects library to call the runner and hence lift the static type constructors provided by the API into IO actions.
 3. Handling errors using the shared error types
 
 Example implementations for both BiDi and HTTP runners, in this case using [the handle pattern](https://jaspervdj.be/posts/2018-03-08-handle-pattern.html)), can be found in the [test repository](https://github.com/pyrethrum/webdriver/tree/main/webdriver-precore/test#readme) for this package.
 
-== Example Implementation
-
-Using navigation as an example with both protocols, the client implmentation is implemented as follows:
-
+== Example Implementation (Single Endpoint)
+Using navigation as an example with both protocols, the client implementation is implemented as follows:
 === HTTP
 
 __The Runner__ takes commands and sends HTTP requests to the driver and parses responses (implemented in [HTTP.HttpRunner](https://github.com/pyrethrum/webdriver/blob/main/webdriver-precore/test/HTTP/HttpRunner.hs))
@@ -142,12 +142,13 @@ mkActions runner = MkHttpActions
   }
 @
 
-With the above in place, a /run/ or /withActions/ function can be created to provide the user a means to perfom WebDriver operations.
+With the above in place, a /run/ or /withActions/ function can be created to provide the user a means to perform WebDriver operations.
 
 ==== User's (of the Client Implementation) Module
 
-@
+A user of the client implementation would import the Actions module for performing operations and the "WebDriverPreCore.HTTP.Protocol" module for the related types and utility functions.
 
+@
 import WebDriverPreCore.HTTP.Protocol 
 import HTTP.HttpActions
 import HTTP.HttpRunner (mkRunner)
@@ -192,7 +193,7 @@ Example implementations can be found in the [test repository](https://github.com
     __Deprecated:__ This type is implementation specific and has been removed. The parser supplied in this type is now implicit, as the return types of all Commands are instances of 'FromJSON'.
 
 
-== Migration for Depricated Modules
+== Migration for Deprecated Modules
 
 See the [ChangeLog](https://github.com/pyrethrum/webdriver/blob/main/webdriver-precore/ChangeLog.md) for details
 -}
