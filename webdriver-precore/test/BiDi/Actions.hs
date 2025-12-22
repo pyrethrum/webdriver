@@ -1,10 +1,10 @@
-module BiDi.BiDiActions
+module BiDi.Actions
   ( BiDiActions (..),
     mkActions,
   )
 where
 
-import BiDi.BiDiSocket qualified as Socket
+import BiDi.Socket qualified as Socket
 import BiDi.Runner qualified as Runner
 import Data.Aeson (FromJSON, Object, Value (..))
 import Data.Text (Text)

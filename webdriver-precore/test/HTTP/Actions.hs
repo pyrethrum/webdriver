@@ -1,4 +1,4 @@
-module HTTP.HttpActions
+module HTTP.Actions
   ( HttpActions (..),
     mkActions,
   )
@@ -6,7 +6,7 @@ where
 
 import Data.Aeson (FromJSON, Value)
 import Data.Text (Text)
-import HTTP.HttpRunner (HttpRunner (..))
+import HTTP.Runner (HttpRunner (..))
 import WebDriverPreCore.HTTP.API qualified as API
 import WebDriverPreCore.HTTP.Protocol
   ( Actions (..),

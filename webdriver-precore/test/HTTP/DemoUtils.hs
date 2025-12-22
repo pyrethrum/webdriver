@@ -7,7 +7,7 @@ import ConfigLoader (loadConfig)
 import Const (milliseconds)
 import Control.Exception (bracket)
 import Data.Text (Text)
-import HTTP.HttpActions (HttpActions (..))
+import HTTP.Actions (HttpActions (..))
 import IOUtils (DemoActions (..), Logger, logNothingLogger, mkDemoActions)
 import Logger (withChannelFileLogger)
 import Network.HTTP.Req (http)
@@ -18,8 +18,8 @@ import WebDriverPreCore.HTTP.Protocol (FullCapabilities, Session, SessionRespons
 import HTTP.HttpActionsDeprecated qualified as Legacy
 import HTTP.HttpRunnerDeprecated qualified as Legacy
 #else
-import HTTP.HttpRunner (mkRunner)
-import HTTP.HttpActions (mkActions)
+import HTTP.Runner (mkRunner)
+import HTTP.Actions (mkActions)
 #endif
 
 data HttpDemo

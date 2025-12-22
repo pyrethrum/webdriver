@@ -1,6 +1,6 @@
 module BiDi.Demos.BrowsingContextDemos where
 
-import BiDi.BiDiActions (BiDiActions (..))
+import BiDi.Actions (BiDiActions (..))
 import BiDi.DemoUtils
 import Const (milliseconds)
 import Data.Aeson (Value (Null), object, (.=))

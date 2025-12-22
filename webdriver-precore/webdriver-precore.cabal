@@ -20,7 +20,7 @@ extra-source-files:
   ChangeLog.md
 tested-with: GHC == { 9.8.2, 9.8.4, 9.10.1 }
 
-synopsis:       A typed wrapper for W3C WebDriver protocol (HTTP and BiDi). A base for other libraries.
+synopsis:       A typed wrapper for W3C WebDriver (HTTP and BiDi) protocol. A base for other libraries.
 
 description:
   This library provides typed definitions for the WebDriver W3C spec, both @<https://www.w3.org/TR/2025/WD-webdriver2-20251028/ HTTP>@ and @<https://www.w3.org/TR/2025/WD-webdriver-bidi-20251212/ BiDi>@.
@@ -29,9 +29,9 @@ description:
 
   If you are looking for a fully implemented web client library, you should check out an alternative such as [haskell-webdriver](https://github.com/haskell-webdriver/haskell-webdriver#readme).
 
-  __For complete documentation, module organization, and migration guides, see "WebDriverPreCore".__
+  __For complete documentation, module organisation, and migration guides, see "WebDriverPreCore".__
   
-  See also the [project repo](https://github.com/pyrethrum/webdriver) for [examples](https://github.com/pyrethrum/webdriver/blob/main/webdriver-examples/README.md).
+  See also the @<https://github.com/pyrethrum/webdriver project repo>@ and the test directory for @<https://github.com/pyrethrum/webdriver/tree/main/webdriver-precore/test#readme examples>@.
   
 common commonExtensions
   default-extensions:
@@ -229,18 +229,18 @@ test-suite test
     , Logger
     , TestData
     , TestServerAPI
-    , HTTP.HttpRunner
-    , HTTP.HttpActions
+    , HTTP.Runner
+    , HTTP.HttpClient
+    , HTTP.Actions
     , HTTP.HttpActionsDeprecated
-    , HTTP.HttpEndpoint
     , HTTP.DemoUtils
     , HTTP.HttpDemo
     , HTTP.ErrorDemo
     , HTTP.FallbackDemo
     , BiDi.Runner
     , BiDi.Response
-    , BiDi.BiDiSocket
-    , BiDi.BiDiActions
+    , BiDi.Socket
+    , BiDi.Actions
     , BiDi.DemoUtils
     , BiDi.BiDiUrl
     , BiDi.ErrorDemo

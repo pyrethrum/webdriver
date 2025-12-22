@@ -1,4 +1,4 @@
-module BiDi.BiDiSocket
+module BiDi.Socket
   ( SocketSubscription (..),
     SocketSubscriptionId (..),
     SocketCommand (..),

@@ -1,6 +1,6 @@
 module BiDi.Demos.BrowsingContextEventDemos where
 
-import BiDi.BiDiActions (BiDiActions (..))
+import BiDi.Actions (BiDiActions (..))
 import BiDi.DemoUtils
 import Const (Timeout (..), milliseconds)
 import Data.Text (unpack)

@@ -1,6 +1,6 @@
-module HTTP.HttpRunner
+module HTTP.Runner
   ( mkRunner,
-    HttpRunner (..),
+    HttpRunner (..)
   )
 where
 
@@ -8,7 +8,6 @@ import Data.Aeson (FromJSON (..), Value, withObject, (.:))
 import Data.Aeson.Types (Parser, Value (..), parseEither, parseMaybe)
 import Data.Function ((&))
 import GHC.Exception (throw)
-import HTTP.HttpEndpoint (callWebDriver', mkRequest)
 import IOUtils (DemoActions (..))
 import Network.HTTP.Req
   ( Scheme (..),
@@ -17,6 +16,9 @@ import Network.HTTP.Req
 import UnliftIO (catchAny)
 import WebDriverPreCore.HTTP.Protocol ( Command(..), WebDriverException(..), parseWebDriverException)
 import Prelude hiding (log)
+
+import HTTP.HttpClient ( callWebDriver', mkRequest)
+
 
 -- ############# Runner #############
 

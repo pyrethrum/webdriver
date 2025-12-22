@@ -1,6 +1,6 @@
 module BiDi.Demos.OtherDemos where
 
-import BiDi.BiDiActions (BiDiActions (..))
+import BiDi.Actions (BiDiActions (..))
 import BiDi.DemoUtils
 import Config (Config)
 import ConfigLoader (loadConfig)

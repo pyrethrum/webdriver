@@ -1,6 +1,6 @@
 module BiDi.Demos.WebExtensionDemos where
 
-import BiDi.BiDiActions (BiDiActions (..))
+import BiDi.Actions (BiDiActions (..))
 import BiDi.DemoUtils ( demo, BiDiDemo )
 import Control.Exception (SomeException, catch)
 import IOUtils (DemoActions (..))
