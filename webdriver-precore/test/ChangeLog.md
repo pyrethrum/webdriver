@@ -1,4 +1,12 @@
 <!-- # webdriver-examples-??.??.??.?? (????-??-??) - Unreleased -->
+
+- bid examples
+- Http dircentory and modules renamed HTTP
+- changes due to changes in module structiure for http
+- demos mover from webdriver examples to test directory
+- changes in mechanism for debug config (cabal.prject.local + DebugConfig module)
+
+
 # webdriver-examples-0.1.1.0 (2025-06-29)
 
 ## Examples update only (no hackage update)

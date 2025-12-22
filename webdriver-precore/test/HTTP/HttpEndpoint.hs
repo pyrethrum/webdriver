@@ -4,7 +4,7 @@ module HTTP.HttpEndpoint
     -- share with deprecated runner
     fullCommandPath,
     responseStatusText,
-    callWebDriver'
+    callWebDriver',
   )
 where
 
@@ -36,11 +36,10 @@ import Network.HTTP.Req
     (/:),
   )
 import Network.HTTP.Req qualified as R
-import WebDriverPreCore.HTTP.Protocol (Command (..))
 import Utils (UrlPath (..))
+import WebDriverPreCore.HTTP.HttpResponse (HttpResponse (..))
+import WebDriverPreCore.HTTP.Protocol (Command (..))
 import Prelude hiding (log)
-import WebDriverPreCore.Http (HttpResponse)
-import WebDriverPreCore.HTTP.HttpResponse (HttpResponse(..))
 
 -- ############# Runner #############
 
@@ -57,15 +56,14 @@ mkRequest driverUrl port cmd =
 fullCommandPath :: Url 'Http -> [Text] -> Url 'Http
 fullCommandPath basePath = F.foldl' (/:) basePath
 
+-- call webdriver returning the body of the response as a JSON Value
 callWebDriver' :: DemoActions -> ReqRequestParams -> IO Value
 callWebDriver' MkDemoActions {logShow = logShow', logJSON = logJSON'} MkRequestParams {url, method, body, port = prt} =
   runReq defaultHttpConfig {httpConfigCheckResponse = \_ _ _ -> Nothing} $ do
     logShow "URL" url
     r <- req method url body jsonResponse $ R.port prt
 
-    let 
-      body' = responseBody r :: Value
-
+    let body' = responseBody r :: Value
 
     logShow "Status Code" $ responseStatusCode r
     logShow "Status Message" $ responseStatusText r
@@ -77,16 +75,15 @@ callWebDriver' MkDemoActions {logShow = logShow', logJSON = logJSON'} MkRequestP
     logShow msg = liftIO . logShow' msg
     logJSON msg = liftIO . logJSON' msg
 
-
+-- call webdriver returning the full HttpResponse (kept for now to support deprecated runner)
 callWebDriver :: DemoActions -> ReqRequestParams -> IO HttpResponse
 callWebDriver MkDemoActions {logShow = logShow', logJSON = logJSON'} MkRequestParams {url, method, body, port = prt} =
   runReq defaultHttpConfig {httpConfigCheckResponse = \_ _ _ -> Nothing} $ do
     logShow "URL" url
     r <- req method url body jsonResponse $ R.port prt
 
-    let 
-      body' = responseBody r :: Value
-      fr =
+    let body' = responseBody r :: Value
+        fr =
           MkHttpResponse
             { statusCode = responseStatusCode r,
               statusMessage = responseStatusText r,
