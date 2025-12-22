@@ -16,7 +16,9 @@ This library is intended as a foundation for building WebDriver client implement
 
 If you are writing a webdriver client, this library will save you the effort of analysing the specs and implementing the protocol types and JSON instances.
 
-If you are looking for a library to enable you to interact with web pages directly then you need a fully implemented web client library __which this library is not__. For a fully implemented webdriver client, consider an alternative such as [haskell-webdriver](https://github.com/haskell-webdriver/haskell-webdriver#readme)
+If you are looking for a library to enable you to interact with web pages directly then you need a fully implemented web client library __which this library is not__.
+
+For a fully implemented webdriver client, consider an alternative such as [haskell-webdriver](https://github.com/haskell-webdriver/haskell-webdriver#readme)
 
 = Which Protocol?
 
@@ -114,6 +116,7 @@ Example implementations for both BiDi and HTTP runners, in this case using [the 
 
 == Example Implementation (Single Endpoint)
 Using navigation as an example with both protocols, the client implementation is implemented as follows:
+
 === HTTP
 
 __The Runner__ takes commands and sends HTTP requests to the driver and parses responses (implemented in [HTTP.HttpRunner](https://github.com/pyrethrum/webdriver/blob/main/webdriver-precore/test/HTTP/HttpRunner.hs))
@@ -155,8 +158,8 @@ import HTTP.HttpRunner (mkRunner)
 import HTTP.DemoUtils (HttpDemo, runDemo, sessionDemo)
 
 -- >>> runDemo navigate
-demoForwardBackRefresh :: HttpDemo
-demoForwardBackRefresh =
+demoNavigate :: HttpDemo
+demoNavigate =
   sessionDemo "navigate" action
   where
     action :: Session -> HttpActions -> IO ()
@@ -169,7 +172,7 @@ Full example is available in the [test repository](https://github.com/pyrethrum/
 
 === BiDi
 
-A BiDi client implementation follows the same pattern as HTTP, with a runner, actions type, and actions implementation. It is somewhat more complicated than HTTP due to the asynchronous nature of WebSocket communication and event handling, the need to create correlation IDs for commands and manage subscriptions.
+A BiDi client implementation follows the same pattern as HTTP, with a runner, actions type, and actions implementation. It is somewhat more complicated than HTTP due to the asynchronous nature of WebSocket communication and event handling, the need to create correlation IDs for commands and the need to manage subscriptions for events.
 
 Example implementations can be found in the [test repository](https://github.com/pyrethrum/webdriver/tree/main/webdriver-precore/test#readme)
 
