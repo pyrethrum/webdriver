@@ -12,11 +12,12 @@ debugConfig =
   MkConfig
     { browser =
         Firefox
-          { headless = True,
-            profilePath = Just "[YOUR FIREFOX PROFILE PATH HERE]"
+          { headless = False,
+            -- profilePath = Just "[YOUR FIREFOX PROFILE PATH HERE]"
+            profilePath = None
           },
       logging = True,
       httpUrl = "127.0.0.1",
       httpPort = 4444,
-      pauseMS = 0
+      pauseMS = 2000
     }

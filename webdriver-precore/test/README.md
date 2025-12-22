@@ -17,8 +17,10 @@ The demos cover all W3C WebDriver endpoints for [HTTP](https://www.w3.org/TR/web
 
 ## Core Modules
 
+For BiDi the module structure for BiDi looks like this. 
 
-*For BiDi the modules the module structure looks like this*
+For HTTP, the structure is the same, but for the use of an `HttpClient` module instead of a `Socket`.
+
 ```mermaid
 classDiagram
     class Protocol {
@@ -60,13 +62,11 @@ classDiagram
         - Action execution
     }
   
-    
     class Demo {
         <<demo implementation>>
         Full demos
     }
   
-    
     API ..> Protocol : uses
     Socket ..> Protocol : uses
     Actions ..> API : uses
@@ -87,26 +87,13 @@ classDiagram
     style TestExecutor fill:#fff3e0,stroke:#f57c00,stroke-width:3px,color:#000,rx:10
 ```
 
-
-### HttpRunner
-
-[HttpRunner](./driver-demo-e2e/Http/HttpRunner.hs) exports a single `run` function that accepts a [webdriver-precore HttpSpec](https://hackage-content.haskell.org/package/webdriver-precore-0.0.0.1/package/docs/WebDriverPreCore.html#g:14) and performs HTTP requests to an active WebDriver instance.
-
-### HttpAPI
-
-[HttpAPI](./driver-demo-e2e/Http/HttpAPI.hs) is [W3C WebDriver](https://www.w3.org/TR/webdriver2) client implemented by applying `run` to every endpoint exported by [webdriver-precore](https://hackage-content.haskell.org/package/webdriver-precore).
-
-### HttpE2EDemoTest
-
-[HttpE2EDemoTest](./driver-demo-e2e/Http/HttpE2EDemoTest.hs) is \"unit test" module where the unit tests are actually example stubs that demonstrate driving a browser via the [HttpAPI](./driver-demo-e2e/Http/HttpE2EDemoTest.hs).
-
 ## Running Examples (VSCode Dev-Container)
 
  *The following assumes the pre-requisites for [dev-containers](https://code.visualstudio.com/docs/devcontainers/containers#_getting-started) are installed* 
  
  *See [Running Examples (Manual Configuration)](#running-examples-manual-configuration) if you are not dev-container user.*
 
-The dev-container provided includes all the Haskell tools required, pre-compiled dependencies and Firefox and geckodriver. The examples will be compiled and geckodriver started when the container starts.
+The dev-container provided includes all the Haskell tools required, pre-compiled dependencies and Firefox and geckodriver as well as the `DebugConfig.hs` being initialised. The examples will be compiled and geckodriver started when the container starts.
  
 From VSCode invoke: <BR/> 
 &nbsp;&nbsp; \>> `Show All Commands` <BR/> 
@@ -115,7 +102,7 @@ From VSCode invoke: <BR/>
 &nbsp;&nbsp; \>> search and select `pyrethrum/webdriver`<BR/>
 &nbsp;&nbsp; \>> `main` branch
 
-Once the container downloads starts, you should be ready to run the examples (see [Executing the Examples](#executing-the-examples) below).
+Once the container downloads starts, you should be ready to run the examples (see [Executing Demos from the Test Suite](#executing-the-examples) below).
 
 ## Running Examples (Manual Configuration)
 
@@ -161,7 +148,7 @@ Configuration is affected by the following files:
 ... many build log entries
 ```
 
-*You may need to restart your IDE or envoke `Haskell: Restart Haskell LSP server` after your first rebuild.*
+*You may need to restart your IDE or evoke `Haskell: Restart Haskell LSP server` after your first rebuild.*
 #### 3. Web Driver Running
 
 Before running any of the examples you need to invoke the WebDriver from the terminal. On Linux this can be done with one of the following bash commands:
@@ -203,12 +190,49 @@ ChromeDriver was started successfully on port 4444.
 
 #### 4. Configuration Set
 
-The first time you attempt to run a test a default config file will be generate at: </br>
-&nbsp;&nbsp; `webdriver-examples\driver-demo-e2e\.config\config.dhall`. 
+Before running any of the '*Demo's you will need to set up a `DemoConfig.hs` file as follows:
 
-You will will probably need to make adjustments to this file to get these tests to run successfully.
-</br>See [Executing the Examples](#executing-the-examples) (below) for details.
+1. copy `webdriver-precore/test/DebugConfig.hs.template` => `webdriver-precore/test/DebugConfig.hs`
 
+    `DebugConfig.hs` is included in `.gitIgnore` so wont be added to git. If you are using VSCode you will need to open this for the first time via the Project Explorer as most shortcut keys ignore files ignored by git.
+
+2. copy `cabal.project.local.template` => `cabal.project.local` 
+
+    Similar to the above `cabal.project.local` is ignored by git. The purpose of this file is to set a flag called `debug-local-config` which will cause `DebugConfig.hs` to be included in the build by `webdriver-precore/webdriver-precore.cabal`
+
+The initial `DebugConfig.hs` looks like this:
+
+```Haskell
+module DebugConfig (
+  debugConfig
+) where
+
+import Config
+  ( Config (..),
+    DemoBrowser (..),
+  )
+
+debugConfig :: Config
+debugConfig =
+  MkConfig
+    { browser =
+        Firefox
+          { headless = False,
+            -- profilePath = Just "[YOUR FIREFOX PROFILE PATH HERE]"
+            profilePath = None
+          },
+      logging = True,
+      httpUrl = "127.0.0.1",
+      httpPort = 4444,
+      pauseMS = 2000
+    }
+```
+
+*This is running a headed (visible) FireFox browser with the default profile path. It is also pausing the execution for 2 seconds every time the demo hits a pause clause and logging details of each interaction to the console and a log file that will be called `eval.log`. This is relatively slow, verbose config that you would typically use when browsing and manually evaluating demos.*
+
+*You will need to change the config according to your requirements.*
+
+Note: This test suite can also be configured via a `config.dhall` file but this is used more for `CI` so will not be described here.
 
 ## Executing Demos from the Test Suite
 
@@ -217,7 +241,7 @@ Once the [driver is running](#3-web-driver-running), the recommended way to expe
 ### Evaluate...
 
 1. From VSCode `Ctrl+P` \>> search `demo`
-2. Open `HttpE2EDemoTest`
+2. Open the desired demo, e.g. `HttpE2EDemoTest`
 3. Wait for HLS to process the file, at which point the `Evaluate...` lens will be visible
 
 <img src="evaluate.png" alt="evaluate code lens" width="400">
