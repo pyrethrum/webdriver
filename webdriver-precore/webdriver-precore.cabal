@@ -232,7 +232,6 @@ test-suite test
     , HTTP.HttpRunner
     , HTTP.HttpActions
     , HTTP.HttpActionsDeprecated
-    , HTTP.HttpEndpoint
     , HTTP.DemoUtils
     , HTTP.HttpDemo
     , HTTP.ErrorDemo

@@ -19,7 +19,6 @@ HTTP tests moved to `HTTP/` directory (previously in root):
 - `HttpDemo.hs`: Main HTTP protocol demos
 - `HttpActions.hs`: Reusable HTTP test actions
 - `HttpRunner.hs`: HTTP test runner
-- `HttpEndpoint.hs`: Endpoint testing utilities
 - `ErrorDemo.hs`: HTTP error handling examples
 - `FallbackDemo.hs`: Protocol fallback examples
 - `HttpActionsDeprecated.hs`, `HttpRunnerDeprecated.hs`: For testing deprecated SpecDefinition module
