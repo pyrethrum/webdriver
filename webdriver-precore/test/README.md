@@ -1,121 +1,28 @@
 # webdriver-tests
 
-- [webdriver-tests](#webdriver-tests)
-  - [About These Examples](#about-these-examples)
-  - [Core Modules](#core-modules)
-    - [HttpRunner](#httprunner)
-    - [HttpAPI](#httpapi)
-    - [HttpE2EDemoTest](#httpe2edemotest)
-  - [Running Examples (VSCode Dev-Container)](#running-examples-vscode-dev-container)
-  - [Running Examples (Manual Configuration)](#running-examples-manual-configuration)
-    - [Prerequisites](#prerequisites)
-      - [1. Web Driver Installed](#1-web-driver-installed)
-      - [2. The Project Builds](#2-the-project-builds)
-      - [3. Web Driver Running](#3-web-driver-running)
-      - [4. Configuration Set](#4-configuration-set)
-  - [Executing Demos from the Test Suite](#executing-demos-from-the-test-suite)
-    - [Evaluate...](#evaluate)
-    - [cabal repl](#cabal-repl)
-    - [cabal test](#cabal-test)
-  - [Updating Test Configuration](#updating-test-configuration)
-  - [Fixing Geckodriver Firefox Profile Issues on Linux](#fixing-geckodriver-firefox-profile-issues-on-linux)
-- [Minimal Example](#minimal-example)
-  - [1. Implementing a runner](#1-implementing-a-runner)
-      - [Main Types (Used in the Runner)](#main-types-used-in-the-runner)
-        - [HttpSpec](#httpspec)
-        - [HttpResponse](#httpresponse)
-      - [The Runner](#the-runner)
-    - [1.1 Convert HttpSpec to params for req](#11-convert-httpspec-to-params-for-req)
-    - [1.2 Call the WebDriver](#12-call-the-webdriver)
-    - [1.3 Parse HttpResponse Using the Parser Provided in the HttpSpec](#13-parse-httpresponse-using-the-parser-provided-in-the-httpspec)
-    - [2. Applying the Runner to the HttpSpec Functions](#2-applying-the-runner-to-the-httpspec-functions)
-    - [3. Install a Vendor Provided WebDriver](#3-install-a-vendor-provided-webdriver)
-    - [4. Launch WebDriver From the Terminal](#4-launch-webdriver-from-the-terminal)
-    - [5. Drive the Browser Via the IO API](#5-drive-the-browser-via-the-io-api)
-
 ## About These Examples
 
-These examples demonstrate a minimal wrapper implementation around the [`webdriver-precore`](https://hackage.haskell.org/package/webdriver-precore) library for basic browser automation. 
+- demos
+- handles pattern
+- VSCode eval lens
+-  both protocols
+-  core modules
+   -  runner
+   -  Actions
+      -  type
+      -  implementation
+      -  demos 
+-  how to configure and run
+
+These examples demonstrate a minimal wrapper implementation around the [`webdriver-precore`](https://hackage.haskell.org/package/webdriver-precore) library for basic browser automation using  
 
 Key simplifications compared to a production-ready framework:
 - No utility functions or automated browser/session management
-- Direct console logging (no structured logging)
-- Included sleeps and debug outputs for observability
 - Minimal robustness features (no advanced waits or retry mechanisms)
 
 The examples cover all [W3C WebDriver endpoints](https://www.w3.org/TR/webdriver2/#endpoints) using [the-internet](https://the-internet.herokuapp.com) test site.
 
 ## Core Modules
-
-
-```mermaid
-classDiagram
-    class Protocol {
-        <<Core Library>>
-        +Type definitions
-        +Data structures
-        +Command types
-        +Event types
-        +Serialization
-    }
-    
-    class API {
-        <<Core Library>>
-        +sessionNew()
-        +browsingContextNavigate()
-        +scriptEvaluate()
-        +networkAddIntercept()
-        +storageGetCookies()
-    }
-    
-    class Socket {
-        <<Demo Implementation>>
-        +send()
-        +getNext()
-        +subscribe()
-        +unsubscribe()
-        +WebSocket communication
-    }
-    
-    class Actions {
-        <<Demo Implementation>>
-        +High-level workflows
-        +Application-specific actions
-        +Command orchestration
-    }
-    
-    class Runner {
-        <<Demo Implementation>>
-        +Test orchestration
-        +Session management
-        +Action execution
-    }
-    
-    class Tests {
-        <<Demo Implementation>>
-        +Tests
-    }
-    
-    API ..> Protocol : uses
-    Socket ..> Protocol : uses
-    Actions ..> API : uses
-    Actions ..> Protocol : uses
-    Actions ..> Socket : uses
-    Runner ..> Protocol : uses
-    Runner ..> Socket : uses
-    Tests ..> Actions : uses
-    Tests ..> Protocol : uses
-    TestExecutor ..> Runner : uses
-    TestExecutor ..> Tests : uses
-    
-    style Protocol fill:#e3f2fd,stroke:#1976d2,stroke-width:3px,color:#000,rx:10
-    style API fill:#e3f2fd,stroke:#1976d2,stroke-width:3px,color:#000,rx:10
-    style Socket fill:#fff3e0,stroke:#f57c00,stroke-width:3px,color:#000,rx:10
-    style Actions fill:#fff3e0,stroke:#f57c00,stroke-width:3px,color:#000,rx:10
-    style Runner fill:#fff3e0,stroke:#f57c00,stroke-width:3px,color:#000,rx:10
-    style Tests fill:#fff3e0,stroke:#f57c00,stroke-width:3px,color:#000,rx:10
-    style TestExecutor fill:#fff3e0,stroke:#f57c00,stroke-width:3px,color:#000,rx:10
-```
 
 ### HttpRunner
 
