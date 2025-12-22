@@ -1,6 +1,6 @@
 module BiDi.Demos.ScriptEventDemos where
 
-import BiDi.BiDiActions (BiDiActions (..))
+import BiDi.Actions (BiDiActions (..))
 import BiDi.DemoUtils
 import IOUtils (DemoActions (..))
 import TestData (checkboxesUrl, scriptRealmUrl)

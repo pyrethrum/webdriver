@@ -2,7 +2,7 @@ module HTTP.ErrorDemo where
 
 import GHC.Utils.Misc (HasCallStack)
 import HTTP.DemoUtils (HttpDemo, runDemo, sessionDemo)
-import HTTP.HttpActions (HttpActions (..))
+import HTTP.Actions (HttpActions (..))
 import IOUtils (DemoActions (..), (===))
 import Test.Tasty.HUnit (assertFailure)
 import TestData (inputsUrl)

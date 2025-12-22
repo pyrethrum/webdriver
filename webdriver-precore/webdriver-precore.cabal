@@ -231,7 +231,7 @@ test-suite test
     , TestServerAPI
     , HTTP.Runner
     , HTTP.HttpClient
-    , HTTP.HttpActions
+    , HTTP.Actions
     , HTTP.HttpActionsDeprecated
     , HTTP.DemoUtils
     , HTTP.HttpDemo
@@ -240,7 +240,7 @@ test-suite test
     , BiDi.Runner
     , BiDi.Response
     , BiDi.Socket
-    , BiDi.BiDiActions
+    , BiDi.Actions
     , BiDi.DemoUtils
     , BiDi.BiDiUrl
     , BiDi.ErrorDemo

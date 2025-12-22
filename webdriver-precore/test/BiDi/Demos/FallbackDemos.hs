@@ -1,6 +1,6 @@
 module BiDi.Demos.FallbackDemos where
 
-import BiDi.BiDiActions (BiDiActions (..))
+import BiDi.Actions (BiDiActions (..))
 import BiDi.DemoUtils
 import Const (seconds)
 import Data.Aeson (Value (..), FromJSON)

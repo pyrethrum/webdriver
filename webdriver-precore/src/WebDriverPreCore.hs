@@ -121,9 +121,9 @@ Using navigation as an example with both protocols, the client implementation is
 
 __The Runner__ takes commands and sends HTTP requests to the driver and parses responses (implemented in [HTTP.Runner](https://github.com/pyrethrum/webdriver/blob/main/webdriver-precore/test/HTTP/Runner.hs))
 
-__An Actions Type__ mirrors the type API functions with the response wrapped in IO (implemented in [HTTP.HttpActions](https://github.com/pyrethrum/webdriver/blob/main/webdriver-precore/test/HTTP/HttpActions.hs))
+__An Actions Type__ mirrors the type API functions with the response wrapped in IO (implemented in [HTTP.Actions](https://github.com/pyrethrum/webdriver/blob/main/webdriver-precore/test/HTTP/Actions.hs))
 
-__An Actions Implementation__ an instance of the Actions type that uses the runner to send commands (implemented in [HTTP.HttpActions](https://github.com/pyrethrum/webdriver/blob/main/webdriver-precore/test/HTTP/HttpActions.hs))
+__An Actions Implementation__ an instance of the Actions type that uses the runner to send commands (implemented in [HTTP.Actions](https://github.com/pyrethrum/webdriver/blob/main/webdriver-precore/test/HTTP/Actions.hs))
 
 @
 import WebDriverPreCore.HTTP.API qualified as API
@@ -153,7 +153,7 @@ A user of the client implementation would import the Actions module for performi
 
 @
 import WebDriverPreCore.HTTP.Protocol 
-import HTTP.HttpActions
+import HTTP.Actions
 import HTTP.Runner (mkRunner)
 import HTTP.DemoUtils (HttpDemo, runDemo, sessionDemo)
 

@@ -1,6 +1,6 @@
 module BiDi.Demos.NetworkDemos where
 
-import BiDi.BiDiActions (BiDiActions (..))
+import BiDi.Actions (BiDiActions (..))
 import BiDi.DemoUtils
   ( BiDiDemo,
     closeContext,

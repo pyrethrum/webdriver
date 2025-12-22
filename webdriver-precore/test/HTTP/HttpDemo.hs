@@ -11,7 +11,7 @@ import Data.Text (isInfixOf)
 import Data.Time.Clock.POSIX (getPOSIXTime)
 import GHC.IO (catchAny)
 import HTTP.DemoUtils (HttpDemo, demo, runDemo, sessionDemo)
-import HTTP.HttpActions (HttpActions (..))
+import HTTP.Actions (HttpActions (..))
 import IOUtils
   ( DemoActions (..),
     (===),

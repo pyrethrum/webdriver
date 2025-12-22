@@ -8,7 +8,7 @@ import HTTP.HttpRunnerDeprecated (HttpRunnerDeprecated (..))
 
 import  WebDriverPreCore.HTTP.Protocol qualified as P
 import WebDriverPreCore.HTTP.SpecDefinition qualified as W
-import HTTP.HttpActions (HttpActions (..))
+import HTTP.Actions (HttpActions (..))
 import WebDriverPreCore.Http qualified as Legacy
 
 mkDeprecatedActions :: HttpRunnerDeprecated -> HttpActions

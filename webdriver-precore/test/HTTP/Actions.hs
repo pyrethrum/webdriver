@@ -1,4 +1,4 @@
-module HTTP.HttpActions
+module HTTP.Actions
   ( HttpActions (..),
     mkActions,
   )

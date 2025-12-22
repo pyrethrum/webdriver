@@ -1,4 +1,4 @@
-module BiDi.BiDiActions
+module BiDi.Actions
   ( BiDiActions (..),
     mkActions,
   )

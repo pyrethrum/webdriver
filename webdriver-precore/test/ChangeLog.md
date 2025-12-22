@@ -8,7 +8,7 @@ Complete test coverage for WebDriver BiDi protocol:
 
 - **Demos**: Comprehensive demos for all BiDi modules in `BiDi/Demos/` including browsing context, script evaluation, network interception, input actions, storage, emulation, and event subscriptions
 - **Connection handling**: WebSocket connection utilities in `BiDi/BiDiSocket.hs` and `BiDi/BiDiUrl.hs`
-- **Test actions**: Reusable BiDi test actions in `BiDi/BiDiActions.hs`
+- **Test actions**: Reusable BiDi test actions in `BiDi/Actions.hs`
 - **Runner**: BiDi test runner with session management in `BiDi/Runner.hs`
 - **Error demos**: BiDi error handling examples in `BiDi/ErrorDemo.hs`
 
@@ -17,7 +17,7 @@ Complete test coverage for WebDriver BiDi protocol:
 HTTP tests moved to `HTTP/` directory (previously in root):
 
 - `HttpDemo.hs`: Main HTTP protocol demos
-- `HttpActions.hs`: Reusable HTTP test actions
+- `Actions.hs`: Reusable HTTP test actions
 - `HttpRunner.hs`: HTTP test runner
 - `ErrorDemo.hs`: HTTP error handling examples
 - `FallbackDemo.hs`: Protocol fallback examples

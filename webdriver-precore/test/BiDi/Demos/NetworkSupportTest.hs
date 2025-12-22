@@ -1,6 +1,6 @@
 module BiDi.Demos.NetworkSupportTest where
 
-import BiDi.BiDiActions (BiDiActions (..))
+import BiDi.Actions (BiDiActions (..))
 import BiDi.DemoUtils
 import Control.Exception (SomeException, throwIO, try)
 import IOUtils (DemoActions (..), exceptionTextIncludes)

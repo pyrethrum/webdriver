@@ -1,6 +1,6 @@
 module BiDi.Demos.InputDemos where
 
-import BiDi.BiDiActions (BiDiActions (..))
+import BiDi.Actions (BiDiActions (..))
 import BiDi.DemoUtils
 import Data.Maybe (fromJust)
 import IOUtils (DemoActions (..))

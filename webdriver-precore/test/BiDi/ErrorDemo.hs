@@ -1,6 +1,6 @@
 module BiDi.ErrorDemo where
 
-import BiDi.BiDiActions (BiDiActions (..))
+import BiDi.Actions (BiDiActions (..))
 import BiDi.DemoUtils (BiDiDemo, demo, runDemo)
 import IOUtils (DemoActions (..), (===))
 import TestData (inputsUrl)

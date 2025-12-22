@@ -1,6 +1,6 @@
 module BiDi.Demos.EmulationDemos where
 
-import BiDi.BiDiActions (BiDiActions (..))
+import BiDi.Actions (BiDiActions (..))
 import BiDi.DemoUtils
 import IOUtils (DemoActions (..))
 import WebDriverPreCore.BiDi.Protocol
