@@ -29,7 +29,7 @@ For a fully implemented webdriver client, consider an alternative such as [haske
 
 Several libraries provide WebDriver bindings for Haskell. However, when development on this library began, the existing options were either unmaintained, dependent on Selenium, or tightly coupled with larger "batteries included" testing frameworks.
 
-We, the authors of this library, are building our own standalone test framework. To support browser based testing within this framework we're first creating a series of independent low-level libraries. This library is the first in that series. Our aim is to make each of our low level libraries broadly useful to others, outside its use within our own framework. 
+We, the authors of this library, are building our own stand-alone test framework. To support browser based testing within this framework we're first creating a series of independent low-level libraries. This library is the first in that series. Our aim is to make each of our low level libraries broadly useful to others, outside its use within our own framework. 
 
 ### Core Principles
 - **Direct W3C WebDriver Implementation**  
