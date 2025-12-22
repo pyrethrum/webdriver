@@ -26,13 +26,13 @@ HTTP tests moved to `HTTP/` directory (previously in root):
 
 ### Configuration Management
 
-New Dhall-based configuration system:
+New means configuration:
 
 - Configuration loader in `ConfigLoader.hs` supporting Dhall config files
-- Debug configuration via `DebugConfig.hs` module
 - Config directory at `.config/` (user config file gitignored)
+- Debug configuration via `DebugConfig.hs` module
 - Runtime constants in `RuntimeConst.hs` and `Const.hs`
-- For details regarding configuration
+- For details regarding configuration details see [Configuration set up](README.md#4-configuration-set)
 
 ### Test Infrastructure
 
