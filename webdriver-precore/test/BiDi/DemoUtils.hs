@@ -2,7 +2,7 @@ module BiDi.DemoUtils where
 
 import BiDi.BiDiActions (BiDiActions (..), mkActions)
 import BiDi.Runner (withBiDi, withBidiFailTest)
-import BiDi.BiDiSocket (SocketActions)
+import BiDi.Socket (SocketActions)
 import Config (Config (..))
 import ConfigLoader (loadConfig)
 import Const (Timeout (..), milliseconds, seconds)

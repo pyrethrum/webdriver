@@ -10,7 +10,7 @@ module BiDi.Runner
   )
 where
 
-import BiDi.BiDiSocket as S
+import BiDi.Socket as S
   ( Channels (..),
     RegisteredSubscription (..),
     SocketActions (..),

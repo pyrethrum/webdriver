@@ -239,7 +239,7 @@ test-suite test
     , HTTP.FallbackDemo
     , BiDi.Runner
     , BiDi.Response
-    , BiDi.BiDiSocket
+    , BiDi.Socket
     , BiDi.BiDiActions
     , BiDi.DemoUtils
     , BiDi.BiDiUrl
