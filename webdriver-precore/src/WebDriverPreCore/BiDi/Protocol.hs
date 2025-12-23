@@ -15,8 +15,8 @@ module WebDriverPreCore.BiDi.Protocol
     KnownCommand (..),
     OffSpecCommand (..),
      -- ** Constructors
-    {-| The following constructors are patially applied in "WebDriverPreCore.BiDi.API" to generate specific named command functions. 
-        Although these functions form the basis of every command in the "WebDriverPreCore.BiDi.API", it would be unsusal to need to use these directly.
+    {-| The following constructors are partially applied in "WebDriverPreCore.BiDi.API" to generate specific named command functions. 
+        Although these functions form the basis of every command in the "WebDriverPreCore.BiDi.API", it would be unusual to need to use these directly.
     -}
     mkCommand,
     emptyCommand,

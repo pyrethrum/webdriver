@@ -54,8 +54,7 @@ unexpected alert open 	500 	unexpected alert open 	A modal dialog was open, bloc
 unknown command 	404 	unknown command 	A command could not be executed because the remote end is not aware of it.
 unknown error 	500 	unknown error 	An unknown error occurred in the remote end while processing the command.
 unknown method 	405 	unknown method 	The requested command matched a known URL but did not match any method for that URL.
-unsupported operation 	500 	unsupported operation 	Indicates that a commamodule ErrorCoverageTest where
-nd that should have executed properly cannot be supported for some reason.
+unsupported operation 	500 	unsupported operation 	Indicates that a command that should have executed properly cannot be supported for some reason.
 -}
 
 -- | Known WevDriver Error Types

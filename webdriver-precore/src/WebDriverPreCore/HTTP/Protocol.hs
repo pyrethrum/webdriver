@@ -14,7 +14,7 @@ module WebDriverPreCore.HTTP.Protocol
 
     -- ** Constructors
     {-| The following constructors are utility functions that partially applied in "WebDriverPreCore.HTTP.API" to generate specific named command functions for POST requests. 
-        Although these functions form the basis of nmany commands in the "WebDriverPreCore.HTTP.API", it would be unsusal to need to use these directly.
+        Although these functions form the basis of many commands in the "WebDriverPreCore.HTTP.API", it would be unusual to need to use these directly.
     -}
     mkPost,
     mkPost',

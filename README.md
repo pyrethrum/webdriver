@@ -7,7 +7,7 @@
 
 ## Subprojects
 
-This repository contains single sub-repo:
+This repository contains a single sub-repo:
 
 ### 1. [webdriver-precore](./webdriver-precore/README.md)
 
