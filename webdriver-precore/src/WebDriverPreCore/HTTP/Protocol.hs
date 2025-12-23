@@ -1,5 +1,13 @@
+{-| 
+This module defines the 'Command' type and related types/functions for HTTP commands referenced by the API functions in "WebDriverPreCore.HTTP.API" 
+
+"WebDriverPreCore.HTTP.API" contains functions that generate the payload for each HTTP command and is the main interface for users of this package to interact with the WebDriver HTTP protocol.
+
+An example of using these modules to implement a basic HTTP client can be found in the [test repository](https://github.com/pyrethrum/webdriver/tree/main/webdriver-precore/test#readme) for this package.
+-}
+
 module WebDriverPreCore.HTTP.Protocol
-  ( -- * Re-exported modules
+  (
 
     -- * Command
     Command (..),
