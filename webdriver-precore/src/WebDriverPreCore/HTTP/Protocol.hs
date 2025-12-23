@@ -30,7 +30,27 @@ module WebDriverPreCore.HTTP.Protocol
     extendPostLoosen,
 
     -- * Capabilities
-    module WebDriverPreCore.HTTP.Capabilities,
+    FullCapabilities (..),
+    Capabilities (..),
+    UnhandledPromptBehavior (..),
+    PageLoadStrategy (..),
+    BrowserName (..),
+    PlatformName (..),
+    Proxy (..),
+    VendorSpecific (..),
+    SocksProxy (..),
+    Timeouts (..),
+    PerfLoggingPrefs (..),
+    MobileEmulation (..),
+    LogLevel (..),
+    LogSettings (..),
+    DeviceMetrics (..),
+     -- * Capability Utility Functions
+    alwaysMatchCapabilities,
+    minCapabilities,
+    minFullCapabilities,
+    minFirefoxCapabilities,
+    minChromeCapabilities,
 
     -- * Error
     module WebDriverPreCore.Error,
@@ -47,7 +67,6 @@ module WebDriverPreCore.HTTP.Protocol
     Selector (..),
     Session (..),
     SessionResponse (..),
-    Timeouts (..),
     Handle (..),
     WindowHandleSpec (..),
     WindowRect (..),
@@ -232,7 +251,7 @@ instance FromJSON SessionResponse where
           -- so it must be converted or there will be a parse error
           let capabilitiesVal = webSocketUrlToBool allCapsObject
           capabilities :: Capabilities <- parseJSON $ Object capabilitiesVal
-          standardCapsProps <- parseObject "JSON from Capabilities Object must be a JSON Object" $ toJSON capabilities
+          standardCapsProps <- parseObject "JSON frotim Capabilities Object must be a JSON Object" $ toJSON capabilities
           let keys = fromList . KM.keys
               capsKeys = keys standardCapsProps
               nonNullExtensionKey k v = k `notMember` capsKeys && k /= webSocketKey && nonEmpty v
