@@ -1,7 +1,25 @@
 module WebDriverPreCore.HTTP.Protocol
   ( -- * Re-exported modules
+
     -- * Command
-    module WebDriverPreCore.HTTP.Command,
+    Command (..),
+
+    -- ** Constructors
+    {-| The following constructors are utility functions that partially applied in "WebDriverPreCore.HTTP.API" to generate specific named command functions for POST requests. 
+        Although these functions form the basis of nmany commands in the "WebDriverPreCore.HTTP.API", it would be unsusal to need to use these directly.
+    -}
+    mkPost,
+    mkPost',
+
+    -- ** Fallback Constructors
+    {-| The following constructors are provided to modify or create new commands that are not directly supported by the "WebDriverPreCore.HTTP.API".
+        These constructors provide a means by which users can work around defects in this package or defects in driver implementation as well as handling driver specific extensions to the HTTP protocol. 
+    -}
+    voidCommand,
+    loosenCommand,
+    coerceCommand,
+    extendPost,
+    extendPostLoosen,
 
     -- * Capabilities
     module WebDriverPreCore.HTTP.Capabilities,
@@ -38,6 +56,7 @@ module WebDriverPreCore.HTTP.Protocol
   )
 where
 
+import AesonUtils (nonEmpty, opt, parseObject)
 import Data.Aeson as A
   ( FromJSON (..),
     Key,
@@ -60,31 +79,29 @@ import Data.Text (Text, pack, unpack)
 import Data.Text qualified as T
 import Data.Word (Word16)
 import GHC.Generics (Generic)
+import Utils (txt)
+import WebDriverPreCore.Error
 import WebDriverPreCore.HTTP.Capabilities
 import WebDriverPreCore.HTTP.Command
-import WebDriverPreCore.Error
-import AesonUtils (nonEmpty, opt, parseObject)
-import WebDriverPreCore.Internal.HTTPBidiCommon as Url (URL(..)) 
-import Utils (txt)
+import WebDriverPreCore.Internal.HTTPBidiCommon as Url (URL (..))
 import Prelude hiding (id)
 
 -- | [spec](https://www.w3.org/TR/2025/WD-webdriver2-20251028/#dfn-get-window-handle)
 newtype Handle = MkHandle {handle :: Text}
   deriving (Show, Eq, Generic)
 
-instance ToJSON Handle where 
+instance ToJSON Handle where
   toJSON :: Handle -> Value
   toJSON (MkHandle handle) = object ["handle" .= handle]
 
 instance FromJSON Handle where
   parseJSON :: Value -> Parser Handle
-  parseJSON = \case 
+  parseJSON = \case
     String t -> pure $ MkHandle t
-    Object o -> do  
+    Object o -> do
       h <- o .: "handle"
-      pure $ MkHandle h 
+      pure $ MkHandle h
     v -> fail $ unpack $ "Expected Handle as String or Object with handle property, got: " <> txt v
-
 
 -- | [spec](https://www.w3.org/TR/2025/WD-webdriver2-20251028/#new-window)
 data WindowHandleSpec = HandleSpec

@@ -21,15 +21,10 @@ import AesonUtils (objectOrThrow)
 import Utils (UrlPath (..))
 import Prelude hiding (id, lookup)
 
-mkPost :: forall a r. (ToJSON a) => Text -> UrlPath -> a -> Command r
-mkPost description path = mkPost' description path (objectOrThrow ("mkPost - " <> description))
-
-mkPost' :: forall a r. Text -> UrlPath -> (a -> Object) -> a -> Command r
-mkPost' description path f = Post description path . f
-
 -- |
 --  The 'Command' type is a specification for a WebDriver Http command.
---  Every endpoint function in this module returns a 'Command' object.
+--  Every endpoint function in this module returns a 'Command' object which defines the HTTP method, URL path, and request body (if applicable) for the command.
+--  The phantom type parameter 'r' represents the expected response type for the command. In practice, this 'r' type will always have a 'FromJSON' instance which can be used to parse the result from the response body.
 data Command r
   = Get
       { description :: Text,
@@ -50,7 +45,16 @@ data Command r
       }
   deriving (Show, Eq)
 
--- fallback
+
+-- Constructors
+
+mkPost :: forall a r. (ToJSON a) => Text -> UrlPath -> a -> Command r
+mkPost description path = mkPost' description path (objectOrThrow ("mkPost - " <> description))
+
+mkPost' :: forall a r. Text -> UrlPath -> (a -> Object) -> a -> Command r
+mkPost' description path parser = Post description path . parser
+
+-- Fallback Functions
 
 coerceCommand  :: forall r r'. Command r -> Command r'
 coerceCommand = \case

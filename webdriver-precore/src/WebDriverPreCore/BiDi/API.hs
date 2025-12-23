@@ -6,6 +6,8 @@ module WebDriverPreCore.BiDi.API
     --
     -- Not all commands and subscriptions will be supported by all [BiDi drivers yet](https://wpt.fyi/results/webdriver/tests/bidi?label=experimental&label=master&aligned), as the specification is [still evolving](https://www.w3.org/standards/history/webdriver-bidi/) rapidly.
     -- 
+    -- See the demos in the [demos](https://github.com/pyrethrum/webdriver/blob/main/webdriver-precore/test/README.md) for how this module can be used to delvelop a WebDriver client.
+    --
 
     -- * Session Commands
     sessionNew,
