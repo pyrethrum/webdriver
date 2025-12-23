@@ -1,8 +1,8 @@
 module WebDriverPreCore.BiDi.Command
   ( Command (..),
-    CommandMethod (..), 
-    KnownCommand (..), 
-    OffSpecCommand (..), 
+    CommandMethod (..),
+    KnownCommand (..),
+    OffSpecCommand (..),
     mkCommand,
     emptyCommand,
     mkOffSpecCommand,
@@ -51,7 +51,7 @@ instance ToJSON CommandMethod where
   toJSON :: CommandMethod -> Value
   toJSON = String . toCommandText
 
--- | The method name of a BiDi command known to this library.
+-- | This type enumerates the BiDi commands known to this library.
 data KnownCommand
   = BrowserClose
   | BrowserCreateUserContext
@@ -115,7 +115,6 @@ data KnownCommand
   | WebExtensionUninstall
   deriving (Show, Eq, Enum, Bounded)
 
-
 -- | The method name of a BiDi command not yet implemented in this library
 newtype OffSpecCommand = MkOffSpecCommand {command :: Text}
   deriving (Show, Eq)
@@ -123,23 +122,60 @@ newtype OffSpecCommand = MkOffSpecCommand {command :: Text}
 
 -- constructors
 
-mkCommand :: forall c r. (ToJSON c) => KnownCommand -> c -> Command r
+-- | Creates a 'Command' with the given 'KnownCommand' method and parameters.
+--
+-- Patially applied in "WebDriverPreCore.BiDi.API" to generate specific named command functions which accept only an input type, relevant to that command.
+-- The input type must be an instance of 'ToJSON' and encode to a JSON 'Object' type.
+--
+-- E.g. the 'WebDriverPreCore.BiDi.API.browsingContextNavigate', which takes a 'Navigate' input and returns a 'Command' with a 'NavigateResult' output, is defined by the partial application of 'mkCommand':
+--
+-- @
+-- browsingContextNavigate :: Navigate -> Command NavigateResult
+-- browsingContextNavigate = mkCommand BrowsingContextNavigate
+-- @
+mkCommand ::
+  forall c r.
+  (ToJSON c) =>
+  -- | The identitifier for the command to be invoked
+  KnownCommand ->
+  -- | The parameters to be sent with the command
+  c ->
+  -- | A 'Command' value with the given method and parameters
+  Command r
 mkCommand method params = MkCommand {method = KnownCommand method, params = objectOrThrow ("mkCommand - " <> toCommandText (KnownCommand method)) params}
 
-emptyCommand :: forall r. KnownCommand -> Command r
+-- | Creates a 'Command' with the given 'KnownCommand' method and no parameters.
+-- This is the same as calling 'mkCommand' with an empty object as parameters.
+--
+-- E.g. the 'WebDriverPreCore.BiDi.API.browserGetClientWindows', which takes no input and returns a 'Command' with a list of 'WindowInfo' output, is defined by the partial application of 'emptyCommand':
+--
+-- @
+-- browserGetClientWindows :: Command [WindowInfo]
+-- browserGetClientWindows = emptyCommand BrowserGetClientWindows
+-- @
+emptyCommand ::
+  forall r.
+  -- | The identitifier for the command to be invoked
+  KnownCommand ->
+  -- | A 'Command' value with the given method and no parameters
+  Command r
 emptyCommand method = MkCommand {method = KnownCommand method, params = KM.empty}
-
-mkOffSpecCommand :: Text -> Object -> Command Object
-mkOffSpecCommand method = MkCommand (OffSpecCommand $ MkOffSpecCommand method)
 
 -- fallback modifiers
 
+-- | Creates a 'Command' with the given method name text, JSON Object parameters, and an expected JSON Object response.
+mkOffSpecCommand :: Text -> Object -> Command Object
+mkOffSpecCommand method = MkCommand (OffSpecCommand $ MkOffSpecCommand method)
+
+-- | Extends the parameters of a 'Command' with additional fields from a JSON 'Object', changing the expected response type to a generic JSON 'Value'.
 extendLoosenCommand :: forall r. Object -> Command r -> Command Value
 extendLoosenCommand = extendCoerceCommand
 
+-- | Extends the parameters of a 'Command' with additional fields from a JSON 'Object', preserving the expected response type.
 extendCommand :: forall r. Object -> Command r -> Command r
 extendCommand = extendCoerceCommand
 
+-- | Extends the parameters of a 'Command' with additional fields from a JSON 'Object', changing the expected response type to a different type.
 extendCoerceCommand :: forall r r2. Object -> Command r -> Command r2
 extendCoerceCommand extended MkCommand {method, params} =
   MkCommand
@@ -147,9 +183,11 @@ extendCoerceCommand extended MkCommand {method, params} =
       params = params <> extended
     }
 
+-- | Changes the expected response type of a 'Command' to a generic JSON 'Value'.
 loosenCommand :: forall r. Command r -> Command Value
 loosenCommand = coerceCommand
 
+-- | Changes the expected response type of a 'Command' to a different type.
 coerceCommand :: forall r r'. Command r -> Command r'
 coerceCommand MkCommand {method, params} = MkCommand {method, params}
 
@@ -235,6 +273,7 @@ instance FromJSON KnownCommand where
             <> " "
             <> (T.intercalate ", " $ knownCommandToText <$> enumerate @KnownCommand)
 
+-- | Converts a 'KnownCommand' to its corresponding method name text.
 knownCommandToText :: KnownCommand -> Text
 knownCommandToText = \case
   BrowserClose -> "browser.close"
@@ -298,6 +337,7 @@ knownCommandToText = \case
   WebExtensionInstall -> "webExtension.install"
   WebExtensionUninstall -> "webExtension.uninstall"
 
+-- | Converts a 'CommandMethod' to its corresponding method name text.
 toCommandText :: CommandMethod -> Text
 toCommandText = \case
   KnownCommand k -> knownCommandToText k

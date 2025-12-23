@@ -1,3 +1,5 @@
+{-# LANGUAGE CPP #-}
+
 module WebDriverPreCore.BiDi.API
   ( -- * Session Commands
     sessionNew,
@@ -302,7 +304,9 @@ browserSetDownloadBehavior = mkCommand BrowserSetDownloadBehavior
 
 ---- Emulation ----
 
--- since 29-07-2025 https://www.w3.org/TR/2025/WD-webdriver-bidi-20250729
+-- | Specification Entry: <BiDiSpecURL#command-emulation-setForcedColorsModeThemeOverride emulation.setForcedColorsModeThemeOverride>
+--
+-- First added to Spec: <https://www.w3.org/TR/2025/WD-webdriver-bidi-20250729/#command-emulation-setForcedColorsModeThemeOverride 29 July 2025>
 emulationSetForcedColorsModeThemeOverride :: SetForcedColorsModeThemeOverride -> Command ()
 emulationSetForcedColorsModeThemeOverride = mkCommand EmulationSetForcedColorsModeThemeOverride
 
