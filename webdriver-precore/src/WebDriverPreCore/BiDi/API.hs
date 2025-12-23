@@ -1,7 +1,13 @@
 {-# LANGUAGE CPP #-}
 
 module WebDriverPreCore.BiDi.API
-  ( -- * Session Commands
+  ( 
+    -- | Type definitions for commands and subscriptions to events defined in the [WebDriver BiDi specification](BiDiSpecURL).
+    --
+    -- Not all commands and subscriptions will be supported by all [BiDi drivers yet](https://wpt.fyi/results/webdriver/tests/bidi?label=experimental&label=master&aligned), as the specification is [still evolving](https://www.w3.org/standards/history/webdriver-bidi/) rapidly.
+    -- 
+
+    -- * Session Commands
     sessionNew,
     sessionStatus,
     sessionEnd,
@@ -226,32 +232,38 @@ import WebDriverPreCore.BiDi.Script (Message, RealmInfo)
 ---- Session ----
 
 -- | Specification Entry: <BiDiSpecURL#command-session-new session.new>
+--  
+-- This function is not supported by many Bidi drivers yet. To start a BiDi session you need to create an HTTP session with a web socket port specified.
+-- Creating a new BiDi session via this command may result in a driver error.
 --
--- First added to Spec: <https://www.w3.org/TR/2024/WD-webdriver-bidi-20241121/#command-session-new 21 November 2024>
+-- First added to Spec: <https://www.w3.org/TR/2024/WD-webdriver-bidi-20241121/#command-session-new 21 November 2024 - First Public Working Draft>
 sessionNew :: Capabilities -> Command SessionNewResult
 sessionNew = mkCommand SessionNew
 
 -- | Specification Entry: <BiDiSpecURL#command-session-status session.status>
 --
--- First added to Spec: <https://www.w3.org/TR/2024/WD-webdriver-bidi-20241121/#command-session-status 21 November 2024>
+-- First added to Spec: <https://www.w3.org/TR/2024/WD-webdriver-bidi-20241121/#command-session-status 21 November 2024 - First Public Working Draft>
 sessionStatus :: Command SessionStatusResult
 sessionStatus = emptyCommand SessionStatus
 
 -- | Specification Entry: <BiDiSpecURL#command-session-end session.end>
 --
--- First added to Spec: <https://www.w3.org/TR/2024/WD-webdriver-bidi-20241121/#command-session-end 21 November 2024>
+-- Only sessions created via 'sessionNew' can be ended via this command.
+-- If the BiDi session was created by other means (e.g. during HTTP session creation with a web socket port), it needs to be ended by ending the HTTP session.
+--
+-- First added to Spec: <https://www.w3.org/TR/2024/WD-webdriver-bidi-20241121/#command-session-end 21 November 2024 - First Public Working Draft>
 sessionEnd :: Command ()
 sessionEnd = emptyCommand SessionEnd
 
 -- | Specification Entry: <BiDiSpecURL#command-session-subscribe session.subscribe>
 --
--- First added to Spec: <https://www.w3.org/TR/2024/WD-webdriver-bidi-20241121/#command-session-subscribe 21 November 2024>
+-- First added to Spec: <https://www.w3.org/TR/2024/WD-webdriver-bidi-20241121/#command-session-subscribe 21 November 2024 - First Public Working Draft>
 sessionSubscribe :: SessionSubscibe -> Command SessionSubscribeResult
 sessionSubscribe = mkCommand SessionSubscribe
 
 -- | Specification Entry: <BiDiSpecURL#command-session-unsubscribe session.unsubscribe>
 --
--- First added to Spec: <https://www.w3.org/TR/2024/WD-webdriver-bidi-20241121/#command-session-unsubscribe 21 November 2024>
+-- First added to Spec: <https://www.w3.org/TR/2024/WD-webdriver-bidi-20241121/#command-session-unsubscribe 21 November 2024 - First Public Working Draft>
 sessionUnsubscribe :: SessionUnsubscribe -> Command ()
 sessionUnsubscribe = mkCommand SessionUnsubscribe
 
@@ -259,73 +271,73 @@ sessionUnsubscribe = mkCommand SessionUnsubscribe
 
 -- | Specification Entry: <BiDiSpecURL#command-browsingContext-activate browsingContext.activate>
 --
--- First added to Spec: <https://www.w3.org/TR/2024/WD-webdriver-bidi-20241121/#command-browsingContext-activate 21 November 2024>
+-- First added to Spec: <https://www.w3.org/TR/2024/WD-webdriver-bidi-20241121/#command-browsingContext-activate 21 November 2024 - First Public Working Draft>
 browsingContextActivate :: Activate -> Command ()
 browsingContextActivate = mkCommand BrowsingContextActivate
 
 -- | Specification Entry: <BiDiSpecURL#command-browsingContext-captureScreenshot browsingContext.captureScreenshot>
 --
--- First added to Spec: <https://www.w3.org/TR/2024/WD-webdriver-bidi-20241121/#command-browsingContext-captureScreenshot 21 November 2024>
+-- First added to Spec: <https://www.w3.org/TR/2024/WD-webdriver-bidi-20241121/#command-browsingContext-captureScreenshot 21 November 2024 - First Public Working Draft>
 browsingContextCaptureScreenshot :: CaptureScreenshot -> Command CaptureScreenshotResult
 browsingContextCaptureScreenshot = mkCommand BrowsingContextCaptureScreenshot
 
 -- | Specification Entry: <BiDiSpecURL#command-browsingContext-close browsingContext.close>
 --
--- First added to Spec: <https://www.w3.org/TR/2024/WD-webdriver-bidi-20241121/#command-browsingContext-close 21 November 2024>
+-- First added to Spec: <https://www.w3.org/TR/2024/WD-webdriver-bidi-20241121/#command-browsingContext-close 21 November 2024 - First Public Working Draft>
 browsingContextClose :: Close -> Command ()
 browsingContextClose = mkCommand BrowsingContextClose
 
 -- | Specification Entry: <BiDiSpecURL#command-browsingContext-create browsingContext.create>
 --
--- First added to Spec: <https://www.w3.org/TR/2024/WD-webdriver-bidi-20241121/#command-browsingContext-create 21 November 2024>
+-- First added to Spec: <https://www.w3.org/TR/2024/WD-webdriver-bidi-20241121/#command-browsingContext-create 21 November 2024 - First Public Working Draft>
 browsingContextCreate :: Create -> Command BrowsingContext
 browsingContextCreate = mkCommand BrowsingContextCreate
 
 -- | Specification Entry: <BiDiSpecURL#command-browsingContext-getTree browsingContext.getTree>
 --
--- First added to Spec: <https://www.w3.org/TR/2024/WD-webdriver-bidi-20241121/#command-browsingContext-getTree 21 November 2024>
+-- First added to Spec: <https://www.w3.org/TR/2024/WD-webdriver-bidi-20241121/#command-browsingContext-getTree 21 November 2024 - First Public Working Draft>
 browsingContextGetTree :: GetTree -> Command GetTreeResult
 browsingContextGetTree = mkCommand BrowsingContextGetTree
 
 -- | Specification Entry: <BiDiSpecURL#command-browsingContext-handleUserPrompt browsingContext.handleUserPrompt>
 --
--- First added to Spec: <https://www.w3.org/TR/2024/WD-webdriver-bidi-20241121/#command-browsingContext-handleUserPrompt 21 November 2024>
+-- First added to Spec: <https://www.w3.org/TR/2024/WD-webdriver-bidi-20241121/#command-browsingContext-handleUserPrompt 21 November 2024 - First Public Working Draft>
 browsingContextHandleUserPrompt :: HandleUserPrompt -> Command ()
 browsingContextHandleUserPrompt = mkCommand BrowsingContextHandleUserPrompt
 
 -- | Specification Entry: <BiDiSpecURL#command-browsingContext-locateNodes browsingContext.locateNodes>
 --
--- First added to Spec: <https://www.w3.org/TR/2024/WD-webdriver-bidi-20241121/#command-browsingContext-locateNodes 21 November 2024>
+-- First added to Spec: <https://www.w3.org/TR/2024/WD-webdriver-bidi-20241121/#command-browsingContext-locateNodes 21 November 2024 - First Public Working Draft>
 browsingContextLocateNodes :: LocateNodes -> Command LocateNodesResult
 browsingContextLocateNodes = mkCommand BrowsingContextLocateNodes
 
 -- | Specification Entry: <BiDiSpecURL#command-browsingContext-navigate browsingContext.navigate>
 --
--- First added to Spec: <https://www.w3.org/TR/2024/WD-webdriver-bidi-20241121/#command-browsingContext-navigate 21 November 2024>
+-- First added to Spec: <https://www.w3.org/TR/2024/WD-webdriver-bidi-20241121/#command-browsingContext-navigate 21 November 2024 - First Public Working Draft>
 browsingContextNavigate :: Navigate -> Command NavigateResult
 browsingContextNavigate = mkCommand BrowsingContextNavigate
 
 -- | Specification Entry: <BiDiSpecURL#command-browsingContext-print browsingContext.print>
 --
--- First added to Spec: <https://www.w3.org/TR/2024/WD-webdriver-bidi-20241121/#command-browsingContext-print 21 November 2024>
+-- First added to Spec: <https://www.w3.org/TR/2024/WD-webdriver-bidi-20241121/#command-browsingContext-print 21 November 2024 - First Public Working Draft>
 browsingContextPrint :: Print -> Command PrintResult
 browsingContextPrint = mkCommand BrowsingContextPrint
 
 -- | Specification Entry: <BiDiSpecURL#command-browsingContext-reload browsingContext.reload>
 --
--- First added to Spec: <https://www.w3.org/TR/2024/WD-webdriver-bidi-20241121/#command-browsingContext-reload 21 November 2024>
+-- First added to Spec: <https://www.w3.org/TR/2024/WD-webdriver-bidi-20241121/#command-browsingContext-reload 21 November 2024 - First Public Working Draft>
 browsingContextReload :: Reload -> Command ()
 browsingContextReload = mkCommand BrowsingContextReload
 
 -- | Specification Entry: <BiDiSpecURL#command-browsingContext-setViewport browsingContext.setViewport>
 --
--- First added to Spec: <https://www.w3.org/TR/2024/WD-webdriver-bidi-20241121/#command-browsingContext-setViewport 21 November 2024>
+-- First added to Spec: <https://www.w3.org/TR/2024/WD-webdriver-bidi-20241121/#command-browsingContext-setViewport 21 November 2024 - First Public Working Draft>
 browsingContextSetViewport :: SetViewport -> Command ()
 browsingContextSetViewport = mkCommand BrowsingContextSetViewport
 
 -- | Specification Entry: <BiDiSpecURL#command-browsingContext-traverseHistory browsingContext.traverseHistory>
 --
--- First added to Spec: <https://www.w3.org/TR/2024/WD-webdriver-bidi-20241121/#command-browsingContext-traverseHistory 21 November 2024>
+-- First added to Spec: <https://www.w3.org/TR/2024/WD-webdriver-bidi-20241121/#command-browsingContext-traverseHistory 21 November 2024 - First Public Working Draft>
 browsingContextTraverseHistory :: TraverseHistory -> Command TraverseHistoryResult
 browsingContextTraverseHistory = mkCommand BrowsingContextTraverseHistory
 
@@ -333,37 +345,37 @@ browsingContextTraverseHistory = mkCommand BrowsingContextTraverseHistory
 
 -- | Specification Entry: <BiDiSpecURL#command-browser-close browser.close>
 --
--- First added to Spec: <https://www.w3.org/TR/2024/WD-webdriver-bidi-20241121/#command-browser-close 21 November 2024>
+-- First added to Spec: <https://www.w3.org/TR/2024/WD-webdriver-bidi-20241121/#command-browser-close 21 November 2024 - First Public Working Draft>
 browserClose :: Command ()
 browserClose = emptyCommand BrowserClose
 
 -- | Specification Entry: <BiDiSpecURL#command-browser-createUserContext browser.createUserContext>
 --
--- First added to Spec: <https://www.w3.org/TR/2024/WD-webdriver-bidi-20241121/#command-browser-createUserContext 21 November 2024>
+-- First added to Spec: <https://www.w3.org/TR/2024/WD-webdriver-bidi-20241121/#command-browser-createUserContext 21 November 2024 - First Public Working Draft>
 browserCreateUserContext :: CreateUserContext -> Command UserContext
 browserCreateUserContext = mkCommand BrowserCreateUserContext
 
 -- | Specification Entry: <BiDiSpecURL#command-browser-getClientWindows browser.getClientWindows>
 --
--- First added to Spec: <https://www.w3.org/TR/2024/WD-webdriver-bidi-20241121/#command-browser-getClientWindows 21 November 2024>
+-- First added to Spec: <https://www.w3.org/TR/2024/WD-webdriver-bidi-20241121/#command-browser-getClientWindows 21 November 2024 - First Public Working Draft>
 browserGetClientWindows :: Command GetClientWindowsResult
 browserGetClientWindows = emptyCommand BrowserGetClientWindows
 
 -- | Specification Entry: <BiDiSpecURL#command-browser-getUserContexts browser.getUserContexts>
 --
--- First added to Spec: <https://www.w3.org/TR/2024/WD-webdriver-bidi-20241121/#command-browser-getUserContexts 21 November 2024>
+-- First added to Spec: <https://www.w3.org/TR/2024/WD-webdriver-bidi-20241121/#command-browser-getUserContexts 21 November 2024 - First Public Working Draft>
 browserGetUserContexts :: Command GetUserContextsResult
 browserGetUserContexts = emptyCommand BrowserGetUserContexts
 
 -- | Specification Entry: <BiDiSpecURL#command-browser-removeUserContext browser.removeUserContext>
 --
--- First added to Spec: <https://www.w3.org/TR/2024/WD-webdriver-bidi-20241121/#command-browser-removeUserContext 21 November 2024>
+-- First added to Spec: <https://www.w3.org/TR/2024/WD-webdriver-bidi-20241121/#command-browser-removeUserContext 21 November 2024 - First Public Working Draft>
 browserRemoveUserContext :: RemoveUserContext -> Command ()
 browserRemoveUserContext = mkCommand BrowserRemoveUserContext
 
 -- | Specification Entry: <BiDiSpecURL#command-browser-setClientWindowState browser.setClientWindowState>
 --
--- First added to Spec: <https://www.w3.org/TR/2024/WD-webdriver-bidi-20241121/#command-browser-setClientWindowState 21 November 2024>
+-- First added to Spec: <https://www.w3.org/TR/2024/WD-webdriver-bidi-20241121/#command-browser-setClientWindowState 21 November 2024 - First Public Working Draft>
 browserSetClientWindowState :: SetClientWindowState -> Command ClientWindowInfo
 browserSetClientWindowState = mkCommand BrowserSetClientWindowState
 
@@ -438,19 +450,19 @@ emulationSetUserAgentOverride = mkCommand EmulationSetUserAgentOverride
 
 -- | Specification Entry: <BiDiSpecURL#command-input-performActions input.performActions>
 --
--- First added to Spec: <https://www.w3.org/TR/2024/WD-webdriver-bidi-20241121/#command-input-performActions 21 November 2024>
+-- First added to Spec: <https://www.w3.org/TR/2024/WD-webdriver-bidi-20241121/#command-input-performActions 21 November 2024 - First Public Working Draft>
 inputPerformActions :: PerformActions -> Command ()
 inputPerformActions = mkCommand InputPerformActions
 
 -- | Specification Entry: <BiDiSpecURL#command-input-releaseActions input.releaseActions>
 --
--- First added to Spec: <https://www.w3.org/TR/2024/WD-webdriver-bidi-20241121/#command-input-releaseActions 21 November 2024>
+-- First added to Spec: <https://www.w3.org/TR/2024/WD-webdriver-bidi-20241121/#command-input-releaseActions 21 November 2024 - First Public Working Draft>
 inputReleaseActions :: ReleaseActions -> Command ()
 inputReleaseActions = mkCommand InputReleaseActions
 
 -- | Specification Entry: <BiDiSpecURL#command-input-setFiles input.setFiles>
 --
--- First added to Spec: <https://www.w3.org/TR/2024/WD-webdriver-bidi-20241121/#command-input-setFiles 21 November 2024>
+-- First added to Spec: <https://www.w3.org/TR/2024/WD-webdriver-bidi-20241121/#command-input-setFiles 21 November 2024 - First Public Working Draft>
 inputSetFiles :: SetFiles -> Command ()
 inputSetFiles = mkCommand InputSetFiles
 
@@ -464,25 +476,25 @@ networkAddDataCollector = mkCommand NetworkAddDataCollector
 
 -- | Specification Entry: <BiDiSpecURL#command-network-addIntercept network.addIntercept>
 --
--- First added to Spec: <https://www.w3.org/TR/2024/WD-webdriver-bidi-20241121/#command-network-addIntercept 21 November 2024>
+-- First added to Spec: <https://www.w3.org/TR/2024/WD-webdriver-bidi-20241121/#command-network-addIntercept 21 November 2024 - First Public Working Draft>
 networkAddIntercept :: AddIntercept -> Command AddInterceptResult
 networkAddIntercept = mkCommand NetworkAddIntercept
 
 -- | Specification Entry: <BiDiSpecURL#command-network-continueRequest network.continueRequest>
 --
--- First added to Spec: <https://www.w3.org/TR/2024/WD-webdriver-bidi-20241121/#command-network-continueRequest 21 November 2024>
+-- First added to Spec: <https://www.w3.org/TR/2024/WD-webdriver-bidi-20241121/#command-network-continueRequest 21 November 2024 - First Public Working Draft>
 networkContinueRequest :: ContinueRequest -> Command ()
 networkContinueRequest = mkCommand NetworkContinueRequest
 
 -- | Specification Entry: <BiDiSpecURL#command-network-continueResponse network.continueResponse>
 --
--- First added to Spec: <https://www.w3.org/TR/2024/WD-webdriver-bidi-20241121/#command-network-continueResponse 21 November 2024>
+-- First added to Spec: <https://www.w3.org/TR/2024/WD-webdriver-bidi-20241121/#command-network-continueResponse 21 November 2024 - First Public Working Draft>
 networkContinueResponse :: ContinueResponse -> Command ()
 networkContinueResponse = mkCommand NetworkContinueResponse
 
 -- | Specification Entry: <BiDiSpecURL#command-network-continueWithAuth network.continueWithAuth>
 --
--- First added to Spec: <https://www.w3.org/TR/2024/WD-webdriver-bidi-20241121/#command-network-continueWithAuth 21 November 2024>
+-- First added to Spec: <https://www.w3.org/TR/2024/WD-webdriver-bidi-20241121/#command-network-continueWithAuth 21 November 2024 - First Public Working Draft>
 networkContinueWithAuth :: ContinueWithAuth -> Command ()
 networkContinueWithAuth = mkCommand NetworkContinueWithAuth
 
@@ -494,7 +506,7 @@ networkDisownData = mkCommand NetworkDisownData
 
 -- | Specification Entry: <BiDiSpecURL#command-network-failRequest network.failRequest>
 --
--- First added to Spec: <https://www.w3.org/TR/2024/WD-webdriver-bidi-20241121/#command-network-failRequest 21 November 2024>
+-- First added to Spec: <https://www.w3.org/TR/2024/WD-webdriver-bidi-20241121/#command-network-failRequest 21 November 2024 - First Public Working Draft>
 networkFailRequest :: FailRequest -> Command ()
 networkFailRequest = mkCommand NetworkFailRequest
 
@@ -506,7 +518,7 @@ networkGetData = mkCommand NetworkGetData
 
 -- | Specification Entry: <BiDiSpecURL#command-network-provideResponse network.provideResponse>
 --
--- First added to Spec: <https://www.w3.org/TR/2024/WD-webdriver-bidi-20241121/#command-network-provideResponse 21 November 2024>
+-- First added to Spec: <https://www.w3.org/TR/2024/WD-webdriver-bidi-20241121/#command-network-provideResponse 21 November 2024 - First Public Working Draft>
 networkProvideResponse :: ProvideResponse -> Command ()
 networkProvideResponse = mkCommand NetworkProvideResponse
 
@@ -518,13 +530,13 @@ networkRemoveDataCollector = mkCommand NetworkRemoveDataCollector
 
 -- | Specification Entry: <BiDiSpecURL#command-network-removeIntercept network.removeIntercept>
 --
--- First added to Spec: <https://www.w3.org/TR/2024/WD-webdriver-bidi-20241121/#command-network-removeIntercept 21 November 2024>
+-- First added to Spec: <https://www.w3.org/TR/2024/WD-webdriver-bidi-20241121/#command-network-removeIntercept 21 November 2024 - First Public Working Draft>
 networkRemoveIntercept :: RemoveIntercept -> Command ()
 networkRemoveIntercept = mkCommand NetworkRemoveIntercept
 
 -- | Specification Entry: <BiDiSpecURL#command-network-setCacheBehavior network.setCacheBehavior>
 --
--- First added to Spec: <https://www.w3.org/TR/2024/WD-webdriver-bidi-20241121/#command-network-setCacheBehavior 21 November 2024>
+-- First added to Spec: <https://www.w3.org/TR/2024/WD-webdriver-bidi-20241121/#command-network-setCacheBehavior 21 November 2024 - First Public Working Draft>
 networkSetCacheBehavior :: SetCacheBehavior -> Command ()
 networkSetCacheBehavior = mkCommand NetworkSetCacheBehavior
 
@@ -538,37 +550,37 @@ networkSetExtraHeaders = mkCommand NetworkSetExtraHeaders
 
 -- | Specification Entry: <BiDiSpecURL#command-script-addPreloadScript script.addPreloadScript>
 --
--- First added to Spec: <https://www.w3.org/TR/2024/WD-webdriver-bidi-20241121/#command-script-addPreloadScript 21 November 2024>
+-- First added to Spec: <https://www.w3.org/TR/2024/WD-webdriver-bidi-20241121/#command-script-addPreloadScript 21 November 2024 - First Public Working Draft>
 scriptAddPreloadScript :: AddPreloadScript -> Command AddPreloadScriptResult
 scriptAddPreloadScript = mkCommand ScriptAddPreloadScript
 
 -- | Specification Entry: <BiDiSpecURL#command-script-callFunction script.callFunction>
 --
--- First added to Spec: <https://www.w3.org/TR/2024/WD-webdriver-bidi-20241121/#command-script-callFunction 21 November 2024>
+-- First added to Spec: <https://www.w3.org/TR/2024/WD-webdriver-bidi-20241121/#command-script-callFunction 21 November 2024 - First Public Working Draft>
 scriptCallFunction :: CallFunction -> Command EvaluateResult
 scriptCallFunction = mkCommand ScriptCallFunction
 
 -- | Specification Entry: <BiDiSpecURL#command-script-disown script.disown>
 --
--- First added to Spec: <https://www.w3.org/TR/2024/WD-webdriver-bidi-20241121/#command-script-disown 21 November 2024>
+-- First added to Spec: <https://www.w3.org/TR/2024/WD-webdriver-bidi-20241121/#command-script-disown 21 November 2024 - First Public Working Draft>
 scriptDisown :: Disown -> Command ()
 scriptDisown = mkCommand ScriptDisown
 
 -- | Specification Entry: <BiDiSpecURL#type-script-EvaluateResult script.evaluate>
 --
--- First added to Spec: <https://www.w3.org/TR/2024/WD-webdriver-bidi-20241121/#type-script-EvaluateResult 21 November 2024>
+-- First added to Spec: <https://www.w3.org/TR/2024/WD-webdriver-bidi-20241121/#type-script-EvaluateResult 21 November 2024 - First Public Working Draft>
 scriptEvaluate :: Evaluate -> Command EvaluateResult
 scriptEvaluate = mkCommand ScriptEvaluate
 
 -- | Specification Entry: <BiDiSpecURL#command-script-getRealms script.getRealms>
 --
--- First added to Spec: <https://www.w3.org/TR/2024/WD-webdriver-bidi-20241121/#command-script-getRealms 21 November 2024>
+-- First added to Spec: <https://www.w3.org/TR/2024/WD-webdriver-bidi-20241121/#command-script-getRealms 21 November 2024 - First Public Working Draft>
 scriptGetRealms :: GetRealms -> Command GetRealmsResult
 scriptGetRealms = mkCommand ScriptGetRealms
 
 -- | Specification Entry: <BiDiSpecURL#command-script-removePreloadScript script.removePreloadScript>
 --
--- First added to Spec: <https://www.w3.org/TR/2024/WD-webdriver-bidi-20241121/#command-script-removePreloadScript 21 November 2024>
+-- First added to Spec: <https://www.w3.org/TR/2024/WD-webdriver-bidi-20241121/#command-script-removePreloadScript 21 November 2024 - First Public Working Draft>
 scriptRemovePreloadScript :: RemovePreloadScript -> Command ()
 scriptRemovePreloadScript = mkCommand ScriptRemovePreloadScript
 
@@ -576,19 +588,19 @@ scriptRemovePreloadScript = mkCommand ScriptRemovePreloadScript
 
 -- | Specification Entry: <BiDiSpecURL#command-storage-deleteCookies storage.deleteCookies>
 --
--- First added to Spec: <https://www.w3.org/TR/2024/WD-webdriver-bidi-20241121/#command-storage-deleteCookies 21 November 2024>
+-- First added to Spec: <https://www.w3.org/TR/2024/WD-webdriver-bidi-20241121/#command-storage-deleteCookies 21 November 2024 - First Public Working Draft>
 storageDeleteCookies :: DeleteCookies -> Command DeleteCookiesResult
 storageDeleteCookies = mkCommand StorageDeleteCookies
 
 -- | Specification Entry: <BiDiSpecURL#command-storage-getCookies storage.getCookies>
 --
--- First added to Spec: <https://www.w3.org/TR/2024/WD-webdriver-bidi-20241121/#command-storage-getCookies 21 November 2024>
+-- First added to Spec: <https://www.w3.org/TR/2024/WD-webdriver-bidi-20241121/#command-storage-getCookies 21 November 2024 - First Public Working Draft>
 storageGetCookies :: GetCookies -> Command GetCookiesResult
 storageGetCookies = mkCommand StorageGetCookies
 
 -- | Specification Entry: <BiDiSpecURL#command-storage-setCookie storage.setCookie>
 --
--- First added to Spec: <https://www.w3.org/TR/2024/WD-webdriver-bidi-20241121/#command-storage-setCookie 21 November 2024>
+-- First added to Spec: <https://www.w3.org/TR/2024/WD-webdriver-bidi-20241121/#command-storage-setCookie 21 November 2024 - First Public Working Draft>
 storageSetCookie :: SetCookie -> Command SetCookieResult
 storageSetCookie = mkCommand StorageSetCookie
 
@@ -628,7 +640,7 @@ subscribeOffSpecMany = mkOffSpecSubscription
 
 -- | Specification Entry: <BiDiSpecURL#event-browsingContext-contextCreated browsingContext.contextCreated>
 --
--- First added to Spec: <https://www.w3.org/TR/2024/WD-webdriver-bidi-20241121/#event-browsingContext-contextCreated 21 November 2024>
+-- First added to Spec: <https://www.w3.org/TR/2024/WD-webdriver-bidi-20241121/#event-browsingContext-contextCreated 21 November 2024 - First Public Working Draft>
 subscribeBrowsingContextCreated ::
   [BrowsingContext] ->
   [UserContext] ->
@@ -638,7 +650,7 @@ subscribeBrowsingContextCreated = mkSubscription BrowsingContextContextCreated
 
 -- | Specification Entry: <BiDiSpecURL#event-browsingContext-contextDestroyed browsingContext.contextDestroyed>
 --
--- First added to Spec: <https://www.w3.org/TR/2024/WD-webdriver-bidi-20241121/#event-browsingContext-contextDestroyed 21 November 2024>
+-- First added to Spec: <https://www.w3.org/TR/2024/WD-webdriver-bidi-20241121/#event-browsingContext-contextDestroyed 21 November 2024 - First Public Working Draft>
 subscribeBrowsingContextDestroyed ::
   [BrowsingContext] ->
   [UserContext] ->
@@ -648,7 +660,7 @@ subscribeBrowsingContextDestroyed = mkSubscription BrowsingContextContextDestroy
 
 -- | Specification Entry: <BiDiSpecURL#event-browsingContext-navigationStarted browsingContext.navigationStarted>
 --
--- First added to Spec: <https://www.w3.org/TR/2024/WD-webdriver-bidi-20241121/#event-browsingContext-navigationStarted 21 November 2024>
+-- First added to Spec: <https://www.w3.org/TR/2024/WD-webdriver-bidi-20241121/#event-browsingContext-navigationStarted 21 November 2024 - First Public Working Draft>
 subscribeBrowsingContextNavigationStarted ::
   [BrowsingContext] ->
   [UserContext] ->
@@ -658,7 +670,7 @@ subscribeBrowsingContextNavigationStarted = mkSubscription BrowsingContextNaviga
 
 -- | Specification Entry: <BiDiSpecURL#event-browsingContext-fragmentNavigated browsingContext.fragmentNavigated>
 --
--- First added to Spec: <https://www.w3.org/TR/2024/WD-webdriver-bidi-20241121/#event-browsingContext-fragmentNavigated 21 November 2024>
+-- First added to Spec: <https://www.w3.org/TR/2024/WD-webdriver-bidi-20241121/#event-browsingContext-fragmentNavigated 21 November 2024 - First Public Working Draft>
 subscribeBrowsingContextFragmentNavigated ::
   [BrowsingContext] ->
   [UserContext] ->
@@ -668,7 +680,7 @@ subscribeBrowsingContextFragmentNavigated = mkSubscription BrowsingContextFragme
 
 -- | Specification Entry: <BiDiSpecURL#event-browsingContext-historyUpdated browsingContext.historyUpdated>
 --
--- First added to Spec: <https://www.w3.org/TR/2024/WD-webdriver-bidi-20241121/#event-browsingContext-historyUpdated 21 November 2024>
+-- First added to Spec: <https://www.w3.org/TR/2024/WD-webdriver-bidi-20241121/#event-browsingContext-historyUpdated 21 November 2024 - First Public Working Draft>
 subscribeBrowsingContextHistoryUpdated ::
   [BrowsingContext] ->
   [UserContext] ->
@@ -678,7 +690,7 @@ subscribeBrowsingContextHistoryUpdated = mkSubscription BrowsingContextHistoryUp
 
 -- | Specification Entry: <BiDiSpecURL#event-browsingContext-domContentLoaded browsingContext.domContentLoaded>
 --
--- First added to Spec: <https://www.w3.org/TR/2024/WD-webdriver-bidi-20241121/#event-browsingContext-domContentLoaded 21 November 2024>
+-- First added to Spec: <https://www.w3.org/TR/2024/WD-webdriver-bidi-20241121/#event-browsingContext-domContentLoaded 21 November 2024 - First Public Working Draft>
 subscribeBrowsingContextDomContentLoaded ::
   [BrowsingContext] ->
   [UserContext] ->
@@ -688,7 +700,7 @@ subscribeBrowsingContextDomContentLoaded = mkSubscription BrowsingContextDomCont
 
 -- | Specification Entry: <BiDiSpecURL#event-browsingContext-load browsingContext.load>
 --
--- First added to Spec: <https://www.w3.org/TR/2024/WD-webdriver-bidi-20241121/#event-browsingContext-load 21 November 2024>
+-- First added to Spec: <https://www.w3.org/TR/2024/WD-webdriver-bidi-20241121/#event-browsingContext-load 21 November 2024 - First Public Working Draft>
 subscribeBrowsingContextLoad ::
   [BrowsingContext] ->
   [UserContext] ->
@@ -715,7 +727,7 @@ subscribeBrowsingContextDownloadEnd = mkSubscription BrowsingContextDownloadEnd
 
 -- | Specification Entry: <BiDiSpecURL#event-browsingContext-navigationAborted browsingContext.navigationAborted>
 --
--- First added to Spec: <https://www.w3.org/TR/2024/WD-webdriver-bidi-20241121/#event-browsingContext-navigationAborted 21 November 2024>
+-- First added to Spec: <https://www.w3.org/TR/2024/WD-webdriver-bidi-20241121/#event-browsingContext-navigationAborted 21 November 2024 - First Public Working Draft>
 subscribeBrowsingContextNavigationAborted ::
   [BrowsingContext] ->
   [UserContext] ->
@@ -735,7 +747,7 @@ subscribeBrowsingContextNavigationCommitted = mkSubscription BrowsingContextNavi
 
 -- | Specification Entry: <BiDiSpecURL#event-browsingContext-navigationFailed browsingContext.navigationFailed>
 --
--- First added to Spec: <https://www.w3.org/TR/2024/WD-webdriver-bidi-20241121/#event-browsingContext-navigationFailed 21 November 2024>
+-- First added to Spec: <https://www.w3.org/TR/2024/WD-webdriver-bidi-20241121/#event-browsingContext-navigationFailed 21 November 2024 - First Public Working Draft>
 subscribeBrowsingContextNavigationFailed ::
   [BrowsingContext] ->
   [UserContext] ->
@@ -745,7 +757,7 @@ subscribeBrowsingContextNavigationFailed = mkSubscription BrowsingContextNavigat
 
 -- | Specification Entry: <BiDiSpecURL#event-browsingContext-userPromptClosed browsingContext.userPromptClosed>
 --
--- First added to Spec: <https://www.w3.org/TR/2024/WD-webdriver-bidi-20241121/#event-browsingContext-userPromptClosed 21 November 2024>
+-- First added to Spec: <https://www.w3.org/TR/2024/WD-webdriver-bidi-20241121/#event-browsingContext-userPromptClosed 21 November 2024 - First Public Working Draft>
 subscribeBrowsingContextUserPromptClosed ::
   [BrowsingContext] ->
   [UserContext] ->
@@ -755,7 +767,7 @@ subscribeBrowsingContextUserPromptClosed = mkSubscription BrowsingContextUserPro
 
 -- | Specification Entry: <BiDiSpecURL#event-browsingContext-userPromptOpened browsingContext.userPromptOpened>
 --
--- First added to Spec: <https://www.w3.org/TR/2024/WD-webdriver-bidi-20241121/#event-browsingContext-userPromptOpened 21 November 2024>
+-- First added to Spec: <https://www.w3.org/TR/2024/WD-webdriver-bidi-20241121/#event-browsingContext-userPromptOpened 21 November 2024 - First Public Working Draft>
 subscribeBrowsingContextUserPromptOpened ::
   [BrowsingContext] ->
   [UserContext] ->
@@ -767,7 +779,7 @@ subscribeBrowsingContextUserPromptOpened = mkSubscription BrowsingContextUserPro
 
 -- | Specification Entry: <BiDiSpecURL#event-log-entryAdded log.entryAdded>
 --
--- First added to Spec: <https://www.w3.org/TR/2024/WD-webdriver-bidi-20241121/#event-log-entryAdded 21 November 2024>
+-- First added to Spec: <https://www.w3.org/TR/2024/WD-webdriver-bidi-20241121/#event-log-entryAdded 21 November 2024 - First Public Working Draft>
 subscribeLogEntryAdded ::
   [BrowsingContext] ->
   [UserContext] ->
@@ -779,7 +791,7 @@ subscribeLogEntryAdded = mkSubscription LogEntryAdded
 
 -- | Specification Entry: <BiDiSpecURL#event-network-authRequired network.authRequired>
 --
--- First added to Spec: <https://www.w3.org/TR/2024/WD-webdriver-bidi-20241121/#event-network-authRequired 21 November 2024>
+-- First added to Spec: <https://www.w3.org/TR/2024/WD-webdriver-bidi-20241121/#event-network-authRequired 21 November 2024 - First Public Working Draft>
 subscribeNetworkAuthRequired ::
   [BrowsingContext] ->
   [UserContext] ->
@@ -796,7 +808,7 @@ subscribeNetworkBeforeRequestSent = mkSubscription NetworkBeforeRequestSent
 
 -- | Specification Entry: <BiDiSpecURL#event-network-fetchError network.fetchError>
 --
--- First added to Spec: <https://www.w3.org/TR/2024/WD-webdriver-bidi-20241121/#event-network-fetchError 21 November 2024>
+-- First added to Spec: <https://www.w3.org/TR/2024/WD-webdriver-bidi-20241121/#event-network-fetchError 21 November 2024 - First Public Working Draft>
 subscribeNetworkFetchError ::
   [BrowsingContext] ->
   [UserContext] ->
@@ -806,7 +818,7 @@ subscribeNetworkFetchError = mkSubscription NetworkFetchError
 
 -- | Specification Entry: <BiDiSpecURL#event-network-responseCompleted network.responseCompleted>
 --
--- First added to Spec: <https://www.w3.org/TR/2024/WD-webdriver-bidi-20241121/#event-network-responseCompleted 21 November 2024>
+-- First added to Spec: <https://www.w3.org/TR/2024/WD-webdriver-bidi-20241121/#event-network-responseCompleted 21 November 2024 - First Public Working Draft>
 subscribeNetworkResponseCompleted ::
   [BrowsingContext] ->
   [UserContext] ->
@@ -816,7 +828,7 @@ subscribeNetworkResponseCompleted = mkSubscription NetworkResponseCompleted
 
 -- | Specification Entry: <BiDiSpecURL#event-network-responseStarted network.responseStarted>
 --
--- First added to Spec: <https://www.w3.org/TR/2024/WD-webdriver-bidi-20241121/#event-network-responseStarted 21 November 2024>
+-- First added to Spec: <https://www.w3.org/TR/2024/WD-webdriver-bidi-20241121/#event-network-responseStarted 21 November 2024 - First Public Working Draft>
 subscribeNetworkResponseStarted ::
   [BrowsingContext] ->
   [UserContext] ->
@@ -828,7 +840,7 @@ subscribeNetworkResponseStarted = mkSubscription NetworkResponseStarted
 
 -- | Specification Entry: <BiDiSpecURL#event-script-message script.message>
 --
--- First added to Spec: <https://www.w3.org/TR/2024/WD-webdriver-bidi-20241121/#event-script-message 21 November 2024>
+-- First added to Spec: <https://www.w3.org/TR/2024/WD-webdriver-bidi-20241121/#event-script-message 21 November 2024 - First Public Working Draft>
 subscribeScriptMessage ::
   [BrowsingContext] ->
   [UserContext] ->
@@ -838,7 +850,7 @@ subscribeScriptMessage = mkSubscription ScriptMessage
 
 -- | Specification Entry: <BiDiSpecURL#event-script-realmCreated script.realmCreated>
 --
--- First added to Spec: <https://www.w3.org/TR/2024/WD-webdriver-bidi-20241121/#event-script-realmCreated 21 November 2024>
+-- First added to Spec: <https://www.w3.org/TR/2024/WD-webdriver-bidi-20241121/#event-script-realmCreated 21 November 2024 - First Public Working Draft>
 subscribeScriptRealmCreated ::
   [BrowsingContext] ->
   [UserContext] ->
@@ -848,7 +860,7 @@ subscribeScriptRealmCreated = mkSubscription ScriptRealmCreated
 
 -- | Specification Entry: <BiDiSpecURL#event-script-realmDestroyed script.realmDestroyed>
 --
--- First added to Spec: <https://www.w3.org/TR/2024/WD-webdriver-bidi-20241121/#event-script-realmDestroyed 21 November 2024>
+-- First added to Spec: <https://www.w3.org/TR/2024/WD-webdriver-bidi-20241121/#event-script-realmDestroyed 21 November 2024 - First Public Working Draft>
 subscribeScriptRealmDestroyed ::
   [BrowsingContext] ->
   [UserContext] ->
