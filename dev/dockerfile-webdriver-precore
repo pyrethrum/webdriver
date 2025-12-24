@@ -42,7 +42,7 @@ RUN REPO_DIR=$(basename -s .git "${REPO}") \
     # libraries will be cached by cabal
     # local modules => dist-newstyle
     && cabal update \
-    && cabal build  --only-dependencies \
+    && cabal build --enable-tests --only-dependencies \
     && echo "working directory is ${PWD}" \
     # cd back into examples
     && cd .. \

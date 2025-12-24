@@ -9,19 +9,25 @@ let Browser =
 
 let Config = 
       { browser : Browser
-      , wantConsoleLogging : Bool
+      , logging : Bool
+      , httpUrl : Text
+      , httpPort : Natural
+      , pauseMS : Natural
       }
 
 -- Config value
 let browser : Browser = 
-      Browser.Firefox
+      Browser.Firefox 
         { headless = True
         , profilePath = None Text
         }
 
 let config : Config = 
       { browser = browser
-      , wantConsoleLogging = False
+      , logging = False
+      , httpUrl = "127.0.0.1"
+      , httpPort = 4444
+      , pauseMS = 0
       }
 
 in config

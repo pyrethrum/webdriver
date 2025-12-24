@@ -27,15 +27,18 @@ RUN apt install -y firefox \
     && curl -L https://github.com/mozilla/geckodriver/releases/download/v0.36.0/geckodriver-v0.36.0-linux64.tar.gz | tar xz -C /usr/local/bin
 
 COPY webdriver-precore/webdriver-precore.cabal webdriver-precore/webdriver-precore.cabal
-COPY webdriver-examples/webdriver-examples.cabal webdriver-examples/webdriver-examples.cabal
+COPY webdriver-precore/test-server/test-server.cabal webdriver-precore/test-server/test-server.cabal
 COPY cabal.project .
 RUN cabal v2-build all --only-dependencies --enable-tests
-RUN cabal install tasty-discover
 
+# Copy all files and directories from the current build context (.) 
 COPY . .
-COPY dev/config-ci.dhall webdriver-examples/driver-demo-e2e/.config/config.dhall
+# RUN echo "==== LISTING WEBDRIVER DIRECTORYY ====" && \
+#     find . -not -path "./.git/*" -not -path "*/dist-newstyle/*" -ls && \
+#     echo "==== END LISTING ===="
+COPY dev/config-ci.dhall webdriver-precore/test/.config/config.dhall
 # RUN echo "==== BEGIN CONFIG FILE ====" && \
-#     cat webdriver-examples/driver-demo-e2e/.config/config.dhall && \
+#     cat webdriver-precore/test/.config/config.dhall && \
 #     echo "==== END CONFIG FILE ===="
 
 # RUN cabal clean

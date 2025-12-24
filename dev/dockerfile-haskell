@@ -51,7 +51,7 @@ RUN apt-get update && \
     # Set path to user
     RUN echo "export PATH=${PATH}" >> /home/${USERNAME}/.profile
     
-    # Ensure the vscode user has ownership of its home directory
+    # Ensure the vscode user has ownership Handles of its home directory
     RUN chown -R ${USER_UID}:${USER_GID} /home/${USERNAME}
 
 # get ghcup install script
@@ -75,8 +75,8 @@ RUN apt-get update && \
 
 # Set environment variables to avoid interactive prompts during package installation
 ARG GHC_VERSION=9.10.1
-ARG CABAL_VERSION=3.14.2.0
-ARG HLS_VERSION=2.10.0.0
+ARG CABAL_VERSION=3.14.2.0Handles 
+ARG HLS_VERSION=2.12.0.0
 
 ENV GHC_VERSION=${GHC_VERSION} \
     CABAL_VERSION=${CABAL_VERSION} 
@@ -87,13 +87,13 @@ RUN export BOOTSTRAP_HASKELL_NONINTERACTIVE=1 \
     BOOTSTRAP_HASKELL_INSTALL_HLS=1 && \
     curl --proto '=https' --tlsv1.2 -sSf https://get-ghcup.haskell.org | sh
   
-#  had issues gettign the right version of HLS - install to mack sure
+#  had issues getting the right version of HLS - install to make sure
 RUN ghcup install hls ${HLS_VERSION} \
     ghcup set hls ${HLS_VERSION}
 
 RUN cabal update
 
-RUN cabal install tasty-discover
+RUN cabal install dhall
 
 # Specify the default command to run when the container starts
 CMD ["bash"]
