@@ -37,15 +37,10 @@ import Test.Tasty.HUnit (testCase)
 
 main :: IO ()
 main = do
-  cfg <- loadConfig
-  let testCfg =
-        cfg
-          { logging = False,
-            pauseMS = 0
-          }
-  -- defaultMain tests
-  defaultMain $
-    tests testCfg
+  testCfg <- loadConfig
+  -- defaultMain $ httpDemoSingleIsolated testCfg 
+  defaultMain $ bidiSingleForDebug testCfg 
+  -- defaultMain $ tests testCfg
 
 tests :: Config -> TestTree
 tests cfg =
@@ -93,6 +88,29 @@ propertyTests =
         [ JSON.test_round_trip
         ]
     ]
+
+
+-- Single isolated HTTP demo for CI debugging 
+httpDemoSingleIsolated :: Config -> TestTree
+httpDemoSingleIsolated cfg =
+  testGroup
+    "HTTP Demos"
+    $ fromHttpDemo cfg
+      <$> [ 
+            Http.demoForwardBackRefresh
+          ]
+
+bidiSingleForDebug :: Config -> TestTree
+bidiSingleForDebug cfg =
+  let run = bidiTest cfg
+   in testGroup
+            "BiDi Single Demo"
+            [ 
+              run
+                "Browser"
+                [ ScriptEvent.scriptEventMessage
+                ]
+        ]
 
 httpDemos :: Config -> TestTree
 httpDemos cfg =
@@ -146,6 +164,8 @@ bidiTest cfg title =
   testGroup (unpack title) . fmap fromBidiDemo
   where
     fromBidiDemo demo = testCase (unpack demo.name) $ runDemo' cfg demo
+
+
 
 bidiDemos :: Config -> TestTree
 bidiDemos cfg =

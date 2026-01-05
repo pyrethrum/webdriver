@@ -24,7 +24,7 @@ let browser : Browser =
 
 let config : Config = 
       { browser = browser
-      , logging = False
+      , logging = True
       , httpUrl = "127.0.0.1"
       , httpPort = 4444
       , pauseMS = 0
