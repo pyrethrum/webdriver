@@ -243,7 +243,7 @@ parseWebDriverException :: Value -> WebDriverException
 parseWebDriverException response =
   parseMaybe parseErrorCode response
     & maybe
-      (parserErr ("Could find 'error' property in response\n" <> jsonToText response))
+      (parserErr ("Could not find 'error' property in response\n" <> jsonToText response))
       ( either
           (flip UnrecognisedErrorTypeException response)
           mkWebDriverException
