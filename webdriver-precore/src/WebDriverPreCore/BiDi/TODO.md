@@ -134,6 +134,7 @@
 
 ## CI
 
+ - [X] get CI tests working in container
  - [ ] use one base container for dev-container and CI (update)
  - [ ] retest dev-container
    - [ ] dhall
