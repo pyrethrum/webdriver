@@ -235,15 +235,12 @@ instance Exception WebDriverException where
           <> message
           <> maybe "" (\st -> "\nStacktrace: \n" <> st) stacktrace
 
-instance FromJSON WebDriverException where
-  parseJSON :: Value -> Parser WebDriverException
-  parseJSON = pure . parseWebDriverException
 
-parseWebDriverException :: Value -> WebDriverException
-parseWebDriverException response =
-  parseMaybe parseErrorCode response
+parseWebDriverException :: Text -> Value -> WebDriverException
+parseWebDriverException errInfo response =
+  parseMaybe getErrorProp response
     & maybe
-      (parserErr ("Could not find 'error' property in response\n" <> jsonToText response))
+      (parserErr (errInfo <> "\n" <> "Could not find 'error' property in response\n" <> jsonToText response))
       ( either
           (flip UnrecognisedErrorTypeException response)
           mkWebDriverException
@@ -266,13 +263,13 @@ parseWebDriverException response =
                 errorData
               }
 
-parseErrorCode :: Value -> Parser Text
-parseErrorCode =
+getErrorProp :: Value -> Parser Text
+getErrorProp =
   withObject "error" (.: "error")
 
 parseErrorType :: Value -> Maybe ErrorType
 parseErrorType resp =
-  case parseWebDriverException resp of
+  case parseWebDriverException "parse error type result" resp of
     ProtocolException {error} -> Just error
     JSONEncodeException {} -> Nothing
     ResponseParseException {} -> Nothing

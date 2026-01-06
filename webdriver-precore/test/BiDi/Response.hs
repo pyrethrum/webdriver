@@ -9,18 +9,16 @@ module BiDi.Response
   )
 where
 
+import AesonUtils (parseObjectEither, subtractProps)
+import Control.Exception (Exception (..))
 import Data.Aeson (FromJSON (parseJSON), Object, Value (..), eitherDecode, withObject, (.:), (.:?))
 import Data.Aeson.Types (Parser, parseEither)
 import Data.Bifunctor (Bifunctor (..))
 import Data.ByteString.Lazy (ByteString)
-import Data.Function ((&))
-import Data.Text (Text, pack)
+import Data.Text (Text, pack, unpack)
 import GHC.Generics (Generic)
-import WebDriverPreCore.BiDi.Protocol (EmptyResult (..), JSUInt, WebDriverException(..), JSONEncodeException(..))
-import AesonUtils (parseObjectEither, parseObjectMaybe, subtractProps)
 import Utils (txt)
-import Control.Exception (Exception (..))
-import Data.Text (unpack)
+import WebDriverPreCore.BiDi.Protocol (EmptyResult (..), JSONEncodeException (..), JSUInt, WebDriverException (..), parseWebDriverException)
 
 parseResponse :: forall r. (FromJSON r) => JSUInt -> Either JSONEncodeException ResponseObject -> Maybe (Either ResponseException (MatchedResponse r))
 parseResponse id' =
@@ -36,12 +34,7 @@ matchResponseId msgId = \case
       then
         Just $
           bimap
-            ( \e ->
-                (parseObjectMaybe obj :: Maybe WebDriverException)
-                  & maybe
-                    (BiDIError $ ResponseParseException {response = Object obj, message = e})
-                    BiDIError
-            )
+            (\e -> BiDIError . parseWebDriverException e $ Object obj)
             (\s -> MkMatchedResponse {response = s.result, object = obj})
             (parseObjectEither obj :: Either Text (Success a))
       else
@@ -68,19 +61,16 @@ data ResponseObject
   | WithID {id :: JSUInt, object :: Object}
   deriving (Show, Generic)
 
-
 data ResponseException
   = BiDIError WebDriverException
   | BiDiTimeoutError {ms :: Int}
   deriving (Show, Eq, Generic)
-
 
 instance Exception ResponseException where
   displayException :: ResponseException -> String
   displayException = \case
     BiDIError e -> displayException e
     BiDiTimeoutError {ms} -> unpack $ "Timed out waiting for matching command response from driver (" <> txt ms <> "milliseconds)"
-
 
 data Success a = MkSuccess
   { id :: JSUInt,

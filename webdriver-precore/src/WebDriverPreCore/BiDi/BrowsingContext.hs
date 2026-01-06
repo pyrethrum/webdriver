@@ -458,6 +458,7 @@ instance FromJSON PrintResult where
 
 data Info = MkInfo
   { children :: Maybe [Info],
+    -- clientWindow :: Maybe ClientWindow, 
     clientWindow :: ClientWindow, 
     context :: BrowsingContext,
     originalOpener :: Maybe BrowsingContext,
