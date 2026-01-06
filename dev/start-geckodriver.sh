@@ -18,6 +18,7 @@ nohup geckodriver \
 disown
 echo "geckodriver started with PID $! at http://127.0.0.1:$PORT"
 geckodriver -V 
+firefox -V
 
 # Wait for geckodriver to be ready before script exits
 echo "Checking port..."

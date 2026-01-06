@@ -23,7 +23,7 @@ RUN curl --proto '=https' --tlsv1.2 -sSf https://get-ghcup.haskell.org | \
 ENV PATH="/root/.ghcup/bin/:$PATH"
 ENV DEBIAN_FRONTEND=noninteractive
 
-RUN apt install -y firefox \
+RUN apt install -y --fix-missing firefox \
     && curl -L https://github.com/mozilla/geckodriver/releases/download/v0.36.0/geckodriver-v0.36.0-linux64.tar.gz | tar xz -C /usr/local/bin
 
 COPY webdriver-precore/webdriver-precore.cabal webdriver-precore/webdriver-precore.cabal
@@ -45,3 +45,4 @@ RUN rm -f cabal.project.local
 
 # RUN cabal clean
 RUN cabal v2-build all --enable-tests
+RUN geckodriver --version && firefox --version
