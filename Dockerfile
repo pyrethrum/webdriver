@@ -1,6 +1,27 @@
 FROM ubuntu:20.04
 WORKDIR /webdriver
 
+
+# Install dependencies for Firefox
+RUN apt-get update \
+    && apt-get install -y --fix-missing \
+    wget \
+    xz-utils \
+    libgtk-3-0 \
+    libdbus-glib-1-2 \
+    libasound2 \
+    libx11-xcb1 \
+    libxt6 \
+    libpci3 \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install latest Firefox from Mozilla (downloads as .tar.xz)
+RUN wget -O /tmp/firefox.tar.xz "https://download.mozilla.org/?product=firefox-latest-ssl&os=linux64&lang=en-US" \
+    && tar -xJf /tmp/firefox.tar.xz -C /opt \
+    && ln -s /opt/firefox/firefox /usr/local/bin/firefox \
+    && rm /tmp/firefox.tar.xz
+
+
 RUN apt-get update \
     && apt-get install -y \
         build-essential \
@@ -23,8 +44,8 @@ RUN curl --proto '=https' --tlsv1.2 -sSf https://get-ghcup.haskell.org | \
 ENV PATH="/root/.ghcup/bin/:$PATH"
 ENV DEBIAN_FRONTEND=noninteractive
 
-RUN apt install -y --fix-missing firefox \
-    && curl -L https://github.com/mozilla/geckodriver/releases/download/v0.36.0/geckodriver-v0.36.0-linux64.tar.gz | tar xz -C /usr/local/bin
+# Install geckodriver
+RUN curl -L https://github.com/mozilla/geckodriver/releases/download/v0.36.0/geckodriver-v0.36.0-linux64.tar.gz | tar xz -C /usr/local/bin
 
 COPY webdriver-precore/webdriver-precore.cabal webdriver-precore/webdriver-precore.cabal
 COPY webdriver-precore/test-server/test-server.cabal webdriver-precore/test-server/test-server.cabal

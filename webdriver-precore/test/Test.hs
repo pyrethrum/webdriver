@@ -39,8 +39,8 @@ main :: IO ()
 main = do
   testCfg <- loadConfig
   -- defaultMain $ httpDemoSingleIsolated testCfg 
-  defaultMain $ bidiSingleForDebug testCfg 
-  -- defaultMain $ tests testCfg
+  -- defaultMain $ bidiSingleForDebug testCfg 
+  defaultMain $ tests testCfg
 
 tests :: Config -> TestTree
 tests cfg =
@@ -100,6 +100,7 @@ httpDemoSingleIsolated cfg =
             Http.demoForwardBackRefresh
           ]
 
+-- Single isolated Bidi demo for CI debugging 
 bidiSingleForDebug :: Config -> TestTree
 bidiSingleForDebug cfg =
   let run = bidiTest cfg
