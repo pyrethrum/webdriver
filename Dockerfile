@@ -37,6 +37,7 @@ COPY . .
 #     find . -not -path "./.git/*" -not -path "*/dist-newstyle/*" -ls && \
 #     echo "==== END LISTING ===="
 COPY dev/config-ci.dhall webdriver-precore/test/.config/config.dhall
+# remove debug local config file if it exists - we want CI builds to use config.dhall
 RUN rm -f cabal.project.local
 # RUN echo "==== BEGIN CONFIG FILE ====" && \
 #     cat webdriver-precore/test/.config/config.dhall && \
