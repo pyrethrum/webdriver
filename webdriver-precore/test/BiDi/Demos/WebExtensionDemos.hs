@@ -10,7 +10,6 @@ import WebDriverPreCore.BiDi.Protocol
       WebExtensionInstall(..),
       WebExtensionResult(..),
       WebExtensionUninstall(..) )
-
 import Utils (txt)
 import Prelude hiding (log, putStrLn)
 
