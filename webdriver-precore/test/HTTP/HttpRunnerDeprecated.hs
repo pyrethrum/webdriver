@@ -72,7 +72,7 @@ throwFailure body =
   parseMaybe valueParser body
     & maybe
       (throw $ ResponseParseException "No value property found in WebDriver response" body)
-      (throw . parseWebDriverException)
+      (throw . parseWebDriverException "Could not find body property")
 
 valueParser :: Value -> Parser Value
 valueParser body = body & withObject "body value" (.: "value")

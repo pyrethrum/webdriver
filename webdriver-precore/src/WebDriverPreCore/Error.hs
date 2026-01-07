@@ -54,8 +54,7 @@ unexpected alert open 	500 	unexpected alert open 	A modal dialog was open, bloc
 unknown command 	404 	unknown command 	A command could not be executed because the remote end is not aware of it.
 unknown error 	500 	unknown error 	An unknown error occurred in the remote end while processing the command.
 unknown method 	405 	unknown method 	The requested command matched a known URL but did not match any method for that URL.
-unsupported operation 	500 	unsupported operation 	Indicates that a commamodule ErrorCoverageTest where
-nd that should have executed properly cannot be supported for some reason.
+unsupported operation 	500 	unsupported operation 	Indicates that a command that should have executed properly cannot be supported for some reason.
 -}
 
 -- | Known WevDriver Error Types
@@ -236,15 +235,12 @@ instance Exception WebDriverException where
           <> message
           <> maybe "" (\st -> "\nStacktrace: \n" <> st) stacktrace
 
-instance FromJSON WebDriverException where
-  parseJSON :: Value -> Parser WebDriverException
-  parseJSON = pure . parseWebDriverException
 
-parseWebDriverException :: Value -> WebDriverException
-parseWebDriverException response =
-  parseMaybe parseErrorCode response
+parseWebDriverException :: Text -> Value -> WebDriverException
+parseWebDriverException errInfo response =
+  parseMaybe getErrorProp response
     & maybe
-      (parserErr ("Could find 'error' property in response\n" <> jsonToText response))
+      (parserErr (errInfo <> "\n" <> "Could not find 'error' property in response\n" <> jsonToText response))
       ( either
           (flip UnrecognisedErrorTypeException response)
           mkWebDriverException
@@ -267,13 +263,13 @@ parseWebDriverException response =
                 errorData
               }
 
-parseErrorCode :: Value -> Parser Text
-parseErrorCode =
+getErrorProp :: Value -> Parser Text
+getErrorProp =
   withObject "error" (.: "error")
 
 parseErrorType :: Value -> Maybe ErrorType
 parseErrorType resp =
-  case parseWebDriverException resp of
+  case parseWebDriverException "parse error type result" resp of
     ProtocolException {error} -> Just error
     JSONEncodeException {} -> Nothing
     ResponseParseException {} -> Nothing

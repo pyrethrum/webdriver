@@ -13,12 +13,13 @@ import Config ( Config (..),
     isFirefox
   )
 
+import Data.Text.IO qualified as T
+
 #ifdef DEBUG_LOCAL_CONFIG
 import DebugConfig (debugConfig)
 #else
 import Control.Monad (unless)
 import Data.Text as T (Text, pack, unlines)
-import Data.Text.IO qualified as T
 import Dhall (auto, input)
 import IOUtils (findWebDriverRoot)
 import System.Directory (doesFileExist, getCurrentDirectory)
@@ -103,11 +104,13 @@ userPath =
 #endif
 
 loadConfig :: IO Config
-loadConfig =
+loadConfig = do
 #ifdef DEBUG_LOCAL_CONFIG
-  putStrLn "Using debug local config" >>
+  T.putStrLn "Using debug local config" 
   pure debugConfig
 #else
-  putStrLn "Loading config from file" >>
-  initialiseTestConfig >> readConfig
+  userPath' <- userPath
+  T.putStrLn $ "Loading config from file: " <> pack userPath'
+  initialiseTestConfig 
+  readConfig
 #endif

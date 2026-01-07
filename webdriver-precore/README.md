@@ -46,7 +46,7 @@ We, the authors of this library, are building our own stand-alone test framework
 
 ### Library Non-Goals
   
-  * Any convenience or utility functions, that do not directly correspond to an endpoint on the WC3 spec. Such functions belong in downstream libraries.
+  * Any convenience or utility functions, that do not directly correspond to an endpoint on the W3C spec. Such functions belong in downstream libraries.
   * Any transformers, effects or similar abstractions. These too belong downstream.
 
 ### Acknowledgements

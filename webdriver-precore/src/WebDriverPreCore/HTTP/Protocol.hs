@@ -1,10 +1,56 @@
+{-| 
+This module defines the 'Command' type and related types/functions for HTTP commands referenced by the API functions in "WebDriverPreCore.HTTP.API" 
+
+"WebDriverPreCore.HTTP.API" contains functions that generate the payload for each HTTP command and is the main interface for users of this package to interact with the WebDriver HTTP protocol.
+
+An example of using these modules to implement a basic HTTP client can be found in the [test repository](https://github.com/pyrethrum/webdriver/tree/main/webdriver-precore/test#readme) for this package.
+-}
+
 module WebDriverPreCore.HTTP.Protocol
-  ( -- * Re-exported modules
+  (
+
     -- * Command
-    module WebDriverPreCore.HTTP.Command,
+    Command (..),
+
+    -- ** Constructors
+    {-| The following constructors are utility functions that partially applied in "WebDriverPreCore.HTTP.API" to generate specific named command functions for POST requests. 
+        Although these functions form the basis of many commands in the "WebDriverPreCore.HTTP.API", it would be unusual to need to use these directly.
+    -}
+    mkPost,
+    mkPost',
+
+    -- ** Fallback Constructors
+    {-| The following constructors are provided to modify or create new commands that are not directly supported by the "WebDriverPreCore.HTTP.API".
+        These constructors provide a means by which users can work around defects in this package or defects in driver implementation as well as handling driver specific extensions to the HTTP protocol. 
+    -}
+    voidCommand,
+    loosenCommand,
+    coerceCommand,
+    extendPost,
+    extendPostLoosen,
 
     -- * Capabilities
-    module WebDriverPreCore.HTTP.Capabilities,
+    FullCapabilities (..),
+    Capabilities (..),
+    UnhandledPromptBehavior (..),
+    PageLoadStrategy (..),
+    BrowserName (..),
+    PlatformName (..),
+    Proxy (..),
+    VendorSpecific (..),
+    SocksProxy (..),
+    Timeouts (..),
+    PerfLoggingPrefs (..),
+    MobileEmulation (..),
+    LogLevel (..),
+    LogSettings (..),
+    DeviceMetrics (..),
+     -- * Capability Utility Functions
+    alwaysMatchCapabilities,
+    minCapabilities,
+    minFullCapabilities,
+    minFirefoxCapabilities,
+    minChromeCapabilities,
 
     -- * Error
     module WebDriverPreCore.Error,
@@ -21,7 +67,6 @@ module WebDriverPreCore.HTTP.Protocol
     Selector (..),
     Session (..),
     SessionResponse (..),
-    Timeouts (..),
     Handle (..),
     WindowHandleSpec (..),
     WindowRect (..),
@@ -38,6 +83,7 @@ module WebDriverPreCore.HTTP.Protocol
   )
 where
 
+import AesonUtils (nonEmpty, opt, parseObject)
 import Data.Aeson as A
   ( FromJSON (..),
     Key,
@@ -60,31 +106,29 @@ import Data.Text (Text, pack, unpack)
 import Data.Text qualified as T
 import Data.Word (Word16)
 import GHC.Generics (Generic)
+import Utils (txt)
+import WebDriverPreCore.Error
 import WebDriverPreCore.HTTP.Capabilities
 import WebDriverPreCore.HTTP.Command
-import WebDriverPreCore.Error
-import AesonUtils (nonEmpty, opt, parseObject)
-import WebDriverPreCore.Internal.HTTPBidiCommon as Url (URL(..)) 
-import Utils (txt)
+import WebDriverPreCore.Internal.HTTPBidiCommon as Url (URL (..))
 import Prelude hiding (id)
 
 -- | [spec](https://www.w3.org/TR/2025/WD-webdriver2-20251028/#dfn-get-window-handle)
 newtype Handle = MkHandle {handle :: Text}
   deriving (Show, Eq, Generic)
 
-instance ToJSON Handle where 
+instance ToJSON Handle where
   toJSON :: Handle -> Value
   toJSON (MkHandle handle) = object ["handle" .= handle]
 
 instance FromJSON Handle where
   parseJSON :: Value -> Parser Handle
-  parseJSON = \case 
+  parseJSON = \case
     String t -> pure $ MkHandle t
-    Object o -> do  
+    Object o -> do
       h <- o .: "handle"
-      pure $ MkHandle h 
+      pure $ MkHandle h
     v -> fail $ unpack $ "Expected Handle as String or Object with handle property, got: " <> txt v
-
 
 -- | [spec](https://www.w3.org/TR/2025/WD-webdriver2-20251028/#new-window)
 data WindowHandleSpec = HandleSpec
@@ -207,7 +251,7 @@ instance FromJSON SessionResponse where
           -- so it must be converted or there will be a parse error
           let capabilitiesVal = webSocketUrlToBool allCapsObject
           capabilities :: Capabilities <- parseJSON $ Object capabilitiesVal
-          standardCapsProps <- parseObject "JSON from Capabilities Object must be a JSON Object" $ toJSON capabilities
+          standardCapsProps <- parseObject "JSON frotim Capabilities Object must be a JSON Object" $ toJSON capabilities
           let keys = fromList . KM.keys
               capsKeys = keys standardCapsProps
               nonNullExtensionKey k v = k `notMember` capsKeys && k /= webSocketKey && nonEmpty v

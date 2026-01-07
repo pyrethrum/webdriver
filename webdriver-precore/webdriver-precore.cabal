@@ -209,7 +209,6 @@ test-suite test
     , raw-strings-qq
     , req
     , tasty
-    , tasty-discover
     , tasty-hunit
     , time
     , text

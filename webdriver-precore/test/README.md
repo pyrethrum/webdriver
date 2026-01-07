@@ -142,7 +142,7 @@ Drivers can be downloaded from the vendors' web sites e.g.:
 
 #### 2. The Project Builds
 
-In the the integrated terminal in your IDE run:
+In the integrated terminal in your IDE run:
 
 1. ensure you are in the project directory
 2. `cabal update`
@@ -196,7 +196,7 @@ Before running any of the `*Demo`s you will need to set up a `DemoConfig.hs` fil
 
 1. copy `webdriver-precore/test/DebugConfig.hs.template` => `webdriver-precore/test/DebugConfig.hs`
 
-    `DebugConfig.hs` is included in `.gitIgnore` so wont be added to git. If you are using VSCode you will need to open this for the first time via the Project Explorer as most shortcut keys ignore files ignored by git.
+    `DebugConfig.hs` is included in `.gitIgnore` so won't be added to git. If you are using VSCode you will need to open this for the first time via the Project Explorer as most shortcut keys ignore files ignored by git.
 
 2. copy `cabal.project.local.template` => `cabal.project.local` 
 

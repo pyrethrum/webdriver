@@ -24,8 +24,6 @@ import WebDriverPreCore.BiDi.Protocol
 import Utils (txt)
 import Prelude hiding (log, putStrLn)
 
---  TODO aake sure all demos only use Protocol, not sub modules
-
 -- >>> runDemo browsingContextEventDemo
 browsingContextEventDemo :: BiDiDemo
 browsingContextEventDemo =

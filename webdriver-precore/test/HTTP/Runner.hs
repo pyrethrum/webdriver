@@ -18,6 +18,7 @@ import WebDriverPreCore.HTTP.Protocol ( Command(..), WebDriverException(..), par
 import Prelude hiding (log)
 
 import HTTP.HttpClient ( callWebDriver', mkRequest)
+import Data.Text (pack)
 
 
 -- ############# Runner #############
@@ -70,7 +71,7 @@ parseResultIO body  =
       )
       ( \val ->
           parseEither @_ @r parseJSON val & either
-            (const . throw $ parseWebDriverException val)
+            (\e -> throw $ parseWebDriverException (pack e) val)
             pure
       )
   
