@@ -125,6 +125,7 @@
 - [ ] redo diagram in drawIO
 - [ ] http diagram
 - [ ] change log
+- [ ] mention git LFS in Docs
 
 ## prep
 

@@ -36,6 +36,7 @@ RUN chown -R ${USER_UID}:${USER_GID} /home/${USERNAME}
 RUN REPO_DIR=$(basename -s .git "${REPO}") \
     # clone into home (note single branch)
     && git clone --single-branch --branch ${BRANCH} ${REPO} \
+
     # cd into source repo
     && cd "${REPO_DIR}/webdriver-precore" \
     # build it all (go have coffee for an hour or more)
@@ -64,6 +65,7 @@ USER root
 RUN echo "Install firefox" && \
     # chown ${USER_UID}:${USER_GID} /home/vscode/install-firefox.sh && \
     # ls -l /home/vscode/install-firefox.sh && \
+
     chmod +x /home/vscode/install-firefox.sh && \
     /home/vscode/install-firefox.sh && \
     rm /home/vscode/install-firefox.sh
