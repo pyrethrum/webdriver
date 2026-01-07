@@ -150,3 +150,24 @@
 
 
 
+**Chrome (Chromedriver)**
+
+*`--log-level=ALL` is optional*
+
+*The port is set to 4444 to match the port hard coded in our test suite*
+
+```
+> pkill -f chromedriver || true && chromedriver --log-level=ALL --port=4444
+```
+
+*expect output like*
+
+```
+Starting ChromeDriver 135.0.7049.52 (9ba7e609d28c509a8ce9265c2247065d8d251173-refs/branch-heads/7049_41@{#4}) on port 4444
+Only local connections are allowed.
+Please see https://chromedriver.chromium.org/security-considerations for suggestions on keeping ChromeDriver safe.
+ChromeDriver was started successfully on port 4444.
+```
+
+
+

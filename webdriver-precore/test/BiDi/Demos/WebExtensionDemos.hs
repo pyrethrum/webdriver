@@ -1,7 +1,7 @@
 module BiDi.Demos.WebExtensionDemos where
 
 import BiDi.Actions (BiDiActions (..))
-import BiDi.DemoUtils ( demo, BiDiDemo )
+import BiDi.DemoUtils ( demo, BiDiDemo, runDemo )
 import Control.Exception (SomeException, catch)
 import IOUtils (DemoActions (..))
 import TestData (demoExtensionAsBase64, demoExtensionDirPath, demoExtensionZipPath)
@@ -13,6 +13,10 @@ import WebDriverPreCore.BiDi.Protocol
 
 import Utils (txt)
 import Prelude hiding (log, putStrLn)
+
+-- this is just to silence "defined but not used" warnings for runDemo
+_stopDemoUnusedWarning :: BiDiDemo -> IO ()
+_stopDemoUnusedWarning = runDemo
 
 -- >>> runDemo webExtensionInstallPathDemo
 webExtensionInstallPathDemo :: BiDiDemo
