@@ -135,18 +135,17 @@
 ## CI
 
  - [X] get CI tests working in container
- - [ ] use one base container for dev-container and CI (update)
+ - [ ] chrome - local
  - [ ] retest dev-container
    - [ ] dhall
    - [ ] dhall-lsp-server
- - [ ] chrome
- - [ ] edge
 
 ## release http / bidi
 
 - [ ] hackage
 - [ ] stackage
 - [ ] announce
+- [ ] ping webdriver repo
 
 --- 
 delete this later
@@ -169,6 +168,11 @@ Only local connections are allowed.
 Please see https://chromedriver.chromium.org/security-considerations for suggestions on keeping ChromeDriver safe.
 ChromeDriver was started successfully on port 4444.
 ```
+
+## deferred
+ - [ ] use one base container for dev-container and CI (update)
+ - [ ] edge driver
+ - [ ] chrome - CI
 
 
 
