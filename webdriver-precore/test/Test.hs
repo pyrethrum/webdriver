@@ -21,7 +21,7 @@ import BiDi.Demos.SessionDemos qualified as Session
 import BiDi.Demos.StorageDemos qualified as Storage
 import BiDi.Demos.WebExtensionDemos qualified as WebExtension
 import BiDi.ErrorDemo qualified as BiDiError
-import Config (Config (..))
+import Config (Config (..), DemoBrowser (..))
 import ConfigLoader (loadConfig)
 import Data.Text (Text, unpack)
 import ErrorCoverageTest qualified as Error
@@ -171,6 +171,9 @@ bidiTest cfg title =
 bidiDemos :: Config -> TestTree
 bidiDemos cfg =
   let run = bidiTest cfg
+      thisBrowser = cfg.browser
+      unknownCommand = unknownCommandError thisBrowser
+      expectFail = biDiError thisBrowser
    in testGroup
         "BiDi Demos"
         [ testGroup
@@ -186,14 +189,14 @@ bidiDemos cfg =
                 [ Browser.browserGetClientWindowsDemo,
                   Browser.browserCreateUserContextDemo,
                   Browser.browserGetUserContextsDemo,
-                  unknownCommandError
+                  unknownCommand [FailsFirefox, FailsChrome]
                     Browser.browserSetClientWindowStateDemo,
                   Browser.browserRemoveUserContextDemo,
                   Browser.browserCompleteWorkflowDemo,
-                  biDiError
+                  expectFail [FailsFirefox]
                     "Closing the browser in a session started with WebDriver classic is not supported"
                     Browser.browserCloseDemo,
-                  unknownCommandError
+                  unknownCommand [FailsFirefox]
                     -- since https://www.w3.org/TR/2025/WD-webdriver-bidi-20250918/#command-browser-seProtocolExceptiontDownloadBehavior
                     Browser.browserSetDownloadBehaviorDemo
                 ],
@@ -214,19 +217,19 @@ bidiDemos cfg =
                 ],
               run
                 "Emulation"
-                [ unknownCommandError
+                [ unknownCommand [FailsFirefox, FailsChrome]
                     -- since https:\/\/www.w3.org\/TR\/2025\/WD-webdriver-bidi-20250729
                     Emulation.emulationSetForcedColorsModeThemeOverrideDemo,
                   Emulation.emulationSetGeolocationOverrideDemo,
                   Emulation.emulationSetLocaleOverrideDemo,
-                  unknownCommandError
+                  unknownCommand [FailsFirefox, FailsChrome]
                     -- since https://www.w3.org/TR/2025/WD-webdriver-bidi-20251007
                     Emulation.emulationSetNetworkConditionsDemo,
                   Emulation.emulationSetScreenOrientationOverrideDemo,
-                  unknownCommandError
+                  unknownCommand [FailsFirefox, FailsChrome]
                     -- since https://www.w3.org/TR/2025/WD-webdriver-bidi-20251120
                     Emulation.emulationSetScreenSettingsOverrideDemo,
-                  unknownCommandError
+                  unknownCommand [FailsFirefox, FailsChrome]
                     -- since https://www.w3.org/TR/2025/WD-webdriver-bidi-20250811
                     Emulation.emulationSetScriptingEnabledDemo,
                   Emulation.emulationSetTimezoneOverrideDemo,
@@ -252,7 +255,9 @@ bidiDemos cfg =
                 ],
               run
                 "Network"
-                [ biDiError
+                [ 
+                  -- TODO: revisit documant
+                  expectFail [FailsFirefox, FailsChrome]
                     "The arguments passed to a command are either invalid or malformed"
                     Network.networkDataCollectorDemo,
                   Network.networkInterceptDemo,
@@ -287,16 +292,22 @@ bidiDemos cfg =
               run
                 "Session"
                 [ Session.sessionStatusDemo,
-                  biDiError
-                    "Maximum number of active sessions"
+                  expectFail [FailsFirefox, FailsChrome]
+                    (case thisBrowser of 
+                      Firefox{} -> "Maximum number of active sessions"
+                      Chrome{} -> "session already exists"
+                      )
                     Session.sessionNewDemo,
-                  biDiError
+                  expectFail [FailsFirefox]
                     "Ending a session started with WebDriver classic is not supported"
                     Session.sessionEndDemo,
                   Session.sessionSubscribeDemo,
                   Session.sessionUnsubscribeDemo,
-                  biDiError
-                    "Maximum number of active sessions"
+                  expectFail [FailsFirefox, FailsChrome]
+                    (case thisBrowser of 
+                      Firefox{} -> "Maximum number of active sessions"
+                      Chrome{} -> "session already exists"
+                      )
                     Session.sessionCapabilityNegotiationDemo,
                   Session.sessionCompleteLifecycleDemo
                 ],
@@ -329,22 +340,28 @@ bidiDemos cfg =
                   BrowsingContextEvent.browsingContextEventFragmentNavigation,
                   BrowsingContextEvent.browsingContextEventUserPrompts,
                   BrowsingContextEvent.browsingContextEventUserPromptsVariants,
-                  biDiError
+                  expectFail [FailsFirefox]
                     "Expected event did not fire: BrowsingContextHistoryUpdated"
                     BrowsingContextEvent.browsingContextEventHistoryUpdated,
                   -- not supporrted in geckodriver yet
-                  biDiError
-                    "browsingContext.navigationAborted is not a valid event name"
+                  expectFail [FailsFirefox, FailsChrome]
+                    (case thisBrowser of 
+                      Firefox{} -> "browsingContext.navigationAborted is not a valid event name"
+                      Chrome{} -> "ERR_NAME_NOT_RESOLVED"
+                      )
                     BrowsingContextEvent.browsingContextEventNavigationAborted,
-                  biDiError
-                    "Error: NS_ERROR_UNKNOWN_HOST"
+                  expectFail [FailsFirefox, FailsChrome]
+                    (case thisBrowser of 
+                      Firefox{} -> "Error: NS_ERROR_UNKNOWN_HOST"
+                      Chrome{} -> "Error: NS_ERROR_UNKNOWN_HOST"
+                      )
                     BrowsingContextEvent.browsingContextEventNavigationFailed,
                   BrowsingContextEvent.browsingContextEventDownloadWillBegin,
                   BrowsingContextEvent.browsingContextEventDownloadEnd
                 ],
               run
                 "Input Events"
-                [ biDiError
+                [ expectFail [FailsFirefox, FailsChrome]
                     "input.fileDialogOpened is not a valid event name"
                     InputEvent.inputEventFileDialogOpened
                 ],
@@ -372,12 +389,28 @@ bidiDemos cfg =
             ]
         ]
 
-biDiError :: Text -> BiDiDemo -> BiDiDemo
-biDiError errorFragment MkBiDiDemo {name, action} =
+biDiError :: DemoBrowser -> [FailsIn] -> Text -> BiDiDemo -> BiDiDemo
+biDiError actualBrowser failBrowsers errorFragment demo@MkBiDiDemo {name, action} =
+  if expectFail then
   MkBiDiDemo
     { name = name <> " - EXPECTED ERROR: " <> errorFragment,
       action = \utils bidi -> expectError name errorFragment (action utils bidi)
     }
+  else demo
+  where
+    expectFail = fromBrowser actualBrowser `elem` failBrowsers
 
-unknownCommandError :: BiDiDemo -> BiDiDemo
-unknownCommandError = biDiError "unknown command"
+data FailsIn = FailsFirefox | FailsChrome deriving (Eq, Show)
+
+fromBrowser :: DemoBrowser -> FailsIn
+fromBrowser = \case 
+  Firefox {} -> FailsFirefox
+  Chrome {} -> FailsChrome
+
+unknownCommandError :: DemoBrowser -> [FailsIn] -> BiDiDemo -> BiDiDemo
+unknownCommandError actualBrowser failBrowsers  demo = 
+  biDiError actualBrowser failBrowsers failFragement demo
+  where
+    failFragement = case actualBrowser of
+      Chrome {} -> "not implemented"
+      Firefox {} -> "unknown command"
