@@ -30,7 +30,7 @@ errorDemo =
       -- Set short timeouts
       setTimeouts sesId $
         MkTimeouts
-          { pageLoad = Just 0,
+          { pageLoad = Just 1_000,
             script = Just 0,
             implicit = Just 0
           }
