@@ -183,7 +183,9 @@ data GetTree = MkGetTree
   }
   deriving (Show, Eq, Generic)
 
-instance ToJSON GetTree
+instance ToJSON GetTree where
+  toJSON :: GetTree -> Value
+  toJSON = toJSONOmitNothing
 
 -- |  for handleUserPrompt command
 data HandleUserPrompt = MkHandleUserPrompt

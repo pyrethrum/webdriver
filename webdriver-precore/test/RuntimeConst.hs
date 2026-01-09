@@ -52,8 +52,22 @@ httpCapabilities MkConfig {browser} =
                   Nothing -> []
                 allArgs = headlessArgs <> profileArgs
 
-          CFG.Chrome -> Nothing
+          CFG.Chrome {headless} -> Just $ ChromeOptions
+                { chromeArgs = if headless then Just ["--headless=new"] else Nothing,
+                  chromeBinary = Nothing,
+                  chromeExtensions = Nothing,
+                  chromeLocalState = Nothing,
+                  chromeMobileEmulation = Nothing,
+                  chromePrefs = Nothing,
+                  chromeDetach = Nothing,
+                  chromeDebuggerAddress = Nothing,
+                  chromeExcludeSwitches = Nothing,
+                  chromeMinidumpPath = Nothing,
+                  chromePerfLoggingPrefs = Nothing,
+                  chromeWindowTypes = Nothing
+                }
     }
+ 
 
 
 httpFullCapabilities :: Config -> FullCapabilities

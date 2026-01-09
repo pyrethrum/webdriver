@@ -67,6 +67,20 @@
       "problemMatcher": []
     },
     {
+      "label": "launch chromedriver",
+      "type": "shell",
+      "options": {
+        "cwd": "${workspaceFolder}/dev"
+      },
+      "command": "bash start-chromedriver.sh",
+      "presentation": {
+        "reveal": "always",
+        "panel": "new",
+        "showReuseMessage": false
+      },
+      "problemMatcher": []
+    },
+    {
       "label": "build haddock",
       "type": "shell",
       "command": "cabal",

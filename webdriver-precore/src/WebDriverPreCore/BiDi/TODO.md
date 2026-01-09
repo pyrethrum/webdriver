@@ -170,8 +170,16 @@ Please see https://chromedriver.chromium.org/security-considerations for suggest
 ChromeDriver was started successfully on port 4444.
 ```
 
+## FINAL
+[ ] chromedriver working
+[ ] rerun firefox 
+[ ] docs lfs git
+[ ] devcontainer fixed
+[ ] use one base container for dev-container and CI (update)
+[ ] docs use image
+
+
 ## deferred
- - [ ] use one base container for dev-container and CI (update)
  - [ ] edge driver
  - [ ] chrome - CI
 
