@@ -53,7 +53,6 @@ defaultPointerProps =
     }
 
 -- >>> runDemo inputKeyboardDemo
--- *** Exception: BiDIError (ProtocolException {error = InvalidArgument, description = "The arguments passed to a command are either invalid or malformed", message = "Invalid input in \"actions\"/0.", stacktrace = Nothing, errorData = Nothing, response = Object (fromList [("error",String "invalid argument"),("id",Number 4.0),("message",String "Invalid input in \"actions\"/0."),("type",String "error")])})
 inputKeyboardDemo :: BiDiDemo
 inputKeyboardDemo =
   demo "Input I - Keyboard Actions" action

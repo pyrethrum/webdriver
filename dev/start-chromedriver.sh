@@ -3,9 +3,9 @@
 # Exit immediately if a command exits with a non-zero status
 set -e
 
-# Kill any existing geckodriver processes
+# Kill any existing or chromedriver processes
+pkill -x geckodriver || true
 pkill -x chromedriver || true
-
 
 PORT=4444
 

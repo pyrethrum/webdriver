@@ -177,6 +177,7 @@ ChromeDriver was started successfully on port 4444.
 [ ] devcontainer fixed
 [ ] use one base container for dev-container and CI (update)
 [ ] docs use image
+[ ] spec update
 
 
 ## deferred
