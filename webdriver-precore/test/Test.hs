@@ -256,10 +256,7 @@ bidiDemos cfg =
               run
                 "Network"
                 [ 
-                  -- TODO: revisit documant
-                  expectFail [FailsFirefox, FailsChrome]
-                    "The arguments passed to a command are either invalid or malformed"
-                    Network.networkDataCollectorDemo,
+                  Network.networkDataCollectorDemo,
                   Network.networkInterceptDemo,
                   Network.networkRequestModificationDemo,
                   Network.networkResponseModificationDemo,
