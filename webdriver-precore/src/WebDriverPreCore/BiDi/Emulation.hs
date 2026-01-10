@@ -1,6 +1,5 @@
 module WebDriverPreCore.BiDi.Emulation
-  ( 
-    SetGeolocationOverride (..),
+  ( SetGeolocationOverride (..),
     SetLocaleOverride (..),
     SetScreenOrientationOverride (..),
     SetScreenSettingsOverride (..),
@@ -13,21 +12,21 @@ module WebDriverPreCore.BiDi.Emulation
     GeolocationCoordinates (..),
     GeolocationPositionError (..),
     ScreenArea (..),
-    ScreenOrientationOverride  (..),
-    ScreenOrientationNatural  (..),
-    ScreenOrientationType  (..),
+    ScreenOrientationOverride (..),
+    ScreenOrientationNatural (..),
+    ScreenOrientationType (..),
     ForcedColorsModeTheme (..),
     NetworkConditions (..),
-    NetworkConditionsOffline (..)
+    NetworkConditionsOffline (..),
   )
 where
 
+import AesonUtils (opt)
+import Data.Aeson (ToJSON (..), Value (..), object, (.=))
 import Data.Maybe (catMaybes)
 import Data.Text (Text)
 import GHC.Generics (Generic)
-import WebDriverPreCore.BiDi.CoreTypes (BrowsingContext, UserContext, JSUInt)
-import Data.Aeson (ToJSON (..), object, (.=), Value(..))
-import AesonUtils (opt, toJSONOmitNothing)
+import WebDriverPreCore.BiDi.CoreTypes (BrowsingContext, JSUInt, UserContext)
 
 -- ######### Remote #########
 
@@ -287,4 +286,4 @@ newtype NetworkConditionsOffline = MkNetworkConditionsOffline
 
 instance ToJSON NetworkConditionsOffline where
   toJSON :: NetworkConditionsOffline -> Value
-  toJSON _ = toJSON (("type", "offline") :: (Text, Text))
+  toJSON _ = object ["type" .= "offline"]
