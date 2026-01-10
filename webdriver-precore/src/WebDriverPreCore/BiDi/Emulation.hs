@@ -65,7 +65,13 @@ data SetLocaleOverride = MkSetLocaleOverride
 
 instance ToJSON SetLocaleOverride where
   toJSON :: SetLocaleOverride -> Value
-  toJSON = toJSONOmitNothing
+  toJSON MkSetLocaleOverride {locale, contexts, userContexts} =
+    object $
+      ["locale" .= locale]
+        <> catMaybes
+          [ opt "contexts" contexts,
+            opt "userContexts" userContexts
+          ]
 
 data SetScreenOrientationOverride = MkSetScreenOrientationOverride
   { screenOrientation :: Maybe ScreenOrientationOverride,
