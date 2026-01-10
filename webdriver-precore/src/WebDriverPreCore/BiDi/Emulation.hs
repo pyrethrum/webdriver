@@ -82,7 +82,13 @@ data SetScreenOrientationOverride = MkSetScreenOrientationOverride
 
 instance ToJSON SetScreenOrientationOverride where
   toJSON :: SetScreenOrientationOverride -> Value
-  toJSON = toJSONOmitNothing
+  toJSON MkSetScreenOrientationOverride {screenOrientation, contexts, userContexts} =
+    object $
+      ["screenOrientation" .= screenOrientation]
+        <> catMaybes
+          [ opt "contexts" contexts,
+            opt "userContexts" userContexts
+          ]
 
 data SetScreenSettingsOverride = MkSetScreenSettingsOverride
   { screenArea :: Maybe ScreenArea,
@@ -113,7 +119,13 @@ data SetTimezoneOverride = MkSetTimezoneOverride
 
 instance ToJSON SetTimezoneOverride where
   toJSON :: SetTimezoneOverride -> Value
-  toJSON = toJSONOmitNothing
+  toJSON MkSetTimezoneOverride {timezone, contexts, userContexts} =
+    object $
+      ["timezone" .= timezone]
+        <> catMaybes
+          [ opt "contexts" contexts,
+            opt "userContexts" userContexts
+          ]
 
 data SetForcedColorsModeThemeOverride = MkSetForcedColorsModeThemeOverride
   { theme :: Maybe ForcedColorsModeTheme,
