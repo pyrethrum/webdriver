@@ -5,6 +5,7 @@ import BiDi.DemoUtils
 import IOUtils (DemoActions (..))
 import WebDriverPreCore.BiDi.Protocol
   ( ForcedColorsModeTheme (..),
+    GeoProperty (..),
     GeolocationCoordinates (..),
     GeolocationPositionError (..),
     NetworkConditions (..),
@@ -47,8 +48,7 @@ emulationSetGeolocationOverrideDemo =
               speed = Just 0.0
             }
       let geoOverride = MkSetGeolocationOverride
-            { coordinates = Just nycCoordinates,
-              error = Nothing,
+            { override = Coordinates nycCoordinates,
               contexts = Just [bc],
               userContexts = Nothing
             }
@@ -59,8 +59,7 @@ emulationSetGeolocationOverrideDemo =
       logTxt "Test 2: Set geolocation position error"
       let positionError = MkGeolocationPositionError { errorType = "positionUnavailable" }
       let errorOverride = MkSetGeolocationOverride
-            { coordinates = Nothing,
-              error = Just positionError,
+            { override = PositionError positionError,
               contexts = Just [bc],
               userContexts = Nothing
             }
@@ -70,8 +69,7 @@ emulationSetGeolocationOverrideDemo =
 
       logTxt "Test 3: Clear geolocation override"
       let clearOverride = MkSetGeolocationOverride
-            { coordinates = Nothing,
-              error = Nothing,
+            { override = ClearCoodrdinates,
               contexts = Just [bc],
               userContexts = Nothing
             }
@@ -357,8 +355,7 @@ emulationCompleteWorkflowDemo =
               speed = Nothing
             }
       let geoOverride1 = MkSetGeolocationOverride
-            { coordinates = Just nycCoordinates,
-              error = Nothing,
+            { override = Coordinates nycCoordinates,
               contexts = Just [bc1],
               userContexts = Nothing
             }
@@ -409,8 +406,7 @@ emulationCompleteWorkflowDemo =
               speed = Just 5.0
             }
       let geoOverride2 = MkSetGeolocationOverride
-            { coordinates = Just londonCoordinates,
-              error = Nothing,
+            { override = Coordinates londonCoordinates,
               contexts = Just [bc2],
               userContexts = Nothing
             }
@@ -452,8 +448,7 @@ emulationCompleteWorkflowDemo =
       logTxt "=== Clearing all emulation overrides ==="
       -- Clear context 1 overrides
       let clearGeo1 = MkSetGeolocationOverride
-            { coordinates = Nothing,
-              error = Nothing,
+            { override = ClearCoodrdinates,
               contexts = Just [bc1],
               userContexts = Nothing
             }
@@ -484,8 +479,7 @@ emulationCompleteWorkflowDemo =
 
       -- Clear context 2 overrides
       let clearGeo2 = MkSetGeolocationOverride
-            { coordinates = Nothing,
-              error = Nothing,
+            { override = ClearCoodrdinates,
               contexts = Just [bc2],
               userContexts = Nothing
             }

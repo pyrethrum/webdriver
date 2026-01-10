@@ -9,6 +9,7 @@ module WebDriverPreCore.BiDi.Emulation
     SetNetworkConditions (..),
     SetUserAgentOverride (..),
     SetScriptingEnabled (..),
+    GeoProperty (..),
     GeolocationCoordinates (..),
     GeolocationPositionError (..),
     ScreenArea (..),
@@ -25,42 +26,35 @@ import Data.Maybe (catMaybes)
 import Data.Text (Text)
 import GHC.Generics (Generic)
 import WebDriverPreCore.BiDi.CoreTypes (BrowsingContext, UserContext, JSUInt)
-import Data.Aeson (ToJSON (..), object, (.=), Value(Null))
+import Data.Aeson (ToJSON (..), object, (.=), Value(..))
 import AesonUtils (opt, toJSONOmitNothing)
-import Data.Aeson.Types (Value)
 
 -- ######### Remote #########
 
 -- Note: emulation module does not have a local end
 
+data GeoProperty
+  = Coordinates GeolocationCoordinates
+  | ClearCoodrdinates
+  | PositionError GeolocationPositionError
+  deriving (Show, Eq, Generic)
+
 data SetGeolocationOverride = MkSetGeolocationOverride
-  { coordinates :: Maybe GeolocationCoordinates,
-    error :: Maybe GeolocationPositionError,
+  { override :: GeoProperty,
     contexts :: Maybe [BrowsingContext],
     userContexts :: Maybe [UserContext]
   }
   deriving (Show, Eq, Generic)
 
--- Note: coordinates and error are mutually exclusive optional fields
--- When both are Nothing (clearing), send null for coordinates
--- When one is Just, omit the other to avoid "cannot be set at the same time" error
 instance ToJSON SetGeolocationOverride where
   toJSON :: SetGeolocationOverride -> Value
-  toJSON MkSetGeolocationOverride {coordinates, error, contexts, userContexts} =
-    object $ catMaybes
-      [ case (coordinates, error) of
-          (Nothing, Nothing) -> Just ("coordinates" .= Null)
-          (Just c, Nothing)  -> Just ("coordinates" .= c)
-          (Nothing, Just _)  -> Nothing
-          (Just _, Just _)   -> Just ("coordinates" .= coordinates)
-      , case (coordinates, error) of
-          (Nothing, Nothing) -> Nothing
-          (Nothing, Just e)  -> Just ("error" .= e)
-          (Just _, Nothing)  -> Nothing
-          (Just _, Just _)   -> Just ("error" .= error)
-      , opt "contexts" contexts
-      , opt "userContexts" userContexts
-      ]
+  toJSON MkSetGeolocationOverride {override, contexts, userContexts} =
+    object $ geoField <> catMaybes [opt "contexts" contexts, opt "userContexts" userContexts]
+    where
+      geoField = case override of
+        Coordinates coords -> [("coordinates" .= coords)]
+        ClearCoodrdinates -> [("coordinates" .= Null)]
+        PositionError err -> [("error" .= err)]
 
 data SetLocaleOverride = MkSetLocaleOverride
   { locale :: Maybe Text,
