@@ -286,7 +286,7 @@ instance FromJSON Cookie
 instance ToJSON Cookie where
   toJSON :: Cookie -> Value
   toJSON = toJSONOmitNothing
-  
+
 data SameSite
   = Strict
   | Lax
@@ -452,7 +452,9 @@ data SetCacheBehavior = MkSetCacheBehavior
   }
   deriving (Show, Eq, Generic)
 
-instance ToJSON SetCacheBehavior
+instance ToJSON SetCacheBehavior where
+  toJSON :: SetCacheBehavior -> Value
+  toJSON = toJSONOmitNothing
 
 -- | Cache behavior options
 data CacheBehavior
