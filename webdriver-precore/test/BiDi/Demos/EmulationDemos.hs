@@ -27,6 +27,7 @@ import WebDriverPreCore.BiDi.Protocol
 import Prelude hiding (log, putStrLn)
 
 -- >>> runDemo emulationSetGeolocationOverrideDemo
+-- *** Exception: BiDIError (ProtocolException {error = InvalidArgument, description = "The arguments passed to a command are either invalid or malformed", message = "Coordinates and error cannot be set at the same time", stacktrace = Nothing, errorData = Nothing, response = Object (fromList [("error",String "invalid argument"),("id",Number 2.0),("message",String "Coordinates and error cannot be set at the same time"),("type",String "error")])})
 emulationSetGeolocationOverrideDemo :: BiDiDemo
 emulationSetGeolocationOverrideDemo =
   demo "Emulation - Set Geolocation Override" action

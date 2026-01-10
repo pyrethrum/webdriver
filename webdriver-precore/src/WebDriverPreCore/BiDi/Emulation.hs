@@ -25,8 +25,8 @@ import Data.Maybe (catMaybes)
 import Data.Text (Text)
 import GHC.Generics (Generic)
 import WebDriverPreCore.BiDi.CoreTypes (BrowsingContext, UserContext, JSUInt)
-import Data.Aeson (ToJSON (..), object, (.=))
-import AesonUtils (opt)
+import Data.Aeson (ToJSON (..), object, (.=), Value(Null))
+import AesonUtils (opt, toJSONOmitNothing)
 import Data.Aeson.Types (Value)
 
 -- ######### Remote #########
@@ -41,7 +41,26 @@ data SetGeolocationOverride = MkSetGeolocationOverride
   }
   deriving (Show, Eq, Generic)
 
-instance ToJSON SetGeolocationOverride
+-- Note: coordinates and error are mutually exclusive optional fields
+-- When both are Nothing (clearing), send null for coordinates
+-- When one is Just, omit the other to avoid "cannot be set at the same time" error
+instance ToJSON SetGeolocationOverride where
+  toJSON :: SetGeolocationOverride -> Value
+  toJSON MkSetGeolocationOverride {coordinates, error, contexts, userContexts} =
+    object $ catMaybes
+      [ case (coordinates, error) of
+          (Nothing, Nothing) -> Just ("coordinates" .= Null)
+          (Just c, Nothing)  -> Just ("coordinates" .= c)
+          (Nothing, Just _)  -> Nothing
+          (Just _, Just _)   -> Just ("coordinates" .= coordinates)
+      , case (coordinates, error) of
+          (Nothing, Nothing) -> Nothing
+          (Nothing, Just e)  -> Just ("error" .= e)
+          (Just _, Nothing)  -> Nothing
+          (Just _, Just _)   -> Just ("error" .= error)
+      , opt "contexts" contexts
+      , opt "userContexts" userContexts
+      ]
 
 data SetLocaleOverride = MkSetLocaleOverride
   { locale :: Maybe Text,
@@ -50,7 +69,9 @@ data SetLocaleOverride = MkSetLocaleOverride
   }
   deriving (Show, Eq, Generic)
 
-instance ToJSON SetLocaleOverride
+instance ToJSON SetLocaleOverride where
+  toJSON :: SetLocaleOverride -> Value
+  toJSON = toJSONOmitNothing
 
 data SetScreenOrientationOverride = MkSetScreenOrientationOverride
   { screenOrientation :: Maybe ScreenOrientationOverride,
@@ -59,7 +80,9 @@ data SetScreenOrientationOverride = MkSetScreenOrientationOverride
   }
   deriving (Show, Eq, Generic)
 
-instance ToJSON SetScreenOrientationOverride
+instance ToJSON SetScreenOrientationOverride where
+  toJSON :: SetScreenOrientationOverride -> Value
+  toJSON = toJSONOmitNothing
 
 data SetScreenSettingsOverride = MkSetScreenSettingsOverride
   { screenArea :: Maybe ScreenArea,
@@ -88,7 +111,9 @@ data SetTimezoneOverride = MkSetTimezoneOverride
   }
   deriving (Show, Eq, Generic)
 
-instance ToJSON SetTimezoneOverride
+instance ToJSON SetTimezoneOverride where
+  toJSON :: SetTimezoneOverride -> Value
+  toJSON = toJSONOmitNothing
 
 data SetForcedColorsModeThemeOverride = MkSetForcedColorsModeThemeOverride
   { theme :: Maybe ForcedColorsModeTheme,
@@ -184,7 +209,10 @@ newtype GeolocationPositionError = MkGeolocationPositionError
   }
   deriving (Show, Eq, Generic)
 
-instance ToJSON GeolocationPositionError
+instance ToJSON GeolocationPositionError where
+  toJSON :: GeolocationPositionError -> Value
+  toJSON MkGeolocationPositionError {errorType} =
+    object ["type" .= errorType]
 
 data ScreenOrientationOverride = MkScreenOrientationOverride
   { natural :: ScreenOrientationNatural,
