@@ -143,7 +143,7 @@ browsingContextCaptureScreenshotCloseDemo =
               format =
                 Just $
                   MkImageFormat
-                    { imageType = "png",
+                    { imageType = "image/png",
                       quality = Just 0.75
                     },
               clip = Nothing
@@ -292,7 +292,8 @@ browsingContextHandleUserPromptDemo =
             resultOwnership = Nothing,
             serializationOptions = Nothing
           }
-      -- Wait for the alert to be displayed (in a production automation more sophisticated polling must be used)
+      -- Wait for the alert to be displayed 
+      -- in a production automation more sophisticated polling or event subscription would be used
       pauseAtLeast $ 500 * milliseconds
 
       logTxt "Accept the alert dialog"

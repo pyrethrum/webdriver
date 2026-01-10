@@ -10,6 +10,7 @@ import WebDriverPreCore.HTTP.Protocol as WPC
   ( BrowserName (..),
     Capabilities (..),
     FullCapabilities (..),
+    UnhandledPromptBehavior (..),
     VendorSpecific (..),
   )
 import Prelude as P
@@ -35,7 +36,7 @@ httpCapabilities MkConfig {browser} =
       setWindowRect = Nothing,
       timeouts = Nothing,
       strictFileInteractability = Nothing,
-      unhandledPromptBehavior = Nothing,
+      unhandledPromptBehavior = Just Ignore,
       webSocketUrl = Nothing,
       vendorSpecific =
         case browser of
