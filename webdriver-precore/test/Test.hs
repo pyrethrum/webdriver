@@ -23,8 +23,10 @@ import BiDi.Demos.WebExtensionDemos qualified as WebExtension
 import BiDi.ErrorDemo qualified as BiDiError
 import Config (Config (..), DemoBrowser (..))
 import ConfigLoader (loadConfig)
+import Control.Exception (catch, throw)
 import Data.Text (Text, unpack)
 import ErrorCoverageTest qualified as Error
+import Network.WebSockets (ConnectionException (..))
 import HTTP.DemoUtils (HttpDemo (..), runDemoWithConfig)
 import HTTP.ErrorDemo qualified as HttpError
 import HTTP.HttpDemo qualified as Http
@@ -172,6 +174,7 @@ bidiDemos :: Config -> TestTree
 bidiDemos cfg =
   let run = bidiTest cfg
       thisBrowser = cfg.browser
+      browserType = fromBrowser thisBrowser
       unknownCommand = unknownCommandError thisBrowser
       expectFail = biDiError thisBrowser
    in testGroup
@@ -189,14 +192,14 @@ bidiDemos cfg =
                 [ Browser.browserGetClientWindowsDemo,
                   Browser.browserCreateUserContextDemo,
                   Browser.browserGetUserContextsDemo,
-                  unknownCommand [FailsFirefox, FailsChrome]
+                  unknownCommand [FireFox', Chrome']
                     Browser.browserSetClientWindowStateDemo,
                   Browser.browserRemoveUserContextDemo,
                   Browser.browserCompleteWorkflowDemo,
-                  expectFail [FailsFirefox]
+                  expectFail [FireFox']
                     "Closing the browser in a session started with WebDriver classic is not supported"
                     Browser.browserCloseDemo,
-                  unknownCommand [FailsFirefox]
+                  unknownCommand [FireFox']
                     -- since https://www.w3.org/TR/2025/WD-webdriver-bidi-20250918/#command-browser-seProtocolExceptiontDownloadBehavior
                     Browser.browserSetDownloadBehaviorDemo
                 ],
@@ -217,19 +220,19 @@ bidiDemos cfg =
                 ],
               run
                 "Emulation"
-                [ unknownCommand [FailsFirefox, FailsChrome]
+                [ unknownCommand [FireFox', Chrome']
                     -- since https:\/\/www.w3.org\/TR\/2025\/WD-webdriver-bidi-20250729
                     Emulation.emulationSetForcedColorsModeThemeOverrideDemo,
                   Emulation.emulationSetGeolocationOverrideDemo,
                   Emulation.emulationSetLocaleOverrideDemo,
-                  unknownCommand [FailsFirefox]
+                  unknownCommand [FireFox']
                     -- since https://www.w3.org/TR/2025/WD-webdriver-bidi-20251007
                     Emulation.emulationSetNetworkConditionsDemo,
                   Emulation.emulationSetScreenOrientationOverrideDemo,
-                  unknownCommand [FailsFirefox]
+                  unknownCommand [FireFox']
                     -- since https://www.w3.org/TR/2025/WD-webdriver-bidi-20251120
                     Emulation.emulationSetScreenSettingsOverrideDemo,
-                  unknownCommand [FailsFirefox, FailsChrome]
+                  unknownCommand [FireFox', Chrome']
                     -- since https://www.w3.org/TR/2025/WD-webdriver-bidi-20250811
                     Emulation.emulationSetScriptingEnabledDemo,
                   Emulation.emulationSetTimezoneOverrideDemo,
@@ -289,18 +292,20 @@ bidiDemos cfg =
               run
                 "Session"
                 [ Session.sessionStatusDemo,
-                  expectFail [FailsFirefox, FailsChrome]
+                  expectFail [FireFox', Chrome']
                     (case thisBrowser of 
                       Firefox{} -> "Maximum number of active sessions"
                       Chrome{} -> "session already exists"
                       )
                     Session.sessionNewDemo,
-                  expectFail [FailsFirefox]
+                    -- todo: - calling `session.end` on the BiDi runner can throw `ConnectionClosed` when 
+                    -- the server closes the WebSocket after session termination - needs orchestration fix in bidi runner when sesssion is closed
+                  expectFail [FireFox']
                     "Ending a session started with WebDriver classic is not supported"
-                    Session.sessionEndDemo,
+                    (catchConnectionClosed browserType Session.sessionEndDemo),
                   Session.sessionSubscribeDemo,
                   Session.sessionUnsubscribeDemo,
-                  expectFail [FailsFirefox, FailsChrome]
+                  expectFail [FireFox', Chrome']
                     (case thisBrowser of 
                       Firefox{} -> "Maximum number of active sessions"
                       Chrome{} -> "session already exists"
@@ -337,17 +342,17 @@ bidiDemos cfg =
                   BrowsingContextEvent.browsingContextEventFragmentNavigation,
                   BrowsingContextEvent.browsingContextEventUserPrompts,
                   BrowsingContextEvent.browsingContextEventUserPromptsVariants,
-                  expectFail [FailsFirefox]
+                  expectFail [FireFox']
                     "Expected event did not fire: BrowsingContextHistoryUpdated"
                     BrowsingContextEvent.browsingContextEventHistoryUpdated,
                   -- not supporrted in geckodriver yet
-                  expectFail [FailsFirefox, FailsChrome]
+                  expectFail [FireFox', Chrome']
                     (case thisBrowser of 
                       Firefox{} -> "browsingContext.navigationAborted is not a valid event name"
                       Chrome{} -> "ERR_NAME_NOT_RESOLVED"
                       )
                     BrowsingContextEvent.browsingContextEventNavigationAborted,
-                  expectFail [FailsFirefox, FailsChrome]
+                  expectFail [FireFox', Chrome']
                     (case thisBrowser of 
                       Firefox{} -> "Error: NS_ERROR_UNKNOWN_HOST"
                       Chrome{} -> "Error: NS_ERROR_UNKNOWN_HOST"
@@ -358,7 +363,7 @@ bidiDemos cfg =
                 ],
               run
                 "Input Events"
-                [ expectFail [FailsFirefox, FailsChrome]
+                [ expectFail [FireFox', Chrome']
                     "input.fileDialogOpened is not a valid event name"
                     InputEvent.inputEventFileDialogOpened
                 ],
@@ -386,7 +391,7 @@ bidiDemos cfg =
             ]
         ]
 
-biDiError :: DemoBrowser -> [FailsIn] -> Text -> BiDiDemo -> BiDiDemo
+biDiError :: DemoBrowser -> [BrowserType] -> Text -> BiDiDemo -> BiDiDemo
 biDiError actualBrowser failBrowsers errorFragment demo@MkBiDiDemo {name, action} =
   if expectFail then
   MkBiDiDemo
@@ -397,17 +402,29 @@ biDiError actualBrowser failBrowsers errorFragment demo@MkBiDiDemo {name, action
   where
     expectFail = fromBrowser actualBrowser `elem` failBrowsers
 
-data FailsIn = FailsFirefox | FailsChrome deriving (Eq, Show)
+data BrowserType = FireFox' | Chrome' deriving (Eq, Show)
 
-fromBrowser :: DemoBrowser -> FailsIn
+fromBrowser :: DemoBrowser -> BrowserType
 fromBrowser = \case 
-  Firefox {} -> FailsFirefox
-  Chrome {} -> FailsChrome
+  Firefox {} -> FireFox'
+  Chrome {} -> Chrome'
 
-unknownCommandError :: DemoBrowser -> [FailsIn] -> BiDiDemo -> BiDiDemo
+unknownCommandError :: DemoBrowser -> [BrowserType] -> BiDiDemo -> BiDiDemo
 unknownCommandError actualBrowser failBrowsers  demo = 
   biDiError actualBrowser failBrowsers failFragement demo
   where
     failFragement = case actualBrowser of
       Chrome {} -> "not implemented"
       Firefox {} -> "unknown command"
+
+catchConnectionClosed :: BrowserType-> BiDiDemo -> BiDiDemo
+catchConnectionClosed browserType  demo@MkBiDiDemo {name, action} =
+  if browserType == Chrome' then
+    MkBiDiDemo
+      { name = name <> " - catches ConnectionClosed",
+        action = \utils bidi -> action utils bidi `catch` \case 
+          ConnectionClosed -> pure ()
+          e -> throw e
+      }
+  else demo
+
