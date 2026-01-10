@@ -387,7 +387,7 @@ browsingNavigateReloadTraverseHistoryDemo =
 
       nav1 <- navigation1Url
       logTxt "Navigate to Navigation 1"
-      navResult1 <- browsingContextNavigate $ MkNavigate {context = bc, url = nav1, wait = Nothing}
+      navResult1 <- browsingContextNavigate $ MkNavigate {context = bc, url = nav1, wait = Just Complete}
       logShow "Navigation result - Navigation 1" navResult1
       pause
 
@@ -405,18 +405,18 @@ browsingNavigateReloadTraverseHistoryDemo =
 
       nav4 <- navigation4Url
       logTxt "Navigate to Navigation 4"
-      navResult4 <- browsingContextNavigate $ MkNavigate {context = bc, url = nav4, wait = Just None}
+      navResult4 <- browsingContextNavigate $ MkNavigate {context = bc, url = nav4, wait = Just Complete}
       logShow "Navigation result - Navigation 4" navResult4
       pause
 
       logTxt "Reload current page (Navigation 4) - default options"
-      reloadResult1 <- browsingContextReload $ MkReload {context = bc, ignoreCache = Nothing, wait = Nothing}
+      reloadResult1 <- browsingContextReload $ MkReload {context = bc, ignoreCache = Nothing, wait = Just Complete}
       logShow "Reload result - default" reloadResult1
       pause
 
       nav5 <- navigation5Url
       logTxt "Navigate to Navigation 5"
-      navResult5 <- browsingContextNavigate $ MkNavigate {context = bc, url = nav5, wait = Nothing}
+      navResult5 <- browsingContextNavigate $ MkNavigate {context = bc, url = nav5, wait = Just Complete}
       logShow "Navigation result - Navigation 5" navResult5
       pause
 
@@ -428,7 +428,7 @@ browsingNavigateReloadTraverseHistoryDemo =
 
       nav6 <- navigation6Url
       logTxt "Navigate to Navigation 6"
-      navResult6 <- browsingContextNavigate $ MkNavigate {context = bc, url = nav6, wait = Nothing}
+      navResult6 <- browsingContextNavigate $ MkNavigate {context = bc, url = nav6, wait = Just Complete}
       logShow "Navigation result - Navigation 6" navResult6
       pause
 
