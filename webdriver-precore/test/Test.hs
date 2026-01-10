@@ -226,7 +226,7 @@ bidiDemos cfg =
                     -- since https://www.w3.org/TR/2025/WD-webdriver-bidi-20251007
                     Emulation.emulationSetNetworkConditionsDemo,
                   Emulation.emulationSetScreenOrientationOverrideDemo,
-                  unknownCommand [FailsFirefox, FailsChrome]
+                  unknownCommand [FailsFirefox]
                     -- since https://www.w3.org/TR/2025/WD-webdriver-bidi-20251120
                     Emulation.emulationSetScreenSettingsOverrideDemo,
                   unknownCommand [FailsFirefox, FailsChrome]
