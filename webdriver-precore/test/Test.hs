@@ -422,7 +422,10 @@ catchConnectionClosed browserType  demo@MkBiDiDemo {name, action} =
   if browserType == Chrome' then
     MkBiDiDemo
       { name = name <> " - catches ConnectionClosed",
-        action = \utils bidi -> action utils bidi `catch` \case 
+        action = \utils bidi -> do 
+           action utils bidi 
+           error "Expected ConnectionClosed exception but none thrown - has bidirunner been fixed?"
+        `catch` \case 
           ConnectionClosed -> pure ()
           e -> throw e
       }
