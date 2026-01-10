@@ -283,8 +283,10 @@ data Cookie = MkCookie
 
 instance FromJSON Cookie
 
-instance ToJSON Cookie
-
+instance ToJSON Cookie where
+  toJSON :: Cookie -> Value
+  toJSON = toJSONOmitNothing
+  
 data SameSite
   = Strict
   | Lax
