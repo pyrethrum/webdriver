@@ -598,10 +598,12 @@ data AuthRequired = MkAuthRequired
 instance FromJSON AuthRequired
 
 -- | Response data
+-- Note: responseStatus is Int (not Word/JSUInt) because Chrome sends -1 for authRequired events
+-- where the response hasn't been completed yet (deviation from spec which says js-uint)
 data ResponseData = MkResponseData
   { responseUrl :: Text,
     responseProtocol :: Text,
-    responseStatus :: Word,
+    responseStatus :: Int,
     responseStatusText :: Text,
     responseFromCache :: Bool,
     responseHeaders :: [Header],
