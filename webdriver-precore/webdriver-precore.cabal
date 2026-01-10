@@ -102,7 +102,7 @@ common commonGhcOptions
     -fno-warn-unused-do-bind 
     -Wno-overlapping-patterns 
     -Wno-deprecations
-    -fprefer-byte-code 
+    -fbyte-code-and-object-code 
     -- -fdefer-type-errors
   cpp-options: 
     -DHTMLSpecURL=https://www.w3.org/TR/2025/WD-webdriver2-20251028/
