@@ -218,13 +218,21 @@ demoWindowSizes =
       navigateTo sesId $ url
       pause
 
+      {- ChromeDriver limitation: Transitioning from fullscreen => maximized fails intermittently with
+         "failed to change window state to 'normal', current state is 'fullscreen'" on some systems.
+         This is a known ChromeDriver bug on Linux/Wayland/X11 where the window manager state doesn't
+         sync properly with ChromeDriver's internal state machine. Even with delays and state sync
+         calls (getWindowRect), the transition remains unreliable.
+         
+         Workaround: minimizeWindow => maximizeWindow => fullscreen  -}
+
       logShowM "minimizeWindow" $ minimizeWindow sesId
       pause
 
-      logShowM "fullscreen" $ fullScreenWindow sesId
-      pause
-
       logShowM "maximizeWindow" $ maximizeWindow sesId
+      pause 
+
+      logShowM "fullscreen" $ fullScreenWindow sesId
       pause
 
 -- >>> runDemo demoElementPageProps
