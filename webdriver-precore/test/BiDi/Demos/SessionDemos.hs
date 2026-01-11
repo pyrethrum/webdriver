@@ -15,7 +15,7 @@ import WebDriverPreCore.BiDi.Protocol
     SessionUnsubscribe (..),
     SubscriptionType (..),
     UserPromptHandler (..),
-    UserPromptHandlerType (..)
+    UserPromptHandlerType (..),
   )
 import Prelude hiding (log, putStrLn)
 
@@ -89,10 +89,11 @@ sessionNewDemo =
       logShow "Capabilities result" newSession.capabilities
       pause
 
+-- TODO: Add orchestration between receive loop and session.end to suppress ConnectionClosed when connection closes gracefully
+
 -- >>> runDemo sessionEndDemo
 sessionEndDemo :: BiDiDemo
 sessionEndDemo =
-  -- this test to be updates for drivers that support BiDi session new and ending
   demo "Session - End Session" action
   where
     action :: DemoActions -> BiDiActions -> IO ()

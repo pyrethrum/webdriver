@@ -23,7 +23,7 @@ import BiDi.Demos.WebExtensionDemos qualified as WebExtension
 import BiDi.ErrorDemo qualified as BiDiError
 import Config (Config (..), DemoBrowser (..))
 import ConfigLoader (loadConfig)
-import Control.Exception (catch, throw)
+import Control.Exception (SomeException, catch, throw)
 import Data.Text (Text, unpack)
 import ErrorCoverageTest qualified as Error
 import Network.WebSockets (ConnectionException (..))
@@ -117,12 +117,16 @@ bidiSingleForDebug cfg =
 
 httpDemos :: Config -> TestTree
 httpDemos cfg =
-  testGroup
-    "HTTP Demos"
-    $ fromHttpDemo cfg
-      <$> [ Http.newSessionDemo,
-            Http.driverStatusDemo,
-            Http.demoSendKeysClear,
+  let thisBrowser = cfg.browser
+      expectHttpFail = httpError thisBrowser
+   in testGroup
+        "HTTP Demos"
+        $ fromHttpDemo cfg
+          <$> [ Http.newSessionDemo,
+                -- W3C spec requires status.ready=false when sessions exist. Chrome diverges from spec.
+                expectHttpFail [Chrome'] "status.ready expected to be False"
+                  Http.driverStatusDemo,
+                Http.demoSendKeysClear,
             Http.demoForwardBackRefresh,
             -- this test is redundant but used in docs so run anyway
             Http.documentationDemo,
@@ -391,16 +395,18 @@ bidiDemos cfg =
             ]
         ]
 
+expectFailure :: DemoBrowser -> [BrowserType] -> Bool
+expectFailure actualBrowser failBrowsers = 
+  fromBrowser actualBrowser `elem` failBrowsers
+
 biDiError :: DemoBrowser -> [BrowserType] -> Text -> BiDiDemo -> BiDiDemo
 biDiError actualBrowser failBrowsers errorFragment demo@MkBiDiDemo {name, action} =
-  if expectFail then
+  if expectFailure actualBrowser failBrowsers then
   MkBiDiDemo
     { name = name <> " - EXPECTED ERROR: " <> errorFragment,
       action = \utils bidi -> expectError name errorFragment (action utils bidi)
     }
   else demo
-  where
-    expectFail = fromBrowser actualBrowser `elem` failBrowsers
 
 data BrowserType = FireFox' | Chrome' deriving (Eq, Show)
 
@@ -416,6 +422,34 @@ unknownCommandError actualBrowser failBrowsers  demo =
     failFragement = case actualBrowser of
       Chrome {} -> "not implemented"
       Firefox {} -> "unknown command"
+
+httpError :: DemoBrowser -> [BrowserType] -> Text -> HttpDemo -> HttpDemo
+httpError actualBrowser failBrowsers errorFragment demo =
+  if expectFailure actualBrowser failBrowsers then
+    case demo of
+      Demo {name, action} ->
+        Demo
+          { name = name <> " - EXPECTED ERROR: " <> errorFragment,
+            action = \demoActions httpActions ->
+              catch
+                ( do
+                    action demoActions httpActions
+                    error $ "Expected test to fail with error containing: " <> unpack errorFragment
+                )
+                (\(_ :: SomeException) -> pure ())
+          }
+      SessionDemo {name, sessionAction} ->
+        SessionDemo
+          { name = name <> " - EXPECTED ERROR: " <> errorFragment,
+            sessionAction = \session demoActions httpActions ->
+              catch
+                ( do
+                    sessionAction session demoActions httpActions
+                    error $ "Expected test to fail with error containing: " <> unpack errorFragment
+                )
+                (\(_ :: SomeException) -> pure ())
+          }
+  else demo
 
 catchConnectionClosed :: BrowserType-> BiDiDemo -> BiDiDemo
 catchConnectionClosed browserType  demo@MkBiDiDemo {name, action} =
