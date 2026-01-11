@@ -378,7 +378,7 @@ bidiDemos cfg =
                       Firefox{} -> "browsingContext.navigationAborted is not a valid event name"
                       Chrome{} -> "Expected event did not fire: BrowsingContextNavigationAborted"
                       )
-                    BrowsingContextEvent.browsingContextEventNavigationAborted,
+                      BrowsingContextEvent.browsingContextEventNavigationAborted,
                   expectFail [Firefox', Chrome']
                     (case thisBrowser of 
                       Firefox{} -> "NS_ERROR_UNKNOWN_HOST"
@@ -390,8 +390,11 @@ bidiDemos cfg =
                 ],
               run
                 "Input Events"
-                [ expectFail [Firefox', Chrome']
-                    "input.fileDialogOpened is not a valid event name"
+                [ expectFail [Chrome'] (
+                  case thisBrowser of 
+                    Firefox{} -> "input.fileDialogOpened is not a valid event name"
+                    Chrome{} -> "key \"params\" not found"
+                )
                     InputEvent.inputEventFileDialogOpened
                 ],
               run

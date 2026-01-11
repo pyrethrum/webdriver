@@ -26,6 +26,7 @@ Input Events - Implementation Status:
 
 1. input.fileDialogOpened :: ✗ inputEventFileDialogOpened, inputEventFileDialogOpenedMultiple 
    (not implemented in geckodriver - bugs 1855044, 1855045)
+   (chromedriver sends malformed event - missing params wrapper)
    
 Note: The input.fileDialogOpened event is not yet implemented in geckodriver.
 See:
@@ -34,11 +35,13 @@ See:
 - Status: NEW (as of m18 milestone, last updated October 2025)
 - WebDriver BiDi spec: https://w3c.github.io/webdriver-bidi/#event-input-fileDialogOpened
 
-The demos below are ready for when the feature is implemented.
+ChromeDriver has implemented this event but sends malformed data - it omits the required
+"params" wrapper per the WebDriver BiDi spec. The spec requires event data to be wrapped
+in a params field, but ChromeDriver sends the data directly at the top level.
+
+The demos below are ready for when the feature is correctly implemented.
 -}
 
--- >>> runDemo inputEventFileDialogOpened
--- *** Exception: BiDIError (ProtocolException {error = InvalidArgument, description = "The arguments passed to a command are either invalid or malformed", message = "Invalid input in \"actions\"/0.", stacktrace = Nothing, errorData = Nothing, response = Object (fromList [("error",String "invalid argument"),("id",Number 6.0),("message",String "Invalid input in \"actions\"/0."),("type",String "error")])})
 inputEventFileDialogOpened :: BiDiDemo
 inputEventFileDialogOpened =
   demo "Input Events - File Dialog Opened (Single File)" action
