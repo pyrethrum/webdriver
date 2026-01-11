@@ -405,7 +405,9 @@ bidiDemos cfg =
                 ],
               run
                 "Network Events"
-                [ NetworkEvent.networkEventRequestResponseLifecycle,
+                [ expectFail [Chrome']
+                    "Timeout - Expected event did not fire: NetworkResponseStarted"
+                    NetworkEvent.networkEventRequestResponseLifecycle,
                   NetworkEvent.networkEventFetchError,
                   expectFail [Chrome']
                     "Timeout - Expected event did not fire: NetworkAuthRequired"

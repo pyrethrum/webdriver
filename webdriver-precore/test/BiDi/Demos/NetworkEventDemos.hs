@@ -17,12 +17,11 @@ import WebDriverPreCore.BiDi.Protocol
 import Prelude hiding (log, putStrLn)
 
 -- >>> runDemo networkEventRequestResponseLifecycle
+-- *** Exception: user error (Timeout - Expected event did not fire: NetworkResponseStarted after 10000 milliseconds)
 networkEventRequestResponseLifecycle :: BiDiDemo
 networkEventRequestResponseLifecycle =
   demo "Network Events - Complete Request/Response Lifecycle" action
   where
-    -- NOTE: This demo may timeout waiting for NetworkBeforeRequestSent due to incomplete
-    -- GeckoDriver support. See networkEventBeforeRequestSent comment above for details.
     action :: DemoActions -> BiDiActions -> IO ()
     action utils@MkDemoActions {..} bidi@MkBiDiActions {..} = do
       logTxt "Subscribe to all network lifecycle events"
