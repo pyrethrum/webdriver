@@ -377,7 +377,6 @@ browsingContextHandleUserPromptDemo =
       pause
 
 -- >>> runDemo browsingNavigateReloadTraverseHistoryDemo
--- *** Exception: BiDIError (ProtocolException {error = NoSuchHistoryEntry, description = "Tried to navigate to an unknown session history entry", message = "No history entry at delta 2", stacktrace = Nothing, errorData = Nothing, response = Object (fromList [("error",String "no such history entry"),("id",Number 14.0),("message",String "No history entry at delta 2"),("type",String "error")])})
 browsingNavigateReloadTraverseHistoryDemo :: BiDiDemo
 browsingNavigateReloadTraverseHistoryDemo =
   demo "Browsing Context - Navigate, Reload, Traverse History" action
@@ -441,32 +440,34 @@ browsingNavigateReloadTraverseHistoryDemo =
       logTxt "Test history traversal - Go back 1 step (to Navigation 5)"
       historyResult1 <- browsingContextTraverseHistory $ MkTraverseHistory {context = bc, delta = MkJSInt (-1)}
       logShow "History traversal result - back 1" historyResult1
-      pause
+      -- there is an issue in chromedriver where navigating back too quickly causes a failure
+      -- would need a better solution in production code (retries, waits, event listening, etc )
+      pauseAtLeast (100 * milliseconds)
 
       logTxt "Go back 2 more steps (to Navigation 3)"
       historyResult2 <- browsingContextTraverseHistory $ MkTraverseHistory {context = bc, delta = MkJSInt (-2)}
       logShow "History traversal result - back 2" historyResult2
-      pause
+      pauseAtLeast (100 * milliseconds)
 
       logTxt "Go back 1 more step (to Navigation 2)"
       historyResult3 <- browsingContextTraverseHistory $ MkTraverseHistory {context = bc, delta = MkJSInt (-1)}
       logShow "History traversal result - back 1" historyResult3
-      pause
+      pauseAtLeast (100 * milliseconds)
 
       logTxt "Go forward 1 step (to Navigation 3)"
       historyResult4 <- browsingContextTraverseHistory $ MkTraverseHistory {context = bc, delta = MkJSInt 1}
       logShow "History traversal result - forward 1" historyResult4
-      pause
+      pauseAtLeast (100 * milliseconds)
 
       logTxt "Go forward 2 steps (to Navigation 5)"
       historyResult5 <- browsingContextTraverseHistory $ MkTraverseHistory {context = bc, delta = MkJSInt 2}
       logShow "History traversal result - forward 2" historyResult5
-      pause
+      pauseAtLeast (100 * milliseconds)
 
       logTxt "Go forward 1 step (to Navigation 6)"
       historyResult6 <- browsingContextTraverseHistory $ MkTraverseHistory {context = bc, delta = MkJSInt 1}
       logShow "History traversal result - forward 1" historyResult6
-      pause
+      pauseAtLeast (100 * milliseconds)
 
       logTxt "Final navigation - back to Navigation 1"
       navResultFinal <- browsingContextNavigate $ MkNavigate {context = bc, url = nav1, wait = Just Complete}

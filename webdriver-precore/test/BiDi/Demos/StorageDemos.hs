@@ -1,7 +1,7 @@
 module BiDi.Demos.StorageDemos where
 
 import BiDi.Actions (BiDiActions (..))
-import BiDi.DemoUtils ( demo, rootContext, BiDiDemo )
+import BiDi.DemoUtils 
 import IOUtils (DemoActions (..))
 import WebDriverPreCore.BiDi.Protocol
   ( CookieFilter (..),
@@ -83,6 +83,7 @@ storageGetCookiesDemo =
       pause
 
 -- >>> runDemo storageSetCookieDemo
+-- *** Exception: BiDIError (ProtocolException {error = UnableToSetCookie, description = "Tried to create a cookie, but the user agent rejected it", message = "[object Object]", stacktrace = Nothing, errorData = Nothing, response = Object (fromList [("error",String "unable to set cookie"),("id",Number 4.0),("message",String "[object Object]"),("type",String "error")])})
 storageSetCookieDemo :: BiDiDemo
 storageSetCookieDemo =
   demo "Storage - Set Cookie" action
