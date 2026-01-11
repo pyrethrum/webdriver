@@ -18,6 +18,7 @@ _stopDemoUnusedWarning :: BiDiDemo -> IO ()
 _stopDemoUnusedWarning = runDemo
 
 -- >>> runDemo webExtensionInstallPathDemo
+-- *** Exception: BiDIError (ProtocolException {error = UnknownError, description = "An unknown error occurred in the remote end while processing the command", message = "Method not available.", stacktrace = Just "Error\n    at new UnknownErrorException (<anonymous>:65:5630)\n    at CommandProcessor.processCommand (<anonymous>:485:13324)", errorData = Nothing, response = Object (fromList [("error",String "unknown error"),("id",Number 1.0),("message",String "Method not available."),("stacktrace",String "Error\n    at new UnknownErrorException (<anonymous>:65:5630)\n    at CommandProcessor.processCommand (<anonymous>:485:13324)"),("type",String "error")])})
 webExtensionInstallPathDemo :: BiDiDemo
 webExtensionInstallPathDemo =
   demo "WebExtension - Install from Path" action

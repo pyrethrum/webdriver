@@ -340,9 +340,16 @@ bidiDemos cfg =
                 ],
               run
                 "WebExtension"
-                [ WebExtension.webExtensionInstallPathDemo,
-                  WebExtension.webExtensionInstallArchiveDemo,
-                  WebExtension.webExtensionInstallBase64Demo,
+                [ -- ChromeDriver doesn't support BiDi WebExtension methods
+                  expectFail [Chrome']
+                    "Method not available"
+                    WebExtension.webExtensionInstallPathDemo,
+                  expectFail [Chrome']
+                    "Archived and Base64 extensions are not supported"
+                    WebExtension.webExtensionInstallArchiveDemo,
+                  expectFail [Chrome']
+                    "Archived and Base64 extensions are not supported"
+                    WebExtension.webExtensionInstallBase64Demo,
                   WebExtension.webExtensionValidationDemo
                 ]
             ],
