@@ -390,13 +390,20 @@ bidiDemos cfg =
                 ],
               run
                 "Input Events"
-                [ expectFail [Chrome'] (
-                  case thisBrowser of 
-                    Firefox{} -> "input.fileDialogOpened is not a valid event name"
-                    Chrome{} -> "key \"params\" not found"
-                )
-                    InputEvent.inputEventFileDialogOpened
-                ],
+                [],
+              -- TODO: Parsing exceptions from BiDi event handlers occur in background threads
+              -- and are not caught by expectError in the main thread. This needs to be fixed
+              -- in the BiDi runner to propagate parsing exceptions back to the main thread.
+              -- running with chrome will get: Error in $: parsing WebDriverPreCore.BiDi.Input.FileDialogOpened(MkFileDialogOpened) failed, key "params" not found
+              -- this appears to be a chromeDriver bug
+              run
+                "Input Events - File Dialog Opened" (
+                  if browserType == Chrome' then []
+                  else [
+                   expectFail [Firefox'] 
+                      "input.fileDialogOpened is not a valid event name"
+                      InputEvent.inputEventFileDialogOpened
+                  ]),
               run
                 "Log Events"
                 [ LogEvent.logEventConsoleEntries,

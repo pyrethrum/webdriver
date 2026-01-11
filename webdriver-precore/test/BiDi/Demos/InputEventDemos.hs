@@ -42,6 +42,7 @@ in a params field, but ChromeDriver sends the data directly at the top level.
 The demos below are ready for when the feature is correctly implemented.
 -}
 
+-- >>> runDemo inputEventFileDialogOpened
 inputEventFileDialogOpened :: BiDiDemo
 inputEventFileDialogOpened =
   demo "Input Events - File Dialog Opened (Single File)" action
