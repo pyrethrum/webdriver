@@ -90,6 +90,7 @@ networkEventFetchError =
           ]
 
 -- >>> runDemo networkEventAuthRequired
+-- *** Exception: user error (Timeout - Expected event did not fire: NetworkAuthRequired after 10000 milliseconds)
 networkEventAuthRequired :: BiDiDemo
 networkEventAuthRequired =
   demo "Network Events - Auth Required (requires auth-protected URL)" action
@@ -108,9 +109,10 @@ networkEventAuthRequired =
       logTxt "Navigate to auth-protected URL to trigger AuthRequired event"
 
       withTestServer $ do
+        logTxt "Waiting for auth required events..."
 
         sendCommandNoWait . mkCommand BrowsingContextNavigate $ MkNavigate {context = bc, url = MkUrl authTestUrl, wait = Nothing}
-        logTxt "Waiting for auth required events..."
+        
         pause
 
         sequence_
