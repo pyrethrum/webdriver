@@ -332,7 +332,10 @@ bidiDemos cfg =
                 [ Storage.storageGetCookiesDemo,
                   Storage.storageSetCookieDemo,
                   Storage.storageDeleteCookiesDemo,
-                  Storage.storagePartitionKeyDemo,
+                  -- ChromeDriver does not support storageKey partition type in storage.setCookie
+                  expectFail [Chrome']
+                    "unable to set cookie"
+                    Storage.storagePartitionKeyDemo,
                   Storage.storageCompleteWorkflowDemo
                 ],
               run
