@@ -373,13 +373,13 @@ bidiDemos cfg =
                   expectFail [Firefox', Chrome']
                     (case thisBrowser of 
                       Firefox{} -> "browsingContext.navigationAborted is not a valid event name"
-                      Chrome{} -> "ERR_NAME_NOT_RESOLVED"
+                      Chrome{} -> "Expected event did not fire: BrowsingContextNavigationAborted"
                       )
                     BrowsingContextEvent.browsingContextEventNavigationAborted,
                   expectFail [Firefox', Chrome']
                     (case thisBrowser of 
                       Firefox{} -> "Error: NS_ERROR_UNKNOWN_HOST"
-                      Chrome{} -> "Error: NS_ERROR_UNKNOWN_HOST"
+                      Chrome{} -> "Error: ERR_NAME_NOT_RESOLVED"
                       )
                     BrowsingContextEvent.browsingContextEventNavigationFailed,
                   BrowsingContextEvent.browsingContextEventDownloadWillBegin,

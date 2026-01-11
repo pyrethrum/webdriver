@@ -570,16 +570,20 @@ browsingContextEventHistoryUpdated =
         ]
 
 -- >>> runDemo browsingContextEventNavigationAborted
+-- *** Exception: user error (Timeout - Expected event did not fire: BrowsingContextNavigationAborted after 10000 milliseconds)
 browsingContextEventNavigationAborted :: BiDiDemo
 browsingContextEventNavigationAborted =
   demo "Browsing Context Events - Navigation Aborted" action
   where
-    -- NOTE: browsingContext.navigationAborted event is not yet implemented in geckodriver
-    -- The subscription fails with InvalidArgument error:
-    -- "browsingContext.navigationAborted is not a valid event name"
-    -- This event is defined in the WebDriver BiDi spec but not yet supported by geckodriver
-    -- See: https://bugzilla.mozilla.org/show_bug.cgi?id=1874362
-    -- Status: NEW (as of 2025-09-17)
+    -- NOTE: browsingContext.navigationAborted event support varies by driver:
+    -- 
+    -- geckodriver: Not implemented. The subscription fails with InvalidArgument error:
+    --   "browsingContext.navigationAborted is not a valid event name"
+    --   See: https://bugzilla.mozilla.org/show_bug.cgi?id=1874362
+    --   Status: NEW (as of 2025-09-17)
+    --
+    -- chromedriver: Partially implemented. Accepts subscriptions but does not emit the event.
+    --   The test times out waiting for the event that never fires.
     action :: DemoActions -> BiDiActions -> IO ()
     action utils@MkDemoActions {..} bidi@MkBiDiActions {..} = do
       logTxt "Subscribe to NavigationAborted event"
@@ -617,16 +621,20 @@ browsingContextEventNavigationAborted =
         ]
 
 -- >>> runDemo browsingContextEventNavigationFailed
+-- *** Exception: BiDIError (ProtocolException {error = UnknownError, description = "An unknown error occurred in the remote end while processing the command", message = "net::ERR_NAME_NOT_RESOLVED", stacktrace = Just "Error\n    at new UnknownErrorException (<anonymous>:65:5630)\n    at BrowsingContextImpl.navigate (<anonymous>:679:14660)\n    at async #processCommand (<anonymous>:485:5805)\n    at async CommandProcessor.processCommand (<anonymous>:485:12768)", errorData = Nothing, response = Object (fromList [("error",String "unknown error"),("id",Number 4.0),("message",String "net::ERR_NAME_NOT_RESOLVED"),("stacktrace",String "Error\n    at new UnknownErrorException (<anonymous>:65:5630)\n    at BrowsingContextImpl.navigate (<anonymous>:679:14660)\n    at async #processCommand (<anonymous>:485:5805)\n    at async CommandProcessor.processCommand (<anonymous>:485:12768)"),("type",String "error")])})
 browsingContextEventNavigationFailed :: BiDiDemo
 browsingContextEventNavigationFailed =
-  demo "Browsing Context Events - Navigation Failed (NOT WORKING - geckodriver issue)" action
+  demo "Browsing Context Events - Navigation Failed (NOT WORKING - driver issue)" action
   where
     -- NOTE: browsingContext.navigationFailed event is implemented in the library,
-    -- but geckodriver throws an error on the navigate command itself for DNS failures
-    -- (NS_ERROR_UNKNOWN_HOST) rather than starting the navigation and then firing
+    -- but both geckodriver and chromedriver throw an error on the navigate command 
+    -- itself for DNS failures rather than starting the navigation and then firing
     -- a navigationFailed event.
     --
-    -- This appears to be a geckodriver behavior issue. The navigate command returns
+    -- geckodriver throws: NS_ERROR_UNKNOWN_HOST
+    -- chromedriver throws: ERR_NAME_NOT_RESOLVED
+    --
+    -- This appears to be a driver behavior issue. The navigate command returns
     -- an error before the navigation lifecycle begins, so no navigationFailed event
     -- is emitted.
     --
