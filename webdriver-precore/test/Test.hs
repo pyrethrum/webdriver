@@ -3,7 +3,7 @@
 module Main where
 
 import ApiCoverageTest qualified as API
-import BiDi.DemoUtils (BiDiDemo (..), expectError, runDemo')
+import BiDi.DemoUtils (BiDiDemo (..), expectError, runDemo', FailTest (..), toText)
 import BiDi.Demos.BrowserDemos qualified as Browser
 import BiDi.Demos.BrowsingContextDemos qualified as BrowsingContext
 import BiDi.Demos.BrowsingContextEventDemos qualified as BrowsingContextEvent
@@ -23,10 +23,9 @@ import BiDi.Demos.WebExtensionDemos qualified as WebExtension
 import BiDi.ErrorDemo qualified as BiDiError
 import Config (Config (..), DemoBrowser (..))
 import ConfigLoader (loadConfig)
-import Control.Exception (SomeException, catch, throw)
+import Control.Exception (SomeException, catch)
 import Data.Text (Text, unpack)
 import ErrorCoverageTest qualified as Error
-import Network.WebSockets (ConnectionException (..))
 import HTTP.DemoUtils (HttpDemo (..), runDemoWithConfig)
 import HTTP.ErrorDemo qualified as HttpError
 import HTTP.HttpDemo qualified as Http
@@ -36,6 +35,7 @@ import HTTP.FallbackDemo qualified as HttpFallback
 import JSONParsingTest qualified as JSON
 import Test.Tasty (TestTree, defaultMain, testGroup)
 import Test.Tasty.HUnit (testCase)
+import qualified Data.Text as T
 
 main :: IO ()
 main = do
@@ -180,7 +180,7 @@ bidiDemos cfg =
       thisBrowser = cfg.browser
       browserType = fromBrowser thisBrowser
       unknownCommand = unknownCommandError thisBrowser
-      expectFail = biDiError thisBrowser
+      expectFail bts txt = biDiError thisBrowser bts (Fragment txt)
    in testGroup
         "BiDi Demos"
         [ testGroup
@@ -421,12 +421,12 @@ expectFailure :: DemoBrowser -> [BrowserType] -> Bool
 expectFailure actualBrowser failBrowsers = 
   fromBrowser actualBrowser `elem` failBrowsers
 
-biDiError :: DemoBrowser -> [BrowserType] -> Text -> BiDiDemo -> BiDiDemo
-biDiError actualBrowser failBrowsers errorFragment demo@MkBiDiDemo {name, action} =
+biDiError :: DemoBrowser -> [BrowserType] -> FailTest -> BiDiDemo -> BiDiDemo
+biDiError actualBrowser failBrowsers failTest demo@MkBiDiDemo {name, action} =
   if expectFailure actualBrowser failBrowsers then
   MkBiDiDemo
-    { name = name <> " - EXPECTED ERROR: " <> errorFragment,
-      action = \utils bidi -> expectError name errorFragment (action utils bidi)
+    { name = name <> " - EXPECTED ERROR: " <> toText failTest,
+      action = \utils bidi -> expectError name failTest (action utils bidi)
     }
   else demo
 
@@ -439,12 +439,10 @@ fromBrowser = \case
 
 unknownCommandError :: DemoBrowser -> [BrowserType] -> BiDiDemo -> BiDiDemo
 unknownCommandError actualBrowser failBrowsers  demo = 
-  biDiError actualBrowser failBrowsers failFragement demo
+  biDiError actualBrowser failBrowsers failTest demo
   where
-    failFragement = case actualBrowser of
-      Chrome {} -> "not implemented"
-      Firefox {} -> "unknown command"
-
+    failTest = Predicate \txt -> "not implemented" `T.isInfixOf` txt || "unknown command" `T.isInfixOf` txt
+    
 httpError :: DemoBrowser -> [BrowserType] -> Text -> HttpDemo -> HttpDemo
 httpError actualBrowser failBrowsers errorFragment demo =
   if expectFailure actualBrowser failBrowsers then

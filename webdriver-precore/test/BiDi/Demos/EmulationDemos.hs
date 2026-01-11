@@ -188,31 +188,7 @@ emulationSetScreenOrientationOverrideDemo =
       pause
 
 -- >>> runDemo emulationSetScreenSettingsOverrideDemo
--- *** Exception: Error executing BiDi command: With JSON: 
--- {
---     "id": 2,
---     "method": "emulation.setScreenSettingsOverride",
---     "params": {
---         "contexts": [
---             "a09acf51-3f41-4728-a27a-8864b7dcee8d"
---         ],
---         "screenArea": {
---             "height": 1080,
---             "width": 1920
---         }
---     }
--- }
--- BiDi driver error: 
--- MkDriverError
---   { id = Just 2
---   , error = UnknownCommand
---   , description = "The command sent is not known"
---   , message = "emulation.setScreenSettingsOverride"
---   , stacktrace =
---       Just
---         "RemoteError@chrome://remote/content/shared/RemoteError.sys.mjs:8:8\nWebDriverError@chrome://remote/content/shared/webdriver/Errors.sys.mjs:202:5\nUnknownCommandError@chrome://remote/content/shared/webdriver/Errors.sys.mjs:944:5\nexecute@chrome://remote/content/shared/webdriver/Session.sys.mjs:407:13\nonPacket@chrome://remote/content/webdriver-bidi/WebDriverBiDiConnection.sys.mjs:236:37\nonMessage@chrome://remote/content/server/WebSocketTransport.sys.mjs:127:18\nhandleEvent@chrome://remote/content/server/WebSocketTransport.sys.mjs:109:14\n"
---   , extensions = MkEmptyResult { extensible = fromList [] }
---   }
+-- *** Exception: BiDIError (ProtocolException {error = UnknownCommand, description = "A command could not be executed because the remote end is not aware of it", message = "Unknown command 'emulation.setScreenSettingsOverride'.", stacktrace = Nothing, errorData = Nothing, response = Object (fromList [("error",String "unknown command"),("id",Number 2.0),("message",String "Unknown command 'emulation.setScreenSettingsOverride'."),("type",String "error")])})
 emulationSetScreenSettingsOverrideDemo :: BiDiDemo
 emulationSetScreenSettingsOverrideDemo =
   demo "Emulation - Set Screen Settings Override - since https://www.w3.org/TR/2025/WD-webdriver-bidi-20251120" action
