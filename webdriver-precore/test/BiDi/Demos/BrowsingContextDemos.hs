@@ -377,6 +377,7 @@ browsingContextHandleUserPromptDemo =
       pause
 
 -- >>> runDemo browsingNavigateReloadTraverseHistoryDemo
+-- *** Exception: BiDIError (ProtocolException {error = NoSuchHistoryEntry, description = "Tried to navigate to an unknown session history entry", message = "No history entry at delta 2", stacktrace = Nothing, errorData = Nothing, response = Object (fromList [("error",String "no such history entry"),("id",Number 14.0),("message",String "No history entry at delta 2"),("type",String "error")])})
 browsingNavigateReloadTraverseHistoryDemo :: BiDiDemo
 browsingNavigateReloadTraverseHistoryDemo =
   demo "Browsing Context - Navigate, Reload, Traverse History" action

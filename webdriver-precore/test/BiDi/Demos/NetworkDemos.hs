@@ -1411,6 +1411,7 @@ networkCacheBehaviorDemo =
 
 
 -- >>> runDemo networkSetExtraHeadersDemo
+-- *** Exception: BiDIError (ProtocolException {error = UnsupportedOperation, description = "Indicates that a command that should have executed properly cannot be supported for some reason", message = "Only string headers values are supported", stacktrace = Nothing, errorData = Nothing, response = Object (fromList [("error",String "unsupported operation"),("id",Number 6.0),("message",String "Only string headers values are supported"),("type",String "error")])})
 networkSetExtraHeadersDemo :: BiDiDemo
 networkSetExtraHeadersDemo =
   demo "Network XI - Set Extra Headers -- since https://www.w3.org/TR/2025/WD-webdriver-bidi-20251106" action

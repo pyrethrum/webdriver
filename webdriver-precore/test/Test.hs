@@ -279,7 +279,10 @@ bidiDemos cfg =
                   Network.networkDisownDataDemo,
                   Network.networkCacheBehaviorDemo,
                   -- since https://www.w3.org/TR/2025/WD-webdriver-bidi-20251106
-                  Network.networkSetExtraHeadersDemo
+                  expectFail [Chrome']
+                    -- Chromedriver does not support setting non-string header values
+                    "Only string headers values are supported"
+                    Network.networkSetExtraHeadersDemo
                 ],
               run
                 "Script"
