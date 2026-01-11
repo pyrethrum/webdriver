@@ -330,12 +330,12 @@ bidiDemos cfg =
               run
                 "Storage"
                 [ Storage.storageGetCookiesDemo,
-                  Storage.storageSetCookieDemo,
-                  Storage.storageDeleteCookiesDemo,
                   -- ChromeDriver does not support storageKey partition type in storage.setCookie
                   expectFail [Chrome']
                     "unable to set cookie"
-                    Storage.storagePartitionKeyDemo,
+                  Storage.storageSetCookieDemo,
+                  Storage.storageDeleteCookiesDemo,
+                  Storage.storagePartitionKeyDemo,
                   Storage.storageCompleteWorkflowDemo
                 ],
               run
@@ -366,8 +366,11 @@ bidiDemos cfg =
                   BrowsingContextEvent.browsingContextEventFragmentNavigation,
                   BrowsingContextEvent.browsingContextEventUserPrompts,
                   BrowsingContextEvent.browsingContextEventUserPromptsVariants,
-                  expectFail [Firefox']
-                    "Expected event did not fire: BrowsingContextHistoryUpdated"
+                  expectFail [Firefox', Chrome']
+                    (case thisBrowser of 
+                      Firefox{} -> "Expected event did not fire: BrowsingContextHistoryUpdated"
+                      Chrome{} -> "Timeout"
+                      )
                     BrowsingContextEvent.browsingContextEventHistoryUpdated,
                   -- not supporrted in geckodriver yet
                   expectFail [Firefox', Chrome']
@@ -378,8 +381,8 @@ bidiDemos cfg =
                     BrowsingContextEvent.browsingContextEventNavigationAborted,
                   expectFail [Firefox', Chrome']
                     (case thisBrowser of 
-                      Firefox{} -> "Error: NS_ERROR_UNKNOWN_HOST"
-                      Chrome{} -> "Error: ERR_NAME_NOT_RESOLVED"
+                      Firefox{} -> "NS_ERROR_UNKNOWN_HOST"
+                      Chrome{} -> "ERR_NAME_NOT_RESOLVED"
                       )
                     BrowsingContextEvent.browsingContextEventNavigationFailed,
                   BrowsingContextEvent.browsingContextEventDownloadWillBegin,

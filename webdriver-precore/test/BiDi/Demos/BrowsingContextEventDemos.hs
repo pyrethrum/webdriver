@@ -511,7 +511,7 @@ browsingContextEventUserPromptsVariants =
       pause
 
 -- >>> runDemo browsingContextEventHistoryUpdated
--- *** Exception: user error (Timeout - Expected event did not fire: BrowsingContextHistoryUpdated)
+-- *** Exception: user error (Timeout - Expected event did not fire: BrowsingContextHistoryUpdated after 10000 milliseconds)
 browsingContextEventHistoryUpdated :: BiDiDemo
 browsingContextEventHistoryUpdated =
   demo "Browsing Context Events - History Updated" action
