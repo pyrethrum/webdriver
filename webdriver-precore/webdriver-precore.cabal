@@ -106,7 +106,7 @@ common commonGhcOptions
     -- -fdefer-type-errors
   cpp-options: 
     -DHTMLSpecURL=https://www.w3.org/TR/2025/WD-webdriver2-20251028/
-    -DBiDiSpecURL=https://www.w3.org/TR/2025/WD-webdriver-bidi-20251212/
+    -DBiDiSpecURL=https://www.w3.org/TR/2026/WD-webdriver-bidi-20260109/
 
 library utils-internal
   import: commonExtensions, commonGhcOptions
