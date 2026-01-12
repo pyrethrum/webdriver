@@ -222,6 +222,7 @@ bidiDemos cfg =
                   BrowsingContext.browsingContextHandleUserPromptDemo,
                   BrowsingContext.browsingNavigateReloadTraverseHistoryDemo,
                   BrowsingContext.browsingContextLocateNodesDemo,
+                  BrowsingContext.browsingContextContextLocatorDemo,
                   BrowsingContext.browsingContextPrintDemo,
                   BrowsingContext.browsingContextSetViewportDemo,
                   BiDiError.errorDemo

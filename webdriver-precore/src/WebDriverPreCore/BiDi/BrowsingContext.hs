@@ -345,7 +345,7 @@ instance ToJSON Locator where
     Context {context} ->
       object
         [ "type" .= "context",
-          "context" .= context
+          "value" .= object ["context" .= context]
         ]
     InnerText {value, ignoreCase, matchType, maxDepth} ->
       object $
