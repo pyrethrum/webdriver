@@ -174,7 +174,7 @@ ChromeDriver was started successfully on port 4444.
 [X] chromedriver working
 [X] rerun firefox 
 [x] Claud audit
-[ ] spec update
+[X] spec update
 [ ] docs lfs git
 [ ] devcontainer fixed
 [ ] use one base container for dev-container and CI (update)

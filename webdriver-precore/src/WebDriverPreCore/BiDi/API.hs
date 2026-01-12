@@ -6,7 +6,7 @@ module WebDriverPreCore.BiDi.API
     --
     -- Not all commands and subscriptions will be supported by all [BiDi drivers yet](https://wpt.fyi/results/webdriver/tests/bidi?label=experimental&label=master&aligned), as the specification is [still evolving](https://www.w3.org/standards/history/webdriver-bidi/) rapidly.
     -- 
-    -- See the demos in the [demos](https://github.com/pyrethrum/webdriver/blob/main/webdriver-precore/test/README.md) for how this module can be used to delvelop a WebDriver client.
+    -- See the demos in the [demos](https://github.com/pyrethrum/webdriver/blob/main/webdriver-precore/test/README.md) for how this module can be used to develop a WebDriver client.
     --
 
     -- * Session Commands
@@ -880,7 +880,7 @@ subscribeScriptRealmDestroyed = mkSubscription ScriptRealmDestroyed
 
 ---- Input ----
 
--- | Specification Entry: <BiDiSpecURL#event-input-fileDialogOpened input.fileDialogOpened>
+-- | Specification Entry: <BiDiSpecURL#event-input-fileDialogOpened input.filedblogOpened>
 --
 -- First added to Spec: <https://www.w3.org/TR/2025/WD-webdriver-bidi-20250305/#event-input-fileDialogOpened 05 March 2025>
 subscribeInputFileDialogOpened ::
