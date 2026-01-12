@@ -252,6 +252,9 @@ bidiDemos cfg =
                     -- since https://www.w3.org/TR/2025/WD-webdriver-bidi-20250811
                     Emulation.emulationSetScriptingEnabledDemo,
                   Emulation.emulationSetTimezoneOverrideDemo,
+                  unknownCommand [Firefox', Chrome']
+                    -- since https://www.w3.org/TR/2026/WD-webdriver-bidi-20260109
+                    Emulation.emulationSetTouchOverrideDemo,
                   Emulation.emulationSetUserAgentOverrideDemo,
                   Emulation.emulationCompleteWorkflowDemo
                 ],

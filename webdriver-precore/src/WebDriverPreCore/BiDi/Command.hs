@@ -80,6 +80,7 @@ data KnownCommand
   | EmulationSetScreenSettingsOverride
   | EmulationSetScriptingEnabled
   | EmulationSetTimezoneOverride
+  | EmulationSetTouchOverride
   | EmulationSetUserAgentOverride
   | InputPerformActions
   | InputReleaseActions
@@ -227,6 +228,7 @@ instance FromJSON KnownCommand where
         "emulation.setScreenSettingsOverride" -> p EmulationSetScreenSettingsOverride
         "emulation.setScriptingEnabled" -> p EmulationSetScriptingEnabled
         "emulation.setTimezoneOverride" -> p EmulationSetTimezoneOverride
+        "emulation.setTouchOverride" -> p EmulationSetTouchOverride
         "emulation.setUserAgentOverride" -> p EmulationSetUserAgentOverride
         "input.performActions" -> p InputPerformActions
         "input.releaseActions" -> p InputReleaseActions
@@ -303,6 +305,7 @@ knownCommandToText = \case
   EmulationSetScreenSettingsOverride -> "emulation.setScreenSettingsOverride"
   EmulationSetScriptingEnabled -> "emulation.setScriptingEnabled"
   EmulationSetTimezoneOverride -> "emulation.setTimezoneOverride"
+  EmulationSetTouchOverride -> "emulation.setTouchOverride"
   EmulationSetUserAgentOverride -> "emulation.setUserAgentOverride"
   InputPerformActions -> "input.performActions"
   InputReleaseActions -> "input.releaseActions"

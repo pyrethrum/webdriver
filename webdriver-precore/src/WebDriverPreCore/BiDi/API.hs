@@ -48,6 +48,7 @@ module WebDriverPreCore.BiDi.API
     emulationSetScreenSettingsOverride,
     emulationSetScriptingEnabled,
     emulationSetTimezoneOverride,
+    emulationSetTouchOverride,
     emulationSetUserAgentOverride,
 
     -- * Input Commands
@@ -209,6 +210,7 @@ import WebDriverPreCore.BiDi.Protocol
     SetScreenSettingsOverride,
     SetScriptingEnabled,
     SetTimezoneOverride,
+    SetTouchOverride,
     SetUserAgentOverride,
     SetViewport,
     Subscription,
@@ -439,6 +441,13 @@ emulationSetScriptingEnabled = mkCommand EmulationSetScriptingEnabled
 -- First added to Spec: <https://www.w3.org/TR/2025/WD-webdriver-bidi-20250718/#command-emulation-setTimezoneOverride 18 July 2025>
 emulationSetTimezoneOverride :: SetTimezoneOverride -> Command ()
 emulationSetTimezoneOverride = mkCommand EmulationSetTimezoneOverride
+
+-- since 09-01-2026 https://www.w3.org/TR/2026/WD-webdriver-bidi-20260109
+-- | Specification Entry: <BiDiSpecURL#command-emulation-setTouchOverride emulation.setTouchOverride>
+--
+-- First added to Spec: <https://www.w3.org/TR/2026/WD-webdriver-bidi-20260109/#command-emulation-setTouchOverride 09 January 2026>
+emulationSetTouchOverride :: SetTouchOverride -> Command ()
+emulationSetTouchOverride = mkCommand EmulationSetTouchOverride
 
 -- since 10-09-2025 https://www.w3.org/TR/2025/WD-webdriver-bidi-20250910
 -- | Specification Entry: <BiDiSpecURL#command-emulation-setUserAgentOverride emulation.setUserAgentOverride>

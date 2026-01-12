@@ -4,6 +4,7 @@ module WebDriverPreCore.BiDi.Emulation
     SetScreenOrientationOverride (..),
     SetScreenSettingsOverride (..),
     SetTimezoneOverride (..),
+    SetTouchOverride (..),
     SetForcedColorsModeThemeOverride (..),
     SetNetworkConditions (..),
     SetUserAgentOverride (..),
@@ -189,6 +190,25 @@ instance ToJSON SetScriptingEnabled where
   toJSON MkSetScriptingEnabled {enabled, contexts, userContexts} =
     object $
       ["enabled" .= enabled]
+        <> catMaybes
+          [ opt "contexts" contexts,
+            opt "userContexts" userContexts
+          ]
+
+-- | Parameters for emulation.setTouchOverride command
+-- maxTouchPoints: (js-uint .ge 1) / null - the maximum number of touch points to emulate, or null to clear
+data SetTouchOverride = MkSetTouchOverride
+  { maxTouchPoints :: Maybe JSUInt,
+    contexts :: Maybe [BrowsingContext],
+    userContexts :: Maybe [UserContext]
+  }
+  deriving (Show, Eq, Generic)
+
+instance ToJSON SetTouchOverride where
+  toJSON :: SetTouchOverride -> Value
+  toJSON MkSetTouchOverride {maxTouchPoints, contexts, userContexts} =
+    object $
+      ["maxTouchPoints" .= maxTouchPoints]
         <> catMaybes
           [ opt "contexts" contexts,
             opt "userContexts" userContexts

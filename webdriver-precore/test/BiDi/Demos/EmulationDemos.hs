@@ -19,6 +19,7 @@ import WebDriverPreCore.BiDi.Protocol
     SetScreenSettingsOverride (..),
     SetScriptingEnabled (..),
     SetTimezoneOverride (..),
+    SetTouchOverride (..),
     SetUserAgentOverride (..),
     NetworkConditionsOffline(..),
     ScreenOrientationNatural(..),
@@ -320,6 +321,35 @@ emulationSetTimezoneOverrideDemo =
             }
       result5 <- emulationSetTimezoneOverride clearTimezone
       logShow "Timezone override cleared" result5
+      pause
+
+-- >>> runDemo emulationSetTouchOverrideDemo
+emulationSetTouchOverrideDemo :: BiDiDemo
+emulationSetTouchOverrideDemo =
+  demo "Emulation - Set Touch Override - since https://www.w3.org/TR/2026/WD-webdriver-bidi-20260109" action
+  where
+    action :: DemoActions -> BiDiActions -> IO ()
+    action utils@MkDemoActions {..} bidi@MkBiDiActions {..} = do
+      bc <- rootContext utils bidi
+
+      logTxt "Test 1: Enable touch emulation with 5 touch points"
+      let touchOverride = MkSetTouchOverride
+            { maxTouchPoints = Just (MkJSUInt 5),
+              contexts = Just [bc],
+              userContexts = Nothing
+            }
+      result1 <- emulationSetTouchOverride touchOverride
+      logShow "Touch emulation enabled (5 points)" result1
+      pause
+
+      logTxt "Test 2: Clear touch override"
+      let clearTouch = MkSetTouchOverride
+            { maxTouchPoints = Nothing,
+              contexts = Just [bc],
+              userContexts = Nothing
+            }
+      result2 <- emulationSetTouchOverride clearTouch
+      logShow "Touch override cleared" result2
       pause
 
 -- >>> runDemo emulationCompleteWorkflowDemo
