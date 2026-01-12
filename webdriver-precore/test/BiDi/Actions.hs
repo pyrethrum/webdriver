@@ -110,7 +110,6 @@ import WebDriverPreCore.BiDi.Protocol as P
     SetViewport,
     SubscriptionId (..),
     TraverseHistory,
-    TraverseHistoryResult,
     OffSpecSubscriptionType,
     UserContext,
     WebExtensionInstall,
@@ -144,7 +143,7 @@ data BiDiActions = MkBiDiActions
     browsingContextPrint :: Print -> IO PrintResult,
     browsingContextReload :: Reload -> IO (),
     browsingContextSetViewport :: SetViewport -> IO (),
-    browsingContextTraverseHistory :: TraverseHistory -> IO TraverseHistoryResult,
+    browsingContextTraverseHistory :: TraverseHistory -> IO (),
     -- Browser commandssendCommandNoWait socket
     browserClose :: IO (),
     browserCreateUserContext :: CreateUserContext -> IO UserContext,

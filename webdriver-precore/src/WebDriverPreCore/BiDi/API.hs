@@ -213,7 +213,6 @@ import WebDriverPreCore.BiDi.Protocol
     SetViewport,
     Subscription,
     TraverseHistory,
-    TraverseHistoryResult,
     OffSpecSubscriptionType,
     UserContext,
     UserPromptClosed,
@@ -340,7 +339,7 @@ browsingContextSetViewport = mkCommand BrowsingContextSetViewport
 -- | Specification Entry: <BiDiSpecURL#command-browsingContext-traverseHistory browsingContext.traverseHistory>
 --
 -- First added to Spec: <https://www.w3.org/TR/2024/WD-webdriver-bidi-20241121/#command-browsingContext-traverseHistory 21 November 2024 - First Public Working Draft>
-browsingContextTraverseHistory :: TraverseHistory -> Command TraverseHistoryResult
+browsingContextTraverseHistory :: TraverseHistory -> Command ()
 browsingContextTraverseHistory = mkCommand BrowsingContextTraverseHistory
 
 ---- Browser ----
