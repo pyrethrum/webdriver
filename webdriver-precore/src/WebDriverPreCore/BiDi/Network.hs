@@ -330,8 +330,7 @@ instance ToJSON Header where
   toJSON :: Header -> Value
   toJSON h =
     object
-      [ "type" .= "network.Header",
-        "name" .= h.headerName,
+      [ "name" .= h.headerName,
         "value" .= h.headerValue
       ]
 
