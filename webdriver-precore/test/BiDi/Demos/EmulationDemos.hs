@@ -28,7 +28,7 @@ import WebDriverPreCore.BiDi.Protocol
 import Prelude hiding (log, putStrLn)
 
 -- >>> runDemo emulationSetGeolocationOverrideDemo
--- *** Exception: BiDIError (ProtocolException {error = InvalidArgument, description = "The arguments passed to a command are either invalid or malformed", message = "Coordinates and error cannot be set at the same time", stacktrace = Nothing, errorData = Nothing, response = Object (fromList [("error",String "invalid argument"),("id",Number 2.0),("message",String "Coordinates and error cannot be set at the same time"),("type",String "error")])})
+-- *** Exception: BiDIError (ProtocolException {error = InvalidArgument, description = "The arguments passed to a command are either invalid or malformed", message = "Expected \"coordinates\" to be an object, got [object Undefined] undefined", stacktrace = Just "RemoteError@chrome://remote/content/shared/RemoteError.sys.mjs:8:8\nWebDriverError@chrome://remote/content/shared/webdriver/Errors.sys.mjs:202:5\nInvalidArgumentError@chrome://remote/content/shared/webdriver/Errors.sys.mjs:404:5\nassert.that/<@chrome://remote/content/shared/webdriver/Assert.sys.mjs:581:13\nassert.object@chrome://remote/content/shared/webdriver/Assert.sys.mjs:454:10\nsetGeolocationOverride@chrome://remote/content/webdriver-bidi/modules/root/emulation.sys.mjs:133:19\nhandleCommand@chrome://remote/content/shared/messagehandler/MessageHandler.sys.mjs:282:33\nexecute@chrome://remote/content/shared/webdriver/Session.sys.mjs:423:32\nonPacket@chrome://remote/content/webdriver-bidi/WebDriverBiDiConnection.sys.mjs:236:37\nonMessage@chrome://remote/content/server/WebSocketTransport.sys.mjs:127:18\nhandleEvent@chrome://remote/content/server/WebSocketTransport.sys.mjs:109:14\n", errorData = Nothing, response = Object (fromList [("error",String "invalid argument"),("id",Number 3.0),("message",String "Expected \"coordinates\" to be an object, got [object Undefined] undefined"),("stacktrace",String "RemoteError@chrome://remote/content/shared/RemoteError.sys.mjs:8:8\nWebDriverError@chrome://remote/content/shared/webdriver/Errors.sys.mjs:202:5\nInvalidArgumentError@chrome://remote/content/shared/webdriver/Errors.sys.mjs:404:5\nassert.that/<@chrome://remote/content/shared/webdriver/Assert.sys.mjs:581:13\nassert.object@chrome://remote/content/shared/webdriver/Assert.sys.mjs:454:10\nsetGeolocationOverride@chrome://remote/content/webdriver-bidi/modules/root/emulation.sys.mjs:133:19\nhandleCommand@chrome://remote/content/shared/messagehandler/MessageHandler.sys.mjs:282:33\nexecute@chrome://remote/content/shared/webdriver/Session.sys.mjs:423:32\nonPacket@chrome://remote/content/webdriver-bidi/WebDriverBiDiConnection.sys.mjs:236:37\nonMessage@chrome://remote/content/server/WebSocketTransport.sys.mjs:127:18\nhandleEvent@chrome://remote/content/server/WebSocketTransport.sys.mjs:109:14\n"),("type",String "error")])})
 emulationSetGeolocationOverrideDemo :: BiDiDemo
 emulationSetGeolocationOverrideDemo =
   demo "Emulation - Set Geolocation Override" action
@@ -44,7 +44,7 @@ emulationSetGeolocationOverrideDemo =
               accuracy = Just 10.0,
               altitude = Just 10.0,
               altitudeAccuracy = Just 5.0,
-              heading = Just 90.0,
+              heading = Just 90.0,{-  -}
               speed = Just 0.0
             }
       let geoOverride = MkSetGeolocationOverride
