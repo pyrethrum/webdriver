@@ -87,7 +87,7 @@
 
 [x] runFailDemo
 [X] deduplicate URL type
-[ ] test with driver not running
+
 
 ## change config - for CI only
 
@@ -136,7 +136,7 @@
 ## CI
 
  - [X] get CI tests working in container
- - [ ] chrome - local
+ - [X] chrome - local
  - [ ] retest dev-container
    - [ ] dhall
    - [ ] dhall-lsp-server
@@ -171,18 +171,20 @@ ChromeDriver was started successfully on port 4444.
 ```
 
 ## FINAL
-[ ] chromedriver working
-[ ] rerun firefox 
+[X] chromedriver working
+[X] rerun firefox 
+[x] Claud audit
+[ ] spec update
 [ ] docs lfs git
 [ ] devcontainer fixed
 [ ] use one base container for dev-container and CI (update)
 [ ] docs use image
-[ ] spec update
 
 
 ## deferred
  - [ ] edge driver
  - [ ] chrome - CI
+ - [ ] test with driver not running
 
 
 
