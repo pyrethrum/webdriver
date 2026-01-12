@@ -42,71 +42,7 @@ For BiDi the module structure for BiDi looks like this.
 
 For HTTP, the structure is the same but for the use of an `HttpClient` module instead of a `Socket`.
 
-```mermaid
-classDiagram
-    class Protocol {
-        <<webdriver-precore>>
-        - Data structures
-        - Command types
-        - Event types
-        - Serialization
-    }
-    
-    class API {
-        <<webdriver-precore>>
-        A typed version of the WebDriver spec
-        - sessionNew
-        - browsingContextNavigate
-        - scriptEvaluate
-        - networkAddIntercept
-        - storageGetCookies
-        ...
-    }
-    
-    class Socket {
-        <<demo implementation>>
-        WebSocket communication
-        - send
-        - getNext
-        - subscribe
-        - unsubscribe
-    }
-    
-    class Actions {
-        <<demo implementation>>
-        API lifted into IO
-    }
-    
-    class Runner {
-        <<demo implementation>>
-        - Session management
-        - Action execution
-    }
-  
-    class Demo {
-        <<demo implementation>>
-        Full demos
-    }
-  
-    API ..> Protocol : uses
-    Socket ..> Protocol : uses
-    Actions ..> API : uses
-    Actions ..> Protocol : uses
-    Actions ..> Runner : uses
-    Runner ..> Protocol : uses
-    Runner ..> Socket : uses
-    Demo ..> Runner : uses
-    Demo ..> Actions : uses
-    Demo ..> Protocol : uses
-    
-    style Protocol fill:#e3f2fd,stroke:#1976d2,stroke-width:3px,color:#000,rx:10
-    style API fill:#e3f2fd,stroke:#1976d2,stroke-width:3px,color:#000,rx:10
-    style Socket fill:#fff3e0,stroke:#f57c00,stroke-width:3px,color:#000,rx:10
-    style Actions fill:#fff3e0,stroke:#f57c00,stroke-width:3px,color:#000,rx:10
-    style Runner fill:#fff3e0,stroke:#f57c00,stroke-width:3px,color:#000,rx:10
-    style Demo fill:#fff3e0,stroke:#f57c00,stroke-width:3px,color:#000,rx:10
-    style TestExecutor fill:#fff3e0,stroke:#f57c00,stroke-width:3px,color:#000,rx:10
-```
+![demo structure](./doc/deepseek_mermaid_20260112_8708ec.svg)
 
 ## Running Examples (VSCode Dev-Container)
 
@@ -263,7 +199,7 @@ Once the [driver is running](#3-web-driver-running), the recommended way to expe
 2. Open the desired demo, e.g. `HttpDemo`
 3. Wait for HLS to process the file, at which point the `Evaluate...` lens will be visible
 
-![alt text](evaluate.png)
+![alt text](.\doc\evaluate.png)
 
 Clicking `Evaluate...` will execute the demo.
 * any exceptions will be inserted in the source file under the evaluation
@@ -297,7 +233,7 @@ There is a [known issue](https://github.com/mozilla/geckodriver/releases/tag/v0.
 
 When `Firefox` is installed in this way, `geckodriver` does not have the required permissions to access the Firefox profile directory causing an exception to be thrown on session creation:
 
-<img src="profileMissing.png" alt="profile missing" width="600">
+<img src=".\doc\profileMissing.png" alt="profile missing" width="600">
 
 One solution is to create a profile in a directory somewhere accessible to geckodriver on the file system:
 
