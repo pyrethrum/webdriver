@@ -175,16 +175,20 @@ ChromeDriver was started successfully on port 4444.
 [X] rerun firefox 
 [x] Claud audit
 [X] spec update
-[ ] docs lfs git
-[ ] devcontainer fixed
+[X] docs lfs git
 [ ] use one base container for dev-container and CI (update)
-[ ] docs use image
+[ ] devcontainer fixed
+[X] docs use image
 
 
 ## deferred
  - [ ] edge driver
  - [ ] chrome - CI
  - [ ] test with driver not running
+
+## later
+
+- [ ] [update readme in similar style to](https://github.com/nikita-volkov/hasql)
 
 
 

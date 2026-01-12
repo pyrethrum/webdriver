@@ -40,9 +40,9 @@ The demos cover all W3C WebDriver endpoints for [HTTP](https://www.w3.org/TR/web
 
 For BiDi the module structure for BiDi looks like this. 
 
-For HTTP, the structure is the same but for the use of an `HttpClient` module instead of a `Socket`.
-
 <img src="./doc/deepseek_mermaid_20260112_8708ec.svg" alt="demo structure" width="600">
+
+*For HTTP, the structure is the same but for the use of an `HttpClient` module instead of a `Socket`.*
 
 ## Running Examples (VSCode Dev-Container)
 
