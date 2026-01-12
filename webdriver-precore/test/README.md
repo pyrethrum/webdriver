@@ -42,7 +42,7 @@ For BiDi the module structure for BiDi looks like this.
 
 For HTTP, the structure is the same but for the use of an `HttpClient` module instead of a `Socket`.
 
-![demo structure](./doc/deepseek_mermaid_20260112_8708ec.svg)
+<img src="./doc/deepseek_mermaid_20260112_8708ec.svg" alt="demo structure" width="600">
 
 ## Running Examples (VSCode Dev-Container)
 
