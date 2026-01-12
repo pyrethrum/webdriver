@@ -105,13 +105,19 @@ httpDemoSingleIsolated cfg =
 -- Single isolated Bidi demo for CI debugging 
 bidiSingleForDebug :: Config -> TestTree
 bidiSingleForDebug cfg =
-  let run = bidiTest cfg
+  let 
+    run = bidiTest cfg
+    thisBrowser = cfg.browser
+    expectFail bts txt = biDiError thisBrowser bts (Fragment txt)
    in testGroup
             "BiDi Single Demo"
             [ 
               run
-                "Browser"
-                [ ScriptEvent.scriptEventMessage
+                "Emulation"
+                [ 
+                  expectFail [Firefox']
+                    "Expected \\\\\\\"coordinates\\\\\\\" to be an object"
+                    Emulation.emulationSetGeolocationOverridePositionErrorDemo
                 ]
         ]
 
@@ -231,7 +237,7 @@ bidiDemos cfg =
                   -- Geckodriver bug: incorrectly requires 'coordinates' when 'error' is provided
                   -- Spec section 7.4.2.2 states that 'error' and 'coordinates' are mutually exclusive
                   expectFail [Firefox']
-                    "Expected \"coordinates\" to be an object"
+                    "Expected \\\\\\\"coordinates\\\\\\\" to be an object"
                     Emulation.emulationSetGeolocationOverridePositionErrorDemo,
                   Emulation.emulationSetLocaleOverrideDemo,
                   unknownCommand [Firefox']
