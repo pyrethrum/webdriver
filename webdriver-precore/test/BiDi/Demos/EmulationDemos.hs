@@ -28,7 +28,6 @@ import WebDriverPreCore.BiDi.Protocol
 import Prelude hiding (log, putStrLn)
 
 -- >>> runDemo emulationSetGeolocationOverrideDemo
--- *** Exception: BiDIError (ProtocolException {error = InvalidArgument, description = "The arguments passed to a command are either invalid or malformed", message = "Expected \"coordinates\" to be an object, got [object Undefined] undefined", stacktrace = Just "RemoteError@chrome://remote/content/shared/RemoteError.sys.mjs:8:8\nWebDriverError@chrome://remote/content/shared/webdriver/Errors.sys.mjs:202:5\nInvalidArgumentError@chrome://remote/content/shared/webdriver/Errors.sys.mjs:404:5\nassert.that/<@chrome://remote/content/shared/webdriver/Assert.sys.mjs:581:13\nassert.object@chrome://remote/content/shared/webdriver/Assert.sys.mjs:454:10\nsetGeolocationOverride@chrome://remote/content/webdriver-bidi/modules/root/emulation.sys.mjs:133:19\nhandleCommand@chrome://remote/content/shared/messagehandler/MessageHandler.sys.mjs:282:33\nexecute@chrome://remote/content/shared/webdriver/Session.sys.mjs:423:32\nonPacket@chrome://remote/content/webdriver-bidi/WebDriverBiDiConnection.sys.mjs:236:37\nonMessage@chrome://remote/content/server/WebSocketTransport.sys.mjs:127:18\nhandleEvent@chrome://remote/content/server/WebSocketTransport.sys.mjs:109:14\n", errorData = Nothing, response = Object (fromList [("error",String "invalid argument"),("id",Number 3.0),("message",String "Expected \"coordinates\" to be an object, got [object Undefined] undefined"),("stacktrace",String "RemoteError@chrome://remote/content/shared/RemoteError.sys.mjs:8:8\nWebDriverError@chrome://remote/content/shared/webdriver/Errors.sys.mjs:202:5\nInvalidArgumentError@chrome://remote/content/shared/webdriver/Errors.sys.mjs:404:5\nassert.that/<@chrome://remote/content/shared/webdriver/Assert.sys.mjs:581:13\nassert.object@chrome://remote/content/shared/webdriver/Assert.sys.mjs:454:10\nsetGeolocationOverride@chrome://remote/content/webdriver-bidi/modules/root/emulation.sys.mjs:133:19\nhandleCommand@chrome://remote/content/shared/messagehandler/MessageHandler.sys.mjs:282:33\nexecute@chrome://remote/content/shared/webdriver/Session.sys.mjs:423:32\nonPacket@chrome://remote/content/webdriver-bidi/WebDriverBiDiConnection.sys.mjs:236:37\nonMessage@chrome://remote/content/server/WebSocketTransport.sys.mjs:127:18\nhandleEvent@chrome://remote/content/server/WebSocketTransport.sys.mjs:109:14\n"),("type",String "error")])})
 emulationSetGeolocationOverrideDemo :: BiDiDemo
 emulationSetGeolocationOverrideDemo =
   demo "Emulation - Set Geolocation Override" action
@@ -56,25 +55,41 @@ emulationSetGeolocationOverrideDemo =
       logShow "Geolocation set to NYC" result1
       pause
 
-      logTxt "Test 2: Set geolocation position error"
+      logTxt "Test 2: Clear geolocation override"
+      let clearOverride = MkSetGeolocationOverride
+            { override = ClearCoodrdinates,
+              contexts = Just [bc],
+              userContexts = Nothing
+            }
+      result2 <- emulationSetGeolocationOverride clearOverride
+      logShow "Geolocation override cleared" result2
+      pause
+
+-- >>> runDemo emulationSetGeolocationOverridePositionErrorDemo
+-- | Test setting geolocation position error
+-- Geckodriver incorrectly requires 'coordinates' to be present even when 'error' is provided.
+-- According to the WebDriver BiDi spec (section 7.4.2.2), when 'error' is provided,
+-- 'coordinates' should NOT be required. The spec states:
+-- "If command parameters contains 'error': ... let emulated position data be a map matching GeolocationPositionError production"
+-- "Otherwise, let emulated position data be command parameters['coordinates']."
+-- This is a known geckodriver defect.
+emulationSetGeolocationOverridePositionErrorDemo :: BiDiDemo
+emulationSetGeolocationOverridePositionErrorDemo =
+  demo "Emulation - Set Geolocation Position Error" action
+  where
+    action :: DemoActions -> BiDiActions -> IO ()
+    action utils@MkDemoActions {..} bidi@MkBiDiActions {..} = do
+      bc <- rootContext utils bidi
+
+      logTxt "Set geolocation position error"
       let positionError = MkGeolocationPositionError { errorType = "positionUnavailable" }
       let errorOverride = MkSetGeolocationOverride
             { override = PositionError positionError,
               contexts = Just [bc],
               userContexts = Nothing
             }
-      result2 <- emulationSetGeolocationOverride errorOverride
-      logShow "Geolocation error set" result2
-      pause
-
-      logTxt "Test 3: Clear geolocation override"
-      let clearOverride = MkSetGeolocationOverride
-            { override = ClearCoodrdinates,
-              contexts = Just [bc],
-              userContexts = Nothing
-            }
-      result3 <- emulationSetGeolocationOverride clearOverride
-      logShow "Geolocation override cleared" result3
+      result <- emulationSetGeolocationOverride errorOverride
+      logShow "Geolocation error set" result
       pause
 
 -- >>> runDemo emulationSetLocaleOverrideDemo

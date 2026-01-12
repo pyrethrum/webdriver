@@ -228,6 +228,11 @@ bidiDemos cfg =
                     -- since https:\/\/www.w3.org\/TR\/2025\/WD-webdriver-bidi-20250729
                     Emulation.emulationSetForcedColorsModeThemeOverrideDemo,
                   Emulation.emulationSetGeolocationOverrideDemo,
+                  -- Geckodriver bug: incorrectly requires 'coordinates' when 'error' is provided
+                  -- Spec section 7.4.2.2 states that 'error' and 'coordinates' are mutually exclusive
+                  expectFail [Firefox']
+                    "Expected \"coordinates\" to be an object"
+                    Emulation.emulationSetGeolocationOverridePositionErrorDemo,
                   Emulation.emulationSetLocaleOverrideDemo,
                   unknownCommand [Firefox']
                     -- since https://www.w3.org/TR/2025/WD-webdriver-bidi-20251007
