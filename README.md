@@ -11,7 +11,7 @@ This repository contains a single sub-repo:
 
 ### 1. [webdriver-precore](./webdriver-precore/README.md)
 
- Typed definitions for the W3C WebDriver Protocol, supporting both the [HTML](https://www.w3.org/TR/2025/WD-webdriver2-20251028/) and the [BiDi][text](https://www.w3.org/TR/2026/WD-webdriver-bidi-20260109/) protocols.
+ Typed definitions for the W3C WebDriver Protocol, supporting both the [HTTP] and the [BiDi] protocols.
 
 This is a library intended to be used as a base for other libraries that provide a WebDriver client implementation and higher level functions.
 
@@ -22,3 +22,8 @@ For runnable demos and source code for an example client implementation see the 
 ## Future Plans
 
 Over the coming months we intend to build out a number of sub-libraries and tools, culminating in a fully featured webdriver client.
+
+<!-- Link References -->
+
+[BiDi]: https://www.w3.org/TR/2026/WD-webdriver-bidi-20260109/
+[HTTP]: https://www.w3.org/TR/2025/WD-webdriver2-20251028/

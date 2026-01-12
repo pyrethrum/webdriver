@@ -21,7 +21,7 @@ testFilesDir = do
           <> "\n tests are expected to be run from the 'webdriver' directory or "
           <> testFilesSubDir
   where
-    testFilesSubDir = "webdriver-precore" </> "test" </> "TestFiles"
+    testFilesSubDir = "webdriver-precore" </> "test" </> "testFiles"
 
 testPath :: FilePath -> IO Text
 testPath filename =
