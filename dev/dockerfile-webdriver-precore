@@ -46,10 +46,6 @@ RUN REPO_DIR=$(basename -s .git "${REPO}") \
     && cabal build --enable-tests --only-dependencies \
     && echo "working directory is ${PWD}" \
     # cd back into examples
-    && cd .. \
-    && echo "working directory after cd out ${PWD}" \
-    && cd "webdriver-examples" \
-    && cabal build  --only-dependencies --enable-tests \
     # local copy module build artifacts to home dir
     # note this does not work cabal is too clever with its cach invalidation
     # && cp -r ./dist-newstyle /home/vscode/dist-newstyle \
