@@ -38,19 +38,12 @@ RUN REPO_DIR=$(basename -s .git "${REPO}") \
     # clone into home (note single branch)
     && git clone --single-branch --branch ${BRANCH} ${REPO} \
     # cd into source repo
-    && cd "${REPO_DIR}/webdriver-precore" \
+    && cd "${REPO_DIR}" \
     # build it all (go have coffee for an hour or more)
     # libraries will be cached by cabal
     # local modules => dist-newstyle
     && cabal update \
-    && cabal build --enable-tests --only-dependencies \
-    # build test server dependencies
-    && cd test-server \
-    # list all files
-    && ls -la \
-    && cabal build test-server --only-dependencies \
-    && cd ../.. \
-    && echo "working directory is ${PWD}" \
+    && cabal build all --only-dependencies \
     # cd back into examples
     # local copy module build artifacts to home dir
     # note this does not work cabal is too clever with its cach invalidation
@@ -58,6 +51,8 @@ RUN REPO_DIR=$(basename -s .git "${REPO}") \
     # CD out
     && cd .. \
     # delete the repo
+    && echo "working directory is ${PWD}" \
+    && echo "deleting repo ${REPO_DIR}" \
     && rm -rf "${REPO_DIR}"
 
 # Specify the default command to run when the container starts
