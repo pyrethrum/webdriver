@@ -48,7 +48,7 @@ RUN REPO_DIR=$(basename -s .git "${REPO}") \
     && cd test-server \
     # list all files
     && ls -la \
-    && cabal build --only-dependencies \
+    && cabal build test-server --only-dependencies \
     && cd ../.. \
     && echo "working directory is ${PWD}" \
     # cd back into examples
