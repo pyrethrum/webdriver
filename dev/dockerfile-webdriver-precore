@@ -37,7 +37,6 @@ RUN chown -R ${USER_UID}:${USER_GID} /home/${USERNAME}
 RUN REPO_DIR=$(basename -s .git "${REPO}") \
     # clone into home (note single branch)
     && git clone --single-branch --branch ${BRANCH} ${REPO} \
-
     # cd into source repo
     && cd "${REPO_DIR}/webdriver-precore" \
     # build it all (go have coffee for an hour or more)
@@ -45,6 +44,12 @@ RUN REPO_DIR=$(basename -s .git "${REPO}") \
     # local modules => dist-newstyle
     && cabal update \
     && cabal build --enable-tests --only-dependencies \
+    # build test server dependencies
+    && cd test-server \
+    # list all files
+    && ls -la \
+    && cabal build --only-dependencies \
+    && cd ../.. \
     && echo "working directory is ${PWD}" \
     # cd back into examples
     # local copy module build artifacts to home dir
@@ -54,26 +59,6 @@ RUN REPO_DIR=$(basename -s .git "${REPO}") \
     && cd .. \
     # delete the repo
     && rm -rf "${REPO_DIR}"
-
-
-# Install Firefox by running the install script
-COPY install-firefox.sh /home/vscode/install-firefox.sh
-USER root
-RUN echo "Install firefox" && \
-    # chown ${USER_UID}:${USER_GID} /home/vscode/install-firefox.sh && \
-    # ls -l /home/vscode/install-firefox.sh &&
-
-    chmod +x /home/vscode/install-firefox.sh && \
-    /home/vscode/install-firefox.sh && \
-    rm /home/vscode/install-firefox.sh
-
-# Install geckodriver by running the install script
-COPY install-gecko-driver.sh /home/vscode/install-gecko-driver.sh
-RUN echo "Install geckodriver" && \
-    chmod +x /home/vscode/install-gecko-driver.sh && \
-    /home/vscode/install-gecko-driver.sh && \
-    rm /home/vscode/install-gecko-driver.sh
-USER ${USER_UID}:${USER_GID}
 
 # Specify the default command to run when the container starts
 CMD ["bash"]

@@ -1,6 +1,6 @@
 -- Config types
 let Browser = 
-      < Chrome
+      < Chrome : { headless : Bool }
       | Firefox : 
           { headless : Bool
           , profilePath : Optional Text 
