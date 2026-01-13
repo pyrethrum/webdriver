@@ -21,7 +21,8 @@ ENV DEBIAN_FRONTEND=noninteractive \
     WORKDIR /home/vscode
     
 ARG REPO=https://github.com/pyrethrum/webdriver.git
-ARG BRANCH=main
+ARG BRANCH=pre-release-3
+# ARG BRANCH=main
 
     
 # Ensure the vscode user has ownership of its home directory
@@ -60,7 +61,7 @@ COPY install-firefox.sh /home/vscode/install-firefox.sh
 USER root
 RUN echo "Install firefox" && \
     # chown ${USER_UID}:${USER_GID} /home/vscode/install-firefox.sh && \
-    # ls -l /home/vscode/install-firefox.sh && \
+    # ls -l /home/vscode/install-firefox.sh &&
 
     chmod +x /home/vscode/install-firefox.sh && \
     /home/vscode/install-firefox.sh && \
@@ -70,7 +71,7 @@ RUN echo "Install firefox" && \
 COPY install-gecko-driver.sh /home/vscode/install-gecko-driver.sh
 RUN echo "Install geckodriver" && \
     chmod +x /home/vscode/install-gecko-driver.sh && \
-    /home/vscode/install-gecko-driver.sh && \ 
+    /home/vscode/install-gecko-driver.sh && \
     rm /home/vscode/install-gecko-driver.sh
 USER ${USER_UID}:${USER_GID}
 
