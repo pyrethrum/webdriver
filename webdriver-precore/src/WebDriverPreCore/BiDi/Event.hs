@@ -88,13 +88,17 @@ instance FromJSON Event where
   parseJSON :: Value -> Parser Event
   parseJSON = withObject "Event" $ \o -> do
     m <- o .: "method"
+    params <- o .: "params"
     let methodPrefix :: Text -> Bool
         methodPrefix = (`isPrefixOf` m)
         parseVal :: forall a. (FromJSON a) => Parser a
         parseVal = parseJSON (Object o)
+        -- For input events, parse from params directly (consistent with SingleSubscription)
+        parseParams :: forall a. (FromJSON a) => Parser a
+        parseParams = parseJSON params
     if
       | methodPrefix "browsingContext" -> BrowsingContextEvent <$> parseVal
-      | methodPrefix "input" -> InputEvent <$> parseVal
+      | methodPrefix "input" -> InputEvent <$> parseParams
       | methodPrefix "log" -> LogEvent <$> parseVal
       | methodPrefix "network" -> NetworkEvent <$> parseVal
       | methodPrefix "script" -> ScriptEvent <$> parseVal

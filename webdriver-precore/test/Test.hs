@@ -245,7 +245,7 @@ bidiDemos cfg =
                     -- since https://www.w3.org/TR/2025/WD-webdriver-bidi-20251007
                     Emulation.emulationSetNetworkConditionsDemo,
                   Emulation.emulationSetScreenOrientationOverrideDemo,
-                  unknownCommand [Firefox', Chrome']
+                  unknownCommand [Chrome']
                     -- since https://www.w3.org/TR/2025/WD-webdriver-bidi-20251120
                     Emulation.emulationSetScreenSettingsOverrideDemo,
                   unknownCommand [Firefox']
@@ -406,19 +406,15 @@ bidiDemos cfg =
               run
                 "Input Events"
                 [],
-              -- TODO: Parsing exceptions from BiDi event handlers occur in background threads
-              -- and are not caught by expectError in the main thread. This needs to be fixed
-              -- in the BiDi runner to propagate parsing exceptions back to the main thread.
-              -- running with chrome will get: Error in $: parsing WebDriverPreCore.BiDi.Input.FileDialogOpened(MkFileDialogOpened) failed, key "params" not found
-              -- this appears to be a chromeDriver bug
               run
                 "Input Events - File Dialog Opened" (
-                  if browserType == Chrome' then []
-                  else [
-                   expectFail [Firefox'] 
-                      "input.fileDialogOpened is not a valid event name"
-                      InputEvent.inputEventFileDialogOpened
-                  ]),
+                   case thisBrowser of 
+                     Chrome {} -> [InputEvent.inputEventFileDialogOpened]
+                     Firefox {headless = False} -> [InputEvent.inputEventFileDialogOpened]
+                     -- firfox throws error on file dialog open in headless mode
+                     -- ConnectionClosed is not coming from main thread so not being caught TODO: reinstate this when runner fixed
+                     Firefox {headless = True} ->  [] -- [expectFail [Firefox'] "ConnectionClosed" InputEvent.inputEventFileDialogOpened] 
+                ),
               run
                 "Log Events"
                 [ LogEvent.logEventConsoleEntries,

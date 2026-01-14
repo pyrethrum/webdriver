@@ -23,13 +23,13 @@ where
 
 import Data.Aeson (ToJSON (..), Value (Object), object, (.=), FromJSON (..))
 import Data.Aeson.KeyMap qualified
+import Data.Aeson.Types (Parser)
 import Data.Maybe (fromMaybe, catMaybes)
 import Data.Text (Text)
 import GHC.Generics (Generic)
 import WebDriverPreCore.BiDi.Script qualified as Script
 import AesonUtils (toJSONOmitNothing, parseJSONOmitNothing, opt)
 import WebDriverPreCore.BiDi.CoreTypes (BrowsingContext(..))
-import Data.Aeson.Types (Parser)
 import WebDriverPreCore.BiDi.Script (SharedReference)
 
 -- ######### Local #########
@@ -333,12 +333,16 @@ data SetFiles = MkSetFiles
 
 instance ToJSON SetFiles
 
-data FileDialogOpened = MkFileDialogOpened
+-- | Event data for input.fileDialogOpened event
+-- Parses the params content directly (params is extracted by Event or SingleSubscription handler)
+newtype FileDialogOpened = MkFileDialogOpened
   { params :: FileDialogInfo
   }
   deriving (Show, Eq, Generic)
 
-instance FromJSON FileDialogOpened
+instance FromJSON FileDialogOpened where
+  parseJSON :: Value -> Parser FileDialogOpened
+  parseJSON v = MkFileDialogOpened <$> parseJSON v
 
 -- ######### Local #########
 

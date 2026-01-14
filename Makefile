@@ -9,4 +9,4 @@ build:
 test: build
 	docker run $(IMAGE) bash -c \
       'bash ./dev/start-geckodriver.sh & cabal test all'
-# 	  'geckodriver --binary /usr/bin/firefox & cabal test all'
+#       'geckodriver --version && firefox --version && bash ./dev/start-geckodriver.sh & cabal test all'

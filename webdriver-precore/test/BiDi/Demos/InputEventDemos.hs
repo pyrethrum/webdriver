@@ -24,23 +24,15 @@ defaultPointerProps =
 {- 
 Input Events - Implementation Status:
 
-1. input.fileDialogOpened :: ✗ inputEventFileDialogOpened, inputEventFileDialogOpenedMultiple 
-   (not implemented in geckodriver - bugs 1855044, 1855045)
-   (chromedriver sends malformed event - missing params wrapper)
-   
-Note: The input.fileDialogOpened event is not yet implemented in geckodriver.
-See:
-- Meta bug: https://bugzilla.mozilla.org/show_bug.cgi?id=1855044
-- Implementation bug: https://bugzilla.mozilla.org/show_bug.cgi?id=1855045
-- Status: NEW (as of m18 milestone, last updated October 2025)
-- WebDriver BiDi spec: https://w3c.github.io/webdriver-bidi/#event-input-fileDialogOpened
+1. input.fileDialogOpened :: ✓ inputEventFileDialogOpened (parsing works)
+   Firefox/geckodriver closes WebSocket connection when file dialog opens in headless mode,
+   causing ConnectionClosed exception. Events are received and parsed correctly before disconnect.
+   See bugs: 1855044, 1855045
 
-ChromeDriver has implemented this event but sends malformed data - it omits the required
-"params" wrapper per the WebDriver BiDi spec. The spec requires event data to be wrapped
-in a params field, but ChromeDriver sends the data directly at the top level.
-
-The demos below are ready for when the feature is correctly implemented.
+The demos below work for event parsing but Firefox crashes in headless mode when file dialog opens.
 -}
+
+
 
 -- >>> runDemo inputEventFileDialogOpened
 inputEventFileDialogOpened :: BiDiDemo
