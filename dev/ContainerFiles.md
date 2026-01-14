@@ -15,10 +15,72 @@ ubuntu:25.04
 
 ## Container Files Table
 
-| File Name | Tag Name | Depends On | Build Script | Push Script | Description |
-|-----------|----------|------------|--------------|-------------|-------------|
-| [dockerfile-haskell](dockerfile-haskell) | ghcr.io/pyrethrum/haskell:latest | [ubuntu:25.04](https://hub.docker.com/_/ubuntu) | [docker-build-haskell.sh](docker-build-haskell.sh) | [docker-push-haskell.sh](docker-push-haskell.sh) | Base Haskell development image with GHCup, GHC, and essential build tools |
-| [dockerfile-webdriver-precore](dockerfile-webdriver-precore) | ghcr.io/pyrethrum/webdriver-precore:latest | [dockerfile-haskell](dockerfile-haskell) | [docker-build-webdriver-precore.sh](docker-build-webdriver-precore.sh) | [docker-push-webdriver-precore.sh](docker-push-webdriver-precore.sh) | Clones webdriver repo and pre-builds dependencies with cabal |
-| [dockerfile-webdriver-precore-firefox](dockerfile-webdriver-precore-firefox) | ghcr.io/pyrethrum/webdriver-precore-firefox:latest | [dockerfile-webdriver-precore](dockerfile-webdriver-precore) | [docker-build-webdriver-precore-firefox.sh](docker-build-webdriver-precore-firefox.sh) | [docker-push-webdriver-precore-firefox.sh](docker-push-webdriver-precore-firefox.sh) | Adds Firefox and geckodriver for browser automation testing |
-| [dockerfile-ci-test](dockerfile-ci-test) | ghcr.io/pyrethrum/ci-test:latest | [dockerfile-webdriver-precore-firefox](dockerfile-webdriver-precore-firefox) | [docker-build-ci-test.sh](docker-build-ci-test.sh) | [docker-push-ci-test.sh](docker-push-ci-test.sh) | CI container that copies local source files and configures test environment |
-| [devcontainer.json](../.devcontainer/devcontainer.json) | None | [dockerfile-webdriver-precore-firefox](dockerfile-webdriver-precore-firefox) | None | None | VS Code dev container with desktop-lite feature for noVNC browser viewing |
+| File Name | Tag Name | Depends On | Description |
+|-----------|----------|------------|-------------|
+| [dockerfile-haskell](dockerfile-haskell) | ghcr.io/pyrethrum/haskell:latest | [ubuntu:25.04](https://hub.docker.com/_/ubuntu) | Base Haskell development image with GHCup, GHC, and essential build tools |
+| [dockerfile-webdriver-precore](dockerfile-webdriver-precore) | ghcr.io/pyrethrum/webdriver-precore:latest | [dockerfile-haskell](dockerfile-haskell) | Clones webdriver repo and pre-builds dependencies with cabal |
+| [dockerfile-webdriver-precore-firefox](dockerfile-webdriver-precore-firefox) | ghcr.io/pyrethrum/webdriver-precore-firefox:latest | [dockerfile-webdriver-precore](dockerfile-webdriver-precore) | Adds Firefox and geckodriver for browser automation testing |
+| [dockerfile-ci-test](dockerfile-ci-test) | ghcr.io/pyrethrum/ci-test:latest | [dockerfile-webdriver-precore-firefox](dockerfile-webdriver-precore-firefox) | CI container that copies local source files and configures test environment |
+| [devcontainer.json](../.devcontainer/devcontainer.json) | None | [dockerfile-webdriver-precore-firefox](dockerfile-webdriver-precore-firefox) | VS Code dev container with desktop-lite feature for noVNC browser viewing |
+
+## Build & Push Scripts
+
+<details>
+<summary><strong>dockerfile-haskell</strong></summary>
+
+Build:
+```bash
+bash docker-build-haskell.sh
+```
+
+Push:
+```bash
+bash docker-push-haskell.sh
+```
+
+</details>
+
+<details>
+<summary><strong>dockerfile-webdriver-precore</strong></summary>
+
+Build:
+```bash
+bash docker-build-webdriver-precore.sh
+```
+
+Push:
+```bash
+bash docker-push-webdriver-precore.sh
+```
+
+</details>
+
+<details>
+<summary><strong>dockerfile-webdriver-precore-firefox</strong></summary>
+
+Build:
+```bash
+bash docker-build-webdriver-precore-firefox.sh
+```
+
+Push:
+```bash
+bash docker-push-webdriver-precore-firefox.sh
+```
+
+</details>
+
+<details>
+<summary><strong>dockerfile-ci-test</strong></summary>
+
+Build:
+```bash
+bash docker-build-ci-test.sh
+```
+
+Push:
+```bash
+bash docker-push-ci-test.sh
+```
+
+</details>
