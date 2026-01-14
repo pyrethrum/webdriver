@@ -20,6 +20,7 @@ RUN apt-get update && \
     apt-get install -y \
     wget \
     git \
+    git-lfs \
     sudo \
     # GHCUp Requirements https://www.haskell.org/ghcup/install/#version-23
     build-essential \
@@ -34,7 +35,8 @@ RUN apt-get update && \
     pkg-config \
     # used by zlib used by
     zlib1g-dev \
-    && apt-get clean
+    && apt-get clean \
+    && git lfs install
     
     # Explicitly export PATH changes
     RUN groupadd --gid ${USER_GID} ${USERNAME} && \

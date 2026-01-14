@@ -36,10 +36,10 @@
 				"ms-vsliveshare.vsliveshare-pack",
 				"christian-kohler.path-intellisense",
 				"kylepaulsen.stack-tabs",
-				"spmeesseman.vscode-taskexplorer",
 				"andyyaldoo.vscode-json",
 				"redhat.vscode-yaml",
-				"bee.git-temporal-vscode"
+				"bee.git-temporal-vscode",
+				"SanaAjani.taskrunnercode"
 			]
 		}
 	}
