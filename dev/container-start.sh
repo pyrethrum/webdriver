@@ -7,4 +7,4 @@ set -e
 bash ./dev/start-geckodriver.sh
 
 # Build the project
-cabal build
+cabal build all
