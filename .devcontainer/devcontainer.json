@@ -50,7 +50,8 @@
 				"andyyaldoo.vscode-json",
 				"redhat.vscode-yaml",
 				"bee.git-temporal-vscode",
-				"SanaAjani.taskrunnercode"
+				"SanaAjani.taskrunnercode",
+				"ms-azuretools.vscode-containers"
 			]
 		}
 	}
