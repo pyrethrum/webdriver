@@ -4,20 +4,6 @@
 	"name": "webdriver-precore",
 	"image": "ghcr.io/pyrethrum/webdriver-precore-firefox:latest",
 
-	// desktop-lite provides a virtual display (Xvfb + VNC + noVNC) so Firefox can render
-	// its GUI inside the container. Users view it via browser at localhost:6080.
-	// This works on all host OSes (Windows/macOS/Linux) without requiring X server setup.
-	"features": {
-		"ghcr.io/devcontainers/features/desktop-lite:1": {}
-	},
-
-	// Forward the noVNC web port so users can view the desktop in their browser
-	"forwardPorts": [6080],
-	"portsAttributes": {
-		"6080": {
-			"label": "Desktop (noVNC)"
-		}
-	},
 	// copy the compiled library files from dist-newstyle into the current working directory
 	// if the dist-newstyle directory does not already exist  this does not work
 	// cabal is too clever about cache invalidation and rebuild anyway
