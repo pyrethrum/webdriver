@@ -30,7 +30,13 @@
 	],
 	
 	// Auto-run xhost on container start for X11 forwarding (runs on host before container starts)
-	"initializeCommand": "xhost +local: 2>/dev/null || true",
+	// Two steps needed:
+	// 1. xhost +local: - adds X server access control entry
+	// 2. chmod - makes socket accessible to container user (different UID)
+	"initializeCommand": {
+		"xhost": "xhost +local: 2>&1 || echo 'xhost failed (is it installed?)'",
+		"chmod": "chmod a+rw /tmp/.X11-unix/X* 2>&1 || echo 'chmod X11 socket failed (may need sudo)'"
+	},
 
 	"postStartCommand": "bash ./dev/container-start.sh",
 	"postAttachCommand": "bash ./dev/container-attach.sh",
