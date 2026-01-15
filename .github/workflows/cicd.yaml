@@ -46,4 +46,5 @@ jobs:
           cache-to: type=registry,ref=theghostjw/webdriver:buildcache,mode=max
       - name: Test
         run: |
-          IMAGE=theghostjw/webdriver:${{needs.env-setup.outputs.buildid}} make test
+          IMAGE=theghostjw/webdriver:${{needs.env-setup.outputs.buildid}}
+          docker run $IMAGE bash -c 'bash ./dev/start-geckodriver.sh & cabal test all'
