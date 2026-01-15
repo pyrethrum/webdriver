@@ -79,7 +79,7 @@ configText =
       "-- Config value",
       "let browser : Browser = ",
       "      Browser.Firefox ",
-      "        { headless = True",
+      "        { headless = False",
       "        , profilePath = None Text",
       "        }",
       "",
