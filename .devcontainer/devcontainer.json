@@ -13,6 +13,12 @@
 	"remoteUser": "vscode",
 	"containerUser": "vscode",
 
+	// X11 forwarding for headed browser testing
+	"runArgs": [
+		"-e", "DISPLAY=${localEnv:DISPLAY}",
+		"-v", "/tmp/.X11-unix:/tmp/.X11-unix:rw"
+	],
+
 	"postStartCommand": "bash ./dev/container-start.sh",
 	"postAttachCommand": "bash ./dev/container-attach.sh",
 	
