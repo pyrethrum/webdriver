@@ -4,6 +4,8 @@
   - [About This Test Suite](#about-this-test-suite)
   - [Core Modules](#core-modules)
   - [Running Examples (VSCode Dev-Container)](#running-examples-vscode-dev-container)
+    - [Preparing for Headed Demos](#preparing-for-headed-demos)
+    - [Initialising the Dev-Container](#initialising-the-dev-container)
   - [Running Examples (Manual Configuration)](#running-examples-manual-configuration)
     - [Prerequisites](#prerequisites)
       - [1. LFS Installed (Optional)](#1-lfs-installed-optional)
@@ -13,6 +15,7 @@
       - [4. Configuration Set](#4-configuration-set)
   - [Executing Demos from the Test Suite](#executing-demos-from-the-test-suite)
     - [Evaluate...](#evaluate)
+    - [Dev-Container Configuration Notes](#dev-container-configuration-notes)
     - [cabal repl](#cabal-repl)
     - [cabal test](#cabal-test)
   - [Fixing Geckodriver Firefox Profile Issues on Linux](#fixing-geckodriver-firefox-profile-issues-on-linux)
@@ -45,10 +48,38 @@ For BiDi the module structure for BiDi looks like this.
 *For HTTP, the structure is the same but for the use of an `HttpClient` module instead of a `Socket`.*
 
 ## Running Examples (VSCode Dev-Container)
+ 
+ *See [Running Examples (Manual Configuration)](#running-examples-manual-configuration) if you are not a dev-container user.*
 
  *The following assumes the pre-requisites for [dev-containers](https://code.visualstudio.com/docs/devcontainers/containers#_getting-started) are installed* 
- 
- *See [Running Examples (Manual Configuration)](#running-examples-manual-configuration) if you are not dev-container user.*
+
+ ### Preparing for Headed Demos
+
+Headed (visible browser) demos require a display server for the browser to render to. The dev-container needs access to your host's display to show the browser window.
+
+Note: you can still run the the demos headless in the contaier if you skip this step.
+
+**Linux:**
+```bash
+xhost +local:docker
+```
+Run this on your host before starting the dev-container. This grants Docker containers access to your X11 display.
+
+**macOS:**
+1. Install [XQuartz](https://www.xquartz.org/)
+2. Open XQuartz, go to `Preferences` → `Security` → enable `Allow connections from network clients`
+3. Restart XQuartz
+4. Run on your host:
+   ```bash
+   xhost +localhost
+   ```
+
+**Windows:**
+1. Install an X server such as [VcXsrv](https://sourceforge.net/projects/vcxsrv/) or [X410](https://x410.dev/)
+2. Launch the X server with `Disable access control` enabled
+3. Ensure your firewall allows connections on the X11 port
+
+### Initialising the Dev-Container
 
 The dev-container provided includes all the Haskell tools required, pre-compiled dependencies and Firefox and geckodriver as well as the `DebugConfig.hs` being initialised. The examples will be compiled and geckodriver started when the container starts.
  
@@ -59,7 +90,7 @@ From VSCode invoke: <BR/>
 &nbsp;&nbsp; \>> search and select `pyrethrum/webdriver`<BR/>
 &nbsp;&nbsp; \>> `main` branch
 
-Once the container downloads starts, you should be ready to run the examples (see [Executing Demos from the Test Suite](#executing-the-examples) below).
+Once the container is initialised, you should be ready to run the examples (see [Executing Demos from the Test Suite](#executing-demos-from-the-test-suite) below).
 
 ## Running Examples (Manual Configuration)
 
@@ -145,7 +176,7 @@ Port 4444 is open
 
 #### 4. Configuration Set
 
-Before running any of the `*Demo`s you will need to set up a `DemoConfig.hs` file as follows:
+Before running any of the `Demo`s you will need to set up a `DemoConfig.hs` file as follows:
 
 1. copy `webdriver-precore/test/DebugConfig.hs.template` => `webdriver-precore/test/DebugConfig.hs`
 
@@ -187,7 +218,7 @@ debugConfig =
 
 *You will need to change the config according to your requirements.*
 
-Note: This test suite can also be configured via a `config.dhall` file but this is used more for `CI` so will not be described here.
+Note: This test suite can also be configured via a `config.dhall` file which is used in the dev-container.
 
 ## Executing Demos from the Test Suite
 
@@ -205,7 +236,28 @@ Clicking `Evaluate...` will execute the demo.
 * any exceptions will be inserted in the source file under the evaluation
 * any console logs generated form the test will be piped to the `OUTPUT` window for `Haskell (webdriver)` 
 * the output will be piped to `eval.log`
-  
+
+
+### Dev-Container Configuration Notes
+
+If you are running inside a dev-container then on the first run a configuration file will be created at `.config/config.dhall` within the test directory. This file is ignored by git, so navigate to it via the **Project Explorer** as most keyboard shortcuts will skip ignored files.
+
+By default, demos run **headless** (no visible browser window). Output can be viewed in:
+- The VSCode **OUTPUT** window → select `Haskell` from the dropdown
+- The `eval.log` file created in the `webdriver` directory
+
+To switch to **headed** mode (visible browser), edit `.config/config.dhall` and change the `headless` property:
+
+```haskell
+let browser : Browser = 
+      Browser.Firefox 
+        { headless = False  -- change from True to False
+        , profilePath = None Text
+        }
+```
+
+**Important:** Running headed demos requires display server access. See [Preparing for Headed Demos](#preparing-for-headed-demos) for the required host setup.
+
 ### cabal repl
 *Alternatively tests can be run in `cabal repl webdriver-precore:test:test` from the `webdriver` directory:*
 
