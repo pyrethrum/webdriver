@@ -14,9 +14,6 @@ ENV DEBIAN_FRONTEND=noninteractive \
     USER_UID=1001 \
     USER_GID=1001
     
-    # ensure switched user
-    USER ${USER_UID}:${USER_GID}
-    
     # Set the working directory
     WORKDIR /home/vscode
     
@@ -24,9 +21,8 @@ ARG REPO=https://github.com/pyrethrum/webdriver.git
 ARG BRANCH=pre-release-3
 # ARG BRANCH=main
 
-    
-# Ensure the vscode user has ownership of its home directory
-RUN chown -R ${USER_UID}:${USER_GID} /home/${USERNAME}
+# ensure switched user (do this AFTER setting up directories)
+USER ${USER_UID}:${USER_GID}
 
 # Sadly this has to all be in a single RUN command so REPO_DIR can be used
 # Docker does not directly support storing command output in variables within a Dockerfile as you might in a shell script. 
@@ -53,7 +49,15 @@ RUN REPO_DIR=$(basename -s .git "${REPO}") \
     # delete the repo
     && echo "working directory is ${PWD}" \
     && echo "deleting repo ${REPO_DIR}" \
-    && rm -rf "${REPO_DIR}"
+    && rm -rf "${REPO_DIR}" \
+    # Clean up cabal cache to reduce image size (keep compiled libraries!)
+    && rm -rf /home/vscode/.cabal/packages/*/*/build-reports \
+    && rm -rf /home/vscode/.cabal/logs \
+    # Remove source tarballs since we have the compiled versions
+    && find /home/vscode/.cabal/packages -name "*.tar.gz" -delete \
+    # Remove profiling objects (only needed if building with --enable-profiling)
+    && find /home/vscode/.cabal/store -type f -name "*.p_o" -delete \
+    && find /home/vscode/.cabal/store -type f -name "*.p_hi" -delete
 
 # Specify the default command to run when the container starts
 CMD ["bash"]
