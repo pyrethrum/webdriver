@@ -14,10 +14,23 @@
 	"containerUser": "vscode",
 
 	// X11 forwarding for headed browser testing
+	// 
+	// xhost controls access to the X11 display server. By default, the X server
+	// only allows connections from the user who started it. Since the container
+	// runs as a different user (vscode), it cannot access the host's display
+	// without explicit permission. The initializeCommand below runs `xhost +local:`
+	// on the host to allow all local connections to the X server, enabling the
+	// browser inside the container to render windows on your desktop.
+	//
+	// Requires xhost installed on Linux host (x11-xserver-utils package).
+	// For macOS/Windows, see test/README.md for additional setup steps.
 	"runArgs": [
 		"-e", "DISPLAY=${localEnv:DISPLAY}",
 		"-v", "/tmp/.X11-unix:/tmp/.X11-unix:rw"
 	],
+	
+	// Auto-run xhost on container start for X11 forwarding (runs on host before container starts)
+	"initializeCommand": "xhost +local: 2>/dev/null || true",
 
 	"postStartCommand": "bash ./dev/container-start.sh",
 	"postAttachCommand": "bash ./dev/container-attach.sh",

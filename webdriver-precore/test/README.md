@@ -60,10 +60,25 @@ Headed (visible browser) demos require a display server for the browser to rende
 Note: you can still run the demos headless in the container if you skip this step.
 
 **Linux:**
+
+No manual setup required. The dev-container automatically runs `xhost +local:` on startup via `initializeCommand` in `devcontainer.json`.
+
+If you encounter X11 issues, ensure `xhost` is installed on your host:
 ```bash
-xhost +local:docker
+# Debian/Ubuntu
+sudo apt-get install x11-xserver-utils
+
+# Fedora
+sudo dnf install xorg-x11-server-utils
+
+# Arch
+sudo pacman -S xorg-xhost
 ```
-Run this on your host before starting the dev-container. This grants Docker containers access to your X11 display.
+
+You can verify X11 is working from inside the container by running:
+```bash
+bash ./dev/test-x11.sh
+```
 
 **macOS:**
 1. Install [XQuartz](https://www.xquartz.org/)
@@ -242,16 +257,17 @@ Clicking `Evaluate...` will execute the demo.
 
 If you are running inside a dev-container then on the first run a configuration file will be created at `.config/config.dhall` within the test directory. This file is ignored by git, so navigate to it via the **Project Explorer** as most keyboard shortcuts will skip ignored files.
 
-By default, demos run **headless** (no visible browser window). Output can be viewed in:
+By default, demos run **headed** (visible browser window). Output can be viewed in:
+- You should see Firefox running when a demo runs
 - The VSCode **OUTPUT** window → select `Haskell` from the dropdown
 - The `eval.log` file created in the `webdriver` directory
 
-To switch to **headed** mode (visible browser), edit `.config/config.dhall` and change the `headless` property:
+To switch to **headless** mode (no visible browser), edit `.config/config.dhall` and change the `headless` property:
 
 ```haskell
 let browser : Browser = 
       Browser.Firefox 
-        { headless = False  -- change from True to False
+        { headless = True  -- change from False to True
         , profilePath = None Text
         }
 ```

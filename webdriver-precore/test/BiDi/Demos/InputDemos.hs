@@ -53,6 +53,7 @@ defaultPointerProps =
     }
 
 -- >>> runDemo inputKeyboardDemo
+-- *** Exception: ProtocolException {error = UnknownError, description = "An unknown error occurred in the remote end while processing the command", message = "Process unexpectedly closed with status 1", stacktrace = Just "", errorData = Nothing, response = Object (fromList [("error",String "unknown error"),("message",String "Process unexpectedly closed with status 1"),("stacktrace",String "")])}
 inputKeyboardDemo :: BiDiDemo
 inputKeyboardDemo =
   demo "Input I - Keyboard Actions" action
@@ -507,6 +508,7 @@ inputPointerDemo =
       closeContext utils bidi bc
 
 -- >>> runDemo inputWheelDemo
+-- *** Exception: ProtocolException {error = UnknownError, description = "An unknown error occurred in the remote end while processing the command", message = "Process unexpectedly closed with status 1", stacktrace = Just "", errorData = Nothing, response = Object (fromList [("error",String "unknown error"),("message",String "Process unexpectedly closed with status 1"),("stacktrace",String "")])}
 inputWheelDemo :: BiDiDemo
 inputWheelDemo =
   demo "Input III - Wheel/Scroll Actions" action
