@@ -137,9 +137,9 @@
 
  - [X] get CI tests working in container
  - [X] chrome - local
- - [ ] retest dev-container
-   - [ ] dhall
-   - [ ] dhall-lsp-server
+ - [X] retest dev-container
+   - [X] dhall
+   - [X] dhall-lsp-server
 
 ## release http / bidi
 
