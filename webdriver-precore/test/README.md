@@ -41,7 +41,7 @@ The demos cover all W3C WebDriver endpoints for [HTTP](https://www.w3.org/TR/web
 
 ## Core Modules
 
-For BiDi the module structure for BiDi looks like this. 
+The module structure for BiDi looks like this. 
 
 <img src="./doc/deepseek_mermaid_20260112_8708ec.svg" alt="demo structure" width="600">
 
@@ -57,7 +57,7 @@ For BiDi the module structure for BiDi looks like this.
 
 Headed (visible browser) demos require a display server for the browser to render to. The dev-container needs access to your host's display to show the browser window.
 
-Note: you can still run the the demos headless in the contaier if you skip this step.
+Note: you can still run the demos headless in the container if you skip this step.
 
 **Linux:**
 ```bash
@@ -140,7 +140,7 @@ Configuration is affected by the following files:
 ... many build log entries
 ```
 
-*You may need to restart your IDE or evoke `Haskell: Restart Haskell LSP server` after your first rebuild.*
+*You may need to restart your IDE or invoke `Haskell: Restart Haskell LSP server` after your first rebuild.*
 #### 4. Web Driver Running
 
 Before running any of the examples you need to invoke the WebDriver from the terminal. On Linux this can be done by running the provided script:
@@ -234,7 +234,7 @@ Once the [driver is running](#3-web-driver-running), the recommended way to expe
 
 Clicking `Evaluate...` will execute the demo.
 * any exceptions will be inserted in the source file under the evaluation
-* any console logs generated form the test will be piped to the `OUTPUT` window for `Haskell (webdriver)` 
+* any console logs generated from the test will be piped to the `OUTPUT` window for `Haskell (webdriver)` 
 * the output will be piped to `eval.log`
 
 
@@ -290,7 +290,7 @@ When `Firefox` is installed in this way, `geckodriver` does not have the require
 One solution is to create a profile in a directory somewhere accessible to geckodriver on the file system:
 
 1. Create a new folder called `test-firefox-profile` in an accessible place such as your linux `Home` directory
-2. In Firefox type the following into the search bar: `about:profiles` to be take to `About Profiles`
+2. In Firefox type the following into the search bar: `about:profiles` to be taken to `About Profiles`
 3. Note your current `Default Profile`
 4. `Create New Profile` 
 5. `Next`

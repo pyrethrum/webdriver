@@ -49,7 +49,7 @@ We, the authors of this library, are building our own stand-alone test framework
 The following features are not included in this library. They belong in downstream libraries.
   * Convenience or utility functions, that do not directly correspond to an endpoint on the W3C spec.
   * Transformers, effects or similar abstractions. 
-  * Bespoke variations from the spec to accommodate non-standard driver behviour.
+  * Bespoke variations from the spec to accommodate non-standard driver behaviour.
 
 ### Acknowledgements
 
