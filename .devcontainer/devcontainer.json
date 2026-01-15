@@ -33,9 +33,10 @@
 	// Two steps needed:
 	// 1. xhost +local: - adds X server access control entry
 	// 2. chmod - makes socket accessible to container user (different UID)
+	// Note: Using full paths because /bin/sh may have minimal PATH
 	"initializeCommand": {
-		"xhost": "xhost +local: 2>&1 || echo 'xhost failed (is it installed?)'",
-		"chmod": "chmod a+rw /tmp/.X11-unix/X* 2>&1 || echo 'chmod X11 socket failed (may need sudo)'"
+		"xhost": "/usr/bin/xhost +local: 2>&1 || echo 'xhost failed - install x11-xserver-utils on host'",
+		"chmod": "/bin/chmod a+rw /tmp/.X11-unix/X* 2>&1 || echo 'chmod X11 socket failed (may need sudo)'"
 	},
 
 	"postStartCommand": "bash ./dev/container-start.sh",
