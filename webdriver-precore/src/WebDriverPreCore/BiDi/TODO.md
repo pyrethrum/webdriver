@@ -185,6 +185,7 @@ ChromeDriver was started successfully on port 4444.
  - [ ] edge driver
  - [ ] chrome - CI
  - [ ] test with driver not running
+ - [ ] rearrange docker - move hls install to jsut before dev-container
 
 ## later
 
