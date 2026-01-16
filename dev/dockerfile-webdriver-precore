@@ -18,8 +18,7 @@ ENV DEBIAN_FRONTEND=noninteractive \
     WORKDIR /home/vscode
     
 ARG REPO=https://github.com/pyrethrum/webdriver.git
-ARG BRANCH=pre-release-3
-# ARG BRANCH=main
+ARG BRANCH=main
 
 # ensure switched user (do this AFTER setting up directories)
 USER ${USER_UID}:${USER_GID}
