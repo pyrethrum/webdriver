@@ -615,7 +615,6 @@ inputWheelDemo =
       closeContext utils bidi bc
 
 -- >>> runDemo inputCombinedActionsDemo
--- *** Exception: ProtocolException {error = UnknownError, description = "An unknown error occurred in the remote end while processing the command", message = "Process unexpectedly closed with status 1", stacktrace = Just "", errorData = Nothing, response = Object (fromList [("error",String "unknown error"),("message",String "Process unexpectedly closed with status 1"),("stacktrace",String "")])}
 inputCombinedActionsDemo :: BiDiDemo
 inputCombinedActionsDemo =
   demo "Input IV - Combined Actions" action
