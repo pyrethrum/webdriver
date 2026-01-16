@@ -33,7 +33,7 @@
 	// If headed mode fails, you may also need to run on the host (not in container):
 	//   sudo chmod a+rw /tmp/.X11-unix/X*
 	// See test/README.md for details.
-	"initializeCommand": "/usr/bin/xhost +local: 2>&1 && echo '[xhost] X11 forwarding enabled' || echo '[xhost] X11 not available (headed mode will not work)'",
+	"initializeCommand": "sh -c 'xhost +local: 2>&1 && echo \"[xhost] X11 forwarding enabled\" || echo \"[xhost] X11 not available (headed mode will not work)\"'",
 
 	"postStartCommand": "bash ./dev/container-start.sh",
 	"postAttachCommand": "bash ./dev/container-attach.sh",
