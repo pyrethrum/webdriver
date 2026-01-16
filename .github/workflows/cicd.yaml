@@ -35,6 +35,14 @@ jobs:
           registry: ghcr.io
           username: ${{ vars.PACKAGE_UPLOAD_USER_NAME }}
           password: ${{ secrets.PACKAGE_UPLOAD_TOKEN }}
+      - name: Free Disk Space
+        run: |
+          docker system prune -af --volumes
+          sudo rm -rf /usr/share/dotnet
+          sudo rm -rf /opt/ghc
+          sudo rm -rf /usr/local/share/boost
+          sudo rm -rf "$AGENT_TOOLSDIRECTORY"
+          df -h
       - name: Build and push
         uses: docker/build-push-action@v5
         with:
