@@ -40,7 +40,7 @@ jobs:
         with:
 
           context: .
-          file: Dockerfile
+          file: ./dev/dockerfile-ci-test
           push: true
           tags: ghcr.io/pyrethrum/ci-test:${{needs.env-setup.outputs.buildid}},ghcr.io/pyrethrum/ci-test:latest
           cache-from: type=registry,ref=ghcr.io/pyrethrum/ci-test:buildcache
