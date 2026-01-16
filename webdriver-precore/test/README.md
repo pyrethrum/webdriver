@@ -61,9 +61,14 @@ Note: you can still run the demos headless in the container if you skip this ste
 
 **Linux:**
 
-No manual setup required. The dev-container automatically configures X11 access on startup via `initializeCommand` in `devcontainer.json`.
+The dev-container automatically runs `xhost +local:` on startup. However, if headed browser tests fail with display errors, you may need to fix X11 socket permissions.
 
-If you encounter X11 issues, ensure `xhost` is installed on your host:
+Run this on your **host machine** (not in the container), typically once after each host reboot:
+```bash
+sudo chmod a+rw /tmp/.X11-unix/X*
+```
+
+Prerequisite: ensure `xhost` is installed on your host:
 ```bash
 # Debian/Ubuntu
 sudo apt-get install x11-xserver-utils
@@ -73,12 +78,6 @@ sudo dnf install xorg-x11-server-utils
 
 # Arch
 sudo pacman -S xorg-xhost
-```
-
-If the automatic setup fails (e.g., permission errors on the X11 socket), you can manually run on the host:
-```bash
-xhost +local:
-sudo chmod a+rw /tmp/.X11-unix/X*
 ```
 
 You can verify X11 is working from inside the container by running:
