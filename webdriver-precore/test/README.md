@@ -61,10 +61,13 @@ Note: you can still run the demos headless in the container if you skip this ste
 
 **Linux:**
 
-The dev-container automatically runs `xhost +local:` on startup. However, if headed browser tests fail with display errors, you may need to fix X11 socket permissions.
-
 Run this on your **host machine** (not in the container), typically once after each host reboot:
+
+- `xhost +local:` grants permission for local connections to access the X11 display server
+- `sudo chmod a+rw /tmp/.X11-unix/X*` ensures X11 socket files have read/write permissions for all users
+
 ```bash
+xhost +local:
 sudo chmod a+rw /tmp/.X11-unix/X*
 ```
 
