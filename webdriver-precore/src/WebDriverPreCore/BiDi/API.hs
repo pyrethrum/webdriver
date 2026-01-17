@@ -638,6 +638,10 @@ subscribeMany ::
   Subscription m
 subscribeMany = mkMultiSubscription
 
+-- | Subscribe to off-specification event types.
+--
+-- Use this only as a fallback when a driver supports events not covered by
+-- this library. Prefer using the standard subscription functions when available.
 subscribeOffSpecMany ::
   [OffSpecSubscriptionType] ->
   [BrowsingContext] ->

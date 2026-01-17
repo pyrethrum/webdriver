@@ -38,6 +38,10 @@ mkMultiSubscription ::
 mkMultiSubscription ks =
   MultiSubscription (KnownSubscriptionType <$> ks)
 
+-- | Create a subscription for off-specification event types.
+--
+-- Use this only as a fallback when a driver supports events not covered by
+-- this library. Prefer using standard subscription constructors when available.
 mkOffSpecSubscription ::
   [OffSpecSubscriptionType] ->
   [BrowsingContext] ->
