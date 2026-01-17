@@ -10,7 +10,7 @@
   - All 97 tests passed (181.01s) - headless
 - [x] pull logger out
 - [x] rename BidiActions/Methods BiDiSocket / BiDiActions
-- [x] recocover http session after refactor
+- [x] recover http session after refactor
 - [x] simplify Command - use value parameter :: THINK MAY NEED TO CHANGE HTTP BACK
 - [NA] not worth it - mostly done finsih when split libraries - needs own types when moved to own library - decouple runner and socket from protocol
   - [X] clean up last bidi imports
@@ -109,23 +109,23 @@
 
 ## docs
 
-- [ ] generate Haddock
-  - [NA] haddock varible for versions - HADDOCK LIMITATION
-  - [ ] add urls to bidi
-  - [ ] move intro to haddock
-  - [ ] move demo discussion to demo
-- [ ] document all Fallback functions
-- [ ] demos index
-- [ ] config explaind
-- [ ] update haddock
-- [ ] update readme
-- [ ] lookup / document dealing with diffferent versions
-- [ ] check docs urls
-- [ ] check all licence files
-- [ ] redo diagram in drawIO
-- [ ] http diagram
-- [ ] change log
-- [ ] mention git LFS in Docs
+- [X] generate Haddock
+  - [NA] haddock variable for versions - HADDOCK LIMITATION
+  - [X] add urls to bidi
+  - [X] move intro to haddock
+  - [X] move demo discussion to demo
+- [X] document all Fallback functions
+- [X] demos index
+- [X] config explained
+- [X] update haddock
+- [X] update readme
+- [X] lookup / document dealing with different versions
+- [X] check docs urls
+- [X] check all licence files
+- [X] redo diagram in drawIO
+- [X] http diagram
+- [X] change log
+- [X] mention git LFS in Docs
 
 ## prep
 
@@ -173,19 +173,22 @@ ChromeDriver was started successfully on port 4444.
 ## FINAL
 [X] chromedriver working
 [X] rerun firefox 
-[x] Claud audit
+[x] Claude audit
 [X] spec update
 [X] docs lfs git
-[ ] use one base container for dev-container and CI (update)
-[ ] devcontainer fixed
+[X] use one base container for dev-container and CI (update)
+[X] devcontainer fixed
 [X] docs use image
+[X] once upon a time
+[X] check type returned http
+[ ] Claude check typos
 
 
 ## deferred
  - [ ] edge driver
  - [ ] chrome - CI
  - [ ] test with driver not running
- - [ ] rearrange docker - move hls install to jsut before dev-container
+ - [ ] rearrange docker - move hls install to just before dev-container
 
 ## later
 

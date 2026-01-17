@@ -101,7 +101,7 @@
       "problemMatcher": []
     },
     {
-      "label": "upload to hackage",
+      "label": "upload hackage candidate",
       "type": "shell",
       "options": {
         "cwd": "${workspaceFolder}/webdriver-precore"

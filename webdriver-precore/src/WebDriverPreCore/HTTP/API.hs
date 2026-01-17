@@ -1,39 +1,12 @@
 {-# LANGUAGE CPP #-}
 
-{-|
+{-
 
--- TODO: FIX
-Once upon a time, the main browser automation tool was Selenium. Users of
-this package had to start a Selenium session themselves, making sure to
-configure it with a browser-specific driver program like @chromedriver@ or
-@geckodriver@, and provide a hostname\/port. Then, this package would connect to
-Selenium and use its wire protocol to control browsers.
+    -- | Type definitions for commands for all [WebDriver HTTP endpoints](HTMLSpecURL).
+    --
+    -- See the demos in the [demos](https://github.com/pyrethrum/webdriver/blob/main/webdriver-precore/test/README.md) for how this module can be used to develop a WebDriver client.
+    --
 
-Nowadays, there is an official W3C spec (<https://www.w3.org/TR/webdriver1>)
-specifying the protocol, and a number of implementations. Selenium still exists,
-but Chromedriver and Geckodriver can both serve as standalone WebDriver servers.
-This library now helps you start up a driver in one of these supported
-configurations:
-
-1. Selenium.jar with one or more supported sub-drivers (@chromedriver@,
-@geckodriver@). This is similar to the traditional picture.
-2. Chromedriver standalone.
-3. Geckodriver standalone.
-
-You can pick the configuration you want by passing a 'DriverConfig' to the
-'startSession' function. The WebDriver implementations have a few differences
-between them, which this library tries to smooth over. For example, a single
-Geckodriver instance can't start multiple Firefox sessions (see
-<https://github.com/mozilla/geckodriver/issues/1946>). So, this library will spin
-up a separate @geckodriver@ process for every session.
-
-For an example of using this package by itself, see "Test.WebDriver.WD". For a
-full test framework integrated with this package, see
-[sandwich-webdriver](https://hackage.haskell.org/package/sandwich-webdriver).
-
-For more information about error handling, see "WebDriverPreCore.SharedDocs#errorHandling#".
-
-For session lifecycle details, see "WebDriverPreCore.SharedDocs#sessionManagement#".
 
 -}
 

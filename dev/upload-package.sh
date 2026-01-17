@@ -38,6 +38,7 @@ cabal upload --token=$API_KEY "$SOURCE_TARBALL"
 # see issue https://github.com/haskell/cabal/issues/10252
 # when fixed replace with cabal upload --username="" --password="$API_KEY" "$DOCS_TARBALL" --documentation
 echo "Uploading docs tarball..."
+echo "If uploading docs fails use: cabal upload -d dist-newstyle/webdriver-precore-*-docs.tar.gz"
 curl -X PUT \
   --header "Authorization: X-ApiKey $API_KEY" \
   -H "Content-Type: application/x-tar" \
@@ -46,3 +47,5 @@ curl -X PUT \
   https://hackage.haskell.org/package/$PACKAGE_NAME/candidate/docs
 
 echo "Upload complete for $PACKAGE_NAME"
+
+
