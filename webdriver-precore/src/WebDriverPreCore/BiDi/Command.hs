@@ -41,7 +41,9 @@ data Command r = MkCommand
   }
   deriving (Show, Eq)
 
--- | The method name of a BiDi command. This library provides known commands as 'KnownCommand' values, but users can also create off-spec commands using 'OffSpecCommand' as a fallback, when the driver supports commands not yet implemented in this library.
+-- | The method name of a BiDi command.
+--
+-- This library provides known commands as 'KnownCommand' values, but users can also create off-spec commands using 'OffSpecCommand' as a fallback, when the driver supports commands not yet implemented in this library.
 data CommandMethod
   = KnownCommand KnownCommand
   | OffSpecCommand OffSpecCommand
