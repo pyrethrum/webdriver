@@ -15,7 +15,7 @@ Adapt and move when ready
 
 ## What is This Library?
 
-This library provides typed definitions for the W3C WebDriver Protocol, supporting both the [HTML](https://www.w3.org/TR/2025/WD-webdriver2-20251028/) and the [BiDi](https://www.w3.org/TR/2025/WD-webdriver-bidi-20251212/) protocols.
+This library provides typed definitions for the W3C WebDriver Protocol, supporting both the [HTTP](https://www.w3.org/TR/2025/WD-webdriver2-20251028/) and the [BiDi](https://www.w3.org/TR/2025/WD-webdriver-bidi-20251212/) protocols.
 
 This library is intended as a foundation for building WebDriver client implementations. **It is type constructors only**, and does not include any executable client code.
 

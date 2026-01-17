@@ -12,10 +12,10 @@
 - [x] rename BidiActions/Methods BiDiSocket / BiDiActions
 - [x] recover http session after refactor
 - [x] simplify Command - use value parameter :: THINK MAY NEED TO CHANGE HTTP BACK
-- [NA] not worth it - mostly done finsih when split libraries - needs own types when moved to own library - decouple runner and socket from protocol
+- [NA] not worth it - mostly done finish when split libraries - needs own types when moved to own library - decouple runner and socket from protocol
   - [X] clean up last bidi imports
 - [X] specific code TODOs - TODO tree
-- [X] check all exports - should use prtocol and API only
+- [X] check all exports - should use protocol and API only
 - [X] update to latest spec
 - [X] unsubscribe by attributes
 - [X] fallback
@@ -69,7 +69,7 @@
 
 ## Extend testing
 
-- [ ] chrome
+- [X] chrome
   - [ ] container
   - [ ] CI
 - [ ] edge
@@ -127,12 +127,6 @@
 - [X] change log
 - [X] mention git LFS in Docs
 
-## prep
-
-- [ ] spell check
-- [ ] check hlint and why it isn't firing as it use to
-- [ ] run weeder
-
 ## CI
 
  - [X] get CI tests working in container
@@ -140,13 +134,6 @@
  - [X] retest dev-container
    - [X] dhall
    - [X] dhall-lsp-server
-
-## release http / bidi
-
-- [ ] hackage
-- [ ] stackage
-- [ ] announce
-- [ ] ping webdriver repo
 
 --- 
 delete this later
@@ -181,7 +168,7 @@ ChromeDriver was started successfully on port 4444.
 [X] docs use image
 [X] once upon a time
 [X] check type returned http
-[ ] Claude check typos
+[X] Claude check typos
 
 
 ## deferred
@@ -193,6 +180,14 @@ ChromeDriver was started successfully on port 4444.
 ## later
 
 - [ ] [update readme in similar style to](https://github.com/nikita-volkov/hasql)
+
+## release http / bidi
+
+- [ ] hackage
+- [ ] stackage
+- [ ] announce
+- [ ] ping webdriver repo
+
 
 
 
