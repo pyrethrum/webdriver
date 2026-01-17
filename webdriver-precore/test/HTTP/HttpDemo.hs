@@ -82,7 +82,10 @@ driverStatusDemo =
     action sesId MkDemoActions {..} MkHttpActions {..} = do
       log "new session:" $ txt sesId
       s <- status
-      -- not ready because the driver is already serving a session
+      {- Per W3C WebDriver spec section 8.4, status.ready must be false when active HTTP sessions exist.
+         Geckodriver (Firefox) correctly implements this - returns ready: false when serving a session.
+         Chromedriver diverges from spec - returns ready: true even with active sessions because it 
+         supports multiple concurrent sessions. This test will fail on Chrome. -}
       False === s.ready
       logShowM "driver status" status
 
@@ -215,13 +218,21 @@ demoWindowSizes =
       navigateTo sesId $ url
       pause
 
+      {- ChromeDriver limitation: Transitioning from fullscreen => maximized fails intermittently with
+         "failed to change window state to 'normal', current state is 'fullscreen'" on some systems.
+         This is a known ChromeDriver bug on Linux/Wayland/X11 where the window manager state doesn't
+         sync properly with ChromeDriver's internal state machine. Even with delays and state sync
+         calls (getWindowRect), the transition remains unreliable.
+         
+         Workaround: minimizeWindow => maximizeWindow => fullscreen  -}
+
       logShowM "minimizeWindow" $ minimizeWindow sesId
       pause
 
-      logShowM "fullscreen" $ fullScreenWindow sesId
-      pause
-
       logShowM "maximizeWindow" $ maximizeWindow sesId
+      pause 
+
+      logShowM "fullscreen" $ fullScreenWindow sesId
       pause
 
 -- >>> runDemo demoElementPageProps

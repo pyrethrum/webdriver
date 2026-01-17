@@ -45,8 +45,7 @@ instance ToJSON WebExtensionInstall where
   toJSON :: WebExtensionInstall -> Value
   toJSON ex =
     object
-      [ "method" .= "webExtension.install",
-        "extensionData" .= extensionData
+      [ "extensionData" .= extensionData
       ]
     where
       extensionData = case ex of
@@ -75,8 +74,7 @@ instance ToJSON WebExtensionUninstall where
   toJSON :: WebExtensionUninstall -> Value
   toJSON (MkWebExtensionUninstall extId) =
     object
-      [ "method" .= "webExtension.uninstall",
-        "extension" .= extId
+      [ "extension" .= extId
       ]
 
 

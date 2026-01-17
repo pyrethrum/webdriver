@@ -28,16 +28,15 @@ parseUrlDemo = txt $ parseUrl "ws://127.0.0.1:9222/session/e43698d9-b02a-4284-a9
 
 -- >>> evalFail getFailDemo
 getFailDemo :: Config -> IO ()
-getFailDemo c = expectError "getfail" "Forced failure for testing: get" $ runDemoFail' c 0 2 0 failDemo
+getFailDemo c = expectErrorText "getfail" "Forced failure for testing: get" $ runDemoFail' c 0 2 0 failDemo
 
 -- >>> evalFail sendFailDemo
 sendFailDemo :: Config -> IO ()
-sendFailDemo c = expectError "sendfail" "Forced failure for testing: send" $ runDemoFail' c 2 0 0 failDemo
+sendFailDemo c = expectErrorText "sendfail" "Forced failure for testing: send" $ runDemoFail' c 2 0 0 failDemo
 
 -- >>> evalFail eventFailDemo
 eventFailDemo :: Config -> IO ()
-eventFailDemo c = expectError "eventfail" "Forced failure for testing: eventhandler (call #2)" $ runDemoFail' c 0 0 2 failDemo
-
+eventFailDemo c = expectErrorText "eventfail" "Forced failure for testing: eventhandler (call #2)" $ runDemoFail' c 0 0 2 failDemo
 evalFail :: (Config -> IO ()) -> IO ()
 evalFail failAction = do
   c <- loadConfig

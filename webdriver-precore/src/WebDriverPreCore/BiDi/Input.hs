@@ -23,13 +23,13 @@ where
 
 import Data.Aeson (ToJSON (..), Value (Object), object, (.=), FromJSON (..))
 import Data.Aeson.KeyMap qualified
-import Data.Maybe (fromMaybe)
+import Data.Aeson.Types (Parser)
+import Data.Maybe (fromMaybe, catMaybes)
 import Data.Text (Text)
 import GHC.Generics (Generic)
 import WebDriverPreCore.BiDi.Script qualified as Script
-import AesonUtils (toJSONOmitNothing, parseJSONOmitNothing)
+import AesonUtils (toJSONOmitNothing, parseJSONOmitNothing, opt)
 import WebDriverPreCore.BiDi.CoreTypes (BrowsingContext(..))
-import Data.Aeson.Types (Parser)
 import WebDriverPreCore.BiDi.Script (SharedReference)
 
 -- ######### Local #########
@@ -109,10 +109,9 @@ instance ToJSON KeySourceAction where
   toJSON :: KeySourceAction -> Value
   toJSON = \case
     KeyPause {duration} ->
-      object
-        [ "type" .= "pause",
-          "duration" .= duration
-        ]
+      object $
+        ["type" .= "pause"]
+          <> catMaybes [opt "duration" duration]
     KeyDown {value} ->
       object
         [ "type" .= "keyDown",
@@ -187,10 +186,9 @@ instance ToJSON PointerSourceAction where
   toJSON :: PointerSourceAction -> Value
   toJSON = \case
     Pause {duration} ->
-      object
-        [ "type" .= "pause",
-          "duration" .= duration
-        ]
+      object $
+        ["type" .= "pause"]
+          <> catMaybes [opt "duration" duration]
     PointerDown {button, pointerCommonProperties} ->
       case toJSON pointerCommonProperties of
         Object props ->
@@ -214,18 +212,17 @@ instance ToJSON PointerSourceAction where
           object $
             [ "type" .= "pointerMove",
               "x" .= x,
-              "y" .= y,
-              "duration" .= duration,
-              "origin" .= origin
-            ] ++ [(k, v) | (k, v) <- Data.Aeson.KeyMap.toList props]
+              "y" .= y
+            ] 
+            <> catMaybes [opt "duration" duration, opt "origin" origin]
+            ++ [(k, v) | (k, v) <- Data.Aeson.KeyMap.toList props]
         _ -> 
-          object
+          object $
             [ "type" .= "pointerMove",
               "x" .= x,
-              "y" .= y,
-              "duration" .= duration,
-              "origin" .= origin
+              "y" .= y
             ]
+            <> catMaybes [opt "duration" duration, opt "origin" origin]
 
 data WheelSourceActions = MkWheelSourceActions
   { wheelId :: Text,
@@ -261,10 +258,9 @@ newtype PauseAction = MkPauseAction
 instance ToJSON PauseAction where
   toJSON :: PauseAction -> Value
   toJSON (MkPauseAction duration) =
-    object
-      [ "type" .= "pause",
-        "duration" .= duration
-      ]
+    object $
+      ["type" .= "pause"]
+        <> catMaybes [opt "duration" duration]
 
 data WheelScrollAction = MkWheelScrollAction
   { x :: Int,
@@ -279,15 +275,14 @@ data WheelScrollAction = MkWheelScrollAction
 instance ToJSON WheelScrollAction where
   toJSON :: WheelScrollAction -> Value
   toJSON (MkWheelScrollAction x y deltaX deltaY duration origin) =
-    object
+    object $
       [ "type" .= "scroll",
         "x" .= x,
         "y" .= y,
         "deltaX" .= deltaX,
-        "deltaY" .= deltaY,
-        "duration" .= duration,
-        "origin" .= origin
+        "deltaY" .= deltaY
       ]
+        <> catMaybes [opt "duration" duration, opt "origin" origin]
 
 data PointerCommonProperties = MkPointerCommonProperties
   { width :: Maybe Int, -- default 1
@@ -338,12 +333,16 @@ data SetFiles = MkSetFiles
 
 instance ToJSON SetFiles
 
-data FileDialogOpened = MkFileDialogOpened
+-- | Event data for input.fileDialogOpened event
+-- Parses the params content directly (params is extracted by Event or SingleSubscription handler)
+newtype FileDialogOpened = MkFileDialogOpened
   { params :: FileDialogInfo
   }
   deriving (Show, Eq, Generic)
 
-instance FromJSON FileDialogOpened
+instance FromJSON FileDialogOpened where
+  parseJSON :: Value -> Parser FileDialogOpened
+  parseJSON v = MkFileDialogOpened <$> parseJSON v
 
 -- ######### Local #########
 

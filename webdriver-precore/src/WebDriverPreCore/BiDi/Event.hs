@@ -38,6 +38,10 @@ mkMultiSubscription ::
 mkMultiSubscription ks =
   MultiSubscription (KnownSubscriptionType <$> ks)
 
+-- | Create a subscription for off-specification event types.
+--
+-- Use this only as a fallback when a driver supports events not covered by
+-- this library. Prefer using standard subscription constructors when available.
 mkOffSpecSubscription ::
   [OffSpecSubscriptionType] ->
   [BrowsingContext] ->
@@ -45,7 +49,7 @@ mkOffSpecSubscription ::
   (Value -> m ()) ->
   Subscription m
 mkOffSpecSubscription ks =
-  UnknownSubscription (OffSpecSubscriptionType <$> ks)
+  OffSpecSubscription (OffSpecSubscriptionType <$> ks)
 
 data Subscription m where
   SingleSubscription ::
@@ -64,7 +68,7 @@ data Subscription m where
       nAction :: Event -> m ()
     } ->
     Subscription m
-  UnknownSubscription ::
+  OffSpecSubscription ::
     { subscriptionTypes :: [SubscriptionType],
       browsingContexts :: [BrowsingContext],
       userContexts :: [UserContext],
@@ -88,13 +92,17 @@ instance FromJSON Event where
   parseJSON :: Value -> Parser Event
   parseJSON = withObject "Event" $ \o -> do
     m <- o .: "method"
+    params <- o .: "params"
     let methodPrefix :: Text -> Bool
         methodPrefix = (`isPrefixOf` m)
         parseVal :: forall a. (FromJSON a) => Parser a
         parseVal = parseJSON (Object o)
+        -- For input events, parse from params directly (consistent with SingleSubscription)
+        parseParams :: forall a. (FromJSON a) => Parser a
+        parseParams = parseJSON params
     if
       | methodPrefix "browsingContext" -> BrowsingContextEvent <$> parseVal
-      | methodPrefix "input" -> InputEvent <$> parseVal
+      | methodPrefix "input" -> InputEvent <$> parseParams
       | methodPrefix "log" -> LogEvent <$> parseVal
       | methodPrefix "network" -> NetworkEvent <$> parseVal
       | methodPrefix "script" -> ScriptEvent <$> parseVal

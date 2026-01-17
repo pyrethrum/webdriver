@@ -1,0 +1,34 @@
+# Use the webdriver-precore image as a base
+FROM ghcr.io/pyrethrum/webdriver-precore:latest
+
+# use
+# docker build -t "webdriver-precore-firefox" --file dockerfile-webdriver-precore-firefox .
+# docker tag webdriver-precore-firefox ghcr.io/pyrethrum/webdriver-precore-firefox:latest
+# docker push ghcr.io/pyrethrum/webdriver-precore-firefox:latest
+
+# vscode user already created in base image
+ENV DEBIAN_FRONTEND=noninteractive \
+    USERNAME=vscode \
+    USER_UID=1001 \
+    USER_GID=1001
+
+# Install Firefox by running the install script
+COPY install-firefox.sh /home/vscode/install-firefox.sh
+USER root
+RUN echo "Install firefox" && \
+    chmod +x /home/vscode/install-firefox.sh && \
+    /home/vscode/install-firefox.sh && \
+    rm /home/vscode/install-firefox.sh
+
+# Install geckodriver by running the install script
+COPY install-gecko-driver.sh /home/vscode/install-gecko-driver.sh
+RUN echo "Install geckodriver" && \
+    chmod +x /home/vscode/install-gecko-driver.sh && \
+    /home/vscode/install-gecko-driver.sh && \
+    rm /home/vscode/install-gecko-driver.sh
+
+# Switch back to vscode user
+USER ${USER_UID}:${USER_GID}
+
+# Specify the default command to run when the container starts
+CMD ["bash"]

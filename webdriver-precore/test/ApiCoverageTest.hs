@@ -25,16 +25,12 @@ import WebDriverPreCore.HTTP.Protocol
 
 {-
 !! Replace this the endepoints from the spec with every release
-https://www.w3.org/TR/2025/WD-webdriver2-20251028 - W3C Editor's Draft 10 February 2025
-61 endpoints
-Method 	URI Template 	Command
-POST 	/session 	New Session
+https://www.w3.org/TR/2025/WD-webdriver2-20251028/#endpoints- W3C Working Draft 28 October 2025
 -}
 endPointsCopiedFromSpc :: Text
 endPointsCopiedFromSpc =
   pack
     [r|POST 	/session 	New Session
-
 DELETE 	/session/{session id} 	Delete Session
 GET 	/status 	Status
 GET 	/session/{session id}/timeouts 	Get Timeouts
@@ -94,7 +90,7 @@ GET 	/session/{session id}/alert/text 	Get Alert Text
 POST 	/session/{session id}/alert/text 	Send Alert Text
 GET 	/session/{session id}/screenshot 	Take Screenshot
 GET 	/session/{session id}/element/{element id}/screenshot 	Take Element Screenshot
-POST 	/session/{session id}/print   Print Page
+POST 	/session/{session id}/print 	Print Page
 |]
 
 parseLine :: Text -> SpecLine

@@ -30,7 +30,6 @@ module WebDriverPreCore.BiDi.BrowsingContext
     PrintResult (..),
     Info (..),
     NavigateResult (..),
-    TraverseHistoryResult (..),
     BrowsingContextEvent (..),
     NavigationInfo (..),
     DownloadEnd (..),
@@ -45,7 +44,6 @@ where
 import Data.Aeson (FromJSON (..), GFromJSON, KeyValue (..), Options (..), ToJSON (..), Value (..), Zero, defaultOptions, genericParseJSON, genericToJSON, object, withObject, (.:), (.=))
 import Data.Aeson.Types (Parser)
 import Data.Functor ((<&>))
-import Data.Map qualified as Map
 import Data.Maybe (catMaybes)
 import Data.Text (Text, pack, unpack)
 import GHC.Generics ( Generic(Rep) )
@@ -183,7 +181,9 @@ data GetTree = MkGetTree
   }
   deriving (Show, Eq, Generic)
 
-instance ToJSON GetTree
+instance ToJSON GetTree where
+  toJSON :: GetTree -> Value
+  toJSON = toJSONOmitNothing
 
 -- |  for handleUserPrompt command
 data HandleUserPrompt = MkHandleUserPrompt
@@ -345,7 +345,7 @@ instance ToJSON Locator where
     Context {context} ->
       object
         [ "type" .= "context",
-          "context" .= context
+          "value" .= object ["context" .= context]
         ]
     InnerText {value, ignoreCase, matchType, maxDepth} ->
       object $
@@ -418,8 +418,6 @@ data Viewport = MkViewport
 
 instance FromJSON NavigateResult
 
-instance FromJSON TraverseHistoryResult
-
 newtype GetTreeResult = MkGetTreeResult
   { contexts :: [Info]
   }
@@ -474,11 +472,6 @@ instance FromJSON Info where
 data NavigateResult = MkNavigateResult
   { navigation :: Maybe Text,
     url :: URL
-  }
-  deriving (Show, Eq, Generic)
-
-data TraverseHistoryResult = MkTraverseHistoryResult
-  { extensions :: Maybe (Map.Map Text Value)
   }
   deriving (Show, Eq, Generic)
 

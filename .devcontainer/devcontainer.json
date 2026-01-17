@@ -2,11 +2,8 @@
 // README at: https://github.com/devcontainers/templates/tree/main/src/docker-existing-dockerfile
 {
 	"name": "webdriver-precore",
-	"image": "ghcr.io/pyrethrum/webdriver-precore:latest",
-	// Features to add to the dev container. More info: https://containers.dev/features.
-	// "features": {},
-	// Use 'forwardPorts' to make a list of ports inside the container available locally.
-	// "forwardPorts": [],
+	"image": "ghcr.io/pyrethrum/webdriver-precore-firefox:latest",
+
 	// copy the compiled library files from dist-newstyle into the current working directory
 	// if the dist-newstyle directory does not already exist  this does not work
 	// cabal is too clever about cache invalidation and rebuild anyway
@@ -15,6 +12,30 @@
 	// "customizations": {},
 	"remoteUser": "vscode",
 	"containerUser": "vscode",
+
+	// X11 forwarding for headed browser testing
+	// 
+	// xhost controls access to the X11 display server. By default, the X server
+	// only allows connections from the user who started it. Since the container
+	// runs as a different user (vscode), it cannot access the host's display
+	// without explicit permission. The initializeCommand below runs `xhost +local:`
+	// on the host to allow all local connections to the X server, enabling the
+	// browser inside the container to render windows on your desktop.
+	//
+	// Requires xhost installed on Linux host (x11-xserver-utils package).
+	// For macOS/Windows, see test/README.md for additional setup steps.
+	"runArgs": [
+		"-e", "DISPLAY=${localEnv:DISPLAY}",
+		"-v", "/tmp/.X11-unix:/tmp/.X11-unix:rw"
+	],
+	
+	// Auto-run xhost on container start for X11 forwarding (runs on host before container starts)
+	// NOTE: If using snap-installed VS Code, run this manually on host before starting container:
+	//   xhost +local:
+	// If headed mode fails, you may also need to run on the host (not in container):
+	//   sudo chmod a+rw /tmp/.X11-unix/X*
+	// See test/README.md for details.
+	// "initializeCommand": "xhost +local:",
 
 	"postStartCommand": "bash ./dev/container-start.sh",
 	"postAttachCommand": "bash ./dev/container-attach.sh",
@@ -36,10 +57,11 @@
 				"ms-vsliveshare.vsliveshare-pack",
 				"christian-kohler.path-intellisense",
 				"kylepaulsen.stack-tabs",
-				"spmeesseman.vscode-taskexplorer",
 				"andyyaldoo.vscode-json",
 				"redhat.vscode-yaml",
-				"bee.git-temporal-vscode"
+				"bee.git-temporal-vscode",
+				"SanaAjani.taskrunnercode",
+				"ms-azuretools.vscode-containers"
 			]
 		}
 	}

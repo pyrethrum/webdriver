@@ -1,7 +1,7 @@
-cabal-version: 3.8
+cabal-version: 3.12
 
 name:           webdriver-precore
-version:        0.1.0.2
+version:        0.2.0.0
 homepage:       https://github.com/pyrethrum/webdriver-precore#readme
 bug-reports:    https://github.com/pyrethrum/webdriver-precore/issues
 author:         John Walker, Adrian Glouftsis
@@ -11,19 +11,17 @@ copyright:      2025 John Walker, Adrian Glouftsis
 license:        BSD-3-Clause
 license-file:   LICENSE
 build-type:     Simple
--- after 3.10
--- extra-doc-files: 
---   README.md
---   ChangeLog.md
-extra-source-files: 
+
+extra-doc-files: 
   README.md
   ChangeLog.md
+
 tested-with: GHC == { 9.8.2, 9.8.4, 9.10.1 }
 
-synopsis:       A typed wrapper for W3C WebDriver (HTTP and BiDi) protocol. A base for other libraries.
+synopsis:       A typed wrapper for W3C WebDriver (HTTP and BiDi) protocols.
 
 description:
-  This library provides typed definitions for the WebDriver W3C spec, both @<https://www.w3.org/TR/2025/WD-webdriver2-20251028/ HTTP>@ and @<https://www.w3.org/TR/2025/WD-webdriver-bidi-20251212/ BiDi>@.
+  This library provides typed definitions for the WebDriver W3C spec, both @<https://www.w3.org/TR/2025/WD-webdriver2-20251028/ HTTP>@ and @<https://www.w3.org/TR/2026/WD-webdriver-bidi-20260109/ BiDi>@.
 
   It is designed as a foundation for building WebDriver client libraries providing type-safe endpoint definitions and response parsers without any client implementation.
 
@@ -102,11 +100,11 @@ common commonGhcOptions
     -fno-warn-unused-do-bind 
     -Wno-overlapping-patterns 
     -Wno-deprecations
-    -fprefer-byte-code 
+    -fbyte-code-and-object-code 
     -- -fdefer-type-errors
   cpp-options: 
     -DHTMLSpecURL=https://www.w3.org/TR/2025/WD-webdriver2-20251028/
-    -DBiDiSpecURL=https://www.w3.org/TR/2025/WD-webdriver-bidi-20251212/
+    -DBiDiSpecURL=https://www.w3.org/TR/2026/WD-webdriver-bidi-20260109/
 
 library utils-internal
   import: commonExtensions, commonGhcOptions

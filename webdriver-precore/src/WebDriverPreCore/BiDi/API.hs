@@ -6,7 +6,7 @@ module WebDriverPreCore.BiDi.API
     --
     -- Not all commands and subscriptions will be supported by all [BiDi drivers yet](https://wpt.fyi/results/webdriver/tests/bidi?label=experimental&label=master&aligned), as the specification is [still evolving](https://www.w3.org/standards/history/webdriver-bidi/) rapidly.
     -- 
-    -- See the demos in the [demos](https://github.com/pyrethrum/webdriver/blob/main/webdriver-precore/test/README.md) for how this module can be used to delvelop a WebDriver client.
+    -- See the demos in the [demos](https://github.com/pyrethrum/webdriver/blob/main/webdriver-precore/test/README.md) for how this module can be used to develop a WebDriver client.
     --
 
     -- * Session Commands
@@ -48,6 +48,7 @@ module WebDriverPreCore.BiDi.API
     emulationSetScreenSettingsOverride,
     emulationSetScriptingEnabled,
     emulationSetTimezoneOverride,
+    emulationSetTouchOverride,
     emulationSetUserAgentOverride,
 
     -- * Input Commands
@@ -209,11 +210,11 @@ import WebDriverPreCore.BiDi.Protocol
     SetScreenSettingsOverride,
     SetScriptingEnabled,
     SetTimezoneOverride,
+    SetTouchOverride,
     SetUserAgentOverride,
     SetViewport,
     Subscription,
     TraverseHistory,
-    TraverseHistoryResult,
     OffSpecSubscriptionType,
     UserContext,
     UserPromptClosed,
@@ -340,7 +341,7 @@ browsingContextSetViewport = mkCommand BrowsingContextSetViewport
 -- | Specification Entry: <BiDiSpecURL#command-browsingContext-traverseHistory browsingContext.traverseHistory>
 --
 -- First added to Spec: <https://www.w3.org/TR/2024/WD-webdriver-bidi-20241121/#command-browsingContext-traverseHistory 21 November 2024 - First Public Working Draft>
-browsingContextTraverseHistory :: TraverseHistory -> Command TraverseHistoryResult
+browsingContextTraverseHistory :: TraverseHistory -> Command ()
 browsingContextTraverseHistory = mkCommand BrowsingContextTraverseHistory
 
 ---- Browser ----
@@ -440,6 +441,13 @@ emulationSetScriptingEnabled = mkCommand EmulationSetScriptingEnabled
 -- First added to Spec: <https://www.w3.org/TR/2025/WD-webdriver-bidi-20250718/#command-emulation-setTimezoneOverride 18 July 2025>
 emulationSetTimezoneOverride :: SetTimezoneOverride -> Command ()
 emulationSetTimezoneOverride = mkCommand EmulationSetTimezoneOverride
+
+-- since 09-01-2026 https://www.w3.org/TR/2026/WD-webdriver-bidi-20260109
+-- | Specification Entry: <BiDiSpecURL#command-emulation-setTouchOverride emulation.setTouchOverride>
+--
+-- First added to Spec: <https://www.w3.org/TR/2026/WD-webdriver-bidi-20260109/#command-emulation-setTouchOverride 09 January 2026>
+emulationSetTouchOverride :: SetTouchOverride -> Command ()
+emulationSetTouchOverride = mkCommand EmulationSetTouchOverride
 
 -- since 10-09-2025 https://www.w3.org/TR/2025/WD-webdriver-bidi-20250910
 -- | Specification Entry: <BiDiSpecURL#command-emulation-setUserAgentOverride emulation.setUserAgentOverride>
@@ -630,6 +638,10 @@ subscribeMany ::
   Subscription m
 subscribeMany = mkMultiSubscription
 
+-- | Subscribe to off-specification event types.
+--
+-- Use this only as a fallback when a driver supports events not covered by
+-- this library. Prefer using the standard subscription functions when available.
 subscribeOffSpecMany ::
   [OffSpecSubscriptionType] ->
   [BrowsingContext] ->
@@ -872,7 +884,7 @@ subscribeScriptRealmDestroyed = mkSubscription ScriptRealmDestroyed
 
 ---- Input ----
 
--- | Specification Entry: <BiDiSpecURL#event-input-fileDialogOpened input.fileDialogOpened>
+-- | Specification Entry: <BiDiSpecURL#event-input-fileDialogOpened input.filedblogOpened>
 --
 -- First added to Spec: <https://www.w3.org/TR/2025/WD-webdriver-bidi-20250305/#event-input-fileDialogOpened 05 March 2025>
 subscribeInputFileDialogOpened ::

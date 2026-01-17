@@ -8,4 +8,8 @@ with-compiler: ghc-9.10.1
 -- with-compiler: ghc-9.10.1
 -- with-compiler: ghc-9.8.4
 
+-- always build tests without needing the --enable-tests flag
 tests: True
+
+-- allow cabal repl to load multiple packages at once
+multi-repl: True

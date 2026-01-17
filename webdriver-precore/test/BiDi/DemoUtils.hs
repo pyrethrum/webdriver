@@ -1,24 +1,26 @@
 module BiDi.DemoUtils where
 
 import BiDi.Actions (BiDiActions (..), mkActions)
+import BiDi.BiDiUrl (BiDiUrl, getBiDiUrl)
 import BiDi.Runner (withBiDi, withBidiFailTest)
 import BiDi.Socket (SocketActions)
 import Config (Config (..))
 import ConfigLoader (loadConfig)
 import Const (Timeout (..), milliseconds, seconds)
-import Control.Exception (Exception, catch, throwIO, SomeException, try)
+import Control.Exception (Exception, SomeException, catch, throwIO, try)
 import Data.Function ((&))
 import Data.Text (Text, isInfixOf, unpack)
+import Data.Text qualified as T
 import Data.Time.Clock.POSIX (POSIXTime, getPOSIXTime)
 import Data.Word (Word64)
-import HTTP.DemoUtils (withSession)
 import HTTP.Actions qualified as HTTPA
+import HTTP.DemoUtils (withSession)
 import HTTP.Runner (mkRunner)
 import IOUtils (DemoActions (..), Logger, logNothingLogger, mkDemoActions)
 import Logger (withChannelFileLogger)
 import Network.HTTP.Req (http)
 import RuntimeConst (httpCapabilities, httpFullCapabilities)
-import BiDi.BiDiUrl (BiDiUrl, getBiDiUrl)
+import Utils (txt)
 import WebDriverPreCore.BiDi.Protocol
   ( BrowsingContext (..),
     Close (..),
@@ -33,13 +35,11 @@ import WebDriverPreCore.BiDi.Protocol
     PrimitiveProtocolValue (..),
     RemoteValue (..),
     StringValue (..),
-    Target (..)
+    Target (..),
   )
 import WebDriverPreCore.HTTP.Protocol (FullCapabilities (..))
 import WebDriverPreCore.HTTP.Protocol qualified as Caps (Capabilities (..))
-import Utils (txt)
 import Prelude hiding (log, putStrLn)
-import qualified Data.Text as T
 
 data BiDiDemo = MkBiDiDemo
   { name :: Text,
@@ -100,7 +100,6 @@ runDemoFail failSendCount failGetCount failEventCount dmo = loadConfig >>= \c ->
 
 runDemoFail' :: Config -> Word64 -> Word64 -> Word64 -> BiDiDemo -> IO ()
 runDemoFail' config failSendCount failGetCount failEventCount dmo = runDemo'' (withBidiFailTest failSendCount failGetCount failEventCount) config dmo
-
 
 newWindowContext :: DemoActions -> BiDiActions -> IO BrowsingContext
 newWindowContext MkDemoActions {..} MkBiDiActions {..} = do
@@ -212,17 +211,31 @@ chkDomContains' timeout pause' MkDemoActions {..} MkBiDiActions {..} bc expected
 chkDomContains :: DemoActions -> BiDiActions -> BrowsingContext -> Text -> IO ()
 chkDomContains = chkDomContains' (10 * seconds) (MkTimeout 100)
 
+data FailTest
+  = Predicate (Text -> Bool)
+  | Fragment Text
 
+toLambda :: FailTest -> (Text -> Bool)
+toLambda = \case
+  Predicate f -> f
+  Fragment t -> \errText -> t `T.isInfixOf` errText
 
+expectErrorText :: Text -> Text -> IO () -> IO ()
+expectErrorText testName expectedFragment =
+  expectError testName (Fragment expectedFragment)
+
+toText :: FailTest -> Text
+toText (Fragment t) = t
+toText (Predicate _) = "<custom lambda>"
 
 -- | General function to test that an IO action throws an exception containing expected text
-expectError :: Text -> Text -> IO () -> IO ()
-expectError testName errorFragment action = do
+expectError :: Text -> FailTest -> IO () -> IO ()
+expectError testName failTest action = do
   result <- try action
   case result of
     Left (e :: SomeException) -> do
       let errText = txt $ show e
-      if errorFragment `T.isInfixOf` errText
+      if toLambda failTest errText
         then pure ()
         else
           fail . unpack $
@@ -231,7 +244,7 @@ expectError testName errorFragment action = do
               <> "\n"
               <> " Expected Fragment was: "
               <> "\n"
-              <>  errorFragment
+              <> toText failTest 
               <> "\n"
               <> "Actual Error was:"
               <> "\n"

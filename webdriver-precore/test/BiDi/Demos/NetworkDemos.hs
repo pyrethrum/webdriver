@@ -85,34 +85,6 @@ testServerHomeUrl :: URL
 testServerHomeUrl = MkUrl URLs.testServerHomeUrl
 
 -- >>> runDemo networkDataCollectorDemo
-
--- *** Exception: Error executing BiDi command: With JSON:
-
--- {
---     "id": 3,
---     "method": "network.addDataCollector",
---     "params": {
---         "collectorType": "blob",
---         "dataTypes": [
---             "request",
---             "response"
---         ],
---         "maxEncodedDataSize": 2048
---     }
--- }
--- BiDi driver error:
--- MkDriverError
---   { id = Just 3
---   , error = InvalidArgument
---   , description =
---       "Tried to perform an action with an invalid argument"
---   , message =
---       "Expected \"dataTypes\" values to be one of response, got [object String] \"request\""
---   , stacktrace =
---       Just
---         "RemoteError@chrome://remote/content/shared/RemoteError.sys.mjs:8:8\nWebDriverError@chrome://remote/content/shared/webdriver/Errors.sys.mjs:202:5\nInvalidArgumentError@chrome://remote/content/shared/webdriver/Errors.sys.mjs:404:5\naddDataCollector@chrome://remote/content/webdriver-bidi/modules/root/network.sys.mjs:514:15\nhandleCommand@chrome://remote/content/shared/messagehandler/MessageHandler.sys.mjs:282:33\nexecute@chrome://remote/content/shared/webdriver/Session.sys.mjs:410:32\nonPacket@chrome://remote/content/webdriver-bidi/WebDriverBiDiConnection.sys.mjs:236:37\nonMessage@chrome://remote/content/server/WebSocketTransport.sys.mjs:127:18\nhandleEvent@chrome://remote/content/server/WebSocketTransport.sys.mjs:109:14\n"
---   , extensions = MkEmptyResult { extensible = fromList [] }
---   }
 networkDataCollectorDemo :: BiDiDemo
 networkDataCollectorDemo =
   demo
@@ -156,7 +128,7 @@ networkDataCollectorDemo =
             MkAddDataCollector
               { dataTypes = [Response],
                 maxEncodedDataSize = MkJSUInt 4096,
-                collectorType = Just (MkCollectorType "stream"),
+                collectorType = Just (MkCollectorType "blob"),
                 contexts = Just [bc],
                 userContexts = Nothing
               }
@@ -193,9 +165,9 @@ networkDataCollectorDemo =
             MkAddDataCollector
               { dataTypes = [Request, Response],
                 maxEncodedDataSize = MkJSUInt 16384,
-                collectorType = Just (MkCollectorType "buffer"),
+                collectorType = Just (MkCollectorType "blob"),
                 contexts = Just [bc],
-                userContexts = Just [userContext]
+                userContexts = Nothing
               }
         logShow "Multi-type data collector added" collector5
         pause
@@ -1439,6 +1411,7 @@ networkCacheBehaviorDemo =
 
 
 -- >>> runDemo networkSetExtraHeadersDemo
+-- *** Exception: BiDIError (ProtocolException {error = UnsupportedOperation, description = "Indicates that a command that should have executed properly cannot be supported for some reason", message = "Only string headers values are supported", stacktrace = Nothing, errorData = Nothing, response = Object (fromList [("error",String "unsupported operation"),("id",Number 6.0),("message",String "Only string headers values are supported"),("type",String "error")])})
 networkSetExtraHeadersDemo :: BiDiDemo
 networkSetExtraHeadersDemo =
   demo "Network XI - Set Extra Headers -- since https://www.w3.org/TR/2025/WD-webdriver-bidi-20251106" action

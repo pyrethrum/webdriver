@@ -41,7 +41,9 @@ data Command r = MkCommand
   }
   deriving (Show, Eq)
 
--- | The method name of a BiDi command. This library provides known commands as 'KnownCommand' values, but users can also create off-spec commands using 'OffSpecCommand' as a fallback, when the driver supports commands not yet implemented in this library.
+-- | The method name of a BiDi command.
+--
+-- This library provides known commands as 'KnownCommand' values, but users can also create off-spec commands using 'OffSpecCommand' as a fallback, when the driver supports commands not yet implemented in this library.
 data CommandMethod
   = KnownCommand KnownCommand
   | OffSpecCommand OffSpecCommand
@@ -80,6 +82,7 @@ data KnownCommand
   | EmulationSetScreenSettingsOverride
   | EmulationSetScriptingEnabled
   | EmulationSetTimezoneOverride
+  | EmulationSetTouchOverride
   | EmulationSetUserAgentOverride
   | InputPerformActions
   | InputReleaseActions
@@ -227,6 +230,7 @@ instance FromJSON KnownCommand where
         "emulation.setScreenSettingsOverride" -> p EmulationSetScreenSettingsOverride
         "emulation.setScriptingEnabled" -> p EmulationSetScriptingEnabled
         "emulation.setTimezoneOverride" -> p EmulationSetTimezoneOverride
+        "emulation.setTouchOverride" -> p EmulationSetTouchOverride
         "emulation.setUserAgentOverride" -> p EmulationSetUserAgentOverride
         "input.performActions" -> p InputPerformActions
         "input.releaseActions" -> p InputReleaseActions
@@ -303,6 +307,7 @@ knownCommandToText = \case
   EmulationSetScreenSettingsOverride -> "emulation.setScreenSettingsOverride"
   EmulationSetScriptingEnabled -> "emulation.setScriptingEnabled"
   EmulationSetTimezoneOverride -> "emulation.setTimezoneOverride"
+  EmulationSetTouchOverride -> "emulation.setTouchOverride"
   EmulationSetUserAgentOverride -> "emulation.setUserAgentOverride"
   InputPerformActions -> "input.performActions"
   InputReleaseActions -> "input.releaseActions"

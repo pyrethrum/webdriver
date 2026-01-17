@@ -1,5 +1,0 @@
-packages: .
-
-multi-repl: True
-
-package *

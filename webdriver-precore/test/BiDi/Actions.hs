@@ -106,11 +106,11 @@ import WebDriverPreCore.BiDi.Protocol as P
     SetScreenSettingsOverride,
     SetScriptingEnabled,
     SetTimezoneOverride,
+    SetTouchOverride,
     SetUserAgentOverride,
     SetViewport,
     SubscriptionId (..),
     TraverseHistory,
-    TraverseHistoryResult,
     OffSpecSubscriptionType,
     UserContext,
     WebExtensionInstall,
@@ -144,7 +144,7 @@ data BiDiActions = MkBiDiActions
     browsingContextPrint :: Print -> IO PrintResult,
     browsingContextReload :: Reload -> IO (),
     browsingContextSetViewport :: SetViewport -> IO (),
-    browsingContextTraverseHistory :: TraverseHistory -> IO TraverseHistoryResult,
+    browsingContextTraverseHistory :: TraverseHistory -> IO (),
     -- Browser commandssendCommandNoWait socket
     browserClose :: IO (),
     browserCreateUserContext :: CreateUserContext -> IO UserContext,
@@ -162,6 +162,7 @@ data BiDiActions = MkBiDiActions
     emulationSetScreenSettingsOverride :: SetScreenSettingsOverride -> IO (),
     emulationSetScriptingEnabled :: SetScriptingEnabled -> IO (),
     emulationSetTimezoneOverride :: SetTimezoneOverride -> IO (),
+    emulationSetTouchOverride :: SetTouchOverride -> IO (),
     emulationSetUserAgentOverride :: SetUserAgentOverride -> IO (),
     -- Input commands
     inputPerformActions :: PerformActions -> IO (),
@@ -315,6 +316,7 @@ mkActions socket =
       emulationSetScreenSettingsOverride = send . API.emulationSetScreenSettingsOverride,
       emulationSetScriptingEnabled = send . API.emulationSetScriptingEnabled,
       emulationSetTimezoneOverride = send . API.emulationSetTimezoneOverride,
+      emulationSetTouchOverride = send . API.emulationSetTouchOverride,
       emulationSetUserAgentOverride = send . API.emulationSetUserAgentOverride,
       -- Input commands
       inputPerformActions = send . API.inputPerformActions,

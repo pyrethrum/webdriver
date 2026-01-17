@@ -283,7 +283,9 @@ data Cookie = MkCookie
 
 instance FromJSON Cookie
 
-instance ToJSON Cookie
+instance ToJSON Cookie where
+  toJSON :: Cookie -> Value
+  toJSON = toJSONOmitNothing
 
 data SameSite
   = Strict
@@ -328,8 +330,7 @@ instance ToJSON Header where
   toJSON :: Header -> Value
   toJSON h =
     object
-      [ "type" .= "network.Header",
-        "name" .= h.headerName,
+      [ "name" .= h.headerName,
         "value" .= h.headerValue
       ]
 
@@ -450,7 +451,9 @@ data SetCacheBehavior = MkSetCacheBehavior
   }
   deriving (Show, Eq, Generic)
 
-instance ToJSON SetCacheBehavior
+instance ToJSON SetCacheBehavior where
+  toJSON :: SetCacheBehavior -> Value
+  toJSON = toJSONOmitNothing
 
 -- | Cache behavior options
 data CacheBehavior
@@ -598,10 +601,12 @@ data AuthRequired = MkAuthRequired
 instance FromJSON AuthRequired
 
 -- | Response data
+-- Note: responseStatus is Int (not Word/JSUInt) because Chrome sends -1 for authRequired events
+-- where the response hasn't been completed yet (deviation from spec which says js-uint)
 data ResponseData = MkResponseData
   { responseUrl :: Text,
     responseProtocol :: Text,
-    responseStatus :: Word,
+    responseStatus :: Int,
     responseStatusText :: Text,
     responseFromCache :: Bool,
     responseHeaders :: [Header],

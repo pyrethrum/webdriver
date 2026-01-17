@@ -1,47 +1,60 @@
 module WebDriverPreCore.BiDi.Emulation
-  ( 
-    SetGeolocationOverride (..),
+  ( SetGeolocationOverride (..),
     SetLocaleOverride (..),
     SetScreenOrientationOverride (..),
     SetScreenSettingsOverride (..),
     SetTimezoneOverride (..),
+    SetTouchOverride (..),
     SetForcedColorsModeThemeOverride (..),
     SetNetworkConditions (..),
     SetUserAgentOverride (..),
     SetScriptingEnabled (..),
+    GeoProperty (..),
     GeolocationCoordinates (..),
     GeolocationPositionError (..),
     ScreenArea (..),
-    ScreenOrientationOverride  (..),
-    ScreenOrientationNatural  (..),
-    ScreenOrientationType  (..),
+    ScreenOrientationOverride (..),
+    ScreenOrientationNatural (..),
+    ScreenOrientationType (..),
     ForcedColorsModeTheme (..),
     NetworkConditions (..),
-    NetworkConditionsOffline (..)
+    NetworkConditionsOffline (..),
   )
 where
 
+import AesonUtils (opt)
+import Data.Aeson (ToJSON (..), Value (..), object, (.=))
 import Data.Maybe (catMaybes)
 import Data.Text (Text)
 import GHC.Generics (Generic)
-import WebDriverPreCore.BiDi.CoreTypes (BrowsingContext, UserContext, JSUInt)
-import Data.Aeson (ToJSON (..), object, (.=))
-import AesonUtils (opt)
-import Data.Aeson.Types (Value)
+import WebDriverPreCore.BiDi.CoreTypes (BrowsingContext, JSUInt, UserContext)
 
 -- ######### Remote #########
 
 -- Note: emulation module does not have a local end
 
+data GeoProperty
+  = Coordinates GeolocationCoordinates
+  | ClearCoodrdinates
+  | PositionError GeolocationPositionError
+  deriving (Show, Eq, Generic)
+
 data SetGeolocationOverride = MkSetGeolocationOverride
-  { coordinates :: Maybe GeolocationCoordinates,
-    error :: Maybe GeolocationPositionError,
+  { override :: GeoProperty,
     contexts :: Maybe [BrowsingContext],
     userContexts :: Maybe [UserContext]
   }
   deriving (Show, Eq, Generic)
 
-instance ToJSON SetGeolocationOverride
+instance ToJSON SetGeolocationOverride where
+  toJSON :: SetGeolocationOverride -> Value
+  toJSON MkSetGeolocationOverride {override, contexts, userContexts} =
+    object $ geoField <> catMaybes [opt "contexts" contexts, opt "userContexts" userContexts]
+    where
+      geoField = case override of
+        Coordinates coords -> [("coordinates" .= coords)]
+        ClearCoodrdinates -> [("coordinates" .= Null)]
+        PositionError err -> [("error" .= err)]
 
 data SetLocaleOverride = MkSetLocaleOverride
   { locale :: Maybe Text,
@@ -50,7 +63,15 @@ data SetLocaleOverride = MkSetLocaleOverride
   }
   deriving (Show, Eq, Generic)
 
-instance ToJSON SetLocaleOverride
+instance ToJSON SetLocaleOverride where
+  toJSON :: SetLocaleOverride -> Value
+  toJSON MkSetLocaleOverride {locale, contexts, userContexts} =
+    object $
+      ["locale" .= locale]
+        <> catMaybes
+          [ opt "contexts" contexts,
+            opt "userContexts" userContexts
+          ]
 
 data SetScreenOrientationOverride = MkSetScreenOrientationOverride
   { screenOrientation :: Maybe ScreenOrientationOverride,
@@ -59,7 +80,15 @@ data SetScreenOrientationOverride = MkSetScreenOrientationOverride
   }
   deriving (Show, Eq, Generic)
 
-instance ToJSON SetScreenOrientationOverride
+instance ToJSON SetScreenOrientationOverride where
+  toJSON :: SetScreenOrientationOverride -> Value
+  toJSON MkSetScreenOrientationOverride {screenOrientation, contexts, userContexts} =
+    object $
+      ["screenOrientation" .= screenOrientation]
+        <> catMaybes
+          [ opt "contexts" contexts,
+            opt "userContexts" userContexts
+          ]
 
 data SetScreenSettingsOverride = MkSetScreenSettingsOverride
   { screenArea :: Maybe ScreenArea,
@@ -88,7 +117,15 @@ data SetTimezoneOverride = MkSetTimezoneOverride
   }
   deriving (Show, Eq, Generic)
 
-instance ToJSON SetTimezoneOverride
+instance ToJSON SetTimezoneOverride where
+  toJSON :: SetTimezoneOverride -> Value
+  toJSON MkSetTimezoneOverride {timezone, contexts, userContexts} =
+    object $
+      ["timezone" .= timezone]
+        <> catMaybes
+          [ opt "contexts" contexts,
+            opt "userContexts" userContexts
+          ]
 
 data SetForcedColorsModeThemeOverride = MkSetForcedColorsModeThemeOverride
   { theme :: Maybe ForcedColorsModeTheme,
@@ -158,6 +195,25 @@ instance ToJSON SetScriptingEnabled where
             opt "userContexts" userContexts
           ]
 
+-- | Parameters for emulation.setTouchOverride command
+-- maxTouchPoints: (js-uint .ge 1) / null - the maximum number of touch points to emulate, or null to clear
+data SetTouchOverride = MkSetTouchOverride
+  { maxTouchPoints :: Maybe JSUInt,
+    contexts :: Maybe [BrowsingContext],
+    userContexts :: Maybe [UserContext]
+  }
+  deriving (Show, Eq, Generic)
+
+instance ToJSON SetTouchOverride where
+  toJSON :: SetTouchOverride -> Value
+  toJSON MkSetTouchOverride {maxTouchPoints, contexts, userContexts} =
+    object $
+      ["maxTouchPoints" .= maxTouchPoints]
+        <> catMaybes
+          [ opt "contexts" contexts,
+            opt "userContexts" userContexts
+          ]
+
 data ScreenArea = MkScreenArea
   { width :: JSUInt,
     height :: JSUInt
@@ -184,7 +240,10 @@ newtype GeolocationPositionError = MkGeolocationPositionError
   }
   deriving (Show, Eq, Generic)
 
-instance ToJSON GeolocationPositionError
+instance ToJSON GeolocationPositionError where
+  toJSON :: GeolocationPositionError -> Value
+  toJSON MkGeolocationPositionError {errorType} =
+    object ["type" .= errorType]
 
 data ScreenOrientationOverride = MkScreenOrientationOverride
   { natural :: ScreenOrientationNatural,
@@ -247,4 +306,4 @@ newtype NetworkConditionsOffline = MkNetworkConditionsOffline
 
 instance ToJSON NetworkConditionsOffline where
   toJSON :: NetworkConditionsOffline -> Value
-  toJSON _ = toJSON (("type", "offline") :: (Text, Text))
+  toJSON _ = object ["type" .= "offline"]

@@ -1,0 +1,21 @@
+FROM ghcr.io/pyrethrum/webdriver-precore-firefox:latest
+
+WORKDIR /home/vscode/webdriver
+
+# Copy all files and directories from the current build context (.) 
+COPY --chown=vscode:vscode . .
+
+#  code to check everything is copied correctly
+# RUN echo "==== LISTING WEBDRIVER DIRECTORY ====" ; \
+#     find . -not -path "./.git/*" -not -path "*/dist-newstyle/*" -ls 2>&1 | grep -v "Permission denied" || true ; \
+#     echo "==== END LISTING ===="
+
+COPY --chown=vscode:vscode dev/config-ci.dhall webdriver-precore/test/.config/config.dhall
+# remove debug local config file if it exists - we want CI builds to use config.dhall
+RUN rm -f cabal.project.local
+# RUN echo "==== BEGIN CONFIG FILE ====" && \
+#     cat webdriver-precore/test/.config/config.dhall && \
+#     echo "==== END CONFIG FILE ===="
+
+# Specify the default command to run when the container starts
+CMD ["bash"]

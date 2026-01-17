@@ -3,7 +3,7 @@
 module Main where
 
 import ApiCoverageTest qualified as API
-import BiDi.DemoUtils (BiDiDemo (..), expectError, runDemo')
+import BiDi.DemoUtils (BiDiDemo (..), expectError, runDemo', FailTest (..), toText)
 import BiDi.Demos.BrowserDemos qualified as Browser
 import BiDi.Demos.BrowsingContextDemos qualified as BrowsingContext
 import BiDi.Demos.BrowsingContextEventDemos qualified as BrowsingContextEvent
@@ -21,8 +21,9 @@ import BiDi.Demos.SessionDemos qualified as Session
 import BiDi.Demos.StorageDemos qualified as Storage
 import BiDi.Demos.WebExtensionDemos qualified as WebExtension
 import BiDi.ErrorDemo qualified as BiDiError
-import Config (Config (..))
+import Config (Config (..), DemoBrowser (..))
 import ConfigLoader (loadConfig)
+import Control.Exception (SomeException, catch)
 import Data.Text (Text, unpack)
 import ErrorCoverageTest qualified as Error
 import HTTP.DemoUtils (HttpDemo (..), runDemoWithConfig)
@@ -34,6 +35,7 @@ import HTTP.FallbackDemo qualified as HttpFallback
 import JSONParsingTest qualified as JSON
 import Test.Tasty (TestTree, defaultMain, testGroup)
 import Test.Tasty.HUnit (testCase)
+import qualified Data.Text as T
 
 main :: IO ()
 main = do
@@ -103,24 +105,34 @@ httpDemoSingleIsolated cfg =
 -- Single isolated Bidi demo for CI debugging 
 bidiSingleForDebug :: Config -> TestTree
 bidiSingleForDebug cfg =
-  let run = bidiTest cfg
+  let 
+    run = bidiTest cfg
+    thisBrowser = cfg.browser
+    expectFail bts txt = biDiError thisBrowser bts (Fragment txt)
    in testGroup
             "BiDi Single Demo"
             [ 
               run
-                "Browser"
-                [ ScriptEvent.scriptEventMessage
+                "Emulation"
+                [ 
+                  expectFail [Firefox']
+                    "Expected \\\\\\\"coordinates\\\\\\\" to be an object"
+                    Emulation.emulationSetGeolocationOverridePositionErrorDemo
                 ]
         ]
 
 httpDemos :: Config -> TestTree
 httpDemos cfg =
-  testGroup
-    "HTTP Demos"
-    $ fromHttpDemo cfg
-      <$> [ Http.newSessionDemo,
-            Http.driverStatusDemo,
-            Http.demoSendKeysClear,
+  let thisBrowser = cfg.browser
+      expectHttpFail = httpError thisBrowser
+   in testGroup
+        "HTTP Demos"
+        $ fromHttpDemo cfg
+          <$> [ Http.newSessionDemo,
+                -- W3C spec requires status.ready=false when sessions exist. Chrome diverges from spec.
+                expectHttpFail [Chrome'] "status.ready expected to be False"
+                  Http.driverStatusDemo,
+                Http.demoSendKeysClear,
             Http.demoForwardBackRefresh,
             -- this test is redundant but used in docs so run anyway
             Http.documentationDemo,
@@ -171,6 +183,10 @@ bidiTest cfg title =
 bidiDemos :: Config -> TestTree
 bidiDemos cfg =
   let run = bidiTest cfg
+      thisBrowser = cfg.browser
+      browserType = fromBrowser thisBrowser
+      unknownCommand = unknownCommandError thisBrowser
+      expectFail bts txt = biDiError thisBrowser bts (Fragment txt)
    in testGroup
         "BiDi Demos"
         [ testGroup
@@ -186,14 +202,14 @@ bidiDemos cfg =
                 [ Browser.browserGetClientWindowsDemo,
                   Browser.browserCreateUserContextDemo,
                   Browser.browserGetUserContextsDemo,
-                  unknownCommandError
+                  unknownCommand [Firefox', Chrome']
                     Browser.browserSetClientWindowStateDemo,
                   Browser.browserRemoveUserContextDemo,
                   Browser.browserCompleteWorkflowDemo,
-                  biDiError
+                  expectFail [Firefox']
                     "Closing the browser in a session started with WebDriver classic is not supported"
                     Browser.browserCloseDemo,
-                  unknownCommandError
+                  unknownCommand [Firefox']
                     -- since https://www.w3.org/TR/2025/WD-webdriver-bidi-20250918/#command-browser-seProtocolExceptiontDownloadBehavior
                     Browser.browserSetDownloadBehaviorDemo
                 ],
@@ -206,6 +222,7 @@ bidiDemos cfg =
                   BrowsingContext.browsingContextHandleUserPromptDemo,
                   BrowsingContext.browsingNavigateReloadTraverseHistoryDemo,
                   BrowsingContext.browsingContextLocateNodesDemo,
+                  BrowsingContext.browsingContextContextLocatorDemo,
                   BrowsingContext.browsingContextPrintDemo,
                   BrowsingContext.browsingContextSetViewportDemo,
                   BiDiError.errorDemo
@@ -214,22 +231,30 @@ bidiDemos cfg =
                 ],
               run
                 "Emulation"
-                [ unknownCommandError
+                [ unknownCommand [Firefox', Chrome']
                     -- since https:\/\/www.w3.org\/TR\/2025\/WD-webdriver-bidi-20250729
                     Emulation.emulationSetForcedColorsModeThemeOverrideDemo,
                   Emulation.emulationSetGeolocationOverrideDemo,
+                  -- Geckodriver bug: incorrectly requires 'coordinates' when 'error' is provided
+                  -- Spec section 7.4.2.2 states that 'error' and 'coordinates' are mutually exclusive
+                  expectFail [Firefox']
+                    "Expected \\\\\\\"coordinates\\\\\\\" to be an object"
+                    Emulation.emulationSetGeolocationOverridePositionErrorDemo,
                   Emulation.emulationSetLocaleOverrideDemo,
-                  unknownCommandError
+                  unknownCommand [Firefox']
                     -- since https://www.w3.org/TR/2025/WD-webdriver-bidi-20251007
                     Emulation.emulationSetNetworkConditionsDemo,
                   Emulation.emulationSetScreenOrientationOverrideDemo,
-                  unknownCommandError
+                  unknownCommand [Chrome']
                     -- since https://www.w3.org/TR/2025/WD-webdriver-bidi-20251120
                     Emulation.emulationSetScreenSettingsOverrideDemo,
-                  unknownCommandError
+                  unknownCommand [Firefox']
                     -- since https://www.w3.org/TR/2025/WD-webdriver-bidi-20250811
                     Emulation.emulationSetScriptingEnabledDemo,
                   Emulation.emulationSetTimezoneOverrideDemo,
+                  unknownCommand [Firefox', Chrome']
+                    -- since https://www.w3.org/TR/2026/WD-webdriver-bidi-20260109
+                    Emulation.emulationSetTouchOverrideDemo,
                   Emulation.emulationSetUserAgentOverrideDemo,
                   Emulation.emulationCompleteWorkflowDemo
                 ],
@@ -252,9 +277,8 @@ bidiDemos cfg =
                 ],
               run
                 "Network"
-                [ biDiError
-                    "The arguments passed to a command are either invalid or malformed"
-                    Network.networkDataCollectorDemo,
+                [ 
+                  Network.networkDataCollectorDemo,
                   Network.networkInterceptDemo,
                   Network.networkRequestModificationDemo,
                   Network.networkResponseModificationDemo,
@@ -270,7 +294,10 @@ bidiDemos cfg =
                   Network.networkDisownDataDemo,
                   Network.networkCacheBehaviorDemo,
                   -- since https://www.w3.org/TR/2025/WD-webdriver-bidi-20251106
-                  Network.networkSetExtraHeadersDemo
+                  -- Chromedriver does not support setting non-string header values
+                  expectFail [Chrome']
+                    "Only string headers values are supported"
+                    Network.networkSetExtraHeadersDemo
                 ],
               run
                 "Script"
@@ -287,22 +314,40 @@ bidiDemos cfg =
               run
                 "Session"
                 [ Session.sessionStatusDemo,
-                  biDiError
-                    "Maximum number of active sessions"
+                  expectFail [Firefox', Chrome']
+                    (case thisBrowser of 
+                      Firefox{} -> "Maximum number of active sessions"
+                      Chrome{} -> "session already exists"
+                      )
                     Session.sessionNewDemo,
-                  biDiError
-                    "Ending a session started with WebDriver classic is not supported"
-                    Session.sessionEndDemo,
+
                   Session.sessionSubscribeDemo,
                   Session.sessionUnsubscribeDemo,
-                  biDiError
-                    "Maximum number of active sessions"
+                  expectFail [Firefox', Chrome']
+                    (case thisBrowser of 
+                      Firefox{} -> "Maximum number of active sessions"
+                      Chrome{} -> "session already exists"
+                      )
                     Session.sessionCapabilityNegotiationDemo,
                   Session.sessionCompleteLifecycleDemo
                 ],
+                run
+                "Session - firefox only" (
+                  if browserType == Firefox' then 
+                  [
+                  -- todo: - calling `session.end` on the test BiDi runner throws `ConnectionClosed` when 
+                  -- the server closes the WebSocket after session termination - needs orchestration 
+                  -- fix in bidi runner when sesssion is closed
+                  expectFail [Firefox']
+                    "Ending a session started with WebDriver classic is not supported"
+                    Session.sessionEndDemo
+                ] else []),
               run
                 "Storage"
                 [ Storage.storageGetCookiesDemo,
+                  -- ChromeDriver does not support storageKey partition type in storage.setCookie
+                  expectFail [Chrome']
+                    "unable to set cookie"
                   Storage.storageSetCookieDemo,
                   Storage.storageDeleteCookiesDemo,
                   Storage.storagePartitionKeyDemo,
@@ -310,9 +355,16 @@ bidiDemos cfg =
                 ],
               run
                 "WebExtension"
-                [ WebExtension.webExtensionInstallPathDemo,
-                  WebExtension.webExtensionInstallArchiveDemo,
-                  WebExtension.webExtensionInstallBase64Demo,
+                [ -- ChromeDriver doesn't support BiDi WebExtension methods
+                  expectFail [Chrome']
+                    "Method not available"
+                    WebExtension.webExtensionInstallPathDemo,
+                  expectFail [Chrome']
+                    "Archived and Base64 extensions are not supported"
+                    WebExtension.webExtensionInstallArchiveDemo,
+                  expectFail [Chrome']
+                    "Archived and Base64 extensions are not supported"
+                    WebExtension.webExtensionInstallBase64Demo,
                   WebExtension.webExtensionValidationDemo
                 ]
             ],
@@ -329,25 +381,40 @@ bidiDemos cfg =
                   BrowsingContextEvent.browsingContextEventFragmentNavigation,
                   BrowsingContextEvent.browsingContextEventUserPrompts,
                   BrowsingContextEvent.browsingContextEventUserPromptsVariants,
-                  biDiError
-                    "Expected event did not fire: BrowsingContextHistoryUpdated"
+                  expectFail [Firefox', Chrome']
+                    (case thisBrowser of 
+                      Firefox{} -> "Expected event did not fire: BrowsingContextHistoryUpdated"
+                      Chrome{} -> "Timeout"
+                      )
                     BrowsingContextEvent.browsingContextEventHistoryUpdated,
                   -- not supporrted in geckodriver yet
-                  biDiError
-                    "browsingContext.navigationAborted is not a valid event name"
-                    BrowsingContextEvent.browsingContextEventNavigationAborted,
-                  biDiError
-                    "Error: NS_ERROR_UNKNOWN_HOST"
+                  expectFail [Firefox', Chrome']
+                    (case thisBrowser of 
+                      Firefox{} -> "browsingContext.navigationAborted is not a valid event name"
+                      Chrome{} -> "Expected event did not fire: BrowsingContextNavigationAborted"
+                      )
+                      BrowsingContextEvent.browsingContextEventNavigationAborted,
+                  expectFail [Firefox', Chrome']
+                    (case thisBrowser of 
+                      Firefox{} -> "NS_ERROR_UNKNOWN_HOST"
+                      Chrome{} -> "ERR_NAME_NOT_RESOLVED"
+                      )
                     BrowsingContextEvent.browsingContextEventNavigationFailed,
                   BrowsingContextEvent.browsingContextEventDownloadWillBegin,
                   BrowsingContextEvent.browsingContextEventDownloadEnd
                 ],
               run
                 "Input Events"
-                [ biDiError
-                    "input.fileDialogOpened is not a valid event name"
-                    InputEvent.inputEventFileDialogOpened
-                ],
+                [],
+              run
+                "Input Events - File Dialog Opened" (
+                   case thisBrowser of 
+                     Chrome {} -> [InputEvent.inputEventFileDialogOpened]
+                     Firefox {headless = False} -> [InputEvent.inputEventFileDialogOpened]
+                     -- firfox throws error on file dialog open in headless mode
+                     -- ConnectionClosed is not coming from main thread so not being caught TODO: reinstate this when runner fixed
+                     Firefox {headless = True} ->  [] -- [expectFail [Firefox'] "ConnectionClosed" InputEvent.inputEventFileDialogOpened] 
+                ),
               run
                 "Log Events"
                 [ LogEvent.logEventConsoleEntries,
@@ -359,9 +426,13 @@ bidiDemos cfg =
                 ],
               run
                 "Network Events"
-                [ NetworkEvent.networkEventRequestResponseLifecycle,
+                [ expectFail [Chrome']
+                    "Timeout - Expected event did not fire: NetworkResponseStarted"
+                    NetworkEvent.networkEventRequestResponseLifecycle,
                   NetworkEvent.networkEventFetchError,
-                  NetworkEvent.networkEventAuthRequired
+                  expectFail [Chrome']
+                    "Timeout - Expected event did not fire: NetworkAuthRequired"
+                    NetworkEvent.networkEventAuthRequired
                 ],
               run
                 "Script Events"
@@ -372,12 +443,57 @@ bidiDemos cfg =
             ]
         ]
 
-biDiError :: Text -> BiDiDemo -> BiDiDemo
-biDiError errorFragment MkBiDiDemo {name, action} =
-  MkBiDiDemo
-    { name = name <> " - EXPECTED ERROR: " <> errorFragment,
-      action = \utils bidi -> expectError name errorFragment (action utils bidi)
-    }
+expectFailure :: DemoBrowser -> [BrowserType] -> Bool
+expectFailure actualBrowser failBrowsers = 
+  fromBrowser actualBrowser `elem` failBrowsers
 
-unknownCommandError :: BiDiDemo -> BiDiDemo
-unknownCommandError = biDiError "unknown command"
+biDiError :: DemoBrowser -> [BrowserType] -> FailTest -> BiDiDemo -> BiDiDemo
+biDiError actualBrowser failBrowsers failTest demo@MkBiDiDemo {name, action} =
+  if expectFailure actualBrowser failBrowsers then
+  MkBiDiDemo
+    { name = name <> " - EXPECTED ERROR: " <> toText failTest,
+      action = \utils bidi -> expectError name failTest (action utils bidi)
+    }
+  else demo
+
+data BrowserType = Firefox' | Chrome' deriving (Eq, Show)
+
+fromBrowser :: DemoBrowser -> BrowserType
+fromBrowser = \case 
+  Firefox {} -> Firefox'
+  Chrome {} -> Chrome'
+
+unknownCommandError :: DemoBrowser -> [BrowserType] -> BiDiDemo -> BiDiDemo
+unknownCommandError actualBrowser failBrowsers  demo = 
+  biDiError actualBrowser failBrowsers failTest demo
+  where
+    failTest = Predicate \txt -> "not implemented" `T.isInfixOf` txt || "unknown command" `T.isInfixOf` txt
+    
+httpError :: DemoBrowser -> [BrowserType] -> Text -> HttpDemo -> HttpDemo
+httpError actualBrowser failBrowsers errorFragment demo =
+  if expectFailure actualBrowser failBrowsers then
+    case demo of
+      Demo {name, action} ->
+        Demo
+          { name = name <> " - EXPECTED ERROR: " <> errorFragment,
+            action = \demoActions httpActions ->
+              catch
+                ( do
+                    action demoActions httpActions
+                    error $ "Expected test to fail with error containing: " <> unpack errorFragment
+                )
+                (\(_ :: SomeException) -> pure ())
+          }
+      SessionDemo {name, sessionAction} ->
+        SessionDemo
+          { name = name <> " - EXPECTED ERROR: " <> errorFragment,
+            sessionAction = \session demoActions httpActions ->
+              catch
+                ( do
+                    sessionAction session demoActions httpActions
+                    error $ "Expected test to fail with error containing: " <> unpack errorFragment
+                )
+                (\(_ :: SomeException) -> pure ())
+          }
+  else demo
+

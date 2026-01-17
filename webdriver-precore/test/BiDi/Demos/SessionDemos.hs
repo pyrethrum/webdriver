@@ -15,7 +15,7 @@ import WebDriverPreCore.BiDi.Protocol
     SessionUnsubscribe (..),
     SubscriptionType (..),
     UserPromptHandler (..),
-    UserPromptHandlerType (..)
+    UserPromptHandlerType (..),
   )
 import Prelude hiding (log, putStrLn)
 
@@ -89,30 +89,11 @@ sessionNewDemo =
       logShow "Capabilities result" newSession.capabilities
       pause
 
+-- TODO: Add orchestration between receive loop and session.end to suppress ConnectionClosed when connection closes gracefully
+
 -- >>> runDemo sessionEndDemo
-
--- *** Exception: Error executing BiDi command: With JSON:
-
--- {
---     "id": 1,
---     "method": "session.end",
---     "params": {}
--- }
--- BiDi driver error:
--- MkDriverError
---   { id = Just 1
---   , error = UnsupportedOperation
---   , description = "The operation requested is not supported"
---   , message =
---       "Ending a session started with WebDriver classic is not supported. Use the WebDriver classic \"Delete Session\" command instead."
---   , stacktrace =
---       Just
---         "RemoteError@chrome://remote/content/shared/RemoteError.sys.mjs:8:8\nWebDriverError@chrome://remote/content/shared/webdriver/Errors.sys.mjs:202:5\nUnsupportedOperationError@chrome://remote/content/shared/webdriver/Errors.sys.mjs:978:5\nend@chrome://remote/content/webdriver-bidi/modules/root/session.sys.mjs:72:13\nhandleCommand@chrome://remote/content/shared/messagehandler/MessageHandler.sys.mjs:282:33\nexecute@chrome://remote/content/shared/webdriver/Session.sys.mjs:410:32\nonPacket@chrome://remote/content/webdriver-bidi/WebDriverBiDiConnection.sys.mjs:236:37\nonMessage@chrome://remote/content/server/WebSocketTransport.sys.mjs:127:18\nhandleEvent@chrome://remote/content/server/WebSocketTransport.sys.mjs:109:14\n"
---   , extensions = MkEmptyResult { extensible = fromList [] }
---   }
 sessionEndDemo :: BiDiDemo
 sessionEndDemo =
-  -- this test to be updates for drivers that support BiDi session new and ending
   demo "Session - End Session" action
   where
     action :: DemoActions -> BiDiActions -> IO ()

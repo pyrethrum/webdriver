@@ -10,6 +10,7 @@ import WebDriverPreCore.HTTP.Protocol as WPC
   ( BrowserName (..),
     Capabilities (..),
     FullCapabilities (..),
+    UnhandledPromptBehavior (..),
     VendorSpecific (..),
   )
 import Prelude as P
@@ -35,7 +36,7 @@ httpCapabilities MkConfig {browser} =
       setWindowRect = Nothing,
       timeouts = Nothing,
       strictFileInteractability = Nothing,
-      unhandledPromptBehavior = Nothing,
+      unhandledPromptBehavior = Just Ignore,
       webSocketUrl = Nothing,
       vendorSpecific =
         case browser of
@@ -52,8 +53,22 @@ httpCapabilities MkConfig {browser} =
                   Nothing -> []
                 allArgs = headlessArgs <> profileArgs
 
-          CFG.Chrome -> Nothing
+          CFG.Chrome {headless} -> Just $ ChromeOptions
+                { chromeArgs = if headless then Just ["--headless=new"] else Nothing,
+                  chromeBinary = Nothing,
+                  chromeExtensions = Nothing,
+                  chromeLocalState = Nothing,
+                  chromeMobileEmulation = Nothing,
+                  chromePrefs = Nothing,
+                  chromeDetach = Nothing,
+                  chromeDebuggerAddress = Nothing,
+                  chromeExcludeSwitches = Nothing,
+                  chromeMinidumpPath = Nothing,
+                  chromePerfLoggingPrefs = Nothing,
+                  chromeWindowTypes = Nothing
+                }
     }
+ 
 
 
 httpFullCapabilities :: Config -> FullCapabilities

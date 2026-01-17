@@ -2,10 +2,11 @@ module BiDi.Demos.BrowsingContextEventDemos where
 
 import BiDi.Actions (BiDiActions (..))
 import BiDi.DemoUtils
-import Const (Timeout (..), milliseconds)
+import Const (Timeout (..), milliseconds, second)
 import Data.Text (unpack)
 import IOUtils (DemoActions (..))
 import TestData (checkboxesUrl, downloadLinkUrl, fragmentUrl, promptUrl, slowLoadUrl, textAreaUrl)
+import Utils (txt)
 import WebDriverPreCore.BiDi.Protocol
   ( BrowsingContext (..),
     Close (..),
@@ -21,7 +22,6 @@ import WebDriverPreCore.BiDi.Protocol
     URL (..),
     UserContext (..),
   )
-import Utils (txt)
 import Prelude hiding (log, putStrLn)
 
 -- >>> runDemo browsingContextEventDemo
@@ -233,12 +233,12 @@ browsingContextEventDemoUserContextFiltered =
       bc4 <- browsingContextCreate createParams1
       logShow "Created browsing context 4 (no event)" bc4
 
-
       -- Navigate browsing context 1 (should trigger event)
       chkBxsUrl <- checkboxesUrl
       logTxt "Navigating browsing context 1 to checkboxes.html (SHOULD trigger event)"
       browsingContextNavigate $ MkNavigate bc1 chkBxsUrl Nothing
       pause
+
 -- >>> runDemo browsingContextEventCreateDestroy
 browsingContextEventCreateDestroy :: BiDiDemo
 browsingContextEventCreateDestroy =
@@ -357,7 +357,7 @@ browsingContextEventFragmentNavigation =
       subscribeMany [BrowsingContextFragmentNavigated] manyFragmentEventFired
 
       logTxt "Navigate to fragment #section2"
-      browsingContextNavigate $ MkNavigate { context = bc, url = MkUrl(url.url <> "#section2"), wait = Nothing }
+      browsingContextNavigate $ MkNavigate {context = bc, url = MkUrl (url.url <> "#section2"), wait = Nothing}
 
       sequence_
         [ waitFragmentEventFired,
@@ -511,7 +511,9 @@ browsingContextEventUserPromptsVariants =
       pause
 
 -- >>> runDemo browsingContextEventHistoryUpdated
--- *** Exception: user error (Timeout - Expected event did not fire: BrowsingContextHistoryUpdated)
+
+-- *** Exception: user error (Timeout - Expected event did not fire: BrowsingContextHistoryUpdated after 10000 milliseconds)
+
 browsingContextEventHistoryUpdated :: BiDiDemo
 browsingContextEventHistoryUpdated =
   demo "Browsing Context Events - History Updated" action
@@ -570,16 +572,22 @@ browsingContextEventHistoryUpdated =
         ]
 
 -- >>> runDemo browsingContextEventNavigationAborted
+
+-- *** Exception: user error (Timeout - Expected event did not fire: BrowsingContextNavigationAborted after 10000 milliseconds)
+
 browsingContextEventNavigationAborted :: BiDiDemo
 browsingContextEventNavigationAborted =
   demo "Browsing Context Events - Navigation Aborted" action
   where
-    -- NOTE: browsingContext.navigationAborted event is not yet implemented in geckodriver
-    -- The subscription fails with InvalidArgument error:
-    -- "browsingContext.navigationAborted is not a valid event name"
-    -- This event is defined in the WebDriver BiDi spec but not yet supported by geckodriver
-    -- See: https://bugzilla.mozilla.org/show_bug.cgi?id=1874362
-    -- Status: NEW (as of 2025-09-17)
+    -- NOTE: browsingContext.navigationAborted event support varies by driver:
+    --
+    -- geckodriver: Not implemented. The subscription fails with InvalidArgument error:
+    --   "browsingContext.navigationAborted is not a valid event name"
+    --   See: https://bugzilla.mozilla.org/show_bug.cgi?id=1874362
+    --   Status: NEW (as of 2025-09-17)
+    --
+    -- chromedriver: Partially implemented. Accepts subscriptions but does not emit the event.
+    --   The test times out waiting for the event that never fires.
     action :: DemoActions -> BiDiActions -> IO ()
     action utils@MkDemoActions {..} bidi@MkBiDiActions {..} = do
       logTxt "Subscribe to NavigationAborted event"
@@ -617,16 +625,22 @@ browsingContextEventNavigationAborted =
         ]
 
 -- >>> runDemo browsingContextEventNavigationFailed
+
+-- *** Exception: BiDIError (ProtocolException {error = UnknownError, description = "An unknown error occurred in the remote end while processing the command", message = "net::ERR_NAME_NOT_RESOLVED", stacktrace = Just "Error\n    at new UnknownErrorException (<anonymous>:65:5630)\n    at BrowsingContextImpl.navigate (<anonymous>:679:14660)\n    at async #processCommand (<anonymous>:485:5805)\n    at async CommandProcessor.processCommand (<anonymous>:485:12768)", errorData = Nothing, response = Object (fromList [("error",String "unknown error"),("id",Number 4.0),("message",String "net::ERR_NAME_NOT_RESOLVED"),("stacktrace",String "Error\n    at new UnknownErrorException (<anonymous>:65:5630)\n    at BrowsingContextImpl.navigate (<anonymous>:679:14660)\n    at async #processCommand (<anonymous>:485:5805)\n    at async CommandProcessor.processCommand (<anonymous>:485:12768)"),("type",String "error")])})
+
 browsingContextEventNavigationFailed :: BiDiDemo
 browsingContextEventNavigationFailed =
-  demo "Browsing Context Events - Navigation Failed (NOT WORKING - geckodriver issue)" action
+  demo "Browsing Context Events - Navigation Failed (NOT WORKING - driver issue)" action
   where
     -- NOTE: browsingContext.navigationFailed event is implemented in the library,
-    -- but geckodriver throws an error on the navigate command itself for DNS failures
-    -- (NS_ERROR_UNKNOWN_HOST) rather than starting the navigation and then firing
+    -- but both geckodriver and chromedriver throw an error on the navigate command
+    -- itself for DNS failures rather than starting the navigation and then firing
     -- a navigationFailed event.
     --
-    -- This appears to be a geckodriver behavior issue. The navigate command returns
+    -- geckodriver throws: NS_ERROR_UNKNOWN_HOST
+    -- chromedriver throws: ERR_NAME_NOT_RESOLVED
+    --
+    -- This appears to be a driver behavior issue. The navigate command returns
     -- an error before the navigation lifecycle begins, so no navigationFailed event
     -- is emitted.
     --
@@ -652,7 +666,7 @@ browsingContextEventNavigationFailed =
 
       -- This will throw NS_ERROR_UNKNOWN_HOST error from geckodriver
       -- instead of firing a navigationFailed event
-      browsingContextNavigate $ MkNavigate { context = bc, url = MkUrl "https://invalid-domain-that-does-not-exist-12345", wait = Nothing }
+      browsingContextNavigate $ MkNavigate {context = bc, url = MkUrl "https://invalid-domain-that-does-not-exist-12345", wait = Nothing}
 
       sequence_
         [ waitFailedEventFired,
@@ -713,6 +727,11 @@ browsingContextEventDownloadEnd =
 
       (manyDownloadEndEventFired, waitManyDownloadEndEventFired) <- timeLimitLogMany BrowsingContextDownloadEnd
       subscribeMany [BrowsingContextDownloadEnd] manyDownloadEndEventFired
+
+      -- Wait for page scripts to be fully loaded (Chrome timing issue)
+      -- prod code would need something better than this
+      -- Race condition: Chrome's browsingContext.navigate returns before the page's inline <script> tag (which defines triggerDownload()) has finished executing
+      pauseAtLeast $ 1 * second
 
       logTxt "Trigger download via JavaScript (blob download should complete quickly)"
       scriptEvaluate $

@@ -16,9 +16,9 @@ This library is intended as a foundation for building WebDriver client implement
 
 If you are writing a webdriver client, this library will save you the effort of analysing the specs and implementing the protocol types and JSON instances.
 
-If you are looking for a library to enable you to interact with web pages directly then you need a fully implemented web client library __which this library is not__.
+If you are looking for a library to enable you to interact with web pages directly then you need a fully implemented client library __which this library is not__.
 
-For a fully implemented webdriver client, consider an alternative such as [haskell-webdriver](https://github.com/haskell-webdriver/haskell-webdriver#readme)
+For a fully implemented (HTTP) WebDriver client, consider an alternative such as [haskell-webdriver](https://github.com/haskell-webdriver/haskell-webdriver#readme)
 
 = Which Protocol?
 
@@ -52,7 +52,7 @@ __2. A Protocol module__
 
 "WebDriverPreCore.HTTP.API"
 
-    Example usage:
+    Example:
     
     @
     -- Calling the API (navigateTo) function to generate the navigation command payload
@@ -60,11 +60,19 @@ __2. A Protocol module__
         goExample = navigateTo (Session "session-id-123") $ MkUrl "https://example.com"
     
   
-    -- The result of the API function call contains HTTP request details required for the driver 'WebDriverPreCore.HTTP.Protocol.Command' 
-     'Post'
-        { description = "Navigate To",
-        , path = "/session/session-id-123/url" 
-        , body = {"url": "https://example.com"}
+    -- The result of the API function call contains HTTP request details required for the driver 'WebDriverPreCore.HTTP.Protocol.Command' including the path and body (a JSON payload) if applicable.
+
+     Post
+        { description = "Navigate To"
+        , path =
+            [ "session" , "b07baa96-046a-4e11-ad1e-94eda436502b" , "url" ]
+        , body =
+            fromList
+                [ ( "url"
+                , String
+                    "https://example.com"
+                )
+                ]
         }
     @
 
@@ -79,8 +87,8 @@ __2. A Protocol module__
 
     API functions for BiDi commands and event subscriptions. Each command function returns a 'WebDriverPreCore.BiDi.Protocol.Command' value with the WebSocket message specification and response type.
     
-    Example usage:
-    
+    Example:
+
     @
     -- Calling the API function to generate the command payload
     let navCommand :: Command NavigateResult
@@ -90,7 +98,7 @@ __2. A Protocol module__
           , wait = Just Interactive
           }
     
-    -- The result is a Command value with the method and params to send to the WebSocket
+    -- The result is a 'WebDriverPreCore.BiDi.Protocol.Command' value with the method and params (a JSON payload) to send to the WebSocket
        navCommand = MkCommand
          { method = KnownCommand BrowsingContextNavigate
          , params = fromList [("context", String "context-id-123"), 
@@ -112,7 +120,7 @@ Implementing a WebDriver client involves:
 2. Creating some kind of abstraction, such as handles, a typeclass, or the use of an effects library to call the runner and hence lift the static type constructors provided by the API into IO actions.
 3. Handling errors using the shared error types
 
-Example implementations for both BiDi and HTTP runners, in this case using [the handle pattern](https://jaspervdj.be/posts/2018-03-08-handle-pattern.html)), can be found in the [test repository](https://github.com/pyrethrum/webdriver/tree/main/webdriver-precore/test#readme) for this package.
+Example implementations for both BiDi and HTTP runners, in this case using [the handle pattern](https://jaspervdj.be/posts/2018-03-08-handle-pattern.html)), can be found in the [test repository](https://github.com/pyrethrum/webdriver/tree/main/webdriver-precore/test#readme).
 
 == Example Implementation (Single Endpoint)
 Using navigation as an example with both protocols, the client implementation is implemented as follows:
@@ -132,16 +140,17 @@ import WebDriverPreCore.HTTP.Protocol (Session, URL)
 -- The Actions type
 data HttpActions = MkHttpActions
   { navigateTo :: Session -> URL -> IO ()
-  , ...
+  , ... 
+  -- the rest of the API
   }
 
 -- The Actions implementation
 mkActions :: HttpRunner -> HttpActions
 mkActions runner = MkHttpActions
-  { navigateTo = \sessionId url -> do
-      let command = API.navigateTo sessionId url
-      runner.runHttpCommand command
-  , ...
+  { navigateTo = \sessionId url -> 
+      runner.runHttpCommand $ API.navigateTo sessionId url
+  , ... 
+   -- the rest of the API
   }
 @
 
@@ -172,7 +181,7 @@ Full example is available in the [test repository](https://github.com/pyrethrum/
 
 === BiDi
 
-A BiDi client implementation follows the same pattern as HTTP, with a runner, actions type, and actions implementation. It is somewhat more complicated than HTTP due to the asynchronous nature of WebSocket communication and event handling, the need to create correlation IDs for commands and the need to manage subscriptions for events.
+A BiDi client implementation follows the same pattern as HTTP, with a runner, actions type, and actions implementation. It is, however, more complicated than HTTP due to the asynchronous nature of WebSocket communication and event handling, the need to create correlation IDs for commands and the need to manage subscriptions for events.
 
 Example implementations can be found in the [test repository](https://github.com/pyrethrum/webdriver/tree/main/webdriver-precore/test#readme)
 

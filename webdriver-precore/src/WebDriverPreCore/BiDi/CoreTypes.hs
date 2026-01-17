@@ -202,6 +202,11 @@ data SubscriptionType
   | OffSpecSubscriptionType OffSpecSubscriptionType
   deriving (Show, Eq, Generic)
 
+-- | Off-specification subscription type for driver-specific events.
+--
+-- This type should only be used as a fallback when a WebDriver implementation
+-- supports subscribing to events that are not covered by this library's
+-- 'KnownSubscriptionType'. Use the standard subscription types whenever possible.
 newtype OffSpecSubscriptionType = MkOffSpecSubscriptionType
   { method :: Text
   }

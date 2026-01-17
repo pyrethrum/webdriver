@@ -778,7 +778,9 @@ instance ToJSON LocalValue where
 
 instance ToJSON RemoteReference
 
-instance ToJSON SharedReference
+instance ToJSON SharedReference where
+  toJSON :: SharedReference -> Value
+  toJSON = toJSONOmitNothing
 
 instance ToJSON RemoteObjectReference
 

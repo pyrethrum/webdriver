@@ -249,28 +249,6 @@ browserCompleteWorkflowDemo =
       logShow "Final user contexts" finalContexts
 
 -- >>> runDemo browserSetDownloadBehaviorDemo
--- *** Exception: Error executing BiDi command: With JSON: 
--- {
---     "id": 1,
---     "method": "browser.setDownloadBehavior",
---     "params": {
---         "downloadBehavior": {
---             "destinationFolder": "/tmp/downloads",
---             "type": "allowed"
---         }
---     }
--- }
--- BiDi driver error: 
--- MkDriverError
---   { id = Just 1
---   , error = UnknownCommand
---   , description = "The command sent is not known"
---   , message = "browser.setDownloadBehavior"
---   , stacktrace =
---       Just
---         "RemoteError@chrome://remote/content/shared/RemoteError.sys.mjs:8:8\nWebDriverError@chrome://remote/content/shared/webdriver/Errors.sys.mjs:202:5\nUnknownCommandError@chrome://remote/content/shared/webdriver/Errors.sys.mjs:944:5\nexecute@chrome://remote/content/shared/webdriver/Session.sys.mjs:407:13\nonPacket@chrome://remote/content/webdriver-bidi/WebDriverBiDiConnection.sys.mjs:236:37\nonMessage@chrome://remote/content/server/WebSocketTransport.sys.mjs:127:18\nhandleEvent@chrome://remote/content/server/WebSocketTransport.sys.mjs:109:14\n"
---   , extensions = MkEmptyResult { extensible = fromList [] }
---   }
 browserSetDownloadBehaviorDemo :: BiDiDemo
 browserSetDownloadBehaviorDemo =
   demo "Browser - Set Download Behavior (since https://www.w3.org/TR/2025/WD-webdriver-bidi-20250918)" action

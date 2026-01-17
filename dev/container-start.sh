@@ -7,5 +7,4 @@ set -e
 bash ./dev/start-geckodriver.sh
 
 # Build the project
-cd webdriver-examples
-cabal build --enable-tests
+cabal build all

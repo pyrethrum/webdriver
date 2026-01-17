@@ -1,4 +1,4 @@
-# webdriver-test-0.2.0.0 (unreleased)
+# webdriver-test-0.2.0.0 (2026-01-17)
 
 ## New Features
 
@@ -25,7 +25,7 @@ HTTP tests moved to `HTTP/` directory (previously in root):
 
 ### Configuration Management
 
-New means configuration:
+New configuration:
 
 - Configuration loader in `ConfigLoader.hs` supporting Dhall config files
 - Config directory at `.config/` (user config file gitignored)
@@ -73,7 +73,7 @@ The test directory serves as reference implementation for library users. See:
 - Update `ReadMe`
   - better instructions for handling Firefox profile issues
   - instructions on using new dhall config
-- Examples are modified in line with unreleaased changes to `WebDriverPreCore.Http.SpecDefinition`. Theses include:
+- Examples are modified in line with unreleased changes to `WebDriverPreCore.Http.SpecDefinition`. These include:
   - `newSession` to return the whole response, not just the `sessionId`
   - refactoring in preparation for including webdriver BiDi
 

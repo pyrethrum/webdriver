@@ -5,6 +5,7 @@ import BiDi.DemoUtils
 import IOUtils (DemoActions (..))
 import WebDriverPreCore.BiDi.Protocol
   ( ForcedColorsModeTheme (..),
+    GeoProperty (..),
     GeolocationCoordinates (..),
     GeolocationPositionError (..),
     NetworkConditions (..),
@@ -18,6 +19,7 @@ import WebDriverPreCore.BiDi.Protocol
     SetScreenSettingsOverride (..),
     SetScriptingEnabled (..),
     SetTimezoneOverride (..),
+    SetTouchOverride (..),
     SetUserAgentOverride (..),
     NetworkConditionsOffline(..),
     ScreenOrientationNatural(..),
@@ -42,12 +44,11 @@ emulationSetGeolocationOverrideDemo =
               accuracy = Just 10.0,
               altitude = Just 10.0,
               altitudeAccuracy = Just 5.0,
-              heading = Just 90.0,
+              heading = Just 90.0,{-  -}
               speed = Just 0.0
             }
       let geoOverride = MkSetGeolocationOverride
-            { coordinates = Just nycCoordinates,
-              error = Nothing,
+            { override = Coordinates nycCoordinates,
               contexts = Just [bc],
               userContexts = Nothing
             }
@@ -55,27 +56,41 @@ emulationSetGeolocationOverrideDemo =
       logShow "Geolocation set to NYC" result1
       pause
 
-      logTxt "Test 2: Set geolocation position error"
-      let positionError = MkGeolocationPositionError { errorType = "positionUnavailable" }
-      let errorOverride = MkSetGeolocationOverride
-            { coordinates = Nothing,
-              error = Just positionError,
+      logTxt "Test 2: Clear geolocation override"
+      let clearOverride = MkSetGeolocationOverride
+            { override = ClearCoodrdinates,
               contexts = Just [bc],
               userContexts = Nothing
             }
-      result2 <- emulationSetGeolocationOverride errorOverride
-      logShow "Geolocation error set" result2
+      result2 <- emulationSetGeolocationOverride clearOverride
+      logShow "Geolocation override cleared" result2
       pause
 
-      logTxt "Test 3: Clear geolocation override"
-      let clearOverride = MkSetGeolocationOverride
-            { coordinates = Nothing,
-              error = Nothing,
+-- >>> runDemo emulationSetGeolocationOverridePositionErrorDemo
+-- | Test setting geolocation position error
+-- Geckodriver incorrectly requires 'coordinates' to be present even when 'error' is provided.
+-- According to the WebDriver BiDi spec (section 7.4.2.2), when 'error' is provided,
+-- 'coordinates' should NOT be required. The spec states:
+-- "If command parameters contains 'error': ... let emulated position data be a map matching GeolocationPositionError production"
+-- "Otherwise, let emulated position data be command parameters['coordinates']."
+-- This is a known geckodriver defect.
+emulationSetGeolocationOverridePositionErrorDemo :: BiDiDemo
+emulationSetGeolocationOverridePositionErrorDemo =
+  demo "Emulation - Set Geolocation Position Error" action
+  where
+    action :: DemoActions -> BiDiActions -> IO ()
+    action utils@MkDemoActions {..} bidi@MkBiDiActions {..} = do
+      bc <- rootContext utils bidi
+
+      logTxt "Set geolocation position error"
+      let positionError = MkGeolocationPositionError { errorType = "positionUnavailable" }
+      let errorOverride = MkSetGeolocationOverride
+            { override = PositionError positionError,
               contexts = Just [bc],
               userContexts = Nothing
             }
-      result3 <- emulationSetGeolocationOverride clearOverride
-      logShow "Geolocation override cleared" result3
+      result <- emulationSetGeolocationOverride errorOverride
+      logShow "Geolocation error set" result
       pause
 
 -- >>> runDemo emulationSetLocaleOverrideDemo
@@ -189,31 +204,7 @@ emulationSetScreenOrientationOverrideDemo =
       pause
 
 -- >>> runDemo emulationSetScreenSettingsOverrideDemo
--- *** Exception: Error executing BiDi command: With JSON: 
--- {
---     "id": 2,
---     "method": "emulation.setScreenSettingsOverride",
---     "params": {
---         "contexts": [
---             "a09acf51-3f41-4728-a27a-8864b7dcee8d"
---         ],
---         "screenArea": {
---             "height": 1080,
---             "width": 1920
---         }
---     }
--- }
--- BiDi driver error: 
--- MkDriverError
---   { id = Just 2
---   , error = UnknownCommand
---   , description = "The command sent is not known"
---   , message = "emulation.setScreenSettingsOverride"
---   , stacktrace =
---       Just
---         "RemoteError@chrome://remote/content/shared/RemoteError.sys.mjs:8:8\nWebDriverError@chrome://remote/content/shared/webdriver/Errors.sys.mjs:202:5\nUnknownCommandError@chrome://remote/content/shared/webdriver/Errors.sys.mjs:944:5\nexecute@chrome://remote/content/shared/webdriver/Session.sys.mjs:407:13\nonPacket@chrome://remote/content/webdriver-bidi/WebDriverBiDiConnection.sys.mjs:236:37\nonMessage@chrome://remote/content/server/WebSocketTransport.sys.mjs:127:18\nhandleEvent@chrome://remote/content/server/WebSocketTransport.sys.mjs:109:14\n"
---   , extensions = MkEmptyResult { extensible = fromList [] }
---   }
+-- *** Exception: BiDIError (ProtocolException {error = UnknownCommand, description = "A command could not be executed because the remote end is not aware of it", message = "Unknown command 'emulation.setScreenSettingsOverride'.", stacktrace = Nothing, errorData = Nothing, response = Object (fromList [("error",String "unknown command"),("id",Number 2.0),("message",String "Unknown command 'emulation.setScreenSettingsOverride'."),("type",String "error")])})
 emulationSetScreenSettingsOverrideDemo :: BiDiDemo
 emulationSetScreenSettingsOverrideDemo =
   demo "Emulation - Set Screen Settings Override - since https://www.w3.org/TR/2025/WD-webdriver-bidi-20251120" action
@@ -332,6 +323,35 @@ emulationSetTimezoneOverrideDemo =
       logShow "Timezone override cleared" result5
       pause
 
+-- >>> runDemo emulationSetTouchOverrideDemo
+emulationSetTouchOverrideDemo :: BiDiDemo
+emulationSetTouchOverrideDemo =
+  demo "Emulation - Set Touch Override - since https://www.w3.org/TR/2026/WD-webdriver-bidi-20260109" action
+  where
+    action :: DemoActions -> BiDiActions -> IO ()
+    action utils@MkDemoActions {..} bidi@MkBiDiActions {..} = do
+      bc <- rootContext utils bidi
+
+      logTxt "Test 1: Enable touch emulation with 5 touch points"
+      let touchOverride = MkSetTouchOverride
+            { maxTouchPoints = Just (MkJSUInt 5),
+              contexts = Just [bc],
+              userContexts = Nothing
+            }
+      result1 <- emulationSetTouchOverride touchOverride
+      logShow "Touch emulation enabled (5 points)" result1
+      pause
+
+      logTxt "Test 2: Clear touch override"
+      let clearTouch = MkSetTouchOverride
+            { maxTouchPoints = Nothing,
+              contexts = Just [bc],
+              userContexts = Nothing
+            }
+      result2 <- emulationSetTouchOverride clearTouch
+      logShow "Touch override cleared" result2
+      pause
+
 -- >>> runDemo emulationCompleteWorkflowDemo
 emulationCompleteWorkflowDemo :: BiDiDemo
 emulationCompleteWorkflowDemo =
@@ -356,8 +376,7 @@ emulationCompleteWorkflowDemo =
               speed = Nothing
             }
       let geoOverride1 = MkSetGeolocationOverride
-            { coordinates = Just nycCoordinates,
-              error = Nothing,
+            { override = Coordinates nycCoordinates,
               contexts = Just [bc1],
               userContexts = Nothing
             }
@@ -408,8 +427,7 @@ emulationCompleteWorkflowDemo =
               speed = Just 5.0
             }
       let geoOverride2 = MkSetGeolocationOverride
-            { coordinates = Just londonCoordinates,
-              error = Nothing,
+            { override = Coordinates londonCoordinates,
               contexts = Just [bc2],
               userContexts = Nothing
             }
@@ -451,8 +469,7 @@ emulationCompleteWorkflowDemo =
       logTxt "=== Clearing all emulation overrides ==="
       -- Clear context 1 overrides
       let clearGeo1 = MkSetGeolocationOverride
-            { coordinates = Nothing,
-              error = Nothing,
+            { override = ClearCoodrdinates,
               contexts = Just [bc1],
               userContexts = Nothing
             }
@@ -483,8 +500,7 @@ emulationCompleteWorkflowDemo =
 
       -- Clear context 2 overrides
       let clearGeo2 = MkSetGeolocationOverride
-            { coordinates = Nothing,
-              error = Nothing,
+            { override = ClearCoodrdinates,
               contexts = Just [bc2],
               userContexts = Nothing
             }

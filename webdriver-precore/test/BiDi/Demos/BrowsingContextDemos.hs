@@ -6,7 +6,7 @@ import Const (milliseconds)
 import Data.Aeson (Value (Null), object, (.=))
 import Data.Text (Text)
 import IOUtils (DemoActions (..))
-import TestData (contentPageUrl, framesUrl, loginUrl, navigation1Url, navigation2Url, navigation3Url, navigation4Url, navigation5Url, navigation6Url, nestedFramesUrl)
+import TestData (contentPageUrl, framesUrl, loginUrl, navigation1Url, navigation2Url, navigation3Url, navigation4Url, navigation5Url, navigation6Url, nestedFramesUrl, scriptRealmUrl)
 import WebDriverPreCore.BiDi.Protocol
   ( Activate (..),
     CaptureScreenshot (..),
@@ -18,8 +18,10 @@ import WebDriverPreCore.BiDi.Protocol
     CreateUserContext (..),
     Evaluate (..),
     GetTree (..),
+    GetTreeResult (..),
     HandleUserPrompt (..),
     ImageFormat (..),
+    Info (..),
     JSInt (..),
     JSUInt (..),
     LocateNodes (..),
@@ -143,7 +145,7 @@ browsingContextCaptureScreenshotCloseDemo =
               format =
                 Just $
                   MkImageFormat
-                    { imageType = "png",
+                    { imageType = "image/png",
                       quality = Just 0.75
                     },
               clip = Nothing
@@ -292,7 +294,8 @@ browsingContextHandleUserPromptDemo =
             resultOwnership = Nothing,
             serializationOptions = Nothing
           }
-      -- Wait for the alert to be displayed (in a production automation more sophisticated polling must be used)
+      -- Wait for the alert to be displayed 
+      -- in a production automation more sophisticated polling or event subscription would be used
       pauseAtLeast $ 500 * milliseconds
 
       logTxt "Accept the alert dialog"
@@ -386,7 +389,7 @@ browsingNavigateReloadTraverseHistoryDemo =
 
       nav1 <- navigation1Url
       logTxt "Navigate to Navigation 1"
-      navResult1 <- browsingContextNavigate $ MkNavigate {context = bc, url = nav1, wait = Nothing}
+      navResult1 <- browsingContextNavigate $ MkNavigate {context = bc, url = nav1, wait = Just Complete}
       logShow "Navigation result - Navigation 1" navResult1
       pause
 
@@ -404,18 +407,18 @@ browsingNavigateReloadTraverseHistoryDemo =
 
       nav4 <- navigation4Url
       logTxt "Navigate to Navigation 4"
-      navResult4 <- browsingContextNavigate $ MkNavigate {context = bc, url = nav4, wait = Just None}
+      navResult4 <- browsingContextNavigate $ MkNavigate {context = bc, url = nav4, wait = Just Complete}
       logShow "Navigation result - Navigation 4" navResult4
       pause
 
       logTxt "Reload current page (Navigation 4) - default options"
-      reloadResult1 <- browsingContextReload $ MkReload {context = bc, ignoreCache = Nothing, wait = Nothing}
+      reloadResult1 <- browsingContextReload $ MkReload {context = bc, ignoreCache = Nothing, wait = Just Complete}
       logShow "Reload result - default" reloadResult1
       pause
 
       nav5 <- navigation5Url
       logTxt "Navigate to Navigation 5"
-      navResult5 <- browsingContextNavigate $ MkNavigate {context = bc, url = nav5, wait = Nothing}
+      navResult5 <- browsingContextNavigate $ MkNavigate {context = bc, url = nav5, wait = Just Complete}
       logShow "Navigation result - Navigation 5" navResult5
       pause
 
@@ -427,7 +430,7 @@ browsingNavigateReloadTraverseHistoryDemo =
 
       nav6 <- navigation6Url
       logTxt "Navigate to Navigation 6"
-      navResult6 <- browsingContextNavigate $ MkNavigate {context = bc, url = nav6, wait = Nothing}
+      navResult6 <- browsingContextNavigate $ MkNavigate {context = bc, url = nav6, wait = Just Complete}
       logShow "Navigation result - Navigation 6" navResult6
       pause
 
@@ -439,32 +442,34 @@ browsingNavigateReloadTraverseHistoryDemo =
       logTxt "Test history traversal - Go back 1 step (to Navigation 5)"
       historyResult1 <- browsingContextTraverseHistory $ MkTraverseHistory {context = bc, delta = MkJSInt (-1)}
       logShow "History traversal result - back 1" historyResult1
-      pause
+      -- there is an issue in chromedriver where navigating back too quickly causes a failure
+      -- would need a better solution in production code (retries, waits, event listening, etc )
+      pauseAtLeast (100 * milliseconds)
 
       logTxt "Go back 2 more steps (to Navigation 3)"
       historyResult2 <- browsingContextTraverseHistory $ MkTraverseHistory {context = bc, delta = MkJSInt (-2)}
       logShow "History traversal result - back 2" historyResult2
-      pause
+      pauseAtLeast (100 * milliseconds)
 
       logTxt "Go back 1 more step (to Navigation 2)"
       historyResult3 <- browsingContextTraverseHistory $ MkTraverseHistory {context = bc, delta = MkJSInt (-1)}
       logShow "History traversal result - back 1" historyResult3
-      pause
+      pauseAtLeast (100 * milliseconds)
 
       logTxt "Go forward 1 step (to Navigation 3)"
       historyResult4 <- browsingContextTraverseHistory $ MkTraverseHistory {context = bc, delta = MkJSInt 1}
       logShow "History traversal result - forward 1" historyResult4
-      pause
+      pauseAtLeast (100 * milliseconds)
 
       logTxt "Go forward 2 steps (to Navigation 5)"
       historyResult5 <- browsingContextTraverseHistory $ MkTraverseHistory {context = bc, delta = MkJSInt 2}
       logShow "History traversal result - forward 2" historyResult5
-      pause
+      pauseAtLeast (100 * milliseconds)
 
       logTxt "Go forward 1 step (to Navigation 6)"
       historyResult6 <- browsingContextTraverseHistory $ MkTraverseHistory {context = bc, delta = MkJSInt 1}
       logShow "History traversal result - forward 1" historyResult6
-      pause
+      pauseAtLeast (100 * milliseconds)
 
       logTxt "Final navigation - back to Navigation 1"
       navResultFinal <- browsingContextNavigate $ MkNavigate {context = bc, url = nav1, wait = Just Complete}
@@ -703,6 +708,57 @@ browsingContextLocateNodesDemo =
       treeResult <- browsingContextGetTree $ MkGetTree Nothing Nothing
       logShow "Browsing context tree" treeResult
       pause
+
+-- >>> runDemo browsingContextContextLocatorDemo
+browsingContextContextLocatorDemo :: BiDiDemo
+browsingContextContextLocatorDemo =
+  demo "Browsing Context - Context Locator" action
+  where
+    action :: DemoActions -> BiDiActions -> IO ()
+    action utils@MkDemoActions {..} bidi@MkBiDiActions {..} = do
+      bc <- rootContext utils bidi
+
+      scriptRealmPage <- scriptRealmUrl
+      logTxt "Navigate to Script Realm page with iframe"
+      _ <- browsingContextNavigate $ MkNavigate {context = bc, url = scriptRealmPage, wait = Just Complete}
+      pause
+
+      -- Click the button to create an iframe using script.evaluate
+      logTxt "Click button to create iframe"
+      _ <- scriptEvaluate $
+        MkEvaluate
+          { expression = "document.getElementById('createIframe').click()",
+            target = ContextTarget $ MkContextTarget {context = bc, sandbox = Nothing},
+            awaitPromise = False,
+            resultOwnership = Nothing,
+            serializationOptions = Nothing
+          }
+      pauseAtLeast (500 * milliseconds)
+
+      -- Get the tree to find the iframe's browsing context
+      logTxt "Get tree to find iframe browsing context"
+      MkGetTreeResult {contexts} <- browsingContextGetTree $ MkGetTree {maxDepth = Nothing, root = Just bc}
+      logShow "Tree result" contexts
+
+      case contexts of
+        (MkInfo {children = Just (iframeInfo : _)} : _) -> do
+          let iframeContext = iframeInfo.context
+          logShow "Found iframe context" iframeContext
+
+          -- Use Context locator to locate nodes within the iframe
+          logTxt "Using Context locator to find elements in iframe"
+          contextResult <-
+            browsingContextLocateNodes $
+              MkLocateNodes
+                { context = bc,
+                  locator = Context {context = iframeContext},
+                  maxNodeCount = Nothing,
+                  serializationOptions = Nothing,
+                  startNodes = Nothing
+                }
+          logShow "Context locator result" contextResult
+          pause
+        _ -> logTxt "No iframe child context found"
 
 -- >>> runDemo browsingContextPrintDemo
 browsingContextPrintDemo :: BiDiDemo

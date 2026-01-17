@@ -11,9 +11,9 @@ import Dhall (FromDhall, Generic, ToDhall)
 isFirefox :: DemoBrowser -> Bool
 isFirefox = \case
   Firefox {} -> True
-  Chrome -> False
+  Chrome {} -> False
 
-data DemoBrowser = Chrome | Firefox {headless :: Bool, profilePath :: Maybe Text}
+data DemoBrowser = Chrome {headless :: Bool} | Firefox {headless :: Bool, profilePath :: Maybe Text}
   deriving (Eq, Show, Generic)
 
 instance FromDhall DemoBrowser
