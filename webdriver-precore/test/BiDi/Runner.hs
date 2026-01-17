@@ -205,7 +205,7 @@ subscribe sa callSubscribe subscription = do
               contexts,
               userContexts
             }
-      P.UnknownSubscription
+      P.OffSpecSubscription
         { subscriptionTypes
         } ->
           MkSessionSubscribe
@@ -239,12 +239,12 @@ subscribe sa callSubscribe subscription = do
               { subscriptionTypes = socketSubtypes,
                 nAction = parseThrow ("Could not parse Event when executing MultiSubscription action for: " <> socketSubtypesTxt) >=> nAction
               }
-        P.UnknownSubscription
+        P.OffSpecSubscription
           { nValueAction
           } ->
             S.MultiSubscription
               { subscriptionTypes = socketSubtypes,
-                nAction = parseThrow ("Could not parse Value when executing UnknownSubscription action for: " <> socketSubtypesTxt) >=> nValueAction
+                nAction = parseThrow ("Could not parse Value when executing OffSpecSubscription action for: " <> socketSubtypesTxt) >=> nValueAction
               }
         where
           socketSubtypes = Set.fromList $ toSocketSubType <$> s'.subscriptionTypes

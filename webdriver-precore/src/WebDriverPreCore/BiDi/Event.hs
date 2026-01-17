@@ -45,7 +45,7 @@ mkOffSpecSubscription ::
   (Value -> m ()) ->
   Subscription m
 mkOffSpecSubscription ks =
-  UnknownSubscription (OffSpecSubscriptionType <$> ks)
+  OffSpecSubscription (OffSpecSubscriptionType <$> ks)
 
 data Subscription m where
   SingleSubscription ::
@@ -64,7 +64,7 @@ data Subscription m where
       nAction :: Event -> m ()
     } ->
     Subscription m
-  UnknownSubscription ::
+  OffSpecSubscription ::
     { subscriptionTypes :: [SubscriptionType],
       browsingContexts :: [BrowsingContext],
       userContexts :: [UserContext],
