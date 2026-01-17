@@ -1,4 +1,4 @@
-# webdriver-precore-0.2.0.0 (unreleased)
+# webdriver-precore-0.2.0.0 (2026-01-17)
 
 ## Breaking Changes
 
