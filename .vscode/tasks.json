@@ -20,6 +20,22 @@
       "problemMatcher": []
     },
     {
+      "label": "build library only",
+      "type": "shell",
+      "command": "cabal",
+      "args": [
+        "build",
+        "webdriver-precore:lib:webdriver-precore",
+        "--disable-tests"
+      ],
+      "presentation": {
+        "reveal": "always",
+        "panel": "shared",
+        "showReuseMessage": false
+      },
+      "problemMatcher": []
+    },
+    {
       "label": "test all",
       "type": "shell",
       "command": "cabal test all --test-show-details=streaming 2>&1 | tee test-all.log",
