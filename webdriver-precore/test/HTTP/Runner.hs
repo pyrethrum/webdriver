@@ -1,25 +1,27 @@
 module HTTP.Runner
   ( mkRunner,
-    HttpRunner (..)
+    HttpRunner (..),
   )
 where
 
 import Data.Aeson (FromJSON (..), Value, withObject, (.:))
 import Data.Aeson.Types (Parser, Value (..), parseEither, parseMaybe)
 import Data.Function ((&))
+import Data.Text (pack)
 import GHC.Exception (throw)
+import HTTP.HttpClient (callWebDriver', mkRequest)
 import IOUtils (DemoActions (..))
 import Network.HTTP.Req
   ( Scheme (..),
     Url,
   )
 import UnliftIO (catchAny)
-import WebDriverPreCore.HTTP.Protocol ( Command(..), WebDriverException(..), parseWebDriverException)
+import WebDriverPreCore.HTTP.Protocol
+  ( Command (..),
+    WebDriverException (..),
+    parseWebDriverException,
+  )
 import Prelude hiding (log)
-
-import HTTP.HttpClient ( callWebDriver', mkRequest)
-import Data.Text (pack)
-
 
 -- ############# Runner #############
 
@@ -62,19 +64,17 @@ logCommand da@MkDemoActions {logShow} cmd = do
     PostEmpty {} -> pure ()
     Delete {} -> pure ()
 
-
 parseResultIO :: forall r. (FromJSON r) => Value -> IO r
-parseResultIO body  =
+parseResultIO body =
   parseMaybe valueParser body
     & maybe
-      ( throw $ ResponseParseException "No value property found in WebDriver response" body
-      )
+      (throw $ ResponseParseException "No value property found in WebDriver response" body)
       ( \val ->
-          parseEither @_ @r parseJSON val & either
-            (\e -> throw $ parseWebDriverException (pack e) val)
-            pure
+          parseEither @_ @r parseJSON val
+            & either
+              (\e -> throw $ parseWebDriverException (pack e) val)
+              pure
       )
-  
 
 valueParser :: Value -> Parser Value
 valueParser body = body & withObject "body value" (.: "value")

@@ -1,4 +1,4 @@
-cabal-version: 3.12
+cabal-version: 2.4
 
 name:           webdriver-precore
 version:        0.2.0.1
@@ -16,7 +16,7 @@ extra-doc-files:
   README.md
   ChangeLog.md
 
-tested-with: GHC == { 9.8.2, 9.8.4, 9.10.1 }
+tested-with: GHC == 9.8.2 || == 9.8.4 || == 9.10.1
 
 synopsis:       A typed wrapper for W3C WebDriver (HTTP and BiDi) protocols.
 
@@ -162,7 +162,7 @@ library
       WebDriverPreCore.Error
   hs-source-dirs: src
   build-depends:
-    webdriver-precore:utils-internal,
+    utils-internal,
     aeson         >=1.4   && <2.3, 
     base          >=4.16  && <5,
     bytestring    >=0.10  && <0.12.3,
@@ -192,7 +192,7 @@ test-suite test
   hs-source-dirs: test
   build-depends:
     aeson
-    , webdriver-precore:utils-internal
+    , utils-internal
     , base
     , base64
     , bytestring
