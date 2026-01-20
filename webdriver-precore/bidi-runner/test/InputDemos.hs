@@ -1,10 +1,10 @@
-module BiDi.Demos.InputDemos where
+module InputDemos where
 
-import BiDi.Actions (BiDiActions (..))
-import BiDi.DemoUtils
+import BiDiActions (BiDiActions (..))
+import BiDiDemoUtils
 import Data.Maybe (fromJust)
-import IOUtils (DemoActions (..))
-import TestData (checkboxesUrl, fileUrl, infiniteScrollUrl, textAreaUrl, uploadFilePath)
+import WebDriverPreCore.Test.IOUtils (DemoActions (..))
+import WebDriverPreCore.Test.TestData (checkboxesUrl, fileUrl, infiniteScrollUrl, textAreaUrl, uploadFilePath)
 import WebDriverPreCore.BiDi.Protocol
   ( KeySourceAction (..),
     KeySourceActions (..),

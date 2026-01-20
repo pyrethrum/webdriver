@@ -1,10 +1,10 @@
-module BiDi.Demos.InputEventDemos where
+module InputEventDemos where
 
-import BiDi.Actions (BiDiActions (..))
-import BiDi.DemoUtils
+import BiDiActions (BiDiActions (..))
+import BiDiDemoUtils
 import Data.Maybe (fromJust)
-import IOUtils (DemoActions (..))
-import TestData (uploadUrl)
+import WebDriverPreCore.Test.IOUtils (DemoActions (..))
+import WebDriverPreCore.Test.TestData (uploadUrl)
 import WebDriverPreCore.BiDi.Protocol
 import Prelude hiding (log, putStrLn)
 

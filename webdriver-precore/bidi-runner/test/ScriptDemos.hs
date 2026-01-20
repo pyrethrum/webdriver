@@ -1,7 +1,7 @@
-module BiDi.Demos.ScriptDemos where
+module ScriptDemos where
 
-import BiDi.Actions (BiDiActions (..))
-import BiDi.DemoUtils
+import BiDiActions (BiDiActions (..))
+import BiDiDemoUtils
     ( chkDomContains,
       closeContext,
       demo,
@@ -11,7 +11,7 @@ import BiDi.DemoUtils
 import Data.Aeson (ToJSON (..))
 import Data.Maybe (catMaybes)
 import Data.Text (isInfixOf, pack)
-import IOUtils (DemoActions (..))
+import WebDriverPreCore.Test.IOUtils (DemoActions (..))
 
 import WebDriverPreCore.BiDi.Protocol
     ( JSUInt(..),
@@ -52,7 +52,7 @@ import WebDriverPreCore.BiDi.Protocol
       URL(..) )
 
 import Prelude hiding (log, putStrLn)
-import Const (milliseconds)
+import WebDriverPreCore.Test.Const (milliseconds)
 
 
 -- >>> runDemo scriptEvaluateAllPrimitiveTypesDemo

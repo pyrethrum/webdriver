@@ -1,7 +1,7 @@
-module BiDi.Demos.NetworkDemos where
+module NetworkDemos where
 
-import BiDi.Actions (BiDiActions (..))
-import BiDi.DemoUtils
+import BiDiActions (BiDiActions (..))
+import BiDiDemoUtils
   ( BiDiDemo,
     closeContext,
     demo,
@@ -9,9 +9,9 @@ import BiDi.DemoUtils
     rootContext,
     runDemo
   )
-import IOUtils (DemoActions (..))
-import TestServerAPI (withTestServer)
-import TestServerAPI qualified as URLs
+import WebDriverPreCore.Test.IOUtils (DemoActions (..))
+import WebDriverPreCore.Test.TestServerAPI (withTestServer)
+import WebDriverPreCore.Test.TestServerAPI qualified as URLs
 import UnliftIO (putTMVar, readTMVar)
 import UnliftIO.STM (atomically, newEmptyTMVarIO, newTVarIO, readTVar, writeTVar)
 import WebDriverPreCore.BiDi.Protocol

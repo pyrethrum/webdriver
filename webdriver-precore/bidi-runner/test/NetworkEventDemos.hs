@@ -1,9 +1,9 @@
-module BiDi.Demos.NetworkEventDemos where
+module NetworkEventDemos where
 
-import BiDi.Actions (BiDiActions (..))
-import BiDi.DemoUtils
-import IOUtils (DemoActions (..))
-import TestServerAPI (authTestUrl, malformedResponseUrl, testServerHomeUrl, withTestServer)
+import BiDiActions (BiDiActions (..))
+import BiDiDemoUtils
+import WebDriverPreCore.Test.IOUtils (DemoActions (..))
+import WebDriverPreCore.Test.TestServerAPI (authTestUrl, malformedResponseUrl, testServerHomeUrl, withTestServer)
 import WebDriverPreCore.BiDi.Protocol
   ( ContextTarget (..),
     Evaluate (..),

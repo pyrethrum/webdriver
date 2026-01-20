@@ -1,12 +1,12 @@
-module BiDi.Demos.BrowsingContextDemos where
+module BrowsingContextDemos where
 
-import BiDi.Actions (BiDiActions (..))
-import BiDi.DemoUtils
-import Const (milliseconds)
+import BiDiActions (BiDiActions (..))
+import BiDiDemoUtils
+import WebDriverPreCore.Test.Const (milliseconds)
 import Data.Aeson (Value (Null), object, (.=))
 import Data.Text (Text)
-import IOUtils (DemoActions (..))
-import TestData (contentPageUrl, framesUrl, loginUrl, navigation1Url, navigation2Url, navigation3Url, navigation4Url, navigation5Url, navigation6Url, nestedFramesUrl, scriptRealmUrl)
+import WebDriverPreCore.Test.IOUtils (DemoActions (..))
+import WebDriverPreCore.Test.TestData (contentPageUrl, framesUrl, loginUrl, navigation1Url, navigation2Url, navigation3Url, navigation4Url, navigation5Url, navigation6Url, nestedFramesUrl, scriptRealmUrl)
 import WebDriverPreCore.BiDi.Protocol
   ( Activate (..),
     CaptureScreenshot (..),

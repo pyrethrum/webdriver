@@ -339,8 +339,24 @@ test-suite test-bidi-runner
   hs-source-dirs: bidi-runner/test
   other-modules:
     BiDiActions
-    BiDiDemo
     BiDiDemoUtils
+    BrowserDemos
+    BrowsingContextDemos
+    BrowsingContextEventDemos
+    EmulationDemos
+    FallbackDemos
+    InputDemos
+    InputEventDemos
+    LogEventDemos
+    NetworkDemos
+    NetworkEventDemos
+    NetworkSupportTest
+    OtherDemos
+    ScriptDemos
+    ScriptEventDemos
+    SessionDemos
+    StorageDemos
+    WebExtensionDemos
   build-depends:
     utils-internal,
     webdriver-precore,
@@ -614,30 +630,31 @@ test-suite test
     , HTTP.HttpDemo
     , HTTP.ErrorDemo
     , HTTP.FallbackDemo
-    , BiDi.Runner
-    , BiDi.Response
-    , BiDi.Socket
-    , BiDi.Actions
-    , BiDi.DemoUtils
-    , BiDi.BiDiUrl
-    , BiDi.ErrorDemo
-    , BiDi.Demos.BrowserDemos
-    , BiDi.Demos.BrowsingContextDemos
-    , BiDi.Demos.BrowsingContextEventDemos
-    , BiDi.Demos.EmulationDemos
-    , BiDi.Demos.FallbackDemos
-    , BiDi.Demos.InputDemos
-    , BiDi.Demos.InputEventDemos
-    , BiDi.Demos.LogEventDemos
-    , BiDi.Demos.NetworkDemos
-    , BiDi.Demos.NetworkEventDemos
-    , BiDi.Demos.NetworkSupportTest
-    , BiDi.Demos.OtherDemos
-    , BiDi.Demos.ScriptDemos
-    , BiDi.Demos.ScriptEventDemos
-    , BiDi.Demos.SessionDemos
-    , BiDi.Demos.StorageDemos
-    , BiDi.Demos.WebExtensionDemos
+    -- NOTE: BiDi modules have been migrated to bidi-runner/test
+    -- , BiDi.Runner
+    -- , BiDi.Response
+    -- , BiDi.Socket
+    -- , BiDi.Actions
+    -- , BiDi.DemoUtils
+    -- , BiDi.BiDiUrl
+    -- , BiDi.ErrorDemo
+    -- , BiDi.Demos.BrowserDemos
+    -- , BiDi.Demos.BrowsingContextDemos
+    -- , BiDi.Demos.BrowsingContextEventDemos
+    -- , BiDi.Demos.EmulationDemos
+    -- , BiDi.Demos.FallbackDemos
+    -- , BiDi.Demos.InputDemos
+    -- , BiDi.Demos.InputEventDemos
+    -- , BiDi.Demos.LogEventDemos
+    -- , BiDi.Demos.NetworkDemos
+    -- , BiDi.Demos.NetworkEventDemos
+    -- , BiDi.Demos.NetworkSupportTest
+    -- , BiDi.Demos.OtherDemos
+    -- , BiDi.Demos.ScriptDemos
+    -- , BiDi.Demos.ScriptEventDemos
+    -- , BiDi.Demos.SessionDemos
+    -- , BiDi.Demos.StorageDemos
+    -- , BiDi.Demos.WebExtensionDemos
     , RuntimeConst
     , HTTP.HttpRunnerDeprecated
   if flag(debug-local-config)

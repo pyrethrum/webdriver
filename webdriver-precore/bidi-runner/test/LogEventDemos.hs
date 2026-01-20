@@ -1,10 +1,10 @@
-module BiDi.Demos.LogEventDemos where
+module LogEventDemos where
 
-import BiDi.Actions (BiDiActions (..))
-import BiDi.DemoUtils ( demo, rootContext, BiDiDemo )
+import BiDiActions (BiDiActions (..))
+import BiDiDemoUtils ( demo, rootContext, BiDiDemo )
 import Data.Maybe (fromJust)
-import IOUtils (DemoActions (..))
-import TestData (badJavaScriptUrl, consoleLogUrl)
+import WebDriverPreCore.Test.IOUtils (DemoActions (..))
+import WebDriverPreCore.Test.TestData (badJavaScriptUrl, consoleLogUrl)
 import WebDriverPreCore.BiDi.Protocol
   ( ContextTarget (..),
     Evaluate (..),

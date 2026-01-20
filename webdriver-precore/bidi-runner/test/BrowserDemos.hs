@@ -1,8 +1,8 @@
-module BiDi.Demos.BrowserDemos where
+module BrowserDemos where
 
-import BiDi.Actions (BiDiActions (..))
-import BiDi.DemoUtils
-import IOUtils (DemoActions (..))
+import BiDiActions (BiDiActions (..))
+import BiDiDemoUtils
+import WebDriverPreCore.Test.IOUtils (DemoActions (..))
 import WebDriverPreCore.BiDi.Protocol
   ( Close (..),
     Create (..),

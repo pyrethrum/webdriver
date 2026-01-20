@@ -64,89 +64,89 @@ testFileNames = fst <$> testFiles
 
 -- | All embedded test files
 testFiles :: [(String, ByteString)]
-testFiles = $(embedDir "test/testFiles")
+testFiles = $(embedDir "test-resources/testFiles")
 
 -- Individual file accessors for common files
 indexHtml :: ByteString
-indexHtml = $(embedFile "test/testFiles/index.html")
+indexHtml = $(embedFile "test-resources/testFiles/index.html")
 
 contentPageHtml :: ByteString
-contentPageHtml = $(embedFile "test/testFiles/contentPage.html")
+contentPageHtml = $(embedFile "test-resources/testFiles/contentPage.html")
 
 checkboxesHtml :: ByteString
-checkboxesHtml = $(embedFile "test/testFiles/checkboxes.html")
+checkboxesHtml = $(embedFile "test-resources/testFiles/checkboxes.html")
 
 framesHtml :: ByteString
-framesHtml = $(embedFile "test/testFiles/frames.html")
+framesHtml = $(embedFile "test-resources/testFiles/frames.html")
 
 nestedFramesHtml :: ByteString
-nestedFramesHtml = $(embedFile "test/testFiles/nestedFrames.html")
+nestedFramesHtml = $(embedFile "test-resources/testFiles/nestedFrames.html")
 
 nestedFramesTopHtml :: ByteString
-nestedFramesTopHtml = $(embedFile "test/testFiles/nestedFramesTop.html")
+nestedFramesTopHtml = $(embedFile "test-resources/testFiles/nestedFramesTop.html")
 
 inputsHtml :: ByteString
-inputsHtml = $(embedFile "test/testFiles/inputs.html")
+inputsHtml = $(embedFile "test-resources/testFiles/inputs.html")
 
 loginHtml :: ByteString
-loginHtml = $(embedFile "test/testFiles/login.html")
+loginHtml = $(embedFile "test-resources/testFiles/login.html")
 
 promptHtml :: ByteString
-promptHtml = $(embedFile "test/testFiles/prompt.html")
+promptHtml = $(embedFile "test-resources/testFiles/prompt.html")
 
 shadowDomHtml :: ByteString
-shadowDomHtml = $(embedFile "test/testFiles/shadowDom.html")
+shadowDomHtml = $(embedFile "test-resources/testFiles/shadowDom.html")
 
 textAreaHtml :: ByteString
-textAreaHtml = $(embedFile "test/testFiles/textArea.html")
+textAreaHtml = $(embedFile "test-resources/testFiles/textArea.html")
 
 uploadHtml :: ByteString
-uploadHtml = $(embedFile "test/testFiles/upload.html")
+uploadHtml = $(embedFile "test-resources/testFiles/upload.html")
 
 navigationHtml1 :: ByteString
-navigationHtml1 = $(embedFile "test/testFiles/navigation1.html")
+navigationHtml1 = $(embedFile "test-resources/testFiles/navigation1.html")
 
 navigationHtml2 :: ByteString
-navigationHtml2 = $(embedFile "test/testFiles/navigation2.html")
+navigationHtml2 = $(embedFile "test-resources/testFiles/navigation2.html")
 
 navigationHtml3 :: ByteString
-navigationHtml3 = $(embedFile "test/testFiles/navigation3.html")
+navigationHtml3 = $(embedFile "test-resources/testFiles/navigation3.html")
 
 navigationHtml4 :: ByteString
-navigationHtml4 = $(embedFile "test/testFiles/navigation4.html")
+navigationHtml4 = $(embedFile "test-resources/testFiles/navigation4.html")
 
 navigationHtml5 :: ByteString
-navigationHtml5 = $(embedFile "test/testFiles/navigation5.html")
+navigationHtml5 = $(embedFile "test-resources/testFiles/navigation5.html")
 
 navigationHtml6 :: ByteString
-navigationHtml6 = $(embedFile "test/testFiles/navigation6.html")
+navigationHtml6 = $(embedFile "test-resources/testFiles/navigation6.html")
 
 fragmentHtml :: ByteString
-fragmentHtml = $(embedFile "test/testFiles/fragment.html")
+fragmentHtml = $(embedFile "test-resources/testFiles/fragment.html")
 
 slowLoadHtml :: ByteString
-slowLoadHtml = $(embedFile "test/testFiles/slowLoad.html")
+slowLoadHtml = $(embedFile "test-resources/testFiles/slowLoad.html")
 
 infiniteScrollHtml :: ByteString
-infiniteScrollHtml = $(embedFile "test/testFiles/infiniteScroll.html")
+infiniteScrollHtml = $(embedFile "test-resources/testFiles/infiniteScroll.html")
 
 consoleLogHtml :: ByteString
-consoleLogHtml = $(embedFile "test/testFiles/consoleLog.html")
+consoleLogHtml = $(embedFile "test-resources/testFiles/consoleLog.html")
 
 badJavaScriptHtml :: ByteString
-badJavaScriptHtml = $(embedFile "test/testFiles/badJavaScript.html")
+badJavaScriptHtml = $(embedFile "test-resources/testFiles/badJavaScript.html")
 
 downloadHtml :: ByteString
-downloadHtml = $(embedFile "test/testFiles/download.html")
+downloadHtml = $(embedFile "test-resources/testFiles/download.html")
 
 downloadLinkHtml :: ByteString
-downloadLinkHtml = $(embedFile "test/testFiles/downloadLink.html")
+downloadLinkHtml = $(embedFile "test-resources/testFiles/downloadLink.html")
 
 scriptRealmHtml :: ByteString
-scriptRealmHtml = $(embedFile "test/testFiles/scriptRealm.html")
+scriptRealmHtml = $(embedFile "test-resources/testFiles/scriptRealm.html")
 
 demoCss :: ByteString
-demoCss = $(embedFile "test/testFiles/demo.css")
+demoCss = $(embedFile "test-resources/testFiles/demo.css")
 
 demoExtensionZip :: ByteString
-demoExtensionZip = $(embedFile "test/testFiles/demoExtension.zip")
+demoExtensionZip = $(embedFile "test-resources/testFiles/demoExtension.zip")

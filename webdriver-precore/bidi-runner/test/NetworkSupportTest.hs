@@ -1,9 +1,9 @@
-module BiDi.Demos.NetworkSupportTest where
+module NetworkSupportTest where
 
-import BiDi.Actions (BiDiActions (..))
-import BiDi.DemoUtils
+import BiDiActions (BiDiActions (..))
+import BiDiDemoUtils
 import Control.Exception (SomeException, throwIO, try)
-import IOUtils (DemoActions (..), exceptionTextIncludes)
+import WebDriverPreCore.Test.IOUtils (DemoActions (..), exceptionTextIncludes)
 import WebDriverPreCore.BiDi.Protocol
   ( AddDataCollector (..),
     AddIntercept (..),

@@ -3,27 +3,11 @@
 module Main where
 
 import ApiCoverageTest qualified as API
-import BiDi.DemoUtils (BiDiDemo (..), expectError, runDemo', FailTest (..), toText)
-import BiDi.Demos.BrowserDemos qualified as Browser
-import BiDi.Demos.BrowsingContextDemos qualified as BrowsingContext
-import BiDi.Demos.BrowsingContextEventDemos qualified as BrowsingContextEvent
-import BiDi.Demos.EmulationDemos qualified as Emulation
-import BiDi.Demos.FallbackDemos qualified as Fallback
-import BiDi.Demos.InputDemos qualified as Input
-import BiDi.Demos.InputEventDemos qualified as InputEvent
-import BiDi.Demos.LogEventDemos qualified as LogEvent
-import BiDi.Demos.NetworkDemos qualified as Network
-import BiDi.Demos.NetworkEventDemos qualified as NetworkEvent
-import BiDi.Demos.OtherDemos qualified as Other
-import BiDi.Demos.ScriptDemos qualified as Script
-import BiDi.Demos.ScriptEventDemos qualified as ScriptEvent
-import BiDi.Demos.SessionDemos qualified as Session
-import BiDi.Demos.StorageDemos qualified as Storage
-import BiDi.Demos.WebExtensionDemos qualified as WebExtension
-import BiDi.ErrorDemo qualified as BiDiError
-import Config (Config (..), DemoBrowser (..))
+-- NOTE: BiDi demos have been migrated to bidi-runner/test
+-- All BiDi.Demos imports have been removed
+import Config (Config (..))
 import ConfigLoader (loadConfig)
-import Control.Exception (SomeException, catch)
+
 import Data.Text (Text, unpack)
 import ErrorCoverageTest qualified as Error
 import HTTP.DemoUtils (HttpDemo (..), runDemoWithConfig)
@@ -35,7 +19,7 @@ import HTTP.FallbackDemo qualified as HttpFallback
 import JSONParsingTest qualified as JSON
 import Test.Tasty (TestTree, defaultMain, testGroup)
 import Test.Tasty.HUnit (testCase)
-import qualified Data.Text as T
+
 
 main :: IO ()
 main = do
@@ -55,8 +39,9 @@ tests cfg =
 #else
     [ unitTests,
       httpDemos cfg,
-      propertyTests,
-      bidiDemos cfg
+      propertyTests
+      -- NOTE: bidiDemos have been migrated to bidi-runner/test
+      -- bidiDemos cfg
     ]
 #endif
 
@@ -102,6 +87,8 @@ httpDemoSingleIsolated cfg =
             Http.demoForwardBackRefresh
           ]
 
+-- NOTE: bidiSingleForDebug has been disabled as BiDi demos have been migrated to bidi-runner/test
+{-
 -- Single isolated Bidi demo for CI debugging 
 bidiSingleForDebug :: Config -> TestTree
 bidiSingleForDebug cfg =
@@ -120,18 +107,18 @@ bidiSingleForDebug cfg =
                     Emulation.emulationSetGeolocationOverridePositionErrorDemo
                 ]
         ]
+-}
 
 httpDemos :: Config -> TestTree
 httpDemos cfg =
-  let thisBrowser = cfg.browser
-      expectHttpFail = httpError thisBrowser
-   in testGroup
+  testGroup
         "HTTP Demos"
         $ fromHttpDemo cfg
           <$> [ Http.newSessionDemo,
                 -- W3C spec requires status.ready=false when sessions exist. Chrome diverges from spec.
-                expectHttpFail [Chrome'] "status.ready expected to be False"
-                  Http.driverStatusDemo,
+                -- expectHttpFail [Chrome'] "status.ready expected to be False"
+                --  Http.driverStatusDemo,
+                Http.driverStatusDemo,
                 Http.demoSendKeysClear,
             Http.demoForwardBackRefresh,
             -- this test is redundant but used in docs so run anyway
@@ -172,13 +159,16 @@ fromHttpDemo cfg demo = testCase (unpack demo.name) $ runDemoWithConfig cfg demo
 
 -- testCase (unpack demo.name) $ runDemo' logNothingLogger MkTimeout {microseconds = 0} demo
 
+{- NOTE: bidiTest and helper functions have been migrated to bidi-runner/test
 bidiTest :: Config -> Text -> [BiDiDemo] -> TestTree
 bidiTest cfg title =
   testGroup (unpack title) . fmap fromBidiDemo
   where
     fromBidiDemo demo = testCase (unpack demo.name) $ runDemo' cfg demo
+-}
 
-
+{- NOTE: bidiDemos have been migrated to bidi-runner/test
+All BiDi demo tests below have been moved to the bidi-runner test suite
 
 bidiDemos :: Config -> TestTree
 bidiDemos cfg =
@@ -197,6 +187,7 @@ bidiDemos cfg =
                   testCase "get exception" $ Other.getFailDemo cfg,
                   testCase "event fail exception" $ Other.eventFailDemo cfg
                 ],
+
               run
                 "Browser"
                 [ Browser.browserGetClientWindowsDemo,
@@ -456,6 +447,7 @@ biDiError actualBrowser failBrowsers failTest demo@MkBiDiDemo {name, action} =
     }
   else demo
 
+{- Commented out - BiDi-specific helper functions moved to bidi-runner test suite
 data BrowserType = Firefox' | Chrome' deriving (Eq, Show)
 
 fromBrowser :: DemoBrowser -> BrowserType
@@ -496,4 +488,6 @@ httpError actualBrowser failBrowsers errorFragment demo =
                 (\(_ :: SomeException) -> pure ())
           }
   else demo
+-}
 
+-}

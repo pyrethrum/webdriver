@@ -1,10 +1,10 @@
-module BiDi.Demos.WebExtensionDemos where
+module WebExtensionDemos where
 
-import BiDi.Actions (BiDiActions (..))
-import BiDi.DemoUtils ( demo, BiDiDemo, runDemo )
+import BiDiActions (BiDiActions (..))
+import BiDiDemoUtils ( demo, BiDiDemo, runDemo )
 import Control.Exception (SomeException, catch)
-import IOUtils (DemoActions (..))
-import TestData (demoExtensionAsBase64, demoExtensionDirPath, demoExtensionZipPath)
+import WebDriverPreCore.Test.IOUtils (DemoActions (..))
+import WebDriverPreCore.Test.TestData (demoExtensionAsBase64, demoExtensionDirPath, demoExtensionZipPath)
 import WebDriverPreCore.BiDi.Protocol
     ( WebExtensionID(..),
       WebExtensionInstall(..),

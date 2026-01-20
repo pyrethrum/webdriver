@@ -1,9 +1,9 @@
-module BiDi.Demos.ScriptEventDemos where
+module ScriptEventDemos where
 
-import BiDi.Actions (BiDiActions (..))
-import BiDi.DemoUtils
-import IOUtils (DemoActions (..))
-import TestData (checkboxesUrl, scriptRealmUrl)
+import BiDiActions (BiDiActions (..))
+import BiDiDemoUtils
+import WebDriverPreCore.Test.IOUtils (DemoActions (..))
+import WebDriverPreCore.Test.TestData (checkboxesUrl, scriptRealmUrl)
 import WebDriverPreCore.BiDi.Protocol
   ( AddPreloadScript (..),
     Channel (..),

@@ -1,12 +1,12 @@
-module BiDi.Demos.FallbackDemos where
+module FallbackDemos where
 
-import BiDi.Actions (BiDiActions (..))
-import BiDi.DemoUtils
-import Const (seconds)
+import BiDiActions (BiDiActions (..))
+import BiDiDemoUtils
+import WebDriverPreCore.Test.Const (seconds)
 import Data.Aeson (Value (..), FromJSON)
 import Data.Aeson.KeyMap qualified as KM
-import IOUtils (DemoActions (..))
-import TestData (contentPageUrl)
+import WebDriverPreCore.Test.IOUtils (DemoActions (..))
+import WebDriverPreCore.Test.TestData (contentPageUrl)
 import WebDriverPreCore.BiDi.API qualified as API
 import WebDriverPreCore.BiDi.Protocol
     ( JSUInt(MkJSUInt),

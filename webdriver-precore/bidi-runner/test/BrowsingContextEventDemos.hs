@@ -1,11 +1,11 @@
-module BiDi.Demos.BrowsingContextEventDemos where
+module BrowsingContextEventDemos where
 
-import BiDi.Actions (BiDiActions (..))
-import BiDi.DemoUtils
-import Const (Timeout (..), milliseconds, second)
+import BiDiActions (BiDiActions (..))
+import BiDiDemoUtils
+import WebDriverPreCore.Test.Const (Timeout (..), milliseconds, second)
 import Data.Text (unpack)
-import IOUtils (DemoActions (..))
-import TestData (checkboxesUrl, downloadLinkUrl, fragmentUrl, promptUrl, slowLoadUrl, textAreaUrl)
+import WebDriverPreCore.Test.IOUtils (DemoActions (..))
+import WebDriverPreCore.Test.TestData (checkboxesUrl, downloadLinkUrl, fragmentUrl, promptUrl, slowLoadUrl, textAreaUrl)
 import Utils (txt)
 import WebDriverPreCore.BiDi.Protocol
   ( BrowsingContext (..),

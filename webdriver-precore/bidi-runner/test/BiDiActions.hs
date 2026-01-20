@@ -10,7 +10,8 @@ module BiDiActions
   )
 where
 
-import Data.Aeson (FromJSON)
+import Data.Aeson (FromJSON, Object, Value)
+import Data.Text (Text)
 import WebDriverPreCore.BiDi.Protocol
   ( AddDataCollector,
     AddDataCollectorResult,
@@ -19,6 +20,8 @@ import WebDriverPreCore.BiDi.Protocol
     AddPreloadScript,
     AddPreloadScriptResult,
     Activate,
+    AuthRequired,
+    BeforeRequestSent,
     BrowsingContext,
     CallFunction,
     CaptureScreenshot,
@@ -35,9 +38,14 @@ import WebDriverPreCore.BiDi.Protocol
     DeleteCookiesResult,
     Disown,
     DisownData,
+    DownloadEnd,
+    DownloadWillBegin,
     Evaluate,
     EvaluateResult,
+    Event,
     FailRequest,
+    FetchError,
+    FileDialogOpened,
     GetCookies,
     GetCookiesResult,
     GetData,
@@ -49,20 +57,32 @@ import WebDriverPreCore.BiDi.Protocol
     GetUserContextsResult,
     GetClientWindowsResult,
     HandleUserPrompt,
+    HistoryUpdated,
+    Info,
+    JSUInt,
+    KnownSubscriptionType (..),
     LocateNodes,
     LocateNodesResult,
+    LogEntry,
+    Message,
     Navigate,
     NavigateResult,
+    OffSpecSubscriptionType,
+    NavigationInfo,
     PerformActions,
     Print,
     PrintResult,
     ProvideResponse,
+    RealmDestroyed,
+    RealmInfo,
     ReleaseActions,
     Reload,
     RemoveDataCollector,
     RemoveIntercept,
     RemovePreloadScript,
     RemoveUserContext,
+    ResponseCompleted,
+    ResponseStarted,
     SessionNewResult,
     SessionStatusResult,
     SessionSubscibe,
@@ -89,6 +109,8 @@ import WebDriverPreCore.BiDi.Protocol
     SubscriptionId (..),
     TraverseHistory,
     UserContext,
+    UserPromptClosed,
+    UserPromptOpened,
     WebExtensionInstall,
     WebExtensionResult,
     WebExtensionUninstall,
@@ -164,6 +186,7 @@ data BiDiActions = MkBiDiActions
     scriptCallFunction :: CallFunction -> IO EvaluateResult,
     scriptDisown :: Disown -> IO (),
     scriptEvaluate :: Evaluate -> IO EvaluateResult,
+    scriptEvaluateNoWait :: Evaluate -> IO (),
     scriptGetRealms :: GetRealms -> IO GetRealmsResult,
     scriptRemovePreloadScript :: RemovePreloadScript -> IO (),
     -- Storage commands
@@ -173,8 +196,81 @@ data BiDiActions = MkBiDiActions
     -- WebExtension commands
     webExtensionInstall :: WebExtensionInstall -> IO WebExtensionResult,
     webExtensionUninstall :: WebExtensionUninstall -> IO (),
-    -- Generic command
-    sendCommand :: forall r. (FromJSON r) => Command r -> IO r
+    -- Subscription methods
+    subscribeMany :: [KnownSubscriptionType] -> (Event -> IO ()) -> IO SubscriptionId,
+    subscribeMany' :: [BrowsingContext] -> [UserContext] -> [KnownSubscriptionType] -> (Event -> IO ()) -> IO SubscriptionId,
+    -- Log
+    subscribeLogEntryAdded :: (LogEntry -> IO ()) -> IO SubscriptionId,
+    subscribeLogEntryAdded' :: [BrowsingContext] -> [UserContext] -> (LogEntry -> IO ()) -> IO SubscriptionId,
+    -- BrowsingContext
+    subscribeBrowsingContextCreated :: (Info -> IO ()) -> IO SubscriptionId,
+    subscribeBrowsingContextCreated' :: [BrowsingContext] -> [UserContext] -> (Info -> IO ()) -> IO SubscriptionId,
+    subscribeBrowsingContextDestroyed :: (Info -> IO ()) -> IO SubscriptionId,
+    subscribeBrowsingContextDestroyed' :: [BrowsingContext] -> [UserContext] -> (Info -> IO ()) -> IO SubscriptionId,
+    subscribeBrowsingContextNavigationStarted :: (NavigationInfo -> IO ()) -> IO SubscriptionId,
+    subscribeBrowsingContextNavigationStarted' :: [BrowsingContext] -> [UserContext] -> (NavigationInfo -> IO ()) -> IO SubscriptionId,
+    subscribeBrowsingContextFragmentNavigated :: (NavigationInfo -> IO ()) -> IO SubscriptionId,
+    subscribeBrowsingContextFragmentNavigated' :: [BrowsingContext] -> [UserContext] -> (NavigationInfo -> IO ()) -> IO SubscriptionId,
+    subscribeBrowsingContextHistoryUpdated :: (HistoryUpdated -> IO ()) -> IO SubscriptionId,
+    subscribeBrowsingContextHistoryUpdated' :: [BrowsingContext] -> [UserContext] -> (HistoryUpdated -> IO ()) -> IO SubscriptionId,
+    subscribeBrowsingContextDomContentLoaded :: (NavigationInfo -> IO ()) -> IO SubscriptionId,
+    subscribeBrowsingContextDomContentLoaded' :: [BrowsingContext] -> [UserContext] -> (NavigationInfo -> IO ()) -> IO SubscriptionId,
+    subscribeBrowsingContextLoad :: (NavigationInfo -> IO ()) -> IO SubscriptionId,
+    subscribeBrowsingContextLoad' :: [BrowsingContext] -> [UserContext] -> (NavigationInfo -> IO ()) -> IO SubscriptionId,
+    subscribeBrowsingContextDownloadWillBegin :: (DownloadWillBegin -> IO ()) -> IO SubscriptionId,
+    subscribeBrowsingContextDownloadWillBegin' :: [BrowsingContext] -> [UserContext] -> (DownloadWillBegin -> IO ()) -> IO SubscriptionId,
+    subscribeBrowsingContextDownloadEnd :: (DownloadEnd -> IO ()) -> IO SubscriptionId,
+    subscribeBrowsingContextDownloadEnd' :: [BrowsingContext] -> [UserContext] -> (DownloadEnd -> IO ()) -> IO SubscriptionId,
+    subscribeBrowsingContextNavigationAborted :: (NavigationInfo -> IO ()) -> IO SubscriptionId,
+    subscribeBrowsingContextNavigationAborted' :: [BrowsingContext] -> [UserContext] -> (NavigationInfo -> IO ()) -> IO SubscriptionId,
+    subscribeBrowsingContextNavigationCommitted :: (NavigationInfo -> IO ()) -> IO SubscriptionId,
+    subscribeBrowsingContextNavigationCommitted' :: [BrowsingContext] -> [UserContext] -> (NavigationInfo -> IO ()) -> IO SubscriptionId,
+    subscribeBrowsingContextNavigationFailed :: (NavigationInfo -> IO ()) -> IO SubscriptionId,
+    subscribeBrowsingContextNavigationFailed' :: [BrowsingContext] -> [UserContext] -> (NavigationInfo -> IO ()) -> IO SubscriptionId,
+    subscribeBrowsingContextUserPromptClosed :: (UserPromptClosed -> IO ()) -> IO SubscriptionId,
+    subscribeBrowsingContextUserPromptClosed' :: [BrowsingContext] -> [UserContext] -> (UserPromptClosed -> IO ()) -> IO SubscriptionId,
+    subscribeBrowsingContextUserPromptOpened :: (UserPromptOpened -> IO ()) -> IO SubscriptionId,
+    subscribeBrowsingContextUserPromptOpened' :: [BrowsingContext] -> [UserContext] -> (UserPromptOpened -> IO ()) -> IO SubscriptionId,
+    -- Network
+    subscribeNetworkAuthRequired :: (AuthRequired -> IO ()) -> IO SubscriptionId,
+    subscribeNetworkAuthRequired' :: [BrowsingContext] -> [UserContext] -> (AuthRequired -> IO ()) -> IO SubscriptionId,
+    subscribeNetworkBeforeRequestSent :: (BeforeRequestSent -> IO ()) -> IO SubscriptionId,
+    subscribeNetworkBeforeRequestSent' :: [BrowsingContext] -> [UserContext] -> (BeforeRequestSent -> IO ()) -> IO SubscriptionId,
+    subscribeNetworkFetchError :: (FetchError -> IO ()) -> IO SubscriptionId,
+    subscribeNetworkFetchError' :: [BrowsingContext] -> [UserContext] -> (FetchError -> IO ()) -> IO SubscriptionId,
+    subscribeNetworkResponseCompleted :: (ResponseCompleted -> IO ()) -> IO SubscriptionId,
+    subscribeNetworkResponseCompleted' :: [BrowsingContext] -> [UserContext] -> (ResponseCompleted -> IO ()) -> IO SubscriptionId,
+    subscribeNetworkResponseStarted :: (ResponseStarted -> IO ()) -> IO SubscriptionId,
+    subscribeNetworkResponseStarted' :: [BrowsingContext] -> [UserContext] -> (ResponseStarted -> IO ()) -> IO SubscriptionId,
+    -- Script
+    subscribeScriptMessage :: (Message -> IO ()) -> IO SubscriptionId,
+    subscribeScriptMessage' :: [BrowsingContext] -> [UserContext] -> (Message -> IO ()) -> IO SubscriptionId,
+    subscribeScriptRealmCreated :: (RealmInfo -> IO ()) -> IO SubscriptionId,
+    subscribeScriptRealmCreated' :: [BrowsingContext] -> [UserContext] -> (RealmInfo -> IO ()) -> IO SubscriptionId,
+    subscribeScriptRealmDestroyed :: (RealmDestroyed -> IO ()) -> IO SubscriptionId,
+    subscribeScriptRealmDestroyed' :: [BrowsingContext] -> [UserContext] -> (RealmDestroyed -> IO ()) -> IO SubscriptionId,
+    -- Input
+    subscribeInputFileDialogOpened :: (FileDialogOpened -> IO ()) -> IO SubscriptionId,
+    subscribeInputFileDialogOpened' :: [BrowsingContext] -> [UserContext] -> (FileDialogOpened -> IO ()) -> IO SubscriptionId,
+    -- Unsubscribe
+    unsubscribe :: SubscriptionId -> IO (),
+    -- Generic and low-level command methods
+    sendCommand :: forall r. (FromJSON r) => Command r -> IO r,
+    sendCommand' :: forall r. (FromJSON r) => JSUInt -> Command r -> IO r,
+    sendCommandNoWait :: forall r. Command r -> IO (),
+    sendOffSpecCommand' :: JSUInt -> Text -> Object -> IO Object,
+    sendOffSpecCommandNoWait :: Text -> Object -> IO (),
+    -- fallback subscriptions
+    subscribeUnknownMany ::
+      [OffSpecSubscriptionType] ->
+      (Value -> IO ()) ->
+      IO SubscriptionId,
+    subscribeUnknownMany' ::
+      [BrowsingContext] ->
+      [UserContext] ->
+      [OffSpecSubscriptionType] ->
+      (Value -> IO ()) ->
+      IO SubscriptionId
   }
 
 -- | Create BiDiActions from a BiDiRunner
@@ -242,6 +338,7 @@ mkActions (MkBiDiRunner {run}) =
       scriptCallFunction = run . API.scriptCallFunction,
       scriptDisown = run . API.scriptDisown,
       scriptEvaluate = run . API.scriptEvaluate,
+      scriptEvaluateNoWait = \cmd -> run (API.scriptEvaluate cmd) >> pure (),
       scriptGetRealms = run . API.scriptGetRealms,
       scriptRemovePreloadScript = run . API.scriptRemovePreloadScript,
       -- Storage commands
@@ -251,6 +348,64 @@ mkActions (MkBiDiRunner {run}) =
       -- WebExtension commands
       webExtensionInstall = run . API.webExtensionInstall,
       webExtensionUninstall = run . API.webExtensionUninstall,
-      -- Generic command
-      sendCommand = run
+      -- Subscription methods - Note: These require event handling which is not yet implemented in BiDiRunner
+      subscribeMany = \_ _ -> error "Subscription support not yet implemented in BiDiRunner",
+      subscribeMany' = \_ _ _ _ -> error "Subscription support not yet implemented in BiDiRunner",
+      subscribeLogEntryAdded = \_ -> error "Subscription support not yet implemented in BiDiRunner",
+      subscribeLogEntryAdded' = \_ _ _ -> error "Subscription support not yet implemented in BiDiRunner",
+      subscribeBrowsingContextCreated = \_ -> error "Subscription support not yet implemented in BiDiRunner",
+      subscribeBrowsingContextCreated' = \_ _ _ -> error "Subscription support not yet implemented in BiDiRunner",
+      subscribeBrowsingContextDestroyed = \_ -> error "Subscription support not yet implemented in BiDiRunner",
+      subscribeBrowsingContextDestroyed' = \_ _ _ -> error "Subscription support not yet implemented in BiDiRunner",
+      subscribeBrowsingContextNavigationStarted = \_ -> error "Subscription support not yet implemented in BiDiRunner",
+      subscribeBrowsingContextNavigationStarted' = \_ _ _ -> error "Subscription support not yet implemented in BiDiRunner",
+      subscribeBrowsingContextFragmentNavigated = \_ -> error "Subscription support not yet implemented in BiDiRunner",
+      subscribeBrowsingContextFragmentNavigated' = \_ _ _ -> error "Subscription support not yet implemented in BiDiRunner",
+      subscribeBrowsingContextHistoryUpdated = \_ -> error "Subscription support not yet implemented in BiDiRunner",
+      subscribeBrowsingContextHistoryUpdated' = \_ _ _ -> error "Subscription support not yet implemented in BiDiRunner",
+      subscribeBrowsingContextDomContentLoaded = \_ -> error "Subscription support not yet implemented in BiDiRunner",
+      subscribeBrowsingContextDomContentLoaded' = \_ _ _ -> error "Subscription support not yet implemented in BiDiRunner",
+      subscribeBrowsingContextLoad = \_ -> error "Subscription support not yet implemented in BiDiRunner",
+      subscribeBrowsingContextLoad' = \_ _ _ -> error "Subscription support not yet implemented in BiDiRunner",
+      subscribeBrowsingContextDownloadWillBegin = \_ -> error "Subscription support not yet implemented in BiDiRunner",
+      subscribeBrowsingContextDownloadWillBegin' = \_ _ _ -> error "Subscription support not yet implemented in BiDiRunner",
+      subscribeBrowsingContextDownloadEnd = \_ -> error "Subscription support not yet implemented in BiDiRunner",
+      subscribeBrowsingContextDownloadEnd' = \_ _ _ -> error "Subscription support not yet implemented in BiDiRunner",
+      subscribeBrowsingContextNavigationAborted = \_ -> error "Subscription support not yet implemented in BiDiRunner",
+      subscribeBrowsingContextNavigationAborted' = \_ _ _ -> error "Subscription support not yet implemented in BiDiRunner",
+      subscribeBrowsingContextNavigationCommitted = \_ -> error "Subscription support not yet implemented in BiDiRunner",
+      subscribeBrowsingContextNavigationCommitted' = \_ _ _ -> error "Subscription support not yet implemented in BiDiRunner",
+      subscribeBrowsingContextNavigationFailed = \_ -> error "Subscription support not yet implemented in BiDiRunner",
+      subscribeBrowsingContextNavigationFailed' = \_ _ _ -> error "Subscription support not yet implemented in BiDiRunner",
+      subscribeBrowsingContextUserPromptClosed = \_ -> error "Subscription support not yet implemented in BiDiRunner",
+      subscribeBrowsingContextUserPromptClosed' = \_ _ _ -> error "Subscription support not yet implemented in BiDiRunner",
+      subscribeBrowsingContextUserPromptOpened = \_ -> error "Subscription support not yet implemented in BiDiRunner",
+      subscribeBrowsingContextUserPromptOpened' = \_ _ _ -> error "Subscription support not yet implemented in BiDiRunner",
+      subscribeNetworkAuthRequired = \_ -> error "Subscription support not yet implemented in BiDiRunner",
+      subscribeNetworkAuthRequired' = \_ _ _ -> error "Subscription support not yet implemented in BiDiRunner",
+      subscribeNetworkBeforeRequestSent = \_ -> error "Subscription support not yet implemented in BiDiRunner",
+      subscribeNetworkBeforeRequestSent' = \_ _ _ -> error "Subscription support not yet implemented in BiDiRunner",
+      subscribeNetworkFetchError = \_ -> error "Subscription support not yet implemented in BiDiRunner",
+      subscribeNetworkFetchError' = \_ _ _ -> error "Subscription support not yet implemented in BiDiRunner",
+      subscribeNetworkResponseCompleted = \_ -> error "Subscription support not yet implemented in BiDiRunner",
+      subscribeNetworkResponseCompleted' = \_ _ _ -> error "Subscription support not yet implemented in BiDiRunner",
+      subscribeNetworkResponseStarted = \_ -> error "Subscription support not yet implemented in BiDiRunner",
+      subscribeNetworkResponseStarted' = \_ _ _ -> error "Subscription support not yet implemented in BiDiRunner",
+      subscribeScriptMessage = \_ -> error "Subscription support not yet implemented in BiDiRunner",
+      subscribeScriptMessage' = \_ _ _ -> error "Subscription support not yet implemented in BiDiRunner",
+      subscribeScriptRealmCreated = \_ -> error "Subscription support not yet implemented in BiDiRunner",
+      subscribeScriptRealmCreated' = \_ _ _ -> error "Subscription support not yet implemented in BiDiRunner",
+      subscribeScriptRealmDestroyed = \_ -> error "Subscription support not yet implemented in BiDiRunner",
+      subscribeScriptRealmDestroyed' = \_ _ _ -> error "Subscription support not yet implemented in BiDiRunner",
+      subscribeInputFileDialogOpened = \_ -> error "Subscription support not yet implemented in BiDiRunner",
+      subscribeInputFileDialogOpened' = \_ _ _ -> error "Subscription support not yet implemented in BiDiRunner",
+      unsubscribe = \_ -> error "Subscription support not yet implemented in BiDiRunner",
+      -- Generic and low-level command methods
+      sendCommand = run,
+      sendCommand' = \_ cmd -> run cmd, -- JSUInt ID is ignored in current BiDiRunner
+      sendCommandNoWait = \_ -> pure (), -- Ignore the command result for NoWait version
+      sendOffSpecCommand' = \_ _ _ -> error "Off-spec command support not yet implemented in BiDiRunner",
+      sendOffSpecCommandNoWait = \_ _ -> error "Off-spec command support not yet implemented in BiDiRunner",
+      subscribeUnknownMany = \_ _ -> error "Subscription support not yet implemented in BiDiRunner",
+      subscribeUnknownMany' = \_ _ _ _ -> error "Subscription support not yet implemented in BiDiRunner"
     }
