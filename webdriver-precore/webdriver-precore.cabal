@@ -259,6 +259,8 @@ test-suite test-http-runner
   main-is: Test.hs
   hs-source-dirs: http-runner/test
   other-modules:
+    ErrorDemo
+    FallbackDemo
     HttpDemo
     HttpDemoUtils
   build-depends:
@@ -622,14 +624,15 @@ test-suite test
     , Logger
     , TestData
     , TestServerAPI
-    , HTTP.Runner
-    , HTTP.HttpClient
-    , HTTP.Actions
-    , HTTP.HttpActionsDeprecated
-    , HTTP.DemoUtils
-    , HTTP.HttpDemo
-    , HTTP.ErrorDemo
-    , HTTP.FallbackDemo
+    -- NOTE: HTTP modules have been migrated to http-runner/test
+    -- , HTTP.Runner
+    -- , HTTP.HttpClient
+    -- , HTTP.Actions
+    -- , HTTP.HttpActionsDeprecated
+    -- , HTTP.DemoUtils
+    -- , HTTP.HttpDemo
+    -- , HTTP.ErrorDemo
+    -- , HTTP.FallbackDemo
     -- NOTE: BiDi modules have been migrated to bidi-runner/test
     -- , BiDi.Runner
     -- , BiDi.Response
@@ -656,7 +659,7 @@ test-suite test
     -- , BiDi.Demos.StorageDemos
     -- , BiDi.Demos.WebExtensionDemos
     , RuntimeConst
-    , HTTP.HttpRunnerDeprecated
+    -- , HTTP.HttpRunnerDeprecated (deleted with test/HTTP directory)
   if flag(debug-local-config)
     other-modules:
       DebugConfig

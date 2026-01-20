@@ -1,11 +1,11 @@
-module HTTP.ErrorDemo where
+module ErrorDemo where
 
-import GHC.Utils.Misc (HasCallStack)
-import HTTP.DemoUtils (HttpDemo, runDemo, sessionDemo)
-import HTTP.Actions (HttpActions (..))
-import IOUtils (DemoActions (..), (===))
+import GHC.Stack (HasCallStack)
+import HttpDemoUtils (HttpDemo, runDemo, sessionDemo)
+import WebDriverPreCore.HttpRunner.Actions (HttpActions (..))
+import WebDriverPreCore.Test.IOUtils (DemoActions (..), (===))
 import Test.Tasty.HUnit (assertFailure)
-import TestData (inputsUrl)
+import WebDriverPreCore.Test.TestData (inputsUrl)
 import UnliftIO (try)
 import WebDriverPreCore.HTTP.Protocol
   ( ErrorType (..),

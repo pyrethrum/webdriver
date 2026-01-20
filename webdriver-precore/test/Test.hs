@@ -10,12 +10,13 @@ import ConfigLoader (loadConfig)
 
 import Data.Text (Text, unpack)
 import ErrorCoverageTest qualified as Error
-import HTTP.DemoUtils (HttpDemo (..), runDemoWithConfig)
-import HTTP.ErrorDemo qualified as HttpError
-import HTTP.HttpDemo qualified as Http
-#ifndef LEGACY_TEST
-import HTTP.FallbackDemo qualified as HttpFallback
-#endif
+-- NOTE: HTTP demos have been migrated to http-runner/test
+-- import HTTP.DemoUtils (HttpDemo (..), runDemoWithConfig)
+-- import HTTP.ErrorDemo qualified as HttpError
+-- import HTTP.HttpDemo qualified as Http
+-- #ifndef LEGACY_TEST
+-- import HTTP.FallbackDemo qualified as HttpFallback
+-- #endif
 import JSONParsingTest qualified as JSON
 import Test.Tasty (TestTree, defaultMain, testGroup)
 import Test.Tasty.HUnit (testCase)
@@ -23,23 +24,26 @@ import Test.Tasty.HUnit (testCase)
 
 main :: IO ()
 main = do
-  testCfg <- loadConfig
+  -- testCfg <- loadConfig
   -- defaultMain $ httpDemoSingleIsolated testCfg 
   -- defaultMain $ bidiSingleForDebug testCfg 
-  defaultMain $ tests testCfg
+  defaultMain tests
 
-tests :: Config -> TestTree
-tests cfg =
+tests :: TestTree
+tests =
   testGroup
     "Tests"
 #ifdef LEGACY_TEST
     [ 
-      httpDemos cfg
+      unitTests
+      -- NOTE: httpDemos have been migrated to http-runner/test
+      -- httpDemos cfg
     ]
 #else
     [ unitTests,
-      httpDemos cfg,
       propertyTests
+      -- NOTE: httpDemos have been migrated to http-runner/test
+      -- httpDemos cfg
       -- NOTE: bidiDemos have been migrated to bidi-runner/test
       -- bidiDemos cfg
     ]
@@ -77,6 +81,7 @@ propertyTests =
     ]
 
 
+{- NOTE: httpDemoSingleIsolated has been migrated to http-runner/test
 -- Single isolated HTTP demo for CI debugging 
 httpDemoSingleIsolated :: Config -> TestTree
 httpDemoSingleIsolated cfg =
@@ -86,6 +91,7 @@ httpDemoSingleIsolated cfg =
       <$> [ 
             Http.demoForwardBackRefresh
           ]
+-}
 
 -- NOTE: bidiSingleForDebug has been disabled as BiDi demos have been migrated to bidi-runner/test
 {-
@@ -109,6 +115,7 @@ bidiSingleForDebug cfg =
         ]
 -}
 
+{- NOTE: httpDemos have been migrated to http-runner/test
 httpDemos :: Config -> TestTree
 httpDemos cfg =
   testGroup
@@ -119,7 +126,7 @@ httpDemos cfg =
                 -- expectHttpFail [Chrome'] "status.ready expected to be False"
                 --  Http.driverStatusDemo,
                 Http.driverStatusDemo,
-                Http.demoSendKeysClear,
+            Http.demoSendKeysClear,
             Http.demoForwardBackRefresh,
             -- this test is redundant but used in docs so run anyway
             Http.documentationDemo,
@@ -150,7 +157,9 @@ httpDemos cfg =
             , HttpFallback.demoExtendPost
 #endif
           ]
+-}
 
+{- NOTE: httpTest and fromHttpDemo have been migrated to http-runner/test
 httpTest :: Config -> Text -> [HttpDemo] -> TestTree
 httpTest cfg title = testGroup (unpack title) . fmap (fromHttpDemo cfg)
 
@@ -158,6 +167,7 @@ fromHttpDemo :: Config -> HttpDemo -> TestTree
 fromHttpDemo cfg demo = testCase (unpack demo.name) $ runDemoWithConfig cfg demo
 
 -- testCase (unpack demo.name) $ runDemo' logNothingLogger MkTimeout {microseconds = 0} demo
+-}
 
 {- NOTE: bidiTest and helper functions have been migrated to bidi-runner/test
 bidiTest :: Config -> Text -> [BiDiDemo] -> TestTree
