@@ -135,7 +135,7 @@ once migrated ensure all unused test files are removed from the webdriver-precor
 - do not try running tests
 - make sure tests dont get dropped in test migration
 - don't change script or ci files yet
-- create todo.md and update after every major step such as adding a library and getting compiling
+- create plan.md and update after every major step such as adding a library and getting compiling
 - Do not add any extra functions other than those asked for, this is the first part of a lage transformation 
 
 

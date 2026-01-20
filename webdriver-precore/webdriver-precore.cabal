@@ -122,6 +122,207 @@ library utils-internal
     pretty-show ^>=1.10
   default-language: Haskell2010
 
+-- ============================================================================
+-- New Internal Libraries
+-- ============================================================================
+
+library webdriver-precore-exception
+  import: commonExtensions, commonGhcOptions
+  exposed-modules:
+      WebDriverPreCore.Exception
+  hs-source-dirs: src-exception
+  build-depends:
+    base          >=4.16  && <5,
+    aeson         >=1.4   && <2.3,
+    text          >=2.1   && <2.2,
+    unliftio      >=0.2   && <0.3
+  default-language: Haskell2010
+
+library webdriver-precore-test-resources
+  import: commonExtensions, commonGhcOptions
+  exposed-modules:
+      WebDriverPreCore.TestResources
+  hs-source-dirs: src-test-resources
+  build-depends:
+    base          >=4.16  && <5,
+    bytestring    >=0.10  && <0.12.3,
+    file-embed    >=0.0.15 && <0.1,
+    text          >=2.1   && <2.2,
+    unliftio      >=0.2   && <0.3
+  default-language: Haskell2010
+
+library webdriver-precore-test-utils
+  import: commonExtensions, commonGhcOptions
+  exposed-modules:
+      WebDriverPreCore.Test.Config
+      WebDriverPreCore.Test.ConfigLoader
+      WebDriverPreCore.Test.Const
+      WebDriverPreCore.Test.IOUtils
+      WebDriverPreCore.Test.Logger
+      WebDriverPreCore.Test.RuntimeConst
+      WebDriverPreCore.Test.TestData
+      WebDriverPreCore.Test.TestServerAPI
+  hs-source-dirs: src-test-utils
+  build-depends:
+    utils-internal,
+    webdriver-precore,
+    aeson         >=1.4   && <2.3,
+    base          >=4.16  && <5,
+    base64        >=0.4   && <1.1,
+    bytestring    >=0.10  && <0.12.3,
+    dhall         >=1.40  && <1.43,
+    directory     >=1.3   && <1.4,
+    filepath      >=1.5   && <1.6,
+    req           >=3.9   && <3.14,
+    tasty-hunit   >=0.10  && <0.11,
+    text          >=2.1   && <2.2,
+    time          >=1.9   && <1.15,
+    unliftio      >=0.2   && <0.3
+  default-language: Haskell2010
+
+library webdriver-precore-http-runner-base
+  import: commonExtensions, commonGhcOptions
+  exposed-modules:
+      WebDriverPreCore.HttpRunnerBase
+      WebDriverPreCore.HttpRunnerBase.HttpResponse
+  hs-source-dirs: src-http-runner-base
+  build-depends:
+    webdriver-precore-exception,
+    aeson         >=1.4   && <2.3,
+    base          >=4.16  && <5,
+    bytestring    >=0.10  && <0.12.3,
+    req           >=3.9   && <3.14,
+    text          >=2.1   && <2.2,
+    unliftio      >=0.2   && <0.3
+  default-language: Haskell2010
+
+library webdriver-precore-http-runner
+  import: commonExtensions, commonGhcOptions
+  exposed-modules:
+      WebDriverPreCore.HttpRunner
+      WebDriverPreCore.HttpRunner.Actions
+  hs-source-dirs: src-http-runner
+  build-depends:
+    utils-internal,
+    webdriver-precore,
+    webdriver-precore-exception,
+    webdriver-precore-http-runner-base,
+    aeson         >=1.4   && <2.3,
+    base          >=4.16  && <5,
+    text          >=2.1   && <2.2,
+    unliftio      >=0.2   && <0.3
+  default-language: Haskell2010
+
+library webdriver-precore-bidi-runner-base
+  import: commonExtensions, commonGhcOptions
+  exposed-modules:
+      WebDriverPreCore.BiDiRunnerBase
+      WebDriverPreCore.BiDiRunnerBase.Socket
+      WebDriverPreCore.BiDiRunnerBase.Response
+      WebDriverPreCore.BiDiRunnerBase.Types
+  hs-source-dirs: src-bidi-runner-base
+  build-depends:
+    webdriver-precore-exception,
+    aeson         >=1.4   && <2.3,
+    aeson-pretty  >=0.8   && <0.9,
+    base          >=4.16  && <5,
+    bytestring    >=0.10  && <0.12.3,
+    containers    >=0.6   && <0.9,
+    text          >=2.1   && <2.2,
+    unliftio      >=0.2   && <0.3,
+    websockets    >=0.12  && <0.14
+  default-language: Haskell2010
+
+library webdriver-precore-bidi-runner
+  import: commonExtensions, commonGhcOptions
+  exposed-modules:
+      WebDriverPreCore.BiDiRunner
+  hs-source-dirs: src-bidi-runner
+  build-depends:
+    webdriver-precore,
+    webdriver-precore-exception,
+    webdriver-precore-bidi-runner-base,
+    aeson         >=1.4   && <2.3,
+    base          >=4.16  && <5,
+    containers    >=0.6   && <0.9,
+    text          >=2.1   && <2.2,
+    unliftio      >=0.2   && <0.3
+  default-language: Haskell2010
+
+library webdriver-precore-extended
+  import: commonExtensions, commonGhcOptions
+  exposed-modules:
+      WebDriverPreCore.Extended
+      WebDriverPreCore.Extended.Base.HTTP.API
+      WebDriverPreCore.Extended.Base.HTTP.Protocol
+      WebDriverPreCore.Extended.Base.BiDi.API
+      WebDriverPreCore.Extended.Base.BiDi.Protocol
+  hs-source-dirs: src-extended
+  build-depends:
+    webdriver-precore,
+    base          >=4.16  && <5,
+    text          >=2.1   && <2.2,
+    unliftio      >=0.2   && <0.3
+  default-language: Haskell2010
+
+library webdriver-precore-driver-control
+  import: commonExtensions, commonGhcOptions
+  exposed-modules:
+      WebDriverPreCore.DriverControl
+  hs-source-dirs: src-driver-control
+  build-depends:
+    base          >=4.16  && <5,
+    text          >=2.1   && <2.2,
+    unliftio      >=0.2   && <0.3,
+    typed-process >=0.2   && <0.3,
+    path          >=0.9   && <0.10,
+    path-io       >=1.8   && <1.9
+  default-language: Haskell2010
+
+library webdriver-effectful
+  import: commonExtensions, commonGhcOptions
+  exposed-modules:
+      WebDriver.Effectful
+  hs-source-dirs: src-effectful
+  build-depends:
+    webdriver-precore-extended,
+    base          >=4.16  && <5,
+    effectful     >=2.3   && <2.7,
+    effectful-core >=2.3  && <2.7,
+    text          >=2.1   && <2.2,
+    unliftio      >=0.2   && <0.3
+  default-language: Haskell2010
+
+library webdriver-rio-poc
+  import: commonExtensions, commonGhcOptions
+  exposed-modules:
+      WebDriver.RIO
+  hs-source-dirs: src-rio-poc
+  build-depends:
+    webdriver-precore-extended,
+    base          >=4.16  && <5,
+    rio           >=0.1   && <0.2,
+    text          >=2.1   && <2.2,
+    unliftio      >=0.2   && <0.3
+  default-language: Haskell2010
+
+library webdriver-bluefin-poc
+  import: commonExtensions, commonGhcOptions
+  exposed-modules:
+      WebDriver.Bluefin
+  hs-source-dirs: src-bluefin-poc
+  build-depends:
+    webdriver-precore-extended,
+    base          >=4.16  && <5,
+    bluefin       >=0.2   && <0.3,
+    text          >=2.1   && <2.2,
+    unliftio      >=0.2   && <0.3
+  default-language: Haskell2010
+
+-- ============================================================================
+-- Main Library
+-- ============================================================================
+
 library
   import: commonExtensions, commonGhcOptions
   exposed-modules:
@@ -180,6 +381,112 @@ flag debug-local-config
   description: Use local debug configuration (ignore Dhall file in test/.config)
   default: False
   manual: True
+
+-- ============================================================================
+-- Test Suites for Internal Libraries
+-- ============================================================================
+
+test-suite test-exception
+  import: commonExtensions, commonGhcOptions
+  type: exitcode-stdio-1.0
+  main-is: Test.hs
+  hs-source-dirs: test-exception
+  build-depends:
+    webdriver-precore-exception,
+    aeson,
+    base,
+    tasty,
+    tasty-hunit,
+    text
+  default-language: Haskell2010
+
+test-suite test-http-runner-base
+  import: commonExtensions, commonGhcOptions
+  type: exitcode-stdio-1.0
+  main-is: Test.hs
+  hs-source-dirs: test-http-runner-base
+  build-depends:
+    webdriver-precore-http-runner-base,
+    aeson,
+    base,
+    tasty,
+    tasty-hunit,
+    text
+  default-language: Haskell2010
+
+test-suite test-http-runner
+  import: commonExtensions, commonGhcOptions
+  type: exitcode-stdio-1.0
+  main-is: Test.hs
+  hs-source-dirs: test-http-runner
+  other-modules:
+    HttpDemo
+    HttpDemoUtils
+  build-depends:
+    utils-internal,
+    webdriver-precore,
+    webdriver-precore-http-runner,
+    webdriver-precore-http-runner-base,
+    webdriver-precore-exception,
+    webdriver-precore-test-resources,
+    webdriver-precore-test-utils,
+    aeson,
+    base,
+    bytestring,
+    containers,
+    dhall,
+    req,
+    tasty,
+    tasty-hunit,
+    text,
+    time,
+    unliftio
+  default-language: Haskell2010
+
+test-suite test-bidi-runner-base
+  import: commonExtensions, commonGhcOptions
+  type: exitcode-stdio-1.0
+  main-is: Test.hs
+  hs-source-dirs: test-bidi-runner-base
+  build-depends:
+    webdriver-precore-bidi-runner-base,
+    aeson,
+    base,
+    tasty,
+    tasty-hunit,
+    text
+  default-language: Haskell2010
+
+test-suite test-bidi-runner
+  import: commonExtensions, commonGhcOptions
+  type: exitcode-stdio-1.0
+  main-is: Test.hs
+  hs-source-dirs: test-bidi-runner
+  other-modules:
+    BiDiActions
+    BiDiDemo
+    BiDiDemoUtils
+  build-depends:
+    utils-internal,
+    webdriver-precore,
+    webdriver-precore-bidi-runner,
+    webdriver-precore-bidi-runner-base,
+    webdriver-precore-http-runner,
+    webdriver-precore-exception,
+    webdriver-precore-test-resources,
+    webdriver-precore-test-utils,
+    aeson,
+    base,
+    bytestring,
+    containers,
+    dhall,
+    tasty,
+    tasty-hunit,
+    text,
+    time,
+    unliftio,
+    websockets
+  default-language: Haskell2010
 
 test-suite test
   import: commonExtensions, commonGhcOptions

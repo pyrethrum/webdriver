@@ -1,0 +1,256 @@
+{-|
+BiDi Actions module for webdriver-precore-bidi-runner tests
+
+This module provides a BiDiActions interface that wraps the BiDiRunner,
+making it compatible with demos migrated from the test suite.
+-}
+module BiDiActions
+  ( BiDiActions (..),
+    mkActions,
+  )
+where
+
+import Data.Aeson (FromJSON)
+import WebDriverPreCore.BiDi.Protocol
+  ( AddDataCollector,
+    AddDataCollectorResult,
+    AddIntercept,
+    AddInterceptResult,
+    AddPreloadScript,
+    AddPreloadScriptResult,
+    Activate,
+    BrowsingContext,
+    CallFunction,
+    CaptureScreenshot,
+    CaptureScreenshotResult,
+    ClientWindowInfo,
+    Close,
+    Command (..),
+    ContinueRequest,
+    ContinueResponse,
+    ContinueWithAuth,
+    Create,
+    CreateUserContext,
+    DeleteCookies,
+    DeleteCookiesResult,
+    Disown,
+    DisownData,
+    Evaluate,
+    EvaluateResult,
+    FailRequest,
+    GetCookies,
+    GetCookiesResult,
+    GetData,
+    GetDataResult,
+    GetRealms,
+    GetRealmsResult,
+    GetTree,
+    GetTreeResult,
+    GetUserContextsResult,
+    GetClientWindowsResult,
+    HandleUserPrompt,
+    LocateNodes,
+    LocateNodesResult,
+    Navigate,
+    NavigateResult,
+    PerformActions,
+    Print,
+    PrintResult,
+    ProvideResponse,
+    ReleaseActions,
+    Reload,
+    RemoveDataCollector,
+    RemoveIntercept,
+    RemovePreloadScript,
+    RemoveUserContext,
+    SessionNewResult,
+    SessionStatusResult,
+    SessionSubscibe,
+    SessionUnsubscribe,
+    SetCacheBehavior,
+    SetClientWindowState,
+    SetCookie,
+    SetCookieResult,
+    SetDownloadBehavior,
+    SetExtraHeaders,
+    SetFiles,
+    SetForcedColorsModeThemeOverride,
+    SetGeolocationOverride,
+    SetLocaleOverride,
+    SetNetworkConditions,
+    SetScreenOrientationOverride,
+    SetScreenSettingsOverride,
+    SetScriptingEnabled,
+    SetTimezoneOverride,
+    SetTouchOverride,
+    SetUserAgentOverride,
+    SetViewport,
+    SessionSubscribeResult (..),
+    SubscriptionId (..),
+    TraverseHistory,
+    UserContext,
+    WebExtensionInstall,
+    WebExtensionResult,
+    WebExtensionUninstall,
+    Capabilities,
+  )
+import WebDriverPreCore.BiDi.API qualified as API
+import WebDriverPreCore.BiDiRunner (BiDiRunner (..))
+
+-- | Extract subscription ID from result
+extractSubscription :: SessionSubscribeResult -> SubscriptionId
+extractSubscription (MkSessionSubscribeResult {subscription}) = subscription
+
+-- | BiDi actions interface - wraps BiDiRunner with named functions for each command
+data BiDiActions = MkBiDiActions
+  { -- Session commands
+    sessionNew :: Capabilities -> IO SessionNewResult,
+    sessionStatus :: IO SessionStatusResult,
+    sessionEnd :: IO (),
+    sessionSubscribe :: SessionSubscibe -> IO SubscriptionId,
+    sessionUnsubscribe :: SessionUnsubscribe -> IO (),
+    -- BrowsingContext commands
+    browsingContextActivate :: Activate -> IO (),
+    browsingContextCaptureScreenshot :: CaptureScreenshot -> IO CaptureScreenshotResult,
+    browsingContextClose :: Close -> IO (),
+    browsingContextCreate :: Create -> IO BrowsingContext,
+    browsingContextGetTree :: GetTree -> IO GetTreeResult,
+    browsingContextHandleUserPrompt :: HandleUserPrompt -> IO (),
+    browsingContextLocateNodes :: LocateNodes -> IO LocateNodesResult,
+    browsingContextNavigate :: Navigate -> IO NavigateResult,
+    browsingContextPrint :: Print -> IO PrintResult,
+    browsingContextReload :: Reload -> IO (),
+    browsingContextSetViewport :: SetViewport -> IO (),
+    browsingContextTraverseHistory :: TraverseHistory -> IO (),
+    -- Browser commands
+    browserClose :: IO (),
+    browserCreateUserContext :: CreateUserContext -> IO UserContext,
+    browserGetClientWindows :: IO GetClientWindowsResult,
+    browserGetUserContexts :: IO GetUserContextsResult,
+    browserRemoveUserContext :: RemoveUserContext -> IO (),
+    browserSetClientWindowState :: SetClientWindowState -> IO ClientWindowInfo,
+    browserSetDownloadBehavior :: SetDownloadBehavior -> IO (),
+    -- Emulation commands
+    emulationSetForcedColorsModeThemeOverride :: SetForcedColorsModeThemeOverride -> IO (),
+    emulationSetGeolocationOverride :: SetGeolocationOverride -> IO (),
+    emulationSetLocaleOverride :: SetLocaleOverride -> IO (),
+    emulationSetNetworkConditions :: SetNetworkConditions -> IO (),
+    emulationSetScreenOrientationOverride :: SetScreenOrientationOverride -> IO (),
+    emulationSetScreenSettingsOverride :: SetScreenSettingsOverride -> IO (),
+    emulationSetScriptingEnabled :: SetScriptingEnabled -> IO (),
+    emulationSetTimezoneOverride :: SetTimezoneOverride -> IO (),
+    emulationSetTouchOverride :: SetTouchOverride -> IO (),
+    emulationSetUserAgentOverride :: SetUserAgentOverride -> IO (),
+    -- Input commands
+    inputPerformActions :: PerformActions -> IO (),
+    inputReleaseActions :: ReleaseActions -> IO (),
+    inputSetFiles :: SetFiles -> IO (),
+    -- Network commands
+    networkAddDataCollector :: AddDataCollector -> IO AddDataCollectorResult,
+    networkAddIntercept :: AddIntercept -> IO AddInterceptResult,
+    networkContinueRequest :: ContinueRequest -> IO (),
+    networkContinueResponse :: ContinueResponse -> IO (),
+    networkContinueWithAuth :: ContinueWithAuth -> IO (),
+    networkDisownData :: DisownData -> IO (),
+    networkFailRequest :: FailRequest -> IO (),
+    networkGetData :: GetData -> IO GetDataResult,
+    networkProvideResponse :: ProvideResponse -> IO (),
+    networkRemoveDataCollector :: RemoveDataCollector -> IO (),
+    networkRemoveIntercept :: RemoveIntercept -> IO (),
+    networkSetCacheBehavior :: SetCacheBehavior -> IO (),
+    networkSetExtraHeaders :: SetExtraHeaders -> IO (),
+    -- Script commands
+    scriptAddPreloadScript :: AddPreloadScript -> IO AddPreloadScriptResult,
+    scriptCallFunction :: CallFunction -> IO EvaluateResult,
+    scriptDisown :: Disown -> IO (),
+    scriptEvaluate :: Evaluate -> IO EvaluateResult,
+    scriptGetRealms :: GetRealms -> IO GetRealmsResult,
+    scriptRemovePreloadScript :: RemovePreloadScript -> IO (),
+    -- Storage commands
+    storageDeleteCookies :: DeleteCookies -> IO DeleteCookiesResult,
+    storageGetCookies :: GetCookies -> IO GetCookiesResult,
+    storageSetCookie :: SetCookie -> IO SetCookieResult,
+    -- WebExtension commands
+    webExtensionInstall :: WebExtensionInstall -> IO WebExtensionResult,
+    webExtensionUninstall :: WebExtensionUninstall -> IO (),
+    -- Generic command
+    sendCommand :: forall r. (FromJSON r) => Command r -> IO r
+  }
+
+-- | Create BiDiActions from a BiDiRunner
+mkActions :: BiDiRunner -> BiDiActions
+mkActions (MkBiDiRunner {run}) =
+  MkBiDiActions
+    { -- Session commands
+      sessionNew = run . API.sessionNew,
+      sessionStatus = run API.sessionStatus,
+      sessionEnd = run API.sessionEnd,
+      sessionSubscribe = fmap extractSubscription . run . API.sessionSubscribe,
+      sessionUnsubscribe = run . API.sessionUnsubscribe,
+      -- BrowsingContext commands
+      browsingContextActivate = run . API.browsingContextActivate,
+      browsingContextCaptureScreenshot = run . API.browsingContextCaptureScreenshot,
+      browsingContextClose = run . API.browsingContextClose,
+      browsingContextCreate = run . API.browsingContextCreate,
+      browsingContextGetTree = run . API.browsingContextGetTree,
+      browsingContextHandleUserPrompt = run . API.browsingContextHandleUserPrompt,
+      browsingContextLocateNodes = run . API.browsingContextLocateNodes,
+      browsingContextNavigate = run . API.browsingContextNavigate,
+      browsingContextPrint = run . API.browsingContextPrint,
+      browsingContextReload = run . API.browsingContextReload,
+      browsingContextSetViewport = run . API.browsingContextSetViewport,
+      browsingContextTraverseHistory = run . API.browsingContextTraverseHistory,
+      -- Browser commands
+      browserClose = run API.browserClose,
+      browserCreateUserContext = run . API.browserCreateUserContext,
+      browserGetClientWindows = run API.browserGetClientWindows,
+      browserGetUserContexts = run API.browserGetUserContexts,
+      browserRemoveUserContext = run . API.browserRemoveUserContext,
+      browserSetClientWindowState = run . API.browserSetClientWindowState,
+      browserSetDownloadBehavior = run . API.browserSetDownloadBehavior,
+      -- Emulation commands
+      emulationSetForcedColorsModeThemeOverride = run . API.emulationSetForcedColorsModeThemeOverride,
+      emulationSetGeolocationOverride = run . API.emulationSetGeolocationOverride,
+      emulationSetLocaleOverride = run . API.emulationSetLocaleOverride,
+      emulationSetNetworkConditions = run . API.emulationSetNetworkConditions,
+      emulationSetScreenOrientationOverride = run . API.emulationSetScreenOrientationOverride,
+      emulationSetScreenSettingsOverride = run . API.emulationSetScreenSettingsOverride,
+      emulationSetScriptingEnabled = run . API.emulationSetScriptingEnabled,
+      emulationSetTimezoneOverride = run . API.emulationSetTimezoneOverride,
+      emulationSetTouchOverride = run . API.emulationSetTouchOverride,
+      emulationSetUserAgentOverride = run . API.emulationSetUserAgentOverride,
+      -- Input commands
+      inputPerformActions = run . API.inputPerformActions,
+      inputReleaseActions = run . API.inputReleaseActions,
+      inputSetFiles = run . API.inputSetFiles,
+      -- Network commands
+      networkAddDataCollector = run . API.networkAddDataCollector,
+      networkAddIntercept = run . API.networkAddIntercept,
+      networkContinueRequest = run . API.networkContinueRequest,
+      networkContinueResponse = run . API.networkContinueResponse,
+      networkContinueWithAuth = run . API.networkContinueWithAuth,
+      networkDisownData = run . API.networkDisownData,
+      networkFailRequest = run . API.networkFailRequest,
+      networkGetData = run . API.networkGetData,
+      networkProvideResponse = run . API.networkProvideResponse,
+      networkRemoveDataCollector = run . API.networkRemoveDataCollector,
+      networkRemoveIntercept = run . API.networkRemoveIntercept,
+      networkSetCacheBehavior = run . API.networkSetCacheBehavior,
+      networkSetExtraHeaders = run . API.networkSetExtraHeaders,
+      -- Script commands
+      scriptAddPreloadScript = run . API.scriptAddPreloadScript,
+      scriptCallFunction = run . API.scriptCallFunction,
+      scriptDisown = run . API.scriptDisown,
+      scriptEvaluate = run . API.scriptEvaluate,
+      scriptGetRealms = run . API.scriptGetRealms,
+      scriptRemovePreloadScript = run . API.scriptRemovePreloadScript,
+      -- Storage commands
+      storageDeleteCookies = run . API.storageDeleteCookies,
+      storageGetCookies = run . API.storageGetCookies,
+      storageSetCookie = run . API.storageSetCookie,
+      -- WebExtension commands
+      webExtensionInstall = run . API.webExtensionInstall,
+      webExtensionUninstall = run . API.webExtensionUninstall,
+      -- Generic command
+      sendCommand = run
+    }
