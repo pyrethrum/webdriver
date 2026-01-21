@@ -27,33 +27,39 @@ jobs:
       - uses: actions/checkout@v3
         with:
           lfs: true
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-      - name: Login to GitHub Container Registry
-        uses: docker/login-action@v3
-        with:
-          registry: ghcr.io
-          username: ${{ vars.PACKAGE_UPLOAD_USER_NAME }}
-          password: ${{ secrets.PACKAGE_UPLOAD_TOKEN }}
+      # - name: Set up Docker Buildx
+      #   uses: docker/setup-buildx-action@v3
+      # - name: Login to GitHub Container Registry
+      #   uses: docker/login-action@v3
+      #   with:
+      #     registry: ghcr.io
+      #     username: ${{ vars.PACKAGE_UPLOAD_USER_NAME }}
+      #     password: ${{ secrets.PACKAGE_UPLOAD_TOKEN }}
       - name: Free Disk Space
         run: |
+          ls
+          df -h
+          docker container list --all
           docker system prune -af --volumes
+          ls /usr/
+          ls /opt/
+          ls "$AGENT_TOOLSDIRECTORY"
           sudo rm -rf /usr/share/dotnet
           sudo rm -rf /opt/ghc
           sudo rm -rf /usr/local/share/boost
           sudo rm -rf "$AGENT_TOOLSDIRECTORY"
           df -h
-      - name: Build and push
-        uses: docker/build-push-action@v5
-        with:
-
-          context: .
-          file: ./dev/dockerfile-ci-test
-          push: true
-          tags: ghcr.io/pyrethrum/ci-test:${{needs.env-setup.outputs.buildid}},ghcr.io/pyrethrum/ci-test:latest
-          cache-from: type=registry,ref=ghcr.io/pyrethrum/ci-test:buildcache
-          cache-to: type=registry,ref=ghcr.io/pyrethrum/ci-test:buildcache,mode=max
-      - name: Test
-        run: |
-          IMAGE=ghcr.io/pyrethrum/ci-test:${{needs.env-setup.outputs.buildid}}
-          docker run $IMAGE bash -c 'bash ./dev/start-geckodriver.sh & cabal test all'
+      # - name: Build and push
+      #   uses: docker/build-push-action@v5
+      #   with:
+      #
+      #     context: .
+      #     file: ./dev/dockerfile-ci-test
+      #     push: true
+      #     tags: ghcr.io/pyrethrum/ci-test:${{needs.env-setup.outputs.buildid}},ghcr.io/pyrethrum/ci-test:latest
+      #     cache-from: type=registry,ref=ghcr.io/pyrethrum/ci-test:buildcache
+      #     cache-to: type=registry,ref=ghcr.io/pyrethrum/ci-test:buildcache,mode=max
+      # - name: Test
+      #   run: |
+      #     IMAGE=ghcr.io/pyrethrum/ci-test:${{needs.env-setup.outputs.buildid}}
+      #     docker run $IMAGE bash -c 'bash ./dev/start-geckodriver.sh & cabal test all'
