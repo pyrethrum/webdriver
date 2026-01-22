@@ -29,3 +29,12 @@ test-suite test
     -- Use simplified tests or skip certain tests
 
 ```
+
+### immediate post restructure
+
+ [ ] all tests working
+ [ ] read unliftIO
+ [ ] read RIO
+ [ ] reexport base test
+ [ ] all patterns
+
