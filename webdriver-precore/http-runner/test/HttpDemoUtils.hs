@@ -1,7 +1,7 @@
 {-# LANGUAGE CPP #-}
 
 module HttpDemoUtils
-  ( HttpDemo,
+  ( HttpDemo (..),
     demo,
     sessionDemo,
     runDemo,

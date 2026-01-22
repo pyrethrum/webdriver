@@ -196,6 +196,7 @@ library webdriver-precore-test-utils
       WebDriverPreCore.Test.Config
       WebDriverPreCore.Test.ConfigLoader
       WebDriverPreCore.Test.Const
+      WebDriverPreCore.Test.ExpectedErrors
       WebDriverPreCore.Test.IOUtils
       WebDriverPreCore.Test.Logger
       WebDriverPreCore.Test.RuntimeConst
@@ -358,6 +359,7 @@ test-suite test-bidi-runner
     BrowsingContextDemos
     BrowsingContextEventDemos
     EmulationDemos
+    ErrorDemo
     FallbackDemos
     InputDemos
     InputEventDemos

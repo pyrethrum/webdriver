@@ -19,6 +19,8 @@ module BiDiDemoUtils
     expectError,
     expectErrorText,
     FailTest (..),
+    toText,
+    toLambda,
   )
 where
 
