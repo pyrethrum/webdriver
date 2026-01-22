@@ -106,6 +106,14 @@ common commonGhcOptions
     -DHTMLSpecURL=https://www.w3.org/TR/2025/WD-webdriver2-20251028/
     -DBiDiSpecURL=https://www.w3.org/TR/2026/WD-webdriver-bidi-20260109/
 
+common testDepends
+  build-depends:
+    aeson         >=1.4   && <2.3,
+    base          >=4.16  && <5,
+    tasty         >=1.4   && <1.6,
+    tasty-hunit   >=0.10  && <0.11,
+    text          >=2.1   && <2.2
+
 flag legacy-test
   description: Use legacy deprecated HTTP test implementations
   default: False
@@ -157,17 +165,12 @@ library webdriver-precore-exception
   default-language: Haskell2010
 
 test-suite test-exception
-  import: commonExtensions, commonGhcOptions
+  import: commonExtensions, commonGhcOptions, testDepends
   type: exitcode-stdio-1.0
   main-is: Test.hs
   hs-source-dirs: exception/test
   build-depends:
-    webdriver-precore-exception,
-    aeson,
-    base,
-    tasty,
-    tasty-hunit,
-    text
+    webdriver-precore-exception
   default-language: Haskell2010
 
 library webdriver-precore-test-resources
@@ -234,17 +237,12 @@ library webdriver-precore-http-runner-base
   default-language: Haskell2010
 
 test-suite test-http-runner-base
-  import: commonExtensions, commonGhcOptions
+  import: commonExtensions, commonGhcOptions, testDepends
   type: exitcode-stdio-1.0
   main-is: Test.hs
   hs-source-dirs: http-runner-base/test
   build-depends:
-    webdriver-precore-http-runner-base,
-    aeson,
-    base,
-    tasty,
-    tasty-hunit,
-    text
+    webdriver-precore-http-runner-base
   default-language: Haskell2010
 
 library webdriver-precore-http-runner
@@ -320,17 +318,12 @@ library webdriver-precore-bidi-runner-base
   default-language: Haskell2010
 
 test-suite test-bidi-runner-base
-  import: commonExtensions, commonGhcOptions
+  import: commonExtensions, commonGhcOptions, testDepends
   type: exitcode-stdio-1.0
   main-is: Test.hs
   hs-source-dirs: bidi-runner-base/test
   build-depends:
-    webdriver-precore-bidi-runner-base,
-    aeson,
-    base,
-    tasty,
-    tasty-hunit,
-    text
+    webdriver-precore-bidi-runner-base
   default-language: Haskell2010
 
 library webdriver-precore-bidi-runner
@@ -413,16 +406,12 @@ library webdriver-precore-extended
   default-language: Haskell2010
 
 test-suite test-extended
-  import: commonExtensions, commonGhcOptions
+  import: commonExtensions, commonGhcOptions, testDepends
   type: exitcode-stdio-1.0
   main-is: Test.hs
   hs-source-dirs: extended/test
   build-depends:
-    webdriver-precore-extended,
-    base,
-    tasty,
-    tasty-hunit,
-    text
+    webdriver-precore-extended
   default-language: Haskell2010
 
 library webdriver-precore-driver-control
@@ -440,16 +429,12 @@ library webdriver-precore-driver-control
   default-language: Haskell2010
 
 test-suite test-driver-control
-  import: commonExtensions, commonGhcOptions
+  import: commonExtensions, commonGhcOptions, testDepends
   type: exitcode-stdio-1.0
   main-is: Test.hs
   hs-source-dirs: driver-control/test
   build-depends:
-    webdriver-precore-driver-control,
-    base,
-    tasty,
-    tasty-hunit,
-    text
+    webdriver-precore-driver-control
   default-language: Haskell2010
 
 library webdriver-effectful
@@ -467,16 +452,12 @@ library webdriver-effectful
   default-language: Haskell2010
 
 test-suite test-effectful
-  import: commonExtensions, commonGhcOptions
+  import: commonExtensions, commonGhcOptions, testDepends
   type: exitcode-stdio-1.0
   main-is: Test.hs
   hs-source-dirs: effectful/test
   build-depends:
-    webdriver-effectful,
-    base,
-    tasty,
-    tasty-hunit,
-    text
+    webdriver-effectful
   default-language: Haskell2010
 
 library webdriver-rio-poc
@@ -493,16 +474,12 @@ library webdriver-rio-poc
   default-language: Haskell2010
 
 test-suite test-rio-poc
-  import: commonExtensions, commonGhcOptions
+  import: commonExtensions, commonGhcOptions, testDepends
   type: exitcode-stdio-1.0
   main-is: Test.hs
   hs-source-dirs: rio-poc/test
   build-depends:
-    webdriver-rio-poc,
-    base,
-    tasty,
-    tasty-hunit,
-    text
+    webdriver-rio-poc
   default-language: Haskell2010
 
 library webdriver-bluefin-poc
@@ -519,16 +496,12 @@ library webdriver-bluefin-poc
   default-language: Haskell2010
 
 test-suite test-bluefin-poc
-  import: commonExtensions, commonGhcOptions
+  import: commonExtensions, commonGhcOptions, testDepends
   type: exitcode-stdio-1.0
   main-is: Test.hs
   hs-source-dirs: bluefin-poc/test
   build-depends:
-    webdriver-bluefin-poc,
-    base,
-    tasty,
-    tasty-hunit,
-    text
+    webdriver-bluefin-poc
   default-language: Haskell2010
 
 library
