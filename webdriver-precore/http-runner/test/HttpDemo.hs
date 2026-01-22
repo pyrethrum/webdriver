@@ -110,6 +110,7 @@ demoSendKeysClear =
       pause
 
 -- >>> runDemo demoForwardBackRefresh
+-- *** Exception: CONFIG LOADED Loading config from file
 demoForwardBackRefresh :: HttpDemo
 demoForwardBackRefresh =
   sessionDemo "forward back refresh" action

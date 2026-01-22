@@ -1,27 +1,116 @@
 {-# LANGUAGE CPP #-}
 
 module WebDriverPreCore.Test.ConfigLoader
-  ( loadConfig,
-    module WebDriverPreCore.Test.Config
+  ( Config (..),
+    DemoBrowser (..),
+    isFirefox,
+    loadConfig,
   )
 where
 
-import WebDriverPreCore.Test.Config
-  ( Config (..),
+import WebDriverPreCore.Test.Config ( Config (..),
     DemoBrowser (..),
+    isFirefox
   )
-import WebDriverPreCore.Test.IOUtils (findWebDriverRoot)
-import Data.Maybe (fromMaybe)
-import Data.Text (pack)
+
+import Data.Text.IO qualified as T
+
+#ifdef DEBUG_LOCAL_CONFIG
+import WebDriverPreCore.Test.DebugConfig (debugConfig)
+#else
+import Control.Monad (unless)
+import Data.Text as T (Text, pack, unlines)
 import Dhall (auto, input)
-import System.Directory (getCurrentDirectory)
+import IOUtils (findWebDriverRoot)
+import System.Directory (doesFileExist, getCurrentDirectory)
+import System.FilePath (combine, (</>))
+#endif
+
+#ifndef DEBUG_LOCAL_CONFIG
+configDir :: IO FilePath
+configDir = do
+  currentDir <- getCurrentDirectory
+  case findWebDriverRoot currentDir of
+    Just root -> pure $ root </> testSubDir </> ".config"
+    Nothing ->
+      error $
+        "Could not find 'webdriver' root directory from: "
+          <> currentDir
+          <> "\n tests are expected to be run from the 'webdriver' directory or "
+          <> testSubDir
+  where
+    testSubDir = "webdriver-precore" </> "test"
+
+initialiseTestConfig :: IO ()
+initialiseTestConfig = do
+  userPath' <- userPath
+  exists <- doesFileExist userPath'
+  unless exists $ do
+    putStrLn $ "Saving default config to: " <> userPath'
+    T.writeFile userPath' configText
+
+{-
+Generating in code is more principled but produces a less readable file.
+
+import Dhall.Pretty qualified as P
+let expr = embed (inject @Config) defaultConfig
+     doc = pack (show (P.prettyCharacterSet P.ASCII expr))
+ -}
+configText :: Text
+configText =
+  T.unlines
+    [ "-- Config types",
+      "let Browser = ",
+      "      < Chrome : { headless : Bool }",
+      "      | Firefox : ",
+      "          { headless : Bool",
+      "          , profilePath : Optional Text ",
+      "          }",
+      "      >",
+      "",
+      "let Config = ",
+      "      { browser : Browser",
+      "      , logging : Bool",
+      "      , httpUrl : Text",
+      "      , httpPort : Natural",
+      "      , pauseMS : Natural",
+      "      }",
+      "",
+      "-- Config value",
+      "let browser : Browser = ",
+      "      Browser.Firefox ",
+      "        { headless = False",
+      "        , profilePath = None Text",
+      "        }",
+      "",
+      "let config : Config = ",
+      "      { browser = browser",
+      "      , logging = True",
+      "      , httpUrl = \"127.0.0.1\"",
+      "      , httpPort = 4444",
+      "      , pauseMS = 2000",
+      "      }",
+      "",
+      "in config"
+    ]
+
+readConfig :: IO Config
+readConfig =
+  userPath >>= input auto . pack
+
+userPath :: IO FilePath
+userPath =
+  configDir >>= pure . (flip combine) "config.dhall"
+#endif
 
 loadConfig :: IO Config
 loadConfig = do
-  webDriverRoot <- getCurrentDirectory >>= pure . fromMaybe (error "Could not find webdriver root") . findWebDriverRoot
-  let 
-    configPath = webDriverRoot <> "/dev/config-ci.dhall"
 #ifdef DEBUG_LOCAL_CONFIG
-  putStrLn $ "Loading config from (DEBUG local): " <> configPath
+  T.putStrLn "Using debug local config" 
+  pure debugConfig
+#else
+  userPath' <- userPath
+  T.putStrLn $ "Loading config from file: " <> pack userPath'
+  initialiseTestConfig 
+  readConfig
 #endif
-  input auto $ pack configPath
