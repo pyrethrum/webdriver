@@ -53,7 +53,6 @@ defaultPointerProps =
     }
 
 -- >>> runDemo inputKeyboardDemo
--- *** Exception: CloseRequest 1000 ""
 inputKeyboardDemo :: BiDiDemo
 inputKeyboardDemo =
   demo "Input I - Keyboard Actions" action

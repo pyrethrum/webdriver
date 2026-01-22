@@ -84,6 +84,11 @@ common commonExtensions
       TypeFamilyDependencies
       TypeOperators
 
+flag debug-local-config
+  description: Use local debug configuration (ignore Dhall file in test/.config)
+  default: False
+  manual: True
+
 common commonGhcOptions
   ghc-options:
     -fmax-pmcheck-models=10000000 
@@ -102,9 +107,13 @@ common commonGhcOptions
     -Wno-deprecations
     -fbyte-code-and-object-code 
     -- -fdefer-type-errors
+
   cpp-options: 
     -DHTMLSpecURL=https://www.w3.org/TR/2025/WD-webdriver2-20251028/
     -DBiDiSpecURL=https://www.w3.org/TR/2026/WD-webdriver-bidi-20260109/
+
+  if flag(debug-local-config)
+    cpp-options: -DDEBUG_LOCAL_CONFIG
 
 common testDepends
   build-depends:
@@ -116,11 +125,6 @@ common testDepends
 
 flag legacy-test
   description: Use legacy deprecated HTTP test implementations
-  default: False
-  manual: True
-
-flag debug-local-config
-  description: Use local debug configuration (ignore Dhall file in test/.config)
   default: False
   manual: True
 
@@ -188,8 +192,6 @@ library webdriver-precore-test-resources
 
 library webdriver-precore-test-utils
   import: commonExtensions, commonGhcOptions
-  if flag(debug-local-config)
-    cpp-options: -DDEBUG_LOCAL_CONFIG
   exposed-modules: 
       WebDriverPreCore.Test.Config
       WebDriverPreCore.Test.ConfigLoader
@@ -199,9 +201,11 @@ library webdriver-precore-test-utils
       WebDriverPreCore.Test.RuntimeConst
       WebDriverPreCore.Test.TestData
       WebDriverPreCore.Test.TestServerAPI
+
   if flag(debug-local-config)
     exposed-modules:
       WebDriverPreCore.Test.DebugConfig
+      
   hs-source-dirs: test-utils/src
   build-depends:
     utils-internal,

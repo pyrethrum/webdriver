@@ -45,12 +45,6 @@ sessionDemo = SessionDemo
 runDemo :: HttpDemo -> IO ()
 runDemo demo' = do
   cfg <- loadConfig
-#ifdef DEBUG_LOCAL_CONFIG
-  let source = "Using debug local config" 
-#else
-  let source = "Loading config from file"
-#endif
-  error $ "CONFIG LOADED " <> source
   runDemoWithConfig cfg demo'
 
 runDemoWithConfig :: Config -> HttpDemo -> IO ()

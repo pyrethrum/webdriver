@@ -2,8 +2,6 @@ module OtherDemos where
 
 import BiDiActions (BiDiActions (..))
 import BiDiDemoUtils
-import WebDriverPreCore.Test.Config (Config)
-import WebDriverPreCore.Test.ConfigLoader (loadConfig)
 import Data.Text (Text)
 import WebDriverPreCore.Test.IOUtils (DemoActions (..))
 import WebDriverPreCore.Test.TestData (navigation1Url, navigation2Url)

@@ -110,14 +110,12 @@ demoSendKeysClear =
       pause
 
 -- >>> runDemo demoForwardBackRefresh
--- *** Exception: CONFIG LOADED Loading config from file
-demoForwardBackRefresh :: HttpDemo
+-- *** Exception: ProtocolException {error = NoSuchElement, description = "An element could not be located on the page using the given search parameters", message = "Unable to locate element: a[href='checkboxes.html']", stacktrace = Just "RemoteError@chrome://remote/content/shared/RemoteError.sys.mjs:8:8\nWebDriverError@chrome://remote/content/shared/webdriver/Errors.sys.mjs:202:5\nNoSuchElementError@chrome://remote/content/shared/webdriver/Errors.sys.mjs:555:5\ndom.find/</<@chrome://remote/content/shared/DOM.sys.mjs:136:16\n", errorData = Nothing, response = Object (fromList [("error",String "no such element"),("message",String "Unable to locate element: a[href='checkboxes.html']"),("stacktrace",String "RemoteError@chrome://remote/content/shared/RemoteError.sys.mjs:8:8\nWebDriverError@chrome://remote/content/shared/webdriver/Errors.sys.mjs:202:5\nNoSuchElementError@chrome://remote/content/shared/webdriver/Errors.sys.mjs:555:5\ndom.find/</<@chrome://remote/content/shared/DOM.sys.mjs:136:16\n")])}
 demoForwardBackRefresh =
   sessionDemo "forward back refresh" action
   where
     action :: Session -> DemoActions -> HttpActions -> IO ()
     action sesId MkDemoActions {..} MkHttpActions {..} = do
-      error "WOW IN DEMO"
       url <- indexUrl
       logTxt "navigating to index page"
       navigateTo sesId $ url
