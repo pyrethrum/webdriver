@@ -1,4 +1,4 @@
-module Config
+module WebDriverPreCore.Test.Config
   ( Config (..),
     DemoBrowser (..),
     isFirefox
