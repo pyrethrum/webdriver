@@ -106,6 +106,16 @@ common commonGhcOptions
     -DHTMLSpecURL=https://www.w3.org/TR/2025/WD-webdriver2-20251028/
     -DBiDiSpecURL=https://www.w3.org/TR/2026/WD-webdriver-bidi-20260109/
 
+flag legacy-test
+  description: Use legacy deprecated HTTP test implementations
+  default: False
+  manual: True
+
+flag debug-local-config
+  description: Use local debug configuration (ignore Dhall file in test/.config)
+  default: False
+  manual: True
+
 library utils-internal
   import: commonExtensions, commonGhcOptions
   exposed-modules:
@@ -133,10 +143,6 @@ test-suite test-utils
     tasty,
     tasty-hunit
   default-language: Haskell2010
-
--- ============================================================================
--- New Internal Libraries
--- ============================================================================
 
 library webdriver-precore-exception
   import: commonExtensions, commonGhcOptions
@@ -179,7 +185,9 @@ library webdriver-precore-test-resources
 
 library webdriver-precore-test-utils
   import: commonExtensions, commonGhcOptions
-  exposed-modules:
+  if flag(debug-local-config)
+    cpp-options: -DDEBUG_LOCAL_CONFIG
+  exposed-modules: 
       WebDriverPreCore.Test.Config
       WebDriverPreCore.Test.ConfigLoader
       WebDriverPreCore.Test.Const
@@ -188,6 +196,9 @@ library webdriver-precore-test-utils
       WebDriverPreCore.Test.RuntimeConst
       WebDriverPreCore.Test.TestData
       WebDriverPreCore.Test.TestServerAPI
+  if flag(debug-local-config)
+    exposed-modules:
+      WebDriverPreCore.Test.DebugConfig
   hs-source-dirs: test-utils/src
   build-depends:
     utils-internal,
@@ -258,6 +269,10 @@ test-suite test-http-runner
   type: exitcode-stdio-1.0
   main-is: Test.hs
   hs-source-dirs: http-runner/test
+  -- TODO: restore legacy files when flag is enabled
+  -- see main
+  if flag(legacy-test)
+    cpp-options: -DLEGACY_TEST
   other-modules:
     ErrorDemo
     FallbackDemo
@@ -516,10 +531,6 @@ test-suite test-bluefin-poc
     text
   default-language: Haskell2010
 
--- ============================================================================
--- Main Library
--- ============================================================================
-
 library
   import: commonExtensions, commonGhcOptions
   exposed-modules:
@@ -569,22 +580,8 @@ library
     vector        >=0.12  && <0.14
   default-language: Haskell2010
 
-flag legacy-test
-  description: Use legacy deprecated HTTP test implementations
-  default: False
-  manual: True
-
-flag debug-local-config
-  description: Use local debug configuration (ignore Dhall file in test/.config)
-  default: False
-  manual: True
-
 test-suite test
   import: commonExtensions, commonGhcOptions
-  if flag(legacy-test)
-    cpp-options: -DLEGACY_TEST
-  if flag(debug-local-config)
-    cpp-options: -DDEBUG_LOCAL_CONFIG
   type: exitcode-stdio-1.0
   main-is: Test.hs
   hs-source-dirs: test
@@ -616,51 +613,4 @@ test-suite test
     ApiCoverageTest
     , ErrorCoverageTest
     , JSONParsingTest
-    -- demos 
-    , Config
-    , ConfigLoader
-    , Const
-    , IOUtils
-    , Logger
-    , TestData
-    , TestServerAPI
-    -- NOTE: HTTP modules have been migrated to http-runner/test
-    -- , HTTP.Runner
-    -- , HTTP.HttpClient
-    -- , HTTP.Actions
-    -- , HTTP.HttpActionsDeprecated
-    -- , HTTP.DemoUtils
-    -- , HTTP.HttpDemo
-    -- , HTTP.ErrorDemo
-    -- , HTTP.FallbackDemo
-    -- NOTE: BiDi modules have been migrated to bidi-runner/test
-    -- , BiDi.Runner
-    -- , BiDi.Response
-    -- , BiDi.Socket
-    -- , BiDi.Actions
-    -- , BiDi.DemoUtils
-    -- , BiDi.BiDiUrl
-    -- , BiDi.ErrorDemo
-    -- , BiDi.Demos.BrowserDemos
-    -- , BiDi.Demos.BrowsingContextDemos
-    -- , BiDi.Demos.BrowsingContextEventDemos
-    -- , BiDi.Demos.EmulationDemos
-    -- , BiDi.Demos.FallbackDemos
-    -- , BiDi.Demos.InputDemos
-    -- , BiDi.Demos.InputEventDemos
-    -- , BiDi.Demos.LogEventDemos
-    -- , BiDi.Demos.NetworkDemos
-    -- , BiDi.Demos.NetworkEventDemos
-    -- , BiDi.Demos.NetworkSupportTest
-    -- , BiDi.Demos.OtherDemos
-    -- , BiDi.Demos.ScriptDemos
-    -- , BiDi.Demos.ScriptEventDemos
-    -- , BiDi.Demos.SessionDemos
-    -- , BiDi.Demos.StorageDemos
-    -- , BiDi.Demos.WebExtensionDemos
-    , RuntimeConst
-    -- , HTTP.HttpRunnerDeprecated (deleted with test/HTTP directory)
-  if flag(debug-local-config)
-    other-modules:
-      DebugConfig
   default-language: Haskell2010

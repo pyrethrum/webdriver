@@ -59,6 +59,7 @@ _stopDemoUnusedWarning = runDemo
 -- #################### The Demos ######################
 
 -- >>> runDemo newSessionDemo
+-- *** Exception: CONFIG LOADED MkConfig {browser = Firefox {headless = True, profilePath = Nothing}, httpUrl = "127.0.0.1", httpPort = 4444, logging = False, pauseMS = 0}
 newSessionDemo :: HttpDemo
 newSessionDemo =
   demo "new Session" action
@@ -109,12 +110,14 @@ demoSendKeysClear =
       pause
 
 -- >>> runDemo demoForwardBackRefresh
+-- *** Exception: CONFIG LOADED Loading config from file
 demoForwardBackRefresh :: HttpDemo
 demoForwardBackRefresh =
   sessionDemo "forward back refresh" action
   where
     action :: Session -> DemoActions -> HttpActions -> IO ()
     action sesId MkDemoActions {..} MkHttpActions {..} = do
+      error "WOW IN DEMO"
       url <- indexUrl
       logTxt "navigating to index page"
       navigateTo sesId $ url

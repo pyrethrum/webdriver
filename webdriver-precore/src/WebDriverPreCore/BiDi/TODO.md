@@ -11,6 +11,7 @@
 ## final restructure
 
 - [ ] [update readme in similar style to](https://github.com/nikita-volkov/hasql)
+- [ ] restore legacy test / code for HTTP
 
 ### interim
 - use shared libraries
