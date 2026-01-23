@@ -13,7 +13,7 @@ where
 import Control.Exception (bracket)
 import Data.Text (Text)
 import WebDriverPreCore.HTTP.Protocol (FullCapabilities, Session, SessionResponse (..))
-import WebDriverPreCore.HttpRunner (HttpRunner, mkHttpRunner)
+import WebDriverPreCore.HttpRunner (mkHttpRunner)
 import WebDriverPreCore.HttpRunner.Actions (HttpActions (..), mkActions)
 import WebDriverPreCore.Test.Config (Config (..))
 import WebDriverPreCore.Test.ConfigLoader (loadConfig)

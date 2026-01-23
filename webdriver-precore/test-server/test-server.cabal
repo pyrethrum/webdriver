@@ -85,6 +85,7 @@ common commonGhcOptions
     -Wno-overlapping-patterns 
     -fprefer-byte-code 
     -fdefer-type-errors
+    -threaded
 
 executable test-server
   import: commonExtensions, commonGhcOptions
