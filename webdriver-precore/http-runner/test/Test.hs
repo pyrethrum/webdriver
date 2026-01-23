@@ -14,14 +14,16 @@ import ErrorDemo qualified
 import FallbackDemo qualified
 import HttpDemo qualified
 import HttpDemoUtils (HttpDemo (..), runDemoWithConfig)
-import Test.Tasty (TestTree, defaultMain, testGroup)
+import Test.Tasty (TestTree, defaultMain, localOption, testGroup)
 import Test.Tasty.HUnit (testCase)
+import Test.Tasty.Runners (NumThreads (..))
 import WebDriverPreCore.Test.Config (Config (..), DemoBrowser (..))
 import WebDriverPreCore.Test.ConfigLoader (loadConfig)
 
 main :: IO ()
 main = do
   testCfg <- loadConfig
+  -- defaultMain $ localOption (NumThreads 1) $ tests testCfg
   defaultMain $ tests testCfg
 
 tests :: Config -> TestTree

@@ -16,5 +16,9 @@ with-compiler: ghc-9.10.1
 -- always build tests without needing the --enable-tests flag
 tests: True
 
+-- Run everything sequentially to avoid WebDriver session conflicts
+-- Multiple test suites cannot share a single geckodriver instance
+jobs: 1
+
 -- allow cabal repl to load multiple packages at once
 multi-repl: True

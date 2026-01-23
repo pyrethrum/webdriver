@@ -106,7 +106,6 @@ common commonGhcOptions
     -Wno-overlapping-patterns 
     -Wno-deprecations
     -fbyte-code-and-object-code 
-    -threaded
     -- -fdefer-type-errors
 
   cpp-options: 

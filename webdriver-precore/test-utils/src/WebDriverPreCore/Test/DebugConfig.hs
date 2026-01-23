@@ -12,11 +12,11 @@ import Data.Text (Text)
 debugConfig :: Config
 debugConfig = 
   --
-  _firefoxSilent
+  -- _firefoxSilent
   -- _chromeSilent
   -- _firefoxHeadlessLogging
   -- _chromeHeadlessLogging
-  -- _firefoxDebug
+  _firefoxDebug
   -- _chromeDebug
 
 _firefoxSilent :: Config
