@@ -5,7 +5,6 @@ import BiDiDemoUtils (BiDiDemo, demo, runDemo)
 import GHC.Stack (HasCallStack)
 import Test.Tasty.HUnit qualified as HUnit
 import UnliftIO.Exception (try)
-import WebDriverPreCore.BiDiRunnerBase.Response (ResponseException (..))
 import WebDriverPreCore.Test.IOUtils (DemoActions (..), (===))
 import WebDriverPreCore.Test.TestData (inputsUrl)
 
@@ -25,8 +24,7 @@ import WebDriverPreCore.BiDi.Protocol
     SharedReference (..),
     SourceActions (..),
     ErrorType (..), 
-    WebDriverException (..), 
-    parseWebDriverException
+    WebDriverException (..)
   )
 import Prelude hiding (log)
 

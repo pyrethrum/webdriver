@@ -24,25 +24,21 @@ module WebDriverPreCore.BiDiRunner
   )
 where
 
-import Control.Exception (throw, fromException)
-import Control.Monad (when)
-import Data.Aeson (FromJSON, ToJSON, Value (..), object, toJSON, (.=), parseJSON)
+import Control.Exception (fromException)
+import Data.Aeson (FromJSON, toJSON, parseJSON)
 import Data.Aeson.Types (parseEither)
 import Data.Coerce (coerce)
-import Data.Function ((&))
 import Data.Set qualified as Set
 import Data.Text (Text, unpack)
 import Data.Word (Word64)
 import UnliftIO (catchAny, throwIO)
-import UnliftIO.STM (STM, TVar, atomically)
+import UnliftIO.STM (STM, atomically)
 import WebDriverPreCore.BiDiRunnerBase
   ( BiDiUrl (..),
     ChannelActions (..),
     MessageActions (..),
-    MessageLoops (..),
     SocketActions (..),
     loopActions,
-    mkChannelActions,
     mkMessageActions,
     parseBiDiUrl,
     withBiDiBase,
@@ -55,7 +51,6 @@ import WebDriverPreCore.BiDiRunnerBase.Types qualified as BaseTypes
 import WebDriverPreCore.BiDi.Protocol as P
   ( Command (..),
     CommandMethod (..),
-    JSUInt (..),
     OffSpecCommand (..),
     SessionSubscribeResult (..),
     SessionSubscibe (..),
@@ -65,7 +60,6 @@ import WebDriverPreCore.BiDi.Protocol as P
     SubscriptionType (..),
     subscriptionTypeToText,
     knownCommandToText,
-    WebDriverException (..),
     parseWebDriverException,
   )
 import Prelude hiding (log)

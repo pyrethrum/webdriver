@@ -22,7 +22,7 @@ module WebDriverPreCore.HttpRunner
   )
 where
 
-import Data.Aeson (FromJSON (..), Value (..), Object, (.:))
+import Data.Aeson (FromJSON (..), Value (..), (.:))
 import Data.Aeson.Types (parseMaybe, parseEither)
 import Data.Function ((&))
 import Data.Text (Text, pack)
@@ -41,7 +41,6 @@ import WebDriverPreCore.HttpRunnerBase
     HttpResponse (..),
     mkHttpRunnerBase,
   )
-import WebDriverPreCore.HTTP.Protocol (Command (..))
 import Prelude hiding (log)
 
 -- | Typed HTTP runner for WebDriver commands

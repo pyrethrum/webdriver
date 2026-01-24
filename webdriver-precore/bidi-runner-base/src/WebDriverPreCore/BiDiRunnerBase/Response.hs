@@ -23,7 +23,6 @@ import Control.Exception (Exception (..))
 import Data.Aeson (FromJSON (..), Object, Value (..), eitherDecode, withObject, (.:), (.:?))
 import Data.Aeson.KeyMap qualified as KM
 import Data.Aeson.Types (Parser, parseEither)
-import Data.Bifunctor (Bifunctor (..))
 import Data.ByteString.Lazy (ByteString)
 import Data.Text (Text, pack, unpack)
 import GHC.Generics (Generic)

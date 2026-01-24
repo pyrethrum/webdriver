@@ -28,12 +28,9 @@ module WebDriverPreCore.BiDiRunnerBase.Socket
 where
 
 import Control.Exception (throw)
-import Data.Aeson (FromJSON, Object, ToJSON, Value (..), encode, object, toJSON, (.=))
+import Data.Aeson (FromJSON, Object, ToJSON, Value (..), object, toJSON, (.=))
 import Data.Function ((&))
-import Data.Set (Set)
 import Data.Set qualified as Set
-import Data.Text (Text, unpack)
-import GHC.Generics (Generic)
 import UnliftIO.Exception (Exception (..), SomeException, catch)
 import UnliftIO.STM
   ( STM,
