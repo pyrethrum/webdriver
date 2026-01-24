@@ -8,6 +8,7 @@ rather than typed WebDriver commands.
 module WebDriverPreCore.BiDiRunnerBase
   ( -- * BiDi Runner
     withBiDiBase,
+    withBiDiWithActions,
     
     -- * Socket Actions
     SocketActions (..),
@@ -16,6 +17,8 @@ module WebDriverPreCore.BiDiRunnerBase
     -- * Message Loops
     MessageLoops (..),
     MessageActions (..),
+    loopActions,
+    mkMessageActions,
     
     -- * Channel Actions
     ChannelActions (..),
@@ -94,6 +97,19 @@ withBiDiBase
 withBiDiBase mLogger bidiUrl action = do
   let logger = maybe nullLogger id mLogger
   ca <- mkChannelActions logger
+  withSocket bidiUrl logger ca.messageLoops $
+    action ca.socketActions
+
+-- | Run a BiDi session with custom message actions
+withBiDiWithActions 
+  :: Maybe Logger 
+  -> BiDiUrl 
+  -> (Logger -> IO ChannelActions)
+  -> (SocketActions -> IO ()) 
+  -> IO ()
+withBiDiWithActions mLogger bidiUrl mkActions action = do
+  let logger = maybe nullLogger id mLogger
+  ca <- mkActions logger
   withSocket bidiUrl logger ca.messageLoops $
     action ca.socketActions
 

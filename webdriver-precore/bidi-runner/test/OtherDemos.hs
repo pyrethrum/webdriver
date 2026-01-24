@@ -3,6 +3,8 @@ module OtherDemos where
 import BiDiActions (BiDiActions (..))
 import BiDiDemoUtils
 import Data.Text (Text)
+import WebDriverPreCore.Test.Config (Config)
+import WebDriverPreCore.Test.ConfigLoader (loadConfig)
 import WebDriverPreCore.Test.IOUtils (DemoActions (..))
 import WebDriverPreCore.Test.TestData (navigation1Url, navigation2Url)
 import WebDriverPreCore.BiDiRunner (parseBiDiUrl)
@@ -23,9 +25,7 @@ parseUrlDemo = txt $ parseBiDiUrl "ws://127.0.0.1:9222/session/e43698d9-b02a-428
 
 
 -- Check expected errors when rigged to fail
--- NOTE: These require runDemoFail' which is not yet implemented in BiDiDemoUtils
 
-{-
 -- >>> evalFail getFailDemo
 getFailDemo :: Config -> IO ()
 getFailDemo c = expectErrorText "getfail" "Forced failure for testing: get" $ runDemoFail' c 0 2 0 failDemo
@@ -37,13 +37,13 @@ sendFailDemo c = expectErrorText "sendfail" "Forced failure for testing: send" $
 -- >>> evalFail eventFailDemo
 eventFailDemo :: Config -> IO ()
 eventFailDemo c = expectErrorText "eventfail" "Forced failure for testing: eventhandler (call #2)" $ runDemoFail' c 0 0 2 failDemo
+
 evalFail :: (Config -> IO ()) -> IO ()
 evalFail failAction = do
   c <- loadConfig
   failAction c
--}
 
--- >>> runDemo dummyDemo
+-- >>> runDemo failDemo
 failDemo :: BiDiDemo
 failDemo =
   demo "Fail demo" action

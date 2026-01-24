@@ -18,6 +18,7 @@ import InputEventDemos qualified as InputEvent
 import LogEventDemos qualified as LogEvent
 import NetworkDemos qualified as Network
 import NetworkEventDemos qualified as NetworkEvent
+import OtherDemos qualified as Other
 import ScriptDemos qualified as Script
 import ScriptEventDemos qualified as ScriptEvent
 import SessionDemos qualified as Session
@@ -80,14 +81,12 @@ bidiDemos cfg =
         "BiDi Demos"
         [ testGroup
             "BiDi Commands"
-            [ -- BiDi Exception tests require runDemoFail' which is not yet implemented
-              -- TODO: Uncomment when runDemoFail' is implemented in BiDiDemoUtils
-              -- testGroup
-              --   "BiDi Exception tests - threads rigged to explode"
-              --   [ testCase "send exception" $ Other.sendFailDemo cfg,
-              --     testCase "get exception" $ Other.getFailDemo cfg,
-              --     testCase "event fail exception" $ Other.eventFailDemo cfg
-              --   ],
+            [ testGroup
+                "BiDi Exception tests - threads rigged to explode"
+                [ testCase "send exception" $ Other.sendFailDemo cfg,
+                  testCase "get exception" $ Other.getFailDemo cfg,
+                  testCase "event fail exception" $ Other.eventFailDemo cfg
+                ],
               run
                 "Browser"
                 [ Browser.browserGetClientWindowsDemo,

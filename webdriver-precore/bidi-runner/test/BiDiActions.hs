@@ -10,8 +10,12 @@ module BiDiActions
   )
 where
 
-import Data.Aeson (FromJSON, Object, Value)
+import Data.Aeson (FromJSON, Object, Value, toJSON)
+import Data.Coerce (coerce)
 import Data.Text (Text)
+import WebDriverPreCore.BiDiRunnerBase.Types (Request)
+import WebDriverPreCore.BiDiRunnerBase.Socket qualified as Socket
+import WebDriverPreCore.BiDiRunnerBase qualified as Base
 import WebDriverPreCore.BiDi.Protocol
   ( AddDataCollector,
     AddDataCollectorResult,
@@ -22,6 +26,10 @@ import WebDriverPreCore.BiDi.Protocol
     Activate,
     AuthRequired,
     BeforeRequestSent,
+    CommandMethod (..),
+    OffSpecCommand (..),
+    Subscription,
+    knownCommandToText,
     BrowsingContext,
     CallFunction,
     CaptureScreenshot,
@@ -59,7 +67,7 @@ import WebDriverPreCore.BiDi.Protocol
     HandleUserPrompt,
     HistoryUpdated,
     Info,
-    JSUInt,
+    JSUInt (..),
     KnownSubscriptionType (..),
     LocateNodes,
     LocateNodesResult,
@@ -86,7 +94,7 @@ import WebDriverPreCore.BiDi.Protocol
     SessionNewResult,
     SessionStatusResult,
     SessionSubscibe,
-    SessionUnsubscribe,
+    SessionUnsubscribe (..),
     SetCacheBehavior,
     SetClientWindowState,
     SetCookie,
@@ -118,6 +126,7 @@ import WebDriverPreCore.BiDi.Protocol
   )
 import WebDriverPreCore.BiDi.API qualified as API
 import WebDriverPreCore.BiDiRunner (BiDiRunner (..))
+import WebDriverPreCore.BiDiRunner qualified as Runner
 
 -- | Extract subscription ID from result
 extractSubscription :: SessionSubscribeResult -> SubscriptionId
@@ -186,7 +195,7 @@ data BiDiActions = MkBiDiActions
     scriptCallFunction :: CallFunction -> IO EvaluateResult,
     scriptDisown :: Disown -> IO (),
     scriptEvaluate :: Evaluate -> IO EvaluateResult,
-    scriptEvaluateNoWait :: Evaluate -> IO (),
+    scriptEvaluateNoWait :: Evaluate -> IO Request,
     scriptGetRealms :: GetRealms -> IO GetRealmsResult,
     scriptRemovePreloadScript :: RemovePreloadScript -> IO (),
     -- Storage commands
@@ -257,9 +266,9 @@ data BiDiActions = MkBiDiActions
     -- Generic and low-level command methods
     sendCommand :: forall r. (FromJSON r) => Command r -> IO r,
     sendCommand' :: forall r. (FromJSON r) => JSUInt -> Command r -> IO r,
-    sendCommandNoWait :: forall r. Command r -> IO (),
+    sendCommandNoWait :: forall r. Command r -> IO Request,
     sendOffSpecCommand' :: JSUInt -> Text -> Object -> IO Object,
-    sendOffSpecCommandNoWait :: Text -> Object -> IO (),
+    sendOffSpecCommandNoWait :: Text -> Object -> IO Request,
     -- fallback subscriptions
     subscribeUnknownMany ::
       [OffSpecSubscriptionType] ->
@@ -275,14 +284,14 @@ data BiDiActions = MkBiDiActions
 
 -- | Create BiDiActions from a BiDiRunner
 mkActions :: BiDiRunner -> BiDiActions
-mkActions (MkBiDiRunner {run}) =
+mkActions (MkBiDiRunner {run, socketActions}) =
   MkBiDiActions
     { -- Session commands
       sessionNew = run . API.sessionNew,
       sessionStatus = run API.sessionStatus,
       sessionEnd = run API.sessionEnd,
-      sessionSubscribe = fmap extractSubscription . run . API.sessionSubscribe,
-      sessionUnsubscribe = run . API.sessionUnsubscribe,
+      sessionSubscribe = fmap extractSubscription . sessionSubscribe',
+      sessionUnsubscribe = sessionUnsubscribe',
       -- BrowsingContext commands
       browsingContextActivate = run . API.browsingContextActivate,
       browsingContextCaptureScreenshot = run . API.browsingContextCaptureScreenshot,
@@ -338,7 +347,7 @@ mkActions (MkBiDiRunner {run}) =
       scriptCallFunction = run . API.scriptCallFunction,
       scriptDisown = run . API.scriptDisown,
       scriptEvaluate = run . API.scriptEvaluate,
-      scriptEvaluateNoWait = \cmd -> run (API.scriptEvaluate cmd) >> pure (),
+      scriptEvaluateNoWait = sendCommandNoWait . API.scriptEvaluate,
       scriptGetRealms = run . API.scriptGetRealms,
       scriptRemovePreloadScript = run . API.scriptRemovePreloadScript,
       -- Storage commands
@@ -348,64 +357,159 @@ mkActions (MkBiDiRunner {run}) =
       -- WebExtension commands
       webExtensionInstall = run . API.webExtensionInstall,
       webExtensionUninstall = run . API.webExtensionUninstall,
-      -- Subscription methods - Note: These require event handling which is not yet implemented in BiDiRunner
-      subscribeMany = \_ _ -> error "Subscription support not yet implemented in BiDiRunner",
-      subscribeMany' = \_ _ _ _ -> error "Subscription support not yet implemented in BiDiRunner",
-      subscribeLogEntryAdded = \_ -> error "Subscription support not yet implemented in BiDiRunner",
-      subscribeLogEntryAdded' = \_ _ _ -> error "Subscription support not yet implemented in BiDiRunner",
-      subscribeBrowsingContextCreated = \_ -> error "Subscription support not yet implemented in BiDiRunner",
-      subscribeBrowsingContextCreated' = \_ _ _ -> error "Subscription support not yet implemented in BiDiRunner",
-      subscribeBrowsingContextDestroyed = \_ -> error "Subscription support not yet implemented in BiDiRunner",
-      subscribeBrowsingContextDestroyed' = \_ _ _ -> error "Subscription support not yet implemented in BiDiRunner",
-      subscribeBrowsingContextNavigationStarted = \_ -> error "Subscription support not yet implemented in BiDiRunner",
-      subscribeBrowsingContextNavigationStarted' = \_ _ _ -> error "Subscription support not yet implemented in BiDiRunner",
-      subscribeBrowsingContextFragmentNavigated = \_ -> error "Subscription support not yet implemented in BiDiRunner",
-      subscribeBrowsingContextFragmentNavigated' = \_ _ _ -> error "Subscription support not yet implemented in BiDiRunner",
-      subscribeBrowsingContextHistoryUpdated = \_ -> error "Subscription support not yet implemented in BiDiRunner",
-      subscribeBrowsingContextHistoryUpdated' = \_ _ _ -> error "Subscription support not yet implemented in BiDiRunner",
-      subscribeBrowsingContextDomContentLoaded = \_ -> error "Subscription support not yet implemented in BiDiRunner",
-      subscribeBrowsingContextDomContentLoaded' = \_ _ _ -> error "Subscription support not yet implemented in BiDiRunner",
-      subscribeBrowsingContextLoad = \_ -> error "Subscription support not yet implemented in BiDiRunner",
-      subscribeBrowsingContextLoad' = \_ _ _ -> error "Subscription support not yet implemented in BiDiRunner",
-      subscribeBrowsingContextDownloadWillBegin = \_ -> error "Subscription support not yet implemented in BiDiRunner",
-      subscribeBrowsingContextDownloadWillBegin' = \_ _ _ -> error "Subscription support not yet implemented in BiDiRunner",
-      subscribeBrowsingContextDownloadEnd = \_ -> error "Subscription support not yet implemented in BiDiRunner",
-      subscribeBrowsingContextDownloadEnd' = \_ _ _ -> error "Subscription support not yet implemented in BiDiRunner",
-      subscribeBrowsingContextNavigationAborted = \_ -> error "Subscription support not yet implemented in BiDiRunner",
-      subscribeBrowsingContextNavigationAborted' = \_ _ _ -> error "Subscription support not yet implemented in BiDiRunner",
-      subscribeBrowsingContextNavigationCommitted = \_ -> error "Subscription support not yet implemented in BiDiRunner",
-      subscribeBrowsingContextNavigationCommitted' = \_ _ _ -> error "Subscription support not yet implemented in BiDiRunner",
-      subscribeBrowsingContextNavigationFailed = \_ -> error "Subscription support not yet implemented in BiDiRunner",
-      subscribeBrowsingContextNavigationFailed' = \_ _ _ -> error "Subscription support not yet implemented in BiDiRunner",
-      subscribeBrowsingContextUserPromptClosed = \_ -> error "Subscription support not yet implemented in BiDiRunner",
-      subscribeBrowsingContextUserPromptClosed' = \_ _ _ -> error "Subscription support not yet implemented in BiDiRunner",
-      subscribeBrowsingContextUserPromptOpened = \_ -> error "Subscription support not yet implemented in BiDiRunner",
-      subscribeBrowsingContextUserPromptOpened' = \_ _ _ -> error "Subscription support not yet implemented in BiDiRunner",
-      subscribeNetworkAuthRequired = \_ -> error "Subscription support not yet implemented in BiDiRunner",
-      subscribeNetworkAuthRequired' = \_ _ _ -> error "Subscription support not yet implemented in BiDiRunner",
-      subscribeNetworkBeforeRequestSent = \_ -> error "Subscription support not yet implemented in BiDiRunner",
-      subscribeNetworkBeforeRequestSent' = \_ _ _ -> error "Subscription support not yet implemented in BiDiRunner",
-      subscribeNetworkFetchError = \_ -> error "Subscription support not yet implemented in BiDiRunner",
-      subscribeNetworkFetchError' = \_ _ _ -> error "Subscription support not yet implemented in BiDiRunner",
-      subscribeNetworkResponseCompleted = \_ -> error "Subscription support not yet implemented in BiDiRunner",
-      subscribeNetworkResponseCompleted' = \_ _ _ -> error "Subscription support not yet implemented in BiDiRunner",
-      subscribeNetworkResponseStarted = \_ -> error "Subscription support not yet implemented in BiDiRunner",
-      subscribeNetworkResponseStarted' = \_ _ _ -> error "Subscription support not yet implemented in BiDiRunner",
-      subscribeScriptMessage = \_ -> error "Subscription support not yet implemented in BiDiRunner",
-      subscribeScriptMessage' = \_ _ _ -> error "Subscription support not yet implemented in BiDiRunner",
-      subscribeScriptRealmCreated = \_ -> error "Subscription support not yet implemented in BiDiRunner",
-      subscribeScriptRealmCreated' = \_ _ _ -> error "Subscription support not yet implemented in BiDiRunner",
-      subscribeScriptRealmDestroyed = \_ -> error "Subscription support not yet implemented in BiDiRunner",
-      subscribeScriptRealmDestroyed' = \_ _ _ -> error "Subscription support not yet implemented in BiDiRunner",
-      subscribeInputFileDialogOpened = \_ -> error "Subscription support not yet implemented in BiDiRunner",
-      subscribeInputFileDialogOpened' = \_ _ _ -> error "Subscription support not yet implemented in BiDiRunner",
-      unsubscribe = \_ -> error "Subscription support not yet implemented in BiDiRunner",
+      -- Subscription methods
+      subscribeMany = \sts -> subscribeMany' [] [] sts,
+      subscribeMany',
+      -- Log
+      subscribeLogEntryAdded = sendSub API.subscribeLogEntryAdded,
+      subscribeLogEntryAdded' = sendSub' API.subscribeLogEntryAdded,
+      -- BrowsingContext
+      subscribeBrowsingContextCreated = sendSub API.subscribeBrowsingContextCreated,
+      subscribeBrowsingContextCreated' = sendSub' API.subscribeBrowsingContextCreated,
+      subscribeBrowsingContextDestroyed = sendSub API.subscribeBrowsingContextDestroyed,
+      subscribeBrowsingContextDestroyed' = sendSub' API.subscribeBrowsingContextDestroyed,
+      subscribeBrowsingContextNavigationStarted = sendSub API.subscribeBrowsingContextNavigationStarted,
+      subscribeBrowsingContextNavigationStarted' = sendSub' API.subscribeBrowsingContextNavigationStarted,
+      subscribeBrowsingContextFragmentNavigated = sendSub API.subscribeBrowsingContextFragmentNavigated,
+      subscribeBrowsingContextFragmentNavigated' = sendSub' API.subscribeBrowsingContextFragmentNavigated,
+      subscribeBrowsingContextHistoryUpdated = sendSub API.subscribeBrowsingContextHistoryUpdated,
+      subscribeBrowsingContextHistoryUpdated' = sendSub' API.subscribeBrowsingContextHistoryUpdated,
+      subscribeBrowsingContextDomContentLoaded = sendSub API.subscribeBrowsingContextDomContentLoaded,
+      subscribeBrowsingContextDomContentLoaded' = sendSub' API.subscribeBrowsingContextDomContentLoaded,
+      subscribeBrowsingContextLoad = sendSub API.subscribeBrowsingContextLoad,
+      subscribeBrowsingContextLoad' = sendSub' API.subscribeBrowsingContextLoad,
+      subscribeBrowsingContextDownloadWillBegin = sendSub API.subscribeBrowsingContextDownloadWillBegin,
+      subscribeBrowsingContextDownloadWillBegin' = sendSub' API.subscribeBrowsingContextDownloadWillBegin,
+      subscribeBrowsingContextDownloadEnd = sendSub API.subscribeBrowsingContextDownloadEnd,
+      subscribeBrowsingContextDownloadEnd' = sendSub' API.subscribeBrowsingContextDownloadEnd,
+      subscribeBrowsingContextNavigationAborted = sendSub API.subscribeBrowsingContextNavigationAborted,
+      subscribeBrowsingContextNavigationAborted' = sendSub' API.subscribeBrowsingContextNavigationAborted,
+      subscribeBrowsingContextNavigationCommitted = sendSub API.subscribeBrowsingContextNavigationCommitted,
+      subscribeBrowsingContextNavigationCommitted' = sendSub' API.subscribeBrowsingContextNavigationCommitted,
+      subscribeBrowsingContextNavigationFailed = sendSub API.subscribeBrowsingContextNavigationFailed,
+      subscribeBrowsingContextNavigationFailed' = sendSub' API.subscribeBrowsingContextNavigationFailed,
+      subscribeBrowsingContextUserPromptClosed = sendSub API.subscribeBrowsingContextUserPromptClosed,
+      subscribeBrowsingContextUserPromptClosed' = sendSub' API.subscribeBrowsingContextUserPromptClosed,
+      subscribeBrowsingContextUserPromptOpened = sendSub API.subscribeBrowsingContextUserPromptOpened,
+      subscribeBrowsingContextUserPromptOpened' = sendSub' API.subscribeBrowsingContextUserPromptOpened,
+      -- Network
+      subscribeNetworkAuthRequired = sendSub API.subscribeNetworkAuthRequired,
+      subscribeNetworkAuthRequired' = sendSub' API.subscribeNetworkAuthRequired,
+      subscribeNetworkBeforeRequestSent = sendSub API.subscribeNetworkBeforeRequestSent,
+      subscribeNetworkBeforeRequestSent' = sendSub' API.subscribeNetworkBeforeRequestSent,
+      subscribeNetworkFetchError = sendSub API.subscribeNetworkFetchError,
+      subscribeNetworkFetchError' = sendSub' API.subscribeNetworkFetchError,
+      subscribeNetworkResponseCompleted = sendSub API.subscribeNetworkResponseCompleted,
+      subscribeNetworkResponseCompleted' = sendSub' API.subscribeNetworkResponseCompleted,
+      subscribeNetworkResponseStarted = sendSub API.subscribeNetworkResponseStarted,
+      subscribeNetworkResponseStarted' = sendSub' API.subscribeNetworkResponseStarted,
+      -- Script
+      subscribeScriptMessage = sendSub API.subscribeScriptMessage,
+      subscribeScriptMessage' = sendSub' API.subscribeScriptMessage,
+      subscribeScriptRealmCreated = sendSub API.subscribeScriptRealmCreated,
+      subscribeScriptRealmCreated' = sendSub' API.subscribeScriptRealmCreated,
+      subscribeScriptRealmDestroyed = sendSub API.subscribeScriptRealmDestroyed,
+      subscribeScriptRealmDestroyed' = sendSub' API.subscribeScriptRealmDestroyed,
+      -- Input
+      subscribeInputFileDialogOpened = sendSub API.subscribeInputFileDialogOpened,
+      subscribeInputFileDialogOpened' = sendSub' API.subscribeInputFileDialogOpened,
+      --
+      unsubscribe,
       -- Generic and low-level command methods
       sendCommand = run,
-      sendCommand' = \_ cmd -> run cmd, -- JSUInt ID is ignored in current BiDiRunner
-      sendCommandNoWait = \_ -> pure (), -- Ignore the command result for NoWait version
-      sendOffSpecCommand' = \_ _ _ -> error "Off-spec command support not yet implemented in BiDiRunner",
-      sendOffSpecCommandNoWait = \_ _ -> error "Off-spec command support not yet implemented in BiDiRunner",
-      subscribeUnknownMany = \_ _ -> error "Subscription support not yet implemented in BiDiRunner",
-      subscribeUnknownMany' = \_ _ _ _ -> error "Subscription support not yet implemented in BiDiRunner"
+      sendCommand',
+      sendCommandNoWait,
+      sendOffSpecCommand',
+      sendOffSpecCommandNoWait,
+      -- Fallback subscriptions
+      subscribeUnknownMany,
+      subscribeUnknownMany'
     }
+  where
+    -- Helper to convert Command to SocketCommand
+    commandToSocketCommand :: Command r -> Base.SocketCommand Text r
+    commandToSocketCommand cmd = Base.MkSocketCommand
+      { method = toCommandText cmd.method,
+        params = toJSON cmd.params
+      }
+      where
+        toCommandText = \case
+          KnownCommand k -> knownCommandToText k
+          OffSpecCommand (MkOffSpecCommand cmdText) -> cmdText
+
+    -- Send a command without waiting for response
+    sendCommandNoWait :: forall r. Command r -> IO Request
+    sendCommandNoWait = Socket.sendCommandNoWait (coerce socketActions) . commandToSocketCommand
+
+    -- Send a command with specific ID
+    sendCommand' :: forall r. (FromJSON r) => JSUInt -> Command r -> IO r
+    sendCommand' (MkJSUInt id') = Socket.sendCommand' (coerce socketActions) (Base.MkJSUInt id') . commandToSocketCommand
+
+    -- Send off-spec command with specific ID
+    sendOffSpecCommand' :: JSUInt -> Text -> Object -> IO Object
+    sendOffSpecCommand' (MkJSUInt id') method params =
+      Socket.sendCommand' (coerce socketActions) (Base.MkJSUInt id') $ Base.MkSocketCommand method (toJSON params)
+
+    -- Send off-spec command without waiting
+    sendOffSpecCommandNoWait :: Text -> Object -> IO Request
+    sendOffSpecCommandNoWait method params =
+      Socket.sendCommandNoWait (coerce socketActions) $ Base.MkSocketCommand method (toJSON params)
+
+    -- Session subscribe/unsubscribe helpers
+    sessionSubscribe' :: SessionSubscibe -> IO SessionSubscribeResult
+    sessionSubscribe' = run . API.sessionSubscribe
+
+    sessionUnsubscribe' :: SessionUnsubscribe -> IO ()
+    sessionUnsubscribe' unsub = Runner.unsubscribe socketActions sessionUnsubscribe'' unsub
+      where
+        sessionUnsubscribe'' = run . API.sessionUnsubscribe
+
+    -- Subscription helpers
+    subscribeMany' ::
+      [BrowsingContext] ->
+      [UserContext] ->
+      [KnownSubscriptionType] ->
+      (Event -> IO ()) ->
+      IO SubscriptionId
+    subscribeMany' bcs ucs sts = Runner.subscribe socketActions sessionSubscribe' . API.subscribeMany sts bcs ucs
+
+    subscribeUnknownMany ::
+      [OffSpecSubscriptionType] ->
+      (Value -> IO ()) ->
+      IO SubscriptionId
+    subscribeUnknownMany sts = Runner.subscribe socketActions sessionSubscribe' . API.subscribeOffSpecMany sts [] []
+
+    subscribeUnknownMany' ::
+      [BrowsingContext] ->
+      [UserContext] ->
+      [OffSpecSubscriptionType] ->
+      (Value -> IO ()) ->
+      IO SubscriptionId
+    subscribeUnknownMany' bcs ucs sts = Runner.subscribe socketActions sessionSubscribe' . API.subscribeOffSpecMany sts bcs ucs
+
+    sendSub ::
+      ( [BrowsingContext] ->
+        [UserContext] ->
+        (a -> IO ()) ->
+        Subscription IO
+      ) ->
+      (a -> IO ()) ->
+      IO SubscriptionId
+    sendSub mkSubscription =
+      Runner.subscribe socketActions sessionSubscribe' . mkSubscription [] []
+
+    sendSub' ::
+      ( [BrowsingContext] ->
+        [UserContext] ->
+        (a -> IO ()) ->
+        Subscription IO
+      ) ->
+      [BrowsingContext] ->
+      [UserContext] ->
+      (a -> IO ()) ->
+      IO SubscriptionId
+    sendSub' mkSubscription bcs ucs =
+      Runner.subscribe socketActions sessionSubscribe' . mkSubscription bcs ucs
+
+    unsubscribe :: SubscriptionId -> IO ()
+    unsubscribe subId = Runner.unsubscribe socketActions (run . API.sessionUnsubscribe) (UnsubscribeById [subId])

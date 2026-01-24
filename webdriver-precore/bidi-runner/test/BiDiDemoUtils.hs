@@ -8,6 +8,8 @@ module BiDiDemoUtils
     demo,
     runDemo,
     runDemoWithConfig,
+    runDemoFail,
+    runDemoFail',
     httpBidiCapabilities,
     -- Helper functions
     rootContext,
@@ -30,6 +32,7 @@ import Control.Exception (Exception, SomeException, bracket, catch, throwIO, try
 import Data.Text (Text, isInfixOf, unpack)
 import Data.Text qualified as T
 import Data.Time.Clock.POSIX (POSIXTime, getPOSIXTime)
+import Data.Word (Word64)
 import WebDriverPreCore.BiDi.Protocol
   ( BrowsingContext,
     Close (..),
@@ -46,7 +49,7 @@ import WebDriverPreCore.BiDi.Protocol
     StringValue (..),
     Target (..),
   )
-import WebDriverPreCore.BiDiRunner (BiDiUrl, parseBiDiUrl, withBiDi)
+import WebDriverPreCore.BiDiRunner (BiDiUrl, parseBiDiUrl, withBiDi, withBiDiFailTest)
 import WebDriverPreCore.HTTP.Protocol (FullCapabilities (..), SessionResponse (..))
 import WebDriverPreCore.HTTP.Protocol qualified as Caps (Capabilities (..))
 import WebDriverPreCore.HttpRunner (mkHttpRunner)
@@ -279,4 +282,39 @@ expectError testName failTest action = do
               <> "\n"
               <> errText
     Right _ ->
-      fail $ unpack $ testName <> ": Expected error, but action completed successfully."
+      fail . unpack $
+        testName <> ": Expected error but action succeeded"
+
+-- | Run a BiDi demo with failure injection for testing
+runDemoFail :: Word64 -> Word64 -> Word64 -> BiDiDemo -> IO ()
+runDemoFail failSendCount failGetCount failEventCount dmo = 
+  loadConfig >>= \c -> runDemoFail' c failSendCount failGetCount failEventCount dmo
+
+-- | Run a BiDi demo with failure injection for testing (with config)
+runDemoFail' :: Config -> Word64 -> Word64 -> Word64 -> BiDiDemo -> IO ()
+runDemoFail' cfg failSendCount failGetCount failEventCount demo' = do
+  if cfg.logging
+    then withChannelFileLogger runWithLogger
+    else runWithLogger logNothingLogger
+  where
+    runWithLogger :: Logger -> IO ()
+    runWithLogger logger = do
+      let demoActions = mkDemoActions logger $ fromIntegral cfg.pauseMS * milliseconds
+          mLogger = if cfg.logging then Just logger.log else Nothing
+          httpRunner = mkHttpRunner cfg.httpUrl (fromIntegral cfg.httpPort) mLogger
+          httpActions = mkActions httpRunner
+          httpCaps = httpBidiCapabilities cfg
+      
+      bracket
+        (httpActions.newSession httpCaps)
+        (httpActions.deleteSession . (.sessionId))
+        $ \ses -> do
+          bidiUrl <- case getBiDiUrl ses of
+            Left err -> fail $ show err
+            Right url -> pure url
+          
+          -- Run with BiDi connection with failure injection
+          withBiDiFailTest failSendCount failGetCount failEventCount mLogger bidiUrl $ \biDiRunner -> do
+            let bidiActions = BiDiActions.mkActions biDiRunner
+            demoActions.logTxt $ "Executing (with failures): " <> demo'.name
+            demo'.action demoActions bidiActions

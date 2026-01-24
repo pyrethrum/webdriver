@@ -8,6 +8,7 @@ Command types, built on top of the JSON-based runner in BiDiRunnerBase.
 module WebDriverPreCore.BiDiRunner
   ( -- * BiDi Runner
     withBiDi,
+    withBiDiFailTest,
     BiDiRunner (..),
     mkBiDiRunner,
     
@@ -30,16 +31,22 @@ import Data.Aeson.Types (parseEither)
 import Data.Coerce (coerce)
 import Data.Function ((&))
 import Data.Set qualified as Set
-import Data.Text (Text)
+import Data.Text (Text, unpack)
+import Data.Word (Word64)
 import UnliftIO (catchAny, throwIO)
-import UnliftIO.STM (STM, atomically)
+import UnliftIO.STM (STM, TVar, atomically)
 import WebDriverPreCore.BiDiRunnerBase
   ( BiDiUrl (..),
     ChannelActions (..),
+    MessageActions (..),
+    MessageLoops (..),
     SocketActions (..),
+    loopActions,
     mkChannelActions,
+    mkMessageActions,
     parseBiDiUrl,
     withBiDiBase,
+    withBiDiWithActions,
   )
 import WebDriverPreCore.BiDiRunnerBase qualified as Base
 import WebDriverPreCore.BiDiRunnerBase.Response (ResponseException (..))
@@ -209,3 +216,66 @@ unsubscribe sa callUnsubscribe unsub = do
 -- | Convert SubscriptionType to SocketSubscriptionType  
 toSocketSubType :: SubscriptionType -> BaseTypes.SocketSubscriptionType
 toSocketSubType = BaseTypes.MkSocketSubscriptionType . subscriptionTypeToText
+
+-- | Run a BiDi session with failure injection for testing
+withBiDiFailTest 
+  :: Word64  -- ^ Fail send after this many calls
+  -> Word64  -- ^ Fail get after this many calls
+  -> Word64  -- ^ Fail event handler after this many calls
+  -> Maybe (Text -> IO ())  -- ^ Optional logger
+  -> BiDiUrl 
+  -> (BiDiRunner -> IO ()) 
+  -> IO ()
+withBiDiFailTest failSendCount failGetCount failEventCount mLogger bidiUrl action =
+  withBiDiWithActions mLogger bidiUrl (mkFailChannelActions failSendCount failGetCount failEventCount) $ \sa ->
+    action (mkBiDiRunner sa)
+
+-- | Create channel actions with failure injection
+mkFailChannelActions 
+  :: Word64  -- ^ Fail send after this many calls
+  -> Word64  -- ^ Fail get after this many calls  
+  -> Word64  -- ^ Fail event handler after this many calls
+  -> (Text -> IO ())  -- ^ Logger
+  -> IO ChannelActions
+mkFailChannelActions failSendCount failGetCount failEventCount logger = do
+  channels <- Socket.initChannels
+  let baseActions = mkMessageActions logger channels
+  failedActions <- failMessageActions baseActions failSendCount failGetCount failEventCount
+  pure $
+    MkChannelActions
+      { socketActions = Socket.mkSocketActions channels,
+        messageLoops = loopActions logger failedActions
+      }
+
+-- | Create message actions with failure injection
+failMessageActions 
+  :: MessageActions  -- ^ Base actions
+  -> Word64          -- ^ Fail send after this many calls
+  -> Word64          -- ^ Fail get after this many calls
+  -> Word64          -- ^ Fail event handler after this many calls
+  -> IO MessageActions
+failMessageActions baseActions failSendCount failGetCount failEventCount = do
+  send <- failAction "send" failSendCount baseActions.send
+  get <- failAction "get" failGetCount baseActions.get
+  eventHandler' <- failAction "eventhandler" failEventCount $ const baseActions.eventHandler
+  pure $
+    MkMessageActions
+      { send,
+        get,
+        eventHandler = eventHandler' ()
+      }
+
+-- | Create an action that fails after a specified number of calls
+failAction 
+  :: Text      -- ^ Label for error message
+  -> Word64    -- ^ Fail after this many calls
+  -> (a -> IO ())  -- ^ Base action
+  -> IO (a -> IO ())
+failAction lbl failCallCount action = do
+  counterVar' <- Socket.counterVar
+  let counter = Socket.mkAtomicCounter counterVar'
+  pure $ \a -> do
+    n <- atomically counter
+    if (coerce n :: Word64) == failCallCount
+      then fail $ "Forced failure for testing: " <> unpack lbl <> " (call #" <> show n <> ")"
+      else action a
