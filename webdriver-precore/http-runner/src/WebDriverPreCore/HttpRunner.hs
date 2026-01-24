@@ -28,8 +28,9 @@ import Data.Function ((&))
 import Data.Text (Text, pack)
 import GHC.Exception (throw)
 import Utils qualified
-import WebDriverPreCore.Exception 
-  ( WebDriverException (..),
+import WebDriverPreCore.HTTP.Protocol 
+  ( Command (..),
+    WebDriverException (..),
     parseWebDriverException,
   )
 import WebDriverPreCore.HttpRunnerBase 

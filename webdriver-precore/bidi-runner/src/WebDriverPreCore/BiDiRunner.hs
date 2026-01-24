@@ -24,7 +24,7 @@ module WebDriverPreCore.BiDiRunner
   )
 where
 
-import Control.Exception (throw)
+import Control.Exception (throw, fromException)
 import Control.Monad (when)
 import Data.Aeson (FromJSON, ToJSON, Value (..), object, toJSON, (.=), parseJSON)
 import Data.Aeson.Types (parseEither)
@@ -65,6 +65,8 @@ import WebDriverPreCore.BiDi.Protocol as P
     SubscriptionType (..),
     subscriptionTypeToText,
     knownCommandToText,
+    WebDriverException (..),
+    parseWebDriverException,
   )
 import Prelude hiding (log)
 
@@ -98,6 +100,10 @@ runTypedCommand :: forall r. (FromJSON r) => SocketActions -> Command r -> IO r
 runTypedCommand sa cmd = do
   let socketCmd = commandToSocketCommand cmd
   Socket.sendCommand (coerceSocketActions sa) socketCmd
+    `catchAny` \e -> case fromException e :: Maybe ResponseException of
+      Just (BiDIError errorValue) -> 
+        throwIO $ parseWebDriverException "BiDi error response" errorValue
+      _ -> throwIO e
 
 -- | Convert a typed Command to a SocketCommand
 commandToSocketCommand :: Command r -> BaseTypes.SocketCommand Text r

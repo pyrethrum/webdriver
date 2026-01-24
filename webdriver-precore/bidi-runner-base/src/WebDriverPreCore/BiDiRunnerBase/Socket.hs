@@ -49,7 +49,6 @@ import UnliftIO.STM
   )
 import WebDriverPreCore.BiDiRunnerBase.Types
 import WebDriverPreCore.BiDiRunnerBase.Response
-import WebDriverPreCore.Exception (JSONEncodeException (..))
 import Prelude hiding (id, log)
 
 -- | Communication channels for BiDi

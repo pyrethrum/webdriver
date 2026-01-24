@@ -156,27 +156,6 @@ test-suite test-utils
     tasty-hunit
   default-language: Haskell2010
 
-library webdriver-precore-exception
-  import: commonExtensions, commonGhcOptions
-  exposed-modules:
-      WebDriverPreCore.Exception
-  hs-source-dirs: exception/src
-  build-depends:
-    base          >=4.16  && <5,
-    aeson         >=1.4   && <2.3,
-    text          >=2.1   && <2.2,
-    unliftio      >=0.2   && <0.3
-  default-language: Haskell2010
-
-test-suite test-exception
-  import: commonExtensions, commonGhcOptions, testDepends
-  type: exitcode-stdio-1.0
-  main-is: Test.hs
-  hs-source-dirs: exception/test
-  build-depends:
-    webdriver-precore-exception
-  default-language: Haskell2010
-
 library webdriver-precore-test-resources
   import: commonExtensions, commonGhcOptions
   exposed-modules:
@@ -232,7 +211,6 @@ library webdriver-precore-http-runner-base
       WebDriverPreCore.HttpRunnerBase.HttpResponse
   hs-source-dirs: http-runner-base/src
   build-depends:
-    webdriver-precore-exception,
     aeson         >=1.4   && <2.3,
     base          >=4.16  && <5,
     bytestring    >=0.10  && <0.12.3,
@@ -259,7 +237,6 @@ library webdriver-precore-http-runner
   build-depends:
     utils-internal,
     webdriver-precore,
-    webdriver-precore-exception,
     webdriver-precore-http-runner-base,
     aeson         >=1.4   && <2.3,
     base          >=4.16  && <5,
@@ -286,7 +263,6 @@ test-suite test-http-runner
     webdriver-precore,
     webdriver-precore-http-runner,
     webdriver-precore-http-runner-base,
-    webdriver-precore-exception,
     webdriver-precore-test-resources,
     webdriver-precore-test-utils,
     aeson,
@@ -311,7 +287,6 @@ library webdriver-precore-bidi-runner-base
       WebDriverPreCore.BiDiRunnerBase.Types
   hs-source-dirs: bidi-runner-base/src
   build-depends:
-    webdriver-precore-exception,
     aeson         >=1.4   && <2.3,
     aeson-pretty  >=0.8   && <0.9,
     base          >=4.16  && <5,
@@ -338,7 +313,6 @@ library webdriver-precore-bidi-runner
   hs-source-dirs: bidi-runner/src
   build-depends:
     webdriver-precore,
-    webdriver-precore-exception,
     webdriver-precore-bidi-runner-base,
     aeson         >=1.4   && <2.3,
     base          >=4.16  && <5,
@@ -379,7 +353,6 @@ test-suite test-bidi-runner
     webdriver-precore-bidi-runner,
     webdriver-precore-bidi-runner-base,
     webdriver-precore-http-runner,
-    webdriver-precore-exception,
     webdriver-precore-test-resources,
     webdriver-precore-test-utils,
     aeson,

@@ -9,6 +9,7 @@ module WebDriverPreCore.BiDiRunnerBase.Response
     ResponseObject (..),
     MatchedResponse (..),
     ResponseException (..),
+    JSONEncodeException (..),
     Success (..),
     
     -- * Parsing Functions
@@ -27,11 +28,22 @@ import Data.ByteString.Lazy (ByteString)
 import Data.Text (Text, pack, unpack)
 import GHC.Generics (Generic)
 import WebDriverPreCore.BiDiRunnerBase.Types (JSUInt (..))
-import WebDriverPreCore.Exception 
-  ( WebDriverException (..),
-    JSONEncodeException (..),
-    parseWebDriverException,
-  )
+
+-- | Exception for JSON encoding/decoding failures
+data JSONEncodeException = MkJSONEncodeException
+  { message :: Text,
+    responseText :: Text
+  }
+  deriving (Show, Eq, Ord, Generic)
+
+instance Exception JSONEncodeException where
+  displayException :: JSONEncodeException -> String
+  displayException MkJSONEncodeException {message, responseText} =
+    unpack $
+      "Error converting WebDriver response to JSON: "
+        <> message
+        <> "\nResponse text was:\n"
+        <> responseText
 
 -- | A parsed response object from the WebSocket
 data ResponseObject
@@ -48,14 +60,14 @@ data MatchedResponse a = MkMatchedResponse
 
 -- | Exception during response parsing/matching
 data ResponseException
-  = BiDIError WebDriverException
+  = BiDIError Value
   | BiDiTimeoutError {ms :: Int}
   deriving (Show, Eq, Generic)
 
 instance Exception ResponseException where
   displayException :: ResponseException -> String
   displayException = \case
-    BiDIError e -> displayException e
+    BiDIError v -> "BiDi error response: " <> show v
     BiDiTimeoutError {ms} -> "Timed out waiting for matching command response from driver (" <> show ms <> " milliseconds)"
 
 -- | Successful command response
@@ -85,8 +97,16 @@ parseResponse :: forall r. (FromJSON r)
   -> Maybe (Either ResponseException (MatchedResponse r))
 parseResponse id' =
   either
-    (Just . Left . BiDIError . JSONEncodeException)
+    (Just . Left . BiDIError . toObject)
     (matchResponseId id')
+  where
+    toObject :: JSONEncodeException -> Value
+    toObject MkJSONEncodeException {message, responseText} =
+      Object $ KM.fromList 
+        [ ("error", String "json encode exception"), 
+          ("message", String message), 
+          ("responseText", String responseText)
+        ]
 
 -- | Match a response object to a command ID
 matchResponseId :: forall a. (FromJSON a) 
@@ -104,7 +124,7 @@ matchResponseId msgId = \case
     parseSuccessOrError obj =
       case parseEither parseJSON (Object obj) :: Either String (Success a) of
         Right s -> Right $ MkMatchedResponse {response = s.result, object = obj}
-        Left err -> Left $ BiDIError $ parseWebDriverException (pack err) (Object obj)
+        Left _err -> Left $ BiDIError (Object obj)
 
 -- | Decode a raw WebSocket message into a ResponseObject
 decodeResponse :: ByteString -> Either JSONEncodeException ResponseObject
