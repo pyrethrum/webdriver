@@ -1,4 +1,9 @@
-import: https://www.stackage.org/nightly-2025-02-25/cabal.config
+import: https://www.stackage.org/nightly-2026-01-18/cabal.config
+  --  https://www.stackage.org/nightly-2025-02-25/cabal.config
+
+-- Allow newer versions to resolve dependency conflicts
+allow-newer:
+  falsify:optparse-applicative
 
 packages: 
   webdriver-precore/*.cabal
@@ -10,6 +15,10 @@ with-compiler: ghc-9.10.1
 
 -- always build tests without needing the --enable-tests flag
 tests: True
+
+-- Run everything sequentially to avoid WebDriver session conflicts
+-- Multiple test suites cannot share a single geckodriver instance
+jobs: 1
 
 -- allow cabal repl to load multiple packages at once
 multi-repl: True

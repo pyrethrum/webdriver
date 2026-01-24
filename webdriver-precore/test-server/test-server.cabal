@@ -88,6 +88,7 @@ common commonGhcOptions
 
 executable test-server
   import: commonExtensions, commonGhcOptions
+  ghc-options: -threaded -rtsopts -with-rtsopts=-N
   main-is: TestServer.hs
   other-modules: TestPages
   hs-source-dirs: src
