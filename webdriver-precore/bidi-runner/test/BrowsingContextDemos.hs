@@ -271,7 +271,6 @@ browsingContextGetTreeDemo =
       pause
 
 -- >>> runDemo browsingContextHandleUserPromptDemo
--- *** Exception: Waiting for alert to be displayed...
 browsingContextHandleUserPromptDemo :: BiDiDemo
 browsingContextHandleUserPromptDemo =
   demo "Browsing Context - Handle User Prompt" action
@@ -297,7 +296,6 @@ browsingContextHandleUserPromptDemo =
           }
       -- Wait for the alert to be displayed 
       -- in a production automation more sophisticated polling or event subscription would be used
-      error "Waiting for alert to be displayed..."
       pauseAtLeast $ 500 * milliseconds
 
       logTxt "Accept the alert dialog"

@@ -7,12 +7,11 @@ import WebDriverPreCore.Test.IOUtils (DemoActions (..), (===))
 import Test.Tasty.HUnit (assertFailure)
 import WebDriverPreCore.Test.TestData (inputsUrl)
 import UnliftIO (try)
+import WebDriverPreCore.Exception (ErrorType (..), WebDriverException (..))
 import WebDriverPreCore.HTTP.Protocol
-  ( ErrorType (..),
-    Selector (..),
+  ( Selector (..),
     Session,
-    Timeouts (..),
-    WebDriverException (..),
+    Timeouts (..)
   )
 import Prelude hiding (log)
 

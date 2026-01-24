@@ -8,7 +8,7 @@ import UnliftIO.Exception (try)
 import WebDriverPreCore.BiDiRunnerBase.Response (ResponseException (..))
 import WebDriverPreCore.Test.IOUtils (DemoActions (..), (===))
 import WebDriverPreCore.Test.TestData (inputsUrl)
-import WebDriverPreCore.Exception (WebDriverException (..), ErrorType (..))
+import WebDriverPreCore.Exception (ErrorType (..), WebDriverException (..))
 import WebDriverPreCore.BiDi.Protocol
   ( Create (..),
     CreateType (..),
@@ -23,7 +23,7 @@ import WebDriverPreCore.BiDi.Protocol
     ReadinessState (..),
     SharedId (..),
     SharedReference (..),
-    SourceActions (..),
+    SourceActions (..)
   )
 import Prelude hiding (log)
 
