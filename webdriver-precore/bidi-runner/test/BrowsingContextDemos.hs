@@ -271,7 +271,7 @@ browsingContextGetTreeDemo =
       pause
 
 -- >>> runDemo browsingContextHandleUserPromptDemo
--- *** Exception: BiDIError (ProtocolException {error = NoSuchAlert, description = "An attempt was made to operate on a modal dialog when one was not open", message = "", stacktrace = Just "RemoteError@chrome://remote/content/shared/RemoteError.sys.mjs:8:8\nWebDriverError@chrome://remote/content/shared/webdriver/Errors.sys.mjs:202:5\nNoSuchAlertError@chrome://remote/content/shared/webdriver/Errors.sys.mjs:538:5\nhandleUserPrompt@chrome://remote/content/webdriver-bidi/modules/root/browsingContext.sys.mjs:952:11\nhandleCommand@chrome://remote/content/shared/messagehandler/MessageHandler.sys.mjs:282:33\nexecute@chrome://remote/content/shared/webdriver/Session.sys.mjs:450:32\nonPacket@chrome://remote/content/webdriver-bidi/WebDriverBiDiConnection.sys.mjs:236:37\nonMessage@chrome://remote/content/server/WebSocketTransport.sys.mjs:127:18\nhandleEvent@chrome://remote/content/server/WebSocketTransport.sys.mjs:109:14\n", errorData = Nothing, response = Object (fromList [("error",String "no such alert"),("id",Number 3.0),("message",String ""),("stacktrace",String "RemoteError@chrome://remote/content/shared/RemoteError.sys.mjs:8:8\nWebDriverError@chrome://remote/content/shared/webdriver/Errors.sys.mjs:202:5\nNoSuchAlertError@chrome://remote/content/shared/webdriver/Errors.sys.mjs:538:5\nhandleUserPrompt@chrome://remote/content/webdriver-bidi/modules/root/browsingContext.sys.mjs:952:11\nhandleCommand@chrome://remote/content/shared/messagehandler/MessageHandler.sys.mjs:282:33\nexecute@chrome://remote/content/shared/webdriver/Session.sys.mjs:450:32\nonPacket@chrome://remote/content/webdriver-bidi/WebDriverBiDiConnection.sys.mjs:236:37\nonMessage@chrome://remote/content/server/WebSocketTransport.sys.mjs:127:18\nhandleEvent@chrome://remote/content/server/WebSocketTransport.sys.mjs:109:14\n"),("type",String "error")])})
+-- *** Exception: Waiting for alert to be displayed...
 browsingContextHandleUserPromptDemo :: BiDiDemo
 browsingContextHandleUserPromptDemo =
   demo "Browsing Context - Handle User Prompt" action
@@ -297,6 +297,7 @@ browsingContextHandleUserPromptDemo =
           }
       -- Wait for the alert to be displayed 
       -- in a production automation more sophisticated polling or event subscription would be used
+      error "Waiting for alert to be displayed..."
       pauseAtLeast $ 500 * milliseconds
 
       logTxt "Accept the alert dialog"
