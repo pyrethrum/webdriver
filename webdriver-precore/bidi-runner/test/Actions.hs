@@ -1,11 +1,11 @@
 {-|
 BiDi Actions module for webdriver-precore-bidi-runner tests
 
-This module provides a BiDiActions interface that wraps the BiDiRunner,
+This module provides a Actions interface that wraps the BiDiRunner,
 making it compatible with demos migrated from the test suite.
 -}
-module BiDiActions
-  ( BiDiActions (..),
+module Actions
+  ( Actions (..),
     mkActions,
   )
 where
