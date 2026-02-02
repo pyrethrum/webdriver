@@ -1,6 +1,6 @@
 module NetworkSupportTest where
 
-import BiDiActions (BiDiActions (..))
+import Actions (BiDiActions (..))
 import BiDiDemoUtils
 import Control.Exception (SomeException, throwIO, try)
 import WebDriverPreCore.Test.IOUtils (DemoActions (..), exceptionTextIncludes)

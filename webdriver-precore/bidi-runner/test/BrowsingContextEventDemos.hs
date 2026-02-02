@@ -1,6 +1,6 @@
 module BrowsingContextEventDemos where
 
-import BiDiActions (BiDiActions (..))
+import Actions (BiDiActions (..))
 import BiDiDemoUtils
 import WebDriverPreCore.Test.Const (Timeout (..), milliseconds, second)
 import Data.Text (unpack)

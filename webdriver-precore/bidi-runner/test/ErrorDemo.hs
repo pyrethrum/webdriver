@@ -1,6 +1,6 @@
 module ErrorDemo where
 
-import BiDiActions (BiDiActions (..))
+import Actions (BiDiActions (..))
 import BiDiDemoUtils (BiDiDemo, demo, runDemo)
 import GHC.Stack (HasCallStack)
 import Test.Tasty.HUnit qualified as HUnit

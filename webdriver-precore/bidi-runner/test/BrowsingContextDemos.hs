@@ -1,6 +1,6 @@
 module BrowsingContextDemos where
 
-import BiDiActions (BiDiActions (..))
+import Actions (BiDiActions (..))
 import BiDiDemoUtils
 import WebDriverPreCore.Test.Const (milliseconds)
 import Data.Aeson (Value (Null), object, (.=))

@@ -26,8 +26,8 @@ module BiDiDemoUtils
   )
 where
 
-import BiDiActions (BiDiActions (..))
-import BiDiActions qualified
+import Actions (BiDiActions (..))
+import Actions qualified
 import Control.Exception (Exception, SomeException, bracket, catch, throwIO, try)
 import Data.Text (Text, isInfixOf, unpack)
 import Data.Text qualified as T

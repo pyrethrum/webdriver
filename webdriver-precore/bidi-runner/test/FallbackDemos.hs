@@ -1,6 +1,6 @@
 module FallbackDemos where
 
-import BiDiActions (BiDiActions (..))
+import Actions (BiDiActions (..))
 import BiDiDemoUtils
 import WebDriverPreCore.Test.Const (seconds)
 import Data.Aeson (Value (..), FromJSON)

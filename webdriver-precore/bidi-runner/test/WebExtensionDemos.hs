@@ -1,6 +1,6 @@
 module WebExtensionDemos where
 
-import BiDiActions (BiDiActions (..))
+import Actions (BiDiActions (..))
 import BiDiDemoUtils ( demo, BiDiDemo, runDemo )
 import Control.Exception (SomeException, catch)
 import WebDriverPreCore.Test.IOUtils (DemoActions (..))

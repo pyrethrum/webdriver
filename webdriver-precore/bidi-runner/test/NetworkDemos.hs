@@ -1,6 +1,6 @@
 module NetworkDemos where
 
-import BiDiActions (BiDiActions (..))
+import Actions (BiDiActions (..))
 import BiDiDemoUtils
   ( BiDiDemo,
     closeContext,

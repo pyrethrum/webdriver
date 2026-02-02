@@ -1,6 +1,6 @@
 module ScriptEventDemos where
 
-import BiDiActions (BiDiActions (..))
+import Actions (BiDiActions (..))
 import BiDiDemoUtils
 import WebDriverPreCore.Test.IOUtils (DemoActions (..))
 import WebDriverPreCore.Test.TestData (checkboxesUrl, scriptRealmUrl)

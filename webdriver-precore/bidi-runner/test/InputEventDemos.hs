@@ -1,6 +1,6 @@
 module InputEventDemos where
 
-import BiDiActions (BiDiActions (..))
+import Actions (BiDiActions (..))
 import BiDiDemoUtils
 import Data.Maybe (fromJust)
 import WebDriverPreCore.Test.IOUtils (DemoActions (..))

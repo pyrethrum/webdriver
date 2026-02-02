@@ -327,7 +327,7 @@ test-suite test-bidi-runner
   main-is: Test.hs
   hs-source-dirs: bidi-runner/test
   other-modules:
-    BiDiActions
+    Actions
     BiDiDemoUtils
     BrowserDemos
     BrowsingContextDemos
@@ -446,6 +446,7 @@ library webdriver-rio-poc
   hs-source-dirs: rio-poc/src
   build-depends:
     webdriver-precore-extended,
+    base          >=4.16  && <5,
     rio           >=0.1   && <0.2
   default-language: Haskell2010
 

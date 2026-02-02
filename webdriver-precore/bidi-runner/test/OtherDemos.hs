@@ -1,6 +1,6 @@
 module OtherDemos where
 
-import BiDiActions (BiDiActions (..))
+import Actions (BiDiActions (..))
 import BiDiDemoUtils
 import Data.Text (Text)
 import WebDriverPreCore.Test.Config (Config)
