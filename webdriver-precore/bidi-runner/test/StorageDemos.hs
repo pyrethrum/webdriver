@@ -1,6 +1,6 @@
 module StorageDemos where
 
-import Actions (BiDiActions (..))
+import Actions (Actions (..))
 import BiDiDemoUtils 
 import WebDriverPreCore.Test.IOUtils (DemoActions (..))
 import WebDriverPreCore.BiDi.Protocol
@@ -24,8 +24,8 @@ storageGetCookiesDemo :: BiDiDemo
 storageGetCookiesDemo =
   demo "Storage - Get Cookies" action
   where
-    action :: DemoActions -> BiDiActions -> IO ()
-    action utils@MkDemoActions {..} bidi@MkBiDiActions {..} = do
+    action :: DemoActions -> Actions -> IO ()
+    action utils@MkDemoActions {..} bidi@MkActions {..} = do
       bc <- rootContext utils bidi
 
       logTxt "Test 1: Get all cookies (no filter)"
@@ -88,8 +88,8 @@ storageSetCookieDemo :: BiDiDemo
 storageSetCookieDemo =
   demo "Storage - Set Cookie" action
   where
-    action :: DemoActions -> BiDiActions -> IO ()
-    action utils@MkDemoActions {..} bidi@MkBiDiActions {..} = do
+    action :: DemoActions -> Actions -> IO ()
+    action utils@MkDemoActions {..} bidi@MkActions {..} = do
       bc <- rootContext utils bidi
 
       logTxt "Test 1: Set basic cookie"
@@ -161,8 +161,8 @@ storageDeleteCookiesDemo :: BiDiDemo
 storageDeleteCookiesDemo =
   demo "Storage - Delete Cookies" action
   where
-    action :: DemoActions -> BiDiActions -> IO ()
-    action utils@MkDemoActions {..} bidi@MkBiDiActions {..} = do
+    action :: DemoActions -> Actions -> IO ()
+    action utils@MkDemoActions {..} bidi@MkActions {..} = do
       bc <- rootContext utils bidi
 
       logTxt "Test 1: Delete cookies by name"
@@ -224,8 +224,8 @@ storagePartitionKeyDemo :: BiDiDemo
 storagePartitionKeyDemo =
   demo "Storage - Partition Key Management" action
   where
-    action :: DemoActions -> BiDiActions -> IO ()
-    action utils@MkDemoActions {..} bidi@MkBiDiActions {..} = do
+    action :: DemoActions -> Actions -> IO ()
+    action utils@MkDemoActions {..} bidi@MkActions {..} = do
       bc <- rootContext utils bidi
 
       logTxt "Test 1: Context-based partition"
@@ -284,8 +284,8 @@ storageCompleteWorkflowDemo :: BiDiDemo
 storageCompleteWorkflowDemo =
   demo "Storage - Complete Cookie Workflow" action
   where
-    action :: DemoActions -> BiDiActions -> IO ()
-    action utils@MkDemoActions {..} bidi@MkBiDiActions {..} = do
+    action :: DemoActions -> Actions -> IO ()
+    action utils@MkDemoActions {..} bidi@MkActions {..} = do
       bc <- rootContext utils bidi
 
       logTxt "Step 1: Check initial cookies"

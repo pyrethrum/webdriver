@@ -1,6 +1,6 @@
 module NetworkSupportTest where
 
-import Actions (BiDiActions (..))
+import Actions (Actions (..))
 import BiDiDemoUtils
 import Control.Exception (SomeException, throwIO, try)
 import WebDriverPreCore.Test.IOUtils (DemoActions (..), exceptionTextIncludes)
@@ -24,8 +24,8 @@ networkSupportTest :: BiDiDemo
 networkSupportTest =
   demo "Network Support Test - Check which commands are implemented" action
   where
-    action :: DemoActions -> BiDiActions -> IO ()
-    action utils@MkDemoActions {..} bidi@MkBiDiActions {..} = do
+    action :: DemoActions -> Actions -> IO ()
+    action utils@MkDemoActions {..} bidi@MkActions {..} = do
       bc <- rootContext utils bidi
 
       logTxt "Testing network command support in current WebDriver implementation..."

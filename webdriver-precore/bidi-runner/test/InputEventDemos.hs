@@ -1,6 +1,6 @@
 module InputEventDemos where
 
-import Actions (BiDiActions (..))
+import Actions (Actions (..))
 import BiDiDemoUtils
 import Data.Maybe (fromJust)
 import WebDriverPreCore.Test.IOUtils (DemoActions (..))
@@ -39,8 +39,8 @@ inputEventFileDialogOpened :: BiDiDemo
 inputEventFileDialogOpened =
   demo "Input Events - File Dialog Opened (Single File)" action
   where
-    action :: DemoActions -> BiDiActions -> IO ()
-    action utils@MkDemoActions {..} bidi@MkBiDiActions {..} = do
+    action :: DemoActions -> Actions -> IO ()
+    action utils@MkDemoActions {..} bidi@MkActions {..} = do
       logTxt "Subscribe to FileDialogOpened event"
       (fileDialogEventFired, waitFileDialogEventFired) <- timeLimitLog InputFileDialogOpened
       subscribeInputFileDialogOpened fileDialogEventFired

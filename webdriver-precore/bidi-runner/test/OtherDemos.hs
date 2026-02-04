@@ -1,6 +1,6 @@
 module OtherDemos where
 
-import Actions (BiDiActions (..))
+import Actions (Actions (..))
 import BiDiDemoUtils
 import Data.Text (Text)
 import WebDriverPreCore.Test.Config (Config)
@@ -48,8 +48,8 @@ failDemo :: BiDiDemo
 failDemo =
   demo "Fail demo" action
   where
-    action :: DemoActions -> BiDiActions -> IO ()
-    action utils@MkDemoActions {pause, logTxt, logShow, timeLimitLog} bidi@MkBiDiActions {..} = do
+    action :: DemoActions -> Actions -> IO ()
+    action utils@MkDemoActions {pause, logTxt, logShow, timeLimitLog} bidi@MkActions {..} = do
       bc <- rootContext utils bidi
 
       logTxt "Subscribe to navigation started events"

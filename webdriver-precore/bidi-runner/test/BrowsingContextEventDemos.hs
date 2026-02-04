@@ -1,6 +1,6 @@
 module BrowsingContextEventDemos where
 
-import Actions (BiDiActions (..))
+import Actions (Actions (..))
 import BiDiDemoUtils
 import WebDriverPreCore.Test.Const (Timeout (..), milliseconds, second)
 import Data.Text (unpack)
@@ -29,8 +29,8 @@ browsingContextEventDemo :: BiDiDemo
 browsingContextEventDemo =
   demo "Browsing Context Create - Subscribe Unsubscribe" action
   where
-    action :: DemoActions -> BiDiActions -> IO ()
-    action MkDemoActions {..} MkBiDiActions {..} = do
+    action :: DemoActions -> Actions -> IO ()
+    action MkDemoActions {..} MkActions {..} = do
       subId <- subscribeBrowsingContextCreated (logShow "Event Subscription Fired: browsingContext.contextCreated")
       logShow "Subscription id" subId
 
@@ -57,8 +57,8 @@ browsingContextEventDemoMulti :: BiDiDemo
 browsingContextEventDemoMulti =
   demo "Browsing Context Events - Subscribe Unsubscribe Using subscribeMany" action
   where
-    action :: DemoActions -> BiDiActions -> IO ()
-    action MkDemoActions {..} MkBiDiActions {..} = do
+    action :: DemoActions -> Actions -> IO ()
+    action MkDemoActions {..} MkActions {..} = do
       subId <-
         subscribeMany
           [BrowsingContextContextCreated, BrowsingContextContextDestroyed]
@@ -98,8 +98,8 @@ browsingContextEventDemoFilteredSubscriptions :: BiDiDemo
 browsingContextEventDemoFilteredSubscriptions =
   demo "Browsing Context Events - Filtered Navigation Subscriptions" action
   where
-    action :: DemoActions -> BiDiActions -> IO ()
-    action MkDemoActions {..} MkBiDiActions {..} = do
+    action :: DemoActions -> Actions -> IO ()
+    action MkDemoActions {..} MkActions {..} = do
       logTxt "Creating two browsing contexts"
 
       let createParams =
@@ -171,8 +171,8 @@ browsingContextEventDemoUserContextFiltered :: BiDiDemo
 browsingContextEventDemoUserContextFiltered =
   demo "Browsing Context Events - Filtered User Context Subscriptions" action
   where
-    action :: DemoActions -> BiDiActions -> IO ()
-    action MkDemoActions {..} MkBiDiActions {..} = do
+    action :: DemoActions -> Actions -> IO ()
+    action MkDemoActions {..} MkActions {..} = do
       logTxt "Creating two user contexts"
       uc1 <-
         browserCreateUserContext
@@ -244,8 +244,8 @@ browsingContextEventCreateDestroy :: BiDiDemo
 browsingContextEventCreateDestroy =
   demo "Browsing Context Events - Created and Destroyed" action
   where
-    action :: DemoActions -> BiDiActions -> IO ()
-    action MkDemoActions {..} MkBiDiActions {..} = do
+    action :: DemoActions -> Actions -> IO ()
+    action MkDemoActions {..} MkActions {..} = do
       logTxt "Subscribe to ContextCreated event"
       (createdEventFired, waitCreateEventFired) <- timeLimitLog BrowsingContextContextCreated
       subscribeBrowsingContextCreated createdEventFired
@@ -291,8 +291,8 @@ browsingContextEventNavigationLifecycle :: BiDiDemo
 browsingContextEventNavigationLifecycle =
   demo "Browsing Context Events - Navigation Lifecycle (Started, Committed, DomContentLoaded, Load)" action
   where
-    action :: DemoActions -> BiDiActions -> IO ()
-    action utils@MkDemoActions {..} bidi@MkBiDiActions {..} = do
+    action :: DemoActions -> Actions -> IO ()
+    action utils@MkDemoActions {..} bidi@MkActions {..} = do
       logTxt "Subscribe to navigation lifecycle events"
 
       (startedEventFired, waitStartedEventFired) <- timeLimitLog BrowsingContextNavigationStarted
@@ -340,8 +340,8 @@ browsingContextEventFragmentNavigation :: BiDiDemo
 browsingContextEventFragmentNavigation =
   demo "Browsing Context Events - Fragment Navigation" action
   where
-    action :: DemoActions -> BiDiActions -> IO ()
-    action utils@MkDemoActions {..} bidi@MkBiDiActions {..} = do
+    action :: DemoActions -> Actions -> IO ()
+    action utils@MkDemoActions {..} bidi@MkActions {..} = do
       logTxt "Navigate to fragment page"
       url <- fragmentUrl
       bc <- rootContext utils bidi
@@ -369,8 +369,8 @@ browsingContextEventUserPrompts :: BiDiDemo
 browsingContextEventUserPrompts =
   demo "Browsing Context Events - User Prompt Opened and Closed" action
   where
-    action :: DemoActions -> BiDiActions -> IO ()
-    action utils@MkDemoActions {..} bidi@MkBiDiActions {..} = do
+    action :: DemoActions -> Actions -> IO ()
+    action utils@MkDemoActions {..} bidi@MkActions {..} = do
       logTxt "Navigate to prompt page"
       url <- promptUrl
       bc <- rootContext utils bidi
@@ -427,8 +427,8 @@ browsingContextEventUserPromptsVariants :: BiDiDemo
 browsingContextEventUserPromptsVariants =
   demo "Browsing Context Events - User Prompt Types (Alert, Confirm, Prompt)" action
   where
-    action :: DemoActions -> BiDiActions -> IO ()
-    action utils@MkDemoActions {..} bidi@MkBiDiActions {..} = do
+    action :: DemoActions -> Actions -> IO ()
+    action utils@MkDemoActions {..} bidi@MkActions {..} = do
       logTxt "Navigate to prompt page"
       url <- promptUrl
       bc <- rootContext utils bidi
@@ -521,8 +521,8 @@ browsingContextEventHistoryUpdated =
     -- NOTE: browsingContext.historyUpdated event is not yet implemented in geckodriver
     -- See: https://bugzilla.mozilla.org/show_bug.cgi?id=1906050
     -- Status: NEW (as of 2025-06-03)
-    action :: DemoActions -> BiDiActions -> IO ()
-    action utils@MkDemoActions {..} bidi@MkBiDiActions {..} = do
+    action :: DemoActions -> Actions -> IO ()
+    action utils@MkDemoActions {..} bidi@MkActions {..} = do
       logTxt "Subscribe to HistoryUpdated event"
 
       (historyEventFired, waitHistoryEventFired) <- timeLimitLog BrowsingContextHistoryUpdated
@@ -588,8 +588,8 @@ browsingContextEventNavigationAborted =
     --
     -- chromedriver: Partially implemented. Accepts subscriptions but does not emit the event.
     --   The test times out waiting for the event that never fires.
-    action :: DemoActions -> BiDiActions -> IO ()
-    action utils@MkDemoActions {..} bidi@MkBiDiActions {..} = do
+    action :: DemoActions -> Actions -> IO ()
+    action utils@MkDemoActions {..} bidi@MkActions {..} = do
       logTxt "Subscribe to NavigationAborted event"
 
       (abortedEventFired, waitAbortedEventFired) <- timeLimitLog BrowsingContextNavigationAborted
@@ -650,8 +650,8 @@ browsingContextEventNavigationFailed =
     -- 3. Wait for geckodriver fix to properly emit navigationFailed events
     --
     -- The library implementation is correct and will handle the event when it fires.
-    action :: DemoActions -> BiDiActions -> IO ()
-    action utils@MkDemoActions {..} bidi@MkBiDiActions {..} = do
+    action :: DemoActions -> Actions -> IO ()
+    action utils@MkDemoActions {..} bidi@MkActions {..} = do
       logTxt "Subscribe to NavigationFailed event"
 
       (failedEventFired, waitFailedEventFired) <- timeLimitLog BrowsingContextNavigationFailed
@@ -678,8 +678,8 @@ browsingContextEventDownloadWillBegin :: BiDiDemo
 browsingContextEventDownloadWillBegin =
   demo "Browsing Context Events - Download Will Begin (NOT IMPLEMENTED)" action
   where
-    action :: DemoActions -> BiDiActions -> IO ()
-    action utils@MkDemoActions {..} bidi@MkBiDiActions {..} = do
+    action :: DemoActions -> Actions -> IO ()
+    action utils@MkDemoActions {..} bidi@MkActions {..} = do
       logTxt "Navigate to download link page"
       url <- downloadLinkUrl
       bc <- rootContext utils bidi
@@ -714,8 +714,8 @@ browsingContextEventDownloadEnd :: BiDiDemo
 browsingContextEventDownloadEnd =
   demo "Browsing Context Events - Download End (Complete and Canceled)" action
   where
-    action :: DemoActions -> BiDiActions -> IO ()
-    action utils@MkDemoActions {..} bidi@MkBiDiActions {..} = do
+    action :: DemoActions -> Actions -> IO ()
+    action utils@MkDemoActions {..} bidi@MkActions {..} = do
       logTxt "Navigate to download link page"
       url <- downloadLinkUrl
       bc <- rootContext utils bidi

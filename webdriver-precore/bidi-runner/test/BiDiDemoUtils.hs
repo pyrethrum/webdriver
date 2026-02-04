@@ -26,7 +26,7 @@ module BiDiDemoUtils
   )
 where
 
-import Actions (BiDiActions (..))
+import Actions (Actions (..))
 import Actions qualified
 import Control.Exception (Exception, SomeException, bracket, catch, throwIO, try)
 import Data.Text (Text, isInfixOf, unpack)
@@ -63,14 +63,14 @@ import WebDriverPreCore.Test.RuntimeConst (httpCapabilities, httpFullCapabilitie
 import Utils (txt)
 import Prelude hiding (log)
 
--- | A BiDi demo is a named action that runs with DemoActions and a BiDiActions
+-- | A BiDi demo is a named action that runs with DemoActions and a Actions
 data BiDiDemo = MkBiDiDemo
   { name :: Text,
-    action :: DemoActions -> BiDiActions -> IO ()
+    action :: DemoActions -> Actions -> IO ()
   }
 
 -- | Create a BiDi demo
-demo :: Text -> (DemoActions -> BiDiActions -> IO ()) -> BiDiDemo
+demo :: Text -> (DemoActions -> Actions -> IO ()) -> BiDiDemo
 demo name action = MkBiDiDemo {name, action}
 
 -- | BiDi capabilities are HTTP capabilities with webSocketUrl enabled
@@ -124,13 +124,13 @@ runDemoWithConfig cfg demo' = do
           
           -- Run with BiDi connection
           withBiDi mLogger bidiUrl $ \biDiRunner -> do
-            let bidiActions = BiDiActions.mkActions biDiRunner
+            let bidiActions = Actions.mkActions biDiRunner
             demoActions.logTxt $ "Executing: " <> demo'.name
             demo'.action demoActions bidiActions
 
 -- | Get root browsing context
-rootContext :: DemoActions -> BiDiActions -> IO BrowsingContext
-rootContext MkDemoActions {..} MkBiDiActions {..} = do
+rootContext :: DemoActions -> Actions -> IO BrowsingContext
+rootContext MkDemoActions {..} MkActions {..} = do
   logTxt "Get root browsing context"
   tree <- browsingContextGetTree $ MkGetTree Nothing Nothing
   logShow "Browsing context tree" tree
@@ -139,8 +139,8 @@ rootContext MkDemoActions {..} MkBiDiActions {..} = do
     _ -> error "No browsing contexts found"
 
 -- | Create a new window context
-newWindowContext :: DemoActions -> BiDiActions -> IO BrowsingContext
-newWindowContext MkDemoActions {..} MkBiDiActions {..} = do
+newWindowContext :: DemoActions -> Actions -> IO BrowsingContext
+newWindowContext MkDemoActions {..} MkActions {..} = do
   logTxt "New browsing context - Window"
   bcWin <- browsingContextCreate bcParams {createType = Window}
   logShow "Browsing context - Window" bcWin
@@ -156,8 +156,8 @@ newWindowContext MkDemoActions {..} MkBiDiActions {..} = do
         }
 
 -- | Close a browsing context
-closeContext :: DemoActions -> BiDiActions -> BrowsingContext -> IO ()
-closeContext MkDemoActions {pause, logTxt, logShow} MkBiDiActions {..} bc = do
+closeContext :: DemoActions -> Actions -> BrowsingContext -> IO ()
+closeContext MkDemoActions {pause, logTxt, logShow} MkActions {..} bc = do
   logTxt "Close browsing context"
   co <- browsingContextClose $ MkClose {context = bc, promptUnload = Nothing}
   logShow "Close result" co
@@ -174,8 +174,8 @@ data TextValidationError = MkTextValidationError
 instance Exception TextValidationError
 
 -- | Check if expected text is present in DOM with timeout and retry, throw error if not found
-chkDomContains' :: Timeout -> Timeout -> DemoActions -> BiDiActions -> BrowsingContext -> Text -> IO ()
-chkDomContains' timeout pause' MkDemoActions {..} MkBiDiActions {..} bc expectedText = do
+chkDomContains' :: Timeout -> Timeout -> DemoActions -> Actions -> BrowsingContext -> Text -> IO ()
+chkDomContains' timeout pause' MkDemoActions {..} MkActions {..} bc expectedText = do
   startTime <- getPOSIXTime
   logTxt $ "Checking DOM contains: " <> expectedText <> " (timeout: " <> txt timeout <> "ms, pause: " <> txt pause' <> "ms)"
   checkLoop $ startTime + (fromIntegral timeout.microseconds / 1000000)
@@ -238,7 +238,7 @@ chkDomContains' timeout pause' MkDemoActions {..} MkBiDiActions {..} bc expected
               }
 
 -- | Check if expected text is present in DOM with default timeout and retry settings
-chkDomContains :: DemoActions -> BiDiActions -> BrowsingContext -> Text -> IO ()
+chkDomContains :: DemoActions -> Actions -> BrowsingContext -> Text -> IO ()
 chkDomContains = chkDomContains' (10 * seconds) (MkTimeout 100)
 
 -- | Test specification for expected error
@@ -315,6 +315,6 @@ runDemoFail' cfg failSendCount failGetCount failEventCount demo' = do
           
           -- Run with BiDi connection with failure injection
           withBiDiFailTest failSendCount failGetCount failEventCount mLogger bidiUrl $ \biDiRunner -> do
-            let bidiActions = BiDiActions.mkActions biDiRunner
+            let bidiActions = Actions.mkActions biDiRunner
             demoActions.logTxt $ "Executing (with failures): " <> demo'.name
             demo'.action demoActions bidiActions

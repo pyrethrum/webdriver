@@ -1,6 +1,6 @@
 module EmulationDemos where
 
-import Actions (BiDiActions (..))
+import Actions (Actions (..))
 import BiDiDemoUtils
 import WebDriverPreCore.Test.IOUtils (DemoActions (..))
 import WebDriverPreCore.BiDi.Protocol
@@ -33,8 +33,8 @@ emulationSetGeolocationOverrideDemo :: BiDiDemo
 emulationSetGeolocationOverrideDemo =
   demo "Emulation - Set Geolocation Override" action
   where
-    action :: DemoActions -> BiDiActions -> IO ()
-    action utils@MkDemoActions {..} bidi@MkBiDiActions {..} = do
+    action :: DemoActions -> Actions -> IO ()
+    action utils@MkDemoActions {..} bidi@MkActions {..} = do
       bc <- rootContext utils bidi
 
       logTxt "Test 1: Set geolocation coordinates (New York City)"
@@ -78,8 +78,8 @@ emulationSetGeolocationOverridePositionErrorDemo :: BiDiDemo
 emulationSetGeolocationOverridePositionErrorDemo =
   demo "Emulation - Set Geolocation Position Error" action
   where
-    action :: DemoActions -> BiDiActions -> IO ()
-    action utils@MkDemoActions {..} bidi@MkBiDiActions {..} = do
+    action :: DemoActions -> Actions -> IO ()
+    action utils@MkDemoActions {..} bidi@MkActions {..} = do
       bc <- rootContext utils bidi
 
       logTxt "Set geolocation position error"
@@ -98,8 +98,8 @@ emulationSetLocaleOverrideDemo :: BiDiDemo
 emulationSetLocaleOverrideDemo =
   demo "Emulation - Set Locale Override" action
   where
-    action :: DemoActions -> BiDiActions -> IO ()
-    action utils@MkDemoActions {..} bidi@MkBiDiActions {..} = do
+    action :: DemoActions -> Actions -> IO ()
+    action utils@MkDemoActions {..} bidi@MkActions {..} = do
       bc <- rootContext utils bidi
 
       logTxt "Test 1: Set locale to French (France)"
@@ -147,8 +147,8 @@ emulationSetScreenOrientationOverrideDemo :: BiDiDemo
 emulationSetScreenOrientationOverrideDemo =
   demo "Emulation - Set Screen Orientation Override" action
   where
-    action :: DemoActions -> BiDiActions -> IO ()
-    action utils@MkDemoActions {..} bidi@MkBiDiActions {..} = do
+    action :: DemoActions -> Actions -> IO ()
+    action utils@MkDemoActions {..} bidi@MkActions {..} = do
       bc <- rootContext utils bidi
 
       logTxt "Test 1: Set orientation to portrait primary"
@@ -209,8 +209,8 @@ emulationSetScreenSettingsOverrideDemo :: BiDiDemo
 emulationSetScreenSettingsOverrideDemo =
   demo "Emulation - Set Screen Settings Override - since https://www.w3.org/TR/2025/WD-webdriver-bidi-20251120" action
   where
-    action :: DemoActions -> BiDiActions -> IO ()
-    action utils@MkDemoActions {..} bidi@MkBiDiActions {..} = do
+    action :: DemoActions -> Actions -> IO ()
+    action utils@MkDemoActions {..} bidi@MkActions {..} = do
       bc <- rootContext utils bidi
 
       logTxt "Test 1: Set screen area to 1920x1080 (Full HD)"
@@ -270,8 +270,8 @@ emulationSetTimezoneOverrideDemo :: BiDiDemo
 emulationSetTimezoneOverrideDemo =
   demo "Emulation - Set Timezone Override" action
   where
-    action :: DemoActions -> BiDiActions -> IO ()
-    action utils@MkDemoActions {..} bidi@MkBiDiActions {..} = do
+    action :: DemoActions -> Actions -> IO ()
+    action utils@MkDemoActions {..} bidi@MkActions {..} = do
       bc <- rootContext utils bidi
       logTxt "Test 1: Set timezone to New York"
       let nyTimezone = MkSetTimezoneOverride
@@ -328,8 +328,8 @@ emulationSetTouchOverrideDemo :: BiDiDemo
 emulationSetTouchOverrideDemo =
   demo "Emulation - Set Touch Override - since https://www.w3.org/TR/2026/WD-webdriver-bidi-20260109" action
   where
-    action :: DemoActions -> BiDiActions -> IO ()
-    action utils@MkDemoActions {..} bidi@MkBiDiActions {..} = do
+    action :: DemoActions -> Actions -> IO ()
+    action utils@MkDemoActions {..} bidi@MkActions {..} = do
       bc <- rootContext utils bidi
 
       logTxt "Test 1: Enable touch emulation with 5 touch points"
@@ -357,8 +357,8 @@ emulationCompleteWorkflowDemo :: BiDiDemo
 emulationCompleteWorkflowDemo =
   demo "Emulation - Complete Workflow Demo" action
   where
-    action :: DemoActions -> BiDiActions -> IO ()
-    action utils@MkDemoActions {..} bidi@MkBiDiActions {..} = do
+    action :: DemoActions -> Actions -> IO ()
+    action utils@MkDemoActions {..} bidi@MkActions {..} = do
       logTxt "=== Creating multiple browsing contexts for emulation demo ==="
       bc1 <- rootContext utils bidi
       bc2 <- newWindowContext utils bidi
@@ -537,8 +537,8 @@ emulationSetForcedColorsModeThemeOverrideDemo :: BiDiDemo
 emulationSetForcedColorsModeThemeOverrideDemo =
   demo "Emulation - Set Forced Colors Mode Theme Override - since https://www.w3.org/TR/2025/WD-webdriver-bidi-20250729" action
   where
-    action :: DemoActions -> BiDiActions -> IO ()
-    action utils@MkDemoActions {..} bidi@MkBiDiActions {..} = do
+    action :: DemoActions -> Actions -> IO ()
+    action utils@MkDemoActions {..} bidi@MkActions {..} = do
       bc <- rootContext utils bidi
 
       logTxt "Test 1: Set forced colors mode theme to light"
@@ -576,8 +576,8 @@ emulationSetNetworkConditionsDemo :: BiDiDemo
 emulationSetNetworkConditionsDemo =
   demo "Emulation - Set Network Conditions - since https://www.w3.org/TR/2025/WD-webdriver-bidi-20251007" action
   where
-    action :: DemoActions -> BiDiActions -> IO ()
-    action utils@MkDemoActions {..} bidi@MkBiDiActions {..} = do
+    action :: DemoActions -> Actions -> IO ()
+    action utils@MkDemoActions {..} bidi@MkActions {..} = do
       bc <- rootContext utils bidi
 
       logTxt "Test 1: Set network to offline mode"
@@ -606,8 +606,8 @@ emulationSetUserAgentOverrideDemo :: BiDiDemo
 emulationSetUserAgentOverrideDemo =
   demo "Emulation - Set User Agent Override - since https://www.w3.org/TR/2025/WD-webdriver-bidi-20250910" action
   where
-    action :: DemoActions -> BiDiActions -> IO ()
-    action utils@MkDemoActions {..} bidi@MkBiDiActions {..} = do
+    action :: DemoActions -> Actions -> IO ()
+    action utils@MkDemoActions {..} bidi@MkActions {..} = do
       bc <- rootContext utils bidi
 
       logTxt "Test 1: Set custom User-Agent (Chrome on Windows)"
@@ -645,8 +645,8 @@ emulationSetScriptingEnabledDemo :: BiDiDemo
 emulationSetScriptingEnabledDemo =
   demo "Emulation - Set Scripting Enabled - since https://www.w3.org/TR/2025/WD-webdriver-bidi-20250811" action
   where
-    action :: DemoActions -> BiDiActions -> IO ()
-    action utils@MkDemoActions {..} bidi@MkBiDiActions {..} = do
+    action :: DemoActions -> Actions -> IO ()
+    action utils@MkDemoActions {..} bidi@MkActions {..} = do
       bc <- rootContext utils bidi
 
       logTxt "Test 1: Disable JavaScript"

@@ -1,6 +1,6 @@
 module WebExtensionDemos where
 
-import Actions (BiDiActions (..))
+import Actions (Actions (..))
 import BiDiDemoUtils ( demo, BiDiDemo, runDemo )
 import Control.Exception (SomeException, catch)
 import WebDriverPreCore.Test.IOUtils (DemoActions (..))
@@ -23,8 +23,8 @@ webExtensionInstallPathDemo :: BiDiDemo
 webExtensionInstallPathDemo =
   demo "WebExtension - Install from Path" action
   where
-    action :: DemoActions -> BiDiActions -> IO ()
-    action MkDemoActions {..} MkBiDiActions {..} = do
+    action :: DemoActions -> Actions -> IO ()
+    action MkDemoActions {..} MkActions {..} = do
       logTxt "Test 1: Install extension from filesystem path"
       exPath <- demoExtensionDirPath
       result <- webExtensionInstall $ ExtensionPath exPath
@@ -47,8 +47,8 @@ webExtensionInstallArchiveDemo :: BiDiDemo
 webExtensionInstallArchiveDemo =
   demo "WebExtension - Install from Archive" action
   where
-    action :: DemoActions -> BiDiActions -> IO ()
-    action MkDemoActions {..} MkBiDiActions {..} = do
+    action :: DemoActions -> Actions -> IO ()
+    action MkDemoActions {..} MkActions {..} = do
       logTxt "Test 1: Install extension from zip archive"
       zipPath <- demoExtensionZipPath
       result1 <- webExtensionInstall $ ExtensionArchivePath zipPath
@@ -60,8 +60,8 @@ webExtensionInstallBase64Demo :: BiDiDemo
 webExtensionInstallBase64Demo =
   demo "WebExtension - Install from Base64" action
   where
-    action :: DemoActions -> BiDiActions -> IO ()
-    action MkDemoActions {..} MkBiDiActions {..} = do
+    action :: DemoActions -> Actions -> IO ()
+    action MkDemoActions {..} MkActions {..} = do
       logTxt "Test 1: Install extension from base64 encoded data"
 
       base64Data <- demoExtensionAsBase64
@@ -74,8 +74,8 @@ webExtensionValidationDemo :: BiDiDemo
 webExtensionValidationDemo =
   demo "WebExtension - Extension Validation" action
   where
-    action :: DemoActions -> BiDiActions -> IO ()
-    action MkDemoActions {..} MkBiDiActions {..} = do
+    action :: DemoActions -> Actions -> IO ()
+    action MkDemoActions {..} MkActions {..} = do
       logTxt "Test 1: Invalid extension path"
       let invalidExtension = ExtensionPath "/non/existent/path"
       invalidResult <-

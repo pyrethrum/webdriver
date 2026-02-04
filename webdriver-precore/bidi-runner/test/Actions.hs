@@ -133,7 +133,7 @@ extractSubscription :: SessionSubscribeResult -> SubscriptionId
 extractSubscription (MkSessionSubscribeResult {subscription}) = subscription
 
 -- | BiDi actions interface - wraps BiDiRunner with named functions for each command
-data BiDiActions = MkBiDiActions
+data Actions = MkActions
   { -- Session commands
     sessionNew :: Capabilities -> IO SessionNewResult,
     sessionStatus :: IO SessionStatusResult,
@@ -282,10 +282,10 @@ data BiDiActions = MkBiDiActions
       IO SubscriptionId
   }
 
--- | Create BiDiActions from a BiDiRunner
-mkActions :: BiDiRunner -> BiDiActions
+-- | Create Actions from a BiDiRunner
+mkActions :: BiDiRunner -> Actions
 mkActions (MkBiDiRunner {run, socketActions}) =
-  MkBiDiActions
+  MkActions
     { -- Session commands
       sessionNew = run . API.sessionNew,
       sessionStatus = run API.sessionStatus,

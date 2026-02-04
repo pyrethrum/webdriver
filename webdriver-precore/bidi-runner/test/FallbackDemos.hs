@@ -1,6 +1,6 @@
 module FallbackDemos where
 
-import Actions (BiDiActions (..))
+import Actions (Actions (..))
 import BiDiDemoUtils
 import WebDriverPreCore.Test.Const (seconds)
 import Data.Aeson (Value (..), FromJSON)
@@ -27,8 +27,8 @@ fallbackExtendCommandDemo :: BiDiDemo
 fallbackExtendCommandDemo =
   demo "Fallback - Extend Navigate Command with Extra Property" action
   where
-    action :: DemoActions -> BiDiActions -> IO ()
-    action utils@MkDemoActions {..} bidi@MkBiDiActions {..} = do
+    action :: DemoActions -> Actions -> IO ()
+    action utils@MkDemoActions {..} bidi@MkActions {..} = do
       bc <- rootContext utils bidi
       url <- contentPageUrl
 
@@ -58,8 +58,8 @@ fallbackOffSpecCommandDemo :: BiDiDemo
 fallbackOffSpecCommandDemo =
   demo "Fallback - Navigate Using mkAnyCommand with Raw Object" action
   where
-    action :: DemoActions -> BiDiActions -> IO ()
-    action utils@MkDemoActions {..} bidi@MkBiDiActions {..} = do
+    action :: DemoActions -> Actions -> IO ()
+    action utils@MkDemoActions {..} bidi@MkActions {..} = do
       bc <- rootContext utils bidi
       url <- contentPageUrl
 
@@ -105,8 +105,8 @@ fallbackCommandCoercionsDemo :: BiDiDemo
 fallbackCommandCoercionsDemo =
   demo "Fallback - Command Coercions" action
   where
-    action :: DemoActions -> BiDiActions -> IO ()
-    action utils@MkDemoActions {..} bidi@MkBiDiActions {..} = do
+    action :: DemoActions -> Actions -> IO ()
+    action utils@MkDemoActions {..} bidi@MkActions {..} = do
       bc <- rootContext utils bidi
       url <- contentPageUrl
 
@@ -130,8 +130,8 @@ fallbackSubscribeUnknownEventDemo :: BiDiDemo
 fallbackSubscribeUnknownEventDemo =
   demo "Fallback - Subscribe to Navigation Event Using Unknown Subscription" action
   where
-    action :: DemoActions -> BiDiActions -> IO ()
-    action utils@MkDemoActions {..} bidi@MkBiDiActions {..} = do
+    action :: DemoActions -> Actions -> IO ()
+    action utils@MkDemoActions {..} bidi@MkActions {..} = do
       bc <- rootContext utils bidi
       url <- contentPageUrl
 
@@ -170,8 +170,8 @@ fallbackSubscribeUnknownEventFilteredDemo :: BiDiDemo
 fallbackSubscribeUnknownEventFilteredDemo =
   demo "Fallback - Subscribe to Navigation Event with Context Filter" action
   where
-    action :: DemoActions -> BiDiActions -> IO ()
-    action utils@MkDemoActions {..} bidi@MkBiDiActions {..} = do
+    action :: DemoActions -> Actions -> IO ()
+    action utils@MkDemoActions {..} bidi@MkActions {..} = do
       bc <- rootContext utils bidi
       url <- contentPageUrl
 

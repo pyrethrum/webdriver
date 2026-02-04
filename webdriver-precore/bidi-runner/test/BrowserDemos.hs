@@ -1,6 +1,6 @@
 module BrowserDemos where
 
-import Actions (BiDiActions (..))
+import Actions (Actions (..))
 import BiDiDemoUtils
 import WebDriverPreCore.Test.IOUtils (DemoActions (..))
 import WebDriverPreCore.BiDi.Protocol
@@ -25,8 +25,8 @@ browserGetClientWindowsDemo :: BiDiDemo
 browserGetClientWindowsDemo =
   demo "Browser - Get Client Windows" action
   where
-    action :: DemoActions -> BiDiActions -> IO ()
-    action MkDemoActions {..} MkBiDiActions {..} = do
+    action :: DemoActions -> Actions -> IO ()
+    action MkDemoActions {..} MkActions {..} = do
       logTxt "Getting current client windows"
       clientWindows <- browserGetClientWindows
       logShow "Client windows" clientWindows
@@ -37,8 +37,8 @@ browserCreateUserContextDemo :: BiDiDemo
 browserCreateUserContextDemo =
   demo "Browser - Create User Context" action
   where
-    action :: DemoActions -> BiDiActions -> IO ()
-    action MkDemoActions {..} MkBiDiActions {..} = do
+    action :: DemoActions -> Actions -> IO ()
+    action MkDemoActions {..} MkActions {..} = do
       logTxt "Creating basic user context"
       let basicUserContext =
             MkCreateUserContext
@@ -61,8 +61,8 @@ browserGetUserContextsDemo :: BiDiDemo
 browserGetUserContextsDemo =
   demo "Browser - Get User Contexts" action
   where
-    action :: DemoActions -> BiDiActions -> IO ()
-    action MkDemoActions {..} MkBiDiActions {..} = do
+    action :: DemoActions -> Actions -> IO ()
+    action MkDemoActions {..} MkActions {..} = do
       logTxt "Getting all user contexts"
       userContexts <- browserGetUserContexts
       logShow "User contexts" userContexts
@@ -74,8 +74,8 @@ browserSetClientWindowStateDemo :: BiDiDemo
 browserSetClientWindowStateDemo =
   demo "Browser - Set Client Window State" action
   where
-    action :: DemoActions -> BiDiActions -> IO ()
-    action MkDemoActions {..} MkBiDiActions {..} = do
+    action :: DemoActions -> Actions -> IO ()
+    action MkDemoActions {..} MkActions {..} = do
       logTxt "Getting current client windows to find one to modify"
       clientWindows <- browserGetClientWindows
       logShow "Available client windows" clientWindows
@@ -121,8 +121,8 @@ browserRemoveUserContextDemo :: BiDiDemo
 browserRemoveUserContextDemo =
   demo "Browser - Remove User Context" action
   where
-    action :: DemoActions -> BiDiActions -> IO ()
-    action MkDemoActions {..} MkBiDiActions {..} = do
+    action :: DemoActions -> Actions -> IO ()
+    action MkDemoActions {..} MkActions {..} = do
       logTxt "Creating a user context to remove"
       let userContextParams =
             MkCreateUserContext
@@ -145,8 +145,8 @@ browserCompleteWorkflowDemo :: BiDiDemo
 browserCompleteWorkflowDemo =
   demo "Browser - Complete Workflow" action
   where
-    action :: DemoActions -> BiDiActions -> IO ()
-    action MkDemoActions {..} MkBiDiActions {..} = do
+    action :: DemoActions -> Actions -> IO ()
+    action MkDemoActions {..} MkActions {..} = do
       logTxt "Step 1: Get initial state"
       initialWindows <- browserGetClientWindows
       initialContexts <- browserGetUserContexts
@@ -253,8 +253,8 @@ browserSetDownloadBehaviorDemo :: BiDiDemo
 browserSetDownloadBehaviorDemo =
   demo "Browser - Set Download Behavior (since https://www.w3.org/TR/2025/WD-webdriver-bidi-20250918)" action
   where
-    action :: DemoActions -> BiDiActions -> IO ()
-    action MkDemoActions {..} MkBiDiActions {..} = do
+    action :: DemoActions -> Actions -> IO ()
+    action MkDemoActions {..} MkActions {..} = do
       logTxt "Setting download behavior to allow downloads to /tmp/downloads"
       let allowedDownload =
             MkSetDownloadBehavior
@@ -309,8 +309,8 @@ browserCloseDemo =
   demo "Browser - Close (CAUTION: Terminates Session)" action
   where
     -- will fail with: "Closing the browser in a session started with WebDriver classic is not supported."
-    action :: DemoActions -> BiDiActions -> IO ()
-    action MkDemoActions {..} MkBiDiActions {..} = do
+    action :: DemoActions -> Actions -> IO ()
+    action MkDemoActions {..} MkActions {..} = do
       logTxt "Getting final browser state before closing..."
       finalWindows <- browserGetClientWindows
       finalContexts <- browserGetUserContexts

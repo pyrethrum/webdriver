@@ -1,6 +1,6 @@
 module InputDemos where
 
-import Actions (BiDiActions (..))
+import Actions (Actions (..))
 import BiDiDemoUtils
 import Data.Maybe (fromJust)
 import WebDriverPreCore.Test.IOUtils (DemoActions (..))
@@ -57,8 +57,8 @@ inputKeyboardDemo :: BiDiDemo
 inputKeyboardDemo =
   demo "Input I - Keyboard Actions" action
   where
-    action :: DemoActions -> BiDiActions -> IO ()
-    action utils@MkDemoActions {..} bidi@MkBiDiActions {..} = do
+    action :: DemoActions -> Actions -> IO ()
+    action utils@MkDemoActions {..} bidi@MkActions {..} = do
       bc <- rootContext utils bidi
       textAreaPageUrl <- textAreaUrl
 
@@ -300,8 +300,8 @@ inputKeyboardDemo =
 -- Note: This does NOT resize the browser window itself in Firefox/geckodriver
 -- because browser.setClientWindowState is not yet supported.onfi
 -- The viewport change affects coordinate calculations but isn't visually obvious.
-enlargeViewport :: BiDiActions -> BrowsingContext -> IO ()
-enlargeViewport MkBiDiActions {..} bc = do
+enlargeViewport :: Actions -> BrowsingContext -> IO ()
+enlargeViewport MkActions {..} bc = do
     browsingContextSetViewport $
           MkSetViewport
             { context = Just bc,
@@ -322,8 +322,8 @@ inputPointerDemo :: BiDiDemo
 inputPointerDemo =
   demo "Input II - Pointer/Mouse Actions" action
   where
-    action :: DemoActions -> BiDiActions -> IO ()
-    action utils@MkDemoActions {..} bidi@MkBiDiActions {..} = do
+    action :: DemoActions -> Actions -> IO ()
+    action utils@MkDemoActions {..} bidi@MkActions {..} = do
       bc <- rootContext utils bidi
       chkBoxPage <- checkboxesUrl
 
@@ -511,8 +511,8 @@ inputWheelDemo :: BiDiDemo
 inputWheelDemo =
   demo "Input III - Wheel/Scroll Actions" action
   where
-    action :: DemoActions -> BiDiActions -> IO ()
-    action utils@MkDemoActions {..} bidi@MkBiDiActions {..} = do
+    action :: DemoActions -> Actions -> IO ()
+    action utils@MkDemoActions {..} bidi@MkActions {..} = do
       bc <- rootContext utils bidi
       infiniteScroll <- infiniteScrollUrl
 
@@ -618,8 +618,8 @@ inputCombinedActionsDemo :: BiDiDemo
 inputCombinedActionsDemo =
   demo "Input IV - Combined Actions" action
   where
-    action :: DemoActions -> BiDiActions -> IO ()
-    action utils@MkDemoActions {..} bidi@MkBiDiActions {..} = do
+    action :: DemoActions -> Actions -> IO ()
+    action utils@MkDemoActions {..} bidi@MkActions {..} = do
       bc <- rootContext utils bidi
       testPage <- textAreaUrl
 
@@ -817,8 +817,8 @@ inputReleaseActionsDemo :: BiDiDemo
 inputReleaseActionsDemo =
   demo "Input V - Release Actions" action
   where
-    action :: DemoActions -> BiDiActions -> IO ()
-    action utils@MkDemoActions {..} bidi@MkBiDiActions {..} = do
+    action :: DemoActions -> Actions -> IO ()
+    action utils@MkDemoActions {..} bidi@MkActions {..} = do
       bc <- rootContext utils bidi
       testPage <- textAreaUrl
 
@@ -973,8 +973,8 @@ inputSetFilesDemo :: BiDiDemo
 inputSetFilesDemo =
   demo "Input VI - Set Files for File Upload" action
   where
-    action :: DemoActions -> BiDiActions -> IO ()
-    action utils@MkDemoActions {..} bidi@MkBiDiActions {..} = do
+    action :: DemoActions -> Actions -> IO ()
+    action utils@MkDemoActions {..} bidi@MkActions {..} = do
       bc <- rootContext utils bidi
       uploadUrl <- fileUrl "upload.html"
 

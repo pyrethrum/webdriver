@@ -1,6 +1,6 @@
 module ScriptEventDemos where
 
-import Actions (BiDiActions (..))
+import Actions (Actions (..))
 import BiDiDemoUtils
 import WebDriverPreCore.Test.IOUtils (DemoActions (..))
 import WebDriverPreCore.Test.TestData (checkboxesUrl, scriptRealmUrl)
@@ -23,8 +23,8 @@ scriptEventRealmLifecycle :: BiDiDemo
 scriptEventRealmLifecycle =
   demo "Script Events - Realm Created and Destroyed" action
   where
-    action :: DemoActions -> BiDiActions -> IO ()
-    action utils@MkDemoActions {..} bidi@MkBiDiActions {..} = do
+    action :: DemoActions -> Actions -> IO ()
+    action utils@MkDemoActions {..} bidi@MkActions {..} = do
       logTxt "Subscribe to RealmCreated and RealmDestroyed events"
 
       (realmCreatedEventFired, waitRealmCreatedEventFired) <- timeLimitLog ScriptRealmCreated
@@ -84,8 +84,8 @@ scriptEventMessage :: BiDiDemo
 scriptEventMessage =
   demo "Script Events - Message via Channel" action
   where
-    action :: DemoActions -> BiDiActions -> IO ()
-    action utils@MkDemoActions {..} bidi@MkBiDiActions {..} = do
+    action :: DemoActions -> Actions -> IO ()
+    action utils@MkDemoActions {..} bidi@MkActions {..} = do
       logTxt "Subscribe to Message event"
 
       (messageEventFired, waitMessageEventFired) <- timeLimitLog ScriptMessage
@@ -137,8 +137,8 @@ scriptEventMessageRuntime :: BiDiDemo
 scriptEventMessageRuntime =
   demo "Script Events - Runtime Message via sendBidiMessage" action
   where
-    action :: DemoActions -> BiDiActions -> IO ()
-    action utils@MkDemoActions {..} bidi@MkBiDiActions {..} = do
+    action :: DemoActions -> Actions -> IO ()
+    action utils@MkDemoActions {..} bidi@MkActions {..} = do
       logTxt "Subscribe to Message event"
       subscribeScriptMessage $ logShow "Script Message Event"
 

@@ -3,11 +3,10 @@ import: https://www.stackage.org/nightly-2026-01-18/cabal.config
 
 -- Allow newer versions to resolve dependency conflicts
 allow-newer:
-  falsify:optparse-applicative
+  falsify:optparse-applicative,
 
 packages: 
-  webdriver-precore/*.cabal
-  webdriver-precore/test-server/*.cabal
+  **/*.cabal
 
 with-compiler: ghc-9.10.1
 -- with-compiler: ghc-9.10.1

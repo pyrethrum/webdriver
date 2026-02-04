@@ -1,6 +1,6 @@
 module NetworkDemos where
 
-import Actions (BiDiActions (..))
+import Actions (Actions (..))
 import BiDiDemoUtils
   ( BiDiDemo,
     closeContext,
@@ -91,8 +91,8 @@ networkDataCollectorDemo =
     "Network I - Data Collector Management - Response data contructor added https://www.w3.org/TR/2025/WD-webdriver-bidi-20251001"
     action
   where
-    action :: DemoActions -> BiDiActions -> IO ()
-    action utils@MkDemoActions {..} bidi@MkBiDiActions {..} = do
+    action :: DemoActions -> Actions -> IO ()
+    action utils@MkDemoActions {..} bidi@MkActions {..} = do
       withTestServer $ do
         bc <- rootContext utils bidi
 
@@ -219,8 +219,8 @@ networkInterceptDemo :: BiDiDemo
 networkInterceptDemo =
   demo "Network II - Request/Response Interception" action
   where
-    action :: DemoActions -> BiDiActions -> IO ()
-    action utils@MkDemoActions {..} bidi@MkBiDiActions {..} = do
+    action :: DemoActions -> Actions -> IO ()
+    action utils@MkDemoActions {..} bidi@MkActions {..} = do
       bc <- rootContext utils bidi
 
       logTxt "Test 1: Add intercept for BeforeRequestSent phase"
@@ -389,8 +389,8 @@ networkRequestModificationDemo :: BiDiDemo
 networkRequestModificationDemo =
   demo "Network III - Request Modification" action
   where
-    action :: DemoActions -> BiDiActions -> IO ()
-    action utils@MkDemoActions {..} bidi@MkBiDiActions {..} = do
+    action :: DemoActions -> Actions -> IO ()
+    action utils@MkDemoActions {..} bidi@MkActions {..} = do
       bc <- rootContext utils bidi
 
       withTestServer $ do
@@ -451,8 +451,8 @@ networkResponseModificationDemo :: BiDiDemo
 networkResponseModificationDemo =
   demo "Network IV - Response Modification (Headers & Status Only) - modified in subscription" action
   where
-    action :: DemoActions -> BiDiActions -> IO ()
-    action utils@MkDemoActions {..} bidi@MkBiDiActions {..} = do
+    action :: DemoActions -> Actions -> IO ()
+    action utils@MkDemoActions {..} bidi@MkActions {..} = do
       bc <- rootContext utils bidi
 
       withTestServer $ do
@@ -536,8 +536,8 @@ networkResponseModificationDemo2 :: BiDiDemo
 networkResponseModificationDemo2 =
   demo "Network IV - Response Modification - with pre-generated id" action
   where
-    action :: DemoActions -> BiDiActions -> IO ()
-    action utils@MkDemoActions {..} bidi@MkBiDiActions {..} = do
+    action :: DemoActions -> Actions -> IO ()
+    action utils@MkDemoActions {..} bidi@MkActions {..} = do
       bc <- rootContext utils bidi
 
       withTestServer $ do
@@ -617,8 +617,8 @@ networkAuthCancelDemo :: BiDiDemo
 networkAuthCancelDemo =
   demo "Network V-A - Authentication: Cancel" action
   where
-    action :: DemoActions -> BiDiActions -> IO ()
-    action utils@MkDemoActions {..} bidi@MkBiDiActions {..} = do
+    action :: DemoActions -> Actions -> IO ()
+    action utils@MkDemoActions {..} bidi@MkActions {..} = do
       bc <- rootContext utils bidi
 
       withTestServer $ do
@@ -666,8 +666,8 @@ networkAuthWithCredentialsDemo :: BiDiDemo
 networkAuthWithCredentialsDemo =
   demo "Network V-B - Authentication: Credentials" action
   where
-    action :: DemoActions -> BiDiActions -> IO ()
-    action utils@MkDemoActions {..} bidi@MkBiDiActions {..} = do
+    action :: DemoActions -> Actions -> IO ()
+    action utils@MkDemoActions {..} bidi@MkActions {..} = do
       bc <- rootContext utils bidi
 
       withTestServer $ do
@@ -720,8 +720,8 @@ networkFailRequestDemo :: BiDiDemo
 networkFailRequestDemo =
   demo "Network VI - Request Failure Handling" action
   where
-    action :: DemoActions -> BiDiActions -> IO ()
-    action utils@MkDemoActions {..} bidi@MkBiDiActions {..} = do
+    action :: DemoActions -> Actions -> IO ()
+    action utils@MkDemoActions {..} bidi@MkActions {..} = do
       bc <- rootContext utils bidi
 
       withTestServer $ do
@@ -793,8 +793,8 @@ networkProvideResponseJSONDemo :: BiDiDemo
 networkProvideResponseJSONDemo =
   demo "Network VII-A - Provide JSON Response" action
   where
-    action :: DemoActions -> BiDiActions -> IO ()
-    action utils@MkDemoActions {..} bidi@MkBiDiActions {..} = do
+    action :: DemoActions -> Actions -> IO ()
+    action utils@MkDemoActions {..} bidi@MkActions {..} = do
       bc <- rootContext utils bidi
 
       withTestServer $ do
@@ -861,8 +861,8 @@ networkProvideResponseHTMLDemo :: BiDiDemo
 networkProvideResponseHTMLDemo =
   demo "Network VII-B - Provide HTML Response" action
   where
-    action :: DemoActions -> BiDiActions -> IO ()
-    action utils@MkDemoActions {..} bidi@MkBiDiActions {..} = do
+    action :: DemoActions -> Actions -> IO ()
+    action utils@MkDemoActions {..} bidi@MkActions {..} = do
       bc <- rootContext utils bidi
 
       withTestServer $ do
@@ -933,8 +933,8 @@ networkProvideResponseWithCookiesDemo :: BiDiDemo
 networkProvideResponseWithCookiesDemo =
   demo "Network VII-C - Provide Response with Cookies" action
   where
-    action :: DemoActions -> BiDiActions -> IO ()
-    action utils@MkDemoActions {..} bidi@MkBiDiActions {..} = do
+    action :: DemoActions -> Actions -> IO ()
+    action utils@MkDemoActions {..} bidi@MkActions {..} = do
       bc <- rootContext utils bidi
 
       withTestServer $ do
@@ -1018,8 +1018,8 @@ networkProvideResponseBase64Demo :: BiDiDemo
 networkProvideResponseBase64Demo =
   demo "Network VII-D - Provide Base64 Response" action
   where
-    action :: DemoActions -> BiDiActions -> IO ()
-    action utils@MkDemoActions {..} bidi@MkBiDiActions {..} = do
+    action :: DemoActions -> Actions -> IO ()
+    action utils@MkDemoActions {..} bidi@MkActions {..} = do
       bc <- rootContext utils bidi
 
       withTestServer $ do
@@ -1091,8 +1091,8 @@ networkProvideResponseErrorDemo :: BiDiDemo
 networkProvideResponseErrorDemo =
   demo "Network VII-E - Provide Error Response" action
   where
-    action :: DemoActions -> BiDiActions -> IO ()
-    action utils@MkDemoActions {..} bidi@MkBiDiActions {..} = do
+    action :: DemoActions -> Actions -> IO ()
+    action utils@MkDemoActions {..} bidi@MkActions {..} = do
       bc <- rootContext utils bidi
 
       withTestServer $ do
@@ -1163,8 +1163,8 @@ networkDataRetrievalDemo :: BiDiDemo
 networkDataRetrievalDemo =
   demo "Network VIII - Data Retrieval and Ownership" action
   where
-    action :: DemoActions -> BiDiActions -> IO ()
-    action utils@MkDemoActions {..} bidi@MkBiDiActions {..} = do
+    action :: DemoActions -> Actions -> IO ()
+    action utils@MkDemoActions {..} bidi@MkActions {..} = do
       bc <- rootContext utils bidi
 
       logTxt "Test 1: Add data collector to capture network data"
@@ -1230,8 +1230,8 @@ networkDisownDataDemo :: BiDiDemo
 networkDisownDataDemo =
   demo "Network IX - Data Retrieval and Disown" action
   where
-    action :: DemoActions -> BiDiActions -> IO ()
-    action utils@MkDemoActions {..} bidi@MkBiDiActions {..} = do
+    action :: DemoActions -> Actions -> IO ()
+    action utils@MkDemoActions {..} bidi@MkActions {..} = do
       bc <- rootContext utils bidi
 
       logTxt "Test 1: Add data collector to capture network data"
@@ -1308,8 +1308,8 @@ networkCacheBehaviorDemo :: BiDiDemo
 networkCacheBehaviorDemo =
   demo "Network X - Cache Behavior Management" action
   where
-    action :: DemoActions -> BiDiActions -> IO ()
-    action utils@MkDemoActions {..} bidi@MkBiDiActions {..} = do
+    action :: DemoActions -> Actions -> IO ()
+    action utils@MkDemoActions {..} bidi@MkActions {..} = do
       bc <- rootContext utils bidi
 
       logTxt "Test 1: Set cache behavior to default (global)"
@@ -1416,8 +1416,8 @@ networkSetExtraHeadersDemo :: BiDiDemo
 networkSetExtraHeadersDemo =
   demo "Network XI - Set Extra Headers -- since https://www.w3.org/TR/2025/WD-webdriver-bidi-20251106" action
   where
-    action :: DemoActions -> BiDiActions -> IO ()
-    action utils@MkDemoActions {..} bidi@MkBiDiActions {..} = do
+    action :: DemoActions -> Actions -> IO ()
+    action utils@MkDemoActions {..} bidi@MkActions {..} = do
       bc <- rootContext utils bidi
 
       withTestServer $ do

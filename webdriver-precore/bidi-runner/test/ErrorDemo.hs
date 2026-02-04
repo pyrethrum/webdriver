@@ -1,6 +1,6 @@
 module ErrorDemo where
 
-import Actions (BiDiActions (..))
+import Actions (Actions (..))
 import BiDiDemoUtils (BiDiDemo, demo, runDemo)
 import GHC.Stack (HasCallStack)
 import Test.Tasty.HUnit qualified as HUnit
@@ -37,8 +37,8 @@ errorDemo :: BiDiDemo
 errorDemo =
   demo "BiDi Error Demo" action
   where
-    action :: DemoActions -> BiDiActions -> IO ()
-    action MkDemoActions {..} MkBiDiActions {..} = do
+    action :: DemoActions -> Actions -> IO ()
+    action MkDemoActions {..} MkActions {..} = do
       url <- inputsUrl
 
       -- Create browsing context and navigate

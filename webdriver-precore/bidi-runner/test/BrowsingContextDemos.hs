@@ -1,6 +1,6 @@
 module BrowsingContextDemos where
 
-import Actions (BiDiActions (..))
+import Actions (Actions (..))
 import BiDiDemoUtils
 import WebDriverPreCore.Test.Const (milliseconds)
 import Data.Aeson (Value (Null), object, (.=))
@@ -52,8 +52,8 @@ browsingContextCreateActivateCloseDemo :: BiDiDemo
 browsingContextCreateActivateCloseDemo =
   demo "Browsing Context - Create, Activate, Close" action
   where
-    action :: DemoActions -> BiDiActions -> IO ()
-    action MkDemoActions {..} MkBiDiActions {..} = do
+    action :: DemoActions -> Actions -> IO ()
+    action MkDemoActions {..} MkActions {..} = do
       logTxt "New browsing context - Tab"
       let bcParams =
             MkCreate
@@ -127,8 +127,8 @@ browsingContextCaptureScreenshotCloseDemo :: BiDiDemo
 browsingContextCaptureScreenshotCloseDemo =
   demo "Browsing Context - Capture Screenshot, Close" action
   where
-    action :: DemoActions -> BiDiActions -> IO ()
-    action utils@MkDemoActions {..} bidi@MkBiDiActions {..} = do
+    action :: DemoActions -> Actions -> IO ()
+    action utils@MkDemoActions {..} bidi@MkActions {..} = do
       bc <- rootContext utils bidi
 
       logTxt "Capture screenshot - default"
@@ -175,8 +175,8 @@ browsingContextClosePromptUnloadDemo :: BiDiDemo
 browsingContextClosePromptUnloadDemo =
   demo "Browsing Context - Close with Unload Prompt" action
   where
-    action :: DemoActions -> BiDiActions -> IO ()
-    action utils@MkDemoActions {..} bidi@MkBiDiActions {..} = do
+    action :: DemoActions -> Actions -> IO ()
+    action utils@MkDemoActions {..} bidi@MkActions {..} = do
       bc <- rootContext utils bidi
 
       -- TODO :: promptUnload doesn't seem to do anything ??
@@ -190,8 +190,8 @@ browsingContextGetTreeDemo :: BiDiDemo
 browsingContextGetTreeDemo =
   demo "Browsing Context - Get Tree" action
   where
-    action :: DemoActions -> BiDiActions -> IO ()
-    action utils@MkDemoActions {..} bidi@MkBiDiActions {..} = do
+    action :: DemoActions -> Actions -> IO ()
+    action utils@MkDemoActions {..} bidi@MkActions {..} = do
       logTxt "Get browsing context tree - all"
       tree <- browsingContextGetTree $ MkGetTree Nothing Nothing
       logShow "Browsing context tree" tree
@@ -275,8 +275,8 @@ browsingContextHandleUserPromptDemo :: BiDiDemo
 browsingContextHandleUserPromptDemo =
   demo "Browsing Context - Handle User Prompt" action
   where
-    action :: DemoActions -> BiDiActions -> IO ()
-    action utils@MkDemoActions {..} bidi@MkBiDiActions {..} = do
+    action :: DemoActions -> Actions -> IO ()
+    action utils@MkDemoActions {..} bidi@MkActions {..} = do
       bc <- rootContext utils bidi
 
       logTxt "Test 1: Create and handle an alert dialog"
@@ -383,8 +383,8 @@ browsingNavigateReloadTraverseHistoryDemo :: BiDiDemo
 browsingNavigateReloadTraverseHistoryDemo =
   demo "Browsing Context - Navigate, Reload, Traverse History" action
   where
-    action :: DemoActions -> BiDiActions -> IO ()
-    action utils@MkDemoActions {..} bidi@MkBiDiActions {..} = do
+    action :: DemoActions -> Actions -> IO ()
+    action utils@MkDemoActions {..} bidi@MkActions {..} = do
       bc <- rootContext utils bidi
 
       nav1 <- navigation1Url
@@ -481,8 +481,8 @@ browsingContextLocateNodesDemo :: BiDiDemo
 browsingContextLocateNodesDemo =
   demo "Browsing Context - Locate Nodes with All Selectors and Options" action
   where
-    action :: DemoActions -> BiDiActions -> IO ()
-    action utils@MkDemoActions {..} bidi@MkBiDiActions {..} = do
+    action :: DemoActions -> Actions -> IO ()
+    action utils@MkDemoActions {..} bidi@MkActions {..} = do
       bc <- rootContext utils bidi
 
       loginPage <- loginUrl
@@ -714,8 +714,8 @@ browsingContextContextLocatorDemo :: BiDiDemo
 browsingContextContextLocatorDemo =
   demo "Browsing Context - Context Locator" action
   where
-    action :: DemoActions -> BiDiActions -> IO ()
-    action utils@MkDemoActions {..} bidi@MkBiDiActions {..} = do
+    action :: DemoActions -> Actions -> IO ()
+    action utils@MkDemoActions {..} bidi@MkActions {..} = do
       bc <- rootContext utils bidi
 
       scriptRealmPage <- scriptRealmUrl
@@ -765,8 +765,8 @@ browsingContextPrintDemo :: BiDiDemo
 browsingContextPrintDemo =
   demo "Browsing Context - Print" action
   where
-    action :: DemoActions -> BiDiActions -> IO ()
-    action utils@MkDemoActions {..} bidi@MkBiDiActions {..} = do
+    action :: DemoActions -> Actions -> IO ()
+    action utils@MkDemoActions {..} bidi@MkActions {..} = do
       bc <- rootContext utils bidi
 
       contentPage <- contentPageUrl
@@ -893,8 +893,8 @@ browsingContextSetViewportDemo :: BiDiDemo
 browsingContextSetViewportDemo =
   demo "Browsing Context - Set Viewport" action
   where
-    action :: DemoActions -> BiDiActions -> IO ()
-    action utils@MkDemoActions {..} bidi@MkBiDiActions {..} = do
+    action :: DemoActions -> Actions -> IO ()
+    action utils@MkDemoActions {..} bidi@MkActions {..} = do
       bc <- rootContext utils bidi
 
       contentPage <- contentPageUrl
@@ -978,8 +978,8 @@ browsingContextSetViewportResetDemo :: BiDiDemo
 browsingContextSetViewportResetDemo =
   demo "Browsing Context - Set Viewport Reset to Null" action
   where
-    action :: DemoActions -> BiDiActions -> IO ()
-    action utils@MkDemoActions {..} bidi@MkBiDiActions {..} = do
+    action :: DemoActions -> Actions -> IO ()
+    action utils@MkDemoActions {..} bidi@MkActions {..} = do
       bc <- rootContext utils bidi
 
       contentPage <- contentPageUrl

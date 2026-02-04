@@ -1,6 +1,6 @@
 module NetworkEventDemos where
 
-import Actions (BiDiActions (..))
+import Actions (Actions (..))
 import BiDiDemoUtils
 import WebDriverPreCore.Test.IOUtils (DemoActions (..))
 import WebDriverPreCore.Test.TestServerAPI (authTestUrl, malformedResponseUrl, testServerHomeUrl, withTestServer)
@@ -22,8 +22,8 @@ networkEventRequestResponseLifecycle :: BiDiDemo
 networkEventRequestResponseLifecycle =
   demo "Network Events - Complete Request/Response Lifecycle" action
   where
-    action :: DemoActions -> BiDiActions -> IO ()
-    action utils@MkDemoActions {..} bidi@MkBiDiActions {..} = do
+    action :: DemoActions -> Actions -> IO ()
+    action utils@MkDemoActions {..} bidi@MkActions {..} = do
       logTxt "Subscribe to all network lifecycle events"
 
       (beforeReqEventFired, waitBeforeReqEventFired) <- timeLimitLog NetworkBeforeRequestSent
@@ -60,8 +60,8 @@ networkEventFetchError :: BiDiDemo
 networkEventFetchError =
   demo "Network Events - Fetch Error" action
   where
-    action :: DemoActions -> BiDiActions -> IO ()
-    action utils@MkDemoActions {..} bidi@MkBiDiActions {..} = do
+    action :: DemoActions -> Actions -> IO ()
+    action utils@MkDemoActions {..} bidi@MkActions {..} = do
       withTestServer $ do
         logTxt "Subscribe to FetchError event"
         (fetchErrorEventFired, waitFetchErrorEventFired) <- timeLimitLog NetworkFetchError
@@ -94,8 +94,8 @@ networkEventAuthRequired :: BiDiDemo
 networkEventAuthRequired =
   demo "Network Events - Auth Required (requires auth-protected URL)" action
   where
-    action :: DemoActions -> BiDiActions -> IO ()
-    action utils@MkDemoActions {..} bidi@MkBiDiActions {..} = do
+    action :: DemoActions -> Actions -> IO ()
+    action utils@MkDemoActions {..} bidi@MkActions {..} = do
       logTxt "Subscribe to AuthRequired event"
       (authReqEventFired, waitAuthReqEventFired) <- timeLimitLog NetworkAuthRequired
       subscribeNetworkAuthRequired authReqEventFired
