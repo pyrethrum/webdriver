@@ -1,12 +1,12 @@
-import: https://www.stackage.org/nightly-2026-01-18/cabal.config
-  --  https://www.stackage.org/nightly-2025-02-25/cabal.config
+import: cabal.config
+  -- https://www.stackage.org/nightly-2026-02-05/cabal.config
 
 -- Allow newer versions to resolve dependency conflicts
 allow-newer:
   falsify:optparse-applicative,
 
 packages: 
-  **/*.cabal
+  webdriver-precore/**/*.cabal
 
 with-compiler: ghc-9.10.1
 -- with-compiler: ghc-9.10.1
