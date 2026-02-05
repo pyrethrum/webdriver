@@ -6,7 +6,8 @@ allow-newer:
   falsify:optparse-applicative,
 
 packages: 
-  webdriver-precore/**/*.cabal
+  webdriver-precore/webdriver-precore.cabal
+  webdriver-precore/test-server/test-server.cabal
 
 with-compiler: ghc-9.10.1
 -- with-compiler: ghc-9.10.1

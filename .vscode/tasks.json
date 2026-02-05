@@ -20,6 +20,17 @@
       "problemMatcher": []
     },
     {
+      "label": "build with update clean",
+      "type": "shell",
+      "command": "cabal update && cabal clean && cabal build all --enable-tests",
+      "presentation": {
+        "reveal": "always",
+        "panel": "shared",
+        "showReuseMessage": false
+      },
+      "problemMatcher": []
+    },
+    {
       "label": "build library only",
       "type": "shell",
       "command": "cabal",

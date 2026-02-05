@@ -1,7 +1,7 @@
-cabal-version: 2.4
+cabal-version: 3.12
 
 name:           webdriver-precore
-version:        0.2.0.1
+version:        0.2.0.2
 homepage:       https://github.com/pyrethrum/webdriver-precore#readme
 bug-reports:    https://github.com/pyrethrum/webdriver-precore/issues
 author:         John Walker, Adrian Glouftsis
@@ -150,7 +150,7 @@ test-suite test-utils
   main-is: Test.hs
   hs-source-dirs: utils/test
   build-depends:
-    utils-internal,
+    webdriver-precore:utils-internal,
     base,
     tasty,
     tasty-hunit
@@ -188,8 +188,8 @@ library webdriver-precore-test-utils
       
   hs-source-dirs: test-utils/src
   build-depends:
-    utils-internal,
-    webdriver-precore,
+    webdriver-precore:utils-internal,
+    webdriver-precore:webdriver-precore,
     aeson         >=1.4   && <2.3,
     base          >=4.16  && <5,
     base64        >=0.4   && <1.1,
@@ -225,7 +225,7 @@ test-suite test-http-runner-base
   main-is: Test.hs
   hs-source-dirs: http-runner-base/test
   build-depends:
-    webdriver-precore-http-runner-base
+    webdriver-precore:webdriver-precore-http-runner-base
   default-language: Haskell2010
 
 library webdriver-precore-http-runner
@@ -235,9 +235,9 @@ library webdriver-precore-http-runner
       WebDriverPreCore.HttpRunner.Actions
   hs-source-dirs: http-runner/src
   build-depends:
-    utils-internal,
-    webdriver-precore,
-    webdriver-precore-http-runner-base,
+    webdriver-precore:utils-internal,
+    webdriver-precore:webdriver-precore,
+    webdriver-precore:webdriver-precore-http-runner-base,
     aeson         >=1.4   && <2.3,
     base          >=4.16  && <5,
     text          >=2.1   && <2.2,
@@ -259,12 +259,12 @@ test-suite test-http-runner
     HttpDemo
     HttpDemoUtils
   build-depends:
-    utils-internal,
-    webdriver-precore,
-    webdriver-precore-http-runner,
-    webdriver-precore-http-runner-base,
-    webdriver-precore-test-resources,
-    webdriver-precore-test-utils,
+    webdriver-precore:utils-internal,
+    webdriver-precore:webdriver-precore,
+    webdriver-precore:webdriver-precore-http-runner,
+    webdriver-precore:webdriver-precore-http-runner-base,
+    webdriver-precore:webdriver-precore-test-resources,
+    webdriver-precore:webdriver-precore-test-utils,
     aeson,
     base,
     bytestring,
@@ -303,7 +303,7 @@ test-suite test-bidi-runner-base
   main-is: Test.hs
   hs-source-dirs: bidi-runner-base/test
   build-depends:
-    webdriver-precore-bidi-runner-base
+    webdriver-precore:webdriver-precore-bidi-runner-base
   default-language: Haskell2010
 
 library webdriver-precore-bidi-runner
@@ -312,8 +312,8 @@ library webdriver-precore-bidi-runner
       WebDriverPreCore.BiDiRunner
   hs-source-dirs: bidi-runner/src
   build-depends:
-    webdriver-precore,
-    webdriver-precore-bidi-runner-base,
+    webdriver-precore:webdriver-precore,
+    webdriver-precore:webdriver-precore-bidi-runner-base,
     aeson         >=1.4   && <2.3,
     base          >=4.16  && <5,
     containers    >=0.6   && <0.9,
@@ -348,13 +348,13 @@ test-suite test-bidi-runner
     StorageDemos
     WebExtensionDemos
   build-depends:
-    utils-internal,
-    webdriver-precore,
-    webdriver-precore-bidi-runner,
-    webdriver-precore-bidi-runner-base,
-    webdriver-precore-http-runner,
-    webdriver-precore-test-resources,
-    webdriver-precore-test-utils,
+    webdriver-precore:utils-internal,
+    webdriver-precore:webdriver-precore,
+    webdriver-precore:webdriver-precore-bidi-runner,
+    webdriver-precore:webdriver-precore-bidi-runner-base,
+    webdriver-precore:webdriver-precore-http-runner,
+    webdriver-precore:webdriver-precore-test-resources,
+    webdriver-precore:webdriver-precore-test-utils,
     aeson,
     base,
     bytestring,
@@ -378,7 +378,7 @@ library webdriver-precore-extended
       WebDriverPreCore.Extended.Base.BiDi.Protocol
   hs-source-dirs: extended/src
   build-depends:
-    webdriver-precore,
+    webdriver-precore:webdriver-precore,
     base          >=4.16  && <5,
     text          >=2.1   && <2.2,
     unliftio      >=0.2   && <0.3
@@ -390,7 +390,7 @@ test-suite test-extended
   main-is: Test.hs
   hs-source-dirs: extended/test
   build-depends:
-    webdriver-precore-extended
+    webdriver-precore:webdriver-precore-extended
   default-language: Haskell2010
 
 library webdriver-precore-driver-control
@@ -413,7 +413,7 @@ test-suite test-driver-control
   main-is: Test.hs
   hs-source-dirs: driver-control/test
   build-depends:
-    webdriver-precore-driver-control
+    webdriver-precore:webdriver-precore-driver-control
   default-language: Haskell2010
 
 library webdriver-effectful
@@ -422,7 +422,7 @@ library webdriver-effectful
       WebDriver.Effectful
   hs-source-dirs: effectful/src
   build-depends:
-    webdriver-precore-extended,
+    webdriver-precore:webdriver-precore-extended,
     base          >=4.16  && <5,
     effectful     >=2.3   && <2.7,
     effectful-core >=2.3  && <2.7,
@@ -436,7 +436,7 @@ test-suite test-effectful
   main-is: Test.hs
   hs-source-dirs: effectful/test
   build-depends:
-    webdriver-effectful
+    webdriver-precore:webdriver-effectful
   default-language: Haskell2010
 
 library webdriver-rio-poc
@@ -445,7 +445,7 @@ library webdriver-rio-poc
       WebDriver.RIO
   hs-source-dirs: rio-poc/src
   build-depends:
-    webdriver-precore-extended,
+    webdriver-precore:webdriver-precore-extended,
     base          >=4.16  && <5,
     rio           >=0.1   && <0.2
   default-language: Haskell2010
@@ -456,7 +456,7 @@ test-suite test-rio-poc
   main-is: Test.hs
   hs-source-dirs: rio-poc/test
   build-depends:
-    webdriver-rio-poc
+    webdriver-precore:webdriver-rio-poc
   default-language: Haskell2010
 
 library webdriver-bluefin-poc
@@ -465,9 +465,9 @@ library webdriver-bluefin-poc
       WebDriver.Bluefin
   hs-source-dirs: bluefin-poc/src
   build-depends:
-    webdriver-precore-extended,
+    webdriver-precore:webdriver-precore-extended,
     base          >=4.16  && <5,
-    bluefin       >=0.2   && <0.3,
+    bluefin       >=0.2   && <0.5, 
     text          >=2.1   && <2.2,
     unliftio      >=0.2   && <0.3
   default-language: Haskell2010
@@ -478,7 +478,7 @@ test-suite test-bluefin-poc
   main-is: Test.hs
   hs-source-dirs: bluefin-poc/test
   build-depends:
-    webdriver-bluefin-poc
+    webdriver-precore:webdriver-bluefin-poc
   default-language: Haskell2010
 
 library
@@ -521,7 +521,7 @@ library
       WebDriverPreCore.Error
   hs-source-dirs: src
   build-depends:
-    utils-internal,
+    webdriver-precore:utils-internal,
     aeson         >=1.4   && <2.3, 
     base          >=4.16  && <5,
     bytestring    >=0.10  && <0.12.3,
@@ -537,7 +537,7 @@ test-suite test
   hs-source-dirs: test
   build-depends:
     aeson
-    , utils-internal
+    , webdriver-precore:utils-internal
     , base
     , base64
     , bytestring
@@ -556,7 +556,7 @@ test-suite test
     , time
     , text
     , unliftio
-    , webdriver-precore
+    , webdriver-precore:webdriver-precore
     , websockets
   other-modules:
    -- true unit/property tests
