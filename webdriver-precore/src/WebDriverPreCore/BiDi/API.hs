@@ -227,8 +227,8 @@ import WebDriverPreCore.BiDi.Protocol
     mkMultiSubscription,
     mkSubscription,
     mkOffSpecSubscription,
+    RealmInfo, Message
   )
-import WebDriverPreCore.BiDi.Script (Message, RealmInfo)
 
 --- ############## Commands ##############
 
