@@ -2,16 +2,153 @@
 -- Module: WebDriverPreCore.Extended.Base.BiDi.Actions
 -- Description: BiDi actions module
 module WebDriverPreCore.Extended.Base.BiDi.Actions
-  (
+  ( -- * Runner Type
+    Runner,
+    -- * Session Commands
+    sessionNew,
+    sessionStatus,
+    sessionEnd,
+    -- * BrowsingContext Commands
+    browsingContextActivate,
+    browsingContextCaptureScreenshot,
+    browsingContextClose,
+    browsingContextCreate,
+    browsingContextGetTree,
+    browsingContextHandleUserPrompt,
+    browsingContextLocateNodes,
+    browsingContextNavigate,
+    browsingContextPrint,
+    browsingContextReload,
+    browsingContextSetViewport,
+    browsingContextTraverseHistory,
+    -- * Browser Commands
+    browserClose,
+    browserCreateUserContext,
+    browserGetClientWindows,
+    browserGetUserContexts,
+    browserRemoveUserContext,
+    browserSetClientWindowState,
+    browserSetDownloadBehavior,
+    -- * Emulation Commands
+    emulationSetForcedColorsModeThemeOverride,
+    emulationSetGeolocationOverride,
+    emulationSetLocaleOverride,
+    emulationSetNetworkConditions,
+    emulationSetScreenOrientationOverride,
+    emulationSetScreenSettingsOverride,
+    emulationSetScriptingEnabled,
+    emulationSetTimezoneOverride,
+    emulationSetTouchOverride,
+    emulationSetUserAgentOverride,
+    -- * Input Commands
+    inputPerformActions,
+    inputReleaseActions,
+    inputSetFiles,
+    -- * Network Commands
+    networkAddDataCollector,
+    networkAddIntercept,
+    networkContinueRequest,
+    networkContinueResponse,
+    networkContinueWithAuth,
+    networkDisownData,
+    networkFailRequest,
+    networkGetData,
+    networkProvideResponse,
+    networkRemoveDataCollector,
+    networkRemoveIntercept,
+    networkSetCacheBehavior,
+    networkSetExtraHeaders,
+    -- * Script Commands
+    scriptAddPreloadScript,
+    scriptCallFunction,
+    scriptDisown,
+    scriptEvaluate,
+    scriptGetRealms,
+    scriptRemovePreloadScript,
+    -- * Storage Commands
+    storageDeleteCookies,
+    storageGetCookies,
+    storageSetCookie,
+    -- * WebExtension Commands
+    webExtensionInstall,
+    webExtensionUninstall,
+    -- * Subscription Types
+    SendSubMany,
+    SendSubMany',
+    SendSub,
+    SendSub',
+    SendSubOffSpecMany,
+    SendSubOffSpecMany',
+    -- * Subscription Functions
+    subscribeMany,
+    subscribeMany',
+    -- ** BrowsingContext Events
+    subscribeBrowsingContextCreated,
+    subscribeBrowsingContextCreated',
+    subscribeBrowsingContextDestroyed,
+    subscribeBrowsingContextDestroyed',
+    subscribeBrowsingContextNavigationStarted,
+    subscribeBrowsingContextNavigationStarted',
+    subscribeBrowsingContextFragmentNavigated,
+    subscribeBrowsingContextFragmentNavigated',
+    subscribeBrowsingContextHistoryUpdated,
+    subscribeBrowsingContextHistoryUpdated',
+    subscribeBrowsingContextDomContentLoaded,
+    subscribeBrowsingContextDomContentLoaded',
+    subscribeBrowsingContextLoad,
+    subscribeBrowsingContextLoad',
+    subscribeBrowsingContextDownloadWillBegin,
+    subscribeBrowsingContextDownloadWillBegin',
+    subscribeBrowsingContextDownloadEnd,
+    subscribeBrowsingContextDownloadEnd',
+    subscribeBrowsingContextNavigationAborted,
+    subscribeBrowsingContextNavigationAborted',
+    subscribeBrowsingContextNavigationCommitted,
+    subscribeBrowsingContextNavigationCommitted',
+    subscribeBrowsingContextNavigationFailed,
+    subscribeBrowsingContextNavigationFailed',
+    subscribeBrowsingContextUserPromptClosed,
+    subscribeBrowsingContextUserPromptClosed',
+    subscribeBrowsingContextUserPromptOpened,
+    subscribeBrowsingContextUserPromptOpened',
+    -- ** Log Events
+    subscribeLogEntryAdded,
+    subscribeLogEntryAdded',
+    -- ** Network Events
+    subscribeNetworkAuthRequired,
+    subscribeNetworkAuthRequired',
+    subscribeNetworkBeforeRequestSent,
+    subscribeNetworkBeforeRequestSent',
+    subscribeNetworkFetchError,
+    subscribeNetworkFetchError',
+    subscribeNetworkResponseCompleted,
+    subscribeNetworkResponseCompleted',
+    subscribeNetworkResponseStarted,
+    subscribeNetworkResponseStarted',
+    -- ** Script Events
+    subscribeScriptMessage,
+    subscribeScriptMessage',
+    subscribeScriptRealmCreated,
+    subscribeScriptRealmCreated',
+    subscribeScriptRealmDestroyed,
+    subscribeScriptRealmDestroyed',
+    -- ** Input Events
+    subscribeInputFileDialogOpened,
+    subscribeInputFileDialogOpened',
+    -- * Fallback / Utility Functions
+    subscribeOffSpecMany,
+    subscribeOffSpecMany',
+    offSpecCommand,
   )
 where
 
-import WebDriverPreCore.Extended.Base.BiDi.API as API
+import Data.Aeson (Object, Value)
+import Data.Text (Text)
+import WebDriverPreCore.Extended.Base.BiDi.API qualified as API
 import WebDriverPreCore.Extended.Base.BiDi.Protocol
 
 type Runner m a = Command a -> m a
 
-
 --- ############## Commands ##############
 
 ---- Session ----
@@ -29,25 +166,6 @@ sessionNew r = r . API.sessionNew
 --
 -- First added to Spec: <https://www.w3.org/TR/2024/WD-webdriver-bidi-20241121/#command-session-status 21 November 2024 - First Public Working Draft>
 sessionStatus :: forall m. Runner m SessionStatusResult -> m SessionStatusResult
-
---- ############## Commands ##############
-
----- Session ----
-
--- | Specification Entry: <BiDiSpecURL#command-session-new session.new>
---
--- This function is not supported by many Bidi drivers yet. To start a BiDi session you need to create an HTTP session with a web socket port specified.
--- Creating a new BiDi session via this command may result in a driver error.
---
--- First added to Spec: <https://www.w3.org/TR/2024/WD-webdriver-bidi-20241121/#command-session-new 21 November 2024 - First Public Working Draft>
-sessionNew :: forall m. Runner m SessionNewResult -> Capabilities -> m SessionNewResult
-sessionNew r = r . API.sessionNew
-
--- | Specification Entry: <BiDiSpecURL#command-session-status session.status>
---
--- First added to Spec: <https://www.w3.org/TR/2024/WD-webdriver-bidi-20241121/#command-session-status 21 November 2024 - First Public Working Draft>
-sessionStatus :: forall m. Runner m SessionStatusResult -> m SessionStatusResult
-sessionStatus r = 
 sessionStatus r = r API.sessionStatus
 
 -- | Specification Entry: <BiDiSpecURL#command-session-end session.end>
@@ -97,49 +215,11 @@ browsingContextClose r = r . API.browsingContextClose
 browsingContextCreate :: forall m. Runner m BrowsingContext -> Create -> m BrowsingContext
 browsingContextCreate r = r . API.browsingContextCreate
 
-
---- ############## Commands ##############
-
----- Session ----
-
--- | Specification Entry: <BiDiSpecURL#command-session-new session.new>
---
--- This function is not supported by many Bidi drivers yet. To start a BiDi session you need to create an HTTP session with a web socket port specified.
--- Creating a new BiDi session via this command may result in a driver error.
---
--- First added to Spec: <https://www.w3.org/TR/2024/WD-webdriver-bidi-20241121/#command-session-new 21 November 2024 - First Public Working Draft>
-sessionNew :: forall m. Runner m SessionNewResult -> Capabilities -> m SessionNewResult
-sessionNew r = r . API.sessionNew
-
--- | Specification Entry: <BiDiSpecURL#command-session-status session.status>
---
--- First added to Spec: <https://www.w3.org/TR/2024/WD-webdriver-bidi-20241121/#command-session-status 21 November 2024 - First Public Working Draft>
-sessionStatus :: forall m. Runner m SessionStatusResult -> m SessionStatusResult
-sessionStatus r = 
 -- | Specification Entry: <BiDiSpecURL#command-browsingContext-getTree browsingContext.getTree>
 --
 -- First added to Spec: <https://www.w3.org/TR/2024/WD-webdriver-bidi-20241121/#command-browsingContext-getTree 21 November 2024 - First Public Working Draft>
 browsingContextGetTree :: forall m. Runner m GetTreeResult -> GetTree -> m GetTreeResult
 browsingContextGetTree r = r . API.browsingContextGetTree
-
---- ############## Commands ##############
-
----- Session ----
-
--- | Specification Entry: <BiDiSpecURL#command-session-new session.new>
---
--- This function is not supported by many Bidi drivers yet. To start a BiDi session you need to create an HTTP session with a web socket port specified.
--- Creating a new BiDi session via this command may result in a driver error.
---
--- First added to Spec: <https://www.w3.org/TR/2024/WD-webdriver-bidi-20241121/#command-session-new 21 November 2024 - First Public Working Draft>
-sessionNew :: forall m. Runner m SessionNewResult -> Capabilities -> m SessionNewResult
-sessionNew r = r . API.sessionNew
-
--- | Specification Entry: <BiDiSpecURL#command-session-status session.status>
---
--- First added to Spec: <https://www.w3.org/TR/2024/WD-webdriver-bidi-20241121/#command-session-status 21 November 2024 - First Public Working Draft>
-sessionStatus :: forall m. Runner m SessionStatusResult -> m SessionStatusResult
-sessionStatus r = 
 
 -- | Specification Entry: <BiDiSpecURL#command-browsingContext-handleUserPrompt browsingContext.handleUserPrompt>
 --
@@ -213,25 +293,6 @@ browserGetUserContexts r = r API.browserGetUserContexts
 --
 -- First added to Spec: <https://www.w3.org/TR/2024/WD-webdriver-bidi-20241121/#command-browser-removeUserContext 21 November 2024 - First Public Working Draft>
 browserRemoveUserContext :: forall m. Runner m () -> RemoveUserContext -> m ()
-
---- ############## Commands ##############
-
----- Session ----
-
--- | Specification Entry: <BiDiSpecURL#command-session-new session.new>
---
--- This function is not supported by many Bidi drivers yet. To start a BiDi session you need to create an HTTP session with a web socket port specified.
--- Creating a new BiDi session via this command may result in a driver error.
---
--- First added to Spec: <https://www.w3.org/TR/2024/WD-webdriver-bidi-20241121/#command-session-new 21 November 2024 - First Public Working Draft>
-sessionNew :: forall m. Runner m SessionNewResult -> Capabilities -> m SessionNewResult
-sessionNew r = r . API.sessionNew
-
--- | Specification Entry: <BiDiSpecURL#command-session-status session.status>
---
--- First added to Spec: <https://www.w3.org/TR/2024/WD-webdriver-bidi-20241121/#command-session-status 21 November 2024 - First Public Working Draft>
-sessionStatus :: forall m. Runner m SessionStatusResult -> m SessionStatusResult
-sessionStatus r = 
 browserRemoveUserContext r = r . API.browserRemoveUserContext
 
 -- | Specification Entry: <BiDiSpecURL#command-browser-setClientWindowState browser.setClientWindowState>
@@ -258,25 +319,6 @@ emulationSetForcedColorsModeThemeOverride r = r . API.emulationSetForcedColorsMo
 
 -- | Specification Entry: <BiDiSpecURL#command-emulation-setGeolocationOverride emulation.setGeolocationOverride>
 --
-
---- ############## Commands ##############
-
----- Session ----
-
--- | Specification Entry: <BiDiSpecURL#command-session-new session.new>
---
--- This function is not supported by many Bidi drivers yet. To start a BiDi session you need to create an HTTP session with a web socket port specified.
--- Creating a new BiDi session via this command may result in a driver error.
---
--- First added to Spec: <https://www.w3.org/TR/2024/WD-webdriver-bidi-20241121/#command-session-new 21 November 2024 - First Public Working Draft>
-sessionNew :: forall m. Runner m SessionNewResult -> Capabilities -> m SessionNewResult
-sessionNew r = r . API.sessionNew
-
--- | Specification Entry: <BiDiSpecURL#command-session-status session.status>
---
--- First added to Spec: <https://www.w3.org/TR/2024/WD-webdriver-bidi-20241121/#command-session-status 21 November 2024 - First Public Working Draft>
-sessionStatus :: forall m. Runner m SessionStatusResult -> m SessionStatusResult
-sessionStatus r = 
 -- First added to Spec: <https://www.w3.org/TR/2025/WD-webdriver-bidi-20250321/#command-emulation-setGeolocationOverride 21 March 2025>
 emulationSetGeolocationOverride :: forall m. Runner m () -> SetGeolocationOverride -> m ()
 emulationSetGeolocationOverride r = r . API.emulationSetGeolocationOverride
@@ -543,6 +585,249 @@ subscribeMany sendSubMany = sendSubMany API.subscribeMany
 subscribeMany' :: forall m. SendSubMany' m -> [KnownSubscriptionType] -> [BrowsingContext] -> [UserContext] -> (Event -> m ()) -> m SubscriptionId
 subscribeMany' sendSubMany' = sendSubMany' API.subscribeMany
 
+------- 
+
+type SendSub m a =
+  ( [BrowsingContext] ->
+    [UserContext] ->
+    (a -> m ()) ->
+    Subscription m
+  ) ->
+  (a -> m ()) ->
+  m SubscriptionId
+
+type SendSub' m a =
+  ( [BrowsingContext] ->
+    [UserContext] ->
+    (a -> m ()) ->
+    Subscription m
+  ) ->
+  [BrowsingContext] ->
+  [UserContext] ->
+  (a -> m ()) ->
+  m SubscriptionId
+
+---- BrowsingContext ----
+
+-- | Specification Entry: <BiDiSpecURL#event-browsingContext-contextCreated browsingContext.contextCreated>
+--
+-- First added to Spec: <https://www.w3.org/TR/2024/WD-webdriver-bidi-20241121/#event-browsingContext-contextCreated 21 November 2024 - First Public Working Draft>
+subscribeBrowsingContextCreated :: forall m. SendSub m Info -> (Info -> m ()) -> m SubscriptionId
+subscribeBrowsingContextCreated sendSub = sendSub API.subscribeBrowsingContextCreated
+
+subscribeBrowsingContextCreated' :: forall m. SendSub' m Info -> [BrowsingContext] -> [UserContext] -> (Info -> m ()) -> m SubscriptionId
+subscribeBrowsingContextCreated' sendSub' = sendSub' API.subscribeBrowsingContextCreated
+
+-- | Specification Entry: <BiDiSpecURL#event-browsingContext-contextDestroyed browsingContext.contextDestroyed>
+--
+-- First added to Spec: <https://www.w3.org/TR/2024/WD-webdriver-bidi-20241121/#event-browsingContext-contextDestroyed 21 November 2024 - First Public Working Draft>
+subscribeBrowsingContextDestroyed :: forall m. SendSub m Info -> (Info -> m ()) -> m SubscriptionId
+subscribeBrowsingContextDestroyed sendSub = sendSub API.subscribeBrowsingContextDestroyed
+
+subscribeBrowsingContextDestroyed' :: forall m. SendSub' m Info -> [BrowsingContext] -> [UserContext] -> (Info -> m ()) -> m SubscriptionId
+subscribeBrowsingContextDestroyed' sendSub' = sendSub' API.subscribeBrowsingContextDestroyed
+
+-- | Specification Entry: <BiDiSpecURL#event-browsingContext-navigationStarted browsingContext.navigationStarted>
+--
+-- First added to Spec: <https://www.w3.org/TR/2024/WD-webdriver-bidi-20241121/#event-browsingContext-navigationStarted 21 November 2024 - First Public Working Draft>
+subscribeBrowsingContextNavigationStarted :: forall m. SendSub m NavigationInfo -> (NavigationInfo -> m ()) -> m SubscriptionId
+subscribeBrowsingContextNavigationStarted sendSub = sendSub API.subscribeBrowsingContextNavigationStarted
+
+subscribeBrowsingContextNavigationStarted' :: forall m. SendSub' m NavigationInfo -> [BrowsingContext] -> [UserContext] -> (NavigationInfo -> m ()) -> m SubscriptionId
+subscribeBrowsingContextNavigationStarted' sendSub' = sendSub' API.subscribeBrowsingContextNavigationStarted
+
+-- | Specification Entry: <BiDiSpecURL#event-browsingContext-fragmentNavigated browsingContext.fragmentNavigated>
+--
+-- First added to Spec: <https://www.w3.org/TR/2024/WD-webdriver-bidi-20241121/#event-browsingContext-fragmentNavigated 21 November 2024 - First Public Working Draft>
+subscribeBrowsingContextFragmentNavigated :: forall m. SendSub m NavigationInfo -> (NavigationInfo -> m ()) -> m SubscriptionId
+subscribeBrowsingContextFragmentNavigated sendSub = sendSub API.subscribeBrowsingContextFragmentNavigated
+
+subscribeBrowsingContextFragmentNavigated' :: forall m. SendSub' m NavigationInfo -> [BrowsingContext] -> [UserContext] -> (NavigationInfo -> m ()) -> m SubscriptionId
+subscribeBrowsingContextFragmentNavigated' sendSub' = sendSub' API.subscribeBrowsingContextFragmentNavigated
+
+-- | Specification Entry: <BiDiSpecURL#event-browsingContext-historyUpdated browsingContext.historyUpdated>
+--
+-- First added to Spec: <https://www.w3.org/TR/2024/WD-webdriver-bidi-20241121/#event-browsingContext-historyUpdated 21 November 2024 - First Public Working Draft>
+subscribeBrowsingContextHistoryUpdated :: forall m. SendSub m HistoryUpdated -> (HistoryUpdated -> m ()) -> m SubscriptionId
+subscribeBrowsingContextHistoryUpdated sendSub = sendSub API.subscribeBrowsingContextHistoryUpdated
+
+subscribeBrowsingContextHistoryUpdated' :: forall m. SendSub' m HistoryUpdated -> [BrowsingContext] -> [UserContext] -> (HistoryUpdated -> m ()) -> m SubscriptionId
+subscribeBrowsingContextHistoryUpdated' sendSub' = sendSub' API.subscribeBrowsingContextHistoryUpdated
+
+-- | Specification Entry: <BiDiSpecURL#event-browsingContext-domContentLoaded browsingContext.domContentLoaded>
+--
+-- First added to Spec: <https://www.w3.org/TR/2024/WD-webdriver-bidi-20241121/#event-browsingContext-domContentLoaded 21 November 2024 - First Public Working Draft>
+subscribeBrowsingContextDomContentLoaded :: forall m. SendSub m NavigationInfo -> (NavigationInfo -> m ()) -> m SubscriptionId
+subscribeBrowsingContextDomContentLoaded sendSub = sendSub API.subscribeBrowsingContextDomContentLoaded
+
+subscribeBrowsingContextDomContentLoaded' :: forall m. SendSub' m NavigationInfo -> [BrowsingContext] -> [UserContext] -> (NavigationInfo -> m ()) -> m SubscriptionId
+subscribeBrowsingContextDomContentLoaded' sendSub' = sendSub' API.subscribeBrowsingContextDomContentLoaded
+
+-- | Specification Entry: <BiDiSpecURL#event-browsingContext-load browsingContext.load>
+--
+-- First added to Spec: <https://www.w3.org/TR/2024/WD-webdriver-bidi-20241121/#event-browsingContext-load 21 November 2024 - First Public Working Draft>
+subscribeBrowsingContextLoad :: forall m. SendSub m NavigationInfo -> (NavigationInfo -> m ()) -> m SubscriptionId
+subscribeBrowsingContextLoad sendSub = sendSub API.subscribeBrowsingContextLoad
+
+subscribeBrowsingContextLoad' :: forall m. SendSub' m NavigationInfo -> [BrowsingContext] -> [UserContext] -> (NavigationInfo -> m ()) -> m SubscriptionId
+subscribeBrowsingContextLoad' sendSub' = sendSub' API.subscribeBrowsingContextLoad
+
+subscribeBrowsingContextDownloadWillBegin :: forall m. SendSub m DownloadWillBegin -> (DownloadWillBegin -> m ()) -> m SubscriptionId
+subscribeBrowsingContextDownloadWillBegin sendSub = sendSub API.subscribeBrowsingContextDownloadWillBegin
+
+subscribeBrowsingContextDownloadWillBegin' :: forall m. SendSub' m DownloadWillBegin -> [BrowsingContext] -> [UserContext] -> (DownloadWillBegin -> m ()) -> m SubscriptionId
+subscribeBrowsingContextDownloadWillBegin' sendSub' = sendSub' API.subscribeBrowsingContextDownloadWillBegin
+
+-- | Specification Entry: <BiDiSpecURL#event-browsingContext-downloadEnd browsingContext.downloadEnd>
+--
+-- First added to Spec: <https://www.w3.org/TR/2025/WD-webdriver-bidi-20250603/#event-browsingContext-downloadEnd 03 June 2025>
+subscribeBrowsingContextDownloadEnd :: forall m. SendSub m DownloadEnd -> (DownloadEnd -> m ()) -> m SubscriptionId
+subscribeBrowsingContextDownloadEnd sendSub = sendSub API.subscribeBrowsingContextDownloadEnd
+
+subscribeBrowsingContextDownloadEnd' :: forall m. SendSub' m DownloadEnd -> [BrowsingContext] -> [UserContext] -> (DownloadEnd -> m ()) -> m SubscriptionId
+subscribeBrowsingContextDownloadEnd' sendSub' = sendSub' API.subscribeBrowsingContextDownloadEnd
+
+-- | Specification Entry: <BiDiSpecURL#event-browsingContext-navigationAborted browsingContext.navigationAborted>
+--
+-- First added to Spec: <https://www.w3.org/TR/2024/WD-webdriver-bidi-20241121/#event-browsingContext-navigationAborted 21 November 2024 - First Public Working Draft>
+subscribeBrowsingContextNavigationAborted :: forall m. SendSub m NavigationInfo -> (NavigationInfo -> m ()) -> m SubscriptionId
+subscribeBrowsingContextNavigationAborted sendSub = sendSub API.subscribeBrowsingContextNavigationAborted
+
+subscribeBrowsingContextNavigationAborted' :: forall m. SendSub' m NavigationInfo -> [BrowsingContext] -> [UserContext] -> (NavigationInfo -> m ()) -> m SubscriptionId
+subscribeBrowsingContextNavigationAborted' sendSub' = sendSub' API.subscribeBrowsingContextNavigationAborted
+
+-- | Specification Entry: <BiDiSpecURL#event-browsingContext-navigationCommitted browsingContext.navigationCommitted>
+--
+-- First added to Spec: <https://www.w3.org/TR/2025/WD-webdriver-bidi-20250131/#event-browsingContext-navigationCommitted 31 January 2025>
+subscribeBrowsingContextNavigationCommitted :: forall m. SendSub m NavigationInfo -> (NavigationInfo -> m ()) -> m SubscriptionId
+subscribeBrowsingContextNavigationCommitted sendSub = sendSub API.subscribeBrowsingContextNavigationCommitted
+
+subscribeBrowsingContextNavigationCommitted' :: forall m. SendSub' m NavigationInfo -> [BrowsingContext] -> [UserContext] -> (NavigationInfo -> m ()) -> m SubscriptionId
+subscribeBrowsingContextNavigationCommitted' sendSub' = sendSub' API.subscribeBrowsingContextNavigationCommitted
+
+-- | Specification Entry: <BiDiSpecURL#event-browsingContext-navigationFailed browsingContext.navigationFailed>
+--
+-- First added to Spec: <https://www.w3.org/TR/2024/WD-webdriver-bidi-20241121/#event-browsingContext-navigationFailed 21 November 2024 - First Public Working Draft>
+subscribeBrowsingContextNavigationFailed :: forall m. SendSub m NavigationInfo -> (NavigationInfo -> m ()) -> m SubscriptionId
+subscribeBrowsingContextNavigationFailed sendSub = sendSub API.subscribeBrowsingContextNavigationFailed
+
+subscribeBrowsingContextNavigationFailed' :: forall m. SendSub' m NavigationInfo -> [BrowsingContext] -> [UserContext] -> (NavigationInfo -> m ()) -> m SubscriptionId
+subscribeBrowsingContextNavigationFailed' sendSub' = sendSub' API.subscribeBrowsingContextNavigationFailed
+
+-- | Specification Entry: <BiDiSpecURL#event-browsingContext-userPromptClosed browsingContext.userPromptClosed>
+--
+-- First added to Spec: <https://www.w3.org/TR/2024/WD-webdriver-bidi-20241121/#event-browsingContext-userPromptClosed 21 November 2024 - First Public Working Draft>
+subscribeBrowsingContextUserPromptClosed :: forall m. SendSub m UserPromptClosed -> (UserPromptClosed -> m ()) -> m SubscriptionId
+subscribeBrowsingContextUserPromptClosed sendSub = sendSub API.subscribeBrowsingContextUserPromptClosed
+
+subscribeBrowsingContextUserPromptClosed' :: forall m. SendSub' m UserPromptClosed -> [BrowsingContext] -> [UserContext] -> (UserPromptClosed -> m ()) -> m SubscriptionId
+subscribeBrowsingContextUserPromptClosed' sendSub' = sendSub' API.subscribeBrowsingContextUserPromptClosed
+
+-- | Specification Entry: <BiDiSpecURL#event-browsingContext-userPromptOpened browsingContext.userPromptOpened>
+--
+-- First added to Spec: <https://www.w3.org/TR/2024/WD-webdriver-bidi-20241121/#event-browsingContext-userPromptOpened 21 November 2024 - First Public Working Draft>
+subscribeBrowsingContextUserPromptOpened :: forall m. SendSub m UserPromptOpened -> (UserPromptOpened -> m ()) -> m SubscriptionId
+subscribeBrowsingContextUserPromptOpened sendSub = sendSub API.subscribeBrowsingContextUserPromptOpened
+
+subscribeBrowsingContextUserPromptOpened' :: forall m. SendSub' m UserPromptOpened -> [BrowsingContext] -> [UserContext] -> (UserPromptOpened -> m ()) -> m SubscriptionId
+subscribeBrowsingContextUserPromptOpened' sendSub' = sendSub' API.subscribeBrowsingContextUserPromptOpened
+
+---- Log ----
+
+-- | Specification Entry: <BiDiSpecURL#event-log-entryAdded log.entryAdded>
+--
+-- First added to Spec: <https://www.w3.org/TR/2024/WD-webdriver-bidi-20241121/#event-log-entryAdded 21 November 2024 - First Public Working Draft>
+subscribeLogEntryAdded :: forall m. SendSub m LogEntry -> (LogEntry -> m ()) -> m SubscriptionId
+subscribeLogEntryAdded sendSub = sendSub API.subscribeLogEntryAdded
+
+subscribeLogEntryAdded' :: forall m. SendSub' m LogEntry -> [BrowsingContext] -> [UserContext] -> (LogEntry -> m ()) -> m SubscriptionId
+subscribeLogEntryAdded' sendSub' = sendSub' API.subscribeLogEntryAdded
+
+---- Network ----
+
+-- | Specification Entry: <BiDiSpecURL#event-network-authRequired network.authRequired>
+--
+-- First added to Spec: <https://www.w3.org/TR/2024/WD-webdriver-bidi-20241121/#event-network-authRequired 21 November 2024 - First Public Working Draft>
+subscribeNetworkAuthRequired :: forall m. SendSub m AuthRequired -> (AuthRequired -> m ()) -> m SubscriptionId
+subscribeNetworkAuthRequired sendSub = sendSub API.subscribeNetworkAuthRequired
+
+subscribeNetworkAuthRequired' :: forall m. SendSub' m AuthRequired -> [BrowsingContext] -> [UserContext] -> (AuthRequired -> m ()) -> m SubscriptionId
+subscribeNetworkAuthRequired' sendSub' = sendSub' API.subscribeNetworkAuthRequired
+
+subscribeNetworkBeforeRequestSent :: forall m. SendSub m BeforeRequestSent -> (BeforeRequestSent -> m ()) -> m SubscriptionId
+subscribeNetworkBeforeRequestSent sendSub = sendSub API.subscribeNetworkBeforeRequestSent
+
+subscribeNetworkBeforeRequestSent' :: forall m. SendSub' m BeforeRequestSent -> [BrowsingContext] -> [UserContext] -> (BeforeRequestSent -> m ()) -> m SubscriptionId
+subscribeNetworkBeforeRequestSent' sendSub' = sendSub' API.subscribeNetworkBeforeRequestSent
+
+-- | Specification Entry: <BiDiSpecURL#event-network-fetchError network.fetchError>
+--
+-- First added to Spec: <https://www.w3.org/TR/2024/WD-webdriver-bidi-20241121/#event-network-fetchError 21 November 2024 - First Public Working Draft>
+subscribeNetworkFetchError :: forall m. SendSub m FetchError -> (FetchError -> m ()) -> m SubscriptionId
+subscribeNetworkFetchError sendSub = sendSub API.subscribeNetworkFetchError
+
+subscribeNetworkFetchError' :: forall m. SendSub' m FetchError -> [BrowsingContext] -> [UserContext] -> (FetchError -> m ()) -> m SubscriptionId
+subscribeNetworkFetchError' sendSub' = sendSub' API.subscribeNetworkFetchError
+
+-- | Specification Entry: <BiDiSpecURL#event-network-responseCompleted network.responseCompleted>
+--
+-- First added to Spec: <https://www.w3.org/TR/2024/WD-webdriver-bidi-20241121/#event-network-responseCompleted 21 November 2024 - First Public Working Draft>
+subscribeNetworkResponseCompleted :: forall m. SendSub m ResponseCompleted -> (ResponseCompleted -> m ()) -> m SubscriptionId
+subscribeNetworkResponseCompleted sendSub = sendSub API.subscribeNetworkResponseCompleted
+
+subscribeNetworkResponseCompleted' :: forall m. SendSub' m ResponseCompleted -> [BrowsingContext] -> [UserContext] -> (ResponseCompleted -> m ()) -> m SubscriptionId
+subscribeNetworkResponseCompleted' sendSub' = sendSub' API.subscribeNetworkResponseCompleted
+
+-- | Specification Entry: <BiDiSpecURL#event-network-responseStarted network.responseStarted>
+--
+-- First added to Spec: <https://www.w3.org/TR/2024/WD-webdriver-bidi-20241121/#event-network-responseStarted 21 November 2024 - First Public Working Draft>
+subscribeNetworkResponseStarted :: forall m. SendSub m ResponseStarted -> (ResponseStarted -> m ()) -> m SubscriptionId
+subscribeNetworkResponseStarted sendSub = sendSub API.subscribeNetworkResponseStarted
+
+subscribeNetworkResponseStarted' :: forall m. SendSub' m ResponseStarted -> [BrowsingContext] -> [UserContext] -> (ResponseStarted -> m ()) -> m SubscriptionId
+subscribeNetworkResponseStarted' sendSub' = sendSub' API.subscribeNetworkResponseStarted
+
+---- Script ----
+
+-- | Specification Entry: <BiDiSpecURL#event-script-message script.message>
+--
+-- First added to Spec: <https://www.w3.org/TR/2024/WD-webdriver-bidi-20241121/#event-script-message 21 November 2024 - First Public Working Draft>
+subscribeScriptMessage :: forall m. SendSub m Message -> (Message -> m ()) -> m SubscriptionId
+subscribeScriptMessage sendSub = sendSub API.subscribeScriptMessage
+
+subscribeScriptMessage' :: forall m. SendSub' m Message -> [BrowsingContext] -> [UserContext] -> (Message -> m ()) -> m SubscriptionId
+subscribeScriptMessage' sendSub' = sendSub' API.subscribeScriptMessage
+
+-- | Specification Entry: <BiDiSpecURL#event-script-realmCreated script.realmCreated>
+--
+-- First added to Spec: <https://www.w3.org/TR/2024/WD-webdriver-bidi-20241121/#event-script-realmCreated 21 November 2024 - First Public Working Draft>
+subscribeScriptRealmCreated :: forall m. SendSub m RealmInfo -> (RealmInfo -> m ()) -> m SubscriptionId
+subscribeScriptRealmCreated sendSub = sendSub API.subscribeScriptRealmCreated
+
+subscribeScriptRealmCreated' :: forall m. SendSub' m RealmInfo -> [BrowsingContext] -> [UserContext] -> (RealmInfo -> m ()) -> m SubscriptionId
+subscribeScriptRealmCreated' sendSub' = sendSub' API.subscribeScriptRealmCreated
+
+-- | Specification Entry: <BiDiSpecURL#event-script-realmDestroyed script.realmDestroyed>
+--
+-- First added to Spec: <https://www.w3.org/TR/2024/WD-webdriver-bidi-20241121/#event-script-realmDestroyed 21 November 2024 - First Public Working Draft>
+subscribeScriptRealmDestroyed :: forall m. SendSub m RealmDestroyed -> (RealmDestroyed -> m ()) -> m SubscriptionId
+subscribeScriptRealmDestroyed sendSub = sendSub API.subscribeScriptRealmDestroyed
+
+subscribeScriptRealmDestroyed' :: forall m. SendSub' m RealmDestroyed -> [BrowsingContext] -> [UserContext] -> (RealmDestroyed -> m ()) -> m SubscriptionId
+subscribeScriptRealmDestroyed' sendSub' = sendSub' API.subscribeScriptRealmDestroyed
+
+---- Input ----
+
+-- | Specification Entry: <BiDiSpecURL#event-input-fileDialogOpened input.filedblogOpened>
+--
+-- First added to Spec: <https://www.w3.org/TR/2025/WD-webdriver-bidi-20250305/#event-input-fileDialogOpened 05 March 2025>
+subscribeInputFileDialogOpened :: forall m. SendSub m FileDialogOpened -> (FileDialogOpened -> m ()) -> m SubscriptionId
+subscribeInputFileDialogOpened sendSub = sendSub API.subscribeInputFileDialogOpened
+
+subscribeInputFileDialogOpened' :: forall m. SendSub' m FileDialogOpened -> [BrowsingContext] -> [UserContext] -> (FileDialogOpened -> m ()) -> m SubscriptionId
+subscribeInputFileDialogOpened' sendSub' = sendSub' API.subscribeInputFileDialogOpened
+
+-- ############## Fallback / Utility Functions ##############
 
 -- | Subscribe to off-specification event types.
 --
@@ -572,250 +857,31 @@ type SendSubOffSpecMany' m =
   (Value -> m ()) ->
   m SubscriptionId
 
+-- | Subscribe to off-specification event types (simplified version).
+--
+-- Use this only as a fallback when a driver supports events not covered by
+-- this library. Prefer using the standard subscription functions when available.
+--
+-- This is the simplified version that subscribes to all browsing contexts and user contexts.
+-- For more control, use 'subscribeOffSpecMany''.
 subscribeOffSpecMany :: forall m. SendSubOffSpecMany m -> [OffSpecSubscriptionType] -> (Value -> m ()) -> m SubscriptionId
 subscribeOffSpecMany sendSubOffSpecMany = sendSubOffSpecMany API.subscribeOffSpecMany
 
+-- | Subscribe to off-specification event types with full control.
+--
+-- Use this only as a fallback when a driver supports events not covered by
+-- this library. Prefer using the standard subscription functions when available.
+--
+-- This version allows you to specify the browsing contexts and user contexts to subscribe to.
 subscribeOffSpecMany' :: forall m. SendSubOffSpecMany' m -> [OffSpecSubscriptionType] -> [BrowsingContext] -> [UserContext] -> (Value -> m ()) -> m SubscriptionId
 subscribeOffSpecMany' sendSubOffSpecMany' = sendSubOffSpecMany' API.subscribeOffSpecMany
 
-------- 
-
-type SendSub m a =
-  ( [BrowsingContext] ->
-    [UserContext] ->
-    (a -> m ()) ->
-    Subscription m
-  ) ->
-  (a -> m ()) ->
-  m SubscriptionId
-
-type SendSub' m a =
-  ( [BrowsingContext] ->
-    [UserContext] ->
-    (a -> m ()) ->
-    Subscription m
-  ) ->
-  [BrowsingContext] ->
-  [UserContext] ->
-  (a -> m ()) ->
-  m SubscriptionId
-
----- BrowsingContext ----
-
--- | Specification Entry: <BiDiSpecURL#event-browsingContext-contextCreated browsingContext.contextCreated>
+-- | Create an off-specification command.
 --
--- First added to Spec: <https://www.w3.org/TR/2024/WD-webdriver-bidi-20241121/#event-browsingContext-contextCreated 21 November 2024 - First Public Working Draft>
-subscribeBrowsingContextCreated :: forall m a. SendSub m Info -> (Info -> m ()) -> m SubscriptionId
-subscribeBrowsingContextCreated sendSub = sendSub API.subscribeBrowsingContextCreated
-
-subscribeBrowsingContextCreated' :: forall m a. SendSub' m Info -> [BrowsingContext] -> [UserContext] -> (Info -> m ()) -> m SubscriptionId
-subscribeBrowsingContextCreated' sendSub' = sendSub' API.subscribeBrowsingContextCreated
-
--- | Specification Entry: <BiDiSpecURL#event-browsingContext-contextDestroyed browsingContext.contextDestroyed>
+-- Use this only as a fallback when a driver supports commands not covered by
+-- this library. Prefer using the standard command functions when available.
 --
--- First added to Spec: <https://www.w3.org/TR/2024/WD-webdriver-bidi-20241121/#event-browsingContext-contextDestroyed 21 November 2024 - First Public Working Draft>
-subscribeBrowsingContextDestroyed :: forall m a. SendSub m Info -> (Info -> m ()) -> m SubscriptionId
-subscribeBrowsingContextDestroyed sendSub = sendSub API.subscribeBrowsingContextDestroyed
-
-subscribeBrowsingContextDestroyed' :: forall m a. SendSub' m Info -> [BrowsingContext] -> [UserContext] -> (Info -> m ()) -> m SubscriptionId
-subscribeBrowsingContextDestroyed' sendSub' = sendSub' API.subscribeBrowsingContextDestroyed
-
--- | Specification Entry: <BiDiSpecURL#event-browsingContext-navigationStarted browsingContext.navigationStarted>
---
--- First added to Spec: <https://www.w3.org/TR/2024/WD-webdriver-bidi-20241121/#event-browsingContext-navigationStarted 21 November 2024 - First Public Working Draft>
-subscribeBrowsingContextNavigationStarted :: forall m a. SendSub m NavigationInfo -> (NavigationInfo -> m ()) -> m SubscriptionId
-subscribeBrowsingContextNavigationStarted sendSub = sendSub API.subscribeBrowsingContextNavigationStarted
-
-subscribeBrowsingContextNavigationStarted' :: forall m a. SendSub' m NavigationInfo -> [BrowsingContext] -> [UserContext] -> (NavigationInfo -> m ()) -> m SubscriptionId
-subscribeBrowsingContextNavigationStarted' sendSub' = sendSub' API.subscribeBrowsingContextNavigationStarted
-
--- | Specification Entry: <BiDiSpecURL#event-browsingContext-fragmentNavigated browsingContext.fragmentNavigated>
---
--- First added to Spec: <https://www.w3.org/TR/2024/WD-webdriver-bidi-20241121/#event-browsingContext-fragmentNavigated 21 November 2024 - First Public Working Draft>
-subscribeBrowsingContextFragmentNavigated :: forall m a. SendSub m NavigationInfo -> (NavigationInfo -> m ()) -> m SubscriptionId
-subscribeBrowsingContextFragmentNavigated sendSub = sendSub API.subscribeBrowsingContextFragmentNavigated
-
-subscribeBrowsingContextFragmentNavigated' :: forall m a. SendSub' m NavigationInfo -> [BrowsingContext] -> [UserContext] -> (NavigationInfo -> m ()) -> m SubscriptionId
-subscribeBrowsingContextFragmentNavigated' sendSub' = sendSub' API.subscribeBrowsingContextFragmentNavigated
-
--- | Specification Entry: <BiDiSpecURL#event-browsingContext-historyUpdated browsingContext.historyUpdated>
---
--- First added to Spec: <https://www.w3.org/TR/2024/WD-webdriver-bidi-20241121/#event-browsingContext-historyUpdated 21 November 2024 - First Public Working Draft>
-subscribeBrowsingContextHistoryUpdated :: forall m a. SendSub m HistoryUpdated -> (HistoryUpdated -> m ()) -> m SubscriptionId
-subscribeBrowsingContextHistoryUpdated sendSub = sendSub API.subscribeBrowsingContextHistoryUpdated
-
-subscribeBrowsingContextHistoryUpdated' :: forall m a. SendSub' m HistoryUpdated -> [BrowsingContext] -> [UserContext] -> (HistoryUpdated -> m ()) -> m SubscriptionId
-subscribeBrowsingContextHistoryUpdated' sendSub' = sendSub' API.subscribeBrowsingContextHistoryUpdated
-
--- | Specification Entry: <BiDiSpecURL#event-browsingContext-domContentLoaded browsingContext.domContentLoaded>
---
--- First added to Spec: <https://www.w3.org/TR/2024/WD-webdriver-bidi-20241121/#event-browsingContext-domContentLoaded 21 November 2024 - First Public Working Draft>
-subscribeBrowsingContextDomContentLoaded :: forall m a. SendSub m NavigationInfo -> (NavigationInfo -> m ()) -> m SubscriptionId
-subscribeBrowsingContextDomContentLoaded sendSub = sendSub API.subscribeBrowsingContextDomContentLoaded
-
-subscribeBrowsingContextDomContentLoaded' :: forall m a. SendSub' m NavigationInfo -> [BrowsingContext] -> [UserContext] -> (NavigationInfo -> m ()) -> m SubscriptionId
-subscribeBrowsingContextDomContentLoaded' sendSub' = sendSub' API.subscribeBrowsingContextDomContentLoaded
-
--- | Specification Entry: <BiDiSpecURL#event-browsingContext-load browsingContext.load>
---
--- First added to Spec: <https://www.w3.org/TR/2024/WD-webdriver-bidi-20241121/#event-browsingContext-load 21 November 2024 - First Public Working Draft>
-subscribeBrowsingContextLoad :: forall m a. SendSub m NavigationInfo -> (NavigationInfo -> m ()) -> m SubscriptionId
-subscribeBrowsingContextLoad sendSub = sendSub API.subscribeBrowsingContextLoad
-
-subscribeBrowsingContextLoad' :: forall m a. SendSub' m NavigationInfo -> [BrowsingContext] -> [UserContext] -> (NavigationInfo -> m ()) -> m SubscriptionId
-subscribeBrowsingContextLoad' sendSub' = sendSub' API.subscribeBrowsingContextLoad
-
-subscribeBrowsingContextDownloadWillBegin :: forall m a. SendSub m DownloadWillBegin -> (DownloadWillBegin -> m ()) -> m SubscriptionId
-subscribeBrowsingContextDownloadWillBegin sendSub = sendSub API.subscribeBrowsingContextDownloadWillBegin
-
-subscribeBrowsingContextDownloadWillBegin' :: forall m a. SendSub' m DownloadWillBegin -> [BrowsingContext] -> [UserContext] -> (DownloadWillBegin -> m ()) -> m SubscriptionId
-subscribeBrowsingContextDownloadWillBegin' sendSub' = sendSub' API.subscribeBrowsingContextDownloadWillBegin
-
--- | Specification Entry: <BiDiSpecURL#event-browsingContext-downloadEnd browsingContext.downloadEnd>
---
--- First added to Spec: <https://www.w3.org/TR/2025/WD-webdriver-bidi-20250603/#event-browsingContext-downloadEnd 03 June 2025>
-subscribeBrowsingContextDownloadEnd :: forall m a. SendSub m DownloadEnd -> (DownloadEnd -> m ()) -> m SubscriptionId
-subscribeBrowsingContextDownloadEnd sendSub = sendSub API.subscribeBrowsingContextDownloadEnd
-
-subscribeBrowsingContextDownloadEnd' :: forall m a. SendSub' m DownloadEnd -> [BrowsingContext] -> [UserContext] -> (DownloadEnd -> m ()) -> m SubscriptionId
-subscribeBrowsingContextDownloadEnd' sendSub' = sendSub' API.subscribeBrowsingContextDownloadEnd
-
--- | Specification Entry: <BiDiSpecURL#event-browsingContext-navigationAborted browsingContext.navigationAborted>
---
--- First added to Spec: <https://www.w3.org/TR/2024/WD-webdriver-bidi-20241121/#event-browsingContext-navigationAborted 21 November 2024 - First Public Working Draft>
-subscribeBrowsingContextNavigationAborted :: forall m a. SendSub m NavigationInfo -> (NavigationInfo -> m ()) -> m SubscriptionId
-subscribeBrowsingContextNavigationAborted sendSub = sendSub API.subscribeBrowsingContextNavigationAborted
-
-subscribeBrowsingContextNavigationAborted' :: forall m a. SendSub' m NavigationInfo -> [BrowsingContext] -> [UserContext] -> (NavigationInfo -> m ()) -> m SubscriptionId
-subscribeBrowsingContextNavigationAborted' sendSub' = sendSub' API.subscribeBrowsingContextNavigationAborted
-
--- | Specification Entry: <BiDiSpecURL#event-browsingContext-navigationCommitted browsingContext.navigationCommitted>
---
--- First added to Spec: <https://www.w3.org/TR/2025/WD-webdriver-bidi-20250131/#event-browsingContext-navigationCommitted 31 January 2025>
-subscribeBrowsingContextNavigationCommitted :: forall m a. SendSub m NavigationInfo -> (NavigationInfo -> m ()) -> m SubscriptionId
-subscribeBrowsingContextNavigationCommitted sendSub = sendSub API.subscribeBrowsingContextNavigationCommitted
-
-subscribeBrowsingContextNavigationCommitted' :: forall m a. SendSub' m NavigationInfo -> [BrowsingContext] -> [UserContext] -> (NavigationInfo -> m ()) -> m SubscriptionId
-subscribeBrowsingContextNavigationCommitted' sendSub' = sendSub' API.subscribeBrowsingContextNavigationCommitted
-
--- | Specification Entry: <BiDiSpecURL#event-browsingContext-navigationFailed browsingContext.navigationFailed>
---
--- First added to Spec: <https://www.w3.org/TR/2024/WD-webdriver-bidi-20241121/#event-browsingContext-navigationFailed 21 November 2024 - First Public Working Draft>
-subscribeBrowsingContextNavigationFailed :: forall m a. SendSub m NavigationInfo -> (NavigationInfo -> m ()) -> m SubscriptionId
-subscribeBrowsingContextNavigationFailed sendSub = sendSub API.subscribeBrowsingContextNavigationFailed
-
-subscribeBrowsingContextNavigationFailed' :: forall m a. SendSub' m NavigationInfo -> [BrowsingContext] -> [UserContext] -> (NavigationInfo -> m ()) -> m SubscriptionId
-subscribeBrowsingContextNavigationFailed' sendSub' = sendSub' API.subscribeBrowsingContextNavigationFailed
-
--- | Specification Entry: <BiDiSpecURL#event-browsingContext-userPromptClosed browsingContext.userPromptClosed>
---
--- First added to Spec: <https://www.w3.org/TR/2024/WD-webdriver-bidi-20241121/#event-browsingContext-userPromptClosed 21 November 2024 - First Public Working Draft>
-subscribeBrowsingContextUserPromptClosed :: forall m a. SendSub m UserPromptClosed -> (UserPromptClosed -> m ()) -> m SubscriptionId
-subscribeBrowsingContextUserPromptClosed sendSub = sendSub API.subscribeBrowsingContextUserPromptClosed
-
-subscribeBrowsingContextUserPromptClosed' :: forall m a. SendSub' m UserPromptClosed -> [BrowsingContext] -> [UserContext] -> (UserPromptClosed -> m ()) -> m SubscriptionId
-subscribeBrowsingContextUserPromptClosed' sendSub' = sendSub' API.subscribeBrowsingContextUserPromptClosed
-
--- | Specification Entry: <BiDiSpecURL#event-browsingContext-userPromptOpened browsingContext.userPromptOpened>
---
--- First added to Spec: <https://www.w3.org/TR/2024/WD-webdriver-bidi-20241121/#event-browsingContext-userPromptOpened 21 November 2024 - First Public Working Draft>
-subscribeBrowsingContextUserPromptOpened :: forall m a. SendSub m UserPromptOpened -> (UserPromptOpened -> m ()) -> m SubscriptionId
-subscribeBrowsingContextUserPromptOpened sendSub = sendSub API.subscribeBrowsingContextUserPromptOpened
-
-subscribeBrowsingContextUserPromptOpened' :: forall m a. SendSub' m UserPromptOpened -> [BrowsingContext] -> [UserContext] -> (UserPromptOpened -> m ()) -> m SubscriptionId
-subscribeBrowsingContextUserPromptOpened' sendSub' = sendSub' API.subscribeBrowsingContextUserPromptOpened
-
----- Log ----
-
--- | Specification Entry: <BiDiSpecURL#event-log-entryAdded log.entryAdded>
---
--- First added to Spec: <https://www.w3.org/TR/2024/WD-webdriver-bidi-20241121/#event-log-entryAdded 21 November 2024 - First Public Working Draft>
-subscribeLogEntryAdded :: forall m a. SendSub m LogEntry -> (LogEntry -> m ()) -> m SubscriptionId
-subscribeLogEntryAdded sendSub = sendSub API.subscribeLogEntryAdded
-
-subscribeLogEntryAdded' :: forall m a. SendSub' m LogEntry -> [BrowsingContext] -> [UserContext] -> (LogEntry -> m ()) -> m SubscriptionId
-subscribeLogEntryAdded' sendSub' = sendSub' API.subscribeLogEntryAdded
-
----- Network ----
-
--- | Specification Entry: <BiDiSpecURL#event-network-authRequired network.authRequired>
---
--- First added to Spec: <https://www.w3.org/TR/2024/WD-webdriver-bidi-20241121/#event-network-authRequired 21 November 2024 - First Public Working Draft>
-subscribeNetworkAuthRequired :: forall m a. SendSub m AuthRequired -> (AuthRequired -> m ()) -> m SubscriptionId
-subscribeNetworkAuthRequired sendSub = sendSub API.subscribeNetworkAuthRequired
-
-subscribeNetworkAuthRequired' :: forall m a. SendSub' m AuthRequired -> [BrowsingContext] -> [UserContext] -> (AuthRequired -> m ()) -> m SubscriptionId
-subscribeNetworkAuthRequired' sendSub' = sendSub' API.subscribeNetworkAuthRequired
-
-subscribeNetworkBeforeRequestSent :: forall m a. SendSub m BeforeRequestSent -> (BeforeRequestSent -> m ()) -> m SubscriptionId
-subscribeNetworkBeforeRequestSent sendSub = sendSub API.subscribeNetworkBeforeRequestSent
-
-subscribeNetworkBeforeRequestSent' :: forall m a. SendSub' m BeforeRequestSent -> [BrowsingContext] -> [UserContext] -> (BeforeRequestSent -> m ()) -> m SubscriptionId
-subscribeNetworkBeforeRequestSent' sendSub' = sendSub' API.subscribeNetworkBeforeRequestSent
-
--- | Specification Entry: <BiDiSpecURL#event-network-fetchError network.fetchError>
---
--- First added to Spec: <https://www.w3.org/TR/2024/WD-webdriver-bidi-20241121/#event-network-fetchError 21 November 2024 - First Public Working Draft>
-subscribeNetworkFetchError :: forall m a. SendSub m FetchError -> (FetchError -> m ()) -> m SubscriptionId
-subscribeNetworkFetchError sendSub = sendSub API.subscribeNetworkFetchError
-
-subscribeNetworkFetchError' :: forall m a. SendSub' m FetchError -> [BrowsingContext] -> [UserContext] -> (FetchError -> m ()) -> m SubscriptionId
-subscribeNetworkFetchError' sendSub' = sendSub' API.subscribeNetworkFetchError
-
--- | Specification Entry: <BiDiSpecURL#event-network-responseCompleted network.responseCompleted>
---
--- First added to Spec: <https://www.w3.org/TR/2024/WD-webdriver-bidi-20241121/#event-network-responseCompleted 21 November 2024 - First Public Working Draft>
-subscribeNetworkResponseCompleted :: forall m a. SendSub m ResponseCompleted -> (ResponseCompleted -> m ()) -> m SubscriptionId
-subscribeNetworkResponseCompleted sendSub = sendSub API.subscribeNetworkResponseCompleted
-
-subscribeNetworkResponseCompleted' :: forall m a. SendSub' m ResponseCompleted -> [BrowsingContext] -> [UserContext] -> (ResponseCompleted -> m ()) -> m SubscriptionId
-subscribeNetworkResponseCompleted' sendSub' = sendSub' API.subscribeNetworkResponseCompleted
-
--- | Specification Entry: <BiDiSpecURL#event-network-responseStarted network.responseStarted>
---
--- First added to Spec: <https://www.w3.org/TR/2024/WD-webdriver-bidi-20241121/#event-network-responseStarted 21 November 2024 - First Public Working Draft>
-subscribeNetworkResponseStarted :: forall m a. SendSub m ResponseStarted -> (ResponseStarted -> m ()) -> m SubscriptionId
-subscribeNetworkResponseStarted sendSub = sendSub API.subscribeNetworkResponseStarted
-
-subscribeNetworkResponseStarted' :: forall m a. SendSub' m ResponseStarted -> [BrowsingContext] -> [UserContext] -> (ResponseStarted -> m ()) -> m SubscriptionId
-subscribeNetworkResponseStarted' sendSub' = sendSub' API.subscribeNetworkResponseStarted
-
----- Script ----
-
--- | Specification Entry: <BiDiSpecURL#event-script-message script.message>
---
--- First added to Spec: <https://www.w3.org/TR/2024/WD-webdriver-bidi-20241121/#event-script-message 21 November 2024 - First Public Working Draft>
-subscribeScriptMessage :: forall m a. SendSub m Message -> (Message -> m ()) -> m SubscriptionId
-subscribeScriptMessage sendSub = sendSub API.subscribeScriptMessage
-
-subscribeScriptMessage' :: forall m a. SendSub' m Message -> [BrowsingContext] -> [UserContext] -> (Message -> m ()) -> m SubscriptionId
-subscribeScriptMessage' sendSub' = sendSub' API.subscribeScriptMessage
-
--- | Specification Entry: <BiDiSpecURL#event-script-realmCreated script.realmCreated>
---
--- First added to Spec: <https://www.w3.org/TR/2024/WD-webdriver-bidi-20241121/#event-script-realmCreated 21 November 2024 - First Public Working Draft>
-subscribeScriptRealmCreated :: forall m a. SendSub m RealmInfo -> (RealmInfo -> m ()) -> m SubscriptionId
-subscribeScriptRealmCreated sendSub = sendSub API.subscribeScriptRealmCreated
-
-subscribeScriptRealmCreated' :: forall m a. SendSub' m RealmInfo -> [BrowsingContext] -> [UserContext] -> (RealmInfo -> m ()) -> m SubscriptionId
-subscribeScriptRealmCreated' sendSub' = sendSub' API.subscribeScriptRealmCreated
-
--- | Specification Entry: <BiDiSpecURL#event-script-realmDestroyed script.realmDestroyed>
---
--- First added to Spec: <https://www.w3.org/TR/2024/WD-webdriver-bidi-20241121/#event-script-realmDestroyed 21 November 2024 - First Public Working Draft>
-subscribeScriptRealmDestroyed :: forall m a. SendSub m RealmDestroyed -> (RealmDestroyed -> m ()) -> m SubscriptionId
-subscribeScriptRealmDestroyed sendSub = sendSub API.subscribeScriptRealmDestroyed
-
-subscribeScriptRealmDestroyed' :: forall m a. SendSub' m RealmDestroyed -> [BrowsingContext] -> [UserContext] -> (RealmDestroyed -> m ()) -> m SubscriptionId
-subscribeScriptRealmDestroyed' sendSub' = sendSub' API.subscribeScriptRealmDestroyed
-
----- Input ----
-
--- | Specification Entry: <BiDiSpecURL#event-input-fileDialogOpened input.filedblogOpened>
---
--- First added to Spec: <https://www.w3.org/TR/2025/WD-webdriver-bidi-20250305/#event-input-fileDialogOpened 05 March 2025>
-subscribeInputFileDialogOpened :: forall m a. SendSub m FileDialogOpened -> (FileDialogOpened -> m ()) -> m SubscriptionId
-subscribeInputFileDialogOpened sendSub = sendSub API.subscribeInputFileDialogOpened
-
-subscribeInputFileDialogOpened' :: forall m a. SendSub' m FileDialogOpened -> [BrowsingContext] -> [UserContext] -> (FileDialogOpened -> m ()) -> m SubscriptionId
-subscribeInputFileDialogOpened' sendSub' = sendSub' API.subscribeInputFileDialogOpened
+-- The first argument is the command name (e.g., "cdp.sendCommand"), and the
+-- second is the parameters as a JSON Object.
+offSpecCommand :: forall m. Runner m Object -> Text -> Object -> m Object
+offSpecCommand r method params = r (mkOffSpecCommand method params)

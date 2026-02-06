@@ -374,11 +374,14 @@ library webdriver-precore-extended
       WebDriverPreCore.Extended
       WebDriverPreCore.Extended.Base.HTTP.API
       WebDriverPreCore.Extended.Base.HTTP.Protocol
+      WebDriverPreCore.Extended.Base.HTTP.Actions
       WebDriverPreCore.Extended.Base.BiDi.API
       WebDriverPreCore.Extended.Base.BiDi.Protocol
+      WebDriverPreCore.Extended.Base.BiDi.Actions
   hs-source-dirs: extended/src
   build-depends:
     webdriver-precore:webdriver-precore,
+    aeson         >=1.4   && <2.3, 
     base          >=4.16  && <5,
     text          >=2.1   && <2.2,
     unliftio      >=0.2   && <0.3
