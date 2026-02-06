@@ -447,9 +447,13 @@ library webdriver-rio-poc
   import: commonExtensions, commonGhcOptions
   exposed-modules:
       WebDriver.RIO
+      WebDriver.RIO.BiDi.Base
+      WebDriver.RIO.HTTP.Base
   hs-source-dirs: rio-poc/src
   build-depends:
     webdriver-precore:webdriver-precore-extended,
+    webdriver-precore:webdriver-precore-http-runner,
+    webdriver-precore:webdriver-precore-bidi-runner,
     base          >=4.16  && <5,
     rio           >=0.1   && <0.2
   default-language: Haskell2010
