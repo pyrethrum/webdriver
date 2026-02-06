@@ -53,7 +53,7 @@ import WebDriverPreCore.BiDiRunner (BiDiUrl, parseBiDiUrl, withBiDi, withBiDiFai
 import WebDriverPreCore.HTTP.Protocol (FullCapabilities (..), SessionResponse (..))
 import WebDriverPreCore.HTTP.Protocol qualified as Caps (Capabilities (..))
 import WebDriverPreCore.HttpRunner (mkHttpRunner)
-import WebDriverPreCore.HttpRunner.Actions (HttpActions (..), mkActions)
+import HttpActions (HttpActions (..), mkActions)
 import WebDriverPreCore.Test.Config (Config (..))
 import WebDriverPreCore.Test.ConfigLoader (loadConfig)
 import WebDriverPreCore.Test.Const (Timeout (..), milliseconds, seconds)

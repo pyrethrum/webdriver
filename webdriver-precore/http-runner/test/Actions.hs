@@ -1,11 +1,11 @@
 {-|
-Module: WebDriverPreCore.HttpRunner.Actions
+Module: Actions
 Description: High-level WebDriver HTTP action abstraction
 
 This module provides a record-based interface to WebDriver HTTP actions,
 wrapping the Command-based API into convenient functions.
 -}
-module WebDriverPreCore.HttpRunner.Actions
+module Actions
   ( HttpActions (..),
     mkActions,
   )

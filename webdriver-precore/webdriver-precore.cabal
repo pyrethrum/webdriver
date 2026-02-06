@@ -232,7 +232,6 @@ library webdriver-precore-http-runner
   import: commonExtensions, commonGhcOptions
   exposed-modules:
       WebDriverPreCore.HttpRunner
-      WebDriverPreCore.HttpRunner.Actions
   hs-source-dirs: http-runner/src
   build-depends:
     webdriver-precore:utils-internal,
@@ -254,6 +253,7 @@ test-suite test-http-runner
   if flag(legacy-test)
     cpp-options: -DLEGACY_TEST
   other-modules:
+    Actions
     ErrorDemo
     FallbackDemo
     HttpDemo
@@ -335,6 +335,7 @@ test-suite test-bidi-runner
     EmulationDemos
     ErrorDemo
     FallbackDemos
+    HttpActions
     InputDemos
     InputEventDemos
     LogEventDemos

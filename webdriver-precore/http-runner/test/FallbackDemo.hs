@@ -6,7 +6,7 @@ import Data.Aeson.KeyMap qualified as A
 import Data.Function ((&))
 import Data.Text (Text)
 import HttpDemoUtils (HttpDemo, runDemo, sessionDemo)
-import WebDriverPreCore.HttpRunner.Actions (HttpActions (..))
+import Actions (HttpActions (..))
 import WebDriverPreCore.Test.IOUtils (DemoActions (..))
 import WebDriverPreCore.Test.TestData (checkboxesUrl, textAreaUrl)
 import WebDriverPreCore.HTTP.API qualified as A

@@ -2,7 +2,7 @@ module ErrorDemo where
 
 import GHC.Stack (HasCallStack)
 import HttpDemoUtils (HttpDemo, runDemo, sessionDemo)
-import WebDriverPreCore.HttpRunner.Actions (HttpActions (..))
+import Actions (HttpActions (..))
 import WebDriverPreCore.Test.IOUtils (DemoActions (..), (===))
 import Test.Tasty.HUnit (assertFailure)
 import WebDriverPreCore.Test.TestData (inputsUrl)
