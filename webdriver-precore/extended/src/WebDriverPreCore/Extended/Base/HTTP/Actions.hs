@@ -167,7 +167,7 @@ setTimeouts r sess = r . API.setTimeouts sess
 --
 -- @POST \/session\/{session id}\/url Navigate To@
 navigateTo :: forall m. Runner m () -> Session -> URL -> m ()
-navigateTo r sess url = r $ API.navigateTo sess url
+navigateTo r sess = r . API.navigateTo sess
 
 -- | Get the current URL.
 --
@@ -239,7 +239,7 @@ closeWindow r = r . API.closeWindow
 --
 -- @POST \/session\/{session id}\/window Switch To Window@
 switchToWindow :: forall m. Runner m () -> Session -> Handle -> m ()
-switchToWindow r sess handle = r $ API.switchToWindow sess handle
+switchToWindow r sess = r . API.switchToWindow sess
 
 -- | Switch to a different frame.
 --
@@ -247,7 +247,7 @@ switchToWindow r sess handle = r $ API.switchToWindow sess handle
 --
 -- @POST \/session\/{session id}\/frame Switch To Frame@
 switchToFrame :: forall m. Runner m () -> Session -> FrameReference -> m ()
-switchToFrame r sess frame = r $ API.switchToFrame sess frame
+switchToFrame r sess = r . API.switchToFrame sess
 
 -- | Get the source of the current page.
 --
@@ -263,7 +263,7 @@ getPageSource r = r . API.getPageSource
 --
 -- @POST \/session\/{session id}\/execute\/sync Execute Script@
 executeScript :: forall m. Runner m Value -> Session -> Script -> m Value
-executeScript r sess script = r $ API.executeScript sess script
+executeScript r sess = r . API.executeScript sess
 
 -- | Execute a script asynchronously.
 --
@@ -271,7 +271,7 @@ executeScript r sess script = r $ API.executeScript sess script
 --
 -- @POST \/session\/{session id}\/execute\/async Execute Async Script@
 executeScriptAsync :: forall m. Runner m Value -> Session -> Script -> m Value
-executeScriptAsync r sess script = r $ API.executeScriptAsync sess script
+executeScriptAsync r sess = r . API.executeScriptAsync sess
 
 -- | Add a cookie.
 --
@@ -279,7 +279,7 @@ executeScriptAsync r sess script = r $ API.executeScriptAsync sess script
 --
 -- @POST \/session\/{session id}\/cookie Add Cookie@
 addCookie :: forall m. Runner m () -> Session -> Cookie -> m ()
-addCookie r sess cookie = r $ API.addCookie sess cookie
+addCookie r sess = r . API.addCookie sess
 
 -- | Get all cookies.
 --
@@ -295,7 +295,7 @@ getAllCookies r = r . API.getAllCookies
 --
 -- @GET \/session\/{session id}\/cookie\/{name} Get Named Cookie@
 getNamedCookie :: forall m. Runner m Cookie -> Session -> Text -> m Cookie
-getNamedCookie r sess name = r $ API.getNamedCookie sess name
+getNamedCookie r sess = r . API.getNamedCookie sess
 
 -- | Delete a cookie.
 --
@@ -303,7 +303,7 @@ getNamedCookie r sess name = r $ API.getNamedCookie sess name
 --
 -- @DELETE \/session\/{session id}\/cookie\/{name} Delete Cookie@
 deleteCookie :: forall m. Runner m () -> Session -> Text -> m ()
-deleteCookie r sess name = r $ API.deleteCookie sess name
+deleteCookie r sess = r . API.deleteCookie sess
 
 -- | Delete all cookies.
 --
@@ -319,7 +319,7 @@ deleteAllCookies r = r . API.deleteAllCookies
 --
 -- @POST \/session\/{session id}\/actions Perform Actions@
 performActions :: forall m. Runner m () -> Session -> Actions -> m ()
-performActions r sess actions = r $ API.performActions sess actions
+performActions r sess = r . API.performActions sess
 
 -- | Release all action state.
 --
@@ -359,7 +359,7 @@ getAlertText r = r . API.getAlertText
 --
 -- @POST \/session\/{session id}\/alert\/text Send Alert Text@
 sendAlertText :: forall m. Runner m () -> Session -> Text -> m ()
-sendAlertText r sess text = r $ API.sendAlertText sess text
+sendAlertText r sess = r . API.sendAlertText sess
 
 -- | Take a screenshot of the current page.
 --
@@ -403,7 +403,7 @@ getWindowRect r = r . API.getWindowRect
 --
 -- @POST \/session\/{session id}\/window\/rect Set Window Rect@
 setWindowRect :: forall m. Runner m WindowRect -> Session -> WindowRect -> m WindowRect
-setWindowRect r sess rect = r $ API.setWindowRect sess rect
+setWindowRect r sess = r . API.setWindowRect sess
 
 -- | Maximize the window.
 --
@@ -459,7 +459,7 @@ getActiveElement r = r . API.getActiveElement
 --
 -- @POST \/session\/{session id}\/element Find Element@
 findElement :: forall m. Runner m ElementId -> Session -> Selector -> m ElementId
-findElement r sess selector = r $ API.findElement sess selector
+findElement r sess = r . API.findElement sess
 
 -- | Find elements using a selector.
 --
@@ -467,7 +467,7 @@ findElement r sess selector = r $ API.findElement sess selector
 --
 -- @POST \/session\/{session id}\/elements Find Elements@
 findElements :: forall m. Runner m [ElementId] -> Session -> Selector -> m [ElementId]
-findElements r sess selector = r $ API.findElements sess selector
+findElements r sess = r . API.findElements sess
 
 -- ######################################################################
 -- ##################### Element Instance Methods #######################
@@ -479,7 +479,7 @@ findElements r sess selector = r $ API.findElements sess selector
 --
 -- @POST \/session\/{session id}\/element\/{element id}\/element Find Element From Element@
 findElementFromElement :: forall m. Runner m ElementId -> Session -> ElementId -> Selector -> m ElementId
-findElementFromElement r sess elemId selector = r $ API.findElementFromElement sess elemId selector
+findElementFromElement r sess elemId = r . API.findElementFromElement sess elemId
 
 -- | Find elements from another element.
 --
@@ -487,7 +487,7 @@ findElementFromElement r sess elemId selector = r $ API.findElementFromElement s
 --
 -- @POST \/session\/{session id}\/element\/{element id}\/elements Find Elements From Element@
 findElementsFromElement :: forall m. Runner m [ElementId] -> Session -> ElementId -> Selector -> m [ElementId]
-findElementsFromElement r sess elemId selector = r $ API.findElementsFromElement sess elemId selector
+findElementsFromElement r sess elemId = r . API.findElementsFromElement sess elemId
 
 -- | Check if an element is selected.
 --
@@ -495,7 +495,7 @@ findElementsFromElement r sess elemId selector = r $ API.findElementsFromElement
 --
 -- @GET \/session\/{session id}\/element\/{element id}\/selected Is Element Selected@
 isElementSelected :: forall m. Runner m Bool -> Session -> ElementId -> m Bool
-isElementSelected r sess elemId = r $ API.isElementSelected sess elemId
+isElementSelected r sess = r . API.isElementSelected sess
 
 -- | Get an element's attribute.
 --
@@ -503,7 +503,7 @@ isElementSelected r sess elemId = r $ API.isElementSelected sess elemId
 --
 -- @GET \/session\/{session id}\/element\/{element id}\/attribute\/{name} Get Element Attribute@
 getElementAttribute :: forall m. Runner m Text -> Session -> ElementId -> Text -> m Text
-getElementAttribute r sess elemId attr = r $ API.getElementAttribute sess elemId attr
+getElementAttribute r sess elemId = r . API.getElementAttribute sess elemId
 
 -- | Get an element's property.
 --
@@ -511,7 +511,7 @@ getElementAttribute r sess elemId attr = r $ API.getElementAttribute sess elemId
 --
 -- @GET \/session\/{session id}\/element\/{element id}\/property\/{name} Get Element Property@
 getElementProperty :: forall m. Runner m Value -> Session -> ElementId -> Text -> m Value
-getElementProperty r sess elemId prop = r $ API.getElementProperty sess elemId prop
+getElementProperty r sess elemId = r . API.getElementProperty sess elemId
 
 -- | Get an element's CSS value.
 --
@@ -519,7 +519,7 @@ getElementProperty r sess elemId prop = r $ API.getElementProperty sess elemId p
 --
 -- @GET \/session\/{session id}\/element\/{element id}\/css\/{property name} Get Element CSS Value@
 getElementCssValue :: forall m. Runner m Text -> Session -> ElementId -> Text -> m Text
-getElementCssValue r sess elemId prop = r $ API.getElementCssValue sess elemId prop
+getElementCssValue r sess elemId = r . API.getElementCssValue sess elemId
 
 -- | Get an element's shadow root.
 --
@@ -527,7 +527,7 @@ getElementCssValue r sess elemId prop = r $ API.getElementCssValue sess elemId p
 --
 -- @GET \/session\/{session id}\/element\/{element id}\/shadow Get Element Shadow Root@
 getElementShadowRoot :: forall m. Runner m ShadowRootElementId -> Session -> ElementId -> m ShadowRootElementId
-getElementShadowRoot r sess elemId = r $ API.getElementShadowRoot sess elemId
+getElementShadowRoot r sess = r . API.getElementShadowRoot sess
 
 -- | Get an element's text.
 --
@@ -535,7 +535,7 @@ getElementShadowRoot r sess elemId = r $ API.getElementShadowRoot sess elemId
 --
 -- @GET \/session\/{session id}\/element\/{element id}\/text Get Element Text@
 getElementText :: forall m. Runner m Text -> Session -> ElementId -> m Text
-getElementText r sess elemId = r $ API.getElementText sess elemId
+getElementText r sess = r . API.getElementText sess
 
 -- | Get an element's tag name.
 --
@@ -543,7 +543,7 @@ getElementText r sess elemId = r $ API.getElementText sess elemId
 --
 -- @GET \/session\/{session id}\/element\/{element id}\/name Get Element Tag Name@
 getElementTagName :: forall m. Runner m Text -> Session -> ElementId -> m Text
-getElementTagName r sess elemId = r $ API.getElementTagName sess elemId
+getElementTagName r sess = r . API.getElementTagName sess
 
 -- | Get an element's rectangle.
 --
@@ -551,7 +551,7 @@ getElementTagName r sess elemId = r $ API.getElementTagName sess elemId
 --
 -- @GET \/session\/{session id}\/element\/{element id}\/rect Get Element Rect@
 getElementRect :: forall m. Runner m WindowRect -> Session -> ElementId -> m WindowRect
-getElementRect r sess elemId = r $ API.getElementRect sess elemId
+getElementRect r sess = r . API.getElementRect sess
 
 -- | Check if an element is enabled.
 --
@@ -559,7 +559,7 @@ getElementRect r sess elemId = r $ API.getElementRect sess elemId
 --
 -- @GET \/session\/{session id}\/element\/{element id}\/enabled Is Element Enabled@
 isElementEnabled :: forall m. Runner m Bool -> Session -> ElementId -> m Bool
-isElementEnabled r sess elemId = r $ API.isElementEnabled sess elemId
+isElementEnabled r sess = r . API.isElementEnabled sess
 
 -- | Get an element's computed role.
 --
@@ -567,7 +567,7 @@ isElementEnabled r sess elemId = r $ API.isElementEnabled sess elemId
 --
 -- @GET \/session\/{session id}\/element\/{element id}\/computedrole Get Element Computed Role@
 getElementComputedRole :: forall m. Runner m Text -> Session -> ElementId -> m Text
-getElementComputedRole r sess elemId = r $ API.getElementComputedRole sess elemId
+getElementComputedRole r sess = r . API.getElementComputedRole sess
 
 -- | Get an element's computed label.
 --
@@ -575,7 +575,7 @@ getElementComputedRole r sess elemId = r $ API.getElementComputedRole sess elemI
 --
 -- @GET \/session\/{session id}\/element\/{element id}\/computedlabel Get Element Computed Label@
 getElementComputedLabel :: forall m. Runner m Text -> Session -> ElementId -> m Text
-getElementComputedLabel r sess elemId = r $ API.getElementComputedLabel sess elemId
+getElementComputedLabel r sess = r . API.getElementComputedLabel sess
 
 -- | Click an element.
 --
@@ -583,7 +583,7 @@ getElementComputedLabel r sess elemId = r $ API.getElementComputedLabel sess ele
 --
 -- @POST \/session\/{session id}\/element\/{element id}\/click Element Click@
 elementClick :: forall m. Runner m () -> Session -> ElementId -> m ()
-elementClick r sess elemId = r $ API.elementClick sess elemId
+elementClick r sess = r . API.elementClick sess
 
 -- | Clear an element.
 --
@@ -591,7 +591,7 @@ elementClick r sess elemId = r $ API.elementClick sess elemId
 --
 -- @POST \/session\/{session id}\/element\/{element id}\/clear Element Clear@
 elementClear :: forall m. Runner m () -> Session -> ElementId -> m ()
-elementClear r sess elemId = r $ API.elementClear sess elemId
+elementClear r sess = r . API.elementClear sess
 
 -- | Send keys to an element.
 --
@@ -599,7 +599,7 @@ elementClear r sess elemId = r $ API.elementClear sess elemId
 --
 -- @POST \/session\/{session id}\/element\/{element id}\/value Element Send Keys@
 elementSendKeys :: forall m. Runner m () -> Session -> ElementId -> Text -> m ()
-elementSendKeys r sess elemId keys = r $ API.elementSendKeys sess elemId keys
+elementSendKeys r sess elemId = r . API.elementSendKeys sess elemId
 
 -- | Take a screenshot of an element.
 --
@@ -607,7 +607,7 @@ elementSendKeys r sess elemId keys = r $ API.elementSendKeys sess elemId keys
 --
 -- @GET \/session\/{session id}\/element\/{element id}\/screenshot Take Element Screenshot@
 takeElementScreenshot :: forall m. Runner m Text -> Session -> ElementId -> m Text
-takeElementScreenshot r sess elemId = r $ API.takeElementScreenshot sess elemId
+takeElementScreenshot r sess = r . API.takeElementScreenshot sess
 
 -- ######################################################################
 -- ######################### Shadow DOM Methods #########################
@@ -619,7 +619,7 @@ takeElementScreenshot r sess elemId = r $ API.takeElementScreenshot sess elemId
 --
 -- @POST \/session\/{session id}\/shadow\/{shadow id}\/element Find Element From Shadow Root@
 findElementFromShadowRoot :: forall m. Runner m ElementId -> Session -> ShadowRootElementId -> Selector -> m ElementId
-findElementFromShadowRoot r sess shadowId selector = r $ API.findElementFromShadowRoot sess shadowId selector
+findElementFromShadowRoot r sess shadowId = r . API.findElementFromShadowRoot sess shadowId
 
 -- | Find elements from a shadow root.
 --
@@ -627,7 +627,7 @@ findElementFromShadowRoot r sess shadowId selector = r $ API.findElementFromShad
 --
 -- @POST \/session\/{session id}\/shadow\/{shadow id}\/elements Find Elements From Shadow Root@
 findElementsFromShadowRoot :: forall m. Runner m [ElementId] -> Session -> ShadowRootElementId -> Selector -> m [ElementId]
-findElementsFromShadowRoot r sess shadowId selector = r $ API.findElementsFromShadowRoot sess shadowId selector
+findElementsFromShadowRoot r sess shadowId = r . API.findElementsFromShadowRoot sess shadowId
 
 -- ######################################################################
 -- ########################## Fallback Methods ##########################
@@ -638,5 +638,5 @@ findElementsFromShadowRoot r sess shadowId selector = r $ API.findElementsFromSh
 -- This is a fallback method for when the standard API doesn't provide
 -- the functionality you need. Use with caution as it bypasses the
 -- type-safe command builders.
-runCommand :: forall m a. (FromJSON a) => Runner m a -> Command a -> m a
+runCommand :: forall m a. Runner m a -> Command a -> m a
 runCommand r cmd = r cmd
