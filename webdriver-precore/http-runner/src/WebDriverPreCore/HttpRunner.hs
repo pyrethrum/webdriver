@@ -11,14 +11,7 @@ module WebDriverPreCore.HttpRunner
     mkHttpRunner,
     
     -- * Re-exports from base
-    HttpResponse (..),
-    
-    -- * Command Execution
-    runCommand,
-    runCommandFullResponse,
-    
-    -- * Response Parsing
-    parseResultIO,
+    HttpResponse (..)
   )
 where
 
