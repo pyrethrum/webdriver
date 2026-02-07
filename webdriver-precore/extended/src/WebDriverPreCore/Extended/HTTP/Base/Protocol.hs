@@ -1,5 +1,5 @@
 
-module WebDriverPreCore.Extended.Base.HTTP.Protocol
+module WebDriverPreCore.Extended.HTTP.Base.Protocol
   ( module WebDriverPreCore.HTTP.Protocol
   )
 where

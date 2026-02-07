@@ -1,8 +1,8 @@
 {-|
-Module: WebDriverPreCore.Extended.Base.HTTP.API
+Module: WebDriverPreCore.Extended.HTTP.Base.API
 Description: Re-export of WebDriverPreCore.HTTP.API
 -}
-module WebDriverPreCore.Extended.Base.HTTP.API
+module WebDriverPreCore.Extended.HTTP.Base.API
   ( module WebDriverPreCore.HTTP.API
   )
 where

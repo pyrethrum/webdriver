@@ -1,7 +1,7 @@
 -- |
--- Module: WebDriverPreCore.Extended.Base.BiDi.Actions
+-- Module: WebDriverPreCore.Extended.BiDi.Base.Actions
 -- Description: BiDi actions module
-module WebDriverPreCore.Extended.Base.BiDi.Actions
+module WebDriverPreCore.Extended.BiDi.Base.Actions
   ( -- * Runner Type
     Runner,
     -- * Session Commands
@@ -144,8 +144,8 @@ where
 
 import Data.Aeson (Object, Value)
 import Data.Text (Text)
-import WebDriverPreCore.Extended.Base.BiDi.API qualified as API
-import WebDriverPreCore.Extended.Base.BiDi.Protocol
+import WebDriverPreCore.Extended.BiDi.Base.API qualified as API
+import WebDriverPreCore.Extended.BiDi.Base.Protocol
 
 type Runner m a = Command a -> m a
 

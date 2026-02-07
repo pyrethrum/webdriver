@@ -373,12 +373,12 @@ library webdriver-precore-extended
   import: commonExtensions, commonGhcOptions
   exposed-modules:
       WebDriverPreCore.Extended
-      WebDriverPreCore.Extended.Base.HTTP.API
-      WebDriverPreCore.Extended.Base.HTTP.Protocol
-      WebDriverPreCore.Extended.Base.HTTP.Actions
-      WebDriverPreCore.Extended.Base.BiDi.API
-      WebDriverPreCore.Extended.Base.BiDi.Protocol
-      WebDriverPreCore.Extended.Base.BiDi.Actions
+      WebDriverPreCore.Extended.HTTP.Base.API
+      WebDriverPreCore.Extended.HTTP.Base.Protocol
+      WebDriverPreCore.Extended.HTTP.Base.Actions
+      WebDriverPreCore.Extended.BiDi.Base.API
+      WebDriverPreCore.Extended.BiDi.Base.Protocol
+      WebDriverPreCore.Extended.BiDi.Base.Actions
   hs-source-dirs: extended/src
   build-depends:
     webdriver-precore:webdriver-precore,

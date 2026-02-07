@@ -1,12 +1,12 @@
 {-|
-Module: WebDriverPreCore.Extended.Base.HTTP.Actions
+Module: WebDriverPreCore.Extended.HTTP.Base.Actions
 Description: HTTP WebDriver action functions using the Runner pattern
 
 This module provides HTTP WebDriver action functions that accept a Runner
 parameter to execute commands. These functions wrap the Command-based API
 into a more flexible interface suitable for the Extended module system.
 -}
-module WebDriverPreCore.Extended.Base.HTTP.Actions
+module WebDriverPreCore.Extended.HTTP.Base.Actions
   ( -- * Runner Type
     Runner,
     -- * Root Methods
@@ -84,8 +84,8 @@ where
 
 import Data.Aeson (FromJSON, Value)
 import Data.Text (Text)
-import WebDriverPreCore.Extended.Base.HTTP.API qualified as API
-import WebDriverPreCore.Extended.Base.HTTP.Protocol
+import WebDriverPreCore.Extended.HTTP.Base.API qualified as API
+import WebDriverPreCore.Extended.HTTP.Base.Protocol
   ( Actions,
     Cookie,
     ElementId,

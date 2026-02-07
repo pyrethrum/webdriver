@@ -1,8 +1,8 @@
 {-|
-Module: WebDriverPreCore.Extended.Base.BiDi.API
+Module: WebDriverPreCore.Extended.BiDi.Base.API
 Description: Re-export of WebDriverPreCore.BiDi.API
 -}
-module WebDriverPreCore.Extended.Base.BiDi.API
+module WebDriverPreCore.Extended.BiDi.Base.API
   ( module WebDriverPreCore.BiDi.API
   )
 where
