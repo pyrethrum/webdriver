@@ -6,6 +6,7 @@ on:
       - main
     paths:
       - webdriver-*/**
+      - cicd/*
   workflow_dispatch:
     
 jobs:
@@ -45,4 +46,4 @@ jobs:
       - name: Test
         run: |
           BUILD_IMAGE=ghcr.io/pyrethrum/webdriver-build:${{needs.env-setup.outputs.buildid}}
-          docker build -f ./cicd/Dockerbuild.test --build-arg BUILD_IMAGE=$BUILD_IMAGE .
+          docker build -f ./cicd/Dockerfile.test --build-arg BUILD_IMAGE=$BUILD_IMAGE .
