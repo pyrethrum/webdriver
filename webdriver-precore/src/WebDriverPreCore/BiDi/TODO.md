@@ -12,30 +12,18 @@
 
 - [ ] [update readme in similar style to](https://github.com/nikita-volkov/hasql)
 - [ ] restore legacy test / code for HTTP
+- [ ] integration test libraries
+- [ ] get off [9.12.3](https://www.reddit.com/r/haskell/comments/1q78zgc/critical_code_generation_bug_with_ghc_9123/)
+  - [ ] no wonder it wasn't in ghcup
 
 ### interim
 - use shared libraries
 
-### use flag to turn off integration testing in hackage / stackage
-```
-flag build-test-utils
-  description: Build with test utilities (for development)
-  default: False
-  manual: True
-
-test-suite test
-  if flag(build-test-utils)
-    build-depends: webdriver-test-utils
-  else
-    -- Use simplified tests or skip certain tests
-
-```
-
 ### immediate post restructure
 
  [x] all tests working
- [ ] read unliftIO
- [ ] read RIO
+ [x] read unliftIO
+ [x] read RIO
  [ ] reexport base test
  [ ] all patterns
 

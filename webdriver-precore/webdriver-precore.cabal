@@ -449,6 +449,7 @@ library webdriver-rio-poc
       WebDriver.RIO
       WebDriver.RIO.BiDi.Base
       WebDriver.RIO.HTTP.Base
+      WebDriver.RIO.Logging
   hs-source-dirs: rio-poc/src
   build-depends:
     webdriver-precore:webdriver-precore-extended,
