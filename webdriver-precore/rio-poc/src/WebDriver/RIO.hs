@@ -2,16 +2,25 @@
 Module: WebDriver.RIO
 Description: RIO-based wrapper for WebDriver (proof of concept)
 
-This module will provide a RIO-based interface to WebDriver,
-demonstrating that webdriver-precore-extended can adapt to RIO idioms.
+Re-exports from sub-modules so consumers can import @WebDriver.RIO@
+as a single entry point.
 -}
 module WebDriver.RIO
-  ( -- * Placeholder for future implementation
-    -- Will include:
-    -- * RIO environment type
-    -- * RIO-style API functions
+  ( -- * Capabilities
+    module WebDriver.RIO.Capabilities,
+
+    -- * Environment Types
+    module WebDriver.RIO.Env,
+
+    -- * Runner Typeclasses
+    module WebDriver.RIO.Runner,
+
+    -- * Logging
+    module WebDriver.RIO.Logging,
   )
 where
 
--- This module is a placeholder for RIO proof of concept.
--- It will demonstrate adaptation of webdriver-precore-extended to RIO patterns.
+import WebDriver.RIO.Capabilities
+import WebDriver.RIO.Env
+import WebDriver.RIO.Logging
+import WebDriver.RIO.Runner

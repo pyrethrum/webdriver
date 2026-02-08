@@ -448,10 +448,14 @@ library webdriver-rio-poc
   exposed-modules:
       WebDriver.RIO
       WebDriver.RIO.BiDi.Base
+      WebDriver.RIO.Capabilities
+      WebDriver.RIO.Env
       WebDriver.RIO.HTTP.Base
       WebDriver.RIO.Logging
+      WebDriver.RIO.Runner
   hs-source-dirs: rio-poc/src
   build-depends:
+    webdriver-precore:webdriver-precore,
     webdriver-precore:webdriver-precore-extended,
     webdriver-precore:webdriver-precore-http-runner,
     webdriver-precore:webdriver-precore-bidi-runner,
