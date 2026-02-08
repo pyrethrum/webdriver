@@ -1,0 +1,10 @@
+FROM haskell:9.10.3-slim-bookworm
+WORKDIR /webdriver
+
+COPY cabal.project .
+COPY webdriver-precore/webdriver-precore.cabal ./webdriver-precore/
+COPY webdriver-precore/test-server/test-server.cabal ./webdriver-precore/test-server/
+RUN cabal update
+RUN cabal v2-build all --only-dependencies --enable-tests
+COPY . .
+RUN cabal v2-build all --enable-tests

@@ -1,5 +1,4 @@
-import: https://www.stackage.org/nightly-2026-01-18/cabal.config
-  --  https://www.stackage.org/nightly-2025-02-25/cabal.config
+import: https://www.stackage.org/nightly-2025-02-25/cabal.config
 
 -- Allow newer versions to resolve dependency conflicts
 allow-newer:
@@ -9,12 +8,8 @@ packages:
   webdriver-precore/*.cabal
   webdriver-precore/test-server/*.cabal
 
-with-compiler: ghc-9.10.1
--- with-compiler: ghc-9.10.1
--- with-compiler: ghc-9.8.4
-
+with-compiler: ghc-9.10.3
 -- always build tests without needing the --enable-tests flag
 tests: True
-
 -- allow cabal repl to load multiple packages at once
 multi-repl: True
