@@ -4,7 +4,7 @@ Description: RIO environment types for outer and inner WebDriver layers
 
 Defines four environment data types:
 
-* 'OuterEnv'  — pre-runner layer with logging + capabilities
+* 'BaseEnv'   — pre-runner layer with logging + capabilities
 * 'HttpEnv'   — inner layer with HTTP runner
 * 'BiDiEnv'   — inner layer with BiDi runner
 * 'DualEnv'   — inner layer with both HTTP and BiDi runners
@@ -13,8 +13,8 @@ All implement 'HasLogFunc' and 'HasCapabilities'; inner envs additionally
 implement the appropriate runner typeclasses.
 -}
 module WebDriver.RIO.Env
-  ( -- * Outer Layer
-    OuterEnv (..),
+  ( -- * Base Layer
+    BaseEnv (..),
 
     -- * Inner Layer
     HttpEnv (..),
@@ -34,24 +34,24 @@ import WebDriverPreCore.BiDiRunner (BiDiRunner)
 import WebDriverPreCore.HttpRunner (HttpRunner)
 
 -- ---------------------------------------------------------------------------
--- Outer layer
+-- Base layer
 -- ---------------------------------------------------------------------------
 
 -- | Environment used before a runner is established.
 --   Parameterised by capability type so callers lock in HTTP or BiDi
 --   at the type level.
-data OuterEnv cap = MkOuterEnv
+data BaseEnv cap = MkBaseEnv
   { logFunc :: LogFunc
   , capabilities :: FullCapabilities cap
   }
 
-instance HasLogFunc (OuterEnv cap) where
-  logFuncL :: Lens' (OuterEnv cap) LogFunc
-  logFuncL = lens (.logFunc) \(MkOuterEnv _ c) l -> MkOuterEnv l c
+instance HasLogFunc (BaseEnv cap) where
+  logFuncL :: Lens' (BaseEnv cap) LogFunc
+  logFuncL = lens (.logFunc) \(MkBaseEnv _ c) l -> MkBaseEnv l c
 
-instance HasCapabilities (OuterEnv cap) cap where
-  capabilitiesL :: Lens' (OuterEnv cap) (FullCapabilities cap)
-  capabilitiesL = lens (.capabilities) \(MkOuterEnv l _) c -> MkOuterEnv l c
+instance HasCapabilities (BaseEnv cap) cap where
+  capabilitiesL :: Lens' (BaseEnv cap) (FullCapabilities cap)
+  capabilitiesL = lens (.capabilities) \(MkBaseEnv l _) c -> MkBaseEnv l c
 
 -- ---------------------------------------------------------------------------
 -- Inner layer — HTTP only
