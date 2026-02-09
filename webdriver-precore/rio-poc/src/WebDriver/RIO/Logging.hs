@@ -36,6 +36,9 @@ module WebDriver.RIO.Logging
     withConsoleLog',
     withFileLog',
     withConsoleAndFileLog',
+
+    LoggerConfig(..),
+    withLogging
   )
 where
 

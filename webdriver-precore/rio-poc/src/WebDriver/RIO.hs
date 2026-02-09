@@ -13,7 +13,7 @@ module WebDriver.RIO
     module WebDriver.RIO.Env,
 
     -- * Runner Typeclasses
-    module WebDriver.RIO.Runner,
+    module WebDriver.RIO.App,
 
     -- * Logging
     module WebDriver.RIO.Logging,
@@ -23,4 +23,4 @@ where
 import WebDriver.RIO.Capabilities
 import WebDriver.RIO.Env
 import WebDriver.RIO.Logging
-import WebDriver.RIO.Runner
+import WebDriver.RIO.App

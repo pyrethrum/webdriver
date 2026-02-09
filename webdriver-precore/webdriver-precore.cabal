@@ -447,12 +447,12 @@ library webdriver-rio-poc
   import: commonExtensions, commonGhcOptions
   exposed-modules:
       WebDriver.RIO
+      WebDriver.RIO.App
       WebDriver.RIO.BiDi.Base
       WebDriver.RIO.Capabilities
       WebDriver.RIO.Env
       WebDriver.RIO.HTTP.Base
       WebDriver.RIO.Logging
-      WebDriver.RIO.Runner
   hs-source-dirs: rio-poc/src
   build-depends:
     webdriver-precore:webdriver-precore,

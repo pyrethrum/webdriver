@@ -1,17 +1,16 @@
-{-|
-Module: WebDriver.RIO.Env
-Description: RIO environment types for outer and inner WebDriver layers
-
-Defines four environment data types:
-
-* 'BaseEnv'   — pre-runner layer with logging + capabilities
-* 'HttpEnv'   — inner layer with HTTP runner
-* 'BiDiEnv'   — inner layer with BiDi runner
-* 'DualEnv'   — inner layer with both HTTP and BiDi runners
-
-All implement 'HasLogFunc' and 'HasCapabilities'; inner envs additionally
-implement the appropriate runner typeclasses.
--}
+-- |
+-- Module: WebDriver.RIO.Env
+-- Description: RIO environment types for outer and inner WebDriver layers
+--
+-- Defines four environment data types:
+--
+-- * 'BaseEnv'   — pre-runner layer with logging + capabilities
+-- * 'HttpEnv'   — inner layer with HTTP runner
+-- * 'BiDiEnv'   — inner layer with BiDi runner
+-- * 'DualEnv'   — inner layer with both HTTP and BiDi runners
+--
+-- All implement 'HasLogFunc' and 'HasCapabilities'; inner envs additionally
+-- implement the appropriate runner typeclasses.
 module WebDriver.RIO.Env
   ( -- * Base Layer
     BaseEnv (..),
@@ -20,18 +19,37 @@ module WebDriver.RIO.Env
     HttpEnv (..),
     BiDiEnv (..),
     DualEnv (..),
+
+    -- * Runner Typeclasses
+    HasHttpRunner (..),
+    HasBiDiRunner (..),
+
+    -- * Capabilities Typeclass
+    HasCapabilities (..),
   )
 where
 
-import RIO (HasLogFunc (..), LogFunc, lens, Lens')
+import RIO (HasLogFunc (..), Lens', LogFunc, lens)
 import WebDriver.RIO.Capabilities (FullCapabilities)
-import WebDriver.RIO.Runner
-  ( HasBiDiRunner (..),
-    HasCapabilities (..),
-    HasHttpRunner (..),
-  )
+
 import WebDriverPreCore.BiDiRunner (BiDiRunner)
 import WebDriverPreCore.HttpRunner (HttpRunner)
+
+-- | Env has an 'HttpRunner' available.
+class HasHttpRunner env where
+  httpRunnerL :: Lens' env HttpRunner
+
+-- | Env has a 'BiDiRunner' available.
+class HasBiDiRunner env where
+  biDiRunnerL :: Lens' env BiDiRunner
+
+-- | Env carries 'FullCapabilities' parameterised by @cap@.
+--
+-- The functional dependency @env -> cap@ ensures the capability type is
+-- determined by the environment, preventing ambiguous type variable errors
+-- at call sites.
+class HasCapabilities env cap | env -> cap where
+  capabilitiesL :: Lens' env (FullCapabilities cap)
 
 -- ---------------------------------------------------------------------------
 -- Base layer
@@ -41,8 +59,8 @@ import WebDriverPreCore.HttpRunner (HttpRunner)
 --   Parameterised by capability type so callers lock in HTTP or BiDi
 --   at the type level.
 data BaseEnv cap = MkBaseEnv
-  { logFunc :: LogFunc
-  , capabilities :: FullCapabilities cap
+  { logFunc :: LogFunc,
+    capabilities :: FullCapabilities cap
   }
 
 instance HasLogFunc (BaseEnv cap) where
@@ -59,9 +77,9 @@ instance HasCapabilities (BaseEnv cap) cap where
 
 -- | Inner environment carrying an HTTP runner.
 data HttpEnv cap = MkHttpEnv
-  { logFunc :: LogFunc
-  , capabilities :: FullCapabilities cap
-  , httpRunner :: HttpRunner
+  { logFunc :: LogFunc,
+    capabilities :: FullCapabilities cap,
+    httpRunner :: HttpRunner
   }
 
 instance HasLogFunc (HttpEnv cap) where
@@ -82,9 +100,9 @@ instance HasHttpRunner (HttpEnv cap) where
 
 -- | Inner environment carrying a BiDi runner.
 data BiDiEnv cap = MkBiDiEnv
-  { logFunc :: LogFunc
-  , capabilities :: FullCapabilities cap
-  , biDiRunner :: BiDiRunner
+  { logFunc :: LogFunc,
+    capabilities :: FullCapabilities cap,
+    biDiRunner :: BiDiRunner
   }
 
 instance HasLogFunc (BiDiEnv cap) where
@@ -105,10 +123,10 @@ instance HasBiDiRunner (BiDiEnv cap) where
 
 -- | Inner environment carrying both HTTP and BiDi runners.
 data DualEnv cap = MkDualEnv
-  { logFunc :: LogFunc
-  , capabilities :: FullCapabilities cap
-  , httpRunner :: HttpRunner
-  , biDiRunner :: BiDiRunner
+  { logFunc :: LogFunc,
+    capabilities :: FullCapabilities cap,
+    httpRunner :: HttpRunner,
+    biDiRunner :: BiDiRunner
   }
 
 instance HasLogFunc (DualEnv cap) where
