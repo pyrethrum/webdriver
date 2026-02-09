@@ -46,23 +46,25 @@ import RIO
 import RIO.Text qualified as T
 
 data LoggerConfig
-  = Console
+  = None
+  | Console
   | File {fileName :: Text}
   | ConsoleAndFile {fileName :: Text}
-  | Console' {opsModifier :: LogOptions -> LogOptions}
+  | Console' {optsModifier :: LogOptions -> LogOptions}
   | File'
       { fileName :: Text,
-        opsModifier :: LogOptions -> LogOptions
+        optsModifier :: LogOptions -> LogOptions
       }
   | ConsoleAndFile'
-      { consoleOpsModifier :: LogOptions -> LogOptions,
+      { consoleoptsModifier :: LogOptions -> LogOptions,
         fileName :: Text,
-        fileOpsModifier :: LogOptions -> LogOptions
+        fileoptsModifier :: LogOptions -> LogOptions
       }
 
 withLogging :: (MonadUnliftIO m) => LoggerConfig -> (LogFunc -> m a) -> m a
 withLogging =
   ( \case
+      None -> ($ mkLogFunc (\_ _ _ _ -> pure ()))
       Console -> withConsoleLog' id
       File fileName -> withFileLog' id fileName
       ConsoleAndFile fileName -> withConsoleAndFileLog' id id fileName
@@ -72,11 +74,11 @@ withLogging =
         withConsoleAndFileLog' consoleModifyOpts fileModifyOpts fileName
   )
 
-consoleOpsHandle :: (MonadIO m) => m LogOptions
-consoleOpsHandle = defaultOptions <$> logOptionsHandle stdout True
+consoleoptsHandle :: (MonadIO m) => m LogOptions
+consoleoptsHandle = defaultOptions <$> logOptionsHandle stdout True
 
-fileOpsHandle :: (MonadIO m) => Handle -> m LogOptions
-fileOpsHandle h = defaultFileOptions <$> logOptionsHandle h True
+fileoptsHandle :: (MonadIO m) => Handle -> m LogOptions
+fileoptsHandle h = defaultFileOptions <$> logOptionsHandle h True
 
 -- | Apply verbose defaults: debug level, timestamps, verbose format
 defaultOptions :: LogOptions -> LogOptions
@@ -98,8 +100,8 @@ withConsoleLog :: (MonadUnliftIO m) => (LogFunc -> m a) -> m a
 withConsoleLog = withConsoleLog' id
 
 withModifiedOpts :: (MonadUnliftIO m) => m LogOptions -> (LogOptions -> LogOptions) -> (LogFunc -> m a) -> m a
-withModifiedOpts defaultHandleOps opsModifier action =
-  defaultHandleOps >>= flip withLogFunc action . opsModifier
+withModifiedOpts defaultHandleopts optsModifier action =
+  defaultHandleopts >>= flip withLogFunc action . optsModifier
 
 -- | Console logging with a custom options modifier applied after verbose defaults
 withConsoleLog' ::
@@ -108,7 +110,7 @@ withConsoleLog' ::
   (LogFunc -> m a) ->
   m a
 withConsoleLog' modifyOpts =
-  withModifiedOpts consoleOpsHandle modifyOpts
+  withModifiedOpts consoleoptsHandle modifyOpts
 
 -- | File logging with verbose defaults
 withFileLog :: (MonadUnliftIO m) => Text -> (LogFunc -> m a) -> m a
@@ -122,7 +124,7 @@ withFileLog' ::
   (LogFunc -> m a) ->
   m a
 withFileLog' modifyOpts logFileName action =
-  bracket (openLogFile logFileName) hClose $ \h -> withModifiedOpts (fileOpsHandle h) modifyOpts action
+  bracket (openLogFile logFileName) hClose $ \h -> withModifiedOpts (fileoptsHandle h) modifyOpts action
 
 -- | Console and file logging with verbose defaults
 withConsoleAndFileLog :: (MonadUnliftIO m) => Text -> (LogFunc -> m a) -> m a
@@ -138,8 +140,8 @@ withConsoleAndFileLog' ::
   m a
 withConsoleAndFileLog' modifyConsoleOpts modifyFileOpts logFileName action =
   bracket (openLogFile logFileName) hClose $ \h -> do
-    consoleOpts <- consoleOpsHandle
-    fileOpts <- fileOpsHandle h
+    consoleOpts <- consoleoptsHandle
+    fileOpts <- fileoptsHandle h
     withLogFunc (modifyConsoleOpts consoleOpts) $ \consoleLF ->
       withLogFunc (modifyFileOpts fileOpts) $ \fileLF ->
         action (consoleLF <> fileLF)

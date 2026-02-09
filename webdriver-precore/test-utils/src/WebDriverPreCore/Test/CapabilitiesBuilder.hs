@@ -1,4 +1,4 @@
-module WebDriverPreCore.Test.RuntimeConst
+module WebDriverPreCore.Test.CapabilitiesBuilder
   ( httpCapabilities,
     httpFullCapabilities,
   )

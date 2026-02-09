@@ -59,7 +59,7 @@ import WebDriverPreCore.Test.ConfigLoader (loadConfig)
 import WebDriverPreCore.Test.Const (Timeout (..), milliseconds, seconds)
 import WebDriverPreCore.Test.IOUtils (DemoActions (..), Logger (..), logNothingLogger, mkDemoActions)
 import WebDriverPreCore.Test.Logger (withChannelFileLogger)
-import WebDriverPreCore.Test.RuntimeConst (httpCapabilities, httpFullCapabilities)
+import WebDriverPreCore.Test.CapabilitiesBuilder (httpCapabilities, httpFullCapabilities)
 import Utils (txt)
 import Prelude hiding (log)
 

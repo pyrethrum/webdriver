@@ -18,7 +18,7 @@ import Utils (txt)
 import Actions (HttpActions (..))
 import WebDriverPreCore.Test.ConfigLoader (loadConfig)
 import WebDriverPreCore.Test.IOUtils (DemoActions (..), (===))
-import WebDriverPreCore.Test.RuntimeConst (httpFullCapabilities)
+import WebDriverPreCore.Test.CapabilitiesBuilder (httpFullCapabilities)
 import WebDriverPreCore.Test.TestData
   ( checkboxesUrl,
     indexUrl,

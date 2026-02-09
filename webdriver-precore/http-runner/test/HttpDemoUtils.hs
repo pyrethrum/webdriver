@@ -20,7 +20,7 @@ import WebDriverPreCore.Test.ConfigLoader (loadConfig)
 import WebDriverPreCore.Test.Const (milliseconds)
 import WebDriverPreCore.Test.IOUtils (DemoActions (..), Logger (..), logNothingLogger, mkDemoActions)
 import WebDriverPreCore.Test.Logger (withChannelFileLogger)
-import WebDriverPreCore.Test.RuntimeConst (httpFullCapabilities)
+import WebDriverPreCore.Test.CapabilitiesBuilder (httpFullCapabilities)
 
 data HttpDemo
   = Demo

@@ -30,7 +30,7 @@ New configuration:
 - Configuration loader in `ConfigLoader.hs` supporting Dhall config files
 - Config directory at `.config/` (user config file gitignored)
 - Debug configuration via `DebugConfig.hs` module
-- Runtime constants in `RuntimeConst.hs` and `Const.hs`
+- Runtime constants in `CapabilitiesBuilder.hs` and `Const.hs`
 - For details regarding configuration details see [Configuration set up](README.md#4-configuration-set)
 
 ### Test Infrastructure

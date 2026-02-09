@@ -94,7 +94,7 @@ Each library will have a corresponding test suite with:
 15. [ ] Slim down original test suite to unit/property tests only (FUTURE)
 16. [ ] Remove unused test files from webdriver-precore/test (FUTURE)
 
-Note: Demo migration requires refactoring shared modules (Config, ConfigLoader, TestData, IOUtils, TestServerAPI, RuntimeConst, Logger) which have dependencies on dhall configuration. This is deferred for a future phase.
+Note: Demo migration requires refactoring shared modules (Config, ConfigLoader, TestData, IOUtils, TestServerAPI, CapabilitiesBuilder, Logger) which have dependencies on dhall configuration. This is deferred for a future phase.
 
 ### Phase 7: Cleanup
 17. [ ] Update tasks.json
