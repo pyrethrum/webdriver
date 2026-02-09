@@ -85,7 +85,7 @@ configText =
       "",
       "let config : Config = ",
       "      { browser = browser",
-      "      , logging = True",
+      "      , logging = False",
       "      , httpUrl = \"127.0.0.1\"",
       "      , httpPort = 4444",
       "      , pauseMS = 2000",
