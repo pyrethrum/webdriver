@@ -1,3 +1,5 @@
+{-# LANGUAGE DataKinds #-}
+
 -- |
 -- Module: WebDriver.RIO.Env
 -- Description: RIO environment types for outer and inner WebDriver layers
@@ -30,7 +32,7 @@ module WebDriver.RIO.Env
 where
 
 import RIO (HasLogFunc (..), Lens', LogFunc, lens)
-import WebDriverPreCore.Extended.Capabilities (FullCapabilities)
+import WebDriverPreCore.Extended.Capabilities (FullCapabilitiesRequest)
 
 import WebDriverPreCore.BiDiRunner (BiDiRunner)
 import WebDriverPreCore.HttpRunner (HttpRunner)
@@ -43,32 +45,26 @@ class HasHttpRunner env where
 class HasBiDiRunner env where
   biDiRunnerL :: Lens' env BiDiRunner
 
--- | Env carries 'FullCapabilities' parameterised by @cap@.
---
--- The functional dependency @env -> cap@ ensures the capability type is
--- determined by the environment, preventing ambiguous type variable errors
--- at call sites.
-class HasCapabilities env cap | env -> cap where
-  capabilitiesL :: Lens' env (FullCapabilities cap)
+-- | Env carries 'FullCapabilitiesRequest'.
+class HasCapabilities env where
+  capabilitiesL :: Lens' env FullCapabilitiesRequest
 
 -- ---------------------------------------------------------------------------
 -- Base layer
 -- ---------------------------------------------------------------------------
 
 -- | Environment used before a runner is established.
---   Parameterised by capability type so callers lock in HTTP or BiDi
---   at the type level.
-data BaseEnv cap = MkBaseEnv
+data BaseEnv = MkBaseEnv
   { logFunc :: LogFunc,
-    capabilities :: FullCapabilities cap
+    capabilities :: FullCapabilitiesRequest
   }
 
-instance HasLogFunc (BaseEnv cap) where
-  logFuncL :: Lens' (BaseEnv cap) LogFunc
+instance HasLogFunc BaseEnv where
+  logFuncL :: Lens' BaseEnv LogFunc
   logFuncL = lens (.logFunc) \(MkBaseEnv _ c) l -> MkBaseEnv l c
 
-instance HasCapabilities (BaseEnv cap) cap where
-  capabilitiesL :: Lens' (BaseEnv cap) (FullCapabilities cap)
+instance HasCapabilities BaseEnv where
+  capabilitiesL :: Lens' BaseEnv FullCapabilitiesRequest
   capabilitiesL = lens (.capabilities) \(MkBaseEnv l _) c -> MkBaseEnv l c
 
 -- ---------------------------------------------------------------------------
@@ -76,22 +72,22 @@ instance HasCapabilities (BaseEnv cap) cap where
 -- ---------------------------------------------------------------------------
 
 -- | Inner environment carrying an HTTP runner.
-data HttpEnv cap = MkHttpEnv
+data HttpEnv = MkHttpEnv
   { logFunc :: LogFunc,
-    capabilities :: FullCapabilities cap,
+    capabilities :: FullCapabilitiesRequest,
     httpRunner :: HttpRunner
   }
 
-instance HasLogFunc (HttpEnv cap) where
-  logFuncL :: Lens' (HttpEnv cap) LogFunc
+instance HasLogFunc HttpEnv where
+  logFuncL :: Lens' HttpEnv LogFunc
   logFuncL = lens (.logFunc) \(MkHttpEnv _ c r) l -> MkHttpEnv l c r
 
-instance HasCapabilities (HttpEnv cap) cap where
-  capabilitiesL :: Lens' (HttpEnv cap) (FullCapabilities cap)
+instance HasCapabilities HttpEnv where
+  capabilitiesL :: Lens' HttpEnv FullCapabilitiesRequest
   capabilitiesL = lens (.capabilities) \(MkHttpEnv l _ r) c -> MkHttpEnv l c r
 
-instance HasHttpRunner (HttpEnv cap) where
-  httpRunnerL :: Lens' (HttpEnv cap) HttpRunner
+instance HasHttpRunner HttpEnv where
+  httpRunnerL :: Lens' HttpEnv HttpRunner
   httpRunnerL = lens (.httpRunner) \(MkHttpEnv l c _) r -> MkHttpEnv l c r
 
 -- ---------------------------------------------------------------------------
@@ -99,22 +95,22 @@ instance HasHttpRunner (HttpEnv cap) where
 -- ---------------------------------------------------------------------------
 
 -- | Inner environment carrying a BiDi runner.
-data BiDiEnv cap = MkBiDiEnv
+data BiDiEnv = MkBiDiEnv
   { logFunc :: LogFunc,
-    capabilities :: FullCapabilities cap,
+    capabilities :: FullCapabilitiesRequest,
     biDiRunner :: BiDiRunner
   }
 
-instance HasLogFunc (BiDiEnv cap) where
-  logFuncL :: Lens' (BiDiEnv cap) LogFunc
+instance HasLogFunc BiDiEnv where
+  logFuncL :: Lens' BiDiEnv LogFunc
   logFuncL = lens (.logFunc) \(MkBiDiEnv _ c r) l -> MkBiDiEnv l c r
 
-instance HasCapabilities (BiDiEnv cap) cap where
-  capabilitiesL :: Lens' (BiDiEnv cap) (FullCapabilities cap)
+instance HasCapabilities BiDiEnv where
+  capabilitiesL :: Lens' BiDiEnv FullCapabilitiesRequest
   capabilitiesL = lens (.capabilities) \(MkBiDiEnv l _ r) c -> MkBiDiEnv l c r
 
-instance HasBiDiRunner (BiDiEnv cap) where
-  biDiRunnerL :: Lens' (BiDiEnv cap) BiDiRunner
+instance HasBiDiRunner BiDiEnv where
+  biDiRunnerL :: Lens' BiDiEnv BiDiRunner
   biDiRunnerL = lens (.biDiRunner) \(MkBiDiEnv l c _) r -> MkBiDiEnv l c r
 
 -- ---------------------------------------------------------------------------
@@ -122,25 +118,25 @@ instance HasBiDiRunner (BiDiEnv cap) where
 -- ---------------------------------------------------------------------------
 
 -- | Inner environment carrying both HTTP and BiDi runners.
-data DualEnv cap = MkDualEnv
+data DualEnv = MkDualEnv
   { logFunc :: LogFunc,
-    capabilities :: FullCapabilities cap,
+    capabilities :: FullCapabilitiesRequest,
     httpRunner :: HttpRunner,
     biDiRunner :: BiDiRunner
   }
 
-instance HasLogFunc (DualEnv cap) where
-  logFuncL :: Lens' (DualEnv cap) LogFunc
+instance HasLogFunc DualEnv where
+  logFuncL :: Lens' DualEnv LogFunc
   logFuncL = lens (.logFunc) \(MkDualEnv _ c h b) l -> MkDualEnv l c h b
 
-instance HasCapabilities (DualEnv cap) cap where
-  capabilitiesL :: Lens' (DualEnv cap) (FullCapabilities cap)
+instance HasCapabilities DualEnv where
+  capabilitiesL :: Lens' DualEnv FullCapabilitiesRequest
   capabilitiesL = lens (.capabilities) \(MkDualEnv l _ h b) c -> MkDualEnv l c h b
 
-instance HasHttpRunner (DualEnv cap) where
-  httpRunnerL :: Lens' (DualEnv cap) HttpRunner
+instance HasHttpRunner DualEnv where
+  httpRunnerL :: Lens' DualEnv HttpRunner
   httpRunnerL = lens (.httpRunner) \(MkDualEnv l c _ b) h -> MkDualEnv l c h b
 
-instance HasBiDiRunner (DualEnv cap) where
-  biDiRunnerL :: Lens' (DualEnv cap) BiDiRunner
+instance HasBiDiRunner DualEnv where
+  biDiRunnerL :: Lens' DualEnv BiDiRunner
   biDiRunnerL = lens (.biDiRunner) \(MkDualEnv l c h _) b -> MkDualEnv l c h b

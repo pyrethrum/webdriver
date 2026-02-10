@@ -265,9 +265,9 @@ genProxy =
 -- Generate random Capabilities
 genCapabilities :: G.Gen Capabilities
 genCapabilities = do
-  browserName <- genMEnum
+  browserName <- genMaybe genText
   browserVersion <- genMaybe genText
-  platformName <- genMEnum
+  platformName <- genMaybe genText
   strictFileInteractability <- genMaybe genBool
   unhandledPromptBehavior <- genMEnum
   acceptInsecureCerts <- genMaybe genBool

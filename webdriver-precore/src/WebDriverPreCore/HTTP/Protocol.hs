@@ -34,8 +34,6 @@ module WebDriverPreCore.HTTP.Protocol
     Capabilities (..),
     UnhandledPromptBehavior (..),
     PageLoadStrategy (..),
-    BrowserName (..),
-    PlatformName (..),
     Proxy (..),
     VendorSpecific (..),
     SocksProxy (..),

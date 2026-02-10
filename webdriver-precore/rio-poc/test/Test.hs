@@ -1,6 +1,8 @@
 {-|
 Test suite for webdriver-rio-poc library
 -}
+{-# LANGUAGE DataKinds #-}
+
 module Main where
 
 import Test.Tasty (TestTree, defaultMain, testGroup)
@@ -10,6 +12,7 @@ import WebDriver.RIO as R
 import WebDriverPreCore.Test.ConfigLoader (loadConfig)
 import WebDriverPreCore.Test.CapabilitiesBuilder (httpCapabilities)
 import WebDriverPreCore.Extended.HTTP.Base.Protocol as HTTP
+import WebDriverPreCore.Extended.Capabilities (FullCapabilitiesRequest (..), fromHttpCapabilities)
 
 main :: IO ()
 main = defaultMain tests
@@ -29,11 +32,12 @@ basic_demo = do
       logInfo "Successfully started WebDriverRIO with provided capabilities"
 
 
-loadCapabilities :: IO (R.FullCapabilities HTTP.Capabilities)
+loadCapabilities :: IO FullCapabilitiesRequest
 loadCapabilities = do
   config <- loadConfig
-  pure $ R.MkFullCapabilities
-    { alwaysMatch = Just $ httpCapabilities config,
+  let httpCap = httpCapabilities config
+  pure $ MkFullCapabilitiesRequest
+    { alwaysMatch = Just $ fromHttpCapabilities httpCap,
       firstMatch = []
     }
    

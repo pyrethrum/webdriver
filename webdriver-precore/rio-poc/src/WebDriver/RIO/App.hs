@@ -1,3 +1,5 @@
+{-# LANGUAGE DataKinds #-}
+
 -- |
 -- Module: WebDriver.RIO.App
 -- Description: Runner to initialize BaseEnv and execute RIO actions
@@ -10,7 +12,7 @@ module WebDriver.RIO.App
 where
 
 import RIO
-import WebDriverPreCore.Extended.Capabilities (FullCapabilities)
+import WebDriverPreCore.Extended.Capabilities (FullCapabilitiesRequest)
 import WebDriver.RIO.Env (BaseEnv (..))
 import WebDriver.RIO.Logging (LoggerConfig, withLogging)
 
@@ -18,7 +20,7 @@ import WebDriver.RIO.Logging (LoggerConfig, withLogging)
 --
 -- Takes logger config and capabilities, creates a BaseEnv, logs a debug
 -- message, then executes the provided action.
-runWebDriver :: LoggerConfig -> FullCapabilities cap -> RIO (BaseEnv cap) a -> IO a
+runWebDriver :: LoggerConfig -> FullCapabilitiesRequest -> RIO BaseEnv a -> IO a
 runWebDriver loggerConfig caps action =
   withLogging loggerConfig $ \lf -> do
     let env = MkBaseEnv lf caps

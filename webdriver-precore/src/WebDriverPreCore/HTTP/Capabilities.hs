@@ -5,8 +5,6 @@ module WebDriverPreCore.HTTP.Capabilities
     Capabilities (..),
     UnhandledPromptBehavior (..),
     PageLoadStrategy (..),
-    BrowserName (..),
-    PlatformName (..),
     Proxy (..),
     Timeouts (..),
     VendorSpecific (..),
@@ -107,13 +105,13 @@ alwaysMatchCapabilities = flip MkFullCapabilities [] . Just
 -- | Returns the minimal FullCapabilities object for a given browser
 -- The browserName in the 'alwaysMatch' field is the only field populated
 -- [spec](https://https://www.w3.org/TR/2025/WD-webdriver2-20251028/#capabilities)
-minFullCapabilities :: BrowserName -> FullCapabilities
+minFullCapabilities :: Text -> FullCapabilities
 minFullCapabilities = alwaysMatchCapabilities . minCapabilities
 
 -- | Returns the minimal Capabilities object for a given browser
 -- The browserName is the only field populated
 -- [spec](https://https://www.w3.org/TR/2025/WD-webdriver2-20251028/#capabilities)
-minCapabilities :: BrowserName -> Capabilities
+minCapabilities :: Text -> Capabilities
 minCapabilities browserName =
   MkCapabilities
     { browserName = Just browserName,
@@ -132,11 +130,11 @@ minCapabilities browserName =
 
 -- | Returns the minimal FullCapabilities object for Firefox
 minFirefoxCapabilities :: FullCapabilities
-minFirefoxCapabilities = minFullCapabilities Firefox
+minFirefoxCapabilities = minFullCapabilities "firefox"
 
 -- | Returns the minimal FullCapabilities object for Chrome
 minChromeCapabilities :: FullCapabilities
-minChromeCapabilities = minFullCapabilities Chrome
+minChromeCapabilities = minFullCapabilities "chrome"
 
 -- Custom Types for Enums
 
@@ -171,35 +169,19 @@ instance FromJSON PageLoadStrategy where
     "normal" -> pure Normal
     _ -> fail "Invalid PageLoadStrategy"
 
--- | [spec](https://www.w3.org/TR/2025/WD-webdriver2-20251028/#capabilities)
-data BrowserName
-  = Chrome
-  | Firefox
-  | Safari
-  | Edge
-  | InternetExplorer
-  deriving (Show, Generic, Enum, Bounded, Eq)
-
--- | [spec](https://www.w3.org/TR/2025/WD-webdriver2-20251028/#capabilities)
-data PlatformName
-  = Windows
-  | Mac
-  | Linux
-  | Android
-  | IOS
-  deriving (Show, Generic, Enum, Bounded, Eq)
-
 -- | 'Capabilities' define the properties of the session and are passed to the webdriver
 -- via fields of the 'FullCapabilities' object.
 --
 -- [spec](https://https://www.w3.org/TR/2025/WD-webdriver2-20251028/#capabilities)
 --
+-- browserName and platformName are Text as per W3C spec (not closed enumerations)
+--
 -- See also: 'FullCapabilities' and related constructors such as: 'minCapabilities',
 --   'minFullCapabilities',  'minFirefoxCapabilities' and 'minChromeCapabilities'
 data Capabilities = MkCapabilities
-  { browserName :: Maybe BrowserName,
+  { browserName :: Maybe Text,
     browserVersion :: Maybe Text,
-    platformName :: Maybe PlatformName,
+    platformName :: Maybe Text,
     acceptInsecureCerts :: Maybe Bool,
     pageLoadStrategy :: Maybe PageLoadStrategy,
     proxy :: Maybe Proxy,
@@ -586,24 +568,6 @@ instance ToJSON UnhandledPromptBehavior where
     AcceptAndNotify -> "accept and notify"
     Ignore -> "ignore"
 
-instance ToJSON BrowserName where
-  toJSON :: BrowserName -> Value
-  toJSON = \case
-    Chrome -> "chrome"
-    Firefox -> "firefox"
-    Safari -> "safari"
-    Edge -> "edge"
-    InternetExplorer -> "internet explorer"
-
-instance ToJSON PlatformName where
-  toJSON :: PlatformName -> Value
-  toJSON = \case
-    Windows -> "windows"
-    Mac -> "mac"
-    Linux -> "linux"
-    Android -> "android"
-    IOS -> "ios"
-
 instance FromJSON UnhandledPromptBehavior where
   parseJSON :: Value -> Parser UnhandledPromptBehavior
   parseJSON = withText "UnhandledPromptBehavior" $ \case
@@ -613,26 +577,6 @@ instance FromJSON UnhandledPromptBehavior where
     "accept and notify" -> pure AcceptAndNotify
     "ignore" -> pure Ignore
     other -> fail $ "UnhandledPromptBehavior: " <> show other
-
-instance FromJSON BrowserName where
-  parseJSON :: Value -> Parser BrowserName
-  parseJSON = withText "BrowserName" $ \case
-    "chrome" -> pure Chrome
-    "firefox" -> pure Firefox
-    "safari" -> pure Safari
-    "edge" -> pure Edge
-    "internet explorer" -> pure InternetExplorer
-    _ -> fail "Invalid BrowserName"
-
-instance FromJSON PlatformName where
-  parseJSON :: Value -> Parser PlatformName
-  parseJSON = withText "PlatformName" $ \case
-    "windows" -> pure Windows
-    "mac" -> pure Mac
-    "linux" -> pure Linux
-    "android" -> pure Android
-    "ios" -> pure IOS
-    _ -> fail "Invalid PlatformName"
 
 -- FromJSON Instances for Data Structures
 parseVendorSpecific :: Object -> Parser (Maybe VendorSpecific)

@@ -6,8 +6,7 @@ where
 
 import WebDriverPreCore.Test.Config as CFG
 import WebDriverPreCore.HTTP.Protocol as WPC
-  ( BrowserName (..),
-    Capabilities (..),
+  ( Capabilities (..),
     FullCapabilities (..),
     UnhandledPromptBehavior (..),
     VendorSpecific (..),
@@ -26,7 +25,7 @@ import Prelude as P
 httpCapabilities :: Config -> Capabilities
 httpCapabilities MkConfig {browser} =
   MkCapabilities
-    { browserName = Just $ if isFirefox browser then WPC.Firefox else WPC.Chrome,
+    { browserName = Just $ if isFirefox browser then "firefox" else "chrome",
       browserVersion = Nothing,
       platformName = Nothing,
       acceptInsecureCerts = Nothing,
