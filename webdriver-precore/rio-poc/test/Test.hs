@@ -35,9 +35,8 @@ basic_demo = do
 loadCapabilities :: IO FullCapabilitiesRequest
 loadCapabilities = do
   config <- loadConfig
-  let httpCap = httpCapabilities config
   pure $ MkFullCapabilitiesRequest
-    { alwaysMatch = Just $ fromHttpCapabilities httpCap,
+    { alwaysMatch = Just . fromHttpCapabilities $ httpCapabilities config,
       firstMatch = []
     }
    
