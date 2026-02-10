@@ -1,11 +1,11 @@
 {-|
-Module: WebDriver.RIO.Capabilities
+Module: WebDriverPreCore.Extended.Capabilities
 Description: Parameterised full-capabilities wrapper
 
 Temporary unified capabilities — workaround until protocols share
 a common capability abstraction.
 -}
-module WebDriver.RIO.Capabilities
+module WebDriverPreCore.Extended.Capabilities
   ( -- * Full Capabilities
     FullCapabilities (..),
 

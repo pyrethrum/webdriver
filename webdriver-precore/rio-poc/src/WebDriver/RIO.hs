@@ -7,7 +7,7 @@ as a single entry point.
 -}
 module WebDriver.RIO
   ( -- * Capabilities
-    module WebDriver.RIO.Capabilities,
+    module WebDriverPreCore.Extended.Capabilities,
 
     -- * Environment Types
     module WebDriver.RIO.Env,
@@ -20,7 +20,7 @@ module WebDriver.RIO
   )
 where
 
-import WebDriver.RIO.Capabilities
+import WebDriverPreCore.Extended.Capabilities
 import WebDriver.RIO.Env
 import WebDriver.RIO.Logging
 import WebDriver.RIO.App

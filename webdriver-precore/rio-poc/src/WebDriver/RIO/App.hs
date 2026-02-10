@@ -10,7 +10,7 @@ module WebDriver.RIO.App
 where
 
 import RIO
-import WebDriver.RIO.Capabilities (FullCapabilities)
+import WebDriverPreCore.Extended.Capabilities (FullCapabilities)
 import WebDriver.RIO.Env (BaseEnv (..))
 import WebDriver.RIO.Logging (LoggerConfig, withLogging)
 

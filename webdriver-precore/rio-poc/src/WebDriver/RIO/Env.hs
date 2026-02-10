@@ -30,7 +30,7 @@ module WebDriver.RIO.Env
 where
 
 import RIO (HasLogFunc (..), Lens', LogFunc, lens)
-import WebDriver.RIO.Capabilities (FullCapabilities)
+import WebDriverPreCore.Extended.Capabilities (FullCapabilities)
 
 import WebDriverPreCore.BiDiRunner (BiDiRunner)
 import WebDriverPreCore.HttpRunner (HttpRunner)

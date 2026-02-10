@@ -373,6 +373,7 @@ library webdriver-precore-extended
   import: commonExtensions, commonGhcOptions
   exposed-modules:
       WebDriverPreCore.Extended
+      WebDriverPreCore.Extended.Capabilities
       WebDriverPreCore.Extended.HTTP.Base.API
       WebDriverPreCore.Extended.HTTP.Base.Protocol
       WebDriverPreCore.Extended.HTTP.Base.Actions
@@ -449,7 +450,6 @@ library webdriver-rio-poc
       WebDriver.RIO
       WebDriver.RIO.App
       WebDriver.RIO.BiDi.Base
-      WebDriver.RIO.Capabilities
       WebDriver.RIO.Env
       WebDriver.RIO.HTTP.Base
       WebDriver.RIO.Logging
