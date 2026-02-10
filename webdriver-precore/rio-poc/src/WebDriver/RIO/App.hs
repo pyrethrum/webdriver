@@ -8,13 +8,15 @@
 -- capabilities, then execute a RIO action in that context.
 module WebDriver.RIO.App
   ( runWebDriver,
+    withBiDiRunner,
   )
 where
 
 import RIO
-import WebDriverPreCore.Extended.Capabilities (FullCapabilitiesRequest)
-import WebDriver.RIO.Env (BaseEnv (..))
+import WebDriver.RIO.Env (BaseEnv (..), BiDiEnv (..), HasCapabilities (..), HasLogFunc (..), capabilitiesL, logFuncL)
 import WebDriver.RIO.Logging (LoggerConfig, withLogging)
+import WebDriverPreCore.BiDiRunner (BiDiRunner)
+import WebDriverPreCore.Extended.Capabilities (FullCapabilitiesRequest)
 
 -- | Initialize a BaseEnv context and run a RIO action.
 --
@@ -27,3 +29,31 @@ runWebDriver loggerConfig caps action =
     runRIO env $ do
       logDebug "Running action"
       action
+
+-- | Run an action in BiDiEnv context with the given runner.
+--
+-- Extracts LogFunc and capabilities from the current environment, constructs
+-- a BiDiEnv with the given runner, then executes the provided action.
+runInBiDiEnv :: BiDiRunner -> RIO BiDiEnv a -> RIO BaseEnv a
+runInBiDiEnv runner action = do
+  caps <- view capabilitiesL
+  lf <- view logFuncL
+  let biDiEnv = MkBiDiEnv lf caps runner
+  runRIO biDiEnv action
+
+-- | Create a BiDiRunner from capabilities and run an action in BiDiEnv context.
+--
+-- Extracts logger and capabilities from BaseEnv, creates a BiDiRunner with
+-- the provided initialization function, then executes the action in a BiDiEnv
+-- context. Uses bracket to ensure cleanup happens even if the action fails.
+withBiDiRunner ::
+  (FullCapabilitiesRequest -> IO BiDiRunner) ->
+  (BiDiRunner -> IO ()) ->
+  RIO BiDiEnv a ->
+  RIO BaseEnv a
+withBiDiRunner mkRunner cleanup action = do
+  caps <- view capabilitiesL
+  bracket
+    (liftIO $ mkRunner caps)
+    (liftIO . cleanup)
+    $ \runner -> runInBiDiEnv runner action
