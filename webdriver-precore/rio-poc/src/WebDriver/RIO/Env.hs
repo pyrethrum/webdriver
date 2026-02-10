@@ -31,7 +31,7 @@ module WebDriver.RIO.Env
   )
 where
 
-import RIO (HasLogFunc (..), Lens', LogFunc, lens)
+import RIO (HasLogFunc (..), Lens', LogFunc, lens, view, (^.))
 import WebDriverPreCore.Extended.Capabilities (FullCapabilitiesRequest)
 
 import WebDriverPreCore.BiDiRunner (BiDiRunner)
@@ -48,6 +48,9 @@ class HasBiDiRunner env where
 -- | Env carries 'FullCapabilitiesRequest'.
 class HasCapabilities env where
   capabilitiesL :: Lens' env FullCapabilitiesRequest
+  
+getCapabilities :: env -> FullCapabilitiesRequest
+  getCapabilities env = env ^. capabilitiesL
 
 -- ---------------------------------------------------------------------------
 -- Base layer
@@ -66,6 +69,7 @@ instance HasLogFunc BaseEnv where
 instance HasCapabilities BaseEnv where
   capabilitiesL :: Lens' BaseEnv FullCapabilitiesRequest
   capabilitiesL = lens (.capabilities) \(MkBaseEnv l _) c -> MkBaseEnv l c
+
 
 -- ---------------------------------------------------------------------------
 -- Inner layer — HTTP only

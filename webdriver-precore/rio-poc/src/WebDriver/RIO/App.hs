@@ -13,7 +13,7 @@ module WebDriver.RIO.App
 where
 
 import RIO
-import WebDriver.RIO.Env (BaseEnv (..), BiDiEnv (..), HasCapabilities (..), HasLogFunc (..), capabilitiesL, logFuncL)
+import WebDriver.RIO.Env (BaseEnv (..), BiDiEnv (..), HasCapabilities (..), capabilitiesL)
 import WebDriver.RIO.Logging (LoggerConfig, withLogging)
 import WebDriverPreCore.BiDiRunner (BiDiRunner)
 import WebDriverPreCore.Extended.Capabilities (FullCapabilitiesRequest)
@@ -37,6 +37,7 @@ runWebDriver loggerConfig caps action =
 runInBiDiEnv :: BiDiRunner -> RIO BiDiEnv a -> RIO BaseEnv a
 runInBiDiEnv runner action = do
   caps <- view capabilitiesL
+  -- caps <- getCapabilities
   lf <- view logFuncL
   let biDiEnv = MkBiDiEnv lf caps runner
   runRIO biDiEnv action
