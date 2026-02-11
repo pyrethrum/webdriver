@@ -49,9 +49,6 @@ class HasBiDiRunner env where
 class HasCapabilities env where
   capabilitiesL :: Lens' env FullCapabilitiesRequest
   
-getCapabilities :: env -> FullCapabilitiesRequest
-  getCapabilities env = env ^. capabilitiesL
-
 -- ---------------------------------------------------------------------------
 -- Base layer
 -- ---------------------------------------------------------------------------

@@ -34,11 +34,10 @@ runWebDriver loggerConfig caps action =
 --
 -- Extracts LogFunc and capabilities from the current environment, constructs
 -- a BiDiEnv with the given runner, then executes the provided action.
-runInBiDiEnv :: BiDiRunner -> RIO BiDiEnv a -> RIO BaseEnv a
-runInBiDiEnv runner action = do
-  caps <- view capabilitiesL
-  -- caps <- getCapabilities
-  lf <- view logFuncL
+runBiDi :: BiDiRunner -> RIO BiDiEnv a -> RIO BaseEnv a
+runBiDi runner action = do
+  caps <- getCapabilities
+  lf <- getLogger
   let biDiEnv = MkBiDiEnv lf caps runner
   runRIO biDiEnv action
 
@@ -47,14 +46,22 @@ runInBiDiEnv runner action = do
 -- Extracts logger and capabilities from BaseEnv, creates a BiDiRunner with
 -- the provided initialization function, then executes the action in a BiDiEnv
 -- context. Uses bracket to ensure cleanup happens even if the action fails.
+{-
 withBiDiRunner ::
-  (FullCapabilitiesRequest -> IO BiDiRunner) ->
   (BiDiRunner -> IO ()) ->
   RIO BiDiEnv a ->
   RIO BaseEnv a
-withBiDiRunner mkRunner cleanup action = do
-  caps <- view capabilitiesL
+withBiDiRunner cleanup action = do
+  caps <- getCapabilities
   bracket
     (liftIO $ mkRunner caps)
     (liftIO . cleanup)
-    $ \runner -> runInBiDiEnv runner action
+    $ \runner -> runBiDi runner action
+  -}
+  
+
+getCapabilities :: HasCapabilities env => RIO env FullCapabilitiesRequest
+getCapabilities = view capabilitiesL
+
+getLogger :: HasLogFunc env => RIO env LogFunc
+getLogger = view logFuncL
