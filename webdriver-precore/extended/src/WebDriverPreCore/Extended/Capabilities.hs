@@ -176,6 +176,7 @@ TODO:
 deal with 
   , browserVersion :: Maybe Text  -- Response only (in practice)
   , setWindowRect :: Maybe Bool   -- Response only
+  , inRio only needs sessionID typeclass
 
 -- | HTTP-specific capabilities
 data HttpCapabilities = MkHttpCapabilities
