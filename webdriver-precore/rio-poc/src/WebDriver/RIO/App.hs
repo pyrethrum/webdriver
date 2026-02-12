@@ -13,10 +13,11 @@ module WebDriver.RIO.App
 where
 
 import RIO
-import WebDriver.RIO.Env (BaseEnv (..), BiDiEnv (..), HasCapabilities (..), capabilitiesL)
+import WebDriver.RIO.Env (BaseEnv (..), BiDiEnv (..), HasCapabilities (..), HasCapabilitiesResponse (..), capabilitiesL, capabilitiesResponseL)
 import WebDriver.RIO.Logging (LoggerConfig, withLogging)
-import WebDriverPreCore.BiDiRunner (BiDiRunner)
-import WebDriverPreCore.Extended.Capabilities (FullCapabilitiesRequest)
+import WebDriverPreCore.BiDiRunner (BiDiRunner, BiDiUrl, parseBiDiUrl)
+import WebDriverPreCore.BiDiRunner qualified as BiDiRunner
+import WebDriverPreCore.Extended.Capabilities (FullCapabilitiesRequest, CapabilitiesResponse (..))
 
 -- | Initialize a BaseEnv context and run a RIO action.
 --
@@ -25,7 +26,7 @@ import WebDriverPreCore.Extended.Capabilities (FullCapabilitiesRequest)
 runWebDriver :: LoggerConfig -> FullCapabilitiesRequest -> RIO BaseEnv a -> IO a
 runWebDriver loggerConfig caps action =
   withLogging loggerConfig $ \lf -> do
-    let env = MkBaseEnv lf caps
+    let env = MkBaseEnv lf caps Nothing
     runRIO env $ do
       logDebug "Running action"
       action
@@ -37,31 +38,56 @@ runWebDriver loggerConfig caps action =
 runBiDi :: BiDiRunner -> RIO BiDiEnv a -> RIO BaseEnv a
 runBiDi runner action = do
   caps <- getCapabilities
+  mCapsResp <- getCapabilitiesResponse
   lf <- getLogger
-  let biDiEnv = MkBiDiEnv lf caps runner
+  let biDiEnv = MkBiDiEnv lf caps mCapsResp runner
   runRIO biDiEnv action
 
 -- | Create a BiDiRunner from capabilities and run an action in BiDiEnv context.
 --
--- Extracts logger and capabilities from BaseEnv, creates a BiDiRunner with
--- the provided initialization function, then executes the action in a BiDiEnv
--- context. Uses bracket to ensure cleanup happens even if the action fails.
-{-
+-- Extracts logger and capabilities from BaseEnv, creates a BiDiRunner using
+-- withBiDi from the BiDiRunner module, then executes the action in a BiDiEnv
+-- context. The BiDi URL comes from the webSocketUrl in the capabilities response.
+-- Uses finally to ensure cleanup happens even if the action fails.
+
 withBiDiRunner ::
   (BiDiRunner -> IO ()) ->
-  RIO BiDiEnv a ->
-  RIO BaseEnv a
+  RIO BiDiEnv () ->
+  RIO BaseEnv ()
 withBiDiRunner cleanup action = do
   caps <- getCapabilities
-  bracket
-    (liftIO $ mkRunner caps)
-    (liftIO . cleanup)
-    $ \runner -> runBiDi runner action
-  -}
+  mCapsResp <- getCapabilitiesResponse
+  capsResp <- case mCapsResp of
+    Nothing -> error "No capabilities response available. Create a session first."
+    Just cr -> pure cr
+  bidiUrl <- getBiDiUrl capsResp
+  lf <- getLogger
   
+  -- Create logger function from RIO logInfo
+  let logger txt = runRIO (MkBaseEnv lf caps mCapsResp) $ logInfo $ display txt
+  
+  liftIO $ BiDiRunner.withBiDi (Just logger) bidiUrl $ \runner -> do
+    finally
+      (runRIO (MkBaseEnv lf caps mCapsResp) $ runBiDi runner action)
+      (cleanup runner)
+
+-- | Extract BiDi URL from capabilities response
+getBiDiUrl :: (MonadIO m) => CapabilitiesResponse -> m BiDiUrl
+getBiDiUrl capsResp = case capsResp of
+  BiDiCapabilitiesResponse {bidiWebSocketUrl = Just wsUrl} ->
+    case parseBiDiUrl wsUrl of
+      Just url -> pure url
+      Nothing -> error $ "Failed to parse WebSocket URL: " <> show wsUrl
+  BiDiCapabilitiesResponse {bidiWebSocketUrl = Nothing} ->
+    error "No WebSocket URL in BiDi capabilities response"
+  HttpCapabilitiesResponse {} ->
+    error "Cannot get BiDi URL from HTTP capabilities response"
 
 getCapabilities :: HasCapabilities env => RIO env FullCapabilitiesRequest
 getCapabilities = view capabilitiesL
+
+getCapabilitiesResponse :: HasCapabilitiesResponse env => RIO env (Maybe CapabilitiesResponse)
+getCapabilitiesResponse = view capabilitiesResponseL
 
 getLogger :: HasLogFunc env => RIO env LogFunc
 getLogger = view logFuncL
