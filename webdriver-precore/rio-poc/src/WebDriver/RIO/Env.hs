@@ -33,7 +33,7 @@ module WebDriver.RIO.Env
 where
 
 import RIO (HasLogFunc (..), Lens', LogFunc, lens)
-import WebDriverPreCore.Extended.Capabilities (FullCapabilitiesRequest, CapabilitiesResponse)
+import WebDriverPreCore.Extended.Capabilities (FullCapabilitiesRequest, SessionResponse)
 
 import WebDriverPreCore.BiDiRunner (BiDiRunner)
 import WebDriverPreCore.HttpRunner (HttpRunner)
@@ -50,9 +50,9 @@ class HasBiDiRunner env where
 class HasCapabilities env where
   capabilitiesL :: Lens' env FullCapabilitiesRequest
 
--- | Env carries 'CapabilitiesResponse' from a session.
+-- | Env carries 'SessionResponse' from a session.
 class HasCapabilitiesResponse env where
-  capabilitiesResponseL :: Lens' env (Maybe CapabilitiesResponse)
+  capabilitiesResponseL :: Lens' env (Maybe SessionResponse)
   
 -- ---------------------------------------------------------------------------
 -- Base layer
@@ -62,7 +62,7 @@ class HasCapabilitiesResponse env where
 data BaseEnv = MkBaseEnv
   { logFunc :: LogFunc,
     capabilities :: FullCapabilitiesRequest,
-    capabilitiesResponse :: Maybe CapabilitiesResponse
+    capabilitiesResponse :: Maybe SessionResponse
   }
 
 instance HasLogFunc BaseEnv where
@@ -74,7 +74,7 @@ instance HasCapabilities BaseEnv where
   capabilitiesL = lens (.capabilities) \(MkBaseEnv l _ r) c -> MkBaseEnv l c r
 
 instance HasCapabilitiesResponse BaseEnv where
-  capabilitiesResponseL :: Lens' BaseEnv (Maybe CapabilitiesResponse)
+  capabilitiesResponseL :: Lens' BaseEnv (Maybe SessionResponse)
   capabilitiesResponseL = lens (.capabilitiesResponse) \(MkBaseEnv l c _) r -> MkBaseEnv l c r
 
 
@@ -109,7 +109,7 @@ instance HasHttpRunner HttpEnv where
 data BiDiEnv = MkBiDiEnv
   { logFunc :: LogFunc,
     capabilities :: FullCapabilitiesRequest,
-    capabilitiesResponse :: Maybe CapabilitiesResponse,
+    capabilitiesResponse :: Maybe SessionResponse,
     biDiRunner :: BiDiRunner
   }
 
@@ -122,7 +122,7 @@ instance HasCapabilities BiDiEnv where
   capabilitiesL = lens (.capabilities) \(MkBiDiEnv l _ cr r) c -> MkBiDiEnv l c cr r
 
 instance HasCapabilitiesResponse BiDiEnv where
-  capabilitiesResponseL :: Lens' BiDiEnv (Maybe CapabilitiesResponse)
+  capabilitiesResponseL :: Lens' BiDiEnv (Maybe SessionResponse)
   capabilitiesResponseL = lens (.capabilitiesResponse) \(MkBiDiEnv l c _ r) cr -> MkBiDiEnv l c cr r
 
 instance HasBiDiRunner BiDiEnv where
@@ -137,7 +137,7 @@ instance HasBiDiRunner BiDiEnv where
 data DualEnv = MkDualEnv
   { logFunc :: LogFunc,
     capabilities :: FullCapabilitiesRequest,
-    capabilitiesResponse :: Maybe CapabilitiesResponse,
+    capabilitiesResponse :: Maybe SessionResponse,
     httpRunner :: HttpRunner,
     biDiRunner :: BiDiRunner
   }
@@ -151,7 +151,7 @@ instance HasCapabilities DualEnv where
   capabilitiesL = lens (.capabilities) \(MkDualEnv l _ cr h b) c -> MkDualEnv l c cr h b
 
 instance HasCapabilitiesResponse DualEnv where
-  capabilitiesResponseL :: Lens' DualEnv (Maybe CapabilitiesResponse)
+  capabilitiesResponseL :: Lens' DualEnv (Maybe SessionResponse)
   capabilitiesResponseL = lens (.capabilitiesResponse) \(MkDualEnv l c _ h b) cr -> MkDualEnv l c cr h b
 
 instance HasHttpRunner DualEnv where

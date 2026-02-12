@@ -27,6 +27,24 @@
  [ ] reexport base test
  [ ] all patterns
 
+### demo capabilities all
+
+-- challenge 
+  -- basic bidi
+  -- basic http
+  -- bidi events
+  -- bidi and http mixed on the same instance
+  -- hooks to start runner and close connection
+  -- 
+  -- concurrency 
+    - mock create user rest call
+    - 2 browsers (chrome and firefox)
+
+### effectful only
+
+-- non-compliant unparsable response from capabilities 
+
+
  ### socket server
 
 [ ] check [this PR](https://github.com/jaspervdj/websockets/pull/259/changes)

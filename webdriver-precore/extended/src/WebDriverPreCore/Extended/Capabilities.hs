@@ -10,7 +10,9 @@ types. Uses sum types to represent HTTP and BiDi protocol variants.
 module WebDriverPreCore.Extended.Capabilities
   ( -- * Universal Capability Types
     CapabilitiesRequest (..),
-    CapabilitiesResponse (..),
+    SessionResponse (..),
+    HttpCapabilities (..),
+    BiDiCapabilities (..),
     FullCapabilitiesRequest (..),
 
     -- * Unified Property Types
@@ -59,6 +61,7 @@ where
 
 import Data.Aeson (FromJSON (..), ToJSON (..), Value (..), withText)
 import Data.Aeson.Types (Parser)
+import Data.Map.Strict qualified as M
 import Data.Text (Text)
 import Data.Word (Word8)
 import WebDriverPreCore.HTTP.Protocol qualified as HTTP
@@ -169,34 +172,55 @@ data CapabilitiesRequest
 
 -- * Universal Capability Response Types
 
--- | Universal capabilities response type with protocol-specific variants.
+TODO: 
+deal with 
+  , browserVersion :: Maybe Text  -- Response only (in practice)
+  , setWindowRect :: Maybe Bool   -- Response only
+
+-- | HTTP-specific capabilities
+data HttpCapabilities = MkHttpCapabilities
+  { browserName :: BrowserName,
+    browserVersion :: Text,
+    platformName :: PlatformName,
+    acceptInsecureCerts :: Bool,
+    pageLoadStrategy :: Maybe PageLoadStrategy,
+    proxy :: Maybe ProxyConfig,
+    httpSetWindowRect :: Maybe Bool,
+    timeouts :: Maybe HTTP.Timeouts,
+    strictFileInteractability :: Maybe Bool,
+    unhandledPromptBehavior :: Maybe PromptBehavior,
+    httpWebSocketUrl :: Maybe Bool,
+    vendorSpecific :: Maybe HTTP.VendorSpecific
+  }
+  deriving (Show, Eq)
+
+-- | BiDi-specific capabilities
+data BiDiCapabilities = MkBiDiCapabilities
+  { acceptInsecureCerts :: Bool,
+    browserName :: BrowserName,
+    browserVersion :: Text,
+    platformName :: PlatformName,
+    bidiSetWindowRect :: Bool,
+    userAgent :: Text,
+    proxy :: Maybe ProxyConfig,
+    unhandledPromptBehavior :: Maybe PromptBehavior,
+    bidiWebSocketUrl :: Maybe Text
+  }
+  deriving (Show, Eq)
+
+-- | Universal session response type with protocol-specific variants.
 --
--- Response types include fields that are only present in session responses.
-data CapabilitiesResponse
-  = HttpCapabilitiesResponse
-      { browserName :: BrowserName,
-        browserVersion :: Text,
-        platformName :: PlatformName,
-        acceptInsecureCerts :: Bool,
-        pageLoadStrategy :: Maybe PageLoadStrategy,
-        proxy :: Maybe ProxyConfig,
-        httpSetWindowRect :: Maybe Bool,
-        timeouts :: Maybe HTTP.Timeouts,
-        strictFileInteractability :: Maybe Bool,
-        unhandledPromptBehavior :: Maybe PromptBehavior,
-        httpWebSocketUrl :: Maybe Bool,
-        vendorSpecific :: Maybe HTTP.VendorSpecific
+-- Response types include session information and capabilities from session creation.
+data SessionResponse
+  = HttpSessionResponse
+      { sessionId :: Text,
+        websocketUrl :: Maybe Text,
+        extensions :: Maybe (M.Map Text Value),
+        httpCapabilities :: HttpCapabilities
       }
-  | BiDiCapabilitiesResponse
-      { acceptInsecureCerts :: Bool,
-        browserName :: BrowserName,
-        browserVersion :: Text,
-        platformName :: PlatformName,
-        bidiSetWindowRect :: Bool,
-        userAgent :: Text,
-        proxy :: Maybe ProxyConfig,
-        unhandledPromptBehavior :: Maybe PromptBehavior,
-        bidiWebSocketUrl :: Maybe Text
+  | BiDiSessionResponse
+      { sessionId :: Text,
+        bidiCapabilities :: BiDiCapabilities
       }
   deriving (Show, Eq)
 
@@ -490,36 +514,46 @@ fromBiDiCapability (BiDi.MkCapability {..}) =
 -- * Response Conversions
 
 -- | Convert HTTP session response to universal response
-fromHttpSessionResponse :: HTTP.Capabilities -> CapabilitiesResponse
-fromHttpSessionResponse (HTTP.MkCapabilities {..}) =
-  HttpCapabilitiesResponse
-    { browserName = maybe (Other "") textToBrowserName browserName,
-      browserVersion = maybe "" id browserVersion,
-      platformName = maybe (OtherPlatform "") textToPlatformName platformName,
-      acceptInsecureCerts = maybe False id acceptInsecureCerts,
-      pageLoadStrategy = fmap pageLoadFromHttp pageLoadStrategy,
-      proxy = fmap proxyFromHttp proxy,
-      httpSetWindowRect = setWindowRect,
-      timeouts = timeouts,
-      strictFileInteractability = strictFileInteractability,
-      unhandledPromptBehavior = fmap promptFromHttp unhandledPromptBehavior,
-      httpWebSocketUrl = webSocketUrl,
-      vendorSpecific = vendorSpecific
+fromHttpSessionResponse :: HTTP.SessionResponse -> SessionResponse
+fromHttpSessionResponse (HTTP.MkSessionResponse {sessionId = HTTP.MkSession sid, webSocketUrl = wsUrl, capabilities = HTTP.MkCapabilities {..}, extensions = exts}) =
+  HttpSessionResponse
+    { sessionId = sid,
+      websocketUrl = wsUrl,
+      extensions = exts,
+      httpCapabilities =
+        MkHttpCapabilities
+          { browserName = maybe (Other "") textToBrowserName browserName,
+            browserVersion = maybe "" id browserVersion,
+            platformName = maybe (OtherPlatform "") textToPlatformName platformName,
+            acceptInsecureCerts = maybe False id acceptInsecureCerts,
+            pageLoadStrategy = fmap pageLoadFromHttp pageLoadStrategy,
+            proxy = fmap proxyFromHttp proxy,
+            httpSetWindowRect = setWindowRect,
+            timeouts = timeouts,
+            strictFileInteractability = strictFileInteractability,
+            unhandledPromptBehavior = fmap promptFromHttp unhandledPromptBehavior,
+            httpWebSocketUrl = webSocketUrl,
+            vendorSpecific = vendorSpecific
+          }
     }
 
--- | Convert BiDi capabilities result to universal response
-fromBiDiCapabilitiesResult :: BiDi.CapabilitiesResult -> CapabilitiesResponse
-fromBiDiCapabilitiesResult (BiDi.MkCapabilitiesResult {..}) =
-  BiDiCapabilitiesResponse
-    { acceptInsecureCerts = acceptInsecureCerts,
-      browserName = textToBrowserName browserName,
-      browserVersion = browserVersion,
-      platformName = textToPlatformName platformName,
-      bidiSetWindowRect = setWindowRect,
-      userAgent = userAgent,
-      proxy = fmap proxyFromBiDi proxy,
-      unhandledPromptBehavior = fmap promptFromBiDi unhandledPromptBehavior,
-      bidiWebSocketUrl = webSocketUrl
+-- | Convert BiDi session result to universal response
+fromBiDiCapabilitiesResult :: BiDi.SessionNewResult -> SessionResponse
+fromBiDiCapabilitiesResult (BiDi.MkSessionNewResult {sessionId = sid, capabilities = BiDi.MkCapabilitiesResult {..}}) =
+  BiDiSessionResponse
+    { sessionId = sid,
+      bidiCapabilities =
+        MkBiDiCapabilities
+          { acceptInsecureCerts = acceptInsecureCerts,
+            browserName = textToBrowserName browserName,
+            browserVersion = browserVersion,
+            platformName = textToPlatformName platformName,
+            bidiSetWindowRect = setWindowRect,
+            userAgent = userAgent,
+            proxy = fmap proxyFromBiDi proxy,
+            unhandledPromptBehavior = fmap promptFromBiDi unhandledPromptBehavior,
+            bidiWebSocketUrl = webSocketUrl
+          }
     }
 
 -- * Cross-Protocol Conversions

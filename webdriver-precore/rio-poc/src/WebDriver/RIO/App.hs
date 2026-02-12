@@ -17,7 +17,7 @@ import WebDriver.RIO.Env (BaseEnv (..), BiDiEnv (..), HasCapabilities (..), HasC
 import WebDriver.RIO.Logging (LoggerConfig, withLogging)
 import WebDriverPreCore.BiDiRunner (BiDiRunner, BiDiUrl, parseBiDiUrl)
 import WebDriverPreCore.BiDiRunner qualified as BiDiRunner
-import WebDriverPreCore.Extended.Capabilities (FullCapabilitiesRequest, CapabilitiesResponse (..))
+import WebDriverPreCore.Extended.Capabilities (FullCapabilitiesRequest, SessionResponse (..), BiDiCapabilities (..))
 
 -- | Initialize a BaseEnv context and run a RIO action.
 --
@@ -72,21 +72,21 @@ withBiDiRunner cleanup action = do
       (cleanup runner)
 
 -- | Extract BiDi URL from capabilities response
-getBiDiUrl :: (MonadIO m) => CapabilitiesResponse -> m BiDiUrl
+getBiDiUrl :: (MonadIO m) => SessionResponse -> m BiDiUrl
 getBiDiUrl capsResp = case capsResp of
-  BiDiCapabilitiesResponse {bidiWebSocketUrl = Just wsUrl} ->
+  BiDiSessionResponse {bidiCapabilities = MkBiDiCapabilities {bidiWebSocketUrl = Just wsUrl}} ->
     case parseBiDiUrl wsUrl of
       Just url -> pure url
       Nothing -> error $ "Failed to parse WebSocket URL: " <> show wsUrl
-  BiDiCapabilitiesResponse {bidiWebSocketUrl = Nothing} ->
+  BiDiSessionResponse {bidiCapabilities = MkBiDiCapabilities {bidiWebSocketUrl = Nothing}} ->
     error "No WebSocket URL in BiDi capabilities response"
-  HttpCapabilitiesResponse {} ->
+  HttpSessionResponse {} ->
     error "Cannot get BiDi URL from HTTP capabilities response"
 
 getCapabilities :: HasCapabilities env => RIO env FullCapabilitiesRequest
 getCapabilities = view capabilitiesL
 
-getCapabilitiesResponse :: HasCapabilitiesResponse env => RIO env (Maybe CapabilitiesResponse)
+getCapabilitiesResponse :: HasCapabilitiesResponse env => RIO env (Maybe SessionResponse)
 getCapabilitiesResponse = view capabilitiesResponseL
 
 getLogger :: HasLogFunc env => RIO env LogFunc
