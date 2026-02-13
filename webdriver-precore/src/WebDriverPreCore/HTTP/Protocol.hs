@@ -216,7 +216,7 @@ data Script = MkScript
 
 instance ToJSON Script
 
-instance ToJSON SessionResponse where
+instance {-# DEPRECATED "Removal planned ~ 2027-04-01" #-} ToJSON SessionResponse where
   toJSON :: SessionResponse -> Value
   toJSON MkSessionResponse {sessionId, webSocketUrl, capabilities, extensions} =
     object $

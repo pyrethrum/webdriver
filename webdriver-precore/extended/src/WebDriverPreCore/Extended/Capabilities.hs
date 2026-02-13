@@ -1,12 +1,9 @@
-
-
-{-|
-Module: WebDriverPreCore.Extended.Capabilities
-Description: Universal capabilities abstraction for HTTP and BiDi protocols
-
-Provides a unified capabilities interface that can be converted to protocol-specific
-types. Uses sum types to represent HTTP and BiDi protocol variants.
--}
+-- |
+-- Module: WebDriverPreCore.Extended.Capabilities
+-- Description: Universal capabilities abstraction for HTTP and BiDi protocols
+--
+-- Provides a unified capabilities interface that can be converted to protocol-specific
+-- types. Uses sum types to represent HTTP and BiDi protocol variants.
 module WebDriverPreCore.Extended.Capabilities
   ( -- * Universal Capability Types
     CapabilitiesRequest (..),
@@ -64,8 +61,8 @@ import Data.Aeson.Types (Parser)
 import Data.Map.Strict qualified as M
 import Data.Text (Text)
 import Data.Word (Word8)
-import WebDriverPreCore.HTTP.Protocol qualified as HTTP
 import WebDriverPreCore.BiDi.Protocol qualified as BiDi
+import WebDriverPreCore.HTTP.Protocol qualified as HTTP
 
 -- * Unified Property Types
 
@@ -172,11 +169,11 @@ data CapabilitiesRequest
 
 -- * Universal Capability Response Types
 
-TODO: 
-deal with 
-  , browserVersion :: Maybe Text  -- Response only (in practice)
-  , setWindowRect :: Maybe Bool   -- Response only
-  , inRio only needs sessionID typeclass
+-- TODO:
+-- deal with
+--   , browserVersion :: Maybe Text  -- Response only (in practice)
+--   , setWindowRect :: Maybe Bool   -- Response only
+--   , inRio only needs sessionID typeclass
 
 -- | HTTP-specific capabilities
 data HttpCapabilities = MkHttpCapabilities
@@ -223,6 +220,19 @@ data SessionResponse
       { sessionId :: Text,
         bidiCapabilities :: BiDiCapabilities
       }
+  deriving (Show, Eq)
+
+data BiDiSessionResponse = MkBiDiSessionResponse
+  { acceptInsecureCerts :: Bool,
+    browserName :: Text,
+    browserVersion :: Text,
+    platformName :: Text,
+    setWindowRect :: Bool,
+    userAgent :: Text,
+    proxy :: Maybe ProxyConfig,
+    unhandledPromptBehavior :: Maybe UserPromptHandler,
+    webSocketUrl :: Maybe Text
+  }
   deriving (Show, Eq)
 
 -- * Full Capabilities Request
@@ -351,12 +361,13 @@ promptActionToHttp = \case
 
 -- | Convert HTTP unhandled prompt behavior to unified
 promptFromHttp :: HTTP.UnhandledPromptBehavior -> PromptBehavior
-promptFromHttp = SimplePromptBehavior . \case
-  HTTP.Accept -> Accept
-  HTTP.Dismiss -> Dismiss
-  HTTP.AcceptAndNotify -> Accept
-  HTTP.DismissAndNotify -> Dismiss
-  HTTP.Ignore -> Ignore
+promptFromHttp =
+  SimplePromptBehavior . \case
+    HTTP.Accept -> Accept
+    HTTP.Dismiss -> Dismiss
+    HTTP.AcceptAndNotify -> Accept
+    HTTP.DismissAndNotify -> Dismiss
+    HTTP.Ignore -> Ignore
 
 -- | Convert unified prompt behavior to BiDi user prompt handler
 promptToBiDi :: PromptBehavior -> BiDi.UserPromptHandler
