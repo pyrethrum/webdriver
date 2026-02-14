@@ -30,6 +30,9 @@ module WebDriverPreCore.Extended.Capabilities
     HTTP.LogSettings (..),
     HTTP.DeviceMetrics (..),
 
+    HttpCapabilities,
+    BiDiCapabilities,
+
     -- * Conversions to Native Types
     toHttpCapability,
     toBiDiCapability,
@@ -62,7 +65,8 @@ import Data.Word (Word8)
 import WebDriverPreCore.BiDi.Protocol qualified as BiDi
 import WebDriverPreCore.HTTP.Protocol qualified as HTTP
 
-type HttpCapabilities = HttpCapability
+type HttpCapabilities = FullCapabilities HttpCapability
+type BiDiCapabilities = FullCapabilities BiDiCapability
 
 -- | HTTP-specific capabilities
 data HttpCapability = MkHttpCapability
@@ -145,7 +149,7 @@ data HttpSessionResponse = MkHttpSessionResponse
     httpSetWindowRect :: Maybe Bool,
     -- TODO should be object
     extensions :: Maybe (M.Map Text Value),
-    httpCapabilities :: HttpCapabilities
+    httpCapability :: HttpCapability
   }
 
 -- | BiDi-specific capabilities
@@ -170,7 +174,8 @@ data UserPromptHandler = MkUserPromptHandler
   deriving (Show, Eq)
 
 data BiDiSessionResponse = MkBiDiSessionResponse
-  { acceptInsecureCerts :: Bool,
+  { sessionId :: Text,
+    acceptInsecureCerts :: Bool,
     browserName :: Text,
     browserVersion :: Text,
     platformName :: Text,
@@ -461,26 +466,26 @@ fromHttpSessionResponse (HTTP.MkSessionResponse {sessionId = HTTP.MkSession sid,
       browserVersion = fromMaybe "" browserVersion,
       httpSetWindowRect = setWindowRect,
       extensions = exts,
-      httpCapabilities =
-        MkHttpCapability
-          { browserName = textToBrowserName <$> browserName,
-            platformName = textToPlatformName <$> platformName,
-            acceptInsecureCerts = fromMaybe False acceptInsecureCerts,
-            pageLoadStrategy = pageLoadFromHttp <$> pageLoadStrategy,
-            proxy = proxyFromHttp <$> proxy,
-            timeouts = timeouts,
-            strictFileInteractability = strictFileInteractability,
-            unhandledPromptBehavior = promptFromHttp <$> unhandledPromptBehavior,
-            httpWebSocketUrl = webSocketUrl,
-            vendorSpecific = vendorSpecific
+      httpCapability = MkHttpCapability
+                  { browserName = textToBrowserName <$> browserName,
+                    platformName = textToPlatformName <$> platformName,
+                    acceptInsecureCerts = fromMaybe False acceptInsecureCerts,
+                    pageLoadStrategy = pageLoadFromHttp <$> pageLoadStrategy,
+                    proxy = proxyFromHttp <$> proxy,
+                    timeouts = timeouts,
+                    strictFileInteractability = strictFileInteractability,
+                    unhandledPromptBehavior = promptFromHttp <$> unhandledPromptBehavior,
+                    httpWebSocketUrl = webSocketUrl,
+                    vendorSpecific = vendorSpecific
+                  }
           }
-    }
 
 -- | Convert native BiDi session response to local BiDi session response
 fromBiDiSessionResponse :: BiDi.SessionNewResult -> BiDiSessionResponse
-fromBiDiSessionResponse (BiDi.MkSessionNewResult {capabilities = BiDi.MkCapabilitiesResult {..}}) =
+fromBiDiSessionResponse (BiDi.MkSessionNewResult {sessionId = sid, capabilities = BiDi.MkCapabilitiesResult {..}}) =
   MkBiDiSessionResponse
-    { acceptInsecureCerts = acceptInsecureCerts,
+    { sessionId = sid,
+      acceptInsecureCerts = acceptInsecureCerts,
       browserName = browserName,
       browserVersion = browserVersion,
       platformName = platformName,
