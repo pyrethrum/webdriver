@@ -52,11 +52,11 @@ module WebDriverPreCore.Extended.Capabilities
   )
 where
 
+import Control.Applicative ((<|>))
 import Data.Aeson (FromJSON (..), ToJSON (..), Value (..), withText)
 import Data.Aeson.Types (Parser)
-import Control.Applicative ((<|>))
-import Data.Maybe (fromMaybe)
 import Data.Map.Strict qualified as M
+import Data.Maybe (fromMaybe)
 import Data.Text (Text)
 import Data.Word (Word8)
 import WebDriverPreCore.BiDi.Protocol qualified as BiDi
@@ -139,26 +139,23 @@ data PromptAction
   deriving (Show, Eq)
 
 data HttpSessionResponse = MkHttpSessionResponse
-      { sessionId :: Text,
-        websocketUrl :: Maybe Text,
-        browserVersion :: Text,
-        httpSetWindowRect :: Maybe Bool,
-        -- TODO should be object
-        extensions :: Maybe (M.Map Text Value),
-        httpCapabilities :: HttpCapabilities
-      }
+  { sessionId :: Text,
+    websocketUrl :: Maybe Text,
+    browserVersion :: Text,
+    httpSetWindowRect :: Maybe Bool,
+    -- TODO should be object
+    extensions :: Maybe (M.Map Text Value),
+    httpCapabilities :: HttpCapabilities
+  }
 
 -- | BiDi-specific capabilities
 data BiDiCapability = MkBiDiCapability
-  { acceptInsecureCerts :: Bool,
-    browserName :: BrowserName,
-    browserVersion :: Text,
-    platformName :: PlatformName,
-    bidiSetWindowRect :: Bool,
-    userAgent :: Text,
+  { acceptInsecureCerts :: Maybe Bool,
+    browserName :: Maybe BrowserName,
+    browserVersion :: Maybe Text,
+    platformName :: Maybe PlatformName,
     proxy :: Maybe Proxy,
-    unhandledPromptBehavior :: Maybe UserPromptHandler,
-    bidiWebSocketUrl :: Maybe Text
+    unhandledPromptBehavior :: Maybe UserPromptHandler
   }
   deriving (Show, Eq)
 
@@ -172,7 +169,6 @@ data UserPromptHandler = MkUserPromptHandler
   }
   deriving (Show, Eq)
 
-
 data BiDiSessionResponse = MkBiDiSessionResponse
   { acceptInsecureCerts :: Bool,
     browserName :: Text,
@@ -185,7 +181,6 @@ data BiDiSessionResponse = MkBiDiSessionResponse
     webSocketUrl :: Maybe Text
   }
   deriving (Show, Eq)
-
 
 -- * Full Capabilities Request
 
@@ -207,7 +202,7 @@ proxyToHttp = \case
     HTTP.Manual
       { HTTP.httpProxy = httpProxy,
         HTTP.sslProxy = sslProxy,
-        HTTP.socksProxy = fmap socksToHttp socksProxy,
+        HTTP.socksProxy = socksToHttp <$> socksProxy,
         HTTP.noProxy = noProxy
       }
   Pac {proxyAutoconfigUrl} ->
@@ -223,7 +218,7 @@ proxyFromHttp = \case
     Manual
       { httpProxy = httpProxy,
         sslProxy = sslProxy,
-        socksProxy = fmap socksFromHttp socksProxy,
+        socksProxy = socksFromHttp <$> socksProxy,
         noProxy = noProxy
       }
   HTTP.Pac {HTTP.proxyAutoconfigUrl} ->
@@ -239,7 +234,7 @@ proxyToBiDi = \case
     BiDi.ManualProxyConfiguration
       { BiDi.httpProxy = httpProxy,
         BiDi.sslProxy = sslProxy,
-        BiDi.socksProxyConfig = fmap socksToBiDi socksProxy,
+        BiDi.socksProxyConfig = socksToBiDi <$> socksProxy,
         BiDi.noProxy = noProxy
       }
   Pac {proxyAutoconfigUrl} ->
@@ -255,7 +250,7 @@ proxyFromBiDi = \case
     Manual
       { httpProxy = httpProxy,
         sslProxy = sslProxy,
-        socksProxy = fmap socksFromBiDi socksProxyConfig,
+        socksProxy = socksFromBiDi <$> socksProxyConfig,
         noProxy = noProxy
       }
   BiDi.PacProxyConfiguration {BiDi.proxyAutoconfigUrl} ->
@@ -310,11 +305,11 @@ promptActionToHttp = \case
 -- | Convert HTTP unhandled prompt behavior to prompt action
 promptFromHttp :: HTTP.UnhandledPromptBehavior -> PromptAction
 promptFromHttp = \case
-    HTTP.Accept -> Accept
-    HTTP.Dismiss -> Dismiss
-    HTTP.AcceptAndNotify -> Accept
-    HTTP.DismissAndNotify -> Dismiss
-    HTTP.Ignore -> Ignore
+  HTTP.Accept -> Accept
+  HTTP.Dismiss -> Dismiss
+  HTTP.AcceptAndNotify -> Accept
+  HTTP.DismissAndNotify -> Dismiss
+  HTTP.Ignore -> Ignore
 
 -- | Convert prompt action to BiDi user prompt handler
 promptActionToUserPromptHandler :: PromptAction -> UserPromptHandler
@@ -346,7 +341,7 @@ userPromptHandlerFromBiDi (BiDi.MkUserPromptHandler {BiDi.alert, BiDi.beforeUnlo
       fileHandler = mapPrompt fileHandler,
       prompt = mapPrompt prompt
     }
-  where 
+  where
     mapPrompt = fmap promptActionFromBiDi
 
 -- | Convert local user prompt handler to a single prompt action
@@ -365,7 +360,7 @@ userPromptHandlerToBiDi MkUserPromptHandler {alert, beforeUnload, confirm, defau
       BiDi.fileHandler = mapPrompt fileHandler,
       BiDi.prompt = mapPrompt prompt
     }
-  where 
+  where
     mapPrompt = fmap promptActionToBiDi
 
 -- | Convert BiDi action to prompt action
@@ -402,13 +397,13 @@ toHttpCapability (MkHttpCapability {..}) =
       HTTP.browserVersion = Nothing,
       HTTP.platformName = platformNameToText <$> platformName,
       HTTP.acceptInsecureCerts = Just acceptInsecureCerts,
-      HTTP.pageLoadStrategy = fmap pageLoadToHttp pageLoadStrategy,
-      HTTP.proxy = fmap proxyToHttp proxy,
+      HTTP.pageLoadStrategy = pageLoadToHttp <$> pageLoadStrategy,
+      HTTP.proxy = proxyToHttp <$> proxy,
       -- response only
       HTTP.setWindowRect = Nothing,
       HTTP.timeouts = timeouts,
       HTTP.strictFileInteractability = strictFileInteractability,
-      HTTP.unhandledPromptBehavior = fmap promptToHttp unhandledPromptBehavior,
+      HTTP.unhandledPromptBehavior = promptToHttp <$> unhandledPromptBehavior,
       HTTP.webSocketUrl = httpWebSocketUrl,
       HTTP.vendorSpecific = vendorSpecific
     }
@@ -417,12 +412,12 @@ toHttpCapability (MkHttpCapability {..}) =
 toBiDiCapability :: BiDiCapability -> BiDi.Capability
 toBiDiCapability (MkBiDiCapability {..}) =
   BiDi.MkCapability
-    { BiDi.acceptInsecureCerts = Just acceptInsecureCerts,
-      BiDi.browserName = Just (browserNameToText browserName),
-      BiDi.browserVersion = Just browserVersion,
-      BiDi.platformName = Just (platformNameToText platformName),
-      BiDi.proxy = fmap proxyToBiDi proxy,
-      BiDi.unhandledPromptBehavior = fmap userPromptHandlerToBiDi unhandledPromptBehavior
+    { BiDi.acceptInsecureCerts = acceptInsecureCerts,
+      BiDi.browserName = browserNameToText <$> browserName,
+      BiDi.browserVersion = browserVersion,
+      BiDi.platformName = platformNameToText <$> platformName,
+      BiDi.proxy = proxyToBiDi <$> proxy,
+      BiDi.unhandledPromptBehavior = userPromptHandlerToBiDi <$> unhandledPromptBehavior
     }
 
 -- * Conversions from Native Types
@@ -434,11 +429,11 @@ fromHttpCapability (HTTP.MkCapabilities {..}) =
     { browserName = textToBrowserName <$> browserName,
       platformName = textToPlatformName <$> platformName,
       acceptInsecureCerts = fromMaybe False acceptInsecureCerts,
-      pageLoadStrategy = fmap pageLoadFromHttp pageLoadStrategy,
-      proxy = fmap proxyFromHttp proxy,
+      pageLoadStrategy = pageLoadFromHttp <$> pageLoadStrategy,
+      proxy = proxyFromHttp <$> proxy,
       timeouts = timeouts,
       strictFileInteractability = strictFileInteractability,
-      unhandledPromptBehavior = fmap promptFromHttp unhandledPromptBehavior,
+      unhandledPromptBehavior = promptFromHttp <$> unhandledPromptBehavior,
       httpWebSocketUrl = webSocketUrl,
       vendorSpecific = vendorSpecific
     }
@@ -447,15 +442,12 @@ fromHttpCapability (HTTP.MkCapabilities {..}) =
 fromBiDiCapability :: BiDi.Capability -> BiDiCapability
 fromBiDiCapability (BiDi.MkCapability {..}) =
   MkBiDiCapability
-    { acceptInsecureCerts = fromMaybe False acceptInsecureCerts,
-      browserName = maybe (Other "") textToBrowserName browserName,
-      browserVersion = fromMaybe "" browserVersion,
-      platformName = maybe (OtherPlatform "") textToPlatformName platformName,
-      bidiSetWindowRect = False,
-      userAgent = "",
-      proxy = fmap proxyFromBiDi proxy,
-      unhandledPromptBehavior = fmap userPromptHandlerFromBiDi unhandledPromptBehavior,
-      bidiWebSocketUrl = Nothing
+    { acceptInsecureCerts = acceptInsecureCerts,
+      browserName = textToBrowserName <$> browserName,
+      browserVersion = browserVersion,
+      platformName = textToPlatformName <$> platformName,
+      proxy = proxyFromBiDi <$> proxy,
+      unhandledPromptBehavior = userPromptHandlerFromBiDi <$> unhandledPromptBehavior
     }
 
 -- * Response Conversions
@@ -474,11 +466,11 @@ fromHttpSessionResponse (HTTP.MkSessionResponse {sessionId = HTTP.MkSession sid,
           { browserName = textToBrowserName <$> browserName,
             platformName = textToPlatformName <$> platformName,
             acceptInsecureCerts = fromMaybe False acceptInsecureCerts,
-            pageLoadStrategy = fmap pageLoadFromHttp pageLoadStrategy,
-            proxy = fmap proxyFromHttp proxy,
+            pageLoadStrategy = pageLoadFromHttp <$> pageLoadStrategy,
+            proxy = proxyFromHttp <$> proxy,
             timeouts = timeouts,
             strictFileInteractability = strictFileInteractability,
-            unhandledPromptBehavior = fmap promptFromHttp unhandledPromptBehavior,
+            unhandledPromptBehavior = promptFromHttp <$> unhandledPromptBehavior,
             httpWebSocketUrl = webSocketUrl,
             vendorSpecific = vendorSpecific
           }
@@ -494,8 +486,8 @@ fromBiDiSessionResponse (BiDi.MkSessionNewResult {capabilities = BiDi.MkCapabili
       platformName = platformName,
       setWindowRect = setWindowRect,
       userAgent = userAgent,
-      proxy = fmap proxyFromBiDi proxy,
-      unhandledPromptBehavior = fmap userPromptHandlerFromBiDi unhandledPromptBehavior,
+      proxy = proxyFromBiDi <$> proxy,
+      unhandledPromptBehavior = userPromptHandlerFromBiDi <$> unhandledPromptBehavior,
       webSocketUrl = webSocketUrl
     }
 
@@ -505,15 +497,15 @@ fromBiDiSessionResponse (BiDi.MkSessionNewResult {capabilities = BiDi.MkCapabili
 convertCapabilityToHttp :: BiDiCapability -> HttpCapability
 convertCapabilityToHttp (MkBiDiCapability {..}) =
   MkHttpCapability
-    { browserName = Just browserName,
-      platformName = Just platformName,
-      acceptInsecureCerts = acceptInsecureCerts,
+    { browserName = browserName,
+      platformName = platformName,
+      acceptInsecureCerts = fromMaybe False acceptInsecureCerts,
       pageLoadStrategy = Nothing,
       proxy = proxy,
       timeouts = Nothing,
       strictFileInteractability = Nothing,
-      unhandledPromptBehavior = fmap userPromptHandlerToPromptAction unhandledPromptBehavior,
-      httpWebSocketUrl = fmap (const True) bidiWebSocketUrl,
+      unhandledPromptBehavior = userPromptHandlerToPromptAction <$> unhandledPromptBehavior,
+      httpWebSocketUrl = Nothing,
       vendorSpecific = Nothing
     }
 
@@ -521,15 +513,12 @@ convertCapabilityToHttp (MkBiDiCapability {..}) =
 convertCapabilityToBiDi :: HttpCapability -> BiDiCapability
 convertCapabilityToBiDi (MkHttpCapability {..}) =
   MkBiDiCapability
-    { acceptInsecureCerts = acceptInsecureCerts,
+    { acceptInsecureCerts = Just acceptInsecureCerts,
       browserName = browserName,
-      browserVersion = "",
+      browserVersion = Nothing,
       platformName = platformName,
-      bidiSetWindowRect = False,
-      userAgent = "",
       proxy = proxy,
-      unhandledPromptBehavior = fmap promptActionToUserPromptHandler unhandledPromptBehavior,
-      bidiWebSocketUrl = Nothing
+      unhandledPromptBehavior = promptActionToUserPromptHandler <$> unhandledPromptBehavior
     }
 
 -- * Full Capabilities Conversions
@@ -538,32 +527,32 @@ convertCapabilityToBiDi (MkHttpCapability {..}) =
 toHttpCapabilities :: FullCapabilities HttpCapability -> HTTP.FullCapabilities
 toHttpCapabilities (MkFullCapabilitiesRequest {..}) =
   HTTP.MkFullCapabilities
-    { HTTP.alwaysMatch = fmap toHttpCapability alwaysMatch,
-      HTTP.firstMatch = fmap toHttpCapability firstMatch
+    { HTTP.alwaysMatch = toHttpCapability <$> alwaysMatch,
+      HTTP.firstMatch = toHttpCapability <$> firstMatch
     }
 
 -- | Convert universal full capabilities to BiDi capabilities
 toBiDiCapabilities :: FullCapabilities BiDiCapability -> BiDi.Capabilities
 toBiDiCapabilities (MkFullCapabilitiesRequest {..}) =
   BiDi.MkCapabilities
-    { BiDi.alwaysMatch = fmap toBiDiCapability alwaysMatch,
-      BiDi.firstMatch = fmap toBiDiCapability firstMatch
+    { BiDi.alwaysMatch = toBiDiCapability <$> alwaysMatch,
+      BiDi.firstMatch = toBiDiCapability <$> firstMatch
     }
 
 -- | Convert HTTP full capabilities to universal
 fromHttpCapabilities :: HTTP.FullCapabilities -> FullCapabilities HttpCapability
 fromHttpCapabilities (HTTP.MkFullCapabilities {..}) =
   MkFullCapabilitiesRequest
-    { alwaysMatch = fmap fromHttpCapability alwaysMatch,
-      firstMatch = fmap fromHttpCapability firstMatch
+    { alwaysMatch = fromHttpCapability <$> alwaysMatch,
+      firstMatch = fromHttpCapability <$> firstMatch
     }
 
 -- | Convert BiDi capabilities to universal
 fromBiDiCapabilities :: BiDi.Capabilities -> FullCapabilities BiDiCapability
 fromBiDiCapabilities (BiDi.MkCapabilities {..}) =
   MkFullCapabilitiesRequest
-    { alwaysMatch = fmap fromBiDiCapability alwaysMatch,
-      firstMatch = fmap fromBiDiCapability firstMatch
+    { alwaysMatch = fromBiDiCapability <$> alwaysMatch,
+      firstMatch = fromBiDiCapability <$> firstMatch
     }
 
 -- * Helper Functions for Browser/Platform Names
