@@ -49,7 +49,7 @@ mkHttpRunner ::
   -- | Host (e.g. "127.0.0.1")
   Text ->
   -- | Port (e.g. 4444)
-  Int ->
+  Word16 ->
   -- | Optional logger
   Maybe (Text -> IO ()) ->
   HttpRunner
@@ -59,7 +59,7 @@ mkHttpRunner host port mLogger =
       fullResponse = runCommandFullResponse base
     }
   where
-    base = mkHttpRunnerBase host (fromIntegral port) mLogger
+    base = mkHttpRunnerBase host port mLogger
 
 -- | Execute a typed command and return the parsed result
 runCommand :: forall r. (FromJSON r) => HttpRunnerBase -> Command r -> IO r

@@ -30,7 +30,9 @@ module WebDriverPreCore.Extended.Capabilities
     HTTP.LogSettings (..),
     HTTP.DeviceMetrics (..),
 
+    HttpCapability,
     HttpCapabilities,
+    BiDiCapability,
     BiDiCapabilities,
 
     -- * Conversions to Native Types

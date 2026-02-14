@@ -14,9 +14,8 @@
 -- All implement 'HasLogFunc' and 'HasCapabilities'; inner envs additionally
 -- implement the appropriate runner typeclasses.
 module WebDriver.RIO.Env
-  ( -- * Base Layer
-    BaseEnv (..),
-
+  ( 
+    LoggerEnv (..),
     -- * Inner Layer
     HttpEnv (..),
     BiDiEnv (..),
@@ -25,10 +24,6 @@ module WebDriver.RIO.Env
     -- * Runner Typeclasses
     HasHttpRunner (..),
     HasBiDiRunner (..),
-
-    -- * Capabilities Typeclass
-    HasCapabilities (..),
-    HasCapabilitiesResponse (..),
   )
 where
 
@@ -53,16 +48,26 @@ data HttpEnv = MkHttpEnv
 
 instance HasLogFunc HttpEnv where
   logFuncL :: Lens' HttpEnv LogFunc
-  logFuncL = lens (.logFunc) \(MkHttpEnv _ c r) l -> MkHttpEnv l c r
+  logFuncL = lens (.logFunc) \MkHttpEnv{logFunc, ..} l -> MkHttpEnv { logFunc = l, .. }
 
 instance HasHttpRunner HttpEnv where
   httpRunnerL :: Lens' HttpEnv HttpRunner
-  httpRunnerL = lens (.httpRunner) \(MkHttpEnv l c _) r -> MkHttpEnv l c r
+  httpRunnerL = lens (.httpRunner) \MkHttpEnv{..} r -> MkHttpEnv { httpRunner = r, .. }
+
+
+
+data LoggerEnv = MkLoggerEnv
+  { logFunc :: LogFunc
+  }
+
+instance HasLogFunc LoggerEnv where
+  logFuncL :: Lens' LoggerEnv LogFunc
+  logFuncL = lens (.logFunc) \MkLoggerEnv{..} l -> MkLoggerEnv { logFunc = l, .. }
+
 
 -- ---------------------------------------------------------------------------
 -- BiDi only
 -- ---------------------------------------------------------------------------
-
 
 data BiDiEnv = MkBiDiEnv
   { logFunc :: LogFunc,
@@ -71,11 +76,11 @@ data BiDiEnv = MkBiDiEnv
 
 instance HasLogFunc BiDiEnv where
   logFuncL :: Lens' BiDiEnv LogFunc
-  logFuncL = lens (.logFunc) \(MkBiDiEnv _ c cr r) l -> MkBiDiEnv l c cr r
+  logFuncL = lens (.logFunc) \MkBiDiEnv{..} l -> MkBiDiEnv { logFunc = l, .. }
 
 instance HasBiDiRunner BiDiEnv where
   biDiRunnerL :: Lens' BiDiEnv BiDiRunner
-  biDiRunnerL = lens (.biDiRunner) \(MkBiDiEnv l c cr _) r -> MkBiDiEnv l c cr r
+  biDiRunnerL = lens (.biDiRunner) \MkBiDiEnv{..} r -> MkBiDiEnv { biDiRunner = r, .. }
 
 -- ---------------------------------------------------------------------------
 -- Dual (HTTP + BiDi)
@@ -90,12 +95,12 @@ data DualEnv = MkDualEnv
 
 instance HasLogFunc DualEnv where
   logFuncL :: Lens' DualEnv LogFunc
-  logFuncL = lens (.logFunc) \(MkDualEnv _ c cr h b) l -> MkDualEnv l c cr h b
+  logFuncL = lens (.logFunc) \MkDualEnv{..} l -> MkDualEnv { logFunc = l, .. }
 
 instance HasHttpRunner DualEnv where
   httpRunnerL :: Lens' DualEnv HttpRunner
-  httpRunnerL = lens (.httpRunner) \(MkDualEnv l c cr _ b) h -> MkDualEnv l c cr h b
+  httpRunnerL = lens (.httpRunner) \MkDualEnv{..} h -> MkDualEnv { httpRunner = h, .. }
 
 instance HasBiDiRunner DualEnv where
   biDiRunnerL :: Lens' DualEnv BiDiRunner
-  biDiRunnerL = lens (.biDiRunner) \(MkDualEnv l c cr h _) b -> MkDualEnv l c cr h b
+  biDiRunnerL = lens (.biDiRunner) \MkDualEnv{..} b -> MkDualEnv { biDiRunner = b, .. }
