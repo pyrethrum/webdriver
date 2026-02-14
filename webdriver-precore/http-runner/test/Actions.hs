@@ -109,7 +109,7 @@ data HttpActions = MkHttpActions
     runCommand' :: forall a. (FromJSON a) => Command a -> IO Value
   }
 
-mkActions :: HttpRunner -> HttpActions
+mkActions :: HttpRunner IO -> HttpActions
 mkActions MkHttpRunner {run, fullResponse} =
   MkHttpActions
     { -- Root methods

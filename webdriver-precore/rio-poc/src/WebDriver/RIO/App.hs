@@ -12,7 +12,6 @@ module WebDriver.RIO.App
 where
 
 import RIO
-import RIO.Text
 import WebDriver.RIO.Env
 import WebDriver.RIO.Logging (LoggerConfig, withLogging)
 import WebDriverPreCore.BiDiRunner (BiDiRunner, BiDiUrl, parseBiDiUrl)
@@ -23,12 +22,11 @@ import WebDriverPreCore.HttpRunner (mkHttpRunner)
 runHttp :: LoggerConfig -> Text -> Word16 -> RIO HttpEnv a -> IO a
 runHttp loggerConfig host port httpAction =
   withLogging loggerConfig $ \lf ->
-    runRIO (MkLoggerEnv lf) $ do
-      let logger = logInfo . fromString . unpack
-          httpEnv = MkHttpEnv lf . mkHttpRunner host port $ Just logger
-      runRIO httpEnv $ do
-        logInfo "Successfully started WebDriverRIO"
-        httpAction
+    let logger = runRIO lf . logInfo . display
+        httpEnv = MkHttpEnv lf (mkHttpRunner host port (Just logger))
+     in runRIO httpEnv $ do
+          logInfo "Successfully started WebDriverRIO"
+          httpAction
 
 -- withHttpSession
 -- runBiDi :: LoggerConfig -> BiDiCapabilities -> RIO BiDiEnv a -> IO a

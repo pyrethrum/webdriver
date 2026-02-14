@@ -25,7 +25,7 @@ data HttpActions = MkHttpActions
     deleteSession :: Session -> IO ()
   }
 
-mkActions :: HttpRunner -> HttpActions
+mkActions :: HttpRunner IO -> HttpActions
 mkActions MkHttpRunner {run} =
   MkHttpActions
     { newSession = run . API.newSession,

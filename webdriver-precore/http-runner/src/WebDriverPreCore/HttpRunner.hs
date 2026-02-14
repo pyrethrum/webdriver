@@ -20,6 +20,7 @@ import Data.Function ((&))
 import Data.Text (Text, pack)
 import Data.Word (Word16)
 import GHC.Exception (throw)
+import Control.Monad.IO.Class (MonadIO)
 import Utils qualified
 import WebDriverPreCore.HTTP.Protocol
   ( Command (..),
@@ -37,22 +38,23 @@ import WebDriverPreCore.HttpRunnerBase
 import Prelude hiding (log)
 
 -- | Typed HTTP runner for WebDriver commands
-data HttpRunner = MkHttpRunner
+data HttpRunner m = MkHttpRunner
   { -- | Execute a command and return the typed result
-    run :: forall r. (FromJSON r) => Command r -> IO r,
+    run :: forall r. (FromJSON r) => Command r -> m r,
     -- | Execute a command and return the full JSON response
-    fullResponse :: forall r. (FromJSON r) => Command r -> IO Value
+    fullResponse :: forall r. (FromJSON r) => Command r -> m Value
   }
 
 -- | Create a typed HTTP runner
 mkHttpRunner ::
+  (MonadIO m) =>
   -- | Host (e.g. "127.0.0.1")
   Text ->
   -- | Port (e.g. 4444)
   Word16 ->
   -- | Optional logger
-  Maybe (Text -> IO ()) ->
-  HttpRunner
+  Maybe (Text -> m ()) ->
+  HttpRunner m
 mkHttpRunner host port mLogger =
   MkHttpRunner
     { run = runCommand base,
@@ -62,12 +64,12 @@ mkHttpRunner host port mLogger =
     base = mkHttpRunnerBase host port mLogger
 
 -- | Execute a typed command and return the parsed result
-runCommand :: forall r. (FromJSON r) => HttpRunnerBase -> Command r -> IO r
+runCommand :: forall r m. (FromJSON r, Functor m) => HttpRunnerBase m -> Command r -> m r
 runCommand base cmd =
-  runCommandFullResponse base cmd >>= parseResultIO
+  parseResult <$> runCommandFullResponse base cmd
 
 -- | Execute a typed command and return the full JSON response
-runCommandFullResponse :: forall r. HttpRunnerBase -> Command r -> IO Value
+runCommandFullResponse :: forall r m. HttpRunnerBase m -> Command r -> m Value
 runCommandFullResponse base cmd =
   base.runJson $ commandToRequest cmd
 
@@ -88,8 +90,8 @@ commandToRequest cmd = case cmd of
     path = MkUrlPath cmd.path.segments
 
 -- | Parse a WebDriver response, extracting the 'value' property
-parseResultIO :: forall r. (FromJSON r) => Value -> IO r
-parseResultIO body =
+parseResult :: forall r. (FromJSON r) => Value -> r
+parseResult body =
   valueParser body
     & maybe
       (throw $ ResponseParseException "No value property found in WebDriver response" body)
@@ -97,7 +99,7 @@ parseResultIO body =
           parseEither @_ @r parseJSON val
             & either
               (\e -> throw $ parseWebDriverException (pack e) val)
-              pure
+              id
       )
 
 -- Parser for the "value" property in WebDriver responses

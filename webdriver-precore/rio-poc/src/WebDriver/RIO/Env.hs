@@ -34,7 +34,7 @@ import WebDriverPreCore.HttpRunner (HttpRunner)
 
 -- | Env has an 'HttpRunner' available.
 class HasHttpRunner env where
-  httpRunnerL :: Lens' env HttpRunner
+  httpRunnerL :: Lens' env (HttpRunner IO)
 
 -- | Env has a 'BiDiRunner' available.
 class HasBiDiRunner env where
@@ -43,7 +43,7 @@ class HasBiDiRunner env where
 -- | HTTP runner.
 data HttpEnv = MkHttpEnv
   { logFunc :: LogFunc,
-    httpRunner :: HttpRunner
+    httpRunner :: HttpRunner IO
   }
 
 instance HasLogFunc HttpEnv where
@@ -51,7 +51,7 @@ instance HasLogFunc HttpEnv where
   logFuncL = lens (.logFunc) \MkHttpEnv{logFunc, ..} l -> MkHttpEnv { logFunc = l, .. }
 
 instance HasHttpRunner HttpEnv where
-  httpRunnerL :: Lens' HttpEnv HttpRunner
+  httpRunnerL :: Lens' HttpEnv (HttpRunner IO)
   httpRunnerL = lens (.httpRunner) \MkHttpEnv{..} r -> MkHttpEnv { httpRunner = r, .. }
 
 
@@ -89,7 +89,7 @@ instance HasBiDiRunner BiDiEnv where
 -- | Inner environment carrying both HTTP and BiDi runners.
 data DualEnv = MkDualEnv
   { logFunc :: LogFunc,
-    httpRunner :: HttpRunner,
+    httpRunner :: HttpRunner IO,
     biDiRunner :: BiDiRunner
   }
 
@@ -98,7 +98,7 @@ instance HasLogFunc DualEnv where
   logFuncL = lens (.logFunc) \MkDualEnv{..} l -> MkDualEnv { logFunc = l, .. }
 
 instance HasHttpRunner DualEnv where
-  httpRunnerL :: Lens' DualEnv HttpRunner
+  httpRunnerL :: Lens' DualEnv (HttpRunner IO)
   httpRunnerL = lens (.httpRunner) \MkDualEnv{..} h -> MkDualEnv { httpRunner = h, .. }
 
 instance HasBiDiRunner DualEnv where

@@ -27,7 +27,7 @@ module WebDriverPreCore.HttpRunnerBase
   )
 where
 
-import Control.Monad.IO.Class (liftIO)
+import Control.Monad.IO.Class (MonadIO)
 import Data.Aeson (Value, object)
 import Data.Foldable qualified as F
 import Data.Maybe (fromMaybe)
@@ -74,22 +74,23 @@ data HttpRequest = MkHttpRequest
   deriving (Show, Eq)
 
 -- | Base HTTP runner that works with JSON values
-data HttpRunnerBase = MkHttpRunnerBase
+data HttpRunnerBase m = MkHttpRunnerBase
   { -- | Execute a request and return just the response body
-    runJson :: HttpRequest -> IO Value,
+    runJson :: HttpRequest -> m Value,
     -- | Execute a request and return the full HTTP response
-    runResponse :: HttpRequest -> IO HttpResponse
+    runResponse :: HttpRequest -> m HttpResponse
   }
 
 -- | Create an HTTP runner base
 mkHttpRunnerBase ::
+  (MonadIO m) =>
   -- | Host (e.g. "127.0.0.1")
   Text ->
   -- | Port (e.g. 4444)
   Word16 ->
   -- | Optional logger
-  Maybe (Text -> IO ()) ->
-  HttpRunnerBase
+  Maybe (Text -> m ()) ->
+  HttpRunnerBase m
 mkHttpRunnerBase host port mLogger =
   MkHttpRunnerBase
     { runJson = callWebDriverJson baseUrl port mLogger,
@@ -104,47 +105,45 @@ buildUrl basePath urlPath = F.foldl' (/:) basePath urlPath.segments
 
 -- | Execute a WebDriver HTTP request, returning just the JSON body
 callWebDriverJson ::
+  (MonadIO m) =>
   Url 'Http ->
   Word16 ->
-  Maybe (Text -> IO ()) ->
+  Maybe (Text -> m ()) ->
   HttpRequest ->
-  IO Value
-callWebDriverJson baseUrl port mLogger = 
-  fmap (.body) . callWebDriverResponse baseUrl port mLogger 
+  m Value
+callWebDriverJson baseUrl port mLogger =
+  fmap (.body) . callWebDriverResponse baseUrl port mLogger
 
 -- | Execute a WebDriver HTTP request, returning the full HTTP response
 callWebDriverResponse ::
+  (MonadIO m) =>
   Url 'Http ->
   Word16 ->
-  Maybe (Text -> IO ()) ->
+  Maybe (Text -> m ()) ->
   HttpRequest ->
-  IO HttpResponse
+  m HttpResponse
 callWebDriverResponse baseUrl port mLogger request = do
-
-  runReq defaultHttpConfig {httpConfigCheckResponse = \_ _ _ -> Nothing} $ do
-    log $ "HTTP " <> methodText request.method <> " " <> pack (show url)
-
+  log $ "HTTP " <> methodText request.method <> " " <> pack (show url)
+  response <- runReq defaultHttpConfig {httpConfigCheckResponse = \_ _ _ -> Nothing} $ do
     r <- case request.method of
       GET_METHOD ->
         req GET url NoReqBody jsonResponse (R.port iPort)
       POST_METHOD ->
-        req POST url (ReqBodyJson $ maybe (object []) id request.body) jsonResponse (R.port iPort)
+        req POST url (ReqBodyJson $ fromMaybe (object []) request.body) jsonResponse (R.port iPort)
       DELETE_METHOD ->
         req DELETE url NoReqBody jsonResponse (R.port iPort)
-
-    let body' = responseBody r :: Value
-        response =
-          MkHttpResponse
-            { statusCode = responseStatusCode r,
-              statusMessage = decodeUtf8Lenient $ responseStatusMessage r,
-              body = body'
-            }
-    log $ "Response: " <> pack (show response.statusCode)
-    pure response
+    pure
+      MkHttpResponse
+        { statusCode = responseStatusCode r,
+          statusMessage = decodeUtf8Lenient $ responseStatusMessage r,
+          body = responseBody r
+        }
+  log $ "Response: " <> pack (show response.statusCode)
+  pure response
   where
     iPort = fromIntegral port
     url = buildUrl baseUrl request.path
-    log = liftIO . fromMaybe (const $ pure ()) mLogger
+    log = fromMaybe (const $ pure ()) mLogger
     methodText = \case
       GET_METHOD -> "GET"
       POST_METHOD -> "POST"
