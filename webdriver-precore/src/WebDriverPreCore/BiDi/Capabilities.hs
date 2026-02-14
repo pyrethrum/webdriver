@@ -43,15 +43,25 @@ data Capability = MkCapability
   { acceptInsecureCerts :: Maybe Bool,
     browserName :: Maybe Text,
     browserVersion :: Maybe Text,
-    -- Always true for BiDi
-    webSocketUrl :: Bool,
     platformName :: Maybe Text,
     proxy :: Maybe ProxyConfiguration,
     unhandledPromptBehavior :: Maybe UserPromptHandler
   }
   deriving (Show, Eq, Generic)
 
-instance ToJSON Capability
+instance ToJSON Capability where
+  toJSON :: Capability -> Value
+  toJSON MkCapability {acceptInsecureCerts, browserName, browserVersion, platformName, proxy, unhandledPromptBehavior} =
+    object $
+      catMaybes
+        [ opt "acceptInsecureCerts" acceptInsecureCerts,
+          opt "browserName" browserName,
+          opt "browserVersion" browserVersion,
+          opt "platformName" platformName,
+          opt "proxy" proxy,
+          opt "unhandledPromptBehavior" unhandledPromptBehavior
+        ]
+        <> [("webSocketUrl", toJSON True)]
 
 -- | Proxy Configuration
 data ProxyConfiguration

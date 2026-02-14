@@ -420,7 +420,6 @@ toBiDiCapability (MkBiDiCapability {..}) =
     { BiDi.acceptInsecureCerts = Just acceptInsecureCerts,
       BiDi.browserName = Just (browserNameToText browserName),
       BiDi.browserVersion = Just browserVersion,
-      BiDi.webSocketUrl = True, -- Always true for BiDi
       BiDi.platformName = Just (platformNameToText platformName),
       BiDi.proxy = fmap proxyToBiDi proxy,
       BiDi.unhandledPromptBehavior = fmap userPromptHandlerToBiDi unhandledPromptBehavior
