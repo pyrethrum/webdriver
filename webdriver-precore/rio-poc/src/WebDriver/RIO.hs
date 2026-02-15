@@ -9,10 +9,10 @@ module WebDriver.RIO
   ( -- * Capabilities
     module WebDriverPreCore.Extended.Capabilities,
 
-    -- * Environment Types
+    -- * Environment Types & Typeclasses
     module WebDriver.RIO.Env,
 
-    -- * Runner Typeclasses
+    -- * App / Runners
     module WebDriver.RIO.App,
 
     -- * Logging

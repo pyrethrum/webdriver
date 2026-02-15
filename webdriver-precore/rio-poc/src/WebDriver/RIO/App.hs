@@ -8,16 +8,16 @@
 -- capabilities, then execute a RIO action in that context.
 module WebDriver.RIO.App
   ( runHttp,
+    withHttpSession,
+    newSession,
+    deleteSession,
   )
 where
 
 import RIO
 import WebDriver.RIO.Env
 import WebDriver.RIO.Logging (LoggerConfig, withLogging)
-import WebDriverPreCore.BiDiRunner (BiDiRunner, BiDiUrl, parseBiDiUrl)
-import WebDriverPreCore.BiDiRunner qualified as BiDiRunner
-import WebDriverPreCore.Extended.Capabilities
-import WebDriverPreCore.HttpRunner (mkHttpRunner)
+import WebDriverPreCore.HttpRunner (HttpRunner, mkHttpRunner)
 
 runHttp :: LoggerConfig -> Text -> Word16 -> Bool -> RIO HttpEnv a -> IO a
 runHttp loggerConfig host port wantHttpLogging httpAction =
@@ -30,6 +30,30 @@ runHttp loggerConfig host port wantHttpLogging httpAction =
      in runRIO httpEnv $ do
           logInfo "Successfully started WebDriverRIO"
           httpAction
+
+-- | Create a session, run an action with it, then delete the session.
+--
+-- Uses bracket to ensure the session is always cleaned up.
+withHttpSession ::
+  (HasHttpRunner env, HasLogFunc env) =>
+  RIO HttpSessionEnv a ->
+  RIO env a
+withHttpSession action = do
+  env <- ask
+  let runner = view httpRunnerL env
+      lf = view logFuncL env
+  bracket
+    (newSession runner)
+    (deleteSession runner)
+    (\sid -> runRIO (MkHttpSessionEnv {logFunc = lf, httpRunner = runner, httpSessionId = sid}) action)
+
+-- | Create a new WebDriver session, returning the session id.
+newSession :: HttpRunner IO -> RIO env Text
+newSession _runner = undefined
+
+-- | Delete a WebDriver session by id.
+deleteSession :: HttpRunner IO -> Text -> RIO env ()
+deleteSession _runner _sessionId = undefined
 
 -- withHttpSession
 -- runBiDi :: LoggerConfig -> BiDiCapabilities -> RIO BiDiEnv a -> IO a
