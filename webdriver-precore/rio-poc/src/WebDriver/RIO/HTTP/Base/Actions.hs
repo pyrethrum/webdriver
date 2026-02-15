@@ -83,6 +83,7 @@ module WebDriver.RIO.HTTP.Base.Actions
   )
 where
 
+
 import Data.Aeson (FromJSON, Value)
 import RIO (RIO, Text, ask, asks, liftIO, view)
 import WebDriver.RIO.Env
@@ -91,6 +92,7 @@ import WebDriver.RIO.Env
   )
 import WebDriverPreCore.Extended.HTTP.Base.Actions qualified as A
 import WebDriverPreCore.Extended.Capabilities qualified as EC
+import WebDriverPreCore.Extended.HTTP.Base.Protocol
   ( Actions,
     Command,
     Cookie,
@@ -120,20 +122,20 @@ getRunner :: (HasHttpRunner env, FromJSON a) => RIO env (Command a -> IO a)
 getRunner = view httpRunnerL >>= \MkHttpRunner {run = r} -> pure r
 
 -- | Lift a session action through the RIO environment.
-withSession :: (HasHttpRunner env, HasHttpSession env, FromJSON a) => (A.Runner IO a -> Session -> IO a) -> RIO env a
-withSession sesFunc =
+viaSession :: (HasHttpRunner env, HasHttpSession env, FromJSON a) => (A.Runner IO a -> Session -> IO a) -> RIO env a
+viaSession sesFunc =
   sesFunc
     <$> getRunner
     <*> (MkSession <$> asks getHttpSessionId)
     >>= liftIO
 
 -- | Lift a session action with one extra argument.
-withSession1 :: (HasHttpRunner env, HasHttpSession env, FromJSON a) => (A.Runner IO a -> Session -> b -> IO a) -> b -> RIO env a
-withSession1 f b = withSession (\r s -> f r s b)
+viaSession1 :: (HasHttpRunner env, HasHttpSession env, FromJSON a) => (A.Runner IO a -> Session -> b -> IO a) -> b -> RIO env a
+viaSession1 f b = viaSession (\r s -> f r s b)
 
 -- | Lift a session action with two extra arguments.
-withSession2 :: (HasHttpRunner env, HasHttpSession env, FromJSON a) => (A.Runner IO a -> Session -> b -> c -> IO a) -> b -> c -> RIO env a
-withSession2 f b c = withSession (\r s -> f r s b c)
+viaSession2 :: (HasHttpRunner env, HasHttpSession env, FromJSON a) => (A.Runner IO a -> Session -> b -> c -> IO a) -> b -> c -> RIO env a
+viaSession2 f b c = viaSession (\r s -> f r s b c)
 
 -- ######################################################################
 -- ########################### Root Methods #############################
@@ -142,206 +144,207 @@ withSession2 f b c = withSession (\r s -> f r s b c)
 status :: (HasHttpRunner env) => RIO env Status
 status = getRunner >>= liftIO . A.status
 
-newSession :: (HasHttpRunner env) => EC.HttpCapabilities -> RIO env EC.SessionResponse
-newSession caps = getRunner >>= liftIO . flip A.newSession (EC.toHttpCapabilities caps)
+-- NOTE USES Extended Capabilities types
+newSession :: (HasHttpRunner env) => EC.HttpCapabilities -> RIO env EC.HttpSessionResponse
+newSession caps = getRunner >>= liftIO . flip EC.newHttpSession caps
 
 -- ######################################################################
 -- ########################### Session Methods ##########################
 -- ######################################################################
 
 deleteSession :: (HasHttpRunner env, HasHttpSession env) => RIO env ()
-deleteSession = withSession A.deleteSession
+deleteSession = viaSession A.deleteSession
 
 getTimeouts :: (HasHttpRunner env, HasHttpSession env) => RIO env Timeouts
-getTimeouts = withSession A.getTimeouts
+getTimeouts = viaSession A.getTimeouts
 
 setTimeouts :: (HasHttpRunner env, HasHttpSession env) => Timeouts -> RIO env ()
-setTimeouts = withSession1 A.setTimeouts
+setTimeouts = viaSession1 A.setTimeouts
 
 navigateTo :: (HasHttpRunner env, HasHttpSession env) => URL -> RIO env ()
-navigateTo = withSession1 A.navigateTo
+navigateTo = viaSession1 A.navigateTo
 
 getCurrentUrl :: (HasHttpRunner env, HasHttpSession env) => RIO env URL
-getCurrentUrl = withSession A.getCurrentUrl
+getCurrentUrl = viaSession A.getCurrentUrl
 
 back :: (HasHttpRunner env, HasHttpSession env) => RIO env ()
-back = withSession A.back
+back = viaSession A.back
 
 forward :: (HasHttpRunner env, HasHttpSession env) => RIO env ()
-forward = withSession A.forward
+forward = viaSession A.forward
 
 refresh :: (HasHttpRunner env, HasHttpSession env) => RIO env ()
-refresh = withSession A.refresh
+refresh = viaSession A.refresh
 
 getTitle :: (HasHttpRunner env, HasHttpSession env) => RIO env Text
-getTitle = withSession A.getTitle
+getTitle = viaSession A.getTitle
 
 getWindowHandle :: (HasHttpRunner env, HasHttpSession env) => RIO env Handle
-getWindowHandle = withSession A.getWindowHandle
+getWindowHandle = viaSession A.getWindowHandle
 
 newWindow :: (HasHttpRunner env, HasHttpSession env) => RIO env WindowHandleSpec
-newWindow = withSession A.newWindow
+newWindow = viaSession A.newWindow
 
 closeWindow :: (HasHttpRunner env, HasHttpSession env) => RIO env [Handle]
-closeWindow = withSession A.closeWindow
+closeWindow = viaSession A.closeWindow
 
 switchToWindow :: (HasHttpRunner env, HasHttpSession env) => Handle -> RIO env ()
-switchToWindow = withSession1 A.switchToWindow
+switchToWindow = viaSession1 A.switchToWindow
 
 switchToFrame :: (HasHttpRunner env, HasHttpSession env) => FrameReference -> RIO env ()
-switchToFrame = withSession1 A.switchToFrame
+switchToFrame = viaSession1 A.switchToFrame
 
 getPageSource :: (HasHttpRunner env, HasHttpSession env) => RIO env Text
-getPageSource = withSession A.getPageSource
+getPageSource = viaSession A.getPageSource
 
 executeScript :: (HasHttpRunner env, HasHttpSession env) => Script -> RIO env Value
-executeScript = withSession1 A.executeScript
+executeScript = viaSession1 A.executeScript
 
 executeScriptAsync :: (HasHttpRunner env, HasHttpSession env) => Script -> RIO env Value
-executeScriptAsync = withSession1 A.executeScriptAsync
+executeScriptAsync = viaSession1 A.executeScriptAsync
 
 addCookie :: (HasHttpRunner env, HasHttpSession env) => Cookie -> RIO env ()
-addCookie = withSession1 A.addCookie
+addCookie = viaSession1 A.addCookie
 
 getAllCookies :: (HasHttpRunner env, HasHttpSession env) => RIO env [Cookie]
-getAllCookies = withSession A.getAllCookies
+getAllCookies = viaSession A.getAllCookies
 
 getNamedCookie :: (HasHttpRunner env, HasHttpSession env) => Text -> RIO env Cookie
-getNamedCookie = withSession1 A.getNamedCookie
+getNamedCookie = viaSession1 A.getNamedCookie
 
 deleteCookie :: (HasHttpRunner env, HasHttpSession env) => Text -> RIO env ()
-deleteCookie = withSession1 A.deleteCookie
+deleteCookie = viaSession1 A.deleteCookie
 
 deleteAllCookies :: (HasHttpRunner env, HasHttpSession env) => RIO env ()
-deleteAllCookies = withSession A.deleteAllCookies
+deleteAllCookies = viaSession A.deleteAllCookies
 
 performActions :: (HasHttpRunner env, HasHttpSession env) => Actions -> RIO env ()
-performActions = withSession1 A.performActions
+performActions = viaSession1 A.performActions
 
 releaseActions :: (HasHttpRunner env, HasHttpSession env) => RIO env ()
-releaseActions = withSession A.releaseActions
+releaseActions = viaSession A.releaseActions
 
 dismissAlert :: (HasHttpRunner env, HasHttpSession env) => RIO env ()
-dismissAlert = withSession A.dismissAlert
+dismissAlert = viaSession A.dismissAlert
 
 acceptAlert :: (HasHttpRunner env, HasHttpSession env) => RIO env ()
-acceptAlert = withSession A.acceptAlert
+acceptAlert = viaSession A.acceptAlert
 
 getAlertText :: (HasHttpRunner env, HasHttpSession env) => RIO env Text
-getAlertText = withSession A.getAlertText
+getAlertText = viaSession A.getAlertText
 
 sendAlertText :: (HasHttpRunner env, HasHttpSession env) => Text -> RIO env ()
-sendAlertText = withSession1 A.sendAlertText
+sendAlertText = viaSession1 A.sendAlertText
 
 takeScreenshot :: (HasHttpRunner env, HasHttpSession env) => RIO env Text
-takeScreenshot = withSession A.takeScreenshot
+takeScreenshot = viaSession A.takeScreenshot
 
 printPage :: (HasHttpRunner env, HasHttpSession env) => RIO env Text
-printPage = withSession A.printPage
+printPage = viaSession A.printPage
 
 -- ######################################################################
 -- ########################### Window Methods ###########################
 -- ######################################################################
 
 getWindowHandles :: (HasHttpRunner env, HasHttpSession env) => RIO env [Handle]
-getWindowHandles = withSession A.getWindowHandles
+getWindowHandles = viaSession A.getWindowHandles
 
 getWindowRect :: (HasHttpRunner env, HasHttpSession env) => RIO env WindowRect
-getWindowRect = withSession A.getWindowRect
+getWindowRect = viaSession A.getWindowRect
 
 setWindowRect :: (HasHttpRunner env, HasHttpSession env) => WindowRect -> RIO env WindowRect
-setWindowRect = withSession1 A.setWindowRect
+setWindowRect = viaSession1 A.setWindowRect
 
 maximizeWindow :: (HasHttpRunner env, HasHttpSession env) => RIO env WindowRect
-maximizeWindow = withSession A.maximizeWindow
+maximizeWindow = viaSession A.maximizeWindow
 
 minimizeWindow :: (HasHttpRunner env, HasHttpSession env) => RIO env WindowRect
-minimizeWindow = withSession A.minimizeWindow
+minimizeWindow = viaSession A.minimizeWindow
 
 fullScreenWindow :: (HasHttpRunner env, HasHttpSession env) => RIO env WindowRect
-fullScreenWindow = withSession A.fullScreenWindow
+fullScreenWindow = viaSession A.fullScreenWindow
 
 -- ######################################################################
 -- ########################### Frame Methods ############################
 -- ######################################################################
 
 switchToParentFrame :: (HasHttpRunner env, HasHttpSession env) => RIO env ()
-switchToParentFrame = withSession A.switchToParentFrame
+switchToParentFrame = viaSession A.switchToParentFrame
 
 -- ######################################################################
 -- ########################## Element(s) Methods ########################
 -- ######################################################################
 
 getActiveElement :: (HasHttpRunner env, HasHttpSession env) => RIO env ElementId
-getActiveElement = withSession A.getActiveElement
+getActiveElement = viaSession A.getActiveElement
 
 findElement :: (HasHttpRunner env, HasHttpSession env) => Selector -> RIO env ElementId
-findElement = withSession1 A.findElement
+findElement = viaSession1 A.findElement
 
 findElements :: (HasHttpRunner env, HasHttpSession env) => Selector -> RIO env [ElementId]
-findElements = withSession1 A.findElements
+findElements = viaSession1 A.findElements
 
 -- ######################################################################
 -- ##################### Element Instance Methods #######################
 -- ######################################################################
 
 findElementFromElement :: (HasHttpRunner env, HasHttpSession env) => ElementId -> Selector -> RIO env ElementId
-findElementFromElement = withSession2 A.findElementFromElement
+findElementFromElement = viaSession2 A.findElementFromElement
 
 findElementsFromElement :: (HasHttpRunner env, HasHttpSession env) => ElementId -> Selector -> RIO env [ElementId]
-findElementsFromElement = withSession2 A.findElementsFromElement
+findElementsFromElement = viaSession2 A.findElementsFromElement
 
 isElementSelected :: (HasHttpRunner env, HasHttpSession env) => ElementId -> RIO env Bool
-isElementSelected = withSession1 A.isElementSelected
+isElementSelected = viaSession1 A.isElementSelected
 
 getElementAttribute :: (HasHttpRunner env, HasHttpSession env) => ElementId -> Text -> RIO env Text
-getElementAttribute = withSession2 A.getElementAttribute
+getElementAttribute = viaSession2 A.getElementAttribute
 
 getElementProperty :: (HasHttpRunner env, HasHttpSession env) => ElementId -> Text -> RIO env Value
-getElementProperty = withSession2 A.getElementProperty
+getElementProperty = viaSession2 A.getElementProperty
 
 getElementCssValue :: (HasHttpRunner env, HasHttpSession env) => ElementId -> Text -> RIO env Text
-getElementCssValue = withSession2 A.getElementCssValue
+getElementCssValue = viaSession2 A.getElementCssValue
 
 getElementShadowRoot :: (HasHttpRunner env, HasHttpSession env) => ElementId -> RIO env ShadowRootElementId
-getElementShadowRoot = withSession1 A.getElementShadowRoot
+getElementShadowRoot = viaSession1 A.getElementShadowRoot
 
 getElementText :: (HasHttpRunner env, HasHttpSession env) => ElementId -> RIO env Text
-getElementText = withSession1 A.getElementText
+getElementText = viaSession1 A.getElementText
 
 getElementTagName :: (HasHttpRunner env, HasHttpSession env) => ElementId -> RIO env Text
-getElementTagName = withSession1 A.getElementTagName
+getElementTagName = viaSession1 A.getElementTagName
 
 getElementRect :: (HasHttpRunner env, HasHttpSession env) => ElementId -> RIO env WindowRect
-getElementRect = withSession1 A.getElementRect
+getElementRect = viaSession1 A.getElementRect
 
 isElementEnabled :: (HasHttpRunner env, HasHttpSession env) => ElementId -> RIO env Bool
-isElementEnabled = withSession1 A.isElementEnabled
+isElementEnabled = viaSession1 A.isElementEnabled
 
 getElementComputedRole :: (HasHttpRunner env, HasHttpSession env) => ElementId -> RIO env Text
-getElementComputedRole = withSession1 A.getElementComputedRole
+getElementComputedRole = viaSession1 A.getElementComputedRole
 
 getElementComputedLabel :: (HasHttpRunner env, HasHttpSession env) => ElementId -> RIO env Text
-getElementComputedLabel = withSession1 A.getElementComputedLabel
+getElementComputedLabel = viaSession1 A.getElementComputedLabel
 
 elementClick :: (HasHttpRunner env, HasHttpSession env) => ElementId -> RIO env ()
-elementClick = withSession1 A.elementClick
+elementClick = viaSession1 A.elementClick
 
 elementClear :: (HasHttpRunner env, HasHttpSession env) => ElementId -> RIO env ()
-elementClear = withSession1 A.elementClear
+elementClear = viaSession1 A.elementClear
 
 elementSendKeys :: (HasHttpRunner env, HasHttpSession env) => ElementId -> Text -> RIO env ()
-elementSendKeys = withSession2 A.elementSendKeys
+elementSendKeys = viaSession2 A.elementSendKeys
 
 takeElementScreenshot :: (HasHttpRunner env, HasHttpSession env) => ElementId -> RIO env Text
-takeElementScreenshot = withSession1 A.takeElementScreenshot
+takeElementScreenshot = viaSession1 A.takeElementScreenshot
 
 -- ######################################################################
 -- ######################### Shadow DOM Methods #########################
 -- ######################################################################
 
 findElementFromShadowRoot :: (HasHttpRunner env, HasHttpSession env) => ShadowRootElementId -> Selector -> RIO env ElementId
-findElementFromShadowRoot = withSession2 A.findElementFromShadowRoot
+findElementFromShadowRoot = viaSession2 A.findElementFromShadowRoot
 
 findElementsFromShadowRoot :: (HasHttpRunner env, HasHttpSession env) => ShadowRootElementId -> Selector -> RIO env [ElementId]
-findElementsFromShadowRoot = withSession2 A.findElementsFromShadowRoot
+findElementsFromShadowRoot = viaSession2 A.findElementsFromShadowRoot

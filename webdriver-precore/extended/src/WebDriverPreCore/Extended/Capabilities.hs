@@ -29,10 +29,10 @@ module WebDriverPreCore.Extended.Capabilities
     HTTP.LogLevel (..),
     HTTP.LogSettings (..),
     HTTP.DeviceMetrics (..),
+    HTTP.Session (..),
 
-    HttpCapability,
+    -- * Full Capabilities
     HttpCapabilities,
-    BiDiCapability,
     BiDiCapabilities,
 
     -- * Conversions to Native Types
@@ -41,12 +41,6 @@ module WebDriverPreCore.Extended.Capabilities
     toHttpCapabilities,
     toBiDiCapabilities,
 
-    -- * Conversions from Native Types
-    fromHttpCapability,
-    fromBiDiCapability,
-    fromHttpCapabilities,
-    fromBiDiCapabilities,
-
     -- * Response Conversions
     fromHttpSessionResponse,
     fromBiDiSessionResponse,
@@ -54,22 +48,27 @@ module WebDriverPreCore.Extended.Capabilities
     -- * Cross-Protocol Conversions
     convertCapabilityToHttp,
     convertCapabilityToBiDi,
+
+    -- * Session Management
+    Runner,
+    newHttpSession,
   )
 where
 
 import Control.Applicative ((<|>))
 import Data.Aeson (FromJSON (..), ToJSON (..), Value (..), withText)
 import Data.Aeson.Types (Parser)
+import Data.Coerce (coerce)
 import Data.Map.Strict qualified as M
 import Data.Maybe (fromMaybe)
 import Data.Text (Text)
 import Data.Word (Word8)
 import WebDriverPreCore.BiDi.Protocol qualified as BiDi
+import WebDriverPreCore.Extended.HTTP.Base.Actions qualified as Actions
 import WebDriverPreCore.HTTP.Protocol qualified as HTTP
 
-
-
 type HttpCapabilities = FullCapabilities HttpCapability
+
 type BiDiCapabilities = FullCapabilities BiDiCapability
 
 -- | HTTP-specific capabilities
@@ -147,7 +146,7 @@ data PromptAction
   deriving (Show, Eq)
 
 data HttpSessionResponse = MkHttpSessionResponse
-  { sessionId :: Text,
+  { sessionId :: HTTP.Session,
     websocketUrl :: Maybe Text,
     browserVersion :: Text,
     httpSetWindowRect :: Maybe Bool,
@@ -178,7 +177,8 @@ data UserPromptHandler = MkUserPromptHandler
   deriving (Show, Eq)
 
 data BiDiSessionResponse = MkBiDiSessionResponse
-  { sessionId :: Text,
+  { -- TODO - make base BIDI Session use the same newtype as HTTP
+    sessionId :: HTTP.Session,
     acceptInsecureCerts :: Bool,
     browserName :: Text,
     browserVersion :: Text,
@@ -429,66 +429,37 @@ toBiDiCapability (MkBiDiCapability {..}) =
       BiDi.unhandledPromptBehavior = userPromptHandlerToBiDi <$> unhandledPromptBehavior
     }
 
--- * Conversions from Native Types
-
--- | Convert native HTTP capabilities to local HTTP capability
-fromHttpCapability :: HTTP.Capabilities -> HttpCapability
-fromHttpCapability (HTTP.MkCapabilities {..}) =
-  MkHttpCapability
-    { browserName = textToBrowserName <$> browserName,
-      platformName = textToPlatformName <$> platformName,
-      acceptInsecureCerts = fromMaybe False acceptInsecureCerts,
-      pageLoadStrategy = pageLoadFromHttp <$> pageLoadStrategy,
-      proxy = proxyFromHttp <$> proxy,
-      timeouts = timeouts,
-      strictFileInteractability = strictFileInteractability,
-      unhandledPromptBehavior = promptFromHttp <$> unhandledPromptBehavior,
-      httpWebSocketUrl = webSocketUrl,
-      vendorSpecific = vendorSpecific
-    }
-
--- | Convert native BiDi capability to local BiDi capability
-fromBiDiCapability :: BiDi.Capability -> BiDiCapability
-fromBiDiCapability (BiDi.MkCapability {..}) =
-  MkBiDiCapability
-    { acceptInsecureCerts = acceptInsecureCerts,
-      browserName = textToBrowserName <$> browserName,
-      browserVersion = browserVersion,
-      platformName = textToPlatformName <$> platformName,
-      proxy = proxyFromBiDi <$> proxy,
-      unhandledPromptBehavior = userPromptHandlerFromBiDi <$> unhandledPromptBehavior
-    }
-
 -- * Response Conversions
 
 -- | Convert native HTTP session response to local HTTP session response
 fromHttpSessionResponse :: HTTP.SessionResponse -> HttpSessionResponse
-fromHttpSessionResponse (HTTP.MkSessionResponse {sessionId = HTTP.MkSession sid, webSocketUrl = wsUrl, capabilities = HTTP.MkCapabilities {..}, extensions = exts}) =
+fromHttpSessionResponse (HTTP.MkSessionResponse {sessionId, webSocketUrl = wsUrl, capabilities = HTTP.MkCapabilities {..}, extensions = exts}) =
   MkHttpSessionResponse
-    { sessionId = sid,
+    { sessionId,
       websocketUrl = wsUrl,
       browserVersion = fromMaybe "" browserVersion,
       httpSetWindowRect = setWindowRect,
       extensions = exts,
-      httpCapability = MkHttpCapability
-                  { browserName = textToBrowserName <$> browserName,
-                    platformName = textToPlatformName <$> platformName,
-                    acceptInsecureCerts = fromMaybe False acceptInsecureCerts,
-                    pageLoadStrategy = pageLoadFromHttp <$> pageLoadStrategy,
-                    proxy = proxyFromHttp <$> proxy,
-                    timeouts = timeouts,
-                    strictFileInteractability = strictFileInteractability,
-                    unhandledPromptBehavior = promptFromHttp <$> unhandledPromptBehavior,
-                    httpWebSocketUrl = webSocketUrl,
-                    vendorSpecific = vendorSpecific
-                  }
+      httpCapability =
+        MkHttpCapability
+          { browserName = textToBrowserName <$> browserName,
+            platformName = textToPlatformName <$> platformName,
+            acceptInsecureCerts = fromMaybe False acceptInsecureCerts,
+            pageLoadStrategy = pageLoadFromHttp <$> pageLoadStrategy,
+            proxy = proxyFromHttp <$> proxy,
+            timeouts = timeouts,
+            strictFileInteractability = strictFileInteractability,
+            unhandledPromptBehavior = promptFromHttp <$> unhandledPromptBehavior,
+            httpWebSocketUrl = webSocketUrl,
+            vendorSpecific = vendorSpecific
           }
+    }
 
 -- | Convert native BiDi session response to local BiDi session response
 fromBiDiSessionResponse :: BiDi.SessionNewResult -> BiDiSessionResponse
 fromBiDiSessionResponse (BiDi.MkSessionNewResult {sessionId = sid, capabilities = BiDi.MkCapabilitiesResult {..}}) =
   MkBiDiSessionResponse
-    { sessionId = sid,
+    { sessionId = coerce sid,
       acceptInsecureCerts = acceptInsecureCerts,
       browserName = browserName,
       browserVersion = browserVersion,
@@ -546,22 +517,6 @@ toBiDiCapabilities (MkFullCapabilitiesRequest {..}) =
   BiDi.MkCapabilities
     { BiDi.alwaysMatch = toBiDiCapability <$> alwaysMatch,
       BiDi.firstMatch = toBiDiCapability <$> firstMatch
-    }
-
--- | Convert HTTP full capabilities to universal
-fromHttpCapabilities :: HTTP.FullCapabilities -> FullCapabilities HttpCapability
-fromHttpCapabilities (HTTP.MkFullCapabilities {..}) =
-  MkFullCapabilitiesRequest
-    { alwaysMatch = fromHttpCapability <$> alwaysMatch,
-      firstMatch = fromHttpCapability <$> firstMatch
-    }
-
--- | Convert BiDi capabilities to universal
-fromBiDiCapabilities :: BiDi.Capabilities -> FullCapabilities BiDiCapability
-fromBiDiCapabilities (BiDi.MkCapabilities {..}) =
-  MkFullCapabilitiesRequest
-    { alwaysMatch = fromBiDiCapability <$> alwaysMatch,
-      firstMatch = fromBiDiCapability <$> firstMatch
     }
 
 -- * Helper Functions for Browser/Platform Names
@@ -627,3 +582,25 @@ platformNameToText = \case
   Android -> "android"
   IOS -> "ios"
   OtherPlatform t -> t
+
+-- ######################################################################
+-- ######################## Session Management ##########################
+-- ######################################################################
+
+-- | A 'Runner' is a function that executes a 'Command' in a monadic context.
+-- This allows the Extended module to work with different execution strategies.
+type Runner m a = HTTP.Command a -> m a
+
+-- | Create a new HTTP WebDriver session with the given capabilities.
+--
+-- Specification Entry: [HTMLSpecURL#new-session](https://www.w3.org/TR/webdriver/#new-session)
+--
+-- @POST \/session New Session@
+newHttpSession ::
+  forall m.
+  (Functor m) =>
+  Runner m HTTP.SessionResponse ->
+  FullCapabilities HttpCapability ->
+  m HttpSessionResponse
+newHttpSession runner =
+  fmap fromHttpSessionResponse . Actions.newSession runner . toHttpCapabilities

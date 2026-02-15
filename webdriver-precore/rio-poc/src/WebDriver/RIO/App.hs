@@ -9,8 +9,8 @@
 module WebDriver.RIO.App
   ( runHttp,
     -- withHttpSession,
-    newSession,
-    deleteSession,
+    -- newSession,
+    -- deleteSession,
   )
 where
 
@@ -30,23 +30,24 @@ runHttp loggerConfig host port wantHttpLogging httpAction =
         httpEnv = MkHttpEnv {logFunc = lf, httpRunner = mkHttpRunner host port logger}
      in runRIO httpEnv $ do
           logInfo "Successfully started WebDriverRIO"
-          httpAction
+          undefined
+          -- httpAction
 
 
 -- | Create a session, run an action with it, then delete the session.
 --
 -- Uses bracket to ensure the session is always cleaned up.
-withHttpSession ::
-  (HasHttpRunner env, HasLogFunc env) =>
-  RIO HttpSessionEnv a ->
-  RIO env a
-withHttpSession action = do
-  httpRunner <- getHttpRunner
-  logFunc <- getLogger
-  bracket
-    ((.sessionId) <$> newSession)
-    (deleteSession)
-    (\httpSessionId -> runRIO (MkHttpSessionEnv {logFunc, httpRunner, httpSessionId}) action)
+-- withHttpSession ::
+--   (HasHttpRunner env, HasLogFunc env) =>
+--   RIO HttpSessionEnv a ->
+--   RIO env a
+-- withHttpSession action = do
+--   httpRunner <- getHttpRunner
+--   logFunc <- getLogger
+--   bracket
+--     ((.sessionId) <$> newSession)
+--     (deleteSession)
+--     (\httpSessionId -> runRIO (MkHttpSessionEnv {logFunc, httpRunner, httpSessionId}) action)
 
 
 
