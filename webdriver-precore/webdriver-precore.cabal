@@ -453,6 +453,7 @@ library webdriver-rio-poc
       WebDriver.RIO.BiDi.Base
       WebDriver.RIO.Env
       WebDriver.RIO.HTTP.Base
+      WebDriver.RIO.HTTP.Base.Actions
       WebDriver.RIO.Logging
   hs-source-dirs: rio-poc/src
   build-depends:
@@ -460,6 +461,7 @@ library webdriver-rio-poc
     webdriver-precore:webdriver-precore-extended,
     webdriver-precore:webdriver-precore-http-runner,
     webdriver-precore:webdriver-precore-bidi-runner,
+    aeson         >=2.0   && <3,
     base          >=4.16  && <5,
     rio           >=0.1   && <0.2
   default-language: Haskell2010

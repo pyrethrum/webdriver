@@ -18,6 +18,7 @@ import RIO
 import WebDriver.RIO.Env
 import WebDriver.RIO.Logging (LoggerConfig, withLogging)
 import WebDriverPreCore.HttpRunner (HttpRunner, mkHttpRunner)
+import WebDriver.RIO.HTTP.Base.Actions
 
 runHttp :: LoggerConfig -> Text -> Word16 -> Bool -> RIO HttpEnv a -> IO a
 runHttp loggerConfig host port wantHttpLogging httpAction =
@@ -44,16 +45,9 @@ withHttpSession action = do
       lf = view logFuncL env
   bracket
     (newSession runner)
-    (deleteSession runner)
+    (deleteSession runner . (.sessionId))
     (\sid -> runRIO (MkHttpSessionEnv {logFunc = lf, httpRunner = runner, httpSessionId = sid}) action)
 
--- | Create a new WebDriver session, returning the session id.
-newSession :: HttpRunner IO -> RIO env Text
-newSession _runner = undefined
-
--- | Delete a WebDriver session by id.
-deleteSession :: HttpRunner IO -> Text -> RIO env ()
-deleteSession _runner _sessionId = undefined
 
 -- withHttpSession
 -- runBiDi :: LoggerConfig -> BiDiCapabilities -> RIO BiDiEnv a -> IO a
@@ -67,7 +61,7 @@ deleteSession _runner _sessionId = undefined
 
 -- | Run a BiDi session with typed commands
 -- withBiDi
---   :: Maybe (Text -> IO ())  -- ^ Optional logger
+--   :: Maybe (Text -> IO ())  -- ^ Optional logger>
 --   -> BiDiUrl
 --   -> (BiDiRunner -> IO ())
 --   -> IO ()
