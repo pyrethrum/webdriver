@@ -90,7 +90,7 @@ import WebDriver.RIO.Env
     HasHttpSession (..),
   )
 import WebDriverPreCore.Extended.HTTP.Base.Actions qualified as A
-import WebDriverPreCore.Extended.HTTP.Base.Protocol
+import WebDriverPreCore.Extended.Capabilities qualified as EC
   ( Actions,
     Command,
     Cookie,
@@ -142,8 +142,8 @@ withSession2 f b c = withSession (\r s -> f r s b c)
 status :: (HasHttpRunner env) => RIO env Status
 status = getRunner >>= liftIO . A.status
 
-newSession :: (HasHttpRunner env) => FullCapabilities -> RIO env SessionResponse
-newSession caps = getRunner >>= liftIO . flip A.newSession caps
+newSession :: (HasHttpRunner env) => EC.HttpCapabilities -> RIO env EC.SessionResponse
+newSession caps = getRunner >>= liftIO . flip A.newSession (EC.toHttpCapabilities caps)
 
 -- ######################################################################
 -- ########################### Session Methods ##########################

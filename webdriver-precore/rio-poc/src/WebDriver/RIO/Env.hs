@@ -38,10 +38,16 @@ module WebDriver.RIO.Env
     -- * Session Typeclasses
     HasHttpSession (..),
     HasBiDiSession (..),
+
+    getLogger,
+    getHttpRunner,
+    getBiDiRunner,
+    getHttpSessionId,
+    getBiDiSessionId
   )
 where
 
-import RIO (HasLogFunc (..), Lens', LogFunc, Text, lens)
+import RIO (HasLogFunc (..), Lens', LogFunc, RIO, Text, lens, view)
 import WebDriverPreCore.BiDiRunner (BiDiRunner)
 import WebDriverPreCore.HttpRunner (HttpRunner)
 
@@ -70,6 +76,15 @@ data HttpEnv = MkHttpEnv
 instance HasLogFunc HttpEnv where
   logFuncL :: Lens' HttpEnv LogFunc
   logFuncL = lens (.logFunc) \MkHttpEnv{..} l -> MkHttpEnv { logFunc = l, .. }
+
+getLogger :: HasLogFunc env => RIO env LogFunc
+getLogger = view logFuncL
+
+getHttpRunner :: HasHttpRunner env => RIO env (HttpRunner IO)
+getHttpRunner = view httpRunnerL
+
+getBiDiRunner :: HasBiDiRunner env => RIO env BiDiRunner
+getBiDiRunner = view biDiRunnerL
 
 instance HasHttpRunner HttpEnv where
   httpRunnerL :: Lens' HttpEnv (HttpRunner IO)

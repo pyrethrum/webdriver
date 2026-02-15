@@ -8,7 +8,7 @@
 -- capabilities, then execute a RIO action in that context.
 module WebDriver.RIO.App
   ( runHttp,
-    withHttpSession,
+    -- withHttpSession,
     newSession,
     deleteSession,
   )
@@ -16,21 +16,22 @@ where
 
 import RIO
 import WebDriver.RIO.Env
+import WebDriver.RIO.HTTP.Base.Actions
 import WebDriver.RIO.Logging (LoggerConfig, withLogging)
 import WebDriverPreCore.HttpRunner (HttpRunner, mkHttpRunner)
-import WebDriver.RIO.HTTP.Base.Actions
 
-runHttp :: LoggerConfig -> Text -> Word16 -> Bool -> RIO HttpEnv a -> IO a
+runHttp :: (HasHttpRunner env, HasLogFunc env) => LoggerConfig -> Text -> Word16 -> Bool -> RIO env a -> IO a
 runHttp loggerConfig host port wantHttpLogging httpAction =
   withLogging loggerConfig $ \lf ->
     let logger =
           if wantHttpLogging
             then Just $ runRIO lf . logInfo . display
             else Nothing
-        httpEnv = MkHttpEnv {logFunc = lf, httpRunner = (mkHttpRunner host port logger)}
+        httpEnv = MkHttpEnv {logFunc = lf, httpRunner = mkHttpRunner host port logger}
      in runRIO httpEnv $ do
           logInfo "Successfully started WebDriverRIO"
           httpAction
+
 
 -- | Create a session, run an action with it, then delete the session.
 --
@@ -40,13 +41,13 @@ withHttpSession ::
   RIO HttpSessionEnv a ->
   RIO env a
 withHttpSession action = do
-  env <- ask
-  let runner = view httpRunnerL env
-      lf = view logFuncL env
+  httpRunner <- getHttpRunner
+  logFunc <- getLogger
   bracket
-    (newSession runner)
-    (deleteSession runner . (.sessionId))
-    (\sid -> runRIO (MkHttpSessionEnv {logFunc = lf, httpRunner = runner, httpSessionId = sid}) action)
+    ((.sessionId) <$> newSession)
+    (deleteSession)
+    (\httpSessionId -> runRIO (MkHttpSessionEnv {logFunc, httpRunner, httpSessionId}) action)
+
 
 
 -- withHttpSession

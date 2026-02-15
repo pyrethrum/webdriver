@@ -67,6 +67,8 @@ import Data.Word (Word8)
 import WebDriverPreCore.BiDi.Protocol qualified as BiDi
 import WebDriverPreCore.HTTP.Protocol qualified as HTTP
 
+
+
 type HttpCapabilities = FullCapabilities HttpCapability
 type BiDiCapabilities = FullCapabilities BiDiCapability
 
