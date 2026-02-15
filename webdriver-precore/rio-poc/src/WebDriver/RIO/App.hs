@@ -19,11 +19,14 @@ import WebDriverPreCore.BiDiRunner qualified as BiDiRunner
 import WebDriverPreCore.Extended.Capabilities
 import WebDriverPreCore.HttpRunner (mkHttpRunner)
 
-runHttp :: LoggerConfig -> Text -> Word16 -> RIO HttpEnv a -> IO a
-runHttp loggerConfig host port httpAction =
+runHttp :: LoggerConfig -> Text -> Word16 -> Bool -> RIO HttpEnv a -> IO a
+runHttp loggerConfig host port wantHttpLogging httpAction =
   withLogging loggerConfig $ \lf ->
-    let logger = runRIO lf . logInfo . display
-        httpEnv = MkHttpEnv lf (mkHttpRunner host port (Just logger))
+    let logger =
+          if wantHttpLogging
+            then Just $ runRIO lf . logInfo . display
+            else Nothing
+        httpEnv = MkHttpEnv {logFunc = lf, httpRunner = (mkHttpRunner host port logger)}
      in runRIO httpEnv $ do
           logInfo "Successfully started WebDriverRIO"
           httpAction

@@ -48,13 +48,11 @@ data HttpEnv = MkHttpEnv
 
 instance HasLogFunc HttpEnv where
   logFuncL :: Lens' HttpEnv LogFunc
-  logFuncL = lens (.logFunc) \MkHttpEnv{logFunc, ..} l -> MkHttpEnv { logFunc = l, .. }
+  logFuncL = lens (.logFunc) \MkHttpEnv{..} l -> MkHttpEnv { logFunc = l, .. }
 
 instance HasHttpRunner HttpEnv where
   httpRunnerL :: Lens' HttpEnv (HttpRunner IO)
   httpRunnerL = lens (.httpRunner) \MkHttpEnv{..} r -> MkHttpEnv { httpRunner = r, .. }
-
-
 
 data LoggerEnv = MkLoggerEnv
   { logFunc :: LogFunc
@@ -62,7 +60,7 @@ data LoggerEnv = MkLoggerEnv
 
 instance HasLogFunc LoggerEnv where
   logFuncL :: Lens' LoggerEnv LogFunc
-  logFuncL = lens (.logFunc) \MkLoggerEnv{..} l -> MkLoggerEnv { logFunc = l, .. }
+  logFuncL = lens (.logFunc) \MkLoggerEnv{} l -> MkLoggerEnv { logFunc = l}
 
 
 -- ---------------------------------------------------------------------------
