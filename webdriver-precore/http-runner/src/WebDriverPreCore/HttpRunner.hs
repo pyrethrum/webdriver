@@ -7,20 +7,17 @@
 module WebDriverPreCore.HttpRunner
   ( -- * HTTP Runner
     HttpRunner (..),
-    mkHttpRunner,
-
-    -- * Re-exports from base
-    HttpResponse (..),
+    mkHttpRunner
   )
 where
 
+import Control.Monad.IO.Class (MonadIO)
 import Data.Aeson (FromJSON (..), Value (..), (.:))
 import Data.Aeson.Types (parseEither, parseMaybe)
 import Data.Function ((&))
 import Data.Text (Text, pack)
 import Data.Word (Word16)
 import GHC.Exception (throw)
-import Control.Monad.IO.Class (MonadIO)
 import Utils qualified
 import WebDriverPreCore.HTTP.Protocol
   ( Command (..),
@@ -32,7 +29,7 @@ import WebDriverPreCore.HttpRunnerBase
     HttpRequest (..),
     HttpResponse (..),
     HttpRunnerBase (..),
-    UrlPath (..),
+    SubPath (..),
     mkHttpRunnerBase,
   )
 import Prelude hiding (log)
@@ -85,9 +82,9 @@ commandToRequest cmd = case cmd of
   Delete {} ->
     MkHttpRequest DELETE_METHOD path Nothing
   where
-    -- Coerce the UrlPath from Utils to our local UrlPath
-    path :: UrlPath
-    path = MkUrlPath cmd.path.segments
+    -- Coerce the SubPath from Utils to our local SubPath
+    path :: SubPath
+    path = MkSubPath cmd.path.parts
 
 -- | Parse a WebDriver response, extracting the 'value' property
 parseResult :: forall r. (FromJSON r) => Value -> r

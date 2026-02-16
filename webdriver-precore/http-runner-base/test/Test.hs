@@ -17,8 +17,8 @@ tests =
   testGroup
     "HTTP Runner Base Tests"
     [ testGroup
-        "UrlPath"
-        [ testCase "Create UrlPath" test_createUrlPath
+        "SubPath"
+        [ testCase "Create SubPath" test_createSubPath
         ],
       testGroup
         "HttpResponse"
@@ -26,9 +26,9 @@ tests =
         ]
     ]
 
-test_createUrlPath :: IO ()
-test_createUrlPath = do
-  let MkUrlPath segs = MkUrlPath ["session", "abc123", "url"]
+test_createSubPath :: IO ()
+test_createSubPath = do
+  let MkSubPath segs = MkSubPath ["session", "abc123", "url"]
   length segs @?= 3
 
 test_httpResponseType :: IO ()

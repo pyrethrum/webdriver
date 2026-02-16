@@ -4,7 +4,7 @@ module Utils
   ( txt,
     enumerate,
     -- shared path elements
-    UrlPath (..),
+    SubPath (..),
     db
   )
 where
@@ -29,7 +29,7 @@ enumerate :: (Enum a, Bounded a) => [a]
 enumerate = [minBound ..]
 
 -- shared path elements
-newtype UrlPath = MkUrlPath {segments :: [Text]}
+newtype SubPath = MkSubPath {parts :: [Text]}
   deriving newtype (Show, Eq, Ord, Semigroup)
 
 -- debugging

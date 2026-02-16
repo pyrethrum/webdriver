@@ -18,7 +18,7 @@ import Data.Aeson as A
   )
 import Data.Text (Text)
 import AesonUtils (objectOrThrow)
-import Utils (UrlPath (..))
+import Utils (SubPath (..))
 import Prelude hiding (id, lookup)
 
 -- |
@@ -28,20 +28,20 @@ import Prelude hiding (id, lookup)
 data Command r
   = Get
       { description :: Text,
-        path :: UrlPath
+        path :: SubPath
       }
   | Post
       { description :: Text,
-        path :: UrlPath,
+        path :: SubPath,
         body :: Object
       }
   | PostEmpty
       { description :: Text,
-        path :: UrlPath
+        path :: SubPath
       }
   | Delete
       { description :: Text,
-        path :: UrlPath
+        path :: SubPath
       }
   deriving (Show, Eq)
 
@@ -54,14 +54,14 @@ data Command r
 -- This function is partially applied in "WebDriverPreCore.HTTP.API" to generate specific named command functions.
 --
 -- If the body cannot be converted to a JSON 'Object', an error is thrown with the description included in the error message.
-mkPost :: forall a r. (ToJSON a) => Text -> UrlPath -> a -> Command r
+mkPost :: forall a r. (ToJSON a) => Text -> SubPath -> a -> Command r
 mkPost description path = mkPost' description path (objectOrThrow ("mkPost - " <> description))
 
 -- | Creates a 'Post' command with the given description, path, and a custom parser function.
 --
 -- This is a more flexible version of 'mkPost' that allows you to provide a custom function to convert
 -- the input parameter to a JSON 'Object'. This is useful when you need more control over the serialization process.
-mkPost' :: forall a r. Text -> UrlPath -> (a -> Object) -> a -> Command r
+mkPost' :: forall a r. Text -> SubPath -> (a -> Object) -> a -> Command r
 mkPost' description path parser = Post description path . parser
 
 -- Fallback Functions

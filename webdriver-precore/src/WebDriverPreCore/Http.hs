@@ -148,7 +148,7 @@ import WebDriverPreCore.HTTP.HttpResponse
 --     Session (..),
 --     SessionResponse (..),
 --     Timeouts (..),
---     UrlPath (..),
+--     SubPath (..),
 --     Handle (..),
 --     WindowHandleSpec (..),
 --     WindowRect (..),

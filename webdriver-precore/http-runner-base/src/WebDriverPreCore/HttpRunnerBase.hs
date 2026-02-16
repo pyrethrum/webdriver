@@ -18,7 +18,7 @@ module WebDriverPreCore.HttpRunnerBase
     HttpResponse (..),
 
     -- * URL Utilities
-    UrlPath (..),
+    SubPath (..),
     buildUrl,
 
     -- * Low-level HTTP
@@ -57,8 +57,8 @@ import Network.HTTP.Req qualified as R
 import WebDriverPreCore.HttpRunnerBase.HttpResponse (HttpResponse (..))
 import Prelude hiding (log)
 
--- | URL path segments
-newtype UrlPath = MkUrlPath {segments :: [Text]}
+-- | URL path parts
+newtype SubPath = MkSubPath {parts :: [Text]}
   deriving (Show, Eq)
 
 -- | HTTP methods supported by WebDriver
@@ -68,7 +68,7 @@ data HttpMethod = GET_METHOD | POST_METHOD | DELETE_METHOD
 -- | An HTTP request to send to WebDriver
 data HttpRequest = MkHttpRequest
   { method :: HttpMethod,
-    path :: UrlPath,
+    path :: SubPath,
     body :: Maybe Value
   }
   deriving (Show, Eq)
@@ -99,9 +99,9 @@ mkHttpRunnerBase host port mLogger =
   where
     baseUrl = http host
 
--- | Build a full URL from base URL and path segments
-buildUrl :: Url 'Http -> UrlPath -> Url 'Http
-buildUrl basePath urlPath = F.foldl' (/:) basePath urlPath.segments
+-- | Build a full URL from base URL and path parts
+buildUrl :: Url 'Http -> SubPath -> Url 'Http
+buildUrl basePath urlPath = F.foldl' (/:) basePath urlPath.parts
 
 -- | Execute a WebDriver HTTP request, returning just the JSON body
 callWebDriverJson ::

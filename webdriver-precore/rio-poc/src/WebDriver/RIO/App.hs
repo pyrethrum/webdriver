@@ -15,20 +15,25 @@ module WebDriver.RIO.App
 where
 
 import RIO
-import WebDriver.RIO.Env
-import WebDriver.RIO.HTTP.Base.Actions
+import WebDriver.RIO.Env (HasHttpRunner)
 import WebDriver.RIO.Logging (LoggerConfig, withLogging)
-import WebDriverPreCore.HttpRunner (HttpRunner, mkHttpRunner)
+import WebDriverPreCore.HttpRunner (HttpRunner)
+import WebDriverPreCore.HttpRunner qualified as HTTPRunner 
 
-runHttp :: forall env a. (HasHttpRunner env, HasLogFunc env) => LoggerConfig -> Text -> Word16 -> Bool -> RIO env a -> IO a
-runHttp loggerConfig host port wantHttpLogging httpAction =
+
+
+
+
+runHttp :: (HasLogFunc env) => (LogFunc -> HttpRunner IO -> env) -> LoggerConfig -> Text -> Word16 -> Bool -> RIO env a -> IO a
+runHttp mkEnv loggerConfig host port wantHttpLogging httpAction =
   withLogging loggerConfig $ \lf ->
-    let logger =
+    let runnerLogger =
           if wantHttpLogging
             then Just $ runRIO lf . logInfo . display
             else Nothing
-        httpEnv = MkHttpEnv {logFunc = lf, httpRunner = mkHttpRunner host port logger}
-     in runRIO httpEnv $ do
+        httpRunner = HTTPRunner.mkHttpRunner host port runnerLogger
+        env = mkEnv lf httpRunner
+     in runRIO env $ do
           logInfo "Successfully started WebDriverRIO"
           httpAction
 

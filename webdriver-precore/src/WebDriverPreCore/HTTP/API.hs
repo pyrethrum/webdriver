@@ -114,7 +114,7 @@ import WebDriverPreCore.HTTP.Protocol
     mkPost,
     mkPost'
   )
-import Utils (UrlPath (..))
+import Utils (SubPath (..))
 import Prelude hiding (id, lookup)
 import Data.Aeson.KeyMap (fromList)
 
@@ -143,7 +143,7 @@ newSession = mkPost "New Session" newSessionUrl
 --
 -- @GET 	\/status 	Status@
 status :: Command Status
-status = Get "Status" $ MkUrlPath ["status"]
+status = Get "Status" $ MkSubPath ["status"]
 
 -- ############################ Session Methods ##########################################
 
@@ -750,35 +750,35 @@ findElementsFromShadowRoot sessionId shadowId = mkPost "Find Elements From Shado
 
 -- ############################ Helper Functions ##########################################
 
-newSessionUrl :: UrlPath
-newSessionUrl = MkUrlPath [session]
+newSessionUrl :: SubPath
+newSessionUrl = MkSubPath [session]
 
 session :: Text
 session = "session"
 
-sessionUri :: Text -> UrlPath
-sessionUri sp = MkUrlPath [session, sp]
+sessionUri :: Text -> SubPath
+sessionUri sp = MkSubPath [session, sp]
 
-sessionUri1 :: Session -> Text -> UrlPath
-sessionUri1 s sp = MkUrlPath [session, s.id, sp]
+sessionUri1 :: Session -> Text -> SubPath
+sessionUri1 s sp = MkSubPath [session, s.id, sp]
 
-sessionUri2 :: Session -> Text -> Text -> UrlPath
-sessionUri2 s sp sp2 = MkUrlPath [session, s.id, sp, sp2]
+sessionUri2 :: Session -> Text -> Text -> SubPath
+sessionUri2 s sp sp2 = MkSubPath [session, s.id, sp, sp2]
 
-sessionUri3 :: Session -> Text -> Text -> Text -> UrlPath
-sessionUri3 s sp sp2 sp3 = MkUrlPath [session, s.id, sp, sp2, sp3]
+sessionUri3 :: Session -> Text -> Text -> Text -> SubPath
+sessionUri3 s sp sp2 sp3 = MkSubPath [session, s.id, sp, sp2, sp3]
 
-sessionUri4 :: Session -> Text -> Text -> Text -> Text -> UrlPath
-sessionUri4 s sp sp2 sp3 sp4 = MkUrlPath [session, s.id, sp, sp2, sp3, sp4]
+sessionUri4 :: Session -> Text -> Text -> Text -> Text -> SubPath
+sessionUri4 s sp sp2 sp3 sp4 = MkSubPath [session, s.id, sp, sp2, sp3, sp4]
 
-elementUri1 :: Session -> ElementId -> Text -> UrlPath
+elementUri1 :: Session -> ElementId -> Text -> SubPath
 elementUri1 s er ep = sessionUri3 s "element" er.id ep
 
-elementUri2 :: Session -> ElementId -> Text -> Text -> UrlPath
+elementUri2 :: Session -> ElementId -> Text -> Text -> SubPath
 elementUri2 s er ep ep2 = sessionUri4 s "element" er.id ep ep2
 
 window :: Text
 window = "window"
 
-windowUri1 :: Session -> Text -> UrlPath
+windowUri1 :: Session -> Text -> SubPath
 windowUri1 sr sp = sessionUri2 sr window sp

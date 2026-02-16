@@ -5,7 +5,7 @@ import Data.Text as T (Text, intercalate, lines, null, pack, replace, strip, unw
 import GHC.Utils.Misc (filterOut)
 import Test.Tasty.HUnit as HUnit (Assertion, assertBool)
 import Text.RawString.QQ (r)
-import  Utils (UrlPath(..))
+import  Utils (SubPath(..))
 import WebDriverPreCore.Http
 import WebDriverPreCore.HTTP.Protocol
   ( Actions (..),
@@ -96,12 +96,12 @@ POST 	/session/{session id}/print 	Print Page
 parseLine :: Text -> SpecLine
 parseLine line = MkSpecLine method uriTemplate command
   where
-    segments = filterOut T.null $ T.words $ replaceTemplateTxt line
-    method = case segments of
+    parts = filterOut T.null $ T.words $ replaceTemplateTxt line
+    method = case parts of
       [] -> "PARSER ERROR NO METHOD IN LINE" <> line
       x : _ -> x
-    uriTemplate = segments !! 1
-    command = T.unwords $ drop 2 segments
+    uriTemplate = parts !! 1
+    command = T.unwords $ drop 2 parts
 
 specLinesFromSpec :: Set SpecLine
 specLinesFromSpec = fromList $ parseLine <$> filterOut T.null (strip <$> T.lines endPointsCopiedFromSpc)
@@ -153,7 +153,7 @@ toSpecLine w3 = case w3 of
   Delete {} -> MkSpecLine "DELETE" path command
   where
     command = w3.description
-    path = replaceTemplateTxt $ "/" <> intercalate "/" w3.path.segments
+    path = replaceTemplateTxt $ "/" <> intercalate "/" w3.path.parts
 
 allSpecsSample :: Set SpecLine
 allSpecsSample =

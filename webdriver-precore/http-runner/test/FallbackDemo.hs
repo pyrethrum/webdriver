@@ -21,7 +21,7 @@ import WebDriverPreCore.HTTP.Protocol
     loosenCommand,
     voidCommand,
   )
-import Utils (UrlPath (..))
+import Utils (SubPath (..))
 import Prelude hiding (log)
 
 -- >>> runDemo demoFallbackActions
@@ -149,11 +149,11 @@ demoExtendPost =
 
 -- Helper functions (copied from API.hs since they're not exported)
 
-sessionUri1 :: Session -> Text -> UrlPath
-sessionUri1 s sp = MkUrlPath ["session", s.id, sp]
+sessionUri1 :: Session -> Text -> SubPath
+sessionUri1 s sp = MkSubPath ["session", s.id, sp]
 
-elementUri1 :: Session -> ElementId -> Text -> UrlPath
-elementUri1 s er ep = MkUrlPath ["session", s.id, "element", er.id, ep]
+elementUri1 :: Session -> ElementId -> Text -> SubPath
+elementUri1 s er ep = MkSubPath ["session", s.id, "element", er.id, ep]
 
 _stopDemoUnusedWarning :: HttpDemo -> IO ()
 _stopDemoUnusedWarning = runDemo

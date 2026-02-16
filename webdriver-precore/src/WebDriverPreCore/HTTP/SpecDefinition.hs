@@ -120,7 +120,7 @@ import WebDriverPreCore.HTTP.Protocol
     WindowRect (..)
   )
 import AesonUtils (jsonToText)
-import Utils (UrlPath (..))
+import Utils (SubPath (..))
 import Prelude hiding (id, lookup)
 import Data.Aeson (withObject)
 import Control.Monad (when)
@@ -132,51 +132,51 @@ import Data.Function ((&))
 data HttpSpec a
   = Get
       { description :: Text,
-        path :: UrlPath,
+        path :: SubPath,
         parser :: HttpResponse -> Result a
       }
   | Post
       { description :: Text,
-        path :: UrlPath,
+        path :: SubPath,
         body :: Value,
         parser :: HttpResponse -> Result a
       }
   | PostEmpty
       { description :: Text,
-        path :: UrlPath,
+        path :: SubPath,
         parser :: HttpResponse -> Result a
       }
   | Delete
       { description :: Text,
-        path :: UrlPath,
+        path :: SubPath,
         parser :: HttpResponse -> Result a
       }
 
-get :: forall a. (FromJSON a) => Text -> UrlPath -> HttpSpec a
+get :: forall a. (FromJSON a) => Text -> SubPath -> HttpSpec a
 get description path =
   Get description path (getParser False)
 
-post :: forall c r. (ToJSON c, FromJSON r) => Text -> UrlPath -> c -> HttpSpec r
+post :: forall c r. (ToJSON c, FromJSON r) => Text -> SubPath -> c -> HttpSpec r
 post description path body =
   Post description path (toJSON body) (getParser False)
 
-post_ :: forall c. (ToJSON c) => Text -> UrlPath -> c -> HttpSpec ()
+post_ :: forall c. (ToJSON c) => Text -> SubPath -> c -> HttpSpec ()
 post_ description path body =
   Post description path (toJSON body) (getParser True)
 
-postEmpty :: forall a. (FromJSON a) => Text -> UrlPath -> HttpSpec a
+postEmpty :: forall a. (FromJSON a) => Text -> SubPath -> HttpSpec a
 postEmpty description path =
   PostEmpty description path (getParser False)
 
-postEmpty_ :: Text -> UrlPath -> HttpSpec ()
+postEmpty_ :: Text -> SubPath -> HttpSpec ()
 postEmpty_ description path =
   PostEmpty description path (getParser True)
 
-delete :: forall a. (FromJSON a) => Text -> UrlPath -> HttpSpec a
+delete :: forall a. (FromJSON a) => Text -> SubPath -> HttpSpec a
 delete description path =
   Delete description path (getParser False)
 
-delete_ :: Text -> UrlPath -> HttpSpec ()
+delete_ :: Text -> SubPath -> HttpSpec ()
 delete_ description path =
   Delete description path (getParser True)
 
@@ -201,7 +201,7 @@ instance (Show a) => Show (HttpSpec a) where
 data HttpSpecShowable = Request
   { description :: Text,
     method :: Text,
-    path :: UrlPath,
+    path :: SubPath,
     body :: Maybe Text
   }
   deriving (Show)
@@ -257,7 +257,7 @@ newSession' = post "New Session" newSessionUrl
 --
 -- @GET 	\/status 	Status@
 status :: HttpSpec Status
-status = get "Status" (MkUrlPath ["status"])
+status = get "Status" (MkSubPath ["status"])
 
 -- ############################ Session Methods ##########################################
 
@@ -864,35 +864,35 @@ findElementsFromShadowRoot sessionId shadowId = post "Find Elements From Shadow 
 
 -- ############################ Utils ##########################################
 
-sessionUri :: Text -> UrlPath
-sessionUri sp = MkUrlPath [session, sp]
+sessionUri :: Text -> SubPath
+sessionUri sp = MkSubPath [session, sp]
 
-sessionUri1 :: Session -> Text -> UrlPath
-sessionUri1 s sp = MkUrlPath [session, s.id, sp]
+sessionUri1 :: Session -> Text -> SubPath
+sessionUri1 s sp = MkSubPath [session, s.id, sp]
 
-sessionUri2 :: Session -> Text -> Text -> UrlPath
-sessionUri2 s sp sp2 = MkUrlPath [session, s.id, sp, sp2]
+sessionUri2 :: Session -> Text -> Text -> SubPath
+sessionUri2 s sp sp2 = MkSubPath [session, s.id, sp, sp2]
 
-sessionUri3 :: Session -> Text -> Text -> Text -> UrlPath
-sessionUri3 s sp sp2 sp3 = MkUrlPath [session, s.id, sp, sp2, sp3]
+sessionUri3 :: Session -> Text -> Text -> Text -> SubPath
+sessionUri3 s sp sp2 sp3 = MkSubPath [session, s.id, sp, sp2, sp3]
 
-sessionUri4 :: Session -> Text -> Text -> Text -> Text -> UrlPath
-sessionUri4 s sp sp2 sp3 sp4 = MkUrlPath [session, s.id, sp, sp2, sp3, sp4]
+sessionUri4 :: Session -> Text -> Text -> Text -> Text -> SubPath
+sessionUri4 s sp sp2 sp3 sp4 = MkSubPath [session, s.id, sp, sp2, sp3, sp4]
 
 window :: Text
 window = "window"
 
-windowUri1 :: Session -> Text -> UrlPath
+windowUri1 :: Session -> Text -> SubPath
 windowUri1 sr sp = sessionUri2 sr window sp
 
-elementUri1 :: Session -> ElementId -> Text -> UrlPath
+elementUri1 :: Session -> ElementId -> Text -> SubPath
 elementUri1 s er ep = sessionUri3 s "element" er.id ep
 
-elementUri2 :: Session -> ElementId -> Text -> Text -> UrlPath
+elementUri2 :: Session -> ElementId -> Text -> Text -> SubPath
 elementUri2 s er ep ep2 = sessionUri4 s "element" er.id ep ep2
 
-newSessionUrl :: UrlPath
-newSessionUrl = MkUrlPath [session]
+newSessionUrl :: SubPath
+newSessionUrl = MkSubPath [session]
 
 session :: Text
 session = "session"
