@@ -7,7 +7,7 @@
 module WebDriverPreCore.HttpRunner
   ( -- * HTTP Runner
     HttpRunner (..),
-    mkHttpRunner
+    mkHttpRunner,
   )
 where
 
@@ -27,6 +27,7 @@ import WebDriverPreCore.HTTP.Protocol
 import WebDriverPreCore.HttpRunnerBase
   ( HttpMethod (..),
     HttpRequest (..),
+    HttpResponse (..),
     HttpRunnerBase (..),
     SubPath (..),
     mkHttpRunnerBase,
@@ -36,9 +37,11 @@ import Prelude hiding (log)
 -- | Typed HTTP runner for WebDriver commands
 data HttpRunner m = MkHttpRunner
   { -- | Execute a command and return the typed result
-    run :: forall r. (FromJSON r) => Command r -> m r,
-    -- | Execute a command and return the full JSON response
-    fullResponse :: forall r. (FromJSON r) => Command r -> m Value
+    exe :: forall r. (FromJSON r) => Command r -> m r,
+    -- | Execute a command and return the JSON body
+    exeBody :: forall r. (FromJSON r) => Command r -> m Value,
+    -- | Execute a command and return the full HTTP response
+    exeFull :: forall r. (FromJSON r) => Command r -> m HttpResponse
   }
 
 -- | Create a typed HTTP runner
@@ -53,8 +56,9 @@ mkHttpRunner ::
   HttpRunner m
 mkHttpRunner host port mLogger =
   MkHttpRunner
-    { run = runCommand base,
-      fullResponse = runCommandFullResponse base
+    { exe = runCommand base,
+      exeBody = runCommandBody base,
+      exeFull = runCommandFullResponse base
     }
   where
     base = mkHttpRunnerBase host port mLogger
@@ -62,12 +66,15 @@ mkHttpRunner host port mLogger =
 -- | Execute a typed command and return the parsed result
 runCommand :: forall r m. (FromJSON r, Functor m) => HttpRunnerBase m -> Command r -> m r
 runCommand base cmd =
-  parseResult <$> runCommandFullResponse base cmd
+  parseResult <$> runCommandBody base cmd
 
 -- | Execute a typed command and return the full JSON response
-runCommandFullResponse :: forall r m. HttpRunnerBase m -> Command r -> m Value
-runCommandFullResponse base cmd =
-  base.runJson $ commandToRequest cmd
+runCommandBody :: forall r m. HttpRunnerBase m -> Command r -> m Value
+runCommandBody base = base.exeBody . commandToRequest
+
+-- | Execute a typed command and return the full HTTP response
+runCommandFullResponse :: forall r m. HttpRunnerBase m -> Command r -> m HttpResponse
+runCommandFullResponse base = base.exeFull . commandToRequest
 
 -- | Convert a typed Command to an HttpRequest
 commandToRequest :: Command r -> HttpRequest

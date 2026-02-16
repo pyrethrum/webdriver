@@ -76,9 +76,9 @@ data HttpRequest = MkHttpRequest
 -- | Base HTTP runner that works with JSON values
 data HttpRunnerBase m = MkHttpRunnerBase
   { -- | Execute a request and return just the response body
-    runJson :: HttpRequest -> m Value,
+    exeBody :: HttpRequest -> m Value,
     -- | Execute a request and return the full HTTP response
-    runResponse :: HttpRequest -> m HttpResponse
+    exeFull :: HttpRequest -> m HttpResponse
   }
 
 -- | Create an HTTP runner base
@@ -93,8 +93,8 @@ mkHttpRunnerBase ::
   HttpRunnerBase m
 mkHttpRunnerBase host port mLogger =
   MkHttpRunnerBase
-    { runJson = callWebDriverJson baseUrl port mLogger,
-      runResponse = callWebDriverResponse baseUrl port mLogger
+    { exeBody = callWebDriverJson baseUrl port mLogger,
+      exeFull = callWebDriverResponse baseUrl port mLogger
     }
   where
     baseUrl = http host
