@@ -20,7 +20,7 @@ import WebDriver.RIO.HTTP.Base.Actions
 import WebDriver.RIO.Logging (LoggerConfig, withLogging)
 import WebDriverPreCore.HttpRunner (HttpRunner, mkHttpRunner)
 
-runHttp :: (HasHttpRunner env, HasLogFunc env) => LoggerConfig -> Text -> Word16 -> Bool -> RIO env a -> IO a
+runHttp :: forall env a. (HasHttpRunner env, HasLogFunc env) => LoggerConfig -> Text -> Word16 -> Bool -> RIO env a -> IO a
 runHttp loggerConfig host port wantHttpLogging httpAction =
   withLogging loggerConfig $ \lf ->
     let logger =
@@ -30,8 +30,7 @@ runHttp loggerConfig host port wantHttpLogging httpAction =
         httpEnv = MkHttpEnv {logFunc = lf, httpRunner = mkHttpRunner host port logger}
      in runRIO httpEnv $ do
           logInfo "Successfully started WebDriverRIO"
-          undefined
-          -- httpAction
+          httpAction
 
 
 -- | Create a session, run an action with it, then delete the session.
