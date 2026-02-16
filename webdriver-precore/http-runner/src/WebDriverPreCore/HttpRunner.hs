@@ -27,7 +27,6 @@ import WebDriverPreCore.HTTP.Protocol
 import WebDriverPreCore.HttpRunnerBase
   ( HttpMethod (..),
     HttpRequest (..),
-    HttpResponse (..),
     HttpRunnerBase (..),
     SubPath (..),
     mkHttpRunnerBase,
