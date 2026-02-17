@@ -107,7 +107,8 @@ runDemoWithConfig cfg demo' = do
     runWithLogger logger = do
       let demoActions = mkDemoActions logger $ fromIntegral cfg.pauseMS * milliseconds
           mLogger = if cfg.logging then Just logger.log else Nothing
-          httpRunner = mkHttpRunner cfg.httpUrl (fromIntegral cfg.httpPort) mLogger
+          httpEndpoint = MkHttpEndpoint {host = cfg.httpUrl, port = cfg.httpPort}
+          httpRunner = mkHttpRunner httpEndpoint mLogger
           httpActions = mkActions httpRunner
           httpCaps = httpBidiCapabilities cfg
 

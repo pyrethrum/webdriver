@@ -110,7 +110,7 @@ data HttpActions = MkHttpActions
   }
 
 mkActions :: HttpRunner IO -> HttpActions
-mkActions MkHttpRunner {run, fullResponse} =
+mkActions MkHttpRunner {run, runBody} =
   MkHttpActions
     { -- Root methods
       status = run API.status,
@@ -182,7 +182,7 @@ mkActions MkHttpRunner {run, fullResponse} =
       findElementsFromShadowRoot = sessRun2 API.findElementsFromShadowRoot,
       --
       runCommand = run,
-      runCommand' = fullResponse
+      runCommand' = runBody
     }
   where
     sessRun :: forall a r. (FromJSON r) => (Session -> a -> Command r) -> Session -> a -> IO r

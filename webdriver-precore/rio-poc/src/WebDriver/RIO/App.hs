@@ -20,8 +20,12 @@ import WebDriver.RIO.Env (BiDiEnv (..), HasHttpRunner, HttpEnv (..))
 import WebDriver.RIO.HTTP.Base.Actions (status)
 import WebDriver.RIO.Logging (LoggerConfig (..), withLogging)
 import WebDriverPreCore.HttpRunner (HttpEndpoint, HttpRunner, mkHttpRunner)
+import WebDriverPreCore.HttpRunner (HttpEndpoint(..))
 
 data WantAPILogging = APILogging | NoAPILogging deriving (Eq, Show)
+
+defaultEndpoint :: HttpEndpoint
+defaultEndpoint = MkHttpEndpoint {host = "127.0.0.1", port = 4444}
 
 runHttp :: (LogFunc -> HttpRunner IO -> env) -> LoggerConfig -> HttpEndpoint -> WantAPILogging -> RIO env a -> IO a
 runHttp mkEnv loggerConfig httpEndpoint apiLogging httpAction =
@@ -43,7 +47,7 @@ myAction = do
   logInfo $ "Status: " <> displayShow s
 
 a :: IO ()
-a = runHttp MkHttpEnv Console "127.0.0.1" 4444 True myAction
+a = runHttp MkHttpEnv Console defaultEndpoint APILogging myAction
 
 -- Perform WebDriver commands using the HTTP runner from the environment
 

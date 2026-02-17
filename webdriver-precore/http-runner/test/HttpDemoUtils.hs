@@ -21,6 +21,7 @@ import WebDriverPreCore.Test.Const (milliseconds)
 import WebDriverPreCore.Test.IOUtils (DemoActions (..), Logger (..), logNothingLogger, mkDemoActions)
 import WebDriverPreCore.Test.Logger (withChannelFileLogger)
 import WebDriverPreCore.Test.CapabilitiesBuilder (httpFullCapabilities)
+import WebDriverPreCore.HttpRunner (HttpEndpoint(..))
 
 data HttpDemo
   = Demo
@@ -68,7 +69,8 @@ runDemo' cfg@MkConfig {httpUrl, httpPort, pauseMS} lgr demo' = do
     demoActions = mkDemoActions lgr $ fromIntegral pauseMS * milliseconds
     -- Create runner with optional logger based on config logging
     mLogger = if cfg.logging then Just lgr.log else Nothing
-    runner = mkHttpRunner httpUrl (fromIntegral httpPort) mLogger
+    httpEndpoint = MkHttpEndpoint {host = httpUrl, port = fromIntegral httpPort}
+    runner = mkHttpRunner httpEndpoint mLogger
     httpActions = mkActions runner
 
 withSession :: FullCapabilities -> HttpActions -> (SessionResponse -> IO ()) -> IO ()
