@@ -9,6 +9,7 @@ module WebDriverPreCore.HttpRunnerBase
   ( -- * HTTP Runner
     HttpRunnerBase (..),
     mkHttpRunnerBase,
+    HttpEndpoint (..),
 
     -- * Request Types
     HttpMethod (..),
@@ -73,28 +74,34 @@ data HttpRequest = MkHttpRequest
   }
   deriving (Show, Eq)
 
+data HttpEndpoint = MkHttpEndpoint
+  { -- | Host (e.g. "127.0.0.1")
+    host :: Text,
+    -- | Port (e.g. 4444)
+    port :: Word16
+  }
+  deriving (Show, Eq)
+
 -- | Base HTTP runner that works with JSON values
 data HttpRunnerBase m = MkHttpRunnerBase
   { -- | Execute a request and return just the response body
-    exeBody :: HttpRequest -> m Value,
+    runBody :: HttpRequest -> m Value,
     -- | Execute a request and return the full HTTP response
-    exeFull :: HttpRequest -> m HttpResponse
+    runFull :: HttpRequest -> m HttpResponse
   }
 
 -- | Create an HTTP runner base
 mkHttpRunnerBase ::
   (MonadIO m) =>
-  -- | Host (e.g. "127.0.0.1")
-  Text ->
-  -- | Port (e.g. 4444)
-  Word16 ->
+  -- | HTTP endpoint (host and port)
+  HttpEndpoint ->
   -- | Optional logger
   Maybe (Text -> m ()) ->
   HttpRunnerBase m
-mkHttpRunnerBase host port mLogger =
+mkHttpRunnerBase MkHttpEndpoint {host, port} mLogger =
   MkHttpRunnerBase
-    { exeBody = callWebDriverJson baseUrl port mLogger,
-      exeFull = callWebDriverResponse baseUrl port mLogger
+    { runBody = callWebDriverJson baseUrl port mLogger,
+      runFull = callWebDriverResponse baseUrl port mLogger
     }
   where
     baseUrl = http host

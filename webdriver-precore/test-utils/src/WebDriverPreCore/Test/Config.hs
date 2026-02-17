@@ -7,6 +7,7 @@ where
 
 import Data.Text as T (Text)
 import Dhall (FromDhall, Generic, ToDhall)
+import Data.Word (Word16)
 
 isFirefox :: DemoBrowser -> Bool
 isFirefox = \case
@@ -23,7 +24,7 @@ instance ToDhall DemoBrowser
 data Config = MkConfig
   { browser :: DemoBrowser,
     httpUrl :: Text,
-    httpPort :: Word,
+    httpPort :: Word16,
     logging :: Bool,
     pauseMS :: Word
   }

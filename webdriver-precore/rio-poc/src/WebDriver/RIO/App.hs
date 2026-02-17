@@ -8,35 +8,44 @@
 -- capabilities, then execute a RIO action in that context.
 module WebDriver.RIO.App
   ( runHttp,
-    -- withHttpSession,
-    -- newSession,
-    -- deleteSession,
+  -- withHttpSession,
+  -- newSession,
+  -- deleteSession,
   )
 where
 
 import RIO
-import WebDriver.RIO.Env (HasHttpRunner)
-import WebDriver.RIO.Logging (LoggerConfig, withLogging)
-import WebDriverPreCore.HttpRunner (HttpRunner)
-import WebDriverPreCore.HttpRunner qualified as HTTPRunner 
+import RIO.Text (pack)
+import WebDriver.RIO.Env (BiDiEnv (..), HasHttpRunner, HttpEnv (..))
+import WebDriver.RIO.HTTP.Base.Actions (status)
+import WebDriver.RIO.Logging (LoggerConfig (..), withLogging)
+import WebDriverPreCore.HttpRunner (HttpEndpoint, HttpRunner, mkHttpRunner)
 
+data WantAPILogging = APILogging | NoAPILogging deriving (Eq, Show)
 
-
-
-
-runHttp :: (HasLogFunc env) => (LogFunc -> HttpRunner IO -> env) -> LoggerConfig -> Text -> Word16 -> Bool -> RIO env a -> IO a
-runHttp mkEnv loggerConfig host port wantHttpLogging httpAction =
+runHttp :: (LogFunc -> HttpRunner IO -> env) -> LoggerConfig -> HttpEndpoint -> WantAPILogging -> RIO env a -> IO a
+runHttp mkEnv loggerConfig httpEndpoint apiLogging httpAction =
   withLogging loggerConfig $ \lf ->
     let runnerLogger =
-          if wantHttpLogging
-            then Just $ runRIO lf . logInfo . display
-            else Nothing
-        httpRunner = HTTPRunner.mkHttpRunner host port runnerLogger
+          case apiLogging of
+            APILogging -> Just $ runRIO lf . logInfo . display . ("HTTP: " <>)
+            NoAPILogging -> Nothing
+
+        httpRunner = mkHttpRunner httpEndpoint runnerLogger
         env = mkEnv lf httpRunner
      in runRIO env $ do
-          logInfo "Successfully started WebDriverRIO"
           httpAction
 
+myAction :: (HasLogFunc env, HasHttpRunner env) => RIO env ()
+myAction = do
+  logInfo "Running myAction"
+  s <- status
+  logInfo $ "Status: " <> displayShow s
+
+a :: IO ()
+a = runHttp MkHttpEnv Console "127.0.0.1" 4444 True myAction
+
+-- Perform WebDriver commands using the HTTP runner from the environment
 
 -- | Create a session, run an action with it, then delete the session.
 --
@@ -52,8 +61,6 @@ runHttp mkEnv loggerConfig host port wantHttpLogging httpAction =
 --     ((.sessionId) <$> newSession)
 --     (deleteSession)
 --     (\httpSessionId -> runRIO (MkHttpSessionEnv {logFunc, httpRunner, httpSessionId}) action)
-
-
 
 -- withHttpSession
 -- runBiDi :: LoggerConfig -> BiDiCapabilities -> RIO BiDiEnv a -> IO a

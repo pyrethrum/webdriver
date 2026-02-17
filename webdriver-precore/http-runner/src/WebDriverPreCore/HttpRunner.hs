@@ -6,8 +6,9 @@
 -- Command types, built on top of the JSON-based runner in HttpRunnerBase.
 module WebDriverPreCore.HttpRunner
   ( -- * HTTP Runner
-    HttpRunner (..),
+    HttpRunner(..),
     mkHttpRunner,
+    HttpEndpoint (..)
   )
 where
 
@@ -16,7 +17,6 @@ import Data.Aeson (FromJSON (..), Value (..), (.:))
 import Data.Aeson.Types (parseEither, parseMaybe)
 import Data.Function ((&))
 import Data.Text (Text, pack)
-import Data.Word (Word16)
 import GHC.Exception (throw)
 import Utils qualified
 import WebDriverPreCore.HTTP.Protocol
@@ -28,40 +28,40 @@ import WebDriverPreCore.HttpRunnerBase
   ( HttpMethod (..),
     HttpRequest (..),
     HttpResponse (..),
+    HttpEndpoint (..),
     HttpRunnerBase (..),
     SubPath (..),
     mkHttpRunnerBase,
   )
 import Prelude hiding (log)
 
+
 -- | Typed HTTP runner for WebDriver commands
 data HttpRunner m = MkHttpRunner
   { -- | Execute a command and return the typed result
-    exe :: forall r. (FromJSON r) => Command r -> m r,
+    run :: forall r. (FromJSON r) => Command r -> m r,
     -- | Execute a command and return the JSON body
-    exeBody :: forall r. (FromJSON r) => Command r -> m Value,
+    runBody :: forall r. (FromJSON r) => Command r -> m Value,
     -- | Execute a command and return the full HTTP response
-    exeFull :: forall r. (FromJSON r) => Command r -> m HttpResponse
+    runFull :: forall r. (FromJSON r) => Command r -> m HttpResponse
   }
 
 -- | Create a typed HTTP runner
 mkHttpRunner ::
   (MonadIO m) =>
   -- | Host (e.g. "127.0.0.1")
-  Text ->
-  -- | Port (e.g. 4444)
-  Word16 ->
+  HttpEndpoint->
   -- | Optional logger
   Maybe (Text -> m ()) ->
   HttpRunner m
-mkHttpRunner host port mLogger =
+mkHttpRunner httpEndpoint mLogger =
   MkHttpRunner
-    { exe = runCommand base,
-      exeBody = runCommandBody base,
-      exeFull = runCommandFullResponse base
+    { run = runCommand base,
+      runBody = runCommandBody base,
+      runFull = runCommandFullResponse base
     }
   where
-    base = mkHttpRunnerBase host port mLogger
+    base = mkHttpRunnerBase httpEndpoint mLogger
 
 -- | Execute a typed command and return the parsed result
 runCommand :: forall r m. (FromJSON r, Functor m) => HttpRunnerBase m -> Command r -> m r
@@ -70,11 +70,11 @@ runCommand base cmd =
 
 -- | Execute a typed command and return the full JSON response
 runCommandBody :: forall r m. HttpRunnerBase m -> Command r -> m Value
-runCommandBody base = base.exeBody . commandToRequest
+runCommandBody base = base.runBody . commandToRequest
 
 -- | Execute a typed command and return the full HTTP response
 runCommandFullResponse :: forall r m. HttpRunnerBase m -> Command r -> m HttpResponse
-runCommandFullResponse base = base.exeFull . commandToRequest
+runCommandFullResponse base = base.runFull . commandToRequest
 
 -- | Convert a typed Command to an HttpRequest
 commandToRequest :: Command r -> HttpRequest

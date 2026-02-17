@@ -113,6 +113,8 @@ import WebDriverPreCore.Extended.HTTP.Base.Protocol
 -- This allows the Extended module to work with different execution strategies.
 type Runner m a = Command a -> m a
 
+
+
 -- ######################################################################
 -- ########################### Root Methods #############################
 -- ######################################################################

@@ -83,15 +83,14 @@ module WebDriver.RIO.HTTP.Base.Actions
   )
 where
 
-
 import Data.Aeson (FromJSON, Value)
 import RIO (RIO, Text, ask, asks, liftIO, view)
 import WebDriver.RIO.Env
   ( HasHttpRunner (..),
     HasHttpSession (..),
   )
-import WebDriverPreCore.Extended.HTTP.Base.Actions qualified as A
 import WebDriverPreCore.Extended.Capabilities qualified as EC
+import WebDriverPreCore.Extended.HTTP.Base.Actions qualified as A
 import WebDriverPreCore.Extended.HTTP.Base.Protocol
   ( Actions,
     Command,
@@ -117,7 +116,7 @@ import WebDriverPreCore.HttpRunner (HttpRunner (..))
 
 -- | Lift a session action through the RIO environment.
 getRunner :: (HasHttpRunner env, FromJSON a) => RIO env (Command a -> IO a)
-getRunner = view httpRunnerL >>= \MkHttpRunner {run = r} -> pure r
+getRunner = view httpRunnerL >>= \MkHttpRunner {run} -> pure run
 
 -- | Lift a session action through the RIO environment.
 viaSession :: (HasHttpRunner env, HasHttpSession env, FromJSON a) => (A.Runner IO a -> Session -> IO a) -> RIO env a

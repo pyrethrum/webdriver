@@ -1,8 +1,7 @@
-{-|
-BiDi Demo utilities module for webdriver-precore-bidi-runner tests
-
-This module provides utilities for running BiDi demos.
--}
+-- |
+-- BiDi Demo utilities module for webdriver-precore-bidi-runner tests
+--
+-- This module provides utilities for running BiDi demos.
 module BiDiDemoUtils
   ( BiDiDemo (..),
     demo,
@@ -33,6 +32,8 @@ import Data.Text (Text, isInfixOf, unpack)
 import Data.Text qualified as T
 import Data.Time.Clock.POSIX (POSIXTime, getPOSIXTime)
 import Data.Word (Word64)
+import HttpActions (HttpActions (..), mkActions)
+import Utils (txt)
 import WebDriverPreCore.BiDi.Protocol
   ( BrowsingContext,
     Close (..),
@@ -52,15 +53,13 @@ import WebDriverPreCore.BiDi.Protocol
 import WebDriverPreCore.BiDiRunner (BiDiUrl, parseBiDiUrl, withBiDi, withBiDiFailTest)
 import WebDriverPreCore.HTTP.Protocol (FullCapabilities (..), SessionResponse (..))
 import WebDriverPreCore.HTTP.Protocol qualified as Caps (Capabilities (..))
-import WebDriverPreCore.HttpRunner (mkHttpRunner)
-import HttpActions (HttpActions (..), mkActions)
+import WebDriverPreCore.HttpRunner (HttpEndpoint (..), mkHttpRunner)
+import WebDriverPreCore.Test.CapabilitiesBuilder (httpCapabilities, httpFullCapabilities)
 import WebDriverPreCore.Test.Config (Config (..))
 import WebDriverPreCore.Test.ConfigLoader (loadConfig)
 import WebDriverPreCore.Test.Const (Timeout (..), milliseconds, seconds)
 import WebDriverPreCore.Test.IOUtils (DemoActions (..), Logger (..), logNothingLogger, mkDemoActions)
 import WebDriverPreCore.Test.Logger (withChannelFileLogger)
-import WebDriverPreCore.Test.CapabilitiesBuilder (httpCapabilities, httpFullCapabilities)
-import Utils (txt)
 import Prelude hiding (log)
 
 -- | A BiDi demo is a named action that runs with DemoActions and a Actions
@@ -86,7 +85,7 @@ getBiDiUrl :: SessionResponse -> Either Text BiDiUrl
 getBiDiUrl r =
   case r.webSocketUrl of
     Nothing -> Left $ "WebSocket URL not provided in session response:\n" <> txt r
-    Just wsUrl -> 
+    Just wsUrl ->
       case parseBiDiUrl wsUrl of
         Nothing -> Left $ "Could not parse WebSocket URL: " <> wsUrl
         Just bidiUrl -> Right bidiUrl
@@ -111,7 +110,7 @@ runDemoWithConfig cfg demo' = do
           httpRunner = mkHttpRunner cfg.httpUrl (fromIntegral cfg.httpPort) mLogger
           httpActions = mkActions httpRunner
           httpCaps = httpBidiCapabilities cfg
-      
+
       -- Create HTTP session first (BiDi needs webSocketUrl from session response)
       bracket
         (httpActions.newSession httpCaps)
@@ -121,7 +120,7 @@ runDemoWithConfig cfg demo' = do
           bidiUrl <- case getBiDiUrl ses of
             Left err -> fail $ show err
             Right url -> pure url
-          
+
           -- Run with BiDi connection
           withBiDi mLogger bidiUrl $ \biDiRunner -> do
             let bidiActions = Actions.mkActions biDiRunner
@@ -276,7 +275,7 @@ expectError testName failTest action = do
               <> "\n"
               <> " Expected Fragment was: "
               <> "\n"
-              <> toText failTest 
+              <> toText failTest
               <> "\n"
               <> "Actual Error was:"
               <> "\n"
@@ -287,7 +286,7 @@ expectError testName failTest action = do
 
 -- | Run a BiDi demo with failure injection for testing
 runDemoFail :: Word64 -> Word64 -> Word64 -> BiDiDemo -> IO ()
-runDemoFail failSendCount failGetCount failEventCount dmo = 
+runDemoFail failSendCount failGetCount failEventCount dmo =
   loadConfig >>= \c -> runDemoFail' c failSendCount failGetCount failEventCount dmo
 
 -- | Run a BiDi demo with failure injection for testing (with config)
@@ -301,10 +300,11 @@ runDemoFail' cfg failSendCount failGetCount failEventCount demo' = do
     runWithLogger logger = do
       let demoActions = mkDemoActions logger $ fromIntegral cfg.pauseMS * milliseconds
           mLogger = if cfg.logging then Just logger.log else Nothing
-          httpRunner = mkHttpRunner cfg.httpUrl (fromIntegral cfg.httpPort) mLogger
+          endpoint = MkHttpEndpoint {host = cfg.httpUrl, port = cfg.httpPort}
+          httpRunner = mkHttpRunner endpoint mLogger
           httpActions = mkActions httpRunner
           httpCaps = httpBidiCapabilities cfg
-      
+
       bracket
         (httpActions.newSession httpCaps)
         (httpActions.deleteSession . (.sessionId))
@@ -312,7 +312,7 @@ runDemoFail' cfg failSendCount failGetCount failEventCount demo' = do
           bidiUrl <- case getBiDiUrl ses of
             Left err -> fail $ show err
             Right url -> pure url
-          
+
           -- Run with BiDi connection with failure injection
           withBiDiFailTest failSendCount failGetCount failEventCount mLogger bidiUrl $ \biDiRunner -> do
             let bidiActions = Actions.mkActions biDiRunner
