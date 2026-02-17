@@ -19,26 +19,40 @@ import RIO.Text (pack)
 import WebDriver.RIO.Env (BiDiEnv (..), HasHttpRunner, HttpEnv (..))
 import WebDriver.RIO.HTTP.Base.Actions (status)
 import WebDriver.RIO.Logging (LoggerConfig (..), withLogging)
-import WebDriverPreCore.HttpRunner (HttpEndpoint, HttpRunner, mkHttpRunner)
-import WebDriverPreCore.HttpRunner (HttpEndpoint(..))
+import WebDriverPreCore.HttpRunner (HttpEndpoint (..), HttpRunner, mkHttpRunner)
 
-data WantAPILogging = APILogging | NoAPILogging deriving (Eq, Show)
+data WantWebDriverLogging = WebDriverLogging | NoWebDriverLogging deriving (Eq, Show)
 
 defaultEndpoint :: HttpEndpoint
 defaultEndpoint = MkHttpEndpoint {host = "127.0.0.1", port = 4444}
 
-runHttp :: (LogFunc -> HttpRunner IO -> env) -> LoggerConfig -> HttpEndpoint -> WantAPILogging -> RIO env a -> IO a
+-- | Run an HTTP action with logging and HTTP runner capabilities.
+--
+-- Sets up a logging context and HTTP runner, then executes the provided
+-- RIO action in an environment constructed by the given function.
+runHttp ::
+  (MonadUnliftIO m) =>
+  (LogFunc -> HttpRunner m -> env) ->
+  -- ^ Environment constructor function that builds the environment from LogFunc and HttpRunner
+  LoggerConfig ->
+  -- ^ Configuration for the logging subsystem
+  HttpEndpoint ->
+  -- ^ HTTP endpoint (host and port) for the WebDriver server
+  WantWebDriverLogging ->
+  -- ^ Whether to enable verbose HTTP API logging
+  RIO env a ->
+  -- ^ The RIO action to execute in the configured environment
+  m a
 runHttp mkEnv loggerConfig httpEndpoint apiLogging httpAction =
   withLogging loggerConfig $ \lf ->
     let runnerLogger =
           case apiLogging of
-            APILogging -> Just $ runRIO lf . logInfo . display . ("HTTP: " <>)
-            NoAPILogging -> Nothing
+            WebDriverLogging -> Just $ runRIO lf . logInfo . display . ("HTTP: " <>)
+            NoWebDriverLogging -> Nothing
 
         httpRunner = mkHttpRunner httpEndpoint runnerLogger
         env = mkEnv lf httpRunner
-     in runRIO env $ do
-          httpAction
+     in runRIO env httpAction
 
 myAction :: (HasLogFunc env, HasHttpRunner env) => RIO env ()
 myAction = do
@@ -47,7 +61,7 @@ myAction = do
   logInfo $ "Status: " <> displayShow s
 
 a :: IO ()
-a = runHttp MkHttpEnv Console defaultEndpoint APILogging myAction
+a = runHttp MkHttpEnv Console defaultEndpoint WebDriverLogging myAction
 
 -- Perform WebDriver commands using the HTTP runner from the environment
 
