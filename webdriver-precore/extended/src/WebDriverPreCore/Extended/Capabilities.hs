@@ -146,7 +146,7 @@ data PromptAction
   deriving (Show, Eq)
 
 data HttpSessionResponse = MkHttpSessionResponse
-  { sessionId :: HTTP.Session,
+  { session :: HTTP.Session,
     websocketUrl :: Maybe Text,
     browserVersion :: Text,
     httpSetWindowRect :: Maybe Bool,
@@ -178,7 +178,7 @@ data UserPromptHandler = MkUserPromptHandler
 
 data BiDiSessionResponse = MkBiDiSessionResponse
   { -- TODO - make base BIDI Session use the same newtype as HTTP
-    sessionId :: HTTP.Session,
+    session :: HTTP.Session,
     acceptInsecureCerts :: Bool,
     browserName :: Text,
     browserVersion :: Text,
@@ -433,9 +433,9 @@ toBiDiCapability (MkBiDiCapability {..}) =
 
 -- | Convert native HTTP session response to local HTTP session response
 fromHttpSessionResponse :: HTTP.SessionResponse -> HttpSessionResponse
-fromHttpSessionResponse (HTTP.MkSessionResponse {sessionId, webSocketUrl = wsUrl, capabilities = HTTP.MkCapabilities {..}, extensions = exts}) =
+fromHttpSessionResponse (HTTP.MkSessionResponse {sessionId = session, webSocketUrl = wsUrl, capabilities = HTTP.MkCapabilities {..}, extensions = exts}) =
   MkHttpSessionResponse
-    { sessionId,
+    { session,
       websocketUrl = wsUrl,
       browserVersion = fromMaybe "" browserVersion,
       httpSetWindowRect = setWindowRect,
@@ -457,9 +457,9 @@ fromHttpSessionResponse (HTTP.MkSessionResponse {sessionId, webSocketUrl = wsUrl
 
 -- | Convert native BiDi session response to local BiDi session response
 fromBiDiSessionResponse :: BiDi.SessionNewResult -> BiDiSessionResponse
-fromBiDiSessionResponse (BiDi.MkSessionNewResult {sessionId = sid, capabilities = BiDi.MkCapabilitiesResult {..}}) =
+fromBiDiSessionResponse (BiDi.MkSessionNewResult {sessionId = session, capabilities = BiDi.MkCapabilitiesResult {..}}) =
   MkBiDiSessionResponse
-    { sessionId = coerce sid,
+    { session,
       acceptInsecureCerts = acceptInsecureCerts,
       browserName = browserName,
       browserVersion = browserVersion,

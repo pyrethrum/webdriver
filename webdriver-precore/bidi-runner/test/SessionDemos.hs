@@ -85,7 +85,7 @@ sessionNewDemo =
       pause
 
       logTxt "Session information:"
-      logTxt $ "Session ID: " <> newSession.sessionId
+      logShow "Session ID: " newSession
       logShow "Capabilities result" newSession.capabilities
       pause
 

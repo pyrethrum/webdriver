@@ -1,6 +1,7 @@
 module WebDriverPreCore.Internal.HTTPBidiCommon
   ( URL (..),
     JSUInt (..),
+    Session (..),
   )
 where
 
@@ -14,6 +15,12 @@ import Data.Aeson.Types (Parser)
 import Data.Text (Text, unpack)
 import Data.Word (Word64)
 import Utils (txt)
+import GHC.Generics (Generic)
+
+
+newtype Session = MkSession {id :: Text}
+  deriving (Generic)
+  deriving newtype (Show, Eq, FromJSON, ToJSON)
 
 newtype JSUInt = MkJSUInt Word64 deriving newtype (Show, Eq, Enum, FromJSON, ToJSON) -- JSUnit ::  0..9007199254740991  -     Word64 :: 18446744073709551615
 

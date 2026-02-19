@@ -5,6 +5,7 @@ module WebDriverPreCore.BiDi.Session
     SessionNewResult (..),
     SessionStatusResult (..),
     SessionSubscribeResult (..),
+    Session (..)
   )
 where
 
@@ -15,6 +16,7 @@ import GHC.Generics (Generic)
 import WebDriverPreCore.BiDi.Capabilities (CapabilitiesResult)
 import WebDriverPreCore.BiDi.CoreTypes (BrowsingContext, UserContext, SubscriptionType)
 import AesonUtils (toJSONOmitNothing)
+import WebDriverPreCore.Internal.HTTPBidiCommon (Session (..))
 
 -- ######### Remote #########
 
@@ -55,18 +57,19 @@ instance ToJSON SessionUnsubscribe where
 
 -- | Session New Result
 data SessionNewResult = MkSessionNewResult
-  { sessionId :: Text,
+  { sessionId :: Session,
     capabilities :: CapabilitiesResult
   }
   deriving (Show, Eq, Generic)
 
-instance ToJSON SessionNewResult where
+instance {-# DEPRECATED "Removal planned ~ 2027-04-01" #-} ToJSON SessionNewResult where
   toJSON :: SessionNewResult -> Value
   toJSON (MkSessionNewResult sessionId capabilities) =
     object
       [ "sessionId" .= sessionId,
         "capabilities" .= capabilities
       ]
+
 
 instance FromJSON SessionNewResult where
   parseJSON :: Value -> Parser SessionNewResult

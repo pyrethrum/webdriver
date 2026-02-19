@@ -123,7 +123,7 @@ viaSession :: (HasHttpRunner env, HasHttpSession env, FromJSON a) => (A.Runner I
 viaSession sesFunc =
   sesFunc
     <$> getRunner
-    <*> (MkSession <$> asks getHttpSessionId)
+    <*> asks getHttpSession
     >>= liftIO
 
 -- | Lift a session action with one extra argument.

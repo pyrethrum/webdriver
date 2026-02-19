@@ -42,14 +42,15 @@ module WebDriver.RIO.Env
     getLogger,
     getHttpRunner,
     getBiDiRunner,
-    getHttpSessionId,
-    getBiDiSessionId
+    getHttpSession,
+    getBiDiSession
   )
 where
 
-import RIO (HasLogFunc (..), Lens', LogFunc, RIO, Text, lens, view)
+import RIO (HasLogFunc (..), Lens', LogFunc, RIO, Text, lens, view, ask)
 import WebDriverPreCore.BiDiRunner (BiDiRunner)
 import WebDriverPreCore.HttpRunner (HttpRunner)
+import WebDriverPreCore.Extended.HTTP.Base.Protocol (Session (..))
 
 -- | Env has an 'HttpRunner' available.
 class HasHttpRunner env where
@@ -61,11 +62,11 @@ class HasBiDiRunner env where
 
 -- | Env has an HTTP session id available.
 class HasHttpSession env where
-  getHttpSessionId :: env -> Text
+  getHttpSession :: env -> Session
 
 -- | Env has a BiDi session id available.
 class HasBiDiSession env where
-  getBiDiSessionId :: env -> Text
+  getBiDiSession :: env -> Session
 
 -- | HTTP runner.
 data HttpEnv = MkHttpEnv
@@ -147,7 +148,7 @@ instance HasBiDiRunner DualEnv where
 data HttpSessionEnv = MkHttpSessionEnv
   { logFunc :: LogFunc,
     httpRunner :: HttpRunner IO,
-    httpSessionId :: Text
+    httpSession :: Session
   }
 
 instance HasLogFunc HttpSessionEnv where
@@ -159,8 +160,8 @@ instance HasHttpRunner HttpSessionEnv where
   httpRunnerL = lens (.httpRunner) \MkHttpSessionEnv{..} r -> MkHttpSessionEnv { httpRunner = r, .. }
 
 instance HasHttpSession HttpSessionEnv where
-  getHttpSessionId :: HttpSessionEnv -> Text
-  getHttpSessionId = (.httpSessionId)
+  getHttpSession :: HttpSessionEnv -> Session
+  getHttpSession = (.httpSession)
 
 -- ---------------------------------------------------------------------------
 -- BiDi Session (BiDi runner + session id)
@@ -170,7 +171,7 @@ instance HasHttpSession HttpSessionEnv where
 data BiDiSessionEnv = MkBiDiSessionEnv
   { logFunc :: LogFunc,
     biDiRunner :: BiDiRunner,
-    biDiSessionId :: Text
+    biDiSession :: Session
   }
 
 instance HasLogFunc BiDiSessionEnv where
@@ -182,8 +183,8 @@ instance HasBiDiRunner BiDiSessionEnv where
   biDiRunnerL = lens (.biDiRunner) \MkBiDiSessionEnv{..} r -> MkBiDiSessionEnv { biDiRunner = r, .. }
 
 instance HasBiDiSession BiDiSessionEnv where
-  getBiDiSessionId :: BiDiSessionEnv -> Text
-  getBiDiSessionId = (.biDiSessionId)
+  getBiDiSession :: BiDiSessionEnv -> Session
+  getBiDiSession = (.biDiSession)
 
 -- ---------------------------------------------------------------------------
 -- Dual Session (HTTP + BiDi runners + session id)
@@ -194,8 +195,8 @@ data DualSessionEnv = MkDualSessionEnv
   { logFunc :: LogFunc,
     httpRunner :: HttpRunner IO,
     biDiRunner :: BiDiRunner,
-    httpSessionId :: Text,
-    biDiSessionId :: Text
+    httpSession :: Session,
+    biDiSession :: Session
   }
 
 instance HasLogFunc DualSessionEnv where
@@ -211,9 +212,20 @@ instance HasBiDiRunner DualSessionEnv where
   biDiRunnerL = lens (.biDiRunner) \MkDualSessionEnv{..} b -> MkDualSessionEnv { biDiRunner = b, .. }
 
 instance HasHttpSession DualSessionEnv where
-  getHttpSessionId :: DualSessionEnv -> Text
-  getHttpSessionId = (.httpSessionId)
+  getHttpSession :: DualSessionEnv -> Session
+  getHttpSession = (.httpSession)
 
 instance HasBiDiSession DualSessionEnv where
-  getBiDiSessionId :: DualSessionEnv -> Text
-  getBiDiSessionId = (.biDiSessionId)
+  getBiDiSession :: DualSessionEnv -> Session
+  getBiDiSession = (.biDiSession)
+
+
+
+-- getHttpSession = asks getHttpSession
+
+-- RIO HttpEnv a 
+-- mkSessionHttp :: RIO HttpEnv a -> RIO HttpEnv (Session, a)
+-- mkSessionHttp action = do
+--   a <- action
+--   s <- asks
+--   httpEnv@MkHttpEnv{..} <- ask

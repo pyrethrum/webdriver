@@ -8,10 +8,12 @@
 -- capabilities, then execute a RIO action in that context.
 module WebDriver.RIO.App
   ( runHttp,
-    withHttpSession,
-    exampleWithTimeouts,
+    -- withHttpSession,
+    -- exampleWithTimeouts,
     WantWebDriverLogging (..),
     defaultEndpoint,
+    withHttpSession,
+    exampleWithTimeouts,
   )
 where
 
@@ -23,9 +25,9 @@ import WebDriver.RIO.Env
     getHttpRunner,
     getLogger,
   )
-import WebDriver.RIO.HTTP.Base.Actions (deleteSession, getTimeouts, setTimeouts, status)
+import WebDriver.RIO.HTTP.Base.Actions (deleteSession, getTimeouts, newSession, setTimeouts, status)
 import WebDriver.RIO.Logging (LoggerConfig (..), withLogging)
-import WebDriverPreCore.Extended.Capabilities qualified as EC
+import WebDriverPreCore.Extended.Capabilities as EC
 import WebDriverPreCore.HTTP.Protocol (Timeouts (..))
 import WebDriverPreCore.HttpRunner (HttpEndpoint (..), HttpRunner (..), mkHttpRunner)
 
@@ -40,16 +42,16 @@ defaultEndpoint = MkHttpEndpoint {host = "127.0.0.1", port = 4444}
 -- RIO action in an environment constructed by the given function.
 runHttp ::
   (MonadUnliftIO m) =>
+  -- | Environment constructor function that builds the environment from LogFunc and HttpRunner
   (LogFunc -> HttpRunner m -> env) ->
-  -- ^ Environment constructor function that builds the environment from LogFunc and HttpRunner
+  -- | Configuration for the logging subsystem
   LoggerConfig ->
-  -- ^ Configuration for the logging subsystem
+  -- | HTTP endpoint (host and port) for the WebDriver server
   HttpEndpoint ->
-  -- ^ HTTP endpoint (host and port) for the WebDriver server
+  -- | Whether to enable verbose HTTP API logging
   WantWebDriverLogging ->
-  -- ^ Whether to enable verbose HTTP API logging
+  -- | The RIO action to execute in the configured environment
   RIO env a ->
-  -- ^ The RIO action to execute in the configured environment
   m a
 runHttp mkEnv loggerConfig httpEndpoint apiLogging httpAction =
   withLogging loggerConfig $ \lf ->
@@ -78,24 +80,18 @@ a = runHttp MkHttpEnv Console defaultEndpoint WebDriverLogging myAction
 -- Uses bracket to ensure the session is always cleaned up even if the action fails.
 withHttpSession ::
   (HasHttpRunner env, HasLogFunc env) =>
+  -- | Capabilities to request for the session
   EC.HttpCapabilities ->
-  -- ^ Capabilities to request for the session
+  -- | Action to run with the session
   RIO HttpSessionEnv a ->
-  -- ^ Action to run with the session
   RIO env a
-withHttpSession caps action = do
-  httpRunner@MkHttpRunner{run} <- getHttpRunner
-  lf <- getLogger
+withHttpSession caps action =
   bracket
-    (liftIO $ do 
-       EC.newHttpSession run caps
-       here)
-    (\(EC.MkHttpSessionResponse {sessionId = sid}) -> do
-        let sessionEnv = MkHttpSessionEnv {logFunc = lf, httpRunner, httpSessionId = sid.id}
-        liftIO $ runRIO sessionEnv deleteSession)
-    (\(EC.MkHttpSessionResponse {sessionId = sid}) -> do
-        let sessionEnv = MkHttpSessionEnv {logFunc = lf, httpRunner, httpSessionId = sid.id}
-        runRIO sessionEnv action)
+    (MkHttpSessionEnv <$> getLogger <*> getHttpRunner <*> ((.session) <$> newSession caps))
+    (run deleteSession)
+    (run action)
+  where
+    run = flip runRIO
 
 -- | Example showing how to use withHttpSession to set and get timeouts
 exampleWithTimeouts :: IO ()

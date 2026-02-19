@@ -63,6 +63,7 @@ module WebDriverPreCore.HTTP.Protocol
     SameSite (..),
     Script (..),
     Selector (..),
+    -- | [spec](https://www.w3.org/TR/2025/WD-webdriver2-20251028/#dfn-new-sessions)
     Session (..),
     SessionResponse (..),
     Handle (..),
@@ -108,7 +109,7 @@ import Utils (txt)
 import WebDriverPreCore.Error
 import WebDriverPreCore.HTTP.Capabilities
 import WebDriverPreCore.HTTP.Command
-import WebDriverPreCore.Internal.HTTPBidiCommon as Url (URL (..))
+import WebDriverPreCore.Internal.HTTPBidiCommon as Url (URL (..), Session (..))
 import Prelude hiding (id)
 
 -- | [spec](https://www.w3.org/TR/2025/WD-webdriver2-20251028/#dfn-get-window-handle)
@@ -193,9 +194,6 @@ instance FromJSON ShadowRootElementId where
     withObject "ElementId" $
       fmap MkShadowRootElementId . (.: shadowRootFieldName)
 
--- | [spec](https://www.w3.org/TR/2025/WD-webdriver2-20251028/#dfn-new-sessions)
-newtype Session = MkSession {id :: Text}
-  deriving (Show, Eq, Generic)
 
 data SessionResponse = MkSessionResponse
   { sessionId :: Session,
@@ -240,7 +238,7 @@ instance FromJSON SessionResponse where
     withObject
       "SessionResponse.value"
       ( \valueObj -> do
-          sessionId <- MkSession <$> valueObj .: "sessionId"
+          sessionId <- valueObj .: "sessionId"
           --
           capabilitiesVal' :: Value <- valueObj .: "capabilities"
           allCapsObject <- parseObject "capabilities property returned from newSession should be an object" capabilitiesVal'
