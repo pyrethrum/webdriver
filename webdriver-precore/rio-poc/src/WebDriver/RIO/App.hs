@@ -8,12 +8,9 @@
 -- capabilities, then execute a RIO action in that context.
 module WebDriver.RIO.App
   ( runHttp,
-    -- withHttpSession,
-    -- exampleWithTimeouts,
-    WantWebDriverLogging (..),
-    defaultEndpoint,
     withHttpSession,
-    exampleWithTimeouts,
+    WantWebDriverLogging (..),
+    defaultEndpoint
   )
 where
 
@@ -57,12 +54,15 @@ runHttp mkEnv loggerConfig httpEndpoint apiLogging httpAction =
   withLogging loggerConfig $ \lf ->
     let runnerLogger =
           case apiLogging of
-            WebDriverLogging -> Just $ runRIO lf . logInfo . display . ("HTTP: " <>)
+            WebDriverLogging -> Just $ infoLogger lf
             NoWebDriverLogging -> Nothing
 
         httpRunner = mkHttpRunner httpEndpoint runnerLogger
         env = mkEnv lf httpRunner
      in runRIO env httpAction
+
+infoLogger :: (MonadIO m) => LogFunc -> Text -> m ()
+infoLogger lf = liftIO . runRIO lf . logInfo . display
 
 myAction :: (HasLogFunc env, HasHttpRunner env) => RIO env ()
 myAction = do
@@ -96,42 +96,3 @@ withHttpSession caps action =
   where
     run = flip runRIO
 
--- | Example showing how to use withHttpSession to set and get timeouts
-exampleWithTimeouts :: IO ()
-exampleWithTimeouts = runHttp MkHttpEnv Console defaultEndpoint WebDriverLogging $ do
-  -- Define minimal capabilities
-  let caps =
-        EC.MkFullCapabilitiesRequest
-          { alwaysMatch =
-              Just $
-                EC.MkHttpCapability
-                  { browserName = Just EC.Firefox,
-                    platformName = Nothing,
-                    acceptInsecureCerts = False,
-                    pageLoadStrategy = Nothing,
-                    proxy = Nothing,
-                    timeouts = Nothing,
-                    strictFileInteractability = Nothing,
-                    unhandledPromptBehavior = Nothing,
-                    httpWebSocketUrl = Nothing,
-                    vendorSpecific = Nothing
-                  },
-            firstMatch = []
-          }
-
-  -- Create a session, run actions, and automatically clean up
-  withHttpSession caps $ do
-    logInfo "Session created, setting timeouts"
-
-    -- Set new timeout values
-    let newTimeouts =
-          MkTimeouts
-            { implicit = Just 5000, -- 5 seconds
-              pageLoad = Just 60000, -- 60 seconds
-              script = Just 30000 -- 30 seconds
-            }
-    setTimeouts newTimeouts
-
-    -- Get and log the current timeouts
-    currentTimeouts <- getTimeouts
-    logInfo $ "Current timeouts: " <> displayShow currentTimeouts

@@ -35,6 +35,12 @@ module WebDriverPreCore.Extended.Capabilities
     HttpCapabilities,
     BiDiCapabilities,
 
+    -- * Conversions from Native Types
+    fromHttpCapability,
+    fromBiDiCapability,
+    fromHttpCapabilities,
+    fromBiDiCapabilities,
+
     -- * Conversions to Native Types
     toHttpCapability,
     toBiDiCapability,
@@ -66,8 +72,8 @@ import Data.Text (Text)
 import Data.Word (Word8)
 import WebDriverPreCore.BiDi.Protocol qualified as BiDi
 import WebDriverPreCore.Extended.HTTP.Base.Actions qualified as Actions
+import WebDriverPreCore.HTTP.Protocol (Session (..))
 import WebDriverPreCore.HTTP.Protocol qualified as HTTP
-import WebDriverPreCore.HTTP.Protocol (Session(..))
 
 type HttpCapabilities = FullCapabilities HttpCapability
 
@@ -196,7 +202,7 @@ data BiDiSessionResponse = MkBiDiSessionResponse
 -- * Full Capabilities Request
 
 -- | Full capabilities request with alwaysMatch and firstMatch.
-data FullCapabilities a = MkFullCapabilitiesRequest
+data FullCapabilities a = MkFullCapabilities
   { alwaysMatch :: Maybe a,
     firstMatch :: [a]
   }
@@ -509,7 +515,7 @@ convertCapabilityToBiDi (MkHttpCapability {..}) =
 
 -- | Convert universal full capabilities to HTTP full capabilities
 toHttpCapabilities :: FullCapabilities HttpCapability -> HTTP.FullCapabilities
-toHttpCapabilities (MkFullCapabilitiesRequest {..}) =
+toHttpCapabilities (MkFullCapabilities {..}) =
   HTTP.MkFullCapabilities
     { HTTP.alwaysMatch = toHttpCapability <$> alwaysMatch,
       HTTP.firstMatch = toHttpCapability <$> firstMatch
@@ -517,7 +523,7 @@ toHttpCapabilities (MkFullCapabilitiesRequest {..}) =
 
 -- | Convert universal full capabilities to BiDi capabilities
 toBiDiCapabilities :: FullCapabilities BiDiCapability -> BiDi.Capabilities
-toBiDiCapabilities (MkFullCapabilitiesRequest {..}) =
+toBiDiCapabilities (MkFullCapabilities {..}) =
   BiDi.MkCapabilities
     { BiDi.alwaysMatch = toBiDiCapability <$> alwaysMatch,
       BiDi.firstMatch = toBiDiCapability <$> firstMatch
