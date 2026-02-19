@@ -52,6 +52,7 @@ module WebDriverPreCore.Extended.Capabilities
     -- * Session Management
     Runner,
     newHttpSession,
+    newHttpSessionResponse,
   )
 where
 
@@ -66,6 +67,7 @@ import Data.Word (Word8)
 import WebDriverPreCore.BiDi.Protocol qualified as BiDi
 import WebDriverPreCore.Extended.HTTP.Base.Actions qualified as Actions
 import WebDriverPreCore.HTTP.Protocol qualified as HTTP
+import WebDriverPreCore.HTTP.Protocol (Session(..))
 
 type HttpCapabilities = FullCapabilities HttpCapability
 
@@ -310,6 +312,8 @@ promptActionToHttp = \case
   Accept -> HTTP.Accept
   Dismiss -> HTTP.Dismiss
   Ignore -> HTTP.Ignore
+
+-- TODO - review this is lossy
 
 -- | Convert HTTP unhandled prompt behavior to prompt action
 promptFromHttp :: HTTP.UnhandledPromptBehavior -> PromptAction
@@ -596,11 +600,20 @@ type Runner m a = HTTP.Command a -> m a
 -- Specification Entry: [HTMLSpecURL#new-session](https://www.w3.org/TR/webdriver/#new-session)
 --
 -- @POST \/session New Session@
-newHttpSession ::
+newHttpSessionResponse ::
   forall m.
   (Functor m) =>
   Runner m HTTP.SessionResponse ->
   FullCapabilities HttpCapability ->
   m HttpSessionResponse
-newHttpSession runner =
+newHttpSessionResponse runner =
   fmap fromHttpSessionResponse . Actions.newSession runner . toHttpCapabilities
+
+newHttpSession ::
+  forall m.
+  (Functor m) =>
+  Runner m HTTP.SessionResponse ->
+  FullCapabilities HttpCapability ->
+  m Session
+newHttpSession runner =
+  fmap ((.session) . fromHttpSessionResponse) . Actions.newSession runner . toHttpCapabilities

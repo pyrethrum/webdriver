@@ -138,12 +138,17 @@ viaSession2 f b c = viaSession (\r s -> f r s b c)
 -- ########################### Root Methods #############################
 -- ######################################################################
 
+viaRunner f = (getRunner >>= liftIO . f)
+
 status :: (HasHttpRunner env) => RIO env Status
-status = getRunner >>= liftIO . A.status
+status = viaRunner A.status
 
 -- NOTE USES Extended Capabilities types
-newSession :: (HasHttpRunner env) => EC.HttpCapabilities -> RIO env EC.HttpSessionResponse
-newSession caps = getRunner >>= liftIO . flip EC.newHttpSession caps
+newSessionResponse :: (HasHttpRunner env) => EC.HttpCapabilities -> RIO env EC.HttpSessionResponse
+newSessionResponse caps = viaRunner (flip EC.newHttpSessionResponse caps)
+
+newSession :: (HasHttpRunner env) => EC.HttpCapabilities -> RIO env Session
+newSession caps = viaRunner (flip EC.newHttpSession caps)
 
 -- ######################################################################
 -- ########################### Session Methods ##########################

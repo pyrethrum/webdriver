@@ -73,12 +73,15 @@ myAction = do
 a :: IO ()
 a = runHttp MkHttpEnv Console defaultEndpoint WebDriverLogging myAction
 
+mkHttpSession :: (HasLogFunc env, HasHttpRunner env) => EC.HttpCapabilities -> RIO env HttpSessionEnv
+mkHttpSession caps = MkHttpSessionEnv <$> getLogger <*> getHttpRunner <*> newSession caps
+
 -- Perform WebDriver commands using the HTTP runner from the environment
 
 -- | Create a session, run an action with it, then delete the session.
 --
 -- Uses bracket to ensure the session is always cleaned up even if the action fails.
-withHttpSession ::
+withHttpSession :: forall env a. 
   (HasHttpRunner env, HasLogFunc env) =>
   -- | Capabilities to request for the session
   EC.HttpCapabilities ->
@@ -87,7 +90,7 @@ withHttpSession ::
   RIO env a
 withHttpSession caps action =
   bracket
-    (MkHttpSessionEnv <$> getLogger <*> getHttpRunner <*> ((.session) <$> newSession caps))
+    (mkHttpSession caps)
     (run deleteSession)
     (run action)
   where
