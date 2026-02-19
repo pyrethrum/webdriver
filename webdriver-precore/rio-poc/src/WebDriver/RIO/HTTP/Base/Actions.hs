@@ -138,6 +138,7 @@ viaSession2 f b c = viaSession (\r s -> f r s b c)
 -- ########################### Root Methods #############################
 -- ######################################################################
 
+viaRunner :: ((Command a -> IO a) -> IO b) -> RIO env b
 viaRunner f = (getRunner >>= liftIO . f)
 
 status :: (HasHttpRunner env) => RIO env Status
