@@ -10,7 +10,7 @@ import Test.Tasty.HUnit (testCase)
 import WebDriver.RIO hiding (runHttp, withHttpSession)
 import WebDriver.RIO qualified as R
 import WebDriver.RIO.HTTP.Base.Actions
-import WebDriverPreCore.Extended.Capabilities
+import WebDriverPreCore.Extended.Capabilities ()
 import WebDriverPreCore.Extended.HTTP.Base.Protocol qualified as HTTP
 import WebDriverPreCore.Test.CapabilitiesBuilder (httpCapabilities)
 import WebDriverPreCore.Test.ConfigLoader (Config (..), loadConfig)
@@ -46,7 +46,7 @@ runHttp' httpAction = do
           else NoWebDriverLogging
       logConfig = ConsoleAndFile "eval.log"
       endPoint = MkHttpEndpoint {host = httpUrl, port = httpPort}
-  R.runHttp MkHttpEnv logConfig endPoint apiLogging (httpAction config)
+  R.runHttp mkHttpEnv logConfig endPoint apiLogging (httpAction config)
 
 runHttp :: RIO HttpEnv a -> IO a
 runHttp httpAction = runHttp' (const httpAction)
