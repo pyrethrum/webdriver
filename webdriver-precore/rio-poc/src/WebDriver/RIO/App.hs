@@ -9,14 +9,17 @@
 module WebDriver.RIO.App
   ( runHttp,
     withHttpSession,
+    withHttpSessionEnv,
     WantWebDriverLogging (..),
-    defaultEndpoint
+    defaultEndpoint,
   )
 where
 
 import RIO
+import RIO.Prelude hiding (log)
 import WebDriver.RIO.Env
   ( HasHttpRunner,
+    HasHttpSession,
     HttpEnv (..),
     HttpSessionEnv (..),
     getHttpRunner,
@@ -64,15 +67,6 @@ runHttp mkEnv loggerConfig httpEndpoint apiLogging httpAction =
 infoLogger :: (MonadIO m) => LogFunc -> Text -> m ()
 infoLogger lf = liftIO . runRIO lf . logInfo . display
 
-myAction :: (HasLogFunc env, HasHttpRunner env) => RIO env ()
-myAction = do
-  logInfo "Running myAction"
-  s <- status
-  logInfo $ "Status: " <> displayShow s
-
-a :: IO ()
-a = runHttp MkHttpEnv Console defaultEndpoint WebDriverLogging myAction
-
 mkHttpSession :: (HasLogFunc env, HasHttpRunner env) => EC.HttpCapabilities -> RIO env HttpSessionEnv
 mkHttpSession caps = MkHttpSessionEnv <$> getLogger <*> getHttpRunner <*> newSession caps
 
@@ -81,18 +75,21 @@ mkHttpSession caps = MkHttpSessionEnv <$> getLogger <*> getHttpRunner <*> newSes
 -- | Create a session, run an action with it, then delete the session.
 --
 -- Uses bracket to ensure the session is always cleaned up even if the action fails.
-withHttpSession :: forall env a. 
-  (HasHttpRunner env, HasLogFunc env) =>
-  -- | Capabilities to request for the session
+withHttpSession ::
+  forall env senv a.
+  (HasHttpRunner senv, HasHttpSession senv) =>
+  (EC.HttpCapabilities -> RIO env senv) ->
   EC.HttpCapabilities ->
   -- | Action to run with the session
-  RIO HttpSessionEnv a ->
+  RIO senv a ->
   RIO env a
-withHttpSession caps action =
+withHttpSession mkEnv caps action =
   bracket
-    (mkHttpSession caps)
+    (mkEnv caps)
     (run deleteSession)
     (run action)
   where
     run = flip runRIO
 
+withHttpSessionEnv :: EC.HttpCapabilities -> RIO HttpSessionEnv a -> RIO HttpEnv a
+withHttpSessionEnv = withHttpSession mkHttpSession

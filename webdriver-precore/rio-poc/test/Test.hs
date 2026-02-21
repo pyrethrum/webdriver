@@ -52,7 +52,7 @@ runHttp httpAction = runHttp' (const httpAction)
 withSession :: RIO HttpSessionEnv a -> IO a
 withSession sessionAction = runHttp' $ \config -> do
   let caps = mkHttpCaps config
-  R.withHttpSession caps sessionAction
+  R.withHttpSessionEnv caps sessionAction
 
 mkHttpCaps :: Config -> HttpCapabilities
 mkHttpCaps config =
@@ -90,6 +90,8 @@ session_demo = withSession $ do
             script = Just 30000 -- 30 seconds
           }
   setTimeouts newTimeouts
+  navigateTo $ HTTP.MkUrl "https://www.example.com"
+  liftIO $ threadDelay 4000000 -- Wait for 2 seconds to allow page load
 
   -- Get and log the current timeouts
   currentTimeouts <- getTimeouts
