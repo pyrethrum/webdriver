@@ -24,37 +24,18 @@ import Network.HTTP.Req as R
     Url,
     http,
   )
+import WebDriverPreCore.Utils.Timeout
+  ( Timeout (..),
+    hour,
+    hours,
+    millisecond,
+    milliseconds,
+    minute,
+    minutes,
+    second,
+    seconds,
+  )
 
-
--- ################### time ##################
-
-newtype Timeout = MkTimeout {microseconds :: Int}
-  deriving (Show, Eq)
-  deriving newtype (Num)
-
-millisecond :: Timeout
-millisecond = MkTimeout 1_000
-
-milliseconds :: Timeout
-milliseconds = millisecond
-
-second :: Timeout
-second = 1_000 * milliseconds
-
-seconds :: Timeout
-seconds = second
-
-minute :: Timeout
-minute = 60 * seconds
-
-minutes :: Timeout
-minutes = minute
-
-hour :: Timeout
-hour = 60 * minutes
-
-hours :: Timeout
-hours = hour
 
 -- ################### request ##################
 

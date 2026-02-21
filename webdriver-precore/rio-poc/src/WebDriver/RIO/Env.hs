@@ -16,7 +16,7 @@
 -- appropriate runner typeclasses; session envs add 'HasHttpSession' or
 -- 'HasBiDiSession'.
 module WebDriver.RIO.Env
-  ( LoggerEnv (..),
+  ( BaseEnv (..),
 
     -- * Runner Envs
     HttpEnv (..),
@@ -35,18 +35,18 @@ module WebDriver.RIO.Env
     -- * Session Typeclasses
     HasHttpSession (..),
     HasBiDiSession (..),
+    HasPauseDuration (..),
     getLogger,
     getHttpRunner,
     getBiDiRunner,
-    getHttpSession,
-    getBiDiSession,
   )
 where
 
-import RIO (HasLogFunc (..), Lens', LogFunc, RIO, Text, ask, lens, view)
+import RIO (HasLogFunc (..), Lens', LogFunc, RIO, lens, view)
 import WebDriverPreCore.BiDiRunner (BiDiRunner)
 import WebDriverPreCore.Extended.HTTP.Base.Protocol (Session (..))
 import WebDriverPreCore.HttpRunner (HttpRunner)
+import WebDriverPreCore.Utils.Timeout (Timeout)
 
 -- | Env has an 'HttpRunner' available.
 class HasHttpRunner env where
@@ -63,6 +63,10 @@ class HasHttpSession env where
 -- | Env has a BiDi session id available.
 class HasBiDiSession env where
   getBiDiSession :: env -> Session
+
+-- | Env has a pause duration available.
+class HasPauseDuration env where
+  getPauseDuration :: env -> Timeout
 
 -- | HTTP runner.
 data HttpEnv = MkHttpEnv
@@ -87,13 +91,13 @@ instance HasHttpRunner HttpEnv where
   httpRunnerL :: Lens' HttpEnv (HttpRunner IO)
   httpRunnerL = lens (.httpRunner) \MkHttpEnv {..} r -> MkHttpEnv {httpRunner = r, ..}
 
-data LoggerEnv = MkLoggerEnv
+data BaseEnv = MkBaseEnv
   { logFunc :: LogFunc
   }
 
-instance HasLogFunc LoggerEnv where
-  logFuncL :: Lens' LoggerEnv LogFunc
-  logFuncL = lens (.logFunc) \MkLoggerEnv {} l -> MkLoggerEnv {logFunc = l}
+instance HasLogFunc BaseEnv where
+  logFuncL :: Lens' BaseEnv LogFunc
+  logFuncL = lens (.logFunc) \MkBaseEnv {} l -> MkBaseEnv {logFunc = l}
 
 -- ---------------------------------------------------------------------------
 -- BiDi only
@@ -143,7 +147,8 @@ instance HasBiDiRunner DualEnv where
 data HttpSessionEnv = MkHttpSessionEnv
   { logFunc :: LogFunc,
     httpRunner :: HttpRunner IO,
-    httpSession :: Session
+    httpSession :: Session,
+    pauseDuration :: Timeout
   }
 
 instance HasLogFunc HttpSessionEnv where
@@ -158,6 +163,10 @@ instance HasHttpSession HttpSessionEnv where
   getHttpSession :: HttpSessionEnv -> Session
   getHttpSession = (.httpSession)
 
+instance HasPauseDuration HttpSessionEnv where
+  getPauseDuration :: HttpSessionEnv -> Timeout
+  getPauseDuration = (.pauseDuration)
+
 -- ---------------------------------------------------------------------------
 -- BiDi Session (BiDi runner + session id)
 -- ---------------------------------------------------------------------------
@@ -166,7 +175,8 @@ instance HasHttpSession HttpSessionEnv where
 data BiDiSessionEnv = MkBiDiSessionEnv
   { logFunc :: LogFunc,
     biDiRunner :: BiDiRunner,
-    biDiSession :: Session
+    biDiSession :: Session,
+    pauseDuration :: Timeout
   }
 
 instance HasLogFunc BiDiSessionEnv where
@@ -181,6 +191,10 @@ instance HasBiDiSession BiDiSessionEnv where
   getBiDiSession :: BiDiSessionEnv -> Session
   getBiDiSession = (.biDiSession)
 
+instance HasPauseDuration BiDiSessionEnv where
+  getPauseDuration :: BiDiSessionEnv -> Timeout
+  getPauseDuration = (.pauseDuration)
+
 -- ---------------------------------------------------------------------------
 -- Dual Session (HTTP + BiDi runners + session id)
 -- ---------------------------------------------------------------------------
@@ -191,7 +205,8 @@ data DualSessionEnv = MkDualSessionEnv
     httpRunner :: HttpRunner IO,
     biDiRunner :: BiDiRunner,
     httpSession :: Session,
-    biDiSession :: Session
+    biDiSession :: Session,
+    pauseDuration :: Timeout
   }
 
 instance HasLogFunc DualSessionEnv where
@@ -214,11 +229,6 @@ instance HasBiDiSession DualSessionEnv where
   getBiDiSession :: DualSessionEnv -> Session
   getBiDiSession = (.biDiSession)
 
--- getHttpSession = asks getHttpSession
-
--- RIO HttpEnv a
--- mkSessionHttp :: RIO HttpEnv a -> RIO HttpEnv (Session, a)
--- mkSessionHttp action = do
---   a <- action
---   s <- asks
---   httpEnv@MkHttpEnv{..} <- ask
+instance HasPauseDuration DualSessionEnv where
+  getPauseDuration :: DualSessionEnv -> Timeout
+  getPauseDuration = (.pauseDuration)

@@ -12,24 +12,25 @@ module WebDriver.RIO.App
     withHttpSessionEnv,
     WantWebDriverLogging (..),
     defaultEndpoint,
+    pause,
   )
 where
 
 import RIO
-import RIO.Prelude hiding (log)
 import WebDriver.RIO.Env
   ( HasHttpRunner,
     HasHttpSession,
+    HasPauseDuration (getPauseDuration),
     HttpEnv (..),
     HttpSessionEnv (..),
     getHttpRunner,
     getLogger,
   )
-import WebDriver.RIO.HTTP.Base.Actions (deleteSession, getTimeouts, newSession, setTimeouts, status)
+import WebDriver.RIO.HTTP.Base.Actions (deleteSession, newSession)
 import WebDriver.RIO.Logging (LoggerConfig (..), withLogging)
 import WebDriverPreCore.Extended.Capabilities as EC
-import WebDriverPreCore.HTTP.Protocol (Timeouts (..))
 import WebDriverPreCore.HttpRunner (HttpEndpoint (..), HttpRunner (..), mkHttpRunner)
+import WebDriverPreCore.Utils.Timeout (Timeout (..))
 
 data WantWebDriverLogging = WebDriverLogging | NoWebDriverLogging deriving (Eq, Show)
 
@@ -67,8 +68,8 @@ runHttp mkEnv loggerConfig httpEndpoint apiLogging httpAction =
 infoLogger :: (MonadIO m) => LogFunc -> Text -> m ()
 infoLogger lf = liftIO . runRIO lf . logInfo . display
 
-mkHttpSession :: (HasLogFunc env, HasHttpRunner env) => EC.HttpCapabilities -> RIO env HttpSessionEnv
-mkHttpSession caps = MkHttpSessionEnv <$> getLogger <*> getHttpRunner <*> newSession caps
+mkHttpSession :: (HasLogFunc env, HasHttpRunner env) => EC.HttpCapabilities -> Timeout -> RIO env HttpSessionEnv
+mkHttpSession caps timeout' = MkHttpSessionEnv <$> getLogger <*> getHttpRunner <*> newSession caps <*> pure timeout'
 
 -- Perform WebDriver commands using the HTTP runner from the environment
 
@@ -78,18 +79,23 @@ mkHttpSession caps = MkHttpSessionEnv <$> getLogger <*> getHttpRunner <*> newSes
 withHttpSession ::
   forall env senv a.
   (HasHttpRunner senv, HasHttpSession senv) =>
-  (EC.HttpCapabilities -> RIO env senv) ->
+  (EC.HttpCapabilities -> Timeout -> RIO env senv) ->
+  Timeout ->
   EC.HttpCapabilities ->
   -- | Action to run with the session
   RIO senv a ->
   RIO env a
-withHttpSession mkEnv caps action =
+withHttpSession mkEnv pauseDuration caps action =
   bracket
-    (mkEnv caps)
+    (mkEnv caps pauseDuration)
     (run deleteSession)
     (run action)
   where
     run = flip runRIO
 
-withHttpSessionEnv :: EC.HttpCapabilities -> RIO HttpSessionEnv a -> RIO HttpEnv a
+withHttpSessionEnv :: Timeout -> EC.HttpCapabilities -> RIO HttpSessionEnv a -> RIO HttpEnv a
 withHttpSessionEnv = withHttpSession mkHttpSession
+
+pause :: (HasPauseDuration env) => RIO env ()
+pause = do
+  getPauseDuration <$> ask >>= liftIO . threadDelay . (.microseconds)

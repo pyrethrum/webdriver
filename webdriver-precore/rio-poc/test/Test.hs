@@ -14,6 +14,7 @@ import WebDriverPreCore.Extended.Capabilities
 import WebDriverPreCore.Extended.HTTP.Base.Protocol qualified as HTTP
 import WebDriverPreCore.Test.CapabilitiesBuilder (httpCapabilities)
 import WebDriverPreCore.Test.ConfigLoader (Config (..), loadConfig)
+import WebDriverPreCore.Utils.Timeout (Timeout(..))
 
 main :: IO ()
 main = defaultMain tests
@@ -51,8 +52,10 @@ runHttp httpAction = runHttp' (const httpAction)
 
 withSession :: RIO HttpSessionEnv a -> IO a
 withSession sessionAction = runHttp' $ \config -> do
-  let caps = mkHttpCaps config
-  R.withHttpSessionEnv caps sessionAction
+  let 
+    caps = mkHttpCaps config
+    pauseDuration = MkTimeout $ (* 1000) $ fromIntegral config.pauseMS
+  R.withHttpSessionEnv pauseDuration caps sessionAction
 
 mkHttpCaps :: Config -> HttpCapabilities
 mkHttpCaps config =
@@ -77,6 +80,7 @@ basic_demo =
 
 -- | Example showing how to use withHttpSession to set and get timeouts
 
+
 --- >>> session_demo
 session_demo :: IO ()
 session_demo = withSession $ do
@@ -91,7 +95,7 @@ session_demo = withSession $ do
           }
   setTimeouts newTimeouts
   navigateTo $ HTTP.MkUrl "https://www.example.com"
-  liftIO $ threadDelay 4000000 -- Wait for 2 seconds to allow page load
+  pause
 
   -- Get and log the current timeouts
   currentTimeouts <- getTimeouts

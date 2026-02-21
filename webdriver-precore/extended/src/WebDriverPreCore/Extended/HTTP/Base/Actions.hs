@@ -82,7 +82,7 @@ module WebDriverPreCore.Extended.HTTP.Base.Actions
   )
 where
 
-import Data.Aeson (FromJSON, Value)
+import Data.Aeson (Value)
 import Data.Text (Text)
 import WebDriverPreCore.Extended.HTTP.Base.API qualified as API
 import WebDriverPreCore.Extended.HTTP.Base.Protocol

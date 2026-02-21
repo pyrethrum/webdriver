@@ -133,6 +133,7 @@ library utils-internal
   exposed-modules:
       AesonUtils
       Utils
+      WebDriverPreCore.Utils.Timeout
   hs-source-dirs: utils
   build-depends:
     base          >=4.16  && <5,
@@ -383,6 +384,7 @@ library webdriver-precore-extended
   hs-source-dirs: extended/src
   build-depends:
     webdriver-precore:webdriver-precore,
+    webdriver-precore:utils-internal,
     aeson         >=1.4   && <2.3, 
     base          >=4.16  && <5,
     containers    >=0.6   && <0.8,
@@ -461,6 +463,7 @@ library webdriver-rio-poc
     webdriver-precore:webdriver-precore-extended,
     webdriver-precore:webdriver-precore-http-runner,
     webdriver-precore:webdriver-precore-bidi-runner,
+    webdriver-precore:utils-internal,
     aeson         >=2.0   && <3,
     base          >=4.16  && <5,
     rio           >=0.1   && <0.2
@@ -475,6 +478,7 @@ test-suite test-rio-poc
     webdriver-precore:webdriver-precore-extended,
     webdriver-precore:webdriver-precore-test-utils,
     webdriver-precore:webdriver-rio-poc,
+    webdriver-precore:utils-internal,
     rio           >=0.1   && <0.2
   default-language: Haskell2010
 

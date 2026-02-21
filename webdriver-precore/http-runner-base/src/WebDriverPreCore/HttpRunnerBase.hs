@@ -90,6 +90,7 @@ data HttpRunnerBase m = MkHttpRunnerBase
     runFull :: HttpRequest -> m HttpResponse
   }
 
+-- TODO SIMPLIFY runFull Only and rename to run - cascade to typed
 -- | Create an HTTP runner base
 mkHttpRunnerBase ::
   (MonadIO m) =>
