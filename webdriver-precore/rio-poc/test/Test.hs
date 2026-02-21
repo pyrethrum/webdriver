@@ -14,6 +14,7 @@ import WebDriverPreCore.Extended.Capabilities
 import WebDriverPreCore.Extended.HTTP.Base.Protocol qualified as HTTP
 import WebDriverPreCore.Test.CapabilitiesBuilder (httpCapabilities)
 import WebDriverPreCore.Test.ConfigLoader (Config (..), loadConfig)
+import WebDriverPreCore.Test.TestData (contentPageUrl, loginUrl)
 import WebDriverPreCore.Utils.Timeout (Timeout(..))
 
 main :: IO ()
@@ -100,3 +101,30 @@ session_demo = withSession $ do
   -- Get and log the current timeouts
   currentTimeouts <- getTimeouts
   logInfo $ "Current timeouts: " <> displayShow currentTimeouts
+
+-- >>> input_navigation_base_demo
+input_navigation_base_demo :: IO ()
+input_navigation_base_demo = withSession $ do
+  logInfo "=== Navigate to login form ==="
+  loginPage <- liftIO loginUrl
+  navigateTo loginPage
+  maximizeWindow
+  pause
+
+  logInfo "=== Fill in username ==="
+  usernameField <- findElement $ HTTP.CSS "#username"
+  elementSendKeys usernameField "demoUser"
+  pause
+
+  logInfo "=== Fill in password ==="
+  passwordField <- findElement $ HTTP.CSS "#password"
+  elementSendKeys passwordField "s3cr3tP4ssw0rd"
+  pause
+
+  logInfo "=== Navigate to colourful content page ==="
+  contentPage <- liftIO contentPageUrl
+  navigateTo contentPage
+  pause
+
+  title <- getTitle
+  logInfo $ "Landed on: " <> display title
