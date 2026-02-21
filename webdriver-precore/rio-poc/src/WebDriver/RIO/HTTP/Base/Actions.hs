@@ -6,89 +6,94 @@
 -- and 'newSession' require 'HasHttpRunner'. Session-scoped functions like
 -- 'navigateTo' and 'newWindow' additionally require 'HasHttpSession'.
 module WebDriver.RIO.HTTP.Base.Actions
-  ( -- * Root Methods
-    status,
-    newSession,
+  (
+  {-
+   -- * Root Methods
+  status,
+  newSession,
 
-    -- * Session Methods
-    deleteSession,
-    getTimeouts,
-    setTimeouts,
-    navigateTo,
-    getCurrentUrl,
-    back,
-    forward,
-    refresh,
-    getTitle,
-    getWindowHandle,
-    newWindow,
-    closeWindow,
-    switchToWindow,
-    switchToFrame,
-    getPageSource,
-    executeScript,
-    executeScriptAsync,
-    addCookie,
-    getAllCookies,
-    getNamedCookie,
-    deleteCookie,
-    deleteAllCookies,
-    performActions,
-    releaseActions,
-    dismissAlert,
-    acceptAlert,
-    getAlertText,
-    sendAlertText,
-    takeScreenshot,
-    printPage,
+  -- * Session Methods
+  deleteSession,
+  getTimeouts,
+  setTimeouts,
+  navigateTo,
+  getCurrentUrl,
+  back,
+  forward,
+  refresh,
+  getTitle,
+  getWindowHandle,
+  newWindow,
+  closeWindow,
+  switchToWindow,
+  switchToFrame,
+  getPageSource,
+  executeScript,
+  executeScriptAsync,
+  addCookie,
+  getAllCookies,
+  getNamedCookie,
+  deleteCookie,
+  deleteAllCookies,
+  performActions,
+  releaseActions,
+  dismissAlert,
+  acceptAlert,
+  getAlertText,
+  sendAlertText,
+  takeScreenshot,
+  printPage,
 
-    -- * Window Methods
-    getWindowHandles,
-    getWindowRect,
-    setWindowRect,
-    maximizeWindow,
-    minimizeWindow,
-    fullScreenWindow,
+  -- * Window Methods
+  getWindowHandles,
+  getWindowRect,
+  setWindowRect,
+  maximizeWindow,
+  minimizeWindow,
+  fullScreenWindow,
 
-    -- * Frame Methods
-    switchToParentFrame,
+  -- * Frame Methods
+  switchToParentFrame,
 
-    -- * Element(s) Methods
-    getActiveElement,
-    findElement,
-    findElements,
+  -- * Element(s) Methods
+  getActiveElement,
+  findElement,
+  findElements,
 
-    -- * Element Instance Methods
-    findElementFromElement,
-    findElementsFromElement,
-    isElementSelected,
-    getElementAttribute,
-    getElementProperty,
-    getElementCssValue,
-    getElementShadowRoot,
-    getElementText,
-    getElementTagName,
-    getElementRect,
-    isElementEnabled,
-    getElementComputedRole,
-    getElementComputedLabel,
-    elementClick,
-    elementClear,
-    elementSendKeys,
-    takeElementScreenshot,
+  -- * Element Instance Methods
+  findElementFromElement,
+  findElementsFromElement,
+  isElementSelected,
+  getElementAttribute,
+  getElementProperty,
+  getElementCssValue,
+  getElementShadowRoot,
+  getElementText,
+  getElementTagName,
+  getElementRect,
+  isElementEnabled,
+  getElementComputedRole,
+  getElementComputedLabel,
+  elementClick,
+  elementClear,
+  elementSendKeys,
+  takeElementScreenshot,
 
-    -- * Shadow DOM Methods
-    findElementFromShadowRoot,
-    findElementsFromShadowRoot,
-    newSessionResponse,
+  -- * Shadow DOM Methods
+  findElementFromShadowRoot,
+  findElementsFromShadowRoot,
+  newSessionResponse,
+  -}
   )
 where
 
 import Data.Aeson (FromJSON, Value)
-import RIO (RIO, Text, ask, asks, liftIO, view)
+import RIO (MonadIO, RIO, Text, ask, asks, liftIO, view)
 import WebDriver.RIO.Env
   ( HasHttpRunner (..),
     HasHttpSession (..),
+    getHttpRunner,
+    getHttpCommandRunner
   )
 import WebDriverPreCore.Extended.Capabilities qualified as EC
 import WebDriverPreCore.Extended.HTTP.Base.Actions qualified as A
@@ -116,34 +121,30 @@ import WebDriverPreCore.HttpRunner (HttpRunner (..))
 -- ######################################################################
 
 -- | Lift a session action through the RIO environment.
-getRunner :: (HasHttpRunner env, FromJSON a) => RIO env (Command a -> IO a)
-getRunner = view httpRunnerL >>= \MkHttpRunner {run} -> pure run
-
--- | Lift a session action through the RIO environment.
-viaSession :: (HasHttpRunner env, HasHttpSession env, FromJSON a) => (A.Runner IO a -> Session -> IO a) -> RIO env a
-viaSession sesFunc =
-  sesFunc
-    <$> getRunner
-    <*> asks getHttpSession
-    >>= liftIO
+viaSession :: (HasHttpRunner (RIO env) env, HasHttpSession env, FromJSON a) => (A.Runner (RIO env) a -> Session -> RIO env a) -> RIO env a
+viaSession sesFunc = do
+  runner <- getHttpCommandRunner
+  session <- asks getHttpSession
+  sesFunc runner session
 
 -- | Lift a session action with one extra argument.
-viaSession1 :: (HasHttpRunner env, HasHttpSession env, FromJSON a) => (A.Runner IO a -> Session -> b -> IO a) -> b -> RIO env a
+viaSession1 :: (HasHttpRunner (RIO env) env, HasHttpSession env, FromJSON a) => (A.Runner (RIO env) a -> Session -> b -> RIO env a) -> b -> RIO env a
 viaSession1 f b = viaSession (\r s -> f r s b)
 
 -- | Lift a session action with two extra arguments.
-viaSession2 :: (HasHttpRunner env, HasHttpSession env, FromJSON a) => (A.Runner IO a -> Session -> b -> c -> IO a) -> b -> c -> RIO env a
+viaSession2 :: (HasHttpRunner (RIO env) env, HasHttpSession env, FromJSON a) => (A.Runner (RIO env) a -> Session -> b -> c -> RIO env a) -> b -> c -> RIO env a
 viaSession2 f b c = viaSession (\r s -> f r s b c)
 
 -- ######################################################################
 -- ########################### Root Methods #############################
 -- ######################################################################
 
-viaRunner :: (HasHttpRunner env, FromJSON a) => ((Command a -> IO a) -> IO b) -> RIO env b
-viaRunner f = (getRunner >>= liftIO . f)
+viaRunner :: (HasHttpRunner (RIO env) env, FromJSON a) => ((Command a -> RIO env a) -> RIO env b) -> RIO env b
+viaRunner = (>>=) getHttpCommandRunner 
 
 status :: (HasHttpRunner env) => RIO env Status
 status = viaRunner A.status
+
 
 -- NOTE USES Extended Capabilities types
 newSessionResponse :: (HasHttpRunner env) => EC.HttpCapabilities -> RIO env EC.HttpSessionResponse
@@ -248,7 +249,7 @@ printPage = viaSession A.printPage
 
 -- ######################################################################
 -- ########################### Window Methods ###########################
--- ######################################################################
+-- ######################################################################{-
 
 getWindowHandles :: (HasHttpRunner env, HasHttpSession env) => RIO env [Handle]
 getWindowHandles = viaSession A.getWindowHandles
@@ -307,7 +308,7 @@ getElementAttribute = viaSession2 A.getElementAttribute
 getElementProperty :: (HasHttpRunner env, HasHttpSession env) => ElementId -> Text -> RIO env Value
 getElementProperty = viaSession2 A.getElementProperty
 
-getElementCssValue :: (HasHttpRunner env, HasHttpSession env) => ElementId -> Text -> RIO env Text
+getElementCssValue :: (HasHttpRunner env, HasHttpSession env) => ElementId -> Text -> RIO env Text 
 getElementCssValue = viaSession2 A.getElementCssValue
 
 getElementShadowRoot :: (HasHttpRunner env, HasHttpSession env) => ElementId -> RIO env ShadowRootElementId
@@ -346,9 +347,10 @@ takeElementScreenshot = viaSession1 A.takeElementScreenshot
 -- ######################################################################
 -- ######################### Shadow DOM Methods #########################
 -- ######################################################################
-
+ 
 findElementFromShadowRoot :: (HasHttpRunner env, HasHttpSession env) => ShadowRootElementId -> Selector -> RIO env ElementId
 findElementFromShadowRoot = viaSession2 A.findElementFromShadowRoot
 
 findElementsFromShadowRoot :: (HasHttpRunner env, HasHttpSession env) => ShadowRootElementId -> Selector -> RIO env [ElementId]
 findElementsFromShadowRoot = viaSession2 A.findElementsFromShadowRoot
+

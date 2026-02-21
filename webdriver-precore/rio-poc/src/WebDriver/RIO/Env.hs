@@ -1,3 +1,5 @@
+{-# LANGUAGE ImpredicativeTypes #-}
+
 -- |
 -- Module: WebDriver.RIO.Env
 -- Description: RIO environment types for outer and inner WebDriver layers
@@ -20,13 +22,17 @@ module WebDriver.RIO.Env
 
     -- * Runner Envs
     HttpEnv (..),
+    {-
     BiDiEnv (..),
     DualEnv (..),
+    -}
 
     -- * Session Envs
     HttpSessionEnv (..),
+    {-
     BiDiSessionEnv (..),
     DualSessionEnv (..),
+    -}
 
     -- * Runner Typeclasses
     HasHttpRunner (..),
@@ -38,19 +44,21 @@ module WebDriver.RIO.Env
     HasPauseDuration (..),
     getLogger,
     getHttpRunner,
+    getHttpCommandRunner,
     getBiDiRunner,
   )
 where
 
-import RIO (HasLogFunc (..), Lens', LogFunc, RIO, lens, view)
+import Data.Aeson (FromJSON, Value)
+import RIO (HasLogFunc (..), Lens', LogFunc, MonadIO, RIO, lens, view)
 import WebDriverPreCore.BiDiRunner (BiDiRunner)
-import WebDriverPreCore.Extended.HTTP.Base.Protocol (Session (..))
-import WebDriverPreCore.HttpRunner (HttpRunner)
+import WebDriverPreCore.Extended.HTTP.Base.Protocol (Command (..), Session (..))
+import WebDriverPreCore.HttpRunner (HttpRunner (..))
 import WebDriverPreCore.Utils.Timeout (Timeout)
 
 -- | Env has an 'HttpRunner' available.
-class HasHttpRunner env where
-  httpRunnerL :: Lens' env (HttpRunner IO)
+class HasHttpRunner m env where
+  httpRunnerL :: Lens' env (HttpRunner m)
 
 -- | Env has a 'BiDiRunner' available.
 class HasBiDiRunner env where
@@ -69,27 +77,35 @@ class HasPauseDuration env where
   getPauseDuration :: env -> Timeout
 
 -- | HTTP runner.
-data HttpEnv = MkHttpEnv
+data HttpEnv m = MkHttpEnv
   { logFunc :: LogFunc,
-    httpRunner :: HttpRunner IO
+    httpRunner :: HttpRunner m
   }
 
-instance HasLogFunc HttpEnv where
-  logFuncL :: Lens' HttpEnv LogFunc
+instance HasLogFunc (HttpEnv m) where
+  logFuncL :: Lens' (HttpEnv m) LogFunc
   logFuncL = lens (.logFunc) \MkHttpEnv {..} l -> MkHttpEnv {logFunc = l, ..}
+
+httpEnvRunnerExtract :: HttpEnv m -> HttpRunner m
+httpEnvRunnerExtract MkHttpEnv {httpRunner = r} = r
 
 getLogger :: (HasLogFunc env) => RIO env LogFunc
 getLogger = view logFuncL
 
-getHttpRunner :: (HasHttpRunner env) => RIO env (HttpRunner IO)
+getHttpRunner :: forall m env. (HasHttpRunner (RIO env) env) => RIO env (HttpRunner (RIO env))
 getHttpRunner = view httpRunnerL
+
+getHttpCommandRunner :: forall env a. (HasHttpRunner (RIO env) env, FromJSON a) => RIO env (Command a -> RIO env a)
+getHttpCommandRunner = do
+  MkHttpRunner {run} <- getHttpRunner
+  pure run
 
 getBiDiRunner :: (HasBiDiRunner env) => RIO env BiDiRunner
 getBiDiRunner = view biDiRunnerL
 
-instance HasHttpRunner HttpEnv where
-  httpRunnerL :: Lens' HttpEnv (HttpRunner IO)
-  httpRunnerL = lens (.httpRunner) \MkHttpEnv {..} r -> MkHttpEnv {httpRunner = r, ..}
+instance HasHttpRunner m (HttpEnv m) where
+  httpRunnerL :: Lens' (HttpEnv m) (HttpRunner m)
+  httpRunnerL = lens httpEnvRunnerExtract \MkHttpEnv {..} r -> MkHttpEnv {httpRunner = r, ..}
 
 data BaseEnv = MkBaseEnv
   { logFunc :: LogFunc
@@ -99,6 +115,7 @@ instance HasLogFunc BaseEnv where
   logFuncL :: Lens' BaseEnv LogFunc
   logFuncL = lens (.logFunc) \MkBaseEnv {} l -> MkBaseEnv {logFunc = l}
 
+{-
 -- ---------------------------------------------------------------------------
 -- BiDi only
 -- ---------------------------------------------------------------------------
@@ -123,50 +140,59 @@ instance HasBiDiRunner BiDiEnv where
 -- | Inner environment carrying both HTTP and BiDi runners.
 data DualEnv = MkDualEnv
   { logFunc :: LogFunc,
-    httpRunner :: HttpRunner IO,
+    httpRunner :: HttpRunner,
     biDiRunner :: BiDiRunner
   }
+
+httpRunnerGetter :: DualEnv -> HttpRunner
+httpRunnerGetter MkDualEnv {httpRunner = r} = r
 
 instance HasLogFunc DualEnv where
   logFuncL :: Lens' DualEnv LogFunc
   logFuncL = lens (.logFunc) \MkDualEnv {..} l -> MkDualEnv {logFunc = l, ..}
 
 instance HasHttpRunner DualEnv where
-  httpRunnerL :: Lens' DualEnv (HttpRunner IO)
-  httpRunnerL = lens (.httpRunner) \MkDualEnv {..} h -> MkDualEnv {httpRunner = h, ..}
+  httpRunnerL :: Lens' DualEnv HttpRunner
+  httpRunnerL = lens httpRunnerGetter \MkDualEnv {..} h -> MkDualEnv {httpRunner = h, ..}
 
 instance HasBiDiRunner DualEnv where
   biDiRunnerL :: Lens' DualEnv BiDiRunner
   biDiRunnerL = lens (.biDiRunner) \MkDualEnv {..} b -> MkDualEnv {biDiRunner = b, ..}
+
+-}
 
 -- ---------------------------------------------------------------------------
 -- HTTP Session (HTTP runner + session id)
 -- ---------------------------------------------------------------------------
 
 -- | HTTP environment extended with a session id.
-data HttpSessionEnv = MkHttpSessionEnv
+data HttpSessionEnv m = MkHttpSessionEnv
   { logFunc :: LogFunc,
-    httpRunner :: HttpRunner IO,
+    httpRunner :: HttpRunner m,
     httpSession :: Session,
     pauseDuration :: Timeout
   }
 
-instance HasLogFunc HttpSessionEnv where
-  logFuncL :: Lens' HttpSessionEnv LogFunc
+httpSessionEnvRunnerExtract :: HttpSessionEnv m -> HttpRunner m
+httpSessionEnvRunnerExtract MkHttpSessionEnv {httpRunner = r} = r
+
+instance HasLogFunc (HttpSessionEnv m) where
+  logFuncL :: Lens' (HttpSessionEnv m) LogFunc
   logFuncL = lens (.logFunc) \MkHttpSessionEnv {..} l -> MkHttpSessionEnv {logFunc = l, ..}
 
-instance HasHttpRunner HttpSessionEnv where
-  httpRunnerL :: Lens' HttpSessionEnv (HttpRunner IO)
-  httpRunnerL = lens (.httpRunner) \MkHttpSessionEnv {..} r -> MkHttpSessionEnv {httpRunner = r, ..}
+instance HasHttpRunner m (HttpSessionEnv m) where
+  httpRunnerL :: Lens' (HttpSessionEnv m) (HttpRunner m)
+  httpRunnerL = lens httpSessionEnvRunnerExtract \MkHttpSessionEnv {..} r -> MkHttpSessionEnv {httpRunner = r, ..}
 
-instance HasHttpSession HttpSessionEnv where
-  getHttpSession :: HttpSessionEnv -> Session
+instance HasHttpSession (HttpSessionEnv m) where
+  getHttpSession :: HttpSessionEnv m -> Session
   getHttpSession = (.httpSession)
 
-instance HasPauseDuration HttpSessionEnv where
-  getPauseDuration :: HttpSessionEnv -> Timeout
+instance HasPauseDuration (HttpSessionEnv m) where
+  getPauseDuration :: HttpSessionEnv m -> Timeout
   getPauseDuration = (.pauseDuration)
 
+{-
 -- ---------------------------------------------------------------------------
 -- BiDi Session (BiDi runner + session id)
 -- ---------------------------------------------------------------------------
@@ -202,20 +228,23 @@ instance HasPauseDuration BiDiSessionEnv where
 -- | Dual environment extended with a session id.
 data DualSessionEnv = MkDualSessionEnv
   { logFunc :: LogFunc,
-    httpRunner :: HttpRunner IO,
+    httpRunner :: HttpRunner,
     biDiRunner :: BiDiRunner,
     httpSession :: Session,
     biDiSession :: Session,
     pauseDuration :: Timeout
   }
 
+dualSessionEnvHttpRunnerExtract :: DualSessionEnv -> HttpRunner
+dualSessionEnvHttpRunnerExtract MkDualSessionEnv {httpRunner = r} = r
+
 instance HasLogFunc DualSessionEnv where
   logFuncL :: Lens' DualSessionEnv LogFunc
   logFuncL = lens (.logFunc) \MkDualSessionEnv {..} l -> MkDualSessionEnv {logFunc = l, ..}
 
 instance HasHttpRunner DualSessionEnv where
-  httpRunnerL :: Lens' DualSessionEnv (HttpRunner IO)
-  httpRunnerL = lens (.httpRunner) \MkDualSessionEnv {..} h -> MkDualSessionEnv {httpRunner = h, ..}
+  httpRunnerL :: Lens' DualSessionEnv HttpRunner
+  httpRunnerL = lens dualSessionEnvHttpRunnerExtract \MkDualSessionEnv {..} h -> MkDualSessionEnv {httpRunner = h, ..}
 
 instance HasBiDiRunner DualSessionEnv where
   biDiRunnerL :: Lens' DualSessionEnv BiDiRunner
@@ -232,3 +261,5 @@ instance HasBiDiSession DualSessionEnv where
 instance HasPauseDuration DualSessionEnv where
   getPauseDuration :: DualSessionEnv -> Timeout
   getPauseDuration = (.pauseDuration)
+
+-}
