@@ -68,7 +68,7 @@ runHttp mkEnv loggerConfig httpEndpoint apiLogging httpAction =
 infoLogger :: (MonadIO m) => LogFunc -> Text -> m ()
 infoLogger lf = liftIO . runRIO lf . logInfo . display
 
-mkHttpSession :: (HasLogFunc env, HasHttpRunner env) => EC.HttpCapabilities -> Timeout -> RIO env HttpSessionEnv
+mkHttpSession :: (HasLogFunc env, HasHttpRunner (RIO env) env) => EC.HttpCapabilities -> Timeout -> RIO env (HttpSessionEnv (RIO env ))
 mkHttpSession caps timeout' = MkHttpSessionEnv <$> getLogger <*> getHttpRunner <*> newSession caps <*> pure timeout'
 
 -- Perform WebDriver commands using the HTTP runner from the environment
