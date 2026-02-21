@@ -18,3 +18,5 @@ module WebDriverPreCore.Extended
 where
 
 import WebDriverPreCore.Extended.HTTP.Base.API
+import WebDriverPreCore.Extended.HTTP.Base.Protocol
+

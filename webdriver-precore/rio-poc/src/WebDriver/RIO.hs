@@ -17,6 +17,9 @@ module WebDriver.RIO
 
     -- * Logging
     module WebDriver.RIO.Logging,
+
+    -- * HTTP Runner - todo review if this should be re-exported here or just used internally by App1
+    module WebDriverPreCore.HttpRunner,
   )
 where
 
@@ -24,3 +27,4 @@ import WebDriverPreCore.Extended.Capabilities
 import WebDriver.RIO.Env
 import WebDriver.RIO.Logging
 import WebDriver.RIO.App
+import WebDriverPreCore.HttpRunner
