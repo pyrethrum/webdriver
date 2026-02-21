@@ -240,6 +240,7 @@ library webdriver-precore-http-runner
     webdriver-precore:webdriver-precore-http-runner-base,
     aeson         >=1.4   && <2.3,
     base          >=4.16  && <5,
+    req           >=3.9   && <3.14,
     text          >=2.1   && <2.2,
     unliftio      >=0.2   && <0.3
   default-language: Haskell2010

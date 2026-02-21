@@ -6,9 +6,12 @@
 -- Command types, built on top of the JSON-based runner in HttpRunnerBase.
 module WebDriverPreCore.HttpRunner
   ( -- * HTTP Runner
-    HttpRunner(..),
+    HttpRunner (..),
     mkHttpRunner,
-    HttpEndpoint (..)
+    HttpEndpoint (..),
+    callWebDriver,
+    callWebDriverResponse,
+    callWebDriverJson,
   )
 where
 
@@ -18,6 +21,7 @@ import Data.Aeson.Types (parseEither, parseMaybe)
 import Data.Function ((&))
 import Data.Text (Text, pack)
 import GHC.Exception (throw)
+import Network.HTTP.Req (http)
 import Utils qualified
 import WebDriverPreCore.HTTP.Protocol
   ( Command (..),
@@ -25,16 +29,28 @@ import WebDriverPreCore.HTTP.Protocol
     parseWebDriverException,
   )
 import WebDriverPreCore.HttpRunnerBase
-  ( HttpMethod (..),
+  ( HttpEndpoint (..),
+    HttpMethod (..),
     HttpRequest (..),
     HttpResponse (..),
-    HttpEndpoint (..),
     HttpRunnerBase (..),
     SubPath (..),
+    callWebDriverJson,
+    callWebDriverResponse,
     mkHttpRunnerBase,
   )
 import Prelude hiding (log)
 
+callWebDriver ::
+  (MonadIO m, FromJSON r) =>
+  HttpEndpoint ->
+  Maybe (Text -> m ()) ->
+  HttpRequest ->
+  m r
+callWebDriver MkHttpEndpoint {host, port} mLogger request =
+  parseResult <$> callWebDriverJson baseUrl port mLogger request
+  where
+    baseUrl = http host
 
 -- | Typed HTTP runner for WebDriver commands
 data HttpRunner m = MkHttpRunner
@@ -50,7 +66,7 @@ data HttpRunner m = MkHttpRunner
 mkHttpRunner ::
   (MonadIO m) =>
   -- | Host (e.g. "127.0.0.1")
-  HttpEndpoint->
+  HttpEndpoint ->
   -- | Optional logger
   Maybe (Text -> m ()) ->
   HttpRunner m
