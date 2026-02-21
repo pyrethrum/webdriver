@@ -15,7 +15,7 @@ import WebDriverPreCore.Extended.HTTP.Base.Protocol qualified as HTTP
 import WebDriverPreCore.Test.CapabilitiesBuilder (httpCapabilities)
 import WebDriverPreCore.Test.ConfigLoader (Config (..), loadConfig)
 import WebDriverPreCore.Test.TestData (contentPageUrl, loginUrl)
-import WebDriverPreCore.Utils.Timeout (Timeout(..))
+import WebDriverPreCore.Utils.Timeout (Timeout (..))
 
 main :: IO ()
 main = defaultMain tests
@@ -53,9 +53,8 @@ runHttp httpAction = runHttp' (const httpAction)
 
 withSession :: RIO HttpSessionEnv a -> IO a
 withSession sessionAction = runHttp' $ \config -> do
-  let 
-    caps = mkHttpCaps config
-    pauseDuration = MkTimeout $ (* 1000) $ fromIntegral config.pauseMS
+  let caps = mkHttpCaps config
+      pauseDuration = MkTimeout $ (* 1000) $ fromIntegral config.pauseMS
   R.withHttpSessionEnv pauseDuration caps sessionAction
 
 mkHttpCaps :: Config -> HttpCapabilities
@@ -81,7 +80,6 @@ basic_demo =
 
 -- | Example showing how to use withHttpSession to set and get timeouts
 
-
 --- >>> session_demo
 session_demo :: IO ()
 session_demo = withSession $ do
@@ -106,7 +104,7 @@ session_demo = withSession $ do
 input_navigation_base_demo :: IO ()
 input_navigation_base_demo = withSession $ do
   logInfo "=== Navigate to login form ==="
-  loginPage <- liftIO loginUrl
+  loginPage <- loginUrl
   navigateTo loginPage
   maximizeWindow
   pause
@@ -122,7 +120,7 @@ input_navigation_base_demo = withSession $ do
   pause
 
   logInfo "=== Navigate to colourful content page ==="
-  contentPage <- liftIO contentPageUrl
+  contentPage <- contentPageUrl
   navigateTo contentPage
   pause
 

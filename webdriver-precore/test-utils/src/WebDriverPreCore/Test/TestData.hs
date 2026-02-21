@@ -34,6 +34,7 @@ module WebDriverPreCore.Test.TestData
   )
 where
 
+import Control.Monad.IO.Class (MonadIO, liftIO)
 import Data.Base64.Types qualified as B64T
 import Data.ByteString qualified as BS
 import Data.ByteString.Base64 qualified as B64
@@ -43,9 +44,9 @@ import System.FilePath ((</>))
 import WebDriverPreCore.HTTP.Protocol (URL (..))
 import WebDriverPreCore.Test.IOUtils (findWebDriverRoot)
 
-testFilesDir :: IO FilePath
+testFilesDir :: MonadIO m => m FilePath
 testFilesDir = do
-  currentDir <- getCurrentDirectory
+  currentDir <- liftIO getCurrentDirectory
   case findWebDriverRoot currentDir of
     Just root -> pure $ root </> testFilesSubDir
     Nothing ->
@@ -57,102 +58,102 @@ testFilesDir = do
   where
     testFilesSubDir = "webdriver-precore" </> "test-resources" </> "testFiles"
 
-testPath :: FilePath -> IO Text
+testPath :: MonadIO m => FilePath -> m Text
 testPath filename =
   pack . (</> filename) <$> testFilesDir
 
-fileUrl :: FilePath -> IO URL
-fileUrl fp = MkUrl <$> ((<>) "file://") <$> testPath fp
+fileUrl :: MonadIO m => FilePath -> m URL
+fileUrl fp = MkUrl . ((<>) "file://") <$> testPath fp
 
 -- | Get absolute file path for upload test files
-uploadFilePath :: FilePath -> IO Text
+uploadFilePath :: MonadIO m => FilePath -> m Text
 uploadFilePath filename = do
   testDir <- testFilesDir
   pure . pack $ testDir </> "uploadFiles" </> filename
 
-demoExtensionDirPath :: IO Text
+demoExtensionDirPath :: MonadIO m => m Text
 demoExtensionDirPath = testPath "demoExtension"
 
-demoExtensionZipPath :: IO Text
+demoExtensionZipPath :: MonadIO m => m Text
 demoExtensionZipPath = testPath "demoExtension.zip"
 
-demoExtensionAsBase64 :: IO Text
+demoExtensionAsBase64 :: MonadIO m => m Text
 demoExtensionAsBase64 = do
   zipPath <- demoExtensionZipPath
-  zipContent <- BS.readFile (unpack zipPath)
+  zipContent <- liftIO $ BS.readFile (unpack zipPath)
   pure $ B64T.extractBase64 $ B64.encodeBase64 zipContent
 
-textAreaUrl :: IO URL
+textAreaUrl :: MonadIO m => m URL
 textAreaUrl = fileUrl "textArea.html"
 
-checkboxesUrl :: IO URL
+checkboxesUrl :: MonadIO m => m URL
 checkboxesUrl = fileUrl "checkboxes.html"
 
-infiniteScrollUrl :: IO URL
+infiniteScrollUrl :: MonadIO m => m URL
 infiniteScrollUrl = fileUrl "infiniteScroll.html"
 
-promptUrl :: IO URL
+promptUrl :: MonadIO m => m URL
 promptUrl = fileUrl "prompt.html"
 
-fragmentUrl :: IO URL
+fragmentUrl :: MonadIO m => m URL
 fragmentUrl = fileUrl "fragment.html"
 
-downloadUrl :: IO URL
+downloadUrl :: MonadIO m => m URL
 downloadUrl = fileUrl "download.html"
 
-slowLoadUrl :: IO URL
+slowLoadUrl :: MonadIO m => m URL
 slowLoadUrl = fileUrl "slowLoad.html"
 
-downloadLinkUrl :: IO URL
+downloadLinkUrl :: MonadIO m => m URL
 downloadLinkUrl = fileUrl "downloadLink.html"
 
-consoleLogUrl :: IO URL
+consoleLogUrl :: MonadIO m => m URL
 consoleLogUrl = fileUrl "consoleLog.html"
 
-scriptRealmUrl :: IO URL
+scriptRealmUrl :: MonadIO m => m URL
 scriptRealmUrl = fileUrl "scriptRealm.html"
 
-badJavaScriptUrl :: IO URL
+badJavaScriptUrl :: MonadIO m => m URL
 badJavaScriptUrl = fileUrl "badJavaScript.html"
 
-uploadUrl :: IO URL
+uploadUrl :: MonadIO m => m URL
 uploadUrl = fileUrl "upload.html"
 
-navigation1Url :: IO URL
+navigation1Url :: MonadIO m => m URL
 navigation1Url = fileUrl "navigation1.html"
 
-navigation2Url :: IO URL
+navigation2Url :: MonadIO m => m URL
 navigation2Url = fileUrl "navigation2.html"
 
-navigation3Url :: IO URL
+navigation3Url :: MonadIO m => m URL
 navigation3Url = fileUrl "navigation3.html"
 
-navigation4Url :: IO URL
+navigation4Url :: MonadIO m => m URL
 navigation4Url = fileUrl "navigation4.html"
 
-navigation5Url :: IO URL
+navigation5Url :: MonadIO m => m URL
 navigation5Url = fileUrl "navigation5.html"
 
-navigation6Url :: IO URL
+navigation6Url :: MonadIO m => m URL
 navigation6Url = fileUrl "navigation6.html"
 
-loginUrl :: IO URL
+loginUrl :: MonadIO m => m URL
 loginUrl = fileUrl "login.html"
 
-framesUrl :: IO URL
+framesUrl :: MonadIO m => m URL
 framesUrl = fileUrl "frames.html"
 
-nestedFramesUrl :: IO URL
+nestedFramesUrl :: MonadIO m => m URL
 nestedFramesUrl = fileUrl "nestedFrames.html"
 
-contentPageUrl :: IO URL
+contentPageUrl :: MonadIO m => m URL
 contentPageUrl = fileUrl "contentPage.html"
 
-indexUrl :: IO URL
+indexUrl :: MonadIO m => m URL
 indexUrl = fileUrl "index.html"
 
-shadowDomUrl :: IO URL
+shadowDomUrl :: MonadIO m => m URL
 shadowDomUrl = fileUrl "shadowDom.html"
 
-inputsUrl :: IO URL
+inputsUrl :: MonadIO m => m URL
 inputsUrl = fileUrl "inputs.html"
