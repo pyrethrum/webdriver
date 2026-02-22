@@ -7,8 +7,6 @@
 -- webdriver-precore type definitions.
 module WebDriverPreCore.HttpRunnerBase
   ( -- * HTTP Runner
-    HttpRunnerBase (..),
-    mkHttpRunnerBase,
     HttpEndpoint (..),
 
     -- * Request Types
@@ -81,31 +79,6 @@ data HttpEndpoint = MkHttpEndpoint
     port :: Word16
   }
   deriving (Show, Eq)
-
--- | Base HTTP runner that works with JSON values
-data HttpRunnerBase m = MkHttpRunnerBase
-  { -- | Execute a request and return just the response body
-    runBody :: HttpRequest -> m Value,
-    -- | Execute a request and return the full HTTP response
-    runFull :: HttpRequest -> m HttpResponse
-  }
-
--- TODO SIMPLIFY runFull Only and rename to run - cascade to typed
--- | Create an HTTP runner base
-mkHttpRunnerBase ::
-  (MonadIO m) =>
-  -- | HTTP endpoint (host and port)
-  HttpEndpoint ->
-  -- | Optional logger
-  Maybe (Text -> m ()) ->
-  HttpRunnerBase m
-mkHttpRunnerBase MkHttpEndpoint {host, port} mLogger =
-  MkHttpRunnerBase
-    { runBody = callWebDriverBody baseUrl port mLogger,
-      runFull = callWebDriverResponse baseUrl port mLogger
-    }
-  where
-    baseUrl = http host
 
 -- | Build a full URL from base URL and path parts
 buildUrl :: Url 'Http -> SubPath -> Url 'Http
