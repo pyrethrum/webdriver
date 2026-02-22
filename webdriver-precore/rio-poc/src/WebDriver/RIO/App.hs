@@ -10,69 +10,60 @@ module WebDriver.RIO.App
   ( runHttp,
     withHttpSession,
     withHttpSessionEnv,
-    WantWebDriverLogging (..),
-    defaultEndpoint,
+    defaultDriverInfo,
     pause,
   )
 where
 
 import RIO
 import WebDriver.RIO.Env
-  ( HasHttpRunner,
+  ( HasHttpDriverInfo,
     HasHttpSession,
     HasPauseDuration (getPauseDuration),
+    HttpDriverInfo (..),
     HttpSessionEnv (..),
-    getHttpRunner,
+    getHttpDriverInfo,
     getLogger,
   )
 import WebDriver.RIO.HTTP.Base.Actions (deleteSession, newSession)
 import WebDriver.RIO.Logging (LoggerConfig (..), withLogging)
 import WebDriverPreCore.Extended.Capabilities as EC
-import WebDriverPreCore.HttpRunner (HttpEndpoint (..), HttpRunner (..), mkHttpRunner)
+import WebDriverPreCore.HttpRunner (HttpEndpoint (..))
 import WebDriverPreCore.Utils.Timeout (Timeout (..))
 
-data WantWebDriverLogging = WebDriverLogging | NoWebDriverLogging deriving (Eq, Show)
+defaultDriverInfo :: HttpDriverInfo
+defaultDriverInfo = MkHttpDriverInfo
+  { httpEndpoint = MkHttpEndpoint {host = "127.0.0.1", port = 4444},
+    driverLogging = False
+  }
 
-defaultEndpoint :: HttpEndpoint
-defaultEndpoint = MkHttpEndpoint {host = "127.0.0.1", port = 4444}
-
--- | Run an HTTP action with logging and HTTP runner capabilities.
+-- | Run an HTTP action with logging and HTTP driver info in the environment.
 --
--- Sets up a logging context and HTTP runner, then executes the provided
--- RIO action in an environment constructed by the given function.
+-- Sets up a logging context then constructs the environment from a 'LogFunc'
+-- and 'HttpDriverInfo', before running the provided RIO action.
 runHttp ::
   (MonadUnliftIO m) =>
-  -- | Environment constructor function that builds the environment from LogFunc and HttpRunner IO
-  (LogFunc -> HttpRunner IO -> env) ->
+  -- | Environment constructor from LogFunc and HttpDriverInfo
+  (LogFunc -> HttpDriverInfo -> env) ->
   -- | Configuration for the logging subsystem
   LoggerConfig ->
-  -- | HTTP endpoint (host and port) for the WebDriver server
-  HttpEndpoint ->
-  -- | Whether to enable verbose HTTP API logging
-  WantWebDriverLogging ->
+  -- | HTTP driver info (endpoint + logging flag)
+  HttpDriverInfo ->
   -- | The RIO action to execute in the configured environment
   RIO env a ->
   m a
-runHttp mkEnv loggerConfig httpEndpoint apiLogging httpAction =
+runHttp mkEnv loggerConfig driverInfo httpAction =
   withLogging loggerConfig $ \lf ->
-    let runnerLogger :: Maybe (Text -> IO ())
-        runnerLogger =
-          case apiLogging of
-            WebDriverLogging -> Just $ \t -> runRIO lf (logInfo (display t))
-            NoWebDriverLogging -> Nothing
+    runRIO (mkEnv lf driverInfo) httpAction
 
-        httpRunner = mkHttpRunner httpEndpoint runnerLogger
-        env = mkEnv lf httpRunner
-     in runRIO env httpAction
-
-mkHttpSession :: (HasLogFunc env, HasHttpRunner env) => EC.HttpCapabilities -> Timeout -> RIO env HttpSessionEnv
+mkHttpSession :: (HasLogFunc env, HasHttpDriverInfo env) => EC.HttpCapabilities -> Timeout -> RIO env HttpSessionEnv
 mkHttpSession caps timeout' = do
   lf <- getLogger
-  runner <- getHttpRunner
+  driverInfo <- getHttpDriverInfo
   session <- newSession caps
   pure MkHttpSessionEnv
     { logFunc = lf
-    , httpRunner = runner
+    , httpDriverInfo = driverInfo
     , httpSession = session
     , pauseDuration = timeout'
     }
@@ -82,7 +73,7 @@ mkHttpSession caps timeout' = do
 -- Uses bracket to ensure the session is always cleaned up even if the action fails.
 withHttpSession ::
   forall env senv a.
-  (HasHttpRunner senv, HasHttpSession senv) =>
+  (HasLogFunc senv, HasHttpDriverInfo senv, HasHttpSession senv) =>
   (EC.HttpCapabilities -> Timeout -> RIO env senv) ->
   Timeout ->
   EC.HttpCapabilities ->
@@ -97,7 +88,7 @@ withHttpSession mkEnv pauseDuration caps action =
   where
     run = flip runRIO
 
-withHttpSessionEnv :: (HasLogFunc env, HasHttpRunner env) => Timeout -> EC.HttpCapabilities -> RIO HttpSessionEnv a -> RIO env a
+withHttpSessionEnv :: (HasLogFunc env, HasHttpDriverInfo env) => Timeout -> EC.HttpCapabilities -> RIO HttpSessionEnv a -> RIO env a
 withHttpSessionEnv = withHttpSession mkHttpSession
 
 pause :: (HasPauseDuration env) => RIO env ()

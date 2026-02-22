@@ -4,13 +4,16 @@
 --
 -- Defines environment data types:
 --
--- * 'HttpEnv'        — logging + IO HTTP runner
+-- * 'HttpEnv'        — logging + HTTP driver info
 -- * 'HttpSessionEnv' — 'HttpEnv' + session id
 --
--- All implement 'HasLogFunc'; runner envs implement 'HasHttpRunner';
+-- All implement 'HasLogFunc'; runner envs implement 'HasHttpDriverInfo';
 -- session envs add 'HasHttpSession'.
 module WebDriver.RIO.Env
   ( BaseEnv (..),
+
+    -- * Driver Info
+    HttpDriverInfo (..),
 
     -- * Runner Envs
     HttpEnv (..),
@@ -19,8 +22,10 @@ module WebDriver.RIO.Env
     -- * Session Envs
     HttpSessionEnv (..),
 
-    -- * Runner Typeclasses
-    HasHttpRunner (..),
+    -- * Driver Info Typeclass
+    HasHttpDriverInfo (..),
+
+    -- * Other Runner Typeclasses
     HasBiDiRunner (..),
 
     -- * Session Typeclasses
@@ -28,23 +33,28 @@ module WebDriver.RIO.Env
     HasBiDiSession (..),
     HasPauseDuration (..),
     getLogger,
-    getHttpRunner,
-    getHttpCommandRunner,
+    getHttpDriverInfo,
+    runCommand,
     getBiDiRunner,
   )
 where
 
 import Data.Aeson (FromJSON)
-import RIO (HasLogFunc (..), Lens', LogFunc, RIO, lens, view)
+import RIO (HasLogFunc (..), Lens', LogFunc, RIO, Text, display, lens, liftIO, logInfo, runRIO, view)
 import WebDriverPreCore.BiDiRunner (BiDiRunner)
 import WebDriverPreCore.Extended.HTTP.Base.Protocol (Command (..), Session (..))
-import WebDriverPreCore.HttpRunner (HttpRunner (..))
+import WebDriverPreCore.HttpRunner (HttpEndpoint (..), HttpRunner (..), mkHttpRunner)
 import WebDriverPreCore.Utils.Timeout (Timeout)
 
+-- | Configuration for an HTTP WebDriver connection.
+data HttpDriverInfo = MkHttpDriverInfo
+  { httpEndpoint :: HttpEndpoint,
+    driverLogging :: Bool
+  }
 
--- | Env has an IO 'HttpRunner' available.
-class HasHttpRunner env where
-  httpRunnerL :: Lens' env (HttpRunner IO)
+-- | Env has an 'HttpDriverInfo' available.
+class HasHttpDriverInfo env where
+  httpDriverInfoL :: Lens' env HttpDriverInfo
 
 -- | Env has a 'BiDiRunner' available.
 class HasBiDiRunner env where
@@ -69,20 +79,20 @@ class HasPauseDuration env where
 -- | HTTP-runner environment.
 data HttpEnv = MkHttpEnv
   { logFunc :: LogFunc,
-    httpRunner :: HttpRunner IO
+    httpDriverInfo :: HttpDriverInfo
   }
 
--- | Construct an 'HttpEnv' from a 'LogFunc' and an IO 'HttpRunner'.
-mkHttpEnv :: LogFunc -> HttpRunner IO -> HttpEnv
+-- | Construct an 'HttpEnv' from a 'LogFunc' and 'HttpDriverInfo'.
+mkHttpEnv :: LogFunc -> HttpDriverInfo -> HttpEnv
 mkHttpEnv = MkHttpEnv
 
 instance HasLogFunc HttpEnv where
   logFuncL :: Lens' HttpEnv LogFunc
   logFuncL = lens (.logFunc) \MkHttpEnv {..} l -> MkHttpEnv {logFunc = l, ..}
 
-instance HasHttpRunner HttpEnv where
-  httpRunnerL :: Lens' HttpEnv (HttpRunner IO)
-  httpRunnerL = lens (.httpRunner) \MkHttpEnv {..} r -> MkHttpEnv {httpRunner = r, ..}
+instance HasHttpDriverInfo HttpEnv where
+  httpDriverInfoL :: Lens' HttpEnv HttpDriverInfo
+  httpDriverInfoL = lens (.httpDriverInfo) \MkHttpEnv {..} i -> MkHttpEnv {httpDriverInfo = i, ..}
 
 -- ---------------------------------------------------------------------------
 -- Shared helpers
@@ -91,13 +101,22 @@ instance HasHttpRunner HttpEnv where
 getLogger :: (HasLogFunc env) => RIO env LogFunc
 getLogger = view logFuncL
 
-getHttpRunner :: (HasHttpRunner env) => RIO env (HttpRunner IO)
-getHttpRunner = view httpRunnerL
+getHttpDriverInfo :: (HasHttpDriverInfo env) => RIO env HttpDriverInfo
+getHttpDriverInfo = view httpDriverInfoL
 
-getHttpCommandRunner :: forall env a. (HasHttpRunner env, FromJSON a) => RIO env (Command a -> IO a)
-getHttpCommandRunner = do
-  MkHttpRunner {run} <- getHttpRunner
-  pure run
+-- | Run a WebDriver 'Command' in the RIO environment, using the stored
+-- driver info to build an HTTP runner on each call.
+-- Logging is enabled only when 'driverLogging' is 'True'.
+runCommand :: forall env r. (HasHttpDriverInfo env, HasLogFunc env, FromJSON r) => Command r -> RIO env r
+runCommand cmd = do
+  MkHttpDriverInfo {httpEndpoint, driverLogging} <- getHttpDriverInfo
+  lf <- view logFuncL
+  let mLogger :: Maybe (Text -> IO ())
+      mLogger
+        | driverLogging = Just $ \t -> runRIO lf (logInfo (display t))
+        | otherwise     = Nothing
+      MkHttpRunner {run} = mkHttpRunner httpEndpoint mLogger
+  liftIO $ run cmd
 
 getBiDiRunner :: (HasBiDiRunner env) => RIO env BiDiRunner
 getBiDiRunner = view biDiRunnerL
@@ -117,7 +136,7 @@ instance HasLogFunc BaseEnv where
 -- | HTTP environment extended with a session id.
 data HttpSessionEnv = MkHttpSessionEnv
   { logFunc :: LogFunc,
-    httpRunner :: HttpRunner IO,
+    httpDriverInfo :: HttpDriverInfo,
     httpSession :: Session,
     pauseDuration :: Timeout
   }
@@ -126,9 +145,9 @@ instance HasLogFunc HttpSessionEnv where
   logFuncL :: Lens' HttpSessionEnv LogFunc
   logFuncL = lens (.logFunc) \MkHttpSessionEnv {..} l -> MkHttpSessionEnv {logFunc = l, ..}
 
-instance HasHttpRunner HttpSessionEnv where
-  httpRunnerL :: Lens' HttpSessionEnv (HttpRunner IO)
-  httpRunnerL = lens (.httpRunner) \MkHttpSessionEnv {..} r -> MkHttpSessionEnv {httpRunner = r, ..}
+instance HasHttpDriverInfo HttpSessionEnv where
+  httpDriverInfoL :: Lens' HttpSessionEnv HttpDriverInfo
+  httpDriverInfoL = lens (.httpDriverInfo) \MkHttpSessionEnv {..} i -> MkHttpSessionEnv {httpDriverInfo = i, ..}
 
 instance HasHttpSession HttpSessionEnv where
   getHttpSession :: HttpSessionEnv -> Session

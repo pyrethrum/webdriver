@@ -40,13 +40,12 @@ tests =
 runHttp' :: (Config -> RIO HttpEnv a) -> IO a
 runHttp' httpAction = do
   config@MkConfig {httpPort, httpUrl, logging} <- loadConfig
-  let apiLogging =
-        if logging
-          then WebDriverLogging
-          else NoWebDriverLogging
-      logConfig = ConsoleAndFile "eval.log"
-      endPoint = MkHttpEndpoint {host = httpUrl, port = httpPort}
-  R.runHttp mkHttpEnv logConfig endPoint apiLogging (httpAction config)
+  let logConfig = ConsoleAndFile "eval.log"
+      driverInfo = MkHttpDriverInfo
+        { httpEndpoint = MkHttpEndpoint {host = httpUrl, port = httpPort},
+          driverLogging = logging
+        }
+  R.runHttp mkHttpEnv logConfig driverInfo (httpAction config)
 
 runHttp :: RIO HttpEnv a -> IO a
 runHttp httpAction = runHttp' (const httpAction)
