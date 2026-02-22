@@ -5,13 +5,11 @@
 -- This module provides a typed HTTP runner that works with webdriver-precore
 -- Command types, built on top of the JSON-based runner in HttpRunnerBase.
 module WebDriverPreCore.HttpRunner
-  ( -- * HTTP Runner
-    HttpRunner (..),
-    mkHttpRunner,
-    HttpEndpoint (..),
+  ( HttpEndpoint (..),
     callWebDriver,
     callWebDriverResponse,
     callWebDriverJson,
+    commandToRequest,
   )
 where
 
@@ -32,12 +30,9 @@ import WebDriverPreCore.HttpRunnerBase
   ( HttpEndpoint (..),
     HttpMethod (..),
     HttpRequest (..),
-    HttpResponse (..),
-    HttpRunnerBase (..),
     SubPath (..),
     callWebDriverJson,
     callWebDriverResponse,
-    mkHttpRunnerBase,
   )
 import Prelude hiding (log)
 
@@ -52,46 +47,6 @@ callWebDriver MkHttpEndpoint {host, port} mLogger request =
   where
     baseUrl = http host
 
--- | Typed HTTP runner for WebDriver commands
-data HttpRunner m = MkHttpRunner
-  { -- | Execute a command and return the typed result
-    run :: forall r. (FromJSON r) => Command r -> m r,
-    -- | Execute a command and return the JSON body
-    runBody :: forall r. (FromJSON r) => Command r -> m Value,
-    -- | Execute a command and return the full HTTP response
-    runFull :: forall r. (FromJSON r) => Command r -> m HttpResponse
-  }
-
--- | Create a typed HTTP runner
-mkHttpRunner ::
-  (MonadIO m) =>
-  -- | Host (e.g. "127.0.0.1")
-  HttpEndpoint ->
-  -- | Optional logger
-  Maybe (Text -> m ()) ->
-  HttpRunner m
-mkHttpRunner httpEndpoint mLogger =
-  MkHttpRunner
-    { run = runCommand base,
-      runBody = runCommandBody base,
-      runFull = runCommandFullResponse base
-    }
-  where
-    base = mkHttpRunnerBase httpEndpoint mLogger
-
--- | Execute a typed command and return the parsed result
-runCommand :: forall r m. (FromJSON r, Functor m) => HttpRunnerBase m -> Command r -> m r
-runCommand base cmd =
-  parseResult <$> runCommandBody base cmd
-
--- | Execute a typed command and return the full JSON response
-runCommandBody :: forall r m. HttpRunnerBase m -> Command r -> m Value
-runCommandBody base = base.runBody . commandToRequest
-
--- | Execute a typed command and return the full HTTP response
-runCommandFullResponse :: forall r m. HttpRunnerBase m -> Command r -> m HttpResponse
-runCommandFullResponse base = base.runFull . commandToRequest
-
 -- | Convert a typed Command to an HttpRequest
 commandToRequest :: Command r -> HttpRequest
 commandToRequest cmd = case cmd of
@@ -104,9 +59,9 @@ commandToRequest cmd = case cmd of
   Delete {} ->
     MkHttpRequest DELETE_METHOD path Nothing
   where
-    -- Coerce the SubPath from Utils to our local SubPath
+    -- Unpack Utils.SubPath and repack as HttpRunnerBase.SubPath
     path :: SubPath
-    path = MkSubPath cmd.path.parts
+    path = let Utils.MkSubPath ps = cmd.path in MkSubPath ps
 
 -- | Parse a WebDriver response, extracting the 'value' property
 parseResult :: forall r. (FromJSON r) => Value -> r

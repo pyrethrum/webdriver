@@ -13,7 +13,6 @@ where
 
 import Data.Aeson (FromJSON, Value)
 import Data.Text (Text)
-import WebDriverPreCore.HttpRunner (HttpRunner (..))
 import WebDriverPreCore.HTTP.API qualified as API
 import WebDriverPreCore.HTTP.Protocol
   ( Actions (..),
@@ -109,8 +108,11 @@ data HttpActions = MkHttpActions
     runCommand' :: forall a. (FromJSON a) => Command a -> IO Value
   }
 
-mkActions :: HttpRunner IO -> HttpActions
-mkActions MkHttpRunner {run, runBody} =
+mkActions ::
+  (forall r. (FromJSON r) => Command r -> IO r) ->
+  (forall r. (FromJSON r) => Command r -> IO Value) ->
+  HttpActions
+mkActions run runBody =
   MkHttpActions
     { -- Root methods
       status = run API.status,

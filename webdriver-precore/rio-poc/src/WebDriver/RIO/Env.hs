@@ -43,7 +43,7 @@ import Data.Aeson (FromJSON)
 import RIO (HasLogFunc (..), Lens', LogFunc, RIO, Text, display, lens, liftIO, logInfo, runRIO, view)
 import WebDriverPreCore.BiDiRunner (BiDiRunner)
 import WebDriverPreCore.Extended.HTTP.Base.Protocol (Command (..), Session (..))
-import WebDriverPreCore.HttpRunner (HttpEndpoint (..), HttpRunner (..), mkHttpRunner)
+import WebDriverPreCore.HttpRunner (HttpEndpoint (..), callWebDriver, commandToRequest)
 import WebDriverPreCore.Utils.Timeout (Timeout)
 
 -- | Configuration for an HTTP WebDriver connection.
@@ -115,8 +115,7 @@ runCommand cmd = do
       mLogger
         | driverLogging = Just $ \t -> runRIO lf (logInfo (display t))
         | otherwise     = Nothing
-      MkHttpRunner {run} = mkHttpRunner httpEndpoint mLogger
-  liftIO $ run cmd
+  liftIO $ callWebDriver httpEndpoint mLogger (commandToRequest cmd)
 
 getBiDiRunner :: (HasBiDiRunner env) => RIO env BiDiRunner
 getBiDiRunner = view biDiRunnerL

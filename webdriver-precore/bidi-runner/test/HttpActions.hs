@@ -11,10 +11,11 @@ module HttpActions
   )
 where
 
-import WebDriverPreCore.HttpRunner (HttpRunner (..))
+import Data.Aeson (FromJSON)
 import WebDriverPreCore.HTTP.API qualified as API
 import WebDriverPreCore.HTTP.Protocol
-  ( FullCapabilities,
+  ( Command,
+    FullCapabilities,
     Session,
     SessionResponse,
   )
@@ -25,8 +26,8 @@ data HttpActions = MkHttpActions
     deleteSession :: Session -> IO ()
   }
 
-mkActions :: HttpRunner IO -> HttpActions
-mkActions MkHttpRunner {run} =
+mkActions :: (forall r. (FromJSON r) => Command r -> IO r) -> HttpActions
+mkActions run =
   MkHttpActions
     { newSession = run . API.newSession,
       deleteSession = run . API.deleteSession

@@ -28,6 +28,7 @@ where
 import Actions (Actions (..))
 import Actions qualified
 import Control.Exception (Exception, SomeException, bracket, catch, throwIO, try)
+import Data.Aeson (FromJSON)
 import Data.Text (Text, isInfixOf, unpack)
 import Data.Text qualified as T
 import Data.Time.Clock.POSIX (POSIXTime, getPOSIXTime)
@@ -51,9 +52,9 @@ import WebDriverPreCore.BiDi.Protocol
     Target (..),
   )
 import WebDriverPreCore.BiDiRunner (BiDiUrl, parseBiDiUrl, withBiDi, withBiDiFailTest)
-import WebDriverPreCore.HTTP.Protocol (FullCapabilities (..), SessionResponse (..))
+import WebDriverPreCore.HTTP.Protocol (Command, FullCapabilities (..), SessionResponse (..))
 import WebDriverPreCore.HTTP.Protocol qualified as Caps (Capabilities (..))
-import WebDriverPreCore.HttpRunner (HttpEndpoint (..), mkHttpRunner)
+import WebDriverPreCore.HttpRunner (HttpEndpoint (..), callWebDriver, commandToRequest)
 import WebDriverPreCore.Test.CapabilitiesBuilder (httpCapabilities, httpFullCapabilities)
 import WebDriverPreCore.Test.Config (Config (..))
 import WebDriverPreCore.Test.ConfigLoader (loadConfig)
@@ -108,8 +109,9 @@ runDemoWithConfig cfg demo' = do
       let demoActions = mkDemoActions logger $ fromIntegral cfg.pauseMS * milliseconds
           mLogger = if cfg.logging then Just logger.log else Nothing
           httpEndpoint = MkHttpEndpoint {host = cfg.httpUrl, port = cfg.httpPort}
-          httpRunner = mkHttpRunner httpEndpoint mLogger
-          httpActions = mkActions httpRunner
+          run :: forall r. (FromJSON r) => Command r -> IO r
+          run = callWebDriver httpEndpoint mLogger . commandToRequest
+          httpActions = mkActions run
           httpCaps = httpBidiCapabilities cfg
 
       -- Create HTTP session first (BiDi needs webSocketUrl from session response)
@@ -302,8 +304,9 @@ runDemoFail' cfg failSendCount failGetCount failEventCount demo' = do
       let demoActions = mkDemoActions logger $ fromIntegral cfg.pauseMS * milliseconds
           mLogger = if cfg.logging then Just logger.log else Nothing
           endpoint = MkHttpEndpoint {host = cfg.httpUrl, port = cfg.httpPort}
-          httpRunner = mkHttpRunner endpoint mLogger
-          httpActions = mkActions httpRunner
+          run :: forall r. (FromJSON r) => Command r -> IO r
+          run = callWebDriver endpoint mLogger . commandToRequest
+          httpActions = mkActions run
           httpCaps = httpBidiCapabilities cfg
 
       bracket

@@ -11,9 +11,10 @@ module HttpDemoUtils
 where
 
 import Control.Exception (bracket)
+import Data.Aeson (FromJSON, Value)
 import Data.Text (Text)
-import WebDriverPreCore.HTTP.Protocol (FullCapabilities, Session, SessionResponse (..))
-import WebDriverPreCore.HttpRunner (mkHttpRunner)
+import WebDriverPreCore.HTTP.Protocol (Command, FullCapabilities, Session, SessionResponse (..))
+import WebDriverPreCore.HttpRunner (callWebDriver, commandToRequest)
 import Actions (HttpActions (..), mkActions)
 import WebDriverPreCore.Test.Config (Config (..))
 import WebDriverPreCore.Test.ConfigLoader (loadConfig)
@@ -67,11 +68,14 @@ runDemo' cfg@MkConfig {httpUrl, httpPort, pauseMS} lgr demo' = do
   where
     capabilities = httpFullCapabilities cfg
     demoActions = mkDemoActions lgr $ fromIntegral pauseMS * milliseconds
-    -- Create runner with optional logger based on config logging
+    -- Create runner functions from endpoint
     mLogger = if cfg.logging then Just lgr.log else Nothing
     httpEndpoint = MkHttpEndpoint {host = httpUrl, port = fromIntegral httpPort}
-    runner = mkHttpRunner httpEndpoint mLogger
-    httpActions = mkActions runner
+    run :: forall r. (FromJSON r) => Command r -> IO r
+    run = callWebDriver httpEndpoint mLogger . commandToRequest
+    runBody :: forall r. (FromJSON r) => Command r -> IO Value
+    runBody = callWebDriver httpEndpoint mLogger . commandToRequest
+    httpActions = mkActions run runBody
 
 withSession :: FullCapabilities -> HttpActions -> (SessionResponse -> IO ()) -> IO ()
 withSession capabilities http' action = do
