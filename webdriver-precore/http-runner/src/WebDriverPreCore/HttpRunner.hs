@@ -6,9 +6,15 @@
 -- Command types, built on top of the JSON-based runner in HttpRunnerBase.
 module WebDriverPreCore.HttpRunner
   ( HttpEndpoint (..),
+    HttpRequest (..),
+    HttpResponse (..),
+    SubPath (..),
     callWebDriver,
+    callWebDriverBody,
     callWebDriverResponse,
-    callWebDriverJson,
+
+    --  low level
+    callWebDriverBody',
     commandToRequest,
   )
 where
@@ -18,22 +24,43 @@ import Data.Aeson (FromJSON (..), Value (..), (.:))
 import Data.Aeson.Types (parseEither, parseMaybe)
 import Data.Function ((&))
 import Data.Text (Text, pack)
+import Data.Word (Word16)
 import GHC.Exception (throw)
-import Network.HTTP.Req (http)
+import Network.HTTP.Req
+  ( DELETE (DELETE),
+    GET (GET),
+    HttpConfig (httpConfigCheckResponse),
+    NoReqBody (NoReqBody),
+    POST (POST),
+    ReqBodyJson (ReqBodyJson),
+    Scheme (..),
+    Url,
+    defaultHttpConfig,
+    http,
+    jsonResponse,
+    req,
+    responseBody,
+    responseStatusCode,
+    responseStatusMessage,
+    runReq,
+    (/:),
+  )
 import Utils qualified
 import WebDriverPreCore.HTTP.Protocol
   ( Command (..),
     WebDriverException (..),
     parseWebDriverException,
   )
-import WebDriverPreCore.HttpRunnerBase
+import WebDriverPreCore.HttpRunnerBase 
   ( HttpEndpoint (..),
     HttpMethod (..),
     HttpRequest (..),
+    HttpResponse (..),
     SubPath (..),
-    callWebDriverJson,
     callWebDriverResponse,
   )
+import WebDriverPreCore.HttpRunnerBase qualified as HttpRunnerBase
+
 import Prelude hiding (log)
 
 callWebDriver ::
@@ -43,9 +70,29 @@ callWebDriver ::
   HttpRequest ->
   m r
 callWebDriver MkHttpEndpoint {host, port} mLogger request =
-  parseResult <$> callWebDriverJson baseUrl port mLogger request
+  parseResult <$> HttpRunnerBase.callWebDriverBody baseUrl port mLogger request
   where
     baseUrl = http host
+
+callWebDriverBody ::
+  (MonadIO m) =>
+  Url 'Http ->
+  Word16 ->
+  Maybe (Text -> m ()) ->
+  Command a ->
+  m Value
+callWebDriverBody url port lgr =
+  callWebDriverBody' url port lgr . commandToRequest
+
+callWebDriverBody' ::
+  (MonadIO m) =>
+  Url 'Http ->
+  Word16 ->
+  Maybe (Text -> m ()) ->
+  HttpRequest ->
+  m Value
+callWebDriverBody' =
+  HttpRunnerBase.callWebDriverBody
 
 -- | Convert a typed Command to an HttpRequest
 commandToRequest :: Command r -> HttpRequest

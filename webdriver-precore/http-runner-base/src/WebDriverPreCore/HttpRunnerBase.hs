@@ -23,7 +23,7 @@ module WebDriverPreCore.HttpRunnerBase
     buildUrl,
 
     -- * Low-level HTTP
-    callWebDriverJson,
+    callWebDriverBody,
     callWebDriverResponse,
   )
 where
@@ -101,7 +101,7 @@ mkHttpRunnerBase ::
   HttpRunnerBase m
 mkHttpRunnerBase MkHttpEndpoint {host, port} mLogger =
   MkHttpRunnerBase
-    { runBody = callWebDriverJson baseUrl port mLogger,
+    { runBody = callWebDriverBody baseUrl port mLogger,
       runFull = callWebDriverResponse baseUrl port mLogger
     }
   where
@@ -112,14 +112,14 @@ buildUrl :: Url 'Http -> SubPath -> Url 'Http
 buildUrl basePath urlPath = F.foldl' (/:) basePath urlPath.parts
 
 -- | Execute a WebDriver HTTP request, returning just the JSON body
-callWebDriverJson ::
+callWebDriverBody ::
   (MonadIO m) =>
   Url 'Http ->
   Word16 ->
   Maybe (Text -> m ()) ->
   HttpRequest ->
   m Value
-callWebDriverJson baseUrl port mLogger =
+callWebDriverBody baseUrl port mLogger =
   fmap (.body) . callWebDriverResponse baseUrl port mLogger
 
 -- | Execute a WebDriver HTTP request, returning the full HTTP response
