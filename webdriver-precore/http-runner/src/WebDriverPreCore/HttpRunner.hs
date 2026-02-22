@@ -10,11 +10,13 @@ module WebDriverPreCore.HttpRunner
     HttpResponse (..),
     SubPath (..),
     callWebDriver,
+    callWebDriver',
     callWebDriverBody,
+    callWebDriverBody',
     callWebDriverResponse,
+    callWebDriverResponse',
 
     --  low level
-    callWebDriverBody',
     commandToRequest,
   )
 where
@@ -27,23 +29,9 @@ import Data.Text (Text, pack)
 import Data.Word (Word16)
 import GHC.Exception (throw)
 import Network.HTTP.Req
-  ( DELETE (DELETE),
-    GET (GET),
-    HttpConfig (httpConfigCheckResponse),
-    NoReqBody (NoReqBody),
-    POST (POST),
-    ReqBodyJson (ReqBodyJson),
-    Scheme (..),
+  ( Scheme (..),
     Url,
-    defaultHttpConfig,
     http,
-    jsonResponse,
-    req,
-    responseBody,
-    responseStatusCode,
-    responseStatusMessage,
-    runReq,
-    (/:),
   )
 import Utils qualified
 import WebDriverPreCore.HTTP.Protocol
@@ -51,13 +39,12 @@ import WebDriverPreCore.HTTP.Protocol
     WebDriverException (..),
     parseWebDriverException,
   )
-import WebDriverPreCore.HttpRunnerBase 
+import WebDriverPreCore.HttpRunnerBase
   ( HttpEndpoint (..),
     HttpMethod (..),
     HttpRequest (..),
     HttpResponse (..),
     SubPath (..),
-    callWebDriverResponse,
   )
 import WebDriverPreCore.HttpRunnerBase qualified as HttpRunnerBase
 
@@ -67,12 +54,37 @@ callWebDriver ::
   (MonadIO m, FromJSON r) =>
   HttpEndpoint ->
   Maybe (Text -> m ()) ->
+  Command a ->
+  m r
+callWebDriver endpoint mLogger = callWebDriver' endpoint mLogger . commandToRequest
+
+callWebDriver' ::
+  (MonadIO m, FromJSON r) =>
+  HttpEndpoint ->
+  Maybe (Text -> m ()) ->
   HttpRequest ->
   m r
-callWebDriver MkHttpEndpoint {host, port} mLogger request =
+callWebDriver' MkHttpEndpoint {host, port} mLogger request =
   parseResult <$> HttpRunnerBase.callWebDriverBody baseUrl port mLogger request
   where
     baseUrl = http host
+
+callWebDriverResponse ::
+  (MonadIO m) =>
+  HttpEndpoint ->
+  Maybe (Text -> m ()) ->
+  Command a ->
+  m HttpResponse
+callWebDriverResponse endpoint mLogger = callWebDriverResponse' endpoint mLogger . commandToRequest
+
+callWebDriverResponse' ::
+  (MonadIO m) =>
+  HttpEndpoint ->
+  Maybe (Text -> m ()) ->
+  HttpRequest ->
+  m HttpResponse
+callWebDriverResponse' MkHttpEndpoint {host, port} mLogger request =
+  HttpRunnerBase.callWebDriverResponse (http host) port mLogger request
 
 callWebDriverBody ::
   (MonadIO m) =>

@@ -14,7 +14,7 @@ import Control.Exception (bracket)
 import Data.Aeson (FromJSON, Value)
 import Data.Text (Text)
 import WebDriverPreCore.HTTP.Protocol (Command, FullCapabilities, Session, SessionResponse (..))
-import WebDriverPreCore.HttpRunner (callWebDriver, commandToRequest)
+import WebDriverPreCore.HttpRunner (callWebDriver)
 import Actions (HttpActions (..), mkActions)
 import WebDriverPreCore.Test.Config (Config (..))
 import WebDriverPreCore.Test.ConfigLoader (loadConfig)
@@ -72,9 +72,9 @@ runDemo' cfg@MkConfig {httpUrl, httpPort, pauseMS} lgr demo' = do
     mLogger = if cfg.logging then Just lgr.log else Nothing
     httpEndpoint = MkHttpEndpoint {host = httpUrl, port = fromIntegral httpPort}
     run :: forall r. (FromJSON r) => Command r -> IO r
-    run = callWebDriver httpEndpoint mLogger . commandToRequest
+    run = callWebDriver httpEndpoint mLogger
     runBody :: forall r. (FromJSON r) => Command r -> IO Value
-    runBody = callWebDriver httpEndpoint mLogger . commandToRequest
+    runBody = callWebDriver httpEndpoint mLogger
     httpActions = mkActions run runBody
 
 withSession :: FullCapabilities -> HttpActions -> (SessionResponse -> IO ()) -> IO ()

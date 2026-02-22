@@ -54,7 +54,7 @@ import WebDriverPreCore.BiDi.Protocol
 import WebDriverPreCore.BiDiRunner (BiDiUrl, parseBiDiUrl, withBiDi, withBiDiFailTest)
 import WebDriverPreCore.HTTP.Protocol (Command, FullCapabilities (..), SessionResponse (..))
 import WebDriverPreCore.HTTP.Protocol qualified as Caps (Capabilities (..))
-import WebDriverPreCore.HttpRunner (HttpEndpoint (..), callWebDriver, commandToRequest)
+import WebDriverPreCore.HttpRunner (HttpEndpoint (..), callWebDriver)
 import WebDriverPreCore.Test.CapabilitiesBuilder (httpCapabilities, httpFullCapabilities)
 import WebDriverPreCore.Test.Config (Config (..))
 import WebDriverPreCore.Test.ConfigLoader (loadConfig)
@@ -110,7 +110,7 @@ runDemoWithConfig cfg demo' = do
           mLogger = if cfg.logging then Just logger.log else Nothing
           httpEndpoint = MkHttpEndpoint {host = cfg.httpUrl, port = cfg.httpPort}
           run :: forall r. (FromJSON r) => Command r -> IO r
-          run = callWebDriver httpEndpoint mLogger . commandToRequest
+          run = callWebDriver httpEndpoint mLogger
           httpActions = mkActions run
           httpCaps = httpBidiCapabilities cfg
 
@@ -305,7 +305,7 @@ runDemoFail' cfg failSendCount failGetCount failEventCount demo' = do
           mLogger = if cfg.logging then Just logger.log else Nothing
           endpoint = MkHttpEndpoint {host = cfg.httpUrl, port = cfg.httpPort}
           run :: forall r. (FromJSON r) => Command r -> IO r
-          run = callWebDriver endpoint mLogger . commandToRequest
+          run = callWebDriver endpoint mLogger
           httpActions = mkActions run
           httpCaps = httpBidiCapabilities cfg
 
