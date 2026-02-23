@@ -3,7 +3,7 @@
 -- Description: Typed HTTP runner for WebDriver commands
 --
 -- This module provides a typed HTTP runner that works with webdriver-precore
--- Command types, built on top of the JSON-based runner in HttpRunnerBase.
+-- Command types.
 --
 -- For low-level utilities (HttpRequest-based runners, commandToRequest, etc.) see
 -- "WebDriverPreCore.HttpRunner.Utils".
@@ -29,19 +29,16 @@ import Data.Word (Word16)
 import Network.HTTP.Req
   ( Scheme (..),
     Url,
-    http,
   )
-import WebDriverPreCore.HTTP.Protocol (Command (..))
-import WebDriverPreCore.HttpRunnerBase
+import WebDriverPreCore.HTTP.Command (Command (..))
+import WebDriverPreCore.HttpRunner.Utils
   ( HttpEndpoint (..),
     HttpResponse (..),
-  )
-import WebDriverPreCore.HttpRunner.Utils
-  ( callWebDriver',
+    callWebDriver',
     callWebDriverBody',
+    callWebDriverResponse',
     commandToRequest,
   )
-import WebDriverPreCore.HttpRunnerBase qualified as HttpRunnerBase
 
 import Prelude hiding (log)
 
@@ -73,7 +70,5 @@ callWebDriverResponse ::
   Command a ->
   m HttpResponse
 callWebDriverResponse endpoint mLogger cmd =
-  HttpRunnerBase.callWebDriverResponse (http host) port mLogger (commandToRequest cmd)
-  where
-    MkHttpEndpoint {host, port} = endpoint
+  callWebDriverResponse' endpoint mLogger (commandToRequest cmd)
 

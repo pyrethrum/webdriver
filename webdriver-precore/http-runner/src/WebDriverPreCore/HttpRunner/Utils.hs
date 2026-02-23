@@ -2,8 +2,8 @@
 -- Module: WebDriverPreCore.HttpRunner.Utils
 -- Description: Low-level HTTP runner utilities for WebDriver commands
 --
--- This module provides the low-level plumbing: raw HttpRequest-based variants
--- of the runners and the conversion from typed Commands to HttpRequests.
+-- This module provides the low-level plumbing: HTTP execution, typed-to-raw
+-- request conversion, and response parsing.
 module WebDriverPreCore.HttpRunner.Utils
   ( -- * Request-level runners
     callWebDriver',
@@ -13,35 +13,83 @@ module WebDriverPreCore.HttpRunner.Utils
     -- * Command conversion
     commandToRequest,
 
-    -- * Re-exports from HttpRunnerBase
+    -- * Types
+    HttpEndpoint (..),
+    HttpResponse (..),
     HttpMethod (..),
     HttpRequest (..),
+
+    -- * URL Utilities
     SubPath (..),
+    buildUrl,
   )
 where
 
 import Control.Exception (throw)
-import Data.Function ((&))
 import Control.Monad.IO.Class (MonadIO)
-import Data.Aeson (FromJSON (..), Value (..), (.:))
+import Data.Aeson (FromJSON (..), Value (..), object, (.:))
 import Data.Aeson.Types (parseEither, parseMaybe)
+import Data.Foldable qualified as F
+import Data.Function ((&))
+import Data.Maybe (fromMaybe)
 import Data.Text (Text, pack)
+import Data.Text.Encoding (decodeUtf8Lenient)
 import Data.Word (Word16)
 import Network.HTTP.Req
-  ( Scheme (..),
+  ( DELETE (DELETE),
+    GET (GET),
+    HttpConfig (httpConfigCheckResponse),
+    NoReqBody (NoReqBody),
+    POST (POST),
+    ReqBodyJson (ReqBodyJson),
+    Scheme (..),
     Url,
+    defaultHttpConfig,
     http,
+    jsonResponse,
+    req,
+    responseBody,
+    responseStatusCode,
+    responseStatusMessage,
+    runReq,
+    (/:),
   )
-import Utils qualified
-import WebDriverPreCore.HTTP.Protocol (Command (..), WebDriverException (..), parseWebDriverException)
-import WebDriverPreCore.HttpRunnerBase
-  ( HttpEndpoint (..),
-    HttpMethod (..),
-    HttpRequest (..),
-    HttpResponse (..),
-    SubPath (..),
-  )
-import WebDriverPreCore.HttpRunnerBase qualified as HttpRunnerBase
+import Network.HTTP.Req qualified as R
+import Utils (SubPath (..))
+import WebDriverPreCore.Error (WebDriverException (..), parseWebDriverException)
+import WebDriverPreCore.HTTP.Command (Command (..))
+import Prelude hiding (log)
+
+-- | HTTP response from a WebDriver endpoint
+data HttpResponse = MkHttpResponse
+  { statusCode :: Int,
+    statusMessage :: Text,
+    body :: Value
+  }
+  deriving (Show, Eq)
+
+-- | Host and port of a WebDriver HTTP endpoint
+data HttpEndpoint = MkHttpEndpoint
+  { host :: Text,
+    port :: Word16
+  }
+  deriving (Show, Eq)
+
+-- | HTTP methods supported by WebDriver
+data HttpMethod = GET_METHOD | POST_METHOD | DELETE_METHOD
+  deriving (Show, Eq)
+
+-- | A raw HTTP request to send to a WebDriver endpoint
+data HttpRequest = MkHttpRequest
+  { method :: HttpMethod,
+    path :: SubPath,
+    body :: Maybe Value
+  }
+  deriving (Show, Eq)
+
+-- | Build a full URL from base URL and path parts
+buildUrl :: Url 'Http -> SubPath -> Url 'Http
+buildUrl basePath urlPath = F.foldl' (/:) basePath urlPath.parts
 
 -- | Execute a WebDriver 'Command', returning just the parsed JSON body.
 -- Low-level variant that takes a raw 'HttpRequest'.
@@ -52,7 +100,7 @@ callWebDriver' ::
   HttpRequest ->
   m r
 callWebDriver' MkHttpEndpoint {host, port} mLogger request =
-  parseResult <$> HttpRunnerBase.callWebDriverBody (http host) port mLogger request
+  parseResult <$> callWebDriverBody' (http host) port mLogger request
 
 -- | Execute a WebDriver HTTP request, returning just the JSON body.
 -- Low-level variant that takes a raw 'HttpRequest'.
@@ -63,8 +111,8 @@ callWebDriverBody' ::
   Maybe (Text -> m ()) ->
   HttpRequest ->
   m Value
-callWebDriverBody' =
-  HttpRunnerBase.callWebDriverBody
+callWebDriverBody' baseUrl port mLogger =
+  fmap (.body) . runHttpRequest baseUrl port mLogger
 
 -- | Execute a WebDriver HTTP request, returning the full HTTP response.
 -- Low-level variant that takes a raw 'HttpRequest'.
@@ -75,26 +123,56 @@ callWebDriverResponse' ::
   HttpRequest ->
   m HttpResponse
 callWebDriverResponse' MkHttpEndpoint {host, port} mLogger request =
-  HttpRunnerBase.callWebDriverResponse (http host) port mLogger request
+  runHttpRequest (http host) port mLogger request
 
 -- | Convert a typed 'Command' to a raw 'HttpRequest'.
 commandToRequest :: Command r -> HttpRequest
 commandToRequest cmd = case cmd of
   Get {} ->
-    MkHttpRequest GET_METHOD path Nothing
+    MkHttpRequest GET_METHOD cmd.path Nothing
   Post {body} ->
-    MkHttpRequest POST_METHOD path (Just $ Object body)
+    MkHttpRequest POST_METHOD cmd.path (Just $ Object body)
   PostEmpty {} ->
-    MkHttpRequest POST_METHOD path Nothing
+    MkHttpRequest POST_METHOD cmd.path Nothing
   Delete {} ->
-    MkHttpRequest DELETE_METHOD path Nothing
+    MkHttpRequest DELETE_METHOD cmd.path Nothing
+
+-- | Execute a WebDriver HTTP request via @req@, returning the full HTTP response.
+runHttpRequest ::
+  (MonadIO m) =>
+  Url 'Http ->
+  Word16 ->
+  Maybe (Text -> m ()) ->
+  HttpRequest ->
+  m HttpResponse
+runHttpRequest baseUrl port mLogger request = do
+  log $ "HTTP " <> methodText request.method <> " " <> pack (show url)
+  response <- runReq defaultHttpConfig {httpConfigCheckResponse = \_ _ _ -> Nothing} $ do
+    r <- case request.method of
+      GET_METHOD ->
+        req GET url NoReqBody jsonResponse (R.port iPort)
+      POST_METHOD ->
+        req POST url (ReqBodyJson $ fromMaybe (object []) request.body) jsonResponse (R.port iPort)
+      DELETE_METHOD ->
+        req DELETE url NoReqBody jsonResponse (R.port iPort)
+    pure
+      MkHttpResponse
+        { statusCode = responseStatusCode r,
+          statusMessage = decodeUtf8Lenient $ responseStatusMessage r,
+          body = responseBody r
+        }
+  log $ "Response: " <> pack (show response.statusCode)
+  pure response
   where
-    path :: SubPath
-    path = let Utils.MkSubPath ps = cmd.path in MkSubPath ps
+    iPort = fromIntegral port
+    url = buildUrl baseUrl request.path
+    log = fromMaybe (const $ pure ()) mLogger
+    methodText = \case
+      GET_METHOD -> "GET"
+      POST_METHOD -> "POST"
+      DELETE_METHOD -> "DELETE"
 
--- imported by callWebDriver' above; re-declared here to avoid circular import
-
--- | Parse a WebDriver response, extracting the 'value' property
+-- | Parse a WebDriver response, extracting the @value@ property
 parseResult :: forall r. (FromJSON r) => Value -> r
 parseResult body =
   valueParser body
@@ -107,7 +185,7 @@ parseResult body =
               id
       )
 
--- Parser for the "value" property in WebDriver responses
+-- | Extract the @value@ property from a WebDriver JSON response
 valueParser :: Value -> Maybe Value
 valueParser = \case
   Object obj -> parseMaybe (\o -> o .: "value") obj

@@ -120,8 +120,7 @@ extendCoercePost cmd extended =
   case cmd of
     Post {description, path, body} -> Post {description, path, body = body <> extended}
     PostEmpty {description, path} -> Post {description = description, path = path, body = extended}
-    get@Get {} -> 
+    get@Get {} ->
         error $ "extendPost called with Get Command (extendPost can only be called with Post or PostEmpty commands): " <> show get
-    del@Delete {} -> 
+    del@Delete {} ->
         error $ "extendPost called with Delete Command (extendPost can only be called with Post or PostEmpty commands): " <> show del
-

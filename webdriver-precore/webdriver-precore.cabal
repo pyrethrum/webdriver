@@ -133,6 +133,8 @@ library utils-internal
   exposed-modules:
       AesonUtils
       Utils
+      WebDriverPreCore.Error
+      WebDriverPreCore.HTTP.Command
       WebDriverPreCore.Utils.Timeout
   hs-source-dirs: utils
   build-depends:
@@ -205,30 +207,6 @@ library webdriver-precore-test-utils
     unliftio      >=0.2   && <0.3
   default-language: Haskell2010
 
-library webdriver-precore-http-runner-base
-  import: commonExtensions, commonGhcOptions
-  exposed-modules:
-      WebDriverPreCore.HttpRunnerBase
-      WebDriverPreCore.HttpRunnerBase.HttpResponse
-  hs-source-dirs: http-runner-base/src
-  build-depends:
-    aeson         >=1.4   && <2.3,
-    base          >=4.16  && <5,
-    bytestring    >=0.10  && <0.12.3,
-    req           >=3.9   && <3.14,
-    text          >=2.1   && <2.2,
-    unliftio      >=0.2   && <0.3
-  default-language: Haskell2010
-
-test-suite test-http-runner-base
-  import: commonExtensions, commonGhcOptions, testDepends
-  type: exitcode-stdio-1.0
-  main-is: Test.hs
-  hs-source-dirs: http-runner-base/test
-  build-depends:
-    webdriver-precore:webdriver-precore-http-runner-base
-  default-language: Haskell2010
-
 library webdriver-precore-http-runner
   import: commonExtensions, commonGhcOptions
   exposed-modules:
@@ -237,10 +215,9 @@ library webdriver-precore-http-runner
   hs-source-dirs: http-runner/src
   build-depends:
     webdriver-precore:utils-internal,
-    webdriver-precore:webdriver-precore,
-    webdriver-precore:webdriver-precore-http-runner-base,
     aeson         >=1.4   && <2.3,
     base          >=4.16  && <5,
+    bytestring    >=0.10  && <0.12.3,
     req           >=3.9   && <3.14,
     text          >=2.1   && <2.2,
     unliftio      >=0.2   && <0.3
@@ -265,7 +242,6 @@ test-suite test-http-runner
     webdriver-precore:utils-internal,
     webdriver-precore:webdriver-precore,
     webdriver-precore:webdriver-precore-http-runner,
-    webdriver-precore:webdriver-precore-http-runner-base,
     webdriver-precore:webdriver-precore-test-resources,
     webdriver-precore:webdriver-precore-test-utils,
     aeson,
@@ -526,7 +502,6 @@ library
       WebDriverPreCore.Internal.HTTPBidiCommon
       -- HTTP
       WebDriverPreCore.HTTP.Capabilities
-      WebDriverPreCore.HTTP.Command
       -- BiDI
       WebDriverPreCore.BiDi.Browser
       WebDriverPreCore.BiDi.BrowsingContext
@@ -542,8 +517,6 @@ library
       WebDriverPreCore.BiDi.Session
       WebDriverPreCore.BiDi.Storage
       WebDriverPreCore.BiDi.WebExtensions
-      -- Shared
-      WebDriverPreCore.Error
   hs-source-dirs: src
   build-depends:
     webdriver-precore:utils-internal,
