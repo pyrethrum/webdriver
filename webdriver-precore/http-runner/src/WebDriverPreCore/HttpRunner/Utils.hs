@@ -26,7 +26,6 @@ module WebDriverPreCore.HttpRunner.Utils
   )
 where
 
-import Control.Exception (Exception)
 import Control.Monad.IO.Class (MonadIO)
 import Data.Aeson (FromJSON (..), Value (..), object, (.:))
 import Data.Aeson.Types (parseEither, parseMaybe)
@@ -37,6 +36,7 @@ import Data.Maybe (fromMaybe)
 import Data.Text (Text, pack)
 import Data.Text.Encoding (decodeUtf8Lenient)
 import Data.Word (Word16)
+import WebDriverPreCore.ParseFailure (ParseFailure (..))
 import Network.HTTP.Req
   ( DELETE (DELETE),
     GET (GET),
@@ -60,14 +60,6 @@ import Network.HTTP.Req qualified as R
 import Utils (SubPath (..))
 import WebDriverPreCore.HTTP.Command (Command (..))
 import Prelude hiding (log)
-
-data ParseFailure = MkParseFailure
-  { info :: Text,
-    response :: Value
-  }
-  deriving (Show, Eq)
-
-instance Exception ParseFailure
 
 -- | HTTP response from a WebDriver endpoint
 data HttpResponse = MkHttpResponse

@@ -133,8 +133,8 @@ library utils-internal
   exposed-modules:
       AesonUtils
       Utils
-      WebDriverPreCore.Error
       WebDriverPreCore.HTTP.Command
+      WebDriverPreCore.ParseFailure
       WebDriverPreCore.Utils.Timeout
   hs-source-dirs: utils
   build-depends:
@@ -353,6 +353,7 @@ library webdriver-precore-extended
   exposed-modules:
       WebDriverPreCore.Extended
       WebDriverPreCore.Extended.Capabilities
+      WebDriverPreCore.Extended.Error
       WebDriverPreCore.Extended.HTTP.Base.API
       WebDriverPreCore.Extended.HTTP.Base.Protocol
       WebDriverPreCore.Extended.HTTP.Base.Actions
@@ -487,6 +488,8 @@ library
   exposed-modules:
       -- Main documentation module
       WebDriverPreCore
+      -- Error
+      WebDriverPreCore.Error
       -- BiDi
       WebDriverPreCore.BiDi.API
       WebDriverPreCore.BiDi.Protocol

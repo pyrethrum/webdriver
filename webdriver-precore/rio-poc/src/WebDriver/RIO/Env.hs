@@ -40,7 +40,7 @@ module WebDriver.RIO.Env
 where
 
 import Data.Aeson (FromJSON)
-import RIO (HasLogFunc (..), Lens', LogFunc, RIO, Text, display, lens, liftIO, logInfo, runRIO, view)
+import RIO (HasLogFunc (..), Lens', LogFunc, RIO, Text, display, lens, liftIO, logInfo, runRIO, throwIO, view)
 import WebDriverPreCore.BiDiRunner (BiDiRunner)
 import WebDriverPreCore.Extended.HTTP.Base.Protocol (Command (..), Session (..))
 import WebDriverPreCore.HttpRunner (HttpEndpoint (..), callWebDriver)
@@ -115,7 +115,7 @@ runCommand cmd = do
       mLogger
         | driverLogging = Just $ \t -> runRIO lf (logInfo (display t))
         | otherwise     = Nothing
-  liftIO $ callWebDriver httpEndpoint mLogger cmd
+  liftIO $ callWebDriver httpEndpoint mLogger cmd >>= either throwIO pure
 
 getBiDiRunner :: (HasBiDiRunner env) => RIO env BiDiRunner
 getBiDiRunner = view biDiRunnerL

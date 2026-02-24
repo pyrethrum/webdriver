@@ -35,12 +35,12 @@ import WebDriverPreCore.HTTP.Command (Command (..))
 import WebDriverPreCore.HttpRunner.Utils
   ( HttpEndpoint (..),
     HttpResponse (..),
-    ParseFailure(..),
     callWebDriver',
     callWebDriverBody',
     callWebDriverResponse',
     commandToRequest,
   )
+import WebDriverPreCore.ParseFailure (ParseFailure (..))
 
 import Prelude hiding (log)
 

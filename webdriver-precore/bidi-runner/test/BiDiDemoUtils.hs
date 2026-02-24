@@ -110,7 +110,7 @@ runDemoWithConfig cfg demo' = do
           mLogger = if cfg.logging then Just logger.log else Nothing
           httpEndpoint = MkHttpEndpoint {host = cfg.httpUrl, port = cfg.httpPort}
           run :: forall r. (FromJSON r) => Command r -> IO r
-          run = callWebDriver httpEndpoint mLogger
+          run cmd = callWebDriver httpEndpoint mLogger cmd >>= either throwIO pure
           httpActions = mkActions run
           httpCaps = httpBidiCapabilities cfg
 
@@ -305,7 +305,7 @@ runDemoFail' cfg failSendCount failGetCount failEventCount demo' = do
           mLogger = if cfg.logging then Just logger.log else Nothing
           endpoint = MkHttpEndpoint {host = cfg.httpUrl, port = cfg.httpPort}
           run :: forall r. (FromJSON r) => Command r -> IO r
-          run = callWebDriver endpoint mLogger
+          run cmd = callWebDriver endpoint mLogger cmd >>= either throwIO pure
           httpActions = mkActions run
           httpCaps = httpBidiCapabilities cfg
 

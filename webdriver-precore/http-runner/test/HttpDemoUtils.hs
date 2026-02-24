@@ -10,7 +10,7 @@ module HttpDemoUtils
   )
 where
 
-import Control.Exception (bracket)
+import Control.Exception (bracket, throwIO)
 import Data.Aeson (FromJSON, Value)
 import Data.Text (Text)
 import WebDriverPreCore.HTTP.Protocol (Command, FullCapabilities, Session, SessionResponse (..))
@@ -72,9 +72,9 @@ runDemo' cfg@MkConfig {httpUrl, httpPort, pauseMS} lgr demo' = do
     mLogger = if cfg.logging then Just lgr.log else Nothing
     httpEndpoint = MkHttpEndpoint {host = httpUrl, port = fromIntegral httpPort}
     run :: forall r. (FromJSON r) => Command r -> IO r
-    run = callWebDriver httpEndpoint mLogger
+    run cmd = callWebDriver httpEndpoint mLogger cmd >>= either throwIO pure
     runBody :: forall r. (FromJSON r) => Command r -> IO Value
-    runBody = callWebDriver httpEndpoint mLogger
+    runBody cmd = callWebDriver httpEndpoint mLogger cmd >>= either throwIO pure
     httpActions = mkActions run runBody
 
 withSession :: FullCapabilities -> HttpActions -> (SessionResponse -> IO ()) -> IO ()
