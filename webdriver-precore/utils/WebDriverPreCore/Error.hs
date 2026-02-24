@@ -26,9 +26,6 @@ import Text.Read (readEither)
 import Prelude as P hiding (error, words)
 
 
-HERE
-move WebDriverPreCore.Error back to where it was before in the main library rename change cabal files
-create a new 
 
 -- | A JavaScript unsigned integer (0..9007199254740991), represented as Word64.
 -- Used internally for parsing BiDi response IDs.

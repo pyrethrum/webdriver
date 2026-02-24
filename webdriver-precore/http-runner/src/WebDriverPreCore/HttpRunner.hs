@@ -16,6 +16,7 @@ module WebDriverPreCore.HttpRunner
     -- * Types
     HttpEndpoint (..),
     HttpResponse (..),
+    ParseFailure(..),
 
     -- * Re-exports
     Command (..),
@@ -34,6 +35,7 @@ import WebDriverPreCore.HTTP.Command (Command (..))
 import WebDriverPreCore.HttpRunner.Utils
   ( HttpEndpoint (..),
     HttpResponse (..),
+    ParseFailure(..),
     callWebDriver',
     callWebDriverBody',
     callWebDriverResponse',
@@ -48,7 +50,7 @@ callWebDriver ::
   HttpEndpoint ->
   Maybe (Text -> m ()) ->
   Command a ->
-  m r
+  m (Either ParseFailure r)
 callWebDriver endpoint mLogger = callWebDriver' endpoint mLogger . commandToRequest
 
 -- | Execute a typed 'Command', returning just the raw JSON body.

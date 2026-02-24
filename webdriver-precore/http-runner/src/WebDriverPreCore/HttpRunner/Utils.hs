@@ -18,6 +18,7 @@ module WebDriverPreCore.HttpRunner.Utils
     HttpResponse (..),
     HttpMethod (..),
     HttpRequest (..),
+    ParseFailure (..),
 
     -- * URL Utilities
     SubPath (..),
@@ -25,10 +26,11 @@ module WebDriverPreCore.HttpRunner.Utils
   )
 where
 
-import Control.Exception (throw)
+import Control.Exception (Exception)
 import Control.Monad.IO.Class (MonadIO)
 import Data.Aeson (FromJSON (..), Value (..), object, (.:))
 import Data.Aeson.Types (parseEither, parseMaybe)
+import Data.Bifunctor (first)
 import Data.Foldable qualified as F
 import Data.Function ((&))
 import Data.Maybe (fromMaybe)
@@ -56,9 +58,16 @@ import Network.HTTP.Req
   )
 import Network.HTTP.Req qualified as R
 import Utils (SubPath (..))
-import WebDriverPreCore.Error (WebDriverException (..), parseWebDriverException)
 import WebDriverPreCore.HTTP.Command (Command (..))
 import Prelude hiding (log)
+
+data ParseFailure = MkParseFailure
+  { info :: Text,
+    response :: Value
+  }
+  deriving (Show, Eq)
+
+instance Exception ParseFailure
 
 -- | HTTP response from a WebDriver endpoint
 data HttpResponse = MkHttpResponse
@@ -98,7 +107,7 @@ callWebDriver' ::
   HttpEndpoint ->
   Maybe (Text -> m ()) ->
   HttpRequest ->
-  m r
+  m (Either ParseFailure r)
 callWebDriver' MkHttpEndpoint {host, port} mLogger request =
   parseResult <$> callWebDriverBody' (http host) port mLogger request
 
@@ -172,17 +181,16 @@ runHttpRequest baseUrl port mLogger request = do
       POST_METHOD -> "POST"
       DELETE_METHOD -> "DELETE"
 
+-- todo expand err type eg no session
+
 -- | Parse a WebDriver response, extracting the @value@ property
-parseResult :: forall r. (FromJSON r) => Value -> r
+parseResult :: forall r. (FromJSON r) => Value -> Either ParseFailure r
 parseResult body =
   valueParser body
     & maybe
-      (throw $ ResponseParseException "No value property found in WebDriver response" body)
+      (Left $ MkParseFailure "No 'value' property found in WebDriver response" body)
       ( \val ->
-          parseEither @_ @r parseJSON val
-            & either
-              (\e -> throw $ parseWebDriverException (pack e) val)
-              id
+          first (flip MkParseFailure val . pack) (parseEither @_ @r parseJSON val)
       )
 
 -- | Extract the @value@ property from a WebDriver JSON response
