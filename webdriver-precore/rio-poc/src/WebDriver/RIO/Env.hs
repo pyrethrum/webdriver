@@ -40,8 +40,23 @@ module WebDriver.RIO.Env
 where
 
 import Data.Aeson (FromJSON)
-import RIO (HasLogFunc (..), Lens', LogFunc, RIO, Text, display, lens, liftIO, logInfo, runRIO, throwIO, view)
+import RIO
+  ( HasLogFunc (..),
+    Lens',
+    LogFunc,
+    RIO,
+    Text,
+    display,
+    first,
+    lens,
+    liftIO,
+    logInfo,
+    runRIO,
+    throwIO,
+    view,
+  )
 import WebDriverPreCore.BiDiRunner (BiDiRunner)
+import WebDriverPreCore.Error (parseFailToWDException)
 import WebDriverPreCore.Extended.HTTP.Base.Protocol (Command (..), Session (..))
 import WebDriverPreCore.HttpRunner (HttpEndpoint (..), callWebDriver)
 import WebDriverPreCore.Utils.Timeout (Timeout)
@@ -114,8 +129,10 @@ runCommand cmd = do
   let mLogger :: Maybe (Text -> IO ())
       mLogger
         | driverLogging = Just $ \t -> runRIO lf (logInfo (display t))
-        | otherwise     = Nothing
-  liftIO $ callWebDriver httpEndpoint mLogger cmd >>= either (throwIO . parseFailToWDException) pure
+        | otherwise = Nothing
+  liftIO $
+    callWebDriver httpEndpoint mLogger cmd
+      >>= either (throwIO . parseFailToWDException) pure
 
 getBiDiRunner :: (HasBiDiRunner env) => RIO env BiDiRunner
 getBiDiRunner = view biDiRunnerL
