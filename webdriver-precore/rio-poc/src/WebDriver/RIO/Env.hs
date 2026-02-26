@@ -45,7 +45,6 @@ import WebDriverPreCore.BiDiRunner (BiDiRunner)
 import WebDriverPreCore.Extended.HTTP.Base.Protocol (Command (..), Session (..))
 import WebDriverPreCore.HttpRunner (HttpEndpoint (..), callWebDriver)
 import WebDriverPreCore.Utils.Timeout (Timeout)
-import WebDriverPreCore.Extended.Error (parseFailToWDException)
 
 -- | Configuration for an HTTP WebDriver connection.
 data HttpDriverInfo = MkHttpDriverInfo

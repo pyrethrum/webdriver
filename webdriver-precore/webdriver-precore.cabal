@@ -353,7 +353,6 @@ library webdriver-precore-extended
   exposed-modules:
       WebDriverPreCore.Extended
       WebDriverPreCore.Extended.Capabilities
-      WebDriverPreCore.Extended.Error
       WebDriverPreCore.Extended.HTTP.Base.API
       WebDriverPreCore.Extended.HTTP.Base.Protocol
       WebDriverPreCore.Extended.HTTP.Base.Actions

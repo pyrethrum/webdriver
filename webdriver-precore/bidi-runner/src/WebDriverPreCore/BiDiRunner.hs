@@ -58,9 +58,10 @@ import WebDriverPreCore.BiDi.Protocol as P
     Subscription (..),
     SubscriptionId (..),
     SubscriptionType (..),
+    ParseFailure(..),
     subscriptionTypeToText,
     knownCommandToText,
-    parseFailToWDException,
+    parseFailToWDException, 
   )
 import Prelude hiding (log)
 
@@ -96,7 +97,7 @@ runTypedCommand sa cmd = do
   Socket.sendCommand (coerceSocketActions sa) socketCmd
     `catchAny` \e -> case fromException e :: Maybe ResponseException of
       Just (BiDIError errorValue) -> 
-        throwIO $ parseFailToWDException "BiDi error response" errorValue
+        throwIO . parseFailToWDException $ MkParseFailure "BiDi error response" errorValue
       _ -> throwIO e
 
 -- | Convert a typed Command to a SocketCommand
