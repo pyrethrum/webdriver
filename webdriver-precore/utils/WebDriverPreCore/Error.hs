@@ -7,7 +7,7 @@ module WebDriverPreCore.Error
     errorDescription,
     toErrorType,
     toErrorCode,
-    parseWebDriverException,
+    parseFailToWDException,
     parseErrorType,
   )
 where
@@ -209,8 +209,8 @@ instance Exception WebDriverException where
           <> maybe "" (\st -> "\nStacktrace: \n" <> st) stacktrace
 
 
-parseWebDriverException :: Text -> Value -> WebDriverException
-parseWebDriverException errInfo response =
+parseFailToWDException :: Text -> Value -> WebDriverException
+parseFailToWDException errInfo response =
   parseMaybe getErrorProp response
     & maybe
       (parserErr (errInfo <> "\n" <> "Could not find 'error' property in response\n" <> jsonToText response))
@@ -242,7 +242,7 @@ getErrorProp =
 
 parseErrorType :: Value -> Maybe ErrorType
 parseErrorType resp =
-  case parseWebDriverException "parse error type result" resp of
+  case parseFailToWDException "parse error type result" resp of
     ProtocolException {error} -> Just error
     JSONEncodeException {} -> Nothing
     ResponseParseException {} -> Nothing

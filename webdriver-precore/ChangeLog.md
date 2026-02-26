@@ -21,7 +21,7 @@ Main module exports updated to reflect new structure. Import from `WebDriverPreC
 - Error functions renamed:
   - `errorCodeToErrorType` → `toErrorType`
   - `errorTypeToErrorCode` → `toErrorCode`
-  - `parseWebDriverError` → `parseWebDriverException`
+  - `parseWebDriverError` → `parseFailToWDException`
   - `parseWebDriverErrorType` → `parseErrorType`
 
 ### HTTP API Changes

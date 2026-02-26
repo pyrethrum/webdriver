@@ -45,6 +45,7 @@ import WebDriverPreCore.BiDiRunner (BiDiRunner)
 import WebDriverPreCore.Extended.HTTP.Base.Protocol (Command (..), Session (..))
 import WebDriverPreCore.HttpRunner (HttpEndpoint (..), callWebDriver)
 import WebDriverPreCore.Utils.Timeout (Timeout)
+import WebDriverPreCore.Extended.Error (parseFailToWDException)
 
 -- | Configuration for an HTTP WebDriver connection.
 data HttpDriverInfo = MkHttpDriverInfo
@@ -115,7 +116,7 @@ runCommand cmd = do
       mLogger
         | driverLogging = Just $ \t -> runRIO lf (logInfo (display t))
         | otherwise     = Nothing
-  liftIO $ callWebDriver httpEndpoint mLogger cmd >>= either throwIO pure
+  liftIO $ callWebDriver httpEndpoint mLogger cmd >>= either (throwIO . parseFailToWDException) pure
 
 getBiDiRunner :: (HasBiDiRunner env) => RIO env BiDiRunner
 getBiDiRunner = view biDiRunnerL

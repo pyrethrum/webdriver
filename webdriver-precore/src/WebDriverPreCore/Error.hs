@@ -5,7 +5,7 @@ module WebDriverPreCore.Error
     errorDescription,
     toErrorType,
     toErrorCode,
-    parseWebDriverException,
+    parseFailToWDException,
     parseErrorType,
   )
 where
@@ -21,9 +21,8 @@ import Data.Text as T (Text, concat, pack, toTitle, unpack, words)
 import Data.Word (Word64)
 import GHC.Generics (Generic)
 import Text.Read (readEither)
+import WebDriverPreCore.ParseFailure (ParseFailure (..))
 import Prelude as P hiding (error, words)
-
-
 
 -- | A JavaScript unsigned integer (0..9007199254740991), represented as Word64.
 -- Used internally for parsing BiDi response IDs.
@@ -206,12 +205,11 @@ instance Exception WebDriverException where
           <> message
           <> maybe "" (\st -> "\nStacktrace: \n" <> st) stacktrace
 
-
-parseWebDriverException :: Text -> Value -> WebDriverException
-parseWebDriverException errInfo response =
+parseFailToWDException :: ParseFailure -> WebDriverException
+parseFailToWDException MkParseFailure {info, response} =
   parseMaybe getErrorProp response
     & maybe
-      (parserErr (errInfo <> "\n" <> "Could not find 'error' property in response\n" <> jsonToText response))
+      (parserErr (info <> "\n" <> "Could not find 'error' property in response\n" <> jsonToText response))
       ( either
           (flip UnrecognisedErrorTypeException response)
           mkWebDriverException
@@ -238,9 +236,9 @@ getErrorProp :: Value -> Parser Text
 getErrorProp =
   withObject "error" (.: "error")
 
-parseErrorType :: Value -> Maybe ErrorType
-parseErrorType resp =
-  case parseWebDriverException "parse error type result" resp of
+parseErrorType :: WebDriverException -> Maybe ErrorType
+parseErrorType =
+  \case
     ProtocolException {error} -> Just error
     JSONEncodeException {} -> Nothing
     ResponseParseException {} -> Nothing
