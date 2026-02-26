@@ -5,8 +5,9 @@ module WebDriverPreCore.Error
     errorDescription,
     toErrorType,
     toErrorCode,
-    parseFailToWDException,
     parseErrorType,
+    ParseFailure (..),
+    parseFailToWDException,
   )
 where
 
