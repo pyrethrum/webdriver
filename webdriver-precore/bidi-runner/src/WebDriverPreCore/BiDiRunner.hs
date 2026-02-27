@@ -73,13 +73,13 @@ import Prelude hiding (log)
 -- | Typed BiDi runner
 data BiDiRunner = MkBiDiRunner
   { -- | Execute a typed command
-    run :: forall r. (FromJSON r) => Command r -> IO r,
+    run :: forall r m. (FromJSON r) => Command r -> m r,
     -- | Get the underlying socket actions
     socketActions :: SocketActions,
     -- | Execute a typed command with an explicit message ID
-    runWithId :: forall r. (FromJSON r) => JSUInt -> Command r -> IO r,
+    runWithId :: forall r m. (FromJSON r) => JSUInt -> Command r -> m r,
     -- | Send an off-spec command with an explicit message ID
-    runOffSpecWithId :: JSUInt -> Text -> Object -> IO Object
+    runOffSpecWithId :: forall m. JSUInt -> Text -> Object -> m Object
   }
 
 -- | Create a typed BiDi runner from socket actions
@@ -116,7 +116,7 @@ withBiDi mLogger bidiUrl action =
     action (mkBiDiRunner sa)
 
 -- | Execute a typed command
-runTypedCommand :: forall r. (FromJSON r) => SocketActions -> Command r -> IO r
+runTypedCommand :: forall m r. (FromJSON r) => SocketActions -> Command r ->  m r
 runTypedCommand sa cmd = do
   let socketCmd = commandToSocketCommand cmd
   Socket.sendCommand (coerceSocketActions sa) socketCmd

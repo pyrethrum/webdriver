@@ -286,8 +286,8 @@ import WebDriverPreCore.BiDiRunner qualified as Runner
 -- ###########################################################################
 
 -- | Execute a BiDi command via the runner in the environment.
-viaRunner :: HasBiDiRunner env => (BiDiRunner -> IO a) -> RIO env a
-viaRunner f = getBiDiRunner >>= liftIO . f
+viaRunner :: HasBiDiRunner env => (BiDiRunner -> RIO env a) -> RIO env a
+viaRunner f = getBiDiRunner >>= f
 
 -- | Run a typed command through the BiDi runner.
 run :: (HasBiDiRunner env, FromJSON r) => Command r -> RIO env r
@@ -321,7 +321,7 @@ mkSendSubOffSpecMany' MkBiDiRunner {run = r, socketActions} mkSub sts bcs ucs ha
 viaSub ::
   HasBiDiRunner env =>
   (A.SendSub IO a -> (a -> IO ()) -> IO SubscriptionId) ->
-  (a -> IO ()) ->
+  (a -> RIO env ()) ->
   RIO env SubscriptionId
 viaSub extFn handler = viaRunner $ \runner -> extFn (mkSendSub runner) handler
 
@@ -331,7 +331,7 @@ viaSub' ::
   (A.SendSub' IO a -> [BrowsingContext] -> [UserContext] -> (a -> IO ()) -> IO SubscriptionId) ->
   [BrowsingContext] ->
   [UserContext] ->
-  (a -> IO ()) ->
+  (a -> RIO env ()) ->
   RIO env SubscriptionId
 viaSub' extFn bcs ucs handler = viaRunner $ \runner -> extFn (mkSendSub' runner) bcs ucs handler
 
@@ -598,7 +598,7 @@ scriptEvaluateNoWait cmd =
 subscribeMany ::
   HasBiDiRunner env =>
   [KnownSubscriptionType] ->
-  (Event -> IO ()) ->
+  (Event -> RIO env ()) ->
   RIO env SubscriptionId
 subscribeMany sts = subscribeMany' [] [] sts
 
@@ -608,7 +608,7 @@ subscribeMany' ::
   [BrowsingContext] ->
   [UserContext] ->
   [KnownSubscriptionType] ->
-  (Event -> IO ()) ->
+  (Event -> RIO env ()) ->
   RIO env SubscriptionId
 subscribeMany' bcs ucs sts handler =
   viaRunner $ \runner -> A.subscribeMany' (mkSendSubMany' runner) sts bcs ucs handler
@@ -617,7 +617,7 @@ subscribeMany' bcs ucs sts handler =
 subscribeUnknownMany ::
   HasBiDiRunner env =>
   [OffSpecSubscriptionType] ->
-  (Value -> IO ()) ->
+  (Value -> RIO env ()) ->
   RIO env SubscriptionId
 subscribeUnknownMany sts = subscribeUnknownMany' [] [] sts
 
@@ -627,7 +627,7 @@ subscribeUnknownMany' ::
   [BrowsingContext] ->
   [UserContext] ->
   [OffSpecSubscriptionType] ->
-  (Value -> IO ()) ->
+  (Value -> RIO env ()) ->
   RIO env SubscriptionId
 subscribeUnknownMany' bcs ucs sts handler =
   viaRunner $ \runner -> A.subscribeOffSpecMany' (mkSendSubOffSpecMany' runner) sts bcs ucs handler
@@ -635,14 +635,14 @@ subscribeUnknownMany' bcs ucs sts handler =
 -- | Unsubscribe using a previously obtained 'SubscriptionId'.
 unsubscribe :: HasBiDiRunner env => SubscriptionId -> RIO env ()
 unsubscribe subId =
-  viaRunner $ \MkBiDiRunner {run, socketActions} ->
-    Runner.unsubscribe socketActions (run . A.sessionUnsubscribe) (UnsubscribeById [subId])
+  viaRunner $ \MkBiDiRunner {run = r, socketActions} ->
+    Runner.unsubscribe socketActions (r . A.sessionUnsubscribe) (UnsubscribeById [subId])
 
 -- ###########################################################################
 -- ######################### Log Subscriptions ###############################
 -- ###########################################################################
 
-subscribeLogEntryAdded :: HasBiDiRunner env => (LogEntry -> IO ()) -> RIO env SubscriptionId
+subscribeLogEntryAdded :: HasBiDiRunner env => (LogEntry -> RIO env ()) -> RIO env SubscriptionId
 subscribeLogEntryAdded = viaSub A.subscribeLogEntryAdded
 
 subscribeLogEntryAdded' :: HasBiDiRunner env => [BrowsingContext] -> [UserContext] -> (LogEntry -> IO ()) -> RIO env SubscriptionId

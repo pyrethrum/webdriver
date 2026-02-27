@@ -47,14 +47,15 @@ import UnliftIO.STM
 import WebDriverPreCore.BiDiRunnerBase.Types
 import WebDriverPreCore.BiDiRunnerBase.Response
 import Prelude hiding (id, log)
+import UnliftIO (MonadIO, MonadUnliftIO)
 
 -- | Communication channels for BiDi
-data Channels = MkChannels
+data Channels m = MkChannels
   { sendChan :: TChan Value,
     receiveChan :: TChan (Either JSONEncodeException ResponseObject),
     eventChan :: TChan Object,
     counterVar :: TVar JSUInt,
-    subscriptions :: TVar [RegisteredSubscription IO]
+    subscriptions :: TVar [RegisteredSubscription m]
   }
 
 -- | Actions available on the socket
@@ -66,8 +67,8 @@ data SocketActions = MkSocketActions
     unregisterSubscription :: SocketUnregister -> STM ()
   }
 
--- | Initialize communication channels
-initChannels :: IO Channels
+-- | Initialise communication channels
+initChannels :: MonadIO m => m (Channels m)
 initChannels =
   MkChannels
     <$> newTChanIO
@@ -77,7 +78,7 @@ initChannels =
     <*> newTVarIO []
 
 -- | Create a counter variable
-counterVar :: IO (TVar JSUInt)
+counterVar :: MonadIO m => m (TVar JSUInt)
 counterVar = newTVarIO $ MkJSUInt 0
 
 -- | Create an atomic counter
@@ -87,7 +88,7 @@ mkAtomicCounter var = do
   readTVar var
 
 -- | Create socket actions from channels
-mkSocketActions :: Channels -> SocketActions
+mkSocketActions :: Channels m -> SocketActions
 mkSocketActions c =
   MkSocketActions
     { nextId = mkAtomicCounter c.counterVar,
@@ -104,11 +105,11 @@ mkSocketActions c =
       writeTChan c.sendChan json
 
 -- | Send a command without waiting for response
-sendCommandNoWait' :: forall a r. (Show a, ToJSON a) 
-  => SocketActions 
-  -> SocketCommand a r 
-  -> JSUInt 
-  -> IO Request
+sendCommandNoWait' :: forall a m r. (Show a, ToJSON a, MonadUnliftIO m, MonadFail m)
+  => SocketActions
+  -> SocketCommand a r
+  -> JSUInt
+  -> m Request
 sendCommandNoWait' MkSocketActions {send} command id = do
   (atomically $ send payload)
     `catch` \(e :: SomeException) -> do
@@ -127,38 +128,38 @@ sendCommandNoWait' MkSocketActions {send} command id = do
         ]
 
 -- | Send a command without waiting (auto-generates ID)
-sendCommandNoWait :: forall a r. (Show a, ToJSON a) 
+sendCommandNoWait :: forall a m r. (Show a, ToJSON a, MonadUnliftIO m, MonadFail m)
   => SocketActions 
   -> SocketCommand a r 
-  -> IO Request
+  -> m Request
 sendCommandNoWait sa command =
   atomically sa.nextId >>= sendCommandNoWait' sa command
 
 -- | Send a command with specific ID and wait for response
-sendCommand' :: forall a r. (FromJSON r, Show a, ToJSON a) 
+sendCommand' :: forall a m r. (FromJSON r, Show a, ToJSON a, MonadUnliftIO m, MonadFail m)
   => SocketActions 
   -> JSUInt 
   -> SocketCommand a r 
-  -> IO r
+  -> m r
 sendCommand' sa id' command = do
   MkRequest {payload} <- sendCommandNoWait' sa command id'
   matchedRequest sa.getNext payload id'
 
 -- | Send a command and wait for response (auto-generates ID)
-sendCommand :: forall a r. (FromJSON r, Show a, ToJSON a) 
+sendCommand :: forall a m r. (FromJSON r, Show a, ToJSON a, MonadUnliftIO m, MonadFail m)
   => SocketActions 
   -> SocketCommand a r 
-  -> IO r
+  -> m r
 sendCommand sa@MkSocketActions {getNext} command = do
   MkRequest {id = id', payload} <- sendCommandNoWait sa command
   matchedRequest getNext payload id'
 
 -- | Wait for a response matching the given ID
-matchedRequest :: forall r. (FromJSON r) 
-  => STM (Either JSONEncodeException ResponseObject) 
-  -> Value 
-  -> JSUInt 
-  -> IO r
+matchedRequest :: forall m r. (FromJSON r, MonadIO m)
+  => STM (Either JSONEncodeException ResponseObject)
+  -> Value
+  -> JSUInt
+  -> m r
 matchedRequest getNext request id' = do
   response <- atomically getNext
   parseResponse id' response
@@ -168,7 +169,7 @@ matchedRequest getNext request id' = do
 
 -- | Register a subscription
 registerSubscription' ::
-  TVar [RegisteredSubscription IO] ->
+  TVar [RegisteredSubscription m] ->
   SocketSubscription ->
   SocketSubscriptionId ->
   STM ()
@@ -176,7 +177,7 @@ registerSubscription' allSubs subscription subId = do
   modifyTVar' allSubs (MkRegisteredSubscription subId subscription :)
 
 -- | Unregister subscriptions
-unregisterSubscription' :: TVar [RegisteredSubscription IO] -> SocketUnregister -> STM ()
+unregisterSubscription' :: TVar [RegisteredSubscription m] -> SocketUnregister -> STM ()
 unregisterSubscription' allSubs unsub =
   case unsub of
     UnregisterById {subscriptionIds = subs} ->
@@ -186,7 +187,7 @@ unregisterSubscription' allSubs unsub =
         filter (not . subscriptionIsEmpty . (.subscription))
           . fmap removeSubFromMultiSocketRegistration
       where
-        removeSubFromMultiSocketRegistration :: RegisteredSubscription IO -> RegisteredSubscription IO
+        removeSubFromMultiSocketRegistration :: RegisteredSubscription m -> RegisteredSubscription m
         removeSubFromMultiSocketRegistration regSub@MkRegisteredSubscription {subscription} =
           regSub
             { subscription = removeSubscriptionFromMulti subscription
