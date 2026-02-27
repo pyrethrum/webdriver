@@ -187,9 +187,9 @@ withSocket pth@MkBiDiUrl {host, port, path} logger messageLoops action = do
     getLoop <- messageLoops.getLoop conn
     sendLoop <- messageLoops.sendLoop conn
 
-    logger "WebSocket connection established"
+    unliftIO logger "WebSocket connection established"
 
-    result <- async action
+    result <- async (unliftIO const action)
 
     (_asy, ethresult) <- waitAnyCatch [getLoop, sendLoop, result, eventLoop]
 
@@ -198,7 +198,7 @@ withSocket pth@MkBiDiUrl {host, port, path} logger messageLoops action = do
     ethresult
       & either
         ( \e -> do
-            logger $ "One of the BiDi client threads failed: \n" <> pack (displayException e)
+            unliftIO logger $ "One of the BiDi client threads failed: \n" <> pack (displayException e)
             throw e
         )
         pure
@@ -213,7 +213,7 @@ applySubscriptions log' obj subscriptions = do
         log' $
           "Not an event message: " <> msgType
       subs <- readTVarIO subscriptions
-      traverse_ (applySubscription (MkSocketSubscriptionType method) params fullObj) ((.subscription) <$> subs)
+      traverse_ (liftIO . applySubscription (MkSocketSubscriptionType method) params fullObj) ((.subscription) <$> subs)
 
 -- | Event properties parsed from a message
 data EventProps = MkEventProps
