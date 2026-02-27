@@ -14,9 +14,12 @@ import WebDriverPreCore.BiDiRunnerBase
     loopActions,
     mkMessageActions,
     withBiDiWithActions,
+    initChannels,
+    mkSocketActions,
+    counterVar,
+    mkAtomicCounter,
   )
-import WebDriverPreCore.BiDiRunnerBase.Socket qualified as Socket
-import WebDriverPreCore.BiDiRunnerBase.Types (JSUInt (..))
+import Utils (JSUInt (..))
 
 -- | Run a BiDi session with failure injection for testing
 withBiDiFailTest
@@ -39,12 +42,12 @@ mkFailChannelActions
   -> (Text -> IO ())     -- ^ Logger
   -> IO (ChannelActions IO)
 mkFailChannelActions failSendCount failGetCount failEventCount logger = do
-  channels <- Socket.initChannels
+  channels <- initChannels
   let baseActions = mkMessageActions logger channels
   failedActions <- failMessageActions baseActions failSendCount failGetCount failEventCount
   pure $
     MkChannelActions
-      { socketActions = Socket.mkSocketActions channels,
+      { socketActions = mkSocketActions channels,
         messageLoops = loopActions logger failedActions
       }
 
@@ -73,8 +76,8 @@ failAction
   -> (a -> IO ())    -- ^ Base action
   -> IO (a -> IO ())
 failAction lbl failCallCount action = do
-  counterVar' <- Socket.counterVar
-  let counter = Socket.mkAtomicCounter counterVar'
+  counterVar' <- counterVar
+  let counter = mkAtomicCounter counterVar'
   pure $ \a -> do
     n <- atomically counter
     if (coerce n :: Word64) == failCallCount

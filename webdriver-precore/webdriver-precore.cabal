@@ -334,6 +334,7 @@ test-suite test-bidi-runner
     webdriver-precore:utils-internal,
     webdriver-precore:webdriver-precore,
     webdriver-precore:webdriver-precore-bidi-runner,
+    webdriver-precore:webdriver-precore-bidi-runner-base,
     webdriver-precore:webdriver-precore-http-runner,
     webdriver-precore:webdriver-precore-test-resources,
     webdriver-precore:webdriver-precore-test-utils,

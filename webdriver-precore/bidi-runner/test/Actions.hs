@@ -10,12 +10,8 @@ module Actions
   )
 where
 
-import Data.Aeson (FromJSON, Object, Value, toJSON)
-import Data.Coerce (coerce)
+import Data.Aeson (FromJSON, Object, Value)
 import Data.Text (Text)
-import WebDriverPreCore.BiDiRunnerBase.Types (Request)
-import WebDriverPreCore.BiDiRunnerBase.Socket qualified as Socket
-import WebDriverPreCore.BiDiRunnerBase qualified as Base
 import WebDriverPreCore.BiDi.Protocol
   ( AddDataCollector,
     AddDataCollectorResult,
@@ -26,10 +22,7 @@ import WebDriverPreCore.BiDi.Protocol
     Activate,
     AuthRequired,
     BeforeRequestSent,
-    CommandMethod (..),
-    OffSpecCommand (..),
     Subscription,
-    knownCommandToText,
     BrowsingContext,
     CallFunction,
     CaptureScreenshot,
@@ -125,7 +118,7 @@ import WebDriverPreCore.BiDi.Protocol
     Capabilities,
   )
 import WebDriverPreCore.BiDi.API qualified as API
-import WebDriverPreCore.BiDiRunner (BiDiRunner (..))
+import WebDriverPreCore.BiDiRunner (BiDiRunner (..), Request)
 import WebDriverPreCore.BiDiRunner qualified as Runner
 
 -- | Extract subscription ID from result
@@ -284,7 +277,7 @@ data Actions = MkActions
 
 -- | Create Actions from a BiDiRunner
 mkActions :: BiDiRunner IO -> Actions
-mkActions (MkBiDiRunner {run, socketActions}) =
+mkActions runner@(MkBiDiRunner {run, socketActions, runWithId, runOffSpecWithId}) =
   MkActions
     { -- Session commands
       sessionNew = run . API.sessionNew,
@@ -347,7 +340,7 @@ mkActions (MkBiDiRunner {run, socketActions}) =
       scriptCallFunction = run . API.scriptCallFunction,
       scriptDisown = run . API.scriptDisown,
       scriptEvaluate = run . API.scriptEvaluate,
-      scriptEvaluateNoWait = sendCommandNoWait . API.scriptEvaluate,
+      scriptEvaluateNoWait = Runner.runNoWait runner . API.scriptEvaluate,
       scriptGetRealms = run . API.scriptGetRealms,
       scriptRemovePreloadScript = run . API.scriptRemovePreloadScript,
       -- Storage commands
@@ -417,43 +410,15 @@ mkActions (MkBiDiRunner {run, socketActions}) =
       unsubscribe,
       -- Generic and low-level command methods
       sendCommand = run,
-      sendCommand',
-      sendCommandNoWait,
-      sendOffSpecCommand',
-      sendOffSpecCommandNoWait,
+      sendCommand' = runWithId,
+      sendCommandNoWait = Runner.runNoWait runner,
+      sendOffSpecCommand' = runOffSpecWithId,
+      sendOffSpecCommandNoWait = Runner.runOffSpecNoWait runner,
       -- Fallback subscriptions
       subscribeUnknownMany,
       subscribeUnknownMany'
     }
   where
-    -- Helper to convert Command to SocketCommand
-    commandToSocketCommand :: Command r -> Base.SocketCommand Text r
-    commandToSocketCommand cmd = Base.MkSocketCommand
-      { method = toCommandText cmd.method,
-        params = toJSON cmd.params
-      }
-      where
-        toCommandText = \case
-          KnownCommand k -> knownCommandToText k
-          OffSpecCommand (MkOffSpecCommand cmdText) -> cmdText
-
-    -- Send a command without waiting for response
-    sendCommandNoWait :: forall r. Command r -> IO Request
-    sendCommandNoWait = Socket.sendCommandNoWait (coerce socketActions) . commandToSocketCommand
-
-    -- Send a command with specific ID
-    sendCommand' :: forall r. (FromJSON r) => JSUInt -> Command r -> IO r
-    sendCommand' (MkJSUInt id') = Socket.sendCommand' (coerce socketActions) (Base.MkJSUInt id') . commandToSocketCommand
-
-    -- Send off-spec command with specific ID
-    sendOffSpecCommand' :: JSUInt -> Text -> Object -> IO Object
-    sendOffSpecCommand' (MkJSUInt id') method params =
-      Socket.sendCommand' (coerce socketActions) (Base.MkJSUInt id') $ Base.MkSocketCommand method (toJSON params)
-
-    -- Send off-spec command without waiting
-    sendOffSpecCommandNoWait :: Text -> Object -> IO Request
-    sendOffSpecCommandNoWait method params =
-      Socket.sendCommandNoWait (coerce socketActions) $ Base.MkSocketCommand method (toJSON params)
 
     -- Session subscribe/unsubscribe helpers
     sessionSubscribe' :: SessionSubscibe -> IO SessionSubscribeResult
