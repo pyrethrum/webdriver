@@ -34,17 +34,8 @@ import Data.Set qualified as Set
 import Data.Text (Text)
 import UnliftIO (MonadUnliftIO, catchAny, throwIO)
 import UnliftIO.STM (STM, atomically)
-import WebDriverPreCore.BiDiRunnerBase
-  ( BiDiUrl (..),
-    SocketActions (..),
-    parseBiDiUrl,
-    withBiDiBase,
-  )
-import WebDriverPreCore.BiDiRunnerBase qualified as Base
-import WebDriverPreCore.BiDiRunnerBase.Response (ResponseException (..))
-import WebDriverPreCore.BiDiRunnerBase.Socket qualified as Socket
-import WebDriverPreCore.BiDiRunnerBase.Types (Request)
-import WebDriverPreCore.BiDiRunnerBase.Types qualified as BaseTypes
+import WebDriverPreCore.BiDiRunnerBase  as B hiding (JSUInt(..))
+
 import WebDriverPreCore.BiDi.Protocol as P
   ( Command (..),
     CommandMethod (..),
@@ -81,22 +72,22 @@ mkBiDiRunner sa = MkBiDiRunner
   { run = runTypedCommand sa,
     socketActions = sa,
     runWithId = \(MkJSUInt msgId) cmd ->
-      Socket.sendCommand' (coerceSocketActions sa) (BaseTypes.MkJSUInt msgId) (commandToSocketCommand cmd),
+      B.sendCommand' (coerceSocketActions sa) (MkJSUInt msgId) (commandToSocketCommand cmd),
     runOffSpecWithId = \(MkJSUInt msgId) method params ->
-      Socket.sendCommand' (coerceSocketActions sa) (BaseTypes.MkJSUInt msgId) $
-        BaseTypes.MkSocketCommand method (toJSON params)
+      B.sendCommand' (coerceSocketActions sa) (MkJSUInt msgId) $
+        MkSocketCommand method (toJSON params)
   }
 
 -- | Send a typed 'Command' without waiting for a response.
 runNoWait :: (MonadUnliftIO m, MonadFail m) => BiDiRunner m -> Command r -> m Request
 runNoWait MkBiDiRunner {socketActions} cmd =
-  Socket.sendCommandNoWait (coerceSocketActions socketActions) (commandToSocketCommand cmd)
+  B.sendCommandNoWait (coerceSocketActions socketActions) (commandToSocketCommand cmd)
 
 -- | Send an off-spec command without waiting for a response.
 runOffSpecNoWait :: (MonadUnliftIO m, MonadFail m) => BiDiRunner m -> Text -> Object -> m Request
 runOffSpecNoWait MkBiDiRunner {socketActions} method params =
-  Socket.sendCommandNoWait (coerceSocketActions socketActions) $
-    BaseTypes.MkSocketCommand method (toJSON params)
+  B.sendCommandNoWait (coerceSocketActions socketActions) $
+    MkSocketCommand method (toJSON params)
 
 -- | Run a BiDi session with typed commands
 withBiDi
@@ -113,15 +104,15 @@ withBiDi mLogger bidiUrl action =
 runTypedCommand :: forall m r. (FromJSON r, MonadUnliftIO m, MonadFail m) => SocketActions m -> Command r -> m r
 runTypedCommand sa cmd = do
   let socketCmd = commandToSocketCommand cmd
-  Socket.sendCommand (coerceSocketActions sa) socketCmd
+  sendCommand (coerceSocketActions sa) socketCmd
     `catchAny` \e -> case fromException e :: Maybe ResponseException of
       Just (BiDIError errorValue) -> 
         throwIO . parseFailToWDException $ MkParseFailure "BiDi error response" errorValue
       _ -> throwIO e
 
 -- | Convert a typed Command to a SocketCommand
-commandToSocketCommand :: Command r -> BaseTypes.SocketCommand Text r
-commandToSocketCommand cmd = BaseTypes.MkSocketCommand
+commandToSocketCommand :: Command r -> SocketCommand Text r
+commandToSocketCommand cmd = MkSocketCommand
   { method = toCommandText cmd.method,
     params = toJSON cmd.params
   }
@@ -129,10 +120,10 @@ commandToSocketCommand cmd = BaseTypes.MkSocketCommand
     toCommandText :: CommandMethod -> Text
     toCommandText = \case
       KnownCommand k -> knownCommandToText k
-      OffSpecCommand (P.MkOffSpecCommand cmdText) -> cmdText
+      OffSpecCommand c -> coerce c
 
 -- | Coerce socket actions between the typed and base versions
-coerceSocketActions :: SocketActions m -> Base.SocketActions m
+coerceSocketActions :: SocketActions m -> B.SocketActions m
 coerceSocketActions = coerce
 
 -- | Subscribe to events with a typed handler
@@ -186,39 +177,39 @@ subscribe sa callSubscribe subscription = do
           [] -> Nothing
           xs -> Just xs
 
-    mkRegistration :: Subscription m -> BaseTypes.SocketSubscription m
+    mkRegistration :: Subscription m -> SocketSubscription m
     mkRegistration = \case
       P.SingleSubscription {subscriptionType, action} ->
-        BaseTypes.SingleSubscription
+        B.SingleSubscription
           { subscriptionType = toSocketSubType subscriptionType,
             action
           }
       s' -> case s' of
         P.MultiSubscription {nAction} ->
-          BaseTypes.MultiSubscription
+          B.MultiSubscription
             { subscriptionTypes = socketSubtypes s',
               nAction = \v -> case parseEither parseJSON v of
                 Left _ -> pure ()
                 Right r -> nAction r
             }
         P.OffSpecSubscription {nValueAction} ->
-          BaseTypes.MultiSubscription
+          B.MultiSubscription
             { subscriptionTypes = socketSubtypes s',
               nAction = nValueAction
             }
       where
         socketSubtypes s = Set.fromList $ toSocketSubType <$> s.subscriptionTypes
 
-    dummySubId = BaseTypes.MkSocketSubscriptionId "dummy"
+    dummySubId = MkSocketSubscriptionId "dummy"
 
-    subscribeWithId :: BaseTypes.SocketSubscriptionId -> STM ()
+    subscribeWithId :: SocketSubscriptionId -> STM ()
     subscribeWithId subId =
       (coerceSocketActions sa).registerSubscription (mkRegistration subscription) subId
 
     removeDummySub :: STM ()
     removeDummySub = 
       (coerceSocketActions sa).unregisterSubscription $ 
-        BaseTypes.UnregisterById $ Set.singleton dummySubId
+        UnregisterById $ Set.singleton dummySubId
 
 -- | Unsubscribe from events
 unsubscribe :: MonadUnliftIO m => SocketActions m -> (SessionUnsubscribe -> m ()) -> SessionUnsubscribe -> m ()
@@ -226,15 +217,15 @@ unsubscribe sa callUnsubscribe unsub = do
   callUnsubscribe unsub
   atomically $ (coerceSocketActions sa).unregisterSubscription (toSocketUnregister unsub)
   where
-    toSocketUnregister :: SessionUnsubscribe -> BaseTypes.SocketUnregister
+    toSocketUnregister :: SessionUnsubscribe -> SocketUnregister
     toSocketUnregister = \case
       UnsubscribeById {subscriptions} ->
-        BaseTypes.UnregisterById . Set.fromList $ 
-          BaseTypes.MkSocketSubscriptionId . coerce <$> subscriptions
+        UnregisterById . Set.fromList $ 
+          MkSocketSubscriptionId . coerce <$> subscriptions
       UnsubscribeByAttributes {unsubEvents} ->
-        BaseTypes.UnregisterByAttributes . Set.fromList $ 
+        UnregisterByAttributes . Set.fromList $ 
           toSocketSubType <$> unsubEvents
 
 -- | Convert SubscriptionType to SocketSubscriptionType  
-toSocketSubType :: SubscriptionType -> BaseTypes.SocketSubscriptionType
-toSocketSubType = BaseTypes.MkSocketSubscriptionType . subscriptionTypeToText
+toSocketSubType :: SubscriptionType -> SocketSubscriptionType
+toSocketSubType = MkSocketSubscriptionType . subscriptionTypeToText

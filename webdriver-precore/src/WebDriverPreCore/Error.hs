@@ -25,11 +25,6 @@ import Text.Read (readEither)
 import WebDriverPreCore.ParseFailure (ParseFailure (..))
 import Prelude as P hiding (error, words)
 
--- | A JavaScript unsigned integer (0..9007199254740991), represented as Word64.
--- Used internally for parsing BiDi response IDs.
-newtype JSUInt = MkJSUInt Word64
-  deriving newtype (Show, Eq, Enum, FromJSON)
-
 -- | Known WebDriver Error Types
 --
 -- [spec](https://www.w3.org/TR/2025/WD-webdriver2-20251028/#errors)

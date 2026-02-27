@@ -33,11 +33,6 @@ import Data.Word (Word64)
 import GHC.Generics (Generic)
 import Text.Read (readMaybe)
 
--- | JavaScript safe unsigned integer (0 to 2^53-1)
--- Duplicated from webdriver-precore to avoid dependency
-newtype JSUInt = MkJSUInt Word64 
-  deriving newtype (Show, Eq, Ord, Enum, FromJSON, ToJSON, Num)
-
 -- | A command to send over the BiDi socket
 data SocketCommand a r = MkSocketCommand
   { method :: a,

@@ -261,6 +261,7 @@ library webdriver-precore-bidi-runner-base
   import: commonExtensions, commonGhcOptions
   exposed-modules:
       WebDriverPreCore.BiDiRunnerBase
+  other-modules:
       WebDriverPreCore.BiDiRunnerBase.Socket
       WebDriverPreCore.BiDiRunnerBase.Response
       WebDriverPreCore.BiDiRunnerBase.Types
