@@ -35,6 +35,7 @@ import RIO
   ( HasLogFunc (..),
     Lens',
     LogFunc,
+    RIO,
     lens,
   )
 import WebDriverPreCore.BiDiRunner (BiDiRunner)
@@ -113,13 +114,13 @@ instance HasPauseDuration HttpSessionEnv where
 -- ---------------------------------------------------------------------------
 
 -- | BiDi-runner environment: logging + 'BiDiRunner'.
-data BiDiEnv m = MkBiDiEnv
+data BiDiEnv = MkBiDiEnv
   { logFunc :: LogFunc,
-    biDiRunner :: BiDiRunner m
+    biDiRunner :: BiDiRunner (RIO BiDiEnv)
   }
 
-instance HasLogFunc (BiDiEnv m) where
-  logFuncL :: Lens' (BiDiEnv m) LogFunc
+instance HasLogFunc BiDiEnv where
+  logFuncL :: Lens' BiDiEnv LogFunc
   logFuncL = lens (.logFunc) \MkBiDiEnv {..} l -> MkBiDiEnv {logFunc = l, ..}
 
 instance HasBiDiRunner BiDiEnv where
@@ -131,27 +132,27 @@ instance HasBiDiRunner BiDiEnv where
 -- ---------------------------------------------------------------------------
 
 -- | BiDi environment extended with a session id and pause duration.
-data BiDiSessionEnv m = MkBiDiSessionEnv
+data BiDiSessionEnv = MkBiDiSessionEnv
   { logFunc :: LogFunc,
-    biDiRunner :: BiDiRunner m,
+    biDiRunner :: BiDiRunner (RIO BiDiSessionEnv),
     biDiSession :: Session,
     pauseDuration :: Timeout
   }
 
-instance HasLogFunc (BiDiSessionEnv m) where
-  logFuncL :: Lens' (BiDiSessionEnv m) LogFunc
+instance HasLogFunc BiDiSessionEnv where
+  logFuncL :: Lens' BiDiSessionEnv LogFunc
   logFuncL = lens (.logFunc) \MkBiDiSessionEnv {..} l -> MkBiDiSessionEnv {logFunc = l, ..}
 
-instance HasBiDiRunner (BiDiSessionEnv m) where
-  biDiRunnerL :: Lens' (BiDiSessionEnv m) (BiDiRunner m)
+instance HasBiDiRunner BiDiSessionEnv where
+  biDiRunnerL :: Lens' BiDiSessionEnv (BiDiRunner (RIO BiDiSessionEnv))
   biDiRunnerL = lens (.biDiRunner) \MkBiDiSessionEnv {..} r -> MkBiDiSessionEnv {biDiRunner = r, ..}
 
-instance HasBiDiSession (BiDiSessionEnv m) where
-  getBiDiSession :: BiDiSessionEnv m -> Session
+instance HasBiDiSession BiDiSessionEnv where
+  getBiDiSession :: BiDiSessionEnv -> Session
   getBiDiSession = (.biDiSession)
 
-instance HasPauseDuration (BiDiSessionEnv m) where
-  getPauseDuration :: BiDiSessionEnv m -> Timeout
+instance HasPauseDuration BiDiSessionEnv where
+  getPauseDuration :: BiDiSessionEnv -> Timeout
   getPauseDuration = (.pauseDuration)
 
 {- DO NOT DELETE

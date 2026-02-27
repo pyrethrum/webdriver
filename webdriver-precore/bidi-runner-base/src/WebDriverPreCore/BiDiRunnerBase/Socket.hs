@@ -28,6 +28,7 @@ module WebDriverPreCore.BiDiRunnerBase.Socket
 where
 
 import Control.Exception (throw)
+import Control.Monad.Catch (MonadThrow (..))
 import Data.Aeson (FromJSON, Object, ToJSON, Value (..), object, toJSON, (.=))
 import Data.Function ((&))
 import Data.Set qualified as Set
@@ -105,7 +106,7 @@ mkSocketActions c =
       writeTChan c.sendChan json
 
 -- | Send a command without waiting for response
-sendCommandNoWait' :: forall a m r. (Show a, ToJSON a, MonadUnliftIO m, MonadFail m)
+sendCommandNoWait' :: forall a m r. (Show a, ToJSON a, MonadUnliftIO m, MonadThrow m)
   => SocketActions m
   -> SocketCommand a r
   -> JSUInt
@@ -113,7 +114,7 @@ sendCommandNoWait' :: forall a m r. (Show a, ToJSON a, MonadUnliftIO m, MonadFai
 sendCommandNoWait' MkSocketActions {send} command id = do
   (atomically $ send payload)
     `catch` \(e :: SomeException) -> do
-      fail $
+      throwM . userError $
         "Send command failed: \n"
           <> show command
           <> "\n ---- Exception -----\n"
@@ -128,27 +129,27 @@ sendCommandNoWait' MkSocketActions {send} command id = do
         ]
 
 -- | Send a command without waiting (auto-generates ID)
-sendCommandNoWait :: forall a m r. (Show a, ToJSON a, MonadUnliftIO m, MonadFail m)
+sendCommandNoWait :: forall a m r. (Show a, ToJSON a, MonadUnliftIO m, MonadThrow m)
   => SocketActions m
-  -> SocketCommand a r 
+  -> SocketCommand a r
   -> m Request
 sendCommandNoWait sa command =
   atomically sa.nextId >>= sendCommandNoWait' sa command
 
 -- | Send a command with specific ID and wait for response
-sendCommand' :: forall a m r. (FromJSON r, Show a, ToJSON a, MonadUnliftIO m, MonadFail m)
+sendCommand' :: forall a m r. (FromJSON r, Show a, ToJSON a, MonadUnliftIO m, MonadThrow m)
   => SocketActions m
-  -> JSUInt 
-  -> SocketCommand a r 
+  -> JSUInt
+  -> SocketCommand a r
   -> m r
 sendCommand' sa id' command = do
   MkRequest {payload} <- sendCommandNoWait' sa command id'
   matchedRequest sa.getNext payload id'
 
 -- | Send a command and wait for response (auto-generates ID)
-sendCommand :: forall a m r. (FromJSON r, Show a, ToJSON a, MonadUnliftIO m, MonadFail m)
+sendCommand :: forall a m r. (FromJSON r, Show a, ToJSON a, MonadUnliftIO m, MonadThrow m)
   => SocketActions m
-  -> SocketCommand a r 
+  -> SocketCommand a r
   -> m r
 sendCommand sa@MkSocketActions {getNext} command = do
   MkRequest {id = id', payload} <- sendCommandNoWait sa command

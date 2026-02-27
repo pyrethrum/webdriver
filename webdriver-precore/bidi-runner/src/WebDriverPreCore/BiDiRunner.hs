@@ -10,13 +10,14 @@ module WebDriverPreCore.BiDiRunner
     withBiDi,
     BiDiRunner (..),
     mkBiDiRunner,
+    hoistBiDiRunner,
         -- * Low-level commands
     runNoWait,
     runOffSpecNoWait,
         -- * Subscription Management
     subscribe,
     unsubscribe,
-    
+
     -- * Re-exports from base
     BiDiUrl (..),
     parseBiDiUrl,
@@ -27,6 +28,7 @@ module WebDriverPreCore.BiDiRunner
 where
 
 import Control.Exception (fromException)
+import Control.Monad.Catch (MonadThrow)
 import Data.Aeson (FromJSON, Object, toJSON, parseJSON)
 import Data.Aeson.Types (parseEither)
 import Data.Coerce (coerce)
@@ -67,7 +69,7 @@ data BiDiRunner m = MkBiDiRunner
   }
 
 -- | Create a typed BiDi runner from socket actions
-mkBiDiRunner :: (MonadUnliftIO m, MonadFail m) => SocketActions m -> BiDiRunner m
+mkBiDiRunner :: (MonadUnliftIO m, MonadThrow m) => SocketActions m -> BiDiRunner m
 mkBiDiRunner sa = MkBiDiRunner
   { run = runTypedCommand sa,
     socketActions = sa,
@@ -79,19 +81,19 @@ mkBiDiRunner sa = MkBiDiRunner
   }
 
 -- | Send a typed 'Command' without waiting for a response.
-runNoWait :: (MonadUnliftIO m, MonadFail m) => BiDiRunner m -> Command r -> m Request
+runNoWait :: (MonadUnliftIO m, MonadThrow m) => BiDiRunner m -> Command r -> m Request
 runNoWait MkBiDiRunner {socketActions} cmd =
   B.sendCommandNoWait (coerceSocketActions socketActions) (commandToSocketCommand cmd)
 
 -- | Send an off-spec command without waiting for a response.
-runOffSpecNoWait :: (MonadUnliftIO m, MonadFail m) => BiDiRunner m -> Text -> Object -> m Request
+runOffSpecNoWait :: (MonadUnliftIO m, MonadThrow m) => BiDiRunner m -> Text -> Object -> m Request
 runOffSpecNoWait MkBiDiRunner {socketActions} method params =
   B.sendCommandNoWait (coerceSocketActions socketActions) $
     MkSocketCommand method (toJSON params)
 
 -- | Run a BiDi session with typed commands
 withBiDi
-  :: (MonadUnliftIO m, MonadFail m)
+  :: (MonadUnliftIO m, MonadThrow m)
   => Maybe (Text -> m ())  -- ^ Optional logger
   -> BiDiUrl
   -> (BiDiRunner m -> m ())
@@ -101,7 +103,7 @@ withBiDi mLogger bidiUrl action =
     action (mkBiDiRunner sa)
 
 -- | Execute a typed command
-runTypedCommand :: forall m r. (FromJSON r, MonadUnliftIO m, MonadFail m) => SocketActions m -> Command r -> m r
+runTypedCommand :: forall m r. (FromJSON r, MonadUnliftIO m, MonadThrow m) => SocketActions m -> Command r -> m r
 runTypedCommand sa cmd = do
   let socketCmd = commandToSocketCommand cmd
   sendCommand (coerceSocketActions sa) socketCmd
@@ -226,6 +228,39 @@ unsubscribe sa callUnsubscribe unsub = do
         UnregisterByAttributes . Set.fromList $ 
           toSocketSubType <$> unsubEvents
 
--- | Convert SubscriptionType to SocketSubscriptionType  
+-- | Convert SubscriptionType to SocketSubscriptionType
 toSocketSubType :: SubscriptionType -> SocketSubscriptionType
 toSocketSubType = MkSocketSubscriptionType . subscriptionTypeToText
+
+-- | Convert a 'BiDiRunner' from one monad to another.
+--
+-- The @lift@ function converts command actions from @m@ to @n@ (e.g., 'liftIO').
+-- The @unlift@ function converts subscription callbacks from @n@ to @m@
+-- (e.g., @runRIO env@), so that callbacks stored in the event system are
+-- invoked in the base monad @m@.
+hoistBiDiRunner ::
+  (forall a. m a -> n a) ->
+  (forall a. n a -> m a) ->
+  BiDiRunner m ->
+  BiDiRunner n
+hoistBiDiRunner lift' unlift' MkBiDiRunner {run = mRun, socketActions = mSA, runWithId = mRWI, runOffSpecWithId = mROS} =
+  MkBiDiRunner
+    { run = lift' . mRun,
+      socketActions = hoistSA unlift' mSA,
+      runWithId = \i cmd -> lift' (mRWI i cmd),
+      runOffSpecWithId = \i m p -> lift' (mROS i m p)
+    }
+  where
+    hoistSA :: (forall a. n a -> m a) -> B.SocketActions m -> B.SocketActions n
+    hoistSA unlift B.MkSocketActions {registerSubscription = mRegSub, ..} =
+      B.MkSocketActions
+        { registerSubscription = \sub subId -> mRegSub (unliftSub unlift sub) subId,
+          ..
+        }
+
+    unliftSub :: (forall a. n a -> m a) -> B.SocketSubscription n -> B.SocketSubscription m
+    unliftSub unlift = \case
+      B.SingleSubscription {subscriptionType, action} ->
+        B.SingleSubscription {subscriptionType, action = unlift . action}
+      B.MultiSubscription {subscriptionTypes, nAction} ->
+        B.MultiSubscription {subscriptionTypes, nAction = unlift . nAction}

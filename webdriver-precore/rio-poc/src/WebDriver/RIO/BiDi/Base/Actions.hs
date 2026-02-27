@@ -169,7 +169,7 @@ where
 
 import Data.Aeson (FromJSON, Object, Value)
 import Data.Text (Text)
-import RIO (RIO, liftIO)
+import RIO (RIO)
 import WebDriver.RIO.HTTP.Core (HasBiDiRunner (..), getBiDiRunner)
 import WebDriverPreCore.Extended.BiDi.Base.Actions qualified as A
 import WebDriverPreCore.BiDi.Protocol
@@ -645,159 +645,159 @@ unsubscribe subId =
 subscribeLogEntryAdded :: HasBiDiRunner env => (LogEntry -> RIO env ()) -> RIO env SubscriptionId
 subscribeLogEntryAdded = viaSub A.subscribeLogEntryAdded
 
-subscribeLogEntryAdded' :: HasBiDiRunner env => [BrowsingContext] -> [UserContext] -> (LogEntry -> IO ()) -> RIO env SubscriptionId
+subscribeLogEntryAdded' :: HasBiDiRunner env => [BrowsingContext] -> [UserContext] -> (LogEntry -> RIO env ()) -> RIO env SubscriptionId
 subscribeLogEntryAdded' = viaSub' A.subscribeLogEntryAdded'
 
 -- ###########################################################################
 -- ################### BrowsingContext Subscriptions #########################
 -- ###########################################################################
 
-subscribeBrowsingContextCreated :: HasBiDiRunner env => (Info -> IO ()) -> RIO env SubscriptionId
+subscribeBrowsingContextCreated :: HasBiDiRunner env => (Info -> RIO env ()) -> RIO env SubscriptionId
 subscribeBrowsingContextCreated = viaSub A.subscribeBrowsingContextCreated
 
-subscribeBrowsingContextCreated' :: HasBiDiRunner env => [BrowsingContext] -> [UserContext] -> (Info -> IO ()) -> RIO env SubscriptionId
+subscribeBrowsingContextCreated' :: HasBiDiRunner env => [BrowsingContext] -> [UserContext] -> (Info -> RIO env ()) -> RIO env SubscriptionId
 subscribeBrowsingContextCreated' = viaSub' A.subscribeBrowsingContextCreated'
 
-subscribeBrowsingContextDestroyed :: HasBiDiRunner env => (Info -> IO ()) -> RIO env SubscriptionId
+subscribeBrowsingContextDestroyed :: HasBiDiRunner env => (Info -> RIO env ()) -> RIO env SubscriptionId
 subscribeBrowsingContextDestroyed = viaSub A.subscribeBrowsingContextDestroyed
 
-subscribeBrowsingContextDestroyed' :: HasBiDiRunner env => [BrowsingContext] -> [UserContext] -> (Info -> IO ()) -> RIO env SubscriptionId
+subscribeBrowsingContextDestroyed' :: HasBiDiRunner env => [BrowsingContext] -> [UserContext] -> (Info -> RIO env ()) -> RIO env SubscriptionId
 subscribeBrowsingContextDestroyed' = viaSub' A.subscribeBrowsingContextDestroyed'
 
-subscribeBrowsingContextNavigationStarted :: HasBiDiRunner env => (NavigationInfo -> IO ()) -> RIO env SubscriptionId
+subscribeBrowsingContextNavigationStarted :: HasBiDiRunner env => (NavigationInfo -> RIO env ()) -> RIO env SubscriptionId
 subscribeBrowsingContextNavigationStarted = viaSub A.subscribeBrowsingContextNavigationStarted
 
-subscribeBrowsingContextNavigationStarted' :: HasBiDiRunner env => [BrowsingContext] -> [UserContext] -> (NavigationInfo -> IO ()) -> RIO env SubscriptionId
+subscribeBrowsingContextNavigationStarted' :: HasBiDiRunner env => [BrowsingContext] -> [UserContext] -> (NavigationInfo -> RIO env ()) -> RIO env SubscriptionId
 subscribeBrowsingContextNavigationStarted' = viaSub' A.subscribeBrowsingContextNavigationStarted'
 
-subscribeBrowsingContextFragmentNavigated :: HasBiDiRunner env => (NavigationInfo -> IO ()) -> RIO env SubscriptionId
+subscribeBrowsingContextFragmentNavigated :: HasBiDiRunner env => (NavigationInfo -> RIO env ()) -> RIO env SubscriptionId
 subscribeBrowsingContextFragmentNavigated = viaSub A.subscribeBrowsingContextFragmentNavigated
 
-subscribeBrowsingContextFragmentNavigated' :: HasBiDiRunner env => [BrowsingContext] -> [UserContext] -> (NavigationInfo -> IO ()) -> RIO env SubscriptionId
+subscribeBrowsingContextFragmentNavigated' :: HasBiDiRunner env => [BrowsingContext] -> [UserContext] -> (NavigationInfo -> RIO env ()) -> RIO env SubscriptionId
 subscribeBrowsingContextFragmentNavigated' = viaSub' A.subscribeBrowsingContextFragmentNavigated'
 
-subscribeBrowsingContextHistoryUpdated :: HasBiDiRunner env => (HistoryUpdated -> IO ()) -> RIO env SubscriptionId
+subscribeBrowsingContextHistoryUpdated :: HasBiDiRunner env => (HistoryUpdated -> RIO env ()) -> RIO env SubscriptionId
 subscribeBrowsingContextHistoryUpdated = viaSub A.subscribeBrowsingContextHistoryUpdated
 
-subscribeBrowsingContextHistoryUpdated' :: HasBiDiRunner env => [BrowsingContext] -> [UserContext] -> (HistoryUpdated -> IO ()) -> RIO env SubscriptionId
+subscribeBrowsingContextHistoryUpdated' :: HasBiDiRunner env => [BrowsingContext] -> [UserContext] -> (HistoryUpdated -> RIO env ()) -> RIO env SubscriptionId
 subscribeBrowsingContextHistoryUpdated' = viaSub' A.subscribeBrowsingContextHistoryUpdated'
 
-subscribeBrowsingContextDomContentLoaded :: HasBiDiRunner env => (NavigationInfo -> IO ()) -> RIO env SubscriptionId
+subscribeBrowsingContextDomContentLoaded :: HasBiDiRunner env => (NavigationInfo -> RIO env ()) -> RIO env SubscriptionId
 subscribeBrowsingContextDomContentLoaded = viaSub A.subscribeBrowsingContextDomContentLoaded
 
-subscribeBrowsingContextDomContentLoaded' :: HasBiDiRunner env => [BrowsingContext] -> [UserContext] -> (NavigationInfo -> IO ()) -> RIO env SubscriptionId
+subscribeBrowsingContextDomContentLoaded' :: HasBiDiRunner env => [BrowsingContext] -> [UserContext] -> (NavigationInfo -> RIO env ()) -> RIO env SubscriptionId
 subscribeBrowsingContextDomContentLoaded' = viaSub' A.subscribeBrowsingContextDomContentLoaded'
 
-subscribeBrowsingContextLoad :: HasBiDiRunner env => (NavigationInfo -> IO ()) -> RIO env SubscriptionId
+subscribeBrowsingContextLoad :: HasBiDiRunner env => (NavigationInfo -> RIO env ()) -> RIO env SubscriptionId
 subscribeBrowsingContextLoad = viaSub A.subscribeBrowsingContextLoad
 
-subscribeBrowsingContextLoad' :: HasBiDiRunner env => [BrowsingContext] -> [UserContext] -> (NavigationInfo -> IO ()) -> RIO env SubscriptionId
+subscribeBrowsingContextLoad' :: HasBiDiRunner env => [BrowsingContext] -> [UserContext] -> (NavigationInfo -> RIO env ()) -> RIO env SubscriptionId
 subscribeBrowsingContextLoad' = viaSub' A.subscribeBrowsingContextLoad'
 
-subscribeBrowsingContextDownloadWillBegin :: HasBiDiRunner env => (DownloadWillBegin -> IO ()) -> RIO env SubscriptionId
+subscribeBrowsingContextDownloadWillBegin :: HasBiDiRunner env => (DownloadWillBegin -> RIO env ()) -> RIO env SubscriptionId
 subscribeBrowsingContextDownloadWillBegin = viaSub A.subscribeBrowsingContextDownloadWillBegin
 
-subscribeBrowsingContextDownloadWillBegin' :: HasBiDiRunner env => [BrowsingContext] -> [UserContext] -> (DownloadWillBegin -> IO ()) -> RIO env SubscriptionId
+subscribeBrowsingContextDownloadWillBegin' :: HasBiDiRunner env => [BrowsingContext] -> [UserContext] -> (DownloadWillBegin -> RIO env ()) -> RIO env SubscriptionId
 subscribeBrowsingContextDownloadWillBegin' = viaSub' A.subscribeBrowsingContextDownloadWillBegin'
 
-subscribeBrowsingContextDownloadEnd :: HasBiDiRunner env => (DownloadEnd -> IO ()) -> RIO env SubscriptionId
+subscribeBrowsingContextDownloadEnd :: HasBiDiRunner env => (DownloadEnd -> RIO env ()) -> RIO env SubscriptionId
 subscribeBrowsingContextDownloadEnd = viaSub A.subscribeBrowsingContextDownloadEnd
 
-subscribeBrowsingContextDownloadEnd' :: HasBiDiRunner env => [BrowsingContext] -> [UserContext] -> (DownloadEnd -> IO ()) -> RIO env SubscriptionId
+subscribeBrowsingContextDownloadEnd' :: HasBiDiRunner env => [BrowsingContext] -> [UserContext] -> (DownloadEnd -> RIO env ()) -> RIO env SubscriptionId
 subscribeBrowsingContextDownloadEnd' = viaSub' A.subscribeBrowsingContextDownloadEnd'
 
-subscribeBrowsingContextNavigationAborted :: HasBiDiRunner env => (NavigationInfo -> IO ()) -> RIO env SubscriptionId
+subscribeBrowsingContextNavigationAborted :: HasBiDiRunner env => (NavigationInfo -> RIO env ()) -> RIO env SubscriptionId
 subscribeBrowsingContextNavigationAborted = viaSub A.subscribeBrowsingContextNavigationAborted
 
-subscribeBrowsingContextNavigationAborted' :: HasBiDiRunner env => [BrowsingContext] -> [UserContext] -> (NavigationInfo -> IO ()) -> RIO env SubscriptionId
+subscribeBrowsingContextNavigationAborted' :: HasBiDiRunner env => [BrowsingContext] -> [UserContext] -> (NavigationInfo -> RIO env ()) -> RIO env SubscriptionId
 subscribeBrowsingContextNavigationAborted' = viaSub' A.subscribeBrowsingContextNavigationAborted'
 
-subscribeBrowsingContextNavigationCommitted :: HasBiDiRunner env => (NavigationInfo -> IO ()) -> RIO env SubscriptionId
+subscribeBrowsingContextNavigationCommitted :: HasBiDiRunner env => (NavigationInfo -> RIO env ()) -> RIO env SubscriptionId
 subscribeBrowsingContextNavigationCommitted = viaSub A.subscribeBrowsingContextNavigationCommitted
 
-subscribeBrowsingContextNavigationCommitted' :: HasBiDiRunner env => [BrowsingContext] -> [UserContext] -> (NavigationInfo -> IO ()) -> RIO env SubscriptionId
+subscribeBrowsingContextNavigationCommitted' :: HasBiDiRunner env => [BrowsingContext] -> [UserContext] -> (NavigationInfo -> RIO env ()) -> RIO env SubscriptionId
 subscribeBrowsingContextNavigationCommitted' = viaSub' A.subscribeBrowsingContextNavigationCommitted'
 
-subscribeBrowsingContextNavigationFailed :: HasBiDiRunner env => (NavigationInfo -> IO ()) -> RIO env SubscriptionId
+subscribeBrowsingContextNavigationFailed :: HasBiDiRunner env => (NavigationInfo -> RIO env ()) -> RIO env SubscriptionId
 subscribeBrowsingContextNavigationFailed = viaSub A.subscribeBrowsingContextNavigationFailed
 
-subscribeBrowsingContextNavigationFailed' :: HasBiDiRunner env => [BrowsingContext] -> [UserContext] -> (NavigationInfo -> IO ()) -> RIO env SubscriptionId
+subscribeBrowsingContextNavigationFailed' :: HasBiDiRunner env => [BrowsingContext] -> [UserContext] -> (NavigationInfo -> RIO env ()) -> RIO env SubscriptionId
 subscribeBrowsingContextNavigationFailed' = viaSub' A.subscribeBrowsingContextNavigationFailed'
 
-subscribeBrowsingContextUserPromptClosed :: HasBiDiRunner env => (UserPromptClosed -> IO ()) -> RIO env SubscriptionId
+subscribeBrowsingContextUserPromptClosed :: HasBiDiRunner env => (UserPromptClosed -> RIO env ()) -> RIO env SubscriptionId
 subscribeBrowsingContextUserPromptClosed = viaSub A.subscribeBrowsingContextUserPromptClosed
 
-subscribeBrowsingContextUserPromptClosed' :: HasBiDiRunner env => [BrowsingContext] -> [UserContext] -> (UserPromptClosed -> IO ()) -> RIO env SubscriptionId
+subscribeBrowsingContextUserPromptClosed' :: HasBiDiRunner env => [BrowsingContext] -> [UserContext] -> (UserPromptClosed -> RIO env ()) -> RIO env SubscriptionId
 subscribeBrowsingContextUserPromptClosed' = viaSub' A.subscribeBrowsingContextUserPromptClosed'
 
-subscribeBrowsingContextUserPromptOpened :: HasBiDiRunner env => (UserPromptOpened -> IO ()) -> RIO env SubscriptionId
+subscribeBrowsingContextUserPromptOpened :: HasBiDiRunner env => (UserPromptOpened -> RIO env ()) -> RIO env SubscriptionId
 subscribeBrowsingContextUserPromptOpened = viaSub A.subscribeBrowsingContextUserPromptOpened
 
-subscribeBrowsingContextUserPromptOpened' :: HasBiDiRunner env => [BrowsingContext] -> [UserContext] -> (UserPromptOpened -> IO ()) -> RIO env SubscriptionId
+subscribeBrowsingContextUserPromptOpened' :: HasBiDiRunner env => [BrowsingContext] -> [UserContext] -> (UserPromptOpened -> RIO env ()) -> RIO env SubscriptionId
 subscribeBrowsingContextUserPromptOpened' = viaSub' A.subscribeBrowsingContextUserPromptOpened'
 
 -- ###########################################################################
 -- ####################### Network Subscriptions #############################
 -- ###########################################################################
 
-subscribeNetworkAuthRequired :: HasBiDiRunner env => (AuthRequired -> IO ()) -> RIO env SubscriptionId
+subscribeNetworkAuthRequired :: HasBiDiRunner env => (AuthRequired -> RIO env ()) -> RIO env SubscriptionId
 subscribeNetworkAuthRequired = viaSub A.subscribeNetworkAuthRequired
 
-subscribeNetworkAuthRequired' :: HasBiDiRunner env => [BrowsingContext] -> [UserContext] -> (AuthRequired -> IO ()) -> RIO env SubscriptionId
+subscribeNetworkAuthRequired' :: HasBiDiRunner env => [BrowsingContext] -> [UserContext] -> (AuthRequired -> RIO env ()) -> RIO env SubscriptionId
 subscribeNetworkAuthRequired' = viaSub' A.subscribeNetworkAuthRequired'
 
-subscribeNetworkBeforeRequestSent :: HasBiDiRunner env => (BeforeRequestSent -> IO ()) -> RIO env SubscriptionId
+subscribeNetworkBeforeRequestSent :: HasBiDiRunner env => (BeforeRequestSent -> RIO env ()) -> RIO env SubscriptionId
 subscribeNetworkBeforeRequestSent = viaSub A.subscribeNetworkBeforeRequestSent
 
-subscribeNetworkBeforeRequestSent' :: HasBiDiRunner env => [BrowsingContext] -> [UserContext] -> (BeforeRequestSent -> IO ()) -> RIO env SubscriptionId
+subscribeNetworkBeforeRequestSent' :: HasBiDiRunner env => [BrowsingContext] -> [UserContext] -> (BeforeRequestSent -> RIO env ()) -> RIO env SubscriptionId
 subscribeNetworkBeforeRequestSent' = viaSub' A.subscribeNetworkBeforeRequestSent'
 
-subscribeNetworkFetchError :: HasBiDiRunner env => (FetchError -> IO ()) -> RIO env SubscriptionId
+subscribeNetworkFetchError :: HasBiDiRunner env => (FetchError -> RIO env ()) -> RIO env SubscriptionId
 subscribeNetworkFetchError = viaSub A.subscribeNetworkFetchError
 
-subscribeNetworkFetchError' :: HasBiDiRunner env => [BrowsingContext] -> [UserContext] -> (FetchError -> IO ()) -> RIO env SubscriptionId
+subscribeNetworkFetchError' :: HasBiDiRunner env => [BrowsingContext] -> [UserContext] -> (FetchError -> RIO env ()) -> RIO env SubscriptionId
 subscribeNetworkFetchError' = viaSub' A.subscribeNetworkFetchError'
 
-subscribeNetworkResponseCompleted :: HasBiDiRunner env => (ResponseCompleted -> IO ()) -> RIO env SubscriptionId
+subscribeNetworkResponseCompleted :: HasBiDiRunner env => (ResponseCompleted -> RIO env ()) -> RIO env SubscriptionId
 subscribeNetworkResponseCompleted = viaSub A.subscribeNetworkResponseCompleted
 
-subscribeNetworkResponseCompleted' :: HasBiDiRunner env => [BrowsingContext] -> [UserContext] -> (ResponseCompleted -> IO ()) -> RIO env SubscriptionId
+subscribeNetworkResponseCompleted' :: HasBiDiRunner env => [BrowsingContext] -> [UserContext] -> (ResponseCompleted -> RIO env ()) -> RIO env SubscriptionId
 subscribeNetworkResponseCompleted' = viaSub' A.subscribeNetworkResponseCompleted'
 
-subscribeNetworkResponseStarted :: HasBiDiRunner env => (ResponseStarted -> IO ()) -> RIO env SubscriptionId
+subscribeNetworkResponseStarted :: HasBiDiRunner env => (ResponseStarted -> RIO env ()) -> RIO env SubscriptionId
 subscribeNetworkResponseStarted = viaSub A.subscribeNetworkResponseStarted
 
-subscribeNetworkResponseStarted' :: HasBiDiRunner env => [BrowsingContext] -> [UserContext] -> (ResponseStarted -> IO ()) -> RIO env SubscriptionId
+subscribeNetworkResponseStarted' :: HasBiDiRunner env => [BrowsingContext] -> [UserContext] -> (ResponseStarted -> RIO env ()) -> RIO env SubscriptionId
 subscribeNetworkResponseStarted' = viaSub' A.subscribeNetworkResponseStarted'
 
 -- ###########################################################################
 -- ####################### Script Subscriptions ##############################
 -- ###########################################################################
 
-subscribeScriptMessage :: HasBiDiRunner env => (Message -> IO ()) -> RIO env SubscriptionId
+subscribeScriptMessage :: HasBiDiRunner env => (Message -> RIO env ()) -> RIO env SubscriptionId
 subscribeScriptMessage = viaSub A.subscribeScriptMessage
 
-subscribeScriptMessage' :: HasBiDiRunner env => [BrowsingContext] -> [UserContext] -> (Message -> IO ()) -> RIO env SubscriptionId
+subscribeScriptMessage' :: HasBiDiRunner env => [BrowsingContext] -> [UserContext] -> (Message -> RIO env ()) -> RIO env SubscriptionId
 subscribeScriptMessage' = viaSub' A.subscribeScriptMessage'
 
-subscribeScriptRealmCreated :: HasBiDiRunner env => (RealmInfo -> IO ()) -> RIO env SubscriptionId
+subscribeScriptRealmCreated :: HasBiDiRunner env => (RealmInfo -> RIO env ()) -> RIO env SubscriptionId
 subscribeScriptRealmCreated = viaSub A.subscribeScriptRealmCreated
 
-subscribeScriptRealmCreated' :: HasBiDiRunner env => [BrowsingContext] -> [UserContext] -> (RealmInfo -> IO ()) -> RIO env SubscriptionId
+subscribeScriptRealmCreated' :: HasBiDiRunner env => [BrowsingContext] -> [UserContext] -> (RealmInfo -> RIO env ()) -> RIO env SubscriptionId
 subscribeScriptRealmCreated' = viaSub' A.subscribeScriptRealmCreated'
 
-subscribeScriptRealmDestroyed :: HasBiDiRunner env => (RealmDestroyed -> IO ()) -> RIO env SubscriptionId
+subscribeScriptRealmDestroyed :: HasBiDiRunner env => (RealmDestroyed -> RIO env ()) -> RIO env SubscriptionId
 subscribeScriptRealmDestroyed = viaSub A.subscribeScriptRealmDestroyed
 
-subscribeScriptRealmDestroyed' :: HasBiDiRunner env => [BrowsingContext] -> [UserContext] -> (RealmDestroyed -> IO ()) -> RIO env SubscriptionId
+subscribeScriptRealmDestroyed' :: HasBiDiRunner env => [BrowsingContext] -> [UserContext] -> (RealmDestroyed -> RIO env ()) -> RIO env SubscriptionId
 subscribeScriptRealmDestroyed' = viaSub' A.subscribeScriptRealmDestroyed'
 
 -- ###########################################################################
 -- ####################### Input Subscriptions ###############################
 -- ###########################################################################
 
-subscribeInputFileDialogOpened :: HasBiDiRunner env => (FileDialogOpened -> IO ()) -> RIO env SubscriptionId
+subscribeInputFileDialogOpened :: HasBiDiRunner env => (FileDialogOpened -> RIO env ()) -> RIO env SubscriptionId
 subscribeInputFileDialogOpened = viaSub A.subscribeInputFileDialogOpened
 
-subscribeInputFileDialogOpened' :: HasBiDiRunner env => [BrowsingContext] -> [UserContext] -> (FileDialogOpened -> IO ()) -> RIO env SubscriptionId
+subscribeInputFileDialogOpened' :: HasBiDiRunner env => [BrowsingContext] -> [UserContext] -> (FileDialogOpened -> RIO env ()) -> RIO env SubscriptionId
 subscribeInputFileDialogOpened' = viaSub' A.subscribeInputFileDialogOpened'

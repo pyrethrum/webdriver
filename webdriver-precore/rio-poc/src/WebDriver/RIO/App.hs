@@ -183,8 +183,10 @@ withBiDiSession driverLogging caps action = do
 withBiDiEnvIO :: LogFunc -> Bool -> BiDiUrl -> RIO BiDiEnv a -> IO a
 withBiDiEnvIO lf driverLogging bidiUrl action = do
   resultRef <- newIORef (Left (error "withBiDiEnvIO: result unset" :: SomeException))
-  BiDiRunner.withBiDi mLogger bidiUrl $ \runner -> do
-    r <- try (runRIO (MkBiDiEnv {logFunc = lf, biDiRunner = runner}) action)
+  BiDiRunner.withBiDi mLogger bidiUrl $ \ioRunner -> do
+    let rioRunner = BiDiRunner.hoistBiDiRunner liftIO (runRIO env) ioRunner
+        env = MkBiDiEnv {logFunc = lf, biDiRunner = rioRunner}
+    r <- try (runRIO env action)
     writeIORef resultRef r
   readIORef resultRef >>= either throwIO pure
   where
