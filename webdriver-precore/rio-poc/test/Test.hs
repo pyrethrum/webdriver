@@ -4,7 +4,7 @@
 -- Test suite for webdriver-rio-poc library
 module Main where
 
-import RIO
+import RIO hiding (log)
 import RIO.Text qualified as T
 import Test.Tasty (TestTree, defaultMain, testGroup)
 import Test.Tasty.HUnit (testCase)
@@ -113,14 +113,14 @@ loadCapabilities = do
 -- >>> basic_demo
 basic_demo :: IO ()
 basic_demo =
-  runHttp $ logInfo "Loaded eval config"
+  runHttp $ log "Loaded eval config"
 
 -- | Example showing how to use withHttpSession to set and get timeouts
 
 --- >>> session_demo
 session_demo :: IO ()
 session_demo = withSession $ do
-  logInfo "Session created, setting timeouts"
+  log "Session created, setting timeouts"
 
   -- Set new timeout values
   let newTimeouts =
@@ -135,36 +135,36 @@ session_demo = withSession $ do
 
   -- Get and log the current timeouts
   currentTimeouts <- getTimeouts
-  logInfo $ "Current timeouts: " <> displayShow currentTimeouts
+  log $ "Current timeouts: " <> displayShow currentTimeouts
 
 -- | Example showing how to use withHttpSession to set and get timeouts
 
 --- >>> input_navigation_base_demo
 input_navigation_base_demo :: IO ()
 input_navigation_base_demo = withSession $ do
-  logInfo "=== Navigate to login form ==="
+  log "=== Navigate to login form ==="
   loginPage <- loginUrl
   navigateTo loginPage
   maximizeWindow
   pause
 
-  logInfo "=== Fill in username ==="
+  log "=== Fill in username ==="
   usernameField <- findElement $ HTTP.CSS "#username"
   elementSendKeys usernameField "demoUser"
   pause
 
-  logInfo "=== Fill in password ==="
+  log "=== Fill in password ==="
   passwordField <- findElement $ HTTP.CSS "#password"
   elementSendKeys passwordField "s3cr3tP4ssw0rd"
   pause
 
-  logInfo "=== Navigate to colourful content page ==="
+  log "=== Navigate to colourful content page ==="
   contentPage <- contentPageUrl
   navigateTo contentPage
   pause
 
   title <- getTitle
-  logInfo $ "Landed on: " <> display title
+  log $ "Landed on: " <> display title
 
 -- ---------------------------------------------------------------------------
 -- BiDi demo
@@ -183,48 +183,43 @@ bidi_login_demo = runHttp' $ \config -> do
 
   R.withBiDiSession False caps $ do
 
-    -- ── Get the root browsing context ────────────────────────────────────
-    logInfo "=== Get root browsing context ==="
+    log "=== Get root browsing context ==="
     tree <- browsingContextGetTree $ MkGetTree Nothing Nothing
     bc <- case tree of
       MkGetTreeResult (info : _) -> do
         let MkBrowsingContext ctxId = info.context
-        logInfo $ "Root context: " <> display ctxId
+        log $ "Root context: " <> display ctxId
         pure info.context
       _ -> throwIO $ userError "No browsing contexts found"
 
-    -- ── Subscribe to domContentLoaded with a timed wait ──────────────────
-    logInfo "=== Subscribe to browsingContext.domContentLoaded ==="
+    log "=== Subscribe to browsingContext.domContentLoaded ==="
     loadedVar <- newEmptyTMVarIO
     let onLoadedEvent :: NavigationInfo -> IO ()
         onLoadedEvent evt = do
           void $ atomically $ tryPutTMVar loadedVar evt
 
-    _ <- subscribeBrowsingContextDomContentLoaded onLoadedEvent
+    logsubscribeBrowsingContextDomContentLoaded onLoadedEvent
 
-    -- Also subscribe to the multi (many) style for demonstration
+    log "=== Subscribe to browsingContext.domContentLoaded Many-style ==="
     navVar <- newEmptyTMVarIO
-    _ <- subscribeMany [BrowsingContextLoad] $ \evt -> do
-      putStrLn $ "!!! browsingContext.load event (many-style): " <> show evt
+    logsubscribeMany [BrowsingContextLoad] $ \evt -> do
+      log $ "!!! browsingContext.load event (many-style): " <> show evt
       void $ atomically $ tryPutTMVar navVar ()
 
-    -- ── Navigate to the login page ───────────────────────────────────────
-    logInfo "=== Navigate to login page ==="
+    log "=== Navigate to login page ==="
     loginPage <- loginUrl
-    _ <- browsingContextNavigate $ MkNavigate bc loginPage Nothing
+    logbrowsingContextNavigate $ MkNavigate bc loginPage Nothing
 
-    -- ── Wait for domContentLoaded (10 s timeout) ─────────────────────────
-    logInfo "=== Waiting for domContentLoaded event ==="
+    log "=== Waiting for domContentLoaded event ==="
     let waitLoaded =
           atomically (readTMVar loadedVar) >>= \evt ->
-            logInfo $ "!!! domContentLoaded fired: " <> displayShow evt
+            log $ "!!! domContentLoaded fired: " <> displayShow evt
         waitTimeout =
           threadDelay (10 * 1_000_000)
             >> throwIO (userError "Timeout: domContentLoaded did not fire within 10 s")
     race_ waitTimeout waitLoaded
 
-    -- ── Locate the username field and type into it ───────────────────────
-    logInfo "=== Locate #username field ==="
+    log "=== Locate #username field ==="
     nodesResult <- browsingContextLocateNodes $
       MkLocateNodes
         { context = bc,
@@ -233,7 +228,7 @@ bidi_login_demo = runHttp' $ \config -> do
           serializationOptions = Nothing,
           startNodes = Nothing
         }
-    logInfo $ "Located nodes: " <> displayShow nodesResult
+    log $ "Located nodes: " <> displayShow nodesResult
 
     let MkLocateNodesResult nodes = nodesResult
         usernameSharedId :: SharedId
@@ -241,7 +236,7 @@ bidi_login_demo = runHttp' $ \config -> do
           [node] -> fromJust node.sharedId
           _      -> error "Expected exactly one #username element"
 
-    logInfo "=== Type 'rioUser' into #username via BiDi key actions ==="
+    log "=== Type 'rioUser' into #username via BiDi key actions ==="
     inputPerformActions $
       MkPerformActions
         { context = bc,
@@ -276,12 +271,6 @@ bidi_login_demo = runHttp' $ \config -> do
                   }
             ]
         }
-
-    logInfo "=== Typed into #username successfully ==="
-
-    -- ── Wait 1 s so the browser has time to dispatch any remaining events ─
-    threadDelay 1_000_000
-    logInfo "=== BiDi login demo complete ==="
 
 -- | Minimal pointer properties (all optional fields set to Nothing).
 defaultPointerProps :: PointerCommonProperties

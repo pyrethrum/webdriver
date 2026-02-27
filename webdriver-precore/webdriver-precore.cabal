@@ -460,6 +460,7 @@ test-suite test-rio-poc
   type: exitcode-stdio-1.0
   main-is: Test.hs
   hs-source-dirs: rio-poc/test
+  default-extensions: NoImplicitPrelude
   build-depends:
     webdriver-precore:webdriver-precore,
     webdriver-precore:webdriver-precore-extended,

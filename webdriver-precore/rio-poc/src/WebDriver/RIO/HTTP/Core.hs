@@ -29,9 +29,11 @@ module WebDriver.RIO.HTTP.Core
     getHttpDriverInfo,
     runHttpCommand,
     getBiDiRunner,
+    log
   )
 where
 
+import Prelude hiding (log)
 import Data.Aeson (FromJSON)
 import RIO
   ( HasLogFunc (..),
@@ -84,6 +86,11 @@ class HasPauseDuration env where
 
 getLogger :: (HasLogFunc env) => RIO env LogFunc
 getLogger = view logFuncL
+
+log :: (HasLogFunc env) => Text -> RIO env ()
+log = logInfo . display
+
+
 
 getHttpDriverInfo :: (HasHttpDriverInfo env) => RIO env HttpDriverInfo
 getHttpDriverInfo = view httpDriverInfoL
