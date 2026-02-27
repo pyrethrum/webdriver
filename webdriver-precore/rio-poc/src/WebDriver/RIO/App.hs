@@ -15,6 +15,7 @@ module WebDriver.RIO.App
     -- * BiDi Runners
     runBiDi,
     withBiDiEnv,
+    withBiDiSession,
   )
 where
 
@@ -31,12 +32,12 @@ import WebDriver.RIO.HTTP.Core
     getHttpDriverInfo,
     getLogger,
   )
-import WebDriver.RIO.HTTP.Base.Actions (deleteSession, newSession)
+import WebDriver.RIO.HTTP.Base.Actions (deleteSession, newSessionResponse)
 import WebDriver.RIO.Logging (LoggerConfig (..), withLogging)
 import WebDriverPreCore.Extended.Capabilities as EC
 import WebDriverPreCore.HttpRunner (HttpEndpoint (..))
 import WebDriverPreCore.Utils.Timeout (Timeout (..))
-import WebDriverPreCore.BiDiRunner (BiDiUrl)
+import WebDriverPreCore.BiDiRunner (BiDiUrl, parseBiDiUrl)
 import WebDriverPreCore.BiDiRunner qualified as BiDiRunner
 
 defaultDriverInfo :: HttpDriverInfo
@@ -68,11 +69,11 @@ mkHttpSession :: (HasLogFunc env, HasHttpDriverInfo env) => EC.HttpCapabilities 
 mkHttpSession caps timeout' = do
   lf <- getLogger
   driverInfo <- getHttpDriverInfo
-  session <- newSession caps
+  resp <- newSessionResponse caps
   pure MkHttpSessionEnv
     { logFunc = lf
     , httpDriverInfo = driverInfo
-    , httpSession = session
+    , httpSession = resp.session
     , pauseDuration = timeout'
     }
 
@@ -144,6 +145,39 @@ withBiDiEnv ::
 withBiDiEnv driverLogging bidiUrl action = do
   lf <- view logFuncL
   liftIO $ withBiDiEnvIO lf driverLogging bidiUrl action
+
+-- | Create an HTTP session with BiDi enabled, open the WebSocket, and run
+-- a 'RIO BiDiEnv' action.  The HTTP session is deleted on exit (or error).
+--
+-- The provided 'EC.HttpCapabilities' must have @webSocketUrl = Just True@ so
+-- that the driver returns a WebSocket URL in the session response.
+withBiDiSession ::
+  (HasLogFunc env, HasHttpDriverInfo env) =>
+  -- | Whether to enable driver-level message logging
+  Bool ->
+  -- | Capabilities – must enable @webSocketUrl@
+  EC.HttpCapabilities ->
+  -- | Action to run in the BiDi environment
+  RIO BiDiEnv a ->
+  RIO env a
+withBiDiSession driverLogging caps action = do
+  lf <- view logFuncL
+  driverInfo <- getHttpDriverInfo
+  resp <- newSessionResponse caps
+  let sessionEnv = MkHttpSessionEnv
+        { logFunc = lf
+        , httpDriverInfo = driverInfo
+        , httpSession = resp.session
+        , pauseDuration = MkTimeout 0
+        }
+  flip finally (runRIO sessionEnv deleteSession) $ do
+    wsText <- case resp.websocketUrl of
+      Nothing -> throwIO $ userError "withBiDiSession: driver did not return a WebSocket URL (is webSocketUrl=true in caps?)"
+      Just t  -> pure t
+    bidiUrl <- case parseBiDiUrl wsText of
+      Nothing -> throwIO $ userError $ "withBiDiSession: could not parse WebSocket URL: " <> show wsText
+      Just u  -> pure u
+    withBiDiEnv driverLogging bidiUrl action
 
 -- Internal helper: open a BiDi connection and run an action in BiDiEnv.
 withBiDiEnvIO :: LogFunc -> Bool -> BiDiUrl -> RIO BiDiEnv a -> IO a

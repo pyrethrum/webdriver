@@ -5,17 +5,45 @@
 module Main where
 
 import RIO
+import RIO.Text qualified as T
 import Test.Tasty (TestTree, defaultMain, testGroup)
 import Test.Tasty.HUnit (testCase)
 import WebDriver.RIO hiding (runHttp, withHttpSession)
 import WebDriver.RIO qualified as R
 import WebDriver.RIO.HTTP.Base.Actions
+import WebDriver.RIO.BiDi.Base.Actions
 import WebDriverPreCore.Extended.Capabilities ()
 import WebDriverPreCore.Extended.HTTP.Base.Protocol qualified as HTTP
 import WebDriverPreCore.Test.CapabilitiesBuilder (httpCapabilities)
 import WebDriverPreCore.Test.ConfigLoader (Config (..), loadConfig)
 import WebDriverPreCore.Test.TestData (contentPageUrl, loginUrl)
+import WebDriverPreCore.BiDi.Protocol
+  ( BrowsingContext (..),
+    GetTree (..),
+    GetTreeResult (..),
+    Info (..),
+    KnownSubscriptionType (..),
+    Navigate (..),
+    NavigationInfo (..),
+    LocateNodes (..),
+    LocateNodesResult (..),
+    NodeRemoteValue (..),
+    Locator (..),
+    PerformActions (..),
+    PointerSourceActions (..),
+    PointerSourceAction (..),
+    Pointer (..),
+    PointerType (..),
+    PointerCommonProperties (..),
+    Origin (..),
+    SharedReference (..),
+    SharedId,
+    KeySourceActions (..),
+    KeySourceAction (..),
+    SourceActions (..),
+  )
 import WebDriverPreCore.Utils.Timeout (Timeout (..))
+import Data.Maybe (fromJust)
 
 main :: IO ()
 main = defaultMain tests
@@ -24,7 +52,8 @@ tests :: TestTree
 tests =
   testGroup
     "RIO Tests"
-    []
+    [ testCase "BiDi login demo" bidi_login_demo
+    ]
 
 -- testCase "Basic Demo" basic_demo
 
@@ -63,6 +92,15 @@ mkHttpCaps config =
       firstMatch = []
     }
 
+mkBiDiCaps :: Config -> HttpCapabilities
+mkBiDiCaps config =
+  MkFullCapabilities
+    { alwaysMatch = Just cap { httpWebSocketUrl = Just True },
+      firstMatch = []
+    }
+  where
+    cap = fromHttpCapability $ httpCapabilities config
+
 loadCapabilities :: IO HttpCapabilities
 loadCapabilities = do
   config <- loadConfig
@@ -99,7 +137,9 @@ session_demo = withSession $ do
   currentTimeouts <- getTimeouts
   logInfo $ "Current timeouts: " <> displayShow currentTimeouts
 
--- >>> input_navigation_base_demo
+-- | Example showing how to use withHttpSession to set and get timeouts
+
+--- >>> input_navigation_base_demo
 input_navigation_base_demo :: IO ()
 input_navigation_base_demo = withSession $ do
   logInfo "=== Navigate to login form ==="
@@ -125,3 +165,137 @@ input_navigation_base_demo = withSession $ do
 
   title <- getTitle
   logInfo $ "Landed on: " <> display title
+
+-- ---------------------------------------------------------------------------
+-- BiDi demo
+-- ---------------------------------------------------------------------------
+
+-- | BiDi version of the login demo:
+--   - Subscribes to browsingContext.domContentLoaded events with a timed wait
+--   - Navigates to the login page
+--   - Fills in the username field via BiDi input actions
+--   - Waits for and logs the received event
+--
+-- Run with: >>> bidi_login_demo
+bidi_login_demo :: IO ()
+bidi_login_demo = runHttp' $ \config -> do
+  let caps = mkBiDiCaps config
+
+  R.withBiDiSession False caps $ do
+
+    -- ── Get the root browsing context ────────────────────────────────────
+    logInfo "=== Get root browsing context ==="
+    tree <- browsingContextGetTree $ MkGetTree Nothing Nothing
+    bc <- case tree of
+      MkGetTreeResult (info : _) -> do
+        let MkBrowsingContext ctxId = info.context
+        logInfo $ "Root context: " <> display ctxId
+        pure info.context
+      _ -> throwIO $ userError "No browsing contexts found"
+
+    -- ── Subscribe to domContentLoaded with a timed wait ──────────────────
+    logInfo "=== Subscribe to browsingContext.domContentLoaded ==="
+    loadedVar <- newEmptyTMVarIO
+    let onLoadedEvent :: NavigationInfo -> IO ()
+        onLoadedEvent evt = do
+          void $ atomically $ tryPutTMVar loadedVar evt
+
+    _ <- subscribeBrowsingContextDomContentLoaded onLoadedEvent
+
+    -- Also subscribe to the multi (many) style for demonstration
+    navVar <- newEmptyTMVarIO
+    _ <- subscribeMany [BrowsingContextLoad] $ \evt -> do
+      putStrLn $ "!!! browsingContext.load event (many-style): " <> show evt
+      void $ atomically $ tryPutTMVar navVar ()
+
+    -- ── Navigate to the login page ───────────────────────────────────────
+    logInfo "=== Navigate to login page ==="
+    loginPage <- loginUrl
+    _ <- browsingContextNavigate $ MkNavigate bc loginPage Nothing
+
+    -- ── Wait for domContentLoaded (10 s timeout) ─────────────────────────
+    logInfo "=== Waiting for domContentLoaded event ==="
+    let waitLoaded =
+          atomically (readTMVar loadedVar) >>= \evt ->
+            logInfo $ "!!! domContentLoaded fired: " <> displayShow evt
+        waitTimeout =
+          threadDelay (10 * 1_000_000)
+            >> throwIO (userError "Timeout: domContentLoaded did not fire within 10 s")
+    race_ waitTimeout waitLoaded
+
+    -- ── Locate the username field and type into it ───────────────────────
+    logInfo "=== Locate #username field ==="
+    nodesResult <- browsingContextLocateNodes $
+      MkLocateNodes
+        { context = bc,
+          locator = CSS {value = "#username"},
+          maxNodeCount = Nothing,
+          serializationOptions = Nothing,
+          startNodes = Nothing
+        }
+    logInfo $ "Located nodes: " <> displayShow nodesResult
+
+    let MkLocateNodesResult nodes = nodesResult
+        usernameSharedId :: SharedId
+        usernameSharedId = case nodes of
+          [node] -> fromJust node.sharedId
+          _      -> error "Expected exactly one #username element"
+
+    logInfo "=== Type 'rioUser' into #username via BiDi key actions ==="
+    inputPerformActions $
+      MkPerformActions
+        { context = bc,
+          actions =
+            [ PointerSourceActions $
+                MkPointerSourceActions
+                  { pointerId = "mouse1",
+                    pointer = Just $ MkPointer {pointerType = Just MousePointer},
+                    pointerActions =
+                      [ PointerMove
+                          { x = 0,
+                            y = 0,
+                            duration = Nothing,
+                            origin =
+                              Just $
+                                ElementOrigin $
+                                  MkSharedReference
+                                    { sharedId = usernameSharedId,
+                                      handle = Nothing,
+                                      extensions = Nothing
+                                    },
+                            pointerCommonProperties = defaultPointerProps
+                          },
+                        PointerDown {button = 0, pointerCommonProperties = defaultPointerProps},
+                        PointerUp   {button = 0}
+                      ]
+                  },
+              KeySourceActions $
+                MkKeySourceActions
+                  { keyId = "keyboard1",
+                    keyActions = concatMap charToKeys (T.unpack "rioUser")
+                  }
+            ]
+        }
+
+    logInfo "=== Typed into #username successfully ==="
+
+    -- ── Wait 1 s so the browser has time to dispatch any remaining events ─
+    threadDelay 1_000_000
+    logInfo "=== BiDi login demo complete ==="
+
+-- | Minimal pointer properties (all optional fields set to Nothing).
+defaultPointerProps :: PointerCommonProperties
+defaultPointerProps =
+  MkPointerCommonProperties
+    { width = Nothing,
+      height = Nothing,
+      pressure = Nothing,
+      tangentialPressure = Nothing,
+      twist = Nothing,
+      altitudeAngle = Nothing,
+      azimuthAngle = Nothing
+    }
+
+-- | Convert a 'Char' to a pair of keyDown/keyUp 'KeySourceAction's.
+charToKeys :: Char -> [KeySourceAction]
+charToKeys c = [KeyDown {value = T.singleton c}, KeyUp {value = T.singleton c}]
