@@ -43,7 +43,7 @@ import Data.Text (Text, pack, take, unpack)
 import Data.Text.Encoding (decodeUtf8)
 import Network.WebSockets (ClientApp, Connection, receiveData, sendTextData)
 import Network.WebSockets qualified as WS
-import UnliftIO (MonadIO, MonadUnliftIO, catchAny, liftIO, throwIO, waitAnyCatch)
+import UnliftIO (MonadIO, MonadUnliftIO, catchAny, liftIO, throwIO, waitAnyCatch, UnliftIO (unliftIO))
 import UnliftIO.Async (Async, async, cancel)
 import UnliftIO.STM (TVar, atomically, readTChan, readTVarIO, writeTChan)
 import WebDriverPreCore.BiDiRunnerBase.Response
@@ -182,7 +182,7 @@ catchLog msg logger action =
 withSocket :: (MonadIO m) => BiDiUrl -> Logger m -> MessageLoops m -> m () -> m ()
 withSocket pth@MkBiDiUrl {host, port, path} logger messageLoops action = do
   logger $ "Connecting to WebDriver at " <> pack (show pth)
-  runClient (unpack host) port (unpack path) $ \conn -> do
+  runClient (unpack host) port (unpack path) $ \conn ->  do
     eventLoop <- messageLoops.eventLoop
     getLoop <- messageLoops.getLoop conn
     sendLoop <- messageLoops.sendLoop conn
