@@ -9,11 +9,10 @@
 --
 -- All implement 'HasLogFunc'; runner envs implement 'HasHttpDriverInfo';
 -- session envs add 'HasHttpSession'.
+--
+-- Typeclasses and abstract helpers live in "WebDriver.RIO.HTTP.Core".
 module WebDriver.RIO.Env
   ( BaseEnv (..),
-
-    -- * Driver Info
-    HttpDriverInfo (..),
 
     -- * Runner Envs
     HttpEnv (..),
@@ -21,71 +20,23 @@ module WebDriver.RIO.Env
 
     -- * Session Envs
     HttpSessionEnv (..),
-
-    -- * Driver Info Typeclass
-    HasHttpDriverInfo (..),
-
-    -- * Other Runner Typeclasses
-    HasBiDiRunner (..),
-
-    -- * Session Typeclasses
-    HasHttpSession (..),
-    HasBiDiSession (..),
-    HasPauseDuration (..),
-    getLogger,
-    getHttpDriverInfo,
-    runCommand,
-    getBiDiRunner,
   )
 where
 
-import Data.Aeson (FromJSON)
 import RIO
   ( HasLogFunc (..),
     Lens',
     LogFunc,
-    RIO,
-    Text,
-    display,
-    first,
     lens,
-    liftIO,
-    logInfo,
-    runRIO,
-    throwIO,
-    view,
   )
-import WebDriverPreCore.BiDiRunner (BiDiRunner)
-import WebDriverPreCore.Error (parseFailToWDException)
-import WebDriverPreCore.Extended.HTTP.Base.Protocol (Command (..), Session (..))
-import WebDriverPreCore.HttpRunner (HttpEndpoint (..), callWebDriver)
+import WebDriver.RIO.HTTP.Core
+  ( HasHttpDriverInfo (..),
+    HasHttpSession (..),
+    HasPauseDuration (..),
+    HttpDriverInfo (..),
+  )
+import WebDriverPreCore.Extended.HTTP.Base.Protocol (Session (..))
 import WebDriverPreCore.Utils.Timeout (Timeout)
-
--- | Configuration for an HTTP WebDriver connection.
-data HttpDriverInfo = MkHttpDriverInfo
-  { httpEndpoint :: HttpEndpoint,
-    driverLogging :: Bool
-  }
-
--- | Env has an 'HttpDriverInfo' available.
-class HasHttpDriverInfo env where
-  httpDriverInfoL :: Lens' env HttpDriverInfo
-
--- | Env has a 'BiDiRunner' available.
-class HasBiDiRunner env where
-  biDiRunnerL :: Lens' env BiDiRunner
-
--- | Env has an HTTP session id available.
-class HasHttpSession env where
-  getHttpSession :: env -> Session
-
--- | Env has a BiDi session id available.
-class HasBiDiSession env where
-  getBiDiSession :: env -> Session
-
--- | Env has a pause duration available.
-class HasPauseDuration env where
-  getPauseDuration :: env -> Timeout
 
 -- ---------------------------------------------------------------------------
 -- HTTP runner env
@@ -108,34 +59,6 @@ instance HasLogFunc HttpEnv where
 instance HasHttpDriverInfo HttpEnv where
   httpDriverInfoL :: Lens' HttpEnv HttpDriverInfo
   httpDriverInfoL = lens (.httpDriverInfo) \MkHttpEnv {..} i -> MkHttpEnv {httpDriverInfo = i, ..}
-
--- ---------------------------------------------------------------------------
--- Shared helpers
--- ---------------------------------------------------------------------------
-
-getLogger :: (HasLogFunc env) => RIO env LogFunc
-getLogger = view logFuncL
-
-getHttpDriverInfo :: (HasHttpDriverInfo env) => RIO env HttpDriverInfo
-getHttpDriverInfo = view httpDriverInfoL
-
--- | Run a WebDriver 'Command' in the RIO environment, using the stored
--- driver info to build an HTTP runner on each call.
--- Logging is enabled only when 'driverLogging' is 'True'.
-runCommand :: forall env r. (HasHttpDriverInfo env, HasLogFunc env, FromJSON r) => Command r -> RIO env r
-runCommand cmd = do
-  MkHttpDriverInfo {httpEndpoint, driverLogging} <- getHttpDriverInfo
-  lf <- view logFuncL
-  let mLogger :: Maybe (Text -> IO ())
-      mLogger
-        | driverLogging = Just $ \t -> runRIO lf (logInfo (display t))
-        | otherwise = Nothing
-  liftIO $
-    callWebDriver httpEndpoint mLogger cmd
-      >>= either (throwIO . parseFailToWDException) pure
-
-getBiDiRunner :: (HasBiDiRunner env) => RIO env BiDiRunner
-getBiDiRunner = view biDiRunnerL
 
 data BaseEnv = MkBaseEnv
   { logFunc :: LogFunc

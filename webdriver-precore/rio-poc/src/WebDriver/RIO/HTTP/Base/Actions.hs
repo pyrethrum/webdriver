@@ -89,10 +89,10 @@ where
 
 import Data.Aeson (FromJSON, Value)
 import RIO (HasLogFunc (..), RIO, Text, ask, asks, liftIO, runRIO)
-import WebDriver.RIO.Env
+import WebDriver.RIO.HTTP.Core
   ( HasHttpDriverInfo (..),
     HasHttpSession (..),
-    runCommand,
+    runHttpCommand,
   )
 import WebDriverPreCore.Extended.Capabilities qualified as EC
 import WebDriverPreCore.Extended.HTTP.Base.Actions qualified as A
@@ -122,7 +122,7 @@ viaSession :: (HasHttpDriverInfo env, HasLogFunc env, HasHttpSession env, FromJS
 viaSession sesFunc = do
   env <- ask
   session <- asks getHttpSession
-  liftIO $ sesFunc (runRIO env . runCommand) session
+  liftIO $ sesFunc (runRIO env . runHttpCommand) session
 
 -- | Lift a session action with one extra argument.
 viaSession1 :: (HasHttpDriverInfo env, HasLogFunc env, HasHttpSession env, FromJSON a) => (A.Runner IO a -> Session -> b -> IO a) -> b -> RIO env a
@@ -139,7 +139,7 @@ viaSession2 f b c = viaSession (\r s -> f r s b c)
 viaRunner :: (HasHttpDriverInfo env, HasLogFunc env, FromJSON a) => ((Command a -> IO a) -> IO b) -> RIO env b
 viaRunner f = do
   env <- ask
-  liftIO $ f (runRIO env . runCommand)
+  liftIO $ f (runRIO env . runHttpCommand)
 
 status :: (HasHttpDriverInfo env, HasLogFunc env) => RIO env Status
 status = viaRunner A.status

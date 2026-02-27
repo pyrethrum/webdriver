@@ -11,8 +11,10 @@ module WebDriverPreCore.BiDiRunner
     withBiDiFailTest,
     BiDiRunner (..),
     mkBiDiRunner,
-    
-    -- * Subscription Management
+        -- * Low-level commands
+    runNoWait,
+    runOffSpecNoWait,
+        -- * Subscription Management
     subscribe,
     unsubscribe,
     
@@ -21,11 +23,12 @@ module WebDriverPreCore.BiDiRunner
     parseBiDiUrl,
     SocketActions (..),
     ResponseException (..),
+    Request,
   )
 where
 
 import Control.Exception (fromException)
-import Data.Aeson (FromJSON, toJSON, parseJSON)
+import Data.Aeson (FromJSON, Object, toJSON, parseJSON)
 import Data.Aeson.Types (parseEither)
 import Data.Coerce (coerce)
 import Data.Set qualified as Set
@@ -47,10 +50,12 @@ import WebDriverPreCore.BiDiRunnerBase
 import WebDriverPreCore.BiDiRunnerBase qualified as Base
 import WebDriverPreCore.BiDiRunnerBase.Response (ResponseException (..))
 import WebDriverPreCore.BiDiRunnerBase.Socket qualified as Socket
+import WebDriverPreCore.BiDiRunnerBase.Types (Request)
 import WebDriverPreCore.BiDiRunnerBase.Types qualified as BaseTypes
 import WebDriverPreCore.BiDi.Protocol as P
   ( Command (..),
     CommandMethod (..),
+    JSUInt (..),
     OffSpecCommand (..),
     SessionSubscribeResult (..),
     SessionSubscibe (..),
@@ -70,15 +75,35 @@ data BiDiRunner = MkBiDiRunner
   { -- | Execute a typed command
     run :: forall r. (FromJSON r) => Command r -> IO r,
     -- | Get the underlying socket actions
-    socketActions :: SocketActions
+    socketActions :: SocketActions,
+    -- | Execute a typed command with an explicit message ID
+    runWithId :: forall r. (FromJSON r) => JSUInt -> Command r -> IO r,
+    -- | Send an off-spec command with an explicit message ID
+    runOffSpecWithId :: JSUInt -> Text -> Object -> IO Object
   }
 
 -- | Create a typed BiDi runner from socket actions
 mkBiDiRunner :: SocketActions -> BiDiRunner
 mkBiDiRunner sa = MkBiDiRunner
   { run = runTypedCommand sa,
-    socketActions = sa
+    socketActions = sa,
+    runWithId = \(MkJSUInt msgId) cmd ->
+      Socket.sendCommand' (coerceSocketActions sa) (BaseTypes.MkJSUInt msgId) (commandToSocketCommand cmd),
+    runOffSpecWithId = \(MkJSUInt msgId) method params ->
+      Socket.sendCommand' (coerceSocketActions sa) (BaseTypes.MkJSUInt msgId) $
+        BaseTypes.MkSocketCommand method (toJSON params)
   }
+
+-- | Send a typed 'Command' without waiting for a response.
+runNoWait :: BiDiRunner -> Command r -> IO Request
+runNoWait MkBiDiRunner {socketActions} cmd =
+  Socket.sendCommandNoWait (coerceSocketActions socketActions) (commandToSocketCommand cmd)
+
+-- | Send an off-spec command without waiting for a response.
+runOffSpecNoWait :: BiDiRunner -> Text -> Object -> IO Request
+runOffSpecNoWait MkBiDiRunner {socketActions} method params =
+  Socket.sendCommandNoWait (coerceSocketActions socketActions) $
+    BaseTypes.MkSocketCommand method (toJSON params)
 
 -- | Run a BiDi session with typed commands
 withBiDi 

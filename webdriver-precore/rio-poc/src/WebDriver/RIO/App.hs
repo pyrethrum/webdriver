@@ -17,11 +17,13 @@ where
 
 import RIO
 import WebDriver.RIO.Env
+  ( HttpSessionEnv (..),
+  )
+import WebDriver.RIO.HTTP.Core
   ( HasHttpDriverInfo,
     HasHttpSession,
     HasPauseDuration (getPauseDuration),
     HttpDriverInfo (..),
-    HttpSessionEnv (..),
     getHttpDriverInfo,
     getLogger,
   )

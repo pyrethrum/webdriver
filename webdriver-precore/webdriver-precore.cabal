@@ -436,9 +436,11 @@ library webdriver-rio-poc
       WebDriver.RIO
       WebDriver.RIO.App
       WebDriver.RIO.BiDi.Base
+      WebDriver.RIO.BiDi.Base.Actions
       WebDriver.RIO.Env
       WebDriver.RIO.HTTP.Base
       WebDriver.RIO.HTTP.Base.Actions
+      WebDriver.RIO.HTTP.Core
       WebDriver.RIO.Logging
   hs-source-dirs: rio-poc/src
   build-depends:
@@ -449,7 +451,8 @@ library webdriver-rio-poc
     webdriver-precore:utils-internal,
     aeson         >=2.0   && <3,
     base          >=4.16  && <5,
-    rio           >=0.1   && <0.2
+    rio           >=0.1   && <0.2,
+    text          >=2.1   && <2.2
   default-language: Haskell2010
 
 test-suite test-rio-poc

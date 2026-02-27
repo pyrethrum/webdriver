@@ -9,8 +9,11 @@ module WebDriver.RIO
   ( -- * Capabilities
     module WebDriverPreCore.Extended.Capabilities,
 
-    -- * Environment Types & Typeclasses
+    -- * Environment Types
     module WebDriver.RIO.Env,
+
+    -- * Core Typeclasses & Helpers
+    module WebDriver.RIO.HTTP.Core,
 
     -- * App / Runners
     module WebDriver.RIO.App,
@@ -25,6 +28,7 @@ where
 
 import WebDriverPreCore.Extended.Capabilities
 import WebDriver.RIO.Env
+import WebDriver.RIO.HTTP.Core
 import WebDriver.RIO.Logging
 import WebDriver.RIO.App
 import WebDriverPreCore.HttpRunner
