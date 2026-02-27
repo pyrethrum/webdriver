@@ -46,19 +46,19 @@ data SocketCommand a r = MkSocketCommand
   deriving (Show, Eq)
 
 -- | A subscription handler
-data SocketSubscription where
+data SocketSubscription m where
   SingleSubscription ::
-    forall r.
+    forall m r.
     (FromJSON r) =>
     { subscriptionType :: SocketSubscriptionType,
-      action :: r -> IO ()
+      action :: r -> m ()
     } ->
-    SocketSubscription
+    SocketSubscription m
   MultiSubscription ::
     { subscriptionTypes :: Set SocketSubscriptionType,
-      nAction :: Value -> IO ()
+      nAction :: Value -> m ()
     } ->
-    SocketSubscription
+    SocketSubscription m
 
 -- | Subscription identifier
 newtype SocketSubscriptionId = MkSocketSubscriptionId {subscriptionId :: Text}
@@ -79,7 +79,7 @@ data SocketUnregister
 -- | A registered subscription with its ID
 data RegisteredSubscription m = MkRegisteredSubscription
   { subscriptionId :: SocketSubscriptionId,
-    subscription :: SocketSubscription
+    subscription :: SocketSubscription m
   }
 
 -- | A request with ID for matching responses

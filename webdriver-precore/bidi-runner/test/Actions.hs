@@ -283,7 +283,7 @@ data Actions = MkActions
   }
 
 -- | Create Actions from a BiDiRunner
-mkActions :: BiDiRunner -> Actions
+mkActions :: BiDiRunner IO -> Actions
 mkActions (MkBiDiRunner {run, socketActions}) =
   MkActions
     { -- Session commands

@@ -61,7 +61,7 @@ nullLogger = const $ pure ()
 -- | Combined channel and socket actions
 data ChannelActions m = MkChannelActions
   { messageLoops :: MessageLoops m,
-    socketActions :: SocketActions
+    socketActions :: SocketActions m
   }
 
 -- | Message handling actions
@@ -93,7 +93,7 @@ withBiDiBase ::
   (MonadUnliftIO m) =>
   Maybe (Logger m) ->
   BiDiUrl ->
-  (SocketActions -> m ()) ->
+  (SocketActions m -> m ()) ->
   m ()
 withBiDiBase mLogger bidiUrl action = do
   let logger = maybe nullLogger id mLogger
@@ -107,7 +107,7 @@ withBiDiWithActions ::
   Maybe (Logger m) ->
   BiDiUrl ->
   (Logger m -> m (ChannelActions m)) ->
-  (SocketActions -> m ()) ->
+  (SocketActions m -> m ()) ->
   m ()
 withBiDiWithActions mLogger bidiUrl mkActions action = do
   let logger = maybe nullLogger id mLogger
@@ -210,7 +210,7 @@ applySubscriptions log' obj subscriptions = do
         log' $
           "Not an event message: " <> msgType
       subs <- readTVarIO subscriptions
-      traverse_ (liftIO . applySubscription (MkSocketSubscriptionType method) params fullObj) ((.subscription) <$> subs)
+      traverse_ (applySubscription (MkSocketSubscriptionType method) params fullObj) ((.subscription) <$> subs)
 
 -- | Event properties parsed from a message
 data EventProps = MkEventProps
@@ -229,7 +229,7 @@ parseEventProps = withObject "EventProps" $ \o ->
     <*> pure (Object o)
 
 -- | Apply a subscription handler to an event
-applySubscription :: SocketSubscriptionType -> Value -> Value -> SocketSubscription -> IO ()
+applySubscription :: Monad m => SocketSubscriptionType -> Value -> Value -> SocketSubscription m -> m ()
 applySubscription subType params fullObj = \case
   SingleSubscription {subscriptionType, action} ->
     when (subType == subscriptionType) $

@@ -313,6 +313,7 @@ test-suite test-bidi-runner
     BrowsingContextEventDemos
     EmulationDemos
     ErrorDemo
+    FailSimulation
     FallbackDemos
     HttpActions
     InputDemos

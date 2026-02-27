@@ -59,11 +59,11 @@ data Channels m = MkChannels
   }
 
 -- | Actions available on the socket
-data SocketActions = MkSocketActions
+data SocketActions m = MkSocketActions
   { nextId :: STM JSUInt,
     send :: forall a. (ToJSON a, Show a) => a -> STM (),
     getNext :: STM (Either JSONEncodeException ResponseObject),
-    registerSubscription :: SocketSubscription -> SocketSubscriptionId -> STM (),
+    registerSubscription :: SocketSubscription m -> SocketSubscriptionId -> STM (),
     unregisterSubscription :: SocketUnregister -> STM ()
   }
 
@@ -88,7 +88,7 @@ mkAtomicCounter var = do
   readTVar var
 
 -- | Create socket actions from channels
-mkSocketActions :: Channels m -> SocketActions
+mkSocketActions :: Channels m -> SocketActions m
 mkSocketActions c =
   MkSocketActions
     { nextId = mkAtomicCounter c.counterVar,
@@ -106,7 +106,7 @@ mkSocketActions c =
 
 -- | Send a command without waiting for response
 sendCommandNoWait' :: forall a m r. (Show a, ToJSON a, MonadUnliftIO m, MonadFail m)
-  => SocketActions
+  => SocketActions m
   -> SocketCommand a r
   -> JSUInt
   -> m Request
@@ -129,7 +129,7 @@ sendCommandNoWait' MkSocketActions {send} command id = do
 
 -- | Send a command without waiting (auto-generates ID)
 sendCommandNoWait :: forall a m r. (Show a, ToJSON a, MonadUnliftIO m, MonadFail m)
-  => SocketActions 
+  => SocketActions m
   -> SocketCommand a r 
   -> m Request
 sendCommandNoWait sa command =
@@ -137,7 +137,7 @@ sendCommandNoWait sa command =
 
 -- | Send a command with specific ID and wait for response
 sendCommand' :: forall a m r. (FromJSON r, Show a, ToJSON a, MonadUnliftIO m, MonadFail m)
-  => SocketActions 
+  => SocketActions m
   -> JSUInt 
   -> SocketCommand a r 
   -> m r
@@ -147,7 +147,7 @@ sendCommand' sa id' command = do
 
 -- | Send a command and wait for response (auto-generates ID)
 sendCommand :: forall a m r. (FromJSON r, Show a, ToJSON a, MonadUnliftIO m, MonadFail m)
-  => SocketActions 
+  => SocketActions m
   -> SocketCommand a r 
   -> m r
 sendCommand sa@MkSocketActions {getNext} command = do
@@ -170,7 +170,7 @@ matchedRequest getNext request id' = do
 -- | Register a subscription
 registerSubscription' ::
   TVar [RegisteredSubscription m] ->
-  SocketSubscription ->
+  SocketSubscription m ->
   SocketSubscriptionId ->
   STM ()
 registerSubscription' allSubs subscription subId = do
@@ -193,7 +193,7 @@ unregisterSubscription' allSubs unsub =
             { subscription = removeSubscriptionFromMulti subscription
             }
 
-        removeSubscriptionFromMulti :: SocketSubscription -> SocketSubscription
+        removeSubscriptionFromMulti :: SocketSubscription m -> SocketSubscription m
         removeSubscriptionFromMulti = \case
           MultiSubscription {subscriptionTypes = subTypes, nAction} ->
             MultiSubscription
@@ -202,7 +202,7 @@ unregisterSubscription' allSubs unsub =
               }
           s@SingleSubscription {} -> s
 
-        subscriptionIsEmpty :: SocketSubscription -> Bool
+        subscriptionIsEmpty :: SocketSubscription m -> Bool
         subscriptionIsEmpty = \case
           MultiSubscription {subscriptionTypes} -> Set.null subscriptionTypes
           SingleSubscription {subscriptionType} -> subscriptionType `Set.member` unregTypes

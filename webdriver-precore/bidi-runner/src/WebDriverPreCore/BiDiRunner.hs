@@ -8,7 +8,6 @@ Command types, built on top of the JSON-based runner in BiDiRunnerBase.
 module WebDriverPreCore.BiDiRunner
   ( -- * BiDi Runner
     withBiDi,
-    withBiDiFailTest,
     BiDiRunner (..),
     mkBiDiRunner,
         -- * Low-level commands
@@ -32,20 +31,14 @@ import Data.Aeson (FromJSON, Object, toJSON, parseJSON)
 import Data.Aeson.Types (parseEither)
 import Data.Coerce (coerce)
 import Data.Set qualified as Set
-import Data.Text (Text, unpack)
-import Data.Word (Word64)
-import UnliftIO (catchAny, throwIO)
+import Data.Text (Text)
+import UnliftIO (MonadUnliftIO, catchAny, throwIO)
 import UnliftIO.STM (STM, atomically)
 import WebDriverPreCore.BiDiRunnerBase
   ( BiDiUrl (..),
-    ChannelActions (..),
-    MessageActions (..),
     SocketActions (..),
-    loopActions,
-    mkMessageActions,
     parseBiDiUrl,
     withBiDiBase,
-    withBiDiWithActions,
   )
 import WebDriverPreCore.BiDiRunnerBase qualified as Base
 import WebDriverPreCore.BiDiRunnerBase.Response (ResponseException (..))
@@ -71,19 +64,19 @@ import WebDriverPreCore.BiDi.Protocol as P
 import Prelude hiding (log)
 
 -- | Typed BiDi runner
-data BiDiRunner = MkBiDiRunner
+data BiDiRunner m = MkBiDiRunner
   { -- | Execute a typed command
-    run :: forall r m. (FromJSON r) => Command r -> m r,
+    run :: forall r. (FromJSON r) => Command r -> m r,
     -- | Get the underlying socket actions
-    socketActions :: SocketActions,
+    socketActions :: SocketActions m,
     -- | Execute a typed command with an explicit message ID
-    runWithId :: forall r m. (FromJSON r) => JSUInt -> Command r -> m r,
+    runWithId :: forall r. (FromJSON r) => JSUInt -> Command r -> m r,
     -- | Send an off-spec command with an explicit message ID
-    runOffSpecWithId :: forall m. JSUInt -> Text -> Object -> m Object
+    runOffSpecWithId :: JSUInt -> Text -> Object -> m Object
   }
 
 -- | Create a typed BiDi runner from socket actions
-mkBiDiRunner :: SocketActions -> BiDiRunner
+mkBiDiRunner :: (MonadUnliftIO m, MonadFail m) => SocketActions m -> BiDiRunner m
 mkBiDiRunner sa = MkBiDiRunner
   { run = runTypedCommand sa,
     socketActions = sa,
@@ -95,28 +88,29 @@ mkBiDiRunner sa = MkBiDiRunner
   }
 
 -- | Send a typed 'Command' without waiting for a response.
-runNoWait :: BiDiRunner -> Command r -> IO Request
+runNoWait :: (MonadUnliftIO m, MonadFail m) => BiDiRunner m -> Command r -> m Request
 runNoWait MkBiDiRunner {socketActions} cmd =
   Socket.sendCommandNoWait (coerceSocketActions socketActions) (commandToSocketCommand cmd)
 
 -- | Send an off-spec command without waiting for a response.
-runOffSpecNoWait :: BiDiRunner -> Text -> Object -> IO Request
+runOffSpecNoWait :: (MonadUnliftIO m, MonadFail m) => BiDiRunner m -> Text -> Object -> m Request
 runOffSpecNoWait MkBiDiRunner {socketActions} method params =
   Socket.sendCommandNoWait (coerceSocketActions socketActions) $
     BaseTypes.MkSocketCommand method (toJSON params)
 
 -- | Run a BiDi session with typed commands
-withBiDi 
-  :: Maybe (Text -> IO ())  -- ^ Optional logger
-  -> BiDiUrl 
-  -> (BiDiRunner -> IO ()) 
-  -> IO ()
+withBiDi
+  :: (MonadUnliftIO m, MonadFail m)
+  => Maybe (Text -> m ())  -- ^ Optional logger
+  -> BiDiUrl
+  -> (BiDiRunner m -> m ())
+  -> m ()
 withBiDi mLogger bidiUrl action =
   withBiDiBase mLogger bidiUrl $ \sa ->
     action (mkBiDiRunner sa)
 
 -- | Execute a typed command
-runTypedCommand :: forall m r. (FromJSON r) => SocketActions -> Command r ->  m r
+runTypedCommand :: forall m r. (FromJSON r, MonadUnliftIO m, MonadFail m) => SocketActions m -> Command r -> m r
 runTypedCommand sa cmd = do
   let socketCmd = commandToSocketCommand cmd
   Socket.sendCommand (coerceSocketActions sa) socketCmd
@@ -138,15 +132,17 @@ commandToSocketCommand cmd = BaseTypes.MkSocketCommand
       OffSpecCommand (P.MkOffSpecCommand cmdText) -> cmdText
 
 -- | Coerce socket actions between the typed and base versions
-coerceSocketActions :: SocketActions -> Base.SocketActions
+coerceSocketActions :: SocketActions m -> Base.SocketActions m
 coerceSocketActions = coerce
 
 -- | Subscribe to events with a typed handler
 subscribe ::
-  SocketActions ->
-  (SessionSubscibe -> IO SessionSubscribeResult) ->
-  Subscription IO ->
-  IO SubscriptionId
+  forall m.
+  MonadUnliftIO m =>
+  SocketActions m ->
+  (SessionSubscibe -> m SessionSubscribeResult) ->
+  Subscription m ->
+  m SubscriptionId
 subscribe sa callSubscribe subscription = do
   -- Subscribe with a dummy ID first
   atomically $ subscribeWithId dummySubId
@@ -163,7 +159,7 @@ subscribe sa callSubscribe subscription = do
         throwIO e
     )
   where
-    mkRequest :: Subscription IO -> SessionSubscibe
+    mkRequest :: Subscription m -> SessionSubscibe
     mkRequest s = case s of
       P.SingleSubscription {subscriptionType} ->
         MkSessionSubscribe
@@ -190,7 +186,7 @@ subscribe sa callSubscribe subscription = do
           [] -> Nothing
           xs -> Just xs
 
-    mkRegistration :: Subscription IO -> BaseTypes.SocketSubscription
+    mkRegistration :: Subscription m -> BaseTypes.SocketSubscription m
     mkRegistration = \case
       P.SingleSubscription {subscriptionType, action} ->
         BaseTypes.SingleSubscription
@@ -225,7 +221,7 @@ subscribe sa callSubscribe subscription = do
         BaseTypes.UnregisterById $ Set.singleton dummySubId
 
 -- | Unsubscribe from events
-unsubscribe :: SocketActions -> (SessionUnsubscribe -> IO ()) -> SessionUnsubscribe -> IO ()
+unsubscribe :: MonadUnliftIO m => SocketActions m -> (SessionUnsubscribe -> m ()) -> SessionUnsubscribe -> m ()
 unsubscribe sa callUnsubscribe unsub = do
   callUnsubscribe unsub
   atomically $ (coerceSocketActions sa).unregisterSubscription (toSocketUnregister unsub)
@@ -242,66 +238,3 @@ unsubscribe sa callUnsubscribe unsub = do
 -- | Convert SubscriptionType to SocketSubscriptionType  
 toSocketSubType :: SubscriptionType -> BaseTypes.SocketSubscriptionType
 toSocketSubType = BaseTypes.MkSocketSubscriptionType . subscriptionTypeToText
-
--- | Run a BiDi session with failure injection for testing
-withBiDiFailTest 
-  :: Word64  -- ^ Fail send after this many calls
-  -> Word64  -- ^ Fail get after this many calls
-  -> Word64  -- ^ Fail event handler after this many calls
-  -> Maybe (Text -> IO ())  -- ^ Optional logger
-  -> BiDiUrl 
-  -> (BiDiRunner -> IO ()) 
-  -> IO ()
-withBiDiFailTest failSendCount failGetCount failEventCount mLogger bidiUrl action =
-  withBiDiWithActions mLogger bidiUrl (mkFailChannelActions failSendCount failGetCount failEventCount) $ \sa ->
-    action (mkBiDiRunner sa)
-
--- | Create channel actions with failure injection
-mkFailChannelActions 
-  :: Word64  -- ^ Fail send after this many calls
-  -> Word64  -- ^ Fail get after this many calls  
-  -> Word64  -- ^ Fail event handler after this many calls
-  -> (Text -> IO ())  -- ^ Logger
-  -> IO ChannelActions
-mkFailChannelActions failSendCount failGetCount failEventCount logger = do
-  channels <- Socket.initChannels
-  let baseActions = mkMessageActions logger channels
-  failedActions <- failMessageActions baseActions failSendCount failGetCount failEventCount
-  pure $
-    MkChannelActions
-      { socketActions = Socket.mkSocketActions channels,
-        messageLoops = loopActions logger failedActions
-      }
-
--- | Create message actions with failure injection
-failMessageActions 
-  :: MessageActions  -- ^ Base actions
-  -> Word64          -- ^ Fail send after this many calls
-  -> Word64          -- ^ Fail get after this many calls
-  -> Word64          -- ^ Fail event handler after this many calls
-  -> IO MessageActions
-failMessageActions baseActions failSendCount failGetCount failEventCount = do
-  send <- failAction "send" failSendCount baseActions.send
-  get <- failAction "get" failGetCount baseActions.get
-  eventHandler' <- failAction "eventhandler" failEventCount $ const baseActions.eventHandler
-  pure $
-    MkMessageActions
-      { send,
-        get,
-        eventHandler = eventHandler' ()
-      }
-
--- | Create an action that fails after a specified number of calls
-failAction 
-  :: Text      -- ^ Label for error message
-  -> Word64    -- ^ Fail after this many calls
-  -> (a -> IO ())  -- ^ Base action
-  -> IO (a -> IO ())
-failAction lbl failCallCount action = do
-  counterVar' <- Socket.counterVar
-  let counter = Socket.mkAtomicCounter counterVar'
-  pure $ \a -> do
-    n <- atomically counter
-    if (coerce n :: Word64) == failCallCount
-      then fail $ "Forced failure for testing: " <> unpack lbl <> " (call #" <> show n <> ")"
-      else action a

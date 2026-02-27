@@ -51,7 +51,8 @@ import WebDriverPreCore.BiDi.Protocol
     StringValue (..),
     Target (..),
   )
-import WebDriverPreCore.BiDiRunner (BiDiUrl, parseBiDiUrl, withBiDi, withBiDiFailTest)
+import FailSimulation (withBiDiFailTest)
+import WebDriverPreCore.BiDiRunner (BiDiUrl, parseBiDiUrl, withBiDi)
 import WebDriverPreCore.HTTP.Protocol (Command, FullCapabilities (..), SessionResponse (..))
 import WebDriverPreCore.HTTP.Protocol qualified as Caps (Capabilities (..))
 import WebDriverPreCore.HttpRunner (HttpEndpoint (..), callWebDriver)
