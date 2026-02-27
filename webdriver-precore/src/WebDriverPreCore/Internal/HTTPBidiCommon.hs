@@ -13,8 +13,7 @@ import Data.Aeson as A
   )
 import Data.Aeson.Types (Parser)
 import Data.Text (Text, unpack)
-import Data.Word (Word64)
-import Utils (txt)
+import Utils (txt, JSUInt (..))
 import GHC.Generics (Generic)
 
 

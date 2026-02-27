@@ -267,6 +267,7 @@ library webdriver-precore-bidi-runner-base
       WebDriverPreCore.BiDiRunnerBase.Types
   hs-source-dirs: bidi-runner-base/src
   build-depends:
+    webdriver-precore:utils-internal,
     aeson         >=1.4   && <2.3,
     aeson-pretty  >=0.8   && <0.9,
     base          >=4.16  && <5,
@@ -333,7 +334,6 @@ test-suite test-bidi-runner
     webdriver-precore:utils-internal,
     webdriver-precore:webdriver-precore,
     webdriver-precore:webdriver-precore-bidi-runner,
-    webdriver-precore:webdriver-precore-bidi-runner-base,
     webdriver-precore:webdriver-precore-http-runner,
     webdriver-precore:webdriver-precore-test-resources,
     webdriver-precore:webdriver-precore-test-utils,

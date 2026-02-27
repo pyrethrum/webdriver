@@ -29,8 +29,8 @@ import Data.Aeson (FromJSON (..), ToJSON (..), Value)
 import Data.Set (Set)
 import Data.Text (Text)
 import Data.Text qualified as T
-import Data.Word (Word64)
 import GHC.Generics (Generic)
+import Utils (JSUInt (..))
 import Text.Read (readMaybe)
 
 -- | A command to send over the BiDi socket
