@@ -19,7 +19,7 @@ module WebDriverPreCore.BiDiRunnerBase
     loopActions,
     mkMessageActions,
 
-    -- * Channel Actions
+    -- * Channel ActionsWebDriverPreCore.BiDiRunnerBase
     ChannelActions (..),
     mkChannelActions,
 
@@ -41,19 +41,15 @@ import Data.Function ((&))
 import Data.Set qualified as Set
 import Data.Text (Text, pack, take, unpack)
 import Data.Text.Encoding (decodeUtf8)
-import Network.WebSockets (ClientApp, Connection, receiveData, sendTextData)
+import Network.WebSockets (Connection, receiveData, sendTextData)
 import Network.WebSockets qualified as WS
-import UnliftIO (MonadIO, MonadUnliftIO, catchAny, liftIO, throwIO, waitAnyCatch, UnliftIO (unliftIO))
+import UnliftIO (MonadIO, MonadUnliftIO, catchAny, liftIO, throwIO, waitAnyCatch, withRunInIO)
 import UnliftIO.Async (Async, async, cancel)
 import UnliftIO.STM (TVar, atomically, readTChan, readTVarIO, writeTChan)
 import WebDriverPreCore.BiDiRunnerBase.Response
 import WebDriverPreCore.BiDiRunnerBase.Socket
 import WebDriverPreCore.BiDiRunnerBase.Types
 import Prelude hiding (log, take)
-
-runClient :: forall a m. (MonadIO m) => String -> Int -> String -> ClientApp a -> m a
-runClient host port path app =
-  liftIO $ WS.runClient host port path app
 
 -- | Logger type alias
 type Logger m = Text -> m ()
@@ -179,29 +175,30 @@ catchLog msg logger action =
     logger $ msg <> ": " <> pack (displayException e)
 
 -- | Run a WebSocket client
-withSocket :: (MonadIO m) => BiDiUrl -> Logger m -> MessageLoops m -> m () -> m ()
+withSocket :: (MonadUnliftIO m) => BiDiUrl -> Logger m -> MessageLoops m -> m () -> m ()
 withSocket pth@MkBiDiUrl {host, port, path} logger messageLoops action = do
   logger $ "Connecting to WebDriver at " <> pack (show pth)
-  runClient (unpack host) port (unpack path) $ \conn ->  do
-    eventLoop <- messageLoops.eventLoop
-    getLoop <- messageLoops.getLoop conn
-    sendLoop <- messageLoops.sendLoop conn
+  withRunInIO $ \runInIO ->
+    WS.runClient (unpack host) port (unpack path) $ \conn -> do
+      eventLoop <- runInIO messageLoops.eventLoop
+      getLoop <- runInIO $ messageLoops.getLoop conn
+      sendLoop <- runInIO $ messageLoops.sendLoop conn
 
-    unliftIO logger "WebSocket connection established"
+      runInIO $ logger "WebSocket connection established"
 
-    result <- async (unliftIO const action)
+      result <- async (runInIO action)
 
-    (_asy, ethresult) <- waitAnyCatch [getLoop, sendLoop, result, eventLoop]
+      (_asy, ethresult) <- waitAnyCatch [getLoop, sendLoop, result, eventLoop]
 
-    traverse_ cancel [getLoop, sendLoop, result, eventLoop]
+      traverse_ cancel [getLoop, sendLoop, result, eventLoop]
 
-    ethresult
-      & either
-        ( \e -> do
-            unliftIO logger $ "One of the BiDi client threads failed: \n" <> pack (displayException e)
-            throw e
-        )
-        pure
+      ethresult
+        & either
+          ( \e -> do
+              runInIO $ logger $ "One of the BiDi client threads failed: \n" <> pack (displayException e)
+              throw e
+          )
+          pure
 
 -- | Apply subscriptions to an event
 applySubscriptions :: (MonadIO m) => Logger m -> Object -> TVar [RegisteredSubscription m] -> m ()
