@@ -35,7 +35,7 @@
   -- bidi events
   -- bidi and http mixed on the same instance
   -- hooks to start runner and close connection
-  -- 
+     -- may cascade in bidirunner
   -- concurrency 
     - mock create user rest call
     - 2 browsers (chrome and firefox)

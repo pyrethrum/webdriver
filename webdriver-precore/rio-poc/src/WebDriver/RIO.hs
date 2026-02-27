@@ -21,8 +21,11 @@ module WebDriver.RIO
     -- * Logging
     module WebDriver.RIO.Logging,
 
-    -- * HTTP Runner - todo review if this should be re-exported here or just used internally by App1
+    -- * HTTP Runner - todo review if this should be re-exported here or just used internally by App
     module WebDriverPreCore.HttpRunner,
+
+    -- * BiDi URL & types
+    module WebDriverPreCore.BiDiRunner,
   )
 where
 
@@ -32,3 +35,4 @@ import WebDriver.RIO.HTTP.Core
 import WebDriver.RIO.Logging
 import WebDriver.RIO.App
 import WebDriverPreCore.HttpRunner
+import WebDriverPreCore.BiDiRunner

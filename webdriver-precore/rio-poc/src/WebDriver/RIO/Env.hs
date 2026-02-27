@@ -6,9 +6,11 @@
 --
 -- * 'HttpEnv'        — logging + HTTP driver info
 -- * 'HttpSessionEnv' — 'HttpEnv' + session id
+-- * 'BiDiEnv'        — logging + BiDi runner
+-- * 'BiDiSessionEnv' — 'BiDiEnv' + session id + pause duration
 --
--- All implement 'HasLogFunc'; runner envs implement 'HasHttpDriverInfo';
--- session envs add 'HasHttpSession'.
+-- All implement 'HasLogFunc'; runner envs implement the appropriate runner
+-- typeclass; session envs add the matching session typeclass.
 --
 -- Typeclasses and abstract helpers live in "WebDriver.RIO.HTTP.Core".
 module WebDriver.RIO.Env
@@ -20,6 +22,12 @@ module WebDriver.RIO.Env
 
     -- * Session Envs
     HttpSessionEnv (..),
+
+    -- * BiDi Runner Env
+    BiDiEnv (..),
+
+    -- * BiDi Session Env
+    BiDiSessionEnv (..),
   )
 where
 
@@ -29,12 +37,16 @@ import RIO
     LogFunc,
     lens,
   )
+import WebDriverPreCore.BiDiRunner (BiDiRunner)
 import WebDriver.RIO.HTTP.Core
-  ( HasHttpDriverInfo (..),
+  ( HasBiDiRunner (..),
+    HasBiDiSession (..),
+    HasHttpDriverInfo (..),
     HasHttpSession (..),
     HasPauseDuration (..),
     HttpDriverInfo (..),
   )
+
 import WebDriverPreCore.Extended.HTTP.Base.Protocol (Session (..))
 import WebDriverPreCore.Utils.Timeout (Timeout)
 
@@ -96,11 +108,11 @@ instance HasPauseDuration HttpSessionEnv where
   getPauseDuration :: HttpSessionEnv -> Timeout
   getPauseDuration = (.pauseDuration)
 
-{- DO NOT DELETE
 -- ---------------------------------------------------------------------------
 -- BiDi only
 -- ---------------------------------------------------------------------------
 
+-- | BiDi-runner environment: logging + 'BiDiRunner'.
 data BiDiEnv = MkBiDiEnv
   { logFunc :: LogFunc,
     biDiRunner :: BiDiRunner
@@ -114,6 +126,35 @@ instance HasBiDiRunner BiDiEnv where
   biDiRunnerL :: Lens' BiDiEnv BiDiRunner
   biDiRunnerL = lens (.biDiRunner) \MkBiDiEnv {..} r -> MkBiDiEnv {biDiRunner = r, ..}
 
+-- ---------------------------------------------------------------------------
+-- BiDi Session (BiDi runner + session id)
+-- ---------------------------------------------------------------------------
+
+-- | BiDi environment extended with a session id and pause duration.
+data BiDiSessionEnv = MkBiDiSessionEnv
+  { logFunc :: LogFunc,
+    biDiRunner :: BiDiRunner,
+    biDiSession :: Session,
+    pauseDuration :: Timeout
+  }
+
+instance HasLogFunc BiDiSessionEnv where
+  logFuncL :: Lens' BiDiSessionEnv LogFunc
+  logFuncL = lens (.logFunc) \MkBiDiSessionEnv {..} l -> MkBiDiSessionEnv {logFunc = l, ..}
+
+instance HasBiDiRunner BiDiSessionEnv where
+  biDiRunnerL :: Lens' BiDiSessionEnv BiDiRunner
+  biDiRunnerL = lens (.biDiRunner) \MkBiDiSessionEnv {..} r -> MkBiDiSessionEnv {biDiRunner = r, ..}
+
+instance HasBiDiSession BiDiSessionEnv where
+  getBiDiSession :: BiDiSessionEnv -> Session
+  getBiDiSession = (.biDiSession)
+
+instance HasPauseDuration BiDiSessionEnv where
+  getPauseDuration :: BiDiSessionEnv -> Timeout
+  getPauseDuration = (.pauseDuration)
+
+{- DO NOT DELETE
 -- ---------------------------------------------------------------------------
 -- Dual (HTTP + BiDi)
 -- ---------------------------------------------------------------------------

@@ -4,20 +4,24 @@
 -- Module: WebDriver.RIO.App
 -- Description: Runner to initialize BaseEnv and execute RIO actions
 --
--- Provides a runner function to set up a BaseEnv with logging and
--- capabilities, then execute a RIO action in that context.
+-- Provides runner functions to set up environments with logging and
+-- driver info, then execute RIO actions in those contexts.
 module WebDriver.RIO.App
   ( runHttp,
     withHttpSession,
     withHttpSessionEnv,
     defaultDriverInfo,
     pause,
+    -- * BiDi Runners
+    runBiDi,
+    withBiDiEnv,
   )
 where
 
 import RIO
 import WebDriver.RIO.Env
-  ( HttpSessionEnv (..),
+  ( BiDiEnv (..),
+    HttpSessionEnv (..),
   )
 import WebDriver.RIO.HTTP.Core
   ( HasHttpDriverInfo,
@@ -32,6 +36,8 @@ import WebDriver.RIO.Logging (LoggerConfig (..), withLogging)
 import WebDriverPreCore.Extended.Capabilities as EC
 import WebDriverPreCore.HttpRunner (HttpEndpoint (..))
 import WebDriverPreCore.Utils.Timeout (Timeout (..))
+import WebDriverPreCore.BiDiRunner (BiDiUrl)
+import WebDriverPreCore.BiDiRunner qualified as BiDiRunner
 
 defaultDriverInfo :: HttpDriverInfo
 defaultDriverInfo = MkHttpDriverInfo
@@ -96,3 +102,58 @@ withHttpSessionEnv = withHttpSession mkHttpSession
 pause :: (HasPauseDuration env) => RIO env ()
 pause = do
   getPauseDuration <$> ask >>= liftIO . threadDelay . (.microseconds)
+
+-- ---------------------------------------------------------------------------
+-- BiDi runners
+-- ---------------------------------------------------------------------------
+
+-- | Run a BiDi action with full logging setup.
+--
+-- Sets up a logging context, then opens a WebSocket connection to 'BiDiUrl'
+-- and runs the provided 'RIO BiDiEnv' action inside a 'BiDiEnv'.
+--
+-- Use 'driverLogging' to enable verbose per-message logging via RIO.
+runBiDi ::
+  (MonadUnliftIO m) =>
+  -- | Configuration for the logging subsystem
+  LoggerConfig ->
+  -- | Whether to enable driver-level message logging
+  Bool ->
+  -- | The BiDi WebSocket URL (obtained from a prior HTTP session response)
+  BiDiUrl ->
+  -- | The RIO action to execute in the BiDi environment
+  RIO BiDiEnv a ->
+  m a
+runBiDi loggerConfig driverLogging bidiUrl action =
+  withLogging loggerConfig $ \lf ->
+    liftIO $ withBiDiEnvIO lf driverLogging bidiUrl action
+
+-- | Run a BiDi action within an existing RIO environment.
+--
+-- Inherits the 'LogFunc' from the outer environment, opens a WebSocket
+-- connection to 'BiDiUrl', builds a 'BiDiEnv', and runs @action@ in it.
+withBiDiEnv ::
+  (HasLogFunc env) =>
+  -- | Whether to enable driver-level message logging
+  Bool ->
+  -- | The BiDi WebSocket URL (obtained from a prior HTTP session response)
+  BiDiUrl ->
+  -- | The RIO action to execute in the BiDi environment
+  RIO BiDiEnv a ->
+  RIO env a
+withBiDiEnv driverLogging bidiUrl action = do
+  lf <- view logFuncL
+  liftIO $ withBiDiEnvIO lf driverLogging bidiUrl action
+
+-- Internal helper: open a BiDi connection and run an action in BiDiEnv.
+withBiDiEnvIO :: LogFunc -> Bool -> BiDiUrl -> RIO BiDiEnv a -> IO a
+withBiDiEnvIO lf driverLogging bidiUrl action = do
+  resultRef <- newIORef (Left (error "withBiDiEnvIO: result unset" :: SomeException))
+  BiDiRunner.withBiDi mLogger bidiUrl $ \runner -> do
+    r <- try (runRIO (MkBiDiEnv {logFunc = lf, biDiRunner = runner}) action)
+    writeIORef resultRef r
+  readIORef resultRef >>= either throwIO pure
+  where
+    mLogger
+      | driverLogging = Just $ \t -> runRIO lf (logInfo (display t))
+      | otherwise = Nothing
