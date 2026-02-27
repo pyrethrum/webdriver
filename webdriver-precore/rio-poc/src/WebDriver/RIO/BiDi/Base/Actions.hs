@@ -291,7 +291,7 @@ viaRunner f = getBiDiRunner >>= liftIO . f
 
 -- | Run a typed command through the BiDi runner.
 run :: (HasBiDiRunner env, FromJSON r) => Command r -> RIO env r
-run cmd = viaRunner $ \(MkBiDiRunner {run}) -> run cmd
+run cmd = viaRunner $ \(MkBiDiRunner {run = r}) -> r cmd
 
 -- | Extract the 'SubscriptionId' from a subscribe response.
 extractSubscription :: SessionSubscribeResult -> SubscriptionId
@@ -299,23 +299,23 @@ extractSubscription MkSessionSubscribeResult {subscription} = subscription
 
 -- | Build an 'A.SendSub IO a' from a 'BiDiRunner', subscribing to all contexts.
 mkSendSub :: BiDiRunner -> A.SendSub IO a
-mkSendSub MkBiDiRunner {run, socketActions} mkSub handler =
-  Runner.subscribe socketActions (run . A.sessionSubscribe) (mkSub [] [] handler)
+mkSendSub MkBiDiRunner {run = r, socketActions} mkSub handler =
+  Runner.subscribe socketActions (r . A.sessionSubscribe) (mkSub [] [] handler)
 
 -- | Build an 'A.SendSub\' IO a' from a 'BiDiRunner', with context filters.
 mkSendSub' :: BiDiRunner -> A.SendSub' IO a
-mkSendSub' MkBiDiRunner {run, socketActions} mkSub bcs ucs handler =
-  Runner.subscribe socketActions (run . A.sessionSubscribe) (mkSub bcs ucs handler)
+mkSendSub' MkBiDiRunner {run = r, socketActions} mkSub bcs ucs handler =
+  Runner.subscribe socketActions (r . A.sessionSubscribe) (mkSub bcs ucs handler)
 
 -- | Build an 'A.SendSubMany\' IO' from a 'BiDiRunner', with context filters.
 mkSendSubMany' :: BiDiRunner -> A.SendSubMany' IO
-mkSendSubMany' MkBiDiRunner {run, socketActions} mkSub sts bcs ucs handler =
-  Runner.subscribe socketActions (run . A.sessionSubscribe) (mkSub sts bcs ucs handler)
+mkSendSubMany' MkBiDiRunner {run = r, socketActions} mkSub sts bcs ucs handler =
+  Runner.subscribe socketActions (r . A.sessionSubscribe) (mkSub sts bcs ucs handler)
 
 -- | Build an 'A.SendSubOffSpecMany\' IO' from a 'BiDiRunner', with context filters.
 mkSendSubOffSpecMany' :: BiDiRunner -> A.SendSubOffSpecMany' IO
-mkSendSubOffSpecMany' MkBiDiRunner {run, socketActions} mkSub sts bcs ucs handler =
-  Runner.subscribe socketActions (run . A.sessionSubscribe) (mkSub sts bcs ucs handler)
+mkSendSubOffSpecMany' MkBiDiRunner {run = r, socketActions} mkSub sts bcs ucs handler =
+  Runner.subscribe socketActions (r . A.sessionSubscribe) (mkSub sts bcs ucs handler)
 
 -- | Subscribe via an Extended-style subscription function (no context filters).
 viaSub ::
@@ -354,8 +354,8 @@ sessionSubscribe sub = extractSubscription <$> run (A.sessionSubscribe sub)
 
 sessionUnsubscribe :: HasBiDiRunner env => SessionUnsubscribe -> RIO env ()
 sessionUnsubscribe unsub =
-  viaRunner $ \MkBiDiRunner {run, socketActions} ->
-    Runner.unsubscribe socketActions (run . A.sessionUnsubscribe) unsub
+  viaRunner $ \MkBiDiRunner {run = r, socketActions} ->
+    Runner.unsubscribe socketActions (r . A.sessionUnsubscribe) unsub
 
 -- ###########################################################################
 -- ####################### BrowsingContext Commands ##########################
