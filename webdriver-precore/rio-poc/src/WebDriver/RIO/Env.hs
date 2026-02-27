@@ -122,8 +122,8 @@ instance HasLogFunc (BiDiEnv m) where
   logFuncL :: Lens' (BiDiEnv m) LogFunc
   logFuncL = lens (.logFunc) \MkBiDiEnv {..} l -> MkBiDiEnv {logFunc = l, ..}
 
-instance HasBiDiRunner (BiDiEnv m) where
-  biDiRunnerL :: Lens' (BiDiEnv m) (BiDiRunner m)
+instance HasBiDiRunner BiDiEnv where
+  biDiRunnerL :: Lens' BiDiEnv (BiDiRunner (RIO BiDiEnv))
   biDiRunnerL = lens (.biDiRunner) \MkBiDiEnv {..} r -> MkBiDiEnv {biDiRunner = r, ..}
 
 -- ---------------------------------------------------------------------------

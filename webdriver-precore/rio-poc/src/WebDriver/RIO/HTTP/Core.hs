@@ -65,8 +65,8 @@ class HasHttpDriverInfo env where
   httpDriverInfoL :: Lens' env HttpDriverInfo
 
 -- | Env has a 'BiDiRunner' available.
-class HasBiDiRunner m env where
-  biDiRunnerL :: Lens' env (BiDiRunner m)
+class HasBiDiRunner env where
+  biDiRunnerL :: Lens' env (BiDiRunner (RIO env))
 
 -- | Env has an HTTP session id available.
 class HasHttpSession env where
@@ -108,5 +108,5 @@ runHttpCommand cmd = do
     callWebDriver httpEndpoint mLogger cmd
       >>= either (throwIO . parseFailToWDException) pure
 
-getBiDiRunner :: (HasBiDiRunner m env) => RIO env (BiDiRunner m)
+getBiDiRunner :: (HasBiDiRunner env) => RIO env (BiDiRunner (RIO env))
 getBiDiRunner = view biDiRunnerL

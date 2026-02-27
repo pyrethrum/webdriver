@@ -286,7 +286,7 @@ import WebDriverPreCore.BiDiRunner qualified as Runner
 -- ###########################################################################
 
 -- | Execute a BiDi command via the runner in the environment.
-viaRunner :: HasBiDiRunner env => (BiDiRunner -> RIO env a) -> RIO env a
+viaRunner :: HasBiDiRunner env => (BiDiRunner (RIO env) -> RIO env a) -> RIO env a
 viaRunner f = getBiDiRunner >>= f
 
 -- | Run a typed command through the BiDi runner.
@@ -298,29 +298,29 @@ extractSubscription :: SessionSubscribeResult -> SubscriptionId
 extractSubscription MkSessionSubscribeResult {subscription} = subscription
 
 -- | Build an 'A.SendSub IO a' from a 'BiDiRunner', subscribing to all contexts.
-mkSendSub :: BiDiRunner -> A.SendSub IO a
+mkSendSub :: BiDiRunner (RIO env) -> A.SendSub (RIO env) a
 mkSendSub MkBiDiRunner {run = r, socketActions} mkSub handler =
   Runner.subscribe socketActions (r . A.sessionSubscribe) (mkSub [] [] handler)
 
 -- | Build an 'A.SendSub\' IO a' from a 'BiDiRunner', with context filters.
-mkSendSub' :: BiDiRunner -> A.SendSub' IO a
+mkSendSub' :: BiDiRunner (RIO env) -> A.SendSub' (RIO env) a
 mkSendSub' MkBiDiRunner {run = r, socketActions} mkSub bcs ucs handler =
   Runner.subscribe socketActions (r . A.sessionSubscribe) (mkSub bcs ucs handler)
 
 -- | Build an 'A.SendSubMany\' IO' from a 'BiDiRunner', with context filters.
-mkSendSubMany' :: BiDiRunner -> A.SendSubMany' IO
+mkSendSubMany' :: BiDiRunner (RIO env)-> A.SendSubMany' (RIO env) 
 mkSendSubMany' MkBiDiRunner {run = r, socketActions} mkSub sts bcs ucs handler =
   Runner.subscribe socketActions (r . A.sessionSubscribe) (mkSub sts bcs ucs handler)
 
 -- | Build an 'A.SendSubOffSpecMany\' IO' from a 'BiDiRunner', with context filters.
-mkSendSubOffSpecMany' :: BiDiRunner -> A.SendSubOffSpecMany' IO
+mkSendSubOffSpecMany' :: BiDiRunner (RIO env) -> A.SendSubOffSpecMany' (RIO env) 
 mkSendSubOffSpecMany' MkBiDiRunner {run = r, socketActions} mkSub sts bcs ucs handler =
   Runner.subscribe socketActions (r . A.sessionSubscribe) (mkSub sts bcs ucs handler)
 
 -- | Subscribe via an Extended-style subscription function (no context filters).
 viaSub ::
   HasBiDiRunner env =>
-  (A.SendSub IO a -> (a -> IO ()) -> IO SubscriptionId) ->
+  (A.SendSub (RIO env) a -> (a -> RIO env  ()) -> RIO env  SubscriptionId) ->
   (a -> RIO env ()) ->
   RIO env SubscriptionId
 viaSub extFn handler = viaRunner $ \runner -> extFn (mkSendSub runner) handler
@@ -328,7 +328,7 @@ viaSub extFn handler = viaRunner $ \runner -> extFn (mkSendSub runner) handler
 -- | Subscribe via an Extended-style subscription function (with context filters).
 viaSub' ::
   HasBiDiRunner env =>
-  (A.SendSub' IO a -> [BrowsingContext] -> [UserContext] -> (a -> IO ()) -> IO SubscriptionId) ->
+  (A.SendSub' (RIO env) a -> [BrowsingContext] -> [UserContext] -> (a -> RIO env ()) -> RIO env SubscriptionId) ->
   [BrowsingContext] ->
   [UserContext] ->
   (a -> RIO env ()) ->
