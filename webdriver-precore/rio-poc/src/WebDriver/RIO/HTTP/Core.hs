@@ -90,8 +90,6 @@ getLogger = view logFuncL
 log :: (HasLogFunc env) => Text -> RIO env ()
 log = logInfo . display
 
-
-
 getHttpDriverInfo :: (HasHttpDriverInfo env) => RIO env HttpDriverInfo
 getHttpDriverInfo = view httpDriverInfoL
 

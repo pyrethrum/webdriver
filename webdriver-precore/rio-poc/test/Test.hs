@@ -44,6 +44,8 @@ import WebDriverPreCore.BiDi.Protocol
   )
 import WebDriverPreCore.Utils.Timeout (Timeout (..))
 import Data.Maybe (fromJust)
+import Prelude (userError)
+import Utils (txt)
 
 main :: IO ()
 main = defaultMain tests
@@ -164,7 +166,7 @@ input_navigation_base_demo = withSession $ do
   pause
 
   title <- getTitle
-  log $ "Landed on: " <> display title
+  log $ "Landed on: " <> title
 
 -- ---------------------------------------------------------------------------
 -- BiDi demo
@@ -188,7 +190,7 @@ bidi_login_demo = runHttp' $ \config -> do
     bc <- case tree of
       MkGetTreeResult (info : _) -> do
         let MkBrowsingContext ctxId = info.context
-        log $ "Root context: " <> display ctxId
+        log $ "Root context: " <> ctxId
         pure info.context
       _ -> throwIO $ userError "No browsing contexts found"
 
@@ -198,22 +200,22 @@ bidi_login_demo = runHttp' $ \config -> do
         onLoadedEvent evt = do
           void $ atomically $ tryPutTMVar loadedVar evt
 
-    logsubscribeBrowsingContextDomContentLoaded onLoadedEvent
+    subscribeBrowsingContextDomContentLoaded onLoadedEvent
 
     log "=== Subscribe to browsingContext.domContentLoaded Many-style ==="
     navVar <- newEmptyTMVarIO
-    logsubscribeMany [BrowsingContextLoad] $ \evt -> do
-      log $ "!!! browsingContext.load event (many-style): " <> show evt
+    subscribeMany [BrowsingContextLoad] $ \evt -> do
+      log $ "!!! browsingContext.load event (many-style): " <> txt evt
       void $ atomically $ tryPutTMVar navVar ()
 
     log "=== Navigate to login page ==="
     loginPage <- loginUrl
-    logbrowsingContextNavigate $ MkNavigate bc loginPage Nothing
+    browsingContextNavigate $ MkNavigate bc loginPage Nothing
 
     log "=== Waiting for domContentLoaded event ==="
     let waitLoaded =
           atomically (readTMVar loadedVar) >>= \evt ->
-            log $ "!!! domContentLoaded fired: " <> displayShow evt
+            log $ "!!! domContentLoaded fired: " <> txt evt
         waitTimeout =
           threadDelay (10 * 1_000_000)
             >> throwIO (userError "Timeout: domContentLoaded did not fire within 10 s")
