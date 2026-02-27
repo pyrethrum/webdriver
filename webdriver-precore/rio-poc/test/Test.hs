@@ -137,7 +137,7 @@ session_demo = withSession $ do
 
   -- Get and log the current timeouts
   currentTimeouts <- getTimeouts
-  log $ "Current timeouts: " <> displayShow currentTimeouts
+  log $ "Current timeouts: " <> txt currentTimeouts
 
 -- | Example showing how to use withHttpSession to set and get timeouts
 
@@ -196,8 +196,7 @@ bidi_login_demo = runHttp' $ \config -> do
 
     log "=== Subscribe to browsingContext.domContentLoaded ==="
     loadedVar <- newEmptyTMVarIO
-    let onLoadedEvent :: NavigationInfo -> IO ()
-        onLoadedEvent evt = do
+    let onLoadedEvent evt = do
           void $ atomically $ tryPutTMVar loadedVar evt
 
     subscribeBrowsingContextDomContentLoaded onLoadedEvent
@@ -230,7 +229,7 @@ bidi_login_demo = runHttp' $ \config -> do
           serializationOptions = Nothing,
           startNodes = Nothing
         }
-    log $ "Located nodes: " <> displayShow nodesResult
+    log $ "Located nodes: " <> txt nodesResult
 
     let MkLocateNodesResult nodes = nodesResult
         usernameSharedId :: SharedId
