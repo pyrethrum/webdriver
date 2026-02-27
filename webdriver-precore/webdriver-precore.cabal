@@ -351,12 +351,11 @@ test-suite test-bidi-runner
 library webdriver-precore-extended
   import: commonExtensions, commonGhcOptions
   exposed-modules:
-      WebDriverPreCore.Extended.HTTP
       WebDriverPreCore.Extended.HTTP.Protocol
       WebDriverPreCore.Extended.HTTP.ProtocolExclusive
-      WebDriverPreCore.Extended.BiDi
       WebDriverPreCore.Extended.BiDi.Protocol
       WebDriverPreCore.Extended.Capabilities
+      -- 
       WebDriverPreCore.Extended.HTTP.Base.API
       WebDriverPreCore.Extended.HTTP.Base.Protocol
       WebDriverPreCore.Extended.HTTP.Base.Actions

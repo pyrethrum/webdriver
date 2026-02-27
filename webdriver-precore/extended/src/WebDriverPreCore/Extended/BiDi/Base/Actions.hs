@@ -4,10 +4,12 @@
 module WebDriverPreCore.Extended.BiDi.Base.Actions
   ( -- * Runner Type
     Runner,
+
     -- * Session Commands
     sessionNew,
     sessionStatus,
     sessionEnd,
+
     -- * BrowsingContext Commands
     browsingContextActivate,
     browsingContextCaptureScreenshot,
@@ -21,6 +23,7 @@ module WebDriverPreCore.Extended.BiDi.Base.Actions
     browsingContextReload,
     browsingContextSetViewport,
     browsingContextTraverseHistory,
+
     -- * Browser Commands
     browserClose,
     browserCreateUserContext,
@@ -29,6 +32,7 @@ module WebDriverPreCore.Extended.BiDi.Base.Actions
     browserRemoveUserContext,
     browserSetClientWindowState,
     browserSetDownloadBehavior,
+
     -- * Emulation Commands
     emulationSetForcedColorsModeThemeOverride,
     emulationSetGeolocationOverride,
@@ -40,10 +44,12 @@ module WebDriverPreCore.Extended.BiDi.Base.Actions
     emulationSetTimezoneOverride,
     emulationSetTouchOverride,
     emulationSetUserAgentOverride,
+
     -- * Input Commands
     inputPerformActions,
     inputReleaseActions,
     inputSetFiles,
+
     -- * Network Commands
     networkAddDataCollector,
     networkAddIntercept,
@@ -58,6 +64,7 @@ module WebDriverPreCore.Extended.BiDi.Base.Actions
     networkRemoveIntercept,
     networkSetCacheBehavior,
     networkSetExtraHeaders,
+
     -- * Script Commands
     scriptAddPreloadScript,
     scriptCallFunction,
@@ -65,13 +72,16 @@ module WebDriverPreCore.Extended.BiDi.Base.Actions
     scriptEvaluate,
     scriptGetRealms,
     scriptRemovePreloadScript,
+
     -- * Storage Commands
     storageDeleteCookies,
     storageGetCookies,
     storageSetCookie,
+
     -- * WebExtension Commands
     webExtensionInstall,
     webExtensionUninstall,
+
     -- * Subscription Types
     SendSubMany,
     SendSubMany',
@@ -79,9 +89,11 @@ module WebDriverPreCore.Extended.BiDi.Base.Actions
     SendSub',
     SendSubOffSpecMany,
     SendSubOffSpecMany',
+
     -- * Subscription Functions
     subscribeMany,
     subscribeMany',
+
     -- ** BrowsingContext Events
     subscribeBrowsingContextCreated,
     subscribeBrowsingContextCreated',
@@ -111,9 +123,11 @@ module WebDriverPreCore.Extended.BiDi.Base.Actions
     subscribeBrowsingContextUserPromptClosed',
     subscribeBrowsingContextUserPromptOpened,
     subscribeBrowsingContextUserPromptOpened',
+
     -- ** Log Events
     subscribeLogEntryAdded,
     subscribeLogEntryAdded',
+
     -- ** Network Events
     subscribeNetworkAuthRequired,
     subscribeNetworkAuthRequired',
@@ -125,6 +139,7 @@ module WebDriverPreCore.Extended.BiDi.Base.Actions
     subscribeNetworkResponseCompleted',
     subscribeNetworkResponseStarted,
     subscribeNetworkResponseStarted',
+
     -- ** Script Events
     subscribeScriptMessage,
     subscribeScriptMessage',
@@ -132,13 +147,18 @@ module WebDriverPreCore.Extended.BiDi.Base.Actions
     subscribeScriptRealmCreated',
     subscribeScriptRealmDestroyed,
     subscribeScriptRealmDestroyed',
+
     -- ** Input Events
     subscribeInputFileDialogOpened,
     subscribeInputFileDialogOpened',
+
     -- * Fallback / Utility Functions
     subscribeOffSpecMany,
     subscribeOffSpecMany',
     offSpecCommand,
+    --
+    sessionSubscribe,
+    sessionUnsubscribe,
   )
 where
 
@@ -585,7 +605,7 @@ subscribeMany sendSubMany = sendSubMany API.subscribeMany
 subscribeMany' :: forall m. SendSubMany' m -> [KnownSubscriptionType] -> [BrowsingContext] -> [UserContext] -> (Event -> m ()) -> m SubscriptionId
 subscribeMany' sendSubMany' = sendSubMany' API.subscribeMany
 
-------- 
+-------
 
 type SendSub m a =
   ( [BrowsingContext] ->
