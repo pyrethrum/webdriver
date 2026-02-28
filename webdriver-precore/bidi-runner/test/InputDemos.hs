@@ -86,7 +86,8 @@ inputKeyboardDemo =
           textAreaId :: SharedId
           textAreaId = case nodes of
             [textArea] -> fromJust textArea.sharedId
-            _ -> error "Failed to locate text area 1"
+            [] -> error "Failed to locate text area 1 - no results returned"
+            _ -> error "Failed to locate text area 1 - many results returned"
 
           clickTextArea1 =
             inputPerformActions $
