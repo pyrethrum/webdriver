@@ -116,7 +116,8 @@ instance HasPauseDuration HttpSessionEnv where
 -- | BiDi-runner environment: logging + 'BiDiRunner'.
 data BiDiEnv = MkBiDiEnv
   { logFunc :: LogFunc,
-    biDiRunner :: BiDiRunner (RIO BiDiEnv)
+    biDiRunner :: BiDiRunner (RIO BiDiEnv),
+    pauseDuration :: Timeout
   }
 
 instance HasLogFunc BiDiEnv where
@@ -126,6 +127,10 @@ instance HasLogFunc BiDiEnv where
 instance HasBiDiRunner BiDiEnv where
   biDiRunnerL :: Lens' BiDiEnv (BiDiRunner (RIO BiDiEnv))
   biDiRunnerL = lens (.biDiRunner) \MkBiDiEnv {..} r -> MkBiDiEnv {biDiRunner = r, ..}
+
+instance HasPauseDuration BiDiEnv where
+  getPauseDuration :: BiDiEnv -> Timeout
+  getPauseDuration = (.pauseDuration)
 
 -- ---------------------------------------------------------------------------
 -- BiDi Session (BiDi runner + session id)
