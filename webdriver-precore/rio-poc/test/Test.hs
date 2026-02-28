@@ -43,7 +43,7 @@ import WebDriverPreCore.Extended.HTTP.Base.Protocol qualified as HTTP
 import WebDriverPreCore.Test.CapabilitiesBuilder (httpCapabilities)
 import WebDriverPreCore.Test.ConfigLoader (Config (..), loadConfig)
 import WebDriverPreCore.Test.TestData (contentPageUrl, loginUrl)
-import WebDriverPreCore.Utils.Timeout (Timeout (..))
+import WebDriverPreCore.Utils.Timeout (milliseconds)
 import Prelude (userError)
 
 main :: IO ()
@@ -69,14 +69,22 @@ tests =
 
 runHttp' :: (Config -> RIO HttpEnv a) -> IO a
 runHttp' httpAction = do
-  config@MkConfig {httpPort, httpUrl, logging} <- loadConfig
-  let logConfig = ConsoleAndFile "eval.log"
+  config@MkConfig {httpPort, httpUrl} <- loadConfig
+  let behaviour = mkInteractBehaviour config
       driverInfo =
         MkHttpDriverInfo
           { httpEndpoint = MkHttpEndpoint {host = httpUrl, port = httpPort},
-            driverLogging = logging
+            driverLogging = behaviour.driverLogging
           }
-  R.runHttp mkHttpEnv logConfig driverInfo (httpAction config)
+  R.runHttp mkHttpEnv behaviour driverInfo (httpAction config)
+
+mkInteractBehaviour :: Config -> InteractBehaviour
+mkInteractBehaviour config =
+  MkInteractBehaviour
+    { pauseDuration = fromIntegral config.pauseMS * milliseconds,
+      loggerConfig = ConsoleAndFile "eval.log",
+      driverLogging = config.logging
+    }
 
 runHttp :: RIO HttpEnv a -> IO a
 runHttp httpAction = runHttp' (const httpAction)
@@ -84,8 +92,8 @@ runHttp httpAction = runHttp' (const httpAction)
 withSession :: RIO HttpSessionEnv a -> IO a
 withSession sessionAction = runHttp' $ \config -> do
   let caps = mkHttpCaps config
-      pauseDuration = MkTimeout $ (* 1000) $ fromIntegral config.pauseMS
-  R.withHttpSessionEnv pauseDuration caps sessionAction
+      behaviour = mkInteractBehaviour config
+  R.withHttpSessionEnv behaviour caps sessionAction
 
 mkHttpCaps :: Config -> HttpCapabilities
 mkHttpCaps config =
@@ -182,8 +190,9 @@ input_navigation_base_demo = withSession $ do
 bidi_login_demo :: IO ()
 bidi_login_demo = runHttp' $ \config -> do
   let caps = mkBiDiCaps config
+      behaviour = mkInteractBehaviour config
 
-  R.withBiDiSession False caps $ do
+  R.withBiDiSession behaviour caps $ do
     log "=== Get root browsing context ==="
     tree <- browsingContextGetTree $ MkGetTree Nothing Nothing
     bc <- case tree of

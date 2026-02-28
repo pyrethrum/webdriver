@@ -73,7 +73,7 @@ runDemo' cfg@MkConfig {httpUrl, httpPort, pauseMS} lgr demo' = do
     httpEndpoint = MkHttpEndpoint {host = httpUrl, port = fromIntegral httpPort}
     run :: forall r. (FromJSON r) => Command r -> IO r
     run cmd = callWebDriver httpEndpoint mLogger cmd >>= either throwIO pure
-    runBody :: forall r. (FromJSON r) => Command r -> IO Value
+    runBody :: forall r.  Command r -> IO Value
     runBody cmd = callWebDriver httpEndpoint mLogger cmd >>= either throwIO pure
     httpActions = mkActions run runBody
 

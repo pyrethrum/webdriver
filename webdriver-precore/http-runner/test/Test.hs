@@ -14,9 +14,8 @@ import ErrorDemo qualified
 import FallbackDemo qualified
 import HttpDemo qualified
 import HttpDemoUtils (HttpDemo (..), runDemoWithConfig)
-import Test.Tasty (TestTree, defaultMain, localOption, testGroup)
+import Test.Tasty (TestTree, defaultMain, testGroup)
 import Test.Tasty.HUnit (testCase)
-import Test.Tasty.Runners (NumThreads (..))
 import WebDriverPreCore.Test.Config (Config (..), DemoBrowser (..))
 import WebDriverPreCore.Test.ConfigLoader (loadConfig)
 
