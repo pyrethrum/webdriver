@@ -104,7 +104,7 @@ data HttpSessionEnv e = MkHttpSessionEnv
 -- into 'Eff' via 'effIO'.
 data BiDiEnv e = MkBiDiEnv
   { biDiRunner :: BiDiRunner IO,
-    biDiPauseDuration :: Timeout,
+    pauseDuration :: Timeout,
     biDiIO :: IOE e
   }
 
@@ -169,6 +169,6 @@ getBiDiRunner = (.biDiRunner)
 pause :: (e :> es) => HttpSessionEnv e -> Eff es ()
 pause sess = effIO sess.envIO $ threadDelay (let MkTimeout us = sess.pauseDuration in us)
 
--- | Sleep for the 'biDiPauseDuration' stored in a 'BiDiEnv'.
+-- | Sleep for the 'pauseDuration' stored in a 'BiDiEnv'.
 pauseBiDi :: (e :> es) => BiDiEnv e -> Eff es ()
-pauseBiDi bidi = effIO bidi.biDiIO $ threadDelay (let MkTimeout us = bidi.biDiPauseDuration in us)
+pauseBiDi bidi = effIO bidi.biDiIO $ threadDelay (let MkTimeout us = bidi.pauseDuration in us)
