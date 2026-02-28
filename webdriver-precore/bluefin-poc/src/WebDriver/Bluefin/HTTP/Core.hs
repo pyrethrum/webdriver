@@ -1,0 +1,174 @@
+-- |
+-- Module: WebDriver.Bluefin.HTTP.Core
+-- Description: Core handle types and helpers for Bluefin WebDriver
+--
+-- Defines the environment handle types used throughout the Bluefin POC:
+--
+-- * 'HttpDriverInfo'   — HTTP connection configuration
+-- * 'HttpEnv'          — IOE handle + driver info; used for root HTTP methods
+-- * 'HttpSessionEnv'   — 'HttpEnv' fields + session + pause duration
+-- * 'BiDiEnv'          — IOE handle + BiDiRunner IO + pause duration
+--
+-- Functions receive handles explicitly rather than implicitly via typeclasses.
+-- This is the idiomatic Bluefin approach, analogous to RIO's @Has*@ typeclasses.
+module WebDriver.Bluefin.HTTP.Core
+  ( -- * Driver Info
+    HttpDriverInfo (..),
+    defaultDriverInfo,
+
+    -- * Handles
+    HttpEnv (..),
+    HttpSessionEnv (..),
+    BiDiEnv (..),
+
+    -- * Logging
+    log,
+
+    -- * IO runner builders (for use by Actions modules)
+    mkEnvRunner,
+    mkSessionRunner,
+
+    -- * Higher-level command runners
+    runHttpCommand,
+    runBiDiCommand,
+    getBiDiRunner,
+
+    -- * Pause
+    pause,
+    pauseBiDi,
+  )
+where
+
+import Prelude hiding (log)
+
+import Control.Concurrent (threadDelay)
+import Data.Aeson (FromJSON)
+import Data.Text (Text)
+import Data.Text qualified as T
+import Bluefin.Eff (Eff, (:>))
+import Bluefin.IO (IOE, effIO)
+import WebDriverPreCore.BiDiRunner (BiDiRunner (..))
+import WebDriverPreCore.BiDi.Protocol (Command)
+import WebDriverPreCore.Error (parseFailToWDException)
+import WebDriverPreCore.Extended.HTTP.Base.Actions (Runner)
+import WebDriverPreCore.Extended.HTTP.Base.Protocol (Session)
+import WebDriverPreCore.HTTP.Command qualified as HC
+import WebDriverPreCore.HttpRunner (HttpEndpoint (..), callWebDriver)
+import WebDriverPreCore.Utils.Timeout (Timeout (..))
+import UnliftIO (throwIO)
+
+-- ---------------------------------------------------------------------------
+-- Driver Info
+-- ---------------------------------------------------------------------------
+
+-- | Configuration for an HTTP WebDriver connection.
+data HttpDriverInfo = MkHttpDriverInfo
+  { httpEndpoint :: HttpEndpoint,
+    driverLogging :: Bool
+  }
+
+-- | Default driver info targeting localhost:4444 with logging disabled.
+defaultDriverInfo :: HttpDriverInfo
+defaultDriverInfo =
+  MkHttpDriverInfo
+    { httpEndpoint = MkHttpEndpoint {host = "127.0.0.1", port = 4444},
+      driverLogging = False
+    }
+
+-- ---------------------------------------------------------------------------
+-- Handles
+-- ---------------------------------------------------------------------------
+
+-- | Environment handle for HTTP runner operations (no session required).
+--
+-- Analogous to RIO's @HttpEnv@, combining @HasLogFunc@ + @HasHttpDriverInfo@.
+data HttpEnv e = MkHttpEnv
+  { httpDriverInfo :: HttpDriverInfo,
+    envIO :: IOE e
+  }
+
+-- | Environment handle for session-scoped HTTP operations.
+--
+-- Analogous to RIO's @HttpSessionEnv@, adding @HasHttpSession@ + @HasPauseDuration@.
+data HttpSessionEnv e = MkHttpSessionEnv
+  { httpDriverInfo :: HttpDriverInfo,
+    httpSession :: Session,
+    pauseDuration :: Timeout,
+    envIO :: IOE e
+  }
+
+-- | Environment handle for BiDi operations.
+--
+-- Analogous to RIO's @BiDiEnv@, combining @HasBiDiRunner@ + @HasLogFunc@ +
+-- @HasPauseDuration@.  The 'BiDiRunner' is kept in @IO@; commands are lifted
+-- into 'Eff' via 'effIO'.
+data BiDiEnv e = MkBiDiEnv
+  { biDiRunner :: BiDiRunner IO,
+    biDiPauseDuration :: Timeout,
+    biDiIO :: IOE e
+  }
+
+-- ---------------------------------------------------------------------------
+-- Logging
+-- ---------------------------------------------------------------------------
+
+-- | Log an info message to stdout.
+--
+-- Analogous to @log :: (HasLogFunc env) => Text -> RIO env ()@ in the RIO POC.
+-- Pass any 'IOE' handle in scope (e.g. @env.envIO@ or @bidi.biDiIO@).
+log :: (e :> es) => IOE e -> Text -> Eff es ()
+log io t = effIO io $ putStrLn ("[INFO] " <> T.unpack t)
+
+-- ---------------------------------------------------------------------------
+-- IO runner builders
+-- ---------------------------------------------------------------------------
+
+-- | Build a @Command a -> IO a@ runner from an 'HttpEnv'.
+--
+-- The returned runner is polymorphic in @a@ (constrained by 'FromJSON').
+mkEnvRunner :: (FromJSON a) => HttpEnv e -> Runner IO a
+mkEnvRunner env cmd =
+  callWebDriver env.httpDriverInfo.httpEndpoint (mkMLogger env.httpDriverInfo) cmd
+    >>= either (throwIO . parseFailToWDException) pure
+
+-- | Build a @Command a -> IO a@ runner from an 'HttpSessionEnv'.
+mkSessionRunner :: (FromJSON a) => HttpSessionEnv e -> Runner IO a
+mkSessionRunner sess cmd =
+  callWebDriver sess.httpDriverInfo.httpEndpoint (mkMLogger sess.httpDriverInfo) cmd
+    >>= either (throwIO . parseFailToWDException) pure
+
+mkMLogger :: HttpDriverInfo -> Maybe (Text -> IO ())
+mkMLogger info
+  | info.driverLogging = Just $ \t -> putStrLn ("[DRIVER] " <> T.unpack t)
+  | otherwise = Nothing
+
+-- ---------------------------------------------------------------------------
+-- Higher-level command runners
+-- ---------------------------------------------------------------------------
+
+-- | Run a typed HTTP WebDriver 'Command' via an 'HttpEnv' handle.
+runHttpCommand :: (e :> es, FromJSON r) => HttpEnv e -> HC.Command r -> Eff es r
+runHttpCommand env cmd = effIO env.envIO (mkEnvRunner env cmd)
+
+-- | Run a typed BiDi 'Command' via a 'BiDiEnv' handle.
+--
+-- The underlying 'BiDiRunner' is @IO@-based; the result is lifted into 'Eff'.
+runBiDiCommand :: (e :> es, FromJSON r) => BiDiEnv e -> Command r -> Eff es r
+runBiDiCommand MkBiDiEnv {biDiRunner = MkBiDiRunner {run = r}, biDiIO} cmd =
+  effIO biDiIO (r cmd)
+
+-- | Extract the 'BiDiRunner IO' from a 'BiDiEnv' handle.
+getBiDiRunner :: BiDiEnv e -> BiDiRunner IO
+getBiDiRunner = (.biDiRunner)
+
+-- ---------------------------------------------------------------------------
+-- Pause helpers
+-- ---------------------------------------------------------------------------
+
+-- | Sleep for the 'pauseDuration' stored in an 'HttpSessionEnv'.
+pause :: (e :> es) => HttpSessionEnv e -> Eff es ()
+pause sess = effIO sess.envIO $ threadDelay (let MkTimeout us = sess.pauseDuration in us)
+
+-- | Sleep for the 'biDiPauseDuration' stored in a 'BiDiEnv'.
+pauseBiDi :: (e :> es) => BiDiEnv e -> Eff es ()
+pauseBiDi bidi = effIO bidi.biDiIO $ threadDelay (let MkTimeout us = bidi.biDiPauseDuration in us)

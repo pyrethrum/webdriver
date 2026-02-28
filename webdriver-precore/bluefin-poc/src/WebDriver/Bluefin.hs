@@ -2,16 +2,32 @@
 Module: WebDriver.Bluefin
 Description: Bluefin-based wrapper for WebDriver (proof of concept)
 
-This module will provide a Bluefin-based interface to WebDriver,
-demonstrating that webdriver-precore-extended can adapt to Bluefin idioms.
+Re-exports from sub-modules so consumers can import @WebDriver.Bluefin@
+as a single entry point.
+
+This mirrors 'WebDriver.RIO' but uses Bluefin 'Eff'/'IOE' handles instead
+of RIO's @Has*@ typeclass constraints and @RIO env a@ monad.
 -}
 module WebDriver.Bluefin
-  ( -- * Placeholder for future implementation
-    -- Will include:
-    -- * Bluefin effect types
-    -- * Bluefin-style API functions
+  ( -- * Capabilities
+    module WebDriverPreCore.Extended.Capabilities,
+
+    -- * Handle Types
+    module WebDriver.Bluefin.HTTP.Core,
+
+    -- * App / Runners
+    module WebDriver.Bluefin.App,
+
+    -- * HTTP Runner
+    module WebDriverPreCore.HttpRunner,
+
+    -- * BiDi URL & runner types
+    module WebDriverPreCore.BiDiRunner,
   )
 where
 
--- This module is a placeholder for Bluefin proof of concept.
--- It will demonstrate adaptation of webdriver-precore-extended to Bluefin patterns.
+import WebDriverPreCore.Extended.Capabilities
+import WebDriver.Bluefin.HTTP.Core
+import WebDriver.Bluefin.App
+import WebDriverPreCore.HttpRunner
+import WebDriverPreCore.BiDiRunner
