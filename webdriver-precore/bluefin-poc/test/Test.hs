@@ -20,6 +20,7 @@ import Utils (txt)
 import WebDriver.Bluefin hiding (log)
 import WebDriver.Bluefin qualified as B
 import WebDriver.Bluefin.BiDi.Base.Actions
+import WebDriver.Bluefin.HTTP.Base.Actions qualified as HTTP
 import WebDriverPreCore.BiDi.Protocol
   ( BrowsingContext (..),
     GetTree (..),
@@ -46,8 +47,9 @@ import WebDriverPreCore.BiDi.Protocol
   )
 import WebDriverPreCore.Test.CapabilitiesBuilder (httpCapabilities)
 import WebDriverPreCore.Test.ConfigLoader (Config (..), loadConfig)
-import WebDriverPreCore.Test.TestData (loginUrl)
+import WebDriverPreCore.Test.TestData (contentPageUrl, loginUrl)
 import WebDriverPreCore.Utils.Timeout (milliseconds)
+import WebDriverPreCore.Extended.HTTP.Base.Protocol qualified as P
 
 main :: IO ()
 main = defaultMain tests
@@ -56,7 +58,8 @@ tests :: TestTree
 tests =
   testGroup
     "Bluefin Tests"
-    [ testCase "BiDi login demo" bidi_login_demo
+    [ testCase "HTTP login and navigation demo" http_login_navigation_demo,
+      testCase "BiDi login demo" bidi_login_demo
     ]
 
 -- ---------------------------------------------------------------------------
@@ -79,6 +82,13 @@ mkBiDiCaps config =
   where
     cap = fromHttpCapability $ httpCapabilities config
 
+mkHttpCaps :: Config -> HttpCapabilities
+mkHttpCaps config =
+  MkFullCapabilities
+    { alwaysMatch = Just . fromHttpCapability $ httpCapabilities config,
+      firstMatch = []
+    }
+
 -- | Minimal pointer properties with all optional fields set to 'Nothing'.
 defaultPointerProps :: PointerCommonProperties
 defaultPointerProps =
@@ -99,6 +109,51 @@ charToKeys c = [KeyDown {value = T.singleton c}, KeyUp {value = T.singleton c}]
 -- ---------------------------------------------------------------------------
 -- Tests
 -- ---------------------------------------------------------------------------
+
+-- | HTTP-only demo:
+--   - Creates an HTTP session
+--   - Navigates to the login page
+--   - Fills in username and password via elementSendKeys
+--   - Navigates to the colourful content page
+--   - Gets and logs the page title
+
+-- >>> http_login_navigation_demo
+http_login_navigation_demo :: IO ()
+http_login_navigation_demo = runEff_ $ \io -> do
+  config <- effIO io loadConfig
+  let behaviour = mkInteractBehaviour config
+      caps = mkHttpCaps config
+      driverInfo =
+        MkHttpDriverInfo
+          { httpEndpoint = MkHttpEndpoint {host = config.httpUrl, port = config.httpPort},
+            driverLogging = behaviour.driverLogging
+          }
+      http = MkHttpEnv driverInfo io
+
+  B.withHttpSession http behaviour caps $ \sess -> do
+    B.log io "=== Navigate to login form ==="
+    loginPage <- effIO io loginUrl
+    HTTP.navigateTo sess loginPage
+    _ <- HTTP.maximizeWindow sess
+    pause sess
+
+    B.log io "=== Fill in username ==="
+    usernameField <- HTTP.findElement sess $ P.CSS "#username"
+    HTTP.elementSendKeys sess usernameField "demoUser"
+    pause sess
+
+    B.log io "=== Fill in password ==="
+    passwordField <- HTTP.findElement sess $ P.CSS "#password"
+    HTTP.elementSendKeys sess passwordField "s3cr3tP4ssw0rd"
+    pause sess
+
+    B.log io "=== Navigate to colourful content page ==="
+    contentPage <- effIO io contentPageUrl
+    HTTP.navigateTo sess contentPage
+    pause sess
+
+    title <- HTTP.getTitle sess
+    B.log io $ "Landed on: " <> title
 
 -- | BiDi version of the login demo:
 --   - Subscribes to browsingContext.domContentLoaded events with a timed wait

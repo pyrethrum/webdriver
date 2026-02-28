@@ -1,3 +1,5 @@
+{-# LANGUAGE DerivingVia #-}
+
 -- |
 -- Module: WebDriver.Bluefin.HTTP.Core
 -- Description: Core handle types and helpers for Bluefin WebDriver
@@ -9,8 +11,10 @@
 -- * 'HttpSessionEnv'   — 'HttpEnv' fields + session + pause duration
 -- * 'BiDiEnv'          — IOE handle + BiDiRunner IO + pause duration
 --
--- Functions receive handles explicitly rather than implicitly via typeclasses.
--- This is the idiomatic Bluefin approach, analogous to RIO's @Has*@ typeclasses.
+-- All handle types are proper Bluefin compound effects: they derive 'Handle'
+-- via 'OneWayCoercibleHandle' so they can be used with 'mapHandle',
+-- 'useImplIn', etc.  Functions receive handles explicitly rather than
+-- implicitly via typeclasses.
 module WebDriver.Bluefin.HTTP.Core
   ( -- * Driver Info
     HttpDriverInfo (..),
@@ -45,8 +49,10 @@ import Control.Concurrent (threadDelay)
 import Data.Aeson (FromJSON)
 import Data.Text (Text)
 import Data.Text qualified as T
+import Bluefin.Compound (Handle, OneWayCoercible (..), OneWayCoercibleHandle (..), gOneWayCoercible)
 import Bluefin.Eff (Eff, (:>))
 import Bluefin.IO (IOE, effIO)
+import GHC.Generics (Generic)
 import WebDriverPreCore.BiDiRunner (BiDiRunner (..))
 import WebDriverPreCore.BiDi.Protocol (Command)
 import WebDriverPreCore.Error (parseFailToWDException)
@@ -81,32 +87,47 @@ defaultDriverInfo =
 
 -- | Environment handle for HTTP runner operations (no session required).
 --
--- Analogous to RIO's @HttpEnv@, combining @HasLogFunc@ + @HasHttpDriverInfo@.
+-- A proper Bluefin compound handle wrapping 'IOE' and driver config.
 data HttpEnv e = MkHttpEnv
   { httpDriverInfo :: HttpDriverInfo,
     envIO :: IOE e
   }
+  deriving (Generic)
+  deriving (Handle) via OneWayCoercibleHandle HttpEnv
+
+instance (e :> es) => OneWayCoercible (HttpEnv e) (HttpEnv es) where
+  oneWayCoercibleImpl = gOneWayCoercible
 
 -- | Environment handle for session-scoped HTTP operations.
 --
--- Analogous to RIO's @HttpSessionEnv@, adding @HasHttpSession@ + @HasPauseDuration@.
+-- A proper Bluefin compound handle wrapping 'IOE', driver config, session
+-- and pause duration.
 data HttpSessionEnv e = MkHttpSessionEnv
   { httpDriverInfo :: HttpDriverInfo,
     httpSession :: Session,
     pauseDuration :: Timeout,
     envIO :: IOE e
   }
+  deriving (Generic)
+  deriving (Handle) via OneWayCoercibleHandle HttpSessionEnv
+
+instance (e :> es) => OneWayCoercible (HttpSessionEnv e) (HttpSessionEnv es) where
+  oneWayCoercibleImpl = gOneWayCoercible
 
 -- | Environment handle for BiDi operations.
 --
--- Analogous to RIO's @BiDiEnv@, combining @HasBiDiRunner@ + @HasLogFunc@ +
--- @HasPauseDuration@.  The 'BiDiRunner' is kept in @IO@; commands are lifted
--- into 'Eff' via 'effIO'.
+-- A proper Bluefin compound handle wrapping 'IOE', a 'BiDiRunner' (kept in
+-- @IO@; commands are lifted into 'Eff' via 'effIO') and pause duration.
 data BiDiEnv e = MkBiDiEnv
   { biDiRunner :: BiDiRunner IO,
     pauseDuration :: Timeout,
     biDiIO :: IOE e
   }
+  deriving (Generic)
+  deriving (Handle) via OneWayCoercibleHandle BiDiEnv
+
+instance (e :> es) => OneWayCoercible (BiDiEnv e) (BiDiEnv es) where
+  oneWayCoercibleImpl = gOneWayCoercible
 
 -- ---------------------------------------------------------------------------
 -- Logging
