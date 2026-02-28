@@ -181,14 +181,11 @@ withBiDiSession driverLogging caps action = do
 
 -- Internal helper: open a BiDi connection and run an action in BiDiEnv.
 withBiDiEnvIO :: LogFunc -> Bool -> BiDiUrl -> RIO BiDiEnv a -> IO a
-withBiDiEnvIO lf driverLogging bidiUrl action = do
-  resultRef <- newIORef (Left (error "withBiDiEnvIO: result unset" :: SomeException))
-  BiDiRunner.withBiDi mLogger bidiUrl $ \ioRunner -> do
+withBiDiEnvIO lf driverLogging bidiUrl action =
+  BiDiRunner.withBiDi mLogger bidiUrl $ \ioRunner ->
     let rioRunner = BiDiRunner.hoistBiDiRunner liftIO (runRIO env) ioRunner
-        env = MkBiDiEnv {logFunc = lf, biDiRunner = rioRunner}
-    r <- try (runRIO env action)
-    writeIORef resultRef r
-  readIORef resultRef >>= either throwIO pure
+        env = MkBiDiEnv {logFunc = lf, biDiRunner = rioRunner, pauseDuration = MkTimeout 0}
+    in runRIO env action
   where
     mLogger
       | driverLogging = Just $ \t -> runRIO lf (logInfo (display t))
