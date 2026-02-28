@@ -93,9 +93,9 @@ mkHttpSession caps timeout' = do
 withHttpSession ::
   forall env senv a.
   (HasLogFunc senv, HasHttpDriverInfo senv, HasHttpSession senv) =>
-  (EC.HttpCapabilities -> Timeout -> RIO env senv) ->
+  (HttpCapabilities -> Timeout -> RIO env senv) ->
   InteractBehaviour ->
-  EC.HttpCapabilities ->
+  HttpCapabilities ->
   -- | Action to run with the session
   RIO senv a ->
   RIO env a
@@ -107,7 +107,7 @@ withHttpSession mkEnv behaviour caps action =
   where
     run = flip runRIO
 
-withHttpSessionEnv :: (HasLogFunc env, HasHttpDriverInfo env) => InteractBehaviour -> EC.HttpCapabilities -> RIO HttpSessionEnv a -> RIO env a
+withHttpSessionEnv :: (HasLogFunc env, HasHttpDriverInfo env) => InteractBehaviour -> HttpCapabilities -> RIO HttpSessionEnv a -> RIO env a
 withHttpSessionEnv = withHttpSession mkHttpSession
 
 pause :: (HasPauseDuration env) => RIO env ()
