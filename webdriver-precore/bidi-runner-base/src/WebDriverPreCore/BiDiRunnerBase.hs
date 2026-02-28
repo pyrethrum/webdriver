@@ -38,6 +38,8 @@ import Data.Aeson.Types (Parser, parseEither)
 import Data.ByteString.Lazy qualified as BL
 import Data.Foldable (traverse_)
 import Data.Function ((&))
+import Data.Functor (($>))
+import Data.Maybe (fromMaybe)
 import Data.Set qualified as Set
 import Data.Text (Text, pack, take, unpack)
 import Data.Text.Encoding (decodeUtf8)
@@ -55,7 +57,7 @@ import Prelude hiding (log, take)
 type Logger m = Text -> m ()
 
 -- | Null logger
-nullLogger :: Applicative m => Logger m
+nullLogger :: (Applicative m) => Logger m
 nullLogger = const $ pure ()
 
 -- | Combined channel and socket actions
@@ -90,11 +92,12 @@ mkChannelActions logger = do
 
 -- | Run a BiDi session
 withBiDiBase ::
+  forall a m.
   (MonadUnliftIO m) =>
   Maybe (Logger m) ->
   BiDiUrl ->
-  (SocketActions m -> m ()) ->
-  m ()
+  (SocketActions m -> m a) ->
+  m a
 withBiDiBase mLogger bidiUrl action = do
   let logger = maybe nullLogger id mLogger
   ca <- mkChannelActions logger
@@ -107,8 +110,8 @@ withBiDiWithActions ::
   Maybe (Logger m) ->
   BiDiUrl ->
   (Logger m -> m (ChannelActions m)) ->
-  (SocketActions m -> m ()) ->
-  m ()
+  (SocketActions m -> m a) ->
+  m a
 withBiDiWithActions mLogger bidiUrl mkActions action = do
   let logger = maybe nullLogger id mLogger
   ca <- mkActions logger
@@ -123,7 +126,8 @@ mkMessageActions log' MkChannels {sendChan, receiveChan, eventChan, subscription
         msgToSend <- atomically $ readTChan sendChan
         log' $ "Sending Message: " <> jsonToText msgToSend
         catchLog "Message Send Failed" log' $
-          liftIO $ sendTextData conn (BL.toStrict $ encode msgToSend),
+          liftIO $
+            sendTextData conn (BL.toStrict $ encode msgToSend),
       --
       get = \conn -> do
         msg <- liftIO $ receiveData conn
@@ -175,22 +179,30 @@ catchLog msg logger action =
     logger $ msg <> ": " <> pack (displayException e)
 
 -- | Run a WebSocket client
-withSocket :: (MonadUnliftIO m) => BiDiUrl -> Logger m -> MessageLoops m -> m () -> m ()
+withSocket :: forall a m. (MonadUnliftIO m) => BiDiUrl -> Logger m -> MessageLoops m -> m a -> m a
 withSocket pth@MkBiDiUrl {host, port, path} logger messageLoops action = do
   logger $ "Connecting to WebDriver at " <> pack (show pth)
   withRunInIO $ \runInIO ->
     WS.runClient (unpack host) port (unpack path) $ \conn -> do
       eventLoop <- runInIO messageLoops.eventLoop
-      getLoop <- runInIO $ messageLoops.getLoop conn
-      sendLoop <- runInIO $ messageLoops.sendLoop conn
+      getLoop <- (runInIO $ messageLoops.getLoop conn)
+      sendLoop <- (runInIO $ messageLoops.sendLoop conn)
 
       runInIO $ logger "WebSocket connection established"
 
-      result <- async (runInIO action)
+      result <- async $ runInIO action
 
-      (_asy, ethresult) <- waitAnyCatch [getLoop, sendLoop, result, eventLoop]
+      let asyncs :: [Async (Maybe a)]
+          asyncs =
+            [ getLoop $> Nothing,
+              sendLoop $> Nothing,
+              eventLoop $> Nothing,
+              Just <$> result
+            ]
 
-      traverse_ cancel [getLoop, sendLoop, result, eventLoop]
+      (_asy, ethresult) <- waitAnyCatch asyncs
+
+      traverse_ cancel asyncs
 
       ethresult
         & either
@@ -198,7 +210,14 @@ withSocket pth@MkBiDiUrl {host, port, path} logger messageLoops action = do
               runInIO $ logger $ "One of the BiDi client threads failed: \n" <> pack (displayException e)
               throw e
           )
-          pure
+          ( \case
+              Nothing -> do
+                runInIO $ logger message
+                throwIO $ userError $ unpack message
+                where
+                  message = "BiDi client threads did not return a result, likely due to WebSocket closure."
+              Just r -> pure r
+          )
 
 -- | Apply subscriptions to an event
 applySubscriptions :: (MonadIO m) => Logger m -> Object -> TVar [RegisteredSubscription m] -> m ()
@@ -229,7 +248,7 @@ parseEventProps = withObject "EventProps" $ \o ->
     <*> pure (Object o)
 
 -- | Apply a subscription handler to an event
-applySubscription :: Monad m => SocketSubscriptionType -> Value -> Value -> SocketSubscription m -> m ()
+applySubscription :: (Monad m) => SocketSubscriptionType -> Value -> Value -> SocketSubscription m -> m ()
 applySubscription subType params fullObj = \case
   SingleSubscription {subscriptionType, action} ->
     when (subType == subscriptionType) $

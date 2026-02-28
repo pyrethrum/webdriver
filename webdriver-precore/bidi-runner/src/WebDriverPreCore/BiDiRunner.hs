@@ -93,11 +93,11 @@ runOffSpecNoWait MkBiDiRunner {socketActions} method params =
 
 -- | Run a BiDi session with typed commands
 withBiDi
-  :: (MonadUnliftIO m, MonadThrow m)
+  :: forall a m. (MonadUnliftIO m, MonadThrow m)
   => Maybe (Text -> m ())  -- ^ Optional logger
   -> BiDiUrl
-  -> (BiDiRunner m -> m ())
-  -> m ()
+  -> (BiDiRunner m -> m a)
+  -> m a
 withBiDi mLogger bidiUrl action =
   withBiDiBase mLogger bidiUrl $ \sa ->
     action (mkBiDiRunner sa)
