@@ -7,8 +7,8 @@ import Data.Functor (void)
 import Data.Maybe (fromJust)
 import Data.Text qualified as T
 import Data.Text.IO qualified as TIO
-import Bluefin.Eff (runEff_)
-import Bluefin.IO (effIO)
+import Bluefin.Eff (Eff, runEff_)
+import Bluefin.IO (IOE, effIO)
 import Test.Tasty (TestTree, defaultMain, testGroup)
 import Test.Tasty.HUnit (testCase)
 import UnliftIO (throwIO)
@@ -59,6 +59,49 @@ tests =
     [ testCase "HTTP login and navigation demo" http_login_navigation_demo,
       testCase "BiDi login demo" bidi_login_demo
     ]
+
+-- ---------------------------------------------------------------------------
+-- Setup runners
+-- ---------------------------------------------------------------------------
+
+-- | Load config and build an 'HttpEnv', then run an action inside 'runEff_'.
+--
+-- Both 'runHttpTest' and 'runBiDiTest' delegate to this so config loading and
+-- environment construction happen in exactly one place.
+runSetup
+  :: (forall e. IOE e -> HttpEnv e -> InteractBehaviour -> Config -> Eff e a)
+  -> IO a
+runSetup action = runEff_ $ \io -> do
+  config <- effIO io loadConfig
+  let behaviour = mkInteractBehaviour config
+      driverInfo =
+        MkHttpDriverInfo
+          { httpEndpoint = MkHttpEndpoint {host = config.httpUrl, port = config.httpPort},
+            driverLogging = behaviour.driverLogging
+          }
+  action io (MkHttpEnv driverInfo io) behaviour config
+
+-- | Full HTTP test harness: loads config, opens a session, provides a
+-- 'LogPause' handle, and runs the supplied action.
+runHttpTest
+  :: (forall e. IOE e -> HttpSessionEnv e -> LogPause e -> Eff e ())
+  -> IO ()
+runHttpTest action =
+  runSetup $ \io http behaviour config ->
+    withHttpSession http behaviour (mkHttpCaps config) $ \sess ->
+      withLogPause io behaviour.pauseDuration $ \lp ->
+        action io sess lp
+
+-- | Full BiDi test harness: loads config, opens a BiDi session, provides a
+-- 'LogPause' handle, and runs the supplied action.
+runBiDiTest
+  :: (forall e. IOE e -> BiDiEnv e -> LogPause e -> Eff e ())
+  -> IO ()
+runBiDiTest action =
+  runSetup $ \io http behaviour config ->
+    withBiDiSession http behaviour (mkBiDiCaps config) $ \bidi ->
+      withLogPause io behaviour.pauseDuration $ \lp ->
+        action io bidi lp
 
 -- ---------------------------------------------------------------------------
 -- Helpers
@@ -117,42 +160,30 @@ charToKeys c = [KeyDown {value = T.singleton c}, KeyUp {value = T.singleton c}]
 
 -- >>> http_login_navigation_demo
 http_login_navigation_demo :: IO ()
-http_login_navigation_demo = runEff_ $ \io -> do
-  config <- effIO io loadConfig
-  let behaviour = mkInteractBehaviour config
-      caps = mkHttpCaps config
-      driverInfo =
-        MkHttpDriverInfo
-          { httpEndpoint = MkHttpEndpoint {host = config.httpUrl, port = config.httpPort},
-            driverLogging = behaviour.driverLogging
-          }
-      http = MkHttpEnv driverInfo io
+http_login_navigation_demo = runHttpTest $ \io sess lp -> do
+  log lp "=== Navigate to login form ==="
+  loginPage <- effIO io loginUrl
+  HTTP.navigateTo sess loginPage
+  _ <- HTTP.maximizeWindow sess
+  pause lp
 
-  withHttpSession http behaviour caps $ \sess ->
-    withLogPause io behaviour.pauseDuration $ \lp -> do
-      log lp "=== Navigate to login form ==="
-      loginPage <- effIO io loginUrl
-      HTTP.navigateTo sess loginPage
-      _ <- HTTP.maximizeWindow sess
-      pause lp
+  log lp "=== Fill in username ==="
+  usernameField <- HTTP.findElement sess $ P.CSS "#username"
+  HTTP.elementSendKeys sess usernameField "demoUser"
+  pause lp
 
-      log lp "=== Fill in username ==="
-      usernameField <- HTTP.findElement sess $ P.CSS "#username"
-      HTTP.elementSendKeys sess usernameField "demoUser"
-      pause lp
+  log lp "=== Fill in password ==="
+  passwordField <- HTTP.findElement sess $ P.CSS "#password"
+  HTTP.elementSendKeys sess passwordField "s3cr3tP4ssw0rd"
+  pause lp
 
-      log lp "=== Fill in password ==="
-      passwordField <- HTTP.findElement sess $ P.CSS "#password"
-      HTTP.elementSendKeys sess passwordField "s3cr3tP4ssw0rd"
-      pause lp
+  log lp "=== Navigate to colourful content page ==="
+  contentPage <- effIO io contentPageUrl
+  HTTP.navigateTo sess contentPage
+  pause lp
 
-      log lp "=== Navigate to colourful content page ==="
-      contentPage <- effIO io contentPageUrl
-      HTTP.navigateTo sess contentPage
-      pause lp
-
-      title <- HTTP.getTitle sess
-      log lp $ "Landed on: " <> title
+  title <- HTTP.getTitle sess
+  log lp $ "Landed on: " <> title
 
 -- | BiDi version of the login demo:
 --   - Subscribes to browsingContext.domContentLoaded events with a timed wait
@@ -162,108 +193,96 @@ http_login_navigation_demo = runEff_ $ \io -> do
 
 -- >>> bidi_login_demo
 bidi_login_demo :: IO ()
-bidi_login_demo = runEff_ $ \io -> do
-  config <- effIO io loadConfig
-  let behaviour = mkInteractBehaviour config
-      caps = mkBiDiCaps config
-      driverInfo =
-        MkHttpDriverInfo
-          { httpEndpoint = MkHttpEndpoint {host = config.httpUrl, port = config.httpPort},
-            driverLogging = behaviour.driverLogging
-          }
-      http = MkHttpEnv driverInfo io
+bidi_login_demo = runBiDiTest $ \io bidi lp -> do
+  log lp "=== Get root browsing context ==="
+  tree <- browsingContextGetTree bidi (MkGetTree Nothing Nothing)
+  bc <- case tree of
+    MkGetTreeResult (info : _) -> do
+      let MkBrowsingContext ctxId = info.context
+      log lp $ "Root context: " <> ctxId
+      pure info.context
+    _ -> effIO io $ throwIO $ userError "No browsing contexts found"
 
-  withBiDiSession http behaviour caps $ \bidi ->
-    withLogPause io behaviour.pauseDuration $ \lp -> do
-      log lp "=== Get root browsing context ==="
-      tree <- browsingContextGetTree bidi (MkGetTree Nothing Nothing)
-      bc <- case tree of
-        MkGetTreeResult (info : _) -> do
-          let MkBrowsingContext ctxId = info.context
-          log lp $ "Root context: " <> ctxId
-          pure info.context
-        _ -> effIO io $ throwIO $ userError "No browsing contexts found"
+  log lp "=== Subscribe to browsingContext.domContentLoaded ==="
+  loadedVar <- effIO io newEmptyTMVarIO
+  let onLoadedEvent evt =
+        void $ atomically $ tryPutTMVar loadedVar evt
+  subscribeBrowsingContextDomContentLoaded bidi onLoadedEvent
 
-      log lp "=== Subscribe to browsingContext.domContentLoaded ==="
-      loadedVar <- effIO io newEmptyTMVarIO
-      let onLoadedEvent evt =
-            void $ atomically $ tryPutTMVar loadedVar evt
-      subscribeBrowsingContextDomContentLoaded bidi onLoadedEvent
+  log lp "=== Subscribe to browsingContext.load (many-style) ==="
+  navVar <- effIO io newEmptyTMVarIO
+  subscribeMany bidi [BrowsingContextLoad] $ \evt -> do
+    TIO.putStrLn $ "!!! browsingContext.load event (many-style): " <> txt evt
+    atomically $ putTMVar navVar ()
 
-      log lp "=== Subscribe to browsingContext.load (many-style) ==="
-      navVar <- effIO io newEmptyTMVarIO
-      subscribeMany bidi [BrowsingContextLoad] $ \evt -> do
-        TIO.putStrLn $ "!!! browsingContext.load event (many-style): " <> txt evt
-        atomically $ putTMVar navVar ()
+  log lp "=== Navigate to login page ==="
+  loginPage <- effIO io loginUrl
+  browsingContextNavigate bidi $ MkNavigate {context = bc, url = loginPage, wait = Nothing}
+  pause lp
 
-      log lp "=== Navigate to login page ==="
-      loginPage <- effIO io loginUrl
-      browsingContextNavigate bidi $ MkNavigate {context = bc, url = loginPage, wait = Nothing}
-      pause lp
+  log lp "=== Waiting for domContentLoaded event ==="
+  effIO io $
+    race_
+      ( atomically (readTMVar loadedVar) >>= \evt ->
+          TIO.putStrLn $ "!!! domContentLoaded fired: " <> txt evt
+      )
+      ( threadDelay (10 * 1_000_000)
+          >> throwIO (userError "Timeout: domContentLoaded did not fire within 10 s")
+      )
+  pause lp
 
-      log lp "=== Waiting for domContentLoaded event ==="
-      effIO io $
-        race_
-          ( atomically (readTMVar loadedVar) >>= \evt ->
-              TIO.putStrLn $ "!!! domContentLoaded fired: " <> txt evt
-          )
-          ( threadDelay (10 * 1_000_000)
-              >> throwIO (userError "Timeout: domContentLoaded did not fire within 10 s")
-          )
-      pause lp
+  log lp "=== Locate #username field ==="
+  nodesResult <-
+    browsingContextLocateNodes bidi $
+      MkLocateNodes
+        { context = bc,
+          locator = CSS {value = "#username"},
+          maxNodeCount = Nothing,
+          serializationOptions = Nothing,
+          startNodes = Nothing
+        }
+  log lp $ "Located nodes: " <> txt nodesResult
+  pause lp
 
-      log lp "=== Locate #username field ==="
-      nodesResult <-
-        browsingContextLocateNodes bidi $
-          MkLocateNodes
-            { context = bc,
-              locator = CSS {value = "#username"},
-              maxNodeCount = Nothing,
-              serializationOptions = Nothing,
-              startNodes = Nothing
-            }
-      log lp $ "Located nodes: " <> txt nodesResult
-      pause lp
+  let MkLocateNodesResult nodes = nodesResult
+      usernameSharedId :: SharedId
+      usernameSharedId = case nodes of
+        [node] -> fromJust node.sharedId
+        _ -> error "Expected exactly one #username element"
 
-      let MkLocateNodesResult nodes = nodesResult
-          usernameSharedId :: SharedId
-          usernameSharedId = case nodes of
-            [node] -> fromJust node.sharedId
-            _ -> error "Expected exactly one #username element"
-
-      log lp "=== Type 'bluefinUser' into #username via BiDi key actions ==="
-      inputPerformActions bidi $
-        MkPerformActions
-          { context = bc,
-            actions =
-              [ PointerSourceActions
-                  $ MkPointerSourceActions
-                    { pointerId = "mouse1",
-                      pointer = Just $ MkPointer {pointerType = Just MousePointer},
-                      pointerActions =
-                        [ PointerMove
-                            { x = 0,
-                              y = 0,
-                              duration = Nothing,
-                              origin =
-                                Just
-                                  $ ElementOrigin
-                                  $ MkSharedReference
-                                    { sharedId = usernameSharedId,
-                                      handle = Nothing,
-                                      extensions = Nothing
-                                    },
-                              pointerCommonProperties = defaultPointerProps
-                            },
-                          PointerDown {button = 0, pointerCommonProperties = defaultPointerProps},
-                          PointerUp {button = 0}
-                        ]
-                    },
-                KeySourceActions
-                  $ MkKeySourceActions
-                    { keyId = "keyboard1",
-                      keyActions = concatMap charToKeys (T.unpack "bluefinUser")
-                    }
-              ]
-          }
-      pause lp
+  log lp "=== Type 'bluefinUser' into #username via BiDi key actions ==="
+  inputPerformActions bidi $
+    MkPerformActions
+      { context = bc,
+        actions =
+          [ PointerSourceActions
+              $ MkPointerSourceActions
+                { pointerId = "mouse1",
+                  pointer = Just $ MkPointer {pointerType = Just MousePointer},
+                  pointerActions =
+                    [ PointerMove
+                        { x = 0,
+                          y = 0,
+                          duration = Nothing,
+                          origin =
+                            Just
+                              $ ElementOrigin
+                              $ MkSharedReference
+                                { sharedId = usernameSharedId,
+                                  handle = Nothing,
+                                  extensions = Nothing
+                                },
+                          pointerCommonProperties = defaultPointerProps
+                        },
+                      PointerDown {button = 0, pointerCommonProperties = defaultPointerProps},
+                      PointerUp {button = 0}
+                    ]
+                },
+            KeySourceActions
+              $ MkKeySourceActions
+                { keyId = "keyboard1",
+                  keyActions = concatMap charToKeys (T.unpack "bluefinUser")
+                }
+          ]
+      }
+  pause lp
