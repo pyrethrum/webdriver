@@ -76,7 +76,7 @@ runSetup action = runEff_ $ \io -> do
       driverInfo =
         MkHttpDriverInfo
           { httpEndpoint = MkHttpEndpoint {host = config.httpUrl, port = config.httpPort},
-            driverLogging = behaviour.driverLogging
+            driverLogFn = Nothing
           }
   action io (MkHttpEnv driverInfo io) behaviour config
 
@@ -87,8 +87,8 @@ runHttpTest ::
   IO ()
 runHttpTest action =
   runSetup $ \io http behaviour config ->
-    withHttpSession http behaviour (mkHttpCaps config) $ \sess ->
-      withLogger io $ \logger ->
+    withLogger io $ \logger ->
+      withHttpSession http behaviour logger (mkHttpCaps config) $ \sess ->
         withLogPause io behaviour.pauseDuration $ \lp ->
           action io sess logger lp
 
@@ -103,8 +103,8 @@ runBiDiTest ::
   IO ()
 runBiDiTest action =
   runSetup $ \io http behaviour config ->
-    withBiDiSession http behaviour (mkBiDiCaps config) $ \bidi ->
-      withLogger io $ \logger ->
+    withLogger io $ \logger ->
+      withBiDiSession http behaviour logger (mkBiDiCaps config) $ \bidi ->
         withLogPause io behaviour.pauseDuration $ \lp ->
           catch
             (\ex -> action ex io bidi logger lp)
@@ -228,6 +228,7 @@ bidi_login_demo = runBiDiTest $ \ex io bidi logger lp -> do
   pause lp
 
   log logger "=== Waiting for domContentLoaded event ==="
+  -- Note in full example this should be moved into its own effect to support propper logging
   effIO io $
     race_
       ( atomically (readTMVar loadedVar) >>= \evt ->

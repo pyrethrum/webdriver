@@ -26,10 +26,11 @@ where
 import Prelude hiding (log)
 
 import Data.Text (Text)
-import Data.Text qualified as T
 import Bluefin.Eff (Eff, (:>), runEff_)
 import Bluefin.IO (IOE, withEffToIO_)
 import UnliftIO (finally, throwIO)
+import WebDriver.Bluefin.Core (Logger (..))
+import WebDriver.Bluefin.LoggingImp (Severity (..))
 import WebDriver.Bluefin.HTTP.Core
   ( BiDiEnv (..),
     HttpDriverInfo (..),
@@ -93,13 +94,18 @@ withHttpSession
   :: (e :> es)
   => HttpEnv e
   -> InteractBehaviour
+  -> Logger e
   -> EC.HttpCapabilities
   -> (HttpSessionEnv e -> Eff es a)
   -> Eff es a
-withHttpSession http behaviour caps action =
+withHttpSession http behaviour logger caps action =
   withEffToIO_ http.envIO $ \toIO -> do
     resp <- toIO $ newSessionResponse http caps
-    let sessionEnv = mkHttpSessionEnv http behaviour resp
+    let logFn
+          | behaviour.driverLogging = Just (logger.logFunc Info)
+          | otherwise               = Nothing
+        info'      = http.httpDriverInfo { driverLogFn = logFn }
+        sessionEnv = mkHttpSessionEnv info' behaviour resp http.envIO
     finally
       (toIO $ action sessionEnv)
       (toIO $ deleteSession sessionEnv)
@@ -121,16 +127,17 @@ withBiDiSession
   :: (e :> es)
   => HttpEnv e
   -> InteractBehaviour
+  -> Logger e
   -> EC.HttpCapabilities
   -> (BiDiEnv e -> Eff es a)
   -> Eff es a
-withBiDiSession http behaviour caps action =
+withBiDiSession http behaviour logger caps action =
   withEffToIO_ http.envIO $ \toIO -> do
     resp        <- toIO $ newSessionResponse http caps
-    let sessionEnv = mkHttpSessionEnv http behaviour resp
+    let sessionEnv = mkHttpSessionEnv http.httpDriverInfo behaviour resp http.envIO
     let mLogger
-          | behaviour.driverLogging = Just $ \t -> putStrLn ("[INFO] " <> T.unpack t)
-          | otherwise = Nothing
+          | behaviour.driverLogging = Just (logger.logFunc Info)
+          | otherwise               = Nothing
     bidiUrl <- parseBiDiUrlIO resp.websocketUrl
     finally
       ( withBiDi mLogger bidiUrl $ \ioRunner ->
@@ -142,13 +149,13 @@ withBiDiSession http behaviour caps action =
 -- Internal helpers
 -- ---------------------------------------------------------------------------
 
-mkHttpSessionEnv :: HttpEnv e -> InteractBehaviour -> EC.HttpSessionResponse -> HttpSessionEnv e
-mkHttpSessionEnv http behaviour resp =
+mkHttpSessionEnv :: HttpDriverInfo -> InteractBehaviour -> EC.HttpSessionResponse -> IOE e -> HttpSessionEnv e
+mkHttpSessionEnv info behaviour resp io =
   MkHttpSessionEnv
-    { httpDriverInfo = http.httpDriverInfo,
+    { httpDriverInfo = info,
       httpSession = resp.session,
       pauseDuration = behaviour.pauseDuration,
-      envIO = http.envIO
+      envIO = io
     }
 
 parseBiDiUrlIO :: Maybe Text -> IO BiDiUrl

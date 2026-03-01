@@ -38,7 +38,6 @@ where
 
 import Data.Aeson (FromJSON)
 import Data.Text (Text)
-import Data.Text qualified as T
 import Bluefin.Compound (Handle, OneWayCoercible (..), OneWayCoercibleHandle (..), gOneWayCoercible)
 import Bluefin.Eff (Eff, (:>))
 import Bluefin.IO (IOE, effIO)
@@ -60,7 +59,10 @@ import UnliftIO (throwIO)
 -- | Configuration for an HTTP WebDriver connection.
 data HttpDriverInfo = MkHttpDriverInfo
   { httpEndpoint :: HttpEndpoint,
-    driverLogging :: Bool
+    -- | When 'Just', each driver request/response is logged via this function.
+    -- Set from a Katip 'Logger' by 'WebDriver.Bluefin.App.withHttpSession' /
+    -- 'WebDriver.Bluefin.App.withBiDiSession'.
+    driverLogFn :: Maybe (Text -> IO ())
   }
 
 -- | Default driver info targeting localhost:4444 with logging disabled.
@@ -68,7 +70,7 @@ defaultDriverInfo :: HttpDriverInfo
 defaultDriverInfo =
   MkHttpDriverInfo
     { httpEndpoint = MkHttpEndpoint {host = "127.0.0.1", port = 4444},
-      driverLogging = False
+      driverLogFn = Nothing
     }
 
 -- ---------------------------------------------------------------------------
@@ -128,19 +130,14 @@ instance (e :> es) => OneWayCoercible (BiDiEnv e) (BiDiEnv es) where
 -- The returned runner is polymorphic in @a@ (constrained by 'FromJSON').
 mkEnvRunner :: (FromJSON a) => HttpEnv e -> Runner IO a
 mkEnvRunner env cmd =
-  callWebDriver env.httpDriverInfo.httpEndpoint (mkMLogger env.httpDriverInfo) cmd
+  callWebDriver env.httpDriverInfo.httpEndpoint env.httpDriverInfo.driverLogFn cmd
     >>= either (throwIO . parseFailToWDException) pure
 
 -- | Build a @Command a -> IO a@ runner from an 'HttpSessionEnv'.
 mkSessionRunner :: (FromJSON a) => HttpSessionEnv e -> Runner IO a
 mkSessionRunner sess cmd =
-  callWebDriver sess.httpDriverInfo.httpEndpoint (mkMLogger sess.httpDriverInfo) cmd
+  callWebDriver sess.httpDriverInfo.httpEndpoint sess.httpDriverInfo.driverLogFn cmd
     >>= either (throwIO . parseFailToWDException) pure
-
-mkMLogger :: HttpDriverInfo -> Maybe (Text -> IO ())
-mkMLogger info
-  | info.driverLogging = Just $ \t -> putStrLn ("[DRIVER] " <> T.unpack t)
-  | otherwise = Nothing
 
 -- ---------------------------------------------------------------------------
 -- Higher-level command runners
