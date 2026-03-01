@@ -13,6 +13,37 @@
  - [ ] rearrange docker - move hls install to just before dev-container
  - [ ] ci see if can compile test server once
 
+## address critical review - effectful
+
+What worked well:
+
+withSeqEffToIO bridging — correctly used in App.hs for resource management. The pattern withSeqEffToIO $ \runInIO -> finally (runInIO action) cleanup is the canonical Effectful approach for brackets that span IO/Eff boundaries. ✓
+
+Dynamic effect dispatch — justified. The GADT encoding (WebDriverHttp, WebDriverBiDi) means alternative interpreters (test doubles, mock sessions) can replace the IO interpretations without changing call-site code. ✓
+
+Logger as Static WithSideEffects, LogPause as Static NoSideEffects — semantically correct. LogPause holds a pure Timeout value (no IO), so it doesn't need IOE :> es to install via evalStaticRep. pause carries its own IOE :> es where needed. ✓
+
+withLogger + withHttpSession + withLogPause stacking — reads cleanly in the test harness, clearly reflecting the effect stack in the types. ✓
+
+STM via liftIO — pragmatic. The comment noting the future Effectful.Concurrent.STM enhancement is honest. No semantic difference for tests.
+
+Areas to note:
+
+mkSessionRunner leaks from HTTP/Core — it's an internal detail exposed to allow App.hs to use it. Alternatively it could live in App.hs directly (reducing the API surface of HTTP/Core), but the current approach avoids circular imports.
+
+Logger :> es required by withHttpSession/withBiDiSession — only needed when driverLogging == True. This is a mild over-constraint: users must have Logger in scope even when they don't want logging. The Bluefin equivalent passes the log function directly. However, requiring the effect is more idiomatic for the Effectful style and makes the dependency visible.
+
+Severity (..) constructors not re-exported from the top-level module — due to a name conflict with Debug/Info/Error from Extended.Capabilities. Users needing constructors must import WebDriver.Effectful.Core (Severity (..)) separately. Acceptable for a POC.
+
+effectful >= 2.3 && < 2.7 cabal constraint — the code requires 2.6.x API (Dispatch(..), SideEffects(..) from the redesign). Consider tightening to >= 2.6 && < 2.7 to prevent resolving to an incompatible older version.
+
+BP.ScriptEvaluate for KnownCommand — needed one qualified import (BP) to avoid the GADT/enum naming collision. This is minor but signals the naming tension between the WebDriver protocol domain model and the GADT constructors.
+
+The overall structure is sound. The Effectful POC achieves its purpose: a clean algebraic effect + interpreter architecture that mirrors the Bluefin approach while using effectful's send/interpret_ idiom instead of Bluefin's handle-passing style.
+
+Claude Sonnet 4.6 • 1x
+
+
 ## final restructure
 
 - [ ] [update readme in similar style to](https://github.com/nikita-volkov/hasql)

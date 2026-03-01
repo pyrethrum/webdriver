@@ -412,13 +412,36 @@ test-suite test-driver-control
     webdriver-precore:webdriver-precore-driver-control
   default-language: Haskell2010
 
+library webdriver-katip-logging
+  import: commonExtensions, commonGhcOptions
+  exposed-modules:
+      WebDriver.KatipLogging
+  hs-source-dirs: katip-logging/src
+  build-depends:
+    base          >=4.16  && <5,
+    katip         >=0.8   && <0.9,
+    text          >=2.1   && <2.2,
+    time          >=1.9   && <2
+  default-language: Haskell2010
+
 library webdriver-effectful
   import: commonExtensions, commonGhcOptions
   exposed-modules:
       WebDriver.Effectful
+      WebDriver.Effectful.App
+      WebDriver.Effectful.Core
+      WebDriver.Effectful.HTTP.Core
+      WebDriver.Effectful.HTTP.Base.Actions
+      WebDriver.Effectful.BiDi.Base.Actions
   hs-source-dirs: effectful/src
   build-depends:
+    webdriver-precore:webdriver-precore,
     webdriver-precore:webdriver-precore-extended,
+    webdriver-precore:webdriver-precore-http-runner,
+    webdriver-precore:webdriver-precore-bidi-runner,
+    webdriver-precore:webdriver-katip-logging,
+    webdriver-precore:utils-internal,
+    aeson         >=2.0   && <3,
     base          >=4.16  && <5,
     effectful     >=2.3   && <2.7,
     effectful-core >=2.3  && <2.7,
@@ -432,7 +455,14 @@ test-suite test-effectful
   main-is: Test.hs
   hs-source-dirs: effectful/test
   build-depends:
-    webdriver-precore:webdriver-effectful
+    webdriver-precore:webdriver-precore,
+    webdriver-precore:webdriver-precore-extended,
+    webdriver-precore:webdriver-precore-test-utils,
+    webdriver-precore:webdriver-effectful,
+    webdriver-precore:utils-internal,
+    effectful     >=2.3   && <2.7,
+    stm           >=2.5   && <2.6,
+    unliftio      >=0.2   && <0.3
   default-language: Haskell2010
 
 library webdriver-rio-poc
@@ -492,13 +522,12 @@ library webdriver-bluefin-poc
     webdriver-precore:webdriver-precore-extended,
     webdriver-precore:webdriver-precore-http-runner,
     webdriver-precore:webdriver-precore-bidi-runner,
+    webdriver-precore:webdriver-katip-logging,
     webdriver-precore:utils-internal,
     aeson         >=2.0   && <3,
     base          >=4.16  && <5,
-    bluefin       >=0.4   && <0.5, 
-    katip         >=0.8   && <0.9,
+    bluefin       >=0.4   && <0.5,
     text          >=2.1   && <2.2,
-    time          >=1.9   && <2,
     unliftio      >=0.2   && <0.3
   default-language: Haskell2010
 
