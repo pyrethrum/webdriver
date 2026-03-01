@@ -2,21 +2,20 @@
 -- Test suite for webdriver-bluefin-poc library
 module Main where
 
-import Prelude hiding (log)
+import Bluefin.Eff (Eff, Effects, runEff_, (:&))
+import Bluefin.Exception (Exception, catch, throw)
+import Bluefin.IO (IOE, effIO)
 import Data.Functor (void)
-import Data.Maybe (fromJust)
 import Data.Text qualified as T
 import Data.Text.IO qualified as TIO
-import Bluefin.Eff (Eff, runEff_)
-import Bluefin.IO (IOE, effIO)
 import Test.Tasty (TestTree, defaultMain, testGroup)
 import Test.Tasty.HUnit (testCase)
 import UnliftIO (throwIO)
 import UnliftIO.Async (race_)
 import UnliftIO.Concurrent (threadDelay)
-import UnliftIO.STM (atomically, newEmptyTMVarIO, readTMVar, tryPutTMVar, putTMVar)
+import UnliftIO.STM (atomically, newEmptyTMVarIO, putTMVar, readTMVar, tryPutTMVar)
 import Utils (txt)
-import WebDriver.Bluefin 
+import WebDriver.Bluefin
 import WebDriver.Bluefin.BiDi.Base.Actions
 import WebDriver.Bluefin.HTTP.Base.Actions qualified as HTTP
 import WebDriverPreCore.BiDi.Protocol
@@ -39,15 +38,15 @@ import WebDriverPreCore.BiDi.Protocol
     PointerSourceAction (..),
     PointerSourceActions (..),
     PointerType (..),
-    SharedId,
     SharedReference (..),
     SourceActions (..),
   )
+import WebDriverPreCore.Extended.HTTP.Base.Protocol qualified as P
 import WebDriverPreCore.Test.CapabilitiesBuilder (httpCapabilities)
 import WebDriverPreCore.Test.ConfigLoader (Config (..), loadConfig)
 import WebDriverPreCore.Test.TestData (contentPageUrl, loginUrl)
 import WebDriverPreCore.Utils.Timeout (milliseconds)
-import WebDriverPreCore.Extended.HTTP.Base.Protocol qualified as P
+import Prelude hiding (log)
 
 main :: IO ()
 main = defaultMain tests
@@ -68,9 +67,9 @@ tests =
 --
 -- Both 'runHttpTest' and 'runBiDiTest' delegate to this so config loading and
 -- environment construction happen in exactly one place.
-runSetup
-  :: (forall e. IOE e -> HttpEnv e -> InteractBehaviour -> Config -> Eff e a)
-  -> IO a
+runSetup ::
+  (forall e. IOE e -> HttpEnv e -> InteractBehaviour -> Config -> Eff e a) ->
+  IO a
 runSetup action = runEff_ $ \io -> do
   config <- effIO io loadConfig
   let behaviour = mkInteractBehaviour config
@@ -83,9 +82,9 @@ runSetup action = runEff_ $ \io -> do
 
 -- | Full HTTP test harness: loads config, opens a session, provides a
 -- 'LogPause' handle, and runs the supplied action.
-runHttpTest
-  :: (forall e. IOE e -> HttpSessionEnv e -> LogPause e -> Eff e ())
-  -> IO ()
+runHttpTest ::
+  (forall e. IOE e -> HttpSessionEnv e -> LogPause e -> Eff e ()) ->
+  IO ()
 runHttpTest action =
   runSetup $ \io http behaviour config ->
     withHttpSession http behaviour (mkHttpCaps config) $ \sess ->
@@ -94,14 +93,20 @@ runHttpTest action =
 
 -- | Full BiDi test harness: loads config, opens a BiDi session, provides a
 -- 'LogPause' handle, and runs the supplied action.
-runBiDiTest
-  :: (forall e. IOE e -> BiDiEnv e -> LogPause e -> Eff e ())
-  -> IO ()
+--
+-- The action receives an 'Exception' handle so it can use 'throw' rather than
+-- 'error' or 'throwIO' for test-level failures.  Any caught exception is
+-- re-thrown as an 'IOError' so Tasty reports it as a test failure.
+runBiDiTest ::
+  (forall (es :: Effects) (e :: Effects). Exception String e -> IOE es -> BiDiEnv es -> LogPause es -> Eff (e :& es) ()) ->
+  IO ()
 runBiDiTest action =
   runSetup $ \io http behaviour config ->
     withBiDiSession http behaviour (mkBiDiCaps config) $ \bidi ->
       withLogPause io behaviour.pauseDuration $ \lp ->
-        action io bidi lp
+        catch
+          (\ex -> action ex io bidi lp)
+          (\err -> effIO io $ throwIO $ userError err)
 
 -- ---------------------------------------------------------------------------
 -- Helpers
@@ -193,7 +198,7 @@ http_login_navigation_demo = runHttpTest $ \io sess lp -> do
 
 -- >>> bidi_login_demo
 bidi_login_demo :: IO ()
-bidi_login_demo = runBiDiTest $ \io bidi lp -> do
+bidi_login_demo = runBiDiTest $ \ex io bidi lp -> do
   log lp "=== Get root browsing context ==="
   tree <- browsingContextGetTree bidi (MkGetTree Nothing Nothing)
   bc <- case tree of
@@ -201,7 +206,7 @@ bidi_login_demo = runBiDiTest $ \io bidi lp -> do
       let MkBrowsingContext ctxId = info.context
       log lp $ "Root context: " <> ctxId
       pure info.context
-    _ -> effIO io $ throwIO $ userError "No browsing contexts found"
+    _ -> throw ex "No browsing contexts found"
 
   log lp "=== Subscribe to browsingContext.domContentLoaded ==="
   loadedVar <- effIO io newEmptyTMVarIO
@@ -245,18 +250,17 @@ bidi_login_demo = runBiDiTest $ \io bidi lp -> do
   pause lp
 
   let MkLocateNodesResult nodes = nodesResult
-      usernameSharedId :: SharedId
-      usernameSharedId = case nodes of
-        [node] -> fromJust node.sharedId
-        _ -> error "Expected exactly one #username element"
+  usernameSharedId <- case nodes of
+    [node] -> maybe (throw ex "sharedId is missing") pure node.sharedId
+    _ -> throw ex "Expected exactly one #username element"
 
   log lp "=== Type 'bluefinUser' into #username via BiDi key actions ==="
   inputPerformActions bidi $
     MkPerformActions
       { context = bc,
         actions =
-          [ PointerSourceActions
-              $ MkPointerSourceActions
+          [ PointerSourceActions $
+              MkPointerSourceActions
                 { pointerId = "mouse1",
                   pointer = Just $ MkPointer {pointerType = Just MousePointer},
                   pointerActions =
@@ -265,21 +269,21 @@ bidi_login_demo = runBiDiTest $ \io bidi lp -> do
                           y = 0,
                           duration = Nothing,
                           origin =
-                            Just
-                              $ ElementOrigin
-                              $ MkSharedReference
-                                { sharedId = usernameSharedId,
-                                  handle = Nothing,
-                                  extensions = Nothing
-                                },
+                            Just $
+                              ElementOrigin $
+                                MkSharedReference
+                                  { sharedId = usernameSharedId,
+                                    handle = Nothing,
+                                    extensions = Nothing
+                                  },
                           pointerCommonProperties = defaultPointerProps
                         },
                       PointerDown {button = 0, pointerCommonProperties = defaultPointerProps},
                       PointerUp {button = 0}
                     ]
                 },
-            KeySourceActions
-              $ MkKeySourceActions
+            KeySourceActions $
+              MkKeySourceActions
                 { keyId = "keyboard1",
                   keyActions = concatMap charToKeys (T.unpack "bluefinUser")
                 }
