@@ -109,7 +109,7 @@ import Data.Aeson (Value)
 import Data.Text (Text)
 import Effectful (Eff, (:>))
 import Effectful.Dispatch.Dynamic (send)
-import WebDriver.Effectful.HTTP.Core
+import WebDriver.Effectful.HTTP.Base.Effect
   ( WebDriverHttp (..),
   )
 import WebDriverPreCore.Extended.HTTP.Base.Protocol

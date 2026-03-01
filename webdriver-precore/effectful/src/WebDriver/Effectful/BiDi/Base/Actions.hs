@@ -174,7 +174,7 @@ import Data.Aeson (FromJSON, Object, Value)
 import Data.Text (Text)
 import Effectful (Eff, (:>))
 import Effectful.Dispatch.Dynamic (send)
-import WebDriver.Effectful.HTTP.Core (WebDriverBiDi (..))
+import WebDriver.Effectful.BiDi.Base.Effect (WebDriverBiDi (..))
 import WebDriverPreCore.BiDi.Protocol
   ( Activate,
     AddDataCollector,

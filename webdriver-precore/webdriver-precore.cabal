@@ -431,7 +431,11 @@ library webdriver-effectful
       WebDriver.Effectful.App
       WebDriver.Effectful.Core
       WebDriver.Effectful.HTTP.Core
+      WebDriver.Effectful.HTTP.Base.Effect
+      WebDriver.Effectful.HTTP.Base.Interpreter
       WebDriver.Effectful.HTTP.Base.Actions
+      WebDriver.Effectful.BiDi.Base.Effect
+      WebDriver.Effectful.BiDi.Base.Interpreter
       WebDriver.Effectful.BiDi.Base.Actions
   hs-source-dirs: effectful/src
   build-depends:
