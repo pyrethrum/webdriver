@@ -5,9 +5,15 @@
 -- Provides BiDi WebDriver actions for Bluefin.  All functions take an
 -- explicit 'BiDiEnv' handle rather than using typeclass constraints.
 --
--- Subscription callbacks are @IO ()@ actions (not 'Eff') because the
--- underlying 'BiDiRunner' is @IO@-based and callbacks are invoked
--- asynchronously by the WebSocket reader loop.
+-- Command functions delegate directly to the generic @A.xxx (run bidi)@
+-- pattern: the 'run' helper already lifts the @IO@-based runner into 'Eff',
+-- so no @effIO@ or @bidiRun@ plumbing is needed at each call site.
+--
+-- Subscription callbacks are @Eff es@ actions.  The underlying
+-- 'BiDiRunner' dispatches events in @IO@, so handlers must be lowered back
+-- to @IO@ at some point.  This is done in the single 'bridgeToIO' helper
+-- via 'unsafeUnEff', which is safe because the enclosing
+-- 'withBiDiSession' bracket keeps the effect environment alive.
 --
 -- This mirrors 'WebDriver.RIO.BiDi.Base.Actions' but with explicit handles.
 module WebDriver.Bluefin.BiDi.Base.Actions
@@ -174,6 +180,7 @@ where
 import Data.Aeson (FromJSON, Object, Value)
 import Data.Text (Text)
 import Bluefin.Eff (Eff, (:>))
+import Bluefin.Internal (unsafeUnEff)
 import Bluefin.IO (effIO)
 import WebDriver.Bluefin.HTTP.Core (BiDiEnv (..), runBiDiCommand)
 import WebDriverPreCore.Extended.BiDi.Base.Actions qualified as A
@@ -309,6 +316,16 @@ bidiRunWithId MkBiDiEnv {biDiRunner = MkBiDiRunner {runWithId = rwi}} = rwi
 extractSubscription :: SessionSubscribeResult -> SubscriptionId
 extractSubscription MkSessionSubscribeResult {subscription} = subscription
 
+-- | Bridge an @Eff es ()@ handler to @IO ()@ for WebSocket event callbacks.
+--
+-- Subscription callbacks are dispatched from the WebSocket IO thread, so they
+-- must ultimately run in @IO@.  'unsafeUnEff' is safe here because the effect
+-- environment @es@ remains alive for the duration of the enclosing
+-- 'withBiDiSession' bracket.  All subscription helpers funnel through this
+-- single point so that 'unsafeUnEff' never appears at individual call sites.
+bridgeToIO :: (a -> Eff es ()) -> a -> IO ()
+bridgeToIO = (unsafeUnEff .)
+
 -- | Build an 'A.SendSub IO a' from a 'BiDiRunner IO', subscribing to all contexts.
 mkSendSub :: BiDiRunner IO -> A.SendSub IO a
 mkSendSub MkBiDiRunner {run = r, socketActions} mkSub handler =
@@ -330,39 +347,43 @@ mkSendSubOffSpecMany' MkBiDiRunner {run = r, socketActions} mkSub sts bcs ucs ha
   Runner.subscribe socketActions (r . A.sessionSubscribe) (mkSub sts bcs ucs handler)
 
 -- | Subscribe (no context filters), lifting result into 'Eff'.
+--
+-- Handlers are bridged from @Eff es ()@ to @IO ()@ via 'bridgeToIO'.
 viaSub ::
   (e :> es) =>
   (A.SendSub IO a -> (a -> IO ()) -> IO SubscriptionId) ->
   BiDiEnv e ->
-  (a -> IO ()) ->
+  (a -> Eff es ()) ->
   Eff es SubscriptionId
 viaSub extFn bidi handler =
-  effIO bidi.biDiIO $ extFn (mkSendSub bidi.biDiRunner) handler
+  effIO bidi.biDiIO $ extFn (mkSendSub bidi.biDiRunner) (bridgeToIO handler)
 
 -- | Subscribe with context filters, lifting result into 'Eff'.
+--
+-- Handlers are bridged from @Eff es ()@ to @IO ()@ via 'bridgeToIO'.
 viaSub' ::
   (e :> es) =>
   (A.SendSub' IO a -> [BrowsingContext] -> [UserContext] -> (a -> IO ()) -> IO SubscriptionId) ->
   BiDiEnv e ->
   [BrowsingContext] ->
   [UserContext] ->
-  (a -> IO ()) ->
+  (a -> Eff es ()) ->
   Eff es SubscriptionId
 viaSub' extFn bidi bcs ucs handler =
-  effIO bidi.biDiIO $ extFn (mkSendSub' bidi.biDiRunner) bcs ucs handler
+  effIO bidi.biDiIO $ extFn (mkSendSub' bidi.biDiRunner) bcs ucs (bridgeToIO handler)
 
 -- ###########################################################################
 -- ########################### Session Commands ##############################
 -- ###########################################################################
 
 sessionNew :: (e :> es) => BiDiEnv e -> Capabilities -> Eff es SessionNewResult
-sessionNew bidi = effIO bidi.biDiIO . A.sessionNew (bidiRun bidi)
+sessionNew bidi = A.sessionNew (run bidi)
 
 sessionStatus :: (e :> es) => BiDiEnv e -> Eff es SessionStatusResult
-sessionStatus bidi = effIO bidi.biDiIO $ A.sessionStatus (bidiRun bidi)
+sessionStatus bidi = A.sessionStatus (run bidi)
 
 sessionEnd :: (e :> es) => BiDiEnv e -> Eff es ()
-sessionEnd bidi = effIO bidi.biDiIO $ A.sessionEnd (bidiRun bidi)
+sessionEnd bidi = A.sessionEnd (run bidi)
 
 -- | Subscribe and return the bare 'SubscriptionId'.
 sessionSubscribe :: (e :> es) => BiDiEnv e -> SessionSubscibe -> Eff es SubscriptionId
@@ -379,200 +400,200 @@ sessionUnsubscribe bidi unsub =
 -- ###########################################################################
 
 browsingContextActivate :: (e :> es) => BiDiEnv e -> Activate -> Eff es ()
-browsingContextActivate bidi = effIO bidi.biDiIO . A.browsingContextActivate (bidiRun bidi)
+browsingContextActivate bidi = A.browsingContextActivate (run bidi)
 
 browsingContextCaptureScreenshot :: (e :> es) => BiDiEnv e -> CaptureScreenshot -> Eff es CaptureScreenshotResult
-browsingContextCaptureScreenshot bidi = effIO bidi.biDiIO . A.browsingContextCaptureScreenshot (bidiRun bidi)
+browsingContextCaptureScreenshot bidi = A.browsingContextCaptureScreenshot (run bidi)
 
 browsingContextClose :: (e :> es) => BiDiEnv e -> Close -> Eff es ()
-browsingContextClose bidi = effIO bidi.biDiIO . A.browsingContextClose (bidiRun bidi)
+browsingContextClose bidi = A.browsingContextClose (run bidi)
 
 browsingContextCreate :: (e :> es) => BiDiEnv e -> Create -> Eff es BrowsingContext
-browsingContextCreate bidi = effIO bidi.biDiIO . A.browsingContextCreate (bidiRun bidi)
+browsingContextCreate bidi = A.browsingContextCreate (run bidi)
 
 browsingContextGetTree :: (e :> es) => BiDiEnv e -> GetTree -> Eff es GetTreeResult
-browsingContextGetTree bidi = effIO bidi.biDiIO . A.browsingContextGetTree (bidiRun bidi)
+browsingContextGetTree bidi = A.browsingContextGetTree (run bidi)
 
 browsingContextHandleUserPrompt :: (e :> es) => BiDiEnv e -> HandleUserPrompt -> Eff es ()
-browsingContextHandleUserPrompt bidi = effIO bidi.biDiIO . A.browsingContextHandleUserPrompt (bidiRun bidi)
+browsingContextHandleUserPrompt bidi = A.browsingContextHandleUserPrompt (run bidi)
 
 browsingContextLocateNodes :: (e :> es) => BiDiEnv e -> LocateNodes -> Eff es LocateNodesResult
-browsingContextLocateNodes bidi = effIO bidi.biDiIO . A.browsingContextLocateNodes (bidiRun bidi)
+browsingContextLocateNodes bidi = A.browsingContextLocateNodes (run bidi)
 
 browsingContextNavigate :: (e :> es) => BiDiEnv e -> Navigate -> Eff es NavigateResult
-browsingContextNavigate bidi = effIO bidi.biDiIO . A.browsingContextNavigate (bidiRun bidi)
+browsingContextNavigate bidi = A.browsingContextNavigate (run bidi)
 
 browsingContextPrint :: (e :> es) => BiDiEnv e -> Print -> Eff es PrintResult
-browsingContextPrint bidi = effIO bidi.biDiIO . A.browsingContextPrint (bidiRun bidi)
+browsingContextPrint bidi = A.browsingContextPrint (run bidi)
 
 browsingContextReload :: (e :> es) => BiDiEnv e -> Reload -> Eff es ()
-browsingContextReload bidi = effIO bidi.biDiIO . A.browsingContextReload (bidiRun bidi)
+browsingContextReload bidi = A.browsingContextReload (run bidi)
 
 browsingContextSetViewport :: (e :> es) => BiDiEnv e -> SetViewport -> Eff es ()
-browsingContextSetViewport bidi = effIO bidi.biDiIO . A.browsingContextSetViewport (bidiRun bidi)
+browsingContextSetViewport bidi = A.browsingContextSetViewport (run bidi)
 
 browsingContextTraverseHistory :: (e :> es) => BiDiEnv e -> TraverseHistory -> Eff es ()
-browsingContextTraverseHistory bidi = effIO bidi.biDiIO . A.browsingContextTraverseHistory (bidiRun bidi)
+browsingContextTraverseHistory bidi = A.browsingContextTraverseHistory (run bidi)
 
 -- ###########################################################################
 -- ########################### Browser Commands ##############################
 -- ###########################################################################
 
 browserClose :: (e :> es) => BiDiEnv e -> Eff es ()
-browserClose bidi = effIO bidi.biDiIO $ A.browserClose (bidiRun bidi)
+browserClose bidi = A.browserClose (run bidi)
 
 browserCreateUserContext :: (e :> es) => BiDiEnv e -> CreateUserContext -> Eff es UserContext
-browserCreateUserContext bidi = effIO bidi.biDiIO . A.browserCreateUserContext (bidiRun bidi)
+browserCreateUserContext bidi = A.browserCreateUserContext (run bidi)
 
 browserGetClientWindows :: (e :> es) => BiDiEnv e -> Eff es GetClientWindowsResult
-browserGetClientWindows bidi = effIO bidi.biDiIO $ A.browserGetClientWindows (bidiRun bidi)
+browserGetClientWindows bidi = A.browserGetClientWindows (run bidi)
 
 browserGetUserContexts :: (e :> es) => BiDiEnv e -> Eff es GetUserContextsResult
-browserGetUserContexts bidi = effIO bidi.biDiIO $ A.browserGetUserContexts (bidiRun bidi)
+browserGetUserContexts bidi = A.browserGetUserContexts (run bidi)
 
 browserRemoveUserContext :: (e :> es) => BiDiEnv e -> RemoveUserContext -> Eff es ()
-browserRemoveUserContext bidi = effIO bidi.biDiIO . A.browserRemoveUserContext (bidiRun bidi)
+browserRemoveUserContext bidi = A.browserRemoveUserContext (run bidi)
 
 browserSetClientWindowState :: (e :> es) => BiDiEnv e -> SetClientWindowState -> Eff es ClientWindowInfo
-browserSetClientWindowState bidi = effIO bidi.biDiIO . A.browserSetClientWindowState (bidiRun bidi)
+browserSetClientWindowState bidi = A.browserSetClientWindowState (run bidi)
 
 browserSetDownloadBehavior :: (e :> es) => BiDiEnv e -> SetDownloadBehavior -> Eff es ()
-browserSetDownloadBehavior bidi = effIO bidi.biDiIO . A.browserSetDownloadBehavior (bidiRun bidi)
+browserSetDownloadBehavior bidi = A.browserSetDownloadBehavior (run bidi)
 
 -- ###########################################################################
 -- ########################## Emulation Commands #############################
 -- ###########################################################################
 
 emulationSetForcedColorsModeThemeOverride :: (e :> es) => BiDiEnv e -> SetForcedColorsModeThemeOverride -> Eff es ()
-emulationSetForcedColorsModeThemeOverride bidi = effIO bidi.biDiIO . A.emulationSetForcedColorsModeThemeOverride (bidiRun bidi)
+emulationSetForcedColorsModeThemeOverride bidi = A.emulationSetForcedColorsModeThemeOverride (run bidi)
 
 emulationSetGeolocationOverride :: (e :> es) => BiDiEnv e -> SetGeolocationOverride -> Eff es ()
-emulationSetGeolocationOverride bidi = effIO bidi.biDiIO . A.emulationSetGeolocationOverride (bidiRun bidi)
+emulationSetGeolocationOverride bidi = A.emulationSetGeolocationOverride (run bidi)
 
 emulationSetLocaleOverride :: (e :> es) => BiDiEnv e -> SetLocaleOverride -> Eff es ()
-emulationSetLocaleOverride bidi = effIO bidi.biDiIO . A.emulationSetLocaleOverride (bidiRun bidi)
+emulationSetLocaleOverride bidi = A.emulationSetLocaleOverride (run bidi)
 
 emulationSetNetworkConditions :: (e :> es) => BiDiEnv e -> SetNetworkConditions -> Eff es ()
-emulationSetNetworkConditions bidi = effIO bidi.biDiIO . A.emulationSetNetworkConditions (bidiRun bidi)
+emulationSetNetworkConditions bidi = A.emulationSetNetworkConditions (run bidi)
 
 emulationSetScreenOrientationOverride :: (e :> es) => BiDiEnv e -> SetScreenOrientationOverride -> Eff es ()
-emulationSetScreenOrientationOverride bidi = effIO bidi.biDiIO . A.emulationSetScreenOrientationOverride (bidiRun bidi)
+emulationSetScreenOrientationOverride bidi = A.emulationSetScreenOrientationOverride (run bidi)
 
 emulationSetScreenSettingsOverride :: (e :> es) => BiDiEnv e -> SetScreenSettingsOverride -> Eff es ()
-emulationSetScreenSettingsOverride bidi = effIO bidi.biDiIO . A.emulationSetScreenSettingsOverride (bidiRun bidi)
+emulationSetScreenSettingsOverride bidi = A.emulationSetScreenSettingsOverride (run bidi)
 
 emulationSetScriptingEnabled :: (e :> es) => BiDiEnv e -> SetScriptingEnabled -> Eff es ()
-emulationSetScriptingEnabled bidi = effIO bidi.biDiIO . A.emulationSetScriptingEnabled (bidiRun bidi)
+emulationSetScriptingEnabled bidi = A.emulationSetScriptingEnabled (run bidi)
 
 emulationSetTimezoneOverride :: (e :> es) => BiDiEnv e -> SetTimezoneOverride -> Eff es ()
-emulationSetTimezoneOverride bidi = effIO bidi.biDiIO . A.emulationSetTimezoneOverride (bidiRun bidi)
+emulationSetTimezoneOverride bidi = A.emulationSetTimezoneOverride (run bidi)
 
 emulationSetTouchOverride :: (e :> es) => BiDiEnv e -> SetTouchOverride -> Eff es ()
-emulationSetTouchOverride bidi = effIO bidi.biDiIO . A.emulationSetTouchOverride (bidiRun bidi)
+emulationSetTouchOverride bidi = A.emulationSetTouchOverride (run bidi)
 
 emulationSetUserAgentOverride :: (e :> es) => BiDiEnv e -> SetUserAgentOverride -> Eff es ()
-emulationSetUserAgentOverride bidi = effIO bidi.biDiIO . A.emulationSetUserAgentOverride (bidiRun bidi)
+emulationSetUserAgentOverride bidi = A.emulationSetUserAgentOverride (run bidi)
 
 -- ###########################################################################
 -- ############################ Input Commands ###############################
 -- ###########################################################################
 
 inputPerformActions :: (e :> es) => BiDiEnv e -> PerformActions -> Eff es ()
-inputPerformActions bidi = effIO bidi.biDiIO . A.inputPerformActions (bidiRun bidi)
+inputPerformActions bidi = A.inputPerformActions (run bidi)
 
 inputReleaseActions :: (e :> es) => BiDiEnv e -> ReleaseActions -> Eff es ()
-inputReleaseActions bidi = effIO bidi.biDiIO . A.inputReleaseActions (bidiRun bidi)
+inputReleaseActions bidi = A.inputReleaseActions (run bidi)
 
 inputSetFiles :: (e :> es) => BiDiEnv e -> SetFiles -> Eff es ()
-inputSetFiles bidi = effIO bidi.biDiIO . A.inputSetFiles (bidiRun bidi)
+inputSetFiles bidi = A.inputSetFiles (run bidi)
 
 -- ###########################################################################
 -- ########################### Network Commands ##############################
 -- ###########################################################################
 
 networkAddDataCollector :: (e :> es) => BiDiEnv e -> AddDataCollector -> Eff es AddDataCollectorResult
-networkAddDataCollector bidi = effIO bidi.biDiIO . A.networkAddDataCollector (bidiRun bidi)
+networkAddDataCollector bidi = A.networkAddDataCollector (run bidi)
 
 networkAddIntercept :: (e :> es) => BiDiEnv e -> AddIntercept -> Eff es AddInterceptResult
-networkAddIntercept bidi = effIO bidi.biDiIO . A.networkAddIntercept (bidiRun bidi)
+networkAddIntercept bidi = A.networkAddIntercept (run bidi)
 
 networkContinueRequest :: (e :> es) => BiDiEnv e -> ContinueRequest -> Eff es ()
-networkContinueRequest bidi = effIO bidi.biDiIO . A.networkContinueRequest (bidiRun bidi)
+networkContinueRequest bidi = A.networkContinueRequest (run bidi)
 
 networkContinueResponse :: (e :> es) => BiDiEnv e -> ContinueResponse -> Eff es ()
-networkContinueResponse bidi = effIO bidi.biDiIO . A.networkContinueResponse (bidiRun bidi)
+networkContinueResponse bidi = A.networkContinueResponse (run bidi)
 
 networkContinueWithAuth :: (e :> es) => BiDiEnv e -> ContinueWithAuth -> Eff es ()
-networkContinueWithAuth bidi = effIO bidi.biDiIO . A.networkContinueWithAuth (bidiRun bidi)
+networkContinueWithAuth bidi = A.networkContinueWithAuth (run bidi)
 
 networkDisownData :: (e :> es) => BiDiEnv e -> DisownData -> Eff es ()
-networkDisownData bidi = effIO bidi.biDiIO . A.networkDisownData (bidiRun bidi)
+networkDisownData bidi = A.networkDisownData (run bidi)
 
 networkFailRequest :: (e :> es) => BiDiEnv e -> FailRequest -> Eff es ()
-networkFailRequest bidi = effIO bidi.biDiIO . A.networkFailRequest (bidiRun bidi)
+networkFailRequest bidi = A.networkFailRequest (run bidi)
 
 networkGetData :: (e :> es) => BiDiEnv e -> GetData -> Eff es GetDataResult
-networkGetData bidi = effIO bidi.biDiIO . A.networkGetData (bidiRun bidi)
+networkGetData bidi = A.networkGetData (run bidi)
 
 networkProvideResponse :: (e :> es) => BiDiEnv e -> ProvideResponse -> Eff es ()
-networkProvideResponse bidi = effIO bidi.biDiIO . A.networkProvideResponse (bidiRun bidi)
+networkProvideResponse bidi = A.networkProvideResponse (run bidi)
 
 networkRemoveDataCollector :: (e :> es) => BiDiEnv e -> RemoveDataCollector -> Eff es ()
-networkRemoveDataCollector bidi = effIO bidi.biDiIO . A.networkRemoveDataCollector (bidiRun bidi)
+networkRemoveDataCollector bidi = A.networkRemoveDataCollector (run bidi)
 
 networkRemoveIntercept :: (e :> es) => BiDiEnv e -> RemoveIntercept -> Eff es ()
-networkRemoveIntercept bidi = effIO bidi.biDiIO . A.networkRemoveIntercept (bidiRun bidi)
+networkRemoveIntercept bidi = A.networkRemoveIntercept (run bidi)
 
 networkSetCacheBehavior :: (e :> es) => BiDiEnv e -> SetCacheBehavior -> Eff es ()
-networkSetCacheBehavior bidi = effIO bidi.biDiIO . A.networkSetCacheBehavior (bidiRun bidi)
+networkSetCacheBehavior bidi = A.networkSetCacheBehavior (run bidi)
 
 networkSetExtraHeaders :: (e :> es) => BiDiEnv e -> SetExtraHeaders -> Eff es ()
-networkSetExtraHeaders bidi = effIO bidi.biDiIO . A.networkSetExtraHeaders (bidiRun bidi)
+networkSetExtraHeaders bidi = A.networkSetExtraHeaders (run bidi)
 
 -- ###########################################################################
 -- ########################### Script Commands ###############################
 -- ###########################################################################
 
 scriptAddPreloadScript :: (e :> es) => BiDiEnv e -> AddPreloadScript -> Eff es AddPreloadScriptResult
-scriptAddPreloadScript bidi = effIO bidi.biDiIO . A.scriptAddPreloadScript (bidiRun bidi)
+scriptAddPreloadScript bidi = A.scriptAddPreloadScript (run bidi)
 
 scriptCallFunction :: (e :> es) => BiDiEnv e -> CallFunction -> Eff es EvaluateResult
-scriptCallFunction bidi = effIO bidi.biDiIO . A.scriptCallFunction (bidiRun bidi)
+scriptCallFunction bidi = A.scriptCallFunction (run bidi)
 
 scriptDisown :: (e :> es) => BiDiEnv e -> Disown -> Eff es ()
-scriptDisown bidi = effIO bidi.biDiIO . A.scriptDisown (bidiRun bidi)
+scriptDisown bidi = A.scriptDisown (run bidi)
 
 scriptEvaluate :: (e :> es) => BiDiEnv e -> Evaluate -> Eff es EvaluateResult
-scriptEvaluate bidi = effIO bidi.biDiIO . A.scriptEvaluate (bidiRun bidi)
+scriptEvaluate bidi = A.scriptEvaluate (run bidi)
 
 scriptGetRealms :: (e :> es) => BiDiEnv e -> GetRealms -> Eff es GetRealmsResult
-scriptGetRealms bidi = effIO bidi.biDiIO . A.scriptGetRealms (bidiRun bidi)
+scriptGetRealms bidi = A.scriptGetRealms (run bidi)
 
 scriptRemovePreloadScript :: (e :> es) => BiDiEnv e -> RemovePreloadScript -> Eff es ()
-scriptRemovePreloadScript bidi = effIO bidi.biDiIO . A.scriptRemovePreloadScript (bidiRun bidi)
+scriptRemovePreloadScript bidi = A.scriptRemovePreloadScript (run bidi)
 
 -- ###########################################################################
 -- ########################### Storage Commands ##############################
 -- ###########################################################################
 
 storageDeleteCookies :: (e :> es) => BiDiEnv e -> DeleteCookies -> Eff es DeleteCookiesResult
-storageDeleteCookies bidi = effIO bidi.biDiIO . A.storageDeleteCookies (bidiRun bidi)
+storageDeleteCookies bidi = A.storageDeleteCookies (run bidi)
 
 storageGetCookies :: (e :> es) => BiDiEnv e -> GetCookies -> Eff es GetCookiesResult
-storageGetCookies bidi = effIO bidi.biDiIO . A.storageGetCookies (bidiRun bidi)
+storageGetCookies bidi = A.storageGetCookies (run bidi)
 
 storageSetCookie :: (e :> es) => BiDiEnv e -> SetCookie -> Eff es SetCookieResult
-storageSetCookie bidi = effIO bidi.biDiIO . A.storageSetCookie (bidiRun bidi)
+storageSetCookie bidi = A.storageSetCookie (run bidi)
 
 -- ###########################################################################
 -- ######################### WebExtension Commands ###########################
 -- ###########################################################################
 
 webExtensionInstall :: (e :> es) => BiDiEnv e -> WebExtensionInstall -> Eff es WebExtensionResult
-webExtensionInstall bidi = effIO bidi.biDiIO . A.webExtensionInstall (bidiRun bidi)
+webExtensionInstall bidi = A.webExtensionInstall (run bidi)
 
 webExtensionUninstall :: (e :> es) => BiDiEnv e -> WebExtensionUninstall -> Eff es ()
-webExtensionUninstall bidi = effIO bidi.biDiIO . A.webExtensionUninstall (bidiRun bidi)
+webExtensionUninstall bidi = A.webExtensionUninstall (run bidi)
 
 -- ###########################################################################
 -- ########################## Generic Command ################################
@@ -616,7 +637,7 @@ subscribeMany ::
   (e :> es) =>
   BiDiEnv e ->
   [KnownSubscriptionType] ->
-  (Event -> IO ()) ->
+  (Event -> Eff es ()) ->
   Eff es SubscriptionId
 subscribeMany bidi = subscribeMany' bidi [] []
 
@@ -627,18 +648,18 @@ subscribeMany' ::
   [BrowsingContext] ->
   [UserContext] ->
   [KnownSubscriptionType] ->
-  (Event -> IO ()) ->
+  (Event -> Eff es ()) ->
   Eff es SubscriptionId
 subscribeMany' bidi bcs ucs sts handler =
   effIO bidi.biDiIO $
-    A.subscribeMany' (mkSendSubMany' bidi.biDiRunner) sts bcs ucs handler
+    A.subscribeMany' (mkSendSubMany' bidi.biDiRunner) sts bcs ucs (bridgeToIO handler)
 
 -- | Subscribe to unknown / off-spec event types (no context filters).
 subscribeUnknownMany ::
   (e :> es) =>
   BiDiEnv e ->
   [OffSpecSubscriptionType] ->
-  (Value -> IO ()) ->
+  (Value -> Eff es ()) ->
   Eff es SubscriptionId
 subscribeUnknownMany bidi = subscribeUnknownMany' bidi [] []
 
@@ -649,11 +670,11 @@ subscribeUnknownMany' ::
   [BrowsingContext] ->
   [UserContext] ->
   [OffSpecSubscriptionType] ->
-  (Value -> IO ()) ->
+  (Value -> Eff es ()) ->
   Eff es SubscriptionId
 subscribeUnknownMany' bidi bcs ucs sts handler =
   effIO bidi.biDiIO $
-    A.subscribeOffSpecMany' (mkSendSubOffSpecMany' bidi.biDiRunner) sts bcs ucs handler
+    A.subscribeOffSpecMany' (mkSendSubOffSpecMany' bidi.biDiRunner) sts bcs ucs (bridgeToIO handler)
 
 -- | Unsubscribe using a previously obtained 'SubscriptionId'.
 unsubscribe :: (e :> es) => BiDiEnv e -> SubscriptionId -> Eff es ()
@@ -668,162 +689,162 @@ unsubscribe bidi subId =
 -- ######################### Log Subscriptions ###############################
 -- ###########################################################################
 
-subscribeLogEntryAdded :: (e :> es) => BiDiEnv e -> (LogEntry -> IO ()) -> Eff es SubscriptionId
+subscribeLogEntryAdded :: (e :> es) => BiDiEnv e -> (LogEntry -> Eff es ()) -> Eff es SubscriptionId
 subscribeLogEntryAdded bidi = viaSub A.subscribeLogEntryAdded bidi
 
-subscribeLogEntryAdded' :: (e :> es) => BiDiEnv e -> [BrowsingContext] -> [UserContext] -> (LogEntry -> IO ()) -> Eff es SubscriptionId
+subscribeLogEntryAdded' :: (e :> es) => BiDiEnv e -> [BrowsingContext] -> [UserContext] -> (LogEntry -> Eff es ()) -> Eff es SubscriptionId
 subscribeLogEntryAdded' bidi = viaSub' A.subscribeLogEntryAdded' bidi
 
 -- ###########################################################################
 -- ################### BrowsingContext Subscriptions #########################
 -- ###########################################################################
 
-subscribeBrowsingContextCreated :: (e :> es) => BiDiEnv e -> (Info -> IO ()) -> Eff es SubscriptionId
+subscribeBrowsingContextCreated :: (e :> es) => BiDiEnv e -> (Info -> Eff es ()) -> Eff es SubscriptionId
 subscribeBrowsingContextCreated bidi = viaSub A.subscribeBrowsingContextCreated bidi
 
-subscribeBrowsingContextCreated' :: (e :> es) => BiDiEnv e -> [BrowsingContext] -> [UserContext] -> (Info -> IO ()) -> Eff es SubscriptionId
+subscribeBrowsingContextCreated' :: (e :> es) => BiDiEnv e -> [BrowsingContext] -> [UserContext] -> (Info -> Eff es ()) -> Eff es SubscriptionId
 subscribeBrowsingContextCreated' bidi = viaSub' A.subscribeBrowsingContextCreated' bidi
 
-subscribeBrowsingContextDestroyed :: (e :> es) => BiDiEnv e -> (Info -> IO ()) -> Eff es SubscriptionId
+subscribeBrowsingContextDestroyed :: (e :> es) => BiDiEnv e -> (Info -> Eff es ()) -> Eff es SubscriptionId
 subscribeBrowsingContextDestroyed bidi = viaSub A.subscribeBrowsingContextDestroyed bidi
 
-subscribeBrowsingContextDestroyed' :: (e :> es) => BiDiEnv e -> [BrowsingContext] -> [UserContext] -> (Info -> IO ()) -> Eff es SubscriptionId
+subscribeBrowsingContextDestroyed' :: (e :> es) => BiDiEnv e -> [BrowsingContext] -> [UserContext] -> (Info -> Eff es ()) -> Eff es SubscriptionId
 subscribeBrowsingContextDestroyed' bidi = viaSub' A.subscribeBrowsingContextDestroyed' bidi
 
-subscribeBrowsingContextNavigationStarted :: (e :> es) => BiDiEnv e -> (NavigationInfo -> IO ()) -> Eff es SubscriptionId
+subscribeBrowsingContextNavigationStarted :: (e :> es) => BiDiEnv e -> (NavigationInfo -> Eff es ()) -> Eff es SubscriptionId
 subscribeBrowsingContextNavigationStarted bidi = viaSub A.subscribeBrowsingContextNavigationStarted bidi
 
-subscribeBrowsingContextNavigationStarted' :: (e :> es) => BiDiEnv e -> [BrowsingContext] -> [UserContext] -> (NavigationInfo -> IO ()) -> Eff es SubscriptionId
+subscribeBrowsingContextNavigationStarted' :: (e :> es) => BiDiEnv e -> [BrowsingContext] -> [UserContext] -> (NavigationInfo -> Eff es ()) -> Eff es SubscriptionId
 subscribeBrowsingContextNavigationStarted' bidi = viaSub' A.subscribeBrowsingContextNavigationStarted' bidi
 
-subscribeBrowsingContextFragmentNavigated :: (e :> es) => BiDiEnv e -> (NavigationInfo -> IO ()) -> Eff es SubscriptionId
+subscribeBrowsingContextFragmentNavigated :: (e :> es) => BiDiEnv e -> (NavigationInfo -> Eff es ()) -> Eff es SubscriptionId
 subscribeBrowsingContextFragmentNavigated bidi = viaSub A.subscribeBrowsingContextFragmentNavigated bidi
 
-subscribeBrowsingContextFragmentNavigated' :: (e :> es) => BiDiEnv e -> [BrowsingContext] -> [UserContext] -> (NavigationInfo -> IO ()) -> Eff es SubscriptionId
+subscribeBrowsingContextFragmentNavigated' :: (e :> es) => BiDiEnv e -> [BrowsingContext] -> [UserContext] -> (NavigationInfo -> Eff es ()) -> Eff es SubscriptionId
 subscribeBrowsingContextFragmentNavigated' bidi = viaSub' A.subscribeBrowsingContextFragmentNavigated' bidi
 
-subscribeBrowsingContextHistoryUpdated :: (e :> es) => BiDiEnv e -> (HistoryUpdated -> IO ()) -> Eff es SubscriptionId
+subscribeBrowsingContextHistoryUpdated :: (e :> es) => BiDiEnv e -> (HistoryUpdated -> Eff es ()) -> Eff es SubscriptionId
 subscribeBrowsingContextHistoryUpdated bidi = viaSub A.subscribeBrowsingContextHistoryUpdated bidi
 
-subscribeBrowsingContextHistoryUpdated' :: (e :> es) => BiDiEnv e -> [BrowsingContext] -> [UserContext] -> (HistoryUpdated -> IO ()) -> Eff es SubscriptionId
+subscribeBrowsingContextHistoryUpdated' :: (e :> es) => BiDiEnv e -> [BrowsingContext] -> [UserContext] -> (HistoryUpdated -> Eff es ()) -> Eff es SubscriptionId
 subscribeBrowsingContextHistoryUpdated' bidi = viaSub' A.subscribeBrowsingContextHistoryUpdated' bidi
 
-subscribeBrowsingContextDomContentLoaded :: (e :> es) => BiDiEnv e -> (NavigationInfo -> IO ()) -> Eff es SubscriptionId
+subscribeBrowsingContextDomContentLoaded :: (e :> es) => BiDiEnv e -> (NavigationInfo -> Eff es ()) -> Eff es SubscriptionId
 subscribeBrowsingContextDomContentLoaded bidi = viaSub A.subscribeBrowsingContextDomContentLoaded bidi
 
-subscribeBrowsingContextDomContentLoaded' :: (e :> es) => BiDiEnv e -> [BrowsingContext] -> [UserContext] -> (NavigationInfo -> IO ()) -> Eff es SubscriptionId
+subscribeBrowsingContextDomContentLoaded' :: (e :> es) => BiDiEnv e -> [BrowsingContext] -> [UserContext] -> (NavigationInfo -> Eff es ()) -> Eff es SubscriptionId
 subscribeBrowsingContextDomContentLoaded' bidi = viaSub' A.subscribeBrowsingContextDomContentLoaded' bidi
 
-subscribeBrowsingContextLoad :: (e :> es) => BiDiEnv e -> (NavigationInfo -> IO ()) -> Eff es SubscriptionId
+subscribeBrowsingContextLoad :: (e :> es) => BiDiEnv e -> (NavigationInfo -> Eff es ()) -> Eff es SubscriptionId
 subscribeBrowsingContextLoad bidi = viaSub A.subscribeBrowsingContextLoad bidi
 
-subscribeBrowsingContextLoad' :: (e :> es) => BiDiEnv e -> [BrowsingContext] -> [UserContext] -> (NavigationInfo -> IO ()) -> Eff es SubscriptionId
+subscribeBrowsingContextLoad' :: (e :> es) => BiDiEnv e -> [BrowsingContext] -> [UserContext] -> (NavigationInfo -> Eff es ()) -> Eff es SubscriptionId
 subscribeBrowsingContextLoad' bidi = viaSub' A.subscribeBrowsingContextLoad' bidi
 
-subscribeBrowsingContextDownloadWillBegin :: (e :> es) => BiDiEnv e -> (DownloadWillBegin -> IO ()) -> Eff es SubscriptionId
+subscribeBrowsingContextDownloadWillBegin :: (e :> es) => BiDiEnv e -> (DownloadWillBegin -> Eff es ()) -> Eff es SubscriptionId
 subscribeBrowsingContextDownloadWillBegin bidi = viaSub A.subscribeBrowsingContextDownloadWillBegin bidi
 
-subscribeBrowsingContextDownloadWillBegin' :: (e :> es) => BiDiEnv e -> [BrowsingContext] -> [UserContext] -> (DownloadWillBegin -> IO ()) -> Eff es SubscriptionId
+subscribeBrowsingContextDownloadWillBegin' :: (e :> es) => BiDiEnv e -> [BrowsingContext] -> [UserContext] -> (DownloadWillBegin -> Eff es ()) -> Eff es SubscriptionId
 subscribeBrowsingContextDownloadWillBegin' bidi = viaSub' A.subscribeBrowsingContextDownloadWillBegin' bidi
 
-subscribeBrowsingContextDownloadEnd :: (e :> es) => BiDiEnv e -> (DownloadEnd -> IO ()) -> Eff es SubscriptionId
+subscribeBrowsingContextDownloadEnd :: (e :> es) => BiDiEnv e -> (DownloadEnd -> Eff es ()) -> Eff es SubscriptionId
 subscribeBrowsingContextDownloadEnd bidi = viaSub A.subscribeBrowsingContextDownloadEnd bidi
 
-subscribeBrowsingContextDownloadEnd' :: (e :> es) => BiDiEnv e -> [BrowsingContext] -> [UserContext] -> (DownloadEnd -> IO ()) -> Eff es SubscriptionId
+subscribeBrowsingContextDownloadEnd' :: (e :> es) => BiDiEnv e -> [BrowsingContext] -> [UserContext] -> (DownloadEnd -> Eff es ()) -> Eff es SubscriptionId
 subscribeBrowsingContextDownloadEnd' bidi = viaSub' A.subscribeBrowsingContextDownloadEnd' bidi
 
-subscribeBrowsingContextNavigationAborted :: (e :> es) => BiDiEnv e -> (NavigationInfo -> IO ()) -> Eff es SubscriptionId
+subscribeBrowsingContextNavigationAborted :: (e :> es) => BiDiEnv e -> (NavigationInfo -> Eff es ()) -> Eff es SubscriptionId
 subscribeBrowsingContextNavigationAborted bidi = viaSub A.subscribeBrowsingContextNavigationAborted bidi
 
-subscribeBrowsingContextNavigationAborted' :: (e :> es) => BiDiEnv e -> [BrowsingContext] -> [UserContext] -> (NavigationInfo -> IO ()) -> Eff es SubscriptionId
+subscribeBrowsingContextNavigationAborted' :: (e :> es) => BiDiEnv e -> [BrowsingContext] -> [UserContext] -> (NavigationInfo -> Eff es ()) -> Eff es SubscriptionId
 subscribeBrowsingContextNavigationAborted' bidi = viaSub' A.subscribeBrowsingContextNavigationAborted' bidi
 
-subscribeBrowsingContextNavigationCommitted :: (e :> es) => BiDiEnv e -> (NavigationInfo -> IO ()) -> Eff es SubscriptionId
+subscribeBrowsingContextNavigationCommitted :: (e :> es) => BiDiEnv e -> (NavigationInfo -> Eff es ()) -> Eff es SubscriptionId
 subscribeBrowsingContextNavigationCommitted bidi = viaSub A.subscribeBrowsingContextNavigationCommitted bidi
 
-subscribeBrowsingContextNavigationCommitted' :: (e :> es) => BiDiEnv e -> [BrowsingContext] -> [UserContext] -> (NavigationInfo -> IO ()) -> Eff es SubscriptionId
+subscribeBrowsingContextNavigationCommitted' :: (e :> es) => BiDiEnv e -> [BrowsingContext] -> [UserContext] -> (NavigationInfo -> Eff es ()) -> Eff es SubscriptionId
 subscribeBrowsingContextNavigationCommitted' bidi = viaSub' A.subscribeBrowsingContextNavigationCommitted' bidi
 
-subscribeBrowsingContextNavigationFailed :: (e :> es) => BiDiEnv e -> (NavigationInfo -> IO ()) -> Eff es SubscriptionId
+subscribeBrowsingContextNavigationFailed :: (e :> es) => BiDiEnv e -> (NavigationInfo -> Eff es ()) -> Eff es SubscriptionId
 subscribeBrowsingContextNavigationFailed bidi = viaSub A.subscribeBrowsingContextNavigationFailed bidi
 
-subscribeBrowsingContextNavigationFailed' :: (e :> es) => BiDiEnv e -> [BrowsingContext] -> [UserContext] -> (NavigationInfo -> IO ()) -> Eff es SubscriptionId
+subscribeBrowsingContextNavigationFailed' :: (e :> es) => BiDiEnv e -> [BrowsingContext] -> [UserContext] -> (NavigationInfo -> Eff es ()) -> Eff es SubscriptionId
 subscribeBrowsingContextNavigationFailed' bidi = viaSub' A.subscribeBrowsingContextNavigationFailed' bidi
 
-subscribeBrowsingContextUserPromptClosed :: (e :> es) => BiDiEnv e -> (UserPromptClosed -> IO ()) -> Eff es SubscriptionId
+subscribeBrowsingContextUserPromptClosed :: (e :> es) => BiDiEnv e -> (UserPromptClosed -> Eff es ()) -> Eff es SubscriptionId
 subscribeBrowsingContextUserPromptClosed bidi = viaSub A.subscribeBrowsingContextUserPromptClosed bidi
 
-subscribeBrowsingContextUserPromptClosed' :: (e :> es) => BiDiEnv e -> [BrowsingContext] -> [UserContext] -> (UserPromptClosed -> IO ()) -> Eff es SubscriptionId
+subscribeBrowsingContextUserPromptClosed' :: (e :> es) => BiDiEnv e -> [BrowsingContext] -> [UserContext] -> (UserPromptClosed -> Eff es ()) -> Eff es SubscriptionId
 subscribeBrowsingContextUserPromptClosed' bidi = viaSub' A.subscribeBrowsingContextUserPromptClosed' bidi
 
-subscribeBrowsingContextUserPromptOpened :: (e :> es) => BiDiEnv e -> (UserPromptOpened -> IO ()) -> Eff es SubscriptionId
+subscribeBrowsingContextUserPromptOpened :: (e :> es) => BiDiEnv e -> (UserPromptOpened -> Eff es ()) -> Eff es SubscriptionId
 subscribeBrowsingContextUserPromptOpened bidi = viaSub A.subscribeBrowsingContextUserPromptOpened bidi
 
-subscribeBrowsingContextUserPromptOpened' :: (e :> es) => BiDiEnv e -> [BrowsingContext] -> [UserContext] -> (UserPromptOpened -> IO ()) -> Eff es SubscriptionId
+subscribeBrowsingContextUserPromptOpened' :: (e :> es) => BiDiEnv e -> [BrowsingContext] -> [UserContext] -> (UserPromptOpened -> Eff es ()) -> Eff es SubscriptionId
 subscribeBrowsingContextUserPromptOpened' bidi = viaSub' A.subscribeBrowsingContextUserPromptOpened' bidi
 
 -- ###########################################################################
 -- ####################### Network Subscriptions #############################
 -- ###########################################################################
 
-subscribeNetworkAuthRequired :: (e :> es) => BiDiEnv e -> (AuthRequired -> IO ()) -> Eff es SubscriptionId
+subscribeNetworkAuthRequired :: (e :> es) => BiDiEnv e -> (AuthRequired -> Eff es ()) -> Eff es SubscriptionId
 subscribeNetworkAuthRequired bidi = viaSub A.subscribeNetworkAuthRequired bidi
 
-subscribeNetworkAuthRequired' :: (e :> es) => BiDiEnv e -> [BrowsingContext] -> [UserContext] -> (AuthRequired -> IO ()) -> Eff es SubscriptionId
+subscribeNetworkAuthRequired' :: (e :> es) => BiDiEnv e -> [BrowsingContext] -> [UserContext] -> (AuthRequired -> Eff es ()) -> Eff es SubscriptionId
 subscribeNetworkAuthRequired' bidi = viaSub' A.subscribeNetworkAuthRequired' bidi
 
-subscribeNetworkBeforeRequestSent :: (e :> es) => BiDiEnv e -> (BeforeRequestSent -> IO ()) -> Eff es SubscriptionId
+subscribeNetworkBeforeRequestSent :: (e :> es) => BiDiEnv e -> (BeforeRequestSent -> Eff es ()) -> Eff es SubscriptionId
 subscribeNetworkBeforeRequestSent bidi = viaSub A.subscribeNetworkBeforeRequestSent bidi
 
-subscribeNetworkBeforeRequestSent' :: (e :> es) => BiDiEnv e -> [BrowsingContext] -> [UserContext] -> (BeforeRequestSent -> IO ()) -> Eff es SubscriptionId
+subscribeNetworkBeforeRequestSent' :: (e :> es) => BiDiEnv e -> [BrowsingContext] -> [UserContext] -> (BeforeRequestSent -> Eff es ()) -> Eff es SubscriptionId
 subscribeNetworkBeforeRequestSent' bidi = viaSub' A.subscribeNetworkBeforeRequestSent' bidi
 
-subscribeNetworkFetchError :: (e :> es) => BiDiEnv e -> (FetchError -> IO ()) -> Eff es SubscriptionId
+subscribeNetworkFetchError :: (e :> es) => BiDiEnv e -> (FetchError -> Eff es ()) -> Eff es SubscriptionId
 subscribeNetworkFetchError bidi = viaSub A.subscribeNetworkFetchError bidi
 
-subscribeNetworkFetchError' :: (e :> es) => BiDiEnv e -> [BrowsingContext] -> [UserContext] -> (FetchError -> IO ()) -> Eff es SubscriptionId
+subscribeNetworkFetchError' :: (e :> es) => BiDiEnv e -> [BrowsingContext] -> [UserContext] -> (FetchError -> Eff es ()) -> Eff es SubscriptionId
 subscribeNetworkFetchError' bidi = viaSub' A.subscribeNetworkFetchError' bidi
 
-subscribeNetworkResponseCompleted :: (e :> es) => BiDiEnv e -> (ResponseCompleted -> IO ()) -> Eff es SubscriptionId
+subscribeNetworkResponseCompleted :: (e :> es) => BiDiEnv e -> (ResponseCompleted -> Eff es ()) -> Eff es SubscriptionId
 subscribeNetworkResponseCompleted bidi = viaSub A.subscribeNetworkResponseCompleted bidi
 
-subscribeNetworkResponseCompleted' :: (e :> es) => BiDiEnv e -> [BrowsingContext] -> [UserContext] -> (ResponseCompleted -> IO ()) -> Eff es SubscriptionId
+subscribeNetworkResponseCompleted' :: (e :> es) => BiDiEnv e -> [BrowsingContext] -> [UserContext] -> (ResponseCompleted -> Eff es ()) -> Eff es SubscriptionId
 subscribeNetworkResponseCompleted' bidi = viaSub' A.subscribeNetworkResponseCompleted' bidi
 
-subscribeNetworkResponseStarted :: (e :> es) => BiDiEnv e -> (ResponseStarted -> IO ()) -> Eff es SubscriptionId
+subscribeNetworkResponseStarted :: (e :> es) => BiDiEnv e -> (ResponseStarted -> Eff es ()) -> Eff es SubscriptionId
 subscribeNetworkResponseStarted bidi = viaSub A.subscribeNetworkResponseStarted bidi
 
-subscribeNetworkResponseStarted' :: (e :> es) => BiDiEnv e -> [BrowsingContext] -> [UserContext] -> (ResponseStarted -> IO ()) -> Eff es SubscriptionId
+subscribeNetworkResponseStarted' :: (e :> es) => BiDiEnv e -> [BrowsingContext] -> [UserContext] -> (ResponseStarted -> Eff es ()) -> Eff es SubscriptionId
 subscribeNetworkResponseStarted' bidi = viaSub' A.subscribeNetworkResponseStarted' bidi
 
 -- ###########################################################################
 -- ####################### Script Subscriptions ##############################
 -- ###########################################################################
 
-subscribeScriptMessage :: (e :> es) => BiDiEnv e -> (Message -> IO ()) -> Eff es SubscriptionId
+subscribeScriptMessage :: (e :> es) => BiDiEnv e -> (Message -> Eff es ()) -> Eff es SubscriptionId
 subscribeScriptMessage bidi = viaSub A.subscribeScriptMessage bidi
 
-subscribeScriptMessage' :: (e :> es) => BiDiEnv e -> [BrowsingContext] -> [UserContext] -> (Message -> IO ()) -> Eff es SubscriptionId
+subscribeScriptMessage' :: (e :> es) => BiDiEnv e -> [BrowsingContext] -> [UserContext] -> (Message -> Eff es ()) -> Eff es SubscriptionId
 subscribeScriptMessage' bidi = viaSub' A.subscribeScriptMessage' bidi
 
-subscribeScriptRealmCreated :: (e :> es) => BiDiEnv e -> (RealmInfo -> IO ()) -> Eff es SubscriptionId
+subscribeScriptRealmCreated :: (e :> es) => BiDiEnv e -> (RealmInfo -> Eff es ()) -> Eff es SubscriptionId
 subscribeScriptRealmCreated bidi = viaSub A.subscribeScriptRealmCreated bidi
 
-subscribeScriptRealmCreated' :: (e :> es) => BiDiEnv e -> [BrowsingContext] -> [UserContext] -> (RealmInfo -> IO ()) -> Eff es SubscriptionId
+subscribeScriptRealmCreated' :: (e :> es) => BiDiEnv e -> [BrowsingContext] -> [UserContext] -> (RealmInfo -> Eff es ()) -> Eff es SubscriptionId
 subscribeScriptRealmCreated' bidi = viaSub' A.subscribeScriptRealmCreated' bidi
 
-subscribeScriptRealmDestroyed :: (e :> es) => BiDiEnv e -> (RealmDestroyed -> IO ()) -> Eff es SubscriptionId
+subscribeScriptRealmDestroyed :: (e :> es) => BiDiEnv e -> (RealmDestroyed -> Eff es ()) -> Eff es SubscriptionId
 subscribeScriptRealmDestroyed bidi = viaSub A.subscribeScriptRealmDestroyed bidi
 
-subscribeScriptRealmDestroyed' :: (e :> es) => BiDiEnv e -> [BrowsingContext] -> [UserContext] -> (RealmDestroyed -> IO ()) -> Eff es SubscriptionId
+subscribeScriptRealmDestroyed' :: (e :> es) => BiDiEnv e -> [BrowsingContext] -> [UserContext] -> (RealmDestroyed -> Eff es ()) -> Eff es SubscriptionId
 subscribeScriptRealmDestroyed' bidi = viaSub' A.subscribeScriptRealmDestroyed' bidi
 
 -- ###########################################################################
 -- ####################### Input Subscriptions ###############################
 -- ###########################################################################
 
-subscribeInputFileDialogOpened :: (e :> es) => BiDiEnv e -> (FileDialogOpened -> IO ()) -> Eff es SubscriptionId
+subscribeInputFileDialogOpened :: (e :> es) => BiDiEnv e -> (FileDialogOpened -> Eff es ()) -> Eff es SubscriptionId
 subscribeInputFileDialogOpened bidi = viaSub A.subscribeInputFileDialogOpened bidi
 
-subscribeInputFileDialogOpened' :: (e :> es) => BiDiEnv e -> [BrowsingContext] -> [UserContext] -> (FileDialogOpened -> IO ()) -> Eff es SubscriptionId
+subscribeInputFileDialogOpened' :: (e :> es) => BiDiEnv e -> [BrowsingContext] -> [UserContext] -> (FileDialogOpened -> Eff es ()) -> Eff es SubscriptionId
 subscribeInputFileDialogOpened' bidi = viaSub' A.subscribeInputFileDialogOpened' bidi

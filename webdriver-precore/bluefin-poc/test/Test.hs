@@ -213,14 +213,14 @@ bidi_login_demo = runBiDiTest $ \ex io bidi logger lp -> do
   log logger "=== Subscribe to browsingContext.domContentLoaded ==="
   loadedVar <- effIO io newEmptyTMVarIO
   let onLoadedEvent evt =
-        void $ atomically $ tryPutTMVar loadedVar evt
+        effIO io $ void $ atomically $ tryPutTMVar loadedVar evt
   subscribeBrowsingContextDomContentLoaded bidi onLoadedEvent
 
   log logger "=== Subscribe to browsingContext.load (many-style) ==="
   navVar <- effIO io newEmptyTMVarIO
   subscribeMany bidi [BrowsingContextLoad] $ \evt -> do
-    TIO.putStrLn $ "!!! browsingContext.load event (many-style): " <> txt evt
-    atomically $ putTMVar navVar ()
+    effIO io $ TIO.putStrLn $ "!!! browsingContext.load event (many-style): " <> txt evt
+    effIO io $ atomically $ putTMVar navVar ()
 
   log logger "=== Navigate to login page ==="
   loginPage <- effIO io loginUrl
