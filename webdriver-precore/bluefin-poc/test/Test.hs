@@ -1,9 +1,8 @@
-{-# LANGUAGE DataKinds #-}
-
 -- |
 -- Test suite for webdriver-bluefin-poc library
 module Main where
 
+import Prelude hiding (log)
 import Data.Functor (void)
 import Data.Maybe (fromJust)
 import Data.Text qualified as T
@@ -15,10 +14,9 @@ import Test.Tasty.HUnit (testCase)
 import UnliftIO (throwIO)
 import UnliftIO.Async (race_)
 import UnliftIO.Concurrent (threadDelay)
-import UnliftIO.STM (atomically, newEmptyTMVarIO, readTMVar, tryPutTMVar)
+import UnliftIO.STM (atomically, newEmptyTMVarIO, readTMVar, tryPutTMVar, putTMVar)
 import Utils (txt)
-import WebDriver.Bluefin hiding (log)
-import WebDriver.Bluefin qualified as B
+import WebDriver.Bluefin 
 import WebDriver.Bluefin.BiDi.Base.Actions
 import WebDriver.Bluefin.HTTP.Base.Actions qualified as HTTP
 import WebDriverPreCore.BiDi.Protocol
@@ -130,30 +128,30 @@ http_login_navigation_demo = runEff_ $ \io -> do
           }
       http = MkHttpEnv driverInfo io
 
-  B.withHttpSession http behaviour caps $ \sess -> do
-    B.log io "=== Navigate to login form ==="
+  withHttpSession http behaviour caps $ \sess -> do
+    log io "=== Navigate to login form ==="
     loginPage <- effIO io loginUrl
     HTTP.navigateTo sess loginPage
     _ <- HTTP.maximizeWindow sess
     pause sess
 
-    B.log io "=== Fill in username ==="
+    log io "=== Fill in username ==="
     usernameField <- HTTP.findElement sess $ P.CSS "#username"
     HTTP.elementSendKeys sess usernameField "demoUser"
     pause sess
 
-    B.log io "=== Fill in password ==="
+    log io "=== Fill in password ==="
     passwordField <- HTTP.findElement sess $ P.CSS "#password"
     HTTP.elementSendKeys sess passwordField "s3cr3tP4ssw0rd"
     pause sess
 
-    B.log io "=== Navigate to colourful content page ==="
+    log io "=== Navigate to colourful content page ==="
     contentPage <- effIO io contentPageUrl
     HTTP.navigateTo sess contentPage
     pause sess
 
     title <- HTTP.getTitle sess
-    B.log io $ "Landed on: " <> title
+    log io $ "Landed on: " <> title
 
 -- | BiDi version of the login demo:
 --   - Subscribes to browsingContext.domContentLoaded events with a timed wait
@@ -174,34 +172,34 @@ bidi_login_demo = runEff_ $ \io -> do
           }
       http = MkHttpEnv driverInfo io
 
-  B.withBiDiSession http behaviour caps $ \bidi -> do
-    B.log io "=== Get root browsing context ==="
+  withBiDiSession http behaviour caps $ \bidi -> do
+    log io "=== Get root browsing context ==="
     tree <- browsingContextGetTree bidi (MkGetTree Nothing Nothing)
     bc <- case tree of
       MkGetTreeResult (info : _) -> do
         let MkBrowsingContext ctxId = info.context
-        B.log io $ "Root context: " <> ctxId
+        log io $ "Root context: " <> ctxId
         pure info.context
       _ -> effIO io $ throwIO $ userError "No browsing contexts found"
 
-    B.log io "=== Subscribe to browsingContext.domContentLoaded ==="
+    log io "=== Subscribe to browsingContext.domContentLoaded ==="
     loadedVar <- effIO io newEmptyTMVarIO
     let onLoadedEvent evt =
           void $ atomically $ tryPutTMVar loadedVar evt
-    void $ subscribeBrowsingContextDomContentLoaded bidi onLoadedEvent
+    subscribeBrowsingContextDomContentLoaded bidi onLoadedEvent
 
-    B.log io "=== Subscribe to browsingContext.load (many-style) ==="
+    log io "=== Subscribe to browsingContext.load (many-style) ==="
     navVar <- effIO io newEmptyTMVarIO
-    void $ subscribeMany bidi [BrowsingContextLoad] $ \evt -> do
+    subscribeMany bidi [BrowsingContextLoad] $ \evt -> do
       TIO.putStrLn $ "!!! browsingContext.load event (many-style): " <> txt evt
-      void $ atomically $ tryPutTMVar navVar ()
+      atomically $ putTMVar navVar ()
 
-    B.log io "=== Navigate to login page ==="
+    log io "=== Navigate to login page ==="
     loginPage <- effIO io loginUrl
-    void $ browsingContextNavigate bidi $ MkNavigate {context = bc, url = loginPage, wait = Nothing}
+    browsingContextNavigate bidi $ MkNavigate {context = bc, url = loginPage, wait = Nothing}
     pauseBiDi bidi
 
-    B.log io "=== Waiting for domContentLoaded event ==="
+    log io "=== Waiting for domContentLoaded event ==="
     effIO io $
       race_
         ( atomically (readTMVar loadedVar) >>= \evt ->
@@ -212,7 +210,7 @@ bidi_login_demo = runEff_ $ \io -> do
         )
     pauseBiDi bidi
 
-    B.log io "=== Locate #username field ==="
+    log io "=== Locate #username field ==="
     nodesResult <-
       browsingContextLocateNodes bidi $
         MkLocateNodes
@@ -222,7 +220,7 @@ bidi_login_demo = runEff_ $ \io -> do
             serializationOptions = Nothing,
             startNodes = Nothing
           }
-    B.log io $ "Located nodes: " <> txt nodesResult
+    log io $ "Located nodes: " <> txt nodesResult
     pauseBiDi bidi
 
     let MkLocateNodesResult nodes = nodesResult
@@ -231,7 +229,7 @@ bidi_login_demo = runEff_ $ \io -> do
           [node] -> fromJust node.sharedId
           _ -> error "Expected exactly one #username element"
 
-    B.log io "=== Type 'bluefinUser' into #username via BiDi key actions ==="
+    log io "=== Type 'bluefinUser' into #username via BiDi key actions ==="
     inputPerformActions bidi $
       MkPerformActions
         { context = bc,
