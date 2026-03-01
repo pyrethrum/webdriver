@@ -107,7 +107,7 @@ brackets m = "[" <> m <> "]"
 --
 -- * Timestamps are shown in the local system time zone.
 -- * The terminal scribe uses 'ColorIfTerminal'.
--- * The file scribe opens @logFile@ in 'AppendMode'.
+-- * The file scribe opens @logFile@ in 'WriteMode' (truncates on each run).
 -- * Both scribes and the 'LogEnv' are closed safely via 'bracket'.
 --
 -- @
@@ -122,9 +122,9 @@ withKatipLogFunc
   -> IO a
 withKatipLogFunc logFile action = do
   tz <- getCurrentTimeZone
-  bracket (openFile logFile AppendMode) hClose $ \fh -> do
+  bracket (openFile logFile WriteMode) hClose $ \fh -> do
     hSetBuffering fh LineBuffering
-    termScribe <- mkHandleScribeWithFormatter (localBracketFormat tz) (ColorLog True) stdout (permitItem K.DebugS) V2
+    termScribe <- mkHandleScribeWithFormatter (localBracketFormat tz) ColorIfTerminal stdout (permitItem K.DebugS) V2
     fileScribe  <- mkHandleScribeWithFormatter (localBracketFormat tz) (ColorLog False) fh   (permitItem K.DebugS) V2
     le0 <- initLogEnv "webdriver" "eval"
     let acquire = do
