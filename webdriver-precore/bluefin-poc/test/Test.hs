@@ -194,7 +194,7 @@ http_login_navigation_demo = runHttpTest $ \io sess lp -> do
 --   - Subscribes to browsingContext.domContentLoaded events with a timed wait
 --   - Navigates to the login page>
 --   - Locates the #username field via BiDi locateNodes
---   - Types 'bluefinUser' into the field via BiDi key actions
+--   - Types 'bluefin-user' into the field via BiDi key actions
 
 -- >>> bidi_login_demo
 bidi_login_demo :: IO ()
@@ -254,7 +254,7 @@ bidi_login_demo = runBiDiTest $ \ex io bidi lp -> do
     [node] -> maybe (throw ex "sharedId is missing") pure node.sharedId
     _ -> throw ex "Expected exactly one #username element"
 
-  log lp "=== Type 'bluefinUser' into #username via BiDi key actions ==="
+  log lp "=== Type 'bluefin-user' into #username via BiDi key actions ==="
   inputPerformActions bidi $
     MkPerformActions
       { context = bc,
@@ -281,8 +281,14 @@ bidi_login_demo = runBiDiTest $ \ex io bidi lp -> do
                       PointerDown {button = 0, pointerCommonProperties = defaultPointerProps},
                       PointerUp {button = 0}
                     ]
-                },
-            KeySourceActions $
+                }
+          ]
+      }
+  inputPerformActions bidi $
+    MkPerformActions
+      { context = bc,
+        actions =
+          [ KeySourceActions $
               MkKeySourceActions
                 { keyId = "keyboard1",
                   keyActions = concatMap charToKeys (T.unpack "bluefin-user")
