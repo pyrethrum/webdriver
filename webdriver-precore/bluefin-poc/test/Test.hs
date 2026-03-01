@@ -192,7 +192,7 @@ http_login_navigation_demo = runHttpTest $ \io sess lp -> do
 
 -- | BiDi version of the login demo:
 --   - Subscribes to browsingContext.domContentLoaded events with a timed wait
---   - Navigates to the login page
+--   - Navigates to the login page>
 --   - Locates the #username field via BiDi locateNodes
 --   - Types 'bluefinUser' into the field via BiDi key actions
 
@@ -285,7 +285,7 @@ bidi_login_demo = runBiDiTest $ \ex io bidi lp -> do
             KeySourceActions $
               MkKeySourceActions
                 { keyId = "keyboard1",
-                  keyActions = concatMap charToKeys (T.unpack "bluefinUser")
+                  keyActions = concatMap charToKeys (T.unpack "bluefin-user")
                 }
           ]
       }
