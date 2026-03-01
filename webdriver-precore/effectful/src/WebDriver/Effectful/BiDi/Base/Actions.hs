@@ -6,14 +6,13 @@
 -- Each function simply invokes the corresponding constructor via 'send'.
 --
 -- Subscription functions (e.g. 'subscribeBrowsingContextDomContentLoaded')
--- register IO callbacks that the BiDi runner invokes asynchronously when the
--- event fires.  In the effect stack the subscription call itself is an effect
--- operation — the callback remains @IO@-based because it is invoked by the
--- underlying WebSocket reader loop outside the @Eff@ monad.
+-- accept callbacks in the caller's @Eff es@ monad.  The interpreter uses
+-- 'Effectful.Dispatch.Dynamic.localSeqUnliftIO' to convert them to @IO@
+-- callbacks before handing them off to the underlying WebSocket runner.
 --
--- For idiomatic use in tests, write to a 'Control.Concurrent.STM.TMVar' in
--- the callback and use 'Effectful.Concurrent.STM.atomically' to wait for the
--- event in the main @Eff es@ computation.
+-- For idiomatic use in tests, use 'liftIO' inside the callback to write to a
+-- 'Control.Concurrent.STM.TMVar', then call 'liftIO atomically' in the main
+-- @Eff es@ computation to wait for the event.
 --
 -- This mirrors "WebDriver.Bluefin.BiDi.Base.Actions" but uses Effectful
 -- algebraic effects rather than Bluefin handles.
@@ -520,169 +519,169 @@ sendBiDiOffSpecCmdNoWait m = send . SendBiDiOffSpecCmdNoWait m
 -- Log subscriptions
 -- ---------------------------------------------------------------------------
 
-subscribeLogEntryAdded :: (WebDriverBiDi :> es) => (LogEntry -> IO ()) -> Eff es SubscriptionId
+subscribeLogEntryAdded :: (WebDriverBiDi :> es) => (LogEntry -> Eff es ()) -> Eff es SubscriptionId
 subscribeLogEntryAdded = send . SubscribeLogEntryAdded
 
-subscribeLogEntryAdded' :: (WebDriverBiDi :> es) => [BrowsingContext] -> [UserContext] -> (LogEntry -> IO ()) -> Eff es SubscriptionId
+subscribeLogEntryAdded' :: (WebDriverBiDi :> es) => [BrowsingContext] -> [UserContext] -> (LogEntry -> Eff es ()) -> Eff es SubscriptionId
 subscribeLogEntryAdded' b u = send . SubscribeLogEntryAdded' b u
 
 -- ---------------------------------------------------------------------------
 -- BrowsingContext subscriptions
 -- ---------------------------------------------------------------------------
 
-subscribeBrowsingContextCreated :: (WebDriverBiDi :> es) => (Info -> IO ()) -> Eff es SubscriptionId
+subscribeBrowsingContextCreated :: (WebDriverBiDi :> es) => (Info -> Eff es ()) -> Eff es SubscriptionId
 subscribeBrowsingContextCreated = send . SubscribeBrowsingContextCreated
 
-subscribeBrowsingContextCreated' :: (WebDriverBiDi :> es) => [BrowsingContext] -> [UserContext] -> (Info -> IO ()) -> Eff es SubscriptionId
+subscribeBrowsingContextCreated' :: (WebDriverBiDi :> es) => [BrowsingContext] -> [UserContext] -> (Info -> Eff es ()) -> Eff es SubscriptionId
 subscribeBrowsingContextCreated' b u = send . SubscribeBrowsingContextCreated' b u
 
-subscribeBrowsingContextDestroyed :: (WebDriverBiDi :> es) => (Info -> IO ()) -> Eff es SubscriptionId
+subscribeBrowsingContextDestroyed :: (WebDriverBiDi :> es) => (Info -> Eff es ()) -> Eff es SubscriptionId
 subscribeBrowsingContextDestroyed = send . SubscribeBrowsingContextDestroyed
 
-subscribeBrowsingContextDestroyed' :: (WebDriverBiDi :> es) => [BrowsingContext] -> [UserContext] -> (Info -> IO ()) -> Eff es SubscriptionId
+subscribeBrowsingContextDestroyed' :: (WebDriverBiDi :> es) => [BrowsingContext] -> [UserContext] -> (Info -> Eff es ()) -> Eff es SubscriptionId
 subscribeBrowsingContextDestroyed' b u = send . SubscribeBrowsingContextDestroyed' b u
 
-subscribeBrowsingContextNavigationStarted :: (WebDriverBiDi :> es) => (NavigationInfo -> IO ()) -> Eff es SubscriptionId
+subscribeBrowsingContextNavigationStarted :: (WebDriverBiDi :> es) => (NavigationInfo -> Eff es ()) -> Eff es SubscriptionId
 subscribeBrowsingContextNavigationStarted = send . SubscribeBrowsingContextNavigationStarted
 
-subscribeBrowsingContextNavigationStarted' :: (WebDriverBiDi :> es) => [BrowsingContext] -> [UserContext] -> (NavigationInfo -> IO ()) -> Eff es SubscriptionId
+subscribeBrowsingContextNavigationStarted' :: (WebDriverBiDi :> es) => [BrowsingContext] -> [UserContext] -> (NavigationInfo -> Eff es ()) -> Eff es SubscriptionId
 subscribeBrowsingContextNavigationStarted' b u = send . SubscribeBrowsingContextNavigationStarted' b u
 
-subscribeBrowsingContextFragmentNavigated :: (WebDriverBiDi :> es) => (NavigationInfo -> IO ()) -> Eff es SubscriptionId
+subscribeBrowsingContextFragmentNavigated :: (WebDriverBiDi :> es) => (NavigationInfo -> Eff es ()) -> Eff es SubscriptionId
 subscribeBrowsingContextFragmentNavigated = send . SubscribeBrowsingContextFragmentNavigated
 
-subscribeBrowsingContextFragmentNavigated' :: (WebDriverBiDi :> es) => [BrowsingContext] -> [UserContext] -> (NavigationInfo -> IO ()) -> Eff es SubscriptionId
+subscribeBrowsingContextFragmentNavigated' :: (WebDriverBiDi :> es) => [BrowsingContext] -> [UserContext] -> (NavigationInfo -> Eff es ()) -> Eff es SubscriptionId
 subscribeBrowsingContextFragmentNavigated' b u = send . SubscribeBrowsingContextFragmentNavigated' b u
 
-subscribeBrowsingContextHistoryUpdated :: (WebDriverBiDi :> es) => (HistoryUpdated -> IO ()) -> Eff es SubscriptionId
+subscribeBrowsingContextHistoryUpdated :: (WebDriverBiDi :> es) => (HistoryUpdated -> Eff es ()) -> Eff es SubscriptionId
 subscribeBrowsingContextHistoryUpdated = send . SubscribeBrowsingContextHistoryUpdated
 
-subscribeBrowsingContextHistoryUpdated' :: (WebDriverBiDi :> es) => [BrowsingContext] -> [UserContext] -> (HistoryUpdated -> IO ()) -> Eff es SubscriptionId
+subscribeBrowsingContextHistoryUpdated' :: (WebDriverBiDi :> es) => [BrowsingContext] -> [UserContext] -> (HistoryUpdated -> Eff es ()) -> Eff es SubscriptionId
 subscribeBrowsingContextHistoryUpdated' b u = send . SubscribeBrowsingContextHistoryUpdated' b u
 
 -- | Subscribe to @browsingContext.domContentLoaded@ events.
 --
 -- Pass the returned 'SubscriptionId' to 'unsubscribe' to de-register.
--- In the callback, write to a 'Control.Concurrent.STM.TMVar' and use
--- 'Effectful.Concurrent.STM.atomically' in the main @Eff@ stack to wait.
-subscribeBrowsingContextDomContentLoaded :: (WebDriverBiDi :> es) => (NavigationInfo -> IO ()) -> Eff es SubscriptionId
+-- In the callback, use 'liftIO' to write to a 'Control.Concurrent.STM.TMVar'
+-- and @liftIO atomically@ in the main @Eff@ stack to wait for the event.
+subscribeBrowsingContextDomContentLoaded :: (WebDriverBiDi :> es) => (NavigationInfo -> Eff es ()) -> Eff es SubscriptionId
 subscribeBrowsingContextDomContentLoaded = send . SubscribeBrowsingContextDomContentLoaded
 
-subscribeBrowsingContextDomContentLoaded' :: (WebDriverBiDi :> es) => [BrowsingContext] -> [UserContext] -> (NavigationInfo -> IO ()) -> Eff es SubscriptionId
+subscribeBrowsingContextDomContentLoaded' :: (WebDriverBiDi :> es) => [BrowsingContext] -> [UserContext] -> (NavigationInfo -> Eff es ()) -> Eff es SubscriptionId
 subscribeBrowsingContextDomContentLoaded' b u = send . SubscribeBrowsingContextDomContentLoaded' b u
 
-subscribeBrowsingContextLoad :: (WebDriverBiDi :> es) => (NavigationInfo -> IO ()) -> Eff es SubscriptionId
+subscribeBrowsingContextLoad :: (WebDriverBiDi :> es) => (NavigationInfo -> Eff es ()) -> Eff es SubscriptionId
 subscribeBrowsingContextLoad = send . SubscribeBrowsingContextLoad
 
-subscribeBrowsingContextLoad' :: (WebDriverBiDi :> es) => [BrowsingContext] -> [UserContext] -> (NavigationInfo -> IO ()) -> Eff es SubscriptionId
+subscribeBrowsingContextLoad' :: (WebDriverBiDi :> es) => [BrowsingContext] -> [UserContext] -> (NavigationInfo -> Eff es ()) -> Eff es SubscriptionId
 subscribeBrowsingContextLoad' b u = send . SubscribeBrowsingContextLoad' b u
 
-subscribeBrowsingContextDownloadWillBegin :: (WebDriverBiDi :> es) => (DownloadWillBegin -> IO ()) -> Eff es SubscriptionId
+subscribeBrowsingContextDownloadWillBegin :: (WebDriverBiDi :> es) => (DownloadWillBegin -> Eff es ()) -> Eff es SubscriptionId
 subscribeBrowsingContextDownloadWillBegin = send . SubscribeBrowsingContextDownloadWillBegin
 
-subscribeBrowsingContextDownloadWillBegin' :: (WebDriverBiDi :> es) => [BrowsingContext] -> [UserContext] -> (DownloadWillBegin -> IO ()) -> Eff es SubscriptionId
+subscribeBrowsingContextDownloadWillBegin' :: (WebDriverBiDi :> es) => [BrowsingContext] -> [UserContext] -> (DownloadWillBegin -> Eff es ()) -> Eff es SubscriptionId
 subscribeBrowsingContextDownloadWillBegin' b u = send . SubscribeBrowsingContextDownloadWillBegin' b u
 
-subscribeBrowsingContextDownloadEnd :: (WebDriverBiDi :> es) => (DownloadEnd -> IO ()) -> Eff es SubscriptionId
+subscribeBrowsingContextDownloadEnd :: (WebDriverBiDi :> es) => (DownloadEnd -> Eff es ()) -> Eff es SubscriptionId
 subscribeBrowsingContextDownloadEnd = send . SubscribeBrowsingContextDownloadEnd
 
-subscribeBrowsingContextDownloadEnd' :: (WebDriverBiDi :> es) => [BrowsingContext] -> [UserContext] -> (DownloadEnd -> IO ()) -> Eff es SubscriptionId
+subscribeBrowsingContextDownloadEnd' :: (WebDriverBiDi :> es) => [BrowsingContext] -> [UserContext] -> (DownloadEnd -> Eff es ()) -> Eff es SubscriptionId
 subscribeBrowsingContextDownloadEnd' b u = send . SubscribeBrowsingContextDownloadEnd' b u
 
-subscribeBrowsingContextNavigationAborted :: (WebDriverBiDi :> es) => (NavigationInfo -> IO ()) -> Eff es SubscriptionId
+subscribeBrowsingContextNavigationAborted :: (WebDriverBiDi :> es) => (NavigationInfo -> Eff es ()) -> Eff es SubscriptionId
 subscribeBrowsingContextNavigationAborted = send . SubscribeBrowsingContextNavigationAborted
 
-subscribeBrowsingContextNavigationAborted' :: (WebDriverBiDi :> es) => [BrowsingContext] -> [UserContext] -> (NavigationInfo -> IO ()) -> Eff es SubscriptionId
+subscribeBrowsingContextNavigationAborted' :: (WebDriverBiDi :> es) => [BrowsingContext] -> [UserContext] -> (NavigationInfo -> Eff es ()) -> Eff es SubscriptionId
 subscribeBrowsingContextNavigationAborted' b u = send . SubscribeBrowsingContextNavigationAborted' b u
 
-subscribeBrowsingContextNavigationCommitted :: (WebDriverBiDi :> es) => (NavigationInfo -> IO ()) -> Eff es SubscriptionId
+subscribeBrowsingContextNavigationCommitted :: (WebDriverBiDi :> es) => (NavigationInfo -> Eff es ()) -> Eff es SubscriptionId
 subscribeBrowsingContextNavigationCommitted = send . SubscribeBrowsingContextNavigationCommitted
 
-subscribeBrowsingContextNavigationCommitted' :: (WebDriverBiDi :> es) => [BrowsingContext] -> [UserContext] -> (NavigationInfo -> IO ()) -> Eff es SubscriptionId
+subscribeBrowsingContextNavigationCommitted' :: (WebDriverBiDi :> es) => [BrowsingContext] -> [UserContext] -> (NavigationInfo -> Eff es ()) -> Eff es SubscriptionId
 subscribeBrowsingContextNavigationCommitted' b u = send . SubscribeBrowsingContextNavigationCommitted' b u
 
-subscribeBrowsingContextNavigationFailed :: (WebDriverBiDi :> es) => (NavigationInfo -> IO ()) -> Eff es SubscriptionId
+subscribeBrowsingContextNavigationFailed :: (WebDriverBiDi :> es) => (NavigationInfo -> Eff es ()) -> Eff es SubscriptionId
 subscribeBrowsingContextNavigationFailed = send . SubscribeBrowsingContextNavigationFailed
 
-subscribeBrowsingContextNavigationFailed' :: (WebDriverBiDi :> es) => [BrowsingContext] -> [UserContext] -> (NavigationInfo -> IO ()) -> Eff es SubscriptionId
+subscribeBrowsingContextNavigationFailed' :: (WebDriverBiDi :> es) => [BrowsingContext] -> [UserContext] -> (NavigationInfo -> Eff es ()) -> Eff es SubscriptionId
 subscribeBrowsingContextNavigationFailed' b u = send . SubscribeBrowsingContextNavigationFailed' b u
 
-subscribeBrowsingContextUserPromptClosed :: (WebDriverBiDi :> es) => (UserPromptClosed -> IO ()) -> Eff es SubscriptionId
+subscribeBrowsingContextUserPromptClosed :: (WebDriverBiDi :> es) => (UserPromptClosed -> Eff es ()) -> Eff es SubscriptionId
 subscribeBrowsingContextUserPromptClosed = send . SubscribeBrowsingContextUserPromptClosed
 
-subscribeBrowsingContextUserPromptClosed' :: (WebDriverBiDi :> es) => [BrowsingContext] -> [UserContext] -> (UserPromptClosed -> IO ()) -> Eff es SubscriptionId
+subscribeBrowsingContextUserPromptClosed' :: (WebDriverBiDi :> es) => [BrowsingContext] -> [UserContext] -> (UserPromptClosed -> Eff es ()) -> Eff es SubscriptionId
 subscribeBrowsingContextUserPromptClosed' b u = send . SubscribeBrowsingContextUserPromptClosed' b u
 
-subscribeBrowsingContextUserPromptOpened :: (WebDriverBiDi :> es) => (UserPromptOpened -> IO ()) -> Eff es SubscriptionId
+subscribeBrowsingContextUserPromptOpened :: (WebDriverBiDi :> es) => (UserPromptOpened -> Eff es ()) -> Eff es SubscriptionId
 subscribeBrowsingContextUserPromptOpened = send . SubscribeBrowsingContextUserPromptOpened
 
-subscribeBrowsingContextUserPromptOpened' :: (WebDriverBiDi :> es) => [BrowsingContext] -> [UserContext] -> (UserPromptOpened -> IO ()) -> Eff es SubscriptionId
+subscribeBrowsingContextUserPromptOpened' :: (WebDriverBiDi :> es) => [BrowsingContext] -> [UserContext] -> (UserPromptOpened -> Eff es ()) -> Eff es SubscriptionId
 subscribeBrowsingContextUserPromptOpened' b u = send . SubscribeBrowsingContextUserPromptOpened' b u
 
 -- ---------------------------------------------------------------------------
 -- Network subscriptions
 -- ---------------------------------------------------------------------------
 
-subscribeNetworkAuthRequired :: (WebDriverBiDi :> es) => (AuthRequired -> IO ()) -> Eff es SubscriptionId
+subscribeNetworkAuthRequired :: (WebDriverBiDi :> es) => (AuthRequired -> Eff es ()) -> Eff es SubscriptionId
 subscribeNetworkAuthRequired = send . SubscribeNetworkAuthRequired
 
-subscribeNetworkAuthRequired' :: (WebDriverBiDi :> es) => [BrowsingContext] -> [UserContext] -> (AuthRequired -> IO ()) -> Eff es SubscriptionId
+subscribeNetworkAuthRequired' :: (WebDriverBiDi :> es) => [BrowsingContext] -> [UserContext] -> (AuthRequired -> Eff es ()) -> Eff es SubscriptionId
 subscribeNetworkAuthRequired' b u = send . SubscribeNetworkAuthRequired' b u
 
-subscribeNetworkBeforeRequestSent :: (WebDriverBiDi :> es) => (BeforeRequestSent -> IO ()) -> Eff es SubscriptionId
+subscribeNetworkBeforeRequestSent :: (WebDriverBiDi :> es) => (BeforeRequestSent -> Eff es ()) -> Eff es SubscriptionId
 subscribeNetworkBeforeRequestSent = send . SubscribeNetworkBeforeRequestSent
 
-subscribeNetworkBeforeRequestSent' :: (WebDriverBiDi :> es) => [BrowsingContext] -> [UserContext] -> (BeforeRequestSent -> IO ()) -> Eff es SubscriptionId
+subscribeNetworkBeforeRequestSent' :: (WebDriverBiDi :> es) => [BrowsingContext] -> [UserContext] -> (BeforeRequestSent -> Eff es ()) -> Eff es SubscriptionId
 subscribeNetworkBeforeRequestSent' b u = send . SubscribeNetworkBeforeRequestSent' b u
 
-subscribeNetworkFetchError :: (WebDriverBiDi :> es) => (FetchError -> IO ()) -> Eff es SubscriptionId
+subscribeNetworkFetchError :: (WebDriverBiDi :> es) => (FetchError -> Eff es ()) -> Eff es SubscriptionId
 subscribeNetworkFetchError = send . SubscribeNetworkFetchError
 
-subscribeNetworkFetchError' :: (WebDriverBiDi :> es) => [BrowsingContext] -> [UserContext] -> (FetchError -> IO ()) -> Eff es SubscriptionId
+subscribeNetworkFetchError' :: (WebDriverBiDi :> es) => [BrowsingContext] -> [UserContext] -> (FetchError -> Eff es ()) -> Eff es SubscriptionId
 subscribeNetworkFetchError' b u = send . SubscribeNetworkFetchError' b u
 
-subscribeNetworkResponseCompleted :: (WebDriverBiDi :> es) => (ResponseCompleted -> IO ()) -> Eff es SubscriptionId
+subscribeNetworkResponseCompleted :: (WebDriverBiDi :> es) => (ResponseCompleted -> Eff es ()) -> Eff es SubscriptionId
 subscribeNetworkResponseCompleted = send . SubscribeNetworkResponseCompleted
 
-subscribeNetworkResponseCompleted' :: (WebDriverBiDi :> es) => [BrowsingContext] -> [UserContext] -> (ResponseCompleted -> IO ()) -> Eff es SubscriptionId
+subscribeNetworkResponseCompleted' :: (WebDriverBiDi :> es) => [BrowsingContext] -> [UserContext] -> (ResponseCompleted -> Eff es ()) -> Eff es SubscriptionId
 subscribeNetworkResponseCompleted' b u = send . SubscribeNetworkResponseCompleted' b u
 
-subscribeNetworkResponseStarted :: (WebDriverBiDi :> es) => (ResponseStarted -> IO ()) -> Eff es SubscriptionId
+subscribeNetworkResponseStarted :: (WebDriverBiDi :> es) => (ResponseStarted -> Eff es ()) -> Eff es SubscriptionId
 subscribeNetworkResponseStarted = send . SubscribeNetworkResponseStarted
 
-subscribeNetworkResponseStarted' :: (WebDriverBiDi :> es) => [BrowsingContext] -> [UserContext] -> (ResponseStarted -> IO ()) -> Eff es SubscriptionId
+subscribeNetworkResponseStarted' :: (WebDriverBiDi :> es) => [BrowsingContext] -> [UserContext] -> (ResponseStarted -> Eff es ()) -> Eff es SubscriptionId
 subscribeNetworkResponseStarted' b u = send . SubscribeNetworkResponseStarted' b u
 
 -- ---------------------------------------------------------------------------
 -- Script subscriptions
 -- ---------------------------------------------------------------------------
 
-subscribeScriptMessage :: (WebDriverBiDi :> es) => (Message -> IO ()) -> Eff es SubscriptionId
+subscribeScriptMessage :: (WebDriverBiDi :> es) => (Message -> Eff es ()) -> Eff es SubscriptionId
 subscribeScriptMessage = send . SubscribeScriptMessage
 
-subscribeScriptMessage' :: (WebDriverBiDi :> es) => [BrowsingContext] -> [UserContext] -> (Message -> IO ()) -> Eff es SubscriptionId
+subscribeScriptMessage' :: (WebDriverBiDi :> es) => [BrowsingContext] -> [UserContext] -> (Message -> Eff es ()) -> Eff es SubscriptionId
 subscribeScriptMessage' b u = send . SubscribeScriptMessage' b u
 
-subscribeScriptRealmCreated :: (WebDriverBiDi :> es) => (RealmInfo -> IO ()) -> Eff es SubscriptionId
+subscribeScriptRealmCreated :: (WebDriverBiDi :> es) => (RealmInfo -> Eff es ()) -> Eff es SubscriptionId
 subscribeScriptRealmCreated = send . SubscribeScriptRealmCreated
 
-subscribeScriptRealmCreated' :: (WebDriverBiDi :> es) => [BrowsingContext] -> [UserContext] -> (RealmInfo -> IO ()) -> Eff es SubscriptionId
+subscribeScriptRealmCreated' :: (WebDriverBiDi :> es) => [BrowsingContext] -> [UserContext] -> (RealmInfo -> Eff es ()) -> Eff es SubscriptionId
 subscribeScriptRealmCreated' b u = send . SubscribeScriptRealmCreated' b u
 
-subscribeScriptRealmDestroyed :: (WebDriverBiDi :> es) => (RealmDestroyed -> IO ()) -> Eff es SubscriptionId
+subscribeScriptRealmDestroyed :: (WebDriverBiDi :> es) => (RealmDestroyed -> Eff es ()) -> Eff es SubscriptionId
 subscribeScriptRealmDestroyed = send . SubscribeScriptRealmDestroyed
 
-subscribeScriptRealmDestroyed' :: (WebDriverBiDi :> es) => [BrowsingContext] -> [UserContext] -> (RealmDestroyed -> IO ()) -> Eff es SubscriptionId
+subscribeScriptRealmDestroyed' :: (WebDriverBiDi :> es) => [BrowsingContext] -> [UserContext] -> (RealmDestroyed -> Eff es ()) -> Eff es SubscriptionId
 subscribeScriptRealmDestroyed' b u = send . SubscribeScriptRealmDestroyed' b u
 
 -- ---------------------------------------------------------------------------
 -- Input subscriptions
 -- ---------------------------------------------------------------------------
 
-subscribeInputFileDialogOpened :: (WebDriverBiDi :> es) => (FileDialogOpened -> IO ()) -> Eff es SubscriptionId
+subscribeInputFileDialogOpened :: (WebDriverBiDi :> es) => (FileDialogOpened -> Eff es ()) -> Eff es SubscriptionId
 subscribeInputFileDialogOpened = send . SubscribeInputFileDialogOpened
 
-subscribeInputFileDialogOpened' :: (WebDriverBiDi :> es) => [BrowsingContext] -> [UserContext] -> (FileDialogOpened -> IO ()) -> Eff es SubscriptionId
+subscribeInputFileDialogOpened' :: (WebDriverBiDi :> es) => [BrowsingContext] -> [UserContext] -> (FileDialogOpened -> Eff es ()) -> Eff es SubscriptionId
 subscribeInputFileDialogOpened' b u = send . SubscribeInputFileDialogOpened' b u
 
 -- ---------------------------------------------------------------------------
@@ -690,19 +689,19 @@ subscribeInputFileDialogOpened' b u = send . SubscribeInputFileDialogOpened' b u
 -- ---------------------------------------------------------------------------
 
 -- | Subscribe to multiple known event types (no context filters).
-subscribeMany :: (WebDriverBiDi :> es) => [KnownSubscriptionType] -> (Event -> IO ()) -> Eff es SubscriptionId
+subscribeMany :: (WebDriverBiDi :> es) => [KnownSubscriptionType] -> (Event -> Eff es ()) -> Eff es SubscriptionId
 subscribeMany sts = send . SubscribeMany sts
 
 -- | Subscribe to multiple known event types with context filters.
-subscribeMany' :: (WebDriverBiDi :> es) => [BrowsingContext] -> [UserContext] -> [KnownSubscriptionType] -> (Event -> IO ()) -> Eff es SubscriptionId
+subscribeMany' :: (WebDriverBiDi :> es) => [BrowsingContext] -> [UserContext] -> [KnownSubscriptionType] -> (Event -> Eff es ()) -> Eff es SubscriptionId
 subscribeMany' b u sts = send . SubscribeMany' b u sts
 
 -- | Subscribe to unknown off-spec event types (no context filters).
-subscribeUnknownMany :: (WebDriverBiDi :> es) => [OffSpecSubscriptionType] -> (Value -> IO ()) -> Eff es SubscriptionId
+subscribeUnknownMany :: (WebDriverBiDi :> es) => [OffSpecSubscriptionType] -> (Value -> Eff es ()) -> Eff es SubscriptionId
 subscribeUnknownMany sts = send . SubscribeUnknownMany sts
 
 -- | Subscribe to unknown off-spec event types with context filters.
-subscribeUnknownMany' :: (WebDriverBiDi :> es) => [BrowsingContext] -> [UserContext] -> [OffSpecSubscriptionType] -> (Value -> IO ()) -> Eff es SubscriptionId
+subscribeUnknownMany' :: (WebDriverBiDi :> es) => [BrowsingContext] -> [UserContext] -> [OffSpecSubscriptionType] -> (Value -> Eff es ()) -> Eff es SubscriptionId
 subscribeUnknownMany' b u sts = send . SubscribeUnknownMany' b u sts
 
 -- ---------------------------------------------------------------------------

@@ -45,7 +45,7 @@ where
 import Data.Aeson (FromJSON, Object, Value)
 import Data.Text (Text)
 import Effectful (Effect, Dispatch (..), DispatchOf, Eff, IOE, (:>), liftIO)
-import Effectful.Dispatch.Dynamic (interpret_)
+import Effectful.Dispatch.Dynamic (interpret, localSeqUnliftIO)
 import UnliftIO (throwIO)
 import WebDriverPreCore.BiDi.Protocol qualified as BP
 import WebDriverPreCore.BiDi.Protocol
@@ -339,15 +339,14 @@ type instance DispatchOf WebDriverHttp = Dynamic
 --
 -- Command constructors (e.g. 'BrowsingContextNavigate') invoke a BiDi
 -- command and return its response.  Subscription constructors
--- (e.g. 'SubscribeBrowsingContextDomContentLoaded') register an IO callback
--- that the BiDi runner will invoke asynchronously when the event fires.
--- Callbacks are @IO@-based because the underlying WebSocket reader loop is
--- @IO@-based; the subscription call itself remains an effect operation.
+-- (e.g. 'SubscribeBrowsingContextDomContentLoaded') accept an @m ()@ callback
+-- so callers can use any effectful action in the handler.  The interpreter
+-- uses 'Effectful.Dispatch.Dynamic.localSeqUnliftIO' to convert the @Eff@
+-- callback to @IO@ before handing it off to the underlying WebSocket runner.
 --
--- For idiomatic use of subscriptions in tests, pass a callback that writes
--- to a 'Control.Concurrent.STM.TMVar' and then use
--- 'Effectful.Concurrent.STM.atomically' to wait for the event in the main
--- effect stack (see the Effectful test suite for an example).
+-- For idiomatic use of subscriptions in tests, use 'liftIO' inside the
+-- callback to write to a 'Control.Concurrent.STM.TMVar', then call
+-- @liftIO atomically@ in the main @Eff@ stack to wait for the event.
 --
 -- Smart constructors are in "WebDriver.Effectful.BiDi.Base.Actions".
 data WebDriverBiDi :: Effect where
@@ -426,63 +425,63 @@ data WebDriverBiDi :: Effect where
   SendBiDiOffSpecCmd      :: JSUInt -> Text -> Object -> WebDriverBiDi m Object
   SendBiDiOffSpecCmdNoWait :: Text -> Object -> WebDriverBiDi m Request
   -- Log subscriptions
-  SubscribeLogEntryAdded  :: (LogEntry -> IO ()) -> WebDriverBiDi m SubscriptionId
-  SubscribeLogEntryAdded' :: [BrowsingContext] -> [UserContext] -> (LogEntry -> IO ()) -> WebDriverBiDi m SubscriptionId
+  SubscribeLogEntryAdded  :: (LogEntry -> m ()) -> WebDriverBiDi m SubscriptionId
+  SubscribeLogEntryAdded' :: [BrowsingContext] -> [UserContext] -> (LogEntry -> m ()) -> WebDriverBiDi m SubscriptionId
   -- BrowsingContext subscriptions
-  SubscribeBrowsingContextCreated               :: (Info -> IO ()) -> WebDriverBiDi m SubscriptionId
-  SubscribeBrowsingContextCreated'              :: [BrowsingContext] -> [UserContext] -> (Info -> IO ()) -> WebDriverBiDi m SubscriptionId
-  SubscribeBrowsingContextDestroyed             :: (Info -> IO ()) -> WebDriverBiDi m SubscriptionId
-  SubscribeBrowsingContextDestroyed'            :: [BrowsingContext] -> [UserContext] -> (Info -> IO ()) -> WebDriverBiDi m SubscriptionId
-  SubscribeBrowsingContextNavigationStarted     :: (NavigationInfo -> IO ()) -> WebDriverBiDi m SubscriptionId
-  SubscribeBrowsingContextNavigationStarted'    :: [BrowsingContext] -> [UserContext] -> (NavigationInfo -> IO ()) -> WebDriverBiDi m SubscriptionId
-  SubscribeBrowsingContextFragmentNavigated     :: (NavigationInfo -> IO ()) -> WebDriverBiDi m SubscriptionId
-  SubscribeBrowsingContextFragmentNavigated'    :: [BrowsingContext] -> [UserContext] -> (NavigationInfo -> IO ()) -> WebDriverBiDi m SubscriptionId
-  SubscribeBrowsingContextHistoryUpdated        :: (HistoryUpdated -> IO ()) -> WebDriverBiDi m SubscriptionId
-  SubscribeBrowsingContextHistoryUpdated'       :: [BrowsingContext] -> [UserContext] -> (HistoryUpdated -> IO ()) -> WebDriverBiDi m SubscriptionId
-  SubscribeBrowsingContextDomContentLoaded      :: (NavigationInfo -> IO ()) -> WebDriverBiDi m SubscriptionId
-  SubscribeBrowsingContextDomContentLoaded'     :: [BrowsingContext] -> [UserContext] -> (NavigationInfo -> IO ()) -> WebDriverBiDi m SubscriptionId
-  SubscribeBrowsingContextLoad                  :: (NavigationInfo -> IO ()) -> WebDriverBiDi m SubscriptionId
-  SubscribeBrowsingContextLoad'                 :: [BrowsingContext] -> [UserContext] -> (NavigationInfo -> IO ()) -> WebDriverBiDi m SubscriptionId
-  SubscribeBrowsingContextDownloadWillBegin     :: (DownloadWillBegin -> IO ()) -> WebDriverBiDi m SubscriptionId
-  SubscribeBrowsingContextDownloadWillBegin'    :: [BrowsingContext] -> [UserContext] -> (DownloadWillBegin -> IO ()) -> WebDriverBiDi m SubscriptionId
-  SubscribeBrowsingContextDownloadEnd           :: (DownloadEnd -> IO ()) -> WebDriverBiDi m SubscriptionId
-  SubscribeBrowsingContextDownloadEnd'          :: [BrowsingContext] -> [UserContext] -> (DownloadEnd -> IO ()) -> WebDriverBiDi m SubscriptionId
-  SubscribeBrowsingContextNavigationAborted     :: (NavigationInfo -> IO ()) -> WebDriverBiDi m SubscriptionId
-  SubscribeBrowsingContextNavigationAborted'    :: [BrowsingContext] -> [UserContext] -> (NavigationInfo -> IO ()) -> WebDriverBiDi m SubscriptionId
-  SubscribeBrowsingContextNavigationCommitted   :: (NavigationInfo -> IO ()) -> WebDriverBiDi m SubscriptionId
-  SubscribeBrowsingContextNavigationCommitted'  :: [BrowsingContext] -> [UserContext] -> (NavigationInfo -> IO ()) -> WebDriverBiDi m SubscriptionId
-  SubscribeBrowsingContextNavigationFailed      :: (NavigationInfo -> IO ()) -> WebDriverBiDi m SubscriptionId
-  SubscribeBrowsingContextNavigationFailed'     :: [BrowsingContext] -> [UserContext] -> (NavigationInfo -> IO ()) -> WebDriverBiDi m SubscriptionId
-  SubscribeBrowsingContextUserPromptClosed      :: (UserPromptClosed -> IO ()) -> WebDriverBiDi m SubscriptionId
-  SubscribeBrowsingContextUserPromptClosed'     :: [BrowsingContext] -> [UserContext] -> (UserPromptClosed -> IO ()) -> WebDriverBiDi m SubscriptionId
-  SubscribeBrowsingContextUserPromptOpened      :: (UserPromptOpened -> IO ()) -> WebDriverBiDi m SubscriptionId
-  SubscribeBrowsingContextUserPromptOpened'     :: [BrowsingContext] -> [UserContext] -> (UserPromptOpened -> IO ()) -> WebDriverBiDi m SubscriptionId
+  SubscribeBrowsingContextCreated               :: (Info -> m ()) -> WebDriverBiDi m SubscriptionId
+  SubscribeBrowsingContextCreated'              :: [BrowsingContext] -> [UserContext] -> (Info -> m ()) -> WebDriverBiDi m SubscriptionId
+  SubscribeBrowsingContextDestroyed             :: (Info -> m ()) -> WebDriverBiDi m SubscriptionId
+  SubscribeBrowsingContextDestroyed'            :: [BrowsingContext] -> [UserContext] -> (Info -> m ()) -> WebDriverBiDi m SubscriptionId
+  SubscribeBrowsingContextNavigationStarted     :: (NavigationInfo -> m ()) -> WebDriverBiDi m SubscriptionId
+  SubscribeBrowsingContextNavigationStarted'    :: [BrowsingContext] -> [UserContext] -> (NavigationInfo -> m ()) -> WebDriverBiDi m SubscriptionId
+  SubscribeBrowsingContextFragmentNavigated     :: (NavigationInfo -> m ()) -> WebDriverBiDi m SubscriptionId
+  SubscribeBrowsingContextFragmentNavigated'    :: [BrowsingContext] -> [UserContext] -> (NavigationInfo -> m ()) -> WebDriverBiDi m SubscriptionId
+  SubscribeBrowsingContextHistoryUpdated        :: (HistoryUpdated -> m ()) -> WebDriverBiDi m SubscriptionId
+  SubscribeBrowsingContextHistoryUpdated'       :: [BrowsingContext] -> [UserContext] -> (HistoryUpdated -> m ()) -> WebDriverBiDi m SubscriptionId
+  SubscribeBrowsingContextDomContentLoaded      :: (NavigationInfo -> m ()) -> WebDriverBiDi m SubscriptionId
+  SubscribeBrowsingContextDomContentLoaded'     :: [BrowsingContext] -> [UserContext] -> (NavigationInfo -> m ()) -> WebDriverBiDi m SubscriptionId
+  SubscribeBrowsingContextLoad                  :: (NavigationInfo -> m ()) -> WebDriverBiDi m SubscriptionId
+  SubscribeBrowsingContextLoad'                 :: [BrowsingContext] -> [UserContext] -> (NavigationInfo -> m ()) -> WebDriverBiDi m SubscriptionId
+  SubscribeBrowsingContextDownloadWillBegin     :: (DownloadWillBegin -> m ()) -> WebDriverBiDi m SubscriptionId
+  SubscribeBrowsingContextDownloadWillBegin'    :: [BrowsingContext] -> [UserContext] -> (DownloadWillBegin -> m ()) -> WebDriverBiDi m SubscriptionId
+  SubscribeBrowsingContextDownloadEnd           :: (DownloadEnd -> m ()) -> WebDriverBiDi m SubscriptionId
+  SubscribeBrowsingContextDownloadEnd'          :: [BrowsingContext] -> [UserContext] -> (DownloadEnd -> m ()) -> WebDriverBiDi m SubscriptionId
+  SubscribeBrowsingContextNavigationAborted     :: (NavigationInfo -> m ()) -> WebDriverBiDi m SubscriptionId
+  SubscribeBrowsingContextNavigationAborted'    :: [BrowsingContext] -> [UserContext] -> (NavigationInfo -> m ()) -> WebDriverBiDi m SubscriptionId
+  SubscribeBrowsingContextNavigationCommitted   :: (NavigationInfo -> m ()) -> WebDriverBiDi m SubscriptionId
+  SubscribeBrowsingContextNavigationCommitted'  :: [BrowsingContext] -> [UserContext] -> (NavigationInfo -> m ()) -> WebDriverBiDi m SubscriptionId
+  SubscribeBrowsingContextNavigationFailed      :: (NavigationInfo -> m ()) -> WebDriverBiDi m SubscriptionId
+  SubscribeBrowsingContextNavigationFailed'     :: [BrowsingContext] -> [UserContext] -> (NavigationInfo -> m ()) -> WebDriverBiDi m SubscriptionId
+  SubscribeBrowsingContextUserPromptClosed      :: (UserPromptClosed -> m ()) -> WebDriverBiDi m SubscriptionId
+  SubscribeBrowsingContextUserPromptClosed'     :: [BrowsingContext] -> [UserContext] -> (UserPromptClosed -> m ()) -> WebDriverBiDi m SubscriptionId
+  SubscribeBrowsingContextUserPromptOpened      :: (UserPromptOpened -> m ()) -> WebDriverBiDi m SubscriptionId
+  SubscribeBrowsingContextUserPromptOpened'     :: [BrowsingContext] -> [UserContext] -> (UserPromptOpened -> m ()) -> WebDriverBiDi m SubscriptionId
   -- Network subscriptions
-  SubscribeNetworkAuthRequired        :: (AuthRequired -> IO ()) -> WebDriverBiDi m SubscriptionId
-  SubscribeNetworkAuthRequired'       :: [BrowsingContext] -> [UserContext] -> (AuthRequired -> IO ()) -> WebDriverBiDi m SubscriptionId
-  SubscribeNetworkBeforeRequestSent   :: (BeforeRequestSent -> IO ()) -> WebDriverBiDi m SubscriptionId
-  SubscribeNetworkBeforeRequestSent'  :: [BrowsingContext] -> [UserContext] -> (BeforeRequestSent -> IO ()) -> WebDriverBiDi m SubscriptionId
-  SubscribeNetworkFetchError          :: (FetchError -> IO ()) -> WebDriverBiDi m SubscriptionId
-  SubscribeNetworkFetchError'         :: [BrowsingContext] -> [UserContext] -> (FetchError -> IO ()) -> WebDriverBiDi m SubscriptionId
-  SubscribeNetworkResponseCompleted   :: (ResponseCompleted -> IO ()) -> WebDriverBiDi m SubscriptionId
-  SubscribeNetworkResponseCompleted'  :: [BrowsingContext] -> [UserContext] -> (ResponseCompleted -> IO ()) -> WebDriverBiDi m SubscriptionId
-  SubscribeNetworkResponseStarted     :: (ResponseStarted -> IO ()) -> WebDriverBiDi m SubscriptionId
-  SubscribeNetworkResponseStarted'    :: [BrowsingContext] -> [UserContext] -> (ResponseStarted -> IO ()) -> WebDriverBiDi m SubscriptionId
+  SubscribeNetworkAuthRequired        :: (AuthRequired -> m ()) -> WebDriverBiDi m SubscriptionId
+  SubscribeNetworkAuthRequired'       :: [BrowsingContext] -> [UserContext] -> (AuthRequired -> m ()) -> WebDriverBiDi m SubscriptionId
+  SubscribeNetworkBeforeRequestSent   :: (BeforeRequestSent -> m ()) -> WebDriverBiDi m SubscriptionId
+  SubscribeNetworkBeforeRequestSent'  :: [BrowsingContext] -> [UserContext] -> (BeforeRequestSent -> m ()) -> WebDriverBiDi m SubscriptionId
+  SubscribeNetworkFetchError          :: (FetchError -> m ()) -> WebDriverBiDi m SubscriptionId
+  SubscribeNetworkFetchError'         :: [BrowsingContext] -> [UserContext] -> (FetchError -> m ()) -> WebDriverBiDi m SubscriptionId
+  SubscribeNetworkResponseCompleted   :: (ResponseCompleted -> m ()) -> WebDriverBiDi m SubscriptionId
+  SubscribeNetworkResponseCompleted'  :: [BrowsingContext] -> [UserContext] -> (ResponseCompleted -> m ()) -> WebDriverBiDi m SubscriptionId
+  SubscribeNetworkResponseStarted     :: (ResponseStarted -> m ()) -> WebDriverBiDi m SubscriptionId
+  SubscribeNetworkResponseStarted'    :: [BrowsingContext] -> [UserContext] -> (ResponseStarted -> m ()) -> WebDriverBiDi m SubscriptionId
   -- Script subscriptions
-  SubscribeScriptMessage        :: (Message -> IO ()) -> WebDriverBiDi m SubscriptionId
-  SubscribeScriptMessage'       :: [BrowsingContext] -> [UserContext] -> (Message -> IO ()) -> WebDriverBiDi m SubscriptionId
-  SubscribeScriptRealmCreated   :: (RealmInfo -> IO ()) -> WebDriverBiDi m SubscriptionId
-  SubscribeScriptRealmCreated'  :: [BrowsingContext] -> [UserContext] -> (RealmInfo -> IO ()) -> WebDriverBiDi m SubscriptionId
-  SubscribeScriptRealmDestroyed :: (RealmDestroyed -> IO ()) -> WebDriverBiDi m SubscriptionId
-  SubscribeScriptRealmDestroyed' :: [BrowsingContext] -> [UserContext] -> (RealmDestroyed -> IO ()) -> WebDriverBiDi m SubscriptionId
+  SubscribeScriptMessage        :: (Message -> m ()) -> WebDriverBiDi m SubscriptionId
+  SubscribeScriptMessage'       :: [BrowsingContext] -> [UserContext] -> (Message -> m ()) -> WebDriverBiDi m SubscriptionId
+  SubscribeScriptRealmCreated   :: (RealmInfo -> m ()) -> WebDriverBiDi m SubscriptionId
+  SubscribeScriptRealmCreated'  :: [BrowsingContext] -> [UserContext] -> (RealmInfo -> m ()) -> WebDriverBiDi m SubscriptionId
+  SubscribeScriptRealmDestroyed :: (RealmDestroyed -> m ()) -> WebDriverBiDi m SubscriptionId
+  SubscribeScriptRealmDestroyed' :: [BrowsingContext] -> [UserContext] -> (RealmDestroyed -> m ()) -> WebDriverBiDi m SubscriptionId
   -- Input subscriptions
-  SubscribeInputFileDialogOpened  :: (FileDialogOpened -> IO ()) -> WebDriverBiDi m SubscriptionId
-  SubscribeInputFileDialogOpened' :: [BrowsingContext] -> [UserContext] -> (FileDialogOpened -> IO ()) -> WebDriverBiDi m SubscriptionId
+  SubscribeInputFileDialogOpened  :: (FileDialogOpened -> m ()) -> WebDriverBiDi m SubscriptionId
+  SubscribeInputFileDialogOpened' :: [BrowsingContext] -> [UserContext] -> (FileDialogOpened -> m ()) -> WebDriverBiDi m SubscriptionId
   -- Multi-event subscriptions
-  SubscribeMany         :: [KnownSubscriptionType] -> (Event -> IO ()) -> WebDriverBiDi m SubscriptionId
-  SubscribeMany'        :: [BrowsingContext] -> [UserContext] -> [KnownSubscriptionType] -> (Event -> IO ()) -> WebDriverBiDi m SubscriptionId
-  SubscribeUnknownMany  :: [OffSpecSubscriptionType] -> (Value -> IO ()) -> WebDriverBiDi m SubscriptionId
-  SubscribeUnknownMany' :: [BrowsingContext] -> [UserContext] -> [OffSpecSubscriptionType] -> (Value -> IO ()) -> WebDriverBiDi m SubscriptionId
+  SubscribeMany         :: [KnownSubscriptionType] -> (Event -> m ()) -> WebDriverBiDi m SubscriptionId
+  SubscribeMany'        :: [BrowsingContext] -> [UserContext] -> [KnownSubscriptionType] -> (Event -> m ()) -> WebDriverBiDi m SubscriptionId
+  SubscribeUnknownMany  :: [OffSpecSubscriptionType] -> (Value -> m ()) -> WebDriverBiDi m SubscriptionId
+  SubscribeUnknownMany' :: [BrowsingContext] -> [UserContext] -> [OffSpecSubscriptionType] -> (Value -> m ()) -> WebDriverBiDi m SubscriptionId
   -- Unsubscribe
   Unsubscribe :: SubscriptionId -> WebDriverBiDi m ()
 
@@ -498,7 +497,7 @@ type instance DispatchOf WebDriverBiDi = Dynamic
 -- The interpreter maps each effect constructor to the corresponding
 -- @WebDriverPreCore.Extended.HTTP.Base.Actions@ function.
 runWebDriverHttp :: (IOE :> es) => HttpSessionInfo -> Eff (WebDriverHttp : es) a -> Eff es a
-runWebDriverHttp info = interpret_ $ \case
+runWebDriverHttp info = interpret $ \_localEnv -> \case
   DeleteSession             -> liftIO $ HA.deleteSession       runner sess
   GetTimeouts               -> liftIO $ HA.getTimeouts         runner sess
   SetTimeouts ts            -> liftIO $ HA.setTimeouts         runner sess ts
@@ -574,7 +573,7 @@ runWebDriverHttp info = interpret_ $ \case
 -- @WebDriverPreCore.Extended.BiDi.Base.Actions@ function, using the same
 -- subscription helper pattern as the Bluefin POC.
 runWebDriverBiDi :: (IOE :> es) => BiDiInfo -> Eff (WebDriverBiDi : es) a -> Eff es a
-runWebDriverBiDi info = interpret_ $ \case
+runWebDriverBiDi info = interpret $ \localEnv -> \case
   -- Session
   BiDiSessionNew caps   -> liftIO $ BA.sessionNew    run' caps
   BiDiSessionStatus     -> liftIO $ BA.sessionStatus run'
@@ -650,63 +649,63 @@ runWebDriverBiDi info = interpret_ $ \case
   SendBiDiOffSpecCmd mid m ps -> liftIO $ info.biDiRunner.runOffSpecWithId mid m ps
   SendBiDiOffSpecCmdNoWait m ps -> liftIO $ Runner.runOffSpecNoWait info.biDiRunner m ps
   -- Log subscriptions
-  SubscribeLogEntryAdded  h    -> liftIO $ BA.subscribeLogEntryAdded  (mkSendSub  info.biDiRunner) h
-  SubscribeLogEntryAdded' b u h -> liftIO $ BA.subscribeLogEntryAdded' (mkSendSub' info.biDiRunner) b u h
+  SubscribeLogEntryAdded  h    -> localSeqUnliftIO localEnv $ \unlift -> BA.subscribeLogEntryAdded  (mkSendSub  info.biDiRunner) (unlift . h)
+  SubscribeLogEntryAdded' b u h -> localSeqUnliftIO localEnv $ \unlift -> BA.subscribeLogEntryAdded' (mkSendSub' info.biDiRunner) b u (unlift . h)
   -- BrowsingContext subscriptions
-  SubscribeBrowsingContextCreated              h     -> liftIO $ BA.subscribeBrowsingContextCreated             (mkSendSub  info.biDiRunner) h
-  SubscribeBrowsingContextCreated'             b u h -> liftIO $ BA.subscribeBrowsingContextCreated'            (mkSendSub' info.biDiRunner) b u h
-  SubscribeBrowsingContextDestroyed            h     -> liftIO $ BA.subscribeBrowsingContextDestroyed           (mkSendSub  info.biDiRunner) h
-  SubscribeBrowsingContextDestroyed'           b u h -> liftIO $ BA.subscribeBrowsingContextDestroyed'          (mkSendSub' info.biDiRunner) b u h
-  SubscribeBrowsingContextNavigationStarted    h     -> liftIO $ BA.subscribeBrowsingContextNavigationStarted   (mkSendSub  info.biDiRunner) h
-  SubscribeBrowsingContextNavigationStarted'   b u h -> liftIO $ BA.subscribeBrowsingContextNavigationStarted'  (mkSendSub' info.biDiRunner) b u h
-  SubscribeBrowsingContextFragmentNavigated    h     -> liftIO $ BA.subscribeBrowsingContextFragmentNavigated   (mkSendSub  info.biDiRunner) h
-  SubscribeBrowsingContextFragmentNavigated'   b u h -> liftIO $ BA.subscribeBrowsingContextFragmentNavigated'  (mkSendSub' info.biDiRunner) b u h
-  SubscribeBrowsingContextHistoryUpdated       h     -> liftIO $ BA.subscribeBrowsingContextHistoryUpdated      (mkSendSub  info.biDiRunner) h
-  SubscribeBrowsingContextHistoryUpdated'      b u h -> liftIO $ BA.subscribeBrowsingContextHistoryUpdated'     (mkSendSub' info.biDiRunner) b u h
-  SubscribeBrowsingContextDomContentLoaded     h     -> liftIO $ BA.subscribeBrowsingContextDomContentLoaded    (mkSendSub  info.biDiRunner) h
-  SubscribeBrowsingContextDomContentLoaded'    b u h -> liftIO $ BA.subscribeBrowsingContextDomContentLoaded'   (mkSendSub' info.biDiRunner) b u h
-  SubscribeBrowsingContextLoad                 h     -> liftIO $ BA.subscribeBrowsingContextLoad                (mkSendSub  info.biDiRunner) h
-  SubscribeBrowsingContextLoad'                b u h -> liftIO $ BA.subscribeBrowsingContextLoad'               (mkSendSub' info.biDiRunner) b u h
-  SubscribeBrowsingContextDownloadWillBegin    h     -> liftIO $ BA.subscribeBrowsingContextDownloadWillBegin   (mkSendSub  info.biDiRunner) h
-  SubscribeBrowsingContextDownloadWillBegin'   b u h -> liftIO $ BA.subscribeBrowsingContextDownloadWillBegin'  (mkSendSub' info.biDiRunner) b u h
-  SubscribeBrowsingContextDownloadEnd          h     -> liftIO $ BA.subscribeBrowsingContextDownloadEnd         (mkSendSub  info.biDiRunner) h
-  SubscribeBrowsingContextDownloadEnd'         b u h -> liftIO $ BA.subscribeBrowsingContextDownloadEnd'        (mkSendSub' info.biDiRunner) b u h
-  SubscribeBrowsingContextNavigationAborted    h     -> liftIO $ BA.subscribeBrowsingContextNavigationAborted   (mkSendSub  info.biDiRunner) h
-  SubscribeBrowsingContextNavigationAborted'   b u h -> liftIO $ BA.subscribeBrowsingContextNavigationAborted'  (mkSendSub' info.biDiRunner) b u h
-  SubscribeBrowsingContextNavigationCommitted  h     -> liftIO $ BA.subscribeBrowsingContextNavigationCommitted (mkSendSub  info.biDiRunner) h
-  SubscribeBrowsingContextNavigationCommitted' b u h -> liftIO $ BA.subscribeBrowsingContextNavigationCommitted' (mkSendSub' info.biDiRunner) b u h
-  SubscribeBrowsingContextNavigationFailed     h     -> liftIO $ BA.subscribeBrowsingContextNavigationFailed    (mkSendSub  info.biDiRunner) h
-  SubscribeBrowsingContextNavigationFailed'    b u h -> liftIO $ BA.subscribeBrowsingContextNavigationFailed'   (mkSendSub' info.biDiRunner) b u h
-  SubscribeBrowsingContextUserPromptClosed     h     -> liftIO $ BA.subscribeBrowsingContextUserPromptClosed    (mkSendSub  info.biDiRunner) h
-  SubscribeBrowsingContextUserPromptClosed'    b u h -> liftIO $ BA.subscribeBrowsingContextUserPromptClosed'   (mkSendSub' info.biDiRunner) b u h
-  SubscribeBrowsingContextUserPromptOpened     h     -> liftIO $ BA.subscribeBrowsingContextUserPromptOpened    (mkSendSub  info.biDiRunner) h
-  SubscribeBrowsingContextUserPromptOpened'    b u h -> liftIO $ BA.subscribeBrowsingContextUserPromptOpened'   (mkSendSub' info.biDiRunner) b u h
+  SubscribeBrowsingContextCreated              h     -> localSeqUnliftIO localEnv $ \unlift -> BA.subscribeBrowsingContextCreated             (mkSendSub  info.biDiRunner) (unlift . h)
+  SubscribeBrowsingContextCreated'             b u h -> localSeqUnliftIO localEnv $ \unlift -> BA.subscribeBrowsingContextCreated'            (mkSendSub' info.biDiRunner) b u (unlift . h)
+  SubscribeBrowsingContextDestroyed            h     -> localSeqUnliftIO localEnv $ \unlift -> BA.subscribeBrowsingContextDestroyed           (mkSendSub  info.biDiRunner) (unlift . h)
+  SubscribeBrowsingContextDestroyed'           b u h -> localSeqUnliftIO localEnv $ \unlift -> BA.subscribeBrowsingContextDestroyed'          (mkSendSub' info.biDiRunner) b u (unlift . h)
+  SubscribeBrowsingContextNavigationStarted    h     -> localSeqUnliftIO localEnv $ \unlift -> BA.subscribeBrowsingContextNavigationStarted   (mkSendSub  info.biDiRunner) (unlift . h)
+  SubscribeBrowsingContextNavigationStarted'   b u h -> localSeqUnliftIO localEnv $ \unlift -> BA.subscribeBrowsingContextNavigationStarted'  (mkSendSub' info.biDiRunner) b u (unlift . h)
+  SubscribeBrowsingContextFragmentNavigated    h     -> localSeqUnliftIO localEnv $ \unlift -> BA.subscribeBrowsingContextFragmentNavigated   (mkSendSub  info.biDiRunner) (unlift . h)
+  SubscribeBrowsingContextFragmentNavigated'   b u h -> localSeqUnliftIO localEnv $ \unlift -> BA.subscribeBrowsingContextFragmentNavigated'  (mkSendSub' info.biDiRunner) b u (unlift . h)
+  SubscribeBrowsingContextHistoryUpdated       h     -> localSeqUnliftIO localEnv $ \unlift -> BA.subscribeBrowsingContextHistoryUpdated      (mkSendSub  info.biDiRunner) (unlift . h)
+  SubscribeBrowsingContextHistoryUpdated'      b u h -> localSeqUnliftIO localEnv $ \unlift -> BA.subscribeBrowsingContextHistoryUpdated'     (mkSendSub' info.biDiRunner) b u (unlift . h)
+  SubscribeBrowsingContextDomContentLoaded     h     -> localSeqUnliftIO localEnv $ \unlift -> BA.subscribeBrowsingContextDomContentLoaded    (mkSendSub  info.biDiRunner) (unlift . h)
+  SubscribeBrowsingContextDomContentLoaded'    b u h -> localSeqUnliftIO localEnv $ \unlift -> BA.subscribeBrowsingContextDomContentLoaded'   (mkSendSub' info.biDiRunner) b u (unlift . h)
+  SubscribeBrowsingContextLoad                 h     -> localSeqUnliftIO localEnv $ \unlift -> BA.subscribeBrowsingContextLoad                (mkSendSub  info.biDiRunner) (unlift . h)
+  SubscribeBrowsingContextLoad'                b u h -> localSeqUnliftIO localEnv $ \unlift -> BA.subscribeBrowsingContextLoad'               (mkSendSub' info.biDiRunner) b u (unlift . h)
+  SubscribeBrowsingContextDownloadWillBegin    h     -> localSeqUnliftIO localEnv $ \unlift -> BA.subscribeBrowsingContextDownloadWillBegin   (mkSendSub  info.biDiRunner) (unlift . h)
+  SubscribeBrowsingContextDownloadWillBegin'   b u h -> localSeqUnliftIO localEnv $ \unlift -> BA.subscribeBrowsingContextDownloadWillBegin'  (mkSendSub' info.biDiRunner) b u (unlift . h)
+  SubscribeBrowsingContextDownloadEnd          h     -> localSeqUnliftIO localEnv $ \unlift -> BA.subscribeBrowsingContextDownloadEnd         (mkSendSub  info.biDiRunner) (unlift . h)
+  SubscribeBrowsingContextDownloadEnd'         b u h -> localSeqUnliftIO localEnv $ \unlift -> BA.subscribeBrowsingContextDownloadEnd'        (mkSendSub' info.biDiRunner) b u (unlift . h)
+  SubscribeBrowsingContextNavigationAborted    h     -> localSeqUnliftIO localEnv $ \unlift -> BA.subscribeBrowsingContextNavigationAborted   (mkSendSub  info.biDiRunner) (unlift . h)
+  SubscribeBrowsingContextNavigationAborted'   b u h -> localSeqUnliftIO localEnv $ \unlift -> BA.subscribeBrowsingContextNavigationAborted'  (mkSendSub' info.biDiRunner) b u (unlift . h)
+  SubscribeBrowsingContextNavigationCommitted  h     -> localSeqUnliftIO localEnv $ \unlift -> BA.subscribeBrowsingContextNavigationCommitted (mkSendSub  info.biDiRunner) (unlift . h)
+  SubscribeBrowsingContextNavigationCommitted' b u h -> localSeqUnliftIO localEnv $ \unlift -> BA.subscribeBrowsingContextNavigationCommitted' (mkSendSub' info.biDiRunner) b u (unlift . h)
+  SubscribeBrowsingContextNavigationFailed     h     -> localSeqUnliftIO localEnv $ \unlift -> BA.subscribeBrowsingContextNavigationFailed    (mkSendSub  info.biDiRunner) (unlift . h)
+  SubscribeBrowsingContextNavigationFailed'    b u h -> localSeqUnliftIO localEnv $ \unlift -> BA.subscribeBrowsingContextNavigationFailed'   (mkSendSub' info.biDiRunner) b u (unlift . h)
+  SubscribeBrowsingContextUserPromptClosed     h     -> localSeqUnliftIO localEnv $ \unlift -> BA.subscribeBrowsingContextUserPromptClosed    (mkSendSub  info.biDiRunner) (unlift . h)
+  SubscribeBrowsingContextUserPromptClosed'    b u h -> localSeqUnliftIO localEnv $ \unlift -> BA.subscribeBrowsingContextUserPromptClosed'   (mkSendSub' info.biDiRunner) b u (unlift . h)
+  SubscribeBrowsingContextUserPromptOpened     h     -> localSeqUnliftIO localEnv $ \unlift -> BA.subscribeBrowsingContextUserPromptOpened    (mkSendSub  info.biDiRunner) (unlift . h)
+  SubscribeBrowsingContextUserPromptOpened'    b u h -> localSeqUnliftIO localEnv $ \unlift -> BA.subscribeBrowsingContextUserPromptOpened'   (mkSendSub' info.biDiRunner) b u (unlift . h)
   -- Network subscriptions
-  SubscribeNetworkAuthRequired       h     -> liftIO $ BA.subscribeNetworkAuthRequired      (mkSendSub  info.biDiRunner) h
-  SubscribeNetworkAuthRequired'      b u h -> liftIO $ BA.subscribeNetworkAuthRequired'     (mkSendSub' info.biDiRunner) b u h
-  SubscribeNetworkBeforeRequestSent  h     -> liftIO $ BA.subscribeNetworkBeforeRequestSent (mkSendSub  info.biDiRunner) h
-  SubscribeNetworkBeforeRequestSent' b u h -> liftIO $ BA.subscribeNetworkBeforeRequestSent' (mkSendSub' info.biDiRunner) b u h
-  SubscribeNetworkFetchError         h     -> liftIO $ BA.subscribeNetworkFetchError        (mkSendSub  info.biDiRunner) h
-  SubscribeNetworkFetchError'        b u h -> liftIO $ BA.subscribeNetworkFetchError'       (mkSendSub' info.biDiRunner) b u h
-  SubscribeNetworkResponseCompleted  h     -> liftIO $ BA.subscribeNetworkResponseCompleted (mkSendSub  info.biDiRunner) h
-  SubscribeNetworkResponseCompleted' b u h -> liftIO $ BA.subscribeNetworkResponseCompleted' (mkSendSub' info.biDiRunner) b u h
-  SubscribeNetworkResponseStarted    h     -> liftIO $ BA.subscribeNetworkResponseStarted   (mkSendSub  info.biDiRunner) h
-  SubscribeNetworkResponseStarted'   b u h -> liftIO $ BA.subscribeNetworkResponseStarted'  (mkSendSub' info.biDiRunner) b u h
+  SubscribeNetworkAuthRequired       h     -> localSeqUnliftIO localEnv $ \unlift -> BA.subscribeNetworkAuthRequired      (mkSendSub  info.biDiRunner) (unlift . h)
+  SubscribeNetworkAuthRequired'      b u h -> localSeqUnliftIO localEnv $ \unlift -> BA.subscribeNetworkAuthRequired'     (mkSendSub' info.biDiRunner) b u (unlift . h)
+  SubscribeNetworkBeforeRequestSent  h     -> localSeqUnliftIO localEnv $ \unlift -> BA.subscribeNetworkBeforeRequestSent (mkSendSub  info.biDiRunner) (unlift . h)
+  SubscribeNetworkBeforeRequestSent' b u h -> localSeqUnliftIO localEnv $ \unlift -> BA.subscribeNetworkBeforeRequestSent' (mkSendSub' info.biDiRunner) b u (unlift . h)
+  SubscribeNetworkFetchError         h     -> localSeqUnliftIO localEnv $ \unlift -> BA.subscribeNetworkFetchError        (mkSendSub  info.biDiRunner) (unlift . h)
+  SubscribeNetworkFetchError'        b u h -> localSeqUnliftIO localEnv $ \unlift -> BA.subscribeNetworkFetchError'       (mkSendSub' info.biDiRunner) b u (unlift . h)
+  SubscribeNetworkResponseCompleted  h     -> localSeqUnliftIO localEnv $ \unlift -> BA.subscribeNetworkResponseCompleted (mkSendSub  info.biDiRunner) (unlift . h)
+  SubscribeNetworkResponseCompleted' b u h -> localSeqUnliftIO localEnv $ \unlift -> BA.subscribeNetworkResponseCompleted' (mkSendSub' info.biDiRunner) b u (unlift . h)
+  SubscribeNetworkResponseStarted    h     -> localSeqUnliftIO localEnv $ \unlift -> BA.subscribeNetworkResponseStarted   (mkSendSub  info.biDiRunner) (unlift . h)
+  SubscribeNetworkResponseStarted'   b u h -> localSeqUnliftIO localEnv $ \unlift -> BA.subscribeNetworkResponseStarted'  (mkSendSub' info.biDiRunner) b u (unlift . h)
   -- Script subscriptions
-  SubscribeScriptMessage         h     -> liftIO $ BA.subscribeScriptMessage        (mkSendSub  info.biDiRunner) h
-  SubscribeScriptMessage'        b u h -> liftIO $ BA.subscribeScriptMessage'       (mkSendSub' info.biDiRunner) b u h
-  SubscribeScriptRealmCreated    h     -> liftIO $ BA.subscribeScriptRealmCreated   (mkSendSub  info.biDiRunner) h
-  SubscribeScriptRealmCreated'   b u h -> liftIO $ BA.subscribeScriptRealmCreated'  (mkSendSub' info.biDiRunner) b u h
-  SubscribeScriptRealmDestroyed  h     -> liftIO $ BA.subscribeScriptRealmDestroyed (mkSendSub  info.biDiRunner) h
-  SubscribeScriptRealmDestroyed' b u h -> liftIO $ BA.subscribeScriptRealmDestroyed' (mkSendSub' info.biDiRunner) b u h
+  SubscribeScriptMessage         h     -> localSeqUnliftIO localEnv $ \unlift -> BA.subscribeScriptMessage        (mkSendSub  info.biDiRunner) (unlift . h)
+  SubscribeScriptMessage'        b u h -> localSeqUnliftIO localEnv $ \unlift -> BA.subscribeScriptMessage'       (mkSendSub' info.biDiRunner) b u (unlift . h)
+  SubscribeScriptRealmCreated    h     -> localSeqUnliftIO localEnv $ \unlift -> BA.subscribeScriptRealmCreated   (mkSendSub  info.biDiRunner) (unlift . h)
+  SubscribeScriptRealmCreated'   b u h -> localSeqUnliftIO localEnv $ \unlift -> BA.subscribeScriptRealmCreated'  (mkSendSub' info.biDiRunner) b u (unlift . h)
+  SubscribeScriptRealmDestroyed  h     -> localSeqUnliftIO localEnv $ \unlift -> BA.subscribeScriptRealmDestroyed (mkSendSub  info.biDiRunner) (unlift . h)
+  SubscribeScriptRealmDestroyed' b u h -> localSeqUnliftIO localEnv $ \unlift -> BA.subscribeScriptRealmDestroyed' (mkSendSub' info.biDiRunner) b u (unlift . h)
   -- Input subscriptions
-  SubscribeInputFileDialogOpened  h     -> liftIO $ BA.subscribeInputFileDialogOpened  (mkSendSub  info.biDiRunner) h
-  SubscribeInputFileDialogOpened' b u h -> liftIO $ BA.subscribeInputFileDialogOpened' (mkSendSub' info.biDiRunner) b u h
+  SubscribeInputFileDialogOpened  h     -> localSeqUnliftIO localEnv $ \unlift -> BA.subscribeInputFileDialogOpened  (mkSendSub  info.biDiRunner) (unlift . h)
+  SubscribeInputFileDialogOpened' b u h -> localSeqUnliftIO localEnv $ \unlift -> BA.subscribeInputFileDialogOpened' (mkSendSub' info.biDiRunner) b u (unlift . h)
   -- Multi-event subscriptions
-  SubscribeMany         sts h      -> liftIO $ BA.subscribeMany' (mkSendSubMany'        info.biDiRunner) sts [] [] h
-  SubscribeMany'        b u sts h  -> liftIO $ BA.subscribeMany' (mkSendSubMany'        info.biDiRunner) sts b  u  h
-  SubscribeUnknownMany  sts h      -> liftIO $ BA.subscribeOffSpecMany' (mkSendSubOffSpecMany' info.biDiRunner) sts [] [] h
-  SubscribeUnknownMany' b u sts h  -> liftIO $ BA.subscribeOffSpecMany' (mkSendSubOffSpecMany' info.biDiRunner) sts b  u  h
+  SubscribeMany         sts h     -> localSeqUnliftIO localEnv $ \unlift -> BA.subscribeMany'        (mkSendSubMany'        info.biDiRunner) sts [] [] (unlift . h)
+  SubscribeMany'        b u sts h -> localSeqUnliftIO localEnv $ \unlift -> BA.subscribeMany'        (mkSendSubMany'        info.biDiRunner) sts b  u  (unlift . h)
+  SubscribeUnknownMany  sts h     -> localSeqUnliftIO localEnv $ \unlift -> BA.subscribeOffSpecMany' (mkSendSubOffSpecMany' info.biDiRunner) sts [] [] (unlift . h)
+  SubscribeUnknownMany' b u sts h -> localSeqUnliftIO localEnv $ \unlift -> BA.subscribeOffSpecMany' (mkSendSubOffSpecMany' info.biDiRunner) sts b  u  (unlift . h)
   -- Unsubscribe
   Unsubscribe subId ->
     liftIO $
