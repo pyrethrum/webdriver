@@ -4,8 +4,7 @@
 --
 -- Provides monadic BiDi WebDriver actions for RIO. All functions require
 -- 'HasBiDiRunner' in the environment, which supplies the underlying
--- 'BiDiRunner'. Subscription callbacks are plain 'IO' actions since they
--- are invoked asynchronously by the WebSocket reader loop.
+-- 'BiDiRunner'. Subscription callbacks are 'RIO' @env@ actions.
 module WebDriver.RIO.BiDi.Base.Actions
   ( -- * Session Commands
     sessionNew,
