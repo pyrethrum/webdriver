@@ -107,12 +107,11 @@ runHttpTest
   -> IO ()
 runHttpTest action =
   runSetup $ \driverInfo behaviour config ->
-    withLogger "effectful-http-test.log" $
+    withLogger "eval.log" $
       withHttpSession driverInfo behaviour (mkHttpCaps config) $
         withLogPause behaviour.pauseDuration action
 
 -- | Full BiDi test harness: loads config, opens a BiDi-enabled session, and
--- provides 'Logger', 'LogPause', and 'WebDriverBiDi' effects.
 --
 -- Any exception thrown by the action propagates as an 'IOError' so Tasty
 -- reports it as a test failure.
@@ -128,7 +127,7 @@ runBiDiTest
   -> IO ()
 runBiDiTest action =
   runSetup $ \driverInfo behaviour config ->
-    withLogger "effectful-bidi-test.log" $
+    withLogger "eval.log" $
       withBiDiSession driverInfo behaviour (mkBiDiCaps config) $
         withLogPause behaviour.pauseDuration action
 
@@ -222,6 +221,7 @@ http_login_navigation_demo = runHttpTest $ do
 --   * Locates the @#username@ field via BiDi @locateNodes@
 --   * Types @effectful-user@ into the field via BiDi key actions
 --
+
 -- >>> bidi_login_demo
 bidi_login_demo :: IO ()
 bidi_login_demo = runBiDiTest $ do
@@ -237,7 +237,7 @@ bidi_login_demo = runBiDiTest $ do
   log "=== Subscribe to browsingContext.domContentLoaded ==="
   loadedVar <- liftIO newEmptyTMVarIO
   let onLoadedEvent evt =
-        void . atomically $ tryPutTMVar loadedVar evt
+        atomically $ putTMVar loadedVar evt
   subscribeBrowsingContextDomContentLoaded onLoadedEvent
 
   log "=== Subscribe to browsingContext.load (many-style) ==="

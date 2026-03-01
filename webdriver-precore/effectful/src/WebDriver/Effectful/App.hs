@@ -28,7 +28,7 @@ where
 
 import Data.Aeson (FromJSON)
 import Data.Text (Text)
-import Effectful (Eff, IOE, (:>), runEff, withSeqEffToIO)
+import Effectful (Eff, IOE, Limit (..), Persistence (..), UnliftStrategy (..), (:>), runEff, withEffToIO, withSeqEffToIO)
 import UnliftIO (finally, throwIO)
 import WebDriver.Effectful.Core
   ( Logger,
@@ -135,7 +135,7 @@ withBiDiSession
   -> Eff (WebDriverBiDi : es) a
   -> Eff es a
 withBiDiSession driverInfo behaviour caps action =
-  withSeqEffToIO $ \runInIO -> do
+  withEffToIO (ConcUnlift Persistent Unlimited) $ \runInIO -> do
     logFn    <- runInIO (resolveLogFn behaviour)
     let driverInfo' = driverInfo {driverLogFn = logFn}
     resp     <- EC.newHttpSessionResponse (mkRootRunner driverInfo') caps
