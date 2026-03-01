@@ -12,6 +12,9 @@ module WebDriver.Bluefin
   ( -- * Capabilities
     module WebDriverPreCore.Extended.Capabilities,
 
+    -- * Core effects (log / pause)
+    module WebDriver.Bluefin.Core,
+
     -- * Handle Types
     module WebDriver.Bluefin.HTTP.Core,
 
@@ -27,6 +30,7 @@ module WebDriver.Bluefin
 where
 
 import WebDriverPreCore.Extended.Capabilities
+import WebDriver.Bluefin.Core
 import WebDriver.Bluefin.HTTP.Core
 import WebDriver.Bluefin.App
 import WebDriverPreCore.HttpRunner

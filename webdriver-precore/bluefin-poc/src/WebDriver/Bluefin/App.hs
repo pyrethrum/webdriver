@@ -26,6 +26,7 @@ where
 import Prelude hiding (log)
 
 import Data.Text (Text)
+import Data.Text qualified as T
 import Bluefin.Eff (Eff, (:>), runEff_)
 import Bluefin.IO (IOE, withEffToIO_)
 import UnliftIO (finally, throwIO)
@@ -35,7 +36,6 @@ import WebDriver.Bluefin.HTTP.Core
     HttpEnv (..),
     HttpSessionEnv (..),
     defaultDriverInfo,
-    log,
   )
 import WebDriver.Bluefin.HTTP.Base.Actions (deleteSession, newSessionResponse)
 import WebDriverPreCore.BiDiRunner (BiDiUrl, parseBiDiUrl, withBiDi)
@@ -129,7 +129,7 @@ withBiDiSession http behaviour caps action =
     resp        <- toIO $ newSessionResponse http caps
     let sessionEnv = mkHttpSessionEnv http behaviour resp
     let mLogger
-          | behaviour.driverLogging = Just $ \t -> toIO $ log http.envIO t
+          | behaviour.driverLogging = Just $ \t -> putStrLn ("[INFO] " <> T.unpack t)
           | otherwise = Nothing
     bidiUrl <- parseBiDiUrlIO resp.websocketUrl
     finally

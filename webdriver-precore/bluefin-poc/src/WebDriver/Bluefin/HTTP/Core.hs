@@ -25,9 +25,6 @@ module WebDriver.Bluefin.HTTP.Core
     HttpSessionEnv (..),
     BiDiEnv (..),
 
-    -- * Logging
-    log,
-
     -- * IO runner builders (for use by Actions modules)
     mkEnvRunner,
     mkSessionRunner,
@@ -36,16 +33,9 @@ module WebDriver.Bluefin.HTTP.Core
     runHttpCommand,
     runBiDiCommand,
     getBiDiRunner,
-
-    -- * Pause
-    pause,
-    pauseBiDi,
   )
 where
 
-import Prelude hiding (log)
-
-import Control.Concurrent (threadDelay)
 import Data.Aeson (FromJSON)
 import Data.Text (Text)
 import Data.Text qualified as T
@@ -130,17 +120,6 @@ instance (e :> es) => OneWayCoercible (BiDiEnv e) (BiDiEnv es) where
   oneWayCoercibleImpl = gOneWayCoercible
 
 -- ---------------------------------------------------------------------------
--- Logging
--- ---------------------------------------------------------------------------
-
--- | Log an info message to stdout.
---
--- Analogous to @log :: (HasLogFunc env) => Text -> RIO env ()@ in the RIO POC.
--- Pass any 'IOE' handle in scope (e.g. @env.envIO@ or @bidi.biDiIO@).
-log :: (e :> es) => IOE e -> Text -> Eff es ()
-log io t = effIO io $ putStrLn ("[INFO] " <> T.unpack t)
-
--- ---------------------------------------------------------------------------
 -- IO runner builders
 -- ---------------------------------------------------------------------------
 
@@ -182,14 +161,4 @@ runBiDiCommand MkBiDiEnv {biDiRunner = MkBiDiRunner {run = r}, biDiIO} cmd =
 getBiDiRunner :: BiDiEnv e -> BiDiRunner IO
 getBiDiRunner = (.biDiRunner)
 
--- ---------------------------------------------------------------------------
--- Pause helpers
--- ---------------------------------------------------------------------------
 
--- | Sleep for the 'pauseDuration' stored in an 'HttpSessionEnv'.
-pause :: (e :> es) => HttpSessionEnv e -> Eff es ()
-pause sess = effIO sess.envIO $ threadDelay (let MkTimeout us = sess.pauseDuration in us)
-
--- | Sleep for the 'pauseDuration' stored in a 'BiDiEnv'.
-pauseBiDi :: (e :> es) => BiDiEnv e -> Eff es ()
-pauseBiDi bidi = effIO bidi.biDiIO $ threadDelay (let MkTimeout us = bidi.pauseDuration in us)

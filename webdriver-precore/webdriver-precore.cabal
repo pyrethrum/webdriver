@@ -481,6 +481,7 @@ library webdriver-bluefin-poc
   exposed-modules:
       WebDriver.Bluefin
       WebDriver.Bluefin.App
+      WebDriver.Bluefin.Core
       WebDriver.Bluefin.HTTP.Core
       WebDriver.Bluefin.HTTP.Base.Actions
       WebDriver.Bluefin.BiDi.Base.Actions

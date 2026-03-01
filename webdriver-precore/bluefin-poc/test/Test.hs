@@ -128,30 +128,31 @@ http_login_navigation_demo = runEff_ $ \io -> do
           }
       http = MkHttpEnv driverInfo io
 
-  withHttpSession http behaviour caps $ \sess -> do
-    log io "=== Navigate to login form ==="
-    loginPage <- effIO io loginUrl
-    HTTP.navigateTo sess loginPage
-    _ <- HTTP.maximizeWindow sess
-    pause sess
+  withHttpSession http behaviour caps $ \sess ->
+    withLogPause io behaviour.pauseDuration $ \lp -> do
+      log lp "=== Navigate to login form ==="
+      loginPage <- effIO io loginUrl
+      HTTP.navigateTo sess loginPage
+      _ <- HTTP.maximizeWindow sess
+      pause lp
 
-    log io "=== Fill in username ==="
-    usernameField <- HTTP.findElement sess $ P.CSS "#username"
-    HTTP.elementSendKeys sess usernameField "demoUser"
-    pause sess
+      log lp "=== Fill in username ==="
+      usernameField <- HTTP.findElement sess $ P.CSS "#username"
+      HTTP.elementSendKeys sess usernameField "demoUser"
+      pause lp
 
-    log io "=== Fill in password ==="
-    passwordField <- HTTP.findElement sess $ P.CSS "#password"
-    HTTP.elementSendKeys sess passwordField "s3cr3tP4ssw0rd"
-    pause sess
+      log lp "=== Fill in password ==="
+      passwordField <- HTTP.findElement sess $ P.CSS "#password"
+      HTTP.elementSendKeys sess passwordField "s3cr3tP4ssw0rd"
+      pause lp
 
-    log io "=== Navigate to colourful content page ==="
-    contentPage <- effIO io contentPageUrl
-    HTTP.navigateTo sess contentPage
-    pause sess
+      log lp "=== Navigate to colourful content page ==="
+      contentPage <- effIO io contentPageUrl
+      HTTP.navigateTo sess contentPage
+      pause lp
 
-    title <- HTTP.getTitle sess
-    log io $ "Landed on: " <> title
+      title <- HTTP.getTitle sess
+      log lp $ "Landed on: " <> title
 
 -- | BiDi version of the login demo:
 --   - Subscribes to browsingContext.domContentLoaded events with a timed wait
@@ -172,96 +173,97 @@ bidi_login_demo = runEff_ $ \io -> do
           }
       http = MkHttpEnv driverInfo io
 
-  withBiDiSession http behaviour caps $ \bidi -> do
-    log io "=== Get root browsing context ==="
-    tree <- browsingContextGetTree bidi (MkGetTree Nothing Nothing)
-    bc <- case tree of
-      MkGetTreeResult (info : _) -> do
-        let MkBrowsingContext ctxId = info.context
-        log io $ "Root context: " <> ctxId
-        pure info.context
-      _ -> effIO io $ throwIO $ userError "No browsing contexts found"
+  withBiDiSession http behaviour caps $ \bidi ->
+    withLogPause io behaviour.pauseDuration $ \lp -> do
+      log lp "=== Get root browsing context ==="
+      tree <- browsingContextGetTree bidi (MkGetTree Nothing Nothing)
+      bc <- case tree of
+        MkGetTreeResult (info : _) -> do
+          let MkBrowsingContext ctxId = info.context
+          log lp $ "Root context: " <> ctxId
+          pure info.context
+        _ -> effIO io $ throwIO $ userError "No browsing contexts found"
 
-    log io "=== Subscribe to browsingContext.domContentLoaded ==="
-    loadedVar <- effIO io newEmptyTMVarIO
-    let onLoadedEvent evt =
-          void $ atomically $ tryPutTMVar loadedVar evt
-    subscribeBrowsingContextDomContentLoaded bidi onLoadedEvent
+      log lp "=== Subscribe to browsingContext.domContentLoaded ==="
+      loadedVar <- effIO io newEmptyTMVarIO
+      let onLoadedEvent evt =
+            void $ atomically $ tryPutTMVar loadedVar evt
+      subscribeBrowsingContextDomContentLoaded bidi onLoadedEvent
 
-    log io "=== Subscribe to browsingContext.load (many-style) ==="
-    navVar <- effIO io newEmptyTMVarIO
-    subscribeMany bidi [BrowsingContextLoad] $ \evt -> do
-      TIO.putStrLn $ "!!! browsingContext.load event (many-style): " <> txt evt
-      atomically $ putTMVar navVar ()
+      log lp "=== Subscribe to browsingContext.load (many-style) ==="
+      navVar <- effIO io newEmptyTMVarIO
+      subscribeMany bidi [BrowsingContextLoad] $ \evt -> do
+        TIO.putStrLn $ "!!! browsingContext.load event (many-style): " <> txt evt
+        atomically $ putTMVar navVar ()
 
-    log io "=== Navigate to login page ==="
-    loginPage <- effIO io loginUrl
-    browsingContextNavigate bidi $ MkNavigate {context = bc, url = loginPage, wait = Nothing}
-    pauseBiDi bidi
+      log lp "=== Navigate to login page ==="
+      loginPage <- effIO io loginUrl
+      browsingContextNavigate bidi $ MkNavigate {context = bc, url = loginPage, wait = Nothing}
+      pause lp
 
-    log io "=== Waiting for domContentLoaded event ==="
-    effIO io $
-      race_
-        ( atomically (readTMVar loadedVar) >>= \evt ->
-            TIO.putStrLn $ "!!! domContentLoaded fired: " <> txt evt
-        )
-        ( threadDelay (10 * 1_000_000)
-            >> throwIO (userError "Timeout: domContentLoaded did not fire within 10 s")
-        )
-    pauseBiDi bidi
+      log lp "=== Waiting for domContentLoaded event ==="
+      effIO io $
+        race_
+          ( atomically (readTMVar loadedVar) >>= \evt ->
+              TIO.putStrLn $ "!!! domContentLoaded fired: " <> txt evt
+          )
+          ( threadDelay (10 * 1_000_000)
+              >> throwIO (userError "Timeout: domContentLoaded did not fire within 10 s")
+          )
+      pause lp
 
-    log io "=== Locate #username field ==="
-    nodesResult <-
-      browsingContextLocateNodes bidi $
-        MkLocateNodes
+      log lp "=== Locate #username field ==="
+      nodesResult <-
+        browsingContextLocateNodes bidi $
+          MkLocateNodes
+            { context = bc,
+              locator = CSS {value = "#username"},
+              maxNodeCount = Nothing,
+              serializationOptions = Nothing,
+              startNodes = Nothing
+            }
+      log lp $ "Located nodes: " <> txt nodesResult
+      pause lp
+
+      let MkLocateNodesResult nodes = nodesResult
+          usernameSharedId :: SharedId
+          usernameSharedId = case nodes of
+            [node] -> fromJust node.sharedId
+            _ -> error "Expected exactly one #username element"
+
+      log lp "=== Type 'bluefinUser' into #username via BiDi key actions ==="
+      inputPerformActions bidi $
+        MkPerformActions
           { context = bc,
-            locator = CSS {value = "#username"},
-            maxNodeCount = Nothing,
-            serializationOptions = Nothing,
-            startNodes = Nothing
+            actions =
+              [ PointerSourceActions
+                  $ MkPointerSourceActions
+                    { pointerId = "mouse1",
+                      pointer = Just $ MkPointer {pointerType = Just MousePointer},
+                      pointerActions =
+                        [ PointerMove
+                            { x = 0,
+                              y = 0,
+                              duration = Nothing,
+                              origin =
+                                Just
+                                  $ ElementOrigin
+                                  $ MkSharedReference
+                                    { sharedId = usernameSharedId,
+                                      handle = Nothing,
+                                      extensions = Nothing
+                                    },
+                              pointerCommonProperties = defaultPointerProps
+                            },
+                          PointerDown {button = 0, pointerCommonProperties = defaultPointerProps},
+                          PointerUp {button = 0}
+                        ]
+                    },
+                KeySourceActions
+                  $ MkKeySourceActions
+                    { keyId = "keyboard1",
+                      keyActions = concatMap charToKeys (T.unpack "bluefinUser")
+                    }
+              ]
           }
-    log io $ "Located nodes: " <> txt nodesResult
-    pauseBiDi bidi
-
-    let MkLocateNodesResult nodes = nodesResult
-        usernameSharedId :: SharedId
-        usernameSharedId = case nodes of
-          [node] -> fromJust node.sharedId
-          _ -> error "Expected exactly one #username element"
-
-    log io "=== Type 'bluefinUser' into #username via BiDi key actions ==="
-    inputPerformActions bidi $
-      MkPerformActions
-        { context = bc,
-          actions =
-            [ PointerSourceActions
-                $ MkPointerSourceActions
-                  { pointerId = "mouse1",
-                    pointer = Just $ MkPointer {pointerType = Just MousePointer},
-                    pointerActions =
-                      [ PointerMove
-                          { x = 0,
-                            y = 0,
-                            duration = Nothing,
-                            origin =
-                              Just
-                                $ ElementOrigin
-                                $ MkSharedReference
-                                  { sharedId = usernameSharedId,
-                                    handle = Nothing,
-                                    extensions = Nothing
-                                  },
-                            pointerCommonProperties = defaultPointerProps
-                          },
-                        PointerDown {button = 0, pointerCommonProperties = defaultPointerProps},
-                        PointerUp {button = 0}
-                      ]
-                  },
-              KeySourceActions
-                $ MkKeySourceActions
-                  { keyId = "keyboard1",
-                    keyActions = concatMap charToKeys (T.unpack "bluefinUser")
-                  }
-            ]
-        }
-    pauseBiDi bidi
+      pause lp
