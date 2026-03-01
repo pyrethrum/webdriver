@@ -2,54 +2,137 @@
 
 -- |
 -- Module: WebDriver.Bluefin.Core
--- Description: LogPause effect — a Bluefin handle for logging and pausing
+-- Description: Logger and LogPause effects for Bluefin WebDriver tests
 --
--- Provides a first-class Bluefin effect that bundles console logging and
--- configurable pause delays into a single handle.  Using 'withLogPause' to
--- introduce the handle lets call-sites write:
+-- Provides two first-class Bluefin handles:
+--
+-- * 'Logger' — structured console logging backed by Katip; introduce with
+--   'withLogger'.  Log output goes to both the terminal and @eval.log@.
+-- * 'LogPause' — configurable sleep between driver actions; introduce with
+--   'withLogPause'.
+--
+-- The Katip integration lives in "WebDriver.Bluefin.LoggingImp"; this module
+-- re-exports 'Severity' from there.
+--
+-- Typical usage:
 --
 -- @
--- withLogPause io behaviour.pauseDuration $ \lp -> do
---   log lp "=== step ==="
---   -- … actions …
---   pause lp
+-- withLogger io $ \logger ->
+--   withLogPause io behaviour.pauseDuration $ \lp -> do
+--     log logger \"=== step ==="
+--     pause lp
 -- @
---
--- instead of threading 'IOE' and 'HttpSessionEnv' / 'BiDiEnv' through every
--- helper just to sleep or print.
 module WebDriver.Bluefin.Core
-  ( -- * Handle
+  (
+    -- * Logger handle
+    Logger (..),
+
+
+    -- * Logger introducer
+    withLogger,
+
+    -- * Logger effects
+    log,
+    logDebug,
+    logInfo,
+    logWarn,
+    logError,
+
+    -- * LogPause handle
     LogPause (..),
 
-    -- * Introducer
+    -- * LogPause introducer
     withLogPause,
 
-    -- * Effects
-    log,
+    -- * LogPause effect
     pause,
   )
 where
 
-import Prelude hiding (log)
-
-import Control.Concurrent (threadDelay)
-import Data.Text (Text)
-import Data.Text qualified as T
 import Bluefin.Compound (Handle, OneWayCoercible (..), OneWayCoercibleHandle (..), gOneWayCoercible)
 import Bluefin.Eff (Eff, (:>))
-import Bluefin.IO (IOE, effIO)
+import Bluefin.IO (IOE, effIO, withEffToIO_)
+import Control.Concurrent (threadDelay)
+import Data.Text (Text)
 import GHC.Generics (Generic)
+import WebDriver.Bluefin.LoggingImp (Severity (..), withKatipLogFunc)
 import WebDriverPreCore.Utils.Timeout (Timeout (..))
+import Prelude hiding (log)
 
 -- ---------------------------------------------------------------------------
--- Handle
+-- Logger handle
+-- ---------------------------------------------------------------------------
+
+-- | Bluefin handle for structured logging.
+--
+-- Introduce with 'withLogger'; use 'log', 'logInfo', etc. to emit messages.
+data Logger e = MkLogger
+  { logFunc :: Severity -> Text -> IO (),
+    loggerIO :: IOE e
+  }
+  deriving (Generic)
+  deriving (Handle) via OneWayCoercibleHandle Logger
+
+instance (e :> es) => OneWayCoercible (Logger e) (Logger es) where
+  oneWayCoercibleImpl = gOneWayCoercible
+
+-- ---------------------------------------------------------------------------
+-- Logger introducer
+-- ---------------------------------------------------------------------------
+
+-- | Introduce a 'Logger' backed by Katip.
+--
+-- Log messages are written to both the terminal (with colour when supported)
+-- and to @eval.log@ in the current working directory.  The Katip environment
+-- is initialised via 'WebDriver.Bluefin.LoggingImp.withKatipLogFunc' and is
+-- cleaned up safely even when the action throws an exception.
+--
+-- @
+-- withLogger io $ \logger -> do
+--   log logger "Hello"
+-- @
+withLogger :: (e :> es) => IOE e -> (Logger e -> Eff es a) -> Eff es a
+withLogger io action =
+  withEffToIO_ io $ \runInIO ->
+    withKatipLogFunc "eval.log" $ \lf ->
+      runInIO (action MkLogger {loggerIO = io, logFunc = lf})
+
+-- ---------------------------------------------------------------------------
+-- Logger effects
+-- ---------------------------------------------------------------------------
+
+-- | Emit a message at 'Info' level.  Alias for 'logInfo'.
+log :: (e :> es) => Logger e -> Text -> Eff es ()
+log = logInfo
+
+lgSev :: (e :> es) => Logger e -> Severity -> Text -> Eff es ()
+lgSev logger sev = effIO logger.loggerIO . logger.logFunc sev
+
+-- | Emit a message at 'LvlDebug' level.
+logDebug :: (e :> es) => Logger e -> Text -> Eff es ()
+logDebug logger = lgSev logger Debug
+
+-- | Emit a message at 'LvlInfo' level.
+logInfo :: (e :> es) => Logger e -> Text -> Eff es ()
+logInfo logger = lgSev logger Info
+
+-- | Emit a message at 'LvlWarn' level.
+logWarn :: (e :> es) => Logger e -> Text -> Eff es ()
+logWarn logger = lgSev logger Warn
+
+-- | Emit a message at 'LvlError' level.
+logError :: (e :> es) => Logger e -> Text -> Eff es ()
+logError logger = lgSev logger Error
+
+-- ---------------------------------------------------------------------------
+-- LogPause handle
 -- ---------------------------------------------------------------------------
 
 -- | Bluefin handle that carries an 'IOE' handle and a pause duration.
 --
--- Introduce it with 'withLogPause'; use 'log' and 'pause' to consume it.
+-- Introduce it with 'withLogPause'; use 'pause' to sleep between actions.
 data LogPause e = MkLogPause
-  { lpIO           :: IOE e,
+  { lpIO :: IOE e,
     lpPauseDuration :: Timeout
   }
   deriving (Generic)
@@ -59,7 +142,7 @@ instance (e :> es) => OneWayCoercible (LogPause e) (LogPause es) where
   oneWayCoercibleImpl = gOneWayCoercible
 
 -- ---------------------------------------------------------------------------
--- Introducer
+-- LogPause introducer
 -- ---------------------------------------------------------------------------
 
 -- | Run an action with a 'LogPause' handle built from an existing 'IOE' and
@@ -67,25 +150,14 @@ instance (e :> es) => OneWayCoercible (LogPause e) (LogPause es) where
 --
 -- @
 -- withLogPause io (5 * seconds) $ \lp -> do
---   log lp "Starting…"
 --   pause lp
 -- @
-withLogPause
-  :: IOE e
-  -> Timeout
-  -> (LogPause e -> Eff es a)
-  -> Eff es a
+withLogPause :: IOE e -> Timeout -> (LogPause e -> Eff es a) -> Eff es a
 withLogPause io dur action = action MkLogPause {lpIO = io, lpPauseDuration = dur}
 
 -- ---------------------------------------------------------------------------
--- Effects
+-- LogPause effect
 -- ---------------------------------------------------------------------------
-
--- | Print a labelled info message to stdout.
---
--- Produces output of the form @[INFO] \<message\>@.
-log :: (e :> es) => LogPause e -> Text -> Eff es ()
-log lp t = effIO lp.lpIO $ putStrLn ("[INFO] " <> T.unpack t)
 
 -- | Sleep for the 'lpPauseDuration' stored in the 'LogPause' handle.
 pause :: (e :> es) => LogPause e -> Eff es ()

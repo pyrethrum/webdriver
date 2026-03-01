@@ -81,32 +81,34 @@ runSetup action = runEff_ $ \io -> do
   action io (MkHttpEnv driverInfo io) behaviour config
 
 -- | Full HTTP test harness: loads config, opens a session, provides a
--- 'LogPause' handle, and runs the supplied action.
+-- 'Logger' and 'LogPause' handle, and runs the supplied action.
 runHttpTest ::
-  (forall e. IOE e -> HttpSessionEnv e -> LogPause e -> Eff e ()) ->
+  (forall e. IOE e -> HttpSessionEnv e -> Logger e -> LogPause e -> Eff e ()) ->
   IO ()
 runHttpTest action =
   runSetup $ \io http behaviour config ->
     withHttpSession http behaviour (mkHttpCaps config) $ \sess ->
-      withLogPause io behaviour.pauseDuration $ \lp ->
-        action io sess lp
+      withLogger io $ \logger ->
+        withLogPause io behaviour.pauseDuration $ \lp ->
+          action io sess logger lp
 
 -- | Full BiDi test harness: loads config, opens a BiDi session, provides a
--- 'LogPause' handle, and runs the supplied action.
+-- 'Logger' and 'LogPause' handle, and runs the supplied action.
 --
 -- The action receives an 'Exception' handle so it can use 'throw' rather than
 -- 'error' or 'throwIO' for test-level failures.  Any caught exception is
 -- re-thrown as an 'IOError' so Tasty reports it as a test failure.
 runBiDiTest ::
-  (forall (es :: Effects) (e :: Effects). Exception String e -> IOE es -> BiDiEnv es -> LogPause es -> Eff (e :& es) ()) ->
+  (forall (es :: Effects) (e :: Effects). Exception String e -> IOE es -> BiDiEnv es -> Logger es -> LogPause es -> Eff (e :& es) ()) ->
   IO ()
 runBiDiTest action =
   runSetup $ \io http behaviour config ->
     withBiDiSession http behaviour (mkBiDiCaps config) $ \bidi ->
-      withLogPause io behaviour.pauseDuration $ \lp ->
-        catch
-          (\ex -> action ex io bidi lp)
-          (\err -> effIO io $ throwIO $ userError err)
+      withLogger io $ \logger ->
+        withLogPause io behaviour.pauseDuration $ \lp ->
+          catch
+            (\ex -> action ex io bidi logger lp)
+            (\err -> effIO io $ throwIO $ userError err)
 
 -- ---------------------------------------------------------------------------
 -- Helpers
@@ -165,30 +167,30 @@ charToKeys c = [KeyDown {value = T.singleton c}, KeyUp {value = T.singleton c}]
 
 -- >>> http_login_navigation_demo
 http_login_navigation_demo :: IO ()
-http_login_navigation_demo = runHttpTest $ \io sess lp -> do
-  log lp "=== Navigate to login form ==="
+http_login_navigation_demo = runHttpTest $ \io sess logger lp -> do
+  log logger "=== Navigate to login form ==="
   loginPage <- effIO io loginUrl
   HTTP.navigateTo sess loginPage
   _ <- HTTP.maximizeWindow sess
   pause lp
 
-  log lp "=== Fill in username ==="
+  log logger "=== Fill in username ==="
   usernameField <- HTTP.findElement sess $ P.CSS "#username"
   HTTP.elementSendKeys sess usernameField "demoUser"
   pause lp
 
-  log lp "=== Fill in password ==="
+  log logger "=== Fill in password ==="
   passwordField <- HTTP.findElement sess $ P.CSS "#password"
   HTTP.elementSendKeys sess passwordField "s3cr3tP4ssw0rd"
   pause lp
 
-  log lp "=== Navigate to colourful content page ==="
+  log logger "=== Navigate to colourful content page ==="
   contentPage <- effIO io contentPageUrl
   HTTP.navigateTo sess contentPage
   pause lp
 
   title <- HTTP.getTitle sess
-  log lp $ "Landed on: " <> title
+  log logger $ "Landed on: " <> title
 
 -- | BiDi version of the login demo:
 --   - Subscribes to browsingContext.domContentLoaded events with a timed wait
@@ -198,34 +200,34 @@ http_login_navigation_demo = runHttpTest $ \io sess lp -> do
 
 -- >>> bidi_login_demo
 bidi_login_demo :: IO ()
-bidi_login_demo = runBiDiTest $ \ex io bidi lp -> do
-  log lp "=== Get root browsing context ==="
+bidi_login_demo = runBiDiTest $ \ex io bidi logger lp -> do
+  log logger "=== Get root browsing context ==="
   tree <- browsingContextGetTree bidi (MkGetTree Nothing Nothing)
   bc <- case tree of
     MkGetTreeResult (info : _) -> do
       let MkBrowsingContext ctxId = info.context
-      log lp $ "Root context: " <> ctxId
+      log logger $ "Root context: " <> ctxId
       pure info.context
     _ -> throw ex "No browsing contexts found"
 
-  log lp "=== Subscribe to browsingContext.domContentLoaded ==="
+  log logger "=== Subscribe to browsingContext.domContentLoaded ==="
   loadedVar <- effIO io newEmptyTMVarIO
   let onLoadedEvent evt =
         void $ atomically $ tryPutTMVar loadedVar evt
   subscribeBrowsingContextDomContentLoaded bidi onLoadedEvent
 
-  log lp "=== Subscribe to browsingContext.load (many-style) ==="
+  log logger "=== Subscribe to browsingContext.load (many-style) ==="
   navVar <- effIO io newEmptyTMVarIO
   subscribeMany bidi [BrowsingContextLoad] $ \evt -> do
     TIO.putStrLn $ "!!! browsingContext.load event (many-style): " <> txt evt
     atomically $ putTMVar navVar ()
 
-  log lp "=== Navigate to login page ==="
+  log logger "=== Navigate to login page ==="
   loginPage <- effIO io loginUrl
   browsingContextNavigate bidi $ MkNavigate {context = bc, url = loginPage, wait = Nothing}
   pause lp
 
-  log lp "=== Waiting for domContentLoaded event ==="
+  log logger "=== Waiting for domContentLoaded event ==="
   effIO io $
     race_
       ( atomically (readTMVar loadedVar) >>= \evt ->
@@ -236,7 +238,7 @@ bidi_login_demo = runBiDiTest $ \ex io bidi lp -> do
       )
   pause lp
 
-  log lp "=== Locate #username field ==="
+  log logger "=== Locate #username field ==="
   nodesResult <-
     browsingContextLocateNodes bidi $
       MkLocateNodes
@@ -246,7 +248,7 @@ bidi_login_demo = runBiDiTest $ \ex io bidi lp -> do
           serializationOptions = Nothing,
           startNodes = Nothing
         }
-  log lp $ "Located nodes: " <> txt nodesResult
+  log logger $ "Located nodes: " <> txt nodesResult
   pause lp
 
   let MkLocateNodesResult nodes = nodesResult
@@ -254,7 +256,7 @@ bidi_login_demo = runBiDiTest $ \ex io bidi lp -> do
     [node] -> maybe (throw ex "sharedId is missing") pure node.sharedId
     _ -> throw ex "Expected exactly one #username element"
 
-  log lp "=== Type 'bluefin-user' into #username via BiDi key actions ==="
+  log logger "=== Type 'bluefin-user' into #username via BiDi key actions ==="
   inputPerformActions bidi $
     MkPerformActions
       { context = bc,
