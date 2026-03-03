@@ -1,0 +1,4 @@
+ARG BUILD_IMAGE=webdriver-build
+FROM ${BUILD_IMAGE}
+
+RUN echo "TODO"

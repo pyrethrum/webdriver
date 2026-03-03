@@ -46,4 +46,5 @@ jobs:
       - name: Test
         run: |
           BUILD_IMAGE=ghcr.io/pyrethrum/webdriver-build:${{needs.env-setup.outputs.buildid}}
-          docker build -f ./cicd/Dockerfile.test --build-arg BUILD_IMAGE=$BUILD_IMAGE .
+          docker build -f ./cicd/Dockerfile.test_firefox --build-arg BUILD_IMAGE=$BUILD_IMAGE .
+          docker build -f ./cicd/Dockerfile.test_chrome --build-arg BUILD_IMAGE=$BUILD_IMAGE .

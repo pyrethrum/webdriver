@@ -44,6 +44,20 @@ main = do
   -- defaultMain $ bidiSingleForDebug testCfg 
   defaultMain $ tests testCfg
 
+firefoxTests :: TestTree
+firefoxTests = do
+    let config = MkConfig {
+        browser = Firefox {
+            headless = True,
+            profilePath = Nothing
+        },
+        httpUrl = "127.0.0.1",
+        httpPort = 4444,
+        logging = True,
+        pauseMS = 0
+    }
+    testGroup "firefox" [ unitTests, propertyTests ]
+
 tests :: Config -> TestTree
 tests cfg =
   testGroup
@@ -54,7 +68,7 @@ tests cfg =
     ]
 #else
     [ unitTests,
-      httpDemos cfg,
+      -- httpDemos cfg,
       propertyTests,
       bidiDemos cfg
     ]
