@@ -178,7 +178,7 @@ flattenLoc :: Locator -> Locator
 flattenLoc = \case
   -- Flatten And: And [And [a,b], c] -> And [a,b,c]
   And locs ->
-    let reduced = fmap flattenLoc locs
+    let reduced = flattenLoc <$> locs
         flattened = concatMap flattenAll reduced
      in case flattened of
           [single] -> single
@@ -190,7 +190,7 @@ flattenLoc = \case
 
   -- Flatten Or: Or [Or [a,b], c] -> Or [a,b,c]
   Or locs ->
-    let reduced = fmap flattenLoc locs
+    let reduced = flattenLoc <$> locs
         flattened = concatMap flattenAny reduced
      in case flattened of
           [single] -> single
@@ -202,21 +202,21 @@ flattenLoc = \case
 
   -- Apply De Morgan's laws and flatten Not
   Not locs ->
-    let reduced = fmap flattenLoc locs
+    let reduced = flattenLoc <$> locs
      in case toList reduced of
           -- Double negation: Not [Not [x]] -> Or [x]
-          [Not xs] -> flattenLoc (Or xs)
+          [Not xs] -> flattenLoc $ Or xs
           -- De Morgan: Not [And [x,y]] -> Or [Not [x], Not [y]]
-          [And xs] -> flattenLoc (Or (fmap (\x -> Not (x :| [])) xs))
+          [And xs] -> flattenLoc . Or $ (\x -> Not (x :| [])) <$> xs
           -- De Morgan: Not [Or [x,y]] -> And [Not [x], Not [y]]
-          [Or xs] -> flattenLoc (And (fmap (\x -> Not (x :| [])) xs))
+          [Or xs] -> flattenLoc . And $ (\x -> Not (x :| [])) <$> xs
           -- Single non-Match* locator - already reduced
           [single] -> Not (single :| [])
           -- Multiple locators - can't simplify further
           (x : xs) -> Not (x :| xs)
           [] -> error "flattenLoc: Not produced empty list (impossible with NonEmpty input)"
   -- Parent with recursive reduction on both sides
-  Parent p c -> Parent (flattenLoc p) (flattenLoc c)
+  Parent p c -> Parent (flattenLoc p) $ flattenLoc c
   -- All other locator types remain unchanged
   loc -> loc
 
@@ -491,16 +491,7 @@ displayAriaRole = toLower . pack . show
 someBoolVal :: Bool
 someBoolVal = True || False && (True || False) && not (False || True)
 
--- &&& negate |||
-
 data MatchType = Full | Partial deriving (Show, Eq)
-
--- | Http Locator
-data Selector
-  = CSSSelector Text
-  | XPathSelector Text
-  | TagNameSelector Tag
-  deriving (Show, Eq)
 
 -- //*[contains(translate(@class, 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz'), 'submit')]
 

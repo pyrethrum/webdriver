@@ -116,6 +116,7 @@ module WebDriverPreCore.Extended.Tags
     var_,
     video_,
     wbr_,
+    -- utilities
     displayTag,
     tagToXPath,
   )
