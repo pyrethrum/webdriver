@@ -28,9 +28,9 @@ data Locator
       }
   | XPath {value :: Text}
   | Parent {parent :: Locator, child :: Locator}
-  | MatchAll (NonEmpty Locator)
-  | MatchAny (NonEmpty Locator)
-  | MatchNone (NonEmpty Locator)
+  | And (NonEmpty Locator)
+  | Or (NonEmpty Locator)
+  | Not (NonEmpty Locator)
   | Default Text
   | BiDiDirective
       { description :: Text,
@@ -160,61 +160,61 @@ textbox :: Text -> Locator
 textbox = role Textbox
 
 (&&&) :: Locator -> Locator -> Locator
-l &&& r = MatchAll (l :| [r])
+l &&& r = And (l :| [r])
 
 infixr 3 &&&
 
 (|||) :: Locator -> Locator -> Locator
-l ||| r = MatchAny (l :| [r])
+l ||| r = Or (l :| [r])
 
 infixr 2 |||
 
 notLoc :: Locator -> Locator
-notLoc l = MatchNone (l :| [])
+notLoc l = Not (l :| [])
 
 -- | Recursively flattens and simplifies Match* locators while maintaining logical correctness.
 -- Flattens nested Match* of the same type and applies De Morgan's laws where applicable.
 flattenLoc :: Locator -> Locator
 flattenLoc = \case
-  -- Flatten MatchAll: MatchAll [MatchAll [a,b], c] -> MatchAll [a,b,c]
-  MatchAll locs ->
+  -- Flatten And: And [And [a,b], c] -> And [a,b,c]
+  And locs ->
     let reduced = fmap flattenLoc locs
         flattened = concatMap flattenAll reduced
      in case flattened of
           [single] -> single
-          (x : xs) -> MatchAll (x :| xs)
-          [] -> error "flattenLoc: MatchAll produced empty list (impossible with NonEmpty input)"
+          (x : xs) -> And (x :| xs)
+          [] -> error "flattenLoc: And produced empty list (impossible with NonEmpty input)"
     where
-      flattenAll (MatchAll xs) = toList xs
+      flattenAll (And xs) = toList xs
       flattenAll x = [x]
 
-  -- Flatten MatchAny: MatchAny [MatchAny [a,b], c] -> MatchAny [a,b,c]
-  MatchAny locs ->
+  -- Flatten Or: Or [Or [a,b], c] -> Or [a,b,c]
+  Or locs ->
     let reduced = fmap flattenLoc locs
         flattened = concatMap flattenAny reduced
      in case flattened of
           [single] -> single
-          (x : xs) -> MatchAny (x :| xs)
-          [] -> error "flattenLoc: MatchAny produced empty list (impossible with NonEmpty input)"
+          (x : xs) -> Or (x :| xs)
+          [] -> error "flattenLoc: Or produced empty list (impossible with NonEmpty input)"
     where
-      flattenAny (MatchAny xs) = toList xs
+      flattenAny (Or xs) = toList xs
       flattenAny x = [x]
 
-  -- Apply De Morgan's laws and flatten MatchNone
-  MatchNone locs ->
+  -- Apply De Morgan's laws and flatten Not
+  Not locs ->
     let reduced = fmap flattenLoc locs
      in case toList reduced of
-          -- Double negation: MatchNone [MatchNone [x]] -> MatchAny [x]
-          [MatchNone xs] -> flattenLoc (MatchAny xs)
-          -- De Morgan: MatchNone [MatchAll [x,y]] -> MatchAny [MatchNone [x], MatchNone [y]]
-          [MatchAll xs] -> flattenLoc (MatchAny (fmap (\x -> MatchNone (x :| [])) xs))
-          -- De Morgan: MatchNone [MatchAny [x,y]] -> MatchAll [MatchNone [x], MatchNone [y]]
-          [MatchAny xs] -> flattenLoc (MatchAll (fmap (\x -> MatchNone (x :| [])) xs))
+          -- Double negation: Not [Not [x]] -> Or [x]
+          [Not xs] -> flattenLoc (Or xs)
+          -- De Morgan: Not [And [x,y]] -> Or [Not [x], Not [y]]
+          [And xs] -> flattenLoc (Or (fmap (\x -> Not (x :| [])) xs))
+          -- De Morgan: Not [Or [x,y]] -> And [Not [x], Not [y]]
+          [Or xs] -> flattenLoc (And (fmap (\x -> Not (x :| [])) xs))
           -- Single non-Match* locator - already reduced
-          [single] -> MatchNone (single :| [])
+          [single] -> Not (single :| [])
           -- Multiple locators - can't simplify further
-          (x : xs) -> MatchNone (x :| xs)
-          [] -> error "flattenLoc: MatchNone produced empty list (impossible with NonEmpty input)"
+          (x : xs) -> Not (x :| xs)
+          [] -> error "flattenLoc: Not produced empty list (impossible with NonEmpty input)"
   -- Parent with recursive reduction on both sides
   Parent p c -> Parent (flattenLoc p) (flattenLoc c)
   -- All other locator types remain unchanged
