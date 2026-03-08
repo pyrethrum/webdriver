@@ -339,6 +339,8 @@ library webdriver-precore-extended
       WebDriverPreCore.Extended.HTTP.ProtocolExclusive
       WebDriverPreCore.Extended.BiDi.Protocol
       WebDriverPreCore.Extended.Capabilities
+      WebDriverPreCore.Extended.Locators
+      WebDriverPreCore.Extended.Tags
       -- 
       WebDriverPreCore.Extended.HTTP.Base.API
       WebDriverPreCore.Extended.HTTP.Base.Protocol
@@ -362,6 +364,8 @@ test-suite test-extended
   type: exitcode-stdio-1.0
   main-is: Test.hs
   hs-source-dirs: extended/test
+  other-modules:
+    LocatorsTest
   build-depends:
     webdriver-precore:webdriver-precore-extended
   default-language: Haskell2010
