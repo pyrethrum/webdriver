@@ -46,7 +46,9 @@ tests =
         "Property Tests"
         [ test_mock_logic_preserved_on_flattenning,
           test_flatenning_simplification,
-          test_nested_none_match
+          test_nested_none_match,
+          test_infix_precedence_i,
+          test_infix_precedence_ii
         ]
     ]
 
@@ -112,9 +114,7 @@ reduceSingleAnd =
       }
 
 -- >>> _eval reduceSingleOr
-
 -- *** Exception: ExitSuccess
-
 reduceSingleOr :: TestTree
 reduceSingleOr =
   chkFlatten
@@ -134,9 +134,7 @@ applyDoubleNegation =
       }
 
 -- >>> _eval applyDeMorganAnd
-
 -- *** Exception: ExitSuccess
-
 applyDeMorganAnd :: TestTree
 applyDeMorganAnd =
   chkFlatten
@@ -348,4 +346,23 @@ test_nested_none_match = testCase "This test fails" $ do
   -- logPretty (flattenLoc loc)
   mockLocated loc @?= mockLocated (flattenLoc loc)
 
-  TODO :: precedence tests
+-- >>> _eval test_infix_precedence
+-- *** Exception: ExitSuccess
+test_infix_precedence_i :: TestTree
+test_infix_precedence_i = testCase "Test operator precedence i" $ 
+  expected @?= actual
+  where
+    expected = True || False && False  
+    actual = mockLocated $ trueLoc ||| falseLoc &&& falseLoc
+
+
+-- >>> _eval test_infix_precedence_ii
+-- *** Exception: ExitSuccess
+test_infix_precedence_ii :: TestTree
+test_infix_precedence_ii = testCase "Test operator precedence ii" $ 
+  expected @?= actual
+  where
+    expected = False || True && False || True 
+    actual = mockLocated $ falseLoc ||| trueLoc &&& falseLoc ||| trueLoc
+
+
