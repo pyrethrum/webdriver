@@ -5,13 +5,13 @@ import Data.List.NonEmpty (NonEmpty (..))
 import Data.Text (Text, unpack)
 import Data.Text.IO (putStrLn)
 import System.Environment (withArgs)
-import Test.Falsify.Generator as G (Gen, bool, choose, frequency, integral, list)
+import Test.Falsify.Generator as G (Gen, frequency, integral)
 import Test.Falsify.Predicate (dot, expect, fn, (.$))
 import Test.Falsify.Range as R (between)
-import Test.Tasty
+import Test.Tasty ( defaultMain, testGroup, TestTree )
 import Test.Tasty.Falsify (ExpectFailure (DontExpectFailure), Property, TestOptions (..), Verbose (..), gen, info, testPropertyWith)
 import Test.Tasty.Falsify qualified as F
-import Test.Tasty.HUnit
+import Test.Tasty.HUnit ( testCase, (@?=) )
 import Utils (txt)
 import WebDriverPreCore.Extended.Locators
 import Prelude hiding (putStrLn)
@@ -295,7 +295,7 @@ genLocatorOptions =
     }
 
 -- >>> _eval test_flatenning_simplification
--- *** Exception: ExitFailure 1
+-- *** Exception: ExitSuccess
 test_flatenning_simplification :: TestTree
 test_flatenning_simplification = testPropertyWith genLocatorOptions "Flattening simplification" $ do
   loc <- gen genLocator
@@ -315,10 +315,12 @@ test_flatenning_simplification = testPropertyWith genLocatorOptions "Flattening 
       CSS "True" -> 1
       -- falseLoc
       Role (Just Button) (Just "False") -> 1
-      Not (_ :| []) -> 1 -- Singleton Not
+      Not (x :| []) -> complexity x --- Singleton Not leaf - complexity of child
       Not locs -> plus2Map locs
       And locs -> plus2Map locs
+      And (_ :| []) -> error "Singleton And should be flattenned"
       Or locs -> plus2Map locs
+      Or (_ :| []) -> error "Singleton Or should be flattenned"
       Parent parent child -> 2 + complexity parent + complexity child
       _ -> error "Locator not Mocked"
 
@@ -345,3 +347,5 @@ test_nested_none_match = testCase "This test fails" $ do
   -- logPretty "--->"
   -- logPretty (flattenLoc loc)
   mockLocated loc @?= mockLocated (flattenLoc loc)
+
+  TODO :: precedence tests
