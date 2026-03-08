@@ -16,5 +16,6 @@
     "TLDR",
     "Unrecognised"
   ],
-  "cSpell.enabled": true
+  "cSpell.enabled": true,
+  "workbench.colorTheme": "Default Light Modern"
 }
