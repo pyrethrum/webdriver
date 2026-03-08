@@ -1,5 +1,6 @@
 module WebDriverPreCore.Extended.Locators where
 
+import Data.List.NonEmpty (NonEmpty (..), toList)
 import Data.Text (Text, intercalate, pack, toLower)
 import WebDriverPreCore.Extended.BiDi.Base.Protocol (BrowsingContext, JSUInt)
 import WebDriverPreCore.Extended.Tags (Tag)
@@ -27,9 +28,9 @@ data Locator
       }
   | XPath {value :: Text}
   | Parent {parent :: Locator, child :: Locator}
-  | MatchAll [Locator]
-  | MatchAny [Locator]
-  | MatchNone [Locator]
+  | MatchAll (NonEmpty Locator)
+  | MatchAny (NonEmpty Locator)
+  | MatchNone (NonEmpty Locator)
   | Default Text
   | BiDiDirective
       { description :: Text,
@@ -159,17 +160,17 @@ textbox :: Text -> Locator
 textbox = role Textbox
 
 (&&&) :: Locator -> Locator -> Locator
-l &&& r = MatchAll [l, r]
+l &&& r = MatchAll (l :| [r])
 
 infixr 3 &&&
 
 (|||) :: Locator -> Locator -> Locator
-l ||| r = MatchAny [l, r]
+l ||| r = MatchAny (l :| [r])
 
 infixr 2 |||
 
 notLoc :: Locator -> Locator
-notLoc l = MatchNone [l]
+notLoc l = MatchNone (l :| [])
 
 -- | Recursively flattens and simplifies Match* locators while maintaining logical correctness.
 -- Flattens nested Match* of the same type and applies De Morgan's laws where applicable.
@@ -177,44 +178,43 @@ flattenLoc :: Locator -> Locator
 flattenLoc = \case
   -- Flatten MatchAll: MatchAll [MatchAll [a,b], c] -> MatchAll [a,b,c]
   MatchAll locs ->
-    let reduced = map flattenLoc locs
+    let reduced = fmap flattenLoc locs
         flattened = concatMap flattenAll reduced
      in case flattened of
-          [] -> MatchAll []
           [single] -> single
-          _ -> MatchAll flattened
+          (x : xs) -> MatchAll (x :| xs)
+          [] -> error "flattenLoc: MatchAll produced empty list (impossible with NonEmpty input)"
     where
-      flattenAll (MatchAll xs) = xs
+      flattenAll (MatchAll xs) = toList xs
       flattenAll x = [x]
 
   -- Flatten MatchAny: MatchAny [MatchAny [a,b], c] -> MatchAny [a,b,c]
   MatchAny locs ->
-    let reduced = map flattenLoc locs
+    let reduced = fmap flattenLoc locs
         flattened = concatMap flattenAny reduced
      in case flattened of
-          [] -> MatchAny []
           [single] -> single
-          _ -> MatchAny flattened
+          (x : xs) -> MatchAny (x :| xs)
+          [] -> error "flattenLoc: MatchAny produced empty list (impossible with NonEmpty input)"
     where
-      flattenAny (MatchAny xs) = xs
+      flattenAny (MatchAny xs) = toList xs
       flattenAny x = [x]
 
   -- Apply De Morgan's laws and flatten MatchNone
   MatchNone locs ->
-    let reduced = map flattenLoc locs
-     in case reduced of
-          -- MatchNone [] stays as is (negation of nothing)
-          [] -> MatchNone []
+    let reduced = fmap flattenLoc locs
+     in case toList reduced of
           -- Double negation: MatchNone [MatchNone [x]] -> MatchAll [x]
           [MatchNone xs] -> flattenLoc (MatchAll xs)
           -- De Morgan: MatchNone [MatchAll [x,y]] -> MatchAny [MatchNone [x], MatchNone [y]]
-          [MatchAll xs] -> flattenLoc (MatchAny (map (\x -> MatchNone [x]) xs))
+          [MatchAll xs] -> flattenLoc (MatchAny (fmap (\x -> MatchNone (x :| [])) xs))
           -- De Morgan: MatchNone [MatchAny [x,y]] -> MatchAll [MatchNone [x], MatchNone [y]]
-          [MatchAny xs] -> flattenLoc (MatchAll (map (\x -> MatchNone [x]) xs))
+          [MatchAny xs] -> flattenLoc (MatchAll (fmap (\x -> MatchNone (x :| [])) xs))
           -- Single non-Match* locator - already reduced
-          [single] -> MatchNone [single]
+          [single] -> MatchNone (single :| [])
           -- Multiple locators - can't simplify further
-          _ -> MatchNone reduced
+          (x : xs) -> MatchNone (x :| xs)
+          [] -> error "flattenLoc: MatchNone produced empty list (impossible with NonEmpty input)"
   -- Parent with recursive reduction on both sides
   Parent p c -> Parent (flattenLoc p) (flattenLoc c)
   -- All other locator types remain unchanged

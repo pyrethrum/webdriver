@@ -124,9 +124,11 @@ common testDepends
   import: libDepends
   build-depends:
     aeson         >=1.4   && <2.3,
+    falsify,
     tasty         >=1.4   && <1.6,
     tasty-hunit   >=0.10  && <0.11,
     webdriver-precore:utils-internal
+
 
 flag legacy-test
   description: Use legacy deprecated HTTP test implementations
@@ -577,7 +579,6 @@ test-suite test
     , containers
     , dhall
     , directory >=1.3 && <1.4
-    , falsify
     , filepath
     , ghc
     , network
