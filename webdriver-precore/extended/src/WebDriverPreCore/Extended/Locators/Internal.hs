@@ -6,6 +6,60 @@ import WebDriverPreCore.Extended.BiDi.Base.Protocol (BrowsingContext, JSUInt)
 import Prelude
 
 -- TODO : use bidi type when merged
+{-
+From specs:
+## HTTP Selector Types
+- css selector
+- xpath
+// easily derivable
+- link text
+- partial link text
+- tag name
+
+## BiDI Locator Types (CDDL)
+browsingContext.Locator = (
+   browsingContext.CssLocator /
+   browsingContext.XPathLocator /
+   ---
+   browsingContext.AccessibilityLocator /
+   browsingContext.ContextLocator /
+   browsingContext.InnerTextLocator /
+)
+
+browsingContext.AccessibilityLocator = {
+   type: "accessibility",
+   value: {
+    ? name: text,
+    ? role: text,
+   }
+}
+
+browsingContext.CssLocator = {
+   type: "css",
+   value: text
+}
+
+browsingContext.ContextLocator = {
+  type: "context",
+  value: {
+    context: browsingContext.BrowsingContext,
+  }
+}
+
+browsingContext.InnerTextLocator = {
+   type: "innerText",
+   value: text,
+   ? ignoreCase: bool
+   ? matchType: "full" / "partial",
+   ? maxDepth: js-uint,
+}
+
+browsingContext.XPathLocator = {
+   type: "xpath",
+   value: text
+}
+
+-}
 
 -- | Locator for use with both HTTP and BiDi protocols.
 data Locator
