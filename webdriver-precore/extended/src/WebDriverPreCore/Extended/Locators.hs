@@ -204,8 +204,8 @@ flattenLoc = \case
   MatchNone locs ->
     let reduced = fmap flattenLoc locs
      in case toList reduced of
-          -- Double negation: MatchNone [MatchNone [x]] -> MatchAll [x]
-          [MatchNone xs] -> flattenLoc (MatchAll xs)
+          -- Double negation: MatchNone [MatchNone [x]] -> MatchAny [x]
+          [MatchNone xs] -> flattenLoc (MatchAny xs)
           -- De Morgan: MatchNone [MatchAll [x,y]] -> MatchAny [MatchNone [x], MatchNone [y]]
           [MatchAll xs] -> flattenLoc (MatchAny (fmap (\x -> MatchNone (x :| [])) xs))
           -- De Morgan: MatchNone [MatchAny [x,y]] -> MatchAll [MatchNone [x], MatchNone [y]]

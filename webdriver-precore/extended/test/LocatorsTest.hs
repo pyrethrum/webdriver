@@ -9,7 +9,7 @@ import Test.Falsify.Generator as G (Gen, bool, choose, frequency, integral, list
 import Test.Falsify.Predicate (dot, expect, fn, (.$))
 import Test.Falsify.Range as R (between)
 import Test.Tasty
-import Test.Tasty.Falsify (ExpectFailure (DontExpectFailure), Property, TestOptions (..), gen, info, testPropertyWith, Verbose (..))
+import Test.Tasty.Falsify (ExpectFailure (DontExpectFailure), Property, TestOptions (..), Verbose (..), gen, info, testPropertyWith)
 import Test.Tasty.Falsify qualified as F
 import Test.Tasty.HUnit
 import Utils (txt)
@@ -17,7 +17,9 @@ import WebDriverPreCore.Extended.Locators
 import Prelude hiding (putStrLn)
 
 -- >>> _eval tests
+
 -- *** Exception: ExitSuccess
+
 tests :: TestTree
 tests =
   testGroup
@@ -42,7 +44,8 @@ tests =
         ],
       testGroup
         "Property Tests"
-        [ test_genLocator_mock
+        [ test_mock_logic_preserved_on_flattenning,
+          test_nested_none_match
         ]
     ]
 
@@ -60,8 +63,13 @@ http_login_navigation_demo = do
 logging :: Bool
 logging = True
 
-chkFlatten :: Text -> Locator -> Locator -> TestTree
-chkFlatten description expected unflattened =
+data FlattenCase = MkFlattenCase
+  { unflattened :: Locator,
+    flattenned :: Locator
+  }
+
+chkFlatten :: Text -> FlattenCase -> TestTree
+chkFlatten description MkFlattenCase {unflattened, flattenned = expected} =
   testCase (unpack description) $ do
     when logging $ do
       logPretty unflattened
@@ -79,71 +87,95 @@ flattenNestedMatchAll :: TestTree
 flattenNestedMatchAll =
   chkFlatten
     "flattens nested MatchAll"
-    (MatchAll (CSS "a" :| [CSS "b", CSS "c"]))
-    (MatchAll (MatchAll (CSS "a" :| [CSS "b"]) :| [CSS "c"]))
+    MkFlattenCase
+      { unflattened = MatchAll (MatchAll (CSS "a" :| [CSS "b"]) :| [CSS "c"]),
+        flattenned = MatchAll (CSS "a" :| [CSS "b", CSS "c"])
+      }
 
 flattenNestedMatchAny :: TestTree
 flattenNestedMatchAny =
   chkFlatten
     "flattens nested MatchAny"
-    (MatchAny (CSS "a" :| [CSS "b", CSS "c"]))
-    (MatchAny (MatchAny (CSS "a" :| [CSS "b"]) :| [CSS "c"]))
+    MkFlattenCase
+      { unflattened = MatchAny (MatchAny (CSS "a" :| [CSS "b"]) :| [CSS "c"]),
+        flattenned = MatchAny (CSS "a" :| [CSS "b", CSS "c"])
+      }
 
 reduceSingleMatchAll :: TestTree
 reduceSingleMatchAll =
   chkFlatten
     "reduces single element MatchAll to the element"
-    (CSS "button")
-    (MatchAll (CSS "button" :| []))
+    MkFlattenCase
+      { unflattened = MatchAll (CSS "button" :| []),
+        flattenned = CSS "button"
+      }
+
+-- >>> _eval reduceSingleMatchAny
+
+-- *** Exception: ExitSuccess
 
 reduceSingleMatchAny :: TestTree
 reduceSingleMatchAny =
   chkFlatten
     "reduces single element MatchAny to the element"
-    (CSS "button")
-    (MatchAny (CSS "button" :| []))
+    MkFlattenCase
+      { unflattened = MatchAny (CSS "button" :| []),
+        flattenned = CSS "button"
+      }
 
 applyDoubleNegation :: TestTree
 applyDoubleNegation =
   chkFlatten
     "applies double negation: MatchNone [MatchNone [x]] -> x"
-    (CSS "button")
-    (MatchNone (MatchNone (CSS "button" :| []) :| []))
+    MkFlattenCase
+      { unflattened = MatchNone (MatchNone (CSS "button" :| []) :| []),
+        flattenned = CSS "button"
+      }
 
 applyDeMorganMatchAll :: TestTree
 applyDeMorganMatchAll =
   chkFlatten
     "applies De Morgan: MatchNone [MatchAll [x, y]] -> MatchAny [MatchNone [x], MatchNone [y]]"
-    (MatchAny (MatchNone (CSS "a" :| []) :| [MatchNone (CSS "b" :| [])]))
-    (MatchNone (MatchAll (CSS "a" :| [CSS "b"]) :| []))
+    MkFlattenCase
+      { unflattened = MatchNone (MatchAll (CSS "a" :| [CSS "b"]) :| []),
+        flattenned = MatchAny (MatchNone (CSS "a" :| []) :| [MatchNone (CSS "b" :| [])])
+      }
 
 applyDeMorganMatchAny :: TestTree
 applyDeMorganMatchAny =
   chkFlatten
     "applies De Morgan: MatchNone [MatchAny [x, y]] -> MatchAll [MatchNone [x], MatchNone [y]]"
-    (MatchAll (MatchNone (CSS "a" :| []) :| [MatchNone (CSS "b" :| [])]))
-    (MatchNone (MatchAny (CSS "a" :| [CSS "b"]) :| []))
+    MkFlattenCase
+      { unflattened = MatchNone (MatchAny (CSS "a" :| [CSS "b"]) :| []),
+        flattenned = MatchAll (MatchNone (CSS "a" :| []) :| [MatchNone (CSS "b" :| [])])
+      }
 
 preserveNonMatchLocators :: TestTree
 preserveNonMatchLocators =
   chkFlatten
     "preserves non-Match* locators"
-    (CSS "button")
-    (CSS "button")
+    MkFlattenCase
+      { unflattened = CSS "button",
+        flattenned = CSS "button"
+      }
 
 recursiveReduceParent :: TestTree
 recursiveReduceParent =
   chkFlatten
     "recursively reduces Parent locators"
-    (Parent (CSS "a") (CSS "b"))
-    (Parent (MatchAll (CSS "a" :| [])) (MatchAny (CSS "b" :| [])))
+    MkFlattenCase
+      { unflattened = Parent (MatchAll (CSS "a" :| [])) (MatchAny (CSS "b" :| [])),
+        flattenned = Parent (CSS "a") (CSS "b")
+      }
 
 complexNestedFlattening :: TestTree
 complexNestedFlattening =
   chkFlatten
     "complex nested flattening"
-    (MatchAll (CSS "a" :| [CSS "b", CSS "c", CSS "d"]))
-    (MatchAll (MatchAll (CSS "a" :| [MatchAll (CSS "b" :| [CSS "c"])]) :| [CSS "d"]))
+    MkFlattenCase
+      { unflattened = MatchAll (MatchAll (CSS "a" :| [MatchAll (CSS "b" :| [CSS "c"])]) :| [CSS "d"]),
+        flattenned = MatchAll (CSS "a" :| [CSS "b", CSS "c", CSS "d"])
+      }
 
 trueLoc :: Locator
 trueLoc = css "True"
@@ -183,14 +215,14 @@ genLocatorWithLimits depth remainingNodes
     baseSingletonProb = 20 :: Word
     extraProb = if depth <= 1 then 0 else fromIntegral (depth - 1) * 5
     singletonProb = min 100 (baseSingletonProb + extraProb)
-    
+
     -- Remaining probability distributed evenly among 4 constructors
     nonSingletonProb = 100 - singletonProb
     perConstructorProb = nonSingletonProb `div` 4
-    
+
     -- Small adjustment for rounding
     remainder = nonSingletonProb `mod` 4
-    
+
     weights =
       [ (singletonProb, genSingleton),
         (perConstructorProb, genParentAt (depth + 1) (remainingNodes - 1)),
@@ -246,59 +278,35 @@ genNonEmptyLocators depth remainingNodes = do
       rest <- sequence [genLocatorWithLimits depth nodesPerLoc | _ <- [2 .. n]]
       pure $ first :| rest
 
--- | Count the total number of nodes in a Locator tree
-countLocatorNodes :: Locator -> Int
-countLocatorNodes = \case
-  Parent p c -> 1 + countLocatorNodes p + countLocatorNodes c
-  MatchAll locs -> 1 + sum (fmap countLocatorNodes locs)
-  MatchAny locs -> 1 + sum (fmap countLocatorNodes locs)
-  MatchNone locs -> 1 + sum (fmap countLocatorNodes locs)
-  _ -> 1 -- Singleton locators
-
--- | Measure the maximum depth of a Locator tree
-measureLocatorDepth :: Locator -> Int
-measureLocatorDepth = \case
-  Parent p c -> 1 + max (measureLocatorDepth p) (measureLocatorDepth c)
-  MatchAll locs -> 1 + maximum (fmap measureLocatorDepth locs)
-  MatchAny locs -> 1 + maximum (fmap measureLocatorDepth locs)
-  MatchNone locs -> 1 + maximum (fmap measureLocatorDepth locs)
-  _ -> 0 -- Singleton at depth 0
-
 -- Property test options for 100 tests
 genLocatorOptions :: TestOptions
 genLocatorOptions =
   TestOptions
     { expectFailure = DontExpectFailure,
-      overrideVerbose = Just Verbose,
+      overrideVerbose = Just NotVerbose,
       overrideMaxShrinks = Nothing,
-      overrideNumTests = Just 100,
+      overrideNumTests = Just 1000,
       overrideMaxRatio = Nothing
     }
 
--- Logging function that can be toggled
-logProperty :: String -> Property ()
-logProperty = if logging then info else const $ pure ()
-
 -- Mock property test that generates locators and logs them
--- >>> _eval test_genLocator_mock
--- *** Exception: ExitFailure 1
-test_genLocator_mock :: TestTree
-test_genLocator_mock = testPropertyWith genLocatorOptions "Generate and log locators" $ do
+-- >>> _eval test_mock_logic_preserved_on_flattenning
+
+-- *** Exception: ExitSuccess
+
+test_mock_logic_preserved_on_flattenning :: TestTree
+test_mock_logic_preserved_on_flattenning = testPropertyWith genLocatorOptions "Generate and log locators" $ do
   loc <- gen genLocator
   F.assert $ expect True `dot` fn ("flattenLoc preserves mockLocated", \l -> mockLocated l == mockLocated (flattenLoc l)) .$ ("loc", loc)
 
 -- >>> _eval test_fail
--- *** Exception: ExitFailure 1
-test_fail :: TestTree
-test_fail = testCase "This test fails" $ do
-  let 
-    loc = MatchNone (MatchNone (MatchNone (falseLoc :| [trueLoc]) :| []) :| []) 
-  logPretty loc
-  logPretty "--->"  
-  logPretty (flattenLoc loc)
-  mockLocated loc @?=  mockLocated (flattenLoc loc) 
 
+-- *** Exception: ExitSuccess
 
-
-
-
+test_nested_none_match :: TestTree
+test_nested_none_match = testCase "This test fails" $ do
+  let loc = MatchNone (MatchNone (MatchNone (falseLoc :| [trueLoc]) :| []) :| [])
+  -- logPretty loc
+  -- logPretty "--->"
+  -- logPretty (flattenLoc loc)
+  mockLocated loc @?= mockLocated (flattenLoc loc)
