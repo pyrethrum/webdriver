@@ -341,6 +341,7 @@ library webdriver-precore-extended
       WebDriverPreCore.Extended.BiDi.Protocol
       WebDriverPreCore.Extended.Capabilities
       WebDriverPreCore.Extended.Locators
+      WebDriverPreCore.Extended.Locators.Internal
       WebDriverPreCore.Extended.Tags
       -- 
       WebDriverPreCore.Extended.HTTP.Base.API

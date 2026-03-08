@@ -9,11 +9,12 @@ import Test.Falsify.Generator as G (Gen, frequency, integral)
 import Test.Falsify.Predicate (dot, expect, fn, (.$))
 import Test.Falsify.Range as R (between)
 import Test.Tasty ( defaultMain, testGroup, TestTree )
-import Test.Tasty.Falsify (ExpectFailure (DontExpectFailure), Property, TestOptions (..), Verbose (..), gen, info, testPropertyWith)
+import Test.Tasty.Falsify (ExpectFailure (DontExpectFailure), TestOptions (..), Verbose (..), gen, info, testPropertyWith)
 import Test.Tasty.Falsify qualified as F
 import Test.Tasty.HUnit ( testCase, (@?=) )
 import Utils (txt)
 import WebDriverPreCore.Extended.Locators
+import WebDriverPreCore.Extended.Locators.Internal (Locator (..), flattenLoc)
 import Prelude hiding (putStrLn)
 
 -- >>> _eval tests
@@ -55,13 +56,13 @@ tests =
 logPretty :: (Show a) => a -> IO ()
 logPretty = putStrLn . txt
 
-http_login_navigation_demo :: IO ()
-http_login_navigation_demo = do
-  undefined
-  where
-    loginButton = button "Submit"
-    navBar = navigation "Main Navigation"
-    absurdLoc = notLoc (button "Submit" &&& navBar) ||| navBar
+-- http_login_navigation_demo :: IO ()
+-- http_login_navigation_demo = do
+--   undefined
+--   where
+--     loginButton = button "Submit"
+--     navBar = navigation "Main Navigation"
+--     absurdLoc = notLoc (button "Submit" &&& navBar) ||| navBar
 
 logging :: Bool
 logging = True
