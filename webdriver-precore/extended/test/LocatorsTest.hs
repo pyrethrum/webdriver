@@ -3,6 +3,9 @@ module LocatorsTest (tests) where
 import WebDriverPreCore.Extended.Locators
 import Test.Tasty
 import Test.Tasty.HUnit
+import Data.Text (Text, unpack)
+import Data.Text.IO (putStrLn)
+import Prelude hiding (putStrLn)
 
 tests :: TestTree
 tests =
@@ -58,6 +61,9 @@ tests =
         ]
     ]
 
+logPretty :: Show a => a -> IO ()
+logPretty = putStrLn . txt
+
 http_login_navigation_demo :: IO ()
 http_login_navigation_demo = do
   undefined
@@ -65,3 +71,30 @@ http_login_navigation_demo = do
     loginButton = button "Submit"
     navBar = navigation "Main Navigation"
     absurdLoc = notLoc (button "Submit" &&& navBar) ||| navBar
+
+
+
+chkFlatten :: Text -> Locator -> Locator -> TestTree
+chkFlatten description expected unflattened =
+  testCase (unpack description) $ do
+     
+     expected @?= actual
+  where 
+     actual = flattenLoc unflattened
+
+
+trueLoc :: Locator
+trueLoc = css "NA"
+
+falseLoc :: Locator
+falseLoc = button "NA"
+
+mockLocated :: Locator -> Bool
+mockLocated = \case 
+  CSS "NA" -> True
+  Role (Just Button) (Just "NA") -> False
+  MatchAll locs -> all mockLocated locs
+  MatchAny locs -> any mockLocated locs 
+  MatchNone locs -> not (any mockLocated locs)
+  Parent parent child -> mockLocated parent && mockLocated child
+  _ -> error "Locator not Mocked"
