@@ -8,10 +8,10 @@ import System.Environment (withArgs)
 import Test.Falsify.Generator as G (Gen, frequency, integral)
 import Test.Falsify.Predicate (dot, expect, fn, (.$))
 import Test.Falsify.Range as R (between)
-import Test.Tasty ( defaultMain, testGroup, TestTree )
+import Test.Tasty (TestTree, defaultMain, testGroup)
 import Test.Tasty.Falsify (ExpectFailure (DontExpectFailure), TestOptions (..), Verbose (..), gen, info, testPropertyWith)
 import Test.Tasty.Falsify qualified as F
-import Test.Tasty.HUnit ( testCase, (@?=) )
+import Test.Tasty.HUnit (testCase, (@?=))
 import Utils (txt)
 import WebDriverPreCore.Extended.Locators
 import WebDriverPreCore.Extended.Locators.Internal (Locator (..), flattenLoc)
@@ -115,7 +115,9 @@ reduceSingleAnd =
       }
 
 -- >>> _eval reduceSingleOr
+
 -- *** Exception: ExitSuccess
+
 reduceSingleOr :: TestTree
 reduceSingleOr =
   chkFlatten
@@ -135,7 +137,9 @@ applyDoubleNegation =
       }
 
 -- >>> _eval applyDeMorganAnd
+
 -- *** Exception: ExitSuccess
+
 applyDeMorganAnd :: TestTree
 applyDeMorganAnd =
   chkFlatten
@@ -294,7 +298,9 @@ genLocatorOptions =
     }
 
 -- >>> _eval test_flatenning_simplification
+
 -- *** Exception: ExitSuccess
+
 test_flatenning_simplification :: TestTree
 test_flatenning_simplification = testPropertyWith genLocatorOptions "Flattening simplification" $ do
   loc <- gen genLocator
@@ -302,15 +308,15 @@ test_flatenning_simplification = testPropertyWith genLocatorOptions "Flattening 
       flatloc = flattenLoc loc
       flattenedComplexity = complexity flatloc
   info $ "Unflattened complexity: " <> show unflattenedComplexity
-  info $ "Original locator:\n" <>  unpack (txt loc)
+  info $ "Original locator:\n" <> unpack (txt loc)
   info $ "Flattened complexity: " <> show flattenedComplexity
-  info $ "Flattened locator:\n" <>  unpack (txt flatloc)
+  info $ "Flattened locator:\n" <> unpack (txt flatloc)
   F.assert $ expect True `dot` fn ("flattenLoc simplifies or maintains complexity", \_l -> complexity flatloc <= complexity loc) .$ ("loc", loc)
   where
     -- Calculate complexity score: singleton/leaf = 1, nesting constructors = 2
     complexity :: Locator -> Int
     complexity = \case
-      -- trueLoc 
+      -- trueLoc
       CSS "True" -> 1
       -- falseLoc
       Role (Just Button) (Just "False") -> 1
@@ -329,7 +335,9 @@ test_flatenning_simplification = testPropertyWith genLocatorOptions "Flattening 
 -- Mock property test that generates locators and logs them
 
 -- >>> _eval test_mock_logic_preserved_on_flattenning
+
 -- *** Exception: ExitSuccess
+
 test_mock_logic_preserved_on_flattenning :: TestTree
 test_mock_logic_preserved_on_flattenning = testPropertyWith genLocatorOptions "Generate and log locators" $ do
   loc <- gen genLocator
@@ -348,22 +356,35 @@ test_nested_none_match = testCase "This test fails" $ do
   mockLocated loc @?= mockLocated (flattenLoc loc)
 
 -- >>> _eval test_infix_precedence
+
 -- *** Exception: ExitSuccess
+
 test_infix_precedence_i :: TestTree
-test_infix_precedence_i = testCase "Test operator precedence i" $ 
-  expected @?= actual
+test_infix_precedence_i =
+  testCase "Test operator precedence i" $
+    expected @?= actual
   where
-    expected = True || False && False  
+    expected = True || False && False
     actual = mockLocated $ trueLoc ||| falseLoc &&& falseLoc
 
-
 -- >>> _eval test_infix_precedence_ii
+
 -- *** Exception: ExitSuccess
+
 test_infix_precedence_ii :: TestTree
-test_infix_precedence_ii = testCase "Test operator precedence ii" $ 
-  expected @?= actual
+test_infix_precedence_ii =
+  testCase "Test operator precedence ii" $
+    expected @?= actual
   where
-    expected = False || True && False || True 
+    expected = False || True && False || True
     actual = mockLocated $ falseLoc ||| trueLoc &&& falseLoc ||| trueLoc
 
-
+-- >>> _eval test_parent_infix_precedence
+-- *** Exception: ExitSuccess
+test_parent_infix_precedence :: TestTree
+test_parent_infix_precedence =
+  testCase "Test Parent operator precedence" $
+    expected @?= actual
+  where
+    expected = Parent (falseLoc ||| trueLoc) (trueLoc &&& falseLoc)
+    actual = falseLoc ||| trueLoc >>> trueLoc &&& falseLoc

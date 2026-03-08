@@ -54,6 +54,7 @@ module WebDriverPreCore.Extended.Locators
     -- * Combinators
     (&&&),
     (|||),
+    (>>>),
     notLoc
   )
 where
@@ -186,6 +187,12 @@ infixr 3 &&&
 l ||| r = Or (l :| [r])
 
 infixr 2 |||
+
+(>>>) :: Locator -> Locator -> Locator
+(>>>) = Parent
+
+infixr 1 >>>
+
 
 notLoc :: Locator -> Locator
 notLoc l = Not (l :| [])

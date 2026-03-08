@@ -59,6 +59,8 @@ browsingContext.XPathLocator = {
    value: text
 }
 
+locator visible to user includes 
+
 -}
 
 -- | Locator for use with both HTTP and BiDi protocols.
