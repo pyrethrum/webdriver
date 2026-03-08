@@ -10,6 +10,7 @@ packages:
   webdriver-precore/test-server/test-server.cabal
 
 with-compiler: ghc-9.10.1
+-- with-compiler: ghc-9.14.1
 -- with-compiler: ghc-9.10.1
 -- with-compiler: ghc-9.8.4
 
