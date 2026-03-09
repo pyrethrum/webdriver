@@ -185,10 +185,9 @@ module WebDriverPreCore.Extended.Locators
   )
 where
 
-import Data.List.NonEmpty (NonEmpty (..), toList)
+import Data.List.NonEmpty (NonEmpty (..))
 import Data.Text (Text)
 import WebDriverPreCore.Extended.Locators.Internal
-import WebDriverPreCore.Extended.Locators.Tags.Internal qualified as T
 import Prelude
 
 css :: Text -> Locator
@@ -307,7 +306,7 @@ textbox = role Textbox
 --- Tag Constructors ---
 
 customTag :: Text -> Locator
-customTag = Tag 
+customTag = Tag
 
 a_ :: Locator
 a_ = Tag "a"

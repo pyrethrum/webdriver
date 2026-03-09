@@ -1,87 +1,64 @@
-css-and-or.md
+css-depth-limiting.md
 
-Yes, you've got it exactly right! Let me break down each pattern with examples:
-1. :is(a, b, c) → OR (Union)
+## CSS Depth Limiting
 
-Matches if the element matches any of the selectors a, b, or c.
-css
+**Q:** If I have a complex CSS query is there a way to limit depth?
 
-/* Matches if element is EITHER a p OR an h1 OR an h2 */
-:is(p, h1, h2) {
-    color: blue;
-}
+**A:** In CSS, there is **no native way to limit depth** directly.
 
-/* Same as: p, h1, h2 */
+**Indirect Methods:**
 
-2. :is(a):is(b):is(c) → AND (Intersection)
-
-Matches if the element matches ALL of the selectors a, b, and c.
-css
-
-/* Matches if element is BOTH a p AND has class "foo" AND has class "bar" */
-:is(p):is(.foo):is(.bar) {
-    color: blue;
-}
-
-/* Same as: p.foo.bar */
-
-3. :is(a, b):is(c, d) → Cartesian Product
-
-Matches if the element matches one from the first set AND one from the second set. This creates every possible combination.
-css
-
-/* Matches if element is:
-   - (p OR h1) AND (has class "foo" OR class "bar")
-   This creates 4 possible combinations:
-   1. p.foo
-   2. p.bar
-   3. h1.foo
-   4. h1.bar
-*/
-:is(p, h1):is(.foo, .bar) {
-    color: blue;
-}
-
-/* Same as: p.foo, p.bar, h1.foo, h1.bar */
-
-Visual Examples:
-HTML:
-html
-
-```
-<p class="foo">✅ p.foo</p>
-<p class="bar">✅ p.bar</p>
-<p class="baz">❌ p.baz (no match)</p>
-
-<h1 class="foo">✅ h1.foo</h1>
-<h1 class="bar">✅ h1.bar</h1>
-
-<h2 class="foo">❌ h2.foo (not in first set)</h2>
-<div class="foo">❌ div.foo (not in first set)</div>
+1. **Child Combinator Chain:**
+```css
+.parent > .child              /* depth 1 */
+.parent > * > .child          /* depth 2 */
+.parent > * > * > .child      /* depth 3 */
 ```
 
-Complex Example with Three Sets:
-css
+2. **:not() with Descendant Selectors:**
+```css
+.container .item:not(.container .container .item)
+```
 
-/* Cartestian product of: (p, h1) × (.foo, .bar) × (.red, .blue) */
-:is(p, h1):is(.foo, .bar):is(.red, .blue) {
-    color: blue;
-}
+3. **JavaScript (Post-Query Filtering):**
+```javascript
+document.querySelectorAll('.parent .target').forEach(el => {
+  let depth = 0;
+  let node = el;
+  while (node.parentElement && !node.parentElement.matches('.parent')) {
+    depth++;
+    node = node.parentElement;
+  }
+  if (depth <= 3) {
+    // use this element
+  }
+});
+```
 
-/* This creates 8 possible combinations:
-   p.foo.red, p.foo.blue, p.bar.red, p.bar.blue,
-   h1.foo.red, h1.foo.blue, h1.bar.red, h1.bar.blue
-*/
+4. **Use XPath Instead (Recommended):**
+```xpath
+//*[@class='parent']//*[@class='target'][count(ancestor::*) <= 3]
+```
 
-/* Same as: 
-   p.foo.red, p.foo.blue, p.bar.red, p.bar.blue,
-   h1.foo.red, h1.foo.blue, h1.bar.red, h1.bar.blue
-*/
+In Haskell:
+```haskell
+-- CSS: no depth control
+css ".parent .target"
 
-Summary Table:
-Pattern	Logical Operation	Math Equivalent	CSS Equivalent
-:is(a, b, c)	OR	Union (a ∪ b ∪ c)	a, b, c
-:is(a):is(b):is(c)	AND	Intersection (a ∩ b ∩ c)	a.b.c (if classes)
-:is(a,b):is(c,d)	AND of ORs	Cartesian Product (a ∪ b) ∩ (c ∪ d)	a c, a d, b c, b d*
+-- XPath: with depth control
+xpath "//*[contains(@class,'parent')]//*[contains(@class,'target')][count(ancestor::*) <= 3]"
+```
 
-*Note: The CSS equivalent depends on the relationship between selectors. If they're all on the same element, it's a.c, a.d, b.c, b.d (like our examples). If there's a space, it could mean different relationships.
+**Recommendation:** If you need depth limiting, use XPath or add a JavaScript-based post-filter function to your BiDi locator strategy.
+
+---
+
+## Summary
+
+Key decisions made:
+1. Adopted `Foo.Internal` module naming convention
+2. Removed intermediate `Tags.Internal` module in favor of direct tag constructors
+3. Simplified tag locators to use plain text values
+4. Identified XPath as the solution for depth-limited queries
+
+Project state: Compiles successfully with all tag locators implemented.

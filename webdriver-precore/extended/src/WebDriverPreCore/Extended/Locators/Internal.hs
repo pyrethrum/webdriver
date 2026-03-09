@@ -3,7 +3,6 @@ module WebDriverPreCore.Extended.Locators.Internal where
 import Data.List.NonEmpty (NonEmpty (..), toList)
 import Data.Text (Text, intercalate, pack, toLower)
 import WebDriverPreCore.Extended.BiDi.Base.Protocol (BrowsingContext, JSUInt)
-import WebDriverPreCore.Extended.Locators.Tags.Internal as T
 import Prelude
 
 -- TODO : use bidi type when merged
@@ -64,21 +63,31 @@ locator visible to user includes
 
 -}
 
+data MatchFlags = MkMatchFlags
+  { ignoreCase :: Bool,
+    matchType :: MatchType
+  }
+  deriving (Show, Eq)
+
 -- | Locator for use with both HTTP and BiDi protocols.
 data Locator
-  = CSS {value :: Text}
+  =
+   CSS {value :: Text}
   | XPath {value :: Text}
   | Role {role :: Maybe AriaRole, name :: Maybe Text}
   | -- browsingContextId -> elementId ie get the frame that belongs to the browsing context
     BiDiContext {context :: BrowsingContext}
   | InnerText
       { value :: Text,
-        ignoreCase :: Maybe Bool,
         matchType :: Maybe MatchType,
         maxDepth :: Maybe JSUInt
       }
   | Tag {tag :: Text}
   | Parent {parent :: Locator, child :: Locator}
+  -- 
+  | All
+  | ID Text
+  | Class {matchType :: MatchType}
   | And (NonEmpty Locator)
   | Or (NonEmpty Locator)
   | Not (NonEmpty Locator)
@@ -138,7 +147,7 @@ data AriaRole
   | Textbox
   deriving (Show, Eq, Ord, Enum, Bounded)
 
-data MatchType = Full | Partial deriving (Show, Eq)
+data MatchType = Full | Starts | Partial | WildCard deriving (Show, Eq)
 
 displayAriaRole :: AriaRole -> Text
 displayAriaRole = toLower . pack . show

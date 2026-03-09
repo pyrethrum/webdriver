@@ -49,7 +49,8 @@ tests =
           test_flatenning_simplification,
           test_nested_none_match,
           test_infix_precedence_i,
-          test_infix_precedence_ii
+          test_infix_precedence_ii,
+          test_parent_infix_precedence
         ]
     ]
 
