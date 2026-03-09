@@ -59,14 +59,15 @@ browsingContext.XPathLocator = {
    value: text
 }
 
-locator visible to user includes 
+locator visible to user includes
 
 -}
 
 -- | Locator for use with both HTTP and BiDi protocols.
 data Locator
-  = Role {role :: Maybe AriaRole, name :: Maybe Text}
-  | CSS {value :: Text}
+  = CSS {value :: Text}
+  | XPath {value :: Text}
+  | Role {role :: Maybe AriaRole, name :: Maybe Text}
   | -- browsingContextId -> elementId ie get the frame that belongs to the browsing context
     BiDiContext {context :: BrowsingContext}
   | InnerText
@@ -75,7 +76,6 @@ data Locator
         matchType :: Maybe MatchType,
         maxDepth :: Maybe JSUInt
       }
-  | XPath {value :: Text}
   | Parent {parent :: Locator, child :: Locator}
   | And (NonEmpty Locator)
   | Or (NonEmpty Locator)
@@ -140,7 +140,6 @@ data MatchType = Full | Partial deriving (Show, Eq)
 
 displayAriaRole :: AriaRole -> Text
 displayAriaRole = toLower . pack . show
-
 
 -- | Best-effort XPath approximation of a BiDi accessibility locator.
 --   Covers explicit @role attributes, implicit roles for common HTML elements,
@@ -246,7 +245,6 @@ implicitRoleXPath =
     Table -> "table"
     Term -> "dt"
     Textbox -> "input[not(@type) or @type='text' or @type='email' or @type='tel' or @type='url' or @type='search'] or self::textarea"
-
 
 -- | Recursively flattens and simplifies Match* locators while maintaining logical correctness.
 -- Flattens nested Match* of the same type and applies De Morgan's laws where applicable.

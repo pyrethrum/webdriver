@@ -3,7 +3,7 @@ module WebDriverPreCore.Extended.Locators
     Locator,
 
     -- * Re-exports from Tags
-    module WebDriverPreCore.Extended.Tags,
+    module WebDriverPreCore.Extended.Locators.Tags.Internal,
 
     -- * Re-exports from Internal
     AriaRole (..),
@@ -12,10 +12,23 @@ module WebDriverPreCore.Extended.Locators
 
     -- * Smart Constructors
     css,
-    role',
-    role,
+    -- xpath,
+    -- allElms,
+    -- idEq,
+    -- classEq,
+    -- classStarts,
+    -- classContains,
+    -- attributeEq,
+    -- attributeStarts,
+    -- attributeContains,
+    -- valueEq,
+    -- valueStarts,
+    -- valueContains,
 
-    -- * Role-specific Smart Constructors
+    -- * Role Constructors
+    role,
+    role',
+    --
     article,
     banner,
     button,
@@ -51,6 +64,9 @@ module WebDriverPreCore.Extended.Locators
     term,
     textbox,
 
+
+    -- * Tag Constructors
+
     -- * Combinators
     (&&&),
     (|||),
@@ -62,7 +78,7 @@ where
 import Data.List.NonEmpty (NonEmpty (..), toList)
 import Data.Text (Text)
 import WebDriverPreCore.Extended.Locators.Internal
-import WebDriverPreCore.Extended.Tags
+import WebDriverPreCore.Extended.Locators.Tags.Internal
 import Prelude
 
 css :: Text -> Locator

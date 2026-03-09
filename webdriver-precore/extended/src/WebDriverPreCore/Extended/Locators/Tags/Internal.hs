@@ -1,4 +1,4 @@
-module WebDriverPreCore.Extended.Tags
+module WebDriverPreCore.Extended.Locators.Tags.Internal
   ( HTag,
     displayHTag,
     Tag,
