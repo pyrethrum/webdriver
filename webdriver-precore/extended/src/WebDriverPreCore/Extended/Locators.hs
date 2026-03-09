@@ -2,9 +2,6 @@ module WebDriverPreCore.Extended.Locators
   ( -- * Locator Type
     Locator,
 
-    -- * Re-exports from Tags
-    module WebDriverPreCore.Extended.Locators.Tags.Internal,
-
     -- * Re-exports from Internal
     AriaRole (..),
     MatchType (..),
@@ -66,6 +63,119 @@ module WebDriverPreCore.Extended.Locators
 
 
     -- * Tag Constructors
+    customTag,
+    a_,
+    abbr_,
+    address_,
+    area_,
+    article_,
+    aside_,
+    audio_,
+    b_,
+    base_,
+    bdi_,
+    bdo_,
+    blockquote_,
+    body_,
+    br_,
+    button_,
+    canvas_,
+    caption_,
+    cite_,
+    code_,
+    col_,
+    colgroup_,
+    data_,
+    datalist_,
+    dd_,
+    del_,
+    details_,
+    dfn_,
+    dialog_,
+    div_,
+    dl_,
+    dt_,
+    em_,
+    embed_,
+    fieldset_,
+    figcaption_,
+    figure_,
+    footer_,
+    form_,
+    h1_,
+    h2_,
+    h3_,
+    h4_,
+    h5_,
+    h6_,
+    head_,
+    header_,
+    hgroup_,
+    hr_,
+    html_,
+    i_,
+    iframe_,
+    img_,
+    input_,
+    ins_,
+    kbd_,
+    label_,
+    legend_,
+    li_,
+    link_,
+    main_,
+    map_,
+    mark_,
+    menu_,
+    meta_,
+    meter_,
+    nav_,
+    noscript_,
+    object_,
+    ol_,
+    optgroup_,
+    option_,
+    output_,
+    p_,
+    picture_,
+    pre_,
+    progress_,
+    q_,
+    rp_,
+    rt_,
+    ruby_,
+    s_,
+    samp_,
+    script_,
+    search_,
+    section_,
+    select_,
+    slot_,
+    small_,
+    source_,
+    span_,
+    strong_,
+    style_,
+    sub_,
+    summary_,
+    sup_,
+    table_,
+    tbody_,
+    td_,
+    template_,
+    textarea_,
+    tfoot_,
+    th_,
+    thead_,
+    time_,
+    title_,
+    tr_,
+    track_,
+    u_,
+    ul_,
+    var_,
+    video_,
+    wbr_,
 
     -- * Combinators
     (&&&),
@@ -78,13 +188,13 @@ where
 import Data.List.NonEmpty (NonEmpty (..), toList)
 import Data.Text (Text)
 import WebDriverPreCore.Extended.Locators.Internal
-import WebDriverPreCore.Extended.Locators.Tags.Internal
+import WebDriverPreCore.Extended.Locators.Tags.Internal qualified as T
 import Prelude
 
 css :: Text -> Locator
 css = CSS
 
-------- Role Smart Constructors -------
+------- Role Constructors -------
 
 role' :: Maybe AriaRole -> Maybe Text -> Locator
 role' r = Role r
@@ -193,6 +303,349 @@ term = role Term
 
 textbox :: Text -> Locator
 textbox = role Textbox
+
+--- Tag Constructors ---
+
+customTag :: Text -> Locator
+customTag = Tag 
+
+a_ :: Locator
+a_ = Tag "a"
+
+abbr_ :: Locator
+abbr_ = Tag "abbr"
+
+address_ :: Locator
+address_ = Tag "address"
+
+area_ :: Locator
+area_ = Tag "area"
+
+article_ :: Locator
+article_ = Tag "article"
+
+aside_ :: Locator
+aside_ = Tag "aside"
+
+audio_ :: Locator
+audio_ = Tag "audio"
+
+b_ :: Locator
+b_ = Tag "b"
+
+base_ :: Locator
+base_ = Tag "base"
+
+bdi_ :: Locator
+bdi_ = Tag "bdi"
+
+bdo_ :: Locator
+bdo_ = Tag "bdo"
+
+blockquote_ :: Locator
+blockquote_ = Tag "blockquote"
+
+body_ :: Locator
+body_ = Tag "body"
+
+br_ :: Locator
+br_ = Tag "br"
+
+button_ :: Locator
+button_ = Tag "button"
+
+canvas_ :: Locator
+canvas_ = Tag "canvas"
+
+caption_ :: Locator
+caption_ = Tag "caption"
+
+cite_ :: Locator
+cite_ = Tag "cite"
+
+code_ :: Locator
+code_ = Tag "code"
+
+col_ :: Locator
+col_ = Tag "col"
+
+colgroup_ :: Locator
+colgroup_ = Tag "colgroup"
+
+data_ :: Locator
+data_ = Tag "data"
+
+datalist_ :: Locator
+datalist_ = Tag "datalist"
+
+dd_ :: Locator
+dd_ = Tag "dd"
+
+del_ :: Locator
+del_ = Tag "del"
+
+details_ :: Locator
+details_ = Tag "details"
+
+dfn_ :: Locator
+dfn_ = Tag "dfn"
+
+dialog_ :: Locator
+dialog_ = Tag "dialog"
+
+div_ :: Locator
+div_ = Tag "div"
+
+dl_ :: Locator
+dl_ = Tag "dl"
+
+dt_ :: Locator
+dt_ = Tag "dt"
+
+em_ :: Locator
+em_ = Tag "em"
+
+embed_ :: Locator
+embed_ = Tag "embed"
+
+fieldset_ :: Locator
+fieldset_ = Tag "fieldset"
+
+figcaption_ :: Locator
+figcaption_ = Tag "figcaption"
+
+figure_ :: Locator
+figure_ = Tag "figure"
+
+footer_ :: Locator
+footer_ = Tag "footer"
+
+form_ :: Locator
+form_ = Tag "form"
+
+h1_ :: Locator
+h1_ = Tag "h1"
+
+h2_ :: Locator
+h2_ = Tag "h2"
+
+h3_ :: Locator
+h3_ = Tag "h3"
+
+h4_ :: Locator
+h4_ = Tag "h4"
+
+h5_ :: Locator
+h5_ = Tag "h5"
+
+h6_ :: Locator
+h6_ = Tag "h6"
+
+head_ :: Locator
+head_ = Tag "head"
+
+header_ :: Locator
+header_ = Tag "header"
+
+hgroup_ :: Locator
+hgroup_ = Tag "hgroup"
+
+hr_ :: Locator
+hr_ = Tag "hr"
+
+html_ :: Locator
+html_ = Tag "html"
+
+i_ :: Locator
+i_ = Tag "i"
+
+iframe_ :: Locator
+iframe_ = Tag "iframe"
+
+img_ :: Locator
+img_ = Tag "img"
+
+input_ :: Locator
+input_ = Tag "input"
+
+ins_ :: Locator
+ins_ = Tag "ins"
+
+kbd_ :: Locator
+kbd_ = Tag "kbd"
+
+label_ :: Locator
+label_ = Tag "label"
+
+legend_ :: Locator
+legend_ = Tag "legend"
+
+li_ :: Locator
+li_ = Tag "li"
+
+link_ :: Locator
+link_ = Tag "link"
+
+main_ :: Locator
+main_ = Tag "main"
+
+map_ :: Locator
+map_ = Tag "map"
+
+mark_ :: Locator
+mark_ = Tag "mark"
+
+menu_ :: Locator
+menu_ = Tag "menu"
+
+meta_ :: Locator
+meta_ = Tag "meta"
+
+meter_ :: Locator
+meter_ = Tag "meter"
+
+nav_ :: Locator
+nav_ = Tag "nav"
+
+noscript_ :: Locator
+noscript_ = Tag "noscript"
+
+object_ :: Locator
+object_ = Tag "object"
+
+ol_ :: Locator
+ol_ = Tag "ol"
+
+optgroup_ :: Locator
+optgroup_ = Tag "optgroup"
+
+option_ :: Locator
+option_ = Tag "option"
+
+output_ :: Locator
+output_ = Tag "output"
+
+p_ :: Locator
+p_ = Tag "p"
+
+picture_ :: Locator
+picture_ = Tag "picture"
+
+pre_ :: Locator
+pre_ = Tag "pre"
+
+progress_ :: Locator
+progress_ = Tag "progress"
+
+q_ :: Locator
+q_ = Tag "q"
+
+rp_ :: Locator
+rp_ = Tag "rp"
+
+rt_ :: Locator
+rt_ = Tag "rt"
+
+ruby_ :: Locator
+ruby_ = Tag "ruby"
+
+s_ :: Locator
+s_ = Tag "s"
+
+samp_ :: Locator
+samp_ = Tag "samp"
+
+script_ :: Locator
+script_ = Tag "script"
+
+search_ :: Locator
+search_ = Tag "search"
+
+section_ :: Locator
+section_ = Tag "section"
+
+select_ :: Locator
+select_ = Tag "select"
+
+slot_ :: Locator
+slot_ = Tag "slot"
+
+small_ :: Locator
+small_ = Tag "small"
+
+source_ :: Locator
+source_ = Tag "source"
+
+span_ :: Locator
+span_ = Tag "span"
+
+strong_ :: Locator
+strong_ = Tag "strong"
+
+style_ :: Locator
+style_ = Tag "style"
+
+sub_ :: Locator
+sub_ = Tag "sub"
+
+summary_ :: Locator
+summary_ = Tag "summary"
+
+sup_ :: Locator
+sup_ = Tag "sup"
+
+table_ :: Locator
+table_ = Tag "table"
+
+tbody_ :: Locator
+tbody_ = Tag "tbody"
+
+td_ :: Locator
+td_ = Tag "td"
+
+template_ :: Locator
+template_ = Tag "template"
+
+textarea_ :: Locator
+textarea_ = Tag "textarea"
+
+tfoot_ :: Locator
+tfoot_ = Tag "tfoot"
+
+th_ :: Locator
+th_ = Tag "th"
+
+thead_ :: Locator
+thead_ = Tag "thead"
+
+time_ :: Locator
+time_ = Tag "time"
+
+title_ :: Locator
+title_ = Tag "title"
+
+tr_ :: Locator
+tr_ = Tag "tr"
+
+track_ :: Locator
+track_ = Tag "track"
+
+u_ :: Locator
+u_ = Tag "u"
+
+ul_ :: Locator
+ul_ = Tag "ul"
+
+var_ :: Locator
+var_ = Tag "var"
+
+video_ :: Locator
+video_ = Tag "video"
+
+wbr_ :: Locator
+wbr_ = Tag "wbr"
+
+--- Combinators ---
 
 (&&&) :: Locator -> Locator -> Locator
 l &&& r = And (l :| [r])

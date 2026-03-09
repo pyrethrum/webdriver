@@ -3,6 +3,7 @@ module WebDriverPreCore.Extended.Locators.Internal where
 import Data.List.NonEmpty (NonEmpty (..), toList)
 import Data.Text (Text, intercalate, pack, toLower)
 import WebDriverPreCore.Extended.BiDi.Base.Protocol (BrowsingContext, JSUInt)
+import WebDriverPreCore.Extended.Locators.Tags.Internal as T
 import Prelude
 
 -- TODO : use bidi type when merged
@@ -76,6 +77,7 @@ data Locator
         matchType :: Maybe MatchType,
         maxDepth :: Maybe JSUInt
       }
+  | Tag {tag :: Text}
   | Parent {parent :: Locator, child :: Locator}
   | And (NonEmpty Locator)
   | Or (NonEmpty Locator)
