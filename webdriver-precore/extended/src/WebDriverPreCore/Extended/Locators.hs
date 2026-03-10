@@ -9,16 +9,22 @@ module WebDriverPreCore.Extended.Locators
 
     -- * Smart Constructors
     css,
-    -- xpath,
-    -- allElms,
-    -- idEq,
-    -- classEq,
-    -- classStarts,
+    xpath,
+    allElms,
+    elmId,
+    elmClass,
+    elmClass',
+    elmClassExact,
+    elemClassStarts,
     -- classContains,
-    -- attributeEq,
+    -- attribute,
+    -- attribute',
+    -- attributeExact,
     -- attributeStarts,
     -- attributeContains,
-    -- valueEq,
+    -- value,
+    -- valueExact,
+    -- value',
     -- valueStarts,
     -- valueContains,
 
@@ -60,7 +66,6 @@ module WebDriverPreCore.Extended.Locators
     table,
     term,
     textbox,
-
 
     -- * Tag Constructors
     customTag,
@@ -181,17 +186,54 @@ module WebDriverPreCore.Extended.Locators
     (&&&),
     (|||),
     (>>>),
-    notLoc
+    notLoc,
   )
 where
 
 import Data.List.NonEmpty (NonEmpty (..))
-import Data.Text (Text)
+import Data.Text (Text, isInfixOf)
 import WebDriverPreCore.Extended.Locators.Internal
 import Prelude
+import Data.Bool (bool)
 
 css :: Text -> Locator
 css = CSS
+
+xpath :: Text -> Locator
+xpath = XPath
+
+allElms :: Locator
+allElms = All
+
+elmId :: Text -> Locator
+elmId = ID
+
+deriveMatch :: Text -> MatchType
+deriveMatch = bool Partial Wildcard  . ("*" `isInfixOf`) 
+
+passThrough :: (Text -> MatchType -> CaseSensitivity -> Locator) -> MatchType -> CaseSensitivity -> Text -> Locator
+passThrough constructor mt cs v = constructor v mt cs
+
+withDefaults :: (MatchType -> CaseSensitivity -> Text -> Locator) -> Text -> Locator
+withDefaults constructor val = constructor (deriveMatch val) CaseInsensitive val
+
+withStarts :: (MatchType -> CaseSensitivity -> Text -> Locator) -> Text -> Locator
+withStarts constructor val = constructor Starts CaseInsensitive val
+
+makeExact :: (MatchType -> CaseSensitivity -> Text -> Locator) -> Text -> Locator
+makeExact constructor val = constructor Full CaseSensitive val
+
+elmClass' :: MatchType -> CaseSensitivity -> Text -> Locator
+elmClass'= passThrough Class 
+
+elmClass :: Text -> Locator
+elmClass = withDefaults elmClass'
+
+elmClassExact :: Text -> Locator
+elmClassExact = makeExact elmClass'
+
+elemClassStarts :: Text -> Locator
+elemClassStarts = withStarts elmClass'
 
 ------- Role Constructors -------
 
@@ -661,7 +703,24 @@ infixr 2 |||
 
 infixr 1 >>>
 
-
 notLoc :: Locator -> Locator
 notLoc l = Not (l :| [])
 
+{- Demo:
+-- has initial values in fields
+-- multiple types of hidden including aria-hidden and display:none
+-- demo-id all interactable elements and labels e.g. btn-demo-id, edt-demo-id, lbl-demo-id
+-- for css (label for="demo-id") and (input#demo-id) should both work
+-- divs with text split across multiple p tags
+-- 2 frames 1 hidden - delivery address shown only if same as billing address checkbox is unchecked
+  -- init with checkbox checked
+-- 6 labels with same start end and different middle text - test match types and case sensitivity
+-- 2 text areas with the same class one not displayed via css one displayed
+  --
+-}
+
+{- ideas:
+- optimisation double shot goes at end
+- search directive - displayCheck - disambiguate only
+
+-}

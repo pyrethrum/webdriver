@@ -7,6 +7,7 @@ module WebDriverPreCore.BiDi.CoreTypes
     JSInt (..),
     JSUInt (..),
     KnownSubscriptionType (..),
+    NodeMode (..),
     NodeProperties (..),
     NodeRemoteValue (..),
     SharedId (..),
@@ -19,6 +20,7 @@ module WebDriverPreCore.BiDi.CoreTypes
   )
 where
 
+import AesonUtils (jsonToText)
 import Control.Applicative (Alternative (..))
 import Control.Monad (unless)
 import Data.Aeson (FromJSON (..), Object, ToJSON (..), Value (..), withText, (.:), (.:?))
@@ -27,8 +29,7 @@ import Data.Int (Int64)
 import Data.Map qualified as Map
 import Data.Text (Text, unpack)
 import GHC.Generics (Generic)
-import AesonUtils (jsonToText)
-import WebDriverPreCore.Internal.HTTPBidiCommon (URL (..), JSUInt (..))
+import WebDriverPreCore.Internal.HTTPBidiCommon (JSUInt (..), URL (..))
 
 newtype ClientWindow = MkClientWindow Text
   deriving newtype (Show, Eq, FromJSON, ToJSON)
@@ -87,13 +88,25 @@ newtype InternalId
   = MkInternalId Text
   deriving newtype (Show, Eq, FromJSON)
 
+data NodeMode = NodeOpen | NodeClosed deriving (Show, Eq, Generic)
+
+instance FromJSON NodeMode where
+  parseJSON :: Value -> Parser NodeMode
+  parseJSON = withText "NodeMode" $ \t ->
+    case t of
+      "open" -> pure NodeOpen
+      "closed" -> pure NodeClosed
+      _ -> fail $ "Invalid NodeMode: " 
+                    <> unpack t
+                    <> "\nExpected 'open' or 'closed'."
+
 data NodeProperties = MkNodeProperties
   { nodeType :: JSUInt,
     childNodeCount :: JSUInt,
     attributes :: Maybe (Map.Map Text Text),
     children :: Maybe [NodeRemoteValue],
     localName :: Maybe Text,
-    mode :: Maybe Text, -- "open" or "closed"
+    mode :: Maybe NodeMode,
     namespaceURI :: Maybe Text,
     nodeValue :: Maybe Text,
     shadowRoot :: Maybe NodeRemoteValue -- null allowed

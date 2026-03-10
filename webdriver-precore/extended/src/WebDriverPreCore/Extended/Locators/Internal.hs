@@ -1,8 +1,8 @@
 module WebDriverPreCore.Extended.Locators.Internal where
 
 import Data.List.NonEmpty (NonEmpty (..), toList)
-import Data.Text (Text, intercalate, pack, toLower)
-import WebDriverPreCore.Extended.BiDi.Base.Protocol (BrowsingContext, JSUInt)
+import Data.Text (Text, intercalate, pack, toLower, unpack)
+import WebDriverPreCore.Extended.BiDi.Base.Protocol (BrowsingContext, Command, JSUInt, NodeProperties)
 import Prelude
 
 -- TODO : use bidi type when merged
@@ -71,43 +71,77 @@ data MatchFlags = MkMatchFlags
 
 -- | Locator for use with both HTTP and BiDi protocols.
 data Locator
-  =
-   CSS {value :: Text}
+  = CSS {value :: Text}
   | XPath {value :: Text}
   | Role {role :: Maybe AriaRole, name :: Maybe Text}
   | -- browsingContextId -> elementId ie get the frame that belongs to the browsing context
     BiDiContext {context :: BrowsingContext}
   | InnerText
       { value :: Text,
-        matchType :: Maybe MatchType,
+        matchType :: MatchType,
+        caseSesnsitivity :: CaseSensitivity,
         maxDepth :: Maybe JSUInt
       }
   | Tag {tag :: Text}
   | Parent {parent :: Locator, child :: Locator}
-  -- 
-  | All
+  | --
+    All
   | ID Text
-  | Class {matchType :: MatchType}
+  | Class
+      { 
+        value :: Text,
+        matchType :: MatchType,
+        caseSensitivity :: CaseSensitivity
+      }
+  | Attribute
+      { value :: Text,
+        matchType :: MatchType,
+        caseSensitivity :: CaseSensitivity
+      }
+  | Value
+      { value :: Text,
+        matchType :: MatchType,
+        caseSensitivity :: CaseSensitivity
+      }
   | And (NonEmpty Locator)
   | Or (NonEmpty Locator)
   | Not (NonEmpty Locator)
   | Default Text
-  | BiDiDirective
+  | --- fix this
+    PostFilter PostFilter
+  deriving (Show, Eq)
+
+data PostFilter
+  = BiDiPostFilter
       { description :: Text,
         -- TODO: fix this when merged
-        biDiCommand :: Either Text Text
+        predicate :: NodeProperties -> Bool
       }
-  | HttpDirective
+  | HttpPostFilter
       { description :: Text,
         -- TODO: fix this when merged
         httpCommand :: Either Text Text
       }
-  | JSDirective
+  | JSPostFilter
       { description :: Text,
         -- TODO: fix this when merged
         js :: Text
       }
-  deriving (Show, Eq)
+
+instance Show PostFilter where
+  show :: PostFilter -> String
+  show = \case
+    BiDiPostFilter desc _ -> "BiDiPostFilter: " <> unpack desc
+    HttpPostFilter desc _ -> "HttpPostFilter: " <> unpack desc
+    JSPostFilter desc _ -> "JSPostFilter: " <> unpack desc
+
+instance Eq PostFilter where
+  (==) :: PostFilter -> PostFilter -> Bool
+  (==) = \cases
+    (BiDiPostFilter desc1 _) (BiDiPostFilter desc2 _) -> desc1 == desc2
+    (HttpPostFilter desc1 _) (HttpPostFilter desc2 _) -> desc1 == desc2
+    (JSPostFilter desc1 _) (JSPostFilter desc2 _) -> desc1 == desc2
+    _ _ -> False
 
 -- | ARIA roles from https://www.w3.org/TR/wai-aria-1.2/#role_definitions
 data AriaRole
@@ -147,7 +181,9 @@ data AriaRole
   | Textbox
   deriving (Show, Eq, Ord, Enum, Bounded)
 
-data MatchType = Full | Starts | Partial | WildCard deriving (Show, Eq)
+data MatchType = Full | Starts | Partial | Wildcard deriving (Show, Eq)
+
+data CaseSensitivity = CaseSensitive | CaseInsensitive deriving (Show, Eq)
 
 displayAriaRole :: AriaRole -> Text
 displayAriaRole = toLower . pack . show
@@ -182,8 +218,11 @@ accessibilityToXPath = \cases
 --   via count(ancestor::*).
 --   Visibility filtering: excludes elements with the HTML @hidden attribute,
 --   @aria-hidden='true', or inline style display:none / visibility:hidden.
+-- TODO: check strategy for visibility filtering in execution - may need to add more cases or use script.callFunction instead
 --   Does NOT catch hiding via CSS classes or inherited/cascaded styles —
 --   only the BiDi innerText locator handles those correctly.
+
+-- UPdate
 innerTextToXPath :: Text -> Maybe Bool -> Maybe MatchType -> Maybe JSUInt -> Text
 innerTextToXPath val mIgnoreCase mMatchType mMaxDepth =
   "//*" <> depthPred <> "[" <> hiddenPred <> " and " <> textPred <> "]"
@@ -672,12 +711,5 @@ This avoids re-sending the function each time
 -- use GADTs ? or just a parameterised data type wiith one param type for Locators and another for values
 
 perhaps a data type with selector -> a -> m () that could be partially applied
-
-  ```
-
-  todo:
-  - work out how user would deal with name collisions eg Button tag and Button role
-    - typeclass ?
-    - smart constructors
 
   -}
