@@ -223,20 +223,19 @@ accessibilityToXPath = \cases
 --   only the BiDi innerText locator handles those correctly.
 
 -- UPdate
-innerTextToXPath :: Text -> Maybe Bool -> Maybe MatchType -> Maybe JSUInt -> Text
-innerTextToXPath val mIgnoreCase mMatchType mMaxDepth =
+innerTextToXPath :: Text -> CaseSensitivity -> MatchType -> Maybe JSUInt -> Text
+innerTextToXPath val cs mMatchType mMaxDepth =
   "//*" <> depthPred <> "[" <> hiddenPred <> " and " <> textPred <> "]"
   where
-    caseInsensitive = maybe False id mIgnoreCase
     fullMatch = mMatchType == Just Full
 
-    normalisedText
-      | caseInsensitive = "translate(normalize-space(.), '" <> upperAlpha <> "', '" <> lowerAlpha <> "')"
-      | otherwise = "normalize-space(.)"
+    normalisedText = case cs of
+      CaseInsensitive -> "translate(normalize-space(.), '" <> upperAlpha <> "', '" <> lowerAlpha <> "')"
+      CaseSensitive -> "normalize-space(.)"
 
-    matchVal
-      | caseInsensitive = toLower val
-      | otherwise = val
+    matchVal = case cs of
+      CaseInsensitive -> toLower val
+      CaseSensitive -> val
 
     textPred
       | fullMatch = normalisedText <> "='" <> matchVal <> "'"
@@ -711,5 +710,58 @@ This avoids re-sending the function each time
 -- use GADTs ? or just a parameterised data type wiith one param type for Locators and another for values
 
 perhaps a data type with selector -> a -> m () that could be partially applied
+
+----
+Yes, you can select elements based on their `value` in Playwright, though the approach differs slightly between standard HTML elements and custom components.
+
+### 🎯 For Standard HTML Elements
+
+The most direct way is to use standard CSS attribute selectors. This is particularly effective for `<input>`, `<button>`, and `<option>` elements where the `value` is set as an HTML attribute .
+
+```javascript
+// Select an input button by its value
+await page.locator('input[value="Log in"]').click();
+
+// Select any element with a specific value attribute
+const element = page.locator('[value="your-value-here"]');
+```
+
+For `<select>` dropdowns, Playwright provides the dedicated `selectOption()` method, which can select by `value`, visible `label`, or `index` .
+
+```javascript
+// Select by the option's value attribute
+await page.locator('select#country').selectOption('us');
+
+// Select by the option's visible text
+await page.locator('select#country').selectOption({ label: 'United States' });
+```
+
+### ⚠️ For Custom Components
+
+Modern frontend frameworks often build custom dropdowns and inputs that don't use standard HTML `<select>` or simple `<input>` elements. In these cases, the `value` you see may be a property of the JavaScript object, not an HTML attribute, so CSS selectors won't work directly .
+
+You have a couple of options to handle this:
+
+1.  **Interact by visible text**: Click the custom component to open it, then select the option by its visible text.
+    ```javascript
+    await page.getByTestId('custom-dropdown-trigger').click();
+    await page.getByText('Desired Option', { exact: true }).click();
+    ```
+2.  **Use a more resilient locator strategy**: Rely on `getByTestId()`, `getByRole()`, or other stable attributes provided by the component, rather than the element's state .
+
+### 🔍 Checking Values After Selection
+
+Once you've interacted with an element, you'll often want to verify it has the correct value. Playwright provides specific methods for this :
+
+- **`toHaveValue()`**: An assertion to verify the value of an `<input>`, `<textarea>`, or `<select>` element.
+    ```javascript
+    await expect(page.locator('input#name')).toHaveValue('John Doe');
+    ```
+- **`inputValue()`**: To retrieve the current value of an input element without making an assertion.
+    ```javascript
+    const currentValue = await page.locator('input#name').inputValue();
+    ```
+
+I hope this helps you effectively select and interact with elements based on their values. If you're dealing with a particularly tricky component, feel free to share the HTML structure, and I might be able to offer a more specific suggestion
 
   -}

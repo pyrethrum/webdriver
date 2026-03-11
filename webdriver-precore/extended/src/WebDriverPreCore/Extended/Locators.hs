@@ -10,23 +10,24 @@ module WebDriverPreCore.Extended.Locators
     -- * Smart Constructors
     css,
     xpath,
+    --
     allElms,
     elmId,
+    --
     elmClass,
     elmClass',
     elmClassExact,
     elemClassStarts,
-    -- classContains,
-    -- attribute,
-    -- attribute',
-    -- attributeExact,
-    -- attributeStarts,
-    -- attributeContains,
-    -- value,
-    -- valueExact,
-    -- value',
-    -- valueStarts,
-    -- valueContains,
+    --
+    attribute,
+    attribute',
+    attributeExact,
+    attributeStarts,
+    --
+    value,
+    valueExact,
+    value',
+    valueStarts,
 
     -- * Role Constructors
     role,
@@ -211,29 +212,53 @@ elmId = ID
 deriveMatch :: Text -> MatchType
 deriveMatch = bool Partial Wildcard  . ("*" `isInfixOf`) 
 
-passThrough :: (Text -> MatchType -> CaseSensitivity -> Locator) -> MatchType -> CaseSensitivity -> Text -> Locator
-passThrough constructor mt cs v = constructor v mt cs
+mkPassThrough :: (Text -> MatchType -> CaseSensitivity -> Locator) -> MatchType -> CaseSensitivity -> Text -> Locator
+mkPassThrough constructor mt cs v = constructor v mt cs
 
-withDefaults :: (MatchType -> CaseSensitivity -> Text -> Locator) -> Text -> Locator
-withDefaults constructor val = constructor (deriveMatch val) CaseInsensitive val
+mkDefaults :: (MatchType -> CaseSensitivity -> Text -> Locator) -> Text -> Locator
+mkDefaults constructor val = constructor (deriveMatch val) CaseInsensitive val
 
-withStarts :: (MatchType -> CaseSensitivity -> Text -> Locator) -> Text -> Locator
-withStarts constructor val = constructor Starts CaseInsensitive val
+mkStarts :: (MatchType -> CaseSensitivity -> Text -> Locator) -> Text -> Locator
+mkStarts constructor val = constructor Starts CaseInsensitive val
 
-makeExact :: (MatchType -> CaseSensitivity -> Text -> Locator) -> Text -> Locator
-makeExact constructor val = constructor Full CaseSensitive val
-
-elmClass' :: MatchType -> CaseSensitivity -> Text -> Locator
-elmClass'= passThrough Class 
+mkExact :: (MatchType -> CaseSensitivity -> Text -> Locator) -> Text -> Locator
+mkExact constructor val = constructor Full CaseSensitive val
 
 elmClass :: Text -> Locator
-elmClass = withDefaults elmClass'
+elmClass = mkDefaults elmClass'
+
+elmClass' :: MatchType -> CaseSensitivity -> Text -> Locator
+elmClass'= mkPassThrough Class 
 
 elmClassExact :: Text -> Locator
-elmClassExact = makeExact elmClass'
+elmClassExact = mkExact elmClass'
 
 elemClassStarts :: Text -> Locator
-elemClassStarts = withStarts elmClass'
+elemClassStarts = mkStarts elmClass'
+
+attribute :: Text -> Locator
+attribute = mkDefaults attribute'
+
+attribute' :: MatchType -> CaseSensitivity -> Text -> Locator
+attribute' = mkPassThrough Attribute
+
+attributeExact :: Text -> Locator
+attributeExact = mkExact attribute'
+
+attributeStarts :: Text -> Locator
+attributeStarts = mkStarts attribute'
+
+value :: Text -> Locator
+value = mkDefaults value'
+
+value' :: MatchType -> CaseSensitivity -> Text -> Locator
+value' = mkPassThrough Value
+
+valueExact :: Text -> Locator
+valueExact = mkExact value'
+
+valueStarts :: Text -> Locator
+valueStarts = mkStarts value'
 
 ------- Role Constructors -------
 
