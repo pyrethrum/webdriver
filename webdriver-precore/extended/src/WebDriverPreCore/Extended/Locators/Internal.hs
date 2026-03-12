@@ -1,5 +1,6 @@
 module WebDriverPreCore.Extended.Locators.Internal where
 
+import Data.Functor ((<&>))
 import Data.List.NonEmpty (NonEmpty (..), toList)
 import Data.Text (Text, intercalate, pack, splitOn, toLower, unpack)
 import Data.Text qualified as T
@@ -488,12 +489,22 @@ flattenLoc = \case
       [Or xs] -> flattenLoc . And $ negateAll xs
       -- Single non-Match* locator - already reduced
       [single] -> Not (single :| [])
-      -- Multiple locators - can't simplify further
-      (x : xs) -> Not (x :| xs)
+      -- Multiple locators - check for nested Not and apply De Morgan
+      -- Not [a, Not [b], c] -> And [Not [a], b, Not [c]]
+      (x : xs) ->
+        if any isNot (x : xs)
+          then flattenLoc . And $ (x :| xs) <&> applyDoubleNegation
+          else Not (x :| xs)
       [] -> error "flattenLoc: Not produced empty list (impossible with NonEmpty input)"
     where
       reduced = flattenLoc <$> locs
       negateAll = fmap (\x -> Not (x :| []))
+      isNot (Not _) = True
+      isNot _ = False
+      -- Apply double negation to unwrap Not, or negate non-Not
+      applyDoubleNegation (Not (y :| [])) = y  -- Not [y] becomes y
+      applyDoubleNegation (Not ys) = Or ys  -- Not [y1, y2, ...] becomes Or [y1, y2, ...]
+      applyDoubleNegation y = Not (y :| [])  -- y becomes Not [y]
   -- Parent with recursive reduction on both sides
   Parent p c -> Parent (flattenLoc p) $ flattenLoc c
   -- All other locator types remain unchanged

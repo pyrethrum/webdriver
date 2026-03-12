@@ -47,7 +47,7 @@ tests =
         "Property Tests"
         [ test_mock_logic_preserved_on_flattenning,
           test_flatenning_simplification,
-          test_flatenning_no_adjacent_and_or,
+          test_flatenning_no_adjacent_and_or_not,
           test_nested_none_match,
           test_infix_precedence_i,
           test_infix_precedence_ii,
@@ -299,10 +299,10 @@ genLocatorOptions =
       overrideMaxRatio = Nothing
     }
 
--- >>> _eval test_flatenning_no_adjacent_and_or
--- *** Exception: ExitFailure 1
-test_flatenning_no_adjacent_and_or :: TestTree
-test_flatenning_no_adjacent_and_or = testPropertyWith genLocatorOptions "Flattening removes adjacent And/Or" $ do
+-- >>> _eval test_flatenning_no_adjacent_and_or_not
+-- *** Exception: ExitSuccess
+test_flatenning_no_adjacent_and_or_not :: TestTree
+test_flatenning_no_adjacent_and_or_not = testPropertyWith genLocatorOptions "Flattening removes adjacent And/Or" $ do
   loc <- gen genLocator
   let flatloc = flattenLoc loc
   info $ "Original locator:\n" <> unpack (txt loc)
