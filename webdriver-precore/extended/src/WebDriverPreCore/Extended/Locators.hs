@@ -23,11 +23,13 @@ module WebDriverPreCore.Extended.Locators
     attribute',
     attributeExact,
     attributeStarts,
-    --
+    -- 
+    -- post filters
     value,
     valueExact,
     value',
     valueStarts,
+    valueFunc,
 
     -- * Role Constructors
     role,
@@ -191,11 +193,11 @@ module WebDriverPreCore.Extended.Locators
   )
 where
 
+import Data.Bool (bool)
 import Data.List.NonEmpty (NonEmpty (..))
 import Data.Text (Text, isInfixOf)
 import WebDriverPreCore.Extended.Locators.Internal
 import Prelude
-import Data.Bool (bool)
 
 css :: Text -> Locator
 css = CSS
@@ -210,7 +212,7 @@ elmId :: Text -> Locator
 elmId = ID
 
 deriveMatch :: Text -> MatchType
-deriveMatch = bool Partial Wildcard  . ("*" `isInfixOf`) 
+deriveMatch = bool Partial Wildcard . ("*" `isInfixOf`)
 
 mkPassThrough :: (Text -> MatchType -> CaseSensitivity -> Locator) -> MatchType -> CaseSensitivity -> Text -> Locator
 mkPassThrough constructor mt cs v = constructor v mt cs
@@ -228,7 +230,7 @@ elmClass :: Text -> Locator
 elmClass = mkDefaults elmClass'
 
 elmClass' :: MatchType -> CaseSensitivity -> Text -> Locator
-elmClass'= mkPassThrough Class 
+elmClass' = mkPassThrough Class
 
 elmClassExact :: Text -> Locator
 elmClassExact = mkExact elmClass'
@@ -248,17 +250,20 @@ attributeExact = mkExact attribute'
 attributeStarts :: Text -> Locator
 attributeStarts = mkStarts attribute'
 
-value :: Text -> Locator
-value = mkDefaults value'
+value :: Text -> Text -> Locator
+value desc = mkDefaults $ value' desc
 
-value' :: MatchType -> CaseSensitivity -> Text -> Locator
-value' = mkPassThrough Value
+value' :: Text -> MatchType -> CaseSensitivity -> Text -> Locator
+value' description matchType caseSensitivity value'' = PostFilter $ ValuePostFilter {description, matchType, caseSensitivity, value = value''}
 
-valueExact :: Text -> Locator
-valueExact = mkExact value'
+valueExact :: Text -> Text -> Locator
+valueExact description = mkExact (value' description)
 
-valueStarts :: Text -> Locator
-valueStarts = mkStarts value'
+valueStarts :: Text -> Text -> Locator
+valueStarts description = mkStarts (value' description)
+
+valueFunc :: Text -> (Text -> Bool) -> Locator
+valueFunc description  = PostFilter . ValueFuncPostFilter description
 
 ------- Role Constructors -------
 

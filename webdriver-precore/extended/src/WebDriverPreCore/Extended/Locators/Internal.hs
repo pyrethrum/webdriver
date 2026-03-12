@@ -445,7 +445,8 @@ data Protocol = HTTP | BiDi deriving (Show, Eq)
 
 data Cardinality = One | Many deriving (Show, Eq)
 
-prepare :: (Text -> Locator) -> Protocol -> Locator -> Locator
+
+prepare :: (Text -> Locator) -> Protocol -> Cardinality -> Locator -> Locator
 prepare = undefined
 
 -- | Recursively flattens and simplifies Match* locators while maintaining logical correctness.
@@ -482,9 +483,9 @@ flattenLoc = \case
       -- Double negation: Not [Not [x]] -> Or [x]
       [Not xs] -> flattenLoc $ Or xs
       -- De Morgan: Not [And [x,y]] -> Or [Not [x], Not [y]]
-      [And xs] -> flattenLoc . Or $ (\x -> Not (x :| [])) <$> xs
+      [And xs] -> flattenLoc . Or $ negateAll xs
       -- De Morgan: Not [Or [x,y]] -> And [Not [x], Not [y]]
-      [Or xs] -> flattenLoc . And $ (\x -> Not (x :| [])) <$> xs
+      [Or xs] -> flattenLoc . And $ negateAll xs
       -- Single non-Match* locator - already reduced
       [single] -> Not (single :| [])
       -- Multiple locators - can't simplify further
@@ -492,6 +493,7 @@ flattenLoc = \case
       [] -> error "flattenLoc: Not produced empty list (impossible with NonEmpty input)"
     where
       reduced = flattenLoc <$> locs
+      negateAll = fmap (\x -> Not (x :| []))
   -- Parent with recursive reduction on both sides
   Parent p c -> Parent (flattenLoc p) $ flattenLoc c
   -- All other locator types remain unchanged

@@ -369,7 +369,6 @@ test_infix_precedence_i =
     actual = mockLocated $ trueLoc ||| falseLoc &&& falseLoc
 
 -- >>> _eval test_infix_precedence_ii
-
 -- *** Exception: ExitSuccess
 
 test_infix_precedence_ii :: TestTree
