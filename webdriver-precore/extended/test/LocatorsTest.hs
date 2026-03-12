@@ -14,7 +14,7 @@ import Test.Tasty.Falsify qualified as F
 import Test.Tasty.HUnit (testCase, (@?=))
 import Utils (txt)
 import WebDriverPreCore.Extended.Locators
-import WebDriverPreCore.Extended.Locators.Internal (Locator (..), flattenLoc)
+import WebDriverPreCore.Extended.Locators.Internal (Locator (..), flattenLoc, foldLoc)
 import Prelude hiding (putStrLn)
 
 -- >>> _eval tests
@@ -29,6 +29,10 @@ tests =
         "Show"
         [ testCase "CSS shows correctly" $
             show (CSS "button") @?= "CSS {value = \"button\"}"
+        ],
+      testGroup
+        "foldLoc"
+        [ countNestedOrs
         ],
       testGroup
         "flattenLoc"
@@ -87,6 +91,21 @@ chkFlatten description MkFlattenCase {unflattened, flattenned = expected} =
 
 _eval :: TestTree -> IO ()
 _eval = withArgs [] . defaultMain
+
+-- >>> _eval countNestedOrs
+-- *** Exception: ExitSuccess
+countNestedOrs :: TestTree
+countNestedOrs =
+  testCase "counts nested OR locators" $
+    let nestedOr = Or (Or (Or (CSS "leaf" :| []) :| []) :| [])
+        countOrs =
+          foldLoc
+            ( \count loc -> case loc of
+                Or _ -> count + 1
+                _ -> count
+            )
+            0
+     in countOrs nestedOr @?= 3
 
 -- >>> _eval flattenNestedAnd
 flattenNestedAnd :: TestTree
@@ -300,7 +319,9 @@ genLocatorOptions =
     }
 
 -- >>> _eval prop_flatenning_no_adjacent_and_or_not
+
 -- *** Exception: ExitSuccess
+
 prop_flatenning_no_adjacent_and_or_not :: TestTree
 prop_flatenning_no_adjacent_and_or_not = testPropertyWith genLocatorOptions "Flattening removes adjacent And/Or" $ do
   loc <- gen genLocator
@@ -316,18 +337,20 @@ prop_flatenning_no_adjacent_and_or_not = testPropertyWith genLocatorOptions "Fla
       Not locs -> any isNot locs || any hasNestedAndOr locs
       Parent parent child -> hasNestedAndOr parent || hasNestedAndOr child
       _ -> False
-    
+
     isNot (Not _) = True
     isNot _ = False
 
     isAnd (And _) = True
     isAnd _ = False
-    
+
     isOr (Or _) = True
     isOr _ = False
 
 -- >>> _eval prop_flatenning_simplification
+
 -- *** Exception: ExitSuccess
+
 prop_flatenning_simplification :: TestTree
 prop_flatenning_simplification = testPropertyWith genLocatorOptions "Flattening simplification" $ do
   loc <- gen genLocator
@@ -362,14 +385,18 @@ prop_flatenning_simplification = testPropertyWith genLocatorOptions "Flattening 
 -- Mock property test that generates locators and logs them
 
 -- >>> _eval prop_mock_logic_preserved_on_flattenning
+
 -- *** Exception: ExitSuccess
+
 prop_mock_logic_preserved_on_flattenning :: TestTree
 prop_mock_logic_preserved_on_flattenning = testPropertyWith genLocatorOptions "Generate and log locators" $ do
   loc <- gen genLocator
   F.assert $ expect True `dot` fn ("flattenLoc preserves mockLocated", \l -> mockLocated l == mockLocated (flattenLoc l)) .$ ("loc", loc)
 
 -- >>> _eval test_fail
+
 -- *** Exception: ExitSuccess
+
 test_nested_none_match :: TestTree
 test_nested_none_match = testCase "This test fails" $ do
   let loc = Not (Not (Not (falseLoc :| [trueLoc]) :| []) :| [])
@@ -391,6 +418,7 @@ test_infix_precedence_i =
     actual = mockLocated $ trueLoc ||| falseLoc &&& falseLoc
 
 -- >>> _eval test_infix_precedence_ii
+
 -- *** Exception: ExitSuccess
 
 test_infix_precedence_ii :: TestTree
@@ -402,7 +430,9 @@ test_infix_precedence_ii =
     actual = mockLocated $ falseLoc ||| trueLoc &&& falseLoc ||| trueLoc
 
 -- >>> _eval test_parent_infix_precedence
+
 -- *** Exception: ExitSuccess
+
 test_parent_infix_precedence :: TestTree
 test_parent_infix_precedence =
   testCase "Test Parent operator precedence" $

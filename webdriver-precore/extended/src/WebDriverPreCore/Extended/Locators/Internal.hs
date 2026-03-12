@@ -446,24 +446,26 @@ data Protocol = HTTP | BiDi deriving (Show, Eq)
 
 data Cardinality = One | Many deriving (Show, Eq)
 
-
 prepare :: (Text -> Locator) -> Protocol -> Cardinality -> Locator -> Locator
 prepare = undefined
 
--- | Generic recursion over a Locator's immediate children.
---   Applies the given transformation function to each direct child Locator,
---   then reconstructs the parent with the transformed children.
-recurseLoc :: (Locator -> Locator) -> Locator -> Locator
-recurseLoc f = \case
-  Parent p c -> Parent (f p) (f c)
-  And locs -> And (f <$> locs)
-  Or locs -> Or (f <$> locs)
-  Not locs -> Not (f <$> locs)
-  WithOptions base opts -> WithOptions (f base) opts
-  -- PostFilter doesn't contain child Locators
-  PostFilter pf -> PostFilter pf
-  -- Leaf locators have no children to recurse into
-  leaf -> leaf
+-- | Fold over a Locator tree with an accumulator, similar to foldl.
+--   Processes the parent node first (top-down), then recursively folds over children,
+--   threading the accumulator through the entire tree.
+--   Useful for counting, collecting, or accumulating information from the Locator tree.
+foldLoc :: (a -> Locator -> a) -> a -> Locator -> a
+foldLoc f acc loc =
+  case loc of
+    Parent p c -> foldLoc f (foldLoc f acc' p) c
+    And locs -> foldList locs
+    Or locs -> foldList locs
+    Not locs -> foldList locs
+    WithOptions base _ -> foldLoc f acc' base
+    PostFilter _ -> acc'
+    _ -> acc' -- Leaf locators
+  where
+    acc' = f acc loc -- Apply function to parent first
+    foldList = foldl' (foldLoc f) acc' . toList
 
 -- | Recursively flattens and simplifies Match* locators while maintaining logical correctness.
 -- Flattens nested Match* of the same type and applies De Morgan's laws where applicable.
@@ -517,12 +519,15 @@ flattenLoc = \case
       isNot (Not _) = True
       isNot _ = False
       -- Apply double negation to unwrap Not, or negate non-Not
-      applyDoubleNegation (Not (y :| [])) = y  -- Not [y] becomes y
-      applyDoubleNegation (Not ys) = Or ys  -- Not [y1, y2, ...] becomes Or [y1, y2, ...]
-      applyDoubleNegation y = Not (y :| [])  -- y becomes Not [y]
+      applyDoubleNegation (Not (y :| [])) = y -- Not [y] becomes y
+      applyDoubleNegation (Not ys) = Or ys -- Not [y1, y2, ...] becomes Or [y1, y2, ...]
+      applyDoubleNegation y = Not (y :| []) -- y becomes Not [y]
 
-  -- All other cases: recurse into children
-  other -> recurseLoc flattenLoc other
+  -- Recurse into other composite locators
+  Parent p c -> Parent (flattenLoc p) (flattenLoc c)
+  WithOptions base opts -> WithOptions (flattenLoc base) opts
+  -- Leaf locators and PostFilter have no children to recurse into
+  other -> other
 
 --  readers
 --  gt fail info - failinfo
