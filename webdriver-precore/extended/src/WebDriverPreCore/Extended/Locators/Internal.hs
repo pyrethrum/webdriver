@@ -1,7 +1,8 @@
 module WebDriverPreCore.Extended.Locators.Internal where
 
 import Data.List.NonEmpty (NonEmpty (..), toList)
-import Data.Text (Text, intercalate, pack, toLower, unpack)
+import Data.Text (Text, intercalate, pack, splitOn, toLower, unpack)
+import Data.Text qualified as T
 import WebDriverPreCore.Extended.BiDi.Base.Protocol (BrowsingContext, Command, JSUInt, NodeProperties)
 import Prelude
 
@@ -69,27 +70,31 @@ data MatchFlags = MkMatchFlags
   }
   deriving (Show, Eq)
 
+{- strategy for implementation:
+
+- xpath / css universal
+- bidi  classify
+- combinators sorting
+-> tests
+- edge
+    - HTTP + accesibility
+    - accessibility + composition
+- postfilter
+
+-}
+
+--
+data LocatorDirectives = ToDo deriving (Show, Eq)
+
 -- | Locator for use with both HTTP and BiDi protocols.
 data Locator
-  = CSS {value :: Text}
+  = -- universal
+    CSS {value :: Text}
   | XPath {value :: Text}
-  | Role {role :: Maybe AriaRole, name :: Maybe Text}
-  | -- browsingContextId -> elementId ie get the frame that belongs to the browsing context
-    BiDiContext {context :: BrowsingContext}
-  | InnerText
-      { value :: Text,
-        matchType :: MatchType,
-        caseSesnsitivity :: CaseSensitivity,
-        maxDepth :: Maybe JSUInt
-      }
-  | Tag {tag :: Text}
-  | Parent {parent :: Locator, child :: Locator}
-  | --
-    All
+  | All
   | ID Text
   | Class
-      { 
-        value :: Text,
+      { value :: Text,
         matchType :: MatchType,
         caseSensitivity :: CaseSensitivity
       }
@@ -98,24 +103,34 @@ data Locator
         matchType :: MatchType,
         caseSensitivity :: CaseSensitivity
       }
-  | Value
+  | Tag {tag :: Text}
+  | Default Text
+  | -- double shot / difficult
+    Role {role :: Maybe AriaRole, name :: Maybe Text}
+  | InnerText
       { value :: Text,
         matchType :: MatchType,
-        caseSensitivity :: CaseSensitivity
+        caseSesnsitivity :: CaseSensitivity,
+        maxDepth :: Maybe JSUInt
       }
+  | -- exclusive
+    -- browsingContextId -> elementId ie get the frame that belongs to the browsing context
+    BiDiContext {context :: BrowsingContext}
+  | -- combinators
+    Parent {parent :: Locator, child :: Locator}
   | And (NonEmpty Locator)
   | Or (NonEmpty Locator)
   | Not (NonEmpty Locator)
-  | Default Text
-  | --- fix this
+  | --- postfilter
     PostFilter PostFilter
+  | WithOptions {base :: Locator, options :: [LocatorDirectives]}
   deriving (Show, Eq)
 
 data PostFilter
   = BiDiPostFilter
       { description :: Text,
         -- TODO: fix this when merged
-        predicate :: NodeProperties -> Bool
+        nodePredicate :: NodeProperties -> Bool
       }
   | HttpPostFilter
       { description :: Text,
@@ -127,6 +142,16 @@ data PostFilter
         -- TODO: fix this when merged
         js :: Text
       }
+  | ValuePostFilter
+      { description :: Text,
+        value :: Text,
+        matchType :: MatchType,
+        caseSensitivity :: CaseSensitivity
+      }
+  | ValueFuncPostFilter
+      { description :: Text,
+        valPredicate :: Text -> Bool
+      }
 
 instance Show PostFilter where
   show :: PostFilter -> String
@@ -134,6 +159,8 @@ instance Show PostFilter where
     BiDiPostFilter desc _ -> "BiDiPostFilter: " <> unpack desc
     HttpPostFilter desc _ -> "HttpPostFilter: " <> unpack desc
     JSPostFilter desc _ -> "JSPostFilter: " <> unpack desc
+    ValuePostFilter desc _ _ _ -> "ValuePostFilter: " <> unpack desc
+    ValueFuncPostFilter desc _ -> "ValueFuncPostFilter: " <> unpack desc
 
 instance Eq PostFilter where
   (==) :: PostFilter -> PostFilter -> Bool
@@ -141,6 +168,9 @@ instance Eq PostFilter where
     (BiDiPostFilter desc1 _) (BiDiPostFilter desc2 _) -> desc1 == desc2
     (HttpPostFilter desc1 _) (HttpPostFilter desc2 _) -> desc1 == desc2
     (JSPostFilter desc1 _) (JSPostFilter desc2 _) -> desc1 == desc2
+    (ValuePostFilter desc1 val1 mt1 cs1) (ValuePostFilter desc2 val2 mt2 cs2) ->
+      desc1 == desc2 && val1 == val2 && mt1 == mt2 && cs1 == cs2
+    (ValueFuncPostFilter desc1 _) (ValueFuncPostFilter desc2 _) -> desc1 == desc2
     _ _ -> False
 
 -- | ARIA roles from https://www.w3.org/TR/wai-aria-1.2/#role_definitions
@@ -193,6 +223,101 @@ displayAriaRole = toLower . pack . show
 --   and common accessible name sources. Cannot cover aria-labelledby,
 --   label[for=...], or shadow DOM.
 -- TODO: cover edge cases in execution
+
+{-
+User: -- | Best-effort XPath approximation of a BiDi accessibility locator.
+--   Covers explicit @role attributes, implicit roles for common HTML elements,
+--   and common accessible name sources. Cannot cover aria-labelledby,
+--   label[for=...], or shadow DOM.
+
+expand on edge cases missede by this function
+
+GitHub Copilot: Based on the function `accessibilityToXPath` and the ARIA/HTML specifications, here are the edge cases this XPath approximation misses:
+
+## Edge Cases Not Covered
+
+### 1. **aria-labelledby References**
+The function cannot resolve `aria-labelledby` which references other element IDs to construct the accessible name. XPath 1.0 has no way to follow ID references and concatenate text from multiple elements.
+
+```html
+<!-- Cannot handle this: -->
+<h2 id="dialog-title">Confirm Action</h2>
+<button aria-labelledby="dialog-title">OK</button>
+<!-- Accessible name is "Confirm Action", but XPath won't resolve the idref -->
+```
+
+### 2. **`<label for="...">` Associations**
+HTML `<label>` elements that reference form controls via the `for` attribute create accessible names, but XPath cannot make this reverse lookup.
+
+```html
+<!-- Cannot handle this: -->
+<label for="email-input">Email Address</label>
+<input id="email-input" type="email">
+<!-- Accessible name is "Email Address", but XPath can't follow the for/id link -->
+```
+
+### 3. **Shadow DOM**
+Elements inside shadow roots are completely invisible to XPath queries from the light DOM.
+
+```html
+<!-- Cannot handle this: -->
+<custom-button>
+  #shadow-root
+    <button role="button">Click Me</button>
+</custom-button>
+```
+
+### 4. **aria-describedby (Description, Not Name)**
+While the function focuses on accessible *names*, `aria-describedby` contributes to the accessible *description* and is similarly unsupported.
+
+### 5. **Accessible Name Computation Order**
+The [ARIA spec's name computation algorithm](https://www.w3.org/TR/accname-1.2/#mapping_additional_nd_te) has a specific precedence order. This function checks all sources with `or`, but the real algorithm stops at the first match:
+
+1. `aria-labelledby` (highest priority)
+2. `aria-label`
+3. Native HTML labeling (`<label for>`, `alt`, `title`, etc.)
+4. Inner text content (lowest priority)
+
+The XPath treats them as equals, potentially matching elements that wouldn't match in real accessibility APIs.
+
+### 6. **Hidden Text in Accessible Names**
+CSS-hidden text (`visibility: hidden`, `display: none`) can still contribute to accessible names via `aria-label` or `aria-labelledby`, but those elements wouldn't match the XPath visibility filters you use elsewhere.
+
+### 7. **Recursive/Nested aria-labelledby**
+Elements referenced by `aria-labelledby` can themselves have `aria-labelledby`, creating chains. Real browsers flatten these recursively; XPath cannot.
+
+### 8. **Title Attribute Fallback Conditions**
+The `title` attribute only becomes the accessible name when no other labeling mechanism exists. The XPath uses `or`, so it might match elements where `title` shouldn't be considered.
+
+### 9. **Role Presentation/None Suppression**
+Elements with `role="presentation"` or `role="none"` have their semantics (and often their names) suppressed in the accessibility tree, but this function still tries to match them.
+
+```html
+<!-- Should not expose accessible name: -->
+<img src="decorative.png" alt="Decorative" role="none">
+```
+
+### 10. **Form Control Implicit Labels**
+Wrapping a form control inside a `<label>` without using `for=` creates an implicit association:
+
+```html
+<!-- Cannot handle this: -->
+<label>
+  Username
+  <input type="text">
+</label>
+```
+
+### 11. **ARIA 1.3 Name-from-Content Rules**
+Some roles prohibit name-from-content (e.g., `textbox`, `combobox`). Others require it (e.g., `button`, `link`). The function doesn't enforce these constraints.
+
+### 12. **Internationalization/Whitespace**
+`normalize-space()` handles basic whitespace, but doesn't account for RTL text, zero-width characters, or Unicode normalization differences that might affect accessible name matching.
+
+### Recommendation
+
+For production use, consider documenting these limitations prominently and/or falling back to BiDi's native `browsingContext.Locator` with `type: "accessibility"` when the session supports it, using this XPath only as a best-effort HTTP fallback.
+-}
 accessibilityToXPath :: Maybe AriaRole -> Maybe Text -> Maybe Text
 accessibilityToXPath = \cases
   Nothing Nothing -> Nothing
@@ -221,14 +346,10 @@ accessibilityToXPath = \cases
 -- TODO: check strategy for visibility filtering in execution - may need to add more cases or use script.callFunction instead
 --   Does NOT catch hiding via CSS classes or inherited/cascaded styles —
 --   only the BiDi innerText locator handles those correctly.
-
--- UPdate
 innerTextToXPath :: Text -> CaseSensitivity -> MatchType -> Maybe JSUInt -> Text
-innerTextToXPath val cs mMatchType mMaxDepth =
+innerTextToXPath val cs matchType mMaxDepth =
   "//*" <> depthPred <> "[" <> hiddenPred <> " and " <> textPred <> "]"
   where
-    fullMatch = mMatchType == Just Full
-
     normalisedText = case cs of
       CaseInsensitive -> "translate(normalize-space(.), '" <> upperAlpha <> "', '" <> lowerAlpha <> "')"
       CaseSensitive -> "normalize-space(.)"
@@ -237,9 +358,34 @@ innerTextToXPath val cs mMatchType mMaxDepth =
       CaseInsensitive -> toLower val
       CaseSensitive -> val
 
-    textPred
-      | fullMatch = normalisedText <> "='" <> matchVal <> "'"
-      | otherwise = "contains(" <> normalisedText <> ", '" <> matchVal <> "')"
+    textPred = case matchType of
+      Full -> normalisedText <> "='" <> matchVal <> "'"
+      Partial -> "contains(" <> normalisedText <> ", '" <> matchVal <> "')"
+      Starts -> "starts-with(" <> normalisedText <> ", '" <> matchVal <> "')"
+      Wildcard -> buildWildcardPredicate normalisedText matchVal
+
+    buildWildcardPredicate normText val' =
+      let parts = filter (not . T.null) $ splitOn "*" val'
+          startsWithWildcard = "*" `T.isPrefixOf` val'
+          endsWithWildcard = "*" `T.isSuffixOf` val'
+       in case parts of
+            [] -> "true()" -- "*" or "**" etc. matches everything
+            [single]
+              | startsWithWildcard && endsWithWildcard -> "contains(" <> normText <> ", '" <> single <> "')"
+              | startsWithWildcard -> "substring(" <> normText <> ", string-length(" <> normText <> ") - string-length('" <> single <> "') + 1) = '" <> single <> "'"
+              | endsWithWildcard -> "starts-with(" <> normText <> ", '" <> single <> "')"
+              | otherwise -> normText <> "='" <> single <> "'" -- No wildcards
+            _ ->
+              -- For multiple parts, use substring-after to ensure order
+              let buildPred (preds, currentText) (idx, part) =
+                    let predicate =
+                          if idx == 0 && not startsWithWildcard
+                            then "starts-with(" <> currentText <> ", '" <> part <> "')"
+                            else "contains(" <> currentText <> ", '" <> part <> "')"
+                        nextText = "substring-after(" <> currentText <> ", '" <> part <> "')"
+                     in (preds <> [predicate], nextText)
+                  (predicates, _) = foldl' buildPred ([], normText) (zip [0 ..] parts)
+               in intercalate " and " predicates
 
     -- Partial visibility filter: catches @hidden, aria-hidden, and inline styles only.
     -- Cannot detect hiding via CSS classes or ancestor cascade.
@@ -295,6 +441,13 @@ implicitRoleXPath =
     Term -> "dt"
     Textbox -> "input[not(@type) or @type='text' or @type='email' or @type='tel' or @type='url' or @type='search'] or self::textarea"
 
+data Protocol = HTTP | BiDi deriving (Show, Eq)
+
+data Cardinality = One | Many deriving (Show, Eq)
+
+prepare :: (Text -> Locator) -> Protocol -> Locator -> Locator
+prepare = undefined
+
 -- | Recursively flattens and simplifies Match* locators while maintaining logical correctness.
 -- Flattens nested Match* of the same type and applies De Morgan's laws where applicable.
 flattenLoc :: Locator -> Locator
@@ -325,19 +478,20 @@ flattenLoc = \case
 
   -- Apply De Morgan's laws and flatten Not
   Not locs ->
-    let reduced = flattenLoc <$> locs
-     in case toList reduced of
-          -- Double negation: Not [Not [x]] -> Or [x]
-          [Not xs] -> flattenLoc $ Or xs
-          -- De Morgan: Not [And [x,y]] -> Or [Not [x], Not [y]]
-          [And xs] -> flattenLoc . Or $ (\x -> Not (x :| [])) <$> xs
-          -- De Morgan: Not [Or [x,y]] -> And [Not [x], Not [y]]
-          [Or xs] -> flattenLoc . And $ (\x -> Not (x :| [])) <$> xs
-          -- Single non-Match* locator - already reduced
-          [single] -> Not (single :| [])
-          -- Multiple locators - can't simplify further
-          (x : xs) -> Not (x :| xs)
-          [] -> error "flattenLoc: Not produced empty list (impossible with NonEmpty input)"
+    case toList reduced of
+      -- Double negation: Not [Not [x]] -> Or [x]
+      [Not xs] -> flattenLoc $ Or xs
+      -- De Morgan: Not [And [x,y]] -> Or [Not [x], Not [y]]
+      [And xs] -> flattenLoc . Or $ (\x -> Not (x :| [])) <$> xs
+      -- De Morgan: Not [Or [x,y]] -> And [Not [x], Not [y]]
+      [Or xs] -> flattenLoc . And $ (\x -> Not (x :| [])) <$> xs
+      -- Single non-Match* locator - already reduced
+      [single] -> Not (single :| [])
+      -- Multiple locators - can't simplify further
+      (x : xs) -> Not (x :| xs)
+      [] -> error "flattenLoc: Not produced empty list (impossible with NonEmpty input)"
+    where
+      reduced = flattenLoc <$> locs
   -- Parent with recursive reduction on both sides
   Parent p c -> Parent (flattenLoc p) $ flattenLoc c
   -- All other locator types remain unchanged
