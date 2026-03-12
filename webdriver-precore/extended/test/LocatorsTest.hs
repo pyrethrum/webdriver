@@ -45,9 +45,9 @@ tests =
         ],
       testGroup
         "Property Tests"
-        [ test_mock_logic_preserved_on_flattenning,
-          test_flatenning_simplification,
-          test_flatenning_no_adjacent_and_or_not,
+        [ prop_mock_logic_preserved_on_flattenning,
+          prop_flatenning_simplification,
+          prop_flatenning_no_adjacent_and_or_not,
           test_nested_none_match,
           test_infix_precedence_i,
           test_infix_precedence_ii,
@@ -299,10 +299,10 @@ genLocatorOptions =
       overrideMaxRatio = Nothing
     }
 
--- >>> _eval test_flatenning_no_adjacent_and_or_not
+-- >>> _eval prop_flatenning_no_adjacent_and_or_not
 -- *** Exception: ExitSuccess
-test_flatenning_no_adjacent_and_or_not :: TestTree
-test_flatenning_no_adjacent_and_or_not = testPropertyWith genLocatorOptions "Flattening removes adjacent And/Or" $ do
+prop_flatenning_no_adjacent_and_or_not :: TestTree
+prop_flatenning_no_adjacent_and_or_not = testPropertyWith genLocatorOptions "Flattening removes adjacent And/Or" $ do
   loc <- gen genLocator
   let flatloc = flattenLoc loc
   info $ "Original locator:\n" <> unpack (txt loc)
@@ -326,10 +326,10 @@ test_flatenning_no_adjacent_and_or_not = testPropertyWith genLocatorOptions "Fla
     isOr (Or _) = True
     isOr _ = False
 
--- >>> _eval test_flatenning_simplification
+-- >>> _eval prop_flatenning_simplification
 -- *** Exception: ExitSuccess
-test_flatenning_simplification :: TestTree
-test_flatenning_simplification = testPropertyWith genLocatorOptions "Flattening simplification" $ do
+prop_flatenning_simplification :: TestTree
+prop_flatenning_simplification = testPropertyWith genLocatorOptions "Flattening simplification" $ do
   loc <- gen genLocator
   let unflattenedComplexity = complexity loc
       flatloc = flattenLoc loc
@@ -361,10 +361,10 @@ test_flatenning_simplification = testPropertyWith genLocatorOptions "Flattening 
 
 -- Mock property test that generates locators and logs them
 
--- >>> _eval test_mock_logic_preserved_on_flattenning
+-- >>> _eval prop_mock_logic_preserved_on_flattenning
 -- *** Exception: ExitSuccess
-test_mock_logic_preserved_on_flattenning :: TestTree
-test_mock_logic_preserved_on_flattenning = testPropertyWith genLocatorOptions "Generate and log locators" $ do
+prop_mock_logic_preserved_on_flattenning :: TestTree
+prop_mock_logic_preserved_on_flattenning = testPropertyWith genLocatorOptions "Generate and log locators" $ do
   loc <- gen genLocator
   F.assert $ expect True `dot` fn ("flattenLoc preserves mockLocated", \l -> mockLocated l == mockLocated (flattenLoc l)) .$ ("loc", loc)
 

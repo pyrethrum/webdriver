@@ -744,7 +744,8 @@ function bidiIsVisible(el) {
   const style = getComputedStyle(el);
 
   if (style.display === "none") return false;
-  if (style.visibility === "hidden" || style.visibility === "collapse") return false;
+  if (style.visibility === "hidden" || style.visibility === "collapse") return false;mplification,
+          test_flatenning_no
 
   if (el.tagName === "INPUT" && el.type === "hidden")
     return false;
