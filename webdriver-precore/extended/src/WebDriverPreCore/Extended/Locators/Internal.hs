@@ -450,6 +450,21 @@ data Cardinality = One | Many deriving (Show, Eq)
 prepare :: (Text -> Locator) -> Protocol -> Cardinality -> Locator -> Locator
 prepare = undefined
 
+-- | Generic recursion over a Locator's immediate children.
+--   Applies the given transformation function to each direct child Locator,
+--   then reconstructs the parent with the transformed children.
+recurseLoc :: (Locator -> Locator) -> Locator -> Locator
+recurseLoc f = \case
+  Parent p c -> Parent (f p) (f c)
+  And locs -> And (f <$> locs)
+  Or locs -> Or (f <$> locs)
+  Not locs -> Not (f <$> locs)
+  WithOptions base opts -> WithOptions (f base) opts
+  -- PostFilter doesn't contain child Locators
+  PostFilter pf -> PostFilter pf
+  -- Leaf locators have no children to recurse into
+  leaf -> leaf
+
 -- | Recursively flattens and simplifies Match* locators while maintaining logical correctness.
 -- Flattens nested Match* of the same type and applies De Morgan's laws where applicable.
 flattenLoc :: Locator -> Locator
@@ -505,10 +520,9 @@ flattenLoc = \case
       applyDoubleNegation (Not (y :| [])) = y  -- Not [y] becomes y
       applyDoubleNegation (Not ys) = Or ys  -- Not [y1, y2, ...] becomes Or [y1, y2, ...]
       applyDoubleNegation y = Not (y :| [])  -- y becomes Not [y]
-  -- Parent with recursive reduction on both sides
-  Parent p c -> Parent (flattenLoc p) $ flattenLoc c
-  -- All other locator types remain unchanged
-  loc -> loc
+
+  -- All other cases: recurse into children
+  other -> recurseLoc flattenLoc other
 
 --  readers
 --  gt fail info - failinfo
