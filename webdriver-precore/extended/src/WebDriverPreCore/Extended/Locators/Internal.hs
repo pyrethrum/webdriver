@@ -321,8 +321,8 @@ Some roles prohibit name-from-content (e.g., `textbox`, `combobox`). Others requ
 For production use, consider documenting these limitations prominently and/or falling back to BiDi's native `browsingContext.Locator` with `type: "accessibility"` when the session supports it,
 using this XPath only as a best-effort HTTP fallback.
 -}
-accessibilityToXPath :: Maybe AriaRole -> Maybe Text -> Maybe Text
-accessibilityToXPath = \cases
+roleToXPath :: Maybe AriaRole -> Maybe Text -> Maybe Text
+roleToXPath = \cases
   Nothing Nothing -> Nothing
   mRole mName -> Just $ "//*" <> rle mRole <> name mName
   where
@@ -488,39 +488,45 @@ prepare defLoc proto card loc = undefined
 
 data Info = IsMixed | IsCSS | IsXPath | IsBiDi | IsAny | Invalid InvalidLocator deriving (Show, Eq)
 
+data LocPlus = MkLocPlus {accLoc :: Locator, info :: Info}
+
 prepare' :: (Text -> Locator) -> Protocol -> Cardinality -> Locator -> (Locator, Info)
 prepare' defLoc proto card loc = undefined
   where
     flattenned = flattenLoc loc
-    prepLoc :: (Locator, Info) -> Locator -> (Locator, Info)
-    prepLoc (accLoc, info) loc =
-      case info of
-        Invalid _ -> (accLoc, info) -- propagate failure
-        _ ->
-          case loc of
-            CSS {value} -> undefined
-            XPath {value} -> undefined
-            All -> undefined
-            ID {value} -> undefined
-            Class {value} -> undefined
-            Attribute {value} -> undefined
-            Tag {value} -> undefined
-            Default {value} ->
-              let nxtLoc = defLoc value
-               in case nxtLoc of
-                    Default {} -> (accLoc, Invalid $ InvalidLocator "Invalid Default locator - Default locator cannot resolve to another Default")
-                    _ -> prepLoc (accLoc, info) nxtLoc
-            Role {} -> undefined
-            InnerText {} -> undefined
-            BiDiContext {} -> case proto of
-              BiDi -> (loc, IsBiDi)
-              HTTP -> (accLoc, Invalid $ InvalidLocator "BiDiContext locator cannot be used with HTTP protocol")
-            Parent {} -> undefined
-            And {} -> undefined
-            Or {} -> undefined
-            Not {} -> undefined
-            PostFilter {} -> undefined
-            WithOptions {} -> undefined
+
+classify :: (Text -> Locator) -> Protocol -> Locator -> Info
+classify defLoc proto =
+  \case
+    CSS {} -> IsCSS
+    XPath {} -> IsXPath
+    All -> IsAny
+    ID {} -> IsAny
+    Class {} -> IsAny
+    Attribute {} -> IsAny
+    Tag {} -> IsAny
+    Default {value} ->
+      let nxtLoc = defLoc value
+       in case nxtLoc of
+            Default {} -> MkLocPlus accLoc (Invalid $ InvalidLocator "Invalid Default locator - Default locator cannot resolve to another Default")
+            _ -> prepLoc (accLoc, info) nxtLoc
+    Role {} -> undefined
+    InnerText {} -> case proto of
+      BiDi -> IsBiDi
+      HTTP -> IsXPath -- fallback to XPath for HTTP, with a post-filter to weed out false positives
+    BiDiContext {} -> case proto of
+      BiDi -> IsBiDi
+      HTTP -> Invalid $ InvalidLocator "BiDiContext locator cannot be used with HTTP protocol"
+    Parent {} -> undefined
+    And {} -> undefined
+    Or {} -> undefined
+    Not {} -> undefined
+    PostFilter {} -> undefined
+    WithOptions {} -> undefined
+  where
+    leafAny = leaf IsAny
+    leaf :: Info -> LocPlus
+    leaf = MkLocPlus loc
 
 -- | Fold over a Locator tree with an accumulator, similar to foldl.
 --   Processes the parent node first (top-down), then recursively folds over children,
