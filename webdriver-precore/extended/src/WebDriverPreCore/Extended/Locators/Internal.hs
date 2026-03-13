@@ -6,6 +6,7 @@ import Data.Text (Text, intercalate, pack, splitOn, toLower, unpack)
 import Data.Text qualified as T
 import WebDriverPreCore.Extended.BiDi.Base.Protocol (BrowsingContext, Command, JSUInt, NodeProperties)
 import Prelude
+import Control.Exception (Exception)
 
 -- TODO : use bidi type when merged
 {-
@@ -480,7 +481,11 @@ data Cardinality = One | Many deriving (Show, Eq)
   -- HTTP - use xpath approximation + post filter for duplicates - consider js function
           -- CSS use xpath + multi shot
 
-prepare :: (Text -> Locator) -> Protocol -> Cardinality -> Locator -> Locator
+data InvalidLocator = InvalidLocator Text deriving (Show, Eq)
+
+instance Exception InvalidLocator
+
+prepare :: (Text -> Locator) -> Protocol -> Cardinality -> Locator -> Either InvalidLocator Locator
 prepare defLoc proto card loc = undefined
   where
     flattenned = flattenLoc loc
