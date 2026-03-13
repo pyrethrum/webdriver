@@ -317,7 +317,8 @@ Some roles prohibit name-from-content (e.g., `textbox`, `combobox`). Others requ
 
 ### Recommendation
 
-For production use, consider documenting these limitations prominently and/or falling back to BiDi's native `browsingContext.Locator` with `type: "accessibility"` when the session supports it, using this XPath only as a best-effort HTTP fallback.
+For production use, consider documenting these limitations prominently and/or falling back to BiDi's native `browsingContext.Locator` with `type: "accessibility"` when the session supports it, 
+using this XPath only as a best-effort HTTP fallback.
 -}
 accessibilityToXPath :: Maybe AriaRole -> Maybe Text -> Maybe Text
 accessibilityToXPath = \cases
@@ -442,12 +443,50 @@ implicitRoleXPath =
     Term -> "dt"
     Textbox -> "input[not(@type) or @type='text' or @type='email' or @type='tel' or @type='url' or @type='search'] or self::textarea"
 
+
+
+
+
+
+
+
 data Protocol = HTTP | BiDi deriving (Show, Eq)
 
 data Cardinality = One | Many deriving (Show, Eq)
 
+
+-- locator ready to run
+-- css or xpath
+
+-- ===== Parent =====
+-- parent
+    -- xpath
+    -- xpath 
+      -- => use xpath
+
+    -- xpath
+    -- css | bidi only
+      -- => double shot [BiDi start nodes | HTTP post filter - Find Element From Element]
+    -- css child
+    -- bidi child
+
+-- ==== Depth - inner text only ====
+   -- bidi use direct 
+   -- HTTP Xpath - use xpath
+   -- css - use js function
+
+-- ==== inner text ==== 
+  -- bidi 
+    -- use direct
+  -- HTTP Xpath - use xpath + conditional post attempt check fod duplicate visible elements - consider js function
+  -- css - use js function
+
+
 prepare :: (Text -> Locator) -> Protocol -> Cardinality -> Locator -> Locator
-prepare = undefined
+prepare defLoc proto card loc = undefined
+  where
+    flattenned = flattenLoc loc
+
 
 -- | Fold over a Locator tree with an accumulator, similar to foldl.
 --   Processes the parent node first (top-down), then recursively folds over children,
