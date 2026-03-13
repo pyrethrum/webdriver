@@ -1,12 +1,12 @@
 module WebDriverPreCore.Extended.Locators.Internal where
 
+import Control.Exception (Exception)
 import Data.Functor ((<&>))
 import Data.List.NonEmpty (NonEmpty (..), toList)
 import Data.Text (Text, intercalate, pack, splitOn, toLower, unpack)
 import Data.Text qualified as T
 import WebDriverPreCore.Extended.BiDi.Base.Protocol (BrowsingContext, Command, JSUInt, NodeProperties)
 import Prelude
-import Control.Exception (Exception)
 
 -- TODO : use bidi type when merged
 {-
@@ -94,7 +94,7 @@ data Locator
     CSS {value :: Text}
   | XPath {value :: Text}
   | All
-  | ID Text
+  | ID {value :: Text}
   | Class
       { value :: Text,
         matchType :: MatchType,
@@ -105,8 +105,8 @@ data Locator
         matchType :: MatchType,
         caseSensitivity :: CaseSensitivity
       }
-  | Tag {tag :: Text}
-  | Default Text
+  | Tag {value :: Text}
+  | Default {value :: Text}
   | -- double shot / difficult
     Role {role :: Maybe AriaRole, name :: Maybe Text}
   | InnerText
@@ -318,7 +318,7 @@ Some roles prohibit name-from-content (e.g., `textbox`, `combobox`). Others requ
 
 ### Recommendation
 
-For production use, consider documenting these limitations prominently and/or falling back to BiDi's native `browsingContext.Locator` with `type: "accessibility"` when the session supports it, 
+For production use, consider documenting these limitations prominently and/or falling back to BiDi's native `browsingContext.Locator` with `type: "accessibility"` when the session supports it,
 using this XPath only as a best-effort HTTP fallback.
 -}
 accessibilityToXPath :: Maybe AriaRole -> Maybe Text -> Maybe Text
@@ -444,42 +444,40 @@ implicitRoleXPath =
     Term -> "dt"
     Textbox -> "input[not(@type) or @type='text' or @type='email' or @type='tel' or @type='url' or @type='search'] or self::textarea"
 
-
 data Protocol = HTTP | BiDi deriving (Show, Eq)
 
 data Cardinality = One | Many deriving (Show, Eq)
-
 
 -- locator ready to run
 -- css or xpath
 
 -- ===== Parent =====
 -- parent
-    -- xpath
-    -- xpath 
-      -- => use xpath
+-- xpath
+-- xpath
+-- => use xpath
 
-    -- xpath
-    -- css | bidi only
-      -- => double shot [BiDi start nodes | HTTP post filter - Find Element From Element]
-    -- css child
-    -- bidi child
+-- xpath
+-- css | bidi only
+-- => double shot [BiDi start nodes | HTTP post filter - Find Element From Element]
+-- css child
+-- bidi child
 
 -- ==== Depth - inner text only ====
-   -- bidi use direct 
-   -- HTTP Xpath - use xpath
-   -- css - use js function
+-- bidi use direct
+-- HTTP Xpath - use xpath
+-- css - use js function
 
--- ==== inner text ==== 
-  -- bidi 
-    -- use direct
-  -- HTTP Xpath - use xpath + conditional post attempt check for duplicate visible elements - consider js function
-  -- css - use js function
+-- ==== inner text ====
+-- bidi
+-- use direct
+-- HTTP Xpath - use xpath + conditional post attempt check for duplicate visible elements - consider js function
+-- css - use js function
 
--- ==== Role ==== 
-  -- BiDi - use native 
-  -- HTTP - use xpath approximation + post filter for duplicates - consider js function
-          -- CSS use xpath + multi shot
+-- ==== Role ====
+-- BiDi - use native
+-- HTTP - use xpath approximation + post filter for duplicates - consider js function
+-- CSS use xpath + multi shot
 
 data InvalidLocator = InvalidLocator Text deriving (Show, Eq)
 
@@ -487,9 +485,42 @@ instance Exception InvalidLocator
 
 prepare :: (Text -> Locator) -> Protocol -> Cardinality -> Locator -> Either InvalidLocator Locator
 prepare defLoc proto card loc = undefined
+
+data Info = IsMixed | IsCSS | IsXPath | IsBiDi | IsAny | Invalid InvalidLocator deriving (Show, Eq)
+
+prepare' :: (Text -> Locator) -> Protocol -> Cardinality -> Locator -> (Locator, Info)
+prepare' defLoc proto card loc = undefined
   where
     flattenned = flattenLoc loc
-
+    prepLoc :: (Locator, Info) -> Locator -> (Locator, Info)
+    prepLoc (accLoc, info) loc =
+      case info of
+        Invalid _ -> (accLoc, info) -- propagate failure
+        _ ->
+          case loc of
+            CSS {value} -> undefined
+            XPath {value} -> undefined
+            All -> undefined
+            ID {value} -> undefined
+            Class {value} -> undefined
+            Attribute {value} -> undefined
+            Tag {value} -> undefined
+            Default {value} ->
+              let nxtLoc = defLoc value
+               in case nxtLoc of
+                    Default {} -> (accLoc, Invalid $ InvalidLocator "Invalid Default locator - Default locator cannot resolve to another Default")
+                    _ -> prepLoc (accLoc, info) nxtLoc
+            Role {} -> undefined
+            InnerText {} -> undefined
+            BiDiContext {} -> case proto of
+              BiDi -> (loc, IsBiDi)
+              HTTP -> (accLoc, Invalid $ InvalidLocator "BiDiContext locator cannot be used with HTTP protocol")
+            Parent {} -> undefined
+            And {} -> undefined
+            Or {} -> undefined
+            Not {} -> undefined
+            PostFilter {} -> undefined
+            WithOptions {} -> undefined
 
 -- | Fold over a Locator tree with an accumulator, similar to foldl.
 --   Processes the parent node first (top-down), then recursively folds over children,
