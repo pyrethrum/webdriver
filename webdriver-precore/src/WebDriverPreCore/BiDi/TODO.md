@@ -15,6 +15,9 @@
  - [ ] rearrange docker - move hls install to just before dev-container
  - [ ] ci see if can compile test server once
 
+## update according to spec changes 
+ - [ ] [webdriver-HTTP-20251028-20260206.md](../../../../docs/webdriver-HTTP-20251028-20260206.md)
+ - [ ] 
 ## address critical review - effectful
 
 What worked well:

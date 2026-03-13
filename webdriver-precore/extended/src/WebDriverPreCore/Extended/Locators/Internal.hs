@@ -444,12 +444,6 @@ implicitRoleXPath =
     Textbox -> "input[not(@type) or @type='text' or @type='email' or @type='tel' or @type='url' or @type='search'] or self::textarea"
 
 
-
-
-
-
-
-
 data Protocol = HTTP | BiDi deriving (Show, Eq)
 
 data Cardinality = One | Many deriving (Show, Eq)
@@ -478,9 +472,13 @@ data Cardinality = One | Many deriving (Show, Eq)
 -- ==== inner text ==== 
   -- bidi 
     -- use direct
-  -- HTTP Xpath - use xpath + conditional post attempt check fod duplicate visible elements - consider js function
+  -- HTTP Xpath - use xpath + conditional post attempt check for duplicate visible elements - consider js function
   -- css - use js function
 
+-- ==== Role ==== 
+  -- BiDi - use native 
+  -- HTTP - use xpath approximation + post filter for duplicates - consider js function
+          -- CSS use xpath + multi shot
 
 prepare :: (Text -> Locator) -> Protocol -> Cardinality -> Locator -> Locator
 prepare defLoc proto card loc = undefined
@@ -505,6 +503,22 @@ foldLoc f acc loc =
   where
     acc' = f acc loc -- Apply function to parent first
     foldList = foldl' (foldLoc f) acc' . toList
+
+-- | Fold over a Locator tree with an accumulator, bottom-up (post-order).
+--   Recursively folds over children first, then applies the function to the current node.
+--   Useful when the result at a node depends on the already-folded results of its children.
+foldLocBottomUp :: (a -> Locator -> a) -> a -> Locator -> a
+foldLocBottomUp f acc loc =
+  case loc of
+    Parent p c -> f (foldLocBottomUp f (foldLocBottomUp f acc p) c) loc
+    And locs -> f (foldList locs) loc
+    Or locs -> f (foldList locs) loc
+    Not locs -> f (foldList locs) loc
+    WithOptions base _ -> f (foldLocBottomUp f acc base) loc
+    PostFilter _ -> f acc loc
+    _ -> f acc loc -- Leaf locators
+  where
+    foldList = foldl' (foldLocBottomUp f) acc . toList
 
 -- | Recursively flattens and simplifies Match* locators while maintaining logical correctness.
 -- Flattens nested Match* of the same type and applies De Morgan's laws where applicable.

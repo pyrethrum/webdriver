@@ -14,7 +14,7 @@ import Test.Tasty.Falsify qualified as F
 import Test.Tasty.HUnit (testCase, (@?=))
 import Utils (txt)
 import WebDriverPreCore.Extended.Locators
-import WebDriverPreCore.Extended.Locators.Internal (Locator (..), flattenLoc)
+import WebDriverPreCore.Extended.Locators.Internal (Locator (..), flattenLoc, foldLoc, foldLocBottomUp)
 import Prelude hiding (putStrLn)
 
 -- >>> _eval tests
@@ -42,6 +42,11 @@ tests =
           preserveNonMatchLocators,
           recursiveReduceParent,
           complexNestedFlattening
+        ],
+      testGroup
+        "foldLoc traversal order"
+        [ foldLocTopDown,
+          foldLocBottomUpTest
         ],
       testGroup
         "Property Tests"
@@ -185,6 +190,52 @@ complexNestedFlattening =
       { unflattened = And (And (CSS "a" :| [And (CSS "b" :| [CSS "c"])]) :| [CSS "d"]),
         flattenned = And (CSS "a" :| [CSS "b", CSS "c", CSS "d"])
       }
+
+-- | Shared nested locator used by fold traversal tests.
+-- Tree shape (4 different constructors, 3 levels deep):
+--
+--   Parent
+--   ├── And
+--   │   ├── CSS "a"
+--   │   └── XPath "//b"
+--   └── Not
+--       └── Tag "div"
+nestedLoc :: Locator
+nestedLoc = Parent (And (CSS "a" :| [XPath "//b"])) (Not (Tag "div" :| []))
+
+-- | Collect txt of each node in the order visited, using snoc.
+collectLoc :: (([Locator] -> Locator -> [Locator]) -> [Locator] -> Locator -> [Locator]) -> [Locator]
+collectLoc fold' = fold' (\acc loc -> acc `snoc` loc) [] nestedLoc
+  where
+    snoc xs x = xs ++ [x]
+
+-- >>> _eval foldLocTopDown
+-- *** Exception: ExitSuccess
+foldLocTopDown :: TestTree
+foldLocTopDown =
+  testCase "foldLoc visits nodes top-down (pre-order)" $
+    collectLoc foldLoc
+      @?= [ nestedLoc,
+            And (CSS "a" :| [XPath "//b"]),
+            CSS "a",
+            XPath "//b",
+            Not (Tag "div" :| []),
+            Tag "div"
+          ]
+
+-- >>> _eval foldLocBottomUpTest
+-- *** Exception: ExitSuccess
+foldLocBottomUpTest :: TestTree
+foldLocBottomUpTest =
+  testCase "foldLocBottomUp visits nodes bottom-up (post-order)" $
+    collectLoc foldLocBottomUp
+      @?= [ CSS "a",
+            XPath "//b",
+            And (CSS "a" :| [XPath "//b"]),
+            Tag "div",
+            Not (Tag "div" :| []),
+            nestedLoc
+          ]
 
 trueLoc :: Locator
 trueLoc = css "True"
@@ -345,6 +396,7 @@ test_mock_logic_preserved_on_flattenning = testPropertyWith genLocatorOptions "G
   F.assert $ expect True `dot` fn ("flattenLoc preserves mockLocated", \l -> mockLocated l == mockLocated (flattenLoc l)) .$ ("loc", loc)
 
 -- >>> _eval test_fail
+
 -- *** Exception: ExitSuccess
 
 test_nested_none_match :: TestTree
@@ -368,6 +420,7 @@ test_infix_precedence_i =
     actual = mockLocated $ trueLoc ||| falseLoc &&& falseLoc
 
 -- >>> _eval test_infix_precedence_ii
+
 -- *** Exception: ExitSuccess
 
 test_infix_precedence_ii :: TestTree
@@ -379,7 +432,9 @@ test_infix_precedence_ii =
     actual = mockLocated $ falseLoc ||| trueLoc &&& falseLoc ||| trueLoc
 
 -- >>> _eval test_parent_infix_precedence
+
 -- *** Exception: ExitSuccess
+
 test_parent_infix_precedence :: TestTree
 test_parent_infix_precedence =
   testCase "Test Parent operator precedence" $
