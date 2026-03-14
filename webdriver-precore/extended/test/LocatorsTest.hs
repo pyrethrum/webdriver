@@ -350,9 +350,7 @@ genLocatorOptions =
     }
 
 -- >>> _eval test_flatenning_simplification
-
 -- *** Exception: ExitSuccess
-
 test_flatenning_simplification :: TestTree
 test_flatenning_simplification = testPropertyWith genLocatorOptions "Flattening simplification" $ do
   loc <- gen genLocator
@@ -408,9 +406,7 @@ test_nested_none_match = testCase "This test fails" $ do
   mockLocated loc @?= mockLocated (flattenLoc loc)
 
 -- >>> _eval test_infix_precedence
-
 -- *** Exception: ExitSuccess
-
 test_infix_precedence_i :: TestTree
 test_infix_precedence_i =
   testCase "Test operator precedence i" $
@@ -420,9 +416,7 @@ test_infix_precedence_i =
     actual = mockLocated $ trueLoc ||| falseLoc &&& falseLoc
 
 -- >>> _eval test_infix_precedence_ii
-
 -- *** Exception: ExitSuccess
-
 test_infix_precedence_ii :: TestTree
 test_infix_precedence_ii =
   testCase "Test operator precedence ii" $
@@ -432,9 +426,7 @@ test_infix_precedence_ii =
     actual = mockLocated $ falseLoc ||| trueLoc &&& falseLoc ||| trueLoc
 
 -- >>> _eval test_parent_infix_precedence
-
 -- *** Exception: ExitSuccess
-
 test_parent_infix_precedence :: TestTree
 test_parent_infix_precedence =
   testCase "Test Parent operator precedence" $

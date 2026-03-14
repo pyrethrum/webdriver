@@ -120,12 +120,12 @@ data Locator
     BiDiContext {context :: BrowsingContext}
   | -- combinators
     Parent {parent :: Locator, child :: Locator}
-  | And (NonEmpty Locator)
-  | Or (NonEmpty Locator)
-  | Not (NonEmpty Locator)
+  | And {elms :: NonEmpty Locator}
+  | Or {elms :: NonEmpty Locator}
+  | Not {elms :: NonEmpty Locator}
   | --- postfilter
     PostFilter PostFilter
-  | WithOptions {base :: Locator, options :: [LocatorDirectives]}
+  -- | WithOptions {base :: Locator, options :: [LocatorDirectives]}
   deriving (Show, Eq)
 
 data PostFilter
@@ -340,6 +340,47 @@ roleToXPath = \cases
           ]
         <> "]"
 
+-- | Maps an ARIA role to an XPath predicate matching elements that have
+--   that role implicitly (i.e. without an explicit role= attribute).
+--   Based on the ARIA in HTML spec: https://www.w3.org/TR/html-aria/
+implicitRoleXPath :: AriaRole -> Text
+implicitRoleXPath =
+  ("self::" <>) . \case
+    Article -> "article"
+    Banner -> "header[not(ancestor::article) and not(ancestor::section)]"
+    Button -> "button or self::input[@type='button'] or self::input[@type='submit'] or self::input[@type='reset'] or self::input[@type='image'] or self::summary"
+    Cell -> "td"
+    Checkbox -> "input[@type='checkbox']"
+    ColumnHeader -> "th[@scope='col' or not(@scope)]"
+    Complementary -> "aside"
+    ContentInfo -> "footer[not(ancestor::article) and not(ancestor::section)]"
+    Definition -> "dd"
+    Dialog -> "dialog"
+    Figure -> "figure"
+    Form -> "form[@aria-label or @aria-labelledby]"
+    Group -> "fieldset or self::optgroup"
+    Heading -> "h1 or self::h2 or self::h3 or self::h4 or self::h5 or self::h6"
+    Img -> "img[@alt and string-length(@alt)>0]"
+    Link -> "a[@href] or self::area[@href]"
+    List -> "ul or self::ol"
+    ListItem -> "li"
+    Main -> "main"
+    Navigation -> "nav"
+    Option -> "option"
+    ProgressBar -> "progress"
+    Radio -> "input[@type='radio']"
+    Region -> "section[@aria-label or @aria-labelledby]"
+    Row -> "tr"
+    RowHeader -> "th[@scope='row']"
+    Search -> "search"
+    Separator -> "hr"
+    Slider -> "input[@type='range']"
+    SpinButton -> "input[@type='number']"
+    Status -> "output"
+    Table -> "table"
+    Term -> "dt"
+    Textbox -> "input[not(@type) or @type='text' or @type='email' or @type='tel' or @type='url' or @type='search'] or self::textarea"
+
 -- | Best-effort XPath approximation of a BiDi inner text locator.
 --   Uses normalize-space(.) as a proxy for innerText. Case-insensitive
 --   matching uses the translate() alphabet hack. maxDepth is approximated
@@ -403,47 +444,6 @@ innerTextToXPath val cs matchType mMaxDepth =
     upperAlpha = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
     lowerAlpha = "abcdefghijklmnopqrstuvwxyz"
 
--- | Maps an ARIA role to an XPath predicate matching elements that have
---   that role implicitly (i.e. without an explicit role= attribute).
---   Based on the ARIA in HTML spec: https://www.w3.org/TR/html-aria/
-implicitRoleXPath :: AriaRole -> Text
-implicitRoleXPath =
-  ("self::" <>) . \case
-    Article -> "article"
-    Banner -> "header[not(ancestor::article) and not(ancestor::section)]"
-    Button -> "button or self::input[@type='button'] or self::input[@type='submit'] or self::input[@type='reset'] or self::input[@type='image'] or self::summary"
-    Cell -> "td"
-    Checkbox -> "input[@type='checkbox']"
-    ColumnHeader -> "th[@scope='col' or not(@scope)]"
-    Complementary -> "aside"
-    ContentInfo -> "footer[not(ancestor::article) and not(ancestor::section)]"
-    Definition -> "dd"
-    Dialog -> "dialog"
-    Figure -> "figure"
-    Form -> "form[@aria-label or @aria-labelledby]"
-    Group -> "fieldset or self::optgroup"
-    Heading -> "h1 or self::h2 or self::h3 or self::h4 or self::h5 or self::h6"
-    Img -> "img[@alt and string-length(@alt)>0]"
-    Link -> "a[@href] or self::area[@href]"
-    List -> "ul or self::ol"
-    ListItem -> "li"
-    Main -> "main"
-    Navigation -> "nav"
-    Option -> "option"
-    ProgressBar -> "progress"
-    Radio -> "input[@type='radio']"
-    Region -> "section[@aria-label or @aria-labelledby]"
-    Row -> "tr"
-    RowHeader -> "th[@scope='row']"
-    Search -> "search"
-    Separator -> "hr"
-    Slider -> "input[@type='range']"
-    SpinButton -> "input[@type='number']"
-    Status -> "output"
-    Table -> "table"
-    Term -> "dt"
-    Textbox -> "input[not(@type) or @type='text' or @type='email' or @type='tel' or @type='url' or @type='search'] or self::textarea"
-
 data Protocol = HTTP | BiDi deriving (Show, Eq)
 
 data Cardinality = One | Many deriving (Show, Eq)
@@ -488,6 +488,31 @@ prepare defLoc proto card loc = undefined
 
 data Info = IsMixed | IsCSS | IsXPath | IsBiDi | IsAny | Invalid InvalidLocator deriving (Show, Eq)
 
+combineInfo :: Info -> Info -> Info
+combineInfo i ii 
+  -- if equal retunn that info
+  | i == ii = i
+
+  -- if either invalid then invalid (first)
+  | invalid i = i
+  | invalid ii = ii
+
+  -- if either mixed then mixed
+  | i == IsMixed || ii == IsMixed = IsMixed
+
+  -- if either any then the other
+  | i == IsAny = ii
+  | ii == IsAny = i
+
+  -- else mixed
+  | otherwise = IsMixed
+  where 
+    invalid = \case 
+      Invalid _ -> True
+      _ -> False
+
+
+
 data LocPlus = MkLocPlus {accLoc :: Locator, info :: Info}
 
 prepare' :: (Text -> Locator) -> Protocol -> Cardinality -> Locator -> (Locator, Info)
@@ -507,26 +532,30 @@ classify defLoc proto =
     Tag {} -> IsAny
     Default {value} ->
       let nxtLoc = defLoc value
-       in case nxtLoc of
-            Default {} -> MkLocPlus accLoc (Invalid $ InvalidLocator "Invalid Default locator - Default locator cannot resolve to another Default")
-            _ -> prepLoc (accLoc, info) nxtLoc
-    Role {} -> undefined
-    InnerText {} -> case proto of
-      BiDi -> IsBiDi
-      HTTP -> IsXPath -- fallback to XPath for HTTP, with a post-filter to weed out false positives
+          nestedDefault = hasDefault nxtLoc
+       in if nestedDefault
+            then Invalid $ InvalidLocator "Invalid Default locator - Default locator cannot resolve to another Default"
+            else classifyNxt nxtLoc
+    Role {} ->
+      case proto of
+        BiDi -> IsBiDi
+        HTTP -> IsXPath -- fallback to XPath for HTTP, with a post-filter to weed out false positives
+    InnerText {} ->
+      case proto of
+        BiDi -> IsBiDi
+        HTTP -> IsXPath -- fallback to XPath for HTTP, with a post-filter to weed out false positives
     BiDiContext {} -> case proto of
       BiDi -> IsBiDi
       HTTP -> Invalid $ InvalidLocator "BiDiContext locator cannot be used with HTTP protocol"
-    Parent {} -> undefined
-    And {} -> undefined
-    Or {} -> undefined
-    Not {} -> undefined
-    PostFilter {} -> undefined
-    WithOptions {} -> undefined
+    Parent {parent, child} -> combineInfo (classifyNxt parent) (classifyNxt child)
+    And {elms} -> clasifyElms elms
+    Or {elms} -> clasifyElms elms
+    Not {elms} -> clasifyElms elms
+    PostFilter {} -> IsMixed
+    -- WithOptions {} -> undefined
   where
-    leafAny = leaf IsAny
-    leaf :: Info -> LocPlus
-    leaf = MkLocPlus loc
+    classifyNxt = classify defLoc proto
+    clasifyElms = foldl' combineInfo IsAny . (<$>) classifyNxt . toList
 
 -- | Fold over a Locator tree with an accumulator, similar to foldl.
 --   Processes the parent node first (top-down), then recursively folds over children,
@@ -539,7 +568,7 @@ foldLoc f acc loc =
     And locs -> foldList locs
     Or locs -> foldList locs
     Not locs -> foldList locs
-    WithOptions base _ -> foldLoc f acc' base
+    -- WithOptions base _ -> foldLoc f acc' base
     PostFilter _ -> acc'
     _ -> acc' -- Leaf locators
   where
@@ -556,11 +585,18 @@ foldLocBottomUp f acc loc =
     And locs -> f (foldList locs) loc
     Or locs -> f (foldList locs) loc
     Not locs -> f (foldList locs) loc
-    WithOptions base _ -> f (foldLocBottomUp f acc base) loc
+    -- WithOptions base _ -> f (foldLocBottomUp f acc base) loc
     PostFilter _ -> f acc loc
     _ -> f acc loc -- Leaf locators
   where
     foldList = foldl' (foldLocBottomUp f) acc . toList
+
+-- | Returns 'True' if a 'Default' constructor appears anywhere within the locator tree.
+hasDefault :: Locator -> Bool
+hasDefault = foldLoc (\acc loc -> acc || isDefault loc) False
+  where
+    isDefault (Default _) = True
+    isDefault _ = False
 
 -- | Recursively flattens and simplifies Match* locators while maintaining logical correctness.
 -- Flattens nested Match* of the same type and applies De Morgan's laws where applicable.
@@ -620,7 +656,7 @@ flattenLoc = \case
 
   -- Recurse into other composite locators
   Parent p c -> Parent (flattenLoc p) (flattenLoc c)
-  WithOptions base opts -> WithOptions (flattenLoc base) opts
+  -- WithOptions base opts -> WithOptions (flattenLoc base) opts
   -- Leaf locators and PostFilter have no children to recurse into
   other -> other
 
