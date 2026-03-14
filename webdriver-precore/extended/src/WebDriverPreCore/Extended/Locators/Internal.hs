@@ -558,7 +558,7 @@ classify defLoc proto =
 locatorToXPathPartial :: Locator -> Locator
 locatorToXPathPartial l = case l of
   CSS {} -> err
-  XPath {} -> undefined
+  XPath {} -> l
   All -> undefined
   ID {} -> undefined
   Class {} -> undefined
