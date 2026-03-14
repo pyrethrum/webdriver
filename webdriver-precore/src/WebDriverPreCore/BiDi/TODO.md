@@ -2,6 +2,14 @@
 
 ## Locators
 
+## docs 
+ - best used in isolation
+ - default id
+ - use ids
+ - css
+ - bidi
+   - inner text
+   - aria
 ## fix this file
 - [ ] harmonise isolate logging
 - [ ] resplit the libraries 

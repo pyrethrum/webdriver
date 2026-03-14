@@ -1,10 +1,12 @@
 module WebDriverPreCore.Extended.Locators.Internal where
 
 import Control.Exception (Exception)
+import Data.Foldable1 (Foldable1 (..), foldl1')
 import Data.Functor ((<&>))
 import Data.List.NonEmpty (NonEmpty (..), toList)
 import Data.Text (Text, intercalate, pack, splitOn, toLower, unpack)
 import Data.Text qualified as T
+import Utils (txt)
 import WebDriverPreCore.Extended.BiDi.Base.Protocol (BrowsingContext, Command, JSUInt, NodeProperties)
 import Prelude
 
@@ -158,10 +160,6 @@ data PostFilter
         valPredicate :: Text -> Bool
       }
 
-locatorToCSSPartial :: Locator -> Locator
-locatorToCSSPartial = \case
- 
-   
 instance Show PostFilter where
   show :: PostFilter -> String
   show = \case
@@ -493,20 +491,15 @@ instance Exception InvalidLocator
 prepare :: (Text -> Locator) -> Protocol -> Cardinality -> Locator -> Either InvalidLocator Locator
 prepare defLoc proto card loc = undefined
 
-data Info = IsMixed | IsCSS | IsXPath | IsBiDi | IsAny | Invalid InvalidLocator deriving (Show, Eq)
+data Classification = IsMixed | IsCSS | IsXPath | IsBiDi | Invalid InvalidLocator deriving (Show, Eq)
 
-combineInfo :: Info -> Info -> Info
-combineInfo i ii
+mergeClassification :: Classification -> Classification -> Classification
+mergeClassification i ii
   -- if equal retunn that info
   | i == ii = i
   -- if either invalid then invalid (first)
   | invalid i = i
   | invalid ii = ii
-  -- if either mixed then mixed
-  | i == IsMixed || ii == IsMixed = IsMixed
-  -- if either any then the other
-  | i == IsAny = ii
-  | ii == IsAny = i
   -- else mixed
   | otherwise = IsMixed
   where
@@ -514,23 +507,23 @@ combineInfo i ii
       Invalid _ -> True
       _ -> False
 
-data LocPlus = MkLocPlus {accLoc :: Locator, info :: Info}
+data LocPlus = MkLocPlus {accLoc :: Locator, info :: Classification}
 
-prepare' :: (Text -> Locator) -> Protocol -> Cardinality -> Locator -> (Locator, Info)
+prepare' :: (Text -> Locator) -> Protocol -> Cardinality -> Locator -> (Locator, Classification)
 prepare' defLoc proto card loc = undefined
   where
     flattenned = flattenLoc loc
 
-classify :: (Text -> Locator) -> Protocol -> Locator -> Info
+classify :: (Text -> Locator) -> Protocol -> Locator -> Classification
 classify defLoc proto =
   \case
     CSS {} -> IsCSS
     XPath {} -> IsXPath
-    All -> IsAny
-    ID {} -> IsAny
-    Class {} -> IsAny
-    Attribute {} -> IsAny
-    Tag {} -> IsAny
+    All -> IsXPath
+    ID {} -> IsXPath
+    Class {} -> IsXPath
+    Attribute {} -> IsXPath
+    Tag {} -> IsXPath
     Default {value} ->
       let nxtLoc = defLoc value
           nestedDefault = hasDefault nxtLoc
@@ -550,20 +543,43 @@ classify defLoc proto =
         BiDi -> IsBiDi
         HTTP -> Invalid $ InvalidLocator "BiDiContext locator cannot be used with HTTP protocol"
     Parent {parent, child} ->
-      let combined = combineInfo (classifyNxt parent) (classifyNxt child)
-       in if
-            -- prefer xpath so can use parent capabilities in xpath
-            | combined == IsAny || combined == IsXPath -> IsXPath
-            -- css required double shot
-            | combined == IsCSS -> IsMixed
-            | otherwise -> combined
+      mergeClassification (classifyNxt parent) (classifyNxt child)
     And {elms} -> clasifyElms elms
     Or {elms} -> clasifyElms elms
     Not {elms} -> clasifyElms elms
     PostFilter {} -> IsMixed
   where
+    classifyNxt :: Locator -> Classification
     classifyNxt = classify defLoc proto
-    clasifyElms = foldl' combineInfo IsAny . (<$>) classifyNxt . toList
+
+    clasifyElms :: NonEmpty Locator -> Classification
+    clasifyElms = foldl1' mergeClassification . fmap classifyNxt
+
+locatorToXPathPartial :: Locator -> Locator
+locatorToXPathPartial l = case l of
+  CSS {} -> err
+  XPath {} -> undefined
+  All -> undefined
+  ID {} -> undefined
+  Class {} -> undefined
+  Attribute {} -> undefined
+  Tag {} -> undefined
+  Default {} -> err
+  Role {} -> err
+  InnerText {} -> err
+  BiDiContext {} -> err
+  Parent {} -> undefined
+  And {} -> undefined
+  Or {} -> undefined
+  Not {} -> undefined
+  PostFilter {} -> err
+  where
+    err =
+      error . unpack $
+        "Locator "
+          <> txt l
+          <> " conversion not implemented - should not be called - this is library defect - either clasify or locatorToXPathPartial is wrong"
+
 
 -- | Fold over a Locator tree with an accumulator, similar to foldl.
 --   Processes the parent node first (top-down), then recursively folds over children,
@@ -1091,5 +1107,3 @@ Once you've interacted with an element, you'll often want to verify it has the c
 I hope this helps you effectively select and interact with elements based on their values. If you're dealing with a particularly tricky component, feel free to share the HTML structure, and I might be able to offer a more specific suggestion
 
   -}
-
-
