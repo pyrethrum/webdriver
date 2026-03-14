@@ -125,8 +125,11 @@ data Locator
   | Not {elms :: NonEmpty Locator}
   | --- postfilter
     PostFilter PostFilter
-  -- | WithOptions {base :: Locator, options :: [LocatorDirectives]}
-  deriving (Show, Eq)
+  deriving
+    ( -- | WithOptions {base :: Locator, options :: [LocatorDirectives]}
+      Show,
+      Eq
+    )
 
 data PostFilter
   = BiDiPostFilter
@@ -155,6 +158,10 @@ data PostFilter
         valPredicate :: Text -> Bool
       }
 
+locatorToCSSPartial :: Locator -> Locator
+locatorToCSSPartial = \case
+ 
+   
 instance Show PostFilter where
   show :: PostFilter -> String
   show = \case
@@ -489,29 +496,23 @@ prepare defLoc proto card loc = undefined
 data Info = IsMixed | IsCSS | IsXPath | IsBiDi | IsAny | Invalid InvalidLocator deriving (Show, Eq)
 
 combineInfo :: Info -> Info -> Info
-combineInfo i ii 
+combineInfo i ii
   -- if equal retunn that info
   | i == ii = i
-
   -- if either invalid then invalid (first)
   | invalid i = i
   | invalid ii = ii
-
   -- if either mixed then mixed
   | i == IsMixed || ii == IsMixed = IsMixed
-
   -- if either any then the other
   | i == IsAny = ii
   | ii == IsAny = i
-
   -- else mixed
   | otherwise = IsMixed
-  where 
-    invalid = \case 
+  where
+    invalid = \case
       Invalid _ -> True
       _ -> False
-
-
 
 data LocPlus = MkLocPlus {accLoc :: Locator, info :: Info}
 
@@ -539,20 +540,27 @@ classify defLoc proto =
     Role {} ->
       case proto of
         BiDi -> IsBiDi
-        HTTP -> IsXPath -- fallback to XPath for HTTP, with a post-filter to weed out false positives
+        HTTP -> IsMixed -- requires double shot Xpath + post filter
     InnerText {} ->
       case proto of
         BiDi -> IsBiDi
-        HTTP -> IsXPath -- fallback to XPath for HTTP, with a post-filter to weed out false positives
-    BiDiContext {} -> case proto of
-      BiDi -> IsBiDi
-      HTTP -> Invalid $ InvalidLocator "BiDiContext locator cannot be used with HTTP protocol"
-    Parent {parent, child} -> combineInfo (classifyNxt parent) (classifyNxt child)
+        HTTP -> IsMixed -- requires double shot Xpath + post filter
+    BiDiContext {} ->
+      case proto of
+        BiDi -> IsBiDi
+        HTTP -> Invalid $ InvalidLocator "BiDiContext locator cannot be used with HTTP protocol"
+    Parent {parent, child} ->
+      let combined = combineInfo (classifyNxt parent) (classifyNxt child)
+       in if
+            -- prefer xpath so can use parent capabilities in xpath
+            | combined == IsAny || combined == IsXPath -> IsXPath
+            -- css required double shot
+            | combined == IsCSS -> IsMixed
+            | otherwise -> combined
     And {elms} -> clasifyElms elms
     Or {elms} -> clasifyElms elms
     Not {elms} -> clasifyElms elms
     PostFilter {} -> IsMixed
-    -- WithOptions {} -> undefined
   where
     classifyNxt = classify defLoc proto
     clasifyElms = foldl' combineInfo IsAny . (<$>) classifyNxt . toList
@@ -1083,3 +1091,5 @@ Once you've interacted with an element, you'll often want to verify it has the c
 I hope this helps you effectively select and interact with elements based on their values. If you're dealing with a particularly tricky component, feel free to share the HTML structure, and I might be able to offer a more specific suggestion
 
   -}
+
+
