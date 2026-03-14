@@ -446,9 +446,6 @@ innerTextToXPath val cs matchType mMaxDepth =
 
     depthPred = maybe "" (\d -> "[count(ancestor::*)<=" <> pack (show d) <> "]") mMaxDepth
 
-    upperAlpha = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
-    lowerAlpha = "abcdefghijklmnopqrstuvwxyz"
-
 data Protocol = HTTP | BiDi deriving (Show, Eq)
 
 data Cardinality = One | Many deriving (Show, Eq)
@@ -555,31 +552,154 @@ classify defLoc proto =
     clasifyElms :: NonEmpty Locator -> Classification
     clasifyElms = foldl1' mergeClassification . fmap classifyNxt
 
-locatorToXPathPartial :: Locator -> Locator
-locatorToXPathPartial l = case l of
-  CSS {} -> err
+sortCombinatorChildLocs' :: Locator -> Locator
+sortCombinatorChildLocs' l = case l of
+  CSS {} -> l
   XPath {} -> l
-  All -> undefined
-  ID {} -> undefined
-  Class {} -> undefined
-  Attribute {} -> undefined
-  Tag {} -> undefined
-  Default {} -> err
-  Role {} -> err
-  InnerText {} -> err
-  BiDiContext {} -> err
-  Parent {} -> undefined
+  All -> l
+  ID {} -> l
+  Class {} -> l
+  Attribute {} -> l
+  Tag {} -> l
+  Default {} -> l
+  Role {} -> l
+  InnerText {} -> l
+  BiDiContext {} -> l
+  Parent {} -> l
   And {} -> undefined
   Or {} -> undefined
   Not {} -> undefined
-  PostFilter {} -> err
+  PostFilter {} -> l
+where 
+  sortLocList :: NonEmpty Locator -> NonEmpty Locator
+
+locatorToXPathPartial :: Locator -> Locator
+locatorToXPathPartial = XPath . toXPathStr
   where
-    err =
+    -- \| Convert a Locator to a full XPath expression string.
+    toXPathStr :: Locator -> Text
+    toXPathStr loc = case loc of
+      XPath {value} -> value
+      All -> "//*"
+      ID {value} -> "//*[@id='" <> value <> "']"
+      Class {value, matchType, caseSensitivity} ->
+        "//*[" <> classPred value matchType caseSensitivity <> "]"
+      Attribute {value, matchType, caseSensitivity} ->
+        "//*[" <> attrPred value matchType caseSensitivity <> "]"
+      Tag {value} -> "//" <> value
+      -- Parent: concatenate parent and child XPath — child's leading // creates a
+      -- descendant-axis step from the parent result set, e.g. //form//input.
+      Parent {parent, child} -> toXPathStr parent <> toXPathStr child
+      And {elms} -> "//*[" <> intercalate " and " (toList $ toPred <$> elms) <> "]"
+      Or {elms} -> "//*[" <> intercalate " or " (toList $ toPred <$> elms) <> "]"
+      Not {elms} -> "//*[not(" <> intercalate " or " (toList $ toPred <$> elms) <> ")]"
+      CSS {} -> locErr loc
+      Default {} -> locErr loc
+      Role {} -> locErr loc
+      InnerText {} -> locErr loc
+      BiDiContext {} -> locErr loc
+      PostFilter {} -> locErr loc
+
+    -- \| Convert a Locator to an XPath predicate expression for use inside [...].
+    --   Combinators are recursively inlined; Parent uses the ancestor:: axis.
+    toPred :: Locator -> Text
+    toPred loc = case loc of
+      XPath {value} ->
+        -- Try to unwrap //*[pred] to get just the inner predicate; fall back to a boolean test.
+        let stripped = T.stripPrefix "//*[" value
+            unwrapped = stripped >>= \s -> if "]" `T.isSuffixOf` s then Just (T.dropEnd 1 s) else Nothing
+         in maybe ("boolean(" <> value <> ")") id unwrapped
+      All -> "true()"
+      ID {value} -> "@id='" <> value <> "'"
+      Class {value, matchType, caseSensitivity} -> classPred value matchType caseSensitivity
+      Attribute {value, matchType, caseSensitivity} -> attrPred value matchType caseSensitivity
+      Tag {value} -> "self::" <> value
+      -- Parent as predicate: "I match child AND I have an ancestor matching parent"
+      Parent {parent, child} ->
+        toPred child <> " and ancestor::*[" <> toPred parent <> "]"
+      And {elms} -> "(" <> intercalate " and " (toList $ toPred <$> elms) <> ")"
+      Or {elms} -> "(" <> intercalate " or " (toList $ toPred <$> elms) <> ")"
+      Not {elms} -> "not(" <> intercalate " or " (toList $ toPred <$> elms) <> ")"
+      CSS {} -> locErr loc
+      Default {} -> locErr loc
+      Role {} -> locErr loc
+      InnerText {} -> locErr loc
+      BiDiContext {} -> locErr loc
+      PostFilter {} -> locErr loc
+
+    -- \| XPath predicate for CSS class matching.
+    --   Full uses the space-padding token trick to match whole class names.
+    --   Other match types operate directly on the raw @class attribute value.
+    classPred :: Text -> MatchType -> CaseSensitivity -> Text
+    classPred val mt cs =
+      let classAttr = applyCS cs "@class"
+          matchVal = lowerIfCI cs val
+       in case mt of
+            Full ->
+              -- Pad the class attribute with spaces so each token is surrounded by spaces,
+              -- then check for ' token '. Case folding applied inside concat.
+              "contains(concat(' ', " <> classAttr <> ", ' '), ' " <> matchVal <> " ')"
+            Partial -> "contains(" <> classAttr <> ", '" <> matchVal <> "')"
+            Starts -> "starts-with(normalize-space(" <> classAttr <> "), '" <> matchVal <> "')"
+            Wildcard -> wildcardPred classAttr matchVal
+
+    -- \| XPath predicate matching elements that have any attribute satisfying the condition.
+    --   Uses @*[...] predicate syntax so the condition is applied to each attribute node.
+    attrPred :: Text -> MatchType -> CaseSensitivity -> Text
+    attrPred val mt cs =
+      let attrExpr = applyCS cs "." -- '.' refers to the attribute node's string value
+          matchVal = lowerIfCI cs val
+       in case mt of
+            Full -> "@*[" <> attrExpr <> "='" <> matchVal <> "']"
+            Partial -> "@*[contains(" <> attrExpr <> ", '" <> matchVal <> "')]"
+            Starts -> "@*[starts-with(" <> attrExpr <> ", '" <> matchVal <> "')]"
+            Wildcard -> "@*[" <> wildcardPred attrExpr matchVal <> "]"
+
+    -- \| Wrap an XPath string expression with a translate() call to fold it to lower-case,
+    --   for CaseInsensitive matching.
+    applyCS :: CaseSensitivity -> Text -> Text
+    applyCS CaseSensitive expr = expr
+    applyCS CaseInsensitive expr =
+      "translate(" <> expr <> ", '" <> upperAlpha <> "', '" <> lowerAlpha <> "')"
+
+    lowerIfCI :: CaseSensitivity -> Text -> Text
+    lowerIfCI CaseSensitive v = v
+    lowerIfCI CaseInsensitive v = toLower v
+
+    -- \| Build a wildcard predicate from a normalised text expression and pattern.
+    --   Mirrors the logic in innerTextToXPath's buildWildcardPredicate.
+    wildcardPred :: Text -> Text -> Text
+    wildcardPred normText val =
+      let parts = filter (not . T.null) $ splitOn "*" val
+          startsWithWildcard = "*" `T.isPrefixOf` val
+          endsWithWildcard = "*" `T.isSuffixOf` val
+       in case parts of
+            [] -> "true()" -- "*" or "**" etc. matches everything
+            [single]
+              | startsWithWildcard && endsWithWildcard ->
+                  "contains(" <> normText <> ", '" <> single <> "')"
+              | startsWithWildcard ->
+                  "substring(" <> normText <> ", string-length(" <> normText <> ") - string-length('" <> single <> "') + 1) = '" <> single <> "'"
+              | endsWithWildcard ->
+                  "starts-with(" <> normText <> ", '" <> single <> "')"
+              | otherwise -> normText <> "='" <> single <> "'"
+            _ ->
+              let buildP (preds, curText) (idx, part) =
+                    let predicate =
+                          if idx == (0 :: Int) && not startsWithWildcard
+                            then "starts-with(" <> curText <> ", '" <> part <> "')"
+                            else "contains(" <> curText <> ", '" <> part <> "')"
+                        nextText = "substring-after(" <> curText <> ", '" <> part <> "')"
+                     in (preds <> [predicate], nextText)
+                  (predicates, _) = foldl' buildP ([], normText) (zip [0 ..] parts)
+               in intercalate " and " predicates
+
+    locErr :: Locator -> a
+    locErr loc =
       error . unpack $
         "Locator "
-          <> txt l
-          <> " conversion not implemented - should not be called - this is library defect - either clasify or locatorToXPathPartial is wrong"
-
+          <> txt loc
+          <> " conversion not implemented - should not be called - this is a library defect - check classify or locatorToXPathPartial"
 
 -- | Fold over a Locator tree with an accumulator, similar to foldl.
 --   Processes the parent node first (top-down), then recursively folds over children,
@@ -683,6 +803,12 @@ flattenLoc = \case
   -- WithOptions base opts -> WithOptions (flattenLoc base) opts
   -- Leaf locators and PostFilter have no children to recurse into
   other -> other
+
+upperAlpha :: Text
+upperAlpha = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+
+lowerAlpha :: Text
+lowerAlpha = "abcdefghijklmnopqrstuvwxyz"
 
 --  readers
 --  gt fail info - failinfo
