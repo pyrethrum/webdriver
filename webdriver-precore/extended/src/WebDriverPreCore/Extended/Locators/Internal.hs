@@ -492,7 +492,7 @@ data Classification = IsXPath | IsCSS | IsBiDi | Invalid InvalidLocator | IsMixe
 
 mergeClassification :: Classification -> Classification -> Classification
 mergeClassification i ii
-  -- if equal retunn that info
+  -- if equal return that info
   | i == ii = i
   -- if either invalid then invalid (first)
   | invalid i = i
@@ -581,9 +581,13 @@ sortCombinatorChildLocs' defLoc proto l =
 
     regroup :: (NonEmpty Locator -> Locator) -> NonEmpty Locator -> Locator
     regroup constr elms =
-       let grouped = groupBy (\a b -> clasify' a == clasify' b) elms
+      undefined
+      where
+        grouped = groupBy (\a b -> clasify' a == clasify' b) elms
          -- here careful of not ~ may need 2 construcots ???
-        in constr $ fromList $ map regroupIfMixed grouped
+        r = case grouped of
+             [] -> error "sortLocList: impossible empty list after grouping"
+             _ -> undefined
 
 locatorToXPathPartial :: Locator -> Locator
 locatorToXPathPartial = XPath . toXPathStr
