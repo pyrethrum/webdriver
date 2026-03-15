@@ -206,7 +206,7 @@ xpath :: Text -> Locator
 xpath = XPath
 
 allElms :: Locator
-allElms = All
+allElms = AllElms
 
 elmId :: Text -> Locator
 elmId = ID

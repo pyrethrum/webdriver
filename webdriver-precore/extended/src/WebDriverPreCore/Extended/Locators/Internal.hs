@@ -95,7 +95,7 @@ data Locator
   = -- universal
     CSS {value :: Text}
   | XPath {value :: Text}
-  | All
+  | AllElms
   | ID {value :: Text}
   | Class
       { value :: Text,
@@ -516,7 +516,7 @@ classify defLoc proto =
   \case
     CSS {} -> IsCSS
     XPath {} -> IsXPath
-    All -> IsXPath
+    AllElms -> IsXPath
     ID {} -> IsXPath
     Class {} -> IsXPath
     Attribute {} -> IsXPath
@@ -560,7 +560,7 @@ sortCombinatorChildLocs' defLoc proto l =
   case l of
     CSS {} -> l
     XPath {} -> l
-    All -> l
+    AllElms -> l
     ID {} -> l
     Class {} -> l
     Attribute {} -> l
@@ -596,7 +596,7 @@ locatorToXPathPartial = XPath . toXPathStr
     toXPathStr :: Locator -> Text
     toXPathStr loc = case loc of
       XPath {value} -> value
-      All -> "//*"
+      AllElms -> "//*"
       ID {value} -> "//*[@id='" <> value <> "']"
       Class {value, matchType, caseSensitivity} ->
         "//*[" <> classPred value matchType caseSensitivity <> "]"
@@ -625,7 +625,7 @@ locatorToXPathPartial = XPath . toXPathStr
         let stripped = T.stripPrefix "//*[" value
             unwrapped = stripped >>= \s -> if "]" `T.isSuffixOf` s then Just (T.dropEnd 1 s) else Nothing
          in maybe ("boolean(" <> value <> ")") id unwrapped
-      All -> "true()"
+      AllElms -> "true()"
       ID {value} -> "@id='" <> value <> "'"
       Class {value, matchType, caseSensitivity} -> classPred value matchType caseSensitivity
       Attribute {value, matchType, caseSensitivity} -> attrPred value matchType caseSensitivity

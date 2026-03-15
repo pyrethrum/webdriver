@@ -318,7 +318,7 @@ uniformFrequency = frequency . fmap (1,) . fmap pure
 xPathOnlyLocs :: [Locator]
 xPathOnlyLocs =
   [ XPath "//div",
-    All,
+    AllElms,
     ID "my-id",
     Class "my-class" Partial CaseSensitive,
     Attribute "data-test" Partial CaseInsensitive,
