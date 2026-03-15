@@ -3,7 +3,9 @@ module WebDriverPreCore.Extended.Locators.Internal where
 import Control.Exception (Exception)
 import Data.Foldable1 (Foldable1 (..), foldl1')
 import Data.Functor ((<&>))
-import Data.List.NonEmpty (NonEmpty (..), sortBy, toList, groupBy)
+import Data.List (uncons)
+import Data.List.NonEmpty (NonEmpty (..), groupBy, sortBy, toList)
+import Data.Maybe (fromJust)
 import Data.Text (Text, intercalate, pack, splitOn, toLower, unpack)
 import Data.Text qualified as T
 import Utils (txt)
@@ -570,24 +572,28 @@ sortCombinatorChildLocs' defLoc proto l =
     InnerText {} -> l
     BiDiContext {} -> l
     Parent {} -> l
-    All {elms} -> All $ sortLocList elms
-    Any {elms} -> Any $ sortLocList elms
-    None {elms} -> None $ sortLocList elms
+    All {elms} -> All $ sortAndGroup All elms
+    Any {elms} -> Any $ sortAndGroup Any elms
+    --- None a1, a2, b1, b2, c => None ( any (a1, a2), any (b1, b2), any (c))
+    None {elms} -> None $ sortAndGroup All elms
     PostFilter {} -> l
   where
+    sortAndGroup groupCons = regroup groupCons . sortLocList
     clasify' = classify defLoc proto
     sortLocList :: NonEmpty Locator -> NonEmpty Locator
     sortLocList = sortBy (\a b -> compare (clasify' a) (clasify' b))
 
-    regroup :: (NonEmpty Locator -> Locator) -> NonEmpty Locator -> Locator
+    regroup :: (NonEmpty Locator -> Locator) -> NonEmpty Locator -> NonEmpty Locator
     regroup constr elms =
-      undefined
+      -- as the source is a non-empty list, fromJust is safe here as uncons will always return a head and tail
+      uncurry (:|) . fromJust . uncons $ rewrapGroup <$> grouped
       where
         grouped = groupBy (\a b -> clasify' a == clasify' b) elms
-         -- here careful of not ~ may need 2 construcots ???
-        r = case grouped of
-             [] -> error "sortLocList: impossible empty list after grouping"
-             _ -> undefined
+        -- here careful of not ~ may need 2 construcots ???
+        rewrapGroup :: NonEmpty Locator -> Locator
+        rewrapGroup = \case
+          l' :| [] -> l'
+          multi -> constr multi
 
 locatorToXPathPartial :: Locator -> Locator
 locatorToXPathPartial = XPath . toXPathStr
