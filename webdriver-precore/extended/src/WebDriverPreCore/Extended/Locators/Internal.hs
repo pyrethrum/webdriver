@@ -3,7 +3,7 @@ module WebDriverPreCore.Extended.Locators.Internal where
 import Control.Exception (Exception)
 import Data.Foldable1 (Foldable1 (..), foldl1')
 import Data.Functor ((<&>))
-import Data.List.NonEmpty (NonEmpty (..), sortBy, toList)
+import Data.List.NonEmpty (NonEmpty (..), sortBy, toList, groupBy)
 import Data.Text (Text, intercalate, pack, splitOn, toLower, unpack)
 import Data.Text qualified as T
 import Utils (txt)
@@ -575,8 +575,15 @@ sortCombinatorChildLocs' defLoc proto l =
     Not {elms} -> Not $ sortLocList elms
     PostFilter {} -> l
   where
+    clasify' = classify defLoc proto
     sortLocList :: NonEmpty Locator -> NonEmpty Locator
-    sortLocList = sortBy (\a b -> compare (classify defLoc proto a) (classify defLoc proto b))
+    sortLocList = sortBy (\a b -> compare (clasify' a) (clasify' b))
+
+    regroup :: (NonEmpty Locator -> Locator) -> NonEmpty Locator -> Locator
+    regroup constr elms =
+       let grouped = groupBy (\a b -> clasify' a == clasify' b) elms
+         -- here careful of not ~ may need 2 construcots ???
+        in constr $ fromList $ map regroupIfMixed grouped
 
 locatorToXPathPartial :: Locator -> Locator
 locatorToXPathPartial = XPath . toXPathStr
