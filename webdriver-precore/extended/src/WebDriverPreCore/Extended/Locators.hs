@@ -719,12 +719,12 @@ wbr_ = Tag "wbr"
 --- Combinators ---
 
 (&&&) :: Locator -> Locator -> Locator
-l &&& r = And (l :| [r])
+l &&& r = All (l :| [r])
 
 infixr 3 &&&
 
 (|||) :: Locator -> Locator -> Locator
-l ||| r = Or (l :| [r])
+l ||| r = Any (l :| [r])
 
 infixr 2 |||
 
@@ -734,7 +734,7 @@ infixr 2 |||
 infixr 1 >>>
 
 notLoc :: Locator -> Locator
-notLoc l = Not (l :| [])
+notLoc l = None (l :| [])
 
 {- Demo:
 -- has initial values in fields
