@@ -3,7 +3,7 @@ module WebDriverPreCore.Extended.Locators.Internal where
 import Control.Exception (Exception)
 import Data.Foldable1 (Foldable1 (..), foldl1')
 import Data.Functor ((<&>))
-import Data.List.NonEmpty (NonEmpty (..), toList)
+import Data.List.NonEmpty (NonEmpty (..), sortBy, toList)
 import Data.Text (Text, intercalate, pack, splitOn, toLower, unpack)
 import Data.Text qualified as T
 import Utils (txt)
@@ -481,14 +481,14 @@ data Cardinality = One | Many deriving (Show, Eq)
 -- HTTP - use xpath approximation + post filter for duplicates - consider js function
 -- CSS use xpath + multi shot
 
-data InvalidLocator = InvalidLocator Text deriving (Show, Eq)
+data InvalidLocator = InvalidLocator Text deriving (Show, Eq, Ord)
 
 instance Exception InvalidLocator
 
 prepare :: (Text -> Locator) -> Protocol -> Cardinality -> Locator -> Either InvalidLocator Locator
 prepare defLoc proto card loc = undefined
 
-data Classification = IsMixed | IsCSS | IsXPath | IsBiDi | Invalid InvalidLocator deriving (Show, Eq)
+data Classification = IsXPath| IsCSS | IsBiDi | Invalid InvalidLocator | IsMixed  deriving (Show, Eq, Ord)
 
 mergeClassification :: Classification -> Classification -> Classification
 mergeClassification i ii
@@ -552,26 +552,31 @@ classify defLoc proto =
     clasifyElms :: NonEmpty Locator -> Classification
     clasifyElms = foldl1' mergeClassification . fmap classifyNxt
 
-sortCombinatorChildLocs' :: Locator -> Locator
-sortCombinatorChildLocs' l = case l of
-  CSS {} -> l
-  XPath {} -> l
-  All -> l
-  ID {} -> l
-  Class {} -> l
-  Attribute {} -> l
-  Tag {} -> l
-  Default {} -> l
-  Role {} -> l
-  InnerText {} -> l
-  BiDiContext {} -> l
-  Parent {} -> l
-  And {} -> undefined
-  Or {} -> undefined
-  Not {} -> undefined
-  PostFilter {} -> l
-where 
-  sortLocList :: NonEmpty Locator -> NonEmpty Locator
+sortCombinatorChildLocs :: (Text -> Locator) -> Protocol -> Locator -> Locator
+sortCombinatorChildLocs defLoc proto = mapLocBottomUp (sortCombinatorChildLocs' defLoc proto)
+
+sortCombinatorChildLocs' :: (Text -> Locator) -> Protocol -> Locator -> Locator
+sortCombinatorChildLocs' defLoc proto l =
+  case l of
+    CSS {} -> l
+    XPath {} -> l
+    All -> l
+    ID {} -> l
+    Class {} -> l
+    Attribute {} -> l
+    Tag {} -> l
+    Default {} -> l
+    Role {} -> l
+    InnerText {} -> l
+    BiDiContext {} -> l
+    Parent {} -> l
+    And {elms} -> And $ sortLocList elms
+    Or {elms} -> Or $ sortLocList elms
+    Not {elms} -> Not $ sortLocList elms
+    PostFilter {} -> l
+  where
+    sortLocList :: NonEmpty Locator -> NonEmpty Locator
+    sortLocList = sortBy (\a b -> compare (classify defLoc proto a) (classify defLoc proto b))
 
 locatorToXPathPartial :: Locator -> Locator
 locatorToXPathPartial = XPath . toXPathStr
@@ -735,9 +740,31 @@ foldLocBottomUp f acc loc =
   where
     foldList = foldl' (foldLocBottomUp f) acc . toList
 
+-- | Map over a Locator tree bottom-up (post-order).
+--   Recursively transforms children first, rebuilds the node with the new children,
+--   then applies the function to the reconstructed node.
+--   Useful for rewriting or normalising a Locator tree.
+mapLocBottomUp :: (Locator -> Locator) -> Locator -> Locator
+mapLocBottomUp f loc = f $
+  case loc of
+    Parent p c -> Parent (recurse p) (recurse c)
+    And locs -> And $ recurseMap locs
+    Or locs -> Or $ recurseMap locs
+    Not locs -> Not $ recurseMap locs
+    _ -> loc -- Leaf locators and PostFilter
+  where 
+    recurse = mapLocBottomUp f
+    recurseMap = fmap (mapLocBottomUp f)
+    
+-- | Returns 'True' if the predicate holds for any node in the locator tree.
+anyLoc :: (Locator -> Bool) -> Locator -> Bool
+anyLoc p = foldLoc (\acc loc -> acc || p loc) False
+
+hasInvalidLoc :: Locator -> Bool
+
 -- | Returns 'True' if a 'Default' constructor appears anywhere within the locator tree.
 hasDefault :: Locator -> Bool
-hasDefault = foldLoc (\acc loc -> acc || isDefault loc) False
+hasDefault = anyLoc isDefault
   where
     isDefault (Default _) = True
     isDefault _ = False

@@ -14,7 +14,7 @@ import Test.Tasty.Falsify qualified as F
 import Test.Tasty.HUnit (testCase, (@?=))
 import Utils (txt)
 import WebDriverPreCore.Extended.Locators
-import WebDriverPreCore.Extended.Locators.Internal (Locator (..), flattenLoc, foldLoc, foldLocBottomUp)
+import WebDriverPreCore.Extended.Locators.Internal (CaseSensitive, Locator (..), flattenLoc, foldLoc, foldLocBottomUp)
 import Prelude hiding (putStrLn)
 
 -- >>> _eval tests
@@ -210,7 +210,9 @@ collectLoc fold' = fold' (\acc loc -> acc `snoc` loc) [] nestedLoc
     snoc xs x = xs ++ [x]
 
 -- >>> _eval foldLocTopDown
+
 -- *** Exception: ExitSuccess
+
 foldLocTopDown :: TestTree
 foldLocTopDown =
   testCase "foldLoc visits nodes top-down (pre-order)" $
@@ -224,7 +226,9 @@ foldLocTopDown =
           ]
 
 -- >>> _eval foldLocBottomUpTest
+
 -- *** Exception: ExitSuccess
+
 foldLocBottomUpTest :: TestTree
 foldLocBottomUpTest =
   testCase "foldLocBottomUp visits nodes bottom-up (post-order)" $
@@ -260,11 +264,11 @@ mockLocated = \case
 -- After layer 1: Increase singleton probability by 5% per layer
 -- Terminates at max 10 layers or approximately 1000 nodes
 genLocator :: Gen Locator
-genLocator = genLocatorWithLimits 0 1000
+genLocator = genLocatorWithLimits genTrueFalseLoc 0 1000
 
 -- Internal generator that tracks depth and remaining node budget
-genLocatorWithLimits :: Int -> Int -> Gen Locator
-genLocatorWithLimits depth remainingNodes
+genLocatorWithLimits :: Gen Locator -> Int -> Int -> Gen Locator
+genLocatorWithLimits genSingleton depth remainingNodes
   | depth >= 10 || remainingNodes <= 0 = genSingleton
   | otherwise = frequency weights
   where
@@ -285,57 +289,83 @@ genLocatorWithLimits depth remainingNodes
 
     weights =
       [ (singletonProb, genSingleton),
-        (perConstructorProb, genParentAt (depth + 1) (remainingNodes - 1)),
-        (perConstructorProb, genAndAt (depth + 1) (remainingNodes - 1)),
-        (perConstructorProb, genOrAt (depth + 1) (remainingNodes - 1)),
-        (perConstructorProb + remainder, genNotAt (depth + 1) (remainingNodes - 1))
+        (perConstructorProb, genParentAt genSingleton (depth + 1) (remainingNodes - 1)),
+        (perConstructorProb, genAndAt genSingleton (depth + 1) (remainingNodes - 1)),
+        (perConstructorProb, genOrAt genSingleton (depth + 1) (remainingNodes - 1)),
+        (perConstructorProb + remainder, genNotAt genSingleton (depth + 1) (remainingNodes - 1))
       ]
 
 -- | Generate a singleton locator (80% trueLoc, 20% falseLoc)
-genSingleton :: Gen Locator
-genSingleton = frequency [(80 :: Word, pure trueLoc), (20, pure falseLoc)]
+genTrueFalseLoc :: Gen Locator
+genTrueFalseLoc =
+  frequency
+    [ (80, pure trueLoc),
+      (20, pure falseLoc)
+    ]
+
+uniformFrequency :: [a] -> Gen a
+uniformFrequency = frequency . fmap (1,) . fmap pure
+
+xPathOnlySample :: Gen Locator
+xPathOnlySample = uniformFrequency xPathOnlyLocs
+
+xPathOnlyLocs :: [Locator]
+xPathOnlyLocs =
+  [ XPath "//div",
+    All,
+    ID "my-id",
+    Class "my-class" Contains CaseSensitive,
+    Attribute "data-test" Contains CaseInsensitive,
+    Tag "button"
+  ]
+
+invalidHTTPLocs :: Gen Locator
+invalidHTTPLocs = uniformFrequency
+  [ Default $ Default "nested",
+    BiDiContext $ BrowsingContext "context-id"
+  ]
 
 -- | Generate a Parent locator at a given depth
-genParentAt :: Int -> Int -> Gen Locator
-genParentAt depth remainingNodes = do
+genParentAt :: Gen Locator -> Int -> Int -> Gen Locator
+genParentAt genSingleton depth remainingNodes = do
   -- Split remaining nodes between parent and child
   let halfNodes = remainingNodes `div` 2
-  parent <- genLocatorWithLimits depth halfNodes
-  child <- genLocatorWithLimits depth (remainingNodes - halfNodes - 1)
+  parent <- genLocatorWithLimits genSingleton depth halfNodes
+  child <- genLocatorWithLimits genSingleton depth (remainingNodes - halfNodes - 1)
   pure $ Parent parent child
 
 -- | Generate a And locator at a given depth
-genAndAt :: Int -> Int -> Gen Locator
-genAndAt depth remainingNodes = do
-  locs <- genNonEmptyLocators depth remainingNodes
+genAndAt :: Gen Locator -> Int -> Int -> Gen Locator
+genAndAt genSingleton depth remainingNodes = do
+  locs <- genNonEmptyLocators genSingleton depth remainingNodes
   pure $ And locs
 
 -- | Generate a Or locator at a given depth
-genOrAt :: Int -> Int -> Gen Locator
-genOrAt depth remainingNodes = do
-  locs <- genNonEmptyLocators depth remainingNodes
+genOrAt :: Gen Locator -> Int -> Int -> Gen Locator
+genOrAt genSingleton depth remainingNodes = do
+  locs <- genNonEmptyLocators genSingleton depth remainingNodes
   pure $ Or locs
 
 -- | Generate a Not locator at a given depth
-genNotAt :: Int -> Int -> Gen Locator
-genNotAt depth remainingNodes = do
-  locs <- genNonEmptyLocators depth remainingNodes
+genNotAt :: Gen Locator -> Int -> Int -> Gen Locator
+genNotAt genSingleton depth remainingNodes = do
+  locs <- genNonEmptyLocators genSingleton depth remainingNodes
   pure $ Not locs
 
 -- | Generate a non-empty list of locators, distributing the node budget
-genNonEmptyLocators :: Int -> Int -> Gen (NonEmpty Locator)
-genNonEmptyLocators depth remainingNodes = do
+genNonEmptyLocators :: Gen Locator -> Int -> Int -> Gen (NonEmpty Locator)
+genNonEmptyLocators genSingleton depth remainingNodes = do
   -- Generate 1 to min(5, remainingNodes) locators
   let maxCount = min 5 (max 1 remainingNodes)
   count <- G.integral $ R.between (1, maxCount)
   let nodesPerLoc = max 1 (remainingNodes `div` count)
   case count of
     1 -> do
-      loc <- genLocatorWithLimits depth remainingNodes
+      loc <- genLocatorWithLimits genSingleton depth remainingNodes
       pure $ loc :| []
     n -> do
-      first <- genLocatorWithLimits depth nodesPerLoc
-      rest <- sequence [genLocatorWithLimits depth nodesPerLoc | _ <- [2 .. n]]
+      first <- genLocatorWithLimits genSingleton depth nodesPerLoc
+      rest <- sequence [genLocatorWithLimits genSingleton depth nodesPerLoc | _ <- [2 .. n]]
       pure $ first :| rest
 
 -- Property test options for 100 tests
@@ -350,7 +380,9 @@ genLocatorOptions =
     }
 
 -- >>> _eval test_flatenning_simplification
+
 -- *** Exception: ExitSuccess
+
 test_flatenning_simplification :: TestTree
 test_flatenning_simplification = testPropertyWith genLocatorOptions "Flattening simplification" $ do
   loc <- gen genLocator
@@ -406,7 +438,9 @@ test_nested_none_match = testCase "This test fails" $ do
   mockLocated loc @?= mockLocated (flattenLoc loc)
 
 -- >>> _eval test_infix_precedence
+
 -- *** Exception: ExitSuccess
+
 test_infix_precedence_i :: TestTree
 test_infix_precedence_i =
   testCase "Test operator precedence i" $
@@ -416,7 +450,9 @@ test_infix_precedence_i =
     actual = mockLocated $ trueLoc ||| falseLoc &&& falseLoc
 
 -- >>> _eval test_infix_precedence_ii
+
 -- *** Exception: ExitSuccess
+
 test_infix_precedence_ii :: TestTree
 test_infix_precedence_ii =
   testCase "Test operator precedence ii" $
@@ -426,7 +462,9 @@ test_infix_precedence_ii =
     actual = mockLocated $ falseLoc ||| trueLoc &&& falseLoc ||| trueLoc
 
 -- >>> _eval test_parent_infix_precedence
+
 -- *** Exception: ExitSuccess
+
 test_parent_infix_precedence :: TestTree
 test_parent_infix_precedence =
   testCase "Test Parent operator precedence" $
