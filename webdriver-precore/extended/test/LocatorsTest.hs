@@ -13,8 +13,9 @@ import Test.Tasty.Falsify (ExpectFailure (DontExpectFailure), TestOptions (..), 
 import Test.Tasty.Falsify qualified as F
 import Test.Tasty.HUnit (testCase, (@?=))
 import Utils (txt)
+import WebDriverPreCore.Extended.BiDi.Base.Protocol (BrowsingContext (..))
 import WebDriverPreCore.Extended.Locators
-import WebDriverPreCore.Extended.Locators.Internal (CaseSensitive, Locator (..), flattenLoc, foldLoc, foldLocBottomUp)
+import WebDriverPreCore.Extended.Locators.Internal (CaseSensitivity (..), Classification (..), Locator (..), Protocol (..), anyLoc, classify, flattenLoc, foldLoc, foldLocBottomUp, hasInvalidLoc)
 import Prelude hiding (putStrLn)
 
 -- >>> _eval tests
@@ -55,7 +56,8 @@ tests =
           test_nested_none_match,
           test_infix_precedence_i,
           test_infix_precedence_ii,
-          test_parent_infix_precedence
+          test_parent_infix_precedence,
+          test_classify_invalid_iff_any_invalid_node
         ]
     ]
 
@@ -303,26 +305,29 @@ genTrueFalseLoc =
       (20, pure falseLoc)
     ]
 
+genLocatorXPathOrInvalidHttp :: Gen Locator
+genLocatorXPathOrInvalidHttp = genLocatorWithLimits genXPathOrInvalidHTTP 0 1000
+
+genXPathOrInvalidHTTP :: Gen Locator
+genXPathOrInvalidHTTP = uniformFrequency (xPathOnlyLocs <> invalidHTTPLocs)
+
 uniformFrequency :: [a] -> Gen a
 uniformFrequency = frequency . fmap (1,) . fmap pure
-
-xPathOnlySample :: Gen Locator
-xPathOnlySample = uniformFrequency xPathOnlyLocs
 
 xPathOnlyLocs :: [Locator]
 xPathOnlyLocs =
   [ XPath "//div",
     All,
     ID "my-id",
-    Class "my-class" Contains CaseSensitive,
-    Attribute "data-test" Contains CaseInsensitive,
+    Class "my-class" Partial CaseSensitive,
+    Attribute "data-test" Partial CaseInsensitive,
     Tag "button"
   ]
 
-invalidHTTPLocs :: Gen Locator
-invalidHTTPLocs = uniformFrequency
-  [ Default $ Default "nested",
-    BiDiContext $ BrowsingContext "context-id"
+invalidHTTPLocs :: [Locator]
+invalidHTTPLocs =
+  [ Default "nested",
+    BiDiContext (MkBrowsingContext "context-id")
   ]
 
 -- | Generate a Parent locator at a given depth
@@ -472,3 +477,38 @@ test_parent_infix_precedence =
   where
     expected = Parent (falseLoc ||| trueLoc) (trueLoc &&& falseLoc)
     actual = falseLoc ||| trueLoc >>> trueLoc &&& falseLoc
+
+-- >>> _eval test_classify_invalid_iff_any_invalid_node
+-- *** Exception: ExitSuccess
+
+-- | Property: classify with HTTP protocol and (\t -> Default t) as the default
+-- function returns Invalid if and only if the locator tree contains any
+-- Default or BiDiContext node.
+--
+-- Rationale: with defLoc = \t -> Default t, every Default node resolves to
+-- another Default (nested) which classify rejects as invalid. BiDiContext is
+-- unconditionally invalid under HTTP. mergeClassification propagates Invalid
+-- upward through any combinator, so the top-level result is Invalid iff any
+-- leaf is invalid.
+test_classify_invalid_iff_any_invalid_node :: TestTree
+test_classify_invalid_iff_any_invalid_node =
+  testPropertyWith genLocatorOptions "classify HTTP (\\t->Default t): Invalid iff tree has an invalid node" $ do
+    loc <- gen genLocatorXPathOrInvalidHttp
+    let hasInvalid = hasInvalidLoc (\t -> Default t) HTTP  loc
+        classification = classify (\t -> Default t) HTTP loc
+
+    info $ "Locator:\n" <> unpack (txt loc)
+    info $ "Has invalid node: " <> show hasInvalid
+    info $ "Classification: " <> show classification
+    F.assert $
+      expect True
+        `dot` fn
+          ( "classify HTTP (\\t->Default t) is Invalid iff anyLoc detects a recursive Default or BiDiContext node",
+            const $  hasInvalid == classedasInvalid classification
+          )
+        .$ ("loc", loc)
+  where
+    classedasInvalid :: Classification -> Bool
+    classedasInvalid = \case
+      Invalid _ -> True
+      _ -> False

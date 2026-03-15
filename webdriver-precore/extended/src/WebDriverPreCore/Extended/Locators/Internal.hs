@@ -488,7 +488,7 @@ instance Exception InvalidLocator
 prepare :: (Text -> Locator) -> Protocol -> Cardinality -> Locator -> Either InvalidLocator Locator
 prepare defLoc proto card loc = undefined
 
-data Classification = IsXPath| IsCSS | IsBiDi | Invalid InvalidLocator | IsMixed  deriving (Show, Eq, Ord)
+data Classification = IsXPath | IsCSS | IsBiDi | Invalid InvalidLocator | IsMixed deriving (Show, Eq, Ord)
 
 mergeClassification :: Classification -> Classification -> Classification
 mergeClassification i ii
@@ -752,15 +752,23 @@ mapLocBottomUp f loc = f $
     Or locs -> Or $ recurseMap locs
     Not locs -> Not $ recurseMap locs
     _ -> loc -- Leaf locators and PostFilter
-  where 
+  where
     recurse = mapLocBottomUp f
     recurseMap = fmap (mapLocBottomUp f)
-    
+
 -- | Returns 'True' if the predicate holds for any node in the locator tree.
 anyLoc :: (Locator -> Bool) -> Locator -> Bool
 anyLoc p = foldLoc (\acc loc -> acc || p loc) False
 
-hasInvalidLoc :: Locator -> Bool
+-- | Returns 'True' if the locator tree contains any node that is invalid
+--   for the given protocol.
+hasInvalidLoc :: (Text -> Locator) -> Protocol -> Locator -> Bool
+hasInvalidLoc defLoc proto =
+  anyLoc
+    ( \l -> case classify defLoc proto l of
+        Invalid _ -> True
+        _ -> False
+    )
 
 -- | Returns 'True' if a 'Default' constructor appears anywhere within the locator tree.
 hasDefault :: Locator -> Bool
