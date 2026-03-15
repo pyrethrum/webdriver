@@ -57,6 +57,7 @@ tests =
           test_infix_precedence_i,
           test_infix_precedence_ii,
           test_parent_infix_precedence,
+          test_classify_xpath_only_is_xpath,
           test_classify_invalid_iff_any_invalid_node
         ]
     ]
@@ -378,6 +379,7 @@ genLocatorOptions :: TestOptions
 genLocatorOptions =
   TestOptions
     { expectFailure = DontExpectFailure,
+      -- overrideVerbose = Just Verbose,
       overrideVerbose = Just NotVerbose,
       overrideMaxShrinks = Nothing,
       overrideNumTests = Just 1000,
@@ -478,6 +480,20 @@ test_parent_infix_precedence =
     expected = Parent (falseLoc ||| trueLoc) (trueLoc &&& falseLoc)
     actual = falseLoc ||| trueLoc >>> trueLoc &&& falseLoc
 
+-- >>> _eval test_classify_xpath_only_is_xpath
+-- *** Exception: ExitSuccess
+
+-- | Property: a tree built exclusively from xPathOnlyLocs is always classified
+-- as IsXPath under the HTTP protocol.
+test_classify_xpath_only_is_xpath :: TestTree
+test_classify_xpath_only_is_xpath =
+  testPropertyWith genLocatorOptions "classify HTTP: xpath-only tree is always IsXPath" $ do
+    loc <- gen $ genLocatorWithLimits (uniformFrequency xPathOnlyLocs) 0 1000
+    let classification = classify (\t -> Default t) HTTP loc
+    info $ "Locator:\n" <> unpack (txt loc)
+    info $ "Classification: " <> show classification
+    F.assert $ expect True .$ ("classification == IsXPath", classification == IsXPath)
+
 -- >>> _eval test_classify_invalid_iff_any_invalid_node
 -- *** Exception: ExitSuccess
 
@@ -500,13 +516,7 @@ test_classify_invalid_iff_any_invalid_node =
     info $ "Locator:\n" <> unpack (txt loc)
     info $ "Has invalid node: " <> show hasInvalid
     info $ "Classification: " <> show classification
-    F.assert $
-      expect True
-        `dot` fn
-          ( "classify HTTP (\\t->Default t) is Invalid iff anyLoc detects a recursive Default or BiDiContext node",
-            const $  hasInvalid == classedasInvalid classification
-          )
-        .$ ("loc", loc)
+    F.assert $ expect True .$ ("hasInvalid == classedasInvalid classification", hasInvalid == classedasInvalid classification)
   where
     classedasInvalid :: Classification -> Bool
     classedasInvalid = \case
