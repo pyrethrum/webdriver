@@ -554,46 +554,48 @@ classify defLoc proto =
     clasifyElms :: NonEmpty Locator -> Classification
     clasifyElms = foldl1' mergeClassification . fmap classifyNxt
 
-sortCombinatorChildLocs :: (Text -> Locator) -> Protocol -> Locator -> Locator
-sortCombinatorChildLocs defLoc proto = mapLocBottomUp (sortCombinatorChildLocs' defLoc proto)
-
-sortCombinatorChildLocs' :: (Text -> Locator) -> Protocol -> Locator -> Locator
-sortCombinatorChildLocs' defLoc proto l =
-  case l of
-    CSS {} -> l
-    XPath {} -> l
-    AllElms -> l
-    ID {} -> l
-    Class {} -> l
-    Attribute {} -> l
-    Tag {} -> l
-    Default {} -> l
-    Role {} -> l
-    InnerText {} -> l
-    BiDiContext {} -> l
-    Parent {} -> l
-    All {elms} -> All $ sortAndGroup All elms
-    Any {elms} -> Any $ sortAndGroup Any elms
-    --- None a1, a2, b1, b2, c => None ( any (a1, a2), any (b1, b2), any (c))
-    None {elms} -> None $ sortAndGroup All elms
-    PostFilter {} -> l
+sortGroupChildLocs :: (Text -> Locator) -> Protocol -> Locator -> Locator
+sortGroupChildLocs defLoc proto =
+  mapLocBottomUp sortGroupChildLocs'
   where
-    sortAndGroup groupCons = regroup groupCons . sortLocList
-    clasify' = classify defLoc proto
-    sortLocList :: NonEmpty Locator -> NonEmpty Locator
-    sortLocList = sortBy (\a b -> compare (clasify' a) (clasify' b))
-
-    regroup :: (NonEmpty Locator -> Locator) -> NonEmpty Locator -> NonEmpty Locator
-    regroup constr elms =
-      -- as the source is a non-empty list, fromJust is safe here as uncons will always return a head and tail
-      uncurry (:|) . fromJust . uncons $ rewrapGroup <$> grouped
+    sortGroupChildLocs' :: Locator -> Locator
+    sortGroupChildLocs' l =
+      case l of
+        CSS {} -> l
+        XPath {} -> l
+        AllElms -> l
+        ID {} -> l
+        Class {} -> l
+        Attribute {} -> l
+        Tag {} -> l
+        Default {} -> l
+        Role {} -> l
+        InnerText {} -> l
+        BiDiContext {} -> l
+        Parent {} -> l
+        All {elms} -> All $ sortAndGroup All elms
+        Any {elms} -> Any $ sortAndGroup Any elms
+        --- None a1, a2, b1, b2, c => None ( any (a1, a2), any (b1, b2), any (c))
+        None {elms} -> None $ sortAndGroup Any elms
+        PostFilter {} -> l
       where
-        grouped = groupBy (\a b -> clasify' a == clasify' b) elms
-        -- here careful of not ~ may need 2 construcots ???
-        rewrapGroup :: NonEmpty Locator -> Locator
-        rewrapGroup = \case
-          l' :| [] -> l'
-          multi -> constr multi
+        clasify' = classify defLoc proto
+        sortAndGroup groupCons = regroup groupCons . sortLocList
+
+        sortLocList :: NonEmpty Locator -> NonEmpty Locator
+        sortLocList = sortBy (\a b -> compare (clasify' a) (clasify' b))
+
+        regroup :: (NonEmpty Locator -> Locator) -> NonEmpty Locator -> NonEmpty Locator
+        regroup constr elms =
+          -- as the source is a non-empty list, fromJust is safe here as uncons will always return a head and tail
+          uncurry (:|) . fromJust . uncons $ rewrapGroup <$> grouped
+          where
+            grouped = groupBy (\a b -> clasify' a == clasify' b) elms
+            -- here careful of not ~ may need 2 construcots ???
+            rewrapGroup :: NonEmpty Locator -> Locator
+            rewrapGroup = \case
+              l' :| [] -> l'
+              multi -> constr multi
 
 locatorToXPathPartial :: Locator -> Locator
 locatorToXPathPartial = XPath . toXPathStr

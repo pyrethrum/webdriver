@@ -15,7 +15,7 @@ import Test.Tasty.HUnit (testCase, (@?=))
 import Utils (txt)
 import WebDriverPreCore.Extended.BiDi.Base.Protocol (BrowsingContext (..))
 import WebDriverPreCore.Extended.Locators
-import WebDriverPreCore.Extended.Locators.Internal (CaseSensitivity (..), Classification (..), Locator (..), Protocol (..), anyLoc, classify, flattenLoc, foldLoc, foldLocBottomUp, hasInvalidLoc)
+import WebDriverPreCore.Extended.Locators.Internal (CaseSensitivity (..), Classification (..), JSPostFilter, Locator (..), Protocol (..), anyLoc, classify, flattenLoc, foldLoc, foldLocBottomUp, hasInvalidLoc, sortGroupChildLocs)
 import Prelude hiding (putStrLn)
 
 -- >>> _eval tests
@@ -51,14 +51,14 @@ tests =
         ],
       testGroup
         "Property Tests"
-        [ test_mock_logic_preserved_on_flattenning,
-          test_flatenning_simplification,
+        [ prop_mock_logic_preserved_on_flattenning,
+          prop_flatenning_simplification,
           test_nested_none_match,
           test_infix_precedence_i,
           test_infix_precedence_ii,
           test_parent_infix_precedence,
-          test_classify_xpath_only_is_xpath,
-          test_classify_invalid_iff_any_invalid_node
+          prop_classify_xpath_only_is_xpath,
+          prop_classify_invalid_iff_any_invalid_node
         ]
     ]
 
@@ -244,12 +244,6 @@ foldLocBottomUpTest =
             nestedLoc
           ]
 
-trueLoc :: Locator
-trueLoc = css "True"
-
-falseLoc :: Locator
-falseLoc = button "False"
-
 mockLocated :: Locator -> Bool
 mockLocated = \case
   CSS "True" -> True
@@ -298,6 +292,12 @@ genLocatorWithLimits genSingleton depth remainingNodes
         (perConstructorProb + remainder, genNoneAt genSingleton (depth + 1) (remainingNodes - 1))
       ]
 
+trueLoc :: Locator
+trueLoc = css "True"
+
+falseLoc :: Locator
+falseLoc = button "False"
+
 -- | Generate a singleton locator (80% trueLoc, 20% falseLoc)
 genTrueFalseLoc :: Gen Locator
 genTrueFalseLoc =
@@ -305,6 +305,42 @@ genTrueFalseLoc =
     [ (80, pure trueLoc),
       (20, pure falseLoc)
     ]
+
+allLeavesBool :: Bool -> [Locator]
+allLeavesBool val =
+  let b = pack $ show val
+   in [ CSS b,
+        XPath b,
+        AllElms,
+        ID b,
+        Class
+          { value = b,
+            matchType = Full,
+            caseSensitivity = CaseSensitive
+          },
+        Attribute
+          { value = b,
+            matchType = Full,
+            caseSensitivity = CaseSensitive
+          },
+        Tag {value = b},
+        Default {value = b},
+        -- double shot / difficult
+        Role {role = Just Button, name = Just b},
+        InnerText
+          { value = b,
+            matchType = Full,
+            caseSesnsitivity = CaseSensitive,
+            maxDepth = Nothing
+          },
+        -- browsingContextId -> elementId ie get the frame that belongs to the browsing context
+        BiDiContext {context = MkBrowsingContext b},
+        PostFilter $
+          JSPostFilter
+            { description = b,
+              js = b
+            }
+      ]
 
 genLocatorXPathOrInvalidHttp :: Gen Locator
 genLocatorXPathOrInvalidHttp = genLocatorWithLimits genXPathOrInvalidHTTP 0 1000
@@ -386,12 +422,12 @@ genLocatorOptions =
       overrideMaxRatio = Nothing
     }
 
--- >>> _eval test_flatenning_simplification
+-- >>> _eval prop_flatenning_simplification
 
 -- *** Exception: ExitSuccess
 
-test_flatenning_simplification :: TestTree
-test_flatenning_simplification = testPropertyWith genLocatorOptions "Flattening simplification" $ do
+prop_flatenning_simplification :: TestTree
+prop_flatenning_simplification = testPropertyWith genLocatorOptions "Flattening simplification" $ do
   loc <- gen genLocator
   let unflattenedComplexity = complexity loc
       flatloc = flattenLoc loc
@@ -423,14 +459,23 @@ test_flatenning_simplification = testPropertyWith genLocatorOptions "Flattening 
 
 -- Mock property test that generates locators and logs them
 
--- >>> _eval test_mock_logic_preserved_on_flattenning
+-- >>> _eval prop_mock_logic_preserved_on_flattenning
 
 -- *** Exception: ExitSuccess
 
-test_mock_logic_preserved_on_flattenning :: TestTree
-test_mock_logic_preserved_on_flattenning = testPropertyWith genLocatorOptions "Generate and log locators" $ do
+prop_mock_logic_preserved_on_flattenning :: TestTree
+prop_mock_logic_preserved_on_flattenning = testPropertyWith genLocatorOptions "Generate and log locators" $ do
   loc <- gen genLocator
   F.assert $ expect True `dot` fn ("flattenLoc preserves mockLocated", \l -> mockLocated l == mockLocated (flattenLoc l)) .$ ("loc", loc)
+
+-- >>> _eval prop_mock_logic_preserved_on_sort_and_grouping
+
+-- *** Exception: ExitSuccess
+
+prop_mock_logic_preserved_on_sort_and_grouping :: TestTree
+prop_mock_logic_preserved_on_sort_and_grouping = testPropertyWith genLocatorOptions "Generate and log locators" $ do
+  loc <- gen genLocator
+  F.assert $ expect True `dot` fn ("flattenLoc preserves mockLocated", \l -> mockLocated l == mockLocated (sortGroupChildLocs l)) .$ ("loc", loc)
 
 -- >>> _eval test_fail
 
@@ -480,13 +525,14 @@ test_parent_infix_precedence =
     expected = Parent (falseLoc ||| trueLoc) (trueLoc &&& falseLoc)
     actual = falseLoc ||| trueLoc >>> trueLoc &&& falseLoc
 
--- >>> _eval test_classify_xpath_only_is_xpath
+-- >>> _eval prop_classify_xpath_only_is_xpath
+
 -- *** Exception: ExitSuccess
 
 -- | Property: a tree built exclusively from xPathOnlyLocs is always classified
 -- as IsXPath under the HTTP protocol.
-test_classify_xpath_only_is_xpath :: TestTree
-test_classify_xpath_only_is_xpath =
+prop_classify_xpath_only_is_xpath :: TestTree
+prop_classify_xpath_only_is_xpath =
   testPropertyWith genLocatorOptions "classify HTTP: xpath-only tree is always IsXPath" $ do
     loc <- gen $ genLocatorWithLimits (uniformFrequency xPathOnlyLocs) 0 1000
     let classification = classify (\t -> Default t) HTTP loc
@@ -494,7 +540,8 @@ test_classify_xpath_only_is_xpath =
     info $ "Classification: " <> show classification
     F.assert $ expect True .$ ("classification == IsXPath", classification == IsXPath)
 
--- >>> _eval test_classify_invalid_iff_any_invalid_node
+-- >>> _eval prop_classify_invalid_iff_any_invalid_node
+
 -- *** Exception: ExitSuccess
 
 -- | Property: classify with HTTP protocol and (\t -> Default t) as the default
@@ -506,11 +553,11 @@ test_classify_xpath_only_is_xpath =
 -- unconditionally invalid under HTTP. mergeClassification propagates Invalid
 -- upward through any combinator, so the top-level result is Invalid iff any
 -- leaf is invalid.
-test_classify_invalid_iff_any_invalid_node :: TestTree
-test_classify_invalid_iff_any_invalid_node =
+prop_classify_invalid_iff_any_invalid_node :: TestTree
+prop_classify_invalid_iff_any_invalid_node =
   testPropertyWith genLocatorOptions "classify HTTP (\\t->Default t): Invalid iff tree has an invalid node" $ do
     loc <- gen genLocatorXPathOrInvalidHttp
-    let hasInvalid = hasInvalidLoc (\t -> Default t) HTTP  loc
+    let hasInvalid = hasInvalidLoc (\t -> Default t) HTTP loc
         classification = classify (\t -> Default t) HTTP loc
 
     info $ "Locator:\n" <> unpack (txt loc)
