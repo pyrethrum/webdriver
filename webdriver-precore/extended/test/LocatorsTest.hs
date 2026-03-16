@@ -15,7 +15,7 @@ import Test.Tasty.HUnit (testCase, (@?=))
 import Utils (txt)
 import WebDriverPreCore.Extended.BiDi.Base.Protocol (BrowsingContext (..))
 import WebDriverPreCore.Extended.Locators
-import WebDriverPreCore.Extended.Locators.Internal (CaseSensitivity (..), Classification (..), PostFilter (..), Locator (..), Protocol (..), anyLoc, classify, flattenLoc, foldLoc, foldLocBottomUp, hasInvalidLoc, sortGroupChildLocs)
+import WebDriverPreCore.Extended.Locators.Internal (CaseSensitivity (..), Classification (..), InvalidLocator, PostFilter (..), Locator (..), Protocol (..), anyLoc, classify, flattenLoc, foldLoc, foldLocBottomUp, hasInvalidLoc, prepare, sortGroupChildLocs)
 import Prelude hiding (putStrLn)
 
 -- >>> _eval tests
@@ -60,7 +60,8 @@ tests =
           prop_classify_xpath_only_is_xpath,
           prop_classify_invalid_iff_any_invalid_node,
           prop_mock_logic_preserved_on_flattenning,
-          prop_mock_logic_preserved_on_sort_and_grouping
+          prop_mock_logic_preserved_on_sort_and_grouping,
+          prop_prepare_logic_preserved
         ]
     ]
 
@@ -498,6 +499,21 @@ prop_mock_logic_preserved_on_sort_and_grouping = testPropertyWith genLocatorOpti
   info $ "Original locator:\n" <> unpack (txt loc)
   info $ "Grouped locator:\n" <> unpack (txt grouped)
   F.assert $ satisfies ("group sort preserves mockLocated", \l -> mockLocated False l == mockLocated False grouped) .$ ("loc", loc)
+
+-- >>> _eval prop_prepare_logic_preserved
+-- *** Exception: ExitSuccess
+prop_prepare_logic_preserved :: TestTree
+prop_prepare_logic_preserved = testPropertyWith genLocatorOptions "prepare with ID default preserves mockLocated" $ do
+  loc <- gen genLocator
+  proto <- gen genProtocol
+  let result = prepare ID proto loc
+  info $ "Original locator:\n" <> unpack (txt loc)
+  info $ "Protocol: " <> show proto
+  info $ "Prepared: " <> either show (unpack . txt) result
+  F.assert $ satisfies ("prepare preserves mockLocated when valid", \l -> either (const True) (\prepared -> mockLocated False l == mockLocated False prepared) (prepare ID proto l)) .$ ("loc", loc)
+
+genProtocol :: Gen Protocol
+genProtocol = uniformFrequency [HTTP, BiDi]
 
 -- >>> _eval test_fail
 
