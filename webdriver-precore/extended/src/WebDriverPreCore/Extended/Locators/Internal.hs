@@ -487,8 +487,15 @@ data InvalidLocator = InvalidLocator Text deriving (Show, Eq, Ord)
 
 instance Exception InvalidLocator
 
-prepare :: (Text -> Locator) -> Protocol -> Cardinality -> Locator -> Either InvalidLocator Locator
-prepare defLoc proto card loc = undefined
+prepare :: (Text -> Locator) -> Protocol ->  Locator -> Either InvalidLocator Locator
+prepare defLoc proto = 
+   toEither . sortGroupChildLocs defLoc proto . flattenLoc
+   where 
+    toEither :: Locator -> Either InvalidLocator Locator
+    toEither l = case classify defLoc proto l of
+      Invalid err -> Left err
+      _ -> Right l
+      
 
 data Classification = IsXPath | IsCSS | IsBiDi | Invalid InvalidLocator | IsMixed deriving (Show, Eq, Ord)
 
@@ -507,11 +514,6 @@ mergeClassification i ii
       _ -> False
 
 data LocPlus = MkLocPlus {accLoc :: Locator, info :: Classification}
-
-prepare' :: (Text -> Locator) -> Protocol -> Cardinality -> Locator -> (Locator, Classification)
-prepare' defLoc proto card loc = undefined
-  where
-    flattenned = flattenLoc loc
 
 classify :: (Text -> Locator) -> Protocol -> Locator -> Classification
 classify defLoc proto =

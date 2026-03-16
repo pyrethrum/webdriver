@@ -2,7 +2,7 @@ module LocatorsTest (tests) where
 
 import Control.Monad (when)
 import Data.List.NonEmpty (NonEmpty (..))
-import Data.Text (Text, unpack)
+import Data.Text (Text, pack, unpack)
 import Data.Text.IO (putStrLn)
 import System.Environment (withArgs)
 import Test.Falsify.Generator as G (Gen, frequency, integral)
@@ -15,7 +15,7 @@ import Test.Tasty.HUnit (testCase, (@?=))
 import Utils (txt)
 import WebDriverPreCore.Extended.BiDi.Base.Protocol (BrowsingContext (..))
 import WebDriverPreCore.Extended.Locators
-import WebDriverPreCore.Extended.Locators.Internal (CaseSensitivity (..), Classification (..), JSPostFilter, Locator (..), Protocol (..), anyLoc, classify, flattenLoc, foldLoc, foldLocBottomUp, hasInvalidLoc, sortGroupChildLocs)
+import WebDriverPreCore.Extended.Locators.Internal (CaseSensitivity (..), Classification (..), PostFilter (..), Locator (..), Protocol (..), anyLoc, classify, flattenLoc, foldLoc, foldLocBottomUp, hasInvalidLoc, sortGroupChildLocs)
 import Prelude hiding (putStrLn)
 
 -- >>> _eval tests
@@ -51,14 +51,16 @@ tests =
         ],
       testGroup
         "Property Tests"
-        [ prop_mock_logic_preserved_on_flattenning,
-          prop_flatenning_simplification,
+        [ 
           test_nested_none_match,
           test_infix_precedence_i,
           test_infix_precedence_ii,
           test_parent_infix_precedence,
+          prop_flatenning_simplification,
           prop_classify_xpath_only_is_xpath,
-          prop_classify_invalid_iff_any_invalid_node
+          prop_classify_invalid_iff_any_invalid_node,
+          prop_mock_logic_preserved_on_flattenning,
+          prop_mock_logic_preserved_on_sort_and_grouping
         ]
     ]
 
@@ -244,15 +246,35 @@ foldLocBottomUpTest =
             nestedLoc
           ]
 
-mockLocated :: Locator -> Bool
-mockLocated = \case
-  CSS "True" -> True
-  Role (Just Button) (Just "False") -> False
-  All locs -> all mockLocated locs
-  Any locs -> any mockLocated locs
-  None locs -> not (any mockLocated locs)
-  Parent parent child -> mockLocated parent && mockLocated child
-  _ -> error "Locator not Mocked"
+-- | Interpret a Locator as a Bool for property testing.
+-- Leaf locators encode their boolean value as the text \"True\" or \"False\" in their
+-- primary text field. 'AllElms' and 'Role' with no name use @allElmsDefault@.
+-- Combinators recurse with standard boolean semantics.
+mockLocated :: Bool -> Locator -> Bool
+mockLocated allElmsDefault = go
+  where
+    go = \case
+      CSS v -> readBool v
+      XPath v -> readBool v
+      AllElms -> allElmsDefault
+      ID v -> readBool v
+      Class {value = v} -> readBool v
+      Attribute {value = v} -> readBool v
+      Tag {value = v} -> readBool v
+      Default {value = v} -> readBool v
+      Role {name = Just v} -> readBool v
+      Role {name = Nothing} -> allElmsDefault
+      InnerText {value = v} -> readBool v
+      BiDiContext {context = MkBrowsingContext v} -> readBool v
+      PostFilter (JSPostFilter v _) -> readBool v
+      All locs -> all go locs
+      Any locs -> any go locs
+      None locs -> not (any go locs)
+      Parent p c -> go p && go c
+      _ -> error "Locator not supported by mockLocated"
+    readBool "True" = True
+    readBool "False" = False
+    readBool v = error $ "mockLocated: unexpected value: " <> unpack v
 
 -- | Falsify generator for Locator with depth and node count limits.
 -- Only generates Parent, All, Any, None, and singletons (trueLoc, falseLoc).
@@ -261,7 +283,7 @@ mockLocated = \case
 -- After layer 1: Increase singleton probability by 5% per layer
 -- Terminates at max 10 layers or approximately 1000 nodes
 genLocator :: Gen Locator
-genLocator = genLocatorWithLimits genTrueFalseLoc 0 1000
+genLocator = genLocatorWithLimits (leafLocBool 80) 0 1000
 
 -- Internal generator that tracks depth and remaining node budget
 genLocatorWithLimits :: Gen Locator -> Int -> Int -> Gen Locator
@@ -335,12 +357,18 @@ allLeavesBool val =
           },
         -- browsingContextId -> elementId ie get the frame that belongs to the browsing context
         BiDiContext {context = MkBrowsingContext b},
-        PostFilter $
-          JSPostFilter
-            { description = b,
-              js = b
-            }
+        PostFilter $ JSPostFilter b b
       ]
+
+-- | Generate a leaf locator where the text value encodes the boolean result.
+-- With probability @percentTrue/100@, picks uniformly from all True-valued
+-- leaves (from 'allLeavesBool'); otherwise picks from all False-valued leaves.
+leafLocBool :: Word -> Gen Locator
+leafLocBool percentTrue =
+  frequency
+    [ (percentTrue, uniformFrequency (allLeavesBool True)),
+      (100 - percentTrue, uniformFrequency (allLeavesBool False))
+    ]
 
 genLocatorXPathOrInvalidHttp :: Gen Locator
 genLocatorXPathOrInvalidHttp = genLocatorWithLimits genXPathOrInvalidHTTP 0 1000
@@ -415,17 +443,15 @@ genLocatorOptions :: TestOptions
 genLocatorOptions =
   TestOptions
     { expectFailure = DontExpectFailure,
-      -- overrideVerbose = Just Verbose,
-      overrideVerbose = Just NotVerbose,
+      overrideVerbose = Just Verbose,
+      -- overrideVerbose = Just NotVerbose,
       overrideMaxShrinks = Nothing,
       overrideNumTests = Just 1000,
       overrideMaxRatio = Nothing
     }
 
 -- >>> _eval prop_flatenning_simplification
-
 -- *** Exception: ExitSuccess
-
 prop_flatenning_simplification :: TestTree
 prop_flatenning_simplification = testPropertyWith genLocatorOptions "Flattening simplification" $ do
   loc <- gen genLocator
@@ -438,21 +464,15 @@ prop_flatenning_simplification = testPropertyWith genLocatorOptions "Flattening 
   info $ "Flattened locator:\n" <> unpack (txt flatloc)
   F.assert $ expect True `dot` fn ("flattenLoc simplifies or maintains complexity", \_l -> complexity flatloc <= complexity loc) .$ ("loc", loc)
   where
-    -- Calculate complexity score: singleton/leaf = 1, nesting constructors = 2
+    -- Calculate complexity score: leaf = 1, combinator wrapper = 2 + children
     complexity :: Locator -> Int
     complexity = \case
-      -- trueLoc
-      CSS "True" -> 1
-      -- falseLoc
-      Role (Just Button) (Just "False") -> 1
-      None (x :| []) -> complexity x --- Singleton None leaf - complexity of child
+      None (x :| []) -> complexity x -- singleton None: same complexity as child
       None locs -> plus2Map locs
       All locs -> plus2Map locs
-      All (_ :| []) -> error "Singleton All should be flattenned"
       Any locs -> plus2Map locs
-      Any (_ :| []) -> error "Singleton Any should be flattenned"
       Parent parent child -> 2 + complexity parent + complexity child
-      _ -> error "Locator not Mocked"
+      _ -> 1 -- all leaf nodes have complexity 1
 
     plus2Map :: NonEmpty Locator -> Int
     plus2Map locs = 2 + (sum $ complexity <$> locs)
@@ -460,22 +480,24 @@ prop_flatenning_simplification = testPropertyWith genLocatorOptions "Flattening 
 -- Mock property test that generates locators and logs them
 
 -- >>> _eval prop_mock_logic_preserved_on_flattenning
+-- *** Exception: ExitSuccess
 
 -- *** Exception: ExitSuccess
 
 prop_mock_logic_preserved_on_flattenning :: TestTree
 prop_mock_logic_preserved_on_flattenning = testPropertyWith genLocatorOptions "Generate and log locators" $ do
   loc <- gen genLocator
-  F.assert $ expect True `dot` fn ("flattenLoc preserves mockLocated", \l -> mockLocated l == mockLocated (flattenLoc l)) .$ ("loc", loc)
+  F.assert $ expect True `dot` fn ("flattenLoc preserves mockLocated", \l -> mockLocated False l == mockLocated False (flattenLoc l)) .$ ("loc", loc)
 
 -- >>> _eval prop_mock_logic_preserved_on_sort_and_grouping
-
 -- *** Exception: ExitSuccess
-
 prop_mock_logic_preserved_on_sort_and_grouping :: TestTree
 prop_mock_logic_preserved_on_sort_and_grouping = testPropertyWith genLocatorOptions "Generate and log locators" $ do
   loc <- gen genLocator
-  F.assert $ expect True `dot` fn ("flattenLoc preserves mockLocated", \l -> mockLocated l == mockLocated (sortGroupChildLocs l)) .$ ("loc", loc)
+  let grouped = sortGroupChildLocs (\t -> Default t) HTTP loc
+  info $ "Original locator:\n" <> unpack (txt loc)
+  info $ "Grouped locator:\n" <> unpack (txt grouped)
+  F.assert $ expect True `dot` fn ("group sort preserves mockLocated", \l -> mockLocated False l == mockLocated False grouped) .$ ("loc", loc)
 
 -- >>> _eval test_fail
 
@@ -487,7 +509,7 @@ test_nested_none_match = testCase "This test fails" $ do
   -- logPretty loc
   -- logPretty "--->"
   -- logPretty (flattenLoc loc)
-  mockLocated loc @?= mockLocated (flattenLoc loc)
+  mockLocated False loc @?= mockLocated False (flattenLoc loc)
 
 -- >>> _eval test_infix_precedence
 
@@ -499,7 +521,7 @@ test_infix_precedence_i =
     expected @?= actual
   where
     expected = True || False && False
-    actual = mockLocated $ trueLoc ||| falseLoc &&& falseLoc
+    actual = mockLocated False $ trueLoc ||| falseLoc &&& falseLoc
 
 -- >>> _eval test_infix_precedence_ii
 
@@ -511,7 +533,7 @@ test_infix_precedence_ii =
     expected @?= actual
   where
     expected = False || True && False || True
-    actual = mockLocated $ falseLoc ||| trueLoc &&& falseLoc ||| trueLoc
+    actual = mockLocated False $ falseLoc ||| trueLoc &&& falseLoc ||| trueLoc
 
 -- >>> _eval test_parent_infix_precedence
 
