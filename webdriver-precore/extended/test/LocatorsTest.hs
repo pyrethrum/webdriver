@@ -6,7 +6,7 @@ import Data.Text (Text, pack, unpack)
 import Data.Text.IO (putStrLn)
 import System.Environment (withArgs)
 import Test.Falsify.Generator as G (Gen, frequency, integral)
-import Test.Falsify.Predicate (dot, expect, fn, (.$))
+import Test.Falsify.Predicate (expect, satisfies, (.$))
 import Test.Falsify.Range as R (between)
 import Test.Tasty (TestTree, defaultMain, testGroup)
 import Test.Tasty.Falsify (ExpectFailure (DontExpectFailure), TestOptions (..), Verbose (..), gen, info, testPropertyWith)
@@ -462,7 +462,7 @@ prop_flatenning_simplification = testPropertyWith genLocatorOptions "Flattening 
   info $ "Original locator:\n" <> unpack (txt loc)
   info $ "Flattened complexity: " <> show flattenedComplexity
   info $ "Flattened locator:\n" <> unpack (txt flatloc)
-  F.assert $ expect True `dot` fn ("flattenLoc simplifies or maintains complexity", \_l -> complexity flatloc <= complexity loc) .$ ("loc", loc)
+  F.assert $ satisfies ("flattenLoc simplifies or maintains complexity", \_l -> complexity flatloc <= complexity loc) .$ ("loc", loc)
   where
     -- Calculate complexity score: leaf = 1, combinator wrapper = 2 + children
     complexity :: Locator -> Int
@@ -487,7 +487,7 @@ prop_flatenning_simplification = testPropertyWith genLocatorOptions "Flattening 
 prop_mock_logic_preserved_on_flattenning :: TestTree
 prop_mock_logic_preserved_on_flattenning = testPropertyWith genLocatorOptions "Generate and log locators" $ do
   loc <- gen genLocator
-  F.assert $ expect True `dot` fn ("flattenLoc preserves mockLocated", \l -> mockLocated False l == mockLocated False (flattenLoc l)) .$ ("loc", loc)
+  F.assert $ satisfies ("flattenLoc preserves mockLocated", \l -> mockLocated False l == mockLocated False (flattenLoc l)) .$ ("loc", loc)
 
 -- >>> _eval prop_mock_logic_preserved_on_sort_and_grouping
 -- *** Exception: ExitSuccess
@@ -497,7 +497,7 @@ prop_mock_logic_preserved_on_sort_and_grouping = testPropertyWith genLocatorOpti
   let grouped = sortGroupChildLocs (\t -> Default t) HTTP loc
   info $ "Original locator:\n" <> unpack (txt loc)
   info $ "Grouped locator:\n" <> unpack (txt grouped)
-  F.assert $ expect True `dot` fn ("group sort preserves mockLocated", \l -> mockLocated False l == mockLocated False grouped) .$ ("loc", loc)
+  F.assert $ satisfies ("group sort preserves mockLocated", \l -> mockLocated False l == mockLocated False grouped) .$ ("loc", loc)
 
 -- >>> _eval test_fail
 
