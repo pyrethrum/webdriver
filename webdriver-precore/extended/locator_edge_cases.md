@@ -1,0 +1,447 @@
+- [BiDi Accessibility Locators vs CSS](#bidi-accessibility-locators-vs-css)
+  - [`role` → CSS `[role=...]`](#role--css-role)
+  - [`name` (accessible name) → no direct CSS equivalent](#name-accessible-name--no-direct-css-equivalent)
+  - [Practical Upshot](#practical-upshot)
+- [Role Approx](#role-approx)
+  - [Edge Cases Not Covered](#edge-cases-not-covered)
+    - [1. **aria-labelledby References**](#1-aria-labelledby-references)
+    - [2. **`<label for="...">` Associations**](#2-label-for-associations)
+    - [3. **Shadow DOM**](#3-shadow-dom)
+    - [4. **aria-describedby (Description, Not Name)**](#4-aria-describedby-description-not-name)
+    - [5. **Accessible Name Computation Order**](#5-accessible-name-computation-order)
+    - [6. **Hidden Text in Accessible Names**](#6-hidden-text-in-accessible-names)
+    - [7. **Recursive/Nested aria-labelledby**](#7-recursivenested-aria-labelledby)
+    - [8. **Title Attribute Fallback Conditions**](#8-title-attribute-fallback-conditions)
+    - [9. **Role Presentation/None Suppression**](#9-role-presentationnone-suppression)
+    - [10. **Form Control Implicit Labels**](#10-form-control-implicit-labels)
+    - [11. **ARIA 1.3 Name-from-Content Rules**](#11-aria-13-name-from-content-rules)
+    - [12. **Internationalization/Whitespace**](#12-internationalizationwhitespace)
+    - [Recommendation](#recommendation)
+- [Visible Text](#visible-text)
+- [SubContext - IFrames](#subcontext---iframes)
+  - [BiDi vs HTTP WebDriver: Interacting with Elements in Child iframes](#bidi-vs-http-webdriver-interacting-with-elements-in-child-iframes)
+    - [BiDi — no switching, context IDs are stable handles](#bidi--no-switching-context-ids-are-stable-handles)
+    - [HTTP WebDriver — stateful switch required](#http-webdriver--stateful-switch-required)
+    - [Key Difference](#key-difference)
+- [Displayed](#displayed)
+  - [Hybrid “best practical” visibility function](#hybrid-best-practical-visibility-function)
+  - [Why this works very well](#why-this-works-very-well)
+    - [1. CSS visibility rules](#1-css-visibility-rules)
+    - [2. Layout presence](#2-layout-presence)
+    - [3. Real user visibility](#3-real-user-visibility)
+  - [Why multiple hit points matter](#why-multiple-hit-points-matter)
+  - [Example BiDi call](#example-bidi-call)
+  - [Performance tip (important)](#performance-tip-important)
+  - [Behaviour vs WebDriver `displayed`](#behaviour-vs-webdriver-displayed)
+- [Depth](#depth)
+
+
+
+
+
+# BiDi Accessibility Locators vs CSS
+
+Partial and imperfect. The rough mapping:
+
+## `role` → CSS `[role=...]`
+
+Works only for **explicit** ARIA role attributes:
+
+```css
+[role="button"]   /* works for explicit role= attributes */
+```
+
+But native semantic elements (`<button>`, `<h1>`, `<nav>`) have *implicit* roles that CSS can't query by role — you'd need to know the element type. No CSS equivalent for the implicit role of `<button>` other than `button`.
+
+## `name` (accessible name) → no direct CSS equivalent
+
+The accessible name is a *computed* property derived from (in priority order):
+
+1. `aria-labelledby` → text content of another element
+2. `aria-label` → attribute value
+3. `<label>` association
+4. `placeholder`, `title`, `alt` depending on element type
+5. Inner text content
+
+You can approximate some cases:
+
+```css
+[aria-label="First name"]       /* only covers aria-label case */
+[placeholder="First name"]      /* only covers placeholder case */
+```
+
+But there's no single CSS selector that captures all sources of accessible name.
+
+## Practical Upshot
+
+Accessibility locators are semantically richer — they work against the *accessibility tree* (what screen readers see), not the DOM. The BiDi spec intentionally delegates evaluation to the browser's AX tree computation rather than DOM attributes, so they're not reliably reducible to CSS.
+
+That's most of their value — a `role=button` locator matches `<button>`, `<div role="button">`, `<input type="button">` etc. uniformly.
+
+
+# Role Approx
+
+
+-- | Best-effort XPath approximation of a BiDi accessibility locator.
+--   Covers explicit @role attributes, implicit roles for common HTML elements,
+--   and common accessible name sources. Cannot cover aria-labelledby,
+--   label[for=...], or shadow DOM.
+-- TODO: cover edge cases in execution
+
+
+User: -- | Best-effort XPath approximation of a BiDi accessibility locator.
+--   Covers explicit @role attributes, implicit roles for common HTML elements,
+--   and common accessible name sources. Cannot cover aria-labelledby,
+--   label[for=...], or shadow DOM.
+
+expand on edge cases missede by this function
+
+GitHub Copilot: Based on the function `accessibilityToXPath` and the ARIA/HTML specifications, here are the edge cases this XPath approximation misses:
+
+## Edge Cases Not Covered
+
+### 1. **aria-labelledby References**
+The function cannot resolve `aria-labelledby` which references other element IDs to construct the accessible name. XPath 1.0 has no way to follow ID references and concatenate text from multiple elements.
+
+```html
+<!-- Cannot handle this: -->
+<h2 id="dialog-title">Confirm Action</h2>
+<button aria-labelledby="dialog-title">OK</button>
+<!-- Accessible name is "Confirm Action", but XPath won't resolve the idref -->
+```
+
+### 2. **`<label for="...">` Associations**
+HTML `<label>` elements that reference form controls via the `for` attribute create accessible names, but XPath cannot make this reverse lookup.
+
+```html
+<!-- Cannot handle this: -->
+<label for="email-input">Email Address</label>
+<input id="email-input" type="email">
+<!-- Accessible name is "Email Address", but XPath can't follow the for/id link -->
+```
+
+### 3. **Shadow DOM**
+Elements inside shadow roots are completely invisible to XPath queries from the light DOM.
+
+```html
+<!-- Cannot handle this: -->
+<custom-button>
+  #shadow-root
+    <button role="button">Click Me</button>
+</custom-button>
+```
+
+### 4. **aria-describedby (Description, Not Name)**
+While the function focuses on accessible *names*, `aria-describedby` contributes to the accessible *description* and is similarly unsupported.
+
+### 5. **Accessible Name Computation Order**
+The [ARIA spec's name computation algorithm](https://www.w3.org/TR/accname-1.2/#mapping_additional_nd_te) has a specific precedence order. This function checks all sources with `or`, but the real algorithm stops at the first match:
+
+1. `aria-labelledby` (highest priority)
+2. `aria-label`
+3. Native HTML labeling (`<label for>`, `alt`, `title`, etc.)
+4. Inner text content (lowest priority)
+
+The XPath treats them as equals, potentially matching elements that wouldn't match in real accessibility APIs.
+
+### 6. **Hidden Text in Accessible Names**
+CSS-hidden text (`visibility: hidden`, `display: none`) can still contribute to accessible names via `aria-label` or `aria-labelledby`, but those elements wouldn't match the XPath visibility filters you use elsewhere.
+
+### 7. **Recursive/Nested aria-labelledby**
+Elements referenced by `aria-labelledby` can themselves have `aria-labelledby`, creating chains. Real browsers flatten these recursively; XPath cannot.
+
+### 8. **Title Attribute Fallback Conditions**
+The `title` attribute only becomes the accessible name when no other labeling mechanism exists. The XPath uses `or`, so it might match elements where `title` shouldn't be considered.
+
+### 9. **Role Presentation/None Suppression**
+Elements with `role="presentation"` or `role="none"` have their semantics (and often their names) suppressed in the accessibility tree, but this function still tries to match them.
+
+```html
+<!-- Should not expose accessible name: -->
+<img src="decorative.png" alt="Decorative" role="none">
+```
+
+### 10. **Form Control Implicit Labels**
+Wrapping a form control inside a `<label>` without using `for=` creates an implicit association:
+
+```html
+<!-- Cannot handle this: -->
+<label>
+  Username
+  <input type="text">
+</label>
+```
+
+### 11. **ARIA 1.3 Name-from-Content Rules**
+Some roles prohibit name-from-content (e.g., `textbox`, `combobox`). Others require it (e.g., `button`, `link`). The function doesn't enforce these constraints.
+
+### 12. **Internationalization/Whitespace**
+`normalize-space()` handles basic whitespace, but doesn't account for RTL text, zero-width characters, or Unicode normalization differences that might affect accessible name matching.
+
+### Recommendation
+
+For production use, consider documenting these limitations prominently and/or falling back to BiDi's native `browsingContext.Locator` with `type: "accessibility"` when the session supports it,
+using this XPath only as a best-effort HTTP fallback.
+
+# Visible Text
+
+ *Best-effort XPath approximation of a BiDi inner text locator.
+ Uses normalize-space(.) as a proxy for innerText. Case-insensitive
+ matching uses the translate() alphabet hack. maxDepth is approximated
+ via count(ancestor::*).
+ Visibility filtering: excludes elements with the HTML @hidden attribute,
+ @aria-hidden='true', or inline style display:none / visibility:hidden.
+ODO: check strategy for visibility filtering in execution - may need to add more cases or use script.callFunction instead
+  Does NOT catch hiding via CSS classes or inherited/cascaded styles —
+  only the BiDi innerText locator handles those correctly.*
+
+# SubContext - IFrames
+
+## BiDi vs HTTP WebDriver: Interacting with Elements in Child iframes
+
+**Scenario:** On main page with a child `<iframe>`, edit an element with id `firstName` inside the child frame.
+
+
+### BiDi — no switching, context IDs are stable handles
+
+```
+# 1. Discover child context
+browsingContext.getTree({ root: main_ctx })
+→ children: [{ context: child_ctx, ... }]
+
+# 2. Locate node directly in child context
+browsingContext.locateNodes({
+  context: child_ctx,
+  locator: { type: "css", value: "#firstName" }
+})
+→ nodes: [{ sharedId: "node-abc" }]
+
+# 3. Interact
+perform_actions*(child_ctx, click node-abc)
+perform_actions*(child_ctx, type "John")
+```
+
+### HTTP WebDriver — stateful switch required
+
+```
+# 1. Find the iframe element in parent
+POST /session/{id}/element  { using: "css selector", value: "iframe" }
+→ elementId: "elem-xyz"
+
+# 2. Switch into frame (global state change)
+POST /session/{id}/frame  { id: { element-6066...: "elem-xyz" } }
+
+# 3. Now find #firstName (relative to frame)
+POST /session/{id}/element  { using: "css selector", value: "#firstName" }
+→ elementId: "elem-abc"
+
+# 4. Interact
+perform_actions*(click elem-abc, type "John")
+
+# 5. Must switch back
+POST /session/{id}/frame  { id: null }
+```
+
+### Key Difference
+
+BiDi contexts are **first-class persistent handles** so you just address the child context directly. HTTP WebDriver has a single implicit "current frame" cursor that you have to move around and restore — easy to leak state if something throws between switch-in and switch-back.
+
+# Displayed
+
+Below is a **robust hybrid visibility function (~40 lines)** that combines ideas from:
+
+* **Selenium / W3C WebDriver** (`isDisplayed` style checks)
+* **Playwright** (hit-testing using `elementFromPoint`)
+* modern browser layout behavior
+
+It works very well when called through **WebDriver BiDi** `script.evaluate`.
+
+This version checks:
+
+* DOM attachment
+* `display` / `visibility`
+* hidden input
+* layout box existence
+* viewport intersection
+* occlusion (hit-testing)
+* partial overlays (multiple hit points)
+
+---
+
+## Hybrid “best practical” visibility function
+
+```javascript
+function bidiIsVisible(el) {
+  if (!el || !el.isConnected) return false;
+
+  const style = getComputedStyle(el);
+
+  if (style.display === "none") return false;
+  if (style.visibility === "hidden" || style.visibility === "collapse") return false;
+
+  if (el.tagName === "INPUT" && el.type === "hidden")
+    return false;
+
+  const rect = el.getBoundingClientRect();
+
+  if (rect.width === 0 || rect.height === 0)
+    return false;
+
+  const vpW = window.innerWidth;
+  const vpH = window.innerHeight;
+
+  if (
+    rect.bottom < 0 ||
+    rect.right < 0 ||
+    rect.top > vpH ||
+    rect.left > vpW
+  )
+    return false;
+
+  const points = [
+    [rect.left + rect.width / 2, rect.top + rect.height / 2],
+    [rect.left + 1, rect.top + 1],
+    [rect.right - 1, rect.bottom - 1]
+  ];
+
+  for (const [x, y] of points) {
+    if (x < 0 || y < 0 || x > vpW || y > vpH)
+      continue;
+
+    const hit = document.elementFromPoint(x, y);
+
+    if (hit === el || el.contains(hit))
+      return true;
+  }
+
+  return false;
+}
+```
+
+---
+
+## Why this works very well
+
+### 1. CSS visibility rules
+
+Handled via:
+
+```
+display
+visibility
+hidden input
+```
+
+### 2. Layout presence
+
+Handled via:
+
+```
+getBoundingClientRect()
+```
+
+### 3. Real user visibility
+
+Handled via:
+
+```
+document.elementFromPoint()
+```
+
+Which automatically respects:
+
+* `z-index`
+* overlays
+* transforms
+* clipping
+* stacking contexts
+* scroll containers
+* `pointer-events`
+
+---
+
+## Why multiple hit points matter
+
+Example:
+
+```
++--------------+
+|  overlay     |
+|      X       |
+|              |
+| element area |
++--------------+
+```
+
+If the **center** is covered but a corner is visible, the element should still count as visible.
+
+Checking **3 points** dramatically reduces false negatives.
+
+---
+
+## Example BiDi call
+
+```json
+{
+  "method": "script.evaluate",
+  "params": {
+    "expression": "bidiIsVisible(arguments[0])",
+    "target": { "context": "context-id" },
+    "awaitPromise": false,
+    "arguments": [
+      { "handle": "element-handle-id" }
+    ]
+  }
+}
+```
+
+---
+
+## Performance tip (important)
+
+For automation frameworks, inject the helper **once per page**:
+
+```js
+window.__bidiIsVisible = bidiIsVisible
+```
+
+Then call:
+
+```
+__bidiIsVisible(element)
+```
+
+This avoids re-sending the function each time.
+
+---
+
+## Behaviour vs WebDriver `displayed`
+
+| Scenario              | WebDriver         | Hybrid   |
+| --------------------- | ----------------- | -------- |
+| `display:none`        | hidden            | hidden   |
+| `visibility:hidden`   | hidden            | hidden   |
+| zero size             | hidden            | hidden   |
+| offscreen             | sometimes visible | hidden   |
+| covered by overlay    | visible ❌         | hidden ✅ |
+| CSS transform clipped | unreliable        | correct  |
+
+---
+
+✅ **Bottom line**
+
+For **BiDi-based automation**, this hybrid algorithm is usually **more accurate than the classic WebDriver `displayed` command** while being much simpler.
+
+---
+
+If you'd like, I can also show a **very useful BiDi technique used by browser automation frameworks** that lets you implement **`waitUntilDisplayed` without polling from the client** (much faster and cleaner).
+
+
+# Depth
+
+- xpath
+- double shot
+  - bidi params
+  - elem from
+
+

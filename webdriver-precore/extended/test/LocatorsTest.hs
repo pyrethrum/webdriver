@@ -15,14 +15,11 @@ import Test.Tasty.HUnit (testCase, (@?=))
 import Utils (txt)
 import WebDriverPreCore.Extended.BiDi.Base.Protocol (BrowsingContext (..))
 import WebDriverPreCore.Extended.Locators
-import WebDriverPreCore.Extended.Locators.Internal (CaseSensitivity (..), Classification (..), PostFilter (..), Locator (..), Protocol (..), classify, flattenLoc, foldLoc, foldLocBottomUp, hasInvalidLoc, prepare, sortGroupChildLocs)
+import WebDriverPreCore.Extended.Locators.Internal (CaseSensitivity (..), Classification (..), Locator (..), PostFilter (..), Protocol (..), classify, flattenLoc, foldLoc, foldLocBottomUp, hasInvalidLoc, prepare, sortGroupChildLocs)
 import Prelude hiding (putStrLn)
 
 -- >>> _eval tests
 -- *** Exception: ExitSuccess
-
--- *** Exception: ExitSuccess
-
 tests :: TestTree
 tests =
   testGroup
@@ -43,7 +40,8 @@ tests =
           applyDeMorganOr,
           preserveNonMatchLocators,
           recursiveReduceParent,
-          complexNestedFlattening
+          complexNestedFlattening,
+          test_nested_none_match
         ],
       testGroup
         "foldLoc traversal order"
@@ -51,13 +49,14 @@ tests =
           foldLocBottomUpTest
         ],
       testGroup
-        "Property Tests"
-        [ 
-          test_nested_none_match,
-          test_infix_precedence_i,
+        "Combinator Precedence"
+        [ test_infix_precedence_i,
           test_infix_precedence_ii,
-          test_parent_infix_precedence,
-          prop_flatenning_simplification,
+          test_parent_infix_precedence
+        ],
+      testGroup
+        "Property Tests"
+        [ prop_flatenning_simplification,
           prop_classify_xpath_only_is_xpath,
           prop_classify_invalid_iff_any_invalid_node,
           prop_mock_logic_preserved_on_flattenning,
@@ -437,7 +436,9 @@ genLocatorOptions =
     }
 
 -- >>> _eval prop_flatenning_simplification
+
 -- *** Exception: ExitSuccess
+
 prop_flatenning_simplification :: TestTree
 prop_flatenning_simplification = testPropertyWith genLocatorOptions "Flattening simplification" $ do
   loc <- gen genLocator
@@ -459,13 +460,13 @@ prop_flatenning_simplification = testPropertyWith genLocatorOptions "Flattening 
       Any locs -> plus2Map locs
       Parent parent child -> 2 + complexity parent + complexity child
       _ -> 1 -- all leaf nodes have complexity 1
-
     plus2Map :: NonEmpty Locator -> Int
     plus2Map locs = 2 + (sum $ complexity <$> locs)
 
 -- Mock property test that generates locators and logs them
 
 -- >>> _eval prop_mock_logic_preserved_on_flattenning
+
 -- *** Exception: ExitSuccess
 
 -- *** Exception: ExitSuccess
@@ -476,7 +477,9 @@ prop_mock_logic_preserved_on_flattenning = testPropertyWith genLocatorOptions "G
   F.assert $ satisfies ("flattenLoc preserves mockLocated", \l -> mockLocated False l == mockLocated False (flattenLoc l)) .$ ("loc", loc)
 
 -- >>> _eval prop_mock_logic_preserved_on_sort_and_grouping
+
 -- *** Exception: ExitSuccess
+
 prop_mock_logic_preserved_on_sort_and_grouping :: TestTree
 prop_mock_logic_preserved_on_sort_and_grouping = testPropertyWith genLocatorOptions "Generate and log locators" $ do
   loc <- gen genLocator
@@ -486,7 +489,9 @@ prop_mock_logic_preserved_on_sort_and_grouping = testPropertyWith genLocatorOpti
   F.assert $ satisfies ("group sort preserves mockLocated", \l -> mockLocated False l == mockLocated False grouped) .$ ("loc", loc)
 
 -- >>> _eval prop_prepare_logic_preserved
+
 -- *** Exception: ExitSuccess
+
 prop_prepare_logic_preserved :: TestTree
 prop_prepare_logic_preserved = testPropertyWith genLocatorOptions "prepare with ID default preserves mockLocated" $ do
   loc <- gen genLocator
