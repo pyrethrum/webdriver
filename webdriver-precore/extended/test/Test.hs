@@ -5,8 +5,7 @@ module Main where
 
 import Test.Tasty (TestTree, defaultMain, testGroup)
 import Test.Tasty.HUnit (testCase, (@?=))
-import qualified LocatorsTest
-
+import qualified Internal.LocatorsTest as InternalLocatorsTest
 
 main :: IO ()
 main = defaultMain tests
@@ -16,7 +15,7 @@ tests =
   testGroup
     "Extended Tests"
     [ testCase "Placeholder test" test_placeholder,
-      LocatorsTest.tests
+      InternalLocatorsTest.tests
     ]
 
 test_placeholder :: IO ()

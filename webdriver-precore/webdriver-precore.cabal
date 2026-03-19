@@ -366,7 +366,7 @@ test-suite test-extended
   main-is: Test.hs
   hs-source-dirs: extended/test
   other-modules:
-    LocatorsTest
+    Internal.LocatorsTest
   build-depends:
     webdriver-precore:webdriver-precore-extended
   default-language: Haskell2010

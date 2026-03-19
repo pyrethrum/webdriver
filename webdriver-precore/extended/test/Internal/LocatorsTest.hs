@@ -1,4 +1,4 @@
-module Intertnal.LocatorsTest (tests) where
+module Internal.LocatorsTest (tests) where
 
 import Control.Monad (when)
 import Data.List.NonEmpty (NonEmpty (..))
