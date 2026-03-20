@@ -1,17 +1,18 @@
-{-|
-Module: WebDriverPreCore.Extended.HTTP.Base.Actions
-Description: HTTP WebDriver action functions using the Runner pattern
-
-This module provides HTTP WebDriver action functions that accept a Runner
-parameter to execute commands. These functions wrap the Command-based API
-into a more flexible interface suitable for the Extended module system.
--}
+-- |
+-- Module: WebDriverPreCore.Extended.HTTP.Base.Actions
+-- Description: HTTP WebDriver action functions using the Runner pattern
+--
+-- This module provides HTTP WebDriver action functions that accept a Runner
+-- parameter to execute commands. These functions wrap the Command-based API
+-- into a more flexible interface suitable for the Extended module system.
 module WebDriverPreCore.Extended.HTTP.Base.Actions
   ( -- * Runner Type
     Runner,
+
     -- * Root Methods
     status,
     newSession,
+
     -- * Session Methods
     deleteSession,
     getTimeouts,
@@ -43,6 +44,7 @@ module WebDriverPreCore.Extended.HTTP.Base.Actions
     sendAlertText,
     takeScreenshot,
     printPage,
+
     -- * Window Methods
     getWindowHandles,
     getWindowRect,
@@ -50,12 +52,15 @@ module WebDriverPreCore.Extended.HTTP.Base.Actions
     maximizeWindow,
     minimizeWindow,
     fullScreenWindow,
+
     -- * Frame Methods
     switchToParentFrame,
+
     -- * Element(s) Methods
     getActiveElement,
     findElement,
     findElements,
+
     -- * Element Instance Methods
     findElementFromElement,
     findElementsFromElement,
@@ -74,9 +79,11 @@ module WebDriverPreCore.Extended.HTTP.Base.Actions
     elementClear,
     elementSendKeys,
     takeElementScreenshot,
+
     -- * Shadow DOM Methods
     findElementFromShadowRoot,
     findElementsFromShadowRoot,
+
     -- * Fallback Methods
     runCommand,
   )
@@ -87,6 +94,7 @@ import Data.Text (Text)
 import WebDriverPreCore.Extended.HTTP.Base.API qualified as API
 import WebDriverPreCore.Extended.HTTP.Base.Protocol
   ( Actions,
+    Command,
     Cookie,
     ElementId,
     FrameReference,
@@ -102,18 +110,8 @@ import WebDriverPreCore.Extended.HTTP.Base.Protocol
     URL,
     WindowHandleSpec,
     WindowRect,
-    Command,
   )
-
--- ######################################################################
--- ########################### Type Aliases #############################
--- ######################################################################
-
--- | A 'Runner' is a function that executes a 'Command' in a monadic context.
--- This allows the Extended module to work with different execution strategies.
-type Runner m a = Command a -> m a
-
-
+import WebDriverPreCore.Extended.HTTP.Internal (Runner)
 
 -- ######################################################################
 -- ########################### Root Methods #############################
@@ -161,7 +159,7 @@ getTimeouts r = r . API.getTimeouts
 --
 -- @POST \/session\/{session id}\/timeouts Set Timeouts@
 setTimeouts :: forall m. Runner m () -> Session -> Timeouts -> m ()
-setTimeouts r sess = r . API.setTimeouts sess 
+setTimeouts r sess = r . API.setTimeouts sess
 
 -- | Navigate to a URL.
 --
