@@ -340,9 +340,12 @@ library webdriver-precore-extended
       WebDriverPreCore.Extended.HTTP.Base.Protocol
       --
       WebDriverPreCore.Extended.HTTP.Protocol
+      WebDriverPreCore.Extended.HTTP.Protocol.Exclusive
+      WebDriverPreCore.Extended.HTTP.Actions
       WebDriverPreCore.Extended.HTTP.Base.Actions
       
       WebDriverPreCore.Extended.BiDi.Protocol
+      WebDriverPreCore.Extended.BiDi.Actions
       WebDriverPreCore.Extended.Capabilities
       WebDriverPreCore.Extended.Locators
       WebDriverPreCore.Extended.Locators.Internal
