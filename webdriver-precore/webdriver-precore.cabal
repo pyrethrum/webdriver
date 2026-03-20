@@ -353,6 +353,9 @@ library webdriver-precore-extended
       WebDriverPreCore.Extended.BiDi.Base.API
       WebDriverPreCore.Extended.BiDi.Base.Protocol
       WebDriverPreCore.Extended.BiDi.Base.Actions
+  other-modules:
+      WebDriverPreCore.Extended.HTTP.Internal
+      WebDriverPreCore.Extended.BiDi.Internal
 
   hs-source-dirs: extended/src
   build-depends:
