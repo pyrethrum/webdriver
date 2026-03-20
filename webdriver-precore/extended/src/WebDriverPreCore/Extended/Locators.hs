@@ -735,27 +735,3 @@ infixr 1 >>>
 
 notLoc :: Locator -> Locator
 notLoc l = None (l :| [])
-
-{- Demo:
--- has initial values in fields
--- multiple types of hidden including aria-hidden and display:none
--- demo-id all interactable elements and labels e.g. btn-demo-id, edt-demo-id, lbl-demo-id
--- for css (label for="demo-id") and (input#demo-id) should both work
--- divs with text split across multiple p tags
--- 2 frames 1 hidden - delivery address shown only if same as billing address checkbox is unchecked
-  -- init with checkbox checked
--- 6 labels with same start end and different middle text - test match types and case sensitivity
--- 2 text areas with the same class one not displayed via css one displayed
--- all element edit types - input, textarea, contenteditable, select , chkbox, radio groups / buttons ect
-
--- elements with CSS classes or hidden via inherited/cascaded styles —
--- need default mechanism to always chcke or deduplicate only
--- innerTextToXPath
--- extensive aria role coverage using all different stratergies to tag an element with a role - role attribute, implicit role via tag name, explicit role via aria-role attribute etc. - see aria spec
--}
-
-{- ideas:
-- optimisation double shot goes at end
-- search directive - displayCheck - disambiguate only
-
--}

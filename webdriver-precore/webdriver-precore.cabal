@@ -333,27 +333,33 @@ test-suite test-bidi-runner
     websockets
   default-language: Haskell2010
 
+library webdriver-precore-extended-internal
+  import: commonExtensions, commonGhcOptions, libDepends
+  exposed-modules:
+      WebDriverPreCore.Extended.Locators.Internal
+
 library webdriver-precore-extended
   import: commonExtensions, commonGhcOptions, libDepends
   exposed-modules:
+      WebDriverPreCore.Extended.HTTP.Base.API
+      WebDriverPreCore.Extended.HTTP.Base.Protocol
+      --
       WebDriverPreCore.Extended.HTTP.Protocol
       WebDriverPreCore.Extended.HTTP.ProtocolExclusive
+      WebDriverPreCore.Extended.HTTP.Base.Actions
+      
       WebDriverPreCore.Extended.BiDi.Protocol
       WebDriverPreCore.Extended.Capabilities
       WebDriverPreCore.Extended.Locators
-      WebDriverPreCore.Extended.Locators.Internal
       -- 
-      WebDriverPreCore.Extended.HTTP.Base.API
-      WebDriverPreCore.Extended.HTTP.Base.Protocol
-      WebDriverPreCore.Extended.HTTP.Base.Actions
       WebDriverPreCore.Extended.BiDi.Base.API
       WebDriverPreCore.Extended.BiDi.Base.Protocol
       WebDriverPreCore.Extended.BiDi.Base.Actions
-  other-modules:
-      WebDriverPreCore.Extended.XProtocol
+
   hs-source-dirs: extended/src
   build-depends:
     webdriver-precore:webdriver-precore,
+    webdriver-precore:webdriver-precore-extended-internal,
     webdriver-precore:utils-internal,
     aeson         >=1.4   && <2.3, 
     containers    >=0.6   && <0.8,
@@ -368,7 +374,8 @@ test-suite test-extended
   other-modules:
     Internal.LocatorsTest
   build-depends:
-    webdriver-precore:webdriver-precore-extended
+    webdriver-precore:webdriver-precore-extended,
+    webdriver-precore:webdriver-precore-extended-internal
   default-language: Haskell2010
 
 library webdriver-precore-driver-control

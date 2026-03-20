@@ -455,3 +455,10 @@ Once you've interacted with an element, you'll often want to verify it has the c
     ```
 
 I hope this helps you effectively select and interact with elements based on their values. If you're dealing with a particularly tricky component, feel free to share the HTML structure, and I might be able to offer a more specific suggestion
+
+
+---
+{- ideas:
+- search directive - displayCheck - disambiguate only
+
+-}

@@ -1,26 +1,1385 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 
 <head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Mega Forma Test Page</title>
   <link rel="stylesheet" href="demo.css">
   <style>
+    /* ── Background image preserved ── */
     body {
       background-image: url("megaForma.webp");
       background-size: cover;
       background-position: center;
       background-repeat: no-repeat;
+      margin: 0;
+      padding: 0;
+      font-family: Arial, sans-serif;
+      max-width: none;               /* override demo.css max-width on body */
     }
+
+    /* ── Page wrapper ── */
+    .page-wrapper {
+      max-width: 1100px;
+      margin: 0 auto;
+      background: rgba(255, 255, 255, 0.94);
+      padding: 24px;
+      min-height: 100vh;
+    }
+
+    /* ── Header / nav ── */
+    header { background: #1a365d; color: #fff; padding: 12px 20px; margin-bottom: 20px; border-radius: 6px; }
+    header h1 { margin: 0; color: #fff; font-size: 1.5rem; }
+    nav ul  { list-style: none; margin: 6px 0 0; padding: 0; display: flex; gap: 16px; }
+    nav a   { color: #a0c4ff; text-decoration: none; font-size: 0.9rem; }
+    nav a:hover { color: #fff; text-decoration: underline; }
+
+    /* ── Section layout ── */
+    section, .duplicate-section {
+      background: #fff;
+      border: 1px solid #ddd;
+      border-radius: 6px;
+      padding: 16px 20px;
+      margin-bottom: 20px;
+    }
+    section h2, .duplicate-section h2 {
+      color: #1a365d;
+      margin-top: 0;
+      border-bottom: 2px solid #e2e8f0;
+      padding-bottom: 8px;
+    }
+
+    /* ── Field groups ── */
+    .field-group  { margin-bottom: 14px; }
+    .field-group label { display: block; font-weight: 600; color: #444; margin-bottom: 4px; }
+    .section-intro { font-size: 0.85rem; color: #666; margin-bottom: 12px; }
+
+    /* ── Inputs ── */
+    input[type="text"],
+    input[type="email"],
+    input[type="tel"],
+    input[type="url"],
+    input[type="search"],
+    input[type="password"],
+    input[type="number"],
+    input[type="date"],
+    input[type="time"],
+    input[type="datetime-local"],
+    input[type="month"],
+    input[type="week"],
+    input[type="color"],
+    select,
+    textarea {
+      width: 100%;
+      padding: 7px 10px;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      font-size: 0.95rem;
+      box-sizing: border-box;
+    }
+    input[type="color"] { height: 38px; padding: 2px; }
+    input[type="range"] { width: 100%; }
+    .range-output { font-weight: bold; margin-left: 8px; }
+    input[type="file"]  { padding: 4px; }
+    .multi-select { height: 100px; }
+    .content-editable {
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      min-height: 60px;
+      padding: 8px;
+      background: #fff;
+    }
+    .field-hint { font-size: 0.78rem; color: #888; display: block; margin-top: 2px; }
+    .field-label { font-weight: 600; color: #444; display: block; margin-bottom: 4px; }
+
+    /* ── Checkboxes / radios ── */
+    .checkbox-group, .radio-group { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
+    .checkbox-group label, .radio-group label { font-weight: normal; margin-bottom: 0; }
+
+    /* ── Buttons ── */
+    .btn-primary   { background: linear-gradient(135deg,#667eea,#764ba2); color:#fff; padding:10px 24px; border:none; border-radius:6px; cursor:pointer; font-weight:600; text-transform:uppercase; letter-spacing:.5px; }
+    .btn-secondary { background: #e2e8f0; color: #333; padding: 10px 24px; border: 1px solid #ccc; border-radius: 6px; cursor: pointer; }
+    .submit-area   { display: flex; gap: 12px; flex-wrap: wrap; align-items: center; padding: 16px 0; }
+
+    /* ── Switch button ── */
+    .switch-btn  { background: #48bb78; border: none; border-radius: 20px; width: 44px; height: 24px; cursor: pointer; position: relative; padding: 0; }
+    .switch-btn[aria-checked="false"] { background: #ccc; }
+    .switch-thumb { display: block; width: 18px; height: 18px; background: #fff; border-radius: 50%; position: absolute; top: 3px; left: 3px; transition: left .2s; }
+    .switch-btn[aria-checked="true"] .switch-thumb { left: 23px; }
+
+    /* ── Hidden utilities ── */
+    .hidden-display    { display: none; }
+    .hidden-visibility { visibility: hidden; }
+    .notes-area        { width: 100%; min-height: 80px; resize: vertical; }
+    .notes-area-hidden { display: none; }
+
+    /* ── Tabs ── */
+    .tab-container { border: 1px solid #ccc; border-radius: 6px; overflow: hidden; margin-bottom: 14px; }
+    [role="tablist"]                 { display: flex; list-style: none; margin: 0; padding: 0; background: #f0f4f8; border-bottom: 1px solid #ccc; }
+    [role="tab"]                     { padding: 9px 18px; cursor: pointer; border-right: 1px solid #ccc; user-select: none; }
+    [role="tab"][aria-selected="true"] { background: #fff; font-weight: 700; }
+    [role="tabpanel"]                { padding: 14px; display: none; }
+    [role="tabpanel"]:not([hidden])  { display: block; }
+
+    /* ── Alert / status ── */
+    [role="alert"]  { padding: 10px 14px; background: #fff3cd; border: 1px solid #ffc107; border-radius: 4px; margin-bottom: 12px; }
+    [role="status"] { padding: 6px 10px; background: #d4edda; border: 1px solid #28a745; border-radius: 4px; font-size: 0.9rem; display: inline-block; margin-bottom: 12px; }
+
+    /* ── Tooltip ── */
+    .tooltip-wrap  { position: relative; display: inline-block; margin-bottom: 12px; }
+    .info-btn      { background: #4a90d9; color: #fff; border: none; border-radius: 50%; width: 24px; height: 24px; cursor: pointer; font-weight: 700; }
+    [role="tooltip"] { display: none; position: absolute; background: #333; color: #fff; padding: 5px 10px; border-radius: 4px; font-size: 0.82rem; white-space: nowrap; z-index: 100; top: 110%; left: 0; }
+    .tooltip-wrap:hover [role="tooltip"] { display: block; }
+
+    /* ── Dialog ── */
+    [role="dialog"] { position: fixed; top: 50%; left: 50%; transform: translate(-50%,-50%); background: #fff; border: 1px solid #999; border-radius: 8px; padding: 24px; z-index: 1000; min-width: 300px; box-shadow: 0 8px 30px rgba(0,0,0,.3); }
+    [role="dialog"] h3 { margin-top: 0; }
+
+    /* ── Tree ── */
+    [role="tree"]     { list-style: none; padding-left: 0; }
+    [role="treeitem"] { padding: 4px 8px; cursor: pointer; }
+    [role="group"]    { list-style: none; padding-left: 20px; }
+
+    /* ── Menu ── */
+    .menu-container  { position: relative; display: inline-block; margin-bottom: 12px; }
+    [role="menu"]    { list-style: none; margin: 0; padding: 4px 0; background: #fff; border: 1px solid #ccc; border-radius: 4px; position: absolute; top: 100%; left: 0; z-index: 200; min-width: 140px; }
+    [role="menuitem"],[role="menuitemcheckbox"],[role="menuitemradio"] { padding: 6px 16px; cursor: pointer; }
+    [role="menuitem"]:hover,[role="menuitemcheckbox"]:hover,[role="menuitemradio"]:hover { background: #f0f4f8; }
+
+    /* ── Grid ── */
+    [role="grid"]       { border: 1px solid #ccc; border-radius: 4px; overflow: hidden; margin-bottom: 14px; width: 100%; }
+    [role="row"]        { display: flex; }
+    [role="columnheader"],[role="rowheader"],[role="gridcell"] { flex: 1; padding: 7px 10px; border-right: 1px solid #eee; border-bottom: 1px solid #eee; }
+    [role="columnheader"] { background: #f0f4f8; font-weight: 700; }
+
+    /* ── Listbox ── */
+    .listbox       { list-style: none; padding: 0; margin: 0; border: 1px solid #ccc; border-radius: 4px; max-height: 120px; overflow-y: auto; }
+    [role="option"]{ padding: 6px 12px; cursor: pointer; }
+    [role="option"][aria-selected="true"] { background: #667eea; color: #fff; }
+
+    /* ── Span / link overriding roles ── */
+    .span-button  { display: inline-block; padding: 8px 18px; background: #e2e8f0; border: 1px solid #aaa; border-radius: 4px; cursor: pointer; margin-right: 6px; }
+    .link-button  { display: inline-block; padding: 8px 18px; background: #e2e8f0; border: 1px solid #aaa; border-radius: 4px; cursor: pointer; text-decoration: none; color: #333; }
+    .decorative-shape { width: 60px; height: 60px; background: linear-gradient(135deg,#f093fb,#f5576c); border-radius: 50%; display: inline-block; }
+
+    /* ── Implicit-roles demo strip ── */
+    .implicit-roles-demo { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; margin-bottom: 14px; padding: 10px; background: #f8fafc; border: 1px dashed #ccc; border-radius: 4px; }
+
+    /* ── Text blocks ── */
+    .text-block     { margin-bottom: 14px; padding: 12px; border: 1px solid #e2e8f0; border-radius: 4px; }
+    .text-para      { margin: 0 0 6px; line-height: 1.6; }
+    .highlight-para { background: #fff3cd; padding: 4px 8px; border-radius: 3px; }
+    .highlight      { background: #fffb8f; padding: 0 3px; }
+
+    /* ── Tables ── */
+    .summary-table    { width: 100%; border-collapse: collapse; margin-bottom: 14px; }
+    .summary-table th, .summary-table td { border: 1px solid #ddd; padding: 8px 12px; text-align: left; }
+    .summary-table th { background: #f0f4f8; }
+    .layout-table     { width: 100%; border-collapse: collapse; }
+    .layout-table td  { padding: 6px; }
+
+    /* ── Description list ── */
+    .glossary dt { font-weight: 700; color: #1a365d; }
+    .glossary dd { margin: 0 0 8px 16px; color: #555; }
+
+    /* ── Article / figure ── */
+    .announcement    { border: 1px solid #bee3f8; background: #ebf8ff; border-radius: 6px; padding: 12px; margin-bottom: 14px; }
+    .announcement h3 { margin-top: 0; color: #2b6cb0; }
+    .demo-figure     { margin: 0 0 14px; }
+    .demo-figure img { border-radius: 4px; object-fit: cover; }
+
+    /* ── Duplicate sections ── */
+    .status-indicator.active   { color: #27ae60; font-weight: 700; padding: 3px 10px; background: #eafbea; border-radius: 10px; }
+    .status-indicator.inactive { color: #e74c3c; font-weight: 700; padding: 3px 10px; background: #fdecea; border-radius: 10px; }
+    .dup-list  { padding-left: 20px; }
+    .dup-btn   { margin-top: 6px; }
+
+    /* ── Iframes ── */
+    .payment-frame, .delivery-frame { border: 1px solid #ccc; border-radius: 4px; width: 100%; display: block; }
+
+    /* ── Aside ── */
+    aside    { background: #f0f7ff; border: 1px solid #bee3f8; border-radius: 6px; padding: 16px 20px; margin-bottom: 20px; }
+    aside h2 { margin-top: 0; color: #2b6cb0; font-size: 1.1rem; }
+
+    /* ── Footer ── */
+    footer   { text-align: center; font-size: 0.85rem; color: #888; padding: 12px 0; border-top: 1px solid #e2e8f0; }
+    address  { font-style: normal; }
+
+    /* ── Search element ── */
+    search   { display: block; margin-bottom: 14px; }
+
+    /* ── Progress / meter ── */
+    progress, meter { width: 100%; height: 20px; }
+
+    /* ── Misc ── */
+    details  { margin-bottom: 10px; }
+    summary  { cursor: pointer; font-weight: 600; padding: 6px; }
+    .demo-link { color: #667eea; }
   </style>
 </head>
 
 <body>
-  <div class="container">
-    <h1>Mega Forma Test Page</h1>
-    <div id="content">
-      <p>This is a test page with a custom background image.</p>
+  <div class="page-wrapper">
+
+    <!-- ════════════════════════════════════════════════════
+         BANNER LANDMARK  (implicit role=banner via <header>)
+         ════════════════════════════════════════════════════ -->
+    <header auto-id="hdr-main">
+      <h1 auto-id="hdg-main-title">Mega Forma Test Page</h1>
+      <!-- implicit role=navigation via <nav> -->
+      <nav aria-label="Main navigation" auto-id="nav-main">
+        <ul>
+          <li><a href="#section-personal"    auto-id="lnk-nav-personal">Personal</a></li>
+          <li><a href="#section-contact"     auto-id="lnk-nav-contact">Contact</a></li>
+          <li><a href="#section-preferences" auto-id="lnk-nav-prefs">Preferences</a></li>
+          <li><a href="#section-account"     auto-id="lnk-nav-account">Account</a></li>
+          <li><a href="#section-payment"     auto-id="lnk-nav-payment">Payment</a></li>
+        </ul>
+      </nav>
+    </header>
+
+    <!-- ════════════════════════════════════════════════════
+         MAIN LANDMARK
+         ════════════════════════════════════════════════════ -->
+    <main auto-id="main-content">
+      <form id="megaforma" method="post" action="#" novalidate
+            aria-label="Mega test form" auto-id="frm-mega">
+
+        <!-- ╔══════════════════════════════╗
+             ║  PERSONAL INFORMATION        ║
+             ╚══════════════════════════════╝ -->
+        <section id="section-personal" aria-labelledby="hdg-personal" auto-id="sec-personal">
+          <h2 id="hdg-personal" auto-id="hdg-personal">Personal Information</h2>
+
+          <!-- Label strategy 1: explicit <label for="id"> + <input id="id"> -->
+          <div class="field-group">
+            <label for="given-name" auto-id="lbl-given-name">Given Name</label>
+            <input type="text" id="given-name" name="given-name"
+                   auto-id="edt-given-name"
+                   value="Jane"
+                   class="text-input required-field"
+                   data-validation="letters-only"
+                   autocomplete="given-name">
+          </div>
+
+          <!-- Label strategy 2: implicit <label> wrapping input -->
+          <div class="field-group">
+            <label auto-id="lbl-family-name">Family Name
+              <input type="text" name="family-name"
+                     auto-id="edt-family-name"
+                     value="Smith"
+                     class="text-input"
+                     autocomplete="family-name">
+            </label>
+          </div>
+
+          <!-- Label strategy 3: aria-label on input only (no visible label element) -->
+          <div class="field-group">
+            <input type="text" name="nickname"
+                   auto-id="edt-nickname"
+                   aria-label="Nickname"
+                   placeholder="Nickname"
+                   value="Jay"
+                   class="text-input">
+          </div>
+
+          <!-- Label strategy 4: aria-labelledby pointing to a <span> -->
+          <div class="field-group">
+            <span id="lbl-dob" auto-id="lbl-dob" class="field-label">Date of Birth</span>
+            <input type="date" name="dob"
+                   auto-id="edt-dob"
+                   aria-labelledby="lbl-dob"
+                   value="1990-06-15"
+                   class="date-input">
+          </div>
+
+          <!-- Label strategy 5: placeholder only (no label element, no aria-label) -->
+          <div class="field-group">
+            <input type="text" name="middle-name"
+                   auto-id="edt-middle-name"
+                   placeholder="Middle name (optional)"
+                   class="text-input secondary-input">
+          </div>
+
+          <!-- Label strategy 6: title attribute as fallback label -->
+          <div class="field-group">
+            <input type="text" name="honorific"
+                   auto-id="edt-honorific"
+                   title="Title or honorific e.g. Dr, Prof"
+                   value="Dr"
+                   class="text-input small-input">
+          </div>
+
+          <!-- CSS demo-id: both label[for="demo-id"] and input#demo-id selectors work -->
+          <div class="field-group">
+            <label for="demo-id" auto-id="lbl-demo-id" class="demo-label">Demo Field</label>
+            <input type="text" id="demo-id" name="demo"
+                   auto-id="edt-demo-id"
+                   value="demo value"
+                   class="text-input demo-input">
+          </div>
+
+          <!-- Contenteditable (role=textbox, not a native input) -->
+          <div class="field-group">
+            <span id="lbl-bio" auto-id="lbl-bio" class="field-label">Short Bio</span>
+            <div role="textbox"
+                 contenteditable="true"
+                 aria-labelledby="lbl-bio"
+                 aria-multiline="true"
+                 auto-id="edt-bio"
+                 class="content-editable bio-field">I am a software developer based in Sydney.</div>
+          </div>
+        </section>
+
+        <!-- ╔══════════════════════════════════════════════════════╗
+             ║  NAME VARIATIONS — 6 labels with same start and end ║
+             ║  but different middle text                           ║
+             ╚══════════════════════════════════════════════════════╝ -->
+        <section id="section-names" aria-labelledby="hdg-names" auto-id="sec-names">
+          <h2 id="hdg-names" auto-id="hdg-names">Name Variations</h2>
+          <p class="section-intro">Six labels share the same prefix and suffix with a different middle word.
+            Tests partial / exact / case-insensitive match semantics.</p>
+
+          <div class="field-group">
+            <label for="name-first"     auto-id="lbl-name-first">    Please enter your First Name here</label>
+            <input type="text" id="name-first"     name="name-first"     auto-id="edt-name-first"     value="Alice"            class="text-input name-input">
+          </div>
+          <div class="field-group">
+            <label for="name-last"      auto-id="lbl-name-last">     Please enter your Last Name here</label>
+            <input type="text" id="name-last"      name="name-last"      auto-id="edt-name-last"      value="Walker"           class="text-input name-input">
+          </div>
+          <div class="field-group">
+            <label for="name-middle"    auto-id="lbl-name-middle">   Please enter your Middle Name here</label>
+            <input type="text" id="name-middle"    name="name-middle"    auto-id="edt-name-middle"    value="Jane"             class="text-input name-input">
+          </div>
+          <div class="field-group">
+            <label for="name-nick"      auto-id="lbl-name-nick">     Please enter your Nick Name here</label>
+            <input type="text" id="name-nick"      name="name-nick"      auto-id="edt-name-nick"      value="Ali"              class="text-input name-input">
+          </div>
+          <div class="field-group">
+            <label for="name-preferred" auto-id="lbl-name-preferred"> Please enter your Preferred Name here</label>
+            <input type="text" id="name-preferred" name="name-preferred" auto-id="edt-name-preferred" value="Allie"            class="text-input name-input">
+          </div>
+          <div class="field-group">
+            <label for="name-legal"     auto-id="lbl-name-legal">    Please enter your Legal Name here</label>
+            <input type="text" id="name-legal"     name="name-legal"     auto-id="edt-name-legal"     value="Alice Jane Walker" class="text-input name-input">
+          </div>
+        </section>
+
+        <!-- ╔══════════════════════════════╗
+             ║  CONTACT DETAILS             ║
+             ╚══════════════════════════════╝ -->
+        <section id="section-contact" aria-labelledby="hdg-contact" auto-id="sec-contact">
+          <h2 id="hdg-contact" auto-id="hdg-contact">Contact Details</h2>
+
+          <div class="field-group">
+            <label for="email" auto-id="lbl-email">Email Address</label>
+            <input type="email" id="email" name="email"
+                   auto-id="edt-email"
+                   value="jane.smith@example.com"
+                   class="text-input email-input"
+                   autocomplete="email"
+                   aria-describedby="email-hint">
+            <span id="email-hint" auto-id="hint-email" class="field-hint">We will never share your email.</span>
+          </div>
+
+          <div class="field-group">
+            <label for="phone" auto-id="lbl-phone">Phone Number</label>
+            <input type="tel" id="phone" name="phone"
+                   auto-id="edt-phone"
+                   value="+61 400 000 000"
+                   class="text-input phone-input"
+                   autocomplete="tel"
+                   pattern="[+][0-9 ]{7,15}">
+          </div>
+
+          <div class="field-group">
+            <label for="website" auto-id="lbl-website">Personal Website</label>
+            <input type="url" id="website" name="website"
+                   auto-id="edt-website"
+                   value="https://example.com"
+                   class="text-input url-input">
+          </div>
+
+          <!-- role=searchbox overrides implicit role=searchbox already on input[type=search],
+               shown here explicitly for demonstration -->
+          <div class="field-group">
+            <label for="search-field" auto-id="lbl-search">Search</label>
+            <input type="search" id="search-field" name="search"
+                   auto-id="edt-search"
+                   value="webdriver"
+                   role="searchbox"
+                   class="text-input search-input">
+          </div>
+        </section>
+
+        <!-- ╔══════════════════════════════╗
+             ║  PREFERENCES                 ║
+             ╚══════════════════════════════╝ -->
+        <section id="section-preferences" aria-labelledby="hdg-prefs" auto-id="sec-preferences">
+          <h2 id="hdg-prefs" auto-id="hdg-prefs">Preferences</h2>
+
+          <!-- Checkboxes in fieldset/legend -->
+          <fieldset auto-id="fld-newsletter">
+            <legend auto-id="lgd-newsletter">Newsletter Subscriptions</legend>
+            <div class="checkbox-group">
+              <input type="checkbox" id="chk-news-tech"     name="newsletter" value="tech"    checked auto-id="chk-news-tech">
+              <label for="chk-news-tech"     auto-id="lbl-chk-news-tech">Technology</label>
+            </div>
+            <div class="checkbox-group">
+              <input type="checkbox" id="chk-news-science"  name="newsletter" value="science"        auto-id="chk-news-science">
+              <label for="chk-news-science"  auto-id="lbl-chk-news-science">Science</label>
+            </div>
+            <div class="checkbox-group">
+              <input type="checkbox" id="chk-news-arts"     name="newsletter" value="arts"    checked auto-id="chk-news-arts">
+              <label for="chk-news-arts"     auto-id="lbl-chk-news-arts">Arts &amp; Culture</label>
+            </div>
+          </fieldset>
+
+          <!-- Radio group in fieldset/legend -->
+          <fieldset auto-id="fld-contact-pref">
+            <legend auto-id="lgd-contact-pref">Preferred Contact Method</legend>
+            <div class="radio-group">
+              <input type="radio" id="contact-email" name="contact-method" value="email" checked auto-id="rdo-contact-email">
+              <label for="contact-email" auto-id="lbl-rdo-contact-email">Email</label>
+            </div>
+            <div class="radio-group">
+              <input type="radio" id="contact-phone" name="contact-method" value="phone"       auto-id="rdo-contact-phone">
+              <label for="contact-phone" auto-id="lbl-rdo-contact-phone">Phone</label>
+            </div>
+            <div class="radio-group">
+              <input type="radio" id="contact-post"  name="contact-method" value="post"        auto-id="rdo-contact-post">
+              <label for="contact-post"  auto-id="lbl-rdo-contact-post">Post</label>
+            </div>
+          </fieldset>
+
+          <!-- role=switch (explicit ARIA role on a <button>) -->
+          <div class="field-group" style="display:flex; align-items:center; gap:10px;">
+            <span id="lbl-marketing" auto-id="lbl-marketing">Receive marketing</span>
+            <button type="button"
+                    role="switch"
+                    aria-checked="true"
+                    aria-labelledby="lbl-marketing"
+                    auto-id="btn-marketing-switch"
+                    class="switch-btn"
+                    onclick="this.setAttribute('aria-checked',
+                      this.getAttribute('aria-checked')==='true' ? 'false' : 'true')">
+              <span class="switch-thumb"></span>
+            </button>
+          </div>
+
+          <!-- Billing / delivery address toggle -->
+          <div class="field-group checkbox-group">
+            <input type="checkbox" id="chk-same-address" name="same-address" value="yes" checked
+                   auto-id="chk-same-address"
+                   onchange="document.getElementById('delivery-frame-wrap').style.display =
+                     this.checked ? 'none' : 'block'">
+            <label for="chk-same-address" auto-id="lbl-same-address">
+              Delivery address same as billing address
+            </label>
+          </div>
+        </section>
+
+        <!-- ╔══════════════════════════════╗
+             ║  ACCOUNT SETTINGS            ║
+             ╚══════════════════════════════╝ -->
+        <section id="section-account" aria-labelledby="hdg-account" auto-id="sec-account">
+          <h2 id="hdg-account" auto-id="hdg-account">Account Settings</h2>
+
+          <!-- Single select — implicit role=listbox / option -->
+          <div class="field-group">
+            <label for="country" auto-id="lbl-country">Country</label>
+            <select id="country" name="country" auto-id="sel-country" class="select-input">
+              <option value="">-- Select --</option>
+              <option value="au" selected>Australia</option>
+              <option value="nz">New Zealand</option>
+              <option value="uk">United Kingdom</option>
+              <option value="us">United States</option>
+            </select>
+          </div>
+
+          <!-- Multiple select -->
+          <div class="field-group">
+            <label for="languages" auto-id="lbl-languages">Languages Spoken</label>
+            <select id="languages" name="languages" multiple size="4"
+                    auto-id="sel-languages" class="select-input multi-select">
+              <option value="en" selected>English</option>
+              <option value="fr" selected>French</option>
+              <option value="de">German</option>
+              <option value="es">Spanish</option>
+              <option value="zh">Chinese</option>
+              <option value="ja">Japanese</option>
+            </select>
+          </div>
+
+          <!-- Datalist (combo-box pattern) -->
+          <div class="field-group">
+            <label for="city" auto-id="lbl-city">City</label>
+            <input type="text" id="city" list="city-list" name="city"
+                   auto-id="edt-city"
+                   value="Sydney"
+                   class="text-input">
+            <datalist id="city-list" auto-id="datalist-city">
+              <option value="Sydney">
+              <option value="Melbourne">
+              <option value="Brisbane">
+              <option value="Perth">
+              <option value="Adelaide">
+            </datalist>
+          </div>
+
+          <!-- Range + output -->
+          <div class="field-group">
+            <label for="age-range" auto-id="lbl-age-range">Age Range</label>
+            <input type="range" id="age-range" name="age-range"
+                   auto-id="edt-age-range"
+                   min="18" max="100" step="1" value="35"
+                   class="range-input"
+                   aria-valuemin="18" aria-valuemax="100" aria-valuenow="35"
+                   oninput="document.getElementById('age-range-out').value = this.value">
+            <output id="age-range-out" for="age-range"
+                    auto-id="out-age-range" class="range-output">35</output>
+          </div>
+
+          <!-- Color -->
+          <div class="field-group">
+            <label for="fav-color" auto-id="lbl-fav-color">Favourite Color</label>
+            <input type="color" id="fav-color" name="fav-color"
+                   auto-id="edt-fav-color"
+                   value="#3366cc"
+                   class="color-input">
+          </div>
+
+          <!-- Date -->
+          <div class="field-group">
+            <label for="start-date" auto-id="lbl-start-date">Start Date</label>
+            <input type="date" id="start-date" name="start-date"
+                   auto-id="edt-start-date"
+                   value="2026-01-01"
+                   class="date-input">
+          </div>
+
+          <!-- Time -->
+          <div class="field-group">
+            <label for="meeting-time" auto-id="lbl-meeting-time">Preferred Meeting Time</label>
+            <input type="time" id="meeting-time" name="meeting-time"
+                   auto-id="edt-meeting-time"
+                   value="09:00"
+                   class="time-input">
+          </div>
+
+          <!-- Datetime-local -->
+          <div class="field-group">
+            <label for="appointment" auto-id="lbl-appointment">Appointment</label>
+            <input type="datetime-local" id="appointment" name="appointment"
+                   auto-id="edt-appointment"
+                   value="2026-03-20T14:30"
+                   class="datetime-input">
+          </div>
+
+          <!-- Month -->
+          <div class="field-group">
+            <label for="birth-month" auto-id="lbl-birth-month">Birth Month</label>
+            <input type="month" id="birth-month" name="birth-month"
+                   auto-id="edt-birth-month"
+                   value="1990-06"
+                   class="month-input">
+          </div>
+
+          <!-- Week -->
+          <div class="field-group">
+            <label for="report-week" auto-id="lbl-report-week">Report Week</label>
+            <input type="week" id="report-week" name="report-week"
+                   auto-id="edt-report-week"
+                   value="2026-W12"
+                   class="week-input">
+          </div>
+
+          <!-- Number — explicit role=spinbutton (same as implicit) -->
+          <div class="field-group">
+            <label for="score" auto-id="lbl-score">Current Score</label>
+            <input type="number" id="score" name="score"
+                   auto-id="edt-score"
+                   value="42"
+                   min="0" max="100"
+                   class="number-input"
+                   role="spinbutton"
+                   aria-valuemin="0" aria-valuemax="100" aria-valuenow="42">
+          </div>
+
+          <!-- Password -->
+          <div class="field-group">
+            <label for="password" auto-id="lbl-password">Password</label>
+            <input type="password" id="password" name="password"
+                   auto-id="edt-password"
+                   value="S3cr3tP@ss"
+                   class="text-input password-input"
+                   autocomplete="new-password">
+          </div>
+
+          <!-- File upload -->
+          <div class="field-group">
+            <label for="avatar" auto-id="lbl-avatar">Profile Picture</label>
+            <input type="file" id="avatar" name="avatar"
+                   auto-id="edt-avatar"
+                   accept="image/*"
+                   class="file-input">
+          </div>
+
+          <!-- Hidden input (type=hidden, not rendered) -->
+          <input type="hidden" id="session-token" name="session-token"
+                 auto-id="hdn-session-token"
+                 value="abc123xyz">
+
+          <!-- Progress (implicit role=progressbar) -->
+          <div class="field-group">
+            <label auto-id="lbl-progress">Profile Completion</label>
+            <progress id="profile-progress" max="100" value="72"
+                      auto-id="prg-profile"
+                      class="progress-bar"
+                      aria-label="Profile completion 72 percent">72%</progress>
+          </div>
+
+          <!-- Meter -->
+          <div class="field-group">
+            <label for="storage-meter" auto-id="lbl-storage">Storage Used</label>
+            <meter id="storage-meter" min="0" max="100" low="20" high="80" optimum="40" value="65"
+                   auto-id="mtr-storage"
+                   class="meter-bar">65%</meter>
+          </div>
+        </section>
+
+        <!-- ╔══════════════════════════════╗
+             ║  MESSAGES & NOTES            ║
+             ╚══════════════════════════════╝ -->
+        <section id="section-message" aria-labelledby="hdg-message" auto-id="sec-message">
+          <h2 id="hdg-message" auto-id="hdg-message">Messages &amp; Notes</h2>
+
+          <!-- Visible textarea -->
+          <div class="field-group">
+            <label for="notes-visible" auto-id="lbl-notes-visible">Visible Notes</label>
+            <textarea id="notes-visible" name="notes-visible"
+                      auto-id="edt-notes-visible"
+                      class="notes-area"
+                      rows="4" cols="50"
+                      aria-describedby="notes-hint">This is a visible note area.</textarea>
+            <span id="notes-hint" auto-id="hint-notes" class="field-hint">Max 500 characters.</span>
+          </div>
+
+          <!-- Hidden textarea — same class + extra hidden class (display:none via CSS) -->
+          <div class="field-group">
+            <label for="notes-hidden" auto-id="lbl-notes-hidden">Hidden Notes (display:none via class)</label>
+            <textarea id="notes-hidden" name="notes-hidden"
+                      auto-id="edt-notes-hidden"
+                      class="notes-area notes-area-hidden"
+                      rows="4" cols="50">This note area is hidden via CSS class display:none.</textarea>
+          </div>
+
+          <!-- Contenteditable rich-text editor -->
+          <div class="field-group">
+            <span id="lbl-rich-edit" auto-id="lbl-rich-edit" class="field-label">Rich Text Editor</span>
+            <div id="rich-editor"
+                 role="textbox"
+                 contenteditable="true"
+                 aria-labelledby="lbl-rich-edit"
+                 aria-multiline="true"
+                 auto-id="edt-rich-edit"
+                 class="content-editable rich-editor">
+              <p>First paragraph of the rich editor.</p>
+              <p>Second paragraph with <strong>bold</strong> text.</p>
+            </div>
+          </div>
+        </section>
+
+        <!-- ╔══════════════════════════════╗
+             ║  ARIA ROLE COVERAGE          ║
+             ╚══════════════════════════════╝ -->
+        <section id="section-aria" aria-labelledby="hdg-aria" auto-id="sec-aria">
+          <h2 id="hdg-aria" auto-id="hdg-aria">ARIA Role Coverage</h2>
+
+          <!-- ── Tabs: role=tablist / tab / tabpanel ── -->
+          <div class="tab-container" auto-id="tabs-main">
+            <ul role="tablist" aria-label="Information tabs" auto-id="tablist-main">
+              <li role="tab" id="tab-overview" tabindex="0"  aria-selected="true"  aria-controls="panel-overview" auto-id="tab-overview" onclick="selectTab('overview')">Overview</li>
+              <li role="tab" id="tab-details"  tabindex="-1" aria-selected="false" aria-controls="panel-details"  auto-id="tab-details"  onclick="selectTab('details')">Details</li>
+              <li role="tab" id="tab-history"  tabindex="-1" aria-selected="false" aria-controls="panel-history"  auto-id="tab-history"  onclick="selectTab('history')">History</li>
+            </ul>
+            <div role="tabpanel" id="panel-overview" aria-labelledby="tab-overview" auto-id="panel-overview"><p>Overview content.</p></div>
+            <div role="tabpanel" id="panel-details"  aria-labelledby="tab-details"  auto-id="panel-details"  hidden><p>Detailed information.</p></div>
+            <div role="tabpanel" id="panel-history"  aria-labelledby="tab-history"  auto-id="panel-history"  hidden><p>History information.</p></div>
+          </div>
+
+          <!-- ── role=alert (live region, assertive) ── -->
+          <div role="alert" auto-id="alrt-validation" class="alert-box" aria-live="assertive">
+            <strong>Attention:</strong> Please review the highlighted fields.
+          </div>
+
+          <!-- ── role=status (live region, polite) ── -->
+          <div role="status" auto-id="sts-save" aria-live="polite">
+            Changes saved automatically.
+          </div>
+
+          <!-- ── role=tooltip ── -->
+          <div class="tooltip-wrap" auto-id="wrap-tooltip-info">
+            <button type="button" auto-id="btn-info" aria-describedby="tip-info" class="info-btn">?</button>
+            <span role="tooltip" id="tip-info" auto-id="tip-info">
+              This is a tooltip with helpful information.
+            </span>
+          </div>
+
+          <!-- ── role=dialog (modal) ── -->
+          <button type="button" auto-id="btn-open-dialog"
+                  aria-haspopup="dialog"
+                  aria-controls="dlg-confirm"
+                  onclick="document.getElementById('dlg-confirm').removeAttribute('hidden')">
+            Open Dialog
+          </button>
+          <div role="dialog" id="dlg-confirm" aria-labelledby="dlg-title" aria-modal="true"
+               auto-id="dlg-confirm" hidden>
+            <h3 id="dlg-title" auto-id="dlg-title">Confirm Submission</h3>
+            <p>Are you sure you want to submit the form?</p>
+            <button type="button" auto-id="btn-dlg-confirm" class="btn-primary">Confirm</button>
+            <button type="button" auto-id="btn-dlg-cancel"
+                    onclick="document.getElementById('dlg-confirm').setAttribute('hidden','')">Cancel</button>
+          </div>
+
+          <!-- ── role=log (chat-style live region) ── -->
+          <div role="log" aria-label="Activity log" auto-id="div-log" class="text-block">
+            <p>10:00 — Form opened.</p>
+            <p>10:01 — Given name entered.</p>
+          </div>
+
+          <!-- ── role=timer ── -->
+          <div role="timer" aria-label="Session timer" auto-id="div-timer" aria-live="off">05:00</div>
+
+          <!-- ── role=marquee (rotational live region) ── -->
+          <div role="marquee" aria-label="Latest announcements" auto-id="div-marquee">
+            Special offer: free shipping today!
+          </div>
+
+          <!-- ── Accordion via <details>/<summary> (implicit role=group / button) ── -->
+          <details auto-id="acc-faq">
+            <summary auto-id="acc-faq-summary">Frequently Asked Question</summary>
+            <div auto-id="acc-faq-panel" class="text-block">
+              <p>This is the answer to the frequently asked question.</p>
+            </div>
+          </details>
+
+          <!-- ── role=navigation breadcrumb ── -->
+          <nav aria-label="Breadcrumb" auto-id="nav-breadcrumb">
+            <ol>
+              <li><a href="#" auto-id="lnk-bc-home">Home</a></li>
+              <li><a href="#" auto-id="lnk-bc-forms">Forms</a></li>
+              <li><span aria-current="page" auto-id="spn-bc-current">Mega Forma</span></li>
+            </ol>
+          </nav>
+
+          <!-- ── role=tree / treeitem ── -->
+          <ul role="tree" aria-label="Category tree" auto-id="tree-categories">
+            <li role="treeitem" aria-expanded="true" auto-id="tree-item-tech">
+              <span>Technology</span>
+              <ul role="group">
+                <li role="treeitem" auto-id="tree-item-web">Web Development</li>
+                <li role="treeitem" auto-id="tree-item-mobile">Mobile Development</li>
+              </ul>
+            </li>
+            <li role="treeitem" aria-expanded="false" auto-id="tree-item-science">Science</li>
+          </ul>
+
+          <!-- ── role=menu / menuitem / menuitemcheckbox / menuitemradio ── -->
+          <div class="menu-container" auto-id="wrap-action-menu">
+            <button type="button" auto-id="btn-menu-trigger"
+                    aria-haspopup="menu" aria-expanded="false"
+                    aria-controls="action-menu"
+                    onclick="toggleMenu()">Actions ▾</button>
+            <ul role="menu" id="action-menu" auto-id="mnu-actions" hidden aria-label="Action menu">
+              <li role="menuitem"         tabindex="-1" auto-id="mnu-item-edit">Edit</li>
+              <li role="menuitem"         tabindex="-1" auto-id="mnu-item-delete">Delete</li>
+              <li role="menuitemcheckbox" tabindex="-1" aria-checked="true"  auto-id="mnu-item-archive">Archive</li>
+              <li role="menuitemradio"    tabindex="-1" aria-checked="false" auto-id="mnu-item-private">Private</li>
+            </ul>
+          </div>
+
+          <!-- ── role=grid / row / columnheader / rowheader / gridcell ── -->
+          <div role="grid" aria-label="User permissions" auto-id="grid-perms">
+            <div role="row" auto-id="grid-row-hdr">
+              <span role="columnheader" auto-id="grid-col-feature">Feature</span>
+              <span role="columnheader" auto-id="grid-col-read">Read</span>
+              <span role="columnheader" auto-id="grid-col-write">Write</span>
+            </div>
+            <div role="row" auto-id="grid-row-docs">
+              <span role="rowheader" auto-id="grid-rh-docs">Documents</span>
+              <span role="gridcell"  auto-id="grid-cell-docs-read">
+                <input type="checkbox" checked auto-id="chk-docs-read" aria-label="Read documents">
+              </span>
+              <span role="gridcell"  auto-id="grid-cell-docs-write">
+                <input type="checkbox"         auto-id="chk-docs-write" aria-label="Write documents">
+              </span>
+            </div>
+            <div role="row" auto-id="grid-row-reports">
+              <span role="rowheader" auto-id="grid-rh-reports">Reports</span>
+              <span role="gridcell"  auto-id="grid-cell-reports-read">
+                <input type="checkbox" checked auto-id="chk-reports-read" aria-label="Read reports">
+              </span>
+              <span role="gridcell"  auto-id="grid-cell-reports-write">
+                <input type="checkbox"         auto-id="chk-reports-write" aria-label="Write reports">
+              </span>
+            </div>
+          </div>
+
+          <!-- ── role=listbox / option (custom) ── -->
+          <div class="field-group">
+            <span id="lbl-skills" auto-id="lbl-skills" class="field-label">Skills</span>
+            <ul role="listbox" aria-labelledby="lbl-skills"
+                aria-multiselectable="true"
+                auto-id="lst-skills" class="listbox">
+              <li role="option" aria-selected="true"  auto-id="opt-haskell">Haskell</li>
+              <li role="option" aria-selected="false" auto-id="opt-python">Python</li>
+              <li role="option" aria-selected="true"  auto-id="opt-javascript">JavaScript</li>
+              <li role="option" aria-selected="false" auto-id="opt-rust">Rust</li>
+            </ul>
+          </div>
+
+          <!-- ── role=progressbar (explicit, mirrors <progress> semantics) ── -->
+          <div role="progressbar" aria-valuenow="60" aria-valuemin="0" aria-valuemax="100"
+               aria-label="Upload progress 60%"
+               auto-id="prg-upload"
+               style="height:12px; background:#e2e8f0; border-radius:6px; overflow:hidden; margin-bottom:14px;">
+            <div style="width:60%; height:100%; background:#667eea;"></div>
+          </div>
+
+          <!-- ── role=slider (explicit, mirrors input[type=range] semantics) ── -->
+          <div role="slider" tabindex="0"
+               aria-valuemin="0" aria-valuemax="100" aria-valuenow="40"
+               aria-label="Volume"
+               auto-id="sld-volume"
+               style="width:200px; height:8px; background:#e2e8f0; border-radius:4px; position:relative; display:inline-block; cursor:pointer;">
+            <div style="width:40%; height:100%; background:#48bb78; border-radius:4px;"></div>
+          </div>
+
+          <!-- ── Implicit roles from semantic HTML elements ── -->
+          <!-- <article> = role article -->
+          <article auto-id="art-announcement" class="announcement">
+            <h3 auto-id="hdg-announcement">Announcement</h3>
+            <p  auto-id="txt-announcement">This <code>&lt;article&gt;</code> has implicit <code>role="article"</code>.</p>
+            <footer auto-id="ftr-announcement">
+              <cite auto-id="cit-announcement">Posted by the test team</cite>
+            </footer>
+          </article>
+
+          <!-- <figure>/<figcaption> = role figure -->
+          <figure auto-id="fig-demo" class="demo-figure">
+            <img src="megaForma.webp" alt="Mega Forma background image"
+                 auto-id="img-demo" width="220" height="110" style="border-radius:4px; object-fit:cover;">
+            <figcaption auto-id="cap-demo">Figure 1: The Mega Forma background image</figcaption>
+          </figure>
+
+          <!-- <table> = role table; <th> = columnheader/rowheader; <td> = cell -->
+          <table auto-id="tbl-summary" class="summary-table" aria-label="Form summary">
+            <caption auto-id="cap-tbl-summary">Data Entry Summary</caption>
+            <thead>
+              <tr>
+                <th scope="col" auto-id="th-field">Field</th>
+                <th scope="col" auto-id="th-value">Value</th>
+                <th scope="col" auto-id="th-status">Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr auto-id="tr-given-name">
+                <td auto-id="td-lbl-given-name">Given Name</td>
+                <td auto-id="td-val-given-name">Jane</td>
+                <td auto-id="td-sts-given-name"><span role="img" aria-label="Valid">✓</span></td>
+              </tr>
+              <tr auto-id="tr-email">
+                <td auto-id="td-lbl-email">Email</td>
+                <td auto-id="td-val-email">jane.smith@example.com</td>
+                <td auto-id="td-sts-email"><span role="img" aria-label="Valid">✓</span></td>
+              </tr>
+              <tr auto-id="tr-phone">
+                <td auto-id="td-lbl-phone">Phone</td>
+                <td auto-id="td-val-phone">+61 400 000 000</td>
+                <td auto-id="td-sts-phone"><span role="img" aria-label="Pending">⏳</span></td>
+              </tr>
+            </tbody>
+            <tfoot>
+              <tr auto-id="tr-total">
+                <td colspan="2" auto-id="td-total-label">Fields completed</td>
+                <td auto-id="td-total-val">2 / 3</td>
+              </tr>
+            </tfoot>
+          </table>
+
+          <!-- <dl>/<dt>/<dd> = role term / definition -->
+          <dl auto-id="dl-glossary" class="glossary">
+            <dt auto-id="dt-bidi">BiDi</dt>
+            <dd auto-id="dd-bidi">WebDriver BiDi — bidirectional browser automation protocol</dd>
+            <dt auto-id="dt-aria">ARIA</dt>
+            <dd auto-id="dd-aria">Accessible Rich Internet Applications</dd>
+            <dt auto-id="dt-dom">DOM</dt>
+            <dd auto-id="dd-dom">Document Object Model</dd>
+          </dl>
+
+          <!-- Explicit role overrides: <span role="button">, <a role="button">, <div role="img"> -->
+          <div class="implicit-roles-demo">
+            <button type="button"    auto-id="btn-demo"       class="btn-secondary">Button (implicit button)</button>
+            <a href="#"              auto-id="lnk-demo"       class="demo-link">Link (implicit link)</a>
+            <span role="button" tabindex="0"
+                  auto-id="btn-span-role"
+                  class="span-button"
+                  aria-label="Span acting as button"
+                  onclick="this.textContent = 'Clicked!'"
+                  onkeydown="if(event.key==='Enter'||event.key===' ')this.click()">Span Button</span>
+            <a role="button" href="#"
+               auto-id="btn-link-role"
+               class="link-button"
+               aria-label="Link acting as button">Link-Button</a>
+            <div role="img"
+                 auto-id="img-div-role"
+                 aria-label="Abstract coloured shape"
+                 class="decorative-shape"></div>
+            <input type="checkbox" id="chk-demo" auto-id="chk-demo"
+                   aria-label="Demo checkbox (implicit role=checkbox)">
+            <label for="chk-demo" auto-id="lbl-chk-demo">Demo checkbox</label>
+            <input type="radio" id="rdo-demo" name="rdo-demo-grp" auto-id="rdo-demo"
+                   aria-label="Demo radio (implicit role=radio)">
+            <label for="rdo-demo" auto-id="lbl-rdo-demo">Demo radio</label>
+          </div>
+
+          <!-- role=presentation / none: semantics suppressed -->
+          <table role="presentation" auto-id="tbl-layout" class="layout-table">
+            <tr>
+              <td auto-id="td-layout-l">Layout left</td>
+              <td auto-id="td-layout-r">Layout right</td>
+            </tr>
+          </table>
+          <img src="megaForma.webp" role="none" alt=""
+               auto-id="img-decorative"
+               width="56" height="28"
+               style="border-radius:4px; object-fit:cover;">
+
+          <!-- HTML5 <search> element = role="search" landmark -->
+          <search auto-id="srch-widget">
+            <label for="global-search" auto-id="lbl-global-search">Site Search</label>
+            <input type="search" id="global-search" name="global-search"
+                   auto-id="edt-global-search"
+                   class="text-input search-input"
+                   aria-label="Search the site">
+            <button type="button" auto-id="btn-site-search">Search</button>
+          </search>
+
+          <!-- role=math -->
+          <div role="math" aria-label="Pythagorean theorem: a squared plus b squared equals c squared"
+               auto-id="div-math">
+            a² + b² = c²
+          </div>
+
+          <!-- role=application (whole region managed by script) -->
+          <div role="application" aria-label="Custom date picker application" auto-id="div-app">
+            <p style="font-size:0.85rem; color:#666;">[ Custom date-picker placeholder ]</p>
+          </div>
+        </section>
+
+        <!-- ╔══════════════════════════════╗
+             ║  MULTI-PARAGRAPH TEXT BLOCKS ║
+             ╚══════════════════════════════╝ -->
+        <section id="section-text" aria-labelledby="hdg-text" auto-id="sec-text">
+          <h2 id="hdg-text" auto-id="hdg-text">Multi-Paragraph Content</h2>
+
+          <!-- Text split across multiple <p> tags inside one div -->
+          <div class="text-block bio-block" data-content-type="biography" auto-id="div-bio-content">
+            <p class="text-para" auto-id="para-bio-1">This is the first paragraph of the biography section.</p>
+            <p class="text-para" auto-id="para-bio-2">The text is deliberately split across multiple paragraph elements.</p>
+            <p class="text-para" auto-id="para-bio-3">Each <code>&lt;p&gt;</code> is a child of the same <code>&lt;div&gt;</code>.</p>
+          </div>
+
+          <div class="text-block terms-block" data-content-type="terms" auto-id="div-terms-content">
+            <p class="text-para"            auto-id="para-terms-1">Terms and conditions paragraph one: all data is fictional.</p>
+            <p class="text-para"            auto-id="para-terms-2">Terms and conditions paragraph two with <em>emphasised</em> text.</p>
+            <p class="text-para highlight-para" auto-id="para-terms-3">Important: this highlighted paragraph tests visibility detection.</p>
+          </div>
+
+          <!-- Mixed inline semantic elements -->
+          <div class="text-block mixed-inline" auto-id="div-mixed-inline">
+            <p>Text with <span class="highlight" auto-id="spn-highlight">highlighted span</span> inline.</p>
+            <p>Text with <abbr title="HyperText Markup Language" auto-id="abbr-html">HTML</abbr> abbreviation.</p>
+            <p>Text with <time datetime="2026-03-20" auto-id="time-date">March 20, 2026</time> date element.</p>
+            <p>Text with <mark auto-id="mark-keyword">marked keyword</mark> element.</p>
+            <p>Text with <del auto-id="del-old">removed text</del> and <ins auto-id="ins-new">inserted text</ins>.</p>
+            <p>Text with <sub auto-id="sub-demo">subscript</sub> and <sup auto-id="sup-demo">superscript</sup>.</p>
+            <p>Text with <kbd auto-id="kbd-demo">Ctrl+S</kbd> keyboard shortcut.</p>
+            <p>Text with <var auto-id="var-demo">x</var> variable reference.</p>
+            <p>Text with <samp auto-id="samp-demo">sample output</samp> element.</p>
+            <p>Text with <q auto-id="q-demo">inline quotation</q> element.</p>
+          </div>
+
+          <!-- Blockquote + cite -->
+          <blockquote cite="https://www.w3.org/" auto-id="bq-w3c">
+            <p auto-id="para-bq">The Web is for Everyone.</p>
+            <footer auto-id="ftr-bq"><cite auto-id="cit-bq">W3C Mission Statement</cite></footer>
+          </blockquote>
+
+          <!-- Pre / code block -->
+          <pre auto-id="pre-code"><code auto-id="code-block">const x = 42;
+console.log(x);</code></pre>
+        </section>
+
+        <!-- ╔══════════════════════════════════════════════╗
+             ║  DUPLICATE SECTION A                         ║
+             ║  (same internal structure, different parent) ║
+             ╚══════════════════════════════════════════════╝ -->
+        <div id="section-duplicate-a" class="duplicate-section" auto-id="sec-dup-a">
+          <h2 auto-id="hdg-dup-a">Duplicate Section A</h2>
+          <p auto-id="para-dup-a">Same internal structure as Section B — different parent ID.</p>
+          <div class="field-group" auto-id="fg-dup-a">
+            <label for="dup-input-a" auto-id="lbl-dup-input-a">Shared Input Label</label>
+            <input type="text" id="dup-input-a" name="dup-input-a"
+                   auto-id="edt-dup-input-a"
+                   value="Value in section A"
+                   class="text-input dup-input">
+          </div>
+          <button type="button" auto-id="btn-dup-a" class="dup-btn btn-secondary">Shared Button Text</button>
+          <span class="status-indicator active" auto-id="spn-dup-status-a">Active</span>
+          <ul class="dup-list" auto-id="lst-dup-a">
+            <li auto-id="li-dup-a-1">Item One</li>
+            <li auto-id="li-dup-a-2">Item Two</li>
+            <li auto-id="li-dup-a-3">Item Three</li>
+          </ul>
+        </div>
+
+        <!-- ╔══════════════════════════════════════════════╗
+             ║  DUPLICATE SECTION B                         ║
+             ╚══════════════════════════════════════════════╝ -->
+        <div id="section-duplicate-b" class="duplicate-section" auto-id="sec-dup-b">
+          <h2 auto-id="hdg-dup-b">Duplicate Section B</h2>
+          <p auto-id="para-dup-b">Same internal structure as Section A — different parent ID.</p>
+          <div class="field-group" auto-id="fg-dup-b">
+            <label for="dup-input-b" auto-id="lbl-dup-input-b">Shared Input Label</label>
+            <input type="text" id="dup-input-b" name="dup-input-b"
+                   auto-id="edt-dup-input-b"
+                   value="Value in section B"
+                   class="text-input dup-input">
+          </div>
+          <button type="button" auto-id="btn-dup-b" class="dup-btn btn-secondary">Shared Button Text</button>
+          <span class="status-indicator inactive" auto-id="spn-dup-status-b">Inactive</span>
+          <ul class="dup-list" auto-id="lst-dup-b">
+            <li auto-id="li-dup-b-1">Item One</li>
+            <li auto-id="li-dup-b-2">Item Two</li>
+            <li auto-id="li-dup-b-3">Item Three</li>
+          </ul>
+        </div>
+
+        <!-- ╔══════════════════════════════╗
+             ║  HIDDEN ELEMENTS SHOWCASE    ║
+             ╚══════════════════════════════╝ -->
+        <section id="section-hidden" aria-labelledby="hdg-hidden" auto-id="sec-hidden">
+          <h2 id="hdg-hidden" auto-id="hdg-hidden">Hidden Elements Showcase</h2>
+
+          <!-- Visible reference (control) -->
+          <div class="field-group">
+            <label for="vis-ref" auto-id="lbl-vis-ref">Visible Reference</label>
+            <input type="text" id="vis-ref" name="vis-ref"
+                   auto-id="edt-vis-ref"
+                   value="I am fully visible"
+                   class="text-input">
+          </div>
+
+          <!-- 1. aria-hidden="true" — in DOM and layout, hidden from AT -->
+          <p aria-hidden="true" auto-id="para-aria-hidden" class="text-para">
+            aria-hidden paragraph: visible to CSS / XPath, invisible to accessibility tree.
+          </p>
+          <div class="field-group">
+            <label auto-id="lbl-aria-hidden-input">aria-hidden Input</label>
+            <input type="text" name="aria-hidden-input"
+                   auto-id="edt-aria-hidden"
+                   aria-hidden="true"
+                   value="aria-hidden input"
+                   class="text-input">
+          </div>
+
+          <!-- 2. display:none via inline style — not in layout -->
+          <div class="field-group" style="display:none" auto-id="fg-display-none">
+            <label auto-id="lbl-display-none">Inline display:none Label</label>
+            <input type="text" name="display-none-input"
+                   auto-id="edt-display-none"
+                   value="display:none inline input"
+                   class="text-input">
+          </div>
+
+          <!-- 3. display:none via CSS class -->
+          <div class="field-group hidden-display" auto-id="fg-css-none">
+            <label auto-id="lbl-css-none">CSS .hidden-display Label</label>
+            <input type="text" name="css-none-input"
+                   auto-id="edt-css-none"
+                   value="css class display:none input"
+                   class="text-input">
+          </div>
+
+          <!-- 4. visibility:hidden via inline style — in layout, invisible -->
+          <div class="field-group" style="visibility:hidden" auto-id="fg-vis-hidden">
+            <label auto-id="lbl-vis-hidden">Inline visibility:hidden Label</label>
+            <input type="text" name="vis-hidden-input"
+                   auto-id="edt-vis-hidden"
+                   value="visibility:hidden input"
+                   class="text-input">
+          </div>
+
+          <!-- 5. visibility:hidden via CSS class -->
+          <div class="field-group hidden-visibility" auto-id="fg-css-vis-hidden">
+            <label auto-id="lbl-css-vis-hidden">CSS .hidden-visibility Label</label>
+            <input type="text" name="css-vis-hidden-input"
+                   auto-id="edt-css-vis-hidden"
+                   value="css class visibility:hidden input"
+                   class="text-input">
+          </div>
+
+          <!-- 6. HTML hidden attribute -->
+          <div class="field-group" hidden auto-id="fg-html-hidden">
+            <label auto-id="lbl-html-hidden">HTML [hidden] Label</label>
+            <input type="text" name="html-hidden-input"
+                   auto-id="edt-html-hidden"
+                   value="html [hidden] attr input"
+                   class="text-input">
+          </div>
+
+          <!-- 7. opacity:0 — in layout, no visual presence, still interactive -->
+          <div class="field-group" style="opacity:0" auto-id="fg-opacity-zero">
+            <label auto-id="lbl-opacity-zero">Opacity:0 Label</label>
+            <input type="text" name="opacity-zero-input"
+                   auto-id="edt-opacity-zero"
+                   value="opacity:0 input"
+                   class="text-input">
+          </div>
+
+          <!-- 8. Off-screen via absolute positioning -->
+          <div class="field-group"
+               style="position:absolute; left:-9999px; top:-9999px;"
+               auto-id="fg-offscreen">
+            <label auto-id="lbl-offscreen">Off-screen Label</label>
+            <input type="text" name="offscreen-input"
+                   auto-id="edt-offscreen"
+                   value="off-screen input"
+                   class="text-input">
+          </div>
+        </section>
+
+        <!-- ╔══════════════════════════════╗
+             ║  PAYMENT DETAILS (iframe)    ║
+             ╚══════════════════════════════╝ -->
+        <section id="section-payment" aria-labelledby="hdg-payment" auto-id="sec-payment">
+          <h2 id="hdg-payment" auto-id="hdg-payment">Payment Details</h2>
+          <iframe id="iframe-payment"
+                  auto-id="iframe-payment"
+                  title="Payment Details Form"
+                  width="100%" height="340"
+                  class="payment-frame"></iframe>
+        </section>
+
+        <!-- ╔════════════════════════════════════════════╗
+             ║  DELIVERY ADDRESS (iframe, hidden by default) ║
+             ╚════════════════════════════════════════════╝ -->
+        <div id="delivery-frame-wrap" auto-id="wrap-delivery-frame" style="display:none">
+          <section id="section-delivery" aria-labelledby="hdg-delivery" auto-id="sec-delivery">
+            <h2 id="hdg-delivery" auto-id="hdg-delivery">Delivery Address</h2>
+            <iframe id="iframe-delivery"
+                    auto-id="iframe-delivery"
+                    title="Delivery Address Form"
+                    width="100%" height="340"
+                    class="delivery-frame"></iframe>
+          </section>
+        </div>
+
+        <!-- ╔══════════════════════════════╗
+             ║  SUBMIT AREA                 ║
+             ╚══════════════════════════════╝ -->
+        <div class="submit-area" auto-id="div-submit-area">
+          <button type="reset"  auto-id="btn-reset"        class="btn-secondary">Reset Form</button>
+          <button type="submit" auto-id="btn-submit"       class="btn-primary"
+                  aria-label="Submit the mega form">Submit</button>
+          <input  type="submit" auto-id="btn-submit-input" value="Submit (input)"
+                  class="btn-primary submit-input" style="cursor:pointer;">
+          <input  type="reset"  auto-id="btn-reset-input"  value="Reset (input)"
+                  class="btn-secondary reset-input" style="cursor:pointer;">
+          <input  type="image"  auto-id="btn-image-submit"
+                  src="megaForma.webp"
+                  alt="Submit via image button"
+                  width="48" height="24"
+                  style="border-radius:3px; object-fit:cover; cursor:pointer;">
+        </div>
+
+      </form>
+    </main>
+
+    <!-- ════════════════════════════════════════════════════
+         COMPLEMENTARY LANDMARK (implicit via <aside>)
+         ════════════════════════════════════════════════════ -->
+    <aside aria-label="Help and tips" auto-id="aside-help">
+      <h2 auto-id="hdg-aside-help">Form Help</h2>
+      <p  auto-id="para-aside-1">Fields marked <strong>*</strong> are required.</p>
+      <details auto-id="acc-help-hints">
+        <summary auto-id="acc-help-summary">Keyboard shortcuts</summary>
+        <ul auto-id="lst-shortcuts">
+          <li auto-id="li-shortcut-submit">Press <kbd>Enter</kbd> to submit.</li>
+          <li auto-id="li-shortcut-tab"><kbd>Tab</kbd> moves to the next field.</li>
+          <li auto-id="li-shortcut-esc"><kbd>Esc</kbd> closes dialogs.</li>
+        </ul>
+      </details>
+    </aside>
+
+    <!-- ════════════════════════════════════════════════════
+         CONTENTINFO LANDMARK (implicit via <footer>)
+         ════════════════════════════════════════════════════ -->
+    <footer auto-id="ftr-main">
+      <p auto-id="para-footer-copy">&copy; 2026 Mega Forma Test Page. For testing purposes only.</p>
+      <address auto-id="addr-contact">
+        Contact: <a href="mailto:test@example.com" auto-id="lnk-contact-email">test@example.com</a>
+      </address>
+    </footer>
+
+  </div><!-- .page-wrapper -->
+
+  <!-- ════════════════════════════════════════════════
+       SCRIPTS
+       ════════════════════════════════════════════════ -->
+  <script>
+    /* ── Inject iframes via srcdoc ── */
+    document.getElementById('iframe-payment').srcdoc = `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <style>
+    body { font-family: Arial, sans-serif; padding: 12px; background: #f9f9f9; font-size: 14px; }
+    .field-group { margin-bottom: 11px; }
+    label { display: block; font-weight: 600; margin-bottom: 3px; color: #444; }
+    input, select { width: 100%; padding: 6px 9px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; }
+    .card-row { display: flex; gap: 10px; }
+    .card-row .field-group { flex: 1; }
+    small { color: #888; font-size: 0.78rem; }
+  </style>
+</head>
+<body>
+  <h3 style="margin-top:0">Payment Information</h3>
+  <div class="field-group">
+    <label for="card-holder">Cardholder Name</label>
+    <input type="text" id="card-holder" name="card-holder"
+           auto-id="edt-card-holder" value="Jane Smith" autocomplete="cc-name">
+  </div>
+  <div class="field-group">
+    <label for="card-number">Card Number</label>
+    <input type="text" id="card-number" name="card-number"
+           auto-id="edt-card-number" value="4111 1111 1111 1111"
+           autocomplete="cc-number" maxlength="19" aria-describedby="card-hint">
+    <small id="card-hint">Test card: 4111 1111 1111 1111</small>
+  </div>
+  <div class="card-row">
+    <div class="field-group">
+      <label for="card-expiry">Expiry (MM/YY)</label>
+      <input type="text" id="card-expiry" name="card-expiry"
+             auto-id="edt-card-expiry" value="12/28" autocomplete="cc-exp">
+    </div>
+    <div class="field-group">
+      <label for="card-cvv">CVV</label>
+      <input type="password" id="card-cvv" name="card-cvv"
+             auto-id="edt-card-cvv" value="123" maxlength="4" autocomplete="cc-csc">
     </div>
   </div>
+  <div class="field-group">
+    <label for="payment-type">Payment Type</label>
+    <select id="payment-type" name="payment-type" auto-id="sel-payment-type">
+      <option value="visa" selected>Visa</option>
+      <option value="mastercard">Mastercard</option>
+      <option value="amex">American Express</option>
+      <option value="paypal">PayPal</option>
+    </select>
+  </div>
+  <div style="display:flex;align-items:center;gap:8px;">
+    <input type="checkbox" id="save-card" name="save-card" auto-id="chk-save-card">
+    <label for="save-card" style="margin:0;font-weight:normal;">Save card for future use</label>
+  </div>
+</body>
+</html>`;
+
+    document.getElementById('iframe-delivery').srcdoc = `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <style>
+    body { font-family: Arial, sans-serif; padding: 12px; background: #f9f9f9; font-size: 14px; }
+    .field-group { margin-bottom: 11px; }
+    label { display: block; font-weight: 600; margin-bottom: 3px; color: #444; }
+    input, select, textarea { width: 100%; padding: 6px 9px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; }
+  </style>
+</head>
+<body>
+  <h3 style="margin-top:0">Delivery Address</h3>
+  <div class="field-group">
+    <label for="del-street">Street Address</label>
+    <input type="text" id="del-street" name="del-street"
+           auto-id="edt-del-street" value="42 Test Lane">
+  </div>
+  <div class="field-group">
+    <label for="del-suburb">Suburb / City</label>
+    <input type="text" id="del-suburb" name="del-suburb"
+           auto-id="edt-del-suburb" value="Newtown">
+  </div>
+  <div class="field-group">
+    <label for="del-state">State / Province</label>
+    <select id="del-state" name="del-state" auto-id="sel-del-state">
+      <option value="">-- Select --</option>
+      <option value="nsw" selected>NSW</option>
+      <option value="vic">VIC</option>
+      <option value="qld">QLD</option>
+      <option value="wa">WA</option>
+    </select>
+  </div>
+  <div class="field-group">
+    <label for="del-postcode">Postcode</label>
+    <input type="text" id="del-postcode" name="del-postcode"
+           auto-id="edt-del-postcode" value="2042" pattern="[0-9]{4}">
+  </div>
+  <div class="field-group">
+    <label for="del-country">Country</label>
+    <select id="del-country" name="del-country" auto-id="sel-del-country">
+      <option value="au" selected>Australia</option>
+      <option value="nz">New Zealand</option>
+      <option value="uk">United Kingdom</option>
+    </select>
+  </div>
+  <div class="field-group">
+    <label for="del-instructions">Delivery Instructions</label>
+    <textarea id="del-instructions" name="del-instructions"
+              auto-id="edt-del-instructions" rows="3">Leave at door</textarea>
+  </div>
+</body>
+</html>`;
+
+    /* ── Tab widget ── */
+    function selectTab(tabId) {
+      document.querySelectorAll('[role="tab"]').forEach(t => {
+        t.setAttribute('aria-selected', 'false');
+        t.setAttribute('tabindex', '-1');
+      });
+      document.querySelectorAll('[role="tabpanel"]').forEach(p => p.setAttribute('hidden', ''));
+      var tab   = document.getElementById('tab-'   + tabId);
+      var panel = document.getElementById('panel-' + tabId);
+      if (tab)   { tab.setAttribute('aria-selected', 'true'); tab.setAttribute('tabindex', '0'); }
+      if (panel) { panel.removeAttribute('hidden'); }
+    }
+
+    /* ── Action menu toggle ── */
+    function toggleMenu() {
+      var menu = document.getElementById('action-menu');
+      var btn  = document.querySelector('[aria-controls="action-menu"]');
+      var hide = !menu.hasAttribute('hidden');
+      if (hide) {
+        menu.setAttribute('hidden', '');
+        btn.setAttribute('aria-expanded', 'false');
+      } else {
+        menu.removeAttribute('hidden');
+        btn.setAttribute('aria-expanded', 'true');
+      }
+    }
+  </script>
 </body>
 
 </html>
