@@ -337,6 +337,12 @@ library webdriver-precore-extended-internal
   import: commonExtensions, commonGhcOptions, libDepends
   exposed-modules:
       WebDriverPreCore.Extended.Locators.Internal
+  other-modules:
+      WebDriverPreCore.Extended.BiDi.Base.Protocol
+  hs-source-dirs: extended/src
+  build-depends:
+    webdriver-precore:webdriver-precore,
+    webdriver-precore:utils-internal
 
 library webdriver-precore-extended
   import: commonExtensions, commonGhcOptions, libDepends
