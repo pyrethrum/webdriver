@@ -350,8 +350,9 @@ library webdriver-precore-extended
       WebDriverPreCore.Extended.BiDi.Actions
       WebDriverPreCore.Extended.BiDi.Protocol
       --
-      WebDriverPreCore.Extended.Capabilities
       WebDriverPreCore.Extended.Locators
+      WebDriverPreCore.Extended.Capabilities
+      --
       WebDriverPreCore.Extended.Locators.Internal
   other-modules:
       WebDriverPreCore.Extended.HTTP.Internal
