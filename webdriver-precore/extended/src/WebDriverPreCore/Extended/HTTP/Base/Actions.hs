@@ -92,9 +92,9 @@ where
 import Data.Aeson (Value)
 import Data.Text (Text)
 import WebDriverPreCore.Extended.HTTP.Base.API qualified as API
+import WebDriverPreCore.Extended.HTTP.Protocol (Command)
 import WebDriverPreCore.Extended.HTTP.Base.Protocol
   ( Actions,
-    Command,
     Cookie,
     ElementId,
     FrameReference,

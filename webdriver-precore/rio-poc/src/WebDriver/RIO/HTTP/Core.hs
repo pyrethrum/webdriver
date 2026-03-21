@@ -50,7 +50,8 @@ import RIO
   )
 import WebDriverPreCore.BiDiRunner (BiDiRunner)
 import WebDriverPreCore.Error (parseFailToWDException)
-import WebDriverPreCore.Extended.HTTP.Base.Protocol (Command (..), Session (..))
+import WebDriverPreCore.Extended.HTTP.Base.Protocol (Session (..))
+import WebDriverPreCore.Extended.HTTP.Protocol (Command (..))
 import WebDriverPreCore.HttpRunner (HttpEndpoint (..), callWebDriver)
 import WebDriverPreCore.Utils.Timeout (Timeout)
 

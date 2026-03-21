@@ -1,10 +1,9 @@
+-- A hidden module to export shared types
 module WebDriverPreCore.Extended.HTTP.Internal (Runner) where
 
-import WebDriverPreCore.Extended.HTTP.Base.Protocol
-  ( 
-    Command
+import WebDriverPreCore.Extended.HTTP.Protocol
+  ( Command,
   )
-
 
 -- ######################################################################
 -- ########################### Type Aliases #############################
@@ -13,6 +12,3 @@ import WebDriverPreCore.Extended.HTTP.Base.Protocol
 -- | A 'Runner' is a function that executes a 'Command' in a monadic context.
 -- This allows the Extended module to work with different execution strategies.
 type Runner m a = Command a -> m a
-
-
-

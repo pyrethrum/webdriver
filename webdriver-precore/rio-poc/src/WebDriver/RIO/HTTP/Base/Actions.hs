@@ -96,9 +96,9 @@ import WebDriver.RIO.HTTP.Core
   )
 import WebDriverPreCore.Extended.Capabilities qualified as EC
 import WebDriverPreCore.Extended.HTTP.Base.Actions qualified as A
+import WebDriverPreCore.Extended.HTTP.Protocol (Command)
 import WebDriverPreCore.Extended.HTTP.Base.Protocol
   ( Actions,
-    Command,
     Cookie,
     ElementId,
     FrameReference,
