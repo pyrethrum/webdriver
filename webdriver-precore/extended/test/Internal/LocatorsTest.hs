@@ -1,7 +1,7 @@
 module Internal.LocatorsTest (tests) where
 
 import Control.Monad (when)
-import Data.List.NonEmpty (NonEmpty (..))
+import Data.List.NonEmpty (NonEmpty (..), filter, head)
 import Data.Text (Text, pack, unpack)
 import Data.Text.IO (putStrLn)
 import System.Environment (withArgs)
@@ -29,7 +29,8 @@ import WebDriverPreCore.Extended.Locators.Internal
     prepare,
     sortGroupChildLocs,
   )
-import Prelude hiding (putStrLn)
+import WebDriverPreCore.Extended.SimplifiedLocator.Internal qualified as SL
+import Prelude hiding (filter, head, putStrLn)
 
 -- >>> _eval tests
 
@@ -75,7 +76,8 @@ tests =
           prop_classify_invalid_iff_any_invalid_node,
           prop_mock_logic_preserved_on_flattenning,
           prop_mock_logic_preserved_on_sort_and_grouping,
-          prop_prepare_logic_preserved
+          prop_prepare_logic_preserved,
+          prop_simplification_merges_xpaths
         ]
     ]
 
@@ -611,3 +613,31 @@ prop_classify_invalid_iff_any_invalid_node =
     classedasInvalid = \case
       Invalid _ -> True
       _ -> False
+
+-- >>> _eval prop_simplification_merges_xpaths
+-- *** Exception: ExitFailure 1
+
+-- *** Exception: ExitFailure 1
+
+prop_simplification_merges_xpaths :: TestTree
+prop_simplification_merges_xpaths =
+  testPropertyWith genLocatorOptions "simplified groups have same mockLocated as original" $ do
+    loc <- gen genLocator
+    proto <- gen genProtocol
+    let simpLoc = SL.prepareSimplify ID proto loc
+    info $ "Original locator:\n" <> unpack (txt loc)
+    info $ "Prepared simplified locator:\n" <> either show (unpack . txt) simpLoc
+    F.assert $ satisfies ("prepareSimplify preserves mockLocated", either (const True) chkAllXPathsingleton) .$ ("loc", simpLoc)
+  where
+    chkAllXPathsingleton = \case
+      SL.All locs -> chkSublocs locs
+      SL.Any locs -> chkSublocs locs
+      SL.None locs -> chkSublocs locs
+      _ -> True -- non-list always pass
+      --
+    chkSublocs l =
+      chkListXPathSingleton l
+        && all chkAllXPathsingleton l
+
+    chkListXPathSingleton :: NonEmpty SL.SimplifiedLocator -> Bool
+    chkListXPathSingleton l = not $ (length (filter isXPath l)) > 1
