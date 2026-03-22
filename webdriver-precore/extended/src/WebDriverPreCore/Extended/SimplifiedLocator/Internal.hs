@@ -7,6 +7,11 @@ import WebDriverPreCore.Extended.BiDi.Base.Protocol (BrowsingContext, JSUInt)
 import WebDriverPreCore.Extended.Locators.Internal qualified as LI
 import Prelude
 
+--  HERE
+-- nesting 
+-- process and or based on loc type - note should already be grouped properly due to classification 
+
+
 -- | Simplified/resolved form of 'LI.Locator', where leaf locators expressible
 --   as XPath have been folded in and 'LI.Default' has been resolved.
 --   Produced by 'prepareSimplify'.
