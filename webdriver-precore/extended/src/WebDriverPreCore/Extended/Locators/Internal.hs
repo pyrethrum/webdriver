@@ -65,6 +65,35 @@ data Locator
       Eq
     )
 
+-- | Locator for use with both HTTP and BiDi protocols.
+data SimplifiedLocator
+  = -- universal
+    SCSS {value :: Text}
+  | SXPath {value :: Text}
+  | -- double shot / difficult
+    SRole {role :: Maybe AriaRole, name :: Maybe Text}
+  | SInnerText
+      { value :: Text,
+        matchType :: MatchType,
+        caseSesnsitivity :: CaseSensitivity,
+        maxDepth :: Maybe JSUInt
+      }
+  | -- exclusive
+    -- browsingContextId -> elementId ie get the frame that belongs to the browsing context
+    SBiDiContext {context :: BrowsingContext}
+  | -- combinators
+    SParent {parent :: SimplifiedLocator, child :: SimplifiedLocator}
+  | SAll {elms :: NonEmpty Locator}
+  | SAny {elms :: NonEmpty Locator}
+  | SNone {elms :: NonEmpty Locator}
+  | --- postfilter
+    SPostFilter PostFilter
+  deriving
+    ( -- | WithOptions {base :: Locator, options :: [LocatorDirectives]}
+      Show,
+      Eq
+    )
+
 data PostFilter
   = BiDiPostFilter
       { description :: Text,
@@ -274,6 +303,11 @@ data Protocol = HTTP | BiDi deriving (Show, Eq)
 data InvalidLocator = InvalidLocator Text deriving (Show, Eq, Ord)
 
 instance Exception InvalidLocator
+
+prepareSimplify :: (Text -> Locator) -> Protocol ->  Locator -> Either InvalidLocator SimplifiedLocator
+prepareSimplify defLoc proto l = 
+  prepare defLoc proto l <&> \case
+     
 
 prepare :: (Text -> Locator) -> Protocol ->  Locator -> Either InvalidLocator Locator
 prepare defLoc proto = 

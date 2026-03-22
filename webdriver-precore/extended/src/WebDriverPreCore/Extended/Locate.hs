@@ -11,7 +11,7 @@ import Data.Text
 import WebDriverPreCore.Extended.HTTP.Base.Actions
 import WebDriverPreCore.Extended.HTTP.Base.Protocol (ElementId, Session)
 import WebDriverPreCore.Extended.HTTP.Internal (Runner)
-import WebDriverPreCore.Extended.Locators.Internal (Locator, prepare, Protocol)
+import WebDriverPreCore.Extended.Locators.Internal (Locator(..), prepare, Protocol)
 import WebDriverPreCore.Extended.Locators.Internal qualified as LI
 import WebDriverPreCore.HTTP.Protocol (Command, Selector)
 import GHC.Stack (HasCallStack)
@@ -75,4 +75,23 @@ locateHttp throw catch runner defLoc ses ops loc =
 
     findElms :: Selector -> m (Either LocateException [ElementId])
     findElms = elmFind findElements
+
+    locate :: Locator -> m (Either LocateException ElementId)
+    locate = \case
+      CSS {} -> undefined
+      XPath {} -> undefined
+      AllElms -> undefined
+      ID {} -> undefined
+      Class {} -> undefined
+      Attribute {} -> undefined
+      Tag {} -> undefined
+      Default {} -> undefined
+      Role {} -> undefined
+      InnerText {} -> undefined
+      BiDiContext {} -> undefined
+      Parent {} -> undefined
+      All {} -> undefined
+      Any {} -> undefined
+      None {} -> undefined
+      PostFilter _ -> undefined
 

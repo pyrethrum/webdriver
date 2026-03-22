@@ -14,7 +14,7 @@
 - [ ] harmonise isolate logging
 - [ ] resplit the libraries 
   - [ ] work out a way to work with as one
-  - [ ]  
+  - [ ] run hlint
 
 ## deferred
  - [ ] edge driver
