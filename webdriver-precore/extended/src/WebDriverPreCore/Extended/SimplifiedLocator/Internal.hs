@@ -1,0 +1,67 @@
+module WebDriverPreCore.Extended.SimplifiedLocator.Internal where
+
+import Data.Functor ((<&>))
+import Data.List.NonEmpty (NonEmpty)
+import Data.Text (Text)
+import WebDriverPreCore.Extended.BiDi.Base.Protocol (BrowsingContext, JSUInt)
+import WebDriverPreCore.Extended.Locators.Internal qualified as LI
+import Prelude
+
+-- | Simplified/resolved form of 'LI.Locator', where leaf locators expressible
+--   as XPath have been folded in and 'LI.Default' has been resolved.
+--   Produced by 'prepareSimplify'.
+data SimplifiedLocator
+  = -- universal
+    CSS {value :: Text}
+  | XPath {value :: Text}
+  | -- double shot / difficult
+    Role {role :: Maybe LI.AriaRole, name :: Maybe Text}
+  | InnerText
+      { value :: Text,
+        matchType :: LI.MatchType,
+        caseSesnsitivity :: LI.CaseSensitivity,
+        maxDepth :: Maybe JSUInt
+      }
+  | -- exclusive
+    -- browsingContextId -> elementId ie get the frame that belongs to the browsing context
+    BiDiContext {context :: BrowsingContext}
+  | -- combinators
+    Parent {parent :: SimplifiedLocator, child :: SimplifiedLocator}
+  | All {elms :: NonEmpty LI.Locator}
+  | Any {elms :: NonEmpty LI.Locator}
+  | None {elms :: NonEmpty LI.Locator}
+  | --- postfilter
+    PostFilter LI.PostFilter
+  deriving
+    ( Show,
+      Eq
+    )
+
+prepareSimplify :: (Text -> LI.Locator) -> LI.Protocol -> LI.Locator -> Either LI.InvalidLocator SimplifiedLocator
+prepareSimplify defLoc proto l =
+  LI.prepare defLoc proto l <&> simplify
+  where
+    simplify :: LI.Locator -> SimplifiedLocator
+    simplify = \case
+      LI.CSS {..}                -> CSS {..}
+      LI.XPath {..}              -> XPath {..}
+      loc@LI.AllElms             -> toXPath loc
+      loc@(LI.ID {})             -> toXPath loc
+      loc@(LI.Class {})          -> toXPath loc
+      loc@(LI.Attribute {})      -> toXPath loc
+      loc@(LI.Tag {})            -> toXPath loc
+      LI.Default {value}         -> simplify (defLoc value)
+      LI.Role {..}               -> Role {..}
+      LI.InnerText {..}          -> InnerText {..}
+      LI.BiDiContext {..}        -> BiDiContext {..}
+      LI.Parent {parent, child}  -> Parent {parent = simplify parent, child = simplify child}
+      LI.All {..}                -> All {..}
+      LI.Any {..}                -> Any {..}
+      LI.None {..}               -> None {..}
+      LI.PostFilter pf           -> PostFilter pf
+
+    -- Convert leaf locators that map to XPath via the existing locatorToXPathPartial logic.
+    toXPath :: LI.Locator -> SimplifiedLocator
+    toXPath loc = case LI.locatorToXPathPartial loc of
+      LI.XPath {value} -> XPath {value}
+      _ -> error "impossible: locatorToXPathPartial did not return XPath"
