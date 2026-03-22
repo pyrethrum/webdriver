@@ -271,8 +271,6 @@ innerTextToXPath val cs matchType mMaxDepth =
 
 data Protocol = HTTP | BiDi deriving (Show, Eq)
 
-data Cardinality = One | Many deriving (Show, Eq)
-
 data InvalidLocator = InvalidLocator Text deriving (Show, Eq, Ord)
 
 instance Exception InvalidLocator
