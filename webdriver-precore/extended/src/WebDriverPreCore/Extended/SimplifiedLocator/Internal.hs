@@ -87,7 +87,7 @@ prepareSimplify defLoc proto l =
         xpathVals elms & maybe sl undefined
       other -> other
       where
-        xpathVals l =
-          if (all isXPath l)
-            then Just $ (.value) <$> l
+        xpathVals l' =
+          if (all isXPath l')
+            then Just $ (.value) <$> l'
             else Nothing
