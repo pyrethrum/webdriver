@@ -2,8 +2,9 @@ module WebDriverPreCore.Extended.SimplifiedLocator.Internal where
 
 import Data.Function ((&))
 import Data.Functor ((<&>))
-import Data.List.NonEmpty (NonEmpty)
+import Data.List.NonEmpty (NonEmpty, toList)
 import Data.Text (Text)
+import Data.Text qualified as T
 import WebDriverPreCore.Extended.BiDi.Base.Protocol (BrowsingContext, JSUInt)
 import WebDriverPreCore.Extended.Locators.Internal qualified as LI
 import Prelude
@@ -80,14 +81,20 @@ prepareSimplify defLoc proto l =
     mergeXPaths :: SimplifiedLocator -> SimplifiedLocator
     mergeXPaths sl = case sl of
       All {elms} ->
-        xpathVals elms & maybe sl undefined
+        xpathVals elms & maybe sl (XPath . combineWith " and ")
       Any {elms} ->
-        xpathVals elms & maybe sl undefined
+        xpathVals elms & maybe sl (XPath . combineWith " or ")
       None {elms} ->
-        xpathVals elms & maybe sl undefined
+        xpathVals elms & maybe sl (XPath . (\preds -> "//*[not(" <> preds <> ")]") . combineWith " or ")
       other -> other
       where
         xpathVals l' =
-          if (all isXPath l')
+          if all isXPath l'
             then Just $ (.value) <$> l'
             else Nothing
+        combineWith sep vals =
+          "//*[" <> T.intercalate sep (toList $ toPred <$> vals) <> "]"
+        toPred v =
+          let unwrapped = T.stripPrefix "//*[" v >>= \s ->
+                if T.isSuffixOf "]" s then Just (T.dropEnd 1 s) else Nothing
+           in maybe ("boolean(" <> v <> ")") id unwrapped
