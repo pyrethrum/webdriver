@@ -80,6 +80,8 @@ prepareSimplify defLoc proto l =
 
     mergeXPaths :: SimplifiedLocator -> SimplifiedLocator
     mergeXPaths sl = case sl of
+      Parent {parent = XPath pv, child = XPath cv} ->
+        XPath {value = pv <> cv}
       All {elms} ->
         xpathVals elms & maybe sl (XPath . combineWith " and ")
       Any {elms} ->

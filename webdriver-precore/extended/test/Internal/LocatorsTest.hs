@@ -626,6 +626,7 @@ prop_simplification_merges_xpaths =
     proto <- gen genProtocol
     let simpLoc = SL.prepareSimplify ID proto loc
     info $ "Original locator:\n" <> unpack (txt loc)
+    info $ "prepared locator:\n" <> either show (unpack . txt) (prepare ID proto loc)
     info $ "Prepared simplified locator:\n" <> either show (unpack . txt) simpLoc
     F.assert $ satisfies ("prepareSimplify preserves mockLocated", either (const True) chkAllXPathsingleton) .$ ("loc", simpLoc)
   where
