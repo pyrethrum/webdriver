@@ -291,8 +291,8 @@ mockLocated allElmsDefault = go
 -- Singleton selection: 80% trueLoc, 20% falseLoc
 -- After layer 1: Increase singleton probability by 5% per layer
 -- Terminates at max 10 layers or approximately 1000 nodes
-genLocator :: Gen Locator
-genLocator = genLocatorWithLimits (leafLocBool 80) 0 1000
+genLocator :: Protocol -> Gen Locator
+genLocator proto = genLocatorWithLimits (leafLocBool proto 80) 0 1000
 
 -- Internal generator that tracks depth and remaining node budget
 genLocatorWithLimits :: Gen Locator -> Int -> Int -> Gen Locator
@@ -329,8 +329,8 @@ trueLoc = css "True"
 falseLoc :: Locator
 falseLoc = button "False"
 
-allLeavesBool :: Bool -> [Locator]
-allLeavesBool val =
+httpLeavesBool :: Bool -> [Locator]
+httpLeavesBool val =
   let b = pack $ show val
    in [ CSS b,
         XPath b,
@@ -357,28 +357,45 @@ allLeavesBool val =
             maxDepth = Nothing
           },
         -- browsingContextId -> elementId ie get the frame that belongs to the browsing context
-        BiDiContext {context = MkBrowsingContext b},
         PostFilter $ JSPostFilter b b
       ]
+
+bidiOnlyLeavesBool :: Bool -> [Locator]
+bidiOnlyLeavesBool val =
+  let b = pack $ show val
+   in [ 
+        -- browsingContextId -> elementId ie get the frame that belongs to the browsing context
+        BiDiContext {context = MkBrowsingContext b}
+      ]
+
+allLeavesBool :: Bool -> [Locator]
+allLeavesBool val = httpLeavesBool val <> bidiOnlyLeavesBool val
 
 -- | Generate a leaf locator where the text value encodes the boolean result.
 -- With probability @percentTrue/100@, picks uniformly from all True-valued
 -- leaves (from 'allLeavesBool'); otherwise picks from all False-valued leaves.
-leafLocBool :: Word -> Gen Locator
-leafLocBool percentTrue =
+leafLocBool :: Protocol -> Word -> Gen Locator
+leafLocBool proto percentTrue =
   frequency
-    [ (percentTrue, uniformFrequency (allLeavesBool True)),
-      (100 - percentTrue, uniformFrequency (allLeavesBool False))
+    [ (percentTrue, dist True),
+      (100 - percentTrue, dist False)
     ]
+  where
+    dist b = case proto of
+      HTTP -> frequency (uniformFrequencyTuples 10 (httpLeavesBool b) <> uniformFrequencyTuples 1 (bidiOnlyLeavesBool b))
+      BiDi -> uniformFrequency 1 $ allLeavesBool b
 
 genLocatorXPathOrInvalidHttp :: Gen Locator
 genLocatorXPathOrInvalidHttp = genLocatorWithLimits genXPathOrInvalidHTTP 0 1000
 
 genXPathOrInvalidHTTP :: Gen Locator
-genXPathOrInvalidHTTP = uniformFrequency (xPathOnlyLocs <> invalidHTTPLocs)
+genXPathOrInvalidHTTP = uniformFrequency 1 (xPathOnlyLocs <> invalidHTTPLocs)
 
-uniformFrequency :: [a] -> Gen a
-uniformFrequency = frequency . fmap (1,) . fmap pure
+uniformFrequency :: Word -> [a] -> Gen a
+uniformFrequency weight = frequency . uniformFrequencyTuples weight
+
+uniformFrequencyTuples :: Word -> [a] -> [(Word, Gen a)]
+uniformFrequencyTuples weight vals = (weight,) . pure <$> vals
 
 xPathOnlyLocs :: [Locator]
 xPathOnlyLocs =
@@ -444,8 +461,8 @@ genLocatorOptions :: TestOptions
 genLocatorOptions =
   TestOptions
     { expectFailure = DontExpectFailure,
-      -- overrideVerbose = Just Verbose,
-      overrideVerbose = Just NotVerbose,
+      overrideVerbose = Just Verbose,
+      -- overrideVerbose = Just NotVerbose,
       overrideMaxShrinks = Nothing,
       overrideNumTests = Just 1000,
       overrideMaxRatio = Nothing
@@ -457,7 +474,8 @@ genLocatorOptions =
 
 prop_flatenning_simplification :: TestTree
 prop_flatenning_simplification = testPropertyWith genLocatorOptions "Flattening simplification" $ do
-  loc <- gen genLocator
+  p <- gen genProtocol
+  loc <- gen $ genLocator p
   let unflattenedComplexity = complexity loc
       flatloc = flattenLoc loc
       flattenedComplexity = complexity flatloc
@@ -489,7 +507,8 @@ prop_flatenning_simplification = testPropertyWith genLocatorOptions "Flattening 
 
 prop_mock_logic_preserved_on_flattenning :: TestTree
 prop_mock_logic_preserved_on_flattenning = testPropertyWith genLocatorOptions "Generate and log locators" $ do
-  loc <- gen genLocator
+  p <- gen genProtocol
+  loc <- gen $ genLocator p
   F.assert $ satisfies ("flattenLoc preserves mockLocated", \l -> mockLocated False l == mockLocated False (flattenLoc l)) .$ ("loc", loc)
 
 -- >>> _eval prop_mock_logic_preserved_on_sort_and_grouping
@@ -498,7 +517,8 @@ prop_mock_logic_preserved_on_flattenning = testPropertyWith genLocatorOptions "G
 
 prop_mock_logic_preserved_on_sort_and_grouping :: TestTree
 prop_mock_logic_preserved_on_sort_and_grouping = testPropertyWith genLocatorOptions "Generate and log locators" $ do
-  loc <- gen genLocator
+  p <- gen genProtocol
+  loc <- gen $ genLocator p
   let grouped = sortGroupChildLocs (\t -> Default t) HTTP loc
   info $ "Original locator:\n" <> unpack (txt loc)
   info $ "Grouped locator:\n" <> unpack (txt grouped)
@@ -510,8 +530,8 @@ prop_mock_logic_preserved_on_sort_and_grouping = testPropertyWith genLocatorOpti
 
 prop_prepare_logic_preserved :: TestTree
 prop_prepare_logic_preserved = testPropertyWith genLocatorOptions "prepare with ID default preserves mockLocated" $ do
-  loc <- gen genLocator
   proto <- gen genProtocol
+  loc <- gen $ genLocator proto
   let result = prepare ID proto loc
   info $ "Original locator:\n" <> unpack (txt loc)
   info $ "Protocol: " <> show proto
@@ -519,7 +539,7 @@ prop_prepare_logic_preserved = testPropertyWith genLocatorOptions "prepare with 
   F.assert $ satisfies ("prepare preserves mockLocated when valid", \l -> either (const True) (\prepared -> mockLocated False l == mockLocated False prepared) (prepare ID proto l)) .$ ("loc", loc)
 
 genProtocol :: Gen Protocol
-genProtocol = uniformFrequency [HTTP, BiDi]
+genProtocol = uniformFrequency 1 [HTTP, BiDi]
 
 -- >>> _eval test_fail
 
@@ -578,7 +598,7 @@ test_parent_infix_precedence =
 prop_classify_xpath_only_is_xpath :: TestTree
 prop_classify_xpath_only_is_xpath =
   testPropertyWith genLocatorOptions "classify HTTP: xpath-only tree is always IsXPath" $ do
-    loc <- gen $ genLocatorWithLimits (uniformFrequency xPathOnlyLocs) 0 1000
+    loc <- gen $ genLocatorWithLimits (uniformFrequency 1 xPathOnlyLocs) 0 1000
     let classification = classify (\t -> Default t) HTTP loc
     info $ "Locator:\n" <> unpack (txt loc)
     info $ "Classification: " <> show classification
@@ -615,15 +635,12 @@ prop_classify_invalid_iff_any_invalid_node =
       _ -> False
 
 -- >>> _eval prop_simplification_merges_xpaths
--- *** Exception: ExitFailure 1
-
--- *** Exception: ExitFailure 1
-
+-- *** Exception: ExitSuccess
 prop_simplification_merges_xpaths :: TestTree
 prop_simplification_merges_xpaths =
-  testPropertyWith genLocatorOptions "simplified groups have same mockLocated as original" $ do
-    loc <- gen genLocator
+  testPropertyWith genLocatorOptions "simplified Locs should merge adjacent XPaths" $ do
     proto <- gen genProtocol
+    loc <- gen $ genLocator proto
     let simpLoc = SL.prepareSimplify ID proto loc
     info $ "Original locator:\n" <> unpack (txt loc)
     info $ "prepared locator:\n" <> either show (unpack . txt) (prepare ID proto loc)

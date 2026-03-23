@@ -66,7 +66,7 @@ prepareSimplify defLoc proto l =
       LI.Role {..} -> Role {..}
       LI.InnerText {..} -> InnerText {..}
       LI.BiDiContext {..} -> BiDiContext {..}
-      LI.Parent {parent, child} -> Parent {parent = simplify parent, child = simplify child}
+      LI.Parent {parent, child} -> mergeXPaths $ Parent {parent = simplify parent, child = simplify child}
       LI.All {..} -> mergeXPaths $ All $ simplifyAll elms
       LI.Any {..} -> mergeXPaths $ Any $ simplifyAll elms
       LI.None {..} -> mergeXPaths $ None $ simplifyAll elms
