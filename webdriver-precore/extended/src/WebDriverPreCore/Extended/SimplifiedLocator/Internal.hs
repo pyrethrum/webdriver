@@ -49,6 +49,15 @@ isXPath = \case
   XPath _ -> True
   _ -> False
 
+xPathConvertable :: SimplifiedLocator -> Bool
+xPathConvertable = \case
+  XPath {} -> True
+  Parent {parent, child} -> xPathConvertable parent && xPathConvertable child
+  All {elms} -> all xPathConvertable elms
+  Any {elms} -> all xPathConvertable elms
+  None {elms} -> all xPathConvertable elms
+  _ -> False
+
 prepareSimplify :: (Text -> LI.Locator) -> LI.Protocol -> LI.Locator -> Either LI.InvalidLocator SimplifiedLocator
 prepareSimplify defLoc proto l =
   LI.prepare defLoc proto l <&> simplify
@@ -68,17 +77,19 @@ prepareSimplify defLoc proto l =
         LI.Role {..} -> Role {..}
         LI.InnerText {..} -> InnerText {..}
         LI.BiDiContext {..} -> BiDiContext {..}
-        LI.Parent {parent, child} -> mergeXPaths $ Parent {parent = simplify parent, child = simplify child}
-        -- here mergeIfXPath
-        LI.All {..} -> -- mergeXPaths $ All $ simplifyAll elms
-        LI.Any {..} -> -- mergeXPaths $ Any $ simplifyAll elms
-        LI.None {..} -> -- mergeXPaths $ None $ simplifyAll elms
+        LI.Parent {parent, child} -> mergeIfXPath $ Parent {parent = simplify parent, child = simplify child}
+        LI.All {..} -> mergeIfXPath $ All $ simplifyAll elms
+        LI.Any {..} -> mergeIfXPath $ Any $ simplifyAll elms
+        LI.None {..} -> mergeIfXPath $ None $ simplifyAll elms
         LI.PostFilter pf -> PostFilter pf
       where
         xpathLoc = toXPath loc
-        mergeIfXPath = undefined 
-         where 
-           classification = classify loc
+        mergeIfXPath l' =
+          ( if xPathConvertable l'
+              then toXPath
+              else simplify
+          )
+            l'
 
 toXPath :: LI.Locator -> SimplifiedLocator
 toXPath = XPath . toXPathTxt
@@ -135,7 +146,7 @@ toXPath = XPath . toXPathTxt
         LI.BiDiContext {} -> locErr loc
         LI.PostFilter {} -> locErr loc
       where
-        elmsTxt conjunctive = "(" <> T.intercalate (" " <> conjunctive <> " ") (toList $ toXPathCoreTxt <$> elms) <> ")"
+        elmsTxt conjunctive elms = "(" <> T.intercalate (" " <> conjunctive <> " ") (toList $ toXPathCoreTxt <$> elms) <> ")"
 
     -- \| XPath predicate for CSS class matching.
     --   Full uses the space-padding token trick to match whole class names.
