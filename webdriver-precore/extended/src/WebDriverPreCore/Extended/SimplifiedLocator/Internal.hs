@@ -1,7 +1,10 @@
-module WebDriverPreCore.Extended.SimplifiedLocator.Internal where
+module WebDriverPreCore.Extended.SimplifiedLocator.Internal
+  ( SimplifiedLocator (..),
+    isXPath,
+    prepareSimplify,
+  )
+where
 
-import Data.Function ((&))
-import Data.Functor ((<&>))
 import Data.List.NonEmpty (NonEmpty, toList)
 import Data.Text (Text)
 import Data.Text qualified as T
@@ -49,20 +52,29 @@ isXPath = \case
   XPath _ -> True
   _ -> False
 
-xPathConvertable :: SimplifiedLocator -> Bool
-xPathConvertable = \case
-  XPath {} -> True
-  Parent {parent, child} -> xPathConvertable parent && xPathConvertable child
-  All {elms} -> all xPathConvertable elms
-  Any {elms} -> all xPathConvertable elms
-  None {elms} -> all xPathConvertable elms
-  _ -> False
-
 prepareSimplify :: (Text -> LI.Locator) -> LI.Protocol -> LI.Locator -> Either LI.InvalidLocator SimplifiedLocator
-prepareSimplify defLoc proto l = xPathSub defLoc proto l >>= simplify
-  where 
-    simplify :: LI.Locator -> Either LI.InvalidLocator SimplifiedLocator
+prepareSimplify defLoc proto l =
+  simplify <$> xPathSub defLoc proto l
+  where
+    simplify :: LI.Locator -> SimplifiedLocator
     simplify = \case
+      LI.CSS {..} -> CSS {..}
+      LI.XPath {..} -> XPath {..}
+      LI.Role {..} -> Role {..}
+      LI.InnerText {..} -> InnerText {..}
+      LI.BiDiContext {..} -> BiDiContext {..}
+      LI.PostFilter pf -> PostFilter pf
+      LI.Parent {parent, child} -> Parent {parent = simplify parent, child = simplify child}
+      LI.All {elms} -> All $ simplify <$> elms
+      LI.Any {elms} -> Any $ simplify <$> elms
+      LI.None {elms} -> None $ simplify <$> elms
+      LI.AllElms -> shouldNotExistAfterXPathSub "AllElms"
+      LI.ID {} -> shouldNotExistAfterXPathSub "ID"
+      LI.Class {} -> shouldNotExistAfterXPathSub "Class"
+      LI.Attribute {} -> shouldNotExistAfterXPathSub "Attribute"
+      LI.Tag {} -> shouldNotExistAfterXPathSub "Tag"
+      LI.Default {} -> shouldNotExistAfterXPathSub "Default"
+    shouldNotExistAfterXPathSub name = error . T.unpack $ name <> " should not exist after xPathSub - this is a library defect"
 
 xPathSub :: (Text -> LI.Locator) -> LI.Protocol -> LI.Locator -> Either LI.InvalidLocator LI.Locator
 xPathSub defLoc proto l =
@@ -85,14 +97,20 @@ xPathSub defLoc proto l =
         LI.Attribute {} -> xpathLoc
         LI.Tag {} -> xpathLoc
         LI.Default {value} -> convertXPath (defLoc value)
-        LI.Parent {} -> tryConvert loc
-        LI.All {} -> tryConvert loc
-        LI.Any {} -> tryConvert loc
-        LI.None {} -> tryConvert loc
+        LI.Parent {parent, child} -> tryConvert loc $ LI.Parent (convertXPath parent) (convertXPath child)
+        LI.All {elms} -> tryConvert loc $ LI.All (convertXPath <$> elms)
+        LI.Any {elms} -> tryConvert loc $ LI.Any (convertXPath <$> elms)
+        LI.None {elms} -> tryConvert loc $ LI.None (convertXPath <$> elms)
       where
         xpathLoc = toXPathCore loc
-        convertable = LI.classify defLoc proto loc == LI.IsXPath
-        tryConvert l' = if convertable then toXPathCore l' else LI.mapLocBottomUp tryConvert l'
+        convertable l' = LI.classify defLoc proto l' == LI.IsXPath
+        tryConvert :: LI.Locator -> LI.Locator ->  LI.Locator
+        tryConvert l' mixedRslt =
+          if convertable l'
+            then
+              toXPathCore l'
+            else
+              mixedRslt
 
 coreToFullXPath :: LI.Locator -> LI.Locator
 coreToFullXPath l' =
