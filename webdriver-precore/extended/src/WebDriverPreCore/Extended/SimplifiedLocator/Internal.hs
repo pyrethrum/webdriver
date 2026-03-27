@@ -59,65 +59,53 @@ xPathConvertable = \case
   _ -> False
 
 prepareSimplify :: (Text -> LI.Locator) -> LI.Protocol -> LI.Locator -> Either LI.InvalidLocator SimplifiedLocator
-prepareSimplify defLoc proto l =
-  LI.prepare defLoc proto l <&> simplify
+prepareSimplify defLoc proto l = xPathSub defLoc proto l >>= simplify
+  where 
+    simplify :: LI.Locator -> Either LI.InvalidLocator SimplifiedLocator
+    simplify = \case
+
+xPathSub :: (Text -> LI.Locator) -> LI.Protocol -> LI.Locator -> Either LI.InvalidLocator LI.Locator
+xPathSub defLoc proto l =
+  -- after prepare comboinator ocators such as Parent, All, Any and None are already be grouped correctly with all XPaths together,
+  --  so we can just recursively convert to XPath if the grup is XPath Convertable
+  coreToFullXPath . convertXPath <$> LI.prepare defLoc proto l
   where
-    simplifyAll = (simplify <$>)
-    simplify :: LI.Locator -> SimplifiedLocator
-    simplify loc =
+    convertXPath :: LI.Locator -> LI.Locator
+    convertXPath loc =
       case loc of
-        LI.CSS {..} -> CSS {..}
-        LI.XPath {..} -> XPath {..}
+        LI.CSS {} -> loc
+        LI.InnerText {} -> loc
+        LI.Role {} -> loc
+        LI.BiDiContext {} -> loc
+        LI.PostFilter _ -> loc
+        LI.XPath {} -> xpathLoc
         LI.AllElms -> xpathLoc
         LI.ID {} -> xpathLoc
         LI.Class {} -> xpathLoc
         LI.Attribute {} -> xpathLoc
         LI.Tag {} -> xpathLoc
-        LI.Default {value} -> simplify (defLoc value)
-        LI.Role {..} -> Role {..}
-        LI.InnerText {..} -> InnerText {..}
-        LI.BiDiContext {..} -> BiDiContext {..}
-        LI.Parent {parent, child} -> mergeIfXPath $ Parent {parent = simplify parent, child = simplify child}
-        LI.All {..} -> mergeIfXPath $ All $ simplifyAll elms
-        LI.Any {..} -> mergeIfXPath $ Any $ simplifyAll elms
-        LI.None {..} -> mergeIfXPath $ None $ simplifyAll elms
-        LI.PostFilter pf -> PostFilter pf
+        LI.Default {value} -> convertXPath (defLoc value)
+        LI.Parent {} -> tryConvert loc
+        LI.All {} -> tryConvert loc
+        LI.Any {} -> tryConvert loc
+        LI.None {} -> tryConvert loc
       where
-        xpathLoc = toXPath loc
-        mergeIfXPath l' =
-          ( if xPathConvertable l'
-              then toXPath
-              else simplify
-          )
-            l'
+        xpathLoc = toXPathCore loc
+        convertable = LI.classify defLoc proto loc == LI.IsXPath
+        tryConvert l' = if convertable then toXPathCore l' else LI.mapLocBottomUp tryConvert l'
 
-toXPath :: LI.Locator -> SimplifiedLocator
-toXPath = XPath . toXPathTxt
+coreToFullXPath :: LI.Locator -> LI.Locator
+coreToFullXPath l' =
+  LI.mapLocBottomUp prefixSuffix l'
   where
-    -- \| Convert a Locator to a full XPath expression string.
-    toXPathTxt :: LI.Locator -> Text
-    toXPathTxt loc = case loc of
-      LI.XPath {value} -> value
-      LI.AllElms -> "//*"
-      LI.ID {value} -> "//*[@id='" <> value <> "']"
-      LI.Class {value, matchType, caseSensitivity} ->
-        "//*[" <> classToXPathCoreTxt value matchType caseSensitivity <> "]"
-      LI.Attribute {value, matchType, caseSensitivity} ->
-        "//*[" <> attrToXPathCoreTxt value matchType caseSensitivity <> "]"
-      LI.Tag {value} -> "//" <> value
-      -- Parent: concatenate parent and child XPath — child's leading // creates a
-      -- descendant-axis step from the parent result set, e.g. //form//input.
-      LI.Parent {parent, child} -> toXPathTxt parent <> toXPathTxt child
-      LI.All {elms} -> "//*[" <> T.intercalate " and " (toList $ toXPathCoreTxt <$> elms) <> "]"
-      LI.Any {elms} -> "//*[" <> T.intercalate " or " (toList $ toXPathCoreTxt <$> elms) <> "]"
-      LI.None {elms} -> "//*[not(" <> T.intercalate " or " (toList $ toXPathCoreTxt <$> elms) <> ")]"
-      LI.CSS {} -> locErr loc
-      LI.Default {} -> locErr loc
-      LI.Role {} -> locErr loc
-      LI.InnerText {} -> locErr loc
-      LI.BiDiContext {} -> locErr loc
-      LI.PostFilter {} -> locErr loc
+    prefixSuffix :: LI.Locator -> LI.Locator
+    prefixSuffix = \case
+      LI.XPath {value} -> LI.XPath $ if T.null value then "//*" else "//*[" <> value <> "]"
+      other -> other
 
+toXPathCore :: LI.Locator -> LI.Locator
+toXPathCore = LI.XPath . toXPathCoreTxt
+  where
     -- \| Convert a Locator to an XPath predicate expression for use inside [...].
     --   Combinators are recursively inlined; Parent uses the ancestor:: axis.
     toXPathCoreTxt :: LI.Locator -> Text
@@ -174,7 +162,7 @@ toXPath = XPath . toXPathTxt
             LI.Full -> "@*[" <> attrExpr <> "='" <> matchVal <> "']"
             LI.Partial -> "@*[contains(" <> attrExpr <> ", '" <> matchVal <> "')]"
             LI.Starts -> "@*[starts-with(" <> attrExpr <> ", '" <> matchVal <> "')]"
-            LI.Wildcard -> "@*[" <> wildcardPred attrExpr matchVal <> "]"
+            LI.Wildcard -> "@*[" <> wildcardToXPathCoreTxt attrExpr matchVal <> "]"
 
     -- \| Wrap an XPath string expression with a translate() call to fold it to lower-case,
     --   for CaseInsensitive matching.
