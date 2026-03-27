@@ -461,8 +461,8 @@ genLocatorOptions :: TestOptions
 genLocatorOptions =
   TestOptions
     { expectFailure = DontExpectFailure,
-      overrideVerbose = Just Verbose,
-      -- overrideVerbose = Just NotVerbose,
+      -- overrideVerbose = Just Verbose,
+      overrideVerbose = Just NotVerbose,
       overrideMaxShrinks = Nothing,
       overrideNumTests = Just 1000,
       overrideMaxRatio = Nothing

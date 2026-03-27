@@ -97,20 +97,20 @@ xPathSub defLoc proto l =
         LI.Attribute {} -> xpathLoc
         LI.Tag {} -> xpathLoc
         LI.Default {value} -> convertXPath (defLoc value)
-        LI.Parent {parent, child} -> tryConvert loc $ LI.Parent (convertXPath parent) (convertXPath child)
-        LI.All {elms} -> tryConvert loc $ LI.All (convertXPath <$> elms)
-        LI.Any {elms} -> tryConvert loc $ LI.Any (convertXPath <$> elms)
-        LI.None {elms} -> tryConvert loc $ LI.None (convertXPath <$> elms)
+        LI.Parent {parent, child} -> tryConvert $ LI.Parent (convertXPath parent) (convertXPath child)
+        LI.All {elms} -> tryConvert $ LI.All (convertXPath <$> elms)
+        LI.Any {elms} -> tryConvert $ LI.Any (convertXPath <$> elms)
+        LI.None {elms} -> tryConvert $ LI.None (convertXPath <$> elms)
       where
         xpathLoc = toXPathCore loc
         convertable l' = LI.classify defLoc proto l' == LI.IsXPath
-        tryConvert :: LI.Locator -> LI.Locator ->  LI.Locator
-        tryConvert l' mixedRslt =
+        tryConvert :: LI.Locator -> LI.Locator
+        tryConvert l' =
           if convertable l'
             then
               toXPathCore l'
             else
-              mixedRslt
+              l'
 
 coreToFullXPath :: LI.Locator -> LI.Locator
 coreToFullXPath l' =
