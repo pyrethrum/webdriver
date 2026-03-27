@@ -28,9 +28,16 @@ instance Exception LocateException
 
 data Cardinality = Unique | First | Many deriving (Show, Eq)
 
-data LocateOps = MkLocateOps
+data DisplayedCheck = Never | DisambiguateUnique | Always deriving (Show, Eq)
+
+data LocateDirectives = MkLocateDirectives
   { cardinality :: Cardinality,
     protocol :: Protocol
+  }
+  deriving (Show, Eq)
+
+data LocateOps = MkLocateOps
+  { displayedCheck :: DisplayedCheck
   }
   deriving (Show, Eq)
 
@@ -71,27 +78,44 @@ locateHttp throw catch runner defLoc ses MkLocateOps {cardinality, protocol} loc
               Right [] -> pure $ Left $ WebDriverException $ toException $ userError "Expected at least one element, but found none."
               Right (x : xs) -> case cardinality of
                 Unique -> undefined
-                  -- if null xs
-                  --   then pure $ Right x
-                  --   else pure $ Left $ AmbiguousLocateResult $ "Expected exactly one element, but found " <> pack (show (1 + length xs)) <> "."
+                -- if null xs
+                --   then pure $ Right x
+                --   else pure $ Left $ AmbiguousLocateResult $ "Expected exactly one element, but found " <> pack (show (1 + length xs)) <> "."
                 First -> pure $ Right x
                 Many -> pure $ Right x -- TODO: return all elements, not just the first one
   where
     preparedLoc = prepareSimplify defLoc protocol loc
 
-    runLocate :: forall a. ((Command a -> m a) -> Session -> Selector -> m a) -> Selector -> m a
-    runLocate f sel =
+    runCommand :: forall a. ((Command a -> m a) -> Session -> Selector -> m a) -> Selector -> m a
+    runCommand f sel =
       catch
         (f runner ses sel)
         (throw . WebDriverException)
 
     findElm :: Selector -> m ElementId
-    findElm = runLocate findElement
+    findElm = runCommand findElement
 
     findElms :: Selector -> m [ElementId]
-    findElms = runLocate findElements
+    findElms = runCommand findElements
 
-    httpLocate :: SimplifiedLocator -> m ElementId
+    getSingleton :: Selector -> m ElementId
+    getSingleton sel =
+      case cardinality of
+        Unique -> do
+          elms <- findElms sel
+          findElm sel >>= \eid -> do
+            -- check if there are more elements
+            findElms sel >>= \case
+              Left err -> throw err
+              Right [] -> throw $ WebDriverException $ toException $ userError "Expected at least one element, but found none."
+              Right (x : xs) ->
+                if null xs
+                  then pure eid
+                  else throw $ AmbiguousLocateResult $ "Expected exactly one element, but found " <> pack (show (1 + length xs)) <> "."
+        First -> findElm sel
+        Many -> findElms sel
+
+    httpLocate :: SimplifiedLocator -> m [ElementId]
     httpLocate = \case
       CSS {} -> undefined
       XPath {} -> undefined
@@ -103,3 +127,51 @@ locateHttp throw catch runner defLoc ses MkLocateOps {cardinality, protocol} loc
       Any {} -> undefined
       None {} -> undefined
       PostFilter _ -> undefined
+
+{-
+function bidiIsVisible(el) {
+  if (!el || !el.isConnected) return false;
+
+  const style = getComputedStyle(el);
+
+  if (style.display === "none") return false;
+  if (style.visibility === "hidden" || style.visibility === "collapse") return false;
+
+  if (el.tagName === "INPUT" && el.type === "hidden")
+    return false;
+
+  const rect = el.getBoundingClientRect();
+
+  if (rect.width === 0 || rect.height === 0)
+    return false;
+
+  const vpW = window.innerWidth;
+  const vpH = window.innerHeight;
+
+  if (
+    rect.bottom < 0 ||
+    rect.right < 0 ||
+    rect.top > vpH ||
+    rect.left > vpW
+  )
+    return false;
+
+  const points = [
+    [rect.left + rect.width / 2, rect.top + rect.height / 2],
+    [rect.left + 1, rect.top + 1],
+    [rect.right - 1, rect.bottom - 1]
+  ];
+
+  for (const [x, y] of points) {
+    if (x < 0 || y < 0 || x > vpW || y > vpH)
+      continue;
+
+    const hit = document.elementFromPoint(x, y);
+
+    if (hit === el || el.contains(hit))
+      return true;
+  }
+
+  return false;
+}
+-}

@@ -34,6 +34,10 @@
   - [Performance tip (important)](#performance-tip-important)
   - [Behaviour vs WebDriver `displayed`](#behaviour-vs-webdriver-displayed)
 - [Depth](#depth)
+  - [claude notes on visibility performance but need to check](#claude-notes-on-visibility-performance-but-need-to-check)
+  - [BiDi (`script.evaluate` over WebSocket)](#bidi-scriptevaluate-over-websocket)
+  - [Classic HTTP WebDriver (`executeScript`)](#classic-http-webdriver-executescript)
+  - [Summary](#summary)
 
 
 
@@ -443,5 +447,46 @@ If you'd like, I can also show a **very useful BiDi technique used by browser au
 - double shot
   - bidi params
   - elem from
+
+---
+
+## claude notes on visibility performance but need to check
+
+Conclusion - for now untill tested - always inject
+Based on the protocol mechanics and known JS engine behavior, here are approximate magnitudes:
+
+## BiDi (`script.evaluate` over WebSocket)
+
+The `bidiIsVisible` function is ~600 bytes of JS source.
+
+| Cost                       | Per-call injection  | Pre-injected         |
+| -------------------------- | ------------------- | -------------------- |
+| WebSocket frame payload    | ~650 bytes          | ~35 bytes            |
+| JSON serialization         | ~0.05–0.2ms         | negligible           |
+| JS parse + compile (V8/SM) | ~0.05–0.3ms         | 0 (already compiled) |
+| **Total extra overhead**   | **~0.1–0.5ms/call** | baseline             |
+
+Over 100 visibility checks: roughly **10–50ms** extra for BiDi.
+
+## Classic HTTP WebDriver (`executeScript`)
+
+HTTP already has much higher baseline latency (TCP + HTTP framing, even on localhost ~1–5ms), so the extra payload matters less proportionally:
+
+| Cost                     | Per-call injection  | Pre-injected |
+| ------------------------ | ------------------- | ------------ |
+| HTTP body size           | ~700 bytes          | ~80 bytes    |
+| Serialization overhead   | ~0.1–0.5ms          | negligible   |
+| JS parse + compile       | ~0.05–0.3ms         | 0            |
+| **Total extra overhead** | **~0.1–0.8ms/call** | baseline     |
+
+The HTTP round-trip (1–5ms localhost, 10–100ms remote) **dominates**, so the function injection overhead is a **smaller relative fraction** for HTTP than for BiDi.
+
+## Summary
+
+- **BiDi**: ~0.1–0.5ms/call overhead — matters noticeably at scale (50+ checks/page)
+- **HTTP classic**: ~0.1–0.8ms/call overhead — relatively minor against the HTTP RTT, but still accumulates
+- **Crossover point**: At 20–50 element checks per page, pre-injection starts paying off meaningfully for BiDi; for HTTP it's primarily worthwhile for very high check counts or remote drivers
+
+The JS engine parse cost is the dominant factor for BiDi (where the WebSocket RTT is tiny), while for HTTP classic it's largely noise against network latency.
 
 
