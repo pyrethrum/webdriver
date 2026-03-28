@@ -3,21 +3,25 @@ module WebDriverPreCore.Extended.Locate
     Cardinality (..),
     LocateOps (..),
     locateHttp,
+    displayedJS,
+    isDisplayedHttp,
   )
 where
 
 import Control.Exception (Exception, SomeException)
+import Data.Aeson as A (Result (..), Value, fromJSON, toJSON) 
 import Data.Function ((&))
 import Data.Text
 import GHC.Stack (HasCallStack)
 import WebDriverPreCore.Extended.HTTP.Base.Actions
 import WebDriverPreCore.Extended.HTTP.Base.Protocol (ElementId, Session)
 import WebDriverPreCore.Extended.HTTP.Internal (Runner)
-import WebDriverPreCore.Extended.Locators.Internal (Locator, Protocol)
+import WebDriverPreCore.Extended.Locators.Internal (Locator, Protocol(..))
 import WebDriverPreCore.Extended.Locators.Internal qualified as LI
 import WebDriverPreCore.Extended.Protocol
 import WebDriverPreCore.Extended.SimplifiedLocator.Internal (SimplifiedLocator (..), prepareSimplify)
-import WebDriverPreCore.HTTP.Protocol (Command, Selector)
+import WebDriverPreCore.HTTP.Protocol (Command, Script (..), Selector)
+import Prelude as P
 
 data LocateException
   = AmbiguousLocateResult
@@ -96,7 +100,7 @@ locateHttp throw catch runner defLoc ses cardinality MkLocateOps {displayedCheck
     --         First -> pure $ Right x
     --         Many -> pure $ Right x -- TODO: return all elements, not just the first one
 
-    preparedLoc = prepareSimplify defLoc protocol loc
+    preparedLoc = prepareSimplify defLoc HTTP loc
 
     runCommand :: forall a. ((Command a -> m a) -> Session -> Selector -> m a) -> Selector -> m a
     runCommand f sel =
@@ -118,7 +122,7 @@ locateHttp throw catch runner defLoc ses cardinality MkLocateOps {displayedCheck
           case elms of
             [] -> throw $ NoElementFound { description = "Expected exactly one element, but found none.", locator = loc }
             [x] -> pure x
-            xs -> throw $ AmbiguousLocateResult { description = "Expected exactly one element, but found " <> pack (show (length xs)) <> ".", locator = loc }
+            xs -> throw $ AmbiguousLocateResult { description = "Expected exactly one element, but found: " <> pack (show (P.length xs)) <> ".", locator = loc }
         -- findElm sel >>= \eid -> do
         --   -- check if there are more elements
         --   findElms sel >>= \case
@@ -128,8 +132,8 @@ locateHttp throw catch runner defLoc ses cardinality MkLocateOps {displayedCheck
         --       if null xs
         --         then pure eid
         --         else throw $ AmbiguousLocateResult $ "Expected exactly one element, but found " <> pack (show (1 + length xs)) <> "."
-        First -> findElm sel
-        Many -> findElms sel
+        First -> undefined -- findElm sel
+        Many -> undefined -- findElms sel
 
     httpLocate :: SimplifiedLocator -> m [ElementId]
     httpLocate = \case
@@ -144,53 +148,77 @@ locateHttp throw catch runner defLoc ses cardinality MkLocateOps {displayedCheck
       None {} -> undefined
       PostFilter _ -> undefined
 
-{-
-function bidiIsVisible(el) {
-  if (!el || !el.isConnected) return false;
+displayedJS :: Text
+displayedJS =
+  "function isDisplayed(el) {\n\
+  \  if (!el || !el.isConnected) return false;\n\
+  \\n\
+  \  const style = getComputedStyle(el);\n\
+  \\n\
+  \  if (style.display === \"none\") return false;\n\
+  \  if (style.visibility === \"hidden\" || style.visibility === \"collapse\") return false;\n\
+  \\n\
+  \  if (el.tagName === \"INPUT\" && el.type === \"hidden\")\n\
+  \    return false;\n\
+  \\n\
+  \  const rect = el.getBoundingClientRect();\n\
+  \\n\
+  \  if (rect.width === 0 || rect.height === 0)\n\
+  \    return false;\n\
+  \\n\
+  \  const vpW = window.innerWidth;\n\
+  \  const vpH = window.innerHeight;\n\
+  \\n\
+  \  if (\n\
+  \    rect.bottom < 0 ||\n\
+  \    rect.right < 0 ||\n\
+  \    rect.top > vpH ||\n\
+  \    rect.left > vpW\n\
+  \  )\n\
+  \    return false;\n\
+  \\n\
+  \  const points = [\n\
+  \    [rect.left + rect.width / 2, rect.top + rect.height / 2],\n\
+  \    [rect.left + 1, rect.top + 1],\n\
+  \    [rect.right - 1, rect.bottom - 1]\n\
+  \  ];\n\
+  \\n\
+  \  for (const [x, y] of points) {\n\
+  \    if (x < 0 || y < 0 || x > vpW || y > vpH)\n\
+  \      continue;\n\
+  \\n\
+  \    const hit = document.elementFromPoint(x, y);\n\
+  \\n\
+  \    if (hit === el || el.contains(hit))\n\
+  \      return true;\n\
+  \  }\n\
+  \\n\
+  \  return false;\n\
+  \}\n\
+  \return isDisplayed(arguments[0]);"
 
-  const style = getComputedStyle(el);
-
-  if (style.display === "none") return false;
-  if (style.visibility === "hidden" || style.visibility === "collapse") return false;
-
-  if (el.tagName === "INPUT" && el.type === "hidden")
-    return false;
-
-  const rect = el.getBoundingClientRect();
-
-  if (rect.width === 0 || rect.height === 0)
-    return false;
-
-  const vpW = window.innerWidth;
-  const vpH = window.innerHeight;
-
-  if (
-    rect.bottom < 0 ||
-    rect.right < 0 ||
-    rect.top > vpH ||
-    rect.left > vpW
-  )
-    return false;
-
-  const points = [
-    [rect.left + rect.width / 2, rect.top + rect.height / 2],
-    [rect.left + 1, rect.top + 1],
-    [rect.right - 1, rect.bottom - 1]
-  ];
-
-  for (const [x, y] of points) {
-    if (x < 0 || y < 0 || x > vpW || y > vpH)
-      continue;
-
-    const hit = document.elementFromPoint(x, y);
-
-    if (hit === el || el.contains(hit))
-      return true;
-  }
-
-  return false;
-}
--}
+isDisplayedHttp ::
+  forall m.
+  (Monad m) =>
+  -- | throw exceptions
+  (forall a e. (HasCallStack, Exception e) => e -> m a) ->
+  -- | catch exceptions
+  (forall a e. (HasCallStack, Exception e) => m a -> (e -> m a) -> m a) ->
+  -- | runner
+  (forall b. Command b -> m b) ->
+  -- | session
+  Session ->
+  -- | element to check
+  ElementId ->
+  m Bool
+isDisplayedHttp throw catch runner ses eid = do
+  result <-
+    catch
+      (executeScript runner ses MkScript {script = displayedJS, args = [toJSON eid]})
+      (throw . DriverException)
+  case (fromJSON result :: A.Result Bool) of
+    A.Success b -> pure b
+    A.Error msg -> error $ "isDisplayedHttp: isDisplayed script returned unexpected value: " <> msg
 
 locateHttpBiDi = undefined
 
