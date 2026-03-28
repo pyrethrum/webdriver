@@ -15,13 +15,21 @@ import WebDriverPreCore.Extended.HTTP.Base.Protocol (ElementId, Session)
 import WebDriverPreCore.Extended.HTTP.Internal (Runner)
 import WebDriverPreCore.Extended.Locators.Internal (Locator, Protocol)
 import WebDriverPreCore.Extended.Locators.Internal qualified as LI
+import WebDriverPreCore.Extended.Protocol
 import WebDriverPreCore.Extended.SimplifiedLocator.Internal (SimplifiedLocator (..), prepareSimplify)
 import WebDriverPreCore.HTTP.Protocol (Command, Selector)
 
 data LocateException
-  = AmbiguousLocateResult {description :: Text}
+  = AmbiguousLocateResult
+      { description :: Text,
+        locator :: Locator
+      }
+  | NoElementFound
+      { description :: Text,
+        locator :: Locator
+      }
   | InvalidLocator LI.InvalidLocator
-  | WebDriverException SomeException
+  | DriverException WebDriverException
   deriving (Show)
 
 instance Exception LocateException
@@ -59,38 +67,42 @@ locateHttp ::
   (Text -> Locator) ->
   -- | session
   Session ->
+  -- | cardinality
+  Cardinality ->
   -- | locate ops
   LocateOps ->
   -- | locator
   Locator ->
   m ElementId
-locateHttp throw catch runner defLoc ses MkLocateOps {cardinality, protocol} loc =
+locateHttp throw catch runner defLoc ses cardinality MkLocateOps {displayedCheck} loc =
   preparedLoc
     & either
       (throw . InvalidLocator)
-      \loc -> do
-        case cardinality of
-          Unique -> findElm loc
-          First -> findElm loc
-          Many ->
-            findElms loc >>= \case
-              Left err -> pure $ Left err
-              Right [] -> pure $ Left $ WebDriverException $ toException $ userError "Expected at least one element, but found none."
-              Right (x : xs) -> case cardinality of
-                Unique -> undefined
-                -- if null xs
-                --   then pure $ Right x
-                --   else pure $ Left $ AmbiguousLocateResult $ "Expected exactly one element, but found " <> pack (show (1 + length xs)) <> "."
-                First -> pure $ Right x
-                Many -> pure $ Right x -- TODO: return all elements, not just the first one
+      \loc -> undefined
   where
+    -- do
+    -- case cardinality of
+    --   Unique -> findElm loc
+    --   First -> findElm loc
+    --   Many ->
+    --     findElms loc >>= \case
+    --       Left err -> pure $ Left err
+    --       Right [] -> pure $ Left $ WebDriverException $ toException $ userError "Expected at least one element, but found none."
+    --       Right (x : xs) -> case cardinality of
+    --         Unique -> undefined
+    --         -- if null xs
+    --         --   then pure $ Right x
+    --         --   else pure $ Left $ AmbiguousLocateResult $ "Expected exactly one element, but found " <> pack (show (1 + length xs)) <> "."
+    --         First -> pure $ Right x
+    --         Many -> pure $ Right x -- TODO: return all elements, not just the first one
+
     preparedLoc = prepareSimplify defLoc protocol loc
 
     runCommand :: forall a. ((Command a -> m a) -> Session -> Selector -> m a) -> Selector -> m a
     runCommand f sel =
       catch
         (f runner ses sel)
-        (throw . WebDriverException)
+        (throw . DriverException)
 
     findElm :: Selector -> m ElementId
     findElm = runCommand findElement
@@ -103,15 +115,19 @@ locateHttp throw catch runner defLoc ses MkLocateOps {cardinality, protocol} loc
       case cardinality of
         Unique -> do
           elms <- findElms sel
-          findElm sel >>= \eid -> do
-            -- check if there are more elements
-            findElms sel >>= \case
-              Left err -> throw err
-              Right [] -> throw $ WebDriverException $ toException $ userError "Expected at least one element, but found none."
-              Right (x : xs) ->
-                if null xs
-                  then pure eid
-                  else throw $ AmbiguousLocateResult $ "Expected exactly one element, but found " <> pack (show (1 + length xs)) <> "."
+          case elms of
+            [] -> throw $ NoElementFound { description = "Expected exactly one element, but found none.", locator = loc }
+            [x] -> pure x
+            xs -> throw $ AmbiguousLocateResult { description = "Expected exactly one element, but found " <> pack (show (length xs)) <> ".", locator = loc }
+        -- findElm sel >>= \eid -> do
+        --   -- check if there are more elements
+        --   findElms sel >>= \case
+        --     Left err -> throw err
+        --     Right [] -> throw $ NoElementFound
+        --     Right (x : xs) ->
+        --       if null xs
+        --         then pure eid
+        --         else throw $ AmbiguousLocateResult $ "Expected exactly one element, but found " <> pack (show (1 + length xs)) <> "."
         First -> findElm sel
         Many -> findElms sel
 
@@ -175,3 +191,7 @@ function bidiIsVisible(el) {
   return false;
 }
 -}
+
+locateHttpBiDi = undefined
+
+--  use all findElements but limit to 2 results (not supported in standard HTTP WebDriver, but available in BiDi via maxNodeCount).
