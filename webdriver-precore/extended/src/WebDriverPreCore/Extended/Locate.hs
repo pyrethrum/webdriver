@@ -18,7 +18,7 @@ import GHC.Stack (HasCallStack)
 import WebDriverPreCore.Extended.HTTP.Base.Actions
 import WebDriverPreCore.Extended.HTTP.Base.Protocol as HTTPB (ElementId)
 import WebDriverPreCore.Extended.HTTP.Internal (Runner)
-import WebDriverPreCore.Extended.Locators.Internal (Locator, Protocol (..))
+import WebDriverPreCore.Extended.Locators.Internal (Locator, Protocol (..), RoleLocator(..))
 import WebDriverPreCore.Extended.Locators.Internal qualified as LI
 import WebDriverPreCore.Extended.Protocol (Session, WebDriverException)
 import WebDriverPreCore.Extended.SimplifiedLocator.Internal as L (SimplifiedLocator (..), prepareSimplify)
@@ -54,6 +54,42 @@ data LocateOps = MkLocateOps
   { displayedCheck :: DisplayedCheck
   }
   deriving (Show, Eq)
+
+data Special = PlainRslt | RoleRslt RoleLocator | InnerTextRslt Text deriving (Show, Eq, Ord)
+data LocateResult = SingleResult
+  { found :: [ElementId],
+    special :: Special
+  } | 
+  OrResult
+  { found :: [ElementId],
+    special :: Special,
+    subResults :: [LocateResult]
+  } |
+  AndResult
+  { found :: [ElementId],
+    special :: Special,
+    subResults :: [LocateResult]
+  } |
+  NotResult
+  { found :: [ElementId],
+    special :: Special,
+    subResult :: LocateResult
+  }
+  deriving (Show, Eq)
+
+
+-- TODO
+-- 1. get unretried http working with tests
+--   1.1 simple locators (css, xpath, role, inner text)
+--   1.2 compound locators (parent, all, any, none)
+--   1.3 displayed checks (disambiguate unique and always)
+-- 2. failing tests
+--   2.1 role edge cases (ess edgecases md)
+--   2.2 inner text edge cases (ess edgecases md)
+-- 3. fix edge cases - get tests passing
+-- 4. retries / wait Http
+-- 5. retry tests 
+-- 6. BiDi - repeat all of the above for BiDi, but with the much simpler locateMany as the basis, and no need for retries as BiDi supports waiting for conditions natively via the maxNodeCount parameter.
 
 -- browsingContextLocateNodes :: forall m. Runner m LocateNodesResult -> LocateNodes -> m LocateNodesResult
 
@@ -136,13 +172,13 @@ locateHttp throw catch runner defLoc cardinality MkLocateOps {displayedCheck} se
       InnerText {value, matchType, caseSesnsitivity, maxDepth} -> HTTPP.XPath $ LI.innerTextToXPath value caseSesnsitivity matchType maxDepth
       _ -> error "toSelector: only CSS, XPath, Role and InnerText locators can be converted to Selector for HTTP WebDriver"
 
-    httpLocate :: SimplifiedLocator -> m ElementId
+    httpLocate :: SimplifiedLocator -> m LocateResult
     httpLocate sl = case sl of
-      L.CSS {} -> locateUnnested
-      L.XPath {} -> locateUnnested
+      L.CSS {} -> locateUnnested PlainRslt
+      L.XPath {} -> locateUnnested PlainRslt
       -- TODO: extended inner text rules
-      Role {} -> locateUnnested
-      InnerText {} -> locateUnnested
+      Role {role} -> locateUnnested $ RoleRslt role
+      InnerText {value} -> locateUnnested $ InnerTextRslt value
       -- will never happen - already filtered out by prepareSimplify
       BiDiContext {} -> error "BiDiContext locators are not supported in HTTP WebDriver"
       Parent {} -> undefined
@@ -151,7 +187,7 @@ locateHttp throw catch runner defLoc cardinality MkLocateOps {displayedCheck} se
       None {} -> undefined
       PostFilter {} -> undefined
      where 
-      locateUnnested = locate (cardinality == Unique) $ toSelector sl
+      locateUnnested s = MkLocateResult . pure <$> locate (cardinality == Unique) (toSelector sl) <*> pure s
 
     -- !!!!!!!! compound locates and retries  - need a pointer back to the orional locator so ca retry for
     -- special cases such as role inner test and displayed when ambiguous.
