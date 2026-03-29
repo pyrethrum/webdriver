@@ -153,6 +153,8 @@ locateHttp throw catch runner defLoc cardinality MkLocateOps {displayedCheck} se
      where 
       locateUnnested = locate (cardinality == Unique) $ toSelector sl
 
+    -- !!!!!!!! compound locates and retries  - need a pointer back to the orional locator so ca retry for
+    -- special cases such as role inner test and displayed when ambiguous.
     httpLocateMany :: SimplifiedLocator -> m [ElementId]
     httpLocateMany = \case
       L.CSS {} -> undefined
