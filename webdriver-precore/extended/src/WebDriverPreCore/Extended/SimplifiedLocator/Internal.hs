@@ -14,9 +14,6 @@ import WebDriverPreCore.Extended.BiDi.Base.Protocol (BrowsingContext, JSUInt)
 import WebDriverPreCore.Extended.Locators.Internal qualified as LI
 import Prelude
 
---  HERE
--- nesting
--- process and or based on loc type - note should already be grouped properly due to classification
 
 -- | Simplified/resolved form of 'LI.Locator', where leaf locators expressible
 --   as XPath have been folded in and 'LI.Default' has been resolved.
@@ -63,8 +60,9 @@ prepareSimplify defLoc proto l =
     simplify = \case
       LI.CSS {..} -> CSS {..}
       LI.XPath {..} -> XPath {..}
-      LI.Role {role, name} -> cases of
-         
+      LI.Role {..} -> Role {..}
+      LI.RoleType {role} -> RoleType {role}
+      LI.RoleName {name} -> RoleName {name}
       LI.InnerText {..} -> InnerText {..}
       LI.BiDiContext {..} -> BiDiContext {..}
       LI.PostFilter pf -> PostFilter pf
@@ -92,6 +90,8 @@ xPathSub defLoc proto l =
         LI.CSS {} -> loc
         LI.InnerText {} -> loc
         LI.Role {} -> loc
+        LI.RoleType {} -> loc
+        LI.RoleName {} -> loc
         LI.BiDiContext {} -> loc
         LI.PostFilter _ -> loc
         LI.XPath {} -> xpathLoc
@@ -152,6 +152,8 @@ toXPathCore = LI.XPath . toXPathCoreTxt
         LI.CSS {} -> locErr loc
         LI.Default {} -> locErr loc
         LI.Role {} -> locErr loc
+        LI.RoleType {} -> locErr loc
+        LI.RoleName {} -> locErr loc
         LI.InnerText {} -> locErr loc
         LI.BiDiContext {} -> locErr loc
         LI.PostFilter {} -> locErr loc

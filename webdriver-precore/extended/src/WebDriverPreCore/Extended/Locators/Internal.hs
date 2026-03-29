@@ -22,6 +22,17 @@ data MatchFlags = MkMatchFlags
 --
 data LocatorDirectives = ToDo deriving (Show, Eq)
 
+data RoleLocator
+  = RoleFull {role :: AriaRole, name :: Text}
+  | RoleType {role :: AriaRole}
+  | RoleName {name :: Text}
+  deriving
+    ( -- | WithOptions {base :: Locator, options :: [LocatorDirectives]}
+      Show,
+      Eq,
+      Ord
+    )
+
 -- | Locator for use with both HTTP and BiDi protocols.
 data Locator
   = -- universal
@@ -42,7 +53,7 @@ data Locator
   | Tag {value :: Text}
   | Default {value :: Text}
   | -- double shot / difficult
-    Role {role :: Maybe AriaRole, name :: Maybe Text}
+    Role RoleLocator
   | InnerText
       { value :: Text,
         matchType :: MatchType,
@@ -158,14 +169,15 @@ data CaseSensitivity = CaseSensitive | CaseInsensitive deriving (Show, Eq, Ord)
 displayAriaRole :: AriaRole -> Text
 displayAriaRole = toLower . pack . show
 
-roleToXPath :: Maybe AriaRole -> Maybe Text -> Maybe Text
-roleToXPath = \cases
-  Nothing Nothing -> Nothing
-  mRole mName -> Just $ "//*" <> rle mRole <> name mName
+roleToXPath :: RoleLocator -> Text
+roleToXPath = \case
+  RoleFull {role, name} -> "//*" <> role' role <> name' name
+  RoleType {role} -> "//*" <> role' role
+  RoleName {name} -> "//*" <> name' name
   where
-    rle = maybe "" \r -> "[" <> implicitRoleXPath r <> " or @role='" <> displayAriaRole r <> "']"
+    role' r = "[" <> implicitRoleXPath r <> " or @role='" <> displayAriaRole r <> "']"
 
-    name = maybe "" \n ->
+    name' n =
       "["
         <> intercalate
           " or "

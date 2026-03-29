@@ -35,6 +35,8 @@ module WebDriverPreCore.Extended.Locators
     -- * Role Constructors
     role,
     role',
+    roleType,
+    roleName,
     --
     article,
     banner,
@@ -271,11 +273,17 @@ valueFunc description  = PostFilter . ValueFuncPostFilter description
 
 ------- Role Constructors -------
 
-role' :: Maybe AriaRole -> Maybe Text -> Locator
+role' :: AriaRole -> Text -> Locator
 role' r = Role r
 
 role :: AriaRole -> Text -> Locator
-role r = role' (Just r) . Just
+role r = role' r
+
+roleType :: AriaRole -> Locator
+roleType r = RoleType r
+
+roleName :: Text -> Locator
+roleName = RoleName
 
 article :: Text -> Locator
 article = role Article

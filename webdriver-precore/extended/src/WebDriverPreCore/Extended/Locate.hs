@@ -141,6 +141,8 @@ locateHttp throw catch runner defLoc cardinality MkLocateOps {displayedCheck} se
       L.CSS {} -> undefined
       L.XPath {} -> undefined
       Role {} -> undefined
+      RoleType {} -> undefined
+      RoleName {} -> undefined
       InnerText {} -> undefined
       -- will never happen - already filtered out by prepareSimplify
       BiDiContext {} -> error "BiDiContext locators are not supported in HTTP WebDriver"
@@ -155,6 +157,8 @@ locateHttp throw catch runner defLoc cardinality MkLocateOps {displayedCheck} se
       L.CSS {} -> undefined
       L.XPath {} -> undefined
       Role {} -> undefined
+      RoleType {} -> undefined
+      RoleName {} -> undefined
       InnerText {} -> undefined
       -- will never happen - already filtered out by prepareSimplify
       BiDiContext {} -> error "BiDiContext locators are not supported in HTTP WebDriver"
