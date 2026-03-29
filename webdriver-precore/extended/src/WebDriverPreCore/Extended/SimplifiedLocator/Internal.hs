@@ -39,8 +39,8 @@ data SimplifiedLocator
   | None {elms :: NonEmpty SimplifiedLocator}
   | --- PostFilter
     PostFilter
-      { predicate :: Predicate,
-        locator :: Locator
+      { predicate :: LI.Predicate,
+        locator :: SimplifiedLocator
       }
   deriving
     ( Show,
@@ -63,7 +63,7 @@ prepareSimplify defLoc proto l =
       LI.Role {..} -> Role {..}
       LI.InnerText {..} -> InnerText {..}
       LI.BiDiContext {..} -> BiDiContext {..}
-      LI.Predicate pf -> Predicate pf
+      LI.PostFilter {predicate, locator} -> PostFilter {predicate, locator = simplify locator}
       LI.Parent {parent, child} -> Parent {parent = simplify parent, child = simplify child}
       LI.All {elms} -> All $ simplify <$> elms
       LI.Any {elms} -> Any $ simplify <$> elms
@@ -89,7 +89,7 @@ xPathSub defLoc proto l =
         LI.InnerText {} -> loc
         LI.Role {} -> loc
         LI.BiDiContext {} -> loc
-        LI.Predicate _ -> loc
+        LI.PostFilter {} -> loc
         LI.XPath {} -> xpathLoc
         LI.AllElms -> xpathLoc
         LI.ID {} -> xpathLoc
@@ -150,7 +150,7 @@ toXPathCore = LI.XPath . toXPathCoreTxt
         LI.Role {} -> locErr loc
         LI.InnerText {} -> locErr loc
         LI.BiDiContext {} -> locErr loc
-        LI.Predicate {} -> locErr loc
+        LI.PostFilter {} -> locErr loc
       where
         elmsTxt conjunctive elms = "(" <> T.intercalate (" " <> conjunctive <> " ") (toList $ toXPathCoreTxt <$> elms) <> ")"
 

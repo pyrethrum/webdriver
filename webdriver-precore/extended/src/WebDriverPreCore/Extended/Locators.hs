@@ -24,7 +24,7 @@ module WebDriverPreCore.Extended.Locators
     attribute',
     attributeExact,
     attributeStarts,
-    -- 
+    --
     -- post filters
     value,
     valueExact,
@@ -198,7 +198,7 @@ where
 
 import Data.Bool (bool)
 import Data.List.NonEmpty (NonEmpty (..))
-import Data.Text (Text, isInfixOf)
+import Data.Text (Text, isInfixOf, pack, unpack)
 import WebDriverPreCore.Extended.Locators.Internal
 import Prelude
 
@@ -256,20 +256,42 @@ attributeExact = mkExact attribute'
 attributeStarts :: Text -> Locator
 attributeStarts = mkStarts attribute'
 
-value :: Text -> Text -> Locator
-value desc = mkDefaults $ value' desc
+mkValCons :: Locator -> MatchType -> CaseSensitivity -> Text -> Locator
+mkValCons loc matchType caseSensitivity matchVal =
+  value' matchType caseSensitivity matchVal loc
 
-value' :: Text -> MatchType -> CaseSensitivity -> Text -> Locator
-value' description matchType caseSensitivity value'' = Predicate $ ValuePredicate {description, matchType, caseSensitivity, value = value''}
+value :: Text -> Locator -> Locator
+value matchVal locator = mkDefaults (mkValCons locator) matchVal
 
-valueExact :: Text -> Text -> Locator
-valueExact description = mkExact (value' description)
+value' :: MatchType -> CaseSensitivity -> Text -> Locator -> Locator
+value' matchType caseSensitivity matchVal locator =
+  PostFilter
+    { predicate =
+        ValuePredicate
+          { description = "Match element by its value attribute: " <> matchVal <> (pack $ " (" <> show matchType <> ", " <> show caseSensitivity <> ")"),
+            matchType,
+            caseSensitivity,
+            value = matchVal
+          },
+      locator
+    }
 
-valueStarts :: Text -> Text -> Locator
-valueStarts description = mkStarts (value' description)
+valueExact :: Text -> Locator -> Locator
+valueExact txt loc = mkExact (mkValCons loc) txt
 
-valueFunc :: Text -> (Text -> Bool) -> Locator
-valueFunc description  = Predicate . ValueFuncPredicate description
+valueStarts :: Text -> Locator -> Locator
+valueStarts txt loc = mkStarts (mkValCons loc) txt
+
+valueFunc :: (Text -> Bool) -> Text -> Locator -> Locator
+valueFunc func description loc =
+  PostFilter
+    { predicate =
+        ValueFuncPredicate
+          { description = "Match element by its value attribute with custom function: " <> description,
+            valPredicate = func
+          },
+      locator = loc
+    }
 
 ------- Role Constructors -------
 

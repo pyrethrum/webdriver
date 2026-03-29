@@ -149,7 +149,7 @@ locateHttp throw catch runner defLoc cardinality MkLocateOps {displayedCheck} se
       All {} -> undefined
       Any {} -> undefined
       None {} -> undefined
-      Predicate _ -> undefined
+      PostFilter {} -> undefined
      where 
       locateUnnested = locate (cardinality == Unique) $ toSelector sl
 
@@ -165,7 +165,7 @@ locateHttp throw catch runner defLoc cardinality MkLocateOps {displayedCheck} se
       All {} -> undefined
       Any {} -> undefined
       None {} -> undefined
-      Predicate _ -> undefined
+      PostFilter {} -> undefined
 
 displayedJS :: Text
 displayedJS =

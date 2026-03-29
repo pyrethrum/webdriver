@@ -71,7 +71,7 @@ data Locator
   | --- PostFilter
     PostFilter
       { predicate :: Predicate,
-        loc :: Locator
+        locator :: Locator
       }
   deriving
     ( -- | WithOptions {base :: Locator, options :: [LocatorDirectives]}
@@ -350,7 +350,7 @@ classify defLoc proto =
     All {elms} -> clasifyElms elms
     Any {elms} -> clasifyElms elms
     None {elms} -> clasifyElms elms
-    Predicate {} -> IsMixed
+    PostFilter {} -> IsMixed
   where
     classifyNxt :: Locator -> Classification
     classifyNxt = classify defLoc proto
@@ -381,7 +381,7 @@ sortGroupChildLocs defLoc proto =
         Any {elms} -> Any $ sortAndGroup Any elms
         --- None a1, a2, b1, b2, c => None ( any (a1, a2), any (b1, b2), any (c))
         None {elms} -> None $ sortAndGroup Any elms
-        Predicate {} -> l
+        PostFilter {} -> l
       where
         clasify' = classify defLoc proto
         sortAndGroup groupCons = regroup groupCons . sortLocList
@@ -426,7 +426,7 @@ locatorToXPathPartial = XPath . toXPathStr
       Role {} -> locErr loc
       InnerText {} -> locErr loc
       BiDiContext {} -> locErr loc
-      Predicate {} -> locErr loc
+      PostFilter {} -> locErr loc
 
     -- \| Convert a Locator to an XPath predicate expression for use inside [...].
     --   Combinators are recursively inlined; Parent uses the ancestor:: axis.
@@ -453,7 +453,7 @@ locatorToXPathPartial = XPath . toXPathStr
       Role {} -> locErr loc
       InnerText {} -> locErr loc
       BiDiContext {} -> locErr loc
-      Predicate {} -> locErr loc
+      PostFilter {} -> locErr loc
 
     -- \| XPath predicate for CSS class matching.
     --   Full uses the space-padding token trick to match whole class names.
@@ -541,7 +541,7 @@ foldLoc f acc loc =
     Any locs -> foldList locs
     None locs -> foldList locs
     -- WithOptions base _ -> foldLoc f acc' base
-    Predicate _ -> acc'
+    PostFilter {} -> acc'
     _ -> acc' -- Leaf locators
   where
     acc' = f acc loc -- Apply function to parent first
@@ -558,7 +558,7 @@ foldLocBottomUp f acc loc =
     Any locs -> f (foldList locs) loc
     None locs -> f (foldList locs) loc
     -- WithOptions base _ -> f (foldLocBottomUp f acc base) loc
-    Predicate _ -> f acc loc
+    PostFilter {} -> f acc loc
     _ -> f acc loc -- Leaf locators
   where
     foldList = foldl' (foldLocBottomUp f) acc . toList
