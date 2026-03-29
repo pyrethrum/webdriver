@@ -53,7 +53,7 @@ data Locator
   | Tag {value :: Text}
   | Default {value :: Text}
   | -- double shot / difficult
-    Role RoleLocator
+    Role {role :: RoleLocator}
   | InnerText
       { value :: Text,
         matchType :: MatchType,
@@ -68,8 +68,11 @@ data Locator
   | All {elms :: NonEmpty Locator}
   | Any {elms :: NonEmpty Locator}
   | None {elms :: NonEmpty Locator}
-  | --- postfilter
-    PostFilter PostFilter
+  | --- PostFilter
+    PostFilter
+      { predicate :: Predicate,
+        loc :: Locator
+      }
   deriving
     ( -- | WithOptions {base :: Locator, options :: [LocatorDirectives]}
       Show,
@@ -77,51 +80,51 @@ data Locator
       Ord
     )
 
-data PostFilter
-  = BiDiPostFilter
+data Predicate
+  = BiDiPredicate
       { description :: Text,
         -- TODO: fix this when merged
         nodePredicate :: NodeProperties -> Bool
       }
-  | HttpPostFilter
+  | HttpPredicate
       { description :: Text,
         -- TODO: fix this when merged
         httpCommand :: Either Text Text
       }
-  | JSPostFilter
+  | JSPredicate
       { description :: Text,
         -- TODO: fix this when merged
         js :: Text
       }
-  | ValuePostFilter
+  | ValuePredicate
       { description :: Text,
         value :: Text,
         matchType :: MatchType,
         caseSensitivity :: CaseSensitivity
       }
-  | ValueFuncPostFilter
+  | ValueFuncPredicate
       { description :: Text,
         valPredicate :: Text -> Bool
       }
 
-instance Show PostFilter where
-  show :: PostFilter -> String
+instance Show Predicate where
+  show :: Predicate -> String
   show p =
     prefix <> unpack p.description
     where
       prefix = case p of
-        BiDiPostFilter {} -> "BiDiPostFilter: "
-        HttpPostFilter {} -> "HttpPostFilter: "
-        JSPostFilter {} -> "JSPostFilter: "
-        ValuePostFilter {} -> "ValuePostFilter: "
-        ValueFuncPostFilter {} -> "ValueFuncPostFilter: "
+        BiDiPredicate {} -> "BiDiPredicate: "
+        HttpPredicate {} -> "HttpPredicate: "
+        JSPredicate {} -> "JSPredicate: "
+        ValuePredicate {} -> "ValuePredicate: "
+        ValueFuncPredicate {} -> "ValueFuncPredicate: "
 
-instance Eq PostFilter where
-  (==) :: PostFilter -> PostFilter -> Bool
+instance Eq Predicate where
+  (==) :: Predicate -> Predicate -> Bool
   (==) p p1 = p.description == p1.description
 
-instance Ord PostFilter where
-  compare :: PostFilter -> PostFilter -> Ordering
+instance Ord Predicate where
+  compare :: Predicate -> Predicate -> Ordering
   compare p p1 = compare p.description p1.description
 
 -- | ARIA roles from https://www.w3.org/TR/wai-aria-1.2/#role_definitions
@@ -347,7 +350,7 @@ classify defLoc proto =
     All {elms} -> clasifyElms elms
     Any {elms} -> clasifyElms elms
     None {elms} -> clasifyElms elms
-    PostFilter {} -> IsMixed
+    Predicate {} -> IsMixed
   where
     classifyNxt :: Locator -> Classification
     classifyNxt = classify defLoc proto
@@ -378,7 +381,7 @@ sortGroupChildLocs defLoc proto =
         Any {elms} -> Any $ sortAndGroup Any elms
         --- None a1, a2, b1, b2, c => None ( any (a1, a2), any (b1, b2), any (c))
         None {elms} -> None $ sortAndGroup Any elms
-        PostFilter {} -> l
+        Predicate {} -> l
       where
         clasify' = classify defLoc proto
         sortAndGroup groupCons = regroup groupCons . sortLocList
@@ -423,7 +426,7 @@ locatorToXPathPartial = XPath . toXPathStr
       Role {} -> locErr loc
       InnerText {} -> locErr loc
       BiDiContext {} -> locErr loc
-      PostFilter {} -> locErr loc
+      Predicate {} -> locErr loc
 
     -- \| Convert a Locator to an XPath predicate expression for use inside [...].
     --   Combinators are recursively inlined; Parent uses the ancestor:: axis.
@@ -450,7 +453,7 @@ locatorToXPathPartial = XPath . toXPathStr
       Role {} -> locErr loc
       InnerText {} -> locErr loc
       BiDiContext {} -> locErr loc
-      PostFilter {} -> locErr loc
+      Predicate {} -> locErr loc
 
     -- \| XPath predicate for CSS class matching.
     --   Full uses the space-padding token trick to match whole class names.
@@ -538,7 +541,7 @@ foldLoc f acc loc =
     Any locs -> foldList locs
     None locs -> foldList locs
     -- WithOptions base _ -> foldLoc f acc' base
-    PostFilter _ -> acc'
+    Predicate _ -> acc'
     _ -> acc' -- Leaf locators
   where
     acc' = f acc loc -- Apply function to parent first
@@ -555,7 +558,7 @@ foldLocBottomUp f acc loc =
     Any locs -> f (foldList locs) loc
     None locs -> f (foldList locs) loc
     -- WithOptions base _ -> f (foldLocBottomUp f acc base) loc
-    PostFilter _ -> f acc loc
+    Predicate _ -> f acc loc
     _ -> f acc loc -- Leaf locators
   where
     foldList = foldl' (foldLocBottomUp f) acc . toList
@@ -571,7 +574,7 @@ mapLocBottomUp f loc = f $
     All locs -> All $ recurseMap locs
     Any locs -> Any $ recurseMap locs
     None locs -> None $ recurseMap locs
-    _ -> loc -- Leaf locators and PostFilter
+    _ -> loc -- Leaf locators and Predicate
   where
     recurse = mapLocBottomUp f
     recurseMap = fmap (mapLocBottomUp f)
@@ -656,7 +659,7 @@ flattenLoc = \case
   -- Recurse into other composite locators
   Parent p c -> Parent (flattenLoc p) (flattenLoc c)
   -- WithOptions base opts -> WithOptions (flattenLoc base) opts
-  -- Leaf locators and PostFilter have no children to recurse into
+  -- Leaf locators and Predicate have no children to recurse into
   other -> other
 
 upperAlpha :: Text

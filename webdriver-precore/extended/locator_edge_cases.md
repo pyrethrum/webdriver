@@ -489,4 +489,68 @@ The HTTP round-trip (1–5ms localhost, 10–100ms remote) **dominates**, so the
 
 The JS engine parse cost is the dominant factor for BiDi (where the WebSocket RTT is tiny), while for HTTP classic it's largely noise against network latency.
 
+# Getting Value
+
+Searched for regex `getProperty|getAttribute|element.*value|script.evaluate|callFunction` (`**/*.hs`), 20 results
+
+Searched for files matching `**/webdriver-precore/src/WebDriverPreCore`, no matches
+
+Searched for text `getElementProperty` (`**/webdriver-precore/src/WebDriverPreCore/HTTP/SpecDefinition.hs`), 3 results
+
+Searched for text `script` (`**/webdriver-precore/src/WebDriverPreCore/Bidi`), no results
+
+Searched for files matching `**/Bidi/**/*.hs`, 20 matches
+
+Read [](file:///home/john-walker/repos/webdriver/webdriver-precore/src/WebDriverPreCore/HTTP/SpecDefinition.hs#725-725), lines 725 to 745
+
+Searched for text `callFunction|evaluate|RemoteValue|node` (`**/webdriver-precore/src/WebDriverPreCore/BiDi/Script.hs`), 20 results
+
+Searched for text `CallFunction` (`**/webdriver-precore/src/WebDriverPreCore/BiDi/Script.hs`), 6 results
+
+Read [](file:///home/john-walker/repos/webdriver/webdriver-precore/src/WebDriverPreCore/BiDi/Script.hs#285-285), lines 285 to 340
+
+Here's the answer:
+
+## Classic WebDriver (HTTP)
+
+There are two relevant endpoints depending on what "value" means:
+
+**DOM Property (current live value — what you usually want for inputs):**
+```
+GET /session/{sessionId}/element/{elementId}/property/value
+```
+Returns the current DOM `.value` property. This reflects what the user has typed.
+
+**HTML Attribute (static initial value from markup):**
+```
+GET /session/{sessionId}/element/{elementId}/attribute/value
+```
+Returns the `value` HTML attribute — the default/reset value, not necessarily the current one.
+
+For most use cases (e.g. checking what's in an `<input>`), you want the **property** endpoint.
+
+---
+
+## WebDriver BiDi
+
+BiDi has no dedicated "get element property" command. Instead you use **`script.callFunction`**, passing the element as a `SharedReference` (via its `sharedId`):
+
+```json
+{
+  "method": "script.callFunction",
+  "params": {
+    "functionDeclaration": "function(el) { return el.value; }",
+    "awaitPromise": false,
+    "target": { "context": "<browsingContextId>" },
+    "arguments": [
+      { "sharedId": "<elementSharedId>" }
+    ]
+  }
+}
+```
+
+The response comes back as a `script.EvaluateResult` with the value as a `RemoteValue` (a `StringValue` for a text input).
+
+Alternatively, `script.evaluate` works for simple cases if the element reference is already in scope, but `script.callFunction` with a `SharedReference` argument is the standard pattern when you already have a located element.
+
 

@@ -15,7 +15,7 @@ import Test.Tasty.HUnit (testCase, (@?=))
 import Utils (txt)
 import WebDriverPreCore.Extended.BiDi.Base.Protocol (BrowsingContext (..))
 import WebDriverPreCore.Extended.Locators
-import WebDriverPreCore.Extended.Locators.Internal (CaseSensitivity (..), Classification (..), Locator (..), PostFilter (..), Protocol (..), classify, flattenLoc, foldLoc, foldLocBottomUp, hasInvalidLoc, prepare, sortGroupChildLocs)
+import WebDriverPreCore.Extended.Locators.Internal (CaseSensitivity (..), Classification (..), Locator (..), Predicate (..), Protocol (..), classify, flattenLoc, foldLoc, foldLocBottomUp, hasInvalidLoc, prepare, sortGroupChildLocs)
 import Prelude hiding (putStrLn)
 
 -- >>> _eval tests
@@ -259,7 +259,7 @@ mockLocated allElmsDefault = go
       Role {name = Nothing} -> allElmsDefault
       InnerText {value = v} -> readBool v
       BiDiContext {context = MkBrowsingContext v} -> readBool v
-      PostFilter (JSPostFilter v _) -> readBool v
+      Predicate (JSPredicate v _) -> readBool v
       All locs -> all go locs
       Any locs -> any go locs
       None locs -> not (any go locs)
@@ -342,7 +342,7 @@ allLeavesBool val =
           },
         -- browsingContextId -> elementId ie get the frame that belongs to the browsing context
         BiDiContext {context = MkBrowsingContext b},
-        PostFilter $ JSPostFilter b b
+        Predicate $ JSPredicate b b
       ]
 
 -- | Generate a leaf locator where the text value encodes the boolean result.

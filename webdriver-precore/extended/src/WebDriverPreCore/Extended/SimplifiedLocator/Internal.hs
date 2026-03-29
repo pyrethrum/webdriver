@@ -14,7 +14,6 @@ import WebDriverPreCore.Extended.BiDi.Base.Protocol (BrowsingContext, JSUInt)
 import WebDriverPreCore.Extended.Locators.Internal qualified as LI
 import Prelude
 
-
 -- | Simplified/resolved form of 'LI.Locator', where leaf locators expressible
 --   as XPath have been folded in and 'LI.Default' has been resolved.
 --   Produced by 'prepareSimplify'.
@@ -23,9 +22,7 @@ data SimplifiedLocator
     CSS {value :: Text}
   | XPath {value :: Text}
   | -- double shot / difficult
-    Role {role :: LI.AriaRole, name :: Text}
-  | RoleType {role :: LI.AriaRole}
-  | RoleName {name :: Text}
+    Role {role :: LI.RoleLocator}
   | InnerText
       { value :: Text,
         matchType :: LI.MatchType,
@@ -40,8 +37,11 @@ data SimplifiedLocator
   | All {elms :: NonEmpty SimplifiedLocator}
   | Any {elms :: NonEmpty SimplifiedLocator}
   | None {elms :: NonEmpty SimplifiedLocator}
-  | --- postfilter
-    PostFilter LI.PostFilter
+  | --- PostFilter
+    PostFilter
+      { predicate :: Predicate,
+        locator :: Locator
+      }
   deriving
     ( Show,
       Eq
@@ -61,11 +61,9 @@ prepareSimplify defLoc proto l =
       LI.CSS {..} -> CSS {..}
       LI.XPath {..} -> XPath {..}
       LI.Role {..} -> Role {..}
-      LI.RoleType {role} -> RoleType {role}
-      LI.RoleName {name} -> RoleName {name}
       LI.InnerText {..} -> InnerText {..}
       LI.BiDiContext {..} -> BiDiContext {..}
-      LI.PostFilter pf -> PostFilter pf
+      LI.Predicate pf -> Predicate pf
       LI.Parent {parent, child} -> Parent {parent = simplify parent, child = simplify child}
       LI.All {elms} -> All $ simplify <$> elms
       LI.Any {elms} -> Any $ simplify <$> elms
@@ -90,10 +88,8 @@ xPathSub defLoc proto l =
         LI.CSS {} -> loc
         LI.InnerText {} -> loc
         LI.Role {} -> loc
-        LI.RoleType {} -> loc
-        LI.RoleName {} -> loc
         LI.BiDiContext {} -> loc
-        LI.PostFilter _ -> loc
+        LI.Predicate _ -> loc
         LI.XPath {} -> xpathLoc
         LI.AllElms -> xpathLoc
         LI.ID {} -> xpathLoc
@@ -152,11 +148,9 @@ toXPathCore = LI.XPath . toXPathCoreTxt
         LI.CSS {} -> locErr loc
         LI.Default {} -> locErr loc
         LI.Role {} -> locErr loc
-        LI.RoleType {} -> locErr loc
-        LI.RoleName {} -> locErr loc
         LI.InnerText {} -> locErr loc
         LI.BiDiContext {} -> locErr loc
-        LI.PostFilter {} -> locErr loc
+        LI.Predicate {} -> locErr loc
       where
         elmsTxt conjunctive elms = "(" <> T.intercalate (" " <> conjunctive <> " ") (toList $ toXPathCoreTxt <$> elms) <> ")"
 

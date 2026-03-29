@@ -12,6 +12,7 @@ import Control.Exception (Exception, SomeException)
 import Control.Monad (filterM)
 import Data.Aeson as A (Result (..), Value, fromJSON, toJSON)
 import Data.Function ((&))
+import Data.Maybe (fromMaybe)
 import Data.Text
 import GHC.Stack (HasCallStack)
 import WebDriverPreCore.Extended.HTTP.Base.Actions
@@ -23,7 +24,6 @@ import WebDriverPreCore.Extended.Protocol (Session, WebDriverException)
 import WebDriverPreCore.Extended.SimplifiedLocator.Internal as L (SimplifiedLocator (..), prepareSimplify)
 import WebDriverPreCore.HTTP.Protocol as HTTPP (Command, Script (..), Selector (..))
 import Prelude as P
-import Data.Maybe (fromMaybe)
 
 data LocateException
   = AmbiguousLocateResult
@@ -87,7 +87,7 @@ locateHttp throw catch runner defLoc cardinality MkLocateOps {displayedCheck} se
       \loc -> undefined
   where
     preparedLoc = prepareSimplify defLoc HTTP loc
-  
+
     runCommand :: forall a. ((Command a -> m a) -> Session -> Selector -> m a) -> Selector -> m a
     runCommand f sel =
       catch
@@ -126,39 +126,38 @@ locateHttp throw catch runner defLoc cardinality MkLocateOps {displayedCheck} se
         else
           findElm sel
 
-    locateSingleLoc = locate (cardinality == Unique)
+    locateSingleton = locate (cardinality == Unique)
 
-    toSelector :: SimplifiedLocator -> m Selector
+    toSelector :: SimplifiedLocator -> Selector
     toSelector = \case
-      L.CSS {value} -> pure $ HTTPP.CSS value
-      L.XPath {value} -> pure $ HTTPP.XPath value
-      r@Role {role, name} -> maybe (throw $ InvalidLocator $  LI.MkInvalidLocator r "Invalid Role locator") (pure . HTTPP.XPath) (LI.roleToXPath role name)
-      i@InnerText {} -> pure . HTTPP.XPath $ fromMaybe (throw $ InvalidLocator i "Invalid InnerText locator") (LI.innerTextToXPath i)
+      L.CSS {value} -> HTTPP.CSS value
+      L.XPath {value} -> HTTPP.XPath value
+      Role {role} -> HTTPP.XPath $ LI.roleToXPath role
+      InnerText {value, matchType, caseSesnsitivity, maxDepth} -> HTTPP.XPath $ LI.innerTextToXPath value caseSesnsitivity matchType maxDepth
       _ -> error "toSelector: only CSS, XPath, Role and InnerText locators can be converted to Selector for HTTP WebDriver"
 
-    httpLocate :: SimplifiedLocator -> m [ElementId]
-    httpLocate = \case
-      L.CSS {} -> undefined
-      L.XPath {} -> undefined
-      Role {} -> undefined
-      RoleType {} -> undefined
-      RoleName {} -> undefined
-      InnerText {} -> undefined
+    httpLocate :: SimplifiedLocator -> m ElementId
+    httpLocate sl = case sl of
+      L.CSS {} -> locateUnnested
+      L.XPath {} -> locateUnnested
+      -- TODO: extended inner text rules
+      Role {} -> locateUnnested
+      InnerText {} -> locateUnnested
       -- will never happen - already filtered out by prepareSimplify
       BiDiContext {} -> error "BiDiContext locators are not supported in HTTP WebDriver"
       Parent {} -> undefined
       All {} -> undefined
       Any {} -> undefined
       None {} -> undefined
-      PostFilter _ -> undefined
+      Predicate _ -> undefined
+     where 
+      locateUnnested = locate (cardinality == Unique) $ toSelector sl
 
     httpLocateMany :: SimplifiedLocator -> m [ElementId]
     httpLocateMany = \case
       L.CSS {} -> undefined
       L.XPath {} -> undefined
       Role {} -> undefined
-      RoleType {} -> undefined
-      RoleName {} -> undefined
       InnerText {} -> undefined
       -- will never happen - already filtered out by prepareSimplify
       BiDiContext {} -> error "BiDiContext locators are not supported in HTTP WebDriver"
@@ -166,7 +165,7 @@ locateHttp throw catch runner defLoc cardinality MkLocateOps {displayedCheck} se
       All {} -> undefined
       Any {} -> undefined
       None {} -> undefined
-      PostFilter _ -> undefined
+      Predicate _ -> undefined
 
 displayedJS :: Text
 displayedJS =

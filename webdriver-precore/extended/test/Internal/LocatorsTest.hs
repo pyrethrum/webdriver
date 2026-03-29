@@ -19,7 +19,7 @@ import WebDriverPreCore.Extended.Locators.Internal
   ( CaseSensitivity (..),
     Classification (..),
     Locator (..),
-    PostFilter (..),
+    Predicate (..),
     Protocol (..),
     classify,
     flattenLoc,
@@ -275,7 +275,7 @@ mockLocated allElmsDefault = go
       Role {name = Nothing} -> allElmsDefault
       InnerText {value = v} -> readBool v
       BiDiContext {context = MkBrowsingContext v} -> readBool v
-      PostFilter (JSPostFilter v _) -> readBool v
+      Predicate (JSPredicate v _) -> readBool v
       All locs -> all go locs
       Any locs -> any go locs
       None locs -> not (any go locs)
@@ -357,7 +357,7 @@ httpLeavesBool val =
             maxDepth = Nothing
           },
         -- browsingContextId -> elementId ie get the frame that belongs to the browsing context
-        PostFilter $ JSPostFilter b b
+        Predicate $ JSPredicate b b
       ]
 
 bidiOnlyLeavesBool :: Bool -> [Locator]

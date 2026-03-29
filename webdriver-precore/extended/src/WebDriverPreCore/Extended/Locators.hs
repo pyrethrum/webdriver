@@ -260,7 +260,7 @@ value :: Text -> Text -> Locator
 value desc = mkDefaults $ value' desc
 
 value' :: Text -> MatchType -> CaseSensitivity -> Text -> Locator
-value' description matchType caseSensitivity value'' = PostFilter $ ValuePostFilter {description, matchType, caseSensitivity, value = value''}
+value' description matchType caseSensitivity value'' = Predicate $ ValuePredicate {description, matchType, caseSensitivity, value = value''}
 
 valueExact :: Text -> Text -> Locator
 valueExact description = mkExact (value' description)
@@ -269,7 +269,7 @@ valueStarts :: Text -> Text -> Locator
 valueStarts description = mkStarts (value' description)
 
 valueFunc :: Text -> (Text -> Bool) -> Locator
-valueFunc description  = PostFilter . ValueFuncPostFilter description
+valueFunc description  = Predicate . ValueFuncPredicate description
 
 ------- Role Constructors -------
 
