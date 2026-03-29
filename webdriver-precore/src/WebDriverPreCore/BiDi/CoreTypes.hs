@@ -42,7 +42,7 @@ newtype JSInt = MkJSInt Int64 deriving newtype (Show, Eq, FromJSON, ToJSON) -- J
 
 -- Main BrowsingContext types
 newtype BrowsingContext = MkBrowsingContext {context :: Text}
-  deriving (Show, Eq, Generic, ToJSON)
+  deriving (Show, Eq, Ord, Generic, ToJSON)
 
 instance FromJSON BrowsingContext where
   parseJSON :: Value -> Parser BrowsingContext

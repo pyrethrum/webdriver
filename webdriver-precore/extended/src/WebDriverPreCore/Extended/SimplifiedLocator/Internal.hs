@@ -8,6 +8,7 @@ where
 import Data.List.NonEmpty (NonEmpty, toList)
 import Data.Text (Text)
 import Data.Text qualified as T
+import Data.Word (Word8)
 import Utils (txt)
 import WebDriverPreCore.Extended.BiDi.Base.Protocol (BrowsingContext, JSUInt)
 import WebDriverPreCore.Extended.Locators.Internal qualified as LI
@@ -25,12 +26,14 @@ data SimplifiedLocator
     CSS {value :: Text}
   | XPath {value :: Text}
   | -- double shot / difficult
-    Role {role :: Maybe LI.AriaRole, name :: Maybe Text}
+    Role {role :: LI.AriaRole, name :: Text}
+  | RoleType {role :: LI.AriaRole}
+  | RoleName {name :: Text}
   | InnerText
       { value :: Text,
         matchType :: LI.MatchType,
         caseSesnsitivity :: LI.CaseSensitivity,
-        maxDepth :: Maybe JSUInt
+        maxDepth :: Maybe Word8
       }
   | -- exclusive
     -- browsingContextId -> elementId ie get the frame that belongs to the browsing context
@@ -60,7 +63,8 @@ prepareSimplify defLoc proto l =
     simplify = \case
       LI.CSS {..} -> CSS {..}
       LI.XPath {..} -> XPath {..}
-      LI.Role {..} -> Role {..}
+      LI.Role {role, name} -> cases of
+         
       LI.InnerText {..} -> InnerText {..}
       LI.BiDiContext {..} -> BiDiContext {..}
       LI.PostFilter pf -> PostFilter pf

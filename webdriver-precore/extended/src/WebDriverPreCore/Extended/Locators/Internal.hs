@@ -8,10 +8,10 @@ import Data.List.NonEmpty (NonEmpty (..), groupBy, sortBy, toList)
 import Data.Maybe (fromJust)
 import Data.Text (Text, intercalate, pack, splitOn, toLower, unpack)
 import Data.Text qualified as T
+import Data.Word (Word8)
 import Utils (txt)
 import WebDriverPreCore.Extended.BiDi.Base.Protocol (BrowsingContext, JSUInt, NodeProperties)
 import Prelude
-
 
 data MatchFlags = MkMatchFlags
   { ignoreCase :: Bool,
@@ -47,7 +47,7 @@ data Locator
       { value :: Text,
         matchType :: MatchType,
         caseSesnsitivity :: CaseSensitivity,
-        maxDepth :: Maybe JSUInt
+        maxDepth :: Maybe Word8
       }
   | -- exclusive
     -- browsingContextId -> elementId ie get the frame that belongs to the browsing context
@@ -62,7 +62,8 @@ data Locator
   deriving
     ( -- | WithOptions {base :: Locator, options :: [LocatorDirectives]}
       Show,
-      Eq
+      Eq,
+      Ord
     )
 
 data PostFilter
@@ -94,23 +95,23 @@ data PostFilter
 
 instance Show PostFilter where
   show :: PostFilter -> String
-  show = \case
-    BiDiPostFilter desc _ -> "BiDiPostFilter: " <> unpack desc
-    HttpPostFilter desc _ -> "HttpPostFilter: " <> unpack desc
-    JSPostFilter desc _ -> "JSPostFilter: " <> unpack desc
-    ValuePostFilter desc _ _ _ -> "ValuePostFilter: " <> unpack desc
-    ValueFuncPostFilter desc _ -> "ValueFuncPostFilter: " <> unpack desc
+  show p =
+    prefix <> unpack p.description
+    where
+      prefix = case p of
+        BiDiPostFilter {} -> "BiDiPostFilter: "
+        HttpPostFilter {} -> "HttpPostFilter: "
+        JSPostFilter {} -> "JSPostFilter: "
+        ValuePostFilter {} -> "ValuePostFilter: "
+        ValueFuncPostFilter {} -> "ValueFuncPostFilter: "
 
 instance Eq PostFilter where
   (==) :: PostFilter -> PostFilter -> Bool
-  (==) = \cases
-    (BiDiPostFilter desc1 _) (BiDiPostFilter desc2 _) -> desc1 == desc2
-    (HttpPostFilter desc1 _) (HttpPostFilter desc2 _) -> desc1 == desc2
-    (JSPostFilter desc1 _) (JSPostFilter desc2 _) -> desc1 == desc2
-    (ValuePostFilter desc1 val1 mt1 cs1) (ValuePostFilter desc2 val2 mt2 cs2) ->
-      desc1 == desc2 && val1 == val2 && mt1 == mt2 && cs1 == cs2
-    (ValueFuncPostFilter desc1 _) (ValueFuncPostFilter desc2 _) -> desc1 == desc2
-    _ _ -> False
+  (==) p p1 = p.description == p1.description
+
+instance Ord PostFilter where
+  compare :: PostFilter -> PostFilter -> Ordering
+  compare p p1 = compare p.description p1.description
 
 -- | ARIA roles from https://www.w3.org/TR/wai-aria-1.2/#role_definitions
 data AriaRole
@@ -150,9 +151,9 @@ data AriaRole
   | Textbox
   deriving (Show, Eq, Ord, Enum, Bounded)
 
-data MatchType = Full | Starts | Partial | Wildcard deriving (Show, Eq)
+data MatchType = Full | Starts | Partial | Wildcard deriving (Show, Eq, Ord)
 
-data CaseSensitivity = CaseSensitive | CaseInsensitive deriving (Show, Eq)
+data CaseSensitivity = CaseSensitive | CaseInsensitive deriving (Show, Eq, Ord)
 
 displayAriaRole :: AriaRole -> Text
 displayAriaRole = toLower . pack . show
@@ -217,8 +218,7 @@ implicitRoleXPath =
     Term -> "dt"
     Textbox -> "input[not(@type) or @type='text' or @type='email' or @type='tel' or @type='url' or @type='search'] or self::textarea"
 
-
-innerTextToXPath :: Text -> CaseSensitivity -> MatchType -> Maybe JSUInt -> Text
+innerTextToXPath :: Text -> CaseSensitivity -> MatchType -> Maybe Word8 -> Text
 innerTextToXPath val cs matchType mMaxDepth =
   "//*" <> depthPred <> "[" <> hiddenPred <> " and " <> textPred <> "]"
   where
@@ -271,19 +271,18 @@ innerTextToXPath val cs matchType mMaxDepth =
 
 data Protocol = HTTP | BiDi deriving (Show, Eq)
 
-data InvalidLocator = InvalidLocator Text deriving (Show, Eq, Ord)
+data InvalidLocator = MkInvalidLocator {loc :: Locator, description :: Text} deriving (Show, Eq, Ord)
 
 instance Exception InvalidLocator
 
-prepare :: (Text -> Locator) -> Protocol ->  Locator -> Either InvalidLocator Locator
-prepare defLoc proto = 
-   toEither . sortGroupChildLocs defLoc proto . flattenLoc
-   where 
+prepare :: (Text -> Locator) -> Protocol -> Locator -> Either InvalidLocator Locator
+prepare defLoc proto =
+  toEither . sortGroupChildLocs defLoc proto . flattenLoc
+  where
     toEither :: Locator -> Either InvalidLocator Locator
     toEither l = case classify defLoc proto l of
       Invalid err -> Left err
       _ -> Right l
-      
 
 data Classification = IsXPath | IsCSS | IsBiDi | Invalid InvalidLocator | IsMixed deriving (Show, Eq, Ord)
 
@@ -313,11 +312,11 @@ classify defLoc proto =
     Class {} -> IsXPath
     Attribute {} -> IsXPath
     Tag {} -> IsXPath
-    Default {value} ->
+    d@Default {value} ->
       let nxtLoc = defLoc value
           nestedDefault = hasDefault nxtLoc
        in if nestedDefault
-            then Invalid $ InvalidLocator "Invalid Default locator - Default locator cannot resolve to another Default"
+            then Invalid $ MkInvalidLocator d "Invalid Default locator - Default locator cannot resolve to another Default"
             else classifyNxt nxtLoc
     Role {} ->
       case proto of
@@ -327,10 +326,10 @@ classify defLoc proto =
       case proto of
         BiDi -> IsBiDi
         HTTP -> IsMixed -- requires double shot Xpath + post filter
-    BiDiContext {} ->
+    c@BiDiContext {} ->
       case proto of
         BiDi -> IsBiDi
-        HTTP -> Invalid $ InvalidLocator "BiDiContext locator cannot be used with HTTP protocol"
+        HTTP -> Invalid $ MkInvalidLocator c "BiDiContext locator cannot be used with HTTP protocol"
     Parent {parent, child} ->
       mergeClassification (classifyNxt parent) (classifyNxt child)
     All {elms} -> clasifyElms elms

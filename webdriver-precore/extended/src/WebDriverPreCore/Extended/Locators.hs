@@ -10,6 +10,7 @@ module WebDriverPreCore.Extended.Locators
     -- * Smart Constructors
     css,
     xpath,
+    defaultId,
     --
     allElms,
     elmId,
@@ -204,6 +205,9 @@ css = CSS
 
 xpath :: Text -> Locator
 xpath = XPath
+
+defaultId :: Text -> Locator
+defaultId = Default
 
 allElms :: Locator
 allElms = AllElms

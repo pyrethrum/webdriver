@@ -9,26 +9,28 @@ module WebDriverPreCore.Extended.Locate
 where
 
 import Control.Exception (Exception, SomeException)
-import Data.Aeson as A (Result (..), Value, fromJSON, toJSON) 
+import Control.Monad (filterM)
+import Data.Aeson as A (Result (..), Value, fromJSON, toJSON)
 import Data.Function ((&))
 import Data.Text
 import GHC.Stack (HasCallStack)
 import WebDriverPreCore.Extended.HTTP.Base.Actions
-import WebDriverPreCore.Extended.HTTP.Base.Protocol (ElementId, Session)
+import WebDriverPreCore.Extended.HTTP.Base.Protocol as HTTPB (ElementId)
 import WebDriverPreCore.Extended.HTTP.Internal (Runner)
-import WebDriverPreCore.Extended.Locators.Internal (Locator, Protocol(..))
+import WebDriverPreCore.Extended.Locators.Internal (Locator, Protocol (..))
 import WebDriverPreCore.Extended.Locators.Internal qualified as LI
-import WebDriverPreCore.Extended.Protocol
-import WebDriverPreCore.Extended.SimplifiedLocator.Internal (SimplifiedLocator (..), prepareSimplify)
-import WebDriverPreCore.HTTP.Protocol (Command, Script (..), Selector)
+import WebDriverPreCore.Extended.Protocol (Session, WebDriverException)
+import WebDriverPreCore.Extended.SimplifiedLocator.Internal as L (SimplifiedLocator (..), prepareSimplify)
+import WebDriverPreCore.HTTP.Protocol as HTTPP (Command, Script (..), Selector (..))
 import Prelude as P
+import Data.Maybe (fromMaybe)
 
 data LocateException
   = AmbiguousLocateResult
       { description :: Text,
         locator :: Locator
       }
-  | NoElementFound
+  | ElementNotFound
       { description :: Text,
         locator :: Locator
       }
@@ -69,39 +71,23 @@ locateHttp ::
   (forall b. Command b -> m b) ->
   -- | default locator
   (Text -> Locator) ->
-  -- | session
-  Session ->
   -- | cardinality
   Cardinality ->
   -- | locate ops
   LocateOps ->
+  -- | session
+  Session ->
   -- | locator
   Locator ->
   m ElementId
-locateHttp throw catch runner defLoc ses cardinality MkLocateOps {displayedCheck} loc =
+locateHttp throw catch runner defLoc cardinality MkLocateOps {displayedCheck} ses loc =
   preparedLoc
     & either
       (throw . InvalidLocator)
       \loc -> undefined
   where
-    -- do
-    -- case cardinality of
-    --   Unique -> findElm loc
-    --   First -> findElm loc
-    --   Many ->
-    --     findElms loc >>= \case
-    --       Left err -> pure $ Left err
-    --       Right [] -> pure $ Left $ WebDriverException $ toException $ userError "Expected at least one element, but found none."
-    --       Right (x : xs) -> case cardinality of
-    --         Unique -> undefined
-    --         -- if null xs
-    --         --   then pure $ Right x
-    --         --   else pure $ Left $ AmbiguousLocateResult $ "Expected exactly one element, but found " <> pack (show (1 + length xs)) <> "."
-    --         First -> pure $ Right x
-    --         Many -> pure $ Right x -- TODO: return all elements, not just the first one
-
     preparedLoc = prepareSimplify defLoc HTTP loc
-
+  
     runCommand :: forall a. ((Command a -> m a) -> Session -> Selector -> m a) -> Selector -> m a
     runCommand f sel =
       catch
@@ -114,34 +100,64 @@ locateHttp throw catch runner defLoc ses cardinality MkLocateOps {displayedCheck
     findElms :: Selector -> m [ElementId]
     findElms = runCommand findElements
 
-    getSingleton :: Selector -> m ElementId
-    getSingleton sel =
-      case cardinality of
-        Unique -> do
-          elms <- findElms sel
+    filterDisplayedIf :: DisplayedCheck -> [ElementId] -> m [ElementId]
+    filterDisplayedIf dc elms =
+      if dc == displayedCheck
+        then filterM (isDisplayedHttp throw catch runner ses) elms
+        else pure elms
+
+    locateAll :: Selector -> m [ElementId]
+    locateAll s = findElms s >>= filterDisplayedIf Always
+
+    locate :: Bool -> Selector -> m ElementId
+    locate unique sel =
+      if unique
+        then do
+          elms <- locateAll sel
           case elms of
-            [] -> throw $ NoElementFound { description = "Expected exactly one element, but found none.", locator = loc }
+            [] -> throw $ ElementNotFound {description = "Expected exactly one element, but found none.", locator = loc}
             [x] -> pure x
-            xs -> throw $ AmbiguousLocateResult { description = "Expected exactly one element, but found: " <> pack (show (P.length xs)) <> ".", locator = loc }
-        -- findElm sel >>= \eid -> do
-        --   -- check if there are more elements
-        --   findElms sel >>= \case
-        --     Left err -> throw err
-        --     Right [] -> throw $ NoElementFound
-        --     Right (x : xs) ->
-        --       if null xs
-        --         then pure eid
-        --         else throw $ AmbiguousLocateResult $ "Expected exactly one element, but found " <> pack (show (1 + length xs)) <> "."
-        First -> undefined -- findElm sel
-        Many -> undefined -- findElms sel
+            xs -> do
+              elmsRechecked <- filterDisplayedIf DisambiguateUnique xs
+              case elmsRechecked of
+                [] -> throw $ ElementNotFound {description = "Expected exactly one element, but found none (after filtering for displayed).", locator = loc}
+                [x] -> pure x
+                xs' -> throw $ AmbiguousLocateResult {description = "Expected exactly one element, but found: " <> pack (show (P.length xs')) <> ".", locator = loc}
+        else
+          findElm sel
+
+    locateSingleLoc = locate (cardinality == Unique)
+
+    toSelector :: SimplifiedLocator -> m Selector
+    toSelector = \case
+      L.CSS {value} -> pure $ HTTPP.CSS value
+      L.XPath {value} -> pure $ HTTPP.XPath value
+      r@Role {role, name} -> maybe (throw $ InvalidLocator $  LI.MkInvalidLocator r "Invalid Role locator") (pure . HTTPP.XPath) (LI.roleToXPath role name)
+      i@InnerText {} -> pure . HTTPP.XPath $ fromMaybe (throw $ InvalidLocator i "Invalid InnerText locator") (LI.innerTextToXPath i)
+      _ -> error "toSelector: only CSS, XPath, Role and InnerText locators can be converted to Selector for HTTP WebDriver"
 
     httpLocate :: SimplifiedLocator -> m [ElementId]
     httpLocate = \case
-      CSS {} -> undefined
-      XPath {} -> undefined
+      L.CSS {} -> undefined
+      L.XPath {} -> undefined
       Role {} -> undefined
       InnerText {} -> undefined
-      BiDiContext {} -> undefined
+      -- will never happen - already filtered out by prepareSimplify
+      BiDiContext {} -> error "BiDiContext locators are not supported in HTTP WebDriver"
+      Parent {} -> undefined
+      All {} -> undefined
+      Any {} -> undefined
+      None {} -> undefined
+      PostFilter _ -> undefined
+
+    httpLocateMany :: SimplifiedLocator -> m [ElementId]
+    httpLocateMany = \case
+      L.CSS {} -> undefined
+      L.XPath {} -> undefined
+      Role {} -> undefined
+      InnerText {} -> undefined
+      -- will never happen - already filtered out by prepareSimplify
+      BiDiContext {} -> error "BiDiContext locators are not supported in HTTP WebDriver"
       Parent {} -> undefined
       All {} -> undefined
       Any {} -> undefined
