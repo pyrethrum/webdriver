@@ -274,16 +274,16 @@ valueFunc description  = PostFilter . ValueFuncPostFilter description
 ------- Role Constructors -------
 
 role' :: AriaRole -> Text -> Locator
-role' r = Role r
+role' r = Role . RoleFull r
 
 role :: AriaRole -> Text -> Locator
 role r = role' r
 
 roleType :: AriaRole -> Locator
-roleType r = RoleType r
+roleType = Role . RoleType
 
 roleName :: Text -> Locator
-roleName = RoleName
+roleName = Role . RoleName
 
 article :: Text -> Locator
 article = role Article
