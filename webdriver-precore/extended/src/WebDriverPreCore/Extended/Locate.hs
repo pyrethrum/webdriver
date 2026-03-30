@@ -9,16 +9,17 @@ module WebDriverPreCore.Extended.Locate
 where
 
 import Control.Exception (Exception, SomeException)
-import Control.Monad (filterM)
+import Control.Monad (filterM, (>=>))
 import Data.Aeson as A (Result (..), Value, fromJSON, toJSON)
 import Data.Function ((&))
+import Data.List qualified as LST
 import Data.Maybe (fromMaybe)
 import Data.Text
 import GHC.Stack (HasCallStack)
 import WebDriverPreCore.Extended.HTTP.Base.Actions
 import WebDriverPreCore.Extended.HTTP.Base.Protocol as HTTPB (ElementId)
 import WebDriverPreCore.Extended.HTTP.Internal (Runner)
-import WebDriverPreCore.Extended.Locators.Internal (Locator, Protocol (..), RoleLocator(..))
+import WebDriverPreCore.Extended.Locators.Internal (Locator, Protocol (..), RoleLocator (..))
 import WebDriverPreCore.Extended.Locators.Internal qualified as LI
 import WebDriverPreCore.Extended.Protocol (Session, WebDriverException)
 import WebDriverPreCore.Extended.SimplifiedLocator.Internal as L (SimplifiedLocator (..), prepareSimplify)
@@ -55,28 +56,30 @@ data LocateOps = MkLocateOps
   }
   deriving (Show, Eq)
 
-data Special = PlainRslt | RoleRslt RoleLocator | InnerTextRslt Text deriving (Show, Eq, Ord)
-data LocateResult = SingleResult
-  { found :: [ElementId],
-    special :: Special
-  } | 
-  OrResult
-  { found :: [ElementId],
-    special :: Special,
-    subResults :: [LocateResult]
-  } |
-  AndResult
-  { found :: [ElementId],
-    special :: Special,
-    subResults :: [LocateResult]
-  } |
-  NotResult
-  { found :: [ElementId],
-    special :: Special,
-    subResult :: LocateResult
+data LocatorSource
+  = PlainSource
+  | RoleSource RoleLocator
+  | InnerTextSource Text
+  deriving (Show, Eq, Ord)
+
+data SingleResult = MkSingleResult
+  { source :: LocatorSource,
+    elms :: [ElementId]
   }
   deriving (Show, Eq)
 
+data LocateResult
+  = SingleResult SingleResult
+  | OrResult
+      { found :: [LocateResult]
+      }
+  | AndResult
+      { found :: [LocateResult]
+      }
+  | NotResult
+      { found :: [LocateResult]
+      }
+  deriving (Show, Eq)
 
 -- TODO
 -- 1. get unretried http working with tests
@@ -88,7 +91,7 @@ data LocateResult = SingleResult
 --   2.2 inner text edge cases (ess edgecases md)
 -- 3. fix edge cases - get tests passing
 -- 4. retries / wait Http
--- 5. retry tests 
+-- 5. retry tests
 -- 6. BiDi - repeat all of the above for BiDi, but with the much simpler locateMany as the basis, and no need for retries as BiDi supports waiting for conditions natively via the maxNodeCount parameter.
 
 -- browsingContextLocateNodes :: forall m. Runner m LocateNodesResult -> LocateNodes -> m LocateNodesResult
@@ -116,13 +119,13 @@ locateHttp ::
   -- | locator
   Locator ->
   m ElementId
-locateHttp throw catch runner defLoc cardinality MkLocateOps {displayedCheck} ses loc =
+locateHttp throw catch runner defLoc cardinality MkLocateOps {displayedCheck} ses locator =
   preparedLoc
     & either
       (throw . InvalidLocator)
       \loc -> undefined
   where
-    preparedLoc = prepareSimplify defLoc HTTP loc
+    preparedLoc = prepareSimplify defLoc HTTP locator
 
     runCommand :: forall a. ((Command a -> m a) -> Session -> Selector -> m a) -> Selector -> m a
     runCommand f sel =
@@ -145,24 +148,51 @@ locateHttp throw catch runner defLoc cardinality MkLocateOps {displayedCheck} se
     locateAll :: Selector -> m [ElementId]
     locateAll s = findElms s >>= filterDisplayedIf Always
 
-    locate :: Bool -> Selector -> m ElementId
-    locate unique sel =
-      if unique
-        then do
-          elms <- locateAll sel
-          case elms of
-            [] -> throw $ ElementNotFound {description = "Expected exactly one element, but found none.", locator = loc}
-            [x] -> pure x
-            xs -> do
-              elmsRechecked <- filterDisplayedIf DisambiguateUnique xs
-              case elmsRechecked of
-                [] -> throw $ ElementNotFound {description = "Expected exactly one element, but found none (after filtering for displayed).", locator = loc}
-                [x] -> pure x
-                xs' -> throw $ AmbiguousLocateResult {description = "Expected exactly one element, but found: " <> pack (show (P.length xs')) <> ".", locator = loc}
-        else
-          findElm sel
+    locateSingleUnchecked :: Bool -> LocatorSource -> Selector -> m SingleResult
+    locateSingleUnchecked checkUnique ls sel =
+      MkSingleResult ls
+        <$> ( if checkUnique
+                -- checkUnique - get all results and check for uniqueness ourselves
+                then locateAll
+                -- if non-unique just lean lean on webdriver - brings first result back
+                else fmap LST.singleton . findElm
+            )
+          sel
 
-    locateSingleton = locate (cardinality == Unique)
+    checkSingleResult :: SingleResult -> m SingleResult
+    checkSingleResult sr@MkSingleResult {source, elms} = do
+      case elms of
+        [] -> throw $ ElementNotFound {description = "Expected exactly one element, but found none.", locator}
+        [x] -> pure sr
+        xs -> do
+          elmsRechecked <- filterDisplayedIf DisambiguateUnique xs
+          case elmsRechecked of
+            [] -> throw $ ElementNotFound {description = "Expected exactly one element, but found none (after filtering for displayed).", locator}
+            [x] -> pure $ MkSingleResult source elmsRechecked
+            xs' -> throw $ AmbiguousLocateResult {description = "Expected exactly one element, but found: " <> pack (show (P.length xs')) <> ".", locator}
+
+    locateSingleChecked :: Bool -> LocatorSource -> Selector -> m SingleResult
+    locateSingleChecked checkUnique ls =
+      locateSingleUnchecked checkUnique ls >=> checkSingleResult
+
+    -- locate :: Bool -> Selector -> m ElementId
+    -- locate unique sel =
+    --   if unique
+    --     then do
+    --       elms <- locateAll sel
+    --       case elms of
+    --         [] -> throw $ ElementNotFound {description = "Expected exactly one element, but found none.", locator = locator}
+    --         [x] -> pure x
+    --         xs -> do
+    --           elmsRechecked <- filterDisplayedIf DisambiguateUnique xs
+    --           case elmsRechecked of
+    --             [] -> throw $ ElementNotFound {description = "Expected exactly one element, but found none (after filtering for displayed).", locator = locator}
+    --             [x] -> pure x
+    --             xs' -> throw $ AmbiguousLocateResult {description = "Expected exactly one element, but found: " <> pack (show (P.length xs')) <> ".", locator = locator}
+    --     else
+    --       findElm sel
+
+    -- locateSingleton = locate (cardinality == Unique)
 
     toSelector :: SimplifiedLocator -> Selector
     toSelector = \case
@@ -174,10 +204,10 @@ locateHttp throw catch runner defLoc cardinality MkLocateOps {displayedCheck} se
 
     httpLocate :: SimplifiedLocator -> m LocateResult
     httpLocate sl = case sl of
-      L.CSS {} -> locateUnnested PlainRslt
-      L.XPath {} -> locateUnnested PlainRslt
+      L.CSS {} -> locateUnnested PlainSource
+      L.XPath {} -> locateUnnested PlainSource
       -- TODO: extended inner text rules
-      Role {role} -> locateUnnested $ RoleRslt role
+      Role {role} -> locateUnnested $ RoleSource role
       InnerText {value} -> locateUnnested $ InnerTextRslt value
       -- will never happen - already filtered out by prepareSimplify
       BiDiContext {} -> error "BiDiContext locators are not supported in HTTP WebDriver"
@@ -186,8 +216,8 @@ locateHttp throw catch runner defLoc cardinality MkLocateOps {displayedCheck} se
       Any {} -> undefined
       None {} -> undefined
       PostFilter {} -> undefined
-     where 
-      locateUnnested s = MkLocateResult . pure <$> locate (cardinality == Unique) (toSelector sl) <*> pure s
+      where
+        locateUnnested ls = SingleResult <$> locateSingleChecked (cardinality == Unique) ls (toSelector sl) 
 
     -- !!!!!!!! compound locates and retries  - need a pointer back to the orional locator so ca retry for
     -- special cases such as role inner test and displayed when ambiguous.
