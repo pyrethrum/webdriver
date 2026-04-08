@@ -22,7 +22,7 @@ import WebDriverPreCore.Extended.HTTP.Internal (Runner)
 import WebDriverPreCore.Extended.Locators.Internal (Locator, Protocol (..), RoleLocator (..))
 import WebDriverPreCore.Extended.Locators.Internal qualified as LI
 import WebDriverPreCore.Extended.Protocol (Session, WebDriverException)
-import WebDriverPreCore.Extended.SimplifiedLocator.Internal as L (SimplifiedLocator (..), prepareSimplify)
+import WebDriverPreCore.Extended.ReducedLocator.Internal as L (ReducedLocator (..), prepareSimplify)
 import WebDriverPreCore.HTTP.Protocol as HTTPP (Command, Script (..), Selector (..))
 import Prelude as P
 
@@ -70,25 +70,45 @@ data SingleResult = MkSingleResult
 
 data LocateResult
   = SingleResult SingleResult
-  | OrResult
+  | ParentResult
       { found :: [LocateResult]
       }
   | AndResult
       { found :: [LocateResult]
       }
+  | OrResult
+      { found :: [LocateResult]
+      }
   | NotResult
       { found :: [LocateResult]
       }
+  | PostFilterResult
+      { predicate :: LI.Predicate,
+        found :: [LocateResult]
+      }
   deriving (Show, Eq)
+
+locateNested :: ReducedLocator -> LocateResult
+locateNested = \case
+  Parent {parent, child} -> ParentResult {found = [locateNested child]}
+  All {elms} -> AndResult {found = fmap locateNested elms}
+  Any {elms} -> OrResult {found = fmap locateNested elms}
+  None {elms} -> NotResult {found = fmap locateNested elms}
+  PostFilter {predicate, locator} -> PostFilterResult {predicate, found = [locateNested locator]}
+  -- will never happen - already filtered out by prepareSimplify
+  BiDiContext {} -> error "BiDiContext locators are not supported in HTTP WebDriver"
+  -- sin
+
 
 -- TODO
 -- 1. get unretried http working with tests
 --   1.1 simple locators (css, xpath, role, inner text)
 --   1.2 compound locators (parent, all, any, none)
 --   1.3 displayed checks (disambiguate unique and always)
+--   1.4 visible text
 -- 2. failing tests
 --   2.1 role edge cases (ess edgecases md)
---   2.2 inner text edge cases (ess edgecases md)
+--   2.2 visible  text edge cases (ess edgecases md)
 -- 3. fix edge cases - get tests passing
 -- 4. retries / wait Http
 -- 5. retry tests
@@ -194,7 +214,7 @@ locateHttp throw catch runner defLoc cardinality MkLocateOps {displayedCheck} se
 
     -- locateSingleton = locate (cardinality == Unique)
 
-    toSelector :: SimplifiedLocator -> Selector
+    toSelector :: ReducedLocator -> Selector
     toSelector = \case
       L.CSS {value} -> HTTPP.CSS value
       L.XPath {value} -> HTTPP.XPath value
@@ -202,13 +222,13 @@ locateHttp throw catch runner defLoc cardinality MkLocateOps {displayedCheck} se
       InnerText {value, matchType, caseSesnsitivity, maxDepth} -> HTTPP.XPath $ LI.innerTextToXPath value caseSesnsitivity matchType maxDepth
       _ -> error "toSelector: only CSS, XPath, Role and InnerText locators can be converted to Selector for HTTP WebDriver"
 
-    httpLocate :: SimplifiedLocator -> m LocateResult
+    httpLocate :: ReducedLocator -> m LocateResult
     httpLocate sl = case sl of
       L.CSS {} -> locateUnnested PlainSource
       L.XPath {} -> locateUnnested PlainSource
       -- TODO: extended inner text rules
       Role {role} -> locateUnnested $ RoleSource role
-      InnerText {value} -> locateUnnested $ InnerTextRslt value
+      InnerText {value} -> locateUnnested $ InnerTextSource value
       -- will never happen - already filtered out by prepareSimplify
       BiDiContext {} -> error "BiDiContext locators are not supported in HTTP WebDriver"
       Parent {} -> undefined
@@ -217,11 +237,12 @@ locateHttp throw catch runner defLoc cardinality MkLocateOps {displayedCheck} se
       None {} -> undefined
       PostFilter {} -> undefined
       where
-        locateUnnested ls = SingleResult <$> locateSingleChecked (cardinality == Unique) ls (toSelector sl) 
+        locateUnnested ls = SingleResult <$> locateSingleChecked (cardinality == Unique) ls (toSelector sl)
+        nested = locateNested ls
 
     -- !!!!!!!! compound locates and retries  - need a pointer back to the orional locator so ca retry for
     -- special cases such as role inner test and displayed when ambiguous.
-    httpLocateMany :: SimplifiedLocator -> m [ElementId]
+    httpLocateMany :: ReducedLocator -> m [ElementId]
     httpLocateMany = \case
       L.CSS {} -> undefined
       L.XPath {} -> undefined
@@ -307,6 +328,6 @@ isDisplayedHttp throw catch runner ses eid = do
     A.Success b -> pure b
     A.Error msg -> error $ "isDisplayedHttp: isDisplayed script returned unexpected value: " <> msg
 
-locateHttpBiDi = undefined
+locateBiDi = undefined
 
 --  use all findElements but limit to 2 results (not supported in standard HTTP WebDriver, but available in BiDi via maxNodeCount).

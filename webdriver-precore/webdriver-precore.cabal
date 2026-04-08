@@ -357,7 +357,7 @@ library webdriver-precore-extended
       WebDriverPreCore.Extended.Protocol
       --
       WebDriverPreCore.Extended.Locators.Internal
-      WebDriverPreCore.Extended.SimplifiedLocator.Internal
+      WebDriverPreCore.Extended.ReducedLocator.Internal
   other-modules:
       WebDriverPreCore.Extended.Locate
       WebDriverPreCore.Extended.HTTP.Internal

@@ -1,5 +1,5 @@
-module WebDriverPreCore.Extended.SimplifiedLocator.Internal
-  ( SimplifiedLocator (..),
+module WebDriverPreCore.Extended.ReducedLocator.Internal
+  ( ReducedLocator (..),
     isXPath,
     prepareSimplify,
   )
@@ -14,49 +14,65 @@ import WebDriverPreCore.Extended.BiDi.Base.Protocol (BrowsingContext, JSUInt)
 import WebDriverPreCore.Extended.Locators.Internal qualified as LI
 import Prelude
 
--- | Simplified/resolved form of 'LI.Locator', where leaf locators expressible
---   as XPath have been folded in and 'LI.Default' has been resolved.
---   Produced by 'prepareSimplify'.
-data SimplifiedLocator
+data CommonLocator a
   = -- universal
     CSS {value :: Text}
   | XPath {value :: Text}
-  | -- double shot / difficult
-    Role {role :: LI.RoleLocator}
+  -- bidi native locators that can be approximated in HTTP
+  | Shimmed {shimmed :: ShimmedLocator}
+  | -- combinators
+    Parent {parent :: a, child :: a}
+  | All {elms :: NonEmpty a}
+  | Any {elms :: NonEmpty a}
+  | None {elms :: NonEmpty a}
+  | PostFilter {predicate :: LI.Predicate, locator :: a}
+  deriving
+    ( Show,
+      Eq
+    )
+
+data ShimmedLocator
+  = Role {role :: LI.RoleLocator}
   | InnerText
       { value :: Text,
         matchType :: LI.MatchType,
         caseSesnsitivity :: LI.CaseSensitivity,
         maxDepth :: Maybe Word8
       }
-  | -- exclusive
-    -- browsingContextId -> elementId ie get the frame that belongs to the browsing context
-    BiDiContext {context :: BrowsingContext}
-  | -- combinators
-    Parent {parent :: SimplifiedLocator, child :: SimplifiedLocator}
-  | All {elms :: NonEmpty SimplifiedLocator}
-  | Any {elms :: NonEmpty SimplifiedLocator}
-  | None {elms :: NonEmpty SimplifiedLocator}
-  | --- PostFilter
-    PostFilter
-      { predicate :: LI.Predicate,
-        locator :: SimplifiedLocator
-      }
   deriving
     ( Show,
       Eq
     )
 
-isXPath :: SimplifiedLocator -> Bool
+data BiDiOnlyLocator
+  = BiDiContext {context :: BrowsingContext}
+  deriving
+    ( Show,
+      Eq
+    )
+
+-- | Simplified/resolved form of 'LI.Locator', where leaf locators expressible
+--   as XPath have been folded in and 'LI.Default' has been resolved.
+--   Produced by 'prepareSimplify'.
+data ReducedLocator
+  = Common (CommonLocator ReducedLocator)
+  | BiDiOnly BiDiOnlyLocator
+ 
+  deriving
+    ( Show,
+      Eq
+    )
+
+isXPath :: ReducedLocator -> Bool
 isXPath = \case
-  XPath _ -> True
+  Common XPath {} -> True
   _ -> False
 
-prepareSimplify :: (Text -> LI.Locator) -> LI.Protocol -> LI.Locator -> Either LI.InvalidLocator SimplifiedLocator
+prepareSimplify :: (Text -> LI.Locator) -> LI.Protocol -> LI.Locator -> Either LI.InvalidLocator ReducedLocator
 prepareSimplify defLoc proto l =
   simplify <$> xPathSub defLoc proto l
   where
-    simplify :: LI.Locator -> SimplifiedLocator
+    simplify :: LI.Locator -> ReducedLocator
     simplify = \case
       LI.CSS {..} -> CSS {..}
       LI.XPath {..} -> XPath {..}
