@@ -22,7 +22,7 @@ import WebDriverPreCore.Extended.HTTP.Internal (Runner)
 import WebDriverPreCore.Extended.Locators.Internal (Locator, Protocol (..), RoleLocator (..))
 import WebDriverPreCore.Extended.Locators.Internal qualified as LI
 import WebDriverPreCore.Extended.Protocol (Session, WebDriverException)
-import WebDriverPreCore.Extended.ReducedLocator.Internal as L (ReducedLocator (..), prepareSimplify)
+import WebDriverPreCore.Extended.ReducedLocator.Internal as L (ReducedLocator (..), prepareSimplify, ReducedHttpLocator(..))
 import WebDriverPreCore.HTTP.Protocol as HTTPP (Command, Script (..), Selector (..))
 import Prelude as P
 
@@ -222,7 +222,7 @@ locateHttp throw catch runner defLoc cardinality MkLocateOps {displayedCheck} se
       InnerText {value, matchType, caseSesnsitivity, maxDepth} -> HTTPP.XPath $ LI.innerTextToXPath value caseSesnsitivity matchType maxDepth
       _ -> error "toSelector: only CSS, XPath, Role and InnerText locators can be converted to Selector for HTTP WebDriver"
 
-    httpLocate :: ReducedLocator -> m LocateResult
+    httpLocate :: ReducedHttpLocator -> m LocateResult
     httpLocate sl = case sl of
       L.CSS {} -> locateUnnested PlainSource
       L.XPath {} -> locateUnnested PlainSource

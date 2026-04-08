@@ -1,6 +1,8 @@
 module WebDriverPreCore.Extended.ReducedLocator.Internal
   ( ReducedLocator (..),
+    ReducedHttpLocator (..),
     isXPath,
+    toHttpLocator,
     prepareSimplify,
   )
 where
@@ -18,14 +20,24 @@ data CommonLocator a
   = -- universal
     CSS {value :: Text}
   | XPath {value :: Text}
-  -- bidi native locators that can be approximated in HTTP
-  | Shimmed {shimmed :: ShimmedLocator}
-  | -- combinators
-    Parent {parent :: a, child :: a}
+  | -- bidi native locators that can be approximated in HTTP
+    Shimmed {shimmed :: ShimmedLocator}
+  deriving
+    ( Show,
+      Eq
+    )
+
+data PostFilterLocator a = PostFilter {predicate :: LI.Predicate, locator :: a}
+  deriving
+    ( Show,
+      Eq
+    )
+
+data CombintorLocator a
+  = Parent {parent :: a, child :: a}
   | All {elms :: NonEmpty a}
   | Any {elms :: NonEmpty a}
   | None {elms :: NonEmpty a}
-  | PostFilter {predicate :: LI.Predicate, locator :: a}
   deriving
     ( Show,
       Eq
@@ -56,8 +68,21 @@ data BiDiOnlyLocator
 --   Produced by 'prepareSimplify'.
 data ReducedLocator
   = Common (CommonLocator ReducedLocator)
+  | PostFilterLocator (PostFilterLocator ReducedLocator)
+  | Combintor (CombintorLocator ReducedLocator)
   | BiDiOnly BiDiOnlyLocator
- 
+  deriving
+    ( Show,
+      Eq
+    )
+
+-- | Simplified/resolved form of 'LI.Locator', where leaf locators expressible
+--   as XPath have been folded in and 'LI.Default' has been resolved.
+--   Produced by 'prepareSimplify'.
+data ReducedHttpLocator
+  = CommonHttp (CommonLocator ReducedHttpLocator)
+  | PostFilterHttpLocator (PostFilterLocator ReducedHttpLocator)
+  | CombintorHttp (CombintorLocator ReducedHttpLocator)
   deriving
     ( Show,
       Eq
@@ -68,22 +93,45 @@ isXPath = \case
   Common XPath {} -> True
   _ -> False
 
+toHttpLocator :: ReducedLocator -> Either LI.InvalidLocator ReducedHttpLocator
+toHttpLocator = \case
+  Common cl ->
+    Right . CommonHttp $ case cl of
+      CSS {..} -> CSS {..}
+      XPath {..} -> XPath {..}
+      Shimmed {..} -> Shimmed {..}
+  PostFilterLocator (PostFilter {predicate, locator}) ->
+    PostFilterHttpLocator . PostFilter predicate <$> toHttpLocator locator
+  Combintor cl ->
+    CombintorHttp <$> case cl of
+      Parent {parent, child} -> Parent <$> toHttpLocator parent <*> toHttpLocator child
+      ccl -> case ccl of
+        All {} -> nested All
+        Any {} -> nested Any
+        None {} -> nested None
+      where 
+        nested ctr = ctr <$> traverse toHttpLocator cl.elms
+
+  BiDiOnly (BiDiContext {context}) ->
+    Left $ LI.MkInvalidLocator (LI.BiDiContext {context}) "BiDi-only locator cannot be used with HTTP protocol"
+
+
 prepareSimplify :: (Text -> LI.Locator) -> LI.Protocol -> LI.Locator -> Either LI.InvalidLocator ReducedLocator
 prepareSimplify defLoc proto l =
   simplify <$> xPathSub defLoc proto l
   where
     simplify :: LI.Locator -> ReducedLocator
     simplify = \case
-      LI.CSS {..} -> CSS {..}
-      LI.XPath {..} -> XPath {..}
-      LI.Role {..} -> Role {..}
-      LI.InnerText {..} -> InnerText {..}
-      LI.BiDiContext {..} -> BiDiContext {..}
-      LI.PostFilter {predicate, locator} -> PostFilter {predicate, locator = simplify locator}
-      LI.Parent {parent, child} -> Parent {parent = simplify parent, child = simplify child}
-      LI.All {elms} -> All $ simplify <$> elms
-      LI.Any {elms} -> Any $ simplify <$> elms
-      LI.None {elms} -> None $ simplify <$> elms
+      LI.CSS {..} -> Common CSS {..}
+      LI.XPath {..} -> Common XPath {..}
+      LI.Role {..} -> Common . Shimmed $ Role {..}
+      LI.InnerText {..} -> Common . Shimmed $ InnerText {..}
+      LI.BiDiContext {..} -> BiDiOnly BiDiContext {..}
+      LI.PostFilter {predicate, locator} -> PostFilterLocator $ PostFilter {predicate, locator = simplify locator}
+      LI.Parent {parent, child} -> Combintor $ Parent {parent = simplify parent, child = simplify child}
+      LI.All {elms} -> Combintor . All $ simplify <$> elms
+      LI.Any {elms} -> Combintor . Any $ simplify <$> elms
+      LI.None {elms} -> Combintor . None $ simplify <$> elms
       LI.AllElms -> shouldNotExistAfterXPathSub "AllElms"
       LI.ID {} -> shouldNotExistAfterXPathSub "ID"
       LI.Class {} -> shouldNotExistAfterXPathSub "Class"
