@@ -27,9 +27,9 @@ import WebDriverPreCore.Extended.Locators.Internal
     foldLocBottomUp,
     hasInvalidLoc,
     prepare,
-    sortGroupChildLocs,
+    sortGroupChildLocs, RoleName,
   )
-import WebDriverPreCore.Extended.SimplifiedLocator.Internal qualified as SL
+import WebDriverPreCore.Extended.ReducedLocator.Internal qualified as RL
 import Prelude hiding (filter, head, putStrLn)
 
 -- >>> _eval tests
@@ -271,8 +271,8 @@ mockLocated allElmsDefault = go
       Attribute {value = v} -> readBool v
       Tag {value = v} -> readBool v
       Default {value = v} -> readBool v
-      Role {name = Just v} -> readBool v
-      Role {name = Nothing} -> allElmsDefault
+      Role (RoleName v )-> readBool v
+      Role _ -> allElmsDefault
       InnerText {value = v} -> readBool v
       BiDiContext {context = MkBrowsingContext v} -> readBool v
       Predicate (JSPredicate v _) -> readBool v
@@ -349,7 +349,7 @@ httpLeavesBool val =
         Tag {value = b},
         Default {value = b},
         -- double shot / difficult
-        Role {role = Just Button, name = Just b},
+        Role $ RoleName b,
         InnerText
           { value = b,
             matchType = Full,
@@ -363,8 +363,7 @@ httpLeavesBool val =
 bidiOnlyLeavesBool :: Bool -> [Locator]
 bidiOnlyLeavesBool val =
   let b = pack $ show val
-   in [ 
-        -- browsingContextId -> elementId ie get the frame that belongs to the browsing context
+   in [ -- browsingContextId -> elementId ie get the frame that belongs to the browsing context
         BiDiContext {context = MkBrowsingContext b}
       ]
 
@@ -635,27 +634,31 @@ prop_classify_invalid_iff_any_invalid_node =
       _ -> False
 
 -- >>> _eval prop_simplification_merges_xpaths
+
 -- *** Exception: ExitSuccess
+
 prop_simplification_merges_xpaths :: TestTree
 prop_simplification_merges_xpaths =
   testPropertyWith genLocatorOptions "simplified Locs should merge adjacent XPaths" $ do
     proto <- gen genProtocol
     loc <- gen $ genLocator proto
-    let simpLoc = SL.prepareSimplify ID proto loc
+    let simpLoc = RL.prepareSimplify ID proto loc
     info $ "Original locator:\n" <> unpack (txt loc)
     info $ "prepared locator:\n" <> either show (unpack . txt) (prepare ID proto loc)
     info $ "Prepared simplified locator:\n" <> either show (unpack . txt) simpLoc
     F.assert $ satisfies ("prepareSimplify preserves mockLocated", either (const True) chkAllXPathsingleton) .$ ("loc", simpLoc)
   where
     chkAllXPathsingleton = \case
-      SL.All locs -> chkSublocs locs
-      SL.Any locs -> chkSublocs locs
-      SL.None locs -> chkSublocs locs
-      _ -> True -- non-list always pass
-      --
+      RL.Combintor c -> case c of
+        Parent {} -> True
+        RL.All {elms} -> chkSublocs elms
+        RL.Any {elms} -> chkSublocs elms
+        RL.None {elms} -> chkSublocs elms
+      _ -> True
+
     chkSublocs l =
       chkListXPathSingleton l
         && all chkAllXPathsingleton l
 
-    chkListXPathSingleton :: NonEmpty SL.SimplifiedLocator -> Bool
-    chkListXPathSingleton l = not $ (length (filter SL.isXPath l)) > 1
+    chkListXPathSingleton :: NonEmpty RL.ReducedLocator -> Bool
+    chkListXPathSingleton l = not $ (length (filter RL.isXPath l)) > 1

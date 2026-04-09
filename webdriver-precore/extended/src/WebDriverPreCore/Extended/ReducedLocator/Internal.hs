@@ -1,6 +1,11 @@
 module WebDriverPreCore.Extended.ReducedLocator.Internal
   ( ReducedLocator (..),
     ReducedHttpLocator (..),
+    CommonLocator (..),
+    ShimmedLocator (..),
+    CombintorLocator (..),
+    PostFilterLocator (..),
+    BiDiOnlyLocator (..),
     isXPath,
     toHttpLocator,
     prepareSimplify,
