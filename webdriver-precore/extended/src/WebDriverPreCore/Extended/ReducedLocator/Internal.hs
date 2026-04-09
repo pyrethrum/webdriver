@@ -16,7 +16,7 @@ import WebDriverPreCore.Extended.BiDi.Base.Protocol (BrowsingContext, JSUInt)
 import WebDriverPreCore.Extended.Locators.Internal qualified as LI
 import Prelude
 
-data CommonLocator a
+data CommonLocator 
   = -- universal
     CSS {value :: Text}
   | XPath {value :: Text}
@@ -67,7 +67,7 @@ data BiDiOnlyLocator
 --   as XPath have been folded in and 'LI.Default' has been resolved.
 --   Produced by 'prepareSimplify'.
 data ReducedLocator
-  = Common (CommonLocator ReducedLocator)
+  = Common CommonLocator 
   | PostFilterLocator (PostFilterLocator ReducedLocator)
   | Combintor (CombintorLocator ReducedLocator)
   | BiDiOnly BiDiOnlyLocator
@@ -80,7 +80,7 @@ data ReducedLocator
 --   as XPath have been folded in and 'LI.Default' has been resolved.
 --   Produced by 'prepareSimplify'.
 data ReducedHttpLocator
-  = CommonHttp (CommonLocator ReducedHttpLocator)
+  = CommonHttp CommonLocator
   | PostFilterHttpLocator (PostFilterLocator ReducedHttpLocator)
   | CombintorHttp (CombintorLocator ReducedHttpLocator)
   deriving
@@ -88,32 +88,29 @@ data ReducedHttpLocator
       Eq
     )
 
+toHttpLocator :: ReducedLocator -> Either LI.InvalidLocator ReducedHttpLocator
+toHttpLocator = \case
+  Common cl -> Right $ CommonHttp cl
+  PostFilterLocator (PostFilter {predicate, locator}) ->
+      PostFilterHttpLocator . PostFilter predicate <$> toHttpLocator locator
+  Combintor cl ->
+      CombintorHttp <$> case cl of
+        Parent {parent, child} -> Parent <$> toHttpLocator parent <*> toHttpLocator child
+        ccl -> case ccl of
+          All {} -> nested All
+          Any {} -> nested Any
+          None {} -> nested None
+        where 
+          nested ctr = ctr <$> traverse toHttpLocator cl.elms
+  BiDiOnly (BiDiContext {context}) ->
+    Left $ LI.MkInvalidLocator (LI.BiDiContext {context}) "BiDi-only locator cannot be used with HTTP protocol"
+
+
+
 isXPath :: ReducedLocator -> Bool
 isXPath = \case
   Common XPath {} -> True
   _ -> False
-
-toHttpLocator :: ReducedLocator -> Either LI.InvalidLocator ReducedHttpLocator
-toHttpLocator = \case
-  Common cl ->
-    Right . CommonHttp $ case cl of
-      CSS {..} -> CSS {..}
-      XPath {..} -> XPath {..}
-      Shimmed {..} -> Shimmed {..}
-  PostFilterLocator (PostFilter {predicate, locator}) ->
-    PostFilterHttpLocator . PostFilter predicate <$> toHttpLocator locator
-  Combintor cl ->
-    CombintorHttp <$> case cl of
-      Parent {parent, child} -> Parent <$> toHttpLocator parent <*> toHttpLocator child
-      ccl -> case ccl of
-        All {} -> nested All
-        Any {} -> nested Any
-        None {} -> nested None
-      where 
-        nested ctr = ctr <$> traverse toHttpLocator cl.elms
-
-  BiDiOnly (BiDiContext {context}) ->
-    Left $ LI.MkInvalidLocator (LI.BiDiContext {context}) "BiDi-only locator cannot be used with HTTP protocol"
 
 
 prepareSimplify :: (Text -> LI.Locator) -> LI.Protocol -> LI.Locator -> Either LI.InvalidLocator ReducedLocator

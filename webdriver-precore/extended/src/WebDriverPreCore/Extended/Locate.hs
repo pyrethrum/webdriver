@@ -145,7 +145,9 @@ locateHttp throw catch runner defLoc cardinality MkLocateOps {displayedCheck} se
       (throw . InvalidLocator)
       \loc -> undefined
   where
-    preparedLoc = prepareSimplify defLoc HTTP locator
+
+    preparedLoc :: Either LI.InvalidLocator ReducedHttpLocator
+    preparedLoc = prepareSimplify defLoc HTTP locator >>= toHttpLocator
 
     runCommand :: forall a. ((Command a -> m a) -> Session -> Selector -> m a) -> Selector -> m a
     runCommand f sel =
@@ -214,7 +216,7 @@ locateHttp throw catch runner defLoc cardinality MkLocateOps {displayedCheck} se
 
     -- locateSingleton = locate (cardinality == Unique)
 
-    toSelector :: ReducedLocator -> Selector
+    toSelector :: ReducedHttpLocator -> Selector
     toSelector = \case
       L.CSS {value} -> HTTPP.CSS value
       L.XPath {value} -> HTTPP.XPath value
