@@ -3,7 +3,7 @@ module WebDriverPreCore.Extended.ReducedLocator.Internal
     ReducedHttpLocator (..),
     CommonLocator (..),
     ShimmedLocator (..),
-    CombintorLocator (..),
+    CombinatorLocator (..),
     PostFilterLocator (..),
     BiDiOnlyLocator (..),
     isXPath,
@@ -38,7 +38,7 @@ data PostFilterLocator a = PostFilter {predicate :: LI.Predicate, locator :: a}
       Eq
     )
 
-data CombintorLocator a
+data CombinatorLocator a
   = Parent {parent :: a, child :: a}
   | All {elms :: NonEmpty a}
   | Any {elms :: NonEmpty a}
@@ -74,7 +74,7 @@ data BiDiOnlyLocator
 data ReducedLocator
   = Common CommonLocator 
   | PostFilterLocator (PostFilterLocator ReducedLocator)
-  | Combintor (CombintorLocator ReducedLocator)
+  | Combintor (CombinatorLocator ReducedLocator)
   | BiDiOnly BiDiOnlyLocator
   deriving
     ( Show,
@@ -87,7 +87,7 @@ data ReducedLocator
 data ReducedHttpLocator
   = CommonHttp CommonLocator
   | PostFilterHttpLocator (PostFilterLocator ReducedHttpLocator)
-  | CombintorHttp (CombintorLocator ReducedHttpLocator)
+  | CombintorHttp (CombinatorLocator ReducedHttpLocator)
   deriving
     ( Show,
       Eq
