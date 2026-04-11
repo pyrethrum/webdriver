@@ -1,7 +1,7 @@
 module Internal.LocatorsTest (tests) where
 
 import Control.Monad (when)
-import Data.List.NonEmpty (NonEmpty (..), filter, head)
+import Data.List.NonEmpty (NonEmpty (..), filter)
 import Data.Text (Text, pack, unpack)
 import Data.Text.IO (putStrLn)
 import System.Environment (withArgs)
@@ -19,15 +19,15 @@ import WebDriverPreCore.Extended.Locators.Internal
   ( CaseSensitivity (..),
     Classification (..),
     Locator (..),
-    Predicate (..),
     Protocol (..),
+    RoleLocator (..),
     classify,
     flattenLoc,
     foldLoc,
     foldLocBottomUp,
     hasInvalidLoc,
     prepare,
-    sortGroupChildLocs, RoleName,
+    sortGroupChildLocs,
   )
 import WebDriverPreCore.Extended.ReducedLocator.Internal qualified as RL
 import Prelude hiding (filter, head, putStrLn)
@@ -271,16 +271,15 @@ mockLocated allElmsDefault = go
       Attribute {value = v} -> readBool v
       Tag {value = v} -> readBool v
       Default {value = v} -> readBool v
-      Role (RoleName v )-> readBool v
+      Role (RoleName v) -> readBool v
       Role _ -> allElmsDefault
       InnerText {value = v} -> readBool v
       BiDiContext {context = MkBrowsingContext v} -> readBool v
-      Predicate (JSPredicate v _) -> readBool v
       All locs -> all go locs
       Any locs -> any go locs
       None locs -> not (any go locs)
       Parent p c -> go p && go c
-      _ -> error "Locator not supported by mockLocated"
+      PostFilter _ _ -> error "Locator not supported by mockLocated"
     readBool "True" = True
     readBool "False" = False
     readBool v = error $ "mockLocated: unexpected value: " <> unpack v
@@ -355,9 +354,9 @@ httpLeavesBool val =
             matchType = Full,
             caseSesnsitivity = CaseSensitive,
             maxDepth = Nothing
-          },
-        -- browsingContextId -> elementId ie get the frame that belongs to the browsing context
-        Predicate $ JSPredicate b b
+          }
+          -- browsingContextId -> elementId ie get the frame that belongs to the browsing context
+          -- PostFilter
       ]
 
 bidiOnlyLeavesBool :: Bool -> [Locator]
@@ -650,7 +649,7 @@ prop_simplification_merges_xpaths =
   where
     chkAllXPathsingleton = \case
       RL.Combintor c -> case c of
-        Parent {} -> True
+        RL.Parent {} -> True
         RL.All {elms} -> chkSublocs elms
         RL.Any {elms} -> chkSublocs elms
         RL.None {elms} -> chkSublocs elms
