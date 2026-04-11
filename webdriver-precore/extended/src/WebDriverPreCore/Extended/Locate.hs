@@ -13,6 +13,7 @@ import Control.Monad (filterM, (>=>))
 import Data.Aeson as A (Result (..), Value (Bool), fromJSON, toJSON)
 import Data.Function ((&))
 import Data.List qualified as LST
+import Data.List.NonEmpty (toList)
 import Data.Maybe (fromMaybe)
 import Data.Text
 import GHC.Stack (HasCallStack)
@@ -116,7 +117,6 @@ data LocateResult
 
 -- TODO
 -- 0. locateHttp Compiles (NoImp postfilter)
---  0.1 loacte all compiles
 -- 1. get unretried http working with tests
 --   1.1 simple locators (css, xpath, role, inner text)
 --   1.2 compound locators (parent, all, any, none)
@@ -132,13 +132,19 @@ data LocateResult
 -- 3. implement / redesign related to postfilter HTTP
 -- 4. postfilter tests
 
--- 5. BiDi - repeat all of the above for BiDi, but with the much simpler locateMany as the basis, and no need for retries as BiDi supports waiting for conditions natively via the maxNodeCount parameter.
+-- 5. BiDi - repeat all of the above for BiDi, but with the much simpler locateMany as the basis, 
+--   and no need for retries as BiDi supports waiting for conditions natively via the maxNodeCount parameter.
 
--- 6. retries / wait / logging / recovery Http - need directives eg. log pagesource
+-- 6. refactor / shared code 
+
+-- 7. locate all - http
+-- 7. locate all - bidi
+
+-- 9. retries / wait / logging / recovery Http - need directives eg. log pagesource
 --   -- should this be an asyc race
--- 7. retry tests
+-- 10. retry tests
 
--- 8. adapt retries to Bidi
+-- 11. adapt retries to Bidi
 
 -- browsingContextLocateNodes :: forall m. Runner m LocateNodesResult -> LocateNodes -> m LocateNodesResult
 
@@ -264,10 +270,20 @@ locateHttp throw catch runner defLoc cardinality MkLocateOps {displayedCheck} se
         -- for simple single shot locator locate as per cardinality directive
         httpLocateCommon False cl
       CombintorHttp cb -> case cb of
-        Parent {parent, child} -> undefined
-        All {elms} -> undefined
-        Any {elms} -> undefined
-        None {elms} -> undefined
+        Parent {parent, child} -> do
+          -- TODO: FIX THIS
+          p <- httpLocate' parent
+          c <- httpLocate' child
+          pure ParentResult {found = [p, c]}
+        All {elms} -> do
+          results <- traverse httpLocate' elms
+          pure AndResult {found = toList results}
+        Any {elms} -> do
+          results <- traverse httpLocate' elms
+          pure OrResult {found = toList results}
+        None {elms} -> do
+          results <- traverse httpLocate' elms
+          pure NotResult {found = toList results}
       PostFilterHttpLocator {} -> postfilterNotImplemented
 
     httpLocate :: ReducedHttpLocator -> m LocateResult
