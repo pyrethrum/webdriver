@@ -45,7 +45,7 @@ data LocateException
       }
   | InvalidLocator LI.InvalidLocator
   | DriverException WebDriverException
-  deriving (Show)
+  deriving (Show, Eq)
 
 instance Exception LocateException
 
@@ -70,10 +70,16 @@ data LocatorSource
   | InnerTextSource Text
   deriving (Show, Eq, Ord)
 
-data SingleResult = MkSingleResult
-  { source :: LocatorSource,
-    elms :: [ElementId]
-  }
+data SingleResult
+  = SingleSuccess
+      { source :: LocatorSource,
+        elms :: [ElementId]
+      }
+  | SingleFailure
+      { source :: LocatorSource,
+        error :: LocateException,
+        elms :: [ElementId]
+      }
   deriving (Show, Eq)
 
 data LocateResult
@@ -194,7 +200,7 @@ locateHttp throw catch runner defLoc cardinality MkLocateOps {displayedCheck} se
 
     locateSingleUnchecked :: Bool -> LocatorSource -> Selector -> m SingleResult
     locateSingleUnchecked findFirst ls sel =
-      MkSingleResult ls
+      SingleSuccess ls
         <$> ( if findFirst
                 -- lean on webdriver - brings first result back (faster)
                 then fmap LST.singleton . findElm
@@ -210,21 +216,23 @@ locateHttp throw catch runner defLoc cardinality MkLocateOps {displayedCheck} se
         [x] -> Nothing
         xs -> Just $ AmbiguousLocator {description = "Expected exactly one element, but found: " <> pack (show (P.length xs)) <> ".", locator}
 
-    checkSingleResult :: SingleResult -> m (Either LocateException SingleResult)
-    checkSingleResult sr@MkSingleResult {source, elms} =
-      case hasSingletonErr elms of
-        Nothing -> pure $ Right sr
-        Just err -> case err of
-          -- refilter and by JS displayed and recheck if ambiguous and directive is to disambiguate unique
-          AmbiguousLocator {} -> do
-            elmsRechecked <- filterDisplayedIf DisambiguateUnique elms
-            pure $ case hasSingletonErr elmsRechecked of
-              Nothing -> Right $ MkSingleResult source elmsRechecked
-              Just e -> Left e
-          e -> pure $ Left e
-     
+    checkSingleResult :: SingleResult -> m SingleResult
+    checkSingleResult =
+      \case
+        sf@SingleFailure {} -> pure sf
+        ss@SingleSuccess {source, elms} ->
+          case hasSingletonErr elms of
+            Nothing -> pure ss
+            Just err -> case err of
+              -- refilter and by JS displayed and recheck if ambiguous and directive is to disambiguate unique
+              AmbiguousLocator {} -> do
+                elmsRechecked <- filterDisplayedIf DisambiguateUnique elms
+                pure $ case hasSingletonErr elmsRechecked of
+                  Nothing -> SingleSuccess source elmsRechecked
+                  Just e -> SingleFailure source e elmsRechecked
+              e -> pure $ SingleFailure source e elms
 
-    locateSingleChecked :: Bool -> LocatorSource -> Selector -> m (Either LocateException SingleResult)
+    locateSingleChecked :: Bool -> LocatorSource -> Selector -> m SingleResult
     locateSingleChecked findFirst ls =
       locateSingleUnchecked findFirst ls >=> checkSingleResult
 
@@ -236,9 +244,9 @@ locateHttp throw catch runner defLoc cardinality MkLocateOps {displayedCheck} se
         Role {role} -> HTTPP.XPath $ roleToXPath role
         InnerText {value, matchType, caseSesnsitivity, maxDepth} -> HTTPP.XPath $ innerTextToXPath value caseSesnsitivity matchType maxDepth
 
-    httpLocateCommon :: Bool -> CommonLocator -> m (Either LocateException LocateResult)
+    httpLocateCommon :: Bool -> CommonLocator -> m LocateResult
     httpLocateCommon findFirst cl =
-      fmap SingleResult <$> locateSingleChecked findFirst ls (toSelector cl)
+      SingleResult <$> locateSingleChecked findFirst ls (toSelector cl)
       where
         ls = case cl of
           RL.CSS {} -> PlainSource
@@ -248,19 +256,29 @@ locateHttp throw catch runner defLoc cardinality MkLocateOps {displayedCheck} se
             InnerText {value} -> InnerTextSource value
 
     -- recursive version of http locate
-    httpLocate' :: ReducedHttpLocator -> m (Either LocateException LocateResult)
+    -- httpLocate' :: ReducedHttpLocator -> m (Either LocateException LocateResult)
 
-    httpLocate :: ReducedHttpLocator -> m (Either LocateException LocateResult)
-    httpLocate = \case
+    httpLocate' :: ReducedHttpLocator -> m LocateResult
+    httpLocate' = \case
       CommonHttp cl ->
         -- for simple single shot locator locate as per cardinality directive
-        httpLocateCommon (cardinality == First) cl
+        httpLocateCommon False cl
       CombintorHttp cb -> case cb of
         Parent {parent, child} -> undefined
         All {elms} -> undefined
         Any {elms} -> undefined
         None {elms} -> undefined
       PostFilterHttpLocator {} -> postfilterNotImplemented
+
+    httpLocate :: ReducedHttpLocator -> m LocateResult
+    httpLocate = \case
+      CommonHttp cl ->
+        -- for simple single shot locator locate as per cardinality directive
+        httpLocateCommon (cardinality == First) cl
+      PostFilterHttpLocator {} -> 
+        -- will neeed to postfilter &&& all 
+        postfilterNotImplemented
+      loc -> httpLocate' loc
 
 postfilterNotImplemented :: a
 postfilterNotImplemented = error "PostFilter locators are not yet implemented in HTTP WebDriver"
