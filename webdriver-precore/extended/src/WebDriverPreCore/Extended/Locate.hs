@@ -132,10 +132,10 @@ data LocateResult
 -- 3. implement / redesign related to postfilter HTTP
 -- 4. postfilter tests
 
--- 5. BiDi - repeat all of the above for BiDi, but with the much simpler locateMany as the basis, 
+-- 5. BiDi - repeat all of the above for BiDi, but with the much simpler locateMany as the basis,
 --   and no need for retries as BiDi supports waiting for conditions natively via the maxNodeCount parameter.
 
--- 6. refactor / shared code 
+-- 6. refactor / shared code
 
 -- 7. locate all - http
 -- 7. locate all - bidi
@@ -186,11 +186,18 @@ locateHttp throw catch runner defLoc cardinality MkLocateOps {displayedCheck} se
         (f runner ses sel)
         (throw . DriverException)
 
-    findElm :: Selector -> m ElementId
-    findElm = runCommand findElement
+    findElm :: Maybe [ElementId] -> Selector -> m ElementId
+    findElm mRoots =
+        mRoots
+        & maybe
+          (runCommand findElement)
+          (runCommand . findElementFromElement')
+        where 
+          findElementFromElement' :: ElementId -> (Command ElementId -> m ElementId) -> Session -> Selector -> m ElementId
+          findElementFromElement' rootId runner' ses' sel = findElementFromElement runner' ses' rootId sel
 
-    findElms :: Selector -> m [ElementId]
-    findElms = runCommand findElements
+    findElms :: Maybe ElementId -> Selector -> m [ElementId]
+    findElms mRoot = runCommand findElements
 
     recheckDisplayed :: ElementId -> m Bool
     recheckDisplayed = isDisplayedHttp catch runner ses
@@ -201,17 +208,17 @@ locateHttp throw catch runner defLoc cardinality MkLocateOps {displayedCheck} se
         then filterM recheckDisplayed elms
         else pure elms
 
-    locateAll :: Selector -> m [ElementId]
-    locateAll s = findElms s >>= filterDisplayedIf Always
+    locateAll :: Maybe LocateResult -> Selector -> m [ElementId]
+    locateAll mRoot s = findElms mRoot s >>= filterDisplayedIf Always
 
-    locateSingleUnchecked :: Bool -> LocatorSource -> Selector -> m SingleResult
-    locateSingleUnchecked findFirst ls sel =
+    locateSingleUnchecked :: Maybe LocateResult -> Bool -> LocatorSource -> Selector -> m SingleResult
+    locateSingleUnchecked mRoot findFirst ls sel =
       SingleSuccess ls
         <$> ( if findFirst
                 -- lean on webdriver - brings first result back (faster)
-                then fmap LST.singleton . findElm
+                then fmap LST.singleton . findElm mRoot
                 -- get all results for downstream uniqueness check (slower)
-                else locateAll
+                else (locateAll mRoot)
             )
           sel
 
@@ -238,9 +245,9 @@ locateHttp throw catch runner defLoc cardinality MkLocateOps {displayedCheck} se
                   Just e -> SingleFailure source e elmsRechecked
               e -> pure $ SingleFailure source e elms
 
-    locateSingleChecked :: Bool -> LocatorSource -> Selector -> m SingleResult
-    locateSingleChecked findFirst ls =
-      locateSingleUnchecked findFirst ls >=> checkSingleResult
+    locateSingleChecked :: Maybe LocateResult -> Bool -> LocatorSource -> Selector -> m SingleResult
+    locateSingleChecked mRoot findFirst ls =
+      locateSingleUnchecked mRoot findFirst ls >=> checkSingleResult
 
     toSelector :: CommonLocator -> Selector
     toSelector = \case
@@ -250,9 +257,9 @@ locateHttp throw catch runner defLoc cardinality MkLocateOps {displayedCheck} se
         Role {role} -> HTTPP.XPath $ roleToXPath role
         InnerText {value, matchType, caseSesnsitivity, maxDepth} -> HTTPP.XPath $ innerTextToXPath value caseSesnsitivity matchType maxDepth
 
-    httpLocateCommon :: Bool -> CommonLocator -> m LocateResult
-    httpLocateCommon findFirst cl =
-      SingleResult <$> locateSingleChecked findFirst ls (toSelector cl)
+    httpLocateCommon :: Maybe LocateResult -> Bool -> CommonLocator -> m LocateResult
+    httpLocateCommon mRoot findFirst cl =
+      SingleResult <$> locateSingleChecked mRoot findFirst ls (toSelector cl)
       where
         ls = case cl of
           RL.CSS {} -> PlainSource
@@ -264,37 +271,39 @@ locateHttp throw catch runner defLoc cardinality MkLocateOps {displayedCheck} se
     -- recursive version of http locate
     -- httpLocate' :: ReducedHttpLocator -> m (Either LocateException LocateResult)
 
-    httpLocate' :: ReducedHttpLocator -> m LocateResult
-    httpLocate' = \case
+    httpLocate' :: Maybe LocateResult -> ReducedHttpLocator -> m LocateResult
+    httpLocate' mRoot = \case
       CommonHttp cl ->
         -- for simple single shot locator locate as per cardinality directive
-        httpLocateCommon False cl
+        httpLocateCommon mRoot False cl
       CombintorHttp cb -> case cb of
         Parent {parent, child} -> do
           -- TODO: FIX THIS
-          p <- httpLocate' parent
-          c <- httpLocate' child
+          p <- locate parent
+          c <- locate child
           pure ParentResult {found = [p, c]}
         All {elms} -> do
-          results <- traverse httpLocate' elms
+          results <- traverse locate elms
           pure AndResult {found = toList results}
         Any {elms} -> do
-          results <- traverse httpLocate' elms
+          results <- traverse locate elms
           pure OrResult {found = toList results}
         None {elms} -> do
-          results <- traverse httpLocate' elms
+          results <- traverse locate elms
           pure NotResult {found = toList results}
       PostFilterHttpLocator {} -> postfilterNotImplemented
+      where
+        locate = httpLocate' mRoot
 
     httpLocate :: ReducedHttpLocator -> m LocateResult
     httpLocate = \case
       CommonHttp cl ->
         -- for simple single shot locator locate as per cardinality directive
-        httpLocateCommon (cardinality == First) cl
-      PostFilterHttpLocator {} -> 
-        -- will neeed to postfilter &&& all 
+        httpLocateCommon Nothing (cardinality == First) cl
+      PostFilterHttpLocator {} ->
+        -- will neeed to postfilter &&& all
         postfilterNotImplemented
-      loc -> httpLocate' loc
+      loc@CombintorHttp {} -> httpLocate' Nothing loc
 
 postfilterNotImplemented :: a
 postfilterNotImplemented = error "PostFilter locators are not yet implemented in HTTP WebDriver"
