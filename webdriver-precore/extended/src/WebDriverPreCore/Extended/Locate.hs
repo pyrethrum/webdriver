@@ -103,6 +103,8 @@ data LocateResult
       }
   deriving (Show, Eq)
 
+elmIds :: LocateDirectives -> LocateResult -> Either LocateResult [ElementId]
+
 -- locateNested :: ReducedLocator -> LocateResult
 -- locateNested = \case
 --   Parent {parent, child} -> ParentResult {found = [locateNested child]}
@@ -186,13 +188,12 @@ locateHttp throw catch runner defLoc cardinality MkLocateOps {displayedCheck} se
         (f runner ses sel)
         (throw . DriverException)
 
-    findElm :: Maybe [ElementId] -> Selector -> m ElementId
+    findElm :: Maybe ElementId -> Selector -> m ElementId
     findElm mRoots =
         mRoots
         & maybe
           (runCommand findElement)
-          (\roots -> do 
-            runCommand . findElementFromElement')
+          (runCommand . findElementFromElement')
         where 
           findElementFromElement' :: ElementId -> (Command ElementId -> m ElementId) -> Session -> Selector -> m ElementId
           findElementFromElement' rootId runner' ses' sel = findElementFromElement runner' ses' rootId sel
@@ -209,10 +210,10 @@ locateHttp throw catch runner defLoc cardinality MkLocateOps {displayedCheck} se
         then filterM recheckDisplayed elms
         else pure elms
 
-    locateAll :: Maybe LocateResult -> Selector -> m [ElementId]
+    locateAll :: Maybe ElementId -> Selector -> m [ElementId]
     locateAll mRoot s = findElms mRoot s >>= filterDisplayedIf Always
 
-    locateSingleUnchecked :: Maybe LocateResult -> Bool -> LocatorSource -> Selector -> m SingleResult
+    locateSingleUnchecked :: Maybe ElementId -> Bool -> LocatorSource -> Selector -> m SingleResult
     locateSingleUnchecked mRoot findFirst ls sel =
       SingleSuccess ls
         <$> ( if findFirst
@@ -246,7 +247,7 @@ locateHttp throw catch runner defLoc cardinality MkLocateOps {displayedCheck} se
                   Just e -> SingleFailure source e elmsRechecked
               e -> pure $ SingleFailure source e elms
 
-    locateSingleChecked :: Maybe LocateResult -> Bool -> LocatorSource -> Selector -> m SingleResult
+    locateSingleChecked :: Maybe ElementId -> Bool -> LocatorSource -> Selector -> m SingleResult
     locateSingleChecked mRoot findFirst ls =
       locateSingleUnchecked mRoot findFirst ls >=> checkSingleResult
 
@@ -258,7 +259,7 @@ locateHttp throw catch runner defLoc cardinality MkLocateOps {displayedCheck} se
         Role {role} -> HTTPP.XPath $ roleToXPath role
         InnerText {value, matchType, caseSesnsitivity, maxDepth} -> HTTPP.XPath $ innerTextToXPath value caseSesnsitivity matchType maxDepth
 
-    httpLocateCommon :: Maybe LocateResult -> Bool -> CommonLocator -> m LocateResult
+    httpLocateCommon :: Maybe ElementId -> Bool -> CommonLocator -> m LocateResult
     httpLocateCommon mRoot findFirst cl =
       SingleResult <$> locateSingleChecked mRoot findFirst ls (toSelector cl)
       where
@@ -272,7 +273,7 @@ locateHttp throw catch runner defLoc cardinality MkLocateOps {displayedCheck} se
     -- recursive version of http locate
     -- httpLocate' :: ReducedHttpLocator -> m (Either LocateException LocateResult)
 
-    httpLocate' :: Maybe LocateResult -> ReducedHttpLocator -> m LocateResult
+    httpLocate' :: Maybe ElementId -> ReducedHttpLocator -> m LocateResult
     httpLocate' mRoot = \case
       CommonHttp cl ->
         -- for simple single shot locator locate as per cardinality directive
