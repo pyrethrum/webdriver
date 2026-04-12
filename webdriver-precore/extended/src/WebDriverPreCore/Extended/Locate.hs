@@ -191,7 +191,8 @@ locateHttp throw catch runner defLoc cardinality MkLocateOps {displayedCheck} se
         mRoots
         & maybe
           (runCommand findElement)
-          (runCommand . findElementFromElement')
+          (\roots -> do 
+            runCommand . findElementFromElement')
         where 
           findElementFromElement' :: ElementId -> (Command ElementId -> m ElementId) -> Session -> Selector -> m ElementId
           findElementFromElement' rootId runner' ses' sel = findElementFromElement runner' ses' rootId sel
