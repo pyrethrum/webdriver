@@ -63,7 +63,7 @@ data Locator
     -- browsingContextId -> elementId ie get the frame that belongs to the browsing context
     BiDiContext {context :: BrowsingContext}
   | -- combinators
-    Parent {parent :: Locator, child :: Locator}
+    Contains {container :: Locator, contained :: Locator}
   | All {elms :: NonEmpty Locator}
   | Any {elms :: NonEmpty Locator}
   | --- PostFilter
@@ -343,8 +343,8 @@ classify defLoc proto =
       case proto of
         BiDi -> IsBiDi
         HTTP -> Invalid $ MkInvalidLocator c "BiDiContext locator cannot be used with HTTP protocol"
-    Parent {parent, child} ->
-      mergeClassification (classifyNxt parent) (classifyNxt child)
+    Contains {container, contained} ->
+      mergeClassification (classifyNxt container) (classifyNxt contained)
     All {elms} -> clasifyElms elms
     Any {elms} -> clasifyElms elms
     PostFilter {} -> IsMixed
@@ -373,7 +373,7 @@ sortGroupChildLocs defLoc proto =
         Role {} -> l
         InnerText {} -> l
         BiDiContext {} -> l
-        Parent {} -> l
+        Contains {} -> l
         All {elms} -> All $ sortAndGroup All elms
         Any {elms} -> Any $ sortAndGroup Any elms
         PostFilter {} -> l
@@ -410,9 +410,9 @@ locatorToXPathPartial = XPath . toXPathStr
       Attribute {value, matchType, caseSensitivity} ->
         "//*[" <> attrPred value matchType caseSensitivity <> "]"
       Tag {value} -> "//" <> value
-      -- Parent: concatenate parent and child XPath — child's leading // creates a
-      -- descendant-axis step from the parent result set, e.g. //form//input.
-      Parent {parent, child} -> toXPathStr parent <> toXPathStr child
+      -- Contains: concatenate container and contained XPath — contained's leading // creates a
+      -- descendant-axis step from the container result set, e.g. //form//input.
+      Contains {container, contained} -> toXPathStr container <> toXPathStr contained
       All {elms} -> "//*[" <> intercalate " and " (toList $ toPred <$> elms) <> "]"
       Any {elms} -> "//*[" <> intercalate " or " (toList $ toPred <$> elms) <> "]"
       CSS {} -> locErr loc
@@ -436,9 +436,9 @@ locatorToXPathPartial = XPath . toXPathStr
       Class {value, matchType, caseSensitivity} -> classPred value matchType caseSensitivity
       Attribute {value, matchType, caseSensitivity} -> attrPred value matchType caseSensitivity
       Tag {value} -> "self::" <> value
-      -- Parent as predicate: "I match child AND I have an ancestor matching parent"
-      Parent {parent, child} ->
-        toPred child <> " and ancestor::*[" <> toPred parent <> "]"
+      -- Contains as predicate: "I match contained AND I have an ancestor matching container"
+      Contains {container, contained} ->
+        toPred contained <> " and ancestor::*[" <> toPred container <> "]"
       All {elms} -> "(" <> intercalate " and " (toList $ toPred <$> elms) <> ")"
       Any {elms} -> "(" <> intercalate " or " (toList $ toPred <$> elms) <> ")"
       CSS {} -> locErr loc
@@ -529,7 +529,7 @@ locatorToXPathPartial = XPath . toXPathStr
 foldLoc :: (a -> Locator -> a) -> a -> Locator -> a
 foldLoc f acc loc =
   case loc of
-    Parent p c -> foldLoc f (foldLoc f acc' p) c
+    Contains p c -> foldLoc f (foldLoc f acc' p) c
     All locs -> foldList locs
     Any locs -> foldList locs
     -- WithOptions base _ -> foldLoc f acc' base
@@ -545,7 +545,7 @@ foldLoc f acc loc =
 foldLocBottomUp :: (a -> Locator -> a) -> a -> Locator -> a
 foldLocBottomUp f acc loc =
   case loc of
-    Parent p c -> f (foldLocBottomUp f (foldLocBottomUp f acc p) c) loc
+    Contains p c -> f (foldLocBottomUp f (foldLocBottomUp f acc p) c) loc
     All locs -> f (foldList locs) loc
     Any locs -> f (foldList locs) loc
     -- WithOptions base _ -> f (foldLocBottomUp f acc base) loc
@@ -561,7 +561,7 @@ foldLocBottomUp f acc loc =
 mapLocBottomUp :: (Locator -> Locator) -> Locator -> Locator
 mapLocBottomUp f loc = f $
   case loc of
-    Parent p c -> Parent (recurse p) (recurse c)
+    Contains p c -> Contains (recurse p) (recurse c)
     All locs -> All $ recurseMap locs
     Any locs -> Any $ recurseMap locs
     _ -> loc -- Leaf locators and Predicate
@@ -619,7 +619,7 @@ flattenLoc = \case
       flattenAny x = [x]
 
   -- Recurse into other composite locators
-  Parent p c -> Parent (flattenLoc p) (flattenLoc c)
+  Contains p c -> Contains (flattenLoc p) (flattenLoc c)
   -- WithOptions base opts -> WithOptions (flattenLoc base) opts
   -- Leaf locators and Predicate have no children to recurse into
   other -> other

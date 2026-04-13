@@ -121,7 +121,7 @@ elmIds _ lr = recurse lr
 
 -- locateNested :: ReducedLocator -> LocateResult
 -- locateNested = \case
---   Parent {parent, child} -> ParentResult {found = [locateNested child]}
+--   Contains {container, contained} -> ParentResult {found = [locateNested contained]}
 --   All {elms} -> AndResult {found = fmap locateNested elms}
 --   Any {elms} -> OrResult {found = fmap locateNested elms}
 --   PostFilter {predicate, locator} -> PostFilterResult {predicate, found = [locateNested locator]}
@@ -292,10 +292,10 @@ locateHttp throw catch runner defLoc cardinality MkLocateOps {displayedCheck} se
         -- for simple single shot locator locate as per cardinality directive
         httpLocateCommon mRoot False cl
       CombintorHttp cb -> case cb of
-        Parent {parent, child} -> do
+        Contains {container, contained} -> do
           -- TODO: FIX THIS
-          p <- locate parent
-          c <- locate child
+          p <- locate container
+          c <- locate contained
           pure ParentResult {found = [p, c]}
         All {elms} -> do
           results <- traverse locate elms
@@ -331,7 +331,7 @@ httpLocateMany = \case
   InnerText {} -> undefined
   -- will never happen - already filtered out by prepareSimplify
   BiDiContext {} -> error "BiDiContext locators are not supported in HTTP WebDriver"
-  Parent {} -> undefined
+  Contains {} -> undefined
   All {} -> undefined
   Any {} -> undefined
   PostFilter {} -> undefined

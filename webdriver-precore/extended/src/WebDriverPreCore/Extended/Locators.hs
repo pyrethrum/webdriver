@@ -762,7 +762,7 @@ l ||| r = Any (l :| [r])
 infixr 2 |||
 
 (>>>) :: Locator -> Locator -> Locator
-(>>>) = Parent
+(>>>) = Contains
 
 infixr 1 >>>
 

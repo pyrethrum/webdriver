@@ -176,8 +176,8 @@ recursiveReduceParent =
   chkFlatten
     "recursively reduces Parent locators"
     MkFlattenCase
-      { unflattened = Parent (All (CSS "a" :| [])) (Any (CSS "b" :| [])),
-        flattenned = Parent (CSS "a") (CSS "b")
+      { unflattened = Contains (All (CSS "a" :| [])) (Any (CSS "b" :| [])),
+        flattenned = Contains (CSS "a") (CSS "b")
       }
 
 complexNestedFlattening :: TestTree
@@ -199,7 +199,7 @@ complexNestedFlattening =
 --   └── None
 --       └── Tag "div"
 nestedLoc :: Locator
-nestedLoc = Parent (All (CSS "a" :| [XPath "//b"])) (None (Tag "div" :| []))
+nestedLoc = Contains (All (CSS "a" :| [XPath "//b"])) (None (Tag "div" :| []))
 
 -- | Collect txt of each node in the order visited, using snoc.
 collectLoc :: (([Locator] -> Locator -> [Locator]) -> [Locator] -> Locator -> [Locator]) -> [Locator]
@@ -263,7 +263,7 @@ mockLocated allElmsDefault = go
       All locs -> all go locs
       Any locs -> any go locs
       None locs -> not (any go locs)
-      Parent p c -> go p && go c
+      Contains p c -> go p && go c
       _ -> error "Locator not supported by mockLocated"
     readBool "True" = True
     readBool "False" = False
@@ -380,14 +380,14 @@ invalidHTTPLocs =
     BiDiContext (MkBrowsingContext "context-id")
   ]
 
--- | Generate a Parent locator at a given depth
+-- | Generate a Contains locator at a given depth
 genParentAt :: Gen Locator -> Int -> Int -> Gen Locator
 genParentAt genSingleton depth remainingNodes = do
-  -- Split remaining nodes between parent and child
+  -- Split remaining nodes between container and contained
   let halfNodes = remainingNodes `div` 2
-  parent <- genLocatorWithLimits genSingleton depth halfNodes
-  child <- genLocatorWithLimits genSingleton depth (remainingNodes - halfNodes - 1)
-  pure $ Parent parent child
+  container <- genLocatorWithLimits genSingleton depth halfNodes
+  contained <- genLocatorWithLimits genSingleton depth (remainingNodes - halfNodes - 1)
+  pure $ Contains container contained
 
 -- | Generate an All locator at a given depth
 genAllAt :: Gen Locator -> Int -> Int -> Gen Locator
@@ -458,7 +458,7 @@ prop_flatenning_simplification = testPropertyWith genLocatorOptions "Flattening 
       None locs -> plus2Map locs
       All locs -> plus2Map locs
       Any locs -> plus2Map locs
-      Parent parent child -> 2 + complexity parent + complexity child
+      Contains container contained -> 2 + complexity container + complexity contained
       _ -> 1 -- all leaf nodes have complexity 1
     plus2Map :: NonEmpty Locator -> Int
     plus2Map locs = 2 + (sum $ complexity <$> locs)
@@ -547,10 +547,10 @@ test_infix_precedence_ii =
 
 test_parent_infix_precedence :: TestTree
 test_parent_infix_precedence =
-  testCase "Test Parent operator precedence" $
+  testCase "Test Contains operator precedence" $
     expected @?= actual
   where
-    expected = Parent (falseLoc ||| trueLoc) (trueLoc &&& falseLoc)
+    expected = Contains (falseLoc ||| trueLoc) (trueLoc &&& falseLoc)
     actual = falseLoc ||| trueLoc >>> trueLoc &&& falseLoc
 
 -- >>> _eval prop_classify_xpath_only_is_xpath

@@ -39,7 +39,7 @@ data PostFilterLocator a = PostFilter {predicate :: LI.Predicate, locator :: a}
     )
 
 data CombinatorLocator a
-  = Parent {parent :: a, child :: a}
+  = Contains {container :: a, contained :: a}
   | All {elms :: NonEmpty a}
   | Any {elms :: NonEmpty a}
   deriving
@@ -99,7 +99,7 @@ toHttpLocator = \case
       PostFilterHttpLocator . PostFilter predicate <$> toHttpLocator locator
   Combintor cl ->
       CombintorHttp <$> case cl of
-        Parent {parent, child} -> Parent <$> toHttpLocator parent <*> toHttpLocator child
+        Contains {container, contained} -> Contains <$> toHttpLocator container <*> toHttpLocator contained
         ccl -> case ccl of
           All {} -> nested All
           Any {} -> nested Any
@@ -129,7 +129,7 @@ prepareSimplify defLoc proto l =
       LI.InnerText {..} -> Common . Shimmed $ InnerText {..}
       LI.BiDiContext {..} -> BiDiOnly BiDiContext {..}
       LI.PostFilter {predicate, locator} -> PostFilterLocator $ PostFilter {predicate, locator = simplify locator}
-      LI.Parent {parent, child} -> Combintor $ Parent {parent = simplify parent, child = simplify child}
+      LI.Contains {container, contained} -> Combintor $ Contains {container = simplify container, contained = simplify contained}
       LI.All {elms} -> Combintor . All $ simplify <$> elms
       LI.Any {elms} -> Combintor . Any $ simplify <$> elms
       LI.AllElms -> shouldNotExistAfterXPathSub "AllElms"
@@ -161,7 +161,7 @@ xPathSub defLoc proto l =
         LI.Attribute {} -> xpathLoc
         LI.Tag {} -> xpathLoc
         LI.Default {value} -> convertXPath (defLoc value)
-        LI.Parent {parent, child} -> tryConvert $ LI.Parent (convertXPath parent) (convertXPath child)
+        LI.Contains {container, contained} -> tryConvert $ LI.Contains (convertXPath container) (convertXPath contained)
         LI.All {elms} -> tryConvert $ LI.All (convertXPath <$> elms)
         LI.Any {elms} -> tryConvert $ LI.Any (convertXPath <$> elms)
       where
@@ -202,9 +202,9 @@ toXPathCore = LI.XPath . toXPathCoreTxt
         LI.Class {value, matchType, caseSensitivity} -> classToXPathCoreTxt value matchType caseSensitivity
         LI.Attribute {value, matchType, caseSensitivity} -> attrToXPathCoreTxt value matchType caseSensitivity
         LI.Tag {value} -> "self::" <> value
-        -- Parent as predicate: "I match child AND I have an ancestor matching parent"
-        LI.Parent {parent, child} ->
-          toXPathCoreTxt child <> " and ancestor::*[" <> toXPathCoreTxt parent <> "]"
+        -- Contains as predicate: "I match contained AND I have an ancestor matching container"
+        LI.Contains {container, contained} ->
+          toXPathCoreTxt contained <> " and ancestor::*[" <> toXPathCoreTxt container <> "]"
         LI.All {elms} -> elmsTxt "and" elms
         LI.Any {elms} -> elmsTxt "or" elms
         LI.CSS {} -> locErr loc
