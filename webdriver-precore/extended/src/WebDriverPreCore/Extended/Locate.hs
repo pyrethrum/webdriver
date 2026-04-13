@@ -142,8 +142,8 @@ elmIds _ lr = recurse lr
 -- 2. tests
 -- all of the above with tests, including edge cases such as:
 --   2.1 role edge cases (ess edgecases md)
---   2.2 visible  text edge cases (ess edgecases md)
-
+--   2.2 visible  text edge cases (css edgecases md)
+--   2.3 find all elements not displayed
 -- 3. implement / redesign related to postfilter HTTP
 -- 4. postfilter tests
 
