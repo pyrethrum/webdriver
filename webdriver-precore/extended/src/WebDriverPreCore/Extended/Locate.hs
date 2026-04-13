@@ -100,11 +100,14 @@ data LocateResult
       }
   deriving (Show, Eq)
 
-elmIds :: LocateDirectives -> LocateResult -> Either LocateResult [ElementId]
-elmIds _ lr = recurse lr
+-- TODO - may need to reintroduce locateDirectives param
+-- elmIds :: LocateDirectives -> LocateResult -> Either LocateResult [ElementId]
+-- elmIds _ lr = recurse lr
+elmIds :: LocateResult -> Either LocateResult [ElementId]
+elmIds lr = recurse lr
   where
     recurse :: LocateResult -> Either LocateResult [ElementId]
-    recurse r = case r of
+    recurse = \case 
       SingleResult (SingleSuccess {elms}) -> Right elms
       SingleResult (SingleFailure {}) -> failed
       PostFilterResult {} -> postfilterNotImplemented
@@ -289,14 +292,13 @@ locateHttp throw catch runner defLoc cardinality MkLocateOps {displayedCheck} se
     httpLocate' :: Maybe ElementId -> ReducedHttpLocator -> m LocateResult
     httpLocate' mRoot = \case
       CommonHttp cl ->
-        -- for simple single shot locator locate as per cardinality directive
+        -- need to find all elms for combinator and later checks and retries
         httpLocateCommon mRoot False cl
       CombintorHttp cb -> case cb of
         Contains {container, contained} -> do
-          -- TODO: FIX THIS
-          p <- locate container
-          c <- locate contained
-          pure ParentResult {found = [p, c]}
+          containers <- locate container
+          locateContained containers
+          undefined
         All {elms} -> do
           results <- traverse locate elms
           pure AndResult {found = toList results}
@@ -306,6 +308,12 @@ locateHttp throw catch runner defLoc cardinality MkLocateOps {displayedCheck} se
       PostFilterHttpLocator {} -> postfilterNotImplemented
       where
         locate = httpLocate' mRoot
+        locateContained :: LocateResult -> m LocateResult
+        locateContained containers = do
+          -- for each container, locate contained with root of container element, and combine results
+          let ids = elmIds
+          containedResults <- traverse (locate . Just <=< getSingleElementId) containers
+          pure $ ParentResult {found = toList containedResults}
 
     httpLocate :: ReducedHttpLocator -> m LocateResult
     httpLocate = \case
