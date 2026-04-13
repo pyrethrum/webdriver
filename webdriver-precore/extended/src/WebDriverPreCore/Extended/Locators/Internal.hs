@@ -2,7 +2,6 @@ module WebDriverPreCore.Extended.Locators.Internal where
 
 import Control.Exception (Exception)
 import Data.Foldable1 (foldl1')
-import Data.Functor ((<&>))
 import Data.List (uncons)
 import Data.List.NonEmpty (NonEmpty (..), groupBy, sortBy, toList)
 import Data.Maybe (fromJust)
@@ -67,7 +66,6 @@ data Locator
     Parent {parent :: Locator, child :: Locator}
   | All {elms :: NonEmpty Locator}
   | Any {elms :: NonEmpty Locator}
-  | None {elms :: NonEmpty Locator}
   | --- PostFilter
     PostFilter
       { predicate :: Predicate,
@@ -349,7 +347,6 @@ classify defLoc proto =
       mergeClassification (classifyNxt parent) (classifyNxt child)
     All {elms} -> clasifyElms elms
     Any {elms} -> clasifyElms elms
-    None {elms} -> clasifyElms elms
     PostFilter {} -> IsMixed
   where
     classifyNxt :: Locator -> Classification
@@ -379,8 +376,6 @@ sortGroupChildLocs defLoc proto =
         Parent {} -> l
         All {elms} -> All $ sortAndGroup All elms
         Any {elms} -> Any $ sortAndGroup Any elms
-        --- None a1, a2, b1, b2, c => None ( any (a1, a2), any (b1, b2), any (c))
-        None {elms} -> None $ sortAndGroup Any elms
         PostFilter {} -> l
       where
         clasify' = classify defLoc proto
@@ -420,7 +415,6 @@ locatorToXPathPartial = XPath . toXPathStr
       Parent {parent, child} -> toXPathStr parent <> toXPathStr child
       All {elms} -> "//*[" <> intercalate " and " (toList $ toPred <$> elms) <> "]"
       Any {elms} -> "//*[" <> intercalate " or " (toList $ toPred <$> elms) <> "]"
-      None {elms} -> "//*[not(" <> intercalate " or " (toList $ toPred <$> elms) <> ")]"
       CSS {} -> locErr loc
       Default {} -> locErr loc
       Role {} -> locErr loc
@@ -447,7 +441,6 @@ locatorToXPathPartial = XPath . toXPathStr
         toPred child <> " and ancestor::*[" <> toPred parent <> "]"
       All {elms} -> "(" <> intercalate " and " (toList $ toPred <$> elms) <> ")"
       Any {elms} -> "(" <> intercalate " or " (toList $ toPred <$> elms) <> ")"
-      None {elms} -> "not(" <> intercalate " or " (toList $ toPred <$> elms) <> ")"
       CSS {} -> locErr loc
       Default {} -> locErr loc
       Role {} -> locErr loc
@@ -539,7 +532,6 @@ foldLoc f acc loc =
     Parent p c -> foldLoc f (foldLoc f acc' p) c
     All locs -> foldList locs
     Any locs -> foldList locs
-    None locs -> foldList locs
     -- WithOptions base _ -> foldLoc f acc' base
     PostFilter {} -> acc'
     _ -> acc' -- Leaf locators
@@ -556,7 +548,6 @@ foldLocBottomUp f acc loc =
     Parent p c -> f (foldLocBottomUp f (foldLocBottomUp f acc p) c) loc
     All locs -> f (foldList locs) loc
     Any locs -> f (foldList locs) loc
-    None locs -> f (foldList locs) loc
     -- WithOptions base _ -> f (foldLocBottomUp f acc base) loc
     PostFilter {} -> f acc loc
     _ -> f acc loc -- Leaf locators
@@ -573,7 +564,6 @@ mapLocBottomUp f loc = f $
     Parent p c -> Parent (recurse p) (recurse c)
     All locs -> All $ recurseMap locs
     Any locs -> Any $ recurseMap locs
-    None locs -> None $ recurseMap locs
     _ -> loc -- Leaf locators and Predicate
   where
     recurse = mapLocBottomUp f
@@ -627,34 +617,6 @@ flattenLoc = \case
     where
       flattenAny (Any xs) = toList xs
       flattenAny x = [x]
-
-  -- Apply De Morgan's laws and flatten None
-  None locs ->
-    case toList reduced of
-      -- Double negation: None [None [x]] -> Any [x]
-      [None xs] -> flattenLoc $ Any xs
-      -- De Morgan: None [All [x,y]] -> Any [None [x], None [y]]
-      [All xs] -> flattenLoc . Any $ negateAll xs
-      -- De Morgan: None [Any [x,y]] -> All [None [x], None [y]]
-      [Any xs] -> flattenLoc . All $ negateAll xs
-      -- Single non-Match* locator - already reduced
-      [single] -> None (single :| [])
-      -- Multiple locators - check for nested None and apply De Morgan
-      -- None [a, None [b], c] -> All [None [a], b, None [c]]
-      (x : xs) ->
-        if any isNone (x : xs)
-          then flattenLoc . All $ (x :| xs) <&> applyDoubleNegation
-          else None (x :| xs)
-      [] -> error "flattenLoc: None produced empty list (impossible with NonEmpty input)"
-    where
-      reduced = flattenLoc <$> locs
-      negateAll = fmap (\x -> None (x :| []))
-      isNone (None _) = True
-      isNone _ = False
-      -- Apply double negation to unwrap None, or negate non-None
-      applyDoubleNegation (None (y :| [])) = y -- None [y] becomes y
-      applyDoubleNegation (None ys) = Any ys -- None [y1, y2, ...] becomes Any [y1, y2, ...]
-      applyDoubleNegation y = None (y :| []) -- y becomes None [y]
 
   -- Recurse into other composite locators
   Parent p c -> Parent (flattenLoc p) (flattenLoc c)

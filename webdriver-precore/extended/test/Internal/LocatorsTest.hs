@@ -53,9 +53,6 @@ tests =
           flattenNestedOr,
           reduceSingleAnd,
           reduceSingleOr,
-          applyDoubleNegation,
-          applyDeMorganAnd,
-          applyDeMorganOr,
           preserveNonMatchLocators,
           recursiveReduceParent,
           complexNestedFlattening
@@ -67,8 +64,7 @@ tests =
         ],
       testGroup
         "Property Tests"
-        [ test_nested_none_match,
-          test_infix_precedence_i,
+        [ test_infix_precedence_i,
           test_infix_precedence_ii,
           test_parent_infix_precedence,
           prop_flatenning_simplification,
@@ -147,37 +143,6 @@ reduceSingleOr =
         flattenned = CSS "button"
       }
 
-applyDoubleNegation :: TestTree
-applyDoubleNegation =
-  chkFlatten
-    "applies double negation: None [None [x]] -> x"
-    MkFlattenCase
-      { unflattened = None (None (CSS "button" :| []) :| []),
-        flattenned = CSS "button"
-      }
-
--- >>> _eval applyDeMorganAnd
-
--- *** Exception: ExitSuccess
-
-applyDeMorganAnd :: TestTree
-applyDeMorganAnd =
-  chkFlatten
-    "applies De Morgan: None [All [x, y]] -> Any [None [x], None [y]]"
-    MkFlattenCase
-      { unflattened = None (All (CSS "a" :| [CSS "b"]) :| []),
-        flattenned = Any (None (CSS "a" :| []) :| [None (CSS "b" :| [])])
-      }
-
-applyDeMorganOr :: TestTree
-applyDeMorganOr =
-  chkFlatten
-    "applies De Morgan: None [Any [x, y]] -> All [None [x], None [y]]"
-    MkFlattenCase
-      { unflattened = None (Any (CSS "a" :| [CSS "b"]) :| []),
-        flattenned = All (None (CSS "a" :| []) :| [None (CSS "b" :| [])])
-      }
-
 preserveNonMatchLocators :: TestTree
 preserveNonMatchLocators =
   chkFlatten
@@ -206,16 +171,15 @@ complexNestedFlattening =
       }
 
 -- | Shared nested locator used by fold traversal tests.
--- Tree shape (4 different constructors, 3 levels deep):
+-- Tree shape (3 different constructors, 3 levels deep):
 --
 --   Parent
 --   ├── All
 --   │   ├── CSS "a"
 --   │   └── XPath "//b"
---   └── None
---       └── Tag "div"
+--   └── CSS "div"
 nestedLoc :: Locator
-nestedLoc = Parent (All (CSS "a" :| [XPath "//b"])) (None (Tag "div" :| []))
+nestedLoc = Parent (All (CSS "a" :| [XPath "//b"])) (CSS "div")
 
 -- | Collect txt of each node in the order visited, using snoc.
 collectLoc :: (([Locator] -> Locator -> [Locator]) -> [Locator] -> Locator -> [Locator]) -> [Locator]
@@ -235,8 +199,7 @@ foldLocTopDown =
             All (CSS "a" :| [XPath "//b"]),
             CSS "a",
             XPath "//b",
-            None (Tag "div" :| []),
-            Tag "div"
+            CSS "div"
           ]
 
 -- >>> _eval foldLocBottomUpTest
@@ -250,8 +213,7 @@ foldLocBottomUpTest =
       @?= [ CSS "a",
             XPath "//b",
             All (CSS "a" :| [XPath "//b"]),
-            Tag "div",
-            None (Tag "div" :| []),
+            CSS "div",
             nestedLoc
           ]
 
@@ -277,7 +239,6 @@ mockLocated allElmsDefault = go
       BiDiContext {context = MkBrowsingContext v} -> readBool v
       All locs -> all go locs
       Any locs -> any go locs
-      None locs -> not (any go locs)
       Parent p c -> go p && go c
       PostFilter _ _ -> error "Locator not supported by mockLocated"
     readBool "True" = True
@@ -285,7 +246,7 @@ mockLocated allElmsDefault = go
     readBool v = error $ "mockLocated: unexpected value: " <> unpack v
 
 -- | Falsify generator for Locator with depth and node count limits.
--- Only generates Parent, All, Any, None, and singletons (trueLoc, falseLoc).
+-- Only generates Parent, All, Any, and singletons (trueLoc, falseLoc).
 -- Layers 0-1: Equal probability for all constructors (20% each)
 -- Singleton selection: 80% trueLoc, 20% falseLoc
 -- After layer 1: Increase singleton probability by 5% per layer
@@ -307,19 +268,18 @@ genLocatorWithLimits genSingleton depth remainingNodes
     extraProb = if depth <= 1 then 0 else fromIntegral (depth - 1) * 5
     singletonProb = min 100 (baseSingletonProb + extraProb)
 
-    -- Remaining probability distributed evenly among 4 constructors
+    -- Remaining probability distributed evenly among 3 constructors
     nonSingletonProb = 100 - singletonProb
-    perConstructorProb = nonSingletonProb `div` 4
+    perConstructorProb = nonSingletonProb `div` 3
 
     -- Small adjustment for rounding
-    remainder = nonSingletonProb `mod` 4
+    remainder = nonSingletonProb `mod` 3
 
     weights =
       [ (singletonProb, genSingleton),
         (perConstructorProb, genParentAt genSingleton (depth + 1) (remainingNodes - 1)),
         (perConstructorProb, genAllAt genSingleton (depth + 1) (remainingNodes - 1)),
-        (perConstructorProb, genAnyAt genSingleton (depth + 1) (remainingNodes - 1)),
-        (perConstructorProb + remainder, genNoneAt genSingleton (depth + 1) (remainingNodes - 1))
+        (perConstructorProb + remainder, genAnyAt genSingleton (depth + 1) (remainingNodes - 1))
       ]
 
 trueLoc :: Locator
@@ -432,12 +392,6 @@ genAnyAt genSingleton depth remainingNodes = do
   locs <- genNonEmptyLocators genSingleton depth remainingNodes
   pure $ Any locs
 
--- | Generate a None locator at a given depth
-genNoneAt :: Gen Locator -> Int -> Int -> Gen Locator
-genNoneAt genSingleton depth remainingNodes = do
-  locs <- genNonEmptyLocators genSingleton depth remainingNodes
-  pure $ None locs
-
 -- | Generate a non-empty list of locators, distributing the node budget
 genNonEmptyLocators :: Gen Locator -> Int -> Int -> Gen (NonEmpty Locator)
 genNonEmptyLocators genSingleton depth remainingNodes = do
@@ -486,8 +440,6 @@ prop_flatenning_simplification = testPropertyWith genLocatorOptions "Flattening 
     -- Calculate complexity score: leaf = 1, combinator wrapper = 2 + children
     complexity :: Locator -> Int
     complexity = \case
-      None (x :| []) -> complexity x -- singleton None: same complexity as child
-      None locs -> plus2Map locs
       All locs -> plus2Map locs
       Any locs -> plus2Map locs
       Parent parent child -> 2 + complexity parent + complexity child
@@ -538,18 +490,6 @@ prop_prepare_logic_preserved = testPropertyWith genLocatorOptions "prepare with 
 
 genProtocol :: Gen Protocol
 genProtocol = uniformFrequency 1 [HTTP, BiDi]
-
--- >>> _eval test_fail
-
--- *** Exception: ExitSuccess
-
-test_nested_none_match :: TestTree
-test_nested_none_match = testCase "This test fails" $ do
-  let loc = None (None (None (falseLoc :| [trueLoc]) :| []) :| [])
-  -- logPretty loc
-  -- logPretty "--->"
-  -- logPretty (flattenLoc loc)
-  mockLocated False loc @?= mockLocated False (flattenLoc loc)
 
 -- >>> _eval test_infix_precedence
 
@@ -652,7 +592,6 @@ prop_simplification_merges_xpaths =
         RL.Parent {} -> True
         RL.All {elms} -> chkSublocs elms
         RL.Any {elms} -> chkSublocs elms
-        RL.None {elms} -> chkSublocs elms
       _ -> True
 
     chkSublocs l =

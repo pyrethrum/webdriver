@@ -192,7 +192,6 @@ module WebDriverPreCore.Extended.Locators
     (&&&),
     (|||),
     (>>>),
-    notLoc,
   )
 where
 
@@ -767,5 +766,4 @@ infixr 2 |||
 
 infixr 1 >>>
 
-notLoc :: Locator -> Locator
-notLoc l = None (l :| [])
+

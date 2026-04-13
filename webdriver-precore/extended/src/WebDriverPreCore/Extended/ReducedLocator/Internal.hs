@@ -42,7 +42,6 @@ data CombinatorLocator a
   = Parent {parent :: a, child :: a}
   | All {elms :: NonEmpty a}
   | Any {elms :: NonEmpty a}
-  | None {elms :: NonEmpty a}
   deriving
     ( Show,
       Eq
@@ -104,7 +103,7 @@ toHttpLocator = \case
         ccl -> case ccl of
           All {} -> nested All
           Any {} -> nested Any
-          None {} -> nested None
+
         where 
           nested ctr = ctr <$> traverse toHttpLocator cl.elms
   BiDiOnly (BiDiContext {context}) ->
@@ -133,7 +132,6 @@ prepareSimplify defLoc proto l =
       LI.Parent {parent, child} -> Combintor $ Parent {parent = simplify parent, child = simplify child}
       LI.All {elms} -> Combintor . All $ simplify <$> elms
       LI.Any {elms} -> Combintor . Any $ simplify <$> elms
-      LI.None {elms} -> Combintor . None $ simplify <$> elms
       LI.AllElms -> shouldNotExistAfterXPathSub "AllElms"
       LI.ID {} -> shouldNotExistAfterXPathSub "ID"
       LI.Class {} -> shouldNotExistAfterXPathSub "Class"
@@ -144,7 +142,7 @@ prepareSimplify defLoc proto l =
 
 xPathSub :: (Text -> LI.Locator) -> LI.Protocol -> LI.Locator -> Either LI.InvalidLocator LI.Locator
 xPathSub defLoc proto l =
-  -- after prepare comboinator ocators such as Parent, All, Any and None are already be grouped correctly with all XPaths together,
+  -- after prepare comboinator ocators such as Parent, All, Any are already be grouped correctly with all XPaths together,
   --  so we can just recursively convert to XPath if the grup is XPath Convertable
   coreToFullXPath . convertXPath <$> LI.prepare defLoc proto l
   where
@@ -166,7 +164,6 @@ xPathSub defLoc proto l =
         LI.Parent {parent, child} -> tryConvert $ LI.Parent (convertXPath parent) (convertXPath child)
         LI.All {elms} -> tryConvert $ LI.All (convertXPath <$> elms)
         LI.Any {elms} -> tryConvert $ LI.Any (convertXPath <$> elms)
-        LI.None {elms} -> tryConvert $ LI.None (convertXPath <$> elms)
       where
         xpathLoc = toXPathCore loc
         convertable l' = LI.classify defLoc proto l' == LI.IsXPath
@@ -210,7 +207,6 @@ toXPathCore = LI.XPath . toXPathCoreTxt
           toXPathCoreTxt child <> " and ancestor::*[" <> toXPathCoreTxt parent <> "]"
         LI.All {elms} -> elmsTxt "and" elms
         LI.Any {elms} -> elmsTxt "or" elms
-        LI.None {elms} -> "not" <> elmsTxt "or" elms
         LI.CSS {} -> locErr loc
         LI.Default {} -> locErr loc
         LI.Role {} -> locErr loc

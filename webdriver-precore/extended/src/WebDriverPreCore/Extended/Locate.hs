@@ -94,9 +94,6 @@ data LocateResult
   | OrResult
       { found :: [LocateResult]
       }
-  | NotResult
-      { found :: [LocateResult]
-      }
   | PostFilterResult
       { predicate :: LI.Predicate,
         found :: [LocateResult]
@@ -118,10 +115,6 @@ elmIds _ lr = recurse lr
           & fmap \case
             [] -> []
             (x : xs) -> P.foldl' LST.intersect x xs
-      NotResult {found} ->
-        recurseAll found >>= \idLists ->
-          let allIds = P.foldl' LST.union [] idLists
-           in if P.null allIds then Right [] else failed
     failed = Left lr
     recurseAll = traverse recurse
     recurseConcatAll = fmap mconcat . recurseAll
@@ -131,7 +124,6 @@ elmIds _ lr = recurse lr
 --   Parent {parent, child} -> ParentResult {found = [locateNested child]}
 --   All {elms} -> AndResult {found = fmap locateNested elms}
 --   Any {elms} -> OrResult {found = fmap locateNested elms}
---   None {elms} -> NotResult {found = fmap locateNested elms}
 --   PostFilter {predicate, locator} -> PostFilterResult {predicate, found = [locateNested locator]}
 --   -- will never happen - already filtered out by prepareSimplify
 --   BiDiContext {} -> error "BiDiContext locators are not supported in HTTP WebDriver"
@@ -142,7 +134,7 @@ elmIds _ lr = recurse lr
 -- 0. locateHttp Compiles (NoImp postfilter)
 -- 1. get unretried http working with tests
 --   1.1 simple locators (css, xpath, role, inner text)
---   1.2 compound locators (parent, all, any, none)
+--   1.2 compound locators (parent, all, any)
 --   1.3 displayed checks (disambiguate unique and always)
 --   1.4 visible text
 --
@@ -311,9 +303,6 @@ locateHttp throw catch runner defLoc cardinality MkLocateOps {displayedCheck} se
         Any {elms} -> do
           results <- traverse locate elms
           pure OrResult {found = toList results}
-        None {elms} -> do
-          results <- traverse locate elms
-          pure NotResult {found = toList results}
       PostFilterHttpLocator {} -> postfilterNotImplemented
       where
         locate = httpLocate' mRoot
@@ -345,7 +334,6 @@ httpLocateMany = \case
   Parent {} -> undefined
   All {} -> undefined
   Any {} -> undefined
-  None {} -> undefined
   PostFilter {} -> undefined
   -}
 
