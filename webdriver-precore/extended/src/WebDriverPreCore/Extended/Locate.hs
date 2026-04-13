@@ -104,6 +104,27 @@ data LocateResult
   deriving (Show, Eq)
 
 elmIds :: LocateDirectives -> LocateResult -> Either LocateResult [ElementId]
+elmIds _ lr = recurse lr
+  where
+    recurse :: LocateResult -> Either LocateResult [ElementId]
+    recurse r = case r of
+      SingleResult (SingleSuccess {elms}) -> Right elms
+      SingleResult (SingleFailure {}) -> failed
+      PostFilterResult {} -> postfilterNotImplemented
+      ParentResult {found} -> recurseConcatAll found 
+      OrResult {found} -> recurseConcatAll found 
+      AndResult {found} ->
+        recurseAll found
+          & fmap \case
+            [] -> []
+            (x : xs) -> P.foldl' LST.intersect x xs
+      NotResult {found} ->
+        recurseAll found >>= \idLists ->
+          let allIds = P.foldl' LST.union [] idLists
+           in if P.null allIds then Right [] else failed
+    failed = Left lr
+    recurseAll = traverse recurse
+    recurseConcatAll = fmap mconcat . recurseAll
 
 -- locateNested :: ReducedLocator -> LocateResult
 -- locateNested = \case
