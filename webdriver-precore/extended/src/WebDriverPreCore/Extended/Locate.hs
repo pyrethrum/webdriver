@@ -28,7 +28,7 @@ import WebDriverPreCore.Extended.ReducedLocator.Internal as RL
     CommonLocator (..),
     ReducedHttpLocator (..),
     ReducedLocator (..),
-    ShimmedLocator (..),
+    BiDiNativeLocator (..),
     prepareSimplify,
     toHttpLocator,
   )
@@ -85,7 +85,7 @@ data SingleResult
 
 data LocateResult
   = SingleResult SingleResult
-  | ParentResult
+  | ContainsResult
       { found :: [LocateResult]
       }
   | AndResult
@@ -101,17 +101,17 @@ data LocateResult
   deriving (Show, Eq)
 
 -- TODO - may need to reintroduce locateDirectives param
--- elmIds :: LocateDirectives -> LocateResult -> Either LocateResult [ElementId]
--- elmIds _ lr = recurse lr
-elmIds :: LocateResult -> Either LocateResult [ElementId]
-elmIds lr = recurse lr
+-- extractIds :: LocateDirectives -> LocateResult -> Either LocateResult [ElementId]
+-- extractIds _ lr = recurse lr
+extractIds :: LocateResult -> Either LocateResult [ElementId]
+extractIds lr = recurse lr
   where
     recurse :: LocateResult -> Either LocateResult [ElementId]
     recurse = \case 
       SingleResult (SingleSuccess {elms}) -> Right elms
       SingleResult (SingleFailure {}) -> failed
       PostFilterResult {} -> postfilterNotImplemented
-      ParentResult {found} -> recurseConcatAll found 
+      ContainsResult {found} -> recurseConcatAll found 
       OrResult {found} -> recurseConcatAll found 
       AndResult {found} ->
         recurseAll found
@@ -124,7 +124,7 @@ elmIds lr = recurse lr
 
 -- locateNested :: ReducedLocator -> LocateResult
 -- locateNested = \case
---   Contains {container, contained} -> ParentResult {found = [locateNested contained]}
+--   Contains {container, contained} -> ContainsResult {found = [locateNested contained]}
 --   All {elms} -> AndResult {found = fmap locateNested elms}
 --   Any {elms} -> OrResult {found = fmap locateNested elms}
 --   PostFilter {predicate, locator} -> PostFilterResult {predicate, found = [locateNested locator]}
@@ -263,26 +263,27 @@ locateHttp throw catch runner defLoc cardinality MkLocateOps {displayedCheck} se
                   Just e -> SingleFailure source e elmsRechecked
               e -> pure $ SingleFailure source e elms
 
-    locateSingleChecked :: Maybe ElementId -> Bool -> LocatorSource -> Selector -> m SingleResult
-    locateSingleChecked mRoot findFirst ls =
-      locateSingleUnchecked mRoot findFirst ls >=> checkSingleResult
+    locateSingleChecked :: Maybe ElementId -> Cardinality -> LocatorSource -> Selector -> m SingleResult
+    locateSingleChecked mRoot cardinality' ls =
+      locateSingleUnchecked mRoot (cardinality' == First) ls >=> checkSingleResult
 
     toSelector :: CommonLocator -> Selector
     toSelector = \case
       RL.CSS {value} -> HTTPP.CSS value
       RL.XPath {value} -> HTTPP.XPath value
-      Shimmed sl -> case sl of
+      -- shim BiDiNative locators
+      BiDiNative sl -> case sl of
         Role {role} -> HTTPP.XPath $ roleToXPath role
         InnerText {value, matchType, caseSesnsitivity, maxDepth} -> HTTPP.XPath $ innerTextToXPath value caseSesnsitivity matchType maxDepth
 
-    httpLocateCommon :: Maybe ElementId -> Bool -> CommonLocator -> m LocateResult
-    httpLocateCommon mRoot findFirst cl =
-      SingleResult <$> locateSingleChecked mRoot findFirst ls (toSelector cl)
+    httpLocateCommon :: Maybe ElementId -> Cardinality -> CommonLocator -> m LocateResult
+    httpLocateCommon mRoot cardinality' cl =
+      SingleResult <$> locateSingleChecked mRoot cardinality' ls (toSelector cl)
       where
         ls = case cl of
           RL.CSS {} -> PlainSource
           RL.XPath {} -> PlainSource
-          Shimmed sl -> case sl of
+          BiDiNative sl -> case sl of
             Role {role} -> RoleSource role
             InnerText {value} -> InnerTextSource value
 
@@ -311,15 +312,15 @@ locateHttp throw catch runner defLoc cardinality MkLocateOps {displayedCheck} se
         locateContained :: LocateResult -> m LocateResult
         locateContained containers = do
           -- for each container, locate contained with root of container element, and combine results
-          let ids = elmIds
+          let ids = extractIds <$> containers.found
           containedResults <- traverse (locate . Just <=< getSingleElementId) containers
-          pure $ ParentResult {found = toList containedResults}
+          pure $ ContainsResult {found = toList containedResults}
 
     httpLocate :: ReducedHttpLocator -> m LocateResult
     httpLocate = \case
       CommonHttp cl ->
         -- for simple single shot locator locate as per cardinality directive
-        httpLocateCommon Nothing (cardinality == First) cl
+        httpLocateCommon Nothing cardinality cl
       PostFilterHttpLocator {} ->
         -- will neeed to postfilter &&& all
         postfilterNotImplemented

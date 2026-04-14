@@ -2,7 +2,7 @@ module WebDriverPreCore.Extended.ReducedLocator.Internal
   ( ReducedLocator (..),
     ReducedHttpLocator (..),
     CommonLocator (..),
-    ShimmedLocator (..),
+    BiDiNativeLocator (..),
     CombinatorLocator (..),
     PostFilterLocator (..),
     BiDiOnlyLocator (..),
@@ -26,7 +26,7 @@ data CommonLocator
     CSS {value :: Text}
   | XPath {value :: Text}
   | -- bidi native locators that can be approximated in HTTP
-    Shimmed {shimmed :: ShimmedLocator}
+    BiDiNative {loc :: BiDiNativeLocator}
   deriving
     ( Show,
       Eq
@@ -47,7 +47,7 @@ data CombinatorLocator a
       Eq
     )
 
-data ShimmedLocator
+data BiDiNativeLocator
   = Role {role :: LI.RoleLocator}
   | InnerText
       { value :: Text,
@@ -125,8 +125,8 @@ prepareSimplify defLoc proto l =
     simplify = \case
       LI.CSS {..} -> Common CSS {..}
       LI.XPath {..} -> Common XPath {..}
-      LI.Role {..} -> Common . Shimmed $ Role {..}
-      LI.InnerText {..} -> Common . Shimmed $ InnerText {..}
+      LI.Role {..} -> Common . BiDiNative $ Role {..}
+      LI.InnerText {..} -> Common . BiDiNative $ InnerText {..}
       LI.BiDiContext {..} -> BiDiOnly BiDiContext {..}
       LI.PostFilter {predicate, locator} -> PostFilterLocator $ PostFilter {predicate, locator = simplify locator}
       LI.Contains {container, contained} -> Combintor $ Contains {container = simplify container, contained = simplify contained}
