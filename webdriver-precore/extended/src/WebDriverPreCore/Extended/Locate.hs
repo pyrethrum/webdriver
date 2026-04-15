@@ -24,11 +24,11 @@ import WebDriverPreCore.Extended.Locators.Internal (Locator, Protocol (..), Role
 import WebDriverPreCore.Extended.Locators.Internal qualified as LI
 import WebDriverPreCore.Extended.Protocol (Session, WebDriverException)
 import WebDriverPreCore.Extended.ReducedLocator.Internal as RL
-  ( CombinatorLocator (..),
-    CommonLocator (..),
-    ReducedHttpLocator (..),
-    ReducedLocator (..),
-    BiDiNativeLocator (..),
+  ( CombinatorLoc (..),
+    LeafLoc (..),
+    ReducedHttpLoc (..),
+    ReducedLoc (..),
+    BiDiNativeLoc (..),
     prepareSimplify,
     toHttpLocator,
   )
@@ -122,7 +122,7 @@ extractIds lr = recurse lr
     recurseAll = traverse recurse
     recurseConcatAll = fmap mconcat . recurseAll
 
--- locateNested :: ReducedLocator -> LocateResult
+-- locateNested :: ReducedLoc -> LocateResult
 -- locateNested = \case
 --   Contains {container, contained} -> ContainsResult {found = [locateNested contained]}
 --   All {elms} -> AndResult {found = fmap locateNested elms}
@@ -195,7 +195,7 @@ locateHttp throw catch runner defLoc cardinality MkLocateOps {displayedCheck} se
       (throw . InvalidLocator)
       \loc -> undefined
   where
-    preparedLoc :: Either LI.InvalidLocator ReducedHttpLocator
+    preparedLoc :: Either LI.InvalidLocator ReducedHttpLoc
     preparedLoc = prepareSimplify defLoc HTTP locator >>= toHttpLocator
 
     runCommand :: forall a. ((Command a -> m a) -> Session -> Selector -> m a) -> Selector -> m a
@@ -267,7 +267,7 @@ locateHttp throw catch runner defLoc cardinality MkLocateOps {displayedCheck} se
     locateSingleChecked mRoot cardinality' ls =
       locateSingleUnchecked mRoot (cardinality' == First) ls >=> checkSingleResult
 
-    toSelector :: CommonLocator -> Selector
+    toSelector :: LeafLoc -> Selector
     toSelector = \case
       RL.CSS {value} -> HTTPP.CSS value
       RL.XPath {value} -> HTTPP.XPath value
@@ -276,7 +276,7 @@ locateHttp throw catch runner defLoc cardinality MkLocateOps {displayedCheck} se
         Role {role} -> HTTPP.XPath $ roleToXPath role
         InnerText {value, matchType, caseSesnsitivity, maxDepth} -> HTTPP.XPath $ innerTextToXPath value caseSesnsitivity matchType maxDepth
 
-    httpLocateCommon :: Maybe ElementId -> Cardinality -> CommonLocator -> m LocateResult
+    httpLocateCommon :: Maybe ElementId -> Cardinality -> LeafLoc -> m LocateResult
     httpLocateCommon mRoot cardinality' cl =
       SingleResult <$> locateSingleChecked mRoot cardinality' ls (toSelector cl)
       where
@@ -288,11 +288,11 @@ locateHttp throw catch runner defLoc cardinality MkLocateOps {displayedCheck} se
             InnerText {value} -> InnerTextSource value
 
     -- recursive version of http locate
-    -- httpLocate' :: ReducedHttpLocator -> m (Either LocateException LocateResult)
+    -- httpLocate' :: ReducedHttpLoc -> m (Either LocateException LocateResult)
 
-    httpLocate' :: Maybe ElementId -> ReducedHttpLocator -> m LocateResult
+    httpLocate' :: Maybe ElementId -> ReducedHttpLoc -> m LocateResult
     httpLocate' mRoot = \case
-      CommonHttp cl ->
+      LeafHttp cl ->
         -- need to find all elms for combinator and later checks and retries
         httpLocateCommon mRoot False cl
       CombintorHttp cb -> case cb of
@@ -306,7 +306,7 @@ locateHttp throw catch runner defLoc cardinality MkLocateOps {displayedCheck} se
         Any {elms} -> do
           results <- traverse locate elms
           pure OrResult {found = toList results}
-      PostFilterHttpLocator {} -> postfilterNotImplemented
+      PostFilterHttpLoc {} -> postfilterNotImplemented
       where
         locate = httpLocate' mRoot
         locateContained :: LocateResult -> m LocateResult
@@ -316,12 +316,12 @@ locateHttp throw catch runner defLoc cardinality MkLocateOps {displayedCheck} se
           containedResults <- traverse (locate . Just <=< getSingleElementId) containers
           pure $ ContainsResult {found = toList containedResults}
 
-    httpLocate :: ReducedHttpLocator -> m LocateResult
+    httpLocate :: ReducedHttpLoc -> m LocateResult
     httpLocate = \case
-      CommonHttp cl ->
+      LeafHttp cl ->
         -- for simple single shot locator locate as per cardinality directive
         httpLocateCommon Nothing cardinality cl
-      PostFilterHttpLocator {} ->
+      PostFilterHttpLoc {} ->
         -- will neeed to postfilter &&& all
         postfilterNotImplemented
       loc@CombintorHttp {} -> httpLocate' Nothing loc
@@ -332,7 +332,7 @@ postfilterNotImplemented = error "PostFilter locators are not yet implemented in
 -- !!!!!!!! compound locates and retries  - need a pointer back to the orional locator so ca retry for
 -- special cases such as role inner test and displayed when ambiguous.
 {-
-httpLocateMany :: ReducedHttpLocator -> m [ElementId]
+httpLocateMany :: ReducedHttpLoc -> m [ElementId]
 httpLocateMany = \case
   L.CSS {} -> undefined
   L.XPath {} -> undefined

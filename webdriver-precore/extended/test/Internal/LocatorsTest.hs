@@ -598,5 +598,5 @@ prop_simplification_merges_xpaths =
       chkListXPathSingleton l
         && all chkAllXPathsingleton l
 
-    chkListXPathSingleton :: NonEmpty RL.ReducedLocator -> Bool
+    chkListXPathSingleton :: NonEmpty RL.ReducedLoc -> Bool
     chkListXPathSingleton l = not $ (length (filter RL.isXPath l)) > 1

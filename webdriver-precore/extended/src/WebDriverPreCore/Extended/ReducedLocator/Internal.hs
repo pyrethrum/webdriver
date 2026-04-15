@@ -1,11 +1,11 @@
 module WebDriverPreCore.Extended.ReducedLocator.Internal
-  ( ReducedLocator (..),
-    ReducedHttpLocator (..),
-    CommonLocator (..),
-    BiDiNativeLocator (..),
-    CombinatorLocator (..),
-    PostFilterLocator (..),
-    BiDiOnlyLocator (..),
+  ( ReducedLoc (..),
+    ReducedHttpLoc (..),
+    LeafLoc (..),
+    BiDiNativeLoc (..),
+    CombinatorLoc (..),
+    PostFilterLoc (..),
+    BiDiOnlyLeafLoc (..),
     isXPath,
     toHttpLocator,
     prepareSimplify,
@@ -21,24 +21,24 @@ import WebDriverPreCore.Extended.BiDi.Base.Protocol (BrowsingContext, JSUInt)
 import WebDriverPreCore.Extended.Locators.Internal qualified as LI
 import Prelude
 
-data CommonLocator 
+data LeafLoc
   = -- universal
     CSS {value :: Text}
   | XPath {value :: Text}
   | -- bidi native locators that can be approximated in HTTP
-    BiDiNative {loc :: BiDiNativeLocator}
+    BiDiNative {loc :: BiDiNativeLoc}
   deriving
     ( Show,
       Eq
     )
 
-data PostFilterLocator a = PostFilter {predicate :: LI.Predicate, locator :: a}
+data PostFilterLoc a = PostFilter {predicate :: LI.Predicate, locator :: a}
   deriving
     ( Show,
       Eq
     )
 
-data CombinatorLocator a
+data CombinatorLoc a
   = Contains {container :: a, contained :: a}
   | All {elms :: NonEmpty a}
   | Any {elms :: NonEmpty a}
@@ -47,7 +47,7 @@ data CombinatorLocator a
       Eq
     )
 
-data BiDiNativeLocator
+data BiDiNativeLoc
   = Role {role :: LI.RoleLocator}
   | InnerText
       { value :: Text,
@@ -60,7 +60,7 @@ data BiDiNativeLocator
       Eq
     )
 
-data BiDiOnlyLocator
+data BiDiOnlyLeafLoc
   = BiDiContext {context :: BrowsingContext}
   deriving
     ( Show,
@@ -70,11 +70,11 @@ data BiDiOnlyLocator
 -- | Simplified/resolved form of 'LI.Locator', where leaf locators expressible
 --   as XPath have been folded in and 'LI.Default' has been resolved.
 --   Produced by 'prepareSimplify'.
-data ReducedLocator
-  = Common CommonLocator 
-  | PostFilterLocator (PostFilterLocator ReducedLocator)
-  | Combintor (CombinatorLocator ReducedLocator)
-  | BiDiOnly BiDiOnlyLocator
+data ReducedLoc
+  = Leaf LeafLoc
+  | PostFilterLoc (PostFilterLoc ReducedLoc)
+  | Combintor (CombinatorLoc ReducedLoc)
+  | BiDiOnlyLeaf BiDiOnlyLeafLoc
   deriving
     ( Show,
       Eq
@@ -83,20 +83,20 @@ data ReducedLocator
 -- | Simplified/resolved form of 'LI.Locator', where leaf locators expressible
 --   as XPath have been folded in and 'LI.Default' has been resolved.
 --   Produced by 'prepareSimplify'.
-data ReducedHttpLocator
-  = CommonHttp CommonLocator
-  | PostFilterHttpLocator (PostFilterLocator ReducedHttpLocator)
-  | CombintorHttp (CombinatorLocator ReducedHttpLocator)
+data ReducedHttpLoc
+  = LeafHttp LeafLoc
+  | PostFilterHttpLoc (PostFilterLoc ReducedHttpLoc)
+  | CombintorHttp (CombinatorLoc ReducedHttpLoc)
   deriving
     ( Show,
       Eq
     )
 
-toHttpLocator :: ReducedLocator -> Either LI.InvalidLocator ReducedHttpLocator
+toHttpLocator :: ReducedLoc -> Either LI.InvalidLocator ReducedHttpLoc
 toHttpLocator = \case
-  Common cl -> Right $ CommonHttp cl
-  PostFilterLocator (PostFilter {predicate, locator}) ->
-      PostFilterHttpLocator . PostFilter predicate <$> toHttpLocator locator
+  Leaf cl -> Right $ LeafHttp cl
+  PostFilterLoc (PostFilter {predicate, locator}) ->
+      PostFilterHttpLoc . PostFilter predicate <$> toHttpLocator locator
   Combintor cl ->
       CombintorHttp <$> case cl of
         Contains {container, contained} -> Contains <$> toHttpLocator container <*> toHttpLocator contained
@@ -106,29 +106,29 @@ toHttpLocator = \case
 
         where 
           nested ctr = ctr <$> traverse toHttpLocator cl.elms
-  BiDiOnly (BiDiContext {context}) ->
+  BiDiOnlyLeaf (BiDiContext {context}) ->
     Left $ LI.MkInvalidLocator (LI.BiDiContext {context}) "BiDi-only locator cannot be used with HTTP protocol"
 
 
 
-isXPath :: ReducedLocator -> Bool
+isXPath :: ReducedLoc -> Bool
 isXPath = \case
-  Common XPath {} -> True
+  Leaf XPath {} -> True
   _ -> False
 
 
-prepareSimplify :: (Text -> LI.Locator) -> LI.Protocol -> LI.Locator -> Either LI.InvalidLocator ReducedLocator
+prepareSimplify :: (Text -> LI.Locator) -> LI.Protocol -> LI.Locator -> Either LI.InvalidLocator ReducedLoc
 prepareSimplify defLoc proto l =
   simplify <$> xPathSub defLoc proto l
   where
-    simplify :: LI.Locator -> ReducedLocator
+    simplify :: LI.Locator -> ReducedLoc
     simplify = \case
-      LI.CSS {..} -> Common CSS {..}
-      LI.XPath {..} -> Common XPath {..}
-      LI.Role {..} -> Common . BiDiNative $ Role {..}
-      LI.InnerText {..} -> Common . BiDiNative $ InnerText {..}
-      LI.BiDiContext {..} -> BiDiOnly BiDiContext {..}
-      LI.PostFilter {predicate, locator} -> PostFilterLocator $ PostFilter {predicate, locator = simplify locator}
+      LI.CSS {..} -> Leaf CSS {..}
+      LI.XPath {..} -> Leaf XPath {..}
+      LI.Role {..} -> Leaf . BiDiNative $ Role {..}
+      LI.InnerText {..} -> Leaf . BiDiNative $ InnerText {..}
+      LI.BiDiContext {..} -> BiDiOnlyLeaf BiDiContext {..}
+      LI.PostFilter {predicate, locator} -> PostFilterLoc $ PostFilter {predicate, locator = simplify locator}
       LI.Contains {container, contained} -> Combintor $ Contains {container = simplify container, contained = simplify contained}
       LI.All {elms} -> Combintor . All $ simplify <$> elms
       LI.Any {elms} -> Combintor . Any $ simplify <$> elms
