@@ -293,30 +293,33 @@ locateHttp throw catch runner defLoc cardinality MkLocateOps {displayedCheck} se
     -- httpLocate' :: ReducedHttpLoc -> m (Either LocateException LocateResult)
 
     httpLocate' :: Maybe ElementId -> ReducedHttpLoc -> m (Either LocateException LocateResult)
-    httpLocate' mRoot = \case
-      LeafHttp cl ->
-        -- need to find all elms for combinator and later checks and retries
-        httpLocateLeaf mRoot Many cl
-      CombintorHttp cb -> case cb of
-        Contains {container, contained} -> do
-          containers <- locate container
-          locateContained containers
-          undefined
-        All {elms} -> do
-          results <- traverse locate elms
-          pure AndResult {found = toList results}
-        Any {elms} -> do
-          results <- traverse locate elms
-          pure OrResult {found = toList results}
-      PostFilterHttpLoc {} -> postfilterNotImplemented
-      where
-        locate = httpLocate' mRoot
-        locateContained :: LocateResult -> m LocateResult
-        locateContained containers = do
-          -- for each container, locate contained with root of container element, and combine results
-          let ids = extractIds <$> containers.found
-          containedResults <- traverse (locate . Just <=< getSingleElementId) containers
-          pure $ ContainsResult {found = toList containedResults}
+    httpLocate' mRoot = undefined 
+     where
+      apply =
+        \case
+          LeafHttp cl ->
+            -- need to find all elms for combinator and later checks and retries
+            httpLocateLeaf mRoot Many cl
+          CombintorHttp cb -> case cb of
+            Contains {container, contained} -> do
+              containers <- locate container
+              locateContained containers
+              undefined
+            All {elms} -> do
+              results <- traverse locate elms
+              pure AndResult {found = toList results}
+            Any {elms} -> do
+              results <- traverse locate elms
+              pure OrResult {found = toList results}
+          PostFilterHttpLoc {} -> postfilterNotImplemented
+          where
+            locate = httpLocate' mRoot
+            locateContained :: LocateResult -> m LocateResult
+            locateContained containers = do
+              -- for each container, locate contained with root of container element, and combine results
+              let ids = extractIds <$> containers.found
+              containedResults <- traverse (locate . Just <=< getSingleElementId) containers
+              pure $ ContainsResult {found = toList containedResults}
 
     httpLocate :: ReducedHttpLoc -> m (Either LocateException LocateResult)
     httpLocate = \case
