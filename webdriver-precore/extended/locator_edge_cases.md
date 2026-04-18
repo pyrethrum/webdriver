@@ -10,9 +10,8 @@
     - [4. **aria-describedby (Description, Not Name)**](#4-aria-describedby-description-not-name)
     - [5. **Accessible Name Computation Order**](#5-accessible-name-computation-order)
     - [6. **Hidden Text in Accessible Names**](#6-hidden-text-in-accessible-names)
-    - [7. **Recursive/Nested aria-labelledby**](#7-recursivenested-aria-labelledby)
-    - [8. **Title Attribute Fallback Conditions**](#8-title-attribute-fallback-conditions)
-    - [9. **Role Presentation/None Suppression**](#9-role-presentationnone-suppression)
+    - [7. **Recursive/Nested aria-labelledby**~~](#7-recursivenested-aria-labelledby)
+    - [~~9. **Role Presentation/None Suppression**~~](#9-role-presentationnone-suppression)
     - [10. **Form Control Implicit Labels**](#10-form-control-implicit-labels)
     - [11. **ARIA 1.3 Name-from-Content Rules**](#11-aria-13-name-from-content-rules)
     - [12. **Internationalization/Whitespace**](#12-internationalizationwhitespace)
@@ -38,6 +37,9 @@
   - [BiDi (`script.evaluate` over WebSocket)](#bidi-scriptevaluate-over-websocket)
   - [Classic HTTP WebDriver (`executeScript`)](#classic-http-webdriver-executescript)
   - [Summary](#summary)
+- [Getting Value](#getting-value)
+  - [Classic WebDriver (HTTP)](#classic-webdriver-http)
+  - [WebDriver BiDi](#webdriver-bidi)
 
 
 
@@ -107,11 +109,20 @@ GitHub Copilot: Based on the function `accessibilityToXPath` and the ARIA/HTML s
 ### 1. **aria-labelledby References**
 The function cannot resolve `aria-labelledby` which references other element IDs to construct the accessible name. XPath 1.0 has no way to follow ID references and concatenate text from multiple elements.
 
+`aria-labelledby` also accepts a **space-separated list of IDs** — the browser concatenates the text of all referenced elements in order to form the accessible name. XPath cannot resolve even a single idref, let alone multiple.
+
 ```html
-<!-- Cannot handle this: -->
+<!-- Single idref: -->
 <h2 id="dialog-title">Confirm Action</h2>
 <button aria-labelledby="dialog-title">OK</button>
-<!-- Accessible name is "Confirm Action", but XPath won't resolve the idref -->
+<!-- Accessible name: "Confirm Action" -->
+
+<!-- Multiple idrefs (valid and common in dialogs): -->
+<h2 id="dialog-title">Delete File</h2>
+<p  id="dialog-subtitle">This action cannot be undone.</p>
+<button aria-labelledby="dialog-title dialog-subtitle">Confirm</button>
+<!-- Accessible name: "Delete File This action cannot be undone." -->
+<!-- XPath cannot resolve either reference, let alone concatenate both -->
 ```
 
 ### 2. **`<label for="...">` Associations**
@@ -138,6 +149,16 @@ Elements inside shadow roots are completely invisible to XPath queries from the 
 ### 4. **aria-describedby (Description, Not Name)**
 While the function focuses on accessible *names*, `aria-describedby` contributes to the accessible *description* and is similarly unsupported.
 
+Like `aria-labelledby`, `aria-describedby` is also an **ID reference list** — it accepts multiple space-separated IDs, and the browser concatenates the text of all referenced elements to form the description. The same applies to `aria-controls`, `aria-owns`, and `aria-flowto`. None of these can be resolved by XPath.
+
+```html
+<!-- Multiple idrefs on aria-describedby: -->
+<p id="hint-1">Must be at least 8 characters.</p>
+<p id="hint-2">Must include a number.</p>
+<input type="password" aria-label="Password" aria-describedby="hint-1 hint-2">
+<!-- Accessible description: "Must be at least 8 characters. Must include a number." -->
+```
+
 ### 5. **Accessible Name Computation Order**
 The [ARIA spec's name computation algorithm](https://www.w3.org/TR/accname-1.2/#mapping_additional_nd_te) has a specific precedence order. This function checks all sources with `or`, but the real algorithm stops at the first match:
 
@@ -151,14 +172,14 @@ The XPath treats them as equals, potentially matching elements that wouldn't mat
 ### 6. **Hidden Text in Accessible Names**
 CSS-hidden text (`visibility: hidden`, `display: none`) can still contribute to accessible names via `aria-label` or `aria-labelledby`, but those elements wouldn't match the XPath visibility filters you use elsewhere.
 
-### 7. **Recursive/Nested aria-labelledby**
+### 7. **Recursive/Nested aria-labelledby**~~
 Elements referenced by `aria-labelledby` can themselves have `aria-labelledby`, creating chains. Real browsers flatten these recursively; XPath cannot.
 
-### 8. **Title Attribute Fallback Conditions**
-The `title` attribute only becomes the accessible name when no other labeling mechanism exists. The XPath uses `or`, so it might match elements where `title` shouldn't be considered.
+~~### 8. **Title Attribute Fallback Conditions**~~
+~~The `title` attribute only becomes the accessible name when no other labeling mechanism exists. The XPath uses `or`, so it might match elements where `title` shouldn't be considered.~~
 
-### 9. **Role Presentation/None Suppression**
-Elements with `role="presentation"` or `role="none"` have their semantics (and often their names) suppressed in the accessibility tree, but this function still tries to match them.
+### ~~9. **Role Presentation/None Suppression**~~
+~~Elements with `role="presentation"` or `role="none"` have their semantics (and often their names) suppressed in the accessibility tree, but this function still tries to match them.~~
 
 ```html
 <!-- Should not expose accessible name: -->

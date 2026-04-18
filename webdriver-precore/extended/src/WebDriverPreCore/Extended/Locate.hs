@@ -417,4 +417,11 @@ isDisplayedHttp catch runner ses eid =
 
 locateBiDi = undefined
 
+
+roleToXPathHttpSecondPass :: (Maybe ElementId -> Selector -> m [ElementId]) -> RoleLocator -> m LocateResult
+roleToXPathHttpSecondPass locateAll = undefined
+
+implement #sym:roleToXPathHttpSecondPass to find matching mapped attributes such as aria-labelledby
+There is a number of mapped attribute edge cases in locator_edge_cases.md that can be covered in muti shot a second pass
+
 --  use all findElements but limit to 2 results (not supported in standard HTTP WebDriver, but available in BiDi via maxNodeCount).

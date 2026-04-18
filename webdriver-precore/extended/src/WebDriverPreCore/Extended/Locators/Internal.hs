@@ -174,7 +174,7 @@ roleToXPath :: RoleLocator -> Text
 roleToXPath = \case
   RoleFull {role, name} -> "//*" <> role' role <> name' name
   RoleType {role} -> "//*" <> role' role
-  RoleName {name} -> "//*" <> name' name
+  RoleName {name} -> "//*[not(@role='presentation' or @role='none')]" <> name' name
   where
     role' r = "[" <> implicitRoleXPath r <> " or @role='" <> displayAriaRole r <> "']"
 
@@ -184,9 +184,10 @@ roleToXPath = \case
           " or "
           [ "@aria-label='" <> n <> "'",
             "@placeholder='" <> n <> "'",
-            "@title='" <> n <> "'",
             "@alt='" <> n <> "'",
-            "normalize-space(text())='" <> n <> "'"
+            "normalize-space(text())='" <> n <> "'",
+            -- title is a last-resort fallback: only matches when no higher-priority source exists
+            "@title='" <> n <> "' and not(@aria-label) and not(@placeholder) and not(@alt) and not(normalize-space(text()))"
           ]
         <> "]"
 
