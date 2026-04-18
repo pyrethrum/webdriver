@@ -205,13 +205,13 @@ locateHttp throw catch runner defLoc cardinality MkLocateOps {jsRecheckDisplayed
     preparedLoc :: Either LI.InvalidLocator ReducedHttpLoc
     preparedLoc = prepareSimplify defLoc HTTP locator >>= toHttpLocator
 
-    runCommand :: forall a. ((Command a -> m a) -> Session -> Selector -> m a) -> Selector -> m (Either LocateException a)
+    runCommand :: forall a. ((Command a -> m a) -> Session -> Selector -> m a) -> Selector -> m a
     runCommand f sel =
       catch
-        (Right <$> f runner ses sel)
-        (pure . Left . DriverException)
+        (f runner ses sel)
+        (throw . DriverException)
 
-    findElm :: Maybe ElementId -> Selector -> m (Either LocateException ElementId)
+    findElm :: Maybe ElementId -> Selector -> m ElementId
     findElm mRoots =
       mRoots
         & maybe
@@ -221,7 +221,7 @@ locateHttp throw catch runner defLoc cardinality MkLocateOps {jsRecheckDisplayed
         findElementFromElement' :: ElementId -> (Command ElementId -> m ElementId) -> Session -> Selector -> m ElementId
         findElementFromElement' rootId runner' ses' sel = findElementFromElement runner' ses' rootId sel
 
-    findElms :: Maybe ElementId -> Selector -> m (Either LocateException [ElementId])
+    findElms :: Maybe ElementId -> Selector -> m [ElementId]
     findElms mRoot s =
       mRoot
         & maybe
@@ -231,61 +231,56 @@ locateHttp throw catch runner defLoc cardinality MkLocateOps {jsRecheckDisplayed
         findElementsFromElement' :: ElementId -> (Command [ElementId] -> m [ElementId]) -> Session -> Selector -> m [ElementId]
         findElementsFromElement' rootId runner' ses' sel = findElementsFromElement runner' ses' rootId sel
 
-    recheckDisplayed :: ElementId -> m (Either LocateException Bool)
-    recheckDisplayed = isDisplayedHttp catch runner ses
+    recheckDisplayed :: ElementId -> m Bool
+    recheckDisplayed eid = isDisplayedHttp catch runner ses eid >>= either throw pure
 
-    filterDisplayedIf :: DisplayedCheck -> [ElementId] -> m (Either LocateException [ElementId])
+    filterDisplayedIf :: DisplayedCheck -> [ElementId] -> m [ElementId]
     filterDisplayedIf dc =
       if dc == jsRecheckDisplayed
         then jsFilterDisplayed
-        else pure . Right
+        else pure
 
-    jsFilterDisplayed :: [ElementId] -> m (Either LocateException [ElementId])
+    jsFilterDisplayed :: [ElementId] -> m [ElementId]
     jsFilterDisplayed elms = do
       results <- traverse doCheck elms
-      pure $ fmap fst . P.filter snd <$> sequence results
+      pure $ fmap fst . P.filter snd $ results
       where
-        doCheck elm = fmap (elm,) <$> recheckDisplayed elm
+        doCheck elm = (elm,) <$> recheckDisplayed elm
 
-    locateAll :: Maybe ElementId -> Selector -> m (Either LocateException [ElementId])
+    locateAll :: Maybe ElementId -> Selector -> m [ElementId]
     locateAll mRoot s = findElms mRoot s -- >>= filterDisplayedIf Always
     --
-    locateLeaf :: Maybe ElementId -> Bool -> LeafLoc -> m (Either LocateException LeafResult)
+    locateLeaf :: Maybe ElementId -> Bool -> LeafLoc -> m LeafResult
     locateLeaf mRoot findFirst loc =
-      (MkLeafResult loc <$>)
+      MkLeafResult loc
         <$> ( if findFirst
                 -- lean on webdriver - brings first result back (faster)
-                then \s -> (LST.singleton <$>) <$> (findElm mRoot s)
+                then \s -> LST.singleton <$> findElm mRoot s
                 -- get all results for downstream uniqueness check (slower)
-                else (locateAll mRoot)
+                else locateAll mRoot
             )
           (toSelector loc)
 
     ensureSingleton ::
       Bool -> -- recheck ambiguous
       LeafResult ->
-      m (Either LocateException LeafResult)
+      m LeafResult
     ensureSingleton recheckAmbiguous lr@MkLeafResult {source, elms} =
       case chkSingleton elms of
-        SingletonSuccess -> pure $ Right lr
-        Missing -> pure $ Left $ ElementNotFound {description = "Expected exactly one element, but found none.", locator}
-        Ambiguous -> do
+        SingletonSuccess -> pure lr
+        Missing -> throw $ ElementNotFound {description = "Expected exactly one element, but found none.", locator}
+        Ambiguous ->
           if recheckAmbiguous
             then
               jsFilterDisplayed elms
-                >>= either
-                  (pure . Left)
-                  (ensureSingleton False . MkLeafResult source)
+                >>= ensureSingleton False . MkLeafResult source
             else
-              pure . Left $ AmbiguousLocator {description = "Expected exactly one element, but found: " <> pack (show (P.length elms)) <> ".", locator}
+              throw $ AmbiguousLocator {description = "Expected exactly one element, but found: " <> pack (show (P.length elms)) <> ".", locator}
 
-    locateLeafChecked :: Maybe ElementId -> Cardinality -> LeafLoc -> m (Either LocateException LeafResult)
-    locateLeafChecked mRoot cardinality' loc = do
-      lr <- locateLeaf mRoot (cardinality' == First) loc
-      lr
-        & either
-          (pure . Left)
-          (ensureSingleton (jsRecheckDisplayed `P.elem` [DisambiguateUnique, Always]))
+    locateLeafChecked :: Maybe ElementId -> Cardinality -> LeafLoc -> m LeafResult
+    locateLeafChecked mRoot cardinality' = do
+      locateLeaf mRoot (cardinality' == First)
+        >=> ensureSingleton (jsRecheckDisplayed `P.elem` [DisambiguateUnique, Always])
 
     toSelector :: LeafLoc -> Selector
     toSelector = \case
@@ -296,10 +291,8 @@ locateHttp throw catch runner defLoc cardinality MkLocateOps {jsRecheckDisplayed
         Role {role} -> HTTPP.XPath $ roleToXPath role
         InnerText {value, matchType, caseSesnsitivity, maxDepth} -> HTTPP.XPath $ innerTextToXPath value caseSesnsitivity matchType maxDepth
 
-    -- recursive version of http locate
-    -- httpLocate' :: ReducedHttpLoc -> m (Either LocateException LocateResult)
 
-    httpLocate' :: Maybe ElementId -> ReducedHttpLoc -> m (Either LocateException LocateResult)
+    httpLocate' :: Maybe ElementId -> ReducedHttpLoc -> m LocateResult
     httpLocate' mRoot = undefined
       where
         apply =
@@ -310,8 +303,8 @@ locateHttp throw catch runner defLoc cardinality MkLocateOps {jsRecheckDisplayed
             CombintorHttp cb -> case cb of
               Contains {container, contained} -> do
                 containers <- locate container
-                locateContained containers
-                undefined
+                locateContained containers contained
+   
               All {elms} -> do
                 results <- traverse locate elms
                 pure AndResult {found = toList results}
@@ -321,18 +314,18 @@ locateHttp throw catch runner defLoc cardinality MkLocateOps {jsRecheckDisplayed
             PostFilterHttpLoc {} -> postfilterNotImplemented
           where
             locate = httpLocate' mRoot
-            locateContained :: LocateResult -> m LocateResult
-            locateContained containers = do
+            locateContained :: LocateResult -> ReducedHttpLoc -> m LocateResult
+            locateContained containers subLoc = do
               -- for each container, locate contained with root of container element, and combine results
               let ids = extractIds <$> containers.found
               containedResults <- traverse (locate . Just <=< getSingleElementId) containers
               pure $ ContainsResult {found = toList containedResults}
 
-    httpLocate :: ReducedHttpLoc -> m (Either LocateException LocateResult)
+    httpLocate :: ReducedHttpLoc -> m LocateResult
     httpLocate = \case
       LeafHttp cl ->
         -- for simple single shot locator locate as per cardinality directive
-        fmap LeafResult <$> locateLeafChecked Nothing cardinality cl
+        LeafResult <$> locateLeafChecked Nothing cardinality cl
       PostFilterHttpLoc {} ->
         -- will neeed to postfilter &&& all
         postfilterNotImplemented
