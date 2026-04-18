@@ -118,13 +118,12 @@ extractIds lr = recurse lr
       ContainsResult {found} -> recurseConcatAll found
       OrResult {found} -> recurseConcatAll found
       AndResult {found} ->
-        recurseAll found
+        traverse recurse found
           & \case
             [] -> []
             (x : xs) -> P.foldl' LST.intersect x xs
-    recurseAll = traverse recurse
-    recurseConcatAll = fmap mconcat . recurseAll
-
+    recurseConcatAll :: [LocateResult] -> [ElementId]
+    recurseConcatAll = (>>= recurse)
 
 -- TODO
 -- 0. locateHttp Compiles (NoImp postfilter)
@@ -267,7 +266,6 @@ locateHttp throw catch runner defLoc cardinality MkLocateOps {jsRecheckDisplayed
                 >>= ensureSingleton False lr
             else
               pure $ Left $ AmbiguousLocator {description = "Expected exactly one element, but found: " <> pack (show (P.length elmIds)) <> ".", locator}
-    
 
     locateLeafChecked :: Maybe ElementId -> Cardinality -> LeafLoc -> m LocateResult
     locateLeafChecked mRoot cardinality' leafLoc = do
@@ -284,51 +282,44 @@ locateHttp throw catch runner defLoc cardinality MkLocateOps {jsRecheckDisplayed
         Role {role} -> HTTPP.XPath $ roleToXPath role
         InnerText {value, matchType, caseSesnsitivity, maxDepth} -> HTTPP.XPath $ innerTextToXPath value caseSesnsitivity matchType maxDepth
 
-
     httpLocate'' :: Maybe ElementId -> ReducedHttpLoc -> m LocateResult
-    httpLocate'' mRoot = 
-          \case
-            LeafHttp cl ->
-              -- need to find all elms for combinator and later checks and retries
-              LeafResult <$> locateLeaf mRoot False cl
+    httpLocate'' mRoot =
+      \case
+        LeafHttp cl ->
+          -- need to find all elms for combinator and later checks and retries
+          LeafResult <$> locateLeaf mRoot False cl
+        CombintorHttp cb -> case cb of
+          Contains {container, contained} -> do
+            containers <- locate container
+            locateContained containers contained
+          All {elms = locs} -> do
+            results <- traverse locate locs
+            pure AndResult {found = toList results}
+          Any {elms = locs} -> do
+            results <- traverse locate locs
+            pure OrResult {found = toList results}
+        PostFilterHttpLoc {} -> postfilterNotImplemented
+      where
+        locate = httpLocate'' mRoot
 
-            CombintorHttp cb -> case cb of
-              Contains {container, contained} -> do
-                containers <- locate container
-                locateContained containers contained
-   
-              All {elms = locs} -> do
-                results <- traverse locate locs
-                pure AndResult {found = toList results}
-
-              Any {elms = locs} -> do
-                results <- traverse locate locs
-                pure OrResult {found = toList results}
-
-            PostFilterHttpLoc {} -> postfilterNotImplemented
-          where
-            locate = httpLocate'' mRoot
-
-            locateContained :: LocateResult -> ReducedHttpLoc -> m LocateResult
-            locateContained containers subLoc = do
-              -- for each container, locate contained with root of container element, and combine results
-              let ids = containers.found >>= extractIds
-              containedResults <- traverse (\rootId -> httpLocate'' (Just rootId) subLoc) ids
-              pure $ ContainsResult containedResults
+        locateContained :: LocateResult -> ReducedHttpLoc -> m LocateResult
+        locateContained containers subLoc = do
+          -- for each container, locate contained with root of container element, and combine results
+          let ids = containers.found >>= extractIds
+          containedResults <- traverse (\rootId -> httpLocate'' (Just rootId) subLoc) ids
+          pure $ ContainsResult containedResults
 
     httpLocate' :: Maybe ElementId -> ReducedHttpLoc -> m LocateResult
     httpLocate' mRoot loc = do
       result1 <- httpLocate'' mRoot loc
       let ids = extractIds result1
-      -- this assumes that the jscheck function is good enough to pick up when a parent element 
+      -- this assumes that the jscheck function is good enough to pick up when a parent element
       -- is not displayed, even if a child is => and return false
       checked <- ensureSingleton (jsRecheckDisplayed `P.elem` [DisambiguateUnique, Always]) result1 ids
       case checked of
-        Left (ElementNotFound{}) -> undefined
+        Left (ElementNotFound {}) -> undefined
         Left err -> throw err
         Right _ -> pure result1
-
-
 
     httpLocate :: ReducedHttpLoc -> m LocateResult
     httpLocate = \case
