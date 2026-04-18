@@ -125,16 +125,6 @@ extractIds lr = recurse lr
     recurseAll = traverse recurse
     recurseConcatAll = fmap mconcat . recurseAll
 
--- locateNested :: ReducedLoc -> LocateResult
--- locateNested = \case
---   Contains {container, contained} -> ContainsResult {found = [locateNested contained]}
---   All {elms} -> AndResult {found = fmap locateNested elms}
---   Any {elms} -> OrResult {found = fmap locateNested elms}
---   PostFilter {predicate, locator} -> PostFilterResult {predicate, found = [locateNested locator]}
---   -- will never happen - already filtered out by prepareSimplify
---   BiDiContext {} -> error "BiDiContext locators are not supported in HTTP WebDriver"
-
--- sin
 
 -- TODO
 -- 0. locateHttp Compiles (NoImp postfilter)
@@ -144,7 +134,7 @@ extractIds lr = recurse lr
 --   1.3 compound locators are lazy
 --   1.4 displayed checks (disambiguate unique and always)
 --   1.5 visible text
---
+--   1.6 BiDi special cases
 
 -- 2. tests
 -- all of the above with tests, including edge cases such as:
@@ -263,24 +253,27 @@ locateHttp throw catch runner defLoc cardinality MkLocateOps {jsRecheckDisplayed
 
     ensureSingleton ::
       Bool -> -- recheck ambiguous
-      LeafResult ->
-      m LeafResult
-    ensureSingleton recheckAmbiguous lr@MkLeafResult {source, elms} =
-      case chkSingleton elms of
-        SingletonSuccess -> pure lr
-        Missing -> throw $ ElementNotFound {description = "Expected exactly one element, but found none.", locator}
+      LocateResult ->
+      [ElementId] ->
+      m (Either LocateException LocateResult)
+    ensureSingleton recheckAmbiguous lr elmIds =
+      case chkSingleton elmIds of
+        SingletonSuccess -> pure $ Right lr
+        Missing -> pure $ Left $ ElementNotFound {description = "Expected exactly one element, but found none.", locator}
         Ambiguous ->
           if recheckAmbiguous
             then
-              jsFilterDisplayed elms
-                >>= ensureSingleton False . MkLeafResult source
+              jsFilterDisplayed elmIds
+                >>= ensureSingleton False lr
             else
-              throw $ AmbiguousLocator {description = "Expected exactly one element, but found: " <> pack (show (P.length elms)) <> ".", locator}
+              pure $ Left $ AmbiguousLocator {description = "Expected exactly one element, but found: " <> pack (show (P.length elmIds)) <> ".", locator}
+    
 
-    locateLeafChecked :: Maybe ElementId -> Cardinality -> LeafLoc -> m LeafResult
-    locateLeafChecked mRoot cardinality' = do
-      locateLeaf mRoot (cardinality' == First)
-        >=> ensureSingleton (jsRecheckDisplayed `P.elem` [DisambiguateUnique, Always])
+    locateLeafChecked :: Maybe ElementId -> Cardinality -> LeafLoc -> m LocateResult
+    locateLeafChecked mRoot cardinality' leafLoc = do
+      lr <- locateLeaf mRoot (cardinality' == First) leafLoc
+      chkedRslt <- ensureSingleton (jsRecheckDisplayed `P.elem` [DisambiguateUnique, Always]) (LeafResult lr) lr.elms
+      either throw pure chkedRslt
 
     toSelector :: LeafLoc -> Selector
     toSelector = \case
@@ -292,40 +285,50 @@ locateHttp throw catch runner defLoc cardinality MkLocateOps {jsRecheckDisplayed
         InnerText {value, matchType, caseSesnsitivity, maxDepth} -> HTTPP.XPath $ innerTextToXPath value caseSesnsitivity matchType maxDepth
 
 
-    httpLocate' :: Maybe ElementId -> ReducedHttpLoc -> m LocateResult
-    httpLocate' mRoot = undefined
-      where
-        apply =
+    httpLocate'' :: Maybe ElementId -> ReducedHttpLoc -> m LocateResult
+    httpLocate'' mRoot = 
           \case
             LeafHttp cl ->
               -- need to find all elms for combinator and later checks and retries
-              locateLeaf mRoot False cl
+              LeafResult <$> locateLeaf mRoot False cl
+
             CombintorHttp cb -> case cb of
               Contains {container, contained} -> do
                 containers <- locate container
                 locateContained containers contained
    
-              All {elms} -> do
-                results <- traverse locate elms
+              All {elms = locs} -> do
+                results <- traverse locate locs
                 pure AndResult {found = toList results}
-              Any {elms} -> do
-                results <- traverse locate elms
+
+              Any {elms = locs} -> do
+                results <- traverse locate locs
                 pure OrResult {found = toList results}
+
             PostFilterHttpLoc {} -> postfilterNotImplemented
           where
-            locate = httpLocate' mRoot
+            locate = httpLocate'' mRoot
+
             locateContained :: LocateResult -> ReducedHttpLoc -> m LocateResult
             locateContained containers subLoc = do
               -- for each container, locate contained with root of container element, and combine results
-              let ids = extractIds <$> containers.found
-              containedResults <- traverse (locate . Just <=< getSingleElementId) containers
-              pure $ ContainsResult {found = toList containedResults}
+              let ids = containers.found >>= extractIds
+              containedResults <- traverse (\rootId -> httpLocate'' (Just rootId) subLoc) ids
+              pure $ ContainsResult containedResults
+
+    httpLocate' :: Maybe ElementId -> ReducedHttpLoc -> m LocateResult
+    httpLocate' mRoot loc = do
+      result1 <- httpLocate'' mRoot loc
+      let ids = extractIds result1
+      undefined
+
+
 
     httpLocate :: ReducedHttpLoc -> m LocateResult
     httpLocate = \case
       LeafHttp cl ->
         -- for simple single shot locator locate as per cardinality directive
-        LeafResult <$> locateLeafChecked Nothing cardinality cl
+        locateLeafChecked Nothing cardinality cl
       PostFilterHttpLoc {} ->
         -- will neeed to postfilter &&& all
         postfilterNotImplemented
@@ -333,23 +336,6 @@ locateHttp throw catch runner defLoc cardinality MkLocateOps {jsRecheckDisplayed
 
 postfilterNotImplemented :: a
 postfilterNotImplemented = error "PostFilter locators are not yet implemented in HTTP WebDriver"
-
--- !!!!!!!! compound locates and retries  - need a pointer back to the orional locator so ca retry for
--- special cases such as role inner test and displayed when ambiguous.
-{-
-httpLocateMany :: ReducedHttpLoc -> m [ElementId]
-httpLocateMany = \case
-  L.CSS {} -> undefined
-  L.XPath {} -> undefined
-  Role {} -> undefined
-  InnerText {} -> undefined
-  -- will never happen - already filtered out by prepareSimplify
-  BiDiContext {} -> error "BiDiContext locators are not supported in HTTP WebDriver"
-  Contains {} -> undefined
-  All {} -> undefined
-  Any {} -> undefined
-  PostFilter {} -> undefined
-  -}
 
 data SingletonCheckResult = SingletonSuccess | Missing | Ambiguous deriving (Show, Eq, Ord)
 
