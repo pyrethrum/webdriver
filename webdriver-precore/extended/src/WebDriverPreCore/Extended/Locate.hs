@@ -320,7 +320,13 @@ locateHttp throw catch runner defLoc cardinality MkLocateOps {jsRecheckDisplayed
     httpLocate' mRoot loc = do
       result1 <- httpLocate'' mRoot loc
       let ids = extractIds result1
-      undefined
+      -- this assumes that the jscheck function is good enough to pick up when a parent element 
+      -- is not displayed, even if a child is => and return false
+      checked <- ensureSingleton (jsRecheckDisplayed `P.elem` [DisambiguateUnique, Always]) result1 ids
+      case checked of
+        Left (ElementNotFound{}) -> undefined
+        Left err -> throw err
+        Right _ -> pure result1
 
 
 
