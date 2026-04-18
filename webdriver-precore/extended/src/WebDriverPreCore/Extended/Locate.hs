@@ -197,7 +197,10 @@ locateHttp throw catch runner defLoc cardinality MkLocateOps {jsRecheckDisplayed
   preparedLoc
     & either
       (pure . Left . InvalidLocator)
-      \loc -> undefined
+      \loc ->
+        catch
+          undefined
+          (pure . Left)
   where
     preparedLoc :: Either LI.InvalidLocator ReducedHttpLoc
     preparedLoc = prepareSimplify defLoc HTTP locator >>= toHttpLocator
@@ -278,10 +281,11 @@ locateHttp throw catch runner defLoc cardinality MkLocateOps {jsRecheckDisplayed
 
     locateLeafChecked :: Maybe ElementId -> Cardinality -> LeafLoc -> m (Either LocateException LeafResult)
     locateLeafChecked mRoot cardinality' loc = do
-      lr <- locateLeaf mRoot (cardinality' == First) loc 
-      lr & either
-        (pure . Left)
-        (ensureSingleton (jsRecheckDisplayed `P.elem` [DisambiguateUnique, Always]))
+      lr <- locateLeaf mRoot (cardinality' == First) loc
+      lr
+        & either
+          (pure . Left)
+          (ensureSingleton (jsRecheckDisplayed `P.elem` [DisambiguateUnique, Always]))
 
     toSelector :: LeafLoc -> Selector
     toSelector = \case
@@ -291,7 +295,6 @@ locateHttp throw catch runner defLoc cardinality MkLocateOps {jsRecheckDisplayed
       BiDiNative sl -> case sl of
         Role {role} -> HTTPP.XPath $ roleToXPath role
         InnerText {value, matchType, caseSesnsitivity, maxDepth} -> HTTPP.XPath $ innerTextToXPath value caseSesnsitivity matchType maxDepth
-
 
     -- recursive version of http locate
     -- httpLocate' :: ReducedHttpLoc -> m (Either LocateException LocateResult)
@@ -303,7 +306,7 @@ locateHttp throw catch runner defLoc cardinality MkLocateOps {jsRecheckDisplayed
           \case
             LeafHttp cl ->
               -- need to find all elms for combinator and later checks and retries
-               locateLeaf mRoot False cl
+              locateLeaf mRoot False cl
             CombintorHttp cb -> case cb of
               Contains {container, contained} -> do
                 containers <- locate container
