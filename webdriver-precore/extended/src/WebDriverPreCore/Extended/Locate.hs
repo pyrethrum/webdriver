@@ -227,16 +227,16 @@ locateHttp throw catch runner defLoc cardinality MkLocateOps {jsRecheckDisplayed
         findElementsFromElement' :: ElementId -> (Command [ElementId] -> m [ElementId]) -> Session -> Selector -> m [ElementId]
         findElementsFromElement' rootId runner' ses' sel = findElementsFromElement runner' ses' rootId sel
    
-    recheckDisplayed :: ElementId -> m Bool
+    recheckDisplayed :: ElementId -> m (Either LocateException Bool)
     recheckDisplayed = isDisplayedHttp catch runner ses
 
-    filterDisplayedIf :: DisplayedCheck -> [ElementId] -> m [ElementId]
+    filterDisplayedIf :: DisplayedCheck -> [ElementId] -> m (Either LocateException [ElementId])
     filterDisplayedIf dc =
       if dc == jsRecheckDisplayed
         then jsFilterDisplayed
-        else pure
+        else pure . Right
 
-    jsFilterDisplayed :: [ElementId] -> m [ElementId]
+    jsFilterDisplayed :: [ElementId] -> m (Either LocateException [ElementId])
     jsFilterDisplayed = filterM recheckDisplayed
 
     locateAll :: Maybe ElementId -> Selector -> m [ElementId]
@@ -267,7 +267,7 @@ locateHttp throw catch runner defLoc cardinality MkLocateOps {jsRecheckDisplayed
               elmsRechecked <- jsFilterDisplayed elms
               ensureSingleton False (MkLeafResult source elmsRechecked)
             else
-              pure $ Left $ AmbiguousLocator {description = "Expected exactly one element, but found: " <> pack (show (P.length elms)) <> ".", locator}
+              pure . Left $ AmbiguousLocator {description = "Expected exactly one element, but found: " <> pack (show (P.length elms)) <> ".", locator}
 
     locateLeafChecked :: Maybe ElementId -> Cardinality -> LeafLoc -> Selector -> m (Either LocateException LeafResult)
     locateLeafChecked mRoot cardinality' loc =
@@ -424,19 +424,19 @@ isDisplayedHttp ::
   Session ->
   -- | element to check
   ElementId ->
-  m Bool
-isDisplayedHttp catch runner ses eid = do
-  result <-
+  m (Either LocateException Bool)
+isDisplayedHttp catch runner ses eid = 
     catch
-      (executeScript runner ses MkScript {script = displayedJS, args = [toJSON eid]})
+      (Right . toBool <$> executeScript runner ses MkScript {script = displayedJS, args = [toJSON eid]})
       -- if any error occurs when checking displayed, assume element is displayed
       -- eg. if element becomes stale between finding and checking displayed, or if the driver does not support executeScript
-      (\(_e :: WebDriverException) -> pure $ Bool True)
-  case (fromJSON result :: A.Result Bool) of
-    A.Success b -> pure b
-    A.Error msg ->
-      -- this should not happen unless the script is broken
-      error $ "isDisplayedHttp: isDisplayed script returned unexpected value: " <> msg
+      (pure . Left . DriverException)
+  where 
+    toBool :: Value -> Bool
+    toBool = \case
+      Bool b -> b
+      val -> error $ "library defect - isDisplayedHttp: isDisplayed script returned unexpected value (expected Bool) - got:\n  " <> show val
+
 
 locateBiDi = undefined
 
