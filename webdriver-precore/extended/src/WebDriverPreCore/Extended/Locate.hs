@@ -196,7 +196,7 @@ locateHttp ::
 locateHttp throw catch runner defLoc cardinality MkLocateOps {jsRecheckDisplayed} ses locator =
   preparedLoc
     & either
-      (throw . InvalidLocator)
+      (pure . Left . InvalidLocator)
       \loc -> undefined
   where
     preparedLoc :: Either LI.InvalidLocator ReducedHttpLoc
@@ -219,14 +219,15 @@ locateHttp throw catch runner defLoc cardinality MkLocateOps {jsRecheckDisplayed
         findElementFromElement' rootId runner' ses' sel = findElementFromElement runner' ses' rootId sel
 
     findElms :: Maybe ElementId -> Selector -> m (Either LocateException [ElementId])
-    findElms mRoot s = mRoot & 
-      maybe 
-       (runCommand findElements s) 
-       (\rooId -> runCommand (findElementsFromElement' rooId) s) 
+    findElms mRoot s =
+      mRoot
+        & maybe
+          (runCommand findElements s)
+          (\rootId -> runCommand (findElementsFromElement' rootId) s)
       where
         findElementsFromElement' :: ElementId -> (Command [ElementId] -> m [ElementId]) -> Session -> Selector -> m [ElementId]
         findElementsFromElement' rootId runner' ses' sel = findElementsFromElement runner' ses' rootId sel
-   
+
     recheckDisplayed :: ElementId -> m (Either LocateException Bool)
     recheckDisplayed = isDisplayedHttp catch runner ses
 
@@ -237,17 +238,21 @@ locateHttp throw catch runner defLoc cardinality MkLocateOps {jsRecheckDisplayed
         else pure . Right
 
     jsFilterDisplayed :: [ElementId] -> m (Either LocateException [ElementId])
-    jsFilterDisplayed = filterM recheckDisplayed
+    jsFilterDisplayed elms = do
+      results <- traverse doCheck elms
+      pure $ fmap fst . P.filter snd <$> sequence results
+      where
+        doCheck elm = fmap (elm,) <$> recheckDisplayed elm
 
-    locateAll :: Maybe ElementId -> Selector -> m [ElementId]
+    locateAll :: Maybe ElementId -> Selector -> m (Either LocateException [ElementId])
     locateAll mRoot s = findElms mRoot s -- >>= filterDisplayedIf Always
-
-    locateLeaf :: Maybe ElementId -> Bool -> LeafLoc -> m LeafResult
+    --
+    locateLeaf :: Maybe ElementId -> Bool -> LeafLoc -> m (Either LocateException LeafResult)
     locateLeaf mRoot findFirst loc =
-      MkLeafResult loc
+      (MkLeafResult loc <$>)
         <$> ( if findFirst
                 -- lean on webdriver - brings first result back (faster)
-                then fmap LST.singleton . findElm mRoot
+                then \s -> (LST.singleton <$>) <$> (findElm mRoot s)
                 -- get all results for downstream uniqueness check (slower)
                 else (locateAll mRoot)
             )
@@ -263,16 +268,20 @@ locateHttp throw catch runner defLoc cardinality MkLocateOps {jsRecheckDisplayed
         Missing -> pure $ Left $ ElementNotFound {description = "Expected exactly one element, but found none.", locator}
         Ambiguous -> do
           if recheckAmbiguous
-            then do
-              elmsRechecked <- jsFilterDisplayed elms
-              ensureSingleton False (MkLeafResult source elmsRechecked)
+            then
+              jsFilterDisplayed elms
+                >>= either
+                  (pure . Left)
+                  (ensureSingleton False . MkLeafResult source)
             else
               pure . Left $ AmbiguousLocator {description = "Expected exactly one element, but found: " <> pack (show (P.length elms)) <> ".", locator}
 
-    locateLeafChecked :: Maybe ElementId -> Cardinality -> LeafLoc -> Selector -> m (Either LocateException LeafResult)
-    locateLeafChecked mRoot cardinality' loc =
-      locateLeaf mRoot (cardinality' == First) loc
-        >=> ensureSingleton (jsRecheckDisplayed `P.elem` [DisambiguateUnique, Always])
+    locateLeafChecked :: Maybe ElementId -> Cardinality -> LeafLoc -> m (Either LocateException LeafResult)
+    locateLeafChecked mRoot cardinality' loc = do
+      lr <- locateLeaf mRoot (cardinality' == First) loc 
+      lr & either
+        (pure . Left)
+        (ensureSingleton (jsRecheckDisplayed `P.elem` [DisambiguateUnique, Always]))
 
     toSelector :: LeafLoc -> Selector
     toSelector = \case
@@ -283,16 +292,6 @@ locateHttp throw catch runner defLoc cardinality MkLocateOps {jsRecheckDisplayed
         Role {role} -> HTTPP.XPath $ roleToXPath role
         InnerText {value, matchType, caseSesnsitivity, maxDepth} -> HTTPP.XPath $ innerTextToXPath value caseSesnsitivity matchType maxDepth
 
-    httpLocateLeaf :: Maybe ElementId -> Cardinality -> LeafLoc -> m (Either LocateException LeafResult)
-    httpLocateLeaf mRoot cardinality' loc =
-      locateLeafChecked mRoot cardinality' loc (toSelector loc)
-      where
-        ls = case loc of
-          RL.CSS {} -> PlainSource
-          RL.XPath {} -> PlainSource
-          BiDiNative sl -> case sl of
-            Role {role} -> RoleSource role
-            InnerText {value} -> InnerTextSource value
 
     -- recursive version of http locate
     -- httpLocate' :: ReducedHttpLoc -> m (Either LocateException LocateResult)
@@ -304,7 +303,7 @@ locateHttp throw catch runner defLoc cardinality MkLocateOps {jsRecheckDisplayed
           \case
             LeafHttp cl ->
               -- need to find all elms for combinator and later checks and retries
-              httpLocateLeaf mRoot Many cl
+               locateLeaf mRoot False cl
             CombintorHttp cb -> case cb of
               Contains {container, contained} -> do
                 containers <- locate container
@@ -330,7 +329,7 @@ locateHttp throw catch runner defLoc cardinality MkLocateOps {jsRecheckDisplayed
     httpLocate = \case
       LeafHttp cl ->
         -- for simple single shot locator locate as per cardinality directive
-        fmap LeafResult <$> httpLocateLeaf Nothing cardinality cl
+        fmap LeafResult <$> locateLeafChecked Nothing cardinality cl
       PostFilterHttpLoc {} ->
         -- will neeed to postfilter &&& all
         postfilterNotImplemented
@@ -425,18 +424,17 @@ isDisplayedHttp ::
   -- | element to check
   ElementId ->
   m (Either LocateException Bool)
-isDisplayedHttp catch runner ses eid = 
-    catch
-      (Right . toBool <$> executeScript runner ses MkScript {script = displayedJS, args = [toJSON eid]})
-      -- if any error occurs when checking displayed, assume element is displayed
-      -- eg. if element becomes stale between finding and checking displayed, or if the driver does not support executeScript
-      (pure . Left . DriverException)
-  where 
+isDisplayedHttp catch runner ses eid =
+  catch
+    (Right . toBool <$> executeScript runner ses MkScript {script = displayedJS, args = [toJSON eid]})
+    -- if any error occurs when checking displayed, assume element is displayed
+    -- eg. if element becomes stale between finding and checking displayed, or if the driver does not support executeScript
+    (pure . Left . DriverException)
+  where
     toBool :: Value -> Bool
     toBool = \case
       Bool b -> b
       val -> error $ "library defect - isDisplayedHttp: isDisplayed script returned unexpected value (expected Bool) - got:\n  " <> show val
-
 
 locateBiDi = undefined
 
