@@ -8,7 +8,7 @@
     - [2. ~~**DONE `<label for="...">` Associations**~~](#2-done-label-for-associations)
     - [3. **Shadow DOM**](#3-shadow-dom)
     - [4. ~~**NA Description Unless extend high level locaotrs - aria-describedby (Description, Not Name)**~~](#4-na-description-unless-extend-high-level-locaotrs---aria-describedby-description-not-name)
-    - [5. **Accessible Name Computation Order**](#5-accessible-name-computation-order)
+    - [5. **WONT FIX - Accessible Name Computation Order**](#5-wont-fix---accessible-name-computation-order)
     - [6. **Hidden Text in Accessible Names**](#6-hidden-text-in-accessible-names)
     - [7. **Recursive/Nested aria-labelledby**](#7-recursivenested-aria-labelledby)
     - [~~9. **Role Presentation/None Suppression**~~](#9-role-presentationnone-suppression)
@@ -159,7 +159,7 @@ Elements inside shadow roots are completely invisible to XPath queries from the 
 <!-- Accessible description: "Must be at least 8 characters. Must include a number." -->
 ```
 
-### 5. **Accessible Name Computation Order**
+### 5. **WONT FIX - Accessible Name Computation Order**
 The [ARIA spec's name computation algorithm](https://www.w3.org/TR/accname-1.2/#mapping_additional_nd_te) has a specific precedence order. This function checks all sources with `or`, but the real algorithm stops at the first match:
 
 1. `aria-labelledby` (highest priority)
