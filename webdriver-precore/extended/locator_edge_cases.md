@@ -10,7 +10,7 @@
     - [4. ~~**NA Description Unless extend high level locaotrs - aria-describedby (Description, Not Name)**~~](#4-na-description-unless-extend-high-level-locaotrs---aria-describedby-description-not-name)
     - [5. **Accessible Name Computation Order**](#5-accessible-name-computation-order)
     - [6. **Hidden Text in Accessible Names**](#6-hidden-text-in-accessible-names)
-    - [7. **Recursive/Nested aria-labelledby**~~](#7-recursivenested-aria-labelledby)
+    - [7. **Recursive/Nested aria-labelledby**](#7-recursivenested-aria-labelledby)
     - [~~9. **Role Presentation/None Suppression**~~](#9-role-presentationnone-suppression)
     - [10. **Form Control Implicit Labels**](#10-form-control-implicit-labels)
     - [11. **ARIA 1.3 Name-from-Content Rules**](#11-aria-13-name-from-content-rules)
@@ -172,7 +172,7 @@ The XPath treats them as equals, potentially matching elements that wouldn't mat
 ### 6. **Hidden Text in Accessible Names**
 CSS-hidden text (`visibility: hidden`, `display: none`) can still contribute to accessible names via `aria-label` or `aria-labelledby`, but those elements wouldn't match the XPath visibility filters you use elsewhere.
 
-### 7. **Recursive/Nested aria-labelledby**~~
+### 7. **Recursive/Nested aria-labelledby**
 Elements referenced by `aria-labelledby` can themselves have `aria-labelledby`, creating chains. Real browsers flatten these recursively; XPath cannot.
 
 ~~### 8. **Title Attribute Fallback Conditions**~~
