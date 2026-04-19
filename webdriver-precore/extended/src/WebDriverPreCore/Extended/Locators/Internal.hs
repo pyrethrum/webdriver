@@ -176,7 +176,7 @@ roleToXPath = \case
   RoleType {role} -> "//*" <> role' role
   RoleName {name} -> "//*[not(@role='presentation' or @role='none')]" <> name' name
   where
-    role' r = "[" <> implicitRoleXPath r <> " or @role='" <> displayAriaRole r <> "']"
+    role' = roleTypeXPathContent True 
 
     name' n =
       "["
@@ -190,6 +190,16 @@ roleToXPath = \case
             "@title='" <> n <> "' and not(@aria-label) and not(@placeholder) and not(@alt) and not(normalize-space(text()))"
           ]
         <> "]"
+
+-- | the content of the role type xpath no: //*[ ]
+roleTypeXPathContent :: Bool -> AriaRole -> Text
+roleTypeXPathContent wantBrackets r = 
+  if wantBrackets
+    then "[" <> content <> "]"
+    else content
+  where 
+    content = implicitRoleXPath r <> " or @role='" <> displayAriaRole r <> "'"
+
 
 -- | Maps an ARIA role to an XPath predicate matching elements that have
 --   that role implicitly (i.e. without an explicit role= attribute).
