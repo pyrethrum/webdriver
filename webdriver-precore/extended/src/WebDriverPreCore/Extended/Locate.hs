@@ -444,6 +444,7 @@ roleToXPathHttpSecondPass locAll getAttr getText rootElm spDirectir roleLoc =
     findSpecialAttr :: Text ->  m (Maybe [ElementId])
     findSpecialAttr = roleToXPathHttpSecondPassAttr locAll getAttr getText rootElm spDirectir roleLoc
     
+TODO FIX THIS FOR is REVANT SO AT Leasst 2 CHECK edge-cases
 
 roleToXPathHttpSecondPassAttr ::
   forall m.
@@ -457,10 +458,8 @@ roleToXPathHttpSecondPassAttr ::
   Maybe ElementId -> -- root to search within
   RoleSecondPassDirective ->
   RoleLocator ->
-  -- | attribute name to resolve (e.g. @"aria-labelledby"@)
-  Text ->
   m (Maybe [ElementId])
-roleToXPathHttpSecondPassAttr locAll getAttr getText rootElm spDirectir roleLoc attrName =
+roleToXPathHttpSecondPassAttr locAll getAttr getText rootElm spDirectir roleLoc =
   case roleLoc of
     RoleType {} -> pure Nothing
     _ -> do
@@ -468,6 +467,7 @@ roleToXPathHttpSecondPassAttr locAll getAttr getText rootElm spDirectir roleLoc 
       matched <- filterMatching candidates
       pure (Just matched)
       where
+        attrName = "aria-labelledby"
         isFindFirst = spDirectir `P.elem` [MissFindFirst, AlwaysFindFirst]
 
         roleFilter :: Text

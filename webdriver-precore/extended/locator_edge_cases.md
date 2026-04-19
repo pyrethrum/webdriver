@@ -7,7 +7,7 @@
     - [1. **aria-labelledby References**](#1-aria-labelledby-references)
     - [2. **`<label for="...">` Associations**](#2-label-for-associations)
     - [3. **Shadow DOM**](#3-shadow-dom)
-    - [4. **aria-describedby (Description, Not Name)**](#4-aria-describedby-description-not-name)
+    - [4. ~~**NA Description Unless extend high level locaotrs - aria-describedby (Description, Not Name)**~~](#4-na-description-unless-extend-high-level-locaotrs---aria-describedby-description-not-name)
     - [5. **Accessible Name Computation Order**](#5-accessible-name-computation-order)
     - [6. **Hidden Text in Accessible Names**](#6-hidden-text-in-accessible-names)
     - [7. **Recursive/Nested aria-labelledby**~~](#7-recursivenested-aria-labelledby)
@@ -146,10 +146,10 @@ Elements inside shadow roots are completely invisible to XPath queries from the 
 </custom-button>
 ```
 
-### 4. **aria-describedby (Description, Not Name)**
-While the function focuses on accessible *names*, `aria-describedby` contributes to the accessible *description* and is similarly unsupported.
+### 4. ~~**NA Description Unless extend high level locaotrs - aria-describedby (Description, Not Name)**~~
+~~While the function focuses on accessible *names*, `aria-describedby` contributes to the accessible *description* and is similarly unsupported.~~
 
-Like `aria-labelledby`, `aria-describedby` is also an **ID reference list** — it accepts multiple space-separated IDs, and the browser concatenates the text of all referenced elements to form the description. The same applies to `aria-controls`, `aria-owns`, and `aria-flowto`. None of these can be resolved by XPath.
+~~Like `aria-labelledby`, `aria-describedby` is also an **ID reference list** — it accepts multiple space-separated IDs, and the browser concatenates the text of all referenced elements to form the description. The same applies to `aria-controls`, `aria-owns`, and `aria-flowto`. None of these can be resolved by XPath.~~
 
 ```html
 <!-- Multiple idrefs on aria-describedby: -->
