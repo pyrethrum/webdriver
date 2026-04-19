@@ -460,11 +460,17 @@ roleToXPathHttpSecondPass locAll getAttr getText rootElm spDirectir roleLoc =
     findFst = isFindFirstDirective spDirectir
 
     findSpecialAttr :: Text -> m (Maybe [ElementId])
-    findSpecialAttr = roleToXPathHttpSecondPassAttr locAll getAttr getText rootElm spDirectir roleLoc
+    findSpecialAttr = roleToXPathHttpSecondPassLabeledBy locAll getAttr getText rootElm spDirectir roleLoc
 
     collectElms :: [ElementId] -> [Text] -> m [ElementId]
     collectElms acc = \case
-      [] -> pure acc
+      [] ->
+        -- after all aria-labelledby passes, try label[for=...]
+        if findFst && not (P.null acc)
+          then pure acc
+          else do
+            mForElms <- roleToXPathHttpSecondPassFor locAll getAttr getText rootElm spDirectir roleLoc
+            pure $ LST.nub $ acc <> maybe [] id mForElms
       (attr : attrs)
         | findFst && not (P.null acc) -> pure acc
         | otherwise -> do
@@ -472,7 +478,7 @@ roleToXPathHttpSecondPass locAll getAttr getText rootElm spDirectir roleLoc =
             collectElms (LST.nub $ acc <> maybe [] id mElms) attrs
 
 
-roleToXPathHttpSecondPassAttr ::
+roleToXPathHttpSecondPassLabeledBy ::
   forall m.
   (Monad m) =>
   -- | locate all elements matching a selector
@@ -487,7 +493,7 @@ roleToXPathHttpSecondPassAttr ::
   -- | attribute name to resolve (e.g. @"aria-labelledby"@)
   Text ->
   m (Maybe [ElementId])
-roleToXPathHttpSecondPassAttr locAll getAttr getText rootElm spDirectir roleLoc attrName =
+roleToXPathHttpSecondPassLabeledBy locAll getAttr getText rootElm spDirectir roleLoc attrName =
   case roleLoc of
     RoleType {} -> pure Nothing
     _ -> do
@@ -545,3 +551,65 @@ roleToXPathHttpSecondPassAttr locAll getAttr getText rootElm spDirectir roleLoc 
             (e : _) -> Just <$> getText e
 
 --  use all findElements but limit to 2 results (not supported in standard HTTP WebDriver, but available in BiDi via maxNodeCount).
+
+
+
+roleToXPathHttpSecondPassFor ::
+  forall m.
+  (Monad m) =>
+  -- | locate all elements matching a selector
+  (Maybe ElementId -> Selector -> m [ElementId]) ->
+  -- | get an element attribute; 'Nothing' when the attribute is absent
+  (ElementId -> Text -> m (Maybe Text)) ->
+  -- | get the visible text of an element
+  (ElementId -> m Text) ->
+  Maybe ElementId -> -- root to search within
+  RoleSecondPassDirective ->
+  RoleLocator ->
+  m (Maybe [ElementId])
+roleToXPathHttpSecondPassFor locAll getAttr getText rootElm spDirectir roleLoc =
+  case roleLoc of
+    RoleType {} -> pure Nothing
+    _ -> do
+      candidates <- locAll rootElm (HTTPP.XPath candidateXPath)
+      matched <- filterMatching candidates
+      pure (Just matched)
+  where
+    isFindFirst = isFindFirstDirective spDirectir
+
+    roleFilter :: Text
+    roleFilter = case roleLoc of
+      RoleFull {role} -> LI.roleTypeXPathContent True role
+      RoleName {} -> "[not(@role='presentation' or @role='none')]"
+
+    -- XPath selects every candidate element that has an @id and matches the role
+    -- constraint. The <label for="..."> reverse lookup is done in Haskell below.
+    candidateXPath :: Text
+    candidateXPath = "//*" <> roleFilter <> "[@id]"
+
+    filterMatching :: [ElementId] -> m [ElementId]
+    filterMatching = recurse []
+      where
+        recurse :: [ElementId] -> [ElementId] -> m [ElementId]
+        recurse acc = \case
+          [] -> pure (P.reverse acc)
+          (e : es)
+            | isFindFirst && not (P.null acc) -> pure (P.reverse acc)
+            | otherwise -> do
+                matches <- elementMatchesName e
+                recurse (if matches then e : acc else acc) es
+
+    -- For each candidate, get its @id, find any <label for="that-id">,
+    -- and compare the label's text to the target name.
+    elementMatchesName :: ElementId -> m Bool
+    elementMatchesName eid = do
+      mId <- getAttr eid "id"
+      case mId of
+        Nothing -> pure False
+        Just idVal -> do
+          labels <- locAll Nothing (HTTPP.XPath $ "//label[@for='" <> idVal <> "']")
+          case labels of
+            [] -> pure False
+            (lbl : _) -> do
+              labelText <- getText lbl
+              pure $ T.strip labelText == T.strip roleLoc.name

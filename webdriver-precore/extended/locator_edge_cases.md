@@ -4,8 +4,8 @@
   - [Practical Upshot](#practical-upshot)
 - [Role Approx](#role-approx)
   - [Edge Cases Not Covered](#edge-cases-not-covered)
-    - [1. **aria-labelledby References**](#1-aria-labelledby-references)
-    - [2. **`<label for="...">` Associations**](#2-label-for-associations)
+    - [1. ~~DONE **aria-labelledby References**~~](#1-done-aria-labelledby-references)
+    - [2. ~~**DONE `<label for="...">` Associations**~~](#2-done-label-for-associations)
     - [3. **Shadow DOM**](#3-shadow-dom)
     - [4. ~~**NA Description Unless extend high level locaotrs - aria-describedby (Description, Not Name)**~~](#4-na-description-unless-extend-high-level-locaotrs---aria-describedby-description-not-name)
     - [5. **Accessible Name Computation Order**](#5-accessible-name-computation-order)
@@ -106,10 +106,10 @@ GitHub Copilot: Based on the function `accessibilityToXPath` and the ARIA/HTML s
 
 ## Edge Cases Not Covered
 
-### 1. **aria-labelledby References**
-The function cannot resolve `aria-labelledby` which references other element IDs to construct the accessible name. XPath 1.0 has no way to follow ID references and concatenate text from multiple elements.
+### 1. ~~DONE **aria-labelledby References**~~
+~~The function cannot resolve `aria-labelledby` which references other element IDs to construct the accessible name. XPath 1.0 has no way to follow ID references and concatenate text from multiple elements.~~
 
-`aria-labelledby` also accepts a **space-separated list of IDs** — the browser concatenates the text of all referenced elements in order to form the accessible name. XPath cannot resolve even a single idref, let alone multiple.
+~~`aria-labelledby` also accepts a **space-separated list of IDs** — the browser concatenates the text of all referenced elements in order to form the accessible name. XPath cannot resolve even a single idref, let alone multiple.~~
 
 ```html
 <!-- Single idref: -->
@@ -125,8 +125,8 @@ The function cannot resolve `aria-labelledby` which references other element IDs
 <!-- XPath cannot resolve either reference, let alone concatenate both -->
 ```
 
-### 2. **`<label for="...">` Associations**
-HTML `<label>` elements that reference form controls via the `for` attribute create accessible names, but XPath cannot make this reverse lookup.
+### 2. ~~**DONE `<label for="...">` Associations**~~
+~~HTML `<label>` elements that reference form controls via the `for` attribute create accessible names, but XPath cannot make this reverse lookup.~~
 
 ```html
 <!-- Cannot handle this: -->
