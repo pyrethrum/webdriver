@@ -420,89 +420,101 @@ locateBiDi = undefined
 
 data RoleSecondPassDirective = SecondPassNever | MissFindFirst | MissFindAll | AlwaysFindFirst | AlwaysFindAll deriving (Show, Eq)
 
--- | Second-pass resolution for a single mapped-attribute (e.g. @aria-labelledby@).
---
--- For each candidate element that carries @attrName@, the attribute value is
--- treated as a space-separated list of ID-refs. The text of the referenced
--- elements is resolved and concatenated; if the result matches the @name@
--- in the 'RoleLocator', the element is included in the result.
---
--- Returns 'Nothing' when:
---
--- * @directive@ is 'SecondPassNever', or
--- * @roleLoc@ is 'RoleType' (no accessible name to match against).
 roleToXPathHttpSecondPass ::
   forall m.
   (Monad m) =>
-  -- | attribute name to resolve (e.g. @"aria-labelledby"@)
-  Text ->
   -- | locate all elements matching a selector
   (Maybe ElementId -> Selector -> m [ElementId]) ->
   -- | get an element attribute; 'Nothing' when the attribute is absent
   (ElementId -> Text -> m (Maybe Text)) ->
   -- | get the visible text of an element
   (ElementId -> m Text) ->
+  Maybe ElementId -> -- root to search within
   RoleSecondPassDirective ->
   RoleLocator ->
   m (Maybe LocateResult)
-roleToXPathHttpSecondPass attrName locAll getAttr getText spDirectir roleLoc =
+roleToXPathHttpSecondPass locAll getAttr getText rootElm spDirectir roleLoc =
   if spDirectir == SecondPassNever
     then
       pure Nothing
     else case roleLoc of
       RoleType {} -> pure Nothing
-      _ -> do
-        candidates <- locAll Nothing (HTTPP.XPath candidateXPath)
-        matched <- filterMatching candidates
-        pure . Just . LeafResult $
-          MkLeafResult
-            { source = RL.XPath {value = candidateXPath},
-              elms = matched
-            }
-        where
-          isFindFirst = spDirectir `P.elem` [MissFindFirst, AlwaysFindFirst]
+      _ -> undefined
+  where 
+    findSpecialAttr :: Text ->  m (Maybe [ElementId])
+    findSpecialAttr = roleToXPathHttpSecondPassAttr locAll getAttr getText rootElm spDirectir roleLoc
+    
 
-          roleFilter :: Text
-          roleFilter = case roleLoc of
-            RoleFull {role} -> LI.roleTypeXPathContent True role
-            RoleName {} -> "[not(@role='presentation' or @role='none')]"
+roleToXPathHttpSecondPassAttr ::
+  forall m.
+  (Monad m) =>
+  -- | locate all elements matching a selector
+  (Maybe ElementId -> Selector -> m [ElementId]) ->
+  -- | get an element attribute; 'Nothing' when the attribute is absent
+  (ElementId -> Text -> m (Maybe Text)) ->
+  -- | get the visible text of an element
+  (ElementId -> m Text) ->
+  Maybe ElementId -> -- root to search within
+  RoleSecondPassDirective ->
+  RoleLocator ->
+  -- | attribute name to resolve (e.g. @"aria-labelledby"@)
+  Text ->
+  m (Maybe [ElementId])
+roleToXPathHttpSecondPassAttr locAll getAttr getText rootElm spDirectir roleLoc attrName =
+  case roleLoc of
+    RoleType {} -> pure Nothing
+    _ -> do
+      candidates <- locAll rootElm (HTTPP.XPath candidateXPath)
+      matched <- filterMatching candidates
+      pure (Just matched)
+      where
+        isFindFirst = spDirectir `P.elem` [MissFindFirst, AlwaysFindFirst]
 
-          -- XPath selects every candidate element that has the target attribute
-          -- and matches the role constraint (if any).
-          candidateXPath :: Text
-          candidateXPath = "//*" <> roleFilter <> "[@" <> attrName <> "]"
+        roleFilter :: Text
+        roleFilter = case roleLoc of
+          RoleFull {role} -> LI.roleTypeXPathContent True role
+          RoleName {} -> "[not(@role='presentation' or @role='none')]"
 
-          filterMatching :: [ElementId] -> m [ElementId]
-          filterMatching elms = go [] elms
-            where
-              go acc [] = pure (P.reverse acc)
-              go acc (e : es)
-                | isFindFirst && not (P.null acc) = pure (P.reverse acc)
-                | otherwise = do
+        -- XPath selects every candidate element that has the target attribute
+        -- and matches the role constraint (if any).
+        candidateXPath :: Text
+        candidateXPath = "//*" <> roleFilter <> "[@" <> attrName <> "]"
+
+        filterMatching :: [ElementId] -> m [ElementId]
+        filterMatching = recurse []
+          where
+            recurse :: [ElementId] -> [ElementId] -> m [ElementId]
+            recurse acc rem' =
+              if isFindFirst && not (P.null acc)
+                then
+                  pure acc
+                else case rem' of
+                  [] -> pure (P.reverse acc)
+                  (e : es) -> do
                     matches <- elementMatchesName e
-                    go (if matches then e : acc else acc) es
+                    recurse (if matches then e : acc else acc) es
 
-          -- Resolve @attrName@ on @eid@: split the value on whitespace to get ID-refs,
-          -- look up the text of each referenced element, concatenate with spaces,
-          -- and compare (after stripping) to @targetName@.
-          elementMatchesName :: ElementId -> m Bool
-          elementMatchesName eid = do
-            mAttrVal <- getAttr eid attrName
-            case mAttrVal of
-              Nothing -> pure False
-              Just attrVal -> do
-                let idRefs = T.words attrVal
-                resolvedTexts <- traverse getTextForIdRef idRefs
-                let resolvedName = T.unwords (catMaybes resolvedTexts)
-                pure $ T.strip resolvedName == T.strip roleLoc.name
+        -- Resolve @attrName@ on @eid@: split the value on whitespace to get ID-refs,
+        -- look up the text of each referenced element, concatenate with spaces,
+        -- and compare (after stripping) to @targetName@.
+        elementMatchesName :: ElementId -> m Bool
+        elementMatchesName eid = do
+          mAttrVal <- getAttr eid attrName
+          case mAttrVal of
+            Nothing -> pure False
+            Just attrVal -> do
+              let idRefs = T.words attrVal
+              resolvedTexts <- traverse getTextForIdRef idRefs
+              let resolvedName = T.unwords (catMaybes resolvedTexts)
+              pure $ T.strip resolvedName == T.strip roleLoc.name
 
-          -- Find the element whose @id@ matches @idRef@ and return its text, or
-          -- 'Nothing' if no such element exists.
-          getTextForIdRef :: Text -> m (Maybe Text)
-          getTextForIdRef idRef = do
-            elms <- locAll Nothing (HTTPP.XPath $ "//*[@id='" <> idRef <> "']")
-            case elms of
-              [] -> pure Nothing
-              (e : _) -> Just <$> getText e
+        -- Find the element whose @id@ matches @idRef@ and return its text, or
+        -- 'Nothing' if no such element exists.
+        getTextForIdRef :: Text -> m (Maybe Text)
+        getTextForIdRef idRef = do
+          elms <- locAll Nothing (HTTPP.XPath $ "//*[@id='" <> idRef <> "']")
+          case elms of
+            [] -> pure Nothing
+            (e : _) -> Just <$> getText e
 
 --  use all findElements but limit to 2 results (not supported in standard HTTP WebDriver, but available in BiDi via maxNodeCount).
