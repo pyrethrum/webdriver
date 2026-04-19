@@ -135,7 +135,7 @@ GitHub Copilot: Based on the function `accessibilityToXPath` and the ARIA/HTML s
 <!-- Accessible name is "Email Address", but XPath can't follow the for/id link -->
 ```
 
-### 3. **Shadow DOM**
+### 3. **TODO - NOT SUPPORTED - How to Deal with Shadow DOM**
 Elements inside shadow roots are completely invisible to XPath queries from the light DOM.
 
 ```html
