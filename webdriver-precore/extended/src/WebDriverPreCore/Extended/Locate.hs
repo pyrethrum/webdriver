@@ -420,6 +420,9 @@ locateBiDi = undefined
 
 data RoleSecondPassDirective = SecondPassNever | MissFindFirst | MissFindAll | AlwaysFindFirst | AlwaysFindAll deriving (Show, Eq)
 
+isFindFirstDirective :: RoleSecondPassDirective -> Bool
+isFindFirstDirective spDir = spDir `P.elem` [MissFindFirst, AlwaysFindFirst]
+
 roleToXPathHttpSecondPass ::
   forall m.
   (Monad m) =>
@@ -435,16 +438,39 @@ roleToXPathHttpSecondPass ::
   m (Maybe LocateResult)
 roleToXPathHttpSecondPass locAll getAttr getText rootElm spDirectir roleLoc =
   if spDirectir == SecondPassNever
-    then
-      pure Nothing
+    then pure Nothing
     else case roleLoc of
       RoleType {} -> pure Nothing
-      _ -> undefined
-  where 
-    findSpecialAttr :: Text ->  m (Maybe [ElementId])
+      _ -> do
+        elms <- collectElms [] specialAttrNames
+        pure $
+          if P.null elms
+            then Nothing
+            else
+              Just . LeafResult $
+                MkLeafResult
+                  { source = RL.BiDiNative {loc = RL.Role {role = roleLoc}},
+                    elms = elms
+                  }
+  where
+    specialAttrNames :: [Text]
+    specialAttrNames = ["aria-labelledby"]
+
+    findFst :: Bool
+    findFst = isFindFirstDirective spDirectir
+
+    findSpecialAttr :: Text -> m (Maybe [ElementId])
     findSpecialAttr = roleToXPathHttpSecondPassAttr locAll getAttr getText rootElm spDirectir roleLoc
-    
-TODO FIX THIS FOR is REVANT SO AT Leasst 2 CHECK edge-cases
+
+    collectElms :: [ElementId] -> [Text] -> m [ElementId]
+    collectElms acc = \case
+      [] -> pure acc
+      (attr : attrs)
+        | findFst && not (P.null acc) -> pure acc
+        | otherwise -> do
+            mElms <- findSpecialAttr attr
+            collectElms (LST.nub $ acc <> maybe [] id mElms) attrs
+
 
 roleToXPathHttpSecondPassAttr ::
   forall m.
@@ -458,8 +484,10 @@ roleToXPathHttpSecondPassAttr ::
   Maybe ElementId -> -- root to search within
   RoleSecondPassDirective ->
   RoleLocator ->
+  -- | attribute name to resolve (e.g. @"aria-labelledby"@)
+  Text ->
   m (Maybe [ElementId])
-roleToXPathHttpSecondPassAttr locAll getAttr getText rootElm spDirectir roleLoc =
+roleToXPathHttpSecondPassAttr locAll getAttr getText rootElm spDirectir roleLoc attrName =
   case roleLoc of
     RoleType {} -> pure Nothing
     _ -> do
@@ -467,8 +495,7 @@ roleToXPathHttpSecondPassAttr locAll getAttr getText rootElm spDirectir roleLoc 
       matched <- filterMatching candidates
       pure (Just matched)
       where
-        attrName = "aria-labelledby"
-        isFindFirst = spDirectir `P.elem` [MissFindFirst, AlwaysFindFirst]
+        isFindFirst = isFindFirstDirective spDirectir
 
         roleFilter :: Text
         roleFilter = case roleLoc of
