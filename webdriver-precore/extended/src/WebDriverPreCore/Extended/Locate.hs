@@ -447,11 +447,11 @@ roleToXPathHttpSecondPass locAll getAttr getText rootElm spDirectir roleLoc =
       RoleType {} -> pure Nothing
       _ -> do
         labelledBy <- roleToXPathHttpSecondPassLabeledBy locAll getAttr getText rootElm spDirectir roleLoc
-        forElms <-
-          if isFindFirstDirective spDirectir && not (P.null (fromMaybe [] labelledBy))
-            then pure Nothing
-            else roleToXPathHttpSecondPassFor locAll getAttr getText rootElm spDirectir roleLoc
-        let elms = LST.nub . mconcat $ catMaybes [labelledBy, forElms]
+        if isFindFirstDirective spDirectir && not (P.null labelledBy)
+          then constructRslt labelledBy
+          else do
+            forElms <- roleToXPathHttpSecondPassFor locAll getAttr getText rootElm spDirectir roleLoc
+            constructRslt . LST.nub $ mconcat [labelledBy, forElms]
   where
     constructRslt elms =
       pure $
@@ -481,34 +481,18 @@ roleToXPathHttpSecondPassLabeledBy locAll getAttr getText rootElm spDirectir rol
   case roleLoc of
     RoleType {} -> pure []
     _ -> do
-      candidates <- locAll rootElm (HTTPP.XPath candidateXPath)
-      matched <- filterMatching candidates
-      pure matched
+      candidates <-
+        -- matching role and an aria-labelledby attribute
+        locAll rootElm (HTTPP.XPath $ "//*" <> roleXPath roleLoc <> "[@" <> ariaLabeledBy <> "]")
+      filterElms spDirectir labledByMatchesRoleText candidates
       where
         ariaLabeledBy = "aria-labelledby"
-
-        candidateXPath :: Text
-        candidateXPath = "//*" <> roleXPath roleLoc <> "[@" <> ariaLabeledBy <> "]"
-
-        filterMatching :: [ElementId] -> m [ElementId]
-        filterMatching = recurse []
-          where
-            recurse :: [ElementId] -> [ElementId] -> m [ElementId]
-            recurse acc rem' =
-              if isFindFirstDirective spDirectir && not (P.null acc)
-                then
-                  pure acc
-                else case rem' of
-                  [] -> pure $ P.reverse acc
-                  (e : es) -> do
-                    matches <- elementMatchesName e
-                    recurse (if matches then e : acc else acc) es
 
         -- Resolve aria-labelledby on @eid@: split on whitespace to get ID-refs,
         -- look up the text of each referenced element, concatenate with spaces,
         -- and compare (after stripping) to @targetName@.
-        elementMatchesName :: ElementId -> m Bool
-        elementMatchesName eid = do
+        labledByMatchesRoleText :: ElementId -> m Bool
+        labledByMatchesRoleText eid = do
           mAttrVal <- getAttr eid ariaLabeledBy
           case mAttrVal of
             Nothing -> pure False
@@ -546,15 +530,11 @@ roleToXPathHttpSecondPassFor locAll getAttr getText rootElm spDirectir roleLoc =
   case roleLoc of
     RoleType {} -> pure []
     _ -> do
-      -- candidates <- every element that has an @id and matches the role name
-      candidates <- locAll rootElm (HTTPP.XPath $ "//*" <> roleXPath roleLoc <> "[@id]")
-      -- filter on mathcin for statement
-      matched <- filterFor candidates
-      pure matched
+      candidates <-
+        -- has an @id and matches the role name
+        locAll rootElm (HTTPP.XPath $ "//*" <> roleXPath roleLoc <> "[@id]")
+      filterElms spDirectir matchesFor candidates
       where
-        filterFor :: [ElementId] -> m [ElementId]
-        filterFor = filterElms spDirectir matchesFor
-
         matchesFor :: ElementId -> m Bool
         matchesFor eid = do
           mId <- getAttr eid "id"
@@ -573,21 +553,8 @@ roleXPath = \case
   RoleName {} -> "[not(@role='presentation' or @role='none')]"
   r -> LI.roleTypeXPathContent True r.role
 
-filterMatching :: [ElementId] -> m [ElementId]
-filterMatching = recurse []
-  where
-    recurse :: [ElementId] -> [ElementId] -> m [ElementId]
-    recurse acc rem' =
-      if isFindFirstDirective spDirectir && not (P.null acc)
-        then
-          pure acc
-        else case rem' of
-          [] -> pure $ P.reverse acc
-          (e : es) -> do
-            matches <- elementMatchesName e
-            recurse (if matches then e : acc else acc) es
 
-filterElms :: RoleSecondPassDirective -> (ElementId -> m Bool) -> [ElementId] -> m [ElementId]
+filterElms :: forall m. Monad m => RoleSecondPassDirective -> (ElementId -> m Bool) -> [ElementId] -> m [ElementId]
 filterElms spDir matcher = recurse []
   where
     recurse :: [ElementId] -> [ElementId] -> m [ElementId]
