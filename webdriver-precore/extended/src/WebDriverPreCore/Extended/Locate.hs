@@ -422,14 +422,13 @@ isDisplayedHttp catch runner ses eid =
 
 locateBiDi = undefined
 
-
-data RoleSecondPassOpts  = 
-  FindFirst
+data RoleFindOps
+  = FindFirst
   | FindAll
   deriving (Show, Eq)
 
-isFindFirstDirective :: RoleSecondPassOpts -> Bool
-isFindFirstDirective spDir = spDir `P.elem` [MissFindFirst, AlwaysFindFirst]
+notNull :: [a] -> Bool
+notNull = not . P.null
 
 roleToXPathHttpSecondPass ::
   forall m.
@@ -441,27 +440,25 @@ roleToXPathHttpSecondPass ::
   -- | get the visible text of an element
   (ElementId -> m Text) ->
   Maybe ElementId -> -- root to search within
-  RoleSecondPassOpts ->
+  RoleFindOps ->
   RoleLocator ->
   m (Maybe LocateResult)
-roleToXPathHttpSecondPass locAll getAttr getText rootElm spDirectir roleLoc =
-  if spDirectir == SecondPassNever
-    then pure Nothing
-    else case roleLoc of
-      RoleType {} -> pure Nothing
-      _ -> do
-        labelledByElms <- roleToXPathHttpLabeledBy locAll getAttr getText rootElm spDirectir roleLoc
-        if isFindFirstDirective spDirectir && (not . P.null) labelledByElms
-          then mkResult labelledByElms
-          else do
-            forElms <- roleToXPathFor locAll getAttr getText rootElm spDirectir roleLoc
-            mkResult . LST.nub $ mconcat [labelledByElms, forElms]
+roleToXPathHttpSecondPass locAll getAttr getText rootElm ops roleLoc =
+  case roleLoc of
+    RoleType {} -> pure Nothing
+    _ -> do
+      labelledByElms <- roleToXPathHttpLabeledBy locAll getAttr getText rootElm ops roleLoc
+      if ops == FindFirst && notNull labelledByElms
+        then mkResult labelledByElms
+        else do
+          forElms <- roleToXPathFor locAll getAttr getText rootElm ops roleLoc
+          mkResult . LST.nub $ mconcat [labelledByElms, forElms]
   where
     mkResult elms =
       pure $
-        if P.null elms
-          then Nothing
-          else
+        case elms of
+          [] -> Nothing
+          _ ->
             Just . LeafResult $
               MkLeafResult
                 { source = RL.BiDiNative {loc = RL.Role {role = roleLoc}},
@@ -478,17 +475,17 @@ roleToXPathHttpLabeledBy ::
   -- | get the visible text of an element
   (ElementId -> m Text) ->
   Maybe ElementId -> -- root to search within
-  RoleSecondPassOpts ->
+  RoleFindOps ->
   RoleLocator ->
   m [ElementId]
-roleToXPathHttpLabeledBy locAll getAttr getText rootElm spDirectir roleLoc =
+roleToXPathHttpLabeledBy locAll getAttr getText rootElm ops roleLoc =
   case roleLoc of
     RoleType {} -> pure []
     _ -> do
       candidates <-
         -- matching role and an aria-labelledby attribute
         locAll rootElm (HTTPP.XPath $ "//*" <> roleXPath roleLoc <> "[@" <> ariaLabeledBy <> "]")
-      filterElms spDirectir labledByMatchesRoleText candidates
+      filterElms ops labledByMatchesRoleText candidates
       where
         ariaLabeledBy = "aria-labelledby"
 
@@ -525,17 +522,17 @@ roleToXPathFor ::
   -- | get the visible text of an element
   (ElementId -> m Text) ->
   Maybe ElementId -> -- root to search within
-  RoleSecondPassOpts ->
+  RoleFindOps ->
   RoleLocator ->
   m [ElementId]
-roleToXPathFor locAll getAttr getText rootElm spDirectir roleLoc =
+roleToXPathFor locAll getAttr getText rootElm ops roleLoc =
   case roleLoc of
     RoleType {} -> pure []
     _ -> do
       candidates <-
         -- has an @id and matches the role name
         locAll rootElm (HTTPP.XPath $ "//*" <> roleXPath roleLoc <> "[@id]")
-      filterElms spDirectir forTxtMatchesId candidates
+      filterElms ops forTxtMatchesId candidates
       where
         forTxtMatchesId :: ElementId -> m Bool
         forTxtMatchesId eid = do
@@ -555,12 +552,12 @@ roleXPath = \case
   RoleName {} -> "[not(@role='presentation' or @role='none')]"
   r -> LI.roleTypeXPathContent True r.role
 
-filterElms :: forall m. (Monad m) => RoleSecondPassOpts -> (ElementId -> m Bool) -> [ElementId] -> m [ElementId]
-filterElms spDir matcher = recurse []
+filterElms :: forall m. (Monad m) => RoleFindOps -> (ElementId -> m Bool) -> [ElementId] -> m [ElementId]
+filterElms ops matcher = recurse []
   where
     recurse :: [ElementId] -> [ElementId] -> m [ElementId]
     recurse acc rem' =
-      if isFindFirstDirective spDir && not (P.null acc)
+      if ops == FindFirst && notNull acc
         then
           pure acc
         else case rem' of
