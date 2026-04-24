@@ -169,7 +169,7 @@ instance FromJSON HandleType where
 
 -- | [spec](https://www.w3.org/TR/2025/WD-webdriver2-20251028/#dfn-find-element)
 newtype ElementId = MkElement {id :: Text}
-  deriving (Show, Eq, Generic)
+  deriving (Show, Eq, Ord, Generic)
 
 instance ToJSON ElementId where
   toJSON :: ElementId -> Value

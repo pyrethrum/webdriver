@@ -14,7 +14,7 @@ import Data.Aeson as A (Result (..), Value (Bool), fromJSON, toJSON)
 import Data.Function ((&))
 import Data.Functor.Identity (Identity (..), runIdentity)
 import Data.List qualified as LST
-import Data.List.NonEmpty (toList)
+import Data.List.NonEmpty (NonEmpty (..), toList)
 import Data.Maybe (catMaybes, fromMaybe)
 import Data.Text
 import Data.Text qualified as T
@@ -36,6 +36,7 @@ import WebDriverPreCore.Extended.ReducedLocator.Internal as RL
   )
 import WebDriverPreCore.HTTP.Protocol as HTTPP (Command, Script (..), Selector (..))
 import Prelude as P
+import Data.Containers.ListUtils (nubOrd)
 
 data LocateException
   = AmbiguousLocator
@@ -56,75 +57,64 @@ data Cardinality = Unique | First | Many deriving (Show, Eq)
 
 data DisplayedCheck = Never | DisambiguateUnique | Always deriving (Show, Eq)
 
-data JSRoleCheck = RoleCheckNever | RoleCheckSingletonMiss | RoleCheckAlways deriving (Show, Eq)
+data ExtendedRoleCheck = RoleCheckNever | RoleCheckSingletonMiss | RoleCheckAlways deriving (Show, Eq)
 
 data HttpLocateOpts = MkHttpLocateOpts
   { jsRecheckDisplayed :: DisplayedCheck,
-    jsRoleCheck :: JSRoleCheck
-    -- TODO: RoleSecondPass will be be dreived for findAll
-    -- never - no second pass for findAll
-    -- else second PASS
-  }
-  deriving (Show, Eq)
-
-data LeafResult
-  = MkLeafResult
-  { source :: LeafLoc,
-    elms :: [ElementId]
+    extendedRoleCheck :: ExtendedRoleCheck,
+    cardinality :: Cardinality
   }
   deriving (Show, Eq)
 
 data LocateResult
-  = LeafResult LeafResult
-  | ContainsResult
-      { found :: [LocateResult]
-      }
-  | AndResult
-      { found :: [LocateResult]
-      }
-  | OrResult
-      { found :: [LocateResult]
-      }
-  | PostFilterResult
-      { predicate :: LI.Predicate,
-        found :: [LocateResult]
-      }
+  = MkLocateResult
+  { source :: LeafLoc,
+    elmIds :: [ElementId]
+  }
   deriving (Show, Eq)
 
-foldResult :: (b -> LocateResult -> b) -> b -> LocateResult -> b
-foldResult f z lr = runIdentity $ traverseResult (\acc x -> Identity (f acc x)) z lr
+-- \| ContainsResult
+--     { found :: [LocateResult]
+--     }
+-- \| AndResult
+--     { found :: [LocateResult]
+--     }
+-- \| OrResult
+--     { found :: [LocateResult]
+--     }
+-- \| PostFilterResult
+--     { predicate :: LI.Predicate,
+--       found :: [LocateResult]
+--     }
+-- deriving (Show, Eq)
 
-traverseResult :: (Monad m) => (b -> LocateResult -> m b) -> b -> LocateResult -> m b
-traverseResult f z lr = do
-  z' <- f z lr
-  foldM (traverseResult f) z' children
-  where
-    children = case lr of
-      LeafResult _ -> []
-      ContainsResult {found} -> found
-      AndResult {found} -> found
-      OrResult {found} -> found
-      PostFilterResult {found} -> found
+-- foldResult :: (b -> LocateResult -> b) -> b -> LocateResult -> b
+-- foldResult f z lr = runIdentity $ traverseResult (\acc x -> Identity (f acc x)) z lr
+
+-- traverseResult :: (Monad m) => (b -> LocateResult -> m b) -> b -> LocateResult -> m b
+-- traverseResult f z lr = do
+--   z' <- f z lr
+--   foldM (traverseResult f) z' children
+--   where
+--     children = case lr of
+--       LeafResult _ -> []
+--       ContainsResult {found} -> found
+--       AndResult {found} -> found
+--       OrResult {found} -> found
+--       PostFilterResult {found} -> found
 
 -- TODO - may need to reintroduce locateDirectives param
 -- extractIds :: LocateDirectives -> LocateResult -> Either LocateResult [ElementId]
 -- extractIds _ lr = recurse lr
-extractIds :: LocateResult -> [ElementId]
-extractIds lr = recurse lr
-  where
-    recurse :: LocateResult -> [ElementId]
-    recurse = \case
-      LeafResult (MkLeafResult {elms}) -> elms
-      PostFilterResult {} -> postfilterNotImplemented
-      ContainsResult {found} -> recurseConcatAll found
-      OrResult {found} -> recurseConcatAll found
-      AndResult {found} ->
-        traverse recurse found
-          & \case
-            [] -> []
-            (x : xs) -> P.foldl' LST.intersect x xs
-    recurseConcatAll :: [LocateResult] -> [ElementId]
-    recurseConcatAll = (>>= recurse)
+-- extractIds :: LocateResult -> [ElementId]
+-- extractIds lr = recurse lr
+--   where
+--     recurse :: LocateResult -> [ElementId]
+--     recurse = \case
+--       LeafResult (MkLeafResult {elms}) -> elms
+--       NodeResult {found} -> recurseConcatAll found
+--     recurseConcatAll :: [LocateResult] -> [ElementId]
+--     recurseConcatAll = (>>= recurse)
 
 -- TODO
 -- 0. locateHttp Compiles (NoImp postfilter)
@@ -180,7 +170,7 @@ locateHttp ::
   (Text -> Locator) ->
   -- | cardinality
   Cardinality ->
-  -- | locate ops
+  -- | locate opts
   HttpLocateOpts ->
   -- | session
   Session ->
@@ -244,83 +234,117 @@ locateHttp throw catch runner defLoc cardinality MkHttpLocateOpts {jsRecheckDisp
     locateAll :: Maybe ElementId -> Selector -> m [ElementId]
     locateAll mRoot s = findElms mRoot s -- >>= filterDisplayedIf Always
     --
-    locateLeaf :: Maybe ElementId -> Bool -> LeafLoc -> m LeafResult
-    locateLeaf mRoot findFirst loc =
-      MkLeafResult loc
-        <$> ( if findFirst
-                -- lean on webdriver - brings first result back (faster)
-                then \s -> LST.singleton <$> findElm mRoot s
-                -- get all results for downstream uniqueness check (slower)
-                else locateAll mRoot
-            )
-          (toSelector loc)
+    locateLeaf :: Maybe ElementId -> Cardinality -> Bool -> LeafLoc -> m LocateResult
+    locateLeaf mRoot cardinality' extendedRoleCheck loc = 
+      case loc of 
+        RL.CSS {} -> baseResult
+        RL.XPath {} -> baseResult
+        RL.BiDiNative sl -> case sl of
+          Role {role} -> do
+            mResult <- roleToXPathHttpSecondPass locateAll (getAttribute runner ses) (getElementText runner ses) mRoot (if extendedRoleCheck == RoleCheckAlways then RoleCheckAlways else RoleCheckSingletonMiss) role
+            case mResult of
+              Nothing -> throw ElementNotFound {description = "No element found matching role locator.", locator}
+              Just lr -> pure lr
+          InnerText {value, matchType, caseSesnsitivity, maxDepth} -> do
+            let sel = HTTPP.XPath $ innerTextToXPath value caseSesnsitivity matchType maxDepth
+            baseResult <- locateLeafChecked mRoot cardinality' (RL.XPath {value = sel})
+            chkedRslt <- ensureSingleton (jsRecheckDisplayed `P.elem` [DisambiguateUnique, Always]) baseResult 
+            either throw pure chkedRslt
+      
+      
+      where 
+        baseResult = MkLocateResult loc <$> baseSelection
+        baseSelection = ( if cardinality' == First
+              -- lean on webdriver - brings first result back (faster)
+              then fmap pure . findElm mRoot 
+              -- get all results for downstream uniqueness check (slower)
+              else locateAll mRoot
+          )
+         (toSelector loc)
+
+     
 
     ensureSingleton ::
       Bool -> -- recheck ambiguous
       LocateResult ->
-      [ElementId] ->
       m (Either LocateException LocateResult)
-    ensureSingleton recheckAmbiguous lr elmIds =
-      case chkSingleton elmIds of
-        SingletonSuccess -> pure $ Right lr
-        Missing -> pure . Left $ ElementNotFound {description = "Expected exactly one element, but found none.", locator}
-        Ambiguous ->
-          if recheckAmbiguous
-            then
-              jsFilterDisplayed elmIds
-                >>= ensureSingleton False lr
-            else
-              pure . Left $ AmbiguousLocator {description = "Expected exactly one element, but found: " <> pack (show (P.length elmIds)) <> ".", locator}
+    ensureSingleton recheckAmbiguous lr =
+      ensureSingleton' recheckAmbiguous lr.elmIds
+      where
+        ensureSingleton' recheckAmbiguous' elmIds =
+          case chkSingleton elmIds of
+            SingletonSuccess -> pure $ Right lr
+            Missing -> pure . Left $ ElementNotFound {description = "Expected exactly one element, but found none.", locator}
+            Ambiguous ->
+              if recheckAmbiguous'
+                then
+                  jsFilterDisplayed elmIds
+                    >>= ensureSingleton' False
+                else
+                  pure . Left $ AmbiguousLocator {description = "Expected exactly one element, but found: " <> pack (show (P.length elmIds)) <> ".", locator}
 
     locateLeafChecked :: Maybe ElementId -> Cardinality -> LeafLoc -> m LocateResult
     locateLeafChecked mRoot cardinality' leafLoc = do
-      lr <- locateLeaf mRoot (cardinality' == First) leafLoc
-      chkedRslt <- ensureSingleton (jsRecheckDisplayed `P.elem` [DisambiguateUnique, Always]) (LeafResult lr) lr.elms
+      lr <- locateLeaf mRoot cardinality' leafLoc
+      chkedRslt <- ensureSingleton (jsRecheckDisplayed `P.elem` [DisambiguateUnique, Always]) lr 
       either throw pure chkedRslt
 
-    toSelector :: LeafLoc -> Selector
-    toSelector = \case
-      RL.CSS {value} -> HTTPP.CSS value
-      RL.XPath {value} -> HTTPP.XPath value
-      -- shim BiDiNative locators
-      BiDiNative sl -> case sl of
-        Role {role} -> HTTPP.XPath $ roleToXPath role
-        InnerText {value, matchType, caseSesnsitivity, maxDepth} -> HTTPP.XPath $ innerTextToXPath value caseSesnsitivity matchType maxDepth
+    locateUnchecked :: Maybe ElementId -> Bool -> ReducedHttpLoc -> m LocateResult
+    locateUnchecked mRoot extendedRoleCheck =
+     \case
+      LeafHttp cl ->
+        -- need to find all elms for combinator and later checks and retries
+        LeafResult <$> locateLeaf mRoot False cl
+      CombintorHttp cb -> case cb of
+        Contains {container, contained} -> do
+          containers <- locate container
+          locateContained containers contained
+        All {elms = locs} -> do
+          found <- andLocs locs
+          pure $ AndResult found
+        Any {elms = locs} -> undefined
+      -- do
+      -- results <- traverse locate locs
+      -- pure OrResult {found = toList results}
+      PostFilterHttpLoc {} -> postfilterNotImplemented
+     where
+      locate = locateUnchecked mRoot
 
-    locateUnchecked :: Maybe ElementId -> ReducedHttpLoc -> m LocateResult
-    locateUnchecked mRoot =
-      \case
-        LeafHttp cl ->
-          -- need to find all elms for combinator and later checks and retries
-          LeafResult <$> locateLeaf mRoot False cl
-        CombintorHttp cb -> case cb of
-          Contains {container, contained} -> do
-            containers <- locate container
-            locateContained containers contained
-          All {elms = locs} -> do
-            results <- traverse locate locs
-            pure AndResult {found = toList results}
-          Any {elms = locs} -> do
-            results <- traverse locate locs
-            pure OrResult {found = toList results}
-        PostFilterHttpLoc {} -> postfilterNotImplemented
-      where
-        locate = locateUnchecked mRoot
+    -- Short-circuiting fold for All: stops as soon as the running intersection
+    -- of element IDs becomes empty, avoiding unnecessary locate calls.
+    -- andLocs :: NonEmpty ReducedHttpLoc -> m [LocateResult]
+    -- andLocs (l :| ls) = undefined
+    -- do
+    --   result0 <- locate l
+    --   recurse (extractIds result0) [result0] ls
+    --   where
+    --   recurse :: [ElementId] -> [LocateResult] -> [ReducedHttpLoc] -> m [LocateResult]
+    --   recurse rsltIds locRslts remainderLocs =
+    --     case (rsltIds, locRslts, remainderLocs) of
+    --       (_resultIds, acc, []) -> pure (P.reverse acc)
+    --       (intersection, acc, (l' : ls'))
+    --         | P.null intersection -> pure (P.reverse acc)
+    --         | otherwise ->
+    --             do
+    --                 result <- locate l'
+    --               recurse
+    --               (LST.intersect intersection (extractIds result))
+    --               (result : acc)
+    --               ls'
 
-        locateContained :: LocateResult -> ReducedHttpLoc -> m LocateResult
-        locateContained containers subLoc = do
-          -- for each container, locate contained with root of container element, and combine results
-          let ids = containers.found >>= extractIds
-          containedResults <- traverse (\rootId -> locateUnchecked (Just rootId) subLoc) ids
-          pure $ ContainsResult containedResults
+    locateContained :: LocateResult -> ReducedHttpLoc -> m LocateResult
+    locateContained containers subLoc = do
+      -- for each container, locate contained with root of container element, and combine results
+      let ids = containers.found >>= extractIds
+      containedResults <- traverse (\rootId -> locateUnchecked (Just rootId) subLoc) ids
+      pure $ ContainsResult containedResults
 
     httpLocate' :: Maybe ElementId -> ReducedHttpLoc -> m LocateResult
     httpLocate' mRoot loc = do
       result1 <- locateUnchecked mRoot loc
-      let ids = extractIds result1
       -- this assumes that the jscheck function is good enough to pick up when a parent element
       -- is not displayed, even if a child is => and return false
-      checked <- ensureSingleton (jsRecheckDisplayed `P.elem` [DisambiguateUnique, Always]) result1 ids
+      checked <- ensureSingleton (jsRecheckDisplayed `P.elem` [DisambiguateUnique, Always]) result1
       case checked of
         Left (ElementNotFound {}) -> undefined
         Left err -> throw err
@@ -346,6 +370,15 @@ chkSingleton = \case
   [] -> Missing
   [_] -> SingletonSuccess
   _ -> Ambiguous
+
+toSelector :: LeafLoc -> Selector
+toSelector = \case
+  RL.CSS {value} -> HTTPP.CSS value
+  RL.XPath {value} -> HTTPP.XPath value
+  -- shim BiDiNative locators
+  BiDiNative sl -> case sl of
+    Role {role} -> HTTPP.XPath $ roleToXPath role
+    InnerText {value, matchType, caseSesnsitivity, maxDepth} -> HTTPP.XPath $ innerTextToXPath value caseSesnsitivity matchType maxDepth
 
 displayedJS :: Text
 displayedJS =
@@ -422,7 +455,7 @@ isDisplayedHttp catch runner ses eid =
 
 locateBiDi = undefined
 
-data RoleFindOps
+data RoleFindOpts
   = FindFirst
   | FindAll
   deriving (Show, Eq)
@@ -440,30 +473,31 @@ roleToXPathHttpSecondPass ::
   -- | get the visible text of an element
   (ElementId -> m Text) ->
   Maybe ElementId -> -- root to search within
-  RoleFindOps ->
+  RoleFindOpts ->
   RoleLocator ->
   m (Maybe LocateResult)
-roleToXPathHttpSecondPass locAll getAttr getText rootElm ops roleLoc =
+roleToXPathHttpSecondPass locAll getAttr getText rootElm opts roleLoc =
   case roleLoc of
     RoleType {} -> pure Nothing
     _ -> do
-      labelledByElms <- roleToXPathHttpLabeledBy locAll getAttr getText rootElm ops roleLoc
-      if ops == FindFirst && notNull labelledByElms
+      labelledByElms <- roleToXPathHttpLabeledBy locAll getAttr getText rootElm opts roleLoc
+      if opts == FindFirst && notNull labelledByElms
         then mkResult labelledByElms
         else do
-          forElms <- roleToXPathFor locAll getAttr getText rootElm ops roleLoc
-          mkResult . LST.nub $ mconcat [labelledByElms, forElms]
+          forElms <- roleToXPathFor locAll getAttr getText rootElm opts roleLoc
+          mkResult . nubOrd $ mconcat [labelledByElms, forElms]
   where
     mkResult elms =
       pure $
         case elms of
           [] -> Nothing
-          _ ->
-            Just . LeafResult $
-              MkLeafResult
-                { source = RL.BiDiNative {loc = RL.Role {role = roleLoc}},
-                  elms
-                }
+          _ -> undefined
+
+-- Just . LeafResult $
+--   MkLeafResult
+--     { source = RL.BiDiNative {loc = RL.Role {role = roleLoc}},
+--       elms
+--     }
 
 roleToXPathHttpLabeledBy ::
   forall m.
@@ -475,17 +509,17 @@ roleToXPathHttpLabeledBy ::
   -- | get the visible text of an element
   (ElementId -> m Text) ->
   Maybe ElementId -> -- root to search within
-  RoleFindOps ->
+  RoleFindOpts ->
   RoleLocator ->
   m [ElementId]
-roleToXPathHttpLabeledBy locAll getAttr getText rootElm ops roleLoc =
+roleToXPathHttpLabeledBy locAll getAttr getText rootElm opts roleLoc =
   case roleLoc of
     RoleType {} -> pure []
     _ -> do
       candidates <-
         -- matching role and an aria-labelledby attribute
         locAll rootElm (HTTPP.XPath $ "//*" <> roleXPath roleLoc <> "[@" <> ariaLabeledBy <> "]")
-      filterElms ops labledByMatchesRoleText candidates
+      filterElms opts labledByMatchesRoleText candidates
       where
         ariaLabeledBy = "aria-labelledby"
 
@@ -522,17 +556,17 @@ roleToXPathFor ::
   -- | get the visible text of an element
   (ElementId -> m Text) ->
   Maybe ElementId -> -- root to search within
-  RoleFindOps ->
+  RoleFindOpts ->
   RoleLocator ->
   m [ElementId]
-roleToXPathFor locAll getAttr getText rootElm ops roleLoc =
+roleToXPathFor locAll getAttr getText rootElm opts roleLoc =
   case roleLoc of
     RoleType {} -> pure []
     _ -> do
       candidates <-
         -- has an @id and matches the role name
         locAll rootElm (HTTPP.XPath $ "//*" <> roleXPath roleLoc <> "[@id]")
-      filterElms ops forTxtMatchesId candidates
+      filterElms opts forTxtMatchesId candidates
       where
         forTxtMatchesId :: ElementId -> m Bool
         forTxtMatchesId eid = do
@@ -552,12 +586,12 @@ roleXPath = \case
   RoleName {} -> "[not(@role='presentation' or @role='none')]"
   r -> LI.roleTypeXPathContent True r.role
 
-filterElms :: forall m. (Monad m) => RoleFindOps -> (ElementId -> m Bool) -> [ElementId] -> m [ElementId]
-filterElms ops matcher = recurse []
+filterElms :: forall m. (Monad m) => RoleFindOpts -> (ElementId -> m Bool) -> [ElementId] -> m [ElementId]
+filterElms opts matcher = recurse []
   where
     recurse :: [ElementId] -> [ElementId] -> m [ElementId]
     recurse acc rem' =
-      if ops == FindFirst && notNull acc
+      if opts == FindFirst && notNull acc
         then
           pure acc
         else case rem' of
