@@ -502,7 +502,7 @@ isElementSelected r sess = r . API.isElementSelected sess
 -- Specification Entry: [HTMLSpecURL#get-element-attribute](https://www.w3.org/TR/webdriver/#get-element-attribute)
 --
 -- @GET \/session\/{session id}\/element\/{element id}\/attribute\/{name} Get Element Attribute@
-getElementAttribute :: forall m. Runner m Text -> Session -> ElementId -> Text -> m Text
+getElementAttribute :: forall m. Runner m (Maybe Text) -> Session -> ElementId -> Text -> m (Maybe Text)
 getElementAttribute r sess elemId = r . API.getElementAttribute sess elemId
 
 -- | Get an element's property.
@@ -510,7 +510,7 @@ getElementAttribute r sess elemId = r . API.getElementAttribute sess elemId
 -- Specification Entry: [HTMLSpecURL#get-element-property](https://www.w3.org/TR/webdriver/#get-element-property)
 --
 -- @GET \/session\/{session id}\/element\/{element id}\/property\/{name} Get Element Property@
-getElementProperty :: forall m. Runner m Value -> Session -> ElementId -> Text -> m Value
+getElementProperty :: forall m. Runner m (Maybe Value) -> Session -> ElementId -> Text -> m (Maybe Value)
 getElementProperty r sess elemId = r . API.getElementProperty sess elemId
 
 -- | Get an element's CSS value.

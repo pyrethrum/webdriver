@@ -301,10 +301,10 @@ findElementsFromElement = viaSession2 A.findElementsFromElement
 isElementSelected :: (HasHttpDriverInfo env, HasLogFunc env, HasHttpSession env) => ElementId -> RIO env Bool
 isElementSelected = viaSession1 A.isElementSelected
 
-getElementAttribute :: (HasHttpDriverInfo env, HasLogFunc env, HasHttpSession env) => ElementId -> Text -> RIO env Text
+getElementAttribute :: (HasHttpDriverInfo env, HasLogFunc env, HasHttpSession env) => ElementId -> Text -> RIO env (Maybe Text)
 getElementAttribute = viaSession2 A.getElementAttribute
 
-getElementProperty :: (HasHttpDriverInfo env, HasLogFunc env, HasHttpSession env) => ElementId -> Text -> RIO env Value
+getElementProperty :: (HasHttpDriverInfo env, HasLogFunc env, HasHttpSession env) => ElementId -> Text -> RIO env (Maybe Value)
 getElementProperty = viaSession2 A.getElementProperty
 
 getElementCssValue :: (HasHttpDriverInfo env, HasLogFunc env, HasHttpSession env) => ElementId -> Text -> RIO env Text 

@@ -42,6 +42,9 @@ module WebDriverPreCore.TestResources
     
     -- * Demo Extension
     demoExtensionZip,
+
+    -- * Attribute Test
+    attributeTestHtml,
   )
 where
 
@@ -150,3 +153,6 @@ demoCss = $(embedFile "test-resources/testFiles/demo.css")
 
 demoExtensionZip :: ByteString
 demoExtensionZip = $(embedFile "test-resources/testFiles/demoExtension.zip")
+
+attributeTestHtml :: ByteString
+attributeTestHtml = $(embedFile "test-resources/testFiles/attributeTest.html")

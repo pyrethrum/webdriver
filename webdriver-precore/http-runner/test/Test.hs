@@ -73,7 +73,9 @@ httpDemos cfg =
                 HttpDemo.demoKeyAndReleaseActions,
                 HttpDemo.demoWheelActions,
                 HttpDemo.demoError,
-                ErrorDemo.errorDemo
+                ErrorDemo.errorDemo,
+                HttpDemo.demoGetElementAttributeJust,
+                HttpDemo.demoGetElementAttributeNothing
 -- fallback commands not implemented for legacy
 #ifndef LEGACY_TEST
                 , FallbackDemo.demoFallbackActions

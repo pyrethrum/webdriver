@@ -603,7 +603,7 @@ isElementSelected sessionId elementId = Get "Is Element Selected" (elementUri1 s
 -- [spec](HTMLSpecURL#get-element-attribute)
 --
 -- @GET 	\/session\/{session id}\/element\/{element id}\/attribute\/{name} 	Get Element Attribute@
-getElementAttribute :: Session -> ElementId -> Text -> Command Text
+getElementAttribute :: Session -> ElementId -> Text -> Command (Maybe Text)
 getElementAttribute sessionId elementId attributeName = Get "Get Element Attribute" (elementUri2 sessionId elementId "attribute" attributeName)
 
 -- |
@@ -613,7 +613,7 @@ getElementAttribute sessionId elementId attributeName = Get "Get Element Attribu
 -- [spec](HTMLSpecURL#get-element-property)
 --
 -- @GET 	\/session\/{session id}\/element\/{element id}\/property\/{name} 	Get Element Property@
-getElementProperty :: Session -> ElementId -> Text -> Command Value
+getElementProperty :: Session -> ElementId -> Text -> Command (Maybe Value)
 getElementProperty sessionId elementId propertyName = Get "Get Element Property" (elementUri2 sessionId elementId "property" propertyName)
 
 -- |

@@ -107,8 +107,8 @@ common commonGhcOptions
     -Wno-deprecations
     -fbyte-code-and-object-code 
     -- TODO make conditional
-    -fdefer-type-errors
-    -fdefer-typed-holes
+    -- -fdefer-type-errors
+    -- -fdefer-typed-holes
 
   cpp-options: 
     -DHTMLSpecURL=https://www.w3.org/TR/2025/WD-webdriver2-20251028/

@@ -2,9 +2,9 @@ module WebDriverPreCore.Extended.Locate
   ( LocateException (..),
     Cardinality (..),
     HttpLocateOpts (..),
-    locateHttp,
-    displayedJS,
-    isDisplayedHttp,
+    -- locateHttp,
+    -- displayedJS,
+    -- isDisplayedHttp,
   )
 where
 
@@ -157,7 +157,7 @@ data LocateResult
 
 -- findElement :: forall m. Runner m ElementId -> Session -> Selector -> m ElementId
 -- findElements :: forall m. Runner m [ElementId] -> Session -> Selector -> m [ElementId]
-
+{-
 locateHttp ::
   forall m.
   (Monad m) =>
@@ -197,10 +197,7 @@ locateHttp throw catch runner defLoc cardinality MkHttpLocateOpts {jsRecheckDisp
         (throw . DriverException)
 
     getAttribute :: ElementId -> Text -> m (Maybe Text)
-    getAttribute eid name =
-      catch
-        (Just <$> getElementAttribute runner ses eid name)
-        (\(_ :: WebDriverException) -> pure Nothing)
+    getAttribute eid name = getElementAttribute runner ses eid name
 
 
     findElm :: Maybe ElementId -> Selector -> m ElementId
@@ -609,3 +606,5 @@ filterElms opts matcher = recurse []
           (e : es) -> do
             matches <- matcher e
             recurse (if matches then e : acc else acc) es
+
+-}

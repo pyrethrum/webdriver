@@ -1,3 +1,11 @@
+# webdriver-precore-0.?.?.? (unreleased)
+
+## Breaking Changes
+
+- `getElementAttribute`: return type changed from `Command Text` to `Command (Maybe Text)` — per W3C spec §12.4.2, absent/boolean-false attributes return `null`
+- `getElementProperty`: return type changed from `Command Value` to `Command (Maybe Value)` — per W3C spec §12.4.3, undefined properties return `null`
+- Same changes applied to the deprecated `HttpSpec`-based equivalents in `WebDriverPreCore.HTTP.SpecDefinition`
+
 # webdriver-precore-0.2.0.1 (2026-01-17)
 
 ## Breaking Changes

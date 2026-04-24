@@ -20,7 +20,8 @@ import WebDriverPreCore.Test.ConfigLoader (loadConfig)
 import WebDriverPreCore.Test.IOUtils (DemoActions (..), (===))
 import WebDriverPreCore.Test.CapabilitiesBuilder (httpFullCapabilities)
 import WebDriverPreCore.Test.TestData
-  ( checkboxesUrl,
+  ( attributeTestUrl,
+    checkboxesUrl,
     indexUrl,
     infiniteScrollUrl,
     inputsUrl,
@@ -792,3 +793,37 @@ demoError =
           let errTxt = txt e
               expectedText = "An element could not be located on the page using the given search parameters"
           assertBool "NoSuchElement error should be mapped" $ expectedText `isInfixOf` errTxt
+
+-- >>> runDemo demoGetElementAttributeJust
+demoGetElementAttributeJust :: HttpDemo
+demoGetElementAttributeJust =
+  sessionDemo "get element attribute - Just case" action
+  where
+    action :: Session -> DemoActions -> HttpActions -> IO ()
+    action sesId MkDemoActions {..} MkHttpActions {..} = do
+      url <- attributeTestUrl
+      navigateTo sesId url
+      valueInput <- findElement sesId $ CSS "#value-input"
+      attr <- getElementAttribute sesId valueInput "value"
+      logShow "getElementAttribute value on #value-input" attr
+      Just "Hello" === attr
+      prop <- getElementProperty sesId valueInput "value"
+      logShow "getElementProperty value on #value-input" prop
+      Just (String "Hello") === prop
+
+-- >>> runDemo demoGetElementAttributeNothing
+demoGetElementAttributeNothing :: HttpDemo
+demoGetElementAttributeNothing =
+  sessionDemo "get element attribute - Nothing case" action
+  where
+    action :: Session -> DemoActions -> HttpActions -> IO ()
+    action sesId MkDemoActions {..} MkHttpActions {..} = do
+      url <- attributeTestUrl
+      navigateTo sesId url
+      noValue <- findElement sesId $ CSS "#no-value"
+      attr <- getElementAttribute sesId noValue "value"
+      logShow "getElementAttribute value on #no-value" attr
+      Nothing === attr
+      prop <- getElementProperty sesId noValue "value"
+      logShow "getElementProperty value on #no-value" prop
+      Nothing === prop

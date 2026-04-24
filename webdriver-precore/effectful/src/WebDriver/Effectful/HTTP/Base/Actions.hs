@@ -306,10 +306,10 @@ findElementsFromShadowRoot sr = send . FindElementsFromShadowRoot sr
 isElementSelected :: (WebDriverHttp :> es) => ElementId -> Eff es Bool
 isElementSelected = send . IsElementSelected
 
-getElementAttribute :: (WebDriverHttp :> es) => ElementId -> Text -> Eff es Text
+getElementAttribute :: (WebDriverHttp :> es) => ElementId -> Text -> Eff es (Maybe Text)
 getElementAttribute el = send . GetElementAttribute el
 
-getElementProperty :: (WebDriverHttp :> es) => ElementId -> Text -> Eff es Value
+getElementProperty :: (WebDriverHttp :> es) => ElementId -> Text -> Eff es (Maybe Value)
 getElementProperty el = send . GetElementProperty el
 
 getElementCssValue :: (WebDriverHttp :> es) => ElementId -> Text -> Eff es Text

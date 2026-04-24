@@ -1,3 +1,15 @@
+# webdriver-test-0.?.?.? (unreleased)
+
+## Breaking Changes
+
+- `getElementAttribute` / `getElementProperty` record fields in `HttpActions` updated to `IO (Maybe Text)` and `IO (Maybe Value)` respectively, matching the core library change
+
+## New Tests
+
+- `demoGetElementAttributeJust`: asserts `getElementAttribute`/`getElementProperty` return `Just` for a present attribute/property
+- `demoGetElementAttributeNothing`: asserts `getElementAttribute`/`getElementProperty` return `Nothing` for an absent attribute/property
+- New test fixture `attributeTest.html` with `<input id="value-input" value="Hello">` and `<div id="no-value">`
+
 # webdriver-test-0.2.0.1 (2026-01-17)
 
 ## New Features

@@ -156,8 +156,8 @@ data WebDriverHttp :: Effect where
   FindElementsFromShadowRoot :: ShadowRootElementId -> Selector -> WebDriverHttp m [ElementId]
   -- Element state
   IsElementSelected :: ElementId -> WebDriverHttp m Bool
-  GetElementAttribute :: ElementId -> Text -> WebDriverHttp m Text
-  GetElementProperty :: ElementId -> Text -> WebDriverHttp m Value
+  GetElementAttribute :: ElementId -> Text -> WebDriverHttp m (Maybe Text)
+  GetElementProperty :: ElementId -> Text -> WebDriverHttp m (Maybe Value)
   GetElementCssValue :: ElementId -> Text -> WebDriverHttp m Text
   GetElementShadowRoot :: ElementId -> WebDriverHttp m ShadowRootElementId
   GetElementText :: ElementId -> WebDriverHttp m Text

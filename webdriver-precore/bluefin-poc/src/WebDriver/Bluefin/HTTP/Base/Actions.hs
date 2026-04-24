@@ -297,10 +297,10 @@ findElementsFromElement sess = viaSession2 A.findElementsFromElement sess
 isElementSelected :: (e :> es) => HttpSessionEnv e -> ElementId -> Eff es Bool
 isElementSelected sess = viaSession1 A.isElementSelected sess
 
-getElementAttribute :: (e :> es) => HttpSessionEnv e -> ElementId -> Text -> Eff es Text
+getElementAttribute :: (e :> es) => HttpSessionEnv e -> ElementId -> Text -> Eff es (Maybe Text)
 getElementAttribute sess = viaSession2 A.getElementAttribute sess
 
-getElementProperty :: (e :> es) => HttpSessionEnv e -> ElementId -> Text -> Eff es Value
+getElementProperty :: (e :> es) => HttpSessionEnv e -> ElementId -> Text -> Eff es (Maybe Value)
 getElementProperty sess = viaSession2 A.getElementProperty sess
 
 getElementCssValue :: (e :> es) => HttpSessionEnv e -> ElementId -> Text -> Eff es Text

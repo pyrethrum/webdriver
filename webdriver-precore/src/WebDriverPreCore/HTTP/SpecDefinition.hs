@@ -717,7 +717,7 @@ isElementSelected sessionId elementId = get "Is Element Selected" (elementUri1 s
 -- [spec](https://www.w3.org/TR/2025/WD-webdriver2-20251028/#get-element-attribute)
 --
 -- @GET 	\/session\/{session id}\/element\/{element id}\/attribute\/{name} 	Get Element Attribute@
-getElementAttribute :: Session -> ElementId -> Text -> HttpSpec Text
+getElementAttribute :: Session -> ElementId -> Text -> HttpSpec (Maybe Text)
 getElementAttribute sessionId elementId attributeName = get "Get Element Attribute" (elementUri2 sessionId elementId "attribute" attributeName)
 
 -- |
@@ -727,7 +727,7 @@ getElementAttribute sessionId elementId attributeName = get "Get Element Attribu
 -- [spec](https://www.w3.org/TR/2025/WD-webdriver2-20251028/#get-element-property)
 --
 -- @GET 	\/session\/{session id}\/element\/{element id}\/property\/{name} 	Get Element Property@
-getElementProperty :: Session -> ElementId -> Text -> HttpSpec Value
+getElementProperty :: Session -> ElementId -> Text -> HttpSpec (Maybe Value)
 getElementProperty sessionId elementId propertyName = get "Get Element Property" (elementUri2 sessionId elementId "property" propertyName)
 
 -- |
