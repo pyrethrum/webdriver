@@ -196,8 +196,11 @@ locateHttp throw catch runner defLoc cardinality MkHttpLocateOpts {jsRecheckDisp
         (f runner ses sel)
         (throw . DriverException)
 
-    getAttribute :: ElementId -> Text -> m Text
-    getAttribute = 
+    getAttribute :: ElementId -> Text -> m (Maybe Text)
+    getAttribute eid name =
+      catch
+        (Just <$> getElementAttribute runner ses eid name)
+        (\(_ :: WebDriverException) -> pure Nothing)
 
 
     findElm :: Maybe ElementId -> Selector -> m ElementId
@@ -259,7 +262,7 @@ locateHttp throw catch runner defLoc cardinality MkHttpLocateOpts {jsRecheckDisp
            then  baseResult
            else
              do
-              mResult <- roleToXPathHttpSecondPass locateAll (getAttribute runner ses) (getElementText runner ses) mRoot RoleCheckAlways role
+              mResult <- roleToXPathHttpSecondPass locateAll getAttribute (getElementText runner ses) mRoot RoleCheckAlways role
               case mResult of
                 Nothing -> throw ElementNotFound {description = "No element found matching role locator.", locator}
                 Just lr -> pure lr
