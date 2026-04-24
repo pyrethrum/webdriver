@@ -11,6 +11,8 @@ where
 import Control.Exception (Exception, SomeException)
 import Control.Monad (filterM, foldM, (>=>))
 import Data.Aeson as A (Result (..), Value (Bool), fromJSON, toJSON)
+import Data.Bool (bool)
+import Data.Containers.ListUtils (nubOrd)
 import Data.Function ((&))
 import Data.Functor.Identity (Identity (..), runIdentity)
 import Data.List qualified as LST
@@ -36,7 +38,6 @@ import WebDriverPreCore.Extended.ReducedLocator.Internal as RL
   )
 import WebDriverPreCore.HTTP.Protocol as HTTPP (Command, Script (..), Selector (..))
 import Prelude as P
-import Data.Containers.ListUtils (nubOrd)
 
 data LocateException
   = AmbiguousLocator
@@ -195,6 +196,10 @@ locateHttp throw catch runner defLoc cardinality MkHttpLocateOpts {jsRecheckDisp
         (f runner ses sel)
         (throw . DriverException)
 
+    getAttribute :: ElementId -> Text -> m Text
+    getAttribute = 
+
+
     findElm :: Maybe ElementId -> Selector -> m ElementId
     findElm mRoots =
       mRoots
@@ -235,35 +240,37 @@ locateHttp throw catch runner defLoc cardinality MkHttpLocateOpts {jsRecheckDisp
     locateAll mRoot s = findElms mRoot s -- >>= filterDisplayedIf Always
     --
     locateLeaf :: Maybe ElementId -> Cardinality -> Bool -> LeafLoc -> m LocateResult
-    locateLeaf mRoot cardinality' extendedRoleCheck loc = 
-      case loc of 
+    locateLeaf mRoot cardinality' extendedRoleCheck loc = do
+      firstPass <-
+        ( if cardinality' == First
+            then fmap pure . findElm mRoot
+            else locateAll mRoot
+        )
+          (toSelector loc)
+      let 
+        mkResult = MkLocateResult loc
+        baseResult = mkResult firstPass
+      case loc of
         RL.CSS {} -> baseResult
         RL.XPath {} -> baseResult
         RL.BiDiNative sl -> case sl of
           Role {role} -> do
-            mResult <- roleToXPathHttpSecondPass locateAll (getAttribute runner ses) (getElementText runner ses) mRoot (if extendedRoleCheck == RoleCheckAlways then RoleCheckAlways else RoleCheckSingletonMiss) role
-            case mResult of
-              Nothing -> throw ElementNotFound {description = "No element found matching role locator.", locator}
-              Just lr -> pure lr
+           if not extendedRoleCheck 
+           then  baseResult
+           else
+             do
+              mResult <- roleToXPathHttpSecondPass locateAll (getAttribute runner ses) (getElementText runner ses) mRoot RoleCheckAlways role
+              case mResult of
+                Nothing -> throw ElementNotFound {description = "No element found matching role locator.", locator}
+                Just lr -> pure lr
+
           InnerText {value, matchType, caseSesnsitivity, maxDepth} -> do
             let sel = HTTPP.XPath $ innerTextToXPath value caseSesnsitivity matchType maxDepth
             baseResult <- locateLeafChecked mRoot cardinality' (RL.XPath {value = sel})
-            chkedRslt <- ensureSingleton (jsRecheckDisplayed `P.elem` [DisambiguateUnique, Always]) baseResult 
+            chkedRslt <- ensureSingleton (jsRecheckDisplayed `P.elem` [DisambiguateUnique, Always]) baseResult
             either throw pure chkedRslt
-      
-      
-      where 
-        baseResult = MkLocateResult loc <$> baseSelection
-        baseSelection = ( if cardinality' == First
-              -- lean on webdriver - brings first result back (faster)
-              then fmap pure . findElm mRoot 
-              -- get all results for downstream uniqueness check (slower)
-              else locateAll mRoot
-          )
-         (toSelector loc)
 
-     
-
+        
     ensureSingleton ::
       Bool -> -- recheck ambiguous
       LocateResult ->
@@ -286,29 +293,29 @@ locateHttp throw catch runner defLoc cardinality MkHttpLocateOpts {jsRecheckDisp
     locateLeafChecked :: Maybe ElementId -> Cardinality -> LeafLoc -> m LocateResult
     locateLeafChecked mRoot cardinality' leafLoc = do
       lr <- locateLeaf mRoot cardinality' leafLoc
-      chkedRslt <- ensureSingleton (jsRecheckDisplayed `P.elem` [DisambiguateUnique, Always]) lr 
+      chkedRslt <- ensureSingleton (jsRecheckDisplayed `P.elem` [DisambiguateUnique, Always]) lr
       either throw pure chkedRslt
 
     locateUnchecked :: Maybe ElementId -> Bool -> ReducedHttpLoc -> m LocateResult
     locateUnchecked mRoot extendedRoleCheck =
-     \case
-      LeafHttp cl ->
-        -- need to find all elms for combinator and later checks and retries
-        LeafResult <$> locateLeaf mRoot False cl
-      CombintorHttp cb -> case cb of
-        Contains {container, contained} -> do
-          containers <- locate container
-          locateContained containers contained
-        All {elms = locs} -> do
-          found <- andLocs locs
-          pure $ AndResult found
-        Any {elms = locs} -> undefined
-      -- do
-      -- results <- traverse locate locs
-      -- pure OrResult {found = toList results}
-      PostFilterHttpLoc {} -> postfilterNotImplemented
-     where
-      locate = locateUnchecked mRoot
+      \case
+        LeafHttp cl ->
+          -- need to find all elms for combinator and later checks and retries
+          LeafResult <$> locateLeaf mRoot False cl
+        CombintorHttp cb -> case cb of
+          Contains {container, contained} -> do
+            containers <- locate container
+            locateContained containers contained
+          All {elms = locs} -> do
+            found <- andLocs locs
+            pure $ AndResult found
+          Any {elms = locs} -> undefined
+        -- do
+        -- results <- traverse locate locs
+        -- pure OrResult {found = toList results}
+        PostFilterHttpLoc {} -> postfilterNotImplemented
+      where
+        locate = locateUnchecked mRoot
 
     -- Short-circuiting fold for All: stops as soon as the running intersection
     -- of element IDs becomes empty, avoiding unnecessary locate calls.
