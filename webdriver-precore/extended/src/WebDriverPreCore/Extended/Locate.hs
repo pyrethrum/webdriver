@@ -237,7 +237,7 @@ locateHttp throw catch runner defLoc MkHttpLocateOpts {jsRecheckDisplayed, exten
     locateAll mRoot s = findElms mRoot s -- >>= filterDisplayedIf Always
     --
     locateLeaf :: Maybe ElementId -> Cardinality -> Bool -> LeafLoc -> m LocateResult
-    locateLeaf mRoot cardinality' deepRoles loc = do
+    locateLeaf mRoot cardinality' rolesSecondPass loc = do
       let findFirst = cardinality' == First
       firstPass <-
         ( if findFirst
@@ -252,7 +252,7 @@ locateHttp throw catch runner defLoc MkHttpLocateOpts {jsRecheckDisplayed, exten
         RL.XPath {} -> baseResult
         RL.BiDiNative sl -> case sl of
           Role {role} -> do
-            if not deepRoles
+            if not rolesSecondPass
               then baseResult
               else do
                 mResult <- roleToXPathHttpSecondPass locateAll getAttribute (getElementText runner ses) mRoot findFirst role
@@ -352,7 +352,7 @@ locateHttp throw catch runner defLoc MkHttpLocateOpts {jsRecheckDisplayed, exten
           elms <-
             if displayChkAlways
               then
-                (.elms) <$> chkSingleton True lr
+                chkElmsSingleton lr
               else
                 pure lr.elmIds
 
@@ -364,9 +364,9 @@ locateHttp throw catch runner defLoc MkHttpLocateOpts {jsRecheckDisplayed, exten
                   missRetryRslt <- locateLeaf Nothing cardinality True ll
                   let xs = missRetryRslt.elmIds
                   retryChked <-
-                    if displayChkAlways || displayChkDisambiguate 
+                    if displayChkAlways || displayChkDisambiguate
                       then
-                        (.elms) <$> chkSingleton True missRetryRslt
+                        chkElmsSingleton missRetryRslt
                       else
                         pure xs
                   case retryChked of
@@ -377,12 +377,14 @@ locateHttp throw catch runner defLoc MkHttpLocateOpts {jsRecheckDisplayed, exten
                   if wantSingular
                     then throwNotFound
                     else pure $ MkLocateResult ll []
-            _ -> undefined
+            [x] -> pure $ MkLocateResult ll [x]
+            xs -> undefined
         PostFilterHttpLoc {} ->
           -- will neeed to postfilter &&& all
           postfilterNotImplemented
         loc@CombintorHttp {} -> undefined
       where
+        chkElmsSingleton rslt = (.elms) <$> chkSingleton True rslt
         wantSingular = case cardinality of
           Unique -> True
           First -> True
@@ -393,7 +395,7 @@ locateHttp throw catch runner defLoc MkHttpLocateOpts {jsRecheckDisplayed, exten
           LeafHttp (RL.BiDiNative (Role {})) -> True
           _ -> False
         throwNotFound = throw ElementNotFound {description = "No element found matching locator.", locator}
-        throwAmbiguous elms = throw AmbiguousLocator {description = "Multiple elements found matching locator.", locator}
+        throwAmbiguous elms = throw AmbiguousLocator {description = "Multiple elements found matching locator: " <> pack (show elms), locator}
 
 postfilterNotImplemented :: a
 postfilterNotImplemented = error "PostFilter locators are not yet implemented in HTTP WebDriver"
