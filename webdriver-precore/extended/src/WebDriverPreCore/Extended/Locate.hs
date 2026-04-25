@@ -346,8 +346,16 @@ locateHttp throw catch runner defLoc MkHttpLocateOpts {jsRecheckDisplayed, exten
 
     httpLocate :: ReducedHttpLoc -> m LocateResult
     httpLocate = \case
-      LeafHttp l -> do
-        lr <- locateLeaf Nothing cardinality (extendedRoleLocation == ExtLocateAlways) l
+      LeafHttp ll -> do
+        lr <- locateLeaf Nothing cardinality (extendedRoleLocation == ExtLocateAlways) ll
+        let isRole = case lr of
+              RL.BiDiNative (Role {}) -> True
+              _ -> False
+            wantSingular = case cardinality of
+              Unique -> True
+              First -> True
+              Many -> False
+            disambiguateMissRetry = jsRecheckDisplayed `elem` [DisplayedCheckDisambiguateUnique, DisplayedCheckAlways]
         elms <- if jsRecheckDisplayed == DisplayedCheckAlways
           then
             (.elms) <$> chkSingleton True lr
@@ -355,10 +363,20 @@ locateHttp throw catch runner defLoc MkHttpLocateOpts {jsRecheckDisplayed, exten
             pure lr.elmIds
 
         case elms of
-          [] -> case cardinality of
-            Unique -> 
-              if extendedRoleLocation == ExtLocateSingletonMiss
-                then HERE 
+          [] -> 
+              if wantSingular && isRole && extendedRoleLocation == ExtLocateSingletonMiss
+                then do 
+                  -- retun with extended role location
+                  missRetryRslt <- locateLeaf Nothing cardinality True ll
+                  HERE
+                  case missRetryRslt.elmIds of
+                    [] -> throw ElementNotFound {description = "No element found matching role locator on retry after initial miss with extendedRoleLocation=SingletonMiss.", locator}
+                    [x] -> pure $ mkLocateResult ll [x]
+                    xs -> if disambiguateMissRetry then 
+                      do 
+                        displayedElms <- (.elms) <$> chkSingleton True lr
+                        HERE  
+                      throw AmbiguousLocator {description = "Multiple elements found matching role locator on retry after initial miss with extendedRoleLocation=SingletonMiss.", locator}
                 else throw ElementNotFound {description = "No element found matching locator.", locator}
             First -> throw ElementNotFound {description = "No elements found matching locator.", locator}
             Many -> pure lr
@@ -366,8 +384,8 @@ locateHttp throw catch runner defLoc MkHttpLocateOpts {jsRecheckDisplayed, exten
             throw ElementNotFound {description = "No elements found matching locator.", locator}
           [_] -> pure lr
           _ -> undefined
-        chkedRslt <- chkSingleton (jsRecheckDisplayed `P.elem` [DisambiguateUnique, Always]) lr
-        either throw pure chkedRslt
+
+  
       PostFilterHttpLoc {} ->
         -- will neeed to postfilter &&& all
         postfilterNotImplemented
