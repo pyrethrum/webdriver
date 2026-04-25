@@ -63,13 +63,14 @@ data ExtendedRoleLocate = ExtLocateNever | ExtLocateSingletonMiss | ExtLocateAlw
 data HttpLocateOpts = MkHttpLocateOpts
   { jsRecheckDisplayed :: DisplayedCheck,
     extendedRoleLocation :: ExtendedRoleLocate,
-    cardinality :: Cardinality
+    cardinality :: Cardinality,
+    defaultLocator :: Text -> Locator,
+    baseElement :: Maybe ElementId
   }
-  deriving (Show, Eq)
 
 data LocateResult
   = MkLocateResult
-  { source :: LeafLoc,
+  { source :: Locator,
     elmIds :: [ElementId]
   }
   deriving (Show, Eq)
@@ -167,8 +168,6 @@ locateHttp ::
   (forall a e. (HasCallStack, Exception e) => m a -> (e -> m a) -> m a) ->
   -- | runner
   (forall b. Command b -> m b) ->
-  -- | default locator
-  (Text -> Locator) ->
   -- | locate opts
   HttpLocateOpts ->
   -- | session
@@ -176,7 +175,7 @@ locateHttp ::
   -- | locator
   Locator ->
   m (Either LocateException ElementId)
-locateHttp throw catch runner defLoc MkHttpLocateOpts {jsRecheckDisplayed, extendedRoleLocation, cardinality} ses locator =
+locateHttp throw catch runner opts ses locator =
   preparedLoc
     & either
       (pure . Left . InvalidLocator)
@@ -186,7 +185,10 @@ locateHttp throw catch runner defLoc MkHttpLocateOpts {jsRecheckDisplayed, exten
           (pure . Left)
   where
     preparedLoc :: Either LI.InvalidLocator ReducedHttpLoc
-    preparedLoc = prepareSimplify defLoc HTTP locator >>= toHttpLocator
+    preparedLoc = prepareSimplify opts.defaultLocator HTTP locator >>= toHttpLocator
+
+    mkLocResult :: [ElementId] -> m LocateResult
+    mkLocResult = pure . MkLocateResult locator
 
     runCommand :: forall a. ((Command a -> m a) -> Session -> Selector -> m a) -> Selector -> m a
     runCommand f sel =
@@ -220,12 +222,6 @@ locateHttp throw catch runner defLoc MkHttpLocateOpts {jsRecheckDisplayed, exten
     recheckDisplayed :: ElementId -> m Bool
     recheckDisplayed eid = isDisplayedHttp catch runner ses eid >>= either throw pure
 
-    filterDisplayedIf :: DisplayedCheck -> [ElementId] -> m [ElementId]
-    filterDisplayedIf dc =
-      if dc == jsRecheckDisplayed
-        then jsFilterDisplayed
-        else pure
-
     jsFilterDisplayed :: [ElementId] -> m [ElementId]
     jsFilterDisplayed elms = do
       results <- traverse doCheck elms
@@ -245,7 +241,7 @@ locateHttp throw catch runner defLoc MkHttpLocateOpts {jsRecheckDisplayed, exten
             else locateAll mRoot
         )
           (toSelector loc)
-      let mkResult = MkLocateResult loc
+      let mkResult = MkLocateResult locator
           baseResult = mkResult firstPass
       case loc of
         RL.CSS {} -> baseResult
@@ -262,44 +258,32 @@ locateHttp throw catch runner defLoc MkHttpLocateOpts {jsRecheckDisplayed, exten
           InnerText {value, matchType, caseSesnsitivity, maxDepth} -> do
             let sel = HTTPP.XPath $ innerTextToXPath value caseSesnsitivity matchType maxDepth
             baseResult <- undefined
-            chkedRslt <- chkSingleton (jsRecheckDisplayed `P.elem` [DisambiguateUnique, Always]) baseResult
-            either throw pure chkedRslt
+            chkedRslt <- if (opts.jsRecheckDisplayed `P.elem` [DisplayedCheckAlways, DisplayedCheckDisambiguateUnique]) then chkSingleton baseResult else pure baseResult.elmIds
+            either throw (pure . mkResult) undefined
 
     chkSingleton ::
-      Bool -> -- recheck ambiguous
       LocateResult ->
-      m SingletonCheckResult
-    chkSingleton recheckAmbiguous lr =
-      chkkSingleton' recheckAmbiguous lr.elmIds
+      m [ElementId]
+    chkSingleton lr =
+      chkkSingleton' True lr.elmIds
       where
-        chkkSingleton' recheckAmbiguous' elmIds =
-          do
-            let chkResult = baseSingletonChk elmIds
-                successRslt = pure chkResult
-            case chkResult of
-              SingletonSuccess _ -> successRslt
-              Missing _ -> successRslt
-              Ambiguous elmsIds' ->
-                if recheckAmbiguous'
-                  then
-                    jsFilterDisplayed elmsIds'
-                      >>= chkkSingleton' False
-                  else
-                    pure chkResult
-
-        baseSingletonChk :: [ElementId] -> SingletonCheckResult
-        baseSingletonChk = \case
-          [] -> Missing []
-          [x] -> SingletonSuccess [x]
-          xs -> Ambiguous xs
+        chkkSingleton' recheckAmbiguous' =
+          \case
+            [] -> pure []
+            [x] -> pure [x]
+            xs ->
+              recheckAmbiguous'
+                & bool
+                  (pure xs)
+                  (jsFilterDisplayed xs >>= chkkSingleton' False)
 
     -- single shot base locate
     locateUnchecked :: Maybe ElementId -> Bool -> ReducedHttpLoc -> m LocateResult
-    locateUnchecked mRoot extendedRoleLocation =
+    locateUnchecked mRoot deepRoleLoc =
       \case
         LeafHttp cl ->
           -- need to find all elms for combinator and later checks and retries
-          locateLeaf mRoot False extendedRoleLocation cl
+          locateLeaf mRoot False deepRoleLoc cl
         CombintorHttp cb -> case cb of
           Contains {container, contained} -> do
             containers <- locate container
@@ -349,35 +333,45 @@ locateHttp throw catch runner defLoc MkHttpLocateOpts {jsRecheckDisplayed, exten
       case loc of
         LeafHttp ll -> do
           lr <- locateLeaf Nothing cardinality (extendedRoleLocation == ExtLocateAlways) ll
-          elms <- chkElmsSingleton displayChkAlways lr
+          filtered <- chkElmsSingleton (displayChkAlways || cardinality == Unique && displayChkDisambiguate) lr
 
-          case elms of
+          case filtered of
             [] ->
               -- rerun with extended role location (try to find one or more matches)
-              if wantSingular && isRole && extendedRoleLocation == ExtLocateSingletonMiss
+              if wantSingleton && isRole && extendedRoleLocation == ExtLocateSingletonMiss
                 then do
                   missRetryRslt <- locateLeaf Nothing cardinality True ll
                   retryChked <- chkElmsSingleton (displayChkAlways || displayChkDisambiguate) missRetryRslt
                   case retryChked of
                     [] -> throwNotFound
-                    [x] -> pure $ MkLocateResult ll [x]
-                    xs' -> throwAmbiguous xs'
+                    [x] -> mkLocResult [x]
+                    (x : xs) ->
+                      case cardinality of
+                        Unique -> throwAmbiguous xs
+                        First -> mkLocResult [x]
+                        Many -> 
+                          -- should never be here due to wantSingleton check
+                          error "library defect - locateHttp: unexpected multiple results on singleton retry with extended role location"
                 else
-                  if wantSingular
+                  if wantSingleton
                     then throwNotFound
-                    else pure $ MkLocateResult ll []
-            [x] -> pure $ MkLocateResult ll [x]
-            xs -> undefined
+                    else mkLocResult []
+            [x] -> mkLocResult [x]
+            elms@(x : _xs) ->
+              case cardinality of
+                Unique -> throwAmbiguous elms
+                First -> mkLocResult [x]
+                Many -> mkLocResult elms
         PostFilterHttpLoc {} ->
           -- will neeed to postfilter &&& all
           postfilterNotImplemented
-        loc@CombintorHttp {} -> undefined
+        loc@CombintorHttp {} -> locateUnchecked Nothing
       where
         chkElmsSingleton doChk =
           if doChk
-            then (fmap (.elms) . chkSingleton True)
+            then chkSingleton
             else pure (.elmIds)
-        wantSingular = case cardinality of
+        wantSingleton = case cardinality of
           Unique -> True
           First -> True
           Many -> False
