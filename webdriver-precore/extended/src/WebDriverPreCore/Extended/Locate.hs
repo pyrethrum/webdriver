@@ -349,12 +349,7 @@ locateHttp throw catch runner defLoc MkHttpLocateOpts {jsRecheckDisplayed, exten
       case loc of
         LeafHttp ll -> do
           lr <- locateLeaf Nothing cardinality (extendedRoleLocation == ExtLocateAlways) ll
-          elms <-
-            if displayChkAlways
-              then
-                chkElmsSingleton lr
-              else
-                pure lr.elmIds
+          elms <- chkElmsSingleton displayChkAlways lr
 
           case elms of
             [] ->
@@ -362,13 +357,7 @@ locateHttp throw catch runner defLoc MkHttpLocateOpts {jsRecheckDisplayed, exten
               if wantSingular && isRole && extendedRoleLocation == ExtLocateSingletonMiss
                 then do
                   missRetryRslt <- locateLeaf Nothing cardinality True ll
-                  let xs = missRetryRslt.elmIds
-                  retryChked <-
-                    if displayChkAlways || displayChkDisambiguate
-                      then
-                        chkElmsSingleton missRetryRslt
-                      else
-                        pure xs
+                  retryChked <- chkElmsSingleton (displayChkAlways || displayChkDisambiguate) missRetryRslt
                   case retryChked of
                     [] -> throwNotFound
                     [x] -> pure $ MkLocateResult ll [x]
@@ -384,7 +373,10 @@ locateHttp throw catch runner defLoc MkHttpLocateOpts {jsRecheckDisplayed, exten
           postfilterNotImplemented
         loc@CombintorHttp {} -> undefined
       where
-        chkElmsSingleton rslt = (.elms) <$> chkSingleton True rslt
+        chkElmsSingleton doChk =
+          if doChk
+            then (fmap (.elms) . chkSingleton True)
+            else pure (.elmIds)
         wantSingular = case cardinality of
           Unique -> True
           First -> True
