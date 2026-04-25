@@ -332,21 +332,21 @@ locateHttp throw catch runner opts ses locator =
     httpLocate loc =
       case loc of
         LeafHttp ll -> do
-          lr <- locateLeaf Nothing cardinality (extendedRoleLocation == ExtLocateAlways) ll
+          lr <- locateLeaf Nothing opts.cardinality (opts.extendedRoleLocation == ExtLocateAlways) ll
           filtered <- chkElmsSingleton (displayChkAlways || cardinality == Unique && displayChkDisambiguate) lr
 
           case filtered of
             [] ->
               -- rerun with extended role location (try to find one or more matches)
-              if wantSingleton && isRole && extendedRoleLocation == ExtLocateSingletonMiss
+              if wantSingleton && isRole && opts.extendedRoleLocation == ExtLocateSingletonMiss
                 then do
-                  missRetryRslt <- locateLeaf Nothing cardinality True ll
+                  missRetryRslt <- locateLeaf Nothing opts.cardinality True ll
                   retryChked <- chkElmsSingleton (displayChkAlways || displayChkDisambiguate) missRetryRslt
                   case retryChked of
                     [] -> throwNotFound
                     [x] -> mkLocResult [x]
                     (x : xs) ->
-                      case cardinality of
+                      case opts.cardinality of
                         Unique -> throwAmbiguous xs
                         First -> mkLocResult [x]
                         Many -> 
@@ -358,7 +358,7 @@ locateHttp throw catch runner opts ses locator =
                     else mkLocResult []
             [x] -> mkLocResult [x]
             elms@(x : _xs) ->
-              case cardinality of
+              case opts.cardinality of
                 Unique -> throwAmbiguous elms
                 First -> mkLocResult [x]
                 Many -> mkLocResult elms
@@ -371,12 +371,12 @@ locateHttp throw catch runner opts ses locator =
           if doChk
             then chkSingleton
             else pure (.elmIds)
-        wantSingleton = case cardinality of
+        wantSingleton = case opts.cardinality of
           Unique -> True
           First -> True
           Many -> False
-        displayChkAlways = jsRecheckDisplayed == DisplayedCheckAlways
-        displayChkDisambiguate = jsRecheckDisplayed == DisplayedCheckDisambiguateUnique
+        displayChkAlways = opts.jsRecheckDisplayed == DisplayedCheckAlways
+        displayChkDisambiguate = opts.jsRecheckDisplayed == DisplayedCheckDisambiguateUnique
         isRole = case loc of
           LeafHttp (RL.BiDiNative (Role {})) -> True
           _ -> False
