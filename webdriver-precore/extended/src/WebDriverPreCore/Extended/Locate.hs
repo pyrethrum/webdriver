@@ -275,17 +275,17 @@ locateHttp throw catch runner defLoc MkHttpLocateOpts {jsRecheckDisplayed, exten
         chkkSingleton' recheckAmbiguous' elmIds =
           do
             let chkResult = baseSingletonChk elmIds
-                pureResult = pure chkResult
+                successRslt = pure chkResult
             case chkResult of
-              SingletonSuccess _ -> pureResult
-              Missing _ -> pureResult
-              Ambiguous _ ->
+              SingletonSuccess _ -> successRslt
+              Missing _ -> successRslt
+              Ambiguous elmsIds' ->
                 if recheckAmbiguous'
                   then
-                    jsFilterDisplayed elmIds
+                    jsFilterDisplayed elmsIds'
                       >>= chkkSingleton' False
                   else
-                    pureResult
+                    pure chkResult
 
         baseSingletonChk :: [ElementId] -> SingletonCheckResult
         baseSingletonChk = \case
@@ -345,51 +345,55 @@ locateHttp throw catch runner defLoc MkHttpLocateOpts {jsRecheckDisplayed, exten
       pure $ ContainsResult containedResults
 
     httpLocate :: ReducedHttpLoc -> m LocateResult
-    httpLocate = \case
-      LeafHttp ll -> do
-        lr <- locateLeaf Nothing cardinality (extendedRoleLocation == ExtLocateAlways) ll
-        let isRole = case lr of
-              RL.BiDiNative (Role {}) -> True
-              _ -> False
-            wantSingular = case cardinality of
-              Unique -> True
-              First -> True
-              Many -> False
-            disambiguateMissRetry = jsRecheckDisplayed `elem` [DisplayedCheckDisambiguateUnique, DisplayedCheckAlways]
-        elms <- if jsRecheckDisplayed == DisplayedCheckAlways
-          then
-            (.elms) <$> chkSingleton True lr
-          else
-            pure lr.elmIds
+    httpLocate loc =
+      case loc of
+        LeafHttp ll -> do
+          lr <- locateLeaf Nothing cardinality (extendedRoleLocation == ExtLocateAlways) ll
+          elms <-
+            if displayChkAlways
+              then
+                (.elms) <$> chkSingleton True lr
+              else
+                pure lr.elmIds
 
-        case elms of
-          [] -> 
+          case elms of
+            [] ->
+              -- rerun with extended role location (try to find one or more matches)
               if wantSingular && isRole && extendedRoleLocation == ExtLocateSingletonMiss
-                then do 
-                  -- retun with extended role location
+                then do
                   missRetryRslt <- locateLeaf Nothing cardinality True ll
-                  HERE
-                  case missRetryRslt.elmIds of
-                    [] -> throw ElementNotFound {description = "No element found matching role locator on retry after initial miss with extendedRoleLocation=SingletonMiss.", locator}
-                    [x] -> pure $ mkLocateResult ll [x]
-                    xs -> if disambiguateMissRetry then 
-                      do 
-                        displayedElms <- (.elms) <$> chkSingleton True lr
-                        HERE  
-                      throw AmbiguousLocator {description = "Multiple elements found matching role locator on retry after initial miss with extendedRoleLocation=SingletonMiss.", locator}
-                else throw ElementNotFound {description = "No element found matching locator.", locator}
-            First -> throw ElementNotFound {description = "No elements found matching locator.", locator}
-            Many -> pure lr
-
-            throw ElementNotFound {description = "No elements found matching locator.", locator}
-          [_] -> pure lr
-          _ -> undefined
-
-  
-      PostFilterHttpLoc {} ->
-        -- will neeed to postfilter &&& all
-        postfilterNotImplemented
-      loc@CombintorHttp {} -> httpLocate' Nothing loc
+                  let xs = missRetryRslt.elmIds
+                  retryChked <-
+                    if displayChkAlways || displayChkDisambiguate 
+                      then
+                        (.elms) <$> chkSingleton True missRetryRslt
+                      else
+                        pure xs
+                  case retryChked of
+                    [] -> throwNotFound
+                    [x] -> pure $ MkLocateResult ll [x]
+                    xs' -> throwAmbiguous xs'
+                else
+                  if wantSingular
+                    then throwNotFound
+                    else pure $ MkLocateResult ll []
+            _ -> undefined
+        PostFilterHttpLoc {} ->
+          -- will neeed to postfilter &&& all
+          postfilterNotImplemented
+        loc@CombintorHttp {} -> undefined
+      where
+        wantSingular = case cardinality of
+          Unique -> True
+          First -> True
+          Many -> False
+        displayChkAlways = jsRecheckDisplayed == DisplayedCheckAlways
+        displayChkDisambiguate = jsRecheckDisplayed == DisplayedCheckDisambiguateUnique
+        isRole = case loc of
+          LeafHttp (RL.BiDiNative (Role {})) -> True
+          _ -> False
+        throwNotFound = throw ElementNotFound {description = "No element found matching locator.", locator}
+        throwAmbiguous elms = throw AmbiguousLocator {description = "Multiple elements found matching locator.", locator}
 
 postfilterNotImplemented :: a
 postfilterNotImplemented = error "PostFilter locators are not yet implemented in HTTP WebDriver"
