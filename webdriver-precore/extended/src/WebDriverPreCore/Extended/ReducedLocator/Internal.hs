@@ -17,7 +17,7 @@ import Data.Text (Text)
 import Data.Text qualified as T
 import Data.Word (Word8)
 import Utils (txt)
-import WebDriverPreCore.Extended.BiDi.Base.Protocol (BrowsingContext, JSUInt)
+import WebDriverPreCore.Extended.BiDi.Base.Protocol (BrowsingContext)
 import WebDriverPreCore.Extended.Locators.Internal qualified as LI
 import Prelude
 

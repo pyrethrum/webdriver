@@ -9,7 +9,7 @@ import Data.Text (Text, intercalate, pack, splitOn, toLower, unpack)
 import Data.Text qualified as T
 import Data.Word (Word8)
 import Utils (txt)
-import WebDriverPreCore.Extended.BiDi.Base.Protocol (BrowsingContext, JSUInt, NodeProperties)
+import WebDriverPreCore.Extended.BiDi.Base.Protocol (BrowsingContext, NodeProperties)
 import Prelude
 
 data MatchFlags = MkMatchFlags

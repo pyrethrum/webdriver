@@ -2,28 +2,33 @@ module WebDriverPreCore.Extended.Locate
   ( LocateException (..),
     Cardinality (..),
     HttpLocateOpts (..),
-    -- locateHttp,
-    -- displayedJS,
-    -- isDisplayedHttp,
+    locateHttp
   )
 where
 
-import Control.Exception (Exception, SomeException)
-import Control.Monad (filterM, foldM, join, (>=>))
-import Data.Aeson as A (Result (..), Value (Bool), fromJSON, toJSON)
+import Control.Exception (Exception)
+import Control.Monad (foldM, join)
+import Data.Aeson as A (Value (Bool), toJSON)
 import Data.Bool (bool)
 import Data.Containers.ListUtils (nubOrd)
 import Data.Function ((&))
-import Data.Functor.Identity (Identity (..), runIdentity)
 import Data.List qualified as LST
 import Data.List.NonEmpty (NonEmpty (..), toList)
-import Data.Maybe (catMaybes, fromMaybe)
+import Data.Maybe (catMaybes)
 import Data.Text
 import Data.Text qualified as T
 import GHC.Stack (HasCallStack)
+
 import WebDriverPreCore.Extended.HTTP.Base.Actions
+  ( executeScript,
+    findElement,
+    findElementFromElement,
+    findElements,
+    findElementsFromElement,
+    getElementAttribute,
+    getElementText,
+  )
 import WebDriverPreCore.Extended.HTTP.Base.Protocol as HTTPB (ElementId)
-import WebDriverPreCore.Extended.HTTP.Internal (Runner)
 import WebDriverPreCore.Extended.Locators.Internal (Locator, Protocol (..), RoleLocator (..), innerTextToXPath, roleToXPath)
 import WebDriverPreCore.Extended.Locators.Internal qualified as LI
 import WebDriverPreCore.Extended.Protocol (Session, WebDriverException)
@@ -32,13 +37,11 @@ import WebDriverPreCore.Extended.ReducedLocator.Internal as RL
     CombinatorLoc (..),
     LeafLoc (..),
     ReducedHttpLoc (..),
-    ReducedLoc (..),
     prepareSimplify,
-    toHttpLocator,
+    toHttpLocator
   )
 import WebDriverPreCore.HTTP.Protocol as HTTPP (Command, Script (..), Selector (..))
 import Prelude as P
-import UnliftIO.Exception (try)
 
 data LocateException
   = AmbiguousLocator
@@ -80,51 +83,8 @@ data LocateResult
   }
   deriving (Show, Eq)
 
--- \| ContainsResult
---     { found :: [LocateResult]
---     }
--- \| AndResult
---     { found :: [LocateResult]
---     }
--- \| OrResult
---     { found :: [LocateResult]
---     }
--- \| PostFilterResult
---     { predicate :: LI.Predicate,
---       found :: [LocateResult]
---     }
--- deriving (Show, Eq)
-
--- foldResult :: (b -> LocateResult -> b) -> b -> LocateResult -> b
--- foldResult f z lr = runIdentity $ traverseResult (\acc x -> Identity (f acc x)) z lr
-
--- traverseResult :: (Monad m) => (b -> LocateResult -> m b) -> b -> LocateResult -> m b
--- traverseResult f z lr = do
---   z' <- f z lr
---   foldM (traverseResult f) z' children
---   where
---     children = case lr of
---       LeafResult _ -> []
---       ContainsResult {found} -> found
---       AndResult {found} -> found
---       OrResult {found} -> found
---       PostFilterResult {found} -> found
-
--- TODO - may need to reintroduce locateDirectives param
--- extractIds :: LocateDirectives -> LocateResult -> Either LocateResult [ElementId]
--- extractIds _ lr = recurse lr
--- extractIds :: LocateResult -> [ElementId]
--- extractIds lr = recurse lr
---   where
---     recurse :: LocateResult -> [ElementId]
---     recurse = \case
---       LeafResult (MkLeafResult {elms}) -> elms
---       NodeResult {found} -> recurseConcatAll found
---     recurseConcatAll :: [LocateResult] -> [ElementId]
---     recurseConcatAll = (>>= recurse)
-
 -- TODO
--- 0. locateHttp Compiles (NoImp postfilter)
+-- 0. locateHttp Compiles (NoImp postfilter) [x]
 -- 1. get unretried http working with tests
 --   1.1 simple locators (css, xpath, role, inner text)
 --   1.2 compound locators (parent, all, any)
@@ -159,11 +119,6 @@ data LocateResult
 
 -- 11. adapt retries to Bidi
 
--- browsingContextLocateNodes :: forall m. Runner m LocateNodesResult -> LocateNodes -> m LocateNodesResult
-
--- findElement :: forall m. Runner m ElementId -> Session -> Selector -> m ElementId
--- findElements :: forall m. Runner m [ElementId] -> Session -> Selector -> m [ElementId]
-
 locateHttp ::
   forall m.
   (Monad m) =>
@@ -179,28 +134,24 @@ locateHttp ::
   Session ->
   -- | locator
   Locator ->
-  m (Either LocateException ElementId)
+  m (Either LocateException LocateResult)
 locateHttp throw catch runner opts ses locator =
-  preparedLoc
-    & either
-      (pure . Left . InvalidLocator)
-      \loc ->
-        try
-          (pure . Left)
-          (httpLocate loc)
+  either
+    (pure . Left . InvalidLocator)
+    httpLocate
+    preparedLoc
   where
     preparedLoc :: Either LI.InvalidLocator ReducedHttpLoc
     preparedLoc = prepareSimplify opts.defaultLocator HTTP locator >>= toHttpLocator
 
-    --  todo back to either
-    throwNotFound :: m LocateResult
-    throwNotFound = throw ElementNotFound {description = "No element found matching locator.", locator}
+    notFoundErr :: m (Either LocateException LocateResult)
+    notFoundErr = pure . Left $ ElementNotFound {description = "No element found matching locator.", locator}
 
-    throwAmbiguous :: [ElementId] -> m LocateResult
-    throwAmbiguous elms = throw AmbiguousLocator {description = "Multiple elements found matching locator: " <> pack (show elms), locator}
+    throwAmbiguous :: [ElementId] -> m (Either LocateException LocateResult)
+    throwAmbiguous elms = pure . Left $ AmbiguousLocator {description = "Multiple elements found matching locator: " <> pack (show elms), locator}
 
-    mkLocResult :: [ElementId] -> m LocateResult
-    mkLocResult = pure . MkLocateResult locator
+    mkLocResult :: [ElementId] -> m (Either LocateException LocateResult)
+    mkLocResult = pure . Right . MkLocateResult locator
 
     runCommand :: forall a. ((Command a -> m a) -> Session -> Selector -> m a) -> Selector -> m a
     runCommand f sel =
@@ -263,14 +214,13 @@ locateHttp throw catch runner opts ses locator =
             if rolesSecondPass == NoSecondPass
               then baseResult
               else roleToXPathHttpSecondPass locateAll getAttribute (getElementText runner ses) mRoot findFirst role
-          
           InnerText {} -> baseResult
 
     chkRefilterSingleton ::
-      LocateResult ->
+      [ElementId] ->
       m [ElementId]
-    chkRefilterSingleton lr =
-      chkkSingleton' True lr.elmIds
+    chkRefilterSingleton elmIds =
+      chkkSingleton' True elmIds
       where
         chkkSingleton' recheckAmbiguous' =
           \case
@@ -289,7 +239,7 @@ locateHttp throw catch runner opts ses locator =
         . \case
           LeafHttp cl ->
             -- need to find all elms for combinator and later checks and retries
-            (.elmIds) <$> locateLeaf mRoot leafCardinality rolesSecondPass cl
+            locateLeaf mRoot leafCardinality rolesSecondPass cl
           CombintorHttp cb -> case cb of
             Contains {container, contained} -> do
               containers <- locate LeafMany rolesSecondPass container
@@ -314,7 +264,7 @@ locateHttp throw catch runner opts ses locator =
           containedResults <- traverse (\rootId -> locateElmsUnchecked (Just rootId) LeafMany rolesSecondPass subLoc) containerIds
           pure $ join containedResults
 
-    httpLocate :: ReducedHttpLoc -> m LocateResult
+    httpLocate :: ReducedHttpLoc -> m (Either LocateException LocateResult)
     httpLocate loc =
       case loc of
         LeafHttp ll -> do
@@ -329,7 +279,7 @@ locateHttp throw catch runner opts ses locator =
                   missRetryRslt <- locateLeaf opts.baseElement leafCardinality WantSecondPass ll
                   retryChked <- chkElmsSingleton (displayChkAlways || displayChkDisambiguate) missRetryRslt
                   case retryChked of
-                    [] -> throwNotFound
+                    [] -> notFoundErr
                     [x] -> mkLocResult [x]
                     (x : xs) ->
                       case opts.cardinality of
@@ -340,7 +290,7 @@ locateHttp throw catch runner opts ses locator =
                           error "library defect - locateHttp: unexpected multiple results on singleton retry with extended role location"
                 else
                   if wantSingleton
-                    then throwNotFound
+                    then notFoundErr
                     else mkLocResult []
             [x] -> mkLocResult [x]
             elms@(x : _xs) ->
@@ -357,7 +307,7 @@ locateHttp throw catch runner opts ses locator =
         chkElmsSingleton doChk =
           if doChk
             then chkRefilterSingleton
-            else pure . (.elmIds)
+            else pure 
         wantSingleton = case opts.cardinality of
           Unique -> True
           First -> True
@@ -470,7 +420,8 @@ isDisplayedHttp catch runner ses eid =
       Bool b -> b
       val -> error $ "library defect - isDisplayedHttp: isDisplayed script returned unexpected value (expected Bool) - got:\n  " <> show val
 
-locateBiDi = undefined
+_locateBiDi :: a
+_locateBiDi = undefined
 
 notNull :: [a] -> Bool
 notNull = not . P.null
