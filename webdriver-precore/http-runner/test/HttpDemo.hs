@@ -760,6 +760,28 @@ demoWheelActions =
       pause
 
 -- >>> runDemo demoError
+-- *** Exception: HUnitFailure (Just (SrcLoc {srcLocPackage = "webdriver-precore-0.2.0.2-inplace-test-http-runner", srcLocModule = "HttpDemo", srcLocFile = "/home/john-walker/repos/webdriver/webdriver-precore/http-runner/test/HttpDemo.hs", srcLocStartLine = 817, srcLocStartCol = 11, srcLocEndLine = 817, srcLocEndCol = 21})) "NoSuchElement error should be mapped"
+{-
+[LOG] HTTP POST Url Http ("element" :| ["be50134d-382d-4d08-a3a1-f0b35088f236","session","127.0.0.1"])
+[LOG] Response: 404
+[LOG] caught error: MkParseFailure
+  { info =
+      "Error in $: key \"element-6066-11e4-a52e-4f735466cecf\" not found"
+  , response =
+      Object
+        (fromList
+           [ ( "error" , String "no such element" )
+           , ( "message"
+             , String
+                 "Unable to locate element: #id-that-does-not-exist-on-this-page"
+             )
+           , ( "stacktrace"
+             , String
+                 "RemoteError@chrome://remote/content/shared/RemoteError.sys.mjs:8:8\nWebDriverError@chrome://remote/content/shared/webdriver/Errors.sys.mjs:202:5\nNoSuchElementError@chrome://remote/content/shared/webdriver/Errors.sys.mjs:555:5\ndom.find/</<@chrome://remote/content/shared/DOM.sys.mjs:136:16\n"
+             )
+           ])
+  }
+-}
 demoError :: HttpDemo
 demoError =
   sessionDemo "error" action
