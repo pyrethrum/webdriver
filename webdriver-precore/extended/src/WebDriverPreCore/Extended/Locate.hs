@@ -301,16 +301,8 @@ locateHttp throw catch runner opts ses locator =
             Contains {container, contained} -> do
               containers <- locate LeafMany rolesSecondPass container
               locateContained containers contained
-            All {elms} -> 
-              case elms of
-                [] -> pure []
-                x : xs -> HERE
-                  if rolesSecondPass == NoSecondPass
-                then pure []
-                else do
-                  initial <- locate LeafMany rolesSecondPass (LST.head elms)
-                  found <- andLocs locs
-                  pure $ AndResult found
+            All {elms} -> undefined
+              
             Any {elms = locs} -> undefined
           -- do
           -- results <- traverse locate locs
@@ -384,12 +376,13 @@ locateHttp throw catch runner opts ses locator =
         PostFilterHttpLoc {} ->
           -- will neeed to postfilter &&& all
           postfilterNotImplemented
-        CombintorHttp {} -> locateUnchecked opts.baseElement leafCardinality secondPassOnInitial loc
+        CombintorHttp {} -> 
+          locateElmsUnchecked opts.baseElement leafCardinality secondPassOnInitial loc >>= mkLocResult
       where
         chkElmsSingleton doChk =
           if doChk
             then chkSingleton
-            else pure (.elmIds)
+            else pure . (.elmIds)
         wantSingleton = case opts.cardinality of
           Unique -> True
           First -> True
