@@ -38,6 +38,7 @@ import WebDriverPreCore.Extended.ReducedLocator.Internal as RL
   )
 import WebDriverPreCore.HTTP.Protocol as HTTPP (Command, Script (..), Selector (..))
 import Prelude as P
+import UnliftIO.Exception (try)
 
 data LocateException
   = AmbiguousLocator
@@ -184,9 +185,9 @@ locateHttp throw catch runner opts ses locator =
     & either
       (pure . Left . InvalidLocator)
       \loc ->
-        catch
-          undefined
+        try
           (pure . Left)
+          (httpLocate loc)
   where
     preparedLoc :: Either LI.InvalidLocator ReducedHttpLoc
     preparedLoc = prepareSimplify opts.defaultLocator HTTP locator >>= toHttpLocator
@@ -253,8 +254,7 @@ locateHttp throw catch runner opts ses locator =
             else locateAll mRoot
         )
           (toSelector loc)
-      let mkResult = MkLocateResult locator
-          baseResult = pure $ firstPass
+      let baseResult = pure $ firstPass
       case loc of
         RL.CSS {} -> baseResult
         RL.XPath {} -> baseResult
@@ -264,11 +264,7 @@ locateHttp throw catch runner opts ses locator =
               then baseResult
               else roleToXPathHttpSecondPass locateAll getAttribute (getElementText runner ses) mRoot findFirst role
           
-          InnerText {value, matchType, caseSesnsitivity, maxDepth} -> do HERE
-            let sel = HTTPP.XPath $ innerTextToXPath value caseSesnsitivity matchType maxDepth
-            baseResult <- undefined
-            chkedRslt <- if (opts.jsRecheckDisplayed `P.elem` [DisplayedCheckAlways, DisplayedCheckDisambiguateUnique]) then chkRefilterSingleton baseResult else pure baseResult.elmIds
-            either throw (pure . mkResult) undefined
+          InnerText {} -> baseResult
 
     chkRefilterSingleton ::
       LocateResult ->
