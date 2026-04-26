@@ -15,6 +15,7 @@ import Data.Aeson (FromJSON, Value)
 import Data.Text (Text)
 import WebDriverPreCore.HTTP.Protocol (Command, FullCapabilities, Session, SessionResponse (..))
 import WebDriverPreCore.HttpRunner (callWebDriver)
+import WebDriverPreCore.Error (parseFailToWDException)
 import Actions (HttpActions (..), mkActions)
 import WebDriverPreCore.Test.Config (Config (..))
 import WebDriverPreCore.Test.ConfigLoader (loadConfig)
@@ -72,7 +73,7 @@ runDemo' cfg@MkConfig {httpUrl, httpPort, pauseMS} lgr demo' = do
     mLogger = if cfg.logging then Just lgr.log else Nothing
     httpEndpoint = MkHttpEndpoint {host = httpUrl, port = fromIntegral httpPort}
     run :: forall r. (FromJSON r) => Command r -> IO r
-    run cmd = callWebDriver httpEndpoint mLogger cmd >>= either throwIO pure
+    run cmd = callWebDriver httpEndpoint mLogger cmd >>= either (throwIO . parseFailToWDException) pure
     runBody :: forall r.  Command r -> IO Value
     runBody cmd = callWebDriver httpEndpoint mLogger cmd >>= either throwIO pure
     httpActions = mkActions run runBody
