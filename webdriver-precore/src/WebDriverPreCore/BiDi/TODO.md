@@ -10,11 +10,18 @@
  - bidi
    - inner text
    - aria
+
+## updates
+- [ ] webdriver http
+
 ## fix this file
 - [ ] harmonise isolate logging
 - [ ] resplit the libraries 
   - [ ] work out a way to work with as one
   - [ ] run hlint
+- [ ] devops 
+  - [ ] resplit packages
+  - [ ] build / test with all supported ghcs
 
 ## deferred
  - [ ] edge driver

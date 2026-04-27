@@ -42,6 +42,7 @@ import WebDriverPreCore.Extended.ReducedLocator.Internal as RL
   )
 import WebDriverPreCore.HTTP.Protocol as HTTPP (Command, Script (..), Selector (..))
 import Prelude as P
+import Utils (txt)
 
 data LocateException
   = AmbiguousLocator
@@ -148,7 +149,7 @@ locateHttp throw catch runner opts ses locator =
     notFoundErr = pure . Left $ ElementNotFound {description = "No element found matching locator.", locator}
 
     throwAmbiguous :: [ElementId] -> m (Either LocateException LocateResult)
-    throwAmbiguous elms = pure . Left $ AmbiguousLocator {description = "Multiple elements found matching locator: " <> pack (show elms), locator}
+    throwAmbiguous elms = pure . Left $ AmbiguousLocator {description = "Multiple elements found matching locator: " <> txt elms, locator}
 
     mkLocResult :: [ElementId] -> m (Either LocateException LocateResult)
     mkLocResult = pure . Right . MkLocateResult locator
@@ -418,7 +419,7 @@ isDisplayedHttp catch runner ses eid =
     toBool :: Value -> Bool
     toBool = \case
       Bool b -> b
-      val -> error $ "library defect - isDisplayedHttp: isDisplayed script returned unexpected value (expected Bool) - got:\n  " <> show val
+      val -> error $ "library defect - isDisplayedHttp: isDisplayed script returned unexpected value (expected Bool) - got:\n  " <> P.show val
 
 _locateBiDi :: a
 _locateBiDi = undefined

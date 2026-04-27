@@ -7,7 +7,7 @@ import Data.Text.Lazy.Encoding qualified as TLE
 import Network.HTTP.Types.Status
 import TestPages (helloHtml)
 import Web.Scotty
-import Web.Scotty.Cookie (setSimpleCookie)
+import Web.Scotty.Cookie qualified as C
 
 main :: IO ()
 main = do
@@ -17,7 +17,7 @@ main = do
   putStrLn "  - /malformed-response"
   scotty 8000 $ do
     get "/" $ do
-      setSimpleCookie "helloCookie" "Hello from Test Server"
+      C.setSimpleCookie "helloCookie" "Hello from Test Server"
       html helloHtml
 
     get "/boringHello" $ do

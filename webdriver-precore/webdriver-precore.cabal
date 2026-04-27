@@ -203,7 +203,7 @@ library webdriver-precore-test-utils
     filepath      >=1.5   && <1.6,
     req           >=3.9   && <3.14,
     tasty-hunit   >=0.10  && <0.11,
-    time          >=1.9   && <1.15,
+    time          >=1.9   && <1.16,
     unliftio      >=0.2   && <0.3
   default-language: Haskell2010
 
@@ -516,8 +516,8 @@ library webdriver-bluefin-poc
     webdriver-precore:webdriver-katip-logging,
     webdriver-precore:utils-internal,
     aeson         >=2.0   && <3,
-    bluefin       >=0.4   && <0.5,
-    bluefin-internal >=0.4 && <0.5,
+    bluefin       >=0.4   && <0.6,
+    bluefin-internal >=0.4 && <0.6,
     unliftio      >=0.2   && <0.3
   default-language: Haskell2010
 
@@ -531,7 +531,7 @@ test-suite test-bluefin-poc
     webdriver-precore:webdriver-precore-extended,
     webdriver-precore:webdriver-precore-test-utils,
     webdriver-precore:webdriver-bluefin-poc,
-    bluefin       >=0.4   && <0.5,
+    bluefin       >=0.4   && <0.6,
     stm           >=2.5   && <2.6,
     unliftio      >=0.2   && <0.3
   default-language: Haskell2010

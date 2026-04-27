@@ -1,16 +1,25 @@
 import: cabal.config
-  -- https://www.stackage.org/nightly-2026-02-05/cabal.config
+  -- https://www.stackage.org/nightly-2026-02-05/cabal.config - Modified
 
 -- Allow newer versions to resolve dependency conflicts
+-- GHC 9.14.1 ships with base-4.22, containers-0.8, template-haskell-2.24,
+-- but Stackage nightly is still on GHC 9.12.4. Many packages have outdated
+-- upper bounds on these boot libraries.
 allow-newer:
-  falsify:optparse-applicative,
+ -- falsify:optparse-applicative, -- ghc-9.10.1 may be no longer needed
+ scotty:containers,
+ all:base,
+ all:containers,
+ all:template-haskell,
+ all:time
 
 packages: 
   webdriver-precore/webdriver-precore.cabal
   webdriver-precore/test-server/test-server.cabal
 
-with-compiler: ghc-9.10.1
--- with-compiler: ghc-9.14.1
+with-compiler: ghc-9.14.1
+-- with-compiler: ghc-9.14.1 -- https://www.stackage.org/nightly-2026-04-26/cabal.config
+-- with-compiler: ghc-9.10.1 -- https://www.stackage.org/nightly-2026-02-05/cabal.config
 -- with-compiler: ghc-9.10.1
 -- with-compiler: ghc-9.8.4
 
@@ -23,3 +32,12 @@ jobs: 1
 
 -- allow cabal repl to load multiple packages at once
 multi-repl: True
+
+-- dhall-1.42.3 has duplicate Lift instances for TimeOfDay/TimeZone that
+-- conflict with time-1.15 (GHC 9.14.1). The fix is in PR #2704 (commit
+-- f741aff) but not yet released. Use the patched git source directly.
+source-repository-package
+  type: git
+  location: https://github.com/dhall-lang/dhall-haskell
+  tag: f741afffafc3131cc5a8dd896749c35ed49bfd0a
+  subdir: dhall
