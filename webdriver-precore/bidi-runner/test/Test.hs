@@ -98,7 +98,7 @@ bidiDemos cfg =
                   expectFail [Firefox']
                     "Closing the browser in a session started with WebDriver classic is not supported"
                     Browser.browserCloseDemo,
-                  unknownCommand [Firefox']
+                  -- unknownCommand [Firefox'] first success 29-04-2025
                     -- since https://www.w3.org/TR/2025/WD-webdriver-bidi-20250918/#command-browser-seProtocolExceptiontDownloadBehavior
                     Browser.browserSetDownloadBehaviorDemo
                 ],
