@@ -19,6 +19,7 @@ import WebDriver.Effectful.HTTP.Base.Effect
     mkSessionRunner,
   )
 import WebDriverPreCore.Extended.HTTP.Base.Actions qualified as HA
+import WebDriverPreCore.Extended.Protocol (Session)
 
 -- ---------------------------------------------------------------------------
 -- HTTP interpreter
@@ -31,66 +32,72 @@ import WebDriverPreCore.Extended.HTTP.Base.Actions qualified as HA
 -- @WebDriverPreCore.Extended.HTTP.Base.Actions@ function.
 runWebDriverHttp :: (IOE :> es) => HttpSessionInfo -> Eff (WebDriverHttp : es) a -> Eff es a
 runWebDriverHttp info = interpret $ \_localEnv -> \case
-  DeleteSession -> liftIO $ HA.deleteSession runner sess
-  GetTimeouts -> liftIO $ HA.getTimeouts runner sess
-  SetTimeouts ts -> liftIO $ HA.setTimeouts runner sess ts
-  NavigateTo url -> liftIO $ HA.navigateTo runner sess url
-  GetCurrentUrl -> liftIO $ HA.getCurrentUrl runner sess
-  Back -> liftIO $ HA.back runner sess
-  Forward -> liftIO $ HA.forward runner sess
-  Refresh -> liftIO $ HA.refresh runner sess
-  GetTitle -> liftIO $ HA.getTitle runner sess
-  GetWindowHandle -> liftIO $ HA.getWindowHandle runner sess
-  GetWindowHandles -> liftIO $ HA.getWindowHandles runner sess
-  NewWindow -> liftIO $ HA.newWindow runner sess
-  CloseWindow -> liftIO $ HA.closeWindow runner sess
-  SwitchToWindow wh -> liftIO $ HA.switchToWindow runner sess wh
-  GetWindowRect -> liftIO $ HA.getWindowRect runner sess
-  SetWindowRect wr -> liftIO $ HA.setWindowRect runner sess wr
-  MaximizeWindow -> liftIO $ HA.maximizeWindow runner sess
-  MinimizeWindow -> liftIO $ HA.minimizeWindow runner sess
-  FullScreenWindow -> liftIO $ HA.fullScreenWindow runner sess
-  SwitchToFrame fr -> liftIO $ HA.switchToFrame runner sess fr
-  SwitchToParentFrame -> liftIO $ HA.switchToParentFrame runner sess
-  GetPageSource -> liftIO $ HA.getPageSource runner sess
-  ExecuteScript sc -> liftIO $ HA.executeScript runner sess sc
-  ExecuteScriptAsync sc -> liftIO $ HA.executeScriptAsync runner sess sc
-  AddCookie ck -> liftIO $ HA.addCookie runner sess ck
-  GetAllCookies -> liftIO $ HA.getAllCookies runner sess
-  GetNamedCookie n -> liftIO $ HA.getNamedCookie runner sess n
-  DeleteCookie n -> liftIO $ HA.deleteCookie runner sess n
-  DeleteAllCookies -> liftIO $ HA.deleteAllCookies runner sess
-  PerformActions ac -> liftIO $ HA.performActions runner sess ac
-  ReleaseActions -> liftIO $ HA.releaseActions runner sess
-  DismissAlert -> liftIO $ HA.dismissAlert runner sess
-  AcceptAlert -> liftIO $ HA.acceptAlert runner sess
-  GetAlertText -> liftIO $ HA.getAlertText runner sess
-  SendAlertText t -> liftIO $ HA.sendAlertText runner sess t
-  TakeScreenshot -> liftIO $ HA.takeScreenshot runner sess
-  PrintPage -> liftIO $ HA.printPage runner sess
-  GetActiveElement -> liftIO $ HA.getActiveElement runner sess
-  FindElement sel -> liftIO $ HA.findElement runner sess sel
-  FindElements sel -> liftIO $ HA.findElements runner sess sel
-  FindElementFromElement el sel -> liftIO $ HA.findElementFromElement runner sess el sel
-  FindElementsFromElement el sel -> liftIO $ HA.findElementsFromElement runner sess el sel
-  FindElementFromShadowRoot sr sel -> liftIO $ HA.findElementFromShadowRoot runner sess sr sel
-  FindElementsFromShadowRoot sr sel -> liftIO $ HA.findElementsFromShadowRoot runner sess sr sel
-  IsElementSelected el -> liftIO $ HA.isElementSelected runner sess el
-  GetElementAttribute el n -> liftIO $ HA.getElementAttribute runner sess el n
-  GetElementProperty el n -> liftIO $ HA.getElementProperty runner sess el n
-  GetElementCssValue el n -> liftIO $ HA.getElementCssValue runner sess el n
-  GetElementShadowRoot el -> liftIO $ HA.getElementShadowRoot runner sess el
-  GetElementText el -> liftIO $ HA.getElementText runner sess el
-  GetElementTagName el -> liftIO $ HA.getElementTagName runner sess el
-  GetElementRect el -> liftIO $ HA.getElementRect runner sess el
-  IsElementEnabled el -> liftIO $ HA.isElementEnabled runner sess el
-  GetElementComputedRole el -> liftIO $ HA.getElementComputedRole runner sess el
-  GetElementComputedLabel el -> liftIO $ HA.getElementComputedLabel runner sess el
-  ElementClick el -> liftIO $ HA.elementClick runner sess el
-  ElementClear el -> liftIO $ HA.elementClear runner sess el
-  ElementSendKeys el t -> liftIO $ HA.elementSendKeys runner sess el t
-  TakeElementScreenshot el -> liftIO $ HA.takeElementScreenshot runner sess el
+  DeleteSession -> run HA.deleteSession
+  GetTimeouts -> run HA.getTimeouts
+  SetTimeouts ts -> run1 HA.setTimeouts ts
+  NavigateTo url -> run1 HA.navigateTo url
+  GetCurrentUrl -> run HA.getCurrentUrl
+  Back -> run HA.back
+  Forward -> run HA.forward
+  Refresh -> run HA.refresh
+  GetTitle -> run HA.getTitle
+  GetWindowHandle -> run HA.getWindowHandle
+  GetWindowHandles -> run HA.getWindowHandles
+  NewWindow -> run HA.newWindow
+  CloseWindow -> run HA.closeWindow
+  SwitchToWindow wh -> run1 HA.switchToWindow wh
+  GetWindowRect -> run HA.getWindowRect
+  SetWindowRect wr -> run1 HA.setWindowRect wr
+  MaximizeWindow -> run HA.maximizeWindow
+  MinimizeWindow -> run HA.minimizeWindow
+  FullScreenWindow -> run HA.fullScreenWindow
+  SwitchToFrame fr -> run1 HA.switchToFrame fr
+  SwitchToParentFrame -> run HA.switchToParentFrame
+  GetPageSource -> run HA.getPageSource
+  ExecuteScript sc -> run1 HA.executeScript sc
+  ExecuteScriptAsync sc -> run1 HA.executeScriptAsync sc
+  AddCookie ck -> run1 HA.addCookie ck
+  GetAllCookies -> run HA.getAllCookies
+  GetNamedCookie n -> run1 HA.getNamedCookie n
+  DeleteCookie n -> run1 HA.deleteCookie n
+  DeleteAllCookies -> run HA.deleteAllCookies
+  PerformActions ac -> run1 HA.performActions ac
+  ReleaseActions -> run HA.releaseActions
+  DismissAlert -> run HA.dismissAlert
+  AcceptAlert -> run HA.acceptAlert
+  GetAlertText -> run HA.getAlertText
+  SendAlertText t -> run1 HA.sendAlertText t
+  TakeScreenshot -> run HA.takeScreenshot
+  PrintPage -> run HA.printPage
+  GetActiveElement -> run HA.getActiveElement
+  FindElement sel -> run1 HA.findElement sel
+  FindElements sel -> run1 HA.findElements sel
+  FindElementFromElement el sel -> run2 HA.findElementFromElement el sel
+  FindElementsFromElement el sel -> run2 HA.findElementsFromElement el sel
+  FindElementFromShadowRoot sr sel -> run2 HA.findElementFromShadowRoot sr sel
+  FindElementsFromShadowRoot sr sel -> run2 HA.findElementsFromShadowRoot sr sel
+  IsElementSelected el -> run1 HA.isElementSelected el
+  GetElementAttribute el n -> run2 HA.getElementAttribute el n
+  GetElementProperty el n -> run2 HA.getElementProperty el n
+  GetElementCssValue el n -> run2 HA.getElementCssValue el n
+  GetElementShadowRoot el -> run1 HA.getElementShadowRoot el
+  GetElementText el -> run1 HA.getElementText el
+  GetElementTagName el -> run1 HA.getElementTagName el
+  GetElementRect el -> run1 HA.getElementRect el
+  IsElementEnabled el -> run1 HA.isElementEnabled el
+  GetElementComputedRole el -> run1 HA.getElementComputedRole el
+  GetElementComputedLabel el -> run1 HA.getElementComputedLabel el
+  ElementClick el -> run1 HA.elementClick el
+  ElementClear el -> run1 HA.elementClear el
+  ElementSendKeys el t -> run2 HA.elementSendKeys el t
+  TakeElementScreenshot el -> run1 HA.takeElementScreenshot el
   where
     runner :: forall r. (FromJSON r) => HA.Runner IO r
     runner = mkSessionRunner info
+
+    sess :: Session
     sess = info.session
+
+    run action = liftIO $ action runner sess
+    run1 action p = liftIO $ action runner sess p
+    run2 action p1 p2 = liftIO $ action runner sess p1 p2
