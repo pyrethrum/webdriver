@@ -1,57 +1,28 @@
 module HTTP.SimpleDemo where
 
-import Effectful (Eff, IOE, liftIO, (:>))
+import Effectful (Eff, IOE, liftIO, (:>), Effect)
+import HTTP.Runner (runHttpTest)
 import WebDriver.Effectful
-import WebDriver.Effectful.HTTP.Base.Actions qualified as HTTP
+  ( Logger,
+    Pause,
+    WebDriverHttp,
+    log,
+    pause,
+  )
+import WebDriver.Effectful.HTTP.Base.Actions
+  ( elementSendKeys,
+    findElement,
+    getTitle,
+    maximizeWindow,
+    navigateTo,
+  )
 import WebDriverPreCore.Extended.HTTP.Base.Protocol qualified as P
-import WebDriverPreCore.Test.CapabilitiesBuilder (httpCapabilities)
-import WebDriverPreCore.Test.ConfigLoader (Config (..), loadConfig)
 import WebDriverPreCore.Test.TestData (contentPageUrl, loginUrl)
-import WebDriverPreCore.Utils.Timeout (milliseconds)
 import Prelude hiding (log)
 
-runSetup
-  :: (forall es. (IOE :> es) => HttpDriverInfo -> InteractBehaviour -> Config -> Eff es a)
-  -> IO a
-runSetup action = runHttp $ do
-  config <- liftIO loadConfig
-  let behaviour = mkInteractBehaviour config
-      driverInfo =
-        MkHttpDriverInfo
-          { httpEndpoint = MkHttpEndpoint {host = config.httpUrl, port = config.httpPort},
-            driverLogFn  = Nothing
-          }
-  action driverInfo behaviour config
-
-mkInteractBehaviour :: Config -> InteractBehaviour
-mkInteractBehaviour config =
-  MkInteractBehaviour
-    { pauseDuration = fromIntegral config.pauseMS * milliseconds,
-      driverLogging = config.logging
-    }
-
-mkHttpCaps :: Config -> HttpCapabilities
-mkHttpCaps config =
-  MkFullCapabilities
-    { alwaysMatch = Just . fromHttpCapability $ httpCapabilities config,
-      firstMatch  = []
-    }
-
-runHttpTest
-  :: ( forall es
-      . ( IOE :> es
-        , Logger :> es
-        , Pause :> es
-        , WebDriverHttp :> es
-        )
-     => Eff es ()
-     )
-  -> IO ()
-runHttpTest action =
-  runSetup $ \driverInfo behaviour config ->
-    withLogger "eval.log" $
-      withHttpSession driverInfo behaviour (mkHttpCaps config) $
-        withPause behaviour.pauseDuration action
+-- get rid of warning
+_runHttpTest :: (forall (es :: [Effect]).  (IOE :> es, Logger :> es, Pause :> es, WebDriverHttp :> es) =>  Eff es ()) -> IO ()
+_runHttpTest = runHttpTest
 
 -- | HTTP-only demo:
 --
@@ -60,29 +31,29 @@ runHttpTest action =
 --   * Navigates to the colourful content page
 --   * Gets and logs the page title
 --
--- >>> http_login_navigation_demo
-http_login_navigation_demo :: IO ()
-http_login_navigation_demo = runHttpTest $ do
+-- >>> runHttpTest http_login_navigation_demo
+http_login_navigation_demo :: (Logger :> es, WebDriverHttp :> es, IOE :> es, Pause :> es) => Eff es ()
+http_login_navigation_demo = do
   log "=== Navigate to login form ==="
   loginPage <- liftIO loginUrl
-  HTTP.navigateTo loginPage
-  HTTP.maximizeWindow
+  navigateTo loginPage
+  maximizeWindow
   pause
 
   log "=== Fill in username ==="
-  usernameField <- HTTP.findElement $ P.CSS "#username"
-  HTTP.elementSendKeys usernameField "demoUser"
+  usernameField <- findElement $ P.CSS "#username"
+  elementSendKeys usernameField "demoUser"
   pause
 
   log "=== Fill in password ==="
-  passwordField <- HTTP.findElement $ P.CSS "#password"
-  HTTP.elementSendKeys passwordField "s3cr3tP4ssw0rd"
+  passwordField <- findElement $ P.CSS "#password"
+  elementSendKeys passwordField "s3cr3tP4ssw0rd"
   pause
 
   log "=== Navigate to colourful content page ==="
   contentPage <- liftIO contentPageUrl
-  HTTP.navigateTo contentPage
+  navigateTo contentPage
   pause
 
-  title <- HTTP.getTitle
+  title <- getTitle
   log $ "Landed on: " <> title

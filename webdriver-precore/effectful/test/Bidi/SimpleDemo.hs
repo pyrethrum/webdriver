@@ -1,10 +1,15 @@
 module Bidi.SimpleDemo where
 
+import Bidi.Runner
+  ( charToKeys,
+    defaultPointerProps,
+    runBiDiTest,
+  )
 import Control.Concurrent.STM
   ( atomically,
     newEmptyTMVarIO,
     putTMVar,
-    readTMVar
+    readTMVar,
   )
 import Data.Text qualified as T
 import Data.Text.IO qualified as TIO
@@ -14,13 +19,18 @@ import UnliftIO.Async (race_)
 import UnliftIO.Concurrent (threadDelay)
 import Utils (txt)
 import WebDriver.Effectful
+  ( Logger,
+    Pause,
+    WebDriverBiDi,
+    log,
+    pause,
+  )
 import WebDriver.Effectful.BiDi.Base.Actions
 import WebDriverPreCore.BiDi.Protocol
   ( BrowsingContext (..),
     GetTree (..),
     GetTreeResult (..),
     Info (..),
-    KeySourceAction (..),
     KeySourceActions (..),
     KnownSubscriptionType (..),
     LocateNodes (..),
@@ -31,80 +41,14 @@ import WebDriverPreCore.BiDi.Protocol
     Origin (..),
     PerformActions (..),
     Pointer (..),
-    PointerCommonProperties (..),
     PointerSourceAction (..),
     PointerSourceActions (..),
     PointerType (..),
     SharedReference (..),
     SourceActions (..),
   )
-import WebDriverPreCore.Test.CapabilitiesBuilder (httpCapabilities)
-import WebDriverPreCore.Test.ConfigLoader (Config (..), loadConfig)
 import WebDriverPreCore.Test.TestData (loginUrl)
-import WebDriverPreCore.Utils.Timeout (milliseconds)
 import Prelude hiding (log)
-
-runSetup
-  :: (forall es. (IOE :> es) => HttpDriverInfo -> InteractBehaviour -> Config -> Eff es a)
-  -> IO a
-runSetup action = runHttp $ do
-  config <- liftIO loadConfig
-  let behaviour = mkInteractBehaviour config
-      driverInfo =
-        MkHttpDriverInfo
-          { httpEndpoint = MkHttpEndpoint {host = config.httpUrl, port = config.httpPort},
-            driverLogFn  = Nothing
-          }
-  action driverInfo behaviour config
-
-mkInteractBehaviour :: Config -> InteractBehaviour
-mkInteractBehaviour config =
-  MkInteractBehaviour
-    { pauseDuration = fromIntegral config.pauseMS * milliseconds,
-      driverLogging = config.logging
-    }
-
-mkBiDiCaps :: Config -> HttpCapabilities
-mkBiDiCaps config =
-  MkFullCapabilities
-    { alwaysMatch = Just cap {httpWebSocketUrl = Just True},
-      firstMatch  = []
-    }
-  where
-    cap = fromHttpCapability $ httpCapabilities config
-
-runBiDiTest
-  :: ( forall es
-      . ( IOE :> es
-        , Logger :> es
-        , Pause :> es
-        , WebDriverBiDi :> es
-        )
-     => Eff es ()
-     )
-  -> IO ()
-runBiDiTest action =
-  runSetup $ \driverInfo behaviour config ->
-    withLogger "eval.log" $
-      withBiDiSession driverInfo behaviour (mkBiDiCaps config) $
-        withPause behaviour.pauseDuration action
-
--- | Minimal pointer properties with all optional fields set to 'Nothing'.
-defaultPointerProps :: PointerCommonProperties
-defaultPointerProps =
-  MkPointerCommonProperties
-    { width              = Nothing,
-      height             = Nothing,
-      pressure           = Nothing,
-      tangentialPressure = Nothing,
-      twist              = Nothing,
-      altitudeAngle      = Nothing,
-      azimuthAngle       = Nothing
-    }
-
--- | Convert a 'Char' to a pair of keyDown\/keyUp 'KeySourceAction's.
-charToKeys :: Char -> [KeySourceAction]
-charToKeys c = [KeyDown {value = T.singleton c}, KeyUp {value = T.singleton c}]
 
 -- | BiDi version of the login demo:
 --
@@ -114,9 +58,9 @@ charToKeys c = [KeyDown {value = T.singleton c}, KeyUp {value = T.singleton c}]
 --   * Locates the @#username@ field via BiDi @locateNodes@
 --   * Types @effectful-user@ into the field via BiDi key actions
 --
--- >>> bidi_login_demo
-bidi_login_demo :: IO ()
-bidi_login_demo = runBiDiTest $ do
+-- >>> runBiDiTest bidi_login_demo
+bidi_login_demo :: (Logger :> es, WebDriverBiDi :> es, IOE :> es, Pause :> es) => Eff es ()
+bidi_login_demo = do
   log "=== Get root browsing context ==="
   tree <- browsingContextGetTree (MkGetTree Nothing Nothing)
   bc <- case tree of
@@ -135,7 +79,7 @@ bidi_login_demo = runBiDiTest $ do
   log "=== Subscribe to browsingContext.load (many-style) ==="
   navVar <- liftIO newEmptyTMVarIO
   subscribeMany [BrowsingContextLoad] $ \evt -> do
-    liftIO $ TIO.putStrLn $ "!!! browsingContext.load event (many-style): " <> txt evt
+    log $ "!!! browsingContext.load event (many-style): " <> txt evt
     liftIO $ atomically $ putTMVar navVar ()
 
   log "=== Navigate to login page ==="

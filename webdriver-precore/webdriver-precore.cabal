@@ -442,7 +442,10 @@ test-suite test-effectful
   type: exitcode-stdio-1.0
   main-is: Test.hs
   other-modules:
+    Bidi.Runner
     Bidi.SimpleDemo
+    Common.Runner
+    HTTP.Runner
     HTTP.SimpleDemo
   hs-source-dirs: effectful/test
   build-depends:
