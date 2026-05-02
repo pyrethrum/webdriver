@@ -444,32 +444,32 @@ browsingNavigateReloadTraverseHistoryDemo =
       logShow "History traversal result - back 1" historyResult1
       -- there is an issue in chromedriver where navigating back too quickly causes a failure
       -- would need a better solution in production code (retries, waits, event listening, etc )
-      pauseAtLeast (100 * milliseconds)
+      pauseAtLeast $ 100 * milliseconds
 
       logTxt "Go back 2 more steps (to Navigation 3)"
       historyResult2 <- browsingContextTraverseHistory $ MkTraverseHistory {context = bc, delta = MkJSInt (-2)}
       logShow "History traversal result - back 2" historyResult2
-      pauseAtLeast (100 * milliseconds)
+      pauseAtLeast $ 100 * milliseconds
 
       logTxt "Go back 1 more step (to Navigation 2)"
       historyResult3 <- browsingContextTraverseHistory $ MkTraverseHistory {context = bc, delta = MkJSInt (-1)}
       logShow "History traversal result - back 1" historyResult3
-      pauseAtLeast (100 * milliseconds)
+      pauseAtLeast $ 100 * milliseconds
 
       logTxt "Go forward 1 step (to Navigation 3)"
       historyResult4 <- browsingContextTraverseHistory $ MkTraverseHistory {context = bc, delta = MkJSInt 1}
       logShow "History traversal result - forward 1" historyResult4
-      pauseAtLeast (100 * milliseconds)
+      pauseAtLeast $ 100 * milliseconds
 
       logTxt "Go forward 2 steps (to Navigation 5)"
       historyResult5 <- browsingContextTraverseHistory $ MkTraverseHistory {context = bc, delta = MkJSInt 2}
       logShow "History traversal result - forward 2" historyResult5
-      pauseAtLeast (100 * milliseconds)
+      pauseAtLeast $ 100 * milliseconds
 
       logTxt "Go forward 1 step (to Navigation 6)"
       historyResult6 <- browsingContextTraverseHistory $ MkTraverseHistory {context = bc, delta = MkJSInt 1}
       logShow "History traversal result - forward 1" historyResult6
-      pauseAtLeast (100 * milliseconds)
+      pauseAtLeast $ 100 * milliseconds
 
       logTxt "Final navigation - back to Navigation 1"
       navResultFinal <- browsingContextNavigate $ MkNavigate {context = bc, url = nav1, wait = Just Complete}
@@ -733,7 +733,7 @@ browsingContextContextLocatorDemo =
             resultOwnership = Nothing,
             serializationOptions = Nothing
           }
-      pauseAtLeast (500 * milliseconds)
+      pauseAtLeast $ 500 * milliseconds
 
       -- Get the tree to find the iframe's browsing context
       logTxt "Get tree to find iframe browsing context"

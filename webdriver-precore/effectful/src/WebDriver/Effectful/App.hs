@@ -170,9 +170,10 @@ mkRootRunner info cmd =
 -- | Extract the driver @IO@ log function from the 'Logger' static effect
 -- when @driverLogging@ is enabled.  Returns 'Nothing' otherwise.
 resolveLogFn :: (Logger :> es) => InteractBehaviour -> Eff es (Maybe (Text -> IO ()))
-resolveLogFn behaviour
-  | behaviour.driverLogging = fmap (Just . ($ InfoS)) getLogFn
-  | otherwise               = pure Nothing
+resolveLogFn MkInteractBehaviour{driverLogging} = 
+  if driverLogging
+    then (Just . ($ InfoS)) <$> getLogFn
+    else pure Nothing
 
 -- | Parse a BiDi WebSocket URL, throwing 'IOError' on failure.
 parseBiDiUrlIO :: Maybe Text -> IO BiDiUrl

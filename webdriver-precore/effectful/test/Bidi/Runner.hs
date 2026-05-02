@@ -1,6 +1,6 @@
 module Bidi.Runner where
 
-import Common.Runner (mkInteractBehaviour, runSetup)
+import Common.Runner (runSetup)
 import Data.Text qualified as T
 import Effectful (Eff, IOE, (:>))
 import WebDriver.Effectful

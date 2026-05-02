@@ -613,7 +613,7 @@ browsingContextEventNavigationAborted =
           }
 
       -- Give the navigation a moment to start
-      pauseAtLeast (MkTimeout 200)
+      pauseAtLeast $ 200 * milliseconds
 
       logTxt "Abort navigation by navigating to different page"
       url2 <- checkboxesUrl
