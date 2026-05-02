@@ -11,7 +11,9 @@ allow-newer:
  all:base,
  all:containers,
  all:template-haskell,
- all:time
+ all:time,
+ -- katip-effectful 0.0.1 has tight upper bound on effectful-plugin
+ katip-effectful:effectful-plugin
 
 packages: 
   webdriver-precore/webdriver-precore.cabal

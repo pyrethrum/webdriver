@@ -55,7 +55,7 @@ import Bluefin.IO (IOE, effIO, withEffToIO_)
 import Control.Concurrent (threadDelay)
 import Data.Text (Text)
 import GHC.Generics (Generic)
-import WebDriver.Bluefin.LoggingImp (Severity (..), withKatipLogFunc)
+import WebDriver.Bluefin.Logger (Severity (..), withKatipLogFunc)
 import WebDriverPreCore.Utils.Timeout (Timeout (..))
 import Prelude hiding (log)
 

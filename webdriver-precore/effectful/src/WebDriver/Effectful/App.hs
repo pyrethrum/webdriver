@@ -30,11 +30,7 @@ import Data.Aeson (FromJSON)
 import Data.Text (Text)
 import Effectful (Eff, IOE, Limit (..), Persistence (..), UnliftStrategy (..), (:>), runEff, withEffToIO, withSeqEffToIO)
 import UnliftIO (finally, throwIO)
-import WebDriver.Effectful.Core
-  ( Logger,
-    Severity (..),
-    getLogFn,
-  )
+import WebDriver.Effectful.Logger (Logger, Severity (..), getLogFn)
 import WebDriver.Effectful.HTTP.Core
   ( BiDiInfo (..),
     HttpDriverInfo (..),
@@ -73,7 +69,7 @@ data InteractBehaviour = MkInteractBehaviour
 --
 -- Provides just 'IOE', so the supplied action can lift any @IO@ operation.
 -- Use 'withHttpSession' or 'withBiDiSession' to add WebDriver effects, and
--- 'WebDriver.Effectful.Core.withLogger' \/ 'WebDriver.Effectful.Core.withLogPause'
+-- 'WebDriver.Effectful.Logger.withLogger' \/ 'WebDriver.Effectful.Pause.withPause'
 -- for logging and pacing.
 runHttp :: Eff '[IOE] a -> IO a
 runHttp = runEff
@@ -175,7 +171,7 @@ mkRootRunner info cmd =
 -- when @driverLogging@ is enabled.  Returns 'Nothing' otherwise.
 resolveLogFn :: (Logger :> es) => InteractBehaviour -> Eff es (Maybe (Text -> IO ()))
 resolveLogFn behaviour
-  | behaviour.driverLogging = fmap (Just . ($ Info)) getLogFn
+  | behaviour.driverLogging = fmap (Just . ($ InfoS)) getLogFn
   | otherwise               = pure Nothing
 
 -- | Parse a BiDi WebSocket URL, throwing 'IOError' on failure.

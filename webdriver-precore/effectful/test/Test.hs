@@ -7,7 +7,7 @@
 --
 -- * @WebDriverHttp@ and @WebDriverBiDi@ are Dynamic effects — call-site code
 --   uses 'send'-wrapper functions and the interpreter is swapped at the top.
--- * @Logger@ and @LogPause@ are Static effects — threaded implicitly through
+-- * @Logger@ and @Pause@ are Static effects — threaded implicitly through
 --   the @es@ constraint (@:>@).
 -- * STM operations use 'liftIO' (since @IOE :> es@); a future enhancement
 --   could layer 'Effectful.Concurrent.STM' for a fully effect-saturated stack.
@@ -17,10 +17,8 @@ import Control.Concurrent.STM
   ( atomically,
     newEmptyTMVarIO,
     putTMVar,
-    readTMVar,
-    tryPutTMVar,
+    readTMVar
   )
-import Data.Functor (void)
 import Data.Text qualified as T
 import Data.Text.IO qualified as TIO
 import Effectful (Eff, IOE, liftIO, (:>))
@@ -94,12 +92,12 @@ runSetup action = runHttp $ do
   action driverInfo behaviour config
 
 -- | Full HTTP test harness: loads config, opens a session, and provides
--- 'Logger', 'LogPause', and 'WebDriverHttp' effects for the action.
+-- 'Logger', 'Pause', and 'WebDriverHttp' effects for the action.
 runHttpTest
   :: ( forall es
       . ( IOE :> es
         , Logger :> es
-        , LogPause :> es
+        , Pause :> es
         , WebDriverHttp :> es
         )
      => Eff es ()
@@ -109,7 +107,7 @@ runHttpTest action =
   runSetup $ \driverInfo behaviour config ->
     withLogger "eval.log" $
       withHttpSession driverInfo behaviour (mkHttpCaps config) $
-        withLogPause behaviour.pauseDuration action
+        withPause behaviour.pauseDuration action
 
 -- | Full BiDi test harness: loads config, opens a BiDi-enabled session, and
 --
@@ -119,7 +117,7 @@ runBiDiTest
   :: ( forall es
       . ( IOE :> es
         , Logger :> es
-        , LogPause :> es
+        , Pause :> es
         , WebDriverBiDi :> es
         )
      => Eff es ()
@@ -129,7 +127,7 @@ runBiDiTest action =
   runSetup $ \driverInfo behaviour config ->
     withLogger "eval.log" $
       withBiDiSession driverInfo behaviour (mkBiDiCaps config) $
-        withLogPause behaviour.pauseDuration action
+        withPause behaviour.pauseDuration action
 
 -- ---------------------------------------------------------------------------
 -- Helpers
@@ -192,7 +190,7 @@ http_login_navigation_demo = runHttpTest $ do
   log "=== Navigate to login form ==="
   loginPage <- liftIO loginUrl
   HTTP.navigateTo loginPage
-  _ <- HTTP.maximizeWindow
+  HTTP.maximizeWindow
   pause
 
   log "=== Fill in username ==="

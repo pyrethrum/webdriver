@@ -30,7 +30,7 @@ import Bluefin.Eff (Eff, (:>), runEff_)
 import Bluefin.IO (IOE, withEffToIO_)
 import UnliftIO (finally, throwIO)
 import WebDriver.Bluefin.Core (Logger (..))
-import WebDriver.Bluefin.LoggingImp (Severity (..))
+import WebDriver.Bluefin.Logger (Severity (..))
 import WebDriver.Bluefin.HTTP.Core
   ( BiDiEnv (..),
     HttpDriverInfo (..),
