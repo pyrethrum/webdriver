@@ -2,8 +2,7 @@ module Bidi.SimpleDemo where
 
 import Bidi.Runner
   ( charToKeys,
-    defaultPointerProps,
-    runBiDiTest,
+    defaultPointerProps
   )
 import Control.Concurrent.STM
   ( atomically,

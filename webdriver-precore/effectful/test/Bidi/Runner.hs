@@ -34,7 +34,7 @@ runBiDiTest action =
   runSetup $ \driverInfo behaviour config ->
     withLogger "eval.log" $
       withBiDiSession driverInfo behaviour (mkBiDiCaps config) $
-        withPause behaviour.pauseDuration action
+        runPause behaviour.pauseDuration action
 
 -- | Minimal pointer properties with all optional fields set to 'Nothing'.
 defaultPointerProps :: PointerCommonProperties

@@ -1,6 +1,6 @@
 module Common.Runner where
 
-import Effectful (Eff, IOE, liftIO, (:>))
+import Effectful (Eff, IOE, liftIO, (:>), MonadIO)
 import WebDriver.Effectful
   ( HttpDriverInfo (..),
     HttpEndpoint (..),
@@ -9,6 +9,7 @@ import WebDriver.Effectful
   )
 import WebDriverPreCore.Test.ConfigLoader (Config (..), loadConfig)
 import WebDriverPreCore.Utils.Timeout (milliseconds)
+import WebDriverPreCore.Extended.HTTP.Base.Protocol (URL)
 
 runSetup
   :: (forall es. (IOE :> es) => HttpDriverInfo -> InteractBehaviour -> Config -> Eff es a)
@@ -29,3 +30,6 @@ mkInteractBehaviour config =
     { pauseDuration = fromIntegral config.pauseMS * milliseconds,
       driverLogging = config.logging
     }
+
+testUrl :: MonadIO m => IO URL -> m URL 
+testUrl = liftIO

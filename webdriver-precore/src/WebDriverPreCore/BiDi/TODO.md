@@ -13,6 +13,7 @@
 
 ## updates
 - [ ] webdriver http
+- [ ] notes on pauseAtLeast in webdriver bidi tests - all test units
 
 - [ ]fix this file
 - [ ] harmonise isolate logging

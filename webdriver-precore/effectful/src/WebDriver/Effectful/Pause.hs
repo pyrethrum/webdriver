@@ -1,14 +1,14 @@
 -- |
 -- Module: WebDriver.Effectful.Pause
--- Description: LogPause effect for pacing WebDriver actions
+-- Description: Pause effect for pacing WebDriver actions
 --
--- Provides the 'LogPause' static effect and 'pause', which sleeps for a
+-- Provides the 'Pause' dynamic effect and 'pause', which sleeps for a
 -- configurable duration between driver actions.
 --
 -- Typical usage:
 --
 -- @
--- withLogPause (100 * milliseconds) $ do
+-- runPause (100 * milliseconds) $ do
 --   pause
 --   navigate myUrl
 -- @
@@ -16,52 +16,75 @@ module WebDriver.Effectful.Pause
   ( -- * Pause effect
     Pause,
 
-    -- * Pause introducer
-    withPause,
+    -- * Pause runners
+    runPause,
+    runNoPause,
 
-    -- * LogPause operation
+    -- * Pause operations
     pause,
+    pauseAtLeast,
+    sleep,
   )
 where
 
 import Control.Concurrent (threadDelay)
 import Effectful (Effect, Dispatch (..), DispatchOf, Eff, IOE, (:>), liftIO)
-import Effectful.Dispatch.Static
-  ( StaticRep,
-    SideEffects (..),
-    evalStaticRep,
-    getStaticRep,
-  )
+import Effectful.Dispatch.Dynamic (interpret, send)
 import WebDriverPreCore.Utils.Timeout (Timeout (..))
 
 -- ---------------------------------------------------------------------------
--- LogPause effect
+-- Pause effect
 -- ---------------------------------------------------------------------------
 
--- | Effectful static effect carrying a configurable pause duration.
+-- | Dynamic effect for configurable pausing between driver actions.
+data Pause :: Effect where
+  Pause        :: Pause m ()
+  PauseAtLeast :: Timeout -> Pause m ()
+  Sleep        :: Timeout -> Pause m ()
+
+type instance DispatchOf Pause = Dynamic
+
+-- ---------------------------------------------------------------------------
+-- Pause runners
+-- ---------------------------------------------------------------------------
+
+-- | Run with the 'Pause' effect, sleeping for the given 'Timeout' on each 'pause'.
 --
--- Introduce with 'withLogPause'; use 'pause' to sleep between actions.
-data Pause :: Effect
+--   * 'pause'        — sleeps for @defaultPause@
+--   * 'pauseAtLeast' — sleeps for @max t defaultPause@
+--   * 'sleep'        — sleeps for exactly @t@ regardless of the default
+runPause :: IOE :> es => Timeout -> Eff (Pause : es) a -> Eff es a
+runPause defaultPause = interpret $ \_ op -> 
+  liftIO $  
+    case op of
+      Pause          -> threadDelay defaultPause.microseconds
+      PauseAtLeast t -> threadDelay $ max t.microseconds defaultPause.microseconds
+      Sleep t        -> threadDelay t.microseconds
 
-type instance DispatchOf Pause = Static NoSideEffects
-
--- | The static rep holds the pause 'Timeout'.
-newtype instance StaticRep Pause = LogPauseRep Timeout
+-- | Run with the 'Pause' effect where pauses are no-ops; 'sleep' still waits.
+--
+--   * 'pause'        — no-op
+--   * 'pauseAtLeast' — no-op
+--   * 'sleep'        — sleeps for exactly @t@
+runNoPause :: IOE :> es => Eff (Pause : es) a -> Eff es a
+runNoPause = interpret $ \_ op -> case op of
+  Pause          -> pure ()
+  PauseAtLeast _ -> pure ()
+  Sleep t        -> liftIO $ threadDelay t.microseconds
 
 -- ---------------------------------------------------------------------------
--- LogPause introducer
+-- Pause operations
 -- ---------------------------------------------------------------------------
 
--- | Run an action with a 'Pause' effect providing the given 'Timeout'.
-withPause :: Timeout -> Eff (Pause : es) a -> Eff es a
-withPause = evalStaticRep . LogPauseRep
+-- | Sleep for the default duration configured in the runner, or do nothing with 'runNoPause'.
+pause :: Pause :> es => Eff es ()
+pause = send Pause
 
--- ---------------------------------------------------------------------------
--- Pause operation
--- ---------------------------------------------------------------------------
+-- | Sleep for at least the given duration (or the runner default, whichever is larger).
+--   No-op under 'runNoPause'.
+pauseAtLeast :: Pause :> es => Timeout -> Eff es ()
+pauseAtLeast = send . PauseAtLeast
 
--- | Sleep for the duration stored in the 'LogPause' effect.
-pause :: (Pause :> es, IOE :> es) => Eff es ()
-pause = do
-  LogPauseRep d <- getStaticRep @Pause
-  liftIO $ threadDelay d.microseconds
+-- | Sleep for exactly the given duration in both runners.
+sleep :: Pause :> es => Timeout -> Eff es ()
+sleep = send . Sleep

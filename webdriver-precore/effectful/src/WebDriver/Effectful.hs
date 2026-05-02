@@ -17,7 +17,7 @@ module WebDriver.Effectful
 
     -- * Core effects (log / pause)
     Logger, withLogger, log, logDebug, logInfo, logWarn, logError,
-    Pause, withPause, pause, getLogFn,
+    Pause, runPause, runNoPause, pause, pauseAtLeast, sleep, getLogFn,
     -- | Logging severity level
     Severity,
 
@@ -38,7 +38,7 @@ where
 import Prelude hiding (log)
 import WebDriverPreCore.Extended.Capabilities
 import WebDriver.Effectful.Logger (Logger, withLogger, log, logDebug, logInfo, logWarn, logError, getLogFn, Severity)
-import WebDriver.Effectful.Pause (Pause, withPause, pause)
+import WebDriver.Effectful.Pause (Pause, runPause, runNoPause, pause, pauseAtLeast, sleep)
 import WebDriver.Effectful.HTTP.Core
 import WebDriver.Effectful.App
 import WebDriverPreCore.HttpRunner

@@ -1,6 +1,9 @@
-module HTTP.Runner where
+module HTTP.Runner (
+  runHttpTest,
+  testUrl
+) where
 
-import Common.Runner (mkInteractBehaviour, runSetup)
+import Common.Runner (runSetup, testUrl)
 import Effectful (Eff, IOE, (:>))
 import WebDriver.Effectful
   ( HttpCapabilities,
@@ -12,7 +15,7 @@ import WebDriver.Effectful
     FullCapabilities (..),
     withHttpSession,
     withLogger,
-    withPause,
+    runPause,
   )
 import WebDriverPreCore.Test.CapabilitiesBuilder (httpCapabilities)
 import WebDriverPreCore.Test.ConfigLoader (Config (..))
@@ -38,4 +41,4 @@ runHttpTest action =
   runSetup $ \driverInfo behaviour config ->
     withLogger "eval.log" $
       withHttpSession driverInfo behaviour (mkHttpCaps config) $
-        withPause behaviour.pauseDuration action
+        runPause behaviour.pauseDuration action

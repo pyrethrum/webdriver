@@ -1,7 +1,7 @@
 module HTTP.SimpleDemo where
 
-import Effectful (Eff, IOE, liftIO, (:>), Effect)
-import HTTP.Runner (runHttpTest)
+import Effectful (Eff, IOE, (:>), Effect)
+import HTTP.Runner (runHttpTest, testUrl)
 import WebDriver.Effectful
   ( Logger,
     Pause,
@@ -35,7 +35,7 @@ _runHttpTest = runHttpTest
 http_login_navigation_demo :: (Logger :> es, WebDriverHttp :> es, IOE :> es, Pause :> es) => Eff es ()
 http_login_navigation_demo = do
   log "=== Navigate to login form ==="
-  loginPage <- liftIO loginUrl
+  loginPage <- testUrl loginUrl
   navigateTo loginPage
   maximizeWindow
   pause
@@ -51,7 +51,7 @@ http_login_navigation_demo = do
   pause
 
   log "=== Navigate to colourful content page ==="
-  contentPage <- liftIO contentPageUrl
+  contentPage <- testUrl contentPageUrl
   navigateTo contentPage
   pause
 
