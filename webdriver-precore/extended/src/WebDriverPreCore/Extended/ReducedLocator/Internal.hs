@@ -103,8 +103,7 @@ toHttpLocator = \case
         ccl -> case ccl of
           All {} -> nested All
           Any {} -> nested Any
-
-        where 
+         where 
           nested ctr = ctr <$> traverse toHttpLocator cl.elms
   BiDiOnlyLeaf (BiDiContext {context}) ->
     Left $ LI.MkInvalidLocator (LI.BiDiContext {context}) "BiDi-only locator cannot be used with HTTP protocol"

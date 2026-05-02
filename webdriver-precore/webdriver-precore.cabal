@@ -441,6 +441,9 @@ test-suite test-effectful
   import: commonExtensions, commonGhcOptions, testDepends
   type: exitcode-stdio-1.0
   main-is: Test.hs
+  other-modules:
+    Bidi.SimpleDemo
+    HTTP.SimpleDemo
   hs-source-dirs: effectful/test
   build-depends:
     webdriver-precore:webdriver-precore,
