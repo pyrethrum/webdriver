@@ -40,6 +40,7 @@ import WebDriverPreCore.Extended.ReducedLocator.Internal as RL
 import WebDriverPreCore.HTTP.Protocol as HTTPP (Script (..), Selector (..))
 import Prelude as P
 import Utils (txt)
+import Data.Bifunctor (first, Bifunctor (bimap))
 
 data LocateException
   = AmbiguousLocator
@@ -55,6 +56,8 @@ data LocateException
   deriving (Show, Eq)
 
 instance Exception LocateException
+
+type LocatorExceptionBuilder = Locator -> LocateException
 
 -- | Whether to find the unique element (error if multiple match) or just the first.
 data SingletonCardinality = Unique | First deriving (Show, Eq)
@@ -83,13 +86,6 @@ data HttpLocateAllOpts = MkHttpLocateAllOpts
     extendedRoleLocation :: ExtendedRoleLocateAll,
     defaultLocator :: Text -> Locator
   }
-
-data LocateResult
-  = MkLocateResult
-  { source :: Locator,
-    elmIds :: [ElementId]
-  }
-  deriving (Show, Eq)
 
 -- TODO
 -- 0. locateHttp Compiles (NoImp postfilter) [x]
@@ -154,13 +150,15 @@ locateHttp ::
   HttpLocateOpts ->
   -- | locator
   Locator ->
-  m (Either LocateException LocateResult)
+  m (Either LocateException [ElementId])
 locateHttp catch findElm' findElms' actions opts locator =
+  preparedLoc &
   either
     (pure . Left . InvalidLocator)
-    (httpLocateSingleton catch findElm'' findElms'' actions opts locator)
-    preparedLoc
+    (\rloc -> (first (locator &)) <$> httpLocateSingleton catch findElm'' findElms'' actions opts rloc)
+  
   where
+
     preparedLoc = prepareSimplify opts.defaultLocator HTTP locator >>= toHttpLocator
     withCatch' :: forall a. m a -> m (Either LocateException a)
     withCatch' action = catch (Right <$> action) (pure . Left . DriverException)
@@ -183,7 +181,7 @@ locateFirstHttp ::
   BaseLocateActions m ->
   HttpLocateOpts ->
   Locator ->
-  m (Either LocateException LocateResult)
+  m (Either LocateException [ElementId])
 locateFirstHttp catch findElm' findElms' actions opts locator =
   locateHttp catch findElm' findElms' actions opts{singletonCardinality = First} locator
 
@@ -201,7 +199,7 @@ locateFromElementHttp ::
   -- | root element
   ElementId ->
   Locator ->
-  m (Either LocateException LocateResult)
+  m (Either LocateException [ElementId])
 locateFromElementHttp catch findElmFrom' findElmsFrom' actions opts rootId locator =
   either
     (pure . Left . InvalidLocator)
@@ -232,11 +230,11 @@ locateAllHttp ::
   BaseLocateActions m ->
   HttpLocateAllOpts ->
   Locator ->
-  m (Either LocateException LocateResult)
+  m (Either LocateException [ElementId])
 locateAllHttp catch findElms' actions opts locator =
   either
     (pure . Left . InvalidLocator)
-    (httpLocateAll catch findElms'' actions opts locator)
+    (\rloc -> httpLocateAll catch findElms'' actions opts rloc)
     preparedLoc
   where
     preparedLoc = prepareSimplify opts.defaultLocator HTTP locator >>= toHttpLocator
@@ -255,12 +253,12 @@ locateAllFromElementHttp ::
   -- | root element
   ElementId ->
   Locator ->
-  m (Either LocateException LocateResult)
+  m (Either LocateException [ElementId])
 locateAllFromElementHttp catch findElmsFrom' actions opts rootId locator =
-  either
-    (pure . Left . InvalidLocator)
-    (httpLocateAll catch findElms'' actions opts locator)
-    preparedLoc
+    preparedLoc &
+    either
+      (pure . Left . InvalidLocator)
+      (httpLocateAll catch findElms'' actions opts)
   where
     preparedLoc = prepareSimplify opts.defaultLocator HTTP locator >>= toHttpLocator
     withCatch' action = catch (Right <$> action) (pure . Left . DriverException)
@@ -402,21 +400,21 @@ httpLocateSingleton ::
   BaseLocateActions m ->
   HttpLocateOpts ->
   ReducedHttpLoc ->
-  m (Either (Locator -> LocateException) [ElementId])
+  m (Either LocatorExceptionBuilder [ElementId])
 httpLocateSingleton catch findElm' findElms' actions opts loc = do
   case loc of
     LeafHttp ll -> do
       lr <- locateLeafI findElm' findElms' actions recheckDisplayed' Nothing LeafMany secondPassOnInitial ll
       filtered <- chkElmsSingleton (displayChkAlways || isUnique && displayChkDisambiguate) lr
       case filtered of
-        Left e -> pure (Left e)
+        Left e -> pure (Left (const e))
         Right [] ->
           if opts.extendedRoleLocation == ExtLocateSingletonMiss && isRole
             then do
               missRetryRslt <- locateLeafI findElm' findElms' actions recheckDisplayed' Nothing LeafMany WantSecondPass ll
               retryChked <- chkElmsSingleton (displayChkAlways || displayChkDisambiguate) missRetryRslt
               case retryChked of
-                Left e -> pure (Left e)
+                Left e -> pure (Left $ const e)
                 Right [] -> notFoundErr
                 Right [x] -> mkLocResult [x]
                 Right (x : xs) ->
@@ -467,14 +465,12 @@ httpLocateAll ::
   FindElms m ->
   BaseLocateActions m ->
   HttpLocateAllOpts ->
-  Locator ->
   ReducedHttpLoc ->
-  m (Either LocateException LocateResult)
-httpLocateAll catch findElms' actions opts locator loc = do
+  m (Either LocateException [ElementId])
+httpLocateAll catch findElms' actions opts loc = do
   let recheckDisplayed' = isDisplayedHttp catch actions.executeScript
-      mkLocResult = pure . Right . MkLocateResult locator
-      -- findElm is not needed for locate-all; provide a stub that always fails
-      findElm' _ _ = pure . Left $ DriverException $ error "library defect: findElm called in locate-all context"
+      mkLocResult = pure . Right
+      findElm' _ _ = error "library defect: findElm called in locate-all context"
       secondPassOnInitial = case opts.extendedRoleLocation of
         ExtLocateAllNever -> NoSecondPass
         ExtLocateAllAlways -> WantSecondPass
