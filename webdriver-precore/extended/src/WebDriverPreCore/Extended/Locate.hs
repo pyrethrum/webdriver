@@ -1,9 +1,14 @@
 module WebDriverPreCore.Extended.Locate
   ( LocateException (..),
-    Cardinality (..),
+    SingletonCardinality (..),
     HttpLocateOpts (..),
+    HttpLocateAllOpts (..),
     BaseLocateActions (..),
-    locateHttp
+    locateHttp,
+    locateFirstHttp,
+    locateFromElementHttp,
+    locateAllHttp,
+    locateAllFromElementHttp
   )
 where
 
@@ -51,22 +56,32 @@ data LocateException
 
 instance Exception LocateException
 
-data Cardinality = Unique | First | Many deriving (Show, Eq)
+-- | Whether to find the unique element (error if multiple match) or just the first.
+data SingletonCardinality = Unique | First deriving (Show, Eq)
 
 data LeafCardinality = LeafFirst | LeafMany deriving (Show, Eq)
 
 data DisplayedCheck = DisplayedCheckNever | DisplayedCheckDisambiguateUnique | DisplayedCheckAlways deriving (Show, Eq)
 
-data ExtendedRoleLocate = ExtLocateNever | ExtLocateSingletonMiss | ExtLocateAlways deriving (Show, Eq)
+data ExtendedRoleLocateSingleton = ExtLocateSingletonNever | ExtLocateSingletonMiss | ExtLocateSingletonAlways deriving (Show, Eq)
+
+data ExtendedRoleLocateAll = ExtLocateAllNever | ExtLocateAllAlways deriving (Show, Eq)
 
 data RoleLocateSecondPass = WantSecondPass | NoSecondPass deriving (Show, Eq)
 
+-- | Options for singleton locate functions ('locateHttp', 'locateFromElementHttp').
 data HttpLocateOpts = MkHttpLocateOpts
   { jsRecheckDisplayed :: DisplayedCheck,
-    extendedRoleLocation :: ExtendedRoleLocate,
-    cardinality :: Cardinality,
-    defaultLocator :: Text -> Locator,
-    baseElement :: Maybe ElementId
+    extendedRoleLocation :: ExtendedRoleLocateSingleton,
+    singletonCardinality :: SingletonCardinality,
+    defaultLocator :: Text -> Locator
+  }
+
+-- | Options for multi-locate functions ('locateAllHttp', 'locateAllFromElementHttp').
+data HttpLocateAllOpts = MkHttpLocateAllOpts
+  { jsRecheckDisplayed :: DisplayedCheck,
+    extendedRoleLocation :: ExtendedRoleLocateAll,
+    defaultLocator :: Text -> Locator
   }
 
 data LocateResult
@@ -112,224 +127,364 @@ data LocateResult
 
 -- 11. adapt retries to Bidi
 
+-- | Shared actions that do not depend on find scope (element vs. root).
 data BaseLocateActions m = BaseLocateActions
-  { 
-    executeScript :: Script -> m Value,
-    findElement :: Selector -> m ElementId,
-    findElementFromElement :: ElementId -> Selector -> m ElementId,
-    findElements :: Selector -> m [ElementId],
-    findElementsFromElement :: ElementId -> Selector -> m [ElementId],
+  { executeScript :: Script -> m Value,
     getElementAttribute :: ElementId -> Text -> m (Maybe Text),
     getElementText :: ElementId -> m Text
   }
 
+-- ---------------------------------------------------------------------------
+-- Public API
+-- ---------------------------------------------------------------------------
+
+-- | Locate a unique or first-matching element from the document root.
 locateHttp ::
   forall m.
   (Monad m) =>
   -- | catch exceptions
   (forall a e. (HasCallStack, Exception e) => m a -> (e -> m a) -> m a) ->
-  -- | locate actions
+  -- | find a single element by selector
+  (Selector -> m ElementId) ->
+  -- | find multiple elements by selector
+  (Selector -> m [ElementId]) ->
+  -- | shared locate actions
   BaseLocateActions m ->
   -- | locate opts
   HttpLocateOpts ->
   -- | locator
   Locator ->
   m (Either LocateException LocateResult)
-locateHttp catch actions opts locator =
+locateHttp catch findElm' findElms' actions opts locator =
   either
     (pure . Left . InvalidLocator)
-    httpLocate
+    (httpLocateSingleton catch findElm'' findElms'' actions opts locator)
     preparedLoc
   where
-    preparedLoc :: Either LI.InvalidLocator ReducedHttpLoc
     preparedLoc = prepareSimplify opts.defaultLocator HTTP locator >>= toHttpLocator
+    withCatch' :: forall a. m a -> m (Either LocateException a)
+    withCatch' action = catch (Right <$> action) (pure . Left . DriverException)
+    -- For root-scoped functions mRoot is Nothing at the top level; for sub-searches
+    -- within combinators it carries the container element. Since the caller only
+    -- provides root-level finders, we ignore the sub-root (combinators handle
+    -- scoping via the fromElement variants).
+    findElm'' :: FindElm m
+    findElm'' _ sel = withCatch' $ findElm' sel
+    findElms'' :: FindElms m
+    findElms'' _ sel = withCatch' $ findElms' sel
 
-    notFoundErr :: m (Either LocateException LocateResult)
-    notFoundErr = pure . Left $ ElementNotFound {description = "No element found matching locator.", locator}
+-- | Locate the first-matching element from the document root.
+locateFirstHttp ::
+  forall m.
+  (Monad m) =>
+  (forall a e. (HasCallStack, Exception e) => m a -> (e -> m a) -> m a) ->
+  (Selector -> m ElementId) ->
+  (Selector -> m [ElementId]) ->
+  BaseLocateActions m ->
+  HttpLocateOpts ->
+  Locator ->
+  m (Either LocateException LocateResult)
+locateFirstHttp catch findElm' findElms' actions opts locator =
+  locateHttp catch findElm' findElms' actions opts{singletonCardinality = First} locator
 
-    throwAmbiguous :: [ElementId] -> m (Either LocateException LocateResult)
-    throwAmbiguous elms = pure . Left $ AmbiguousLocator {description = "Multiple elements found matching locator: " <> txt elms, locator}
-
-    mkLocResult :: [ElementId] -> m (Either LocateException LocateResult)
-    mkLocResult = pure . Right . MkLocateResult locator
-
-    withCatch :: forall a. m a -> m (Either LocateException a)
-    withCatch action = catch (Right <$> action) (pure . Left . DriverException)
-
-    getAttribute :: ElementId -> Text -> m (Maybe Text)
-    getAttribute = actions.getElementAttribute
-
-    findElm :: Maybe ElementId -> Selector -> m (Either LocateException ElementId)
-    findElm mRoot sel =
+-- | Locate a unique or first-matching element rooted at a given element.
+locateFromElementHttp ::
+  forall m.
+  (Monad m) =>
+  (forall a e. (HasCallStack, Exception e) => m a -> (e -> m a) -> m a) ->
+  -- | find a single element by selector rooted at an element
+  (ElementId -> Selector -> m ElementId) ->
+  -- | find multiple elements by selector rooted at an element
+  (ElementId -> Selector -> m [ElementId]) ->
+  BaseLocateActions m ->
+  HttpLocateOpts ->
+  -- | root element
+  ElementId ->
+  Locator ->
+  m (Either LocateException LocateResult)
+locateFromElementHttp catch findElmFrom' findElmsFrom' actions opts rootId locator =
+  either
+    (pure . Left . InvalidLocator)
+    (httpLocateSingleton catch findElm'' findElms'' actions opts locator)
+    preparedLoc
+  where
+    preparedLoc = prepareSimplify opts.defaultLocator HTTP locator >>= toHttpLocator
+    withCatch' :: forall a. m a -> m (Either LocateException a)
+    withCatch' action = catch (Right <$> action) (pure . Left . DriverException)
+    findElm'' :: FindElm m
+    findElm'' mRoot sel = maybe
+      (withCatch' $ findElmFrom' rootId sel)
+      (\subRoot -> withCatch' $ findElmFrom' subRoot sel)
       mRoot
-        & maybe
-          (withCatch $ actions.findElement sel)
-          (\rootId -> withCatch $ actions.findElementFromElement rootId sel)
-
-    findElms :: Maybe ElementId -> Selector -> m (Either LocateException [ElementId])
-    findElms mRoot s =
+    findElms'' :: FindElms m
+    findElms'' mRoot sel = maybe
+      (withCatch' $ findElmsFrom' rootId sel)
+      (\subRoot -> withCatch' $ findElmsFrom' subRoot sel)
       mRoot
-        & maybe
-          (withCatch $ actions.findElements s)
-          (\rootId -> withCatch $ actions.findElementsFromElement rootId s)
 
-    recheckDisplayed :: ElementId -> m (Either LocateException Bool)
-    recheckDisplayed = isDisplayedHttp catch actions.executeScript
+-- | Locate all matching elements from the document root.
+locateAllHttp ::
+  forall m.
+  (Monad m) =>
+  (forall a e. (HasCallStack, Exception e) => m a -> (e -> m a) -> m a) ->
+  -- | find multiple elements by selector
+  (Selector -> m [ElementId]) ->
+  BaseLocateActions m ->
+  HttpLocateAllOpts ->
+  Locator ->
+  m (Either LocateException LocateResult)
+locateAllHttp catch findElms' actions opts locator =
+  either
+    (pure . Left . InvalidLocator)
+    (httpLocateAll catch findElms'' actions opts locator)
+    preparedLoc
+  where
+    preparedLoc = prepareSimplify opts.defaultLocator HTTP locator >>= toHttpLocator
+    withCatch' action = catch (Right <$> action) (pure . Left . DriverException)
+    findElms'' _ sel = withCatch' $ findElms' sel
 
-    jsFilterDisplayed :: [ElementId] -> m (Either LocateException [ElementId])
-    jsFilterDisplayed elms = do
-      results <- traverse doCheck elms
-      pure $ fmap (fmap fst . P.filter snd) (sequence results)
-      where
-        doCheck elm = fmap (elm,) <$> recheckDisplayed elm
+-- | Locate all matching elements rooted at a given element.
+locateAllFromElementHttp ::
+  forall m.
+  (Monad m) =>
+  (forall a e. (HasCallStack, Exception e) => m a -> (e -> m a) -> m a) ->
+  -- | find multiple elements by selector rooted at an element
+  (ElementId -> Selector -> m [ElementId]) ->
+  BaseLocateActions m ->
+  HttpLocateAllOpts ->
+  -- | root element
+  ElementId ->
+  Locator ->
+  m (Either LocateException LocateResult)
+locateAllFromElementHttp catch findElmsFrom' actions opts rootId locator =
+  either
+    (pure . Left . InvalidLocator)
+    (httpLocateAll catch findElms'' actions opts locator)
+    preparedLoc
+  where
+    preparedLoc = prepareSimplify opts.defaultLocator HTTP locator >>= toHttpLocator
+    withCatch' action = catch (Right <$> action) (pure . Left . DriverException)
+    findElms'' mRoot sel = maybe
+      (withCatch' $ findElmsFrom' rootId sel)
+      (\subRoot -> withCatch' $ findElmsFrom' subRoot sel)
+      mRoot
 
-    locateAll :: Maybe ElementId -> Selector -> m (Either LocateException [ElementId])
-    locateAll mRoot s = findElms mRoot s -- >>= filterDisplayedIf Always
+-- ---------------------------------------------------------------------------
+-- Internal shared helpers
+-- ---------------------------------------------------------------------------
 
-    -- finds leaf without display filtering
-    locateLeaf :: Maybe ElementId -> LeafCardinality -> RoleLocateSecondPass -> LeafLoc -> m (Either LocateException [ElementId])
-    locateLeaf mRoot leafCardinality rolesSecondPass loc = do
-      let findFirst = leafCardinality == LeafFirst
-      firstPass <-
-        ( if findFirst
-            then fmap (fmap pure) . findElm mRoot
-            else locateAll mRoot
-        )
-          (toSelector loc)
-      let baseResult = pure firstPass
-      case loc of
-        RL.CSS {} -> baseResult
-        RL.XPath {} -> baseResult
-        RL.BiDiNative sl -> case sl of
-          Role {role} -> do
-            if rolesSecondPass == NoSecondPass
-              then baseResult
-              else fmap Right $ roleToXPathHttpSecondPass locateAllLenient getAttribute actions.getElementText mRoot findFirst role
-          InnerText {} -> baseResult
-      where
-        locateAllLenient r s = locateAll r s >>= pure . either (const []) id
+type FindElm m = Maybe ElementId -> Selector -> m (Either LocateException ElementId)
+type FindElms m = Maybe ElementId -> Selector -> m (Either LocateException [ElementId])
 
-    chkRefilterSingleton ::
-      [ElementId] ->
-      m (Either LocateException [ElementId])
-    chkRefilterSingleton elmIds =
-      chkkSingleton' True elmIds
-      where
-        chkkSingleton' recheckAmbiguous' =
-          \case
-            [] -> pure (Right [])
-            [x] -> pure (Right [x])
-            xs ->
-              recheckAmbiguous'
-                & bool
-                  (pure (Right xs))
-                  (jsFilterDisplayed xs >>= either (pure . Left) (chkkSingleton' False))
+jsFilterDisplayedI ::
+  forall m.
+  (Monad m) =>
+  (ElementId -> m (Either LocateException Bool)) ->
+  [ElementId] ->
+  m (Either LocateException [ElementId])
+jsFilterDisplayedI recheckDisplayed' elms = do
+  results <- traverse doCheck elms
+  pure $ fmap (fmap fst . P.filter snd) (sequence results)
+  where
+    doCheck elm = fmap (elm,) <$> recheckDisplayed' elm
 
-    -- single shot base locate
-    locateElmsUnchecked :: Maybe ElementId -> LeafCardinality -> RoleLocateSecondPass -> ReducedHttpLoc -> m (Either LocateException [ElementId])
-    locateElmsUnchecked mRoot leafCardinality rolesSecondPass =
-      fmap (fmap LST.nub)
-        . \case
-          LeafHttp cl ->
-            -- need to find all elms for combinator and later checks and retries
-            locateLeaf mRoot leafCardinality rolesSecondPass cl
-          CombintorHttp cb -> case cb of
-            Contains {container, contained} -> do
-              eContainers <- locate LeafMany rolesSecondPass container
-              case eContainers of
+locateAllI :: FindElms m -> Maybe ElementId -> Selector -> m (Either LocateException [ElementId])
+locateAllI findElms' mRoot s = findElms' mRoot s
+
+-- finds leaf without display filtering
+locateLeafI ::
+  forall m.
+  (Monad m) =>
+  FindElm m ->
+  FindElms m ->
+  BaseLocateActions m ->
+  (ElementId -> m (Either LocateException Bool)) ->
+  Maybe ElementId ->
+  LeafCardinality ->
+  RoleLocateSecondPass ->
+  LeafLoc ->
+  m (Either LocateException [ElementId])
+locateLeafI findElm' findElms' actions _recheckDisplayed mRoot leafCardinality rolesSecondPass loc = do
+  let findFirst = leafCardinality == LeafFirst
+  firstPass <-
+    ( if findFirst
+        then fmap (fmap pure) . findElm' mRoot
+        else locateAllI findElms' mRoot
+    )
+      (toSelector loc)
+  let baseResult = pure firstPass
+  case loc of
+    RL.CSS {} -> baseResult
+    RL.XPath {} -> baseResult
+    RL.BiDiNative sl -> case sl of
+      Role {role} ->
+        if rolesSecondPass == NoSecondPass
+          then baseResult
+          else fmap Right $ roleToXPathHttpSecondPass locateAllLenient actions.getElementAttribute actions.getElementText mRoot findFirst role
+      InnerText {} -> baseResult
+  where
+    locateAllLenient r s = locateAllI findElms' r s >>= pure . either (const []) id
+
+chkRefilterSingletonI ::
+  forall m.
+  (Monad m) =>
+  (ElementId -> m (Either LocateException Bool)) ->
+  [ElementId] ->
+  m (Either LocateException [ElementId])
+chkRefilterSingletonI recheckDisplayed' elmIds =
+  chkkSingleton' True elmIds
+  where
+    chkkSingleton' recheckAmbiguous' =
+      \case
+        [] -> pure (Right [])
+        [x] -> pure (Right [x])
+        xs ->
+          recheckAmbiguous'
+            & bool
+              (pure (Right xs))
+              (jsFilterDisplayedI recheckDisplayed' xs >>= either (pure . Left) (chkkSingleton' False))
+
+-- single shot base locate (all cardinality)
+locateElmsUncheckedI ::
+  forall m.
+  (Monad m) =>
+  FindElm m ->
+  FindElms m ->
+  BaseLocateActions m ->
+  (ElementId -> m (Either LocateException Bool)) ->
+  Maybe ElementId ->
+  LeafCardinality ->
+  RoleLocateSecondPass ->
+  ReducedHttpLoc ->
+  m (Either LocateException [ElementId])
+locateElmsUncheckedI findElm' findElms' actions recheckDisplayed' mRoot leafCardinality rolesSecondPass =
+  fmap (fmap LST.nub)
+    . \case
+      LeafHttp cl ->
+        locateLeafI findElm' findElms' actions recheckDisplayed' mRoot leafCardinality rolesSecondPass cl
+      CombintorHttp cb -> case cb of
+        Contains {container, contained} -> do
+          eContainers <- locate LeafMany rolesSecondPass container
+          case eContainers of
+            Left e -> pure (Left e)
+            Right containers -> locateContained containers contained
+        All {elms = locs} -> do
+          let (l :| ls) = locs
+              step eAcc loc = case eAcc of
                 Left e -> pure (Left e)
-                Right containers -> locateContained containers contained
-            All {elms = locs} -> do
-              let (l :| ls) = locs
-                  step eAcc loc = case eAcc of
-                    Left e -> pure (Left e)
-                    Right acc
-                      | P.null acc -> pure (Right [])
-                      | otherwise -> fmap (fmap (LST.intersect acc)) (locate LeafMany rolesSecondPass loc)
-              initial <- locate LeafMany rolesSecondPass l
-              foldM step initial ls
-            Any {elms = locs} ->
-              fmap (fmap join . sequence) $
-                traverse (locate LeafMany rolesSecondPass) (toList locs)
-          PostFilterHttpLoc {} -> postfilterNotImplemented
-      where
-        locate = locateElmsUnchecked mRoot
+                Right acc
+                  | P.null acc -> pure (Right [])
+                  | otherwise -> fmap (fmap (LST.intersect acc)) (locate LeafMany rolesSecondPass loc)
+          initial <- locate LeafMany rolesSecondPass l
+          foldM step initial ls
+        Any {elms = locs} ->
+          fmap (fmap join . sequence) $
+            traverse (locate LeafMany rolesSecondPass) (toList locs)
+      PostFilterHttpLoc {} -> postfilterNotImplemented
+  where
+    locate = locateElmsUncheckedI findElm' findElms' actions recheckDisplayed' mRoot
 
-        locateContained :: [ElementId] -> ReducedHttpLoc -> m (Either LocateException [ElementId])
-        locateContained containerIds subLoc = do
-          -- for each container, locate contained with root of container element, and combine results
-          containedResults <- traverse (\rootId -> locateElmsUnchecked (Just rootId) LeafMany rolesSecondPass subLoc) containerIds
-          pure . fmap join . sequence $ containedResults
+    locateContained :: [ElementId] -> ReducedHttpLoc -> m (Either LocateException [ElementId])
+    locateContained containerIds subLoc = do
+      containedResults <- traverse (\rootId -> locateElmsUncheckedI findElm' findElms' actions recheckDisplayed' (Just rootId) LeafMany rolesSecondPass subLoc) containerIds
+      pure . fmap join . sequence $ containedResults
 
-    httpLocate :: ReducedHttpLoc -> m (Either LocateException LocateResult)
-    httpLocate loc =
-      case loc of
-        LeafHttp ll -> do
-          lr <- locateLeaf opts.baseElement leafCardinality secondPassOnInitial ll
-          filtered <- chkElmsSingleton (displayChkAlways || opts.cardinality == Unique && displayChkDisambiguate) lr
+-- ---------------------------------------------------------------------------
+-- Internal locate implementations
+-- ---------------------------------------------------------------------------
 
-          case filtered of
-            Left e -> pure (Left e)
-            Right [] ->
-              -- rerun with role second pass on miss (try to find one or more matches)
-              if wantSingleton && isRole && opts.extendedRoleLocation == ExtLocateSingletonMiss
-                then do
-                  missRetryRslt <- locateLeaf opts.baseElement leafCardinality WantSecondPass ll
-                  retryChked <- chkElmsSingleton (displayChkAlways || displayChkDisambiguate) missRetryRslt
-                  case retryChked of
-                    Left e -> pure (Left e)
-                    Right [] -> notFoundErr
-                    Right [x] -> mkLocResult [x]
-                    Right (x : xs) ->
-                      case opts.cardinality of
-                        Unique -> throwAmbiguous xs
-                        First -> mkLocResult [x]
-                        Many ->
-                          -- should never be here due to wantSingleton check
-                          error "library defect - locateHttp: unexpected multiple results on singleton retry with extended role location"
-                else
-                  if wantSingleton
-                    then notFoundErr
-                    else mkLocResult []
-            Right [x] -> mkLocResult [x]
-            Right elms@(x : _xs) ->
-              case opts.cardinality of
-                Unique -> throwAmbiguous elms
-                First -> mkLocResult [x]
-                Many -> mkLocResult elms
-        PostFilterHttpLoc {} ->
-          -- will neeed to postfilter &&& all
-          postfilterNotImplemented
-        CombintorHttp {} ->
-          locateElmsUnchecked opts.baseElement leafCardinality secondPassOnInitial loc >>= either (pure . Left) mkLocResult
-      where
-        chkElmsSingleton doChk eElms =
-          case eElms of
-            Left e -> pure (Left e)
-            Right elms ->
-              if doChk
-                then chkRefilterSingleton elms
-                else pure (Right elms)
-        wantSingleton = case opts.cardinality of
-          Unique -> True
-          First -> True
-          Many -> False
-        displayChkAlways = opts.jsRecheckDisplayed == DisplayedCheckAlways
-        displayChkDisambiguate = opts.jsRecheckDisplayed == DisplayedCheckDisambiguateUnique
-        isRole = case loc of
-          LeafHttp (RL.BiDiNative (Role {})) -> True
-          _ -> False
-        secondPassOnInitial =
-          case opts.extendedRoleLocation of
-            ExtLocateNever -> NoSecondPass
-            ExtLocateSingletonMiss -> NoSecondPass
-            ExtLocateAlways -> WantSecondPass
-        leafCardinality =
-          case opts.cardinality of
-            First -> LeafFirst
-            -- need to find all to check uniqueness
-            Unique -> LeafMany
-            Many -> LeafMany
+httpLocateSingleton ::
+  forall m.
+  (Monad m) =>
+  (forall a e. (HasCallStack, Exception e) => m a -> (e -> m a) -> m a) ->
+  FindElm m ->
+  FindElms m ->
+  BaseLocateActions m ->
+  HttpLocateOpts ->
+  ReducedHttpLoc ->
+  m (Either (Locator -> LocateException) [ElementId])
+httpLocateSingleton catch findElm' findElms' actions opts loc = do
+  case loc of
+    LeafHttp ll -> do
+      lr <- locateLeafI findElm' findElms' actions recheckDisplayed' Nothing LeafMany secondPassOnInitial ll
+      filtered <- chkElmsSingleton (displayChkAlways || isUnique && displayChkDisambiguate) lr
+      case filtered of
+        Left e -> pure (Left e)
+        Right [] ->
+          if opts.extendedRoleLocation == ExtLocateSingletonMiss && isRole
+            then do
+              missRetryRslt <- locateLeafI findElm' findElms' actions recheckDisplayed' Nothing LeafMany WantSecondPass ll
+              retryChked <- chkElmsSingleton (displayChkAlways || displayChkDisambiguate) missRetryRslt
+              case retryChked of
+                Left e -> pure (Left e)
+                Right [] -> notFoundErr
+                Right [x] -> mkLocResult [x]
+                Right (x : xs) ->
+                  if isUnique
+                    then throwAmbiguous xs
+                    else mkLocResult [x]
+            else notFoundErr
+        Right [x] -> mkLocResult [x]
+        Right elms@(x : _xs) ->
+          if isUnique
+            then throwAmbiguous elms
+            else mkLocResult [x]
+    PostFilterHttpLoc {} ->
+      postfilterNotImplemented
+    CombintorHttp {} ->
+      locateElmsUncheckedI findElm' findElms' actions recheckDisplayed' Nothing LeafMany secondPassOnInitial loc
+  where
+      recheckDisplayed' = isDisplayedHttp catch actions.executeScript
+
+      notFoundErr  :: m (Either (Locator -> LocateException) [ElementId])
+      notFoundErr = pure . Left $ (ElementNotFound "No element found matching locator.")
+      
+      throwAmbiguous elms = pure . Left $ (AmbiguousLocator ("Multiple elements found matching locator: " <> txt elms))
+      mkLocResult = pure . Right 
+      displayChkAlways = opts.jsRecheckDisplayed == DisplayedCheckAlways
+      displayChkDisambiguate = opts.jsRecheckDisplayed == DisplayedCheckDisambiguateUnique
+      isUnique = opts.singletonCardinality == Unique
+      isRole = case loc of
+        LeafHttp (RL.BiDiNative (Role {})) -> True
+        _ -> False
+      secondPassOnInitial = case opts.extendedRoleLocation of
+        ExtLocateSingletonNever -> NoSecondPass
+        ExtLocateSingletonMiss -> NoSecondPass
+        ExtLocateSingletonAlways -> WantSecondPass
+      -- for singleton we always need all to check uniqueness
+      chkElmsSingleton doChk eElms =
+        case eElms of
+          Left e -> pure (Left e)
+          Right elms ->
+            if doChk
+              then chkRefilterSingletonI recheckDisplayed' elms
+              else pure (Right elms)
+
+httpLocateAll ::
+  forall m.
+  (Monad m) =>
+  (forall a e. (HasCallStack, Exception e) => m a -> (e -> m a) -> m a) ->
+  FindElms m ->
+  BaseLocateActions m ->
+  HttpLocateAllOpts ->
+  Locator ->
+  ReducedHttpLoc ->
+  m (Either LocateException LocateResult)
+httpLocateAll catch findElms' actions opts locator loc = do
+  let recheckDisplayed' = isDisplayedHttp catch actions.executeScript
+      mkLocResult = pure . Right . MkLocateResult locator
+      -- findElm is not needed for locate-all; provide a stub that always fails
+      findElm' _ _ = pure . Left $ DriverException $ error "library defect: findElm called in locate-all context"
+      secondPassOnInitial = case opts.extendedRoleLocation of
+        ExtLocateAllNever -> NoSecondPass
+        ExtLocateAllAlways -> WantSecondPass
+  result <- locateElmsUncheckedI findElm' findElms' actions recheckDisplayed' Nothing LeafMany secondPassOnInitial loc
+  case result of
+    Left e -> pure (Left e)
+    Right elms ->
+      if opts.jsRecheckDisplayed == DisplayedCheckAlways
+        then jsFilterDisplayedI recheckDisplayed' elms >>= either (pure . Left) mkLocResult
+        else mkLocResult elms
 
 postfilterNotImplemented :: a
 postfilterNotImplemented = error "PostFilter locators are not yet implemented in HTTP WebDriver"
