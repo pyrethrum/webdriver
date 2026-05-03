@@ -24,13 +24,6 @@ import Prelude hiding (log)
 _runHttpTest :: (forall (es :: [Effect]).  (IOE :> es, Logger :> es, Pause :> es, WebDriverHttp :> es) =>  Eff es ()) -> IO ()
 _runHttpTest = runHttpTest
 
--- | HTTP-only demo:
---
---   * Navigates to the login page
---   * Fills in username and password via 'HTTP.elementSendKeys'
---   * Navigates to the colourful content page
---   * Gets and logs the page title
---
 -- >>> runHttpTest http_login_navigation_demo
 http_login_navigation_demo :: (Logger :> es, WebDriverHttp :> es, IOE :> es, Pause :> es) => Eff es ()
 http_login_navigation_demo = do

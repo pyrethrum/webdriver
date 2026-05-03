@@ -49,14 +49,6 @@ import WebDriverPreCore.BiDi.Protocol
 import WebDriverPreCore.Test.TestData (loginUrl)
 import Prelude hiding (log)
 
--- | BiDi version of the login demo:
---
---   * Subscribes to @browsingContext.domContentLoaded@ with a 'TMVar' callback
---   * Navigates to the login page
---   * Waits for the @domContentLoaded@ event (with a 10-second timeout)
---   * Locates the @#username@ field via BiDi @locateNodes@
---   * Types @effectful-user@ into the field via BiDi key actions
---
 -- >>> runBiDiTest bidi_login_demo
 bidi_login_demo :: (Logger :> es, WebDriverBiDi :> es, IOE :> es, Pause :> es) => Eff es ()
 bidi_login_demo = do
