@@ -19,6 +19,7 @@
 - [ ] harmonise isolate logging
 - [ ] resplit the libraries 
   - [ ] work out a way to work with as one
+  - [ ] format - formatter not working
   - [ ] run hlint
 - [ ] devops 
   - [ ] resplit packages

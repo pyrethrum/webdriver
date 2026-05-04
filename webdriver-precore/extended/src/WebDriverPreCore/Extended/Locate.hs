@@ -42,6 +42,13 @@ import Prelude as P
 import Utils (txt)
 import Data.Bifunctor (first, Bifunctor (bimap))
 
+data PreLocateException
+  = AmbiguousLocator'  Text
+  | ElementNotFound' Text
+  | InvalidLocator' LI.InvalidLocator
+  | DriverException' WebDriverException
+  deriving (Show, Eq)
+
 data LocateException
   = AmbiguousLocator
       { description :: Text,
@@ -52,12 +59,23 @@ data LocateException
         locator :: Locator
       }
   | InvalidLocator LI.InvalidLocator
-  | DriverException WebDriverException
+  | DriverException {
+      driverException :: WebDriverException,
+      locator :: Locator
+    }
   deriving (Show, Eq)
 
-instance Exception LocateException
+converLeftException :: forall a m. Functor m => Locator -> m (Either PreLocateException a) ->  m (Either LocateException a)
+converLeftException  locator action = 
+  first convert <$> action
+  where 
+    convert = \case 
+      AmbiguousLocator' desc -> AmbiguousLocator desc locator
+      ElementNotFound' desc -> ElementNotFound desc locator
+      InvalidLocator' e -> InvalidLocator e
+      DriverException' e -> DriverException e locator
 
-type LocatorExceptionBuilder = Locator -> LocateException
+instance Exception LocateException
 
 -- | Whether to find the unique element (error if multiple match) or just the first.
 data SingletonCardinality = Unique | First deriving (Show, Eq)
@@ -155,21 +173,21 @@ locateHttp catch findElm' findElms' actions opts locator =
   preparedLoc &
   either
     (pure . Left . InvalidLocator)
-    (\rloc -> (first (locator &)) <$> httpLocateSingleton catch findElm'' findElms'' actions opts rloc)
+    (converLeftException locator . httpLocateSingleton catch findElm'' findElms'' actions opts)
   
   where
 
     preparedLoc = prepareSimplify opts.defaultLocator HTTP locator >>= toHttpLocator
-    withCatch' :: forall a. m a -> m (Either LocateException a)
-    withCatch' action = catch (Right <$> action) (pure . Left . DriverException)
+    try' :: forall a. m a -> m (Either PreLocateException a)
+    try' = mkTry catch
     -- For root-scoped functions mRoot is Nothing at the top level; for sub-searches
     -- within combinators it carries the container element. Since the caller only
     -- provides root-level finders, we ignore the sub-root (combinators handle
     -- scoping via the fromElement variants).
     findElm'' :: FindElm m
-    findElm'' _ sel = withCatch' $ findElm' sel
+    findElm'' _ sel = try' $ findElm' sel
     findElms'' :: FindElms m
-    findElms'' _ sel = withCatch' $ findElms' sel
+    findElms'' _ sel = try' $ findElms' sel
 
 -- | Locate the first-matching element from the document root.
 locateFirstHttp ::
@@ -203,21 +221,23 @@ locateFromElementHttp ::
 locateFromElementHttp catch findElmFrom' findElmsFrom' actions opts rootId locator =
   either
     (pure . Left . InvalidLocator)
-    (httpLocateSingleton catch findElm'' findElms'' actions opts locator)
+    (converLeftException locator . httpLocateSingleton catch findElm'' findElms'' actions opts)
     preparedLoc
   where
     preparedLoc = prepareSimplify opts.defaultLocator HTTP locator >>= toHttpLocator
-    withCatch' :: forall a. m a -> m (Either LocateException a)
-    withCatch' action = catch (Right <$> action) (pure . Left . DriverException)
+    try' :: forall a. m a -> m (Either PreLocateException a)
+    try' = mkTry catch
     findElm'' :: FindElm m
-    findElm'' mRoot sel = maybe
-      (withCatch' $ findElmFrom' rootId sel)
-      (\subRoot -> withCatch' $ findElmFrom' subRoot sel)
+    findElm'' mRoot sel = 
+      try' $ maybe
+      (findElmFrom' rootId sel)
+      (flip findElmFrom' sel)
       mRoot
     findElms'' :: FindElms m
-    findElms'' mRoot sel = maybe
-      (withCatch' $ findElmsFrom' rootId sel)
-      (\subRoot -> withCatch' $ findElmsFrom' subRoot sel)
+    findElms'' mRoot sel = 
+      try' $ maybe
+      (findElmsFrom' rootId sel)
+      (\subRoot -> findElmsFrom' subRoot sel)
       mRoot
 
 -- | Locate all matching elements from the document root.
@@ -234,12 +254,11 @@ locateAllHttp ::
 locateAllHttp catch findElms' actions opts locator =
   either
     (pure . Left . InvalidLocator)
-    (\rloc -> httpLocateAll catch findElms'' actions opts rloc)
+    ( converLeftException locator . httpLocateAll catch findElms'' actions opts)
     preparedLoc
   where
     preparedLoc = prepareSimplify opts.defaultLocator HTTP locator >>= toHttpLocator
-    withCatch' action = catch (Right <$> action) (pure . Left . DriverException)
-    findElms'' _ sel = withCatch' $ findElms' sel
+    findElms'' _ sel = mkTry catch $ findElms' sel
 
 -- | Locate all matching elements rooted at a given element.
 locateAllFromElementHttp ::
@@ -258,35 +277,38 @@ locateAllFromElementHttp catch findElmsFrom' actions opts rootId locator =
     preparedLoc &
     either
       (pure . Left . InvalidLocator)
-      (httpLocateAll catch findElms'' actions opts)
+      (converLeftException locator . httpLocateAll catch findElms'' actions opts)
   where
     preparedLoc = prepareSimplify opts.defaultLocator HTTP locator >>= toHttpLocator
-    withCatch' action = catch (Right <$> action) (pure . Left . DriverException)
+    try' = mkTry catch
     findElms'' mRoot sel = maybe
-      (withCatch' $ findElmsFrom' rootId sel)
-      (\subRoot -> withCatch' $ findElmsFrom' subRoot sel)
+      (try' $ findElmsFrom' rootId sel)
+      (\subRoot -> try' $ findElmsFrom' subRoot sel)
       mRoot
 
 -- ---------------------------------------------------------------------------
 -- Internal shared helpers
 -- ---------------------------------------------------------------------------
 
-type FindElm m = Maybe ElementId -> Selector -> m (Either LocateException ElementId)
-type FindElms m = Maybe ElementId -> Selector -> m (Either LocateException [ElementId])
+type FindElm m = Maybe ElementId -> Selector -> m (Either PreLocateException ElementId)
+type FindElms m = Maybe ElementId -> Selector -> m (Either PreLocateException [ElementId])
+
+mkTry :: forall m a. Applicative m => (forall b e. (HasCallStack, Exception e) => m b -> (e -> m b) -> m b) -> (m a -> m (Either PreLocateException a))
+mkTry catch action = catch (Right <$> action) (pure . Left . DriverException')
 
 jsFilterDisplayedI ::
   forall m.
   (Monad m) =>
-  (ElementId -> m (Either LocateException Bool)) ->
+  (ElementId -> m (Either PreLocateException Bool)) ->
   [ElementId] ->
-  m (Either LocateException [ElementId])
+  m (Either PreLocateException [ElementId])
 jsFilterDisplayedI recheckDisplayed' elms = do
   results <- traverse doCheck elms
   pure $ fmap (fmap fst . P.filter snd) (sequence results)
   where
     doCheck elm = fmap (elm,) <$> recheckDisplayed' elm
 
-locateAllI :: FindElms m -> Maybe ElementId -> Selector -> m (Either LocateException [ElementId])
+locateAllI :: FindElms m -> Maybe ElementId -> Selector -> m (Either PreLocateException [ElementId])
 locateAllI findElms' mRoot s = findElms' mRoot s
 
 -- finds leaf without display filtering
@@ -296,12 +318,12 @@ locateLeafI ::
   FindElm m ->
   FindElms m ->
   BaseLocateActions m ->
-  (ElementId -> m (Either LocateException Bool)) ->
+  (ElementId -> m (Either PreLocateException Bool)) ->
   Maybe ElementId ->
   LeafCardinality ->
   RoleLocateSecondPass ->
   LeafLoc ->
-  m (Either LocateException [ElementId])
+  m (Either PreLocateException [ElementId])
 locateLeafI findElm' findElms' actions _recheckDisplayed mRoot leafCardinality rolesSecondPass loc = do
   let findFirst = leafCardinality == LeafFirst
   firstPass <-
@@ -326,9 +348,9 @@ locateLeafI findElm' findElms' actions _recheckDisplayed mRoot leafCardinality r
 chkRefilterSingletonI ::
   forall m.
   (Monad m) =>
-  (ElementId -> m (Either LocateException Bool)) ->
+  (ElementId -> m (Either PreLocateException Bool)) ->
   [ElementId] ->
-  m (Either LocateException [ElementId])
+  m (Either PreLocateException [ElementId])
 chkRefilterSingletonI recheckDisplayed' elmIds =
   chkkSingleton' True elmIds
   where
@@ -349,12 +371,12 @@ locateElmsUncheckedI ::
   FindElm m ->
   FindElms m ->
   BaseLocateActions m ->
-  (ElementId -> m (Either LocateException Bool)) ->
+  (ElementId -> m (Either PreLocateException Bool)) ->
   Maybe ElementId ->
   LeafCardinality ->
   RoleLocateSecondPass ->
   ReducedHttpLoc ->
-  m (Either LocateException [ElementId])
+  m (Either PreLocateException [ElementId])
 locateElmsUncheckedI findElm' findElms' actions recheckDisplayed' mRoot leafCardinality rolesSecondPass =
   fmap (fmap LST.nub)
     . \case
@@ -382,7 +404,7 @@ locateElmsUncheckedI findElm' findElms' actions recheckDisplayed' mRoot leafCard
   where
     locate = locateElmsUncheckedI findElm' findElms' actions recheckDisplayed' mRoot
 
-    locateContained :: [ElementId] -> ReducedHttpLoc -> m (Either LocateException [ElementId])
+    locateContained :: [ElementId] -> ReducedHttpLoc -> m (Either PreLocateException [ElementId])
     locateContained containerIds subLoc = do
       containedResults <- traverse (\rootId -> locateElmsUncheckedI findElm' findElms' actions recheckDisplayed' (Just rootId) LeafMany rolesSecondPass subLoc) containerIds
       pure . fmap join . sequence $ containedResults
@@ -400,21 +422,21 @@ httpLocateSingleton ::
   BaseLocateActions m ->
   HttpLocateOpts ->
   ReducedHttpLoc ->
-  m (Either LocatorExceptionBuilder [ElementId])
+  m (Either PreLocateException [ElementId])
 httpLocateSingleton catch findElm' findElms' actions opts loc = do
   case loc of
     LeafHttp ll -> do
       lr <- locateLeafI findElm' findElms' actions recheckDisplayed' Nothing LeafMany secondPassOnInitial ll
       filtered <- chkElmsSingleton (displayChkAlways || isUnique && displayChkDisambiguate) lr
       case filtered of
-        Left e -> pure (Left (const e))
+        Left e -> pure (Left e)
         Right [] ->
           if opts.extendedRoleLocation == ExtLocateSingletonMiss && isRole
             then do
               missRetryRslt <- locateLeafI findElm' findElms' actions recheckDisplayed' Nothing LeafMany WantSecondPass ll
               retryChked <- chkElmsSingleton (displayChkAlways || displayChkDisambiguate) missRetryRslt
               case retryChked of
-                Left e -> pure (Left $ const e)
+                Left e -> pure (Left e)
                 Right [] -> notFoundErr
                 Right [x] -> mkLocResult [x]
                 Right (x : xs) ->
@@ -434,10 +456,10 @@ httpLocateSingleton catch findElm' findElms' actions opts loc = do
   where
       recheckDisplayed' = isDisplayedHttp catch actions.executeScript
 
-      notFoundErr  :: m (Either (Locator -> LocateException) [ElementId])
-      notFoundErr = pure . Left $ (ElementNotFound "No element found matching locator.")
+      notFoundErr  :: m (Either PreLocateException [ElementId])
+      notFoundErr = pure . Left $ (ElementNotFound' "No element found matching locator.")
       
-      throwAmbiguous elms = pure . Left $ (AmbiguousLocator ("Multiple elements found matching locator: " <> txt elms))
+      throwAmbiguous elms = pure . Left $ (AmbiguousLocator' ("Multiple elements found matching locator: " <> txt elms))
       mkLocResult = pure . Right 
       displayChkAlways = opts.jsRecheckDisplayed == DisplayedCheckAlways
       displayChkDisambiguate = opts.jsRecheckDisplayed == DisplayedCheckDisambiguateUnique
@@ -466,7 +488,7 @@ httpLocateAll ::
   BaseLocateActions m ->
   HttpLocateAllOpts ->
   ReducedHttpLoc ->
-  m (Either LocateException [ElementId])
+  m (Either PreLocateException [ElementId])
 httpLocateAll catch findElms' actions opts loc = do
   let recheckDisplayed' = isDisplayedHttp catch actions.executeScript
       mkLocResult = pure . Right
@@ -558,13 +580,13 @@ isDisplayedHttp ::
   (Script -> m Value) ->
   -- | element to check
   ElementId ->
-  m (Either LocateException Bool)
+  m (Either PreLocateException Bool)
 isDisplayedHttp catch execScript eid =
   catch
     (Right . toBool <$> execScript MkScript {script = displayedJS, args = [toJSON eid]})
     -- if any error occurs when checking displayed, assume element is displayed
     -- eg. if element becomes stale between finding and checking displayed, or if the driver does not support executeScript
-    (pure . Left . DriverException)
+    (pure . Left . DriverException')
   where
     toBool :: Value -> Bool
     toBool = \case
