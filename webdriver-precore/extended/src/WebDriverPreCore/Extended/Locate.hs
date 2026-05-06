@@ -65,8 +65,8 @@ data LocateException
     }
   deriving (Show, Eq)
 
-converLeftException :: forall a m. Functor m => Locator -> m (Either PreLocateException a) ->  m (Either LocateException a)
-converLeftException  locator action = 
+mapLeftException :: forall a m. Functor m => Locator -> m (Either PreLocateException a) ->  m (Either LocateException a)
+mapLeftException  locator action = 
   first convert <$> action
   where 
     convert = \case 
@@ -173,21 +173,21 @@ locateHttp catch findElm' findElms' actions opts locator =
   preparedLoc &
   either
     (pure . Left . InvalidLocator)
-    (converLeftException locator . httpLocateSingleton catch findElm'' findElms'' actions opts)
+    (mapLeftException locator 
+      . httpLocateSingleton catch findFromRoot findAllFromRoot actions opts)
   
   where
-
+    preparedLoc :: Either LI.InvalidLocator ReducedHttpLoc
     preparedLoc = prepareSimplify opts.defaultLocator HTTP locator >>= toHttpLocator
+
     try' :: forall a. m a -> m (Either PreLocateException a)
     try' = mkTry catch
-    -- For root-scoped functions mRoot is Nothing at the top level; for sub-searches
-    -- within combinators it carries the container element. Since the caller only
-    -- provides root-level finders, we ignore the sub-root (combinators handle
-    -- scoping via the fromElement variants).
-    findElm'' :: FindElm m
-    findElm'' _ sel = try' $ findElm' sel
-    findElms'' :: FindElms m
-    findElms'' _ sel = try' $ findElms' sel
+
+    findFromRoot :: Maybe ElementId -> Selector -> m (Either PreLocateException ElementId)
+    findFromRoot = const (try' . findElm')
+
+    findAllFromRoot :: Maybe ElementId -> Selector -> m (Either PreLocateException [ElementId])
+    findAllFromRoot = const (try' . findElms')
 
 -- | Locate the first-matching element from the document root.
 locateFirstHttp ::
@@ -221,7 +221,7 @@ locateFromElementHttp ::
 locateFromElementHttp catch findElmFrom' findElmsFrom' actions opts rootId locator =
   either
     (pure . Left . InvalidLocator)
-    (converLeftException locator . httpLocateSingleton catch findElm'' findElms'' actions opts)
+    (mapLeftException locator . httpLocateSingleton catch findElm'' findElms'' actions opts)
     preparedLoc
   where
     preparedLoc = prepareSimplify opts.defaultLocator HTTP locator >>= toHttpLocator
@@ -254,7 +254,7 @@ locateAllHttp ::
 locateAllHttp catch findElms' actions opts locator =
   either
     (pure . Left . InvalidLocator)
-    ( converLeftException locator . httpLocateAll catch findElms'' actions opts)
+    ( mapLeftException locator . httpLocateAll catch findElms'' actions opts)
     preparedLoc
   where
     preparedLoc = prepareSimplify opts.defaultLocator HTTP locator >>= toHttpLocator
@@ -277,7 +277,7 @@ locateAllFromElementHttp catch findElmsFrom' actions opts rootId locator =
     preparedLoc &
     either
       (pure . Left . InvalidLocator)
-      (converLeftException locator . httpLocateAll catch findElms'' actions opts)
+      (mapLeftException locator . httpLocateAll catch findElms'' actions opts)
   where
     preparedLoc = prepareSimplify opts.defaultLocator HTTP locator >>= toHttpLocator
     try' = mkTry catch
