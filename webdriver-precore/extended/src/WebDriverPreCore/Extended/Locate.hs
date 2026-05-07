@@ -677,17 +677,15 @@ roleToXPathHttpLabeledBy elmsLocator getAttr getText firstOnly roleLoc =
         -- WIP HERE ALSO HAVE TO GO BACK AND FEED IN PARTIALLY APPLIED ALLeLMS FUNCTION WHEN SELECTING FROM ELEM 
           -- CHANGE INTERNAL DATA TYPE TO ONLY HAVE ELM SELECTOR WHITH NO BASE ID - FORCE PARTIAL APPLICATION ON CONSTRUCTION
         -- TODO RECHECK THIS        -- all elms that match role and have an aria-labelledby attribute
-        elmsLocator (HTTPP.XPath $ "//*" <> roleXPath roleLoc <> "[@" <> ariaLabeledBy <> "]")
+        elmsLocator (HTTPP.XPath $ "//*" <> roleXPath roleLoc <> "[@aria-labelledby]")
       filterElms firstOnly labledByMatchesRoleText candidates
       where
-        ariaLabeledBy = "aria-labelledby"
-
         -- Resolve aria-labelledby on @eid@: split on whitespace to get ID-refs,
         -- look up the text of each referenced element, concatenate with spaces,
         -- and compare (after stripping) to @targetName@.
         labledByMatchesRoleText :: ElementId -> m Bool
         labledByMatchesRoleText eid =
-          getAttr eid ariaLabeledBy
+          getAttr eid "aria-labelledby"
             >>= \case
               Nothing -> pure False
               Just lblIds -> do
