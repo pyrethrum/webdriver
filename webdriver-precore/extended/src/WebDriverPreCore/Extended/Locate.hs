@@ -375,7 +375,7 @@ locateLeaf findElm' findElms' getElementAttribute' getElementText' _recheckDispl
       Role {role} ->
         if rolesSecondPass == NoSecondPass
           then baseResult
-          else fmap Right $ roleToXPathHttpSecondPass locateAllLenient getElementAttribute' getElementText' mRoot findFirst role
+          else Right <$> roleToXPathHttpSecondPass locateAllLenient getElementAttribute' getElementText' mRoot findFirst role
       InnerText {} -> baseResult
   where
     locateAllLenient r s = locateAll findElms' r s >>= pure . either (const []) id
