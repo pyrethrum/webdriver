@@ -148,7 +148,9 @@ data HttpLocateAllOpts = MkHttpLocateAllOpts
 data LocateActions m = MkLocateActions
   { catch :: forall a e. (HasCallStack, Exception e) => m a -> (e -> m a) -> m a,
     findElement :: Selector -> m ElementId,
+    findElementFromElement :: ElementId -> Selector -> m ElementId,
     findElements :: Selector -> m [ElementId],
+    findElementsFromElement :: ElementId -> Selector -> m [ElementId],
     executeScript :: Script -> m Value,
     getElementAttribute :: ElementId -> Text -> m (Maybe Text),
     getElementText :: ElementId -> m Text
@@ -158,6 +160,7 @@ data LocateActions m = MkLocateActions
 data LocateAllActions m = MkLocateAllActions
   { catch :: forall a e. (HasCallStack, Exception e) => m a -> (e -> m a) -> m a,
     findElements :: Selector -> m [ElementId],
+    findElementsFromElement :: ElementId -> Selector -> m [ElementId],
     executeScript :: Script -> m Value,
     getElementAttribute :: ElementId -> Text -> m (Maybe Text),
     getElementText :: ElementId -> m Text
@@ -202,13 +205,10 @@ locateHttp act@MkLocateActions{catch} opts locator =
   either
     (pure . Left . InvalidLocator)
     (mapLeftException locator
-      . httpLocateSingleton (fromRoot act.findElement) (fromRoot act.findElements) act opts)
+      . httpLocateSingleton act opts)
   where
     preparedLoc :: Either LI.InvalidLocator ReducedHttpLoc
     preparedLoc = prepareSimplify opts.defaultLocator HTTP locator >>= toHttpLocator
-
-    fromRoot :: (Selector -> m a) -> Maybe ElementId -> Selector -> m (Either PreLocateException a)
-    fromRoot actn = const (mkTry catch . actn)
 
 -- | Locate the first-matching element from the document root.
 locateFirstHttp ::
@@ -349,36 +349,32 @@ locateAll findElms' mRoot s = findElms' mRoot s
 locateLeaf ::
   forall m.
   (Monad m) =>
-  FindElm m ->
-  FindElms m ->
-  (ElementId -> Text -> m (Maybe Text)) ->
-  (ElementId -> m Text) ->
-  (ElementId -> m (Either PreLocateException Bool)) ->
-  Maybe ElementId ->
-  LeafCardinality ->
+  (Selector -> m ElementId) ->
+  (Selector -> m [ElementId]) ->
   RoleLocateSecondPass ->
+  LeafCardinality ->
+  Maybe ElementId ->
   LeafLoc ->
   m (Either PreLocateException [ElementId])
-locateLeaf findElm' findElms' getElementAttribute' getElementText' _recheckDisplayed mRoot leafCardinality rolesSecondPass loc = do
-  let findFirst = leafCardinality == LeafFirst
-  firstPass <-
-    ( if findFirst
-        then fmap (fmap pure) . findElm' mRoot
-        else locateAll findElms' mRoot
-    )
-      (toSelector loc)
-  let baseResult = pure firstPass
+locateLeaf elmLocator elmsLocator rolesSecondPass leafCardinality loc = do
+  let firstOnly = leafCardinality == LeafFirst
+      simpleLocate =
+          ( if firstOnly
+              then fmap (fmap pure) . elmLocator 
+              else locateAll elmsLocator
+          )
+          (toSelector loc)
   case loc of
-    RL.CSS {} -> baseResult
-    RL.XPath {} -> baseResult
+    RL.CSS {} -> simpleLocate
+    RL.XPath {} -> simpleLocate
     RL.BiDiNative sl -> case sl of
       Role {role} ->
         if rolesSecondPass == NoSecondPass
-          then baseResult
-          else Right <$> roleToXPathHttpSecondPass locateAllLenient getElementAttribute' getElementText' mRoot findFirst role
-      InnerText {} -> baseResult
-  where
-    locateAllLenient r s = locateAll findElms' r s >>= pure . either (const []) id
+          then simpleLocate
+          -- TODO: THIS IS BE MISSNG simpleLocate elements
+          else Right <$> roleToXPathHttpSecondPass elmsLocator getElementAttribute' getElementText' firstOnly role
+      InnerText {} -> simpleLocate
+
 
 chkRefilterSingleton ::
   forall m.
@@ -417,7 +413,7 @@ locateElmsUnchecked findElm' findElms' getAttr getText recheckDisplayed' mRoot l
   fmap (fmap LST.nub)
     . \case
       LeafHttp cl ->
-        locateLeaf findElm' findElms' getAttr getText recheckDisplayed' mRoot leafCardinality rolesSecondPass cl
+        locateLeaf findElm' findElms' getAttr getText mRoot leafCardinality rolesSecondPass cl
       CombintorHttp cb -> case cb of
         Contains {container, contained} -> do
           eContainers <- locate LeafMany rolesSecondPass container
@@ -452,23 +448,21 @@ locateElmsUnchecked findElm' findElms' getAttr getText recheckDisplayed' mRoot l
 httpLocateSingleton ::
   forall m.
   (Monad m) =>
-  FindElm m ->
-  FindElms m ->
   LocateActions m ->
   HttpLocateOpts ->
   ReducedHttpLoc ->
   m (Either PreLocateException [ElementId])
-httpLocateSingleton findElm' findElms' actions@MkLocateActions{catch} opts loc = do
+httpLocateSingleton actions@MkLocateActions{catch} opts loc = do
   case loc of
     LeafHttp ll -> do
-      lr <- locateLeaf findElm' findElms' actions.getElementAttribute actions.getElementText recheckDisplayed' Nothing LeafMany secondPassOnInitial ll
+      lr <- locateLeaf findElm' findElms' actions.getElementAttribute actions.getElementText Nothing LeafMany secondPassOnInitial ll
       filtered <- chkElmsSingleton (displayChkAlways || isUnique && displayChkDisambiguate) lr
       case filtered of
         Left e -> pure (Left e)
         Right [] ->
           if opts.extendedRoleLocation == ExtLocateSingletonMiss && isRole
             then do
-              missRetryRslt <- locateLeaf findElm' findElms' actions.getElementAttribute actions.getElementText recheckDisplayed' Nothing LeafMany WantSecondPass ll
+              missRetryRslt <- locateLeaf findElm' findElms' actions.getElementAttribute actions.getElementText Nothing LeafMany WantSecondPass ll
               retryChked <- chkElmsSingleton (displayChkAlways || displayChkDisambiguate) missRetryRslt
               case retryChked of
                 Left e -> pure (Left e)
@@ -637,54 +631,54 @@ roleToXPathHttpSecondPass ::
   forall m.
   (Monad m) =>
   -- | locate all elements matching a selector
-  (Maybe ElementId -> Selector -> m [ElementId]) ->
+  (Selector -> m [ElementId]) ->
   -- | get an element attribute; 'Nothing' when the attribute is absent
   (ElementId -> Text -> m (Maybe Text)) ->
   -- | get the visible text of an element
   (ElementId -> m Text) ->
-  Maybe ElementId -> -- root to search within
   Bool ->
   RoleLocator ->
   m [ElementId]
 roleToXPathHttpSecondPass
-  locAll
+  elmsLocator
   getAttr
   getText
-  rootElm
-  findFirst
+  firstOnly
   roleLoc =
     case roleLoc of
       -- role type has no name / label so nothing to do
       RoleType {} -> pure []
       _ -> do
-        labelledByElms <- roleToXPathHttpLabeledBy locAll getAttr getText rootElm findFirst roleLoc
-        if findFirst && notNull labelledByElms
+        labelledByElms <- roleToXPathHttpLabeledBy elmsLocator getAttr getText firstOnly roleLoc
+        if firstOnly && notNull labelledByElms
           then pure labelledByElms
           else do
-            forElms <- roleToXPathFor locAll getAttr getText rootElm findFirst roleLoc
+            forElms <- roleToXPathFor elmsLocator getAttr getText firstOnly roleLoc
             pure . nubOrd $ mconcat [labelledByElms, forElms]
 
 roleToXPathHttpLabeledBy ::
   forall m.
   (Monad m) =>
   -- | locate all elements matching a selector
-  (Maybe ElementId -> Selector -> m [ElementId]) ->
+  (Selector -> m [ElementId]) ->
   -- | get an element attribute; 'Nothing' when the attribute is absent
   (ElementId -> Text -> m (Maybe Text)) ->
   -- | get the visible text of an element
   (ElementId -> m Text) ->
-  Maybe ElementId -> -- root to search within
   Bool ->
   RoleLocator ->
   m [ElementId]
-roleToXPathHttpLabeledBy locAll getAttr getText rootElm findFirst roleLoc =
+roleToXPathHttpLabeledBy elmsLocator getAttr getText firstOnly roleLoc =
   case roleLoc of
     RoleType {} -> pure []
     _ -> do
       candidates <-
         -- matching role and an aria-labelledby attribute
-        locAll rootElm (HTTPP.XPath $ "//*" <> roleXPath roleLoc <> "[@" <> ariaLabeledBy <> "]")
-      filterElms findFirst labledByMatchesRoleText candidates
+        -- WIP HERE ALSO HAVE TO GO BACK AND FEED IN PARTIALLY APPLIED ALLeLMS FUNCTION WHEN SELECTING FROM ELEM 
+          -- CHANGE INTERNAL DATA TYPE TO ONLY HAVE ELM SELECTOR WHITH NO BASE ID - FORCE PARTIAL APPLICATION ON CONSTRUCTION
+        -- TODO RECHECK THIS        -- all elms that match role and have an aria-labelledby attribute
+        elmsLocator (HTTPP.XPath $ "//*" <> roleXPath roleLoc <> "[@" <> ariaLabeledBy <> "]")
+      filterElms firstOnly labledByMatchesRoleText candidates
       where
         ariaLabeledBy = "aria-labelledby"
 
@@ -704,7 +698,7 @@ roleToXPathHttpLabeledBy locAll getAttr getText rootElm findFirst roleLoc =
         -- 'Nothing' if no such element exists.
         textForId :: Text -> m (Maybe Text)
         textForId idRef = do
-          elms <- locAll rootElm . HTTPP.XPath $ "//*[@id='" <> idRef <> "']"
+          elms <- elmsLocator . HTTPP.XPath $ "//*[@id='" <> idRef <> "']"
           case elms of
             [] -> pure Nothing
             (e : _) -> Just <$> getText e
@@ -715,23 +709,22 @@ roleToXPathFor ::
   forall m.
   (Monad m) =>
   -- | locate all elements matching a selector
-  (Maybe ElementId -> Selector -> m [ElementId]) ->
+  (Selector -> m [ElementId]) ->
   -- | get an element attribute; 'Nothing' when the attribute is absent
   (ElementId -> Text -> m (Maybe Text)) ->
   -- | get the visible text of an element
   (ElementId -> m Text) ->
-  Maybe ElementId -> -- root to search within
   Bool -> -- find first only
   RoleLocator ->
   m [ElementId]
-roleToXPathFor locAll getAttr getText rootElm findFirst roleLoc =
+roleToXPathFor elmsLocator getAttr getText firstOnly roleLoc =
   case roleLoc of
     RoleType {} -> pure []
     _ -> do
       candidates <-
         -- has an @id and matches the role name
-        locAll rootElm $ HTTPP.XPath $ "//*" <> roleXPath roleLoc <> "[@id]"
-      filterElms findFirst forTxtMatchesId candidates
+        elmsLocator $ HTTPP.XPath $ "//*" <> roleXPath roleLoc <> "[@id]"
+      filterElms firstOnly forTxtMatchesId candidates
       where
         forTxtMatchesId :: ElementId -> m Bool
         forTxtMatchesId eid = do
@@ -739,7 +732,7 @@ roleToXPathFor locAll getAttr getText rootElm findFirst roleLoc =
           case mId of
             Nothing -> pure False
             Just idVal -> do
-              labels <- locAll Nothing . HTTPP.XPath $ "//label[@for='" <> idVal <> "']"
+              labels <- elmsLocator . HTTPP.XPath $ "//label[@for='" <> idVal <> "']"
               case labels of
                 [] -> pure False
                 (lbl : _) -> do
@@ -752,11 +745,11 @@ roleXPath = \case
   r -> LI.roleTypeXPathContent True r.role
 
 filterElms :: forall m. (Monad m) => Bool -> (ElementId -> m Bool) -> [ElementId] -> m [ElementId]
-filterElms findFirst matcher = recurse []
+filterElms firstOnly matcher = recurse []
   where
     recurse :: [ElementId] -> [ElementId] -> m [ElementId]
     recurse acc rem' =
-      if findFirst && notNull acc
+      if firstOnly && notNull acc
         then
           pure acc
         else case rem' of
