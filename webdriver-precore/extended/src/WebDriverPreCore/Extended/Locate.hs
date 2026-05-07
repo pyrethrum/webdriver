@@ -330,23 +330,23 @@ type FindElms m = Maybe ElementId -> Selector -> m (Either PreLocateException [E
 mkTry :: forall m a. Applicative m => (forall b e. (HasCallStack, Exception e) => m b -> (e -> m b) -> m b) -> (m a -> m (Either PreLocateException a))
 mkTry catch action = catch (Right <$> action) (pure . Left . DriverException')
 
-jsFilterDisplayedI ::
+jsFilterDisplayed ::
   forall m.
   (Monad m) =>
   (ElementId -> m (Either PreLocateException Bool)) ->
   [ElementId] ->
   m (Either PreLocateException [ElementId])
-jsFilterDisplayedI recheckDisplayed' elms = do
+jsFilterDisplayed recheckDisplayed' elms = do
   results <- traverse doCheck elms
   pure $ fmap (fmap fst . P.filter snd) (sequence results)
   where
     doCheck elm = fmap (elm,) <$> recheckDisplayed' elm
 
-locateAllI :: FindElms m -> Maybe ElementId -> Selector -> m (Either PreLocateException [ElementId])
-locateAllI findElms' mRoot s = findElms' mRoot s
+locateAll :: FindElms m -> Maybe ElementId -> Selector -> m (Either PreLocateException [ElementId])
+locateAll findElms' mRoot s = findElms' mRoot s
 
 -- finds leaf without display filtering
-locateLeafI ::
+locateLeaf ::
   forall m.
   (Monad m) =>
   FindElm m ->
@@ -359,12 +359,12 @@ locateLeafI ::
   RoleLocateSecondPass ->
   LeafLoc ->
   m (Either PreLocateException [ElementId])
-locateLeafI findElm' findElms' getElementAttribute' getElementText' _recheckDisplayed mRoot leafCardinality rolesSecondPass loc = do
+locateLeaf findElm' findElms' getElementAttribute' getElementText' _recheckDisplayed mRoot leafCardinality rolesSecondPass loc = do
   let findFirst = leafCardinality == LeafFirst
   firstPass <-
     ( if findFirst
         then fmap (fmap pure) . findElm' mRoot
-        else locateAllI findElms' mRoot
+        else locateAll findElms' mRoot
     )
       (toSelector loc)
   let baseResult = pure firstPass
@@ -378,15 +378,15 @@ locateLeafI findElm' findElms' getElementAttribute' getElementText' _recheckDisp
           else fmap Right $ roleToXPathHttpSecondPass locateAllLenient getElementAttribute' getElementText' mRoot findFirst role
       InnerText {} -> baseResult
   where
-    locateAllLenient r s = locateAllI findElms' r s >>= pure . either (const []) id
+    locateAllLenient r s = locateAll findElms' r s >>= pure . either (const []) id
 
-chkRefilterSingletonI ::
+chkRefilterSingleton ::
   forall m.
   (Monad m) =>
   (ElementId -> m (Either PreLocateException Bool)) ->
   [ElementId] ->
   m (Either PreLocateException [ElementId])
-chkRefilterSingletonI recheckDisplayed' elmIds =
+chkRefilterSingleton recheckDisplayed' elmIds =
   chkkSingleton' True elmIds
   where
     chkkSingleton' recheckAmbiguous' =
@@ -397,10 +397,10 @@ chkRefilterSingletonI recheckDisplayed' elmIds =
           recheckAmbiguous'
             & bool
               (pure (Right xs))
-              (jsFilterDisplayedI recheckDisplayed' xs >>= either (pure . Left) (chkkSingleton' False))
+              (jsFilterDisplayed recheckDisplayed' xs >>= either (pure . Left) (chkkSingleton' False))
 
 -- single shot base locate (all cardinality)
-locateElmsUncheckedI ::
+locateElmsUnchecked ::
   forall m.
   (Monad m) =>
   FindElm m ->
@@ -413,11 +413,11 @@ locateElmsUncheckedI ::
   RoleLocateSecondPass ->
   ReducedHttpLoc ->
   m (Either PreLocateException [ElementId])
-locateElmsUncheckedI findElm' findElms' getAttr getText recheckDisplayed' mRoot leafCardinality rolesSecondPass =
+locateElmsUnchecked findElm' findElms' getAttr getText recheckDisplayed' mRoot leafCardinality rolesSecondPass =
   fmap (fmap LST.nub)
     . \case
       LeafHttp cl ->
-        locateLeafI findElm' findElms' getAttr getText recheckDisplayed' mRoot leafCardinality rolesSecondPass cl
+        locateLeaf findElm' findElms' getAttr getText recheckDisplayed' mRoot leafCardinality rolesSecondPass cl
       CombintorHttp cb -> case cb of
         Contains {container, contained} -> do
           eContainers <- locate LeafMany rolesSecondPass container
@@ -438,11 +438,11 @@ locateElmsUncheckedI findElm' findElms' getAttr getText recheckDisplayed' mRoot 
             traverse (locate LeafMany rolesSecondPass) (toList locs)
       PostFilterHttpLoc {} -> postfilterNotImplemented
   where
-    locate = locateElmsUncheckedI findElm' findElms' getAttr getText recheckDisplayed' mRoot
+    locate = locateElmsUnchecked findElm' findElms' getAttr getText recheckDisplayed' mRoot
 
     locateContained :: [ElementId] -> ReducedHttpLoc -> m (Either PreLocateException [ElementId])
     locateContained containerIds subLoc = do
-      containedResults <- traverse (\rootId -> locateElmsUncheckedI findElm' findElms' getAttr getText recheckDisplayed' (Just rootId) LeafMany rolesSecondPass subLoc) containerIds
+      containedResults <- traverse (\rootId -> locateElmsUnchecked findElm' findElms' getAttr getText recheckDisplayed' (Just rootId) LeafMany rolesSecondPass subLoc) containerIds
       pure . fmap join . sequence $ containedResults
 
 -- ---------------------------------------------------------------------------
@@ -461,14 +461,14 @@ httpLocateSingleton ::
 httpLocateSingleton findElm' findElms' actions@MkLocateActions{catch} opts loc = do
   case loc of
     LeafHttp ll -> do
-      lr <- locateLeafI findElm' findElms' actions.getElementAttribute actions.getElementText recheckDisplayed' Nothing LeafMany secondPassOnInitial ll
+      lr <- locateLeaf findElm' findElms' actions.getElementAttribute actions.getElementText recheckDisplayed' Nothing LeafMany secondPassOnInitial ll
       filtered <- chkElmsSingleton (displayChkAlways || isUnique && displayChkDisambiguate) lr
       case filtered of
         Left e -> pure (Left e)
         Right [] ->
           if opts.extendedRoleLocation == ExtLocateSingletonMiss && isRole
             then do
-              missRetryRslt <- locateLeafI findElm' findElms' actions.getElementAttribute actions.getElementText recheckDisplayed' Nothing LeafMany WantSecondPass ll
+              missRetryRslt <- locateLeaf findElm' findElms' actions.getElementAttribute actions.getElementText recheckDisplayed' Nothing LeafMany WantSecondPass ll
               retryChked <- chkElmsSingleton (displayChkAlways || displayChkDisambiguate) missRetryRslt
               case retryChked of
                 Left e -> pure (Left e)
@@ -487,7 +487,7 @@ httpLocateSingleton findElm' findElms' actions@MkLocateActions{catch} opts loc =
     PostFilterHttpLoc {} ->
       postfilterNotImplemented
     CombintorHttp {} ->
-      locateElmsUncheckedI findElm' findElms' actions.getElementAttribute actions.getElementText recheckDisplayed' Nothing LeafMany secondPassOnInitial loc
+      locateElmsUnchecked findElm' findElms' actions.getElementAttribute actions.getElementText recheckDisplayed' Nothing LeafMany secondPassOnInitial loc
   where
       recheckDisplayed' = isDisplayedHttp catch actions.executeScript
 
@@ -512,7 +512,7 @@ httpLocateSingleton findElm' findElms' actions@MkLocateActions{catch} opts loc =
           Left e -> pure (Left e)
           Right elms ->
             if doChk
-              then chkRefilterSingletonI recheckDisplayed' elms
+              then chkRefilterSingleton recheckDisplayed' elms
               else pure (Right elms)
 
 httpLocateAll ::
@@ -530,12 +530,12 @@ httpLocateAll findElms' actions@MkLocateAllActions{catch} opts loc = do
       secondPassOnInitial = case opts.extendedRoleLocation of
         ExtLocateAllNever -> NoSecondPass
         ExtLocateAllAlways -> WantSecondPass
-  result <- locateElmsUncheckedI findElm' findElms' actions.getElementAttribute actions.getElementText recheckDisplayed' Nothing LeafMany secondPassOnInitial loc
+  result <- locateElmsUnchecked findElm' findElms' actions.getElementAttribute actions.getElementText recheckDisplayed' Nothing LeafMany secondPassOnInitial loc
   case result of
     Left e -> pure (Left e)
     Right elms ->
       if opts.jsRecheckDisplayed == DisplayedCheckAlways
-        then jsFilterDisplayedI recheckDisplayed' elms >>= either (pure . Left) mkLocResult
+        then jsFilterDisplayed recheckDisplayed' elms >>= either (pure . Left) mkLocResult
         else mkLocResult elms
 
 postfilterNotImplemented :: a
