@@ -5,6 +5,8 @@ module WebDriverPreCore.Extended.Locate
     HttpLocateAllOpts (..),
     LocateActions (..),
     LocateAllActions (..),
+    LocateFromElementActions (..),
+    LocateAllFromElementActions (..),
     locateHttp,
     locateFirstHttp,
     locateFromElementHttp,
@@ -161,6 +163,25 @@ data LocateAllActions m = MkLocateAllActions
     getElementText :: ElementId -> m Text
   }
 
+-- | Actions for singleton element-scoped locate functions ('locateFromElementHttp').
+data LocateFromElementActions m = MkLocateFromElementActions
+  { catch :: forall a e. (HasCallStack, Exception e) => m a -> (e -> m a) -> m a,
+    findElementFromElement :: ElementId -> Selector -> m ElementId,
+    findElementsFromElement :: ElementId -> Selector -> m [ElementId],
+    executeScript :: Script -> m Value,
+    getElementAttribute :: ElementId -> Text -> m (Maybe Text),
+    getElementText :: ElementId -> m Text
+  }
+
+-- | Actions for multi element-scoped locate functions ('locateAllFromElementHttp').
+data LocateAllFromElementActions m = MkLocateAllFromElementActions
+  { catch :: forall a e. (HasCallStack, Exception e) => m a -> (e -> m a) -> m a,
+    findElementsFromElement :: ElementId -> Selector -> m [ElementId],
+    executeScript :: Script -> m Value,
+    getElementAttribute :: ElementId -> Text -> m (Maybe Text),
+    getElementText :: ElementId -> m Text
+  }
+
 -- ---------------------------------------------------------------------------
 -- Public API
 -- ---------------------------------------------------------------------------
@@ -189,24 +210,31 @@ locateHttp act@MkLocateActions{catch} opts locator =
     fromRoot :: (Selector -> m a) -> Maybe ElementId -> Selector -> m (Either PreLocateException a)
     fromRoot actn = const (mkTry catch . actn)
 
+-- | Locate the first-matching element from the document root.
+locateFirstHttp ::
+  forall m.
+  (Monad m) =>
+  LocateActions m ->
+  HttpLocateOpts ->
+  Locator ->
+  m (Either LocateException [ElementId])
+locateFirstHttp actions opts locator =
+  locateHttp actions opts{singletonCardinality = First} locator
+
 -- | Locate a unique or first-matching element rooted at a given element.
 locateFromElementHttp ::
   forall m.
   (Monad m) =>
-  -- | find a single element by selector rooted at an element
-  (ElementId -> Selector -> m ElementId) ->
-  -- | find multiple elements by selector rooted at an element
-  (ElementId -> Selector -> m [ElementId]) ->
-  LocateActions m ->
+  LocateFromElementActions m ->
   HttpLocateOpts ->
   -- | root element
   ElementId ->
   Locator ->
   m (Either LocateException [ElementId])
-locateFromElementHttp findElmFrom' findElmsFrom' actions@MkLocateActions{catch} opts rootId locator =
+locateFromElementHttp act@MkLocateFromElementActions{catch} opts rootId locator =
   either
     (pure . Left . InvalidLocator)
-    (mapLeftException locator . httpLocateSingleton findElm'' findElms'' actions opts)
+    (mapLeftException locator . httpLocateSingleton findElm'' findElms'' (toLocateActions act) opts)
     preparedLoc
   where
     preparedLoc = prepareSimplify opts.defaultLocator HTTP locator >>= toHttpLocator
@@ -215,15 +243,15 @@ locateFromElementHttp findElmFrom' findElmsFrom' actions@MkLocateActions{catch} 
     findElm'' :: FindElm m
     findElm'' mRoot sel =
       try' $ maybe
-      (findElmFrom' rootId sel)
-      (flip findElmFrom' sel)
-      mRoot
+        (act.findElementFromElement rootId sel)
+        (\subRoot -> act.findElementFromElement subRoot sel)
+        mRoot
     findElms'' :: FindElms m
     findElms'' mRoot sel =
       try' $ maybe
-      (findElmsFrom' rootId sel)
-      (\subRoot -> findElmsFrom' subRoot sel)
-      mRoot
+        (act.findElementsFromElement rootId sel)
+        (\subRoot -> act.findElementsFromElement subRoot sel)
+        mRoot
 
 -- | Locate all matching elements from the document root.
 locateAllHttp ::
@@ -246,25 +274,51 @@ locateAllHttp actions@MkLocateAllActions{catch} opts locator =
 locateAllFromElementHttp ::
   forall m.
   (Monad m) =>
-  -- | find multiple elements by selector rooted at an element
-  (ElementId -> Selector -> m [ElementId]) ->
-  LocateAllActions m ->
+  LocateAllFromElementActions m ->
   HttpLocateAllOpts ->
   -- | root element
   ElementId ->
   Locator ->
   m (Either LocateException [ElementId])
-locateAllFromElementHttp findElmsFrom' actions@MkLocateAllActions{catch} opts rootId locator =
+locateAllFromElementHttp act@MkLocateAllFromElementActions{catch} opts rootId locator =
     preparedLoc &
     either
       (pure . Left . InvalidLocator)
-      (mapLeftException locator . httpLocateAll findElms'' actions opts)
+      (mapLeftException locator . httpLocateAll findElms'' (toLocateAllActions act) opts)
   where
     preparedLoc = prepareSimplify opts.defaultLocator HTTP locator >>= toHttpLocator
     findElms'' mRoot sel = maybe
-      (mkTry catch $ findElmsFrom' rootId sel)
-      (\subRoot -> mkTry catch $ findElmsFrom' subRoot sel)
+      (mkTry catch $ act.findElementsFromElement rootId sel)
+      (\subRoot -> mkTry catch $ act.findElementsFromElement subRoot sel)
       mRoot
+
+-- ---------------------------------------------------------------------------
+-- Internal action conversions
+-- ---------------------------------------------------------------------------
+
+-- | Promote a 'LocateFromElementActions' to a 'LocateActions' for use with
+-- internal helpers that only need the shared (non-finder) fields.
+toLocateActions :: LocateFromElementActions m -> LocateActions m
+toLocateActions MkLocateFromElementActions{catch, executeScript, getElementAttribute, getElementText} = MkLocateActions
+  { catch,
+    findElement = noRootFind,
+    findElements = noRootFind,
+    executeScript,
+    getElementAttribute,
+    getElementText
+  }
+  where noRootFind = error "library defect: root findElement(s) used in fromElement context"
+
+-- | Promote a 'LocateAllFromElementActions' to a 'LocateAllActions' for use
+-- with internal helpers that only need the shared (non-finder) fields.
+toLocateAllActions :: LocateAllFromElementActions m -> LocateAllActions m
+toLocateAllActions MkLocateAllFromElementActions{catch, executeScript, getElementAttribute, getElementText} = MkLocateAllActions
+  { catch,
+    findElements = error "library defect: root findElements used in fromElement context",
+    executeScript,
+    getElementAttribute,
+    getElementText
+  }
 
 -- ---------------------------------------------------------------------------
 -- Internal shared helpers
