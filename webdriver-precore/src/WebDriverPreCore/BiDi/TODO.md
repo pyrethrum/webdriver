@@ -11,6 +11,9 @@
    - inner text
    - aria
 
+## exceptions 
+ - [review exceptions](https://well-typed.com/blog/2026/05/lay-annotation-land/)
+
 ## updates
 - [ ] webdriver http
 - [ ] notes on pauseAtLeast in webdriver bidi tests - all test units

@@ -8,7 +8,6 @@ module WebDriverPreCore.Extended.Locate
     LocateFromElementActions (..),
     LocateAllFromElementActions (..),
     locateHttp,
-    locateFirstHttp,
     locateFromElementHttp,
     locateAllHttp,
     locateAllFromElementHttp
@@ -68,8 +67,8 @@ data LocateException
     }
   deriving (Show, Eq)
 
-mapLeftException :: forall a m. Functor m => Locator -> m (Either PreLocateException a) ->  m (Either LocateException a)
-mapLeftException  locator action = 
+completeLocException :: forall a m. Functor m => Locator -> m (Either PreLocateException a) ->  m (Either LocateException a)
+completeLocException  locator action = 
   first convert <$> action
   where 
     convert = \case 
@@ -98,14 +97,14 @@ data HttpLocateOpts = MkHttpLocateOpts
   { jsRecheckDisplayed :: DisplayedCheck,
     extendedRoleLocation :: ExtendedRoleLocateSingleton,
     singletonCardinality :: SingletonCardinality,
-    defaultLocator :: Text -> Locator
+    mkDefaultLoc :: Text -> Locator
   }
 
 -- | Options for multi-locate functions ('locateAllHttp', 'locateAllFromElementHttp').
 data HttpLocateAllOpts = MkHttpLocateAllOpts
   { jsRecheckDisplayed :: DisplayedCheck,
     extendedRoleLocation :: ExtendedRoleLocateAll,
-    defaultLocator :: Text -> Locator
+    mkDefaultLoc :: Text -> Locator
   }
 
 -- TODO
@@ -185,9 +184,10 @@ data LocateAllFromElementActions m = MkLocateAllFromElementActions
     getElementText :: ElementId -> m Text
   }
 
--- ---------------------------------------------------------------------------
--- Public API
--- ---------------------------------------------------------------------------
+
+type FindElm m = Maybe ElementId -> Selector -> m (Either PreLocateException ElementId)
+type FindElms m = Maybe ElementId -> Selector -> m (Either PreLocateException [ElementId])
+
 
 -- | Locate a unique or first-matching element from the document root.
 locateHttp ::
@@ -200,58 +200,8 @@ locateHttp ::
   -- | locator
   Locator ->
   m (Either LocateException [ElementId])
-locateHttp act@MkLocateActions{catch} opts locator =
-  preparedLoc &
-  either
-    (pure . Left . InvalidLocator)
-    (mapLeftException locator
-      . httpLocateSingleton act opts)
-  where
-    preparedLoc :: Either LI.InvalidLocator ReducedHttpLoc
-    preparedLoc = prepareSimplify opts.defaultLocator HTTP locator >>= toHttpLocator
-
--- | Locate the first-matching element from the document root.
-locateFirstHttp ::
-  forall m.
-  (Monad m) =>
-  LocateActions m ->
-  HttpLocateOpts ->
-  Locator ->
-  m (Either LocateException [ElementId])
-locateFirstHttp actions opts locator =
-  locateHttp actions opts{singletonCardinality = First} locator
-
--- | Locate a unique or first-matching element rooted at a given element.
-locateFromElementHttp ::
-  forall m.
-  (Monad m) =>
-  LocateFromElementActions m ->
-  HttpLocateOpts ->
-  -- | root element
-  ElementId ->
-  Locator ->
-  m (Either LocateException [ElementId])
-locateFromElementHttp act@MkLocateFromElementActions{catch} opts rootId locator =
-  either
-    (pure . Left . InvalidLocator)
-    (mapLeftException locator . httpLocateSingleton findElm'' findElms'' (toLocateActions act) opts)
-    preparedLoc
-  where
-    preparedLoc = prepareSimplify opts.defaultLocator HTTP locator >>= toHttpLocator
-    try' :: forall a. m a -> m (Either PreLocateException a)
-    try' = mkTry catch
-    findElm'' :: FindElm m
-    findElm'' mRoot sel =
-      try' $ maybe
-        (act.findElementFromElement rootId sel)
-        (\subRoot -> act.findElementFromElement subRoot sel)
-        mRoot
-    findElms'' :: FindElms m
-    findElms'' mRoot sel =
-      try' $ maybe
-        (act.findElementsFromElement rootId sel)
-        (\subRoot -> act.findElementsFromElement subRoot sel)
-        mRoot
+locateHttp act opts =
+  prepareRun opts.catch opts.mkDefaultLoc (httpLocateSingleton act opts)
 
 -- | Locate all matching elements from the document root.
 locateAllHttp ::
@@ -261,73 +211,67 @@ locateAllHttp ::
   HttpLocateAllOpts ->
   Locator ->
   m (Either LocateException [ElementId])
-locateAllHttp actions@MkLocateAllActions{catch} opts locator =
-  either
-    (pure . Left . InvalidLocator)
-    (mapLeftException locator . httpLocateAll findElms'' actions opts)
-    preparedLoc
-  where
-    preparedLoc = prepareSimplify opts.defaultLocator HTTP locator >>= toHttpLocator
-    findElms'' _ sel = mkTry catch $ actions.findElements sel
+locateAllHttp act opts =
+  prepareRun opts.catch opts.mkDefaultLoc (httpLocateAll act opts)
 
+-- | Locate a unique or first-matching element rooted at a given element.
+locateFromElementHttp ::
+  forall m.
+  (Monad m) =>
+  LocateActions m ->
+  HttpLocateOpts ->
+  -- | root element
+  ElementId ->
+  Locator ->
+  m (Either LocateException [ElementId])
+locateFromElementHttp act opts rootId =
+  prepareRun opts.catch opts.mkDefaultLoc (httpLocateSingleton rootedLocateActions opts)
+  where
+    rootedLocateActions = act {
+      findElement = act.findElementFromElement rootId, 
+      findElements = act.findElementsFromElement rootId
+      }
+    
 -- | Locate all matching elements rooted at a given element.
 locateAllFromElementHttp ::
   forall m.
   (Monad m) =>
-  LocateAllFromElementActions m ->
+  LocateAllActions m ->
   HttpLocateAllOpts ->
   -- | root element
   ElementId ->
   Locator ->
   m (Either LocateException [ElementId])
-locateAllFromElementHttp act@MkLocateAllFromElementActions{catch} opts rootId locator =
-    preparedLoc &
-    either
-      (pure . Left . InvalidLocator)
-      (mapLeftException locator . httpLocateAll findElms'' (toLocateAllActions act) opts)
-  where
-    preparedLoc = prepareSimplify opts.defaultLocator HTTP locator >>= toHttpLocator
-    findElms'' mRoot sel = maybe
-      (mkTry catch $ act.findElementsFromElement rootId sel)
-      (\subRoot -> mkTry catch $ act.findElementsFromElement subRoot sel)
-      mRoot
+locateAllFromElementHttp act@MkLocateAllActions{..} opts rootId =
+    prepareRun opts.catch opts.mkDefaultLoc (httpLocateAll rootedLocateActions opts)
+    where
+      rootedLocateActions =  
+        MkLocateAllActions { 
+          findElements = act.findElementsFromElement rootId,
+          ..
+        }
+    
+prepareRun :: forall m. Monad m =>
+     (forall a e. (HasCallStack, Exception e) => m a -> (e -> m a) -> m a)
+     -> (Text -> Locator) 
+     -> (ReducedHttpLoc -> m (Either PreLocateException [ElementId])) 
+     -> Locator 
+     -> m (Either LocateException [ElementId])
+prepareRun catch mkDefaultLoc locateActn locator =
+    either (pure . Left . InvalidLocator) (completeLocException locator . runLoc) preparedLoc
+  where 
+    preparedLoc :: Either LI.InvalidLocator ReducedHttpLoc
+    preparedLoc = prepareSimplify mkDefaultLoc HTTP locator >>= toHttpLocator
 
--- ---------------------------------------------------------------------------
--- Internal action conversions
--- ---------------------------------------------------------------------------
+    runLoc :: ReducedHttpLoc -> m (Either PreLocateException [ElementId])
+    runLoc loc = mkTry catch (locateActn loc)
 
--- | Promote a 'LocateFromElementActions' to a 'LocateActions' for use with
--- internal helpers that only need the shared (non-finder) fields.
-toLocateActions :: LocateFromElementActions m -> LocateActions m
-toLocateActions MkLocateFromElementActions{catch, executeScript, getElementAttribute, getElementText} = MkLocateActions
-  { catch,
-    findElement = noRootFind,
-    findElements = noRootFind,
-    executeScript,
-    getElementAttribute,
-    getElementText
-  }
-  where noRootFind = error "library defect: root findElement(s) used in fromElement context"
-
--- | Promote a 'LocateAllFromElementActions' to a 'LocateAllActions' for use
--- with internal helpers that only need the shared (non-finder) fields.
-toLocateAllActions :: LocateAllFromElementActions m -> LocateAllActions m
-toLocateAllActions MkLocateAllFromElementActions{catch, executeScript, getElementAttribute, getElementText} = MkLocateAllActions
-  { catch,
-    findElements = error "library defect: root findElements used in fromElement context",
-    executeScript,
-    getElementAttribute,
-    getElementText
-  }
-
--- ---------------------------------------------------------------------------
--- Internal shared helpers
--- ---------------------------------------------------------------------------
-
-type FindElm m = Maybe ElementId -> Selector -> m (Either PreLocateException ElementId)
-type FindElms m = Maybe ElementId -> Selector -> m (Either PreLocateException [ElementId])
-
-mkTry :: forall m a. Applicative m => (forall b e. (HasCallStack, Exception e) => m b -> (e -> m b) -> m b) -> (m a -> m (Either PreLocateException a))
+mkTry :: forall m a. Applicative m => 
+ (forall b e.
+  -- | catch
+  (HasCallStack, Exception e) => m b -> (e -> m b) -> m b) 
+  -- | action
+ -> (m a -> m (Either PreLocateException a))
 mkTry catch action = catch (Right <$> action) (pure . Left . DriverException')
 
 jsFilterDisplayed ::
@@ -512,12 +456,11 @@ httpLocateSingleton actions@MkLocateActions{catch} opts loc = do
 httpLocateAll ::
   forall m.
   (Monad m) =>
-  FindElms m ->
   LocateAllActions m ->
   HttpLocateAllOpts ->
   ReducedHttpLoc ->
   m (Either PreLocateException [ElementId])
-httpLocateAll findElms' actions@MkLocateAllActions{catch} opts loc = do
+httpLocateAll actions@MkLocateAllActions{catch} opts loc = do
   let recheckDisplayed' = isDisplayedHttp catch actions.executeScript
       mkLocResult = pure . Right
       findElm' _ _ = error "library defect: findElm called in locate-all context"
