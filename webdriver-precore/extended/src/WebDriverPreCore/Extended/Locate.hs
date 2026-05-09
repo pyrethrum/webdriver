@@ -87,7 +87,7 @@ data ExtendedRoleLocateSingleton = ExtLocateSingletonNever | ExtLocateSingletonM
 
 data ExtendedRoleLocateAll = ExtLocateAllNever | ExtLocateAllAlways deriving (Show, Eq)
 
-data RoleLocateSecondPass = WantSecondPass | NoSecondPass deriving (Show, Eq)
+data RoleJSSecondPass = DoRoleJSSecondPass | NoRoleJSSecondPass deriving (Show, Eq)
 
 -- | Options for singleton locate functions ('locateHttp', 'locateFromElementHttp').
 data HttpLocateOpts = MkHttpLocateOpts
@@ -242,7 +242,7 @@ locateLeaf ::
   forall m.
   (Monad m) =>
   LocateActions m ->
-  RoleLocateSecondPass ->
+  RoleJSSecondPass ->
   LeafCardinality ->
   LeafLoc ->
   m [ElementId]
@@ -260,9 +260,9 @@ locateLeaf actions rolesSecondPass lc loc = do
     RL.XPath {} -> simpleLocate
     RL.BiDiNative sl -> case sl of
       Role {role} ->
-        if rolesSecondPass == NoSecondPass
-          then simpleLocate
-          else do 
+        case rolesSecondPass of 
+          NoRoleJSSecondPass -> simpleLocate
+          DoRoleJSSecondPass -> do 
             sr <- simpleLocate
             if lc == FindFirst then 
               case sr of
@@ -277,13 +277,17 @@ locateLeaf actions rolesSecondPass lc loc = do
 chkRefilterSingleton ::
   forall m.
   (Monad m) =>
-  (ElementId -> m (Either PreLocateException Bool)) ->
+  -- | catch
+  (forall a e. (HasCallStack, Exception e) => m a -> (e -> m a) -> m a) ->
+  -- | execute script
+  (Script -> m Value) ->
   [ElementId] ->
   m (Either PreLocateException [ElementId])
-chkRefilterSingleton recheckDisplayed' elmIds =
-  chkkSingleton' True elmIds
+chkRefilterSingleton catch executeScript elmIds =
+  chkSingleton' True elmIds
   where
-    chkkSingleton' recheckAmbiguous' =
+    jsRecheckDisplayed = isDisplayedViaScript catch executeScript
+    chkSingleton' recheckAmbiguous' =
       \case
         [] -> pure (Right [])
         [x] -> pure (Right [x])
@@ -291,7 +295,7 @@ chkRefilterSingleton recheckDisplayed' elmIds =
           recheckAmbiguous'
             & bool
               (pure (Right xs))
-              (jsFilterDisplayed recheckDisplayed' xs >>= either (pure . Left) (chkkSingleton' False))
+              (jsFilterDisplayed jsRecheckDisplayed xs >>= either (pure . Left) (chkSingleton' False))
 
 -- single shot base locate (all cardinality)
 locateElmsUnchecked ::
@@ -299,7 +303,7 @@ locateElmsUnchecked ::
   (Monad m) =>
   LocateActions m ->
   LeafCardinality ->
-  RoleLocateSecondPass ->
+  RoleJSSecondPass ->
   ReducedHttpLoc ->
   m [ElementId]
 locateElmsUnchecked actions leafCardinality rolesSecondPass loc =
@@ -346,14 +350,14 @@ httpLocateSingleton actions@MkLocateActions{catch} opts loc = do
   case loc of
     LeafHttp ll -> do
       lr <- locateLeaf actions secondPassOnInitial FindAll ll
-      filtered <- chkElmsSingleton (displayChkAlways || isUnique && displayChkDisambiguate) lr
+      filtered <- chkElmsSingleton lr
       case filtered of
         Left e -> pure (Left e)
         Right [] ->
           if opts.extendedRoleLocation == ExtLocateSingletonMiss && isRole
             then do
-              missRetryRslt <- locateLeaf actions WantSecondPass FindAll ll
-              retryChked <- chkElmsSingleton (displayChkAlways || displayChkDisambiguate) missRetryRslt
+              missRetryRslt <- locateLeaf actions DoRoleJSSecondPass FindAll ll
+              retryChked <- chkElmsSingleton missRetryRslt
               case retryChked of
                 Left e -> pure (Left e)
                 Right [] -> notFoundErr
@@ -373,27 +377,31 @@ httpLocateSingleton actions@MkLocateActions{catch} opts loc = do
     CombintorHttp {} ->
       fmap Right (locateElmsUnchecked actions FindAll secondPassOnInitial loc)
   where
-      recheckDisplayed' = isDisplayedHttp catch actions.executeScript
 
       notFoundErr :: m (Either PreLocateException [ElementId])
       notFoundErr = pure . Left $ (ElementNotFound' "No element found matching locator.")
 
       throwAmbiguous elms = pure . Left $ (AmbiguousLocator' ("Multiple elements found matching locator: " <> txt elms))
-      mkLocResult = pure . Right
-      displayChkAlways = opts.jsRecheckDisplayed == DisplayedCheckAlways
-      displayChkDisambiguate = opts.jsRecheckDisplayed == DisplayedCheckDisambiguateUnique
+      mkLocResult = pure . Right  
       isUnique = opts.singletonCardinality == Unique
       isRole = case loc of
         LeafHttp (RL.BiDiNative (Role {})) -> True
         _ -> False
       secondPassOnInitial = case opts.extendedRoleLocation of
-        ExtLocateSingletonNever -> NoSecondPass
-        ExtLocateSingletonMiss -> NoSecondPass
-        ExtLocateSingletonAlways -> WantSecondPass
-      -- for singleton we always need all to check uniqueness
-      chkElmsSingleton doChk elms =
-        if doChk
-          then chkRefilterSingleton recheckDisplayed' elms
+        ExtLocateSingletonNever -> NoRoleJSSecondPass
+        ExtLocateSingletonMiss -> NoRoleJSSecondPass
+        ExtLocateSingletonAlways -> DoRoleJSSecondPass
+
+      chkElmsSingleton elms =
+        let 
+          displayChk = opts.jsRecheckDisplayed
+          cardinality = opts.singletonCardinality
+          wantRecheck = 
+             displayChk == DisplayedCheckAlways 
+             || displayChk == DisplayedCheckDisambiguateUnique && cardinality == Unique
+        in
+        if wantRecheck
+          then chkRefilterSingleton catch actions.executeScript elms
           else pure (Right elms)
 
 httpLocateAll ::
@@ -404,11 +412,11 @@ httpLocateAll ::
   ReducedHttpLoc ->
   m (Either PreLocateException [ElementId])
 httpLocateAll actions@MkLocateActions{catch} opts loc = do
-  let recheckDisplayed' = isDisplayedHttp catch actions.executeScript
+  let recheckDisplayed' = isDisplayedViaScript catch actions.executeScript
       mkLocResult = pure . Right
       secondPassOnInitial = case opts.extendedRoleLocation of
-        ExtLocateAllNever -> NoSecondPass
-        ExtLocateAllAlways -> WantSecondPass
+        ExtLocateAllNever -> NoRoleJSSecondPass
+        ExtLocateAllAlways -> DoRoleJSSecondPass
   elms <- locateElmsUnchecked actions FindAll secondPassOnInitial loc
   if opts.jsRecheckDisplayed == DisplayedCheckAlways
     then jsFilterDisplayed recheckDisplayed' elms >>= either (pure . Left) mkLocResult
@@ -481,17 +489,17 @@ displayedJS =
   \}\n\
   \return isDisplayed(arguments[0]);"
 
-isDisplayedHttp ::
+isDisplayedViaScript ::
   forall m.
   (Monad m) =>
-  -- | catch exceptions
+  -- | catch 
   (forall a e. (HasCallStack, Exception e) => m a -> (e -> m a) -> m a) ->
-  -- | execute script action
+  -- | execute script
   (Script -> m Value) ->
   -- | element to check
   ElementId ->
   m (Either PreLocateException Bool)
-isDisplayedHttp catch execScript eid =
+isDisplayedViaScript catch execScript eid =
   catch
     (Right . toBool <$> execScript MkScript {script = displayedJS, args = [toJSON eid]})
     -- if any error occurs when checking displayed, assume element is displayed
@@ -542,10 +550,7 @@ roleToXPathHttpLabeledBy actions lc roleLoc =
     RoleType {} -> pure []
     _ -> do
       candidates <-
-        -- matching role and an aria-labelledby attribute
-        -- WIP HERE ALSO HAVE TO GO BACK AND FEED IN PARTIALLY APPLIED ALLeLMS FUNCTION WHEN SELECTING FROM ELEM 
-          -- CHANGE INTERNAL DATA TYPE TO ONLY HAVE ELM SELECTOR WHITH NO BASE ID - FORCE PARTIAL APPLICATION ON CONSTRUCTION
-        -- TODO RECHECK THIS        -- all elms that match role and have an aria-labelledby attribute
+        -- all elms that match role and have an aria-labelledby attribute
         actions.findElements (HTTPP.XPath $ "//*" <> roleXPath roleLoc <> "[@aria-labelledby]")
       filterElms lc labledByMatchesRoleText candidates
       where
