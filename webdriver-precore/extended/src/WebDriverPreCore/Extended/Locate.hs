@@ -39,7 +39,7 @@ import WebDriverPreCore.Extended.ReducedLocator.Internal as RL
 import WebDriverPreCore.HTTP.Protocol as HTTPP (Script (..), Selector (..))
 import Prelude as P
 import Utils (txt)
-import Data.Bifunctor (first, Bifunctor (bimap))
+import Data.Bifunctor (first)
 
 data PreLocateException
   = AmbiguousLocator'  Text
@@ -164,10 +164,6 @@ data LocateActions m = MkLocateActions
 
 
 
-type FindElm m = Maybe ElementId -> Selector -> m (Either PreLocateException ElementId)
-type FindElms m = Maybe ElementId -> Selector -> m (Either PreLocateException [ElementId])
-
-
 -- | Locate a unique or first-matching element from the document root.
 locateHttp ::
   forall m.
@@ -179,8 +175,8 @@ locateHttp ::
   -- | locator
   Locator ->
   m (Either LocateException [ElementId])
-locateHttp actions opts =
-  prepareRun actions.catch opts.mkDefaultLoc (httpLocateSingleton actions opts)
+locateHttp actions@MkLocateActions{catch} opts =
+  prepareRun catch opts.mkDefaultLoc (httpLocateSingleton actions opts)
 
 -- | Locate all matching elements from the document root.
 locateAllHttp ::
@@ -190,8 +186,8 @@ locateAllHttp ::
   HttpLocateAllOpts ->
   Locator ->
   m (Either LocateException [ElementId])
-locateAllHttp actions opts =
-  prepareRun actions.catch opts.mkDefaultLoc (httpLocateAll actions opts)
+locateAllHttp actions@MkLocateActions{catch} opts =
+  prepareRun catch opts.mkDefaultLoc (httpLocateAll actions opts)
 
 -- | Locate a unique or first-matching element rooted at a given element.
 locateFromElementHttp ::
@@ -203,8 +199,8 @@ locateFromElementHttp ::
   ElementId ->
   Locator ->
   m (Either LocateException [ElementId])
-locateFromElementHttp actions opts rootId =
-  prepareRun actions.catch opts.mkDefaultLoc (httpLocateSingleton (setBaseElement rootId actions) opts)
+locateFromElementHttp actions@MkLocateActions{catch} opts rootId =
+  prepareRun catch opts.mkDefaultLoc (httpLocateSingleton (setBaseElement rootId actions) opts)
     
 -- | Locate all matching elements rooted at a given element.
 locateAllFromElementHttp ::
@@ -216,8 +212,8 @@ locateAllFromElementHttp ::
   ElementId ->
   Locator ->
   m (Either LocateException [ElementId])
-locateAllFromElementHttp actions opts rootId =
-    prepareRun actions.catch opts.mkDefaultLoc (httpLocateAll (setBaseElement rootId actions) opts)
+locateAllFromElementHttp actions@MkLocateActions{catch} opts rootId =
+    prepareRun catch opts.mkDefaultLoc (httpLocateAll (setBaseElement rootId actions) opts)
 
 
 setBaseElement :: ElementId -> LocateActions m -> LocateActions m
@@ -315,36 +311,33 @@ locateElmsUnchecked ::
   ReducedHttpLoc ->
   m [ElementId]
 locateElmsUnchecked actions leafCardinality rolesSecondPass loc =
-  fmap (fmap LST.nub)
-    . \case
+  fmap LST.nub $
+    case loc of
       LeafHttp cl ->
-        locateLeaf actions leafCardinality rolesSecondPass cl
+        locateLeaf actions rolesSecondPass leafCardinality cl
       CombintorHttp cb -> case cb of
         Contains {container, contained} -> do
-          eContainers <- locate FindAll rolesSecondPass container
-          case eContainers of
-            Left e -> pure (Left e)
-            Right containers -> locateContained containers contained
+          containers <- locate FindAll rolesSecondPass container
+          locateContained containers contained
         All {elms = locs} -> do
           let (l :| ls) = locs
-              step eAcc loc = case eAcc of
-                Left e -> pure (Left e)
-                Right acc
-                  | P.null acc -> pure (Right [])
-                  | otherwise -> fmap (fmap (LST.intersect acc)) (locateElmsUnchecked actions FindAll rolesSecondPass loc)
+              step acc loc' =
+                if P.null acc
+                  then pure []
+                  else fmap (LST.intersect acc) (locateElmsUnchecked actions FindAll rolesSecondPass loc')
           initial <- locate FindAll rolesSecondPass l
           foldM step initial ls
         Any {elms = locs} ->
-          fmap (fmap join . sequence) $
+          fmap join $
             traverse (locate FindAll rolesSecondPass) (toList locs)
       PostFilterHttpLoc {} -> postfilterNotImplemented
   where
     locate = locateElmsUnchecked actions
 
-    locateContained :: [ElementId] -> ReducedHttpLoc -> m (Either PreLocateException [ElementId])
+    locateContained :: [ElementId] -> ReducedHttpLoc -> m [ElementId]
     locateContained containerIds subLoc = do
-      containedResults <- traverse (\rootId -> locateElmsUnchecked actions FindAll rolesSecondPass subLoc) containerIds
-      pure . fmap join . sequence $ containedResults
+      containedResults <- traverse (\_ -> locateElmsUnchecked actions FindAll rolesSecondPass subLoc) containerIds
+      pure $ join containedResults
 
 -- ---------------------------------------------------------------------------
 -- Internal locate implementations
@@ -360,14 +353,14 @@ httpLocateSingleton ::
 httpLocateSingleton actions@MkLocateActions{catch} opts loc = do
   case loc of
     LeafHttp ll -> do
-      lr <- locateLeaf findElm' findElms' actions.getElementAttribute actions.getElementText Nothing FindAll secondPassOnInitial ll
+      lr <- locateLeaf actions secondPassOnInitial FindAll ll
       filtered <- chkElmsSingleton (displayChkAlways || isUnique && displayChkDisambiguate) lr
       case filtered of
         Left e -> pure (Left e)
         Right [] ->
           if opts.extendedRoleLocation == ExtLocateSingletonMiss && isRole
             then do
-              missRetryRslt <- locateLeaf findElm' findElms' actions.getElementAttribute actions.getElementText Nothing FindAll WantSecondPass ll
+              missRetryRslt <- locateLeaf actions WantSecondPass FindAll ll
               retryChked <- chkElmsSingleton (displayChkAlways || displayChkDisambiguate) missRetryRslt
               case retryChked of
                 Left e -> pure (Left e)
@@ -386,7 +379,7 @@ httpLocateSingleton actions@MkLocateActions{catch} opts loc = do
     PostFilterHttpLoc {} ->
       postfilterNotImplemented
     CombintorHttp {} ->
-      locateElmsUnchecked findElm' findElms' actions.getElementAttribute actions.getElementText recheckDisplayed' Nothing FindAll secondPassOnInitial loc
+      fmap Right (locateElmsUnchecked actions FindAll secondPassOnInitial loc)
   where
       recheckDisplayed' = isDisplayedHttp catch actions.executeScript
 
@@ -406,13 +399,10 @@ httpLocateSingleton actions@MkLocateActions{catch} opts loc = do
         ExtLocateSingletonMiss -> NoSecondPass
         ExtLocateSingletonAlways -> WantSecondPass
       -- for singleton we always need all to check uniqueness
-      chkElmsSingleton doChk eElms =
-        case eElms of
-          Left e -> pure (Left e)
-          Right elms ->
-            if doChk
-              then chkRefilterSingleton recheckDisplayed' elms
-              else pure (Right elms)
+      chkElmsSingleton doChk elms =
+        if doChk
+          then chkRefilterSingleton recheckDisplayed' elms
+          else pure (Right elms)
 
 httpLocateAll ::
   forall m.
@@ -424,17 +414,13 @@ httpLocateAll ::
 httpLocateAll actions@MkLocateActions{catch} opts loc = do
   let recheckDisplayed' = isDisplayedHttp catch actions.executeScript
       mkLocResult = pure . Right
-      findElm' _ _ = error "library defect: findElm called in locate-all context"
       secondPassOnInitial = case opts.extendedRoleLocation of
         ExtLocateAllNever -> NoSecondPass
         ExtLocateAllAlways -> WantSecondPass
-  result <- locateElmsUnchecked findElm' findElms' actions.getElementAttribute actions.getElementText recheckDisplayed' Nothing FindAll secondPassOnInitial loc
-  case result of
-    Left e -> pure (Left e)
-    Right elms ->
-      if opts.jsRecheckDisplayed == DisplayedCheckAlways
-        then jsFilterDisplayed recheckDisplayed' elms >>= either (pure . Left) mkLocResult
-        else mkLocResult elms
+  elms <- locateElmsUnchecked actions FindAll secondPassOnInitial loc
+  if opts.jsRecheckDisplayed == DisplayedCheckAlways
+    then jsFilterDisplayed recheckDisplayed' elms >>= either (pure . Left) mkLocResult
+    else mkLocResult elms
 
 postfilterNotImplemented :: a
 postfilterNotImplemented = error "PostFilter locators are not yet implemented in HTTP WebDriver"
@@ -568,7 +554,7 @@ roleToXPathHttpLabeledBy actions lc roleLoc =
         -- WIP HERE ALSO HAVE TO GO BACK AND FEED IN PARTIALLY APPLIED ALLeLMS FUNCTION WHEN SELECTING FROM ELEM 
           -- CHANGE INTERNAL DATA TYPE TO ONLY HAVE ELM SELECTOR WHITH NO BASE ID - FORCE PARTIAL APPLICATION ON CONSTRUCTION
         -- TODO RECHECK THIS        -- all elms that match role and have an aria-labelledby attribute
-        elmsLocator (HTTPP.XPath $ "//*" <> roleXPath roleLoc <> "[@aria-labelledby]")
+        actions.findElements (HTTPP.XPath $ "//*" <> roleXPath roleLoc <> "[@aria-labelledby]")
       filterElms lc labledByMatchesRoleText candidates
       where
         -- Resolve aria-labelledby on @eid@: split on whitespace to get ID-refs,
@@ -576,7 +562,7 @@ roleToXPathHttpLabeledBy actions lc roleLoc =
         -- and compare (after stripping) to @targetName@.
         labledByMatchesRoleText :: ElementId -> m Bool
         labledByMatchesRoleText eid =
-          getAttr eid "aria-labelledby"
+          actions.getElementAttribute eid "aria-labelledby"
             >>= \case
               Nothing -> pure False
               Just lblIds -> do
@@ -587,10 +573,10 @@ roleToXPathHttpLabeledBy actions lc roleLoc =
         -- 'Nothing' if no such element exists.
         textForId :: Text -> m (Maybe Text)
         textForId idRef = do
-          elms <- elmsLocator . HTTPP.XPath $ "//*[@id='" <> idRef <> "']"
+          elms <- actions.findElements . HTTPP.XPath $ "//*[@id='" <> idRef <> "']"
           case elms of
             [] -> pure Nothing
-            (e : _) -> Just <$> getText e
+            (e : _) -> Just <$> actions.getElementText e
 
 --  use all findElements but limit to 2 results (not supported in standard HTTP WebDriver, but available in BiDi via maxNodeCount).
 
@@ -608,20 +594,20 @@ roleToXPathFor actions lc roleLoc =
     _ -> do
       candidates <-
         -- has an @id and matches the role name
-        elmsLocator $ HTTPP.XPath $ "//*" <> roleXPath roleLoc <> "[@id]"
+        actions.findElements $ HTTPP.XPath $ "//*" <> roleXPath roleLoc <> "[@id]"
       filterElms lc forTxtMatchesId candidates
       where
         forTxtMatchesId :: ElementId -> m Bool
         forTxtMatchesId eid = do
-          mId <- getAttr eid "id"
+          mId <- actions.getElementAttribute eid "id"
           case mId of
             Nothing -> pure False
             Just idVal -> do
-              labels <- elmsLocator . HTTPP.XPath $ "//label[@for='" <> idVal <> "']"
+              labels <- actions.findElements . HTTPP.XPath $ "//label[@for='" <> idVal <> "']"
               case labels of
                 [] -> pure False
                 (lbl : _) -> do
-                  labelText <- getText lbl
+                  labelText <- actions.getElementText lbl
                   pure $ T.strip labelText == T.strip roleLoc.name
 
 roleXPath :: RoleLocator -> Text
