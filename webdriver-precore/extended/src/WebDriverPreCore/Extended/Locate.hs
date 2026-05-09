@@ -308,21 +308,16 @@ chkRefilterSingleton recheckDisplayed' elmIds =
 locateElmsUnchecked ::
   forall m.
   (Monad m) =>
-  FindElm m ->
-  FindElms m ->
-  (ElementId -> Text -> m (Maybe Text)) ->
-  (ElementId -> m Text) ->
-  (ElementId -> m (Either PreLocateException Bool)) ->
-  Maybe ElementId ->
+  LocateActions m ->
   LeafCardinality ->
   RoleLocateSecondPass ->
   ReducedHttpLoc ->
-  m (Either PreLocateException [ElementId])
-locateElmsUnchecked findElm' findElms' getAttr getText recheckDisplayed' mRoot leafCardinality rolesSecondPass =
+  m [ElementId]
+locateElmsUnchecked actions leafCardinality rolesSecondPass loc =
   fmap (fmap LST.nub)
     . \case
       LeafHttp cl ->
-        locateLeaf findElm' findElms' getAttr getText mRoot leafCardinality rolesSecondPass cl
+        locateLeaf actions leafCardinality rolesSecondPass cl
       CombintorHttp cb -> case cb of
         Contains {container, contained} -> do
           eContainers <- locate FindAll rolesSecondPass container
@@ -335,7 +330,7 @@ locateElmsUnchecked findElm' findElms' getAttr getText recheckDisplayed' mRoot l
                 Left e -> pure (Left e)
                 Right acc
                   | P.null acc -> pure (Right [])
-                  | otherwise -> fmap (fmap (LST.intersect acc)) (locate FindAll rolesSecondPass loc)
+                  | otherwise -> fmap (fmap (LST.intersect acc)) (locateElmsUnchecked actions FindAll rolesSecondPass loc)
           initial <- locate FindAll rolesSecondPass l
           foldM step initial ls
         Any {elms = locs} ->
@@ -343,11 +338,11 @@ locateElmsUnchecked findElm' findElms' getAttr getText recheckDisplayed' mRoot l
             traverse (locate FindAll rolesSecondPass) (toList locs)
       PostFilterHttpLoc {} -> postfilterNotImplemented
   where
-    locate = locateElmsUnchecked findElm' findElms' getAttr getText recheckDisplayed' mRoot
+    locate = locateElmsUnchecked actions
 
     locateContained :: [ElementId] -> ReducedHttpLoc -> m (Either PreLocateException [ElementId])
     locateContained containerIds subLoc = do
-      containedResults <- traverse (\rootId -> locateElmsUnchecked findElm' findElms' getAttr getText recheckDisplayed' (Just rootId) FindAll rolesSecondPass subLoc) containerIds
+      containedResults <- traverse (\rootId -> locateElmsUnchecked actions FindAll rolesSecondPass subLoc) containerIds
       pure . fmap join . sequence $ containedResults
 
 -- ---------------------------------------------------------------------------
@@ -540,22 +535,19 @@ roleToXPathHttpSecondPass ::
   (Monad m) =>
   -- | locate all elements matching a selector
   LocateActions m ->
-  Bool ->
+  LeafCardinality ->
   RoleLocator ->
   m [ElementId]
-roleToXPathHttpSecondPass
-  actions
-  firstOnly
-  roleLoc =
+roleToXPathHttpSecondPass actions lc roleLoc =
     case roleLoc of
       -- role type has no name / label so nothing to do
       RoleType {} -> pure []
       _ -> do
-        labelledByElms <- roleToXPathHttpLabeledBy actions firstOnly roleLoc
-        if firstOnly && notNull labelledByElms
+        labelledByElms <- roleToXPathHttpLabeledBy actions lc roleLoc
+        if lc == FindFirst && notNull labelledByElms
           then pure labelledByElms
           else do
-            forElms <- roleToXPathFor elmsLocator getAttr getText firstOnly roleLoc
+            forElms <- roleToXPathFor actions lc roleLoc
             pure . nubOrd $ mconcat [labelledByElms, forElms]
 
 roleToXPathHttpLabeledBy ::
@@ -563,10 +555,10 @@ roleToXPathHttpLabeledBy ::
   (Monad m) =>
   -- | locate all elements matching a selector
   LocateActions m ->
-  Bool ->
+  LeafCardinality ->
   RoleLocator ->
   m [ElementId]
-roleToXPathHttpLabeledBy actions firstOnly roleLoc =
+roleToXPathHttpLabeledBy actions lc roleLoc =
   case roleLoc of
     RoleType {} -> pure []
     _ -> do
@@ -576,7 +568,7 @@ roleToXPathHttpLabeledBy actions firstOnly roleLoc =
           -- CHANGE INTERNAL DATA TYPE TO ONLY HAVE ELM SELECTOR WHITH NO BASE ID - FORCE PARTIAL APPLICATION ON CONSTRUCTION
         -- TODO RECHECK THIS        -- all elms that match role and have an aria-labelledby attribute
         elmsLocator (HTTPP.XPath $ "//*" <> roleXPath roleLoc <> "[@aria-labelledby]")
-      filterElms firstOnly labledByMatchesRoleText candidates
+      filterElms lc labledByMatchesRoleText candidates
       where
         -- Resolve aria-labelledby on @eid@: split on whitespace to get ID-refs,
         -- look up the text of each referenced element, concatenate with spaces,
@@ -605,22 +597,18 @@ roleToXPathFor ::
   forall m.
   (Monad m) =>
   -- | locate all elements matching a selector
-  (Selector -> m [ElementId]) ->
-  -- | get an element attribute; 'Nothing' when the attribute is absent
-  (ElementId -> Text -> m (Maybe Text)) ->
-  -- | get the visible text of an element
-  (ElementId -> m Text) ->
-  Bool -> -- find first only
+  LocateActions m ->
+  LeafCardinality ->
   RoleLocator ->
   m [ElementId]
-roleToXPathFor elmsLocator getAttr getText firstOnly roleLoc =
+roleToXPathFor actions lc roleLoc =
   case roleLoc of
     RoleType {} -> pure []
     _ -> do
       candidates <-
         -- has an @id and matches the role name
         elmsLocator $ HTTPP.XPath $ "//*" <> roleXPath roleLoc <> "[@id]"
-      filterElms firstOnly forTxtMatchesId candidates
+      filterElms lc forTxtMatchesId candidates
       where
         forTxtMatchesId :: ElementId -> m Bool
         forTxtMatchesId eid = do
@@ -640,12 +628,12 @@ roleXPath = \case
   RoleName {} -> "[not(@role='presentation' or @role='none')]"
   r -> LI.roleTypeXPathContent True r.role
 
-filterElms :: forall m. (Monad m) => Bool -> (ElementId -> m Bool) -> [ElementId] -> m [ElementId]
-filterElms firstOnly matcher = recurse []
+filterElms :: forall m. (Monad m) => LeafCardinality -> (ElementId -> m Bool) -> [ElementId] -> m [ElementId]
+filterElms lc matcher = recurse []
   where
     recurse :: [ElementId] -> [ElementId] -> m [ElementId]
     recurse acc rem' =
-      if firstOnly && notNull acc
+      if lc == FindFirst && notNull acc
         then
           pure acc
         else case rem' of
