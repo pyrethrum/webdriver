@@ -228,14 +228,25 @@ prepareRun catch mkDefaultLoc locateActn locator =
 jsFilterDisplayed ::
   forall m.
   (Monad m) =>
-  (ElementId -> m (Either PreLocateException Bool)) ->
+  LocateActions m ->
   [ElementId] ->
   m (Either PreLocateException [ElementId])
-jsFilterDisplayed recheckDisplayed' elms = do
+jsFilterDisplayed MkLocateActions{catch, executeScript} elms = do
   results <- traverse doCheck elms
   pure $ fmap (fmap fst . P.filter snd) (sequence results)
   where
-    doCheck elm = fmap (elm,) <$> recheckDisplayed' elm
+    doCheck elm = fmap (elm,) <$> isDisplayedViaScript elm
+    isDisplayedViaScript eid =
+       catch
+        (Right . toBool <$> executeScript MkScript {script = displayedJS, args = [toJSON eid]})
+        -- if any error occurs when checking displayed, assume element is displayed
+        -- eg. if element becomes stale between finding and checking displayed, or if the driver does not support executeScript
+        (pure . Left . DriverException')
+      where
+        toBool :: Value -> Bool
+        toBool = \case
+          Bool b -> b
+          val -> error $ "library defect - isDisplayedHttp: isDisplayed script returned unexpected value (expected Bool) - got:\n  " <> P.show val
 
 -- finds leaf without display filtering
 locateLeaf ::
@@ -277,25 +288,21 @@ locateLeaf actions rolesSecondPass lc loc = do
 chkRefilterSingleton ::
   forall m.
   (Monad m) =>
-  -- | catch
-  (forall a e. (HasCallStack, Exception e) => m a -> (e -> m a) -> m a) ->
-  -- | execute script
-  (Script -> m Value) ->
+  LocateActions m ->
   [ElementId] ->
   m (Either PreLocateException [ElementId])
-chkRefilterSingleton catch executeScript elmIds =
-  chkSingleton' True elmIds
+chkRefilterSingleton actions elmIds =
+  chkSingleton True elmIds
   where
-    jsRecheckDisplayed = isDisplayedViaScript catch executeScript
-    chkSingleton' recheckAmbiguous' =
+    chkSingleton recheckAmbiguous =
       \case
         [] -> pure (Right [])
         [x] -> pure (Right [x])
         xs ->
-          recheckAmbiguous'
+          recheckAmbiguous
             & bool
               (pure (Right xs))
-              (jsFilterDisplayed jsRecheckDisplayed xs >>= either (pure . Left) (chkSingleton' False))
+              (jsFilterDisplayed actions xs >>= either (pure . Left) (chkSingleton False))
 
 -- single shot base locate (all cardinality)
 locateElmsUnchecked ::
@@ -401,7 +408,7 @@ httpLocateSingleton actions@MkLocateActions{catch} opts loc = do
              || displayChk == DisplayedCheckDisambiguateUnique && cardinality == Unique
         in
         if wantRecheck
-          then chkRefilterSingleton catch actions.executeScript elms
+          then chkRefilterSingleton actions elms
           else pure (Right elms)
 
 httpLocateAll ::
@@ -411,15 +418,14 @@ httpLocateAll ::
   HttpLocateAllOpts ->
   ReducedHttpLoc ->
   m (Either PreLocateException [ElementId])
-httpLocateAll actions@MkLocateActions{catch} opts loc = do
-  let recheckDisplayed' = isDisplayedViaScript catch actions.executeScript
-      mkLocResult = pure . Right
+httpLocateAll actions opts loc = do
+  let mkLocResult = pure . Right
       secondPassOnInitial = case opts.extendedRoleLocation of
         ExtLocateAllNever -> NoRoleJSSecondPass
         ExtLocateAllAlways -> DoRoleJSSecondPass
   elms <- locateElmsUnchecked actions FindAll secondPassOnInitial loc
   if opts.jsRecheckDisplayed == DisplayedCheckAlways
-    then jsFilterDisplayed recheckDisplayed' elms >>= either (pure . Left) mkLocResult
+    then jsFilterDisplayed actions elms >>= either (pure . Left) mkLocResult
     else mkLocResult elms
 
 postfilterNotImplemented :: a
@@ -488,28 +494,6 @@ displayedJS =
   \  return false;\n\
   \}\n\
   \return isDisplayed(arguments[0]);"
-
-isDisplayedViaScript ::
-  forall m.
-  (Monad m) =>
-  -- | catch 
-  (forall a e. (HasCallStack, Exception e) => m a -> (e -> m a) -> m a) ->
-  -- | execute script
-  (Script -> m Value) ->
-  -- | element to check
-  ElementId ->
-  m (Either PreLocateException Bool)
-isDisplayedViaScript catch execScript eid =
-  catch
-    (Right . toBool <$> execScript MkScript {script = displayedJS, args = [toJSON eid]})
-    -- if any error occurs when checking displayed, assume element is displayed
-    -- eg. if element becomes stale between finding and checking displayed, or if the driver does not support executeScript
-    (pure . Left . DriverException')
-  where
-    toBool :: Value -> Bool
-    toBool = \case
-      Bool b -> b
-      val -> error $ "library defect - isDisplayedHttp: isDisplayed script returned unexpected value (expected Bool) - got:\n  " <> P.show val
 
 _locateBiDi :: a
 _locateBiDi = undefined
