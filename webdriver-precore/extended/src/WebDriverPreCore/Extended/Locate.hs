@@ -4,7 +4,6 @@ module WebDriverPreCore.Extended.Locate
     HttpLocateOpts (..),
     HttpLocateAllOpts (..),
     LocateActions (..),
-    LocateAllActions (..),
     locateHttp,
     locateFromElementHttp,
     locateAllHttp,
@@ -266,10 +265,12 @@ locateLeaf ::
   LeafCardinality ->
   LeafLoc ->
   m [ElementId]
-locateLeaf actions rolesSecondPass leafCardinality loc = do
-  let simpleLocate =
-          ( if (leafCardinality == FindFirst)
-              then actions.findElement 
+locateLeaf actions rolesSecondPass lc loc = do
+  let 
+    simpleLocate :: m [ElementId]
+    simpleLocate =
+          ( if (lc == FindFirst)
+              then fmap LST.singleton . actions.findElement 
               else actions.findElements
           )
           (toSelector loc)
@@ -281,7 +282,7 @@ locateLeaf actions rolesSecondPass leafCardinality loc = do
         if rolesSecondPass == NoSecondPass
           then simpleLocate
           -- TODO: THIS IS BE MISSNG simpleLocate elements
-          else Right <$> roleToXPathHttpSecondPass actions firstOnly role
+          else roleToXPathHttpSecondPass actions lc role
       InnerText {} -> simpleLocate
 
 
