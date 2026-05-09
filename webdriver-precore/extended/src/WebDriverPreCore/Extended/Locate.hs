@@ -75,6 +75,7 @@ completeLocException  locator action =
       DriverException' e -> DriverException e locator
 
 instance Exception LocateException
+instance Exception PreLocateException
 
 -- | Whether to find the unique element (error if multiple match) or just the first.
 data SingletonCardinality = Unique | First deriving (Show, Eq)
@@ -142,7 +143,9 @@ data HttpLocateAllOpts = MkHttpLocateAllOpts
 
 -- | Actions for singleton locate functions ('locateHttp', 'locateFirstHttp', 'locateFromElementHttp').
 data LocateActions m = MkLocateActions
-  { catch :: forall a e. (HasCallStack, Exception e) => m a -> (e -> m a) -> m a,
+  { 
+    throw :: forall a. HasCallStack => PreLocateException -> m a,
+    catch :: forall a e. (HasCallStack, Exception e) => m a -> (e -> m a) -> m a,
     findElement :: Selector -> m ElementId,
     findElementFromElement :: ElementId -> Selector -> m ElementId,
     findElements :: Selector -> m [ElementId],
@@ -213,7 +216,7 @@ setBaseElement rootId act = act {
 prepareRun :: forall m. Monad m =>
      (forall a e. (HasCallStack, Exception e) => m a -> (e -> m a) -> m a)
      -> (Text -> Locator) 
-     -> (ReducedHttpLoc -> m (Either PreLocateException [ElementId])) 
+     -> (ReducedHttpLoc -> m [ElementId]) 
      -> Locator 
      -> m (Either LocateException [ElementId])
 prepareRun catch mkDefaultLoc locateActn locator =
@@ -223,25 +226,28 @@ prepareRun catch mkDefaultLoc locateActn locator =
     preparedLoc = prepareSimplify mkDefaultLoc HTTP locator >>= toHttpLocator
 
     runLoc :: ReducedHttpLoc -> m (Either PreLocateException [ElementId])
-    runLoc loc = catch (locateActn loc) (pure . Left . DriverException')
+    runLoc loc =
+      catch
+        (catch (Right <$> locateActn loc) (pure . Left . DriverException'))
+        (pure . Left)
 
 jsFilterDisplayed ::
   forall m.
   (Monad m) =>
   LocateActions m ->
   [ElementId] ->
-  m (Either PreLocateException [ElementId])
-jsFilterDisplayed MkLocateActions{catch, executeScript} elms = do
+  m [ElementId]
+jsFilterDisplayed MkLocateActions{catch, executeScript, throw} elms = do
   results <- traverse doCheck elms
-  pure $ fmap (fmap fst . P.filter snd) (sequence results)
+  pure $ fmap fst . P.filter snd $ results
   where
-    doCheck elm = fmap (elm,) <$> isDisplayedViaScript elm
+    doCheck elm = (elm,) <$> isDisplayedViaScript elm
     isDisplayedViaScript eid =
        catch
-        (Right . toBool <$> executeScript MkScript {script = displayedJS, args = [toJSON eid]})
+        (toBool <$> executeScript MkScript {script = displayedJS, args = [toJSON eid]})
         -- if any error occurs when checking displayed, assume element is displayed
         -- eg. if element becomes stale between finding and checking displayed, or if the driver does not support executeScript
-        (pure . Left . DriverException')
+        (throw . DriverException')
       where
         toBool :: Value -> Bool
         toBool = \case
@@ -290,19 +296,19 @@ chkRefilterSingleton ::
   (Monad m) =>
   LocateActions m ->
   [ElementId] ->
-  m (Either PreLocateException [ElementId])
+  m [ElementId]
 chkRefilterSingleton actions elmIds =
   chkSingleton True elmIds
   where
     chkSingleton recheckAmbiguous =
       \case
-        [] -> pure (Right [])
-        [x] -> pure (Right [x])
+        [] -> pure []
+        [x] -> pure [x]
         xs ->
           recheckAmbiguous
             & bool
-              (pure (Right xs))
-              (jsFilterDisplayed actions xs >>= either (pure . Left) (chkSingleton False))
+              (pure xs)
+              (jsFilterDisplayed actions xs >>= chkSingleton False)
 
 -- single shot base locate (all cardinality)
 locateElmsUnchecked ::
@@ -352,44 +358,41 @@ httpLocateSingleton ::
   LocateActions m ->
   HttpLocateOpts ->
   ReducedHttpLoc ->
-  m (Either PreLocateException [ElementId])
-httpLocateSingleton actions@MkLocateActions{catch} opts loc = do
+  m [ElementId]
+httpLocateSingleton actions@MkLocateActions{throw} opts loc = do
   case loc of
     LeafHttp ll -> do
       lr <- locateLeaf actions secondPassOnInitial FindAll ll
       filtered <- chkElmsSingleton lr
       case filtered of
-        Left e -> pure (Left e)
-        Right [] ->
+        [] ->
           if opts.extendedRoleLocation == ExtLocateSingletonMiss && isRole
             then do
               missRetryRslt <- locateLeaf actions DoRoleJSSecondPass FindAll ll
               retryChked <- chkElmsSingleton missRetryRslt
               case retryChked of
-                Left e -> pure (Left e)
-                Right [] -> notFoundErr
-                Right [x] -> mkLocResult [x]
-                Right (x : xs) ->
+                [] -> notFoundErr
+                [x] -> pure [x]
+                (x : xs) ->
                   if isUnique
                     then throwAmbiguous xs
-                    else mkLocResult [x]
+                    else pure [x]
             else notFoundErr
-        Right [x] -> mkLocResult [x]
-        Right elms@(x : _xs) ->
+        [x] -> pure [x]
+        elms@(x : _xs) ->
           if isUnique
             then throwAmbiguous elms
-            else mkLocResult [x]
+            else pure [x]
     PostFilterHttpLoc {} ->
       postfilterNotImplemented
     CombintorHttp {} ->
-      fmap Right (locateElmsUnchecked actions FindAll secondPassOnInitial loc)
+      locateElmsUnchecked actions FindAll secondPassOnInitial loc
   where
 
-      notFoundErr :: m (Either PreLocateException [ElementId])
-      notFoundErr = pure . Left $ (ElementNotFound' "No element found matching locator.")
+      notFoundErr :: m [ElementId]
+      notFoundErr = throw (ElementNotFound' "No element found matching locator.")
 
-      throwAmbiguous elms = pure . Left $ (AmbiguousLocator' ("Multiple elements found matching locator: " <> txt elms))
-      mkLocResult = pure . Right  
+      throwAmbiguous elms = throw (AmbiguousLocator' ("Multiple elements found matching locator: " <> txt elms))
       isUnique = opts.singletonCardinality == Unique
       isRole = case loc of
         LeafHttp (RL.BiDiNative (Role {})) -> True
@@ -409,7 +412,7 @@ httpLocateSingleton actions@MkLocateActions{catch} opts loc = do
         in
         if wantRecheck
           then chkRefilterSingleton actions elms
-          else pure (Right elms)
+          else pure elms
 
 httpLocateAll ::
   forall m.
@@ -417,16 +420,15 @@ httpLocateAll ::
   LocateActions m ->
   HttpLocateAllOpts ->
   ReducedHttpLoc ->
-  m (Either PreLocateException [ElementId])
+  m [ElementId]
 httpLocateAll actions opts loc = do
-  let mkLocResult = pure . Right
-      secondPassOnInitial = case opts.extendedRoleLocation of
+  let secondPassOnInitial = case opts.extendedRoleLocation of
         ExtLocateAllNever -> NoRoleJSSecondPass
         ExtLocateAllAlways -> DoRoleJSSecondPass
   elms <- locateElmsUnchecked actions FindAll secondPassOnInitial loc
   if opts.jsRecheckDisplayed == DisplayedCheckAlways
-    then jsFilterDisplayed actions elms >>= either (pure . Left) mkLocResult
-    else mkLocResult elms
+    then jsFilterDisplayed actions elms
+    else pure elms
 
 postfilterNotImplemented :: a
 postfilterNotImplemented = error "PostFilter locators are not yet implemented in HTTP WebDriver"
@@ -445,55 +447,6 @@ toSelector = \case
   BiDiNative sl -> case sl of
     Role {role} -> HTTPP.XPath $ roleToXPath role
     InnerText {value, matchType, caseSesnsitivity, maxDepth} -> HTTPP.XPath $ innerTextToXPath value caseSesnsitivity matchType maxDepth
-
-displayedJS :: Text
-displayedJS =
-  "function isDisplayed(el) {\n\
-  \  if (!el || !el.isConnected) return false;\n\
-  \\n\
-  \  const style = getComputedStyle(el);\n\
-  \\n\
-  \  if (style.display === \"none\") return false;\n\
-  \  if (style.visibility === \"hidden\" || style.visibility === \"collapse\") return false;\n\
-  \\n\
-  \  if (el.tagName === \"INPUT\" && el.type === \"hidden\")\n\
-  \    return false;\n\
-  \\n\
-  \  const rect = el.getBoundingClientRect();\n\
-  \\n\
-  \  if (rect.width === 0 || rect.height === 0)\n\
-  \    return false;\n\
-  \\n\
-  \  const vpW = window.innerWidth;\n\
-  \  const vpH = window.innerHeight;\n\
-  \\n\
-  \  if (\n\
-  \    rect.bottom < 0 ||\n\
-  \    rect.right < 0 ||\n\
-  \    rect.top > vpH ||\n\
-  \    rect.left > vpW\n\
-  \  )\n\
-  \    return false;\n\
-  \\n\
-  \  const points = [\n\
-  \    [rect.left + rect.width / 2, rect.top + rect.height / 2],\n\
-  \    [rect.left + 1, rect.top + 1],\n\
-  \    [rect.right - 1, rect.bottom - 1]\n\
-  \  ];\n\
-  \\n\
-  \  for (const [x, y] of points) {\n\
-  \    if (x < 0 || y < 0 || x > vpW || y > vpH)\n\
-  \      continue;\n\
-  \\n\
-  \    const hit = document.elementFromPoint(x, y);\n\
-  \\n\
-  \    if (hit === el || el.contains(hit))\n\
-  \      return true;\n\
-  \  }\n\
-  \\n\
-  \  return false;\n\
-  \}\n\
-  \return isDisplayed(arguments[0]);"
 
 _locateBiDi :: a
 _locateBiDi = undefined
@@ -559,8 +512,6 @@ roleToXPathHttpLabeledBy actions lc roleLoc =
             [] -> pure Nothing
             (e : _) -> Just <$> actions.getElementText e
 
---  use all findElements but limit to 2 results (not supported in standard HTTP WebDriver, but available in BiDi via maxNodeCount).
-
 roleToXPathFor ::
   forall m.
   (Monad m) =>
@@ -609,3 +560,53 @@ filterElms lc matcher = recurse []
           (e : es) -> do
             matches <- matcher e
             recurse (if matches then e : acc else acc) es
+
+
+displayedJS :: Text
+displayedJS =
+  "function isDisplayed(el) {\n\
+  \  if (!el || !el.isConnected) return false;\n\
+  \\n\
+  \  const style = getComputedStyle(el);\n\
+  \\n\
+  \  if (style.display === \"none\") return false;\n\
+  \  if (style.visibility === \"hidden\" || style.visibility === \"collapse\") return false;\n\
+  \\n\
+  \  if (el.tagName === \"INPUT\" && el.type === \"hidden\")\n\
+  \    return false;\n\
+  \\n\
+  \  const rect = el.getBoundingClientRect();\n\
+  \\n\
+  \  if (rect.width === 0 || rect.height === 0)\n\
+  \    return false;\n\
+  \\n\
+  \  const vpW = window.innerWidth;\n\
+  \  const vpH = window.innerHeight;\n\
+  \\n\
+  \  if (\n\
+  \    rect.bottom < 0 ||\n\
+  \    rect.right < 0 ||\n\
+  \    rect.top > vpH ||\n\
+  \    rect.left > vpW\n\
+  \  )\n\
+  \    return false;\n\
+  \\n\
+  \  const points = [\n\
+  \    [rect.left + rect.width / 2, rect.top + rect.height / 2],\n\
+  \    [rect.left + 1, rect.top + 1],\n\
+  \    [rect.right - 1, rect.bottom - 1]\n\
+  \  ];\n\
+  \\n\
+  \  for (const [x, y] of points) {\n\
+  \    if (x < 0 || y < 0 || x > vpW || y > vpH)\n\
+  \      continue;\n\
+  \\n\
+  \    const hit = document.elementFromPoint(x, y);\n\
+  \\n\
+  \    if (hit === el || el.contains(hit))\n\
+  \      return true;\n\
+  \  }\n\
+  \\n\
+  \  return false;\n\
+  \}\n\
+  \return isDisplayed(arguments[0]);"
