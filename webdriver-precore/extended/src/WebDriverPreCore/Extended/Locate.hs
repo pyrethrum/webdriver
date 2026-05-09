@@ -152,18 +152,6 @@ data LocateActions m = MkLocateActions
     getElementText :: ElementId -> m Text
   }
 
--- -- | Actions for multi-locate functions ('locateAllHttp', 'locateAllFromElementHttp').
--- data LocateAllActions m = MkLocateAllActions
---   { catch :: forall a e. (HasCallStack, Exception e) => m a -> (e -> m a) -> m a,
---     findElements :: Selector -> m [ElementId],
---     findElementsFromElement :: ElementId -> Selector -> m [ElementId],
---     executeScript :: Script -> m Value,
---     getElementAttribute :: ElementId -> Text -> m (Maybe Text),
---     getElementText :: ElementId -> m Text
---   }
-
-
-
 -- | Locate a unique or first-matching element from the document root.
 locateHttp ::
   forall m.
@@ -249,9 +237,6 @@ jsFilterDisplayed recheckDisplayed' elms = do
   where
     doCheck elm = fmap (elm,) <$> recheckDisplayed' elm
 
--- locateAll :: FindElms m -> Maybe ElementId -> Selector -> m (Either PreLocateException [ElementId])
--- locateAll findElms' mRoot s = findElms' mRoot s
-
 -- finds leaf without display filtering
 locateLeaf ::
   forall m.
@@ -277,8 +262,15 @@ locateLeaf actions rolesSecondPass lc loc = do
       Role {role} ->
         if rolesSecondPass == NoSecondPass
           then simpleLocate
-          -- TODO: THIS IS BE MISSNG simpleLocate elements
-          else roleToXPathHttpSecondPass actions lc role
+          else do 
+            sr <- simpleLocate
+            if lc == FindFirst then 
+              case sr of
+                [] -> roleToXPathHttpSecondPass actions lc role
+                [x] -> pure [x]
+                x:_ -> pure [x]
+              else
+               (sr <>) <$> roleToXPathHttpSecondPass actions lc role
       InnerText {} -> simpleLocate
 
 
