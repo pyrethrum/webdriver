@@ -5,8 +5,6 @@ module WebDriverPreCore.Extended.Locate
     HttpLocateAllOpts (..),
     LocateActions (..),
     LocateAllActions (..),
-    LocateFromElementActions (..),
-    LocateAllFromElementActions (..),
     locateHttp,
     locateFromElementHttp,
     locateAllHttp,
@@ -82,7 +80,7 @@ instance Exception LocateException
 -- | Whether to find the unique element (error if multiple match) or just the first.
 data SingletonCardinality = Unique | First deriving (Show, Eq)
 
-data LeafCardinality = LeafFirst | LeafMany deriving (Show, Eq)
+data LeafCardinality = FindFirst | FindAll deriving (Show, Eq)
 
 data DisplayedCheck = DisplayedCheckNever | DisplayedCheckDisambiguateUnique | DisplayedCheckAlways deriving (Show, Eq)
 
@@ -155,34 +153,16 @@ data LocateActions m = MkLocateActions
     getElementText :: ElementId -> m Text
   }
 
--- | Actions for multi-locate functions ('locateAllHttp', 'locateAllFromElementHttp').
-data LocateAllActions m = MkLocateAllActions
-  { catch :: forall a e. (HasCallStack, Exception e) => m a -> (e -> m a) -> m a,
-    findElements :: Selector -> m [ElementId],
-    findElementsFromElement :: ElementId -> Selector -> m [ElementId],
-    executeScript :: Script -> m Value,
-    getElementAttribute :: ElementId -> Text -> m (Maybe Text),
-    getElementText :: ElementId -> m Text
-  }
+-- -- | Actions for multi-locate functions ('locateAllHttp', 'locateAllFromElementHttp').
+-- data LocateAllActions m = MkLocateAllActions
+--   { catch :: forall a e. (HasCallStack, Exception e) => m a -> (e -> m a) -> m a,
+--     findElements :: Selector -> m [ElementId],
+--     findElementsFromElement :: ElementId -> Selector -> m [ElementId],
+--     executeScript :: Script -> m Value,
+--     getElementAttribute :: ElementId -> Text -> m (Maybe Text),
+--     getElementText :: ElementId -> m Text
+--   }
 
--- | Actions for singleton element-scoped locate functions ('locateFromElementHttp').
-data LocateFromElementActions m = MkLocateFromElementActions
-  { catch :: forall a e. (HasCallStack, Exception e) => m a -> (e -> m a) -> m a,
-    findElementFromElement :: ElementId -> Selector -> m ElementId,
-    findElementsFromElement :: ElementId -> Selector -> m [ElementId],
-    executeScript :: Script -> m Value,
-    getElementAttribute :: ElementId -> Text -> m (Maybe Text),
-    getElementText :: ElementId -> m Text
-  }
-
--- | Actions for multi element-scoped locate functions ('locateAllFromElementHttp').
-data LocateAllFromElementActions m = MkLocateAllFromElementActions
-  { catch :: forall a e. (HasCallStack, Exception e) => m a -> (e -> m a) -> m a,
-    findElementsFromElement :: ElementId -> Selector -> m [ElementId],
-    executeScript :: Script -> m Value,
-    getElementAttribute :: ElementId -> Text -> m (Maybe Text),
-    getElementText :: ElementId -> m Text
-  }
 
 
 type FindElm m = Maybe ElementId -> Selector -> m (Either PreLocateException ElementId)
@@ -200,19 +180,19 @@ locateHttp ::
   -- | locator
   Locator ->
   m (Either LocateException [ElementId])
-locateHttp act opts =
-  prepareRun opts.catch opts.mkDefaultLoc (httpLocateSingleton act opts)
+locateHttp actions opts =
+  prepareRun actions.catch opts.mkDefaultLoc (httpLocateSingleton actions opts)
 
 -- | Locate all matching elements from the document root.
 locateAllHttp ::
   forall m.
   (Monad m) =>
-  LocateAllActions m ->
+  LocateActions m ->
   HttpLocateAllOpts ->
   Locator ->
   m (Either LocateException [ElementId])
-locateAllHttp act opts =
-  prepareRun opts.catch opts.mkDefaultLoc (httpLocateAll act opts)
+locateAllHttp actions opts =
+  prepareRun actions.catch opts.mkDefaultLoc (httpLocateAll actions opts)
 
 -- | Locate a unique or first-matching element rooted at a given element.
 locateFromElementHttp ::
@@ -224,33 +204,29 @@ locateFromElementHttp ::
   ElementId ->
   Locator ->
   m (Either LocateException [ElementId])
-locateFromElementHttp act opts rootId =
-  prepareRun opts.catch opts.mkDefaultLoc (httpLocateSingleton rootedLocateActions opts)
-  where
-    rootedLocateActions = act {
-      findElement = act.findElementFromElement rootId, 
-      findElements = act.findElementsFromElement rootId
-      }
+locateFromElementHttp actions opts rootId =
+  prepareRun actions.catch opts.mkDefaultLoc (httpLocateSingleton (setBaseElement rootId actions) opts)
     
 -- | Locate all matching elements rooted at a given element.
 locateAllFromElementHttp ::
   forall m.
   (Monad m) =>
-  LocateAllActions m ->
+  LocateActions m ->
   HttpLocateAllOpts ->
   -- | root element
   ElementId ->
   Locator ->
   m (Either LocateException [ElementId])
-locateAllFromElementHttp act@MkLocateAllActions{..} opts rootId =
-    prepareRun opts.catch opts.mkDefaultLoc (httpLocateAll rootedLocateActions opts)
-    where
-      rootedLocateActions =  
-        MkLocateAllActions { 
-          findElements = act.findElementsFromElement rootId,
-          ..
-        }
-    
+locateAllFromElementHttp actions opts rootId =
+    prepareRun actions.catch opts.mkDefaultLoc (httpLocateAll (setBaseElement rootId actions) opts)
+
+
+setBaseElement :: ElementId -> LocateActions m -> LocateActions m
+setBaseElement rootId act = act {
+  findElement = act.findElementFromElement rootId,
+  findElements = act.findElementsFromElement rootId
+}
+   
 prepareRun :: forall m. Monad m =>
      (forall a e. (HasCallStack, Exception e) => m a -> (e -> m a) -> m a)
      -> (Text -> Locator) 
@@ -264,15 +240,7 @@ prepareRun catch mkDefaultLoc locateActn locator =
     preparedLoc = prepareSimplify mkDefaultLoc HTTP locator >>= toHttpLocator
 
     runLoc :: ReducedHttpLoc -> m (Either PreLocateException [ElementId])
-    runLoc loc = mkTry catch (locateActn loc)
-
-mkTry :: forall m a. Applicative m => 
- (forall b e.
-  -- | catch
-  (HasCallStack, Exception e) => m b -> (e -> m b) -> m b) 
-  -- | action
- -> (m a -> m (Either PreLocateException a))
-mkTry catch action = catch (Right <$> action) (pure . Left . DriverException')
+    runLoc loc = catch (locateActn loc) (pure . Left . DriverException')
 
 jsFilterDisplayed ::
   forall m.
@@ -286,26 +254,23 @@ jsFilterDisplayed recheckDisplayed' elms = do
   where
     doCheck elm = fmap (elm,) <$> recheckDisplayed' elm
 
-locateAll :: FindElms m -> Maybe ElementId -> Selector -> m (Either PreLocateException [ElementId])
-locateAll findElms' mRoot s = findElms' mRoot s
+-- locateAll :: FindElms m -> Maybe ElementId -> Selector -> m (Either PreLocateException [ElementId])
+-- locateAll findElms' mRoot s = findElms' mRoot s
 
 -- finds leaf without display filtering
 locateLeaf ::
   forall m.
   (Monad m) =>
-  (Selector -> m ElementId) ->
-  (Selector -> m [ElementId]) ->
+  LocateActions m ->
   RoleLocateSecondPass ->
   LeafCardinality ->
-  Maybe ElementId ->
   LeafLoc ->
-  m (Either PreLocateException [ElementId])
-locateLeaf elmLocator elmsLocator rolesSecondPass leafCardinality loc = do
-  let firstOnly = leafCardinality == LeafFirst
-      simpleLocate =
-          ( if firstOnly
-              then fmap (fmap pure) . elmLocator 
-              else locateAll elmsLocator
+  m [ElementId]
+locateLeaf actions rolesSecondPass leafCardinality loc = do
+  let simpleLocate =
+          ( if (leafCardinality == FindFirst)
+              then actions.findElement 
+              else actions.findElements
           )
           (toSelector loc)
   case loc of
@@ -316,7 +281,7 @@ locateLeaf elmLocator elmsLocator rolesSecondPass leafCardinality loc = do
         if rolesSecondPass == NoSecondPass
           then simpleLocate
           -- TODO: THIS IS BE MISSNG simpleLocate elements
-          else Right <$> roleToXPathHttpSecondPass elmsLocator getElementAttribute' getElementText' firstOnly role
+          else Right <$> roleToXPathHttpSecondPass actions firstOnly role
       InnerText {} -> simpleLocate
 
 
@@ -360,7 +325,7 @@ locateElmsUnchecked findElm' findElms' getAttr getText recheckDisplayed' mRoot l
         locateLeaf findElm' findElms' getAttr getText mRoot leafCardinality rolesSecondPass cl
       CombintorHttp cb -> case cb of
         Contains {container, contained} -> do
-          eContainers <- locate LeafMany rolesSecondPass container
+          eContainers <- locate FindAll rolesSecondPass container
           case eContainers of
             Left e -> pure (Left e)
             Right containers -> locateContained containers contained
@@ -370,19 +335,19 @@ locateElmsUnchecked findElm' findElms' getAttr getText recheckDisplayed' mRoot l
                 Left e -> pure (Left e)
                 Right acc
                   | P.null acc -> pure (Right [])
-                  | otherwise -> fmap (fmap (LST.intersect acc)) (locate LeafMany rolesSecondPass loc)
-          initial <- locate LeafMany rolesSecondPass l
+                  | otherwise -> fmap (fmap (LST.intersect acc)) (locate FindAll rolesSecondPass loc)
+          initial <- locate FindAll rolesSecondPass l
           foldM step initial ls
         Any {elms = locs} ->
           fmap (fmap join . sequence) $
-            traverse (locate LeafMany rolesSecondPass) (toList locs)
+            traverse (locate FindAll rolesSecondPass) (toList locs)
       PostFilterHttpLoc {} -> postfilterNotImplemented
   where
     locate = locateElmsUnchecked findElm' findElms' getAttr getText recheckDisplayed' mRoot
 
     locateContained :: [ElementId] -> ReducedHttpLoc -> m (Either PreLocateException [ElementId])
     locateContained containerIds subLoc = do
-      containedResults <- traverse (\rootId -> locateElmsUnchecked findElm' findElms' getAttr getText recheckDisplayed' (Just rootId) LeafMany rolesSecondPass subLoc) containerIds
+      containedResults <- traverse (\rootId -> locateElmsUnchecked findElm' findElms' getAttr getText recheckDisplayed' (Just rootId) FindAll rolesSecondPass subLoc) containerIds
       pure . fmap join . sequence $ containedResults
 
 -- ---------------------------------------------------------------------------
@@ -399,14 +364,14 @@ httpLocateSingleton ::
 httpLocateSingleton actions@MkLocateActions{catch} opts loc = do
   case loc of
     LeafHttp ll -> do
-      lr <- locateLeaf findElm' findElms' actions.getElementAttribute actions.getElementText Nothing LeafMany secondPassOnInitial ll
+      lr <- locateLeaf findElm' findElms' actions.getElementAttribute actions.getElementText Nothing FindAll secondPassOnInitial ll
       filtered <- chkElmsSingleton (displayChkAlways || isUnique && displayChkDisambiguate) lr
       case filtered of
         Left e -> pure (Left e)
         Right [] ->
           if opts.extendedRoleLocation == ExtLocateSingletonMiss && isRole
             then do
-              missRetryRslt <- locateLeaf findElm' findElms' actions.getElementAttribute actions.getElementText Nothing LeafMany WantSecondPass ll
+              missRetryRslt <- locateLeaf findElm' findElms' actions.getElementAttribute actions.getElementText Nothing FindAll WantSecondPass ll
               retryChked <- chkElmsSingleton (displayChkAlways || displayChkDisambiguate) missRetryRslt
               case retryChked of
                 Left e -> pure (Left e)
@@ -425,7 +390,7 @@ httpLocateSingleton actions@MkLocateActions{catch} opts loc = do
     PostFilterHttpLoc {} ->
       postfilterNotImplemented
     CombintorHttp {} ->
-      locateElmsUnchecked findElm' findElms' actions.getElementAttribute actions.getElementText recheckDisplayed' Nothing LeafMany secondPassOnInitial loc
+      locateElmsUnchecked findElm' findElms' actions.getElementAttribute actions.getElementText recheckDisplayed' Nothing FindAll secondPassOnInitial loc
   where
       recheckDisplayed' = isDisplayedHttp catch actions.executeScript
 
@@ -456,18 +421,18 @@ httpLocateSingleton actions@MkLocateActions{catch} opts loc = do
 httpLocateAll ::
   forall m.
   (Monad m) =>
-  LocateAllActions m ->
+  LocateActions m ->
   HttpLocateAllOpts ->
   ReducedHttpLoc ->
   m (Either PreLocateException [ElementId])
-httpLocateAll actions@MkLocateAllActions{catch} opts loc = do
+httpLocateAll actions@MkLocateActions{catch} opts loc = do
   let recheckDisplayed' = isDisplayedHttp catch actions.executeScript
       mkLocResult = pure . Right
       findElm' _ _ = error "library defect: findElm called in locate-all context"
       secondPassOnInitial = case opts.extendedRoleLocation of
         ExtLocateAllNever -> NoSecondPass
         ExtLocateAllAlways -> WantSecondPass
-  result <- locateElmsUnchecked findElm' findElms' actions.getElementAttribute actions.getElementText recheckDisplayed' Nothing LeafMany secondPassOnInitial loc
+  result <- locateElmsUnchecked findElm' findElms' actions.getElementAttribute actions.getElementText recheckDisplayed' Nothing FindAll secondPassOnInitial loc
   case result of
     Left e -> pure (Left e)
     Right elms ->
@@ -574,25 +539,19 @@ roleToXPathHttpSecondPass ::
   forall m.
   (Monad m) =>
   -- | locate all elements matching a selector
-  (Selector -> m [ElementId]) ->
-  -- | get an element attribute; 'Nothing' when the attribute is absent
-  (ElementId -> Text -> m (Maybe Text)) ->
-  -- | get the visible text of an element
-  (ElementId -> m Text) ->
+  LocateActions m ->
   Bool ->
   RoleLocator ->
   m [ElementId]
 roleToXPathHttpSecondPass
-  elmsLocator
-  getAttr
-  getText
+  actions
   firstOnly
   roleLoc =
     case roleLoc of
       -- role type has no name / label so nothing to do
       RoleType {} -> pure []
       _ -> do
-        labelledByElms <- roleToXPathHttpLabeledBy elmsLocator getAttr getText firstOnly roleLoc
+        labelledByElms <- roleToXPathHttpLabeledBy actions firstOnly roleLoc
         if firstOnly && notNull labelledByElms
           then pure labelledByElms
           else do
@@ -603,15 +562,11 @@ roleToXPathHttpLabeledBy ::
   forall m.
   (Monad m) =>
   -- | locate all elements matching a selector
-  (Selector -> m [ElementId]) ->
-  -- | get an element attribute; 'Nothing' when the attribute is absent
-  (ElementId -> Text -> m (Maybe Text)) ->
-  -- | get the visible text of an element
-  (ElementId -> m Text) ->
+  LocateActions m ->
   Bool ->
   RoleLocator ->
   m [ElementId]
-roleToXPathHttpLabeledBy elmsLocator getAttr getText firstOnly roleLoc =
+roleToXPathHttpLabeledBy actions firstOnly roleLoc =
   case roleLoc of
     RoleType {} -> pure []
     _ -> do
