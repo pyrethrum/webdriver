@@ -30,7 +30,7 @@ module WebDriver.Effectful.Logger
     LoggerHandle,
     acquireLogger,
     releaseLogger,
-    runWithLogger,
+    runLogger,
 
     -- * Logger operations
     log,
@@ -108,7 +108,7 @@ brackets m = "[" <> m <> "]"
 -- the log-file 'Handle'.
 --
 -- Use 'acquireLogger' \/ 'releaseLogger' as an acquire\/release pair (e.g.
--- with 'Test.Tasty.withResource') and 'runWithLogger' to inject the
+-- with 'Test.Tasty.withResource') and 'runLogger' to inject the
 -- 'Logger' effect into each action.  'withLogger' uses all three internally.
 data LoggerHandle = MkLoggerHandle K.LogEnv Handle
 
@@ -140,15 +140,15 @@ releaseLogger (MkLoggerHandle le fh) = K.closeScribes le >> hClose fh
 
 -- | Run an effectful action inside the 'Logger' effect using an existing
 -- 'LoggerHandle'.
-runWithLogger :: (IOE :> es) => LoggerHandle -> Eff (Logger : es) a -> Eff es a
-runWithLogger (MkLoggerHandle le _) = runKatipE le
+runLogger :: (IOE :> es) => LoggerHandle -> Eff (Logger : es) a -> Eff es a
+runLogger (MkLoggerHandle le _) = runKatipE le
 
 -- | Introduce a 'Logger' effect backed by Katip.
 --
 -- Registers a terminal scribe (colour when the output is a TTY) and a file
 -- scribe for @logFile@.  Scribes are finalised when the action exits.
 -- This is a convenience wrapper around 'acquireLogger', 'releaseLogger',
--- and 'runWithLogger'.
+-- and 'runLogger'.
 --
 -- @
 -- withLogger "eval.log" $ do
@@ -158,7 +158,7 @@ withLogger :: (IOE :> es) => FilePath -> Eff (Logger : es) a -> Eff es a
 withLogger logFile action =
   withSeqEffToIO $ \runInIO ->
     bracket (acquireLogger logFile) releaseLogger $ \lh ->
-      runInIO (runWithLogger lh action)
+      runInIO (runLogger lh action)
 
 -- ---------------------------------------------------------------------------
 -- Logger operations

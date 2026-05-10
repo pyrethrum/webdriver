@@ -16,6 +16,9 @@ module WebDriver.Effectful.App
 
     -- * HTTP Runners
     runHttp,
+    acquireHttpSession,
+    releaseHttpSession,
+    runHttpSession,
     withHttpSession,
 
     -- * BiDi Runners
@@ -29,7 +32,7 @@ where
 import Data.Aeson (FromJSON)
 import Data.Text (Text)
 import Effectful (Eff, IOE, Limit (..), Persistence (..), UnliftStrategy (..), (:>), runEff, withEffToIO, withSeqEffToIO)
-import UnliftIO (finally, throwIO)
+import UnliftIO (bracket, finally, throwIO)
 import WebDriver.Effectful.Logger (Logger, Severity (..), getLogFn)
 import WebDriver.Effectful.HTTP.Core
   ( BiDiInfo (..),
@@ -74,17 +77,53 @@ data InteractOpts = MkInteractOpts
 runHttp :: Eff '[IOE] a -> IO a
 runHttp = runEff
 
+-- | Create an HTTP WebDriver session and return an 'HttpSessionInfo' handle.
+--
+-- The caller is responsible for pairing this with 'releaseHttpSession'.
+-- Use 'Test.Tasty.withResource' or any other bracket-style combinator.
+-- 'withHttpSession' uses all three of 'acquireHttpSession',
+-- 'releaseHttpSession', and 'runHttpSession' internally.
+--
+-- The @driverInfo@ should already have 'driverLogFn' set if logging is
+-- desired (e.g. resolved from a 'Logger' context via 'resolveLogFn').
+acquireHttpSession
+  :: HttpDriverInfo
+  -> EC.HttpCapabilities
+  -> Timeout
+  -> IO HttpSessionInfo
+acquireHttpSession driverInfo caps pauseDuration' = do
+  resp <- EC.newHttpSessionResponse (mkRootRunner driverInfo) caps
+  pure MkHttpSessionInfo
+    { driverInfo    = driverInfo
+    , session       = resp.session
+    , pauseDuration = pauseDuration'
+    }
+
+-- | Delete the HTTP session associated with an 'HttpSessionInfo' handle.
+releaseHttpSession :: HttpSessionInfo -> IO ()
+releaseHttpSession si =
+  HA.deleteSession (mkSessionRunner si) si.session
+
+-- | Run an effectful action inside the 'WebDriverHttp' effect using an
+-- existing 'HttpSessionInfo' handle.
+runHttpSession :: (IOE :> es) => HttpSessionInfo -> Eff (WebDriverHttp : es) a -> Eff es a
+runHttpSession = runWebDriverHttp
+
 -- | Create an HTTP session, run an action inside the 'WebDriverHttp' effect,
 -- then delete the session on completion or error.
 --
--- Uses 'withSeqEffToIO' so that 'deleteSession' runs even when the action
--- throws.
+-- Uses 'withSeqEffToIO' so that 'releaseHttpSession' runs even when the
+-- action throws.
 --
 -- Stack requirements on the outer @es@:
 --
 -- * @IOE :> es@    — implicit via 'withSeqEffToIO'
 -- * @Logger :> es@ — to route driver-level logging through the existing
---   'Logger' effect (only relevant when @behaviour.driverLogging == True@)
+--   'Logger' effect (only relevant when @opts.driverLogging == True@)
+--
+-- Use 'acquireHttpSession' \/ 'releaseHttpSession' as an acquire\/release
+-- pair (e.g. with 'Test.Tasty.withResource') and 'runHttpSession' to inject
+-- the 'WebDriverHttp' effect into each test.
 withHttpSession
   :: (IOE :> es, Logger :> es)
   => HttpDriverInfo
@@ -92,20 +131,14 @@ withHttpSession
   -> EC.HttpCapabilities
   -> Eff (WebDriverHttp : es) a
   -> Eff es a
-withHttpSession driverInfo behaviour caps action =
+withHttpSession driverInfo opts caps action =
   withSeqEffToIO $ \runInIO -> do
-    logFn     <- runInIO (resolveLogFn behaviour)
-    let driverInfo' = driverInfo {driverLogFn = logFn}
-    resp      <- EC.newHttpSessionResponse (mkRootRunner driverInfo') caps
-    let sessionInfo =
-          MkHttpSessionInfo
-            { driverInfo    = driverInfo',
-              session       = resp.session,
-              pauseDuration = behaviour.pauseDuration
-            }
-    finally
-      (runInIO (runWebDriverHttp sessionInfo action))
-      (HA.deleteSession (mkSessionRunner sessionInfo) sessionInfo.session)
+    driverLogFn <- runInIO (mkLogFunction opts)
+    let driverInfo' = driverInfo {driverLogFn}
+    bracket
+      (acquireHttpSession driverInfo' caps opts.pauseDuration)
+      releaseHttpSession
+      (runInIO . flip runHttpSession action)
 
 -- ---------------------------------------------------------------------------
 -- BiDi Runners
@@ -132,7 +165,7 @@ withBiDiSession
   -> Eff es a
 withBiDiSession driverInfo behaviour caps action =
   withEffToIO (ConcUnlift Persistent Unlimited) $ \runInIO -> do
-    logFn    <- runInIO (resolveLogFn behaviour)
+    logFn    <- runInIO (mkLogFunction behaviour)
     let driverInfo' = driverInfo {driverLogFn = logFn}
     resp     <- EC.newHttpSessionResponse (mkRootRunner driverInfo') caps
     let httpInfo =
@@ -169,8 +202,8 @@ mkRootRunner info cmd =
 
 -- | Extract the driver @IO@ log function from the 'Logger' static effect
 -- when @driverLogging@ is enabled.  Returns 'Nothing' otherwise.
-resolveLogFn :: (Logger :> es) => InteractOpts -> Eff es (Maybe (Text -> IO ()))
-resolveLogFn MkInteractOpts{driverLogging} = 
+mkLogFunction :: (Logger :> es) => InteractOpts -> Eff es (Maybe (Text -> IO ()))
+mkLogFunction MkInteractOpts{driverLogging} = 
   if driverLogging
     then (Just . ($ InfoS)) <$> getLogFn
     else pure Nothing
