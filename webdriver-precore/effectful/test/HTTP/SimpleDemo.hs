@@ -1,7 +1,7 @@
 module HTTP.SimpleDemo where
 
 import Effectful (Eff, IOE, (:>), Effect)
-import HTTP.Runner (runHttpTest, testUrl)
+import HTTP.Runner (withHttp, testUrl)
 import WebDriver.Effectful
   ( Pause,
     WebDriverHttp,
@@ -21,7 +21,7 @@ import Prelude hiding (log)
 
 -- get rid of warning
 _runHttpTest :: (forall (es :: [Effect]).  (IOE :> es, Logger :> es, Pause :> es, WebDriverHttp :> es) =>  Eff es ()) -> IO ()
-_runHttpTest = runHttpTest
+_runHttpTest = withHttp
 
 -- >>> runHttpTest http_login_navigation_demo
 http_login_navigation_demo :: (Logger :> es, WebDriverHttp :> es, IOE :> es, Pause :> es) => Eff es ()

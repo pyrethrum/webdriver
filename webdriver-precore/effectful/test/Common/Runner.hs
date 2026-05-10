@@ -1,18 +1,17 @@
 module Common.Runner where
 
-import Effectful (Eff, IOE, liftIO, (:>), MonadIO)
+import Effectful (Eff, IOE, liftIO, (:>), MonadIO, runEff)
 import WebDriver.Effectful
   ( HttpDriverInfo (..),
     HttpEndpoint (..),
-    InteractOpts (..),
-    runHttp,
+    InteractOpts (..)
   )
 import WebDriverPreCore.Test.ConfigLoader (Config (..), loadConfig)
 import WebDriverPreCore.Utils.Timeout (milliseconds)
 import WebDriverPreCore.Extended.HTTP.Base.Protocol (URL)
 
 runSetup :: (forall es. (IOE :> es) => HttpDriverInfo -> InteractOpts -> Config -> Eff es a) -> IO a
-runSetup action = runHttp $ do
+runSetup action = runEff $ do
   config <- liftIO loadConfig
   let opts = mkInteractOpts config
       driverInfo =

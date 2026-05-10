@@ -101,6 +101,7 @@ mkSessionRunner info cmd =
 -- "WebDriver.Effectful.HTTP.Base.Actions".
 data WebDriverHttp :: Effect where
   -- Session management
+  -- TODO: not sure delete session belongs here
   DeleteSession :: WebDriverHttp m ()
   GetTimeouts :: WebDriverHttp m Timeouts
   SetTimeouts :: Timeouts -> WebDriverHttp m ()

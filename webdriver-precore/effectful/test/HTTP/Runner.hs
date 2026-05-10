@@ -1,18 +1,19 @@
 module HTTP.Runner (
-  runHttpTest,
+  withHttp,
   testUrl,
   mkHttpCaps,
   BaseHTTPAction,
-  WDResources (..),
-  acquireResources,
-  releaseResources,
-  runWDTest,
-  runMegaformaTest,
+  WDSession (..),
+  getWDSession,
+  closeWDSession,
+  -- TODO: Clean this up
+  runHttp,
+  -- runWDSessionTest,
 ) where
 
 import Common.Runner (runSetup, testUrl)
 import Data.Text (Text, unpack)
-import Effectful (Effect, Eff, IOE, liftIO, (:>))
+import Effectful (Effect, Eff, IOE, liftIO, (:>), runEff)
 import Test.Tasty (TestTree)
 import Test.Tasty.HUnit (testCase)
 import WebDriver.Effectful
@@ -25,7 +26,6 @@ import WebDriver.Effectful
     fromHttpCapability,
     FullCapabilities (..),
     releaseHttpSession,
-    runHttp,
     runHttpSession,
     runPause,
     withHttpSession,
@@ -51,7 +51,7 @@ mkHttpCaps config =
       firstMatch  = []
     }
 
-runHttpTest
+withHttp
   :: ( forall es
       . ( IOE :> es
         , Logger :> es
@@ -61,7 +61,7 @@ runHttpTest
      => Eff es ()
      )
   -> IO ()
-runHttpTest action =
+withHttp action =
   runSetup $ \driverInfo opts config ->
     runPause opts.pauseDuration $
       withLogger "eval.log" $
@@ -72,44 +72,41 @@ runHttpTest action =
 -- Resources
 -- ---------------------------------------------------------------------------
 
-data WDResources = MkWDResources
+data WDSession = MkWDSession
   { loggerHandle :: LoggerHandle,
     sessionInfo :: HttpSessionInfo
   }
 
-acquireResources :: IO WDResources
-acquireResources = 
+getWDSession :: IO WDSession
+getWDSession = 
   runSetup $ 
    \driverInfo opts config -> 
       liftIO $ do
         loggerHandle <- acquireLogger "eval.log"
         sessionInfo <- acquireHttpSession driverInfo (mkHttpCaps config) opts.pauseDuration
+        pure MkWDSession {loggerHandle, sessionInfo}
 
-        pure MkWDResources {loggerHandle, sessionInfo}
-
-releaseResources :: WDResources -> IO ()
-releaseResources MkWDResources {loggerHandle, sessionInfo} = do
+closeWDSession :: WDSession -> IO ()
+closeWDSession MkWDSession {loggerHandle, sessionInfo} = do
   releaseHttpSession sessionInfo
   releaseLogger loggerHandle
 
 -- | Run a 'BaseHTTPAction' with shared session and logger resources.
 --
--- Retrieves the 'WDResources' from the Tasty resource getter, then runs the
+-- Retrieves the 'WDSession' from the Tasty resource getter, then runs the
 -- action with 'IOE', 'Pause', 'Logger', and 'WebDriverHttp' in scope.
 -- Intended for use inside a 'withResource' group via 'baseLocateTests'.
-runWDTest :: IO WDResources -> Text -> BaseHTTPAction -> TestTree
-runWDTest getRes name action = 
+runHttp :: IO WDSession -> Text -> BaseHTTPAction -> TestTree
+runHttp getRes name action = 
   testCase (unpack name) $ do
-    MkWDResources {loggerHandle, sessionInfo} <- getRes
-    runHttp $
+    MkWDSession {loggerHandle, sessionInfo} <- getRes
+    runEff $
       runPause sessionInfo.pauseDuration $
         runLogger loggerHandle $
           runHttpSession sessionInfo action
 
-runMegaformaTest :: IO WDResources -> Text -> BaseHTTPAction -> TestTree
-runMegaformaTest getRes name action =
-  runWDTest getRes name $ 
-    testUrl megaformaUrl >>= navigateTo >> action
+-- runWDSessionTest :: WDSession -> Text -> BaseHTTPAction -> TestTree
+-- runWDSessionTest ses  = runWDTest (pure ses)
 
 
 

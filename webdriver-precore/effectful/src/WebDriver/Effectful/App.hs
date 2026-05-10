@@ -15,7 +15,6 @@ module WebDriver.Effectful.App
     InteractOpts (..),
 
     -- * HTTP Runners
-    runHttp,
     acquireHttpSession,
     releaseHttpSession,
     runHttpSession,
@@ -74,8 +73,9 @@ data InteractOpts = MkInteractOpts
 -- Use 'withHttpSession' or 'withBiDiSession' to add WebDriver effects, and
 -- 'WebDriver.Effectful.Logger.withLogger' \/ 'WebDriver.Effectful.Pause.withPause'
 -- for logging and pacing.
-runHttp :: Eff '[IOE] a -> IO a
-runHttp = runEff
+-- TODO: PERHAPS THIS COULD BE StATIC ACTIONS
+-- runHttp :: Eff '[IOE] a -> IO a
+-- runHttp = runEff
 
 -- | Create an HTTP WebDriver session and return an 'HttpSessionInfo' handle.
 --
