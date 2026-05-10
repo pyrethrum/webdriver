@@ -32,6 +32,7 @@ module WebDriverPreCore.Test.TestData
     shadowDomUrl,
     inputsUrl,
     attributeTestUrl,
+    megaformaUrl,
   )
 where
 
@@ -161,3 +162,6 @@ inputsUrl = fileUrl "inputs.html"
 
 attributeTestUrl :: MonadIO m => m URL
 attributeTestUrl = fileUrl "attributeTest.html"
+
+megaformaUrl :: MonadIO m => m URL
+megaformaUrl = fileUrl "megaforma.html"
