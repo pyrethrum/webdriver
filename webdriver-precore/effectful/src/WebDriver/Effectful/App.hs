@@ -11,7 +11,7 @@
 -- function so resource-management brackets run in ordinary @IO@ while still
 -- being able to call back into the outer effect stack.
 module WebDriver.Effectful.App
-  ( -- * Behaviour
+  ( -- * opts
     InteractOpts (..),
 
     -- * HTTP Runners
@@ -53,10 +53,10 @@ import WebDriverPreCore.HttpRunner (callWebDriver)
 import WebDriverPreCore.Utils.Timeout (Timeout)
 
 -- ---------------------------------------------------------------------------
--- Behaviour
+-- opts
 -- ---------------------------------------------------------------------------
 
--- | Bundles runtime behaviour parameters shared across HTTP and BiDi runners.
+-- | Bundles runtime opts parameters shared across HTTP and BiDi runners.
 data InteractOpts = MkInteractOpts
   { -- | How long 'pause' sleeps between actions.
     pauseDuration :: Timeout,
@@ -163,16 +163,16 @@ withBiDiSession
   -> EC.HttpCapabilities
   -> Eff (WebDriverBiDi : es) a
   -> Eff es a
-withBiDiSession driverInfo behaviour caps action =
+withBiDiSession driverInfo opts caps action =
   withEffToIO (ConcUnlift Persistent Unlimited) $ \runInIO -> do
-    logFn    <- runInIO (mkLogFunction behaviour)
+    logFn    <- runInIO (mkLogFunction opts)
     let driverInfo' = driverInfo {driverLogFn = logFn}
     resp     <- EC.newHttpSessionResponse (mkRootRunner driverInfo') caps
     let httpInfo =
           MkHttpSessionInfo
             { driverInfo    = driverInfo',
               session       = resp.session,
-              pauseDuration = behaviour.pauseDuration
+              pauseDuration = opts.pauseDuration
             }
     bidiUrl  <- parseBiDiUrlIO resp.websocketUrl
     finally
@@ -180,7 +180,7 @@ withBiDiSession driverInfo behaviour caps action =
           let biDiInfo =
                 MkBiDiInfo
                   { biDiRunner    = ioRunner,
-                    pauseDuration = behaviour.pauseDuration
+                    pauseDuration = opts.pauseDuration
                   }
           runInIO (runWebDriverBiDi biDiInfo action)
       )
