@@ -1,19 +1,7 @@
 module HTTP.BaseLocateTest where
 
-import Common.Runner (runSetup)
-import Effectful (liftIO)
-import HTTP.Runner (BaseHTTPAction, mkHttpCaps, testUrl)
+import HTTP.Runner (acquireResources, releaseResources)
 import Test.Tasty (TestTree, testGroup, withResource)
-import Test.Tasty.HUnit (testCase)
-import WebDriver.Effectful
-  ( HttpSessionInfo (..),
-    InteractOpts (..),
-    acquireHttpSession,
-    releaseHttpSession,
-    runHttp,
-    runHttpSession,
-    runPause,
-  )
 
 -- ---------------------------------------------------------------------------
 -- Tests

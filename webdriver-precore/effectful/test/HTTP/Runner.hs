@@ -3,33 +3,45 @@ module HTTP.Runner (
   testUrl,
   mkHttpCaps,
   BaseHTTPAction,
+  WDResources (..),
+  acquireResources,
+  releaseResources,
+  runWDTest,
+  runMegaformaTest,
 ) where
 
 import Common.Runner (runSetup, testUrl)
-import Effectful (Effect, Eff, IOE, (:>))
+import Data.Text (Text, unpack)
+import Effectful (Effect, Eff, IOE, liftIO, (:>))
+import Test.Tasty (TestTree)
+import Test.Tasty.HUnit (testCase)
 import WebDriver.Effectful
   ( HttpCapabilities,
+    HttpSessionInfo (..),
     InteractOpts (..),
     Pause,
     WebDriverHttp,
+    acquireHttpSession,
     fromHttpCapability,
     FullCapabilities (..),
+    releaseHttpSession,
+    runHttp,
+    runHttpSession,
+    runPause,
     withHttpSession,
-    runPause, HttpSessionInfo
   )
-import WebDriver.Effectful.Logger (withLogger, Logger)
-import WebDriverPreCore.Test.CapabilitiesBuilder (httpCapabilities)
-import WebDriverPreCore.Test.ConfigLoader (Config (..))
-import WebDriver.Effectful.HTTP.Base.Actions (navigateTo)
 import WebDriver.Effectful.Logger
   ( LoggerHandle,
+    Logger,
     acquireLogger,
     releaseLogger,
     runLogger,
+    withLogger,
   )
+import WebDriver.Effectful.HTTP.Base.Actions (navigateTo)
+import WebDriverPreCore.Test.CapabilitiesBuilder (httpCapabilities)
+import WebDriverPreCore.Test.ConfigLoader (Config (..))
 import WebDriverPreCore.Test.TestData (megaformaUrl)
-import Data.Text (Text, unpack)
-import Test.Tasty (TestTree)
 
 
 mkHttpCaps :: Config -> HttpCapabilities
