@@ -10,6 +10,7 @@ import WebDriverPreCore.BiDi.Protocol
   )
 import WebDriverPreCore.Test.CapabilitiesBuilder (httpCapabilities)
 import WebDriverPreCore.Test.ConfigLoader (Config (..))
+import WebDriver.Effectful.Logger (withLogger, Logger)
 
 mkBiDiCaps :: Config -> HttpCapabilities
 mkBiDiCaps config =

@@ -9,7 +9,7 @@
 -- typeclass environments and 'withEffToIO_' for cleanup on error.
 module WebDriver.Bluefin.App
   ( -- * Behaviour
-    InteractBehaviour (..),
+    InteractOpts (..),
 
     -- * HTTP Runners
     runHttp,
@@ -49,9 +49,9 @@ import WebDriverPreCore.Utils.Timeout (Timeout)
 
 -- | Bundles runtime behaviour parameters shared across HTTP and BiDi runners.
 --
--- Analogous to 'WebDriver.RIO.App.InteractBehaviour' but without a logging
+-- Analogous to 'WebDriver.RIO.App.InteractOpts' but without a logging
 -- config (Bluefin uses the 'IOE' handle for console logging directly).
-data InteractBehaviour = MkInteractBehaviour
+data InteractOpts = MkInteractOpts
   { -- | How long 'pause' sleeps between actions
     pauseDuration :: Timeout,
     -- | When 'True' log each driver message to stdout
@@ -93,7 +93,7 @@ runHttp driverInfo action =
 withHttpSession
   :: (e :> es)
   => HttpEnv e
-  -> InteractBehaviour
+  -> InteractOpts
   -> Logger e
   -> EC.HttpCapabilities
   -> (HttpSessionEnv e -> Eff es a)
@@ -126,7 +126,7 @@ withHttpSession http behaviour logger caps action =
 withBiDiSession
   :: (e :> es)
   => HttpEnv e
-  -> InteractBehaviour
+  -> InteractOpts
   -> Logger e
   -> EC.HttpCapabilities
   -> (BiDiEnv e -> Eff es a)
@@ -149,7 +149,7 @@ withBiDiSession http behaviour logger caps action =
 -- Internal helpers
 -- ---------------------------------------------------------------------------
 
-mkHttpSessionEnv :: HttpDriverInfo -> InteractBehaviour -> EC.HttpSessionResponse -> IOE e -> HttpSessionEnv e
+mkHttpSessionEnv :: HttpDriverInfo -> InteractOpts -> EC.HttpSessionResponse -> IOE e -> HttpSessionEnv e
 mkHttpSessionEnv info behaviour resp io =
   MkHttpSessionEnv
     { httpDriverInfo = info,

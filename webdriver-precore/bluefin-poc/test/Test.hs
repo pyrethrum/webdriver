@@ -68,11 +68,11 @@ tests =
 -- Both 'runHttpTest' and 'runBiDiTest' delegate to this so config loading and
 -- environment construction happen in exactly one place.
 runSetup ::
-  (forall e. IOE e -> HttpEnv e -> InteractBehaviour -> Config -> Eff e a) ->
+  (forall e. IOE e -> HttpEnv e -> InteractOpts -> Config -> Eff e a) ->
   IO a
 runSetup action = runEff_ $ \io -> do
   config <- effIO io loadConfig
-  let behaviour = mkInteractBehaviour config
+  let behaviour = mkInteractOpts config
       driverInfo =
         MkHttpDriverInfo
           { httpEndpoint = MkHttpEndpoint {host = config.httpUrl, port = config.httpPort},
@@ -114,9 +114,9 @@ runBiDiTest action =
 -- Helpers
 -- ---------------------------------------------------------------------------
 
-mkInteractBehaviour :: Config -> InteractBehaviour
-mkInteractBehaviour config =
-  MkInteractBehaviour
+mkInteractOpts :: Config -> InteractOpts
+mkInteractOpts config =
+  MkInteractOpts
     { pauseDuration = fromIntegral config.pauseMS * milliseconds,
       driverLogging = config.logging
     }

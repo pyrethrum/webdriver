@@ -12,7 +12,7 @@
 -- being able to call back into the outer effect stack.
 module WebDriver.Effectful.App
   ( -- * Behaviour
-    InteractBehaviour (..),
+    InteractOpts (..),
 
     -- * HTTP Runners
     runHttp,
@@ -54,7 +54,7 @@ import WebDriverPreCore.Utils.Timeout (Timeout)
 -- ---------------------------------------------------------------------------
 
 -- | Bundles runtime behaviour parameters shared across HTTP and BiDi runners.
-data InteractBehaviour = MkInteractBehaviour
+data InteractOpts = MkInteractOpts
   { -- | How long 'pause' sleeps between actions.
     pauseDuration :: Timeout,
     -- | When 'True' log each driver message via the 'Logger' effect.
@@ -88,7 +88,7 @@ runHttp = runEff
 withHttpSession
   :: (IOE :> es, Logger :> es)
   => HttpDriverInfo
-  -> InteractBehaviour
+  -> InteractOpts
   -> EC.HttpCapabilities
   -> Eff (WebDriverHttp : es) a
   -> Eff es a
@@ -126,7 +126,7 @@ withHttpSession driverInfo behaviour caps action =
 withBiDiSession
   :: (IOE :> es, Logger :> es)
   => HttpDriverInfo
-  -> InteractBehaviour
+  -> InteractOpts
   -> EC.HttpCapabilities
   -> Eff (WebDriverBiDi : es) a
   -> Eff es a
@@ -169,8 +169,8 @@ mkRootRunner info cmd =
 
 -- | Extract the driver @IO@ log function from the 'Logger' static effect
 -- when @driverLogging@ is enabled.  Returns 'Nothing' otherwise.
-resolveLogFn :: (Logger :> es) => InteractBehaviour -> Eff es (Maybe (Text -> IO ()))
-resolveLogFn MkInteractBehaviour{driverLogging} = 
+resolveLogFn :: (Logger :> es) => InteractOpts -> Eff es (Maybe (Text -> IO ()))
+resolveLogFn MkInteractOpts{driverLogging} = 
   if driverLogging
     then (Just . ($ InfoS)) <$> getLogFn
     else pure Nothing

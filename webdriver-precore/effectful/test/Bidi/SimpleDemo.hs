@@ -18,12 +18,12 @@ import UnliftIO.Async (race_)
 import UnliftIO.Concurrent (threadDelay)
 import Utils (txt)
 import WebDriver.Effectful
-  ( Logger,
+  (
     Pause,
     WebDriverBiDi,
-    log,
     pause,
   )
+import WebDriver.Effectful.Logger (Logger, log)
 import WebDriver.Effectful.BiDi.Base.Actions
 import WebDriverPreCore.BiDi.Protocol
   ( BrowsingContext (..),

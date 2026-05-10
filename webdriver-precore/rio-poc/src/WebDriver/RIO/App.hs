@@ -8,7 +8,7 @@
 -- driver info, then execute RIO actions in those contexts.
 module WebDriver.RIO.App
   ( -- * Behaviour
-    InteractBehaviour (..),
+    InteractOpts (..),
     -- * HTTP Runners
     runHttp,
     withHttpSession,
@@ -44,7 +44,7 @@ import WebDriverPreCore.BiDiRunner (BiDiUrl, parseBiDiUrl)
 import WebDriverPreCore.BiDiRunner qualified as BiDiRunner
 
 -- | Bundles the runtime behaviour parameters shared across HTTP and BiDi runners.
-data InteractBehaviour = MkInteractBehaviour
+data InteractOpts = MkInteractOpts
   { pauseDuration :: Timeout,
     loggerConfig :: LoggerConfig,
     driverLogging :: Bool
@@ -65,7 +65,7 @@ runHttp ::
   -- | Environment constructor from LogFunc and HttpDriverInfo
   (LogFunc -> HttpDriverInfo -> env) ->
   -- | Runtime behaviour (logging config, pause duration, driver logging)
-  InteractBehaviour ->
+  InteractOpts ->
   -- | HTTP driver info (endpoint + logging flag)
   HttpDriverInfo ->
   -- | The RIO action to execute in the configured environment
@@ -94,7 +94,7 @@ withHttpSession ::
   forall env senv a.
   (HasLogFunc senv, HasHttpDriverInfo senv, HasHttpSession senv) =>
   (HttpCapabilities -> Timeout -> RIO env senv) ->
-  InteractBehaviour ->
+  InteractOpts ->
   HttpCapabilities ->
   -- | Action to run with the session
   RIO senv a ->
@@ -107,7 +107,7 @@ withHttpSession mkEnv behaviour caps action =
   where
     run = flip runRIO
 
-withHttpSessionEnv :: (HasLogFunc env, HasHttpDriverInfo env) => InteractBehaviour -> HttpCapabilities -> RIO HttpSessionEnv a -> RIO env a
+withHttpSessionEnv :: (HasLogFunc env, HasHttpDriverInfo env) => InteractOpts -> HttpCapabilities -> RIO HttpSessionEnv a -> RIO env a
 withHttpSessionEnv = withHttpSession mkHttpSession
 
 pause :: (HasPauseDuration env) => RIO env ()
@@ -127,7 +127,7 @@ pause = do
 runBiDi ::
   (MonadUnliftIO m) =>
   -- | Runtime behaviour (logging config, pause duration, driver logging)
-  InteractBehaviour ->
+  InteractOpts ->
   -- | The BiDi WebSocket URL (obtained from a prior HTTP session response)
   BiDiUrl ->
   -- | The RIO action to execute in the BiDi environment
@@ -144,7 +144,7 @@ runBiDi behaviour bidiUrl action =
 withBiDiEnv ::
   (HasLogFunc env) =>
   -- | Runtime behaviour (logging config, pause duration, driver logging)
-  InteractBehaviour ->
+  InteractOpts ->
   -- | The BiDi WebSocket URL (obtained from a prior HTTP session response)
   BiDiUrl ->
   -- | The RIO action to execute in the BiDi environment
@@ -162,7 +162,7 @@ withBiDiEnv behaviour bidiUrl action = do
 withBiDiSession ::
   (HasLogFunc env, HasHttpDriverInfo env) =>
   -- | Runtime behaviour (logging config, pause duration, driver logging)
-  InteractBehaviour ->
+  InteractOpts ->
   -- | Capabilities – must enable @webSocketUrl@
   EC.HttpCapabilities ->
   -- | Action to run in the BiDi environment
@@ -188,7 +188,7 @@ withBiDiSession behaviour caps action = do
     withBiDiEnv behaviour bidiUrl action
 
 -- Internal helper: open a BiDi connection and run an action in BiDiEnv.
-withBiDiEnvIO :: LogFunc -> InteractBehaviour -> BiDiUrl -> RIO BiDiEnv a -> IO a
+withBiDiEnvIO :: LogFunc -> InteractOpts -> BiDiUrl -> RIO BiDiEnv a -> IO a
 withBiDiEnvIO lf behaviour bidiUrl action =
   BiDiRunner.withBiDi mLogger bidiUrl $ \ioRunner ->
     let rioRunner = BiDiRunner.hoistBiDiRunner liftIO (runRIO env) ioRunner

@@ -26,6 +26,12 @@ module WebDriver.Effectful.Logger
     -- * Logger introducer
     withLogger,
 
+    -- * Logger resource management
+    LoggerHandle,
+    acquireLogger,
+    releaseLogger,
+    runWithLogger,
+
     -- * Logger operations
     log,
     logDebug,
@@ -48,18 +54,12 @@ import Data.Time.Format (defaultTimeLocale, formatTime)
 import Data.Time.LocalTime (TimeZone, getCurrentTimeZone, utcToLocalTime)
 import Effectful (Eff, IOE, (:>), withSeqEffToIO)
 import Effectful.Katip
-  ( ColorStrategy (..),
-    Item (..),
+  ( Item (..),
     ItemFormatter,
     KatipE,
     Severity (..),
-    Verbosity (..),
-    defaultScribeSettings,
     getLogEnv,
     logStr,
-    mkHandleScribeWithFormatter,
-    permitItem,
-    registerScribe,
     renderSeverity,
     runKatipE,
     unLogStr,
@@ -68,7 +68,7 @@ import qualified Effectful.Katip as EK
 import Katip (initLogEnv)
 import qualified Katip as K
 import Katip.Scribes.Handle (colorBySeverity)
-import System.IO (IOMode (..), hClose, openFile, stdout)
+import System.IO (Handle, IOMode (..), hClose, openFile, stdout)
 import Prelude hiding (log)
 
 -- ---------------------------------------------------------------------------
@@ -101,15 +101,54 @@ brackets :: Builder -> Builder
 brackets m = "[" <> m <> "]"
 
 -- ---------------------------------------------------------------------------
+-- Logger handle
+-- ---------------------------------------------------------------------------
+
+-- | Opaque handle holding a Katip 'K.LogEnv' (with scribes registered) and
+-- the log-file 'Handle'.
+--
+-- Use 'acquireLogger' \/ 'releaseLogger' as an acquire\/release pair (e.g.
+-- with 'Test.Tasty.withResource') and 'runWithLogger' to inject the
+-- 'Logger' effect into each action.  'withLogger' uses all three internally.
+data LoggerHandle = MkLoggerHandle K.LogEnv Handle
+
+-- ---------------------------------------------------------------------------
 -- Logger introducer
 -- ---------------------------------------------------------------------------
+
+-- | Open a log file and register a terminal scribe and a file scribe,
+-- returning a 'LoggerHandle'.
+--
+-- Pair with 'releaseLogger' to form an acquire\/release pair suitable for
+-- 'Test.Tasty.withResource' or any other bracket-style combinator.
+-- Use 'withLogger' when a single bracketed scope suffices.
+acquireLogger :: FilePath -> IO LoggerHandle
+acquireLogger logFile = do
+  fh         <- openFile logFile WriteMode
+  tz         <- getCurrentTimeZone
+  le0        <- initLogEnv "webdriver" "eval"
+  termScribe <- K.mkHandleScribeWithFormatter (localBracketFormat tz) K.ColorIfTerminal stdout (K.permitItem K.DebugS) K.V2
+  fileScribe <- K.mkHandleScribeWithFormatter (localBracketFormat tz) (K.ColorLog False) fh   (K.permitItem K.DebugS) K.V2
+  le1        <- K.registerScribe "stdout" termScribe K.defaultScribeSettings le0
+  le2        <- K.registerScribe "file"   fileScribe K.defaultScribeSettings le1
+  pure (MkLoggerHandle le2 fh)
+
+-- | Flush and close all scribes in a 'LoggerHandle', then close the
+-- log-file handle.
+releaseLogger :: LoggerHandle -> IO ()
+releaseLogger (MkLoggerHandle le fh) = K.closeScribes le >> hClose fh
+
+-- | Run an effectful action inside the 'Logger' effect using an existing
+-- 'LoggerHandle'.
+runWithLogger :: (IOE :> es) => LoggerHandle -> Eff (Logger : es) a -> Eff es a
+runWithLogger (MkLoggerHandle le _) = runKatipE le
 
 -- | Introduce a 'Logger' effect backed by Katip.
 --
 -- Registers a terminal scribe (colour when the output is a TTY) and a file
--- scribe for @logFile@.  Scribes are finalised (flushed and closed) by
--- 'runKatipE' when the action exits, after which the file handle is closed
--- by 'bracket'.
+-- scribe for @logFile@.  Scribes are finalised when the action exits.
+-- This is a convenience wrapper around 'acquireLogger', 'releaseLogger',
+-- and 'runWithLogger'.
 --
 -- @
 -- withLogger "eval.log" $ do
@@ -118,15 +157,8 @@ brackets m = "[" <> m <> "]"
 withLogger :: (IOE :> es) => FilePath -> Eff (Logger : es) a -> Eff es a
 withLogger logFile action =
   withSeqEffToIO $ \runInIO ->
-    bracket (openFile logFile WriteMode) hClose $ \fh -> do
-      tz  <- getCurrentTimeZone
-      le0 <- initLogEnv "webdriver" "eval"
-      runInIO $ runKatipE le0 $ do
-        termScribe <- mkHandleScribeWithFormatter (localBracketFormat tz) ColorIfTerminal stdout (permitItem DebugS) V2
-        fileScribe  <- mkHandleScribeWithFormatter (localBracketFormat tz) (ColorLog False) fh   (permitItem DebugS) V2
-        registerScribe "stdout" termScribe defaultScribeSettings
-        registerScribe "file"   fileScribe defaultScribeSettings
-        action
+    bracket (acquireLogger logFile) releaseLogger $ \lh ->
+      runInIO (runWithLogger lh action)
 
 -- ---------------------------------------------------------------------------
 -- Logger operations

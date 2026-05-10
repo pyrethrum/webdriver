@@ -4,19 +4,18 @@ module HTTP.Runner (
 ) where
 
 import Common.Runner (runSetup, testUrl)
-import Effectful (Eff, IOE, (:>))
+import Effectful (Effect, Eff, IOE, (:>))
 import WebDriver.Effectful
   ( HttpCapabilities,
-    InteractBehaviour (..),
-    Logger,
+    InteractOpts (..),
     Pause,
     WebDriverHttp,
     fromHttpCapability,
     FullCapabilities (..),
     withHttpSession,
-    withLogger,
-    runPause,
+    runPause
   )
+import WebDriver.Effectful.Logger (withLogger, Logger)
 import WebDriverPreCore.Test.CapabilitiesBuilder (httpCapabilities)
 import WebDriverPreCore.Test.ConfigLoader (Config (..))
 
@@ -38,7 +37,10 @@ runHttpTest
      )
   -> IO ()
 runHttpTest action =
-  runSetup $ \driverInfo behaviour config ->
-    withLogger "eval.log" $
-      withHttpSession driverInfo behaviour (mkHttpCaps config) $
-        runPause behaviour.pauseDuration action
+  runSetup $ \driverInfo opts config ->
+    runPause opts.pauseDuration $
+      withLogger "eval.log" $
+        withHttpSession driverInfo opts (mkHttpCaps config) action
+
+
+type BaseHTTPAction = forall (es :: [Effect]). (IOE :> es, Logger :> es, Pause :> es, WebDriverHttp :> es) => Eff es ()

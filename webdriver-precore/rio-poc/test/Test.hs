@@ -70,7 +70,7 @@ tests =
 runHttp' :: (Config -> RIO HttpEnv a) -> IO a
 runHttp' httpAction = do
   config@MkConfig {httpPort, httpUrl} <- loadConfig
-  let behaviour = mkInteractBehaviour config
+  let behaviour = mkInteractOpts config
       driverInfo =
         MkHttpDriverInfo
           { httpEndpoint = MkHttpEndpoint {host = httpUrl, port = httpPort},
@@ -78,9 +78,9 @@ runHttp' httpAction = do
           }
   R.runHttp mkHttpEnv behaviour driverInfo (httpAction config)
 
-mkInteractBehaviour :: Config -> InteractBehaviour
-mkInteractBehaviour config =
-  MkInteractBehaviour
+mkInteractOpts :: Config -> InteractOpts
+mkInteractOpts config =
+  MkInteractOpts
     { pauseDuration = fromIntegral config.pauseMS * milliseconds,
       loggerConfig = ConsoleAndFile "eval.log",
       driverLogging = config.logging
@@ -92,7 +92,7 @@ runHttp httpAction = runHttp' (const httpAction)
 withSession :: RIO HttpSessionEnv a -> IO a
 withSession sessionAction = runHttp' $ \config -> do
   let caps = mkHttpCaps config
-      behaviour = mkInteractBehaviour config
+      behaviour = mkInteractOpts config
   R.withHttpSessionEnv behaviour caps sessionAction
 
 mkHttpCaps :: Config -> HttpCapabilities
@@ -190,7 +190,7 @@ input_navigation_base_demo = withSession $ do
 bidi_login_demo :: IO ()
 bidi_login_demo = runHttp' $ \config -> do
   let caps = mkBiDiCaps config
-      behaviour = mkInteractBehaviour config
+      behaviour = mkInteractOpts config
 
   R.withBiDiSession behaviour caps $ do
     log "=== Get root browsing context ==="

@@ -3,12 +3,11 @@ module HTTP.SimpleDemo where
 import Effectful (Eff, IOE, (:>), Effect)
 import HTTP.Runner (runHttpTest, testUrl)
 import WebDriver.Effectful
-  ( Logger,
-    Pause,
+  ( Pause,
     WebDriverHttp,
-    log,
     pause,
   )
+import WebDriver.Effectful.Logger (log, Logger)
 import WebDriver.Effectful.HTTP.Base.Actions
   ( elementSendKeys,
     findElement,
