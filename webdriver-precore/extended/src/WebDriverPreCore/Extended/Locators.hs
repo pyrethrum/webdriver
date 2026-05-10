@@ -219,9 +219,6 @@ elmId = ID
 deriveMatch :: Text -> MatchType
 deriveMatch = bool Partial Wildcard . ("*" `isInfixOf`)
 
-mkPassThrough :: (Text -> MatchType -> CaseSensitivity -> Locator) -> MatchType -> CaseSensitivity -> Text -> Locator
-mkPassThrough constructor mt cs v = constructor v mt cs
-
 mkDefaults :: (MatchType -> CaseSensitivity -> Text -> Locator) -> Text -> Locator
 mkDefaults constructor val = constructor (deriveMatch val) CaseInsensitive val
 
@@ -235,7 +232,7 @@ elmClass :: Text -> Locator
 elmClass = mkDefaults elmClass'
 
 elmClass' :: MatchType -> CaseSensitivity -> Text -> Locator
-elmClass' = mkPassThrough Class
+elmClass' mt cs v = Class {value = v, matchType = mt, caseSensitivity = cs}
 
 elmClassExact :: Text -> Locator
 elmClassExact = mkExact elmClass'
@@ -243,17 +240,17 @@ elmClassExact = mkExact elmClass'
 elemClassStarts :: Text -> Locator
 elemClassStarts = mkStarts elmClass'
 
-attribute :: Text -> Locator
-attribute = mkDefaults attribute'
+attribute :: Text -> Text -> Locator
+attribute nm = mkDefaults (attribute' nm)
 
-attribute' :: MatchType -> CaseSensitivity -> Text -> Locator
-attribute' = mkPassThrough Attribute
+attribute' :: Text -> MatchType -> CaseSensitivity -> Text -> Locator
+attribute' nm mt cs v = Attribute {name = nm, value = v, matchType = mt, caseSensitivity = cs}
 
-attributeExact :: Text -> Locator
-attributeExact = mkExact attribute'
+attributeExact :: Text -> Text -> Locator
+attributeExact nm = mkExact (attribute' nm)
 
-attributeStarts :: Text -> Locator
-attributeStarts = mkStarts attribute'
+attributeStarts :: Text -> Text -> Locator
+attributeStarts nm = mkStarts (attribute' nm)
 
 mkValCons :: Locator -> MatchType -> CaseSensitivity -> Text -> Locator
 mkValCons loc matchType caseSensitivity matchVal =

@@ -301,7 +301,8 @@ httpLeavesBool val =
             caseSensitivity = CaseSensitive
           },
         Attribute
-          { value = b,
+          { name = "data-attr",
+            value = b,
             matchType = Full,
             caseSensitivity = CaseSensitive
           },
@@ -361,7 +362,7 @@ xPathOnlyLocs =
     AllElms,
     ID "my-id",
     Class "my-class" Partial CaseSensitive,
-    Attribute "data-test" Partial CaseInsensitive,
+    Attribute "data-test" "my-value" Partial CaseInsensitive,
     Tag "button"
   ]
 

@@ -45,13 +45,14 @@ data Locator
         caseSensitivity :: CaseSensitivity
       }
   | Attribute
-      { value :: Text,
+      { name :: Text,
+        value :: Text,
         matchType :: MatchType,
         caseSensitivity :: CaseSensitivity
       }
   | Tag {value :: Text}
   | Default {value :: Text}
-  | -- double shot / difficult
+  | -- double shot / difficult -todo:: where is visible text?
     Role {role :: RoleLocator}
   | InnerText
       { value :: Text,
@@ -418,8 +419,8 @@ locatorToXPathPartial = XPath . toXPathStr
       ID {value} -> "//*[@id='" <> value <> "']"
       Class {value, matchType, caseSensitivity} ->
         "//*[" <> classPred value matchType caseSensitivity <> "]"
-      Attribute {value, matchType, caseSensitivity} ->
-        "//*[" <> attrPred value matchType caseSensitivity <> "]"
+      Attribute {name, value, matchType, caseSensitivity} ->
+        "//*[" <> attrPred name value matchType caseSensitivity <> "]"
       Tag {value} -> "//" <> value
       -- Contains: concatenate container and contained XPath — contained's leading // creates a
       -- descendant-axis step from the container result set, e.g. //form//input.
@@ -445,7 +446,7 @@ locatorToXPathPartial = XPath . toXPathStr
       AllElms -> "true()"
       ID {value} -> "@id='" <> value <> "'"
       Class {value, matchType, caseSensitivity} -> classPred value matchType caseSensitivity
-      Attribute {value, matchType, caseSensitivity} -> attrPred value matchType caseSensitivity
+      Attribute {name, value, matchType, caseSensitivity} -> attrPred name value matchType caseSensitivity
       Tag {value} -> "self::" <> value
       -- Contains as predicate: "I match contained AND I have an ancestor matching container"
       Contains {container, contained} ->
@@ -475,17 +476,17 @@ locatorToXPathPartial = XPath . toXPathStr
             Starts -> "starts-with(normalize-space(" <> classAttr <> "), '" <> matchVal <> "')"
             Wildcard -> wildcardPred classAttr matchVal
 
-    -- \| XPath predicate matching elements that have any attribute satisfying the condition.
-    --   Uses @*[...] predicate syntax so the condition is applied to each attribute node.
-    attrPred :: Text -> MatchType -> CaseSensitivity -> Text
-    attrPred val mt cs =
-      let attrExpr = applyCS cs "." -- '.' refers to the attribute node's string value
+    -- \| XPath predicate matching elements that have the named attribute satisfying the condition.
+    --   @name@ is the HTML attribute name (e.g. "href", "data-testid").
+    attrPred :: Text -> Text -> MatchType -> CaseSensitivity -> Text
+    attrPred name val mt cs =
+      let attrExpr = applyCS cs ("@" <> name)
           matchVal = lowerIfCI cs val
        in case mt of
-            Full -> "@*[" <> attrExpr <> "='" <> matchVal <> "']"
-            Partial -> "@*[contains(" <> attrExpr <> ", '" <> matchVal <> "')]"
-            Starts -> "@*[starts-with(" <> attrExpr <> ", '" <> matchVal <> "')]"
-            Wildcard -> "@*[" <> wildcardPred attrExpr matchVal <> "]"
+            Full -> attrExpr <> "='" <> matchVal <> "'"
+            Partial -> "contains(" <> attrExpr <> ", '" <> matchVal <> "')"
+            Starts -> "starts-with(" <> attrExpr <> ", '" <> matchVal <> "')"
+            Wildcard -> wildcardPred attrExpr matchVal
 
     -- \| Wrap an XPath string expression with a translate() call to fold it to lower-case,
     --   for CaseInsensitive matching.

@@ -17,7 +17,7 @@ baseLocateTests =
          opts = MkHttpLocateOpts { extendedRoleLocation = ExtLocateNever
                                  , jsRecheckDisplayed = DisplayedCheckAlways
                                  , singletonCardinality = Unique
-                                 ,  mkDefaultLoc = \txt -> ByText txt
+                                 ,  mkDefaultLoc = elmId
                                  }
     --  these tests run against megaforma.html
      testGroup "Base Locate Tests"
