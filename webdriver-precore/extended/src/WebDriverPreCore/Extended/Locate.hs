@@ -1,9 +1,11 @@
 module WebDriverPreCore.Extended.Locate
-  ( LocateException (..),
-    SingletonCardinality (..),
+  (
+    DisplayedCheck(..),
+    ExtendedRoleLocateSingleton(..),
     HttpLocateOpts (..),
-    HttpLocateAllOpts (..),
     LocateActions (..),
+    LocateException (..),
+    SingletonCardinality (..),
     locateHttp,
     locateFromElementHttp,
     locateAllHttp,
@@ -84,7 +86,7 @@ data LeafCardinality = FindFirst | FindAll deriving (Show, Eq)
 
 data DisplayedCheck = DisplayedCheckNever | DisplayedCheckDisambiguateUnique | DisplayedCheckAlways deriving (Show, Eq)
 
-data ExtendedRoleLocateSingleton = ExtLocateSingletonNever | ExtLocateSingletonMiss | ExtLocateSingletonAlways deriving (Show, Eq)
+data ExtendedRoleLocateSingleton = ExtLocateNever | ExtLocateSingletonMiss | ExtLocateAlways deriving (Show, Eq)
 
 data ExtendedRoleLocateAll = ExtLocateAllNever | ExtLocateAllAlways deriving (Show, Eq)
 
@@ -97,14 +99,6 @@ data HttpLocateOpts = MkHttpLocateOpts
     singletonCardinality :: SingletonCardinality,
     mkDefaultLoc :: Text -> Locator
   }
-
--- | Options for multi-locate functions ('locateAllHttp', 'locateAllFromElementHttp').
-data HttpLocateAllOpts = MkHttpLocateAllOpts
-  { jsRecheckDisplayed :: DisplayedCheck,
-    extendedRoleLocation :: ExtendedRoleLocateAll,
-    mkDefaultLoc :: Text -> Locator
-  }
-
 -- TODO
 -- 0. locateHttp Compiles (NoImp postfilter) [x]
 -- 1. get unretried http working with tests
@@ -174,7 +168,7 @@ locateAllHttp ::
   forall m.
   (Monad m) =>
   LocateActions m ->
-  HttpLocateAllOpts ->
+  HttpLocateOpts ->
   Locator ->
   m (Either LocateException [ElementId])
 locateAllHttp actions@MkLocateActions{catch} opts =
@@ -198,7 +192,7 @@ locateAllFromElementHttp ::
   forall m.
   (Monad m) =>
   LocateActions m ->
-  HttpLocateAllOpts ->
+  HttpLocateOpts ->
   -- | root element
   ElementId ->
   Locator ->
@@ -333,7 +327,7 @@ locateElmsUnchecked actions leafCardinality rolesSecondPass loc =
               step acc loc' =
                 if P.null acc
                   then pure []
-                  else fmap (LST.intersect acc) (locateElmsUnchecked actions FindAll rolesSecondPass loc')
+                  else fmap (LST.intersect acc) (locate FindAll rolesSecondPass loc')
           initial <- locate FindAll rolesSecondPass l
           foldM step initial ls
         Any {elms = locs} ->
@@ -345,7 +339,7 @@ locateElmsUnchecked actions leafCardinality rolesSecondPass loc =
 
     locateContained :: [ElementId] -> ReducedHttpLoc -> m [ElementId]
     locateContained containerIds subLoc = do
-      containedResults <- traverse (\_ -> locateElmsUnchecked actions FindAll rolesSecondPass subLoc) containerIds
+      containedResults <- traverse (\_ -> locate FindAll rolesSecondPass subLoc) containerIds
       pure $ join containedResults
 
 -- ---------------------------------------------------------------------------
@@ -398,9 +392,9 @@ httpLocateSingleton actions@MkLocateActions{throw} opts loc = do
         LeafHttp (RL.BiDiNative (Role {})) -> True
         _ -> False
       secondPassOnInitial = case opts.extendedRoleLocation of
-        ExtLocateSingletonNever -> NoRoleJSSecondPass
+        ExtLocateNever -> NoRoleJSSecondPass
         ExtLocateSingletonMiss -> NoRoleJSSecondPass
-        ExtLocateSingletonAlways -> DoRoleJSSecondPass
+        ExtLocateAlways -> DoRoleJSSecondPass
 
       chkElmsSingleton elms =
         let 
@@ -418,13 +412,14 @@ httpLocateAll ::
   forall m.
   (Monad m) =>
   LocateActions m ->
-  HttpLocateAllOpts ->
+  HttpLocateOpts ->
   ReducedHttpLoc ->
   m [ElementId]
 httpLocateAll actions opts loc = do
   let secondPassOnInitial = case opts.extendedRoleLocation of
-        ExtLocateAllNever -> NoRoleJSSecondPass
-        ExtLocateAllAlways -> DoRoleJSSecondPass
+        ExtLocateNever -> NoRoleJSSecondPass
+        ExtLocateSingletonMiss -> NoRoleJSSecondPass
+        ExtLocateAlways -> DoRoleJSSecondPass
   elms <- locateElmsUnchecked actions FindAll secondPassOnInitial loc
   if opts.jsRecheckDisplayed == DisplayedCheckAlways
     then jsFilterDisplayed actions elms

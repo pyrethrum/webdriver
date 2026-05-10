@@ -108,10 +108,8 @@ runWDTest getRes name action =
 
 runMegaformaTest :: IO WDResources -> Text -> BaseHTTPAction -> TestTree
 runMegaformaTest getRes name action =
-  runWDTest getRes name $ do
-    url <- testUrl megaformaUrl
-    navigateTo url
-    action
+  runWDTest getRes name $ 
+    testUrl megaformaUrl >>= navigateTo >> action
 
 
 
