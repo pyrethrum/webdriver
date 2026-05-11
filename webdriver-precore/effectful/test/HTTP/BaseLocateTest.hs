@@ -1,6 +1,6 @@
 module HTTP.BaseLocateTest where
 
-import HTTP.Runner (getWDSession, closeWDSession, runHttp, withHttp, WDSession, testUrl)
+import HTTP.Runner (getWDSession, closeWDSession, runHttpTest, withHttp, WDSession, testUrl, runHttp)
 import Test.Tasty (TestTree, testGroup, withResource)
 import WebDriverPreCore.Extended.Locators
 import WebDriverPreCore.Extended.Locate
@@ -14,9 +14,9 @@ import WebDriverPreCore.Test.TestData
 
 baseLocateTests :: TestTree
 baseLocateTests =
-  withResource getWDSession closeWDSession $ \ses ->
+  withResource navToMegaForm closeWDSession $ \ses ->
     do 
-     let test = runHttp ses
+     let test = runHttpTest ses
          opts = MkHttpLocateOpts { extendedRoleLocation = ExtLocateNever
                                  , jsRecheckDisplayed = DisplayedCheckAlways
                                  , singletonCardinality = Unique
@@ -33,9 +33,8 @@ baseLocateTests =
       ]
 
 
-megaformaSess :: IO WDSession
-megaformaSess = do
+navToMegaForm :: IO WDSession
+navToMegaForm = do
   ses <- getWDSession
-  runHttp $ do
-    testUrl megaformaUrl >>= navigateTo
+  runHttp ses $ testUrl megaformaUrl >>= navigateTo
   pure ses

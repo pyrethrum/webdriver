@@ -7,8 +7,8 @@ module HTTP.Runner (
   getWDSession,
   closeWDSession,
   -- TODO: Clean this up
+  runHttpTest,
   runHttp,
-  -- runWDSessionTest,
 ) where
 
 import Common.Runner (runSetup, testUrl)
@@ -96,17 +96,22 @@ closeWDSession MkWDSession {loggerHandle, sessionInfo} = do
 -- Retrieves the 'WDSession' from the Tasty resource getter, then runs the
 -- action with 'IOE', 'Pause', 'Logger', and 'WebDriverHttp' in scope.
 -- Intended for use inside a 'withResource' group via 'baseLocateTests'.
-runHttp :: IO WDSession -> Text -> BaseHTTPAction -> TestTree
-runHttp getRes name action = 
-  testCase (unpack name) $ do
-    MkWDSession {loggerHandle, sessionInfo} <- getRes
+runHttpTest :: IO WDSession -> Text -> BaseHTTPAction -> TestTree
+runHttpTest getRes name action = 
+  testCase (unpack name) $ 
+    getRes >>= \r -> runHttp r action
+ 
+
+-- runWDSessionTest :: WDSession -> Text -> BaseHTTPAction -> TestTree
+runHttp :: WDSession -> BaseHTTPAction -> IO ()
+runHttp MkWDSession {loggerHandle, sessionInfo} action = 
     runEff $
       runPause sessionInfo.pauseDuration $
         runLogger loggerHandle $
           runHttpSession sessionInfo action
 
--- runWDSessionTest :: WDSession -> Text -> BaseHTTPAction -> TestTree
--- runWDSessionTest ses  = runWDTest (pure ses)
+
+
 
 
 
