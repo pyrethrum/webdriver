@@ -200,7 +200,6 @@ locateAllFromElementHttp ::
 locateAllFromElementHttp actions@MkLocateActions{catch} opts rootId =
     prepareRun catch opts.mkDefaultLoc (httpLocateAll (setBaseElement rootId actions) opts)
 
-
 setBaseElement :: ElementId -> LocateActions m -> LocateActions m
 setBaseElement rootId act = act {
   findElement = act.findElementFromElement rootId,
@@ -283,7 +282,6 @@ locateLeaf actions rolesSecondPass lc loc = do
               else
                (sr <>) <$> roleToXPathHttpSecondPass actions lc role
       InnerText {} -> simpleLocate
-
 
 chkRefilterSingleton ::
   forall m.
