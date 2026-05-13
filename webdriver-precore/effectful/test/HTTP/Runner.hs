@@ -2,7 +2,7 @@ module HTTP.Runner (
   withHttp,
   testUrl,
   mkHttpCaps,
-  BaseHTTPAction,
+  BaseHTTPEffs,
   WDSession (..),
   getWDSession,
   closeWDSession,
@@ -96,14 +96,14 @@ closeWDSession MkWDSession {loggerHandle, sessionInfo} = do
 -- Retrieves the 'WDSession' from the Tasty resource getter, then runs the
 -- action with 'IOE', 'Pause', 'Logger', and 'WebDriverHttp' in scope.
 -- Intended for use inside a 'withResource' group via 'baseLocateTests'.
-runHttpTest :: IO WDSession -> Text -> BaseHTTPAction -> TestTree
+runHttpTest :: IO WDSession -> Text -> BaseHTTPEffs () -> TestTree
 runHttpTest getRes name action = 
   testCase (unpack name) $ 
     getRes >>= \r -> runHttp r action
  
 
 -- runWDSessionTest :: WDSession -> Text -> BaseHTTPAction -> TestTree
-runHttp :: WDSession -> BaseHTTPAction -> IO ()
+runHttp :: forall a. WDSession -> BaseHTTPEffs a -> IO a
 runHttp MkWDSession {loggerHandle, sessionInfo} action = 
     runEff $
       runPause sessionInfo.pauseDuration $
@@ -112,7 +112,41 @@ runHttp MkWDSession {loggerHandle, sessionInfo} action =
 
 
 
+type BaseHTTPConstraints es =  (IOE :> es, Logger :> es, Pause :> es, WebDriverHttp :> es) 
+type BaseHTTPEffs a =  forall es. BaseHTTPConstraints es => Eff es a
 
 
 
-type BaseHTTPAction = forall (es :: [Effect]). (IOE :> es, Logger :> es, Pause :> es, WebDriverHttp :> es) => Eff es ()
+
+-- -- from pyrethrum these will probably be split off and go into core or another library
+-- -- module later
+-- type Action = Eff ApEffs
+
+-- type HasLog es = Out NodeLog :> es
+
+-- type LogEffs a = forall es. (Out NodeLog :> es) => Eff es a
+
+-- type ApEffs = '[RunConfigReader, FileSystem, WebUI, Out NodeLog, IOE]
+-- -- type ApEffs = '[FileSystem, WebUI, Out NodeLog, IOE]
+
+-- -- Define a labeled Reader effect for RunConfig
+-- type RunConfigReader = Labeled "runConfig" (LR.Reader RunConfig) 
+
+-- -- type ApConstraints es = (FileSystem :> es, Out NodeLog :> es, Error FSException :> es, IOE :> es)
+-- -- type AppEffs a = forall es. (FileSystem :> es, Out NodeLog :> es, Error FSException :> es, IOE :> es) => Eff es a
+
+-- type SuiteRunner = Suite 
+--   -> Filters RunConfig FixtureConfig 
+--   -> RunConfig 
+--   -> ThreadCount 
+--   -> L.LogActions (L.Log L.ExePath AE.NodeLog)
+--   -> IO ()
+
+-- ioInterpreter :: RunConfig -> AE.LogSink -> Action a -> IO a
+-- ioInterpreter rc sink ap =
+--   ap
+--     & LR.runReader @"runConfig" rc
+--     & FIO.runFileSystem
+--     & WDIO.runWebDriver
+--     & runOut sink
+--     & runEff
