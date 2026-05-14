@@ -2,6 +2,7 @@ module HTTP.BaseLocateTest where
 
 import HTTP.Runner (getWDSession, closeWDSession, runHttpTest, WDSession, testUrl, runHttp, BaseHTTPEffs)
 import Test.Tasty (TestTree, testGroup, withResource)
+import Test.Tasty.HUnit (assertBool, assertFailure)
 import WebDriverPreCore.Extended.Locators
 import WebDriverPreCore.Extended.Locate qualified as L
 import WebDriver.Effectful.HTTP.Base.Actions 
@@ -12,7 +13,8 @@ import UnliftIO (throwIO)
 import WebDriver.Effectful
 import WebDriver.Effectful.Logger
 import WebDriverPreCore.Extended.HTTP.Base.Protocol (ElementId)
-import Data.Text (Text)
+import Data.Text (Text, unpack)
+import Utils (txt)
 
 -- ---------------------------------------------------------------------------
 -- Tests
@@ -46,7 +48,7 @@ baseLocateTests =
      testGroup "Base Locate Tests"
       [
         test "Locate by ID" do 
-          l <- locate $ elmId "input1"
+          l <- locate $ elmId "section-personal"
           undefined
       , test "Locate by Name" do
           undefined
@@ -85,3 +87,46 @@ locateFromElementHttp ops loc elmId' = actions >>= \a -> L.locateFromElementHttp
 
 locateAllFromElementHttp :: (IOE :> es, WebDriverHttp :> es) => L.HttpLocateOpts -> ElementId -> Locator -> Eff es (Either L.LocateException [ElementId])
 locateAllFromElementHttp ops loc elmId' = actions >>= \a -> L.locateAllFromElementHttp a ops loc elmId'
+
+-- ---------------------------------------------------------------------------
+-- Check helpers
+-- ---------------------------------------------------------------------------
+
+chkLocException :: (IOE :> es) => Text -> (L.LocateException -> Bool) -> Either L.LocateException [ElementId] -> Eff es ()
+chkLocException errMsg p =
+  either
+    (\ex -> liftChk (errMsg <> ": LocateException check failed: " <> txt ex) $ p ex)
+    (const . liftFail $ errMsg <> ": expected Left LocateException but got Right")
+
+chkElms :: (IOE :> es) => Text -> ([ElementId] -> Bool) -> Either L.LocateException [ElementId] -> Eff es ()
+chkElms errMsg p =
+  either
+    (liftFail . (errMsg <>) . (<> ": expected Right elements but got Left: ") . txt)
+    (liftChk (errMsg <> ": element list check failed") . p)
+
+
+chkElmsM :: (IOE :> es) => Text -> ([ElementId] -> Eff es Bool) -> Either L.LocateException [ElementId] -> Eff es ()
+chkElmsM errMsg chk =
+  either
+    (liftFail . (errMsg <>) . (<> ": expected Right elements but got Left: ") . txt)
+    (\elms -> chk elms >>= liftChk (errMsg <> ": element list monadic check failed"))
+
+chkAttribute :: (IOE :> es, WebDriverHttp :> es) => Text -> Text -> (Text -> Bool) -> Either L.LocateException [ElementId] -> Eff es ()
+chkAttribute errMsg attrName chk = chkElmsM errMsg $ \case
+  [el] ->
+    getElementAttribute el attrName >>=
+      maybe
+        (liftFail $ errMsg <> ": attribute not found: " <> txt attrName)
+        (pure . chk)
+  elms -> liftFail $ errMsg <> ": expected singleton element list but got " <> txt (length elms)
+
+chkAttributeEq :: (IOE :> es, WebDriverHttp :> es) => Text -> Text -> Text -> Either L.LocateException [ElementId] -> Eff es ()
+chkAttributeEq errMsg attrName  = chkAttribute errMsg attrName . (==) 
+
+
+liftFail :: (IOE :> es) => Text -> Eff es a
+liftFail = liftIO . assertFailure . unpack
+
+liftChk :: (IOE :> es) => Text -> Bool -> Eff es ()
+liftChk msg ok = liftIO $ assertBool (unpack msg) ok 
+
