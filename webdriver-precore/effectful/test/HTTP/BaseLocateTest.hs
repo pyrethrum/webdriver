@@ -12,6 +12,7 @@ import UnliftIO (throwIO)
 import WebDriver.Effectful
 import WebDriver.Effectful.Logger
 import WebDriverPreCore.Extended.HTTP.Base.Protocol (ElementId)
+import Data.Text (Text)
 
 -- ---------------------------------------------------------------------------
 -- Tests
@@ -21,17 +22,31 @@ baseLocateTests :: TestTree
 baseLocateTests =
   withResource navToMegaForm closeWDSession $ \ses ->
     do 
-     let test = runHttpTest ses
-         opts = L.MkHttpLocateOpts { extendedRoleLocation = L.ExtLocateNever
+     let 
+      test :: Text -> BaseHTTPEffs () -> TestTree
+      test = runHttpTest ses
+
+      defOpts = L.MkHttpLocateOpts { extendedRoleLocation = L.ExtLocateNever
                                  , jsRecheckDisplayed = L.DisplayedCheckAlways
                                  , singletonCardinality = L.Unique
                                  , mkDefaultLoc = attribute "auto-id"
                                  }
+      locate :: forall es. (IOE :> es, WebDriverHttp :> es)  => Locator -> Eff es (Either L.LocateException [ElementId])
+      locate = locateHttp defOpts
+      
+      locateAll :: forall es. (IOE :> es, WebDriverHttp :> es) => Locator -> Eff es (Either L.LocateException [ElementId])
+      locateAll = locateAllHttp defOpts
 
+      locateFromElement :: forall es. (IOE :> es, WebDriverHttp :> es) => ElementId -> Locator -> Eff es (Either L.LocateException [ElementId])
+      locateFromElement = locateFromElementHttp defOpts
+
+      locateAllFromElement :: forall es. (IOE :> es, WebDriverHttp :> es) => ElementId -> Locator -> Eff es (Either L.LocateException [ElementId])
+      locateAllFromElement = locateAllFromElementHttp defOpts
     --  these tests run against megaforma.html
      testGroup "Base Locate Tests"
       [
         test "Locate by ID" do 
+          l <- locate $ elmId "input1"
           undefined
       , test "Locate by Name" do
           undefined
@@ -58,18 +73,12 @@ actions = pure $ L.MkLocateActions {
                                    getElementText
                                 }
          
--- viaActions :: (IOE :> es, WebDriverHttp :> es) => L.HttpLocateOpts -> Locator -> Eff es (Either L.LocateException [ElementId])
-viaActions :: (IOE :> es, WebDriverHttp :> es) => (L.LocateActions (Eff es) -> t1 -> t2 -> Eff es b) -> t1 -> t2 -> Eff es b
-viaActions f opts loc = actions >>= \a -> f a opts loc
 
 locateHttp :: (IOE :> es, WebDriverHttp :> es) => L.HttpLocateOpts -> Locator -> Eff es (Either L.LocateException [ElementId])
-locateHttp = viaActions L.locateHttp 
+locateHttp opts loc = actions >>= \a -> L.locateHttp a opts loc 
 
 locateAllHttp :: (IOE :> es, WebDriverHttp :> es) => L.HttpLocateOpts -> Locator -> Eff es (Either L.LocateException [ElementId])
-locateAllHttp = viaActions L.locateAllHttp 
-
-applyElmId :: (la -> opts -> eid -> loc -> r) -> la -> opts -> loc -> eid -> r
-applyElmId elmf la opts loc eid = elmf la opts eid loc
+locateAllHttp opts loc = actions >>= \a -> L.locateAllHttp a opts loc
 
 locateFromElementHttp :: (IOE :> es, WebDriverHttp :> es) => L.HttpLocateOpts -> ElementId -> Locator -> Eff es (Either L.LocateException [ElementId])
 locateFromElementHttp ops loc elmId' = actions >>= \a -> L.locateFromElementHttp a ops loc elmId'

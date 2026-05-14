@@ -30,3 +30,6 @@ mkInteractOpts config =
 
 testUrl :: MonadIO m => IO URL -> m URL 
 testUrl = liftIO
+
+-- ghc/ghc#27214
+-- https://gitlab.haskell.org/ghc/ghc/-/issues/?sort=created_date&state=opened&search=expectJust&first_page_size=20&show=eyJpaWQiOiIyNzIxNCIsImZ1bGxfcGF0aCI6ImdoYy9naGMiLCJpZCI6MjgzMzJ9
