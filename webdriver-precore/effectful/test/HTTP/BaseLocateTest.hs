@@ -15,18 +15,26 @@ import WebDriver.Effectful.Logger
 import WebDriverPreCore.Extended.HTTP.Base.Protocol (ElementId)
 import Data.Text (Text, unpack)
 import Utils (txt)
-
--- ---------------------------------------------------------------------------
--- Tests
--- ---------------------------------------------------------------------------
+import Data.Function ((&))
 
 baseLocateTests :: TestTree
 baseLocateTests =
+    --  these tests run against megaforma.html
   withResource navToMegaForm closeWDSession $ \ses ->
     do 
-     let 
+     let
       test :: Text -> BaseHTTPEffs () -> TestTree
       test = runHttpTest ses
+
+     testGroup "Base Locate Tests"
+      [
+        test "Locate by ID" do 
+          l <- locate $ elmId "section-personal"
+          undefined
+      , test "Locate by Name" do
+          undefined
+      ]
+     where
 
       defOpts = L.MkHttpLocateOpts { extendedRoleLocation = L.ExtLocateNever
                                  , jsRecheckDisplayed = L.DisplayedCheckAlways
@@ -44,15 +52,10 @@ baseLocateTests =
 
       locateAllFromElement :: forall es. (IOE :> es, WebDriverHttp :> es) => ElementId -> Locator -> Eff es (Either L.LocateException [ElementId])
       locateAllFromElement = locateAllFromElementHttp defOpts
-    --  these tests run against megaforma.html
-     testGroup "Base Locate Tests"
-      [
-        test "Locate by ID" do 
-          l <- locate $ elmId "section-personal"
-          undefined
-      , test "Locate by Name" do
-          undefined
-      ]
+
+      chkAttrEq :: forall es. (IOE :> es, WebDriverHttp :> es) => Locator -> Text -> Text -> Text -> Eff es ()
+      chkAttrEq loc msg attr expected = 
+        locate loc >>= chkAttributeEq msg attr expected
 
 
 navToMegaForm :: IO WDSession
@@ -75,6 +78,7 @@ actions = pure $ L.MkLocateActions {
                                    getElementText
                                 }
          
+-- ################ Base Eff Actions ################
 
 locateHttp :: (IOE :> es, WebDriverHttp :> es) => L.HttpLocateOpts -> Locator -> Eff es (Either L.LocateException [ElementId])
 locateHttp opts loc = actions >>= \a -> L.locateHttp a opts loc 
@@ -88,45 +92,60 @@ locateFromElementHttp ops loc elmId' = actions >>= \a -> L.locateFromElementHttp
 locateAllFromElementHttp :: (IOE :> es, WebDriverHttp :> es) => L.HttpLocateOpts -> ElementId -> Locator -> Eff es (Either L.LocateException [ElementId])
 locateAllFromElementHttp ops loc elmId' = actions >>= \a -> L.locateAllFromElementHttp a ops loc elmId'
 
--- ---------------------------------------------------------------------------
--- Check helpers
--- ---------------------------------------------------------------------------
+-- ################ Checks ################
 
-chkLocException :: (IOE :> es) => Text -> (L.LocateException -> Bool) -> Either L.LocateException [ElementId] -> Eff es ()
+chkLocException :: (IOE :> es) => Text -> (L.LocateException -> Maybe Text) -> Either L.LocateException [ElementId] -> Eff es ()
 chkLocException errMsg p =
   either
     (\ex -> liftChk (errMsg <> ": LocateException check failed: " <> txt ex) $ p ex)
     (const . liftFail $ errMsg <> ": expected Left LocateException but got Right")
 
-chkElms :: (IOE :> es) => Text -> ([ElementId] -> Bool) -> Either L.LocateException [ElementId] -> Eff es ()
+chkElms :: (IOE :> es) => Text -> ([ElementId] -> Maybe Text) -> Either L.LocateException [ElementId] -> Eff es ()
 chkElms errMsg p =
   either
     (liftFail . (errMsg <>) . (<> ": expected Right elements but got Left: ") . txt)
     (liftChk (errMsg <> ": element list check failed") . p)
 
 
-chkElmsM :: (IOE :> es) => Text -> ([ElementId] -> Eff es Bool) -> Either L.LocateException [ElementId] -> Eff es ()
-chkElmsM errMsg chk =
-  either
-    (liftFail . (errMsg <>) . (<> ": expected Right elements but got Left: ") . txt)
-    (\elms -> chk elms >>= liftChk (errMsg <> ": element list monadic check failed"))
+chkElmsM :: (IOE :> es) => Text -> Either L.LocateException [ElementId] -> ([ElementId] -> Eff es (Maybe Text)) -> Eff es ()
+chkElmsM testTitle locRslt chkM =
+  locRslt & either
+    (liftFail . (testTitle <>) . (<> " - locate failed: ") . txt)
+    (liftChk testTitle . chkM)
 
-chkAttribute :: (IOE :> es, WebDriverHttp :> es) => Text -> Text -> (Text -> Bool) -> Either L.LocateException [ElementId] -> Eff es ()
-chkAttribute errMsg attrName chk = chkElmsM errMsg $ \case
-  [el] ->
-    getElementAttribute el attrName >>=
-      maybe
-        (liftFail $ errMsg <> ": attribute not found: " <> txt attrName)
-        (pure . chk)
-  elms -> liftFail $ errMsg <> ": expected singleton element list but got " <> txt (length elms)
+chkAttribute :: (IOE :> es, WebDriverHttp :> es) => Text -> Either L.LocateException [ElementId] -> Text -> (Text -> Maybe Text) -> Eff es ()
+chkAttribute testTitle locRslt attrName attrValChkM = 
+    chkElmsM testTitle locRslt elmChk 
+    where 
+      elmChk :: [ElementId] -> Eff es (Maybe Text)
+      elmChk = \case 
+        [el] -> 
+          getElementAttribute el attrName 
+           <$>
+           (
+            maybe
+             (Just $ testTitle <> ": attribute not found: " <> txt attrName)
+             elmChk
+           )
+        elms -> Just $ testTitle <> ": expected singlet locate resultlist but got " <> txt (length elms) <> " elms"
+   
+--   -- do 
+--   --  attrs <- getElementAttribute el attrName
+--   --  _
+--   -- chkElmsM errMsg $ 
+--   --   case attrs of
+--   --   [el] ->  getElementAttribute el attrName >>= _
+--   --       -- maybe
+--   --       --   (liftFail $ errMsg <> ": attribute not found: " <> txt attrName)
+--   --       --    chkM
+--   --   elms -> Just $ errMsg <> ": expected singleton element list but got " <> txt (length elms) <> " elms"
 
 chkAttributeEq :: (IOE :> es, WebDriverHttp :> es) => Text -> Text -> Text -> Either L.LocateException [ElementId] -> Eff es ()
-chkAttributeEq errMsg attrName  = chkAttribute errMsg attrName . (==) 
-
+chkAttributeEq errMsg attrName  = chkAttribute (errMsg <> " - expected: ") attrName . undefined
 
 liftFail :: (IOE :> es) => Text -> Eff es a
 liftFail = liftIO . assertFailure . unpack
 
-liftChk :: (IOE :> es) => Text -> Bool -> Eff es ()
-liftChk msg ok = liftIO $ assertBool (unpack msg) ok 
+liftChk :: (IOE :> es) => Text -> Maybe Text -> Eff es ()
+liftChk testTitle mErr = mErr & maybe (pure ()) (\erMsg -> liftFail $ testTitle <> " - " <> erMsg)
 
