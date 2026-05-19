@@ -20,6 +20,7 @@ import Data.Function ((&))
 import Data.Functor ((<&>))
 
 -- >>> _eval baseLocateTests
+-- *** Exception: ExitSuccess
 baseLocateTests :: TestTree
 baseLocateTests =
     --  these tests run against megaforma.html
@@ -38,12 +39,10 @@ baseLocateTests =
      testGroup "Base Locate Tests"
       [
         atrrChk "Locate by ID" (elmId "section-personal") "auto-id" "sec-personal"
-
-      -- , test "Locate by Name" do
-      --     undefined
       ]
      where
 
+      defOpts :: L.HttpLocateOpts
       defOpts = L.MkHttpLocateOpts { extendedRoleLocation = L.ExtLocateNever
                                  , jsRecheckDisplayed = L.DisplayedCheckAlways
                                  , singletonCardinality = L.Unique
