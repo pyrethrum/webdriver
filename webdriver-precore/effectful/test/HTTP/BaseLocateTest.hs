@@ -20,7 +20,7 @@ import Data.Function ((&))
 import Data.Functor ((<&>))
 
 -- >>> _eval baseLocateTests
--- *** Exception: ExitSuccess
+-- *** Exception: ExitFailure 1
 baseLocateTests :: TestTree
 baseLocateTests =
     --  these tests run against megaforma.html
@@ -38,7 +38,8 @@ baseLocateTests =
 
      testGroup "Base Locate Tests"
       [
-        atrrChk "Locate by ID" (elmId "section-personal") "auto-id" "sec-personal"
+        atrrChk "Locate by ID" (elmId "section-personal") "auto-id" "sec-personal",
+        atrrChk "Locate by Class" (elmClass "input") "auto-id" "hello"
       ]
      where
 
