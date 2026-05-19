@@ -16,7 +16,9 @@ import WebDriverPreCore.Extended.HTTP.Base.Protocol (ElementId)
 import Data.Text (Text, unpack)
 import Utils (txt)
 import Data.Function ((&))
+import Data.Functor ((<&>))
 
+-- >>> ???
 baseLocateTests :: TestTree
 baseLocateTests =
     --  these tests run against megaforma.html
@@ -26,13 +28,18 @@ baseLocateTests =
       test :: Text -> BaseHTTPEffs () -> TestTree
       test = runHttpTest ses
 
+      atrrChk :: Text -> Locator -> Text -> Text -> TestTree
+      atrrChk testName loc attrName expctd = 
+        test testName $ do
+          locRslt <- locate loc
+          chkAttributeEq ("Locate " <> txt loc) attrName expctd locRslt
+
      testGroup "Base Locate Tests"
       [
-        test "Locate by ID" do 
-          l <- locate $ elmId "section-personal"
-          undefined
-      , test "Locate by Name" do
-          undefined
+        atrrChk "Locate by ID" (elmId "section-personal") "auto-id" "sec-personal"
+
+      -- , test "Locate by Name" do
+      --     undefined
       ]
      where
 
@@ -111,23 +118,18 @@ chkElmsM :: (IOE :> es) => Text -> Either L.LocateException [ElementId] -> ([Ele
 chkElmsM testTitle locRslt chkM =
   locRslt & either
     (liftFail . (testTitle <>) . (<> " - locate failed: ") . txt)
-    (liftChk testTitle . chkM)
+    (\elms -> chkM elms >>= liftChk (testTitle <> " - element list check failed"))
 
-chkAttribute :: (IOE :> es, WebDriverHttp :> es) => Text -> Either L.LocateException [ElementId] -> Text -> (Text -> Maybe Text) -> Eff es ()
+chkAttribute :: forall es. (IOE :> es, WebDriverHttp :> es)=> Text -> Either L.LocateException [ElementId] -> Text -> (Text -> Maybe Text) -> Eff es ()
 chkAttribute testTitle locRslt attrName attrValChkM = 
     chkElmsM testTitle locRslt elmChk 
     where 
       elmChk :: [ElementId] -> Eff es (Maybe Text)
       elmChk = \case 
-        [el] -> 
-          getElementAttribute el attrName 
-           <$>
-           (
-            maybe
-             (Just $ testTitle <> ": attribute not found: " <> txt attrName)
-             elmChk
-           )
-        elms -> Just $ testTitle <> ": expected singlet locate resultlist but got " <> txt (length elms) <> " elms"
+        [el] ->  do
+          attr <- getElementAttribute el attrName 
+          pure $ maybe (Just $ testTitle <> " - attribute not found: " <> txt attrName) attrValChkM attr
+        elms -> pure $ Just $ testTitle <> " - expected singlet locate resultlist but got " <> txt (length elms) <> " elms"
    
 --   -- do 
 --   --  attrs <- getElementAttribute el attrName
@@ -141,7 +143,11 @@ chkAttribute testTitle locRslt attrName attrValChkM =
 --   --   elms -> Just $ errMsg <> ": expected singleton element list but got " <> txt (length elms) <> " elms"
 
 chkAttributeEq :: (IOE :> es, WebDriverHttp :> es) => Text -> Text -> Text -> Either L.LocateException [ElementId] -> Eff es ()
-chkAttributeEq errMsg attrName  = chkAttribute (errMsg <> " - expected: ") attrName . undefined
+chkAttributeEq testTitle attrName expctd locrslt = 
+  chkAttribute testTitle locrslt attrName (\actual -> if actual == expctd 
+                                                      then Nothing 
+                                                      else Just $ 
+                                                       testTitle <> " - expected attribute value: " <> txt expctd <> " but got: " <> txt actual)
 
 liftFail :: (IOE :> es) => Text -> Eff es a
 liftFail = liftIO . assertFailure . unpack
