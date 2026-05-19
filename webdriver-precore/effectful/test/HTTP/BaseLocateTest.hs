@@ -1,7 +1,8 @@
 module HTTP.BaseLocateTest where
 
 import HTTP.Runner (getWDSession, closeWDSession, runHttpTest, WDSession, testUrl, runHttp, BaseHTTPEffs)
-import Test.Tasty (TestTree, testGroup, withResource)
+import Test.Tasty (TestTree, defaultMain, testGroup, withResource)
+import System.Environment (withArgs)
 import Test.Tasty.HUnit (assertBool, assertFailure)
 import WebDriverPreCore.Extended.Locators
 import WebDriverPreCore.Extended.Locate qualified as L
@@ -18,7 +19,7 @@ import Utils (txt)
 import Data.Function ((&))
 import Data.Functor ((<&>))
 
--- >>> ???
+-- >>> _eval baseLocateTests
 baseLocateTests :: TestTree
 baseLocateTests =
     --  these tests run against megaforma.html
@@ -64,6 +65,9 @@ baseLocateTests =
       chkAttrEq loc msg attr expected = 
         locate loc >>= chkAttributeEq msg attr expected
 
+
+_eval :: TestTree -> IO ()
+_eval = withArgs [] . defaultMain
 
 navToMegaForm :: IO WDSession
 navToMegaForm = do
