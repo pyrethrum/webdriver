@@ -48,6 +48,7 @@ baseLocateTests =
                                  , jsRecheckDisplayed = L.DisplayedCheckAlways
                                  , singletonCardinality = L.Unique
                                  , mkDefaultLoc = attribute "auto-id"
+                                 , wdLogging = L.NoWDLogging
                                  }
       locate :: forall es. (IOE :> es, WebDriverHttp :> es)  => Locator -> Eff es (Either L.LocateException [ElementId])
       locate = locateHttp defOpts
@@ -92,16 +93,16 @@ actions = pure $ L.MkLocateActions {
 -- ################ Base Eff Actions ################
 
 locateHttp :: (IOE :> es, WebDriverHttp :> es) => L.HttpLocateOpts -> Locator -> Eff es (Either L.LocateException [ElementId])
-locateHttp opts loc = actions >>= \a -> L.locateHttp a opts loc 
+locateHttp opts loc = (.result) <$> (actions >>= \a -> L.locateHttp a opts loc)
 
 locateAllHttp :: (IOE :> es, WebDriverHttp :> es) => L.HttpLocateOpts -> Locator -> Eff es (Either L.LocateException [ElementId])
-locateAllHttp opts loc = actions >>= \a -> L.locateAllHttp a opts loc
+locateAllHttp opts loc = (.result) <$> (actions >>= \a -> L.locateAllHttp a opts loc)
 
 locateFromElementHttp :: (IOE :> es, WebDriverHttp :> es) => L.HttpLocateOpts -> ElementId -> Locator -> Eff es (Either L.LocateException [ElementId])
-locateFromElementHttp ops loc elmId' = actions >>= \a -> L.locateFromElementHttp a ops loc elmId'
+locateFromElementHttp ops loc elmId' = (.result) <$> (actions >>= \a -> L.locateFromElementHttp a ops loc elmId')
 
 locateAllFromElementHttp :: (IOE :> es, WebDriverHttp :> es) => L.HttpLocateOpts -> ElementId -> Locator -> Eff es (Either L.LocateException [ElementId])
-locateAllFromElementHttp ops loc elmId' = actions >>= \a -> L.locateAllFromElementHttp a ops loc elmId'
+locateAllFromElementHttp ops loc elmId' = (.result) <$> (actions >>= \a -> L.locateAllFromElementHttp a ops loc elmId')
 
 -- ################ Checks ################
 
