@@ -34,7 +34,7 @@ baseLocateTests =
       atrrChk testName loc attrName expctd = 
         test testName $ do
           locRslt <- locate loc
-          chkAttributeEq ("Locate " <> txt loc) attrName expctd locRslt
+          chkAttributeEq (txt loc) attrName expctd locRslt
 
      testGroup "Base Locate Tests"
       [
@@ -121,7 +121,7 @@ chkElms errMsg p =
 chkElmsM :: (IOE :> es) => Text -> Either L.LocateException [ElementId] -> ([ElementId] -> Eff es (Maybe Text)) -> Eff es ()
 chkElmsM testTitle locRslt chkM =
   locRslt & either
-    (liftFail . (testTitle <>) . (<> " - locate failed: ") . txt)
+    (\err -> liftFail $ " - locate failed:\n" <> testTitle <> "\n" <> txt err)
     (\elms -> chkM elms >>= liftChk (testTitle <> " - element list check failed"))
 
 chkAttribute :: forall es. (IOE :> es, WebDriverHttp :> es)=> Text -> Either L.LocateException [ElementId] -> Text -> (Text -> Maybe Text) -> Eff es ()
