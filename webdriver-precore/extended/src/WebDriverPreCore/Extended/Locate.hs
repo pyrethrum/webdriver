@@ -411,20 +411,19 @@ locateElmsUnchecked actions leafCardinality rolesSecondPass loc =
 httpLocateSingleton ::
   forall m.
   (Monad m) =>
-  LocateOpts m ->
-  HttpLocateOpts ->
+  LocParams m ->
   ReducedHttpLoc ->
   m [ElementId]
-httpLocateSingleton actions@MkLocateActions{throw} opts loc = do
+httpLocateSingleton prms@MkLocParams{throw, locOpts = opts}  loc = do
   case loc of
     LeafHttp ll -> do
-      lr <- locateLeaf actions secondPassOnInitial FindAll ll
+      lr <- locateLeaf prms secondPassOnInitial FindAll ll
       filtered <- chkElmsSingleton lr
       case filtered of
         [] ->
           if opts.extendedRoleLocation == ExtLocateSingletonMiss && isRole
             then do
-              missRetryRslt <- locateLeaf actions DoRoleJSSecondPass FindAll ll
+              missRetryRslt <- locateLeaf prms DoRoleJSSecondPass FindAll ll
               retryChked <- chkElmsSingleton missRetryRslt
               case retryChked of
                 [] -> notFoundErr
@@ -442,7 +441,7 @@ httpLocateSingleton actions@MkLocateActions{throw} opts loc = do
     PostFilterHttpLoc {} ->
       postfilterNotImplemented
     CombintorHttp {} ->
-      locateElmsUnchecked actions FindAll secondPassOnInitial loc
+      locateElmsUnchecked prms FindAll secondPassOnInitial loc
   where
 
       notFoundErr :: m [ElementId]
@@ -467,24 +466,23 @@ httpLocateSingleton actions@MkLocateActions{throw} opts loc = do
              || displayChk == DisplayedCheckDisambiguateUnique && cardinality == Unique
         in
         if wantRecheck
-          then chkRefilterSingleton actions elms
+          then chkRefilterSingleton prms elms
           else pure elms
 
 httpLocateAll ::
   forall m.
   (Monad m) =>
-  LocateActions m ->
-  HttpLocateOpts ->
+  LocParams m ->
   ReducedHttpLoc ->
   m [ElementId]
-httpLocateAll actions opts loc = do
-  let secondPassOnInitial = case opts.extendedRoleLocation of
+httpLocateAll prms loc = do
+  let secondPassOnInitial = case prms.extendedRoleLocation of
         ExtLocateNever -> NoRoleJSSecondPass
         ExtLocateSingletonMiss -> NoRoleJSSecondPass
         ExtLocateAlways -> DoRoleJSSecondPass
-  elms <- locateElmsUnchecked actions FindAll secondPassOnInitial loc
-  if opts.jsRecheckDisplayed == DisplayedCheckAlways
-    then jsFilterDisplayed actions elms
+  elms <- locateElmsUnchecked prms FindAll secondPassOnInitial loc
+  if prms.locOpts.jsRecheckDisplayed == DisplayedCheckAlways
+    then jsFilterDisplayed prms elms
     else pure elms
 
 postfilterNotImplemented :: a
