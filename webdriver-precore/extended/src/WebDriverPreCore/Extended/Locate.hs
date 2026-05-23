@@ -12,8 +12,7 @@ module WebDriverPreCore.Extended.Locate
     locateHttp,
     locateFromElementHttp,
     locateAllHttp,
-    locateAllFromElementHttp,
-    log
+    locateAllFromElementHttp
   )
 where
 
@@ -46,7 +45,7 @@ import WebDriverPreCore.Extended.ReducedLocator.Internal as RL
     toHttpLocator
   )
 import WebDriverPreCore.HTTP.Protocol as HTTPP (Script (..), Selector (..))
-import Prelude as P
+import Prelude as P hiding (log)
 import Utils (txt)
 import Data.Bifunctor (first)
 
@@ -123,6 +122,12 @@ data HttpLocateOpts = MkHttpLocateOpts
     mkDefaultLoc :: Text -> Locator,
     wdLogging :: WDLogging
   }
+
+data LocOpts = MkLocOpts
+  { jsRecheckDisplayed :: DisplayedCheck,
+    extendedRoleLocation :: ExtendedRoleLocateSingleton,
+    singletonCardinality :: SingletonCardinality
+  }
 -- TODO
 -- 0. locateHttp Compiles (NoImp postfilter) [x]
 -- 1. get unretried http working with tests
@@ -172,12 +177,31 @@ data LocateActions m = MkLocateActions
     getElementAttribute :: ElementId -> Text -> m (Maybe Text),
     getElementText :: ElementId -> m Text
   }
+data LocParams m = MkLocParams
+  { 
+    throw :: forall a. HasCallStack => PreLocateException -> m a,
+    catch :: forall a e. (HasCallStack, Exception e) => m a -> (e -> m a) -> m a,
+    findElement :: Selector -> m ElementId,
+    findElementFromElement :: ElementId -> Selector -> m ElementId,
+    findElements :: Selector -> m [ElementId],
+    findElementsFromElement :: ElementId -> Selector -> m [ElementId],
+    executeScript :: Script -> m Value,
+    getElementAttribute :: ElementId -> Text -> m (Maybe Text),
+    getElementText :: ElementId -> m Text,
+    defaultLoc :: Text -> Locator,
+    log :: WDLog -> m (),
+    locOpts :: LocOpts
+  }
 
 -- | Lift a 'LocateActions m' into 'LocateActions (WriterT [WDLog] m)'.
-withLogging :: (Monad m) => LocateActions m -> LocateActions (WriterT [WDLog] m)
-withLogging MkLocateActions{..} = MkLocateActions
-  { throw = lift . throw
+extendActions :: (Monad m) => HttpLocateOpts -> LocateActions m -> LocParams (WriterT [WDLog] m)
+extendActions MkHttpLocateOpts{..} MkLocateActions{..} = MkLocParams
+  { 
+  -- throw / catch
+    throw = lift . throw
   , catch = \ma handler -> WriterT $ catch (runWriterT ma) (runWriterT . handler)
+
+  -- webdriver functions
   , findElement = lift . findElement
   , findElementFromElement = \eid -> lift . findElementFromElement eid
   , findElements = lift . findElements
@@ -185,75 +209,35 @@ withLogging MkLocateActions{..} = MkLocateActions
   , executeScript = lift . executeScript
   , getElementAttribute = \eid -> lift . getElementAttribute eid 
   , getElementText = lift . getElementText
+
+  -- other actions
+  , defaultLoc = mkDefaultLoc
+  , log = \logEntry -> case wdLogging of
+      WDLogging -> tell [logEntry]
+      NoWDLogging -> pure ()
+
+  -- options
+  , locOpts = MkLocOpts {..}
   }
 
--- | Conditionally 'tell' a log entry based on the 'WDLogging' setting in opts.
-log' :: MonadWriter [WDLog] m => HttpLocateOpts -> WDLog -> m ()
-log' opts logEntry = 
-  case opts.wdLogging of
-    WDLogging -> tell [logEntry]
-    NoWDLogging -> pure ()
 
 -- | Locate a unique or first-matching element from the document root.
-locateHttp ::
-  forall m.
-  (Monad m) =>
-  -- | locate actions
-  LocateActions m ->
-  -- | locate opts
-  HttpLocateOpts ->
-  -- | locator
-  Locator ->
-  m LocateResult
-locateHttp actions opts loc = do
-  let locLogActions@MkLocateActions{catch } = withLogging actions
-  (rslt, logs) <- runWriterT $ prepareRun catch opts.mkDefaultLoc (log' opts) (httpLocateSingleton locLogActions opts) loc
-  pure $ MkLocateResult rslt logs
+locateHttp :: forall m. (Monad m) => LocateActions m -> HttpLocateOpts -> Locator -> m LocateResult
+locateHttp actions opts = runHttpAction actions opts Nothing httpLocateSingleton
 
 -- | Locate all matching elements from the document root.
-locateAllHttp ::
-  forall m.
-  (Monad m) =>
-  LocateActions m ->
-  HttpLocateOpts ->
-  Locator ->
-  m LocateResult
-locateAllHttp actions opts loc = do
-  let locLogActions@MkLocateActions{catch } = withLogging actions
-  (rslt, logs) <- runWriterT $ prepareRun catch opts.mkDefaultLoc (log' opts) (httpLocateAll locLogActions opts) loc
-  pure $ MkLocateResult rslt logs
+locateAllHttp :: forall m. (Monad m) => LocateActions m -> HttpLocateOpts -> Locator -> m LocateResult
+locateAllHttp actions opts = runHttpAction actions opts Nothing httpLocateAll
 
 -- | Locate a unique or first-matching element rooted at a given element.
-locateFromElementHttp ::
-  forall m.
-  (Monad m) =>
-  LocateActions m ->
-  HttpLocateOpts ->
-  -- | root element
-  ElementId ->
-  Locator ->
-  m LocateResult
-locateFromElementHttp actions opts rootId loc = do
-  let locLogActions@MkLocateActions{catch } = withLogging actions
-  (rslt, logs) <- runWriterT $ prepareRun catch opts.mkDefaultLoc (log' opts) (httpLocateSingleton (setBaseElement rootId locLogActions) opts) loc
-  pure $ MkLocateResult rslt logs
+locateFromElementHttp :: forall m. (Monad m) => LocateActions m -> HttpLocateOpts -> ElementId -> Locator -> m LocateResult
+locateFromElementHttp actions opts rootId = runHttpAction actions opts (Just rootId) httpLocateSingleton
 
 -- | Locate all matching elements rooted at a given element.
-locateAllFromElementHttp ::
-  forall m.
-  (Monad m) =>
-  LocateActions m ->
-  HttpLocateOpts ->
-  -- | root element
-  ElementId ->
-  Locator ->
-  m LocateResult
-locateAllFromElementHttp actions opts rootId loc = do
-  let locLogActions@MkLocateActions{catch } = withLogging actions
-  (rslt, logs) <- runWriterT $ prepareRun catch opts.mkDefaultLoc (log' opts) (httpLocateAll (setBaseElement rootId locLogActions) opts) loc
-  pure $ MkLocateResult rslt logs
+locateAllFromElementHttp :: forall m. (Monad m) => LocateActions m -> HttpLocateOpts -> ElementId -> Locator -> m LocateResult
+locateAllFromElementHttp actions opts rootId = runHttpAction actions opts (Just rootId) httpLocateAll
 
--- | Locate all matching elements rooted at a given element.
+-- | Common implementation for all public HTTP locate functions.
 runHttpAction ::
   forall m.
   (Monad m) =>
@@ -261,29 +245,29 @@ runHttpAction ::
   HttpLocateOpts ->
   -- | root element
   Maybe ElementId ->
-  (forall m2. LocateActions m2 -> HttpLocateOpts -> ReducedHttpLoc -> m2 [ElementId]) ->
+  (forall m'. LocParams m' -> ReducedHttpLoc -> m' [ElementId]) ->
   Locator ->
   m LocateResult
-runHttpAction actions opts rootId locateAction loc = do
-  let locLogActions@MkLocateActions{ catch } = withLogging actions
-  (rslt, logs) <- runWriterT $ prepareRun catch opts.mkDefaultLoc (log' opts) (locateAction (setBaseElement rootId locLogActions) opts) loc
+runHttpAction actions opts mRootId locateAction loc = do
+  let locParams = setBaseElement mRootId  $ extendActions opts actions
+  (rslt, logs) <- runWriterT $ prepareRun locParams (locateAction locParams) loc
   pure $ MkLocateResult rslt logs
 
-setBaseElement :: Maybe ElementId -> LocateActions m -> LocateActions m
-setBaseElement mRootId act = 
-  maybe act (\rootId -> act {
-  findElement = act.findElementFromElement rootId,
-  findElements = act.findElementsFromElement rootId
+  
+setBaseElement :: Maybe ElementId -> LocParams m -> LocParams m
+setBaseElement mRootId act@MkLocParams{..} = 
+  maybe act (\rootId -> MkLocParams {
+  findElement = findElementFromElement rootId,
+  findElements = findElementsFromElement rootId,
+  ..
 }) mRootId
 
 prepareRun :: forall m. Monad m =>
-     (forall a e. (HasCallStack, Exception e) => m a -> (e -> m a) -> m a)
-     -> (Text -> Locator) 
-     -> (WDLog -> m ())
+      LocParams m 
      -> (ReducedHttpLoc -> m [ElementId]) 
      -> Locator 
      -> m (Either LocateException [ElementId])
-prepareRun catch mkDefaultLoc log locateActn locator =
+prepareRun MkLocParams{log, defaultLoc, catch} locateActn locator =
    case preparedLoc of
      Left err -> do
        log (PrepareFailed locator err)
@@ -293,7 +277,7 @@ prepareRun catch mkDefaultLoc log locateActn locator =
        completeLocException locator . runLoc $ reduced
   where 
     preparedLoc :: Either LI.InvalidLocator ReducedHttpLoc
-    preparedLoc = prepareSimplify mkDefaultLoc HTTP locator >>= toHttpLocator
+    preparedLoc = prepareSimplify defaultLoc HTTP locator >>= toHttpLocator
 
     runLoc :: ReducedHttpLoc -> m (Either PreLocateException [ElementId])
     runLoc loc =
@@ -427,7 +411,7 @@ locateElmsUnchecked actions leafCardinality rolesSecondPass loc =
 httpLocateSingleton ::
   forall m.
   (Monad m) =>
-  LocateActions m ->
+  LocateOpts m ->
   HttpLocateOpts ->
   ReducedHttpLoc ->
   m [ElementId]
