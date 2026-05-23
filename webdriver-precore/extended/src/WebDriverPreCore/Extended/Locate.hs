@@ -603,7 +603,9 @@ roleToXPathFor actions lc roleLoc =
       candidates <-
         -- has an @id and matches the role name
         actions.findElements $ HTTPP.XPath $ "//*" <> roleXPath roleLoc <> "[@id]"
-      filterElms lc forTxtMatchesId candidates
+      r <- filterElms lc forTxtMatchesId candidates
+      actions.trace $ RoleSecondPassFor roleLoc r
+      pure r
       where
         forTxtMatchesId :: ElementId -> m Bool
         forTxtMatchesId eid = do
