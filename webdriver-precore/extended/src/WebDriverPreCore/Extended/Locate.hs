@@ -114,7 +114,11 @@ data WDTrace = Prepared {
 
 data LocateTracing = LocateTracing | NoLocateTracing deriving (Show, Eq)
 
-data LocateResult = MkLocateResult
+data LocateResult = 
+  Locate
+  { result :: Either LocateException [ElementId]
+  } |
+  LocateWithTrace 
   { result :: Either LocateException [ElementId]
   , logFields :: [WDTrace]
   } deriving (Show, Eq)
@@ -270,7 +274,9 @@ runHttpAction ::
 runHttpAction actions opts mRootId locateAction loc = do
   let locParams = setBaseElement mRootId  $ extendActions opts actions
   (rslt, logs) <- runWriterT $ prepareRun locParams (locateAction locParams) loc
-  pure $ MkLocateResult rslt logs
+  pure $ case opts.locateTracing of
+    LocateTracing -> LocateWithTrace rslt logs
+    NoLocateTracing -> Locate rslt
 
 setBaseElement :: Maybe ElementId -> LocParams m -> LocParams m
 setBaseElement mRootId act@MkLocParams{..} = 
