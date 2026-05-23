@@ -13,7 +13,7 @@ module WebDriverPreCore.Extended.Locate
     locateFromElementHttp,
     locateAllHttp,
     locateAllFromElementHttp,
-    tellOpt
+    log
   )
 where
 
@@ -21,7 +21,7 @@ import Control.Exception (Exception)
 import Control.Monad (foldM, join)
 import Control.Monad.Trans.Class (lift)
 import Control.Monad.Trans.Writer.Strict (WriterT (..), runWriterT)
-import Control.Monad.Trans.Writer.Strict qualified as W
+import Control.Monad.Writer.Class (MonadWriter, tell)
 import Data.Aeson as A (Value (Bool), toJSON)
 import Data.Bool (bool)
 import Data.Containers.ListUtils (nubOrd)
@@ -86,7 +86,14 @@ completeLocException  locator action =
 instance Exception LocateException
 instance Exception PreLocateException
 
-data WDLog = Log1 | Log2 deriving (Show, Eq)
+data WDLog = Prepare {
+  loc :: Locator,
+  reducedLoc :: ReducedHttpLoc
+} |
+ PrepareFailed {
+  loc :: Locator,
+  error :: LI.InvalidLocator
+} | Log2 deriving (Show, Eq)
 
 data WDLogging = WDLogging | NoWDLogging deriving (Show, Eq)
 
@@ -167,24 +174,25 @@ data LocateActions m = MkLocateActions
   }
 
 -- | Lift a 'LocateActions m' into 'LocateActions (WriterT [WDLog] m)'.
-liftLocateActions :: Monad m => LocateActions m -> LocateActions (WriterT [WDLog] m)
-liftLocateActions act@MkLocateActions{throw = actThrow, catch = actCatch} = MkLocateActions
-  { throw = lift . actThrow
-  , catch = \ma handler -> WriterT $ actCatch (runWriterT ma) (\e -> runWriterT (handler e))
-  , findElement = lift . act.findElement
-  , findElementFromElement = \eid sel -> lift (act.findElementFromElement eid sel)
-  , findElements = lift . act.findElements
-  , findElementsFromElement = \eid sel -> lift (act.findElementsFromElement eid sel)
-  , executeScript = lift . act.executeScript
-  , getElementAttribute = \eid attr -> lift (act.getElementAttribute eid attr)
-  , getElementText = lift . act.getElementText
+withLogging :: (Monad m) => LocateActions m -> LocateActions (WriterT [WDLog] m)
+withLogging MkLocateActions{..} = MkLocateActions
+  { throw = lift . throw
+  , catch = \ma handler -> WriterT $ catch (runWriterT ma) (runWriterT . handler)
+  , findElement = lift . findElement
+  , findElementFromElement = \eid -> lift . findElementFromElement eid
+  , findElements = lift . findElements
+  , findElementsFromElement = \eid -> lift . findElementsFromElement eid
+  , executeScript = lift . executeScript
+  , getElementAttribute = \eid -> lift . getElementAttribute eid 
+  , getElementText = lift . getElementText
   }
 
 -- | Conditionally 'tell' a log entry based on the 'WDLogging' setting in opts.
-tellOpt :: Monad m => HttpLocateOpts -> WDLog -> WriterT [WDLog] m ()
-tellOpt opts logEntry = case opts.wdLogging of
-  WDLogging -> W.tell [logEntry]
-  NoWDLogging -> pure ()
+log' :: MonadWriter [WDLog] m => HttpLocateOpts -> WDLog -> m ()
+log' opts logEntry = 
+  case opts.wdLogging of
+    WDLogging -> tell [logEntry]
+    NoWDLogging -> pure ()
 
 -- | Locate a unique or first-matching element from the document root.
 locateHttp ::
@@ -198,8 +206,8 @@ locateHttp ::
   Locator ->
   m LocateResult
 locateHttp actions opts loc = do
-  let liftedActions@MkLocateActions{catch = liftedCatch} = liftLocateActions actions
-  (rslt, logs) <- runWriterT $ prepareRun liftedCatch opts.mkDefaultLoc (httpLocateSingleton liftedActions opts) loc
+  let locLogActions@MkLocateActions{catch } = withLogging actions
+  (rslt, logs) <- runWriterT $ prepareRun catch opts.mkDefaultLoc (log' opts) (httpLocateSingleton locLogActions opts) loc
   pure $ MkLocateResult rslt logs
 
 -- | Locate all matching elements from the document root.
@@ -211,8 +219,8 @@ locateAllHttp ::
   Locator ->
   m LocateResult
 locateAllHttp actions opts loc = do
-  let liftedActions@MkLocateActions{catch = liftedCatch} = liftLocateActions actions
-  (rslt, logs) <- runWriterT $ prepareRun liftedCatch opts.mkDefaultLoc (httpLocateAll liftedActions opts) loc
+  let locLogActions@MkLocateActions{catch } = withLogging actions
+  (rslt, logs) <- runWriterT $ prepareRun catch opts.mkDefaultLoc (log' opts) (httpLocateAll locLogActions opts) loc
   pure $ MkLocateResult rslt logs
 
 -- | Locate a unique or first-matching element rooted at a given element.
@@ -226,8 +234,8 @@ locateFromElementHttp ::
   Locator ->
   m LocateResult
 locateFromElementHttp actions opts rootId loc = do
-  let liftedActions@MkLocateActions{catch = liftedCatch} = liftLocateActions actions
-  (rslt, logs) <- runWriterT $ prepareRun liftedCatch opts.mkDefaultLoc (httpLocateSingleton (setBaseElement rootId liftedActions) opts) loc
+  let locLogActions@MkLocateActions{catch } = withLogging actions
+  (rslt, logs) <- runWriterT $ prepareRun catch opts.mkDefaultLoc (log' opts) (httpLocateSingleton (setBaseElement rootId locLogActions) opts) loc
   pure $ MkLocateResult rslt logs
 
 -- | Locate all matching elements rooted at a given element.
@@ -241,8 +249,8 @@ locateAllFromElementHttp ::
   Locator ->
   m LocateResult
 locateAllFromElementHttp actions opts rootId loc = do
-  let liftedActions@MkLocateActions{catch = liftedCatch} = liftLocateActions actions
-  (rslt, logs) <- runWriterT $ prepareRun liftedCatch opts.mkDefaultLoc (httpLocateAll (setBaseElement rootId liftedActions) opts) loc
+  let locLogActions@MkLocateActions{catch } = withLogging actions
+  (rslt, logs) <- runWriterT $ prepareRun catch opts.mkDefaultLoc (log' opts) (httpLocateAll (setBaseElement rootId locLogActions) opts) loc
   pure $ MkLocateResult rslt logs
 
 setBaseElement :: ElementId -> LocateActions m -> LocateActions m
@@ -252,29 +260,39 @@ setBaseElement rootId act = act {
 }
    
 prepareRun :: forall m. Monad m =>
-     (forall a e. (HasCallStack, Exception e) => WriterT [WDLog] m a -> (e -> WriterT [WDLog] m a) -> WriterT [WDLog] m a)
+     (forall a e. (HasCallStack, Exception e) => m a -> (e -> m a) -> m a)
      -> (Text -> Locator) 
-     -> (ReducedHttpLoc -> WriterT [WDLog] m [ElementId]) 
+     -> (WDLog -> m ())
+     -> (ReducedHttpLoc -> m [ElementId]) 
      -> Locator 
-     -> WriterT [WDLog] m (Either LocateException [ElementId])
-prepareRun catch mkDefaultLoc locateActn locator =
-    either (pure . Left . InvalidLocator) (completeLocException locator . runLoc) preparedLoc
+     -> m (Either LocateException [ElementId])
+prepareRun catch mkDefaultLoc log locateActn locator =
+   case preparedLoc of
+     Left err -> do
+       log (PrepareFailed locator err)
+       pure $ Left (InvalidLocator err)
+     Right reduced -> do
+       log (Prepare locator reduced)
+       completeLocException locator . runLoc $ reduced
   where 
     preparedLoc :: Either LI.InvalidLocator ReducedHttpLoc
     preparedLoc = prepareSimplify mkDefaultLoc HTTP locator >>= toHttpLocator
 
-    runLoc :: ReducedHttpLoc -> WriterT [WDLog] m (Either PreLocateException [ElementId])
+    runLoc :: ReducedHttpLoc -> m (Either PreLocateException [ElementId])
     runLoc loc =
-      catch
-        (catch (Right <$> locateActn loc) (pure . Left . DriverException'))
+      catch  -- catch PreLocateException thrown via 'throw' (e.g. AmbiguousLocator', ElementNotFound')
+        (catch -- catch WebDriverException from underlying HTTP calls
+          (Right <$> locateActn loc) 
+          (pure . Left . DriverException')
+        )
         (pure . Left)
 
 jsFilterDisplayed ::
   forall m.
   (Monad m) =>
-  LocateActions (WriterT [WDLog] m) ->
+  LocateActions m ->
   [ElementId] ->
-  WriterT [WDLog] m [ElementId]
+  m [ElementId]
 jsFilterDisplayed MkLocateActions{catch, executeScript, throw} elms = do
   results <- traverse doCheck elms
   pure $ fmap fst . P.filter snd $ results
@@ -296,14 +314,14 @@ jsFilterDisplayed MkLocateActions{catch, executeScript, throw} elms = do
 locateLeaf ::
   forall m.
   (Monad m) =>
-  LocateActions (WriterT [WDLog] m) ->
+  LocateActions m ->
   RoleJSSecondPass ->
   LeafCardinality ->
   LeafLoc ->
-  WriterT [WDLog] m [ElementId]
+  m [ElementId]
 locateLeaf actions rolesSecondPass lc loc = do
   let 
-    simpleLocate :: WriterT [WDLog] m [ElementId]
+    simpleLocate :: m [ElementId]
     simpleLocate =
           ( if (lc == FindFirst)
               then fmap LST.singleton . actions.findElement 
@@ -331,9 +349,9 @@ locateLeaf actions rolesSecondPass lc loc = do
 chkRefilterSingleton ::
   forall m.
   (Monad m) =>
-  LocateActions (WriterT [WDLog] m) ->
+  LocateActions m ->
   [ElementId] ->
-  WriterT [WDLog] m [ElementId]
+  m [ElementId]
 chkRefilterSingleton actions elmIds =
   chkSingleton True elmIds
   where
@@ -351,11 +369,11 @@ chkRefilterSingleton actions elmIds =
 locateElmsUnchecked ::
   forall m.
   (Monad m) =>
-  LocateActions (WriterT [WDLog] m) ->
+  LocateActions m ->
   LeafCardinality ->
   RoleJSSecondPass ->
   ReducedHttpLoc ->
-  WriterT [WDLog] m [ElementId]
+  m [ElementId]
 locateElmsUnchecked actions leafCardinality rolesSecondPass loc =
   fmap LST.nub $
     case loc of
@@ -380,7 +398,7 @@ locateElmsUnchecked actions leafCardinality rolesSecondPass loc =
   where
     locate = locateElmsUnchecked actions
 
-    locateContained :: [ElementId] -> ReducedHttpLoc -> WriterT [WDLog] m [ElementId]
+    locateContained :: [ElementId] -> ReducedHttpLoc -> m [ElementId]
     locateContained containerIds subLoc = do
       containedResults <- traverse (\_ -> locate FindAll rolesSecondPass subLoc) containerIds
       pure $ join containedResults
@@ -392,10 +410,10 @@ locateElmsUnchecked actions leafCardinality rolesSecondPass loc =
 httpLocateSingleton ::
   forall m.
   (Monad m) =>
-  LocateActions (WriterT [WDLog] m) ->
+  LocateActions m ->
   HttpLocateOpts ->
   ReducedHttpLoc ->
-  WriterT [WDLog] m [ElementId]
+  m [ElementId]
 httpLocateSingleton actions@MkLocateActions{throw} opts loc = do
   case loc of
     LeafHttp ll -> do
@@ -426,7 +444,7 @@ httpLocateSingleton actions@MkLocateActions{throw} opts loc = do
       locateElmsUnchecked actions FindAll secondPassOnInitial loc
   where
 
-      notFoundErr :: WriterT [WDLog] m [ElementId]
+      notFoundErr :: m [ElementId]
       notFoundErr = throw (ElementNotFound' "No element found matching locator.")
 
       throwAmbiguous elms = throw (AmbiguousLocator' ("Multiple elements found matching locator: " <> txt elms))
@@ -454,10 +472,10 @@ httpLocateSingleton actions@MkLocateActions{throw} opts loc = do
 httpLocateAll ::
   forall m.
   (Monad m) =>
-  LocateActions (WriterT [WDLog] m) ->
+  LocateActions m ->
   HttpLocateOpts ->
   ReducedHttpLoc ->
-  WriterT [WDLog] m [ElementId]
+  m [ElementId]
 httpLocateAll actions opts loc = do
   let secondPassOnInitial = case opts.extendedRoleLocation of
         ExtLocateNever -> NoRoleJSSecondPass
@@ -496,10 +514,10 @@ roleToXPathHttpSecondPass ::
   forall m.
   (Monad m) =>
   -- | locate all elements matching a selector
-  LocateActions (WriterT [WDLog] m) ->
+  LocateActions m ->
   LeafCardinality ->
   RoleLocator ->
-  WriterT [WDLog] m [ElementId]
+  m [ElementId]
 roleToXPathHttpSecondPass actions lc roleLoc =
     case roleLoc of
       -- role type has no name / label so nothing to do
@@ -516,10 +534,10 @@ roleToXPathHttpLabeledBy ::
   forall m.
   (Monad m) =>
   -- | locate all elements matching a selector
-  LocateActions (WriterT [WDLog] m) ->
+  LocateActions m ->
   LeafCardinality ->
   RoleLocator ->
-  WriterT [WDLog] m [ElementId]
+  m [ElementId]
 roleToXPathHttpLabeledBy actions lc roleLoc =
   case roleLoc of
     RoleType {} -> pure []
@@ -532,7 +550,7 @@ roleToXPathHttpLabeledBy actions lc roleLoc =
         -- Resolve aria-labelledby on @eid@: split on whitespace to get ID-refs,
         -- look up the text of each referenced element, concatenate with spaces,
         -- and compare (after stripping) to @targetName@.
-        labledByMatchesRoleText :: ElementId -> WriterT [WDLog] m Bool
+        labledByMatchesRoleText :: ElementId -> m Bool
         labledByMatchesRoleText eid =
           actions.getElementAttribute eid "aria-labelledby"
             >>= \case
@@ -543,7 +561,7 @@ roleToXPathHttpLabeledBy actions lc roleLoc =
 
         -- Find the element whose @id@ matches @idRef@ and return its text, or
         -- 'Nothing' if no such element exists.
-        textForId :: Text -> WriterT [WDLog] m (Maybe Text)
+        textForId :: Text -> m (Maybe Text)
         textForId idRef = do
           elms <- actions.findElements . HTTPP.XPath $ "//*[@id='" <> idRef <> "']"
           case elms of
@@ -554,10 +572,10 @@ roleToXPathFor ::
   forall m.
   (Monad m) =>
   -- | locate all elements matching a selector
-  LocateActions (WriterT [WDLog] m) ->
+  LocateActions m ->
   LeafCardinality ->
   RoleLocator ->
-  WriterT [WDLog] m [ElementId]
+  m [ElementId]
 roleToXPathFor actions lc roleLoc =
   case roleLoc of
     RoleType {} -> pure []
@@ -567,7 +585,7 @@ roleToXPathFor actions lc roleLoc =
         actions.findElements $ HTTPP.XPath $ "//*" <> roleXPath roleLoc <> "[@id]"
       filterElms lc forTxtMatchesId candidates
       where
-        forTxtMatchesId :: ElementId -> WriterT [WDLog] m Bool
+        forTxtMatchesId :: ElementId -> m Bool
         forTxtMatchesId eid = do
           mId <- actions.getElementAttribute eid "id"
           case mId of
@@ -585,10 +603,10 @@ roleXPath = \case
   RoleName {} -> "[not(@role='presentation' or @role='none')]"
   r -> LI.roleTypeXPathContent True r.role
 
-filterElms :: forall m. (Monad m) => LeafCardinality -> (ElementId -> WriterT [WDLog] m Bool) -> [ElementId] -> WriterT [WDLog] m [ElementId]
+filterElms :: forall m. (Monad m) => LeafCardinality -> (ElementId -> m Bool) -> [ElementId] -> m [ElementId]
 filterElms lc matcher = recurse []
   where
-    recurse :: [ElementId] -> [ElementId] -> WriterT [WDLog] m [ElementId]
+    recurse :: [ElementId] -> [ElementId] -> m [ElementId]
     recurse acc rem' =
       if lc == FindFirst && notNull acc
         then
