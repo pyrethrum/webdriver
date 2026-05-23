@@ -34,6 +34,7 @@ baseLocateTests =
       atrrChk testName loc attrName expctd = 
         test testName $ do
           locRslt <- locate loc
+          logTrace locRslt
           chkAttributeEq (txt loc) attrName expctd locRslt
 
      testGroup "Base Locate Tests"
@@ -51,7 +52,7 @@ baseLocateTests =
                                  , locateTracing = L.NoLocateTracing
                                  }
       wantConsoleTrace = False
-      
+
       logTrace :: L.LocateResult -> IO ()
       logTrace lr = 
         when wantConsoleTrace $ do
