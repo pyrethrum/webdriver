@@ -253,12 +253,29 @@ locateAllFromElementHttp actions opts rootId loc = do
   (rslt, logs) <- runWriterT $ prepareRun catch opts.mkDefaultLoc (log' opts) (httpLocateAll (setBaseElement rootId locLogActions) opts) loc
   pure $ MkLocateResult rslt logs
 
-setBaseElement :: ElementId -> LocateActions m -> LocateActions m
-setBaseElement rootId act = act {
+-- | Locate all matching elements rooted at a given element.
+runHttpAction ::
+  forall m.
+  (Monad m) =>
+  LocateActions m ->
+  HttpLocateOpts ->
+  -- | root element
+  Maybe ElementId ->
+  (forall m2. LocateActions m2 -> HttpLocateOpts -> ReducedHttpLoc -> m2 [ElementId]) ->
+  Locator ->
+  m LocateResult
+runHttpAction actions opts rootId locateAction loc = do
+  let locLogActions@MkLocateActions{ catch } = withLogging actions
+  (rslt, logs) <- runWriterT $ prepareRun catch opts.mkDefaultLoc (log' opts) (locateAction (setBaseElement rootId locLogActions) opts) loc
+  pure $ MkLocateResult rslt logs
+
+setBaseElement :: Maybe ElementId -> LocateActions m -> LocateActions m
+setBaseElement mRootId act = 
+  maybe act (\rootId -> act {
   findElement = act.findElementFromElement rootId,
   findElements = act.findElementsFromElement rootId
-}
-   
+}) mRootId
+
 prepareRun :: forall m. Monad m =>
      (forall a e. (HasCallStack, Exception e) => m a -> (e -> m a) -> m a)
      -> (Text -> Locator) 
