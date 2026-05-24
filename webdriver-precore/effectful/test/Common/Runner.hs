@@ -10,7 +10,7 @@ import WebDriverPreCore.Test.ConfigLoader (Config (..), loadConfig)
 import WebDriverPreCore.Utils.Timeout (milliseconds)
 import WebDriverPreCore.Extended.HTTP.Base.Protocol (URL)
 
-runSetup :: (forall es. (IOE :> es) => HttpDriverInfo -> InteractOpts -> Config -> Eff es a) -> IO a
+runSetup :: forall a. (forall es. (IOE :> es) => HttpDriverInfo -> InteractOpts -> Config -> Eff es a) -> IO a
 runSetup action = runEff $ do
   config <- liftIO loadConfig
   let opts = mkInteractOpts config
@@ -19,8 +19,8 @@ runSetup action = runEff $ do
           { httpEndpoint = MkHttpEndpoint {host = config.httpUrl, port = config.httpPort},
             driverLogFn  = Nothing
           }
-  action driverInfo opts config
-
+  action driverInfo opts config 
+  
 mkInteractOpts :: Config -> InteractOpts
 mkInteractOpts config =
   MkInteractOpts

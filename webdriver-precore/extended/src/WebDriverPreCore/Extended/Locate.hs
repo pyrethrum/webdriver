@@ -18,10 +18,9 @@ where
 
 import Control.Exception (Exception)
 import Control.Monad (foldM, join)
-import Control.Monad.Trans.Class (lift)
-import Control.Monad.Trans.Writer.Strict (WriterT (..), runWriterT)
-import Control.Monad.Writer.Class (MonadWriter, tell)
+import Control.Monad.IO.Class (MonadIO, liftIO)
 import Data.Aeson as A (Result (..), Value (Bool), fromJSON, toJSON)
+import Data.IORef (IORef, modifyIORef', newIORef, readIORef)
 import Data.Bool (bool)
 import Data.Containers.ListUtils (nubOrd)
 import Data.Function ((&))
@@ -215,28 +214,30 @@ data LocParams m = MkLocParams
     locOpts :: LocOpts
   }
 
--- | Lift a 'LocateActions m' into 'LocateActions (WriterT [WDTrace] m)'.
-extendActions :: (Monad m) => HttpLocateOpts -> LocateActions m -> LocParams (WriterT [WDTrace] m)
-extendActions MkHttpLocateOpts{..} MkLocateActions{..} = MkLocParams
-  { 
+-- | Build a 'LocParams m' from 'LocateActions m', writing traces to an 'IORef'.
+-- Using IORef instead of WriterT ensures trace entries are preserved even when
+-- exceptions are thrown (WriterT state is discarded on exception).
+extendActions :: (MonadIO m) => IORef [WDTrace] -> HttpLocateOpts -> LocateActions m -> LocParams m
+extendActions logsRef MkHttpLocateOpts{..} MkLocateActions{..} = MkLocParams
+  {
   -- throw / catch
-    throw = lift . throw
-  , catch = \ma handler -> WriterT $ catch (runWriterT ma) (runWriterT . handler)
+    throw = throw
+  , catch = catch
 
   -- webdriver functions
-  , findElement = lift . findElement
-  , findElementFromElement = \eid -> lift . findElementFromElement eid
-  , findElements = lift . findElements
-  , findElementsFromElement = \eid -> lift . findElementsFromElement eid
-  , executeScript = lift . executeScript
-  , getElementAttribute = \eid -> lift . getElementAttribute eid 
-  , getElementText = lift . getElementText
+  , findElement = findElement
+  , findElementFromElement = findElementFromElement
+  , findElements = findElements
+  , findElementsFromElement = findElementsFromElement
+  , executeScript = executeScript
+  , getElementAttribute = getElementAttribute
+  , getElementText = getElementText
 
   -- other actions
   , defaultLoc = mkDefaultLoc
-  , trace = \logEntry -> 
+  , trace = \logEntry ->
       case locateTracing of
-        LocateTracing -> tell [logEntry]
+        LocateTracing -> liftIO $ modifyIORef' logsRef (logEntry :)
         NoLocateTracing -> pure ()
 
   -- options
@@ -245,35 +246,37 @@ extendActions MkHttpLocateOpts{..} MkLocateActions{..} = MkLocParams
 
 
 -- | Locate a unique or first-matching element from the document root.
-locateHttp :: forall m. (Monad m) => LocateActions m -> HttpLocateOpts -> Locator -> m LocateResult
+locateHttp :: forall m. (MonadIO m) => LocateActions m -> HttpLocateOpts -> Locator -> m LocateResult
 locateHttp actions opts = runHttpAction actions opts Nothing httpLocateSingleton
 
 -- | Locate all matching elements from the document root.
-locateAllHttp :: forall m. (Monad m) => LocateActions m -> HttpLocateOpts -> Locator -> m LocateResult
+locateAllHttp :: forall m. (MonadIO m) => LocateActions m -> HttpLocateOpts -> Locator -> m LocateResult
 locateAllHttp actions opts = runHttpAction actions opts Nothing httpLocateAll
 
 -- | Locate a unique or first-matching element rooted at a given element.
-locateFromElementHttp :: forall m. (Monad m) => LocateActions m -> HttpLocateOpts -> ElementId -> Locator -> m LocateResult
+locateFromElementHttp :: forall m. (MonadIO m) => LocateActions m -> HttpLocateOpts -> ElementId -> Locator -> m LocateResult
 locateFromElementHttp actions opts rootId = runHttpAction actions opts (Just rootId) httpLocateSingleton
 
 -- | Locate all matching elements rooted at a given element.
-locateAllFromElementHttp :: forall m. (Monad m) => LocateActions m -> HttpLocateOpts -> ElementId -> Locator -> m LocateResult
+locateAllFromElementHttp :: forall m. (MonadIO m) => LocateActions m -> HttpLocateOpts -> ElementId -> Locator -> m LocateResult
 locateAllFromElementHttp actions opts rootId = runHttpAction actions opts (Just rootId) httpLocateAll
 
 -- | Common implementation for all public HTTP locate functions.
 runHttpAction ::
   forall m.
-  (Monad m) =>
+  (MonadIO m) =>
   LocateActions m ->
   HttpLocateOpts ->
   -- | root element
   Maybe ElementId ->
-  (forall m'. Monad m' => LocParams m' -> ReducedHttpLoc -> m' [ElementId]) ->
+  (LocParams m -> ReducedHttpLoc -> m [ElementId]) ->
   Locator ->
   m LocateResult
 runHttpAction actions opts mRootId locateAction loc = do
-  let locParams = setBaseElement mRootId  $ extendActions opts actions
-  (rslt, logs) <- runWriterT $ prepareRun locParams (locateAction locParams) loc
+  logsRef <- liftIO $ newIORef []
+  let locParams = setBaseElement mRootId $ extendActions logsRef opts actions
+  rslt <- prepareRun locParams (locateAction locParams) loc
+  logs <- liftIO $ P.reverse <$> readIORef logsRef
   pure $ case opts.locateTracing of
     LocateTracing -> LocateWithTrace rslt logs
     NoLocateTracing -> Locate rslt
