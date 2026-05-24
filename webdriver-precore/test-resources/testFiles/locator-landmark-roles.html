@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Locator Landmark and Role Tests</title>
+  <style>
+    .span-button { display: inline-block; padding: 8px 18px; background: #e2e8f0; border: 1px solid #aaa; border-radius: 4px; cursor: pointer; margin-right: 6px; }
+    .link-button  { display: inline-block; padding: 8px 18px; background: #e2e8f0; border: 1px solid #aaa; border-radius: 4px; cursor: pointer; text-decoration: none; color: #333; }
+    .decorative-shape { width: 60px; height: 60px; background: linear-gradient(135deg,#f093fb,#f5576c); border-radius: 50%; display: inline-block; }
+  </style>
+</head>
+<body>
+
+  <!-- ── BANNER landmark (implicit role=banner via <header>) ── -->
+  <header auto-id="hdr-main">
+    <h1>Landmark Role Test Page</h1>
+
+    <!-- ── NAVIGATION landmark – "Main navigation" ── -->
+    <nav aria-label="Main navigation" auto-id="nav-main">
+      <ul>
+        <li><a href="#section-personal">Personal</a></li>
+        <li><a href="#section-contact">Contact</a></li>
+      </ul>
+    </nav>
+  </header>
+
+  <!-- ── MAIN landmark ── -->
+  <main auto-id="main-content">
+
+    <!-- FORM landmark – "Mega test form" -->
+    <form id="megaforma" method="post" action="#" novalidate
+          aria-label="Mega test form" auto-id="frm-mega">
+
+      <!-- Section with HTML id for elmId "section-personal" test -->
+      <section id="section-personal" auto-id="sec-personal">
+        <h2>Personal Information</h2>
+
+        <!-- Several inputs with class "text-input" (class contains "input") for jsDisplay test -->
+        <input type="text"  class="text-input" auto-id="edt-given-name"  value="Jane">
+        <input type="text"  class="text-input" auto-id="edt-family-name" value="Smith">
+        <input type="date"  class="text-input" auto-id="edt-dob"         value="1990-06-15">
+        <input type="email" class="text-input" auto-id="edt-email"       value="jane@example.com">
+
+        <!-- aria-label on input – for textbox "Nickname" test -->
+        <input type="text" aria-label="Nickname"
+               auto-id="edt-nickname"
+               class="text-input"
+               value="Jay">
+      </section>
+
+      <!-- Checkbox with aria-label – for checkbox "Read documents" test -->
+      <div>
+        <input type="checkbox" auto-id="chk-docs-read"
+               aria-label="Read documents" checked>
+      </div>
+
+      <!-- Explicit role overrides -->
+      <div>
+        <span role="button" tabindex="0"
+              auto-id="btn-span-role"
+              class="span-button"
+              aria-label="Span acting as button">Span Button</span>
+
+        <a role="button" href="#"
+           auto-id="btn-link-role"
+           class="link-button"
+           aria-label="Link acting as button">Link-Button</a>
+
+        <div role="img"
+             auto-id="img-div-role"
+             aria-label="Abstract coloured shape"
+             class="decorative-shape"></div>
+      </div>
+
+      <!-- HTML5 <search> element = role="search" landmark -->
+      <search auto-id="srch-widget">
+        <label for="site-search">Site Search</label>
+        <input type="search" id="site-search" class="text-input" aria-label="Search the site">
+        <button type="button">Search</button>
+      </search>
+
+      <!-- Submit button with aria-label – for button "Submit the mega form" test -->
+      <button type="submit" auto-id="btn-submit"
+              class="text-input"
+              aria-label="Submit the mega form">Submit</button>
+
+    </form>
+
+    <!-- ── Second NAVIGATION landmark – "Breadcrumb" (needed for multi-element Navigation test) ── -->
+    <nav aria-label="Breadcrumb" auto-id="nav-breadcrumb">
+      <ol>
+        <li><a href="#">Home</a></li>
+        <li><span aria-current="page">Tests</span></li>
+      </ol>
+    </nav>
+
+  </main>
+
+  <!-- ── COMPLEMENTARY landmark – "Help and tips" ── -->
+  <aside aria-label="Help and tips" auto-id="aside-help">
+    <h2>Form Help</h2>
+    <p>Fields marked <strong>*</strong> are required.</p>
+  </aside>
+
+  <!-- ── CONTENTINFO landmark (implicit via <footer>) ── -->
+  <footer auto-id="ftr-main">
+    <p>&copy; 2026 Landmark Role Test Page. For testing purposes only.</p>
+  </footer>
+
+</body>
+</html>

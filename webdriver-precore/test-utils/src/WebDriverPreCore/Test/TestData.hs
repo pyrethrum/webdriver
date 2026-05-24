@@ -33,6 +33,9 @@ module WebDriverPreCore.Test.TestData
     inputsUrl,
     attributeTestUrl,
     megaformaUrl,
+    landmarkRolesUrl,
+    extendedRolesUrl,
+    visibilityUrl,
   )
 where
 
@@ -165,3 +168,12 @@ attributeTestUrl = fileUrl "attributeTest.html"
 
 megaformaUrl :: MonadIO m => m URL
 megaformaUrl = fileUrl "megaforma.html"
+
+landmarkRolesUrl :: MonadIO m => m URL
+landmarkRolesUrl = fileUrl "locator-landmark-roles.html"
+
+extendedRolesUrl :: MonadIO m => m URL
+extendedRolesUrl = fileUrl "locator-extended-roles.html"
+
+visibilityUrl :: MonadIO m => m URL
+visibilityUrl = fileUrl "locator-visibility.html"

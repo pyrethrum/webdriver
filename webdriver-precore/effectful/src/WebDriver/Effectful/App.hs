@@ -15,7 +15,7 @@ module WebDriver.Effectful.App
     InteractOpts (..),
 
     -- * HTTP Runners
-    newHttpSession,
+    acquireHttpSession,
     releaseHttpSession,
     runHttpSession,
     withHttpSession,
@@ -81,17 +81,17 @@ data InteractOpts = MkInteractOpts
 --
 -- The caller is responsible for pairing this with 'releaseHttpSession'.
 -- Use 'Test.Tasty.withResource' or any other bracket-style combinator.
--- 'withHttpSession' uses all three of 'newHttpSession',
+-- 'withHttpSession' uses all three of 'acquireHttpSession',
 -- 'releaseHttpSession', and 'runHttpSession' internally.
 --
 -- The @driverInfo@ should already have 'driverLogFn' set if logging is
 -- desired (e.g. resolved from a 'Logger' context via 'resolveLogFn').
-newHttpSession
+acquireHttpSession
   :: HttpDriverInfo
   -> EC.HttpCapabilities
   -> Timeout
   -> IO HttpSessionInfo
-newHttpSession driverInfo caps pauseDuration' = do
+acquireHttpSession driverInfo caps pauseDuration' = do
   resp <- EC.newHttpSessionResponse (mkRootRunner driverInfo) caps
   pure MkHttpSessionInfo
     { driverInfo    = driverInfo
@@ -121,7 +121,7 @@ runHttpSession = runWebDriverHttp
 -- * @Logger :> es@ — to route driver-level logging through the existing
 --   'Logger' effect (only relevant when @opts.driverLogging == True@)
 --
--- Use 'newHttpSession' \/ 'releaseHttpSession' as an acquire\/release
+-- Use 'acquireHttpSession' \/ 'releaseHttpSession' as an acquire\/release
 -- pair (e.g. with 'Test.Tasty.withResource') and 'runHttpSession' to inject
 -- the 'WebDriverHttp' effect into each test.
 withHttpSession
@@ -136,7 +136,7 @@ withHttpSession driverInfo opts caps action =
     driverLogFn <- runInIO (mkLogFunction opts)
     let driverInfo' = driverInfo {driverLogFn}
     bracket
-      (newHttpSession driverInfo' caps opts.pauseDuration)
+      (acquireHttpSession driverInfo' caps opts.pauseDuration)
       releaseHttpSession
       (runInIO . flip runHttpSession action)
 

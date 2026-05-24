@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Locator Extended Role Tests</title>
+</head>
+<body>
+
+  <main>
+    <form id="megaforma" method="post" action="#" novalidate
+          aria-label="Extended role test form">
+
+      <!-- ── REGION via aria-labelledby – for region "Personal Information" test ── -->
+      <!--    Also used by: roleType Region test                                    -->
+      <section id="section-personal" aria-labelledby="hdg-personal" auto-id="sec-personal">
+        <h2 id="hdg-personal">Personal Information</h2>
+
+        <!-- for/id label association – for textbox "Given Name" test -->
+        <div>
+          <label for="given-name">Given Name</label>
+          <input type="text" id="given-name" name="given-name"
+                 auto-id="edt-given-name"
+                 value="Jane">
+        </div>
+
+        <!-- aria-label on input – for textbox "Nickname" test -->
+        <!-- (resolved regardless of ExtLocate setting)         -->
+        <div>
+          <input type="text" name="nickname"
+                 auto-id="edt-nickname"
+                 aria-label="Nickname"
+                 value="Jay">
+        </div>
+      </section>
+
+      <!-- ── for/id label association – for radio "Email" test ── -->
+      <fieldset>
+        <legend>Preferred Contact Method</legend>
+        <div>
+          <input type="radio" id="contact-email" name="contact-method" value="email"
+                 auto-id="rdo-contact-email" checked>
+          <label for="contact-email">Email</label>
+        </div>
+        <div>
+          <input type="radio" id="contact-phone" name="contact-method" value="phone"
+                 auto-id="rdo-contact-phone">
+          <label for="contact-phone">Phone</label>
+        </div>
+      </fieldset>
+
+    </form>
+  </main>
+
+</body>
+</html>

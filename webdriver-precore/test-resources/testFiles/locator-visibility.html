@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Locator Visibility Tests</title>
+  <style>
+    /* CSS hiding strategies used by visibility tests */
+    .hidden-display    { display: none; }
+    .hidden-visibility { visibility: hidden; }
+
+    /* notes-area: two textareas sharing this class (one visible, one hidden)  */
+    /* Tests: singleton disambiguation, DisplayedCheckAlways vs Never           */
+    .notes-area        { width: 100%; min-height: 80px; resize: vertical; }
+    .notes-area-hidden { display: none; }
+  </style>
+</head>
+<body>
+
+  <!-- ── Singleton disambiguation tests ──────────────────────────────────────
+       Exactly two elements with class "notes-area":
+         edt-notes-visible  – visible (no hiding)
+         edt-notes-hidden   – hidden via .notes-area-hidden (display:none)
+       ──────────────────────────────────────────────────────────────────────── -->
+  <textarea class="notes-area"              auto-id="edt-notes-visible" rows="4">This is a visible note area.</textarea>
+  <textarea class="notes-area notes-area-hidden" auto-id="edt-notes-hidden" rows="4">This note area is hidden via CSS class display:none.</textarea>
+
+  <!-- ── Visible reference (control) ── -->
+  <div>
+    <label for="vis-ref">Visible Reference</label>
+    <input type="text" id="vis-ref" name="vis-ref"
+           auto-id="edt-vis-ref"
+           value="I am fully visible">
+  </div>
+
+  <!-- ── Rule: aria-hidden – in DOM and layout, NOT filtered by displayedJS ── -->
+  <div>
+    <input type="text" name="aria-hidden-input"
+           auto-id="edt-aria-hidden"
+           aria-hidden="true"
+           value="aria-hidden input">
+  </div>
+
+  <!-- ── Rule 1 (display:none on element itself) ──────────────────────────────
+       edt-notes-hidden above already covers display:none via CSS class.
+       ──────────────────────────────────────────────────────────────────────── -->
+
+  <!-- ── Rule 2 (visibility:hidden or collapse, inherited) ──────────────────── -->
+
+  <!-- visibility:hidden via inline style on parent -->
+  <div style="visibility:hidden" auto-id="fg-vis-hidden">
+    <input type="text" name="vis-hidden-input"
+           auto-id="edt-vis-hidden"
+           value="visibility:hidden input">
+  </div>
+
+  <!-- visibility:hidden via CSS class on parent -->
+  <div class="hidden-visibility" auto-id="fg-css-vis-hidden">
+    <input type="text" name="css-vis-hidden-input"
+           auto-id="edt-css-vis-hidden"
+           value="css class visibility:hidden input">
+  </div>
+
+  <!-- ── Rule 3 (parseFloat(opacity) === 0 on element itself) ─────────────────
+       fg-opacity-zero: the div itself is filtered (opacity:0 directly on it)
+       edt-opacity-zero: the child input is NOT filtered (opacity not inherited) -->
+  <div style="opacity:0" auto-id="fg-opacity-zero">
+    <input type="text" name="opacity-zero-input"
+           auto-id="edt-opacity-zero"
+           value="opacity:0 input">
+  </div>
+
+  <!-- ── Rule 4 (INPUT with type=hidden) ── -->
+  <input type="hidden" id="session-token" name="session-token"
+         auto-id="hdn-session-token"
+         value="abc123xyz">
+
+  <!-- ── Rule 5 (offsetWidth===0 or offsetHeight===0 — parent has display:none) -->
+
+  <!-- display:none via inline style on parent -->
+  <div style="display:none" auto-id="fg-display-none">
+    <input type="text" name="display-none-input"
+           auto-id="edt-display-none"
+           value="display:none inline input">
+  </div>
+
+  <!-- display:none via CSS class on parent -->
+  <div class="hidden-display" auto-id="fg-css-none">
+    <input type="text" name="css-none-input"
+           auto-id="edt-css-none"
+           value="css class display:none input">
+  </div>
+
+  <!-- HTML hidden attribute on parent -->
+  <div hidden auto-id="fg-html-hidden">
+    <input type="text" name="html-hidden-input"
+           auto-id="edt-html-hidden"
+           value="html [hidden] attr input">
+  </div>
+
+  <!-- ── NOT filtered by displayedJS ──────────────────────────────────────────
+       edt-aria-hidden: aria-hidden is covered above.
+       edt-offscreen:   positioned off-viewport but non-zero dimensions.
+       edt-opacity-zero: child of opacity:0 container, covered above.
+       ──────────────────────────────────────────────────────────────────────── -->
+
+  <!-- Off-screen: absolute position far off-viewport; non-zero size -->
+  <div style="position:absolute; left:-9999px; top:-9999px;"
+       auto-id="fg-offscreen">
+    <input type="text" name="offscreen-input"
+           auto-id="edt-offscreen"
+           value="off-screen input">
+  </div>
+
+</body>
+</html>
