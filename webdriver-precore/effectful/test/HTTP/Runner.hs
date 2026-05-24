@@ -22,7 +22,7 @@ import WebDriver.Effectful
     InteractOpts (..),
     Pause,
     WebDriverHttp,
-    acquireHttpSession,
+    newHttpSession,
     fromHttpCapability,
     FullCapabilities (..),
     releaseHttpSession,
@@ -83,7 +83,7 @@ getWDSession =
    \driverInfo opts config -> 
       liftIO $ do
         loggerHandle <- acquireLogger "eval.log"
-        sessionInfo <- acquireHttpSession driverInfo (mkHttpCaps config) opts.pauseDuration
+        sessionInfo <- newHttpSession driverInfo (mkHttpCaps config) opts.pauseDuration
         pure MkWDSession {loggerHandle, sessionInfo}
 
 closeWDSession :: WDSession -> IO ()

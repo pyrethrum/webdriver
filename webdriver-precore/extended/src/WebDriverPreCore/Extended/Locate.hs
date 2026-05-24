@@ -235,9 +235,9 @@ extendActions logsRef MkHttpLocateOpts{..} MkLocateActions{..} = MkLocParams
 
   -- other actions
   , defaultLoc = mkDefaultLoc
-  , trace = \logEntry ->
+  , trace = \traceEntry ->
       case locateTracing of
-        LocateTracing -> liftIO $ modifyIORef' logsRef (logEntry :)
+        LocateTracing -> liftIO $ modifyIORef' logsRef (traceEntry :)
         NoLocateTracing -> pure ()
 
   -- options
