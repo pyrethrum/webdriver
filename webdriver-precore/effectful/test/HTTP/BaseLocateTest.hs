@@ -3,7 +3,7 @@ module HTTP.BaseLocateTest where
 import HTTP.Runner (getWDSession, closeWDSession, runHttpTest, WDSession, testUrl, runHttp, BaseHTTPEffs)
 import Test.Tasty (TestTree, defaultMain, testGroup, withResource)
 import System.Environment (withArgs)
-import Test.Tasty.HUnit (assertBool, assertFailure)
+import Test.Tasty.HUnit (assertBool, assertFailure, assertEqual)
 import WebDriverPreCore.Extended.Locators
 import WebDriverPreCore.Extended.Locate qualified as L
 import WebDriver.Effectful.HTTP.Base.Actions 
@@ -48,18 +48,15 @@ baseLocateTests =
      testGroup "Base Locate Tests"
       [
         {-
-        atrrChk "Locate by ID" (elmId "section-personal") "auto-id" "sec-personal",
-        atrrChk "Locate by Class" (elmClass "input") "auto-id" "hello",
-        chkAll "List input classes" (elmClass "input") (const Nothing)
-        -}
         test "jsDisplay check should NOT be affected by viewport" $ do
           maximizeWindow
           maxResult <-locateAll (elmClass "input")
-          liftIO $ TIO.putStrLn $ "maximisedResult\n" <> txt maxResult 
           minimizeWindow 
           minResult <-locateAll (elmClass "input") 
-          liftIO $ TIO.putStrLn $ "manimisedResult\n" <> txt minResult 
           chkEq "Displayed result should be the same for minised and maximised viewport" maxResult.result minResult.result
+        atrrChk "Locate by ID" (elmId "section-personal") "auto-id" "sec-personal",
+        -}
+        atrrChk "Locate by Class" (elmClass "input") "auto-id" "hello"
       ]
      where
 
@@ -71,16 +68,6 @@ baseLocateTests =
                                  , locateTracing = L.LocateTracing
                                  }
     
-      -- logTrace :: L.LocateResult -> IO ()
-      -- logTrace lr = case lr of
-      --   L.Locate {} -> when wantConsoleTrace $
-      --     error "Trace misconfiguration - wantConsoleTrace is True but locateTracing is not enabled in opts"
-      --   L.LocateWithTrace {logFields} -> when wantConsoleTrace $ do
-      --     putStrLn "Locate trace:"
-      --     case lr.result of
-      --       Left err -> TIO.putStrLn $ " - Locate failed with error: " <> txt err <> "\n - Trace:\n" <> txt logFields
-      --       Right elms -> TIO.putStrLn $ " - Located elements: " <> txt (length elms) <> "\n - Trace:\n" <> txt logFields
-     
       locate :: forall es. (IOE :> es, WebDriverHttp :> es)  => Locator -> Eff es L.LocateResult
       locate = locateHttp defOpts
       
@@ -198,5 +185,6 @@ liftChk :: (IOE :> es) => Text -> Maybe Text -> Eff es ()
 liftChk testTitle mErr = mErr & maybe (pure ()) (\erMsg -> liftFail $ testTitle <> " - " <> erMsg)
 
 chkEq :: (IOE :> es, Show a, Eq a) => Text -> a -> a -> Eff es ()
-chkEq msg a b = when (a /= b) $ liftFail $ msg <> "\n  left:  " <> txt a <> "\n  right: " <> txt b
+chkEq msg a b = liftIO $ assertEqual (unpack msg) a b
+
 

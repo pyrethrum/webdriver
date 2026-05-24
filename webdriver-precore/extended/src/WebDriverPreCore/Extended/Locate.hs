@@ -120,7 +120,7 @@ data LocateResult =
   } |
   LocateWithTrace 
   { result :: Either LocateException [ElementId]
-  , logFields :: [WDTrace]
+  , trace :: [WDTrace]
   } deriving (Show, Eq)
 
 -- | Whether to find the unique element (error if multiple match) or just the first.
@@ -392,10 +392,9 @@ chkRefilterSingleton actions elmIds =
         [] -> pure []
         [x] -> pure [x]
         xs ->
-          recheckAmbiguous
-            & bool
-              (pure xs)
-              (jsFilterDisplayed actions xs >>= chkSingleton False)
+          if recheckAmbiguous
+            then jsFilterDisplayed actions xs >>= chkSingleton False
+            else pure xs
 
 -- single shot base locate (all cardinality)
 locateElmsUnchecked ::
@@ -655,42 +654,14 @@ displayedJS =
   \\n\
   \  if (style.display === \"none\") return false;\n\
   \  if (style.visibility === \"hidden\" || style.visibility === \"collapse\") return false;\n\
+  \  if (parseFloat(style.opacity) === 0) return false;\n\
   \\n\
   \  if (el.tagName === \"INPUT\" && el.type === \"hidden\")\n\
   \    return false;\n\
   \\n\
-  \  const rect = el.getBoundingClientRect();\n\
-  \\n\
-  \  if (rect.width === 0 || rect.height === 0)\n\
+  \  if (el.offsetWidth === 0 || el.offsetHeight === 0)\n\
   \    return false;\n\
   \\n\
-  \  const vpW = window.innerWidth;\n\
-  \  const vpH = window.innerHeight;\n\
-  \\n\
-  \  if (\n\
-  \    rect.bottom < 0 ||\n\
-  \    rect.right < 0 ||\n\
-  \    rect.top > vpH ||\n\
-  \    rect.left > vpW\n\
-  \  )\n\
-  \    return false;\n\
-  \\n\
-  \  const points = [\n\
-  \    [rect.left + rect.width / 2, rect.top + rect.height / 2],\n\
-  \    [rect.left + 1, rect.top + 1],\n\
-  \    [rect.right - 1, rect.bottom - 1]\n\
-  \  ];\n\
-  \\n\
-  \  for (const [x, y] of points) {\n\
-  \    if (x < 0 || y < 0 || x > vpW || y > vpH)\n\
-  \      continue;\n\
-  \\n\
-  \    const hit = document.elementFromPoint(x, y);\n\
-  \\n\
-  \    if (hit === el || el.contains(hit))\n\
-  \      return true;\n\
-  \  }\n\
-  \\n\
-  \  return false;\n\
+  \  return true;\n\
   \}\n\
   \return Array.from(arguments[0]).map(isDisplayed);"
