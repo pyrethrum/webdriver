@@ -15,7 +15,9 @@ import WebDriver.Effectful
 import WebDriver.Effectful.Logger
 import WebDriverPreCore.Extended.HTTP.Base.Protocol (ElementId)
 import Data.Text (Text, unpack)
+import Data.Text.IO qualified as TIO
 import Utils (txt)
+import Control.Monad (when)
 import Data.Function ((&))
 import Data.Functor ((<&>))
 
@@ -34,13 +36,30 @@ baseLocateTests =
       atrrChk testName loc attrName expctd = 
         test testName $ do
           locRslt <- locate loc
-          logTrace locRslt
           chkAttributeEq (txt loc) attrName expctd locRslt
+
+      chkAll :: Text -> Locator -> ([ElementId] -> Maybe Text) -> TestTree
+      chkAll testName loc chk =
+        test testName $ do
+          locRslt <- locateAll loc
+          liftIO $ TIO.putStrLn $ txt locRslt
+          chkElms (txt loc) chk locRslt
 
      testGroup "Base Locate Tests"
       [
+        {-
         atrrChk "Locate by ID" (elmId "section-personal") "auto-id" "sec-personal",
-        atrrChk "Locate by Class" (elmClass "input") "auto-id" "hello"
+        atrrChk "Locate by Class" (elmClass "input") "auto-id" "hello",
+        chkAll "List input classes" (elmClass "input") (const Nothing)
+        -}
+        test "jsDisplay check should NOT be affected by viewport" $ do
+          maximizeWindow
+          maxResult <-locateAll (elmClass "input")
+          liftIO $ TIO.putStrLn $ "maximisedResult\n" <> txt maxResult 
+          minimizeWindow 
+          minResult <-locateAll (elmClass "input") 
+          liftIO $ TIO.putStrLn $ "manimisedResult\n" <> txt minResult 
+          chkEq "Displayed result should be the same for minised and maximised viewport" maxResult.result minResult.result
       ]
      where
 
@@ -49,23 +68,25 @@ baseLocateTests =
                                  , jsRecheckDisplayed = L.DisplayedCheckAlways
                                  , singletonCardinality = L.Unique
                                  , mkDefaultLoc = attribute "auto-id"
-                                 , locateTracing = L.NoLocateTracing
+                                 , locateTracing = L.LocateTracing
                                  }
-      wantConsoleTrace = False
-
-      logTrace :: L.LocateResult -> IO ()
-      logTrace lr = 
-        when wantConsoleTrace $ do
-          putStrLn "Locate trace:"
-          case lr.result of
-            Left err -> putStrLn $ " - Locate failed with error: " <> txt err <> "\n - Trace:\n" <> txt lr.trace
-            Right elms -> putStrLn $ " - Located elements: " <> txt (length elms) <> "\n - Trace:\n" <> txt lr.trace
+    
+      -- logTrace :: L.LocateResult -> IO ()
+      -- logTrace lr = case lr of
+      --   L.Locate {} -> when wantConsoleTrace $
+      --     error "Trace misconfiguration - wantConsoleTrace is True but locateTracing is not enabled in opts"
+      --   L.LocateWithTrace {logFields} -> when wantConsoleTrace $ do
+      --     putStrLn "Locate trace:"
+      --     case lr.result of
+      --       Left err -> TIO.putStrLn $ " - Locate failed with error: " <> txt err <> "\n - Trace:\n" <> txt logFields
+      --       Right elms -> TIO.putStrLn $ " - Located elements: " <> txt (length elms) <> "\n - Trace:\n" <> txt logFields
      
       locate :: forall es. (IOE :> es, WebDriverHttp :> es)  => Locator -> Eff es L.LocateResult
       locate = locateHttp defOpts
       
       locateAll :: forall es. (IOE :> es, WebDriverHttp :> es) => Locator -> Eff es L.LocateResult
       locateAll = locateAllHttp defOpts
+
 
       locateFromElement :: forall es. (IOE :> es, WebDriverHttp :> es) => ElementId -> Locator -> Eff es L.LocateResult
       locateFromElement = locateFromElementHttp defOpts
@@ -84,7 +105,10 @@ _eval = withArgs [] . defaultMain
 navToMegaForm :: IO WDSession
 navToMegaForm = do
   ses <- getWDSession
-  runHttp ses $ testUrl megaformaUrl >>= navigateTo
+  runHttp ses $ do 
+    url <- testUrl megaformaUrl 
+    navigateTo url
+    maximizeWindow
   pure ses
 
 -- actions :: forall es. (IOE :> es, Logger :> es, Pause :> es, WebDriverHttp :> es) => Eff es (L.LocateActions (Eff es))
@@ -135,7 +159,7 @@ chkElms errMsg p locRslt =
 chkElmsM :: (IOE :> es) => Text -> L.LocateResult -> ([ElementId] -> Eff es (Maybe Text)) -> Eff es ()
 chkElmsM testTitle locRslt chkM =
   locRslt.result & either
-    (\err -> liftFail $ " - locate failed:\n" <> testTitle <> "\n" <> txt err)
+    (\err -> liftFail $ " - locate failed:\n" <> testTitle <> "\n" <> txt err <> "\n" <> txt locRslt)
     (\elms -> chkM elms >>= liftChk (testTitle <> " - element list check failed"))
 
 chkAttribute :: forall es. (IOE :> es, WebDriverHttp :> es)=> Text -> L.LocateResult -> Text -> (Text -> Maybe Text) -> Eff es ()
@@ -172,4 +196,7 @@ liftFail = liftIO . assertFailure . unpack
 
 liftChk :: (IOE :> es) => Text -> Maybe Text -> Eff es ()
 liftChk testTitle mErr = mErr & maybe (pure ()) (\erMsg -> liftFail $ testTitle <> " - " <> erMsg)
+
+chkEq :: (IOE :> es, Show a, Eq a) => Text -> a -> a -> Eff es ()
+chkEq msg a b = when (a /= b) $ liftFail $ msg <> "\n  left:  " <> txt a <> "\n  right: " <> txt b
 
