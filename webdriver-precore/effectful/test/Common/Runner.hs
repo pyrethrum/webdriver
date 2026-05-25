@@ -13,7 +13,11 @@ import WebDriverPreCore.Extended.HTTP.Base.Protocol (URL)
 runSetup :: forall a. (forall es. (IOE :> es) => HttpDriverInfo -> InteractOpts -> Config -> Eff es a) -> IO a
 runSetup action = runEff $ do
   config <- liftIO loadConfig
-  let opts = mkInteractOpts config
+  let 
+      opts :: InteractOpts
+      opts = mkInteractOpts config
+      
+      driverInfo :: HttpDriverInfo
       driverInfo =
         MkHttpDriverInfo
           { httpEndpoint = MkHttpEndpoint {host = config.httpUrl, port = config.httpPort},

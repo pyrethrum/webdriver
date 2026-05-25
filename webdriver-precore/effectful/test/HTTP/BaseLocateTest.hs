@@ -25,28 +25,10 @@ import Data.Functor ((<&>))
 -- *** Exception: ExitSuccess
 baseLocateTests :: TestTree
 baseLocateTests =
-  withResource getWDSession closeWDSession $ \ses ->
-   let test :: Text -> BaseHTTPEffs () -> TestTree
-       test name action = runHttpTest ses name action
-
-       atrrChk testName loc attrName expctd =
-         test testName $ locate loc >>= chkAttributeEq (txt loc) attrName expctd
-
-       chkAutoId testName loc  = atrrChk testName loc "auto-id"
-
-       atrrChkExtRole testName loc attrName expctd =
-         test testName $ locateExt loc >>= chkAttributeEq (txt loc) attrName expctd 
-
-       chkAll testName loc chk =
-         test testName $ do
-           locRslt <- locateAll loc
-           chkElms (txt loc) chk locRslt
-
-       atrrChkExtMiss testName loc attrName expctd =
-         test testName $ do
-           locRslt <- locateExtMiss loc
-           chkAttributeEq (txt loc) attrName expctd locRslt
-    in
+  withResource getWDSession closeWDSession runSessionTests
+  where
+  runSessionTests :: IO WDSession -> TestTree
+  runSessionTests ses =
     testGroup "Base Locate Tests"
       [ -- Landmark roles and basic element locators on locator-landmark-roles.html
         withResource (navToUrl ses landmarkRolesUrl) (\_ -> pure ()) $ \_ ->
@@ -244,7 +226,32 @@ baseLocateTests =
                   ]
               ]
       ]
-  where
+    where
+    test :: Text -> BaseHTTPEffs () -> TestTree
+    test name action = runHttpTest ses name action
+
+    atrrChk :: Text -> Locator -> Text -> Text -> TestTree
+    atrrChk testName loc attrName expctd =
+      test testName $ locate loc >>= chkAttributeEq (txt loc) attrName expctd
+
+    chkAutoId :: Text -> Locator -> Text -> TestTree
+    chkAutoId testName loc = atrrChk testName loc "auto-id"
+
+    atrrChkExtRole :: Text -> Locator -> Text -> Text -> TestTree
+    atrrChkExtRole testName loc attrName expctd =
+      test testName $ locateExt loc >>= chkAttributeEq (txt loc) attrName expctd
+
+    chkAll :: Text -> Locator -> ([ElementId] -> Maybe Text) -> TestTree
+    chkAll testName loc chk =
+      test testName $ do
+        locRslt <- locateAll loc
+        chkElms (txt loc) chk locRslt
+
+    atrrChkExtMiss :: Text -> Locator -> Text -> Text -> TestTree
+    atrrChkExtMiss testName loc attrName expctd =
+      test testName $ do
+        locRslt <- locateExtMiss loc
+        chkAttributeEq (txt loc) attrName expctd locRslt
 
   navToUrl :: IO WDSession -> IO URL -> IO WDSession
   navToUrl getSes urlAction = do
