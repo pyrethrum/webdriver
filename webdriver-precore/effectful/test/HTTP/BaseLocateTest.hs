@@ -133,68 +133,68 @@ baseLocateTests =
               [ testGroup "locateAll: DisplayedCheckAlways filters hidden, DisplayedCheckNever does not"
                   [ testGroup "Rule 1 (display=none on element itself)"
                       [ test "edt-notes-hidden has display:none via own CSS class" $ do
-                          always <- locateAll      (attribute "auto-id" "edt-notes-hidden")
-                          never  <- locateAllNever (attribute "auto-id" "edt-notes-hidden")
+                          always <- locateAll      (autoId "edt-notes-hidden")
+                          never  <- locateAllNever (autoId "edt-notes-hidden")
                           chkElms "DisplayedCheckAlways must filter display:none element"    chkEmpty    always
                           chkElms "DisplayedCheckNever must find display:none element"       chkSingleton never
                       ]
                   , testGroup "Rule 2 (visibility=hidden or collapse, inherited)"
                       [ test "edt-vis-hidden is inside inline visibility:hidden parent" $ do
-                          always <- locateAll      (attribute "auto-id" "edt-vis-hidden")
-                          never  <- locateAllNever (attribute "auto-id" "edt-vis-hidden")
+                          always <- locateAll      (autoId "edt-vis-hidden")
+                          never  <- locateAllNever (autoId "edt-vis-hidden")
                           chkElms "DisplayedCheckAlways must filter visibility:hidden element" chkEmpty    always
                           chkElms "DisplayedCheckNever must find visibility:hidden element"    chkSingleton never
                       , test "edt-css-vis-hidden is inside CSS class visibility:hidden parent" $ do
-                          always <- locateAll      (attribute "auto-id" "edt-css-vis-hidden")
-                          never  <- locateAllNever (attribute "auto-id" "edt-css-vis-hidden")
+                          always <- locateAll      (autoId "edt-css-vis-hidden")
+                          never  <- locateAllNever (autoId "edt-css-vis-hidden")
                           chkElms "DisplayedCheckAlways must filter CSS visibility:hidden element" chkEmpty    always
                           chkElms "DisplayedCheckNever must find CSS visibility:hidden element"    chkSingleton never
                       ]
                   , testGroup "Rule 3 (parseFloat(opacity) === 0 on element itself)"
                       [ test "fg-opacity-zero div has opacity:0 applied directly" $ do
-                          always <- locateAll      (attribute "auto-id" "fg-opacity-zero")
-                          never  <- locateAllNever (attribute "auto-id" "fg-opacity-zero")
+                          always <- locateAll      (autoId "fg-opacity-zero")
+                          never  <- locateAllNever (autoId "fg-opacity-zero")
                           chkElms "DisplayedCheckAlways must filter opacity:0 element" chkEmpty    always
                           chkElms "DisplayedCheckNever must find opacity:0 element"    chkSingleton never
                       ]
                   , testGroup "Rule 4 (INPUT with type=hidden)"
                       [ test "hdn-session-token is input[type=hidden]" $ do
-                          always <- locateAll      (attribute "auto-id" "hdn-session-token")
-                          never  <- locateAllNever (attribute "auto-id" "hdn-session-token")
+                          always <- locateAll      (autoId "hdn-session-token")
+                          never  <- locateAllNever (autoId "hdn-session-token")
                           chkElms "DisplayedCheckAlways must filter input type=hidden" chkEmpty    always
                           chkElms "DisplayedCheckNever must find input type=hidden"    chkSingleton never
                       ]
                   , testGroup "Rule 5 (offsetWidth===0 or offsetHeight===0, parent has display:none)"
                       [ test "edt-display-none is inside inline display:none parent" $ do
-                          always <- locateAll      (attribute "auto-id" "edt-display-none")
-                          never  <- locateAllNever (attribute "auto-id" "edt-display-none")
+                          always <- locateAll      (autoId "edt-display-none")
+                          never  <- locateAllNever (autoId "edt-display-none")
                           chkElms "DisplayedCheckAlways must filter zero-size element (inline display:none parent)" chkEmpty    always
                           chkElms "DisplayedCheckNever must find zero-size element (inline display:none parent)"    chkSingleton never
                       , test "edt-css-none is inside CSS class display:none parent" $ do
-                          always <- locateAll      (attribute "auto-id" "edt-css-none")
-                          never  <- locateAllNever (attribute "auto-id" "edt-css-none")
+                          always <- locateAll      (autoId "edt-css-none")
+                          never  <- locateAllNever (autoId "edt-css-none")
                           chkElms "DisplayedCheckAlways must filter zero-size element (CSS display:none parent)" chkEmpty    always
                           chkElms "DisplayedCheckNever must find zero-size element (CSS display:none parent)"    chkSingleton never
                       , test "edt-html-hidden is inside HTML hidden-attribute parent" $ do
-                          always <- locateAll      (attribute "auto-id" "edt-html-hidden")
-                          never  <- locateAllNever (attribute "auto-id" "edt-html-hidden")
+                          always <- locateAll      (autoId "edt-html-hidden")
+                          never  <- locateAllNever (autoId "edt-html-hidden")
                           chkElms "DisplayedCheckAlways must filter zero-size element (HTML hidden parent)" chkEmpty    always
                           chkElms "DisplayedCheckNever must find zero-size element (HTML hidden parent)"    chkSingleton never
                       ]
                   , testGroup "NOT filtered by displayedJS"
                       [ test "edt-aria-hidden: aria-hidden does not affect display, opacity or dimensions" $ do
-                          always <- locateAll      (attribute "auto-id" "edt-aria-hidden")
-                          never  <- locateAllNever (attribute "auto-id" "edt-aria-hidden")
+                          always <- locateAll      (autoId "edt-aria-hidden")
+                          never  <- locateAllNever (autoId "edt-aria-hidden")
                           chkElms "DisplayedCheckAlways must NOT filter aria-hidden element" chkSingleton always
                           chkElms "DisplayedCheckNever must find aria-hidden element"        chkSingleton never
                       , test "edt-offscreen: positioned off-viewport but has non-zero dimensions" $ do
-                          always <- locateAll      (attribute "auto-id" "edt-offscreen")
-                          never  <- locateAllNever (attribute "auto-id" "edt-offscreen")
+                          always <- locateAll      (autoId "edt-offscreen")
+                          never  <- locateAllNever (autoId "edt-offscreen")
                           chkElms "DisplayedCheckAlways must NOT filter off-screen element" chkSingleton always
                           chkElms "DisplayedCheckNever must find off-screen element"        chkSingleton never
                       , test "edt-opacity-zero: input child of opacity:0 container; opacity not inherited" $ do
-                          always <- locateAll      (attribute "auto-id" "edt-opacity-zero")
-                          never  <- locateAllNever (attribute "auto-id" "edt-opacity-zero")
+                          always <- locateAll      (autoId "edt-opacity-zero")
+                          never  <- locateAllNever (autoId "edt-opacity-zero")
                           chkElms "DisplayedCheckAlways must NOT filter opacity:0 child element" chkSingleton always
                           chkElms "DisplayedCheckNever must find opacity:0 child element"        chkSingleton never
                       ]
@@ -259,11 +259,14 @@ baseLocateTests =
     runHttp ses $ testUrl urlAction >>= navigateTo
     pure ses
 
+  autoId :: Text -> Locator
+  autoId = attribute "auto-id"
+
   defOpts :: L.HttpLocateOpts
   defOpts = L.MkHttpLocateOpts { extendedRoleLocation = L.ExtLocateNever
                                , jsRecheckDisplayed = L.DisplayedCheckAlways
                                , singletonCardinality = L.Unique
-                               , mkDefaultLoc = attribute "auto-id"
+                               , mkDefaultLoc = autoId
                                , locateTracing = L.LocateTracing
                                }
 
