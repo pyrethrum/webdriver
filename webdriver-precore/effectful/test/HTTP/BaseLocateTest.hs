@@ -28,18 +28,20 @@ baseLocateTests =
   withResource getWDSession closeWDSession $ \ses ->
    let test :: Text -> BaseHTTPEffs () -> TestTree
        test name action = runHttpTest ses name action
+
        atrrChk testName loc attrName expctd =
          test testName $ locate loc >>= chkAttributeEq (txt loc) attrName expctd
-       chkAutoId testName loc expctd =
-         test testName $ locate loc >>= chkAttributeEq (txt loc) "auto-id" expctd
+
+       chkAutoId testName loc  = atrrChk testName loc "auto-id"
+
+       atrrChkExtRole testName loc attrName expctd =
+         test testName $ locateExt loc >>= chkAttributeEq (txt loc) attrName expctd 
+
        chkAll testName loc chk =
          test testName $ do
            locRslt <- locateAll loc
            chkElms (txt loc) chk locRslt
-       atrrChkExt testName loc attrName expctd =
-         test testName $ do
-           locRslt <- locateExt loc
-           chkAttributeEq (txt loc) attrName expctd locRslt
+
        atrrChkExtMiss testName loc attrName expctd =
          test testName $ do
            locRslt <- locateExtMiss loc
@@ -88,7 +90,7 @@ baseLocateTests =
         withResource (navToUrl ses extendedRolesUrl) (\_ -> pure ()) $ \_ ->
           testGroup "Extended Role Matching Tests"
               [ testGroup "aria-labelledby resolution"
-                  [ atrrChkExt "ExtLocateAlways - locate finds region via aria-labelledby"
+                  [ atrrChkExtRole "ExtLocateAlways - locate finds region via aria-labelledby"
                       (region "Personal Information") "auto-id" "sec-personal"
                   , atrrChkExtMiss "ExtLocateSingletonMiss - locate finds region via aria-labelledby"
                       (region "Personal Information") "auto-id" "sec-personal"
@@ -106,14 +108,14 @@ baseLocateTests =
                       chkElms (txt (region "Personal Information")) chkEmpty locRslt
                   ]
               , testGroup "for/id label association"
-                  [ atrrChkExt "ExtLocateAlways - locate finds radio via for/id label"
+                  [ atrrChkExtRole "ExtLocateAlways - locate finds radio via for/id label"
                       (radio "Email") "auto-id" "rdo-contact-email"
                   , atrrChkExtMiss "ExtLocateSingletonMiss - locate finds radio via for/id label"
                       (radio "Email") "auto-id" "rdo-contact-email"
                   , test "ExtLocateNever - locate does NOT find radio via for/id label" $ do
                       locRslt <- locate (radio "Email")
                       chkLocException (txt (radio "Email")) isNotFound locRslt
-                  , atrrChkExt "ExtLocateAlways - locate finds textbox via for/id label"
+                  , atrrChkExtRole "ExtLocateAlways - locate finds textbox via for/id label"
                       (textbox "Given Name") "auto-id" "edt-given-name"
                   , atrrChkExtMiss "ExtLocateSingletonMiss - locate finds textbox via for/id label"
                       (textbox "Given Name") "auto-id" "edt-given-name"
@@ -136,7 +138,7 @@ baseLocateTests =
               , testGroup "aria-label - always resolved regardless of setting"
                   [ chkAutoId "ExtLocateNever finds textbox with aria-label"
                       (textbox "Nickname") "edt-nickname"
-                  , atrrChkExt "ExtLocateAlways finds textbox with aria-label"
+                  , atrrChkExtRole "ExtLocateAlways finds textbox with aria-label"
                       (textbox "Nickname") "auto-id" "edt-nickname"
                   , atrrChkExtMiss "ExtLocateSingletonMiss finds textbox with aria-label"
                       (textbox "Nickname") "auto-id" "edt-nickname"
