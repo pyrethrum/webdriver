@@ -435,15 +435,27 @@ chkEq :: (IOE :> es, Show a, Eq a) => Text -> a -> a -> Eff es ()
 chkEq msg a b = liftIO $ assertEqual (unpack msg) a b
 
 -- TEST TODO
--- locate tag 
+-- locate tag
 -- locate by css
+-- locate by xpath
+-- locate by allElms
+-- locate by defaultId
 
--- value and attribute variants eg: attributeExact, attribute with different match types and case sensitivity
+-- class match variants: elmClassExact, elemClassStarts
+
+-- value and attribute variants eg: attributeExact, attributeStarts, attribute' with different match types and case sensitivity
     -- not value' relies on postfilter which is not yet implemented but do test cases anyway (in a separate test group)
--- locate/locateAllfrom element basic
+
+-- roleName (locate by accessible name text without AriaRole enum)
+-- role (full: AriaRole + accessible name combined)
+-- untested ARIA roles: article, cell, columnHeader, definition, figure, group, heading, link, list, listItem, option, progressBar, row, rowHeader, separator, slider, spinButton, status, table, term
+
+-- InvalidLocator exception case
+
+-- locate/locateAll from element basic
 -- locate/locateAll from element with extended role matching visibility
 
--- mixed role and tag and cssselectors (and | or) - extended role matching visibility
+-- Basic mixed role and tag and cssselectors (and | or) - combos of 3 elms - extended role matching visibility
 
 _pattern :: Maybe a
 _pattern = Nothing
