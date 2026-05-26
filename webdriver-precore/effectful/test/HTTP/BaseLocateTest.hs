@@ -1,7 +1,7 @@
 module HTTP.BaseLocateTest where
 
 import HTTP.Runner (getWDSession, closeWDSession, runHttpTest, WDSession, testUrl, runHttp, BaseHTTPEffs)
-import Test.Tasty (TestTree, defaultMain, testGroup, withResource)
+import Test.Tasty (TestTree, defaultMain, testGroup, withResource, inOrderTestGroup)
 import System.Environment (withArgs)
 import Test.Tasty.HUnit (assertBool, assertFailure, assertEqual)
 import WebDriverPreCore.Extended.Locators
@@ -23,14 +23,14 @@ import Data.Functor ((<&>))
 import UnliftIO.Concurrent
 
 -- >>> _eval baseLocateTests
--- *** Exception: ExitFailure 1
+-- *** Exception: ExitSuccess
 baseLocateTests :: TestTree
 baseLocateTests =
   withResource getWDSession closeWDSession runSessionTests
   where
   runSessionTests :: IO WDSession -> TestTree
   runSessionTests ses =
-    testGroup "Base Locate Tests"
+    inOrderTestGroup "Base Locate Tests"
       [ -- Landmark roles and basic element locators on locator-landmark-roles.html
         withResource (navToUrl ses landmarkRolesUrl) (\_ -> pure ()) $ \_ ->
           testGroup "Landmark and Role Tests"
@@ -341,11 +341,8 @@ baseLocateTests =
   isAmbiguous other = Just $ "expected AmbiguousLocator but got: " <> txt other
 
 
-_eval :: TestTree -> IO ()
-_eval = withArgs [] . defaultMain
-
-_evalFiltered :: String -> TestTree -> IO ()
-_evalFiltered pat = withArgs ["-p", pat] . defaultMain
+_eval :: Maybe Text -> TestTree -> IO ()
+_eval mPattern = withArgs (maybe [] (\pat -> ["-p", unpack pat]) mPattern) . defaultMain
 
 
 -- actions :: forall es. (IOE :> es, Logger :> es, Pause :> es, WebDriverHttp :> es) => Eff es (L.LocateActions (Eff es))
@@ -437,9 +434,21 @@ liftChk testTitle mErr = mErr & maybe (pure ()) (\erMsg -> liftFail $ testTitle 
 chkEq :: (IOE :> es, Show a, Eq a) => Text -> a -> a -> Eff es ()
 chkEq msg a b = liftIO $ assertEqual (unpack msg) a b
 
+-- TEST TODO
+-- locate tag 
+-- locate by css
 
+-- value and attribute variants eg: attributeExact, attribute with different match types and case sensitivity
+    -- not value' relies on postfilter which is not yet implemented but do test cases anyway (in a separate test group)
+-- locate/locateAllfrom element basic
+-- locate/locateAll from element with extended role matching visibility
 
---- >>> _evalFiltered "ExtLocateAlways - locateAll finds radio via for id label" baseLocateTests
+-- mixed role and tag and cssselectors (and | or) - extended role matching visibility
+
+_pattern :: Maybe a
+_pattern = Nothing
+
+--- >>> _eval _pattern baseLocateTests
 -- *** Exception: ExitSuccess
 
 

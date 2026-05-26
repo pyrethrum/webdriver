@@ -34,7 +34,6 @@ module WebDriverPreCore.Extended.Locators
 
     -- * Role Constructors
     role,
-    role',
     roleType,
     roleName,
     --
@@ -244,7 +243,7 @@ attribute :: Text -> Text -> Locator
 attribute nm = mkDefaults (attribute' nm)
 
 attribute' :: Text -> MatchType -> CaseSensitivity -> Text -> Locator
-attribute' nm mt cs v = Attribute {name = nm, value = v, matchType = mt, caseSensitivity = cs}
+attribute' name matchType caseSensitivity value' = Attribute {name, value = value', matchType, caseSensitivity}
 
 attributeExact :: Text -> Text -> Locator
 attributeExact nm = mkExact (attribute' nm)
@@ -291,11 +290,8 @@ valueFunc func description loc =
 
 ------- Role Constructors -------
 
-role' :: AriaRole -> Text -> Locator
-role' r = Role . RoleFull r
-
 role :: AriaRole -> Text -> Locator
-role r = role' r
+role = Role . RoleFull
 
 roleType :: AriaRole -> Locator
 roleType = Role . RoleType
