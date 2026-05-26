@@ -20,9 +20,10 @@ import Utils (txt)
 import Control.Monad (when)
 import Data.Function ((&))
 import Data.Functor ((<&>))
+import UnliftIO.Concurrent
 
 -- >>> _eval baseLocateTests
--- *** Exception: ExitSuccess
+-- *** Exception: ExitFailure 1
 baseLocateTests :: TestTree
 baseLocateTests =
   withResource getWDSession closeWDSession runSessionTests
@@ -68,7 +69,7 @@ baseLocateTests =
                   ]
               ]
 
-      , -- Extended role matching (aria-labelledby, for/id label) on locator-extended-roles.html
+      , -- Extended role matching (aria-labelledby, for id label) on locator-extended-roles.html
         withResource (navToUrl ses extendedRolesUrl) (\_ -> pure ()) $ \_ ->
           testGroup "Extended Role Matching Tests"
               [ testGroup "aria-labelledby resolution"
@@ -89,25 +90,25 @@ baseLocateTests =
                       locRslt <- locateAll (region "Personal Information")
                       chkElms (txt (region "Personal Information")) chkEmpty locRslt
                   ]
-              , testGroup "for/id label association"
-                  [ atrrChkExtRole "ExtLocateAlways - locate finds radio via for/id label"
+              , testGroup "for id label association"
+                  [ atrrChkExtRole "ExtLocateAlways - locate finds radio via for id label"
                       (radio "Email") "auto-id" "rdo-contact-email"
-                  , atrrChkExtMiss "ExtLocateSingletonMiss - locate finds radio via for/id label"
+                  , atrrChkExtMiss "ExtLocateSingletonMiss - locate finds radio via for id label"
                       (radio "Email") "auto-id" "rdo-contact-email"
-                  , test "ExtLocateNever - locate does NOT find radio via for/id label" $ do
+                  , test "ExtLocateNever - locate does NOT find radio via for id label" $ do
                       locRslt <- locate (radio "Email")
                       chkLocException (txt (radio "Email")) isNotFound locRslt
-                  , atrrChkExtRole "ExtLocateAlways - locate finds textbox via for/id label"
+                  , atrrChkExtRole "ExtLocateAlways - locate finds textbox via for id label"
                       (textbox "Given Name") "auto-id" "edt-given-name"
-                  , atrrChkExtMiss "ExtLocateSingletonMiss - locate finds textbox via for/id label"
+                  , atrrChkExtMiss "ExtLocateSingletonMiss - locate finds textbox via for id label"
                       (textbox "Given Name") "auto-id" "edt-given-name"
-                  , test "ExtLocateNever - locate does NOT find textbox via for/id label" $ do
+                  , test "ExtLocateNever - locate does NOT find textbox via for id label" $ do
                       locRslt <- locate (textbox "Given Name")
                       chkLocException (txt (textbox "Given Name")) isNotFound locRslt
-                  , test "ExtLocateAlways - locateAll finds radio via for/id label" $ do
+                  , test "ExtLocateAlways - locateAll finds radio via for id label" $ do
                       locRslt <- locateAllExt (radio "Email")
                       chkElms (txt (radio "Email")) chkSingleton locRslt
-                  , test "ExtLocateSingletonMiss - locateAll does NOT find radio via for/id label" $ do
+                  , test "ExtLocateSingletonMiss - locateAll does NOT find radio via for id label" $ do
                       locRslt <- locateAllExtMiss (radio "Email")
                       chkElms (txt (radio "Email")) chkEmpty locRslt
                   ]
@@ -257,6 +258,7 @@ baseLocateTests =
   navToUrl getSes urlAction = do
     ses <- getSes
     runHttp ses $ testUrl urlAction >>= navigateTo
+    threadDelay 500000 -- TODO: Remove when we have better page load synchronization
     pure ses
 
   autoId :: Text -> Locator
@@ -341,6 +343,9 @@ baseLocateTests =
 
 _eval :: TestTree -> IO ()
 _eval = withArgs [] . defaultMain
+
+_evalFiltered :: String -> TestTree -> IO ()
+_evalFiltered pat = withArgs ["-p", pat] . defaultMain
 
 
 -- actions :: forall es. (IOE :> es, Logger :> es, Pause :> es, WebDriverHttp :> es) => Eff es (L.LocateActions (Eff es))
@@ -431,5 +436,10 @@ liftChk testTitle mErr = mErr & maybe (pure ()) (\erMsg -> liftFail $ testTitle 
 
 chkEq :: (IOE :> es, Show a, Eq a) => Text -> a -> a -> Eff es ()
 chkEq msg a b = liftIO $ assertEqual (unpack msg) a b
+
+
+
+--- >>> _evalFiltered "ExtLocateAlways - locateAll finds radio via for id label" baseLocateTests
+-- *** Exception: ExitSuccess
 
 
