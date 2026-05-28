@@ -5,6 +5,7 @@ import Test.Tasty (TestTree, defaultMain, testGroup, withResource, inOrderTestGr
 import System.Environment (withArgs)
 import Test.Tasty.HUnit (assertBool, assertFailure, assertEqual)
 import WebDriverPreCore.Extended.Locators
+import WebDriverPreCore.Extended.Locators.Internal (CaseSensitivity (..))
 import WebDriverPreCore.Extended.Locate qualified as L
 import WebDriver.Effectful.HTTP.Base.Actions 
 import WebDriverPreCore.Test.TestData
@@ -226,6 +227,167 @@ baseLocateTests =
                         never
                   ]
               ]
+
+      , withResource (navToUrl ses landmarkRolesUrl) (\_ -> pure ()) $ \_ ->
+          testGroup "Basic Locator Types"
+              [ chkAutoId "defaultId resolves via mkDefaultLoc option" (defaultId "hdr-main") "hdr-main"
+              , chkAll "allElms finds all page elements" allElms
+                  (\elms -> if length elms > 20 then Nothing else Just $ "expected >20 elements but got " <> txt (length elms))
+              , chkAutoId "elmId finds element by HTML id" (elmId "megaforma") "frm-mega"
+              , chkAutoId "css attribute selector" (css "[auto-id='ftr-main']") "ftr-main"
+              , chkAutoId "xpath finds element by tag" (xpath "//footer") "ftr-main"
+              , chkAll "input_ tag locator finds all inputs" input_
+                  (\elms -> if length elms >= 5 then Nothing else Just $ "expected >=5 inputs but got " <> txt (length elms))
+              , chkAll "button_ tag locator finds button elements" button_
+                  (\elms -> if null elms then Just "expected at least one button" else Nothing)
+              , chkAll "h1_ tag locator finds the single h1 heading" h1_ chkSingleton
+              ]
+
+      , withResource (navToUrl ses landmarkRolesUrl) (\_ -> pure ()) $ \_ ->
+          testGroup "Class Locator Variants"
+              [ chkAll "elmClass contains match" (elmClass "text-input")
+                  (\elms -> if length elms >= 6 then Nothing else Just $ "expected >=6 elements with class text-input but got " <> txt (length elms))
+              , chkAll "elmClassExact full-equality match" (elmClassExact "text-input")
+                  (\elms -> if length elms >= 6 then Nothing else Just $ "expected >=6 exact text-input class elements but got " <> txt (length elms))
+              , chkAll "elemClassStarts starts-with match" (elemClassStarts "text")
+                  (\elms -> if length elms >= 6 then Nothing else Just $ "expected >=6 class starts-with-text elements but got " <> txt (length elms))
+              , chkAutoId "elmClass finds element by single class name" (elmClass "span-button") "btn-span-role"
+              ]
+
+      , withResource (navToUrl ses landmarkRolesUrl) (\_ -> pure ()) $ \_ ->
+          testGroup "Attribute Locator Variants"
+              [ chkAutoId "attribute default contains match" (attribute "auto-id" "hdr-main") "hdr-main"
+              , chkAutoId "attributeExact full-equality match" (attributeExact "auto-id" "hdr-main") "hdr-main"
+              , chkAll "attributeStarts starts-with match" (attributeStarts "auto-id" "nav")
+                  (\elms -> if length elms >= 2 then Nothing else Just $ "expected >=2 nav* auto-id elements but got " <> txt (length elms))
+              , chkAll "attribute' full case-sensitive finds type=text inputs" (attribute' "type" Full CaseSensitive "text")
+                  (\elms -> if length elms == 3 then Nothing else Just $ "expected 3 type=text inputs but got " <> txt (length elms))
+              , chkAutoId "attribute' full case-insensitive matches uppercase value" (attribute' "auto-id" Full CaseInsensitive "HDR-MAIN") "hdr-main"
+              ]
+
+      , withResource (navToUrl ses landmarkRolesUrl) (\_ -> pure ()) $ \_ ->
+          testGroup "roleName and role Constructors"
+              [ chkAutoId "roleName finds element by accessible name" (roleName "Submit the mega form") "btn-submit"
+              , chkAutoId "roleName finds aside by aria-label" (roleName "Help and tips") "aside-help"
+              , chkAutoId "roleName finds nav by aria-label" (roleName "Main navigation") "nav-main"
+              , chkAutoId "role generic constructor: Navigation + name" (role Navigation "Breadcrumb") "nav-breadcrumb"
+              ]
+
+      , withResource (navToUrl ses landmarkRolesUrl) (\_ -> pure ()) $ \_ ->
+          testGroup "Locate and LocateAll from Element"
+              [ test "locateAll from element: inputs within sec-personal" $ do
+                  secResult <- locate (autoId "sec-personal")
+                  chkElmsM "find sec-personal" secResult $ \elms ->
+                    case elms of
+                      [sec] -> do
+                        inResult <- locateAllFromElement sec input_
+                        chkElms "inputs in sec-personal"
+                          (\is -> if length is == 5 then Nothing else Just $ "expected 5 inputs but got " <> txt (length is))
+                          inResult
+                        pure Nothing
+                      _ -> pure $ Just $ "expected singleton section but got " <> txt (length elms)
+              , test "locateAll from element: links within nav-main" $ do
+                  navResult <- locate (autoId "nav-main")
+                  chkElmsM "find nav-main" navResult $ \elms ->
+                    case elms of
+                      [nav] -> do
+                        linkResult <- locateAllFromElement nav a_
+                        chkElms "links in nav-main"
+                          (\ls -> if length ls >= 2 then Nothing else Just $ "expected >=2 links but got " <> txt (length ls))
+                          linkResult
+                        pure Nothing
+                      _ -> pure $ Just $ "expected singleton nav but got " <> txt (length elms)
+              , test "locate from element: edt-given-name within sec-personal" $ do
+                  secResult <- locate (autoId "sec-personal")
+                  chkElmsM "find sec-personal" secResult $ \elms ->
+                    case elms of
+                      [sec] -> do
+                        givenResult <- locateFromElement sec (autoId "edt-given-name")
+                        chkElms "edt-given-name in section" chkSingleton givenResult
+                        pure Nothing
+                      _ -> pure $ Just $ "expected singleton section but got " <> txt (length elms)
+              , test "locate from element: not found when element not in scope" $ do
+                  hdrResult <- locate (autoId "hdr-main")
+                  chkElmsM "find hdr-main" hdrResult $ \elms ->
+                    case elms of
+                      [hdr] -> do
+                        notInHdr <- locateFromElement hdr (autoId "edt-given-name")
+                        pure $ case notInHdr.result of
+                          Left (L.ElementNotFound {}) -> Nothing
+                          Left other -> Just $ "expected ElementNotFound but got: " <> txt other
+                          Right _ -> Just "expected ElementNotFound but edt-given-name was found in header"
+                      _ -> pure $ Just $ "expected singleton header but got " <> txt (length elms)
+              ]
+
+      , withResource (navToUrl ses landmarkRolesUrl) (\_ -> pure ()) $ \_ ->
+          testGroup "Combined Locators"
+              [ chkAll "AND: input_ &&& elmClass text-input" (input_ &&& elmClass "text-input")
+                  (\elms -> if length elms == 6 then Nothing else Just $ "expected 6 input+text-input elements but got " <> txt (length elms))
+              , chkAll "OR: h1_ ||| h2_ finds all headings" (h1_ ||| h2_)
+                  (\elms -> if length elms == 3 then Nothing else Just $ "expected 3 headings (1×h1 + 2×h2) but got " <> txt (length elms))
+              , chkAll "Descendant: sec-personal >>> input_ finds contained inputs" (autoId "sec-personal" >>> input_)
+                  (\elms -> if length elms == 5 then Nothing else Just $ "expected 5 inputs in sec-personal but got " <> txt (length elms))
+              , chkAll "OR: roleType Navigation ||| roleType Search" (roleType Navigation ||| roleType Search)
+                  (\elms -> if length elms == 3 then Nothing else Just $ "expected 3 nav+search landmarks but got " <> txt (length elms))
+              ]
+
+      , withResource (navToUrl ses miscRolesUrl) (\_ -> pure ()) $ \_ ->
+          testGroup "Misc ARIA Role Types"
+              [ chkAutoId "roleType Article" (roleType Article) "art-main"
+              , chkAutoId "article by accessible name" (article "Test article") "art-main"
+              , chkAutoId "roleType Heading (single heading on page)" (roleType Heading) "hdg-article"
+              , chkAutoId "heading by text content" (heading "Article Heading") "hdg-article"
+              , chkAutoId "roleType Figure" (roleType Figure) "fig-sample"
+              , chkAutoId "figure by accessible name" (figure "Sample figure") "fig-sample"
+              , chkAutoId "roleType List (single list on page)" (roleType List) "lst-nav"
+              , chkAutoId "list by accessible name" (list "Navigation list") "lst-nav"
+              , chkAll "roleType ListItem finds all list items" (roleType ListItem)
+                  (\elms -> if length elms == 2 then Nothing else Just $ "expected 2 list items but got " <> txt (length elms))
+              , chkAutoId "link by text content" (link "Home") "lnk-home"
+              , chkAll "roleType Link finds all links" (roleType Link)
+                  (\elms -> if length elms == 2 then Nothing else Just $ "expected 2 links but got " <> txt (length elms))
+              , chkAutoId "roleType Table" (roleType Table) "tbl-data"
+              , chkAutoId "table by accessible name" (table "Data table") "tbl-data"
+              , chkAll "roleType Row finds header and data rows" (roleType Row)
+                  (\elms -> if length elms == 2 then Nothing else Just $ "expected 2 rows but got " <> txt (length elms))
+              , chkAll "roleType ColumnHeader finds both column headers" (roleType ColumnHeader)
+                  (\elms -> if length elms == 2 then Nothing else Just $ "expected 2 column headers but got " <> txt (length elms))
+              , chkAutoId "columnHeader by text content" (columnHeader "Name") "col-name"
+              , chkAutoId "roleType RowHeader" (roleType RowHeader) "row-hdr-a"
+              , chkAutoId "rowHeader by text content" (rowHeader "Row A") "row-hdr-a"
+              , chkAutoId "roleType Cell" (roleType Cell) "cel-a1"
+              , chkAutoId "cell by text content" (cell "Cell A1") "cel-a1"
+              , chkAutoId "roleType Group finds fieldset" (roleType Group) "grp-options"
+              , chkAutoId "group by accessible name" (group "Options Group") "grp-options"
+              , chkAll "roleType Option finds all options" (roleType Option)
+                  (\elms -> if length elms == 2 then Nothing else Just $ "expected 2 options but got " <> txt (length elms))
+              , chkAutoId "option by text content" (option "Alpha") "opt-alpha"
+              , chkAutoId "roleType Separator" (roleType Separator) "sep-main"
+              , chkAutoId "progressBar by accessible name" (progressBar "Upload progress") "prg-upload"
+              , chkAutoId "slider by accessible name" (slider "Volume") "sld-volume"
+              , chkAutoId "spinButton by accessible name" (spinButton "Item count") "spn-count"
+              , chkAutoId "roleType Status" (roleType Status) "out-result"
+              , chkAutoId "status by accessible name" (status "Calculation result") "out-result"
+              , chkAutoId "roleType Term" (roleType Term) "trm-name"
+              , chkAutoId "term by text content" (term "Name") "trm-name"
+              , chkAutoId "roleType Definition" (roleType Definition) "def-name"
+              , chkAutoId "definition by text content" (definition "John") "def-name"
+              ]
+
+      , withResource (navToUrl ses landmarkRolesUrl) (\_ -> pure ()) $ \_ ->
+          testGroup "Value PostFilter (not yet implemented in HTTP)"
+              -- These document expected behaviour once PostFilter is implemented.
+              -- Currently fail with: "PostFilter locators are not yet implemented in HTTP WebDriver"
+              [ test "value: find input with matching current value (partial)" $ do
+                  locRslt <- locateAll (value "Jane" input_)
+                  chkElms (txt (value "Jane" input_)) chkSingleton locRslt
+              , test "valueExact: find input with exact current value" $ do
+                  locRslt <- locateAll (valueExact "Jay" input_)
+                  chkElms (txt (valueExact "Jay" input_)) chkSingleton locRslt
+              , test "valueStarts: find input whose value starts with prefix" $ do
+                  locRslt <- locateAll (valueStarts "Jane" input_)
+                  chkElms (txt (valueStarts "Jane" input_)) chkSingleton locRslt
+              ]
       ]
     where
     test :: Text -> BaseHTTPEffs () -> TestTree
@@ -258,7 +420,6 @@ baseLocateTests =
   navToUrl getSes urlAction = do
     ses <- getSes
     runHttp ses $ testUrl urlAction >>= navigateTo
-    threadDelay 500000 -- TODO: Remove when we have better page load synchronization
     pure ses
 
   autoId :: Text -> Locator
@@ -407,17 +568,6 @@ chkAttribute testTitle locRslt attrName attrValChkM =
           pure $ maybe (Just $ testTitle <> " - attribute not found: " <> txt attrName) attrValChkM attr
         elms -> pure $ Just $ testTitle <> " - expected singlet locate resultlist but got " <> txt (length elms) <> " elms"
    
---   -- do 
---   --  attrs <- getElementAttribute el attrName
---   --  _
---   -- chkElmsM errMsg $ 
---   --   case attrs of
---   --   [el] ->  getElementAttribute el attrName >>= _
---   --       -- maybe
---   --       --   (liftFail $ errMsg <> ": attribute not found: " <> txt attrName)
---   --       --    chkM
---   --   elms -> Just $ errMsg <> ": expected singleton element list but got " <> txt (length elms) <> " elms"
-
 chkAttributeEq :: (IOE :> es, WebDriverHttp :> es) => Text -> Text -> Text -> L.LocateResult -> Eff es ()
 chkAttributeEq testTitle attrName expctd locrslt = 
   chkAttribute testTitle locrslt attrName (\actual -> if actual == expctd 
@@ -433,29 +583,6 @@ liftChk testTitle mErr = mErr & maybe (pure ()) (\erMsg -> liftFail $ testTitle 
 
 chkEq :: (IOE :> es, Show a, Eq a) => Text -> a -> a -> Eff es ()
 chkEq msg a b = liftIO $ assertEqual (unpack msg) a b
-
--- TEST TODO
--- locate tag
--- locate by css
--- locate by xpath
--- locate by allElms
--- locate by defaultId
-
--- class match variants: elmClassExact, elemClassStarts
-
--- value and attribute variants eg: attributeExact, attributeStarts, attribute' with different match types and case sensitivity
-    -- not value' relies on postfilter which is not yet implemented but do test cases anyway (in a separate test group)
-
--- roleName (locate by accessible name text without AriaRole enum)
--- role (full: AriaRole + accessible name combined)
--- untested ARIA roles: article, cell, columnHeader, definition, figure, group, heading, link, list, listItem, option, progressBar, row, rowHeader, separator, slider, spinButton, status, table, term
-
--- InvalidLocator exception case
-
--- locate/locateAll from element basic
--- locate/locateAll from element with extended role matching visibility
-
--- Basic mixed role and tag and cssselectors (and | or) - combos of 3 elms - extended role matching visibility
 
 _pattern :: Maybe a
 _pattern = Nothing

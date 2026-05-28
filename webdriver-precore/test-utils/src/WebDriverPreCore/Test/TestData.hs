@@ -36,6 +36,7 @@ module WebDriverPreCore.Test.TestData
     landmarkRolesUrl,
     extendedRolesUrl,
     visibilityUrl,
+    miscRolesUrl,
   )
 where
 
@@ -177,3 +178,6 @@ extendedRolesUrl = fileUrl "locator-extended-roles.html"
 
 visibilityUrl :: MonadIO m => m URL
 visibilityUrl = fileUrl "locator-visibility.html"
+
+miscRolesUrl :: MonadIO m => m URL
+miscRolesUrl = fileUrl "locator-misc-roles.html"

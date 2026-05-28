@@ -243,7 +243,7 @@ attribute :: Text -> Text -> Locator
 attribute nm = mkDefaults (attribute' nm)
 
 attribute' :: Text -> MatchType -> CaseSensitivity -> Text -> Locator
-attribute' name matchType caseSensitivity value' = Attribute {name, value = value', matchType, caseSensitivity}
+attribute' name matchType caseSensitivity val = Attribute {name, value = val, matchType, caseSensitivity}
 
 attributeExact :: Text -> Text -> Locator
 attributeExact nm = mkExact (attribute' nm)
@@ -291,7 +291,7 @@ valueFunc func description loc =
 ------- Role Constructors -------
 
 role :: AriaRole -> Text -> Locator
-role = Role . RoleFull
+role r = Role . RoleFull r
 
 roleType :: AriaRole -> Locator
 roleType = Role . RoleType

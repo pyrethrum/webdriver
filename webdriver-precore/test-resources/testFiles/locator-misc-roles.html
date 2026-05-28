@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Locator Misc Roles</title>
+</head>
+<body>
+
+  <article auto-id="art-main" aria-label="Test article">
+    <h2 auto-id="hdg-article">Article Heading</h2>
+    <figure auto-id="fig-sample" aria-label="Sample figure">
+      <figcaption>Figure caption</figcaption>
+    </figure>
+    <dl>
+      <dt auto-id="trm-name">Name</dt>
+      <dd auto-id="def-name">John</dd>
+    </dl>
+  </article>
+
+  <nav aria-label="Page nav">
+    <ul auto-id="lst-nav" aria-label="Navigation list">
+      <li auto-id="lsti-home"><a auto-id="lnk-home" href="#">Home</a></li>
+      <li auto-id="lsti-about"><a auto-id="lnk-about" href="#">About</a></li>
+    </ul>
+  </nav>
+
+  <table auto-id="tbl-data" aria-label="Data table">
+    <thead>
+      <tr auto-id="row-header">
+        <th auto-id="col-name" scope="col">Name</th>
+        <th auto-id="col-value" scope="col">Value</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr auto-id="row-data">
+        <th auto-id="row-hdr-a" scope="row">Row A</th>
+        <td auto-id="cel-a1">Cell A1</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <fieldset auto-id="grp-options" aria-label="Options Group">
+    <legend>Options</legend>
+    <select auto-id="sel-opts">
+      <option auto-id="opt-alpha" value="alpha">Alpha</option>
+      <option auto-id="opt-beta" value="beta">Beta</option>
+    </select>
+  </fieldset>
+
+  <hr auto-id="sep-main">
+
+  <progress auto-id="prg-upload" aria-label="Upload progress" value="40" max="100"></progress>
+
+  <input type="range" auto-id="sld-volume" aria-label="Volume" min="0" max="100" value="50">
+
+  <input type="number" auto-id="spn-count" aria-label="Item count" min="1" max="99" value="5">
+
+  <output auto-id="out-result" aria-label="Calculation result">42</output>
+
+</body>
+</html>
