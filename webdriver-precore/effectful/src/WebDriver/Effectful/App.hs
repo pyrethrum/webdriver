@@ -30,7 +30,7 @@ where
 
 import Data.Aeson (FromJSON)
 import Data.Text (Text)
-import Effectful (Eff, IOE, Limit (..), Persistence (..), UnliftStrategy (..), (:>), runEff, withEffToIO, withSeqEffToIO)
+import Effectful (Eff, IOE, Limit (..), Persistence (..), UnliftStrategy (..), (:>), withEffToIO, withSeqEffToIO)
 import UnliftIO (bracket, finally, throwIO)
 import WebDriver.Effectful.Logger (Logger, Severity (..), getLogFn)
 import WebDriver.Effectful.HTTP.Core
