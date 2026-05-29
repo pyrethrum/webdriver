@@ -76,8 +76,8 @@ data FullCapabilities = MkFullCapabilities
 instance ToJSON FullCapabilities where
   toJSON :: FullCapabilities -> Value
   toJSON MkFullCapabilities {alwaysMatch, firstMatch} =
-        object $
-      [ "capabilities" .= (object $ catMaybes [opt "alwaysMatch" $ alwaysMatch]),
+        object
+      [ "capabilities" .= object (catMaybes [opt "alwaysMatch" alwaysMatch]),
         "firstMatch" .= firstMatch'
       ]
     where
@@ -459,7 +459,7 @@ instance FromJSON LogLevel where
     other -> fail $ "Invalid log level: " <> show other
 
 -- | Log settings structure for vendor capabilities
-data LogSettings = MkLogSettings
+newtype LogSettings = MkLogSettings
   { level :: LogLevel
   }
   deriving (Show, Eq, Generic)

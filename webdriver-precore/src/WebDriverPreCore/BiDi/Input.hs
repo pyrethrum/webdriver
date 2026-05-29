@@ -150,7 +150,7 @@ instance ToJSON PointerType where
     PenPointer -> "pen"
     TouchPointer -> "touch"
 
-data Pointer = MkPointer
+newtype Pointer = MkPointer
   { pointerType :: Maybe PointerType -- default "mouse"
   }
   deriving (Show, Eq, Generic)

@@ -192,9 +192,9 @@ fromBodyValue expectNull body =
       fail $
         unpack $
           "Null value expected but got:\n" <> jsonToText val
-    parseJSON $ val
+    parseJSON val
 
-instance (Show a) => Show (HttpSpec a) where
+instance Show (HttpSpec a) where
   show :: HttpSpec a -> String
   show = Prelude.show . mkShowable
 
@@ -430,7 +430,7 @@ executeScript sessionId script = post "Execute Script" (sessionUri2 sessionId "e
 --
 -- @POST 	\/session\/{session id}\/execute\/async 	Execute Async Script@
 executeScriptAsync :: Session -> Script -> HttpSpec Value
-executeScriptAsync sessionId script = post "Execute Async Script" (sessionUri2 sessionId "execute" "async") script
+executeScriptAsync sessionId = post "Execute Async Script" (sessionUri2 sessionId "execute" "async")
 
 -- |
 --
@@ -883,7 +883,7 @@ window :: Text
 window = "window"
 
 windowUri1 :: Session -> Text -> SubPath
-windowUri1 sr sp = sessionUri2 sr window sp
+windowUri1 sr = sessionUri2 sr window
 
 elementUri1 :: Session -> ElementId -> Text -> SubPath
 elementUri1 s er ep = sessionUri3 s "element" er.id ep

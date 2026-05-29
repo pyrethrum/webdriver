@@ -327,15 +327,15 @@ instance ToJSON Locator where
   toJSON :: Locator -> Value
   toJSON = \case
     Accessibility {name, role} ->
-      object $
+      object
         [ "type" .= "accessibility",
           "value"
-            .= ( object $
-                   catMaybes
+            .= object
+                 ( catMaybes
                      [ opt "name" name,
                        opt "role" role
                      ]
-               )
+                 )
         ]
     CSS {value} ->
       object

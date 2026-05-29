@@ -217,7 +217,7 @@ instance ToJSON Script
 instance {-# DEPRECATED "Removal planned ~ 2027-04-01" #-} ToJSON SessionResponse where
   toJSON :: SessionResponse -> Value
   toJSON MkSessionResponse {sessionId, webSocketUrl, capabilities, extensions} =
-    object $
+    object
       [ "sessionId" .= sessionId.id,
         "capabilities" .= mergedCaps,
         webSocketKey .= webSocketUrl
@@ -251,7 +251,7 @@ instance FromJSON SessionResponse where
           let keys = fromList . KM.keys
               capsKeys = keys standardCapsProps
               nonNullExtensionKey k v = k `notMember` capsKeys && k /= webSocketKey && nonEmpty v
-              extensionsMap = KM.toMapText $ KM.filterWithKey nonNullExtensionKey $ allCapsObject
+              extensionsMap = KM.toMapText $ KM.filterWithKey nonNullExtensionKey allCapsObject
               extensions =
                 if null extensionsMap
                   then Nothing
@@ -264,7 +264,7 @@ webSocketUrlToBool :: KM.KeyMap Value -> KM.KeyMap Value
 webSocketUrlToBool o =
   case KM.lookup webSocketKey o of
     Just (String url) ->
-      if (T.null url)
+      if T.null url
         then
           KM.delete webSocketKey o
         else

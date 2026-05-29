@@ -199,7 +199,7 @@ instance Exception WebDriverException where
           <> description
           <> "\nMessage: "
           <> message
-          <> maybe "" (\st -> "\nStacktrace: \n" <> st) stacktrace
+          <> maybe "" ("\nStacktrace: \n" <>) stacktrace
 
 parseFailToWDException :: ParseFailure -> WebDriverException
 parseFailToWDException MkParseFailure {info, response} =
@@ -207,7 +207,7 @@ parseFailToWDException MkParseFailure {info, response} =
     & maybe
       (parserErr (info <> "\n" <> "Could not find 'error' property in response\n" <> jsonToText response))
       ( either
-          (flip UnrecognisedErrorTypeException response)
+          (`UnrecognisedErrorTypeException` response)
           mkWebDriverException
           . toErrorType
       )

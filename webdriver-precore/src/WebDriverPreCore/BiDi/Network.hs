@@ -134,7 +134,7 @@ data GetData = MkGetData
 
 instance ToJSON GetData
 
-data RemoveDataCollector = MkRemoveDataCollector
+newtype RemoveDataCollector = MkRemoveDataCollector
   { collector :: Collector
   }
   deriving (Show, Eq, Generic)
@@ -413,7 +413,7 @@ instance ToJSON AuthCredentials where
       ]
 
 -- | FailRequest parameters
-data FailRequest = MkFailRequest
+newtype FailRequest = MkFailRequest
   { request :: Request
   }
   deriving (Show, Eq, Generic)
@@ -504,19 +504,21 @@ instance FromJSON NetworkEvent where
   parseJSON :: Value -> Parser NetworkEvent
   parseJSON val =
     val
-      & ( withObject "NetworkEvent" $ \obj -> do
-            eventType <- obj .: "method"
-            params <- obj .: "params"
-            let parseParams :: forall a b. (FromJSON a) => (a -> b) -> Parser b
-                parseParams = (<&>) (parseJSON params)
-            case eventType of
-              NetworkAuthRequired -> parseParams AuthRequiredEvent
-              NetworkBeforeRequestSent -> parseParams BeforeRequestSentEvent
-              NetworkFetchError -> parseParams FetchError
-              NetworkResponseCompleted -> parseParams ResponseCompleted
-              NetworkResponseStarted -> parseParams ResponseStartedEvent
-              _ -> fail $ "Unknown NetworkEvent type: " <> show eventType
-        )
+      & withObject
+          "NetworkEvent"
+          ( \obj -> do
+              eventType <- obj .: "method"
+              params <- obj .: "params"
+              let parseParams :: forall a b. (FromJSON a) => (a -> b) -> Parser b
+                  parseParams = (<&>) (parseJSON params)
+              case eventType of
+                NetworkAuthRequired -> parseParams AuthRequiredEvent
+                NetworkBeforeRequestSent -> parseParams BeforeRequestSentEvent
+                NetworkFetchError -> parseParams FetchError
+                NetworkResponseCompleted -> parseParams ResponseCompleted
+                NetworkResponseStarted -> parseParams ResponseStartedEvent
+                _ -> fail $ "Unknown NetworkEvent type: " <> show eventType
+          )
 
 
 data HTTPMethod

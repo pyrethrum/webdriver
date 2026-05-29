@@ -139,3 +139,67 @@ render = toText . format . normalise
 ```
 
 **Limit**: don't sacrifice clarity. If point-free requires `(.).(.)` or `flip` gymnastics, name the argument instead.
+
+## Prefer `<$>` over `fmap`, `map`, and `second`
+
+Use the infix `<$>` operator instead of `fmap`, `map` (on functors other than lists where clarity permits), and `second`.
+
+**Avoid:**
+```haskell
+fmap f mValue
+
+map f someList
+
+second f pair
+```
+
+**Prefer:**
+```haskell
+f <$> mValue
+
+f <$> someList
+
+f <$> pair   -- works for tuples via the Functor instance for (,) a
+```
+
+## Prefer `$` over Trailing Parentheses
+
+Use `$` to eliminate closing parentheses at the end of an expression.
+
+**Avoid:**
+```haskell
+foo (bar (baz x))
+
+when condition (doSomething arg)
+
+liftIO (putStrLn "hello")
+```
+
+**Prefer:**
+```haskell
+foo $ bar $ baz x
+
+when condition $ doSomething arg
+
+liftIO $ putStrLn "hello"
+```
+
+**Limit**: don't use `$` when the argument is part of a larger expression that needs grouping, or when it would reduce clarity (e.g. inside operator sections or infix chains).
+
+## Prefer `.` + Single `$` over Chained `$`
+
+When applying a pipeline of functions to an argument, compose the functions with `.` and use a single `$` at the end rather than chaining `$`.
+
+**Avoid:**
+```haskell
+foo $ bar $ baz $ qux param
+
+toText $ format $ normalise x
+```
+
+**Prefer:**
+```haskell
+foo . bar . baz $ qux param
+
+toText . format $ normalise x
+```

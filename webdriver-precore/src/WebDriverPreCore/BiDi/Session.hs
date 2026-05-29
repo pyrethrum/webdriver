@@ -50,8 +50,7 @@ instance ToJSON SessionUnsubscribe where
   toJSON (UnsubscribeById {subscriptions}) =
     object ["subscriptions" .= subscriptions]
   toJSON (UnsubscribeByAttributes {unsubEvents}) =
-    object $
-      ["events" .= unsubEvents]
+    object ["events" .= unsubEvents]
 
 -- ######### Local #########
 

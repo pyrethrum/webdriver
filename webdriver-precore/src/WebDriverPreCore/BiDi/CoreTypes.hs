@@ -62,7 +62,7 @@ instance FromJSON UserContext where
   parseJSON = \case
     String t -> pure $ MkUserContext t
     Object obj ->
-      obj .: "userContext" >>= pure . MkUserContext
+      MkUserContext <$> (obj .: "userContext") 
     v -> fail . unpack $ "Unable to parse UserContext as String or Object, but got:\n  " <> jsonToText v
 
 data NodeRemoteValue = MkNodeRemoteValue
@@ -142,7 +142,7 @@ newtype EmptyResult = MkEmptyResult {extensible :: Object} deriving (Show, Eq, G
 
 instance FromJSON EmptyResult where
   parseJSON :: Value -> Parser EmptyResult
-  parseJSON = withObject "EmptyResult" $ fmap MkEmptyResult . pure
+  parseJSON = withObject "EmptyResult" (pure . MkEmptyResult)
 
 instance ToJSON EmptyResult where
   toJSON :: EmptyResult -> Value

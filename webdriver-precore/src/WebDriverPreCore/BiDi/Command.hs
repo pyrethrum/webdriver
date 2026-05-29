@@ -275,7 +275,7 @@ instance FromJSON KnownCommand where
             <> " - "
             <> "Expected one of: "
             <> " "
-            <> (T.intercalate ", " $ knownCommandToText <$> enumerate @KnownCommand)
+            <> T.intercalate ", " (knownCommandToText <$> enumerate @KnownCommand)
 
 -- | Converts a 'KnownCommand' to its corresponding method name text.
 knownCommandToText :: KnownCommand -> Text
@@ -362,4 +362,4 @@ instance FromJSON CommandMethod where
             <> " - "
             <> "Expected a string, the standard command types of whcih are: "
             <> " "
-            <> (T.intercalate ", " $ knownCommandToText <$> enumerate @KnownCommand)
+            <> T.intercalate ", " (knownCommandToText <$> enumerate @KnownCommand)

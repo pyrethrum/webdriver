@@ -3,3 +3,5 @@
 
 - ignore: {name: Use camelCase}
 - ignore: {name: Use String}
+# False positives: hlint misparses OverloadedRecordDot `.id` field access as `Prelude.id` composition
+- ignore: {name: Redundant id}

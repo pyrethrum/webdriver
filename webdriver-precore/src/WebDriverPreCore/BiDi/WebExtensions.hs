@@ -81,9 +81,10 @@ instance ToJSON WebExtensionUninstall where
 -- ######### Local #########
 
 -- | Represents a command to install a web extension
-data WebExtensionResult = WebExtensionInstallResult
+newtype WebExtensionResult = WebExtensionInstallResult
   { extension :: WebExtensionID
   }
-  deriving (Show, Eq, Generic, ToJSON)
+  deriving (Show, Eq, Generic)
+  deriving newtype (ToJSON)
 
 instance FromJSON WebExtensionResult

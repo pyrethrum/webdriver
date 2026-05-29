@@ -1,5 +1,3 @@
-{-# LANGUAGE DeriveAnyClass #-}
-
 module WebDriverPreCore.BiDi.Storage
   ( PartitionKey (..),
     GetCookiesResult (..),

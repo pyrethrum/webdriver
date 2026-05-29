@@ -30,8 +30,8 @@ data Capabilities = MkCapabilities
 instance ToJSON Capabilities where
   toJSON :: Capabilities -> Value
   toJSON MkCapabilities {alwaysMatch, firstMatch} =
-    object $
-      [ "capabilities" .= (object $ catMaybes [opt "alwaysMatch" $ alwaysMatch]),
+    object
+      [ "capabilities" .= object (catMaybes [opt "alwaysMatch" alwaysMatch]),
         "firstMatch" .= firstMatch'
       ]
     where

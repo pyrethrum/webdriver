@@ -250,7 +250,7 @@ instance FromJSON RemoteValue where
       "promise" -> pure $ PromiseValue {..}
       "typedarray" -> pure $ TypedArrayValue {..}
       "arraybuffer" -> pure $ ArrayBufferValue {..}
-      _ -> fail $ "Unknown RemoteValue type: " <> show typ <> "\n" <> (unpack $ jsonToText $ Object obj)
+      _ -> fail $ "Unknown RemoteValue type: " <> show typ <> "\n" <> unpack (jsonToText $ Object obj)
 
 -- | WindowProxy remote value representation
 data PrimitiveProtocolValue
@@ -360,13 +360,13 @@ newtype MappingLocalValue = MkMappingLocalValue [(Either LocalValue Text, LocalV
   deriving (Show, Eq, Generic)
 
 -- | Map local value
-data MapLocalValue = MkMapLocalValue
+newtype MapLocalValue = MkMapLocalValue
   { value :: MappingLocalValue
   }
   deriving (Show, Eq, Generic)
 
 -- | Object local value
-data ObjectLocalValue = MkObjectLocalValue
+newtype ObjectLocalValue = MkObjectLocalValue
   { value :: MappingLocalValue
   }
   deriving (Show, Eq, Generic)
@@ -379,7 +379,7 @@ data RegExpValue = MkRegExpValue
   deriving (Show, Eq, Generic)
 
 -- | RegExp local value
-data RegExpLocalValue = MkRegExpLocalValue
+newtype RegExpLocalValue = MkRegExpLocalValue
   { value :: RegExpValue
   }
   deriving (Show, Eq, Generic)
@@ -618,7 +618,7 @@ data ExceptionDetails = MkExceptionDetails
   }
   deriving (Show, Eq, Generic)
 
-data StackTrace = MkStackTrace
+newtype StackTrace = MkStackTrace
   { callFrames :: [StackFrame]
   }
   deriving (Show, Eq, Generic)

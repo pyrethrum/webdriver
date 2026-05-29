@@ -18,7 +18,7 @@ import WebDriverPreCore.Extended.HTTP.Base.Protocol (ElementId, URL)
 import Data.Text (Text, unpack)
 import Data.Text.IO qualified as TIO
 import Utils (txt)
-import Control.Monad (when)
+import Control.Monad (when, (>=>))
 import Data.Function ((&))
 import Data.Functor ((<&>))
 import UnliftIO.Concurrent
@@ -391,7 +391,7 @@ baseLocateTests =
       ]
     where
     test :: Text -> BaseHTTPEffs () -> TestTree
-    test name action = runHttpTest ses name action
+    test = runHttpTest ses
 
     atrrChk :: Text -> Locator -> Text -> Text -> TestTree
     atrrChk testName loc attrName expctd =
@@ -523,16 +523,16 @@ actions = pure $ L.MkLocateActions {
 -- ################ Base Eff Actions ################
 
 locateHttp :: (IOE :> es, WebDriverHttp :> es) => L.HttpLocateOpts -> Locator -> Eff es L.LocateResult
-locateHttp opts loc =  (actions >>= \a -> L.locateHttp a opts loc)
+locateHttp opts loc = actions >>= \a -> L.locateHttp a opts loc
 
 locateAllHttp :: (IOE :> es, WebDriverHttp :> es) => L.HttpLocateOpts -> Locator ->  Eff es L.LocateResult
-locateAllHttp opts loc =  (actions >>= \a -> L.locateAllHttp a opts loc)
+locateAllHttp opts loc = actions >>= \a -> L.locateAllHttp a opts loc
 
 locateFromElementHttp :: (IOE :> es, WebDriverHttp :> es) => L.HttpLocateOpts -> ElementId -> Locator ->  Eff es L.LocateResult
-locateFromElementHttp ops loc elmId' =  (actions >>= \a -> L.locateFromElementHttp a ops loc elmId')
+locateFromElementHttp ops loc elmId' = actions >>= \a -> L.locateFromElementHttp a ops loc elmId'
 
 locateAllFromElementHttp :: (IOE :> es, WebDriverHttp :> es) => L.HttpLocateOpts -> ElementId -> Locator ->  Eff es L.LocateResult
-locateAllFromElementHttp ops loc elmId' =  (actions >>= \a -> L.locateAllFromElementHttp a ops loc elmId')
+locateAllFromElementHttp ops loc elmId' = actions >>= \a -> L.locateAllFromElementHttp a ops loc elmId'
 
 -- ################ Checks ################
 
@@ -555,7 +555,7 @@ chkElmsM :: (IOE :> es) => Text -> L.LocateResult -> ([ElementId] -> Eff es (May
 chkElmsM testTitle locRslt chkM =
   locRslt.result & either
     (\err -> liftFail $ " - locate failed:\n" <> testTitle <> "\n" <> txt err <> "\n" <> txt locRslt)
-    (\elms -> chkM elms >>= liftChk (testTitle <> " - element list check failed"))
+    (chkM >=> liftChk (testTitle <> " - element list check failed"))
 
 chkAttribute :: forall es. (IOE :> es, WebDriverHttp :> es)=> Text -> L.LocateResult -> Text -> (Text -> Maybe Text) -> Eff es ()
 chkAttribute testTitle locRslt attrName attrValChkM = 

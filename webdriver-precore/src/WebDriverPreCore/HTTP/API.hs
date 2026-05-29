@@ -781,4 +781,4 @@ window :: Text
 window = "window"
 
 windowUri1 :: Session -> Text -> SubPath
-windowUri1 sr sp = sessionUri2 sr window sp
+windowUri1 sr = sessionUri2 sr window

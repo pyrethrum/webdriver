@@ -52,9 +52,9 @@ instance ToJSON SetGeolocationOverride where
     object $ geoField <> catMaybes [opt "contexts" contexts, opt "userContexts" userContexts]
     where
       geoField = case override of
-        Coordinates coords -> [("coordinates" .= coords)]
-        ClearCoodrdinates -> [("coordinates" .= Null)]
-        PositionError err -> [("error" .= err)]
+        Coordinates coords -> ["coordinates" .= coords]
+        ClearCoodrdinates -> ["coordinates" .= Null]
+        PositionError err -> ["error" .= err]
 
 data SetLocaleOverride = MkSetLocaleOverride
   { locale :: Maybe Text,
