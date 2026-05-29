@@ -145,6 +145,17 @@
       "problemMatcher": []
     },
     {
+      "label": "hlint",
+      "type": "shell",
+      "command": "hlint webdriver-precore/src webdriver-precore/effectful/test --no-exit-code",
+      "presentation": {
+        "reveal": "always",
+        "panel": "shared",
+        "showReuseMessage": true
+      },
+      "problemMatcher": []
+    },
+    {
       "label": "test all - geckodriver",
       "dependsOn": [
         "launch gecko driver",
