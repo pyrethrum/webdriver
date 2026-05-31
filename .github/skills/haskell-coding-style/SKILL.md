@@ -203,3 +203,30 @@ foo . bar . baz $ qux param
 
 toText . format $ normalise x
 ```
+
+## No Constructor/Type Punning
+
+Type names and their constructors must have distinct names. For single-constructor types use the `Mk` prefix on the constructor.
+
+**Avoid:**
+```haskell
+data Config = Config { host :: Text, port :: Int }
+
+data RequestId = RequestId Text
+```
+
+**Prefer:**
+```haskell
+data Config = MkConfig { host :: Text, port :: Int }
+
+data RequestId = MkRequestId Text
+```
+
+For multi-constructor ADTs each constructor already has a distinct name, so no prefix is needed:
+
+```haskell
+data Locator
+  = CSS  { value :: Text }
+  | XPath { value :: Text }
+  | AllElms
+```

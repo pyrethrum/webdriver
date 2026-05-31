@@ -33,11 +33,7 @@ import WebDriverPreCore.Extended.ReducedLocator.Internal qualified as RL
 import Prelude hiding (filter, head, putStrLn)
 
 -- >>> _eval tests
-
 -- *** Exception: ExitSuccess
-
--- *** Exception: ExitSuccess
-
 tests :: TestTree
 tests =
   testGroup
@@ -593,8 +589,8 @@ prepareSimplifyXPathTests =
         (Right $ RL.Leaf $ RL.CSS "button")
         (CSS "button"),
       chkSimplifiedLoc
-        "bare XPath is wrapped in //*[boolean(...)]"
-        (Right $ RL.Leaf $ RL.XPath "//*[boolean(//footer)]")
+        "bare XPath is unchanged"
+        (Right $ RL.Leaf $ RL.XPath "//footer")
         (XPath "//footer"),
       chkSimplifiedLoc
         "XPath already in //*[pred] form is unchanged"
@@ -605,8 +601,8 @@ prepareSimplifyXPathTests =
         (Right $ RL.Leaf $ RL.XPath "//*[@id='my-id']")
         (ID "my-id"),
       chkSimplifiedLoc
-        "Tag converts to XPath //*[self::tag]"
-        (Right $ RL.Leaf $ RL.XPath "//*[self::footer]")
+        "Tag converts to XPath //tag"
+        (Right $ RL.Leaf $ RL.XPath "//footer")
         (Tag "footer")
     ]
 

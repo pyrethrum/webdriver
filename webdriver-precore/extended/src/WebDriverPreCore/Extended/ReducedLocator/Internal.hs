@@ -12,6 +12,7 @@ module WebDriverPreCore.Extended.ReducedLocator.Internal
   )
 where
 
+import Data.List (foldl')
 import Data.List.NonEmpty (NonEmpty, toList)
 import Data.Text (Text)
 import Data.Text qualified as T
@@ -171,77 +172,116 @@ xPathSub defLoc proto l =
             else
               l'
 
+-- | Structured representation of an XPath location step: //tag[pred1][pred2]...
+--   Using a structured ADT avoids the fragile wrap/unwrap of raw predicate text.
+data XPathNode = MkXPathNode
+  { tag :: Text
+  , predicates :: [Text]
+  }
+  deriving (Show, Eq)
+
+-- | Render an 'XPathNode' to a full XPath expression.
+renderXPathNode :: XPathNode -> Text
+renderXPathNode MkXPathNode {tag, predicates} =
+  "//" <> tag <> foldMap (\p -> "[" <> p <> "]") predicates
+
 coreToFullXPath :: LI.Locator -> LI.Locator
-coreToFullXPath l' =
-  LI.mapLocBottomUp prefixSuffix l'
+coreToFullXPath = LI.mapLocBottomUp prefixSuffix
   where
     prefixSuffix :: LI.Locator -> LI.Locator
     prefixSuffix = \case
-      LI.XPath {value} -> LI.XPath $ if T.null value then "//*" else "//*[" <> value <> "]"
+      LI.XPath {value} -> LI.XPath . renderXPathNode $ parseXPathNode value
       other -> other
 
-toXPathCore :: LI.Locator -> LI.Locator
-toXPathCore = LI.XPath . toXPathCoreTxt
+-- | Parse a raw XPath value that may or may not have been produced by this
+--   library into an 'XPathNode'.  Only the simple //tag[pred] form produced
+--   internally is parsed structurally; anything else is preserved verbatim as
+--   a single predicate on the wildcard step via boolean().
+parseXPathNode :: Text -> XPathNode
+parseXPathNode value =
+  case T.stripPrefix "//" value of
+    Nothing -> MkXPathNode {
+      tag = "*", 
+      predicates = ["boolean(" <> value <> ")"]
+      }
+    Just rest ->
+      let (t, remainder) = T.break (== '[') rest
+          preds = parsePreds remainder
+       in MkXPathNode {
+             tag = if T.null t then "*" else t, 
+             predicates = preds
+          }
   where
-    -- \| Convert a Locator to an XPath predicate expression for use inside [...].
-    --   Combinators are recursively inlined; Parent uses the ancestor:: axis.
-    toXPathCoreTxt :: LI.Locator -> Text
-    toXPathCoreTxt loc =
-      case loc of
-        LI.XPath {value} ->
-          -- Try to unwrap //*[pred] to get just the inner predicate; fall back to a boolean test.
-          let stripped = T.stripPrefix "//*[" value
-              unwrapped = stripped >>= \s -> if "]" `T.isSuffixOf` s then Just (T.dropEnd 1 s) else Nothing
-           in maybe ("boolean(" <> value <> ")") id unwrapped
-        LI.AllElms -> "true()"
-        LI.ID {value} -> "@id='" <> value <> "'"
-        LI.Class {value, matchType, caseSensitivity} -> classToXPathCoreTxt value matchType caseSensitivity
-        LI.Attribute {value, matchType, caseSensitivity} -> attrToXPathCoreTxt value matchType caseSensitivity
-        LI.Tag {value} -> "self::" <> value
-        -- Contains as predicate: "I match contained AND I have an ancestor matching container"
-        LI.Contains {container, contained} ->
-          toXPathCoreTxt contained <> " and ancestor::*[" <> toXPathCoreTxt container <> "]"
-        LI.All {elms} -> elmsTxt "and" elms
-        LI.Any {elms} -> elmsTxt "or" elms
-        LI.CSS {} -> locErr loc
-        LI.Default {} -> locErr loc
-        LI.Role {} -> locErr loc
-        LI.InnerText {} -> locErr loc
-        LI.BiDiContext {} -> locErr loc
-        LI.PostFilter {} -> locErr loc
-      where
-        elmsTxt conjunctive elms = "(" <> T.intercalate (" " <> conjunctive <> " ") (toList $ toXPathCoreTxt <$> elms) <> ")"
+    parsePreds :: Text -> [Text]
+    parsePreds txt'
+      | T.null txt' = []
+      | otherwise =
+          case T.stripPrefix "[" txt' of
+            Nothing -> []
+            Just inner ->
+              let (p, after) = T.breakOn "]" inner
+               in p : parsePreds (T.drop 1 after)
 
-    -- \| XPath predicate for CSS class matching.
-    --   Full uses the space-padding token trick to match whole class names.
-    --   Other match types operate directly on the raw @class attribute value.
-    classToXPathCoreTxt :: Text -> LI.MatchType -> LI.CaseSensitivity -> Text
-    classToXPathCoreTxt val mt cs =
+toXPathCore :: LI.Locator -> LI.Locator
+toXPathCore loc = LI.XPath . renderXPathNode $ toXPathNode loc
+  where
+    -- | Convert a Locator to a structured 'XPathNode'.
+    --   Tag sets the node-test; all other predicates accumulate in the predicate list.
+    --   For combinators: All merges predicates (intersection), Any uses | union.
+    toXPathNode :: LI.Locator -> XPathNode
+    toXPathNode = \case
+      LI.XPath {value} -> parseXPathNode value
+      LI.AllElms -> MkXPathNode {tag = "*", predicates = []}
+      LI.Tag {value} -> MkXPathNode {tag = value, predicates = []}
+      LI.ID {value} -> MkXPathNode {tag = "*", predicates = ["@id='" <> value <> "'"]}
+      LI.Class {value, matchType, caseSensitivity} ->
+        MkXPathNode {tag = "*", predicates = [classToXPathPred value matchType caseSensitivity]}
+      LI.Attribute {value, matchType, caseSensitivity} ->
+        MkXPathNode {tag = "*", predicates = [attrToXPathPred value matchType caseSensitivity]}
+      -- All: merge tag (last explicit Tag wins, fall back to "*") and accumulate all predicates
+      LI.All {elms} ->
+        let nodes = toList $ toXPathNode <$> elms
+            explicitTags = filter (/= "*") . fmap (.tag) $ nodes
+            mergedTag = case explicitTags of 
+              [] -> "*"
+              xs -> last xs
+            mergedPreds = concatMap (.predicates) nodes
+         in MkXPathNode {tag = mergedTag, predicates = mergedPreds}
+      -- Any: each branch is a full XPath; join with |
+      LI.Any {elms} ->
+        let branches = toList $ renderXPathNode . toXPathNode <$> elms
+            union = "(" <> T.intercalate " | " branches <> ")"
+         in MkXPathNode {tag = "*", predicates = ["boolean(" <> union <> ")"]}
+      -- Contains: contained node gains an ancestor predicate matching the container
+      LI.Contains {container, contained} ->
+        let MkXPathNode {tag = ct, predicates = cp} = toXPathNode contained
+            containerNode = toXPathNode container
+            ancestorPred = "ancestor::" <> containerNode.tag <> foldMap (\p -> "[" <> p <> "]") containerNode.predicates
+         in MkXPathNode {tag = ct, predicates = cp <> [ancestorPred]}
+      l -> locErr l
+
+    -- | XPath predicate for CSS class matching.
+    classToXPathPred :: Text -> LI.MatchType -> LI.CaseSensitivity -> Text
+    classToXPathPred val mt cs =
       let classAttr = applyCS cs "@class"
           matchVal = lowerIfCI cs val
        in case mt of
-            LI.Full ->
-              -- Pad the class attribute with spaces so each token is surrounded by spaces,
-              -- then check for ' token '. Case folding applied inside concat.
-              "contains(concat(' ', " <> classAttr <> ", ' '), ' " <> matchVal <> " ')"
+            LI.Full -> "contains(concat(' ', " <> classAttr <> ", ' '), ' " <> matchVal <> " ')"
             LI.Partial -> "contains(" <> classAttr <> ", '" <> matchVal <> "')"
             LI.Starts -> "starts-with(normalize-space(" <> classAttr <> "), '" <> matchVal <> "')"
-            LI.Wildcard -> wildcardToXPathCoreTxt classAttr matchVal
+            LI.Wildcard -> wildcardToXPathPred classAttr matchVal
 
-    -- \| XPath predicate matching elements that have any attribute satisfying the condition.
-    --   Uses @*[...] predicate syntax so the condition is applied to each attribute node.
-    attrToXPathCoreTxt :: Text -> LI.MatchType -> LI.CaseSensitivity -> Text
-    attrToXPathCoreTxt val mt cs =
-      let attrExpr = applyCS cs "." -- '.' refers to the attribute node's string value
+    -- | XPath predicate matching elements that have any attribute satisfying the condition.
+    attrToXPathPred :: Text -> LI.MatchType -> LI.CaseSensitivity -> Text
+    attrToXPathPred val mt cs =
+      let attrExpr = applyCS cs "."
           matchVal = lowerIfCI cs val
        in case mt of
             LI.Full -> "@*[" <> attrExpr <> "='" <> matchVal <> "']"
             LI.Partial -> "@*[contains(" <> attrExpr <> ", '" <> matchVal <> "')]"
             LI.Starts -> "@*[starts-with(" <> attrExpr <> ", '" <> matchVal <> "')]"
-            LI.Wildcard -> "@*[" <> wildcardToXPathCoreTxt attrExpr matchVal <> "]"
+            LI.Wildcard -> "@*[" <> wildcardToXPathPred attrExpr matchVal <> "]"
 
-    -- \| Wrap an XPath string expression with a translate() call to fold it to lower-case,
-    --   for CaseInsensitive matching.
     applyCS :: LI.CaseSensitivity -> Text -> Text
     applyCS cs t = case cs of
       LI.CaseSensitive -> t
@@ -252,15 +292,13 @@ toXPathCore = LI.XPath . toXPathCoreTxt
       LI.CaseSensitive -> t
       LI.CaseInsensitive -> T.toLower t
 
-    -- \| Build a wildcard predicate from a normalised text expression and pattern.
-    --   Mirrors the logic in innerTextToXPath's buildWildcardPredicate.
-    wildcardToXPathCoreTxt :: Text -> Text -> Text
-    wildcardToXPathCoreTxt normText val =
+    wildcardToXPathPred :: Text -> Text -> Text
+    wildcardToXPathPred normText val =
       let parts = filter (not . T.null) $ T.splitOn "*" val
           startsWithWildcard = "*" `T.isPrefixOf` val
           endsWithWildcard = "*" `T.isSuffixOf` val
        in case parts of
-            [] -> "true()" -- "*" or "**" etc. matches everything
+            [] -> "true()"
             [single]
               | startsWithWildcard && endsWithWildcard ->
                   "contains(" <> normText <> ", '" <> single <> "')"
@@ -277,12 +315,12 @@ toXPathCore = LI.XPath . toXPathCoreTxt
                             else "contains(" <> curText <> ", '" <> part <> "')"
                         nextText = "substring-after(" <> curText <> ", '" <> part <> "')"
                      in (preds <> [predicate], nextText)
-                  (predicates, _) = foldl' buildP ([], normText) (zip [0 ..] parts)
-               in T.intercalate " and " predicates
+                  (preds, _) = foldl' buildP ([], normText) (zip [0 ..] parts)
+               in T.intercalate " and " preds
 
     locErr :: LI.Locator -> a
-    locErr loc =
+    locErr l =
       error . T.unpack $
         "Locator\n"
-          <> txt loc
+          <> txt l
           <> "\nconversion not implemented - should not be called - this is a library defect - check classify or locatorToXPathPartial"
