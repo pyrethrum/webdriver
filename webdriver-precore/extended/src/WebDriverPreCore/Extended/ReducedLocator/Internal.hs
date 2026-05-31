@@ -12,7 +12,7 @@ module WebDriverPreCore.Extended.ReducedLocator.Internal
   )
 where
 
-import Data.List (foldl')
+import Data.List (foldl', nub)
 import Data.List.NonEmpty (NonEmpty, toList)
 import Data.Text (Text)
 import Data.Text qualified as T
@@ -242,9 +242,10 @@ toXPathCore loc = LI.XPath . renderXPathNode $ toXPathNode loc
       LI.All {elms} ->
         let nodes = toList $ toXPathNode <$> elms
             explicitTags = filter (/= "*") . fmap (.tag) $ nodes
-            mergedTag = case explicitTags of 
-              [] -> "*"
-              xs -> last xs
+            mergedTag = case nub explicitTags of
+              []  -> "*"
+              [t] -> t
+              _   -> "ERROR TODO FIX THIS"
             mergedPreds = concatMap (.predicates) nodes
          in MkXPathNode {tag = mergedTag, predicates = mergedPreds}
       -- Any: each branch is a full XPath; join with |
