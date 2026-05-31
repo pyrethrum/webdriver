@@ -108,13 +108,10 @@ toHttpLocator = \case
   BiDiOnlyLeaf (BiDiContext {context}) ->
     Left $ LI.MkInvalidLocator (LI.BiDiContext {context}) "BiDi-only locator cannot be used with HTTP protocol"
 
-
-
 isXPath :: ReducedLoc -> Bool
 isXPath = \case
   Leaf XPath {} -> True
   _ -> False
-
 
 prepareSimplify :: (Text -> LI.Locator) -> LI.Protocol -> LI.Locator -> Either LI.InvalidLocator ReducedLoc
 prepareSimplify defLoc proto l =

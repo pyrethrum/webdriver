@@ -27,7 +27,7 @@ import WebDriverPreCore.Extended.Locators.Internal
     foldLocBottomUp,
     hasInvalidLoc,
     prepare,
-    sortGroupChildLocs,
+    sortGroupChildLocs, InvalidLocator,
   )
 import WebDriverPreCore.Extended.ReducedLocator.Internal qualified as RL
 import Prelude hiding (filter, head, putStrLn)
@@ -62,6 +62,7 @@ tests =
         [ foldLocTopDown,
           foldLocBottomUpTest
         ],
+      prepareSimplifyXPathTests,
       testGroup
         "Property Tests"
         [ test_infix_precedence_i,
@@ -572,6 +573,42 @@ prop_classify_invalid_iff_any_invalid_node =
     classedasInvalid = \case
       Invalid _ -> True
       _ -> False
+
+
+
+chkSimplifiedLoc :: Text -> Either InvalidLocator RL.ReducedLoc -> Locator -> TestTree
+chkSimplifiedLoc message expected originalLoc =
+  testCase (unpack message) $ RL.prepareSimplify ID HTTP originalLoc @?= expected
+
+-- >>> _eval prepareSimplifyXPathTests
+
+-- *** Exception: ExitSuccess
+
+prepareSimplifyXPathTests :: TestTree
+prepareSimplifyXPathTests =
+  testGroup
+    "prepareSimplify XPaths"
+    [ chkSimplifiedLoc
+        "CSS text is unchanged"
+        (Right $ RL.Leaf $ RL.CSS "button")
+        (CSS "button"),
+      chkSimplifiedLoc
+        "bare XPath is wrapped in //*[boolean(...)]"
+        (Right $ RL.Leaf $ RL.XPath "//*[boolean(//footer)]")
+        (XPath "//footer"),
+      chkSimplifiedLoc
+        "XPath already in //*[pred] form is unchanged"
+        (Right $ RL.Leaf $ RL.XPath "//*[self::footer]")
+        (XPath "//*[self::footer]"),
+      chkSimplifiedLoc
+        "ID converts to XPath //*[@id=...]"
+        (Right $ RL.Leaf $ RL.XPath "//*[@id='my-id']")
+        (ID "my-id"),
+      chkSimplifiedLoc
+        "Tag converts to XPath //*[self::tag]"
+        (Right $ RL.Leaf $ RL.XPath "//*[self::footer]")
+        (Tag "footer")
+    ]
 
 -- >>> _eval prop_simplification_merges_xpaths
 

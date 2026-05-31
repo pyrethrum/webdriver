@@ -38,9 +38,9 @@ baseLocateTests =
               [ chkAutoId "Locate by ID" (elmId "section-personal") "sec-personal"
               , test "jsDisplay check should NOT be affected by viewport" $ do
                   maximizeWindow
-                  maxResult <- locateAll (elmClass "input")
+                  maxResult <- locateAll $ elmClass "input"
                   minimizeWindow
-                  minResult <- locateAll (elmClass "input")
+                  minResult <- locateAll $ elmClass "input"
                   chkEq "Displayed result should be the same for minised and maximised viewport" maxResult.result minResult.result
               , testGroup "Role Locator Tests"
                   [ testGroup "Landmark role types (roleType)"
@@ -79,16 +79,16 @@ baseLocateTests =
                   , atrrChkExtMiss "ExtLocateSingletonMiss - locate finds region via aria-labelledby"
                       (region "Personal Information") "auto-id" "sec-personal"
                   , test "ExtLocateNever - locate does NOT find region via aria-labelledby" $ do
-                      locRslt <- locate (region "Personal Information")
+                      locRslt <- locate $ region "Personal Information"
                       chkLocException (txt (region "Personal Information")) isNotFound locRslt
                   , test "ExtLocateAlways - locateAll finds region via aria-labelledby" $ do
-                      locRslt <- locateAllExt (region "Personal Information")
+                      locRslt <- locateAllExt $ region "Personal Information"
                       chkElms (txt (region "Personal Information")) chkSingleton locRslt
                   , test "ExtLocateSingletonMiss - locateAll does NOT find region via aria-labelledby" $ do
-                      locRslt <- locateAllExtMiss (region "Personal Information")
+                      locRslt <- locateAllExtMiss $ region "Personal Information"
                       chkElms (txt (region "Personal Information")) chkEmpty locRslt
                   , test "ExtLocateNever - locateAll does NOT find region via aria-labelledby" $ do
-                      locRslt <- locateAll (region "Personal Information")
+                      locRslt <- locateAll $ region "Personal Information"
                       chkElms (txt (region "Personal Information")) chkEmpty locRslt
                   ]
               , testGroup "for id label association"
@@ -97,26 +97,26 @@ baseLocateTests =
                   , atrrChkExtMiss "ExtLocateSingletonMiss - locate finds radio via for id label"
                       (radio "Email") "auto-id" "rdo-contact-email"
                   , test "ExtLocateNever - locate does NOT find radio via for id label" $ do
-                      locRslt <- locate (radio "Email")
+                      locRslt <- locate $ radio "Email"
                       chkLocException (txt (radio "Email")) isNotFound locRslt
                   , atrrChkExtRole "ExtLocateAlways - locate finds textbox via for id label"
                       (textbox "Given Name") "auto-id" "edt-given-name"
                   , atrrChkExtMiss "ExtLocateSingletonMiss - locate finds textbox via for id label"
                       (textbox "Given Name") "auto-id" "edt-given-name"
                   , test "ExtLocateNever - locate does NOT find textbox via for id label" $ do
-                      locRslt <- locate (textbox "Given Name")
+                      locRslt <- locate $ textbox "Given Name"
                       chkLocException (txt (textbox "Given Name")) isNotFound locRslt
                   , test "ExtLocateAlways - locateAll finds radio via for id label" $ do
-                      locRslt <- locateAllExt (radio "Email")
+                      locRslt <- locateAllExt $ radio "Email"
                       chkElms (txt (radio "Email")) chkSingleton locRslt
                   , test "ExtLocateSingletonMiss - locateAll does NOT find radio via for id label" $ do
-                      locRslt <- locateAllExtMiss (radio "Email")
+                      locRslt <- locateAllExtMiss $ radio "Email"
                       chkElms (txt (radio "Email")) chkEmpty locRslt
                   ]
               , testGroup "RoleType - unaffected by extended matching"
                   [ test "RoleType Region: ExtLocateNever and ExtLocateAlways give same results" $ do
-                      never <- locateAll (roleType Region)
-                      always <- locateAllExt (roleType Region)
+                      never <- locateAll $ roleType Region
+                      always <- locateAllExt $ roleType Region
                       chkEq "RoleType Region results should be identical" never.result always.result
                   ]
               , testGroup "aria-label - always resolved regardless of setting"
@@ -135,91 +135,91 @@ baseLocateTests =
               [ testGroup "locateAll: DisplayedCheckAlways filters hidden, DisplayedCheckNever does not"
                   [ testGroup "Rule 1 (display=none on element itself)"
                       [ test "edt-notes-hidden has display:none via own CSS class" $ do
-                          always <- locateAll      (autoId "edt-notes-hidden")
-                          never  <- locateAllNever (autoId "edt-notes-hidden")
+                          always <- locateAll      $ autoId "edt-notes-hidden"
+                          never  <- locateAllNever $ autoId "edt-notes-hidden"
                           chkElms "DisplayedCheckAlways must filter display:none element"    chkEmpty    always
                           chkElms "DisplayedCheckNever must find display:none element"       chkSingleton never
                       ]
                   , testGroup "Rule 2 (visibility=hidden or collapse, inherited)"
                       [ test "edt-vis-hidden is inside inline visibility:hidden parent" $ do
-                          always <- locateAll      (autoId "edt-vis-hidden")
-                          never  <- locateAllNever (autoId "edt-vis-hidden")
+                          always <- locateAll      $ autoId "edt-vis-hidden"
+                          never  <- locateAllNever $ autoId "edt-vis-hidden"
                           chkElms "DisplayedCheckAlways must filter visibility:hidden element" chkEmpty    always
                           chkElms "DisplayedCheckNever must find visibility:hidden element"    chkSingleton never
                       , test "edt-css-vis-hidden is inside CSS class visibility:hidden parent" $ do
-                          always <- locateAll      (autoId "edt-css-vis-hidden")
-                          never  <- locateAllNever (autoId "edt-css-vis-hidden")
+                          always <- locateAll      $ autoId "edt-css-vis-hidden"
+                          never  <- locateAllNever $ autoId "edt-css-vis-hidden"
                           chkElms "DisplayedCheckAlways must filter CSS visibility:hidden element" chkEmpty    always
                           chkElms "DisplayedCheckNever must find CSS visibility:hidden element"    chkSingleton never
                       ]
                   , testGroup "Rule 3 (parseFloat(opacity) === 0 on element itself)"
                       [ test "fg-opacity-zero div has opacity:0 applied directly" $ do
-                          always <- locateAll      (autoId "fg-opacity-zero")
-                          never  <- locateAllNever (autoId "fg-opacity-zero")
+                          always <- locateAll      $ autoId "fg-opacity-zero"
+                          never  <- locateAllNever $ autoId "fg-opacity-zero"
                           chkElms "DisplayedCheckAlways must filter opacity:0 element" chkEmpty    always
                           chkElms "DisplayedCheckNever must find opacity:0 element"    chkSingleton never
                       ]
                   , testGroup "Rule 4 (INPUT with type=hidden)"
                       [ test "hdn-session-token is input[type=hidden]" $ do
-                          always <- locateAll      (autoId "hdn-session-token")
-                          never  <- locateAllNever (autoId "hdn-session-token")
+                          always <- locateAll      $ autoId "hdn-session-token"
+                          never  <- locateAllNever $ autoId "hdn-session-token"
                           chkElms "DisplayedCheckAlways must filter input type=hidden" chkEmpty    always
                           chkElms "DisplayedCheckNever must find input type=hidden"    chkSingleton never
                       ]
                   , testGroup "Rule 5 (offsetWidth===0 or offsetHeight===0, parent has display:none)"
                       [ test "edt-display-none is inside inline display:none parent" $ do
-                          always <- locateAll      (autoId "edt-display-none")
-                          never  <- locateAllNever (autoId "edt-display-none")
+                          always <- locateAll      $ autoId "edt-display-none"
+                          never  <- locateAllNever $ autoId "edt-display-none"
                           chkElms "DisplayedCheckAlways must filter zero-size element (inline display:none parent)" chkEmpty    always
                           chkElms "DisplayedCheckNever must find zero-size element (inline display:none parent)"    chkSingleton never
                       , test "edt-css-none is inside CSS class display:none parent" $ do
-                          always <- locateAll      (autoId "edt-css-none")
-                          never  <- locateAllNever (autoId "edt-css-none")
+                          always <- locateAll      $ autoId "edt-css-none"
+                          never  <- locateAllNever $ autoId "edt-css-none"
                           chkElms "DisplayedCheckAlways must filter zero-size element (CSS display:none parent)" chkEmpty    always
                           chkElms "DisplayedCheckNever must find zero-size element (CSS display:none parent)"    chkSingleton never
                       , test "edt-html-hidden is inside HTML hidden-attribute parent" $ do
-                          always <- locateAll      (autoId "edt-html-hidden")
-                          never  <- locateAllNever (autoId "edt-html-hidden")
+                          always <- locateAll      $ autoId "edt-html-hidden"
+                          never  <- locateAllNever $ autoId "edt-html-hidden"
                           chkElms "DisplayedCheckAlways must filter zero-size element (HTML hidden parent)" chkEmpty    always
                           chkElms "DisplayedCheckNever must find zero-size element (HTML hidden parent)"    chkSingleton never
                       ]
                   , testGroup "NOT filtered by displayedJS"
                       [ test "edt-aria-hidden: aria-hidden does not affect display, opacity or dimensions" $ do
-                          always <- locateAll      (autoId "edt-aria-hidden")
-                          never  <- locateAllNever (autoId "edt-aria-hidden")
+                          always <- locateAll      $ autoId "edt-aria-hidden"
+                          never  <- locateAllNever $ autoId "edt-aria-hidden"
                           chkElms "DisplayedCheckAlways must NOT filter aria-hidden element" chkSingleton always
                           chkElms "DisplayedCheckNever must find aria-hidden element"        chkSingleton never
                       , test "edt-offscreen: positioned off-viewport but has non-zero dimensions" $ do
-                          always <- locateAll      (autoId "edt-offscreen")
-                          never  <- locateAllNever (autoId "edt-offscreen")
+                          always <- locateAll      $ autoId "edt-offscreen"
+                          never  <- locateAllNever $ autoId "edt-offscreen"
                           chkElms "DisplayedCheckAlways must NOT filter off-screen element" chkSingleton always
                           chkElms "DisplayedCheckNever must find off-screen element"        chkSingleton never
                       , test "edt-opacity-zero: input child of opacity:0 container; opacity not inherited" $ do
-                          always <- locateAll      (autoId "edt-opacity-zero")
-                          never  <- locateAllNever (autoId "edt-opacity-zero")
+                          always <- locateAll      $ autoId "edt-opacity-zero"
+                          never  <- locateAllNever $ autoId "edt-opacity-zero"
                           chkElms "DisplayedCheckAlways must NOT filter opacity:0 child element" chkSingleton always
                           chkElms "DisplayedCheckNever must find opacity:0 child element"        chkSingleton never
                       ]
                   ]
               , testGroup "locate (singleton): DisplayedCheckDisambiguateUnique resolves hidden/visible ambiguity"
                   [ test "DisplayedCheckNever with Unique throws AmbiguousLocator (hidden+visible share class)" $ do
-                      locRslt <- locateNever (elmClass "notes-area")
+                      locRslt <- locateNever $ elmClass "notes-area"
                       chkLocException (txt (elmClass "notes-area")) isAmbiguous locRslt
                   , test "DisplayedCheckDisambiguateUnique filters hidden, resolving to unique visible element" $ do
-                      locRslt <- locateDisambiguate (elmClass "notes-area")
+                      locRslt <- locateDisambiguate $ elmClass "notes-area"
                       chkAttributeEq (txt (elmClass "notes-area")) "auto-id" "edt-notes-visible" locRslt
                   , test "DisplayedCheckAlways also filters hidden, resolving to unique visible element" $ do
-                      locRslt <- locate (elmClass "notes-area")
+                      locRslt <- locate $ elmClass "notes-area"
                       chkAttributeEq (txt (elmClass "notes-area")) "auto-id" "edt-notes-visible" locRslt
                   ]
               , testGroup "locateAll: DisplayedCheckDisambiguateUnique has no effect (only Always filters)"
                   [ test "DisambiguateUnique gives same result as Never for locateAll" $ do
-                      disambiguate <- locateAllDisambiguate (elmClass "notes-area")
-                      never        <- locateAllNever (elmClass "notes-area")
+                      disambiguate <- locateAllDisambiguate $ elmClass "notes-area"
+                      never        <- locateAllNever $ elmClass "notes-area"
                       chkEq "DisambiguateUnique locateAll result must equal Never" disambiguate.result never.result
                   , test "DisplayedCheckAlways filters hidden in locateAll; Never returns both" $ do
-                      always <- locateAll      (elmClass "notes-area")
-                      never  <- locateAllNever (elmClass "notes-area")
+                      always <- locateAll      $ elmClass "notes-area"
+                      never  <- locateAllNever $ elmClass "notes-area"
                       chkElms (txt (elmClass "notes-area")) chkSingleton always
                       chkElms (txt (elmClass "notes-area"))
                         (\elms -> if length elms == 2 then Nothing
@@ -276,7 +276,7 @@ baseLocateTests =
       , withResource (navToUrl ses landmarkRolesUrl) (\_ -> pure ()) $ \_ ->
           testGroup "Locate and LocateAll from Element"
               [ test "locateAll from element: inputs within sec-personal" $ do
-                  secResult <- locate (autoId "sec-personal")
+                  secResult <- locate $ autoId "sec-personal"
                   chkElmsM "find sec-personal" secResult $ \elms ->
                     case elms of
                       [sec] -> do
@@ -287,7 +287,7 @@ baseLocateTests =
                         pure Nothing
                       _ -> pure $ Just $ "expected singleton section but got " <> txt (length elms)
               , test "locateAll from element: links within nav-main" $ do
-                  navResult <- locate (autoId "nav-main")
+                  navResult <- locate $ autoId "nav-main"
                   chkElmsM "find nav-main" navResult $ \elms ->
                     case elms of
                       [nav] -> do
@@ -298,20 +298,20 @@ baseLocateTests =
                         pure Nothing
                       _ -> pure $ Just $ "expected singleton nav but got " <> txt (length elms)
               , test "locate from element: edt-given-name within sec-personal" $ do
-                  secResult <- locate (autoId "sec-personal")
+                  secResult <- locate $ autoId "sec-personal"
                   chkElmsM "find sec-personal" secResult $ \elms ->
                     case elms of
                       [sec] -> do
-                        givenResult <- locateFromElement sec (autoId "edt-given-name")
+                        givenResult <- locateFromElement sec $ autoId "edt-given-name"
                         chkElms "edt-given-name in section" chkSingleton givenResult
                         pure Nothing
                       _ -> pure $ Just $ "expected singleton section but got " <> txt (length elms)
               , test "locate from element: not found when element not in scope" $ do
-                  hdrResult <- locate (autoId "hdr-main")
+                  hdrResult <- locate $ autoId "hdr-main"
                   chkElmsM "find hdr-main" hdrResult $ \elms ->
                     case elms of
                       [hdr] -> do
-                        notInHdr <- locateFromElement hdr (autoId "edt-given-name")
+                        notInHdr <- locateFromElement hdr $ autoId "edt-given-name"
                         pure $ case notInHdr.result of
                           Left (L.ElementNotFound {}) -> Nothing
                           Left other -> Just $ "expected ElementNotFound but got: " <> txt other
@@ -379,13 +379,13 @@ baseLocateTests =
               -- These document expected behaviour once PostFilter is implemented.
               -- Currently fail with: "PostFilter locators are not yet implemented in HTTP WebDriver"
               [ test "value: find input with matching current value (partial)" $ do
-                  locRslt <- locateAll (value "Jane" input_)
+                  locRslt <- locateAll $ value "Jane" input_
                   chkElms (txt (value "Jane" input_)) chkSingleton locRslt
               , test "valueExact: find input with exact current value" $ do
-                  locRslt <- locateAll (valueExact "Jay" input_)
+                  locRslt <- locateAll $ valueExact "Jay" input_
                   chkElms (txt (valueExact "Jay" input_)) chkSingleton locRslt
               , test "valueStarts: find input whose value starts with prefix" $ do
-                  locRslt <- locateAll (valueStarts "Jane" input_)
+                  locRslt <- locateAll $ valueStarts "Jane" input_
                   chkElms (txt (valueStarts "Jane" input_)) chkSingleton locRslt
               ]
       ]
@@ -502,10 +502,6 @@ baseLocateTests =
   isAmbiguous other = Just $ "expected AmbiguousLocator but got: " <> txt other
 
 
-_eval :: Maybe Text -> TestTree -> IO ()
-_eval mPattern = withArgs (maybe [] (\pat -> ["-p", unpack pat]) mPattern) . defaultMain
-
-
 -- actions :: forall es. (IOE :> es, Logger :> es, Pause :> es, WebDriverHttp :> es) => Eff es (L.LocateActions (Eff es))
 actions :: forall es. (IOE :> es, WebDriverHttp :> es) => Eff es (L.LocateActions (Eff es))
 actions = pure $ L.MkLocateActions { 
@@ -554,7 +550,7 @@ chkElms errMsg p locRslt =
 chkElmsM :: (IOE :> es) => Text -> L.LocateResult -> ([ElementId] -> Eff es (Maybe Text)) -> Eff es ()
 chkElmsM testTitle locRslt chkM =
   locRslt.result & either
-    (\err -> liftFail $ " - locate failed:\n" <> testTitle <> "\n" <> txt err <> "\n" <> txt locRslt)
+    $ \err -> liftFail $ " - locate failed:\n" <> testTitle <> "\n" <> txt err <> "\n" <> txt locRslt
     (chkM >=> liftChk (testTitle <> " - element list check failed"))
 
 chkAttribute :: forall es. (IOE :> es, WebDriverHttp :> es)=> Text -> L.LocateResult -> Text -> (Text -> Maybe Text) -> Eff es ()
@@ -584,10 +580,13 @@ liftChk testTitle mErr = mErr & maybe (pure ()) (\erMsg -> liftFail $ testTitle 
 chkEq :: (IOE :> es, Show a, Eq a) => Text -> a -> a -> Eff es ()
 chkEq msg a b = liftIO $ assertEqual (unpack msg) a b
 
-_pattern :: Maybe a
-_pattern = Nothing
+_pattern :: Maybe Text
+_pattern = Just "xpath finds element by tag"
+
+_eval :: Maybe Text -> TestTree -> IO ()
+_eval mPattern = withArgs (maybe [] (\pat -> ["-p", unpack pat]) mPattern) . defaultMain
 
 --- >>> _eval _pattern baseLocateTests
--- *** Exception: ExitSuccess
+-- *** Exception: ExitFailure 1
 
 
