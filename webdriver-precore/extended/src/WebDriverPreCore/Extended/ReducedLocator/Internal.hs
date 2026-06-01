@@ -233,28 +233,27 @@ toXPathCore loc = LI.XPath . renderXPathNode <$> toXPathNode loc
     toXPathNode :: LI.Locator -> Either LI.InvalidLocator XPathNode
     toXPathNode l = 
       case l of
-        LI.All {elms} ->
-          let nodes = toList $ toXPathNode <$> elms
-              explicitTags = filter (/= "*") . fmap (.tag) $ nodes
-              mergedTag = 
-                case nub explicitTags of
-                  []  -> Right "*"
-                  [t] -> Right t
-                  xs  -> Left . 
-                    LI.MkInvalidLocator l $ "Conflicting tags in All combinator - cannot convert to XPath: " <> txt xs
-              mergedPreds = concatMap (.predicates) nodes
-          in MkXPathNode <$> mergedTag <*> pure mergedPreds
+        LI.All {elms} -> do
+          nodes <- traverse toXPathNode elms
+          let explicitTags = filter (/= "*") . toList $ (.tag) <$> nodes
+              mergedPreds = concatMap (.predicates) (toList nodes)
+          mergedTag <- case nub explicitTags of
+            []  -> Right "*"
+            [t] -> Right t
+            xs  -> Left $ LI.MkInvalidLocator l ("Conflicting tags in All combinator - cannot convert to XPath: " <> txt xs)
+          Right $ MkXPathNode {tag = mergedTag, predicates = mergedPreds}
         -- Any: each branch is a full XPath; join with |
-        LI.Any {elms} ->
-          let branches = toList $ renderXPathNode . toXPathNode <$> elms
+        LI.Any {elms} -> do
+          nodes <- traverse toXPathNode elms
+          let branches = toList $ renderXPathNode <$> nodes
               union = "(" <> T.intercalate " | " branches <> ")"
-          in MkXPathNode {tag = "*", predicates = ["boolean(" <> union <> ")"]}
+          Right $ MkXPathNode {tag = "*", predicates = ["boolean(" <> union <> ")"]}
         -- Contains: contained node gains an ancestor predicate matching the container
-        LI.Contains {container, contained} ->
-          let MkXPathNode {tag = ct, predicates = cp} = toXPathNode contained
-              containerNode = toXPathNode container
-              ancestorPred = "ancestor::" <> containerNode.tag <> foldMap (\p -> "[" <> p <> "]") containerNode.predicates
-          in MkXPathNode {tag = ct, predicates = cp <> [ancestorPred]}
+        LI.Contains {container, contained} -> do
+          MkXPathNode {tag = ct, predicates = cp} <- toXPathNode contained
+          containerNode <- toXPathNode container
+          let ancestorPred = "ancestor::" <> containerNode.tag <> foldMap (\p -> "[" <> p <> "]") containerNode.predicates
+          Right $ MkXPathNode {tag = ct, predicates = cp <> [ancestorPred]}
         _ -> Right $ case l of
                 LI.XPath {value} -> parseXPathNode value
                 LI.AllElms -> MkXPathNode {tag = "*", predicates = []}
@@ -321,13 +320,13 @@ toXPathCore loc = LI.XPath . renderXPathNode <$> toXPathNode loc
                   "starts-with(" <> normText <> ", '" <> single <> "')"
               | otherwise -> normText <> "='" <> single <> "'"
             _ ->
-              let buildP (preds, curText) (idx, part) =
+              let buildP (preds', curText) (idx, part) =
                     let predicate =
                           if idx == (0 :: Int) && not startsWithWildcard
                             then "starts-with(" <> curText <> ", '" <> part <> "')"
                             else "contains(" <> curText <> ", '" <> part <> "')"
                         nextText = "substring-after(" <> curText <> ", '" <> part <> "')"
-                     in (preds <> [predicate], nextText)
+                     in (preds' <> [predicate], nextText)
                   (preds, _) = foldl' buildP ([], normText) (zip [0 ..] parts)
                in T.intercalate " and " preds
 
