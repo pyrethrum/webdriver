@@ -141,16 +141,16 @@ xPathSub :: (Text -> LI.Locator) -> LI.Protocol -> LI.Locator -> Either LI.Inval
 xPathSub defLoc proto l =
   -- after prepare comboinator ocators such as Parent, All, Any are already be grouped correctly with all XPaths together,
   --  so we can just recursively convert to XPath if the grup is XPath Convertable
-  coreToFullXPath . convertXPath <$> LI.prepare defLoc proto l
+  coreToFullXPath <$> (LI.prepare defLoc proto l >>= convertXPath)
   where
-    convertXPath :: LI.Locator -> LI.Locator
+    convertXPath :: LI.Locator -> Either LI.InvalidLocator LI.Locator
     convertXPath loc =
       case loc of
-        LI.CSS {} -> loc
-        LI.InnerText {} -> loc
-        LI.Role {} -> loc
-        LI.BiDiContext {} -> loc
-        LI.PostFilter {} -> loc
+        LI.CSS {} -> rLoc
+        LI.InnerText {} -> rLoc
+        LI.Role {} -> rLoc
+        LI.BiDiContext {} -> rLoc
+        LI.PostFilter {} -> rLoc
         LI.XPath {} -> xpathLoc
         LI.AllElms -> xpathLoc
         LI.ID {} -> xpathLoc
@@ -158,19 +158,21 @@ xPathSub defLoc proto l =
         LI.Attribute {} -> xpathLoc
         LI.Tag {} -> xpathLoc
         LI.Default {value} -> convertXPath (defLoc value)
-        LI.Contains {container, contained} -> tryConvert $ LI.Contains (convertXPath container) (convertXPath contained)
-        LI.All {elms} -> tryConvert $ LI.All (convertXPath <$> elms)
-        LI.Any {elms} -> tryConvert $ LI.Any (convertXPath <$> elms)
+        LI.Contains {container, contained} -> 
+          LI.Contains <$> (convertXPath container) <*> (convertXPath contained) >>= tryConvert 
+        LI.All {elms} -> LI.All <$> traverse convertXPath elms >>= tryConvert
+        LI.Any {elms} -> LI.Any <$> traverse convertXPath elms >>= tryConvert
       where
+        rLoc = Right loc
         xpathLoc = toXPathCore loc
         convertable l' = LI.classify defLoc proto l' == LI.IsXPath
-        tryConvert :: LI.Locator -> LI.Locator
+        tryConvert :: LI.Locator -> Either LI.InvalidLocator LI.Locator
         tryConvert l' =
           if convertable l'
             then
               toXPathCore l'
             else
-              l'
+              Right l'
 
 -- | Structured representation of an XPath location step: //tag[pred1][pred2]...
 --   Using a structured ADT avoids the fragile wrap/unwrap of raw predicate text.
@@ -222,44 +224,54 @@ parseXPathNode value =
               let (p, after) = T.breakOn "]" inner
                in p : parsePreds (T.drop 1 after)
 
-toXPathCore :: LI.Locator -> LI.Locator
-toXPathCore loc = LI.XPath . renderXPathNode $ toXPathNode loc
+toXPathCore :: LI.Locator -> Either LI.InvalidLocator LI.Locator
+toXPathCore loc = LI.XPath . renderXPathNode <$> toXPathNode loc
   where
     -- | Convert a Locator to a structured 'XPathNode'.
     --   Tag sets the node-test; all other predicates accumulate in the predicate list.
     --   For combinators: All merges predicates (intersection), Any uses | union.
-    toXPathNode :: LI.Locator -> XPathNode
-    toXPathNode = \case
-      LI.XPath {value} -> parseXPathNode value
-      LI.AllElms -> MkXPathNode {tag = "*", predicates = []}
-      LI.Tag {value} -> MkXPathNode {tag = value, predicates = []}
-      LI.ID {value} -> MkXPathNode {tag = "*", predicates = ["@id='" <> value <> "'"]}
-      LI.Class {value, matchType, caseSensitivity} ->
-        MkXPathNode {tag = "*", predicates = [classToXPathPred value matchType caseSensitivity]}
-      LI.Attribute {value, matchType, caseSensitivity} ->
-        MkXPathNode {tag = "*", predicates = [attrToXPathPred value matchType caseSensitivity]}
-      -- All: merge tag (last explicit Tag wins, fall back to "*") and accumulate all predicates
-      LI.All {elms} ->
-        let nodes = toList $ toXPathNode <$> elms
-            explicitTags = filter (/= "*") . fmap (.tag) $ nodes
-            mergedTag = case nub explicitTags of
-              []  -> "*"
-              [t] -> t
-              _   -> "ERROR TODO FIX THIS"
-            mergedPreds = concatMap (.predicates) nodes
-         in MkXPathNode {tag = mergedTag, predicates = mergedPreds}
-      -- Any: each branch is a full XPath; join with |
-      LI.Any {elms} ->
-        let branches = toList $ renderXPathNode . toXPathNode <$> elms
-            union = "(" <> T.intercalate " | " branches <> ")"
-         in MkXPathNode {tag = "*", predicates = ["boolean(" <> union <> ")"]}
-      -- Contains: contained node gains an ancestor predicate matching the container
-      LI.Contains {container, contained} ->
-        let MkXPathNode {tag = ct, predicates = cp} = toXPathNode contained
-            containerNode = toXPathNode container
-            ancestorPred = "ancestor::" <> containerNode.tag <> foldMap (\p -> "[" <> p <> "]") containerNode.predicates
-         in MkXPathNode {tag = ct, predicates = cp <> [ancestorPred]}
-      l -> locErr l
+    toXPathNode :: LI.Locator -> Either LI.InvalidLocator XPathNode
+    toXPathNode l = 
+      case l of
+        LI.All {elms} ->
+          let nodes = toList $ toXPathNode <$> elms
+              explicitTags = filter (/= "*") . fmap (.tag) $ nodes
+              mergedTag = 
+                case nub explicitTags of
+                  []  -> Right "*"
+                  [t] -> Right t
+                  xs  -> Left . 
+                    LI.MkInvalidLocator l $ "Conflicting tags in All combinator - cannot convert to XPath: " <> txt xs
+              mergedPreds = concatMap (.predicates) nodes
+          in MkXPathNode <$> mergedTag <*> pure mergedPreds
+        -- Any: each branch is a full XPath; join with |
+        LI.Any {elms} ->
+          let branches = toList $ renderXPathNode . toXPathNode <$> elms
+              union = "(" <> T.intercalate " | " branches <> ")"
+          in MkXPathNode {tag = "*", predicates = ["boolean(" <> union <> ")"]}
+        -- Contains: contained node gains an ancestor predicate matching the container
+        LI.Contains {container, contained} ->
+          let MkXPathNode {tag = ct, predicates = cp} = toXPathNode contained
+              containerNode = toXPathNode container
+              ancestorPred = "ancestor::" <> containerNode.tag <> foldMap (\p -> "[" <> p <> "]") containerNode.predicates
+          in MkXPathNode {tag = ct, predicates = cp <> [ancestorPred]}
+        _ -> Right $ case l of
+                LI.XPath {value} -> parseXPathNode value
+                LI.AllElms -> MkXPathNode {tag = "*", predicates = []}
+                LI.Tag {value} -> MkXPathNode {tag = value, predicates = []}
+                LI.ID {value} -> MkXPathNode {tag = "*", predicates = ["@id='" <> value <> "'"]}
+                LI.Class {value, matchType, caseSensitivity} ->
+                  MkXPathNode {tag = "*", predicates = [classToXPathPred value matchType caseSensitivity]}
+                LI.Attribute {value, matchType, caseSensitivity} ->
+                  MkXPathNode {tag = "*", predicates = [attrToXPathPred value matchType caseSensitivity]}
+          
+                -- Error cases - should have been converted to XPath or removed by prepareSimplify
+                LI.CSS {} -> locErr l
+                LI.Default {} -> locErr l
+                LI.Role {} -> locErr l
+                LI.InnerText {} -> locErr l
+                LI.BiDiContext  {} -> locErr l
+                LI.PostFilter  {} -> locErr l
 
     -- | XPath predicate for CSS class matching.
     classToXPathPred :: Text -> LI.MatchType -> LI.CaseSensitivity -> Text
