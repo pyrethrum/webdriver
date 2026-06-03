@@ -11,19 +11,22 @@ import WebDriverPreCore.Utils.Timeout (milliseconds)
 import WebDriverPreCore.Extended.HTTP.Base.Protocol (URL)
 
 runSetup :: forall a. (forall es. (IOE :> es) => HttpDriverInfo -> InteractOpts -> Config -> Eff es a) -> IO a
-runSetup action = runEff $ do
-  (config :: Config) <- liftIO loadConfig
-  let 
-      opts :: InteractOpts
-      opts = mkInteractOpts config
-      
-      driverInfo :: HttpDriverInfo
-      driverInfo =
-        MkHttpDriverInfo
-          { httpEndpoint = MkHttpEndpoint {host = config.httpUrl, port = config.httpPort},
-            driverLogFn  = Nothing
-          }
-  action driverInfo opts config 
+runSetup action = runEff runAction
+  where
+    runAction :: Eff '[IOE] a
+    runAction = do
+      (config :: Config) <- liftIO loadConfig
+      let
+          opts :: InteractOpts
+          opts = mkInteractOpts config
+
+          driverInfo :: HttpDriverInfo
+          driverInfo =
+            MkHttpDriverInfo
+              { httpEndpoint = MkHttpEndpoint {host = config.httpUrl, port = config.httpPort},
+                driverLogFn  = Nothing
+              }
+      action driverInfo opts config
   
 mkInteractOpts :: Config -> InteractOpts
 mkInteractOpts config =

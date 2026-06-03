@@ -261,8 +261,8 @@ toXPathCore loc = LI.XPath . renderXPathNode <$> toXPathNode loc
                 LI.ID {value} -> MkXPathNode {tag = "*", predicates = ["@id='" <> value <> "'"]}
                 LI.Class {value, matchType, caseSensitivity} ->
                   MkXPathNode {tag = "*", predicates = [classToXPathPred value matchType caseSensitivity]}
-                LI.Attribute {value, matchType, caseSensitivity} ->
-                  MkXPathNode {tag = "*", predicates = [attrToXPathPred value matchType caseSensitivity]}
+                LI.Attribute {name, value, matchType, caseSensitivity} ->
+                  MkXPathNode {tag = "*", predicates = [namedAttrToXPathPred name value matchType caseSensitivity]}
           
                 -- Error cases - should have been converted to XPath or removed by prepareSimplify
                 LI.CSS {} -> locErr l
@@ -283,16 +283,16 @@ toXPathCore loc = LI.XPath . renderXPathNode <$> toXPathNode loc
             LI.Starts -> "starts-with(normalize-space(" <> classAttr <> "), '" <> matchVal <> "')"
             LI.Wildcard -> wildcardToXPathPred classAttr matchVal
 
-    -- | XPath predicate matching elements that have any attribute satisfying the condition.
-    attrToXPathPred :: Text -> LI.MatchType -> LI.CaseSensitivity -> Text
-    attrToXPathPred val mt cs =
-      let attrExpr = applyCS cs "."
+    -- | XPath predicate matching elements with a specific named attribute satisfying the condition.
+    namedAttrToXPathPred :: Text -> Text -> LI.MatchType -> LI.CaseSensitivity -> Text
+    namedAttrToXPathPred name val mt cs =
+      let attrExpr = applyCS cs ("@" <> name)
           matchVal = lowerIfCI cs val
        in case mt of
-            LI.Full -> "@*[" <> attrExpr <> "='" <> matchVal <> "']"
-            LI.Partial -> "@*[contains(" <> attrExpr <> ", '" <> matchVal <> "')]"
-            LI.Starts -> "@*[starts-with(" <> attrExpr <> ", '" <> matchVal <> "')]"
-            LI.Wildcard -> "@*[" <> wildcardToXPathPred attrExpr matchVal <> "]"
+            LI.Full -> attrExpr <> "='" <> matchVal <> "'"
+            LI.Partial -> "contains(" <> attrExpr <> ", '" <> matchVal <> "')" 
+            LI.Starts -> "starts-with(" <> attrExpr <> ", '" <> matchVal <> "')" 
+            LI.Wildcard -> wildcardToXPathPred attrExpr matchVal 
 
     applyCS :: LI.CaseSensitivity -> Text -> Text
     applyCS cs t = case cs of

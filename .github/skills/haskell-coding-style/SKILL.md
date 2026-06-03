@@ -230,3 +230,23 @@ data Locator
   | XPath { value :: Text }
   | AllElms
 ```
+
+## Tasty Test and Group Names
+
+Tasty's `-p/--pattern` shorthand treats the name as a plain substring only when it contains **solely** letters, digits, and the characters `. _ - ` (period, underscore, hyphen, space). Any other character — `:`, `(`, `)`, `=`, `,`, `;`, `+`, `/`, `'`, `[`, `]`, `&`, `|`, `>` — causes the argument to be parsed as an awk expression, which fails on natural-language text and breaks VS Code's test-explorer run-single-test integration.
+
+**Rule**: keep `testGroup` / `testCase` / `test` / helper names to letters, digits, spaces, hyphens, underscores, and periods only.
+
+**Avoid:**
+```haskell
+testGroup "Rule 1 (display=none on element itself)" [...]
+test "locate (singleton): resolves hidden/visible ambiguity" $ ...
+chkAll "AND: input_ &&& elmClass text-input" loc chk
+```
+
+**Prefer:**
+```haskell
+testGroup "Rule 1 - display none on element itself" [...]
+test "locate singleton - resolves hidden-visible ambiguity" $ ...
+chkAll "AND - input_ and elmClass text-input" loc chk
+```
