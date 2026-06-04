@@ -594,16 +594,20 @@ prepareSimplifyXPathTests =
         (XPath "//footer"),
       chkSimplifiedLoc
         "XPath already in //*[pred] form is unchanged"
-        (Right $ RL.Leaf $ RL.XPath "//*[self::footer]")
+        (Right . RL.Leaf $ RL.XPath "//*[self::footer]")
         (XPath "//*[self::footer]"),
       chkSimplifiedLoc
         "ID converts to XPath //*[@id=...]"
-        (Right $ RL.Leaf $ RL.XPath "//*[@id='my-id']")
+        (Right . RL.Leaf $ RL.XPath "//*[@id='my-id']")
         (ID "my-id"),
       chkSimplifiedLoc
         "Tag converts to XPath //tag"
         (Right $ RL.Leaf $ RL.XPath "//footer")
-        (Tag "footer")
+        (Tag "footer"),
+      chkSimplifiedLoc
+        "OR - h1 or h2 converts to XPath union"
+        (Right $ RL.Leaf $ RL.XPath "//h1 | //h2")
+        (Tag "h1" ||| Tag "h2")
     ]
 
 -- >>> _eval prop_simplification_merges_xpaths

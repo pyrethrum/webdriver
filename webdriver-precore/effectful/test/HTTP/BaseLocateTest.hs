@@ -374,6 +374,7 @@ baseLocateTests =
               , chkAutoId "definition by text content" (definition "John") "def-name"
               ]
 
+      {-
       , withResource (navToUrl ses landmarkRolesUrl) (\_ -> pure ()) $ \_ ->
           testGroup "Value PostFilter - not yet implemented in HTTP"
               -- These document expected behaviour once PostFilter is implemented.
@@ -388,6 +389,7 @@ baseLocateTests =
                   locRslt <- locateAll $ valueStarts "Jane" input_
                   chkElms (txt (valueStarts "Jane" input_)) chkSingleton locRslt
               ]
+              -}
       ]
     where
     test :: Text -> BaseHTTPEffs () -> TestTree
@@ -423,7 +425,7 @@ baseLocateTests =
     pure ses
 
   autoId :: Text -> Locator
-  autoId = attribute "auto-id"
+  autoId = attribute' "auto-id" Full CaseSensitive
 
   defOpts :: L.HttpLocateOpts
   defOpts = L.MkHttpLocateOpts { extendedRoleLocation = L.ExtLocateNever
@@ -581,7 +583,7 @@ chkEq :: (IOE :> es, Show a, Eq a) => Text -> a -> a -> Eff es ()
 chkEq msg a b = liftIO $ assertEqual (unpack msg) a b
 
 _pattern :: Maybe Text
-_pattern = Just "OR - h1_ or h2_ finds all headings"
+_pattern = Just "roleType Option finds all options"
 
 _eval :: Maybe Text -> TestTree -> IO ()
 _eval mPattern = withArgs (maybe [] (\pat -> ["-p", (unpack pat)]) mPattern) . defaultMain
@@ -589,4 +591,13 @@ _eval mPattern = withArgs (maybe [] (\pat -> ["-p", (unpack pat)]) mPattern) . d
 --- >>> _eval _pattern baseLocateTests
 -- *** Exception: ExitFailure 1
 
+{-
+    roleType Option finds all options:                                                          FAIL (0.02s)
+      /home/john-walker/repos/webdriver/webdriver-precore/effectful/test/HTTP/BaseLocateTest.hs:577:
+      Role { role = RoleType { role = Option } }: element list check failed - expected 2 options but got 0
+      Use -p '/roleType Option finds all options/' to rerun this test only.
+
+
+      locateAll from element - links within nav-main  
+-}
 

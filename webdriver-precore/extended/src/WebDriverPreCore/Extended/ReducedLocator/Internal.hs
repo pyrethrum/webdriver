@@ -245,11 +245,15 @@ toXPathCore loc = LI.XPath . renderXPathNode <$> toXPathNode loc
             xs  -> Left $ LI.MkInvalidLocator l ("Conflicting tags in All combinator - cannot convert to XPath: " <> txt xs)
           Right $ MkXPathNode {tag = mergedTag, predicates = mergedPreds}
         -- Any: each branch is a full XPath; join with |
+        -- We cannot represent XPath union as a single XPathNode, so we generate the union directly
         LI.Any {elms} -> do
           nodes <- traverse toXPathNode elms
           let branches = toList $ renderXPathNode <$> nodes
-              union = "(" <> T.intercalate " | " branches <> ")"
-          Right $ MkXPathNode {tag = "*", predicates = ["boolean(" <> union <> ")"]}
+              union = T.intercalate " | " branches
+          -- Parse the union expression as a single XPath
+          -- Since it contains multiple branches, parseXPathNode will wrap it in boolean()
+          -- which is what we want for a union when it appears in isolation
+          Right $ parseXPathNode union
         -- Contains: should not reach here since it's handled specially in convertXPath
         -- If it does, it means both parts weren't XPath and we can't convert
         LI.Contains {} -> 
