@@ -284,10 +284,22 @@ runHttpAction actions opts mRootId locateAction loc = do
 setBaseElement :: Maybe ElementId -> LocParams m -> LocParams m
 setBaseElement mRootId act@MkLocParams{..} = 
   maybe act (\rootId -> MkLocParams {
-  findElement = findElementFromElement rootId,
-  findElements = findElementsFromElement rootId,
+  findElement = makeRelative findElementFromElement rootId,
+  findElements = makeRelative findElementsFromElement rootId,
   ..
 }) mRootId
+  where
+    -- Convert absolute XPath to relative when using element-relative search
+    makeRelative :: (ElementId -> Selector -> m a) -> ElementId -> Selector -> m a
+    makeRelative f elmId sel = f elmId (toRelativeSelector sel)
+    
+    toRelativeSelector :: Selector -> Selector
+    toRelativeSelector (HTTPP.XPath xp) = 
+      -- Convert //path to .//path for element-relative search
+      case T.stripPrefix "//" xp of
+        Just rest -> HTTPP.XPath (".//" <> rest)
+        Nothing -> HTTPP.XPath xp  -- Already relative or absolute from root
+    toRelativeSelector sel = sel  -- CSS selectors don't need modification
 
 prepareRun :: forall m. Monad m =>
       LocParams m 
@@ -434,7 +446,7 @@ locateElmsUnchecked actions leafCardinality rolesSecondPass loc =
 
     locateContained :: [ElementId] -> ReducedHttpLoc -> m [ElementId]
     locateContained containerIds subLoc = do
-      containedResults <- traverse (\_ -> locate FindAll rolesSecondPass subLoc) containerIds
+      containedResults <- traverse (\containerId -> locateElmsUnchecked (setBaseElement (Just containerId) actions) FindAll rolesSecondPass subLoc) containerIds
       pure $ join containedResults
 
 

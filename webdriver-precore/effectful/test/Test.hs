@@ -4,6 +4,7 @@ import Bidi.Runner (runBiDiTest)
 import Bidi.SimpleDemo (bidi_login_demo)
 import HTTP.Runner (withHttp)
 import HTTP.SimpleDemo (http_login_navigation_demo)
+import HTTP.BaseLocateTest (baseLocateTests)
 import Test.Tasty (TestTree, defaultMain, testGroup)
 import Test.Tasty.HUnit (testCase)
 
@@ -15,5 +16,6 @@ tests =
   testGroup
     "Effectful Tests"
     [ testCase "HTTP login and navigation demo" (withHttp http_login_navigation_demo),
-      testCase "BiDi login demo" (runBiDiTest bidi_login_demo)
+      testCase "BiDi login demo" (runBiDiTest bidi_login_demo),
+      baseLocateTests
     ]

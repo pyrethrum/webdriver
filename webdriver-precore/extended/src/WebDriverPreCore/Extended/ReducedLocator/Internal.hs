@@ -158,14 +158,16 @@ xPathSub defLoc proto l =
         LI.Attribute {} -> xpathLoc
         LI.Tag {} -> xpathLoc
         LI.Default {value} -> convertXPath (defLoc value)
-        LI.Contains {container, contained} -> 
-          LI.Contains <$> (convertXPath container) <*> (convertXPath contained) >>= tryConvert 
+        LI.Contains {container, contained} ->
+          -- Keep Contains structure, just convert sub-locators
+          LI.Contains <$> (convertXPath container) <*> (convertXPath contained)
         LI.All {elms} -> LI.All <$> traverse convertXPath elms >>= tryConvert
         LI.Any {elms} -> LI.Any <$> traverse convertXPath elms >>= tryConvert
       where
         rLoc = Right loc
         xpathLoc = toXPathCore loc
         convertable l' = LI.classify defLoc proto l' == LI.IsXPath
+        
         tryConvert :: LI.Locator -> Either LI.InvalidLocator LI.Locator
         tryConvert l' =
           if convertable l'
@@ -248,12 +250,10 @@ toXPathCore loc = LI.XPath . renderXPathNode <$> toXPathNode loc
           let branches = toList $ renderXPathNode <$> nodes
               union = "(" <> T.intercalate " | " branches <> ")"
           Right $ MkXPathNode {tag = "*", predicates = ["boolean(" <> union <> ")"]}
-        -- Contains: contained node gains an ancestor predicate matching the container
-        LI.Contains {container, contained} -> do
-          MkXPathNode {tag = ct, predicates = cp} <- toXPathNode contained
-          containerNode <- toXPathNode container
-          let ancestorPred = "ancestor::" <> containerNode.tag <> foldMap (\p -> "[" <> p <> "]") containerNode.predicates
-          Right $ MkXPathNode {tag = ct, predicates = cp <> [ancestorPred]}
+        -- Contains: should not reach here since it's handled specially in convertXPath
+        -- If it does, it means both parts weren't XPath and we can't convert
+        LI.Contains {} -> 
+          Left $ LI.MkInvalidLocator l "Contains locator reached toXPathNode unexpectedly"
         _ -> Right $ case l of
                 LI.XPath {value} -> parseXPathNode value
                 LI.AllElms -> MkXPathNode {tag = "*", predicates = []}

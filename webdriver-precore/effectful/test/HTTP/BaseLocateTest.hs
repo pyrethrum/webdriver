@@ -525,10 +525,10 @@ locateAllHttp :: (IOE :> es, WebDriverHttp :> es) => L.HttpLocateOpts -> Locator
 locateAllHttp opts loc = actions >>= \a -> L.locateAllHttp a opts loc
 
 locateFromElementHttp :: (IOE :> es, WebDriverHttp :> es) => L.HttpLocateOpts -> ElementId -> Locator ->  Eff es L.LocateResult
-locateFromElementHttp ops loc elmId' = actions >>= \a -> L.locateFromElementHttp a ops loc elmId'
+locateFromElementHttp opts elmId loc = actions >>= \a -> L.locateFromElementHttp a opts elmId loc
 
 locateAllFromElementHttp :: (IOE :> es, WebDriverHttp :> es) => L.HttpLocateOpts -> ElementId -> Locator ->  Eff es L.LocateResult
-locateAllFromElementHttp ops loc elmId' = actions >>= \a -> L.locateAllFromElementHttp a ops loc elmId'
+locateAllFromElementHttp opts elmId loc = actions >>= \a -> L.locateAllFromElementHttp a opts elmId loc
 
 -- ################ Checks ################
 
@@ -581,7 +581,7 @@ chkEq :: (IOE :> es, Show a, Eq a) => Text -> a -> a -> Eff es ()
 chkEq msg a b = liftIO $ assertEqual (unpack msg) a b
 
 _pattern :: Maybe Text
-_pattern = Nothing -- Just "DisplayedCheckAlways filters hidden and DisplayedCheckNever does not"
+_pattern = Just "OR - h1_ or h2_ finds all headings"
 
 _eval :: Maybe Text -> TestTree -> IO ()
 _eval mPattern = withArgs (maybe [] (\pat -> ["-p", (unpack pat)]) mPattern) . defaultMain
