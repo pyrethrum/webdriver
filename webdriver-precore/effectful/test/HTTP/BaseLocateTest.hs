@@ -545,7 +545,7 @@ chkElms :: (IOE :> es) => Text -> ([ElementId] -> Maybe Text) -> L.LocateResult 
 chkElms errMsg p locRslt =
   either
     (liftFail . (errMsg <>) . (<> ": expected Right elements but got Left: ") . txt)
-    (liftChk (errMsg <> ": element list check failed") . p)
+    (liftChk (errMsg <> ": element list check failed\n" <> txt locRslt <> "\n") . p)
     (locRslt.result)
 
 
