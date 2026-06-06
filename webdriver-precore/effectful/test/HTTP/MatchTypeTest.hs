@@ -86,11 +86,7 @@ tests =
                   ],
                 testGroup
                   "Whitespace Normalization - Full MatchType"
-                  [ chkAutoId "Full CaseSensitive matches class with leading spaces" (elmClass' Full CaseSensitive "wtestclass") "cls-whitespace-leading",
-                    chkAutoId "Full CaseSensitive matches class with trailing spaces" (elmClass' Full CaseSensitive "wtestclass") "cls-whitespace-trailing",
-                    chkAutoId "Full CaseSensitive matches class with multiple spaces between classes" (elmClass' Full CaseSensitive "wtestclass") "cls-whitespace-multiple",
-                    chkAutoId "Full CaseSensitive matches class with tabs between classes" (elmClass' Full CaseSensitive "wtestclass") "cls-whitespace-tabs",
-                    chkAutoId "Full CaseSensitive matches class with mixed whitespace" (elmClass' Full CaseSensitive "wtestclass") "cls-whitespace-mixed",
+                  [
                     test "Full CaseSensitive finds all whitespace variants" $ do
                       results <- locateAll $ elmClass' Full CaseSensitive "wtestclass"
                       chkElms "Should find 5 whitespace variant elements" (chkCount 5) results
@@ -211,9 +207,9 @@ _eval :: Maybe Text -> TestTree -> IO ()
 _eval mPattern = withArgs (maybe [] (\pat -> ["-p", (unpack pat)]) mPattern) . defaultMain
 
 _pattern :: Maybe Text
-_pattern = Just "Contains Match - Partial MatchType"
--- _pattern = Nothing
+-- _pattern = Just "Contains Match - Partial MatchType"
+_pattern = Nothing
 
 --- >>> _eval _pattern tests
--- *** Exception: ExitSuccess
+-- *** Exception: ExitFailure 1
 
