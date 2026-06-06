@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>MatchType and CaseSensitivity Test Page</title>
+  <style>
+    .container { padding: 20px; }
+    .section { margin: 20px 0; border: 1px solid #ccc; padding: 10px; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>MatchType and CaseSensitivity Test Page</h1>
+
+    <!-- Class attribute tests -->
+    <section class="section">
+      <h2>Class Attribute Tests</h2>
+      <!-- Exact matches with different cases -->
+      <div auto-id="cls-exact-lower" class="testclass">Exact lowercase class</div>
+      <div auto-id="cls-exact-upper" class="TESTCLASS">Exact uppercase class</div>
+      <div auto-id="cls-exact-mixed" class="TestClass">Exact mixed case class</div>
+      
+      <!-- Starts with matches -->
+      <div auto-id="cls-starts-lower" class="swtestclass-item">Starts with lowercase</div>
+      <div auto-id="cls-starts-upper" class="SWTESTCLASS-ITEM">Starts with uppercase</div>
+      <div auto-id="cls-starts-mixed" class="SwTestClass-Item">Starts with mixed case</div>
+      
+      <!-- Contains matches -->
+      <div auto-id="cls-contains-lower" class="prefix-ptestclass-suffix">Contains lowercase</div>
+      <div auto-id="cls-contains-upper" class="PREFIX-PTESTCLASS-SUFFIX">Contains uppercase</div>
+      <div auto-id="cls-contains-mixed" class="Prefix-PTestClass-Suffix">Contains mixed case</div>
+      
+      <!-- Multiple classes -->
+      <div auto-id="cls-multi-lower" class="foo mtestclass bar">Multiple with lowercase</div>
+      <div auto-id="cls-multi-upper" class="FOO MTESTCLASS BAR">Multiple with uppercase</div>
+      <div auto-id="cls-multi-mixed" class="Foo MTestClass Bar">Multiple with mixed case</div>
+      
+      <!-- Whitespace normalization tests -->
+      <div auto-id="cls-whitespace-leading" class="  wtestclass">Leading spaces</div>
+      <div auto-id="cls-whitespace-trailing" class="wtestclass  ">Trailing spaces</div>
+      <div auto-id="cls-whitespace-multiple" class="foo  wtestclass  bar">Multiple spaces between classes</div>
+      <div auto-id="cls-whitespace-tabs" class="foo	wtestclass	bar">Tabs between classes</div>
+      <div auto-id="cls-whitespace-mixed" class="  foo  wtestclass  bar  ">Mixed whitespace</div>
+    </section>
+
+    <!-- Data attribute tests -->
+    <section class="section">
+      <h2>Data Attribute Tests</h2>
+      <!-- Exact matches with different cases -->
+      <div auto-id="attr-exact-lower" data-testattr="value">Exact lowercase value</div>
+      <div auto-id="attr-exact-upper" data-testattr="VALUE">Exact uppercase value</div>
+      <div auto-id="attr-exact-mixed" data-testattr="Value">Exact mixed case value</div>
+      
+      <!-- Starts with matches -->
+      <div auto-id="attr-starts-lower" data-testattr="swvalue-item">Starts with lowercase</div>
+      <div auto-id="attr-starts-upper" data-testattr="SWVALUE-ITEM">Starts with uppercase</div>
+      <div auto-id="attr-starts-mixed" data-testattr="SwValue-Item">Starts with mixed case</div>
+      
+      <!-- Contains matches -->
+      <div auto-id="attr-contains-lower" data-testattr="prefix-value-suffix">Contains lowercase</div>
+      <div auto-id="attr-contains-upper" data-testattr="PREFIX-VALUE-SUFFIX">Contains uppercase</div>
+      <div auto-id="attr-contains-mixed" data-testattr="Prefix-Value-Suffix">Contains mixed case</div>
+    </section>
+
+    <!-- Name attribute tests (for form elements) -->
+    <section class="section">
+      <h2>Name Attribute Tests</h2>
+      <input auto-id="name-exact-lower" type="text" name="username" placeholder="Exact lowercase name">
+      <input auto-id="name-exact-upper" type="text" name="USERNAME" placeholder="Exact uppercase name">
+      <input auto-id="name-exact-mixed" type="text" name="UserName" placeholder="Exact mixed case name">
+      
+      <input auto-id="name-starts-lower" type="text" name="swusername-field" placeholder="Starts with lowercase">
+      <input auto-id="name-starts-upper" type="text" name="SWUSERNAME-FIELD" placeholder="Starts with uppercase">
+      <input auto-id="name-starts-mixed" type="text" name="SwUserName-Field" placeholder="Starts with mixed case">
+      
+      <input auto-id="name-contains-lower" type="text" name="input-username-field" placeholder="Contains lowercase">
+      <input auto-id="name-contains-upper" type="text" name="INPUT-USERNAME-FIELD" placeholder="Contains uppercase">
+      <input auto-id="name-contains-mixed" type="text" name="Input-UserName-Field" placeholder="Contains mixed case">
+    </section>
+
+    <!-- Title attribute tests -->
+    <section class="section">
+      <h2>Title Attribute Tests</h2>
+      <span auto-id="title-exact-lower" title="helpmessage">Exact lowercase title</span>
+      <span auto-id="title-exact-upper" title="HELPMESSAGE">Exact uppercase title</span>
+      <span auto-id="title-exact-mixed" title="HelpMessage">Exact mixed case title</span>
+      
+      <span auto-id="title-starts-lower" title="swhelpmessage-text">Starts with lowercase title</span>
+      <span auto-id="title-starts-upper" title="SWHELPMESSAGE-TEXT">Starts with uppercase title</span>
+      <span auto-id="title-starts-mixed" title="SwHelpMessage-Text">Starts with mixed case title</span>
+      
+      <span auto-id="title-contains-lower" title="show-helpmessage-here">Contains lowercase title</span>
+      <span auto-id="title-contains-upper" title="SHOW-HELPMESSAGE-HERE">Contains uppercase title</span>
+      <span auto-id="title-contains-mixed" title="Show-HelpMessage-Here">Contains mixed case title</span>
+    </section>
+  </div>
+</body>
+</html>

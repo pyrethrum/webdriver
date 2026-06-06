@@ -447,7 +447,9 @@ test-suite test-effectful
     Bidi.Runner
     Bidi.SimpleDemo
     Common.Runner
+    Common.Utils
     HTTP.BaseLocateTest
+    HTTP.MatchTypeTest
     HTTP.Runner
     HTTP.SimpleDemo
   hs-source-dirs: effectful/test

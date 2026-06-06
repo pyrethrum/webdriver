@@ -1,29 +1,35 @@
 module HTTP.BaseLocateTest where
 
-import HTTP.Runner (getWDSession, closeWDSession, runHttpTest, WDSession, testUrl, runHttp, BaseHTTPEffs)
-import Test.Tasty (TestTree, defaultMain, testGroup, withResource, inOrderTestGroup)
+import Common.Utils
+  ( autoId,
+    chkAttributeEq,
+    chkElms,
+    chkElmsM,
+    chkEmpty,
+    chkEq,
+    chkLocException,
+    chkSingleton,
+    defOpts,
+    locateAllFromElementHttp,
+    locateAllHttp,
+    locateFromElementHttp,
+    locateHttp,
+  )
+import Common.Utils qualified as CU
+import Data.Text (Text, unpack)
+import Effectful
+import HTTP.Runner (BaseHTTPEffs, WDSession, closeWDSession, getWDSession, runHttp, runHttpTest, testUrl)
+import Prelude
 import System.Environment (withArgs)
-import Test.Tasty.HUnit (assertBool, assertFailure, assertEqual)
+import Test.Tasty (TestTree, defaultMain, inOrderTestGroup, testGroup, withResource)
+import Utils (txt)
+import WebDriver.Effectful
+import WebDriver.Effectful.HTTP.Base.Actions
+import WebDriverPreCore.Extended.HTTP.Base.Protocol (ElementId, URL)
+import WebDriverPreCore.Extended.Locate qualified as L
 import WebDriverPreCore.Extended.Locators
 import WebDriverPreCore.Extended.Locators.Internal (CaseSensitivity (..))
-import WebDriverPreCore.Extended.Locate qualified as L
-import WebDriver.Effectful.HTTP.Base.Actions 
 import WebDriverPreCore.Test.TestData
-import Effectful
-import Effectful.Exception (catch)
-import UnliftIO (throwIO)
-import WebDriver.Effectful
-import WebDriver.Effectful.Logger
-import WebDriverPreCore.Extended.HTTP.Base.Protocol (ElementId, URL)
-import Data.Text (Text, unpack)
-import Data.Text.IO qualified as TIO
-import Utils (txt)
-import Control.Monad (when, (>=>))
-import Data.Function ((&))
-import Data.Functor ((<&>))
-import UnliftIO.Concurrent
-import WebDriverPreCore.Utils.Timeout (second)
-import WebDriverPreCore.Test.Const (seconds)
 
 -- >>> _eval tests
 -- *** Exception: ExitSuccess
@@ -403,28 +409,19 @@ tests =
     test :: Text -> BaseHTTPEffs () -> TestTree
     test = runHttpTest ses
 
-    atrrChk :: Text -> Locator -> Text -> Text -> TestTree
-    atrrChk testName loc attrName expctd =
-      test testName $ locate loc >>= chkAttributeEq (txt loc) attrName expctd
-
+    -- Partially applied test helpers using shared functions from Common.Utils
     chkAutoId :: Text -> Locator -> Text -> TestTree
-    chkAutoId testName loc = atrrChk testName loc "auto-id"
+    chkAutoId = CU.chkAutoId test locate
+
+    chkAll :: Text -> Locator -> ([ElementId] -> Maybe Text) -> TestTree
+    chkAll = CU.chkAll test locateAll
+
+    chkAllNever :: Text -> Locator -> ([ElementId] -> Maybe Text) -> TestTree
+    chkAllNever = CU.chkAllNever test locateAllNever
 
     atrrChkExtRole :: Text -> Locator -> Text -> Text -> TestTree
     atrrChkExtRole testName loc attrName expctd =
       test testName $ locateExt loc >>= chkAttributeEq (txt loc) attrName expctd
-
-    chkAll :: Text -> Locator -> ([ElementId] -> Maybe Text) -> TestTree
-    chkAll testName loc chk =
-      test testName $ do
-        locRslt <- locateAll loc
-        chkElms (txt loc) chk locRslt
-
-    chkAllNever :: Text -> Locator -> ([ElementId] -> Maybe Text) -> TestTree
-    chkAllNever testName loc chk =
-      test testName $ do
-        locRslt <- locateAllNever loc
-        chkElms (txt loc) chk locRslt
 
     atrrChkExtMiss :: Text -> Locator -> Text -> Text -> TestTree
     atrrChkExtMiss testName loc attrName expctd =
@@ -438,17 +435,6 @@ tests =
     runHttp ses $ testUrl urlAction >>= navigateTo
     pure ses
 
-  autoId :: Text -> Locator
-  autoId = attribute' "auto-id" Full CaseSensitive
-
-  defOpts :: L.HttpLocateOpts
-  defOpts = L.MkHttpLocateOpts { extendedRoleLocation = L.ExtLocateNever
-                               , jsRecheckDisplayed = L.DisplayedCheckAlways
-                               , singletonCardinality = L.Unique
-                               , mkDefaultLoc = autoId
-                               , locateTracing = L.LocateTracing
-                               }
-
   locate :: forall es. (IOE :> es, WebDriverHttp :> es) => Locator -> Eff es L.LocateResult
   locate = locateHttp defOpts
 
@@ -460,10 +446,6 @@ tests =
 
   locateAllFromElement :: forall es. (IOE :> es, WebDriverHttp :> es) => ElementId -> Locator -> Eff es L.LocateResult
   locateAllFromElement = locateAllFromElementHttp defOpts
-
-  chkAttrEq :: forall es. (IOE :> es, WebDriverHttp :> es) => Locator -> Text -> Text -> Text -> Eff es ()
-  chkAttrEq loc msg attr expected =
-    locate loc >>= chkAttributeEq msg attr expected
 
   extAlwaysOpts :: L.HttpLocateOpts
   extAlwaysOpts = defOpts { L.extendedRoleLocation = L.ExtLocateAlways }
@@ -487,14 +469,6 @@ tests =
   isNotFound (L.ElementNotFound {}) = Nothing
   isNotFound other = Just $ "expected ElementNotFound but got: " <> txt other
 
-  chkEmpty :: [ElementId] -> Maybe Text
-  chkEmpty [] = Nothing
-  chkEmpty elms = Just $ "expected 0 results but got " <> txt (length elms)
-
-  chkSingleton :: [ElementId] -> Maybe Text
-  chkSingleton [_] = Nothing
-  chkSingleton elms = Just $ "expected exactly 1 result but got " <> txt (length elms)
-
   neverOpts :: L.HttpLocateOpts
   neverOpts = defOpts { L.jsRecheckDisplayed = L.DisplayedCheckNever }
 
@@ -516,85 +490,6 @@ tests =
   isAmbiguous :: L.LocateException -> Maybe Text
   isAmbiguous (L.AmbiguousLocator {}) = Nothing
   isAmbiguous other = Just $ "expected AmbiguousLocator but got: " <> txt other
-
-
--- actions :: forall es. (IOE :> es, Logger :> es, Pause :> es, WebDriverHttp :> es) => Eff es (L.LocateActions (Eff es))
-actions :: forall es. (IOE :> es, WebDriverHttp :> es) => Eff es (L.LocateActions (Eff es))
-actions = pure $ L.MkLocateActions { 
-                                   throw = throwIO,
-                                   catch,
-                                   findElement,
-                                   findElementFromElement,
-                                   findElements,
-                                   findElementsFromElement,
-                                   executeScript,
-                                   getElementAttribute,  
-                                   getElementText
-                                }
-         
--- ################ Base Eff Actions ################
-
-locateHttp :: (IOE :> es, WebDriverHttp :> es) => L.HttpLocateOpts -> Locator -> Eff es L.LocateResult
-locateHttp opts loc = actions >>= \a -> L.locateHttp a opts loc
-
-locateAllHttp :: (IOE :> es, WebDriverHttp :> es) => L.HttpLocateOpts -> Locator ->  Eff es L.LocateResult
-locateAllHttp opts loc = actions >>= \a -> L.locateAllHttp a opts loc
-
-locateFromElementHttp :: (IOE :> es, WebDriverHttp :> es) => L.HttpLocateOpts -> ElementId -> Locator ->  Eff es L.LocateResult
-locateFromElementHttp opts elmId loc = actions >>= \a -> L.locateFromElementHttp a opts elmId loc
-
-locateAllFromElementHttp :: (IOE :> es, WebDriverHttp :> es) => L.HttpLocateOpts -> ElementId -> Locator ->  Eff es L.LocateResult
-locateAllFromElementHttp opts elmId loc = actions >>= \a -> L.locateAllFromElementHttp a opts elmId loc
-
--- ################ Checks ################
-
-chkLocException :: (IOE :> es) => Text -> (L.LocateException -> Maybe Text) -> L.LocateResult -> Eff es ()
-chkLocException errMsg p locRslt =
-  either
-    (\ex -> liftChk locRslt (errMsg <> ": LocateException check failed: " <> txt ex) $ p ex)
-    (const . liftFail locRslt $ errMsg <> ": expected Left LocateException but got Right")
-    (locRslt.result)
-
-chkElms :: (IOE :> es) => Text -> ([ElementId] -> Maybe Text) -> L.LocateResult -> Eff es ()
-chkElms errMsg p locRslt =
-  either
-    (liftFail locRslt . (errMsg <>) . (<> ": expected Right elements but got Left: ") . txt)
-    (liftChk locRslt (errMsg <> ": element list check failed") . p)
-    (locRslt.result)
-
-
-chkElmsM :: (IOE :> es) => Text -> L.LocateResult -> ([ElementId] -> Eff es (Maybe Text)) -> Eff es ()
-chkElmsM testTitle locRslt chkM =
-  locRslt.result & either
-    (\err -> liftFail locRslt $ testTitle <> " - locate failed: " <> txt err)
-    (chkM >=> liftChk locRslt (testTitle <> " - element list check failed"))
-
-chkAttribute :: forall es. (IOE :> es, WebDriverHttp :> es)=> Text -> L.LocateResult -> Text -> (Text -> Maybe Text) -> Eff es ()
-chkAttribute testTitle locRslt attrName attrValChkM = 
-    chkElmsM testTitle locRslt elmChk 
-    where 
-      elmChk :: [ElementId] -> Eff es (Maybe Text)
-      elmChk = \case 
-        [el] ->  do
-          attr <- getElementAttribute el attrName 
-          pure $ maybe (Just $ testTitle <> " - attribute not found: " <> txt attrName) attrValChkM attr
-        elms -> pure $ Just $ testTitle <> " - expected singlet locate resultlist but got " <> txt (length elms) <> " elms"
-   
-chkAttributeEq :: (IOE :> es, WebDriverHttp :> es) => Text -> Text -> Text -> L.LocateResult -> Eff es ()
-chkAttributeEq testTitle attrName expctd locrslt = 
-  chkAttribute testTitle locrslt attrName (\actual -> if actual == expctd 
-                                                      then Nothing 
-                                                      else Just $ 
-                                                       testTitle <> " - expected attribute value: " <> txt expctd <> " but got: " <> txt actual)
-
-liftFail :: (IOE :> es) => L.LocateResult -> Text -> Eff es a
-liftFail locRslt msg = liftIO . assertFailure . unpack $ msg <> "\n\nLocateResult:\n" <> txt locRslt
-
-liftChk :: (IOE :> es) => L.LocateResult -> Text -> Maybe Text -> Eff es ()
-liftChk locRslt testTitle mErr = mErr & maybe (pure ()) (\erMsg -> liftFail locRslt $ testTitle <> " - " <> erMsg)
-
-chkEq :: (IOE :> es, Show a, Eq a) => Text -> a -> a -> Eff es ()
-chkEq msg a b = liftIO $ assertEqual (unpack msg) a b
 
 _pattern :: Maybe Text
 -- _pattern = Just "roleType Option"

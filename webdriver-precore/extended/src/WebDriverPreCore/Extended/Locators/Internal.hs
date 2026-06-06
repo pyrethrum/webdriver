@@ -471,7 +471,8 @@ locatorToXPathPartial = XPath . toXPathStr
             Full ->
               -- Pad the class attribute with spaces so each token is surrounded by spaces,
               -- then check for ' token '. Case folding applied inside concat.
-              "contains(concat(' ', " <> classAttr <> ", ' '), ' " <> matchVal <> " ')"
+              -- normalize-space() collapses multiple spaces and trims leading/trailing whitespace.
+              "contains(concat(' ', normalize-space(" <> classAttr <> "), ' '), ' " <> matchVal <> " ')"
             Partial -> "contains(" <> classAttr <> ", '" <> matchVal <> "')"
             Starts -> "starts-with(normalize-space(" <> classAttr <> "), '" <> matchVal <> "')"
             Wildcard -> wildcardPred classAttr matchVal

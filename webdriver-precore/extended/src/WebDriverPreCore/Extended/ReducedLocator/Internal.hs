@@ -282,7 +282,7 @@ toXPathCore loc = LI.XPath . renderXPathNode <$> toXPathNode loc
       let classAttr = applyCS cs "@class"
           matchVal = lowerIfCI cs val
        in case mt of
-            LI.Full -> "contains(concat(' ', " <> classAttr <> ", ' '), ' " <> matchVal <> " ')"
+            LI.Full -> "contains(concat(' ', normalize-space(" <> classAttr <> "), ' '), ' " <> matchVal <> " ')"
             LI.Partial -> "contains(" <> classAttr <> ", '" <> matchVal <> "')"
             LI.Starts -> "starts-with(normalize-space(" <> classAttr <> "), '" <> matchVal <> "')"
             LI.Wildcard -> wildcardToXPathPred classAttr matchVal
