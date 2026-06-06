@@ -22,6 +22,8 @@ import Control.Monad (when, (>=>))
 import Data.Function ((&))
 import Data.Functor ((<&>))
 import UnliftIO.Concurrent
+import WebDriverPreCore.Utils.Timeout (second)
+import WebDriverPreCore.Test.Const (seconds)
 
 -- >>> _eval baseLocateTests
 -- *** Exception: ExitSuccess
@@ -359,8 +361,14 @@ baseLocateTests =
               , chkAutoId "cell by text content" (cell "Cell A1") "cel-a1"
               , chkAutoId "roleType Group finds fieldset" (roleType Group) "grp-options"
               , chkAutoId "group by accessible name" (group "Options Group") "grp-options"
-              , chkAll "roleType Option finds all options" (roleType Option)
-                  (\elms -> if length elms == 2 then Nothing else Just $ "expected 2 options but got " <> txt (length elms))
+              -- Note: <option> elements always have offsetWidth/offsetHeight of 0, even when the
+              -- dropdown is visually open. Browser <select> dropdowns are rendered as native OS
+              -- widgets (not DOM elements), so options never have CSS dimensions. DisplayedCheckAlways
+              -- filters them out. Use DisplayedCheckNever to locate them programmatically.
+              , chkAll "roleType Option finds no options (DisplayedCheckAlways)" (roleType Option)
+                  (\elms -> if length elms == 0 then Nothing else Just $ "expected 0 options (native widget has no CSS dimensions) but got " <> txt (length elms))
+              , chkAllNever "roleType Option with DisplayedCheckNever finds all options" (roleType Option)
+                  (\elms -> if length elms == 2 then Nothing else Just $ "expected 2 options (no display check) but got " <> txt (length elms))
               , chkAutoId "option by text content" (option "Alpha") "opt-alpha"
               , chkAutoId "roleType Separator" (roleType Separator) "sep-main"
               , chkAutoId "progressBar by accessible name" (progressBar "Upload progress") "prg-upload"
@@ -410,6 +418,12 @@ baseLocateTests =
     chkAll testName loc chk =
       test testName $ do
         locRslt <- locateAll loc
+        chkElms (txt loc) chk locRslt
+
+    chkAllNever :: Text -> Locator -> ([ElementId] -> Maybe Text) -> TestTree
+    chkAllNever testName loc chk =
+      test testName $ do
+        locRslt <- locateAllNever loc
         chkElms (txt loc) chk locRslt
 
     atrrChkExtMiss :: Text -> Locator -> Text -> Text -> TestTree
@@ -583,21 +597,13 @@ chkEq :: (IOE :> es, Show a, Eq a) => Text -> a -> a -> Eff es ()
 chkEq msg a b = liftIO $ assertEqual (unpack msg) a b
 
 _pattern :: Maybe Text
-_pattern = Just "roleType Option finds all options"
+-- _pattern = Just "roleType Option"
+_pattern = Nothing
 
 _eval :: Maybe Text -> TestTree -> IO ()
 _eval mPattern = withArgs (maybe [] (\pat -> ["-p", (unpack pat)]) mPattern) . defaultMain
 
 --- >>> _eval _pattern baseLocateTests
--- *** Exception: ExitFailure 1
+-- *** Exception: ExitSuccess
 
-{-
-    roleType Option finds all options:                                                          FAIL (0.02s)
-      /home/john-walker/repos/webdriver/webdriver-precore/effectful/test/HTTP/BaseLocateTest.hs:577:
-      Role { role = RoleType { role = Option } }: element list check failed - expected 2 options but got 0
-      Use -p '/roleType Option finds all options/' to rerun this test only.
-
-
-      locateAll from element - links within nav-main  
--}
 
