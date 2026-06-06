@@ -449,6 +449,7 @@ test-suite test-effectful
     Common.Runner
     Common.Utils
     HTTP.BaseLocateTest
+    HTTP.LocateCombinatorTest
     HTTP.MatchTypeTest
     HTTP.Runner
     HTTP.SimpleDemo
