@@ -109,20 +109,20 @@ tests =
                   ],
                 testGroup
                   "Data Attribute - Starts Match"
-                  [ chkAutoId "Starts CaseSensitive matches lowercase data attr prefix" (attribute' "data-testattr" Starts CaseSensitive "value") "attr-starts-lower",
-                    chkAutoId "Starts CaseSensitive matches uppercase data attr prefix" (attribute' "data-testattr" Starts CaseSensitive "VALUE") "attr-starts-upper",
-                    chkAutoId "Starts CaseSensitive matches mixed case data attr prefix" (attribute' "data-testattr" Starts CaseSensitive "Value") "attr-starts-mixed",
+                  [ chkAutoId "Starts CaseSensitive matches lowercase data attr prefix" (attribute' "data-testattr" Starts CaseSensitive "swvalue") "attr-starts-lower",
+                    chkAutoId "Starts CaseSensitive matches uppercase data attr prefix" (attribute' "data-testattr" Starts CaseSensitive "SWVALUE") "attr-starts-upper",
+                    chkAutoId "Starts CaseSensitive matches mixed case data attr prefix" (attribute' "data-testattr" Starts CaseSensitive "SwValue") "attr-starts-mixed",
                     test "Starts CaseInsensitive finds all data attr prefix matches" $ do
-                      results <- locateAll $ attribute' "data-testattr" Starts CaseInsensitive "value"
+                      results <- locateAll $ attribute' "data-testattr" Starts CaseInsensitive "swvalue"
                       chkElms "Should find 3 starts data attr matches" (chkCount 3) results
                   ],
                 testGroup
                   "Data Attribute - Contains Match"
-                  [ chkAutoId "Partial CaseSensitive matches lowercase data attr substring" (attribute' "data-testattr" Partial CaseSensitive "value") "attr-contains-lower",
-                    chkAutoId "Partial CaseSensitive matches uppercase data attr substring" (attribute' "data-testattr" Partial CaseSensitive "VALUE") "attr-contains-upper",
-                    chkAutoId "Partial CaseSensitive matches mixed case data attr substring" (attribute' "data-testattr" Partial CaseSensitive "Value") "attr-contains-mixed",
+                  [ chkAutoId "Partial CaseSensitive matches lowercase data attr substring" (attribute' "data-testattr" Partial CaseSensitive "prefix-value") "attr-contains-lower",
+                    chkAutoId "Partial CaseSensitive matches uppercase data attr substring" (attribute' "data-testattr" Partial CaseSensitive "PREFIX-VALUE") "attr-contains-upper",
+                    chkAutoId "Partial CaseSensitive matches mixed case data attr substring" (attribute' "data-testattr" Partial CaseSensitive "Prefix-Value") "attr-contains-mixed",
                     test "Partial CaseInsensitive finds all data attr substring matches" $ do
-                      results <- locateAll $ attribute' "data-testattr" Partial CaseInsensitive "value"
+                      results <- locateAll $ attribute' "data-testattr" Partial CaseInsensitive "prefix-value"
                       chkElms "Should find 3 contains data attr matches" (chkCount 3) results
                   ],
                 testGroup
@@ -136,20 +136,20 @@ tests =
                   ],
                 testGroup
                   "Name Attribute - Starts Match"
-                  [ chkAutoId "Starts CaseSensitive matches lowercase name prefix" (attribute' "name" Starts CaseSensitive "username") "name-starts-lower",
-                    chkAutoId "Starts CaseSensitive matches uppercase name prefix" (attribute' "name" Starts CaseSensitive "USERNAME") "name-starts-upper",
-                    chkAutoId "Starts CaseSensitive matches mixed case name prefix" (attribute' "name" Starts CaseSensitive "UserName") "name-starts-mixed",
+                  [ chkAutoId "Starts CaseSensitive matches lowercase name prefix" (attribute' "name" Starts CaseSensitive "swusername") "name-starts-lower",
+                    chkAutoId "Starts CaseSensitive matches uppercase name prefix" (attribute' "name" Starts CaseSensitive "SWUSERNAME") "name-starts-upper",
+                    chkAutoId "Starts CaseSensitive matches mixed case name prefix" (attribute' "name" Starts CaseSensitive "SwUserName") "name-starts-mixed",
                     test "Starts CaseInsensitive finds all name prefix matches" $ do
-                      results <- locateAll $ attribute' "name" Starts CaseInsensitive "username"
+                      results <- locateAll $ attribute' "name" Starts CaseInsensitive "swusername"
                       chkElms "Should find 3 starts name attr matches" (chkCount 3) results
                   ],
                 testGroup
                   "Name Attribute - Contains Match"
-                  [ chkAutoId "Partial CaseSensitive matches lowercase name substring" (attribute' "name" Partial CaseSensitive "username") "name-contains-lower",
-                    chkAutoId "Partial CaseSensitive matches uppercase name substring" (attribute' "name" Partial CaseSensitive "USERNAME") "name-contains-upper",
-                    chkAutoId "Partial CaseSensitive matches mixed case name substring" (attribute' "name" Partial CaseSensitive "UserName") "name-contains-mixed",
+                  [ chkAutoId "Partial CaseSensitive matches lowercase name substring" (attribute' "name" Partial CaseSensitive "input-username") "name-contains-lower",
+                    chkAutoId "Partial CaseSensitive matches uppercase name substring" (attribute' "name" Partial CaseSensitive "INPUT-USERNAME") "name-contains-upper",
+                    chkAutoId "Partial CaseSensitive matches mixed case name substring" (attribute' "name" Partial CaseSensitive "Input-UserName") "name-contains-mixed",
                     test "Partial CaseInsensitive finds all name substring matches" $ do
-                      results <- locateAll $ attribute' "name" Partial CaseInsensitive "username"
+                      results <- locateAll $ attribute' "name" Partial CaseInsensitive "input-username"
                       chkElms "Should find 3 contains name attr matches" (chkCount 3) results
                   ],
                 testGroup
@@ -163,20 +163,20 @@ tests =
                   ],
                 testGroup
                   "Title Attribute - Starts Match"
-                  [ chkAutoId "Starts CaseSensitive matches lowercase title prefix" (attribute' "title" Starts CaseSensitive "helpmessage") "title-starts-lower",
-                    chkAutoId "Starts CaseSensitive matches uppercase title prefix" (attribute' "title" Starts CaseSensitive "HELPMESSAGE") "title-starts-upper",
-                    chkAutoId "Starts CaseSensitive matches mixed case title prefix" (attribute' "title" Starts CaseSensitive "HelpMessage") "title-starts-mixed",
+                  [ chkAutoId "Starts CaseSensitive matches lowercase title prefix" (attribute' "title" Starts CaseSensitive "swhelpmessage") "title-starts-lower",
+                    chkAutoId "Starts CaseSensitive matches uppercase title prefix" (attribute' "title" Starts CaseSensitive "SWHELPMESSAGE") "title-starts-upper",
+                    chkAutoId "Starts CaseSensitive matches mixed case title prefix" (attribute' "title" Starts CaseSensitive "SwHelpMessage") "title-starts-mixed",
                     test "Starts CaseInsensitive finds all title prefix matches" $ do
-                      results <- locateAll $ attribute' "title" Starts CaseInsensitive "helpmessage"
+                      results <- locateAll $ attribute' "title" Starts CaseInsensitive "swhelpmessage"
                       chkElms "Should find 3 starts title matches" (chkCount 3) results
                   ],
                 testGroup
                   "Title Attribute - Contains Match"
-                  [ chkAutoId "Partial CaseSensitive matches lowercase title substring" (attribute' "title" Partial CaseSensitive "helpmessage") "title-contains-lower",
-                    chkAutoId "Partial CaseSensitive matches uppercase title substring" (attribute' "title" Partial CaseSensitive "HELPMESSAGE") "title-contains-upper",
-                    chkAutoId "Partial CaseSensitive matches mixed case title substring" (attribute' "title" Partial CaseSensitive "HelpMessage") "title-contains-mixed",
+                  [ chkAutoId "Partial CaseSensitive matches lowercase title substring" (attribute' "title" Partial CaseSensitive "show-helpmessage") "title-contains-lower",
+                    chkAutoId "Partial CaseSensitive matches uppercase title substring" (attribute' "title" Partial CaseSensitive "SHOW-HELPMESSAGE") "title-contains-upper",
+                    chkAutoId "Partial CaseSensitive matches mixed case title substring" (attribute' "title" Partial CaseSensitive "Show-HelpMessage") "title-contains-mixed",
                     test "Partial CaseInsensitive finds all title substring matches" $ do
-                      results <- locateAll $ attribute' "title" Partial CaseInsensitive "helpmessage"
+                      results <- locateAll $ attribute' "title" Partial CaseInsensitive "show-helpmessage"
                       chkElms "Should find 3 contains title matches" (chkCount 3) results
                   ]
               ]
@@ -211,5 +211,5 @@ _pattern :: Maybe Text
 _pattern = Nothing
 
 --- >>> _eval _pattern tests
--- *** Exception: ExitFailure 1
+-- *** Exception: ExitSuccess
 
