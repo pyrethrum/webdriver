@@ -25,10 +25,10 @@ import UnliftIO.Concurrent
 import WebDriverPreCore.Utils.Timeout (second)
 import WebDriverPreCore.Test.Const (seconds)
 
--- >>> _eval baseLocateTests
+-- >>> _eval tests
 -- *** Exception: ExitSuccess
-baseLocateTests :: TestTree
-baseLocateTests =
+tests :: TestTree
+tests =
   withResource getWDSession closeWDSession runSessionTests
   where
   runSessionTests :: IO WDSession -> TestTree
@@ -551,23 +551,23 @@ locateAllFromElementHttp opts elmId loc = actions >>= \a -> L.locateAllFromEleme
 chkLocException :: (IOE :> es) => Text -> (L.LocateException -> Maybe Text) -> L.LocateResult -> Eff es ()
 chkLocException errMsg p locRslt =
   either
-    (\ex -> liftChk (errMsg <> ": LocateException check failed: " <> txt ex) $ p ex)
-    (const . liftFail $ errMsg <> ": expected Left LocateException but got Right")
+    (\ex -> liftChk locRslt (errMsg <> ": LocateException check failed: " <> txt ex) $ p ex)
+    (const . liftFail locRslt $ errMsg <> ": expected Left LocateException but got Right")
     (locRslt.result)
 
 chkElms :: (IOE :> es) => Text -> ([ElementId] -> Maybe Text) -> L.LocateResult -> Eff es ()
 chkElms errMsg p locRslt =
   either
-    (liftFail . (errMsg <>) . (<> ": expected Right elements but got Left: ") . txt)
-    (liftChk (errMsg <> ": element list check failed\n" <> txt locRslt <> "\n") . p)
+    (liftFail locRslt . (errMsg <>) . (<> ": expected Right elements but got Left: ") . txt)
+    (liftChk locRslt (errMsg <> ": element list check failed") . p)
     (locRslt.result)
 
 
 chkElmsM :: (IOE :> es) => Text -> L.LocateResult -> ([ElementId] -> Eff es (Maybe Text)) -> Eff es ()
 chkElmsM testTitle locRslt chkM =
   locRslt.result & either
-    (\err -> liftFail $ " - locate failed:\n" <> testTitle <> "\n" <> txt err <> "\n" <> txt locRslt)
-    (chkM >=> liftChk (testTitle <> " - element list check failed"))
+    (\err -> liftFail locRslt $ testTitle <> " - locate failed: " <> txt err)
+    (chkM >=> liftChk locRslt (testTitle <> " - element list check failed"))
 
 chkAttribute :: forall es. (IOE :> es, WebDriverHttp :> es)=> Text -> L.LocateResult -> Text -> (Text -> Maybe Text) -> Eff es ()
 chkAttribute testTitle locRslt attrName attrValChkM = 
@@ -587,11 +587,11 @@ chkAttributeEq testTitle attrName expctd locrslt =
                                                       else Just $ 
                                                        testTitle <> " - expected attribute value: " <> txt expctd <> " but got: " <> txt actual)
 
-liftFail :: (IOE :> es) => Text -> Eff es a
-liftFail = liftIO . assertFailure . unpack
+liftFail :: (IOE :> es) => L.LocateResult -> Text -> Eff es a
+liftFail locRslt msg = liftIO . assertFailure . unpack $ msg <> "\n\nLocateResult:\n" <> txt locRslt
 
-liftChk :: (IOE :> es) => Text -> Maybe Text -> Eff es ()
-liftChk testTitle mErr = mErr & maybe (pure ()) (\erMsg -> liftFail $ testTitle <> " - " <> erMsg)
+liftChk :: (IOE :> es) => L.LocateResult -> Text -> Maybe Text -> Eff es ()
+liftChk locRslt testTitle mErr = mErr & maybe (pure ()) (\erMsg -> liftFail locRslt $ testTitle <> " - " <> erMsg)
 
 chkEq :: (IOE :> es, Show a, Eq a) => Text -> a -> a -> Eff es ()
 chkEq msg a b = liftIO $ assertEqual (unpack msg) a b
@@ -603,7 +603,7 @@ _pattern = Nothing
 _eval :: Maybe Text -> TestTree -> IO ()
 _eval mPattern = withArgs (maybe [] (\pat -> ["-p", (unpack pat)]) mPattern) . defaultMain
 
---- >>> _eval _pattern baseLocateTests
+--- >>> _eval _pattern tests
 -- *** Exception: ExitSuccess
 
 

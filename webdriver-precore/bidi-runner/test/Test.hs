@@ -91,7 +91,7 @@ bidiDemos cfg =
                 [ Browser.browserGetClientWindowsDemo,
                   Browser.browserCreateUserContextDemo,
                   Browser.browserGetUserContextsDemo,
-                  unknownCommand [Firefox', Chrome']
+                  unknownCommand [Chrome']
                     Browser.browserSetClientWindowStateDemo,
                   Browser.browserRemoveUserContextDemo,
                   Browser.browserCompleteWorkflowDemo,
@@ -130,9 +130,8 @@ bidiDemos cfg =
                     "Expected \\\\\\\"coordinates\\\\\\\" to be an object"
                     Emulation.emulationSetGeolocationOverridePositionErrorDemo,
                   Emulation.emulationSetLocaleOverrideDemo,
-                  unknownCommand [Firefox']
                     -- since https://www.w3.org/TR/2025/WD-webdriver-bidi-20251007
-                    Emulation.emulationSetNetworkConditionsDemo,
+                  Emulation.emulationSetNetworkConditionsDemo,
                   Emulation.emulationSetScreenOrientationOverrideDemo,
                   unknownCommand [Chrome']
                     -- since https://www.w3.org/TR/2025/WD-webdriver-bidi-20251120
