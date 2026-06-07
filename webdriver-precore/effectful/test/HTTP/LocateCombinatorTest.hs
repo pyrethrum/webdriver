@@ -1,6 +1,5 @@
 module HTTP.LocateCombinatorTest where
 
-import Control.Monad (replicateM)
 import Data.Text (Text)
 import HTTP.Runner (WDSession, closeWDSession, getWDSession)
 import Prelude
@@ -50,13 +49,7 @@ genNode =
 
     domClassCountWeights :: [(Word, Int)]
     domClassCountWeights =
-      [ (1, 1),
-        (2, 2),
-        (3, 3),
-        (4, 4),
-        (5, 5),
-        (fromIntegral maxDomClassesPerNode, maxDomClassesPerNode)
-      ]
+      (\classCount -> (fromIntegral classCount, classCount)) <$> [1 .. maxDomClassesPerNode]
 
     genNodeAt :: Int -> Text -> Gen Node
     genNodeAt depth parentAutoId
@@ -89,17 +82,22 @@ genNode =
     genDomClasses :: Gen [DOMClass]
     genDomClasses = do
       classCount <- genDomClassCount
-      replicateM classCount genDomClass
+      genUniqueDomClasses classCount [A, B, C, D, E]
+
+    genUniqueDomClasses :: Int -> [DOMClass] -> Gen [DOMClass]
+    genUniqueDomClasses classCount availableClasses
+      | classCount <= 0 = pure []
+      | null availableClasses = pure []
+      | otherwise = do
+          nextClass <- genDomClassFrom availableClasses
+          restClasses <- genUniqueDomClasses (classCount - 1) (filter (/= nextClass) availableClasses)
+          pure $ nextClass : restClasses
 
     genDomClassCount :: Gen Int
     genDomClassCount = frequency ((\(w, c) -> (w, pure c)) <$> domClassCountWeights)
 
-    genDomClass :: Gen DOMClass
-    genDomClass =
-      frequency
-        [ (1, pure A),
-          (1, pure B),
-          (1, pure C),
-          (1, pure D),
-          (1, pure E)
-        ]
+    genDomClassFrom :: [DOMClass] -> Gen DOMClass
+    genDomClassFrom availableClasses =
+      frequency $ ((\dc -> (1, pure dc)) <$> availableClasses)
+
+
