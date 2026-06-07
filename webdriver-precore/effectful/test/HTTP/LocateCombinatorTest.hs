@@ -1,40 +1,13 @@
 module HTTP.LocateCombinatorTest where
 
-import Common.Utils
-  ( autoId,
-    chkAttributeEq,
-    chkElms,
-    chkElmsM,
-    chkEmpty,
-    chkEq,
-    chkLocException,
-    chkSingleton,
-    defOpts,
-    locateAllFromElementHttp,
-    locateAllHttp,
-    locateFromElementHttp,
-    locateHttp,
-  )
-import Common.Utils qualified as CU
-import Data.Text (Text, unpack)
-import Effectful
-import HTTP.Runner (BaseHTTPEffs, WDSession, closeWDSession, getWDSession, runHttp, runHttpTest, testUrl)
+import Control.Monad (replicateM)
+import Data.Text (Text)
+import HTTP.Runner (WDSession, closeWDSession, getWDSession)
 import Prelude
-import System.Environment (withArgs)
 import Test.Falsify.Generator as G (Gen, frequency, integral)
-import Test.Falsify.Predicate (expect, satisfies, (.$))
 import Test.Falsify.Range as R (between)
-import Test.Tasty (TestTree, defaultMain, inOrderTestGroup, testGroup, withResource)
-import Test.Tasty.Falsify (ExpectFailure (DontExpectFailure), TestOptions (..), Verbose (..), gen, info, testPropertyWith)
-import Test.Tasty.Falsify qualified as F
+import Test.Tasty (TestTree, inOrderTestGroup, testGroup, withResource)
 import Utils (txt)
-import WebDriver.Effectful
-import WebDriver.Effectful.HTTP.Base.Actions
-import WebDriverPreCore.Extended.HTTP.Base.Protocol (ElementId, URL)
-import WebDriverPreCore.Extended.Locate qualified as L
-import WebDriverPreCore.Extended.Locators
-import WebDriverPreCore.Extended.Locators.Internal (CaseSensitivity (..))
-import WebDriverPreCore.Test.TestData
 
 -- >>> _eval tests
 -- *** Exception: ExitSuccess
@@ -43,7 +16,90 @@ tests =
   withResource getWDSession closeWDSession runSessionTests
   where
   runSessionTests :: IO WDSession -> TestTree
-  runSessionTests ses =
+  runSessionTests _ses =
     inOrderTestGroup "Locate Combinator Tests"
       [ testGroup "TODO: Add tests here" []
       ]
+
+
+data DOMClass = A | B | C | D | E deriving (Eq, Show)
+data Node = Div {
+                  autoId :: Text,
+                  classes :: [DOMClass],
+                  children :: [Node] 
+                } | 
+                Span {
+                  autoId :: Text,
+                  classes :: [DOMClass]
+                }
+                deriving (Eq, Show)
+
+genNode :: Gen Node
+genNode = 
+  genDivNodeAt nodeRootDepth rootAutoId
+  where
+    nodeMaxDepth = 6
+    nodeRootDepth = 1
+    rootAutoId = "1"
+    autoIdSeparator = "-"
+    minChildrenPerLevel = 1
+    maxChildrenPerLevel = 10
+    spanNodeWeight = 3
+    divNodeWeight = 1
+    maxDomClassesPerNode = 5
+
+    domClassCountWeights :: [(Word, Int)]
+    domClassCountWeights =
+      [ (1, 1),
+        (2, 2),
+        (3, 3),
+        (4, 4),
+        (5, 5),
+        (fromIntegral maxDomClassesPerNode, maxDomClassesPerNode)
+      ]
+
+    genNodeAt :: Int -> Text -> Gen Node
+    genNodeAt depth parentAutoId
+      | depth >= nodeMaxDepth = genSpanNode parentAutoId
+      | otherwise =
+          frequency
+            [ (spanNodeWeight, genSpanNode parentAutoId),
+              (divNodeWeight, genDivNodeAt depth parentAutoId)
+            ]
+
+    genDivNodeAt :: Int -> Text -> Gen Node
+    genDivNodeAt depth parentAutoId = do
+      nodeClasses <- genDomClasses
+      nodeChildren <- genChildrenAt depth parentAutoId
+      pure $ Div {autoId = parentAutoId, classes = nodeClasses, children = nodeChildren}
+
+    genSpanNode :: Text -> Gen Node
+    genSpanNode parentAutoId = do
+      nodeClasses <- genDomClasses
+      pure $ Span {autoId = parentAutoId, classes = nodeClasses}
+
+    genChildrenAt :: Int -> Text -> Gen [Node]
+    genChildrenAt depth parentAutoId = do
+      childCount <- G.integral $ R.between (minChildrenPerLevel, maxChildrenPerLevel)
+      traverse (\childIndex -> genNodeAt (depth + 1) (mkChildAutoId parentAutoId childIndex)) [1 .. childCount]
+
+    mkChildAutoId :: Text -> Int -> Text
+    mkChildAutoId parentAutoId childIndex = parentAutoId <> autoIdSeparator <> txt childIndex
+
+    genDomClasses :: Gen [DOMClass]
+    genDomClasses = do
+      classCount <- genDomClassCount
+      replicateM classCount genDomClass
+
+    genDomClassCount :: Gen Int
+    genDomClassCount = frequency ((\(w, c) -> (w, pure c)) <$> domClassCountWeights)
+
+    genDomClass :: Gen DOMClass
+    genDomClass =
+      frequency
+        [ (1, pure A),
+          (1, pure B),
+          (1, pure C),
+          (1, pure D),
+          (1, pure E)
+        ]

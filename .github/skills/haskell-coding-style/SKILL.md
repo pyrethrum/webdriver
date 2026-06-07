@@ -5,6 +5,24 @@ description: 'Haskell coding style guidelines for this project. Use when: writin
 
 # Haskell Coding Style
 
+## Core Project Rules
+
+## Code Style
+- Use 2-space indentation
+- Prefer explicit type signatures
+
+## Patterns to Follow
+- Prefer `(&)` for pipeline-style operations
+- Use record syntax with OverloadedRecordDot
+- Use `maybe`, `either`, `fromMaybe` rather than explicit case statements for `Maybe` and `Either`
+- Use `LambdaCase`
+- Prefer `f . g . h $ x` over `f $ g $ h $ x`
+
+## Avoid
+- String type (prefer Text)
+- Nested if-then-else (use case or guards)
+- Trailing closing parentheses (prefer `$`)
+
 ## Prefer LambdaCase
 
 Use `\case` instead of a named lambda when pattern-matching on the sole argument.
@@ -139,6 +157,28 @@ render = toText . format . normalise
 ```
 
 **Limit**: don't sacrifice clarity. If point-free requires `(.).(.)` or `flip` gymnastics, name the argument instead.
+
+## Avoid List Comprehensions
+
+Prefer `traverse`, `for`, `map`, `filter`, and `replicateM` over list comprehensions.
+
+**Avoid:**
+```haskell
+[f x | x <- xs]
+
+[x | x <- xs, predicate x]
+
+sequence [mkChild i | i <- [1 .. count]]
+```
+
+**Prefer:**
+```haskell
+f <$> xs
+
+filter predicate xs
+
+traverse mkChild [1 .. count]
+```
 
 ## Prefer `<$>` over `fmap`, `map`, and `second`
 
