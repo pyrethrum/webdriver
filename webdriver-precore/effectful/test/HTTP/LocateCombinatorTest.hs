@@ -1,12 +1,16 @@
 module HTTP.LocateCombinatorTest where
 
+import Control.Monad (replicateM)
+import Data.Text qualified as T
 import Data.Text (Text)
 import HTTP.Runner (WDSession, closeWDSession, getWDSession)
 import Prelude
 import Test.Falsify.Generator as G (Gen, frequency, integral)
+import Test.Falsify.Interactive (sample)
 import Test.Falsify.Range as R (between)
 import Test.Tasty (TestTree, inOrderTestGroup, testGroup, withResource)
 import Utils (txt)
+import qualified Data.Text.IO as T
 
 -- >>> _eval tests
 -- *** Exception: ExitSuccess
@@ -100,4 +104,12 @@ genNode =
     genDomClassFrom availableClasses =
       frequency $ ((\dc -> (1, pure dc)) <$> availableClasses)
 
+prettyNode :: Int -> Node -> Text
+prettyNode idx node = "Node " <> txt idx <> ":\n" <> txt node
 
+_eval :: IO ()
+_eval = do
+  nodes <- replicateM 5 $ sample genNode
+  T.putStrLn $  T.intercalate "\n\n" $ zipWith prettyNode [1 :: Int ..] nodes
+
+-- >>> _eval
