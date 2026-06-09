@@ -68,6 +68,25 @@ data LocatorTestCase = MkLocatorTestCase {
   testCases :: [LocateExpectation]
 }
 
+genCase :: Gen LocatorTestCase
+genCase = do
+  node <- genNode
+  rawSelections <- replicateM 1000 genSelection
+  let expectations = 
+       take 100 
+       . filter (not . null . (.expectedMatches)) 
+       . fmap (mkExpectation node) 
+       . nub 
+       $ rawSelections
+  pure $ MkLocatorTestCase {testNode = node, testCases = expectations}
+  where
+    mkExpectation :: Node -> Selection -> LocateExpectation
+    mkExpectation node selection =
+      MkLocateExpectation
+        { locator = selection,
+          expectedMatches = nub $ match node selection
+        }
+
 genNode :: Gen Node
 genNode = 
   genDivNodeAt nodeRootDepth rootAutoId
@@ -151,14 +170,17 @@ data Selection =
 
 genLocator :: Selection -> Gen Locator
 genLocator = \case
-      Match {domClass} -> matchLocator domClass
-      Or' {selection} -> NE.foldl1' (|||) <$> traverse genLocator selection
-      And' {selection} -> NE.foldl1' (&&&) <$> traverse genLocator selection
-      Under {parent, descendant} -> do
-        parentLoc <- genLocator parent
-        descendantLoc <- genLocator descendant
-        pure $ parentLoc >>> descendantLoc
+  Match {domClass} -> matchLocator domClass
+  Or' {selection} -> foldNonEmpty1 (|||) <$> traverse genLocator selection
+  And' {selection} -> foldNonEmpty1 (&&&) <$> traverse genLocator selection
+  Under {parent, descendant} -> do
+    parentLoc <- genLocator parent
+    descendantLoc <- genLocator descendant
+    pure $ parentLoc >>> descendantLoc
  where
+    foldNonEmpty1 :: (a -> a -> a) -> NonEmpty a -> a
+    foldNonEmpty1 f (x :| xs) = foldl' f x xs
+
     -- Prefer elmClass because it is simpler than raw css.
     matchLocator :: DOMClass -> Gen Locator
     matchLocator domClass =
