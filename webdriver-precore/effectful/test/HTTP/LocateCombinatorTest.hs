@@ -2,7 +2,9 @@ module HTTP.LocateCombinatorTest where
 
 import Control.Monad (replicateM)
 import Data.Function ((&))
-import Data.List (intersect, nub, sort)
+import Data.List (foldl', intersect, nub, sort)
+import Data.List.NonEmpty (NonEmpty (..))
+import Data.List.NonEmpty qualified as NE
 import Data.Text qualified as T
 import Data.Text (Text, unpack)
 import HTTP.Runner (WDSession, closeWDSession, getWDSession)
@@ -15,6 +17,7 @@ import System.Environment (withArgs)
 import Test.Tasty.HUnit (assertEqual, testCase)
 import Utils (txt)
 import qualified Data.Text.IO as T
+import WebDriverPreCore.Extended.Locators (Locator, css, elmClass, (&&&), (>>>), (|||))
 
 
 tests :: TestTree
@@ -55,6 +58,15 @@ nodeToHtml node = case node of
     id' = " auto-id=\"" <> node.autoId <> "\""
     classes = if null node.classes then "" else " class=\"" <> T.intercalate " " (txt <$> node.classes) <> "\""
     idAndClasses = id' <> " " <> classes
+
+data LocateExpectation = MkLocateExpectation {
+  locator :: Selection,
+  expectedMatches :: [Text]
+}
+data LocatorTestCase = MkLocatorTestCase {
+  testNode :: Node,
+  testCases :: [LocateExpectation]
+}
 
 genNode :: Gen Node
 genNode = 
@@ -127,18 +139,34 @@ prettyNode :: Int -> Node -> Text
 prettyNode idx node = "Node " <> txt idx <> ":\n" <> txt node
 
 data Selection = 
-  Or' {selection:: [Selection] }|
-  And' {selection:: [Selection] }|
+  Or' {selection:: NonEmpty Selection }|
+  And' {selection:: NonEmpty Selection }|
   Under {
     parent :: Selection,
-    selection :: [Selection]
+    descendant :: Selection
   } |
   Match {
     domClass :: DOMClass
   } deriving (Eq, Show)
 
-genLocator :: Selection -> Locator
-genLocator sel = undefined
+genLocator :: Selection -> Gen Locator
+genLocator = \case
+      Match {domClass} -> matchLocator domClass
+      Or' {selection} -> NE.foldl1' (|||) <$> traverse genLocator selection
+      And' {selection} -> NE.foldl1' (&&&) <$> traverse genLocator selection
+      Under {parent, descendant} -> do
+        parentLoc <- genLocator parent
+        descendantLoc <- genLocator descendant
+        pure $ parentLoc >>> descendantLoc
+ where
+    -- Prefer elmClass because it is simpler than raw css.
+    matchLocator :: DOMClass -> Gen Locator
+    matchLocator domClass =
+      let className = txt domClass in
+      frequency
+        [ (7, pure $ elmClass className),
+          (3, pure $ css $ "." <> className)
+        ]
 
 genSelection :: Gen Selection
 genSelection = genSelectionAtDepth 1
@@ -171,14 +199,17 @@ genSelection = genSelectionAtDepth 1
           (1, pure $ And' childSelections),
           (1, do
               parentSelection <- genSelectionAtDepth (depth + 1)
-              pure $ Under {parent = parentSelection, selection = childSelections}
+              descendantSelection <- genSelectionAtDepth (depth + 1)
+              pure $ Under {parent = parentSelection, descendant = descendantSelection}
           )
         ]
 
-    genChildSelectionsAtDepth :: Int -> Gen [Selection]
+    genChildSelectionsAtDepth :: Int -> Gen (NonEmpty Selection)
     genChildSelectionsAtDepth depth = do
-      childCount <- G.integral $ R.between (0, maxSelectionChildren)
-      replicateM childCount (genSelectionAtDepth (depth + 1))
+      childCount <- G.integral $ R.between (1, maxSelectionChildren)
+      firstSelection <- genSelectionAtDepth (depth + 1)
+      restSelections <- replicateM (childCount - 1) (genSelectionAtDepth (depth + 1))
+      pure $ firstSelection :| restSelections
 
 match :: Node -> Selection -> [Text]
 match root sel =
@@ -198,24 +229,21 @@ selectIds root sel =
         & fmap (.autoId)
     Or' {selection} -> nub . concat $ selectIds root <$> selection
     And' {selection} -> foldSelections root selection
-    Under {parent, selection} ->
+    Under {parent, descendant} ->
       let parentIds = selectIds root parent
           parentNodes = flatten root & filter (\n -> n.autoId `elem` parentIds)
-       in nub . concat $ selectUnder selection <$> parentNodes
+       in nub . concat $ selectUnder descendant <$> parentNodes
 
 -- Evaluate all child selections under a specific parent node.
-selectUnder :: [Selection] -> Node -> [Text]
-selectUnder selections parentNode =
+selectUnder :: Selection -> Node -> [Text]
+selectUnder descendantSelection parentNode =
   let validScope = descendants parentNode & fmap (.autoId)
-      selected = foldSelections parentNode selections
+      selected = selectIds parentNode descendantSelection
    in validScope `intersect` selected
 
-foldSelections :: Node -> [Selection] -> [Text]
-foldSelections root selections =
-  case selections of
-    [] -> []
-    firstSel : rest ->
-      foldl' intersect (selectIds root firstSel) $ selectIds root <$> rest
+foldSelections :: Node -> NonEmpty Selection -> [Text]
+foldSelections root (firstSel :| rest) =
+  foldl' intersect (selectIds root firstSel) $ selectIds root <$> rest
 
 flatten :: Node -> [Node]
 flatten = \case
@@ -267,21 +295,19 @@ sanitySimpleA :: TestTree
 sanitySimpleA = sanityChk "Simple Match A" ["1", "1-1", "1-2-1", "1-3-1"] $ Match A
 
 sanityAOrB :: TestTree
-sanityAOrB = sanityChk "A or B"  ["1", "1-1", "1-2-1", "1-3-1", "1-2"] $ Or' [Match A, Match B]
+sanityAOrB = sanityChk "A or B"  ["1", "1-1", "1-2-1", "1-3-1", "1-2"] $ Or' (Match A :| [Match B])
 
 sanityAandC :: TestTree
-sanityAandC = sanityChk "A and C"  ["1-2-1", "1-3-1"] $ And' [Match A, Match C]
+sanityAandC = sanityChk "A and C"  ["1-2-1", "1-3-1"] $ And' (Match A :| [Match C])
 
 sanityAandCUnderC :: TestTree
-sanityAandCUnderC = sanityChk "A and C under C"  ["1-3-1"] $ Under {parent = Match C, selection = [And' [Match A, Match C]]}
+sanityAandCUnderC = sanityChk "A and C under C"  ["1-3-1"] $ Under {parent = Match C, descendant = And' (Match A :| [Match C])}
 
 sanityAandCUnderB :: TestTree
-sanityAandCUnderB = sanityChk "A and C under B"  ["1-2-1", "1-3-1"] $ Under {parent = Match B, selection = [And' [Match A, Match C]]}
+sanityAandCUnderB = sanityChk "A and C under B"  ["1-2-1", "1-3-1"] $ Under {parent = Match B, descendant = And' (Match A :| [Match C])}
 
 sanityAUnderB :: TestTree
-sanityAUnderB = sanityChk "A under B"  ["1-1", "1-2-1", "1-3-1"] $ Under {parent = Match B, selection = [Match A]}
-
-
+sanityAUnderB = sanityChk "A under B"  ["1-1", "1-2-1", "1-3-1"] $ Under {parent = Match B, descendant = Match A}
 
 
 -- locators mixture of css and xpath
@@ -295,4 +321,6 @@ _eval mPattern = withArgs (maybe [] (\pat -> ["-p", (unpack pat)]) mPattern) . d
 
 --- >>> _eval _pattern tests
 -- *** Exception: ExitSuccess
+
+
 
