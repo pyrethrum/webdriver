@@ -1,22 +1,29 @@
 module HTTP.LocateCombinatorTest where
 
-import Control.Monad (replicateM)
+import Control.Monad (forM_, replicateM, when)
 import Data.Function ((&))
-import Data.List (foldl', intersect, nub, sort)
+import Data.List ((\\), intersect, nub, sort)
 import Data.List.NonEmpty (NonEmpty (..))
-import Data.List.NonEmpty qualified as NE
+import Data.Maybe (catMaybes)
 import Data.Text qualified as T
 import Data.Text (Text, unpack)
-import HTTP.Runner (WDSession, closeWDSession, getWDSession)
+import Effectful (Eff, IOE, (:>), liftIO)
+import Common.Utils (defOpts, locateAllHttp)
+import HTTP.Runner (WDSession, closeWDSession, getWDSession, runHttpTest)
 import Prelude
 import Test.Falsify.Generator as G (Gen, frequency, integral)
 import Test.Falsify.Interactive (sample)
 import Test.Falsify.Range as R (between)
 import Test.Tasty (TestTree, inOrderTestGroup, testGroup, withResource, defaultMain)
 import System.Environment (withArgs)
-import Test.Tasty.HUnit (assertEqual, testCase)
+import Test.Tasty.HUnit (assertEqual, assertFailure, testCase)
+import System.IO (hClose, openTempFile)
 import Utils (txt)
 import qualified Data.Text.IO as T
+import WebDriver.Effectful (WebDriverHttp)
+import WebDriver.Effectful.HTTP.Base.Actions (getElementAttribute, navigateTo)
+import WebDriverPreCore.Extended.HTTP.Base.Protocol (URL (..))
+import WebDriverPreCore.Extended.Locate qualified as L
 import WebDriverPreCore.Extended.Locators (Locator, css, elmClass, (&&&), (>>>), (|||))
 
 
@@ -25,7 +32,7 @@ tests =
   withResource getWDSession closeWDSession runSessionTests
   where
   runSessionTests :: IO WDSession -> TestTree
-  runSessionTests _ses =
+  runSessionTests ses =
     testGroup "Locate Combinator Tests"
       [ testGroup "sanity checks for abstract selector" [
           sanitySimpleA,
@@ -34,7 +41,9 @@ tests =
           sanityAUnderB,
           sanityAandCUnderC,
           sanityAandCUnderB],
-        inOrderTestGroup "Locate Combinator Tests" []
+        inOrderTestGroup "Locate Combinator Tests"
+          [ locateCombinatorProperty ses
+          ]
       ]
 
 
@@ -72,11 +81,11 @@ genCase :: Gen LocatorTestCase
 genCase = do
   node <- genNode
   rawSelections <- replicateM 1000 genSelection
-  let expectations = 
-       take 100 
-       . filter (not . null . (.expectedMatches)) 
-       . fmap (mkExpectation node) 
-       . nub 
+  let expectations =
+       take 100
+       . filter (not . null . (.expectedMatches))
+       . fmap (mkExpectation node)
+       . nub
        $ rawSelections
   pure $ MkLocatorTestCase {testNode = node, testCases = expectations}
   where
@@ -330,6 +339,84 @@ sanityAandCUnderB = sanityChk "A and C under B"  ["1-2-1", "1-3-1"] $ Under {par
 
 sanityAUnderB :: TestTree
 sanityAUnderB = sanityChk "A under B"  ["1-1", "1-2-1", "1-3-1"] $ Under {parent = Match B, descendant = Match A}
+
+
+data LocatorTestFailure = MkLocatorTestFailure
+  { node :: Node,
+    html :: Text,
+    selection :: Selection,
+    generatedLocator :: Locator,
+    expectedMatches :: [Text],
+    actualMatches :: [Text],
+    missingFromActual :: [Text],
+    extraInActual :: [Text]
+  }
+  deriving (Show)
+
+locateCombinatorProperty :: IO WDSession -> TestTree
+locateCombinatorProperty ses =
+  runHttpTest ses "Generated locate combinator property (10 cases)" $ do
+    forM_ [1 .. propertyRuns] $ \runIdx -> do
+      locCase <- liftIO $ sample genCase
+      let caseHtml = wrapHtml locCase.testNode
+      htmlFilePath <- liftIO $ writeTempHtmlFile caseHtml
+      navigateTo $ filePathToUrl htmlFilePath
+
+      forM_ (zip [1 :: Int ..] locCase.testCases) $ \(expectationIdx, expectation) -> do
+        generatedLoc <- liftIO $ sample $ genLocator expectation.locator
+        locateRslt <- locateAll generatedLoc
+        actual <- locateRslt.result & either
+          (\err -> liftIO $ assertFailure . unpack $
+            "locateAll failed in generated locate property, run=" <> txt runIdx <> ", expectation=" <> txt expectationIdx
+              <> "\nSelection: " <> txt expectation.locator
+              <> "\nGenerated locator: " <> txt generatedLoc
+              <> "\nError: " <> txt err
+          )
+          (\elms -> nub . catMaybes <$> traverse (`getElementAttribute` "auto-id") elms)
+
+        let expected = nub expectation.expectedMatches
+        when (sort expected /= sort actual) $ do
+          let failure = mkLocatorTestFailure locCase.testNode caseHtml expectation.locator generatedLoc expected actual
+          liftIO $ assertFailure . unpack $
+            "Generated locate mismatch in run=" <> txt runIdx <> ", expectation=" <> txt expectationIdx
+              <> "\n" <> txt failure
+  where
+    propertyRuns :: Int
+    propertyRuns = 10
+
+    wrapHtml :: Node -> Text
+    wrapHtml testNode =
+      "<!doctype html><html><head><meta charset=\"utf-8\"></head><body>"
+        <> nodeToHtml testNode
+        <> "</body></html>"
+
+    locateAll :: forall es. (IOE :> es, WebDriverHttp :> es) => Locator -> Eff es L.LocateResult
+    locateAll = locateAllHttp defOpts
+
+writeTempHtmlFile :: Text -> IO FilePath
+writeTempHtmlFile html = do
+  (fp, h) <- openTempFile "/tmp" "webdriver-locate-combinator-XXXX.html"
+  hClose h
+  T.writeFile fp html
+  pure fp
+
+filePathToUrl :: FilePath -> URL
+filePathToUrl fp = MkUrl $ "file://" <> txt fp
+
+mkLocatorTestFailure :: Node -> Text -> Selection -> Locator -> [Text] -> [Text] -> LocatorTestFailure
+mkLocatorTestFailure testNode caseHtml selected generatedLoc expected actual =
+  let missing = expected \\ actual
+      extra = actual \\ expected
+   in MkLocatorTestFailure
+      { node = testNode,
+        html = caseHtml,
+        selection = selected,
+        generatedLocator = generatedLoc,
+        expectedMatches = expected,
+        actualMatches = actual,
+        missingFromActual = missing,
+        extraInActual = extra
+      }
 
 
 -- locators mixture of css and xpath
