@@ -398,8 +398,9 @@ locateCombinatorProperty getRes =
         <> nodeToHtml testNode
         <> "</body></html>"
 
+    -- sample html elems have zero size so do not check displayed
     locateAll :: forall es. (IOE :> es, WebDriverHttp :> es) => Locator -> Eff es L.LocateResult
-    locateAll = locateAllHttp defOpts
+    locateAll = locateAllHttp $ defOpts {L.jsRecheckDisplayed = L.DisplayedCheckNever}
 
     evaluateCase :: IO WDSession -> LocatorTestCase2 -> Text -> Locator -> IO (Either Text ())
     evaluateCase getSession locCase caseHtml generatedLocator = 
