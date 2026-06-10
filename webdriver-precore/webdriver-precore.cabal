@@ -460,6 +460,8 @@ test-suite test-effectful
     webdriver-precore:webdriver-precore-test-utils,
     webdriver-precore:webdriver-effectful,
     webdriver-precore:utils-internal,
+    base64        >=0.4   && <1.1,
+    bytestring    >=0.10  && <0.12.3,
     effectful     >=2.3   && <2.7,
     stm           >=2.5   && <2.6,
     unliftio      >=0.2   && <0.3

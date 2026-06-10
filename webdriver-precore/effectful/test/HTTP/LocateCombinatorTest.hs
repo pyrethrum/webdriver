@@ -1,14 +1,17 @@
 module HTTP.LocateCombinatorTest where
 
 import Control.Monad (replicateM)
-import Control.Exception (SomeException, bracket, displayException, try)
+import Control.Exception (SomeException, displayException, try)
+import Data.Base64.Types qualified as B64T
+import Data.ByteString.Base64 qualified as B64
 import Data.Function ((&))
 import Data.List ((\\), find, intersect, nub, sort)
 import Data.List.NonEmpty (NonEmpty (..))
 import Data.Maybe (catMaybes)
 import Data.Text qualified as T
 import Data.Text (Text, unpack)
-import Effectful (Eff, IOE, (:>), liftIO)
+import Data.Text.Encoding (encodeUtf8)
+import Effectful (Eff, IOE, (:>))
 import Common.Utils (defOpts, locateAllHttp)
 import HTTP.Runner (WDSession, closeWDSession, getWDSession, runHttp)
 import Prelude
@@ -18,10 +21,8 @@ import Test.Tasty (TestTree, inOrderTestGroup, testGroup, withResource, defaultM
 import System.Environment (withArgs)
 import Test.Tasty.HUnit (assertEqual, testCase)
 import Test.Tasty.Falsify (ExpectFailure (DontExpectFailure), TestOptions (..), Verbose (..), gen, genWith, testFailed, testPropertyWith)
-import System.IO (hClose, openTempFile)
 import System.IO.Unsafe (unsafePerformIO)
 import Utils (txt)
-import qualified Data.Text.IO as T
 import WebDriver.Effectful (WebDriverHttp)
 import WebDriver.Effectful.HTTP.Base.Actions (getElementAttribute, navigateTo)
 import WebDriverPreCore.Extended.HTTP.Base.Protocol (URL (..))
@@ -406,8 +407,8 @@ locateCombinatorProperty getRes =
         Matched {testNode, locator, expectedMatches} -> do
           wdSession <- getSession
           runHttp wdSession $ do
-            htmlFilePath <- liftIO $ writeTempHtmlFile caseHtml
-            navigateTo $ filePathToUrl htmlFilePath
+            let dataUrl = htmlToDataUrl caseHtml
+            navigateTo dataUrl
             evaluateExpectation
           where
             evaluateExpectation :: forall es. (IOE :> es, WebDriverHttp :> es) => Eff es (Either Text ())
@@ -446,17 +447,12 @@ unsafeRunIO action =
       (try action)
 {-# NOINLINE unsafeRunIO #-}
 
-writeTempHtmlFile :: Text -> IO FilePath
-writeTempHtmlFile html =
-  bracket 
-    (openTempFile "/tmp" "webdriver-locate-combinator-XXXX.html") 
-    (hClose . snd) 
-    \(fp, h) -> do
-      T.hPutStr h html
-      pure fp
-
-filePathToUrl :: FilePath -> URL
-filePathToUrl fp = MkUrl $ "file://" <> txt fp
+htmlToDataUrl :: Text -> URL
+htmlToDataUrl html =
+  let htmlBytes = encodeUtf8 html
+      encoded = B64T.extractBase64 $ B64.encodeBase64 htmlBytes
+      dataUrl = "data:text/html;base64," <> encoded
+  in MkUrl dataUrl
 
 mkLocatorTestFailure :: Node -> Text -> Selection -> Locator -> [Text] -> [Text] -> LocatorTestFailure
 mkLocatorTestFailure node html selection generatedLocator expectedMatches actualMatches =
