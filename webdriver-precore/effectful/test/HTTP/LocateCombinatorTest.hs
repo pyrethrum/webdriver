@@ -1,6 +1,7 @@
 module HTTP.LocateCombinatorTest where
 
 import Control.Monad (forM_, replicateM, when)
+import Control.Exception (bracket)
 import Data.Function ((&))
 import Data.List ((\\), intersect, nub, sort)
 import Data.List.NonEmpty (NonEmpty (..))
@@ -394,28 +395,30 @@ locateCombinatorProperty ses =
     locateAll = locateAllHttp defOpts
 
 writeTempHtmlFile :: Text -> IO FilePath
-writeTempHtmlFile html = do
-  (fp, h) <- openTempFile "/tmp" "webdriver-locate-combinator-XXXX.html"
-  hClose h
-  T.writeFile fp html
-  pure fp
+writeTempHtmlFile html =
+  bracket 
+    (openTempFile "/tmp" "webdriver-locate-combinator-XXXX.html") 
+    (hClose . snd) 
+    \(fp, h) -> do
+      T.hPutStr h html
+      pure fp
 
 filePathToUrl :: FilePath -> URL
 filePathToUrl fp = MkUrl $ "file://" <> txt fp
 
 mkLocatorTestFailure :: Node -> Text -> Selection -> Locator -> [Text] -> [Text] -> LocatorTestFailure
-mkLocatorTestFailure testNode caseHtml selected generatedLoc expected actual =
-  let missing = expected \\ actual
-      extra = actual \\ expected
+mkLocatorTestFailure node html selection generatedLocator expectedMatches actualMatches =
+  let missingFromActual = expectedMatches \\ actualMatches
+      extraInActual = actualMatches \\ expectedMatches
    in MkLocatorTestFailure
-      { node = testNode,
-        html = caseHtml,
-        selection = selected,
-        generatedLocator = generatedLoc,
-        expectedMatches = expected,
-        actualMatches = actual,
-        missingFromActual = missing,
-        extraInActual = extra
+      { node,
+        html,
+        selection,
+        generatedLocator,
+        expectedMatches,
+        actualMatches,
+        missingFromActual,
+        extraInActual
       }
 
 
