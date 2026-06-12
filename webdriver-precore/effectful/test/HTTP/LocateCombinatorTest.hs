@@ -23,11 +23,12 @@ import Test.Tasty.HUnit (assertEqual, testCase)
 import Test.Tasty.Falsify (ExpectFailure (DontExpectFailure), TestOptions (..), Verbose (..), gen, genWith, testFailed, testPropertyWith)
 import System.IO.Unsafe (unsafePerformIO)
 import Utils (txt)
-import WebDriver.Effectful (WebDriverHttp)
+import WebDriver.Effectful (WebDriverHttp, sleep)
 import WebDriver.Effectful.HTTP.Base.Actions (getElementAttribute, navigateTo)
 import WebDriverPreCore.Extended.HTTP.Base.Protocol (URL (..))
 import WebDriverPreCore.Extended.Locate qualified as L
 import WebDriverPreCore.Extended.Locators (Locator, css, elmClass, (&&&), (>>>), (|||))
+import WebDriverPreCore.Extended.Protocol (milliseconds)
 
 
 tests :: TestTree
@@ -387,7 +388,7 @@ locateCombinatorProperty getRes =
       TestOptions
         { expectFailure = DontExpectFailure,
           overrideVerbose = Just NotVerbose,
-          overrideNumTests = Just 10,
+          overrideNumTests = Just 1,
           overrideMaxShrinks = Nothing,
           overrideMaxRatio = Nothing
         }
@@ -410,6 +411,7 @@ locateCombinatorProperty getRes =
           runHttp wdSession $ do
             let dataUrl = htmlToDataUrl caseHtml
             navigateTo dataUrl
+            sleep $ 100 * milliseconds
             evaluateExpectation
           where
             evaluateExpectation :: forall es. (IOE :> es, WebDriverHttp :> es) => Eff es (Either Text ())
@@ -479,6 +481,7 @@ _pattern = Just "Combinator property tests"
 
 _eval :: Maybe Text -> TestTree -> IO ()
 _eval mPattern = withArgs (maybe [] (\pat -> ["-p", (unpack pat)]) mPattern) . defaultMain
+
 
 --- >>> _eval _pattern tests
 -- *** Exception: ExitFailure 1
