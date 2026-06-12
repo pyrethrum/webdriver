@@ -20,7 +20,7 @@ import Test.Falsify.Range as R (between)
 import Test.Tasty (TestTree, inOrderTestGroup, testGroup, withResource, defaultMain)
 import System.Environment (withArgs)
 import Test.Tasty.HUnit (assertEqual, testCase)
-import Test.Tasty.Falsify (ExpectFailure (DontExpectFailure), TestOptions (..), Verbose (..), gen, genWith, testFailed, testPropertyWith)
+import Test.Tasty.Falsify (ExpectFailure (DontExpectFailure), TestOptions (..), Verbose (..), gen, genWith, info, testFailed, testPropertyWith)
 import System.IO.Unsafe (unsafePerformIO)
 import Utils (txt)
 import WebDriver.Effectful (WebDriverHttp, sleep)
@@ -305,6 +305,18 @@ descendants = \case
   Div {children} -> concatMap flatten children
   Span {} -> []
 
+countNodes :: Node -> Int
+countNodes = \case
+  Div {children} -> 1 + sum (countNodes <$> children)
+  Span {} -> 1
+
+countSelectionNodes :: Selection -> Int
+countSelectionNodes = \case
+  Match {} -> 1
+  Or' {selection} -> 1 + sum (countSelectionNodes <$> selection)
+  And' {selection} -> 1 + sum (countSelectionNodes <$> selection)
+  Under {parent, descendant} -> 1 + countSelectionNodes parent + countSelectionNodes descendant
+
 chkListContentEq :: (Ord a, Show a) => Text -> [a] -> [a] -> IO ()
 chkListContentEq message expected actual =
   assertEqual (unpack message) (sort expected) (sort actual)
@@ -376,9 +388,16 @@ locateCombinatorProperty :: IO WDSession -> TestTree
 locateCombinatorProperty getRes =
   testPropertyWith propertyOptions "Generated locate combinator property" $ do
     locCase@Matched {} <- genWith (const Nothing) genCase
+    case unsafeRunIO (printGeneratorNodeCounts locCase) of
+      Left err -> testFailed $ unpack err
+      Right () -> pure ()
     generatedLocator <- gen . genLocator $ locCase.locator
     let caseHtml = wrapHtml locCase.testNode
         evaluation = evaluateCase getRes locCase caseHtml generatedLocator
+    info $ "Selection: " <> show locCase.locator
+--    info $ "Generated locator: " <> unpack (txt generatedLocator)
+--    info $ "Expected auto-ids: " <> show (sort $ nub locCase.expectedMatches)
+--    info $ "Generated node:\n" <> unpack (prettyNode 1 locCase.testNode)
     case unsafeRunIO evaluation of
       Left err -> testFailed $ unpack err
       Right () -> pure ()
@@ -387,8 +406,8 @@ locateCombinatorProperty getRes =
     propertyOptions =
       TestOptions
         { expectFailure = DontExpectFailure,
-          overrideVerbose = Just NotVerbose,
-          overrideNumTests = Just 1,
+          overrideVerbose = Just Verbose,
+          overrideNumTests = Just 10,
           overrideMaxShrinks = Nothing,
           overrideMaxRatio = Nothing
         }
@@ -407,6 +426,8 @@ locateCombinatorProperty getRes =
     evaluateCase getSession locCase caseHtml generatedLocator = 
       case locCase of
         Matched {testNode, locator, expectedMatches} -> do
+          putStrLn $ "LocateCombinatorTest pre-IO node count (test node): " <> show (countNodes testNode)
+          putStrLn $ "LocateCombinatorTest pre-IO node count (generator selection): " <> show (countSelectionNodes locator)
           wdSession <- getSession
           runHttp wdSession $ do
             let dataUrl = htmlToDataUrl caseHtml
@@ -438,6 +459,18 @@ locateCombinatorProperty getRes =
 
         Unmatched {} ->
           pure $ Left "evaluateCase called with an unmatched locator case"
+
+    printGeneratorNodeCounts :: LocatorTestCase2 -> IO (Either Text ())
+    printGeneratorNodeCounts locCase =
+      case locCase of
+        Matched {testNode, locator} -> do
+          putStrLn $ "LocateCombinatorTest generator node count (test node): " <> show (countNodes testNode)
+          putStrLn $ "LocateCombinatorTest generator node count (generator selection): " <> show (countSelectionNodes locator)
+          pure $ Right ()
+        Unmatched {testNode, locator} -> do
+          putStrLn $ "LocateCombinatorTest generator node count (test node): " <> show (countNodes testNode)
+          putStrLn $ "LocateCombinatorTest generator node count (generator selection): " <> show (countSelectionNodes locator)
+          pure $ Right ()
 
 unsafeRunIO :: IO (Either Text ()) -> Either Text ()
 unsafeRunIO action =
@@ -484,6 +517,12 @@ _eval mPattern = withArgs (maybe [] (\pat -> ["-p", (unpack pat)]) mPattern) . d
 
 --- >>> _eval _pattern tests
 -- *** Exception: ExitFailure 1
+
+   
+Step 28
+generated Any {elms = Any {elms = Any {elms = Class {value = "A", matchType = Partial, caseSensitivity = CaseInsensitive} :| [Class {value = "A", matchType = Partial, caseSensitivity = CaseInsensitive}]} :| [Class {value = "A", matchType = Partial, caseSensitivity = CaseInsensitive}]} :| [Contains {container = Class {value = "A", matchType = Partial, caseSensitivity = CaseInsensitive}, contained = Class {value = "A", matchType = Partial, caseSensitivity = CaseInsensitive}}]} at CallStack (from HasCallStack):
+  gen, called at /home/john-walker/repos/webdriver/webdriver-precore/effectful/test/HTTP/LocateCombinatorTest.hs:394:25 in webdriver-precore-0.2.0.2-inplace-test-effectful:HTTP.LocateCombinatorTest
+Selection: Or' {selection = Match {domClass = A} :| [Match {domClass = A},Match {domClass = A},Under {parent = Match {domClass = A}, descendant = Match {domClass = A}}]}
 
 
 
