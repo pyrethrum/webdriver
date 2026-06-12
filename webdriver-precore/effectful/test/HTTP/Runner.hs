@@ -16,6 +16,7 @@ import Data.Text (Text, unpack)
 import Effectful (Effect, Eff, IOE, liftIO, (:>), runEff)
 import Test.Tasty (TestTree)
 import Test.Tasty.HUnit (testCase)
+import UnliftIO (finally)
 import WebDriver.Effectful
   ( HttpCapabilities,
     HttpSessionInfo (..),
@@ -73,7 +74,7 @@ withHttp action =
 -- ---------------------------------------------------------------------------
 
 data WDSession = MkWDSession
-  { loggerHandle :: LoggerHandle,
+  { loggerHandle :: Maybe LoggerHandle,
     sessionInfo :: HttpSessionInfo
   }
 
@@ -82,14 +83,16 @@ getWDSession =
   runSetup $ 
    \driverInfo opts config -> 
       liftIO $ do
-        loggerHandle <- acquireLogger "eval.log"
+        loggerHandle <- if opts.driverLogging
+                          then Just <$> acquireLogger "eval.log"
+                          else pure Nothing
         sessionInfo <- acquireHttpSession driverInfo (mkHttpCaps config) opts.pauseDuration
         pure MkWDSession {loggerHandle, sessionInfo}
 
 closeWDSession :: WDSession -> IO ()
-closeWDSession MkWDSession {loggerHandle, sessionInfo} = do
+closeWDSession MkWDSession {loggerHandle, sessionInfo} =
   releaseHttpSession sessionInfo
-  releaseLogger loggerHandle
+    `finally` maybe (pure ()) releaseLogger loggerHandle
 
 -- | Run a 'BaseHTTPAction' with shared session and logger resources.
 --

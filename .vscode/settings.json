@@ -20,5 +20,11 @@
   "workbench.colorTheme": "Dark Modern",
   "chat.tools.terminal.autoApprove": {
     "ghcup": true
+  },
+    "files.watcherExclude": {
+    "**/dist-newstyle/**": true
+  },
+  "search.exclude": {
+    "**/dist-newstyle/**": true
   }
 }

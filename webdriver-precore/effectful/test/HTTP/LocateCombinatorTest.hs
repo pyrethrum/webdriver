@@ -482,7 +482,6 @@ _pattern = Just "Combinator property tests"
 _eval :: Maybe Text -> TestTree -> IO ()
 _eval mPattern = withArgs (maybe [] (\pat -> ["-p", (unpack pat)]) mPattern) . defaultMain
 
-
 --- >>> _eval _pattern tests
 -- *** Exception: ExitFailure 1
 

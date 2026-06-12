@@ -52,7 +52,7 @@ import Data.Text (Text)
 import Data.Text.Lazy.Builder (Builder, fromString, fromText)
 import Data.Time.Format (defaultTimeLocale, formatTime)
 import Data.Time.LocalTime (TimeZone, getCurrentTimeZone, utcToLocalTime)
-import Effectful (Eff, IOE, (:>), withSeqEffToIO)
+import Effectful (Eff, IOE, (:>), liftIO, withSeqEffToIO)
 import Effectful.Katip
   ( Item (..),
     ItemFormatter,
@@ -140,8 +140,14 @@ releaseLogger (MkLoggerHandle le fh) = K.closeScribes le >> hClose fh
 
 -- | Run an effectful action inside the 'Logger' effect using an existing
 -- 'LoggerHandle'.
-runLogger :: (IOE :> es) => LoggerHandle -> Eff (Logger : es) a -> Eff es a
-runLogger (MkLoggerHandle le _) = runKatipE le
+runLogger :: (IOE :> es) => Maybe LoggerHandle -> Eff (Logger : es) a -> Eff es a
+runLogger mlh action = do
+  le <- maybe
+     -- create a fresh env with no registered scribes (effectively no output)
+    (liftIO $ initLogEnv "webdriver" "eval")
+    (\(MkLoggerHandle le _) -> pure le)
+    mlh
+  runKatipE le action
 
 -- | Introduce a 'Logger' effect backed by Katip.
 --
@@ -158,7 +164,7 @@ withLogger :: (IOE :> es) => FilePath -> Eff (Logger : es) a -> Eff es a
 withLogger logFile action =
   withSeqEffToIO $ \runInIO ->
     bracket (acquireLogger logFile) releaseLogger $ \lh ->
-      runInIO (runLogger lh action)
+      runInIO (runLogger (Just lh) action)
 
 -- ---------------------------------------------------------------------------
 -- Logger operations
