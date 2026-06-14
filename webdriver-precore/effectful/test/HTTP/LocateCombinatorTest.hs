@@ -33,22 +33,22 @@ import WebDriverPreCore.Extended.Protocol (milliseconds)
 
 tests :: TestTree
 tests =
-  withResource getWDSession closeWDSession runSessionTests
-  where
-  runSessionTests :: IO WDSession -> TestTree
-  runSessionTests ses =
-    testGroup "Locate Combinator Tests"
-      [ testGroup "sanity checks for abstract selector" [
+  testGroup "Locate Combinator Tests" [
+    testGroup "sanity checks for abstract selector" [
           sanitySimpleA,
           sanityAOrB,
           sanityAandC,
           sanityAUnderB,
           sanityAandCUnderC,
-          sanityAandCUnderB],
+          sanityAandCUnderB 
+          ],
+    withResource getWDSession closeWDSession runSessionTests
+  ]
+  where
+  runSessionTests :: IO WDSession -> TestTree
+  runSessionTests ses =
         inOrderTestGroup "Combinator property tests"
-          [ locateCombinatorProperty ses
-          ]
-      ]
+          [ locateCombinatorProperty ses]
 
 
 data DOMClass = A | B | C | D | E deriving (Eq, Show)
@@ -72,45 +72,50 @@ nodeToHtml node = case node of
     classes = if null node.classes then "" else " class=\"" <> T.intercalate " " (txt <$> node.classes) <> "\""
     idAndClasses = id' <> " " <> classes
 
-data LocatorTestCase2 = Matched {
+data LocatorTestCase = Matched {
   testNode :: Node,
-  locator :: Selection,
-  expectedMatches :: [Text]
+  abstractLocator :: Selection,
+  expectedMatches :: [Text],
+  locator :: Locator
 } |
  Unmatched {
   testNode :: Node,
-  locator :: Selection
+  abstractLocator :: Selection,
+  locator :: Locator
 }
+ deriving (Show, Eq)
 
-genCase :: Gen LocatorTestCase2
+genCase :: Gen LocatorTestCase
 genCase = do
   node <- genNode
-  locatorCases <- replicateM 100 $ genLocatorTestCase2 node
-  case pickLocatorTestCase2 locatorCases of
+  locatorCases <- replicateM 100 $ genLocatorTestCase node
+  case pickLocatorTestCase locatorCases of
     matched@Matched {} -> pure matched
     Unmatched {} -> genCase
   where
-    genLocatorTestCase2 :: Node -> Gen LocatorTestCase2
-    genLocatorTestCase2 node = do
-      selection <- genSelection
-      let expectedMatches = nub $ match node selection
+    genLocatorTestCase :: Node -> Gen LocatorTestCase
+    genLocatorTestCase node = do
+      abstractLocator <- genSelection
+      locator <- genLocator abstractLocator
+      let expectedMatches = nub $ match node abstractLocator
       pure $ if null expectedMatches
-        then Unmatched {testNode = node, locator = selection}
+        then Unmatched {testNode = node, abstractLocator, locator}
         else Matched
           { testNode = node,
-            locator = selection,
-            expectedMatches = expectedMatches
+            abstractLocator,
+            expectedMatches,
+            locator
           }
 
-    pickLocatorTestCase2 :: [LocatorTestCase2] -> LocatorTestCase2
-    pickLocatorTestCase2 locatorCases =
+    pickLocatorTestCase :: [LocatorTestCase] -> LocatorTestCase
+    pickLocatorTestCase locatorCases =
       case find isMatched locatorCases of
         Just matchedCase -> matchedCase
         Nothing -> case locatorCases of
           firstCase : _ -> firstCase
           [] -> error "genCase: expected at least one locator case"
 
-    isMatched :: LocatorTestCase2 -> Bool
+    isMatched :: LocatorTestCase -> Bool
     isMatched = \case
       Matched {} -> True
       Unmatched {} -> False
@@ -385,19 +390,14 @@ data LocatorTestFailure = MkLocatorTestFailure
   deriving (Show)
 
 locateCombinatorProperty :: IO WDSession -> TestTree
-locateCombinatorProperty getRes =
+locateCombinatorProperty getSes =
   testPropertyWith propertyOptions "Generated locate combinator property" $ do
     locCase@Matched {} <- genWith (const Nothing) genCase
     case unsafeRunIO (printGeneratorNodeCounts locCase) of
       Left err -> testFailed $ unpack err
       Right () -> pure ()
-    generatedLocator <- gen . genLocator $ locCase.locator
-    let caseHtml = wrapHtml locCase.testNode
-        evaluation = evaluateCase getRes locCase caseHtml generatedLocator
-    info $ "Selection: " <> show locCase.locator
---    info $ "Generated locator: " <> unpack (txt generatedLocator)
---    info $ "Expected auto-ids: " <> show (sort $ nub locCase.expectedMatches)
---    info $ "Generated node:\n" <> unpack (prettyNode 1 locCase.testNode)
+    let evaluation = evaluateCase getSes locCase
+    info $ "Test Case:\n" <> unpack (txt locCase)
     case unsafeRunIO evaluation of
       Left err -> testFailed $ unpack err
       Right () -> pure ()
@@ -412,64 +412,16 @@ locateCombinatorProperty getRes =
           overrideMaxRatio = Nothing
         }
 
-    wrapHtml :: Node -> Text
-    wrapHtml testNode =
-      "<!doctype html><html><head><meta charset=\"utf-8\"></head><body>"
-        <> nodeToHtml testNode
-        <> "</body></html>"
-
-    -- sample html elems have zero size so do not check displayed
-    locateAll :: forall es. (IOE :> es, WebDriverHttp :> es) => Locator -> Eff es L.LocateResult
-    locateAll = locateAllHttp $ defOpts {L.jsRecheckDisplayed = L.DisplayedCheckNever}
-
-    evaluateCase :: IO WDSession -> LocatorTestCase2 -> Text -> Locator -> IO (Either Text ())
-    evaluateCase getSession locCase caseHtml generatedLocator = 
-      case locCase of
-        Matched {testNode, locator, expectedMatches} -> do
-          putStrLn $ "LocateCombinatorTest pre-IO node count (test node): " <> show (countNodes testNode)
-          putStrLn $ "LocateCombinatorTest pre-IO node count (generator selection): " <> show (countSelectionNodes locator)
-          wdSession <- getSession
-          runHttp wdSession $ do
-            let dataUrl = htmlToDataUrl caseHtml
-            navigateTo dataUrl
-            sleep $ 100 * milliseconds
-            evaluateExpectation
-          where
-            evaluateExpectation :: forall es. (IOE :> es, WebDriverHttp :> es) => Eff es (Either Text ())
-            evaluateExpectation = do
-              locateRslt <- locateAll generatedLocator
-              actualOrFailure <- locateRslt.result & either
-                (\err -> pure . Left $
-                  "locateAll failed in generated locate property"
-                    <> "\nSelection: " <> txt locator
-                    <> "\nGenerated locator: " <> txt generatedLocator
-                    <> "\nError: " <> txt err
-                )
-                (\elms -> Right . nub . catMaybes <$> traverse (`getElementAttribute` "auto-id") elms)
-
-              case actualOrFailure of
-                Left failureMsg -> pure $ Left failureMsg
-                Right actual -> do
-                  let expected = nub expectedMatches
-                  if sort expected == sort actual
-                    then pure $ Right ()
-                    else do
-                      let failure = mkLocatorTestFailure testNode caseHtml locator generatedLocator expected actual
-                      pure . Left $ "Failure generated" <> "\n" <> txt failure
-
-        Unmatched {} ->
-          pure $ Left "evaluateCase called with an unmatched locator case"
-
-    printGeneratorNodeCounts :: LocatorTestCase2 -> IO (Either Text ())
+    printGeneratorNodeCounts :: LocatorTestCase -> IO (Either Text ())
     printGeneratorNodeCounts locCase =
       case locCase of
-        Matched {testNode, locator} -> do
+        Matched {testNode, abstractLocator} -> do
           putStrLn $ "LocateCombinatorTest generator node count (test node): " <> show (countNodes testNode)
-          putStrLn $ "LocateCombinatorTest generator node count (generator selection): " <> show (countSelectionNodes locator)
+          putStrLn $ "LocateCombinatorTest generator node count (generator selection): " <> show (countSelectionNodes abstractLocator)
           pure $ Right ()
-        Unmatched {testNode, locator} -> do
+        Unmatched {testNode, abstractLocator} -> do
           putStrLn $ "LocateCombinatorTest generator node count (test node): " <> show (countNodes testNode)
-          putStrLn $ "LocateCombinatorTest generator node count (generator selection): " <> show (countSelectionNodes locator)
+          putStrLn $ "LocateCombinatorTest generator node count (generator selection): " <> show (countSelectionNodes abstractLocator)
           pure $ Right ()
 
 unsafeRunIO :: IO (Either Text ()) -> Either Text ()
@@ -482,6 +434,52 @@ unsafeRunIO action =
       )
       (try action)
 {-# NOINLINE unsafeRunIO #-}
+
+
+evaluateCase :: IO WDSession -> LocatorTestCase -> IO (Either Text ())
+evaluateCase getSession locCase  = 
+  case locCase of
+    Matched {testNode, abstractLocator, expectedMatches} -> do
+      putStrLn $ "LocateCombinatorTest pre-IO node count (test node): " <> show (countNodes testNode)
+      putStrLn $ "LocateCombinatorTest pre-IO node count (generator selection): " <> show (countSelectionNodes abstractLocator)
+      wdSession <- getSession
+      runHttp wdSession $ do
+        let dataUrl = htmlToDataUrl html
+        navigateTo dataUrl
+        sleep $ 100 * milliseconds
+        evaluateExpectation
+      where
+        locator = locCase.locator
+        locateAll :: forall es. (IOE :> es, WebDriverHttp :> es) => Locator -> Eff es L.LocateResult
+        locateAll = locateAllHttp $ defOpts {L.jsRecheckDisplayed = L.DisplayedCheckNever}
+        html = "<!doctype html><html><head><meta charset=\"utf-8\"></head><body>"
+              <> nodeToHtml testNode
+              <> "</body></html>"
+        evaluateExpectation :: forall es. (IOE :> es, WebDriverHttp :> es) => Eff es (Either Text ())
+        evaluateExpectation = do
+          locateRslt <- locateAll locator
+          actualOrFailure <- locateRslt.result & either
+            (\err -> pure . Left $
+              "locateAll failed in generated locate property"
+                <> "\nSelection: " <> txt abstractLocator
+                <> "\nGenerated locator: " <> txt locator
+                <> "\nError: " <> txt err
+            )
+            (\elms -> Right . nub . catMaybes <$> traverse (`getElementAttribute` "auto-id") elms)
+
+          actualOrFailure &
+            either 
+              (pure . Left)
+              \actual -> do
+                let expected = nub expectedMatches
+                if sort expected == sort actual
+                  then pure $ Right ()
+                  else do
+                    let failure = mkLocatorTestFailure testNode html abstractLocator locator expected actual
+                    pure . Left $ "Failure generated" <> "\n" <> txt failure
+
+    Unmatched {} ->
+      pure $ Left "evaluateCase called with an unmatched locator case"
 
 htmlToDataUrl :: Text -> URL
 htmlToDataUrl html =
@@ -519,10 +517,38 @@ _eval mPattern = withArgs (maybe [] (\pat -> ["-p", (unpack pat)]) mPattern) . d
 -- *** Exception: ExitFailure 1
 
    
-Step 28
-generated Any {elms = Any {elms = Any {elms = Class {value = "A", matchType = Partial, caseSensitivity = CaseInsensitive} :| [Class {value = "A", matchType = Partial, caseSensitivity = CaseInsensitive}]} :| [Class {value = "A", matchType = Partial, caseSensitivity = CaseInsensitive}]} :| [Contains {container = Class {value = "A", matchType = Partial, caseSensitivity = CaseInsensitive}, contained = Class {value = "A", matchType = Partial, caseSensitivity = CaseInsensitive}}]} at CallStack (from HasCallStack):
-  gen, called at /home/john-walker/repos/webdriver/webdriver-precore/effectful/test/HTTP/LocateCombinatorTest.hs:394:25 in webdriver-precore-0.2.0.2-inplace-test-effectful:HTTP.LocateCombinatorTest
-Selection: Or' {selection = Match {domClass = A} :| [Match {domClass = A},Match {domClass = A},Under {parent = Match {domClass = A}, descendant = Match {domClass = A}}]}
-
-
-
+{-
+Matched
+        { testNode =
+            Div
+              { autoId = "1"
+              , classes = [ A ]
+              , children =
+                  [ Span { autoId = "1-1" , classes = [ A ] }
+                  , Span { autoId = "1-2" , classes = [ A ] }
+                  , Span { autoId = "1-3" , classes = [ A ] }
+                  , Span { autoId = "1-4" , classes = [ B ] }
+                  ]
+              }
+        , abstractLocator =
+            Or'
+              { selection = Match { domClass = A } :| [ Match { domClass = B } ]
+              }
+        , expectedMatches = [ "1" , "1-1" , "1-2" , "1-3" , "1-4" ]
+        , locator =
+            Any
+              { elms =
+                  Class
+                    { value = "A"
+                    , matchType = Partial
+                    , caseSensitivity = CaseInsensitive
+                    } :|
+                    [ Class
+                        { value = "B"
+                        , matchType = Partial
+                        , caseSensitivity = CaseInsensitive
+                        }
+                    ]
+              }
+        }
+-}
