@@ -5,6 +5,7 @@ module WebDriverPreCore.Extended.Locators
     -- * Re-exports from Internal
     AriaRole (..),
     MatchType (..),
+    CaseSensitivity(..),
     displayAriaRole,
 
     -- * Smart Constructors

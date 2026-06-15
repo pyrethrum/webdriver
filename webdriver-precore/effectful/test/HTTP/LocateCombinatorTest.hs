@@ -1,7 +1,7 @@
 module HTTP.LocateCombinatorTest where
 
 import Control.Monad (replicateM)
-import Control.Exception (SomeException, displayException, try)
+import Control.Exception (SomeException, displayException, throwIO, try)
 import Data.Base64.Types qualified as B64T
 import Data.ByteString.Base64 qualified as B64
 import Data.Function ((&))
@@ -11,7 +11,7 @@ import Data.Maybe (catMaybes)
 import Data.Text qualified as T
 import Data.Text (Text, unpack)
 import Data.Text.Encoding (encodeUtf8)
-import Effectful (Eff, IOE, (:>))
+import Effectful (Eff, IOE, (:>), liftIO)
 import Common.Utils (defOpts, locateAllHttp)
 import HTTP.Runner (WDSession, closeWDSession, getWDSession, runHttp)
 import Prelude
@@ -20,15 +20,16 @@ import Test.Falsify.Range as R (between)
 import Test.Tasty (TestTree, inOrderTestGroup, testGroup, withResource, defaultMain)
 import System.Environment (withArgs)
 import Test.Tasty.HUnit (assertEqual, testCase)
-import Test.Tasty.Falsify (ExpectFailure (DontExpectFailure), TestOptions (..), Verbose (..), gen, genWith, info, testFailed, testPropertyWith)
+import Test.Tasty.Falsify (ExpectFailure (DontExpectFailure), TestOptions (..), Verbose (..), genWith, info, testFailed, testPropertyWith)
 import System.IO.Unsafe (unsafePerformIO)
 import Utils (txt)
 import WebDriver.Effectful (WebDriverHttp, sleep)
 import WebDriver.Effectful.HTTP.Base.Actions (getElementAttribute, navigateTo)
 import WebDriverPreCore.Extended.HTTP.Base.Protocol (URL (..))
 import WebDriverPreCore.Extended.Locate qualified as L
-import WebDriverPreCore.Extended.Locators (Locator, css, elmClass, (&&&), (>>>), (|||))
+import WebDriverPreCore.Extended.Locators (Locator, css, elmClass, (&&&), (>>>), (|||), elmClass', MatchType (Partial), CaseSensitivity (..))
 import WebDriverPreCore.Extended.Protocol (milliseconds)
+import Data.Bifunctor (Bifunctor(first))
 
 
 tests :: TestTree
@@ -47,8 +48,34 @@ tests =
   where
   runSessionTests :: IO WDSession -> TestTree
   runSessionTests ses =
-        inOrderTestGroup "Combinator property tests"
-          [ locateCombinatorProperty ses]
+        inOrderTestGroup "Combinator tests"
+          [ locateCombinatorProperty ses,
+             inOrderTestGroup "Combinator singleton tests" [
+             locTest "simple OR" $ Matched
+                { testNode =
+                    Div
+                      { autoId = "1"
+                      , classes = [ A ]
+                      , children =
+                          [ Span { autoId = "1-1" , classes = [ A ] }
+                          , Span { autoId = "1-2" , classes = [ A ] }
+                          , Span { autoId = "1-3" , classes = [ A ] }
+                          , Span { autoId = "1-4" , classes = [ B ] }
+                          ]
+                      }
+                , abstractLocator =
+                    Or'
+                      { selection = Match { domClass = A } :| [ Match { domClass = B } ]
+                      }
+                , expectedMatches = [ "1" , "1-1" , "1-2" , "1-3" , "1-4" ]
+                , locator = classLoc "A" ||| classLoc "B"
+                }
+             ]
+          ]
+        where 
+          classLoc = elmClass' Partial CaseInsensitive
+          locTest :: Text -> LocatorTestCase -> TestTree
+          locTest name = testCase (unpack name) .  evaluateCase ses
 
 
 data DOMClass = A | B | C | D | E deriving (Eq, Show)
@@ -393,14 +420,15 @@ locateCombinatorProperty :: IO WDSession -> TestTree
 locateCombinatorProperty getSes =
   testPropertyWith propertyOptions "Generated locate combinator property" $ do
     locCase@Matched {} <- genWith (const Nothing) genCase
-    case unsafeRunIO (printGeneratorNodeCounts locCase) of
-      Left err -> testFailed $ unpack err
-      Right () -> pure ()
-    let evaluation = evaluateCase getSes locCase
+    info $ "LocateCombinatorTest generator node count (test node): " <> show (countNodes locCase.testNode)
+    info $ "LocateCombinatorTest generator node count (generator selection): " <> show (countSelectionNodes locCase.abstractLocator)
+
+    let evaluation = unsafeRunIO $ evaluateCase getSes locCase
     info $ "Test Case:\n" <> unpack (txt locCase)
-    case unsafeRunIO evaluation of
-      Left err -> testFailed $ unpack err
-      Right () -> pure ()
+    evaluation & either
+      (testFailed . unpack)
+      pure
+
   where
     propertyOptions :: TestOptions
     propertyOptions =
@@ -412,31 +440,16 @@ locateCombinatorProperty getSes =
           overrideMaxRatio = Nothing
         }
 
-    printGeneratorNodeCounts :: LocatorTestCase -> IO (Either Text ())
-    printGeneratorNodeCounts locCase =
-      case locCase of
-        Matched {testNode, abstractLocator} -> do
-          putStrLn $ "LocateCombinatorTest generator node count (test node): " <> show (countNodes testNode)
-          putStrLn $ "LocateCombinatorTest generator node count (generator selection): " <> show (countSelectionNodes abstractLocator)
-          pure $ Right ()
-        Unmatched {testNode, abstractLocator} -> do
-          putStrLn $ "LocateCombinatorTest generator node count (test node): " <> show (countNodes testNode)
-          putStrLn $ "LocateCombinatorTest generator node count (generator selection): " <> show (countSelectionNodes abstractLocator)
-          pure $ Right ()
-
-unsafeRunIO :: IO (Either Text ()) -> Either Text ()
+unsafeRunIO :: IO a -> Either Text a
 unsafeRunIO action =
-  unsafePerformIO $
-    fmap
-      ( either
-          (Left . ("Unexpected exception during property IO: " <>) . txt . displayException @SomeException)
-          id
-      )
-      (try action)
+  let rslt = unsafePerformIO $ try action
+  in
+  first (("Unexpected exception during property IO:\n " <>) . txt . displayException @SomeException) rslt
+
 {-# NOINLINE unsafeRunIO #-}
 
 
-evaluateCase :: IO WDSession -> LocatorTestCase -> IO (Either Text ())
+evaluateCase :: IO WDSession -> LocatorTestCase -> IO ()
 evaluateCase getSession locCase  = 
   case locCase of
     Matched {testNode, abstractLocator, expectedMatches} -> do
@@ -446,6 +459,7 @@ evaluateCase getSession locCase  =
       runHttp wdSession $ do
         let dataUrl = htmlToDataUrl html
         navigateTo dataUrl
+        -- TODO FIX
         sleep $ 100 * milliseconds
         evaluateExpectation
       where
@@ -455,31 +469,27 @@ evaluateCase getSession locCase  =
         html = "<!doctype html><html><head><meta charset=\"utf-8\"></head><body>"
               <> nodeToHtml testNode
               <> "</body></html>"
-        evaluateExpectation :: forall es. (IOE :> es, WebDriverHttp :> es) => Eff es (Either Text ())
+        evaluateExpectation :: forall es. (IOE :> es, WebDriverHttp :> es) => Eff es ()
         evaluateExpectation = do
           locateRslt <- locateAll locator
-          actualOrFailure <- locateRslt.result & either
-            (\err -> pure . Left $
+          actual <- locateRslt.result & either
+            (\err -> liftIO . throwIO . userError $
               "locateAll failed in generated locate property"
-                <> "\nSelection: " <> txt abstractLocator
-                <> "\nGenerated locator: " <> txt locator
-                <> "\nError: " <> txt err
+                <> "\nSelection: " <> unpack (txt abstractLocator)
+                <> "\nGenerated locator: " <> unpack (txt locator)
+                <> "\nError: " <> unpack (txt err)
             )
-            (\elms -> Right . nub . catMaybes <$> traverse (`getElementAttribute` "auto-id") elms)
+            (\elms -> nub . catMaybes <$> traverse (`getElementAttribute` "auto-id") elms)
 
-          actualOrFailure &
-            either 
-              (pure . Left)
-              \actual -> do
-                let expected = nub expectedMatches
-                if sort expected == sort actual
-                  then pure $ Right ()
-                  else do
-                    let failure = mkLocatorTestFailure testNode html abstractLocator locator expected actual
-                    pure . Left $ "Failure generated" <> "\n" <> txt failure
+          let expected = nub expectedMatches
+          if sort expected == sort actual
+            then pure ()
+            else do
+              let failure = mkLocatorTestFailure testNode html abstractLocator locator expected actual
+              liftIO . throwIO . userError $ "Failure generated" <> "\n" <> unpack (txt failure)
 
     Unmatched {} ->
-      pure $ Left "evaluateCase called with an unmatched locator case"
+      liftIO $ throwIO $ userError "evaluateCase called with an unmatched locator case"
 
 htmlToDataUrl :: Text -> URL
 htmlToDataUrl html =
@@ -507,7 +517,7 @@ mkLocatorTestFailure node html selection generatedLocator expectedMatches actual
 -- locators mixture of css and xpath
 
 _pattern :: Maybe Text
-_pattern = Just "Combinator property tests"
+_pattern = Just "simple OR"
 -- _pattern = Nothing
 
 _eval :: Maybe Text -> TestTree -> IO ()
@@ -516,39 +526,3 @@ _eval mPattern = withArgs (maybe [] (\pat -> ["-p", (unpack pat)]) mPattern) . d
 --- >>> _eval _pattern tests
 -- *** Exception: ExitFailure 1
 
-   
-{-
-Matched
-        { testNode =
-            Div
-              { autoId = "1"
-              , classes = [ A ]
-              , children =
-                  [ Span { autoId = "1-1" , classes = [ A ] }
-                  , Span { autoId = "1-2" , classes = [ A ] }
-                  , Span { autoId = "1-3" , classes = [ A ] }
-                  , Span { autoId = "1-4" , classes = [ B ] }
-                  ]
-              }
-        , abstractLocator =
-            Or'
-              { selection = Match { domClass = A } :| [ Match { domClass = B } ]
-              }
-        , expectedMatches = [ "1" , "1-1" , "1-2" , "1-3" , "1-4" ]
-        , locator =
-            Any
-              { elms =
-                  Class
-                    { value = "A"
-                    , matchType = Partial
-                    , caseSensitivity = CaseInsensitive
-                    } :|
-                    [ Class
-                        { value = "B"
-                        , matchType = Partial
-                        , caseSensitivity = CaseInsensitive
-                        }
-                    ]
-              }
-        }
--}
