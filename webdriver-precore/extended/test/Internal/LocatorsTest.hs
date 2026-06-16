@@ -577,7 +577,6 @@ chkSimplifiedLoc message expected originalLoc =
   testCase (unpack message) $ RL.prepareSimplify ID HTTP originalLoc @?= expected
 
 -- >>> _eval prepareSimplifyXPathTests
-
 -- *** Exception: ExitSuccess
 
 prepareSimplifyXPathTests :: TestTree
@@ -607,7 +606,11 @@ prepareSimplifyXPathTests =
       chkSimplifiedLoc
         "OR - h1 or h2 converts to XPath union"
         (Right $ RL.Leaf $ RL.XPath "//h1 | //h2")
-        (Tag "h1" ||| Tag "h2")
+        (Tag "h1" ||| Tag "h2"),
+      chkSimplifiedLoc
+        "OR - class A or class B preserves both XPath branches"
+        (Right . RL.Leaf $ RL.XPath "//*[contains(translate(@class, 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz'), 'a')] | //*[contains(translate(@class, 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz'), 'b')]")
+        (Class "A" Partial CaseInsensitive ||| Class "B" Partial CaseInsensitive)
     ]
 
 -- >>> _eval prop_simplification_merges_xpaths

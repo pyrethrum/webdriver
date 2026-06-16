@@ -50,27 +50,47 @@ tests =
   runSessionTests :: IO WDSession -> TestTree
   runSessionTests ses =
         inOrderTestGroup "Combinator tests"
-          [ locateCombinatorProperty ses,
+          [  inOrderTestGroup "Combinator property tests" 
+               [locateCombinatorProperty ses],
              inOrderTestGroup "Combinator singleton tests" [
-             locTest "simple OR" $ Matched
-                { testNode =
-                    Div
-                      { autoId = "1"
-                      , classes = [ A ]
-                      , children =
-                          [ Span { autoId = "1-1" , classes = [ A ] }
-                          , Span { autoId = "1-2" , classes = [ A ] }
-                          , Span { autoId = "1-3" , classes = [ A ] }
-                          , Span { autoId = "1-4" , classes = [ B ] }
-                          ]
+              locTest "simple OR" $ Matched
+                  { testNode =
+                      Div
+                        { autoId = "1"
+                        , classes = [ A ]
+                        , children =
+                            [ Span { autoId = "1-1" , classes = [ A ] }
+                            , Span { autoId = "1-2" , classes = [ A ] }
+                            , Span { autoId = "1-3" , classes = [ A ] }
+                            , Span { autoId = "1-4" , classes = [ B ] }
+                            ]
+                        }
+                  , abstractLocator =
+                      Or'
+                        { selection = Match { domClass = A } :| [ Match { domClass = B } ]
+                        }
+                  , expectedMatches = [ "1" , "1-1" , "1-2" , "1-3" , "1-4" ]
+                  , locator = classLoc "A" ||| classLoc "B"
+                  },
+              locTest "simple under" $
+                 Matched
+                      { testNode =
+                          Div
+                            { autoId = "1"
+                            , classes = [ A ]
+                            , children = [ Span { autoId = "1-1" , classes = [ A ] } ]
+                            }
+                      , abstractLocator =
+                          Under
+                            { parent = Match { domClass = A }
+                            , descendant =
+                                Or'
+                                  { selection = Match { domClass = A } :| [ Match { domClass = A } ]
+                                  }
+                            }
+                      , expectedMatches = [ "1-1" ]
+                      , locator = classLoc "A"  >>> (classLoc "A" ||| classLoc "A")
                       }
-                , abstractLocator =
-                    Or'
-                      { selection = Match { domClass = A } :| [ Match { domClass = B } ]
-                      }
-                , expectedMatches = [ "1" , "1-1" , "1-2" , "1-3" , "1-4" ]
-                , locator = classLoc "A" ||| classLoc "B"
-                }
              ]
           ]
         where 
@@ -524,7 +544,7 @@ mkLocatorTestFailure node html selection generatedLocator expectedMatches actual
 -- locators mixture of css and xpath
 
 _pattern :: Maybe Text
-_pattern = Just "simple OR"
+_pattern = Just "simple under"
 -- _pattern = Nothing
 
 _eval :: Maybe Text -> TestTree -> IO ()
@@ -533,86 +553,3 @@ _eval mPattern = withArgs (maybe [] (\pat -> ["-p", (unpack pat)]) mPattern) . d
 --- >>> _eval _pattern tests
 -- *** Exception: ExitFailure 1
 
-{-
-==== Trace ====
- FAIL
-        Exception: ghc-internal:GHC.Internal.IO.Exception.IOException:
-        
-        user error (Failure generated
-        MkLocatorTestFailure
-          { node =
-              Div
-                { autoId = "1"
-                , classes = [ A ]
-                , children =
-                    [ Span { autoId = "1-1" , classes = [ A ] }
-                    , Span { autoId = "1-2" , classes = [ A ] }
-                    , Span { autoId = "1-3" , classes = [ A ] }
-                    , Span { autoId = "1-4" , classes = [ B ] }
-                    ]
-                }
-          , html =
-              "<!doctype html><html><head><meta charset=\"utf-8\"></head><body><div  auto-id=\"1\"  class=\"A\"><span  auto-id=\"1-1\"  class=\"A\"></span><span  auto-id=\"1-2\"  class=\"A\"></span><span  auto-id=\"1-3\"  class=\"A\"></span><span  auto-id=\"1-4\"  class=\"B\"></span></div></body></html>"
-          , selection =
-              Or'
-                { selection = Match { domClass = A } :| [ Match { domClass = B } ]
-                }
-          , generatedLocator =
-              Any
-                { elms =
-                    Class
-                      { value = "A"
-                      , matchType = Partial
-                      , caseSensitivity = CaseInsensitive
-                      } :|
-                      [ Class
-                          { value = "B"
-                          , matchType = Partial
-                          , caseSensitivity = CaseInsensitive
-                          }
-                      ]
-                }
-          , expectedMatches = [ "1" , "1-1" , "1-2" , "1-3" , "1-4" ]
-          , actualMatches = [ "1" , "1-1" , "1-2" , "1-3" ]
-          , missingFromActual = [ "1-4" ]
-          , extraInActual = []
-          }
-        
-        ==== Trace ====
-        Prepared
-          { loc =
-              Any
-                { elms =
-                    Class
-                      { value = "A"
-                      , matchType = Partial
-                      , caseSensitivity = CaseInsensitive
-                      } :|
-                      [ Class
-                          { value = "B"
-                          , matchType = Partial
-                          , caseSensitivity = CaseInsensitive
-                          }
-                      ]
-                }
-          , reducedLoc =
-              LeafHttp
-                XPath
-                  { value =
-                      "//*[contains(translate(@class, 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz'), 'a')]"
-                  }
-          }
-        LeafLocate
-          { selector =
-              XPath
-                "//*[contains(translate(@class, 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz'), 'a')]"
-          , cardinality = FindAll
-          , found =
-              [ MkElement { id = "144b3f0c-0a62-4383-8651-64ed82eb1745" }
-              , MkElement { id = "55cdfa5c-c5da-4e6d-89c1-6cad398aa592" }
-              , MkElement { id = "bf6adebc-efe7-49ba-88f5-60d9f185bd7f" }
-              , MkElement { id = "f905b7d6-3ae7-4ace-9a2a-0fcee83f3549" }
-              ]
-          }
-        )
--}

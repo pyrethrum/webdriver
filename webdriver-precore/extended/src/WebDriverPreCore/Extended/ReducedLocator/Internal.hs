@@ -194,7 +194,10 @@ coreToFullXPath = LI.mapLocBottomUp prefixSuffix
   where
     prefixSuffix :: LI.Locator -> LI.Locator
     prefixSuffix = \case
-      LI.XPath {value} -> LI.XPath . renderXPathNode $ parseXPathNode value
+      -- Preserve explicit XPath unions; parsing them as a single node drops branches.
+      LI.XPath {value}
+        | T.isInfixOf " | " value -> LI.XPath {value}
+        | otherwise -> LI.XPath . renderXPathNode $ parseXPathNode value
       other -> other
 
 -- | Parse a raw XPath value that may or may not have been produced by this
@@ -227,7 +230,22 @@ parseXPathNode value =
                in p : parsePreds (T.drop 1 after)
 
 toXPathCore :: LI.Locator -> Either LI.InvalidLocator LI.Locator
-toXPathCore loc = LI.XPath . renderXPathNode <$> toXPathNode loc
+toXPathCore loc =
+  case loc of
+    LI.XPath {value}
+      | T.isInfixOf " | " value -> Right LI.XPath {value}
+    LI.Any {elms} -> do
+      convertedBranches <- traverse toXPathCore elms
+      let branches =
+            toList $
+              fmap
+                (\case
+                    LI.XPath {value} -> value
+                    _ -> error "toXPathCore: expected XPath branch for LI.Any"
+                )
+                convertedBranches
+      Right $ LI.XPath {value = T.intercalate " | " branches}
+    _ -> LI.XPath . renderXPathNode <$> toXPathNode loc
   where
     -- | Convert a Locator to a structured 'XPathNode'.
     --   Tag sets the node-test; all other predicates accumulate in the predicate list.
@@ -244,16 +262,8 @@ toXPathCore loc = LI.XPath . renderXPathNode <$> toXPathNode loc
             [t] -> Right t
             xs  -> Left $ LI.MkInvalidLocator l ("Conflicting tags in All combinator - cannot convert to XPath: " <> txt xs)
           Right $ MkXPathNode {tag = mergedTag, predicates = mergedPreds}
-        -- Any: each branch is a full XPath; join with |
-        -- We cannot represent XPath union as a single XPathNode, so we generate the union directly
-        LI.Any {elms} -> do
-          nodes <- traverse toXPathNode elms
-          let branches = toList $ renderXPathNode <$> nodes
-              union = T.intercalate " | " branches
-          -- Parse the union expression as a single XPath
-          -- Since it contains multiple branches, parseXPathNode will wrap it in boolean()
-          -- which is what we want for a union when it appears in isolation
-          Right $ parseXPathNode union
+        -- Any is handled at toXPathCore top-level to preserve XPath unions.
+        LI.Any {} -> locErr l
         -- Contains: should not reach here since it's handled specially in convertXPath
         -- If it does, it means both parts weren't XPath and we can't convert
         LI.Contains {} -> 
