@@ -294,12 +294,20 @@ setBaseElement mRootId act@MkLocParams{..} =
     makeRelative f elmId sel = f elmId (toRelativeSelector sel)
     
     toRelativeSelector :: Selector -> Selector
-    toRelativeSelector (HTTPP.XPath xp) = 
-      -- Convert //path to .//path for element-relative search
-      case T.stripPrefix "//" xp of
-        Just rest -> HTTPP.XPath (".//" <> rest)
-        Nothing -> HTTPP.XPath xp  -- Already relative or absolute from root
+    toRelativeSelector (HTTPP.XPath xp) =
+      -- Keep each XPath union branch relative to the current element scope.
+      HTTPP.XPath $ relativizeXPathUnion xp
     toRelativeSelector sel = sel  -- CSS selectors don't need modification
+
+    relativizeXPathUnion :: Text -> Text
+    relativizeXPathUnion xpathExpr =
+      T.intercalate " | " . fmap relativizeBranch $ T.splitOn " | " xpathExpr
+
+    relativizeBranch :: Text -> Text
+    relativizeBranch branch =
+      case T.stripPrefix "//" (T.strip branch) of
+        Just rest -> ".//" <> rest
+        Nothing -> T.strip branch
 
 prepareRun :: forall m. Monad m =>
       LocParams m 

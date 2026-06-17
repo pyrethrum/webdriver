@@ -269,6 +269,15 @@ toXPathCore loc =
         LI.Contains {} -> 
           Left $ LI.MkInvalidLocator l "Contains locator reached toXPathNode unexpectedly"
         _ -> Right $ case l of
+                LI.XPath {value}
+                  | T.isInfixOf " | " value ->
+                      -- Union XPath produced by a nested Any combinator. Extract
+                      -- predicates from every branch and combine with 'or' so the
+                      -- whole union merges cleanly as a single predicate inside All.
+                      let branches = T.splitOn " | " value
+                          allPreds = concatMap (.predicates) $ parseXPathNode . T.strip <$> branches
+                          orPred   = "(" <> T.intercalate " or " allPreds <> ")"
+                      in  MkXPathNode {tag = "*", predicates = [orPred]}
                 LI.XPath {value} -> parseXPathNode value
                 LI.AllElms -> MkXPathNode {tag = "*", predicates = []}
                 LI.Tag {value} -> MkXPathNode {tag = value, predicates = []}

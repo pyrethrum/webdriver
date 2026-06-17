@@ -42,7 +42,8 @@ tests =
           sanityAandC,
           sanityAUnderB,
           sanityAandCUnderC,
-          sanityAandCUnderB 
+          sanityAandCUnderB,
+          sanityNested2
           ],
     withResource getWDSession closeWDSession runSessionTests
   ]
@@ -90,7 +91,111 @@ tests =
                             }
                       , expectedMatches = [ "1-1" ]
                       , locator = classLoc "A"  >>> (classLoc "A" ||| classLoc "A")
+                      },
+               locTest "nested under with OR remains scoped" $
+                    Matched
+                       { testNode =
+                         Div
+                           { autoId = "1"
+                           , classes = [ A ]
+                           , children =
+                             [ Div
+                               { autoId = "1-1"
+                               , classes = [ B ]
+                               , children =
+                                 [ Span { autoId = "1-1-1", classes = [ C ] }
+                                 , Span { autoId = "1-1-2", classes = [ D ] }
+                                 ]
+                               }
+                             , Div
+                               { autoId = "1-2"
+                               , classes = [ B ]
+                               , children =
+                                 [ Span { autoId = "1-2-1", classes = [ C ] }
+                                 ]
+                               }
+                             ]
+                           }
+                       , abstractLocator =
+                         Under
+                           { parent = Match { domClass = A }
+                           , descendant =
+                             Under
+                             { parent = Match { domClass = B }
+                             , descendant =
+                               Or'
+                                 { selection = Match { domClass = C } :| [ Match { domClass = D } ]
+                                 }
+                             }
+                           }
+                       , expectedMatches = [ "1-1-1", "1-1-2", "1-2-1" ]
+                       , locator = classLoc "A" >>> (classLoc "B" >>> (classLoc "C" ||| classLoc "D"))
+                       },
+          locTest "Or in And" $  Matched
+          { testNode =
+              Div
+                { autoId = "1"
+                , classes = [ A ]
+                , children = [ Span { autoId = "1-1" , classes = [ A ] } ]
+                }
+          , abstractLocator =
+              And'
+                { selection =
+                    Match { domClass = A } :|
+                      [ Or'
+                          { selection = Match { domClass = B } :| [ Match { domClass = A } ]
+                          }
+                      ]
+                }
+          , expectedMatches = [ "1" , "1-1" ]
+          , locator = classLoc "A" &&& (classLoc "B" ||| classLoc "A")
+          },
+          locTest "Nested Contains" $ Matched
+          { testNode =
+              Div
+                { autoId = "1"
+                , classes = [ A ]
+                , children =
+                    [ Div
+                        { autoId = "1-1"
+                        , classes = [ A ]
+                        , children =
+                            [ Span { autoId = "1-1-1" , classes = [ A ] }
+                            , Span { autoId = "1-1-2" , classes = [ A ] }
+                            , Div
+                                { autoId = "1-1-3"
+                                , classes = [ A ]
+                                , children =
+                                    [ Span { autoId = "1-1-3-1" , classes = [ A ] }
+                                    , Span { autoId = "1-1-3-2" , classes = [ A ] }
+                                    , Span { autoId = "1-1-3-3" , classes = [ A ] }
+                                    , Span { autoId = "1-1-3-4" , classes = [ A ] }
+                                    , Span { autoId = "1-1-3-5" , classes = [ A ] }
+                                    , Div
+                                        { autoId = "1-1-3-6"
+                                        , classes = [ A , B ]
+                                        , children = [ Span { autoId = "1-1-3-6-1" , classes = [ B ] } ]
+                                        }
+                                    ]
+                                }
+                            ]
+                        }
+                    ]
+                }
+          , abstractLocator =
+              Under
+                { parent = Match { domClass = B }
+                , descendant =
+                    Under
+                      { parent = Match { domClass = A }
+                      , descendant = Or' { selection = Match { domClass = B } :| [] }
                       }
+                }
+          , expectedMatches = [ "1-1-3-6-1" ]
+          , locator = classLoc "B" >>>
+                      (classLoc "A" >>> classLoc "B")
+          }
+                
              ]
           ]
         where 
@@ -374,11 +479,15 @@ chkListContentEq :: (Ord a, Show a) => Text -> [a] -> [a] -> IO ()
 chkListContentEq message expected actual =
   assertEqual (unpack message) (sort expected) (sort actual)
 
+sanityChk' :: Node ->Text -> [Text] -> Selection -> TestTree
+sanityChk' node message expected selection =
+  testCase (unpack message) $ do
+    let actual = match node selection
+    chkListContentEq message expected actual
+
 sanityChk :: Text -> [Text] -> Selection -> TestTree
 sanityChk message expected selection =
-  testCase (unpack message) $ do
-    let actual = match sanityNode selection
-    chkListContentEq message expected actual
+  sanityChk' sanityNode message expected selection
 
 sanityNode :: Node
 sanityNode =
@@ -424,7 +533,48 @@ sanityAandCUnderB = sanityChk "A and C under B"  ["1-2-1", "1-3-1"] $ Under {par
 sanityAUnderB :: TestTree
 sanityAUnderB = sanityChk "A under B"  ["1-1", "1-2-1", "1-3-1"] $ Under {parent = Match B, descendant = Match A}
 
+sanityNode2 :: Node
+sanityNode2 =
+  Div
+    { autoId = "1"
+    , classes = [ A ]
+    , children =
+        [ Div
+            { autoId = "1-1"
+            , classes = [ A ]
+            , children =
+                [ Span { autoId = "1-1-1" , classes = [ A ] }
+                , Span { autoId = "1-1-2" , classes = [ A ] }
+                , Div
+                    { autoId = "1-1-3"
+                    , classes = [ A ]
+                    , children =
+                        [ Span { autoId = "1-1-3-1" , classes = [ A ] }
+                        , Span { autoId = "1-1-3-2" , classes = [ A ] }
+                        , Span { autoId = "1-1-3-3" , classes = [ A ] }
+                        , Span { autoId = "1-1-3-4" , classes = [ A ] }
+                        , Span { autoId = "1-1-3-5" , classes = [ A ] }
+                        , Div
+                            { autoId = "1-1-3-6"
+                            , classes = [ A , B ]
+                            , children = [ Span { autoId = "1-1-3-6-1" , classes = [ B ] } ]
+                            }
+                        ]
+                    }
+                ]
+            }
+        ]
+    }
 
+sanityNested2 :: TestTree
+sanityNested2 =  sanityChk' sanityNode2 "Double nested" [] $ Under
+                      { parent = Match { domClass = B }
+                      , descendant =
+                          Under
+                            { parent = Match { domClass = A }
+                            , descendant = Or' { selection = Match { domClass = B } :| [] }
+                            }
+                      }
 data LocatorTestFailure = MkLocatorTestFailure
   { node :: Node,
     html :: Text,
@@ -544,7 +694,7 @@ mkLocatorTestFailure node html selection generatedLocator expectedMatches actual
 -- locators mixture of css and xpath
 
 _pattern :: Maybe Text
-_pattern = Just "simple under"
+_pattern = Just "sanity checks for abstract selector"
 -- _pattern = Nothing
 
 _eval :: Maybe Text -> TestTree -> IO ()
@@ -552,4 +702,5 @@ _eval mPattern = withArgs (maybe [] (\pat -> ["-p", (unpack pat)]) mPattern) . d
 
 --- >>> _eval _pattern tests
 -- *** Exception: ExitFailure 1
+
 
