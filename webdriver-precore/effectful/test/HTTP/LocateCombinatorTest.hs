@@ -22,7 +22,7 @@ import System.Environment (withArgs)
 import Test.Tasty.HUnit (assertEqual, testCase)
 import Test.Tasty.Falsify (ExpectFailure (DontExpectFailure), TestOptions (..), Verbose (..), genWith, info, testFailed, testPropertyWith)
 import System.IO.Unsafe (unsafePerformIO)
-import Utils (txt, db)
+import Utils (txt)
 import WebDriver.Effectful (WebDriverHttp, sleep)
 import WebDriver.Effectful.HTTP.Base.Actions (getElementAttribute, navigateTo)
 import WebDriverPreCore.Extended.HTTP.Base.Protocol (URL (..))
@@ -198,7 +198,7 @@ tests =
                         classLoc A >>> 
                           classLoc B
           },
-          locTest "Or and contains ZZZ" $ Matched
+          locTest "Or and contains" $ Matched
           { testNode =
               Div
                 { autoId = "1"
@@ -514,7 +514,7 @@ chkListContentEq message expected actual =
 sanityChk' :: Node ->Text -> [Text] -> AbsLoc -> TestTree
 sanityChk' node message expected selection =
   testCase (unpack message) $ do
-    let actual = db "SANITY CHECK EXPECTED" $ match node selection
+    let actual = match node selection
     chkListContentEq message expected actual
 
 sanityChk :: Text -> [Text] -> AbsLoc -> TestTree
@@ -700,7 +700,8 @@ locateCombinatorProperty getSes =
     propertyOptions =
       TestOptions
         { expectFailure = DontExpectFailure,
-          overrideVerbose = Just Verbose,
+          -- overrideVerbose = Just Verbose,
+          overrideVerbose = Nothing,
           overrideNumTests = Just 10,
           overrideMaxShrinks = Nothing,
           overrideMaxRatio = Nothing
@@ -719,8 +720,8 @@ evaluateCase :: IO WDSession -> LocatorTestCase -> IO ()
 evaluateCase getSession locCase  = 
   case locCase of
     Matched {testNode, abstractLocator, expectedMatches} -> do
-      putStrLn $ "LocateCombinatorTest pre-IO node count (test node): " <> show (countNodes testNode)
-      putStrLn $ "LocateCombinatorTest pre-IO node count (generator selection): " <> show (countSelectionNodes abstractLocator)
+      -- putStrLn $ "LocateCombinatorTest pre-IO node count (test node): " <> show (countNodes testNode)
+      -- putStrLn $ "LocateCombinatorTest pre-IO node count (generator selection): " <> show (countSelectionNodes abstractLocator)
       wdSession <- getSession
       runHttp wdSession $ do
         let dataUrl = htmlToDataUrl html
@@ -789,7 +790,7 @@ mkLocatorTestFailure node html selection generatedLocator expectedMatches actual
 -- locators mixture of css and xpath
 
 _pattern :: Maybe Text
-_pattern = Just "ZZZ"
+_pattern = Just "Combinator property tests"
 -- _pattern = Nothing
 
 _eval :: Maybe Text -> TestTree -> IO ()
@@ -797,72 +798,5 @@ _eval mPattern = withArgs (maybe [] (\pat -> ["-p", (unpack pat)]) mPattern) . d
 
 --- >>> _eval _pattern tests
 -- *** Exception: ExitFailure 1
-
-{-
-Matched
-          { testNode =
-              Div
-                { autoId = "1"
-                , classes = [ A ]
-                , children = [ Span { autoId = "1-1" , classes = [ A ] } ]
-                }
-          , abstractLocator =
-              Or'
-                { locs =
-                    Or'
-                      { locs =
-                          Match { domClass = A } :|
-                            [ Match { domClass = A }
-                            , Or'
-                                { locs =
-                                    Under
-                                      { parentLoc = Match { domClass = A }
-                                      , descendantLoc = Match { domClass = A }
-                                      } :|
-                                      []
-                                }
-                            ]
-                      } :|
-                      []
-                }
-          , expectedMatches = [ "1" , "1-1" ]
-          , locator =
-              Any
-                { elms =
-                    Any
-                      { elms =
-                          Class
-                            { value = "A"
-                            , matchType = Partial
-                            , caseSensitivity = CaseInsensitive
-                            } :|
-                            [ Class
-                                { value = "A"
-                                , matchType = Partial
-                                , caseSensitivity = CaseInsensitive
-                                }
-                            ]
-                      } :|
-                      [ Contains
-                          { container =
-                              Class
-                                { value = "A"
-                                , matchType = Partial
-                                , caseSensitivity = CaseInsensitive
-                                }
-                          , contained =
-                              Class
-                                { value = "A"
-                                , matchType = Partial
-                                , caseSensitivity = CaseInsensitive
-                                }
-                          }
-                      ]
-                }
-          }
-
-
-
--}
 
 

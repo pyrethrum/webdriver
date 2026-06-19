@@ -245,6 +245,16 @@ toXPathCore loc =
                 )
                 convertedBranches
       Right $ LI.XPath {value = T.intercalate " | " branches}
+    LI.Contains {container, contained} -> do
+      -- Both children should already be XPath at this point (converted by convertXPath).
+      -- Combine them into a single descendant XPath: //parent[...]//descendant[...]
+      cXPath <- toXPathCore container
+      dXPath <- toXPathCore contained
+      case (cXPath, dXPath) of
+        (LI.XPath {value = cv}, LI.XPath {value = dv}) ->
+          Right $ LI.XPath {value = cv <> dv}
+        _ ->
+          Left $ LI.MkInvalidLocator loc "Contains: children not convertable to XPath"
     _ -> LI.XPath . renderXPathNode <$> toXPathNode loc
   where
     -- | Convert a Locator to a structured 'XPathNode'.
@@ -264,8 +274,7 @@ toXPathCore loc =
           Right $ MkXPathNode {tag = mergedTag, predicates = mergedPreds}
         -- Any is handled at toXPathCore top-level to preserve XPath unions.
         LI.Any {} -> locErr l
-        -- Contains: should not reach here since it's handled specially in convertXPath
-        -- If it does, it means both parts weren't XPath and we can't convert
+        -- Contains: should not reach here since it's handled in toXPathCore above.
         LI.Contains {} -> 
           Left $ LI.MkInvalidLocator l "Contains locator reached toXPathNode unexpectedly"
         _ -> Right $ case l of
