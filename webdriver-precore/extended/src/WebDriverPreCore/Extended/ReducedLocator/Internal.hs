@@ -139,8 +139,8 @@ prepareSimplify defLoc proto l =
 
 xPathSub :: (Text -> LI.Locator) -> LI.Protocol -> LI.Locator -> Either LI.InvalidLocator LI.Locator
 xPathSub defLoc proto l =
-  -- after prepare comboinator ocators such as Parent, All, Any are already be grouped correctly with all XPaths together,
-  --  so we can just recursively convert to XPath if the grup is XPath Convertable
+  -- after prepare combinator locators such as Parent, All, Any are already be grouped correctly with all XPaths together,
+  --  so we can just recursively convert to XPath if the group is XPath Convertable
   coreToFullXPath <$> (LI.prepare defLoc proto l >>= convertXPath)
   where
     convertXPath :: LI.Locator -> Either LI.InvalidLocator LI.Locator

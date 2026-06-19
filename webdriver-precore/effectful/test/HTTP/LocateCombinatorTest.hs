@@ -22,15 +22,16 @@ import System.Environment (withArgs)
 import Test.Tasty.HUnit (assertEqual, testCase)
 import Test.Tasty.Falsify (ExpectFailure (DontExpectFailure), TestOptions (..), Verbose (..), genWith, info, testFailed, testPropertyWith)
 import System.IO.Unsafe (unsafePerformIO)
-import Utils (txt)
+import Utils (txt, db)
 import WebDriver.Effectful (WebDriverHttp, sleep)
 import WebDriver.Effectful.HTTP.Base.Actions (getElementAttribute, navigateTo)
 import WebDriverPreCore.Extended.HTTP.Base.Protocol (URL (..))
 import WebDriverPreCore.Extended.Locate qualified as L
-import WebDriverPreCore.Extended.Locators (Locator, css, elmClass, (&&&), (>>>), (|||), elmClass', MatchType (Partial), CaseSensitivity (..))
+import WebDriverPreCore.Extended.Locators (Locator, css, elmClass, (&&&), (>>>), (|||), elmClass', MatchType (..), CaseSensitivity (..))
 import WebDriverPreCore.Extended.Protocol (milliseconds)
 import Data.Bifunctor (Bifunctor(first))
 import WebDriverPreCore.Extended.Locate (LocateResult(..))
+
 
 
 tests :: TestTree
@@ -72,7 +73,7 @@ tests =
                         { locs = Match { domClass = A } :| [ Match { domClass = B } ]
                         }
                   , expectedMatches = [ "1" , "1-1" , "1-2" , "1-3" , "1-4" ]
-                  , locator = classLoc "A" ||| classLoc "B"
+                  , locator = classLoc A ||| classLoc B
                   },
               locTest "simple under" $
                  Matched
@@ -91,7 +92,7 @@ tests =
                                   }
                             }
                       , expectedMatches = [ "1-1" ]
-                      , locator = classLoc "A"  >>> (classLoc "A" ||| classLoc "A")
+                      , locator = classLoc A  >>> (classLoc A ||| classLoc A)
                       },
                locTest "nested under with OR remains scoped" $
                     Matched
@@ -130,7 +131,7 @@ tests =
                              }
                            }
                        , expectedMatches = [ "1-1-1", "1-1-2", "1-2-1" ]
-                       , locator = classLoc "A" >>> (classLoc "B" >>> (classLoc "C" ||| classLoc "D"))
+                       , locator = classLoc A >>> (classLoc B >>> (classLoc C ||| classLoc D))
                        },
           locTest "Or in And" $  Matched
           { testNode =
@@ -149,7 +150,7 @@ tests =
                       ]
                 }
           , expectedMatches = [ "1" , "1-1" ]
-          , locator = classLoc "A" &&& (classLoc "B" ||| classLoc "A")
+          , locator = classLoc A &&& (classLoc B ||| classLoc A)
           },
           locTest "Nested Contains" $ Matched
           { testNode =
@@ -192,18 +193,49 @@ tests =
                       , descendantLoc = Or' { locs = Match { domClass = B } :| [] }
                       }
                 }
-          , expectedMatches = [ "1-1-3-6-1" ]
-          , locator = classLoc "B" >>>
-                      (classLoc "A" >>> classLoc "B")
+          , expectedMatches = []
+          , locator = classLoc B >>>
+                        classLoc A >>> 
+                          classLoc B
+          },
+          locTest "Or and contains ZZZ" $ Matched
+          { testNode =
+              Div
+                { autoId = "1"
+                , classes = [ A ]
+                , children = [ Span { autoId = "1-1" , classes = [ A ] } ]
+                }
+          , abstractLocator =
+              Or'
+                { locs =
+                    Or'
+                      { locs =
+                          Match A  :|
+                            [ Match A 
+                            , Or'
+                                { locs =
+                                    Under
+                                      { parentLoc = Match A
+                                      , descendantLoc = Match A
+                                      } :|
+                                      []
+                                }
+                            ]
+                      } :|
+                      []
+                }
+          , expectedMatches = [ "1" , "1-1" ]
+          , locator = classLoc A ||| classLoc A ||| (classLoc A 
+                                                        >>> classLoc A)  
           }
-                
              ]
           ]
         where 
-          classLoc = elmClass' Partial CaseInsensitive
           locTest :: Text -> LocatorTestCase -> TestTree
           locTest name = testCase (unpack name) .  evaluateCase ses
 
+classLoc :: DOMClass -> Locator
+classLoc = elmClass' Full CaseInsensitive . txt
 
 data DOMClass = A | B | C | D | E deriving (Eq, Show)
 data Node = Div {
@@ -482,7 +514,7 @@ chkListContentEq message expected actual =
 sanityChk' :: Node ->Text -> [Text] -> AbsLoc -> TestTree
 sanityChk' node message expected selection =
   testCase (unpack message) $ do
-    let actual = match node selection
+    let actual = db "SANITY CHECK EXPECTED" $ match node selection
     chkListContentEq message expected actual
 
 sanityChk :: Text -> [Text] -> AbsLoc -> TestTree
@@ -593,7 +625,51 @@ sanityNested2 =  sanityChk' sanityNode3 "Double nested 2" ["1-1-3-6-2-1"] $
                             }
                       }
 
-                
+sanityNode4 :: Node
+sanityNode4 =
+  Div
+    { autoId = "1"
+    , classes = [ A ]
+    , children =
+        [ Div
+            { autoId = "1-1"
+            , classes = [ A ]
+            , children =
+                [ Span { autoId = "1-1-1" , classes = [ A ] }
+                , Span { autoId = "1-1-2" , classes = [ A ] }
+                , Div
+                    { autoId = "1-1-3"
+                    , classes = [ A ]
+                    , children =
+                        [ Span { autoId = "1-1-3-1" , classes = [ A ] }
+                        , Span { autoId = "1-1-3-2" , classes = [ A ] }
+                        , Span { autoId = "1-1-3-3" , classes = [ A ] }
+                        , Span { autoId = "1-1-3-4" , classes = [ A ] }
+                        , Span { autoId = "1-1-3-5" , classes = [ A ] }
+                        , Div
+                            { autoId = "1-1-3-6"
+                            , classes = [ A , B ]
+                            , children = [ Span { autoId = "1-1-3-6-1" , classes = [ B ] } ]
+                            }
+                        ]
+                    }
+                ]
+            }
+        ]
+    }
+  
+nestedLoc :: AbsLoc
+nestedLoc = 
+    Under
+      { parentLoc = Match { domClass = B }
+      , descendantLoc =
+          Under
+            { parentLoc = Match { domClass = A }
+            , descendantLoc = Or' { locs = Match { domClass = B } :| [] }
+            }
+      }
+
+
 data LocatorTestFailure = MkLocatorTestFailure
   { node :: Node,
     html :: Text,
@@ -713,13 +789,80 @@ mkLocatorTestFailure node html selection generatedLocator expectedMatches actual
 -- locators mixture of css and xpath
 
 _pattern :: Maybe Text
-_pattern = Just "sanity checks for abstract locator"
+_pattern = Just "ZZZ"
 -- _pattern = Nothing
 
 _eval :: Maybe Text -> TestTree -> IO ()
 _eval mPattern = withArgs (maybe [] (\pat -> ["-p", (unpack pat)]) mPattern) . defaultMain
 
 --- >>> _eval _pattern tests
--- *** Exception: ExitSuccess
+-- *** Exception: ExitFailure 1
+
+{-
+Matched
+          { testNode =
+              Div
+                { autoId = "1"
+                , classes = [ A ]
+                , children = [ Span { autoId = "1-1" , classes = [ A ] } ]
+                }
+          , abstractLocator =
+              Or'
+                { locs =
+                    Or'
+                      { locs =
+                          Match { domClass = A } :|
+                            [ Match { domClass = A }
+                            , Or'
+                                { locs =
+                                    Under
+                                      { parentLoc = Match { domClass = A }
+                                      , descendantLoc = Match { domClass = A }
+                                      } :|
+                                      []
+                                }
+                            ]
+                      } :|
+                      []
+                }
+          , expectedMatches = [ "1" , "1-1" ]
+          , locator =
+              Any
+                { elms =
+                    Any
+                      { elms =
+                          Class
+                            { value = "A"
+                            , matchType = Partial
+                            , caseSensitivity = CaseInsensitive
+                            } :|
+                            [ Class
+                                { value = "A"
+                                , matchType = Partial
+                                , caseSensitivity = CaseInsensitive
+                                }
+                            ]
+                      } :|
+                      [ Contains
+                          { container =
+                              Class
+                                { value = "A"
+                                , matchType = Partial
+                                , caseSensitivity = CaseInsensitive
+                                }
+                          , contained =
+                              Class
+                                { value = "A"
+                                , matchType = Partial
+                                , caseSensitivity = CaseInsensitive
+                                }
+                          }
+                      ]
+                }
+          }
+
+
+
+-}
 
 
