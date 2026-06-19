@@ -197,6 +197,9 @@ coreToFullXPath = LI.mapLocBottomUp prefixSuffix
       -- Preserve explicit XPath unions; parsing them as a single node drops branches.
       LI.XPath {value}
         | T.isInfixOf " | " value -> LI.XPath {value}
+        -- Preserve multi-step XPaths (e.g. //container//descendant) produced by
+        -- All/Contains conversion; parseXPathNode assumes a single step.
+        | "//" `T.isInfixOf` T.drop 2 value -> LI.XPath {value}
         | otherwise -> LI.XPath . renderXPathNode $ parseXPathNode value
       other -> other
 
@@ -255,8 +258,63 @@ toXPathCore loc =
           Right $ LI.XPath {value = cv <> dv}
         _ ->
           Left $ LI.MkInvalidLocator loc "Contains: children not convertable to XPath"
+    LI.All {elms} | any isContains (toList elms) ->
+      allWithContains elms
     _ -> LI.XPath . renderXPathNode <$> toXPathNode loc
   where
+    -- | All containing Contains: can't be merged into a single XPathNode
+    --   because Contains spans two levels (container/descendant).
+    --   Instead produce a multi-step XPath: @container//descendant-with-extra-preds@.
+    allWithContains :: NonEmpty LI.Locator -> Either LI.InvalidLocator LI.Locator
+    allWithContains elms = do
+      let (containsList, restList) =
+            foldr
+              ( \e (cs, rs) -> case e of
+                  LI.Contains {} -> (e : cs, rs)
+                  _              -> (cs, e : rs)
+              )
+              ([], [])
+              (toList elms)
+      extraPreds <- fmap concat $ traverse (fmap (.predicates) . toXPathNode) restList
+      case containsList of
+        [] -> error "allWithContains: expected at least one Contains (checked by caller)"
+        (LI.Contains {container, contained} : restContains) -> do
+          -- Use the first Contains for the structural container path.
+          containerXPath <- toXPathCore container
+          containedNode <- toXPathNode contained
+          -- Collect contained predicates from remaining Contains.
+          restContainedPreds <- fmap concat $ traverse containedPredsFromContains restContains
+          -- For remaining Contains, add ancestor container checks.
+          ancestorPreds <- traverse ancestorCheckFromContains restContains
+          let allPreds = containedNode.predicates <> extraPreds <> restContainedPreds <> ancestorPreds
+              containedNode' = containedNode {predicates = allPreds}
+          case containerXPath of
+            LI.XPath {value = cv} ->
+              Right $ LI.XPath {value = cv <> renderXPathNode containedNode'}
+            _ ->
+              Left $ LI.MkInvalidLocator loc "All/Contains: container not convertible to XPath"
+
+    -- | Extract predicates from the contained part of a Contains locator.
+    containedPredsFromContains :: LI.Locator -> Either LI.InvalidLocator [Text]
+    containedPredsFromContains (LI.Contains {contained}) = fmap (.predicates) (toXPathNode contained)
+    containedPredsFromContains _ = Right []
+
+    -- | Build an ancestor-check predicate for a remaining Contains container.
+    --   \"count(ancestor::tag[preds]) > 0\" ensures the target element has an
+    --   ancestor matching the container specification.
+    ancestorCheckFromContains :: LI.Locator -> Either LI.InvalidLocator Text
+    ancestorCheckFromContains (LI.Contains {container}) = do
+      containerXPath <- toXPathCore container
+      containerNode <- toXPathNode containerXPath
+      let ancestorMatch = containerNode.tag <> foldMap (\p -> "[" <> p <> "]") containerNode.predicates
+      Right $ "count(ancestor::" <> ancestorMatch <> ") > 0"
+    ancestorCheckFromContains _ = Right ""
+
+    isContains :: LI.Locator -> Bool
+    isContains = \case
+      LI.Contains {} -> True
+      _               -> False
+
     -- | Convert a Locator to a structured 'XPathNode'.
     --   Tag sets the node-test; all other predicates accumulate in the predicate list.
     --   For combinators: All merges predicates (intersection), Any uses | union.
@@ -275,7 +333,7 @@ toXPathCore loc =
         -- Any is handled at toXPathCore top-level to preserve XPath unions.
         LI.Any {} -> locErr l
         -- Contains: should not reach here since it's handled in toXPathCore above.
-        LI.Contains {} -> 
+        LI.Contains {} ->
           Left $ LI.MkInvalidLocator l "Contains locator reached toXPathNode unexpectedly"
         _ -> Right $ case l of
                 LI.XPath {value}

@@ -31,6 +31,7 @@ import WebDriverPreCore.Extended.Locators (Locator, css, elmClass, (&&&), (>>>),
 import WebDriverPreCore.Extended.Protocol (milliseconds)
 import Data.Bifunctor (Bifunctor(first))
 import WebDriverPreCore.Extended.Locate (LocateResult(..))
+import Test.Falsify.Property (gen)
 
 
 
@@ -70,7 +71,7 @@ tests =
                         }
                   , abstractLocator =
                       Or'
-                        { locs = Match { domClass = A } :| [ Match { domClass = B } ]
+                        { locs = Match A :| [ Match { domClass = B } ]
                         }
                   , expectedMatches = [ "1" , "1-1" , "1-2" , "1-3" , "1-4" ]
                   , locator = classLoc A ||| classLoc B
@@ -85,10 +86,10 @@ tests =
                             }
                       , abstractLocator =
                           Under
-                            { parentLoc = Match { domClass = A }
+                            { parentLoc = Match A
                             , descendantLoc =
                                 Or'
-                                  { locs = Match { domClass = A } :| [ Match { domClass = A } ]
+                                  { locs = Match A :| [ Match A ]
                                   }
                             }
                       , expectedMatches = [ "1-1" ]
@@ -120,7 +121,7 @@ tests =
                            }
                        , abstractLocator =
                          Under
-                           { parentLoc = Match { domClass = A }
+                           { parentLoc = Match A
                            , descendantLoc =
                              Under
                              { parentLoc = Match { domClass = B }
@@ -143,9 +144,9 @@ tests =
           , abstractLocator =
               And'
                 { locs =
-                    Match { domClass = A } :|
+                    Match A :|
                       [ Or'
-                          { locs = Match { domClass = B } :| [ Match { domClass = A } ]
+                          { locs = Match { domClass = B } :| [ Match A ]
                           }
                       ]
                 }
@@ -189,7 +190,7 @@ tests =
                 { parentLoc = Match { domClass = B }
                 , descendantLoc =
                     Under
-                      { parentLoc = Match { domClass = A }
+                      { parentLoc = Match A
                       , descendantLoc = Or' { locs = Match { domClass = B } :| [] }
                       }
                 }
@@ -227,6 +228,99 @@ tests =
           , expectedMatches = [ "1" , "1-1" ]
           , locator = classLoc A ||| classLoc A ||| (classLoc A 
                                                         >>> classLoc A)  
+          },
+          locTest "Or and contains ii" $ Matched
+          { testNode =
+              Div
+                { autoId = "1"
+                , classes = [ A ]
+                , children = [ Span { autoId = "1-1" , classes = [ A ] } ]
+                }
+          , abstractLocator =
+              Or'
+                { locs =
+                    Match A :|
+                      [ Match A
+                      , Match A
+                      , And'
+                          { locs =
+                              Match A :|
+                                [ Or'
+                                    { locs =
+                                        Under
+                                          { parentLoc = Match A
+                                          , descendantLoc = Match A
+                                          } :|
+                                          []
+                                    }
+                                ]
+                          }
+                      ]
+                }
+          , expectedMatches = [ "1" , "1-1" ]
+          , locator = (classLoc A ||| classLoc A ||| classLoc A)
+                        ||| (classLoc A &&& (classLoc A >>> classLoc A))
+          },
+          locTest "complex nested OR-AND-Under" $ Matched
+          { testNode =
+              Div
+                { autoId = "1"
+                , classes = [ A ]
+                , children = [ Span { autoId = "1-1" , classes = [ A ] } ]
+                }
+          , abstractLocator =
+              Or'
+                { locs =
+                    Match A :|
+                      [ Match A
+                      , Match A
+                      , Match A
+                      , And'
+                          { locs =
+                              Match A :|
+                                [ Match A
+                                , Under
+                                    { parentLoc = Match A
+                                    , descendantLoc = Match A
+                                    }
+                                , Match A
+                                , Under
+                                    { parentLoc = Match A
+                                    , descendantLoc = Match A
+                                    }
+                                ]
+                          }
+                      ]
+                }
+          , expectedMatches = [ "1" , "1-1" ]
+          , locator =
+              let a = elmClass' Partial CaseInsensitive "A"
+              in (((a ||| a) ||| a) ||| a) ||| ((((a &&& a) &&& (a >>> a)) &&& a) &&& (a >>> a))
+          },
+          locTest "OR with contains under" $ Matched
+          { testNode =
+              Div
+                { autoId = "1"
+                , classes = [ B ]
+                , children = [ Span { autoId = "1-1" , classes = [ A ] } ]
+                }
+          , abstractLocator =
+              Or'
+                { locs =
+                    Match A :|
+                      [ Under
+                          { parentLoc = Match A
+                          , descendantLoc =
+                              Or'
+                                { locs =
+                                    Match A :|
+                                      [ Match A , Match { domClass = B } ]
+                                }
+                          }
+                      ]
+                }
+          , expectedMatches = [ "1-1" ]
+          , locator = classLoc A ||| (classLoc A >>> (classLoc A ||| classLoc A ||| classLoc B))
           }
              ]
           ]
@@ -280,14 +374,14 @@ genCase = do
     Unmatched {} -> genCase
   where
     genLocatorTestCase :: Node -> Gen LocatorTestCase
-    genLocatorTestCase node = do
+    genLocatorTestCase testNode = do
       abstractLocator <- genSelection
       locator <- genLocator abstractLocator
-      let expectedMatches = nub $ match node abstractLocator
+      let expectedMatches = nub $ match testNode abstractLocator
       pure $ if null expectedMatches
-        then Unmatched {testNode = node, abstractLocator, locator}
+        then Unmatched {testNode, abstractLocator, locator}
         else Matched
-          { testNode = node,
+          { testNode,
             abstractLocator,
             expectedMatches,
             locator
@@ -308,7 +402,7 @@ genCase = do
 
 genNode :: Gen Node
 genNode = 
-  genDivNodeAt nodeRootDepth rootAutoId
+  genDivNodeAt nodeRootDepth rootAutoId maxNodeBudget
   where
     nodeMaxDepth = 6
     nodeRootDepth = 1
@@ -319,24 +413,27 @@ genNode =
     spanNodeWeight = 3
     divNodeWeight = 1
     maxDomClassesPerNode = 5
+    maxNodeBudget = 1000
 
     domClassCountWeights :: [(Word, Int)]
     domClassCountWeights =
       (\classCount -> (fromIntegral classCount, classCount)) <$> [1 .. maxDomClassesPerNode]
 
-    genNodeAt :: Int -> Text -> Gen Node
-    genNodeAt depth parentAutoId
-      | depth >= nodeMaxDepth = genSpanNode parentAutoId
+    genNodeAt :: Int -> Text -> Int -> Gen Node
+    genNodeAt depth parentAutoId remaining
+      | depth >= nodeMaxDepth || remaining <= 1 = genSpanNode parentAutoId
       | otherwise =
           frequency
             [ (spanNodeWeight, genSpanNode parentAutoId),
-              (divNodeWeight, genDivNodeAt depth parentAutoId)
+              (divNodeWeight, genDivNodeAt depth parentAutoId remaining)
             ]
 
-    genDivNodeAt :: Int -> Text -> Gen Node
-    genDivNodeAt depth parentAutoId = do
+    genDivNodeAt :: Int -> Text -> Int -> Gen Node
+    genDivNodeAt depth parentAutoId remaining = do
       nodeClasses <- genDomClasses
-      nodeChildren <- genChildrenAt depth parentAutoId
+      -- This div costs 1 from the budget.
+      let afterDiv = remaining - 1
+      nodeChildren <- genChildrenAt depth parentAutoId afterDiv
       pure $ Div {autoId = parentAutoId, classes = nodeClasses, children = nodeChildren}
 
     genSpanNode :: Text -> Gen Node
@@ -344,10 +441,17 @@ genNode =
       nodeClasses <- genDomClasses
       pure $ Span {autoId = parentAutoId, classes = nodeClasses}
 
-    genChildrenAt :: Int -> Text -> Gen [Node]
-    genChildrenAt depth parentAutoId = do
-      childCount <- G.integral $ R.between (minChildrenPerLevel, maxChildrenPerLevel)
-      traverse (\childIndex -> genNodeAt (depth + 1) (mkChildAutoId parentAutoId childIndex)) [1 .. childCount]
+    genChildrenAt :: Int -> Text -> Int -> Gen [Node]
+    genChildrenAt depth parentAutoId remaining = do
+      -- Cap child count so the budget isn't exceeded:
+      -- each child gets at most @remaining `div` childCount@ nodes.
+      let budgetMax = min maxChildrenPerLevel remaining
+          budgetMin = min minChildrenPerLevel budgetMax
+      childCount <- if budgetMax < budgetMin
+                    then pure 0
+                    else G.integral $ R.between (budgetMin, budgetMax)
+      let perChild = if childCount == 0 then 0 else max 1 (remaining `div` childCount)
+      traverse (\childIndex -> genNodeAt (depth + 1) (mkChildAutoId parentAutoId childIndex) perChild) [1 .. childCount]
 
     mkChildAutoId :: Text -> Int -> Text
     mkChildAutoId parentAutoId childIndex = parentAutoId <> autoIdSeparator <> txt childIndex
@@ -410,7 +514,7 @@ genLocator = \case
         ]
 
 genSelection :: Gen AbsLoc
-genSelection = genSelectionAtDepth 1
+genSelection = genSelectionAtDepth 1 maxSelectionBudget
   where
     maxSelectionDepth :: Int
     maxSelectionDepth = 5
@@ -418,38 +522,50 @@ genSelection = genSelectionAtDepth 1
     maxSelectionChildren :: Int
     maxSelectionChildren = 5
 
+    maxSelectionBudget :: Int
+    maxSelectionBudget = 100
+
     genSelectionDomClass :: Gen DOMClass
     genSelectionDomClass = frequency $ (\nodeClass -> (1, pure nodeClass)) <$> [A, B, C, D, E]
 
-    genSelectionAtDepth :: Int -> Gen AbsLoc
-    genSelectionAtDepth depth
-      | depth >= maxSelectionDepth = Match <$> genSelectionDomClass
+    genSelectionAtDepth :: Int -> Int -> Gen AbsLoc
+    genSelectionAtDepth depth remaining
+      | depth >= maxSelectionDepth || remaining <= 1 = Match <$> genSelectionDomClass
       | otherwise = frequency
           [ (matchWeight, Match <$> genSelectionDomClass),
-            (parentWeight, genParentSelectionAtDepth depth)
+            (parentWeight, genParentSelectionAtDepth depth remaining)
           ]
       where
         matchWeight = 3
         parentWeight = 2
 
-    genParentSelectionAtDepth :: Int -> Gen AbsLoc
-    genParentSelectionAtDepth depth = do
-      childSelections <- genChildSelectionsAtDepth depth
+    genParentSelectionAtDepth :: Int -> Int -> Gen AbsLoc
+    genParentSelectionAtDepth depth remaining = do
+      let afterSelf = remaining - 1  -- this combinator node costs 1
+      childSelections <- genChildSelectionsAtDepth depth afterSelf
       frequency
         [ (1, pure $ Or' childSelections),
           (1, pure $ And' childSelections),
           (1, do
-              parentSelection <- genSelectionAtDepth (depth + 1)
-              descendantSelection <- genSelectionAtDepth (depth + 1)
+              -- Split remaining budget between parent and descendant subtrees.
+              let half = max 1 (afterSelf `div` 2)
+              parentSelection <- genSelectionAtDepth (depth + 1) half
+              descendantSelection <- genSelectionAtDepth (depth + 1) half
               pure $ Under {parentLoc = parentSelection, descendantLoc = descendantSelection}
           )
         ]
 
-    genChildSelectionsAtDepth :: Int -> Gen (NonEmpty AbsLoc)
-    genChildSelectionsAtDepth depth = do
-      childCount <- G.integral $ R.between (1, maxSelectionChildren)
-      firstSelection <- genSelectionAtDepth (depth + 1)
-      restSelections <- replicateM (childCount - 1) (genSelectionAtDepth (depth + 1))
+    genChildSelectionsAtDepth :: Int -> Int -> Gen (NonEmpty AbsLoc)
+    genChildSelectionsAtDepth depth remaining = do
+      let budgetMax = min maxSelectionChildren remaining
+          budgetMin = min 1 budgetMax
+      childCount <- if budgetMax < budgetMin
+                    then pure 1
+                    else G.integral $ R.between (budgetMin, budgetMax)
+      let perChild = max 1 (remaining `div` childCount)
+      firstSelection <- genSelectionAtDepth (depth + 1) perChild
+      restSelections <- replicateM (childCount - 1) (genSelectionAtDepth (depth + 1) perChild)
+      pure $ firstSelection :| restSelections
       pure $ firstSelection :| restSelections
 
 match :: Node -> AbsLoc -> [Text]
@@ -664,7 +780,7 @@ nestedLoc =
       { parentLoc = Match { domClass = B }
       , descendantLoc =
           Under
-            { parentLoc = Match { domClass = A }
+            { parentLoc = Match A
             , descendantLoc = Or' { locs = Match { domClass = B } :| [] }
             }
       }
@@ -685,7 +801,7 @@ data LocatorTestFailure = MkLocatorTestFailure
 locateCombinatorProperty :: IO WDSession -> TestTree
 locateCombinatorProperty getSes =
   testPropertyWith propertyOptions "Generated locate combinator property" $ do
-    locCase@Matched {} <- genWith (const Nothing) genCase
+    locCase@Matched {} <- gen genCase
     info $ "LocateCombinatorTest generator node count (test node): " <> show (countNodes locCase.testNode)
     info $ "LocateCombinatorTest generator node count (generator selection): " <> show (countSelectionNodes locCase.abstractLocator)
 
@@ -702,7 +818,7 @@ locateCombinatorProperty getSes =
         { expectFailure = DontExpectFailure,
           -- overrideVerbose = Just Verbose,
           overrideVerbose = Nothing,
-          overrideNumTests = Just 10,
+          overrideNumTests = Just 100,
           overrideMaxShrinks = Nothing,
           overrideMaxRatio = Nothing
         }
@@ -720,8 +836,7 @@ evaluateCase :: IO WDSession -> LocatorTestCase -> IO ()
 evaluateCase getSession locCase  = 
   case locCase of
     Matched {testNode, abstractLocator, expectedMatches} -> do
-      -- putStrLn $ "LocateCombinatorTest pre-IO node count (test node): " <> show (countNodes testNode)
-      -- putStrLn $ "LocateCombinatorTest pre-IO node count (generator selection): " <> show (countSelectionNodes abstractLocator)
+      putStrLn $ "LocateCombinatorTest pre-IO node count (test node): " <> show (countNodes testNode) <> " (generator selection): " <> show (countSelectionNodes abstractLocator)
       wdSession <- getSession
       runHttp wdSession $ do
         let dataUrl = htmlToDataUrl html
@@ -775,7 +890,8 @@ mkLocatorTestFailure :: Node -> Text -> AbsLoc -> Locator -> [Text] -> [Text] ->
 mkLocatorTestFailure node html selection generatedLocator expectedMatches actualMatches =
   let missingFromActual = expectedMatches \\ actualMatches
       extraInActual = actualMatches \\ expectedMatches
-   in MkLocatorTestFailure
+    in
+      MkLocatorTestFailure
       { node,
         html,
         selection,
@@ -790,7 +906,7 @@ mkLocatorTestFailure node html selection generatedLocator expectedMatches actual
 -- locators mixture of css and xpath
 
 _pattern :: Maybe Text
-_pattern = Just "Combinator property tests"
+_pattern = Just "OR with contains under"
 -- _pattern = Nothing
 
 _eval :: Maybe Text -> TestTree -> IO ()
@@ -798,5 +914,3 @@ _eval mPattern = withArgs (maybe [] (\pat -> ["-p", (unpack pat)]) mPattern) . d
 
 --- >>> _eval _pattern tests
 -- *** Exception: ExitFailure 1
-
-

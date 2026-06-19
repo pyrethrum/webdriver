@@ -5,6 +5,7 @@ import Bidi.SimpleDemo (bidi_login_demo)
 import HTTP.Runner (withHttp)
 import HTTP.SimpleDemo (http_login_navigation_demo)
 import HTTP.BaseLocateTest qualified as BaseLocateTest
+import HTTP.LocateCombinatorTest qualified as LocateCombinatorTest
 import HTTP.MatchTypeTest qualified as MatchTypeTest
 import Test.Tasty (TestTree, defaultMain, testGroup)
 import Test.Tasty.HUnit (testCase)
@@ -19,5 +20,6 @@ tests =
     [ testCase "HTTP login and navigation demo" (withHttp http_login_navigation_demo),
       testCase "BiDi login demo" (runBiDiTest bidi_login_demo),
       BaseLocateTest.tests,
-      MatchTypeTest.tests
+      MatchTypeTest.tests,
+      LocateCombinatorTest.tests
     ]
