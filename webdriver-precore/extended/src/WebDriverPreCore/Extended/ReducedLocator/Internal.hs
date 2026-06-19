@@ -250,12 +250,14 @@ toXPathCore loc =
       Right $ LI.XPath {value = T.intercalate " | " branches}
     LI.Contains {container, contained} -> do
       -- Both children should already be XPath at this point (converted by convertXPath).
-      -- Combine them into a single descendant XPath: //parent[...]//descendant[...]
+      -- Combine them into a single descendant XPath.
+      -- When the descendant is a union XPath (contains |), prepend the container
+      -- to each branch so all branches stay scoped under the container.
       cXPath <- toXPathCore container
       dXPath <- toXPathCore contained
       case (cXPath, dXPath) of
         (LI.XPath {value = cv}, LI.XPath {value = dv}) ->
-          Right $ LI.XPath {value = cv <> dv}
+          Right $ LI.XPath {value = combineContains cv dv}
         _ ->
           Left $ LI.MkInvalidLocator loc "Contains: children not convertable to XPath"
     LI.All {elms} | any isContains (toList elms) ->
@@ -314,6 +316,20 @@ toXPathCore loc =
     isContains = \case
       LI.Contains {} -> True
       _               -> False
+
+    -- | Combine container and descendant XPaths for the Contains combinator.
+    --   When the descendant is a union XPath (|), each branch must be
+    --   individually scoped under the container.  The container may itself
+    --   be a union; we take the cartesian product so every container branch
+    --   prefixes every descendant branch.
+    combineContains :: Text -> Text -> Text
+    combineContains cv dv =
+      let cvBranches = T.splitOn " | " cv
+          dvBranches = T.splitOn " | " dv
+       in T.intercalate " | " $ do
+            c <- cvBranches
+            d <- dvBranches
+            pure $ c <> d
 
     -- | Convert a Locator to a structured 'XPathNode'.
     --   Tag sets the node-test; all other predicates accumulate in the predicate list.
