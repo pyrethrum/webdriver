@@ -916,3 +916,6 @@ _eval mPattern = withArgs (maybe [] (\pat -> ["-p", (unpack pat)]) mPattern) . d
 
 --- >>> _eval _pattern tests
 -- *** Exception: ExitSuccess
+
+
+

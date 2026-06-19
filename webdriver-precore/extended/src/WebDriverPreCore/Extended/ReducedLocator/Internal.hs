@@ -166,15 +166,11 @@ xPathSub defLoc proto l =
       where
         rLoc = Right loc
         xpathLoc = toXPathCore loc
-        convertable l' = LI.classify defLoc proto l' == LI.IsXPath
+        convertable l' = LI.classify defLoc proto l' == LI.IsXPathConvertable
         
         tryConvert :: LI.Locator -> Either LI.InvalidLocator LI.Locator
         tryConvert l' =
-          if convertable l'
-            then
-              toXPathCore l'
-            else
-              Right l'
+          (if convertable l' then toXPathCore else Right ) l'
 
 -- | Structured representation of an XPath location step: //tag[pred1][pred2]...
 --   Using a structured ADT avoids the fragile wrap/unwrap of raw predicate text.

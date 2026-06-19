@@ -309,7 +309,7 @@ prepare defLoc proto =
       Invalid err -> Left err
       _ -> Right l
 
-data Classification = IsXPath | IsCSS | IsBiDi | Invalid InvalidLocator | IsMixed deriving (Show, Eq, Ord)
+data Classification = IsXPath | IsXPathConvertable | IsCSS | IsBiDi | Invalid InvalidLocator | IsMixed deriving (Show, Eq, Ord)
 
 mergeClassification :: Classification -> Classification -> Classification
 mergeClassification i ii
@@ -333,10 +333,10 @@ classify defLoc proto =
     CSS {} -> IsCSS
     XPath {} -> IsXPath
     AllElms -> IsXPath
-    ID {} -> IsXPath
-    Class {} -> IsXPath
-    Attribute {} -> IsXPath
-    Tag {} -> IsXPath
+    ID {} -> IsXPathConvertable
+    Class {} -> IsXPathConvertable
+    Attribute {} -> IsXPathConvertable
+    Tag {} -> IsXPathConvertable
     d@Default {value} ->
       let nxtLoc = defLoc value
           nestedDefault = hasDefault nxtLoc
