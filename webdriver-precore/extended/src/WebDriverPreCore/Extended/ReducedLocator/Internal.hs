@@ -211,17 +211,20 @@ convertGroupToXPath = fmap LI.XPath . go
               [] -> "//" <> mergedTag
               _  -> "//" <> mergedTag <> "[" <> T.intercalate " and " allPreds <> "]"
           _ -> do
-            -- Has multi-step children: append extra predicates from single-step
-            -- children to the last step of the multi-step XPath.
-            -- Only one multi-step child is supported (covers Contains-in-All).
-            -- Also verify tag compatibility.
+            -- Has multi-step children: use the first multi-step for the
+            -- structural container//descendant path.  For each remaining
+            -- multi-step, extract descendant predicates and add an
+            -- ancestor check on its container, then append all extra
+            -- predicates to the last step.
             when (not (null extraTags || extraTags == ["*"])) $
               Left $ LI.MkInvalidLocator (LI.All elms) $
                 "Cannot merge single-step tags " <> txt extraTags <> " into multi-step XPaths"
-            case multiSteps of
-              [ms] -> Right $ appendPredsToLastStep extraPreds ms
-              _    -> Left $ LI.MkInvalidLocator (LI.All elms) $
-                        "Multiple Contains within an All combinator are not yet supported for XPath merging"
+            let (baseStep : restSteps) = multiSteps
+                base = appendPredsToLastStep extraPreds baseStep
+                restDescPreds = concatMap extractDescendantPreds restSteps
+                ancestorChecks = map ancestorCheckFromMultiStep restSteps
+                allExtraPreds = restDescPreds <> ancestorChecks
+            Right $ appendPredsToLastStep allExtraPreds base
 
       -- Any (union): produce XPath union with |
       LI.Any {elms} -> do
@@ -275,6 +278,40 @@ parseKnownXPath value =
 --   A multi-step XPath has // appearing after the initial //.
 isMultiStepXPath :: Text -> Bool
 isMultiStepXPath v = "//" `T.isInfixOf` T.drop 2 v
+
+-- | Split a multi-step XPath into (containerPart, lastStep).
+--   \"//a//b\" -> (\"//a\", \"//b\")
+--   \"//a//b//c\" -> (\"//a//b\", \"//c\")
+splitMultiStepXPath :: Text -> (Text, Text)
+splitMultiStepXPath v =
+  let steps = T.splitOn "//" v
+      -- steps[0] is \"\" (before leading //), steps[1..] are the actual steps
+      actualSteps = drop 1 steps
+  in case reverse actualSteps of
+      (lastStep : revInit) ->
+        let containerSteps = reverse revInit
+            container = "//" <> T.intercalate "//" containerSteps
+            descendant = "//" <> lastStep
+        in (container, descendant)
+      [] -> ("//*", v)  -- shouldn't happen for valid multi-step
+
+-- | Extract predicates from the descendant (last step) of a multi-step XPath.
+--   Used when merging multiple Contains within an All:
+--   additional Contains' descendant conditions are folded onto the last step.
+extractDescendantPreds :: Text -> [Text]
+extractDescendantPreds multiStep =
+  let (_, descendant) = splitMultiStepXPath multiStep
+  in (.predicates) $ parseKnownXPath descendant
+
+-- | Build an \"count(ancestor::tag[preds]) > 0\" predicate from the container
+--   part of a multi-step XPath.  This ensures the target element has an
+--   ancestor matching the container specification of an additional Contains.
+ancestorCheckFromMultiStep :: Text -> Text
+ancestorCheckFromMultiStep multiStep =
+  let (container, _) = splitMultiStepXPath multiStep
+      cNode = parseKnownXPath container
+      ancestorMatch = cNode.tag <> foldMap (\p -> "[" <> p <> "]") cNode.predicates
+  in "count(ancestor::" <> ancestorMatch <> ") > 0"
 
 -- | Append extra predicates to the last location step of a multi-step XPath.
 --   The XPath must have the form //step1//step2//...//lastStep.
