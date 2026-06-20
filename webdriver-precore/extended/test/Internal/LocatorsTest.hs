@@ -3,6 +3,7 @@ module Internal.LocatorsTest (tests) where
 import Control.Monad (when)
 import Data.List.NonEmpty (NonEmpty (..), filter)
 import Data.Text (Text, pack, unpack)
+import Data.Text qualified as T
 import Data.Text.IO (putStrLn)
 import System.Environment (withArgs)
 import Test.Falsify.Generator as G (Gen, frequency, integral)
@@ -529,16 +530,24 @@ test_parent_infix_precedence =
 
 -- *** Exception: ExitSuccess
 
--- | Property: a tree built exclusively from xPathOnlyLocs is always classified
--- as IsXPath under the HTTP protocol.
+-- | Property: a tree built exclusively from xPathOnlyLocs (which are all
+-- either 'IsXPath' or 'IsXPathConvertable') is never classified as CSS, BiDi,
+-- or Invalid under HTTP.  'IsMixed' is acceptable — it means user-XPath and
+-- auto-convertable nodes are combined, which produces a multi-step locator.
 prop_classify_xpath_only_is_xpath :: TestTree
 prop_classify_xpath_only_is_xpath =
-  testPropertyWith genLocatorOptions "classify HTTP: xpath-only tree is always IsXPath" $ do
+  testPropertyWith genLocatorOptions "classify HTTP: xpath-only tree is never Invalid/CSS/BiDi" $ do
     loc <- gen $ genLocatorWithLimits (uniformFrequency 1 xPathOnlyLocs) 0 1000
     let classification = classify (\t -> Default t) HTTP loc
     info $ "Locator:\n" <> unpack (txt loc)
     info $ "Classification: " <> show classification
-    F.assert $ expect True .$ ("classification == IsXPath", classification == IsXPath)
+    F.assert $ expect True .$ ("classification is not Invalid, CSS, or BiDi", not $ isBadClass classification)
+  where
+    isBadClass = \case
+      Invalid {} -> True
+      IsCSS -> True
+      IsBiDi -> True
+      _ -> False
 
 -- >>> _eval prop_classify_invalid_iff_any_invalid_node
 
@@ -617,27 +626,66 @@ prepareSimplifyXPathTests =
 
 -- *** Exception: ExitSuccess
 
+-- | Property: prepareSimplify preserves mockLocated semantics and, for the HTTP
+--   protocol, auto-generated XPaths (from IsXPathConvertable nodes) within the same
+--   group are merged into a single XPath leaf.  User-provided XPaths are never
+--   merged with auto-generated ones — instead a multi-step combinator is produced.
 prop_simplification_merges_xpaths :: TestTree
 prop_simplification_merges_xpaths =
-  testPropertyWith genLocatorOptions "simplified Locs should merge adjacent XPaths" $ do
+  testPropertyWith genLocatorOptions "prepareSimplify: auto-XPaths merged, user-XPaths preserved" $ do
     proto <- gen genProtocol
     loc <- gen $ genLocator proto
     let simpLoc = RL.prepareSimplify ID proto loc
+        expected = mockLocated True loc
     info $ "Original locator:\n" <> unpack (txt loc)
     info $ "prepared locator:\n" <> either show (unpack . txt) (prepare ID proto loc)
     info $ "Prepared simplified locator:\n" <> either show (unpack . txt) simpLoc
-    F.assert $ satisfies ("prepareSimplify preserves mockLocated", either (const True) chkAllXPathsingleton) .$ ("loc", simpLoc)
+    F.assert $ satisfies ("prepareSimplify preserves mockLocated", \l -> either (const True) (\rl -> mockLocatedReduced True rl == expected) l) .$ ("loc", simpLoc)
+
+-- | Evaluate a ReducedLoc using the same boolean-encoding convention as mockLocated.
+-- Handles both simple XPath values (\"True\"/\"False\") and auto-generated
+-- XPath strings (//*[@id='True'], //footer, etc.).
+mockLocatedReduced :: Bool -> RL.ReducedLoc -> Bool
+mockLocatedReduced allElmsDefault = go
   where
-    chkAllXPathsingleton = \case
+    go = \case
+      RL.Leaf lf -> case lf of
+        RL.CSS v -> readBool v
+        RL.XPath v -> readXPathBool v
+        RL.BiDiNative (RL.Role (RoleName v)) -> readBool v
+        RL.BiDiNative (RL.Role _) -> allElmsDefault
+        RL.BiDiNative (RL.InnerText {value = v}) -> readBool v
+      RL.BiDiOnlyLeaf (RL.BiDiContext (MkBrowsingContext v)) -> readBool v
+      RL.PostFilterLoc _ -> error "PostFilter not supported by mockLocatedReduced"
       RL.Combintor c -> case c of
-        RL.Contains {} -> True
-        RL.All {elms} -> chkSublocs elms
-        RL.Any {elms} -> chkSublocs elms
-      _ -> True
+        RL.Contains p c' -> go p && go c'
+        RL.All elms -> all go elms
+        RL.Any elms -> any go elms
+    readBool "True" = True
+    readBool "False" = False
+    readBool v = error $ "mockLocatedReduced: unexpected value: " <> unpack v
 
-    chkSublocs l =
-      chkListXPathSingleton l
-        && all chkAllXPathsingleton l
-
-    chkListXPathSingleton :: NonEmpty RL.ReducedLoc -> Bool
-    chkListXPathSingleton l = not $ (length (filter RL.isXPath l)) > 1
+    -- | Extract the boolean value from an auto-generated XPath string.
+    -- Mock locators always encode bools as exactly \"True\" or \"False\".
+    -- For multi-step XPaths (from Contains), splits on // and evaluates
+    -- each step; the overall result is the AND of all steps.
+    -- Pure //* (from AllElms) uses 'allElmsDefault'.
+    readXPathBool :: Text -> Bool
+    readXPathBool v
+      -- Union XPath (from Any): OR of branches
+      | " | " `T.isInfixOf` v =
+          or $ readXPathBool <$> T.splitOn " | " v
+      -- Multi-step or single-step XPath (from Contains or leaves)
+      | "//" `T.isPrefixOf` v =
+          let steps = T.splitOn "//" (T.drop 2 v)
+              bools = concatMap stepBool steps
+          in if null bools then allElmsDefault else and bools
+      -- Simple boolean string (from user XPath "True"/"False")
+      | otherwise = readBool v
+      where
+        stepBool s
+          | "False" `T.isInfixOf` s = [False]
+          | "True" `T.isInfixOf` s  = [True]
+          | "*" `T.isPrefixOf` s    = [allElmsDefault]
+          | not (T.null s)          = [allElmsDefault]  -- unrecognised: treat as AllElms
+          | otherwise               = []

@@ -12,7 +12,9 @@ module WebDriverPreCore.Extended.ReducedLocator.Internal
   )
 where
 
+import Control.Monad (when)
 import Data.List (foldl', nub)
+import Data.List qualified as LST
 import Data.List.NonEmpty (NonEmpty, toList)
 import Data.Text (Text)
 import Data.Text qualified as T
@@ -138,303 +140,215 @@ prepareSimplify defLoc proto l =
     shouldNotExistAfterXPathSub name = error . T.unpack $ name <> " should not exist after xPathSub - this is a library defect"
 
 xPathSub :: (Text -> LI.Locator) -> LI.Protocol -> LI.Locator -> Either LI.InvalidLocator LI.Locator
-xPathSub defLoc proto l =
-  -- after prepare combinator locators such as Parent, All, Any are already be grouped correctly with all XPaths together,
-  --  so we can just recursively convert to XPath if the group is XPath Convertable
-  coreToFullXPath <$> (LI.prepare defLoc proto l >>= convertXPath)
-  where
-    convertXPath :: LI.Locator -> Either LI.InvalidLocator LI.Locator
-    convertXPath loc =
-      case loc of
-        LI.CSS {} -> rLoc
-        LI.InnerText {} -> rLoc
-        LI.Role {} -> rLoc
-        LI.BiDiContext {} -> rLoc
-        LI.PostFilter {} -> rLoc
-        LI.XPath {} -> xpathLoc
-        LI.AllElms -> xpathLoc
-        LI.ID {} -> xpathLoc
-        LI.Class {} -> xpathLoc
-        LI.Attribute {} -> xpathLoc
-        LI.Tag {} -> xpathLoc
-        LI.Default {value} -> convertXPath (defLoc value)
-        LI.Contains {container, contained} ->
-          -- Keep Contains structure, just convert sub-locators
-          LI.Contains <$> (convertXPath container) <*> (convertXPath contained)
-        LI.All {elms} -> LI.All <$> traverse convertXPath elms >>= tryConvert
-        LI.Any {elms} -> LI.Any <$> traverse convertXPath elms >>= tryConvert
-      where
-        rLoc = Right loc
-        xpathLoc = toXPathCore loc
-        convertable l' = LI.classify defLoc proto l' == LI.IsXPathConvertable
-        
-        tryConvert :: LI.Locator -> Either LI.InvalidLocator LI.Locator
-        tryConvert l' =
-          (if convertable l' then toXPathCore else Right ) l'
+xPathSub defLoc proto l = do
+  -- prepare: flatten, sort/group by classification, validate
+  prepared <- LI.prepare defLoc proto l
+  -- Top-down conversion: IsXPathConvertable subtrees are converted to XPath
+  -- in one shot; user XPath nodes are left untouched.
+  convertTopDown defLoc proto prepared
 
--- | Structured representation of an XPath location step: //tag[pred1][pred2]...
---   Using a structured ADT avoids the fragile wrap/unwrap of raw predicate text.
-data XPathNode = MkXPathNode
-  { tag :: Text
-  , predicates :: [Text]
-  }
+-- | Top-down conversion of IsXPathConvertable subtrees to XPath.
+--   Uses 'LI.classify' to detect IsXPathConvertable groups (which after
+--   'LI.prepare' / 'sortGroupChildLocs' are pure groups of convertable nodes).
+--   User-provided XPath nodes are preserved as-is so they are never merged
+--   with auto-generated XPath — instead a multi-step combinator is produced.
+convertTopDown :: (Text -> LI.Locator) -> LI.Protocol -> LI.Locator -> Either LI.InvalidLocator LI.Locator
+convertTopDown defLoc proto loc
+  | LI.classify defLoc proto loc == LI.IsXPathConvertable =
+    convertGroupToXPath loc
+  | otherwise = case loc of
+      LI.Contains {container, contained} ->
+        LI.Contains <$> convertTopDown defLoc proto container <*> convertTopDown defLoc proto contained
+      LI.All {elms} ->
+        LI.All <$> traverse (convertTopDown defLoc proto) elms
+      LI.Any {elms} ->
+        LI.Any <$> traverse (convertTopDown defLoc proto) elms
+      LI.PostFilter {predicate, locator} ->
+        LI.PostFilter predicate <$> convertTopDown defLoc proto locator
+      LI.Default {value} ->
+        convertTopDown defLoc proto (defLoc value)
+      _ -> Right loc
+
+-- | Convert an IsXPathConvertable subtree directly to an XPath locator.
+--   Uses structured conversion: leaf nodes render to known-format XPath strings,
+--   All merges tags and predicates, Any produces unions, Contains concatenates.
+convertGroupToXPath :: LI.Locator -> Either LI.InvalidLocator LI.Locator
+convertGroupToXPath = fmap LI.XPath . go
+  where
+    go :: LI.Locator -> Either LI.InvalidLocator Text
+    go = \case
+      -- Leaf IsXPathConvertable nodes: render directly to XPath
+      LI.AllElms -> Right "//*"
+      LI.ID {value} -> Right $ "//*[@id='" <> value <> "']"
+      LI.Tag {value} -> Right $ "//" <> value
+      LI.Class {value, matchType, caseSensitivity} ->
+        Right $ "//*[" <> classXPathPred value matchType caseSensitivity <> "]"
+      LI.Attribute {name, value, matchType, caseSensitivity} ->
+        Right $ "//*[" <> attrXPathPred name value matchType caseSensitivity <> "]"
+
+      -- All (intersection): merge tags and predicates from all children.
+      -- Single-step children are parsed and merged.  Multi-step children
+      -- (from Contains) get extra predicates appended to their last step.
+      LI.All {elms} -> do
+        children <- traverse go (toList elms)
+        let (multiSteps, singleSteps) = LST.partition isMultiStepXPath children
+            extraParsed = parseKnownXPath <$> singleSteps
+            extraPreds = concatMap (.predicates) extraParsed
+            extraTags = nub $ (.tag) <$> extraParsed
+        case multiSteps of
+          [] -> do
+            -- All single-step: merge tags and predicates
+            let parsed = parseKnownXPath <$> children
+                tags = nub $ (.tag) <$> parsed
+                allPreds = concatMap (.predicates) parsed
+            mergedTag <- case tags of
+              []  -> Right "*"
+              ["*"] -> Right "*"
+              [t] -> Right t
+              _   -> Left $ LI.MkInvalidLocator (LI.All elms) $
+                       "Conflicting tags in All combinator: " <> T.intercalate ", " tags
+            Right $ case allPreds of
+              [] -> "//" <> mergedTag
+              _  -> "//" <> mergedTag <> "[" <> T.intercalate " and " allPreds <> "]"
+          _ -> do
+            -- Has multi-step children: append extra predicates from single-step
+            -- children to the last step of the multi-step XPath.
+            -- Only one multi-step child is supported (covers Contains-in-All).
+            -- Also verify tag compatibility.
+            when (not (null extraTags || extraTags == ["*"])) $
+              Left $ LI.MkInvalidLocator (LI.All elms) $
+                "Cannot merge single-step tags " <> txt extraTags <> " into multi-step XPaths"
+            case multiSteps of
+              [ms] -> Right $ appendPredsToLastStep extraPreds ms
+              _    -> Left $ LI.MkInvalidLocator (LI.All elms) $
+                        "Multiple Contains within an All combinator are not yet supported for XPath merging"
+
+      -- Any (union): produce XPath union with |
+      LI.Any {elms} -> do
+        children <- traverse go (toList elms)
+        Right $ T.intercalate " | " children
+
+      -- Contains (descendant): concatenate container and contained XPaths.
+      -- When either side is a union, take the cartesian product so every
+      -- container branch prefixes every descendant branch.
+      LI.Contains {container, contained} -> do
+        cv <- go container
+        dv <- go contained
+        let cvBranches = T.splitOn " | " cv
+            dvBranches = T.splitOn " | " dv
+        Right $ T.intercalate " | " $
+          [c <> d | c <- cvBranches, d <- dvBranches]
+
+      -- Should not happen for IsXPathConvertable subtrees
+      other -> Left $ LI.MkInvalidLocator other $
+        "Unexpected locator in convertGroupToXPath: " <> txt other
+
+-- | Simple structured representation of an XPath location step.
+--   Used only for merging XPath strings that were produced by this module
+--   (known format: //tag[pred1][pred2]...).
+data SimpleXPath = SimpleXPath {tag :: Text, predicates :: [Text]}
   deriving (Show, Eq)
 
--- | Render an 'XPathNode' to a full XPath expression.
-renderXPathNode :: XPathNode -> Text
-renderXPathNode MkXPathNode {tag, predicates} =
-  "//" <> tag <> foldMap (\p -> "[" <> p <> "]") predicates
-
-coreToFullXPath :: LI.Locator -> LI.Locator
-coreToFullXPath = LI.mapLocBottomUp prefixSuffix
-  where
-    prefixSuffix :: LI.Locator -> LI.Locator
-    prefixSuffix = \case
-      -- Preserve explicit XPath unions; parsing them as a single node drops branches.
-      LI.XPath {value}
-        | T.isInfixOf " | " value -> LI.XPath {value}
-        -- Preserve multi-step XPaths (e.g. //container//descendant) produced by
-        -- All/Contains conversion; parseXPathNode assumes a single step.
-        | "//" `T.isInfixOf` T.drop 2 value -> LI.XPath {value}
-        | otherwise -> LI.XPath . renderXPathNode $ parseXPathNode value
-      other -> other
-
--- | Parse a raw XPath value that may or may not have been produced by this
---   library into an 'XPathNode'.  Only the simple //tag[pred] form produced
---   internally is parsed structurally; anything else is preserved verbatim as
---   a single predicate on the wildcard step via boolean().
-parseXPathNode :: Text -> XPathNode
-parseXPathNode value =
+-- | Parse an XPath string in the known format produced by this module.
+--   Since we only parse strings WE generated, there are no edge cases:
+--   the format is always //tag or //tag[pred1][pred2]...
+parseKnownXPath :: Text -> SimpleXPath
+parseKnownXPath value =
   case T.stripPrefix "//" value of
-    Nothing -> MkXPathNode {
-      tag = "*", 
-      predicates = ["boolean(" <> value <> ")"]
-      }
+    Nothing -> SimpleXPath "*" []
     Just rest ->
       let (t, remainder) = T.break (== '[') rest
           preds = parsePreds remainder
-       in MkXPathNode {
-             tag = if T.null t then "*" else t, 
-             predicates = preds
-          }
+      in SimpleXPath {tag = if T.null t then "*" else t, predicates = preds}
   where
     parsePreds :: Text -> [Text]
-    parsePreds txt'
-      | T.null txt' = []
+    parsePreds txt
+      | T.null txt = []
       | otherwise =
-          case T.stripPrefix "[" txt' of
+          case T.stripPrefix "[" txt of
             Nothing -> []
             Just inner ->
               let (p, after) = T.breakOn "]" inner
-               in p : parsePreds (T.drop 1 after)
+              in p : parsePreds (T.drop 1 after)
 
-toXPathCore :: LI.Locator -> Either LI.InvalidLocator LI.Locator
-toXPathCore loc =
-  case loc of
-    LI.XPath {value}
-      | T.isInfixOf " | " value -> Right LI.XPath {value}
-    LI.Any {elms} -> do
-      convertedBranches <- traverse toXPathCore elms
-      let branches =
-            toList $
-              fmap
-                (\case
-                    LI.XPath {value} -> value
-                    _ -> error "toXPathCore: expected XPath branch for LI.Any"
-                )
-                convertedBranches
-      Right $ LI.XPath {value = T.intercalate " | " branches}
-    LI.Contains {container, contained} -> do
-      -- Both children should already be XPath at this point (converted by convertXPath).
-      -- Combine them into a single descendant XPath.
-      -- When the descendant is a union XPath (contains |), prepend the container
-      -- to each branch so all branches stay scoped under the container.
-      cXPath <- toXPathCore container
-      dXPath <- toXPathCore contained
-      case (cXPath, dXPath) of
-        (LI.XPath {value = cv}, LI.XPath {value = dv}) ->
-          Right $ LI.XPath {value = combineContains cv dv}
+-- | Does the XPath string contain more than one location step?
+--   A multi-step XPath has // appearing after the initial //.
+isMultiStepXPath :: Text -> Bool
+isMultiStepXPath v = "//" `T.isInfixOf` T.drop 2 v
+
+-- | Append extra predicates to the last location step of a multi-step XPath.
+--   The XPath must have the form //step1//step2//...//lastStep.
+--   Extra predicates are added to lastStep: //step1//...//lastStep[extra1 and extra2].
+appendPredsToLastStep :: [Text] -> Text -> Text
+appendPredsToLastStep [] v = v
+appendPredsToLastStep extraPreds v =
+  let -- Split into steps, keeping the // delimiters
+      steps = T.splitOn "//" v
+      -- steps[0] is "" (before leading //), steps[1..] are the actual steps
+      (initSteps, lastStep) = case reverse steps of
+        []     -> ([], "*")
+        (l:ls) -> (reverse ls, l)
+      -- Add extra predicates to the last step
+      extraPred = "[" <> T.intercalate " and " extraPreds <> "]"
+      lastStep' = case T.break (== '[') lastStep of
+        (tag, "")  -> tag <> extraPred
+        (tag, preds) -> tag <> preds <> extraPred
+  in T.intercalate "//" (initSteps <> [lastStep'])
+
+-- | XPath predicate for CSS class matching.
+classXPathPred :: Text -> LI.MatchType -> LI.CaseSensitivity -> Text
+classXPathPred val mt cs =
+  let classAttr = applyCS cs "@class"
+      matchVal = lowerIfCI cs val
+  in case mt of
+        LI.Full -> "contains(concat(' ', normalize-space(" <> classAttr <> "), ' '), ' " <> matchVal <> " ')"
+        LI.Partial -> "contains(" <> classAttr <> ", '" <> matchVal <> "')"
+        LI.Starts -> "starts-with(normalize-space(" <> classAttr <> "), '" <> matchVal <> "')"
+        LI.Wildcard -> wildcardXPathPred classAttr matchVal
+
+-- | XPath predicate for named attribute matching.
+attrXPathPred :: Text -> Text -> LI.MatchType -> LI.CaseSensitivity -> Text
+attrXPathPred name val mt cs =
+  let attrExpr = applyCS cs ("@" <> name)
+      matchVal = lowerIfCI cs val
+  in case mt of
+        LI.Full -> attrExpr <> "='" <> matchVal <> "'"
+        LI.Partial -> "contains(" <> attrExpr <> ", '" <> matchVal <> "')"
+        LI.Starts -> "starts-with(" <> attrExpr <> ", '" <> matchVal <> "')"
+        LI.Wildcard -> wildcardXPathPred attrExpr matchVal
+
+applyCS :: LI.CaseSensitivity -> Text -> Text
+applyCS cs t = case cs of
+  LI.CaseSensitive -> t
+  LI.CaseInsensitive -> "translate(" <> t <> ", '" <> LI.upperAlpha <> "', '" <> LI.lowerAlpha <> "')"
+
+lowerIfCI :: LI.CaseSensitivity -> Text -> Text
+lowerIfCI cs t = case cs of
+  LI.CaseSensitive -> t
+  LI.CaseInsensitive -> T.toLower t
+
+wildcardXPathPred :: Text -> Text -> Text
+wildcardXPathPred normText val =
+  let parts = filter (not . T.null) $ T.splitOn "*" val
+      startsWithWildcard = "*" `T.isPrefixOf` val
+      endsWithWildcard = "*" `T.isSuffixOf` val
+  in case parts of
+        [] -> "true()"
+        [single]
+          | startsWithWildcard && endsWithWildcard ->
+              "contains(" <> normText <> ", '" <> single <> "')"
+          | startsWithWildcard ->
+              "substring(" <> normText <> ", string-length(" <> normText <> ") - string-length('" <> single <> "') + 1) = '" <> single <> "'"
+          | endsWithWildcard ->
+              "starts-with(" <> normText <> ", '" <> single <> "')"
+          | otherwise -> normText <> "='" <> single <> "'"
         _ ->
-          Left $ LI.MkInvalidLocator loc "Contains: children not convertable to XPath"
-    LI.All {elms} | any isContains (toList elms) ->
-      allWithContains elms
-    _ -> LI.XPath . renderXPathNode <$> toXPathNode loc
-  where
-    -- | All containing Contains: can't be merged into a single XPathNode
-    --   because Contains spans two levels (container/descendant).
-    --   Instead produce a multi-step XPath: @container//descendant-with-extra-preds@.
-    allWithContains :: NonEmpty LI.Locator -> Either LI.InvalidLocator LI.Locator
-    allWithContains elms = do
-      let (containsList, restList) =
-            foldr
-              ( \e (cs, rs) -> case e of
-                  LI.Contains {} -> (e : cs, rs)
-                  _              -> (cs, e : rs)
-              )
-              ([], [])
-              (toList elms)
-      extraPreds <- fmap concat $ traverse (fmap (.predicates) . toXPathNode) restList
-      case containsList of
-        [] -> error "allWithContains: expected at least one Contains (checked by caller)"
-        (LI.Contains {container, contained} : restContains) -> do
-          -- Use the first Contains for the structural container path.
-          containerXPath <- toXPathCore container
-          containedNode <- toXPathNode contained
-          -- Collect contained predicates from remaining Contains.
-          restContainedPreds <- fmap concat $ traverse containedPredsFromContains restContains
-          -- For remaining Contains, add ancestor container checks.
-          ancestorPreds <- traverse ancestorCheckFromContains restContains
-          let allPreds = containedNode.predicates <> extraPreds <> restContainedPreds <> ancestorPreds
-              containedNode' = containedNode {predicates = allPreds}
-          case containerXPath of
-            LI.XPath {value = cv} ->
-              Right $ LI.XPath {value = cv <> renderXPathNode containedNode'}
-            _ ->
-              Left $ LI.MkInvalidLocator loc "All/Contains: container not convertible to XPath"
-
-    -- | Extract predicates from the contained part of a Contains locator.
-    containedPredsFromContains :: LI.Locator -> Either LI.InvalidLocator [Text]
-    containedPredsFromContains (LI.Contains {contained}) = fmap (.predicates) (toXPathNode contained)
-    containedPredsFromContains _ = Right []
-
-    -- | Build an ancestor-check predicate for a remaining Contains container.
-    --   \"count(ancestor::tag[preds]) > 0\" ensures the target element has an
-    --   ancestor matching the container specification.
-    ancestorCheckFromContains :: LI.Locator -> Either LI.InvalidLocator Text
-    ancestorCheckFromContains (LI.Contains {container}) = do
-      containerXPath <- toXPathCore container
-      containerNode <- toXPathNode containerXPath
-      let ancestorMatch = containerNode.tag <> foldMap (\p -> "[" <> p <> "]") containerNode.predicates
-      Right $ "count(ancestor::" <> ancestorMatch <> ") > 0"
-    ancestorCheckFromContains _ = Right ""
-
-    isContains :: LI.Locator -> Bool
-    isContains = \case
-      LI.Contains {} -> True
-      _               -> False
-
-    -- | Combine container and descendant XPaths for the Contains combinator.
-    --   When the descendant is a union XPath (|), each branch must be
-    --   individually scoped under the container.  The container may itself
-    --   be a union; we take the cartesian product so every container branch
-    --   prefixes every descendant branch.
-    combineContains :: Text -> Text -> Text
-    combineContains cv dv =
-      let cvBranches = T.splitOn " | " cv
-          dvBranches = T.splitOn " | " dv
-       in T.intercalate " | " $ do
-            c <- cvBranches
-            d <- dvBranches
-            pure $ c <> d
-
-    -- | Convert a Locator to a structured 'XPathNode'.
-    --   Tag sets the node-test; all other predicates accumulate in the predicate list.
-    --   For combinators: All merges predicates (intersection), Any uses | union.
-    toXPathNode :: LI.Locator -> Either LI.InvalidLocator XPathNode
-    toXPathNode l = 
-      case l of
-        LI.All {elms} -> do
-          nodes <- traverse toXPathNode elms
-          let explicitTags = filter (/= "*") . toList $ (.tag) <$> nodes
-              mergedPreds = concatMap (.predicates) (toList nodes)
-          mergedTag <- case nub explicitTags of
-            []  -> Right "*"
-            [t] -> Right t
-            xs  -> Left $ LI.MkInvalidLocator l ("Conflicting tags in All combinator - cannot convert to XPath: " <> txt xs)
-          Right $ MkXPathNode {tag = mergedTag, predicates = mergedPreds}
-        -- Any is handled at toXPathCore top-level to preserve XPath unions.
-        LI.Any {} -> locErr l
-        -- Contains: should not reach here since it's handled in toXPathCore above.
-        LI.Contains {} ->
-          Left $ LI.MkInvalidLocator l "Contains locator reached toXPathNode unexpectedly"
-        _ -> Right $ case l of
-                LI.XPath {value}
-                  | T.isInfixOf " | " value ->
-                      -- Union XPath produced by a nested Any combinator. Extract
-                      -- predicates from every branch and combine with 'or' so the
-                      -- whole union merges cleanly as a single predicate inside All.
-                      let branches = T.splitOn " | " value
-                          allPreds = concatMap (.predicates) $ parseXPathNode . T.strip <$> branches
-                          orPred   = "(" <> T.intercalate " or " allPreds <> ")"
-                      in  MkXPathNode {tag = "*", predicates = [orPred]}
-                LI.XPath {value} -> parseXPathNode value
-                LI.AllElms -> MkXPathNode {tag = "*", predicates = []}
-                LI.Tag {value} -> MkXPathNode {tag = value, predicates = []}
-                LI.ID {value} -> MkXPathNode {tag = "*", predicates = ["@id='" <> value <> "'"]}
-                LI.Class {value, matchType, caseSensitivity} ->
-                  MkXPathNode {tag = "*", predicates = [classToXPathPred value matchType caseSensitivity]}
-                LI.Attribute {name, value, matchType, caseSensitivity} ->
-                  MkXPathNode {tag = "*", predicates = [namedAttrToXPathPred name value matchType caseSensitivity]}
-          
-                -- Error cases - should have been converted to XPath or removed by prepareSimplify
-                LI.CSS {} -> locErr l
-                LI.Default {} -> locErr l
-                LI.Role {} -> locErr l
-                LI.InnerText {} -> locErr l
-                LI.BiDiContext  {} -> locErr l
-                LI.PostFilter  {} -> locErr l
-
-    -- | XPath predicate for CSS class matching.
-    classToXPathPred :: Text -> LI.MatchType -> LI.CaseSensitivity -> Text
-    classToXPathPred val mt cs =
-      let classAttr = applyCS cs "@class"
-          matchVal = lowerIfCI cs val
-       in case mt of
-            LI.Full -> "contains(concat(' ', normalize-space(" <> classAttr <> "), ' '), ' " <> matchVal <> " ')"
-            LI.Partial -> "contains(" <> classAttr <> ", '" <> matchVal <> "')"
-            LI.Starts -> "starts-with(normalize-space(" <> classAttr <> "), '" <> matchVal <> "')"
-            LI.Wildcard -> wildcardToXPathPred classAttr matchVal
-
-    -- | XPath predicate matching elements with a specific named attribute satisfying the condition.
-    namedAttrToXPathPred :: Text -> Text -> LI.MatchType -> LI.CaseSensitivity -> Text
-    namedAttrToXPathPred name val mt cs =
-      let attrExpr = applyCS cs ("@" <> name)
-          matchVal = lowerIfCI cs val
-       in case mt of
-            LI.Full -> attrExpr <> "='" <> matchVal <> "'"
-            LI.Partial -> "contains(" <> attrExpr <> ", '" <> matchVal <> "')" 
-            LI.Starts -> "starts-with(" <> attrExpr <> ", '" <> matchVal <> "')" 
-            LI.Wildcard -> wildcardToXPathPred attrExpr matchVal 
-
-    applyCS :: LI.CaseSensitivity -> Text -> Text
-    applyCS cs t = case cs of
-      LI.CaseSensitive -> t
-      LI.CaseInsensitive -> "translate(" <> t <> ", '" <> LI.upperAlpha <> "', '" <> LI.lowerAlpha <> "')"
-
-    lowerIfCI :: LI.CaseSensitivity -> Text -> Text
-    lowerIfCI cs t = case cs of
-      LI.CaseSensitive -> t
-      LI.CaseInsensitive -> T.toLower t
-
-    wildcardToXPathPred :: Text -> Text -> Text
-    wildcardToXPathPred normText val =
-      let parts = filter (not . T.null) $ T.splitOn "*" val
-          startsWithWildcard = "*" `T.isPrefixOf` val
-          endsWithWildcard = "*" `T.isSuffixOf` val
-       in case parts of
-            [] -> "true()"
-            [single]
-              | startsWithWildcard && endsWithWildcard ->
-                  "contains(" <> normText <> ", '" <> single <> "')"
-              | startsWithWildcard ->
-                  "substring(" <> normText <> ", string-length(" <> normText <> ") - string-length('" <> single <> "') + 1) = '" <> single <> "'"
-              | endsWithWildcard ->
-                  "starts-with(" <> normText <> ", '" <> single <> "')"
-              | otherwise -> normText <> "='" <> single <> "'"
-            _ ->
-              let buildP (preds', curText) (idx, part) =
-                    let predicate =
-                          if idx == (0 :: Int) && not startsWithWildcard
-                            then "starts-with(" <> curText <> ", '" <> part <> "')"
-                            else "contains(" <> curText <> ", '" <> part <> "')"
-                        nextText = "substring-after(" <> curText <> ", '" <> part <> "')"
-                     in (preds' <> [predicate], nextText)
-                  (preds, _) = foldl' buildP ([], normText) (zip [0 ..] parts)
-               in T.intercalate " and " preds
-
-    locErr :: LI.Locator -> a
-    locErr l =
-      error . T.unpack $
-        "Locator\n"
-          <> txt l
-          <> "\nconversion not implemented - should not be called - this is a library defect - check classify or locatorToXPathPartial"
+          let buildP (preds', curText) (idx, part) =
+                let predicate =
+                      if idx == (0 :: Int) && not startsWithWildcard
+                        then "starts-with(" <> curText <> ", '" <> part <> "')"
+                        else "contains(" <> curText <> ", '" <> part <> "')"
+                    nextText = "substring-after(" <> curText <> ", '" <> part <> "')"
+                in (preds' <> [predicate], nextText)
+              (preds, _) = foldl' buildP ([], normText) (zip [0 ..] parts)
+          in T.intercalate " and " preds

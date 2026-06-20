@@ -332,7 +332,7 @@ classify defLoc proto =
   \case
     CSS {} -> IsCSS
     XPath {} -> IsXPath
-    AllElms -> IsXPath
+    AllElms -> IsXPathConvertable
     ID {} -> IsXPathConvertable
     Class {} -> IsXPathConvertable
     Attribute {} -> IsXPathConvertable

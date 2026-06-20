@@ -915,7 +915,7 @@ _eval :: Maybe Text -> TestTree -> IO ()
 _eval mPattern = withArgs (maybe [] (\pat -> ["-p", (unpack pat)]) mPattern) . defaultMain
 
 --- >>> _eval _pattern tests
--- *** Exception: ExitSuccess
+-- *** Exception: ExitFailure 1
 
 
 
