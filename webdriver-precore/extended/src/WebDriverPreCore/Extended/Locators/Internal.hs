@@ -314,6 +314,15 @@ The `Protocol` parameter is required. Initial implementation targets HTTP only;
 BiDi-only constructors (e.g. `BiDiContext`) return an `InvalidLocator` error.
 (BiDi support is deferred to a later change.)
 
+### Design principle
+
+XPathID bodies are always pure predicates — no `//*` or `//tag` prefix.
+Tags are stored separately in `tagM` and are only materialised in the final
+Phase 3 conversion.  ContainsI is NOT collapsed to XPathID during the
+simplification loop; instead tags cascade *through* ContainsI to the contained
+side during tag assignment, and the ContainsI → XPathI concatenation happens
+as the very last step in Phase 3, using the already-fully-tagged XPathI values.
+
 ### Phase 0 — Type fixes before implementation
 
 - Fix `PostFilterI.locator` from `Locator` to `LocatorI` (typo).
@@ -333,7 +342,7 @@ combinators bottom-up (convert children first, then rebuild the parent).
 | `ID {value}` | `XPathID {tagM = Nothing, body = "@id='" <> value <> "'"}` |
 | `Class {value, matchType, caseSensitivity}` | `XPathID {tagM = Nothing, body = classPred value matchType caseSensitivity}` |
 | `Attribute {name, value, matchType, caseSensitivity}` | `XPathID {tagM = Nothing, body = attrPred name value matchType caseSensitivity}`. Validate: if `name` or `value` is empty, return `InvalidLocator`. |
-| `Tag {value}` | `TagI {tag = value}` (will be resolved in Phase 4) |
+| `Tag {value}` | `TagI {tag = value}` (will be resolved in Phase 3) |
 | `Default {value}` | Resolve via `defLoc value`. If *any* node in the resolved tree is a `Default`, return `InvalidLocator` (recursive check). Otherwise, recursively convert the resolved locator. |
 | `Role {role}` | `RoleI {xpath = roleToXPath role}` (pre-compute the full `//*[...]` XPath string using existing `roleToXPath`) |
 | `InnerText {value, matchType, caseSensitivity, maxDepth}` | `InnerTextI {value, matchType, caseSensitivity, maxDepth}`. Note: InnerText passes through unchanged; HTTP double-shot handling belongs in a later pipeline stage. |
@@ -356,11 +365,13 @@ further changes occur:
 loop:
   2a. flatten nested AllI/AnyI
   2b. combine contiguous XPathIDs
-  2c. convert ContainsI → XPathID (when both sides are XPathID)
-  2d. assign tags
-  2e. unwrap single-child combinators
-  2f. combine XPathID-only AllI/AnyI into a single XPathID
+  2c. assign tags
+  2d. unwrap single-child combinators
+  2e. combine XPathID-only AllI/AnyI into a single XPathID
 ```
+
+Note: ContainsI → XPathID conversion is **not** done here. Tags are cascaded
+*through* ContainsI to the contained side. ContainsI is resolved in Phase 3.
 
 #### 2a. Flatten nested AllI/AnyI
 
@@ -369,7 +380,7 @@ Same semantics as existing `flattenLoc` but on `LocatorI`:
 - `AnyI [..., AnyI [a,b], ...]` → `AnyI [..., a, b, ...]`
 - Flattening recurses: `AllI [AllI [AllI [x]]]` → `AllI [x]`
 - If after flattening an AllI/AnyI has a single child, it is **not** unwrapped
-  here — that is done in step 2e.
+  here — that is done in step 2d.
 
 #### 2b. Combine contiguous XPathIDs
 
@@ -383,42 +394,17 @@ result directly in the parent combinator (no extra nesting).
   `XPathID {body="a"}, XPathID {body="b"}` → `XPathID {tagM=Nothing, body="a or b"}`
 - Parenthesise each original body before joining if it contains `and`/`or` to
   preserve precedence: `"(a or b) and c"`.
-- The combined XPathID inherits `tagM = Nothing` (tags are assigned in step 2d).
+- The combined XPathID inherits `tagM = Nothing` (tags are assigned in step 2c).
 - After this pass, no combinator should contain adjacent XPathID children.
 
 Example: `AllI [XPathID{body="p1"}, XPathID{body="p2"}, XPathID{body="p3"}, RoleI{...}, XPathID{body="p4"}, XPathID{body="p5"}]`
 → `AllI [XPathID{body="p1 and p2 and p3"}, RoleI{...}, XPathID{body="p4 and p5"}]`
 
-#### 2c. Convert ContainsI → XPathID
-
-For each `ContainsI {container, contained}` where both `container` and `contained`
-are `XPathID`, convert to a single `XPathID`:
-
-- body = `container.body <> "//*" <> contained.body`
-- tagM = `Nothing`
-
-The `//*` separator represents the descendant axis between container and contained.
-
-> **⚠ AMBIGUITY NOTE:** This produces bodies containing `//*` (multi-step),
-> which conflicts with the principle that XPathID bodies are pure predicates.
-> The `//*` in the body is a descendant step, not a tag prefix — it is
-> semantically distinct from the `//tag` added in Phase 4. Ensure Phase 3's
-> final conversion handles multi-step bodies correctly by only replacing the
-> *last* `//*` with `//tagM`.
-
-When the tag is later assigned (step 2d), it applies to the *contained* element
-(the last step), not the container. Rationale: distributing the tag to the
-contained element is equivalent to intersecting "all tagged elements" with
-"(contained under container)" — i.e. "all tagged contained under container".
-
-After this pass, apply 2b again in the next loop iteration, since the new
-XPathID may now be adjacent to other XPathIDs.
-
-#### 2d. Assign tags
+#### 2c. Assign tags
 
 Recurse through the tree. At each `AllI` and `AnyI`, process Tags as follows.
 
-##### 2d-i. Tags within AnyI
+##### 2c-i. Tags within AnyI
 
 Each `TagI` within an `AnyI` is converted to a standalone `XPathI`. If there
 are multiple `TagI` children within the same `AnyI`, they are merged into a
@@ -429,9 +415,9 @@ single `XPathI` with a union value:
 
 After this step there should be no `TagI` constructors remaining inside any
 `AnyI`. If the resulting `XPathI` is the only child of the `AnyI`, unwrapping
-will happen in step 2e.
+will happen in step 2d.
 
-##### 2d-ii. Contradictory tag detection within AllI
+##### 2c-ii. Contradictory tag detection within AllI
 
 Scan an `AllI` for `TagI` constructors in its *direct children*. Also consider
 `TagI` constructors from nested `AllI` children (but NOT from nested `AnyI`
@@ -449,42 +435,47 @@ Examples:
 - `AllI [TagI "div", AllI [TagI "div", XPathID{...}]]` → **ok** (same tag;
   inner one is redundant and will be removed below)
 
-##### 2d-iii. Tag distribution within AllI
+##### 2c-iii. Tag distribution within AllI
 
 For an `AllI`:
 1. Collect all `TagI` direct children.
 2. If zero Tags → nothing to do.
 3. If exactly one Tag value `t`:
    a. Set `tagM = Just t` on every `XPathID` descendant that is reachable by
-      traversing only through `AllI` and `AnyI` combinators (i.e. do not cross
-      `ContainsI`, `PostFilterI`, or any leaf non-XPathID constructors).
+      traversing through `AllI`, `AnyI`, **and `ContainsI`** combinators.
+      When crossing a `ContainsI`, the tag cascades to the **contained** side
+      only (and recursively through any AllI/AnyI beneath it). The container
+      side of a `ContainsI` is NOT tagged.
+      Do not cross `PostFilterI` or any leaf non-XPathID constructor
+      (RoleI, XPathI, CSSI, InnerTextI, BiDiContextI).
    b. Remove the `TagI` from the AllI's children **iff** there are no non-XPathID
       constructors (RoleI, XPathI, CSSI, InnerTextI, ContainsI, PostFilterI,
-      BiDiContextI) among the AllI's direct or nested descendants (through
-      AllI/AnyI). If any such constructor exists, the Tag stays to preserve
-      correct semantics for elements it could not be distributed to.
+      BiDiContextI) among the AllI's direct or nested descendants (traversing
+      through AllI/AnyI and the contained side of ContainsI). If any such
+      constructor exists, the Tag stays to preserve correct semantics for
+      elements it could not be distributed to.
 4. If multiple Tags with the same value → keep one, remove the rest (redundant).
-   This case is reached after contradictory-tag check (2d-ii) has already filtered
+   This case is reached after contradictory-tag check (2c-ii) has already filtered
    out differing Tags.
 
-##### 2d-iv. Tag removal when nested Any becomes XPathID-only
+##### 2c-iv. Tag removal when nested Any becomes XPathID-only
 
 After tag distribution, if a nested `AnyI` within the `AllI` now contains only
 `XPathID` children (all of which have the same `tagM`), the `TagI` in the outer
 `AllI` can be removed (it is redundant — all elements in the Any already carry
 the tag).
 
-#### 2e. Unwrap single-child combinators
+#### 2d. Unwrap single-child combinators
 
 - `AllI [x]` → `x`
 - `AnyI [x]` → `x`
 - `ContainsI {container = x, contained = y}` where `x` or `y` is a
   single-child combinator → unwrap first, then re-check ContainsI.
 
-This pass is intentionally placed *after* tag assignment (2d) so that tag
+This pass is intentionally placed *after* tag assignment (2c) so that tag
 distribution is not lost by premature unwrapping.
 
-#### 2f. Combine XPathID-only AllI/AnyI
+#### 2e. Combine XPathID-only AllI/AnyI
 
 If an `AllI` or `AnyI` contains *only* `XPathID` children (after all previous
 passes), combine them into a single `XPathID`:
@@ -495,70 +486,77 @@ passes), combine them into a single `XPathID`:
   `Nothing`.
 
 After this pass, if the result is a single XPathID, the outer combinator has
-been eliminated. Apply 2e in the next iteration to unwrap any new single-child
+been eliminated. Apply 2d in the next iteration to unwrap any new single-child
 combinators.
 
 #### Loop termination
 
-The fixed-point loop terminates when a full pass (2a→2f) produces no changes.
+The fixed-point loop terminates when a full pass (2a→2e) produces no changes.
 Since every pass either reduces the number of constructors or eliminates a
 constructor type, termination is guaranteed.
 
 ### Phase 3 — Final conversion
 
 When the loop terminates (no further simplifications possible), convert all
-remaining intermediate constructors to their final forms:
+remaining intermediate constructors to their final forms, in this order:
 
-1. **XPathID → XPathI**:
+**3a. XPathID → XPathI**:
    `XPathI {value = "//" <> tagStr <> body}`
    where `tagStr = fromMaybe "*" tagM`.
+   Since all XPathID bodies are pure predicates (ContainsI was not collapsed
+   in the loop), the `//tagStr` prefix is always correct.
 
-   > **⚠ AMBIGUITY NOTE:** This assumes `body` is a predicate (no leading
-   > `//*`). For Contains-derived XPathID bodies that contain `//*` in the
-   > middle, only the last `//*` should be replaced with `//tagStr`. The
-   > existing `appendPredsToLastStep` logic in
-   > `ReducedLocator/Internal.hs` may be a useful reference.
-
-2. **TagI → XPathI**:
+**3b. TagI → XPathI**:
    `XPathI {value = "//" <> tag}`
 
-3. **RoleI** stays as `RoleI` — do NOT convert to XPathI.
-   (The xpath is already pre-computed in its `xpath` field.)
+**3c. ContainsI → XPathI** *(new — replaces the old Phase 2 step)*:
+   For each `ContainsI {container, contained}` where both sides are now
+   `XPathI` (after steps 3a/3b), replace with a single `XPathI` by
+   concatenating the already-resolved values:
+   `XPathI {value = container.value <> contained.value}`
 
-4. All other constructors (`CSSI`, `InnerTextI`, `BiDiContextI`, `ContainsI`,
-   `AllI`, `AnyI`, `PostFilterI`) remain unchanged.
+   This naturally places the container's tag (if any) on the container step
+   and the contained's tag on the contained step, since tags were already
+   materialised in 3a.  Example:
+   - container = `XPathI "//*[@id='foo']"` (no tag, so `*`)
+   - contained = `XPathI "//div[contains(@class,'bar')]"` (tag=div)
+   - result = `XPathI "//*[@id='foo']//div[contains(@class,'bar')]"`
+
+   After this pass apply step 3d to clean up any redundant neighbouring
+   XPathIs.
+
+**3d. Cleanup redundant Tag-derived XPathIs**:
+   After 3c, an `AllI` may contain a standalone `XPathI "//t"` (from a TagI
+   that could not be removed in 2c because a ContainsI blocked it) alongside
+   the newly-created Contains-derived `XPathI` which already encodes `t` on
+   the contained step.  These are logically redundant but harmless; they may
+   be left as-is for the downstream consumer to handle, or optionally removed
+   if `"//t"` is a suffix of another child's value.
+
+**3e. RoleI** stays as `RoleI` — do NOT convert to XPathI.
+   (The xpath is already pre-computed in its `xpath` field.)
 
 ### Phase 4 — Post-conditions
 
 After Phase 3, the following invariants hold:
 - No `XPathID` or `TagI` constructors remain.
 - No `AllI` or `AnyI` contains only `XPathI` children that could have been
-  combined (they were combined in 2f).
-- No `ContainsI` has both sides as `XPathID`/`XPathI` (they were converted in 2c).
+  combined (they were combined in 2e).
+- No `ContainsI` has both sides as `XPathI` (they were converted in 3c).
 - `RoleI` is preserved (not converted to `XPathI`).
 - User-provided `XPath` values are preserved as-is in `XPathI` and were never
   merged with auto-generated XPath.
 
 ### Notes from review
 
-- **Contains body format**: The interaction between "pure predicate" XPathID
-  bodies and Contains-derived multi-step bodies needs clarification. See
-  ambiguity notes in 2c and Phase 3.
+- **Contains resolution**: Deferred to Phase 3. Tags cascade through ContainsI
+  to the contained side during the loop (2c-iii). The XPath concatenation uses
+  already-tagged XPathI values, so each side carries its own tag naturally.
 - **InnerText**: Passes through as `InnerTextI`. HTTP double-shot (XPath +
   post-filter) is handled in a downstream pipeline stage, not in `transform`.
 - **validate `Attribute`**: Empty `name` or `value` returns `InvalidLocator`.
 - **`tagM` field**: The `XPathID` constructor uses `tagM :: Maybe Text` (not
   `tag`), matching the current type definition.
-
-## Ambiguity notes flagged
-
-1. Contains→XPathID body format (step 2c and Phase 3)
-
-This is the unresolved tension from Bug #1. The principle says XPathID bodies are pure predicates (no //* prefix), but Contains→XPathID produces container.body <> "//*" <> contained.body — bodies with //* in them. The spec documents this and says the final Phase 3 conversion should only replace the last //* with //tagStr for such multi-step bodies. I referenced the existing appendPredsToLastStep in ReducedLocator/Internal.hs as a pattern to follow. This will need explicit resolution during implementation.
-
-2. tagM field convention
-
-The data type already uses tagM :: Maybe Text (line 88). The spec consistently uses this name. No issue, just noting the rename from the original tag in the prose.
 -
 
 -}
