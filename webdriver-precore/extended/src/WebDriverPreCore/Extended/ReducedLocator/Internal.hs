@@ -55,7 +55,7 @@ data BiDiNativeLoc
   | InnerText
       { value :: Text,
         matchType :: LI.MatchType,
-        caseSesnsitivity :: LI.CaseSensitivity,
+        caseSensitivity :: LI.CaseSensitivity,
         maxDepth :: Maybe Word8
       }
   deriving

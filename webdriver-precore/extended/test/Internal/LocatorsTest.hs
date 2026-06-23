@@ -311,7 +311,7 @@ httpLeavesBool val =
         InnerText
           { value = b,
             matchType = Full,
-            caseSesnsitivity = CaseSensitive,
+            caseSensitivity = CaseSensitive,
             maxDepth = Nothing
           }
           -- browsingContextId -> elementId ie get the frame that belongs to the browsing context

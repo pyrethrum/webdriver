@@ -2,9 +2,10 @@ module WebDriverPreCore.Extended.Locators.Internal where
 
 import Control.Exception (Exception)
 import Data.Foldable1 (foldl1')
-import Data.List (uncons)
+import Data.List (nub, uncons)
+import Data.List qualified as LST
 import Data.List.NonEmpty (NonEmpty (..), groupBy, sortBy, toList)
-import Data.Maybe (fromJust)
+import Data.Maybe (fromJust, fromMaybe)
 import Data.Text (Text, intercalate, pack, splitOn, toLower, unpack)
 import Data.Text qualified as T
 import Data.Word (Word8)
@@ -57,7 +58,7 @@ data Locator
   | InnerText
       { value :: Text,
         matchType :: MatchType,
-        caseSesnsitivity :: CaseSensitivity,
+        caseSensitivity :: CaseSensitivity,
         maxDepth :: Maybe Word8
       }
   | -- exclusive
@@ -95,7 +96,7 @@ data LocatorI
   | InnerTextI
       { value :: Text,
         matchType :: MatchType,
-        caseSesnsitivity :: CaseSensitivity,
+        caseSensitivity :: CaseSensitivity,
         maxDepth :: Maybe Word8
       }
   | -- exclusive
@@ -108,7 +109,7 @@ data LocatorI
   | --- PostFilter
     PostFilterI
       { predicate :: Predicate,
-        locator :: Locator
+        locator :: LocatorI
       }
   deriving
     ( -- | WithOptions {base :: Locator, options :: [LocatorDirectives]}
@@ -117,8 +118,384 @@ data LocatorI
       Ord
     )
 
-tranform :: (Text -> Locator) -> Locator -> Either InvalidLocator LocatorI
-tranform defLoc loc = undefined
+-- | Map over a LocatorI tree bottom-up (post-order).
+mapLocIBottomUp :: (LocatorI -> LocatorI) -> LocatorI -> LocatorI
+mapLocIBottomUp f loc = f $
+  case loc of
+    ContainsI c d -> ContainsI (recurse c) (recurse d)
+    AllI elms -> AllI $ recurseMap elms
+    AnyI elms -> AnyI $ recurseMap elms
+    PostFilterI p l -> PostFilterI p (recurse l)
+    _ -> loc
+  where
+    recurse = mapLocIBottomUp f
+    recurseMap = fmap (mapLocIBottomUp f)
+
+-----------------------------------------------------------------------------
+-- Phase 1: Initial conversion (Locator → LocatorI)
+-----------------------------------------------------------------------------
+
+convertLoc :: Protocol -> (Text -> Locator) -> Locator -> Either InvalidLocator LocatorI
+convertLoc proto defLoc = \case
+  CSS {value} -> Right $ CSSI {value}
+  XPath {value} -> Right $ XPathI {value}
+  AllElms -> Right $ XPathID {tagM = Nothing, body = "true()"}
+  ID {value} -> Right $ XPathID {tagM = Nothing, body = "@id='" <> value <> "'"}
+  Class {value, matchType, caseSensitivity} ->
+    Right $ XPathID {tagM = Nothing, body = classPredX value matchType caseSensitivity}
+  Attribute {name, value, matchType, caseSensitivity}
+    | T.null name || T.null value ->
+        Left $ MkInvalidLocator (Attribute {name, value, matchType, caseSensitivity})
+          "Attribute locator has empty name or value"
+    | otherwise ->
+        Right $ XPathID {tagM = Nothing, body = attrPredX name value matchType caseSensitivity}
+  Tag {value} -> Right $ TagI {tag = value}
+  Default {value} ->
+    let resolved = defLoc value
+    in if hasDefault resolved
+       then Left $ MkInvalidLocator (Default value)
+              "Default locator cannot resolve to another Default"
+       else convertLoc proto defLoc resolved
+  Role {role} -> Right $ RoleI {xpath = roleToXPath role}
+  InnerText {value, matchType, caseSensitivity, maxDepth} ->
+    Right $ InnerTextI {value, matchType, caseSensitivity, maxDepth}
+  BiDiContext {context} -> case proto of
+    HTTP -> Left $ MkInvalidLocator (BiDiContext {context})
+              "BiDiContext locator cannot be used with HTTP protocol"
+    BiDi -> Right $ BiDiContextI {context}
+  Contains {container, contained} ->
+    ContainsI <$> convertLoc proto defLoc container <*> convertLoc proto defLoc contained
+  All {elms} ->
+    AllI <$> traverse (convertLoc proto defLoc) elms
+  Any {elms} ->
+    AnyI <$> traverse (convertLoc proto defLoc) elms
+  PostFilter {predicate, locator} ->
+    PostFilterI predicate <$> convertLoc proto defLoc locator
+
+-----------------------------------------------------------------------------
+-- Phase 2: Simplify loop (fixed-point)
+-----------------------------------------------------------------------------
+
+-----------------------------------------------------------------------------
+-- 2a. Flatten nested AllI/AnyI
+-----------------------------------------------------------------------------
+
+flattenLocI :: LocatorI -> LocatorI
+flattenLocI = \case
+  AllI elms ->
+    let reduced = flattenLocI <$> elms
+        flattened = concatMap flattenAll $ toList reduced
+    in case flattened of
+         [] -> error "flattenLocI: AllI produced empty list (impossible with NonEmpty input)"
+         (x : xs) -> AllI (x :| xs)
+    where
+      flattenAll (AllI xs) = toList xs
+      flattenAll x = [x]
+  AnyI elms ->
+    let reduced = flattenLocI <$> elms
+        flattened = concatMap flattenAny $ toList reduced
+    in case flattened of
+         [] -> error "flattenLocI: AnyI produced empty list (impossible with NonEmpty input)"
+         (x : xs) -> AnyI (x :| xs)
+    where
+      flattenAny (AnyI xs) = toList xs
+      flattenAny x = [x]
+  ContainsI c d -> ContainsI (flattenLocI c) (flattenLocI d)
+  PostFilterI p l -> PostFilterI p (flattenLocI l)
+  other -> other
+
+-----------------------------------------------------------------------------
+-- 2b. Combine contiguous XPathIDs
+-----------------------------------------------------------------------------
+
+combineContiguous :: LocatorI -> LocatorI
+combineContiguous = mapLocIBottomUp $ \case
+  AllI elms -> AllI $ combineRuns " and " elms
+  AnyI elms -> AnyI $ combineRuns " or " elms
+  other -> other
+  where
+    combineRuns :: Text -> NonEmpty LocatorI -> NonEmpty LocatorI
+    combineRuns sep elms =
+      let xs = toList elms
+          result = go sep xs
+      in case result of
+           [] -> error "combineRuns: produced empty list"
+           (y : ys) -> y :| ys
+    
+    go :: Text -> [LocatorI] -> [LocatorI]
+    go _ [] = []
+    go s (XPathID _ b1 : XPathID _ b2 : rest) =
+      let p1 = if " and " `T.isInfixOf` b1 || " or " `T.isInfixOf` b1
+               then "(" <> b1 <> ")" else b1
+          p2 = if " and " `T.isInfixOf` b2 || " or " `T.isInfixOf` b2
+               then "(" <> b2 <> ")" else b2
+          combined = XPathID {tagM = Nothing, body = p1 <> s <> p2}
+      in go s (combined : rest)
+    go s (x : rest) = x : go s rest
+
+-----------------------------------------------------------------------------
+-- 2c. Assign tags
+-----------------------------------------------------------------------------
+
+assignTags :: LocatorI -> Either InvalidLocator LocatorI
+assignTags = \case
+  ContainsI c d -> ContainsI <$> assignTags c <*> assignTags d
+  AllI elms -> AllI <$> (processAllI =<< traverse assignTags elms)
+  AnyI elms -> AnyI <$> (processAnyITags =<< traverse assignTags elms)
+  PostFilterI p l -> PostFilterI p <$> assignTags l
+  other -> Right other
+
+-- | 2c-i: Process TagI constructors within an AnyI.
+processAnyITags :: NonEmpty LocatorI -> Either InvalidLocator (NonEmpty LocatorI)
+processAnyITags elms = do
+  let children = toList elms
+      (tags, others) = LST.partition isTagI children
+      tagXPaths = case tags of
+        [] -> []
+        [TagI t] -> [XPathI ("//" <> t)]
+        ts -> [XPathI ("//" <> T.intercalate " | " [t | TagI t <- ts])]
+      result = tagXPaths <> others
+  case result of
+    [] -> error "processAnyITags: empty result"
+    (x : xs) -> Right (x :| xs)
+  where
+    isTagI (TagI _) = True
+    isTagI _ = False
+
+-- | 2c-ii + 2c-iii + 2c-iv: Process TagI constructors within an AllI.
+processAllI :: NonEmpty LocatorI -> Either InvalidLocator (NonEmpty LocatorI)
+processAllI elms = do
+  let children = toList elms
+      (tags, others) = LST.partition isTagI children
+  
+  -- 2c-ii: Contradictory tag detection
+  let tagValues = [t | TagI t <- tags]
+  case nub tagValues of
+    (_ : _ : _) ->
+      Left $ MkInvalidLocator (All (CSS "error" :| []))
+        ("Contradictory tags in All combinator: " <> T.intercalate ", " tagValues)
+    _ -> pure ()
+  
+  -- 2c-iii: Tag distribution
+  case tagValues of
+    [] -> pure elms  -- no tags, nothing to distribute
+    (t : _) -> do
+      let distributed = fmap (distributeTag t) others
+      
+      -- 2c-iii-b: can we remove the Tag?
+      let canRemove = not (any hasNonXPathIDDescendant distributed)
+      
+      -- 2c-iv: check nested AnyIs for XPathID-only after distribution
+      let withNestedAnyCheck = fmap (checkNestedAnyTagRemoval t) distributed
+      
+      let resultList = if canRemove then withNestedAnyCheck
+                       else TagI t : withNestedAnyCheck
+      case resultList of
+        [] -> error "processAllI: empty result"
+        (x : xs) -> pure (x :| xs)
+  where
+    isTagI (TagI _) = True
+    isTagI _ = False
+
+-- | Set tagM = Just t on all reachable XPathID descendants.
+-- Traverses through AllI, AnyI, and the contained side of ContainsI.
+-- Container side of ContainsI is NOT tagged.
+distributeTag :: Text -> LocatorI -> LocatorI
+distributeTag t = \case
+  XPathID _ body -> XPathID {tagM = Just t, body}
+  AllI elms -> AllI $ distributeTag t <$> elms
+  AnyI elms -> AnyI $ distributeTag t <$> elms
+  ContainsI container contained -> ContainsI container (distributeTag t contained)
+  other -> other  -- PostFilterI, RoleI, XPathI, CSSI, InnerTextI, BiDiContextI, TagI
+
+-- | Check if there are non-XPathID constructors reachable through the same
+-- traversal as distributeTag. Used to decide if a TagI can be removed.
+hasNonXPathIDDescendant :: LocatorI -> Bool
+hasNonXPathIDDescendant = \case
+  XPathID {} -> False
+  TagI {} -> False  -- Tags being processed; don't count as blockers
+  AllI elms -> any hasNonXPathIDDescendant elms
+  AnyI elms -> any hasNonXPathIDDescendant elms
+  ContainsI container contained ->
+    hasNonXPathIDDescendant container || hasNonXPathIDDescendant contained
+  _ -> True  -- RoleI, XPathI, CSSI, InnerTextI, PostFilterI, BiDiContextI
+
+-- | 2c-iv: If a nested AnyI now contains only XPathID children (all same tag),
+-- the Tag in the outer All can be removed. Since the Tag has already been
+-- distributed, this checks the state after distribution.
+checkNestedAnyTagRemoval :: Text -> LocatorI -> LocatorI
+checkNestedAnyTagRemoval t = \case
+  AnyI elms
+    | all (isXPathIDWithTag t) elms -> 
+        -- All children are XPathID with the same tag — the outer Tag is redundant
+        -- for this subtree.  We can't remove the outer Tag from here, but we
+        -- mark that this AnyI no longer blocks tag removal by returning the
+        -- already-tagged children (no-op structurally).
+        AnyI elms
+  other -> other
+  where
+    isXPathIDWithTag tag (XPathID {tagM = Just t'}) = t' == tag
+    isXPathIDWithTag _ _ = False
+
+-----------------------------------------------------------------------------
+-- 2d. Unwrap single-child combinators
+-----------------------------------------------------------------------------
+
+unwrapSingle :: LocatorI -> LocatorI
+unwrapSingle = \case
+  AllI elms ->
+    let processed = unwrapSingle <$> elms
+    in case toList processed of
+         [x] -> x
+         _ -> AllI processed
+  AnyI elms ->
+    let processed = unwrapSingle <$> elms
+    in case toList processed of
+         [x] -> x
+         _ -> AnyI processed
+  ContainsI c d -> ContainsI (unwrapSingle c) (unwrapSingle d)
+  PostFilterI p l -> PostFilterI p (unwrapSingle l)
+  other -> other
+
+-----------------------------------------------------------------------------
+-- 2e. Combine XPathID-only AllI/AnyI
+-----------------------------------------------------------------------------
+
+combineXPathIDOnly :: LocatorI -> LocatorI
+combineXPathIDOnly = \case
+  AllI elms
+    | all isXPathID elms ->
+        let xs = toList elms
+            bodies = [parenthesise b | XPathID _ b <- xs]
+            joined = T.intercalate " and " bodies
+            tags = nub [tm | XPathID tm _ <- xs]
+            commonTag = case tags of
+              [t] -> t
+              _ -> Nothing
+        in XPathID {tagM = commonTag, body = joined}
+    | otherwise -> AllI $ combineXPathIDOnly <$> elms
+  AnyI elms
+    | all isXPathID elms ->
+        let xs = toList elms
+            bodies = [parenthesise b | XPathID _ b <- xs]
+            joined = T.intercalate " or " bodies
+            tags = nub [tm | XPathID tm _ <- xs]
+            commonTag = case tags of
+              [t] -> t
+              _ -> Nothing
+        in XPathID {tagM = commonTag, body = joined}
+    | otherwise -> AnyI $ combineXPathIDOnly <$> elms
+  ContainsI c d -> ContainsI (combineXPathIDOnly c) (combineXPathIDOnly d)
+  PostFilterI p l -> PostFilterI p (combineXPathIDOnly l)
+  other -> other
+  where
+    isXPathID (XPathID {}) = True
+    isXPathID _ = False
+    parenthesise body
+      | " and " `T.isInfixOf` body || " or " `T.isInfixOf` body = "(" <> body <> ")"
+      | otherwise = body
+
+-----------------------------------------------------------------------------
+-- Phase 3: Final conversion
+-----------------------------------------------------------------------------
+
+finalConvert :: LocatorI -> LocatorI
+finalConvert = convertContains . convertTags . convertXPathIDs
+
+convertXPathIDs :: LocatorI -> LocatorI
+convertXPathIDs = mapLocIBottomUp $ \case
+  XPathID {tagM, body} ->
+    XPathI {value = "//" <> fromMaybe "*" tagM <> body}
+  other -> other
+
+convertTags :: LocatorI -> LocatorI
+convertTags = mapLocIBottomUp $ \case
+  TagI {tag} -> XPathI {value = "//" <> tag}
+  other -> other
+
+convertContains :: LocatorI -> LocatorI
+convertContains = mapLocIBottomUp $ \case
+  ContainsI (XPathI {value = cv}) (XPathI {value = dv}) ->
+    XPathI {value = cv <> dv}
+  other -> other
+
+-----------------------------------------------------------------------------
+-- Top-level XPath predicate helpers (extracted from locatorToXPathPartial)
+-----------------------------------------------------------------------------
+
+-- | XPath predicate for CSS class matching.
+classPredX :: Text -> MatchType -> CaseSensitivity -> Text
+classPredX val mt cs =
+  let classAttr = applyCSText cs "@class"
+      matchVal = lowerIfCIText cs val
+  in case mt of
+       Full ->
+         "contains(concat(' ', normalize-space(" <> classAttr <> "), ' '), ' " <> matchVal <> " ')"
+       Partial -> "contains(" <> classAttr <> ", '" <> matchVal <> "')"
+       Starts -> "starts-with(normalize-space(" <> classAttr <> "), '" <> matchVal <> "')"
+       Wildcard -> wildcardPredX classAttr matchVal
+
+-- | XPath predicate for named attribute matching.
+attrPredX :: Text -> Text -> MatchType -> CaseSensitivity -> Text
+attrPredX name val mt cs =
+  let attrExpr = applyCSText cs ("@" <> name)
+      matchVal = lowerIfCIText cs val
+  in case mt of
+       Full -> attrExpr <> "='" <> matchVal <> "'"
+       Partial -> "contains(" <> attrExpr <> ", '" <> matchVal <> "')"
+       Starts -> "starts-with(" <> attrExpr <> ", '" <> matchVal <> "')"
+       Wildcard -> wildcardPredX attrExpr matchVal
+
+applyCSText :: CaseSensitivity -> Text -> Text
+applyCSText CaseSensitive expr = expr
+applyCSText CaseInsensitive expr =
+  "translate(" <> expr <> ", '" <> upperAlpha <> "', '" <> lowerAlpha <> "')"
+
+lowerIfCIText :: CaseSensitivity -> Text -> Text
+lowerIfCIText CaseSensitive v = v
+lowerIfCIText CaseInsensitive v = toLower v
+
+wildcardPredX :: Text -> Text -> Text
+wildcardPredX normText val =
+  let parts = filter (not . T.null) $ splitOn "*" val
+      startsWithWildcard = "*" `T.isPrefixOf` val
+      endsWithWildcard = "*" `T.isSuffixOf` val
+  in case parts of
+       [] -> "true()"
+       [single]
+         | startsWithWildcard && endsWithWildcard ->
+             "contains(" <> normText <> ", '" <> single <> "')"
+         | startsWithWildcard ->
+             "substring(" <> normText <> ", string-length(" <> normText <> ") - string-length('" <> single <> "') + 1) = '" <> single <> "'"
+         | endsWithWildcard ->
+             "starts-with(" <> normText <> ", '" <> single <> "')"
+         | otherwise -> normText <> "='" <> single <> "'"
+       _ ->
+         let buildP (preds, curText) (idx, part) =
+               let predicate =
+                     if idx == (0 :: Int) && not startsWithWildcard
+                       then "starts-with(" <> curText <> ", '" <> part <> "')"
+                       else "contains(" <> curText <> ", '" <> part <> "')"
+                   nextText = "substring-after(" <> curText <> ", '" <> part <> "')"
+               in (preds <> [predicate], nextText)
+             (predicates, _) = foldl' buildP ([], normText) (zip [0 ..] parts)
+         in intercalate " and " predicates
+
+transform :: Protocol -> (Text -> Locator) -> Locator -> Either InvalidLocator LocatorI
+transform proto defLoc loc = do
+  locI <- convertLoc proto defLoc loc
+  simplified <- runSimplifyLoop locI
+  pure $ finalConvert simplified
+  where
+    runSimplifyLoop current = do
+      let flat = flattenLocI current
+      let combined = combineContiguous flat
+      tagged <- assignTags combined
+      let unwrapped = unwrapSingle tagged
+      let xpathOnly = combineXPathIDOnly unwrapped
+      if xpathOnly == current
+        then pure current
+        else runSimplifyLoop xpathOnly
 
 {-
 ## Spec Version 1

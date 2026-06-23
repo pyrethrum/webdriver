@@ -551,7 +551,7 @@ toSelector = \case
   -- shim BiDiNative locators
   BiDiNative sl -> case sl of
     Role {role} -> HTTPP.XPath $ roleToXPath role
-    InnerText {value, matchType, caseSesnsitivity, maxDepth} -> HTTPP.XPath $ innerTextToXPath value caseSesnsitivity matchType maxDepth
+    InnerText {value, matchType, caseSensitivity, maxDepth} -> HTTPP.XPath $ innerTextToXPath value caseSensitivity matchType maxDepth
 
 _locateBiDi :: a
 _locateBiDi = undefined
