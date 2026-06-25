@@ -118,59 +118,67 @@ data LocatorI
       Ord
     )
 
--- | Map over a LocatorI tree bottom-up (post-order).
-mapLocIBottomUp :: (LocatorI -> LocatorI) -> LocatorI -> LocatorI
-mapLocIBottomUp f loc = f $
-  case loc of
-    ContainsI c d -> ContainsI (recurse c) (recurse d)
-    AllI elms -> AllI $ recurseMap elms
-    AnyI elms -> AnyI $ recurseMap elms
-    PostFilterI p l -> PostFilterI p (recurse l)
-    _ -> loc
+
+transform :: Protocol -> (Text -> Locator) -> Locator -> Either InvalidLocator LocatorI
+transform proto defLoc loc = do
+  locI <- convertLoc proto defLoc loc
+  simplified <- simplify locI
+  pure $ finalConvert simplified
   where
-    recurse = mapLocIBottomUp f
-    recurseMap = fmap (mapLocIBottomUp f)
+    simplify current = do
+      tagged <- assignTags . combineContiguous $ flattenLocI current
+      let xpathOnly = combineXPathIDOnly $ unwrapSingle tagged
+      if xpathOnly == current
+        then pure current
+        else simplify xpathOnly
+
+
 
 -----------------------------------------------------------------------------
 -- Phase 1: Initial conversion (Locator → LocatorI)
 -----------------------------------------------------------------------------
 
 convertLoc :: Protocol -> (Text -> Locator) -> Locator -> Either InvalidLocator LocatorI
-convertLoc proto defLoc = \case
-  CSS {value} -> Right $ CSSI {value}
-  XPath {value} -> Right $ XPathI {value}
-  AllElms -> Right $ XPathID {tagM = Nothing, body = "true()"}
-  ID {value} -> Right $ XPathID {tagM = Nothing, body = "@id='" <> value <> "'"}
-  Class {value, matchType, caseSensitivity} ->
-    Right $ XPathID {tagM = Nothing, body = classPredX value matchType caseSensitivity}
-  Attribute {name, value, matchType, caseSensitivity}
-    | T.null name || T.null value ->
-        Left $ MkInvalidLocator (Attribute {name, value, matchType, caseSensitivity})
-          "Attribute locator has empty name or value"
-    | otherwise ->
-        Right $ XPathID {tagM = Nothing, body = attrPredX name value matchType caseSensitivity}
-  Tag {value} -> Right $ TagI {tag = value}
-  Default {value} ->
-    let resolved = defLoc value
-    in if hasDefault resolved
-       then Left $ MkInvalidLocator (Default value)
-              "Default locator cannot resolve to another Default"
-       else convertLoc proto defLoc resolved
-  Role {role} -> Right $ RoleI {xpath = roleToXPath role}
-  InnerText {value, matchType, caseSensitivity, maxDepth} ->
-    Right $ InnerTextI {value, matchType, caseSensitivity, maxDepth}
-  BiDiContext {context} -> case proto of
-    HTTP -> Left $ MkInvalidLocator (BiDiContext {context})
-              "BiDiContext locator cannot be used with HTTP protocol"
-    BiDi -> Right $ BiDiContextI {context}
-  Contains {container, contained} ->
-    ContainsI <$> convertLoc proto defLoc container <*> convertLoc proto defLoc contained
-  All {elms} ->
-    AllI <$> traverse (convertLoc proto defLoc) elms
-  Any {elms} ->
-    AnyI <$> traverse (convertLoc proto defLoc) elms
-  PostFilter {predicate, locator} ->
-    PostFilterI predicate <$> convertLoc proto defLoc locator
+convertLoc proto defLoc loc = 
+  case loc of
+    -- fallable conversions
+    Attribute {name, value, matchType, caseSensitivity}
+      | T.null name || T.null value ->
+          failLocator "Attribute locator has empty name or value"
+      | otherwise ->
+          Right $ XPathID {tagM = Nothing, body = attrPredX name value matchType caseSensitivity}
+    Default {value} ->
+      let resolved = defLoc value
+      in if hasDefault resolved
+        then failLocator "Default locator cannot resolve to another Default"
+        else convertLoc proto defLoc resolved
+    BiDiContext {context} -> case proto of
+      BiDi -> Right $ BiDiContextI {context}
+      HTTP -> failLocator "BiDiContext locator cannot be used with HTTP protocol"
+      -- combinators / postfilter require higher order conversions
+    _ -> case loc of
+      Contains {container, contained} ->
+        ContainsI <$> convertLoc proto defLoc container <*> convertLoc proto defLoc contained
+      All {elms} ->
+        AllI <$> traverse (convertLoc proto defLoc) elms
+      Any {elms} ->
+        AnyI <$> traverse (convertLoc proto defLoc) elms
+      PostFilter {predicate, locator} ->
+        PostFilterI predicate <$> convertLoc proto defLoc locator
+      -- simple pass through conversions / xpath
+      _ -> Right $ case loc of
+        CSS {value} -> CSSI {value}
+        XPath {value} -> XPathI {value}
+        AllElms -> XPathID {tagM = Nothing, body = "true()"}
+        ID {value} -> XPathID {tagM = Nothing, body = "@id='" <> value <> "'"}
+        Class {value, matchType, caseSensitivity} ->
+          XPathID {tagM = Nothing, body = classPredX value matchType caseSensitivity}
+        Tag {value} -> TagI {tag = value}
+        Role {role} -> RoleI {xpath = roleToXPath role}
+        InnerText {value, matchType, caseSensitivity, maxDepth} ->
+          InnerTextI {value, matchType, caseSensitivity, maxDepth}
+    where 
+      failLocator msg = Left $ MkInvalidLocator loc msg
 
 -----------------------------------------------------------------------------
 -- Phase 2: Simplify loop (fixed-point)
@@ -183,23 +191,17 @@ convertLoc proto defLoc = \case
 flattenLocI :: LocatorI -> LocatorI
 flattenLocI = \case
   AllI elms ->
-    let reduced = flattenLocI <$> elms
-        flattened = concatMap flattenAll $ toList reduced
-    in case flattened of
-         [] -> error "flattenLocI: AllI produced empty list (impossible with NonEmpty input)"
-         (x : xs) -> AllI (x :| xs)
-    where
-      flattenAll (AllI xs) = toList xs
-      flattenAll x = [x]
+    AllI $ flattenLocI <$> elms >>= flattenAlls
+    where 
+      flattenAlls = \case 
+        AllI xs -> xs
+        x -> x :| [] 
   AnyI elms ->
-    let reduced = flattenLocI <$> elms
-        flattened = concatMap flattenAny $ toList reduced
-    in case flattened of
-         [] -> error "flattenLocI: AnyI produced empty list (impossible with NonEmpty input)"
-         (x : xs) -> AnyI (x :| xs)
+    AnyI $ flattenLocI <$> elms >>= flattenAnys
     where
-      flattenAny (AnyI xs) = toList xs
-      flattenAny x = [x]
+      flattenAnys = \case
+        AnyI xs -> xs
+        x -> x :| []
   ContainsI c d -> ContainsI (flattenLocI c) (flattenLocI d)
   PostFilterI p l -> PostFilterI p (flattenLocI l)
   other -> other
@@ -481,22 +483,18 @@ wildcardPredX normText val =
              (predicates, _) = foldl' buildP ([], normText) (zip [0 ..] parts)
          in intercalate " and " predicates
 
-transform :: Protocol -> (Text -> Locator) -> Locator -> Either InvalidLocator LocatorI
-transform proto defLoc loc = do
-  locI <- convertLoc proto defLoc loc
-  simplified <- runSimplifyLoop locI
-  pure $ finalConvert simplified
+-- | Map over a LocatorI tree bottom-up (post-order).
+mapLocIBottomUp :: (LocatorI -> LocatorI) -> LocatorI -> LocatorI
+mapLocIBottomUp f loc = f $
+  case loc of
+    ContainsI c d -> ContainsI (recurse c) (recurse d)
+    AllI elms -> AllI $ recurseMap elms
+    AnyI elms -> AnyI $ recurseMap elms
+    PostFilterI p l -> PostFilterI p (recurse l)
+    _ -> loc
   where
-    runSimplifyLoop current = do
-      let flat = flattenLocI current
-      let combined = combineContiguous flat
-      tagged <- assignTags combined
-      let unwrapped = unwrapSingle tagged
-      let xpathOnly = combineXPathIDOnly unwrapped
-      if xpathOnly == current
-        then pure current
-        else runSimplifyLoop xpathOnly
-
+    recurse = mapLocIBottomUp f
+    recurseMap = fmap (mapLocIBottomUp f)
 {-
 ## Spec Version 1
 
@@ -1458,10 +1456,11 @@ hasInvalidLoc defLoc proto =
 
 -- | Returns 'True' if a 'Default' constructor appears anywhere within the locator tree.
 hasDefault :: Locator -> Bool
-hasDefault = anyLoc isDefault
-  where
-    isDefault (Default _) = True
-    isDefault _ = False
+hasDefault = 
+  anyLoc $
+    \case 
+       Default {} -> True
+       _ -> False
 
 -- | Recursively flattens and simplifies Match* locators while maintaining logical correctness.
 -- Flattens nested Match* of the same type and applies De Morgan's laws where applicable.
