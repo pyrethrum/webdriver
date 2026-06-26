@@ -217,14 +217,9 @@ combineContiguous = mapLocIBottomUp $ \case
   other -> other
   where
     combineRuns :: Text -> NonEmpty LocatorI -> NonEmpty LocatorI
-    combineRuns sep elms =
-      let xs = toList elms
-          result = go sep xs
-      in case result of
-           [] -> error "combineRuns: produced empty list"
-           (y : ys) -> y :| ys
-    
-    go :: Text -> [LocatorI] -> [LocatorI]
+    combineRuns sep elms = go sep elms
+ 
+    go :: Text -> NonEmpty LocatorI -> NonEmpty LocatorI
     go _ [] = []
     go s (XPathID _ b1 : XPathID _ b2 : rest) =
       let brkt s' = "(" <> s' <> ")" in
