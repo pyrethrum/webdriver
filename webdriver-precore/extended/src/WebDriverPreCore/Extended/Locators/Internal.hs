@@ -209,7 +209,7 @@ flattenLocI = \case
 -----------------------------------------------------------------------------
 -- 2b. Combine contiguous XPathIDs
 -----------------------------------------------------------------------------
-HERE
+
 combineContiguous :: LocatorI -> LocatorI
 combineContiguous = mapLocIBottomUp $ \case
   AllI elms -> AllI $ combineRuns " and " elms
@@ -227,13 +227,10 @@ combineContiguous = mapLocIBottomUp $ \case
     go :: Text -> [LocatorI] -> [LocatorI]
     go _ [] = []
     go s (XPathID _ b1 : XPathID _ b2 : rest) =
-      let p1 = if " and " `T.isInfixOf` b1 || " or " `T.isInfixOf` b1
-               then "(" <> b1 <> ")" else b1
-          p2 = if " and " `T.isInfixOf` b2 || " or " `T.isInfixOf` b2
-               then "(" <> b2 <> ")" else b2
-          combined = XPathID {tagM = Nothing, body = p1 <> s <> p2}
-      in go s (combined : rest)
+      let brkt s' = "(" <> s' <> ")" in
+      go s (XPathID {tagM = Nothing, body = brkt b1 <> s <> brkt b2} : rest)
     go s (x : rest) = x : go s rest
+  
 
 -----------------------------------------------------------------------------
 -- 2c. Assign tags
@@ -393,9 +390,7 @@ combineXPathIDOnly = \case
   where
     isXPathID (XPathID {}) = True
     isXPathID _ = False
-    parenthesise body
-      | " and " `T.isInfixOf` body || " or " `T.isInfixOf` body = "(" <> body <> ")"
-      | otherwise = body
+    parenthesise body = "(" <> body <> ")"
 
 -----------------------------------------------------------------------------
 -- Phase 3: Final conversion
