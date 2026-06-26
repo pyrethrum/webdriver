@@ -118,7 +118,6 @@ data LocatorI
       Ord
     )
 
-
 transform :: Protocol -> (Text -> Locator) -> Locator -> Either InvalidLocator LocatorI
 transform proto defLoc loc = do
   locI <- convertLoc proto defLoc loc
@@ -212,19 +211,19 @@ flattenLocI = \case
 
 combineContiguous :: LocatorI -> LocatorI
 combineContiguous = mapLocIBottomUp $ \case
-  AllI elms -> AllI $ combineRuns " and " elms
-  AnyI elms -> AnyI $ combineRuns " or " elms
+  AllI elms -> AllI $ combine " and " elms
+  AnyI elms -> AnyI $ combine " or " elms
   other -> other
   where
-    combineRuns :: Text -> NonEmpty LocatorI -> NonEmpty LocatorI
-    combineRuns sep elms = go sep elms
+    combine :: Text -> NonEmpty LocatorI -> NonEmpty LocatorI
+    combine sep elms = go sep elms
  
     go :: Text -> NonEmpty LocatorI -> NonEmpty LocatorI
-    go _ [] = []
-    go s (XPathID _ b1 : XPathID _ b2 : rest) =
+    go s (XPathID tm1 b1 :| XPathID tm2 b2 : rest) =
       let brkt s' = "(" <> s' <> ")" in
-      go s (XPathID {tagM = Nothing, body = brkt b1 <> s <> brkt b2} : rest)
-    go s (x : rest) = x : go s rest
+      go s (XPathID {tagM = Nothing, body = brkt b1 <> s <> brkt b2} :| rest)
+    go _ (x :| []) = x :| []
+    go s (x :| (y : ys)) = x :| toList (go s (y :| ys))
   
 
 -----------------------------------------------------------------------------
