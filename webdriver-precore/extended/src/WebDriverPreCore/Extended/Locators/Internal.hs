@@ -122,16 +122,15 @@ transform :: Protocol -> (Text -> Locator) -> Locator -> Either InvalidLocator L
 transform proto defLoc loc = do
   locI <- convertLoc proto defLoc loc
   simplified <- simplify locI
-  pure $ finalConvert simplified
+  pure $ derivedAndTagsToXPath simplified
   where
+    simplify :: LocatorI -> Either InvalidLocator LocatorI
     simplify current = do
-      tagged <- assignTags . combineContiguous $ flattenLocI current
+      tagged <- assignTags . combineContiguous $ flattenAllAnyCombos current
       let xpathOnly = combineXPathIDOnly $ unwrapSingle tagged
       if xpathOnly == current
         then pure current
         else simplify xpathOnly
-
-
 
 -----------------------------------------------------------------------------
 -- Phase 1: Initial conversion (Locator → LocatorI)
@@ -187,43 +186,68 @@ convertLoc proto defLoc loc =
 -- 2a. Flatten nested AllI/AnyI
 -----------------------------------------------------------------------------
 
-flattenLocI :: LocatorI -> LocatorI
-flattenLocI = \case
+flattenAllAnyCombos :: LocatorI -> LocatorI
+flattenAllAnyCombos = \case
   AllI elms ->
-    AllI $ flattenLocI <$> elms >>= flattenAlls
-    where 
-      flattenAlls = \case 
+    AllI $ flattenAllAnyCombos <$> elms >>= (\case 
         AllI xs -> xs
-        x -> x :| [] 
+        x -> x :| [] )
   AnyI elms ->
-    AnyI $ flattenLocI <$> elms >>= flattenAnys
-    where
-      flattenAnys = \case
+    AnyI $ flattenAllAnyCombos <$> elms >>= (\case
         AnyI xs -> xs
-        x -> x :| []
-  ContainsI c d -> ContainsI (flattenLocI c) (flattenLocI d)
-  PostFilterI p l -> PostFilterI p (flattenLocI l)
+        x -> x :| [] )
+  ContainsI c d -> ContainsI (flattenAllAnyCombos c) (flattenAllAnyCombos d)
+  PostFilterI p l -> PostFilterI p (flattenAllAnyCombos l)
   other -> other
 
 -----------------------------------------------------------------------------
 -- 2b. Combine contiguous XPathIDs
 -----------------------------------------------------------------------------
+bracket :: Text -> Text
+bracket t = "(" <> t <> ")" 
+
+mergeAlls :: Locator -> LocatorI -> Either InvalidLocator LocatorI
+mergeAlls srcLoc l = case l of
+   AllI elms -> AllI <$> mergeAllElms elms
+   other -> Right other
+ where
+   mergeTags :: Maybe Text -> Maybe Text -> Either InvalidLocator (Maybe Text)
+   mergeTags = \cases
+      Nothing Nothing -> Right Nothing
+      (Just t) Nothing -> Right (Just t)
+      Nothing (Just t) -> Right (Just t)
+      (Just t1) (Just t2)
+        | t1 == t2 -> Right (Just t1)
+        | otherwise -> Left $ MkInvalidLocator srcLoc ("Contradictory tags in All combinator: " <> txt l <> "\n " <> t1 <> " and " <> t2)
+
+   mergeAllElms :: NonEmpty LocatorI -> Either InvalidLocator (NonEmpty LocatorI)
+   mergeAllElms = \case
+       (XPathID tm1 b1 :| XPathID tm2 b2 : rest) -> 
+         do 
+          tag <- mergeTags tm1 tm2
+          mergeAllElms $ XPathID {tagM = tag, body = bracket b1 <> " and " <> bracket b2} :| rest 
+       x -> Right x
+
+
 
 combineContiguous :: LocatorI -> LocatorI
 combineContiguous = mapLocIBottomUp $ \case
-  AllI elms -> AllI $ combine " and " elms
+  AllI elms -> AllI $ mergeAlls elms
   AnyI elms -> AnyI $ combine " or " elms
   other -> other
   where
-    combine :: Text -> NonEmpty LocatorI -> NonEmpty LocatorI
-    combine sep elms = go sep elms
+    bracket t = "(" <> t <> ")" 
+
+    mergeAlls :: NonEmpty LocatorI -> NonEmpty LocatorI
+    mergeAlls =  \case 
+      (XPathID tm1 b1 :| XPathID tm2 b2 : rest) -> 
+         XPathID {tagM = Nothing, body = bracket b1 <> infix' <> bracket b2} :| rest
  
     go :: Text -> NonEmpty LocatorI -> NonEmpty LocatorI
-    go s (XPathID tm1 b1 :| XPathID tm2 b2 : rest) =
-      let brkt s' = "(" <> s' <> ")" in
-      go s (XPathID {tagM = Nothing, body = brkt b1 <> s <> brkt b2} :| rest)
+    go infix' (XPathID tm1 b1 :| XPathID tm2 b2 : rest) =
+      go infix' (XPathID {tagM = Nothing, body = bracket b1 <> infix' <> bracket b2} :| rest)
     go _ (x :| []) = x :| []
-    go s (x :| (y : ys)) = x :| toList (go s (y :| ys))
+    go infix' (x :| (y : ys)) = x :| toList (go infix' (y :| ys))
   
 
 -----------------------------------------------------------------------------
@@ -390,8 +414,8 @@ combineXPathIDOnly = \case
 -- Phase 3: Final conversion
 -----------------------------------------------------------------------------
 
-finalConvert :: LocatorI -> LocatorI
-finalConvert = convertContains . convertTags . convertXPathIDs
+derivedAndTagsToXPath :: LocatorI -> LocatorI
+derivedAndTagsToXPath = convertContains . convertTags . convertXPathIDs
 
 convertXPathIDs :: LocatorI -> LocatorI
 convertXPathIDs = mapLocIBottomUp $ \case
@@ -406,8 +430,8 @@ convertTags = mapLocIBottomUp $ \case
 
 convertContains :: LocatorI -> LocatorI
 convertContains = mapLocIBottomUp $ \case
-  ContainsI (XPathI {value = cv}) (XPathI {value = dv}) ->
-    XPathI {value = cv <> dv}
+  ContainsI (XPathI {value = containerXPath}) (XPathI {value = containedXPath}) ->
+    XPathI $ containerXPath <> containedXPath
   other -> other
 
 -----------------------------------------------------------------------------
