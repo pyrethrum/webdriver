@@ -211,6 +211,14 @@ mergeAlls srcLoc l = case l of
    AllI elms -> AllI <$> mergeAllElms elms
    other -> Right other
  where
+   mergeAllElms :: NonEmpty LocatorI -> Either InvalidLocator (NonEmpty LocatorI)
+   mergeAllElms = \case
+       (XPathID tm1 b1 :| XPathID tm2 b2 : rest) -> 
+         do 
+          tag <- mergeTags tm1 tm2
+          mergeAllElms $ XPathID {tagM = tag, body = bracket b1 <> " and " <> bracket b2} :| rest 
+       x -> Right x
+
    mergeTags :: Maybe Text -> Maybe Text -> Either InvalidLocator (Maybe Text)
    mergeTags = \cases
       Nothing Nothing -> Right Nothing
@@ -220,15 +228,11 @@ mergeAlls srcLoc l = case l of
         | t1 == t2 -> Right (Just t1)
         | otherwise -> Left $ MkInvalidLocator srcLoc ("Contradictory tags in All combinator: " <> txt l <> "\n " <> t1 <> " and " <> t2)
 
-   mergeAllElms :: NonEmpty LocatorI -> Either InvalidLocator (NonEmpty LocatorI)
-   mergeAllElms = \case
-       (XPathID tm1 b1 :| XPathID tm2 b2 : rest) -> 
-         do 
-          tag <- mergeTags tm1 tm2
-          mergeAllElms $ XPathID {tagM = tag, body = bracket b1 <> " and " <> bracket b2} :| rest 
-       x -> Right x
 
-
+mergeAnys :: LocatorI -> LocatorI
+mergeAnys = \case  
+  AnyI elms -> undefined
+  other -> other
 
 combineContiguous :: LocatorI -> LocatorI
 combineContiguous = mapLocIBottomUp $ \case
