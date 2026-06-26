@@ -209,7 +209,7 @@ flattenLocI = \case
 -----------------------------------------------------------------------------
 -- 2b. Combine contiguous XPathIDs
 -----------------------------------------------------------------------------
-
+HERE
 combineContiguous :: LocatorI -> LocatorI
 combineContiguous = mapLocIBottomUp $ \case
   AllI elms -> AllI $ combineRuns " and " elms
@@ -242,8 +242,8 @@ combineContiguous = mapLocIBottomUp $ \case
 assignTags :: LocatorI -> Either InvalidLocator LocatorI
 assignTags = \case
   ContainsI c d -> ContainsI <$> assignTags c <*> assignTags d
-  AllI elms -> AllI <$> (processAllI =<< traverse assignTags elms)
-  AnyI elms -> AnyI <$> (processAnyITags =<< traverse assignTags elms)
+  AllI elms -> AllI <$> (traverse assignTags elms >>= processAllI)
+  AnyI elms -> AnyI <$> (traverse assignTags elms >>= processAnyITags)
   PostFilterI p l -> PostFilterI p <$> assignTags l
   other -> Right other
 
