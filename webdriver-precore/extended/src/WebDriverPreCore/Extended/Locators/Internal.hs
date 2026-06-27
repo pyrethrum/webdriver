@@ -260,6 +260,15 @@ mergeAnys srcLoc =
 -- 2c. Assign tags
 -----------------------------------------------------------------------------
 
+isTagI :: LocatorI -> Bool
+isTagI  = \case 
+  TagI _ -> True
+  _ -> False
+
+isNotTage :: LocatorI -> Bool
+isNotTage = not . isTagI
+
+-- copy tags from TagI and XPathID to all reachable XPathID descendants, and remove the TagI if possible.
 assignTags :: Locator -> LocatorI -> Either InvalidLocator LocatorI
 assignTags srcLocator = 
     mapLocIBottomUpM (\case
@@ -280,9 +289,7 @@ processAnyITags elms = do
   case result of
     [] -> error "processAnyITags: empty result"
     (x : xs) -> Right (x :| xs)
-  where
-    isTagI (TagI _) = True
-    isTagI _ = False
+
 
 -- | 2c-ii + 2c-iii + 2c-iv: Process TagI constructors within an AllI.
 processAllI :: Locator -> NonEmpty LocatorI -> Either InvalidLocator (NonEmpty LocatorI)
@@ -291,11 +298,14 @@ processAllI srcLocator elms = do
   
   -- 2c-ii: Contradictory tag detection
   case tagVals of
-    [] -> pure elms  -- no tags, nothing to distribute
+     -- no tags, nothing to distribute
+    [] -> pure elms 
+     -- contradictory tags
     _ : _ : _ -> Left . MkInvalidLocator srcLocator $ 
       "Contradictory tags in All combinator: " <> T.intercalate ", " tagVals
+     -- singleton tag -> distribute
     [t] -> do
-      let distributed = fmap (distributeTag t) others
+      let distributed = fmap (distributeTagToDescendantsOfAll t) others
       
       -- 2c-iii-b: can we remove the Tag?
       let canRemove = not (any hasNonXPathIDDescendant distributed)
@@ -309,27 +319,7 @@ processAllI srcLocator elms = do
         [] -> error "processAllI: empty result"
         (x : xs) -> pure (x :| xs)
 
-  -- 2c-iii: Tag distribution
-  case tagValues of
-    [] -> pure elms  -- no tags, nothing to distribute
-    (t : _) -> do
-      let distributed = fmap (distributeTag t) others
-      
-      -- 2c-iii-b: can we remove the Tag?
-      let canRemove = not (any hasNonXPathIDDescendant distributed)
-      
-      -- 2c-iv: check nested AnyIs for XPathID-only after distribution
-      let withNestedAnyCheck = fmap (checkNestedAnyTagRemoval t) distributed
-      
-      let resultList = if canRemove then withNestedAnyCheck
-                       else TagI t : withNestedAnyCheck
-      case resultList of
-        [] -> error "processAllI: empty result"
-        (x : xs) -> pure (x :| xs)
   where
-    isTagI (TagI _) = True
-    isTagI _ = False
-
     tagVal :: LocatorI -> Maybe Text
     tagVal = \case 
       TagI t -> Just t
@@ -338,28 +328,46 @@ processAllI srcLocator elms = do
       XPathID {tagM = Just t} -> Just t
       _ -> Nothing
 
--- | Set tagM = Just t on all reachable XPathID descendants.
--- Traverses through AllI, AnyI, and the contained side of ContainsI.
--- Container side of ContainsI is NOT tagged.
-distributeTag :: Text -> LocatorI -> LocatorI
-distributeTag t = \case
-  XPathID _ body -> XPathID {tagM = Just t, body}
-  AllI elms -> AllI $ distributeTag t <$> elms
-  AnyI elms -> AnyI $ distributeTag t <$> elms
-  ContainsI container contained -> ContainsI container (distributeTag t contained)
-  other -> other  -- PostFilterI, RoleI, XPathI, CSSI, InnerTextI, BiDiContextI, TagI
+    -- | Set tagM = Just t on all reachable XPathID descendants.
+    -- Traverses through AllI, AnyI, and the contained side of ContainsI.
+    -- Container side of ContainsI is NOT tagged.
+    distributeTagToDescendantsOfAll :: Text -> LocatorI -> LocatorI
+    distributeTagToDescendantsOfAll t = \case
+      XPathID _ body -> XPathID {tagM = Just t, body}
+      AllI elms' -> AllI $ cascade <$> elms'
+      AnyI elms' -> AnyI $ cascade <$> elms'
+      ContainsI container contained -> ContainsI container (cascade contained)
+      other -> case other of 
+        PostFilterI {} -> other
+        RoleI {} -> other
+        XPathI {} -> other
+        CSSI {} -> other
+        InnerTextI {} -> other
+        BiDiContextI {} -> other
+        TagI {} -> other
+     where 
+      cascade :: LocatorI -> LocatorI
+      cascade = distributeTagToDescendantsOfAll t 
 
--- | Check if there are non-XPathID constructors reachable through the same
--- traversal as distributeTag. Used to decide if a TagI can be removed.
-hasNonXPathIDDescendant :: LocatorI -> Bool
-hasNonXPathIDDescendant = \case
-  XPathID {} -> False
-  TagI {} -> False  -- Tags being processed; don't count as blockers
-  AllI elms -> any hasNonXPathIDDescendant elms
-  AnyI elms -> any hasNonXPathIDDescendant elms
-  ContainsI container contained ->
-    hasNonXPathIDDescendant container || hasNonXPathIDDescendant contained
-  _ -> True  -- RoleI, XPathI, CSSI, InnerTextI, PostFilterI, BiDiContextI
+    -- | Check if there are non-XPathID constructors reachable through the same
+    -- traversal as distributeTagToDescendantsOfAll. Used to decide if a TagI can be removed.
+    hasNonXPathIDDescendant :: LocatorI -> Bool
+    hasNonXPathIDDescendant = \case
+      XPathID {} -> False
+      TagI {} -> False  -- Tags being processed; don't count as blockers
+      AllI elms' -> any hasNonXPathIDDescendant elms'
+      AnyI elms' -> any hasNonXPathIDDescendant elms'
+      ContainsI _container contained ->
+        hasNonXPathIDDescendant contained
+      other -> case other of 
+        PostFilterI {} -> True
+        RoleI {} -> True
+        XPathI {} -> True
+        CSSI {} -> True
+        InnerTextI {} -> True
+        BiDiContextI {} -> True
+        TagI {} -> True
+
 
 -- | 2c-iv: If a nested AnyI now contains only XPathID children (all same tag),
 -- the Tag in the outer All can be removed. Since the Tag has already been
