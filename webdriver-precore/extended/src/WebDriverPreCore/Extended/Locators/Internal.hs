@@ -14,6 +14,7 @@ import Utils (txt)
 import WebDriverPreCore.Extended.BiDi.Base.Protocol (BrowsingContext, NodeProperties)
 import Prelude
 import Data.Function ((&))
+import Control.Monad ((>=>))
 
 data MatchFlags = MkMatchFlags
   { ignoreCase :: Bool,
@@ -475,7 +476,7 @@ mapLocIBottomUpM f = (\case
     AnyI elms -> AnyI <$> recurseMap elms
     PostFilterI p l -> PostFilterI p <$> recurse l
     l -> pure l)
-    >>= f
+    >=> f
   where
     recurse = mapLocIBottomUpM f
     recurseMap = traverse recurse
