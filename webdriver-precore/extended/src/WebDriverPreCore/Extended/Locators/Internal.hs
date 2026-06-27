@@ -130,10 +130,10 @@ transform proto defLoc loc = do
     simplify current = do
       merged <- mergeContiguous loc $ flattenAllAnyCombos current
       tagged <- assignTags merged
-      let xpathOnly = combineXPathIDOnly $ unwrapSingle tagged
-      if xpathOnly == current
+      let unwrapped = unwrapSingle tagged
+      if unwrapped == current
         then pure current
-        else simplify xpathOnly
+        else simplify unwrapped
 
 -----------------------------------------------------------------------------
 -- Phase 1: Initial conversion (Locator → LocatorI)
@@ -219,7 +219,7 @@ mergeTags srcLoc = \cases
   Nothing (Just t) -> Right $ Just t
   (Just t1) (Just t2)
     | t1 == t2 -> Right (Just t1)
-    | otherwise -> Left $ MkInvalidLocator srcLoc ("Contradictory tags in All combinator: " <> txt l <> "\n " <> t1 <> " and " <> t2)
+    | otherwise -> Left $ MkInvalidLocator srcLoc ("Contradictory tags in All combinator: " <> txt srcLoc <> "\n " <> t1 <> " and " <> t2)
 
 mergeAlls :: Locator -> LocatorI -> Either InvalidLocator LocatorI
 mergeAlls srcLoc = 
@@ -379,42 +379,6 @@ unwrapSingle = \case
   other -> other
 
 -----------------------------------------------------------------------------
--- 2e. Combine XPathID-only AllI/AnyI
------------------------------------------------------------------------------
-
-combineXPathIDOnly :: LocatorI -> LocatorI
-combineXPathIDOnly = \case
-  AllI elms
-    | all isXPathID elms ->
-        let xs = toList elms
-            bodies = [parenthesise b | XPathID _ b <- xs]
-            joined = T.intercalate " and " bodies
-            tags = nub [tm | XPathID tm _ <- xs]
-            commonTag = case tags of
-              [t] -> t
-              _ -> Nothing
-        in XPathID {tagM = commonTag, body = joined}
-    | otherwise -> AllI $ combineXPathIDOnly <$> elms
-  AnyI elms
-    | all isXPathID elms ->
-        let xs = toList elms
-            bodies = [parenthesise b | XPathID _ b <- xs]
-            joined = T.intercalate " or " bodies
-            tags = nub [tm | XPathID tm _ <- xs]
-            commonTag = case tags of
-              [t] -> t
-              _ -> Nothing
-        in XPathID {tagM = commonTag, body = joined}
-    | otherwise -> AnyI $ combineXPathIDOnly <$> elms
-  ContainsI c d -> ContainsI (combineXPathIDOnly c) (combineXPathIDOnly d)
-  PostFilterI p l -> PostFilterI p (combineXPathIDOnly l)
-  other -> other
-  where
-    isXPathID (XPathID {}) = True
-    isXPathID _ = False
-    parenthesise body = "(" <> body <> ")"
-
------------------------------------------------------------------------------
 -- Phase 3: Final conversion
 -----------------------------------------------------------------------------
 
@@ -505,13 +469,13 @@ wildcardPredX normText val =
 --   reconstructed node.  Short-circuits on the first failure for instances
 --   that support it (e.g. 'Either', 'Maybe').
 mapLocIBottomUpM :: Monad m => (LocatorI -> m LocatorI) -> LocatorI -> m LocatorI
-mapLocIBottomUpM f loc = \case 
+mapLocIBottomUpM f = (\case 
     ContainsI c d -> ContainsI <$> recurse c <*> recurse d
     AllI elms -> AllI <$> recurseMap elms
     AnyI elms -> AnyI <$> recurseMap elms
     PostFilterI p l -> PostFilterI p <$> recurse l
-    l -> pure l
-  >>= f
+    l -> pure l)
+    >>= f
   where
     recurse = mapLocIBottomUpM f
     recurseMap = traverse recurse
