@@ -6,7 +6,7 @@ import Data.Functor.Identity (Identity (..))
 import Data.List (nub, uncons)
 import Data.List qualified as LST
 import Data.List.NonEmpty (NonEmpty (..), groupBy, sortBy, toList)
-import Data.Maybe (fromJust, fromMaybe)
+import Data.Maybe (fromJust, fromMaybe, catMaybes)
 import Data.Text (Text, intercalate, pack, splitOn, toLower, unpack)
 import Data.Text qualified as T
 import Data.Word (Word8)
@@ -15,6 +15,7 @@ import WebDriverPreCore.Extended.BiDi.Base.Protocol (BrowsingContext, NodeProper
 import Prelude
 import Data.Function ((&))
 import Control.Monad ((>=>))
+import Data.List.NonEmpty (partition)
 
 data MatchFlags = MkMatchFlags
   { ignoreCase :: Bool,
@@ -259,13 +260,12 @@ mergeAnys srcLoc =
 -- 2c. Assign tags
 -----------------------------------------------------------------------------
 
-assignTags :: LocatorI -> Either InvalidLocator LocatorI
-assignTags = \case
-  ContainsI c d -> ContainsI <$> assignTags c <*> assignTags d
-  AllI elms -> AllI <$> (traverse assignTags elms >>= processAllI)
-  AnyI elms -> AnyI <$> (traverse assignTags elms >>= processAnyITags)
-  PostFilterI p l -> PostFilterI p <$> assignTags l
-  other -> Right other
+assignTags :: Locator -> LocatorI -> Either InvalidLocator LocatorI
+assignTags srcLocator = 
+    mapLocIBottomUpM (\case
+      AllI elms -> AllI <$> processAllI srcLocator elms
+      AnyI elms -> AnyI <$> processAnyITags elms
+      other -> Right other)
 
 -- | 2c-i: Process TagI constructors within an AnyI.
 processAnyITags :: NonEmpty LocatorI -> Either InvalidLocator (NonEmpty LocatorI)
@@ -285,19 +285,30 @@ processAnyITags elms = do
     isTagI _ = False
 
 -- | 2c-ii + 2c-iii + 2c-iv: Process TagI constructors within an AllI.
-processAllI :: NonEmpty LocatorI -> Either InvalidLocator (NonEmpty LocatorI)
-processAllI elms = do
-  let children = toList elms
-      (tags, others) = LST.partition isTagI children
+processAllI :: Locator -> NonEmpty LocatorI -> Either InvalidLocator (NonEmpty LocatorI)
+processAllI srcLocator elms = do
+  let tagVals = nub . catMaybes $ tagVal <$> toList elms
   
   -- 2c-ii: Contradictory tag detection
-  let tagValues = [t | TagI t <- tags]
-  case nub tagValues of
-    (_ : _ : _) ->
-      Left $ MkInvalidLocator (All (CSS "error" :| []))
-        ("Contradictory tags in All combinator: " <> T.intercalate ", " tagValues)
-    _ -> pure ()
-  
+  case tagVals of
+    [] -> pure elms  -- no tags, nothing to distribute
+    _ : _ : _ -> Left . MkInvalidLocator srcLocator $ 
+      "Contradictory tags in All combinator: " <> T.intercalate ", " tagVals
+    [t] -> do
+      let distributed = fmap (distributeTag t) others
+      
+      -- 2c-iii-b: can we remove the Tag?
+      let canRemove = not (any hasNonXPathIDDescendant distributed)
+      
+      -- 2c-iv: check nested AnyIs for XPathID-only after distribution
+      let withNestedAnyCheck = fmap (checkNestedAnyTagRemoval t) distributed
+      
+      let resultList = if canRemove then withNestedAnyCheck
+                       else TagI t : withNestedAnyCheck
+      case resultList of
+        [] -> error "processAllI: empty result"
+        (x : xs) -> pure (x :| xs)
+
   -- 2c-iii: Tag distribution
   case tagValues of
     [] -> pure elms  -- no tags, nothing to distribute
@@ -318,6 +329,14 @@ processAllI elms = do
   where
     isTagI (TagI _) = True
     isTagI _ = False
+
+    tagVal :: LocatorI -> Maybe Text
+    tagVal = \case 
+      TagI t -> Just t
+      -- ar this stage we should not have any other tag types in the AllI
+      -- including this fro future proofing
+      XPathID {tagM = Just t} -> Just t
+      _ -> Nothing
 
 -- | Set tagM = Just t on all reachable XPathID descendants.
 -- Traverses through AllI, AnyI, and the contained side of ContainsI.
