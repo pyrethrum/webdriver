@@ -2,6 +2,7 @@ module WebDriverPreCore.Extended.Locators.Internal where
 
 import Control.Exception (Exception)
 import Data.Foldable1 (foldl1')
+import Data.Functor.Identity (Identity (..))
 import Data.List (nub, uncons)
 import Data.List qualified as LST
 import Data.List.NonEmpty (NonEmpty (..), groupBy, sortBy, toList)
@@ -12,6 +13,7 @@ import Data.Word (Word8)
 import Utils (txt)
 import WebDriverPreCore.Extended.BiDi.Base.Protocol (BrowsingContext, NodeProperties)
 import Prelude
+import Data.Function ((&))
 
 data MatchFlags = MkMatchFlags
   { ignoreCase :: Bool,
@@ -126,7 +128,8 @@ transform proto defLoc loc = do
   where
     simplify :: LocatorI -> Either InvalidLocator LocatorI
     simplify current = do
-      tagged <- assignTags . combineContiguous $ flattenAllAnyCombos current
+      merged <- mergeContiguous loc $ flattenAllAnyCombos current
+      tagged <- assignTags merged
       let xpathOnly = combineXPathIDOnly $ unwrapSingle tagged
       if xpathOnly == current
         then pure current
@@ -203,56 +206,53 @@ flattenAllAnyCombos = \case
 -----------------------------------------------------------------------------
 -- 2b. Combine contiguous XPathIDs
 -----------------------------------------------------------------------------
+mergeContiguous :: Locator -> LocatorI -> Either InvalidLocator LocatorI
+mergeContiguous srcLoc li = mergeAnys srcLoc <$> mergeAlls srcLoc li
+
 bracket :: Text -> Text
 bracket t = "(" <> t <> ")" 
 
+mergeTags :: Locator -> Maybe Text -> Maybe Text -> Either InvalidLocator (Maybe Text)
+mergeTags srcLoc = \cases
+  Nothing Nothing -> Right Nothing
+  (Just t) Nothing -> Right $ Just t
+  Nothing (Just t) -> Right $ Just t
+  (Just t1) (Just t2)
+    | t1 == t2 -> Right (Just t1)
+    | otherwise -> Left $ MkInvalidLocator srcLoc ("Contradictory tags in All combinator: " <> txt l <> "\n " <> t1 <> " and " <> t2)
+
 mergeAlls :: Locator -> LocatorI -> Either InvalidLocator LocatorI
-mergeAlls srcLoc l = case l of
+mergeAlls srcLoc = 
+  mapOrFailLocIBottomUp (\case 
    AllI elms -> AllI <$> mergeAllElms elms
-   other -> Right other
+   other -> Right other)
  where
    mergeAllElms :: NonEmpty LocatorI -> Either InvalidLocator (NonEmpty LocatorI)
    mergeAllElms = \case
        (XPathID tm1 b1 :| XPathID tm2 b2 : rest) -> 
          do 
-          tag <- mergeTags tm1 tm2
+          tag <- mergeTags srcLoc tm1 tm2
           mergeAllElms $ XPathID {tagM = tag, body = bracket b1 <> " and " <> bracket b2} :| rest 
        x -> Right x
 
-   mergeTags :: Maybe Text -> Maybe Text -> Either InvalidLocator (Maybe Text)
-   mergeTags = \cases
-      Nothing Nothing -> Right Nothing
-      (Just t) Nothing -> Right (Just t)
-      Nothing (Just t) -> Right (Just t)
-      (Just t1) (Just t2)
-        | t1 == t2 -> Right (Just t1)
-        | otherwise -> Left $ MkInvalidLocator srcLoc ("Contradictory tags in All combinator: " <> txt l <> "\n " <> t1 <> " and " <> t2)
-
-
-mergeAnys :: LocatorI -> LocatorI
-mergeAnys = \case  
-  AnyI elms -> undefined
-  other -> other
-
-combineContiguous :: LocatorI -> LocatorI
-combineContiguous = mapLocIBottomUp $ \case
-  AllI elms -> AllI $ mergeAlls elms
-  AnyI elms -> AnyI $ combine " or " elms
-  other -> other
-  where
-    bracket t = "(" <> t <> ")" 
-
-    mergeAlls :: NonEmpty LocatorI -> NonEmpty LocatorI
-    mergeAlls =  \case 
-      (XPathID tm1 b1 :| XPathID tm2 b2 : rest) -> 
-         XPathID {tagM = Nothing, body = bracket b1 <> infix' <> bracket b2} :| rest
- 
-    go :: Text -> NonEmpty LocatorI -> NonEmpty LocatorI
-    go infix' (XPathID tm1 b1 :| XPathID tm2 b2 : rest) =
-      go infix' (XPathID {tagM = Nothing, body = bracket b1 <> infix' <> bracket b2} :| rest)
-    go _ (x :| []) = x :| []
-    go infix' (x :| (y : ys)) = x :| toList (go infix' (y :| ys))
-  
+mergeAnys :: Locator -> LocatorI -> LocatorI
+mergeAnys srcLoc = 
+  mapLocIBottomUp (\case 
+   AnyI elms -> AnyI $ mergeAnyElms elms
+   other -> other)
+ where
+   mergeAnyElms :: NonEmpty LocatorI -> NonEmpty LocatorI
+   mergeAnyElms = \case
+       (XPathID tm1 b1 :| XPathID tm2 b2 : rest) ->
+         mergeTags srcLoc tm1 tm2 & either
+           (\_ ->
+             -- Tags incompatible, keep first as-is, try merging from second onward
+             let rest' = mergeAnyElms (XPathID tm2 b2 :| rest)
+             in XPathID tm1 b1 :| toList rest')
+           (\tag ->
+             -- Tags compatible, merge these two and continue
+             mergeAnyElms $ XPathID {tagM = tag, body = bracket b1 <> " or " <> bracket b2} :| rest)
+       x -> x
 
 -----------------------------------------------------------------------------
 -- 2c. Assign tags
@@ -500,19 +500,37 @@ wildcardPredX normText val =
              (predicates, _) = foldl' buildP ([], normText) (zip [0 ..] parts)
          in intercalate " and " predicates
 
--- | Map over a LocatorI tree bottom-up (post-order).
-mapLocIBottomUp :: (LocatorI -> LocatorI) -> LocatorI -> LocatorI
-mapLocIBottomUp f loc = f $
-  case loc of
-    ContainsI c d -> ContainsI (recurse c) (recurse d)
-    AllI elms -> AllI $ recurseMap elms
-    AnyI elms -> AnyI $ recurseMap elms
-    PostFilterI p l -> PostFilterI p (recurse l)
-    _ -> loc
+-- | Map over a LocatorI tree bottom-up, with monadic effects.
+--   Recursively transforms children first, then applies the function to the
+--   reconstructed node.  Short-circuits on the first failure for instances
+--   that support it (e.g. 'Either', 'Maybe').
+mapLocIBottomUpM :: Monad m => (LocatorI -> m LocatorI) -> LocatorI -> m LocatorI
+mapLocIBottomUpM f loc = \case 
+    ContainsI c d -> ContainsI <$> recurse c <*> recurse d
+    AllI elms -> AllI <$> recurseMap elms
+    AnyI elms -> AnyI <$> recurseMap elms
+    PostFilterI p l -> PostFilterI p <$> recurse l
+    l -> pure l
+  >>= f
   where
-    recurse = mapLocIBottomUp f
-    recurseMap = fmap (mapLocIBottomUp f)
+    recurse = mapLocIBottomUpM f
+    recurseMap = traverse recurse
+
+-- | Map over a LocatorI tree bottom-up.
+--   Expressed via 'mapLocIBottomUpM' using the 'Identity' monad.
+mapLocIBottomUp :: (LocatorI -> LocatorI) -> LocatorI -> LocatorI
+mapLocIBottomUp f = runIdentity . mapLocIBottomUpM (Identity . f)
+
+-- | Specialization of 'mapLocIBottomUpM' to 'Either InvalidLocator'.
+mapOrFailLocIBottomUp :: (LocatorI -> Either InvalidLocator LocatorI) -> LocatorI -> Either InvalidLocator LocatorI
+mapOrFailLocIBottomUp = mapLocIBottomUpM
+
 {-
+
+implement   mergeAnyElms :: NonEmpty LocatorI -> LocatorI
+  mergeAnyElms elms. Somewhat similar to #sym:mergeAlls 
+it should recursively pattern match on b1 :| XPathID tm2 b2 : rest) -> bracket and or the bodies together IFF merging the tags is valid
+
 ## Spec Version 1
 
 As a first step to a large scale refactor implement the transform function (copying and modifying code from related modules as required as well as writing new code)
