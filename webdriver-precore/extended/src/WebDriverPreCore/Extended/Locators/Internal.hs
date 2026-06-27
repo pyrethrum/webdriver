@@ -129,9 +129,9 @@ transform proto defLoc loc = do
   where
     simplify :: LocatorI -> Either InvalidLocator LocatorI
     simplify current = do
-      merged <- mergeContiguous loc $ flattenAllAnyCombos current
+      merged <- mergeContiguous loc $ unnestAnysAlls current
       tagged <- assignTags merged
-      let unwrapped = unwrapSingle tagged
+      let unwrapped = unwrapSingletonCombinators tagged
       if unwrapped == current
         then pure current
         else simplify unwrapped
@@ -190,18 +190,18 @@ convertLoc proto defLoc loc =
 -- 2a. Flatten nested AllI/AnyI
 -----------------------------------------------------------------------------
 
-flattenAllAnyCombos :: LocatorI -> LocatorI
-flattenAllAnyCombos = \case
+unnestAnysAlls :: LocatorI -> LocatorI
+unnestAnysAlls = \case
   AllI elms ->
-    AllI $ flattenAllAnyCombos <$> elms >>= (\case 
+    AllI $ unnestAnysAlls <$> elms >>= (\case 
         AllI xs -> xs
         x -> x :| [] )
   AnyI elms ->
-    AnyI $ flattenAllAnyCombos <$> elms >>= (\case
+    AnyI $ unnestAnysAlls <$> elms >>= (\case
         AnyI xs -> xs
         x -> x :| [] )
-  ContainsI c d -> ContainsI (flattenAllAnyCombos c) (flattenAllAnyCombos d)
-  PostFilterI p l -> PostFilterI p (flattenAllAnyCombos l)
+  ContainsI c d -> ContainsI (unnestAnysAlls c) (unnestAnysAlls d)
+  PostFilterI p l -> PostFilterI p (unnestAnysAlls l)
   other -> other
 
 -----------------------------------------------------------------------------
@@ -363,20 +363,10 @@ checkNestedAnyTagRemoval t = \case
 -- 2d. Unwrap single-child combinators
 -----------------------------------------------------------------------------
 
-unwrapSingle :: LocatorI -> LocatorI
-unwrapSingle = \case
-  AllI elms ->
-    let processed = unwrapSingle <$> elms
-    in case toList processed of
-         [x] -> x
-         _ -> AllI processed
-  AnyI elms ->
-    let processed = unwrapSingle <$> elms
-    in case toList processed of
-         [x] -> x
-         _ -> AnyI processed
-  ContainsI c d -> ContainsI (unwrapSingle c) (unwrapSingle d)
-  PostFilterI p l -> PostFilterI p (unwrapSingle l)
+unwrapSingletonCombinators :: LocatorI -> LocatorI
+unwrapSingletonCombinators = mapLocIBottomUp $ \case
+  AllI (x :| []) -> x
+  AnyI (x :| []) -> x
   other -> other
 
 -----------------------------------------------------------------------------
