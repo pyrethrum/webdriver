@@ -87,33 +87,36 @@ data Locator
 data Intermdeiate 
 data Final
 -- | LocatorI an intermdiate type 
-data LocatorI where
-  CSSI :: {value :: Text} -> LocatorI
-  XPathI :: {value :: Text} -> LocatorI
-  XPathID :: {tagM :: Maybe Text, body :: Text} -> LocatorI
-  TagI :: {tag :: Text} -> LocatorI
-  RoleI :: {role :: RoleLocator} -> LocatorI
+data LocatorI a where
+  CSSI :: {value :: Text} -> LocatorI Final
+  XPathI :: {value :: Text} -> LocatorI Final
+  XPathID :: {tagM :: Maybe Text, body :: Text} -> LocatorI Intermdeiate
+  TagI :: {tag :: Text} -> LocatorI Intermdeiate
+  RoleI :: {role :: RoleLocator} -> LocatorI Final
   InnerTextI :: {value :: Text,
                    matchType :: MatchType,
                    caseSensitivity :: CaseSensitivity,
                    maxDepth :: Maybe Word8} ->
-                  LocatorI
-  BiDiContextI :: {context :: BrowsingContext} -> LocatorI
-  ContainsI :: {container :: LocatorI, contained :: LocatorI} ->
-                 LocatorI
-  AllI :: {elms :: NonEmpty LocatorI} -> LocatorI
-  AnyI :: {elms :: NonEmpty LocatorI} -> LocatorI
-  PostFilterI :: {predicate :: Predicate, locator :: LocatorI} ->
-                   LocatorI
-  deriving (Show, Eq, Ord)
+                  LocatorI Final
+  BiDiContextI :: {context :: BrowsingContext} -> LocatorI Final
+  ContainsI :: {container :: LocatorI a, contained :: LocatorI a} ->
+                 LocatorI Final
+  AllI :: {elms :: NonEmpty (LocatorI a)} -> LocatorI Final
+  AnyI :: {elms :: NonEmpty (LocatorI a)} -> LocatorI Final
+  PostFilterI :: {predicate :: Predicate, locator :: LocatorI a} ->
+                   LocatorI Final
 
-transform :: Protocol -> (Text -> Locator) -> Locator -> Either InvalidLocator LocatorI
+deriving instance Show (LocatorI a)
+deriving instance Eq (LocatorI a)
+deriving instance Ord (LocatorI a)
+
+transform :: Protocol -> (Text -> Locator) -> Locator -> Either InvalidLocator (LocatorI Final)
 transform proto defLoc loc = do
   locI <- convertLoc proto defLoc loc
   simplified <- simplify locI
   Right $ derivedAndTagsToXPath simplified
   where
-    simplify :: LocatorI -> Either InvalidLocator LocatorI
+    simplify :: LocatorI a -> Either InvalidLocator (LocatorI a)
     simplify current = do
       merged <- mergeContiguous loc $ unnestAnysAlls current
       tagged <- assignTags loc merged
