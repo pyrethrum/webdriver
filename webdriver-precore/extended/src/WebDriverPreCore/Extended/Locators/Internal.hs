@@ -369,21 +369,17 @@ unwrapSingletonCombinators = mapLocIBottomUp $ \case
 -- Phase 3: Final conversion
 -----------------------------------------------------------------------------
 
-derivedAndTagsToXPath :: LocatorI -> LocatorI
-derivedAndTagsToXPath = convertContains . convertTags . convertXPathIDs
+derivedAndTagsToXPath :: LocatorI a -> LocatorI Final
+derivedAndTagsToXPath = convertContains . convertTagsXPathIDs
 
-convertXPathIDs :: LocatorI -> LocatorI
-convertXPathIDs = mapLocIBottomUp $ \case
+convertTagsXPathIDs :: LocatorI a -> LocatorI Final
+convertTagsXPathIDs = mapLocIBottomUp $ \case
   XPathID {tagM, body} ->
     XPathI {value = "//" <> fromMaybe "*" tagM <> body}
-  other -> other
-
-convertTags :: LocatorI -> LocatorI
-convertTags = mapLocIBottomUp $ \case
   TagI {tag} -> XPathI {value = "//" <> tag}
   other -> other
 
-convertContains :: LocatorI -> LocatorI
+convertContains :: LocatorI Final -> LocatorI Final
 convertContains = mapLocIBottomUp $ \case
   ContainsI (XPathI {value = containerXPath}) (XPathI {value = containedXPath}) ->
     XPathI $ containerXPath <> containedXPath
