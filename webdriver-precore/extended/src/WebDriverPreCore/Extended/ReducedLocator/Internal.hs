@@ -389,3 +389,33 @@ wildcardXPathPred normText val =
                 in (preds' <> [predicate], nextText)
               (preds, _) = foldl' buildP ([], normText) (zip [0 ..] parts)
           in T.intercalate " and " preds
+
+-------
+
+prepareSimplify2 :: (Text -> LI.Locator) -> LI.Protocol -> LI.Locator -> Either LI.InvalidLocator ReducedLoc
+prepareSimplify2 defLoc proto l = do
+  locI <- LI.transform proto defLoc l
+  Right $ simplifyLocI locI
+
+-- | Convert a 'LI.LocatorI' (output of 'LI.transform') to 'ReducedLoc'.
+--   After 'LI.transform', all XPath-convertible nodes have been merged into
+--   'LI.XPathI', so no further XPath manipulation is needed.
+simplifyLocI :: LI.LocatorI -> ReducedLoc
+simplifyLocI = \case
+  LI.CSSI {value} -> Leaf CSS {value}
+  LI.XPathI {value} -> Leaf XPath {value}
+  LI.RoleI {role} -> Leaf . BiDiNative $ Role {role}
+  LI.InnerTextI {value, matchType, caseSensitivity, maxDepth} ->
+    Leaf . BiDiNative $ InnerText {value, matchType, caseSensitivity, maxDepth}
+  LI.BiDiContextI {context} -> BiDiOnlyLeaf BiDiContext {context}
+  LI.ContainsI {container, contained} ->
+    Combintor $ Contains {container = simplifyLocI container, contained = simplifyLocI contained}
+  LI.AllI {elms} -> Combintor . All $ simplifyLocI <$> elms
+  LI.AnyI {elms} -> Combintor . Any $ simplifyLocI <$> elms
+  LI.PostFilterI {predicate, locator} ->
+    PostFilterLoc $ PostFilter {predicate, locator = simplifyLocI locator}
+  LI.XPathID {} -> shouldNotExistAfterTransform "XPathID"
+  LI.TagI {} -> shouldNotExistAfterTransform "TagI"
+  where
+    shouldNotExistAfterTransform name =
+      error . T.unpack $ name <> " should not exist after transform - this is a library defect"

@@ -84,41 +84,28 @@ data Locator
       Ord
     )
 
+data Intermdeiate 
+data Final
 -- | LocatorI an intermdiate type 
-data LocatorI
-  = 
-    CSSI {value :: Text}
-  | XPathI {value :: Text}
-  | XPathID {
-      tagM :: Maybe Text, 
-      body :: Text
-      } 
-  | TagI {tag :: Text} 
-  | RoleI {xpath :: Text}
-  | InnerTextI
-      { value :: Text,
-        matchType :: MatchType,
-        caseSensitivity :: CaseSensitivity,
-        maxDepth :: Maybe Word8
-      }
-  | -- exclusive
-    -- browsingContextId -> elementId ie get the frame that belongs to the browsing context
-    BiDiContextI {context :: BrowsingContext}
-  | -- combinators
-    ContainsI {container :: LocatorI, contained :: LocatorI}
-  | AllI {elms :: NonEmpty LocatorI}
-  | AnyI {elms :: NonEmpty LocatorI}
-  | --- PostFilter
-    PostFilterI
-      { predicate :: Predicate,
-        locator :: LocatorI
-      }
-  deriving
-    ( -- | WithOptions {base :: Locator, options :: [LocatorDirectives]}
-      Show,
-      Eq,
-      Ord
-    )
+data LocatorI where
+  CSSI :: {value :: Text} -> LocatorI
+  XPathI :: {value :: Text} -> LocatorI
+  XPathID :: {tagM :: Maybe Text, body :: Text} -> LocatorI
+  TagI :: {tag :: Text} -> LocatorI
+  RoleI :: {role :: RoleLocator} -> LocatorI
+  InnerTextI :: {value :: Text,
+                   matchType :: MatchType,
+                   caseSensitivity :: CaseSensitivity,
+                   maxDepth :: Maybe Word8} ->
+                  LocatorI
+  BiDiContextI :: {context :: BrowsingContext} -> LocatorI
+  ContainsI :: {container :: LocatorI, contained :: LocatorI} ->
+                 LocatorI
+  AllI :: {elms :: NonEmpty LocatorI} -> LocatorI
+  AnyI :: {elms :: NonEmpty LocatorI} -> LocatorI
+  PostFilterI :: {predicate :: Predicate, locator :: LocatorI} ->
+                   LocatorI
+  deriving (Show, Eq, Ord)
 
 transform :: Protocol -> (Text -> Locator) -> Locator -> Either InvalidLocator LocatorI
 transform proto defLoc loc = do
@@ -175,7 +162,7 @@ convertLoc proto defLoc loc =
         Class {value, matchType, caseSensitivity} ->
           XPathID {tagM = Nothing, body = classPredX value matchType caseSensitivity}
         Tag {value} -> TagI {tag = value}
-        Role {role} -> RoleI {xpath = roleToXPath role}
+        Role {role} -> RoleI {role}
         InnerText {value, matchType, caseSensitivity, maxDepth} ->
           InnerTextI {value, matchType, caseSensitivity, maxDepth}
     where 
