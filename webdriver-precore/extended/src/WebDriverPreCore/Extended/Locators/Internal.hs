@@ -1,3 +1,7 @@
+{-# LANGUAGE DeriveFoldable #-}
+{-# LANGUAGE DeriveFunctor #-}
+{-# LANGUAGE DeriveTraversable #-}
+
 module WebDriverPreCore.Extended.Locators.Internal where
 
 import Control.Exception (Exception)
@@ -15,7 +19,6 @@ import WebDriverPreCore.Extended.BiDi.Base.Protocol (BrowsingContext, NodeProper
 import Prelude
 import Data.Function ((&))
 import Control.Monad ((>=>))
-import Data.List.NonEmpty (partition)
 
 data MatchFlags = MkMatchFlags
   { ignoreCase :: Bool,
@@ -84,7 +87,8 @@ data Locator
       Ord
     )
 
--- | LocatorI an intermdiate type 
+-- | LocatorI an intermediate type representing leaf locators.
+--   Compound locators are represented by 'CompoundLocator'.
 data LocatorI
   = 
     CSSI {value :: Text}
@@ -104,15 +108,6 @@ data LocatorI
   | -- exclusive
     -- browsingContextId -> elementId ie get the frame that belongs to the browsing context
     BiDiContextI {context :: BrowsingContext}
-  | -- combinators
-    ContainsI {container :: LocatorI, contained :: LocatorI}
-  | AllI {elms :: NonEmpty LocatorI}
-  | AnyI {elms :: NonEmpty LocatorI}
-  | --- PostFilter
-    PostFilterI
-      { predicate :: Predicate,
-        locator :: LocatorI
-      }
   deriving
     ( -- | WithOptions {base :: Locator, options :: [LocatorDirectives]}
       Show,
@@ -120,13 +115,23 @@ data LocatorI
       Ord
     )
 
-transform :: Protocol -> (Text -> Locator) -> Locator -> Either InvalidLocator LocatorI
+-- | CompoundLocator represents the tree structure of composed locators.
+--   The type parameter @a@ is the leaf type (typically 'LocatorI').
+data CompoundLocator a
+  = Leaf {getLeaf :: a}
+  | ContainsI {container :: CompoundLocator a, contained :: CompoundLocator a}
+  | AllI {elms :: NonEmpty (CompoundLocator a)}
+  | AnyI {elms :: NonEmpty (CompoundLocator a)}
+  | PostFilterI {predicate :: Predicate, locator :: CompoundLocator a}
+  deriving (Show, Eq, Ord, Functor, Foldable, Traversable)
+
+transform :: Protocol -> (Text -> Locator) -> Locator -> Either InvalidLocator (CompoundLocator LocatorI)
 transform proto defLoc loc = do
   locI <- convertLoc proto defLoc loc
   simplified <- simplify locI
   Right $ derivedAndTagsToXPath simplified
   where
-    simplify :: LocatorI -> Either InvalidLocator LocatorI
+    simplify :: CompoundLocator LocatorI -> Either InvalidLocator (CompoundLocator LocatorI)
     simplify current = do
       merged <- mergeContiguous loc $ unnestAnysAlls current
       tagged <- assignTags loc merged
@@ -136,10 +141,10 @@ transform proto defLoc loc = do
         else simplify unwrapped
 
 -----------------------------------------------------------------------------
--- Phase 1: Initial conversion (Locator → LocatorI)
+-- Phase 1: Initial conversion (Locator → CompoundLocator LocatorI)
 -----------------------------------------------------------------------------
 
-convertLoc :: Protocol -> (Text -> Locator) -> Locator -> Either InvalidLocator LocatorI
+convertLoc :: Protocol -> (Text -> Locator) -> Locator -> Either InvalidLocator (CompoundLocator LocatorI)
 convertLoc proto defLoc loc = 
   case loc of
     -- fallable conversions
@@ -147,39 +152,36 @@ convertLoc proto defLoc loc =
       | T.null name || T.null value ->
           failLocator "Attribute locator has empty name or value"
       | otherwise ->
-          Right $ XPathID {tagM = Nothing, body = attrPredX name value matchType caseSensitivity}
+          Right $ Leaf $ XPathID {tagM = Nothing, body = attrPredX name value matchType caseSensitivity}
     Default {value} ->
       let resolved = defLoc value
       in if hasDefault resolved
         then failLocator "Default locator cannot resolve to another Default"
         else convertLoc proto defLoc resolved
     BiDiContext {context} -> case proto of
-      BiDi -> Right $ BiDiContextI {context}
+      BiDi -> Right $ Leaf $ BiDiContextI {context}
       HTTP -> failLocator "BiDiContext locator cannot be used with HTTP protocol"
-      -- combinators / postfilter require higher order conversions
-    _ -> case loc of
-      Contains {container, contained} ->
-        ContainsI <$> convertLoc proto defLoc container <*> convertLoc proto defLoc contained
-      All {elms} ->
-        AllI <$> traverse (convertLoc proto defLoc) elms
-      Any {elms} ->
-        AnyI <$> traverse (convertLoc proto defLoc) elms
-      PostFilter {predicate, locator} ->
-        PostFilterI predicate <$> convertLoc proto defLoc locator
-      -- simple pass through conversions / xpath
-      _ -> Right $ case loc of
-        CSS {value} -> CSSI {value}
-        XPath {value} -> XPathI {value}
-        AllElms -> XPathID {tagM = Nothing, body = "true()"}
-        ID {value} -> XPathID {tagM = Nothing, body = "@id='" <> value <> "'"}
-        Class {value, matchType, caseSensitivity} ->
-          XPathID {tagM = Nothing, body = classPredX value matchType caseSensitivity}
-        Tag {value} -> TagI {tag = value}
-        Role {role} -> RoleI {xpath = roleToXPath role}
-        InnerText {value, matchType, caseSensitivity, maxDepth} ->
-          InnerTextI {value, matchType, caseSensitivity, maxDepth}
-    where 
-      failLocator msg = Left $ MkInvalidLocator loc msg
+    Contains {container, contained} ->
+      ContainsI <$> convertLoc proto defLoc container <*> convertLoc proto defLoc contained
+    All {elms} ->
+      AllI <$> traverse (convertLoc proto defLoc) elms
+    Any {elms} ->
+      AnyI <$> traverse (convertLoc proto defLoc) elms
+    PostFilter {predicate, locator} ->
+      PostFilterI predicate <$> convertLoc proto defLoc locator
+    -- simple pass through conversions / xpath
+    CSS {value} -> Right $ Leaf $ CSSI {value}
+    XPath {value} -> Right $ Leaf $ XPathI {value}
+    AllElms -> Right $ Leaf $ XPathID {tagM = Nothing, body = "true()"}
+    ID {value} -> Right $ Leaf $ XPathID {tagM = Nothing, body = "@id='" <> value <> "'"}
+    Class {value, matchType, caseSensitivity} ->
+      Right $ Leaf $ XPathID {tagM = Nothing, body = classPredX value matchType caseSensitivity}
+    Tag {value} -> Right $ Leaf $ TagI {tag = value}
+    Role {role} -> Right $ Leaf $ RoleI {xpath = roleToXPath role}
+    InnerText {value, matchType, caseSensitivity, maxDepth} ->
+      Right $ Leaf $ InnerTextI {value, matchType, caseSensitivity, maxDepth}
+  where 
+    failLocator msg = Left $ MkInvalidLocator loc msg
 
 -----------------------------------------------------------------------------
 -- Phase 2: Simplify loop (fixed-point)
@@ -189,7 +191,7 @@ convertLoc proto defLoc loc =
 -- 2a. Flatten nested AllI/AnyI
 -----------------------------------------------------------------------------
 
-unnestAnysAlls :: LocatorI -> LocatorI
+unnestAnysAlls :: CompoundLocator LocatorI -> CompoundLocator LocatorI
 unnestAnysAlls = \case
   AllI elms ->
     AllI $ unnestAnysAlls <$> elms >>= (\case 
@@ -201,12 +203,12 @@ unnestAnysAlls = \case
         x -> x :| [] )
   ContainsI c d -> ContainsI (unnestAnysAlls c) (unnestAnysAlls d)
   PostFilterI p l -> PostFilterI p (unnestAnysAlls l)
-  other -> other
+  Leaf a -> Leaf a
 
 -----------------------------------------------------------------------------
 -- 2b. Combine contiguous XPathIDs
 -----------------------------------------------------------------------------
-mergeContiguous :: Locator -> LocatorI -> Either InvalidLocator LocatorI
+mergeContiguous :: Locator -> CompoundLocator LocatorI -> Either InvalidLocator (CompoundLocator LocatorI)
 mergeContiguous srcLoc li = mergeAnys srcLoc <$> mergeAlls srcLoc li
 
 bracket :: Text -> Text
@@ -221,72 +223,72 @@ mergeTags srcLoc = \cases
     | t1 == t2 -> Right (Just t1)
     | otherwise -> Left $ MkInvalidLocator srcLoc ("Contradictory tags in All combinator: " <> txt srcLoc <> "\n " <> t1 <> " and " <> t2)
 
-mergeAlls :: Locator -> LocatorI -> Either InvalidLocator LocatorI
+mergeAlls :: Locator -> CompoundLocator LocatorI -> Either InvalidLocator (CompoundLocator LocatorI)
 mergeAlls srcLoc = 
-  mapOrFailLocIBottomUp (\case 
+  mapCompoundLocBottomUpM (\case 
    AllI elms -> AllI <$> mergeAllElms elms
    other -> Right other)
  where
-   mergeAllElms :: NonEmpty LocatorI -> Either InvalidLocator (NonEmpty LocatorI)
+   mergeAllElms :: NonEmpty (CompoundLocator LocatorI) -> Either InvalidLocator (NonEmpty (CompoundLocator LocatorI))
    mergeAllElms = \case
-       (XPathID tm1 b1 :| XPathID tm2 b2 : rest) -> 
+       (Leaf (XPathID tm1 b1) :| Leaf (XPathID tm2 b2) : rest) -> 
          do 
           tag <- mergeTags srcLoc tm1 tm2
-          mergeAllElms $ XPathID {tagM = tag, body = bracket b1 <> " and " <> bracket b2} :| rest 
+          mergeAllElms $ Leaf (XPathID {tagM = tag, body = bracket b1 <> " and " <> bracket b2}) :| rest 
        x -> Right x
 
-mergeAnys :: Locator -> LocatorI -> LocatorI
+mergeAnys :: Locator -> CompoundLocator LocatorI -> CompoundLocator LocatorI
 mergeAnys srcLoc = 
-  mapLocIBottomUp (\case 
+  mapCompoundLocBottomUp (\case 
    AnyI elms -> AnyI $ mergeAnyElms elms
    other -> other)
  where
-   mergeAnyElms :: NonEmpty LocatorI -> NonEmpty LocatorI
+   mergeAnyElms :: NonEmpty (CompoundLocator LocatorI) -> NonEmpty (CompoundLocator LocatorI)
    mergeAnyElms = \case
-       (XPathID tm1 b1 :| XPathID tm2 b2 : rest) ->
+       (Leaf (XPathID tm1 b1) :| Leaf (XPathID tm2 b2) : rest) ->
          mergeTags srcLoc tm1 tm2 & either
            (\_ ->
              -- Tags incompatible, keep first as-is, try merging from second onward
-             let rest' = mergeAnyElms (XPathID tm2 b2 :| rest)
-             in XPathID tm1 b1 :| toList rest')
+             let rest' = mergeAnyElms (Leaf (XPathID tm2 b2) :| rest)
+             in Leaf (XPathID tm1 b1) :| toList rest')
            (\tag ->
              -- Tags compatible, merge these two and continue
-             mergeAnyElms $ XPathID {tagM = tag, body = bracket b1 <> " or " <> bracket b2} :| rest)
+             mergeAnyElms $ Leaf (XPathID {tagM = tag, body = bracket b1 <> " or " <> bracket b2}) :| rest)
        x -> x
 
 -----------------------------------------------------------------------------
 -- 2c. Assign tags
 -----------------------------------------------------------------------------
 
-tagTxt :: LocatorI -> Maybe Text
+tagTxt :: CompoundLocator LocatorI -> Maybe Text
 tagTxt  = \case 
-  TagI t -> Just t
+  Leaf (TagI t) -> Just t
   _ -> Nothing
 
-isTagI :: LocatorI -> Bool
+isTagI :: CompoundLocator LocatorI -> Bool
 isTagI  = isJust . tagTxt
 
-isNotTage :: LocatorI -> Bool
+isNotTage :: CompoundLocator LocatorI -> Bool
 isNotTage = not . isTagI
 
 -- copy tags from TagI and XPathID to all reachable XPathID descendants, and remove the TagI if possible.
-assignTags :: Locator -> LocatorI -> Either InvalidLocator LocatorI
+assignTags :: Locator -> CompoundLocator LocatorI -> Either InvalidLocator (CompoundLocator LocatorI)
 assignTags srcLocator = 
-    mapLocIBottomUpM (\case
+    mapCompoundLocBottomUpM (\case
       AllI elms -> AllI <$> distributeTagsToAllElms srcLocator elms
       AnyI elms -> AnyI <$> mergeTagsInAny elms
       other -> Right other)
 
 -- | 2c-i: Process TagI constructors within an AnyI.
-mergeTagsInAny :: NonEmpty LocatorI -> Either InvalidLocator (NonEmpty LocatorI)
+mergeTagsInAny :: NonEmpty (CompoundLocator LocatorI) -> Either InvalidLocator (NonEmpty (CompoundLocator LocatorI))
 mergeTagsInAny elms = do
   let children = toList elms
       (tags, others) = LST.partition isTagI children
       tagXPaths = 
         case tags of
           [] -> []
-          [TagI t] -> [XPathI ("//" <> t)]
-          ts -> [XPathI ("//" <> T.intercalate " | " (catMaybes (tagTxt <$> ts)))]
+          [Leaf (TagI t)] -> [Leaf (XPathI ("//" <> t))]
+          ts -> [Leaf (XPathI ("//" <> T.intercalate " | " (catMaybes (tagTxt <$> ts))))]
       result = tagXPaths <> others
   case result of
     [] -> error "mergeTagsInAny: empty result"
@@ -294,7 +296,7 @@ mergeTagsInAny elms = do
 
 
 -- | 2c-ii + 2c-iii: Process TagI constructors within an AllI.
-distributeTagsToAllElms :: Locator -> NonEmpty LocatorI -> Either InvalidLocator (NonEmpty LocatorI)
+distributeTagsToAllElms :: Locator -> NonEmpty (CompoundLocator LocatorI) -> Either InvalidLocator (NonEmpty (CompoundLocator LocatorI))
 distributeTagsToAllElms srcLocator elms = do
   let tagVals = nub . catMaybes $ tagVal <$> toList elms
   
@@ -313,64 +315,42 @@ distributeTagsToAllElms srcLocator elms = do
         x : xs -> Right (x :| xs)
       where
           elements = toList elms
-          distributed = distributeTagToDescendantsOfAll t <$> elms
+          distributed = fmap (distributeTagToLeaf t) <$> elms
           canRemove = all allDescendantsXPathIDOrTag distributed && not (all isTagI elements)
           result = if canRemove 
                    then filter isNotTage $ toList distributed
                    else toList distributed
   where
-    tagVal :: LocatorI -> Maybe Text
+    tagVal :: CompoundLocator LocatorI -> Maybe Text
     tagVal = \case 
-      TagI t -> Just t
+      Leaf (TagI t) -> Just t
       -- not expected that there would be any XPathID with a tag at this point
       -- but include here for future proofing
-      XPathID {tagM = Just t} -> Just t
+      Leaf (XPathID {tagM = Just t}) -> Just t
       _ -> Nothing
 
-    -- | Set tagM = Just t on all reachable XPathID descendants.
-    -- Traverses through AllI, AnyI, and the contained side of ContainsI.
-    -- Container side of ContainsI is NOT tagged.
-    distributeTagToDescendantsOfAll :: Text -> LocatorI -> LocatorI
-    distributeTagToDescendantsOfAll t = \case
+    -- | Set tagM = Just t on XPathID leaves, no-op on all other leaves.
+    --   Since 'LocatorI' is now leaf-only, we only need to handle XPathID.
+    distributeTagToLeaf :: Text -> LocatorI -> LocatorI
+    distributeTagToLeaf t = \case
       XPathID _ body -> XPathID {tagM = Just t, body}
-      AllI elms' -> AllI $ cascade <$> elms'
-      AnyI elms' -> AnyI $ cascade <$> elms'
-      ContainsI container contained -> ContainsI container (cascade contained)
-      other -> case other of 
-        PostFilterI {} -> other
-        RoleI {} -> other
-        XPathI {} -> other
-        CSSI {} -> other
-        InnerTextI {} -> other
-        BiDiContextI {} -> other
-        TagI {} -> other
-     where 
-      cascade :: LocatorI -> LocatorI
-      cascade = distributeTagToDescendantsOfAll t 
+      other -> other
 
-    -- | Check if all reachable descendants are XPathID or TagI constructors.
-    -- Traverses through AllI, AnyI, and the contained side of ContainsI.
-    allDescendantsXPathIDOrTag :: LocatorI -> Bool
+    -- | Check if a leaf is an XPathID or TagI.
+    --   Since 'LocatorI' is leaf-only, this just checks the leaf itself.
+    allDescendantsXPathIDOrTag :: CompoundLocator LocatorI -> Bool
     allDescendantsXPathIDOrTag = \case
-      XPathID {} -> True
-      TagI {} -> True
-      AllI elms' -> all allDescendantsXPathIDOrTag elms'
-      AnyI elms' -> all allDescendantsXPathIDOrTag elms'
-      ContainsI _container contained -> allDescendantsXPathIDOrTag contained
-      PostFilterI {} -> False
-      RoleI {} -> False
-      XPathI {} -> False
-      CSSI {} -> False
-      InnerTextI {} -> False
-      BiDiContextI {} -> False
+      Leaf (XPathID {}) -> True
+      Leaf (TagI {}) -> True
+      _ -> False
 
 
 -----------------------------------------------------------------------------
 -- 2d. Unwrap single-child combinators
 -----------------------------------------------------------------------------
 
-unwrapSingletonCombinators :: LocatorI -> LocatorI
-unwrapSingletonCombinators = mapLocIBottomUp $ \case
+unwrapSingletonCombinators :: CompoundLocator LocatorI -> CompoundLocator LocatorI
+unwrapSingletonCombinators = mapCompoundLocBottomUp $ \case
   AllI (x :| []) -> x
   AnyI (x :| []) -> x
   other -> other
@@ -379,24 +359,27 @@ unwrapSingletonCombinators = mapLocIBottomUp $ \case
 -- Phase 3: Final conversion
 -----------------------------------------------------------------------------
 
-derivedAndTagsToXPath :: LocatorI -> LocatorI
+derivedAndTagsToXPath :: CompoundLocator LocatorI -> CompoundLocator LocatorI
 derivedAndTagsToXPath = convertContains . convertTags . convertXPathIDs
 
-convertXPathIDs :: LocatorI -> LocatorI
-convertXPathIDs = mapLocIBottomUp $ \case
+-- | Convert XPathID leaves to XPathI leaves — uses 'fmap' via 'Functor'.
+convertXPathIDs :: CompoundLocator LocatorI -> CompoundLocator LocatorI
+convertXPathIDs = fmap $ \case
   XPathID {tagM, body} ->
     XPathI {value = "//" <> fromMaybe "*" tagM <> body}
   other -> other
 
-convertTags :: LocatorI -> LocatorI
-convertTags = mapLocIBottomUp $ \case
+-- | Convert TagI leaves to XPathI leaves — uses 'fmap' via 'Functor'.
+convertTags :: CompoundLocator LocatorI -> CompoundLocator LocatorI
+convertTags = fmap $ \case
   TagI {tag} -> XPathI {value = "//" <> tag}
   other -> other
 
-convertContains :: LocatorI -> LocatorI
-convertContains = mapLocIBottomUp $ \case
-  ContainsI (XPathI {value = containerXPath}) (XPathI {value = containedXPath}) ->
-    XPathI $ containerXPath <> containedXPath
+-- | Merge adjacent ContainsI (XPathI, XPathI) into a single XPathI leaf.
+convertContains :: CompoundLocator LocatorI -> CompoundLocator LocatorI
+convertContains = mapCompoundLocBottomUp $ \case
+  ContainsI (Leaf (XPathI {value = containerXPath})) (Leaf (XPathI {value = containedXPath})) ->
+    Leaf $ XPathI {value = containerXPath <> containedXPath}
   other -> other
 
 -----------------------------------------------------------------------------
@@ -461,30 +444,24 @@ wildcardPredX normText val =
              (predicates, _) = foldl' buildP ([], normText) (zip [0 ..] parts)
          in intercalate " and " predicates
 
--- | Map over a LocatorI tree bottom-up, with monadic effects.
+-- | Map over a 'CompoundLocator' tree bottom-up, with monadic effects.
 --   Recursively transforms children first, then applies the function to the
 --   reconstructed node.  Short-circuits on the first failure for instances
 --   that support it (e.g. 'Either', 'Maybe').
-mapLocIBottomUpM :: Monad m => (LocatorI -> m LocatorI) -> LocatorI -> m LocatorI
-mapLocIBottomUpM f = (\case 
-    ContainsI c d -> ContainsI <$> recurse c <*> recurse d
-    AllI elms -> AllI <$> recurseMap elms
-    AnyI elms -> AnyI <$> recurseMap elms
-    PostFilterI p l -> PostFilterI p <$> recurse l
-    l -> pure l)
-    >=> f
+mapCompoundLocBottomUpM :: Monad m => (CompoundLocator a -> m (CompoundLocator a)) -> CompoundLocator a -> m (CompoundLocator a)
+mapCompoundLocBottomUpM f = recurse >=> f
   where
-    recurse = mapLocIBottomUpM f
-    recurseMap = traverse recurse
+    recurse = \case
+      ContainsI c d -> ContainsI <$> mapCompoundLocBottomUpM f c <*> mapCompoundLocBottomUpM f d
+      AllI elms -> AllI <$> traverse (mapCompoundLocBottomUpM f) elms
+      AnyI elms -> AnyI <$> traverse (mapCompoundLocBottomUpM f) elms
+      PostFilterI p l -> PostFilterI p <$> mapCompoundLocBottomUpM f l
+      leaf@(Leaf _) -> pure leaf
 
--- | Map over a LocatorI tree bottom-up.
---   Expressed via 'mapLocIBottomUpM' using the 'Identity' monad.
-mapLocIBottomUp :: (LocatorI -> LocatorI) -> LocatorI -> LocatorI
-mapLocIBottomUp f = runIdentity . mapLocIBottomUpM (Identity . f)
-
--- | Specialization of 'mapLocIBottomUpM' to 'Either InvalidLocator'.
-mapOrFailLocIBottomUp :: (LocatorI -> Either InvalidLocator LocatorI) -> LocatorI -> Either InvalidLocator LocatorI
-mapOrFailLocIBottomUp = mapLocIBottomUpM
+-- | Map over a 'CompoundLocator' tree bottom-up.
+--   Expressed via 'mapCompoundLocBottomUpM' using the 'Identity' monad.
+mapCompoundLocBottomUp :: (CompoundLocator a -> CompoundLocator a) -> CompoundLocator a -> CompoundLocator a
+mapCompoundLocBottomUp f = runIdentity . mapCompoundLocBottomUpM (Identity . f)
 
 data Predicate
   = BiDiPredicate
