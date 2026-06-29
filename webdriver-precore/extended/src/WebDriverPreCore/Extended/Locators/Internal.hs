@@ -454,17 +454,17 @@ wildcardPredX normText val =
 --   Recursively transforms children first, then applies the function to the
 --   reconstructed node.  Short-circuits on the first failure for instances
 --   that support it (e.g. 'Either', 'Maybe').
-mapLocIBottomUpM :: Monad m => (LocatorI -> m LocatorI) -> LocatorI -> m LocatorI
+mapLocIBottomUpM :: forall m a. Monad m => (forall b. LocatorI b -> m (LocatorI b)) -> LocatorI a -> m (LocatorI a)
 mapLocIBottomUpM f = (\case 
     ContainsI c d -> ContainsI <$> recurse c <*> recurse d
-    AllI elms -> AllI <$> recurseMap elms
-    AnyI elms -> AnyI <$> recurseMap elms
+    AllI elms -> AllI <$> traverse recurse elms
+    AnyI elms -> AnyI <$> traverse recurse elms
     PostFilterI p l -> PostFilterI p <$> recurse l
     l -> pure l)
     >=> f
   where
+    recurse :: LocatorI b -> m (LocatorI b)
     recurse = mapLocIBottomUpM f
-    recurseMap = traverse recurse
 
 -- | Map over a LocatorI tree bottom-up.
 --   Expressed via 'mapLocIBottomUpM' using the 'Identity' monad.
@@ -472,7 +472,7 @@ mapLocIBottomUp :: forall a. (forall b. LocatorI b -> LocatorI b) -> LocatorI a 
 mapLocIBottomUp f = runIdentity . mapLocIBottomUpM (Identity . f)
 
 -- | Specialization of 'mapLocIBottomUpM' to 'Either InvalidLocator'.
-mapOrFailLocIBottomUp :: (LocatorI a -> Either InvalidLocator (LocatorI a)) -> LocatorI a -> Either InvalidLocator (LocatorI a)
+mapOrFailLocIBottomUp :: (forall b. LocatorI b -> Either InvalidLocator (LocatorI b)) -> LocatorI a -> Either InvalidLocator (LocatorI a)
 mapOrFailLocIBottomUp = mapLocIBottomUpM
 
 data Predicate
