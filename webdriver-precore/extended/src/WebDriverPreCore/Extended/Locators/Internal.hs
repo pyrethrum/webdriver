@@ -84,16 +84,23 @@ data Locator
       Ord
     )
 
--- | LocatorI an intermdiate type 
-data LocatorI
-  = 
-    CSSI {value :: Text}
-  | XPathI {value :: Text}
-  | XPathID {
+data InternalLocator
+  = XPathID {
       tagM :: Maybe Text, 
       body :: Text
       } 
   | TagI {tag :: Text} 
+  deriving
+    ( -- | WithOptions {base :: Locator, options :: [LocatorDirectives]}
+      Show,
+      Eq,
+      Ord
+    )
+
+data FinalLocator
+  = 
+    CSSI {value :: Text}
+  | XPathI {value :: Text}
   | RoleI {xpath :: Text}
   | InnerTextI
       { value :: Text,
@@ -113,6 +120,17 @@ data LocatorI
       { predicate :: Predicate,
         locator :: LocatorI
       }
+  deriving
+    ( -- | WithOptions {base :: Locator, options :: [LocatorDirectives]}
+      Show,
+      Eq,
+      Ord
+    )
+
+-- | LocatorI an intermdiate type 
+data LocatorI
+  = Internal InternalLocator
+  | Final FinalLocator
   deriving
     ( -- | WithOptions {base :: Locator, options :: [LocatorDirectives]}
       Show,
