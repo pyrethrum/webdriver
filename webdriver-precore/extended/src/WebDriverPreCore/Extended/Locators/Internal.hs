@@ -129,7 +129,7 @@ transform proto defLoc loc = do
 -- Phase 1: Initial conversion (Locator → LocatorI)
 -----------------------------------------------------------------------------
 
-convertLoc :: Protocol -> (Text -> Locator) -> Locator -> Either InvalidLocator LocatorI
+convertLoc :: forall a. Protocol -> (Text -> Locator) -> Locator -> Either InvalidLocator (LocatorI a)
 convertLoc proto defLoc loc = 
   case loc of
     -- fallable conversions
@@ -179,7 +179,7 @@ convertLoc proto defLoc loc =
 -- 2a. Flatten nested AllI/AnyI
 -----------------------------------------------------------------------------
 
-unnestAnysAlls :: LocatorI -> LocatorI
+unnestAnysAlls :: forall a. LocatorI a -> LocatorI a
 unnestAnysAlls = \case
   AllI elms ->
     AllI $ unnestAnysAlls <$> elms >>= (\case 
@@ -196,7 +196,8 @@ unnestAnysAlls = \case
 -----------------------------------------------------------------------------
 -- 2b. Combine contiguous XPathIDs
 -----------------------------------------------------------------------------
-mergeContiguous :: Locator -> LocatorI -> Either InvalidLocator LocatorI
+
+mergeContiguous :: Locator -> LocatorI a -> Either InvalidLocator (LocatorI a)
 mergeContiguous srcLoc li = mergeAnys srcLoc <$> mergeAlls srcLoc li
 
 bracket :: Text -> Text
@@ -211,13 +212,13 @@ mergeTags srcLoc = \cases
     | t1 == t2 -> Right (Just t1)
     | otherwise -> Left $ MkInvalidLocator srcLoc ("Contradictory tags in All combinator: " <> txt srcLoc <> "\n " <> t1 <> " and " <> t2)
 
-mergeAlls :: Locator -> LocatorI -> Either InvalidLocator LocatorI
+mergeAlls :: Locator -> LocatorI a -> Either InvalidLocator (LocatorI a)
 mergeAlls srcLoc = 
   mapOrFailLocIBottomUp (\case 
    AllI elms -> AllI <$> mergeAllElms elms
    other -> Right other)
  where
-   mergeAllElms :: NonEmpty LocatorI -> Either InvalidLocator (NonEmpty LocatorI)
+   mergeAllElms :: NonEmpty (LocatorI a) -> Either InvalidLocator (NonEmpty (LocatorI a))
    mergeAllElms = \case
        (XPathID tm1 b1 :| XPathID tm2 b2 : rest) -> 
          do 
@@ -225,13 +226,13 @@ mergeAlls srcLoc =
           mergeAllElms $ XPathID {tagM = tag, body = bracket b1 <> " and " <> bracket b2} :| rest 
        x -> Right x
 
-mergeAnys :: Locator -> LocatorI -> LocatorI
+mergeAnys :: Locator -> LocatorI a -> LocatorI a
 mergeAnys srcLoc = 
   mapLocIBottomUp (\case 
    AnyI elms -> AnyI $ mergeAnyElms elms
    other -> other)
  where
-   mergeAnyElms :: NonEmpty LocatorI -> NonEmpty LocatorI
+   mergeAnyElms :: NonEmpty (LocatorI a) -> NonEmpty (LocatorI a)
    mergeAnyElms = \case
        (XPathID tm1 b1 :| XPathID tm2 b2 : rest) ->
          mergeTags srcLoc tm1 tm2 & either
@@ -248,19 +249,19 @@ mergeAnys srcLoc =
 -- 2c. Assign tags
 -----------------------------------------------------------------------------
 
-tagTxt :: LocatorI -> Maybe Text
+tagTxt :: LocatorI a -> Maybe Text
 tagTxt  = \case 
   TagI t -> Just t
   _ -> Nothing
 
-isTagI :: LocatorI -> Bool
+isTagI :: LocatorI a -> Bool
 isTagI  = isJust . tagTxt
 
-isNotTage :: LocatorI -> Bool
+isNotTage :: LocatorI a -> Bool
 isNotTage = not . isTagI
 
 -- copy tags from TagI and XPathID to all reachable XPathID descendants, and remove the TagI if possible.
-assignTags :: Locator -> LocatorI -> Either InvalidLocator LocatorI
+assignTags :: Locator -> LocatorI a -> Either InvalidLocator (LocatorI a)
 assignTags srcLocator = 
     mapLocIBottomUpM (\case
       AllI elms -> AllI <$> distributeTagsToAllElms srcLocator elms
@@ -268,7 +269,7 @@ assignTags srcLocator =
       other -> Right other)
 
 -- | 2c-i: Process TagI constructors within an AnyI.
-mergeTagsInAny :: NonEmpty LocatorI -> Either InvalidLocator (NonEmpty LocatorI)
+mergeTagsInAny :: NonEmpty (LocatorI a) -> Either InvalidLocator (NonEmpty (LocatorI a))
 mergeTagsInAny elms = do
   let children = toList elms
       (tags, others) = LST.partition isTagI children
@@ -284,7 +285,7 @@ mergeTagsInAny elms = do
 
 
 -- | 2c-ii + 2c-iii: Process TagI constructors within an AllI.
-distributeTagsToAllElms :: Locator -> NonEmpty LocatorI -> Either InvalidLocator (NonEmpty LocatorI)
+distributeTagsToAllElms :: Locator -> NonEmpty (LocatorI a) -> Either InvalidLocator (NonEmpty (LocatorI a))
 distributeTagsToAllElms srcLocator elms = do
   let tagVals = nub . catMaybes $ tagVal <$> toList elms
   
@@ -309,7 +310,7 @@ distributeTagsToAllElms srcLocator elms = do
                    then filter isNotTage $ toList distributed
                    else toList distributed
   where
-    tagVal :: LocatorI -> Maybe Text
+    tagVal :: forall a. LocatorI a -> Maybe Text
     tagVal = \case 
       TagI t -> Just t
       -- not expected that there would be any XPathID with a tag at this point
@@ -320,7 +321,7 @@ distributeTagsToAllElms srcLocator elms = do
     -- | Set tagM = Just t on all reachable XPathID descendants.
     -- Traverses through AllI, AnyI, and the contained side of ContainsI.
     -- Container side of ContainsI is NOT tagged.
-    distributeTagToDescendantsOfAll :: Text -> LocatorI -> LocatorI
+    distributeTagToDescendantsOfAll :: Text -> LocatorI a -> LocatorI a
     distributeTagToDescendantsOfAll t = \case
       XPathID _ body -> XPathID {tagM = Just t, body}
       AllI elms' -> AllI $ cascade <$> elms'
@@ -335,12 +336,12 @@ distributeTagsToAllElms srcLocator elms = do
         BiDiContextI {} -> other
         TagI {} -> other
      where 
-      cascade :: LocatorI -> LocatorI
+      cascade :: LocatorI a -> LocatorI a
       cascade = distributeTagToDescendantsOfAll t 
 
     -- | Check if all reachable descendants are XPathID or TagI constructors.
     -- Traverses through AllI, AnyI, and the contained side of ContainsI.
-    allDescendantsXPathIDOrTag :: LocatorI -> Bool
+    allDescendantsXPathIDOrTag :: LocatorI a -> Bool
     allDescendantsXPathIDOrTag = \case
       XPathID {} -> True
       TagI {} -> True
@@ -359,7 +360,7 @@ distributeTagsToAllElms srcLocator elms = do
 -- 2d. Unwrap single-child combinators
 -----------------------------------------------------------------------------
 
-unwrapSingletonCombinators :: LocatorI -> LocatorI
+unwrapSingletonCombinators :: LocatorI a -> LocatorI a
 unwrapSingletonCombinators = mapLocIBottomUp $ \case
   AllI (x :| []) -> x
   AnyI (x :| []) -> x
@@ -372,12 +373,14 @@ unwrapSingletonCombinators = mapLocIBottomUp $ \case
 derivedAndTagsToXPath :: LocatorI a -> LocatorI Final
 derivedAndTagsToXPath = convertContains . convertTagsXPathIDs
 
-convertTagsXPathIDs :: LocatorI a -> LocatorI Final
-convertTagsXPathIDs = mapLocIBottomUp $ \case
-  XPathID {tagM, body} ->
-    XPathI {value = "//" <> fromMaybe "*" tagM <> body}
-  TagI {tag} -> XPathI {value = "//" <> tag}
-  other -> other
+convertTagsXPathIDs :: forallLocatorI a -> LocatorI Final
+convertTagsXPathIDs = undefined 
+
+-- mapLocIBottomUp $ \case
+--   XPathID {tagM, body} ->
+--     XPathI {value = "//" <> fromMaybe "*" tagM <> body}
+--   TagI {tag} -> XPathI {value = "//" <> tag}
+--   other -> other
 
 convertContains :: LocatorI Final -> LocatorI Final
 convertContains = mapLocIBottomUp $ \case
@@ -465,11 +468,11 @@ mapLocIBottomUpM f = (\case
 
 -- | Map over a LocatorI tree bottom-up.
 --   Expressed via 'mapLocIBottomUpM' using the 'Identity' monad.
-mapLocIBottomUp :: (LocatorI -> LocatorI) -> LocatorI -> LocatorI
+mapLocIBottomUp :: forall a. (forall b. LocatorI b -> LocatorI b) -> LocatorI a -> LocatorI a
 mapLocIBottomUp f = runIdentity . mapLocIBottomUpM (Identity . f)
 
 -- | Specialization of 'mapLocIBottomUpM' to 'Either InvalidLocator'.
-mapOrFailLocIBottomUp :: (LocatorI -> Either InvalidLocator LocatorI) -> LocatorI -> Either InvalidLocator LocatorI
+mapOrFailLocIBottomUp :: (LocatorI a -> Either InvalidLocator (LocatorI a)) -> LocatorI a -> Either InvalidLocator (LocatorI a)
 mapOrFailLocIBottomUp = mapLocIBottomUpM
 
 data Predicate
