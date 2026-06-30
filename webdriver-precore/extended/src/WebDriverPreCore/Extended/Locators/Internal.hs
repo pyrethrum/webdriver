@@ -2,7 +2,24 @@
 {-# LANGUAGE DeriveFunctor #-}
 {-# LANGUAGE DeriveTraversable #-}
 
-module WebDriverPreCore.Extended.Locators.Internal where
+module WebDriverPreCore.Extended.Locators.Internal (
+    CompoundLocator(..),
+    Locator(..),
+    LocatorFinal(..),
+    Predicate(..),
+    InvalidLocator(..),
+    Protocol(..),
+
+    -- * Re-exports from Internal
+    AriaRole (..),
+    MatchType (..),
+    CaseSensitivity(..),
+    RoleLocator(..),
+
+    displayAriaRole,
+    transform,
+
+) where
 
 import Control.Exception (Exception)
 import Data.Foldable1 (foldl1')
@@ -115,8 +132,28 @@ data LocatorI
       Ord
     )
 
+data LocatorFinal
+  = 
+    CSSF {value :: Text}
+  | XPathF {value :: Text} 
+  | RoleF {xpath :: Text}
+  | InnerTextF
+      { value :: Text,
+        matchType :: MatchType,
+        caseSensitivity :: CaseSensitivity,
+        maxDepth :: Maybe Word8
+      }
+  | -- exclusive
+    -- browsingContextId -> elementId ie get the frame that belongs to the browsing context
+    BiDiContextF {context :: BrowsingContext}
+  deriving
+    ( -- | WithOptions {base :: Locator, options :: [LocatorDirectives]}
+      Show,
+      Eq,
+      Ord
+    )
+
 -- | CompoundLocator represents the tree structure of composed locators.
---   The type parameter @a@ is the leaf type (typically 'LocatorI').
 data CompoundLocator a
   = Leaf {getLeaf :: a}
   | ContainsI {container :: CompoundLocator a, contained :: CompoundLocator a}
@@ -125,7 +162,7 @@ data CompoundLocator a
   | PostFilterI {predicate :: Predicate, locator :: CompoundLocator a}
   deriving (Show, Eq, Ord, Functor, Foldable, Traversable)
 
-transform :: Protocol -> (Text -> Locator) -> Locator -> Either InvalidLocator (CompoundLocator LocatorI)
+transform :: Protocol -> (Text -> Locator) -> Locator -> Either InvalidLocator (CompoundLocator LocatorFinal)
 transform proto defLoc loc = do
   locI <- convertLoc proto defLoc loc
   simplified <- simplify locI
@@ -359,27 +396,27 @@ unwrapSingletonCombinators = mapCompoundLocBottomUp $ \case
 -- Phase 3: Final conversion
 -----------------------------------------------------------------------------
 
-derivedAndTagsToXPath :: CompoundLocator LocatorI -> CompoundLocator LocatorI
-derivedAndTagsToXPath = convertContains . convertTags . convertXPathIDs
+derivedAndTagsToXPath :: CompoundLocator LocatorI -> CompoundLocator LocatorFinal
+derivedAndTagsToXPath = convertContains . convertTagsXPathIDs
 
--- | Convert XPathID leaves to XPathI leaves — uses 'fmap' via 'Functor'.
-convertXPathIDs :: CompoundLocator LocatorI -> CompoundLocator LocatorI
-convertXPathIDs = fmap $ \case
+-- | Convert LocatorI leaves to LocatorFinal leaves — uses 'fmap' via 'Functor'.
+convertTagsXPathIDs :: CompoundLocator LocatorI -> CompoundLocator LocatorFinal
+convertTagsXPathIDs = fmap $ \case
   XPathID {tagM, body} ->
-    XPathI {value = "//" <> fromMaybe "*" tagM <> body}
-  other -> other
+    XPathF {value = "//" <> fromMaybe "*" tagM <> body}
+  TagI {tag} -> XPathF {value = "//" <> tag}
+  CSSI {..} -> CSSF {..}
+  XPathI {..} -> XPathF {..}
+  RoleI {..} -> RoleF {..}
+  InnerTextI {..} -> InnerTextF {..}
+  BiDiContextI {..} -> BiDiContextF {..}
 
--- | Convert TagI leaves to XPathI leaves — uses 'fmap' via 'Functor'.
-convertTags :: CompoundLocator LocatorI -> CompoundLocator LocatorI
-convertTags = fmap $ \case
-  TagI {tag} -> XPathI {value = "//" <> tag}
-  other -> other
 
 -- | Merge adjacent ContainsI (XPathI, XPathI) into a single XPathI leaf.
-convertContains :: CompoundLocator LocatorI -> CompoundLocator LocatorI
+convertContains :: CompoundLocator LocatorFinal -> CompoundLocator LocatorFinal
 convertContains = mapCompoundLocBottomUp $ \case
-  ContainsI (Leaf (XPathI {value = containerXPath})) (Leaf (XPathI {value = containedXPath})) ->
-    Leaf $ XPathI {value = containerXPath <> containedXPath}
+  ContainsI (Leaf (XPathF {value = containerXPath})) (Leaf (XPathF {value = containedXPath})) ->
+    Leaf $ XPathF {value = containerXPath <> containedXPath}
   other -> other
 
 -----------------------------------------------------------------------------
@@ -451,12 +488,14 @@ wildcardPredX normText val =
 mapCompoundLocBottomUpM :: Monad m => (CompoundLocator a -> m (CompoundLocator a)) -> CompoundLocator a -> m (CompoundLocator a)
 mapCompoundLocBottomUpM f = recurse >=> f
   where
+    mapf = mapCompoundLocBottomUpM f
     recurse = \case
-      ContainsI c d -> ContainsI <$> mapCompoundLocBottomUpM f c <*> mapCompoundLocBottomUpM f d
-      AllI elms -> AllI <$> traverse (mapCompoundLocBottomUpM f) elms
-      AnyI elms -> AnyI <$> traverse (mapCompoundLocBottomUpM f) elms
-      PostFilterI p l -> PostFilterI p <$> mapCompoundLocBottomUpM f l
+      ContainsI c d -> ContainsI <$> mapf c <*> mapf d
+      AllI elms -> AllI <$> traverse mapf elms
+      AnyI elms -> AnyI <$> traverse mapf elms
+      PostFilterI p l -> PostFilterI p <$> mapf l
       leaf@(Leaf _) -> pure leaf
+ 
 
 -- | Map over a 'CompoundLocator' tree bottom-up.
 --   Expressed via 'mapCompoundLocBottomUpM' using the 'Identity' monad.

@@ -118,26 +118,21 @@ isXPath = \case
 
 prepareSimplify :: (Text -> LI.Locator) -> LI.Protocol -> LI.Locator -> Either LI.InvalidLocator ReducedLoc
 prepareSimplify defLoc proto l =
-  simplify <$> xPathSub defLoc proto l
+  simplify <$> LI.transform proto defLoc l
   where
-    simplify :: LI.Locator -> ReducedLoc
+    simplify :: LI.CompoundLocator LI.LocatorFinal -> ReducedLoc
     simplify = \case
-      LI.CSS {..} -> Leaf CSS {..}
-      LI.XPath {..} -> Leaf XPath {..}
-      LI.Role {..} -> Leaf . BiDiNative $ Role {..}
-      LI.InnerText {..} -> Leaf . BiDiNative $ InnerText {..}
-      LI.BiDiContext {..} -> BiDiOnlyLeaf BiDiContext {..}
-      LI.PostFilter {predicate, locator} -> PostFilterLoc $ PostFilter {predicate, locator = simplify locator}
-      LI.Contains {container, contained} -> Combintor $ Contains {container = simplify container, contained = simplify contained}
-      LI.All {elms} -> Combintor . All $ simplify <$> elms
-      LI.Any {elms} -> Combintor . Any $ simplify <$> elms
-      LI.AllElms -> shouldNotExistAfterXPathSub "AllElms"
-      LI.ID {} -> shouldNotExistAfterXPathSub "ID"
-      LI.Class {} -> shouldNotExistAfterXPathSub "Class"
-      LI.Attribute {} -> shouldNotExistAfterXPathSub "Attribute"
-      LI.Tag {} -> shouldNotExistAfterXPathSub "Tag"
-      LI.Default {} -> shouldNotExistAfterXPathSub "Default"
-    shouldNotExistAfterXPathSub name = error . T.unpack $ name <> " should not exist after xPathSub - this is a library defect"
+      LI.Leaf (LI.CSSF {..}) -> Leaf CSS {..}
+      LI.Leaf (LI.XPathF {..}) -> Leaf XPath {..}
+      LI.Leaf (LI.RoleF {xpath}) -> Leaf XPath {value = xpath}
+      LI.Leaf (LI.InnerTextF {..}) -> Leaf . BiDiNative $ InnerText {..}
+      LI.Leaf (LI.BiDiContextF {..}) -> BiDiOnlyLeaf BiDiContext {..}
+      LI.PostFilterI {predicate, locator} -> PostFilterLoc $ PostFilter {predicate, locator = simplify locator}
+      LI.ContainsI {container, contained} -> Combintor $ Contains {container = simplify container, contained = simplify contained}
+      LI.AllI {elms} -> Combintor . All $ simplify <$> elms
+      LI.AnyI {elms} -> Combintor . Any $ simplify <$> elms
+
+-- ############## DEAD CODE ########
 
 xPathSub :: (Text -> LI.Locator) -> LI.Protocol -> LI.Locator -> Either LI.InvalidLocator LI.Locator
 xPathSub defLoc proto l = do
@@ -389,3 +384,4 @@ wildcardXPathPred normText val =
                 in (preds' <> [predicate], nextText)
               (preds, _) = foldl' buildP ([], normText) (zip [0 ..] parts)
           in T.intercalate " and " preds
+
