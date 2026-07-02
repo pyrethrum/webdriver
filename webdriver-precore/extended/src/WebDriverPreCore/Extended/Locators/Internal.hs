@@ -132,6 +132,29 @@ data LocatorI
       Ord
     )
 
+{-
+data LocatorFinal
+  = 
+    CSSF {value :: Text}
+  | XPathF {value :: Text} 
+  | RoleF {xpath :: Text}
+  | InnerTextF
+      { value :: Text,
+        matchType :: MatchType,
+        caseSensitivity :: CaseSensitivity,
+        maxDepth :: Maybe Word8
+      }
+  | -- exclusive
+    -- browsingContextId -> elementId ie get the frame that belongs to the browsing context
+    BiDiContextF {context :: BrowsingContext}
+  deriving
+    ( -- | WithOptions {base :: Locator, options :: [LocatorDirectives]}
+      Show,
+      Eq,
+      Ord
+    )
+  -}
+
 data LocatorFinal
   = 
     CSSF {value :: Text}
@@ -189,14 +212,14 @@ convertLoc proto defLoc loc =
       | T.null name || T.null value ->
           failLocator "Attribute locator has empty name or value"
       | otherwise ->
-          Right $ Leaf $ XPathID {tagM = Nothing, body = attrPredX name value matchType caseSensitivity}
+          leaf $ XPathID {tagM = Nothing, body = attrPredX name value matchType caseSensitivity}
     Default {value} ->
       let resolved = defLoc value
       in if hasDefault resolved
         then failLocator "Default locator cannot resolve to another Default"
         else convertLoc proto defLoc resolved
     BiDiContext {context} -> case proto of
-      BiDi -> Right $ Leaf $ BiDiContextI {context}
+      BiDi -> leaf $ BiDiContextI {context}
       HTTP -> failLocator "BiDiContext locator cannot be used with HTTP protocol"
     Contains {container, contained} ->
       ContainsI <$> convertLoc proto defLoc container <*> convertLoc proto defLoc contained
@@ -207,17 +230,19 @@ convertLoc proto defLoc loc =
     PostFilter {predicate, locator} ->
       PostFilterI predicate <$> convertLoc proto defLoc locator
     -- simple pass through conversions / xpath
-    CSS {value} -> Right $ Leaf $ CSSI {value}
-    XPath {value} -> Right $ Leaf $ XPathI {value}
-    AllElms -> Right $ Leaf $ XPathID {tagM = Nothing, body = "true()"}
-    ID {value} -> Right $ Leaf $ XPathID {tagM = Nothing, body = "@id='" <> value <> "'"}
-    Class {value, matchType, caseSensitivity} ->
-      Right $ Leaf $ XPathID {tagM = Nothing, body = classPredX value matchType caseSensitivity}
-    Tag {value} -> Right $ Leaf $ TagI {tag = value}
-    Role {role} -> Right $ Leaf $ RoleI {xpath = roleToXPath role}
-    InnerText {value, matchType, caseSensitivity, maxDepth} ->
-      Right $ Leaf $ InnerTextI {value, matchType, caseSensitivity, maxDepth}
+    _ -> leaf $ case loc of
+          CSS {value} -> CSSI {value}
+          XPath {value} -> XPathI {value}
+          AllElms -> XPathID {tagM = Nothing, body = "true()"}
+          ID {value} -> XPathID {tagM = Nothing, body = "@id='" <> value <> "'"}
+          Class {value, matchType, caseSensitivity} ->
+            XPathID {tagM = Nothing, body = classPredX value matchType caseSensitivity}
+          Tag {value} -> TagI {tag = value}
+          Role {role} -> RoleI {xpath = roleToXPath role}
+          InnerText {value, matchType, caseSensitivity, maxDepth} ->
+            InnerTextI {value, matchType, caseSensitivity, maxDepth}
   where 
+    leaf = Right . Leaf
     failLocator msg = Left $ MkInvalidLocator loc msg
 
 -----------------------------------------------------------------------------
@@ -665,6 +690,7 @@ implicitRoleXPath =
     Table -> "table"
     Term -> "dt"
     Textbox -> "input[not(@type) or @type='text' or @type='email' or @type='tel' or @type='url' or @type='search'] or self::textarea"
+
 
 innerTextToXPath :: Text -> CaseSensitivity -> MatchType -> Maybe Word8 -> Text
 innerTextToXPath val cs matchType mMaxDepth =
