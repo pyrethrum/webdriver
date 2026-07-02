@@ -19,7 +19,7 @@ import WebDriverPreCore.Extended.BiDi.Base.Protocol (BrowsingContext)
 import WebDriverPreCore.Extended.Locators.Internal (
   Locator,
   CompoundLocator,
-  LocatorFinal(..),
+  HttpLoc(..),
   Predicate,
   RoleLocator,
   MatchType,
@@ -125,7 +125,7 @@ prepareSimplify :: (Text -> Locator) -> Protocol -> Locator -> Either InvalidLoc
 prepareSimplify defLoc proto l =
   simplify <$> LI.transform proto defLoc l
   where
-    simplify :: CompoundLocator LocatorFinal -> ReducedLoc
+    simplify :: CompoundLocator HttpLoc -> ReducedLoc
     simplify = \case
       LI.Leaf (CSSF {..}) -> Leaf CSS {..}
       LI.Leaf (XPathF {..}) -> Leaf XPath {..}

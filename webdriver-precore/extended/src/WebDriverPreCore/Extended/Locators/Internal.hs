@@ -5,7 +5,7 @@
 module WebDriverPreCore.Extended.Locators.Internal (
     CompoundLocator(..),
     Locator(..),
-    LocatorFinal(..),
+    HttpLoc(..),
     Predicate(..),
     InvalidLocator(..),
     Protocol(..),
@@ -122,9 +122,9 @@ data LocatorI
         caseSensitivity :: CaseSensitivity,
         maxDepth :: Maybe Word8
       }
-  | -- exclusive
-    -- browsingContextId -> elementId ie get the frame that belongs to the browsing context
-    BiDiContextI {context :: BrowsingContext}
+  -- | -- exclusive
+  --   -- browsingContextId -> elementId ie get the frame that belongs to the browsing context
+  --   BiDiContextI {context :: BrowsingContext}
   deriving
     ( -- | WithOptions {base :: Locator, options :: [LocatorDirectives]}
       Show,
@@ -155,7 +155,7 @@ data LocatorFinal
     )
   -}
 
-data LocatorFinal
+data HttpLoc
   = 
     CSSF {value :: Text}
   | XPathF {value :: Text} 
@@ -166,9 +166,6 @@ data LocatorFinal
         caseSensitivity :: CaseSensitivity,
         maxDepth :: Maybe Word8
       }
-  | -- exclusive
-    -- browsingContextId -> elementId ie get the frame that belongs to the browsing context
-    BiDiContextF {context :: BrowsingContext}
   deriving
     ( -- | WithOptions {base :: Locator, options :: [LocatorDirectives]}
       Show,
@@ -185,9 +182,9 @@ data CompoundLocator a
   | PostFilterI {predicate :: Predicate, locator :: CompoundLocator a}
   deriving (Show, Eq, Ord, Functor, Foldable, Traversable)
 
-transform :: Protocol -> (Text -> Locator) -> Locator -> Either InvalidLocator (CompoundLocator LocatorFinal)
-transform proto defLoc loc = do
-  locI <- convertLoc proto defLoc loc
+transform :: (Text -> Locator) -> Locator -> Either InvalidLocator (CompoundLocator HttpLoc)
+transform defLoc loc = do
+  locI <- toIntermediate defLoc loc
   simplified <- simplify locI
   Right $ derivedAndTagsToXPath simplified
   where
@@ -204,8 +201,8 @@ transform proto defLoc loc = do
 -- Phase 1: Initial conversion (Locator → CompoundLocator LocatorI)
 -----------------------------------------------------------------------------
 
-convertLoc :: Protocol -> (Text -> Locator) -> Locator -> Either InvalidLocator (CompoundLocator LocatorI)
-convertLoc proto defLoc loc = 
+toIntermediate :: (Text -> Locator) -> Locator -> Either InvalidLocator (CompoundLocator LocatorI)
+toIntermediate defLoc loc = 
   case loc of
     -- fallable conversions
     Attribute {name, value, matchType, caseSensitivity}
@@ -217,18 +214,17 @@ convertLoc proto defLoc loc =
       let resolved = defLoc value
       in if hasDefault resolved
         then failLocator "Default locator cannot resolve to another Default"
-        else convertLoc proto defLoc resolved
-    BiDiContext {context} -> case proto of
-      BiDi -> leaf $ BiDiContextI {context}
-      HTTP -> failLocator "BiDiContext locator cannot be used with HTTP protocol"
+        else toIntermediate defLoc resolved
+    BiDiContext {} -> 
+      failLocator "BiDiContext locator cannot be used with HTTP protocol"
     Contains {container, contained} ->
-      ContainsI <$> convertLoc proto defLoc container <*> convertLoc proto defLoc contained
+      ContainsI <$> toIntermediate defLoc container <*> toIntermediate defLoc contained
     All {elms} ->
-      AllI <$> traverse (convertLoc proto defLoc) elms
+      AllI <$> traverse (toIntermediate defLoc) elms
     Any {elms} ->
-      AnyI <$> traverse (convertLoc proto defLoc) elms
+      AnyI <$> traverse (toIntermediate defLoc) elms
     PostFilter {predicate, locator} ->
-      PostFilterI predicate <$> convertLoc proto defLoc locator
+      PostFilterI predicate <$> toIntermediate defLoc locator
     -- simple pass through conversions / xpath
     _ -> leaf $ case loc of
           CSS {value} -> CSSI {value}
@@ -421,11 +417,11 @@ unwrapSingletonCombinators = mapCompoundLocBottomUp $ \case
 -- Phase 3: Final conversion
 -----------------------------------------------------------------------------
 
-derivedAndTagsToXPath :: CompoundLocator LocatorI -> CompoundLocator LocatorFinal
+derivedAndTagsToXPath :: CompoundLocator LocatorI -> CompoundLocator HttpLoc
 derivedAndTagsToXPath = convertContains . convertTagsXPathIDs
 
 -- | Convert LocatorI leaves to LocatorFinal leaves — uses 'fmap' via 'Functor'.
-convertTagsXPathIDs :: CompoundLocator LocatorI -> CompoundLocator LocatorFinal
+convertTagsXPathIDs :: CompoundLocator LocatorI -> CompoundLocator HttpLoc
 convertTagsXPathIDs = fmap $ \case
   XPathID {tagM, body} ->
     XPathF {value = "//" <> fromMaybe "*" tagM <> body}
@@ -434,11 +430,10 @@ convertTagsXPathIDs = fmap $ \case
   XPathI {..} -> XPathF {..}
   RoleI {..} -> RoleF {..}
   InnerTextI {..} -> InnerTextF {..}
-  BiDiContextI {..} -> BiDiContextF {..}
 
 
 -- | Merge adjacent ContainsI (XPathI, XPathI) into a single XPathI leaf.
-convertContains :: CompoundLocator LocatorFinal -> CompoundLocator LocatorFinal
+convertContains :: CompoundLocator HttpLoc -> CompoundLocator HttpLoc
 convertContains = mapCompoundLocBottomUp $ \case
   ContainsI (Leaf (XPathF {value = containerXPath})) (Leaf (XPathF {value = containedXPath})) ->
     Leaf $ XPathF {value = containerXPath <> containedXPath}
