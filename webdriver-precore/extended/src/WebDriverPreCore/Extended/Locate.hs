@@ -443,7 +443,6 @@ locateElmsUnchecked actions leafCardinality rolesSecondPass loc =
       containedResults <- traverse (\containerId -> locateElmsUnchecked (setBaseElement (Just containerId) actions) FindAll rolesSecondPass subLoc) containerIds
       pure $ join containedResults
 
-
 httpLocateSingleton ::
   forall m.
   (Monad m) =>

@@ -15,10 +15,8 @@ module WebDriverPreCore.Extended.Locators.Internal (
     MatchType (..),
     CaseSensitivity(..),
     RoleLocator(..),
-
     roleLabelText,
     transform,
-
 ) where
 
 import Control.Exception (Exception)
@@ -555,7 +553,6 @@ mapCompoundLocBottomUpM f = recurse >=> f
       PostFilterI p l -> PostFilterI p <$> mapf l
       leaf@(Leaf _) -> pure leaf
  
-
 -- | Map over a 'CompoundLocator' tree bottom-up.
 --   Expressed via 'mapCompoundLocBottomUpM' using the 'Identity' monad.
 mapCompoundLocBottomUp :: (CompoundLocator a -> CompoundLocator a) -> CompoundLocator a -> CompoundLocator a
@@ -724,9 +721,6 @@ implicitRoleXPath =
     Term -> "dt"
     Textbox -> "input[not(@type) or @type='text' or @type='email' or @type='tel' or @type='url' or @type='search'] or self::textarea"
 
-
-
-
 data Protocol = HTTP | BiDi deriving (Show, Eq)
 
 data InvalidLocator = MkInvalidLocator {loc :: Locator, description :: Text} deriving (Show, Eq, Ord)
@@ -750,13 +744,9 @@ foldLoc f acc loc =
     acc' = f acc loc -- Apply function to parent first
     foldList = foldl' (foldLoc f) acc' . toList
 
-
-
 -- | Returns 'True' if the predicate holds for any node in the locator tree.
 anyLoc :: (Locator -> Bool) -> Locator -> Bool
 anyLoc p = foldLoc (\acc loc -> acc || p loc) False
-
-
 
 -- | Returns 'True' if a 'Default' constructor appears anywhere within the locator tree.
 hasDefault :: Locator -> Bool
@@ -765,8 +755,6 @@ hasDefault =
     \case 
        Default {} -> True
        _ -> False
-
-
 
 upperAlpha :: Text
 upperAlpha = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
