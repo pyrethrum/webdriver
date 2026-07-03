@@ -157,10 +157,10 @@ data LocatorFinal
 
 data HttpLoc
   = 
-    CSSF {value :: Text}
-  | XPathF {value :: Text} 
-  | RoleF {xpath :: Text}
-  | InnerTextF
+    CSSHttp {value :: Text}
+  | XPathHttp {value :: Text} 
+  | RoleHttp {xpath :: Text}
+  | InnerTextHttp
       { value :: Text,
         matchType :: MatchType,
         caseSensitivity :: CaseSensitivity,
@@ -424,19 +424,19 @@ derivedAndTagsToXPath = convertContains . convertTagsXPathIDs
 convertTagsXPathIDs :: CompoundLocator LocatorI -> CompoundLocator HttpLoc
 convertTagsXPathIDs = fmap $ \case
   XPathID {tagM, body} ->
-    XPathF {value = "//" <> fromMaybe "*" tagM <> body}
-  TagI {tag} -> XPathF {value = "//" <> tag}
-  CSSI {..} -> CSSF {..}
-  XPathI {..} -> XPathF {..}
-  RoleI {..} -> RoleF {..}
-  InnerTextI {..} -> InnerTextF {..}
+    XPathHttp {value = "//" <> fromMaybe "*" tagM <> body}
+  TagI {tag} -> XPathHttp {value = "//" <> tag}
+  CSSI {..} -> CSSHttp {..}
+  XPathI {..} -> XPathHttp {..}
+  RoleI {..} -> RoleHttp {..}
+  InnerTextI {..} -> InnerTextHttp {..}
 
 
 -- | Merge adjacent ContainsI (XPathI, XPathI) into a single XPathI leaf.
 convertContains :: CompoundLocator HttpLoc -> CompoundLocator HttpLoc
 convertContains = mapCompoundLocBottomUp $ \case
-  ContainsI (Leaf (XPathF {value = containerXPath})) (Leaf (XPathF {value = containedXPath})) ->
-    Leaf $ XPathF {value = containerXPath <> containedXPath}
+  ContainsI (Leaf (XPathHttp {value = containerXPath})) (Leaf (XPathHttp {value = containedXPath})) ->
+    Leaf $ XPathHttp {value = containerXPath <> containedXPath}
   other -> other
 
 -----------------------------------------------------------------------------

@@ -24,8 +24,7 @@ import WebDriverPreCore.Extended.Locators.Internal (
   RoleLocator,
   MatchType,
   CaseSensitivity,
-  InvalidLocator(..), 
-  Protocol)
+  InvalidLocator(..))
 import WebDriverPreCore.Extended.Locators.Internal qualified as LI
 import Prelude
 
@@ -121,17 +120,16 @@ isXPath = \case
   Leaf XPath {} -> True
   _ -> False
 
-prepareSimplify :: (Text -> Locator) -> Protocol -> Locator -> Either InvalidLocator ReducedLoc
-prepareSimplify defLoc proto l =
-  simplify <$> LI.transform proto defLoc l
+prepareSimplify :: (Text -> Locator) ->  Locator -> Either InvalidLocator ReducedLoc
+prepareSimplify defLoc l =
+  simplify <$> LI.transform defLoc l
   where
     simplify :: CompoundLocator HttpLoc -> ReducedLoc
     simplify = \case
-      LI.Leaf (CSSF {..}) -> Leaf CSS {..}
-      LI.Leaf (XPathF {..}) -> Leaf XPath {..}
-      LI.Leaf (RoleF {xpath}) -> Leaf XPath {value = xpath}
-      LI.Leaf (InnerTextF {..}) -> Leaf . BiDiNative $ InnerText {..}
-      LI.Leaf (BiDiContextF {..}) -> BiDiOnlyLeaf BiDiContext {..}
+      LI.Leaf (CSSHttp {..}) -> Leaf CSS {..}
+      LI.Leaf (XPathHttp {..}) -> Leaf XPath {..}
+      LI.Leaf (RoleHttp {xpath}) -> Leaf XPath {value = xpath}
+      LI.Leaf (InnerTextHttp {..}) -> Leaf . BiDiNative $ InnerText {..}
       LI.PostFilterI {predicate, locator} -> PostFilterLoc $ PostFilter {predicate, locator = simplify locator}
       LI.ContainsI {container, contained} -> Combintor $ Contains {container = simplify container, contained = simplify contained}
       LI.AllI {elms} -> Combintor . All $ simplify <$> elms

@@ -32,7 +32,7 @@ import Data.Text qualified as T
 import GHC.Stack (HasCallStack)
 
 import WebDriverPreCore.Extended.HTTP.Base.Protocol as HTTPB (ElementId)
-import WebDriverPreCore.Extended.Locators.Internal (Locator, Protocol (..), RoleLocator (..), innerTextToXPath, roleToXPath)
+import WebDriverPreCore.Extended.Locators.Internal (Locator, Protocol (..), RoleLocator (..))
 import WebDriverPreCore.Extended.Locators.Internal qualified as LI
 import WebDriverPreCore.Extended.Protocol (WebDriverException)
 import WebDriverPreCore.Extended.ReducedLocator.Internal as RL
@@ -324,7 +324,7 @@ prepareRun MkLocParams{trace, defaultLoc, catch} locateActn locator =
        completeLocException locator . runLoc $ reduced
   where 
     preparedLoc :: Either LI.InvalidLocator ReducedHttpLoc
-    preparedLoc = prepareSimplify defaultLoc HTTP locator >>= toHttpLocator
+    preparedLoc = prepareSimplify defaultLoc locator >>= toHttpLocator
 
     runLoc :: ReducedHttpLoc -> m (Either PreLocateException [ElementId])
     runLoc loc =
@@ -392,13 +392,14 @@ locateLeaf prms rolesSecondPass lc loc = do
           NoRoleJSSecondPass -> simpleLocate
           DoRoleJSSecondPass -> do 
             sr <- simpleLocate
-            if lc == FindFirst then 
-              case sr of
-                [] -> roleToXPathHttpSecondPass prms lc role
-                [x] -> pure [x]
-                x:_ -> pure [x]
-              else
-               (sr <>) <$> roleToXPathHttpSecondPass prms lc role
+            case lc of
+              FindFirst ->
+                case sr of
+                  [] -> roleToXPathHttpSecondPass prms lc role
+                  [x] -> pure [x]
+                  x:_ -> pure [x]
+              FindAll ->
+                (sr <>) <$> roleToXPathHttpSecondPass prms lc role
       InnerText {} -> simpleLocate
 
 chkRefilterSingleton ::
