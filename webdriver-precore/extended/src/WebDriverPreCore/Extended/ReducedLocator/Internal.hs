@@ -32,6 +32,7 @@ data LeafLoc
   = -- universal
     CSS {value :: Text}
   | XPath {value :: Text}
+  | Role {roleSpec :: RoleLocator, xpath :: Text}
   -- | -- bidi native locators that can be approximated in HTTP
   --   BiDiNative {loc :: BiDiNativeLoc}
   deriving

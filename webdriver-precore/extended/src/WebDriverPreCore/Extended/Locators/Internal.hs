@@ -115,7 +115,7 @@ data LocatorI
       body :: Text
       } 
   | TagI {tag :: Text} 
-  | RoleI {xpath :: Text}
+  | RoleI {roleSpec :: RoleLocator, xpath :: Text}
   | InnerTextI
       { value :: Text,
         matchType :: MatchType,
@@ -159,7 +159,7 @@ data HttpLoc
   = 
     CSSHttp {value :: Text}
   | XPathHttp {value :: Text} 
-  | RoleHttp {xpath :: Text}
+  | RoleHttp {roleSpec :: RoleLocator, xpath :: Text}
   | InnerTextHttp
       { value :: Text,
         matchType :: MatchType,
@@ -225,7 +225,7 @@ toIntermediate defLoc loc =
       AnyI <$> traverse (toIntermediate defLoc) elms
     PostFilter {predicate, locator} ->
       PostFilterI predicate <$> toIntermediate defLoc locator
-    -- simple pass through conversions / xpath
+    -- leaf conversions
     _ -> leaf $ case loc of
           CSS {value} -> CSSI {value}
           XPath {value} -> XPathI {value}
@@ -234,7 +234,7 @@ toIntermediate defLoc loc =
           Class {value, matchType, caseSensitivity} ->
             XPathID {tagM = Nothing, body = classPredX value matchType caseSensitivity}
           Tag {value} -> TagI {tag = value}
-          Role {role} -> RoleI {xpath = roleToXPath role}
+          Role {role} -> RoleI {roleSpec = role, xpath = roleToXPath role}
           InnerText {value, matchType, caseSensitivity, maxDepth} ->
             InnerTextI {value, matchType, caseSensitivity, maxDepth}
   where 
@@ -621,7 +621,6 @@ roleToXPath = \case
   RoleName {name} -> "//*[not(@role='presentation' or @role='none')]" <> name' name
   where
     role' = roleTypeXPathContent True 
-
     name' n =
       "["
         <> intercalate
