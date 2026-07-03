@@ -19,7 +19,6 @@ import WebDriver.Effectful.HTTP.Base.Actions (navigateTo)
 import WebDriverPreCore.Extended.HTTP.Base.Protocol (URL)
 import WebDriverPreCore.Extended.Locate qualified as L
 import WebDriverPreCore.Extended.Locators
-import WebDriverPreCore.Extended.Locators.Internal (CaseSensitivity (..))
 import WebDriverPreCore.Test.TestData (fileUrl)
 import Prelude
 import System.Environment (withArgs)

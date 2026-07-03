@@ -19,11 +19,9 @@ where
 import Control.Exception (Exception)
 import Control.Monad (foldM, join)
 import Control.Monad.IO.Class (MonadIO, liftIO)
-import Data.Aeson as A (Result (..), Value (Bool), fromJSON, toJSON)
+import Data.Aeson as A (Result (..), fromJSON, toJSON, Value)
 import Data.IORef (IORef, modifyIORef', newIORef, readIORef)
-import Data.Bool (bool)
 import Data.Containers.ListUtils (nubOrd)
-import Data.Function ((&))
 import Data.List qualified as LST
 import Data.List.NonEmpty (NonEmpty (..), toList)
 import Data.Maybe (catMaybes)
@@ -32,7 +30,7 @@ import Data.Text qualified as T
 import GHC.Stack (HasCallStack)
 
 import WebDriverPreCore.Extended.HTTP.Base.Protocol as HTTPB (ElementId)
-import WebDriverPreCore.Extended.Locators.Internal (Locator, Protocol (..), RoleLocator (..))
+import WebDriverPreCore.Extended.Locators.Internal (Locator, RoleLocator (..))
 import WebDriverPreCore.Extended.Locators.Internal qualified as LI
 import WebDriverPreCore.Extended.Protocol (WebDriverException)
 import WebDriverPreCore.Extended.ReducedLocator.Internal as RL
@@ -551,6 +549,7 @@ toSelector :: LeafLoc -> Selector
 toSelector = \case
   RL.CSS {value} -> HTTPP.CSS value
   RL.XPath {value} -> HTTPP.XPath value
+  RL.Role {xpath} -> HTTPP.XPath xpath
   -- shim BiDiNative locators
   -- BiDiNative sl -> case sl of
   --   Role {role} -> HTTPP.XPath $ roleToXPath role

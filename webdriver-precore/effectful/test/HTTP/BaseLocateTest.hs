@@ -28,7 +28,6 @@ import WebDriver.Effectful.HTTP.Base.Actions
 import WebDriverPreCore.Extended.HTTP.Base.Protocol (ElementId, URL)
 import WebDriverPreCore.Extended.Locate qualified as L
 import WebDriverPreCore.Extended.Locators
-import WebDriverPreCore.Extended.Locators.Internal (CaseSensitivity (..))
 import WebDriverPreCore.Test.TestData
 
 -- >>> _eval tests

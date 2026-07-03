@@ -180,27 +180,27 @@ subscribe sa callSubscribe subscription = do
           xs -> Just xs
 
     mkRegistration :: Subscription m -> SocketSubscription m
-    mkRegistration = \case
+    mkRegistration sub = case sub of
       P.SingleSubscription {subscriptionType, action} ->
         B.SingleSubscription
           { subscriptionType = toSocketSubType subscriptionType,
             action
           }
-      s' -> case s' of
-        P.MultiSubscription {nAction} ->
-          B.MultiSubscription
-            { subscriptionTypes = socketSubtypes s',
+      _ -> case sub of
+        P.MultiSubscription {nAction, subscriptionTypes} ->
+          B.MultiSubscription {
+              subscriptionTypes = socketSubtypes subscriptionTypes ,
               nAction = \v -> case parseEither parseJSON v of
                 Left _ -> pure ()
                 Right r -> nAction r
             }
-        P.OffSpecSubscription {nValueAction} ->
+        P.OffSpecSubscription {nValueAction, subscriptionTypes} ->
           B.MultiSubscription
-            { subscriptionTypes = socketSubtypes s',
+            { subscriptionTypes = socketSubtypes subscriptionTypes,
               nAction = nValueAction
             }
       where
-        socketSubtypes s = Set.fromList $ toSocketSubType <$> s.subscriptionTypes
+        socketSubtypes = Set.fromList . fmap toSocketSubType 
 
     dummySubId = MkSocketSubscriptionId "dummy"
 

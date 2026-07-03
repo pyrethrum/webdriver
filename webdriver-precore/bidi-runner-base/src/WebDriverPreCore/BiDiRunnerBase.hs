@@ -39,7 +39,6 @@ import Data.ByteString.Lazy qualified as BL
 import Data.Foldable (traverse_)
 import Data.Function ((&))
 import Data.Functor (($>))
-import Data.Maybe (fromMaybe)
 import Data.Set qualified as Set
 import Data.Text (Text, pack, take, unpack)
 import Data.Text.Encoding (decodeUtf8)

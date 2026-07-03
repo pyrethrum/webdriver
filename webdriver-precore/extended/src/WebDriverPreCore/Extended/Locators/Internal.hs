@@ -22,12 +22,11 @@ module WebDriverPreCore.Extended.Locators.Internal (
 ) where
 
 import Control.Exception (Exception)
-import Data.Foldable1 (foldl1')
 import Data.Functor.Identity (Identity (..))
-import Data.List (nub, uncons)
+import Data.List (nub)
 import Data.List qualified as LST
-import Data.List.NonEmpty (NonEmpty (..), groupBy, sortBy, toList)
-import Data.Maybe (fromJust, fromMaybe, catMaybes, isJust)
+import Data.List.NonEmpty (NonEmpty (..), toList)
+import Data.Maybe (fromMaybe, catMaybes, isJust)
 import Data.Text (Text, intercalate, pack, splitOn, toLower, unpack)
 import Data.Text qualified as T
 import Data.Word (Word8)
@@ -726,297 +725,13 @@ implicitRoleXPath =
     Textbox -> "input[not(@type) or @type='text' or @type='email' or @type='tel' or @type='url' or @type='search'] or self::textarea"
 
 
-innerTextToXPath :: Text -> CaseSensitivity -> MatchType -> Maybe Word8 -> Text
-innerTextToXPath val cs matchType mMaxDepth =
-  "//*" <> depthPred <> "[" <> hiddenPred <> " and " <> textPred <> "]"
-  where
-    normalisedText = case cs of
-      CaseInsensitive -> "translate(normalize-space(.), '" <> upperAlpha <> "', '" <> lowerAlpha <> "')"
-      CaseSensitive -> "normalize-space(.)"
 
-    matchVal = case cs of
-      CaseInsensitive -> toLower val
-      CaseSensitive -> val
-
-    textPred = case matchType of
-      Full -> normalisedText <> "='" <> matchVal <> "'"
-      Partial -> "contains(" <> normalisedText <> ", '" <> matchVal <> "')"
-      Starts -> "starts-with(" <> normalisedText <> ", '" <> matchVal <> "')"
-      Wildcard -> buildWildcardPredicate normalisedText matchVal
-
-    buildWildcardPredicate normText val' =
-      let parts = filter (not . T.null) $ splitOn "*" val'
-          startsWithWildcard = "*" `T.isPrefixOf` val'
-          endsWithWildcard = "*" `T.isSuffixOf` val'
-       in case parts of
-            [] -> "true()" -- "*" or "**" etc. matches everything
-            [single]
-              | startsWithWildcard && endsWithWildcard -> "contains(" <> normText <> ", '" <> single <> "')"
-              | startsWithWildcard -> "substring(" <> normText <> ", string-length(" <> normText <> ") - string-length('" <> single <> "') + 1) = '" <> single <> "'"
-              | endsWithWildcard -> "starts-with(" <> normText <> ", '" <> single <> "')"
-              | otherwise -> normText <> "='" <> single <> "'" -- No wildcards
-            _ ->
-              -- For multiple parts, use substring-after to ensure order
-              let buildPred (preds, currentText) (idx, part) =
-                    let predicate =
-                          if idx == 0 && not startsWithWildcard
-                            then "starts-with(" <> currentText <> ", '" <> part <> "')"
-                            else "contains(" <> currentText <> ", '" <> part <> "')"
-                        nextText = "substring-after(" <> currentText <> ", '" <> part <> "')"
-                     in (preds <> [predicate], nextText)
-                  (predicates, _) = foldl' buildPred ([], normText) (zip [0 ..] parts)
-               in intercalate " and " predicates
-
-    -- Partial visibility filter: catches @hidden, aria-hidden, and inline styles only.
-    -- Cannot detect hiding via CSS classes or ancestor cascade.
-    hiddenPred =
-      "not(@hidden)"
-        <> " and not(@aria-hidden='true')"
-        <> " and not(contains(@style,'display:none'))"
-        <> " and not(contains(@style,'visibility:hidden'))"
-
-    depthPred = maybe "" (\d -> "[count(ancestor::*)<=" <> pack (show d) <> "]") mMaxDepth
 
 data Protocol = HTTP | BiDi deriving (Show, Eq)
 
 data InvalidLocator = MkInvalidLocator {loc :: Locator, description :: Text} deriving (Show, Eq, Ord)
 
 instance Exception InvalidLocator
-
-prepare :: (Text -> Locator) -> Protocol -> Locator -> Either InvalidLocator Locator
-prepare defLoc proto =
-  toEither . sortGroupChildLocs defLoc proto . flattenLoc
-  where
-    toEither :: Locator -> Either InvalidLocator Locator
-    toEither l = case classify defLoc proto l of
-      Invalid err -> Left err
-      _ -> Right l
-
-data Classification = IsXPath | IsXPathConvertable | IsCSS | IsBiDi | Invalid InvalidLocator | IsMixed deriving (Show, Eq, Ord)
-
-mergeClassification :: Classification -> Classification -> Classification
-mergeClassification i ii
-  -- if equal return that info
-  | i == ii = i
-  -- if either invalid then invalid (first)
-  | invalid i = i
-  | invalid ii = ii
-  -- else mixed
-  | otherwise = IsMixed
-  where
-    invalid = \case
-      Invalid _ -> True
-      _ -> False
-
-data LocPlus = MkLocPlus {accLoc :: Locator, info :: Classification}
-
-classify :: (Text -> Locator) -> Protocol -> Locator -> Classification
-classify defLoc proto =
-  \case
-    CSS {} -> IsCSS
-    XPath {} -> IsXPath
-    AllElms -> IsXPathConvertable
-    ID {} -> IsXPathConvertable
-    Class {} -> IsXPathConvertable
-    Attribute {} -> IsXPathConvertable
-    Tag {} -> IsXPathConvertable
-    d@Default {value} ->
-      let nxtLoc = defLoc value
-          nestedDefault = hasDefault nxtLoc
-       in if nestedDefault
-            then Invalid $ MkInvalidLocator d "Invalid Default locator - Default locator cannot resolve to another Default"
-            else classifyNxt nxtLoc
-    Role {} ->
-      case proto of
-        BiDi -> IsBiDi
-        HTTP -> IsMixed -- requires double shot Xpath + post filter
-    InnerText {} ->
-      case proto of
-        BiDi -> IsBiDi
-        HTTP -> IsMixed -- requires double shot Xpath + post filter
-    c@BiDiContext {} ->
-      case proto of
-        BiDi -> IsBiDi
-        HTTP -> Invalid $ MkInvalidLocator c "BiDiContext locator cannot be used with HTTP protocol"
-    Contains {container, contained} ->
-      mergeClassification (classifyNxt container) (classifyNxt contained)
-    All {elms} -> clasifyElms elms
-    Any {elms} -> clasifyElms elms
-    PostFilter {} -> IsMixed
-  where
-    classifyNxt :: Locator -> Classification
-    classifyNxt = classify defLoc proto
-
-    clasifyElms :: NonEmpty Locator -> Classification
-    clasifyElms = foldl1' mergeClassification . fmap classifyNxt
-
-sortGroupChildLocs :: (Text -> Locator) -> Protocol -> Locator -> Locator
-sortGroupChildLocs defLoc proto =
-  mapLocBottomUp sortGroupChildLocs'
-  where
-    sortGroupChildLocs' :: Locator -> Locator
-    sortGroupChildLocs' l =
-      case l of
-        CSS {} -> l
-        XPath {} -> l
-        AllElms -> l
-        ID {} -> l
-        Class {} -> l
-        Attribute {} -> l
-        Tag {} -> l
-        Default {} -> l
-        Role {} -> l
-        InnerText {} -> l
-        BiDiContext {} -> l
-        Contains {} -> l
-        All {elms} -> All $ sortAndGroup All elms
-        Any {elms} -> Any $ sortAndGroup Any elms
-        PostFilter {} -> l
-      where
-        clasify' = classify defLoc proto
-        sortAndGroup groupCons = regroup groupCons . sortLocList
-
-        sortLocList :: NonEmpty Locator -> NonEmpty Locator
-        sortLocList = sortBy (\a b -> compare (clasify' a) (clasify' b))
-
-        regroup :: (NonEmpty Locator -> Locator) -> NonEmpty Locator -> NonEmpty Locator
-        regroup constr elms =
-          -- as the source is a non-empty list, fromJust is safe here as uncons will always return a head and tail
-          uncurry (:|) . fromJust . uncons $ rewrapGroup <$> grouped
-          where
-            grouped = groupBy (\a b -> clasify' a == clasify' b) elms
-            -- here careful of not ~ may need 2 construcots ???
-            rewrapGroup :: NonEmpty Locator -> Locator
-            rewrapGroup = \case
-              l' :| [] -> l'
-              multi -> constr multi
-
-locatorToXPathPartial :: Locator -> Locator
-locatorToXPathPartial = XPath . toXPathStr
-  where
-    -- \| Convert a Locator to a full XPath expression string.
-    toXPathStr :: Locator -> Text
-    toXPathStr loc = case loc of
-      XPath {value} -> value
-      AllElms -> "//*"
-      ID {value} -> "//*[@id='" <> value <> "']"
-      Class {value, matchType, caseSensitivity} ->
-        "//*[" <> classPred value matchType caseSensitivity <> "]"
-      Attribute {name, value, matchType, caseSensitivity} ->
-        "//*[" <> attrPred name value matchType caseSensitivity <> "]"
-      Tag {value} -> "//" <> value
-      -- Contains: concatenate container and contained XPath — contained's leading // creates a
-      -- descendant-axis step from the container result set, e.g. //form//input.
-      Contains {container, contained} -> toXPathStr container <> toXPathStr contained
-      All {elms} -> "//*[" <> intercalate " and " (toList $ toPred <$> elms) <> "]"
-      Any {elms} -> "//*[" <> intercalate " or " (toList $ toPred <$> elms) <> "]"
-      CSS {} -> locErr loc
-      Default {} -> locErr loc
-      Role {} -> locErr loc
-      InnerText {} -> locErr loc
-      BiDiContext {} -> locErr loc
-      PostFilter {} -> locErr loc
-
-    -- \| Convert a Locator to an XPath predicate expression for use inside [...].
-    --   Combinators are recursively inlined; Parent uses the ancestor:: axis.
-    toPred :: Locator -> Text
-    toPred loc = case loc of
-      XPath {value} ->
-        -- Try to unwrap //*[pred] to get just the inner predicate; fall back to a boolean test.
-        let stripped = T.stripPrefix "//*[" value
-            unwrapped = stripped >>= \s -> if "]" `T.isSuffixOf` s then Just (T.dropEnd 1 s) else Nothing
-         in maybe ("boolean(" <> value <> ")") id unwrapped
-      AllElms -> "true()"
-      ID {value} -> "@id='" <> value <> "'"
-      Class {value, matchType, caseSensitivity} -> classPred value matchType caseSensitivity
-      Attribute {name, value, matchType, caseSensitivity} -> attrPred name value matchType caseSensitivity
-      Tag {value} -> "self::" <> value
-      -- Contains as predicate: "I match contained AND I have an ancestor matching container"
-      Contains {container, contained} ->
-        toPred contained <> " and ancestor::*[" <> toPred container <> "]"
-      All {elms} -> "(" <> intercalate " and " (toList $ toPred <$> elms) <> ")"
-      Any {elms} -> "(" <> intercalate " or " (toList $ toPred <$> elms) <> ")"
-      CSS {} -> locErr loc
-      Default {} -> locErr loc
-      Role {} -> locErr loc
-      InnerText {} -> locErr loc
-      BiDiContext {} -> locErr loc
-      PostFilter {} -> locErr loc
-
-    -- \| XPath predicate for CSS class matching.
-    --   Full uses the space-padding token trick to match whole class names.
-    --   Other match types operate directly on the raw @class attribute value.
-    classPred :: Text -> MatchType -> CaseSensitivity -> Text
-    classPred val mt cs =
-      let classAttr = applyCS cs "@class"
-          matchVal = lowerIfCI cs val
-       in case mt of
-            Full ->
-              -- Pad the class attribute with spaces so each token is surrounded by spaces,
-              -- then check for ' token '. Case folding applied inside concat.
-              -- normalize-space() collapses multiple spaces and trims leading/trailing whitespace.
-              "contains(concat(' ', normalize-space(" <> classAttr <> "), ' '), ' " <> matchVal <> " ')"
-            Partial -> "contains(" <> classAttr <> ", '" <> matchVal <> "')"
-            Starts -> "starts-with(normalize-space(" <> classAttr <> "), '" <> matchVal <> "')"
-            Wildcard -> wildcardPred classAttr matchVal
-
-    -- \| XPath predicate matching elements that have the named attribute satisfying the condition.
-    --   @name@ is the HTML attribute name (e.g. "href", "data-testid").
-    attrPred :: Text -> Text -> MatchType -> CaseSensitivity -> Text
-    attrPred name val mt cs =
-      let attrExpr = applyCS cs ("@" <> name)
-          matchVal = lowerIfCI cs val
-       in case mt of
-            Full -> attrExpr <> "='" <> matchVal <> "'"
-            Partial -> "contains(" <> attrExpr <> ", '" <> matchVal <> "')"
-            Starts -> "starts-with(" <> attrExpr <> ", '" <> matchVal <> "')"
-            Wildcard -> wildcardPred attrExpr matchVal
-
-    -- \| Wrap an XPath string expression with a translate() call to fold it to lower-case,
-    --   for CaseInsensitive matching.
-    applyCS :: CaseSensitivity -> Text -> Text
-    applyCS CaseSensitive expr = expr
-    applyCS CaseInsensitive expr =
-      "translate(" <> expr <> ", '" <> upperAlpha <> "', '" <> lowerAlpha <> "')"
-
-    lowerIfCI :: CaseSensitivity -> Text -> Text
-    lowerIfCI CaseSensitive v = v
-    lowerIfCI CaseInsensitive v = toLower v
-
-    -- \| Build a wildcard predicate from a normalised text expression and pattern.
-    --   Mirrors the logic in innerTextToXPath's buildWildcardPredicate.
-    wildcardPred :: Text -> Text -> Text
-    wildcardPred normText val =
-      let parts = filter (not . T.null) $ splitOn "*" val
-          startsWithWildcard = "*" `T.isPrefixOf` val
-          endsWithWildcard = "*" `T.isSuffixOf` val
-       in case parts of
-            [] -> "true()" -- "*" or "**" etc. matches everything
-            [single]
-              | startsWithWildcard && endsWithWildcard ->
-                  "contains(" <> normText <> ", '" <> single <> "')"
-              | startsWithWildcard ->
-                  "substring(" <> normText <> ", string-length(" <> normText <> ") - string-length('" <> single <> "') + 1) = '" <> single <> "'"
-              | endsWithWildcard ->
-                  "starts-with(" <> normText <> ", '" <> single <> "')"
-              | otherwise -> normText <> "='" <> single <> "'"
-            _ ->
-              let buildP (preds, curText) (idx, part) =
-                    let predicate =
-                          if idx == (0 :: Int) && not startsWithWildcard
-                            then "starts-with(" <> curText <> ", '" <> part <> "')"
-                            else "contains(" <> curText <> ", '" <> part <> "')"
-                        nextText = "substring-after(" <> curText <> ", '" <> part <> "')"
-                     in (preds <> [predicate], nextText)
-                  (predicates, _) = foldl' buildP ([], normText) (zip [0 ..] parts)
-               in intercalate " and " predicates
-
-    locErr :: Locator -> a
-    locErr loc =
-      error . unpack $
-        "Locator "
-          <> txt loc
-          <> " conversion not implemented - should not be called - this is a library defect - check classify or locatorToXPathPartial"
 
 -- | Fold over a Locator tree with an accumulator, similar to foldl.
 --   Processes the parent node first (top-down), then recursively folds over children,
@@ -1035,49 +750,13 @@ foldLoc f acc loc =
     acc' = f acc loc -- Apply function to parent first
     foldList = foldl' (foldLoc f) acc' . toList
 
--- | Fold over a Locator tree with an accumulator, bottom-up (post-order).
---   Recursively folds over children first, then applies the function to the current node.
---   Useful when the result at a node depends on the already-folded results of its children.
-foldLocBottomUp :: (a -> Locator -> a) -> a -> Locator -> a
-foldLocBottomUp f acc loc =
-  case loc of
-    Contains p c -> f (foldLocBottomUp f (foldLocBottomUp f acc p) c) loc
-    All locs -> f (foldList locs) loc
-    Any locs -> f (foldList locs) loc
-    -- WithOptions base _ -> f (foldLocBottomUp f acc base) loc
-    PostFilter {} -> f acc loc
-    _ -> f acc loc -- Leaf locators
-  where
-    foldList = foldl' (foldLocBottomUp f) acc . toList
 
--- | Map over a Locator tree bottom-up (post-order).
---   Recursively transforms children first, rebuilds the node with the new children,
---   then applies the function to the reconstructed node.
---   Useful for rewriting or normalising a Locator tree.
-mapLocBottomUp :: (Locator -> Locator) -> Locator -> Locator
-mapLocBottomUp f loc = f $
-  case loc of
-    Contains p c -> Contains (recurse p) (recurse c)
-    All locs -> All $ recurseMap locs
-    Any locs -> Any $ recurseMap locs
-    _ -> loc -- Leaf locators and Predicate
-  where
-    recurse = mapLocBottomUp f
-    recurseMap = fmap (mapLocBottomUp f)
 
 -- | Returns 'True' if the predicate holds for any node in the locator tree.
 anyLoc :: (Locator -> Bool) -> Locator -> Bool
 anyLoc p = foldLoc (\acc loc -> acc || p loc) False
 
--- | Returns 'True' if the locator tree contains any node that is invalid
---   for the given protocol.
-hasInvalidLoc :: (Text -> Locator) -> Protocol -> Locator -> Bool
-hasInvalidLoc defLoc proto =
-  anyLoc
-    ( \l -> case classify defLoc proto l of
-        Invalid _ -> True
-        _ -> False
-    )
+
 
 -- | Returns 'True' if a 'Default' constructor appears anywhere within the locator tree.
 hasDefault :: Locator -> Bool
@@ -1087,39 +766,7 @@ hasDefault =
        Default {} -> True
        _ -> False
 
--- | Recursively flattens and simplifies Match* locators while maintaining logical correctness.
--- Flattens nested Match* of the same type and applies De Morgan's laws where applicable.
-flattenLoc :: Locator -> Locator
-flattenLoc = \case
-  -- Flatten All: All [All [a,b], c] -> All [a,b,c]
-  All locs ->
-    let reduced = flattenLoc <$> locs
-        flattened = concatMap flattenAll reduced
-     in case flattened of
-          [single] -> single
-          (x : xs) -> All (x :| xs)
-          [] -> error "flattenLoc: All produced empty list (impossible with NonEmpty input)"
-    where
-      flattenAll (All xs) = toList xs
-      flattenAll x = [x]
 
-  -- Flatten Any: Any [Any [a,b], c] -> Any [a,b,c]
-  Any locs ->
-    let reduced = flattenLoc <$> locs
-        flattened = concatMap flattenAny reduced
-     in case flattened of
-          [single] -> single
-          (x : xs) -> Any (x :| xs)
-          [] -> error "flattenLoc: Any produced empty list (impossible with NonEmpty input)"
-    where
-      flattenAny (Any xs) = toList xs
-      flattenAny x = [x]
-
-  -- Recurse into other composite locators
-  Contains p c -> Contains (flattenLoc p) (flattenLoc c)
-  -- WithOptions base opts -> WithOptions (flattenLoc base) opts
-  -- Leaf locators and Predicate have no children to recurse into
-  other -> other
 
 upperAlpha :: Text
 upperAlpha = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
