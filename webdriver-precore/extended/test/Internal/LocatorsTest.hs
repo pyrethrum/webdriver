@@ -18,17 +18,9 @@ import WebDriverPreCore.Extended.BiDi.Base.Protocol (BrowsingContext (..))
 import WebDriverPreCore.Extended.Locators hiding (Locator)
 import WebDriverPreCore.Extended.Locators.Internal
   ( CaseSensitivity (..),
-    Classification (..),
     Locator (..),
     Protocol (..),
     RoleLocator (..),
-    classify,
-    flattenLoc,
-    foldLoc,
-    foldLocBottomUp,
-    hasInvalidLoc,
-    prepare,
-    sortGroupChildLocs, InvalidLocator,
   )
 import WebDriverPreCore.Extended.ReducedLocator.Internal qualified as RL
 import Prelude hiding (filter, head, putStrLn)

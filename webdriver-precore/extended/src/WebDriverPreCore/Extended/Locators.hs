@@ -6,7 +6,6 @@ module WebDriverPreCore.Extended.Locators
     AriaRole (..),
     MatchType (..),
     CaseSensitivity(..),
-    displayAriaRole,
 
     -- * Smart Constructors
     css,

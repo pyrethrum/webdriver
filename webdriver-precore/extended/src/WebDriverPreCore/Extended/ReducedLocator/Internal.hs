@@ -2,10 +2,10 @@ module WebDriverPreCore.Extended.ReducedLocator.Internal
   ( ReducedLoc (..),
     ReducedHttpLoc (..),
     LeafLoc (..),
-    BiDiNativeLoc (..),
+    -- BiDiNativeLoc (..),
     CombinatorLoc (..),
     PostFilterLoc (..),
-    BiDiOnlyLeafLoc (..),
+    -- BiDiOnlyLeafLoc (..),
     isXPath,
     toHttpLocator,
     prepareSimplify,
@@ -14,16 +14,16 @@ where
 
 import Data.List.NonEmpty (NonEmpty)
 import Data.Text (Text)
-import Data.Word (Word8)
-import WebDriverPreCore.Extended.BiDi.Base.Protocol (BrowsingContext)
+-- import Data.Word (Word8)
+-- import WebDriverPreCore.Extended.BiDi.Base.Protocol (BrowsingContext)
 import WebDriverPreCore.Extended.Locators.Internal (
   Locator,
   CompoundLocator,
   HttpLoc(..),
   Predicate,
   RoleLocator,
-  MatchType,
-  CaseSensitivity,
+  -- MatchType,
+  -- CaseSensitivity,
   InvalidLocator(..))
 import WebDriverPreCore.Extended.Locators.Internal qualified as LI
 import Prelude
@@ -58,7 +58,7 @@ data CombinatorLoc a
 - role
 - text
 - setbase
--}
+
 data BiDiNativeLoc
   = Role {role :: RoleLocator}
   | InnerText
@@ -78,6 +78,7 @@ data BiDiOnlyLeafLoc
     ( Show,
       Eq
     )
+-}
 
 -- | Simplified/resolved form of 'Locator', where leaf locators expressible
 --   as XPath have been folded in and 'Default' has been resolved.
@@ -133,8 +134,7 @@ prepareSimplify defLoc l =
     simplify = \case
       LI.Leaf (CSSHttp {..}) -> Leaf CSS {..}
       LI.Leaf (XPathHttp {..}) -> Leaf XPath {..}
-      LI.Leaf (RoleHttp {xpath}) -> Leaf XPath {value = xpath}
-      LI.Leaf (InnerTextHttp {..}) -> Leaf . BiDiNative $ InnerText {..}
+      LI.Leaf (RoleHttp {..}) -> Leaf Role {..}
       LI.PostFilterI {predicate, locator} -> PostFilterLoc $ PostFilter {predicate, locator = simplify locator}
       LI.ContainsI {container, contained} -> Combinator $ Contains {container = simplify container, contained = simplify contained}
       LI.AllI {elms} -> Combinator . All $ simplify <$> elms

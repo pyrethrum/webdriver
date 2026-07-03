@@ -36,7 +36,8 @@ import WebDriverPreCore.Extended.Locators.Internal (Locator, Protocol (..), Role
 import WebDriverPreCore.Extended.Locators.Internal qualified as LI
 import WebDriverPreCore.Extended.Protocol (WebDriverException)
 import WebDriverPreCore.Extended.ReducedLocator.Internal as RL
-  ( BiDiNativeLoc (..),
+  (
+    --  BiDiNativeLoc (..),
     CombinatorLoc (..),
     LeafLoc (..),
     ReducedHttpLoc (..),
@@ -386,8 +387,7 @@ locateLeaf prms rolesSecondPass lc loc = do
   case loc of
     RL.CSS {} -> simpleLocate
     RL.XPath {} -> simpleLocate
-    RL.BiDiNative sl -> case sl of
-      Role {role} ->
+    RL.Role {roleSpec, xpath} -> 
         case rolesSecondPass of 
           NoRoleJSSecondPass -> simpleLocate
           DoRoleJSSecondPass -> do 
@@ -395,12 +395,14 @@ locateLeaf prms rolesSecondPass lc loc = do
             case lc of
               FindFirst ->
                 case sr of
-                  [] -> findByRoleIndirect prms lc role
+                  [] -> indirectRoleElms
                   [x] -> pure [x]
                   x:_ -> pure [x]
               FindAll ->
-                (sr <>) <$> findByRoleIndirect prms lc role
-      InnerText {} -> simpleLocate
+                (sr <>) <$> indirectRoleElms
+            where 
+              indirectRoleElms = findByRoleIndirect prms lc roleSpec xpath
+
 
 chkRefilterSingleton ::
   forall m.
@@ -501,7 +503,7 @@ httpLocateSingleton prms@MkLocParams{throw, locOpts = opts}  loc = do
       throwAmbiguous elms = throw (AmbiguousLocator' ("Multiple elements found matching locator: " <> txt elms))
       isUnique = opts.singletonCardinality == Unique
       isRole = case loc of
-        LeafHttp (RL.BiDiNative (Role {})) -> True
+        LeafHttp Role {} -> True
         _ -> False
       secondPassOnInitial = case opts.extendedRoleLocation of
         ExtLocateNever -> NoRoleJSSecondPass
@@ -550,9 +552,9 @@ toSelector = \case
   RL.CSS {value} -> HTTPP.CSS value
   RL.XPath {value} -> HTTPP.XPath value
   -- shim BiDiNative locators
-  BiDiNative sl -> case sl of
-    Role {role} -> HTTPP.XPath $ roleToXPath role
-    InnerText {value, matchType, caseSensitivity, maxDepth} -> HTTPP.XPath $ innerTextToXPath value caseSensitivity matchType maxDepth
+  -- BiDiNative sl -> case sl of
+  --   Role {role} -> HTTPP.XPath $ roleToXPath role
+  --   InnerText {value, matchType, caseSensitivity, maxDepth} -> HTTPP.XPath $ innerTextToXPath value caseSensitivity matchType maxDepth
 
 _locateBiDi :: a
 _locateBiDi = undefined
@@ -566,17 +568,18 @@ findByRoleIndirect ::
   LocParams m ->
   LeafCardinality ->
   RoleLocator ->
+  Text ->
   m [ElementId]
-findByRoleIndirect actions lc roleLoc =
+findByRoleIndirect actions lc roleLoc xpath =
     case roleLoc of
       -- role type has no name / label so nothing to do
       RoleType {} -> pure []
       _ -> do
-        labelledByElms <- findRoleByAriaLabledBy actions lc roleLoc
+        labelledByElms <- findRoleByAriaLabledBy actions lc roleLoc xpath
         if lc == FindFirst && notNull labelledByElms
           then pure labelledByElms
           else do
-            forElms <- findRoleByForLabel actions lc roleLoc
+            forElms <- findRoleByForLabel actions lc roleLoc xpath
             pure . nubOrd $ mconcat [labelledByElms, forElms]
 
 findRoleByAriaLabledBy ::
@@ -585,14 +588,15 @@ findRoleByAriaLabledBy ::
   LocParams m ->
   LeafCardinality ->
   RoleLocator ->
+  Text ->
   m [ElementId]
-findRoleByAriaLabledBy prms lc roleLoc =
+findRoleByAriaLabledBy prms lc roleLoc xpath =
   case roleLoc of
     RoleType {} -> pure []
     _ -> do
       candidates <-
         -- all elms that match role and have an aria-labelledby attribute
-        prms.findElements (HTTPP.XPath $ "//*" <> roleXPath roleLoc <> "[@aria-labelledby]")
+        prms.findElements (HTTPP.XPath $ "//*" <> xpath <> "[@aria-labelledby]")
       r <- filterElms lc labledByMatchesRoleText candidates
       prms.trace $ RoleSecondPassLabeledBy roleLoc r
       pure r
@@ -624,14 +628,15 @@ findRoleByForLabel ::
   LocParams m ->
   LeafCardinality ->
   RoleLocator ->
+  Text ->
   m [ElementId]
-findRoleByForLabel actions lc roleLoc =
+findRoleByForLabel actions lc roleLoc xpath =
   case roleLoc of
     RoleType {} -> pure []
     _ -> do
       candidates <-
         -- has an @id and matches the role name
-        actions.findElements $ HTTPP.XPath $ "//*" <> roleXPath roleLoc <> "[@id]"
+        actions.findElements $ HTTPP.XPath $ "//*" <> xpath <> "[@id]"
       r <- filterElms lc forTxtMatchesId candidates
       actions.trace $ RoleSecondPassFor roleLoc r
       pure r
@@ -649,10 +654,6 @@ findRoleByForLabel actions lc roleLoc =
                   labelText <- actions.getElementText lbl
                   pure $ T.strip labelText == T.strip roleLoc.name
 
-roleXPath :: RoleLocator -> Text
-roleXPath = \case
-  RoleName {} -> "[not(@role='presentation' or @role='none')]"
-  r -> LI.roleTypeXPathContent True r.role
 
 filterElms :: forall m. (Monad m) => LeafCardinality -> (ElementId -> m Bool) -> [ElementId] -> m [ElementId]
 filterElms lc matcher = recurse []

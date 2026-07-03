@@ -116,12 +116,6 @@ data LocatorI
       } 
   | TagI {tag :: Text} 
   | RoleI {roleSpec :: RoleLocator, xpath :: Text}
-  | InnerTextI
-      { value :: Text,
-        matchType :: MatchType,
-        caseSensitivity :: CaseSensitivity,
-        maxDepth :: Maybe Word8
-      }
   -- | -- exclusive
   --   -- browsingContextId -> elementId ie get the frame that belongs to the browsing context
   --   BiDiContextI {context :: BrowsingContext}
@@ -160,12 +154,6 @@ data HttpLoc
     CSSHttp {value :: Text}
   | XPathHttp {value :: Text} 
   | RoleHttp {roleSpec :: RoleLocator, xpath :: Text}
-  | InnerTextHttp
-      { value :: Text,
-        matchType :: MatchType,
-        caseSensitivity :: CaseSensitivity,
-        maxDepth :: Maybe Word8
-      }
   deriving
     ( -- | WithOptions {base :: Locator, options :: [LocatorDirectives]}
       Show,
@@ -236,7 +224,7 @@ toIntermediate defLoc loc =
           Tag {value} -> TagI {tag = value}
           Role {role} -> RoleI {roleSpec = role, xpath = roleToXPath role}
           InnerText {value, matchType, caseSensitivity, maxDepth} ->
-            InnerTextI {value, matchType, caseSensitivity, maxDepth}
+            XPathID {tagM = Nothing, body = innerTextPredX value caseSensitivity matchType maxDepth}
   where 
     leaf = Right . Leaf
     failLocator msg = Left $ MkInvalidLocator loc msg
@@ -429,7 +417,6 @@ convertTagsXPathIDs = fmap $ \case
   CSSI {..} -> CSSHttp {..}
   XPathI {..} -> XPathHttp {..}
   RoleI {..} -> RoleHttp {..}
-  InnerTextI {..} -> InnerTextHttp {..}
 
 
 -- | Merge adjacent ContainsI (XPathI, XPathI) into a single XPathI leaf.
@@ -465,6 +452,59 @@ attrPredX name val mt cs =
        Partial -> "contains(" <> attrExpr <> ", '" <> matchVal <> "')"
        Starts -> "starts-with(" <> attrExpr <> ", '" <> matchVal <> "')"
        Wildcard -> wildcardPredX attrExpr matchVal
+
+-- | XPath predicate for inner text matching (without the leading '//*').
+--   Returns predicate brackets that can be used in XPathID body.
+innerTextPredX :: Text -> CaseSensitivity -> MatchType -> Maybe Word8 -> Text
+innerTextPredX val cs matchType mMaxDepth =
+  depthPred <> "[" <> hiddenPred <> " and " <> textPred <> "]"
+  where
+    normalisedText = case cs of
+      CaseInsensitive -> "translate(normalize-space(.), '" <> upperAlpha <> "', '" <> lowerAlpha <> "')"
+      CaseSensitive -> "normalize-space(.)"
+
+    matchVal = case cs of
+      CaseInsensitive -> toLower val
+      CaseSensitive -> val
+
+    textPred = case matchType of
+      Full -> normalisedText <> "='" <> matchVal <> "'"
+      Partial -> "contains(" <> normalisedText <> ", '" <> matchVal <> "')"
+      Starts -> "starts-with(" <> normalisedText <> ", '" <> matchVal <> "')"
+      Wildcard -> buildWildcardPredicate normalisedText matchVal
+
+    buildWildcardPredicate normText val' =
+      let parts = filter (not . T.null) $ splitOn "*" val'
+          startsWithWildcard = "*" `T.isPrefixOf` val'
+          endsWithWildcard = "*" `T.isSuffixOf` val'
+       in case parts of
+            [] -> "true()" -- "*" or "**" etc. matches everything
+            [single]
+              | startsWithWildcard && endsWithWildcard -> "contains(" <> normText <> ", '" <> single <> "')"
+              | startsWithWildcard -> "substring(" <> normText <> ", string-length(" <> normText <> ") - string-length('" <> single <> "') + 1) = '" <> single <> "'"
+              | endsWithWildcard -> "starts-with(" <> normText <> ", '" <> single <> "')"
+              | otherwise -> normText <> "='" <> single <> "'" -- No wildcards
+            _ ->
+              -- For multiple parts, use substring-after to ensure order
+              let buildPred (preds, currentText) (idx, part) =
+                    let predicate =
+                          if idx == 0 && not startsWithWildcard
+                            then "starts-with(" <> currentText <> ", '" <> part <> "')"
+                            else "contains(" <> currentText <> ", '" <> part <> "')"
+                        nextText = "substring-after(" <> currentText <> ", '" <> part <> "')"
+                     in (preds <> [predicate], nextText)
+                  (predicates, _) = foldl' buildPred ([], normText) (zip [0 ..] parts)
+               in intercalate " and " predicates
+
+    -- Partial visibility filter: catches @hidden, aria-hidden, and inline styles only.
+    -- Cannot detect hiding via CSS classes or ancestor cascade.
+    hiddenPred =
+      "not(@hidden)"
+        <> " and not(@aria-hidden='true')"
+        <> " and not(contains(@style,'display:none'))"
+        <> " and not(contains(@style,'visibility:hidden'))"
+
+    depthPred = maybe "" (\d -> "[count(ancestor::*)<=" <> pack (show d) <> "]") mMaxDepth
 
 applyCSText :: CaseSensitivity -> Text -> Text
 applyCSText CaseSensitive expr = expr
