@@ -377,20 +377,17 @@ locateLeaf prms rolesSecondPass lc loc = do
             where 
               indirectRoleElms = findByRoleIndirect prms lc roleSpec xpath
   where
+    sel :: Selector
     sel = toSelector loc
-    trace' :: [ElementId] -> m ()
-    trace' ids = prms.trace $ LeafLocate sel lc ids
+    
     simpleLocate :: m [ElementId]
-    simpleLocate =
-          ( if (lc == FindFirst) then do
-             elm <- fmap LST.singleton $ prms.findElement sel
-             trace' elm
-             pure elm
-            else do
-              elms <- prms.findElements sel
-              trace' elms
-              pure elms
-          )
+    simpleLocate = do 
+          ids <- case lc of
+            FindFirst -> fmap LST.singleton $ prms.findElement sel
+            FindAll -> prms.findElements sel
+          prms.trace $ LeafLocate sel lc ids
+          pure ids
+          
 
 
 chkRefilterSingleton ::
