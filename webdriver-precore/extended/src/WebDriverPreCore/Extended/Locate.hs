@@ -359,37 +359,35 @@ locateLeaf ::
   m [ElementId]
 locateLeaf prms rolesSecondPass lc loc = do
   case loc of
-    CSSHttp {} -> simpleLocate
-    XPathHttp {} -> simpleLocate
+    CSSHttp {} -> findElms
+    XPathHttp {} -> findElms
     RoleHttp {roleSpec, xpath} -> 
-        case rolesSecondPass of 
-          NoRoleJSSecondPass -> simpleLocate
-          DoRoleJSSecondPass -> do 
-            sr <- simpleLocate
-            case lc of
-              FindFirst ->
-                case sr of
-                  [] -> indirectRoleElms
-                  [x] -> pure [x]
-                  x:_ -> pure [x]
-              FindAll ->
-                (sr <>) <$> indirectRoleElms
-            where 
-              indirectRoleElms = findByRoleIndirect prms lc roleSpec xpath
+      case rolesSecondPass of 
+        NoRoleJSSecondPass -> findElms
+        DoRoleJSSecondPass -> do 
+          sr <- findElms
+          case lc of
+            FindFirst ->
+              case sr of
+                [] -> indirectRoleElms
+                [x] -> pure [x]
+                x:_ -> pure [x]
+            FindAll ->
+              (sr <>) <$> indirectRoleElms
+          where 
+            indirectRoleElms = findByRoleIndirect prms lc roleSpec xpath
   where
-    sel :: Selector
-    sel = toSelector loc
-    
-    simpleLocate :: m [ElementId]
-    simpleLocate = do 
-          ids <- case lc of
-            FindFirst -> fmap LST.singleton $ prms.findElement sel
-            FindAll -> prms.findElements sel
-          prms.trace $ LeafLocate sel lc ids
-          pure ids
+    httpSelector :: Selector
+    httpSelector = toSelector loc
+
+    findElms :: m [ElementId]
+    findElms = do 
+      ids <- case lc of
+        FindFirst -> fmap LST.singleton $ prms.findElement httpSelector
+        FindAll -> prms.findElements httpSelector
+      prms.trace $ LeafLocate httpSelector lc ids
+      pure ids
           
-
-
 chkRefilterSingleton ::
   forall m.
   (Monad m) =>
