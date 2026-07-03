@@ -30,18 +30,9 @@ import Data.Text qualified as T
 import GHC.Stack (HasCallStack)
 
 import WebDriverPreCore.Extended.HTTP.Base.Protocol as HTTPB (ElementId)
-import WebDriverPreCore.Extended.Locators.Internal (Locator, RoleLocator (..))
+import WebDriverPreCore.Extended.Locators.Internal (Locator, RoleLocator (..), CompoundLocator, HttpLoc (..))
 import WebDriverPreCore.Extended.Locators.Internal qualified as LI
 import WebDriverPreCore.Extended.Protocol (WebDriverException)
-import WebDriverPreCore.Extended.ReducedLocator.Internal as RL
-  (
-    --  BiDiNativeLoc (..),
-    CombinatorLoc (..),
-    LeafLoc (..),
-    ReducedHttpLoc (..),
-    prepareSimplify,
-    toHttpLocator
-  )
 import WebDriverPreCore.HTTP.Protocol as HTTPP (Script (..), Selector (..))
 import Prelude as P hiding (log)
 import Utils (txt)
@@ -85,7 +76,7 @@ instance Exception PreLocateException
 
 data WDTrace = Prepared {
   loc :: Locator,
-  reducedLoc :: ReducedHttpLoc
+  reducedLoc :: CompoundLocator HttpLoc
 } |
  PrepareFailed {
   loc :: Locator,
@@ -268,7 +259,7 @@ runHttpAction ::
   HttpLocateOpts ->
   -- | root element
   Maybe ElementId ->
-  (LocParams m -> ReducedHttpLoc -> m [ElementId]) ->
+  (LocParams m -> CompoundLocator HttpLoc -> m [ElementId]) ->
   Locator ->
   m LocateResult
 runHttpAction actions opts mRootId locateAction loc = do
@@ -310,7 +301,7 @@ setBaseElement mRootId act@MkLocParams{..} =
 
 prepareRun :: forall m. Monad m =>
       LocParams m 
-     -> (ReducedHttpLoc -> m [ElementId]) 
+     -> (CompoundLocator HttpLoc -> m [ElementId]) 
      -> Locator 
      -> m (Either LocateException [ElementId])
 prepareRun MkLocParams{trace, defaultLoc, catch} locateActn locator =
@@ -322,10 +313,10 @@ prepareRun MkLocParams{trace, defaultLoc, catch} locateActn locator =
        trace (Prepared locator reduced)
        completeLocException locator . runLoc $ reduced
   where 
-    preparedLoc :: Either LI.InvalidLocator ReducedHttpLoc
-    preparedLoc = prepareSimplify defaultLoc locator >>= toHttpLocator
+    preparedLoc :: Either LI.InvalidLocator (CompoundLocator HttpLoc)
+    preparedLoc = LI.transform defaultLoc locator
 
-    runLoc :: ReducedHttpLoc -> m (Either PreLocateException [ElementId])
+    runLoc :: CompoundLocator HttpLoc -> m (Either PreLocateException [ElementId])
     runLoc loc =
       catch  -- catch PreLocateException thrown via 'throw' (e.g. AmbiguousLocator', ElementNotFound')
         (catch -- catch WebDriverException from underlying HTTP calls
@@ -364,7 +355,7 @@ locateLeaf ::
   LocParams m ->
   RoleJSSecondPass ->
   LeafCardinality ->
-  LeafLoc ->
+  HttpLoc ->
   m [ElementId]
 locateLeaf prms rolesSecondPass lc loc = do
   let 
@@ -383,9 +374,9 @@ locateLeaf prms rolesSecondPass lc loc = do
               pure elms
           )
   case loc of
-    RL.CSS {} -> simpleLocate
-    RL.XPath {} -> simpleLocate
-    RL.Role {roleSpec, xpath} -> 
+    CSSHttp {} -> simpleLocate
+    XPathHttp {} -> simpleLocate
+    RoleHttp {roleSpec, xpath} -> 
         case rolesSecondPass of 
           NoRoleJSSecondPass -> simpleLocate
           DoRoleJSSecondPass -> do 
@@ -427,33 +418,32 @@ locateElmsUnchecked ::
   LocParams m ->
   LeafCardinality ->
   RoleJSSecondPass ->
-  ReducedHttpLoc ->
+  CompoundLocator HttpLoc ->
   m [ElementId]
 locateElmsUnchecked actions leafCardinality rolesSecondPass loc =
   fmap LST.nub $
     case loc of
-      LeafHttp cl ->
+      LI.Leaf cl ->
         locateLeaf actions rolesSecondPass leafCardinality cl
-      CombinatorHttp cb -> case cb of
-        Contains {container, contained} -> do
-          containers <- locate FindAll rolesSecondPass container
-          locateContained containers contained
-        All {elms = locs} -> do
-          let (l :| ls) = locs
-              step acc loc' =
-                if P.null acc
-                  then pure []
-                  else fmap (LST.intersect acc) (locate FindAll rolesSecondPass loc')
-          initial <- locate FindAll rolesSecondPass l
-          foldM step initial ls
-        Any {elms = locs} ->
-          fmap join $
-            traverse (locate FindAll rolesSecondPass) (toList locs)
-      PostFilterHttpLoc {} -> postfilterNotImplemented
+      LI.ContainsI {container, contained} -> do
+        containers <- locate FindAll rolesSecondPass container
+        locateContained containers contained
+      LI.AllI {elms = locs} -> do
+        let (l :| ls) = locs
+            step acc loc' =
+              if P.null acc
+                then pure []
+                else fmap (LST.intersect acc) (locate FindAll rolesSecondPass loc')
+        initial <- locate FindAll rolesSecondPass l
+        foldM step initial ls
+      LI.AnyI {elms = locs} ->
+        fmap join $
+          traverse (locate FindAll rolesSecondPass) (toList locs)
+      LI.PostFilterI {} -> postfilterNotImplemented
   where
     locate = locateElmsUnchecked actions
 
-    locateContained :: [ElementId] -> ReducedHttpLoc -> m [ElementId]
+    locateContained :: [ElementId] -> CompoundLocator HttpLoc -> m [ElementId]
     locateContained containerIds subLoc = do
       containedResults <- traverse (\containerId -> locateElmsUnchecked (setBaseElement (Just containerId) actions) FindAll rolesSecondPass subLoc) containerIds
       pure $ join containedResults
@@ -463,11 +453,11 @@ httpLocateSingleton ::
   forall m.
   (Monad m) =>
   LocParams m ->
-  ReducedHttpLoc ->
+  CompoundLocator HttpLoc ->
   m [ElementId]
 httpLocateSingleton prms@MkLocParams{throw, locOpts = opts}  loc = do
   case loc of
-    LeafHttp ll -> do
+    LI.Leaf ll -> do
       lr <- locateLeaf prms secondPassOnInitial FindAll ll
       filtered <- chkElmsSingleton lr
       case filtered of
@@ -489,9 +479,9 @@ httpLocateSingleton prms@MkLocParams{throw, locOpts = opts}  loc = do
           if isUnique
             then throwAmbiguous elms
             else pure [x]
-    PostFilterHttpLoc {} ->
+    LI.PostFilterI {} ->
       postfilterNotImplemented
-    CombinatorHttp {} ->
+    _ ->
       locateElmsUnchecked prms FindAll secondPassOnInitial loc
   where
 
@@ -501,7 +491,7 @@ httpLocateSingleton prms@MkLocParams{throw, locOpts = opts}  loc = do
       throwAmbiguous elms = throw (AmbiguousLocator' ("Multiple elements found matching locator: " <> txt elms))
       isUnique = opts.singletonCardinality == Unique
       isRole = case loc of
-        LeafHttp Role {} -> True
+        LI.Leaf RoleHttp {} -> True
         _ -> False
       secondPassOnInitial = case opts.extendedRoleLocation of
         ExtLocateNever -> NoRoleJSSecondPass
@@ -524,7 +514,7 @@ httpLocateAll ::
   forall m.
   (Monad m) =>
   LocParams m ->
-  ReducedHttpLoc ->
+  CompoundLocator HttpLoc ->
   m [ElementId]
 httpLocateAll prms loc = do
   let secondPassOnInitial = case prms.locOpts.extendedRoleLocation of
@@ -545,11 +535,11 @@ data SingletonCheckResult
   | Ambiguous {elms :: [ElementId]}
   deriving (Show, Eq, Ord)
 
-toSelector :: LeafLoc -> Selector
+toSelector :: HttpLoc -> Selector
 toSelector = \case
-  RL.CSS {value} -> HTTPP.CSS value
-  RL.XPath {value} -> HTTPP.XPath value
-  RL.Role {xpath} -> HTTPP.XPath xpath
+  CSSHttp {value} -> HTTPP.CSS value
+  XPathHttp {value} -> HTTPP.XPath value
+  RoleHttp {xpath} -> HTTPP.XPath xpath
   -- shim BiDiNative locators
   -- BiDiNative sl -> case sl of
   --   Role {role} -> HTTPP.XPath $ roleToXPath role

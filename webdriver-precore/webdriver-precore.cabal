@@ -360,7 +360,6 @@ library webdriver-precore-extended
       WebDriverPreCore.Extended.Protocol
       --
       WebDriverPreCore.Extended.Locators.Internal
-      WebDriverPreCore.Extended.ReducedLocator.Internal
   other-modules:
       WebDriverPreCore.Extended.HTTP.Internal
       WebDriverPreCore.Extended.BiDi.Internal

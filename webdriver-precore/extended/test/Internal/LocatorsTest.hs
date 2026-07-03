@@ -19,8 +19,10 @@ import WebDriverPreCore.Extended.Locators.Internal
     Locator (..),
     Protocol (..),
     RoleLocator (..),
+    CompoundLocator (..),
+    HttpLoc (..),
+    transform,
   )
-import WebDriverPreCore.Extended.ReducedLocator.Internal qualified as RL
 import Prelude
 
 -- >>> _eval tests
@@ -272,9 +274,9 @@ test_parent_infix_precedence =
 
 
 
-chkSimplifiedLoc :: Text -> Either InvalidLocator RL.ReducedLoc -> Locator -> TestTree
+chkSimplifiedLoc :: Text -> Either InvalidLocator (CompoundLocator HttpLoc) -> Locator -> TestTree
 chkSimplifiedLoc message expected originalLoc =
-  testCase (unpack message) $ RL.prepareSimplify ID originalLoc @?= expected
+  testCase (unpack message) $ transform ID originalLoc @?= expected
 
 -- >>> _eval prepareSimplifyXPathTests
 -- *** Exception: ExitSuccess
@@ -285,31 +287,31 @@ prepareSimplifyXPathTests =
     "prepareSimplify XPaths"
     [ chkSimplifiedLoc
         "CSS text is unchanged"
-        (Right $ RL.Leaf $ RL.CSS "button")
+        (Right $ Leaf $ CSSHttp "button")
         (CSS "button"),
       chkSimplifiedLoc
         "bare XPath is unchanged"
-        (Right $ RL.Leaf $ RL.XPath "//footer")
+        (Right $ Leaf $ XPathHttp "//footer")
         (XPath "//footer"),
       chkSimplifiedLoc
         "XPath already in //*[pred] form is unchanged"
-        (Right . RL.Leaf $ RL.XPath "//*[self::footer]")
+        (Right . Leaf $ XPathHttp "//*[self::footer]")
         (XPath "//*[self::footer]"),
       chkSimplifiedLoc
         "ID converts to XPath //*[@id=...]"
-        (Right . RL.Leaf $ RL.XPath "//*[@id='my-id']")
+        (Right . Leaf $ XPathHttp "//*@id='my-id'")
         (ID "my-id"),
       chkSimplifiedLoc
         "Tag converts to XPath //tag"
-        (Right $ RL.Leaf $ RL.XPath "//footer")
+        (Right $ Leaf $ XPathHttp "//footer")
         (Tag "footer"),
       chkSimplifiedLoc
         "OR - h1 or h2 converts to XPath union"
-        (Right $ RL.Leaf $ RL.XPath "//h1 | //h2")
+        (Right $ Leaf $ XPathHttp "//h1 | h2")
         (Tag "h1" ||| Tag "h2"),
       chkSimplifiedLoc
         "OR - class A or class B preserves both XPath branches"
-        (Right . RL.Leaf $ RL.XPath "//*[contains(translate(@class, 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz'), 'a')] | //*[contains(translate(@class, 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz'), 'b')]")
+        (Right . Leaf $ XPathHttp "//*(contains(translate(@class, 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz'), 'a')) or (contains(translate(@class, 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz'), 'b'))")
         (Class "A" Partial CaseInsensitive ||| Class "B" Partial CaseInsensitive)
     ]
 
@@ -326,7 +328,7 @@ prop_simplification_merges_xpaths =
   testPropertyWith genLocatorOptions "prepareSimplify: auto-XPaths merged, user-XPaths preserved" $ do
     proto <- gen genProtocol
     loc <- gen $ genLocator proto
-    let simpLoc = RL.prepareSimplify ID loc
+    let simpLoc = transform ID loc
         expected = mockLocated True loc
     info $ "Original locator:\n" <> unpack (txt loc)
     info $ "Prepared simplified locator:\n" <> either show (unpack . txt) simpLoc
@@ -335,20 +337,19 @@ prop_simplification_merges_xpaths =
 -- | Evaluate a ReducedLoc using the same boolean-encoding convention as mockLocated.
 -- Handles both simple XPath values (\"True\"/\"False\") and auto-generated
 -- XPath strings (//*[@id='True'], //footer, etc.).
-mockLocatedReduced :: Bool -> RL.ReducedLoc -> Bool
+mockLocatedReduced :: Bool -> CompoundLocator HttpLoc -> Bool
 mockLocatedReduced allElmsDefault = go
   where
     go = \case
-      RL.Leaf lf -> case lf of
-        RL.CSS v -> readBool v
-        RL.XPath v -> readXPathBool v
-        RL.Role {roleSpec = RoleName v} -> readBool v
-        RL.Role {} -> allElmsDefault
-      RL.PostFilterLoc _ -> error "PostFilter not supported by mockLocatedReduced"
-      RL.Combinator c -> case c of
-        RL.Contains p c' -> go p && go c'
-        RL.All elms -> all go elms
-        RL.Any elms -> any go elms
+      Leaf lf -> case lf of
+        CSSHttp v -> readBool v
+        XPathHttp v -> readXPathBool v
+        RoleHttp {roleSpec = RoleName v} -> readBool v
+        RoleHttp {} -> allElmsDefault
+      PostFilterI {} -> error "PostFilter not supported by mockLocatedReduced"
+      ContainsI p c' -> go p && go c'
+      AllI elms -> all go elms
+      AnyI elms -> any go elms
     readBool "True" = True
     readBool "False" = False
     readBool v = error $ "mockLocatedReduced: unexpected value: " <> unpack v
@@ -360,12 +361,26 @@ mockLocatedReduced allElmsDefault = go
     -- Pure //* (from AllElms) uses 'allElmsDefault'.
     readXPathBool :: Text -> Bool
     readXPathBool v
-      -- Union XPath (from Any): OR of branches
+      -- Union XPath with multiple // (from Any): OR of branches
+      -- Format: //h1 | //h2 or //h1 | h2
       | " | " `T.isInfixOf` v =
           or $ readXPathBool <$> T.splitOn " | " v
+      -- XPath with " or " predicate (from mergeAnys): OR of conditions
+      -- Format: //*(pred1) or (pred2)
+      | " or " `T.isInfixOf` v && "//*" `T.isPrefixOf` v =
+          let rest = T.drop 3 v  -- drop "//*"
+              parts = T.splitOn " or " rest
+              bools = map checkPredicate parts
+          in or bools
+      -- Contains XPath without leading // (from concatenated XPaths)
+      -- Format: True//True or //foo//bar
+      | "//" `T.isInfixOf` v && not ("//" `T.isPrefixOf` v) =
+          let steps = filter (not . T.null) $ T.splitOn "//" v
+              bools = concatMap stepBool steps
+          in if null bools then allElmsDefault else and bools
       -- Multi-step or single-step XPath (from Contains or leaves)
       | "//" `T.isPrefixOf` v =
-          let steps = T.splitOn "//" (T.drop 2 v)
+          let steps = filter (not . T.null) $ T.splitOn "//" v
               bools = concatMap stepBool steps
           in if null bools then allElmsDefault else and bools
       -- Simple boolean string (from user XPath "True"/"False")
@@ -374,6 +389,12 @@ mockLocatedReduced allElmsDefault = go
         stepBool s
           | "False" `T.isInfixOf` s = [False]
           | "True" `T.isInfixOf` s  = [True]
-          | "*" `T.isPrefixOf` s    = [allElmsDefault]
+          | "*" `T.isPrefixOf` s    = [checkPredicate s]
           | not (T.null s)          = [allElmsDefault]  -- unrecognised: treat as AllElms
           | otherwise               = []
+        
+        -- Check if a predicate or tag contains True/False
+        checkPredicate s
+          | "False" `T.isInfixOf` s = False
+          | "True" `T.isInfixOf` s  = True
+          | otherwise               = allElmsDefault
