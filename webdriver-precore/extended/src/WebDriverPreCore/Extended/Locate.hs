@@ -358,21 +358,6 @@ locateLeaf ::
   HttpLoc ->
   m [ElementId]
 locateLeaf prms rolesSecondPass lc loc = do
-  let 
-    sel = toSelector loc
-    trace' :: [ElementId] -> m ()
-    trace' ids = prms.trace $ LeafLocate sel lc ids
-    simpleLocate :: m [ElementId]
-    simpleLocate =
-          ( if (lc == FindFirst) then do
-             elm <- fmap LST.singleton $ prms.findElement sel
-             trace' elm
-             pure elm
-            else do
-              elms <- prms.findElements sel
-              trace' elms
-              pure elms
-          )
   case loc of
     CSSHttp {} -> simpleLocate
     XPathHttp {} -> simpleLocate
@@ -391,6 +376,21 @@ locateLeaf prms rolesSecondPass lc loc = do
                 (sr <>) <$> indirectRoleElms
             where 
               indirectRoleElms = findByRoleIndirect prms lc roleSpec xpath
+  where
+    sel = toSelector loc
+    trace' :: [ElementId] -> m ()
+    trace' ids = prms.trace $ LeafLocate sel lc ids
+    simpleLocate :: m [ElementId]
+    simpleLocate =
+          ( if (lc == FindFirst) then do
+             elm <- fmap LST.singleton $ prms.findElement sel
+             trace' elm
+             pure elm
+            else do
+              elms <- prms.findElements sel
+              trace' elms
+              pure elms
+          )
 
 
 chkRefilterSingleton ::
