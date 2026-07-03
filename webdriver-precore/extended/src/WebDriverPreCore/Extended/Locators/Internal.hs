@@ -16,7 +16,7 @@ module WebDriverPreCore.Extended.Locators.Internal (
     CaseSensitivity(..),
     RoleLocator(..),
 
-    displayAriaRole,
+    roleLabelText,
     transform,
 
 ) where
@@ -611,8 +611,8 @@ data MatchType = Full | Starts | Partial | Wildcard deriving (Show, Eq, Ord)
 
 data CaseSensitivity = CaseSensitive | CaseInsensitive deriving (Show, Eq, Ord)
 
-displayAriaRole :: AriaRole -> Text
-displayAriaRole = toLower . pack . show
+roleLabelText :: AriaRole -> Text
+roleLabelText = toLower . pack . show
 
 roleToXPath :: RoleLocator -> Text
 roleToXPath = \case
@@ -642,7 +642,7 @@ roleTypeXPathContent wantBrackets r =
     then "[" <> content <> "]"
     else content
   where 
-    content = implicitRoleXPath r <> " or @role='" <> displayAriaRole r <> "'"
+    content = implicitRoleXPath r <> " or @role='" <> roleLabelText r <> "'"
 
 
 -- | Maps an ARIA role to an XPath predicate matching elements that have

@@ -32,8 +32,8 @@ data LeafLoc
   = -- universal
     CSS {value :: Text}
   | XPath {value :: Text}
-  | -- bidi native locators that can be approximated in HTTP
-    BiDiNative {loc :: BiDiNativeLoc}
+  -- | -- bidi native locators that can be approximated in HTTP
+  --   BiDiNative {loc :: BiDiNativeLoc}
   deriving
     ( Show,
       Eq
@@ -53,7 +53,11 @@ data CombinatorLoc a
     ( Show,
       Eq
     )
-
+{-
+- role
+- text
+- setbase
+-}
 data BiDiNativeLoc
   = Role {role :: RoleLocator}
   | InnerText
@@ -80,8 +84,8 @@ data BiDiOnlyLeafLoc
 data ReducedLoc
   = Leaf LeafLoc
   | PostFilterLoc (PostFilterLoc ReducedLoc)
-  | Combintor (CombinatorLoc ReducedLoc)
-  | BiDiOnlyLeaf BiDiOnlyLeafLoc
+  | Combinator (CombinatorLoc ReducedLoc)
+  -- | BiDiOnlyLeaf BiDiOnlyLeafLoc
   deriving
     ( Show,
       Eq
@@ -93,7 +97,7 @@ data ReducedLoc
 data ReducedHttpLoc
   = LeafHttp LeafLoc
   | PostFilterHttpLoc (PostFilterLoc ReducedHttpLoc)
-  | CombintorHttp (CombinatorLoc ReducedHttpLoc)
+  | CombinatorHttp (CombinatorLoc ReducedHttpLoc)
   deriving
     ( Show,
       Eq
@@ -104,16 +108,16 @@ toHttpLocator = \case
   Leaf cl -> Right $ LeafHttp cl
   PostFilterLoc (PostFilter {predicate, locator}) ->
       PostFilterHttpLoc . PostFilter predicate <$> toHttpLocator locator
-  Combintor cl ->
-      CombintorHttp <$> case cl of
+  Combinator cl ->
+      CombinatorHttp <$> case cl of
         Contains {container, contained} -> Contains <$> toHttpLocator container <*> toHttpLocator contained
         ccl -> case ccl of
           All {} -> nested All
           Any {} -> nested Any
          where 
           nested ctr = ctr <$> traverse toHttpLocator cl.elms
-  BiDiOnlyLeaf (BiDiContext {context}) ->
-    Left $ MkInvalidLocator (LI.BiDiContext {context}) "BiDi-only locator cannot be used with HTTP protocol"
+  -- BiDiOnlyLeaf (BiDiContext {context}) ->
+  --   Left $ MkInvalidLocator (LI.BiDiContext {context}) "BiDi-only locator cannot be used with HTTP protocol"
 
 isXPath :: ReducedLoc -> Bool
 isXPath = \case
@@ -131,7 +135,7 @@ prepareSimplify defLoc l =
       LI.Leaf (RoleHttp {xpath}) -> Leaf XPath {value = xpath}
       LI.Leaf (InnerTextHttp {..}) -> Leaf . BiDiNative $ InnerText {..}
       LI.PostFilterI {predicate, locator} -> PostFilterLoc $ PostFilter {predicate, locator = simplify locator}
-      LI.ContainsI {container, contained} -> Combintor $ Contains {container = simplify container, contained = simplify contained}
-      LI.AllI {elms} -> Combintor . All $ simplify <$> elms
-      LI.AnyI {elms} -> Combintor . Any $ simplify <$> elms
+      LI.ContainsI {container, contained} -> Combinator $ Contains {container = simplify container, contained = simplify contained}
+      LI.AllI {elms} -> Combinator . All $ simplify <$> elms
+      LI.AnyI {elms} -> Combinator . Any $ simplify <$> elms
 

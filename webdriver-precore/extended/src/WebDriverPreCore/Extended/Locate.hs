@@ -395,11 +395,11 @@ locateLeaf prms rolesSecondPass lc loc = do
             case lc of
               FindFirst ->
                 case sr of
-                  [] -> roleToXPathHttpSecondPass prms lc role
+                  [] -> findByRoleIndirect prms lc role
                   [x] -> pure [x]
                   x:_ -> pure [x]
               FindAll ->
-                (sr <>) <$> roleToXPathHttpSecondPass prms lc role
+                (sr <>) <$> findByRoleIndirect prms lc role
       InnerText {} -> simpleLocate
 
 chkRefilterSingleton ::
@@ -434,7 +434,7 @@ locateElmsUnchecked actions leafCardinality rolesSecondPass loc =
     case loc of
       LeafHttp cl ->
         locateLeaf actions rolesSecondPass leafCardinality cl
-      CombintorHttp cb -> case cb of
+      CombinatorHttp cb -> case cb of
         Contains {container, contained} -> do
           containers <- locate FindAll rolesSecondPass container
           locateContained containers contained
@@ -491,7 +491,7 @@ httpLocateSingleton prms@MkLocParams{throw, locOpts = opts}  loc = do
             else pure [x]
     PostFilterHttpLoc {} ->
       postfilterNotImplemented
-    CombintorHttp {} ->
+    CombinatorHttp {} ->
       locateElmsUnchecked prms FindAll secondPassOnInitial loc
   where
 
@@ -560,33 +560,33 @@ _locateBiDi = undefined
 notNull :: [a] -> Bool
 notNull = not . P.null
 
-roleToXPathHttpSecondPass ::
+findByRoleIndirect ::
   forall m.
   (Monad m) =>
   LocParams m ->
   LeafCardinality ->
   RoleLocator ->
   m [ElementId]
-roleToXPathHttpSecondPass actions lc roleLoc =
+findByRoleIndirect actions lc roleLoc =
     case roleLoc of
       -- role type has no name / label so nothing to do
       RoleType {} -> pure []
       _ -> do
-        labelledByElms <- roleToXPathHttpLabeledBy actions lc roleLoc
+        labelledByElms <- findRoleByAriaLabledBy actions lc roleLoc
         if lc == FindFirst && notNull labelledByElms
           then pure labelledByElms
           else do
-            forElms <- roleToXPathFor actions lc roleLoc
+            forElms <- findRoleByForLabel actions lc roleLoc
             pure . nubOrd $ mconcat [labelledByElms, forElms]
 
-roleToXPathHttpLabeledBy ::
+findRoleByAriaLabledBy ::
   forall m.
   (Monad m) =>
   LocParams m ->
   LeafCardinality ->
   RoleLocator ->
   m [ElementId]
-roleToXPathHttpLabeledBy prms lc roleLoc =
+findRoleByAriaLabledBy prms lc roleLoc =
   case roleLoc of
     RoleType {} -> pure []
     _ -> do
@@ -618,14 +618,14 @@ roleToXPathHttpLabeledBy prms lc roleLoc =
             [] -> pure Nothing
             (e : _) -> Just <$> prms.getElementText e
 
-roleToXPathFor ::
+findRoleByForLabel ::
   forall m.
   (Monad m) =>
   LocParams m ->
   LeafCardinality ->
   RoleLocator ->
   m [ElementId]
-roleToXPathFor actions lc roleLoc =
+findRoleByForLabel actions lc roleLoc =
   case roleLoc of
     RoleType {} -> pure []
     _ -> do
