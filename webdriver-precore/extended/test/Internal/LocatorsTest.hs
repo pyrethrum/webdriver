@@ -56,8 +56,8 @@ _eval = withArgs [] . defaultMain
 -- Leaf locators encode their boolean value as the text \"True\" or \"False\" in their
 -- primary text field. 'AllElms' and 'Role' with no name use @allElmsDefault@.
 -- Combinators recurse with standard boolean semantics.
-mockLocated :: Bool -> Locator -> Bool
-mockLocated allElmsDefault = go
+mockLocateUnsimplified :: Bool -> Locator -> Bool
+mockLocateUnsimplified allElmsDefault = go
   where
     go = \case
       CSS v -> readBool v
@@ -247,7 +247,7 @@ test_infix_precedence_i =
     expected @?= actual
   where
     expected = True || False && False
-    actual = mockLocated False $ trueLoc ||| falseLoc &&& falseLoc
+    actual = mockLocateUnsimplified False $ trueLoc ||| falseLoc &&& falseLoc
 
 -- >>> _eval test_infix_precedence_ii
 
@@ -259,7 +259,7 @@ test_infix_precedence_ii =
     expected @?= actual
   where
     expected = False || True && False || True
-    actual = mockLocated False $ falseLoc ||| trueLoc &&& falseLoc ||| trueLoc
+    actual = mockLocateUnsimplified False $ falseLoc ||| trueLoc &&& falseLoc ||| trueLoc
 
 -- >>> _eval test_parent_infix_precedence
 
@@ -336,11 +336,11 @@ prop_simplification_merges_xpaths =
     proto <- gen genProtocol
     loc <- gen $ genLocator proto
     let simpLoc = transform ID loc
-        expected = mockLocated True loc
+        expected = mockLocateUnsimplified True loc
     info $ "Original locator:\n" <> unpack (txt loc)
     info $ "Prepared simplified locator:\n" <> either show (unpack . txt) simpLoc
-    info $ "Expected: " <>  show expected
-    info $ "Actual mock located:\n" <>  show (mockLocatedReduced True  <$> simpLoc)
+    info $ "Expected (unsimplified): " <>  show expected
+    info $ "Actual mock located (after simplified merged): " <>  show (mockLocatedReduced True  <$> simpLoc)
     
     F.assert $ satisfies ("prepareSimplify preserves mockLocated", \l -> either (const True) (\rl -> mockLocatedReduced True rl == expected) l) .$ ("loc", simpLoc)
 
@@ -355,7 +355,7 @@ test_user_xpath_contains =
     -- print $ "Transformed: " <> show result
     -- print $ "Expected mockLocated: " <> show (mockLocated True loc)
     -- print $ "Actual mockLocatedReduced: " <> show (mockLocatedReduced True <$> result)
-    either (const $ pure ()) (\r -> mockLocatedReduced True r @?= mockLocated True loc) result
+    either (const $ pure ()) (\r -> mockLocatedReduced True r @?= mockLocateUnsimplified True loc) result
 
 
 -- >>> _eval test_contradictory_tags_nested_all
@@ -592,43 +592,39 @@ mockLocatedReduced allElmsDefault = go
 -- TODO:
 {-
   Original locator:
-  All
+All
     { elms =
-        CSS { value = "True" } :|
-          [ All
-              { elms =
-                  CSS { value = "True" } :|
-                    [ CSS { value = "True" }
-                    , CSS { value = "True" }
-                    , CSS { value = "True" }
-                    , Tag { value = "True" }
-                    ]
-              }
-          , CSS { value = "True" }
-          , Any
-              { elms =
-                  Any
-                    { elms =
-                        All { elms = Tag { value = "False" } :| [ AllElms ] } :| []
-                    } :|
-                    []
-              }
-          ]
+        Any
+          { elms =
+              Any
+                { elms =
+                    AllElms :|
+                      [ AllElms
+                      , AllElms
+                      , Contains
+                          { container = CSS { value = "True" }
+                          , contained = Tag { value = "False" }
+                          }
+                      ]
+                } :|
+                []
+          } :|
+          []
     }
   Prepared simplified locator:
-  AllI
+  AnyI
     { elms =
-        Leaf { getLeaf = CSSHttp { value = "True" } } :|
-          [ Leaf { getLeaf = CSSHttp { value = "True" } }
-          , Leaf { getLeaf = CSSHttp { value = "True" } }
-          , Leaf { getLeaf = CSSHttp { value = "True" } }
-          , Leaf { getLeaf = CSSHttp { value = "True" } }
-          , Leaf { getLeaf = XPathHttp { value = ".//True" } }
-          , Leaf { getLeaf = CSSHttp { value = "True" } }
-          , Leaf { getLeaf = XPathHttp { value = ".//True[true()]" } }
+        Leaf
+          { getLeaf =
+              XPathHttp
+                { value = ".//False[((true()) or (true())) or (true())]" }
+          } :|
+          [ ContainsI
+              { container = Leaf { getLeaf = CSSHttp { value = "True" } }
+              , contained = Leaf { getLeaf = XPathHttp { value = ".//False" } }
+              }
           ]
     }
-  Expected: False
-  Actual mock located:
-  Right True
+  Expected (unsimplified): True
+  Actual mock located (after simplified merged): Right False
 -}
