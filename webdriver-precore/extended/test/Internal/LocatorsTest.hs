@@ -10,7 +10,7 @@ import Test.Falsify.Range as R (between)
 import Test.Tasty (TestTree, defaultMain, testGroup)
 import Test.Tasty.Falsify (ExpectFailure (DontExpectFailure), TestOptions (..), Verbose (..), gen, info, testPropertyWith)
 import Test.Tasty.Falsify qualified as F
-import Test.Tasty.HUnit (testCase, (@?=))
+import Test.Tasty.HUnit (testCase, (@?=), (@?), assertFailure)
 import Utils (txt)
 import WebDriverPreCore.Extended.BiDi.Base.Protocol (BrowsingContext (..))
 import WebDriverPreCore.Extended.Locators hiding (Locator)
@@ -24,6 +24,7 @@ import WebDriverPreCore.Extended.Locators.Internal
     transform,
   )
 import Prelude
+import Data.Function ((&))
 
 -- >>> _eval tests
 -- *** Exception: ExitSuccess
@@ -287,7 +288,9 @@ prepareSimplifyXPathTests :: TestTree
 prepareSimplifyXPathTests =
   testGroup
     "prepareSimplify XPaths"
-    [ chkSimplifiedLoc
+    [ 
+      test_contradictory_tags_nested_all,
+      chkSimplifiedLoc
         "CSS text is unchanged"
         (Right $ Leaf $ CSSHttp "button")
         (CSS "button"),
@@ -351,26 +354,20 @@ test_user_xpath_contains =
     -- print $ "Actual mockLocatedReduced: " <> show (mockLocatedReduced True <$> result)
     either (const $ pure ()) (\r -> mockLocatedReduced True r @?= mockLocated True loc) result
 
--- >>> putStrLn $ (unpack . txt) _simplified
 
-_simplified :: Either InvalidLocator (CompoundLocator HttpLoc)
-_simplified = transform ID  All
-    { elms =
-           All
-              { elms =
-                     Tag { value = "True" }
-                     :|  []
-              } :| [
-            Any
-              { elms =
-                  Any
-                    { elms =
-                        All { elms = Tag { value = "False" } :| [ AllElms ] } :| []
-                    } :|
-                    []
-              }
-           ]
-    }
+-- >>> _eval test_contradictory_tags_nested_all
+-- *** Exception: ExitFailure 1
+test_contradictory_tags_nested_all :: TestTree
+test_contradictory_tags_nested_all =
+  testCase "Contradictory tags in nested All should be detected" $ do
+    let loc = All
+          { elms = All { elms = Tag "True" :| [] } :|
+            [ Any { elms = Any { elms = All { elms = Tag "False" :| [AllElms] } :| [] } :| [] } ]
+          }
+        
+    transform ID loc & either
+      (\(MkInvalidLocator _ msg) -> "Contradictory tags" `T.isInfixOf` msg @? "Expected contradictory tags error")
+      (\_ -> assertFailure "Expected Left (contradictory tags error), got Right")
 
 -- | Evaluate a ReducedLoc using the same boolean-encoding convention as mockLocated.
 -- Handles both simple XPath values (\"True\"/\"False\") and auto-generated
