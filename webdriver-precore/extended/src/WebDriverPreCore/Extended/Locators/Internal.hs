@@ -429,7 +429,18 @@ unwrapSingletonCombinators = mapCompoundLocBottomUp $ \case
 -----------------------------------------------------------------------------
 
 derivedAndTagsToXPath :: CompoundLocator LocatorI -> CompoundLocator HttpLoc
-derivedAndTagsToXPath = convertContains . convertTagsXPathIDs
+derivedAndTagsToXPath = convertTagsXPathIDs . convertContains
+
+-- | Merge adjacent user-provided XPath locators in Contains at the LocatorI stage.
+--   This avoids text manipulation since the relative prefix ".//", brackets, etc.
+--   haven't been added yet. Only handles XPathI (user-provided XPath).
+convertContains :: CompoundLocator LocatorI -> CompoundLocator LocatorI
+convertContains = mapCompoundLocBottomUp $ \case
+  -- Merge two user-provided XPaths
+  ContainsI (Leaf (XPathI {value = containerXPath})) (Leaf (XPathI {value = containedXPath})) ->
+    Leaf $ XPathI {value = containerXPath <> "//" <> containedXPath}
+  -- Keep other combinations as ContainsI - they'll be handled after conversion to HttpLoc
+  other -> other
 
 -- | Convert LocatorI leaves to LocatorFinal leaves — uses 'fmap' via 'Functor'.
 convertTagsXPathIDs :: CompoundLocator LocatorI -> CompoundLocator HttpLoc
@@ -440,16 +451,6 @@ convertTagsXPathIDs = fmap $ \case
   CSSI {..} -> CSSHttp {..}
   XPathI {..} -> XPathHttp {..}
   RoleI {..} -> RoleHttp {..}
-
-
--- | Merge adjacent ContainsI (XPathHttp, XPathHttp) into a single XPathHttp leaf.
---   Handles relative XPath concatenation by stripping the leading '.' from the
---   contained path, converting './/container.//contained' to './/container//contained'.
-convertContains :: CompoundLocator HttpLoc -> CompoundLocator HttpLoc
-convertContains = mapCompoundLocBottomUp $ \case
-  ContainsI (Leaf (XPathHttp {value = containerXPath})) (Leaf (XPathHttp {value = containedXPath})) ->
-    Leaf $ XPathHttp {value = containerXPath <> T.drop 1 containedXPath}
-  other -> other
 
 -----------------------------------------------------------------------------
 -- Top-level XPath predicate helpers (extracted from locatorToXPathPartial)

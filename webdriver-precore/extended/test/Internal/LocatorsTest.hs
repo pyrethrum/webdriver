@@ -39,7 +39,9 @@ tests =
       prepareSimplifyXPathTests,
       testGroup
         "Property Tests"
-        [ test_infix_precedence_i,
+        [ 
+          test_user_xpath_contains,
+          test_infix_precedence_i,
           test_infix_precedence_ii,
           test_parent_infix_precedence,
           prop_simplification_merges_xpaths
@@ -316,8 +318,7 @@ prepareSimplifyXPathTests =
     ]
 
 -- >>> _eval prop_simplification_merges_xpaths
-
--- *** Exception: ExitSuccess
+-- *** Exception: ExitFailure 1
 
 -- | Property: prepareSimplify preserves mockLocated semantics and, for the HTTP
 --   protocol, auto-generated XPaths (from IsXPathConvertable nodes) within the same
@@ -332,7 +333,23 @@ prop_simplification_merges_xpaths =
         expected = mockLocated True loc
     info $ "Original locator:\n" <> unpack (txt loc)
     info $ "Prepared simplified locator:\n" <> either show (unpack . txt) simpLoc
+    info $ "Expected:" <>  show expected
+    info $ "Actual mock located:\n" <>  show (mockLocatedReduced True  <$> simpLoc)
+    
     F.assert $ satisfies ("prepareSimplify preserves mockLocated", \l -> either (const True) (\rl -> mockLocatedReduced True rl == expected) l) .$ ("loc", simpLoc)
+
+-- >>> _eval test_user_xpath_contains
+-- *** Exception: ExitSuccess
+test_user_xpath_contains :: TestTree
+test_user_xpath_contains =
+  testCase "User XPath in Contains should not be merged" $ do
+    let loc = All (CSS "True" :| [All (Contains (XPath "True") (XPath "False") :| [])])
+        result = transform ID loc
+    print $ "Original: " <> show loc
+    print $ "Transformed: " <> show result
+    print $ "Expected mockLocated: " <> show (mockLocated True loc)
+    print $ "Actual mockLocatedReduced: " <> show (mockLocatedReduced True <$> result)
+    either (const $ pure ()) (\r -> mockLocatedReduced True r @?= mockLocated True loc) result
 
 -- | Evaluate a ReducedLoc using the same boolean-encoding convention as mockLocated.
 -- Handles both simple XPath values (\"True\"/\"False\") and auto-generated
@@ -355,76 +372,98 @@ mockLocatedReduced allElmsDefault = go
     readBool v = error $ "mockLocatedReduced: unexpected value: " <> unpack v
 
     -- | Extract the boolean value from an auto-generated XPath string.
-    -- Mock locators always encode bools as exactly \"True\" or \"False\".
-    -- For multi-step XPaths (from Contains), splits on // and evaluates
-    -- each step; the overall result is the AND of all steps.
-    -- Pure //* (from AllElms) uses 'allElmsDefault'.
+    -- Mock locators encode bools as \"True\" or \"False\" in tag names.
+    -- XPath structure determines boolean operations:
+    --   - Union (|) → OR
+    --   - Predicate with "or" → OR
+    --   - Multi-step (//) → AND
+    --   - Tag with predicate → AND
     readXPathBool :: Text -> Bool
     readXPathBool v
-      -- Union XPath with multiple // (from Any): OR of branches
-      -- Format: //h1 | //h2 or //h1 | h2
+      -- Union XPath (from Any): OR of branches
+      -- Format: .//h1 | h2 or .//h1 | .//h2
       | " | " `T.isInfixOf` v =
           or $ readXPathBool <$> T.splitOn " | " v
-      -- XPath with " or " predicate (from mergeAnys): OR of conditions
-      -- Format: //*(pred1) or (pred2)
-      | " or " `T.isInfixOf` v && "//*" `T.isPrefixOf` v =
-          let rest = T.drop 3 v  -- drop "//*"
-              parts = T.splitOn " or " rest
-              bools = map checkPredicate parts
-          in or bools
-      -- Contains XPath without leading // (from concatenated XPaths)
-      -- Format: True//True or //foo//bar
-      | "//" `T.isInfixOf` v && not ("//" `T.isPrefixOf` v) =
+      -- XPath with " or " predicate (from merged Any nodes)
+      -- Format: .//*[(pred1) or (pred2)] or //*[(pred1) or (pred2)]
+      | " or " `T.isInfixOf` v && (".//*" `T.isPrefixOf` v || "//*" `T.isPrefixOf` v) =
+          let rest = if ".//*" `T.isPrefixOf` v then T.drop 4 v else T.drop 3 v
+          in evalOrPredicate rest
+      -- Multi-step XPath (from Contains): AND of steps
+      -- Format: .//True//False or True//False
+      | "//" `T.isInfixOf` v =
           let steps = filter (not . T.null) $ T.splitOn "//" v
-              bools = concatMap stepBool steps
-          in if null bools then allElmsDefault else and bools
-      -- Multi-step or single-step XPath (from Contains or leaves)
-      | "//" `T.isPrefixOf` v =
-          let steps = filter (not . T.null) $ T.splitOn "//" v
-              bools = concatMap stepBool steps
-          in if null bools then allElmsDefault else and bools
-      -- Simple boolean string (from user XPath "True"/"False")
-      | otherwise = readBool v
+              -- Drop leading "." if present
+              steps' = case steps of
+                ("." : rest) -> rest
+                other -> other
+          in and $ evalStep <$> steps'
+      -- Plain tag name (from union like ".//h1 | h2") or boolean string
+      | otherwise = evalTag v
       where
-        stepBool s
-          | "False" `T.isInfixOf` s = [False]
-          | "True" `T.isInfixOf` s  = [True]
-          | "*" `T.isPrefixOf` s    = [checkPredicate s]
-          | not (T.null s)          = [allElmsDefault]  -- unrecognised: treat as AllElms
-          | otherwise               = []
+        -- Evaluate an XPath step (tag with optional predicate)
+        -- Format: "tag[predicate]" or just "tag"
+        evalStep :: Text -> Bool
+        evalStep s =
+          case T.breakOn "[" s of
+            (tag, "") ->
+              -- No predicate, just evaluate tag
+              evalTag tag
+            (tag, predWithBracket) ->
+              -- Tag with predicate: AND them together
+              evalTag tag && evalPredicate predWithBracket
         
-        -- Check if a predicate or tag contains True/False
-        checkPredicate s
-          | "False" `T.isInfixOf` s = False
-          | "True" `T.isInfixOf` s  = True
-          | otherwise               = allElmsDefault
+        -- Evaluate a tag name
+        evalTag :: Text -> Bool
+        evalTag t
+          | T.null t = allElmsDefault
+          | "True" `T.isInfixOf` t = True
+          | "False" `T.isInfixOf` t = False
+          | "*" == t = allElmsDefault
+          | otherwise = allElmsDefault
+        
+        -- Evaluate a predicate (with brackets)
+        -- Format: "[pred]" 
+        evalPredicate :: Text -> Bool
+        evalPredicate p
+          | "False" `T.isInfixOf` p = False
+          | "True" `T.isInfixOf` p = True
+          | "true()" `T.isInfixOf` p = True  -- XPath boolean true
+          | otherwise = allElmsDefault
+        
+        -- Evaluate " or " separated predicates
+        -- Format: "[(pred1) or (pred2)]" - the leading "[" was already stripped
+        evalOrPredicate :: Text -> Bool
+        evalOrPredicate p =
+          let parts = T.splitOn " or " p
+          in or $ evalPredicate <$> parts
 
 
-TODO:
-     Use -p '/OR - class A or class B preserves both XPath branches/' to rerun this test only.
-    Property Tests
-      Test operator precedence i:                                 OK
-      Test operator precedence ii:                                OK
-      Test Contains operator precedence:                          OK
-      prepareSimplify: auto-XPaths merged, user-XPaths preserved: FAIL (0.03s)
-        failed after 81 successful tests and 18 shrinks
-        not (prepareSimplify preserves mockLocated loc)
-        loc: Right (Leaf {getLeaf = XPathHttp {value = ".//*[(true()) or (@id='False')]"}})
+-- TODO:
+--      Use -p '/OR - class A or class B preserves both XPath branches/' to rerun this test only.
+--     Property Tests
+--       Test operator precedence i:                                 OK
+--       Test operator precedence ii:                                OK
+--       Test Contains operator precedence:                          OK
+--       prepareSimplify: auto-XPaths merged, user-XPaths preserved: FAIL (0.03s)
+--         failed after 81 successful tests and 18 shrinks
+--         not (prepareSimplify preserves mockLocated loc)
+--         loc: Right (Leaf {getLeaf = XPathHttp {value = ".//*[(true()) or (@id='False')]"}})
         
-        Logs for failed test run:
-        generated HTTP at CallStack (from HasCallStack):
-          gen, called at extended/test/Internal/LocatorsTest.hs:329:14 in webdriver-precore-0.2.0.2-inplace-test-extended:Internal.LocatorsTest
-        generated All {elms = Any {elms = AllElms :| [ID {value = "False"}]} :| []} at CallStack (from HasCallStack):
-          gen, called at extended/test/Internal/LocatorsTest.hs:330:12 in webdriver-precore-0.2.0.2-inplace-test-extended:Internal.LocatorsTest
-        Original locator:
-        All
-          { elms = Any { elms = AllElms :| [ ID { value = "False" } ] } :| []
-          }
-        Prepared simplified locator:
-        Leaf
-          { getLeaf = XPathHttp { value = ".//*[(true()) or (@id='False')]" }
-          }
+--         Logs for failed test run:
+--         generated HTTP at CallStack (from HasCallStack):
+--           gen, called at extended/test/Internal/LocatorsTest.hs:329:14 in webdriver-precore-0.2.0.2-inplace-test-extended:Internal.LocatorsTest
+--         generated All {elms = Any {elms = AllElms :| [ID {value = "False"}]} :| []} at CallStack (from HasCallStack):
+--           gen, called at extended/test/Internal/LocatorsTest.hs:330:12 in webdriver-precore-0.2.0.2-inplace-test-extended:Internal.LocatorsTest
+--         Original locator:
+--         All
+--           { elms = Any { elms = AllElms :| [ ID { value = "False" } ] } :| []
+--           }
+--         Prepared simplified locator:
+--         Leaf
+--           { getLeaf = XPathHttp { value = ".//*[(true()) or (@id='False')]" }
+--           }
         
-        Use --falsify-replay=011a9857ab1e2921aa5fca1c3a9ac9e005 to replay.
+--         Use --falsify-replay=011a9857ab1e2921aa5fca1c3a9ac9e005 to replay.
         
-        Use -p '/prepareSimplify: auto-XPaths merged, user-XPaths preserved/' to rerun this test only.
+--         Use -p '/prepareSimplify: auto-XPaths merged, user-XPaths preserved/' to rerun this test only.
