@@ -435,7 +435,7 @@ derivedAndTagsToXPath = convertContains . convertTagsXPathIDs
 convertTagsXPathIDs :: CompoundLocator LocatorI -> CompoundLocator HttpLoc
 convertTagsXPathIDs = fmap $ \case
   XPathID {tagM, body} ->
-    XPathHttp {value = xPathRelativePrefix <> fromMaybe "*" tagM <> body}
+    XPathHttp {value = xPathRelativePrefix <> fromMaybe "*" tagM <> "[" <> body <> "]"}
   TagI {tag} -> XPathHttp {value = xPathRelativePrefix <> tag}
   CSSI {..} -> CSSHttp {..}
   XPathI {..} -> XPathHttp {..}

@@ -55,8 +55,9 @@ tests =
   runSessionTests ses =
         inOrderTestGroup "Combinator tests"
           [ 
-            --  inOrderTestGroup "Combinator property tests" 
-            --    [locateCombinatorProperty ses],
+             inOrderTestGroup "Combinator property tests" 
+               [locateCombinatorProperty ses],
+              --  known failures from property tests
              inOrderTestGroup "Combinator singleton tests" [
               locTest "simple OR" $ Matched
                   { testNode =
@@ -820,7 +821,7 @@ locateCombinatorProperty getSes =
         { expectFailure = DontExpectFailure,
           -- overrideVerbose = Just Verbose,
           overrideVerbose = Nothing,
-          overrideNumTests = Just 100,
+          overrideNumTests = Just 1000,
           overrideMaxShrinks = Nothing,
           overrideMaxRatio = Nothing
         }
@@ -844,7 +845,7 @@ evaluateCase getSession locCase  =
         let dataUrl = htmlToDataUrl html
         navigateTo dataUrl
         -- TODO FIX
-        sleep $ 100 * milliseconds
+        -- sleep $ 100 * milliseconds
         evaluateExpectation
       where
         locator = locCase.locator
