@@ -32,8 +32,6 @@ import Data.Bifunctor (Bifunctor(first))
 import WebDriverPreCore.Extended.Locate (LocateResult(..))
 import Test.Falsify.Property (gen)
 
-
-
 tests :: TestTree
 tests =
   testGroup "Locate Combinator Tests" [

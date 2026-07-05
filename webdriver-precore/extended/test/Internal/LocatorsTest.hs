@@ -299,19 +299,19 @@ prepareSimplifyXPathTests =
         (XPath "//*[self::footer]"),
       chkSimplifiedLoc
         "ID converts to XPath //*[@id=...]"
-        (Right . Leaf $ XPathHttp "//*@id='my-id'")
+        (Right . Leaf $ XPathHttp ".//*@id='my-id'")
         (ID "my-id"),
       chkSimplifiedLoc
         "Tag converts to XPath //tag"
-        (Right $ Leaf $ XPathHttp "//footer")
+        (Right $ Leaf $ XPathHttp ".//footer")
         (Tag "footer"),
       chkSimplifiedLoc
         "OR - h1 or h2 converts to XPath union"
-        (Right $ Leaf $ XPathHttp "//h1 | h2")
+        (Right $ Leaf $ XPathHttp ".//h1 | h2")
         (Tag "h1" ||| Tag "h2"),
       chkSimplifiedLoc
         "OR - class A or class B preserves both XPath branches"
-        (Right . Leaf $ XPathHttp "//*(contains(translate(@class, 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz'), 'a')) or (contains(translate(@class, 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz'), 'b'))")
+        (Right . Leaf $ XPathHttp ".//*(contains(translate(@class, 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz'), 'a')) or (contains(translate(@class, 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz'), 'b'))")
         (Class "A" Partial CaseInsensitive ||| Class "B" Partial CaseInsensitive)
     ]
 
@@ -398,3 +398,33 @@ mockLocatedReduced allElmsDefault = go
           | "False" `T.isInfixOf` s = False
           | "True" `T.isInfixOf` s  = True
           | otherwise               = allElmsDefault
+
+
+TODO:
+     Use -p '/OR - class A or class B preserves both XPath branches/' to rerun this test only.
+    Property Tests
+      Test operator precedence i:                                 OK
+      Test operator precedence ii:                                OK
+      Test Contains operator precedence:                          OK
+      prepareSimplify: auto-XPaths merged, user-XPaths preserved: FAIL (0.03s)
+        failed after 81 successful tests and 18 shrinks
+        not (prepareSimplify preserves mockLocated loc)
+        loc: Right (Leaf {getLeaf = XPathHttp {value = ".//*[(true()) or (@id='False')]"}})
+        
+        Logs for failed test run:
+        generated HTTP at CallStack (from HasCallStack):
+          gen, called at extended/test/Internal/LocatorsTest.hs:329:14 in webdriver-precore-0.2.0.2-inplace-test-extended:Internal.LocatorsTest
+        generated All {elms = Any {elms = AllElms :| [ID {value = "False"}]} :| []} at CallStack (from HasCallStack):
+          gen, called at extended/test/Internal/LocatorsTest.hs:330:12 in webdriver-precore-0.2.0.2-inplace-test-extended:Internal.LocatorsTest
+        Original locator:
+        All
+          { elms = Any { elms = AllElms :| [ ID { value = "False" } ] } :| []
+          }
+        Prepared simplified locator:
+        Leaf
+          { getLeaf = XPathHttp { value = ".//*[(true()) or (@id='False')]" }
+          }
+        
+        Use --falsify-replay=011a9857ab1e2921aa5fca1c3a9ac9e005 to replay.
+        
+        Use -p '/prepareSimplify: auto-XPaths merged, user-XPaths preserved/' to rerun this test only.
