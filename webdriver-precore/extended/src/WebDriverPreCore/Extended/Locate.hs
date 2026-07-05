@@ -274,30 +274,11 @@ runHttpAction actions opts mRootId locateAction loc = do
 setBaseElement :: Maybe ElementId -> LocParams m -> LocParams m
 setBaseElement mRootId act@MkLocParams{..} = 
   maybe act (\rootId -> MkLocParams {
-  findElement = makeRelative findElementFromElement rootId,
-  findElements = makeRelative findElementsFromElement rootId,
+  findElement = findElementFromElement rootId,
+  findElements = findElementsFromElement rootId,
   ..
 }) mRootId
-  where
-    -- Convert absolute XPath to relative when using element-relative search
-    makeRelative :: (ElementId -> Selector -> m a) -> ElementId -> Selector -> m a
-    makeRelative f elmId sel = f elmId (toRelativeSelector sel)
-    
-    toRelativeSelector :: Selector -> Selector
-    toRelativeSelector (HTTPP.XPath xp) =
-      -- Keep each XPath union branch relative to the current element scope.
-      HTTPP.XPath $ relativizeXPathUnion xp
-    toRelativeSelector sel = sel  -- CSS selectors don't need modification
 
-    relativizeXPathUnion :: Text -> Text
-    relativizeXPathUnion xpathExpr =
-      T.intercalate " | " . fmap relativizeBranch $ T.splitOn " | " xpathExpr
-
-    relativizeBranch :: Text -> Text
-    relativizeBranch branch =
-      case T.stripPrefix "//" (T.strip branch) of
-        Just rest -> ".//" <> rest
-        Nothing -> T.strip branch
 
 prepareRun :: forall m. Monad m =>
       LocParams m 
@@ -440,7 +421,10 @@ locateElmsUnchecked actions leafCardinality rolesSecondPass loc =
 
     locateContained :: [ElementId] -> CompoundLocator HttpLoc -> m [ElementId]
     locateContained containerIds subLoc = do
-      containedResults <- traverse (\containerId -> locateElmsUnchecked (setBaseElement (Just containerId) actions) FindAll rolesSecondPass subLoc) containerIds
+      containedResults <- 
+        traverse 
+          (\containerId -> locateElmsUnchecked (setBaseElement (Just containerId) actions) FindAll rolesSecondPass subLoc) 
+          containerIds
       pure $ join containedResults
 
 httpLocateSingleton ::

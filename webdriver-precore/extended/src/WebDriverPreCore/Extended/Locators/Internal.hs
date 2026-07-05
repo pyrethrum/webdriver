@@ -34,6 +34,31 @@ import Prelude
 import Data.Function ((&))
 import Control.Monad ((>=>))
 
+-----------------------------------------------------------------------------
+-- Constants
+-----------------------------------------------------------------------------
+
+-- | Relative XPath prefix for all library-generated (derived) XPath expressions.
+--
+-- Uses './/'' (relative descendant-or-self) instead of '//' (absolute) because:
+--
+-- 1. **Semantic correctness in Contains**: When a locator appears inside a Contains
+--    combinator, the contained locator should search relative to the container element,
+--    not from the document root. Using './/'' ensures proper scoping.
+--
+-- 2. **Works at top level too**: When called on the driver (document root context),
+--    './/tag' and '//tag' produce identical results, so using './/'' everywhere is safe.
+--
+-- 3. **Simplifies locateFromElementHttp**: When searching from a base element,
+--    relative paths work correctly without needing text manipulation in setBaseElement
+--    (Locate.hs). Absolute '//' paths would escape the intended container scope.
+--
+-- 4. **User-supplied XPath unchanged**: This only affects library-derived XPath from
+--    constructors like Tag, Class, Attribute, etc. User-supplied XPath via the 'xpath'
+--    constructor is passed through unchanged, giving users full control when needed.
+xPathRelativePrefix :: Text
+xPathRelativePrefix = ".//"
+
 data MatchFlags = MkMatchFlags
   { ignoreCase :: Bool,
     matchType :: MatchType
@@ -330,8 +355,8 @@ mergeTagsInAny elms = do
       tagXPaths = 
         case tags of
           [] -> []
-          [Leaf (TagI t)] -> [Leaf (XPathI ("//" <> t))]
-          ts -> [Leaf (XPathI ("//" <> T.intercalate " | " (catMaybes (tagTxt <$> ts))))]
+          [Leaf (TagI t)] -> [Leaf (XPathI (xPathRelativePrefix <> t))]
+          ts -> [Leaf (XPathI (xPathRelativePrefix <> T.intercalate " | " (catMaybes (tagTxt <$> ts))))]
       result = tagXPaths <> others
   case result of
     [] -> error "mergeTagsInAny: empty result"
@@ -409,18 +434,20 @@ derivedAndTagsToXPath = convertContains . convertTagsXPathIDs
 convertTagsXPathIDs :: CompoundLocator LocatorI -> CompoundLocator HttpLoc
 convertTagsXPathIDs = fmap $ \case
   XPathID {tagM, body} ->
-    XPathHttp {value = "//" <> fromMaybe "*" tagM <> body}
-  TagI {tag} -> XPathHttp {value = "//" <> tag}
+    XPathHttp {value = xPathRelativePrefix <> fromMaybe "*" tagM <> body}
+  TagI {tag} -> XPathHttp {value = xPathRelativePrefix <> tag}
   CSSI {..} -> CSSHttp {..}
   XPathI {..} -> XPathHttp {..}
   RoleI {..} -> RoleHttp {..}
 
 
--- | Merge adjacent ContainsI (XPathI, XPathI) into a single XPathI leaf.
+-- | Merge adjacent ContainsI (XPathHttp, XPathHttp) into a single XPathHttp leaf.
+--   Handles relative XPath concatenation by stripping the leading '.' from the
+--   contained path, converting './/container.//contained' to './/container//contained'.
 convertContains :: CompoundLocator HttpLoc -> CompoundLocator HttpLoc
 convertContains = mapCompoundLocBottomUp $ \case
   ContainsI (Leaf (XPathHttp {value = containerXPath})) (Leaf (XPathHttp {value = containedXPath})) ->
-    Leaf $ XPathHttp {value = containerXPath <> containedXPath}
+    Leaf $ XPathHttp {value = containerXPath <> T.drop 1 containedXPath}
   other -> other
 
 -----------------------------------------------------------------------------
@@ -652,9 +679,9 @@ roleLabelText = toLower . pack . show
 
 roleToXPath :: RoleLocator -> Text
 roleToXPath = \case
-  RoleFull {role, name} -> "//*" <> role' role <> name' name
-  RoleType {role} -> "//*" <> role' role
-  RoleName {name} -> "//*[not(@role='presentation' or @role='none')]" <> name' name
+  RoleFull {role, name} -> xPathRelativePrefix <> "*" <> role' role <> name' name
+  RoleType {role} -> xPathRelativePrefix <> "*" <> role' role
+  RoleName {name} -> xPathRelativePrefix <> "*[not(@role='presentation' or @role='none')]" <> name' name
   where
     role' = roleTypeXPathContent True 
     name' n =
