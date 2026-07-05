@@ -290,6 +290,9 @@ prepareSimplifyXPathTests =
     "prepareSimplify XPaths"
     [ 
       test_contradictory_tags_nested_all,
+      test_contradictory_tags_siingleton_nested_any,
+      test_noncontradictory_tags_nested_any,
+      test_noncontradictory_tags_simple_nested_any,
       chkSimplifiedLoc
         "CSS text is unchanged"
         (Right $ Leaf $ CSSHttp "button")
@@ -336,7 +339,7 @@ prop_simplification_merges_xpaths =
         expected = mockLocated True loc
     info $ "Original locator:\n" <> unpack (txt loc)
     info $ "Prepared simplified locator:\n" <> either show (unpack . txt) simpLoc
-    info $ "Expected:" <>  show expected
+    info $ "Expected: " <>  show expected
     info $ "Actual mock located:\n" <>  show (mockLocatedReduced True  <$> simpLoc)
     
     F.assert $ satisfies ("prepareSimplify preserves mockLocated", \l -> either (const True) (\rl -> mockLocatedReduced True rl == expected) l) .$ ("loc", simpLoc)
@@ -356,7 +359,7 @@ test_user_xpath_contains =
 
 
 -- >>> _eval test_contradictory_tags_nested_all
--- *** Exception: ExitFailure 1
+-- *** Exception: ExitSuccess
 test_contradictory_tags_nested_all :: TestTree
 test_contradictory_tags_nested_all =
   testCase "Contradictory tags in nested All should be detected" $ do
@@ -368,6 +371,46 @@ test_contradictory_tags_nested_all =
     transform ID loc & either
       (\(MkInvalidLocator _ msg) -> "Contradictory tags" `T.isInfixOf` msg @? "Expected contradictory tags error")
       (\_ -> assertFailure "Expected Left (contradictory tags error), got Right")
+
+-- >>> _eval test_contradictory_tags_siingleton_nested_any
+-- *** Exception: ExitSuccess
+test_contradictory_tags_siingleton_nested_any :: TestTree
+test_contradictory_tags_siingleton_nested_any =
+  testCase "Contradictory tags in singleton nested Any should be detected" $ do
+    let loc = All
+          { elms = All { elms = Tag "True" :| [] } :|
+            [ Any { elms = Any { elms = All { elms = Tag "False" :| [] } :| [] } :| [] } ]
+          }
+        
+    transform ID loc & either
+      (\(MkInvalidLocator _ msg) -> "Contradictory tags" `T.isInfixOf` msg @? "Expected contradictory tags error")
+      (\_ -> assertFailure "Expected Left (contradictory tags error), got Right")
+
+-- >>> _eval test_noncontradictory_tags_nested_any
+-- *** Exception: ExitSuccess
+test_noncontradictory_tags_nested_any :: TestTree
+test_noncontradictory_tags_nested_any =
+  testCase "Non-contradictory tags in nested Any should be handled" $ do
+    let loc = All
+          { elms = All { elms = Tag "True" :| [] } :|
+            [ Any { elms = Any { elms = Any { elms = Tag "False" :| [AllElms] } :| [] } :| [] } ]
+          }   
+    transform ID loc & either
+      (\(MkInvalidLocator _ msg) -> assertFailure $ "Expected Right, got Left with message: " <> unpack msg)
+      (\_ -> pure ())
+
+-- >>> _eval test_contradictory_tags_nested_all
+-- *** Exception: ExitSuccess
+test_noncontradictory_tags_simple_nested_any :: TestTree
+test_noncontradictory_tags_simple_nested_any =
+  testCase "Non-contradictory tags in nested Any should be handled" $ do
+    let loc = All
+          { elms = All { elms = Tag "True" :| [] } :|
+            [ Any { elms = Tag "False" :| [AllElms] }  ]
+          }   
+    transform ID loc & either
+      (\(MkInvalidLocator _ msg) -> assertFailure $ "Expected Right, got Left with message: " <> unpack msg)
+      (\_ -> pure ())
 
 -- | Evaluate a ReducedLoc using the same boolean-encoding convention as mockLocated.
 -- Handles both simple XPath values (\"True\"/\"False\") and auto-generated

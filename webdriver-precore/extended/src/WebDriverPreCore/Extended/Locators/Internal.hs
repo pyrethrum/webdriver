@@ -340,6 +340,18 @@ isTagI  = isJust . tagTxt
 isNotTage :: CompoundLocator LocatorI -> Bool
 isNotTage = not . isTagI
 
+-- | Collect all tag values from TagI and tagged XPathID leaves at all depths,
+--   including inside nested AnyI/ContainsI/AllI/PostFilterI combinators.
+collectTags :: CompoundLocator LocatorI -> [Text]
+collectTags = \case
+  Leaf (TagI t) -> [t]
+  Leaf (XPathID {tagM = Just t}) -> [t]
+  Leaf _ -> []
+  ContainsI c d -> collectTags c ++ collectTags d
+  AllI xs -> toList xs >>= collectTags
+  AnyI xs -> toList xs >>= collectTags
+  PostFilterI _ l -> collectTags l
+
 -- copy tags from TagI and XPathID to all reachable XPathID descendants, and remove the TagI if possible.
 assignTags :: Locator -> CompoundLocator LocatorI -> Either InvalidLocator (CompoundLocator LocatorI)
 assignTags srcLocator = 
@@ -367,7 +379,7 @@ mergeTagsInAny elms = do
 -- | 2c-ii + 2c-iii: Process TagI constructors within an AllI.
 distributeTagsToAllElms :: Locator -> NonEmpty (CompoundLocator LocatorI) -> Either InvalidLocator (NonEmpty (CompoundLocator LocatorI))
 distributeTagsToAllElms srcLocator elms = do
-  let tagVals = nub . catMaybes $ tagVal <$> toList elms
+  let tagVals = nub $ toList elms >>= collectTags
   
   -- 2c-ii: Contradictory tag detection
   case tagVals of
@@ -390,14 +402,6 @@ distributeTagsToAllElms srcLocator elms = do
                    then filter isNotTage $ toList distributed
                    else toList distributed
   where
-    tagVal :: CompoundLocator LocatorI -> Maybe Text
-    tagVal = \case 
-      Leaf (TagI t) -> Just t
-      -- not expected that there would be any XPathID with a tag at this point
-      -- but include here for future proofing
-      Leaf (XPathID {tagM = Just t}) -> Just t
-      _ -> Nothing
-
     -- | Set tagM = Just t on XPathID leaves, no-op on all other leaves.
     --   Since 'LocatorI' is now leaf-only, we only need to handle XPathID.
     distributeTagToLeaf :: Text -> LocatorI -> LocatorI
