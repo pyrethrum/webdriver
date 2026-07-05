@@ -13,7 +13,7 @@ module HTTP.Runner (
 
 import Common.Runner (runSetup, testUrl)
 import Data.Text (Text, unpack)
-import Effectful (Effect, Eff, IOE, liftIO, (:>), runEff)
+import Effectful (Eff, IOE, liftIO, (:>), runEff)
 import Test.Tasty (TestTree)
 import Test.Tasty.HUnit (testCase)
 import UnliftIO (finally)
@@ -39,10 +39,8 @@ import WebDriver.Effectful.Logger
     runLogger,
     withLogger,
   )
-import WebDriver.Effectful.HTTP.Base.Actions (navigateTo)
 import WebDriverPreCore.Test.CapabilitiesBuilder (httpCapabilities)
 import WebDriverPreCore.Test.ConfigLoader (Config (..))
-import WebDriverPreCore.Test.TestData (megaformaUrl)
 
 
 mkHttpCaps :: Config -> HttpCapabilities
