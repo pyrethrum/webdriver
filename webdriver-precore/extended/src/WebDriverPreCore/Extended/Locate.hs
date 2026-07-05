@@ -30,7 +30,7 @@ import Data.Text qualified as T
 import GHC.Stack (HasCallStack)
 
 import WebDriverPreCore.Extended.HTTP.Base.Protocol as HTTPB (ElementId)
-import WebDriverPreCore.Extended.Locators.Internal (Locator, RoleLocator (..), CompoundLocator, HttpLoc (..))
+import WebDriverPreCore.Extended.Locators.Internal (Locator, RoleLocator (..), CompoundLocator, HttpLoc (..), xPathRelativePrefix)
 import WebDriverPreCore.Extended.Locators.Internal qualified as LI
 import WebDriverPreCore.Extended.Protocol (WebDriverException)
 import WebDriverPreCore.HTTP.Protocol as HTTPP (Script (..), Selector (..))
@@ -563,7 +563,7 @@ findRoleByAriaLabledBy prms lc roleLoc xpath =
     _ -> do
       candidates <-
         -- all elms that match role and have an aria-labelledby attribute
-        prms.findElements (HTTPP.XPath $ "//*" <> xpath <> "[@aria-labelledby]")
+        prms.findElements (HTTPP.XPath $ xPathRelativePrefix <> "*" <> xpath <> "[@aria-labelledby]")
       r <- filterElms lc labledByMatchesRoleText candidates
       prms.trace $ RoleSecondPassLabeledBy roleLoc r
       pure r
@@ -584,7 +584,7 @@ findRoleByAriaLabledBy prms lc roleLoc xpath =
         -- 'Nothing' if no such element exists.
         textForId :: Text -> m (Maybe Text)
         textForId idRef = do
-          elms <- prms.findElements . HTTPP.XPath $ "//*[@id='" <> idRef <> "']"
+          elms <- prms.findElements . HTTPP.XPath $ xPathRelativePrefix <> "*[@id='" <> idRef <> "']"
           case elms of
             [] -> pure Nothing
             (e : _) -> Just <$> prms.getElementText e
@@ -603,7 +603,7 @@ findRoleByForLabel actions lc roleLoc xpath =
     _ -> do
       candidates <-
         -- has an @id and matches the role name
-        actions.findElements $ HTTPP.XPath $ "//*" <> xpath <> "[@id]"
+        actions.findElements $ HTTPP.XPath $ xPathRelativePrefix <> "*" <> xpath <> "[@id]"
       r <- filterElms lc forTxtMatchesId candidates
       actions.trace $ RoleSecondPassFor roleLoc r
       pure r
@@ -614,7 +614,7 @@ findRoleByForLabel actions lc roleLoc xpath =
           case mId of
             Nothing -> pure False
             Just idVal -> do
-              labels <- actions.findElements . HTTPP.XPath $ "//label[@for='" <> idVal <> "']"
+              labels <- actions.findElements . HTTPP.XPath $ xPathRelativePrefix <> "label[@for='" <> idVal <> "']"
               case labels of
                 [] -> pure False
                 (lbl : _) -> do

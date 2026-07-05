@@ -17,6 +17,7 @@ module WebDriverPreCore.Extended.Locators.Internal (
     RoleLocator(..),
     roleLabelText,
     transform,
+    xPathRelativePrefix 
 ) where
 
 import Control.Exception (Exception)
