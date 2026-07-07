@@ -29,7 +29,7 @@ import Data.Maybe (fromMaybe, catMaybes, isJust)
 import Data.Text (Text, intercalate, pack, splitOn, toLower, unpack)
 import Data.Text qualified as T
 import Data.Word (Word8)
-import Utils (txt)
+import Utils (txt, db)
 import WebDriverPreCore.Extended.BiDi.Base.Protocol (BrowsingContext, NodeProperties)
 import Prelude
 import Data.Function ((&))
@@ -195,14 +195,14 @@ data CompoundLocator a
 
 transform :: (Text -> Locator) -> Locator -> Either InvalidLocator (CompoundLocator HttpLoc)
 transform defLoc loc = do
-  locI <- toIntermediate defLoc loc
+  locI <- db "LOCI" $ toIntermediate defLoc loc
   simplified <- simplify locI
   Right $ derivedAndTagsToXPath simplified
   where
     simplify :: CompoundLocator LocatorI -> Either InvalidLocator (CompoundLocator LocatorI)
     simplify current = do
-      merged <- mergeContiguous loc $ unnestAnysAlls current
-      tagged <- assignTags loc merged
+      merged <- db "MERGED" $ mergeContiguous loc $ unnestAnysAlls current
+      tagged <- db "TAGS ASSIGNED" $ assignTags loc merged
       let unwrapped = unwrapSingletonCombinators tagged
       if unwrapped == current
         then pure current
@@ -314,12 +314,14 @@ mergeAnys srcLoc =
  where
    mergeAnyElms :: NonEmpty (CompoundLocator LocatorI) -> NonEmpty (CompoundLocator LocatorI)
    mergeAnyElms = \case
-       (Leaf (XPathID tm1 b1) :| Leaf (XPathID tm2 b2) : rest) ->
+       (l1@(Leaf (XPathID tm1 b1)) :| l2@(Leaf (XPathID tm2 b2)) : rest) ->
+        -- here
+        -- use == instead of merge tags Nothing cannot be merged with Just t
          mergeTags srcLoc tm1 tm2 & either
            (\_ ->
              -- Tags incompatible, keep first as-is, try merging from second onward
-             let rest' = mergeAnyElms (Leaf (XPathID tm2 b2) :| rest)
-             in Leaf (XPathID tm1 b1) :| toList rest')
+             let rest' = mergeAnyElms (l2 :| rest)
+             in l1 :| toList rest')
            (\tag ->
              -- Tags compatible, merge these two and continue
              mergeAnyElms $ Leaf (XPathID {tagM = tag, body = bracket b1 <> " or " <> bracket b2}) :| rest)
@@ -380,8 +382,16 @@ mergeTagsInAny elms = do
 distributeTagsToAllElms :: Locator -> NonEmpty (CompoundLocator LocatorI) -> Either InvalidLocator (NonEmpty (CompoundLocator LocatorI))
 distributeTagsToAllElms srcLocator elms = do
   let tagVals = nub $ toList elms >>= collectTags
+      -- Tags from direct children (TagI or tagged XPathID only, no recursion).
+      -- Used to decide whether to distribute: if all tags come from nested
+      -- combinators (AnyI/ContainsI etc.) with no direct child tag source,
+      -- skip distribution to avoid corrupting unrelated branches.
+      directTagVals = nub . catMaybes $ toList elms >>= \case
+        Leaf (TagI t) -> [Just t]
+        Leaf (XPathID {tagM = Just t}) -> [Just t]
+        _ -> [Nothing]
   
-  -- 2c-ii: Contradictory tag detection
+  -- 2c-ii: Contradictory tag detection (all descendants)
   case tagVals of
      -- no tags, nothing to check
     [] -> pure elms 
@@ -390,10 +400,14 @@ distributeTagsToAllElms srcLocator elms = do
       "Contradictory tags in All combinator: " <> T.intercalate ", " tagVals
      -- singleton tag -> check if removable
     [t] ->
-      case result of
-        -- empty list wont happen unless there is a bug
-        [] -> error "processAllI: empty result"
-        x : xs -> Right (x :| xs)
+      case directTagVals of
+        -- Tag only from nested sources (Any/Contains/etc.), not a direct constraint.
+        -- Don't distribute — it would corrupt unrelated branches.
+        [] -> pure elms
+        _ -> case result of
+          -- empty list wont happen unless there is a bug
+          [] -> error "processAllI: empty result"
+          x : xs -> Right (x :| xs)
       where
           elements = toList elms
           distributed = fmap (distributeTagToLeaf t) <$> elms

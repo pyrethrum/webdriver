@@ -589,41 +589,26 @@ mockLocatedReduced allElmsDefault = go
           | otherwise = isBalanced (T.tail t) _depth
 
 
+-- >>> _eg 
+-- Right (Leaf {getLeaf = XPathHttp {value = ".//False[(true()) or (true())]"}})
+_eg :: Either InvalidLocator (CompoundLocator HttpLoc)
+_eg =  transform ID $ 
+   Any
+    { elms =
+        All { elms = AllElms :| [ Tag { value = "False" } ] } :|
+        [ AllElms ]
+    }
 -- TODO:
 {-
   Original locator:
-All
+  Any
     { elms =
-        Any
-          { elms =
-              Any
-                { elms =
-                    AllElms :|
-                      [ AllElms
-                      , AllElms
-                      , Contains
-                          { container = CSS { value = "True" }
-                          , contained = Tag { value = "False" }
-                          }
-                      ]
-                } :|
-                []
-          } :|
-          []
+        All { elms = AllElms :| [ Tag { value = "False" } ] } :|
+        [ AllElms ]
     }
   Prepared simplified locator:
-  AnyI
-    { elms =
-        Leaf
-          { getLeaf =
-              XPathHttp
-                { value = ".//False[((true()) or (true())) or (true())]" }
-          } :|
-          [ ContainsI
-              { container = Leaf { getLeaf = CSSHttp { value = "True" } }
-              , contained = Leaf { getLeaf = XPathHttp { value = ".//False" } }
-              }
-          ]
+  Leaf
+    { getLeaf = XPathHttp { value = ".//False[(true()) or (true())]" }
     }
   Expected (unsimplified): True
   Actual mock located (after simplified merged): Right False
