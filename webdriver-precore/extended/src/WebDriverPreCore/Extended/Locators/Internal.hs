@@ -313,6 +313,7 @@ mergeAnys  =
  where
    mergeAnyElms :: NonEmpty (CompoundLocator LocatorI) -> NonEmpty (CompoundLocator LocatorI)
    mergeAnyElms = \case
+       -- Existing: Merge XPathIDs with identical tags
        (l1@(Leaf (XPathID tm1 b1)) :| l2@(Leaf (XPathID tm2 b2)) : rest) ->
         -- if tags are identical then they can be merged 
         -- Nothing cannot be merged with Just because Nothing represents any tag
@@ -320,6 +321,26 @@ mergeAnys  =
           mergeAnyElms $ Leaf (XPathID {tagM = tm1, body = bracket b1 <> " or " <> bracket b2}) :| rest
         else
           l1 <| mergeAnyElms (l2 :| rest)
+       
+       TODO - REVIEW
+       -- NEW: TagI followed by XPathID with matching tag
+       -- Any(Tag "div", divWithClass) → .//div[true() or (...)]
+       (Leaf (TagI tag) :| Leaf (XPathID {tagM = Just tm, body}) : rest) | tag == tm ->
+         mergeAnyElms $ Leaf (XPathID {tagM = Just tag, body = "true() or " <> bracket body}) :| rest
+       
+       -- NEW: TagI followed by XPathID with wildcard (no tag)
+       -- Any(Tag "div", Class "foo") → .//*[self::div or (...)]
+       (Leaf (TagI tag) :| Leaf (XPathID {tagM = Nothing, body}) : rest) ->
+         mergeAnyElms $ Leaf (XPathID {tagM = Nothing, body = "self::" <> tag <> " or " <> bracket body}) :| rest
+       
+       -- NEW: XPathID with matching tag followed by TagI
+       (Leaf (XPathID {tagM = Just tm, body}) :| Leaf (TagI tag) : rest) | tag == tm ->
+         mergeAnyElms $ Leaf (XPathID {tagM = Just tag, body = bracket body <> " or true()"}) :| rest
+       
+       -- NEW: XPathID with wildcard followed by TagI
+       (Leaf (XPathID {tagM = Nothing, body}) :| Leaf (TagI tag) : rest) ->
+         mergeAnyElms $ Leaf (XPathID {tagM = Nothing, body = bracket body <> " or self::" <> tag}) :| rest
+       
        x -> x
 
 -----------------------------------------------------------------------------
