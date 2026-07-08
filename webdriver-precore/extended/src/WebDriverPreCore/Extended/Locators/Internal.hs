@@ -24,15 +24,14 @@ import Control.Exception (Exception)
 import Data.Functor.Identity (Identity (..))
 import Data.List (nub)
 import Data.List qualified as LST
-import Data.List.NonEmpty (NonEmpty (..), toList)
+import Data.List.NonEmpty (NonEmpty (..), toList, (<|))
 import Data.Maybe (fromMaybe, catMaybes, isJust)
 import Data.Text (Text, intercalate, pack, splitOn, toLower, unpack)
 import Data.Text qualified as T
 import Data.Word (Word8)
-import Utils (txt, db)
+import Utils (txt)
 import WebDriverPreCore.Extended.BiDi.Base.Protocol (BrowsingContext, NodeProperties)
 import Prelude
-import Data.Function ((&))
 import Control.Monad ((>=>))
 
 -----------------------------------------------------------------------------
@@ -195,14 +194,14 @@ data CompoundLocator a
 
 transform :: (Text -> Locator) -> Locator -> Either InvalidLocator (CompoundLocator HttpLoc)
 transform defLoc loc = do
-  locI <- db "LOCI" $ toIntermediate defLoc loc
+  locI <- toIntermediate defLoc loc
   simplified <- simplify locI
   Right $ derivedAndTagsToXPath simplified
   where
     simplify :: CompoundLocator LocatorI -> Either InvalidLocator (CompoundLocator LocatorI)
     simplify current = do
-      merged <- db "MERGED" $ mergeContiguous loc $ unnestAnysAlls current
-      tagged <- db "TAGS ASSIGNED" $ assignTags loc merged
+      merged <- mergeContiguous loc $ unnestAnysAlls current
+      tagged <- distributeTagsInAll loc merged
       let unwrapped = unwrapSingletonCombinators tagged
       if unwrapped == current
         then pure current
@@ -278,7 +277,7 @@ unnestAnysAlls = \case
 -- 2b. Combine contiguous XPathIDs
 -----------------------------------------------------------------------------
 mergeContiguous :: Locator -> CompoundLocator LocatorI -> Either InvalidLocator (CompoundLocator LocatorI)
-mergeContiguous srcLoc li = mergeAnys srcLoc <$> mergeAlls srcLoc li
+mergeContiguous srcLoc li = mergeAnys <$> mergeAlls srcLoc li
 
 bracket :: Text -> Text
 bracket t = "(" <> t <> ")" 
@@ -306,8 +305,8 @@ mergeAlls srcLoc =
           mergeAllElms $ Leaf (XPathID {tagM = tag, body = bracket b1 <> " and " <> bracket b2}) :| rest 
        x -> Right x
 
-mergeAnys :: Locator -> CompoundLocator LocatorI -> CompoundLocator LocatorI
-mergeAnys srcLoc = 
+mergeAnys ::  CompoundLocator LocatorI -> CompoundLocator LocatorI
+mergeAnys  = 
   mapCompoundLocBottomUp (\case 
    AnyI elms -> AnyI $ mergeAnyElms elms
    other -> other)
@@ -315,16 +314,12 @@ mergeAnys srcLoc =
    mergeAnyElms :: NonEmpty (CompoundLocator LocatorI) -> NonEmpty (CompoundLocator LocatorI)
    mergeAnyElms = \case
        (l1@(Leaf (XPathID tm1 b1)) :| l2@(Leaf (XPathID tm2 b2)) : rest) ->
-        -- here
-        -- use == instead of merge tags Nothing cannot be merged with Just t
-         mergeTags srcLoc tm1 tm2 & either
-           (\_ ->
-             -- Tags incompatible, keep first as-is, try merging from second onward
-             let rest' = mergeAnyElms (l2 :| rest)
-             in l1 :| toList rest')
-           (\tag ->
-             -- Tags compatible, merge these two and continue
-             mergeAnyElms $ Leaf (XPathID {tagM = tag, body = bracket b1 <> " or " <> bracket b2}) :| rest)
+        -- if tags are identical then they can be merged 
+        -- Nothing cannot be merged with Just because Nothing represents any tag
+        if tm1 == tm2 then
+          mergeAnyElms $ Leaf (XPathID {tagM = tm1, body = bracket b1 <> " or " <> bracket b2}) :| rest
+        else
+          l1 <| mergeAnyElms (l2 :| rest)
        x -> x
 
 -----------------------------------------------------------------------------
@@ -339,8 +334,8 @@ tagTxt  = \case
 isTagI :: CompoundLocator LocatorI -> Bool
 isTagI  = isJust . tagTxt
 
-isNotTage :: CompoundLocator LocatorI -> Bool
-isNotTage = not . isTagI
+isNotTagI :: CompoundLocator LocatorI -> Bool
+isNotTagI = not . isTagI
 
 -- | Collect all tag values from TagI and tagged XPathID leaves at all depths,
 --   including inside nested AnyI/ContainsI/AllI/PostFilterI combinators.
@@ -355,28 +350,11 @@ collectTags = \case
   PostFilterI _ l -> collectTags l
 
 -- copy tags from TagI and XPathID to all reachable XPathID descendants, and remove the TagI if possible.
-assignTags :: Locator -> CompoundLocator LocatorI -> Either InvalidLocator (CompoundLocator LocatorI)
-assignTags srcLocator = 
+distributeTagsInAll :: Locator -> CompoundLocator LocatorI -> Either InvalidLocator (CompoundLocator LocatorI)
+distributeTagsInAll srcLocator = 
     mapCompoundLocBottomUpM (\case
       AllI elms -> AllI <$> distributeTagsToAllElms srcLocator elms
-      AnyI elms -> AnyI <$> mergeTagsInAny elms
       other -> Right other)
-
--- | 2c-i: Process TagI constructors within an AnyI.
-mergeTagsInAny :: NonEmpty (CompoundLocator LocatorI) -> Either InvalidLocator (NonEmpty (CompoundLocator LocatorI))
-mergeTagsInAny elms = do
-  let children = toList elms
-      (tags, others) = LST.partition isTagI children
-      tagXPaths = 
-        case tags of
-          [] -> []
-          [Leaf (TagI t)] -> [Leaf (XPathI (xPathRelativePrefix <> t))]
-          ts -> [Leaf (XPathI (xPathRelativePrefix <> T.intercalate " | " (catMaybes (tagTxt <$> ts))))]
-      result = tagXPaths <> others
-  case result of
-    [] -> error "mergeTagsInAny: empty result"
-    (x : xs) -> Right (x :| xs)
-
 
 -- | 2c-ii + 2c-iii: Process TagI constructors within an AllI.
 distributeTagsToAllElms :: Locator -> NonEmpty (CompoundLocator LocatorI) -> Either InvalidLocator (NonEmpty (CompoundLocator LocatorI))
@@ -413,7 +391,7 @@ distributeTagsToAllElms srcLocator elms = do
           distributed = fmap (distributeTagToLeaf t) <$> elms
           canRemove = all allDescendantsXPathIDOrTag distributed && not (all isTagI elements)
           result = if canRemove 
-                   then filter isNotTage $ toList distributed
+                   then filter isNotTagI $ toList distributed
                    else toList distributed
   where
     -- | Set tagM = Just t on XPathID leaves, no-op on all other leaves.

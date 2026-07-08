@@ -590,7 +590,7 @@ mockLocatedReduced allElmsDefault = go
 
 
 -- >>> _eg 
--- Right (Leaf {getLeaf = XPathHttp {value = ".//False[(true()) or (true())]"}})
+-- Right (AnyI {elms = Leaf {getLeaf = XPathHttp {value = ".//False[true()]"}} :| [Leaf {getLeaf = XPathHttp {value = ".//*[true()]"}}]})
 _eg :: Either InvalidLocator (CompoundLocator HttpLoc)
 _eg =  transform ID $ 
    Any
@@ -601,15 +601,12 @@ _eg =  transform ID $
 -- TODO:
 {-
   Original locator:
-  Any
-    { elms =
-        All { elms = AllElms :| [ Tag { value = "False" } ] } :|
-        [ AllElms ]
+  Contains
+    { container = Any { elms = Tag { value = "True" } :| [] }
+    , contained = XPath { value = "False" }
     }
   Prepared simplified locator:
-  Leaf
-    { getLeaf = XPathHttp { value = ".//False[(true()) or (true())]" }
-    }
-  Expected (unsimplified): True
-  Actual mock located (after simplified merged): Right False
+  Leaf { getLeaf = XPathHttp { value = ".//True//False" } }
+  Expected (unsimplified): False
+  Actual mock located (after simplified merged): Right True
 -}
