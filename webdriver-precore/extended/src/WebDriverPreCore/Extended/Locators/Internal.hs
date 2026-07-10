@@ -362,7 +362,7 @@ collectTags = \case
   Leaf (TagI t) -> [t]
   Leaf (XPathID {tagM = Just t}) -> [t]
   Leaf _ -> []
-  ContainsI c d -> collectTags c ++ collectTags d
+  ContainsI c d -> collectTags c <> collectTags d
   AllI xs -> toList xs >>= collectTags
   AnyI xs -> toList xs >>= collectTags
   PostFilterI _ l -> collectTags l
@@ -371,61 +371,56 @@ collectTags = \case
 distributeTagsInAll :: Locator -> CompoundLocator LocatorI -> Either InvalidLocator (CompoundLocator LocatorI)
 distributeTagsInAll srcLocator = 
     mapCompoundLocBottomUpM (\case
-      AllI elms -> AllI <$> distributeTagsToAllElms srcLocator elms
+      AllI elms -> AllI <$> distributeTagsToAllElms  elms
       other -> Right other)
+    where
+      distributeTagsToAllElms ::  NonEmpty (CompoundLocator LocatorI) -> Either InvalidLocator (NonEmpty (CompoundLocator LocatorI))
+      distributeTagsToAllElms elms = do
+        let tagVals = nub $ toList elms >>= collectTags
+            -- Tags from direct children (TagI or tagged XPathID only, no recursion).
+            -- Used to decide whether to distribute: if all tags come from nested
+            -- combinators (AnyI/ContainsI etc.) with no direct child tag source,
+            -- skip distribution to avoid corrupting unrelated branches.
+            directTagVals = nub . catMaybes $ toList elms >>= \case
+              Leaf (TagI t) -> [Just t]
+              Leaf (XPathID {tagM = Just t}) -> [Just t]
+              _ -> [Nothing]
+        
+        -- 2c-ii: Contradictory tag detection (all descendants)
+        case tagVals of
+          -- no tags, nothing to check
+          [] -> pure elms 
+          -- contradictory tags
+          _ : _ : _ -> Left . MkInvalidLocator srcLocator $ 
+            "Contradictory tags in All combinator: " <> T.intercalate ", " tagVals
+          -- singleton tag -> check if removable
+          [t] ->
+            case directTagVals of
+              -- Tag only from nested sources (Any/Contains/etc.), not a direct constraint.
+              -- Don't distribute — it would corrupt unrelated branches.
+              [] -> pure elms
+              _ -> case result of
+                -- empty list wont happen unless there is a bug
+                [] -> error "processAllI: empty result"
+                x : xs -> Right (x :| xs)
+            where
+                elements = toList elms
+                distributed = fmap (copyTagToXPathID t) <$> elms
+                canRemove = all isTagOrXPathID distributed && not (all isTagI elements)
+                result = if canRemove 
+                        then filter isNotTagI $ toList distributed
+                        else toList distributed
+      
+      copyTagToXPathID :: Text -> LocatorI -> LocatorI
+      copyTagToXPathID t = \case
+          XPathID _ body -> XPathID {tagM = Just t, body}
+          other -> other
 
--- | 2c-ii + 2c-iii: Process TagI constructors within an AllI.
-distributeTagsToAllElms :: Locator -> NonEmpty (CompoundLocator LocatorI) -> Either InvalidLocator (NonEmpty (CompoundLocator LocatorI))
-distributeTagsToAllElms srcLocator elms = do
-  let tagVals = nub $ toList elms >>= collectTags
-      -- Tags from direct children (TagI or tagged XPathID only, no recursion).
-      -- Used to decide whether to distribute: if all tags come from nested
-      -- combinators (AnyI/ContainsI etc.) with no direct child tag source,
-      -- skip distribution to avoid corrupting unrelated branches.
-      directTagVals = nub . catMaybes $ toList elms >>= \case
-        Leaf (TagI t) -> [Just t]
-        Leaf (XPathID {tagM = Just t}) -> [Just t]
-        _ -> [Nothing]
-  
-  -- 2c-ii: Contradictory tag detection (all descendants)
-  case tagVals of
-     -- no tags, nothing to check
-    [] -> pure elms 
-     -- contradictory tags
-    _ : _ : _ -> Left . MkInvalidLocator srcLocator $ 
-      "Contradictory tags in All combinator: " <> T.intercalate ", " tagVals
-     -- singleton tag -> check if removable
-    [t] ->
-      case directTagVals of
-        -- Tag only from nested sources (Any/Contains/etc.), not a direct constraint.
-        -- Don't distribute — it would corrupt unrelated branches.
-        [] -> pure elms
-        _ -> case result of
-          -- empty list wont happen unless there is a bug
-          [] -> error "processAllI: empty result"
-          x : xs -> Right (x :| xs)
-      where
-          elements = toList elms
-          distributed = fmap (distributeTagToLeaf t) <$> elms
-          canRemove = all allDescendantsXPathIDOrTag distributed && not (all isTagI elements)
-          result = if canRemove 
-                   then filter isNotTagI $ toList distributed
-                   else toList distributed
-  where
-    -- | Set tagM = Just t on XPathID leaves, no-op on all other leaves.
-    --   Since 'LocatorI' is now leaf-only, we only need to handle XPathID.
-    distributeTagToLeaf :: Text -> LocatorI -> LocatorI
-    distributeTagToLeaf t = \case
-      XPathID _ body -> XPathID {tagM = Just t, body}
-      other -> other
-
-    -- | Check if a leaf is an XPathID or TagI.
-    --   Since 'LocatorI' is leaf-only, this just checks the leaf itself.
-    allDescendantsXPathIDOrTag :: CompoundLocator LocatorI -> Bool
-    allDescendantsXPathIDOrTag = \case
-      Leaf (XPathID {}) -> True
-      Leaf (TagI {}) -> True
-      _ -> False
+      isTagOrXPathID :: CompoundLocator LocatorI -> Bool
+      isTagOrXPathID = \case
+          Leaf (XPathID {}) -> True
+          Leaf (TagI {}) -> True
+          _ -> False
 
 
 -----------------------------------------------------------------------------
@@ -588,8 +583,6 @@ wildcardPredX normText val =
          in intercalate " and " predicates
 
 -- | Map over a 'CompoundLocator' tree bottom-up, with monadic effects.
---   Recursively transforms children first, then applies the function to the
---   reconstructed node.  Short-circuits on the first failure for instances
 --   that support it (e.g. 'Either', 'Maybe').
 mapCompoundLocBottomUpM :: Monad m => (CompoundLocator a -> m (CompoundLocator a)) -> CompoundLocator a -> m (CompoundLocator a)
 mapCompoundLocBottomUpM f = recurse >=> f
@@ -783,10 +776,7 @@ data InvalidLocator = MkInvalidLocator {loc :: Locator, description :: Text} der
 
 instance Exception InvalidLocator
 
--- | Fold over a Locator tree with an accumulator, similar to foldl.
---   Processes the parent node first (top-down), then recursively folds over children,
---   threading the accumulator through the entire tree.
---   Useful for counting, collecting, or accumulating information from the Locator tree.
+-- | Fold top-down over a Locator tree with an accumulator, similar to foldl.
 foldLoc :: (a -> Locator -> a) -> a -> Locator -> a
 foldLoc f acc loc =
   case loc of
