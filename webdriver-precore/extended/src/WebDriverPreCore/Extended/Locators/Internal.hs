@@ -726,10 +726,10 @@ roleLabelText :: AriaRole -> Text
 roleLabelText = toLower . pack . show
 
 roleToXPath :: RoleLocator -> Text
-roleToXPath = \case
-  RoleFull {role, name} -> xPathRelativePrefix <> "*" <> role' role <> name' name
-  RoleType {role} -> xPathRelativePrefix <> "*" <> role' role
-  RoleName {name} -> xPathRelativePrefix <> excludedRolesTxt <> name' name
+roleToXPath = (<>) xPathRelativePrefix . \case
+  RoleFull {role, name} -> "*" <> role' role <> name' name
+  RoleType {role} -> "*" <> role' role
+  RoleName {name} -> excludedRolesTxt <> name' name
   where
     role' = roleTypeXPathContent True 
     name' n =
