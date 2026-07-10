@@ -275,12 +275,12 @@ test_parent_infix_precedence =
 
 
 
-chkSimplifiedLoc :: Text -> Either InvalidLocator (CompoundLocator HttpLoc) -> Locator -> TestTree
-chkSimplifiedLoc message expected originalLoc =
+chkTransformedHttpLoc :: Text -> Either InvalidLocator (CompoundLocator HttpLoc) -> Locator -> TestTree
+chkTransformedHttpLoc message expected originalLoc =
   testCase (unpack message) $ transform ID originalLoc @?= expected
 
 -- >>> _eval prepareSimplifyXPathTests
--- *** Exception: ExitSuccess
+-- *** Exception: ExitFailure 1
 
 prepareSimplifyXPathTests :: TestTree
 prepareSimplifyXPathTests =
@@ -291,31 +291,32 @@ prepareSimplifyXPathTests =
       test_contradictory_tags_siingleton_nested_any,
       test_noncontradictory_tags_nested_any,
       test_noncontradictory_tags_simple_nested_any,
-      chkSimplifiedLoc
+      chkTransformedHttpLoc
         "CSS text is unchanged"
-        (Right $ Leaf $ CSSHttp "button")
+        (Right . Leaf $ CSSHttp "button")
         (CSS "button"),
-      chkSimplifiedLoc
+      chkTransformedHttpLoc
         "bare XPath is unchanged"
-        (Right $ Leaf $ XPathHttp "//footer")
+        (Right . Leaf $ XPathHttp "//footer")
         (XPath "//footer"),
-      chkSimplifiedLoc
+      chkTransformedHttpLoc
         "XPath already in //*[pred] form is unchanged"
         (Right . Leaf $ XPathHttp "//*[self::footer]")
         (XPath "//*[self::footer]"),
-      chkSimplifiedLoc
+      chkTransformedHttpLoc
         "ID converts to XPath //*[@id=...]"
         (Right . Leaf $ XPathHttp ".//*[@id='my-id']")
         (ID "my-id"),
-      chkSimplifiedLoc
+      chkTransformedHttpLoc
         "Tag converts to XPath //tag"
-        (Right $ Leaf $ XPathHttp ".//footer")
+        (Right . Leaf $ XPathHttp ".//footer")
         (Tag "footer"),
-      chkSimplifiedLoc
+        here
+      chkTransformedHttpLoc
         "OR - h1 or h2 converts to XPath union"
-        (Right $ Leaf $ XPathHttp ".//h1 | h2")
+        (Right . Leaf $ XPathHttp ".//h1 | h2")
         (Tag "h1" ||| Tag "h2"),
-      chkSimplifiedLoc
+      chkTransformedHttpLoc
         "OR - class A or class B preserves both XPath branches"
         (Right . Leaf $ XPathHttp ".//*[(contains(translate(@class, 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz'), 'a')) or (contains(translate(@class, 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz'), 'b'))]")
         (Class "A" Partial CaseInsensitive ||| Class "B" Partial CaseInsensitive)
