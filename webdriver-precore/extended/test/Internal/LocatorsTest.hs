@@ -324,7 +324,7 @@ prepareSimplifyXPathTests =
     ]
 
 -- >>> _eval prop_simplification_merges_xpaths
--- *** Exception: ExitFailure 1
+-- *** Exception: ExitSuccess
 
 -- | Property: prepareSimplify preserves mockLocated semantics and, for the HTTP
 --   protocol, auto-generated XPaths (from IsXPathConvertable nodes) within the same
@@ -590,7 +590,7 @@ mockLocatedReduced allElmsDefault = go
 
 
 -- >>> _eg 
--- Right (AnyI {elms = Leaf {getLeaf = XPathHttp {value = ".//False[true()]"}} :| [Leaf {getLeaf = XPathHttp {value = ".//*[true()]"}}]})
+-- Right (Leaf {getLeaf = XPathHttp {value = ".//*[(self::False and (true())) or (true())]"}})
 _eg :: Either InvalidLocator (CompoundLocator HttpLoc)
 _eg =  transform ID $ 
    Any

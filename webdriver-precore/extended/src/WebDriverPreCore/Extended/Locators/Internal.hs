@@ -318,15 +318,15 @@ mergeAnys  =
        ((Leaf (XPathID tm1 b1)) :| (Leaf (XPathID tm2 b2)) : rest) ->
         -- if tags are identical then they can be merged 
         -- Nothing cannot be merged with Just because Nothing represents any tag
-        if tm1 == tm2 then 
-          mergeAnyElms $ Leaf (XPathID {tagM = tm1, body = bracket b1 <> " or " <> bracket b2}) :| rest
-        else
-          mergeAnyElms $ Leaf (XPathID Nothing xpath1or2Txt) :| rest
-        where
-            xpath1or2Txt = xpathTxt1 <> " or " <> xpathTxt2
-            xpathTxt1 = xpathTxt tm1 b1
-            xpathTxt2 = xpathTxt tm2 b2
-            xpathTxt tagM body =
+         mergeAnyElms $ 
+          if tm1 == tm2 then 
+            Leaf (XPathID tm1 (bracket b1 <> " or " <> bracket b2)) :| rest
+          else
+            Leaf (XPathID Nothing $ xpathTxt1 <> " or " <> xpathTxt2) :| rest
+          where
+            xpathTxt1 = inlineTag tm1 b1
+            xpathTxt2 = inlineTag tm2 b2
+            inlineTag tagM body =
               tagM & maybe 
                 (bracket body)
                 \t -> "(" <> selfTag t <> " and " <> bracket body <> ")"
