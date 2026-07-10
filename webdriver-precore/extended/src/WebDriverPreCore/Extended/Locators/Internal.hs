@@ -29,7 +29,7 @@ import Data.Maybe (fromMaybe, catMaybes, isJust)
 import Data.Text (Text, intercalate, pack, splitOn, toLower, unpack)
 import Data.Text qualified as T
 import Data.Word (Word8)
-import Utils (txt)
+import Utils (txt, db)
 import WebDriverPreCore.Extended.BiDi.Base.Protocol (BrowsingContext, NodeProperties)
 import Prelude
 import Control.Monad ((>=>))
@@ -334,7 +334,6 @@ mergeAnys  =
        -- Tag overrides XPathID with the same tag (eg div or div && class => div as all div && class will satisfy div)
        (Leaf (TagI tag) :| Leaf (XPathID {tagM = Just tm}) : rest)  | tag == tm ->
           mergeAnyElms $ Leaf (TagI tag) :| rest
-
        -- as above flipped
        (Leaf (XPathID {tagM = Just tm}) :| Leaf (TagI tag) : rest) | tag == tm ->
          mergeAnyElms $ Leaf (TagI tag) :| rest
@@ -343,10 +342,12 @@ mergeAnys  =
        -- Any(Tag "div", Class "foo") → .//*[self::div or (...)]
        (Leaf (TagI tag) :| Leaf (XPathID {tagM = Nothing, body}) : rest) ->
          mergeAnyElms $ Leaf (XPathID {tagM = Nothing, body = selfTag tag <> " or " <> bracket body}) :| rest
-       
        -- as above flipped
        (Leaf (XPathID {tagM = Nothing, body}) :| Leaf (TagI tag) : rest) ->
          mergeAnyElms $ Leaf (XPathID {tagM = Nothing, body = bracket body <> " or " <> selfTag tag}) :| rest
+
+       (Leaf (TagI tag1)  :| Leaf (TagI tag2) : rest) ->
+         mergeAnyElms $ Leaf (XPathID {tagM = Nothing, body = selfTag tag1 <> " or " <> selfTag tag2}) :| rest
        
        x -> x
     where 
@@ -718,7 +719,7 @@ roleLabelText = toLower . pack . show
 
 roleToXPath :: RoleLocator -> Text
 roleToXPath = \case
-  RoleFull {role, name} -> xPathRelativePrefix <> "*" <> role' role <> name' name
+  RoleFull {role, name} -> db "FULL ROLE TEXT" $ xPathRelativePrefix <> "*" <> role' role <> name' name
   RoleType {role} -> xPathRelativePrefix <> "*" <> role' role
   RoleName {name} -> xPathRelativePrefix <> "*[not(@role='presentation' or @role='none')]" <> name' name
   where

@@ -491,13 +491,13 @@ tests =
   isAmbiguous other = Just $ "expected AmbiguousLocator but got: " <> txt other
 
 _pattern :: Maybe Text
--- _pattern = Just "roleType Option"
-_pattern = Nothing
-
+_pattern = Just "ExtLocateAlways finds textbox with aria-label"
+-- _pattern = Nothing
+-- (textbox "Nickname") "auto-id" "edt-nickname"
 _eval :: Maybe Text -> TestTree -> IO ()
 _eval mPattern = withArgs (maybe [] (\pat -> ["-p", (unpack pat)]) mPattern) . defaultMain
 
 --- >>> _eval _pattern tests
--- *** Exception: ExitSuccess
+-- *** Exception: ExitFailure 1
 
 

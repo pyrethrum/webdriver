@@ -280,7 +280,7 @@ chkTransformedHttpLoc message expected originalLoc =
   testCase (unpack message) $ transform ID originalLoc @?= expected
 
 -- >>> _eval prepareSimplifyXPathTests
--- *** Exception: ExitFailure 1
+-- *** Exception: ExitSuccess
 
 prepareSimplifyXPathTests :: TestTree
 prepareSimplifyXPathTests =
@@ -293,34 +293,36 @@ prepareSimplifyXPathTests =
       test_noncontradictory_tags_simple_nested_any,
       chkTransformedHttpLoc
         "CSS text is unchanged"
-        (Right . Leaf $ CSSHttp "button")
+        (leaf $ CSSHttp "button")
         (CSS "button"),
       chkTransformedHttpLoc
         "bare XPath is unchanged"
-        (Right . Leaf $ XPathHttp "//footer")
+        (httpLeaf "//footer")
         (XPath "//footer"),
       chkTransformedHttpLoc
         "XPath already in //*[pred] form is unchanged"
-        (Right . Leaf $ XPathHttp "//*[self::footer]")
+        (httpLeaf "//*[self::footer]")
         (XPath "//*[self::footer]"),
       chkTransformedHttpLoc
         "ID converts to XPath //*[@id=...]"
-        (Right . Leaf $ XPathHttp ".//*[@id='my-id']")
+        (httpLeaf ".//*[@id='my-id']")
         (ID "my-id"),
       chkTransformedHttpLoc
         "Tag converts to XPath //tag"
-        (Right . Leaf $ XPathHttp ".//footer")
-        (Tag "footer"),
-        here
+        (httpLeaf ".//footer")
+        (Tag "footer"), 
       chkTransformedHttpLoc
         "OR - h1 or h2 converts to XPath union"
-        (Right . Leaf $ XPathHttp ".//h1 | h2")
+        (httpLeaf ".//*[self::h1 or self::h2]")
         (Tag "h1" ||| Tag "h2"),
       chkTransformedHttpLoc
         "OR - class A or class B preserves both XPath branches"
-        (Right . Leaf $ XPathHttp ".//*[(contains(translate(@class, 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz'), 'a')) or (contains(translate(@class, 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz'), 'b'))]")
+        (httpLeaf ".//*[(contains(translate(@class, 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz'), 'a')) or (contains(translate(@class, 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz'), 'b'))]")
         (Class "A" Partial CaseInsensitive ||| Class "B" Partial CaseInsensitive)
     ]
+    where 
+      leaf = Right . Leaf
+      httpLeaf = leaf . XPathHttp
 
 -- >>> _eval prop_simplification_merges_xpaths
 -- *** Exception: ExitSuccess
