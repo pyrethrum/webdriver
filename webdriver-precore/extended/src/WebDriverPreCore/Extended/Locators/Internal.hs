@@ -315,17 +315,23 @@ mergeAnys  =
    mergeAnyElms :: NonEmpty (CompoundLocator LocatorI) -> NonEmpty (CompoundLocator LocatorI)
    mergeAnyElms = \case
        -- Merge XPathIDs with identical tags
-       (l1@(Leaf (XPathID tm1 b1)) :| l2@(Leaf (XPathID tm2 b2)) : rest) ->
+       ((Leaf (XPathID tm1 b1)) :| (Leaf (XPathID tm2 b2)) : rest) ->
         -- if tags are identical then they can be merged 
         -- Nothing cannot be merged with Just because Nothing represents any tag
         if tm1 == tm2 then 
           mergeAnyElms $ Leaf (XPathID {tagM = tm1, body = bracket b1 <> " or " <> bracket b2}) :| rest
         else
-          --  split the tag off and recurse to be handled in other cases
-          case (tm1, tm2) of 
-            (Just t1, _) -> mergeAnyElms $ Leaf (TagI t1) <| Leaf (XPathID Nothing b1) <| l2 :| rest
-            (_, Just t2) -> mergeAnyElms $ l1 <| Leaf (TagI t2) <| Leaf (XPathID Nothing b2) :| rest
-            (Nothing, Nothing) -> error $ "Nothing Nothing should be handled in equality Nothing == Nothing"
+          mergeAnyElms $ Leaf (XPathID Nothing xpath1or2Txt) :| rest
+        where
+            xpath1or2Txt = xpathTxt1 <> " or " <> xpathTxt2
+            xpathTxt1 = xpathTxt tm1 b1
+            xpathTxt2 = xpathTxt tm2 b2
+            xpathTxt tagM body =
+              tagM & maybe 
+                (bracket body)
+                \t -> "(" <> selfTag t <> " and " <> bracket body <> ")"
+              
+
                    
        -- Tag overrides XPathID with the same tag (eg div or div && class => div as all div && class will satisfy div)
        (Leaf (TagI tag) :| Leaf (XPathID {tagM = Just tm}) : rest)  | tag == tm ->
@@ -348,6 +354,7 @@ mergeAnys  =
     where 
       selfTag :: Text -> Text
       selfTag tag = "self::" <> tag
+           
 
 
   
