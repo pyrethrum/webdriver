@@ -330,9 +330,7 @@ mergeAnys  =
               tagM & maybe 
                 (bracket body)
                 \t -> "(" <> selfTag t <> " and " <> bracket body <> ")"
-              
-
-                   
+                          
        -- Tag overrides XPathID with the same tag (eg div or div && class => div as all div && class will satisfy div)
        (Leaf (TagI tag) :| Leaf (XPathID {tagM = Just tm}) : rest)  | tag == tm ->
           mergeAnyElms $ Leaf (TagI tag) :| rest

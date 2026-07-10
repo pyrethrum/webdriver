@@ -836,7 +836,10 @@ evaluateCase :: IO WDSession -> LocatorTestCase -> IO ()
 evaluateCase getSession locCase  = 
   case locCase of
     Matched {testNode, abstractLocator, expectedMatches} -> do
-      putStrLn $ "LocateCombinatorTest pre-IO node count (test node): " <> show (countNodes testNode) <> " (generator selection): " <> show (countSelectionNodes abstractLocator)
+      -- putStrLn $ "LocateCombinatorTest pre-IO node count (test node): " 
+      --   <> show (countNodes testNode) 
+      --   <> " (generator selection): " 
+      --   <> show (countSelectionNodes abstractLocator)
       wdSession <- getSession
       runHttp wdSession $ do
         let dataUrl = htmlToDataUrl html
