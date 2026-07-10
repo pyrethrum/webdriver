@@ -17,6 +17,7 @@ module WebDriverPreCore.Extended.Locators.Internal (
     RoleLocator(..),
     roleLabelText,
     roleTypeXPathContent,
+    roleTypeOnlyXPath,
     transform,
     xPathRelativePrefix,
     excludedRolesTxt 
@@ -25,13 +26,12 @@ module WebDriverPreCore.Extended.Locators.Internal (
 import Control.Exception (Exception)
 import Data.Functor.Identity (Identity (..))
 import Data.List (nub)
-import Data.List qualified as LST
-import Data.List.NonEmpty (NonEmpty (..), toList, (<|))
+import Data.List.NonEmpty (NonEmpty (..), toList)
 import Data.Maybe (fromMaybe, catMaybes, isJust)
 import Data.Text (Text, intercalate, pack, splitOn, toLower, unpack)
 import Data.Text qualified as T
 import Data.Word (Word8)
-import Utils (txt, db)
+import Utils (txt)
 import WebDriverPreCore.Extended.BiDi.Base.Protocol (BrowsingContext, NodeProperties)
 import Prelude
 import Control.Monad ((>=>))
@@ -156,29 +156,6 @@ data LocatorI
       Eq,
       Ord
     )
-
-{-
-data LocatorFinal
-  = 
-    CSSF {value :: Text}
-  | XPathF {value :: Text} 
-  | RoleF {xpath :: Text}
-  | InnerTextF
-      { value :: Text,
-        matchType :: MatchType,
-        caseSensitivity :: CaseSensitivity,
-        maxDepth :: Maybe Word8
-      }
-  | -- exclusive
-    -- browsingContextId -> elementId ie get the frame that belongs to the browsing context
-    BiDiContextF {context :: BrowsingContext}
-  deriving
-    ( -- | WithOptions {base :: Locator, options :: [LocatorDirectives]}
-      Show,
-      Eq,
-      Ord
-    )
-  -}
 
 data HttpLoc
   = 
@@ -362,9 +339,6 @@ mergeAnys  =
       selfTag :: Text -> Text
       selfTag tag = "self::" <> tag
            
-
-
-  
 
 -----------------------------------------------------------------------------
 -- 2c. Assign tags
@@ -725,13 +699,20 @@ data CaseSensitivity = CaseSensitive | CaseInsensitive deriving (Show, Eq, Ord)
 roleLabelText :: AriaRole -> Text
 roleLabelText = toLower . pack . show
 
+-- | Generate XPath for role type predicates only (without .// prefix or name matching).
+-- Used as a building block for constructing role-based XPath expressions.
+roleTypeOnlyXPath :: RoleLocator -> Text
+roleTypeOnlyXPath = \case
+  RoleFull {role} -> "*" <> roleTypeXPathContent True role
+  RoleName {} -> excludedRolesTxt
+  RoleType {role} -> "*" <> roleTypeXPathContent True role
+
 roleToXPath :: RoleLocator -> Text
-roleToXPath = (<>) xPathRelativePrefix . \case
-  RoleFull {role, name} -> "*" <> role' role <> name' name
-  RoleType {role} -> "*" <> role' role
-  RoleName {name} -> excludedRolesTxt <> name' name
+roleToXPath roleLoc = case roleLoc of
+  RoleFull {name} -> xPathRelativePrefix <> roleTypeOnlyXPath roleLoc <> name' name
+  RoleType {} -> xPathRelativePrefix <> roleTypeOnlyXPath roleLoc
+  RoleName {name} -> xPathRelativePrefix <> roleTypeOnlyXPath roleLoc <> name' name
   where
-    role' = roleTypeXPathContent True 
     name' n =
       "["
         <> intercalate

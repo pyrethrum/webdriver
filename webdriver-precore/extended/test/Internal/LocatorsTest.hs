@@ -11,7 +11,7 @@ import Test.Tasty (TestTree, defaultMain, testGroup)
 import Test.Tasty.Falsify (ExpectFailure (DontExpectFailure), TestOptions (..), Verbose (..), gen, info, testPropertyWith)
 import Test.Tasty.Falsify qualified as F
 import Test.Tasty.HUnit (testCase, (@?=), (@?), assertFailure)
-import Utils (txt, db)
+import Utils (txt)
 import WebDriverPreCore.Extended.BiDi.Base.Protocol (BrowsingContext (..))
 import WebDriverPreCore.Extended.Locators hiding (Locator)
 import WebDriverPreCore.Extended.Locators.Internal
