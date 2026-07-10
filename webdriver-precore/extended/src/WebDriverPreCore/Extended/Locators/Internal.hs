@@ -16,8 +16,10 @@ module WebDriverPreCore.Extended.Locators.Internal (
     CaseSensitivity(..),
     RoleLocator(..),
     roleLabelText,
+    roleTypeXPathContent,
     transform,
-    xPathRelativePrefix 
+    xPathRelativePrefix,
+    excludedRolesTxt 
 ) where
 
 import Control.Exception (Exception)
@@ -59,6 +61,12 @@ import Data.Function ((&))
 --    constructor is passed through unchanged, giving users full control when needed.
 xPathRelativePrefix :: Text
 xPathRelativePrefix = ".//"
+
+-- | XPath predicate to exclude elements with presentation or none roles.
+-- Used in RoleName locators to match only elements that are not explicitly
+-- excluded from the accessibility tree.
+excludedRolesTxt :: Text
+excludedRolesTxt = "*[not(@role='presentation' or @role='none')]"
 
 data MatchFlags = MkMatchFlags
   { ignoreCase :: Bool,
@@ -719,9 +727,9 @@ roleLabelText = toLower . pack . show
 
 roleToXPath :: RoleLocator -> Text
 roleToXPath = \case
-  RoleFull {role, name} -> db "FULL ROLE TEXT" $ xPathRelativePrefix <> "*" <> role' role <> name' name
+  RoleFull {role, name} -> xPathRelativePrefix <> "*" <> role' role <> name' name
   RoleType {role} -> xPathRelativePrefix <> "*" <> role' role
-  RoleName {name} -> xPathRelativePrefix <> "*[not(@role='presentation' or @role='none')]" <> name' name
+  RoleName {name} -> xPathRelativePrefix <> excludedRolesTxt <> name' name
   where
     role' = roleTypeXPathContent True 
     name' n =

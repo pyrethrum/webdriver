@@ -542,11 +542,11 @@ findByRoleIndirect actions lc roleLoc xpath =
       -- role type has no name / label so nothing to do
       RoleType {} -> pure []
       _ -> do
-        labelledByElms <- findRoleByAriaLabledBy actions lc roleLoc xpath
+        labelledByElms <- findRoleByAriaLabledBy actions lc roleLoc
         if lc == FindFirst && notNull labelledByElms
           then pure labelledByElms
           else do
-            forElms <- findRoleByForLabel actions lc roleLoc xpath
+            forElms <- findRoleByForLabel actions lc roleLoc
             pure . nubOrd $ mconcat [labelledByElms, forElms]
 
 findRoleByAriaLabledBy ::
@@ -555,15 +555,14 @@ findRoleByAriaLabledBy ::
   LocParams m ->
   LeafCardinality ->
   RoleLocator ->
-  Text ->
   m [ElementId]
-findRoleByAriaLabledBy prms lc roleLoc xpath =
+findRoleByAriaLabledBy prms lc roleLoc =
   case roleLoc of
     RoleType {} -> pure []
     _ -> do
       candidates <-
         -- all elms that match role and have an aria-labelledby attribute
-        prms.findElements (HTTPP.XPath $ xPathRelativePrefix <> "*" <> xpath <> "[@aria-labelledby]")
+        prms.findElements (HTTPP.XPath $ roleTypeOnlyXPath roleLoc <> "[@aria-labelledby]")
       r <- filterElms lc labledByMatchesRoleText candidates
       prms.trace $ RoleSecondPassLabeledBy roleLoc r
       pure r
@@ -595,15 +594,14 @@ findRoleByForLabel ::
   LocParams m ->
   LeafCardinality ->
   RoleLocator ->
-  Text ->
   m [ElementId]
-findRoleByForLabel actions lc roleLoc xpath =
+findRoleByForLabel actions lc roleLoc =
   case roleLoc of
     RoleType {} -> pure []
     _ -> do
       candidates <-
         -- has an @id and matches the role name
-        actions.findElements $ HTTPP.XPath $ xPathRelativePrefix <> "*" <> xpath <> "[@id]"
+        actions.findElements $ HTTPP.XPath $ roleTypeOnlyXPath roleLoc <> "[@id]"
       r <- filterElms lc forTxtMatchesId candidates
       actions.trace $ RoleSecondPassFor roleLoc r
       pure r
@@ -621,6 +619,13 @@ findRoleByForLabel actions lc roleLoc xpath =
                   labelText <- actions.getElementText lbl
                   pure $ T.strip labelText == T.strip roleLoc.name
 
+-- | Generate XPath for just the role type predicates (without name matching).
+-- Used for aria-labelledby and for-label second-pass resolution.
+roleTypeOnlyXPath :: RoleLocator -> Text
+roleTypeOnlyXPath = (<>) xPathRelativePrefix . \case
+  RoleFull {role} -> "*" <> LI.roleTypeXPathContent True role
+  RoleName {} -> LI.excludedRolesTxt
+  RoleType {role} -> "*" <> LI.roleTypeXPathContent True role
 
 filterElms :: forall m. (Monad m) => LeafCardinality -> (ElementId -> m Bool) -> [ElementId] -> m [ElementId]
 filterElms lc matcher = recurse []
