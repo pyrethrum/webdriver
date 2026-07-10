@@ -33,6 +33,7 @@ import Utils (txt)
 import WebDriverPreCore.Extended.BiDi.Base.Protocol (BrowsingContext, NodeProperties)
 import Prelude
 import Control.Monad ((>=>))
+import Data.Function ((&))
 
 -----------------------------------------------------------------------------
 -- Constants
@@ -313,35 +314,43 @@ mergeAnys  =
  where
    mergeAnyElms :: NonEmpty (CompoundLocator LocatorI) -> NonEmpty (CompoundLocator LocatorI)
    mergeAnyElms = \case
-       -- Existing: Merge XPathIDs with identical tags
+       -- Merge XPathIDs with identical tags
        (l1@(Leaf (XPathID tm1 b1)) :| l2@(Leaf (XPathID tm2 b2)) : rest) ->
         -- if tags are identical then they can be merged 
         -- Nothing cannot be merged with Just because Nothing represents any tag
-        if tm1 == tm2 then
+        if tm1 == tm2 then 
           mergeAnyElms $ Leaf (XPathID {tagM = tm1, body = bracket b1 <> " or " <> bracket b2}) :| rest
         else
-          l1 <| mergeAnyElms (l2 :| rest)
+          --  split the tag off and recurse to be handled in other cases
+          case (tm1, tm2) of 
+            (Just t1, _) -> mergeAnyElms $ Leaf (TagI t1) <| Leaf (XPathID Nothing b1) <| l2 :| rest
+            (_, Just t2) -> mergeAnyElms $ l1 <| Leaf (TagI t2) <| Leaf (XPathID Nothing b2) :| rest
+            (Nothing, Nothing) -> error $ "Nothing Nothing should be handled in equality Nothing == Nothing"
+                   
+       -- Tag overrides XPathID with the same tag (eg div or div && class => div as all div && class will satisfy div)
+       (Leaf (TagI tag) :| Leaf (XPathID {tagM = Just tm}) : rest)  | tag == tm ->
+          mergeAnyElms $ Leaf (TagI tag) :| rest
+
+       -- as above flipped
+       (Leaf (XPathID {tagM = Just tm}) :| Leaf (TagI tag) : rest) | tag == tm ->
+         mergeAnyElms $ Leaf (TagI tag) :| rest
        
-       TODO - REVIEW
-       -- NEW: TagI followed by XPathID with matching tag
-       -- Any(Tag "div", divWithClass) → .//div[true() or (...)]
-       (Leaf (TagI tag) :| Leaf (XPathID {tagM = Just tm, body}) : rest) | tag == tm ->
-         mergeAnyElms $ Leaf (XPathID {tagM = Just tag, body = "true() or " <> bracket body}) :| rest
-       
-       -- NEW: TagI followed by XPathID with wildcard (no tag)
+       -- TagI followed by XPathID with wildcard (no tag)
        -- Any(Tag "div", Class "foo") → .//*[self::div or (...)]
        (Leaf (TagI tag) :| Leaf (XPathID {tagM = Nothing, body}) : rest) ->
-         mergeAnyElms $ Leaf (XPathID {tagM = Nothing, body = "self::" <> tag <> " or " <> bracket body}) :| rest
+         mergeAnyElms $ Leaf (XPathID {tagM = Nothing, body = selfTag tag <> " or " <> bracket body}) :| rest
        
-       -- NEW: XPathID with matching tag followed by TagI
-       (Leaf (XPathID {tagM = Just tm, body}) :| Leaf (TagI tag) : rest) | tag == tm ->
-         mergeAnyElms $ Leaf (XPathID {tagM = Just tag, body = bracket body <> " or true()"}) :| rest
-       
-       -- NEW: XPathID with wildcard followed by TagI
+       -- as above flipped
        (Leaf (XPathID {tagM = Nothing, body}) :| Leaf (TagI tag) : rest) ->
-         mergeAnyElms $ Leaf (XPathID {tagM = Nothing, body = bracket body <> " or self::" <> tag}) :| rest
+         mergeAnyElms $ Leaf (XPathID {tagM = Nothing, body = bracket body <> " or " <> selfTag tag}) :| rest
        
        x -> x
+    where 
+      selfTag :: Text -> Text
+      selfTag tag = "self::" <> tag
+
+
+  
 
 -----------------------------------------------------------------------------
 -- 2c. Assign tags
@@ -463,11 +472,14 @@ convertContains = mapCompoundLocBottomUp $ \case
 convertTagsXPathIDs :: CompoundLocator LocatorI -> CompoundLocator HttpLoc
 convertTagsXPathIDs = fmap $ \case
   XPathID {tagM, body} ->
-    XPathHttp {value = xPathRelativePrefix <> fromMaybe "*" tagM <> "[" <> body <> "]"}
+    XPathHttp {value = xPathIDTxt tagM body}
   TagI {tag} -> XPathHttp {value = xPathRelativePrefix <> tag}
   CSSI {..} -> CSSHttp {..}
   XPathI {..} -> XPathHttp {..}
   RoleI {..} -> RoleHttp {..}
+
+xPathIDTxt :: Maybe Text -> Text -> Text
+xPathIDTxt tagM body = xPathRelativePrefix <> fromMaybe "*" tagM <> "[" <> body <> "]"
 
 -----------------------------------------------------------------------------
 -- Top-level XPath predicate helpers (extracted from locatorToXPathPartial)
@@ -476,25 +488,27 @@ convertTagsXPathIDs = fmap $ \case
 -- | XPath predicate for CSS class matching.
 classPredX :: Text -> MatchType -> CaseSensitivity -> Text
 classPredX val mt cs =
-  let classAttr = applyCSText cs "@class"
-      matchVal = lowerIfCIText cs val
-  in case mt of
-       Full ->
-         "contains(concat(' ', normalize-space(" <> classAttr <> "), ' '), ' " <> matchVal <> " ')"
-       Partial -> "contains(" <> classAttr <> ", '" <> matchVal <> "')"
-       Starts -> "starts-with(normalize-space(" <> classAttr <> "), '" <> matchVal <> "')"
-       Wildcard -> wildcardPredX classAttr matchVal
+  case mt of
+    Full ->
+      "contains(concat(' ', normalize-space(" <> classAttr <> "), ' '), ' " <> matchVal <> " ')"
+    Partial -> "contains(" <> classAttr <> ", '" <> matchVal <> "')"
+    Starts -> "starts-with(normalize-space(" <> classAttr <> "), '" <> matchVal <> "')"
+    Wildcard -> wildcardPredX classAttr matchVal
+  where
+    classAttr = applyCaseSensitivity "@class" cs
+    matchVal = lwrCaseInsensitive val cs
 
 -- | XPath predicate for named attribute matching.
 attrPredX :: Text -> Text -> MatchType -> CaseSensitivity -> Text
 attrPredX name val mt cs =
-  let attrExpr = applyCSText cs ("@" <> name)
-      matchVal = lowerIfCIText cs val
-  in case mt of
-       Full -> attrExpr <> "='" <> matchVal <> "'"
-       Partial -> "contains(" <> attrExpr <> ", '" <> matchVal <> "')"
-       Starts -> "starts-with(" <> attrExpr <> ", '" <> matchVal <> "')"
-       Wildcard -> wildcardPredX attrExpr matchVal
+  case mt of
+    Full -> attrExpr <> "='" <> matchVal <> "'"
+    Partial -> "contains(" <> attrExpr <> ", '" <> matchVal <> "')"
+    Starts -> "starts-with(" <> attrExpr <> ", '" <> matchVal <> "')"
+    Wildcard -> wildcardPredX attrExpr matchVal
+  where
+    attrExpr = applyCaseSensitivity ("@" <> name) cs
+    matchVal = lwrCaseInsensitive val cs
 
 -- | XPath predicate for inner text matching (without the leading '//*').
 --   Returns predicate brackets that can be used in XPathID body.
@@ -549,14 +563,15 @@ innerTextPredX val cs matchType mMaxDepth =
 
     depthPred = maybe "" (\d -> "[count(ancestor::*)<=" <> pack (show d) <> "]") mMaxDepth
 
-applyCSText :: CaseSensitivity -> Text -> Text
-applyCSText CaseSensitive expr = expr
-applyCSText CaseInsensitive expr =
-  "translate(" <> expr <> ", '" <> upperAlpha <> "', '" <> lowerAlpha <> "')"
+applyCaseSensitivity :: Text -> CaseSensitivity -> Text
+applyCaseSensitivity expr = \case
+  CaseSensitive -> expr
+  CaseInsensitive -> "translate(" <> expr <> ", '" <> upperAlpha <> "', '" <> lowerAlpha <> "')"
 
-lowerIfCIText :: CaseSensitivity -> Text -> Text
-lowerIfCIText CaseSensitive v = v
-lowerIfCIText CaseInsensitive v = toLower v
+lwrCaseInsensitive :: Text -> CaseSensitivity -> Text
+lwrCaseInsensitive v = \case
+  CaseSensitive -> v
+  CaseInsensitive -> toLower v
 
 wildcardPredX :: Text -> Text -> Text
 wildcardPredX normText val =
