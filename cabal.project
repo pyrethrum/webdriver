@@ -1,9 +1,11 @@
-import: https://www.stackage.org/nightly-2026-01-18/cabal.config
+import: https://www.stackage.org/nightly-2026-07-12/cabal.config
   --  https://www.stackage.org/nightly-2025-02-25/cabal.config
 
 -- Allow newer versions to resolve dependency conflicts
 allow-newer:
-  falsify:optparse-applicative
+  falsify:optparse-applicative,
+  dhall:http-client-tls
+  
 
 packages: 
   webdriver-precore/*.cabal
