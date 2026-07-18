@@ -28,6 +28,8 @@ module WebDriverPreCore.BiDi.API
     browsingContextPrint,
     browsingContextReload,
     browsingContextSetViewport,
+    browsingContextStartScreencast,
+    browsingContextStopScreencast,
     browsingContextTraverseHistory,
 
     -- * Browser Commands
@@ -192,6 +194,10 @@ import WebDriverPreCore.BiDi.Protocol
     ResponseStarted,
     SessionNewResult,
     SessionStatusResult,
+    StartScreencast,
+    StartScreencastResult,
+    StopScreencast,
+    StopScreencastResult,
     SessionSubscibe (..),
     SessionSubscribeResult (..),
     SessionUnsubscribe (..),
@@ -337,6 +343,18 @@ browsingContextReload = mkCommand BrowsingContextReload
 -- First added to Spec: <https://www.w3.org/TR/2024/WD-webdriver-bidi-20241121/#command-browsingContext-setViewport 21 November 2024 - First Public Working Draft>
 browsingContextSetViewport :: SetViewport -> Command ()
 browsingContextSetViewport = mkCommand BrowsingContextSetViewport
+
+-- | Specification Entry: <BiDiSpecURL#command-browsingContext-startScreencast browsingContext.startScreencast>
+--
+-- First added to Spec: <https://www.w3.org/TR/2026/WD-webdriver-bidi-20260629/#command-browsingContext-startScreencast 29 June 2026 - Working Draft>
+browsingContextStartScreencast :: StartScreencast -> Command StartScreencastResult
+browsingContextStartScreencast = mkCommand BrowsingContextStartScreencast
+
+-- | Specification Entry: <BiDiSpecURL#command-browsingContext-stopScreencast browsingContext.stopScreencast>
+--
+-- First added to Spec: <https://www.w3.org/TR/2026/WD-webdriver-bidi-20260629/#command-browsingContext-stopScreencast 29 June 2026 - Working Draft>
+browsingContextStopScreencast :: StopScreencast -> Command StopScreencastResult
+browsingContextStopScreencast = mkCommand BrowsingContextStopScreencast
 
 -- | Specification Entry: <BiDiSpecURL#command-browsingContext-traverseHistory browsingContext.traverseHistory>
 --

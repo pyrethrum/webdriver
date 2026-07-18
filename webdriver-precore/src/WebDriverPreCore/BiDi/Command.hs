@@ -73,6 +73,8 @@ data KnownCommand
   | BrowsingContextPrint
   | BrowsingContextReload
   | BrowsingContextSetViewport
+  | BrowsingContextStartScreencast
+  | BrowsingContextStopScreencast
   | BrowsingContextTraverseHistory
   | EmulationSetForcedColorsModeThemeOverride
   | EmulationSetGeolocationOverride
@@ -221,6 +223,8 @@ instance FromJSON KnownCommand where
         "browsingContext.print" -> p BrowsingContextPrint
         "browsingContext.reload" -> p BrowsingContextReload
         "browsingContext.setViewport" -> p BrowsingContextSetViewport
+        "browsingContext.startScreencast" -> p BrowsingContextStartScreencast
+        "browsingContext.stopScreencast" -> p BrowsingContextStopScreencast
         "browsingContext.traverseHistory" -> p BrowsingContextTraverseHistory
         "emulation.setForcedColorsModeThemeOverride" -> p EmulationSetForcedColorsModeThemeOverride
         "emulation.setGeolocationOverride" -> p EmulationSetGeolocationOverride
@@ -298,6 +302,8 @@ knownCommandToText = \case
   BrowsingContextPrint -> "browsingContext.print"
   BrowsingContextReload -> "browsingContext.reload"
   BrowsingContextSetViewport -> "browsingContext.setViewport"
+  BrowsingContextStartScreencast -> "browsingContext.startScreencast"
+  BrowsingContextStopScreencast -> "browsingContext.stopScreencast"
   BrowsingContextTraverseHistory -> "browsingContext.traverseHistory"
   EmulationSetForcedColorsModeThemeOverride -> "emulation.setForcedColorsModeThemeOverride"
   EmulationSetGeolocationOverride -> "emulation.setGeolocationOverride"

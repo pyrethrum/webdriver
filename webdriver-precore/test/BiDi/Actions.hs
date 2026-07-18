@@ -108,6 +108,10 @@ import WebDriverPreCore.BiDi.Protocol as P
     SetTimezoneOverride,
     SetTouchOverride,
     SetUserAgentOverride,
+    StartScreencast,
+    StartScreencastResult,
+    StopScreencast,
+    StopScreencastResult,
     SetViewport,
     SubscriptionId (..),
     TraverseHistory,
@@ -144,6 +148,8 @@ data BiDiActions = MkBiDiActions
     browsingContextPrint :: Print -> IO PrintResult,
     browsingContextReload :: Reload -> IO (),
     browsingContextSetViewport :: SetViewport -> IO (),
+    browsingContextStartScreencast :: StartScreencast -> IO StartScreencastResult,
+    browsingContextStopScreencast :: StopScreencast -> IO StopScreencastResult,
     browsingContextTraverseHistory :: TraverseHistory -> IO (),
     -- Browser commandssendCommandNoWait socket
     browserClose :: IO (),
@@ -298,6 +304,8 @@ mkActions socket =
       browsingContextPrint = send . API.browsingContextPrint,
       browsingContextReload = send . API.browsingContextReload,
       browsingContextSetViewport = send . API.browsingContextSetViewport,
+      browsingContextStartScreencast = send . API.browsingContextStartScreencast,
+      browsingContextStopScreencast = send . API.browsingContextStopScreencast,
       browsingContextTraverseHistory = send . API.browsingContextTraverseHistory,
       -- Browser commands
       browserClose = send API.browserClose,
