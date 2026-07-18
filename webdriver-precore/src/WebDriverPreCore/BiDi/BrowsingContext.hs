@@ -279,11 +279,22 @@ instance ToJSON Reload where
   toJSON :: Reload -> Value
   toJSON = toJSONOmitNothing
 
--- | for setBypassCSP command
+-- | Bypass CSP override for setBypassCSP command
 -- Per spec: bypass can be true or null (not false)
--- True encodes as true, False encodes as null
+data BypassCSPOverride
+  = EnableBypassCSP -- ^ Encode as true - enable CSP bypass
+  | RestoreDefaultBypassCSP -- ^ Encode as null - restore to default (don't bypass)
+  deriving (Show, Eq, Generic)
+
+instance ToJSON BypassCSPOverride where
+  toJSON :: BypassCSPOverride -> Value
+  toJSON = \case
+    EnableBypassCSP -> Bool True
+    RestoreDefaultBypassCSP -> Null
+
+-- | for setBypassCSP command
 data SetBypassCSP = MkSetBypassCSP
-  { bypass :: Bool, -- True = true (enable), False = null (disable/restore default)
+  { bypass :: BypassCSPOverride,
     contexts :: Maybe [BrowsingContext],
     userContexts :: Maybe [UserContext]
   }
@@ -292,9 +303,7 @@ data SetBypassCSP = MkSetBypassCSP
 instance ToJSON SetBypassCSP where
   toJSON :: SetBypassCSP -> Value
   toJSON MkSetBypassCSP {bypass, contexts, userContexts} =
-    object $ bypassField : catMaybes [opt "contexts" contexts, opt "userContexts" userContexts]
-    where
-      bypassField = "bypass" .= if bypass then Bool True else Null
+    object $ ["bypass" .= bypass] <> catMaybes [opt "contexts" contexts, opt "userContexts" userContexts]
 
 -- |  for setViewport command
 data SetViewport = MkSetViewport

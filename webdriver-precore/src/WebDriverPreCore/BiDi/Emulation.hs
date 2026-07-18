@@ -8,6 +8,7 @@ module WebDriverPreCore.BiDi.Emulation
     SetForcedColorsModeThemeOverride (..),
     SetNetworkConditions (..),
     SetUserAgentOverride (..),
+    ScriptingOverride (..),
     SetScriptingEnabled (..),
     SetScrollbarTypeOverride (..),
     ScrollbarType (..),
@@ -180,11 +181,22 @@ instance ToJSON SetUserAgentOverride where
             opt "userContexts" userContexts
           ]
 
--- | for setScriptingEnabled command
+-- | Scripting override for setScriptingEnabled command
 -- Per spec: enabled can be false or null (not true)
--- False encodes as false, True encodes as null
+data ScriptingOverride
+  = ForceDisableScripting -- ^ Encode as false - explicitly disable scripting
+  | RestoreDefaultScripting -- ^ Encode as null - restore to initial browser configuration
+  deriving (Show, Eq, Generic)
+
+instance ToJSON ScriptingOverride where
+  toJSON :: ScriptingOverride -> Value
+  toJSON = \case
+    ForceDisableScripting -> Bool False
+    RestoreDefaultScripting -> Null
+
+-- | for setScriptingEnabled command
 data SetScriptingEnabled = MkSetScriptingEnabled
-  { enabled :: Bool, -- False = false (disable), True = null (enable/restore default)
+  { enabled :: ScriptingOverride,
     contexts :: Maybe [BrowsingContext],
     userContexts :: Maybe [UserContext]
   }
@@ -194,7 +206,7 @@ instance ToJSON SetScriptingEnabled where
   toJSON :: SetScriptingEnabled -> Value
   toJSON MkSetScriptingEnabled {enabled, contexts, userContexts} =
     object $
-      ["enabled" .= if enabled then Null else Bool False]
+      ["enabled" .= enabled]
         <> catMaybes
           [ opt "contexts" contexts,
             opt "userContexts" userContexts

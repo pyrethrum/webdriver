@@ -17,6 +17,7 @@ import WebDriverPreCore.BiDi.Protocol
     SetNetworkConditions (..),
     SetScreenOrientationOverride (..),
     SetScreenSettingsOverride (..),
+    ScriptingOverride (..),
     SetScriptingEnabled (..),
     SetTimezoneOverride (..),
     SetTouchOverride (..),
@@ -649,22 +650,22 @@ emulationSetScriptingEnabledDemo =
     action utils@MkDemoActions {..} bidi@MkBiDiActions {..} = do
       bc <- rootContext utils bidi
 
-      logTxt "Test 1: Disable JavaScript"
+      logTxt "Test 1: Force disable JavaScript"
       let disableJS = MkSetScriptingEnabled
-            { enabled = False, -- False -> false (disable)
+            { enabled = ForceDisableScripting,
               contexts = Just [bc],
               userContexts = Nothing
             }
       result1 <- emulationSetScriptingEnabled disableJS
-      logShow "JavaScript disabled" result1
+      logShow "JavaScript forcibly disabled" result1
       pause
 
-      logTxt "Test 2: Re-enable JavaScript (clear override)"
-      let enableJS = MkSetScriptingEnabled
-            { enabled = True, -- True -> null (restore default/enable)
+      logTxt "Test 2: Restore default JavaScript state (clear override)"
+      let restoreJS = MkSetScriptingEnabled
+            { enabled = RestoreDefaultScripting,
               contexts = Just [bc],
               userContexts = Nothing
             }
-      result2 <- emulationSetScriptingEnabled enableJS
-      logShow "JavaScript re-enabled" result2
+      result2 <- emulationSetScriptingEnabled restoreJS
+      logShow "JavaScript restored to initial browser configuration" result2
       pause
