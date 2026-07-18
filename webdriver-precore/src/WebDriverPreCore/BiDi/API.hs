@@ -27,6 +27,7 @@ module WebDriverPreCore.BiDi.API
     browsingContextNavigate,
     browsingContextPrint,
     browsingContextReload,
+    browsingContextSetBypassCSP,
     browsingContextSetViewport,
     browsingContextStartScreencast,
     browsingContextStopScreencast,
@@ -194,6 +195,7 @@ import WebDriverPreCore.BiDi.Protocol
     ResponseStarted,
     SessionNewResult,
     SessionStatusResult,
+    SetBypassCSP,
     StartScreencast,
     StartScreencastResult,
     StopScreencast,
@@ -337,6 +339,12 @@ browsingContextPrint = mkCommand BrowsingContextPrint
 -- First added to Spec: <https://www.w3.org/TR/2024/WD-webdriver-bidi-20241121/#command-browsingContext-reload 21 November 2024 - First Public Working Draft>
 browsingContextReload :: Reload -> Command ()
 browsingContextReload = mkCommand BrowsingContextReload
+
+-- | Specification Entry: <BiDiSpecURL#command-browsingContext-setBypassCSP browsingContext.setBypassCSP>
+--
+-- First added to Spec: <https://www.w3.org/TR/2026/WD-webdriver-bidi-20260629/#command-browsingContext-setBypassCSP 29 June 2026 - Working Draft>
+browsingContextSetBypassCSP :: SetBypassCSP -> Command ()
+browsingContextSetBypassCSP = mkCommand BrowsingContextSetBypassCSP
 
 -- | Specification Entry: <BiDiSpecURL#command-browsingContext-setViewport browsingContext.setViewport>
 --

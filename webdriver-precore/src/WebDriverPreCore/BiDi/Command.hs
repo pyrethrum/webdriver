@@ -72,6 +72,7 @@ data KnownCommand
   | BrowsingContextNavigate
   | BrowsingContextPrint
   | BrowsingContextReload
+  | BrowsingContextSetBypassCSP
   | BrowsingContextSetViewport
   | BrowsingContextStartScreencast
   | BrowsingContextStopScreencast
@@ -222,6 +223,7 @@ instance FromJSON KnownCommand where
         "browsingContext.navigate" -> p BrowsingContextNavigate
         "browsingContext.print" -> p BrowsingContextPrint
         "browsingContext.reload" -> p BrowsingContextReload
+        "browsingContext.setBypassCSP" -> p BrowsingContextSetBypassCSP
         "browsingContext.setViewport" -> p BrowsingContextSetViewport
         "browsingContext.startScreencast" -> p BrowsingContextStartScreencast
         "browsingContext.stopScreencast" -> p BrowsingContextStopScreencast
@@ -301,6 +303,7 @@ knownCommandToText = \case
   BrowsingContextNavigate -> "browsingContext.navigate"
   BrowsingContextPrint -> "browsingContext.print"
   BrowsingContextReload -> "browsingContext.reload"
+  BrowsingContextSetBypassCSP -> "browsingContext.setBypassCSP"
   BrowsingContextSetViewport -> "browsingContext.setViewport"
   BrowsingContextStartScreencast -> "browsingContext.startScreencast"
   BrowsingContextStopScreencast -> "browsingContext.stopScreencast"

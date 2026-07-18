@@ -178,8 +178,11 @@ instance ToJSON SetUserAgentOverride where
             opt "userContexts" userContexts
           ]
 
+-- | for setScriptingEnabled command
+-- Per spec: enabled can be false or null (not true)
+-- False encodes as false, True encodes as null
 data SetScriptingEnabled = MkSetScriptingEnabled
-  { enabled :: Maybe Bool,
+  { enabled :: Bool, -- False = false (disable), True = null (enable/restore default)
     contexts :: Maybe [BrowsingContext],
     userContexts :: Maybe [UserContext]
   }
@@ -189,7 +192,7 @@ instance ToJSON SetScriptingEnabled where
   toJSON :: SetScriptingEnabled -> Value
   toJSON MkSetScriptingEnabled {enabled, contexts, userContexts} =
     object $
-      ["enabled" .= enabled]
+      ["enabled" .= if enabled then Null else Bool False]
         <> catMaybes
           [ opt "contexts" contexts,
             opt "userContexts" userContexts

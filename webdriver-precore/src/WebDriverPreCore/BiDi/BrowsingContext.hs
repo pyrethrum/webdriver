@@ -15,6 +15,7 @@ module WebDriverPreCore.BiDi.BrowsingContext
     Orientation (..),
     PageRange (..),
     Reload (..),
+    SetBypassCSP (..),
     SetViewport (..),
     StartScreencast (..),
     StopScreencast (..),
@@ -277,6 +278,23 @@ data Reload = MkReload
 instance ToJSON Reload where
   toJSON :: Reload -> Value
   toJSON = toJSONOmitNothing
+
+-- | for setBypassCSP command
+-- Per spec: bypass can be true or null (not false)
+-- True encodes as true, False encodes as null
+data SetBypassCSP = MkSetBypassCSP
+  { bypass :: Bool, -- True = true (enable), False = null (disable/restore default)
+    contexts :: Maybe [BrowsingContext],
+    userContexts :: Maybe [UserContext]
+  }
+  deriving (Show, Eq, Generic)
+
+instance ToJSON SetBypassCSP where
+  toJSON :: SetBypassCSP -> Value
+  toJSON MkSetBypassCSP {bypass, contexts, userContexts} =
+    object $ bypassField : catMaybes [opt "contexts" contexts, opt "userContexts" userContexts]
+    where
+      bypassField = "bypass" .= if bypass then Bool True else Null
 
 -- |  for setViewport command
 data SetViewport = MkSetViewport

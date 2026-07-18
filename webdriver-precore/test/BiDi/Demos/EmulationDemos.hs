@@ -651,7 +651,7 @@ emulationSetScriptingEnabledDemo =
 
       logTxt "Test 1: Disable JavaScript"
       let disableJS = MkSetScriptingEnabled
-            { enabled = Just False,
+            { enabled = False, -- False -> false (disable)
               contexts = Just [bc],
               userContexts = Nothing
             }
@@ -661,7 +661,7 @@ emulationSetScriptingEnabledDemo =
 
       logTxt "Test 2: Re-enable JavaScript (clear override)"
       let enableJS = MkSetScriptingEnabled
-            { enabled = Nothing,
+            { enabled = True, -- True -> null (restore default/enable)
               contexts = Just [bc],
               userContexts = Nothing
             }

@@ -1,15 +1,84 @@
-# Screencast Recording Capability Implementation
+# WebDriver BiDi Specification Updates - June 29, 2026
 
 ## Summary
 
-Implemented the Screencast Recording Capability from the WebDriver BiDi specification (June 29, 2026) as described in [bidi-spec-diff-2026-01-09-26-06-29.md](webdriver-precore/src/WebDriverPreCore/BiDi/bidi-spec-diff-2026-01-09-26-06-29.md).
+Implemented new features from the WebDriver BiDi specification (June 29, 2026) as described in [bidi-spec-diff-2026-01-09-26-06-29.md](webdriver-precore/src/WebDriverPreCore/BiDi/bidi-spec-diff-2026-01-09-26-06-29.md):
+
+1. **Content Security Policy Bypass** - Allow tests to bypass CSP restrictions
+2. **Screencast Recording Capability** - Record browser sessions as video files
 
 ## Changes Made
 
+---
+
+## Content Security Policy Bypass Implementation
+
 ### 1. Command Parameter Types (BrowsingContext.hs)
 
-Added new command parameter types:
+Added new command parameter type:
 
+- **`SetBypassCSP`**: Parameters for bypassing Content Security Policy
+  - `bypass`: Either `Just True` (enable bypass) or `Nothing` (disable bypass / send null)
+  - `contexts`: Optional array of specific browsing contexts to affect
+  - `userContexts`: Optional array of user contexts to affect
+
+**Custom ToJSON Instance**: Implements special handling for the `bypass` field to correctly encode:
+  - `Just True` → `"bypass": true`
+  - `Nothing` → `"bypass": null`
+  - `Just False` → Error (not allowed by spec)
+
+### 2. Command Enum (Command.hs)
+
+Added new command constructor to the `KnownCommand` enum:
+- `BrowsingContextSetBypassCSP`
+
+Updated:
+- `FromJSON` instance to parse `"browsingContext.setBypassCSP"`
+- `knownCommandToText` function to convert command constructor to string representation
+
+### 3. API Functions (API.hs)
+
+Added new API function:
+
+```haskell
+browsingContextSetBypassCSP :: SetBypassCSP -> Command ()
+```
+
+Follows the established pattern:
+- Returns `Command ()` (EmptyResult)
+- Include specification reference to the W3C spec
+- Added to spec: 29 June 2026 - Working Draft
+- Spec URL: `browsingContext.setBypassCSP`
+
+### 4. Test Actions (test/BiDi/Actions.hs)
+
+Added action function to the test suite:
+- `browsingContextSetBypassCSP :: SetBypassCSP -> IO ()`
+
+### Specification Reference
+
+- **Spec version**: W3C WebDriver BiDi Working Draft, 29 June 2026
+- **Command**: [browsingContext.setBypassCSP](https://www.w3.org/TR/2026/WD-webdriver-bidi-20260629/#command-browsingContext-setBypassCSP)
+
+### Use Cases
+
+1. **Test Script Injection**: Inject test scripts into pages with strict CSP
+2. **Browser Extension Testing**: Enable extension interactions during testing
+3. **External Resources**: Load test fixtures from external domains
+4. **CSP Debugging**: Debug CSP-related issues without modifying the application
+
+### Security Considerations
+
+This command should only be used in automated testing environments. Bypassing CSP in production could expose applications to XSS and other security vulnerabilities.
+
+--# Specification Reference
+
+- **Spec version**: W3C WebDriver BiDi Working Draft, 29 June 2026
+- **Commands**: 
+  - [browsingContext.startScreencast](https://www.w3.org/TR/2026/WD-webdriver-bidi-20260629/#command-browsingContext-startScreencast)
+  - [browsingContext.stopScreencast](https://www.w3.org/TR/2026/WD-webdriver-bidi-20260629/#command-browsingContext-stopScreencast)
+
+#
 - **`StartScreencast`**: Parameters for starting a screencast recording
   - `context`: The browsing context to record
   - `mimeType`: Optional MIME type for the recording
@@ -82,7 +151,9 @@ Added action functions to the test suite:
 3. **Documentation**: Create automated documentation videos
 4. **User Interaction Analysis**: Capture user interaction flows
 
-## Implementation Notes
+---
+
+## General Implementation Notes
 
 - All types follow the library's established patterns using:
   - Generic deriving for `ToJSON`/`FromJSON` instances
@@ -94,7 +165,18 @@ Added action functions to the test suite:
 
 - Build Status: ✅ Compiles successfully with only harmless redundant import warnings
 
-## Next Steps
+## Next Steps for these features:
+
+### For Content Security Policy Bypass:
+1. Create demo in `test/BiDi/Demos/BrowsingContextDemos.hs`
+2. Test enabling bypass with `Just True`
+3. Test disabling bypass with `Nothing` (null)
+4. Test with specific contexts
+5. Test with user contexts
+6. Verify CSP headers are ignored when bypass is enabled
+7. Verify CSP enforcement is restored when bypass is disabled
+
+### For Screencast Recording
 
 When implementing tests:
 1. Create demo in `test/BiDi/Demos/BrowsingContextDemos.hs`
