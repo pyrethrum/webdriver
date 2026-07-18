@@ -49,6 +49,7 @@ module WebDriverPreCore.BiDi.API
     emulationSetNetworkConditions,
     emulationSetScreenOrientationOverride,
     emulationSetScreenSettingsOverride,
+    emulationSetScrollbarTypeOverride,
     emulationSetScriptingEnabled,
     emulationSetTimezoneOverride,
     emulationSetTouchOverride,
@@ -216,6 +217,7 @@ import WebDriverPreCore.BiDi.Protocol
     SetNetworkConditions,
     SetScreenOrientationOverride,
     SetScreenSettingsOverride,
+    SetScrollbarTypeOverride,
     SetScriptingEnabled,
     SetTimezoneOverride,
     SetTouchOverride,
@@ -455,7 +457,11 @@ emulationSetScreenOrientationOverride = mkCommand EmulationSetScreenOrientationO
 emulationSetScreenSettingsOverride :: SetScreenSettingsOverride -> Command ()
 emulationSetScreenSettingsOverride = mkCommand EmulationSetScreenSettingsOverride
 
--- since 11-08-2025 https://www.w3.org/TR/2025/WD-webdriver-bidi-20250811
+-- since 11-08-2025 https://www.w3.org/TR/2025/WD-webdriver-bidi-20250811-- | Specification Entry: <BiDiSpecURL#command-emulation-setScrollbarTypeOverride emulation.setScrollbarTypeOverride>
+--
+-- First added to Spec: <https://www.w3.org/TR/2026/WD-webdriver-bidi-20260629/#command-emulation-setScrollbarTypeOverride 29 June 2026 - Working Draft>
+emulationSetScrollbarTypeOverride :: SetScrollbarTypeOverride -> Command ()
+emulationSetScrollbarTypeOverride = mkCommand EmulationSetScrollbarTypeOverride
 -- | Specification Entry: <BiDiSpecURL#command-emulation-setScriptingEnabled emulation.setScriptingEnabled>
 --
 -- First added to Spec: <https://www.w3.org/TR/2025/WD-webdriver-bidi-20250811/#command-emulation-setScriptingEnabled 11 August 2025>

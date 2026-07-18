@@ -83,6 +83,7 @@ data KnownCommand
   | EmulationSetNetworkConditions
   | EmulationSetScreenOrientationOverride
   | EmulationSetScreenSettingsOverride
+  | EmulationSetScrollbarTypeOverride
   | EmulationSetScriptingEnabled
   | EmulationSetTimezoneOverride
   | EmulationSetTouchOverride
@@ -234,6 +235,7 @@ instance FromJSON KnownCommand where
         "emulation.setNetworkConditions" -> p EmulationSetNetworkConditions
         "emulation.setScreenOrientationOverride" -> p EmulationSetScreenOrientationOverride
         "emulation.setScreenSettingsOverride" -> p EmulationSetScreenSettingsOverride
+        "emulation.setScrollbarTypeOverride" -> p EmulationSetScrollbarTypeOverride
         "emulation.setScriptingEnabled" -> p EmulationSetScriptingEnabled
         "emulation.setTimezoneOverride" -> p EmulationSetTimezoneOverride
         "emulation.setTouchOverride" -> p EmulationSetTouchOverride
@@ -314,6 +316,7 @@ knownCommandToText = \case
   EmulationSetNetworkConditions -> "emulation.setNetworkConditions"
   EmulationSetScreenOrientationOverride -> "emulation.setScreenOrientationOverride"
   EmulationSetScreenSettingsOverride -> "emulation.setScreenSettingsOverride"
+  EmulationSetScrollbarTypeOverride -> "emulation.setScrollbarTypeOverride"
   EmulationSetScriptingEnabled -> "emulation.setScriptingEnabled"
   EmulationSetTimezoneOverride -> "emulation.setTimezoneOverride"
   EmulationSetTouchOverride -> "emulation.setTouchOverride"

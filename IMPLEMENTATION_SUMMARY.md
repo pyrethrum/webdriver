@@ -6,6 +6,7 @@ Implemented new features from the WebDriver BiDi specification (June 29, 2026) a
 
 1. **Content Security Policy Bypass** - Allow tests to bypass CSP restrictions
 2. **Screencast Recording Capability** - Record browser sessions as video files
+3. **Scrollbar Type Emulation** - Override scrollbar appearance for consistent cross-platform testing
 
 ## Changes Made
 
@@ -153,6 +154,77 @@ Added action functions to the test suite:
 
 ---
 
+## Scrollbar Type Emulation Implementation
+
+### 1. Type Definitions (Emulation.hs)
+
+Added new sum type and command parameter type:
+
+- **`ScrollbarType`**: Enumeration for scrollbar appearance
+  - `Classic` - Always-visible scrollbars (typical on Windows/Linux) → encodes as `"classic"`
+  - `Overlay` - Auto-hiding scrollbars (typical on macOS) → encodes as `"overlay"`
+  - `PlatformDefault` - Restore platform default behavior → encodes as `null`
+
+- **`SetScrollbarTypeOverride`**: Parameters for overriding scrollbar type
+  - `scrollbarType`: The scrollbar type to emulate
+  - `contexts`: Optional array of specific browsing contexts to affect
+  - `userContexts`: Optional array of user contexts to affect
+
+**Custom ToJSON Instance**: Implements special handling for the `scrollbarType` field:
+  - `Classic` → `"scrollbarType": "classic"`
+  - `Overlay` → `"scrollbarType": "overlay"`
+  - `PlatformDefault` → `"scrollbarType": null`
+
+### 2. Command Enum (Command.hs)
+
+Added new command constructor to the `KnownCommand` enum:
+- `EmulationSetScrollbarTypeOverride`
+
+Updated:
+- `FromJSON` instance to parse `"emulation.setScrollbarTypeOverride"`
+- `knownCommandToText` function to convert command constructor to string representation
+
+### 3. API Functions (API.hs)
+
+Added new API function:
+
+```haskell
+emulationSetScrollbarTypeOverride :: SetScrollbarTypeOverride -> Command ()
+```
+
+Follows the established pattern:
+- Returns `Command ()` (EmptyResult)
+- Include specification reference to the W3C spec
+- Added to spec: 29 June 2026 - Working Draft
+- Spec URL: `emulation.setScrollbarTypeOverride`
+
+### 4. Test Actions (test/BiDi/Actions.hs)
+
+Added action function to the test suite:
+- `emulationSetScrollbarTypeOverride :: SetScrollbarTypeOverride -> IO ()`
+
+### Specification Reference
+
+- **Spec version**: W3C WebDriver BiDi Working Draft, 29 June 2026
+- **Command**: [emulation.setScrollbarTypeOverride](https://www.w3.org/TR/2026/WD-webdriver-bidi-20260629/#command-emulation-setScrollbarTypeOverride)
+- **Result**: EmptyResult
+
+### Use Cases
+
+1. **Cross-Platform Testing**: Test layouts consistently across different operating systems without physical hardware
+2. **Responsive Design**: Validate layouts that depend on viewport width calculations
+3. **Screenshot Consistency**: Ensure consistent screenshot capture across test environments
+4. **Scrollbar Width Testing**: Test layouts that must accommodate or exclude scrollbar width
+
+### Implementation Details
+
+The `ScrollbarType` sum type provides a type-safe way to specify scrollbar appearance:
+- Platform-specific scrollbar types are explicitly named for clarity
+- The `PlatformDefault` constructor allows restoration of default behavior
+- JSON encoding matches the spec exactly with `null` for default and strings for specific types
+
+---
+
 ## General Implementation Notes
 
 - All types follow the library's established patterns using:
@@ -184,3 +256,14 @@ When implementing tests:
 3. Test stopping a screencast and verifying the result
 4. Test error handling for invalid screencast IDs
 5. Verify file paths are correctly returned
+
+### For Scrollbar Type Emulation
+
+When implementing tests:
+1. Create demo in `test/BiDi/Demos/EmulationDemos.hs`
+2. Test setting classic scrollbars
+3. Test setting overlay scrollbars
+4. Test restoring platform default with `PlatformDefault`
+5. Test with specific contexts
+6. Test with user contexts
+7. Verify layout changes when switching between scrollbar types
