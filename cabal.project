@@ -4,7 +4,11 @@ import: https://www.stackage.org/nightly-2026-07-12/cabal.config
 -- Allow newer versions to resolve dependency conflicts
 allow-newer:
   falsify:optparse-applicative,
-  dhall:http-client-tls
+  dhall:http-client-tls,
+  webdriver-precore
+
+-- Override Stackage constraint to use local development version
+constraints: webdriver-precore ==0.3.0.2
   
 
 packages: 

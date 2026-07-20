@@ -202,15 +202,12 @@ bidiDemos cfg =
                 [ Browser.browserGetClientWindowsDemo,
                   Browser.browserCreateUserContextDemo,
                   Browser.browserGetUserContextsDemo,
-                  unknownCommand [Firefox', Chrome']
-                    Browser.browserSetClientWindowStateDemo,
+                  Browser.browserSetClientWindowStateDemo,
                   Browser.browserRemoveUserContextDemo,
                   Browser.browserCompleteWorkflowDemo,
                   expectFail [Firefox']
                     "Closing the browser in a session started with WebDriver classic is not supported"
                     Browser.browserCloseDemo,
-                  unknownCommand [Firefox']
-                    -- since https://www.w3.org/TR/2025/WD-webdriver-bidi-20250918/#command-browser-seProtocolExceptiontDownloadBehavior
                     Browser.browserSetDownloadBehaviorDemo
                 ],
               run
@@ -247,13 +244,9 @@ bidiDemos cfg =
                     "Expected \\\\\\\"coordinates\\\\\\\" to be an object"
                     Emulation.emulationSetGeolocationOverridePositionErrorDemo,
                   Emulation.emulationSetLocaleOverrideDemo,
-                  unknownCommand [Firefox']
-                    -- since https://www.w3.org/TR/2025/WD-webdriver-bidi-20251007
-                    Emulation.emulationSetNetworkConditionsDemo,
+                  Emulation.emulationSetNetworkConditionsDemo,
                   Emulation.emulationSetScreenOrientationOverrideDemo,
-                  unknownCommand [Chrome']
-                    -- since https://www.w3.org/TR/2025/WD-webdriver-bidi-20251120
-                    Emulation.emulationSetScreenSettingsOverrideDemo,
+                  Emulation.emulationSetScreenSettingsOverrideDemo,
                   unknownCommand [Firefox']
                     -- since https://www.w3.org/TR/2025/WD-webdriver-bidi-20250811
                     Emulation.emulationSetScriptingEnabledDemo,
@@ -261,8 +254,7 @@ bidiDemos cfg =
                     -- since https://www.w3.org/TR/2026/WD-webdriver-bidi-20260629
                     Emulation.emulationSetScrollbarTypeOverrideDemo,
                   Emulation.emulationSetTimezoneOverrideDemo,
-                  unknownCommand [Firefox', Chrome']
-                    -- since https://www.w3.org/TR/2026/WD-webdriver-bidi-20260109
+                  unknownCommand [Firefox']
                     Emulation.emulationSetTouchOverrideDemo,
                   Emulation.emulationSetUserAgentOverrideDemo,
                   Emulation.emulationCompleteWorkflowDemo
@@ -365,9 +357,7 @@ bidiDemos cfg =
               run
                 "WebExtension"
                 [ -- ChromeDriver doesn't support BiDi WebExtension methods
-                  expectFail [Chrome']
-                    "Method not available"
-                    WebExtension.webExtensionInstallPathDemo,
+                  WebExtension.webExtensionInstallPathDemo,
                   expectFail [Chrome']
                     "Archived and Base64 extensions are not supported"
                     WebExtension.webExtensionInstallArchiveDemo,

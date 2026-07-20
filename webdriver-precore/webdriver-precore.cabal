@@ -1,7 +1,7 @@
 cabal-version: 2.4
 
 name:           webdriver-precore
-version:        0.2.0.2
+version:        0.3.0.2
 homepage:       https://github.com/pyrethrum/webdriver-precore#readme
 bug-reports:    https://github.com/pyrethrum/webdriver-precore/issues
 author:         John Walker, Adrian Glouftsis
@@ -30,6 +30,10 @@ description:
   __For complete documentation, module organisation, and migration guides, see "WebDriverPreCore".__
   
   See also the @<https://github.com/pyrethrum/webdriver project repo>@ and the test directory for @<https://github.com/pyrethrum/webdriver/tree/main/webdriver-precore/test#readme examples>@.
+
+source-repository head
+  type:                git
+  location:            https://github.com/pyrethrum/webdriver-precore.git
   
 common commonExtensions
   default-extensions:

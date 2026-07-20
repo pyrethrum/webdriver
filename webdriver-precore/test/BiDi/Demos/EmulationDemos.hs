@@ -87,7 +87,7 @@ emulationSetGeolocationOverridePositionErrorDemo =
 
       logTxt "Set geolocation position error"
       let positionError = MkGeolocationPositionError { errorType = "positionUnavailable" }
-      let errorOverride = MkSetGeolocationOverride
+          errorOverride = MkSetGeolocationOverride
             { override = PositionError positionError,
               contexts = Just [bc],
               userContexts = Nothing
