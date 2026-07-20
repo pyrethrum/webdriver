@@ -1,5 +1,6 @@
 module WebDriverPreCore.BiDi.BrowsingContext
   ( Activate (..),
+    BypassCSPOverride (..),
     CaptureScreenshot (..),
     ScreenShotOrigin (..),
     ClipRectangle (..),

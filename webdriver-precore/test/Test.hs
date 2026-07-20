@@ -225,6 +225,12 @@ bidiDemos cfg =
                   BrowsingContext.browsingContextContextLocatorDemo,
                   BrowsingContext.browsingContextPrintDemo,
                   BrowsingContext.browsingContextSetViewportDemo,
+                  unknownCommand [Firefox', Chrome']
+                    -- since https://www.w3.org/TR/2026/WD-webdriver-bidi-20260629
+                    BrowsingContext.browsingContextSetBypassCSPDemo,
+                  unknownCommand [Firefox', Chrome']
+                    -- since https://www.w3.org/TR/2026/WD-webdriver-bidi-20260629
+                    BrowsingContext.browsingContextScreencastDemo,
                   BiDiError.errorDemo
                   -- TODO: WHEN NEW DRIVERS ADDED make conditional - hangs in firefox
                   -- , BrowsingContext.browsingContextSetViewportResetDemo
@@ -251,6 +257,9 @@ bidiDemos cfg =
                   unknownCommand [Firefox']
                     -- since https://www.w3.org/TR/2025/WD-webdriver-bidi-20250811
                     Emulation.emulationSetScriptingEnabledDemo,
+                  unknownCommand [Firefox', Chrome']
+                    -- since https://www.w3.org/TR/2026/WD-webdriver-bidi-20260629
+                    Emulation.emulationSetScrollbarTypeOverrideDemo,
                   Emulation.emulationSetTimezoneOverrideDemo,
                   unknownCommand [Firefox', Chrome']
                     -- since https://www.w3.org/TR/2026/WD-webdriver-bidi-20260109
