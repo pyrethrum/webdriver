@@ -1,3 +1,19 @@
+# webdriver-test-0.3.0.2 (2026-07-24)
+
+## BiDi Test Updates
+
+- **New demos** for BiDi features from 29 June 2026 Working Draft:
+  - `browsingContextSetBypassCSPDemo` — CSP bypass demo
+  - `browsingContextScreencastDemo` — Screencast recording demo
+  - `emulationSetScrollbarTypeOverrideDemo` — Scrollbar type override demo
+- **Updated demos** for scripting override type change (`ScriptingOverride` replacing `Maybe Bool`)
+- **Spec URL updates**: BiDi spec references updated to 29 June 2026 Working Draft
+
+## HTTP Test Updates
+
+- Spec reference URL and dates updated to 02 July 2026 Working Draft. No API changes.
+- `ApiCoverageTest.hs` and `ErrorCoverageTest.hs` spec references updated.
+
 # webdriver-test-0.2.0.1 (2026-01-17)
 
 ## New Features
