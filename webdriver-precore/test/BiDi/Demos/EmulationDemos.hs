@@ -329,7 +329,7 @@ emulationSetTimezoneOverrideDemo =
 -- >>> runDemo emulationSetTouchOverrideDemo
 emulationSetTouchOverrideDemo :: BiDiDemo
 emulationSetTouchOverrideDemo =
-  demo "Emulation - Set Touch Override - since https://www.w3.org/TR/2026/WD-webdriver-bidi-20260109" action
+  demo "Emulation - Set Touch Override - since https://www.w3.org/TR/2026/WD-webdriver-bidi-20260629" action
   where
     action :: DemoActions -> BiDiActions -> IO ()
     action utils@MkDemoActions {..} bidi@MkBiDiActions {..} = do

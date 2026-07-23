@@ -474,10 +474,10 @@ emulationSetScriptingEnabled = mkCommand EmulationSetScriptingEnabled
 emulationSetTimezoneOverride :: SetTimezoneOverride -> Command ()
 emulationSetTimezoneOverride = mkCommand EmulationSetTimezoneOverride
 
--- since 09-01-2026 https://www.w3.org/TR/2026/WD-webdriver-bidi-20260109
+-- since 29-06-2026 https://www.w3.org/TR/2026/WD-webdriver-bidi-20260629
 -- | Specification Entry: <BiDiSpecURL#command-emulation-setTouchOverride emulation.setTouchOverride>
 --
--- First added to Spec: <https://www.w3.org/TR/2026/WD-webdriver-bidi-20260109/#command-emulation-setTouchOverride 09 January 2026>
+-- First added to Spec: <https://www.w3.org/TR/2026/WD-webdriver-bidi-20260629/#command-emulation-setTouchOverride 29 June 2026>
 emulationSetTouchOverride :: SetTouchOverride -> Command ()
 emulationSetTouchOverride = mkCommand EmulationSetTouchOverride
 

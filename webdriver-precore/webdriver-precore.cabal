@@ -21,7 +21,7 @@ tested-with: GHC == 9.8.2 || == 9.8.4 || == 9.10.1
 synopsis:       A typed wrapper for W3C WebDriver (HTTP and BiDi) protocols.
 
 description:
-  This library provides typed definitions for the WebDriver W3C spec, both @<https://www.w3.org/TR/2026/WD-webdriver2-20260702/ HTTP>@ and @<https://www.w3.org/TR/2026/WD-webdriver-bidi-20260109/ BiDi>@.
+  This library provides typed definitions for the WebDriver W3C spec, both @<https://www.w3.org/TR/2026/WD-webdriver2-20260702/ HTTP>@ and @<https://www.w3.org/TR/2026/WD-webdriver-bidi-20260629/ BiDi>@.
 
   It is designed as a foundation for building WebDriver client libraries providing type-safe endpoint definitions and response parsers without any client implementation.
 
@@ -108,7 +108,7 @@ common commonGhcOptions
     -- -fdefer-type-errors
   cpp-options: 
     -DHTMLSpecURL=https://www.w3.org/TR/2026/WD-webdriver2-20260702/
-    -DBiDiSpecURL=https://www.w3.org/TR/2026/WD-webdriver-bidi-20260109/
+    -DBiDiSpecURL=https://www.w3.org/TR/2026/WD-webdriver-bidi-20260629/
 
 library utils-internal
   import: commonExtensions, commonGhcOptions
