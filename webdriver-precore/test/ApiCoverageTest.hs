@@ -25,7 +25,7 @@ import WebDriverPreCore.HTTP.Protocol
 
 {-
 !! Replace this the endepoints from the spec with every release
-https://www.w3.org/TR/2025/WD-webdriver2-20251028/#endpoints- W3C Working Draft 28 October 2025
+https://www.w3.org/TR/2026/WD-webdriver2-20260702/#endpoints- W3C Working Draft 02 July 2026
 -}
 endPointsCopiedFromSpc :: Text
 endPointsCopiedFromSpc =

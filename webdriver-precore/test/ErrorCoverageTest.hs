@@ -17,7 +17,7 @@ import WebDriverPreCore.HTTP.Protocol (ErrorType)
 {-
 !! Replace this the endepoints from the spec with every release
 !! remove full stops and replace tabs with " | "
-https://www.w3.org/TR/2025/WD-webdriver2-20251028 - W3C Editor's Draft 10 February 2025
+https://www.w3.org/TR/2026/WD-webdriver2-20260702 - W3C Working Draft 02 July 2026
 61 endpoints
 Error Code 	HTTP Status 	JSON Error Code 	Description 
 NOTE: This entry is moved out because it is duplicated, with a slightly different description in the BiDi spec

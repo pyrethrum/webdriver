@@ -26,4 +26,4 @@ Over the coming months we intend to build out a number of sub-libraries and tool
 <!-- Link References -->
 
 [BiDi]: https://www.w3.org/TR/2026/WD-webdriver-bidi-20260109/
-[HTTP]: https://www.w3.org/TR/2025/WD-webdriver2-20251028/
+[HTTP]: https://www.w3.org/TR/2026/WD-webdriver2-20260702/
