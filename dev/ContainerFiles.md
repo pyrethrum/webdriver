@@ -18,7 +18,7 @@ ubuntu:25.04
 | File Name | Tag Name | Depends On | Description |
 |-----------|----------|------------|-------------|
 | [dockerfile-haskell](dockerfile-haskell) | ghcr.io/pyrethrum/haskell:latest | [ubuntu:25.04](https://hub.docker.com/_/ubuntu) | Base Haskell development image with GHCup, GHC, and essential build tools |
-| [dockerfile-webdriver-precore](dockerfile-webdriver-precore) | ghcr.io/pyrethrum/webdriver-precore:latest | [dockerfile-haskell](dockerfile-haskell) | Clones webdriver repo and pre-builds dependencies with cabal |
+| [dockerfile-webdriver-precore](dockerfile-webdriver-precore) | ghcr.io/pyrethrum/webdriver-precore:latest | [dockerfile-haskell](dockerfile-haskell) | Copies repo source (context: repo root) and pre-builds dependencies with cabal |
 | [dockerfile-webdriver-precore-firefox](dockerfile-webdriver-precore-firefox) | ghcr.io/pyrethrum/webdriver-precore-firefox:latest | [dockerfile-webdriver-precore](dockerfile-webdriver-precore) | Adds Firefox and geckodriver for browser automation testing |
 | [dockerfile-ci-test](dockerfile-ci-test) | ghcr.io/pyrethrum/ci-test:latest | [dockerfile-webdriver-precore-firefox](dockerfile-webdriver-precore-firefox) | CI container that copies local source files and configures test environment |
 | [devcontainer.json](../.devcontainer/devcontainer.json) | None | [dockerfile-webdriver-precore-firefox](dockerfile-webdriver-precore-firefox) | VS Code dev container |
