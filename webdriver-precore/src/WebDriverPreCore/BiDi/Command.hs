@@ -72,7 +72,10 @@ data KnownCommand
   | BrowsingContextNavigate
   | BrowsingContextPrint
   | BrowsingContextReload
+  | BrowsingContextSetBypassCSP
   | BrowsingContextSetViewport
+  | BrowsingContextStartScreencast
+  | BrowsingContextStopScreencast
   | BrowsingContextTraverseHistory
   | EmulationSetForcedColorsModeThemeOverride
   | EmulationSetGeolocationOverride
@@ -80,6 +83,7 @@ data KnownCommand
   | EmulationSetNetworkConditions
   | EmulationSetScreenOrientationOverride
   | EmulationSetScreenSettingsOverride
+  | EmulationSetScrollbarTypeOverride
   | EmulationSetScriptingEnabled
   | EmulationSetTimezoneOverride
   | EmulationSetTouchOverride
@@ -220,7 +224,10 @@ instance FromJSON KnownCommand where
         "browsingContext.navigate" -> p BrowsingContextNavigate
         "browsingContext.print" -> p BrowsingContextPrint
         "browsingContext.reload" -> p BrowsingContextReload
+        "browsingContext.setBypassCSP" -> p BrowsingContextSetBypassCSP
         "browsingContext.setViewport" -> p BrowsingContextSetViewport
+        "browsingContext.startScreencast" -> p BrowsingContextStartScreencast
+        "browsingContext.stopScreencast" -> p BrowsingContextStopScreencast
         "browsingContext.traverseHistory" -> p BrowsingContextTraverseHistory
         "emulation.setForcedColorsModeThemeOverride" -> p EmulationSetForcedColorsModeThemeOverride
         "emulation.setGeolocationOverride" -> p EmulationSetGeolocationOverride
@@ -228,6 +235,7 @@ instance FromJSON KnownCommand where
         "emulation.setNetworkConditions" -> p EmulationSetNetworkConditions
         "emulation.setScreenOrientationOverride" -> p EmulationSetScreenOrientationOverride
         "emulation.setScreenSettingsOverride" -> p EmulationSetScreenSettingsOverride
+        "emulation.setScrollbarTypeOverride" -> p EmulationSetScrollbarTypeOverride
         "emulation.setScriptingEnabled" -> p EmulationSetScriptingEnabled
         "emulation.setTimezoneOverride" -> p EmulationSetTimezoneOverride
         "emulation.setTouchOverride" -> p EmulationSetTouchOverride
@@ -297,7 +305,10 @@ knownCommandToText = \case
   BrowsingContextNavigate -> "browsingContext.navigate"
   BrowsingContextPrint -> "browsingContext.print"
   BrowsingContextReload -> "browsingContext.reload"
+  BrowsingContextSetBypassCSP -> "browsingContext.setBypassCSP"
   BrowsingContextSetViewport -> "browsingContext.setViewport"
+  BrowsingContextStartScreencast -> "browsingContext.startScreencast"
+  BrowsingContextStopScreencast -> "browsingContext.stopScreencast"
   BrowsingContextTraverseHistory -> "browsingContext.traverseHistory"
   EmulationSetForcedColorsModeThemeOverride -> "emulation.setForcedColorsModeThemeOverride"
   EmulationSetGeolocationOverride -> "emulation.setGeolocationOverride"
@@ -305,6 +316,7 @@ knownCommandToText = \case
   EmulationSetNetworkConditions -> "emulation.setNetworkConditions"
   EmulationSetScreenOrientationOverride -> "emulation.setScreenOrientationOverride"
   EmulationSetScreenSettingsOverride -> "emulation.setScreenSettingsOverride"
+  EmulationSetScrollbarTypeOverride -> "emulation.setScrollbarTypeOverride"
   EmulationSetScriptingEnabled -> "emulation.setScriptingEnabled"
   EmulationSetTimezoneOverride -> "emulation.setTimezoneOverride"
   EmulationSetTouchOverride -> "emulation.setTouchOverride"

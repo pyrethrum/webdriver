@@ -1,15 +1,18 @@
-import: https://www.stackage.org/nightly-2026-01-18/cabal.config
-  --  https://www.stackage.org/nightly-2025-02-25/cabal.config
+import: stackage-nightly-2026-07-23-cabal.config
+-- stackage-nightly-2026-07-12-cabal.config
+-- https://www.stackage.org/nightly-2026-07-12/cabal.config
 
 -- Allow newer versions to resolve dependency conflicts
 allow-newer:
-  falsify:optparse-applicative
+  falsify:optparse-applicative,
+  dhall:http-client-tls,
+  warp:http2
 
 packages: 
   webdriver-precore/*.cabal
   webdriver-precore/test-server/*.cabal
 
-with-compiler: ghc-9.10.1
+with-compiler: ghc-9.12.4
 -- with-compiler: ghc-9.10.1
 -- with-compiler: ghc-9.8.4
 

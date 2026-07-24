@@ -8,7 +8,10 @@ module WebDriverPreCore.BiDi.Emulation
     SetForcedColorsModeThemeOverride (..),
     SetNetworkConditions (..),
     SetUserAgentOverride (..),
+    ScriptingOverride (..),
     SetScriptingEnabled (..),
+    SetScrollbarTypeOverride (..),
+    ScrollbarType (..),
     GeoProperty (..),
     GeolocationCoordinates (..),
     GeolocationPositionError (..),
@@ -178,8 +181,22 @@ instance ToJSON SetUserAgentOverride where
             opt "userContexts" userContexts
           ]
 
+-- | Scripting override for setScriptingEnabled command
+-- Per spec: enabled can be false or null (not true)
+data ScriptingOverride
+  = ForceDisableScripting -- ^ Encode as false - explicitly disable scripting
+  | RestoreDefaultScripting -- ^ Encode as null - restore to initial browser configuration
+  deriving (Show, Eq, Generic)
+
+instance ToJSON ScriptingOverride where
+  toJSON :: ScriptingOverride -> Value
+  toJSON = \case
+    ForceDisableScripting -> Bool False
+    RestoreDefaultScripting -> Null
+
+-- | for setScriptingEnabled command
 data SetScriptingEnabled = MkSetScriptingEnabled
-  { enabled :: Maybe Bool,
+  { enabled :: ScriptingOverride,
     contexts :: Maybe [BrowsingContext],
     userContexts :: Maybe [UserContext]
   }
@@ -307,3 +324,36 @@ newtype NetworkConditionsOffline = MkNetworkConditionsOffline
 instance ToJSON NetworkConditionsOffline where
   toJSON :: NetworkConditionsOffline -> Value
   toJSON _ = object ["type" .= "offline"]
+
+-- | Scrollbar type for emulation.setScrollbarTypeOverride command
+-- Per spec: scrollbarType can be "classic" / "overlay" / null
+-- Classic and Overlay encode as their string values, PlatformDefault encodes as null
+data ScrollbarType
+  = Classic -- Always-visible scrollbars (typical on Windows/Linux)
+  | Overlay -- Auto-hiding scrollbars (typical on macOS)
+  | PlatformDefault -- Restore platform default (encodes as null)
+  deriving (Show, Eq, Generic)
+
+instance ToJSON ScrollbarType where
+  toJSON :: ScrollbarType -> Value
+  toJSON = \case
+    Classic -> String "classic"
+    Overlay -> String "overlay"
+    PlatformDefault -> Null
+
+data SetScrollbarTypeOverride = MkSetScrollbarTypeOverride
+  { scrollbarType :: ScrollbarType,
+    contexts :: Maybe [BrowsingContext],
+    userContexts :: Maybe [UserContext]
+  }
+  deriving (Show, Eq, Generic)
+
+instance ToJSON SetScrollbarTypeOverride where
+  toJSON :: SetScrollbarTypeOverride -> Value
+  toJSON MkSetScrollbarTypeOverride {scrollbarType, contexts, userContexts} =
+    object $
+      ["scrollbarType" .= scrollbarType]
+        <> catMaybes
+          [ opt "contexts" contexts,
+            opt "userContexts" userContexts
+          ]

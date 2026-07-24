@@ -12,9 +12,9 @@ chrome.runtime.onInstalled.addListener(() => {
   });
 });
 
-// Listen for browser action clicks
-chrome.browserAction.onClicked.addListener((tab) => {
-  console.log('BiDiDemoExtension: Browser action clicked on tab:', tab.id);
+// Listen for action clicks (Manifest V3 uses 'action' instead of 'browserAction')
+chrome.action.onClicked.addListener((tab) => {
+  console.log('BiDiDemoExtension: Action clicked on tab:', tab.id);
   
   // Send a message to the content script
   chrome.tabs.sendMessage(tab.id, {

@@ -10,7 +10,8 @@
       "args": [
         "build",
         "all",
-        "--enable-tests"
+        "--enable-tests",
+        "--minimize-conflict-set"
       ],
       "presentation": {
         "reveal": "always",

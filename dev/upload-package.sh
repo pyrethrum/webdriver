@@ -2,7 +2,6 @@
 # cd webdriver-precore
 # bash ../dev/upload-package.sh
 
-
 set -e
 
 # take API key as a parameter
@@ -20,7 +19,8 @@ echo "checking package..."
 cabal check
 
 echo "generating docs..."
-DOCS_TARBALL=$(cabal haddock --haddock-for-hackage --enable-doc | awk '/^Documentation tarball created:/ {getline; print}')
+cabal haddock --haddock-for-hackage --enable-doc
+DOCS_TARBALL=$(ls -t ../dist-newstyle/*-docs.tar.gz 2>/dev/null | head -1)
 # echo "The Docs: $DOCS_TARBALL"
 
 PACKAGE_NAME=$(basename $DOCS_TARBALL | sed 's/-docs\.tar\.gz$//')
@@ -38,7 +38,7 @@ cabal upload --token=$API_KEY "$SOURCE_TARBALL"
 # see issue https://github.com/haskell/cabal/issues/10252
 # when fixed replace with cabal upload --username="" --password="$API_KEY" "$DOCS_TARBALL" --documentation
 echo "Uploading docs tarball..."
-echo "If uploading docs fails use: cabal upload -d dist-newstyle/webdriver-precore-*-docs.tar.gz"
+echo "If uploading docs fails use: cabal upload -d ../dist-newstyle/webdriver-precore-*-docs.tar.gz"
 curl -X PUT \
   --header "Authorization: X-ApiKey $API_KEY" \
   -H "Content-Type: application/x-tar" \

@@ -1,5 +1,6 @@
 module WebDriverPreCore.BiDi.BrowsingContext
   ( Activate (..),
+    BypassCSPOverride (..),
     CaptureScreenshot (..),
     ScreenShotOrigin (..),
     ClipRectangle (..),
@@ -15,7 +16,10 @@ module WebDriverPreCore.BiDi.BrowsingContext
     Orientation (..),
     PageRange (..),
     Reload (..),
+    SetBypassCSP (..),
     SetViewport (..),
+    StartScreencast (..),
+    StopScreencast (..),
     TraverseHistory (..),
     MatchType (..),
     Locator (..),
@@ -24,10 +28,14 @@ module WebDriverPreCore.BiDi.BrowsingContext
     PrintMargin (..),
     PrintPage (..),
     Viewport (..),
+    MediaTrackConstraints (..),
+    Screencast (..),
     GetTreeResult (..),
     LocateNodesResult (..),
     CaptureScreenshotResult (..),
     PrintResult (..),
+    StartScreencastResult (..),
+    StopScreencastResult (..),
     Info (..),
     NavigateResult (..),
     BrowsingContextEvent (..),
@@ -272,6 +280,32 @@ instance ToJSON Reload where
   toJSON :: Reload -> Value
   toJSON = toJSONOmitNothing
 
+-- | Bypass CSP override for setBypassCSP command
+-- Per spec: bypass can be true or null (not false)
+data BypassCSPOverride
+  = EnableBypassCSP -- ^ Encode as true - enable CSP bypass
+  | RestoreDefaultBypassCSP -- ^ Encode as null - restore to default (don't bypass)
+  deriving (Show, Eq, Generic)
+
+instance ToJSON BypassCSPOverride where
+  toJSON :: BypassCSPOverride -> Value
+  toJSON = \case
+    EnableBypassCSP -> Bool True
+    RestoreDefaultBypassCSP -> Null
+
+-- | for setBypassCSP command
+data SetBypassCSP = MkSetBypassCSP
+  { bypass :: BypassCSPOverride,
+    contexts :: Maybe [BrowsingContext],
+    userContexts :: Maybe [UserContext]
+  }
+  deriving (Show, Eq, Generic)
+
+instance ToJSON SetBypassCSP where
+  toJSON :: SetBypassCSP -> Value
+  toJSON MkSetBypassCSP {bypass, contexts, userContexts} =
+    object $ ["bypass" .= bypass] <> catMaybes [opt "contexts" contexts, opt "userContexts" userContexts]
+
 -- |  for setViewport command
 data SetViewport = MkSetViewport
   { context :: Maybe BrowsingContext,
@@ -284,6 +318,45 @@ data SetViewport = MkSetViewport
 instance ToJSON SetViewport where
   toJSON :: SetViewport -> Value
   toJSON = toJSONOmitNothing
+
+-- |  for startScreencast command
+data StartScreencast = MkStartScreencast
+  { context :: BrowsingContext,
+    mimeType :: Maybe Text,
+    video :: Maybe MediaTrackConstraints,
+    audio :: Maybe Bool
+  }
+  deriving (Show, Eq, Generic)
+
+instance ToJSON StartScreencast where
+  toJSON :: StartScreencast -> Value
+  toJSON = toJSONOmitNothing
+
+-- | Media track constraints for screencast
+data MediaTrackConstraints = MkMediaTrackConstraints
+  { width :: Maybe JSUInt,
+    height :: Maybe JSUInt,
+    frameRate :: Maybe JSUInt
+  }
+  deriving (Show, Eq, Generic)
+
+instance ToJSON MediaTrackConstraints where
+  toJSON :: MediaTrackConstraints -> Value
+  toJSON = toJSONOmitNothing
+
+-- | Screencast identifier
+newtype Screencast = MkScreencast
+  { screencastId :: Text
+  }
+  deriving newtype (Show, Eq, FromJSON, ToJSON)
+
+-- |  for stopScreencast command
+newtype StopScreencast = MkStopScreencast
+  { screencast :: Screencast
+  }
+  deriving (Show, Eq, Generic)
+
+instance ToJSON StopScreencast
 
 -- |  for traverseHistory command
 data TraverseHistory = MkTraverseHistory
@@ -453,6 +526,26 @@ newtype PrintResult = MkPrintResult
 instance FromJSON PrintResult where
   parseJSON :: Value -> Parser PrintResult
   parseJSON = fmap MkPrintResult . parseTextData "PrintResult"
+
+data StartScreencastResult = MkStartScreencastResult
+  { screencast :: Screencast,
+    path :: Text
+  }
+  deriving (Show, Eq, Generic)
+
+instance FromJSON StartScreencastResult where
+  parseJSON :: Value -> Parser StartScreencastResult
+  parseJSON = parseJSONOmitNothing
+
+data StopScreencastResult = MkStopScreencastResult
+  { path :: Text,
+    error :: Maybe Text
+  }
+  deriving (Show, Eq, Generic)
+
+instance FromJSON StopScreencastResult where
+  parseJSON :: Value -> Parser StopScreencastResult
+  parseJSON = parseJSONOmitNothing
 
 data Info = MkInfo
   { children :: Maybe [Info],

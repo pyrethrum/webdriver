@@ -1,0 +1,24 @@
+# Git
+.git/
+
+# Build artifacts
+dist-newstyle/
+.stack-work/
+.stack-hls-work/
+
+# Editor / IDE
+.vscode/
+
+# CI / GitHub (not needed in image)
+.github/
+
+# Local config overrides
+cabal.project.local
+
+# Logs
+*.log
+
+# Haskell compiler artifacts
+*.hie
+*.hi
+*.o
