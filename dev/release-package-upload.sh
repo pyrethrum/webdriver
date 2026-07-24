@@ -19,7 +19,8 @@ echo "checking package..."
 cabal check
 
 echo "generating docs..."
-DOCS_TARBALL=$(cabal haddock --haddock-for-hackage --enable-doc | awk '/^Documentation tarball created:/ {getline; print}')
+cabal haddock --haddock-for-hackage --enable-doc
+DOCS_TARBALL=$(ls -t ../dist-newstyle/*-docs.tar.gz 2>/dev/null | head -1)
 # echo "The Docs: $DOCS_TARBALL"
 
 PACKAGE_NAME=$(basename $DOCS_TARBALL | sed 's/-docs\.tar\.gz$//')

@@ -1,3 +1,11 @@
+# webdriver-precore-0.3.0.4 (2026-07-24)
+
+- Hackage upload fix — no change.
+
+# webdriver-precore-0.3.0.3 (2026-07-24)
+
+- Hackage upload fix — no change.
+
 # webdriver-precore-0.3.0.2 (2026-07-24)
 
 ## HTTP Spec Update
