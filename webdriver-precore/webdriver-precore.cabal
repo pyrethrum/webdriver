@@ -16,7 +16,7 @@ extra-doc-files:
   README.md
   ChangeLog.md
 
-tested-with: GHC == 9.8.2 || == 9.8.4 || == 9.10.1
+tested-with: GHC == 9.8.2 || == 9.8.4 || == 9.10.1 || == 9.12.4
 
 synopsis:       A typed wrapper for W3C WebDriver (HTTP and BiDi) protocols.
 
