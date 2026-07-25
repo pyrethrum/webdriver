@@ -9,6 +9,7 @@ import WebDriverPreCore.Test.IOUtils (DemoActions (..))
 import WebDriverPreCore.Test.TestData (contentPageUrl, framesUrl, loginUrl, navigation1Url, navigation2Url, navigation3Url, navigation4Url, navigation5Url, navigation6Url, nestedFramesUrl, scriptRealmUrl)
 import WebDriverPreCore.BiDi.Protocol
   ( Activate (..),
+    BypassCSPOverride (..),
     CaptureScreenshot (..),
     ClipRectangle (..),
     Close (..),
@@ -27,6 +28,7 @@ import WebDriverPreCore.BiDi.Protocol
     LocateNodes (..),
     LocateNodesResult (..),
     Locator (..),
+    MediaTrackConstraints (..),
     Navigate (..),
     NodeRemoteValue (..),
     Orientation (..),
@@ -38,9 +40,14 @@ import WebDriverPreCore.BiDi.Protocol
     ReadinessState (..),
     Reload (..),
     ScreenShotOrigin (..),
+    SetBypassCSP (..),
     SetViewport (..),
     SharedId (..),
     SharedReference (..),
+    StartScreencast (..),
+    StartScreencastResult (..),
+    StopScreencast (..),
+    StopScreencastResult (..),
     Target (..),
     TraverseHistory (..),
     Viewport (..),
@@ -1016,4 +1023,86 @@ browsingContextSetViewportResetDemo =
               userContexts = Nothing
             }
       logShow "Set viewport result - reset to null" setViewportNull
+      pause
+
+-- >>> runDemo browsingContextSetBypassCSPDemo
+-- *** Exception: BiDIError (ProtocolException {error = UnknownCommand, description = "A command could not be executed because the remote end is not aware of it", message = "Unknown command 'browsingContext.setBypassCSP'.", stacktrace = Nothing, errorData = Nothing, response = Object (fromList [("error",String "unknown command"),("id",Number 2.0),("message",String "Unknown command 'browsingContext.setBypassCSP'."),("type",String "error")])})
+browsingContextSetBypassCSPDemo :: BiDiDemo
+browsingContextSetBypassCSPDemo =
+  demo "Browsing Context - Set Bypass CSP - since https://www.w3.org/TR/2026/WD-webdriver-bidi-20260629" action
+  where
+    action :: DemoActions -> BiDiActions -> IO ()
+    action utils@MkDemoActions {..} bidi@MkBiDiActions {..} = do
+      bc <- rootContext utils bidi
+
+      logTxt "Test 1: Enable CSP bypass for the browsing context"
+      let enableBypass = MkSetBypassCSP
+            { bypass = EnableBypassCSP,
+              contexts = Just [bc],
+              userContexts = Nothing
+            }
+      browsingContextSetBypassCSP enableBypass
+      logTxt "CSP bypass enabled - test infrastructure can now inject scripts"
+      pause
+
+      logTxt "Test 2: Restore default CSP enforcement"
+      let restoreCSP = MkSetBypassCSP
+            { bypass = RestoreDefaultBypassCSP,
+              contexts = Just [bc],
+              userContexts = Nothing
+            }
+      browsingContextSetBypassCSP restoreCSP
+      logTxt "CSP enforcement restored to default"
+      pause
+
+-- >>> runDemo browsingContextScreencastDemo
+-- *** Exception: BiDIError (ProtocolException {error = UnknownCommand, description = "A command could not be executed because the remote end is not aware of it", message = "Unknown command 'browsingContext.startScreencast'.", stacktrace = Nothing, errorData = Nothing, response = Object (fromList [("error",String "unknown command"),("id",Number 3.0),("message",String "Unknown command 'browsingContext.startScreencast'."),("type",String "error")])})
+browsingContextScreencastDemo :: BiDiDemo
+browsingContextScreencastDemo =
+  demo "Browsing Context - Start and Stop Screencast - since https://www.w3.org/TR/2026/WD-webdriver-bidi-20260629" action
+  where
+    action :: DemoActions -> BiDiActions -> IO ()
+    action utils@MkDemoActions {..} bidi@MkBiDiActions {..} = do
+      bc <- rootContext utils bidi
+
+      contentPage <- contentPageUrl
+      logTxt "Navigate to content page for screencast recording"
+      navResult <- browsingContextNavigate $ MkNavigate {context = bc, url = contentPage, wait = Just Complete}
+      logShow "Navigation result" navResult
+      pause
+
+      logTxt "Test 1: Start screencast with default settings"
+      let screencastParams = MkStartScreencast
+            { context = bc,
+              mimeType = Nothing,
+              video = Nothing,
+              audio = Nothing
+            }
+      MkStartScreencastResult {screencast = screencastId1, path = path1} <- browsingContextStartScreencast screencastParams
+      logShow "Screencast started - default settings" (screencastId1, path1)
+      pause
+
+      logTxt "Stop screencast and retrieve recording"
+      MkStopScreencastResult {path = stopPath1, error = stopError1} <- browsingContextStopScreencast $ MkStopScreencast {screencast = screencastId1}
+      logShow "Screencast stopped" (stopPath1, stopError1)
+      pause
+
+      logTxt "Test 2: Start screencast with custom video constraints"
+      let customScreencast = MkStartScreencast
+            { context = bc,
+              mimeType = Just "video/webm",
+              video = Just $ MkMediaTrackConstraints
+                { width = Just $ MkJSUInt 1280,
+                  height = Just $ MkJSUInt 720,
+                  frameRate = Just $ MkJSUInt 30
+                },
+              audio = Just True
+            }
+      MkStartScreencastResult {screencast = screencastId2, path = path2} <- browsingContextStartScreencast customScreencast
+      logShow "Screencast started - 1280x720@30fps with audio" (screencastId2, path2)
+      pause
+
+      logTxt "Stop custom screencast"
+      MkStopScreencastResult {path = stopPath2, error = stopError2} <- browsingContextStopScreencast $ MkStopScreencast {screencast = screencastId2}
+      logShow "Custom screencast stopped" (stopPath2, stopError2)
       pause

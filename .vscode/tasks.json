@@ -10,7 +10,24 @@
       "args": [
         "build",
         "all",
-        "--enable-tests"
+        "--enable-tests",
+        "--minimize-conflict-set"
+      ],
+      "presentation": {
+        "reveal": "always",
+        "panel": "shared",
+        "showReuseMessage": false
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "build library only",
+      "type": "shell",
+      "command": "cabal",
+      "args": [
+        "build",
+        "webdriver-precore:lib:webdriver-precore",
+        "--disable-tests"
       ],
       "presentation": {
         "reveal": "always",

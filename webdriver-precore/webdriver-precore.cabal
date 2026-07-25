@@ -1,7 +1,7 @@
-cabal-version: 3.12
+cabal-version: 3.16
 
 name:           webdriver-precore
-version:        0.2.0.2
+version:        0.3.0.4
 homepage:       https://github.com/pyrethrum/webdriver-precore#readme
 bug-reports:    https://github.com/pyrethrum/webdriver-precore/issues
 author:         John Walker, Adrian Glouftsis
@@ -16,12 +16,12 @@ extra-doc-files:
   README.md
   ChangeLog.md
 
-tested-with: GHC == 9.8.2 || == 9.8.4 || == 9.10.1
+tested-with: GHC == 9.8.2 || == 9.8.4 || == 9.10.1 || == 9.12.4
 
 synopsis:       A typed wrapper for W3C WebDriver (HTTP and BiDi) protocols.
 
 description:
-  This library provides typed definitions for the WebDriver W3C spec, both @<https://www.w3.org/TR/2025/WD-webdriver2-20251028/ HTTP>@ and @<https://www.w3.org/TR/2026/WD-webdriver-bidi-20260109/ BiDi>@.
+  This library provides typed definitions for the WebDriver W3C spec, both @<https://www.w3.org/TR/2026/WD-webdriver2-20260702/ HTTP>@ and @<https://www.w3.org/TR/2026/WD-webdriver-bidi-20260629/ BiDi>@.
 
   It is designed as a foundation for building WebDriver client libraries providing type-safe endpoint definitions and response parsers without any client implementation.
 
@@ -30,6 +30,10 @@ description:
   __For complete documentation, module organisation, and migration guides, see "WebDriverPreCore".__
   
   See also the @<https://github.com/pyrethrum/webdriver project repo>@ and the test directory for @<https://github.com/pyrethrum/webdriver/tree/main/webdriver-precore/test#readme examples>@.
+
+source-repository head
+  type:                git
+  location:            https://github.com/pyrethrum/webdriver-precore.git
   
 common commonExtensions
   default-extensions:
@@ -111,8 +115,8 @@ common commonGhcOptions
     -- -fdefer-typed-holes
 
   cpp-options: 
-    -DHTMLSpecURL=https://www.w3.org/TR/2025/WD-webdriver2-20251028/
-    -DBiDiSpecURL=https://www.w3.org/TR/2026/WD-webdriver-bidi-20260109/
+    -DHTMLSpecURL=https://www.w3.org/TR/2026/WD-webdriver2-20260702/
+    -DBiDiSpecURL=https://www.w3.org/TR/2026/WD-webdriver-bidi-20260629/
 
   if flag(debug-local-config)
     cpp-options: -DDEBUG_LOCAL_CONFIG
@@ -583,7 +587,7 @@ library
       WebDriverPreCore.BiDi.WebExtensions
   hs-source-dirs: src
   build-depends:
-    webdriver-precore:utils-internal,
+    utils-internal,
     aeson         >=1.4   && <2.3, 
     bytestring    >=0.10  && <0.12.3,
     containers    >=0.6   && <0.9,

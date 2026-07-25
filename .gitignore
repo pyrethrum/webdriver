@@ -7,6 +7,7 @@ dist-newstyle/
 *.log
 cabal.project.local
 
-# ignore the user dhall config file
-webdriver-precore/test/.config/config.dhall
+# local config files
+config.dhall
 DebugConfig.hs
+

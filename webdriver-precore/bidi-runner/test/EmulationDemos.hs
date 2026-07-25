@@ -11,12 +11,15 @@ import WebDriverPreCore.BiDi.Protocol
     NetworkConditions (..),
     ScreenArea (..),
     ScreenOrientationOverride (..),
+    ScrollbarType (..),
     SetForcedColorsModeThemeOverride (..),
     SetGeolocationOverride (..),
     SetLocaleOverride (..),
     SetNetworkConditions (..),
     SetScreenOrientationOverride (..),
     SetScreenSettingsOverride (..),
+    SetScrollbarTypeOverride (..),
+    ScriptingOverride (..),
     SetScriptingEnabled (..),
     SetTimezoneOverride (..),
     SetTouchOverride (..),
@@ -84,7 +87,7 @@ emulationSetGeolocationOverridePositionErrorDemo =
 
       logTxt "Set geolocation position error"
       let positionError = MkGeolocationPositionError { errorType = "positionUnavailable" }
-      let errorOverride = MkSetGeolocationOverride
+          errorOverride = MkSetGeolocationOverride
             { override = PositionError positionError,
               contexts = Just [bc],
               userContexts = Nothing
@@ -326,7 +329,7 @@ emulationSetTimezoneOverrideDemo =
 -- >>> runDemo emulationSetTouchOverrideDemo
 emulationSetTouchOverrideDemo :: BiDiDemo
 emulationSetTouchOverrideDemo =
-  demo "Emulation - Set Touch Override - since https://www.w3.org/TR/2026/WD-webdriver-bidi-20260109" action
+  demo "Emulation - Set Touch Override - since https://www.w3.org/TR/2026/WD-webdriver-bidi-20260629" action
   where
     action :: DemoActions -> Actions -> IO ()
     action utils@MkDemoActions {..} bidi@MkActions {..} = do
@@ -649,22 +652,62 @@ emulationSetScriptingEnabledDemo =
     action utils@MkDemoActions {..} bidi@MkActions {..} = do
       bc <- rootContext utils bidi
 
-      logTxt "Test 1: Disable JavaScript"
+      logTxt "Test 1: Force disable JavaScript"
       let disableJS = MkSetScriptingEnabled
-            { enabled = Just False,
+            { enabled = ForceDisableScripting,
               contexts = Just [bc],
               userContexts = Nothing
             }
       result1 <- emulationSetScriptingEnabled disableJS
-      logShow "JavaScript disabled" result1
+      logShow "JavaScript forcibly disabled" result1
       pause
 
-      logTxt "Test 2: Re-enable JavaScript (clear override)"
-      let enableJS = MkSetScriptingEnabled
-            { enabled = Nothing,
+      logTxt "Test 2: Restore default JavaScript state (clear override)"
+      let restoreJS = MkSetScriptingEnabled
+            { enabled = RestoreDefaultScripting,
               contexts = Just [bc],
               userContexts = Nothing
             }
-      result2 <- emulationSetScriptingEnabled enableJS
-      logShow "JavaScript re-enabled" result2
+      result2 <- emulationSetScriptingEnabled restoreJS
+      logShow "JavaScript restored to initial browser configuration" result2
+      pause
+
+-- >>> runDemo emulationSetScrollbarTypeOverrideDemo
+-- *** Exception: BiDIError (ProtocolException {error = UnknownCommand, description = "A command could not be executed because the remote end is not aware of it", message = "Unknown command 'emulation.setScrollbarTypeOverride'.", stacktrace = Nothing, errorData = Nothing, response = Object (fromList [("error",String "unknown command"),("id",Number 2.0),("message",String "Unknown command 'emulation.setScrollbarTypeOverride'."),("type",String "error")])})
+emulationSetScrollbarTypeOverrideDemo :: BiDiDemo
+emulationSetScrollbarTypeOverrideDemo =
+  demo "Emulation - Set Scrollbar Type Override - since https://www.w3.org/TR/2026/WD-webdriver-bidi-20260629" action
+  where
+    action :: DemoActions -> BiDiActions -> IO ()
+    action utils@MkDemoActions {..} bidi@MkBiDiActions {..} = do
+      bc <- rootContext utils bidi
+
+      logTxt "Test 1: Set scrollbar type to classic (always-visible)"
+      let classicScrollbar = MkSetScrollbarTypeOverride
+            { scrollbarType = Classic,
+              contexts = Just [bc],
+              userContexts = Nothing
+            }
+      emulationSetScrollbarTypeOverride classicScrollbar
+      logTxt "Scrollbar type set to classic - always-visible (Windows/Linux style)"
+      pause
+
+      logTxt "Test 2: Set scrollbar type to overlay (auto-hiding)"
+      let overlayScrollbar = MkSetScrollbarTypeOverride
+            { scrollbarType = Overlay,
+              contexts = Just [bc],
+              userContexts = Nothing
+            }
+      emulationSetScrollbarTypeOverride overlayScrollbar
+      logTxt "Scrollbar type set to overlay - auto-hiding (macOS style)"
+      pause
+
+      logTxt "Test 3: Restore platform default scrollbar type"
+      let platformDefault = MkSetScrollbarTypeOverride
+            { scrollbarType = PlatformDefault,
+              contexts = Just [bc],
+              userContexts = Nothing
+            }
+      emulationSetScrollbarTypeOverride platformDefault
+      logTxt "Scrollbar type restored to platform default"
       pause

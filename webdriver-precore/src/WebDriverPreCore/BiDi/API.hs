@@ -27,7 +27,10 @@ module WebDriverPreCore.BiDi.API
     browsingContextNavigate,
     browsingContextPrint,
     browsingContextReload,
+    browsingContextSetBypassCSP,
     browsingContextSetViewport,
+    browsingContextStartScreencast,
+    browsingContextStopScreencast,
     browsingContextTraverseHistory,
 
     -- * Browser Commands
@@ -46,6 +49,7 @@ module WebDriverPreCore.BiDi.API
     emulationSetNetworkConditions,
     emulationSetScreenOrientationOverride,
     emulationSetScreenSettingsOverride,
+    emulationSetScrollbarTypeOverride,
     emulationSetScriptingEnabled,
     emulationSetTimezoneOverride,
     emulationSetTouchOverride,
@@ -192,6 +196,11 @@ import WebDriverPreCore.BiDi.Protocol
     ResponseStarted,
     SessionNewResult,
     SessionStatusResult,
+    SetBypassCSP,
+    StartScreencast,
+    StartScreencastResult,
+    StopScreencast,
+    StopScreencastResult,
     SessionSubscibe (..),
     SessionSubscribeResult (..),
     SessionUnsubscribe (..),
@@ -208,6 +217,7 @@ import WebDriverPreCore.BiDi.Protocol
     SetNetworkConditions,
     SetScreenOrientationOverride,
     SetScreenSettingsOverride,
+    SetScrollbarTypeOverride,
     SetScriptingEnabled,
     SetTimezoneOverride,
     SetTouchOverride,
@@ -332,11 +342,29 @@ browsingContextPrint = mkCommand BrowsingContextPrint
 browsingContextReload :: Reload -> Command ()
 browsingContextReload = mkCommand BrowsingContextReload
 
+-- | Specification Entry: <BiDiSpecURL#command-browsingContext-setBypassCSP browsingContext.setBypassCSP>
+--
+-- First added to Spec: <https://www.w3.org/TR/2026/WD-webdriver-bidi-20260629/#command-browsingContext-setBypassCSP 29 June 2026 - Working Draft>
+browsingContextSetBypassCSP :: SetBypassCSP -> Command ()
+browsingContextSetBypassCSP = mkCommand BrowsingContextSetBypassCSP
+
 -- | Specification Entry: <BiDiSpecURL#command-browsingContext-setViewport browsingContext.setViewport>
 --
 -- First added to Spec: <https://www.w3.org/TR/2024/WD-webdriver-bidi-20241121/#command-browsingContext-setViewport 21 November 2024 - First Public Working Draft>
 browsingContextSetViewport :: SetViewport -> Command ()
 browsingContextSetViewport = mkCommand BrowsingContextSetViewport
+
+-- | Specification Entry: <BiDiSpecURL#command-browsingContext-startScreencast browsingContext.startScreencast>
+--
+-- First added to Spec: <https://www.w3.org/TR/2026/WD-webdriver-bidi-20260629/#command-browsingContext-startScreencast 29 June 2026 - Working Draft>
+browsingContextStartScreencast :: StartScreencast -> Command StartScreencastResult
+browsingContextStartScreencast = mkCommand BrowsingContextStartScreencast
+
+-- | Specification Entry: <BiDiSpecURL#command-browsingContext-stopScreencast browsingContext.stopScreencast>
+--
+-- First added to Spec: <https://www.w3.org/TR/2026/WD-webdriver-bidi-20260629/#command-browsingContext-stopScreencast 29 June 2026 - Working Draft>
+browsingContextStopScreencast :: StopScreencast -> Command StopScreencastResult
+browsingContextStopScreencast = mkCommand BrowsingContextStopScreencast
 
 -- | Specification Entry: <BiDiSpecURL#command-browsingContext-traverseHistory browsingContext.traverseHistory>
 --
@@ -429,7 +457,11 @@ emulationSetScreenOrientationOverride = mkCommand EmulationSetScreenOrientationO
 emulationSetScreenSettingsOverride :: SetScreenSettingsOverride -> Command ()
 emulationSetScreenSettingsOverride = mkCommand EmulationSetScreenSettingsOverride
 
--- since 11-08-2025 https://www.w3.org/TR/2025/WD-webdriver-bidi-20250811
+-- since 11-08-2025 https://www.w3.org/TR/2025/WD-webdriver-bidi-20250811-- | Specification Entry: <BiDiSpecURL#command-emulation-setScrollbarTypeOverride emulation.setScrollbarTypeOverride>
+--
+-- First added to Spec: <https://www.w3.org/TR/2026/WD-webdriver-bidi-20260629/#command-emulation-setScrollbarTypeOverride 29 June 2026 - Working Draft>
+emulationSetScrollbarTypeOverride :: SetScrollbarTypeOverride -> Command ()
+emulationSetScrollbarTypeOverride = mkCommand EmulationSetScrollbarTypeOverride
 -- | Specification Entry: <BiDiSpecURL#command-emulation-setScriptingEnabled emulation.setScriptingEnabled>
 --
 -- First added to Spec: <https://www.w3.org/TR/2025/WD-webdriver-bidi-20250811/#command-emulation-setScriptingEnabled 11 August 2025>
@@ -442,10 +474,10 @@ emulationSetScriptingEnabled = mkCommand EmulationSetScriptingEnabled
 emulationSetTimezoneOverride :: SetTimezoneOverride -> Command ()
 emulationSetTimezoneOverride = mkCommand EmulationSetTimezoneOverride
 
--- since 09-01-2026 https://www.w3.org/TR/2026/WD-webdriver-bidi-20260109
+-- since 29-06-2026 https://www.w3.org/TR/2026/WD-webdriver-bidi-20260629
 -- | Specification Entry: <BiDiSpecURL#command-emulation-setTouchOverride emulation.setTouchOverride>
 --
--- First added to Spec: <https://www.w3.org/TR/2026/WD-webdriver-bidi-20260109/#command-emulation-setTouchOverride 09 January 2026>
+-- First added to Spec: <https://www.w3.org/TR/2026/WD-webdriver-bidi-20260629/#command-emulation-setTouchOverride 29 June 2026>
 emulationSetTouchOverride :: SetTouchOverride -> Command ()
 emulationSetTouchOverride = mkCommand EmulationSetTouchOverride
 

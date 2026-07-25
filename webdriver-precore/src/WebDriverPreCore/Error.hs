@@ -27,7 +27,7 @@ import Prelude as P hiding (error, words)
 
 -- | Known WebDriver Error Types
 --
--- [spec](https://www.w3.org/TR/2025/WD-webdriver2-20251028/#errors)
+-- [spec](https://www.w3.org/TR/2026/WD-webdriver2-20260702/#errors)
 data ErrorType
   = ElementClickIntercepted
   | ElementNotInteractable

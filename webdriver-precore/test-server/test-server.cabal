@@ -97,6 +97,6 @@ executable test-server
     base64-bytestring    >=1.2   && <1.3,
     bytestring           >=0.10  && <0.12.3,
     http-types           >=0.12  && <0.13,
-    scotty               >=0.20  && <0.40,
+    scotty               >=0.20  && <1,
     text                 >=2.1   && <2.2
   default-language: Haskell2010

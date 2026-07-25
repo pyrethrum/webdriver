@@ -112,7 +112,7 @@ import WebDriverPreCore.HTTP.Command
 import WebDriverPreCore.Internal.HTTPBidiCommon as Url (URL (..), Session (..))
 import Prelude hiding (id)
 
--- | [spec](https://www.w3.org/TR/2025/WD-webdriver2-20251028/#dfn-get-window-handle)
+-- | [spec](https://www.w3.org/TR/2026/WD-webdriver2-20260702/#dfn-get-window-handle)
 newtype Handle = MkHandle {handle :: Text}
   deriving (Show, Eq, Generic)
 
@@ -129,7 +129,7 @@ instance FromJSON Handle where
       pure $ MkHandle h
     v -> fail $ unpack $ "Expected Handle as String or Object with handle property, got: " <> txt v
 
--- | [spec](https://www.w3.org/TR/2025/WD-webdriver2-20251028/#new-window)
+-- | [spec](https://www.w3.org/TR/2026/WD-webdriver2-20260702/#new-window)
 data WindowHandleSpec = HandleSpec
   { handle :: Handle,
     handletype :: HandleType
@@ -167,7 +167,7 @@ instance FromJSON HandleType where
     "tab" -> pure Tab
     v -> fail $ unpack $ "Unknown HandleType " <> v
 
--- | [spec](https://www.w3.org/TR/2025/WD-webdriver2-20251028/#dfn-find-element)
+-- | [spec](https://www.w3.org/TR/2026/WD-webdriver2-20260702/#dfn-find-element)
 newtype ElementId = MkElement {id :: Text}
   deriving (Show, Eq, Ord, Generic)
 
@@ -271,7 +271,7 @@ webSocketUrlToBool o =
           KM.insert webSocketKey (Bool True) o -- change to Bool
     _ -> o -- no change if property not present
 
--- | [spec](https://www.w3.org/TR/2025/WD-webdriver2-20251028/#dfn-status)
+-- | [spec](https://www.w3.org/TR/2026/WD-webdriver2-20260702/#dfn-status)
 data Status = MkStatus
   { ready :: Bool,
     message :: Text
@@ -282,7 +282,7 @@ instance ToJSON Status
 
 instance FromJSON Status
 
--- | [spec](https://www.w3.org/TR/2025/WD-webdriver2-20251028/#cookies)
+-- | [spec](https://www.w3.org/TR/2026/WD-webdriver2-20260702/#cookies)
 data SameSite
   = Lax
   | Strict
@@ -295,7 +295,7 @@ instance ToJSON SameSite where
   toJSON :: SameSite -> Value
   toJSON = String . txt
 
--- | [spec](https://www.w3.org/TR/2025/WD-webdriver2-20251028/#dfn-switch-to-frame)
+-- | [spec](https://www.w3.org/TR/2026/WD-webdriver2-20260702/#dfn-switch-to-frame)
 data FrameReference
   = TopLevelFrame
   | FrameNumber Word16
@@ -322,7 +322,7 @@ elementFieldName = "element-6066-11e4-a52e-4f735466cecf"
 shadowRootFieldName :: Key
 shadowRootFieldName = "shadow-6066-11e4-a52e-4f735466cecf"
 
--- | [spec](https://www.w3.org/TR/2025/WD-webdriver2-20251028/#cookies)
+-- | [spec](https://www.w3.org/TR/2026/WD-webdriver2-20260702/#cookies)
 data Cookie = MkCookie
   { name :: Text,
     value :: Text,
@@ -366,7 +366,7 @@ instance ToJSON Cookie where
             opt "expiry" expiry
           ]
 
--- | [spec](https://www.w3.org/TR/2025/WD-webdriver2-20251028/#locator-strategies)
+-- | [spec](https://www.w3.org/TR/2026/WD-webdriver2-20260702/#locator-strategies)
 data Selector
   = CSS Text
   | XPath Text
@@ -386,7 +386,7 @@ instance ToJSON Selector where
     where
       sJSON using value = object ["using" .= using, "value" .= value]
 
--- | [spec](https://www.w3.org/TR/2025/WD-webdriver2-20251028/#dfn-get-element-rect)
+-- | [spec](https://www.w3.org/TR/2026/WD-webdriver2-20260702/#dfn-get-element-rect)
 data WindowRect = Rect
   { x :: Int,
     y :: Int,
@@ -412,7 +412,7 @@ instance FromJSON WindowRect where
           height = floor height
         }
 
--- | [spec](https://www.w3.org/TR/2025/WD-webdriver2-20251028/#actions)
+-- | [spec](https://www.w3.org/TR/2026/WD-webdriver2-20260702/#actions)
 newtype Actions = MkActions {actions :: [Action]}
   deriving (Show, Eq, Generic)
 
@@ -423,7 +423,7 @@ instance ToJSON Actions where
       [ "actions" .= actions
       ]
 
--- | [spec](https://www.w3.org/TR/2025/WD-webdriver2-20251028/#actions)
+-- | [spec](https://www.w3.org/TR/2026/WD-webdriver2-20260702/#actions)
 data KeyAction
   = PauseKey {duration :: Maybe Int} -- ms
   | KeyDown
@@ -454,7 +454,7 @@ instance ToJSON KeyAction where
 
 -- Pointer subtypes
 
--- | [spec](https://www.w3.org/TR/2025/WD-webdriver2-20251028/#actions)
+-- | [spec](https://www.w3.org/TR/2026/WD-webdriver2-20260702/#actions)
 data Pointer
   = Mouse
   | Pen
@@ -468,7 +468,7 @@ instance ToJSON Pointer where
   toJSON :: Pointer -> Value
   toJSON = mkLwrTxt
 
--- | [spec](https://www.w3.org/TR/2025/WD-webdriver2-20251028/#actions)
+-- | [spec](https://www.w3.org/TR/2026/WD-webdriver2-20260702/#actions)
 data PointerOrigin
   = Viewport
   | OriginPointer
@@ -482,7 +482,7 @@ instance ToJSON PointerOrigin where
     OriginPointer -> "pointer"
     OriginElement (MkElement id') -> object ["element" .= id']
 
--- | [spec](https://www.w3.org/TR/2025/WD-webdriver2-20251028/#actions)
+-- | [spec](https://www.w3.org/TR/2026/WD-webdriver2-20260702/#actions)
 data Action
   = NoneAction
       { id :: Text,
@@ -511,7 +511,7 @@ data Action
       }
   deriving (Show, Eq)
 
--- | [spec](https://www.w3.org/TR/2025/WD-webdriver2-20251028/#actions)
+-- | [spec](https://www.w3.org/TR/2026/WD-webdriver2-20260702/#actions)
 data WheelAction
   = PauseWheel {duration :: Maybe Int} -- ms
   | Scroll
@@ -546,7 +546,7 @@ instance ToJSON WheelAction where
               "deltaY" .= deltaY
             ]
 
--- | [spec](https://www.w3.org/TR/2025/WD-webdriver2-20251028/#actions)
+-- | [spec](https://www.w3.org/TR/2026/WD-webdriver2-20260702/#actions)
 data PointerAction
   = PausePointer {duration :: Maybe Int} -- ms
   | Up

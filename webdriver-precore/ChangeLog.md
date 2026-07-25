@@ -6,6 +6,45 @@
 - `getElementProperty`: return type changed from `Command Value` to `Command (Maybe Value)` — per W3C spec §12.4.3, undefined properties return `null`
 - Same changes applied to the deprecated `HttpSpec`-based equivalents in `WebDriverPreCore.HTTP.SpecDefinition`
 
+# webdriver-precore-0.3.0.4 (2026-07-24)
+
+- Hackage upload fix — no change.
+
+# webdriver-precore-0.3.0.3 (2026-07-24)
+
+- Hackage upload fix — no change.
+
+# webdriver-precore-0.3.0.2 (2026-07-24)
+
+## HTTP Spec Update
+
+- Spec reference URL updated from 28 October 2025 Working Draft to 02 July 2026 Working Draft.
+- No API changes — all HTTP endpoints, capabilities, and types remain identical between versions.
+
+## BiDi Spec Update
+
+Updated to [W3C WebDriver BiDi Working Draft of 29 June 2026](https://www.w3.org/TR/2026/WD-webdriver-bidi-20260629/).
+
+### New Commands
+
+- **`browsingContext.setBypassCSP`** — Bypass Content Security Policy restrictions for automated testing.
+  - New types: `SetBypassCSP`, `BypassCSPOverride`
+- **`browsingContext.startScreencast`** / **`browsingContext.stopScreencast`** — Record browser sessions as video files.
+  - New types: `StartScreencast`, `StartScreencastResult`, `StopScreencast`, `StopScreencastResult`, `MediaTrackConstraints`, `Screencast`
+- **`emulation.setScrollbarTypeOverride`** — Override scrollbar appearance for consistent cross-platform testing.
+  - New types: `SetScrollbarTypeOverride`, `ScrollbarType`
+
+### Breaking Changes
+#### Type Changes
+
+- **`SetScriptingEnabled`**: `enabled` field changed from `Maybe Bool` to `ScriptingOverride` for improved type safety (encodes `false` or `null`, not `true`).
+  - New type: `ScriptingOverride` with constructors `ForceDisableScripting` and `RestoreDefaultScripting`.
+
+### Other
+
+- Spec reference URLs and dates updated throughout BiDi source files.
+- CPP flag `BiDiSpecURL` updated to point to 29 June 2026 Working Draft.
+
 # webdriver-precore-0.2.0.1 (2026-01-17)
 
 ## Breaking Changes

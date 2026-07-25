@@ -7,7 +7,6 @@ import Data.Text.Lazy.Encoding qualified as TLE
 import Network.HTTP.Types.Status
 import TestPages (helloHtml)
 import Web.Scotty
-import Web.Scotty.Cookie qualified as C
 
 main :: IO ()
 main = do

@@ -1,62 +1,29 @@
-# Use the latest official Ubuntu image as a base
 FROM ghcr.io/pyrethrum/haskell:latest
 
-# use
-# docker build -t "pyrethrum" .
-# docker tag pyrethrum theghostjw/pyrethrum:latest
-# docker push theghostjw/pyrethrum:latest
+# Build from repo root:
+#   docker build --tag ghcr.io/pyrethrum/webdriver-precore:latest --file dev/dockerfile-webdriver-precore ..
 
-# vscode user created in haskell
+# vscode user created in haskell image
 ENV DEBIAN_FRONTEND=noninteractive \
     USERNAME=vscode \
-    # modified from https://github.com/vzarytovskii/haskell-dev-env/blob/master/.devcontainer/Dockerfile 
-    # this 1000 is already taken by ubuntu
     USER_UID=1001 \
     USER_GID=1001
-    
-    # Set the working directory
-    WORKDIR /home/vscode
-    
-ARG REPO=https://github.com/pyrethrum/webdriver.git
-ARG BRANCH=main
 
-# ensure switched user (do this AFTER setting up directories)
+WORKDIR /home/vscode/webdriver
+
+# Copy the entire repo source (context must be the repo root)
+COPY --chown=${USER_UID}:${USER_GID} . .
+
 USER ${USER_UID}:${USER_GID}
 
-# Sadly this has to all be in a single RUN command so REPO_DIR can be used
-# Docker does not directly support storing command output in variables within a Dockerfile as you might in a shell script. 
-# The example combines commands using && to ensure they are executed in the same shell, 
-# allowing the use of the variable ${REPO_DIR} within the scope of that RUN command.
-
-# calculate local repo dir
-RUN REPO_DIR=$(basename -s .git "${REPO}") \
-    # clone into home (note single branch)
-    && git clone --single-branch --branch ${BRANCH} ${REPO} \
-    # cd into source repo
-    && cd "${REPO_DIR}" \
-    # build it all (go have coffee for an hour or more)
-    # libraries will be cached by cabal
-    # local modules => dist-newstyle
-    && cabal update \
+# Pre-build all dependencies so downstream builds are fast
+RUN cabal update \
     && cabal build all --only-dependencies \
-    # cd back into examples
-    # local copy module build artifacts to home dir
-    # note this does not work cabal is too clever with its cach invalidation
-    # && cp -r ./dist-newstyle /home/vscode/dist-newstyle \
-    # CD out
-    && cd .. \
-    # delete the repo
-    && echo "working directory is ${PWD}" \
-    && echo "deleting repo ${REPO_DIR}" \
-    && rm -rf "${REPO_DIR}" \
     # Clean up cabal cache to reduce image size (keep compiled libraries!)
     && rm -rf /home/vscode/.cabal/packages/*/*/build-reports \
     && rm -rf /home/vscode/.cabal/logs \
-    # Remove source tarballs since we have the compiled versions
     && find /home/vscode/.cabal/packages -name "*.tar.gz" -delete \
-    # Remove profiling objects (only needed if building with --enable-profiling)
     && find /home/vscode/.cabal/store -type f -name "*.p_o" -delete \
     && find /home/vscode/.cabal/store -type f -name "*.p_hi" -delete
 
-# Specify the default command to run when the container starts
 CMD ["bash"]
