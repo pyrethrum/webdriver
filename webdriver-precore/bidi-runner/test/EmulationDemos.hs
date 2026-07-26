@@ -678,8 +678,8 @@ emulationSetScrollbarTypeOverrideDemo :: BiDiDemo
 emulationSetScrollbarTypeOverrideDemo =
   demo "Emulation - Set Scrollbar Type Override - since https://www.w3.org/TR/2026/WD-webdriver-bidi-20260629" action
   where
-    action :: DemoActions -> BiDiActions -> IO ()
-    action utils@MkDemoActions {..} bidi@MkBiDiActions {..} = do
+    action :: DemoActions -> Actions -> IO ()
+    action utils@MkDemoActions {..} bidi@MkActions {..} = do
       bc <- rootContext utils bidi
 
       logTxt "Test 1: Set scrollbar type to classic (always-visible)"

@@ -2,22 +2,93 @@ module WebDriverPreCore.Test.DebugConfig (
   debugConfig
 ) where
 
-import Config
+import Data.Text (Text)
+import WebDriverPreCore.Test.Config
   ( Config (..),
     DemoBrowser (..),
   )
+import WebDriverPreCore.Test.Const (Timeout, seconds)
+
+_sec :: Timeout
+_sec = seconds
 
 debugConfig :: Config
 debugConfig =
+  --
+
+  -- _chromeDebug
+  -- _firefoxHeadlessLogging
+  -- _firefoxDebug
+  -- _firefoxSilent
+  _chromeSilent
+  -- _chromeHeadlessLogging
+  -- _firefoxDebugNoPause 
+
+
+_firefoxSilent :: Config
+_firefoxSilent =
   MkConfig
-    { browser =
-        Firefox
-          { headless = False,
-            -- profilePath = Just "[YOUR FIREFOX PROFILE PATH HERE]"
-            profilePath = None
-          },
+    { browser = Firefox {headless = True, profilePath},
+      logging = False,
+      httpUrl = "127.0.0.1",
+      httpPort = 4444,
+      pauseMS = 0
+    }
+
+_firefoxHeadlessLogging :: Config
+_firefoxHeadlessLogging =
+  MkConfig
+    { browser = Firefox {headless = True, profilePath},
       logging = True,
       httpUrl = "127.0.0.1",
       httpPort = 4444,
-      pauseMS = 2000
+      pauseMS = 0
     }
+
+_firefoxDebug :: Config
+_firefoxDebug =
+  MkConfig
+    { browser = Firefox {headless = False, profilePath},
+      logging = True,
+      httpUrl = "127.0.0.1",
+      httpPort = 4444,
+      pauseMS = 1_000
+    }
+
+_firefoxDebugNoPause :: Config
+_firefoxDebugNoPause =
+  _firefoxDebug {pauseMS = 0}
+
+
+_chromeSilent :: Config
+_chromeSilent =
+  MkConfig
+    { browser = Chrome {headless = True},
+      logging = False,
+      httpUrl = "127.0.0.1",
+      httpPort = 4444,
+      pauseMS = 0
+    }
+
+_chromeHeadlessLogging :: Config
+_chromeHeadlessLogging =
+  MkConfig
+    { browser = Chrome {headless = True},
+      logging = True,
+      httpUrl = "127.0.0.1",
+      httpPort = 4444,
+      pauseMS = 0
+    }
+
+_chromeDebug :: Config
+_chromeDebug =
+  MkConfig
+    { browser = Chrome {headless = False},
+      logging = True,
+      httpUrl = "127.0.0.1",
+      httpPort = 4444,
+      pauseMS = 0
+    }
+
+profilePath :: Maybe Text
+profilePath = Just "[YOUR FIREFOX PROFILE PATH HERE]"

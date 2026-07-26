@@ -1031,8 +1031,8 @@ browsingContextSetBypassCSPDemo :: BiDiDemo
 browsingContextSetBypassCSPDemo =
   demo "Browsing Context - Set Bypass CSP - since https://www.w3.org/TR/2026/WD-webdriver-bidi-20260629" action
   where
-    action :: DemoActions -> BiDiActions -> IO ()
-    action utils@MkDemoActions {..} bidi@MkBiDiActions {..} = do
+    action :: DemoActions -> Actions -> IO ()
+    action utils@MkDemoActions {..} bidi@MkActions {..} = do
       bc <- rootContext utils bidi
 
       logTxt "Test 1: Enable CSP bypass for the browsing context"
@@ -1061,8 +1061,8 @@ browsingContextScreencastDemo :: BiDiDemo
 browsingContextScreencastDemo =
   demo "Browsing Context - Start and Stop Screencast - since https://www.w3.org/TR/2026/WD-webdriver-bidi-20260629" action
   where
-    action :: DemoActions -> BiDiActions -> IO ()
-    action utils@MkDemoActions {..} bidi@MkBiDiActions {..} = do
+    action :: DemoActions -> Actions -> IO ()
+    action utils@MkDemoActions {..} bidi@MkActions {..} = do
       bc <- rootContext utils bidi
 
       contentPage <- contentPageUrl

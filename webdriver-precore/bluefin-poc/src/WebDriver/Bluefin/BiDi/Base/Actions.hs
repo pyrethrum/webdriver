@@ -11,9 +11,9 @@
 --
 -- Subscription callbacks are @Eff es@ actions.  The underlying
 -- 'BiDiRunner' dispatches events in @IO@, so handlers must be lowered back
--- to @IO@ at some point.  This is done in the single 'bridgeToIO' helper
--- via 'unsafeUnEff', which is safe because the enclosing
--- 'withBiDiSession' bracket keeps the effect environment alive.
+-- to @IO@ at some point.  This is done via 'withEffToIO_', which is safe
+-- because the enclosing 'withBiDiSession' bracket keeps the effect
+-- environment alive.
 --
 -- This mirrors 'WebDriver.RIO.BiDi.Base.Actions' but with explicit handles.
 module WebDriver.Bluefin.BiDi.Base.Actions
@@ -180,8 +180,7 @@ where
 import Data.Aeson (FromJSON, Object, Value)
 import Data.Text (Text)
 import Bluefin.Eff (Eff, (:>))
-import Bluefin.Internal (unsafeUnEff)
-import Bluefin.IO (effIO)
+import Bluefin.IO (effIO, withEffToIO_)
 import WebDriver.Bluefin.HTTP.Core (BiDiEnv (..), runBiDiCommand)
 import WebDriverPreCore.Extended.BiDi.Base.Actions qualified as A
 import WebDriverPreCore.BiDi.Protocol
@@ -316,16 +315,6 @@ bidiRunWithId MkBiDiEnv {biDiRunner = MkBiDiRunner {runWithId = rwi}} = rwi
 extractSubscription :: SessionSubscribeResult -> SubscriptionId
 extractSubscription MkSessionSubscribeResult {subscription} = subscription
 
--- | Bridge an @Eff es ()@ handler to @IO ()@ for WebSocket event callbacks.
---
--- Subscription callbacks are dispatched from the WebSocket IO thread, so they
--- must ultimately run in @IO@.  'unsafeUnEff' is safe here because the effect
--- environment @es@ remains alive for the duration of the enclosing
--- 'withBiDiSession' bracket.  All subscription helpers funnel through this
--- single point so that 'unsafeUnEff' never appears at individual call sites.
-bridgeToIO :: (a -> Eff es ()) -> a -> IO ()
-bridgeToIO = (unsafeUnEff .)
-
 -- | Build an 'A.SendSub IO a' from a 'BiDiRunner IO', subscribing to all contexts.
 mkSendSub :: BiDiRunner IO -> A.SendSub IO a
 mkSendSub MkBiDiRunner {run = r, socketActions} mkSub handler =
@@ -348,7 +337,9 @@ mkSendSubOffSpecMany' MkBiDiRunner {run = r, socketActions} mkSub sts bcs ucs ha
 
 -- | Subscribe (no context filters), lifting result into 'Eff'.
 --
--- Handlers are bridged from @Eff es ()@ to @IO ()@ via 'bridgeToIO'.
+-- Handlers are lowered from @Eff es ()@ to @IO ()@ via 'withEffToIO_',
+-- which is safe because the enclosing 'withBiDiSession' bracket keeps the
+-- effect environment alive.
 viaSub ::
   (e :> es) =>
   (A.SendSub IO a -> (a -> IO ()) -> IO SubscriptionId) ->
@@ -356,11 +347,12 @@ viaSub ::
   (a -> Eff es ()) ->
   Eff es SubscriptionId
 viaSub extFn bidi handler =
-  effIO bidi.biDiIO $ extFn (mkSendSub bidi.biDiRunner) (bridgeToIO handler)
+  withEffToIO_ bidi.biDiIO $ \toIO ->
+    extFn (mkSendSub bidi.biDiRunner) (\a -> toIO (handler a))
 
 -- | Subscribe with context filters, lifting result into 'Eff'.
 --
--- Handlers are bridged from @Eff es ()@ to @IO ()@ via 'bridgeToIO'.
+-- Handlers are lowered from @Eff es ()@ to @IO ()@ via 'withEffToIO_'.
 viaSub' ::
   (e :> es) =>
   (A.SendSub' IO a -> [BrowsingContext] -> [UserContext] -> (a -> IO ()) -> IO SubscriptionId) ->
@@ -370,7 +362,8 @@ viaSub' ::
   (a -> Eff es ()) ->
   Eff es SubscriptionId
 viaSub' extFn bidi bcs ucs handler =
-  effIO bidi.biDiIO $ extFn (mkSendSub' bidi.biDiRunner) bcs ucs (bridgeToIO handler)
+  withEffToIO_ bidi.biDiIO $ \toIO ->
+    extFn (mkSendSub' bidi.biDiRunner) bcs ucs (\a -> toIO (handler a))
 
 -- ###########################################################################
 -- ########################### Session Commands ##############################
@@ -651,8 +644,8 @@ subscribeMany' ::
   (Event -> Eff es ()) ->
   Eff es SubscriptionId
 subscribeMany' bidi bcs ucs sts handler =
-  effIO bidi.biDiIO $
-    A.subscribeMany' (mkSendSubMany' bidi.biDiRunner) sts bcs ucs (bridgeToIO handler)
+  withEffToIO_ bidi.biDiIO $ \toIO ->
+    A.subscribeMany' (mkSendSubMany' bidi.biDiRunner) sts bcs ucs (\a -> toIO (handler a))
 
 -- | Subscribe to unknown / off-spec event types (no context filters).
 subscribeUnknownMany ::
@@ -673,8 +666,8 @@ subscribeUnknownMany' ::
   (Value -> Eff es ()) ->
   Eff es SubscriptionId
 subscribeUnknownMany' bidi bcs ucs sts handler =
-  effIO bidi.biDiIO $
-    A.subscribeOffSpecMany' (mkSendSubOffSpecMany' bidi.biDiRunner) sts bcs ucs (bridgeToIO handler)
+  withEffToIO_ bidi.biDiIO $ \toIO ->
+    A.subscribeOffSpecMany' (mkSendSubOffSpecMany' bidi.biDiRunner) sts bcs ucs (\a -> toIO (handler a))
 
 -- | Unsubscribe using a previously obtained 'SubscriptionId'.
 unsubscribe :: (e :> es) => BiDiEnv e -> SubscriptionId -> Eff es ()
