@@ -12,6 +12,8 @@ allow-newer:
  all:containers,
  all:template-haskell,
  all:time,
+ -- dhall-1.42.3 has http-client-tls < 0.4 but stackage pins 0.4.0
+ dhall:http-client-tls,
  -- katip-effectful 0.0.1 has tight upper bound on effectful-plugin
  katip-effectful:effectful-plugin
 
@@ -38,8 +40,8 @@ multi-repl: True
 -- dhall-1.42.3 has duplicate Lift instances for TimeOfDay/TimeZone that
 -- conflict with time-1.15 (GHC 9.14.1). The fix is in PR #2704 (commit
 -- f741aff) but not yet released. Use the patched git source directly.
--- source-repository-package
---   type: git
---   location: https://github.com/dhall-lang/dhall-haskell
---   tag: f741afffafc3131cc5a8dd896749c35ed49bfd0a
---   subdir: dhall
+source-repository-package
+  type: git
+  location: https://github.com/dhall-lang/dhall-haskell
+  tag: f741afffafc3131cc5a8dd896749c35ed49bfd0a
+  subdir: dhall

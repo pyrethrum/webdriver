@@ -105,13 +105,13 @@ alwaysMatchCapabilities = flip MkFullCapabilities [] . Just
 -- | Returns the minimal FullCapabilities object for a given browser
 -- The browserName in the 'alwaysMatch' field is the only field populated
 -- [spec](https://https://www.w3.org/TR/2026/WD-webdriver2-20260702/#capabilities)
-minFullCapabilities :: BrowserName -> FullCapabilities
+minFullCapabilities :: Text -> FullCapabilities
 minFullCapabilities = alwaysMatchCapabilities . minCapabilities
 
 -- | Returns the minimal Capabilities object for a given browser
 -- The browserName is the only field populated
 -- [spec](https://https://www.w3.org/TR/2026/WD-webdriver2-20260702/#capabilities)
-minCapabilities :: BrowserName -> Capabilities
+minCapabilities :: Text -> Capabilities
 minCapabilities browserName =
   MkCapabilities
     { browserName = Just browserName,
