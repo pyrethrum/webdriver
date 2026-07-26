@@ -358,6 +358,8 @@ library webdriver-precore-extended
       --
       -- TODO: move to other modules
       WebDriverPreCore.Extended.Locate
+      WebDriverPreCore.Extended.Locate.Types
+      WebDriverPreCore.Extended.HTTP.Locate
       WebDriverPreCore.Extended.Locators
       WebDriverPreCore.Extended.Capabilities
       -- common
