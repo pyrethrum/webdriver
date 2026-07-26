@@ -21,7 +21,10 @@ module WebDriverPreCore.Extended.BiDi.Base.Actions
     browsingContextNavigate,
     browsingContextPrint,
     browsingContextReload,
+    browsingContextSetBypassCSP,
     browsingContextSetViewport,
+    browsingContextStartScreencast,
+    browsingContextStopScreencast,
     browsingContextTraverseHistory,
 
     -- * Browser Commands
@@ -41,6 +44,7 @@ module WebDriverPreCore.Extended.BiDi.Base.Actions
     emulationSetScreenOrientationOverride,
     emulationSetScreenSettingsOverride,
     emulationSetScriptingEnabled,
+    emulationSetScrollbarTypeOverride,
     emulationSetTimezoneOverride,
     emulationSetTouchOverride,
     emulationSetUserAgentOverride,
@@ -271,11 +275,29 @@ browsingContextPrint r = r . API.browsingContextPrint
 browsingContextReload :: forall m. Runner m () -> Reload -> m ()
 browsingContextReload r = r . API.browsingContextReload
 
+-- | Specification Entry: <BiDiSpecURL#command-browsingContext-setBypassCSP browsingContext.setBypassCSP>
+--
+-- First added to Spec: <https://www.w3.org/TR/2026/WD-webdriver-bidi-20260629/#command-browsingContext-setBypassCSP 29 June 2026 - Working Draft>
+browsingContextSetBypassCSP :: forall m. Runner m () -> SetBypassCSP -> m ()
+browsingContextSetBypassCSP r = r . API.browsingContextSetBypassCSP
+
 -- | Specification Entry: <BiDiSpecURL#command-browsingContext-setViewport browsingContext.setViewport>
 --
 -- First added to Spec: <https://www.w3.org/TR/2024/WD-webdriver-bidi-20241121/#command-browsingContext-setViewport 21 November 2024 - First Public Working Draft>
 browsingContextSetViewport :: forall m. Runner m () -> SetViewport -> m ()
 browsingContextSetViewport r = r . API.browsingContextSetViewport
+
+-- | Specification Entry: <BiDiSpecURL#command-browsingContext-startScreencast browsingContext.startScreencast>
+--
+-- First added to Spec: <https://www.w3.org/TR/2026/WD-webdriver-bidi-20260629/#command-browsingContext-startScreencast 29 June 2026 - Working Draft>
+browsingContextStartScreencast :: forall m. Runner m StartScreencastResult -> StartScreencast -> m StartScreencastResult
+browsingContextStartScreencast r = r . API.browsingContextStartScreencast
+
+-- | Specification Entry: <BiDiSpecURL#command-browsingContext-stopScreencast browsingContext.stopScreencast>
+--
+-- First added to Spec: <https://www.w3.org/TR/2026/WD-webdriver-bidi-20260629/#command-browsingContext-stopScreencast 29 June 2026 - Working Draft>
+browsingContextStopScreencast :: forall m. Runner m StopScreencastResult -> StopScreencast -> m StopScreencastResult
+browsingContextStopScreencast r = r . API.browsingContextStopScreencast
 
 -- | Specification Entry: <BiDiSpecURL#command-browsingContext-traverseHistory browsingContext.traverseHistory>
 --
@@ -378,6 +400,12 @@ emulationSetScreenSettingsOverride r = r . API.emulationSetScreenSettingsOverrid
 -- First added to Spec: <https://www.w3.org/TR/2025/WD-webdriver-bidi-20250811/#command-emulation-setScriptingEnabled 11 August 2025>
 emulationSetScriptingEnabled :: forall m. Runner m () -> SetScriptingEnabled -> m ()
 emulationSetScriptingEnabled r = r . API.emulationSetScriptingEnabled
+
+-- | Specification Entry: <BiDiSpecURL#command-emulation-setScrollbarTypeOverride emulation.setScrollbarTypeOverride>
+--
+-- First added to Spec: <https://www.w3.org/TR/2026/WD-webdriver-bidi-20260629/#command-emulation-setScrollbarTypeOverride 29 June 2026 - Working Draft>
+emulationSetScrollbarTypeOverride :: forall m. Runner m () -> SetScrollbarTypeOverride -> m ()
+emulationSetScrollbarTypeOverride r = r . API.emulationSetScrollbarTypeOverride
 
 -- | Specification Entry: <BiDiSpecURL#command-emulation-setTimezoneOverride emulation.setTimezoneOverride>
 --

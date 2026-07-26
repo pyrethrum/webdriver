@@ -89,7 +89,7 @@ common commonExtensions
       TypeOperators
 
 flag debug-local-config
-  description: Use local debug configuration (ignore Dhall file in test/.config)
+  description: Package testing flag - use local debug configuration (ignore Dhall file in test/.config)
   default: False
   manual: True
 
@@ -137,7 +137,7 @@ common testDepends
 
 
 flag legacy-test
-  description: Use legacy deprecated HTTP test implementations
+  description: Package testing flag - use legacy deprecated HTTP test implementations
   default: False
   manual: True
 

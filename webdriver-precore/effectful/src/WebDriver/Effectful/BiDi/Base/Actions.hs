@@ -33,7 +33,10 @@ module WebDriver.Effectful.BiDi.Base.Actions
     browsingContextNavigate,
     browsingContextPrint,
     browsingContextReload,
+    browsingContextSetBypassCSP,
     browsingContextSetViewport,
+    browsingContextStartScreencast,
+    browsingContextStopScreencast,
     browsingContextTraverseHistory,
 
     -- * Browser Commands
@@ -53,6 +56,7 @@ module WebDriver.Effectful.BiDi.Base.Actions
     emulationSetScreenOrientationOverride,
     emulationSetScreenSettingsOverride,
     emulationSetScriptingEnabled,
+    emulationSetScrollbarTypeOverride,
     emulationSetTimezoneOverride,
     emulationSetTouchOverride,
     emulationSetUserAgentOverride,
@@ -250,6 +254,7 @@ import WebDriverPreCore.BiDi.Protocol
     SessionNewResult,
     SessionStatusResult,
     SetCacheBehavior,
+    SetBypassCSP,
     SetClientWindowState,
     SetCookie,
     SetCookieResult,
@@ -263,10 +268,15 @@ import WebDriverPreCore.BiDi.Protocol
     SetScreenOrientationOverride,
     SetScreenSettingsOverride,
     SetScriptingEnabled,
+    SetScrollbarTypeOverride,
     SetTimezoneOverride,
     SetTouchOverride,
     SetUserAgentOverride,
     SetViewport,
+    StartScreencast,
+    StartScreencastResult,
+    StopScreencast,
+    StopScreencastResult,
     SubscriptionId,
     TraverseHistory,
     UserContext,
@@ -325,8 +335,17 @@ browsingContextPrint = send . BrowsingContextPrint
 browsingContextReload :: (WebDriverBiDi :> es) => Reload -> Eff es ()
 browsingContextReload = send . BrowsingContextReload
 
+browsingContextSetBypassCSP :: (WebDriverBiDi :> es) => SetBypassCSP -> Eff es ()
+browsingContextSetBypassCSP = send . BrowsingContextSetBypassCSP
+
 browsingContextSetViewport :: (WebDriverBiDi :> es) => SetViewport -> Eff es ()
 browsingContextSetViewport = send . BrowsingContextSetViewport
+
+browsingContextStartScreencast :: (WebDriverBiDi :> es) => StartScreencast -> Eff es StartScreencastResult
+browsingContextStartScreencast = send . BrowsingContextStartScreencast
+
+browsingContextStopScreencast :: (WebDriverBiDi :> es) => StopScreencast -> Eff es StopScreencastResult
+browsingContextStopScreencast = send . BrowsingContextStopScreencast
 
 browsingContextTraverseHistory :: (WebDriverBiDi :> es) => TraverseHistory -> Eff es ()
 browsingContextTraverseHistory = send . BrowsingContextTraverseHistory
@@ -380,6 +399,9 @@ emulationSetScreenSettingsOverride = send . EmulationSetScreenSettingsOverride
 
 emulationSetScriptingEnabled :: (WebDriverBiDi :> es) => SetScriptingEnabled -> Eff es ()
 emulationSetScriptingEnabled = send . EmulationSetScriptingEnabled
+
+emulationSetScrollbarTypeOverride :: (WebDriverBiDi :> es) => SetScrollbarTypeOverride -> Eff es ()
+emulationSetScrollbarTypeOverride = send . EmulationSetScrollbarTypeOverride
 
 emulationSetTimezoneOverride :: (WebDriverBiDi :> es) => SetTimezoneOverride -> Eff es ()
 emulationSetTimezoneOverride = send . EmulationSetTimezoneOverride

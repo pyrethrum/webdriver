@@ -58,7 +58,10 @@ runWebDriverBiDi info = interpret $ \localEnv -> \case
   BrowsingContextNavigate p -> liftIO $ BA.browsingContextNavigate run' p
   BrowsingContextPrint p -> liftIO $ BA.browsingContextPrint run' p
   BrowsingContextReload p -> liftIO $ BA.browsingContextReload run' p
+  BrowsingContextSetBypassCSP p -> liftIO $ BA.browsingContextSetBypassCSP run' p
   BrowsingContextSetViewport p -> liftIO $ BA.browsingContextSetViewport run' p
+  BrowsingContextStartScreencast p -> liftIO $ BA.browsingContextStartScreencast run' p
+  BrowsingContextStopScreencast p -> liftIO $ BA.browsingContextStopScreencast run' p
   BrowsingContextTraverseHistory p -> liftIO $ BA.browsingContextTraverseHistory run' p
   -- Browser
   BrowserClose -> liftIO $ BA.browserClose run'
@@ -76,6 +79,7 @@ runWebDriverBiDi info = interpret $ \localEnv -> \case
   EmulationSetScreenOrientationOverride p -> liftIO $ BA.emulationSetScreenOrientationOverride run' p
   EmulationSetScreenSettingsOverride p -> liftIO $ BA.emulationSetScreenSettingsOverride run' p
   EmulationSetScriptingEnabled p -> liftIO $ BA.emulationSetScriptingEnabled run' p
+  EmulationSetScrollbarTypeOverride p -> liftIO $ BA.emulationSetScrollbarTypeOverride run' p
   EmulationSetTimezoneOverride p -> liftIO $ BA.emulationSetTimezoneOverride run' p
   EmulationSetTouchOverride p -> liftIO $ BA.emulationSetTouchOverride run' p
   EmulationSetUserAgentOverride p -> liftIO $ BA.emulationSetUserAgentOverride run' p

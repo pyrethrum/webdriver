@@ -104,6 +104,7 @@ import WebDriverPreCore.BiDi.Protocol
     SessionNewResult,
     SessionStatusResult,
     SetCacheBehavior,
+    SetBypassCSP,
     SetClientWindowState,
     SetCookie,
     SetCookieResult,
@@ -117,10 +118,15 @@ import WebDriverPreCore.BiDi.Protocol
     SetScreenOrientationOverride,
     SetScreenSettingsOverride,
     SetScriptingEnabled,
+    SetScrollbarTypeOverride,
     SetTimezoneOverride,
     SetTouchOverride,
     SetUserAgentOverride,
     SetViewport,
+    StartScreencast,
+    StartScreencastResult,
+    StopScreencast,
+    StopScreencastResult,
     SubscriptionId (..),
     TraverseHistory,
     UserContext,
@@ -206,7 +212,10 @@ data WebDriverBiDi :: Effect where
   BrowsingContextNavigate :: Navigate -> WebDriverBiDi m NavigateResult
   BrowsingContextPrint :: Print -> WebDriverBiDi m PrintResult
   BrowsingContextReload :: Reload -> WebDriverBiDi m ()
+  BrowsingContextSetBypassCSP :: SetBypassCSP -> WebDriverBiDi m ()
   BrowsingContextSetViewport :: SetViewport -> WebDriverBiDi m ()
+  BrowsingContextStartScreencast :: StartScreencast -> WebDriverBiDi m StartScreencastResult
+  BrowsingContextStopScreencast :: StopScreencast -> WebDriverBiDi m StopScreencastResult
   BrowsingContextTraverseHistory :: TraverseHistory -> WebDriverBiDi m ()
   -- Browser
   BrowserClose :: WebDriverBiDi m ()
@@ -224,6 +233,7 @@ data WebDriverBiDi :: Effect where
   EmulationSetScreenOrientationOverride :: SetScreenOrientationOverride -> WebDriverBiDi m ()
   EmulationSetScreenSettingsOverride :: SetScreenSettingsOverride -> WebDriverBiDi m ()
   EmulationSetScriptingEnabled :: SetScriptingEnabled -> WebDriverBiDi m ()
+  EmulationSetScrollbarTypeOverride :: SetScrollbarTypeOverride -> WebDriverBiDi m ()
   EmulationSetTimezoneOverride :: SetTimezoneOverride -> WebDriverBiDi m ()
   EmulationSetTouchOverride :: SetTouchOverride -> WebDriverBiDi m ()
   EmulationSetUserAgentOverride :: SetUserAgentOverride -> WebDriverBiDi m ()

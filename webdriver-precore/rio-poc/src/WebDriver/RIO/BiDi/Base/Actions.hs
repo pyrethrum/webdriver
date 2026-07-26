@@ -24,7 +24,10 @@ module WebDriver.RIO.BiDi.Base.Actions
     browsingContextNavigate,
     browsingContextPrint,
     browsingContextReload,
+    browsingContextSetBypassCSP,
     browsingContextSetViewport,
+    browsingContextStartScreencast,
+    browsingContextStopScreencast,
     browsingContextTraverseHistory,
 
     -- * Browser Commands
@@ -44,6 +47,7 @@ module WebDriver.RIO.BiDi.Base.Actions
     emulationSetScreenOrientationOverride,
     emulationSetScreenSettingsOverride,
     emulationSetScriptingEnabled,
+    emulationSetScrollbarTypeOverride,
     emulationSetTimezoneOverride,
     emulationSetTouchOverride,
     emulationSetUserAgentOverride,
@@ -250,6 +254,7 @@ import WebDriverPreCore.BiDi.Protocol
     SessionSubscribeResult (..),
     SessionUnsubscribe (..),
     SetCacheBehavior,
+    SetBypassCSP,
     SetClientWindowState,
     SetCookie,
     SetCookieResult,
@@ -263,10 +268,15 @@ import WebDriverPreCore.BiDi.Protocol
     SetScreenOrientationOverride,
     SetScreenSettingsOverride,
     SetScriptingEnabled,
+    SetScrollbarTypeOverride,
     SetTimezoneOverride,
     SetTouchOverride,
     SetUserAgentOverride,
     SetViewport,
+    StartScreencast,
+    StartScreencastResult,
+    StopScreencast,
+    StopScreencastResult,
     SubscriptionId (..),
     TraverseHistory,
     mkCommand,
@@ -390,8 +400,17 @@ browsingContextPrint = A.browsingContextPrint run
 browsingContextReload :: HasBiDiRunner env => Reload -> RIO env ()
 browsingContextReload = A.browsingContextReload run
 
+browsingContextSetBypassCSP :: HasBiDiRunner env => SetBypassCSP -> RIO env ()
+browsingContextSetBypassCSP = A.browsingContextSetBypassCSP run
+
 browsingContextSetViewport :: HasBiDiRunner env => SetViewport -> RIO env ()
 browsingContextSetViewport = A.browsingContextSetViewport run
+
+browsingContextStartScreencast :: HasBiDiRunner env => StartScreencast -> RIO env StartScreencastResult
+browsingContextStartScreencast = A.browsingContextStartScreencast run
+
+browsingContextStopScreencast :: HasBiDiRunner env => StopScreencast -> RIO env StopScreencastResult
+browsingContextStopScreencast = A.browsingContextStopScreencast run
 
 browsingContextTraverseHistory :: HasBiDiRunner env => TraverseHistory -> RIO env ()
 browsingContextTraverseHistory = A.browsingContextTraverseHistory run
@@ -445,6 +464,9 @@ emulationSetScreenSettingsOverride = A.emulationSetScreenSettingsOverride run
 
 emulationSetScriptingEnabled :: HasBiDiRunner env => SetScriptingEnabled -> RIO env ()
 emulationSetScriptingEnabled = A.emulationSetScriptingEnabled run
+
+emulationSetScrollbarTypeOverride :: HasBiDiRunner env => SetScrollbarTypeOverride -> RIO env ()
+emulationSetScrollbarTypeOverride = A.emulationSetScrollbarTypeOverride run
 
 emulationSetTimezoneOverride :: HasBiDiRunner env => SetTimezoneOverride -> RIO env ()
 emulationSetTimezoneOverride = A.emulationSetTimezoneOverride run
