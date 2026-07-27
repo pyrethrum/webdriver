@@ -1,4 +1,4 @@
-module WebDriverPreCore.Extended.HTTP.Locate
+module WebDriverPreCore.Extended.BiDi.Locate
   (
     DisplayedCheck(..),
     ExtendedRoleLocateSingleton(..),
@@ -40,6 +40,42 @@ import WebDriverPreCore.Extended.Locators.Internal qualified as LI
 import WebDriverPreCore.HTTP.Protocol as HTTPP (Script (..), Selector (..))
 import Prelude as P hiding (log)
 import Utils (txt)
+
+-- TODO
+-- 0. locateHttp Compiles (NoImp postfilter) [x]
+-- 1. get unretried http working with tests
+--   1.1 simple locators (css, xpath, role, inner text)
+--   1.2 compound locators (parent, all, any)
+--   1.3 compound locators are lazy
+--   1.4 displayed checks (disambiguate unique and always)
+--   1.5 visible text
+--   1.6 BiDi special cases
+
+-- 2. tests
+-- all of the above with tests, including edge cases such as:
+--   2.1 role edge cases (ess edgecases md)
+--   2.2 visible  text edge cases (css edgecases md)
+--   2.3 find all elements not displayed
+--   2.4 shadow DOM
+--     - may not work with xpath
+--     - basic tests
+--     - check role locators work in shadow DOM
+-- 3. implement / redesign related to postfilter HTTP
+-- 4. postfilter tests
+
+-- 5. BiDi - repeat all of the above for BiDi, but with the much simpler locateMany as the basis,
+--   and no need for retries as BiDi supports waiting for conditions natively via the maxNodeCount parameter.
+
+-- 6. refactor / shared code
+
+-- 7. locate all - http
+-- 7. locate all - bidi
+
+-- 9. retries / wait / logging / recovery Http - need directives eg. log pagesource
+--   -- should this be an asyc race
+-- 10. retry tests
+
+-- 11. adapt retries to Bidi
 
 -- | Whether to find the unique element (error if multiple match) or just the first.
 data SingletonCardinality = Unique | First deriving (Show, Eq)

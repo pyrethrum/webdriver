@@ -358,9 +358,9 @@ library webdriver-precore-extended
       --
       -- TODO: move to other modules
       WebDriverPreCore.Extended.Locate
-      WebDriverPreCore.Extended.Locate.Types
-      WebDriverPreCore.Extended.HTTP.Locate
       WebDriverPreCore.Extended.Locators
+      WebDriverPreCore.Extended.HTTP.Locate
+      WebDriverPreCore.Extended.BiDi.Locate
       WebDriverPreCore.Extended.Capabilities
       -- common
       WebDriverPreCore.Extended.Protocol
@@ -369,6 +369,7 @@ library webdriver-precore-extended
   other-modules:
       WebDriverPreCore.Extended.HTTP.Internal
       WebDriverPreCore.Extended.BiDi.Internal
+      WebDriverPreCore.Extended.LocateCommon
 
   hs-source-dirs: extended/src
   build-depends:

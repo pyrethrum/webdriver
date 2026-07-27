@@ -1,4 +1,4 @@
-module WebDriverPreCore.Extended.Locate.Types
+module WebDriverPreCore.Extended.LocateCommon
   (
     PreLocateException(..),
     LocateException(..),

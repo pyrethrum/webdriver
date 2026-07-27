@@ -1,9 +1,9 @@
 module WebDriverPreCore.Extended.Locate
   (
-    module WebDriverPreCore.Extended.Locate.Types,
+    module WebDriverPreCore.Extended.LocateCommon,
     module WebDriverPreCore.Extended.HTTP.Locate
   )
 where
 
-import WebDriverPreCore.Extended.Locate.Types
+import WebDriverPreCore.Extended.LocateCommon
 import WebDriverPreCore.Extended.HTTP.Locate
