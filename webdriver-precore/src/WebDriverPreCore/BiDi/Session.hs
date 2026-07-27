@@ -16,7 +16,7 @@ import GHC.Generics (Generic)
 import WebDriverPreCore.BiDi.Capabilities (CapabilitiesResult)
 import WebDriverPreCore.BiDi.CoreTypes (BrowsingContext, UserContext, SubscriptionType)
 import AesonUtils (toJSONOmitNothing)
-import WebDriverPreCore.Internal.HTTPBidiCommon (Session (..))
+import WebDriverPreCore.Internal.HTTPBiDiCommon (Session (..))
 
 -- ######### Remote #########
 

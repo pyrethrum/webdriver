@@ -569,7 +569,7 @@ library
       WebDriverPreCore.HTTP.HttpResponse
   other-modules:
       -- Shared
-      WebDriverPreCore.Internal.HTTPBidiCommon
+      WebDriverPreCore.Internal.HTTPBiDiCommon
       -- HTTP
       WebDriverPreCore.HTTP.Capabilities
       -- BiDI

@@ -109,7 +109,7 @@ import Utils (txt)
 import WebDriverPreCore.Error
 import WebDriverPreCore.HTTP.Capabilities
 import WebDriverPreCore.HTTP.Command
-import WebDriverPreCore.Internal.HTTPBidiCommon as Url (URL (..), Session (..))
+import WebDriverPreCore.Internal.HTTPBiDiCommon as Url (URL (..), Session (..))
 import Prelude hiding (id)
 
 -- | [spec](https://www.w3.org/TR/2026/WD-webdriver2-20260702/#dfn-get-window-handle)

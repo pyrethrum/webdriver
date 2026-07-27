@@ -29,7 +29,7 @@ import Data.Int (Int64)
 import Data.Map qualified as Map
 import Data.Text (Text, unpack)
 import GHC.Generics (Generic)
-import WebDriverPreCore.Internal.HTTPBidiCommon (JSUInt (..), URL (..))
+import WebDriverPreCore.Internal.HTTPBiDiCommon (JSUInt (..), URL (..))
 
 newtype ClientWindow = MkClientWindow Text
   deriving newtype (Show, Eq, FromJSON, ToJSON)

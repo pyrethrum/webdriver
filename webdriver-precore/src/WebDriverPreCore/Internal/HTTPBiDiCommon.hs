@@ -1,4 +1,4 @@
-module WebDriverPreCore.Internal.HTTPBidiCommon
+module WebDriverPreCore.Internal.HTTPBiDiCommon
   ( URL (..),
     JSUInt (..),
     Session (..),
