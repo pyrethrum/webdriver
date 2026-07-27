@@ -111,7 +111,8 @@ import WebDriverPreCore.Extended.HTTP.Base.Protocol
     WindowHandleSpec,
     WindowRect,
   )
-import WebDriverPreCore.Extended.HTTP.Internal (Runner)
+
+type Runner m a = Command a -> m a
 
 -- ######################################################################
 -- ########################### Root Methods #############################
