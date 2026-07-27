@@ -61,6 +61,10 @@ module WebDriverPreCore.BiDi.Protocol
     module WebDriverPreCore.BiDi.CoreTypes,
     -- * Error
     module WebDriverPreCore.Error,
+
+    -- * Common HTTP/BiDi Types
+    BrowserName,
+    PlatformName,
   )
 where
 
@@ -79,3 +83,4 @@ import WebDriverPreCore.BiDi.Script
 import WebDriverPreCore.BiDi.Session
 import WebDriverPreCore.BiDi.Storage
 import WebDriverPreCore.BiDi.WebExtensions
+import WebDriverPreCore.Internal.HTTPBiDiCommon (BrowserName, PlatformName)

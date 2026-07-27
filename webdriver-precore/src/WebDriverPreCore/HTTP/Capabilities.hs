@@ -50,6 +50,7 @@ import Data.Text (Text)
 import Data.Vector (fromList)
 import GHC.Generics (Generic)
 import AesonUtils (opt, parseOpt, toJSONOmitNothing, parseJSONOmitNothing)
+import WebDriverPreCore.Internal.HTTPBiDiCommon (BrowserName (..), PlatformName (..))
 
 {- references:
 - https://www.w3.org/TR/2026/WD-webdriver2-20260702/#capabilities
@@ -105,13 +106,13 @@ alwaysMatchCapabilities = flip MkFullCapabilities [] . Just
 -- | Returns the minimal FullCapabilities object for a given browser
 -- The browserName in the 'alwaysMatch' field is the only field populated
 -- [spec](https://https://www.w3.org/TR/2026/WD-webdriver2-20260702/#capabilities)
-minFullCapabilities :: Text -> FullCapabilities
+minFullCapabilities :: BrowserName -> FullCapabilities
 minFullCapabilities = alwaysMatchCapabilities . minCapabilities
 
 -- | Returns the minimal Capabilities object for a given browser
 -- The browserName is the only field populated
 -- [spec](https://https://www.w3.org/TR/2026/WD-webdriver2-20260702/#capabilities)
-minCapabilities :: Text -> Capabilities
+minCapabilities :: BrowserName -> Capabilities
 minCapabilities browserName =
   MkCapabilities
     { browserName = Just browserName,
@@ -130,11 +131,11 @@ minCapabilities browserName =
 
 -- | Returns the minimal FullCapabilities object for Firefox
 minFirefoxCapabilities :: FullCapabilities
-minFirefoxCapabilities = minFullCapabilities "firefox"
+minFirefoxCapabilities = minFullCapabilities Firefox
 
 -- | Returns the minimal FullCapabilities object for Chrome
 minChromeCapabilities :: FullCapabilities
-minChromeCapabilities = minFullCapabilities "chrome"
+minChromeCapabilities = minFullCapabilities Chrome
 
 -- Custom Types for Enums
 
@@ -179,9 +180,9 @@ instance FromJSON PageLoadStrategy where
 -- See also: 'FullCapabilities' and related constructors such as: 'minCapabilities',
 --   'minFullCapabilities',  'minFirefoxCapabilities' and 'minChromeCapabilities'
 data Capabilities = MkCapabilities
-  { browserName :: Maybe Text,
+  { browserName :: Maybe BrowserName,
     browserVersion :: Maybe Text,
-    platformName :: Maybe Text,
+    platformName :: Maybe PlatformName,
     acceptInsecureCerts :: Maybe Bool,
     pageLoadStrategy :: Maybe PageLoadStrategy,
     proxy :: Maybe Proxy,

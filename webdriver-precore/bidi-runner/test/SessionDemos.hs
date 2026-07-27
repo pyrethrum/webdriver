@@ -17,6 +17,7 @@ import WebDriverPreCore.BiDi.Protocol
     UserPromptHandler (..),
     UserPromptHandlerType (..),
   )
+import WebDriverPreCore.HTTP.Protocol (BrowserName (..), PlatformName (..))
 import Prelude hiding (log, putStrLn)
 
 -- TODO: change from text to typed events
@@ -218,9 +219,9 @@ sessionUnsubscribeDemo =
 --             Just
 --               MkCapability
 --                 { acceptInsecureCerts = Just True
---                 , browserName = Just "firefox"
+--                 , browserName = Just Firefox
 --                 , browserVersion = Nothing
---                 , platformName = Just "linux"
+--                 , platformName = Just Linux
 --                 , proxy = Nothing
 --                 , unhandledPromptBehavior = Nothing
 --                 }
@@ -267,9 +268,9 @@ sessionCapabilityNegotiationDemo =
       let alwaysMatchCap =
             MkCapability
               { acceptInsecureCerts = Just True,
-                browserName = Just "firefox",
+                browserName = Just Firefox,
                 browserVersion = Nothing,
-                platformName = Just "linux",
+                platformName = Just Linux,
                 proxy = Nothing,
                 unhandledPromptBehavior = Nothing
               }
@@ -286,9 +287,9 @@ sessionCapabilityNegotiationDemo =
       let firstMatchCap1 =
             MkCapability
               { acceptInsecureCerts = Just False,
-                browserName = Just "firefox",
+                browserName = Just Firefox,
                 browserVersion = Just "130.0",
-                platformName = Just "linux",
+                platformName = Just Linux,
                 proxy = Just DirectProxyConfiguration,
                 unhandledPromptBehavior = Nothing
               }

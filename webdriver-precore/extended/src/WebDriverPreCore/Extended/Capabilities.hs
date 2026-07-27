@@ -67,22 +67,20 @@ module WebDriverPreCore.Extended.Capabilities
   )
 where
 
-import Data.Aeson (FromJSON (..), ToJSON (..), Value (..), withText)
-import Data.Aeson.Types (Parser)
+import Data.Aeson (Value)
 import Data.Map.Strict qualified as M
 import Data.Maybe (fromMaybe)
 import Data.Text (Text)
 import Data.Word (Word8)
 import WebDriverPreCore.BiDi.Protocol qualified as BiDi
 import WebDriverPreCore.Extended.HTTP.Base.Actions qualified as Actions
-import WebDriverPreCore.HTTP.Protocol (Session (..))
+import WebDriverPreCore.HTTP.Protocol (Session (..), BrowserName (..), PlatformName (..))
 import WebDriverPreCore.HTTP.Protocol qualified as HTTP
 import GHC.Generics (Generic)
 
 type HttpCapabilities = FullCapabilities HttpCapability
 
 type BiDiCapabilities = FullCapabilities BiDiCapability
-
 -- TODO : review whole file esp for lossy conversions
 
 -- | HTTP-specific capabilities
@@ -100,26 +98,6 @@ data HttpCapability = MkHttpCapability
     httpWebSocketUrl :: Maybe Bool,
     vendorSpecific :: Maybe HTTP.VendorSpecific
   }
-  deriving (Show, Eq)
-
--- | Browser name with extensibility for unknown browsers
-data BrowserName
-  = Chrome
-  | Firefox
-  | Safari
-  | Edge
-  | InternetExplorer
-  | Other Text
-  deriving (Show, Eq)
-
--- | Platform name with extensibility for unknown platforms
-data PlatformName
-  = Windows
-  | Mac
-  | Linux
-  | Android
-  | IOS
-  | OtherPlatform Text
   deriving (Show, Eq)
 
 -- | Page load strategy (re-exported for convenience)
@@ -235,9 +213,9 @@ data BiDiSessionResponse = MkBiDiSessionResponse
   { -- TODO - make base BIDI Session use the same newtype as HTTP
     session :: HTTP.Session,
     acceptInsecureCerts :: Bool,
-    browserName :: Text,
+    browserName :: BrowserName,
     browserVersion :: Text,
-    platformName :: Text,
+    platformName :: PlatformName,
     setWindowRect :: Bool,
     userAgent :: Text,
     proxy :: Maybe Proxy,
@@ -263,8 +241,8 @@ data FullCapabilities a = MkFullCapabilities
 fromHttpCapability :: HTTP.Capabilities -> HttpCapability
 fromHttpCapability HTTP.MkCapabilities {..} =
   MkHttpCapability
-    { browserName = textToBrowserName <$> browserName,
-      platformName = textToPlatformName <$> platformName,
+    { browserName,
+      platformName,
       acceptInsecureCerts = fromMaybe False acceptInsecureCerts,
       pageLoadStrategy = pageLoadFromHttp <$> pageLoadStrategy,
       proxy = proxyFromHttp <$> proxy,
@@ -280,9 +258,9 @@ fromBiDiCapability :: BiDi.Capability -> BiDiCapability
 fromBiDiCapability BiDi.MkCapability {..} =
   MkBiDiCapability
     { acceptInsecureCerts,
-      browserName = textToBrowserName <$> browserName,
+      browserName,
       browserVersion,
-      platformName = textToPlatformName <$> platformName,
+      platformName,
       proxy = proxyFromBiDi <$> proxy,
       unhandledPromptBehavior = fromBidiPromptHandler <$> unhandledPromptBehavior
     }
@@ -360,26 +338,6 @@ pageLoadFromHttp = \case
   HTTP.Eager -> Eager
   HTTP.Normal -> Normal
 
--- | Convert text to BrowserName
-textToBrowserName :: Text -> BrowserName
-textToBrowserName = \case
-  "chrome" -> Chrome
-  "firefox" -> Firefox
-  "safari" -> Safari
-  "edge" -> Edge
-  "internet explorer" -> InternetExplorer
-  other -> Other other
-
--- | Convert text to PlatformName
-textToPlatformName :: Text -> PlatformName
-textToPlatformName = \case
-  "windows" -> Windows
-  "mac" -> Mac
-  "linux" -> Linux
-  "android" -> Android
-  "ios" -> IOS
-  other -> OtherPlatform other
-
 -- ** Response Conversions
 
 -- | Convert native HTTP session response to local HTTP session response
@@ -393,8 +351,8 @@ fromHttpSessionResponse (HTTP.MkSessionResponse {sessionId = session, webSocketU
       extensions = exts,
       httpCapability =
         MkHttpCapability
-          { browserName = textToBrowserName <$> browserName,
-            platformName = textToPlatformName <$> platformName,
+          { browserName,
+            platformName,
             acceptInsecureCerts = fromMaybe False acceptInsecureCerts,
             pageLoadStrategy = pageLoadFromHttp <$> pageLoadStrategy,
             proxy = proxyFromHttp <$> proxy,
@@ -430,10 +388,10 @@ fromBiDiSessionResponse (BiDi.MkSessionNewResult {sessionId = session, capabilit
 toHttpCapability :: HttpCapability -> HTTP.Capabilities
 toHttpCapability (MkHttpCapability {..}) =
   HTTP.MkCapabilities
-    { browserName = browserNameToText <$> browserName,
+    { browserName,
       -- response only
       browserVersion = Nothing,
-      platformName = platformNameToText <$> platformName,
+      platformName,
       acceptInsecureCerts = Just acceptInsecureCerts,
       pageLoadStrategy = pageLoadToHttp <$> pageLoadStrategy,
       proxy = proxyToHttp <$> proxy,
@@ -503,34 +461,14 @@ pageLoadToHttp = \case
   Eager -> HTTP.Eager
   Normal -> HTTP.Normal
 
--- | Convert BrowserName to text
-browserNameToText :: BrowserName -> Text
-browserNameToText = \case
-  Chrome -> "chrome"
-  Firefox -> "firefox"
-  Safari -> "safari"
-  Edge -> "edge"
-  InternetExplorer -> "internet explorer"
-  Other t -> t
-
--- | Convert PlatformName to text
-platformNameToText :: PlatformName -> Text
-platformNameToText = \case
-  Windows -> "windows"
-  Mac -> "mac"
-  Linux -> "linux"
-  Android -> "android"
-  IOS -> "ios"
-  OtherPlatform t -> t
-
 -- | Convert local BiDi capability to native BiDi capability
 toBiDiCapability :: BiDiCapability -> BiDi.Capability
 toBiDiCapability (MkBiDiCapability {..}) =
   BiDi.MkCapability
     { acceptInsecureCerts,
-      browserName = browserNameToText <$> browserName,
+      browserName,
       browserVersion,
-      platformName = platformNameToText <$> platformName,
+      platformName,
       proxy = proxyToBiDi <$> proxy,
       unhandledPromptBehavior = toBidiPromptHandler <$> unhandledPromptBehavior
     }
@@ -612,28 +550,6 @@ httpCapabilityToBiDi (MkHttpCapability {unhandledPromptBehavior = httpPromptHand
         }
       where
         promptHandlerType = Just $ convertHandlerType hpb
-
--- * Helper Functions for Browser/Platform Names
-
--- | ToJSON instance for BrowserName
-instance ToJSON BrowserName where
-  toJSON :: BrowserName -> Value
-  toJSON = String . browserNameToText
-
--- | FromJSON instance for BrowserName
-instance FromJSON BrowserName where
-  parseJSON :: Value -> Parser BrowserName
-  parseJSON = withText "BrowserName" $ pure . textToBrowserName
-
--- | ToJSON instance for PlatformName
-instance ToJSON PlatformName where
-  toJSON :: PlatformName -> Value
-  toJSON = String . platformNameToText
-
--- | FromJSON instance for PlatformName
-instance FromJSON PlatformName where
-  parseJSON :: Value -> Parser PlatformName
-  parseJSON = withText "PlatformName" $ pure . textToPlatformName
 
 -- ######################################################################
 -- ######################## Session Management ##########################

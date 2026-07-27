@@ -71,6 +71,10 @@ module WebDriverPreCore.HTTP.Protocol
     WindowRect (..),
     module Url,
 
+    -- * Common HTTP/BiDi Types
+    BrowserName (..),
+    PlatformName (..),
+
     -- * Action Types
     Action (..),
     Actions (..),
@@ -109,7 +113,7 @@ import Utils (txt)
 import WebDriverPreCore.Error
 import WebDriverPreCore.HTTP.Capabilities
 import WebDriverPreCore.HTTP.Command
-import WebDriverPreCore.Internal.HTTPBiDiCommon as Url (URL (..), Session (..))
+import WebDriverPreCore.Internal.HTTPBiDiCommon as Url (URL (..), Session (..), BrowserName (..), PlatformName (..))
 import Prelude hiding (id)
 
 -- | [spec](https://www.w3.org/TR/2026/WD-webdriver2-20260702/#dfn-get-window-handle)

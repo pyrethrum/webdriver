@@ -31,12 +31,14 @@ import Test.Tasty.Falsify
 import Test.Tasty.HUnit (Assertion, (@=?))
 import Text.Show.Pretty (ppShow)
 import WebDriverPreCore.HTTP.Protocol
-  ( Capabilities (..),
+  ( BrowserName (..),
+    Capabilities (..),
     DeviceMetrics (..),
     LogLevel (..),
     LogSettings (..),
     MobileEmulation (..),
     PerfLoggingPrefs (..),
+    PlatformName (..),
     Proxy (..),
     SessionResponse (..),
     SocksProxy (..),
@@ -262,12 +264,34 @@ genProxy =
       (1, Pac <$> genText)
     ]
 
+genBrowserName :: G.Gen BrowserName
+genBrowserName =
+  G.frequency
+    [ (1, pure Chrome),
+      (1, pure Firefox),
+      (1, pure Safari),
+      (1, pure Edge),
+      (1, pure InternetExplorer),
+      (1, Other <$> genText)
+    ]
+
+genPlatformName :: G.Gen PlatformName
+genPlatformName =
+  G.frequency
+    [ (1, pure Windows),
+      (1, pure Mac),
+      (1, pure Linux),
+      (1, pure Android),
+      (1, pure IOS),
+      (1, OtherPlatform <$> genText)
+    ]
+
 -- Generate random Capabilities
 genCapabilities :: G.Gen Capabilities
 genCapabilities = do
-  browserName <- genMaybe genText
+  browserName <- genMaybe genBrowserName
   browserVersion <- genMaybe genText
-  platformName <- genMaybe genText
+  platformName <- genMaybe genPlatformName
   strictFileInteractability <- genMaybe genBool
   unhandledPromptBehavior <- genMEnum
   acceptInsecureCerts <- genMaybe genBool

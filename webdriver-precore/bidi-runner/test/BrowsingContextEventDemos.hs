@@ -2,7 +2,7 @@ module BrowsingContextEventDemos where
 
 import Actions (Actions (..))
 import BiDiDemoUtils
-import WebDriverPreCore.Test.Const (Timeout (..), milliseconds, second)
+import WebDriverPreCore.Test.Const (milliseconds, second)
 import Data.Text (unpack)
 import WebDriverPreCore.Test.IOUtils (DemoActions (..))
 import WebDriverPreCore.Test.TestData (checkboxesUrl, downloadLinkUrl, fragmentUrl, promptUrl, slowLoadUrl, textAreaUrl)

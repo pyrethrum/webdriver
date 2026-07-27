@@ -17,6 +17,7 @@ import Data.Word (Word8)
 import GHC.Generics (Generic)
 import AesonUtils (opt, fromJSONCamelCase)
 import Data.Aeson.Types (Parser)
+import WebDriverPreCore.Internal.HTTPBiDiCommon (BrowserName, PlatformName)
 
 
 
@@ -41,9 +42,9 @@ instance ToJSON Capabilities where
 -- | Capability Request
 data Capability = MkCapability
   { acceptInsecureCerts :: Maybe Bool,
-    browserName :: Maybe Text,
+    browserName :: Maybe BrowserName,
     browserVersion :: Maybe Text,
-    platformName :: Maybe Text,
+    platformName :: Maybe PlatformName,
     proxy :: Maybe ProxyConfiguration,
     unhandledPromptBehavior :: Maybe UserPromptHandler
   }
@@ -162,9 +163,9 @@ instance ToJSON UserPromptHandlerType where
 -- | Capabilities Result
 data CapabilitiesResult = MkCapabilitiesResult
   { acceptInsecureCerts :: Bool,
-    browserName :: Text,
+    browserName :: BrowserName,
     browserVersion :: Text,
-    platformName :: Text,
+    platformName :: PlatformName,
     setWindowRect :: Bool,
     userAgent :: Text,
     proxy :: Maybe ProxyConfiguration,
