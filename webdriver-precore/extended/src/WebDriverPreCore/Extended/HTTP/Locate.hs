@@ -103,17 +103,17 @@ extendActions :: (MonadIO m) => IORef [WDTrace] -> HttpLocateOpts -> LocateActio
 extendActions logsRef MkHttpLocateOpts{..} MkLocateActions{..} = MkLocParams
   {
   -- throw / catch
-    throw = throw
-  , catch = catch
+    throw
+  , catch
 
   -- webdriver functions
-  , findElement = findElement
-  , findElementFromElement = findElementFromElement
-  , findElements = findElements
-  , findElementsFromElement = findElementsFromElement
-  , executeScript = executeScript
-  , getElementAttribute = getElementAttribute
-  , getElementText = getElementText
+  , findElement
+  , findElementFromElement
+  , findElements
+  , findElementsFromElement
+  , executeScript
+  , getElementAttribute
+  , getElementText
 
   -- other actions
   , defaultLoc = mkDefaultLoc

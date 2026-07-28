@@ -100,7 +100,9 @@ runWebDriverHttp info = interpret $ \_localEnv -> \case
 
     run :: forall r. (FromJSON r) => (HA.Runner IO r -> Session -> IO r) -> Eff es r
     run action = liftIO $ action runner sess
+
     run1 :: forall r p. (FromJSON r) => (HA.Runner IO r -> Session -> p -> IO r) -> p -> Eff es r
     run1 action p = liftIO $ action runner sess p
+    
     run2 :: forall r p1 p2. (FromJSON r) => (HA.Runner IO r -> Session -> p1 -> p2 -> IO r) -> p1 -> p2 -> Eff es r
     run2 action p1 p2 = liftIO $ action runner sess p1 p2
