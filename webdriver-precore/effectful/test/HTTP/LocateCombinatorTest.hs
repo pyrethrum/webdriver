@@ -844,8 +844,6 @@ evaluateCase getSession locCase  =
       runHttp wdSession $ do
         let dataUrl = htmlToDataUrl html
         navigateTo dataUrl
-        -- TODO FIX
-        -- sleep $ 100 * milliseconds
         evaluateExpectation
       where
         locator = locCase.locator
