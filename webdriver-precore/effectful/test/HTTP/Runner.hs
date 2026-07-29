@@ -63,8 +63,21 @@ withHttp
 withHttp action =
   runSetup $ \driverInfo opts config ->
     runPause opts.pauseDuration $
-      withLogger "eval.log" $
-        withHttpSession driverInfo opts (mkHttpCaps config) action
+         withLogger "eval.log" $
+           withHttpSession driverInfo opts (mkHttpCaps config) action
+
+
+
+      -- let
+      --     opts :: InteractOpts
+      --     opts = mkInteractOpts config
+
+      --     driverInfo :: HttpDriverInfo
+      --     driverInfo =
+      --       MkHttpDriverInfo
+      --         { httpEndpoint = MkHttpEndpoint {host = config.httpUrl, port = config.httpPort},
+      --           driverLogFn  = Nothing
+      --         }
 
 
 -- ---------------------------------------------------------------------------
@@ -81,7 +94,7 @@ getWDSession =
   runSetup $ 
    \driverInfo opts config -> 
       liftIO $ do
-        loggerHandle <- if opts.driverLogging
+        loggerHandle <- if opts.wantLogging
                           then Just <$> acquireLogger "eval.log"
                           else pure Nothing
         sessionInfo <- acquireHttpSession driverInfo (mkHttpCaps config) opts.pauseDuration

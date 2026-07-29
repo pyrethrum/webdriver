@@ -60,7 +60,7 @@ data InteractOpts = MkInteractOpts
   { -- | How long 'pause' sleeps between actions.
     pauseDuration :: Timeout,
     -- | When 'True' log each driver message via the 'Logger' effect.
-    driverLogging :: Bool
+    wantLogging :: Bool
   }
 
 -- ---------------------------------------------------------------------------
@@ -203,8 +203,8 @@ mkRootRunner info cmd =
 -- | Extract the driver @IO@ log function from the 'Logger' static effect
 -- when @driverLogging@ is enabled.  Returns 'Nothing' otherwise.
 mkLogFunction :: (Logger :> es) => InteractOpts -> Eff es (Maybe (Text -> IO ()))
-mkLogFunction MkInteractOpts{driverLogging} = 
-  if driverLogging
+mkLogFunction MkInteractOpts{wantLogging} = 
+  if wantLogging
     then (Just . ($ InfoS)) <$> getLogFn
     else pure Nothing
 

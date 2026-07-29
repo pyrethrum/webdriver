@@ -32,7 +32,7 @@ mkInteractOpts :: Config -> InteractOpts
 mkInteractOpts config =
   MkInteractOpts
     { pauseDuration = fromIntegral config.pauseMS * milliseconds,
-      driverLogging = config.logging
+      wantLogging = config.logging
     }
 
 testUrl :: MonadIO m => IO URL -> m URL 
