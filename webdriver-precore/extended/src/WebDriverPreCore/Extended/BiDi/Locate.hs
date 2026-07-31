@@ -151,10 +151,10 @@ data WDBiDITrace = Prepared {
   } 
  deriving (Show, Eq)
 
-{-
 -- | Locate a unique or first-matching element from the document root.
 locateBiDi :: forall m. (MonadIO m) => LocateActions m -> BiDiLocateOpts -> Locator -> m (LocateResult BiDiP.NodeRemoteValue WDBiDITrace)
 locateBiDi actions opts = runBiDiAction actions opts Nothing httpLocateSingleton
+
 
 -- | Locate all matching elements from the document root.
 locateAllBiDI :: forall m. (MonadIO m) => LocateActions m -> BiDiLocateOpts -> Locator -> m LocateResult
@@ -569,5 +569,3 @@ displayedJS =
   \  return true;\n\
   \}\n\
   \return Array.from(arguments[0]).map(isDisplayed);"
-
-  -}

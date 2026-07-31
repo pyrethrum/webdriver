@@ -3,6 +3,7 @@ module WebDriverPreCore.BiDi.CoreTypes
     ClientWindow (..),
     EmptyResult (..),
     Handle (..),
+    IncludeShadowTree (..),
     InternalId (..),
     JSInt (..),
     JSUInt (..),
@@ -10,7 +11,9 @@ module WebDriverPreCore.BiDi.CoreTypes
     NodeMode (..),
     NodeProperties (..),
     NodeRemoteValue (..),
+    SerializationOptions (..),
     SharedId (..),
+    SharedReference (..),
     StringValue (..),
     SubscriptionType (..),
     OffSpecSubscriptionType (..),
@@ -20,11 +23,11 @@ module WebDriverPreCore.BiDi.CoreTypes
   )
 where
 
-import AesonUtils (jsonToText)
+import AesonUtils (jsonToText, parseJSONOmitNothing, toJSONOmitNothing)
 import Control.Applicative (Alternative (..))
 import Control.Monad (unless)
-import Data.Aeson (FromJSON (..), Object, ToJSON (..), Value (..), withText, (.:), (.:?))
-import Data.Aeson.Types (Parser, withObject)
+import Data.Aeson (FromJSON (..), Object, ToJSON (..), Value (..), defaultOptions, genericToJSON, withText, (.:), (.:?))
+import Data.Aeson.Types (Parser, omitNothingFields, withObject)
 import Data.Int (Int64)
 import Data.Map qualified as Map
 import Data.Text (Text, unpack)
@@ -270,3 +273,41 @@ instance FromJSON SubscriptionType where
     (KnownSubscriptionType <$> parseJSON @KnownSubscriptionType v)
       <|> (OffSpecSubscriptionType <$> parseJSON @OffSpecSubscriptionType v)
       <|> (fail . unpack $ "Invalid SubscriptionType: " <> jsonToText v)
+
+-- | Serialization options for script evaluation and node location
+data SerializationOptions = MkSerializationOptions
+  { maxDomDepth :: Maybe (Maybe JSUInt), -- .default 0
+    maxObjectDepth :: Maybe (Maybe JSUInt), -- .default null
+    includeShadowTree :: Maybe IncludeShadowTree -- "none", "open", "all" .default "none"
+  }
+  deriving (Show, Eq, Generic)
+
+instance ToJSON SerializationOptions where
+  toJSON :: SerializationOptions -> Value
+  toJSON = genericToJSON defaultOptions {omitNothingFields = True}
+
+-- | Shadow tree inclusion mode for serialization
+data IncludeShadowTree = ShadowTreeNone | Open | All deriving (Show, Eq, Generic)
+
+instance ToJSON IncludeShadowTree where
+  toJSON :: IncludeShadowTree -> Value
+  toJSON = \case
+    ShadowTreeNone -> "none"
+    Open -> "open"
+    All -> "all"
+
+-- | Shared reference to a remote node
+data SharedReference = MkSharedReference
+  { sharedId :: SharedId,
+    handle :: Maybe Handle,
+    extensions :: Maybe (Map.Map Text Value) -- "extensions" field is optional
+  }
+  deriving (Show, Eq, Generic)
+
+instance FromJSON SharedReference where
+  parseJSON :: Value -> Parser SharedReference
+  parseJSON = parseJSONOmitNothing
+
+instance ToJSON SharedReference where
+  toJSON :: SharedReference -> Value
+  toJSON = toJSONOmitNothing

@@ -127,19 +127,19 @@ extendActions logsRef MkHttpLocateOpts{..} MkLocateActions{..} = MkLocParams
 
 
 -- | Locate a unique or first-matching element from the document root.
-locateHttp :: forall m. (MonadIO m) => LocateActions m -> HttpLocateOpts -> Locator -> m LocateResult
+locateHttp :: forall m. (MonadIO m) => LocateActions m -> HttpLocateOpts -> Locator -> m (LocateResult WDTrace [ElementId])
 locateHttp actions opts = runHttpAction actions opts Nothing httpLocateSingleton
 
 -- | Locate all matching elements from the document root.
-locateAllHttp :: forall m. (MonadIO m) => LocateActions m -> HttpLocateOpts -> Locator -> m LocateResult
+locateAllHttp :: forall m. (MonadIO m) => LocateActions m -> HttpLocateOpts -> Locator -> m (LocateResult WDTrace [ElementId])
 locateAllHttp actions opts = runHttpAction actions opts Nothing httpLocateAll
 
 -- | Locate a unique or first-matching element rooted at a given element.
-locateFromElementHttp :: forall m. (MonadIO m) => LocateActions m -> HttpLocateOpts -> ElementId -> Locator -> m LocateResult
+locateFromElementHttp :: forall m. (MonadIO m) => LocateActions m -> HttpLocateOpts -> ElementId -> Locator -> m (LocateResult WDTrace [ElementId])
 locateFromElementHttp actions opts rootId = runHttpAction actions opts (Just rootId) httpLocateSingleton
 
 -- | Locate all matching elements rooted at a given element.
-locateAllFromElementHttp :: forall m. (MonadIO m) => LocateActions m -> HttpLocateOpts -> ElementId -> Locator -> m LocateResult
+locateAllFromElementHttp :: forall m. (MonadIO m) => LocateActions m -> HttpLocateOpts -> ElementId -> Locator -> m (LocateResult WDTrace [ElementId])
 locateAllFromElementHttp actions opts rootId = runHttpAction actions opts (Just rootId) httpLocateAll
 
 -- | Common implementation for all public HTTP locate functions.

@@ -16,7 +16,7 @@ import Test.Tasty (TestTree, defaultMain, inOrderTestGroup, testGroup, withResou
 import Utils (txt)
 import WebDriver.Effectful
 import WebDriver.Effectful.HTTP.Base.Actions (navigateTo)
-import WebDriverPreCore.Extended.HTTP.Base.Protocol (URL)
+import WebDriverPreCore.Extended.HTTP.Base.Protocol (ElementId, URL)
 import WebDriverPreCore.Extended.Locate qualified as L
 import WebDriverPreCore.Extended.Locators
 import WebDriverPreCore.Test.TestData (fileUrl)
@@ -184,7 +184,7 @@ tests =
         test :: Text -> BaseHTTPEffs () -> TestTree
         test = runHttpTest ses
 
-        locateAll :: forall es. (IOE :> es, WebDriverHttp :> es) => Locator -> Eff es L.LocateResult
+        locateAll :: forall es. (IOE :> es, WebDriverHttp :> es) => Locator -> Eff es (L.LocateResult L.WDTrace [ElementId])
         locateAll = locateAllHttp defOpts
 
         chkAutoId :: Text -> Locator -> Text -> TestTree

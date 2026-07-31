@@ -25,7 +25,7 @@ import System.IO.Unsafe (unsafePerformIO)
 import Utils (txt)
 import WebDriver.Effectful (WebDriverHttp)
 import WebDriver.Effectful.HTTP.Base.Actions (getElementAttribute, navigateTo)
-import WebDriverPreCore.Extended.HTTP.Base.Protocol (URL (..))
+import WebDriverPreCore.Extended.HTTP.Base.Protocol (ElementId, URL (..))
 import WebDriverPreCore.Extended.Locate qualified as L
 import WebDriverPreCore.Extended.Locators (Locator, css, elmClass, (&&&), (>>>), (|||), elmClass', MatchType (..), CaseSensitivity (..))
 import Data.Bifunctor (Bifunctor(first))
@@ -847,7 +847,7 @@ evaluateCase getSession locCase  =
         evaluateExpectation
       where
         locator = locCase.locator
-        locateAll :: forall es. (IOE :> es, WebDriverHttp :> es) => Locator -> Eff es L.LocateResult
+        locateAll :: forall es. (IOE :> es, WebDriverHttp :> es) => Locator -> Eff es (L.LocateResult L.WDTrace [ElementId])
         locateAll = locateAllHttp $ defOpts {L.jsRecheckDisplayed = L.DisplayedCheckNever}
         html = "<!doctype html><html><head><meta charset=\"utf-8\"></head><body>"
               <> nodeToHtml testNode

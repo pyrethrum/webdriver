@@ -14,12 +14,10 @@ module WebDriverPreCore.BiDi.Script
     MappingLocalValue (..),
     MapLocalValue (..),
     ObjectLocalValue (..),
-    IncludeShadowTree (..),
     RegExpValue (..),
     RegExpLocalValue (..),
     SetLocalValue (..),
     ResultOwnership (..),
-    SerializationOptions (..),
     RealmType (..),
     Disown (..),
     Target (..),
@@ -49,7 +47,6 @@ module WebDriverPreCore.BiDi.Script
     -- * PreloadScript
     PreloadScript (..),
     RemoteReference (..),
-    SharedReference (..),
     RemoteObjectReference (..),
   )
 where
@@ -62,7 +59,7 @@ import Data.Maybe (catMaybes)
 import Data.Text (Text, unpack)
 import Data.Vector qualified as V
 import GHC.Generics
-import WebDriverPreCore.BiDi.CoreTypes (BrowsingContext, Handle, InternalId (..), JSUInt, NodeRemoteValue (..), SharedId, StringValue (..), UserContext)
+import WebDriverPreCore.BiDi.CoreTypes (BrowsingContext, Handle, InternalId (..), JSUInt, NodeRemoteValue (..), SerializationOptions (..), SharedId, SharedReference (..), StringValue (..), UserContext)
 import AesonUtils (jsonToText, opt, parseJSONOmitNothing, toJSONOmitNothing)
 
 
@@ -320,17 +317,6 @@ data RemoteReference = MkRemoteReference
   }
   deriving (Show, Eq, Generic)
 
-data SharedReference = MkSharedReference
-  { sharedId :: SharedId,
-    handle :: Maybe Handle,
-    extensions :: Maybe (Map.Map Text Value) -- "extensions" field is optional
-  }
-  deriving (Show, Eq, Generic)
-
-instance FromJSON SharedReference where
-  parseJSON :: Value -> Parser SharedReference
-  parseJSON = parseJSONOmitNothing
-
 data RemoteObjectReference = MkRemoteObjectReference
   { handle :: Handle,
     shartedId :: Maybe SharedId,
@@ -434,26 +420,6 @@ instance ToJSON RealmType where
     PaintWorkletRealm -> "paint-worklet"
     AudioWorkletRealm -> "audio-worklet"
     WorkletRealm -> "worklet"
-
-data SerializationOptions = MkSerializationOptions
-  { maxDomDepth :: Maybe (Maybe JSUInt), -- .default 0
-    maxObjectDepth :: Maybe (Maybe JSUInt), -- .default null
-    includeShadowTree :: Maybe IncludeShadowTree -- "none", "open", "all" .default "none"
-  }
-  deriving (Show, Eq, Generic)
-
-instance ToJSON SerializationOptions where
-  toJSON :: SerializationOptions -> Value
-  toJSON = genericToJSON defaultOptions {omitNothingFields = True}
-
-data IncludeShadowTree = ShadowTreeNone | Open | All deriving (Show, Eq, Generic)
-
-instance ToJSON IncludeShadowTree where
-  toJSON :: IncludeShadowTree -> Value
-  toJSON = \case
-    ShadowTreeNone -> "none" -- name changed to avoid clash with BrowsingContext None
-    Open -> "open"
-    All -> "all"
 
 -- Disown command
 data Disown = MkDisown
@@ -777,10 +743,6 @@ instance ToJSON LocalValue where
     SetLocalValue set -> toJSON set
 
 instance ToJSON RemoteReference
-
-instance ToJSON SharedReference where
-  toJSON :: SharedReference -> Value
-  toJSON = toJSONOmitNothing
 
 instance ToJSON RemoteObjectReference
 

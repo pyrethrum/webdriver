@@ -27,10 +27,8 @@ import Data.Aeson.Types (Parser)
 import Data.Maybe (fromMaybe, catMaybes)
 import Data.Text (Text)
 import GHC.Generics (Generic)
-import WebDriverPreCore.BiDi.Script qualified as Script
 import AesonUtils (toJSONOmitNothing, parseJSONOmitNothing, opt)
-import WebDriverPreCore.BiDi.CoreTypes (BrowsingContext(..))
-import WebDriverPreCore.BiDi.Script (SharedReference)
+import WebDriverPreCore.BiDi.CoreTypes (BrowsingContext(..), SharedReference)
 
 -- ######### Local #########
 
@@ -302,7 +300,7 @@ instance ToJSON PointerCommonProperties where
 data Origin
   = ViewportOriginPointerType
   | PointerOrigin
-  | ElementOrigin Script.SharedReference
+  | ElementOrigin SharedReference
   deriving (Show, Eq, Generic)
 
 instance ToJSON Origin where
@@ -326,7 +324,7 @@ instance ToJSON ReleaseActions
 
 data SetFiles = MkSetFiles
   { context :: BrowsingContext,
-    element :: Script.SharedReference,
+    element :: SharedReference,
     files :: [Text]
   }
   deriving (Show, Eq, Generic)

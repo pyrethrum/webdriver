@@ -82,16 +82,16 @@ actions =
         getElementText
       }
 
-locateHttp :: (IOE :> es, WebDriverHttp :> es) => L.HttpLocateOpts -> Locator -> Eff es L.LocateResult
+locateHttp :: (IOE :> es, WebDriverHttp :> es) => L.HttpLocateOpts -> Locator -> Eff es (L.LocateResult L.WDTrace [ElementId])
 locateHttp opts loc = actions >>= \a -> L.locateHttp a opts loc
 
-locateAllHttp :: (IOE :> es, WebDriverHttp :> es) => L.HttpLocateOpts -> Locator -> Eff es L.LocateResult
+locateAllHttp :: (IOE :> es, WebDriverHttp :> es) => L.HttpLocateOpts -> Locator -> Eff es (L.LocateResult L.WDTrace [ElementId])
 locateAllHttp opts loc = actions >>= \a -> L.locateAllHttp a opts loc
 
-locateFromElementHttp :: (IOE :> es, WebDriverHttp :> es) => L.HttpLocateOpts -> ElementId -> Locator -> Eff es L.LocateResult
+locateFromElementHttp :: (IOE :> es, WebDriverHttp :> es) => L.HttpLocateOpts -> ElementId -> Locator -> Eff es (L.LocateResult L.WDTrace [ElementId])
 locateFromElementHttp opts elmId' loc = actions >>= \a -> L.locateFromElementHttp a opts elmId' loc
 
-locateAllFromElementHttp :: (IOE :> es, WebDriverHttp :> es) => L.HttpLocateOpts -> ElementId -> Locator -> Eff es L.LocateResult
+locateAllFromElementHttp :: (IOE :> es, WebDriverHttp :> es) => L.HttpLocateOpts -> ElementId -> Locator -> Eff es (L.LocateResult L.WDTrace [ElementId])
 locateAllFromElementHttp opts elmId' loc = actions >>= \a -> L.locateAllFromElementHttp a opts elmId' loc
 
 -- ################ Element Inspection ################
@@ -112,40 +112,40 @@ formatOuterHtmls :: [Text] -> Text
 formatOuterHtmls htmls = T.intercalate "\n---------\n" htmls
 
 -- | Fail with element outerHTML information appended
-liftFailWithElements :: (IOE :> es, WebDriverHttp :> es) => L.LocateResult -> Text -> [ElementId] -> Eff es a
+liftFailWithElements :: (IOE :> es, WebDriverHttp :> es) => L.LocateResult L.WDTrace [ElementId] -> Text -> [ElementId] -> Eff es a
 liftFailWithElements locRslt msg elms = do
   htmls <- getOuterHtmls elms
   let htmlSection = if null htmls then "" else "\n\nFailure Elements:\n" <> formatOuterHtmls htmls
   liftIO . assertFailure . unpack $ msg <> "\n\nLocateResult:\n" <> txt locRslt <> htmlSection
 
 -- | Check with element outerHTML information on failure
-liftChkWithElements :: (IOE :> es, WebDriverHttp :> es) => L.LocateResult -> Text -> [ElementId] -> Maybe Text -> Eff es ()
+liftChkWithElements :: (IOE :> es, WebDriverHttp :> es) => L.LocateResult L.WDTrace [ElementId] -> Text -> [ElementId] -> Maybe Text -> Eff es ()
 liftChkWithElements locRslt testTitle elms mErr = 
   mErr & maybe (pure ()) (\erMsg -> liftFailWithElements locRslt (testTitle <> " - " <> erMsg) elms)
 
 -- ################ Checks ################
 
-chkLocException :: (IOE :> es) => Text -> (L.LocateException -> Maybe Text) -> L.LocateResult -> Eff es ()
+chkLocException :: (IOE :> es) => Text -> (L.LocateException -> Maybe Text) -> L.LocateResult L.WDTrace [ElementId] -> Eff es ()
 chkLocException errMsg p locRslt =
   either
     (\ex -> liftChk locRslt (errMsg <> ": LocateException check failed: " <> txt ex) $ p ex)
     (const . liftFail locRslt $ errMsg <> ": expected Left LocateException but got Right")
     locRslt.result
 
-chkElms :: (IOE :> es, WebDriverHttp :> es) => Text -> ([ElementId] -> Maybe Text) -> L.LocateResult -> Eff es ()
+chkElms :: (IOE :> es, WebDriverHttp :> es) => Text -> ([ElementId] -> Maybe Text) -> L.LocateResult L.WDTrace [ElementId] -> Eff es ()
 chkElms errMsg p locRslt =
   either
     (liftFail locRslt . (errMsg <>) . (<> ": expected Right elements but got Left: ") . txt)
     (\elms -> liftChkWithElements locRslt (errMsg <> ": element list check failed") elms $ p elms)
     locRslt.result
 
-chkElmsM :: (IOE :> es, WebDriverHttp :> es) => Text -> L.LocateResult -> ([ElementId] -> Eff es (Maybe Text)) -> Eff es ()
+chkElmsM :: (IOE :> es, WebDriverHttp :> es) => Text -> L.LocateResult L.WDTrace [ElementId] -> ([ElementId] -> Eff es (Maybe Text)) -> Eff es ()
 chkElmsM testTitle locRslt chkM =
   locRslt.result & either
     (\err -> liftFail locRslt $ testTitle <> " - locate failed: " <> txt err)
     (\elms -> chkM elms >>= liftChkWithElements locRslt (testTitle <> " - element list check failed") elms)
 
-chkAttribute :: forall es. (IOE :> es, WebDriverHttp :> es) => Text -> L.LocateResult -> Text -> (Text -> Maybe Text) -> Eff es ()
+chkAttribute :: forall es. (IOE :> es, WebDriverHttp :> es) => Text -> L.LocateResult L.WDTrace [ElementId] -> Text -> (Text -> Maybe Text) -> Eff es ()
 chkAttribute testTitle locRslt attrName attrValChkM =
   chkElmsM testTitle locRslt elmChk
   where
@@ -156,17 +156,17 @@ chkAttribute testTitle locRslt attrName attrValChkM =
         pure $ maybe (Just $ testTitle <> " - attribute not found: " <> txt attrName) attrValChkM attr
       elms -> pure $ Just $ testTitle <> " - expected singlet locate resultlist but got " <> txt (length elms) <> " elms"
 
-chkAttributeEq :: (IOE :> es, WebDriverHttp :> es) => Text -> Text -> Text -> L.LocateResult -> Eff es ()
+chkAttributeEq :: (IOE :> es, WebDriverHttp :> es) => Text -> Text -> Text -> L.LocateResult L.WDTrace [ElementId] -> Eff es ()
 chkAttributeEq testTitle attrName expctd locrslt =
   chkAttribute testTitle locrslt attrName $ \actual ->
     if actual == expctd
       then Nothing
       else Just $ testTitle <> " - expected attribute value: " <> txt expctd <> " but got: " <> txt actual
 
-liftFail :: (IOE :> es) => L.LocateResult -> Text -> Eff es a
+liftFail :: (IOE :> es) => L.LocateResult L.WDTrace [ElementId] -> Text -> Eff es a
 liftFail locRslt msg = liftIO . assertFailure . unpack $ msg <> "\n\nLocateResult:\n" <> txt locRslt
 
-liftChk :: (IOE :> es) => L.LocateResult -> Text -> Maybe Text -> Eff es ()
+liftChk :: (IOE :> es) => L.LocateResult L.WDTrace [ElementId] -> Text -> Maybe Text -> Eff es ()
 liftChk locRslt testTitle mErr = mErr & maybe (pure ()) (\erMsg -> liftFail locRslt $ testTitle <> " - " <> erMsg)
 
 chkEq :: (IOE :> es, Show a, Eq a) => Text -> a -> a -> Eff es ()
@@ -206,7 +206,7 @@ defOpts =
 -- Takes a test runner, locate function, test name, locator, attribute name, and expected value
 atrrChk ::
   (Text -> BaseHTTPEffs () -> TestTree) ->
-  (forall es. (IOE :> es, WebDriverHttp :> es) => Locator -> Eff es L.LocateResult) ->
+  (forall es. (IOE :> es, WebDriverHttp :> es) => Locator -> Eff es (L.LocateResult L.WDTrace [ElementId])) ->
   Text ->
   Locator ->
   Text ->
@@ -219,7 +219,7 @@ atrrChk testRunner locateFn testName loc attrName expctd =
 -- Takes a test runner, locate function, test name, locator, and expected auto-id value
 chkAutoId ::
   (Text -> BaseHTTPEffs () -> TestTree) ->
-  (forall es. (IOE :> es, WebDriverHttp :> es) => Locator -> Eff es L.LocateResult) ->
+  (forall es. (IOE :> es, WebDriverHttp :> es) => Locator -> Eff es (L.LocateResult L.WDTrace [ElementId])) ->
   Text ->
   Locator ->
   Text ->
@@ -231,7 +231,7 @@ chkAutoId testRunner locateFn testName loc expctd =
 -- Takes a test runner, locateAll function, test name, locator, and checker function
 chkAll ::
   (Text -> BaseHTTPEffs () -> TestTree) ->
-  (forall es. (IOE :> es, WebDriverHttp :> es) => Locator -> Eff es L.LocateResult) ->
+  (forall es. (IOE :> es, WebDriverHttp :> es) => Locator -> Eff es (L.LocateResult L.WDTrace [ElementId])) ->
   Text ->
   Locator ->
   ([ElementId] -> Maybe Text) ->
@@ -245,7 +245,7 @@ chkAll testRunner locateAllFn testName loc chk =
 -- Takes a test runner, locateAll function, test name, locator, and checker function
 chkAllNever ::
   (Text -> BaseHTTPEffs () -> TestTree) ->
-  (forall es. (IOE :> es, WebDriverHttp :> es) => Locator -> Eff es L.LocateResult) ->
+  (forall es. (IOE :> es, WebDriverHttp :> es) => Locator -> Eff es (L.LocateResult L.WDTrace [ElementId])) ->
   Text ->
   Locator ->
   ([ElementId] -> Maybe Text) ->
@@ -256,7 +256,7 @@ chkAllNever testRunner locateAllFn testName loc chk =
     chkElms (txt loc) chk locRslt
 
 -- | Check that located element has the expected auto-id attribute value
-chkElmsWithAutoId :: (IOE :> es, WebDriverHttp :> es) => Text -> Text -> L.LocateResult -> Eff es ()
+chkElmsWithAutoId :: (IOE :> es, WebDriverHttp :> es) => Text -> Text -> L.LocateResult L.WDTrace [ElementId] -> Eff es ()
 chkElmsWithAutoId testTitle expctd locRslt =
   locRslt.result & either
     (\err -> liftFail locRslt $ testTitle <> " - locate failed: " <> txt err)

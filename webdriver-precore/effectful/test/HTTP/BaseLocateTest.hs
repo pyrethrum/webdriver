@@ -434,16 +434,16 @@ tests =
     runHttp ses $ testUrl urlAction >>= navigateTo
     pure ses
 
-  locate :: forall es. (IOE :> es, WebDriverHttp :> es) => Locator -> Eff es L.LocateResult
+  locate :: forall es. (IOE :> es, WebDriverHttp :> es) => Locator -> Eff es (L.LocateResult L.WDTrace [ElementId])
   locate = locateHttp defOpts
 
-  locateAll :: forall es. (IOE :> es, WebDriverHttp :> es) => Locator -> Eff es L.LocateResult
+  locateAll :: forall es. (IOE :> es, WebDriverHttp :> es) => Locator -> Eff es (L.LocateResult L.WDTrace [ElementId])
   locateAll = locateAllHttp defOpts
 
-  locateFromElement :: forall es. (IOE :> es, WebDriverHttp :> es) => ElementId -> Locator -> Eff es L.LocateResult
+  locateFromElement :: forall es. (IOE :> es, WebDriverHttp :> es) => ElementId -> Locator -> Eff es (L.LocateResult L.WDTrace [ElementId])
   locateFromElement = locateFromElementHttp defOpts
 
-  locateAllFromElement :: forall es. (IOE :> es, WebDriverHttp :> es) => ElementId -> Locator -> Eff es L.LocateResult
+  locateAllFromElement :: forall es. (IOE :> es, WebDriverHttp :> es) => ElementId -> Locator -> Eff es (L.LocateResult L.WDTrace [ElementId])
   locateAllFromElement = locateAllFromElementHttp defOpts
 
   extAlwaysOpts :: L.HttpLocateOpts
@@ -452,16 +452,16 @@ tests =
   extMissOpts :: L.HttpLocateOpts
   extMissOpts = defOpts { L.extendedRoleLocation = L.ExtLocateSingletonMiss }
 
-  locateExt :: forall es. (IOE :> es, WebDriverHttp :> es) => Locator -> Eff es L.LocateResult
+  locateExt :: forall es. (IOE :> es, WebDriverHttp :> es) => Locator -> Eff es (L.LocateResult L.WDTrace [ElementId])
   locateExt = locateHttp extAlwaysOpts
 
-  locateAllExt :: forall es. (IOE :> es, WebDriverHttp :> es) => Locator -> Eff es L.LocateResult
+  locateAllExt :: forall es. (IOE :> es, WebDriverHttp :> es) => Locator -> Eff es (L.LocateResult L.WDTrace [ElementId])
   locateAllExt = locateAllHttp extAlwaysOpts
 
-  locateExtMiss :: forall es. (IOE :> es, WebDriverHttp :> es) => Locator -> Eff es L.LocateResult
+  locateExtMiss :: forall es. (IOE :> es, WebDriverHttp :> es) => Locator -> Eff es (L.LocateResult L.WDTrace [ElementId])
   locateExtMiss = locateHttp extMissOpts
 
-  locateAllExtMiss :: forall es. (IOE :> es, WebDriverHttp :> es) => Locator -> Eff es L.LocateResult
+  locateAllExtMiss :: forall es. (IOE :> es, WebDriverHttp :> es) => Locator -> Eff es (L.LocateResult L.WDTrace [ElementId])
   locateAllExtMiss = locateAllHttp extMissOpts
 
   isNotFound :: L.LocateException -> Maybe Text
@@ -474,16 +474,16 @@ tests =
   disambiguateOpts :: L.HttpLocateOpts
   disambiguateOpts = defOpts { L.jsRecheckDisplayed = L.DisplayedCheckDisambiguateUnique }
 
-  locateAllNever :: forall es. (IOE :> es, WebDriverHttp :> es) => Locator -> Eff es L.LocateResult
+  locateAllNever :: forall es. (IOE :> es, WebDriverHttp :> es) => Locator -> Eff es (L.LocateResult L.WDTrace [ElementId])
   locateAllNever = locateAllHttp neverOpts
 
-  locateAllDisambiguate :: forall es. (IOE :> es, WebDriverHttp :> es) => Locator -> Eff es L.LocateResult
+  locateAllDisambiguate :: forall es. (IOE :> es, WebDriverHttp :> es) => Locator -> Eff es (L.LocateResult L.WDTrace [ElementId])
   locateAllDisambiguate = locateAllHttp disambiguateOpts
 
-  locateNever :: forall es. (IOE :> es, WebDriverHttp :> es) => Locator -> Eff es L.LocateResult
+  locateNever :: forall es. (IOE :> es, WebDriverHttp :> es) => Locator -> Eff es (L.LocateResult L.WDTrace [ElementId])
   locateNever = locateHttp neverOpts
 
-  locateDisambiguate :: forall es. (IOE :> es, WebDriverHttp :> es) => Locator -> Eff es L.LocateResult
+  locateDisambiguate :: forall es. (IOE :> es, WebDriverHttp :> es) => Locator -> Eff es (L.LocateResult L.WDTrace [ElementId])
   locateDisambiguate = locateHttp disambiguateOpts
 
   isAmbiguous :: L.LocateException -> Maybe Text

@@ -56,8 +56,7 @@ import Data.Maybe (catMaybes)
 import Data.Text (Text, pack, unpack)
 import GHC.Generics ( Generic(Rep) )
 import WebDriverPreCore.BiDi.Capabilities (UserPromptHandlerType)
-import WebDriverPreCore.BiDi.CoreTypes (BrowsingContext, JSInt, JSUInt, NodeRemoteValue, UserContext, KnownSubscriptionType (..), ClientWindow, URL (..))
-import WebDriverPreCore.BiDi.Script (SharedReference)
+import WebDriverPreCore.BiDi.CoreTypes (BrowsingContext, JSInt, JSUInt, NodeRemoteValue, SerializationOptions, SharedReference, UserContext, KnownSubscriptionType (..), ClientWindow, URL (..))
 import AesonUtils (enumCamelCase, fromJSONCamelCase, opt, parseJSONOmitNothing, toJSONOmitNothing)
 
 -- ######### REMOTE #########
@@ -210,8 +209,8 @@ data LocateNodes = MkLocateNodes
   { context :: BrowsingContext,
     locator :: Locator,
     maxNodeCount :: Maybe JSUInt,
-    serializationOptions :: Maybe Value, -- script.SerializationOptions
-    startNodes :: Maybe [SharedReference] -- script.SharedReference
+    serializationOptions :: Maybe SerializationOptions,
+    startNodes :: Maybe [SharedReference]
   }
   deriving (Show, Eq, Generic)
 
