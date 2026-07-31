@@ -152,7 +152,7 @@ runHttpAction ::
   Maybe ElementId ->
   (LocParams m -> CompoundLocator HttpLoc -> m [ElementId]) ->
   Locator ->
-  m LocateResult
+  m (LocateResult WDTrace [ElementId])
 runHttpAction actions opts mRootId locateAction loc = do
   logsRef <- liftIO $ newIORef []
   let locParams = setBaseElement mRootId $ extendActions logsRef opts actions

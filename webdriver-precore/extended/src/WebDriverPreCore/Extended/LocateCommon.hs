@@ -88,11 +88,11 @@ data WDTrace = Prepared {
 
 data LocateTracing = LocateTracing | NoLocateTracing deriving (Show, Eq)
 
-data LocateResult = 
+data LocateResult t r = 
   Locate
-  { result :: Either LocateException [ElementId]
+  { result :: Either LocateException r
   } |
   LocateWithTrace 
-  { result :: Either LocateException [ElementId]
-  , trace :: [WDTrace]
+  { result :: Either LocateException r
+  , trace :: [t]
   } deriving (Show, Eq)
