@@ -25,7 +25,6 @@ import Data.Text
 import Data.Text qualified as T
 import GHC.Stack (HasCallStack)
 
-import WebDriverPreCore.Extended.HTTP.Base.Protocol as HTTPB (ElementId)
 import WebDriverPreCore.Extended.LocateCommon (
     LocateException (..),
     LocateResult (..),
@@ -37,7 +36,7 @@ import WebDriverPreCore.Extended.LocateCommon (
   )
 import WebDriverPreCore.Extended.Locators.Internal (Locator, RoleLocator (..), CompoundLocator, HttpLoc (..), xPathRelativePrefix)
 import WebDriverPreCore.Extended.Locators.Internal qualified as LI
-import WebDriverPreCore.HTTP.Protocol as HTTPP (Script (..), Selector (..))
+import WebDriverPreCore.HTTP.Protocol as HTTPP (ElementId, Script (..), Selector (..))
 import Prelude as P hiding (log)
 import Utils (txt)
 
@@ -289,7 +288,7 @@ locateElmsUnchecked ::
   CompoundLocator HttpLoc ->
   m [ElementId]
 locateElmsUnchecked actions leafCardinality rolesSecondPass loc =
-  fmap LST.nub $
+   LST.nub <$>
     case loc of
       LI.Leaf cl ->
         locateLeaf actions rolesSecondPass leafCardinality cl
@@ -301,11 +300,11 @@ locateElmsUnchecked actions leafCardinality rolesSecondPass loc =
             step acc loc' =
               if P.null acc
                 then pure []
-                else fmap (LST.intersect acc) (locate FindAll rolesSecondPass loc')
+                else LST.intersect acc <$> locate FindAll rolesSecondPass loc'
         initial <- locate FindAll rolesSecondPass l
         foldM step initial ls
       LI.AnyI {elms = locs} ->
-        fmap join $
+        join <$>
           traverse (locate FindAll rolesSecondPass) (toList locs)
       LI.PostFilterI {} -> postfilterNotImplemented
   where

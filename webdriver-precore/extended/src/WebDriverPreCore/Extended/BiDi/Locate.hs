@@ -5,10 +5,12 @@ module WebDriverPreCore.Extended.BiDi.Locate
     HttpLocateOpts (..),
     LocateActions (..),
     SingletonCardinality (..),
-    locateHttp,
-    locateFromElementHttp,
-    locateAllHttp,
-    locateAllFromElementHttp
+    locateBiDi,
+    locateFromElementBiDi,
+    -- locateFromElementsBiDi,
+    locateAllBiDI,
+    locateAllFromElementBiDi
+    -- locateAllFromElementsBiDi
   )
 where
 
@@ -25,7 +27,7 @@ import Data.Text
 import Data.Text qualified as T
 import GHC.Stack (HasCallStack)
 
-import WebDriverPreCore.Extended.HTTP.Base.Protocol as HTTPB (ElementId)
+
 import WebDriverPreCore.Extended.LocateCommon (
     LocateException (..),
     LocateResult (..),
@@ -37,8 +39,7 @@ import WebDriverPreCore.Extended.LocateCommon (
   )
 import WebDriverPreCore.Extended.Locators.Internal (Locator, RoleLocator (..), CompoundLocator, HttpLoc (..), xPathRelativePrefix)
 import WebDriverPreCore.Extended.Locators.Internal qualified as LI
-import WebDriverPreCore.HTTP.Protocol as HTTPP (Script (..), Selector (..))
-import Prelude as P hiding (log)
+import WebDriverPreCore.BiDi.Protocol qualified as BiDiP
 import Utils (txt)
 
 -- TODO
@@ -79,14 +80,6 @@ import Utils (txt)
 
 -- | Whether to find the unique element (error if multiple match) or just the first.
 data SingletonCardinality = Unique | First deriving (Show, Eq)
-
-data DisplayedCheck = DisplayedCheckNever | DisplayedCheckDisambiguateUnique | DisplayedCheckAlways deriving (Show, Eq)
-
-data ExtendedRoleLocateSingleton = ExtLocateNever | ExtLocateSingletonMiss | ExtLocateAlways deriving (Show, Eq)
-
-data ExtendedRoleLocateAll = ExtLocateAllNever | ExtLocateAllAlways deriving (Show, Eq)
-
-data RoleJSSecondPass = DoRoleJSSecondPass | NoRoleJSSecondPass deriving (Show, Eq)
 
 -- | Options for singleton locate functions ('locateHttp', 'locateFromElementHttp').
 data HttpLocateOpts = MkHttpLocateOpts
@@ -164,20 +157,20 @@ extendActions logsRef MkHttpLocateOpts{..} MkLocateActions{..} = MkLocParams
 
 
 -- | Locate a unique or first-matching element from the document root.
-locateHttp :: forall m. (MonadIO m) => LocateActions m -> HttpLocateOpts -> Locator -> m LocateResult
-locateHttp actions opts = runHttpAction actions opts Nothing httpLocateSingleton
+locateBiDi :: forall m. (MonadIO m) => LocateActions m -> HttpLocateOpts -> Locator -> m LocateResult
+locateBiDi actions opts = runHttpAction actions opts Nothing httpLocateSingleton
 
 -- | Locate all matching elements from the document root.
-locateAllHttp :: forall m. (MonadIO m) => LocateActions m -> HttpLocateOpts -> Locator -> m LocateResult
-locateAllHttp actions opts = runHttpAction actions opts Nothing httpLocateAll
+locateAllBiDI :: forall m. (MonadIO m) => LocateActions m -> HttpLocateOpts -> Locator -> m LocateResult
+locateAllBiDI actions opts = runHttpAction actions opts Nothing httpLocateAll
 
 -- | Locate a unique or first-matching element rooted at a given element.
-locateFromElementHttp :: forall m. (MonadIO m) => LocateActions m -> HttpLocateOpts -> ElementId -> Locator -> m LocateResult
-locateFromElementHttp actions opts rootId = runHttpAction actions opts (Just rootId) httpLocateSingleton
+locateFromElementBiDi :: forall m. (MonadIO m) => LocateActions m -> HttpLocateOpts -> ElementId -> Locator -> m LocateResult
+locateFromElementBiDi actions opts rootId = runHttpAction actions opts (Just rootId) httpLocateSingleton
 
 -- | Locate all matching elements rooted at a given element.
-locateAllFromElementHttp :: forall m. (MonadIO m) => LocateActions m -> HttpLocateOpts -> ElementId -> Locator -> m LocateResult
-locateAllFromElementHttp actions opts rootId = runHttpAction actions opts (Just rootId) httpLocateAll
+locateAllFromElementBiDi :: forall m. (MonadIO m) => LocateActions m -> HttpLocateOpts -> ElementId -> Locator -> m LocateResult
+locateAllFromElementBiDi actions opts rootId = runHttpAction actions opts (Just rootId) httpLocateAll
 
 -- | Common implementation for all public HTTP locate functions.
 runHttpAction ::

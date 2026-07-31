@@ -50,16 +50,7 @@ mkHttpCaps config =
       firstMatch  = []
     }
 
-withHttp
-  :: ( forall es
-      . ( IOE :> es
-        , Logger :> es
-        , Pause :> es
-        , WebDriverHttp :> es
-        )
-     => Eff es ()
-     )
-  -> IO ()
+withHttp :: (forall es. ( IOE :> es, Logger :> es, Pause :> es, WebDriverHttp :> es) => Eff es ()) -> IO ()
 withHttp action =
   runSetup $ \driverInfo opts config ->
     runPause opts.pauseDuration $
