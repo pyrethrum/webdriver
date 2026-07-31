@@ -1,17 +1,17 @@
 module WebDriverPreCore.Extended.BiDi.Locate
-  (
-    DisplayedCheck(..),
-    ExtendedRoleLocateSingleton(..),
-    HttpLocateOpts (..),
-    LocateActions (..),
-    SingletonCardinality (..),
-    locateBiDi,
-    locateFromElementBiDi,
-    -- locateFromElementsBiDi,
-    locateAllBiDI,
-    locateAllFromElementBiDi
-    -- locateAllFromElementsBiDi
-  )
+--   (
+--     DisplayedCheck(..),
+--     ExtendedRoleLocateSingleton(..),
+--     HttpLocateOpts (..),
+--     LocateActions (..),
+--     SingletonCardinality (..),
+--     locateBiDi,
+--     locateFromElementBiDi,
+--     -- locateFromElementsBiDi,
+--     locateAllBiDI,
+--     locateAllFromElementBiDi
+--     -- locateAllFromElementsBiDi
+--   )
 where
 
 import Control.Exception (Exception)
@@ -81,6 +81,7 @@ import Utils (txt)
 -- | Whether to find the unique element (error if multiple match) or just the first.
 data SingletonCardinality = Unique | First deriving (Show, Eq)
 
+{-
 -- | Options for singleton locate functions ('locateHttp', 'locateFromElementHttp').
 data HttpLocateOpts = MkHttpLocateOpts
   { jsRecheckDisplayed :: DisplayedCheck,
@@ -574,3 +575,5 @@ displayedJS =
   \  return true;\n\
   \}\n\
   \return Array.from(arguments[0]).map(isDisplayed);"
+
+  -}
