@@ -86,13 +86,8 @@ data SingletonCardinality = Unique | First deriving (Show, Eq)
 data BiDiLocateOpts = MkBiDiLocateOpts
   {
     singletonCardinality :: SingletonCardinality,
-    mkDefaultLoc :: Text -> Locator,
+    defaultLoc :: Text -> Locator,
     locateTracing :: LocateTracing
-  }
-
-data LocOpts = MkLocOpts
-  { 
-    singletonCardinality :: SingletonCardinality
   }
 
 -- | Actions for singleton locate functions ('locateHttp', 'locateFirstHttp', 'locateFromElementHttp').
@@ -100,7 +95,8 @@ data LocateActions m = MkLocateActions
   { 
     throw :: forall a. HasCallStack => PreLocateException -> m a,
     catch :: forall a e. (HasCallStack, Exception e) => m a -> (e -> m a) -> m a,
-    locateNodes :: BiDiP.LocateNodes -> m BiDiP.LocateNodesResult
+    locateNodes :: BiDiP.LocateNodes -> m BiDiP.LocateNodesResult,
+    context :: m BiDiP.BrowsingContext
   }
 data LocParams m = MkLocParams
   { 
@@ -109,7 +105,8 @@ data LocParams m = MkLocParams
     locateNodes :: BiDiP.LocateNodes -> m BiDiP.LocateNodesResult,
     defaultLoc :: Text -> Locator,
     trace :: WDTrace -> m (),
-    locOpts :: LocOpts
+    context :: m BiDiP.BrowsingContext,
+    singletonCardinality :: SingletonCardinality
   }
 
 -- | Build a 'LocParams m' from 'LocateActions m', writing traces to an 'IORef'.
@@ -118,22 +115,16 @@ data LocParams m = MkLocParams
 extendActions :: (MonadIO m) => IORef [WDTrace] -> BiDiLocateOpts -> LocateActions m -> LocParams m
 extendActions logsRef MkBiDiLocateOpts{..} MkLocateActions{..} = MkLocParams
   {
-  -- throw / catch
     throw 
   , catch 
-
-  -- webdriver functions
+  , defaultLoc
   , locateNodes
-
-  -- other actions
-  , defaultLoc = mkDefaultLoc
+  , context
+  , singletonCardinality
   , trace = \traceEntry ->
       case locateTracing of
         LocateTracing -> liftIO $ modifyIORef' logsRef (traceEntry :)
         NoLocateTracing -> pure ()
-
-  -- options
-  , locOpts = MkLocOpts {..}
   }
 
 data WDBiDITrace = Prepared {
@@ -155,7 +146,7 @@ data WDBiDITrace = Prepared {
 locateBiDi :: forall m. (MonadIO m) => LocateActions m -> BiDiLocateOpts -> Locator -> m (LocateResult BiDiP.NodeRemoteValue WDBiDITrace)
 locateBiDi actions opts = runBiDiAction actions opts Nothing httpLocateSingleton
 
-
+{-
 -- | Locate all matching elements from the document root.
 locateAllBiDI :: forall m. (MonadIO m) => LocateActions m -> BiDiLocateOpts -> Locator -> m LocateResult
 locateAllBiDI actions opts = runBiDiAction actions opts Nothing httpLocateAll
@@ -167,6 +158,8 @@ locateFromElementBiDi actions opts rootId = runBiDiAction actions opts (Just roo
 -- | Locate all matching elements rooted at a given element.
 locateAllFromElementBiDi :: forall m. (MonadIO m) => LocateActions m -> BiDiLocateOpts -> ElementId -> Locator -> m LocateResult
 locateAllFromElementBiDi actions opts rootId = runBiDiAction actions opts (Just rootId) httpLocateAll
+-}
+
 
 -- | Common implementation for all public HTTP locate functions.
 runBiDiAction ::
@@ -187,6 +180,7 @@ runBiDiAction actions opts mRootId locateAction loc = do
     LocateTracing -> LocateWithTrace rslt logs
     NoLocateTracing -> Locate rslt
 
+
 setBaseElement :: Maybe ElementId -> LocParams m -> LocParams m
 setBaseElement mRootId act@MkLocParams{..} = 
   maybe act (\rootId -> MkLocParams {
@@ -194,6 +188,7 @@ setBaseElement mRootId act@MkLocParams{..} =
   findElements = findElementsFromElement rootId,
   ..
 }) mRootId
+
 
 
 prepareRun :: forall m. Monad m =>
@@ -349,7 +344,7 @@ httpLocateSingleton ::
   LocParams m ->
   CompoundLocator HttpLoc ->
   m [ElementId]
-httpLocateSingleton prms@MkLocParams{throw, locOpts = opts}  loc = do
+httpLocateSingleton prms@MkLocParams{throw, defaultLoc, singletonCardinality}  loc = do
   case loc of
     LI.Leaf ll -> do
       lr <- locateLeaf prms secondPassOnInitial FindAll ll
@@ -569,3 +564,4 @@ displayedJS =
   \  return true;\n\
   \}\n\
   \return Array.from(arguments[0]).map(isDisplayed);"
+
