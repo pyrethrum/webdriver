@@ -60,12 +60,6 @@ data HttpLocateOpts = MkHttpLocateOpts
     locateTracing :: LocateTracing
   }
 
-data LocOpts = MkLocOpts
-  { jsRecheckDisplayed :: DisplayedCheck,
-    extendedRoleLocation :: ExtendedRoleLocateSingleton,
-    singletonCardinality :: SingletonCardinality
-  }
-
 -- | Actions for singleton locate functions ('locateHttp', 'locateFirstHttp', 'locateFromElementHttp').
 data LocateActions m = MkLocateActions
   { 
@@ -92,7 +86,9 @@ data LocParams m = MkLocParams
     getElementText :: ElementId -> m Text,
     defaultLoc :: Text -> Locator,
     trace :: WDTrace -> m (),
-    locOpts :: LocOpts
+    jsRecheckDisplayed :: DisplayedCheck,
+    extendedRoleLocation :: ExtendedRoleLocateSingleton,
+    singletonCardinality :: SingletonCardinality
   }
 
 -- | Build a 'LocParams m' from 'LocateActions m', writing traces to an 'IORef'.
@@ -122,7 +118,9 @@ extendActions logsRef MkHttpLocateOpts{..} MkLocateActions{..} = MkLocParams
         NoLocateTracing -> pure ()
 
   -- options
-  , locOpts = MkLocOpts {..}
+  , jsRecheckDisplayed
+  , extendedRoleLocation
+  , singletonCardinality
   }
 
 
@@ -324,14 +322,14 @@ httpLocateSingleton ::
   LocParams m ->
   CompoundLocator HttpLoc ->
   m [ElementId]
-httpLocateSingleton prms@MkLocParams{throw, locOpts = opts}  loc = do
+httpLocateSingleton prms@MkLocParams{throw}  loc = do
   case loc of
     LI.Leaf ll -> do
       lr <- locateLeaf prms secondPassOnInitial FindAll ll
       filtered <- chkElmsSingleton lr
       case filtered of
         [] ->
-          if opts.extendedRoleLocation == ExtLocateSingletonMiss && isRole
+          if prms.extendedRoleLocation == ExtLocateSingletonMiss && isRole
             then do
               missRetryRslt <- locateLeaf prms DoRoleJSSecondPass FindAll ll
               retryChked <- chkElmsSingleton missRetryRslt
@@ -358,19 +356,19 @@ httpLocateSingleton prms@MkLocParams{throw, locOpts = opts}  loc = do
       notFoundErr = throw (ElementNotFound' "No element found matching locator.")
 
       throwAmbiguous elms = throw (AmbiguousLocator' ("Multiple elements found matching locator: " <> txt elms))
-      isUnique = opts.singletonCardinality == Unique
+      isUnique = prms.singletonCardinality == Unique
       isRole = case loc of
         LI.Leaf RoleHttp {} -> True
         _ -> False
-      secondPassOnInitial = case opts.extendedRoleLocation of
+      secondPassOnInitial = case prms.extendedRoleLocation of
         ExtLocateNever -> NoRoleJSSecondPass
         ExtLocateSingletonMiss -> NoRoleJSSecondPass
         ExtLocateAlways -> DoRoleJSSecondPass
 
       chkElmsSingleton elms =
         let 
-          displayChk = opts.jsRecheckDisplayed
-          cardinality = opts.singletonCardinality
+          displayChk = prms.jsRecheckDisplayed
+          cardinality = prms.singletonCardinality
           wantRecheck = 
              displayChk == DisplayedCheckAlways 
              || displayChk == DisplayedCheckDisambiguateUnique && cardinality == Unique
@@ -386,12 +384,12 @@ httpLocateAll ::
   CompoundLocator HttpLoc ->
   m [ElementId]
 httpLocateAll prms loc = do
-  let secondPassOnInitial = case prms.locOpts.extendedRoleLocation of
+  let secondPassOnInitial = case prms.extendedRoleLocation of
         ExtLocateNever -> NoRoleJSSecondPass
         ExtLocateSingletonMiss -> NoRoleJSSecondPass
         ExtLocateAlways -> DoRoleJSSecondPass
   elms <- locateElmsUnchecked prms FindAll secondPassOnInitial loc
-  if prms.locOpts.jsRecheckDisplayed == DisplayedCheckAlways
+  if prms.jsRecheckDisplayed == DisplayedCheckAlways
     then jsFilterDisplayed prms elms
     else pure elms
 
