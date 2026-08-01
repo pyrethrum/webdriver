@@ -324,7 +324,11 @@ httpLocateSingleton ::
 httpLocateSingleton prms@MkLocParams{throw}  loc = do
   case loc of
     LI.Leaf ll -> do
-      lr <- locateLeaf prms secondPassOnInitial FindAll ll
+      let leafCard = if prms.singletonCardinality == First
+                        && prms.jsRecheckDisplayed /= DisplayedCheckAlways
+                     then FindFirst
+                     else FindAll
+      lr <- locateLeaf prms secondPassOnInitial leafCard ll
       filtered <- chkElmsSingleton lr
       case filtered of
         [] ->
@@ -363,16 +367,14 @@ httpLocateSingleton prms@MkLocParams{throw}  loc = do
         ExtLocateAlways -> DoRoleJSSecondPass
 
       chkElmsSingleton elms =
-        let 
-          displayChk = prms.jsRecheckDisplayed
-          cardinality = prms.singletonCardinality
-          wantRecheck = 
-             displayChk == DisplayedCheckAlways 
-             || displayChk == DisplayedCheckDisambiguateUnique && cardinality == Unique
-        in
         if wantRecheck
           then chkRefilterSingleton prms elms
           else pure elms
+        where
+          displayChk = prms.jsRecheckDisplayed
+          wantRecheck = 
+             displayChk == DisplayedCheckAlways 
+             || displayChk == DisplayedCheckDisambiguateUnique && prms.singletonCardinality == Unique
 
 httpLocateAll ::
   forall m.
