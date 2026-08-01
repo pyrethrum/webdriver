@@ -304,7 +304,6 @@ locateElmsUnchecked actions leafCardinality rolesSecondPass loc =
       LI.AnyI {elms = locs} ->
         join <$>
           traverse (locate FindAll rolesSecondPass) (toList locs)
-      LI.PostFilterI {} -> postfilterNotImplemented
   where
     locate = locateElmsUnchecked actions
 
@@ -346,8 +345,6 @@ httpLocateSingleton prms@MkLocParams{throw}  loc = do
           if isUnique
             then throwAmbiguous elms
             else pure [x]
-    LI.PostFilterI {} ->
-      postfilterNotImplemented
     _ ->
       locateElmsUnchecked prms FindAll secondPassOnInitial loc
   where
@@ -392,9 +389,6 @@ httpLocateAll prms loc = do
   if prms.jsRecheckDisplayed == DisplayedCheckAlways
     then jsFilterDisplayed prms elms
     else pure elms
-
-postfilterNotImplemented :: a
-postfilterNotImplemented = error "PostFilter locators are not yet implemented in HTTP WebDriver"
 
 data SingletonCheckResult
   = SingletonSuccess {elms :: [ElementId]}

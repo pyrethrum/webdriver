@@ -3,8 +3,6 @@ module BrowsingContextDemos where
 import Actions (Actions (..))
 import BiDiDemoUtils
 import WebDriverPreCore.Test.Const (milliseconds)
-import Data.Aeson (Value (Null), object, (.=))
-import Data.Text (Text)
 import WebDriverPreCore.Test.IOUtils (DemoActions (..))
 import WebDriverPreCore.Test.TestData (contentPageUrl, framesUrl, loginUrl, navigation1Url, navigation2Url, navigation3Url, navigation4Url, navigation5Url, navigation6Url, nestedFramesUrl, scriptRealmUrl)
 import WebDriverPreCore.BiDi.Protocol
@@ -21,6 +19,7 @@ import WebDriverPreCore.BiDi.Protocol
     GetTree (..),
     GetTreeResult (..),
     HandleUserPrompt (..),
+    IncludeShadowTree (..),
     ImageFormat (..),
     Info (..),
     JSInt (..),
@@ -40,6 +39,7 @@ import WebDriverPreCore.BiDi.Protocol
     ReadinessState (..),
     Reload (..),
     ScreenShotOrigin (..),
+    SerializationOptions (..),
     SetBypassCSP (..),
     SetViewport (..),
     SharedId (..),
@@ -562,11 +562,11 @@ browsingContextLocateNodesDemo =
               maxNodeCount = Nothing,
               serializationOptions =
                 Just $
-                  object
-                    [ "maxDomDepth" .= (3 :: Int),
-                      "maxObjectDepth" .= Null,
-                      "includeShadowTree" .= ("none" :: Text)
-                    ],
+                  MkSerializationOptions
+                    { maxDomDepth = Just (Just (MkJSUInt 3)),
+                      maxObjectDepth = Just Nothing,
+                      includeShadowTree = Just ShadowTreeNone
+                    },
               startNodes = Nothing
             }
       logShow "CSS Selector with SerializationOptions - form with depth 3" cssWithSerializationResult
@@ -581,11 +581,11 @@ browsingContextLocateNodesDemo =
               maxNodeCount = Nothing,
               serializationOptions =
                 Just $
-                  object
-                    [ "maxDomDepth" .= (1 :: Int),
-                      "maxObjectDepth" .= (1 :: Int),
-                      "includeShadowTree" .= ("open" :: Text)
-                    ],
+                  MkSerializationOptions
+                    { maxDomDepth = Just (Just (MkJSUInt 1)),
+                      maxObjectDepth = Just (Just (MkJSUInt 1)),
+                      includeShadowTree = Just Open
+                    },
               startNodes = Nothing
             }
       logShow "CSS Selector with SerializationOptions - body with depth 1" cssShallowResult
@@ -690,11 +690,11 @@ browsingContextLocateNodesDemo =
                     maxNodeCount = Just (MkJSUInt 5),
                     serializationOptions =
                       Just $
-                        object
-                          [ "maxDomDepth" .= (2 :: Int),
-                            "maxObjectDepth" .= Null,
-                            "includeShadowTree" .= ("none" :: Text)
-                          ],
+                        MkSerializationOptions
+                          { maxDomDepth = Just (Just (MkJSUInt 2)),
+                            maxObjectDepth = Just Nothing,
+                            includeShadowTree = Just ShadowTreeNone
+                          },
                     startNodes = Just [MkSharedReference {sharedId = MkSharedId {id = nodeId}, handle = Nothing, extensions = Nothing}]
                   }
             logShow "StartNodes with XPath - text nodes within parent (max 5)" startNodesTextResult

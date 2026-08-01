@@ -25,13 +25,6 @@ module WebDriverPreCore.Extended.Locators
     attributeExact,
     attributeStarts,
     --
-    -- post filters
-    value,
-    valueExact,
-    value',
-    valueStarts,
-    valueFunc,
-
     -- * Role Constructors
     role,
     roleType,
@@ -250,43 +243,6 @@ attributeExact nm = mkExact (attribute' nm)
 
 attributeStarts :: Text -> Text -> Locator
 attributeStarts nm = mkStarts (attribute' nm)
-
-mkValCons :: Locator -> MatchType -> CaseSensitivity -> Text -> Locator
-mkValCons loc matchType caseSensitivity matchVal =
-  value' matchType caseSensitivity matchVal loc
-
-value :: Text -> Locator -> Locator
-value matchVal locator = mkDefaults (mkValCons locator) matchVal
-
-value' :: MatchType -> CaseSensitivity -> Text -> Locator -> Locator
-value' matchType caseSensitivity matchVal locator =
-  PostFilter
-    { predicate =
-        ValuePredicate
-          { description = "Match element by its value attribute: " <> matchVal <> (pack $ " (" <> show matchType <> ", " <> show caseSensitivity <> ")"),
-            matchType,
-            caseSensitivity,
-            value = matchVal
-          },
-      locator
-    }
-
-valueExact :: Text -> Locator -> Locator
-valueExact txt loc = mkExact (mkValCons loc) txt
-
-valueStarts :: Text -> Locator -> Locator
-valueStarts txt loc = mkStarts (mkValCons loc) txt
-
-valueFunc :: (Text -> Bool) -> Text -> Locator -> Locator
-valueFunc func description loc =
-  PostFilter
-    { predicate =
-        ValueFuncPredicate
-          { description = "Match element by its value attribute with custom function: " <> description,
-            valPredicate = func
-          },
-      locator = loc
-    }
 
 ------- Role Constructors -------
 

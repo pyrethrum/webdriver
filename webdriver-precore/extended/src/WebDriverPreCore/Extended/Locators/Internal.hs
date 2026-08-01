@@ -91,9 +91,9 @@ data RoleLocator
 -- | Locator for use with both HTTP and BiDi protocols.
 data Locator
   = -- universal
-    CSS {value :: Text}
+  AllElms
+  | CSS {value :: Text}
   | XPath {value :: Text}
-  | AllElms
   | ID {value :: Text}
   | Class
       { value :: Text,
@@ -123,11 +123,6 @@ data Locator
     Contains {container :: Locator, contained :: Locator}
   | All {elms :: NonEmpty Locator}
   | Any {elms :: NonEmpty Locator}
-  | --- PostFilter
-    PostFilter
-      { predicate :: Predicate,
-        locator :: Locator
-      }
   deriving
     ( -- | WithOptions {base :: Locator, options :: [LocatorDirectives]}
       Show,
@@ -175,7 +170,6 @@ data CompoundLocator a
   | ContainsI {container :: CompoundLocator a, contained :: CompoundLocator a}
   | AllI {elms :: NonEmpty (CompoundLocator a)}
   | AnyI {elms :: NonEmpty (CompoundLocator a)}
-  | PostFilterI {predicate :: Predicate, locator :: CompoundLocator a}
   deriving (Show, Eq, Ord, Functor, Foldable, Traversable)
 
 transform :: (Text -> Locator) -> Locator -> Either InvalidLocator (CompoundLocator HttpLoc)
@@ -219,8 +213,6 @@ toIntermediate defLoc loc =
       AllI <$> traverse (toIntermediate defLoc) elms
     Any {elms} ->
       AnyI <$> traverse (toIntermediate defLoc) elms
-    PostFilter {predicate, locator} ->
-      PostFilterI predicate <$> toIntermediate defLoc locator
     -- leaf conversions
     _ -> leaf $ case loc of
           CSS {value} -> CSSI {value}
@@ -256,7 +248,6 @@ unnestAnysAlls = \case
         AnyI xs -> xs
         x -> x :| [] )
   ContainsI c d -> ContainsI (unnestAnysAlls c) (unnestAnysAlls d)
-  PostFilterI p l -> PostFilterI p (unnestAnysAlls l)
   Leaf a -> Leaf a
 
 -----------------------------------------------------------------------------
@@ -365,7 +356,6 @@ collectTags = \case
   ContainsI c d -> collectTags c <> collectTags d
   AllI xs -> toList xs >>= collectTags
   AnyI xs -> toList xs >>= collectTags
-  PostFilterI _ l -> collectTags l
 
 -- copy tags from TagI and XPathID to all reachable XPathID descendants, and remove the TagI if possible.
 distributeTagsInAll :: Locator -> CompoundLocator LocatorI -> Either InvalidLocator (CompoundLocator LocatorI)
@@ -592,7 +582,6 @@ mapCompoundLocBottomUpM f = recurse >=> f
       ContainsI c d -> ContainsI <$> mapf c <*> mapf d
       AllI elms -> AllI <$> traverse mapf elms
       AnyI elms -> AnyI <$> traverse mapf elms
-      PostFilterI p l -> PostFilterI p <$> mapf l
       leaf@(Leaf _) -> pure leaf
  
 -- | Map over a 'CompoundLocator' tree bottom-up.
@@ -784,7 +773,6 @@ foldLoc f acc loc =
     All locs -> foldList locs
     Any locs -> foldList locs
     -- WithOptions base _ -> foldLoc f acc' base
-    PostFilter {} -> acc'
     _ -> acc' -- Leaf locators
   where
     acc' = f acc loc -- Apply function to parent first
