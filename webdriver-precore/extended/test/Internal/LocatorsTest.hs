@@ -75,7 +75,6 @@ mockLocateUnsimplified allElmsDefault = go
       All locs -> all go locs
       Any locs -> any go locs
       Contains p c -> go p && go c
-      PostFilter _ _ -> error "Locator not supported by mockLocated"
     readBool "True" = True
     readBool "False" = False
     readBool v = error $ "mockLocated: unexpected value: " <> unpack v
@@ -421,7 +420,6 @@ mockLocatedReduced allElmsDefault = go
         XPathHttp v -> readXPathBool v
         RoleHttp {roleSpec = RoleName v} -> readBool v
         RoleHttp {} -> allElmsDefault
-      PostFilterI {} -> error "PostFilter not supported by mockLocatedReduced"
       ContainsI p c' -> go p && go c'
       AllI elms -> all go elms
       AnyI elms -> any go elms

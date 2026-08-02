@@ -13,6 +13,7 @@ module WebDriverPreCore.Extended.BiDi.Locate
 --     -- locateAllFromElementsBiDi
 --   )
 where
+  {-
 
 import Control.Exception (Exception)
 import Control.Monad (foldM, join)
@@ -596,3 +597,4 @@ displayedJS =
   \}\n\
   \return Array.from(arguments[0]).map(isDisplayed);"
 
+-}
