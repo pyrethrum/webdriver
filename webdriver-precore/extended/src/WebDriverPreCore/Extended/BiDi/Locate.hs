@@ -167,7 +167,17 @@ baseLocate :: BiDiBaseLocateOpts -> LocateActions m -> m (LocateResult BiDiP.Nod
 baseLocate opts actions = do
   logsRef <- liftIO $ newIORef []
 
+  rslt <- case LI.transform p.defaultLoc loc of
+    -- log failure if tansformation failed
+    Left err -> do 
+        p.trace (PrepareFailed loc err)
+        pure $ Left (InvalidLocator err)
+    -- run locator if transformation succeeded
+    Right compoundLoc -> do
+      p.trace (Prepared loc compoundLoc)
+      completeLocException loc $ runLoc catch (locateAction p) compoundLoc
   undefined
+
   {-
   let  p = setBaseElement mRootId $ extendActions logsRef opts actions
 
