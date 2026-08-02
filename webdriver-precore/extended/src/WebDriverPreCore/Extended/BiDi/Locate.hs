@@ -13,7 +13,7 @@ module WebDriverPreCore.Extended.BiDi.Locate
 --     -- locateAllFromElementsBiDi
 --   )
 where
-  {-
+
 
 import Control.Exception (Exception)
 import Control.Monad (foldM, join)
@@ -94,7 +94,6 @@ data BiDiLocateOpts = MkBiDiLocateOpts
   }
 data BiDiBaseLocateOpts = MkBiDiBaseLocateOpts
   {
-    singletonCardinality :: SingletonCardinality,
     defaultLoc :: Text -> Locator,
     locateTracing :: LocateTracing,
     maxNodeCount :: Maybe JSUInt,
@@ -117,30 +116,10 @@ data LocParams m = MkLocParams
     locateNodes :: BiDiP.LocateNodes -> m BiDiP.LocateNodesResult,
     defaultLoc :: Text -> Locator,
     trace :: WDTrace -> m (),
-    context :: m BiDiP.BrowsingContext,
     singletonCardinality :: SingletonCardinality
   }
 
 
-   {-
-data LocateNodes = MkLocateNodes
-  { context :: BrowsingContext,
-    locator :: Locator,
-    maxNodeCount :: Maybe JSUInt,
-    serializationOptions :: Maybe SerializationOptions,
-    startNodes :: Maybe [SharedReference]
-  }
-  deriving (Show, Eq, Generic)
--}
-baseLocate :: BiDiBaseLocateOpts -> LocateActions m -> m (LocateResult BiDiP.NodeRemoteValue WDBiDITrace)
-baseLocate opts actions = do
-  logsRef <- liftIO $ newIORef []
-  let locParams = extendActions logsRef opts actions
-  rslt <- prepareRun locParams (locateNodes locParams) (defaultLoc opts "body")
-  logs <- liftIO $ P.reverse <$> readIORef logsRef
-  pure $ case opts.locateTracing of
-    LocateTracing -> LocateWithTrace rslt logs
-    NoLocateTracing -> Locate rslt
 -- | Build a 'LocParams m' from 'LocateActions m', writing traces to an 'IORef'.
 -- Using IORef instead of WriterT ensures trace entries are preserved even when
 -- exceptions are thrown (WriterT state is discarded on exception).
@@ -151,7 +130,6 @@ extendActions logsRef MkBiDiLocateOpts{..} MkLocateActions{..} = MkLocParams
   , catch 
   , defaultLoc
   , locateNodes
-  , context
   , singletonCardinality
   , trace = \traceEntry ->
       case locateTracing of
@@ -174,9 +152,44 @@ data WDBiDITrace = Prepared {
   } 
  deriving (Show, Eq)
 
+
+   {-
+data LocateNodes = MkLocateNodes
+  { context :: BrowsingContext,
+    locator :: Locator,
+    maxNodeCount :: Maybe JSUInt,
+    serializationOptions :: Maybe SerializationOptions,
+    startNodes :: Maybe [SharedReference]
+  }
+  deriving (Show, Eq, Generic)
+-}
+baseLocate :: BiDiBaseLocateOpts -> LocateActions m -> m (LocateResult BiDiP.NodeRemoteValue WDBiDITrace)
+baseLocate opts actions = do
+  logsRef <- liftIO $ newIORef []
+
+  undefined
+  {-
+  let  p = setBaseElement mRootId $ extendActions logsRef opts actions
+
+  rslt <- case LI.transform p.defaultLoc loc of
+    -- log failure if tansformation failed
+    Left err -> do 
+        p.trace (PrepareFailed loc err)
+        pure $ Left (InvalidLocator err)
+    -- run locator if transformation succeeded
+    Right compoundLoc -> do
+      p.trace (Prepared loc compoundLoc)
+      completeLocException loc $ runLoc catch (locateAction p) compoundLoc
+
+  logs <- liftIO $ P.reverse <$> readIORef logsRef
+  pure $ case opts.locateTracing of
+    LocateTracing -> LocateWithTrace rslt logs
+    NoLocateTracing -> Locate rslt
+    -}
+
 -- | Locate a unique or first-matching element from the document root.
-locateBiDi :: forall m. (MonadIO m) => LocateActions m -> BiDiLocateOpts -> Locator -> m (LocateResult BiDiP.NodeRemoteValue WDBiDITrace)
-locateBiDi actions opts = runBiDiAction actions opts Nothing httpLocateSingleton
+-- locateBiDi :: forall m. (MonadIO m) => LocateActions m -> BiDiLocateOpts -> Locator -> m (LocateResult BiDiP.NodeRemoteValue WDBiDITrace)
+-- locateBiDi actions opts = runBiDiAction actions opts Nothing httpLocateSingleton
 
 {-
 -- | Locate all matching elements from the document root.
@@ -400,8 +413,6 @@ httpLocateSingleton prms@MkLocParams{throw, defaultLoc, singletonCardinality}  l
           if isUnique
             then throwAmbiguous elms
             else pure [x]
-    LI.PostFilterI {} ->
-      postfilterNotImplemented
     _ ->
       locateElmsUnchecked prms FindAll secondPassOnInitial loc
   where
@@ -597,4 +608,3 @@ displayedJS =
   \}\n\
   \return Array.from(arguments[0]).map(isDisplayed);"
 
--}
