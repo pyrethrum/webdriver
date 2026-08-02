@@ -6,7 +6,7 @@ import Common.Utils
     chkElms,
     chkElmsWithAutoId,
     chkSingleton,
-    defOpts,
+    defAllOpts,
     locateAllHttp,
   )
 import Data.Text (Text, unpack)
@@ -185,7 +185,7 @@ tests =
         test = runHttpTest ses
 
         locateAll :: forall es. (IOE :> es, WebDriverHttp :> es) => Locator -> Eff es (L.LocateResult L.WDTrace [ElementId])
-        locateAll = locateAllHttp defOpts
+        locateAll = locateAllHttp defAllOpts
 
         chkAutoId :: Text -> Locator -> Text -> TestTree
         chkAutoId testName loc expctd =

@@ -12,7 +12,7 @@ import Data.Text qualified as T
 import Data.Text (Text, unpack)
 import Data.Text.Encoding (encodeUtf8)
 import Effectful (Eff, IOE, (:>), liftIO)
-import Common.Utils (defOpts, locateAllHttp)
+import Common.Utils (defAllOpts, locateAllHttp)
 import HTTP.Runner (WDSession, closeWDSession, getWDSession, runHttp)
 import Prelude
 import Test.Falsify.Generator as G (Gen, frequency, integral)
@@ -848,7 +848,7 @@ evaluateCase getSession locCase  =
       where
         locator = locCase.locator
         locateAll :: forall es. (IOE :> es, WebDriverHttp :> es) => Locator -> Eff es (L.LocateResult L.WDTrace [ElementId])
-        locateAll = locateAllHttp $ defOpts {L.jsRecheckDisplayed = L.DisplayedCheckNever}
+        locateAll = locateAllHttp $ defAllOpts {L.wantJsRecheckDisplayed = False}
         html = "<!doctype html><html><head><meta charset=\"utf-8\"></head><body>"
               <> nodeToHtml testNode
               <> "</body></html>"

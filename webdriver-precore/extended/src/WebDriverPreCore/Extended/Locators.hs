@@ -189,7 +189,7 @@ where
 
 import Data.Bool (bool)
 import Data.List.NonEmpty (NonEmpty (..))
-import Data.Text (Text, isInfixOf, pack)
+import Data.Text (Text, isInfixOf)
 import WebDriverPreCore.Extended.Locators.Internal
 import Prelude
 

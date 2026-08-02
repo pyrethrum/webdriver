@@ -62,8 +62,8 @@ data HttpLocateOpts = MkHttpLocateOpts
   }
 
 data HttpLocateAllOpts = MkHttpLocateAllOpts
-  { jsRecheckDisplayed :: Bool,
-    extendedRoleLocation :: Bool,
+  { wantJsRecheckDisplayed :: Bool,
+    wantExtendedRoleLocation :: Bool,
     mkDefaultLoc :: Text -> Locator,
     locateTracing :: LocateTracing
   }
@@ -151,8 +151,8 @@ locateAllFromElementHttp actions opts rootId = runHttpAction actions (convertOpt
 
 convertOpts :: HttpLocateAllOpts -> HttpLocateOpts
 convertOpts MkHttpLocateAllOpts{..} = MkHttpLocateOpts
-  { jsRecheckDisplayed = if jsRecheckDisplayed then DisplayedCheckAlways else DisplayedCheckNever,
-    extendedRoleLocation = if extendedRoleLocation then ExtLocateAlways else ExtLocateNever,
+  { jsRecheckDisplayed = if wantJsRecheckDisplayed then DisplayedCheckAlways else DisplayedCheckNever,
+    extendedRoleLocation = if wantExtendedRoleLocation then ExtLocateAlways else ExtLocateNever,
     -- wont be used
     singletonCardinality = First,
     mkDefaultLoc = mkDefaultLoc,

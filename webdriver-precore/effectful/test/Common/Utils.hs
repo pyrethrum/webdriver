@@ -34,6 +34,7 @@ module Common.Utils
 
     -- * Config
     autoId,
+    defAllOpts,
     defOpts
   )
 where
@@ -196,6 +197,15 @@ defOpts =
     { extendedRoleLocation = L.ExtLocateNever,
       jsRecheckDisplayed = L.DisplayedCheckAlways,
       singletonCardinality = L.Unique,
+      mkDefaultLoc = autoId,
+      locateTracing = L.LocateTracing
+    }
+
+defAllOpts :: L.HttpLocateAllOpts
+defAllOpts =
+  L.MkHttpLocateAllOpts
+    { wantExtendedRoleLocation = False,
+      wantJsRecheckDisplayed = True,
       mkDefaultLoc = autoId,
       locateTracing = L.LocateTracing
     }
