@@ -169,14 +169,25 @@ runHttpAction ::
   (LocParams m -> CompoundLocator HttpLoc -> m [ElementId]) ->
   Locator ->
   m (LocateResult WDTrace [ElementId])
-runHttpAction actions opts mRootId locateAction loc = do
+runHttpAction actions@MkLocateActions{catch} opts mRootId locateAction loc = do
   logsRef <- liftIO $ newIORef []
-  let locParams = setBaseElement mRootId $ extendActions logsRef opts actions
-  rslt <- prepareRun locParams (locateAction locParams) loc
+  let  p = setBaseElement mRootId $ extendActions logsRef opts actions
+
+  rslt <- case LI.transform p.defaultLoc loc of
+    -- log failure if tansformation failed
+    Left err -> do 
+        p.trace (PrepareFailed loc err)
+        pure $ Left (InvalidLocator err)
+    -- run locator if transformation succeeded
+    Right compoundLoc -> do
+      p.trace (Prepared loc compoundLoc)
+      completeLocException loc $ runLoc catch (locateAction p) compoundLoc
+  
   logs <- liftIO $ P.reverse <$> readIORef logsRef
   pure $ case opts.locateTracing of
     LocateTracing -> LocateWithTrace rslt logs
     NoLocateTracing -> Locate rslt
+
 
 setBaseElement :: Maybe ElementId -> LocParams m -> LocParams m
 setBaseElement mRootId act@MkLocParams{..} = 
@@ -186,32 +197,17 @@ setBaseElement mRootId act@MkLocParams{..} =
   ..
 }) mRootId
 
-
-prepareRun :: forall m. Monad m =>
-      LocParams m 
-     -> (CompoundLocator HttpLoc -> m [ElementId]) 
-     -> Locator 
-     -> m (Either LocateException [ElementId])
-prepareRun MkLocParams{trace, defaultLoc, catch} locateActn locator =
-   case preparedLoc of
-     Left err -> do
-       trace (PrepareFailed locator err)
-       pure $ Left (InvalidLocator err)
-     Right reduced -> do
-       trace (Prepared locator reduced)
-       completeLocException locator . runLoc $ reduced
-  where 
-    preparedLoc :: Either LI.InvalidLocator (CompoundLocator HttpLoc)
-    preparedLoc = LI.transform defaultLoc locator
-
-    runLoc :: CompoundLocator HttpLoc -> m (Either PreLocateException [ElementId])
-    runLoc loc =
-      catch  -- catch PreLocateException thrown via 'throw' (e.g. AmbiguousLocator', ElementNotFound')
-        (catch -- catch WebDriverException from underlying HTTP calls
-          (Right <$> locateActn loc) 
-          (pure . Left . DriverException')
-        )
-        (pure . Left)
+runLoc :: forall m. Applicative m => (forall a e. (HasCallStack, Exception e) => m a -> (e -> m a) -> m a) -- catch
+  -> (CompoundLocator HttpLoc -> m [ElementId])
+  -> CompoundLocator HttpLoc
+  ->  m (Either PreLocateException [ElementId])
+runLoc catch locAction loc =
+  catch  -- catch PreLocateException thrown via 'throw' (e.g. AmbiguousLocator', ElementNotFound')
+    (catch -- catch WebDriverException from underlying HTTP calls
+      (Right <$> locAction loc) 
+      (pure . Left . DriverException')
+    )
+    (pure . Left)
 
 jsFilterDisplayed ::
   forall m.
