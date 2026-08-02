@@ -163,6 +163,7 @@ data LocateNodes = MkLocateNodes
   }
   deriving (Show, Eq, Generic)
 -}
+{-
 baseLocate :: BiDiBaseLocateOpts -> LocateActions m -> m (LocateResult BiDiP.NodeRemoteValue WDBiDITrace)
 baseLocate opts actions = do
   logsRef <- liftIO $ newIORef []
@@ -618,3 +619,4 @@ displayedJS =
   \}\n\
   \return Array.from(arguments[0]).map(isDisplayed);"
 
+-}

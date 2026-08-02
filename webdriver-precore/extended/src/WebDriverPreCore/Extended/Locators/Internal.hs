@@ -151,7 +151,19 @@ data LocatorI
       Eq,
       Ord
     )
-data LocatorIBiDI
+data HttpLoc
+  = 
+    CSSHttp {value :: Text}
+  | XPathHttp {value :: Text} 
+  | RoleHttp {roleSpec :: RoleLocator, xpath :: Text}
+  deriving
+    ( -- | WithOptions {base :: Locator, options :: [LocatorDirectives]}
+      Show,
+      Eq,
+      Ord
+    )
+
+data LocatorIBiDi
   = 
     CSSIBiDI {value :: Text}
   | XPathIBiDI {value :: Text}
@@ -164,6 +176,14 @@ data LocatorIBiDI
   -- | -- exclusive
   --   -- browsingContextId -> elementId ie get the frame that belongs to the browsing context
    | BiDiContextI {context :: BrowsingContext}
+   -- properties  kept the same as user facing Locator 
+   -- because needs special execution logic for required wildcard matching
+   | InnerTextIBiDI
+      { value :: Text,
+        matchType :: MatchType,
+        caseSensitivity :: CaseSensitivity,
+        maxDepth :: Maybe Word8
+      }
   deriving
     ( -- | WithOptions {base :: LocatLocatorIor, options :: [LocatorDirectives]}
       Show,
@@ -171,17 +191,26 @@ data LocatorIBiDI
       Ord
     )
 
-data HttpLoc
+data BiDiLoc
   = 
-    CSSHttp {value :: Text}
-  | XPathHttp {value :: Text} 
-  | RoleHttp {roleSpec :: RoleLocator, xpath :: Text}
+    CSSBiDi {value :: Text}
+  | XPathBiDi {value :: Text}
+  | RoleBiDi {roleSpec :: RoleLocator}
+  | ContextBiDi {context :: BrowsingContext}
+  | InnerTextBiDi
+      { value :: Text,
+        matchType :: MatchType,
+        caseSensitivity :: CaseSensitivity,
+        maxDepth :: Maybe Word8
+      }
   deriving
-    ( -- | WithOptions {base :: Locator, options :: [LocatorDirectives]}
+    ( -- | WithOptions {base :: LocatLocatorIor, options :: [LocatorDirectives]}
       Show,
       Eq,
       Ord
     )
+
+
 
 -- | CompoundLocator represents the tree structure of composed locators.
 data CompoundLocator a
@@ -242,7 +271,7 @@ toIntermediate defLoc loc =
             XPathIDerived {tagM = Nothing, body = classPredX value matchType caseSensitivity}
           Tag {value} -> TagI {tag = value}
           Role {role} -> RoleI {roleSpec = role, xpath = roleToXPath role}
-          InnerText {value, matchType, caseSensitivity, maxDepth} ->
+          InnerText {..} ->
             XPathIDerived {tagM = Nothing, body = innerTextPredX value caseSensitivity matchType maxDepth}
   where 
     leaf = Right . Leaf
@@ -771,14 +800,13 @@ lowerAlpha = "abcdefghijklmnopqrstuvwxyz"
 -- ###################################### BiDi #####################################
 
 
-transformBidi :: (Text -> Locator) -> Locator -> Either InvalidLocator (CompoundLocator BiDi.Locator)
+transformBidi :: (Text -> Locator) -> Locator -> Either InvalidLocator (CompoundLocator BiDiLoc)
 transformBidi defLoc loc = do
   locI <- toIntermediateBiDi defLoc loc
   simplified <- simplify locI
   Right $ derivedAndTagsToXPath simplified
-  undefined
   where
-    simplify :: CompoundLocator LocatorI -> Either InvalidLocator (CompoundLocator LocatorI)
+    simplify :: CompoundLocator LocatorIBiDi -> Either InvalidLocator (CompoundLocator LocatorIBiDi)
     simplify current = do
       merged <- mergeContiguousBiDi loc $ unnestAnysAllsBiDi current
       tagged <- distributeTagsInAll loc merged
@@ -791,7 +819,7 @@ transformBidi defLoc loc = do
 -- 1: Initial conversion (Locator → CompoundLocator LocatorI)
 -----------------------------------------------------------------------------
 
-toIntermediateBiDi :: (Text -> Locator) -> Locator -> Either InvalidLocator (CompoundLocator LocatorIBiDI)
+toIntermediateBiDi :: (Text -> Locator) -> Locator -> Either InvalidLocator (CompoundLocator LocatorIBiDi)
 toIntermediateBiDi defLoc loc = 
   case loc of
     -- fallable conversions
@@ -799,32 +827,32 @@ toIntermediateBiDi defLoc loc =
       | T.null name || T.null value ->
           failLocator "Attribute locator has empty name or value"
       | otherwise ->
-          leaf $ XPathIDerived {tagM = Nothing, body = attrPredX name value matchType caseSensitivity}
+          leaf $ XPathIDerivedBiDI {tagM = Nothing, body = attrPredX name value matchType caseSensitivity}
     Default {value} ->
       let resolved = defLoc value
       in if hasDefault resolved
         then failLocator "Default locator cannot resolve to another Default"
-        else toIntermediate defLoc resolved
-    BiDiContext {} -> 
-      failLocator "BiDiContext locator cannot be used with HTTP protocol"
+        else toIntermediateBiDi defLoc resolved
+    BiDiContext {context} -> 
+      leaf $ BiDiContextI {context}
     Contains {container, contained} ->
-      ContainsI <$> toIntermediate defLoc container <*> toIntermediate defLoc contained
+      ContainsI <$> toIntermediateBiDi defLoc container <*> toIntermediateBiDi defLoc contained
     All {elms} ->
-      AllI <$> traverse (toIntermediate defLoc) elms
+      AllI <$> traverse (toIntermediateBiDi defLoc) elms
     Any {elms} ->
-      AnyI <$> traverse (toIntermediate defLoc) elms
+      AnyI <$> traverse (toIntermediateBiDi defLoc) elms
     -- leaf conversions
     _ -> leaf $ case loc of
-          CSS {value} -> CSSI {value}
-          XPath {value} -> XPathI {value}
-          AllElms -> XPathIDerived {tagM = Nothing, body = "true()"}
-          ID {value} -> XPathIDerived {tagM = Nothing, body = "@id='" <> value <> "'"}
+          CSS {value} -> CSSIBiDI {value}
+          XPath {value} -> XPathIBiDI {value}
+          AllElms -> XPathIDerivedBiDI {tagM = Nothing, body = "true()"}
+          ID {value} -> XPathIDerivedBiDI {tagM = Nothing, body = "@id='" <> value <> "'"}
           Class {value, matchType, caseSensitivity} ->
-            XPathIDerived {tagM = Nothing, body = classPredX value matchType caseSensitivity}
-          Tag {value} -> TagI {tag = value}
-          Role {role} -> RoleI {roleSpec = role, xpath = roleToXPath role}
+            XPathIDerivedBiDI {tagM = Nothing, body = classPredX value matchType caseSensitivity}
+          Tag {value} -> TagIBiDI {tag = value}
+          Role {role} -> RoleIBiDI {roleSpec = role}
           InnerText {value, matchType, caseSensitivity, maxDepth} ->
-            XPathIDerived {tagM = Nothing, body = innerTextPredX value caseSensitivity matchType maxDepth}
+            InnerTextIBiDI {value, matchType, caseSensitivity, maxDepth}
   where 
     leaf = Right . Leaf
     failLocator msg = Left $ MkInvalidLocator loc msg
@@ -837,7 +865,7 @@ toIntermediateBiDi defLoc loc =
 -- 2a. Flatten nested AllI/AnyI
 -----------------------------------------------------------------------------
 
-unnestAnysAllsBiDi :: CompoundLocator LocatorI -> CompoundLocator LocatorI
+unnestAnysAllsBiDi :: CompoundLocator LocatorIBiDi -> CompoundLocator LocatorIBiDi
 unnestAnysAllsBiDi = undefined
   -- \case
   --   AllI elms ->
@@ -854,7 +882,7 @@ unnestAnysAllsBiDi = undefined
 -----------------------------------------------------------------------------
 -- 2b. Combine contiguous XPathIDs
 -----------------------------------------------------------------------------
-mergeContiguousBiDi :: Locator -> CompoundLocator LocatorI -> Either InvalidLocator (CompoundLocator LocatorI)
+mergeContiguousBiDi :: Locator -> CompoundLocator LocatorIBiDi -> Either InvalidLocator (CompoundLocator LocatorIBiDi)
 mergeContiguousBiDi srcLoc li = undefined
   -- mergeAnys <$> mergeAlls srcLoc li
 
@@ -869,13 +897,13 @@ mergeTagsBiDi srcLoc = undefined
   --     | t1 == t2 -> Right (Just t1)
   --     | otherwise -> Left $ MkInvalidLocator srcLoc ("Contradictory tags in All combinator: " <> txt srcLoc <> "\n " <> t1 <> " and " <> t2)
 
-mergeAllsBiDi :: Locator -> CompoundLocator LocatorI -> Either InvalidLocator (CompoundLocator LocatorI)
+mergeAllsBiDi :: Locator -> CompoundLocator LocatorIBiDi -> Either InvalidLocator (CompoundLocator LocatorIBiDi)
 mergeAllsBiDi srcLoc = undefined
   -- mapCompoundLocBottomUpM (\case 
   --  AllI elms -> AllI <$> mergeAllElms elms
   --  other -> Right other)
   -- where
-  --   mergeAllElms :: NonEmpty (CompoundLocator LocatorI) -> Either InvalidLocator (NonEmpty (CompoundLocator LocatorI))
+  --   mergeAllElms :: NonEmpty (CompoundLocator LocatorIBiDI) -> Either InvalidLocator (NonEmpty (CompoundLocator LocatorIBiDI))
   --   mergeAllElms = \case
   --       (Leaf (XPathIDerived tm1 b1) :| Leaf (XPathIDerived tm2 b2) : rest) -> 
   --         do 
@@ -883,13 +911,13 @@ mergeAllsBiDi srcLoc = undefined
   --          mergeAllElms $ Leaf (XPathIDerived {tagM = tag, body = bracket b1 <> " and " <> bracket b2}) :| rest 
   --       x -> Right x
 
-mergeAnysBiDi ::  CompoundLocator LocatorI -> CompoundLocator LocatorI
+mergeAnysBiDi ::  CompoundLocator LocatorIBiDi -> CompoundLocator LocatorIBiDi
 mergeAnysBiDi = undefined
   -- mapCompoundLocBottomUp (\case 
   --  AnyI elms -> AnyI $ mergeAnyElms elms
   --  other -> other)
   -- where
-  --   mergeAnyElms :: NonEmpty (CompoundLocator LocatorI) -> NonEmpty (CompoundLocator LocatorI)
+  --   mergeAnyElms :: NonEmpty (CompoundLocator LocatorIBiDI) -> NonEmpty (CompoundLocator LocatorIBiDI)
   --   mergeAnyElms = \case
   --       -- Merge XPathIDs with identical tags
   --       ((Leaf (XPathIDerived tm1 b1)) :| (Leaf (XPathIDerived tm2 b2)) : rest) ->
@@ -936,23 +964,23 @@ mergeAnysBiDi = undefined
 -- 2c. Assign tags
 -----------------------------------------------------------------------------
 
-tagTxtBiDi :: CompoundLocator LocatorI -> Maybe Text
+tagTxtBiDi :: CompoundLocator LocatorIBiDi -> Maybe Text
 tagTxtBiDi = undefined
   -- \case 
   --   Leaf (TagI t) -> Just t
   --   _ -> Nothing
 
-isTagIBiDi :: CompoundLocator LocatorI -> Bool
+isTagIBiDi :: CompoundLocator LocatorIBiDi -> Bool
 isTagIBiDi = undefined
   -- isJust . tagTxt
 
-isNotTagIBiDi :: CompoundLocator LocatorI -> Bool
+isNotTagIBiDi :: CompoundLocator LocatorIBiDi -> Bool
 isNotTagIBiDi = undefined
   -- not . isTagI
 
 -- | Collect all tag values from TagI and tagged XPathIDerived leaves at all depths,
 --   including inside nested AnyI/ContainsI/AllI/PostFilterI combinators.
-collectTagsBiDi :: CompoundLocator LocatorI -> [Text]
+collectTagsBiDi :: CompoundLocator LocatorIBiDi -> [Text]
 collectTagsBiDi = undefined
   -- \case
   --   Leaf (TagI t) -> [t]
@@ -963,13 +991,13 @@ collectTagsBiDi = undefined
   --   AnyI xs -> toList xs >>= collectTags
 
 -- copy tags from TagI and XPathIDerived to all reachable XPathIDerived descendants, and remove the TagI if possible.
-distributeTagsInAllBiDi :: Locator -> CompoundLocator LocatorI -> Either InvalidLocator (CompoundLocator LocatorI)
+distributeTagsInAllBiDi :: Locator -> CompoundLocator LocatorIBiDi -> Either InvalidLocator (CompoundLocator LocatorIBiDi)
 distributeTagsInAllBiDi srcLocator = undefined
   --   mapCompoundLocBottomUpM (\case
   --     AllI elms -> AllI <$> distributeTagsToAllElms  elms
   --     other -> Right other)
   --   where
-  --     distributeTagsToAllElms ::  NonEmpty (CompoundLocator LocatorI) -> Either InvalidLocator (NonEmpty (CompoundLocator LocatorI))
+  --     distributeTagsToAllElms ::  NonEmpty (CompoundLocator LocatorIBiDI) -> Either InvalidLocator (NonEmpty (CompoundLocator LocatorIBiDI))
   --     distributeTagsToAllElms elms = do
   --       let tagVals = nub $ toList elms >>= collectTags
   --           -- Tags from direct children (TagI or tagged XPathIDerived only, no recursion).
@@ -1011,7 +1039,7 @@ distributeTagsInAllBiDi srcLocator = undefined
   --         XPathIDerived _ body -> XPathIDerived {tagM = Just t, body}
   --         other -> other
   -- 
-  --     isTagOrXPathID :: CompoundLocator LocatorI -> Bool
+  --     isTagOrXPathID :: CompoundLocator LocatorIBiDI-> Bool
   --     isTagOrXPathID = \case
   --         Leaf (XPathIDerived {}) -> True
   --         Leaf (TagI {}) -> True
@@ -1022,7 +1050,7 @@ distributeTagsInAllBiDi srcLocator = undefined
 -- 2d. Unwrap single-child combinators
 -----------------------------------------------------------------------------
 
-unwrapSingletonCombinatorsBiDi :: CompoundLocator LocatorI -> CompoundLocator LocatorI
+unwrapSingletonCombinatorsBiDi :: CompoundLocator LocatorIBiDi -> CompoundLocator LocatorIBiDi
 unwrapSingletonCombinatorsBiDi = undefined
   -- mapCompoundLocBottomUp $ \case
   --   AllI (x :| []) -> x
@@ -1033,14 +1061,14 @@ unwrapSingletonCombinatorsBiDi = undefined
 -- Phase 3: Final conversion
 -----------------------------------------------------------------------------
 
-derivedAndTagsToXPathBiDi :: CompoundLocator LocatorI -> CompoundLocator HttpLoc
+derivedAndTagsToXPathBiDi :: CompoundLocator LocatorIBiDi -> CompoundLocator BiDiLoc
 derivedAndTagsToXPathBiDi = undefined
   -- convertTagsXPathIDs . convertContains
 
 -- | Merge adjacent user-provided XPath locators in Contains at the LocatorI stage.
 --   This avoids text manipulation since the relative prefix ".//", brackets, etc.
 --   haven't been added yet. Only handles XPathI (user-provided XPath).
-convertContainsBiDi :: CompoundLocator LocatorI -> CompoundLocator LocatorI
+convertContainsBiDi :: CompoundLocator LocatorIBiDi -> CompoundLocator LocatorIBiDi
 convertContainsBiDi = undefined
   -- mapCompoundLocBottomUp $ \case
   --   -- Merge two user-provided XPaths
@@ -1050,7 +1078,7 @@ convertContainsBiDi = undefined
   --   other -> other
 
 -- | Convert LocatorI leaves to LocatorFinal leaves — uses 'fmap' via 'Functor'.
-convertTagsXPathIDsBiDi :: CompoundLocator LocatorI -> CompoundLocator HttpLoc
+convertTagsXPathIDsBiDi :: CompoundLocator LocatorIBiDi -> CompoundLocator BiDiLoc
 convertTagsXPathIDsBiDi = undefined
   -- fmap $ \case
   --   XPathIDerived {tagM, body} ->
