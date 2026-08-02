@@ -41,6 +41,7 @@ import WebDriverPreCore.Extended.Locators.Internal (Locator, RoleLocator (..), C
 import WebDriverPreCore.Extended.Locators.Internal qualified as LI
 import WebDriverPreCore.BiDi.Protocol qualified as BiDiP
 import Utils (txt)
+import WebDriverPreCore.Extended.BiDi.Base.Protocol (JSUInt, SerializationOptions, SharedReference)
 
 
 -- TODO
@@ -82,12 +83,22 @@ import Utils (txt)
 -- | Whether to find the unique element (error if multiple match) or just the first.
 data SingletonCardinality = Unique | First deriving (Show, Eq)
 
+
 -- | Options for singleton locate functions ('locateHttp', 'locateFromElementHttp').
 data BiDiLocateOpts = MkBiDiLocateOpts
   {
     singletonCardinality :: SingletonCardinality,
     defaultLoc :: Text -> Locator,
     locateTracing :: LocateTracing
+  }
+data BiDiBaseLocateOpts = MkBiDiBaseLocateOpts
+  {
+    singletonCardinality :: SingletonCardinality,
+    defaultLoc :: Text -> Locator,
+    locateTracing :: LocateTracing,
+    maxNodeCount :: Maybe JSUInt,
+    serializationOptions :: Maybe SerializationOptions,
+    startNodes :: Maybe [SharedReference]
   }
 
 -- | Actions for singleton locate functions ('locateHttp', 'locateFirstHttp', 'locateFromElementHttp').
@@ -109,6 +120,26 @@ data LocParams m = MkLocParams
     singletonCardinality :: SingletonCardinality
   }
 
+
+   {-
+data LocateNodes = MkLocateNodes
+  { context :: BrowsingContext,
+    locator :: Locator,
+    maxNodeCount :: Maybe JSUInt,
+    serializationOptions :: Maybe SerializationOptions,
+    startNodes :: Maybe [SharedReference]
+  }
+  deriving (Show, Eq, Generic)
+-}
+baseLocate :: BiDiBaseLocateOpts -> LocateActions m -> m (LocateResult BiDiP.NodeRemoteValue WDBiDITrace)
+baseLocate opts actions = do
+  logsRef <- liftIO $ newIORef []
+  let locParams = extendActions logsRef opts actions
+  rslt <- prepareRun locParams (locateNodes locParams) (defaultLoc opts "body")
+  logs <- liftIO $ P.reverse <$> readIORef logsRef
+  pure $ case opts.locateTracing of
+    LocateTracing -> LocateWithTrace rslt logs
+    NoLocateTracing -> Locate rslt
 -- | Build a 'LocParams m' from 'LocateActions m', writing traces to an 'IORef'.
 -- Using IORef instead of WriterT ensures trace entries are preserved even when
 -- exceptions are thrown (WriterT state is discarded on exception).
