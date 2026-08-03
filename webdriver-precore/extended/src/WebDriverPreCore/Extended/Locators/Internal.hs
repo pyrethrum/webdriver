@@ -213,8 +213,6 @@ data BiDiLoc
       Ord
     )
 
-
-
 -- | CompoundLocator represents the tree structure of composed locators.
 data CompoundLocator a
   = Leaf {getLeaf :: a}
@@ -281,7 +279,7 @@ toIntermediate defLoc loc =
     failLocator msg = Left $ MkInvalidLocator loc msg
 
 -----------------------------------------------------------------------------
--- Phase 2: Simplify loop (fixed-point)
+-- 2: Simplify loop (fixed-point)
 -----------------------------------------------------------------------------
 
 -----------------------------------------------------------------------------
@@ -475,7 +473,7 @@ unwrapSingletonCombinators = mapCompoundLocBottomUp $ \case
   other -> other
 
 -----------------------------------------------------------------------------
--- Phase 3: Final conversion
+-- 3: Final conversion
 ------------------------------------LocatorI-----------------------------------------
 
 derivedAndTagsToXPath :: CompoundLocator LocatorI -> CompoundLocator HttpLoc
@@ -861,7 +859,7 @@ toIntermediateBiDi defLoc loc =
     failLocator msg = Left $ MkInvalidLocator loc msg
 
 -----------------------------------------------------------------------------
--- Phase 2: Simplify loop (fixed-point)
+-- 2: Simplify loop (fixed-point)
 -----------------------------------------------------------------------------
 
 -----------------------------------------------------------------------------
@@ -1046,7 +1044,7 @@ unwrapSingletonCombinatorsBiDi = mapCompoundLocBottomUp $ \case
   other -> other
 
 -----------------------------------------------------------------------------
--- Phase 3: Final conversion
+-- 3: Final conversion
 -----------------------------------------------------------------------------
 
 derivedAndTagsToXPathBiDi :: CompoundLocator LocatorIBiDi -> CompoundLocator BiDiLoc
