@@ -302,12 +302,12 @@ locateElmsUnchecked ::
 locateElmsUnchecked actions leafCardinality rolesSecondPass loc =
    LST.nub <$>
     case loc of
-      LI.Leaf cl ->
+      LI.LeafC cl ->
         locateLeaf actions rolesSecondPass leafCardinality cl
-      LI.ContainsI {container, contained} -> do
+      LI.ContainsC {container, contained} -> do
         containers <- locate FindAll rolesSecondPass container
         locateContained containers contained
-      LI.AllI {elms = locs} -> do
+      LI.AllC {elms = locs} -> do
         let (l :| ls) = locs
             step acc loc' =
               if P.null acc
@@ -315,7 +315,7 @@ locateElmsUnchecked actions leafCardinality rolesSecondPass loc =
                 else LST.intersect acc <$> locate FindAll rolesSecondPass loc'
         initial <- locate FindAll rolesSecondPass l
         foldM step initial ls
-      LI.AnyI {elms = locs} ->
+      LI.AnyC {elms = locs} ->
         join <$>
           traverse (locate FindAll rolesSecondPass) (toList locs)
   where
@@ -337,7 +337,7 @@ httpLocateSingleton ::
   m [ElementId]
 httpLocateSingleton prms@MkLocParams{throw}  loc = do
   case loc of
-    LI.Leaf ll -> do
+    LI.LeafC ll -> do
       let leafCard = if prms.singletonCardinality == First
                         && prms.jsRecheckDisplayed /= DisplayedCheckAlways
                      then FindFirst
@@ -373,7 +373,7 @@ httpLocateSingleton prms@MkLocParams{throw}  loc = do
       throwAmbiguous elms = throw (AmbiguousLocator' ("Multiple elements found matching locator: " <> txt elms))
       isUnique = prms.singletonCardinality == Unique
       isRole = case loc of
-        LI.Leaf RoleHttp {} -> True
+        LI.LeafC RoleHttp {} -> True
         _ -> False
       secondPassOnInitial = case prms.extendedRoleLocation of
         ExtLocateNever -> NoRoleJSSecondPass

@@ -320,7 +320,7 @@ prepareSimplifyXPathTests =
         (Class "A" Partial CaseInsensitive ||| Class "B" Partial CaseInsensitive)
     ]
     where 
-      leaf = Right . Leaf
+      leaf = Right . LeafC
       httpLeaf = leaf . XPathHttp
 
 -- >>> _eval prop_simplification_merges_xpaths
@@ -415,16 +415,14 @@ mockLocatedReduced :: Bool -> CompoundLocator HttpLoc -> Bool
 mockLocatedReduced allElmsDefault = go
   where
     go = \case
-      Leaf lf -> case lf of
+      LeafC lf -> case lf of
         CSSHttp v -> readBool v
         XPathHttp v -> readXPathBool v
         RoleHttp {roleSpec = RoleName v} -> readBool v
         RoleHttp {} -> allElmsDefault
-      ContainsI p c' -> go p && go c'
-      AllI elms -> all go elms
-      AnyI elms -> any go elms
-      TagLeaf {} -> error "mockLocatedReduced: unexpected TagLeaf in final HttpLoc tree"
-      XPathDerivedLeaf {} -> error "mockLocatedReduced: unexpected XPathDerivedLeaf in final HttpLoc tree"
+      ContainsC p c' -> go p && go c'
+      AllC elms -> all go elms
+      AnyC elms -> any go elms
     readBool "True" = True
     readBool "False" = False
     readBool v = error $ "mockLocatedReduced: unexpected value: " <> unpack v
