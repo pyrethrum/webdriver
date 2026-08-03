@@ -29,7 +29,7 @@ import Control.Exception (Exception)
 import Data.Functor.Identity (Identity (..))
 import Data.List (nub)
 import Data.List.NonEmpty (NonEmpty (..), toList)
-import Data.Maybe (fromMaybe, catMaybes, isJust)
+import Data.Maybe (fromMaybe, catMaybes)
 import Data.Text (Text, intercalate, pack, splitOn, toLower, unpack)
 import Data.Text qualified as T
 import Data.Word (Word8)
@@ -136,24 +136,10 @@ data Locator
 -- | LocatorI an intermediate type representing leaf locators.
 --   Compound locators are represented by 'CompoundLocator'.
 data LocatorI
-  = 
-    CSSI {value :: Text}
+  = CSSI {value :: Text}
   | XPathI {value :: Text}
-  | XPathIDerived {
-      tagM :: Maybe Text, 
-      body :: Text
-      } 
-  | TagI {tag :: Text} 
   | RoleI {roleSpec :: RoleLocator, xpath :: Text}
-  -- | -- exclusive
-  --   -- browsingContextId -> elementId ie get the frame that belongs to the browsing context
-  --   BiDiContextI {context :: BrowsingContext}
-  deriving
-    ( -- | WithOptions {base :: LocatLocatorIor, options :: [LocatorDirectives]}
-      Show,
-      Eq,
-      Ord
-    )
+  deriving (Show, Eq, Ord)
 data HttpLoc
   = 
     CSSHttp {value :: Text}
@@ -167,32 +153,17 @@ data HttpLoc
     )
 
 data LocatorIBiDi
-  = 
-    CSSIBiDI {value :: Text}
+  = CSSIBiDI {value :: Text}
   | XPathIBiDI {value :: Text}
-  | XPathIDerivedBiDI {
-      tagM :: Maybe Text, 
-      body :: Text
-      } 
-  | TagIBiDI {tag :: Text} 
   | RoleIBiDI {roleSpec :: RoleLocator}
-  -- | -- exclusive
-  --   -- browsingContextId -> elementId ie get the frame that belongs to the browsing context
-   | BiDiContextI {context :: BrowsingContext}
-   -- properties  kept the same as user facing Locator 
-   -- because needs special execution logic for required wildcard matching
-   | InnerTextIBiDI
+  | BiDiContextI {context :: BrowsingContext}
+  | InnerTextIBiDI
       { value :: Text,
         matchType :: MatchType,
         caseSensitivity :: CaseSensitivity,
         maxDepth :: Maybe Word8
       }
-  deriving
-    ( -- | WithOptions {base :: LocatLocatorIor, options :: [LocatorDirectives]}
-      Show,
-      Eq,
-      Ord
-    )
+  deriving (Show, Eq, Ord)
 
 data BiDiLoc
   = 
@@ -216,6 +187,8 @@ data BiDiLoc
 -- | CompoundLocator represents the tree structure of composed locators.
 data CompoundLocator a
   = Leaf {getLeaf :: a}
+  | TagLeaf {tag :: Text}
+  | XPathDerivedLeaf {tagM :: Maybe Text, body :: Text}
   | ContainsI {container :: CompoundLocator a, contained :: CompoundLocator a}
   | AllI {elms :: NonEmpty (CompoundLocator a)}
   | AnyI {elms :: NonEmpty (CompoundLocator a)}
@@ -224,17 +197,19 @@ data CompoundLocator a
 transform :: (Text -> Locator) -> Locator -> Either InvalidLocator (CompoundLocator HttpLoc)
 transform defLoc loc = do
   locI <- toIntermediate defLoc loc
-  simplified <- simplify locI
+  simplified <- simplify loc locI
   Right $ derivedAndTagsToXPath simplified
-  where
-    simplify :: CompoundLocator LocatorI -> Either InvalidLocator (CompoundLocator LocatorI)
-    simplify current = do
-      merged <- mergeContiguous loc $ unnestAnysAlls current
-      tagged <- distributeTagsInAll loc merged
-      let unwrapped = unwrapSingletonCombinators tagged
-      if unwrapped == current
-        then pure current
-        else simplify unwrapped
+
+-- | Shared simplification pipeline: flatten, merge, distribute tags, unwrap.
+--   Fixed-point loop — repeats until no more simplifications apply.
+simplify :: Eq a => Locator -> CompoundLocator a -> Either InvalidLocator (CompoundLocator a)
+simplify srcLoc current = do
+  merged <- mergeContiguous srcLoc $ unnestAnysAlls current
+  tagged <- distributeTagsInAll srcLoc merged
+  let unwrapped = unwrapSingletonCombinators tagged
+  if unwrapped == current
+    then pure current
+    else simplify srcLoc unwrapped
 
 -----------------------------------------------------------------------------
 -- 1: Initial conversion (Locator → CompoundLocator LocatorI)
@@ -248,7 +223,7 @@ toIntermediate defLoc loc =
       | T.null name || T.null value ->
           failLocator "Attribute locator has empty name or value"
       | otherwise ->
-          leaf $ XPathIDerived {tagM = Nothing, body = attrPredX name value matchType caseSensitivity}
+          Right $ XPathDerivedLeaf {tagM = Nothing, body = attrPredX name value matchType caseSensitivity}
     Default {value} ->
       let resolved = defLoc value
       in if hasDefault resolved
@@ -263,17 +238,16 @@ toIntermediate defLoc loc =
     Any {elms} ->
       AnyI <$> traverse (toIntermediate defLoc) elms
     -- leaf conversions
-    _ -> leaf $ case loc of
-          CSS {value} -> CSSI {value}
-          XPath {value} -> XPathI {value}
-          AllElms -> XPathIDerived {tagM = Nothing, body = "true()"}
-          ID {value} -> XPathIDerived {tagM = Nothing, body = "@id='" <> value <> "'"}
-          Class {value, matchType, caseSensitivity} ->
-            XPathIDerived {tagM = Nothing, body = classPredX value matchType caseSensitivity}
-          Tag {value} -> TagI {tag = value}
-          Role {role} -> RoleI {roleSpec = role, xpath = roleToXPath role}
-          InnerText {..} ->
-            XPathIDerived {tagM = Nothing, body = innerTextPredX value caseSensitivity matchType maxDepth}
+    CSS {value} -> leaf $ CSSI {value}
+    XPath {value} -> leaf $ XPathI {value}
+    AllElms -> Right $ XPathDerivedLeaf {tagM = Nothing, body = "true()"}
+    ID {value} -> Right $ XPathDerivedLeaf {tagM = Nothing, body = "@id='" <> value <> "'"}
+    Class {value, matchType, caseSensitivity} ->
+      Right $ XPathDerivedLeaf {tagM = Nothing, body = classPredX value matchType caseSensitivity}
+    Tag {value} -> Right $ TagLeaf {tag = value}
+    Role {role} -> leaf $ RoleI {roleSpec = role, xpath = roleToXPath role}
+    InnerText {..} ->
+      Right $ XPathDerivedLeaf {tagM = Nothing, body = innerTextPredX value caseSensitivity matchType maxDepth}
   where 
     leaf = Right . Leaf
     failLocator msg = Left $ MkInvalidLocator loc msg
@@ -286,7 +260,7 @@ toIntermediate defLoc loc =
 -- 2a. Flatten nested AllI/AnyI
 -----------------------------------------------------------------------------
 
-unnestAnysAlls :: CompoundLocator LocatorI -> CompoundLocator LocatorI
+unnestAnysAlls :: CompoundLocator a -> CompoundLocator a
 unnestAnysAlls = \case
   AllI elms ->
     AllI $ unnestAnysAlls <$> elms >>= (\case 
@@ -297,12 +271,12 @@ unnestAnysAlls = \case
         AnyI xs -> xs
         x -> x :| [] )
   ContainsI c d -> ContainsI (unnestAnysAlls c) (unnestAnysAlls d)
-  Leaf a -> Leaf a
+  other -> other
 
 -----------------------------------------------------------------------------
 -- 2b. Combine contiguous XPathIDs
 -----------------------------------------------------------------------------
-mergeContiguous :: Locator -> CompoundLocator LocatorI -> Either InvalidLocator (CompoundLocator LocatorI)
+mergeContiguous :: Locator -> CompoundLocator a -> Either InvalidLocator (CompoundLocator a)
 mergeContiguous srcLoc li = mergeAnys <$> mergeAlls srcLoc li
 
 bracket :: Text -> Text
@@ -317,37 +291,37 @@ mergeTags srcLoc = \cases
     | t1 == t2 -> Right (Just t1)
     | otherwise -> Left $ MkInvalidLocator srcLoc ("Contradictory tags in All combinator: " <> txt srcLoc <> "\n " <> t1 <> " and " <> t2)
 
-mergeAlls :: Locator -> CompoundLocator LocatorI -> Either InvalidLocator (CompoundLocator LocatorI)
+mergeAlls :: Locator -> CompoundLocator a -> Either InvalidLocator (CompoundLocator a)
 mergeAlls srcLoc = 
   mapCompoundLocBottomUpM (\case 
    AllI elms -> AllI <$> mergeAllElms elms
    other -> Right other)
  where
-   mergeAllElms :: NonEmpty (CompoundLocator LocatorI) -> Either InvalidLocator (NonEmpty (CompoundLocator LocatorI))
+   mergeAllElms :: NonEmpty (CompoundLocator a) -> Either InvalidLocator (NonEmpty (CompoundLocator a))
    mergeAllElms = \case
-       (Leaf (XPathIDerived tm1 b1) :| Leaf (XPathIDerived tm2 b2) : rest) -> 
+       (XPathDerivedLeaf tm1 b1 :| XPathDerivedLeaf tm2 b2 : rest) -> 
          do 
           tag <- mergeTags srcLoc tm1 tm2
-          mergeAllElms $ Leaf (XPathIDerived {tagM = tag, body = bracket b1 <> " and " <> bracket b2}) :| rest 
+          mergeAllElms $ XPathDerivedLeaf {tagM = tag, body = bracket b1 <> " and " <> bracket b2} :| rest 
        x -> Right x
 
-mergeAnys ::  CompoundLocator LocatorI -> CompoundLocator LocatorI
+mergeAnys :: CompoundLocator a -> CompoundLocator a
 mergeAnys  = 
   mapCompoundLocBottomUp (\case 
    AnyI elms -> AnyI $ mergeAnyElms elms
    other -> other)
  where
-   mergeAnyElms :: NonEmpty (CompoundLocator LocatorI) -> NonEmpty (CompoundLocator LocatorI)
+   mergeAnyElms :: NonEmpty (CompoundLocator a) -> NonEmpty (CompoundLocator a)
    mergeAnyElms = \case
        -- Merge XPathIDs with identical tags
-       ((Leaf (XPathIDerived tm1 b1)) :| (Leaf (XPathIDerived tm2 b2)) : rest) ->
+       (XPathDerivedLeaf tm1 b1 :| XPathDerivedLeaf tm2 b2 : rest) ->
         -- if tags are identical then they can be merged 
         -- Nothing cannot be merged with Just because Nothing represents any tag
          mergeAnyElms $ 
           if tm1 == tm2 then 
-            Leaf (XPathIDerived tm1 (bracket b1 <> " or " <> bracket b2)) :| rest
+            XPathDerivedLeaf tm1 (bracket b1 <> " or " <> bracket b2) :| rest
           else
-            Leaf (XPathIDerived Nothing $ xpathTxt1 <> " or " <> xpathTxt2) :| rest
+            XPathDerivedLeaf Nothing (xpathTxt1 <> " or " <> xpathTxt2) :| rest
           where
             xpathTxt1 = inlineTag tm1 b1
             xpathTxt2 = inlineTag tm2 b2
@@ -356,23 +330,23 @@ mergeAnys  =
                 (bracket body)
                 \t -> "(" <> selfTag t <> " and " <> bracket body <> ")"
                           
-       -- Tag overrides XPathIDerived with the same tag (eg div or div && class => div as all div && class will satisfy div)
-       (Leaf (TagI tag) :| Leaf (XPathIDerived {tagM = Just tm}) : rest)  | tag == tm ->
-          mergeAnyElms $ Leaf (TagI tag) :| rest
+       -- Tag overrides XPathDerived with the same tag (eg div or div && class => div as all div && class will satisfy div)
+       (TagLeaf tag :| XPathDerivedLeaf {tagM = Just tm} : rest)  | tag == tm ->
+          mergeAnyElms $ TagLeaf tag :| rest
        -- as above flipped
-       (Leaf (XPathIDerived {tagM = Just tm}) :| Leaf (TagI tag) : rest) | tag == tm ->
-         mergeAnyElms $ Leaf (TagI tag) :| rest
+       (XPathDerivedLeaf {tagM = Just tm} :| TagLeaf tag : rest) | tag == tm ->
+         mergeAnyElms $ TagLeaf tag :| rest
        
-       -- TagI followed by XPathIDerived with wildcard (no tag)
+       -- TagLeaf followed by XPathDerived with wildcard (no tag)
        -- Any(Tag "div", Class "foo") → .//*[self::div or (...)]
-       (Leaf (TagI tag) :| Leaf (XPathIDerived {tagM = Nothing, body}) : rest) ->
-         mergeAnyElms $ Leaf (XPathIDerived {tagM = Nothing, body = selfTag tag <> " or " <> bracket body}) :| rest
+       (TagLeaf tag :| XPathDerivedLeaf {tagM = Nothing, body} : rest) ->
+         mergeAnyElms $ XPathDerivedLeaf {tagM = Nothing, body = selfTag tag <> " or " <> bracket body} :| rest
        -- as above flipped
-       (Leaf (XPathIDerived {tagM = Nothing, body}) :| Leaf (TagI tag) : rest) ->
-         mergeAnyElms $ Leaf (XPathIDerived {tagM = Nothing, body = bracket body <> " or " <> selfTag tag}) :| rest
+       (XPathDerivedLeaf {tagM = Nothing, body} :| TagLeaf tag : rest) ->
+         mergeAnyElms $ XPathDerivedLeaf {tagM = Nothing, body = bracket body <> " or " <> selfTag tag} :| rest
 
-       (Leaf (TagI tag1)  :| Leaf (TagI tag2) : rest) ->
-         mergeAnyElms $ Leaf (XPathIDerived {tagM = Nothing, body = selfTag tag1 <> " or " <> selfTag tag2}) :| rest
+       (TagLeaf tag1  :| TagLeaf tag2 : rest) ->
+         mergeAnyElms $ XPathDerivedLeaf {tagM = Nothing, body = selfTag tag1 <> " or " <> selfTag tag2} :| rest
        
        x -> x
     where 
@@ -384,45 +358,35 @@ mergeAnys  =
 -- 2c. Assign tags
 -----------------------------------------------------------------------------
 
-tagTxt :: CompoundLocator LocatorI -> Maybe Text
-tagTxt  = \case 
-  Leaf (TagI t) -> Just t
-  _ -> Nothing
-
-isTagI :: CompoundLocator LocatorI -> Bool
-isTagI  = isJust . tagTxt
-
-isNotTagI :: CompoundLocator LocatorI -> Bool
-isNotTagI = not . isTagI
-
--- | Collect all tag values from TagI and tagged XPathIDerived leaves at all depths,
---   including inside nested AnyI/ContainsI/AllI/PostFilterI combinators.
-collectTags :: CompoundLocator LocatorI -> [Text]
+-- | Collect all tag values from TagLeaf and tagged XPathDerivedLeaf leaves at all depths,
+--   including inside nested AnyI/ContainsI/AllI combinators.
+collectTags :: CompoundLocator a -> [Text]
 collectTags = \case
-  Leaf (TagI t) -> [t]
-  Leaf (XPathIDerived {tagM = Just t}) -> [t]
+  TagLeaf t -> [t]
+  XPathDerivedLeaf {tagM = Just t} -> [t]
+  XPathDerivedLeaf {} -> []
   Leaf _ -> []
   ContainsI c d -> collectTags c <> collectTags d
   AllI xs -> toList xs >>= collectTags
   AnyI xs -> toList xs >>= collectTags
 
--- copy tags from TagI and XPathIDerived to all reachable XPathIDerived descendants, and remove the TagI if possible.
-distributeTagsInAll :: Locator -> CompoundLocator LocatorI -> Either InvalidLocator (CompoundLocator LocatorI)
+-- copy tags from TagLeaf and XPathDerivedLeaf to all reachable XPathDerivedLeaf descendants, and remove the TagLeaf if possible.
+distributeTagsInAll :: Locator -> CompoundLocator a -> Either InvalidLocator (CompoundLocator a)
 distributeTagsInAll srcLocator = 
     mapCompoundLocBottomUpM (\case
       AllI elms -> AllI <$> distributeTagsToAllElms  elms
       other -> Right other)
     where
-      distributeTagsToAllElms ::  NonEmpty (CompoundLocator LocatorI) -> Either InvalidLocator (NonEmpty (CompoundLocator LocatorI))
+      distributeTagsToAllElms ::  NonEmpty (CompoundLocator a) -> Either InvalidLocator (NonEmpty (CompoundLocator a))
       distributeTagsToAllElms elms = do
         let tagVals = nub $ toList elms >>= collectTags
-            -- Tags from direct children (TagI or tagged XPathIDerived only, no recursion).
+            -- Tags from direct children (TagLeaf or tagged XPathDerivedLeaf only, no recursion).
             -- Used to decide whether to distribute: if all tags come from nested
             -- combinators (AnyI/ContainsI etc.) with no direct child tag source,
             -- skip distribution to avoid corrupting unrelated branches.
             directTagVals = nub . catMaybes $ toList elms >>= \case
-              Leaf (TagI t) -> [Just t]
-              Leaf (XPathIDerived {tagM = Just t}) -> [Just t]
+              TagLeaf t -> [Just t]
+              XPathDerivedLeaf {tagM = Just t} -> [Just t]
               _ -> [Nothing]
         
         -- 2c-ii: Contradictory tag detection (all descendants)
@@ -440,33 +404,41 @@ distributeTagsInAll srcLocator =
               [] -> pure elms
               _ -> case result of
                 -- empty list wont happen unless there is a bug
-                [] -> error "processAllI: empty result"
+                [] -> error "distributeTagsInAll: empty result"
                 x : xs -> Right (x :| xs)
             where
                 elements = toList elms
-                distributed = fmap (copyTagToXPathID t) <$> elms
-                canRemove = all isTagOrXPathID distributed && not (all isTagI elements)
+                distributed = copyTagToXPath t <$> elms
+                canRemove = all isTagOrXPathID distributed && not (all isTag elements)
                 result = if canRemove 
-                        then filter isNotTagI $ toList distributed
+                        then filter isNotTag $ toList distributed
                         else toList distributed
       
-      copyTagToXPathID :: Text -> LocatorI -> LocatorI
-      copyTagToXPathID t = \case
-          XPathIDerived _ body -> XPathIDerived {tagM = Just t, body}
+      copyTagToXPath :: Text -> CompoundLocator a -> CompoundLocator a
+      copyTagToXPath t = \case
+          XPathDerivedLeaf _ body -> XPathDerivedLeaf {tagM = Just t, body}
           other -> other
 
-      isTagOrXPathID :: CompoundLocator LocatorI -> Bool
+      isTagOrXPathID :: CompoundLocator a -> Bool
       isTagOrXPathID = \case
-          Leaf (XPathIDerived {}) -> True
-          Leaf (TagI {}) -> True
+          XPathDerivedLeaf {} -> True
+          TagLeaf {} -> True
           _ -> False
+
+      isTag :: CompoundLocator a -> Bool
+      isTag = \case
+          TagLeaf {} -> True
+          _ -> False
+
+      isNotTag :: CompoundLocator a -> Bool
+      isNotTag = not . isTag
 
 
 -----------------------------------------------------------------------------
 -- 2d. Unwrap single-child combinators
 -----------------------------------------------------------------------------
 
-unwrapSingletonCombinators :: CompoundLocator LocatorI -> CompoundLocator LocatorI
+unwrapSingletonCombinators :: CompoundLocator a -> CompoundLocator a
 unwrapSingletonCombinators = mapCompoundLocBottomUp $ \case
   AllI (x :| []) -> x
   AnyI (x :| []) -> x
@@ -490,15 +462,19 @@ convertContains = mapCompoundLocBottomUp $ \case
   -- Keep other combinations as ContainsI - they'll be handled after conversion to HttpLoc
   other -> other
 
--- | Convert LocatorI leaves to LocatorFinal leaves — uses 'fmap' via 'Functor'.
+-- | Convert LocatorI leaves and XPathDerivedLeaf/TagLeaf to HttpLoc.
 convertTagsXPathIDs :: CompoundLocator LocatorI -> CompoundLocator HttpLoc
-convertTagsXPathIDs = fmap $ \case
-  XPathIDerived {tagM, body} ->
-    XPathHttp {value = xPathIDTxt tagM body}
-  TagI {tag} -> XPathHttp {value = xPathRelativePrefix <> tag}
-  CSSI {..} -> CSSHttp {..}
-  XPathI {..} -> XPathHttp {..}
-  RoleI {..} -> RoleHttp {..}
+convertTagsXPathIDs = go
+  where
+    go = \case
+      XPathDerivedLeaf {tagM, body} -> Leaf $ XPathHttp {value = xPathIDTxt tagM body}
+      TagLeaf {tag} -> Leaf $ XPathHttp {value = xPathRelativePrefix <> tag}
+      Leaf (CSSI {..}) -> Leaf $ CSSHttp {..}
+      Leaf (XPathI {..}) -> Leaf $ XPathHttp {..}
+      Leaf (RoleI {..}) -> Leaf $ RoleHttp {..}
+      ContainsI c d -> ContainsI (go c) (go d)
+      AllI elms -> AllI (go <$> elms)
+      AnyI elms -> AnyI (go <$> elms)
 
 xPathIDTxt :: Maybe Text -> Text -> Text
 xPathIDTxt tagM body = xPathRelativePrefix <> fromMaybe "*" tagM <> "[" <> body <> "]"
@@ -631,7 +607,7 @@ mapCompoundLocBottomUpM f = recurse >=> f
       ContainsI c d -> ContainsI <$> mapf c <*> mapf d
       AllI elms -> AllI <$> traverse mapf elms
       AnyI elms -> AnyI <$> traverse mapf elms
-      leaf@(Leaf _) -> pure leaf
+      other -> pure other
  
 -- | Map over a 'CompoundLocator' tree bottom-up.
 --   Expressed via 'mapCompoundLocBottomUpM' using the 'Identity' monad.
@@ -800,24 +776,14 @@ lowerAlpha = "abcdefghijklmnopqrstuvwxyz"
 
 -- ###################################### BiDi #####################################
 
-
 transformBiDi :: (Text -> Locator) -> Locator -> Either InvalidLocator (CompoundLocator BiDiLoc)
 transformBiDi defLoc loc = do
   locI <- toIntermediateBiDi defLoc loc
-  simplified <- simplify locI
+  simplified <- simplify loc locI
   Right $ derivedAndTagsToXPathBiDi simplified
-  where
-    simplify :: CompoundLocator LocatorIBiDi -> Either InvalidLocator (CompoundLocator LocatorIBiDi)
-    simplify current = do
-      merged <- mergeContiguousBiDi loc $ unnestAnysAllsBiDi current
-      tagged <- distributeTagsInAllBiDi loc merged
-      let unwrapped = unwrapSingletonCombinatorsBiDi tagged
-      if unwrapped == current
-        then pure current
-        else simplify unwrapped
 
 -----------------------------------------------------------------------------
--- 1: Initial conversion (Locator → CompoundLocator LocatorI)
+-- 1: Initial conversion (Locator → CompoundLocator LocatorIBiDi)
 -----------------------------------------------------------------------------
 
 toIntermediateBiDi :: (Text -> Locator) -> Locator -> Either InvalidLocator (CompoundLocator LocatorIBiDi)
@@ -828,7 +794,7 @@ toIntermediateBiDi defLoc loc =
       | T.null name || T.null value ->
           failLocator "Attribute locator has empty name or value"
       | otherwise ->
-          leaf $ XPathIDerivedBiDI {tagM = Nothing, body = attrPredX name value matchType caseSensitivity}
+          Right $ XPathDerivedLeaf {tagM = Nothing, body = attrPredX name value matchType caseSensitivity}
     Default {value} ->
       let resolved = defLoc value
       in if hasDefault resolved
@@ -843,205 +809,23 @@ toIntermediateBiDi defLoc loc =
     Any {elms} ->
       AnyI <$> traverse (toIntermediateBiDi defLoc) elms
     -- leaf conversions
-    _ -> leaf $ case loc of
-          CSS {value} -> CSSIBiDI {value}
-          XPath {value} -> XPathIBiDI {value}
-          AllElms -> XPathIDerivedBiDI {tagM = Nothing, body = "true()"}
-          ID {value} -> XPathIDerivedBiDI {tagM = Nothing, body = "@id='" <> value <> "'"}
-          Class {value, matchType, caseSensitivity} ->
-            XPathIDerivedBiDI {tagM = Nothing, body = classPredX value matchType caseSensitivity}
-          Tag {value} -> TagIBiDI {tag = value}
-          Role {role} -> RoleIBiDI {roleSpec = role}
-          InnerText {value, matchType, caseSensitivity, maxDepth} ->
-            InnerTextIBiDI {value, matchType, caseSensitivity, maxDepth}
+    CSS {value} -> leaf $ CSSIBiDI {value}
+    XPath {value} -> leaf $ XPathIBiDI {value}
+    AllElms -> Right $ XPathDerivedLeaf {tagM = Nothing, body = "true()"}
+    ID {value} -> Right $ XPathDerivedLeaf {tagM = Nothing, body = "@id='" <> value <> "'"}
+    Class {value, matchType, caseSensitivity} ->
+      Right $ XPathDerivedLeaf {tagM = Nothing, body = classPredX value matchType caseSensitivity}
+    Tag {value} -> Right $ TagLeaf {tag = value}
+    Role {role} -> leaf $ RoleIBiDI {roleSpec = role}
+    InnerText {value, matchType, caseSensitivity, maxDepth} ->
+      leaf $ InnerTextIBiDI {value, matchType, caseSensitivity, maxDepth}
   where 
     leaf = Right . Leaf
     failLocator msg = Left $ MkInvalidLocator loc msg
 
 -----------------------------------------------------------------------------
--- 2: Simplify loop (fixed-point)
+-- 2: Simplify loop (fixed-point) — uses shared 'simplify' above
 -----------------------------------------------------------------------------
-
------------------------------------------------------------------------------
--- 2a. Flatten nested AllI/AnyI
------------------------------------------------------------------------------
-
-unnestAnysAllsBiDi :: CompoundLocator LocatorIBiDi -> CompoundLocator LocatorIBiDi
-unnestAnysAllsBiDi = \case
-  AllI elms ->
-    AllI $ unnestAnysAllsBiDi <$> elms >>= (\case 
-        AllI xs -> xs
-        x -> x :| [] )
-  AnyI elms ->
-    AnyI $ unnestAnysAllsBiDi <$> elms >>= (\case
-        AnyI xs -> xs
-        x -> x :| [] )
-  ContainsI c d -> ContainsI (unnestAnysAllsBiDi c) (unnestAnysAllsBiDi d)
-  Leaf a -> Leaf a
-
------------------------------------------------------------------------------
--- 2b. Combine contiguous XPathIDs
------------------------------------------------------------------------------
-mergeContiguousBiDi :: Locator -> CompoundLocator LocatorIBiDi -> Either InvalidLocator (CompoundLocator LocatorIBiDi)
-mergeContiguousBiDi srcLoc li = mergeAnysBiDi <$> mergeAllsBiDi srcLoc li
-
-mergeTagsBiDi :: Locator -> Maybe Text -> Maybe Text -> Either InvalidLocator (Maybe Text)
-mergeTagsBiDi = mergeTags
-
-mergeAllsBiDi :: Locator -> CompoundLocator LocatorIBiDi -> Either InvalidLocator (CompoundLocator LocatorIBiDi)
-mergeAllsBiDi srcLoc = 
-  mapCompoundLocBottomUpM (\case 
-   AllI elms -> AllI <$> mergeAllElms elms
-   other -> Right other)
- where
-   mergeAllElms :: NonEmpty (CompoundLocator LocatorIBiDi) -> Either InvalidLocator (NonEmpty (CompoundLocator LocatorIBiDi))
-   mergeAllElms = \case
-       (Leaf (XPathIDerivedBiDI tm1 b1) :| Leaf (XPathIDerivedBiDI tm2 b2) : rest) -> 
-         do 
-          tag <- mergeTagsBiDi srcLoc tm1 tm2
-          mergeAllElms $ Leaf (XPathIDerivedBiDI {tagM = tag, body = bracket b1 <> " and " <> bracket b2}) :| rest 
-       x -> Right x
-
-mergeAnysBiDi ::  CompoundLocator LocatorIBiDi -> CompoundLocator LocatorIBiDi
-mergeAnysBiDi  = 
-  mapCompoundLocBottomUp (\case 
-   AnyI elms -> AnyI $ mergeAnyElms elms
-   other -> other)
- where
-   mergeAnyElms :: NonEmpty (CompoundLocator LocatorIBiDi) -> NonEmpty (CompoundLocator LocatorIBiDi)
-   mergeAnyElms = \case
-       -- Merge XPathIDs with identical tags
-       ((Leaf (XPathIDerivedBiDI tm1 b1)) :| (Leaf (XPathIDerivedBiDI tm2 b2)) : rest) ->
-        -- if tags are identical then they can be merged 
-        -- Nothing cannot be merged with Just because Nothing represents any tag
-         mergeAnyElms $ 
-          if tm1 == tm2 then 
-            Leaf (XPathIDerivedBiDI tm1 (bracket b1 <> " or " <> bracket b2)) :| rest
-          else
-            Leaf (XPathIDerivedBiDI Nothing $ xpathTxt1 <> " or " <> xpathTxt2) :| rest
-          where
-            xpathTxt1 = inlineTag tm1 b1
-            xpathTxt2 = inlineTag tm2 b2
-            inlineTag tagM body =
-              tagM & maybe 
-                (bracket body)
-                \t -> "(" <> selfTag t <> " and " <> bracket body <> ")"
-                          
-       -- Tag overrides XPathIDerived with the same tag (eg div or div && class => div as all div && class will satisfy div)
-       (Leaf (TagIBiDI tag) :| Leaf (XPathIDerivedBiDI {tagM = Just tm}) : rest)  | tag == tm ->
-          mergeAnyElms $ Leaf (TagIBiDI tag) :| rest
-       -- as above flipped
-       (Leaf (XPathIDerivedBiDI {tagM = Just tm}) :| Leaf (TagIBiDI tag) : rest) | tag == tm ->
-         mergeAnyElms $ Leaf (TagIBiDI tag) :| rest
-       
-       -- TagI followed by XPathIDerived with wildcard (no tag)
-       -- Any(Tag "div", Class "foo") → .//*[self::div or (...)]
-       (Leaf (TagIBiDI tag) :| Leaf (XPathIDerivedBiDI {tagM = Nothing, body}) : rest) ->
-         mergeAnyElms $ Leaf (XPathIDerivedBiDI {tagM = Nothing, body = selfTag tag <> " or " <> bracket body}) :| rest
-       -- as above flipped
-       (Leaf (XPathIDerivedBiDI {tagM = Nothing, body}) :| Leaf (TagIBiDI tag) : rest) ->
-         mergeAnyElms $ Leaf (XPathIDerivedBiDI {tagM = Nothing, body = bracket body <> " or " <> selfTag tag}) :| rest
-
-       (Leaf (TagIBiDI tag1)  :| Leaf (TagIBiDI tag2) : rest) ->
-         mergeAnyElms $ Leaf (XPathIDerivedBiDI {tagM = Nothing, body = selfTag tag1 <> " or " <> selfTag tag2}) :| rest
-       
-       x -> x
-    where 
-      selfTag :: Text -> Text
-      selfTag tag = "self::" <> tag
-           
-
------------------------------------------------------------------------------
--- 2c. Assign tags
------------------------------------------------------------------------------
-
-tagTxtBiDi :: CompoundLocator LocatorIBiDi -> Maybe Text
-tagTxtBiDi = \case 
-  Leaf (TagIBiDI t) -> Just t
-  _ -> Nothing
-
-isTagIBiDi :: CompoundLocator LocatorIBiDi -> Bool
-isTagIBiDi = isJust . tagTxtBiDi
-
-isNotTagIBiDi :: CompoundLocator LocatorIBiDi -> Bool
-isNotTagIBiDi = not . isTagIBiDi
-
--- | Collect all tag values from TagI and tagged XPathIDerived leaves at all depths,
---   including inside nested AnyI/ContainsI/AllI/PostFilterI combinators.
-collectTagsBiDi :: CompoundLocator LocatorIBiDi -> [Text]
-collectTagsBiDi = \case
-  Leaf (TagIBiDI t) -> [t]
-  Leaf (XPathIDerivedBiDI {tagM = Just t}) -> [t]
-  Leaf _ -> []
-  ContainsI c d -> collectTagsBiDi c <> collectTagsBiDi d
-  AllI xs -> toList xs >>= collectTagsBiDi
-  AnyI xs -> toList xs >>= collectTagsBiDi
-
--- copy tags from TagI and XPathIDerived to all reachable XPathIDerived descendants, and remove the TagI if possible.
-distributeTagsInAllBiDi :: Locator -> CompoundLocator LocatorIBiDi -> Either InvalidLocator (CompoundLocator LocatorIBiDi)
-distributeTagsInAllBiDi srcLocator = 
-    mapCompoundLocBottomUpM (\case
-      AllI elms -> AllI <$> distributeTagsToAllElms  elms
-      other -> Right other)
-    where
-      distributeTagsToAllElms ::  NonEmpty (CompoundLocator LocatorIBiDi) -> Either InvalidLocator (NonEmpty (CompoundLocator LocatorIBiDi))
-      distributeTagsToAllElms elms = do
-        let tagVals = nub $ toList elms >>= collectTagsBiDi
-            -- Tags from direct children (TagI or tagged XPathIDerived only, no recursion).
-            -- Used to decide whether to distribute: if all tags come from nested
-            -- combinators (AnyI/ContainsI etc.) with no direct child tag source,
-            -- skip distribution to avoid corrupting unrelated branches.
-            directTagVals = nub . catMaybes $ toList elms >>= \case
-              Leaf (TagIBiDI t) -> [Just t]
-              Leaf (XPathIDerivedBiDI {tagM = Just t}) -> [Just t]
-              _ -> [Nothing]
-        
-        -- 2c-ii: Contradictory tag detection (all descendants)
-        case tagVals of
-          -- no tags, nothing to check
-          [] -> pure elms 
-          -- contradictory tags
-          _ : _ : _ -> Left . MkInvalidLocator srcLocator $ 
-            "Contradictory tags in All combinator: " <> T.intercalate ", " tagVals
-          -- singleton tag -> check if removable
-          [t] ->
-            case directTagVals of
-              -- Tag only from nested sources (Any/Contains/etc.), not a direct constraint.
-              -- Don't distribute — it would corrupt unrelated branches.
-              [] -> pure elms
-              _ -> case result of
-                -- empty list wont happen unless there is a bug
-                [] -> error "processAllI: empty result"
-                x : xs -> Right (x :| xs)
-            where
-                elements = toList elms
-                distributed = fmap (copyTagToXPathID t) <$> elms
-                canRemove = all isTagOrXPathID distributed && not (all isTagIBiDi elements)
-                result = if canRemove 
-                        then filter isNotTagIBiDi $ toList distributed
-                        else toList distributed
-      
-      copyTagToXPathID :: Text -> LocatorIBiDi -> LocatorIBiDi
-      copyTagToXPathID t = \case
-          XPathIDerivedBiDI _ body -> XPathIDerivedBiDI {tagM = Just t, body}
-          other -> other
-
-      isTagOrXPathID :: CompoundLocator LocatorIBiDi -> Bool
-      isTagOrXPathID = \case
-          Leaf (XPathIDerivedBiDI {}) -> True
-          Leaf (TagIBiDI {}) -> True
-          _ -> False
-
-
------------------------------------------------------------------------------
--- 2d. Unwrap single-child combinators
------------------------------------------------------------------------------
-
-unwrapSingletonCombinatorsBiDi :: CompoundLocator LocatorIBiDi -> CompoundLocator LocatorIBiDi
-unwrapSingletonCombinatorsBiDi = mapCompoundLocBottomUp $ \case
-  AllI (x :| []) -> x
-  AnyI (x :| []) -> x
-  other -> other
 
 -----------------------------------------------------------------------------
 -- 3: Final conversion
@@ -1050,25 +834,25 @@ unwrapSingletonCombinatorsBiDi = mapCompoundLocBottomUp $ \case
 derivedAndTagsToXPathBiDi :: CompoundLocator LocatorIBiDi -> CompoundLocator BiDiLoc
 derivedAndTagsToXPathBiDi = convertTagsXPathIDsBiDi . convertContainsBiDi
 
--- | Merge adjacent user-provided XPath locators in Contains at the LocatorI stage.
---   This avoids text manipulation since the relative prefix ".//", brackets, etc.
---   haven't been added yet. Only handles XPathIBiDI (user-provided XPath).
+-- | Merge adjacent user-provided XPath locators in Contains at the LocatorIBiDi stage.
 convertContainsBiDi :: CompoundLocator LocatorIBiDi -> CompoundLocator LocatorIBiDi
 convertContainsBiDi = mapCompoundLocBottomUp $ \case
-  -- Merge two user-provided XPaths
   ContainsI (Leaf (XPathIBiDI {value = containerXPath})) (Leaf (XPathIBiDI {value = containedXPath})) ->
     Leaf $ XPathIBiDI {value = containerXPath <> "//" <> containedXPath}
-  -- Keep other combinations as ContainsI - they'll be handled after conversion to BiDiLoc
   other -> other
 
--- | Convert LocatorIBiDi leaves to BiDiLoc leaves — uses 'fmap' via 'Functor'.
+-- | Convert LocatorIBiDi leaves and XPathDerivedLeaf/TagLeaf to BiDiLoc.
 convertTagsXPathIDsBiDi :: CompoundLocator LocatorIBiDi -> CompoundLocator BiDiLoc
-convertTagsXPathIDsBiDi = fmap $ \case
-  XPathIDerivedBiDI {tagM, body} ->
-    XPathBiDi {value = xPathIDTxt tagM body}
-  TagIBiDI {tag} -> XPathBiDi {value = xPathRelativePrefix <> tag}
-  CSSIBiDI {..} -> CSSBiDi {..}
-  XPathIBiDI {..} -> XPathBiDi {..}
-  RoleIBiDI {..} -> RoleBiDi {..}
-  BiDiContextI {..} -> ContextBiDi {..}
-  InnerTextIBiDI {..} -> InnerTextBiDi {..}
+convertTagsXPathIDsBiDi = go
+  where
+    go = \case
+      XPathDerivedLeaf {tagM, body} -> Leaf $ XPathBiDi {value = xPathIDTxt tagM body}
+      TagLeaf {tag} -> Leaf $ XPathBiDi {value = xPathRelativePrefix <> tag}
+      Leaf (CSSIBiDI {..}) -> Leaf $ CSSBiDi {..}
+      Leaf (XPathIBiDI {..}) -> Leaf $ XPathBiDi {..}
+      Leaf (RoleIBiDI {..}) -> Leaf $ RoleBiDi {..}
+      Leaf (BiDiContextI {..}) -> Leaf $ ContextBiDi {..}
+      Leaf (InnerTextIBiDI {..}) -> Leaf $ InnerTextBiDi {..}
+      ContainsI c d -> ContainsI (go c) (go d)
+      AllI elms -> AllI (go <$> elms)
+      AnyI elms -> AnyI (go <$> elms)

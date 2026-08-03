@@ -423,6 +423,8 @@ mockLocatedReduced allElmsDefault = go
       ContainsI p c' -> go p && go c'
       AllI elms -> all go elms
       AnyI elms -> any go elms
+      TagLeaf {} -> error "mockLocatedReduced: unexpected TagLeaf in final HttpLoc tree"
+      XPathDerivedLeaf {} -> error "mockLocatedReduced: unexpected XPathDerivedLeaf in final HttpLoc tree"
     readBool "True" = True
     readBool "False" = False
     readBool v = error $ "mockLocatedReduced: unexpected value: " <> unpack v
