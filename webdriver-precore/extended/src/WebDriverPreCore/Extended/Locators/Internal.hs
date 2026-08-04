@@ -17,7 +17,7 @@ module WebDriverPreCore.Extended.Locators.Internal (
     roleLabelText,
     roleTypeXPathContent,
     roleTypeOnlyXPath,
-    transform,
+    transformHttp,
     xPathRelativePrefix,
     excludedRolesTxt,
 
@@ -30,50 +30,33 @@ import Data.Functor.Identity (Identity (..))
 import Data.List (nub)
 import Data.List.NonEmpty (NonEmpty (..), toList)
 import Data.Maybe (fromMaybe, catMaybes)
-import Data.Text (Text, intercalate, pack, splitOn, toLower, unpack)
+import Data.Text (Text, intercalate, pack, splitOn, toLower)
 import Data.Text qualified as T
 import Data.Word (Word8)
 import Utils (txt)
-import WebDriverPreCore.Extended.BiDi.Base.Protocol (BrowsingContext, NodeProperties)
-import WebDriverPreCore.Extended.BiDi.Base.Protocol qualified as BiDi
+import WebDriverPreCore.Extended.BiDi.Base.Protocol (BrowsingContext)
 import Prelude
 import Control.Monad ((>=>))
 import Data.Function ((&))
 
-transform :: (Text -> Locator) -> Locator -> Either InvalidLocator (CompoundLocator HttpLoc)
-transform defLoc loc = do
-  locI <- toIntermediate defLoc loc
-  simplified <- simplify loc locI
-  Right $ toCompoundLocator $ derivedAndTagsToXPath simplified
+transformHttp :: (Text -> Locator) -> Locator -> Either InvalidLocator (CompoundLocator HttpLoc)
+transformHttp  = transform' toIntermediate derivedAndTagsToXPath
 
 transformBiDi :: (Text -> Locator) -> Locator -> Either InvalidLocator (CompoundLocator BiDiLoc)
-transformBiDi defLoc loc = do
-  locI <- toIntermediateBiDi defLoc loc
+transformBiDi = transform' toIntermediateBiDi derivedAndTagsToXPathBiDi
+
+transform' :: forall a b. Eq a => 
+  ((Text -> Locator) -> Locator -> Either InvalidLocator (CompoundLocatorI a))
+  -> (CompoundLocatorI a -> CompoundLocatorI b)
+  -> (Text -> Locator)
+  -> Locator
+  -> Either InvalidLocator (CompoundLocator b)
+transform' locToIntermediate eliminateDrived defLoc loc = do
+  locI <- locToIntermediate defLoc loc
   simplified <- simplify loc locI
-  Right $ toCompoundLocator $ derivedAndTagsToXPathBiDi simplified
+  Right . intermediateToFinal $ eliminateDrived simplified
 
------------------------------------------------------------------------------
--- Constants
------------------------------------------------------------------------------
 
--- | Relative XPath prefix for all library-generated (derived) XPath expressions.
---
--- Uses './/'' (relative descendant-or-self) instead of '//' (absolute) because:
---
--- 1. **Semantic correctness in Contains**: When a locator appears inside a Contains
---    combinator, the contained locator should search relative to the container element,
---    not from the document root. Using './/'' ensures proper scoping.
---
--- 2. **Works at top level too**: When called on the driver (document root context),
---    './/tag' and '//tag' produce identical results, so using './/'' everywhere is safe.
---
--- 3. **Simplifies locateFromElementHttp**: When searching from a base element,
---    relative paths work correctly without needing text manipulation in setBaseElement
---    (Locate.hs). Absolute '//' paths would escape the intended container scope.
---
--- 4. **User-supplied XPath unchanged**: This only affects library-derived XPath from
---    constructors like Tag, Class, Attribute, etc. User-supplied XPath via the 'xpath'
---    constructor is passed through unchanged, giving users full control when needed.
 xPathRelativePrefix :: Text
 xPathRelativePrefix = ".//"
 
@@ -217,14 +200,14 @@ data CompoundLocator a
 --   'TagLeaf' and 'XPathDerivedLeaf') to the final representation.
 --   These constructors should have been eliminated during simplification;
 --   if encountered, they indicate a bug.
-toCompoundLocator :: CompoundLocatorI a -> CompoundLocator a
-toCompoundLocator = \case
+intermediateToFinal :: CompoundLocatorI a -> CompoundLocator a
+intermediateToFinal = \case
   LeafI a -> LeafC a
   TagLeaf {} -> error "toCompoundLocator: unexpected TagLeaf — should have been eliminated during simplification"
   XPathDerivedLeaf {} -> error "toCompoundLocator: unexpected XPathDerivedLeaf — should have been eliminated during simplification"
-  ContainsI c d -> ContainsC (toCompoundLocator c) (toCompoundLocator d)
-  AllI elms -> AllC (toCompoundLocator <$> elms)
-  AnyI elms -> AnyC (toCompoundLocator <$> elms)
+  ContainsI c d -> ContainsC (intermediateToFinal c) (intermediateToFinal d)
+  AllI elms -> AllC (intermediateToFinal <$> elms)
+  AnyI elms -> AnyC (intermediateToFinal <$> elms)
 
 -- | Shared simplification pipeline: flatten, merge, distribute tags, unwrap.
 --   Fixed-point loop — repeats until no more simplifications apply.

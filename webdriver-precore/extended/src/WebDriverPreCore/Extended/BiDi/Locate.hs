@@ -34,7 +34,6 @@ import WebDriverPreCore.Extended.LocateCommon (
     LocateResult (..),
     LocateTracing (..),
     PreLocateException (..),
-    WDTrace (..),
     LeafCardinality (..),
     completeLocException
   )
@@ -115,7 +114,7 @@ data LocParams m = MkLocParams
     catch :: forall a e. (HasCallStack, Exception e) => m a -> (e -> m a) -> m a,
     locateNodes :: BiDiP.LocateNodes -> m BiDiP.LocateNodesResult,
     defaultLoc :: Text -> Locator,
-    trace :: WDTrace -> m (),
+    trace :: WDBiDITrace -> m (),
     singletonCardinality :: SingletonCardinality
   }
 
@@ -123,7 +122,7 @@ data LocParams m = MkLocParams
 -- | Build a 'LocParams m' from 'LocateActions m', writing traces to an 'IORef'.
 -- Using IORef instead of WriterT ensures trace entries are preserved even when
 -- exceptions are thrown (WriterT state is discarded on exception).
-extendActions :: (MonadIO m) => IORef [WDTrace] -> BiDiLocateOpts -> LocateActions m -> LocParams m
+extendActions :: (MonadIO m) => IORef [WDBiDITrace] -> BiDiLocateOpts -> LocateActions m -> LocParams m
 extendActions logsRef MkBiDiLocateOpts{..} MkLocateActions{..} = MkLocParams
   {
     throw 
@@ -163,12 +162,12 @@ data LocateNodes = MkLocateNodes
   }
   deriving (Show, Eq, Generic)
 -}
-{-
+
 baseLocate :: BiDiBaseLocateOpts -> LocateActions m -> m (LocateResult BiDiP.NodeRemoteValue WDBiDITrace)
 baseLocate opts actions = do
   logsRef <- liftIO $ newIORef []
 
-  rslt <- case LI.transform p.defaultLoc loc of
+  rslt <- case LI.transformHttp p.defaultLoc loc of
     -- log failure if tansformation failed
     Left err -> do 
         p.trace (PrepareFailed loc err)
@@ -215,6 +214,8 @@ locateFromElementBiDi actions opts rootId = runBiDiAction actions opts (Just roo
 locateAllFromElementBiDi :: forall m. (MonadIO m) => LocateActions m -> BiDiLocateOpts -> ElementId -> Locator -> m LocateResult
 locateAllFromElementBiDi actions opts rootId = runBiDiAction actions opts (Just rootId) httpLocateAll
 -}
+
+{-
 
 
 -- | Common implementation for all public HTTP locate functions.

@@ -6,6 +6,7 @@ module WebDriverPreCore.Extended.HTTP.Locate
     HttpLocateAllOpts(..),
     LocateActions (..),
     SingletonCardinality (..),
+    WDTrace(..),
     locateHttp,
     locateFromElementHttp,
     locateAllHttp,
@@ -31,7 +32,6 @@ import WebDriverPreCore.Extended.LocateCommon (
     LocateResult (..),
     LocateTracing (..),
     PreLocateException (..),
-    WDTrace (..),
     LeafCardinality (..),
     completeLocException
   )
@@ -51,6 +51,33 @@ data ExtendedRoleLocateSingleton = ExtLocateNever | ExtLocateSingletonMiss | Ext
 data ExtendedRoleLocateAll = ExtLocateAllNever | ExtLocateAllAlways deriving (Show, Eq)
 
 data RoleJSSecondPass = DoRoleJSSecondPass | NoRoleJSSecondPass deriving (Show, Eq)
+
+data WDTrace = Prepared {
+  loc :: Locator,
+  reducedLoc :: CompoundLocator HttpLoc
+} |
+ PrepareFailed {
+  loc :: Locator,
+  error :: LI.InvalidLocator
+} | 
+ JSDisplayedCheck {
+  beforeCheck :: [ElementId],
+  afterCheck :: [ElementId]
+} |
+ LeafLocate {
+  selector :: Selector,
+  cardinality :: LeafCardinality,
+  found :: [ElementId]
+  } | 
+  RoleSecondPassLabeledBy {
+    role :: RoleLocator,
+    elms :: [ElementId]
+  } |
+  RoleSecondPassFor {
+    role :: RoleLocator,
+    elms :: [ElementId]
+  }
+ deriving (Show, Eq)
 
 -- | Options for singleton locate functions ('locateHttp', 'locateFromElementHttp').
 data HttpLocateOpts = MkHttpLocateOpts
@@ -173,7 +200,7 @@ runHttpAction actions@MkLocateActions{catch} opts mRootId locateAction loc = do
   logsRef <- liftIO $ newIORef []
   let  p = setBaseElement mRootId $ extendActions logsRef opts actions
 
-  rslt <- case LI.transform p.defaultLoc loc of
+  rslt <- case LI.transformHttp p.defaultLoc loc of
     -- log failure if tansformation failed
     Left err -> do 
         p.trace (PrepareFailed loc err)

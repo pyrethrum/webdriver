@@ -3,7 +3,6 @@ module WebDriverPreCore.Extended.LocateCommon
     PreLocateException(..),
     LocateException(..),
     LeafCardinality(..),
-    WDTrace(..),
     LocateTracing(..),
     LocateResult(..),
     completeLocException
@@ -59,32 +58,6 @@ instance Exception PreLocateException
 
 data LeafCardinality = FindFirst | FindAll deriving (Show, Eq)
 
-data WDTrace = Prepared {
-  loc :: Locator,
-  reducedLoc :: CompoundLocator HttpLoc
-} |
- PrepareFailed {
-  loc :: Locator,
-  error :: LI.InvalidLocator
-} | 
- JSDisplayedCheck {
-  beforeCheck :: [ElementId],
-  afterCheck :: [ElementId]
-} |
- LeafLocate {
-  selector :: Selector,
-  cardinality :: LeafCardinality,
-  found :: [ElementId]
-  } | 
-  RoleSecondPassLabeledBy {
-    role :: RoleLocator,
-    elms :: [ElementId]
-  } |
-  RoleSecondPassFor {
-    role :: RoleLocator,
-    elms :: [ElementId]
-  }
- deriving (Show, Eq)
 
 data LocateTracing = LocateTracing | NoLocateTracing deriving (Show, Eq)
 
