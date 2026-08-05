@@ -3,7 +3,6 @@ module WebDriverPreCore.Extended.HTTP.Locate
     DisplayedCheck(..),
     ExtendedRoleLocateSingleton(..),
     HttpLocateOpts (..),
-    HttpLocateAllOpts(..),
     LocateActions (..),
     SingletonCardinality (..),
     WDTrace(..),
@@ -48,8 +47,6 @@ data DisplayedCheck = DisplayedCheckNever | DisplayedCheckDisambiguateUnique | D
 
 data ExtendedRoleLocateSingleton = ExtLocateNever | ExtLocateSingletonMiss | ExtLocateAlways deriving (Show, Eq)
 
-data ExtendedRoleLocateAll = ExtLocateAllNever | ExtLocateAllAlways deriving (Show, Eq)
-
 data RoleJSSecondPass = DoRoleJSSecondPass | NoRoleJSSecondPass deriving (Show, Eq)
 
 data WDTrace = Prepared {
@@ -87,14 +84,6 @@ data HttpLocateOpts = MkHttpLocateOpts
     mkDefaultLoc :: Text -> Locator,
     locateTracing :: LocateTracing
   }
-
-data HttpLocateAllOpts = MkHttpLocateAllOpts
-  { wantJsRecheckDisplayed :: Bool,
-    wantExtendedRoleLocation :: Bool,
-    mkDefaultLoc :: Text -> Locator,
-    locateTracing :: LocateTracing
-  }
-
 
 -- | Actions for singleton locate functions ('locateHttp', 'locateFirstHttp', 'locateFromElementHttp').
 data LocateActions m = MkLocateActions
@@ -165,26 +154,16 @@ locateHttp :: forall m. (MonadIO m) => LocateActions m -> HttpLocateOpts -> Loca
 locateHttp actions opts = runHttpAction actions opts Nothing httpLocateSingleton
 
 -- | Locate all matching elements from the document root.
-locateAllHttp :: forall m. (MonadIO m) => LocateActions m -> HttpLocateAllOpts -> Locator -> m (LocateResult WDTrace [ElementId])
-locateAllHttp actions opts = runHttpAction actions (convertOpts opts) Nothing httpLocateAll
+locateAllHttp :: forall m. (MonadIO m) => LocateActions m -> HttpLocateOpts -> Locator -> m (LocateResult WDTrace [ElementId])
+locateAllHttp actions opts = runHttpAction actions opts Nothing httpLocateAll
 
 -- | Locate a unique or first-matching element rooted at a given element.
 locateFromElementHttp :: forall m. (MonadIO m) => LocateActions m -> HttpLocateOpts -> ElementId -> Locator -> m (LocateResult WDTrace [ElementId])
 locateFromElementHttp actions opts rootId = runHttpAction actions opts (Just rootId) httpLocateSingleton
 
 -- | Locate all matching elements rooted at a given element.
-locateAllFromElementHttp :: forall m. (MonadIO m) => LocateActions m -> HttpLocateAllOpts -> ElementId -> Locator -> m (LocateResult WDTrace [ElementId])
-locateAllFromElementHttp actions opts rootId = runHttpAction actions (convertOpts opts) (Just rootId) httpLocateAll
-
-convertOpts :: HttpLocateAllOpts -> HttpLocateOpts
-convertOpts MkHttpLocateAllOpts{..} = MkHttpLocateOpts
-  { jsRecheckDisplayed = if wantJsRecheckDisplayed then DisplayedCheckAlways else DisplayedCheckNever,
-    extendedRoleLocation = if wantExtendedRoleLocation then ExtLocateAlways else ExtLocateNever,
-    -- wont be used
-    singletonCardinality = First,
-    mkDefaultLoc = mkDefaultLoc,
-    locateTracing = locateTracing
-  }
+locateAllFromElementHttp :: forall m. (MonadIO m) => LocateActions m -> HttpLocateOpts -> ElementId -> Locator -> m (LocateResult WDTrace [ElementId])
+locateAllFromElementHttp actions opts rootId = runHttpAction actions opts (Just rootId) httpLocateAll
 -- | Common implementation for all public HTTP locate functions.
 runHttpAction ::
   forall m.

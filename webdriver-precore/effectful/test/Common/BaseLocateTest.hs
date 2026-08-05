@@ -453,11 +453,11 @@ tests =
   extMissOpts :: L.HttpLocateOpts
   extMissOpts = defOpts { L.extendedRoleLocation = L.ExtLocateSingletonMiss }
 
-  extAlwaysAllOpts :: L.HttpLocateAllOpts
-  extAlwaysAllOpts = defAllOpts { L.wantExtendedRoleLocation = True }
+  extAlwaysAllOpts :: L.HttpLocateOpts
+  extAlwaysAllOpts = defAllOpts { L.extendedRoleLocation = L.ExtLocateAlways }
 
-  extMissAllOpts :: L.HttpLocateAllOpts
-  extMissAllOpts = defAllOpts { L.wantExtendedRoleLocation = True }
+  extMissAllOpts :: L.HttpLocateOpts
+  extMissAllOpts = defAllOpts { L.extendedRoleLocation = L.ExtLocateAlways }
 
   locateExt :: forall es. (IOE :> es, WebDriverHttp :> es) => Locator -> Eff es (L.LocateResult L.WDTrace [ElementId])
   locateExt = locateHttp extAlwaysOpts
@@ -481,11 +481,11 @@ tests =
   disambiguateOpts :: L.HttpLocateOpts
   disambiguateOpts = defOpts { L.jsRecheckDisplayed = L.DisplayedCheckDisambiguateUnique }
 
-  neverAllOpts :: L.HttpLocateAllOpts
-  neverAllOpts = defAllOpts { L.wantJsRecheckDisplayed = False }
+  neverAllOpts :: L.HttpLocateOpts
+  neverAllOpts = defAllOpts { L.jsRecheckDisplayed = L.DisplayedCheckNever }
 
-  disambiguateAllOpts :: L.HttpLocateAllOpts
-  disambiguateAllOpts = defAllOpts { L.wantJsRecheckDisplayed = False }
+  disambiguateAllOpts :: L.HttpLocateOpts
+  disambiguateAllOpts = defAllOpts { L.jsRecheckDisplayed = L.DisplayedCheckNever }
 
   locateAllNever :: forall es. (IOE :> es, WebDriverHttp :> es) => Locator -> Eff es (L.LocateResult L.WDTrace [ElementId])
   locateAllNever = locateAllHttp neverAllOpts
