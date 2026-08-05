@@ -163,20 +163,22 @@ data LocateNodes = MkLocateNodes
   deriving (Show, Eq, Generic)
 -}
 
-baseLocate :: BiDiBaseLocateOpts -> LocateActions m -> m (LocateResult BiDiP.NodeRemoteValue WDBiDITrace)
-baseLocate opts actions = do
+baseLocate :: LocateActions m ->  BiDiBaseLocateOpts -> Locator -> m (LocateResult BiDiP.NodeRemoteValue WDBiDITrace)
+baseLocate  actions  o loc = do
+  
   logsRef <- liftIO $ newIORef []
-
-  rslt <- case LI.transformHttp p.defaultLoc loc of
+  let p = extendActions logsRef o actions
+  rslt <- case LI.transformBiDi o.defaultLoc loc of
     -- log failure if tansformation failed
     Left err -> do 
-        p.trace (PrepareFailed loc err)
+        o.trace (PrepareFailed loc err)
         pure $ Left (InvalidLocator err)
     -- run locator if transformation succeeded
     Right compoundLoc -> do
       p.trace (Prepared loc compoundLoc)
       completeLocException loc $ runLoc catch (locateAction p) compoundLoc
   undefined
+
 
   {-
   let  p = setBaseElement mRootId $ extendActions logsRef opts actions
