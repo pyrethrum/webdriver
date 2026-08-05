@@ -5,20 +5,22 @@ module WebDriverPreCore.Extended.Locators.Internal (
     InvalidLocator(..),
     Protocol(..),
 
+    -- * HTTP
+    transformHttp,
+
+    -- * internal xpath utils
+    roleTypeOnlyXPath,
+    xPathRelativePrefix,
+
+    -- * BiDi
+    transformBiDi,
+    BiDiLoc(..),
+
     -- * Re-exports from Internal
     AriaRole (..),
     MatchType (..),
     CaseSensitivity(..),
-    RoleLocator(..),
-    roleLabelText,
-    roleTypeXPathContent,
-    roleTypeOnlyXPath,
-    transformHttp,
-    xPathRelativePrefix,
-    excludedRolesTxt,
-
-    transformBiDi,
-    BiDiLoc(..)
+    RoleLocator(..)
 ) where
 
 import Control.Exception (Exception)
