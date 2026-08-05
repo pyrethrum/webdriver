@@ -13,11 +13,9 @@ import Control.Exception (Exception)
 import Data.Bifunctor (first)
 import Data.Text
 
-import WebDriverPreCore.Extended.HTTP.Base.Protocol as HTTPB (ElementId)
-import WebDriverPreCore.Extended.Locators.Internal (Locator, RoleLocator (..), CompoundLocator, HttpLoc (..))
+import WebDriverPreCore.Extended.Locators.Internal (Locator)
 import WebDriverPreCore.Extended.Locators.Internal qualified as LI
-import WebDriverPreCore.Extended.Protocol (WebDriverException)
-import WebDriverPreCore.HTTP.Protocol as HTTPP (Selector (..))
+import WebDriverPreCore.Error ( WebDriverException )
 import Prelude as P hiding (log)
 
 data PreLocateException
