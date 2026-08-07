@@ -2,9 +2,10 @@ module HTTP.BaseLocateTest where
 
 import Common.Utils
   ( autoId,
-    chkAttributeEq,
+    chkAttributeEqElm,
+    chkElm,
+    chkElmM,
     chkElms,
-    chkElmsM,
     chkEmpty,
     chkEq,
     chkLocException,
@@ -215,10 +216,10 @@ tests =
                       chkLocException (txt (elmClass "notes-area")) isAmbiguous locRslt
                   , test "DisplayedCheckDisambiguateUnique filters hidden - resolving to unique visible element" $ do
                       locRslt <- locateDisambiguate $ elmClass "notes-area"
-                      chkAttributeEq (txt (elmClass "notes-area")) "auto-id" "edt-notes-visible" locRslt
+                      chkAttributeEqElm (txt (elmClass "notes-area")) "auto-id" "edt-notes-visible" locRslt
                   , test "DisplayedCheckAlways also filters hidden, resolving to unique visible element" $ do
                       locRslt <- locate $ elmClass "notes-area"
-                      chkAttributeEq (txt (elmClass "notes-area")) "auto-id" "edt-notes-visible" locRslt
+                      chkAttributeEqElm (txt (elmClass "notes-area")) "auto-id" "edt-notes-visible" locRslt
                   ]
               , testGroup "locateAll - DisplayedCheckDisambiguateUnique has no effect - only Always filters"
                   [ test "DisambiguateUnique gives same result as Never for locateAll" $ do
@@ -285,46 +286,34 @@ tests =
           testGroup "Locate and LocateAll from Element"
               [ test "locateAll from element - inputs within sec-personal" $ do
                   secResult <- locate $ autoId "sec-personal"
-                  chkElmsM "find sec-personal" secResult $ \elms ->
-                    case elms of
-                      [sec] -> do
-                        inResult <- locateAllFromElement sec input_
-                        chkElms "inputs in sec-personal"
-                          (\is -> if length is == 5 then Nothing else Just $ "expected 5 inputs but got " <> txt (length is))
-                          inResult
-                        pure Nothing
-                      _ -> pure $ Just $ "expected singleton section but got " <> txt (length elms)
+                  chkElmM "find sec-personal" secResult $ \sec -> do
+                    inResult <- locateAllFromElement sec input_
+                    chkElms "inputs in sec-personal"
+                      (\is -> if length is == 5 then Nothing else Just $ "expected 5 inputs but got " <> txt (length is))
+                      inResult
+                    pure Nothing
               , test "locateAll from element - links within nav-main" $ do
                   navResult <- locate $ autoId "nav-main"
-                  chkElmsM "find nav-main" navResult $ \elms ->
-                    case elms of
-                      [nav] -> do
-                        linkResult <- locateAllFromElement nav a_
-                        chkElms "links in nav-main"
-                          (\ls -> if length ls >= 2 then Nothing else Just $ "expected >=2 links but got " <> txt (length ls))
-                          linkResult
-                        pure Nothing
-                      _ -> pure $ Just $ "expected singleton nav but got " <> txt (length elms)
+                  chkElmM "find nav-main" navResult $ \nav -> do
+                    linkResult <- locateAllFromElement nav a_
+                    chkElms "links in nav-main"
+                      (\ls -> if length ls >= 2 then Nothing else Just $ "expected >=2 links but got " <> txt (length ls))
+                      linkResult
+                    pure Nothing
               , test "locate from element - edt-given-name within sec-personal" $ do
                   secResult <- locate $ autoId "sec-personal"
-                  chkElmsM "find sec-personal" secResult $ \elms ->
-                    case elms of
-                      [sec] -> do
-                        givenResult <- locateFromElement sec $ autoId "edt-given-name"
-                        chkElms "edt-given-name in section" chkSingleton givenResult
-                        pure Nothing
-                      _ -> pure $ Just $ "expected singleton section but got " <> txt (length elms)
+                  chkElmM "find sec-personal" secResult $ \sec -> do
+                    givenResult <- locateFromElement sec $ autoId "edt-given-name"
+                    chkElm "edt-given-name in section" (\_ -> Nothing) givenResult
+                    pure Nothing
               , test "locate from element - not found when element not in scope" $ do
                   hdrResult <- locate $ autoId "hdr-main"
-                  chkElmsM "find hdr-main" hdrResult $ \elms ->
-                    case elms of
-                      [hdr] -> do
-                        notInHdr <- locateFromElement hdr $ autoId "edt-given-name"
-                        pure $ case notInHdr.result of
-                          Left (L.ElementNotFound {}) -> Nothing
-                          Left other -> Just $ "expected ElementNotFound but got: " <> txt other
-                          Right _ -> Just "expected ElementNotFound but edt-given-name was found in header"
-                      _ -> pure $ Just $ "expected singleton header but got " <> txt (length elms)
+                  chkElmM "find hdr-main" hdrResult $ \hdr -> do
+                    notInHdr <- locateFromElement hdr $ autoId "edt-given-name"
+                    pure $ case notInHdr.result of
+                      Left (L.ElementNotFound {}) -> Nothing
+                      Left other -> Just $ "expected ElementNotFound but got: " <> txt other
+                      Right _ -> Just "expected ElementNotFound but edt-given-name was found in header"
               ]
 
       , withResource (navToUrl ses landmarkRolesUrl) (\_ -> pure ()) $ \_ ->
@@ -411,7 +400,7 @@ tests =
 
     -- Partially applied test helpers using shared functions from Common.Utils
     chkAutoId :: Text -> Locator -> Text -> TestTree
-    chkAutoId = CU.chkAutoId test locate
+    chkAutoId = CU.chkAutoIdElm test locate
 
     chkAll :: Text -> Locator -> ([ElementId] -> Maybe Text) -> TestTree
     chkAll = CU.chkAll test locateAll
@@ -421,13 +410,13 @@ tests =
 
     atrrChkExtRole :: Text -> Locator -> Text -> Text -> TestTree
     atrrChkExtRole testName loc attrName expctd =
-      test testName $ locateExt loc >>= chkAttributeEq (txt loc) attrName expctd
+      test testName $ locateExt loc >>= chkAttributeEqElm (txt loc) attrName expctd
 
     atrrChkExtMiss :: Text -> Locator -> Text -> Text -> TestTree
     atrrChkExtMiss testName loc attrName expctd =
       test testName $ do
         locRslt <- locateExtMiss loc
-        chkAttributeEq (txt loc) attrName expctd locRslt
+        chkAttributeEqElm (txt loc) attrName expctd locRslt
 
   navToUrl :: IO WDSession -> IO URL -> IO WDSession
   navToUrl getSes urlAction = do
@@ -435,13 +424,13 @@ tests =
     runHttp ses $ testUrl urlAction >>= navigateTo
     pure ses
 
-  locate :: forall es. (IOE :> es, WebDriverHttp :> es) => Locator -> Eff es (L.LocateResult L.WDTrace [ElementId])
+  locate :: forall es. (IOE :> es, WebDriverHttp :> es) => Locator -> Eff es (L.LocateResult L.WDTrace ElementId)
   locate = locateHttp defOpts
 
   locateAll :: forall es. (IOE :> es, WebDriverHttp :> es) => Locator -> Eff es (L.LocateResult L.WDTrace [ElementId])
   locateAll = locateAllHttp defAllOpts
 
-  locateFromElement :: forall es. (IOE :> es, WebDriverHttp :> es) => ElementId -> Locator -> Eff es (L.LocateResult L.WDTrace [ElementId])
+  locateFromElement :: forall es. (IOE :> es, WebDriverHttp :> es) => ElementId -> Locator -> Eff es (L.LocateResult L.WDTrace ElementId)
   locateFromElement = locateFromElementHttp defOpts
 
   locateAllFromElement :: forall es. (IOE :> es, WebDriverHttp :> es) => ElementId -> Locator -> Eff es (L.LocateResult L.WDTrace [ElementId])
@@ -459,13 +448,13 @@ tests =
   extMissAllOpts :: L.HttpLocateOpts
   extMissAllOpts = defAllOpts { L.extendedRoleLocation = L.ExtLocateAlways }
 
-  locateExt :: forall es. (IOE :> es, WebDriverHttp :> es) => Locator -> Eff es (L.LocateResult L.WDTrace [ElementId])
+  locateExt :: forall es. (IOE :> es, WebDriverHttp :> es) => Locator -> Eff es (L.LocateResult L.WDTrace ElementId)
   locateExt = locateHttp extAlwaysOpts
 
   locateAllExt :: forall es. (IOE :> es, WebDriverHttp :> es) => Locator -> Eff es (L.LocateResult L.WDTrace [ElementId])
   locateAllExt = locateAllHttp extAlwaysAllOpts
 
-  locateExtMiss :: forall es. (IOE :> es, WebDriverHttp :> es) => Locator -> Eff es (L.LocateResult L.WDTrace [ElementId])
+  locateExtMiss :: forall es. (IOE :> es, WebDriverHttp :> es) => Locator -> Eff es (L.LocateResult L.WDTrace ElementId)
   locateExtMiss = locateHttp extMissOpts
 
   locateAllExtMiss :: forall es. (IOE :> es, WebDriverHttp :> es) => Locator -> Eff es (L.LocateResult L.WDTrace [ElementId])
@@ -493,10 +482,10 @@ tests =
   locateAllDisambiguate :: forall es. (IOE :> es, WebDriverHttp :> es) => Locator -> Eff es (L.LocateResult L.WDTrace [ElementId])
   locateAllDisambiguate = locateAllHttp disambiguateAllOpts
 
-  locateNever :: forall es. (IOE :> es, WebDriverHttp :> es) => Locator -> Eff es (L.LocateResult L.WDTrace [ElementId])
+  locateNever :: forall es. (IOE :> es, WebDriverHttp :> es) => Locator -> Eff es (L.LocateResult L.WDTrace ElementId)
   locateNever = locateHttp neverOpts
 
-  locateDisambiguate :: forall es. (IOE :> es, WebDriverHttp :> es) => Locator -> Eff es (L.LocateResult L.WDTrace [ElementId])
+  locateDisambiguate :: forall es. (IOE :> es, WebDriverHttp :> es) => Locator -> Eff es (L.LocateResult L.WDTrace ElementId)
   locateDisambiguate = locateHttp disambiguateOpts
 
   isAmbiguous :: L.LocateException -> Maybe Text
