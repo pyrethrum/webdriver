@@ -5,7 +5,7 @@ module WebDriverPreCore.Extended.LocateCommon
     LeafCardinality(..),
     LocateTracing(..),
     LocateResult(..),
-    completeLocException
+    addLocToException
   )
 where
 
@@ -41,15 +41,12 @@ data LocateException
     }
   deriving (Show, Eq)
 
-completeLocException :: forall a m. Functor m => Locator -> m (Either PreLocateException a) ->  m (Either LocateException a)
-completeLocException  locator action = 
-  first convert <$> action
-  where 
-    convert = \case 
-      AmbiguousLocator' desc -> AmbiguousLocator desc locator
-      ElementNotFound' desc -> ElementNotFound desc locator
-      InvalidLocator' e -> InvalidLocator e
-      DriverException' e -> DriverException e locator
+addLocToException :: Locator -> PreLocateException -> LocateException
+addLocToException loc = \case
+  AmbiguousLocator' desc -> AmbiguousLocator desc loc
+  ElementNotFound' desc -> ElementNotFound desc loc
+  InvalidLocator' e -> InvalidLocator e
+  DriverException' e -> DriverException e loc
 
 instance Exception LocateException
 instance Exception PreLocateException

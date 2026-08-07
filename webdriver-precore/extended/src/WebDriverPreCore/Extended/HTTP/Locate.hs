@@ -32,13 +32,14 @@ import WebDriverPreCore.Extended.LocateCommon (
     LocateTracing (..),
     PreLocateException (..),
     LeafCardinality (..),
-    completeLocException
+    addLocToException
   )
 import WebDriverPreCore.Extended.Locators.Internal (Locator, RoleLocator (..), CompoundLocator, HttpLoc (..), xPathRelativePrefix)
 import WebDriverPreCore.Extended.Locators.Internal qualified as LI
 import WebDriverPreCore.HTTP.Protocol as HTTPP (ElementId, Script (..), Selector (..))
 import Prelude as P hiding (log)
 import Utils (txt)
+import Data.Bifunctor (Bifunctor(..))
 
 -- | Whether to find the unique element (error if multiple match) or just the first.
 data SingletonCardinality = Unique | First deriving (Show, Eq)
@@ -149,17 +150,28 @@ mkParams logsRef MkHttpLocateOpts{..} MkLocateActions{..} = MkLocParams
   }
 
 
+-- | Extract a single element from a locate result.
+mkSingleton :: Locator -> (LocateResult WDTrace [ElementId]) -> (LocateResult WDTrace ElementId)
+mkSingleton loc = \case
+  Locate (Right (x:_))             -> Locate (Right x)
+  Locate (Right [])                -> Locate (Left $ addLocToException loc elementNotFoundError)
+  Locate (Left e)                  -> Locate (Left e)
+  LocateWithTrace (Right (x:_)) t  -> LocateWithTrace (Right x) t
+  LocateWithTrace (Right []) t     -> LocateWithTrace (Left $ addLocToException loc elementNotFoundError) t
+  LocateWithTrace (Left e) t       -> LocateWithTrace (Left e) t
+
+
 -- | Locate a unique or first-matching element from the document root.
-locateHttp :: forall m. (MonadIO m) => LocateActions m -> HttpLocateOpts -> Locator -> m (LocateResult WDTrace [ElementId])
-locateHttp actions opts = runHttpAction actions opts Nothing httpLocateSingleton
+locateHttp :: forall m. (MonadIO m) => LocateActions m -> HttpLocateOpts -> Locator -> m (LocateResult WDTrace ElementId)
+locateHttp actions opts l = mkSingleton l <$> runHttpAction actions opts Nothing httpLocateSingleton l
 
 -- | Locate all matching elements from the document root.
 locateAllHttp :: forall m. (MonadIO m) => LocateActions m -> HttpLocateOpts -> Locator -> m (LocateResult WDTrace [ElementId])
 locateAllHttp actions opts = runHttpAction actions opts Nothing httpLocateAll
 
 -- | Locate a unique or first-matching element rooted at a given element.
-locateFromElementHttp :: forall m. (MonadIO m) => LocateActions m -> HttpLocateOpts -> ElementId -> Locator -> m (LocateResult WDTrace [ElementId])
-locateFromElementHttp actions opts rootId = runHttpAction actions opts (Just rootId) httpLocateSingleton
+locateFromElementHttp :: forall m. (MonadIO m) => LocateActions m -> HttpLocateOpts -> ElementId -> Locator -> m (LocateResult WDTrace ElementId)
+locateFromElementHttp actions opts rootId l = mkSingleton l <$> runHttpAction actions opts (Just rootId) httpLocateSingleton l
 
 -- | Locate all matching elements rooted at a given element.
 locateAllFromElementHttp :: forall m. (MonadIO m) => LocateActions m -> HttpLocateOpts -> ElementId -> Locator -> m (LocateResult WDTrace [ElementId])
@@ -187,7 +199,7 @@ runHttpAction actions@MkLocateActions{catch} opts mRootId locateAction loc = do
     -- run locator if transformation succeeded
     Right compoundLoc -> do
       p.trace (Prepared loc compoundLoc)
-      completeLocException loc $ runLoc catch (locateAction p) compoundLoc
+      first (addLocToException loc) <$> runLoc catch (locateAction p) compoundLoc
   
   logs <- liftIO $ P.reverse <$> readIORef logsRef
   pure $ case opts.locateTracing of
@@ -357,13 +369,13 @@ httpLocateSingleton prms@MkLocParams{throw}  loc = do
               missRetryRslt <- locateLeaf prms DoRoleJSSecondPass FindAll ll
               retryChked <- chkElmsSingleton missRetryRslt
               case retryChked of
-                [] -> notFoundErr
+                [] -> throwNotFound
                 [x] -> pure [x]
                 (x : xs) ->
                   if isUnique
                     then throwAmbiguous xs
                     else pure [x]
-            else notFoundErr
+            else throwNotFound
         [x] -> pure [x]
         elms@(x : _xs) ->
           if isUnique
@@ -372,10 +384,7 @@ httpLocateSingleton prms@MkLocParams{throw}  loc = do
     _ ->
       locateElmsUnchecked prms FindAll secondPassOnInitial loc
   where
-
-      notFoundErr :: m [ElementId]
-      notFoundErr = throw (ElementNotFound' "No element found matching locator.")
-
+      throwNotFound = throw elementNotFoundError
       throwAmbiguous elms = throw (AmbiguousLocator' ("Multiple elements found matching locator: " <> txt elms))
       isUnique = prms.singletonCardinality == Unique
       isRole = case loc of
@@ -395,6 +404,9 @@ httpLocateSingleton prms@MkLocParams{throw}  loc = do
           wantRecheck = 
              displayChk == DisplayedCheckAlways 
              || displayChk == DisplayedCheckDisambiguateUnique && prms.singletonCardinality == Unique
+
+elementNotFoundError :: PreLocateException
+elementNotFoundError = ElementNotFound' "No element found matching locator."
 
 httpLocateAll ::
   forall m.

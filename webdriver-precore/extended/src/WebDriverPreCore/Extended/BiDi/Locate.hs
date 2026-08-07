@@ -35,7 +35,7 @@ import WebDriverPreCore.Extended.LocateCommon (
     LocateTracing (..),
     PreLocateException (..),
     LeafCardinality (..),
-    completeLocException
+    addLocToException
   )
 import WebDriverPreCore.Extended.Locators.Internal (Locator, RoleLocator (..), CompoundLocator, HttpLoc (..), xPathRelativePrefix)
 import WebDriverPreCore.Extended.Locators.Internal qualified as LI
@@ -186,6 +186,26 @@ locateAllBiDi :: forall m. (MonadIO m) => LocateActions m -> BiDiLocateOpts -> L
 locateAllBiDi actions opts = undefined
   -- runBiDiAction actions opts Nothing httpLocateAll
 
+-- | Common implementation for all public HTTP locate functions.
+-- runBiDiAction ::
+--   forall m.
+--   (MonadIO m) =>
+--   LocateActions m ->
+--   BiDiLocateOpts ->
+--   -- | root element
+--   (LocParams m -> CompoundLocator BiDiP.LocateNodes -> m BiDiP.LocateNodesResult) ->
+--   Locator ->
+--   m LocateResult
+-- runBiDiAction actions opts mRootId locateAction loc = do
+--   logsRef <- liftIO $ newIORef []
+--   let locParams = setBaseElement mRootId $ extendActions logsRef opts actions
+--   rslt <- prepareRun locParams (locateAction locParams) loc
+--   logs <- liftIO $ P.reverse <$> readIORef logsRef
+--   pure $ case opts.locateTracing of
+--     LocateTracing -> LocateWithTrace rslt logs
+--     NoLocateTracing -> Locate rslt
+
+
 -- -- | Locate a unique or first-matching element rooted at a given element.
 -- locateFromElementBiDi :: forall m. (MonadIO m) => LocateActions m -> BiDiLocateOpts -> ElementId -> Locator -> m LocateResult
 -- locateFromElementBiDi actions opts rootId = undefined
@@ -271,27 +291,6 @@ locateAllFromElementBiDi actions opts rootId = runBiDiAction actions opts (Just 
 -}
 
 {-
-
-
--- | Common implementation for all public HTTP locate functions.
-runBiDiAction ::
-  forall m.
-  (MonadIO m) =>
-  LocateActions m ->
-  BiDiLocateOpts ->
-  -- | root element
-  (LocParams m -> CompoundLocator BiDiP.LocateNodes -> m BiDiP.LocateNodesResult) ->
-  Locator ->
-  m LocateResult
-runBiDiAction actions opts mRootId locateAction loc = do
-  logsRef <- liftIO $ newIORef []
-  let locParams = setBaseElement mRootId $ extendActions logsRef opts actions
-  rslt <- prepareRun locParams (locateAction locParams) loc
-  logs <- liftIO $ P.reverse <$> readIORef logsRef
-  pure $ case opts.locateTracing of
-    LocateTracing -> LocateWithTrace rslt logs
-    NoLocateTracing -> Locate rslt
-
 
 setBaseElement :: Maybe ElementId -> LocParams m -> LocParams m
 setBaseElement mRootId act@MkLocParams{..} = 

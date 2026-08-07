@@ -83,13 +83,13 @@ actions =
         getElementText
       }
 
-locateHttp :: (IOE :> es, WebDriverHttp :> es) => L.HttpLocateOpts -> Locator -> Eff es (L.LocateResult L.WDTrace [ElementId])
+locateHttp :: (IOE :> es, WebDriverHttp :> es) => L.HttpLocateOpts -> Locator -> Eff es (L.LocateResult L.WDTrace ElementId)
 locateHttp opts loc = actions >>= \a -> L.locateHttp a opts loc
 
 locateAllHttp :: (IOE :> es, WebDriverHttp :> es) => L.HttpLocateOpts -> Locator -> Eff es (L.LocateResult L.WDTrace [ElementId])
 locateAllHttp opts loc = actions >>= \a -> L.locateAllHttp a opts loc
 
-locateFromElementHttp :: (IOE :> es, WebDriverHttp :> es) => L.HttpLocateOpts -> ElementId -> Locator -> Eff es (L.LocateResult L.WDTrace [ElementId])
+locateFromElementHttp :: (IOE :> es, WebDriverHttp :> es) => L.HttpLocateOpts -> ElementId -> Locator -> Eff es (L.LocateResult L.WDTrace ElementId)
 locateFromElementHttp opts elmId' loc = actions >>= \a -> L.locateFromElementHttp a opts elmId' loc
 
 locateAllFromElementHttp :: (IOE :> es, WebDriverHttp :> es) => L.HttpLocateOpts -> ElementId -> Locator -> Eff es (L.LocateResult L.WDTrace [ElementId])
