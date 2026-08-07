@@ -119,8 +119,8 @@ data LocParams m = MkLocParams
 -- | Build a 'LocParams m' from 'LocateActions m', writing traces to an 'IORef'.
 -- Using IORef instead of WriterT ensures trace entries are preserved even when
 -- exceptions are thrown (WriterT state is discarded on exception).
-extendActions :: (MonadIO m) => IORef [WDTrace] -> HttpLocateOpts -> LocateActions m -> LocParams m
-extendActions logsRef MkHttpLocateOpts{..} MkLocateActions{..} = MkLocParams
+mkParams :: (MonadIO m) => IORef [WDTrace] -> HttpLocateOpts -> LocateActions m -> LocParams m
+mkParams logsRef MkHttpLocateOpts{..} MkLocateActions{..} = MkLocParams
   {
   -- throw / catch
     throw
@@ -177,7 +177,7 @@ runHttpAction ::
   m (LocateResult WDTrace [ElementId])
 runHttpAction actions@MkLocateActions{catch} opts mRootId locateAction loc = do
   logsRef <- liftIO $ newIORef []
-  let  p = setBaseElement mRootId $ extendActions logsRef opts actions
+  let  p = setBaseElement mRootId $ mkParams logsRef opts actions
 
   rslt <- case LI.transformHttp p.defaultLoc loc of
     -- log failure if tansformation failed

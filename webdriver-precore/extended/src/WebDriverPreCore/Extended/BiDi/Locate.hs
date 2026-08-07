@@ -85,13 +85,13 @@ data SingletonCardinality = Unique | First deriving (Show, Eq)
 
 
 -- | Options for singleton locate functions ('locateHttp', 'locateFromElementHttp').
-data BiDiLocateOpts = MkBiDiLocateOpts
+data BiDiLocateOpts = StandardLocateOpts
   {
     singletonCardinality :: SingletonCardinality,
     defaultLoc :: Text -> Locator,
     locateTracing :: LocateTracing
-  }
-data BiDiBaseLocateOpts = MkBiDiBaseLocateOpts
+  } |
+   BaseLocateOpts
   {
     defaultLoc :: Text -> Locator,
     locateTracing :: LocateTracing,
@@ -99,6 +99,7 @@ data BiDiBaseLocateOpts = MkBiDiBaseLocateOpts
     serializationOptions :: Maybe SerializationOptions,
     startNodes :: Maybe [SharedReference]
   }
+
 
 -- | Actions for singleton locate functions ('locateHttp', 'locateFirstHttp', 'locateFromElementHttp').
 data LocateActions m = MkLocateActions
@@ -122,8 +123,29 @@ data LocParams m = MkLocParams
 -- | Build a 'LocParams m' from 'LocateActions m', writing traces to an 'IORef'.
 -- Using IORef instead of WriterT ensures trace entries are preserved even when
 -- exceptions are thrown (WriterT state is discarded on exception).
-extendActions :: (MonadIO m) => IORef [WDBiDITrace] -> BiDiLocateOpts -> LocateActions m -> LocParams m
-extendActions logsRef MkBiDiLocateOpts{..} MkLocateActions{..} = MkLocParams
+mkParams :: (MonadIO m) => IORef [WDBiDITrace] -> BiDiLocateOpts -> LocateActions m -> LocParams m
+mkParams logsRef opts MkLocateActions{..} =
+  case opts of
+    StandardLocateOpts{..} ->
+      let baseOpts = BaseLocateOpts {
+        throw,
+        catch,
+         defaultLoc,
+         locateTracing,
+
+      }
+        MkLocParams {
+      throw = throw,
+      catch = catch,
+      locateNodes = locateNodes,
+      defaultLoc = defaultLoc,
+      trace = \traceEntry ->
+        case locateTracing of
+          LocateTracing -> liftIO $ modifyIORef' logsRef (traceEntry :)
+          NoLocateTracing -> pure (),
+      singletonCardinality = singletonCardinality
+    }
+    BaseLocateOpts{..} -> MkLocParams
   {
     throw 
   , catch 
@@ -167,16 +189,20 @@ baseLocate :: LocateActions m ->  BiDiBaseLocateOpts -> Locator -> m (LocateResu
 baseLocate  actions  o loc = do
   
   logsRef <- liftIO $ newIORef []
-  let p = extendActions logsRef o actions
+  let p = mkParams logsRef o actions
   rslt <- case LI.transformBiDi o.defaultLoc loc of
     -- log failure if tansformation failed
     Left err -> do 
-        o.trace (PrepareFailed loc err)
+        p.trace (PrepareFailed loc err)
         pure $ Left (InvalidLocator err)
     -- run locator if transformation succeeded
     Right compoundLoc -> do
       p.trace (Prepared loc compoundLoc)
       completeLocException loc $ runLoc catch (locateAction p) compoundLoc
+  logs <- liftIO $ P.reverse <$> readIORef logsRef
+  pure $ case o.locateTracing of
+    LocateTracing -> LocateWithTrace rslt logs
+    NoLocateTracing -> Locate rslt
   undefined
 
 
