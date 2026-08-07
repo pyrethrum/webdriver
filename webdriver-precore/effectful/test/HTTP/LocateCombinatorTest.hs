@@ -31,6 +31,7 @@ import WebDriverPreCore.Extended.Locators (Locator, css, elmClass, (&&&), (>>>),
 import Data.Bifunctor (Bifunctor(first))
 import WebDriverPreCore.Extended.Locate (LocateResult(..))
 import Test.Falsify.Property (gen)
+import WebDriverPreCore.Extended.HTTP.Locate (DisplayedCheck(..))
 
 tests :: TestTree
 tests =
@@ -848,7 +849,7 @@ evaluateCase getSession locCase  =
       where
         locator = locCase.locator
         locateAll :: forall es. (IOE :> es, WebDriverHttp :> es) => Locator -> Eff es (L.LocateResult L.WDTrace [ElementId])
-        locateAll = locateAllHttp $ defAllOpts {L.wantJsRecheckDisplayed = False}
+        locateAll = locateAllHttp $ defAllOpts {L.jsRecheckDisplayed = DisplayedCheckNever}
         html = "<!doctype html><html><head><meta charset=\"utf-8\"></head><body>"
               <> nodeToHtml testNode
               <> "</body></html>"

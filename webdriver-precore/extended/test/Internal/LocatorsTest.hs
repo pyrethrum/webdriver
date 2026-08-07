@@ -21,7 +21,7 @@ import WebDriverPreCore.Extended.Locators.Internal
     RoleLocator (..),
     CompoundLocator (..),
     HttpLoc (..),
-    transform,
+    transformHttp,
   )
 import Prelude
 import Data.Function ((&))
@@ -276,7 +276,7 @@ test_parent_infix_precedence =
 
 chkTransformedHttpLoc :: Text -> Either InvalidLocator (CompoundLocator HttpLoc) -> Locator -> TestTree
 chkTransformedHttpLoc message expected originalLoc =
-  testCase (unpack message) $ transform ID originalLoc @?= expected
+  testCase (unpack message) $ transformHttp ID originalLoc @?= expected
 
 -- >>> _eval prepareSimplifyXPathTests
 -- *** Exception: ExitSuccess
@@ -333,7 +333,7 @@ prop_simplification_merges_xpaths =
   testPropertyWith genLocatorOptions "prepareSimplify: auto-XPaths merged, user-XPaths preserved" $ do
     proto <- gen genProtocol
     loc <- gen $ genBoolLocator proto
-    let simpLoc = transform ID loc
+    let simpLoc = transformHttp ID loc
         expected = mockLocateUnsimplified True loc
     info $ "Original locator:\n" <> unpack (txt loc)
     info $ "Prepared simplified locator:\n" <> either show (unpack . txt) simpLoc
@@ -348,7 +348,7 @@ test_user_xpath_contains :: TestTree
 test_user_xpath_contains =
   testCase "User XPath in Contains should not be merged" $ do
     let loc = All (CSS "True" :| [All (Contains (XPath "True") (XPath "False") :| [])])
-        result = transform ID loc
+        result = transformHttp ID loc
     -- print $ "Original: " <> show loc
     -- print $ "Transformed: " <> show result
     -- print $ "Expected mockLocated: " <> show (mockLocated True loc)
@@ -366,7 +366,7 @@ test_contradictory_tags_nested_all =
             [ Any { elms = Any { elms = All { elms = Tag "False" :| [AllElms] } :| [] } :| [] } ]
           }
         
-    transform ID loc & either
+    transformHttp ID loc & either
       (\(MkInvalidLocator _ msg) -> "Contradictory tags" `T.isInfixOf` msg @? "Expected contradictory tags error")
       (\_ -> assertFailure "Expected Left (contradictory tags error), got Right")
 
@@ -380,7 +380,7 @@ test_contradictory_tags_siingleton_nested_any =
             [ Any { elms = Any { elms = All { elms = Tag "False" :| [] } :| [] } :| [] } ]
           }
         
-    transform ID loc & either
+    transformHttp ID loc & either
       (\(MkInvalidLocator _ msg) -> "Contradictory tags" `T.isInfixOf` msg @? "Expected contradictory tags error")
       (\_ -> assertFailure "Expected Left (contradictory tags error), got Right")
 
@@ -393,7 +393,7 @@ test_noncontradictory_tags_nested_any =
           { elms = All { elms = Tag "True" :| [] } :|
             [ Any { elms = Any { elms = Any { elms = Tag "False" :| [AllElms] } :| [] } :| [] } ]
           }   
-    transform ID loc & either
+    transformHttp ID loc & either
       (\(MkInvalidLocator _ msg) -> assertFailure $ "Expected Right, got Left with message: " <> unpack msg)
       (\_ -> pure ())
 
@@ -406,7 +406,7 @@ test_noncontradictory_tags_simple_nested_any =
           { elms = All { elms = Tag "True" :| [] } :|
             [ Any { elms = Tag "False" :| [AllElms] }  ]
           }   
-    transform ID loc & either
+    transformHttp ID loc & either
       (\(MkInvalidLocator _ msg) -> assertFailure $ "Expected Right, got Left with message: " <> unpack msg)
       (\_ -> pure ())
 
