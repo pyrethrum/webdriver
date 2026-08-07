@@ -201,10 +201,9 @@ runHttpAction actions@MkLocateActions{catch} opts mRootId locateAction loc = do
       p.trace (Prepared loc compoundLoc)
       first (addLocToException loc) <$> runLoc catch (locateAction p) compoundLoc
   
-  logs <- liftIO $ P.reverse <$> readIORef logsRef
-  pure $ case opts.locateTracing of
-    LocateTracing -> LocateWithTrace rslt logs
-    NoLocateTracing -> Locate rslt
+  case opts.locateTracing of
+    LocateTracing -> LocateWithTrace rslt . P.reverse <$> (liftIO $ readIORef logsRef)
+    NoLocateTracing -> pure $ Locate rslt
 
 
 setBaseElement :: Maybe ElementId -> LocParams m -> LocParams m

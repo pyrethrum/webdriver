@@ -42,6 +42,7 @@ import WebDriverPreCore.Extended.Locators.Internal qualified as LI
 import WebDriverPreCore.BiDi.Protocol qualified as BiDiP
 import Utils (txt)
 import WebDriverPreCore.Extended.BiDi.Base.Protocol (JSUInt, SerializationOptions, SharedReference)
+import WebDriverPreCore.Extended.BiDi.Base.Actions (browsingContextLocateNodes)
 
 
 -- TODO
@@ -85,20 +86,12 @@ data SingletonCardinality = Unique | First deriving (Show, Eq)
 
 
 -- | Options for singleton locate functions ('locateHttp', 'locateFromElementHttp').
-data BiDiLocateOpts = StandardLocateOpts
+data BiDiLocateOpts = MkBiDiLocateOpts
   {
     singletonCardinality :: SingletonCardinality,
     defaultLoc :: Text -> Locator,
     locateTracing :: LocateTracing
-  } |
-   BaseLocateOpts
-  {
-    defaultLoc :: Text -> Locator,
-    locateTracing :: LocateTracing,
-    maxNodeCount :: Maybe JSUInt,
-    serializationOptions :: Maybe SerializationOptions,
-    startNodes :: Maybe [SharedReference]
-  }
+  } 
 
 
 -- | Actions for singleton locate functions ('locateHttp', 'locateFirstHttp', 'locateFromElementHttp').
@@ -107,8 +100,9 @@ data LocateActions m = MkLocateActions
     throw :: forall a. HasCallStack => PreLocateException -> m a,
     catch :: forall a e. (HasCallStack, Exception e) => m a -> (e -> m a) -> m a,
     locateNodes :: BiDiP.LocateNodes -> m BiDiP.LocateNodesResult,
-    context :: m BiDiP.BrowsingContext
+    -- context :: m BiDiP.BrowsingContext
   }
+
 data LocParams m = MkLocParams
   { 
     throw :: forall a. HasCallStack => PreLocateException -> m a,
@@ -119,6 +113,20 @@ data LocParams m = MkLocParams
     singletonCardinality :: SingletonCardinality
   }
 
+
+data BaseLocateOpts = MkBaseLocateOpts
+  { 
+    maxNodeCount :: Maybe JSUInt,
+    serializationOptions :: Maybe SerializationOptions,
+    startNodes :: Maybe [SharedReference]
+  }
+  deriving (Show, Eq, Generic)
+
+  -- context :: BrowsingContext,
+  --   locator :: Locator,
+
+locatePrimative :: LocateActions m -> BrowsingContext -> BaseLocateOpts -> BiDiP.Locator -> m (LocateResult BiDiP.NodeRemoteValue WDBiDITrace)
+locatePrimative = undefined
 
 -- -- | Build a 'LocParams m' from 'LocateActions m', writing traces to an 'IORef'.
 -- -- Using IORef instead of WriterT ensures trace entries are preserved even when
@@ -187,25 +195,25 @@ locateAllBiDi actions opts = undefined
   -- runBiDiAction actions opts Nothing httpLocateAll
 
 -- | Common implementation for all public HTTP locate functions.
--- runBiDiAction ::
---   forall m.
---   (MonadIO m) =>
---   LocateActions m ->
---   BiDiLocateOpts ->
---   -- | root element
---   (LocParams m -> CompoundLocator BiDiP.LocateNodes -> m BiDiP.LocateNodesResult) ->
---   Locator ->
---   m LocateResult
--- runBiDiAction actions opts mRootId locateAction loc = do
---   logsRef <- liftIO $ newIORef []
---   let locParams = setBaseElement mRootId $ extendActions logsRef opts actions
---   rslt <- prepareRun locParams (locateAction locParams) loc
---   logs <- liftIO $ P.reverse <$> readIORef logsRef
---   pure $ case opts.locateTracing of
---     LocateTracing -> LocateWithTrace rslt logs
---     NoLocateTracing -> Locate rslt
+runBiDiAction ::
+  forall m.
+  (MonadIO m) =>
+  LocateActions m ->
+  BiDiLocateOpts ->
+  -- | root element
+  (LocParams m -> CompoundLocator BiDiP.LocateNodes -> m BiDiP.LocateNodesResult) ->
+  Locator ->
+  m BiDiP.LocateNodesResult
+runBiDiAction actions opts mRootId locateAction loc = do
+  logsRef <- liftIO $ newIORef []
+  let locParams = setBaseElement mRootId $ extendActions logsRef opts actions
+  rslt <- prepareRun locParams (locateAction locParams) loc
+  logs <- liftIO $ P.reverse <$> readIORef logsRef
+  pure $ case opts.locateTracing of
+    LocateTracing -> LocateWithTrace rslt logs
+    NoLocateTracing -> Locate rslt
 
-
+-}
 -- -- | Locate a unique or first-matching element rooted at a given element.
 -- locateFromElementBiDi :: forall m. (MonadIO m) => LocateActions m -> BiDiLocateOpts -> ElementId -> Locator -> m LocateResult
 -- locateFromElementBiDi actions opts rootId = undefined
