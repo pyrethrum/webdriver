@@ -26,6 +26,7 @@ import Data.List.NonEmpty (NonEmpty (..), toList)
 import Data.Maybe (catMaybes)
 import Data.Text
 import Data.Text qualified as T
+import GHC.Generics (Generic)
 import GHC.Stack (HasCallStack)
 
 
@@ -99,7 +100,7 @@ data LocateActions m = MkLocateActions
   { 
     throw :: forall a. HasCallStack => PreLocateException -> m a,
     catch :: forall a e. (HasCallStack, Exception e) => m a -> (e -> m a) -> m a,
-    locateNodes :: BiDiP.LocateNodes -> m BiDiP.LocateNodesResult,
+    locateNodes :: BiDiP.LocateNodes -> m BiDiP.LocateNodesResult
     -- context :: m BiDiP.BrowsingContext
   }
 
@@ -125,8 +126,26 @@ data BaseLocateOpts = MkBaseLocateOpts
   -- context :: BrowsingContext,
   --   locator :: Locator,
 
-locatePrimative :: LocateActions m -> BrowsingContext -> BaseLocateOpts -> BiDiP.Locator -> m (LocateResult BiDiP.NodeRemoteValue WDBiDITrace)
-locatePrimative = undefined
+locatePrimative :: LocateActions m -> BiDiP.BrowsingContext -> BaseLocateOpts -> BiDiP.Locator -> m (LocateResult WDBiDITrace BiDiP.LocateNodesResult)
+locatePrimative MkLocateActions {catch, locateNodes} context MkBaseLocateOpts {maxNodeCount, serializationOptions, startNodes} locator = do
+  let selector =
+        BiDiP.MkLocateNodes
+          { context,
+            locator,
+            maxNodeCount,
+            serializationOptions,
+            startNodes
+          }
+  rslt <-
+    catch
+      (catch (Right <$> locateNodes selector) (pure . Left . DriverException'))
+      (pure . Left)
+  pure $
+    case rslt of
+      Left e -> LocateWithTrace (Left (addLocToException LI.AllElms e)) []
+      Right locateRslt@BiDiP.MkLocateNodesResult {nodes} ->
+        let traceEntry = LeafLocate {selector, cardinality = FindAll, found = nodes}
+        in LocateWithTrace (Right locateRslt) [traceEntry]
 
 -- -- | Build a 'LocParams m' from 'LocateActions m', writing traces to an 'IORef'.
 -- -- Using IORef instead of WriterT ensures trace entries are preserved even when
@@ -213,7 +232,6 @@ runBiDiAction actions opts mRootId locateAction loc = do
     LocateTracing -> LocateWithTrace rslt logs
     NoLocateTracing -> Locate rslt
 
--}
 -- -- | Locate a unique or first-matching element rooted at a given element.
 -- locateFromElementBiDi :: forall m. (MonadIO m) => LocateActions m -> BiDiLocateOpts -> ElementId -> Locator -> m LocateResult
 -- locateFromElementBiDi actions opts rootId = undefined
