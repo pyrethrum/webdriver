@@ -29,7 +29,6 @@ import WebDriverPreCore.Extended.HTTP.Base.Protocol (ElementId, URL (..))
 import WebDriverPreCore.Extended.Locate qualified as L
 import WebDriverPreCore.Extended.Locators (Locator, css, elmClass, (&&&), (>>>), (|||), elmClass', MatchType (..), CaseSensitivity (..))
 import Data.Bifunctor (Bifunctor(first))
-import WebDriverPreCore.Extended.Locate (LocateResult(..))
 import Test.Falsify.Property (gen)
 import WebDriverPreCore.Extended.HTTP.Locate (DisplayedCheck(..))
 
@@ -848,7 +847,7 @@ evaluateCase getSession locCase  =
         evaluateExpectation
       where
         locator = locCase.locator
-        locateAll :: forall es. (IOE :> es, WebDriverHttp :> es) => Locator -> Eff es (L.LocateResult L.WDTrace [ElementId])
+        locateAll :: forall es. (IOE :> es, WebDriverHttp :> es) => Locator -> Eff es (Either L.LocateException [ElementId])
         locateAll = locateAllHttp $ defAllOpts {L.jsRecheckDisplayed = DisplayedCheckNever}
         html = "<!doctype html><html><head><meta charset=\"utf-8\"></head><body>"
               <> nodeToHtml testNode
@@ -856,7 +855,7 @@ evaluateCase getSession locCase  =
         evaluateExpectation :: forall es. (IOE :> es, WebDriverHttp :> es) => Eff es ()
         evaluateExpectation = do
           locateRslt <- locateAll locator
-          actual <- locateRslt.result & either
+          actual <- locateRslt & either
             (\err -> liftIO . throwIO . userError $
               "locateAll failed in generated locate property"
                 <> "\nSelection: " <> unpack (txt abstractLocator)
@@ -873,10 +872,6 @@ evaluateCase getSession locCase  =
               liftIO . throwIO . userError $ "Failure generated" 
                                                 <> "\n" 
                                                 <> unpack (txt failure)
-                                                <> "\n" 
-                                                <> case locateRslt of
-                                                     LocateWithTrace {trace} -> unpack $ "\n==== Trace ====\n"  <> (T.unlines $ txt <$> trace)
-                                                     Locate {} -> ""
 
     Unmatched {} ->
       liftIO $ throwIO $ userError "evaluateCase called with an unmatched locator case"

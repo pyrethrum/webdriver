@@ -15,21 +15,18 @@ where
 
 import Control.Exception (Exception)
 import Control.Monad (foldM, join)
-import Control.Monad.IO.Class (MonadIO, liftIO)
-import Data.Aeson as A (Result (..), fromJSON, toJSON, Value)
+import Data.Aeson as A (FromJSON, Result (..), ToJSON, Value, fromJSON, toJSON)
 import Data.Containers.ListUtils (nubOrd)
-import Data.IORef (IORef, modifyIORef', newIORef, readIORef)
 import Data.List qualified as LST
 import Data.List.NonEmpty (NonEmpty (..), toList)
 import Data.Maybe (catMaybes)
 import Data.Text
 import Data.Text qualified as T
+import GHC.Generics (Generic)
 import GHC.Stack (HasCallStack)
 
 import WebDriverPreCore.Extended.LocateCommon (
     LocateException (..),
-    LocateResult (..),
-    LocateTracing (..),
     PreLocateException (..),
     LeafCardinality (..),
     addLocToException
@@ -75,15 +72,18 @@ data WDTrace = Prepared {
     role :: RoleLocator,
     elms :: [ElementId]
   }
- deriving (Show, Eq)
+ deriving (Show, Eq, Generic)
+
+instance ToJSON WDTrace
+
+instance FromJSON WDTrace
 
 -- | Options for singleton locate functions ('locateHttp', 'locateFromElementHttp').
 data HttpLocateOpts = MkHttpLocateOpts
   { jsRecheckDisplayed :: DisplayedCheck,
     extendedRoleLocation :: ExtendedRoleLocateSingleton,
     singletonCardinality :: SingletonCardinality,
-    mkDefaultLoc :: Text -> Locator,
-    locateTracing :: LocateTracing
+    mkDefaultLoc :: Text -> Locator
   }
 
 -- | Actions for singleton locate functions ('locateHttp', 'locateFirstHttp', 'locateFromElementHttp').
@@ -119,10 +119,11 @@ data LocParams m = MkLocParams
   }
 
 -- | Build a 'LocParams m' from 'LocateActions m', writing traces to an 'IORef'.
--- Using IORef instead of WriterT ensures trace entries are preserved even when
--- exceptions are thrown (WriterT state is discarded on exception).
-mkParams :: (MonadIO m) => IORef [WDTrace] -> HttpLocateOpts -> LocateActions m -> LocParams m
-mkParams logsRef MkHttpLocateOpts{..} MkLocateActions{..} = MkLocParams
+-- Using IORef instead of WriterT ensures trace e.
+-- The trace function is supplied by the caller via 'LocateActions'; tracing is
+-- entirely under the caller's control (pass a no-op to disable it).
+mkParams :: HttpLocateOpts -> LocateActions m -> LocParams m
+mkParams MkHttpLocateOpts{..} MkLocateActions{..} = MkLocParams
   {
   -- throw / catch
     throw
@@ -139,10 +140,7 @@ mkParams logsRef MkHttpLocateOpts{..} MkLocateActions{..} = MkLocParams
 
   -- other actions
   , defaultLoc = mkDefaultLoc
-  , trace = \traceEntry ->
-      case locateTracing of
-        LocateTracing -> liftIO $ modifyIORef' logsRef (traceEntry :)
-        NoLocateTracing -> pure ()
+  , trace
 
   -- options
   , jsRecheckDisplayed
@@ -152,59 +150,50 @@ mkParams logsRef MkHttpLocateOpts{..} MkLocateActions{..} = MkLocParams
 
 
 -- | Extract a single element from a locate result.
-mkSingleton :: Locator -> (LocateResult WDTrace [ElementId]) -> (LocateResult WDTrace ElementId)
+mkSingleton :: Locator -> Either LocateException [ElementId] -> Either LocateException ElementId
 mkSingleton loc = \case
-  Locate (Right (x:_))             -> Locate (Right x)
-  Locate (Right [])                -> Locate (Left $ addLocToException loc elementNotFoundError)
-  Locate (Left e)                  -> Locate (Left e)
-  LocateWithTrace (Right (x:_)) t  -> LocateWithTrace (Right x) t
-  LocateWithTrace (Right []) t     -> LocateWithTrace (Left $ addLocToException loc elementNotFoundError) t
-  LocateWithTrace (Left e) t       -> LocateWithTrace (Left e) t
-
+  Right (x : _) -> Right x
+  Right []      -> Left $ addLocToException loc elementNotFoundError
+  Left e        -> Left e
 
 -- | Locate a unique or first-matching element from the document root.
-locateHttp :: forall m. (MonadIO m) => LocateActions m -> HttpLocateOpts -> Locator -> m (LocateResult WDTrace ElementId)
+locateHttp :: forall m. Monad m => LocateActions m -> HttpLocateOpts -> Locator -> m (Either LocateException ElementId)
 locateHttp actions opts l = mkSingleton l <$> runHttpAction actions opts Nothing httpLocateSingleton l
 
 -- | Locate all matching elements from the document root.
-locateAllHttp :: forall m. (MonadIO m) => LocateActions m -> HttpLocateOpts -> Locator -> m (LocateResult WDTrace [ElementId])
+locateAllHttp :: forall m. Monad m => LocateActions m -> HttpLocateOpts -> Locator -> m (Either LocateException [ElementId])
 locateAllHttp actions opts = runHttpAction actions opts Nothing httpLocateAll
 
 -- | Locate a unique or first-matching element rooted at a given element.
-locateFromElementHttp :: forall m. (MonadIO m) => LocateActions m -> HttpLocateOpts -> ElementId -> Locator -> m (LocateResult WDTrace ElementId)
+locateFromElementHttp :: forall m. Monad m => LocateActions m -> HttpLocateOpts -> ElementId -> Locator -> m (Either LocateException ElementId)
 locateFromElementHttp actions opts rootId l = mkSingleton l <$> runHttpAction actions opts (Just rootId) httpLocateSingleton l
 
 -- | Locate all matching elements rooted at a given element.
-locateAllFromElementHttp :: forall m. (MonadIO m) => LocateActions m -> HttpLocateOpts -> ElementId -> Locator -> m (LocateResult WDTrace [ElementId])
+locateAllFromElementHttp :: forall m. Monad m => LocateActions m -> HttpLocateOpts -> ElementId -> Locator -> m (Either LocateException [ElementId])
 locateAllFromElementHttp actions opts rootId = runHttpAction actions opts (Just rootId) httpLocateAll
+
 -- | Common implementation for all public HTTP locate functions.
 runHttpAction ::
   forall m.
-  (MonadIO m) =>
+  Monad m =>
   LocateActions m ->
   HttpLocateOpts ->
   -- | root element
   Maybe ElementId ->
   (LocParams m -> CompoundLocator HttpLoc -> m [ElementId]) ->
   Locator ->
-  m (LocateResult WDTrace [ElementId])
+  m (Either LocateException [ElementId])
 runHttpAction actions@MkLocateActions{catch} opts mRootId locateAction loc = do
-  logsRef <- liftIO $ newIORef []
-  let  p = setBaseElement mRootId $ mkParams logsRef opts actions
-
-  rslt <- case LI.transformHttp p.defaultLoc loc of
-    -- log failure if tansformation failed
-    Left err -> do 
-        p.trace (PrepareFailed loc err)
-        pure $ Left (InvalidLocator err)
+  let p = setBaseElement mRootId $ mkParams opts actions
+  case LI.transformHttp p.defaultLoc loc of
+    -- log failure if transformation failed
+    Left err -> do
+      p.trace (PrepareFailed loc err)
+      pure $ Left (InvalidLocator err)
     -- run locator if transformation succeeded
     Right compoundLoc -> do
       p.trace (Prepared loc compoundLoc)
       first (addLocToException loc) <$> runLoc catch (locateAction p) compoundLoc
-  
-  case opts.locateTracing of
-    LocateTracing -> LocateWithTrace rslt . P.reverse <$> (liftIO $ readIORef logsRef)
-    NoLocateTracing -> pure $ Locate rslt
 
 
 setBaseElement :: Maybe ElementId -> LocParams m -> LocParams m

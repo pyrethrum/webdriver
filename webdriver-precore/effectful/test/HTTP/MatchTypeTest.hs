@@ -184,7 +184,7 @@ tests =
         test :: Text -> BaseHTTPEffs () -> TestTree
         test = runHttpTest ses
 
-        locateAll :: forall es. (IOE :> es, WebDriverHttp :> es) => Locator -> Eff es (L.LocateResult L.WDTrace [ElementId])
+        locateAll :: forall es. (IOE :> es, WebDriverHttp :> es) => Locator -> Eff es (Either L.LocateException [ElementId])
         locateAll = locateAllHttp defAllOpts
 
         chkAutoId :: Text -> Locator -> Text -> TestTree

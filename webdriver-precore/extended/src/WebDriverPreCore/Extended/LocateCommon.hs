@@ -3,15 +3,14 @@ module WebDriverPreCore.Extended.LocateCommon
     PreLocateException(..),
     LocateException(..),
     LeafCardinality(..),
-    LocateTracing(..),
-    LocateResult(..),
     addLocToException
   )
 where
 
 import Control.Exception (Exception)
-import Data.Bifunctor (first)
+import Data.Aeson (FromJSON, ToJSON)
 import Data.Text
+import GHC.Generics (Generic)
 
 import WebDriverPreCore.Extended.Locators.Internal (Locator)
 import WebDriverPreCore.Extended.Locators.Internal qualified as LI
@@ -51,16 +50,8 @@ addLocToException loc = \case
 instance Exception LocateException
 instance Exception PreLocateException
 
-data LeafCardinality = FindFirst | FindAll deriving (Show, Eq)
+data LeafCardinality = FindFirst | FindAll deriving (Show, Eq, Generic)
 
+instance ToJSON LeafCardinality
 
-data LocateTracing = LocateTracing | NoLocateTracing deriving (Show, Eq)
-
-data LocateResult t r = 
-  Locate
-  { result :: Either LocateException r
-  } |
-  LocateWithTrace 
-  { result :: Either LocateException r
-  , trace :: [t]
-  } deriving (Show, Eq)
+instance FromJSON LeafCardinality

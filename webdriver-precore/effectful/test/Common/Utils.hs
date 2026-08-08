@@ -87,6 +87,10 @@ actions =
     L.MkLocateActions
       { throw = throwIO,
         catch,
+        -- noOp trace - tracing is disabled unless a real trace function is supplied
+        trace = \_ -> pure (),
+        -- Alternative: log a pretty printed WDTrace to stdout
+        -- trace = \traceEntry -> liftIO . putStrLn . unpack $ "WDTrace: " <> txt traceEntry,
         findElement,
         findElementFromElement,
         findElements,
@@ -96,16 +100,16 @@ actions =
         getElementText
       }
 
-locateHttp :: (IOE :> es, WebDriverHttp :> es) => L.HttpLocateOpts -> Locator -> Eff es (L.LocateResult L.WDTrace ElementId)
+locateHttp :: (IOE :> es, WebDriverHttp :> es) => L.HttpLocateOpts -> Locator -> Eff es (Either L.LocateException ElementId)
 locateHttp opts loc = actions >>= \a -> L.locateHttp a opts loc
 
-locateAllHttp :: (IOE :> es, WebDriverHttp :> es) => L.HttpLocateOpts -> Locator -> Eff es (L.LocateResult L.WDTrace [ElementId])
+locateAllHttp :: (IOE :> es, WebDriverHttp :> es) => L.HttpLocateOpts -> Locator -> Eff es (Either L.LocateException [ElementId])
 locateAllHttp opts loc = actions >>= \a -> L.locateAllHttp a opts loc
 
-locateFromElementHttp :: (IOE :> es, WebDriverHttp :> es) => L.HttpLocateOpts -> ElementId -> Locator -> Eff es (L.LocateResult L.WDTrace ElementId)
+locateFromElementHttp :: (IOE :> es, WebDriverHttp :> es) => L.HttpLocateOpts -> ElementId -> Locator -> Eff es (Either L.LocateException ElementId)
 locateFromElementHttp opts elmId' loc = actions >>= \a -> L.locateFromElementHttp a opts elmId' loc
 
-locateAllFromElementHttp :: (IOE :> es, WebDriverHttp :> es) => L.HttpLocateOpts -> ElementId -> Locator -> Eff es (L.LocateResult L.WDTrace [ElementId])
+locateAllFromElementHttp :: (IOE :> es, WebDriverHttp :> es) => L.HttpLocateOpts -> ElementId -> Locator -> Eff es (Either L.LocateException [ElementId])
 locateAllFromElementHttp opts elmId' loc = actions >>= \a -> L.locateAllFromElementHttp a opts elmId' loc
 
 -- ################ Element Inspection ################
@@ -126,63 +130,61 @@ formatOuterHtmls :: [Text] -> Text
 formatOuterHtmls htmls = T.intercalate "\n---------\n" htmls
 
 -- | Fail with element outerHTML information appended
-liftFailWithElements :: (IOE :> es, WebDriverHttp :> es) => L.LocateResult L.WDTrace [ElementId] -> Text -> [ElementId] -> Eff es a
+liftFailWithElements :: (IOE :> es, WebDriverHttp :> es) => Either L.LocateException [ElementId] -> Text -> [ElementId] -> Eff es a
 liftFailWithElements locRslt msg elms = do
   htmls <- getOuterHtmls elms
   let htmlSection = if null htmls then "" else "\n\nFailure Elements:\n" <> formatOuterHtmls htmls
   liftIO . assertFailure . unpack $ msg <> "\n\nLocateResult:\n" <> txt locRslt <> htmlSection
 
--- | Convert a singleton 'LocateResult' to a list 'LocateResult'.
-singletonToList :: L.LocateResult L.WDTrace ElementId -> L.LocateResult L.WDTrace [ElementId]
-singletonToList = \case
-  L.Locate r -> L.Locate (fmap (:[]) r)
-  L.LocateWithTrace r t -> L.LocateWithTrace (fmap (:[]) r) t
+-- | Convert a singleton 'Either' result to a list 'Either' result.
+singletonToList :: Either L.LocateException ElementId -> Either L.LocateException [ElementId]
+singletonToList = fmap (: [])
 
 -- | Fail with element outerHTML information appended (singleton variant).
-liftFailWithElement :: (IOE :> es, WebDriverHttp :> es) => L.LocateResult L.WDTrace ElementId -> Text -> ElementId -> Eff es a
+liftFailWithElement :: (IOE :> es, WebDriverHttp :> es) => Either L.LocateException ElementId -> Text -> ElementId -> Eff es a
 liftFailWithElement locRslt msg el = liftFailWithElements (singletonToList locRslt) msg [el]
 
 -- | Check with element outerHTML information on failure
-liftChkWithElements :: (IOE :> es, WebDriverHttp :> es) => L.LocateResult L.WDTrace [ElementId] -> Text -> [ElementId] -> Maybe Text -> Eff es ()
+liftChkWithElements :: (IOE :> es, WebDriverHttp :> es) => Either L.LocateException [ElementId] -> Text -> [ElementId] -> Maybe Text -> Eff es ()
 liftChkWithElements locRslt testTitle elms mErr = 
   mErr & maybe (pure ()) (\erMsg -> liftFailWithElements locRslt (testTitle <> " - " <> erMsg) elms)
 
 -- | Check with element outerHTML information on failure (singleton variant).
-liftChkWithElement :: (IOE :> es, WebDriverHttp :> es) => L.LocateResult L.WDTrace ElementId -> Text -> ElementId -> Maybe Text -> Eff es ()
+liftChkWithElement :: (IOE :> es, WebDriverHttp :> es) => Either L.LocateException ElementId -> Text -> ElementId -> Maybe Text -> Eff es ()
 liftChkWithElement locRslt testTitle el mErr =
   liftChkWithElements (singletonToList locRslt) testTitle [el] mErr
 
 -- ################ Checks ################
 
-chkLocException :: (IOE :> es, Show a) => Text -> (L.LocateException -> Maybe Text) -> L.LocateResult L.WDTrace a -> Eff es ()
+chkLocException :: (IOE :> es, Show a) => Text -> (L.LocateException -> Maybe Text) -> Either L.LocateException a -> Eff es ()
 chkLocException errMsg p locRslt =
   either
     (\ex -> liftChk locRslt (errMsg <> ": LocateException check failed: " <> txt ex) $ p ex)
     (const . liftFail locRslt $ errMsg <> ": expected Left LocateException but got Right")
-    locRslt.result
+    locRslt
 
-chkElms :: (IOE :> es, WebDriverHttp :> es) => Text -> ([ElementId] -> Maybe Text) -> L.LocateResult L.WDTrace [ElementId] -> Eff es ()
+chkElms :: (IOE :> es, WebDriverHttp :> es) => Text -> ([ElementId] -> Maybe Text) -> Either L.LocateException [ElementId] -> Eff es ()
 chkElms errMsg p locRslt =
   either
     (liftFail locRslt . (errMsg <>) . (<> ": expected Right elements but got Left: ") . txt)
     (\elms -> liftChkWithElements locRslt (errMsg <> ": element list check failed") elms $ p elms)
-    locRslt.result
+    locRslt
 
 -- | Singleton variant of 'chkElms'.
-chkElm :: (IOE :> es, WebDriverHttp :> es) => Text -> (ElementId -> Maybe Text) -> L.LocateResult L.WDTrace ElementId -> Eff es ()
+chkElm :: (IOE :> es, WebDriverHttp :> es) => Text -> (ElementId -> Maybe Text) -> Either L.LocateException ElementId -> Eff es ()
 chkElm errMsg p = chkElms errMsg (\[x] -> p x) . singletonToList
 
-chkElmsM :: (IOE :> es, WebDriverHttp :> es) => Text -> L.LocateResult L.WDTrace [ElementId] -> ([ElementId] -> Eff es (Maybe Text)) -> Eff es ()
+chkElmsM :: (IOE :> es, WebDriverHttp :> es) => Text -> Either L.LocateException [ElementId] -> ([ElementId] -> Eff es (Maybe Text)) -> Eff es ()
 chkElmsM testTitle locRslt chkM =
-  locRslt.result & either
+  locRslt & either
     (\err -> liftFail locRslt $ testTitle <> " - locate failed: " <> txt err)
     (\elms -> chkM elms >>= liftChkWithElements locRslt (testTitle <> " - element list check failed") elms)
 
 -- | Singleton variant of 'chkElmsM'.
-chkElmM :: (IOE :> es, WebDriverHttp :> es) => Text -> L.LocateResult L.WDTrace ElementId -> (ElementId -> Eff es (Maybe Text)) -> Eff es ()
+chkElmM :: (IOE :> es, WebDriverHttp :> es) => Text -> Either L.LocateException ElementId -> (ElementId -> Eff es (Maybe Text)) -> Eff es ()
 chkElmM testTitle locRslt chkM = chkElmsM testTitle (singletonToList locRslt) (\[x] -> chkM x)
 
-chkAttribute :: forall es. (IOE :> es, WebDriverHttp :> es) => Text -> L.LocateResult L.WDTrace [ElementId] -> Text -> (Text -> Maybe Text) -> Eff es ()
+chkAttribute :: forall es. (IOE :> es, WebDriverHttp :> es) => Text -> Either L.LocateException [ElementId] -> Text -> (Text -> Maybe Text) -> Eff es ()
 chkAttribute testTitle locRslt attrName attrValChkM =
   chkElmsM testTitle locRslt elmChk
   where
@@ -194,11 +196,11 @@ chkAttribute testTitle locRslt attrName attrValChkM =
       elms -> pure $ Just $ testTitle <> " - expected singlet locate resultlist but got " <> txt (length elms) <> " elms"
 
 -- | Singleton variant of 'chkAttribute'.
-chkAttributeElm :: forall es. (IOE :> es, WebDriverHttp :> es) => Text -> L.LocateResult L.WDTrace ElementId -> Text -> (Text -> Maybe Text) -> Eff es ()
+chkAttributeElm :: forall es. (IOE :> es, WebDriverHttp :> es) => Text -> Either L.LocateException ElementId -> Text -> (Text -> Maybe Text) -> Eff es ()
 chkAttributeElm testTitle locRslt attrName attrValChkM =
   chkAttribute testTitle (singletonToList locRslt) attrName attrValChkM
 
-chkAttributeEq :: (IOE :> es, WebDriverHttp :> es) => Text -> Text -> Text -> L.LocateResult L.WDTrace [ElementId] -> Eff es ()
+chkAttributeEq :: (IOE :> es, WebDriverHttp :> es) => Text -> Text -> Text -> Either L.LocateException [ElementId] -> Eff es ()
 chkAttributeEq testTitle attrName expctd locrslt =
   chkAttribute testTitle locrslt attrName $ \actual ->
     if actual == expctd
@@ -206,13 +208,13 @@ chkAttributeEq testTitle attrName expctd locrslt =
       else Just $ testTitle <> " - expected attribute value: " <> txt expctd <> " but got: " <> txt actual
 
 -- | Singleton variant of 'chkAttributeEq'.
-chkAttributeEqElm :: (IOE :> es, WebDriverHttp :> es) => Text -> Text -> Text -> L.LocateResult L.WDTrace ElementId -> Eff es ()
+chkAttributeEqElm :: (IOE :> es, WebDriverHttp :> es) => Text -> Text -> Text -> Either L.LocateException ElementId -> Eff es ()
 chkAttributeEqElm testTitle attrName expctd = chkAttributeEq testTitle attrName expctd . singletonToList
 
-liftFail :: (IOE :> es, Show a) => L.LocateResult L.WDTrace a -> Text -> Eff es b
+liftFail :: (IOE :> es, Show a) => Either L.LocateException a -> Text -> Eff es b
 liftFail locRslt msg = liftIO . assertFailure . unpack $ msg <> "\n\nLocateResult:\n" <> txt locRslt
 
-liftChk :: (IOE :> es, Show a) => L.LocateResult L.WDTrace a -> Text -> Maybe Text -> Eff es ()
+liftChk :: (IOE :> es, Show a) => Either L.LocateException a -> Text -> Maybe Text -> Eff es ()
 liftChk locRslt testTitle mErr = mErr & maybe (pure ()) (\erMsg -> liftFail locRslt $ testTitle <> " - " <> erMsg)
 
 chkEq :: (IOE :> es, Show a, Eq a) => Text -> a -> a -> Eff es ()
@@ -242,8 +244,7 @@ defOpts =
     { extendedRoleLocation = L.ExtLocateNever,
       jsRecheckDisplayed = L.DisplayedCheckAlways,
       singletonCardinality = L.Unique,
-      mkDefaultLoc = autoId,
-      locateTracing = L.LocateTracing
+      mkDefaultLoc = autoId
     }
 
 defAllOpts :: L.HttpLocateOpts
@@ -252,8 +253,7 @@ defAllOpts =
     { extendedRoleLocation = L.ExtLocateNever,
       jsRecheckDisplayed = L.DisplayedCheckAlways,
       singletonCardinality = L.First,
-      mkDefaultLoc = autoId,
-      locateTracing = L.LocateTracing
+      mkDefaultLoc = autoId
     }
 
 -- ################ Test Helpers ################
@@ -262,7 +262,7 @@ defAllOpts =
 -- Takes a test runner, locate function, test name, locator, attribute name, and expected value
 atrrChk ::
   (Text -> BaseHTTPEffs () -> TestTree) ->
-  (forall es. (IOE :> es, WebDriverHttp :> es) => Locator -> Eff es (L.LocateResult L.WDTrace [ElementId])) ->
+  (forall es. (IOE :> es, WebDriverHttp :> es) => Locator -> Eff es (Either L.LocateException [ElementId])) ->
   Text ->
   Locator ->
   Text ->
@@ -275,7 +275,7 @@ atrrChk testRunner locateFn testName loc attrName expctd =
 -- Takes a test runner, locate function, test name, locator, and expected auto-id value
 chkAutoId ::
   (Text -> BaseHTTPEffs () -> TestTree) ->
-  (forall es. (IOE :> es, WebDriverHttp :> es) => Locator -> Eff es (L.LocateResult L.WDTrace [ElementId])) ->
+  (forall es. (IOE :> es, WebDriverHttp :> es) => Locator -> Eff es (Either L.LocateException [ElementId])) ->
   Text ->
   Locator ->
   Text ->
@@ -286,7 +286,7 @@ chkAutoId testRunner locateFn testName loc expctd =
 -- | Check an element's attribute value matches expected (singleton result variant).
 atrrChkElm ::
   (Text -> BaseHTTPEffs () -> TestTree) ->
-  (forall es. (IOE :> es, WebDriverHttp :> es) => Locator -> Eff es (L.LocateResult L.WDTrace ElementId)) ->
+  (forall es. (IOE :> es, WebDriverHttp :> es) => Locator -> Eff es (Either L.LocateException ElementId)) ->
   Text ->
   Locator ->
   Text ->
@@ -298,7 +298,7 @@ atrrChkElm testRunner locateFn testName loc attrName expctd =
 -- | Check an element's auto-id attribute matches expected value (singleton result variant).
 chkAutoIdElm ::
   (Text -> BaseHTTPEffs () -> TestTree) ->
-  (forall es. (IOE :> es, WebDriverHttp :> es) => Locator -> Eff es (L.LocateResult L.WDTrace ElementId)) ->
+  (forall es. (IOE :> es, WebDriverHttp :> es) => Locator -> Eff es (Either L.LocateException ElementId)) ->
   Text ->
   Locator ->
   Text ->
@@ -310,7 +310,7 @@ chkAutoIdElm testRunner locateFn testName loc expctd =
 -- Takes a test runner, locateAll function, test name, locator, and checker function
 chkAll ::
   (Text -> BaseHTTPEffs () -> TestTree) ->
-  (forall es. (IOE :> es, WebDriverHttp :> es) => Locator -> Eff es (L.LocateResult L.WDTrace [ElementId])) ->
+  (forall es. (IOE :> es, WebDriverHttp :> es) => Locator -> Eff es (Either L.LocateException [ElementId])) ->
   Text ->
   Locator ->
   ([ElementId] -> Maybe Text) ->
@@ -324,7 +324,7 @@ chkAll testRunner locateAllFn testName loc chk =
 -- Takes a test runner, locateAll function, test name, locator, and checker function
 chkAllNever ::
   (Text -> BaseHTTPEffs () -> TestTree) ->
-  (forall es. (IOE :> es, WebDriverHttp :> es) => Locator -> Eff es (L.LocateResult L.WDTrace [ElementId])) ->
+  (forall es. (IOE :> es, WebDriverHttp :> es) => Locator -> Eff es (Either L.LocateException [ElementId])) ->
   Text ->
   Locator ->
   ([ElementId] -> Maybe Text) ->
@@ -335,9 +335,9 @@ chkAllNever testRunner locateAllFn testName loc chk =
     chkElms (txt loc) chk locRslt
 
 -- | Check that located element has the expected auto-id attribute value
-chkElmsWithAutoId :: (IOE :> es, WebDriverHttp :> es) => Text -> Text -> L.LocateResult L.WDTrace [ElementId] -> Eff es ()
+chkElmsWithAutoId :: (IOE :> es, WebDriverHttp :> es) => Text -> Text -> Either L.LocateException [ElementId] -> Eff es ()
 chkElmsWithAutoId testTitle expctd locRslt =
-  locRslt.result & either
+  locRslt & either
     (\err -> liftFail locRslt $ testTitle <> " - locate failed: " <> txt err)
     (\elms -> elmChk elms >>= liftChkWithElements locRslt (testTitle <> " - element check failed") elms)
   where
@@ -352,5 +352,5 @@ chkElmsWithAutoId testTitle expctd locRslt =
       elms -> pure $ Just $ testTitle <> " - expected single element but got " <> txt (length elms)
 
 -- | Singleton variant of 'chkElmsWithAutoId'.
-chkElmWithAutoId :: (IOE :> es, WebDriverHttp :> es) => Text -> Text -> L.LocateResult L.WDTrace ElementId -> Eff es ()
+chkElmWithAutoId :: (IOE :> es, WebDriverHttp :> es) => Text -> Text -> Either L.LocateException ElementId -> Eff es ()
 chkElmWithAutoId testTitle expctd = chkElmsWithAutoId testTitle expctd . singletonToList

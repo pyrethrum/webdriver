@@ -24,6 +24,7 @@ module WebDriverPreCore.Extended.Locators.Internal (
 ) where
 
 import Control.Exception (Exception)
+import Data.Aeson (FromJSON, ToJSON)
 import Data.Functor.Identity (Identity (..))
 import Data.List (nub)
 import Data.List.NonEmpty (NonEmpty (..), toList)
@@ -31,6 +32,7 @@ import Data.Maybe (fromMaybe, catMaybes)
 import Data.Text (Text, intercalate, pack, splitOn, toLower)
 import Data.Text qualified as T
 import Data.Word (Word8)
+import GHC.Generics (Generic)
 import Utils (txt)
 import WebDriverPreCore.Extended.BiDi.Base.Protocol (BrowsingContext)
 import Prelude
@@ -75,8 +77,13 @@ data RoleLocator
     ( -- | WithOptions {base :: Locator, options :: [LocatorDirectives]}
       Show,
       Eq,
-      Ord
+      Ord,
+      Generic
     )
+
+instance ToJSON RoleLocator
+
+instance FromJSON RoleLocator
 
 -- | Locator for use with both HTTP and BiDi protocols.
 data Locator
@@ -117,8 +124,13 @@ data Locator
     ( -- | WithOptions {base :: Locator, options :: [LocatorDirectives]}
       Show,
       Eq,
-      Ord
+      Ord,
+      Generic
     )
+
+instance ToJSON Locator
+
+instance FromJSON Locator
 
 -- | ARIA roles from https://www.w3.org/TR/wai-aria-1.2/#role_definitions
 data AriaRole
@@ -156,15 +168,31 @@ data AriaRole
   | Table
   | Term
   | Textbox
-  deriving (Show, Eq, Ord, Enum, Bounded)
+  deriving (Show, Eq, Ord, Enum, Bounded, Generic)
 
-data MatchType = Full | Starts | Partial | Wildcard deriving (Show, Eq, Ord)
+instance ToJSON AriaRole
 
-data CaseSensitivity = CaseSensitive | CaseInsensitive deriving (Show, Eq, Ord)
+instance FromJSON AriaRole
+
+data MatchType = Full | Starts | Partial | Wildcard deriving (Show, Eq, Ord, Generic)
+
+instance ToJSON MatchType
+
+instance FromJSON MatchType
+
+data CaseSensitivity = CaseSensitive | CaseInsensitive deriving (Show, Eq, Ord, Generic)
+
+instance ToJSON CaseSensitivity
+
+instance FromJSON CaseSensitivity
 
 data Protocol = HTTP | BiDi deriving (Show, Eq)
 
-data InvalidLocator = MkInvalidLocator {loc :: Locator, description :: Text} deriving (Show, Eq, Ord)
+data InvalidLocator = MkInvalidLocator {loc :: Locator, description :: Text} deriving (Show, Eq, Ord, Generic)
+
+instance ToJSON InvalidLocator
+
+instance FromJSON InvalidLocator
 
 instance Exception InvalidLocator
 
@@ -183,11 +211,15 @@ data HttpLoc
   | XPathHttp {value :: Text} 
   | RoleHttp {roleSpec :: RoleLocator, xpath :: Text}
   deriving
-    ( -- | WithOptions {base :: Locator, options :: [LocatorDirectives]}
-      Show,
+    ( Show,
       Eq,
-      Ord
+      Ord,
+      Generic
     )
+
+instance ToJSON HttpLoc
+
+instance FromJSON HttpLoc
 
 -- ###################################### HTTP functions #####################################
 
@@ -391,7 +423,11 @@ data CompoundLocator a
   | ContainsC {container :: CompoundLocator a, contained :: CompoundLocator a}
   | AllC {elms :: NonEmpty (CompoundLocator a)}
   | AnyC {elms :: NonEmpty (CompoundLocator a)}
-  deriving (Show, Eq, Ord, Functor, Foldable, Traversable)
+  deriving (Show, Eq, Ord, Functor, Foldable, Traversable, Generic)
+
+instance ToJSON a => ToJSON (CompoundLocator a)
+
+instance FromJSON a => FromJSON (CompoundLocator a)
 
 -- ###################################### Common transformation functions #####################################
 

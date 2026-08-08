@@ -19,7 +19,8 @@
   "cSpell.enabled": true,
   "workbench.colorTheme": "Dark Modern",
   "chat.tools.terminal.autoApprove": {
-    "ghcup": true
+    "ghcup": true,
+    "timeout": true
   },
     "files.watcherExclude": {
     "**/dist-newstyle/**": true

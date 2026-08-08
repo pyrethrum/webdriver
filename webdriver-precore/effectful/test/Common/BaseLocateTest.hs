@@ -50,7 +50,7 @@ tests =
                   maxResult <- locateAll $ elmClass "input"
                   minimizeWindow
                   minResult <- locateAll $ elmClass "input"
-                  chkEq "Displayed result should be the same for minised and maximised viewport" maxResult.result minResult.result
+                  chkEq "Displayed result should be the same for minised and maximised viewport" maxResult minResult
               , testGroup "Role Locator Tests"
                   [ testGroup "Landmark role types - roleType"
                       [ chkAutoId "Banner - page header" (roleType Banner) "hdr-main"
@@ -126,7 +126,7 @@ tests =
                   [ test "RoleType Region - ExtLocateNever and ExtLocateAlways give same results" $ do
                       never <- locateAll $ roleType Region
                       always <- locateAllExt $ roleType Region
-                      chkEq "RoleType Region results should be identical" never.result always.result
+                      chkEq "RoleType Region results should be identical" never always
                   ]
               , testGroup "aria-label - always resolved regardless of setting"
                   [ chkAutoId "ExtLocateNever finds textbox with aria-label"
@@ -225,7 +225,7 @@ tests =
                   [ test "DisambiguateUnique gives same result as Never for locateAll" $ do
                       disambiguate <- locateAllDisambiguate $ elmClass "notes-area"
                       never        <- locateAllNever $ elmClass "notes-area"
-                      chkEq "DisambiguateUnique locateAll result must equal Never" disambiguate.result never.result
+                      chkEq "DisambiguateUnique locateAll result must equal Never" disambiguate never
                   , test "DisplayedCheckAlways filters hidden in locateAll - Never returns both" $ do
                       always <- locateAll      $ elmClass "notes-area"
                       never  <- locateAllNever $ elmClass "notes-area"
@@ -310,7 +310,7 @@ tests =
                   hdrResult <- locate $ autoId "hdr-main"
                   chkElmM "find hdr-main" hdrResult $ \hdr -> do
                     notInHdr <- locateFromElement hdr $ autoId "edt-given-name"
-                    pure $ case notInHdr.result of
+                    pure $ case notInHdr of
                       Left (L.ElementNotFound {}) -> Nothing
                       Left other -> Just $ "expected ElementNotFound but got: " <> txt other
                       Right _ -> Just "expected ElementNotFound but edt-given-name was found in header"
@@ -424,16 +424,16 @@ tests =
     runHttp ses $ testUrl urlAction >>= navigateTo
     pure ses
 
-  locate :: forall es. (IOE :> es, WebDriverHttp :> es) => Locator -> Eff es (L.LocateResult L.WDTrace ElementId)
+  locate :: forall es. (IOE :> es, WebDriverHttp :> es) => Locator -> Eff es (Either L.LocateException ElementId)
   locate = locateHttp defOpts
 
-  locateAll :: forall es. (IOE :> es, WebDriverHttp :> es) => Locator -> Eff es (L.LocateResult L.WDTrace [ElementId])
+  locateAll :: forall es. (IOE :> es, WebDriverHttp :> es) => Locator -> Eff es (Either L.LocateException [ElementId])
   locateAll = locateAllHttp defAllOpts
 
-  locateFromElement :: forall es. (IOE :> es, WebDriverHttp :> es) => ElementId -> Locator -> Eff es (L.LocateResult L.WDTrace ElementId)
+  locateFromElement :: forall es. (IOE :> es, WebDriverHttp :> es) => ElementId -> Locator -> Eff es (Either L.LocateException ElementId)
   locateFromElement = locateFromElementHttp defOpts
 
-  locateAllFromElement :: forall es. (IOE :> es, WebDriverHttp :> es) => ElementId -> Locator -> Eff es (L.LocateResult L.WDTrace [ElementId])
+  locateAllFromElement :: forall es. (IOE :> es, WebDriverHttp :> es) => ElementId -> Locator -> Eff es (Either L.LocateException [ElementId])
   locateAllFromElement = locateAllFromElementHttp defAllOpts
 
   extAlwaysOpts :: L.HttpLocateOpts
@@ -448,16 +448,16 @@ tests =
   extMissAllOpts :: L.HttpLocateOpts
   extMissAllOpts = defAllOpts { L.extendedRoleLocation = L.ExtLocateAlways }
 
-  locateExt :: forall es. (IOE :> es, WebDriverHttp :> es) => Locator -> Eff es (L.LocateResult L.WDTrace ElementId)
+  locateExt :: forall es. (IOE :> es, WebDriverHttp :> es) => Locator -> Eff es (Either L.LocateException ElementId)
   locateExt = locateHttp extAlwaysOpts
 
-  locateAllExt :: forall es. (IOE :> es, WebDriverHttp :> es) => Locator -> Eff es (L.LocateResult L.WDTrace [ElementId])
+  locateAllExt :: forall es. (IOE :> es, WebDriverHttp :> es) => Locator -> Eff es (Either L.LocateException [ElementId])
   locateAllExt = locateAllHttp extAlwaysAllOpts
 
-  locateExtMiss :: forall es. (IOE :> es, WebDriverHttp :> es) => Locator -> Eff es (L.LocateResult L.WDTrace ElementId)
+  locateExtMiss :: forall es. (IOE :> es, WebDriverHttp :> es) => Locator -> Eff es (Either L.LocateException ElementId)
   locateExtMiss = locateHttp extMissOpts
 
-  locateAllExtMiss :: forall es. (IOE :> es, WebDriverHttp :> es) => Locator -> Eff es (L.LocateResult L.WDTrace [ElementId])
+  locateAllExtMiss :: forall es. (IOE :> es, WebDriverHttp :> es) => Locator -> Eff es (Either L.LocateException [ElementId])
   locateAllExtMiss = locateAllHttp extMissAllOpts
 
   isNotFound :: L.LocateException -> Maybe Text
@@ -476,16 +476,16 @@ tests =
   disambiguateAllOpts :: L.HttpLocateOpts
   disambiguateAllOpts = defAllOpts { L.jsRecheckDisplayed = L.DisplayedCheckNever }
 
-  locateAllNever :: forall es. (IOE :> es, WebDriverHttp :> es) => Locator -> Eff es (L.LocateResult L.WDTrace [ElementId])
+  locateAllNever :: forall es. (IOE :> es, WebDriverHttp :> es) => Locator -> Eff es (Either L.LocateException [ElementId])
   locateAllNever = locateAllHttp neverAllOpts
 
-  locateAllDisambiguate :: forall es. (IOE :> es, WebDriverHttp :> es) => Locator -> Eff es (L.LocateResult L.WDTrace [ElementId])
+  locateAllDisambiguate :: forall es. (IOE :> es, WebDriverHttp :> es) => Locator -> Eff es (Either L.LocateException [ElementId])
   locateAllDisambiguate = locateAllHttp disambiguateAllOpts
 
-  locateNever :: forall es. (IOE :> es, WebDriverHttp :> es) => Locator -> Eff es (L.LocateResult L.WDTrace ElementId)
+  locateNever :: forall es. (IOE :> es, WebDriverHttp :> es) => Locator -> Eff es (Either L.LocateException ElementId)
   locateNever = locateHttp neverOpts
 
-  locateDisambiguate :: forall es. (IOE :> es, WebDriverHttp :> es) => Locator -> Eff es (L.LocateResult L.WDTrace ElementId)
+  locateDisambiguate :: forall es. (IOE :> es, WebDriverHttp :> es) => Locator -> Eff es (Either L.LocateException ElementId)
   locateDisambiguate = locateHttp disambiguateOpts
 
   isAmbiguous :: L.LocateException -> Maybe Text

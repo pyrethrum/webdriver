@@ -390,6 +390,19 @@ instance ToJSON Selector where
     where
       sJSON using value = object ["using" .= using, "value" .= value]
 
+instance FromJSON Selector where
+  parseJSON :: Value -> Parser Selector
+  parseJSON = withObject "Selector" $ \o -> do
+    using <- o .: "using"
+    value <- o .: "value"
+    case (using :: Text, value) of
+      ("css selector", String s) -> pure $ CSS s
+      ("xpath", String s) -> pure $ XPath s
+      ("link text", String s) -> pure $ LinkText s
+      ("partial link text", String s) -> pure $ PartialLinkText s
+      ("tag name", String s) -> pure $ TagName s
+      _ -> fail $ unpack $ "Unknown Selector strategy: " <> using
+
 -- | [spec](https://www.w3.org/TR/2026/WD-webdriver2-20260702/#dfn-get-element-rect)
 data WindowRect = Rect
   { x :: Int,
