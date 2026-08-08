@@ -91,6 +91,7 @@ data LocateActions m = MkLocateActions
   { 
     throw :: forall a. HasCallStack => PreLocateException -> m a,
     catch :: forall a e. (HasCallStack, Exception e) => m a -> (e -> m a) -> m a,
+    trace :: WDTrace -> m (),
     findElement :: Selector -> m ElementId,
     findElementFromElement :: ElementId -> Selector -> m ElementId,
     findElements :: Selector -> m [ElementId],
@@ -103,6 +104,7 @@ data LocParams m = MkLocParams
   { 
     throw :: forall a. HasCallStack => PreLocateException -> m a,
     catch :: forall a e. (HasCallStack, Exception e) => m a -> (e -> m a) -> m a,
+    trace :: WDTrace -> m (),
     findElement :: Selector -> m ElementId,
     findElementFromElement :: ElementId -> Selector -> m ElementId,
     findElements :: Selector -> m [ElementId],
@@ -111,7 +113,6 @@ data LocParams m = MkLocParams
     getElementAttribute :: ElementId -> Text -> m (Maybe Text),
     getElementText :: ElementId -> m Text,
     defaultLoc :: Text -> Locator,
-    trace :: WDTrace -> m (),
     jsRecheckDisplayed :: DisplayedCheck,
     extendedRoleLocation :: ExtendedRoleLocateSingleton,
     singletonCardinality :: SingletonCardinality

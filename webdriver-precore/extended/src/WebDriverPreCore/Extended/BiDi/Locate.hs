@@ -1,5 +1,6 @@
 module WebDriverPreCore.Extended.BiDi.Locate
---   (
+  (
+    locatePrimative
 --     DisplayedCheck(..),
 --     ExtendedRoleLocateSingleton(..),
 --     BiDiLocateOpts (..),
@@ -11,7 +12,7 @@ module WebDriverPreCore.Extended.BiDi.Locate
 --     locateAllBiDI,
 --     locateAllFromElementBiDi
 --     -- locateAllFromElementsBiDi
---   )
+  )
 where
 
 
