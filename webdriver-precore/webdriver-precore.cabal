@@ -361,7 +361,7 @@ library webdriver-precore-extended
       WebDriverPreCore.Extended.Locators
       WebDriverPreCore.Extended.HTTP.Locate
       -- WIP: excluded from the build while under development
-      -- WebDriverPreCore.Extended.BiDi.Locate
+      WebDriverPreCore.Extended.BiDi.Locate
       WebDriverPreCore.Extended.Capabilities
       -- common
       WebDriverPreCore.Extended.Protocol

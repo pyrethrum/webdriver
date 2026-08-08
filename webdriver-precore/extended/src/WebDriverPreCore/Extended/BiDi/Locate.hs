@@ -101,6 +101,7 @@ data LocateActions m = MkLocateActions
   { 
     throw :: forall a. HasCallStack => PreLocateException -> m a,
     catch :: forall a e. (HasCallStack, Exception e) => m a -> (e -> m a) -> m a,
+    trace :: WDBiDITrace -> m (),
     locateNodes :: BiDiP.LocateNodes -> m BiDiP.LocateNodesResult
     -- context :: m BiDiP.BrowsingContext
   }
@@ -109,9 +110,9 @@ data LocParams m = MkLocParams
   { 
     throw :: forall a. HasCallStack => PreLocateException -> m a,
     catch :: forall a e. (HasCallStack, Exception e) => m a -> (e -> m a) -> m a,
+    trace :: WDBiDITrace -> m (),
     locateNodes :: BiDiP.LocateNodes -> m BiDiP.LocateNodesResult,
     defaultLoc :: Text -> Locator,
-    trace :: WDBiDITrace -> m (),
     singletonCardinality :: SingletonCardinality
   }
 
