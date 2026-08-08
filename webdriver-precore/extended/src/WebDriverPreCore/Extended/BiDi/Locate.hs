@@ -33,11 +33,10 @@ import GHC.Stack (HasCallStack)
 
 import WebDriverPreCore.Extended.LocateCommon (
     LocateException (..),
-    LocateResult (..),
-    LocateTracing (..),
     PreLocateException (..),
     LeafCardinality (..),
-    addLocToException
+    addLocToException,
+    runLoc
   )
 import WebDriverPreCore.Extended.Locators.Internal (Locator, RoleLocator (..), CompoundLocator, HttpLoc (..), xPathRelativePrefix)
 import WebDriverPreCore.Extended.Locators.Internal qualified as LI
@@ -91,8 +90,7 @@ data SingletonCardinality = Unique | First deriving (Show, Eq)
 data BiDiLocateOpts = MkBiDiLocateOpts
   {
     singletonCardinality :: SingletonCardinality,
-    defaultLoc :: Text -> Locator,
-    locateTracing :: LocateTracing
+    defaultLoc :: Text -> Locator
   } 
 
 
@@ -128,26 +126,15 @@ data BaseLocateOpts = MkBaseLocateOpts
   -- context :: BrowsingContext,
   --   locator :: Locator,
 
-locatePrimative :: LocateActions m -> BiDiP.BrowsingContext -> BaseLocateOpts -> BiDiP.Locator -> m (LocateResult WDBiDITrace BiDiP.LocateNodesResult)
-locatePrimative MkLocateActions {catch, locateNodes} context MkBaseLocateOpts {maxNodeCount, serializationOptions, startNodes} locator = do
-  let selector =
-        BiDiP.MkLocateNodes
-          { context,
+locatePrimative :: LocateActions m -> BiDiP.BrowsingContext -> BaseLocateOpts -> BiDiP.Locator -> m (Either PreLocateException BiDiP.LocateNodesResult)
+locatePrimative MkLocateActions {catch, locateNodes} context MkBaseLocateOpts {maxNodeCount, serializationOptions, startNodes} locator = 
+   runLoc catch locateNodes BiDiP.MkLocateNodes  
+         { context,
             locator,
             maxNodeCount,
             serializationOptions,
             startNodes
           }
-  rslt <-
-    catch
-      (catch (Right <$> locateNodes selector) (pure . Left . DriverException'))
-      (pure . Left)
-  pure $
-    case rslt of
-      Left e -> LocateWithTrace (Left (addLocToException LI.AllElms e)) []
-      Right locateRslt@BiDiP.MkLocateNodesResult {nodes} ->
-        let traceEntry = LeafLocate {selector, cardinality = FindAll, found = nodes}
-        in LocateWithTrace (Right locateRslt) [traceEntry]
 
 -- -- | Build a 'LocParams m' from 'LocateActions m', writing traces to an 'IORef'.
 -- -- Using IORef instead of WriterT ensures trace entries are preserved even when
@@ -204,14 +191,14 @@ data WDBiDITrace = Prepared {
 
 
  -- | Locate a unique or first-matching element from the document root.
-locateBiDi :: forall m. (MonadIO m) => LocateActions m -> BiDiLocateOpts -> Locator -> m (LocateResult BiDiP.NodeRemoteValue WDBiDITrace)
+locateBiDi :: forall m. (MonadIO m) => LocateActions m -> BiDiLocateOpts -> Locator -> m (Either LocateException BiDiP.NodeRemoteValue)
 locateBiDi actions opts = undefined
   -- runBiDiAction actions opts Nothing httpLocateSingleton
 
 
 -- | Locate all matching elements from the document root.
 -- | Locate all matching elements from the document root.
-locateAllBiDi :: forall m. (MonadIO m) => LocateActions m -> BiDiLocateOpts -> Locator -> m (LocateResult BiDiP.NodeRemoteValue WDBiDITrace)
+locateAllBiDi :: forall m. (MonadIO m) => LocateActions m -> BiDiLocateOpts -> Locator -> m (Either LocateException ([BiDiP.NodeRemoteValue]))
 locateAllBiDi actions opts = undefined
   -- runBiDiAction actions opts Nothing httpLocateAll
 
@@ -224,12 +211,10 @@ runBiDiAction ::
   -- | root element
   (LocParams m -> CompoundLocator BiDiP.LocateNodes -> m BiDiP.LocateNodesResult) ->
   Locator ->
-  m BiDiP.LocateNodesResult
+  m (Either LocateException BiDiP.LocateNodesResult)
 runBiDiAction actions opts mRootId locateAction loc = do
-  logsRef <- liftIO $ newIORef []
   let locParams = setBaseElement mRootId $ extendActions logsRef opts actions
   rslt <- prepareRun locParams (locateAction locParams) loc
-  logs <- liftIO $ P.reverse <$> readIORef logsRef
   pure $ case opts.locateTracing of
     LocateTracing -> LocateWithTrace rslt logs
     NoLocateTracing -> Locate rslt

@@ -29,7 +29,8 @@ import WebDriverPreCore.Extended.LocateCommon (
     LocateException (..),
     PreLocateException (..),
     LeafCardinality (..),
-    addLocToException
+    addLocToException,
+    runLoc
   )
 import WebDriverPreCore.Extended.Locators.Internal (Locator, RoleLocator (..), CompoundLocator, HttpLoc (..), xPathRelativePrefix)
 import WebDriverPreCore.Extended.Locators.Internal qualified as LI
@@ -203,18 +204,6 @@ setBaseElement mRootId act@MkLocParams{..} =
   findElements = findElementsFromElement rootId,
   ..
 }) mRootId
-
-runLoc :: forall m. Applicative m => (forall a e. (HasCallStack, Exception e) => m a -> (e -> m a) -> m a) -- catch
-  -> (CompoundLocator HttpLoc -> m [ElementId])
-  -> CompoundLocator HttpLoc
-  ->  m (Either PreLocateException [ElementId])
-runLoc catch locAction loc =
-  catch  -- catch PreLocateException thrown via 'throw' (e.g. AmbiguousLocator', ElementNotFound')
-    (catch -- catch WebDriverException from underlying HTTP calls
-      (Right <$> locAction loc) 
-      (pure . Left . DriverException')
-    )
-    (pure . Left)
 
 jsFilterDisplayed ::
   forall m.

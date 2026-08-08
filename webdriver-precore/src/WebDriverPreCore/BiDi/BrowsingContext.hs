@@ -501,7 +501,7 @@ newtype LocateNodesResult = MkLocateNodesResult
   { nodes :: [NodeRemoteValue]
   }
   deriving newtype (Show, Eq)
-  deriving stock (Generic)
+  deriving (Generic)
 
 instance FromJSON LocateNodesResult
 
