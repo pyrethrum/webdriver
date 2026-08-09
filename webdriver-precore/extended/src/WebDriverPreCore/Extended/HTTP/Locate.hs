@@ -273,21 +273,21 @@ locateElmsUnchecked actions leafCardinality rolesSecondPass loc =
       LI.LeafC cl ->
         locateLeaf actions rolesSecondPass leafCardinality cl
       LI.ContainsC {container, contained} -> do
-        containers <- locate FindAll rolesSecondPass container
+        containers <- locateAll rolesSecondPass container
         locateContained containers contained
       LI.AllC {elms = locs} -> do
         let (l :| ls) = locs
             step acc loc' =
               if P.null acc
                 then pure []
-                else LST.intersect acc <$> locate FindAll rolesSecondPass loc'
-        initial <- locate FindAll rolesSecondPass l
+                else LST.intersect acc <$> locateAll rolesSecondPass loc'
+        initial <- locateAll rolesSecondPass l
         foldM step initial ls
       LI.AnyC {elms = locs} ->
         join <$>
-          traverse (locate FindAll rolesSecondPass) (toList locs)
+          traverse (locateAll rolesSecondPass) (toList locs)
   where
-    locate = locateElmsUnchecked actions
+    locateAll = locateElmsUnchecked actions FindAll
 
     locateContained :: [ElementId] -> CompoundLocator HttpLoc -> m [ElementId]
     locateContained containerIds subLoc = do
