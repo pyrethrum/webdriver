@@ -90,7 +90,7 @@ data SingletonCardinality = Unique | First deriving (Show, Eq)
 data BiDiLocateOpts = MkBiDiLocateOpts
   {
     singletonCardinality :: SingletonCardinality,
-    defaultLoc :: Text -> Locator
+    mkDefaultLoc :: Text -> Locator
   } 
 
 
@@ -114,6 +114,8 @@ data LocParams m = MkLocParams
     singletonCardinality :: SingletonCardinality
   }
 
+mkLocParams :: (Monad m) => BiDiLocateOpts -> LocateActions m -> LocParams m
+mkLocParams MkBiDiLocateOpts{mkDefaultLoc = defaultLoc, ..} MkLocateActions{..} = MkLocParams{..}
 
 data BaseLocateOpts = MkBaseLocateOpts
   { 
@@ -135,44 +137,6 @@ locatePrimative MkLocateActions {catch, locateNodes} context MkBaseLocateOpts {m
             serializationOptions,
             startNodes
           }
-
--- -- | Build a 'LocParams m' from 'LocateActions m', writing traces to an 'IORef'.
--- -- Using IORef instead of WriterT ensures trace entries are preserved even when
--- -- exceptions are thrown (WriterT state is discarded on exception).
--- mkParams :: (MonadIO m) => IORef [WDBiDITrace] -> BiDiLocateOpts -> LocateActions m -> LocParams m
--- mkParams logsRef opts MkLocateActions{..} =
---   case opts of
---     StandardLocateOpts{..} ->
---       let baseOpts = BaseLocateOpts {
---         throw,
---         catch,
---          defaultLoc,
---          locateTracing,
-
---       }
---         MkLocParams {
---       throw = throw,
---       catch = catch,
---       locateNodes = locateNodes,
---       defaultLoc = defaultLoc,
---       trace = \traceEntry ->
---         case locateTracing of
---           LocateTracing -> liftIO $ modifyIORef' logsRef (traceEntry :)
---           NoLocateTracing -> pure (),
---       singletonCardinality = singletonCardinality
---     }
---     BaseLocateOpts{..} -> MkLocParams
---   {
---     throw 
---   , catch 
---   , defaultLoc
---   , locateNodes
---   , singletonCardinality
---   , trace = \traceEntry ->
---       case locateTracing of
---         LocateTracing -> liftIO $ modifyIORef' logsRef (traceEntry :)
---         NoLocateTracing -> pure ()
---   }
 
 data WDBiDITrace = Prepared {
   loc :: Locator,

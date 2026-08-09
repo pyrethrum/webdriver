@@ -119,36 +119,8 @@ data LocParams m = MkLocParams
     singletonCardinality :: SingletonCardinality
   }
 
--- | Build a 'LocParams m' from 'LocateActions m', writing traces to an 'IORef'.
--- Using IORef instead of WriterT ensures trace e.
--- The trace function is supplied by the caller via 'LocateActions'; tracing is
--- entirely under the caller's control (pass a no-op to disable it).
 mkParams :: HttpLocateOpts -> LocateActions m -> LocParams m
-mkParams MkHttpLocateOpts{..} MkLocateActions{..} = MkLocParams
-  {
-  -- throw / catch
-    throw
-  , catch
-
-  -- webdriver functions
-  , findElement
-  , findElementFromElement
-  , findElements
-  , findElementsFromElement
-  , executeScript
-  , getElementAttribute
-  , getElementText
-
-  -- other actions
-  , defaultLoc = mkDefaultLoc
-  , trace
-
-  -- options
-  , jsRecheckDisplayed
-  , extendedRoleLocation
-  , singletonCardinality
-  }
-
+mkParams MkHttpLocateOpts{mkDefaultLoc = defaultLoc, ..} MkLocateActions{..} = MkLocParams{..}
 
 -- | Extract a single element from a locate result.
 mkSingleton :: Locator -> Either LocateException [ElementId] -> Either LocateException ElementId
