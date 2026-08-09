@@ -441,17 +441,29 @@ wildcardMatch :: CaseSensitivity -> Text -> Text -> Bool
 wildcardMatch cs pat text = globMatch (normText cs pat) (normText cs text)
 
 -- | Glob match where '*' matches any (possibly empty) run of characters.
+--   Splitting on '*' yields the literal fragments; the first must be a prefix,
+--   the last a suffix, and the middle ones must appear in order. Greedy
+--   leftmost matching is safe for globs (no backtracking), and 'Text' finds
+--   each fragment with a linear-time algorithm.
 globMatch :: Text -> Text -> Bool
-globMatch pat text = go (T.unpack pat) (T.unpack text)
+globMatch pat text =
+  case T.splitOn "*" pat of
+    [] -> True
+    [single] -> single == text
+    (leading : middle) ->
+      T.isPrefixOf leading text
+        && match middle (T.drop (T.length leading) text)
   where
-    go :: [Char] -> [Char] -> Bool
-    go [] _ = True
-    go ('*' : ps) t = go ps t || case t of
-      [] -> False
-      _ : ts -> go ('*' : ps) ts
-    go (p : ps) t = case t of
-      [] -> False
-      c : cs -> p == c && go ps cs
+    match :: [Text] -> Text -> Bool
+    match [] _ = True
+    match [lastFrag] remaining = T.isSuffixOf lastFrag remaining
+    match (frag : rest) remaining
+      | T.null frag = match rest remaining            -- "**" collapses to "*"
+      | otherwise =
+          case T.breakOn frag remaining of
+            (_, after)
+              | T.null after -> False
+              | otherwise -> match rest (T.drop (T.length frag) after)
 
 -- | Convert an extended BiDi leaf locator to a BiDi protocol locator.
 toBiDiLocator :: BiDiLoc -> BiDiP.Locator
