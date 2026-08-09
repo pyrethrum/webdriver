@@ -17,7 +17,7 @@ import Control.Exception (Exception)
 import Control.Monad (filterM, foldM, join)
 import Data.Bifunctor (first)
 import Data.List qualified as LST
-import Data.List.NonEmpty (NonEmpty (..), toList)
+import Data.List.NonEmpty (NonEmpty (..), nonEmpty, toList)
 import Data.Text
 import Data.Text qualified as T
 import Data.Word (Word8)
@@ -310,7 +310,12 @@ locateLeafBiDi prms baseOpts loc =
   case loc of
     InnerTextBiDi {value, matchType, caseSensitivity, maxDepth} ->
       locateInnerTextBiDi prms baseOpts value matchType caseSensitivity maxDepth
-    _ -> runLeafLocator prms baseOpts (toBiDiLocator loc)
+    CSSBiDi {} -> leafLoc
+    XPathBiDi {} -> leafLoc
+    RoleBiDi {} -> leafLoc
+    ContextBiDi {} -> leafLoc
+  where 
+    leafLoc = runLeafLocator prms baseOpts (toBiDiLocator loc)
 
 -- | Run a single BiDi locateNodes command for a directly-supported BiDi locator.
 runLeafLocator ::
@@ -341,40 +346,28 @@ locateInnerTextBiDi ::
   CaseSensitivity ->
   Maybe Word8 ->
   m [BiDiP.NodeRemoteValue]
-locateInnerTextBiDi prms baseOpts value matchType caseSensitivity maxDepth =
+locateInnerTextBiDi prms baseOpts value matchType cs maxDepth =
   case matchType of
-    Full -> runLeafLocator prms baseOpts $ innerTextLocator caseSensitivity (Just BiDiP.Full) value maxDepth
-    Partial -> runLeafLocator prms baseOpts $ innerTextLocator caseSensitivity (Just BiDiP.Partial) value maxDepth
+    Full -> leafInnerTxtLocate BiDiP.Full
+    Partial -> leafInnerTxtLocate BiDiP.Partial
     Starts -> do
-      found <- runLeafLocator prms baseOpts $ innerTextLocator caseSensitivity (Just BiDiP.Partial) value maxDepth
-      filterByText prms (startsMatch caseSensitivity value) found
-    Wildcard -> locateWildcardInnerTextBiDi prms baseOpts caseSensitivity value maxDepth
+      found <- leafInnerTxtLocate BiDiP.Partial
+      filterByText prms (startsMatch cs value) found
+    Wildcard -> locateWildcardInnerTextBiDi 
+  where 
+    leafInnerTxtLocate mt = runLeafLocator prms baseOpts $ innerTextLocator cs (Just mt) value maxDepth
 
--- | Locate nodes for a Wildcard InnerText locator. A single fragment resolves
---   to Partial; otherwise the longest fragment is used as a Partial pre-filter
---   and the results are filtered against the full glob pattern. A bare "*"
---   selects every element that has non-empty text content.
-locateWildcardInnerTextBiDi ::
-  forall m.
-  (Monad m) =>
-  LocParams m ->
-  BaseLocateOpts ->
-  CaseSensitivity ->
-  Text ->
-  Maybe Word8 ->
-  m [BiDiP.NodeRemoteValue]
-locateWildcardInnerTextBiDi prms baseOpts cs value maxDepth =
-  case wildcardFragments value of
-    -- "*" / "**" etc: every element that has inner text
-    [] -> runLeafLocator prms baseOpts $ BiDiP.XPath {value = allTextXPath maxDepth}
-    -- "*Blahh", "Blahh", "Blahh*", "*Blahh*": resolve to Partial
-    [single] -> runLeafLocator prms baseOpts $ innerTextLocator cs (Just BiDiP.Partial) single maxDepth
-    -- multiple fragments: Partial on the longest, then a text-based glob filter
-    _ -> do
-      let fragments = wildcardFragments value
-          longest = longestFragment fragments
-      found <- runLeafLocator prms baseOpts $ innerTextLocator cs (Just BiDiP.Partial) longest maxDepth
-      filterByText prms (wildcardMatch cs value) found
+    locateWildcardInnerTextBiDi =
+      case nonEmpty (wildcardFragments value) of
+        -- "*" / "**" etc: every element that has inner text
+        Nothing -> runLeafLocator prms baseOpts $ BiDiP.XPath {value = allTextXPath maxDepth}
+        -- "*Blahh", "Blahh", "Blahh*", "*Blahh*": resolve to Partial
+        Just (single :| []) -> runLeafLocator prms baseOpts $ innerTextLocator cs (Just BiDiP.Partial) single maxDepth
+        -- multiple fragments: Partial on the longest, then a text-based glob filter
+        Just fragments -> do
+          let longest = longestFragment fragments
+          found <- runLeafLocator prms baseOpts $ innerTextLocator cs (Just BiDiP.Partial) longest maxDepth
+          filterByText prms (wildcardMatch cs value) found
 
 -- | Whether locating this leaf requires a text-based post-filter, so the
 --   pre-filter query must return every candidate rather than just the first.
@@ -399,15 +392,17 @@ filterByText MkLocParams{getElementText} predicate =
 
 -- | Build a BiDi InnerText locator with the given matching configuration.
 innerTextLocator :: CaseSensitivity -> Maybe BiDiP.MatchType -> Text -> Maybe Word8 -> BiDiP.Locator
-innerTextLocator cs mt val mDepth =
+innerTextLocator cs matchType value mDepth =
   BiDiP.InnerText
-    { value = val,
-      ignoreCase = case cs of
-        CaseSensitive -> Just False
-        CaseInsensitive -> Just True,
-      matchType = mt,
+    { value,
+      ignoreCase = Just 
+       $ case cs of
+          CaseSensitive -> False
+          CaseInsensitive -> True,
+      matchType,
       maxDepth = fmap fromIntegral mDepth
     }
+
 
 -- | XPath selecting every element that has non-empty text content.
 allTextXPath :: Maybe Word8 -> Text
@@ -420,8 +415,11 @@ wildcardFragments :: Text -> [Text]
 wildcardFragments = P.filter (not . T.null) . T.splitOn "*"
 
 -- | The longest fragment of a wildcard pattern (used for the Partial pre-filter).
-longestFragment :: [Text] -> Text
-longestFragment = P.foldr1 (\a b -> if T.length a >= T.length b then a else b)
+--   The pattern must have at least one non-empty fragment.
+longestFragment :: NonEmpty Text -> Text
+longestFragment (x :| xs) = LST.foldl' longest x xs
+  where
+    longest a b = if T.length b > T.length a then b else a
 
 -- | Apply the locator's case sensitivity to a value for matching.
 normText :: CaseSensitivity -> Text -> Text
