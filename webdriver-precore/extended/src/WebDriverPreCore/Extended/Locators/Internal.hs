@@ -10,6 +10,7 @@ module WebDriverPreCore.Extended.Locators.Internal (
 
     -- * internal xpath utils
     roleTypeOnlyXPath,
+    roleLabelText,
     xPathRelativePrefix,
 
     -- * BiDi

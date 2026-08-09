@@ -1,35 +1,27 @@
 module WebDriverPreCore.Extended.BiDi.Locate
   (
-    locatePrimative
---     DisplayedCheck(..),
---     ExtendedRoleLocateSingleton(..),
---     BiDiLocateOpts (..),
---     LocateActions (..),
---     SingletonCardinality (..),
---     locateBiDi,
---     locateFromElementBiDi,
---     -- locateFromElementsBiDi,
---     locateAllBiDI,
---     locateAllFromElementBiDi
---     -- locateAllFromElementsBiDi
+    SingletonCardinality (..),
+    BiDiLocateOpts (..),
+    LocateActions (..),
+    WDBiDITrace (..),
+    BaseLocateOpts (..),
+    locatePrimative,
+    locateBiDi,
+    locateAllBiDi,
+    locateFromElementBiDi,
+    locateAllFromElementBiDi
   )
 where
 
-
 import Control.Exception (Exception)
 import Control.Monad (foldM, join)
-import Control.Monad.IO.Class (MonadIO, liftIO)
-import Data.Aeson as A (Result (..), fromJSON, toJSON, Value)
-import Data.Containers.ListUtils (nubOrd)
-import Data.IORef (IORef, modifyIORef', newIORef, readIORef)
+import Data.Bifunctor (first)
 import Data.List qualified as LST
 import Data.List.NonEmpty (NonEmpty (..), toList)
-import Data.Maybe (catMaybes)
 import Data.Text
 import Data.Text qualified as T
-import GHC.Generics (Generic)
+import Data.Word (Word8)
 import GHC.Stack (HasCallStack)
-
 
 import WebDriverPreCore.Extended.LocateCommon (
     LocateException (..),
@@ -38,12 +30,20 @@ import WebDriverPreCore.Extended.LocateCommon (
     addLocToException,
     runLoc
   )
-import WebDriverPreCore.Extended.Locators.Internal (Locator, RoleLocator (..), CompoundLocator, HttpLoc (..), xPathRelativePrefix)
+import WebDriverPreCore.Extended.Locators.Internal (
+    Locator,
+    RoleLocator (..),
+    CompoundLocator,
+    BiDiLoc (..),
+    MatchType (..),
+    CaseSensitivity (..),
+    roleLabelText
+  )
 import WebDriverPreCore.Extended.Locators.Internal qualified as LI
 import WebDriverPreCore.BiDi.Protocol qualified as BiDiP
+import WebDriverPreCore.Extended.BiDi.Base.Protocol (JSUInt, SerializationOptions, SharedReference (..))
 import Utils (txt)
-import WebDriverPreCore.Extended.BiDi.Base.Protocol (JSUInt, SerializationOptions, SharedReference)
-import WebDriverPreCore.Extended.BiDi.Base.Actions (browsingContextLocateNodes)
+import Prelude as P hiding (log)
 
 
 -- TODO
@@ -100,8 +100,8 @@ data LocateActions m = MkLocateActions
     throw :: forall a. HasCallStack => PreLocateException -> m a,
     catch :: forall a e. (HasCallStack, Exception e) => m a -> (e -> m a) -> m a,
     trace :: WDBiDITrace -> m (),
-    locateNodes :: BiDiP.LocateNodes -> m BiDiP.LocateNodesResult
-    -- context :: m BiDiP.BrowsingContext
+    locateNodes :: BiDiP.LocateNodes -> m BiDiP.LocateNodesResult,
+    getElementText :: SharedReference -> m Text
   }
 
 data LocParams m = MkLocParams
@@ -110,6 +110,9 @@ data LocParams m = MkLocParams
     catch :: forall a e. (HasCallStack, Exception e) => m a -> (e -> m a) -> m a,
     trace :: WDBiDITrace -> m (),
     locateNodes :: BiDiP.LocateNodes -> m BiDiP.LocateNodesResult,
+    getElementText :: SharedReference -> m Text,
+    context :: BiDiP.BrowsingContext,
+    startNodes :: Maybe [SharedReference],
     defaultLoc :: Text -> Locator,
     singletonCardinality :: SingletonCardinality
   }
@@ -121,18 +124,18 @@ data BaseLocateOpts = MkBaseLocateOpts
     serializationOptions :: Maybe SerializationOptions,
     startNodes :: Maybe [SharedReference]
   }
-  deriving (Show, Eq, Generic)
+  deriving (Show, Eq)
 
 data WDBiDITrace = Prepared {
   loc :: Locator,
-  reducedLoc :: CompoundLocator BiDiP.LocateNodes
+  reducedLoc :: CompoundLocator BiDiLoc
 } |
  PrepareFailed {
   loc :: Locator,
   error :: LI.InvalidLocator
 } | 
  LeafLocate {
-  selector :: BiDiP.LocateNodes,
+  selector :: BiDiP.Locator,
   cardinality :: LeafCardinality,
   found :: [BiDiP.NodeRemoteValue]
   } 
@@ -141,8 +144,15 @@ data WDBiDITrace = Prepared {
   -- context :: BrowsingContext,
   --   locator :: Locator,
 
-mkLocParams :: (Monad m) => BiDiLocateOpts -> LocateActions m -> LocParams m
-mkLocParams MkBiDiLocateOpts{mkDefaultLoc = defaultLoc, ..} MkLocateActions{..} = MkLocParams{..}
+mkLocParams :: BiDiLocateOpts -> BiDiP.BrowsingContext -> LocateActions m -> LocParams m
+mkLocParams MkBiDiLocateOpts{mkDefaultLoc = defaultLoc, singletonCardinality} context MkLocateActions{..} =
+  MkLocParams
+    { defaultLoc,
+      singletonCardinality,
+      context,
+      startNodes = Nothing,
+      ..
+    }
 
 locatePrimative :: Applicative m => LocateActions m -> BiDiP.BrowsingContext -> BaseLocateOpts -> BiDiP.Locator -> m (Either PreLocateException BiDiP.LocateNodesResult)
 locatePrimative MkLocateActions {catch, locateNodes} context MkBaseLocateOpts {maxNodeCount, serializationOptions, startNodes} locator = 
@@ -154,511 +164,326 @@ locatePrimative MkLocateActions {catch, locateNodes} context MkBaseLocateOpts {m
             startNodes
           }
 
- -- | Locate a unique or first-matching element from the document root.
-locateBiDi :: forall m. (MonadIO m) => LocateActions m -> BiDiLocateOpts -> BiDiP.BrowsingContext -> Locator -> m (Either LocateException BiDiP.NodeRemoteValue)
-locateBiDi actions opts = undefined
-  -- runBiDiAction actions opts Nothing httpLocateSingleton
-
-
--- | Locate all matching elements from the document root.
--- | Locate all matching elements from the document root.
-locateAllBiDi :: forall m. (MonadIO m) => LocateActions m -> BiDiLocateOpts -> BiDiP.BrowsingContext -> Locator -> m (Either LocateException ([BiDiP.NodeRemoteValue]))
-locateAllBiDi actions opts = undefined
-
- -- | Locate a unique or first-matching element from the document root.
-locateFromElementBiDi :: forall m. (MonadIO m) => LocateActions m -> BiDiLocateOpts -> BiDiP.BrowsingContext -> SharedReference -> Locator -> m (Either LocateException BiDiP.NodeRemoteValue)
-locateFromElementBiDi actions opts sharedRef = undefined
-  -- runBiDiAction actions opts Nothing httpLocateSingleton
-
--- | Locate all matching elements from the document root.
--- | Locate all matching elements from the document root.
-locateAllFromElementBiDi :: forall m. (MonadIO m) => LocateActions m -> BiDiLocateOpts -> BiDiP.BrowsingContext -> SharedReference -> Locator -> m (Either LocateException ([BiDiP.NodeRemoteValue]))
-locateAllFromElementBiDi actions opts sharedRef = undefined
-  -- runBiDiAction actions opts Nothing httpLocateAll
-
--- -- | Common implementation for all public HTTP locate functions.
--- runBiDiAction ::
---   forall m.
---   (MonadIO m) =>
---   LocateActions m ->
---   BiDiLocateOpts ->
---   -- | root element
---   (LocParams m -> CompoundLocator BiDiP.LocateNodes -> m BiDiP.LocateNodesResult) ->
---   Locator ->
---   m (Either LocateException BiDiP.LocateNodesResult)
--- runBiDiAction actions opts mRootId locateAction loc = do
---   let locParams = setBaseElement mRootId $ extendActions logsRef opts actions
---   rslt <- prepareRun locParams (locateAction locParams) loc
---   pure $ case opts.locateTracing of
---     LocateTracing -> LocateWithTrace rslt logs
---     NoLocateTracing -> Locate rslt
-
--- -- | Locate a unique or first-matching element rooted at a given element.
--- locateFromElementBiDi :: forall m. (MonadIO m) => LocateActions m -> BiDiLocateOpts -> ElementId -> Locator -> m LocateResult
--- locateFromElementBiDi actions opts rootId = undefined
---   --runBiDiAction actions opts (Just rootId) httpLocateSingleton
-
--- -- | Locate all matching elements rooted at a given element.
--- locateAllFromElementBiDi :: forall m. (MonadIO m) => LocateActions m -> BiDiLocateOpts -> ElementId -> Locator -> m LocateResult
--- locateAllFromElementBiDi actions opts rootId = undefined
---   --runBiDiAction actions opts (Just rootId) httpLocateAll
-
-
-   {-
-data LocateNodes = MkLocateNodes
-  { context :: BrowsingContext,
-    locator :: Locator,
-    maxNodeCount :: Maybe JSUInt,
-    serializationOptions :: Maybe SerializationOptions,
-    startNodes :: Maybe [SharedReference]
-  }
-  deriving (Show, Eq, Generic)
--}
-
-
-
-
-
--- baseLocate :: LocateActions m ->  BiDiBaseLocateOpts -> Locator -> m (LocateResult BiDiP.NodeRemoteValue WDBiDITrace)
--- baseLocate  actions  o loc = do
-  
---   logsRef <- liftIO $ newIORef []
---   let p = mkParams logsRef o actions
---   rslt <- case LI.transformBiDi o.defaultLoc loc of
---     -- log failure if tansformation failed
---     Left err -> do 
---         p.trace (PrepareFailed loc err)
---         pure $ Left (InvalidLocator err)
---     -- run locator if transformation succeeded
---     Right compoundLoc -> do
---       p.trace (Prepared loc compoundLoc)
---       completeLocException loc $ runLoc catch (locateAction p) compoundLoc
---   logs <- liftIO $ P.reverse <$> readIORef logsRef
---   pure $ case o.locateTracing of
---     LocateTracing -> LocateWithTrace rslt logs
---     NoLocateTracing -> Locate rslt
---   undefined
-
-
-  {-
-  let  p = setBaseElement mRootId $ extendActions logsRef opts actions
-
-  rslt <- case LI.transform p.defaultLoc loc of
-    -- log failure if tansformation failed
-    Left err -> do 
-        p.trace (PrepareFailed loc err)
-        pure $ Left (InvalidLocator err)
-    -- run locator if transformation succeeded
-    Right compoundLoc -> do
-      p.trace (Prepared loc compoundLoc)
-      completeLocException loc $ runLoc catch (locateAction p) compoundLoc
-
-  logs <- liftIO $ P.reverse <$> readIORef logsRef
-  pure $ case opts.locateTracing of
-    LocateTracing -> LocateWithTrace rslt logs
-    NoLocateTracing -> Locate rslt
-    -}
-
 -- | Locate a unique or first-matching element from the document root.
--- locateBiDi :: forall m. (MonadIO m) => LocateActions m -> BiDiLocateOpts -> Locator -> m (LocateResult BiDiP.NodeRemoteValue WDBiDITrace)
--- locateBiDi actions opts = runBiDiAction actions opts Nothing httpLocateSingleton
+locateBiDi :: forall m. (Monad m) => LocateActions m -> BiDiLocateOpts -> BiDiP.BrowsingContext -> Locator -> m (Either LocateException BiDiP.NodeRemoteValue)
+locateBiDi actions opts context = runBiDiAction actions opts context Nothing biDiLocateSingleton
 
-{-
 -- | Locate all matching elements from the document root.
-locateAllBiDI :: forall m. (MonadIO m) => LocateActions m -> BiDiLocateOpts -> Locator -> m LocateResult
-locateAllBiDI actions opts = runBiDiAction actions opts Nothing httpLocateAll
+locateAllBiDi :: forall m. (Monad m) => LocateActions m -> BiDiLocateOpts -> BiDiP.BrowsingContext -> Locator -> m (Either LocateException [BiDiP.NodeRemoteValue])
+locateAllBiDi actions opts context = runBiDiAction actions opts context Nothing biDiLocateAll
 
 -- | Locate a unique or first-matching element rooted at a given element.
-locateFromElementBiDi :: forall m. (MonadIO m) => LocateActions m -> BiDiLocateOpts -> ElementId -> Locator -> m LocateResult
-locateFromElementBiDi actions opts rootId = runBiDiAction actions opts (Just rootId) httpLocateSingleton
+locateFromElementBiDi :: forall m. (Monad m) => LocateActions m -> BiDiLocateOpts -> BiDiP.BrowsingContext -> SharedReference -> Locator -> m (Either LocateException BiDiP.NodeRemoteValue)
+locateFromElementBiDi actions opts context sharedRef = runBiDiAction actions opts context (Just sharedRef) biDiLocateSingleton
 
 -- | Locate all matching elements rooted at a given element.
-locateAllFromElementBiDi :: forall m. (MonadIO m) => LocateActions m -> BiDiLocateOpts -> ElementId -> Locator -> m LocateResult
-locateAllFromElementBiDi actions opts rootId = runBiDiAction actions opts (Just rootId) httpLocateAll
--}
+locateAllFromElementBiDi :: forall m. (Monad m) => LocateActions m -> BiDiLocateOpts -> BiDiP.BrowsingContext -> SharedReference -> Locator -> m (Either LocateException [BiDiP.NodeRemoteValue])
+locateAllFromElementBiDi actions opts context sharedRef = runBiDiAction actions opts context (Just sharedRef) biDiLocateAll
 
-{-
+-- | Common implementation for all public BiDi locate functions. This transforms
+--   the user-facing 'Locator' into a 'CompoundLocator' of BiDi leaf locators and
+--   runs it via 'locatePrimative', wrapping any driver / pre-locate exceptions.
+runBiDiAction ::
+  forall m r.
+  (Monad m) =>
+  LocateActions m ->
+  BiDiLocateOpts ->
+  BiDiP.BrowsingContext ->
+  -- | start node (root element)
+  Maybe SharedReference ->
+  (LocParams m -> CompoundLocator BiDiLoc -> m r) ->
+  Locator ->
+  m (Either LocateException r)
+runBiDiAction actions@MkLocateActions{catch} opts context mRootId locateAction loc = do
+  let p = setBaseElement mRootId $ mkLocParams opts context actions
+  case LI.transformBiDi p.defaultLoc loc of
+    -- log failure if the transformation failed
+    Left err -> do
+      p.trace (PrepareFailed loc err)
+      pure $ Left (InvalidLocator err)
+    -- run the locator if the transformation succeeded
+    Right compoundLoc -> do
+      p.trace (Prepared loc compoundLoc)
+      first (addLocToException loc) <$> runLoc catch (locateAction p) compoundLoc
 
-setBaseElement :: Maybe ElementId -> LocParams m -> LocParams m
-setBaseElement mRootId act@MkLocParams{..} = 
-  maybe act (\rootId -> MkLocParams {
-  findElement = findElementFromElement rootId,
-  findElements = findElementsFromElement rootId,
-  ..
-}) mRootId
+-- | Set the start node (root element) used by the locate.
+setBaseElement :: Maybe SharedReference -> LocParams m -> LocParams m
+setBaseElement mRootId act@MkLocParams{..} =
+  maybe act (\rootId -> MkLocParams {startNodes = Just [rootId], ..}) mRootId
 
+-- | Recover the underlying 'LocateActions' from the extended params.
+mkLocateActions :: LocParams m -> LocateActions m
+mkLocateActions MkLocParams{throw, catch, trace, locateNodes, getElementText} = MkLocateActions{throw, catch, trace, locateNodes, getElementText}
 
-
-prepareRun :: forall m. Monad m =>
-      LocParams m 
-     -> (CompoundLocator HttpLoc -> m [ElementId]) 
-     -> Locator 
-     -> m (Either LocateException [ElementId])
-prepareRun MkLocParams{trace, defaultLoc, catch} locateActn locator =
-   case preparedLoc of
-     Left err -> do
-       trace (PrepareFailed locator err)
-       pure $ Left (InvalidLocator err)
-     Right reduced -> do
-       trace (Prepared locator reduced)
-       completeLocException locator . runLoc $ reduced
-  where 
-    preparedLoc :: Either LI.InvalidLocator (CompoundLocator HttpLoc)
-    preparedLoc = LI.transform defaultLoc locator
-
-    runLoc :: CompoundLocator HttpLoc -> m (Either PreLocateException [ElementId])
-    runLoc loc =
-      catch  -- catch PreLocateException thrown via 'throw' (e.g. AmbiguousLocator', ElementNotFound')
-        (catch -- catch WebDriverException from underlying HTTP calls
-          (Right <$> locateActn loc) 
-          (pure . Left . DriverException')
-        )
-        (pure . Left)
-
-jsFilterDisplayed ::
+-- | Locate a single node. Cardinality checks are deferred until the query
+--   completes; for 'First' the driver is asked for at most one node, while for
+--   'Unique' all matches are fetched so ambiguity can be reported.
+biDiLocateSingleton ::
   forall m.
   (Monad m) =>
   LocParams m ->
-  [ElementId] ->
-  m [ElementId]
-jsFilterDisplayed MkLocParams{throw, catch, trace, executeScript} elms = do
-  bools <- catch
-    (toBools <$> executeScript MkScript {script = displayedJS, args = [toJSON elms]})
-    (throw . DriverException')
-  let filtered = fmap fst . P.filter snd $ P.zip elms bools
-  trace $ 
-    JSDisplayedCheck { 
-      beforeCheck = elms, 
-      afterCheck = filtered
-      }
-  pure filtered
-  where
-    toBools :: Value -> [Bool]
-    toBools val = case A.fromJSON val of
-      A.Success bs -> bs
-      A.Error _ -> error $ "library defect - jsFilterDisplayed: isDisplayed script returned unexpected value (expected [Bool]) - got:\n  " <> P.show val
+  CompoundLocator BiDiLoc ->
+  m BiDiP.NodeRemoteValue
+biDiLocateSingleton prms@MkLocParams{throw, singletonCardinality, startNodes} loc = do
+  let baseOpts =
+        MkBaseLocateOpts
+          { maxNodeCount = case (singletonCardinality, loc) of
+              (First, LI.LeafC leafLoc) | not (needsTextFilter leafLoc) -> Just 1
+              _ -> Nothing,
+            serializationOptions = Nothing,
+            startNodes
+          }
+  allNodes <- locateElmsBiDi prms baseOpts loc
+  case allNodes of
+    [] -> throw elementNotFoundError
+    (x : xs) ->
+      case singletonCardinality of
+        Unique
+          | not (P.null xs) -> throw (AmbiguousLocator' ("Multiple elements found matching locator: " <> txt (x : xs)))
+          | otherwise -> pure x
+        First -> pure x
 
--- finds leaf without display filtering
-locateLeaf ::
+-- | Locate all matching nodes.
+biDiLocateAll ::
   forall m.
   (Monad m) =>
   LocParams m ->
-  RoleJSSecondPass ->
-  LeafCardinality ->
-  HttpLoc ->
-  m [ElementId]
-locateLeaf prms rolesSecondPass lc loc = do
-  case loc of
-    CSSHttp {} -> findElms
-    XPathHttp {} -> findElms
-    RoleHttp {roleSpec} -> 
-      case rolesSecondPass of 
-        NoRoleJSSecondPass -> findElms
-        DoRoleJSSecondPass -> do 
-          sr <- findElms
-          case lc of
-            FindFirst ->
-              case sr of
-                [] -> indirectRoleElms
-                [x] -> pure [x]
-                x:_ -> pure [x]
-            FindAll ->
-              (sr <>) <$> indirectRoleElms
-          where 
-            indirectRoleElms = findByRoleIndirect prms lc roleSpec
-  where
-    httpSelector :: Selector
-    httpSelector = toSelector loc
+  CompoundLocator BiDiLoc ->
+  m [BiDiP.NodeRemoteValue]
+biDiLocateAll prms@MkLocParams{startNodes} loc = do
+  let baseOpts =
+        MkBaseLocateOpts
+          { maxNodeCount = Nothing,
+            serializationOptions = Nothing,
+            startNodes
+          }
+  locateElmsBiDi prms baseOpts loc
 
-    findElms :: m [ElementId]
-    findElms = do 
-      ids <- case lc of
-        FindFirst -> fmap LST.singleton $ prms.findElement httpSelector
-        FindAll -> prms.findElements httpSelector
-      prms.trace $ LeafLocate httpSelector lc ids
-      pure ids
-          
-chkRefilterSingleton ::
+-- | Locate all matching nodes for a compound locator, with no cardinality filtering.
+locateElmsBiDi ::
   forall m.
   (Monad m) =>
   LocParams m ->
-  [ElementId] ->
-  m [ElementId]
-chkRefilterSingleton actions elmIds =
-  chkSingleton True elmIds
-  where
-    chkSingleton recheckAmbiguous =
-      \case
-        [] -> pure []
-        [x] -> pure [x]
-        xs ->
-          if recheckAmbiguous
-            then jsFilterDisplayed actions xs >>= chkSingleton False
-            else pure xs
-
--- single shot base locate (all cardinality)
-locateElmsUnchecked ::
-  forall m.
-  (Monad m) =>
-  LocParams m ->
-  LeafCardinality ->
-  RoleJSSecondPass ->
-  CompoundLocator HttpLoc ->
-  m [ElementId]
-locateElmsUnchecked actions leafCardinality rolesSecondPass loc =
+  BaseLocateOpts ->
+  CompoundLocator BiDiLoc ->
+  m [BiDiP.NodeRemoteValue]
+locateElmsBiDi prms baseOpts loc =
   fmap LST.nub $
     case loc of
-      LI.Leaf cl ->
-        locateLeaf actions rolesSecondPass leafCardinality cl
-      LI.ContainsI {container, contained} -> do
-        containers <- locate FindAll rolesSecondPass container
+      LI.LeafC cl -> locateLeafBiDi prms baseOpts cl
+      LI.ContainsC {container, contained} -> do
+        containers <- locateElmsBiDi prms baseOpts container
         locateContained containers contained
-      LI.AllI {elms = locs} -> do
+      LI.AllC {elms = locs} -> do
         let (l :| ls) = locs
             step acc loc' =
               if P.null acc
                 then pure []
-                else fmap (LST.intersect acc) (locate FindAll rolesSecondPass loc')
-        initial <- locate FindAll rolesSecondPass l
+                else fmap (LST.intersect acc) (locateElmsBiDi prms baseOpts loc')
+        initial <- locateElmsBiDi prms baseOpts l
         foldM step initial ls
-      LI.AnyI {elms = locs} ->
+      LI.AnyC {elms = locs} ->
         fmap join $
-          traverse (locate FindAll rolesSecondPass) (toList locs)
-      LI.PostFilterI {} -> postfilterNotImplemented
+          traverse (locateElmsBiDi prms baseOpts) (toList locs)
   where
-    locate = locateElmsUnchecked actions
-
-    locateContained :: [ElementId] -> CompoundLocator HttpLoc -> m [ElementId]
+    locateContained :: [BiDiP.NodeRemoteValue] -> CompoundLocator BiDiLoc -> m [BiDiP.NodeRemoteValue]
     locateContained containerIds subLoc = do
-      containedResults <- 
-        traverse 
-          (\containerId -> locateElmsUnchecked (setBaseElement (Just containerId) actions) FindAll rolesSecondPass subLoc) 
+      containedResults <-
+        traverse
+          ( \containerId ->
+              case nodeToSharedRef containerId of
+                Just ref -> locateElmsBiDi prms (setStartNodes baseOpts (Just [ref])) subLoc
+                Nothing -> pure []
+          )
           containerIds
       pure $ join containedResults
 
-httpLocateSingleton ::
+-- | Run a single BiDi locateNodes command for a leaf locator.
+locateLeafBiDi ::
   forall m.
   (Monad m) =>
   LocParams m ->
-  CompoundLocator HttpLoc ->
-  m [ElementId]
-httpLocateSingleton prms@MkLocParams{throw, defaultLoc, singletonCardinality}  loc = do
+  BaseLocateOpts ->
+  BiDiLoc ->
+  m [BiDiP.NodeRemoteValue]
+locateLeafBiDi prms baseOpts loc =
   case loc of
-    LI.Leaf ll -> do
-      lr <- locateLeaf prms secondPassOnInitial FindAll ll
-      filtered <- chkElmsSingleton lr
-      case filtered of
-        [] ->
-          if opts.extendedRoleLocation == ExtLocateSingletonMiss && isRole
-            then do
-              missRetryRslt <- locateLeaf prms DoRoleJSSecondPass FindAll ll
-              retryChked <- chkElmsSingleton missRetryRslt
-              case retryChked of
-                [] -> notFoundErr
-                [x] -> pure [x]
-                (x : xs) ->
-                  if isUnique
-                    then throwAmbiguous xs
-                    else pure [x]
-            else notFoundErr
-        [x] -> pure [x]
-        elms@(x : _xs) ->
-          if isUnique
-            then throwAmbiguous elms
-            else pure [x]
-    _ ->
-      locateElmsUnchecked prms FindAll secondPassOnInitial loc
-  where
+    InnerTextBiDi {value, matchType, caseSensitivity, maxDepth} ->
+      locateInnerTextBiDi prms baseOpts value matchType caseSensitivity maxDepth
+    _ -> runLeafLocator prms baseOpts (toBiDiLocator loc)
 
-      notFoundErr :: m [ElementId]
-      notFoundErr = throw (ElementNotFound' "No element found matching locator.")
-
-      throwAmbiguous elms = throw (AmbiguousLocator' ("Multiple elements found matching locator: " <> txt elms))
-      isUnique = opts.singletonCardinality == Unique
-      isRole = case loc of
-        LI.Leaf RoleHttp {} -> True
-        _ -> False
-      secondPassOnInitial = case opts.extendedRoleLocation of
-        ExtLocateNever -> NoRoleJSSecondPass
-        ExtLocateSingletonMiss -> NoRoleJSSecondPass
-        ExtLocateAlways -> DoRoleJSSecondPass
-
-      chkElmsSingleton elms =
-        let 
-          displayChk = opts.jsRecheckDisplayed
-          cardinality = opts.singletonCardinality
-          wantRecheck = 
-             displayChk == DisplayedCheckAlways 
-             || displayChk == DisplayedCheckDisambiguateUnique && cardinality == Unique
-        in
-        if wantRecheck
-          then chkRefilterSingleton prms elms
-          else pure elms
-
-httpLocateAll ::
+-- | Run a single BiDi locateNodes command for a directly-supported BiDi locator.
+runLeafLocator ::
   forall m.
   (Monad m) =>
   LocParams m ->
-  CompoundLocator HttpLoc ->
-  m [ElementId]
-httpLocateAll prms loc = do
-  let secondPassOnInitial = case prms.locOpts.extendedRoleLocation of
-        ExtLocateNever -> NoRoleJSSecondPass
-        ExtLocateSingletonMiss -> NoRoleJSSecondPass
-        ExtLocateAlways -> DoRoleJSSecondPass
-  elms <- locateElmsUnchecked prms FindAll secondPassOnInitial loc
-  if prms.locOpts.jsRecheckDisplayed == DisplayedCheckAlways
-    then jsFilterDisplayed prms elms
-    else pure elms
+  BaseLocateOpts ->
+  BiDiP.Locator ->
+  m [BiDiP.NodeRemoteValue]
+runLeafLocator prms@MkLocParams{throw, trace, context} baseOpts bidiLoc = do
+  rslt <- locatePrimative (mkLocateActions prms) context baseOpts bidiLoc
+  case rslt of
+    Left e -> throw e
+    Right (BiDiP.MkLocateNodesResult found) -> do
+      trace $ LeafLocate bidiLoc FindAll found
+      pure found
 
-postfilterNotImplemented :: a
-postfilterNotImplemented = error "PostFilter locators are not yet implemented in HTTP WebDriver"
-
-data SingletonCheckResult
-  = SingletonSuccess {elms :: [ElementId]}
-  | Missing {elms :: [ElementId]}
-  | Ambiguous {elms :: [ElementId]}
-  deriving (Show, Eq, Ord)
-
-toSelector :: HttpLoc -> Selector
-toSelector = \case
-  CSSHttp {value} -> HTTPP.CSS value
-  XPathHttp {value} -> HTTPP.XPath value
-  RoleHttp {xpath} -> HTTPP.XPath xpath
-  -- shim BiDiNative locators
-  -- BiDiNative sl -> case sl of
-  --   Role {role} -> HTTPP.XPath $ roleToXPath role
-  --   InnerText {value, matchType, caseSensitivity, maxDepth} -> HTTPP.XPath $ innerTextToXPath value caseSensitivity matchType maxDepth
-
-_locateBiDi :: a
-_locateBiDi = undefined
-
-notNull :: [a] -> Bool
-notNull = not . P.null
-
-findByRoleIndirect ::
+-- | Locate nodes matching an InnerText leaf locator. BiDi natively supports
+--   Full and Partial matching; 'Starts' and 'Wildcard' are implemented with a
+--   Partial pre-filter followed by a text-based filter over the results.
+locateInnerTextBiDi ::
   forall m.
   (Monad m) =>
   LocParams m ->
-  LeafCardinality ->
-  RoleLocator ->
-  m [ElementId]
-findByRoleIndirect actions lc roleLoc =
-    case roleLoc of
-      -- role type has no name / label so nothing to do
-      RoleType {} -> pure []
-      _ -> do
-        labelledByElms <- findRoleByAriaLabledBy actions lc roleLoc
-        if lc == FindFirst && notNull labelledByElms
-          then pure labelledByElms
-          else do
-            forElms <- findRoleByForLabel actions lc roleLoc
-            pure . nubOrd $ mconcat [labelledByElms, forElms]
+  BaseLocateOpts ->
+  Text ->
+  MatchType ->
+  CaseSensitivity ->
+  Maybe Word8 ->
+  m [BiDiP.NodeRemoteValue]
+locateInnerTextBiDi prms baseOpts value matchType caseSensitivity maxDepth =
+  case matchType of
+    Full -> runLeafLocator prms baseOpts $ innerTextLocator caseSensitivity (Just BiDiP.Full) value maxDepth
+    Partial -> runLeafLocator prms baseOpts $ innerTextLocator caseSensitivity (Just BiDiP.Partial) value maxDepth
+    Starts -> do
+      found <- runLeafLocator prms baseOpts $ innerTextLocator caseSensitivity (Just BiDiP.Partial) value maxDepth
+      filterByText prms (startsMatch caseSensitivity value) found
+    Wildcard -> locateWildcardInnerTextBiDi prms baseOpts caseSensitivity value maxDepth
 
-findRoleByAriaLabledBy ::
+-- | Locate nodes for a Wildcard InnerText locator. A single fragment resolves
+--   to Partial; otherwise the longest fragment is used as a Partial pre-filter
+--   and the results are filtered against the full glob pattern. A bare "*"
+--   selects every element that has non-empty text content.
+locateWildcardInnerTextBiDi ::
   forall m.
   (Monad m) =>
   LocParams m ->
-  LeafCardinality ->
-  RoleLocator ->
-  m [ElementId]
-findRoleByAriaLabledBy prms lc roleLoc =
-  case roleLoc of
-    RoleType {} -> pure []
+  BaseLocateOpts ->
+  CaseSensitivity ->
+  Text ->
+  Maybe Word8 ->
+  m [BiDiP.NodeRemoteValue]
+locateWildcardInnerTextBiDi prms baseOpts cs value maxDepth =
+  case wildcardFragments value of
+    -- "*" / "**" etc: every element that has inner text
+    [] -> runLeafLocator prms baseOpts $ BiDiP.XPath {value = allTextXPath maxDepth}
+    -- "*Blahh", "Blahh", "Blahh*", "*Blahh*": resolve to Partial
+    [single] -> runLeafLocator prms baseOpts $ innerTextLocator cs (Just BiDiP.Partial) single maxDepth
+    -- multiple fragments: Partial on the longest, then a text-based glob filter
     _ -> do
-      candidates <-
-        -- all elms that match role and have an aria-labelledby attribute
-        prms.findElements (HTTPP.XPath $ xPathRelativePrefix <> LI.roleTypeOnlyXPath roleLoc <> "[@aria-labelledby]")
-      r <- filterElms lc labledByMatchesRoleText candidates
-      prms.trace $ RoleSecondPassLabeledBy roleLoc r
-      pure r
-      where
-        -- Resolve aria-labelledby on @eid@: split on whitespace to get ID-refs,
-        -- look up the text of each referenced element, concatenate with spaces,
-        -- and compare (after stripping) to @targetName@.
-        labledByMatchesRoleText :: ElementId -> m Bool
-        labledByMatchesRoleText eid =
-          prms.getElementAttribute eid "aria-labelledby"
-            >>= \case
-              Nothing -> pure False
-              Just lblIds -> do
-                mappedTxts <- traverse textForId $ T.words lblIds
-                pure $ T.strip (T.unwords $ catMaybes mappedTxts) == T.strip roleLoc.name
+      let fragments = wildcardFragments value
+          longest = longestFragment fragments
+      found <- runLeafLocator prms baseOpts $ innerTextLocator cs (Just BiDiP.Partial) longest maxDepth
+      filterByText prms (wildcardMatch cs value) found
 
-        -- Find the element whose @id@ matches @idRef@ and return its text, or
-        -- 'Nothing' if no such element exists.
-        textForId :: Text -> m (Maybe Text)
-        textForId idRef = do
-          elms <- prms.findElements . HTTPP.XPath $ xPathRelativePrefix <> "*[@id='" <> idRef <> "']"
-          case elms of
-            [] -> pure Nothing
-            (e : _) -> Just <$> prms.getElementText e
+-- | Whether locating this leaf requires a text-based post-filter, so the
+--   pre-filter query must return every candidate rather than just the first.
+needsTextFilter :: BiDiLoc -> Bool
+needsTextFilter = \case
+  InnerTextBiDi {matchType} -> matchType == Starts || matchType == Wildcard
+  _ -> False
 
-findRoleByForLabel ::
+-- | Filter located nodes by reading their text and keeping those matching a predicate.
+filterByText ::
   forall m.
   (Monad m) =>
   LocParams m ->
-  LeafCardinality ->
-  RoleLocator ->
-  m [ElementId]
-findRoleByForLabel actions lc roleLoc =
-  case roleLoc of
-    RoleType {} -> pure []
-    _ -> do
-      candidates <-
-        -- has an @id and matches the role name
-        actions.findElements $ HTTPP.XPath $ xPathRelativePrefix <> LI.roleTypeOnlyXPath roleLoc <> "[@id]"
-      r <- filterElms lc forTxtMatchesId candidates
-      actions.trace $ RoleSecondPassFor roleLoc r
-      pure r
-      where
-        forTxtMatchesId :: ElementId -> m Bool
-        forTxtMatchesId eid = do
-          mId <- actions.getElementAttribute eid "id"
-          case mId of
-            Nothing -> pure False
-            Just idVal -> do
-              labels <- actions.findElements . HTTPP.XPath $ xPathRelativePrefix <> "label[@for='" <> idVal <> "']"
-              case labels of
-                [] -> pure False
-                (lbl : _) -> do
-                  labelText <- actions.getElementText lbl
-                  pure $ T.strip labelText == T.strip roleLoc.name
-
-filterElms :: forall m. (Monad m) => LeafCardinality -> (ElementId -> m Bool) -> [ElementId] -> m [ElementId]
-filterElms lc matcher = recurse []
+  (Text -> Bool) ->
+  [BiDiP.NodeRemoteValue] ->
+  m [BiDiP.NodeRemoteValue]
+filterByText MkLocParams{getElementText} keep = fmap join . traverse go
   where
-    recurse :: [ElementId] -> [ElementId] -> m [ElementId]
-    recurse acc rem' =
-      if lc == FindFirst && notNull acc
-        then
-          pure acc
-        else case rem' of
-          [] -> pure $ P.reverse acc
-          (e : es) -> do
-            matches <- matcher e
-            recurse (if matches then e : acc else acc) es
+    go :: BiDiP.NodeRemoteValue -> m [BiDiP.NodeRemoteValue]
+    go node = case nodeToSharedRef node of
+      Nothing -> pure []
+      Just ref -> do
+        t <- getElementText ref
+        pure $ if keep t then [node] else []
 
+-- | Build a BiDi InnerText locator with the given matching configuration.
+innerTextLocator :: CaseSensitivity -> Maybe BiDiP.MatchType -> Text -> Maybe Word8 -> BiDiP.Locator
+innerTextLocator cs mt val mDepth =
+  BiDiP.InnerText
+    { value = val,
+      ignoreCase = case cs of
+        CaseSensitive -> Just False
+        CaseInsensitive -> Just True,
+      matchType = mt,
+      maxDepth = fmap fromIntegral mDepth
+    }
 
-displayedJS :: Text
-displayedJS =
-  "function isDisplayed(el) {\n\
-  \  if (!el || !el.isConnected) return false;\n\
-  \\n\
-  \  const style = getComputedStyle(el);\n\
-  \\n\
-  \  if (style.display === \"none\") return false;\n\
-  \  if (style.visibility === \"hidden\" || style.visibility === \"collapse\") return false;\n\
-  \  if (parseFloat(style.opacity) === 0) return false;\n\
-  \\n\
-  \  if (el.tagName === \"INPUT\" && el.type === \"hidden\")\n\
-  \    return false;\n\
-  \\n\
-  \  if (el.offsetWidth === 0 || el.offsetHeight === 0)\n\
-  \    return false;\n\
-  \\n\
-  \  return true;\n\
-  \}\n\
-  \return Array.from(arguments[0]).map(isDisplayed);"
+-- | XPath selecting every element that has non-empty text content.
+allTextXPath :: Maybe Word8 -> Text
+allTextXPath = \case
+  Nothing -> ".//*[normalize-space(.) != '']"
+  Just d -> ".//*[normalize-space(.) != '' and count(ancestor::*) <= " <> txt d <> "]"
 
--}
+-- | The non-empty fragments of a wildcard pattern split on '*'.
+wildcardFragments :: Text -> [Text]
+wildcardFragments = P.filter (not . T.null) . T.splitOn "*"
+
+-- | The longest fragment of a wildcard pattern (used for the Partial pre-filter).
+longestFragment :: [Text] -> Text
+longestFragment = P.foldr1 (\a b -> if T.length a >= T.length b then a else b)
+
+-- | Apply the locator's case sensitivity to a value for matching.
+normText :: CaseSensitivity -> Text -> Text
+normText = \case
+  CaseSensitive -> id
+  CaseInsensitive -> T.toLower
+
+-- | Does @txt@ start with @prefix@ (honouring case sensitivity)?
+startsMatch :: CaseSensitivity -> Text -> Text -> Bool
+startsMatch cs prefix text = normText cs prefix `T.isPrefixOf` normText cs text
+
+-- | Does @text@ match the wildcard pattern @pat@ ('*' matches any run of characters)?
+wildcardMatch :: CaseSensitivity -> Text -> Text -> Bool
+wildcardMatch cs pat text = globMatch (normText cs pat) (normText cs text)
+
+-- | Glob match where '*' matches any (possibly empty) run of characters.
+globMatch :: Text -> Text -> Bool
+globMatch pat text = go (T.unpack pat) (T.unpack text)
+  where
+    go :: [Char] -> [Char] -> Bool
+    go [] _ = True
+    go ('*' : ps) t = go ps t || case t of
+      [] -> False
+      _ : ts -> go ('*' : ps) ts
+    go (p : ps) t = case t of
+      [] -> False
+      c : cs -> p == c && go ps cs
+
+-- | Convert an extended BiDi leaf locator to a BiDi protocol locator.
+toBiDiLocator :: BiDiLoc -> BiDiP.Locator
+toBiDiLocator = \case
+  CSSBiDi {value} -> BiDiP.CSS {value}
+  XPathBiDi {value} -> BiDiP.XPath {value}
+  ContextBiDi {context} -> BiDiP.Context {context}
+  RoleBiDi {roleSpec} -> roleToAccessibility roleSpec
+  -- 'InnerTextBiDi' is handled by 'locateInnerTextBiDi'; this case is only a
+  -- total fallback so 'toBiDiLocator' stays exhaustive.
+  InnerTextBiDi {value, caseSensitivity, maxDepth} ->
+    innerTextLocator caseSensitivity (Just BiDiP.Partial) value maxDepth
+
+-- | Map a role locator onto a BiDi accessibility locator.
+roleToAccessibility :: RoleLocator -> BiDiP.Locator
+roleToAccessibility = \case
+  RoleFull {role, name} ->
+    BiDiP.Accessibility {name = Just name, role = Just (roleLabelText role)}
+  RoleType {role} ->
+    BiDiP.Accessibility {name = Nothing, role = Just (roleLabelText role)}
+  RoleName {name} ->
+    BiDiP.Accessibility {name = Just name, role = Nothing}
+
+-- | Update the start nodes used by the base locate options.
+setStartNodes :: BaseLocateOpts -> Maybe [SharedReference] -> BaseLocateOpts
+setStartNodes MkBaseLocateOpts{..} startNodes' = MkBaseLocateOpts {startNodes = startNodes', ..}
+
+-- | Convert a located node into a 'SharedReference' for use as a start node,
+--   returning 'Nothing' if the node has no shared id.
+nodeToSharedRef :: BiDiP.NodeRemoteValue -> Maybe SharedReference
+nodeToSharedRef (BiDiP.MkNodeRemoteValue {sharedId, handle}) =
+  MkSharedReference <$> sharedId <*> pure handle <*> pure Nothing
+
+elementNotFoundError :: PreLocateException
+elementNotFoundError = ElementNotFound' "No element found matching locator."
