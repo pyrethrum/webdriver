@@ -114,8 +114,6 @@ data LocParams m = MkLocParams
     singletonCardinality :: SingletonCardinality
   }
 
-mkLocParams :: (Monad m) => BiDiLocateOpts -> LocateActions m -> LocParams m
-mkLocParams MkBiDiLocateOpts{mkDefaultLoc = defaultLoc, ..} MkLocateActions{..} = MkLocParams{..}
 
 data BaseLocateOpts = MkBaseLocateOpts
   { 
@@ -124,19 +122,6 @@ data BaseLocateOpts = MkBaseLocateOpts
     startNodes :: Maybe [SharedReference]
   }
   deriving (Show, Eq, Generic)
-
-  -- context :: BrowsingContext,
-  --   locator :: Locator,
-
-locatePrimative :: LocateActions m -> BiDiP.BrowsingContext -> BaseLocateOpts -> BiDiP.Locator -> m (Either PreLocateException BiDiP.LocateNodesResult)
-locatePrimative MkLocateActions {catch, locateNodes} context MkBaseLocateOpts {maxNodeCount, serializationOptions, startNodes} locator = 
-   runLoc catch locateNodes BiDiP.MkLocateNodes  
-         { context,
-            locator,
-            maxNodeCount,
-            serializationOptions,
-            startNodes
-          }
 
 data WDBiDITrace = Prepared {
   loc :: Locator,
@@ -153,35 +138,60 @@ data WDBiDITrace = Prepared {
   } 
  deriving (Show, Eq)
 
+  -- context :: BrowsingContext,
+  --   locator :: Locator,
+
+mkLocParams :: (Monad m) => BiDiLocateOpts -> LocateActions m -> LocParams m
+mkLocParams MkBiDiLocateOpts{mkDefaultLoc = defaultLoc, ..} MkLocateActions{..} = MkLocParams{..}
+
+locatePrimative :: Applicative m => LocateActions m -> BiDiP.BrowsingContext -> BaseLocateOpts -> BiDiP.Locator -> m (Either PreLocateException BiDiP.LocateNodesResult)
+locatePrimative MkLocateActions {catch, locateNodes} context MkBaseLocateOpts {maxNodeCount, serializationOptions, startNodes} locator = 
+   runLoc catch locateNodes BiDiP.MkLocateNodes  
+         { context,
+            locator,
+            maxNodeCount,
+            serializationOptions,
+            startNodes
+          }
 
  -- | Locate a unique or first-matching element from the document root.
-locateBiDi :: forall m. (MonadIO m) => LocateActions m -> BiDiLocateOpts -> Locator -> m (Either LocateException BiDiP.NodeRemoteValue)
+locateBiDi :: forall m. (MonadIO m) => LocateActions m -> BiDiLocateOpts -> BiDiP.BrowsingContext -> Locator -> m (Either LocateException BiDiP.NodeRemoteValue)
 locateBiDi actions opts = undefined
   -- runBiDiAction actions opts Nothing httpLocateSingleton
 
 
 -- | Locate all matching elements from the document root.
 -- | Locate all matching elements from the document root.
-locateAllBiDi :: forall m. (MonadIO m) => LocateActions m -> BiDiLocateOpts -> Locator -> m (Either LocateException ([BiDiP.NodeRemoteValue]))
+locateAllBiDi :: forall m. (MonadIO m) => LocateActions m -> BiDiLocateOpts -> BiDiP.BrowsingContext -> Locator -> m (Either LocateException ([BiDiP.NodeRemoteValue]))
 locateAllBiDi actions opts = undefined
+
+ -- | Locate a unique or first-matching element from the document root.
+locateFromElementBiDi :: forall m. (MonadIO m) => LocateActions m -> BiDiLocateOpts -> BiDiP.BrowsingContext -> SharedReference -> Locator -> m (Either LocateException BiDiP.NodeRemoteValue)
+locateFromElementBiDi actions opts sharedRef = undefined
+  -- runBiDiAction actions opts Nothing httpLocateSingleton
+
+-- | Locate all matching elements from the document root.
+-- | Locate all matching elements from the document root.
+locateAllFromElementBiDi :: forall m. (MonadIO m) => LocateActions m -> BiDiLocateOpts -> BiDiP.BrowsingContext -> SharedReference -> Locator -> m (Either LocateException ([BiDiP.NodeRemoteValue]))
+locateAllFromElementBiDi actions opts sharedRef = undefined
   -- runBiDiAction actions opts Nothing httpLocateAll
 
--- | Common implementation for all public HTTP locate functions.
-runBiDiAction ::
-  forall m.
-  (MonadIO m) =>
-  LocateActions m ->
-  BiDiLocateOpts ->
-  -- | root element
-  (LocParams m -> CompoundLocator BiDiP.LocateNodes -> m BiDiP.LocateNodesResult) ->
-  Locator ->
-  m (Either LocateException BiDiP.LocateNodesResult)
-runBiDiAction actions opts mRootId locateAction loc = do
-  let locParams = setBaseElement mRootId $ extendActions logsRef opts actions
-  rslt <- prepareRun locParams (locateAction locParams) loc
-  pure $ case opts.locateTracing of
-    LocateTracing -> LocateWithTrace rslt logs
-    NoLocateTracing -> Locate rslt
+-- -- | Common implementation for all public HTTP locate functions.
+-- runBiDiAction ::
+--   forall m.
+--   (MonadIO m) =>
+--   LocateActions m ->
+--   BiDiLocateOpts ->
+--   -- | root element
+--   (LocParams m -> CompoundLocator BiDiP.LocateNodes -> m BiDiP.LocateNodesResult) ->
+--   Locator ->
+--   m (Either LocateException BiDiP.LocateNodesResult)
+-- runBiDiAction actions opts mRootId locateAction loc = do
+--   let locParams = setBaseElement mRootId $ extendActions logsRef opts actions
+--   rslt <- prepareRun locParams (locateAction locParams) loc
+--   pure $ case opts.locateTracing of
+--     LocateTracing -> LocateWithTrace rslt logs
+--     NoLocateTracing -> Locate rslt
 
 -- -- | Locate a unique or first-matching element rooted at a given element.
 -- locateFromElementBiDi :: forall m. (MonadIO m) => LocateActions m -> BiDiLocateOpts -> ElementId -> Locator -> m LocateResult
