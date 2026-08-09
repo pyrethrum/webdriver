@@ -180,6 +180,43 @@ filter predicate xs
 traverse mkChild [1 .. count]
 ```
 
+## Prefer Functor/Applicative/Monad Combinators over Explicit Recursion
+
+Prefer the standard library combinators (`map`, `filter`, `filterM`, `traverse`, `foldM`, `sequence`, `<$>`, `<*>`, `>>=`, `join`, `maybe`, ...) over hand-rolled recursion or manual `case`/`do`-loop scaffolding whenever they express the intent. Recursion should be a last resort for genuinely recursive structures (e.g. tree walks), not for ordinary list/optional processing.
+
+**Avoid:**
+```haskell
+filterByText MkLocParams{getElementText} keep = fmap join . traverse go
+  where
+    go node = case nodeToSharedRef node of
+      Nothing -> pure []
+      Just ref -> do
+        t <- getElementText ref
+        pure $ if keep t then [node] else []
+```
+
+**Prefer** — combine `filterM` (monadic filter over the list) with `maybe` and `<$>`:
+```haskell
+filterByText MkLocParams{getElementText} keep = filterM keep'
+  where
+    keep' :: BiDiP.NodeRemoteValue -> m Bool
+    keep' = maybe (pure False) ((keep <$>) . getElementText) . nodeToSharedRef
+```
+
+Other examples:
+```haskell
+-- replace manual foldl recursion with foldM / foldl'
+total = foldl' (+) 0 xs
+
+-- replace mapM/sequence scaffolding with traverse
+results = traverse readFile paths
+
+-- replace nested case on Maybe with maybe
+firstOrNil = maybe [] pure
+```
+
+**Limit**: don't force a combinator if it obscures the logic — a short, obvious recursive helper is preferable to `(.).(.)` gymnastics (see the point-free limit above).
+
 ## Prefer `<$>` over `fmap`, `map`, and `second`
 
 Use the infix `<$>` operator instead of `fmap`, `map` (on functors other than lists where clarity permits), and `second`.

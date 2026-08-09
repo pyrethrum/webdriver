@@ -14,7 +14,7 @@ module WebDriverPreCore.Extended.BiDi.Locate
 where
 
 import Control.Exception (Exception)
-import Control.Monad (foldM, join)
+import Control.Monad (filterM, foldM, join)
 import Data.Bifunctor (first)
 import Data.List qualified as LST
 import Data.List.NonEmpty (NonEmpty (..), toList)
@@ -391,14 +391,11 @@ filterByText ::
   (Text -> Bool) ->
   [BiDiP.NodeRemoteValue] ->
   m [BiDiP.NodeRemoteValue]
-filterByText MkLocParams{getElementText} keep = fmap join . traverse go
+filterByText MkLocParams{getElementText} predicate = 
+  filterM predicate'
   where
-    go :: BiDiP.NodeRemoteValue -> m [BiDiP.NodeRemoteValue]
-    go node = case nodeToSharedRef node of
-      Nothing -> pure []
-      Just ref -> do
-        t <- getElementText ref
-        pure $ if keep t then [node] else []
+    predicate' :: BiDiP.NodeRemoteValue -> m Bool
+    predicate' = maybe (pure False) (fmap predicate . getElementText) . nodeToSharedRef
 
 -- | Build a BiDi InnerText locator with the given matching configuration.
 innerTextLocator :: CaseSensitivity -> Maybe BiDiP.MatchType -> Text -> Maybe Word8 -> BiDiP.Locator
@@ -438,32 +435,30 @@ startsMatch cs prefix text = normText cs prefix `T.isPrefixOf` normText cs text
 
 -- | Does @text@ match the wildcard pattern @pat@ ('*' matches any run of characters)?
 wildcardMatch :: CaseSensitivity -> Text -> Text -> Bool
-wildcardMatch cs pat text = globMatch (normText cs pat) (normText cs text)
-
--- | Glob match where '*' matches any (possibly empty) run of characters.
---   Splitting on '*' yields the literal fragments; the first must be a prefix,
---   the last a suffix, and the middle ones must appear in order. Greedy
---   leftmost matching is safe for globs (no backtracking), and 'Text' finds
---   each fragment with a linear-time algorithm.
-globMatch :: Text -> Text -> Bool
-globMatch pat text =
-  case T.splitOn "*" pat of
-    [] -> True
-    [single] -> single == text
-    (leading : middle) ->
-      T.isPrefixOf leading text
-        && match middle (T.drop (T.length leading) text)
+wildcardMatch cs pat text = 
+  globMatch (normText cs pat) (normText cs text)
   where
+    globMatch :: Text -> Text -> Bool
+    globMatch pat' txt' =
+      case T.splitOn "*" pat' of
+        [] -> True
+        [single] -> single == txt'
+        leading : middle ->
+          T.isPrefixOf leading txt'
+            && match middle (T.drop (T.length leading) txt')
+
     match :: [Text] -> Text -> Bool
-    match [] _ = True
-    match [lastFrag] remaining = T.isSuffixOf lastFrag remaining
-    match (frag : rest) remaining
-      | T.null frag = match rest remaining            -- "**" collapses to "*"
-      | otherwise =
-          case T.breakOn frag remaining of
-            (_, after)
-              | T.null after -> False
-              | otherwise -> match rest (T.drop (T.length frag) after)
+    match fragments remaining =
+      case fragments of
+        [] -> True
+        [lastFrag] -> T.isSuffixOf lastFrag remaining
+        frag : rest
+          | T.null frag -> match rest remaining            -- "**" collapses to "*"
+          | otherwise ->
+              case T.breakOn frag remaining of
+                (_, after)
+                  | T.null after -> False
+                  | otherwise -> match rest (T.drop (T.length frag) after)
 
 -- | Convert an extended BiDi leaf locator to a BiDi protocol locator.
 toBiDiLocator :: BiDiLoc -> BiDiP.Locator
