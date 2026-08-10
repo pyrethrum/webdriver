@@ -77,9 +77,6 @@ mockLocateUnsimplified allElmsDefault = go
       All locs -> all go locs
       Any locs -> any go locs
       Contains p c -> go p && go c
-    readBool "True" = True
-    readBool "False" = False
-    readBool v = error $ "mockLocated: unexpected value: " <> unpack v
 
 -- | Falsify generator for Locator with depth and node count limits.
 -- Only generates Parent, All, Any, and singletons (trueLoc, falseLoc).
@@ -328,33 +325,30 @@ prepareSimplifyXPathTests =
 -- >>> _eval prop_simplification_merges_xpaths
 -- *** Exception: ExitSuccess
 
--- generates a mock Locator and checks that the transformed HTTPLoc produces the
--- same locate result as the as the inital Locator
+-- generates a mock Locator and checks that the transformed locator (HTTP or
+-- BiDi, chosen by protocol) produces the same locate result as the initial
+-- Locator
 prop_simplification_merges_xpaths :: TestTree
 prop_simplification_merges_xpaths =
   testPropertyWith genLocatorOptions "prepareSimplify: auto-XPaths merged, user-XPaths preserved" $ do
     proto <- gen genProtocol
     loc <- gen $ genBoolLocator proto
     let expected = mockLocateUnsimplified True loc
-    if proto == BiDi then
-      let 
-        simpleLoc = transformBiDi ID loc 
-        actual = either (const True) (mockLocateBiDi True) simpleLoc
-    else 
-      let 
-        simpleLoc = transformHttp ID loc
-    
-      in
-      mockLocateHttp True simpleLoc
-
-  
-
-    info $ "Original locator:\n" <> unpack (txt loc)
-    info $ "Prepared simplified locator:\n" <> either show (unpack . txt) simpLoc
-    info $ "Expected (unsimplified): " <>  show expected
-    info $ "Actual mock located (after simplified merged): " <>  show (mockLocatedReduced True  <$> simpLoc)
-    
-    F.assert $ satisfies ("prepareSimplify preserves mockLocated", \l -> either (const True) (\rl -> mockLocatedReduced True rl == expected) l) .$ ("loc", simpLoc)
+    case proto of
+      BiDi -> do
+        let simpLoc = transformBiDi ID loc
+        info $ "Original locator:\n" <> unpack (txt loc)
+        info $ "Prepared simplified locator:\n" <> either show (unpack . txt) simpLoc
+        info $ "Expected (unsimplified): " <> show expected
+        info $ "Actual mock located (after simplified merged): " <> show (either (const True) (mockLocateBiDi True) simpLoc)
+        F.assert $ satisfies ("prepareSimplify preserves mockLocated", \l -> either (const True) (\rl -> mockLocateBiDi True rl == expected) l) .$ ("loc", simpLoc)
+      HTTP -> do
+        let simpLoc = transformHttp ID loc
+        info $ "Original locator:\n" <> unpack (txt loc)
+        info $ "Prepared simplified locator:\n" <> either show (unpack . txt) simpLoc
+        info $ "Expected (unsimplified): " <> show expected
+        info $ "Actual mock located (after simplified merged): " <> show (either (const True) (mockLocateHttp True) simpLoc)
+        F.assert $ satisfies ("prepareSimplify preserves mockLocated", \l -> either (const True) (\rl -> mockLocateHttp True rl == expected) l) .$ ("loc", simpLoc)
 
 -- >>> _eval test_user_xpath_contains
 -- *** Exception: ExitSuccess
@@ -363,11 +357,10 @@ test_user_xpath_contains =
   testCase "User XPath in Contains should not be merged" $ do
     let loc = All (CSS "True" :| [All (Contains (XPath "True") (XPath "False") :| [])])
         result = transformHttp ID loc
-    -- print $ "Original: " <> show loc
-    -- print $ "Transformed: " <> show result
-    -- print $ "Expected mockLocated: " <> show (mockLocated True loc)
-    -- print $ "Actual mockLocatedReduced: " <> show (mockLocatedReduced True <$> result)
-    either (const $ pure ()) (\r -> mockLocatedReduced True r @?= mockLocateUnsimplified True loc) result
+    either
+      (const $ pure ())
+      (\r -> mockLocateHttp True r @?= mockLocateUnsimplified True loc)
+      result
 
 
 -- >>> _eval test_contradictory_tags_nested_all
@@ -380,7 +373,7 @@ test_contradictory_tags_nested_all =
             [ Any { elms = Any { elms = All { elms = Tag "False" :| [AllElms] } :| [] } :| [] } ]
           }
         
-    transformHttp ID loc & either
+    transformBiDi ID loc & either
       (\(MkInvalidLocator _ msg) -> "Contradictory tags" `T.isInfixOf` msg @? "Expected contradictory tags error")
       (\_ -> assertFailure "Expected Left (contradictory tags error), got Right")
 
@@ -407,7 +400,7 @@ test_noncontradictory_tags_nested_any =
           { elms = All { elms = Tag "True" :| [] } :|
             [ Any { elms = Any { elms = Any { elms = Tag "False" :| [AllElms] } :| [] } :| [] } ]
           }   
-    transformHttp ID loc & either
+    transformBiDi ID loc & either
       (\(MkInvalidLocator _ msg) -> assertFailure $ "Expected Right, got Left with message: " <> unpack msg)
       (\_ -> pure ())
 
