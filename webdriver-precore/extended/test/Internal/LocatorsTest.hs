@@ -21,7 +21,9 @@ import WebDriverPreCore.Extended.Locators.Internal
     RoleLocator (..),
     CompoundLocator (..),
     HttpLoc (..),
-    transformHttp,
+    transformHttp, 
+    transformBiDi, 
+    BiDiLoc(..),
   )
 import Prelude
 import Data.Function ((&))
@@ -333,8 +335,20 @@ prop_simplification_merges_xpaths =
   testPropertyWith genLocatorOptions "prepareSimplify: auto-XPaths merged, user-XPaths preserved" $ do
     proto <- gen genProtocol
     loc <- gen $ genBoolLocator proto
-    let simpLoc = transformHttp ID loc
-        expected = mockLocateUnsimplified True loc
+    let expected = mockLocateUnsimplified True loc
+    if proto == BiDi then
+      let 
+        simpleLoc = transformBiDi ID loc 
+        actual = either (const True) (mockLocateBiDi True) simpleLoc
+    else 
+      let 
+        simpleLoc = transformHttp ID loc
+    
+      in
+      mockLocateHttp True simpleLoc
+
+  
+
     info $ "Original locator:\n" <> unpack (txt loc)
     info $ "Prepared simplified locator:\n" <> either show (unpack . txt) simpLoc
     info $ "Expected (unsimplified): " <>  show expected
@@ -410,98 +424,121 @@ test_noncontradictory_tags_simple_nested_any =
       (\(MkInvalidLocator _ msg) -> assertFailure $ "Expected Right, got Left with message: " <> unpack msg)
       (\_ -> pure ())
 
+
+mockLocateBiDi :: Bool -> CompoundLocator BiDiLoc -> Bool
+mockLocateBiDi allElmsDefault = mockLocatedReduced allElmsDefault mockBiDiLoc
+
+mockLocateHttp :: Bool -> CompoundLocator HttpLoc -> Bool
+mockLocateHttp allElmsDefault = mockLocatedReduced allElmsDefault mockHttpLoc
+
+
 -- | Evaluate a ReducedLoc assuming limited locators generated 
-mockLocatedReduced :: Bool -> CompoundLocator HttpLoc -> Bool
-mockLocatedReduced allElmsDefault = go
+mockLocatedReduced :: Bool ->  (Bool -> a -> Bool) -> CompoundLocator a -> Bool
+mockLocatedReduced allElmsDefault leafLocator = go
   where
     go = \case
-      LeafC lf -> case lf of
-        CSSHttp v -> readBool v
-        XPathHttp v -> readXPathBool v
-        RoleHttp {roleSpec = RoleName v} -> readBool v
-        RoleHttp {} -> allElmsDefault
+      LeafC lf -> leafLocator allElmsDefault lf
       ContainsC p c' -> go p && go c'
       AllC elms -> all go elms
       AnyC elms -> any go elms
-    readBool "True" = True
-    readBool "False" = False
-    readBool v = error $ "mockLocatedReduced: unexpected value: " <> unpack v
 
-    -- | Extract the boolean value from an auto-generated XPath string.
-    -- Normalizes XPath to a boolean expression, then evaluates it.
-    readXPathBool :: Text -> Bool
-    readXPathBool xp = 
-      tfToBool . reduceToTF {- . db "BEFORE REDUCE" . chkExpectedChrs -} $ initialSub xp
-     where 
-      initialSub = 
-          replace "and" "&" 
-          . replace "or" "|"
-          . replace "True" "T" 
-          . replace "False" "F" 
-          . replace "true()" "T" 
-          . replace "false()" "F"
-          . replace "[" "("
-          . replace "]" ")"
-          . replace "//" "and"
-          . deleteTxt " "
-          . replace "True[" "True and["
-          . replace "False[" "False and["
-          . deleteAll [
-            "'",
-            ".//",
-            ".//*",
-            "@id=",
-            "self::",
-            "@data-attr=",
-             -- role / text normalisationrelated guff
-            "and normalize-space(.)=",
-            "not(@hidden) and not(@aria-hidden='true') and not(contains(@style,'display:none')) and not(contains(@style,'visibility:hidden'))"
-          ]
-           . replace "contains(concat(' ', normalize-space(@class), ' '), ' True ')" "True"
-           . replace "contains(concat(' ', normalize-space(@class), ' '), ' False ')" "False"
-      
-      reduceToTF xp' = 
-        if replaced == xp' then
-          replaced 
-        else 
-          reduceToTF replaced
-       where 
-        replaced =
-          keepReplacing "T&T" "T" .
-          keepReplacing "T&F" "F" .
-          keepReplacing "F&T" "F" .
-          keepReplacing "F&F" "F" .
-          keepReplacing "T|T" "T" .
-          keepReplacing "T|F" "T" .
-          keepReplacing "F|T" "T" .
-          keepReplacing "F|F" "F" .
-          keepReplacing "(F)" "F" $
-          keepReplacing "(T)" "T" xp'
+mockHttpLoc :: Bool -> HttpLoc -> Bool
+mockHttpLoc allElmsDefault = \case
+  CSSHttp v -> readBool v
+  XPathHttp v -> readXPathBool v
+  RoleHttp {roleSpec = RoleName v} -> readBool v
+  RoleHttp {} -> allElmsDefault
 
-      keepReplacing f t hs = 
-          if replaced == hs then 
-            replaced
-          else 
-            keepReplacing f t replaced
-        where
-          replaced = replace f t hs
-      
-      tfToBool = \case
-        "T" -> True
-        "F" -> False
-        t -> 
-          error $ 
-            "Test error - readXPathBool: unexpected reduced XPath value (expected T or F): " 
-            <> unpack t
-            <> "\nInitial Reduced:\n"
-            <> unpack (initialSub xp)
-            <> "\nSource XPath:\n"
-            <> unpack xp
-      
-      deleteTxt = flip replace ""
+mockBiDiLoc :: Bool -> BiDiLoc -> Bool
+mockBiDiLoc allElmsDefault = \case
+  CSSBiDi v -> readBool v
+  XPathBiDi v -> readXPathBool v
+  RoleBiDi {roleSpec = RoleName v} -> readBool v
+  RoleBiDi {} -> allElmsDefault
+  ContextBiDi {context = MkBrowsingContext v} -> readBool v
+  InnerTextBiDi {value = v} -> readBool v
 
-      deleteAll :: [Text] -> Text -> Text
-      deleteAll dtxs xp' = foldr deleteTxt xp' dtxs 
+readBool :: Text -> Bool
+readBool = \case
+      "True" -> True
+      "False" -> False
+      v -> error $ "mockLocatedReduced: unexpected value: " <> unpack v
+
+-- | Extract the boolean value from an auto-generated XPath string.
+-- Normalizes XPath to a boolean expression, then evaluates it.
+readXPathBool :: Text -> Bool
+readXPathBool xp = 
+  tfToBool . reduceToTF {- . db "BEFORE REDUCE" . chkExpectedChrs -} $ initialSub xp
+  where 
+  initialSub = 
+      replace "and" "&" 
+      . replace "or" "|"
+      . replace "True" "T" 
+      . replace "False" "F" 
+      . replace "true()" "T" 
+      . replace "false()" "F"
+      . replace "[" "("
+      . replace "]" ")"
+      . replace "//" "and"
+      . deleteTxt " "
+      . replace "True[" "True and["
+      . replace "False[" "False and["
+      . deleteAll [
+        "'",
+        ".//",
+        ".//*",
+        "@id=",
+        "self::",
+        "@data-attr=",
+          -- role / text normalisationrelated guff
+        "and normalize-space(.)=",
+        "not(@hidden) and not(@aria-hidden='true') and not(contains(@style,'display:none')) and not(contains(@style,'visibility:hidden'))"
+      ]
+        . replace "contains(concat(' ', normalize-space(@class), ' '), ' True ')" "True"
+        . replace "contains(concat(' ', normalize-space(@class), ' '), ' False ')" "False"
+  
+  reduceToTF xp' = 
+    if replaced == xp' then
+      replaced 
+    else 
+      reduceToTF replaced
+    where 
+    replaced =
+      keepReplacing "T&T" "T" .
+      keepReplacing "T&F" "F" .
+      keepReplacing "F&T" "F" .
+      keepReplacing "F&F" "F" .
+      keepReplacing "T|T" "T" .
+      keepReplacing "T|F" "T" .
+      keepReplacing "F|T" "T" .
+      keepReplacing "F|F" "F" .
+      keepReplacing "(F)" "F" $
+      keepReplacing "(T)" "T" xp'
+
+  keepReplacing f t hs = 
+      if replaced == hs then 
+        replaced
+      else 
+        keepReplacing f t replaced
+    where
+      replaced = replace f t hs
+  
+  tfToBool = \case
+    "T" -> True
+    "F" -> False
+    t -> 
+      error $ 
+        "Test error - readXPathBool: unexpected reduced XPath value (expected T or F): " 
+        <> unpack t
+        <> "\nInitial Reduced:\n"
+        <> unpack (initialSub xp)
+        <> "\nSource XPath:\n"
+        <> unpack xp
+  
+  deleteTxt = flip replace ""
+
+  deleteAll :: [Text] -> Text -> Text
+  deleteAll dtxs xp' = foldr deleteTxt xp' dtxs 
       
       {-
       chkExpectedChrs t = 
