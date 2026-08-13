@@ -253,15 +253,18 @@ tests =
               ]
 
       , withResource (navToUrl ses landmarkRolesUrl) (\_ -> pure ()) $ \_ ->
+          let 
+            expect6orMore :: Text -> [ElementId] -> Maybe Text
+            expect6orMore msg elms = if length elms >= 6 then Nothing else Just $ "expected >=6 " <> msg <> "but got " <> txt (length elms)
+          in
           testGroup "Class Locator Variants"
-              [ chkAll "elmClass contains match" (elmClass "text-input")
-                  (\elms -> if length elms >= 6 then Nothing else Just $ "expected >=6 elements with class text-input but got " <> txt (length elms))
-              , chkAll "elmClassExact full-equality match" (elmClassExact "text-input")
-                  (\elms -> if length elms >= 6 then Nothing else Just $ "expected >=6 exact text-input class elements but got " <> txt (length elms))
-              , chkAll "elemClassStarts starts-with match" (elemClassStarts "text")
-                  (\elms -> if length elms >= 6 then Nothing else Just $ "expected >=6 class starts-with-text elements but got " <> txt (length elms))
+              [ chkAll "elmClass contains match" (elmClass "text-input") (expect6orMore "elements with class text-input")
+              , chkAll "elmClassExact full-equality match" (elmClassExact "text-input")(expect6orMore "exact text-input class elements")
+              , chkAll "elemClassStarts starts-with match" (elemClassStarts "text")(expect6orMore "elements with class starting with text")
               , chkAutoId "elmClass finds element by single class name" (elmClass "span-button") "btn-span-role"
               ]
+        
+                
 
       , withResource (navToUrl ses landmarkRolesUrl) (\_ -> pure ()) $ \_ ->
           testGroup "Attribute Locator Variants"

@@ -320,7 +320,7 @@ tests =
                       ]
                 }
           , expectedMatches = [ "1-1" ]
-          , locator = classLoc A ||| (classLoc A >>> (classLoc A ||| classLoc A ||| classLoc B))
+          , locator = classLoc A ||| (classLoc A >>> classLoc A ||| classLoc A ||| classLoc B)
           }
              ]
           ]
@@ -663,6 +663,7 @@ sanityNode =
         ]
     }
 
+-- Tests run against sanityNode (above)
 sanitySimpleA :: TestTree
 sanitySimpleA = sanityChk "Simple Match A" ["1", "1-1", "1-2-1", "1-3-1"] $ Match A
 

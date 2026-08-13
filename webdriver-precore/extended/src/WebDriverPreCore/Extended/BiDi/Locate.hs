@@ -195,15 +195,15 @@ runBiDiAction ::
   Locator ->
   m (Either LocateException r)
 runBiDiAction actions@MkLocateActions{catch} opts context mRootId locateAction loc = do
-  let p = setBaseElement mRootId $ mkLocParams opts context actions
+  let p@MkLocParams{trace} = setBaseElement mRootId $ mkLocParams opts context actions
   case LI.transformBiDi p.defaultLoc loc of
     -- log failure if the transformation failed
     Left err -> do
-      p.trace (PrepareFailed loc err)
+      trace (PrepareFailed loc err)
       pure $ Left (InvalidLocator err)
     -- run the locator if the transformation succeeded
     Right compoundLoc -> do
-      p.trace (Prepared loc compoundLoc)
+      trace (Prepared loc compoundLoc)
       first (addLocToException loc) <$> runLoc catch (locateAction p) compoundLoc
 
 -- | Set the start node (root element) used by the locate.
