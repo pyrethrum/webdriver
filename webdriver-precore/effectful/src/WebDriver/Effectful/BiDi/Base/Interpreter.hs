@@ -121,63 +121,63 @@ runWebDriverBiDi info = interpret $ \localEnv -> \case
   SendBiDiOffSpecCmd mid m ps -> liftIO $ info.biDiRunner.runOffSpecWithId mid m ps
   SendBiDiOffSpecCmdNoWait m ps -> liftIO $ Runner.runOffSpecNoWait info.biDiRunner m ps
   -- Log subscriptions
-  SubscribeLogEntryAdded h -> localUnliftIO localEnv (ConcUnlift Persistent Unlimited) $ \unlift -> BA.subscribeLogEntryAdded (mkSendSub info.biDiRunner) (unlift . h)
-  SubscribeLogEntryAdded' b u h -> localUnliftIO localEnv (ConcUnlift Persistent Unlimited) $ \unlift -> BA.subscribeLogEntryAdded' (mkSendSub' info.biDiRunner) b u (unlift . h)
+  SubscribeLogEntryAdded h -> localUnliftIO localEnv unliftStrategy $ \unlift -> BA.subscribeLogEntryAdded sendSub (unlift . h)
+  SubscribeLogEntryAdded' b u h -> localUnliftIO localEnv unliftStrategy $ \unlift -> BA.subscribeLogEntryAdded' sendSub' b u (unlift . h)
   -- BrowsingContext subscriptions
-  SubscribeBrowsingContextCreated h -> localUnliftIO localEnv (ConcUnlift Persistent Unlimited) $ \unlift -> BA.subscribeBrowsingContextCreated (mkSendSub info.biDiRunner) (unlift . h)
-  SubscribeBrowsingContextCreated' b u h -> localUnliftIO localEnv (ConcUnlift Persistent Unlimited) $ \unlift -> BA.subscribeBrowsingContextCreated' (mkSendSub' info.biDiRunner) b u (unlift . h)
-  SubscribeBrowsingContextDestroyed h -> localUnliftIO localEnv (ConcUnlift Persistent Unlimited) $ \unlift -> BA.subscribeBrowsingContextDestroyed (mkSendSub info.biDiRunner) (unlift . h)
-  SubscribeBrowsingContextDestroyed' b u h -> localUnliftIO localEnv (ConcUnlift Persistent Unlimited) $ \unlift -> BA.subscribeBrowsingContextDestroyed' (mkSendSub' info.biDiRunner) b u (unlift . h)
-  SubscribeBrowsingContextNavigationStarted h -> localUnliftIO localEnv (ConcUnlift Persistent Unlimited) $ \unlift -> BA.subscribeBrowsingContextNavigationStarted (mkSendSub info.biDiRunner) (unlift . h)
-  SubscribeBrowsingContextNavigationStarted' b u h -> localUnliftIO localEnv (ConcUnlift Persistent Unlimited) $ \unlift -> BA.subscribeBrowsingContextNavigationStarted' (mkSendSub' info.biDiRunner) b u (unlift . h)
-  SubscribeBrowsingContextFragmentNavigated h -> localUnliftIO localEnv (ConcUnlift Persistent Unlimited) $ \unlift -> BA.subscribeBrowsingContextFragmentNavigated (mkSendSub info.biDiRunner) (unlift . h)
-  SubscribeBrowsingContextFragmentNavigated' b u h -> localUnliftIO localEnv (ConcUnlift Persistent Unlimited) $ \unlift -> BA.subscribeBrowsingContextFragmentNavigated' (mkSendSub' info.biDiRunner) b u (unlift . h)
-  SubscribeBrowsingContextHistoryUpdated h -> localUnliftIO localEnv (ConcUnlift Persistent Unlimited) $ \unlift -> BA.subscribeBrowsingContextHistoryUpdated (mkSendSub info.biDiRunner) (unlift . h)
-  SubscribeBrowsingContextHistoryUpdated' b u h -> localUnliftIO localEnv (ConcUnlift Persistent Unlimited) $ \unlift -> BA.subscribeBrowsingContextHistoryUpdated' (mkSendSub' info.biDiRunner) b u (unlift . h)
-  SubscribeBrowsingContextDomContentLoaded h -> localUnliftIO localEnv (ConcUnlift Persistent Unlimited) $ \unlift -> BA.subscribeBrowsingContextDomContentLoaded (mkSendSub info.biDiRunner) (unlift . h)
-  SubscribeBrowsingContextDomContentLoaded' b u h -> localUnliftIO localEnv (ConcUnlift Persistent Unlimited) $ \unlift -> BA.subscribeBrowsingContextDomContentLoaded' (mkSendSub' info.biDiRunner) b u (unlift . h)
-  SubscribeBrowsingContextLoad h -> localUnliftIO localEnv (ConcUnlift Persistent Unlimited) $ \unlift -> BA.subscribeBrowsingContextLoad (mkSendSub info.biDiRunner) (unlift . h)
-  SubscribeBrowsingContextLoad' b u h -> localUnliftIO localEnv (ConcUnlift Persistent Unlimited) $ \unlift -> BA.subscribeBrowsingContextLoad' (mkSendSub' info.biDiRunner) b u (unlift . h)
-  SubscribeBrowsingContextDownloadWillBegin h -> localUnliftIO localEnv (ConcUnlift Persistent Unlimited) $ \unlift -> BA.subscribeBrowsingContextDownloadWillBegin (mkSendSub info.biDiRunner) (unlift . h)
-  SubscribeBrowsingContextDownloadWillBegin' b u h -> localUnliftIO localEnv (ConcUnlift Persistent Unlimited) $ \unlift -> BA.subscribeBrowsingContextDownloadWillBegin' (mkSendSub' info.biDiRunner) b u (unlift . h)
-  SubscribeBrowsingContextDownloadEnd h -> localUnliftIO localEnv (ConcUnlift Persistent Unlimited) $ \unlift -> BA.subscribeBrowsingContextDownloadEnd (mkSendSub info.biDiRunner) (unlift . h)
-  SubscribeBrowsingContextDownloadEnd' b u h -> localUnliftIO localEnv (ConcUnlift Persistent Unlimited) $ \unlift -> BA.subscribeBrowsingContextDownloadEnd' (mkSendSub' info.biDiRunner) b u (unlift . h)
-  SubscribeBrowsingContextNavigationAborted h -> localUnliftIO localEnv (ConcUnlift Persistent Unlimited) $ \unlift -> BA.subscribeBrowsingContextNavigationAborted (mkSendSub info.biDiRunner) (unlift . h)
-  SubscribeBrowsingContextNavigationAborted' b u h -> localUnliftIO localEnv (ConcUnlift Persistent Unlimited) $ \unlift -> BA.subscribeBrowsingContextNavigationAborted' (mkSendSub' info.biDiRunner) b u (unlift . h)
-  SubscribeBrowsingContextNavigationCommitted h -> localUnliftIO localEnv (ConcUnlift Persistent Unlimited) $ \unlift -> BA.subscribeBrowsingContextNavigationCommitted (mkSendSub info.biDiRunner) (unlift . h)
-  SubscribeBrowsingContextNavigationCommitted' b u h -> localUnliftIO localEnv (ConcUnlift Persistent Unlimited) $ \unlift -> BA.subscribeBrowsingContextNavigationCommitted' (mkSendSub' info.biDiRunner) b u (unlift . h)
-  SubscribeBrowsingContextNavigationFailed h -> localUnliftIO localEnv (ConcUnlift Persistent Unlimited) $ \unlift -> BA.subscribeBrowsingContextNavigationFailed (mkSendSub info.biDiRunner) (unlift . h)
-  SubscribeBrowsingContextNavigationFailed' b u h -> localUnliftIO localEnv (ConcUnlift Persistent Unlimited) $ \unlift -> BA.subscribeBrowsingContextNavigationFailed' (mkSendSub' info.biDiRunner) b u (unlift . h)
-  SubscribeBrowsingContextUserPromptClosed h -> localUnliftIO localEnv (ConcUnlift Persistent Unlimited) $ \unlift -> BA.subscribeBrowsingContextUserPromptClosed (mkSendSub info.biDiRunner) (unlift . h)
-  SubscribeBrowsingContextUserPromptClosed' b u h -> localUnliftIO localEnv (ConcUnlift Persistent Unlimited) $ \unlift -> BA.subscribeBrowsingContextUserPromptClosed' (mkSendSub' info.biDiRunner) b u (unlift . h)
-  SubscribeBrowsingContextUserPromptOpened h -> localUnliftIO localEnv (ConcUnlift Persistent Unlimited) $ \unlift -> BA.subscribeBrowsingContextUserPromptOpened (mkSendSub info.biDiRunner) (unlift . h)
-  SubscribeBrowsingContextUserPromptOpened' b u h -> localUnliftIO localEnv (ConcUnlift Persistent Unlimited) $ \unlift -> BA.subscribeBrowsingContextUserPromptOpened' (mkSendSub' info.biDiRunner) b u (unlift . h)
+  SubscribeBrowsingContextCreated h -> localUnliftIO localEnv unliftStrategy $ \unlift -> BA.subscribeBrowsingContextCreated sendSub (unlift . h)
+  SubscribeBrowsingContextCreated' b u h -> localUnliftIO localEnv unliftStrategy $ \unlift -> BA.subscribeBrowsingContextCreated' sendSub' b u (unlift . h)
+  SubscribeBrowsingContextDestroyed h -> localUnliftIO localEnv unliftStrategy $ \unlift -> BA.subscribeBrowsingContextDestroyed sendSub (unlift . h)
+  SubscribeBrowsingContextDestroyed' b u h -> localUnliftIO localEnv unliftStrategy $ \unlift -> BA.subscribeBrowsingContextDestroyed' sendSub' b u (unlift . h)
+  SubscribeBrowsingContextNavigationStarted h -> localUnliftIO localEnv unliftStrategy $ \unlift -> BA.subscribeBrowsingContextNavigationStarted sendSub (unlift . h)
+  SubscribeBrowsingContextNavigationStarted' b u h -> localUnliftIO localEnv unliftStrategy $ \unlift -> BA.subscribeBrowsingContextNavigationStarted' sendSub' b u (unlift . h)
+  SubscribeBrowsingContextFragmentNavigated h -> localUnliftIO localEnv unliftStrategy $ \unlift -> BA.subscribeBrowsingContextFragmentNavigated sendSub (unlift . h)
+  SubscribeBrowsingContextFragmentNavigated' b u h -> localUnliftIO localEnv unliftStrategy $ \unlift -> BA.subscribeBrowsingContextFragmentNavigated' sendSub' b u (unlift . h)
+  SubscribeBrowsingContextHistoryUpdated h -> localUnliftIO localEnv unliftStrategy $ \unlift -> BA.subscribeBrowsingContextHistoryUpdated sendSub (unlift . h)
+  SubscribeBrowsingContextHistoryUpdated' b u h -> localUnliftIO localEnv unliftStrategy $ \unlift -> BA.subscribeBrowsingContextHistoryUpdated' sendSub' b u (unlift . h)
+  SubscribeBrowsingContextDomContentLoaded h -> localUnliftIO localEnv unliftStrategy $ \unlift -> BA.subscribeBrowsingContextDomContentLoaded sendSub (unlift . h)
+  SubscribeBrowsingContextDomContentLoaded' b u h -> localUnliftIO localEnv unliftStrategy $ \unlift -> BA.subscribeBrowsingContextDomContentLoaded' sendSub' b u (unlift . h)
+  SubscribeBrowsingContextLoad h -> localUnliftIO localEnv unliftStrategy $ \unlift -> BA.subscribeBrowsingContextLoad sendSub (unlift . h)
+  SubscribeBrowsingContextLoad' b u h -> localUnliftIO localEnv unliftStrategy $ \unlift -> BA.subscribeBrowsingContextLoad' sendSub' b u (unlift . h)
+  SubscribeBrowsingContextDownloadWillBegin h -> localUnliftIO localEnv unliftStrategy $ \unlift -> BA.subscribeBrowsingContextDownloadWillBegin sendSub (unlift . h)
+  SubscribeBrowsingContextDownloadWillBegin' b u h -> localUnliftIO localEnv unliftStrategy $ \unlift -> BA.subscribeBrowsingContextDownloadWillBegin' sendSub' b u (unlift . h)
+  SubscribeBrowsingContextDownloadEnd h -> localUnliftIO localEnv unliftStrategy $ \unlift -> BA.subscribeBrowsingContextDownloadEnd sendSub (unlift . h)
+  SubscribeBrowsingContextDownloadEnd' b u h -> localUnliftIO localEnv unliftStrategy $ \unlift -> BA.subscribeBrowsingContextDownloadEnd' sendSub' b u (unlift . h)
+  SubscribeBrowsingContextNavigationAborted h -> localUnliftIO localEnv unliftStrategy $ \unlift -> BA.subscribeBrowsingContextNavigationAborted sendSub (unlift . h)
+  SubscribeBrowsingContextNavigationAborted' b u h -> localUnliftIO localEnv unliftStrategy $ \unlift -> BA.subscribeBrowsingContextNavigationAborted' sendSub' b u (unlift . h)
+  SubscribeBrowsingContextNavigationCommitted h -> localUnliftIO localEnv unliftStrategy $ \unlift -> BA.subscribeBrowsingContextNavigationCommitted sendSub (unlift . h)
+  SubscribeBrowsingContextNavigationCommitted' b u h -> localUnliftIO localEnv unliftStrategy $ \unlift -> BA.subscribeBrowsingContextNavigationCommitted' sendSub' b u (unlift . h)
+  SubscribeBrowsingContextNavigationFailed h -> localUnliftIO localEnv unliftStrategy $ \unlift -> BA.subscribeBrowsingContextNavigationFailed sendSub (unlift . h)
+  SubscribeBrowsingContextNavigationFailed' b u h -> localUnliftIO localEnv unliftStrategy $ \unlift -> BA.subscribeBrowsingContextNavigationFailed' sendSub' b u (unlift . h)
+  SubscribeBrowsingContextUserPromptClosed h -> localUnliftIO localEnv unliftStrategy $ \unlift -> BA.subscribeBrowsingContextUserPromptClosed sendSub (unlift . h)
+  SubscribeBrowsingContextUserPromptClosed' b u h -> localUnliftIO localEnv unliftStrategy $ \unlift -> BA.subscribeBrowsingContextUserPromptClosed' sendSub' b u (unlift . h)
+  SubscribeBrowsingContextUserPromptOpened h -> localUnliftIO localEnv unliftStrategy $ \unlift -> BA.subscribeBrowsingContextUserPromptOpened sendSub (unlift . h)
+  SubscribeBrowsingContextUserPromptOpened' b u h -> localUnliftIO localEnv unliftStrategy $ \unlift -> BA.subscribeBrowsingContextUserPromptOpened' sendSub' b u (unlift . h)
   -- Network subscriptions
-  SubscribeNetworkAuthRequired h -> localUnliftIO localEnv (ConcUnlift Persistent Unlimited) $ \unlift -> BA.subscribeNetworkAuthRequired (mkSendSub info.biDiRunner) (unlift . h)
-  SubscribeNetworkAuthRequired' b u h -> localUnliftIO localEnv (ConcUnlift Persistent Unlimited) $ \unlift -> BA.subscribeNetworkAuthRequired' (mkSendSub' info.biDiRunner) b u (unlift . h)
-  SubscribeNetworkBeforeRequestSent h -> localUnliftIO localEnv (ConcUnlift Persistent Unlimited) $ \unlift -> BA.subscribeNetworkBeforeRequestSent (mkSendSub info.biDiRunner) (unlift . h)
-  SubscribeNetworkBeforeRequestSent' b u h -> localUnliftIO localEnv (ConcUnlift Persistent Unlimited) $ \unlift -> BA.subscribeNetworkBeforeRequestSent' (mkSendSub' info.biDiRunner) b u (unlift . h)
-  SubscribeNetworkFetchError h -> localUnliftIO localEnv (ConcUnlift Persistent Unlimited) $ \unlift -> BA.subscribeNetworkFetchError (mkSendSub info.biDiRunner) (unlift . h)
-  SubscribeNetworkFetchError' b u h -> localUnliftIO localEnv (ConcUnlift Persistent Unlimited) $ \unlift -> BA.subscribeNetworkFetchError' (mkSendSub' info.biDiRunner) b u (unlift . h)
-  SubscribeNetworkResponseCompleted h -> localUnliftIO localEnv (ConcUnlift Persistent Unlimited) $ \unlift -> BA.subscribeNetworkResponseCompleted (mkSendSub info.biDiRunner) (unlift . h)
-  SubscribeNetworkResponseCompleted' b u h -> localUnliftIO localEnv (ConcUnlift Persistent Unlimited) $ \unlift -> BA.subscribeNetworkResponseCompleted' (mkSendSub' info.biDiRunner) b u (unlift . h)
-  SubscribeNetworkResponseStarted h -> localUnliftIO localEnv (ConcUnlift Persistent Unlimited) $ \unlift -> BA.subscribeNetworkResponseStarted (mkSendSub info.biDiRunner) (unlift . h)
-  SubscribeNetworkResponseStarted' b u h -> localUnliftIO localEnv (ConcUnlift Persistent Unlimited) $ \unlift -> BA.subscribeNetworkResponseStarted' (mkSendSub' info.biDiRunner) b u (unlift . h)
+  SubscribeNetworkAuthRequired h -> localUnliftIO localEnv unliftStrategy $ \unlift -> BA.subscribeNetworkAuthRequired sendSub (unlift . h)
+  SubscribeNetworkAuthRequired' b u h -> localUnliftIO localEnv unliftStrategy $ \unlift -> BA.subscribeNetworkAuthRequired' sendSub' b u (unlift . h)
+  SubscribeNetworkBeforeRequestSent h -> localUnliftIO localEnv unliftStrategy $ \unlift -> BA.subscribeNetworkBeforeRequestSent sendSub (unlift . h)
+  SubscribeNetworkBeforeRequestSent' b u h -> localUnliftIO localEnv unliftStrategy $ \unlift -> BA.subscribeNetworkBeforeRequestSent' sendSub' b u (unlift . h)
+  SubscribeNetworkFetchError h -> localUnliftIO localEnv unliftStrategy $ \unlift -> BA.subscribeNetworkFetchError sendSub (unlift . h)
+  SubscribeNetworkFetchError' b u h -> localUnliftIO localEnv unliftStrategy $ \unlift -> BA.subscribeNetworkFetchError' sendSub' b u (unlift . h)
+  SubscribeNetworkResponseCompleted h -> localUnliftIO localEnv unliftStrategy $ \unlift -> BA.subscribeNetworkResponseCompleted sendSub (unlift . h)
+  SubscribeNetworkResponseCompleted' b u h -> localUnliftIO localEnv unliftStrategy $ \unlift -> BA.subscribeNetworkResponseCompleted' sendSub' b u (unlift . h)
+  SubscribeNetworkResponseStarted h -> localUnliftIO localEnv unliftStrategy $ \unlift -> BA.subscribeNetworkResponseStarted sendSub (unlift . h)
+  SubscribeNetworkResponseStarted' b u h -> localUnliftIO localEnv unliftStrategy $ \unlift -> BA.subscribeNetworkResponseStarted' sendSub' b u (unlift . h)
   -- Script subscriptions
-  SubscribeScriptMessage h -> localUnliftIO localEnv (ConcUnlift Persistent Unlimited) $ \unlift -> BA.subscribeScriptMessage (mkSendSub info.biDiRunner) (unlift . h)
-  SubscribeScriptMessage' b u h -> localUnliftIO localEnv (ConcUnlift Persistent Unlimited) $ \unlift -> BA.subscribeScriptMessage' (mkSendSub' info.biDiRunner) b u (unlift . h)
-  SubscribeScriptRealmCreated h -> localUnliftIO localEnv (ConcUnlift Persistent Unlimited) $ \unlift -> BA.subscribeScriptRealmCreated (mkSendSub info.biDiRunner) (unlift . h)
-  SubscribeScriptRealmCreated' b u h -> localUnliftIO localEnv (ConcUnlift Persistent Unlimited) $ \unlift -> BA.subscribeScriptRealmCreated' (mkSendSub' info.biDiRunner) b u (unlift . h)
-  SubscribeScriptRealmDestroyed h -> localUnliftIO localEnv (ConcUnlift Persistent Unlimited) $ \unlift -> BA.subscribeScriptRealmDestroyed (mkSendSub info.biDiRunner) (unlift . h)
-  SubscribeScriptRealmDestroyed' b u h -> localUnliftIO localEnv (ConcUnlift Persistent Unlimited) $ \unlift -> BA.subscribeScriptRealmDestroyed' (mkSendSub' info.biDiRunner) b u (unlift . h)
+  SubscribeScriptMessage h -> localUnliftIO localEnv unliftStrategy $ \unlift -> BA.subscribeScriptMessage sendSub (unlift . h)
+  SubscribeScriptMessage' b u h -> localUnliftIO localEnv unliftStrategy $ \unlift -> BA.subscribeScriptMessage' sendSub' b u (unlift . h)
+  SubscribeScriptRealmCreated h -> localUnliftIO localEnv unliftStrategy $ \unlift -> BA.subscribeScriptRealmCreated sendSub (unlift . h)
+  SubscribeScriptRealmCreated' b u h -> localUnliftIO localEnv unliftStrategy $ \unlift -> BA.subscribeScriptRealmCreated' sendSub' b u (unlift . h)
+  SubscribeScriptRealmDestroyed h -> localUnliftIO localEnv unliftStrategy $ \unlift -> BA.subscribeScriptRealmDestroyed sendSub (unlift . h)
+  SubscribeScriptRealmDestroyed' b u h -> localUnliftIO localEnv unliftStrategy $ \unlift -> BA.subscribeScriptRealmDestroyed' sendSub' b u (unlift . h)
   -- Input subscriptions
-  SubscribeInputFileDialogOpened h -> localUnliftIO localEnv (ConcUnlift Persistent Unlimited) $ \unlift -> BA.subscribeInputFileDialogOpened (mkSendSub info.biDiRunner) (unlift . h)
-  SubscribeInputFileDialogOpened' b u h -> localUnliftIO localEnv (ConcUnlift Persistent Unlimited) $ \unlift -> BA.subscribeInputFileDialogOpened' (mkSendSub' info.biDiRunner) b u (unlift . h)
+  SubscribeInputFileDialogOpened h -> localUnliftIO localEnv unliftStrategy $ \unlift -> BA.subscribeInputFileDialogOpened sendSub (unlift . h)
+  SubscribeInputFileDialogOpened' b u h -> localUnliftIO localEnv unliftStrategy $ \unlift -> BA.subscribeInputFileDialogOpened' sendSub' b u (unlift . h)
   -- Multi-event subscriptions
-  SubscribeMany sts h -> localUnliftIO localEnv (ConcUnlift Persistent Unlimited) $ \unlift -> BA.subscribeMany' (mkSendSubMany' info.biDiRunner) sts [] [] (unlift . h)
-  SubscribeMany' b u sts h -> localUnliftIO localEnv (ConcUnlift Persistent Unlimited) $ \unlift -> BA.subscribeMany' (mkSendSubMany' info.biDiRunner) sts b u (unlift . h)
-  SubscribeOffSpecMany sts h -> localUnliftIO localEnv (ConcUnlift Persistent Unlimited) $ \unlift -> BA.subscribeOffSpecMany' (mkSendSubOffSpecMany' info.biDiRunner) sts [] [] (unlift . h)
-  SubscribeOffSpecMany' b u sts h -> localUnliftIO localEnv (ConcUnlift Persistent Unlimited) $ \unlift -> BA.subscribeOffSpecMany' (mkSendSubOffSpecMany' info.biDiRunner) sts b u (unlift . h)
+  SubscribeMany sts h -> localUnliftIO localEnv unliftStrategy $ \unlift -> BA.subscribeMany' sendSubMany' sts [] [] (unlift . h)
+  SubscribeMany' b u sts h -> localUnliftIO localEnv unliftStrategy $ \unlift -> BA.subscribeMany' sendSubMany' sts b u (unlift . h)
+  SubscribeOffSpecMany sts h -> localUnliftIO localEnv unliftStrategy $ \unlift -> BA.subscribeOffSpecMany' sendSubOffSpecMany' sts [] [] (unlift . h)
+  SubscribeOffSpecMany' b u sts h -> localUnliftIO localEnv unliftStrategy $ \unlift -> BA.subscribeOffSpecMany' sendSubOffSpecMany' sts b u (unlift . h)
   -- Unsubscribe
   Unsubscribe subId ->
     liftIO $
@@ -200,3 +200,21 @@ runWebDriverBiDi info = interpret $ \localEnv -> \case
 
     run1 :: forall r p. (FromJSON r) => (BA.Runner IO r -> p -> IO r) -> p -> Eff es r
     run1 action p = liftIO $ action run' p
+
+
+    unliftStrategy :: UnliftStrategy
+    unliftStrategy = ConcUnlift Persistent Unlimited
+
+    sendSub :: forall c. BA.SendSub IO c
+    sendSub = mkSendSub info.biDiRunner
+
+    sendSub' :: forall d. BA.SendSub' IO d
+    sendSub' = mkSendSub' info.biDiRunner
+
+    sendSubMany' = mkSendSubMany' info.biDiRunner
+
+
+    sendSubOffSpecMany' = mkSendSubOffSpecMany' info.biDiRunner
+
+
+
