@@ -379,23 +379,6 @@ tests =
               , chkAutoId "roleType Definition" (roleType Definition) "def-name"
               , chkAutoId "definition by text content" (definition "John") "def-name"
               ]
-
-      {-
-      , withResource (navToUrl ses landmarkRolesUrl) (\_ -> pure ()) $ \_ ->
-          testGroup "Value PostFilter - not yet implemented in HTTP"
-              -- These document expected behaviour once PostFilter is implemented.
-              -- Currently fail with: "PostFilter locators are not yet implemented in HTTP WebDriver"
-              [ test "value - find input with matching current value - partial match" $ do
-                  locRslt <- locateAll $ value "Jane" input_
-                  chkElms (txt (value "Jane" input_)) chkSingleton locRslt
-              , test "valueExact - find input with exact current value" $ do
-                  locRslt <- locateAll $ valueExact "Jay" input_
-                  chkElms (txt (valueExact "Jay" input_)) chkSingleton locRslt
-              , test "valueStarts - find input whose value starts with prefix" $ do
-                  locRslt <- locateAll $ valueStarts "Jane" input_
-                  chkElms (txt (valueStarts "Jane" input_)) chkSingleton locRslt
-              ]
-              -}
       ]
     where
     test :: Text -> BaseHTTPEffs () -> TestTree
