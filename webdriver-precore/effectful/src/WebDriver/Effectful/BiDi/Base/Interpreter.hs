@@ -44,9 +44,9 @@ import WebDriverPreCore.Extended.BiDi.Base.Actions qualified as BA
 runWebDriverBiDi :: (IOE :> es) => BiDiInfo -> Eff (WebDriverBiDi : es) a -> Eff es a
 runWebDriverBiDi info = interpret $ \localEnv -> \case
   -- Session
-  BiDiSessionNew caps -> liftIO $ BA.sessionNew run' caps
-  BiDiSessionStatus -> liftIO $ BA.sessionStatus run'
-  BiDiSessionEnd -> liftIO $ BA.sessionEnd run'
+  SessionNew caps -> liftIO $ BA.sessionNew run' caps
+  SessionStatus -> liftIO $ BA.sessionStatus run'
+  SessionEnd -> liftIO $ BA.sessionEnd run'
   -- BrowsingContext
   BrowsingContextActivate p -> liftIO $ BA.browsingContextActivate run' p
   BrowsingContextCaptureScreenshot p -> liftIO $ BA.browsingContextCaptureScreenshot run' p
