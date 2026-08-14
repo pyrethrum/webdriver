@@ -29,7 +29,7 @@ import WebDriverPreCore.BiDi.Protocol
   )
 import WebDriverPreCore.BiDi.Protocol qualified as BP
 import WebDriverPreCore.BiDiRunner qualified as Runner
-import WebDriver.Effectful.BiDi.Base.Actions qualified as BA
+import WebDriverPreCore.Extended.BiDi.Base.Actions qualified as BA
 
 -- ---------------------------------------------------------------------------
 -- BiDi interpreter
@@ -44,9 +44,9 @@ import WebDriver.Effectful.BiDi.Base.Actions qualified as BA
 runWebDriverBiDi :: (IOE :> es) => BiDiInfo -> Eff (WebDriverBiDi : es) a -> Eff es a
 runWebDriverBiDi info = interpret $ \localEnv -> \case
   -- Session
-  SessionNew caps -> liftIO $ BA.sessionNew run' caps
-  SessionStatus -> run BA.sessionStatus
-  SessionEnd -> run BA.sessionEnd
+  BiDiSessionNew caps -> liftIO $ BA.sessionNew run' caps
+  BiDiSessionStatus -> liftIO $ BA.sessionStatus run'
+  BiDiSessionEnd -> liftIO $ BA.sessionEnd run'
   -- BrowsingContext
   BrowsingContextActivate p -> liftIO $ BA.browsingContextActivate run' p
   BrowsingContextCaptureScreenshot p -> liftIO $ BA.browsingContextCaptureScreenshot run' p
@@ -64,10 +64,10 @@ runWebDriverBiDi info = interpret $ \localEnv -> \case
   BrowsingContextStopScreencast p -> liftIO $ BA.browsingContextStopScreencast run' p
   BrowsingContextTraverseHistory p -> liftIO $ BA.browsingContextTraverseHistory run' p
   -- Browser
-  BrowserClose -> run BA.browserClose
+  BrowserClose -> liftIO $ BA.browserClose run'
   BrowserCreateUserContext p -> liftIO $ BA.browserCreateUserContext run' p
-  BrowserGetClientWindows -> run BA.browserGetClientWindows 
-  BrowserGetUserContexts -> run BA.browserGetUserContexts
+  BrowserGetClientWindows -> liftIO $ BA.browserGetClientWindows run'
+  BrowserGetUserContexts -> liftIO $ BA.browserGetUserContexts run'
   BrowserRemoveUserContext p -> liftIO $ BA.browserRemoveUserContext run' p
   BrowserSetClientWindowState p -> liftIO $ BA.browserSetClientWindowState run' p
   BrowserSetDownloadBehavior p -> liftIO $ BA.browserSetDownloadBehavior run' p
@@ -189,9 +189,3 @@ runWebDriverBiDi info = interpret $ \localEnv -> \case
   where
     run' :: forall r. (FromJSON r) => Command r -> IO r
     run' = bidiRun info
-
-    run :: forall r. (FromJSON r) => Command r -> Eff es r
-    run cmd = liftIO $ run' cmd
-
-    run1 :: forall r p. (FromJSON r) => (p -> Command r) -> p -> Eff es r
-    run1 f p = liftIO $ run' (f p)
