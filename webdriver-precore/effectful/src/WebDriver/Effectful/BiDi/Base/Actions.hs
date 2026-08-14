@@ -18,9 +18,9 @@
 -- algebraic effects rather than Bluefin handles.
 module WebDriver.Effectful.BiDi.Base.Actions
   ( -- * Session Commands
-    biDiSessionNew,
-    biDiSessionStatus,
-    biDiSessionEnd,
+    sessionNew,
+    sessionStatus,
+    sessionEnd,
 
     -- * BrowsingContext Commands
     browsingContextActivate,
@@ -292,14 +292,14 @@ import WebDriverPreCore.BiDiRunner (Request)
 -- Session commands
 -- ---------------------------------------------------------------------------
 
-biDiSessionNew :: (WebDriverBiDi :> es) => Capabilities -> Eff es SessionNewResult
-biDiSessionNew = send . BiDiSessionNew
+sessionNew :: (WebDriverBiDi :> es) => Capabilities -> Eff es SessionNewResult
+sessionNew = send . SessionNew
 
-biDiSessionStatus :: (WebDriverBiDi :> es) => Eff es SessionStatusResult
-biDiSessionStatus = send BiDiSessionStatus
+sessionStatus :: (WebDriverBiDi :> es) => Eff es SessionStatusResult
+sessionStatus = send SessionStatus
 
-biDiSessionEnd :: (WebDriverBiDi :> es) => Eff es ()
-biDiSessionEnd = send BiDiSessionEnd
+sessionEnd :: (WebDriverBiDi :> es) => Eff es ()
+sessionEnd = send SessionEnd
 
 -- ---------------------------------------------------------------------------
 -- BrowsingContext commands

@@ -198,9 +198,9 @@ mkSendSubOffSpecMany' MkBiDiRunner {run = r, socketActions} mkSub sts bcs ucs ha
 -- Smart constructors are in "WebDriver.Effectful.BiDi.Base.Actions".
 data WebDriverBiDi :: Effect where
   -- Session
-  BiDiSessionNew :: Capabilities -> WebDriverBiDi m SessionNewResult
-  BiDiSessionStatus :: WebDriverBiDi m SessionStatusResult
-  BiDiSessionEnd :: WebDriverBiDi m ()
+  SessionNew :: Capabilities -> WebDriverBiDi m SessionNewResult
+  SessionStatus :: WebDriverBiDi m SessionStatusResult
+  SessionEnd :: WebDriverBiDi m ()
   -- BrowsingContext
   BrowsingContextActivate :: Activate -> WebDriverBiDi m ()
   BrowsingContextCaptureScreenshot :: CaptureScreenshot -> WebDriverBiDi m CaptureScreenshotResult
