@@ -23,13 +23,11 @@ import WebDriver.Effectful.BiDi.Base.Effect
     mkSendSubOffSpecMany',
   )
 import WebDriverPreCore.BiDi.Protocol
-  ( Command,
-    SessionUnsubscribe (..),
+  ( SessionUnsubscribe (..),
     mkCommand,
   )
 import WebDriverPreCore.BiDi.Protocol qualified as BP
 import WebDriverPreCore.BiDiRunner qualified as Runner
-import WebDriverPreCore.BiDiRunner (BiDiRunner)
 import WebDriverPreCore.Extended.BiDi.Base.Actions qualified as BA
 
 -- ---------------------------------------------------------------------------
@@ -42,81 +40,81 @@ import WebDriverPreCore.Extended.BiDi.Base.Actions qualified as BA
 -- The interpreter maps each effect constructor to the corresponding
 -- @WebDriverPreCore.Extended.BiDi.Base.Actions@ function, using the same
 -- subscription helper pattern as the Bluefin POC.
-runWebDriverBiDi :: forall es a. (IOE :> es, FromJSON r) => BiDiInfo -> Eff (WebDriverBiDi : es) a -> Eff es a
+runWebDriverBiDi :: forall es a. IOE :> es => BiDiInfo -> Eff (WebDriverBiDi : es) a -> Eff es a
 runWebDriverBiDi info = interpret $ \localEnv -> \case
   -- Session
-  SessionNew caps -> liftIO $ BA.sessionNew run' caps
+  SessionNew caps -> run1 BA.sessionNew caps
   SessionStatus -> run BA.sessionStatus
   SessionEnd -> run BA.sessionEnd
   -- BrowsingContext
-  BrowsingContextActivate p -> liftIO $ BA.browsingContextActivate run' p
-  BrowsingContextCaptureScreenshot p -> liftIO $ BA.browsingContextCaptureScreenshot run' p
-  BrowsingContextClose p -> liftIO $ BA.browsingContextClose run' p
-  BrowsingContextCreate p -> liftIO $ BA.browsingContextCreate run' p
-  BrowsingContextGetTree p -> liftIO $ BA.browsingContextGetTree run' p
-  BrowsingContextHandleUserPrompt p -> liftIO $ BA.browsingContextHandleUserPrompt run' p
-  BrowsingContextLocateNodes p -> liftIO $ BA.browsingContextLocateNodes run' p
-  BrowsingContextNavigate p -> liftIO $ BA.browsingContextNavigate run' p
-  BrowsingContextPrint p -> liftIO $ BA.browsingContextPrint run' p
-  BrowsingContextReload p -> liftIO $ BA.browsingContextReload run' p
-  BrowsingContextSetBypassCSP p -> liftIO $ BA.browsingContextSetBypassCSP run' p
-  BrowsingContextSetViewport p -> liftIO $ BA.browsingContextSetViewport run' p
-  BrowsingContextStartScreencast p -> liftIO $ BA.browsingContextStartScreencast run' p
-  BrowsingContextStopScreencast p -> liftIO $ BA.browsingContextStopScreencast run' p
-  BrowsingContextTraverseHistory p -> liftIO $ BA.browsingContextTraverseHistory run' p
+  BrowsingContextActivate p -> run1 BA.browsingContextActivate p
+  BrowsingContextCaptureScreenshot p -> run1 BA.browsingContextCaptureScreenshot p
+  BrowsingContextClose p -> run1 BA.browsingContextClose p
+  BrowsingContextCreate p -> run1 BA.browsingContextCreate p
+  BrowsingContextGetTree p -> run1 BA.browsingContextGetTree p
+  BrowsingContextHandleUserPrompt p -> run1 BA.browsingContextHandleUserPrompt p
+  BrowsingContextLocateNodes p -> run1 BA.browsingContextLocateNodes p
+  BrowsingContextNavigate p -> run1 BA.browsingContextNavigate p
+  BrowsingContextPrint p -> run1 BA.browsingContextPrint p
+  BrowsingContextReload p -> run1 BA.browsingContextReload p
+  BrowsingContextSetBypassCSP p -> run1 BA.browsingContextSetBypassCSP p
+  BrowsingContextSetViewport p -> run1 BA.browsingContextSetViewport p
+  BrowsingContextStartScreencast p -> run1 BA.browsingContextStartScreencast p
+  BrowsingContextStopScreencast p -> run1 BA.browsingContextStopScreencast p
+  BrowsingContextTraverseHistory p -> run1 BA.browsingContextTraverseHistory p
   -- Browser
   BrowserClose -> run BA.browserClose
-  BrowserCreateUserContext p -> liftIO $ BA.browserCreateUserContext run' p
+  BrowserCreateUserContext p -> run1 BA.browserCreateUserContext p
   BrowserGetClientWindows -> run BA.browserGetClientWindows
   BrowserGetUserContexts -> run BA.browserGetUserContexts
-  BrowserRemoveUserContext p -> liftIO $ BA.browserRemoveUserContext run' p
-  BrowserSetClientWindowState p -> liftIO $ BA.browserSetClientWindowState run' p
-  BrowserSetDownloadBehavior p -> liftIO $ BA.browserSetDownloadBehavior run' p
+  BrowserRemoveUserContext p -> run1 BA.browserRemoveUserContext p
+  BrowserSetClientWindowState p -> run1 BA.browserSetClientWindowState p
+  BrowserSetDownloadBehavior p -> run1 BA.browserSetDownloadBehavior p
   -- Emulation
-  EmulationSetForcedColorsModeThemeOverride p -> liftIO $ BA.emulationSetForcedColorsModeThemeOverride run' p
-  EmulationSetGeolocationOverride p -> liftIO $ BA.emulationSetGeolocationOverride run' p
-  EmulationSetLocaleOverride p -> liftIO $ BA.emulationSetLocaleOverride run' p
-  EmulationSetNetworkConditions p -> liftIO $ BA.emulationSetNetworkConditions run' p
-  EmulationSetScreenOrientationOverride p -> liftIO $ BA.emulationSetScreenOrientationOverride run' p
-  EmulationSetScreenSettingsOverride p -> liftIO $ BA.emulationSetScreenSettingsOverride run' p
-  EmulationSetScriptingEnabled p -> liftIO $ BA.emulationSetScriptingEnabled run' p
-  EmulationSetScrollbarTypeOverride p -> liftIO $ BA.emulationSetScrollbarTypeOverride run' p
-  EmulationSetTimezoneOverride p -> liftIO $ BA.emulationSetTimezoneOverride run' p
-  EmulationSetTouchOverride p -> liftIO $ BA.emulationSetTouchOverride run' p
-  EmulationSetUserAgentOverride p -> liftIO $ BA.emulationSetUserAgentOverride run' p
+  EmulationSetForcedColorsModeThemeOverride p -> run1 BA.emulationSetForcedColorsModeThemeOverride p
+  EmulationSetGeolocationOverride p -> run1 BA.emulationSetGeolocationOverride p
+  EmulationSetLocaleOverride p -> run1 BA.emulationSetLocaleOverride p
+  EmulationSetNetworkConditions p -> run1 BA.emulationSetNetworkConditions p
+  EmulationSetScreenOrientationOverride p -> run1 BA.emulationSetScreenOrientationOverride p
+  EmulationSetScreenSettingsOverride p -> run1 BA.emulationSetScreenSettingsOverride p
+  EmulationSetScriptingEnabled p -> run1 BA.emulationSetScriptingEnabled p
+  EmulationSetScrollbarTypeOverride p -> run1 BA.emulationSetScrollbarTypeOverride p
+  EmulationSetTimezoneOverride p -> run1 BA.emulationSetTimezoneOverride p
+  EmulationSetTouchOverride p -> run1 BA.emulationSetTouchOverride p
+  EmulationSetUserAgentOverride p -> run1 BA.emulationSetUserAgentOverride p
   -- Input
-  InputPerformActions p -> liftIO $ BA.inputPerformActions run' p
-  InputReleaseActions p -> liftIO $ BA.inputReleaseActions run' p
-  InputSetFiles p -> liftIO $ BA.inputSetFiles run' p
+  InputPerformActions p -> run1 BA.inputPerformActions p
+  InputReleaseActions p -> run1 BA.inputReleaseActions p
+  InputSetFiles p -> run1 BA.inputSetFiles p
   -- Network
-  NetworkAddDataCollector p -> liftIO $ BA.networkAddDataCollector run' p
-  NetworkAddIntercept p -> liftIO $ BA.networkAddIntercept run' p
-  NetworkContinueRequest p -> liftIO $ BA.networkContinueRequest run' p
-  NetworkContinueResponse p -> liftIO $ BA.networkContinueResponse run' p
-  NetworkContinueWithAuth p -> liftIO $ BA.networkContinueWithAuth run' p
-  NetworkDisownData p -> liftIO $ BA.networkDisownData run' p
-  NetworkFailRequest p -> liftIO $ BA.networkFailRequest run' p
-  NetworkGetData p -> liftIO $ BA.networkGetData run' p
-  NetworkProvideResponse p -> liftIO $ BA.networkProvideResponse run' p
-  NetworkRemoveDataCollector p -> liftIO $ BA.networkRemoveDataCollector run' p
-  NetworkRemoveIntercept p -> liftIO $ BA.networkRemoveIntercept run' p
-  NetworkSetCacheBehavior p -> liftIO $ BA.networkSetCacheBehavior run' p
-  NetworkSetExtraHeaders p -> liftIO $ BA.networkSetExtraHeaders run' p
+  NetworkAddDataCollector p -> run1 BA.networkAddDataCollector p
+  NetworkAddIntercept p -> run1 BA.networkAddIntercept p
+  NetworkContinueRequest p -> run1 BA.networkContinueRequest p
+  NetworkContinueResponse p -> run1 BA.networkContinueResponse p
+  NetworkContinueWithAuth p -> run1 BA.networkContinueWithAuth p
+  NetworkDisownData p -> run1 BA.networkDisownData p
+  NetworkFailRequest p -> run1 BA.networkFailRequest p
+  NetworkGetData p -> run1 BA.networkGetData p
+  NetworkProvideResponse p -> run1 BA.networkProvideResponse p
+  NetworkRemoveDataCollector p -> run1 BA.networkRemoveDataCollector p
+  NetworkRemoveIntercept p -> run1 BA.networkRemoveIntercept p
+  NetworkSetCacheBehavior p -> run1 BA.networkSetCacheBehavior p
+  NetworkSetExtraHeaders p -> run1 BA.networkSetExtraHeaders p
   -- Script
-  ScriptAddPreloadScript p -> liftIO $ BA.scriptAddPreloadScript run' p
-  ScriptCallFunction p -> liftIO $ BA.scriptCallFunction run' p
-  ScriptDisown p -> liftIO $ BA.scriptDisown run' p
-  ScriptEvaluate p -> liftIO $ BA.scriptEvaluate run' p
+  ScriptAddPreloadScript p -> run1 BA.scriptAddPreloadScript p
+  ScriptCallFunction p -> run1 BA.scriptCallFunction p
+  ScriptDisown p -> run1 BA.scriptDisown p
+  ScriptEvaluate p -> run1 BA.scriptEvaluate p
   ScriptEvaluateNoWait p -> liftIO $ Runner.runNoWait info.biDiRunner (mkCommand BP.ScriptEvaluate p)
-  ScriptGetRealms p -> liftIO $ BA.scriptGetRealms run' p
-  ScriptRemovePreloadScript p -> liftIO $ BA.scriptRemovePreloadScript run' p
+  ScriptGetRealms p -> run1 BA.scriptGetRealms p
+  ScriptRemovePreloadScript p -> run1 BA.scriptRemovePreloadScript p
   -- Storage
-  StorageDeleteCookies p -> liftIO $ BA.storageDeleteCookies run' p
-  StorageGetCookies p -> liftIO $ BA.storageGetCookies run' p
-  StorageSetCookie p -> liftIO $ BA.storageSetCookie run' p
+  StorageDeleteCookies p -> run1 BA.storageDeleteCookies p
+  StorageGetCookies p -> run1 BA.storageGetCookies p
+  StorageSetCookie p -> run1 BA.storageSetCookie p
   -- WebExtension
-  WebExtensionInstall p -> liftIO $ BA.webExtensionInstall run' p
-  WebExtensionUninstall p -> liftIO $ BA.webExtensionUninstall run' p
+  WebExtensionInstall p -> run1 BA.webExtensionInstall p
+  WebExtensionUninstall p -> run1 BA.webExtensionUninstall p
   -- Generic escape hatches
   SendBiDiCmd cmd -> liftIO $ bidiRun info cmd
   SendBiDiCmdNoWait cmd -> liftIO $ Runner.runNoWait info.biDiRunner cmd
@@ -202,6 +200,3 @@ runWebDriverBiDi info = interpret $ \localEnv -> \case
 
     run1 :: forall r p. (FromJSON r) => (BA.Runner IO r -> p -> IO r) -> p -> Eff es r
     run1 action p = liftIO $ action run' p
-    
-    run2 :: forall r p1 p2. (FromJSON r) => (BA.Runner IO r -> p1 -> p2 -> IO r) -> p1 -> p2 -> Eff es r
-    run2 action p1 p2 = liftIO $ action run' p1 p2
