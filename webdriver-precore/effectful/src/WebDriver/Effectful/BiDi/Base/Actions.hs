@@ -169,8 +169,12 @@ module WebDriver.Effectful.BiDi.Base.Actions
     subscribeUnknownMany,
     subscribeUnknownMany',
 
+    -- * Low-level subscription helpers (for interpreter use)
+    subscribeOffSpecMany',
+
     -- * Unsubscribe
     unsubscribe,
+    sessionUnsubscribe,
   )
 where
 
@@ -179,6 +183,7 @@ import Data.Text (Text)
 import Effectful (Eff, (:>))
 import Effectful.Dispatch.Dynamic (send)
 import WebDriver.Effectful.BiDi.Base.Effect (WebDriverBiDi (..))
+import WebDriverPreCore.Extended.BiDi.Base.Actions qualified as EA
 import WebDriverPreCore.BiDi.Protocol
   ( Activate,
     AddDataCollector,
@@ -239,6 +244,7 @@ import WebDriverPreCore.BiDi.Protocol
     OffSpecSubscriptionType,
     PerformActions,
     Print,
+    SessionUnsubscribe,
     PrintResult,
     ProvideResponse,
     RealmDestroyed,
@@ -730,6 +736,23 @@ subscribeUnknownMany' b u sts = send . SubscribeUnknownMany' b u sts
 -- Unsubscribe
 -- ---------------------------------------------------------------------------
 
+-- ---------------------------------------------------------------------------
+-- Low-level subscription helpers (for interpreter use)
+-- ---------------------------------------------------------------------------
+
+-- | Re-export from Extended module for interpreter use.
+subscribeOffSpecMany' :: EA.SendSubOffSpecMany' m -> [OffSpecSubscriptionType] -> [BrowsingContext] -> [UserContext] -> (Value -> m ()) -> m SubscriptionId
+subscribeOffSpecMany' = EA.subscribeOffSpecMany'
+
+-- ---------------------------------------------------------------------------
+-- Unsubscribe
+-- ---------------------------------------------------------------------------
+
 -- | Unsubscribe using a previously obtained 'SubscriptionId'.
 unsubscribe :: (WebDriverBiDi :> es) => SubscriptionId -> Eff es ()
 unsubscribe = send . Unsubscribe
+
+-- | Re-export from Extended module for interpreter use.
+-- Used to construct the unsubscribe command.
+sessionUnsubscribe :: SessionUnsubscribe -> Command ()
+sessionUnsubscribe = EA.sessionUnsubscribe
