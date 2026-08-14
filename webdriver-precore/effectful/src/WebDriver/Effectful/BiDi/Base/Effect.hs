@@ -103,6 +103,7 @@ import WebDriverPreCore.BiDi.Protocol
     ResponseStarted,
     SessionNewResult,
     SessionStatusResult,
+    SessionUnsubscribe,
     SetCacheBehavior,
     SetBypassCSP,
     SetClientWindowState,
@@ -335,5 +336,7 @@ data WebDriverBiDi :: Effect where
   SubscribeUnknownMany' :: [BrowsingContext] -> [UserContext] -> [OffSpecSubscriptionType] -> (Value -> m ()) -> WebDriverBiDi m SubscriptionId
   -- Unsubscribe
   Unsubscribe :: SubscriptionId -> WebDriverBiDi m ()
+  -- SessionUnsubscribe
+  SessionUnsubscribe :: SessionUnsubscribe -> WebDriverBiDi m ()
 
 type instance DispatchOf WebDriverBiDi = Dynamic

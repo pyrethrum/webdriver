@@ -183,7 +183,8 @@ import Data.Text (Text)
 import Effectful (Eff, (:>))
 import Effectful.Dispatch.Dynamic (send)
 import WebDriver.Effectful.BiDi.Base.Effect (WebDriverBiDi (..))
-import WebDriverPreCore.Extended.BiDi.Base.Actions qualified as EA
+import WebDriverPreCore.Extended.BiDi.Base.Actions (SendSubOffSpecMany')
+
 import WebDriverPreCore.BiDi.Protocol
   ( Activate,
     AddDataCollector,
@@ -202,6 +203,7 @@ import WebDriverPreCore.BiDi.Protocol
     ClientWindowInfo,
     Close,
     Command,
+    mkOffSpecSubscription,
     ContinueRequest,
     ContinueResponse,
     ContinueWithAuth,
@@ -732,17 +734,6 @@ subscribeUnknownMany sts = send . SubscribeUnknownMany sts
 subscribeUnknownMany' :: (WebDriverBiDi :> es) => [BrowsingContext] -> [UserContext] -> [OffSpecSubscriptionType] -> (Value -> Eff es ()) -> Eff es SubscriptionId
 subscribeUnknownMany' b u sts = send . SubscribeUnknownMany' b u sts
 
--- ---------------------------------------------------------------------------
--- Unsubscribe
--- ---------------------------------------------------------------------------
-
--- ---------------------------------------------------------------------------
--- Low-level subscription helpers (for interpreter use)
--- ---------------------------------------------------------------------------
-
--- | Re-export from Extended module for interpreter use.
-subscribeOffSpecMany' :: EA.SendSubOffSpecMany' m -> [OffSpecSubscriptionType] -> [BrowsingContext] -> [UserContext] -> (Value -> m ()) -> m SubscriptionId
-subscribeOffSpecMany' = EA.subscribeOffSpecMany'
 
 -- ---------------------------------------------------------------------------
 -- Unsubscribe
@@ -752,7 +743,9 @@ subscribeOffSpecMany' = EA.subscribeOffSpecMany'
 unsubscribe :: (WebDriverBiDi :> es) => SubscriptionId -> Eff es ()
 unsubscribe = send . Unsubscribe
 
--- | Re-export from Extended module for interpreter use.
--- Used to construct the unsubscribe command.
-sessionUnsubscribe :: SessionUnsubscribe -> Command ()
-sessionUnsubscribe = EA.sessionUnsubscribe
+-- | Create a session.unsubscribe command.
+--
+-- Used by the interpreter to construct unsubscribe commands.
+-- See: <https://www.w3.org/TR/webdriver-bidi/#command-session-unsubscribe>
+sessionUnsubscribe :: (WebDriverBiDi :> es) =>  SessionUnsubscribe -> Eff es ()
+sessionUnsubscribe = send . SessionUnsubscribe
