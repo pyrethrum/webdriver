@@ -65,10 +65,10 @@ runWebDriverBiDi info = interpret $ \localEnv -> \case
   BrowsingContextStopScreencast p -> liftIO $ BA.browsingContextStopScreencast run' p
   BrowsingContextTraverseHistory p -> liftIO $ BA.browsingContextTraverseHistory run' p
   -- Browser
-  BrowserClose -> liftIO $ BA.browserClose run'
+  BrowserClose -> run BA.browserClose
   BrowserCreateUserContext p -> liftIO $ BA.browserCreateUserContext run' p
-  BrowserGetClientWindows -> liftIO $ BA.browserGetClientWindows run'
-  BrowserGetUserContexts -> liftIO $ BA.browserGetUserContexts run'
+  BrowserGetClientWindows -> run BA.browserGetClientWindows
+  BrowserGetUserContexts -> run BA.browserGetUserContexts
   BrowserRemoveUserContext p -> liftIO $ BA.browserRemoveUserContext run' p
   BrowserSetClientWindowState p -> liftIO $ BA.browserSetClientWindowState run' p
   BrowserSetDownloadBehavior p -> liftIO $ BA.browserSetDownloadBehavior run' p
@@ -199,9 +199,6 @@ runWebDriverBiDi info = interpret $ \localEnv -> \case
 
     run :: (BA.Runner IO r -> IO r) -> Eff es r
     run action = liftIO $ action run'
-
-    -- run :: forall r. (FromJSON r) => (Command r -> IO r) -> Eff es r
-    -- run  = liftIO . action 
 
     run1 :: forall r p. (FromJSON r) => (BiDiRunner IO -> p -> IO r) -> p -> Eff es r
     run1 action p = liftIO $ action run' p
