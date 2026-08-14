@@ -162,8 +162,8 @@ module WebDriver.RIO.BiDi.Base.Actions
     subscribeMany',
 
     -- * Fallback Subscriptions
-    subscribeUnknownMany,
-    subscribeUnknownMany',
+    subscribeOffSpecMany,
+    subscribeOffSpecMany',
 
     -- * Unsubscribe
     unsubscribe,
@@ -635,22 +635,22 @@ subscribeMany' bcs ucs sts handler =
   viaRunner $ \runner -> A.subscribeMany' (mkSendSubMany' runner) sts bcs ucs handler
 
 -- | Subscribe to unknown / off-spec event types (no context filters).
-subscribeUnknownMany ::
+subscribeOffSpecMany ::
   HasBiDiRunner env =>
   [OffSpecSubscriptionType] ->
   (Value -> RIO env ()) ->
   RIO env SubscriptionId
-subscribeUnknownMany sts = subscribeUnknownMany' [] [] sts
+subscribeOffSpecMany sts = subscribeOffSpecMany' [] [] sts
 
 -- | Subscribe to unknown / off-spec event types with context filters.
-subscribeUnknownMany' ::
+subscribeOffSpecMany' ::
   HasBiDiRunner env =>
   [BrowsingContext] ->
   [UserContext] ->
   [OffSpecSubscriptionType] ->
   (Value -> RIO env ()) ->
   RIO env SubscriptionId
-subscribeUnknownMany' bcs ucs sts handler =
+subscribeOffSpecMany' bcs ucs sts handler =
   viaRunner $ \runner -> A.subscribeOffSpecMany' (mkSendSubOffSpecMany' runner) sts bcs ucs handler
 
 -- | Unsubscribe using a previously obtained 'SubscriptionId'.

@@ -169,8 +169,8 @@ module WebDriver.Bluefin.BiDi.Base.Actions
     subscribeMany',
 
     -- * Fallback Subscriptions
-    subscribeUnknownMany,
-    subscribeUnknownMany',
+    subscribeOffSpecMany,
+    subscribeOffSpecMany',
 
     -- * Unsubscribe
     unsubscribe,
@@ -648,16 +648,16 @@ subscribeMany' bidi bcs ucs sts handler =
     A.subscribeMany' (mkSendSubMany' bidi.biDiRunner) sts bcs ucs (\a -> toIO (handler a))
 
 -- | Subscribe to unknown / off-spec event types (no context filters).
-subscribeUnknownMany ::
+subscribeOffSpecMany ::
   (e :> es) =>
   BiDiEnv e ->
   [OffSpecSubscriptionType] ->
   (Value -> Eff es ()) ->
   Eff es SubscriptionId
-subscribeUnknownMany bidi = subscribeUnknownMany' bidi [] []
+subscribeOffSpecMany bidi = subscribeOffSpecMany' bidi [] []
 
 -- | Subscribe to unknown / off-spec event types with context filters.
-subscribeUnknownMany' ::
+subscribeOffSpecMany' ::
   (e :> es) =>
   BiDiEnv e ->
   [BrowsingContext] ->
@@ -665,7 +665,7 @@ subscribeUnknownMany' ::
   [OffSpecSubscriptionType] ->
   (Value -> Eff es ()) ->
   Eff es SubscriptionId
-subscribeUnknownMany' bidi bcs ucs sts handler =
+subscribeOffSpecMany' bidi bcs ucs sts handler =
   withEffToIO_ bidi.biDiIO $ \toIO ->
     A.subscribeOffSpecMany' (mkSendSubOffSpecMany' bidi.biDiRunner) sts bcs ucs (\a -> toIO (handler a))
 

@@ -125,9 +125,9 @@ fallbackCommandCoercionsDemo =
       logShow "Get tree result - as Value" treeVal
       pause
 
--- >>> runDemo fallbackSubscribeUnknownEventDemo
-fallbackSubscribeUnknownEventDemo :: BiDiDemo
-fallbackSubscribeUnknownEventDemo =
+-- >>> runDemo fallbackSubscribeOffSpecEventDemo
+fallbackSubscribeOffSpecEventDemo :: BiDiDemo
+fallbackSubscribeOffSpecEventDemo =
   demo "Fallback - Subscribe to Navigation Event Using Unknown Subscription" action
   where
     action :: DemoActions -> Actions -> IO ()
@@ -135,14 +135,14 @@ fallbackSubscribeUnknownEventDemo =
       bc <- rootContext utils bidi
       url <- contentPageUrl
 
-      logTxt "Demo 3: Subscribe to browsingContext.navigationStarted using subscribeUnknownMany"
+      logTxt "Demo 3: Subscribe to browsingContext.navigationStarted using subscribeOffSpecMany"
       logTxt "This demonstrates subscribing to events as unknown types"
       
       let unknownEventType = MkOffSpecSubscriptionType "browsingContext.navigationStarted"
       
       (unknownEventFired, waitUnknownEventFired) <- timeLimitLog' "navigationStarted (unknown subscription)" (10 * seconds) unknownEventType
       
-      subId <- subscribeUnknownMany
+      subId <- subscribeOffSpecMany
         [unknownEventType]
         unknownEventFired
       
@@ -165,9 +165,9 @@ fallbackSubscribeUnknownEventDemo =
       unsubscribe subId
       pause
 
--- >>> runDemo fallbackSubscribeUnknownEventFilteredDemo
-fallbackSubscribeUnknownEventFilteredDemo :: BiDiDemo
-fallbackSubscribeUnknownEventFilteredDemo =
+-- >>> runDemo fallbackSubscribeOffSpecEventFilteredDemo
+fallbackSubscribeOffSpecEventFilteredDemo :: BiDiDemo
+fallbackSubscribeOffSpecEventFilteredDemo =
   demo "Fallback - Subscribe to Navigation Event with Context Filter" action
   where
     action :: DemoActions -> Actions -> IO ()
@@ -175,7 +175,7 @@ fallbackSubscribeUnknownEventFilteredDemo =
       bc <- rootContext utils bidi
       url <- contentPageUrl
 
-      logTxt "Demo 4: Subscribe using subscribeUnknownMany' with context filtering"
+      logTxt "Demo 4: Subscribe using subscribeOffSpecMany' with context filtering"
       logTxt "Creating a second browsing context for comparison"
       
       bc2 <- newWindowContext utils bidi
@@ -186,7 +186,7 @@ fallbackSubscribeUnknownEventFilteredDemo =
       
       (unknownEventFired, waitUnknownEventFired) <- timeLimitLog' "navigationStarted (filtered unknown subscription)" (10 * seconds) unknownEventType
       
-      subId <- subscribeUnknownMany'
+      subId <- subscribeOffSpecMany'
         [bc]  -- Only subscribe for first context
         []    -- No user context filter
         [unknownEventType]

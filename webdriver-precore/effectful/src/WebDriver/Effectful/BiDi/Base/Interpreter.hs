@@ -177,8 +177,8 @@ runWebDriverBiDi info = interpret $ \localEnv -> \case
   -- Multi-event subscriptions
   SubscribeMany sts h -> localUnliftIO localEnv (ConcUnlift Persistent Unlimited) $ \unlift -> BA.subscribeMany' (mkSendSubMany' info.biDiRunner) sts [] [] (unlift . h)
   SubscribeMany' b u sts h -> localUnliftIO localEnv (ConcUnlift Persistent Unlimited) $ \unlift -> BA.subscribeMany' (mkSendSubMany' info.biDiRunner) sts b u (unlift . h)
-  SubscribeUnknownMany sts h -> localUnliftIO localEnv (ConcUnlift Persistent Unlimited) $ \unlift -> BA.subscribeOffSpecMany' (mkSendSubOffSpecMany' info.biDiRunner) sts [] [] (unlift . h)
-  SubscribeUnknownMany' b u sts h -> localUnliftIO localEnv (ConcUnlift Persistent Unlimited) $ \unlift -> BA.subscribeOffSpecMany' (mkSendSubOffSpecMany' info.biDiRunner) sts b u (unlift . h)
+  SubscribeOffSpecMany sts h -> localUnliftIO localEnv (ConcUnlift Persistent Unlimited) $ \unlift -> BA.subscribeOffSpecMany' (mkSendSubOffSpecMany' info.biDiRunner) sts [] [] (unlift . h)
+  SubscribeOffSpecMany' b u sts h -> localUnliftIO localEnv (ConcUnlift Persistent Unlimited) $ \unlift -> BA.subscribeOffSpecMany' (mkSendSubOffSpecMany' info.biDiRunner) sts b u (unlift . h)
   -- Unsubscribe
   Unsubscribe subId ->
     liftIO $

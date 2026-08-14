@@ -160,8 +160,8 @@ bidiDemos cfg =
                 [ Fallback.fallbackExtendCommandDemo,
                   Fallback.fallbackOffSpecCommandDemo,
                   Fallback.fallbackCommandCoercionsDemo,
-                  Fallback.fallbackSubscribeUnknownEventDemo,
-                  Fallback.fallbackSubscribeUnknownEventFilteredDemo
+                  Fallback.fallbackSubscribeOffSpecEventDemo,
+                  Fallback.fallbackSubscribeOffSpecEventFilteredDemo
                 ],
               run
                 "Input"

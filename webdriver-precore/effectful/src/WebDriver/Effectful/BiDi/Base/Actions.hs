@@ -166,8 +166,8 @@ module WebDriver.Effectful.BiDi.Base.Actions
     -- * Multi-event Subscriptions
     subscribeMany,
     subscribeMany',
-    subscribeUnknownMany,
-    subscribeUnknownMany',
+    subscribeOffSpecMany,
+    subscribeOffSpecMany',
 
     -- * Low-level subscription helpers (for interpreter use)
     subscribeOffSpecMany',
@@ -727,12 +727,12 @@ subscribeMany' :: (WebDriverBiDi :> es) => [BrowsingContext] -> [UserContext] ->
 subscribeMany' b u sts = send . SubscribeMany' b u sts
 
 -- | Subscribe to unknown off-spec event types (no context filters).
-subscribeUnknownMany :: (WebDriverBiDi :> es) => [OffSpecSubscriptionType] -> (Value -> Eff es ()) -> Eff es SubscriptionId
-subscribeUnknownMany sts = send . SubscribeUnknownMany sts
+subscribeOffSpecMany :: (WebDriverBiDi :> es) => [OffSpecSubscriptionType] -> (Value -> Eff es ()) -> Eff es SubscriptionId
+subscribeOffSpecMany sts = send . SubscribeOffSpecMany sts
 
 -- | Subscribe to unknown off-spec event types with context filters.
-subscribeUnknownMany' :: (WebDriverBiDi :> es) => [BrowsingContext] -> [UserContext] -> [OffSpecSubscriptionType] -> (Value -> Eff es ()) -> Eff es SubscriptionId
-subscribeUnknownMany' b u sts = send . SubscribeUnknownMany' b u sts
+subscribeOffSpecMany' :: (WebDriverBiDi :> es) => [BrowsingContext] -> [UserContext] -> [OffSpecSubscriptionType] -> (Value -> Eff es ()) -> Eff es SubscriptionId
+subscribeOffSpecMany' b u sts = send . SubscribeOffSpecMany' b u sts
 
 
 -- ---------------------------------------------------------------------------

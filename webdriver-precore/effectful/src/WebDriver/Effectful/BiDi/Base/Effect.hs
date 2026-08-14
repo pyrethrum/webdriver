@@ -332,8 +332,8 @@ data WebDriverBiDi :: Effect where
   -- Multi-event subscriptions
   SubscribeMany :: [KnownSubscriptionType] -> (Event -> m ()) -> WebDriverBiDi m SubscriptionId
   SubscribeMany' :: [BrowsingContext] -> [UserContext] -> [KnownSubscriptionType] -> (Event -> m ()) -> WebDriverBiDi m SubscriptionId
-  SubscribeUnknownMany :: [OffSpecSubscriptionType] -> (Value -> m ()) -> WebDriverBiDi m SubscriptionId
-  SubscribeUnknownMany' :: [BrowsingContext] -> [UserContext] -> [OffSpecSubscriptionType] -> (Value -> m ()) -> WebDriverBiDi m SubscriptionId
+  SubscribeOffSpecMany :: [OffSpecSubscriptionType] -> (Value -> m ()) -> WebDriverBiDi m SubscriptionId
+  SubscribeOffSpecMany' :: [BrowsingContext] -> [UserContext] -> [OffSpecSubscriptionType] -> (Value -> m ()) -> WebDriverBiDi m SubscriptionId
   -- Unsubscribe
   Unsubscribe :: SubscriptionId -> WebDriverBiDi m ()
   -- SessionUnsubscribe

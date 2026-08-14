@@ -273,11 +273,11 @@ data Actions = MkActions
     sendOffSpecCommand' :: JSUInt -> Text -> Object -> IO Object,
     sendOffSpecCommandNoWait :: Text -> Object -> IO Request,
     -- fallback subscriptions
-    subscribeUnknownMany ::
+    subscribeOffSpecMany ::
       [OffSpecSubscriptionType] ->
       (Value -> IO ()) ->
       IO SubscriptionId,
-    subscribeUnknownMany' ::
+    subscribeOffSpecMany' ::
       [BrowsingContext] ->
       [UserContext] ->
       [OffSpecSubscriptionType] ->
@@ -429,8 +429,8 @@ mkActions runner@(MkBiDiRunner {run, socketActions, runWithId, runOffSpecWithId}
       sendOffSpecCommand' = runOffSpecWithId,
       sendOffSpecCommandNoWait = Runner.runOffSpecNoWait runner,
       -- Fallback subscriptions
-      subscribeUnknownMany,
-      subscribeUnknownMany'
+      subscribeOffSpecMany,
+      subscribeOffSpecMany'
     }
   where
 
@@ -452,19 +452,19 @@ mkActions runner@(MkBiDiRunner {run, socketActions, runWithId, runOffSpecWithId}
       IO SubscriptionId
     subscribeMany' bcs ucs sts = Runner.subscribe socketActions sessionSubscribe' . API.subscribeMany sts bcs ucs
 
-    subscribeUnknownMany ::
+    subscribeOffSpecMany ::
       [OffSpecSubscriptionType] ->
       (Value -> IO ()) ->
       IO SubscriptionId
-    subscribeUnknownMany sts = Runner.subscribe socketActions sessionSubscribe' . API.subscribeOffSpecMany sts [] []
+    subscribeOffSpecMany sts = Runner.subscribe socketActions sessionSubscribe' . API.subscribeOffSpecMany sts [] []
 
-    subscribeUnknownMany' ::
+    subscribeOffSpecMany' ::
       [BrowsingContext] ->
       [UserContext] ->
       [OffSpecSubscriptionType] ->
       (Value -> IO ()) ->
       IO SubscriptionId
-    subscribeUnknownMany' bcs ucs sts = Runner.subscribe socketActions sessionSubscribe' . API.subscribeOffSpecMany sts bcs ucs
+    subscribeOffSpecMany' bcs ucs sts = Runner.subscribe socketActions sessionSubscribe' . API.subscribeOffSpecMany sts bcs ucs
 
     sendSub ::
       ( [BrowsingContext] ->
