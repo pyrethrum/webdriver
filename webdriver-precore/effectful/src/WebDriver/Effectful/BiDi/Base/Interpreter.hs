@@ -42,7 +42,7 @@ import WebDriverPreCore.Extended.BiDi.Base.Actions qualified as BA
 -- The interpreter maps each effect constructor to the corresponding
 -- @WebDriverPreCore.Extended.BiDi.Base.Actions@ function, using the same
 -- subscription helper pattern as the Bluefin POC.
-runWebDriverBiDi :: forall es a. IOE :> es => BiDiInfo -> Eff (WebDriverBiDi : es) a -> Eff es a
+runWebDriverBiDi :: forall es a. (IOE :> es, FromJSON r) => BiDiInfo -> Eff (WebDriverBiDi : es) a -> Eff es a
 runWebDriverBiDi info = interpret $ \localEnv -> \case
   -- Session
   SessionNew caps -> liftIO $ BA.sessionNew run' caps
@@ -197,11 +197,11 @@ runWebDriverBiDi info = interpret $ \localEnv -> \case
     run' :: forall r. (FromJSON r) => BA.Runner IO r
     run' = bidiRun info
 
-    run :: (BA.Runner IO r -> IO r) -> Eff es r
+    run :: forall r. (FromJSON r) => (BA.Runner IO r -> IO r) -> Eff es r
     run action = liftIO $ action run'
 
-    run1 :: forall r p. (FromJSON r) => (BiDiRunner IO -> p -> IO r) -> p -> Eff es r
+    run1 :: forall r p. (FromJSON r) => (BA.Runner IO r -> p -> IO r) -> p -> Eff es r
     run1 action p = liftIO $ action run' p
     
-    run2 :: forall r p1 p2. (FromJSON r) => (BiDiRunner IO -> p1 -> p2 -> IO r) -> p1 -> p2 -> Eff es r
+    run2 :: forall r p1 p2. (FromJSON r) => (BA.Runner IO r -> p1 -> p2 -> IO r) -> p1 -> p2 -> Eff es r
     run2 action p1 p2 = liftIO $ action run' p1 p2
