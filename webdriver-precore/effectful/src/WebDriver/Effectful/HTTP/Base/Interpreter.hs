@@ -32,7 +32,7 @@ import WebDriverPreCore.Extended.Protocol (Session)
 -- @WebDriverPreCore.Extended.HTTP.Base.Actions@ function.
 runWebDriverHttp :: forall es a. (IOE :> es) => HttpSessionInfo -> Eff (WebDriverHttp : es) a -> Eff es a
 runWebDriverHttp info = interpret $ \_localEnv -> \case
-  DeleteSession -> run A.deleteSession
+  Status -> runRoot A.status
   GetTimeouts -> run A.getTimeouts
   SetTimeouts ts -> run1 A.setTimeouts ts
   NavigateTo url -> run1 A.navigateTo url
@@ -97,6 +97,9 @@ runWebDriverHttp info = interpret $ \_localEnv -> \case
 
     sess :: Session
     sess = info.session
+
+    runRoot :: forall r. (FromJSON r) => (A.Runner IO r -> IO r) -> Eff es r
+    runRoot action = liftIO $ action runner
 
     run :: forall r. (FromJSON r) => (A.Runner IO r -> Session -> IO r) -> Eff es r
     run action = liftIO $ action runner sess

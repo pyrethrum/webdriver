@@ -20,8 +20,10 @@
 --   log title
 -- @
 module WebDriver.Effectful.HTTP.Base.Actions
-  ( -- * Session Management
-    deleteSession,
+  ( -- * Root Operations
+    status,
+
+    -- * Session Management
     getTimeouts,
     setTimeouts,
 
@@ -121,6 +123,7 @@ import WebDriverPreCore.Extended.HTTP.Base.Protocol
     Script,
     Selector,
     ShadowRootElementId,
+    Status,
     Timeouts,
     URL,
     WindowHandleSpec,
@@ -128,11 +131,15 @@ import WebDriverPreCore.Extended.HTTP.Base.Protocol
   )
 
 -- ---------------------------------------------------------------------------
--- Session management
+-- Root operations
 -- ---------------------------------------------------------------------------
 
-deleteSession :: (WebDriverHttp :> es) => Eff es ()
-deleteSession = send DeleteSession
+status :: (WebDriverHttp :> es) => Eff es Status
+status = send Status
+
+-- ---------------------------------------------------------------------------
+-- Session management
+-- ---------------------------------------------------------------------------
 
 getTimeouts :: (WebDriverHttp :> es) => Eff es Timeouts
 getTimeouts = send GetTimeouts

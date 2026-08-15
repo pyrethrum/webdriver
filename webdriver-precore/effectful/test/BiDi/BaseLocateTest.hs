@@ -21,6 +21,7 @@ import Common.Utils qualified as CU
 import Data.Text (Text, unpack)
 import Effectful
 import HTTP.Runner (BaseHTTPEffs, WDSession, closeWDSession, getWDSession, runHttp, runHttpTest, testUrl)
+import BiDi.Runner (withBiDiSession)
 import Prelude
 import System.Environment (withArgs)
 import Test.Tasty (TestTree, defaultMain, inOrderTestGroup, testGroup, withResource)

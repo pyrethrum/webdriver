@@ -40,6 +40,7 @@ import WebDriverPreCore.Extended.HTTP.Base.Protocol
     Selector,
     Session (..),
     ShadowRootElementId,
+    Status,
     Timeouts,
     URL,
     WindowHandleSpec,
@@ -100,9 +101,9 @@ mkSessionRunner info cmd =
 -- Smart constructors for each operation are in
 -- "WebDriver.Effectful.HTTP.Base.Actions".
 data WebDriverHttp :: Effect where
-  -- Session management
-  -- TODO: not sure delete session belongs here
-  DeleteSession :: WebDriverHttp m ()
+  -- Root operations (no session required)
+  Status :: WebDriverHttp m Status
+  -- Session operations (require active session managed by withHttpSession)
   GetTimeouts :: WebDriverHttp m Timeouts
   SetTimeouts :: Timeouts -> WebDriverHttp m ()
   -- Navigation
