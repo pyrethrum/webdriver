@@ -1,4 +1,4 @@
-module Common.BaseLocateTest where
+module BiDi.BaseLocateTest where
 
 import Common.Utils
   ( autoId,

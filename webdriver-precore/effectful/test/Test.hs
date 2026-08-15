@@ -1,10 +1,11 @@
 module Main where
 
-import Bidi.Runner (runBiDiTest)
-import Bidi.SimpleDemo (bidi_login_demo)
+import BiDi.Runner (runBiDiTest)
+import BiDi.SimpleDemo (bidi_login_demo)
 import HTTP.Runner (withHttp)
 import HTTP.SimpleDemo (http_login_navigation_demo)
 import HTTP.BaseLocateTest qualified as BaseLocateTest
+import BiDi.BaseLocateTest qualified as BiDiBaseLocateTest
 import HTTP.LocateCombinatorTest qualified as LocateCombinatorTest
 import HTTP.MatchTypeTest qualified as MatchTypeTest
 import Test.Tasty (TestTree, defaultMain, testGroup)
@@ -20,6 +21,7 @@ tests =
     [ testCase "HTTP login and navigation demo" (withHttp http_login_navigation_demo),
       testCase "BiDi login demo" (runBiDiTest bidi_login_demo),
       BaseLocateTest.tests,
+      BiDiBaseLocateTest.tests,
       MatchTypeTest.tests,
       LocateCombinatorTest.tests
     ]

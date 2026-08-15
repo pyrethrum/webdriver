@@ -450,11 +450,11 @@ test-suite test-effectful
   type: exitcode-stdio-1.0
   main-is: Test.hs
   other-modules:
-    Bidi.Runner
-    Bidi.SimpleDemo
+    BiDi.Runner
+    BiDi.SimpleDemo
+    BiDi.BaseLocateTest
     Common.Runner
     Common.Utils
-    Common.BaseLocateTest
     HTTP.BaseLocateTest
     HTTP.LocateCombinatorTest
     HTTP.MatchTypeTest

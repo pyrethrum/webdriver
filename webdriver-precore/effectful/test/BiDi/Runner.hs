@@ -1,4 +1,4 @@
-module Bidi.Runner where
+module BiDi.Runner where
 
 import Common.Runner (runSetup)
 import Data.Text qualified as T

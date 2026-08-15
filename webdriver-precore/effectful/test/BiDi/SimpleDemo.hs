@@ -1,6 +1,6 @@
-module Bidi.SimpleDemo where
+module BiDi.SimpleDemo where
 
-import Bidi.Runner
+import BiDi.Runner
   ( charToKeys,
     defaultPointerProps
   )
