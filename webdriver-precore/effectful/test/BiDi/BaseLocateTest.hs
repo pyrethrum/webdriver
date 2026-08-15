@@ -2,6 +2,8 @@ module BiDi.BaseLocateTest where
 
 import Common.Utils
   ( autoId,
+    beforeAll,
+    beforeAll_,
     chkAttributeEqElm,
     chkElm,
     chkElmM,
@@ -15,7 +17,7 @@ import Common.Utils
     locateAllFromElementHttp,
     locateAllHttp,
     locateFromElementHttp,
-    locateHttp, beforeAll_,
+    locateHttp, 
   )
 import Common.Utils qualified as CU
 import Data.Text (Text, unpack)
@@ -37,7 +39,8 @@ import WebDriverPreCore.Test.TestData
 -- *** Exception: ExitSuccess
 tests :: TestTree
 tests =
-  withResource getWDSession closeWDSession runSessionTests
+  withResource getWDSession closeWDSession 
+    (\httpSes -> beforeAll HERE runSessionTests)
   where
   runSessionTests :: IO WDSession -> TestTree
   runSessionTests ses =

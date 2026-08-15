@@ -6,6 +6,7 @@ module Common.Utils
     locateFromElementHttp,
     locateAllFromElementHttp,
 
+    beforeAll,
     beforeAll_,
 
     -- * Checkers (list result)
@@ -105,6 +106,10 @@ actions =
 
 beforeAll_ :: forall a. IO a -> TestTree -> TestTree
 beforeAll_ action tree = withResource (action >> pure ()) (\_ -> pure ()) (\_ -> tree)
+
+-- like withResource but does not dispose of anything, just runs the action before the test tree
+beforeAll :: forall a. IO a -> (IO a -> TestTree) -> TestTree
+beforeAll action mkTree = withResource action (\_ -> pure ()) mkTree
 
 locateHttp :: (IOE :> es, WebDriverHttp :> es) => L.HttpLocateOpts -> Locator -> Eff es (Either L.LocateException ElementId)
 locateHttp opts loc = actions >>= \a -> L.locateHttp a opts loc
@@ -295,8 +300,8 @@ chkAutoId testRunner locateFn testName loc expctd =
 
 -- | Check an element's attribute value matches expected (singleton result variant).
 atrrChkElm ::
-  (Text -> BaseHTTPEffs () -> TestTree) ->
-  (forall es. (IOE :> es, WebDriverHttp :> es) => Locator -> Eff es (Either L.LocateException ElementId)) ->
+  (Text -> m () -> TestTree) ->
+  (Locator -> m (Either L.LocateException ElementId) )->
   Text ->
   Locator ->
   Text ->
@@ -307,8 +312,8 @@ atrrChkElm testRunner locateFn testName loc attrName expctd =
 
 -- | Check an element's auto-id attribute matches expected value (singleton result variant).
 chkAutoIdElm ::
-  (Text -> BaseHTTPEffs () -> TestTree) ->
-  (forall es. (IOE :> es, WebDriverHttp :> es) => Locator -> Eff es (Either L.LocateException ElementId)) ->
+  (Text -> m () -> TestTree) ->
+  (Locator -> m (Either L.LocateException ElementId)) ->
   Text ->
   Locator ->
   Text ->
