@@ -92,11 +92,12 @@ acquireHttpSession
   -> Timeout
   -> IO HttpSessionInfo
 acquireHttpSession driverInfo caps pauseDuration' = do
-  resp <- EC.newHttpSessionResponse (mkRootRunner driverInfo) caps
+  sessionResponse <- EC.newHttpSessionResponse (mkRootRunner driverInfo) caps
   pure MkHttpSessionInfo
-    { driverInfo    = driverInfo
-    , session       = resp.session
-    , pauseDuration = pauseDuration'
+    { driverInfo
+    , session       = sessionResponse.session
+    , pauseDuration = pauseDuration',
+      sessionResponse
     }
 
 -- | Delete the HTTP session associated with an 'HttpSessionInfo' handle.
@@ -165,16 +166,17 @@ withBiDiSession
   -> Eff es a
 withBiDiSession driverInfo opts caps action =
   withEffToIO (ConcUnlift Persistent Unlimited) $ \runInIO -> do
-    logFn    <- runInIO (mkLogFunction opts)
+    logFn <- runInIO (mkLogFunction opts)
     let driverInfo' = driverInfo {driverLogFn = logFn}
-    resp     <- EC.newHttpSessionResponse (mkRootRunner driverInfo') caps
+    sessionResponse <- EC.newHttpSessionResponse (mkRootRunner driverInfo') caps
     let httpInfo =
           MkHttpSessionInfo
             { driverInfo    = driverInfo',
-              session       = resp.session,
-              pauseDuration = opts.pauseDuration
+              session       = sessionResponse.session,
+              pauseDuration = opts.pauseDuration,
+              sessionResponse
             }
-    bidiUrl  <- parseBiDiUrlIO resp.websocketUrl
+    bidiUrl  <- parseBiDiUrlIO sessionResponse.websocketUrl
     finally
       ( withBiDi logFn bidiUrl $ \ioRunner -> do
           let biDiInfo =

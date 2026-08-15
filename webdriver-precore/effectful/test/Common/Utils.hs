@@ -6,6 +6,8 @@ module Common.Utils
     locateFromElementHttp,
     locateAllFromElementHttp,
 
+    beforeAll_,
+
     -- * Checkers (list result)
     chkElms,
     chkElmsM,
@@ -59,7 +61,7 @@ import Data.Text qualified as T
 import Effectful
 import Effectful.Exception (catch)
 import HTTP.Runner (BaseHTTPEffs)
-import Test.Tasty (TestTree)
+import Test.Tasty (TestTree, withResource)
 import Test.Tasty.HUnit (assertFailure, assertEqual)
 import UnliftIO (throwIO)
 import Utils (txt)
@@ -78,6 +80,7 @@ import WebDriverPreCore.Extended.HTTP.Base.Protocol (ElementId)
 import WebDriverPreCore.Extended.Locate qualified as L
 import WebDriverPreCore.Extended.Locators (Locator, attribute')
 import WebDriverPreCore.Extended.Locators.Internal (CaseSensitivity (..), MatchType (..))
+import Data.List (singleton)
 
 -- ################ Base Eff Actions ################
 
@@ -99,6 +102,9 @@ actions =
         getElementAttribute,
         getElementText
       }
+
+beforeAll_ :: forall a. IO a -> TestTree -> TestTree
+beforeAll_ action tree = withResource (action >> pure ()) (\_ -> pure ()) (\_ -> tree)
 
 locateHttp :: (IOE :> es, WebDriverHttp :> es) => L.HttpLocateOpts -> Locator -> Eff es (Either L.LocateException ElementId)
 locateHttp opts loc = actions >>= \a -> L.locateHttp a opts loc
@@ -137,12 +143,12 @@ liftFailWithElements locRslt msg elms = do
   liftIO . assertFailure . unpack $ msg <> "\n\nLocateResult:\n" <> txt locRslt <> htmlSection
 
 -- | Convert a singleton 'Either' result to a list 'Either' result.
-singletonToList :: Either L.LocateException ElementId -> Either L.LocateException [ElementId]
-singletonToList = fmap (: [])
+mapSingleton :: Either L.LocateException ElementId -> Either L.LocateException [ElementId]
+mapSingleton = fmap singleton
 
 -- | Fail with element outerHTML information appended (singleton variant).
 liftFailWithElement :: (IOE :> es, WebDriverHttp :> es) => Either L.LocateException ElementId -> Text -> ElementId -> Eff es a
-liftFailWithElement locRslt msg el = liftFailWithElements (singletonToList locRslt) msg [el]
+liftFailWithElement locRslt msg el = liftFailWithElements (mapSingleton locRslt) msg [el]
 
 -- | Check with element outerHTML information on failure
 liftChkWithElements :: (IOE :> es, WebDriverHttp :> es) => Either L.LocateException [ElementId] -> Text -> [ElementId] -> Maybe Text -> Eff es ()
@@ -152,7 +158,7 @@ liftChkWithElements locRslt testTitle elms mErr =
 -- | Check with element outerHTML information on failure (singleton variant).
 liftChkWithElement :: (IOE :> es, WebDriverHttp :> es) => Either L.LocateException ElementId -> Text -> ElementId -> Maybe Text -> Eff es ()
 liftChkWithElement locRslt testTitle el mErr =
-  liftChkWithElements (singletonToList locRslt) testTitle [el] mErr
+  liftChkWithElements (mapSingleton locRslt) testTitle [el] mErr
 
 -- ################ Checks ################
 
@@ -172,7 +178,9 @@ chkElms errMsg p locRslt =
 
 -- | Singleton variant of 'chkElms'.
 chkElm :: (IOE :> es, WebDriverHttp :> es) => Text -> (ElementId -> Maybe Text) -> Either L.LocateException ElementId -> Eff es ()
-chkElm errMsg p = chkElms errMsg (\[x] -> p x) . singletonToList
+chkElm errMsg p = chkElms errMsg 
+                    (\case [x] -> p x
+                           _   -> error "chkElm: expected singleton element but got multiple") . mapSingleton
 
 chkElmsM :: (IOE :> es, WebDriverHttp :> es) => Text -> Either L.LocateException [ElementId] -> ([ElementId] -> Eff es (Maybe Text)) -> Eff es ()
 chkElmsM testTitle locRslt chkM =
@@ -182,7 +190,9 @@ chkElmsM testTitle locRslt chkM =
 
 -- | Singleton variant of 'chkElmsM'.
 chkElmM :: (IOE :> es, WebDriverHttp :> es) => Text -> Either L.LocateException ElementId -> (ElementId -> Eff es (Maybe Text)) -> Eff es ()
-chkElmM testTitle locRslt chkM = chkElmsM testTitle (singletonToList locRslt) (\[x] -> chkM x)
+chkElmM testTitle locRslt chkM = chkElmsM testTitle (mapSingleton locRslt) (\case 
+                                                                             [x] -> chkM x
+                                                                             _   -> error . unpack $ testTitle <> " - expected singleton element but got multiple")
 
 chkAttribute :: forall es. (IOE :> es, WebDriverHttp :> es) => Text -> Either L.LocateException [ElementId] -> Text -> (Text -> Maybe Text) -> Eff es ()
 chkAttribute testTitle locRslt attrName attrValChkM =
@@ -198,7 +208,7 @@ chkAttribute testTitle locRslt attrName attrValChkM =
 -- | Singleton variant of 'chkAttribute'.
 chkAttributeElm :: forall es. (IOE :> es, WebDriverHttp :> es) => Text -> Either L.LocateException ElementId -> Text -> (Text -> Maybe Text) -> Eff es ()
 chkAttributeElm testTitle locRslt attrName attrValChkM =
-  chkAttribute testTitle (singletonToList locRslt) attrName attrValChkM
+  chkAttribute testTitle (mapSingleton locRslt) attrName attrValChkM
 
 chkAttributeEq :: (IOE :> es, WebDriverHttp :> es) => Text -> Text -> Text -> Either L.LocateException [ElementId] -> Eff es ()
 chkAttributeEq testTitle attrName expctd locrslt =
@@ -209,7 +219,7 @@ chkAttributeEq testTitle attrName expctd locrslt =
 
 -- | Singleton variant of 'chkAttributeEq'.
 chkAttributeEqElm :: (IOE :> es, WebDriverHttp :> es) => Text -> Text -> Text -> Either L.LocateException ElementId -> Eff es ()
-chkAttributeEqElm testTitle attrName expctd = chkAttributeEq testTitle attrName expctd . singletonToList
+chkAttributeEqElm testTitle attrName expctd = chkAttributeEq testTitle attrName expctd . mapSingleton
 
 liftFail :: (IOE :> es, Show a) => Either L.LocateException a -> Text -> Eff es b
 liftFail locRslt msg = liftIO . assertFailure . unpack $ msg <> "\n\nLocateResult:\n" <> txt locRslt
@@ -353,4 +363,4 @@ chkElmsWithAutoId testTitle expctd locRslt =
 
 -- | Singleton variant of 'chkElmsWithAutoId'.
 chkElmWithAutoId :: (IOE :> es, WebDriverHttp :> es) => Text -> Text -> Either L.LocateException ElementId -> Eff es ()
-chkElmWithAutoId testTitle expctd = chkElmsWithAutoId testTitle expctd . singletonToList
+chkElmWithAutoId testTitle expctd = chkElmsWithAutoId testTitle expctd . mapSingleton

@@ -15,13 +15,13 @@ import Common.Utils
     locateAllFromElementHttp,
     locateAllHttp,
     locateFromElementHttp,
-    locateHttp,
+    locateHttp, beforeAll_,
   )
 import Common.Utils qualified as CU
 import Data.Text (Text, unpack)
 import Effectful
 import HTTP.Runner (BaseHTTPEffs, WDSession, closeWDSession, getWDSession, runHttp, runHttpTest, testUrl)
-import BiDi.Runner (withBiDiSession)
+import BiDi.Runner 
 import Prelude
 import System.Environment (withArgs)
 import Test.Tasty (TestTree, defaultMain, inOrderTestGroup, testGroup, withResource)
@@ -30,7 +30,7 @@ import WebDriver.Effectful
 import WebDriver.Effectful.HTTP.Base.Actions
 import WebDriverPreCore.Extended.HTTP.Base.Protocol (ElementId, URL)
 import WebDriverPreCore.Extended.Locate qualified as L
-import WebDriverPreCore.Extended.Locators
+import WebDriverPreCore.Extended.Locators as LS
 import WebDriverPreCore.Test.TestData
 
 -- >>> _eval tests
@@ -43,7 +43,7 @@ tests =
   runSessionTests ses =
     inOrderTestGroup "Base Locate Tests"
       [ -- Landmark roles and basic element locators on locator-landmark-roles.html
-        withResource (navToUrl ses landmarkRolesUrl) (\_ -> pure ()) $ \_ ->
+        beforeAll_ (navToUrl ses landmarkRolesUrl) $
           testGroup "Landmark and Role Tests"
               [ chkAutoId "Locate by ID" (elmId "section-personal") "sec-personal"
               , test "jsDisplay check should NOT be affected by viewport" $ do
@@ -81,7 +81,7 @@ tests =
               ]
 
       , -- Extended role matching (aria-labelledby, for id label) on locator-extended-roles.html
-        withResource (navToUrl ses extendedRolesUrl) (\_ -> pure ()) $ \_ ->
+        beforeAll_ (navToUrl ses extendedRolesUrl) $
           testGroup "Extended Role Matching Tests"
               [ testGroup "aria-labelledby resolution"
                   [ atrrChkExtRole "ExtLocateAlways - locate finds region via aria-labelledby"
@@ -140,7 +140,7 @@ tests =
               ]
 
       , -- Visibility checks on locator-visibility.html
-        withResource (navToUrl ses visibilityUrl) (\_ -> pure ()) $ \_ ->
+        beforeAll_ (navToUrl ses visibilityUrl) $
           testGroup "Visibility Check Tests"
               [ testGroup "locateAll - DisplayedCheckAlways filters hidden and DisplayedCheckNever does not"
                   [ testGroup "Rule 1 - display none on element itself"
@@ -238,7 +238,7 @@ tests =
                   ]
               ]
 
-      , withResource (navToUrl ses landmarkRolesUrl) (\_ -> pure ()) $ \_ ->
+      , beforeAll_ (navToUrl ses landmarkRolesUrl) $
           testGroup "Basic Locator Types"
               [ chkAutoId "defaultId resolves via mkDefaultLoc option" (defaultId "hdr-main") "hdr-main"
               , chkAll "allElms finds all page elements" allElms
@@ -253,7 +253,7 @@ tests =
               , chkAll "h1_ tag locator finds the single h1 heading" h1_ chkSingleton
               ]
 
-      , withResource (navToUrl ses landmarkRolesUrl) (\_ -> pure ()) $ \_ ->
+      , beforeAll_ (navToUrl ses landmarkRolesUrl) $
           let 
             expect6orMore :: Text -> [ElementId] -> Maybe Text
             expect6orMore msg elms = if length elms >= 6 then Nothing else Just $ "expected >=6 " <> msg <> "but got " <> txt (length elms)
@@ -267,7 +267,7 @@ tests =
         
                 
 
-      , withResource (navToUrl ses landmarkRolesUrl) (\_ -> pure ()) $ \_ ->
+      , beforeAll_ (navToUrl ses landmarkRolesUrl) $
           testGroup "Attribute Locator Variants"
               [ chkAutoId "attribute default contains match" (attribute "auto-id" "hdr-main") "hdr-main"
               , chkAutoId "attributeExact full-equality match" (attributeExact "auto-id" "hdr-main") "hdr-main"
@@ -278,7 +278,7 @@ tests =
               , chkAutoId "attribute full case-insensitive matches uppercase value" (attribute' "auto-id" Full CaseInsensitive "HDR-MAIN") "hdr-main"
               ]
 
-      , withResource (navToUrl ses landmarkRolesUrl) (\_ -> pure ()) $ \_ ->
+      , beforeAll_ (navToUrl ses landmarkRolesUrl) $
           testGroup "roleName and role Constructors"
               [ chkAutoId "roleName finds element by accessible name" (roleName "Submit the mega form") "btn-submit"
               , chkAutoId "roleName finds aside by aria-label" (roleName "Help and tips") "aside-help"
@@ -286,7 +286,7 @@ tests =
               , chkAutoId "role generic constructor - Navigation with name" (role Navigation "Breadcrumb") "nav-breadcrumb"
               ]
 
-      , withResource (navToUrl ses landmarkRolesUrl) (\_ -> pure ()) $ \_ ->
+      , beforeAll_ (navToUrl ses landmarkRolesUrl) $
           testGroup "Locate and LocateAll from Element"
               [ test "locateAll from element - inputs within sec-personal" $ do
                   secResult <- locate $ autoId "sec-personal"
@@ -320,7 +320,7 @@ tests =
                       Right _ -> Just "expected ElementNotFound but edt-given-name was found in header"
               ]
 
-      , withResource (navToUrl ses landmarkRolesUrl) (\_ -> pure ()) $ \_ ->
+      , beforeAll_ (navToUrl ses landmarkRolesUrl) $
           testGroup "Combined Locators"
               [ chkAll "AND - input_ and elmClass text-input" (input_ &&& elmClass "text-input")
                   (\elms -> if length elms == 6 then Nothing else Just $ "expected 6 input+text-input elements but got " <> txt (length elms))
@@ -332,7 +332,7 @@ tests =
                   (\elms -> if length elms == 3 then Nothing else Just $ "expected 3 nav+search landmarks but got " <> txt (length elms))
               ]
 
-      , withResource (navToUrl ses miscRolesUrl) (\_ -> pure ()) $ \_ ->
+      , beforeAll_ (navToUrl ses miscRolesUrl) $
           testGroup "Misc ARIA Role Types"
               [ chkAutoId "roleType Article" (roleType Article) "art-main"
               , chkAutoId "article by accessible name" (article "Test article") "art-main"
@@ -373,8 +373,8 @@ tests =
               , chkAutoId "progressBar by accessible name" (progressBar "Upload progress") "prg-upload"
               , chkAutoId "slider by accessible name" (slider "Volume") "sld-volume"
               , chkAutoId "spinButton by accessible name" (spinButton "Item count") "spn-count"
-              , chkAutoId "roleType Status" (roleType Status) "out-result"
-              , chkAutoId "status by accessible name" (status "Calculation result") "out-result"
+              , chkAutoId "roleType Status" (roleType LS.Status) "out-result"
+              , chkAutoId "status by accessible name" (LS.status "Calculation result") "out-result"
               , chkAutoId "roleType Term" (roleType Term) "trm-name"
               , chkAutoId "term by text content" (term "Name") "trm-name"
               , chkAutoId "roleType Definition" (roleType Definition) "def-name"

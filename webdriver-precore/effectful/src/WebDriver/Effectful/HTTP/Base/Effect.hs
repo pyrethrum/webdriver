@@ -48,6 +48,7 @@ import WebDriverPreCore.Extended.HTTP.Base.Protocol
   )
 import WebDriverPreCore.HttpRunner (HttpEndpoint (..), callWebDriver)
 import WebDriverPreCore.Utils.Timeout (Timeout)
+import WebDriverPreCore.Extended.Capabilities (HttpSessionResponse)
 
 -- ---------------------------------------------------------------------------
 -- Types
@@ -74,7 +75,9 @@ data HttpSessionInfo = MkHttpSessionInfo
     -- | The active WebDriver session identifier.
     session :: Session,
     -- | Duration to sleep on each 'pause' call.
-    pauseDuration :: Timeout
+    pauseDuration :: Timeout,
+    -- | Full response
+    sessionResponse :: HttpSessionResponse
   }
 
 -- ---------------------------------------------------------------------------
