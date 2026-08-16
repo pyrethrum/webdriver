@@ -125,10 +125,13 @@ locateAllFromElementHttp opts elmId' loc = actions >>= \a -> L.locateAllFromElem
 
 -- ################ Element Inspection ################
 
-type GetProperty m = ElementId -> Text -> m (Maybe Value)
-type GetAttribute m = ElementId -> Text -> m (Maybe Text)
-type LocateFn m = Locator -> m (Either L.LocateException ElementId)
-type LocateAllFn m = Locator -> m (Either L.LocateException [ElementId])
+data DriverActions m = MkDriverActions { 
+    testRunnerText :: Text -> m () -> TestTree,
+    getProperty :: ElementId -> Text -> m (Maybe Value),
+    getAttribute :: ElementId -> Text -> m (Maybe Text),
+    locateFn :: Locator -> m (Either L.LocateException ElementId),
+    locateAllFn :: Locator -> m (Either L.LocateException [ElementId])
+  }
 
 -- | Get outerHTML for a list of element IDs
 getOuterHtmls :: forall m. Monad m => GetProperty m -> [ElementId] -> m [Text]
