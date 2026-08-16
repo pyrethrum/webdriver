@@ -125,13 +125,18 @@ locateAllFromElementHttp opts elmId' loc = actions >>= \a -> L.locateAllFromElem
 
 -- ################ Element Inspection ################
 
+type GetProperty m = ElementId -> Text -> m (Maybe Value)
+type GetAttribute m = ElementId -> Text -> m (Maybe Text)
+type LocateFn m = Locator -> m (Either L.LocateException ElementId)
+type LocateAllFn m = Locator -> m (Either L.LocateException [ElementId])
+
 -- | Get outerHTML for a list of element IDs
-getOuterHtmls :: (WebDriverHttp :> es) => [ElementId] -> Eff es [Text]
-getOuterHtmls = traverse getOuterHtml
+getOuterHtmls :: forall m. Monad m => GetProperty m -> [ElementId] -> m [Text]
+getOuterHtmls getProp = traverse getOuterHtml
   where
-    getOuterHtml :: (WebDriverHttp :> es) => ElementId -> Eff es Text
+    getOuterHtml :: ElementId -> m Text
     getOuterHtml el = do
-      mVal <- getElementProperty el "outerHTML"
+      mVal <- getProp el "outerHTML"
       pure $ case mVal of
         Just (String html) -> html
         _ -> "<unable to retrieve outerHTML>"
@@ -141,9 +146,9 @@ formatOuterHtmls :: [Text] -> Text
 formatOuterHtmls htmls = T.intercalate "\n---------\n" htmls
 
 -- | Fail with element outerHTML information appended
-liftFailWithElements :: (IOE :> es, WebDriverHttp :> es) => Either L.LocateException [ElementId] -> Text -> [ElementId] -> Eff es a
-liftFailWithElements locRslt msg elms = do
-  htmls <- getOuterHtmls elms
+liftFailWithElements :: forall m a. Monad m => GetProperty m -> Either L.LocateException [ElementId] -> Text -> [ElementId] -> m a
+liftFailWithElements getProp locRslt msg elms = do
+  htmls <- getOuterHtmls getProp elms
   let htmlSection = if null htmls then "" else "\n\nFailure Elements:\n" <> formatOuterHtmls htmls
   liftIO . assertFailure . unpack $ msg <> "\n\nLocateResult:\n" <> txt locRslt <> htmlSection
 
@@ -152,87 +157,87 @@ mapSingleton :: Either L.LocateException ElementId -> Either L.LocateException [
 mapSingleton = fmap singleton
 
 -- | Fail with element outerHTML information appended (singleton variant).
-liftFailWithElement :: (IOE :> es, WebDriverHttp :> es) => Either L.LocateException ElementId -> Text -> ElementId -> Eff es a
-liftFailWithElement locRslt msg el = liftFailWithElements (mapSingleton locRslt) msg [el]
+liftFailWithElement :: forall m a. Monad m => GetProperty m -> Either L.LocateException ElementId -> Text -> ElementId -> m a
+liftFailWithElement getProp locRslt msg el = liftFailWithElements getProp (mapSingleton locRslt) msg [el]
 
 -- | Check with element outerHTML information on failure
-liftChkWithElements :: (IOE :> es, WebDriverHttp :> es) => Either L.LocateException [ElementId] -> Text -> [ElementId] -> Maybe Text -> Eff es ()
-liftChkWithElements locRslt testTitle elms mErr = 
-  mErr & maybe (pure ()) (\erMsg -> liftFailWithElements locRslt (testTitle <> " - " <> erMsg) elms)
+liftChkWithElements :: forall m. Monad m => GetProperty m -> Either L.LocateException [ElementId] -> Text -> [ElementId] -> Maybe Text -> m ()
+liftChkWithElements getProp locRslt testTitle elms mErr = 
+  mErr & maybe (pure ()) (\erMsg -> liftFailWithElements getProp locRslt (testTitle <> " - " <> erMsg) elms)
 
 -- | Check with element outerHTML information on failure (singleton variant).
-liftChkWithElement :: (IOE :> es, WebDriverHttp :> es) => Either L.LocateException ElementId -> Text -> ElementId -> Maybe Text -> Eff es ()
-liftChkWithElement locRslt testTitle el mErr =
-  liftChkWithElements (mapSingleton locRslt) testTitle [el] mErr
+liftChkWithElement :: forall m. Monad m => GetProperty m -> Either L.LocateException ElementId -> Text -> ElementId -> Maybe Text -> m ()
+liftChkWithElement getProp locRslt testTitle el mErr =
+  liftChkWithElements getProp (mapSingleton locRslt) testTitle [el] mErr
 
 -- ################ Checks ################
 
-chkLocException :: (IOE :> es, Show a) => Text -> (L.LocateException -> Maybe Text) -> Either L.LocateException a -> Eff es ()
+chkLocException :: forall m a. Monad m => Text -> (L.LocateException -> Maybe Text) -> Either L.LocateException a -> m ()
 chkLocException errMsg p locRslt =
   either
     (\ex -> liftChk locRslt (errMsg <> ": LocateException check failed: " <> txt ex) $ p ex)
     (const . liftFail locRslt $ errMsg <> ": expected Left LocateException but got Right")
     locRslt
 
-chkElms :: (IOE :> es, WebDriverHttp :> es) => Text -> ([ElementId] -> Maybe Text) -> Either L.LocateException [ElementId] -> Eff es ()
-chkElms errMsg p locRslt =
+chkElms :: GetProperty m -> Text -> ([ElementId] -> Maybe Text) -> Either L.LocateException [ElementId] -> m ()
+chkElms getProp errMsg p locRslt =
   either
     (liftFail locRslt . (errMsg <>) . (<> ": expected Right elements but got Left: ") . txt)
-    (\elms -> liftChkWithElements locRslt (errMsg <> ": element list check failed") elms $ p elms)
+    (\elms -> liftChkWithElements getProp locRslt (errMsg <> ": element list check failed") elms $ p elms)
     locRslt
 
 -- | Singleton variant of 'chkElms'.
-chkElm :: (IOE :> es, WebDriverHttp :> es) => Text -> (ElementId -> Maybe Text) -> Either L.LocateException ElementId -> Eff es ()
-chkElm errMsg p = chkElms errMsg 
-                    (\case [x] -> p x
-                           _   -> error "chkElm: expected singleton element but got multiple") . mapSingleton
+chkElm :: GetProperty m -> Text -> (ElementId -> Maybe Text) -> Either L.LocateException ElementId -> m ()
+chkElm getProp errMsg p = chkElms getProp errMsg 
+                           (\case [x] -> p x
+                                  _   -> error "chkElm: expected singleton element but got multiple") . mapSingleton
 
-chkElmsM :: (IOE :> es, WebDriverHttp :> es) => Text -> Either L.LocateException [ElementId] -> ([ElementId] -> Eff es (Maybe Text)) -> Eff es ()
-chkElmsM testTitle locRslt chkM =
+chkElmsM :: GetProperty m -> Text -> Either L.LocateException [ElementId] -> ([ElementId] -> m (Maybe Text)) -> m ()
+chkElmsM getProp testTitle locRslt chkM =
   locRslt & either
     (\err -> liftFail locRslt $ testTitle <> " - locate failed: " <> txt err)
-    (\elms -> chkM elms >>= liftChkWithElements locRslt (testTitle <> " - element list check failed") elms)
+    (\elms -> chkM elms >>= liftChkWithElements getProp locRslt (testTitle <> " - element list check failed") elms)
 
 -- | Singleton variant of 'chkElmsM'.
-chkElmM :: (IOE :> es, WebDriverHttp :> es) => Text -> Either L.LocateException ElementId -> (ElementId -> Eff es (Maybe Text)) -> Eff es ()
-chkElmM testTitle locRslt chkM = chkElmsM testTitle (mapSingleton locRslt) (\case 
+chkElmM :: GetProperty m -> Text -> Either L.LocateException ElementId -> (ElementId -> m (Maybe Text)) -> m ()
+chkElmM getProp testTitle locRslt chkM = chkElmsM getProp testTitle (mapSingleton locRslt) (\case 
                                                                              [x] -> chkM x
                                                                              _   -> error . unpack $ testTitle <> " - expected singleton element but got multiple")
 
-chkAttribute :: forall es. (IOE :> es, WebDriverHttp :> es) => Text -> Either L.LocateException [ElementId] -> Text -> (Text -> Maybe Text) -> Eff es ()
-chkAttribute testTitle locRslt attrName attrValChkM =
-  chkElmsM testTitle locRslt elmChk
+chkAttribute :: forall m. GetProperty m -> GetAttribute m -> Text -> Either L.LocateException [ElementId] -> Text -> (Text -> Maybe Text) -> m ()
+chkAttribute getProp getAttribute testTitle locRslt attrName attrValChkM =
+  chkElmsM getProp testTitle locRslt elmChk
   where
-    elmChk :: [ElementId] -> Eff es (Maybe Text)
+    elmChk :: [ElementId] -> m (Maybe Text)
     elmChk = \case
       [el] -> do
-        attr <- getElementAttribute el attrName
+        attr <- getAttribute el attrName
         pure $ maybe (Just $ testTitle <> " - attribute not found: " <> txt attrName) attrValChkM attr
       elms -> pure $ Just $ testTitle <> " - expected singlet locate resultlist but got " <> txt (length elms) <> " elms"
 
 -- | Singleton variant of 'chkAttribute'.
-chkAttributeElm :: forall es. (IOE :> es, WebDriverHttp :> es) => Text -> Either L.LocateException ElementId -> Text -> (Text -> Maybe Text) -> Eff es ()
-chkAttributeElm testTitle locRslt attrName attrValChkM =
-  chkAttribute testTitle (mapSingleton locRslt) attrName attrValChkM
+chkAttributeElm :: forall m. GetProperty m -> GetAttribute m -> Text -> Either L.LocateException ElementId -> Text -> (Text -> Maybe Text) -> m ()
+chkAttributeElm getProp getAttribute testTitle locRslt attrName attrValChkM =
+  chkAttribute getProp getAttribute testTitle (mapSingleton locRslt) attrName attrValChkM
 
-chkAttributeEq :: (IOE :> es, WebDriverHttp :> es) => Text -> Text -> Text -> Either L.LocateException [ElementId] -> Eff es ()
-chkAttributeEq testTitle attrName expctd locrslt =
-  chkAttribute testTitle locrslt attrName $ \actual ->
-    if actual == expctd
+chkAttributeEq :: forall m. GetProperty m -> GetAttribute m -> Text -> Text -> Text -> Either L.LocateException [ElementId] -> m ()
+chkAttributeEq getProp getAttribute testTitle attrName expctd actual =
+  chkAttribute getProp getAttribute testTitle actual attrName $ \actVal ->
+    if actVal == expctd
       then Nothing
-      else Just $ testTitle <> " - expected attribute value: " <> txt expctd <> " but got: " <> txt actual
+      else Just $ testTitle <> " - expected attribute value: " <> txt expctd <> " but got: " <> txt actVal
 
 -- | Singleton variant of 'chkAttributeEq'.
-chkAttributeEqElm :: (IOE :> es, WebDriverHttp :> es) => Text -> Text -> Text -> Either L.LocateException ElementId -> Eff es ()
-chkAttributeEqElm testTitle attrName expctd = chkAttributeEq testTitle attrName expctd . mapSingleton
+chkAttributeEqElm ::  forall m. GetProperty m -> GetAttribute m -> Text -> Text -> Text -> Either L.LocateException ElementId -> m ()
+chkAttributeEqElm getProp getAttribute testTitle attrName expctd = chkAttributeEq getProp getAttribute testTitle attrName expctd . mapSingleton
 
-liftFail :: (IOE :> es, Show a) => Either L.LocateException a -> Text -> Eff es b
+liftFail :: (MonadIO m) => Either L.LocateException a -> Text -> m b
 liftFail locRslt msg = liftIO . assertFailure . unpack $ msg <> "\n\nLocateResult:\n" <> txt locRslt
 
-liftChk :: (IOE :> es, Show a) => Either L.LocateException a -> Text -> Maybe Text -> Eff es ()
+liftChk :: (MonadIO m) =>  Either L.LocateException a -> Text -> Maybe Text -> m ()
 liftChk locRslt testTitle mErr = mErr & maybe (pure ()) (\erMsg -> liftFail locRslt $ testTitle <> " - " <> erMsg)
 
-chkEq :: (IOE :> es, Show a, Eq a) => Text -> a -> a -> Eff es ()
+chkEq :: (MonadIO m) => Text -> a -> a -> m ()
 chkEq msg a b = liftIO $ assertEqual (unpack msg) a b
 
 -- ################ Predicates ################
@@ -275,57 +280,61 @@ defAllOpts =
 
 -- | Check an element's attribute value matches expected
 -- Takes a test runner, locate function, test name, locator, attribute name, and expected value
-atrrChk ::
-  (Text -> BaseHTTPEffs () -> TestTree) ->
-  (forall es. (IOE :> es, WebDriverHttp :> es) => Locator -> Eff es (Either L.LocateException [ElementId])) ->
+atrrChk :: forall m.
+  (Text -> m () -> TestTree) ->
+  LocateAllFn m ->
+  GetAttribute m ->
   Text ->
   Locator ->
   Text ->
   Text ->
   TestTree
-atrrChk testRunner locateFn testName loc attrName expctd =
-  testRunner testName $ locateFn loc >>= chkAttributeEq (txt loc) attrName expctd
+atrrChk testRunner locateFn getAttribute testName loc attrName expctd =
+  testRunner testName $ locateFn loc >>= chkAttributeEq getAttribute (txt loc) attrName expctd
 
 -- | Check an element's auto-id attribute matches expected value
 -- Takes a test runner, locate function, test name, locator, and expected auto-id value
 chkAutoId ::
-  (Text -> BaseHTTPEffs () -> TestTree) ->
-  (forall es. (IOE :> es, WebDriverHttp :> es) => Locator -> Eff es (Either L.LocateException [ElementId])) ->
+  (Text -> m () -> TestTree) ->
+  LocateAllFn m ->
+  GetAttribute m ->
   Text ->
   Locator ->
   Text ->
   TestTree
-chkAutoId testRunner locateFn testName loc expctd =
-  atrrChk testRunner locateFn testName loc "auto-id" expctd
+chkAutoId testRunner locateFn getAttribute testName loc expctd =
+  atrrChk testRunner locateFn getAttribute testName loc "auto-id" expctd
 
 -- | Check an element's attribute value matches expected (singleton result variant).
 atrrChkElm ::
   (Text -> m () -> TestTree) ->
-  (Locator -> m (Either L.LocateException ElementId) )->
+  GetAttribute m ->
+  LocateAllFn m ->
   Text ->
   Locator ->
   Text ->
   Text ->
   TestTree
-atrrChkElm testRunner locateFn testName loc attrName expctd =
-  testRunner testName $ locateFn loc >>= chkAttributeEqElm (txt loc) attrName expctd
+atrrChkElm testRunner getAttribute locateFn testName loc attrName expctd =
+  testRunner testName $ locateFn loc >>= chkAttributeEqElm getAttribute (txt loc) attrName expctd
 
 -- | Check an element's auto-id attribute matches expected value (singleton result variant).
 chkAutoIdElm ::
   (Text -> m () -> TestTree) ->
+  GetAttribute m ->
   (Locator -> m (Either L.LocateException ElementId)) ->
   Text ->
   Locator ->
   Text ->
   TestTree
-chkAutoIdElm testRunner locateFn testName loc expctd =
-  atrrChkElm testRunner locateFn testName loc "auto-id" expctd
+chkAutoIdElm testRunner getAttribute locateFn testName loc expctd =
+  atrrChkElm testRunner getAttribute locateFn testName loc "auto-id" expctd
 
 -- | Locate all elements and check with custom predicate
 -- Takes a test runner, locateAll function, test name, locator, and checker function
 chkAll ::
-  (Text -> BaseHTTPEffs () -> TestTree) ->
-  (forall es. (IOE :> es, WebDriverHttp :> es) => Locator -> Eff es (Either L.LocateException [ElementId])) ->
+  (Text -> m () -> TestTree) ->
+  LocateAllFn m ->
   Text ->
   Locator ->
   ([ElementId] -> Maybe Text) ->
@@ -338,8 +347,8 @@ chkAll testRunner locateAllFn testName loc chk =
 -- | Locate all elements (with DisplayedCheckNever) and check with custom predicate
 -- Takes a test runner, locateAll function, test name, locator, and checker function
 chkAllNever ::
-  (Text -> BaseHTTPEffs () -> TestTree) ->
-  (forall es. (IOE :> es, WebDriverHttp :> es) => Locator -> Eff es (Either L.LocateException [ElementId])) ->
+  (Text -> m () -> TestTree) ->
+  LocateAllFn m ->
   Text ->
   Locator ->
   ([ElementId] -> Maybe Text) ->
