@@ -1,24 +1,8 @@
 module HTTP.BaseLocateTest where
 
-import Common.Utils (
-    autoId,
-    beforeAll_,
-    chkAttributeEqElm,
-    chkElm,
-    chkElmM,
-    chkElms,
-    chkEmpty,
-    chkEq,
-    chkLocException,
-    chkSingleton,
-    defAllOpts,
-    defOpts,
-    locateAllFromElementHttp,
-    locateAllHttp,
-    locateFromElementHttp,
-    locateHttp,
-  )
-import Common.Utils qualified as CU
+
+import Common.Utils (beforeAll_, DriverActions (MkDriverActions) )
+import Common.Utils qualified as U
 import Data.Text (Text, unpack)
 import Effectful
 import HTTP.Runner (BaseHTTPEffs, WDSession, closeWDSession, getWDSession, runHttp, runHttpTest, testUrl)
@@ -32,6 +16,7 @@ import WebDriverPreCore.Extended.HTTP.Base.Protocol (ElementId, URL)
 import WebDriverPreCore.Extended.Locate qualified as L
 import WebDriverPreCore.Extended.Locators as LS
 import WebDriverPreCore.Test.TestData
+import WebDriver.Effectful.Logger (Logger)
 
 -- >>> _eval tests
 -- *** Exception: ExitSuccess
@@ -398,6 +383,23 @@ tests =
               -}
       ]
     where
+     
+    da :: DriverActions (forall es. (IOE :> es, Logger :> es, Pause :> es, WebDriverHttp :> es) => Eff es)
+    da = MkDriverActions { 
+        testRunner =  runHttpTest ses,
+        getProperty = undefined , --getPropertyHttp ses,
+        getAttribute = undefined , --ggetAttributeHttp ses,
+        locateFn = undefined , --glocateHttp defOpts,
+        locateAllFn = undefined --glocateAllHttp defAllOpts
+    }
+
+    -- da = MkDriverActions { 
+    --     testRunner =  runHttpTest ses,
+    --     getProperty = getPropertyHttp ses,
+    --     getAttribute = getAttributeHttp ses,
+    --     locateFn = locateHttp defOpts,
+    --     locateAllFn = locateAllHttp defAllOpts
+    -- }
     test :: Text -> BaseHTTPEffs () -> TestTree
     test = runHttpTest ses
 
