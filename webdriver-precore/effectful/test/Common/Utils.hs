@@ -83,6 +83,7 @@ import WebDriverPreCore.Extended.Locate qualified as L
 import WebDriverPreCore.Extended.Locators (Locator, attribute')
 import WebDriverPreCore.Extended.Locators.Internal (CaseSensitivity (..), MatchType (..))
 import Data.List (singleton)
+import Data.Kind (Type)
 
 -- ################ Base Eff Actions ################
 
@@ -126,7 +127,7 @@ locateAllFromElementHttp opts elmId' loc = actions >>= \a -> L.locateAllFromElem
 
 -- ################ Element Inspection ################
 
-data DriverActions m = MkDriverActions { 
+data DriverActions (m :: Type -> Type) = MkDriverActions {
     testRunner :: Text -> m () -> TestTree,
     getProperty :: ElementId -> Text -> m (Maybe Value),
     getAttribute :: ElementId -> Text -> m (Maybe Text),

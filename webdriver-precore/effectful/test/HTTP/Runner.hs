@@ -3,6 +3,8 @@ module HTTP.Runner (
   testUrl,
   mkHttpCaps,
   BaseHTTPEffs,
+  BaseHTTPConstraints,
+  HttpTestEff,
   WDSession (..),
   getWDSession,
   closeWDSession,
@@ -110,15 +112,16 @@ runHttpTest getRes name action =
 -- runWDSessionTest :: WDSession -> Text -> BaseHTTPAction -> TestTree
 runHttp :: forall a. WDSession -> BaseHTTPEffs a -> IO a
 runHttp MkWDSession {loggerHandle, sessionInfo} action = 
-    runEff $
-      runPause sessionInfo.pauseDuration $
-        runLogger loggerHandle $
-          runHttpSession sessionInfo action
+    runEff 
+      $ runPause sessionInfo.pauseDuration 
+      $ runLogger loggerHandle 
+      $ runHttpSession sessionInfo action
 
 
 
 type BaseHTTPConstraints es =  (IOE :> es, Logger :> es, Pause :> es, WebDriverHttp :> es) 
 type BaseHTTPEffs a =  forall es. BaseHTTPConstraints es => Eff es a
+type  HttpTestEff = Eff '[IOE, Logger, Pause, WebDriverHttp]
 
 
 

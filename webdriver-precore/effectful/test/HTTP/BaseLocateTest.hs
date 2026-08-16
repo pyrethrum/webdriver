@@ -5,7 +5,7 @@ import Common.Utils (beforeAll_, DriverActions (MkDriverActions) )
 import Common.Utils qualified as U
 import Data.Text (Text, unpack)
 import Effectful
-import HTTP.Runner (BaseHTTPEffs, WDSession, closeWDSession, getWDSession, runHttp, runHttpTest, testUrl)
+import HTTP.Runner (BaseHTTPEffs, WDSession, closeWDSession, getWDSession, runHttp, runHttpTest, testUrl, BaseHTTPConstraints, HttpTestEff)
 import Prelude
 import System.Environment (withArgs)
 import Test.Tasty (TestTree, defaultMain, inOrderTestGroup, testGroup, withResource)
@@ -384,22 +384,16 @@ tests =
       ]
     where
      
-    da :: DriverActions (forall es. (IOE :> es, Logger :> es, Pause :> es, WebDriverHttp :> es) => Eff es)
+    
+    da :: DriverActions HttpTestEff
     da = MkDriverActions { 
-        testRunner =  runHttpTest ses,
-        getProperty = undefined , --getPropertyHttp ses,
-        getAttribute = undefined , --ggetAttributeHttp ses,
-        locateFn = undefined , --glocateHttp defOpts,
-        locateAllFn = undefined --glocateAllHttp defAllOpts
+        testRunner = \name act -> runHttpTest ses name act,
+        getProperty = getPropertyHttp ses,
+        getAttribute = getAttributeHttp ses,
+        locateFn = locateHttp defOpts,
+        locateAllFn = locateAllHttp defAllOpts
     }
 
-    -- da = MkDriverActions { 
-    --     testRunner =  runHttpTest ses,
-    --     getProperty = getPropertyHttp ses,
-    --     getAttribute = getAttributeHttp ses,
-    --     locateFn = locateHttp defOpts,
-    --     locateAllFn = locateAllHttp defAllOpts
-    -- }
     test :: Text -> BaseHTTPEffs () -> TestTree
     test = runHttpTest ses
 

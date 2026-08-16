@@ -107,7 +107,7 @@ releaseHttpSession si =
 
 -- | Run an effectful action inside the 'WebDriverHttp' effect using an
 -- existing 'HttpSessionInfo' handle.
-runHttpSession :: (IOE :> es) => HttpSessionInfo -> Eff (WebDriverHttp : es) a -> Eff es a
+runHttpSession :: forall es a. (IOE :> es) => HttpSessionInfo -> Eff (WebDriverHttp : es) a -> Eff es a
 runHttpSession = runWebDriverHttp
 
 -- | Create an HTTP session, run an action inside the 'WebDriverHttp' effect,
