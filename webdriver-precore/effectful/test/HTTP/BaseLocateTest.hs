@@ -1,11 +1,11 @@
 module HTTP.BaseLocateTest where
 
 
-import Common.Utils (beforeAll_, DriverActions (MkDriverActions) )
+import Common.Utils (beforeAll_, DriverActions (..),chkEq, chkLocException, chkSingleton, chkElmsWithAutoId, chkElmM, chkElm, chkAttributeEqElm, chkAll, chkAllNever, chkEmpty )
 import Common.Utils qualified as U
 import Data.Text (Text, unpack)
 import Effectful
-import HTTP.Runner (BaseHTTPEffs, WDSession, closeWDSession, getWDSession, runHttp, runHttpTest, testUrl, BaseHTTPConstraints, HttpTestEff)
+import HTTP.Runner (BaseHTTPEffs, WDSession, closeWDSession, getWDSession, runHttp, runHttpTest, testUrl,  HttpTestEff)
 import Prelude
 import System.Environment (withArgs)
 import Test.Tasty (TestTree, defaultMain, inOrderTestGroup, testGroup, withResource)
@@ -71,14 +71,15 @@ tests =
         beforeAll_ (navToUrl ses extendedRolesUrl) $
           testGroup "Extended Role Matching Tests"
               [ testGroup "aria-labelledby resolution"
-                  [ atrrChkExtRole "ExtLocateAlways - locate finds region via aria-labelledby"
+                  [ 
+                    atrrChkExtRole "ExtLocateAlways - locate finds region via aria-labelledby"
                       (region "Personal Information") "auto-id" "sec-personal"
                   , atrrChkExtMiss "ExtLocateSingletonMiss - locate finds region via aria-labelledby"
                       (region "Personal Information") "auto-id" "sec-personal"
                   , test "ExtLocateNever - locate does NOT find region via aria-labelledby" $ do
                       locRslt <- locate $ region "Personal Information"
-                      chkLocException (txt (region "Personal Information")) isNotFound locRslt
-                  , test "ExtLocateAlways - locateAll finds region via aria-labelledby" $ do
+                      chkLocException (txt (region "Personal Information")) isNotFound locRslt, 
+                    test "ExtLocateAlways - locateAll finds region via aria-labelledby" $ do
                       locRslt <- locateAllExt $ region "Personal Information"
                       chkElms (txt (region "Personal Information")) chkSingleton locRslt
                   , test "ExtLocateSingletonMiss - locateAll does NOT find region via aria-labelledby" $ do
@@ -278,7 +279,7 @@ tests =
                     inResult <- locateAllFromElement sec input_
                     chkElms "inputs in sec-personal"
                       (\is -> if length is == 5 then Nothing else Just $ "expected 5 inputs but got " <> txt (length is))
-                      inResult
+                      inResultgetPropertyHttp
                     pure Nothing
               , test "locateAll from element - links within nav-main" $ do
                   navResult <- locate $ autoId "nav-main"
@@ -385,31 +386,34 @@ tests =
     where
      
     
-    da :: DriverActions HttpTestEff
+    da :: DriverActions (Eff '[WebDriverHttp, Logger, Pause, IOE])
     da = MkDriverActions { 
         testRunner = \name act -> runHttpTest ses name act,
-        getProperty = getPropertyHttp ses,
-        getAttribute = getAttributeHttp ses,
-        locateFn = locateHttp defOpts,
-        locateAllFn = locateAllHttp defAllOpts
+        getProperty = getElementProperty,
+        getAttribute = getElementAttribute,
+        locateFn = U.locateHttp U.defOpts,
+        locateAllFn = U.locateAllHttp U.defAllOpts
     }
 
-    test :: Text -> BaseHTTPEffs () -> TestTree
+    test :: Text -> Eff '[WebDriverHttp, Logger, Pause, IOE] () -> TestTree
     test = runHttpTest ses
+
+
+    chkElms = U.chkElms da
 
     -- Partially applied test helpers using shared functions from Common.Utils
     chkAutoId :: Text -> Locator -> Text -> TestTree
-    chkAutoId = CU.chkAutoIdElm test locate
+    chkAutoId = U.chkAutoIdElm da
 
     chkAll :: Text -> Locator -> ([ElementId] -> Maybe Text) -> TestTree
-    chkAll = CU.chkAll test locateAll
+    chkAll = U.chkAll da
 
     chkAllNever :: Text -> Locator -> ([ElementId] -> Maybe Text) -> TestTree
-    chkAllNever = CU.chkAllNever test locateAllNever
+    chkAllNever = U.chkAllNever da
 
     atrrChkExtRole :: Text -> Locator -> Text -> Text -> TestTree
     atrrChkExtRole testName loc attrName expctd =
-      test testName $ locateExt loc >>= chkAttributeEqElm (txt loc) attrName expctd
+      test testName $ locateExt loc >>= chkAttributeEqElm da (txt loc) attrName expctd
 
     atrrChkExtMiss :: Text -> Locator -> Text -> Text -> TestTree
     atrrChkExtMiss testName loc attrName expctd =

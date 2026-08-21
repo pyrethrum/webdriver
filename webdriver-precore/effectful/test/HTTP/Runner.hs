@@ -3,7 +3,6 @@ module HTTP.Runner (
   testUrl,
   mkHttpCaps,
   BaseHTTPEffs,
-  BaseHTTPConstraints,
   HttpTestEff,
   WDSession (..),
   getWDSession,
@@ -103,14 +102,14 @@ closeWDSession MkWDSession {loggerHandle, sessionInfo} =
 -- Retrieves the 'WDSession' from the Tasty resource getter, then runs the
 -- action with 'IOE', 'Pause', 'Logger', and 'WebDriverHttp' in scope.
 -- Intended for use inside a 'withResource' group via 'baseLocateTests'.
-runHttpTest :: IO WDSession -> Text -> BaseHTTPEffs () -> TestTree
+runHttpTest :: IO WDSession -> Text -> HttpTestEff () -> TestTree
 runHttpTest getRes name action = 
   testCase (unpack name) $ 
     getRes >>= \r -> runHttp r action
  
 
 -- runWDSessionTest :: WDSession -> Text -> BaseHTTPAction -> TestTree
-runHttp :: forall a. WDSession -> BaseHTTPEffs a -> IO a
+runHttp :: forall a. WDSession -> HttpTestEff a -> IO a
 runHttp MkWDSession {loggerHandle, sessionInfo} action = 
     runEff 
       $ runPause sessionInfo.pauseDuration 
@@ -119,9 +118,8 @@ runHttp MkWDSession {loggerHandle, sessionInfo} action =
 
 
 
-type BaseHTTPConstraints es =  (IOE :> es, Logger :> es, Pause :> es, WebDriverHttp :> es) 
-type BaseHTTPEffs a =  forall es. BaseHTTPConstraints es => Eff es a
-type  HttpTestEff = Eff '[IOE, Logger, Pause, WebDriverHttp]
+type BaseHTTPEffs a =  forall es. (IOE :> es, Logger :> es, Pause :> es, WebDriverHttp :> es) => Eff es a
+type  HttpTestEff = Eff '[WebDriverHttp, Logger, Pause, IOE]
 
 
 
