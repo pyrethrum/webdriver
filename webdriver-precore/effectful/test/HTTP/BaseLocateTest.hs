@@ -1,7 +1,7 @@
 module HTTP.BaseLocateTest where
 
 
-import Common.Utils (beforeAll_, DriverActions (..),chkEq, chkLocException, chkSingleton, chkElmsWithAutoId, chkElmM, chkElm, chkAttributeEqElm, chkAll, chkAllNever, chkEmpty )
+import Common.Utils (beforeAll_, DriverActions (..),chkEq, chkLocException, chkSingleton, chkElmsWithAutoId, chkElmM, chkElm, chkAll, chkAllNever, chkEmpty, autoId )
 import Common.Utils qualified as U
 import Data.Text (Text, unpack)
 import Effectful
@@ -410,6 +410,8 @@ tests =
 
     chkAllNever :: Text -> Locator -> ([ElementId] -> Maybe Text) -> TestTree
     chkAllNever = U.chkAllNever da
+
+    chkAttributeEqElm = U.chkAttributeEqElm da
 
     atrrChkExtRole :: Text -> Locator -> Text -> Text -> TestTree
     atrrChkExtRole testName loc attrName expctd =
