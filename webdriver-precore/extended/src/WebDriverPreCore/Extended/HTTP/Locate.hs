@@ -36,8 +36,10 @@ import WebDriverPreCore.Extended.Locators.Internal (Locator, RoleLocator (..), C
 import WebDriverPreCore.Extended.Locators.Internal qualified as LI
 import WebDriverPreCore.HTTP.Protocol as HTTPP (ElementId, Script (..), Selector (..))
 import Prelude as P hiding (log)
-import Utils (txt)
+import Utils (txt, db)
 import Data.Bifunctor (Bifunctor(..))
+import Data.Function ((&))
+import Data.Functor ((<&>))
 
 -- | Whether to find the unique element (error if multiple match) or just the first.
 data SingletonCardinality = Unique | First deriving (Show, Eq)
@@ -369,9 +371,9 @@ httpLocateAll prms loc = do
         ExtLocateNever -> NoRoleJSSecondPass
         ExtLocateSingletonMiss -> NoRoleJSSecondPass
         ExtLocateAlways -> DoRoleJSSecondPass
-  elms <- locateElmsUnchecked prms FindAll secondPassOnInitial loc
+  elms <- locateElmsUnchecked prms FindAll secondPassOnInitial loc <&> db "\n!!!!!!!!!! locateElmsUnchecked !!!!!!!!!!!"
   if prms.jsRecheckDisplayed == DisplayedCheckAlways
-    then jsFilterDisplayed prms elms
+    then jsFilterDisplayed prms elms 
     else pure elms
 
 data SingletonCheckResult

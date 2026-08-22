@@ -12,7 +12,7 @@ import Data.Text qualified as T
 import Data.Text (Text, unpack)
 import Data.Text.Encoding (encodeUtf8)
 import Effectful (Eff, IOE, (:>), liftIO)
-import Common.Utils (defAllOpts, locateAllHttp)
+import Common.Utils (defAllOpts, locateAllHttp, testPattern)
 import HTTP.Runner (WDSession, closeWDSession, getWDSession, runHttp)
 import Prelude
 import Test.Falsify.Generator as G (Gen, frequency, integral)
@@ -875,7 +875,7 @@ evaluateCase getSession locCase  =
                                                 <> unpack (txt failure)
 
     Unmatched {} ->
-      liftIO $ throwIO $ userError "evaluateCase called with an unmatched locator case"
+      liftIO . throwIO $ userError "evaluateCase called with an unmatched locator case"
 
 htmlToDataUrl :: Text -> URL
 htmlToDataUrl html =
@@ -904,14 +904,14 @@ mkLocatorTestFailure node html selection generatedLocator expectedMatches actual
 -- locators mixture of css and xpath
 
 _pattern :: Maybe Text
--- _pattern = Just "OR with contains under"
-_pattern = Nothing
+_pattern = Just "OR with contains under"
+-- _pattern = Nothing
 
 _eval :: Maybe Text -> TestTree -> IO ()
-_eval mPattern = withArgs (maybe [] (\pat -> ["-p", (unpack pat)]) mPattern) . defaultMain
+_eval = testPattern
 
 --- >>> _eval _pattern tests
--- *** Exception: ExitSuccess
+-- *** Exception: ExitFailure 1
 
 
 

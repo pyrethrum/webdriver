@@ -1,7 +1,7 @@
 module HTTP.BaseLocateTest where
 
 
-import Common.Utils (beforeAll_, DriverActions (..),chkEq, chkLocException, chkSingleton, chkElmsWithAutoId, chkElmM, chkElm, chkAll, chkAllNever, chkEmpty, autoId )
+import Common.Utils (beforeAll_, DriverActions (..),chkEq, chkLocException, chkSingleton, chkEmpty, autoId )
 import Common.Utils qualified as U
 import Data.Text (Text, unpack)
 import Effectful
@@ -24,13 +24,11 @@ tests :: TestTree
 tests =
   withResource getWDSession closeWDSession runSessionTests
   where
-
-
   runSessionTests :: IO WDSession -> TestTree
   runSessionTests ses =
     inOrderTestGroup "Base Locate Tests"
       [ -- Landmark roles and basic element locators on locator-landmark-roles.html
-        beforeAll_ (navToUrl ses landmarkRolesUrl) $
+        beforeAll_ (navToUrl landmarkRolesUrl) $
           testGroup "Landmark and Role Tests"
               [ chkAutoId "Locate by ID" (elmId "section-personal") "sec-personal"
               , test "jsDisplay check should NOT be affected by viewport" $ do
@@ -68,7 +66,7 @@ tests =
               ]
 
       , -- Extended role matching (aria-labelledby, for id label) on locator-extended-roles.html
-        beforeAll_ (navToUrl ses extendedRolesUrl) $
+        beforeAll_ (navToUrl extendedRolesUrl) $
           testGroup "Extended Role Matching Tests"
               [ testGroup "aria-labelledby resolution"
                   [ 
@@ -128,7 +126,7 @@ tests =
               ]
 
       , -- Visibility checks on locator-visibility.html
-        beforeAll_ (navToUrl ses visibilityUrl) $
+        beforeAll_ (navToUrl visibilityUrl) $
           testGroup "Visibility Check Tests"
               [ testGroup "locateAll - DisplayedCheckAlways filters hidden and DisplayedCheckNever does not"
                   [ testGroup "Rule 1 - display none on element itself"
@@ -226,7 +224,7 @@ tests =
                   ]
               ]
 
-      , beforeAll_ (navToUrl ses landmarkRolesUrl) $
+      , beforeAll_ (navToUrl landmarkRolesUrl) $
           testGroup "Basic Locator Types"
               [ chkAutoId "defaultId resolves via mkDefaultLoc option" (defaultId "hdr-main") "hdr-main"
               , chkAll "allElms finds all page elements" allElms
@@ -241,7 +239,7 @@ tests =
               , chkAll "h1_ tag locator finds the single h1 heading" h1_ chkSingleton
               ]
 
-      , beforeAll_ (navToUrl ses landmarkRolesUrl) $
+      , beforeAll_ (navToUrl landmarkRolesUrl) $
           testGroup "Class Locator Variants"
               [ chkAll "elmClass contains match" (elmClass "text-input")
                   (\elms -> if length elms >= 6 then Nothing else Just $ "expected >=6 elements with class text-input but got " <> txt (length elms))
@@ -252,7 +250,7 @@ tests =
               , chkAutoId "elmClass finds element by single class name" (elmClass "span-button") "btn-span-role"
               ]
 
-      , beforeAll_ (navToUrl ses landmarkRolesUrl) $
+      , beforeAll_ (navToUrl landmarkRolesUrl) $
           testGroup "Attribute Locator Variants"
               [ chkAutoId "attribute default contains match" (attribute "auto-id" "hdr-main") "hdr-main"
               , chkAutoId "attributeExact full-equality match" (attributeExact "auto-id" "hdr-main") "hdr-main"
@@ -263,7 +261,7 @@ tests =
               , chkAutoId "attribute full case-insensitive matches uppercase value" (attribute' "auto-id" Full CaseInsensitive "HDR-MAIN") "hdr-main"
               ]
 
-      , beforeAll_ (navToUrl ses landmarkRolesUrl) $
+      , beforeAll_ (navToUrl landmarkRolesUrl) $
           testGroup "roleName and role Constructors"
               [ chkAutoId "roleName finds element by accessible name" (roleName "Submit the mega form") "btn-submit"
               , chkAutoId "roleName finds aside by aria-label" (roleName "Help and tips") "aside-help"
@@ -271,7 +269,7 @@ tests =
               , chkAutoId "role generic constructor - Navigation with name" (role Navigation "Breadcrumb") "nav-breadcrumb"
               ]
 
-      , beforeAll_ (navToUrl ses landmarkRolesUrl) $
+      , beforeAll_ (navToUrl landmarkRolesUrl) $
           testGroup "Locate and LocateAll from Element"
               [ test "locateAll from element - inputs within sec-personal" $ do
                   secResult <- locate $ autoId "sec-personal"
@@ -279,7 +277,7 @@ tests =
                     inResult <- locateAllFromElement sec input_
                     chkElms "inputs in sec-personal"
                       (\is -> if length is == 5 then Nothing else Just $ "expected 5 inputs but got " <> txt (length is))
-                      inResultgetPropertyHttp
+                      inResult
                     pure Nothing
               , test "locateAll from element - links within nav-main" $ do
                   navResult <- locate $ autoId "nav-main"
@@ -305,7 +303,7 @@ tests =
                       Right _ -> Just "expected ElementNotFound but edt-given-name was found in header"
               ]
 
-      , beforeAll_ (navToUrl ses landmarkRolesUrl) $
+      , beforeAll_ (navToUrl landmarkRolesUrl) $
           testGroup "Combined Locators"
               [ chkAll "AND - input_ and elmClass text-input" (input_ &&& elmClass "text-input")
                   (\elms -> if length elms == 6 then Nothing else Just $ "expected 6 input+text-input elements but got " <> txt (length elms))
@@ -317,7 +315,7 @@ tests =
                   (\elms -> if length elms == 3 then Nothing else Just $ "expected 3 nav+search landmarks but got " <> txt (length elms))
               ]
 
-      , beforeAll_ (navToUrl ses miscRolesUrl) $
+      , beforeAll_ (navToUrl miscRolesUrl) $
           testGroup "Misc ARIA Role Types"
               [ chkAutoId "roleType Article" (roleType Article) "art-main"
               , chkAutoId "article by accessible name" (article "Test article") "art-main"
@@ -385,19 +383,25 @@ tests =
       ]
     where
      
+    testRunner = \name act -> runHttpTest ses name act
+    getProperty = getElementProperty
+    getAttribute = getElementAttribute
+    locateFn = U.locateHttp U.defOpts
+    locateAllFn = U.locateAllHttp U.defAllOpts
+    locateAllNeverCheckDisplayed = U.locateAllHttp U.defAllOpts { L.jsRecheckDisplayed = L.DisplayedCheckNever }
     
     da :: DriverActions (Eff '[WebDriverHttp, Logger, Pause, IOE])
     da = MkDriverActions { 
-        testRunner = \name act -> runHttpTest ses name act,
-        getProperty = getElementProperty,
-        getAttribute = getElementAttribute,
-        locateFn = U.locateHttp U.defOpts,
-        locateAllFn = U.locateAllHttp U.defAllOpts
+        testRunner,
+        getProperty,
+        getAttribute,
+        locateFn,
+        locateAllFn
     }
 
-    test :: Text -> Eff '[WebDriverHttp, Logger, Pause, IOE] () -> TestTree
     test = runHttpTest ses
 
+    chkElm = U.chkElm da
 
     chkElms = U.chkElms da
 
@@ -409,13 +413,17 @@ tests =
     chkAll = U.chkAll da
 
     chkAllNever :: Text -> Locator -> ([ElementId] -> Maybe Text) -> TestTree
-    chkAllNever = U.chkAllNever da
+    chkAllNever = U.chkAllNever da {
+        locateAllFn = locateAllNeverCheckDisplayed
+    }
 
     chkAttributeEqElm = U.chkAttributeEqElm da
 
+    chkElmM = U.chkElmM da
+
     atrrChkExtRole :: Text -> Locator -> Text -> Text -> TestTree
     atrrChkExtRole testName loc attrName expctd =
-      test testName $ locateExt loc >>= chkAttributeEqElm da (txt loc) attrName expctd
+      test testName $ locateExt loc >>= chkAttributeEqElm (txt loc) attrName expctd
 
     atrrChkExtMiss :: Text -> Locator -> Text -> Text -> TestTree
     atrrChkExtMiss testName loc attrName expctd =
@@ -423,88 +431,77 @@ tests =
         locRslt <- locateExtMiss loc
         chkAttributeEqElm (txt loc) attrName expctd locRslt
 
-  navToUrl :: IO WDSession -> IO URL -> IO WDSession
-  navToUrl getSes urlAction = do
-    ses <- getSes
-    runHttp ses $ testUrl urlAction >>= navigateTo
-    pure ses
+    navToUrl :: IO URL -> IO WDSession
+    navToUrl urlAction = do
+        s <-ses
+        runHttp s $ testUrl urlAction >>= navigateTo
+        pure s
 
-  locate :: forall es. (IOE :> es, WebDriverHttp :> es) => Locator -> Eff es (Either L.LocateException ElementId)
-  locate = locateHttp defOpts
+    locate = da.locateFn 
 
-  locateAll :: forall es. (IOE :> es, WebDriverHttp :> es) => Locator -> Eff es (Either L.LocateException [ElementId])
-  locateAll = locateAllHttp defAllOpts
+    locateAll = da.locateAllFn 
 
-  locateFromElement :: forall es. (IOE :> es, WebDriverHttp :> es) => ElementId -> Locator -> Eff es (Either L.LocateException ElementId)
-  locateFromElement = locateFromElementHttp defOpts
+    locateFromElement = U.locateFromElementHttp U.defOpts
 
-  locateAllFromElement :: forall es. (IOE :> es, WebDriverHttp :> es) => ElementId -> Locator -> Eff es (Either L.LocateException [ElementId])
-  locateAllFromElement = locateAllFromElementHttp defAllOpts
+    locateAllFromElement = U.locateAllFromElementHttp U.defAllOpts
 
-  extAlwaysOpts :: L.HttpLocateOpts
-  extAlwaysOpts = defOpts { L.extendedRoleLocation = L.ExtLocateAlways }
+    extAlwaysOpts :: L.HttpLocateOpts
+    extAlwaysOpts = U.defOpts { L.extendedRoleLocation = L.ExtLocateAlways }
 
-  extMissOpts :: L.HttpLocateOpts
-  extMissOpts = defOpts { L.extendedRoleLocation = L.ExtLocateSingletonMiss }
+    extMissOpts :: L.HttpLocateOpts
+    extMissOpts = U.defOpts { L.extendedRoleLocation = L.ExtLocateSingletonMiss }
 
-  extAlwaysAllOpts :: L.HttpLocateOpts
-  extAlwaysAllOpts = defAllOpts { L.extendedRoleLocation = L.ExtLocateAlways }
+    extAlwaysAllOpts :: L.HttpLocateOpts
+    extAlwaysAllOpts = U.defAllOpts { L.extendedRoleLocation = L.ExtLocateAlways }
 
-  extMissAllOpts :: L.HttpLocateOpts
-  extMissAllOpts = defAllOpts { L.extendedRoleLocation = L.ExtLocateAlways }
+    extMissAllOpts :: L.HttpLocateOpts
+    extMissAllOpts = U.defAllOpts { L.extendedRoleLocation = L.ExtLocateSingletonMiss }
 
-  locateExt :: forall es. (IOE :> es, WebDriverHttp :> es) => Locator -> Eff es (Either L.LocateException ElementId)
-  locateExt = locateHttp extAlwaysOpts
+    locateExt = U.locateHttp extAlwaysOpts
 
-  locateAllExt :: forall es. (IOE :> es, WebDriverHttp :> es) => Locator -> Eff es (Either L.LocateException [ElementId])
-  locateAllExt = locateAllHttp extAlwaysAllOpts
+    locateAllExt = U.locateAllHttp extAlwaysAllOpts
 
-  locateExtMiss :: forall es. (IOE :> es, WebDriverHttp :> es) => Locator -> Eff es (Either L.LocateException ElementId)
-  locateExtMiss = locateHttp extMissOpts
+    locateExtMiss = U.locateHttp extMissOpts
 
-  locateAllExtMiss :: forall es. (IOE :> es, WebDriverHttp :> es) => Locator -> Eff es (Either L.LocateException [ElementId])
-  locateAllExtMiss = locateAllHttp extMissAllOpts
+    locateAllExtMiss = U.locateAllHttp extMissAllOpts
 
-  isNotFound :: L.LocateException -> Maybe Text
-  isNotFound (L.ElementNotFound {}) = Nothing
-  isNotFound other = Just $ "expected ElementNotFound but got: " <> txt other
+    isNotFound :: L.LocateException -> Maybe Text
+    isNotFound = \case
+            L.ElementNotFound {} -> Nothing
+            other -> Just $ "expected ElementNotFound but got: " <> txt other
 
-  neverOpts :: L.HttpLocateOpts
-  neverOpts = defOpts { L.jsRecheckDisplayed = L.DisplayedCheckNever }
+    neverOpts :: L.HttpLocateOpts
+    neverOpts = U.defOpts { L.jsRecheckDisplayed = L.DisplayedCheckNever }
 
-  disambiguateOpts :: L.HttpLocateOpts
-  disambiguateOpts = defOpts { L.jsRecheckDisplayed = L.DisplayedCheckDisambiguateUnique }
+    disambiguateOpts :: L.HttpLocateOpts
+    disambiguateOpts = U.defOpts { L.jsRecheckDisplayed = L.DisplayedCheckDisambiguateUnique }
 
-  neverAllOpts :: L.HttpLocateOpts
-  neverAllOpts = defAllOpts { L.jsRecheckDisplayed = L.DisplayedCheckNever }
+    neverAllOpts :: L.HttpLocateOpts
+    neverAllOpts = U.defAllOpts { L.jsRecheckDisplayed = L.DisplayedCheckNever }
 
-  disambiguateAllOpts :: L.HttpLocateOpts
-  disambiguateAllOpts = defAllOpts { L.jsRecheckDisplayed = L.DisplayedCheckNever }
+    disambiguateAllOpts :: L.HttpLocateOpts
+    disambiguateAllOpts = U.defAllOpts { L.jsRecheckDisplayed = L.DisplayedCheckNever }
 
-  locateAllNever :: forall es. (IOE :> es, WebDriverHttp :> es) => Locator -> Eff es (Either L.LocateException [ElementId])
-  locateAllNever = locateAllHttp neverAllOpts
+    locateAllNever = U.locateAllHttp neverAllOpts
 
-  locateAllDisambiguate :: forall es. (IOE :> es, WebDriverHttp :> es) => Locator -> Eff es (Either L.LocateException [ElementId])
-  locateAllDisambiguate = locateAllHttp disambiguateAllOpts
+    locateAllDisambiguate = U.locateAllHttp disambiguateAllOpts
 
-  locateNever :: forall es. (IOE :> es, WebDriverHttp :> es) => Locator -> Eff es (Either L.LocateException ElementId)
-  locateNever = locateHttp neverOpts
+    locateNever = U.locateHttp neverOpts
 
-  locateDisambiguate :: forall es. (IOE :> es, WebDriverHttp :> es) => Locator -> Eff es (Either L.LocateException ElementId)
-  locateDisambiguate = locateHttp disambiguateOpts
+    locateDisambiguate = U.locateHttp disambiguateOpts
 
-  isAmbiguous :: L.LocateException -> Maybe Text
-  isAmbiguous (L.AmbiguousLocator {}) = Nothing
-  isAmbiguous other = Just $ "expected AmbiguousLocator but got: " <> txt other
-
-_pattern :: Maybe Text
-_pattern = Just "ExtLocateAlways finds textbox with aria-label"
--- _pattern = Nothing
+    isAmbiguous :: L.LocateException -> Maybe Text
+    isAmbiguous (L.AmbiguousLocator {}) = Nothing
+    isAmbiguous other = Just $ "expected AmbiguousLocator but got: " <> txt other
 -- (textbox "Nickname") "auto-id" "edt-nickname"
 _eval :: Maybe Text -> TestTree -> IO ()
-_eval mPattern = withArgs (maybe [] (\pat -> ["-p", (unpack pat)]) mPattern) . defaultMain
+_eval = U.testPattern
+
+_pattern :: Maybe Text
+-- _pattern = Just "ExtLocateAlways finds textbox with aria-label"
+_pattern = Nothing
 
 --- >>> _eval _pattern tests
--- *** Exception: ExitFailure 1
+-- *** Exception: ExitSuccess
 
 

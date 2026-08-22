@@ -209,7 +209,7 @@ elmId :: Text -> Locator
 elmId = ID
 
 deriveMatch :: Text -> MatchType
-deriveMatch = bool Partial Wildcard . ("*" `isInfixOf`)
+deriveMatch = bool Full Wildcard . ("*" `isInfixOf`)
 
 mkDefaults :: (MatchType -> CaseSensitivity -> Text -> Locator) -> Text -> Locator
 mkDefaults constructor val = constructor (deriveMatch val) CaseInsensitive val
@@ -236,7 +236,7 @@ attribute :: Text -> Text -> Locator
 attribute nm = mkDefaults (attribute' nm)
 
 attribute' :: Text -> MatchType -> CaseSensitivity -> Text -> Locator
-attribute' name matchType caseSensitivity val = Attribute {name, value = val, matchType, caseSensitivity}
+attribute' name matchType caseSensitivity value = Attribute {name, value, matchType, caseSensitivity}
 
 attributeExact :: Text -> Text -> Locator
 attributeExact nm = mkExact (attribute' nm)

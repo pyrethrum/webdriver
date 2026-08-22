@@ -1,6 +1,7 @@
 module Common.Utils
   ( -- * LocateActions
-    actions,
+    httpActions,
+    httpTraceActions,
     locateHttp,
     locateAllHttp,
     locateFromElementHttp,
@@ -54,17 +55,21 @@ module Common.Utils
     -- * Config
     autoId,
     defAllOpts,
-    defOpts
+    defOpts,
+
+    testPattern
   )
 where
 
 import Data.Aeson (Value (String))
 import Data.Function ((&))
 import Data.Text (Text, unpack)
+import Data.Text.IO qualified as T  
+
 import Data.Text qualified as T
 import Effectful
 import Effectful.Exception (catch)
-import Test.Tasty (TestTree, withResource)
+import Test.Tasty (TestTree, withResource, defaultMain)
 import Test.Tasty.HUnit (assertFailure, assertEqual)
 import UnliftIO (throwIO)
 import Utils (txt)
@@ -84,11 +89,16 @@ import WebDriverPreCore.Extended.Locators (Locator, attribute')
 import WebDriverPreCore.Extended.Locators.Internal (CaseSensitivity (..), MatchType (..))
 import Data.List (singleton)
 import Data.Kind (Type)
+import System.Environment (withArgs)
+
+
+testPattern :: Maybe Text -> TestTree -> IO ()
+testPattern mPattern = withArgs (maybe [] (\pat -> ["-p", (unpack pat)]) mPattern) . defaultMain
 
 -- ################ Base Eff Actions ################
 
-actions :: forall es. (IOE :> es, WebDriverHttp :> es) => Eff es (L.LocateActions (Eff es))
-actions =
+httpActions :: forall es. (IOE :> es, WebDriverHttp :> es) => Eff es (L.LocateActions (Eff es))
+httpActions =
   pure $
     L.MkLocateActions
       { throw = throwIO,
@@ -106,6 +116,22 @@ actions =
         getElementText
       }
 
+httpTraceActions :: forall es. (IOE :> es, WebDriverHttp :> es) => Eff es (L.LocateActions (Eff es))
+httpTraceActions =
+  pure $
+    L.MkLocateActions
+      { throw = throwIO,
+        catch,
+        trace = \traceEntry -> liftIO $ T.putStrLn $ "WDTrace: " <> txt traceEntry,
+        findElement,
+        findElementFromElement,
+        findElements,
+        findElementsFromElement,
+        executeScript,
+        getElementAttribute,
+        getElementText
+      }
+
 beforeAll_ :: forall a. IO a -> TestTree -> TestTree
 beforeAll_ action tree = withResource (action >> pure ()) (\_ -> pure ()) (\_ -> tree)
 
@@ -114,16 +140,17 @@ beforeAll :: forall a. IO a -> (IO a -> TestTree) -> TestTree
 beforeAll action mkTree = withResource action (\_ -> pure ()) mkTree
 
 locateHttp :: (IOE :> es, WebDriverHttp :> es) => L.HttpLocateOpts -> Locator -> Eff es (Either L.LocateException ElementId)
-locateHttp opts loc = actions >>= \a -> L.locateHttp a opts loc
+locateHttp opts loc = httpActions >>= \a -> L.locateHttp a opts loc
 
 locateAllHttp :: (IOE :> es, WebDriverHttp :> es) => L.HttpLocateOpts -> Locator -> Eff es (Either L.LocateException [ElementId])
-locateAllHttp opts loc = actions >>= \a -> L.locateAllHttp a opts loc
+locateAllHttp opts loc = httpTraceActions >>= \a -> L.locateAllHttp a opts loc
+-- locateAllHttp opts loc = httpActions >>= \a -> L.locateAllHttp a opts loc
 
 locateFromElementHttp :: (IOE :> es, WebDriverHttp :> es) => L.HttpLocateOpts -> ElementId -> Locator -> Eff es (Either L.LocateException ElementId)
-locateFromElementHttp opts elmId' loc = actions >>= \a -> L.locateFromElementHttp a opts elmId' loc
+locateFromElementHttp opts elmId' loc = httpActions >>= \a -> L.locateFromElementHttp a opts elmId' loc
 
 locateAllFromElementHttp :: (IOE :> es, WebDriverHttp :> es) => L.HttpLocateOpts -> ElementId -> Locator -> Eff es (Either L.LocateException [ElementId])
-locateAllFromElementHttp opts elmId' loc = actions >>= \a -> L.locateAllFromElementHttp a opts elmId' loc
+locateAllFromElementHttp opts elmId' loc = httpActions >>= \a -> L.locateAllFromElementHttp a opts elmId' loc
 
 -- ################ Element Inspection ################
 

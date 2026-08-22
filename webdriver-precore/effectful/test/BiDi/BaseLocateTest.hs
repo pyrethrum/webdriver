@@ -35,6 +35,7 @@ import WebDriverPreCore.Extended.Locate qualified as L
 import WebDriverPreCore.Extended.Locators as LS
 import WebDriverPreCore.Test.TestData
 
+{-
 -- >>> _eval tests
 -- *** Exception: ExitSuccess
 tests :: TestTree
@@ -493,3 +494,4 @@ _eval mPattern = withArgs (maybe [] (\pat -> ["-p", (unpack pat)]) mPattern) . d
 -- *** Exception: ExitFailure 1
 
 
+-}

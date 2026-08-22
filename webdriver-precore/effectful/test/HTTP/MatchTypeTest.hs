@@ -1,27 +1,23 @@
 module HTTP.MatchTypeTest where
 
 import Common.Runner (testUrl)
-import Common.Utils
-  ( chkCount,
-    chkElms,
-    chkElmsWithAutoId,
-    chkSingleton,
-    defAllOpts,
-    locateAllHttp,
-  )
+import Common.Utils qualified as U
+
 import Data.Text (Text, unpack)
 import Effectful
 import HTTP.Runner (BaseHTTPEffs, WDSession, closeWDSession, getWDSession, runHttp, runHttpTest)
 import Test.Tasty (TestTree, defaultMain, inOrderTestGroup, testGroup, withResource)
 import Utils (txt)
 import WebDriver.Effectful
-import WebDriver.Effectful.HTTP.Base.Actions (navigateTo)
+import WebDriver.Effectful.HTTP.Base.Actions (navigateTo, getElementAttribute, getElementProperty)
 import WebDriverPreCore.Extended.HTTP.Base.Protocol (ElementId, URL)
 import WebDriverPreCore.Extended.Locate qualified as L
 import WebDriverPreCore.Extended.Locators
 import WebDriverPreCore.Test.TestData (fileUrl)
 import Prelude
 import System.Environment (withArgs)
+import WebDriver.Effectful.Logger
+import Common.Utils (DriverActions(..), chkCount, chkSingleton)
 
 
 tests :: TestTree
@@ -181,17 +177,31 @@ tests =
               ]
         ]
       where
-        test :: Text -> BaseHTTPEffs () -> TestTree
-        test = runHttpTest ses
+        testRunner = \name act -> runHttpTest ses name act
+        getProperty = getElementProperty
+        getAttribute = getElementAttribute
+        locateFn = U.locateHttp U.defOpts
+        locateAllFn = U.locateAllHttp U.defAllOpts
+        
+        da :: DriverActions (Eff '[WebDriverHttp, Logger, Pause, IOE])
+        da = MkDriverActions { 
+            testRunner,
+            getProperty,
+            getAttribute,
+            locateFn,
+            locateAllFn
+        }
 
-        locateAll :: forall es. (IOE :> es, WebDriverHttp :> es) => Locator -> Eff es (Either L.LocateException [ElementId])
-        locateAll = locateAllHttp defAllOpts
+        test = runHttpTest ses
+        chkElms = U.chkElms da
+
+        locateAll = U.locateAllHttp U.defAllOpts
 
         chkAutoId :: Text -> Locator -> Text -> TestTree
         chkAutoId testName loc expctd =
           test testName $ do
             locRslt <- locateAll loc
-            chkElmsWithAutoId (txt loc) expctd locRslt
+            U.chkElmsWithAutoId da (txt loc) expctd locRslt
 
 matchTypeUrl :: IO URL
 matchTypeUrl = fileUrl "locator-matchtype.html"
@@ -203,7 +213,7 @@ navToUrl getSes urlAction = do
   pure ses
 
 _eval :: Maybe Text -> TestTree -> IO ()
-_eval mPattern = withArgs (maybe [] (\pat -> ["-p", (unpack pat)]) mPattern) . defaultMain
+_eval = U.testPattern
 
 _pattern :: Maybe Text
 -- _pattern = Just "Contains Match - Partial MatchType"
