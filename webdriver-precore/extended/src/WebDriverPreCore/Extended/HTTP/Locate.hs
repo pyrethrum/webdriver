@@ -36,10 +36,8 @@ import WebDriverPreCore.Extended.Locators.Internal (Locator, RoleLocator (..), C
 import WebDriverPreCore.Extended.Locators.Internal qualified as LI
 import WebDriverPreCore.HTTP.Protocol as HTTPP (ElementId, Script (..), Selector (..))
 import Prelude as P hiding (log)
-import Utils (txt, db)
+import Utils (txt)
 import Data.Bifunctor (Bifunctor(..))
-import Data.Function ((&))
-import Data.Functor ((<&>))
 
 -- | Whether to find the unique element (error if multiple match) or just the first.
 data SingletonCardinality = Unique | First deriving (Show, Eq)
@@ -286,8 +284,7 @@ locateElmsUnchecked actions leafCardinality rolesSecondPass loc =
         initial <- locateAll rolesSecondPass l
         foldM step initial ls
       LI.AnyC {elms = locs} ->
-       db "######### JOINED #########" . join <$>
-          traverse (\l -> (db ("#########---  LOCATE PART PARAM ---#########" <> txt l <> "\n#########--- LOCATE PART RESULT --- #########")) <$> locateAll rolesSecondPass l) (db "######### ANY LOCS #########"  $ toList locs)
+       join <$> traverse (\l -> locateAll rolesSecondPass l) (toList locs)
   where
     locateAll = locateElmsUnchecked actions FindAll
 
@@ -371,7 +368,7 @@ httpLocateAll prms loc = do
         ExtLocateNever -> NoRoleJSSecondPass
         ExtLocateSingletonMiss -> NoRoleJSSecondPass
         ExtLocateAlways -> DoRoleJSSecondPass
-  elms <- locateElmsUnchecked prms FindAll secondPassOnInitial loc <&> db "\n!!!!!!!!!! locateElmsUnchecked !!!!!!!!!!!"
+  elms <- locateElmsUnchecked prms FindAll secondPassOnInitial loc
   if prms.jsRecheckDisplayed == DisplayedCheckAlways
     then jsFilterDisplayed prms elms 
     else pure elms

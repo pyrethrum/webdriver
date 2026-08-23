@@ -19,7 +19,7 @@ import Test.Tasty (TestTree, inOrderTestGroup, testGroup, withResource)
 import Test.Tasty.HUnit (assertEqual, testCase)
 import Test.Tasty.Falsify (ExpectFailure (DontExpectFailure), TestOptions (..), info, testFailed, testPropertyWith)
 import System.IO.Unsafe (unsafePerformIO)
-import Utils (txt, db)
+import Utils (txt)
 import WebDriver.Effectful (WebDriverHttp)
 import WebDriver.Effectful.HTTP.Base.Actions (executeScript, getElementAttribute, navigateTo)
 import WebDriverPreCore.Extended.HTTP.Base.Protocol (ElementId, Script (..), URL (..))
@@ -855,8 +855,8 @@ evaluateCase getSession locCase  =
               <> "</body></html>"
         evaluateExpectation :: forall es. (IOE :> es, WebDriverHttp :> es) => Eff es ()
         evaluateExpectation = do
-          locateRslt <- locateAll $ db "%%%%%%%%%%%%% THE LOCATOR %%%%%%%%%%%%%" locator
-          actual <- (db "%%%%%%%%%%%%% THE LOCATE RESULT %%%%%%%%%%%%%" locateRslt) & either
+          locateRslt <- locateAll locator
+          actual <- locateRslt & either
             (\err -> liftIO . throwIO . userError $
               "locateAll failed in generated locate property"
                 <> "\nSelection: " <> unpack (txt abstractLocator)
@@ -897,8 +897,8 @@ mkLocatorTestFailure node html selection generatedLocator expectedMatches actual
 -- locators mixture of css and xpath
 
 _pattern :: Maybe Text
-_pattern = Just "OR with contains under"
--- _pattern = Nothing
+-- _pattern = Just "OR with contains under"
+_pattern = Nothing
 
 _eval :: Maybe Text -> TestTree -> IO ()
 _eval = testPattern

@@ -143,8 +143,8 @@ locateHttp :: (IOE :> es, WebDriverHttp :> es) => L.HttpLocateOpts -> Locator ->
 locateHttp opts loc = httpActions >>= \a -> L.locateHttp a opts loc
 
 locateAllHttp :: (IOE :> es, WebDriverHttp :> es) => L.HttpLocateOpts -> Locator -> Eff es (Either L.LocateException [ElementId])
-locateAllHttp opts loc = httpTraceActions >>= \a -> L.locateAllHttp a opts loc
--- locateAllHttp opts loc = httpActions >>= \a -> L.locateAllHttp a opts loc
+-- locateAllHttp opts loc = httpTraceActions >>= \a -> L.locateAllHttp a opts loc
+locateAllHttp opts loc = httpActions >>= \a -> L.locateAllHttp a opts loc
 
 locateFromElementHttp :: (IOE :> es, WebDriverHttp :> es) => L.HttpLocateOpts -> ElementId -> Locator -> Eff es (Either L.LocateException ElementId)
 locateFromElementHttp opts elmId' loc = httpActions >>= \a -> L.locateFromElementHttp a opts elmId' loc
