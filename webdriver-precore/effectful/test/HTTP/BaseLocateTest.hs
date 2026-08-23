@@ -128,71 +128,71 @@ tests =
           testGroup "Visibility Check Tests"
               [ testGroup "locateAll - DisplayedCheckAlways filters hidden and DisplayedCheckNever does not"
                   [ testGroup "Rule 1 - display none on element itself"
-                      [ test "edt-notes-hidden has display none via own CSS class" $ do
-                          always <- locateAll      $ autoId "edt-notes-hidden"
-                          never  <- locateAllNever $ autoId "edt-notes-hidden"
-                          chkElms "DisplayedCheckAlways must filter display:none element"    chkEmpty    always
-                          chkElms "DisplayedCheckNever must find display:none element"       chkSingleton never
+                      [ chkElmCount "edt-notes-hidden has display none via own CSS class - DisplayedCheckAlways filters" 
+                          (autoId "edt-notes-hidden") 0
+                      , chkElmCount' da {locateAllFn = locateAllNeverCheckDisplayed}
+                          "edt-notes-hidden has display none via own CSS class - DisplayedCheckNever finds" 
+                          (autoId "edt-notes-hidden") 1
                       ]
                   , testGroup "Rule 2 - visibility hidden or collapse - inherited"
-                      [ test "edt-vis-hidden is inside inline visibility hidden parent" $ do
-                          always <- locateAll      $ autoId "edt-vis-hidden"
-                          never  <- locateAllNever $ autoId "edt-vis-hidden"
-                          chkElms "DisplayedCheckAlways must filter visibility:hidden element" chkEmpty    always
-                          chkElms "DisplayedCheckNever must find visibility:hidden element"    chkSingleton never
-                      , test "edt-css-vis-hidden is inside CSS class visibility hidden parent" $ do
-                          always <- locateAll      $ autoId "edt-css-vis-hidden"
-                          never  <- locateAllNever $ autoId "edt-css-vis-hidden"
-                          chkElms "DisplayedCheckAlways must filter CSS visibility:hidden element" chkEmpty    always
-                          chkElms "DisplayedCheckNever must find CSS visibility:hidden element"    chkSingleton never
+                      [ chkElmCount "edt-vis-hidden inside inline visibility hidden parent - DisplayedCheckAlways filters" 
+                          (autoId "edt-vis-hidden") 0
+                      , chkElmCount' da {locateAllFn = locateAllNeverCheckDisplayed}
+                          "edt-vis-hidden inside inline visibility hidden parent - DisplayedCheckNever finds" 
+                          (autoId "edt-vis-hidden") 1
+                      , chkElmCount "edt-css-vis-hidden inside CSS class visibility hidden parent - DisplayedCheckAlways filters" 
+                          (autoId "edt-css-vis-hidden") 0
+                      , chkElmCount' da {locateAllFn = locateAllNeverCheckDisplayed}
+                          "edt-css-vis-hidden inside CSS class visibility hidden parent - DisplayedCheckNever finds" 
+                          (autoId "edt-css-vis-hidden") 1
                       ]
                   , testGroup "Rule 3 - parseFloat opacity equals 0 on element itself"
-                      [ test "fg-opacity-zero div has opacity 0 applied directly" $ do
-                          always <- locateAll      $ autoId "fg-opacity-zero"
-                          never  <- locateAllNever $ autoId "fg-opacity-zero"
-                          chkElms "DisplayedCheckAlways must filter opacity:0 element" chkEmpty    always
-                          chkElms "DisplayedCheckNever must find opacity:0 element"    chkSingleton never
+                      [ chkElmCount "fg-opacity-zero div has opacity 0 applied directly - DisplayedCheckAlways filters" 
+                          (autoId "fg-opacity-zero") 0
+                      , chkElmCount' da {locateAllFn = locateAllNeverCheckDisplayed}
+                          "fg-opacity-zero div has opacity 0 applied directly - DisplayedCheckNever finds" 
+                          (autoId "fg-opacity-zero") 1
                       ]
                   , testGroup "Rule 4 - INPUT with type hidden"
-                      [ test "hdn-session-token is input type hidden" $ do
-                          always <- locateAll      $ autoId "hdn-session-token"
-                          never  <- locateAllNever $ autoId "hdn-session-token"
-                          chkElms "DisplayedCheckAlways must filter input type=hidden" chkEmpty    always
-                          chkElms "DisplayedCheckNever must find input type=hidden"    chkSingleton never
+                      [ chkElmCount "hdn-session-token is input type hidden - DisplayedCheckAlways filters" 
+                          (autoId "hdn-session-token") 0
+                      , chkElmCount' da {locateAllFn = locateAllNeverCheckDisplayed}
+                          "hdn-session-token is input type hidden - DisplayedCheckNever finds" 
+                          (autoId "hdn-session-token") 1
                       ]
                   , testGroup "Rule 5 - offsetWidth or offsetHeight equals 0 - parent has display none"
-                      [ test "edt-display-none is inside inline display none parent" $ do
-                          always <- locateAll      $ autoId "edt-display-none"
-                          never  <- locateAllNever $ autoId "edt-display-none"
-                          chkElms "DisplayedCheckAlways must filter zero-size element (inline display:none parent)" chkEmpty    always
-                          chkElms "DisplayedCheckNever must find zero-size element (inline display:none parent)"    chkSingleton never
-                      , test "edt-css-none is inside CSS class display none parent" $ do
-                          always <- locateAll      $ autoId "edt-css-none"
-                          never  <- locateAllNever $ autoId "edt-css-none"
-                          chkElms "DisplayedCheckAlways must filter zero-size element (CSS display:none parent)" chkEmpty    always
-                          chkElms "DisplayedCheckNever must find zero-size element (CSS display:none parent)"    chkSingleton never
-                      , test "edt-html-hidden is inside HTML hidden attribute parent" $ do
-                          always <- locateAll      $ autoId "edt-html-hidden"
-                          never  <- locateAllNever $ autoId "edt-html-hidden"
-                          chkElms "DisplayedCheckAlways must filter zero-size element (HTML hidden parent)" chkEmpty    always
-                          chkElms "DisplayedCheckNever must find zero-size element (HTML hidden parent)"    chkSingleton never
+                      [ chkElmCount "edt-display-none inside inline display none parent - DisplayedCheckAlways filters" 
+                          (autoId "edt-display-none") 0
+                      , chkElmCount' da {locateAllFn = locateAllNeverCheckDisplayed}
+                          "edt-display-none inside inline display none parent - DisplayedCheckNever finds" 
+                          (autoId "edt-display-none") 1
+                      , chkElmCount "edt-css-none inside CSS class display none parent - DisplayedCheckAlways filters" 
+                          (autoId "edt-css-none") 0
+                      , chkElmCount' da {locateAllFn = locateAllNeverCheckDisplayed}
+                          "edt-css-none inside CSS class display none parent - DisplayedCheckNever finds" 
+                          (autoId "edt-css-none") 1
+                      , chkElmCount "edt-html-hidden inside HTML hidden attribute parent - DisplayedCheckAlways filters" 
+                          (autoId "edt-html-hidden") 0
+                      , chkElmCount' da {locateAllFn = locateAllNeverCheckDisplayed}
+                          "edt-html-hidden inside HTML hidden attribute parent - DisplayedCheckNever finds" 
+                          (autoId "edt-html-hidden") 1
                       ]
                   , testGroup "NOT filtered by displayedJS"
-                      [ test "edt-aria-hidden - aria-hidden does not affect display opacity or dimensions" $ do
-                          always <- locateAll      $ autoId "edt-aria-hidden"
-                          never  <- locateAllNever $ autoId "edt-aria-hidden"
-                          chkElms "DisplayedCheckAlways must NOT filter aria-hidden element" chkSingleton always
-                          chkElms "DisplayedCheckNever must find aria-hidden element"        chkSingleton never
-                      , test "edt-offscreen - positioned off-viewport but has non-zero dimensions" $ do
-                          always <- locateAll      $ autoId "edt-offscreen"
-                          never  <- locateAllNever $ autoId "edt-offscreen"
-                          chkElms "DisplayedCheckAlways must NOT filter off-screen element" chkSingleton always
-                          chkElms "DisplayedCheckNever must find off-screen element"        chkSingleton never
-                      , test "edt-opacity-zero - input child of opacity 0 container - opacity not inherited" $ do
-                          always <- locateAll      $ autoId "edt-opacity-zero"
-                          never  <- locateAllNever $ autoId "edt-opacity-zero"
-                          chkElms "DisplayedCheckAlways must NOT filter opacity:0 child element" chkSingleton always
-                          chkElms "DisplayedCheckNever must find opacity:0 child element"        chkSingleton never
+                      [ chkElmCount "edt-aria-hidden - aria-hidden does not affect display - DisplayedCheckAlways finds" 
+                          (autoId "edt-aria-hidden") 1
+                      , chkElmCount' da {locateAllFn = locateAllNeverCheckDisplayed}
+                          "edt-aria-hidden - aria-hidden does not affect display - DisplayedCheckNever finds" 
+                          (autoId "edt-aria-hidden") 1
+                      , chkElmCount "edt-offscreen positioned off-viewport but has non-zero dimensions - DisplayedCheckAlways finds" 
+                          (autoId "edt-offscreen") 1
+                      , chkElmCount' da {locateAllFn = locateAllNeverCheckDisplayed}
+                          "edt-offscreen positioned off-viewport but has non-zero dimensions - DisplayedCheckNever finds" 
+                          (autoId "edt-offscreen") 1
+                      , chkElmCount "edt-opacity-zero input child of opacity 0 container - opacity not inherited - DisplayedCheckAlways finds" 
+                          (autoId "edt-opacity-zero") 1
+                      , chkElmCount' da {locateAllFn = locateAllNeverCheckDisplayed}
+                          "edt-opacity-zero input child of opacity 0 container - opacity not inherited - DisplayedCheckNever finds" 
+                          (autoId "edt-opacity-zero") 1
                       ]
                   ]
               , testGroup "locate singleton - DisplayedCheckDisambiguateUnique resolves hidden-visible ambiguity"
@@ -211,14 +211,12 @@ tests =
                       disambiguate <- locateAllDisambiguate $ elmClass "notes-area"
                       never        <- locateAllNever $ elmClass "notes-area"
                       chkEq "DisambiguateUnique locateAll result must equal Never" disambiguate never
-                  , test "DisplayedCheckAlways filters hidden in locateAll - Never returns both" $ do
-                      always <- locateAll      $ elmClass "notes-area"
-                      never  <- locateAllNever $ elmClass "notes-area"
-                      chkElms (txt (elmClass "notes-area")) chkSingleton always
-                      chkElms (txt (elmClass "notes-area"))
-                        (\elms -> if length elms == 2 then Nothing
-                                  else Just $ "expected 2 elements (visible + hidden) but got " <> txt (length elms))
-                        never
+                  , testGroup "DisplayedCheckAlways filters hidden in locateAll - Never returns both"
+                      [ chkElmCount "notes-area with DisplayedCheckAlways finds visible only"  (elmClass "notes-area") 1
+                      , chkElmCount' da {locateAllFn = locateAllNeverCheckDisplayed}
+                          "notes-area with DisplayedCheckNever finds both visible and hidden" 
+                          (elmClass "notes-area") 2
+                      ]
                   ]
               ]
 
