@@ -34,7 +34,7 @@ import Data.Text (Text, intercalate, pack, splitOn, toLower)
 import Data.Text qualified as T
 import Data.Word (Word8)
 import GHC.Generics (Generic)
-import Utils (txt)
+import Utils (txt, db)
 import WebDriverPreCore.Extended.BiDi.Base.Protocol (BrowsingContext)
 import Prelude
 import Control.Monad ((>=>))
@@ -48,7 +48,7 @@ transformHttp  = transform' toIntermediate derivedAndTagsToXPath
 transformBiDi :: (Text -> Locator) -> Locator -> Either InvalidLocator (CompoundLocator BiDiLoc)
 transformBiDi = transform' toIntermediateBiDi derivedAndTagsToXPathBiDi
 
-transform' :: forall a b. Eq a => 
+transform' :: forall a b. (Show a, Eq a, Show b) =>
   ((Text -> Locator) -> Locator -> Either InvalidLocator (CompoundLocatorI a))
   -> (CompoundLocatorI a -> CompoundLocatorI b)
   -> (Text -> Locator)
@@ -57,7 +57,12 @@ transform' :: forall a b. Eq a =>
 transform' locToIntermediate eliminateDrived defLoc loc = do
   locI <- locToIntermediate defLoc loc
   simplified <- simplify loc locI
-  Right . intermediateToFinal $ eliminateDrived simplified
+  Right 
+    . db "!!!!!!!!! FINAL !!!!!!!" 
+    . intermediateToFinal 
+    . db "!!!!!!!!! eliminateDrived !!!!!!!" 
+    $ eliminateDrived simplified 
+    & db "!!!!!!!!! SiMplIfIED !!!!!!!"
 
 -- ###################################### Locator types (and subtypes) #####################################
 
@@ -447,13 +452,13 @@ intermediateToFinal = \case
 
 -- | Shared simplification pipeline: flatten, merge, distribute tags, unwrap.
 --   Fixed-point loop — repeats until no more simplifications apply.
-simplify :: Eq a => Locator -> CompoundLocatorI a -> Either InvalidLocator (CompoundLocatorI a)
+simplify :: (Show a, Eq a )=> Locator -> CompoundLocatorI a -> Either InvalidLocator (CompoundLocatorI a)
 simplify srcLoc current = do
   merged <- mergeContiguous srcLoc $ unnestAnysAlls current
-  tagged <- distributeTagsInAll srcLoc merged
+  tagged <- distributeTagsInAll srcLoc merged & db "!!!!!!!!! merged !!!!!!!"
   let unwrapped = unwrapSingletonCombinators tagged
   if unwrapped == current
-    then pure current
+    then pure current  & db "!!!!!!!!! final simplify !!!!!!!"
     else simplify srcLoc unwrapped
 
 -----------------------------------------------------------------------------
@@ -476,8 +481,8 @@ unnestAnysAlls = \case
 -----------------------------------------------------------------------------
 -- 2b. Combine contiguous XPathIDs
 -----------------------------------------------------------------------------
-mergeContiguous :: Locator -> CompoundLocatorI a -> Either InvalidLocator (CompoundLocatorI a)
-mergeContiguous srcLoc li = mergeAnys <$> mergeAlls srcLoc li
+mergeContiguous :: Show a => Locator -> CompoundLocatorI a -> Either InvalidLocator (CompoundLocatorI a)
+mergeContiguous srcLoc li = db "!!!!!!!!! mergeContiguous !!!!!!!" . mergeAnys <$> mergeAlls srcLoc li
 
 bracket :: Text -> Text
 bracket t = "(" <> t <> ")" 

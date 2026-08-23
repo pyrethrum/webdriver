@@ -1,0 +1,509 @@
+2026-08-23T07:25:22.230211Z | Info | Typechecking reverse dependencies for NormalizedFilePath "/home/john-walker/repos/webdriver/webdriver-precore/effectful/test/HTTP/LocateCombinatorTest.hs": [ NormalizedFilePath "/home/john-walker/repos/webdriver/webdriver-precore/effectful/test/Test.hs" ]
+Using debug local config
+Locate Combinator Tests
+  Combinator tests
+    Combinator singleton tests
+      OR with contains under: $$$$$$$$$ THE URL $$$$$$$$$:
+"data:text/html;base64,PCFkb2N0eXBlIGh0bWw+PGh0bWw+PGhlYWQ+PG1ldGEgY2hhcnNldD0idXRmLTgiPjwvaGVhZD48Ym9keT48ZGl2ICBhdXRvLWlkPSIxIiAgY2xhc3M9IkIiPjxzcGFuICBhdXRvLWlkPSIxLTEiICBjbGFzcz0iQSI+PC9zcGFuPjwvZGl2PjwvYm9keT48L2h0bWw+"
+$$$$$$$$$$$$$$$$ PAGE SOURCE $$$$$$$$$$$$$$$$
+<html><head></head><body></body></html>
+%%%%%%%%%%%%% THE LOCATOR %%%%%%%%%%%%%:
+Any
+  { elms =
+      Class
+        { value = "A"
+        , matchType = Full
+        , caseSensitivity = CaseInsensitive
+        } :|
+        [ Contains
+            { container =
+                Class
+                  { value = "A"
+                  , matchType = Full
+                  , caseSensitivity = CaseInsensitive
+                  }
+            , contained =
+                Any
+                  { elms =
+                      Class
+                        { value = "A"
+                        , matchType = Full
+                        , caseSensitivity = CaseInsensitive
+                        } :|
+                        [ Any
+                            { elms =
+                                Class
+                                  { value = "A"
+                                  , matchType = Full
+                                  , caseSensitivity = CaseInsensitive
+                                  } :|
+                                  [ Class
+                                      { value = "B"
+                                      , matchType = Full
+                                      , caseSensitivity = CaseInsensitive
+                                      }
+                                  ]
+                            }
+                        ]
+                  }
+            }
+        ]
+  }
+!!!!!!!!! mergeContiguous !!!!!!!:
+AnyI
+  { elms =
+      XPathDerivedLeaf
+        { tagM = Nothing
+        , body =
+            "contains(concat(' ', normalize-space(translate(@class, 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz')), ' '), ' a ')"
+        } :|
+        [ ContainsI
+            { container =
+                XPathDerivedLeaf
+                  { tagM = Nothing
+                  , body =
+                      "contains(concat(' ', normalize-space(translate(@class, 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz')), ' '), ' a ')"
+                  }
+            , contained =
+                AnyI
+                  { elms =
+                      XPathDerivedLeaf
+                        { tagM = Nothing
+                        , body =
+                            "((contains(concat(' ', normalize-space(translate(@class, 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz')), ' '), ' a ')) or (contains(concat(' ', normalize-space(translate(@class, 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz')), ' '), ' a '))) or (contains(concat(' ', normalize-space(translate(@class, 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz')), ' '), ' b '))"
+                        } :|
+                        []
+                  }
+            }
+        ]
+  }
+!!!!!!!!! merged !!!!!!!:
+Right
+  AnyI
+    { elms =
+        XPathDerivedLeaf
+          { tagM = Nothing
+          , body =
+              "contains(concat(' ', normalize-space(translate(@class, 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz')), ' '), ' a ')"
+          } :|
+          [ ContainsI
+              { container =
+                  XPathDerivedLeaf
+                    { tagM = Nothing
+                    , body =
+                        "contains(concat(' ', normalize-space(translate(@class, 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz')), ' '), ' a ')"
+                    }
+              , contained =
+                  AnyI
+                    { elms =
+                        XPathDerivedLeaf
+                          { tagM = Nothing
+                          , body =
+                              "((contains(concat(' ', normalize-space(translate(@class, 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz')), ' '), ' a ')) or (contains(concat(' ', normalize-space(translate(@class, 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz')), ' '), ' a '))) or (contains(concat(' ', normalize-space(translate(@class, 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz')), ' '), ' b '))"
+                          } :|
+                          []
+                    }
+              }
+          ]
+    }
+!!!!!!!!! mergeContiguous !!!!!!!:
+AnyI
+  { elms =
+      XPathDerivedLeaf
+        { tagM = Nothing
+        , body =
+            "contains(concat(' ', normalize-space(translate(@class, 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz')), ' '), ' a ')"
+        } :|
+        [ ContainsI
+            { container =
+                XPathDerivedLeaf
+                  { tagM = Nothing
+                  , body =
+                      "contains(concat(' ', normalize-space(translate(@class, 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz')), ' '), ' a ')"
+                  }
+            , contained =
+                XPathDerivedLeaf
+                  { tagM = Nothing
+                  , body =
+                      "((contains(concat(' ', normalize-space(translate(@class, 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz')), ' '), ' a ')) or (contains(concat(' ', normalize-space(translate(@class, 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz')), ' '), ' a '))) or (contains(concat(' ', normalize-space(translate(@class, 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz')), ' '), ' b '))"
+                  }
+            }
+        ]
+  }
+!!!!!!!!! merged !!!!!!!:
+Right
+  AnyI
+    { elms =
+        XPathDerivedLeaf
+          { tagM = Nothing
+          , body =
+              "contains(concat(' ', normalize-space(translate(@class, 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz')), ' '), ' a ')"
+          } :|
+          [ ContainsI
+              { container =
+                  XPathDerivedLeaf
+                    { tagM = Nothing
+                    , body =
+                        "contains(concat(' ', normalize-space(translate(@class, 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz')), ' '), ' a ')"
+                    }
+              , contained =
+                  XPathDerivedLeaf
+                    { tagM = Nothing
+                    , body =
+                        "((contains(concat(' ', normalize-space(translate(@class, 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz')), ' '), ' a ')) or (contains(concat(' ', normalize-space(translate(@class, 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz')), ' '), ' a '))) or (contains(concat(' ', normalize-space(translate(@class, 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz')), ' '), ' b '))"
+                    }
+              }
+          ]
+    }
+!!!!!!!!! final simplify !!!!!!!:
+Right
+  AnyI
+    { elms =
+        XPathDerivedLeaf
+          { tagM = Nothing
+          , body =
+              "contains(concat(' ', normalize-space(translate(@class, 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz')), ' '), ' a ')"
+          } :|
+          [ ContainsI
+              { container =
+                  XPathDerivedLeaf
+                    { tagM = Nothing
+                    , body =
+                        "contains(concat(' ', normalize-space(translate(@class, 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz')), ' '), ' a ')"
+                    }
+              , contained =
+                  XPathDerivedLeaf
+                    { tagM = Nothing
+                    , body =
+                        "((contains(concat(' ', normalize-space(translate(@class, 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz')), ' '), ' a ')) or (contains(concat(' ', normalize-space(translate(@class, 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz')), ' '), ' a '))) or (contains(concat(' ', normalize-space(translate(@class, 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz')), ' '), ' b '))"
+                    }
+              }
+          ]
+    }
+!!!!!!!!! SiMplIfIED !!!!!!!:
+AnyI
+  { elms =
+      LeafI
+        { getLeaf =
+            XPathHttp
+              { value =
+                  ".//*[contains(concat(' ', normalize-space(translate(@class, 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz')), ' '), ' a ')]"
+              }
+        } :|
+        [ ContainsI
+            { container =
+                LeafI
+                  { getLeaf =
+                      XPathHttp
+                        { value =
+                            ".//*[contains(concat(' ', normalize-space(translate(@class, 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz')), ' '), ' a ')]"
+                        }
+                  }
+            , contained =
+                LeafI
+                  { getLeaf =
+                      XPathHttp
+                        { value =
+                            ".//*[((contains(concat(' ', normalize-space(translate(@class, 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz')), ' '), ' a ')) or (contains(concat(' ', normalize-space(translate(@class, 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz')), ' '), ' a '))) or (contains(concat(' ', normalize-space(translate(@class, 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz')), ' '), ' b '))]"
+                        }
+                  }
+            }
+        ]
+  }
+!!!!!!!!! eliminateDrived !!!!!!!:
+AnyI
+  { elms =
+      LeafI
+        { getLeaf =
+            XPathHttp
+              { value =
+                  ".//*[contains(concat(' ', normalize-space(translate(@class, 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz')), ' '), ' a ')]"
+              }
+        } :|
+        [ ContainsI
+            { container =
+                LeafI
+                  { getLeaf =
+                      XPathHttp
+                        { value =
+                            ".//*[contains(concat(' ', normalize-space(translate(@class, 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz')), ' '), ' a ')]"
+                        }
+                  }
+            , contained =
+                LeafI
+                  { getLeaf =
+                      XPathHttp
+                        { value =
+                            ".//*[((contains(concat(' ', normalize-space(translate(@class, 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz')), ' '), ' a ')) or (contains(concat(' ', normalize-space(translate(@class, 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz')), ' '), ' a '))) or (contains(concat(' ', normalize-space(translate(@class, 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz')), ' '), ' b '))]"
+                        }
+                  }
+            }
+        ]
+  }
+!!!!!!!!! FINAL !!!!!!!:
+AnyC
+  { elms =
+      LeafC
+        { getLeaf =
+            XPathHttp
+              { value =
+                  ".//*[contains(concat(' ', normalize-space(translate(@class, 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz')), ' '), ' a ')]"
+              }
+        } :|
+        [ ContainsC
+            { container =
+                LeafC
+                  { getLeaf =
+                      XPathHttp
+                        { value =
+                            ".//*[contains(concat(' ', normalize-space(translate(@class, 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz')), ' '), ' a ')]"
+                        }
+                  }
+            , contained =
+                LeafC
+                  { getLeaf =
+                      XPathHttp
+                        { value =
+                            ".//*[((contains(concat(' ', normalize-space(translate(@class, 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz')), ' '), ' a ')) or (contains(concat(' ', normalize-space(translate(@class, 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz')), ' '), ' a '))) or (contains(concat(' ', normalize-space(translate(@class, 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz')), ' '), ' b '))]"
+                        }
+                  }
+            }
+        ]
+  }
+WDTrace: Prepared
+  { loc =
+      Any
+        { elms =
+            Class
+              { value = "A"
+              , matchType = Full
+              , caseSensitivity = CaseInsensitive
+              } :|
+              [ Contains
+                  { container =
+                      Class
+                        { value = "A"
+                        , matchType = Full
+                        , caseSensitivity = CaseInsensitive
+                        }
+                  , contained =
+                      Any
+                        { elms =
+                            Class
+                              { value = "A"
+                              , matchType = Full
+                              , caseSensitivity = CaseInsensitive
+                              } :|
+                              [ Any
+                                  { elms =
+                                      Class
+                                        { value = "A"
+                                        , matchType = Full
+                                        , caseSensitivity = CaseInsensitive
+                                        } :|
+                                        [ Class
+                                            { value = "B"
+                                            , matchType = Full
+                                            , caseSensitivity = CaseInsensitive
+                                            }
+                                        ]
+                                  }
+                              ]
+                        }
+                  }
+              ]
+        }
+  , reducedLoc =
+      AnyC
+        { elms =
+            LeafC
+              { getLeaf =
+                  XPathHttp
+                    { value =
+                        ".//*[contains(concat(' ', normalize-space(translate(@class, 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz')), ' '), ' a ')]"
+                    }
+              } :|
+              [ ContainsC
+                  { container =
+                      LeafC
+                        { getLeaf =
+                            XPathHttp
+                              { value =
+                                  ".//*[contains(concat(' ', normalize-space(translate(@class, 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz')), ' '), ' a ')]"
+                              }
+                        }
+                  , contained =
+                      LeafC
+                        { getLeaf =
+                            XPathHttp
+                              { value =
+                                  ".//*[((contains(concat(' ', normalize-space(translate(@class, 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz')), ' '), ' a ')) or (contains(concat(' ', normalize-space(translate(@class, 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz')), ' '), ' a '))) or (contains(concat(' ', normalize-space(translate(@class, 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz')), ' '), ' b '))]"
+                              }
+                        }
+                  }
+              ]
+        }
+  }
+######### ANY LOCS #########:
+[ LeafC
+    { getLeaf =
+        XPathHttp
+          { value =
+              ".//*[contains(concat(' ', normalize-space(translate(@class, 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz')), ' '), ' a ')]"
+          }
+    }
+, ContainsC
+    { container =
+        LeafC
+          { getLeaf =
+              XPathHttp
+                { value =
+                    ".//*[contains(concat(' ', normalize-space(translate(@class, 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz')), ' '), ' a ')]"
+                }
+          }
+    , contained =
+        LeafC
+          { getLeaf =
+              XPathHttp
+                { value =
+                    ".//*[((contains(concat(' ', normalize-space(translate(@class, 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz')), ' '), ' a ')) or (contains(concat(' ', normalize-space(translate(@class, 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz')), ' '), ' a '))) or (contains(concat(' ', normalize-space(translate(@class, 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz')), ' '), ' b '))]"
+                }
+          }
+    }
+]
+!!!!!!!!! FindElements - Selector !!!!!!!:
+XPath
+  ".//*[contains(concat(' ', normalize-space(translate(@class, 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz')), ' '), ' a ')]"
+WDTrace: LeafLocate
+  { selector =
+      XPath
+        ".//*[contains(concat(' ', normalize-space(translate(@class, 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz')), ' '), ' a ')]"
+  , cardinality = FindAll
+  , found = []
+  }
+!!!!!!!!! FindElements - Selector !!!!!!!:
+XPath
+  ".//*[contains(concat(' ', normalize-space(translate(@class, 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz')), ' '), ' a ')]"
+WDTrace: LeafLocate
+  { selector =
+      XPath
+        ".//*[contains(concat(' ', normalize-space(translate(@class, 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz')), ' '), ' a ')]"
+  , cardinality = FindAll
+  , found = []
+  }
+#########---  LOCATE PART PARAM ---#########LeafC
+  { getLeaf =
+      XPathHttp
+        { value =
+            ".//*[contains(concat(' ', normalize-space(translate(@class, 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz')), ' '), ' a ')]"
+        }
+  }
+#########--- LOCATE PART RESULT --- #########:
+[]
+#########---  LOCATE PART PARAM ---#########ContainsC
+  { container =
+      LeafC
+        { getLeaf =
+            XPathHttp
+              { value =
+                  ".//*[contains(concat(' ', normalize-space(translate(@class, 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz')), ' '), ' a ')]"
+              }
+        }
+  , contained =
+      LeafC
+        { getLeaf =
+            XPathHttp
+              { value =
+                  ".//*[((contains(concat(' ', normalize-space(translate(@class, 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz')), ' '), ' a ')) or (contains(concat(' ', normalize-space(translate(@class, 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz')), ' '), ' a '))) or (contains(concat(' ', normalize-space(translate(@class, 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz')), ' '), ' b '))]"
+              }
+        }
+  }
+#########--- LOCATE PART RESULT --- #########:
+[]
+######### JOINED #########:
+[]
+
+!!!!!!!!!! locateElmsUnchecked !!!!!!!!!!!:
+[]
+%%%%%%%%%%%%% THE LOCATE RESULT %%%%%%%%%%%%%:
+Right []
+FAIL
+        Exception: ghc-internal:GHC.Internal.IO.Exception.IOException:
+        
+        user error (Failure generated
+        MkLocatorTestFailure
+          { node =
+              Div
+                { autoId = "1"
+                , classes = [ B ]
+                , children = [ Span { autoId = "1-1" , classes = [ A ] } ]
+                }
+          , html =
+              "<!doctype html><html><head><meta charset=\"utf-8\"></head><body><div  auto-id=\"1\"  class=\"B\"><span  auto-id=\"1-1\"  class=\"A\"></span></div></body></html>"
+          , selection =
+              Or'
+                { locs =
+                    Match { domClass = A } :|
+                      [ Under
+                          { parentLoc = Match { domClass = A }
+                          , descendantLoc =
+                              Or'
+                                { locs =
+                                    Match { domClass = A } :|
+                                      [ Match { domClass = A } , Match { domClass = B } ]
+                                }
+                          }
+                      ]
+                }
+          , generatedLocator =
+              Any
+                { elms =
+                    Class
+                      { value = "A"
+                      , matchType = Full
+                      , caseSensitivity = CaseInsensitive
+                      } :|
+                      [ Contains
+                          { container =
+                              Class
+                                { value = "A"
+                                , matchType = Full
+                                , caseSensitivity = CaseInsensitive
+                                }
+                          , contained =
+                              Any
+                                { elms =
+                                    Class
+                                      { value = "A"
+                                      , matchType = Full
+                                      , caseSensitivity = CaseInsensitive
+                                      } :|
+                                      [ Any
+                                          { elms =
+                                              Class
+                                                { value = "A"
+                                                , matchType = Full
+                                                , caseSensitivity = CaseInsensitive
+                                                } :|
+                                                [ Class
+                                                    { value = "B"
+                                                    , matchType = Full
+                                                    , caseSensitivity = CaseInsensitive
+                                                    }
+                                                ]
+                                          }
+                                      ]
+                                }
+                          }
+                      ]
+                }
+          , expectedMatches = [ "1-1" ]
+          , actualMatches = []
+          , missingFromActual = [ "1-1" ]
+          , extraInActual = []
+          })
+        
+        HasCallStack backtrace:
+          throwIO, called at /home/john-walker/repos/webdriver/webdriver-precore/effectful/test/HTTP/LocateCombinatorTest.hs:877:24 in webdriver-precore-0.3.0.4-inplace-test-effectful:HTTP.LocateCombinatorTest
+
+1 out of 1 tests failed (11.18s)

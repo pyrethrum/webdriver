@@ -286,8 +286,8 @@ locateElmsUnchecked actions leafCardinality rolesSecondPass loc =
         initial <- locateAll rolesSecondPass l
         foldM step initial ls
       LI.AnyC {elms = locs} ->
-        join <$>
-          traverse (locateAll rolesSecondPass) (toList locs)
+       db "######### JOINED #########" . join <$>
+          traverse (\l -> (db ("#########---  LOCATE PART PARAM ---#########" <> txt l <> "\n#########--- LOCATE PART RESULT --- #########")) <$> locateAll rolesSecondPass l) (db "######### ANY LOCS #########"  $ toList locs)
   where
     locateAll = locateElmsUnchecked actions FindAll
 

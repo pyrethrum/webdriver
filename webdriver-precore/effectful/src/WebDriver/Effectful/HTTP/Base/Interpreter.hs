@@ -20,6 +20,8 @@ import WebDriver.Effectful.HTTP.Base.Effect
   )
 import WebDriverPreCore.Extended.HTTP.Base.Actions qualified as A
 import WebDriverPreCore.Extended.Protocol (Session)
+import Data.Function ((&))
+import Utils (db)
 
 -- ---------------------------------------------------------------------------
 -- HTTP interpreter
@@ -71,7 +73,7 @@ runWebDriverHttp info = interpret $ \_localEnv -> \case
   PrintPage -> run A.printPage
   GetActiveElement -> run A.getActiveElement
   FindElement sel -> run1 A.findElement sel
-  FindElements sel -> run1 A.findElements sel
+  FindElements sel -> run1 A.findElements $ db "!!!!!!!!! FindElements - Selector !!!!!!!" sel
   FindElementFromElement el sel -> run2 A.findElementFromElement el sel
   FindElementsFromElement el sel -> run2 A.findElementsFromElement el sel
   FindElementFromShadowRoot sr sel -> run2 A.findElementFromShadowRoot sr sel

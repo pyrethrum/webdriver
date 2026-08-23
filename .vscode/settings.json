@@ -20,7 +20,8 @@
   "workbench.colorTheme": "Dark Modern",
   "chat.tools.terminal.autoApprove": {
     "ghcup": true,
-    "timeout": true
+    "timeout": true,
+    "true": true
   },
     "files.watcherExclude": {
     "**/dist-newstyle/**": true

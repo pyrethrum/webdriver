@@ -9,6 +9,7 @@ import Data.List ((\\), find, intersect, nub, sort)
 import Data.List.NonEmpty (NonEmpty (..))
 import Data.Maybe (catMaybes)
 import Data.Text qualified as T
+import Data.Text.IO qualified as T
 import Data.Text (Text, unpack)
 import Data.Text.Encoding (encodeUtf8)
 import Effectful (Eff, IOE, (:>), liftIO)
@@ -17,20 +18,20 @@ import HTTP.Runner (WDSession, closeWDSession, getWDSession, runHttp)
 import Prelude
 import Test.Falsify.Generator as G (Gen, frequency, integral)
 import Test.Falsify.Range as R (between)
-import Test.Tasty (TestTree, inOrderTestGroup, testGroup, withResource, defaultMain)
-import System.Environment (withArgs)
+import Test.Tasty (TestTree, inOrderTestGroup, testGroup, withResource)
 import Test.Tasty.HUnit (assertEqual, testCase)
 import Test.Tasty.Falsify (ExpectFailure (DontExpectFailure), TestOptions (..), info, testFailed, testPropertyWith)
 import System.IO.Unsafe (unsafePerformIO)
-import Utils (txt)
+import Utils (txt, db)
 import WebDriver.Effectful (WebDriverHttp)
-import WebDriver.Effectful.HTTP.Base.Actions (getElementAttribute, navigateTo)
+import WebDriver.Effectful.HTTP.Base.Actions (getElementAttribute, navigateTo, getPageSource)
 import WebDriverPreCore.Extended.HTTP.Base.Protocol (ElementId, URL (..))
 import WebDriverPreCore.Extended.Locate qualified as L
 import WebDriverPreCore.Extended.Locators (Locator, css, elmClass, (&&&), (>>>), (|||), elmClass', MatchType (..), CaseSensitivity (..))
 import Data.Bifunctor (Bifunctor(first))
 import Test.Falsify.Property (gen)
 import WebDriverPreCore.Extended.HTTP.Locate (DisplayedCheck(..))
+import Control.Concurrent (threadDelay)
 
 tests :: TestTree
 tests =
@@ -845,6 +846,9 @@ evaluateCase getSession locCase  =
       runHttp wdSession $ do
         let dataUrl = htmlToDataUrl html
         navigateTo dataUrl
+        liftIO $ threadDelay 20_000_000
+        ps <- getPageSource
+        liftIO $ T.putStrLn $ "$$$$$$$$$$$$$$$$ PAGE SOURCE $$$$$$$$$$$$$$$$\n" <> ps
         evaluateExpectation
       where
         locator = locCase.locator
@@ -855,8 +859,8 @@ evaluateCase getSession locCase  =
               <> "</body></html>"
         evaluateExpectation :: forall es. (IOE :> es, WebDriverHttp :> es) => Eff es ()
         evaluateExpectation = do
-          locateRslt <- locateAll locator
-          actual <- locateRslt & either
+          locateRslt <- locateAll $ db "%%%%%%%%%%%%% THE LOCATOR %%%%%%%%%%%%%" locator
+          actual <- (db "%%%%%%%%%%%%% THE LOCATE RESULT %%%%%%%%%%%%%" locateRslt) & either
             (\err -> liftIO . throwIO . userError $
               "locateAll failed in generated locate property"
                 <> "\nSelection: " <> unpack (txt abstractLocator)
@@ -882,7 +886,7 @@ htmlToDataUrl html =
   let htmlBytes = encodeUtf8 html
       encoded = B64T.extractBase64 $ B64.encodeBase64 htmlBytes
       dataUrl = "data:text/html;base64," <> encoded
-  in MkUrl dataUrl
+  in db "$$$$$$$$$ THE URL $$$$$$$$$" $ MkUrl dataUrl
 
 mkLocatorTestFailure :: Node -> Text -> AbsLoc -> Locator -> [Text] -> [Text] -> LocatorTestFailure
 mkLocatorTestFailure node html selection generatedLocator expectedMatches actualMatches =
@@ -912,6 +916,13 @@ _eval = testPattern
 
 --- >>> _eval _pattern tests
 -- *** Exception: ExitFailure 1
+
+{- FOR LATER
+Secondary note (pre-existing, not this failure)
+xPathRelativePrefix = ".//" means Contains evaluates the contained locator with findElementsFromElement containerId ".//*[…]", which includes the container itself (webdriver is descendant-or-self). The oracle's Under in the test is strict-descendants (descendants excludes the parent). This mismatch is harmless for this particular test (the span is already in the first Any branch) but can bite the Under-shaped tests like "Nested Contains" (expectedMatches = []). Worth a separate look, but it isn't what's making findElements return [].
+
+Would you like me to fetch the pre-refactor Extended/HTTP/Base/Actions.hs (at 4e209907 or f24bf19f) and diff the findElements/navigateTo wiring against the current one? That's the most likely place to surface the exact regression line.
+-}
 
 
 
