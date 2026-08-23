@@ -3,12 +3,11 @@ module HTTP.BaseLocateTest where
 
 import Common.Utils (beforeAll_, DriverActions (..),chkEq, chkLocException, chkSingleton, chkEmpty, autoId )
 import Common.Utils qualified as U
-import Data.Text (Text, unpack)
+import Data.Text (Text)
 import Effectful
-import HTTP.Runner (BaseHTTPEffs, WDSession, closeWDSession, getWDSession, runHttp, runHttpTest, testUrl,  HttpTestEff)
+import HTTP.Runner (WDSession, closeWDSession, getWDSession, runHttp, runHttpTest, testUrl)
 import Prelude
-import System.Environment (withArgs)
-import Test.Tasty (TestTree, defaultMain, inOrderTestGroup, testGroup, withResource)
+import Test.Tasty (TestTree, inOrderTestGroup, testGroup, withResource)
 import Utils (txt)
 import WebDriver.Effectful
 import WebDriver.Effectful.HTTP.Base.Actions

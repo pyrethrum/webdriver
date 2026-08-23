@@ -178,8 +178,8 @@ tests =
         testRunner = \name act -> runHttpTest ses name act
         getProperty = getElementProperty
         getAttribute = getElementAttribute
-        locateFn = U.locateHttp U.defOpts
-        locateAllFn = U.locateAllHttp U.defAllOpts
+        locateFn = U.locateHttp U.defHttpOpts
+        locateAllFn = U.locateAllHttp U.defHttpOpts
         
         da :: DriverActions (Eff '[WebDriverHttp, Logger, Pause, IOE])
         da = MkDriverActions { 
@@ -193,7 +193,7 @@ tests =
         test = runHttpTest ses
         chkElms = U.chkElms da
 
-        locateAll = U.locateAllHttp U.defAllOpts
+        locateAll = U.locateAllHttp U.defHttpOpts
 
         chkAutoId :: Text -> Locator -> Text -> TestTree
         chkAutoId testName loc expctd =

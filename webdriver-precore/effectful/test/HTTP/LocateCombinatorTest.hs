@@ -10,7 +10,7 @@ import Data.Maybe (catMaybes)
 import Data.Text qualified as T
 import Data.Text (Text, unpack)
 import Effectful (Eff, IOE, (:>), liftIO)
-import Common.Utils (defAllOpts, locateAllHttp, testPattern)
+import Common.Utils (defHttpOpts, locateAllHttp, testPattern)
 import HTTP.Runner (WDSession, closeWDSession, getWDSession, runHttp)
 import Prelude
 import Test.Falsify.Generator as G (Gen, frequency, integral)
@@ -849,7 +849,7 @@ evaluateCase getSession locCase  =
       where
         locator = locCase.locator
         locateAll :: forall es. (IOE :> es, WebDriverHttp :> es) => Locator -> Eff es (Either L.LocateException [ElementId])
-        locateAll = locateAllHttp $ defAllOpts {L.jsRecheckDisplayed = DisplayedCheckNever}
+        locateAll = locateAllHttp $ defHttpOpts {L.jsRecheckDisplayed = DisplayedCheckNever}
         html = "<!doctype html><html><head><meta charset=\"utf-8\"></head><body>"
               <> nodeToHtml testNode
               <> "</body></html>"
@@ -905,13 +905,5 @@ _eval = testPattern
 
 --- >>> _eval _pattern tests
 -- *** Exception: ExitSuccess
-
-{- FOR LATER
-Secondary note (pre-existing, not this failure)
-xPathRelativePrefix = ".//" means Contains evaluates the contained locator with findElementsFromElement containerId ".//*[…]", which includes the container itself (webdriver is descendant-or-self). The oracle's Under in the test is strict-descendants (descendants excludes the parent). This mismatch is harmless for this particular test (the span is already in the first Any branch) but can bite the Under-shaped tests like "Nested Contains" (expectedMatches = []). Worth a separate look, but it isn't what's making findElements return [].
-
-Would you like me to fetch the pre-refactor Extended/HTTP/Base/Actions.hs (at 4e209907 or f24bf19f) and diff the findElements/navigateTo wiring against the current one? That's the most likely place to surface the exact regression line.
--}
-
 
 
