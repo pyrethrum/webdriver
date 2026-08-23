@@ -58,9 +58,7 @@ tests =
                       , chkAutoId "Img - div with explicit role override" (img "Abstract coloured shape") "img-div-role"
                       ]
                   , testGroup "Multi-element role types"
-                      [ chkAll "Navigation - finds both nav landmarks" (roleType Navigation)
-                          (\elms -> if length elms == 2 then Nothing
-                                    else Just $ "expected 2 navigation landmarks but got " <> txt (length elms))
+                      [ chkElmCount "Navigation - finds both nav landmarks" (roleType Navigation) 2
                       ]
                   ]
               ]
@@ -227,26 +225,20 @@ tests =
       , beforeAll_ (navToUrl landmarkRolesUrl) $
           testGroup "Basic Locator Types"
               [ chkAutoId "defaultId resolves via mkDefaultLoc option" (defaultId "hdr-main") "hdr-main"
-              , chkAll "allElms finds all page elements" allElms
-                  (\elms -> if length elms == 42 then Nothing else Just $ "expected 42 elements but got " <> txt (length elms))
+              , chkElmCount "allElms finds all page elements" allElms 42
               , chkAutoId "elmId finds element by HTML id" (elmId "megaforma") "frm-mega"
               , chkAutoId "css attribute selector" (css "[auto-id='ftr-main']") "ftr-main"
               , chkAutoId "xpath finds element by tag" (xpath "//footer") "ftr-main"
-              , chkAll "input_ tag locator finds all inputs" input_
-                  (\elms -> if length elms == 7 then Nothing else Just $ "expected 7 inputs but got " <> txt (length elms))
-              , chkAll "button_ tag locator finds button elements" button_
-                  (\elms -> if length elms == 2 then Nothing else Just $ "expected 2 buttons but got " <> txt (length elms))
+              , chkElmCount "input_ tag locator finds all inputs" input_ 7
+              , chkElmCount "button_ tag locator finds button elements" button_ 2
               , chkAll "h1_ tag locator finds the single h1 heading" h1_ chkSingleton
               ]
 
       , beforeAll_ (navToUrl landmarkRolesUrl) $
           testGroup "Class Locator Variants"
-              [ chkAll "elmClass contains match" (elmClass "text-input")
-                  (\elms -> if length elms == 7 then Nothing else Just $ "expected 7 elements with class text-input but got " <> txt (length elms))
-              , chkAll "elmClassExact full-equality match" (elmClass "text-input")
-                  (\elms -> if length elms == 7 then Nothing else Just $ "expected 7 exact text-input class elements but got " <> txt (length elms))
-              , chkAll "elemClassStarts starts-with match" (elemClassStarts "text")
-                  (\elms -> if length elms == 7 then Nothing else Just $ "expected 7 class starts-with-text elements but got " <> txt (length elms))
+              [ chkElmCount "elmClass contains match" (elmClass "text-input") 7
+              , chkElmCount "elmClassExact full-equality match" (elmClass "text-input") 7
+              , chkElmCount "elemClassStarts starts-with match" (elemClassStarts "text") 7
               , chkAutoId "elmClass finds element by single class name" (elmClass "span-button") "btn-span-role"
               ]
 
@@ -254,10 +246,8 @@ tests =
           testGroup "Attribute Locator Variants"
               [ chkAutoId "attribute default contains match" (attribute "auto-id" "hdr-main") "hdr-main"
               , chkAutoId "attributeExact full-equality match" (attribute "auto-id" "hdr-main") "hdr-main"
-              , chkAll "attributeStarts starts-with match" (attributeStarts "auto-id" "nav")
-                  (\elms -> if length elms == 4 then Nothing else Just $ "expected 4 nav* auto-id elements but got " <> txt (length elms))
-              , chkAll "attribute full case-sensitive finds type text inputs" (attribute' "type" Full CaseSensitive "text")
-                  (\elms -> if length elms == 3 then Nothing else Just $ "expected 3 type=text inputs but got " <> txt (length elms))
+              , chkElmCount "attributeStarts starts-with match" (attributeStarts "auto-id" "nav") 4
+              , chkElmCount "attribute full case-sensitive finds type text inputs" (attribute' "type" Full CaseSensitive "text") 3
               , chkAutoId "attribute full case-insensitive matches uppercase value" (attribute' "auto-id" Full CaseInsensitive "HDR-MAIN") "hdr-main"
               ]
 
@@ -275,17 +265,13 @@ tests =
                   secResult <- locate $ autoId "sec-personal"
                   chkElmM "find sec-personal" secResult $ \sec -> do
                     inResult <- locateAllFromElement sec input_
-                    chkElms "inputs in sec-personal"
-                      (\is -> if length is == 5 then Nothing else Just $ "expected 5 inputs but got " <> txt (length is))
-                      inResult
+                    chkElms "inputs in sec-personal" (elmCountMatches 5) inResult
                     pure Nothing
               , test "locateAll from element - links within nav-main" $ do
                   navResult <- locate $ autoId "nav-main"
                   chkElmM "find nav-main" navResult $ \nav -> do
                     linkResult <- locateAllFromElement nav a_
-                    chkElms "links in nav-main"
-                      (\ls -> if length ls == 2 then Nothing else Just $ "expected 2 links but got " <> txt (length ls))
-                      linkResult
+                    chkElms "links in nav-main" (elmCountMatches 2) linkResult
                     pure Nothing
               , test "locate from element - edt-given-name within sec-personal" $ do
                   secResult <- locate $ autoId "sec-personal"
@@ -305,14 +291,10 @@ tests =
 
       , beforeAll_ (navToUrl landmarkRolesUrl) $
           testGroup "Combined Locators"
-              [ chkAll "AND - input_ and elmClass text-input" (input_ &&& elmClass "text-input")
-                  (\elms -> if length elms == 6 then Nothing else Just $ "expected 6 input+text-input elements but got " <> txt (length elms))
-              , chkAll "OR - h1_ or h2_ finds all headings" (h1_ ||| h2_)
-                  (\elms -> if length elms == 3 then Nothing else Just $ "expected 3 headings (1×h1 + 2×h2) but got " <> txt (length elms))
-              , chkAll "Descendant - sec-personal contains input_ finds contained inputs" (autoId "sec-personal" >>> input_)
-                  (\elms -> if length elms == 5 then Nothing else Just $ "expected 5 inputs in sec-personal but got " <> txt (length elms))
-              , chkAll "OR - roleType Navigation or roleType Search" (roleType Navigation ||| roleType Search)
-                  (\elms -> if length elms == 3 then Nothing else Just $ "expected 3 nav+search landmarks but got " <> txt (length elms))
+              [ chkElmCount "AND - input_ and elmClass text-input" (input_ &&& elmClass "text-input") 6
+              , chkElmCount "OR - h1_ or h2_ finds all headings" (h1_ ||| h2_) 3
+              , chkElmCount "Descendant - sec-personal contains input_ finds contained inputs" (autoId "sec-personal" >>> input_) 5
+              , chkElmCount "OR - roleType Navigation or roleType Search" (roleType Navigation ||| roleType Search) 3
               ]
 
       , beforeAll_ (navToUrl miscRolesUrl) $
@@ -325,17 +307,13 @@ tests =
               , chkAutoId "figure by accessible name" (figure "Sample figure") "fig-sample"
               , chkAutoId "roleType List - single list on page" (roleType List) "lst-nav"
               , chkAutoId "list by accessible name" (list "Navigation list") "lst-nav"
-              , chkAll "roleType ListItem finds all list items" (roleType ListItem)
-                  (\elms -> if length elms == 2 then Nothing else Just $ "expected 2 list items but got " <> txt (length elms))
+              , chkElmCount "roleType ListItem finds all list items" (roleType ListItem) 2
               , chkAutoId "link by text content" (link "Home") "lnk-home"
-              , chkAll "roleType Link finds all links" (roleType Link)
-                  (\elms -> if length elms == 2 then Nothing else Just $ "expected 2 links but got " <> txt (length elms))
+              , chkElmCount "roleType Link finds all links" (roleType Link) 2
               , chkAutoId "roleType Table" (roleType Table) "tbl-data"
               , chkAutoId "table by accessible name" (table "Data table") "tbl-data"
-              , chkAll "roleType Row finds header and data rows" (roleType Row)
-                  (\elms -> if length elms == 2 then Nothing else Just $ "expected 2 rows but got " <> txt (length elms))
-              , chkAll "roleType ColumnHeader finds both column headers" (roleType ColumnHeader)
-                  (\elms -> if length elms == 2 then Nothing else Just $ "expected 2 column headers but got " <> txt (length elms))
+              , chkElmCount "roleType Row finds header and data rows" (roleType Row) 2
+              , chkElmCount "roleType ColumnHeader finds both column headers" (roleType ColumnHeader) 2
               , chkAutoId "columnHeader by text content" (columnHeader "Name") "col-name"
               , chkAutoId "roleType RowHeader" (roleType RowHeader) "row-hdr-a"
               , chkAutoId "rowHeader by text content" (rowHeader "Row A") "row-hdr-a"
@@ -347,8 +325,7 @@ tests =
               -- dropdown is visually open. Browser <select> dropdowns are rendered as native OS
               -- widgets (not DOM elements), so options never have CSS dimensions. DisplayedCheckAlways
               -- filters them out. Use DisplayedCheckNever to locate them programmatically.
-              , chkAll "roleType Option finds no options (DisplayedCheckAlways)" (roleType Option)
-                  (\elms -> if length elms == 0 then Nothing else Just $ "expected 0 options (native widget has no CSS dimensions) but got " <> txt (length elms))
+              , chkElmCount "roleType Option finds no options (DisplayedCheckAlways)" (roleType Option) 0
               , chkElmCount' da {locateAllFn = locateAllNeverCheckDisplayed} 
                             "roleType Option with DisplayedCheckNever finds all options" 
                             (roleType Option) 2
@@ -364,32 +341,15 @@ tests =
               , chkAutoId "roleType Definition" (roleType Definition) "def-name"
               , chkAutoId "definition by text content" (definition "John") "def-name"
               ]
-
-      {-
-      , withResource (navToUrl ses landmarkRolesUrl) (\_ -> pure ()) $ \_ ->
-          testGroup "Value PostFilter - not yet implemented in HTTP"
-              -- These document expected behaviour once PostFilter is implemented.
-              -- Currently fail with: "PostFilter locators are not yet implemented in HTTP WebDriver"
-              [ test "value - find input with matching current value - partial match" $ do
-                  locRslt <- locateAll $ value "Jane" input_
-                  chkElms (txt (value "Jane" input_)) chkSingleton locRslt
-              , test "valueExact - find input with exact current value" $ do
-                  locRslt <- locateAll $ valueExact "Jay" input_
-                  chkElms (txt (valueExact "Jay" input_)) chkSingleton locRslt
-              , test "valueStarts - find input whose value starts with prefix" $ do
-                  locRslt <- locateAll $ valueStarts "Jane" input_
-                  chkElms (txt (valueStarts "Jane" input_)) chkSingleton locRslt
-              ]
-              -}
       ]
     where
      
     testRunner = \name act -> runHttpTest ses name act
     getProperty = getElementProperty
     getAttribute = getElementAttribute
-    locateFn = U.locateHttp U.defOpts
-    locateAllFn = U.locateAllHttp U.defAllOpts
-    locateAllNeverCheckDisplayed = U.locateAllHttp U.defAllOpts { L.jsRecheckDisplayed = L.DisplayedCheckNever }
+    locateFn = U.locateHttp U.defHttpOpts
+    locateAllFn = U.locateAllHttp U.defHttpOpts
+    locateAllNeverCheckDisplayed = U.locateAllHttp U.defHttpOpts { L.jsRecheckDisplayed = L.DisplayedCheckNever }
     
     da :: DriverActions (Eff '[WebDriverHttp, Logger, Pause, IOE])
     da = MkDriverActions { 
@@ -414,12 +374,13 @@ tests =
     chkElmCount = chkElmCount' da
 
     chkElmCount' :: forall m. MonadIO m => DriverActions m -> Text -> Locator -> Int -> TestTree
-    chkElmCount' dact header loc expected = 
-          U.chkAll dact header loc
-            (\elms -> 
-                if length elms == expected 
-                then Nothing 
-                else Just $ "expected " <> txt expected <> " elements but got " <> txt (length elms))
+    chkElmCount' dact header loc expected = U.chkAll dact header loc (elmCountMatches expected)
+          
+    elmCountMatches :: Int -> [ElementId] -> Maybe Text
+    elmCountMatches expected actual =
+        if length actual == expected
+        then Nothing
+        else Just $ "expected " <> txt expected <> " elements but got " <> txt (length actual)
 
     chkAll :: Text -> Locator -> ([ElementId] -> Maybe Text) -> TestTree
     chkAll = U.chkAll da
@@ -448,54 +409,32 @@ tests =
 
     locateAll = da.locateAllFn 
 
-    locateFromElement = U.locateFromElementHttp U.defOpts
+    locateFromElement = U.locateFromElementHttp U.defHttpOpts
 
-    locateAllFromElement = U.locateAllFromElementHttp U.defAllOpts
+    locateAllFromElement = U.locateAllFromElementHttp U.defHttpOpts
 
-    extAlwaysOpts :: L.HttpLocateOpts
-    extAlwaysOpts = U.defOpts { L.extendedRoleLocation = L.ExtLocateAlways }
+    withExtendedRoleLocation er = U.defHttpOpts { L.extendedRoleLocation = er }
 
-    extMissOpts :: L.HttpLocateOpts
-    extMissOpts = U.defOpts { L.extendedRoleLocation = L.ExtLocateSingletonMiss }
+    locateExt = U.locateHttp (withExtendedRoleLocation L.ExtLocateAlways)
 
-    extAlwaysAllOpts :: L.HttpLocateOpts
-    extAlwaysAllOpts = U.defAllOpts { L.extendedRoleLocation = L.ExtLocateAlways }
+    locateExtMiss = U.locateHttp (withExtendedRoleLocation L.ExtLocateSingletonMiss)
 
-    extMissAllOpts :: L.HttpLocateOpts
-    extMissAllOpts = U.defAllOpts { L.extendedRoleLocation = L.ExtLocateSingletonMiss }
+    locateAllExt = U.locateAllHttp (withExtendedRoleLocation L.ExtLocateAlways)
 
-    locateExt = U.locateHttp extAlwaysOpts
-
-    locateAllExt = U.locateAllHttp extAlwaysAllOpts
-
-    locateExtMiss = U.locateHttp extMissOpts
-
-    locateAllExtMiss = U.locateAllHttp extMissAllOpts
+    locateAllExtMiss = U.locateAllHttp (withExtendedRoleLocation L.ExtLocateSingletonMiss)
 
     isNotFound :: L.LocateException -> Maybe Text
     isNotFound = \case
             L.ElementNotFound {} -> Nothing
             other -> Just $ "expected ElementNotFound but got: " <> txt other
 
-    neverOpts :: L.HttpLocateOpts
-    neverOpts = U.defOpts { L.jsRecheckDisplayed = L.DisplayedCheckNever }
+    withDisplayCheck dc = U.defHttpOpts { L.jsRecheckDisplayed = dc }
 
-    disambiguateOpts :: L.HttpLocateOpts
-    disambiguateOpts = U.defOpts { L.jsRecheckDisplayed = L.DisplayedCheckDisambiguateUnique }
+    locateAllDisambiguate = U.locateAllHttp (withDisplayCheck L.DisplayedCheckDisambiguateUnique)
+    locateAllNever = U.locateAllHttp (withDisplayCheck L.DisplayedCheckNever)
 
-    neverAllOpts :: L.HttpLocateOpts
-    neverAllOpts = U.defAllOpts { L.jsRecheckDisplayed = L.DisplayedCheckNever }
-
-    disambiguateAllOpts :: L.HttpLocateOpts
-    disambiguateAllOpts = U.defAllOpts { L.jsRecheckDisplayed = L.DisplayedCheckNever }
-
-    locateAllNever = U.locateAllHttp neverAllOpts
-
-    locateAllDisambiguate = U.locateAllHttp disambiguateAllOpts
-
-    locateNever = U.locateHttp neverOpts
-
-    locateDisambiguate = U.locateHttp disambiguateOpts
+    locateNever = U.locateHttp (withDisplayCheck L.DisplayedCheckNever)
+    locateDisambiguate = U.locateHttp (withDisplayCheck L.DisplayedCheckDisambiguateUnique)
 
     isAmbiguous :: L.LocateException -> Maybe Text
     isAmbiguous (L.AmbiguousLocator {}) = Nothing
@@ -505,13 +444,14 @@ _eval :: Maybe Text -> TestTree -> IO ()
 _eval = U.testPattern
 
 _pattern :: Maybe Text
--- _pattern = Just "ExtLocateAlways finds textbox with aria-label"
-_pattern = Nothing
+_pattern = Just "ExtLocateAlways finds textbox with aria-label"
 
+-- Specific test
 --- >>> _eval _pattern tests
 -- *** Exception: ExitSuccess
 
+-- All tests
 --- >>> _eval Nothing tests -- eval all
--- *** Exception: ExitFailure 1
+-- *** Exception: ExitSuccess
 
 

@@ -54,8 +54,7 @@ module Common.Utils
 
     -- * Config
     autoId,
-    defAllOpts,
-    defOpts,
+    defHttpOpts,
 
     testPattern
   )
@@ -290,21 +289,12 @@ chkEmpty = chkCount 0
 autoId :: Text -> Locator
 autoId = attribute' "auto-id" Full CaseSensitive
 
-defOpts :: L.HttpLocateOpts
-defOpts =
+defHttpOpts :: L.HttpLocateOpts
+defHttpOpts =
   L.MkHttpLocateOpts
     { extendedRoleLocation = L.ExtLocateNever,
       jsRecheckDisplayed = L.DisplayedCheckAlways,
       singletonCardinality = L.Unique,
-      mkDefaultLoc = autoId
-    }
-
-defAllOpts :: L.HttpLocateOpts
-defAllOpts =
-  L.MkHttpLocateOpts
-    { extendedRoleLocation = L.ExtLocateNever,
-      jsRecheckDisplayed = L.DisplayedCheckAlways,
-      singletonCardinality = L.First,
       mkDefaultLoc = autoId
     }
 
