@@ -246,26 +246,26 @@ tests =
           testGroup "Basic Locator Types"
               [ chkAutoId "defaultId resolves via mkDefaultLoc option" (defaultId "hdr-main") "hdr-main"
               , chkAll "allElms finds all page elements" allElms
-                  (\elms -> if length elms > 20 then Nothing else Just $ "expected >20 elements but got " <> txt (length elms))
+                  (\elms -> if length elms == 50 then Nothing else Just $ "expected 50 elements but got " <> txt (length elms))
               , chkAutoId "elmId finds element by HTML id" (elmId "megaforma") "frm-mega"
               , chkAutoId "css attribute selector" (css "[auto-id='ftr-main']") "ftr-main"
               , chkAutoId "xpath finds element by tag" (xpath "//footer") "ftr-main"
               , chkAll "input_ tag locator finds all inputs" input_
-                  (\elms -> if length elms >= 5 then Nothing else Just $ "expected >=5 inputs but got " <> txt (length elms))
+                  (\elms -> if length elms == 7 then Nothing else Just $ "expected 7 inputs but got " <> txt (length elms))
               , chkAll "button_ tag locator finds button elements" button_
-                  (\elms -> if null elms then Just "expected at least one button" else Nothing)
+                  (\elms -> if length elms == 2 then Nothing else Just $ "expected 2 buttons but got " <> txt (length elms))
               , chkAll "h1_ tag locator finds the single h1 heading" h1_ chkSingleton
               ]
 
       , beforeAll_ (navToUrl ses landmarkRolesUrl) $
           let 
-            expect6orMore :: Text -> [ElementId] -> Maybe Text
-            expect6orMore msg elms = if length elms >= 6 then Nothing else Just $ "expected >=6 " <> msg <> "but got " <> txt (length elms)
+            expect7 :: Text -> [ElementId] -> Maybe Text
+            expect7 msg elms = if length elms == 7 then Nothing else Just $ "expected 7 " <> msg <> "but got " <> txt (length elms)
           in
           testGroup "Class Locator Variants"
-              [ chkAll "elmClass contains match" (elmClass "text-input") (expect6orMore "elements with class text-input")
-              , chkAll "elmClassExact full-equality match" (elmClassExact "text-input")(expect6orMore "exact text-input class elements")
-              , chkAll "elemClassStarts starts-with match" (elemClassStarts "text")(expect6orMore "elements with class starting with text")
+              [ chkAll "elmClass contains match" (elmClass "text-input") (expect7 "elements with class text-input")
+              , chkAll "elmClassExact full-equality match" (elmClassExact "text-input")(expect7 "exact text-input class elements")
+              , chkAll "elemClassStarts starts-with match" (elemClassStarts "text")(expect7 "elements with class starting with text")
               , chkAutoId "elmClass finds element by single class name" (elmClass "span-button") "btn-span-role"
               ]
         
@@ -276,7 +276,7 @@ tests =
               [ chkAutoId "attribute default contains match" (attribute "auto-id" "hdr-main") "hdr-main"
               , chkAutoId "attributeExact full-equality match" (attributeExact "auto-id" "hdr-main") "hdr-main"
               , chkAll "attributeStarts starts-with match" (attributeStarts "auto-id" "nav")
-                  (\elms -> if length elms >= 2 then Nothing else Just $ "expected >=2 nav* auto-id elements but got " <> txt (length elms))
+                  (\elms -> if length elms == 4 then Nothing else Just $ "expected 4 nav* auto-id elements but got " <> txt (length elms))
               , chkAll "attribute full case-sensitive finds type text inputs" (attribute' "type" Full CaseSensitive "text")
                   (\elms -> if length elms == 3 then Nothing else Just $ "expected 3 type=text inputs but got " <> txt (length elms))
               , chkAutoId "attribute full case-insensitive matches uppercase value" (attribute' "auto-id" Full CaseInsensitive "HDR-MAIN") "hdr-main"
@@ -305,7 +305,7 @@ tests =
                   chkElmM "find nav-main" navResult $ \nav -> do
                     linkResult <- locateAllFromElement nav a_
                     chkElms "links in nav-main"
-                      (\ls -> if length ls >= 2 then Nothing else Just $ "expected >=2 links but got " <> txt (length ls))
+                      (\ls -> if length ls == 2 then Nothing else Just $ "expected 2 links but got " <> txt (length ls))
                       linkResult
                     pure Nothing
               , test "locate from element - edt-given-name within sec-personal" $ do

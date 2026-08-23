@@ -21,7 +21,8 @@
   "chat.tools.terminal.autoApprove": {
     "ghcup": true,
     "timeout": true,
-    "true": true
+    "true": true,
+    "xmllint": true
   },
     "files.watcherExclude": {
     "**/dist-newstyle/**": true

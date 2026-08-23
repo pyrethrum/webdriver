@@ -228,34 +228,34 @@ tests =
           testGroup "Basic Locator Types"
               [ chkAutoId "defaultId resolves via mkDefaultLoc option" (defaultId "hdr-main") "hdr-main"
               , chkAll "allElms finds all page elements" allElms
-                  (\elms -> if length elms > 20 then Nothing else Just $ "expected >20 elements but got " <> txt (length elms))
+                  (\elms -> if length elms == 42 then Nothing else Just $ "expected 42 elements but got " <> txt (length elms))
               , chkAutoId "elmId finds element by HTML id" (elmId "megaforma") "frm-mega"
               , chkAutoId "css attribute selector" (css "[auto-id='ftr-main']") "ftr-main"
               , chkAutoId "xpath finds element by tag" (xpath "//footer") "ftr-main"
               , chkAll "input_ tag locator finds all inputs" input_
-                  (\elms -> if length elms >= 5 then Nothing else Just $ "expected >=5 inputs but got " <> txt (length elms))
+                  (\elms -> if length elms == 7 then Nothing else Just $ "expected 7 inputs but got " <> txt (length elms))
               , chkAll "button_ tag locator finds button elements" button_
-                  (\elms -> if null elms then Just "expected at least one button" else Nothing)
+                  (\elms -> if length elms == 2 then Nothing else Just $ "expected 2 buttons but got " <> txt (length elms))
               , chkAll "h1_ tag locator finds the single h1 heading" h1_ chkSingleton
               ]
 
       , beforeAll_ (navToUrl landmarkRolesUrl) $
           testGroup "Class Locator Variants"
               [ chkAll "elmClass contains match" (elmClass "text-input")
-                  (\elms -> if length elms >= 6 then Nothing else Just $ "expected >=6 elements with class text-input but got " <> txt (length elms))
-              , chkAll "elmClassExact full-equality match" (elmClassExact "text-input")
-                  (\elms -> if length elms >= 6 then Nothing else Just $ "expected >=6 exact text-input class elements but got " <> txt (length elms))
+                  (\elms -> if length elms == 7 then Nothing else Just $ "expected 7 elements with class text-input but got " <> txt (length elms))
+              , chkAll "elmClassExact full-equality match" (elmClass "text-input")
+                  (\elms -> if length elms == 7 then Nothing else Just $ "expected 7 exact text-input class elements but got " <> txt (length elms))
               , chkAll "elemClassStarts starts-with match" (elemClassStarts "text")
-                  (\elms -> if length elms >= 6 then Nothing else Just $ "expected >=6 class starts-with-text elements but got " <> txt (length elms))
+                  (\elms -> if length elms == 7 then Nothing else Just $ "expected 7 class starts-with-text elements but got " <> txt (length elms))
               , chkAutoId "elmClass finds element by single class name" (elmClass "span-button") "btn-span-role"
               ]
 
       , beforeAll_ (navToUrl landmarkRolesUrl) $
           testGroup "Attribute Locator Variants"
               [ chkAutoId "attribute default contains match" (attribute "auto-id" "hdr-main") "hdr-main"
-              , chkAutoId "attributeExact full-equality match" (attributeExact "auto-id" "hdr-main") "hdr-main"
+              , chkAutoId "attributeExact full-equality match" (attribute "auto-id" "hdr-main") "hdr-main"
               , chkAll "attributeStarts starts-with match" (attributeStarts "auto-id" "nav")
-                  (\elms -> if length elms >= 2 then Nothing else Just $ "expected >=2 nav* auto-id elements but got " <> txt (length elms))
+                  (\elms -> if length elms == 4 then Nothing else Just $ "expected 4 nav* auto-id elements but got " <> txt (length elms))
               , chkAll "attribute full case-sensitive finds type text inputs" (attribute' "type" Full CaseSensitive "text")
                   (\elms -> if length elms == 3 then Nothing else Just $ "expected 3 type=text inputs but got " <> txt (length elms))
               , chkAutoId "attribute full case-insensitive matches uppercase value" (attribute' "auto-id" Full CaseInsensitive "HDR-MAIN") "hdr-main"
@@ -284,7 +284,7 @@ tests =
                   chkElmM "find nav-main" navResult $ \nav -> do
                     linkResult <- locateAllFromElement nav a_
                     chkElms "links in nav-main"
-                      (\ls -> if length ls >= 2 then Nothing else Just $ "expected >=2 links but got " <> txt (length ls))
+                      (\ls -> if length ls == 2 then Nothing else Just $ "expected 2 links but got " <> txt (length ls))
                       linkResult
                     pure Nothing
               , test "locate from element - edt-given-name within sec-personal" $ do
@@ -349,8 +349,9 @@ tests =
               -- filters them out. Use DisplayedCheckNever to locate them programmatically.
               , chkAll "roleType Option finds no options (DisplayedCheckAlways)" (roleType Option)
                   (\elms -> if length elms == 0 then Nothing else Just $ "expected 0 options (native widget has no CSS dimensions) but got " <> txt (length elms))
-              , chkAllNever "roleType Option with DisplayedCheckNever finds all options" (roleType Option)
-                  (\elms -> if length elms == 2 then Nothing else Just $ "expected 2 options (no display check) but got " <> txt (length elms))
+              , chkElmCount' da {locateAllFn = locateAllNeverCheckDisplayed} 
+                            "roleType Option with DisplayedCheckNever finds all options" 
+                            (roleType Option) 2
               , chkAutoId "option by text content" (option "Alpha") "opt-alpha"
               , chkAutoId "roleType Separator" (roleType Separator) "sep-main"
               , chkAutoId "progressBar by accessible name" (progressBar "Upload progress") "prg-upload"
@@ -409,13 +410,19 @@ tests =
     chkAutoId :: Text -> Locator -> Text -> TestTree
     chkAutoId = U.chkAutoIdElm da
 
+    chkElmCount :: Text -> Locator -> Int -> TestTree
+    chkElmCount = chkElmCount' da
+
+    chkElmCount' :: forall m. MonadIO m => DriverActions m -> Text -> Locator -> Int -> TestTree
+    chkElmCount' dact header loc expected = 
+          U.chkAll dact header loc
+            (\elms -> 
+                if length elms == expected 
+                then Nothing 
+                else Just $ "expected " <> txt expected <> " elements but got " <> txt (length elms))
+
     chkAll :: Text -> Locator -> ([ElementId] -> Maybe Text) -> TestTree
     chkAll = U.chkAll da
-
-    chkAllNever :: Text -> Locator -> ([ElementId] -> Maybe Text) -> TestTree
-    chkAllNever = U.chkAllNever da {
-        locateAllFn = locateAllNeverCheckDisplayed
-    }
 
     chkAttributeEqElm = U.chkAttributeEqElm da
 
@@ -503,5 +510,8 @@ _pattern = Nothing
 
 --- >>> _eval _pattern tests
 -- *** Exception: ExitSuccess
+
+--- >>> _eval Nothing tests -- eval all
+-- *** Exception: ExitFailure 1
 
 

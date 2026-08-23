@@ -17,12 +17,10 @@ module WebDriverPreCore.Extended.Locators
     --
     elmClass,
     elmClass',
-    elmClassExact,
     elemClassStarts,
     --
     attribute,
     attribute',
-    attributeExact,
     attributeStarts,
     --
     -- * Role Constructors
@@ -212,22 +210,16 @@ deriveMatch :: Text -> MatchType
 deriveMatch = bool Full Wildcard . ("*" `isInfixOf`)
 
 mkDefaults :: (MatchType -> CaseSensitivity -> Text -> Locator) -> Text -> Locator
-mkDefaults constructor val = constructor (deriveMatch val) CaseInsensitive val
+mkDefaults constructor val = constructor (deriveMatch val) CaseSensitive val
 
 mkStarts :: (MatchType -> CaseSensitivity -> Text -> Locator) -> Text -> Locator
 mkStarts constructor val = constructor Starts CaseInsensitive val
-
-mkExact :: (MatchType -> CaseSensitivity -> Text -> Locator) -> Text -> Locator
-mkExact constructor val = constructor Full CaseSensitive val
 
 elmClass :: Text -> Locator
 elmClass = mkDefaults elmClass'
 
 elmClass' :: MatchType -> CaseSensitivity -> Text -> Locator
 elmClass' mt cs v = Class {value = v, matchType = mt, caseSensitivity = cs}
-
-elmClassExact :: Text -> Locator
-elmClassExact = mkExact elmClass'
 
 elemClassStarts :: Text -> Locator
 elemClassStarts = mkStarts elmClass'
@@ -237,9 +229,6 @@ attribute nm = mkDefaults (attribute' nm)
 
 attribute' :: Text -> MatchType -> CaseSensitivity -> Text -> Locator
 attribute' name matchType caseSensitivity value = Attribute {name, value, matchType, caseSensitivity}
-
-attributeExact :: Text -> Text -> Locator
-attributeExact nm = mkExact (attribute' nm)
 
 attributeStarts :: Text -> Text -> Locator
 attributeStarts nm = mkStarts (attribute' nm)

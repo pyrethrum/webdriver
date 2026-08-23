@@ -3,19 +3,17 @@ module HTTP.MatchTypeTest where
 import Common.Runner (testUrl)
 import Common.Utils qualified as U
 
-import Data.Text (Text, unpack)
+import Data.Text (Text)
 import Effectful
-import HTTP.Runner (BaseHTTPEffs, WDSession, closeWDSession, getWDSession, runHttp, runHttpTest)
-import Test.Tasty (TestTree, defaultMain, inOrderTestGroup, testGroup, withResource)
+import HTTP.Runner (WDSession, closeWDSession, getWDSession, runHttp, runHttpTest)
+import Test.Tasty (TestTree, inOrderTestGroup, testGroup, withResource)
 import Utils (txt)
 import WebDriver.Effectful
 import WebDriver.Effectful.HTTP.Base.Actions (navigateTo, getElementAttribute, getElementProperty)
-import WebDriverPreCore.Extended.HTTP.Base.Protocol (ElementId, URL)
-import WebDriverPreCore.Extended.Locate qualified as L
+import WebDriverPreCore.Extended.HTTP.Base.Protocol (URL)
 import WebDriverPreCore.Extended.Locators
 import WebDriverPreCore.Test.TestData (fileUrl)
 import Prelude
-import System.Environment (withArgs)
 import WebDriver.Effectful.Logger
 import Common.Utils (DriverActions(..), chkCount, chkSingleton)
 
