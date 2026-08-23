@@ -2,16 +2,13 @@ module HTTP.LocateCombinatorTest where
 
 import Control.Monad (replicateM)
 import Control.Exception (SomeException, displayException, throwIO, try)
-import Data.Base64.Types qualified as B64T
-import Data.ByteString.Base64 qualified as B64
+import Data.Aeson (toJSON)
 import Data.Function ((&))
 import Data.List ((\\), find, intersect, nub, sort)
 import Data.List.NonEmpty (NonEmpty (..))
 import Data.Maybe (catMaybes)
 import Data.Text qualified as T
-import Data.Text.IO qualified as T
 import Data.Text (Text, unpack)
-import Data.Text.Encoding (encodeUtf8)
 import Effectful (Eff, IOE, (:>), liftIO)
 import Common.Utils (defAllOpts, locateAllHttp, testPattern)
 import HTTP.Runner (WDSession, closeWDSession, getWDSession, runHttp)
@@ -24,14 +21,13 @@ import Test.Tasty.Falsify (ExpectFailure (DontExpectFailure), TestOptions (..), 
 import System.IO.Unsafe (unsafePerformIO)
 import Utils (txt, db)
 import WebDriver.Effectful (WebDriverHttp)
-import WebDriver.Effectful.HTTP.Base.Actions (getElementAttribute, navigateTo, getPageSource)
-import WebDriverPreCore.Extended.HTTP.Base.Protocol (ElementId, URL (..))
+import WebDriver.Effectful.HTTP.Base.Actions (executeScript, getElementAttribute, navigateTo)
+import WebDriverPreCore.Extended.HTTP.Base.Protocol (ElementId, Script (..), URL (..))
 import WebDriverPreCore.Extended.Locate qualified as L
 import WebDriverPreCore.Extended.Locators (Locator, css, elmClass, (&&&), (>>>), (|||), elmClass', MatchType (..), CaseSensitivity (..))
 import Data.Bifunctor (Bifunctor(first))
 import Test.Falsify.Property (gen)
 import WebDriverPreCore.Extended.HTTP.Locate (DisplayedCheck(..))
-import Control.Concurrent (threadDelay)
 
 tests :: TestTree
 tests =
@@ -844,11 +840,11 @@ evaluateCase getSession locCase  =
       --   <> show (countSelectionNodes abstractLocator)
       wdSession <- getSession
       runHttp wdSession $ do
-        let dataUrl = htmlToDataUrl html
-        navigateTo dataUrl
-        liftIO $ threadDelay 20_000_000
-        ps <- getPageSource
-        liftIO $ T.putStrLn $ "$$$$$$$$$$$$$$$$ PAGE SOURCE $$$$$$$$$$$$$$$$\n" <> ps
+        navigateTo (MkUrl "about:blank")
+        executeScript MkScript
+          { script = "document.open(); document.write(arguments[0]); document.close();",
+            args = [toJSON html]
+          }
         evaluateExpectation
       where
         locator = locCase.locator
@@ -881,13 +877,6 @@ evaluateCase getSession locCase  =
     Unmatched {} ->
       liftIO . throwIO $ userError "evaluateCase called with an unmatched locator case"
 
-htmlToDataUrl :: Text -> URL
-htmlToDataUrl html =
-  let htmlBytes = encodeUtf8 html
-      encoded = B64T.extractBase64 $ B64.encodeBase64 htmlBytes
-      dataUrl = "data:text/html;base64," <> encoded
-  in db "$$$$$$$$$ THE URL $$$$$$$$$" $ MkUrl dataUrl
-
 mkLocatorTestFailure :: Node -> Text -> AbsLoc -> Locator -> [Text] -> [Text] -> LocatorTestFailure
 mkLocatorTestFailure node html selection generatedLocator expectedMatches actualMatches =
   let missingFromActual = expectedMatches \\ actualMatches
@@ -915,7 +904,7 @@ _eval :: Maybe Text -> TestTree -> IO ()
 _eval = testPattern
 
 --- >>> _eval _pattern tests
--- *** Exception: ExitFailure 1
+-- *** Exception: ExitSuccess
 
 {- FOR LATER
 Secondary note (pre-existing, not this failure)
