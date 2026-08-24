@@ -1,11 +1,11 @@
 module HTTP.MatchTypeTest where
 
-import Common.Runner (testUrl)
+import Common.Runner (testUrl, getWDSession, closeWDSession)
 import Common.Utils qualified as U
 
 import Data.Text (Text)
 import Effectful
-import HTTP.Runner (WDSession, closeWDSession, getWDSession, runHttp, runHttpTest)
+import HTTP.Runner (WDSession, runHttp, runHttpTest)
 import Test.Tasty (TestTree, inOrderTestGroup, testGroup, withResource)
 import Utils (txt)
 import WebDriver.Effectful

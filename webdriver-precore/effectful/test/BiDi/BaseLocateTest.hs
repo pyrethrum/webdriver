@@ -5,7 +5,7 @@ import Common.Utils (beforeAll_, DriverActions (..),chkEq, chkLocException, chkS
 import Common.Utils qualified as U
 import Data.Text (Text)
 import Effectful
-import HTTP.Runner (WDSession, closeWDSession, getWDSession, runHttp, runHttpTest, testUrl)
+import HTTP.Runner (WDSession, runHttp, runHttpTest, testUrl)
 import Prelude
 import Test.Tasty (TestTree, inOrderTestGroup, testGroup, withResource)
 import Utils (txt)
@@ -16,6 +16,7 @@ import WebDriverPreCore.Extended.Locate qualified as L
 import WebDriverPreCore.Extended.Locators as LS
 import WebDriverPreCore.Test.TestData
 import WebDriver.Effectful.Logger (Logger)
+import Common.Runner (getWDSession, closeWDSession)
 
 -- >>> _eval tests
 -- *** Exception: ExitSuccess
