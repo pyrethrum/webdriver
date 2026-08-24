@@ -11,6 +11,7 @@ import WebDriverPreCore.BiDi.Protocol
 import WebDriverPreCore.Test.CapabilitiesBuilder (httpCapabilities)
 import WebDriverPreCore.Test.ConfigLoader (Config (..))
 import WebDriver.Effectful.Logger (withLogger, Logger)
+import WebDriverPreCore.Utils.Timeout as T (Timeout(..)) 
 
 mkBiDiCaps :: Config -> HttpCapabilities
 mkBiDiCaps config =
@@ -22,7 +23,8 @@ mkBiDiCaps config =
     cap = fromHttpCapability $ httpCapabilities config
 
 runBiDiTest
-  :: ( forall es
+  :: Timeout 
+   -> ( forall es
       . ( IOE :> es
         , Logger :> es
         , Pause :> es
@@ -31,11 +33,11 @@ runBiDiTest
      => Eff es ()
      )
   -> IO ()
-runBiDiTest action =
-  runSetup $ \driverInfo opts config ->
+runBiDiTest pauseDuration action =
+  runSetup $ \driverInfo config ->
     withLogger "eval.log" $
-      withBiDiSession driverInfo opts (mkBiDiCaps config) $
-        runPause opts.pauseDuration action
+      withBiDiSession pauseDuration driverInfo (mkBiDiCaps config) $
+        runPause pauseDuration action
 
 -- | Minimal pointer properties with all optional fields set to 'Nothing'.
 defaultPointerProps :: PointerCommonProperties

@@ -5,7 +5,7 @@ import UnliftIO (finally)
 import WebDriver.Effectful.Logger (LoggerHandle, acquireLogger, releaseLogger)
 
 import WebDriverPreCore.Test.ConfigLoader (Config (..), loadConfig)
-import WebDriverPreCore.Utils.Timeout (milliseconds)
+import WebDriverPreCore.Utils.Timeout as T (Timeout(..)) 
 import WebDriverPreCore.Extended.HTTP.Base.Protocol (URL)
 import Effectful.Timeout
 import WebDriver.Effectful.HTTP.Base.Effect
@@ -31,15 +31,15 @@ data WDSession = MkWDSession
     sessionInfo :: HttpSessionInfo
   }
 
-getWDSession :: IO WDSession
-getWDSession = 
+getWDSession :: T.Timeout -> Bool -> IO WDSession
+getWDSession pauseDuration wantLogging = 
   runSetup $ 
-   \driverInfo opts config -> 
+   \driverInfo config -> 
       liftIO $ do
-        loggerHandle <- if opts.wantLogging
+        loggerHandle <- if wantLogging
                           then Just <$> acquireLogger "eval.log"
                           else pure Nothing
-        sessionInfo <- acquireHttpSession driverInfo (mkHttpCaps config) opts.pauseDuration
+        sessionInfo <- acquireHttpSession driverInfo (mkHttpCaps config) pauseDuration
         pure MkWDSession {loggerHandle, sessionInfo}
 
 closeWDSession :: WDSession -> IO ()
@@ -48,30 +48,21 @@ closeWDSession MkWDSession {loggerHandle, sessionInfo} =
     `finally` maybe (pure ()) releaseLogger loggerHandle
 
 
-runSetup :: forall a. (forall es. (IOE :> es) => HttpDriverInfo -> InteractOpts -> Config -> Eff es a) -> IO a
+runSetup :: forall a. (forall es. (IOE :> es) => HttpDriverInfo -> Config -> Eff es a) -> IO a
 runSetup action = runEff runAction
   where
     runAction :: Eff '[IOE] a
     runAction = do
       (config :: Config) <- liftIO loadConfig
       let
-          opts :: InteractOpts
-          opts = mkInteractOpts config
-
           driverInfo :: HttpDriverInfo
           driverInfo =
             MkHttpDriverInfo
               { httpEndpoint = MkHttpEndpoint {host = config.httpUrl, port = config.httpPort},
                 driverLogFn  = Nothing
               }
-      action driverInfo opts config
+      action driverInfo config
   
-mkInteractOpts :: Config -> InteractOpts
-mkInteractOpts config =
-  MkInteractOpts
-    { pauseDuration = fromIntegral config.pauseMS * milliseconds,
-      wantLogging = config.logging
-    }
 
 testUrl :: MonadIO m => IO URL -> m URL 
 testUrl = liftIO

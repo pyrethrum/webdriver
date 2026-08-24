@@ -12,9 +12,9 @@
 -- "WebDriver.Effectful.HTTP.Base.Interpreter".
 module WebDriver.Effectful.HTTP.Base.Effect
   ( -- * Configuration types
-    HttpDriverInfo (..),
     HttpSessionInfo (..),
-    defaultDriverInfo,
+    defaultHttpEndpoint,
+    noOpLogger,
 
     -- * Internal helpers
     mkSessionRunner,
@@ -54,24 +54,17 @@ import WebDriverPreCore.Extended.Capabilities (HttpSessionResponse)
 -- Types
 -- ---------------------------------------------------------------------------
 
--- | Configuration for an HTTP WebDriver connection.
-data HttpDriverInfo = MkHttpDriverInfo
-  { httpEndpoint :: HttpEndpoint,
-    -- | When 'Just', each driver request\/response is logged via this function.
-    driverLogFn :: Maybe (Text -> IO ())
-  }
+defaultHttpEndpoint :: HttpEndpoint
+defaultHttpEndpoint = MkHttpEndpoint {host = "127.0.0.1", port = 4444}
 
--- | Default driver info targeting localhost:4444 with logging disabled.
-defaultDriverInfo :: HttpDriverInfo
-defaultDriverInfo =
-  MkHttpDriverInfo
-    { httpEndpoint = MkHttpEndpoint {host = "127.0.0.1", port = 4444},
-      driverLogFn = Nothing
-    }
+noOpLogger :: Text -> IO ()
+noOpLogger _ = pure ()
 
 -- | Session-scoped HTTP driver configuration.
 data HttpSessionInfo = MkHttpSessionInfo
-  { driverInfo :: HttpDriverInfo,
+  { endpoint :: HttpEndpoint,
+
+    logger :: Text -> IO (),
     -- | The active WebDriver session identifier.
     session :: Session,
     -- | Duration to sleep on each 'pause' call.
@@ -85,9 +78,9 @@ data HttpSessionInfo = MkHttpSessionInfo
 -- ---------------------------------------------------------------------------
 
 -- | Build a @Command a -> IO a@ runner from an 'HttpSessionInfo'.
-mkSessionRunner :: (FromJSON a) => HttpSessionInfo -> HA.Runner IO a
-mkSessionRunner info cmd =
-  callWebDriver info.driverInfo.httpEndpoint info.driverInfo.driverLogFn cmd
+mkSessionRunner :: (FromJSON a) => HttpEndpoint -> (Text -> IO ()) -> HA.Runner IO a
+mkSessionRunner endpoint logger cmd =
+  callWebDriver endpoint logger cmd
     >>= either (throwIO . parseFailToWDException) pure
 
 -- ---------------------------------------------------------------------------

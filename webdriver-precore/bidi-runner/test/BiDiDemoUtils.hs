@@ -103,7 +103,7 @@ runDemoWithConfig cfg demo' = do
     then
       withChannelFileLogger runWithLogger
     else
-      runWithLogger logNothingLogger
+      runWithLogger . const $ pure ()
   where
     runWithLogger :: Logger -> IO ()
     runWithLogger logger = do

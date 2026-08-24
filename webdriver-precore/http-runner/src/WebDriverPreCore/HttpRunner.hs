@@ -26,11 +26,7 @@ where
 import Control.Monad.IO.Class (MonadIO)
 import Data.Aeson (FromJSON (..), Value)
 import Data.Text (Text)
-import Data.Word (Word16)
-import Network.HTTP.Req
-  ( Scheme (..),
-    Url,
-  )
+
 import WebDriverPreCore.HTTP.Command (Command (..))
 import WebDriverPreCore.HttpRunner.Utils
   ( HttpEndpoint (..),
@@ -48,29 +44,28 @@ import Prelude hiding (log)
 callWebDriver ::
   (MonadIO m, FromJSON r) =>
   HttpEndpoint ->
-  Maybe (Text -> m ()) ->
-  Command a ->
+  (Text -> m ()) ->
+  Command r ->
   m (Either ParseFailure r)
-callWebDriver endpoint mLogger = callWebDriver' endpoint mLogger . commandToRequest
+callWebDriver endpoint logger = callWebDriver' endpoint logger . commandToRequest
 
 -- | Execute a typed 'Command', returning just the raw JSON body.
 callWebDriverBody ::
   (MonadIO m) =>
-  Url 'Http ->
-  Word16 ->
-  Maybe (Text -> m ()) ->
-  Command a ->
+  HttpEndpoint ->
+  (Text -> m ()) ->
+  Command r ->
   m Value
-callWebDriverBody url port lgr =
-  callWebDriverBody' url port lgr . commandToRequest
+callWebDriverBody endpoint logger =
+  callWebDriverBody' endpoint logger . commandToRequest
 
 -- | Execute a typed 'Command', returning the full HTTP response.
 callWebDriverResponse ::
   (MonadIO m) =>
   HttpEndpoint ->
-  Maybe (Text -> m ()) ->
-  Command a ->
+  (Text -> m ()) ->
+  Command r ->
   m HttpResponse
-callWebDriverResponse endpoint mLogger cmd =
-  callWebDriverResponse' endpoint mLogger (commandToRequest cmd)
+callWebDriverResponse endpoint logger =
+  callWebDriverResponse' endpoint logger . commandToRequest
 

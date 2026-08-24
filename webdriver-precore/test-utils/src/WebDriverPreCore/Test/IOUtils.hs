@@ -50,9 +50,6 @@ newtype Logger = MkLogger
   { log :: Text -> IO ()
   }
 
-logNothingLogger :: Logger
-logNothingLogger = MkLogger . const $ pure ()
-
 -- default Nothing to Logger that does nothing
 defToLogNothing :: Maybe Logger -> Logger
 defToLogNothing = fromMaybe logNothingLogger

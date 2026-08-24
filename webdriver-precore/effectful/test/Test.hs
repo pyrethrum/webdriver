@@ -21,7 +21,7 @@ tests =
     [ testCase "HTTP login and navigation demo" (withHttp http_login_navigation_demo),
       testCase "BiDi login demo" (runBiDiTest bidi_login_demo),
       BaseLocateTest.tests,
-      -- BiDiBaseLocateTest.tests,
+      BiDiBaseLocateTest.tests,
       MatchTypeTest.tests,
       LocateCombinatorTest.tests
     ]

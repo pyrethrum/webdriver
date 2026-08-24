@@ -7,14 +7,12 @@
 -- * 'HttpDriverInfo' — HTTP connection configuration
 -- * Typeclasses: 'HasHttpDriverInfo', 'HasBiDiRunner', 'HasHttpSession',
 --   'HasBiDiSession', 'HasPauseDuration'
--- * Abstract helpers: 'getLogger', 'getHttpDriverInfo', 'runHttpCommand',
+-- * Abstract helpers: 'getLogger', 'getHttpEndpoint', 'runHttpCommand',
 --   'getBiDiRunner'
 module WebDriver.RIO.HTTP.Core
-  ( -- * Driver Info
-    HttpDriverInfo (..),
-
+  ( 
     -- * Driver Info Typeclass
-    HasHttpDriverInfo (..),
+    HasHttpEndpoint (..),
 
     -- * Other Runner Typeclasses
     HasBiDiRunner (..),
@@ -26,7 +24,7 @@ module WebDriver.RIO.HTTP.Core
 
     -- * Abstract helpers
     getLogger,
-    getHttpDriverInfo,
+    getHttpEndpoint,
     runHttpCommand,
     getBiDiRunner,
     log
@@ -56,14 +54,11 @@ import WebDriverPreCore.HttpRunner (HttpEndpoint (..), callWebDriver)
 import WebDriverPreCore.Utils.Timeout (Timeout)
 
 -- | Configuration for an HTTP WebDriver connection.
-data HttpDriverInfo = MkHttpDriverInfo
-  { httpEndpoint :: HttpEndpoint,
-    driverLogging :: Bool
-  }
 
+-- | Env has a 'BiDiRunner' available.
 -- | Env has an 'HttpDriverInfo' available.
-class HasHttpDriverInfo env where
-  httpDriverInfoL :: Lens' env HttpDriverInfo
+class HasHttpEndpoint env where
+  httpDriverInfoL :: Lens' env HttpEndpoint
 
 -- | Env has a 'BiDiRunner' available.
 class HasBiDiRunner env where
@@ -91,22 +86,22 @@ getLogger = view logFuncL
 log :: (HasLogFunc env) => Text -> RIO env ()
 log = logInfo . display
 
-getHttpDriverInfo :: (HasHttpDriverInfo env) => RIO env HttpDriverInfo
-getHttpDriverInfo = view httpDriverInfoL
+getHttpEndpoint :: (HasHttpEndpoint env) => RIO env HttpEndpoint
+getHttpEndpoint = view httpDriverInfoL
 
 -- | Run a WebDriver 'Command' in the RIO environment, using the stored
 -- driver info to build an HTTP runner on each call.
 -- Logging is enabled only when 'driverLogging' is 'True'.
-runHttpCommand :: forall env r. (HasHttpDriverInfo env, HasLogFunc env, FromJSON r) => Command r -> RIO env r
+runHttpCommand :: forall env r. (HasHttpEndpoint env, HasLogFunc env, FromJSON r) => Command r -> RIO env r
 runHttpCommand cmd = do
-  MkHttpDriverInfo {httpEndpoint, driverLogging} <- getHttpDriverInfo
+  httpEndpoint <- getHttpEndpoint
   lf <- view logFuncL
-  let mLogger :: Maybe (Text -> IO ())
-      mLogger
-        | driverLogging = Just $ \t -> runRIO lf (logInfo (display t))
-        | otherwise = Nothing
+  let logger :: Text -> IO ()
+      logger
+        | driverLogging = \t -> runRIO lf (logInfo (display t))
+        | otherwise = const $ pure ()
   liftIO $
-    callWebDriver httpEndpoint mLogger cmd
+    callWebDriver httpEndpoint logger cmd
       >>= either (throwIO . parseFailToWDException) pure
 
 getBiDiRunner :: (HasBiDiRunner env) => RIO env (BiDiRunner (RIO env))

@@ -18,7 +18,6 @@ import UnliftIO (finally)
 import WebDriver.Effectful
   ( HttpCapabilities,
     HttpSessionInfo (..),
-    InteractOpts (..),
     Pause,
     WebDriverHttp,
     acquireHttpSession,

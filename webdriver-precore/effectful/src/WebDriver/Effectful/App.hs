@@ -12,7 +12,6 @@
 -- being able to call back into the outer effect stack.
 module WebDriver.Effectful.App
   ( -- * opts
-    InteractOpts (..),
 
     -- * HTTP Runners
     acquireHttpSession,
@@ -56,13 +55,6 @@ import WebDriverPreCore.Utils.Timeout (Timeout)
 -- opts
 -- ---------------------------------------------------------------------------
 
--- | Bundles runtime opts parameters shared across HTTP and BiDi runners.
-data InteractOpts = MkInteractOpts
-  { -- | How long 'pause' sleeps between actions.
-    pauseDuration :: Timeout,
-    -- | When 'True' log each driver message via the 'Logger' effect.
-    wantLogging :: Bool
-  }
 
 
 -- | Run an effectful action inside the 'WebDriverHttp' effect using an
@@ -106,18 +98,16 @@ releaseHttpSession si =
 -- pair (e.g. with 'Test.Tasty.withResource') and 'runHttpSession' to inject
 -- the 'WebDriverHttp' effect into each test.
 withHttpSession
-  :: (IOE :> es, Logger :> es)
-  => HttpDriverInfo
-  -> InteractOpts
+  :: (IOE :> es)
+  => Timeout
+  -> HttpDriverInfo
   -> EC.HttpCapabilities
   -> Eff (WebDriverHttp : es) a
   -> Eff es a
-withHttpSession driverInfo opts caps action =
+withHttpSession pauseDuration driverInfo caps action =
   withSeqEffToIO $ \runInIO -> do
-    driverLogFn <- runInIO (mkLogFunction opts)
-    let driverInfo' = driverInfo {driverLogFn}
     bracket
-      (acquireHttpSession driverInfo' caps opts.pauseDuration)
+      (acquireHttpSession driverInfo caps pauseDuration)
       releaseHttpSession
       (runInIO . flip runHttpSession action)
 
@@ -138,31 +128,29 @@ withHttpSession driverInfo opts caps action =
 -- * @IOE :> es@    — for @IO@ operations
 -- * @Logger :> es@ — to optionally pipe driver logging
 withBiDiSession
-  :: (IOE :> es, Logger :> es)
-  => HttpDriverInfo
-  -> InteractOpts
+  :: (IOE :> es)
+  => Timeout
+  -> HttpDriverInfo
   -> EC.HttpCapabilities
   -> Eff (WebDriverBiDi : es) a
   -> Eff es a
-withBiDiSession driverInfo opts caps action =
+withBiDiSession pauseDuration driverInfo caps action =
   withEffToIO (ConcUnlift Persistent Unlimited) $ \runInIO -> do
-    logFn <- runInIO (mkLogFunction opts)
-    let driverInfo' = driverInfo {driverLogFn = logFn}
-    sessionResponse <- EC.newHttpSessionResponse (mkRootRunner driverInfo') caps
+    sessionResponse <- EC.newHttpSessionResponse (mkRootRunner driverInfo) caps
     let httpInfo =
           MkHttpSessionInfo
-            { driverInfo    = driverInfo',
+            { driverInfo    = driverInfo,
               session       = sessionResponse.session,
-              pauseDuration = opts.pauseDuration,
+              pauseDuration = pauseDuration,
               sessionResponse
             }
     bidiUrl  <- parseBiDiUrlIO sessionResponse.websocketUrl
     finally
-      ( withBiDi logFn bidiUrl $ \ioRunner -> do
+      ( withBiDi driverInfo.driverLogFn bidiUrl $ \ioRunner -> do
           let biDiInfo =
                 MkBiDiInfo
                   { biDiRunner    = ioRunner,
-                    pauseDuration = opts.pauseDuration
+                    pauseDuration = pauseDuration
                   }
           runInIO (runWebDriverBiDi biDiInfo action)
       )
@@ -182,13 +170,6 @@ mkRootRunner info cmd =
   callWebDriver info.httpEndpoint info.driverLogFn cmd
     >>= either (throwIO . parseFailToWDException) pure
 
--- | Extract the driver @IO@ log function from the 'Logger' static effect
--- when @driverLogging@ is enabled.  Returns 'Nothing' otherwise.
-mkLogFunction :: (Logger :> es) => InteractOpts -> Eff es (Maybe (Text -> IO ()))
-mkLogFunction MkInteractOpts{wantLogging} = 
-  if wantLogging
-    then (Just . ($ InfoS)) <$> getLogFn
-    else pure Nothing
 
 -- | Parse a BiDi WebSocket URL, throwing 'IOError' on failure.
 parseBiDiUrlIO :: Maybe Text -> IO BiDiUrl
