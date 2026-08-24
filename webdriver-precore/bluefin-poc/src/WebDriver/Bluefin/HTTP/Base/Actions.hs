@@ -12,7 +12,6 @@ module WebDriver.Bluefin.HTTP.Base.Actions
   ( -- * Root Methods
     status,
     newSession,
-    newSessionResponse,
 
     -- * Session Methods
     deleteSession,
@@ -142,10 +141,7 @@ viaEnv f env = effIO env.envIO (f (mkEnvRunner env))
 status :: (e :> es) => HttpEnv e -> Eff es Status
 status env = viaEnv A.status env
 
-newSessionResponse :: (e :> es) => HttpEnv e -> EC.HttpCapabilities -> Eff es EC.HttpSessionResponse
-newSessionResponse env caps = effIO env.envIO $ EC.newHttpSessionResponse (mkEnvRunner env) caps
-
-newSession :: (e :> es) => HttpEnv e -> EC.HttpCapabilities -> Eff es Session
+newSession :: (e :> es) => HttpEnv e -> EC.HttpCapabilities -> Eff es EC.HttpSessionResponse
 newSession env caps = effIO env.envIO $ EC.newHttpSession (mkEnvRunner env) caps
 
 -- ######################################################################

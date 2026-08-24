@@ -20,10 +20,8 @@
 -- effects instead of explicit Bluefin compound handles.
 module WebDriver.Effectful.HTTP.Core
   ( -- * Types
-    HttpDriverInfo (..),
     HttpSessionInfo (..),
     BiDiInfo (..),
-    defaultDriverInfo,
 
     -- * HTTP Effect
     WebDriverHttp (..),
@@ -48,10 +46,9 @@ import WebDriver.Effectful.BiDi.Base.Effect
   )
 import WebDriver.Effectful.BiDi.Base.Interpreter (runWebDriverBiDi)
 import WebDriver.Effectful.HTTP.Base.Effect
-  ( HttpDriverInfo (..),
+  ( 
     HttpSessionInfo (..),
     WebDriverHttp (..),
-    defaultDriverInfo,
     mkSessionRunner,
   )
 import WebDriver.Effectful.HTTP.Base.Interpreter (runWebDriverHttp)

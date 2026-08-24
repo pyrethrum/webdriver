@@ -33,7 +33,7 @@ import WebDriver.Bluefin.HTTP.Core
     HttpEnv (..),
     HttpSessionEnv (..),
   )
-import WebDriver.Bluefin.HTTP.Base.Actions (deleteSession, newSessionResponse)
+import WebDriver.Bluefin.HTTP.Base.Actions (deleteSession, newSession)
 import WebDriverPreCore.BiDiRunner (BiDiUrl, parseBiDiUrl, withBiDi)
 import WebDriverPreCore.Extended.Capabilities qualified as EC
 import WebDriverPreCore.Utils.Timeout (Timeout)
@@ -97,7 +97,7 @@ withHttpSession
   -> Eff es a
 withHttpSession http behaviour logger caps action =
   withEffToIO_ http.envIO $ \toIO -> do
-    resp <- toIO $ newSessionResponse http caps
+    resp <- toIO $ newSession http caps
     let logFn
           | behaviour.driverLogging = logger.logFunc Info
           | otherwise               = http.driverLogFn
@@ -129,7 +129,7 @@ withBiDiSession
   -> Eff es a
 withBiDiSession http behaviour logger caps action =
   withEffToIO_ http.envIO $ \toIO -> do
-    resp        <- toIO $ newSessionResponse http caps
+    resp        <- toIO $ newSession http caps
     let logFn = if behaviour.driverLogging then logger.logFunc Info else http.driverLogFn
         sessionEnv = mkHttpSessionEnv http.httpEndpoint logFn behaviour resp http.envIO
         mLogger = if behaviour.driverLogging then Just (logger.logFunc Info) else Nothing

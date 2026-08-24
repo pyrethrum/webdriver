@@ -93,7 +93,7 @@ runWebDriverHttp info = interpret $ \_localEnv -> \case
   TakeElementScreenshot el -> run1 A.takeElementScreenshot el
   where
     runner :: forall r. (FromJSON r) => A.Runner IO r
-    runner = mkSessionRunner info
+    runner = mkSessionRunner info.endpoint info.logger
 
     sess :: Session
     sess = info.session

@@ -14,7 +14,6 @@ module WebDriver.Effectful.App
   ( -- * opts
 
     -- * HTTP Runners
-    acquireHttpSession,
     releaseHttpSession,
     runHttpSession,
     withHttpSession,
@@ -34,11 +33,9 @@ import UnliftIO (bracket, finally, throwIO)
 import WebDriver.Effectful.Logger (Logger, Severity (..), getLogFn)
 import WebDriver.Effectful.HTTP.Core
   ( BiDiInfo (..),
-    HttpDriverInfo (..),
     HttpSessionInfo (..),
     WebDriverBiDi,
     WebDriverHttp,
-    defaultDriverInfo,
     mkSessionRunner,
     runWebDriverBiDi,
     runWebDriverHttp,
@@ -47,8 +44,9 @@ import WebDriverPreCore.BiDiRunner (BiDiUrl, parseBiDiUrl, withBiDi)
 import WebDriverPreCore.Error (parseFailToWDException)
 import WebDriverPreCore.Extended.Capabilities qualified as EC
 import WebDriverPreCore.Extended.HTTP.Base.Actions qualified as HA
-import WebDriverPreCore.HttpRunner (callWebDriver)
+import WebDriverPreCore.HttpRunner (callWebDriver, HttpEndpoint)
 import WebDriverPreCore.Utils.Timeout (Timeout)
+import WebDriverPreCore.Extended.Capabilities (HttpSessionResponse(..))
 
 
 -- ---------------------------------------------------------------------------
@@ -62,19 +60,6 @@ import WebDriverPreCore.Utils.Timeout (Timeout)
 runHttpSession :: forall es a. (IOE :> es) => HttpSessionInfo -> Eff (WebDriverHttp : es) a -> Eff es a
 runHttpSession = runWebDriverHttp
 
-acquireHttpSession
-  :: HttpDriverInfo
-  -> EC.HttpCapabilities
-  -> Timeout
-  -> IO HttpSessionInfo
-acquireHttpSession driverInfo caps pauseDuration' = do
-  sessionResponse <- EC.newHttpSessionResponse (mkRootRunner driverInfo) caps
-  pure MkHttpSessionInfo
-    { driverInfo
-    , session       = sessionResponse.session
-    , pauseDuration = pauseDuration',
-      sessionResponse
-    }
 
 -- | Delete the HTTP session associated with an 'HttpSessionInfo' handle.
 releaseHttpSession :: HttpSessionInfo -> IO ()
@@ -165,9 +150,9 @@ withBiDiSession pauseDuration driverInfo caps action =
 -- Used to create a session via @newSession@ before an 'HttpSessionInfo'
 -- object exists.  'mkSessionRunner' in "WebDriver.Effectful.HTTP.Core"
 -- provides the session-scoped equivalent used by the interpreter.
-mkRootRunner :: (FromJSON r) => HttpDriverInfo -> HA.Runner IO r
-mkRootRunner info cmd =
-  callWebDriver info.httpEndpoint info.driverLogFn cmd
+mkRootRunner :: (FromJSON r) => HttpEndpoint -> (Text -> IO ()) -> HA.Runner IO r
+mkRootRunner endpoint logger cmd =
+  callWebDriver httpEndpoint logger cmd
     >>= either (throwIO . parseFailToWDException) pure
 
 

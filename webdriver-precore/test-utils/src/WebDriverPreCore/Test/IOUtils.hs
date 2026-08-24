@@ -2,7 +2,6 @@ module WebDriverPreCore.Test.IOUtils
   ( sleep,
     encodeFileToBase64,
     exceptionTextIncludes,
-    logNothingLogger,
     lwrTxtIncludes,
     DemoActions (..),
     noOpUtils,
@@ -11,8 +10,7 @@ module WebDriverPreCore.Test.IOUtils
     findWebDriverRoot,
     Logger (..),
     loopForever,
-    catchLog,
-    defToLogNothing
+    catchLog
   )
 where
 
@@ -49,10 +47,6 @@ findWebDriverRoot path =
 newtype Logger = MkLogger
   { log :: Text -> IO ()
   }
-
--- default Nothing to Logger that does nothing
-defToLogNothing :: Maybe Logger -> Logger
-defToLogNothing = fromMaybe logNothingLogger
 
 mkDemoActions :: Logger -> Timeout -> DemoActions
 mkDemoActions qLog pause =

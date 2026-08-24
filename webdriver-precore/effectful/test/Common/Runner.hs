@@ -31,37 +31,34 @@ data WDSession = MkWDSession
     sessionInfo :: HttpSessionInfo
   }
 
-getWDSession :: T.Timeout -> Bool -> IO WDSession
-getWDSession pauseDuration wantLogging = 
-  runSetup $ 
-   \driverInfo config -> 
-      liftIO $ do
-        loggerHandle <- if wantLogging
-                          then Just <$> acquireLogger "eval.log"
-                          else pure Nothing
-        sessionInfo <- acquireHttpSession driverInfo (mkHttpCaps config) pauseDuration
-        pure MkWDSession {loggerHandle, sessionInfo}
+-- | Create a new WebDriver session based on config
+-- TODO:: ADD BIDI Flag
+getWDSession :: IO WDSession
+getWDSession = do
+  cfg@MkConfig{httpUrl = host, httpPort = port, wantLogging} <- loadConfig
+  loggerHandle <- if wantLogging
+                    then Just <$> acquireLogger "eval.log"
+                    else pure Nothing
+  let 
+    endpoint = MkHttpEndpoint {host, port}
+    logger = loggerHandle & 
+                maybe 
+                  (const $ pure ()) 
+                  (\lh -> \t -> liftIO $ logToHandle lh t) 
+  sessionResponse@MkHttpSessionResponse{session} <- EC.newHttpSession (mkHttpCaps cfg) endpoint  
+  let sessionInfo = MkHttpSessionInfo
+        { endpoint = endpoint,
+          logger = logger,
+          session = session,
+          pauseDuration = cfg.pauseDuration,
+          sessionResponse = sessionResponse
+        }
+  pure MkWDSession {loggerHandle, sessionInfo}
 
 closeWDSession :: WDSession -> IO ()
 closeWDSession MkWDSession {loggerHandle, sessionInfo} =
   releaseHttpSession sessionInfo
     `finally` maybe (pure ()) releaseLogger loggerHandle
-
-
-runSetup :: forall a. (forall es. (IOE :> es) => HttpDriverInfo -> Config -> Eff es a) -> IO a
-runSetup action = runEff runAction
-  where
-    runAction :: Eff '[IOE] a
-    runAction = do
-      (config :: Config) <- liftIO loadConfig
-      let
-          driverInfo :: HttpDriverInfo
-          driverInfo =
-            MkHttpDriverInfo
-              { httpEndpoint = MkHttpEndpoint {host = config.httpUrl, port = config.httpPort},
-                driverLogFn  = Nothing
-              }
-      action driverInfo config
   
 
 testUrl :: MonadIO m => IO URL -> m URL 

@@ -62,8 +62,7 @@ module WebDriverPreCore.Extended.Capabilities
 
     -- * Session Management
     Runner,
-    newHttpSession,
-    newHttpSessionResponse,
+    newHttpSession
   )
 where
 
@@ -564,20 +563,11 @@ type Runner m a = HTTP.Command a -> m a
 -- Specification Entry: [HTMLSpecURL#new-session](https://www.w3.org/TR/webdriver/#new-session)
 --
 -- @POST \/session New Session@
-newHttpSessionResponse ::
-  forall m.
-  (Functor m) =>
-  Runner m HTTP.SessionResponse ->
-  FullCapabilities HttpCapability ->
-  m HttpSessionResponse
-newHttpSessionResponse runner =
-  fmap fromHttpSessionResponse . Actions.newSession runner . toHttpCapabilities
-
 newHttpSession ::
   forall m.
   (Functor m) =>
   Runner m HTTP.SessionResponse ->
   FullCapabilities HttpCapability ->
-  m Session
+  m HttpSessionResponse
 newHttpSession runner =
-  fmap ((.session) . fromHttpSessionResponse) . Actions.newSession runner . toHttpCapabilities
+  fmap fromHttpSessionResponse . Actions.newSession runner . toHttpCapabilities
