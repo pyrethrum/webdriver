@@ -1,18 +1,15 @@
 module HTTP.Runner (
   withHttp,
   testUrl,
-  mkHttpCaps,
   BaseHTTPEffs,
   HttpTestEff,
   WDSession (..),
-  getWDSession,
-  closeWDSession,
   -- TODO: Clean this up
   runHttpTest,
   runHttp,
 ) where
 
-import Common.Runner (runSetup, testUrl)
+import Common.Runner (runSetup, testUrl, WDSession (..), mkHttpCaps)
 import Data.Text (Text, unpack)
 import Effectful (Eff, IOE, liftIO, (:>), runEff)
 import Test.Tasty (TestTree)
@@ -44,13 +41,6 @@ import WebDriverPreCore.Test.CapabilitiesBuilder (httpCapabilities)
 import WebDriverPreCore.Test.ConfigLoader (Config (..))
 
 
-mkHttpCaps :: Config -> HttpCapabilities
-mkHttpCaps config =
-  MkFullCapabilities
-    { alwaysMatch = Just . fromHttpCapability $ httpCapabilities config,
-      firstMatch  = []
-    }
-
 withHttp :: (forall es. ( IOE :> es, Logger :> es, Pause :> es, WebDriverHttp :> es) => Eff es ()) -> IO ()
 withHttp action =
   runSetup $ \driverInfo opts config ->
@@ -58,44 +48,10 @@ withHttp action =
          withLogger "eval.log" $
            withHttpSession driverInfo opts (mkHttpCaps config) action
 
-
-
-      -- let
-      --     opts :: InteractOpts
-      --     opts = mkInteractOpts config
-
-      --     driverInfo :: HttpDriverInfo
-      --     driverInfo =
-      --       MkHttpDriverInfo
-      --         { httpEndpoint = MkHttpEndpoint {host = config.httpUrl, port = config.httpPort},
-      --           driverLogFn  = Nothing
-      --         }
-
-
 -- ---------------------------------------------------------------------------
 -- Resources
 -- ---------------------------------------------------------------------------
 
-data WDSession = MkWDSession
-  { loggerHandle :: Maybe LoggerHandle,
-    sessionInfo :: HttpSessionInfo
-  }
-
-getWDSession :: IO WDSession
-getWDSession = 
-  runSetup $ 
-   \driverInfo opts config -> 
-      liftIO $ do
-        loggerHandle <- if opts.wantLogging
-                          then Just <$> acquireLogger "eval.log"
-                          else pure Nothing
-        sessionInfo <- acquireHttpSession driverInfo (mkHttpCaps config) opts.pauseDuration
-        pure MkWDSession {loggerHandle, sessionInfo}
-
-closeWDSession :: WDSession -> IO ()
-closeWDSession MkWDSession {loggerHandle, sessionInfo} =
-  releaseHttpSession sessionInfo
-    `finally` maybe (pure ()) releaseLogger loggerHandle
 
 -- | Run a 'BaseHTTPAction' with shared session and logger resources.
 --

@@ -51,6 +51,7 @@ import WebDriverPreCore.Extended.HTTP.Base.Actions qualified as HA
 import WebDriverPreCore.HttpRunner (callWebDriver)
 import WebDriverPreCore.Utils.Timeout (Timeout)
 
+
 -- ---------------------------------------------------------------------------
 -- opts
 -- ---------------------------------------------------------------------------
@@ -63,29 +64,12 @@ data InteractOpts = MkInteractOpts
     wantLogging :: Bool
   }
 
--- ---------------------------------------------------------------------------
--- HTTP Runners
--- ---------------------------------------------------------------------------
 
--- | Run an Effectful computation in pure @IO@.
---
--- Provides just 'IOE', so the supplied action can lift any @IO@ operation.
--- Use 'withHttpSession' or 'withBiDiSession' to add WebDriver effects, and
--- 'WebDriver.Effectful.Logger.withLogger' \/ 'WebDriver.Effectful.Pause.withPause'
--- for logging and pacing.
--- TODO: PERHAPS THIS COULD BE StATIC ACTIONS
--- runHttp :: Eff '[IOE] a -> IO a
--- runHttp = runEff
+-- | Run an effectful action inside the 'WebDriverHttp' effect using an
+-- existing 'HttpSessionInfo' handle.
+runHttpSession :: forall es a. (IOE :> es) => HttpSessionInfo -> Eff (WebDriverHttp : es) a -> Eff es a
+runHttpSession = runWebDriverHttp
 
--- | Create an HTTP WebDriver session and return an 'HttpSessionInfo' handle.
---
--- The caller is responsible for pairing this with 'releaseHttpSession'.
--- Use 'Test.Tasty.withResource' or any other bracket-style combinator.
--- 'withHttpSession' uses all three of 'acquireHttpSession',
--- 'releaseHttpSession', and 'runHttpSession' internally.
---
--- The @driverInfo@ should already have 'driverLogFn' set if logging is
--- desired (e.g. resolved from a 'Logger' context via 'resolveLogFn').
 acquireHttpSession
   :: HttpDriverInfo
   -> EC.HttpCapabilities
@@ -105,10 +89,6 @@ releaseHttpSession :: HttpSessionInfo -> IO ()
 releaseHttpSession si =
   HA.deleteSession (mkSessionRunner si) si.session
 
--- | Run an effectful action inside the 'WebDriverHttp' effect using an
--- existing 'HttpSessionInfo' handle.
-runHttpSession :: forall es a. (IOE :> es) => HttpSessionInfo -> Eff (WebDriverHttp : es) a -> Eff es a
-runHttpSession = runWebDriverHttp
 
 -- | Create an HTTP session, run an action inside the 'WebDriverHttp' effect,
 -- then delete the session on completion or error.

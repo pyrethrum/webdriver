@@ -11,7 +11,7 @@ import Data.Text qualified as T
 import Data.Text (Text, unpack)
 import Effectful (Eff, IOE, (:>), liftIO)
 import Common.Utils (defHttpOpts, locateAllHttp, testPattern)
-import HTTP.Runner (WDSession, closeWDSession, getWDSession, runHttp)
+import HTTP.Runner (WDSession, runHttp)
 import Prelude
 import Test.Falsify.Generator as G (Gen, frequency, integral)
 import Test.Falsify.Range as R (between)
@@ -28,6 +28,7 @@ import WebDriverPreCore.Extended.Locators (Locator, css, elmClass, (&&&), (>>>),
 import Data.Bifunctor (Bifunctor(first))
 import Test.Falsify.Property (gen)
 import WebDriverPreCore.Extended.HTTP.Locate (DisplayedCheck(..))
+import Common.Runner (getWDSession, closeWDSession)
 
 tests :: TestTree
 tests =
