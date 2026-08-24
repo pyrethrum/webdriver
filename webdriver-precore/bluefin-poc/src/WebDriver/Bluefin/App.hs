@@ -17,9 +17,6 @@ module WebDriver.Bluefin.App
 
     -- * BiDi Runners
     withBiDiSession,
-
-    -- * Re-exports
-    defaultDriverInfo,
   )
 where
 
@@ -33,15 +30,14 @@ import WebDriver.Bluefin.Core (Logger (..))
 import WebDriver.Bluefin.Logger (Severity (..))
 import WebDriver.Bluefin.HTTP.Core
   ( BiDiEnv (..),
-    HttpDriverInfo (..),
     HttpEnv (..),
     HttpSessionEnv (..),
-    defaultDriverInfo,
   )
 import WebDriver.Bluefin.HTTP.Base.Actions (deleteSession, newSessionResponse)
 import WebDriverPreCore.BiDiRunner (BiDiUrl, parseBiDiUrl, withBiDi)
 import WebDriverPreCore.Extended.Capabilities qualified as EC
 import WebDriverPreCore.Utils.Timeout (Timeout)
+import WebDriverPreCore.HttpRunner (HttpEndpoint (..))
 
 -- ---------------------------------------------------------------------------
 -- Behaviour
@@ -69,16 +65,17 @@ data InteractOpts = MkInteractOpts
 -- Example:
 --
 -- @
--- runHttp driverInfo $ \io http -> do
+-- runHttp endpoint logFn $ \io http -> do
 --   log io "Hello"
 --   status http
 -- @
 runHttp
-  :: HttpDriverInfo
+  :: HttpEndpoint
+  -> (Text -> IO ())
   -> (forall e. IOE e -> HttpEnv e -> Eff e a)
   -> IO a
-runHttp driverInfo action =
-  runEff_ $ \io -> action io (MkHttpEnv driverInfo io)
+runHttp endpoint logFn action =
+  runEff_ $ \io -> action io (MkHttpEnv endpoint logFn io)
 
 -- | Create an HTTP session, run an action with it, then delete the session.
 --
@@ -102,10 +99,9 @@ withHttpSession http behaviour logger caps action =
   withEffToIO_ http.envIO $ \toIO -> do
     resp <- toIO $ newSessionResponse http caps
     let logFn
-          | behaviour.driverLogging = Just (logger.logFunc Info)
-          | otherwise               = Nothing
-        info'      = http.httpDriverInfo { driverLogFn = logFn }
-        sessionEnv = mkHttpSessionEnv info' behaviour resp http.envIO
+          | behaviour.driverLogging = logger.logFunc Info
+          | otherwise               = http.driverLogFn
+        sessionEnv = mkHttpSessionEnv http.httpEndpoint logFn behaviour resp http.envIO
     finally
       (toIO $ action sessionEnv)
       (toIO $ deleteSession sessionEnv)
@@ -134,10 +130,9 @@ withBiDiSession
 withBiDiSession http behaviour logger caps action =
   withEffToIO_ http.envIO $ \toIO -> do
     resp        <- toIO $ newSessionResponse http caps
-    let sessionEnv = mkHttpSessionEnv http.httpDriverInfo behaviour resp http.envIO
-    let mLogger
-          | behaviour.driverLogging = Just (logger.logFunc Info)
-          | otherwise               = Nothing
+    let logFn = if behaviour.driverLogging then logger.logFunc Info else http.driverLogFn
+        sessionEnv = mkHttpSessionEnv http.httpEndpoint logFn behaviour resp http.envIO
+        mLogger = if behaviour.driverLogging then Just (logger.logFunc Info) else Nothing
     bidiUrl <- parseBiDiUrlIO resp.websocketUrl
     finally
       ( withBiDi mLogger bidiUrl $ \ioRunner ->
@@ -149,10 +144,11 @@ withBiDiSession http behaviour logger caps action =
 -- Internal helpers
 -- ---------------------------------------------------------------------------
 
-mkHttpSessionEnv :: HttpDriverInfo -> InteractOpts -> EC.HttpSessionResponse -> IOE e -> HttpSessionEnv e
-mkHttpSessionEnv info behaviour resp io =
+mkHttpSessionEnv :: HttpEndpoint -> (Text -> IO ()) -> InteractOpts -> EC.HttpSessionResponse -> IOE e -> HttpSessionEnv e
+mkHttpSessionEnv endpoint logFn behaviour resp io =
   MkHttpSessionEnv
-    { httpDriverInfo = info,
+    { httpEndpoint = endpoint,
+      driverLogFn = logFn,
       httpSession = resp.session,
       pauseDuration = behaviour.pauseDuration,
       envIO = io

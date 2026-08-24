@@ -73,12 +73,8 @@ runSetup ::
 runSetup action = runEff_ $ \io -> do
   config <- effIO io loadConfig
   let behaviour = mkInteractOpts config
-      driverInfo =
-        MkHttpDriverInfo
-          { httpEndpoint = MkHttpEndpoint {host = config.httpUrl, port = config.httpPort},
-            driverLogFn = Nothing
-          }
-  action io (MkHttpEnv driverInfo io) behaviour config
+      endpoint = MkHttpEndpoint {host = config.httpUrl, port = config.httpPort}
+  action io (MkHttpEnv endpoint (const $ pure ()) io) behaviour config
 
 -- | Full HTTP test harness: loads config, opens a session, provides a
 -- 'Logger' and 'LogPause' handle, and runs the supplied action.

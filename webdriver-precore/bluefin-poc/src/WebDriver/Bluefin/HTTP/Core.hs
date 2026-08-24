@@ -6,8 +6,7 @@
 --
 -- Defines the environment handle types used throughout the Bluefin POC:
 --
--- * 'HttpDriverInfo'   — HTTP connection configuration
--- * 'HttpEnv'          — IOE handle + driver info; used for root HTTP methods
+-- * 'HttpEnv'          — IOE handle + HTTP endpoint + logging; used for root HTTP methods
 -- * 'HttpSessionEnv'   — 'HttpEnv' fields + session + pause duration
 -- * 'BiDiEnv'          — IOE handle + BiDiRunner IO + pause duration
 --
@@ -16,11 +15,7 @@
 -- 'useImplIn', etc.  Functions receive handles explicitly rather than
 -- implicitly via typeclasses.
 module WebDriver.Bluefin.HTTP.Core
-  ( -- * Driver Info
-    HttpDriverInfo (..),
-    defaultDriverInfo,
-
-    -- * Handles
+  ( -- * Handles
     HttpEnv (..),
     HttpSessionEnv (..),
     BiDiEnv (..),
@@ -53,27 +48,6 @@ import WebDriverPreCore.Utils.Timeout (Timeout (..))
 import UnliftIO (throwIO)
 
 -- ---------------------------------------------------------------------------
--- Driver Info
--- ---------------------------------------------------------------------------
-
--- | Configuration for an HTTP WebDriver connection.
-data HttpDriverInfo = MkHttpDriverInfo
-  { httpEndpoint :: HttpEndpoint,
-    -- | When 'Just', each driver request/response is logged via this function.
-    -- Set from a Katip 'Logger' by 'WebDriver.Bluefin.App.withHttpSession' /
-    -- 'WebDriver.Bluefin.App.withBiDiSession'.
-    driverLogFn :: Maybe (Text -> IO ())
-  }
-
--- | Default driver info targeting localhost:4444 with logging disabled.
-defaultDriverInfo :: HttpDriverInfo
-defaultDriverInfo =
-  MkHttpDriverInfo
-    { httpEndpoint = MkHttpEndpoint {host = "127.0.0.1", port = 4444},
-      driverLogFn = Nothing
-    }
-
--- ---------------------------------------------------------------------------
 -- Handles
 -- ---------------------------------------------------------------------------
 
@@ -81,7 +55,11 @@ defaultDriverInfo =
 --
 -- A proper Bluefin compound handle wrapping 'IOE' and driver config.
 data HttpEnv e = MkHttpEnv
-  { httpDriverInfo :: HttpDriverInfo,
+  { httpEndpoint :: HttpEndpoint,
+    -- | Each driver request/response is logged via this function.
+    -- Set from a Katip 'Logger' by 'WebDriver.Bluefin.App.withHttpSession' /
+    -- 'WebDriver.Bluefin.App.withBiDiSession'.
+    driverLogFn :: Text -> IO (),
     envIO :: IOE e
   }
   deriving (Generic)
@@ -95,7 +73,9 @@ instance (e :> es) => OneWayCoercible (HttpEnv e) (HttpEnv es) where
 -- A proper Bluefin compound handle wrapping 'IOE', driver config, session
 -- and pause duration.
 data HttpSessionEnv e = MkHttpSessionEnv
-  { httpDriverInfo :: HttpDriverInfo,
+  { httpEndpoint :: HttpEndpoint,
+    -- | Each driver request/response is logged via this function.
+    driverLogFn :: Text -> IO (),
     httpSession :: Session,
     pauseDuration :: Timeout,
     envIO :: IOE e
@@ -130,13 +110,13 @@ instance (e :> es) => OneWayCoercible (BiDiEnv e) (BiDiEnv es) where
 -- The returned runner is polymorphic in @a@ (constrained by 'FromJSON').
 mkEnvRunner :: (FromJSON a) => HttpEnv e -> Runner IO a
 mkEnvRunner env cmd =
-  callWebDriver env.httpDriverInfo.httpEndpoint env.httpDriverInfo.driverLogFn cmd
+  callWebDriver env.httpEndpoint env.driverLogFn cmd
     >>= either (throwIO . parseFailToWDException) pure
 
 -- | Build a @Command a -> IO a@ runner from an 'HttpSessionEnv'.
 mkSessionRunner :: (FromJSON a) => HttpSessionEnv e -> Runner IO a
 mkSessionRunner sess cmd =
-  callWebDriver sess.httpDriverInfo.httpEndpoint sess.httpDriverInfo.driverLogFn cmd
+  callWebDriver sess.httpEndpoint sess.driverLogFn cmd
     >>= either (throwIO . parseFailToWDException) pure
 
 -- ---------------------------------------------------------------------------
