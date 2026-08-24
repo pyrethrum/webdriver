@@ -13,6 +13,7 @@ module WebDriver.RIO.HTTP.Core
   ( 
     -- * Driver Info Typeclass
     HasHttpEndpoint (..),
+    HasDriverLogging (..),
 
     -- * Other Runner Typeclasses
     HasBiDiRunner (..),
@@ -60,6 +61,10 @@ import WebDriverPreCore.Utils.Timeout (Timeout)
 class HasHttpEndpoint env where
   httpDriverInfoL :: Lens' env HttpEndpoint
 
+-- | Env has driver logging configuration available.
+class HasDriverLogging env where
+  driverLoggingL :: Lens' env Bool
+
 -- | Env has a 'BiDiRunner' available.
 class HasBiDiRunner env where
   biDiRunnerL :: Lens' env (BiDiRunner (RIO env))
@@ -89,12 +94,16 @@ log = logInfo . display
 getHttpEndpoint :: (HasHttpEndpoint env) => RIO env HttpEndpoint
 getHttpEndpoint = view httpDriverInfoL
 
+getDriverLogging :: (HasDriverLogging env) => RIO env Bool
+getDriverLogging = view driverLoggingL
+
 -- | Run a WebDriver 'Command' in the RIO environment, using the stored
 -- driver info to build an HTTP runner on each call.
 -- Logging is enabled only when 'driverLogging' is 'True'.
-runHttpCommand :: forall env r. (HasHttpEndpoint env, HasLogFunc env, FromJSON r) => Command r -> RIO env r
+runHttpCommand :: forall env r. (HasHttpEndpoint env, HasLogFunc env, FromJSON r, HasDriverLogging env) => Command r -> RIO env r
 runHttpCommand cmd = do
   httpEndpoint <- getHttpEndpoint
+  driverLogging <- getDriverLogging
   lf <- view logFuncL
   let logger :: Text -> IO ()
       logger
