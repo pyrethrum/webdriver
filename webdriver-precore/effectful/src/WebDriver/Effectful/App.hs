@@ -48,7 +48,6 @@ import WebDriverPreCore.HttpRunner (callWebDriver, HttpEndpoint)
 import WebDriverPreCore.Utils.Timeout (Timeout)
 import WebDriverPreCore.Extended.Capabilities (HttpSessionResponse(..))
 
-
 -- ---------------------------------------------------------------------------
 -- opts
 -- ---------------------------------------------------------------------------
@@ -63,8 +62,8 @@ runHttpSession = runWebDriverHttp
 
 -- | Delete the HTTP session associated with an 'HttpSessionInfo' handle.
 releaseHttpSession :: HttpSessionInfo -> IO ()
-releaseHttpSession si =
-  HA.deleteSession (mkSessionRunner si) si.session
+releaseHttpSession MkHttpSessionInfo{endpoint, logger, session} =
+  HA.deleteSession (mkSessionRunner endpoint logger) session
 
 
 -- | Create an HTTP session, run an action inside the 'WebDriverHttp' effect,
@@ -82,17 +81,14 @@ releaseHttpSession si =
 -- Use 'acquireHttpSession' \/ 'releaseHttpSession' as an acquire\/release
 -- pair (e.g. with 'Test.Tasty.withResource') and 'runHttpSession' to inject
 -- the 'WebDriverHttp' effect into each test.
-withHttpSession
-  :: (IOE :> es)
-  => Timeout
-  -> HttpDriverInfo
-  -> EC.HttpCapabilities
+withHttpSession :: (IOE :> es) =>
+  EC.HttpCapabilities
   -> Eff (WebDriverHttp : es) a
   -> Eff es a
-withHttpSession pauseDuration driverInfo caps action =
+withHttpSession caps action =
   withSeqEffToIO $ \runInIO -> do
     bracket
-      (acquireHttpSession driverInfo caps pauseDuration)
+      getWDSession
       releaseHttpSession
       (runInIO . flip runHttpSession action)
 
