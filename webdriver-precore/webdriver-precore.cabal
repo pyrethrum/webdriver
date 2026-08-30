@@ -111,7 +111,7 @@ common commonGhcOptions
     -Wno-deprecations
     -fbyte-code-and-object-code 
     -- TODO make conditional
-    -- -fdefer-type-errors
+    -fdefer-type-errors
     -- -fdefer-typed-holes
 
   cpp-options: 

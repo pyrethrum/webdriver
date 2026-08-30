@@ -14,13 +14,13 @@ import Control.Exception (bracket, throwIO)
 import Data.Aeson (FromJSON, Value)
 import Data.Text (Text)
 import WebDriverPreCore.HTTP.Protocol (Command, FullCapabilities, Session, SessionResponse (..))
-import WebDriverPreCore.HttpRunner (callWebDriver)
+import WebDriverPreCore.HttpRunner (callWebDriver, callWebDriverBody)
 import WebDriverPreCore.Error (parseFailToWDException)
 import Actions (HttpActions (..), mkActions)
 import WebDriverPreCore.Test.Config (Config (..))
 import WebDriverPreCore.Test.ConfigLoader (loadConfig)
 import WebDriverPreCore.Test.Const (milliseconds)
-import WebDriverPreCore.Test.IOUtils (DemoActions (..), Logger (..), logNothingLogger, mkDemoActions)
+import WebDriverPreCore.Test.IOUtils (DemoActions (..), Logger (..), mkDemoActions)
 import WebDriverPreCore.Test.Logger (withChannelFileLogger)
 import WebDriverPreCore.Test.CapabilitiesBuilder (httpFullCapabilities)
 import WebDriverPreCore.HttpRunner (HttpEndpoint(..))
@@ -57,7 +57,7 @@ runDemoWithConfig cfg demo' = do
     then
       withChannelFileLogger run
     else
-      run logNothingLogger
+      run noOpLogger
 
 runDemo' :: Config -> Logger -> HttpDemo -> IO ()
 runDemo' cfg@MkConfig {httpUrl, httpPort, pauseMS} lgr demo' = do
@@ -70,13 +70,17 @@ runDemo' cfg@MkConfig {httpUrl, httpPort, pauseMS} lgr demo' = do
     capabilities = httpFullCapabilities cfg
     demoActions = mkDemoActions lgr $ fromIntegral pauseMS * milliseconds
     -- Create runner functions from endpoint
-    mLogger = if cfg.logging then Just lgr.log else Nothing
+    logger = if cfg.logging then lgr.log else noOpLogger.log
     httpEndpoint = MkHttpEndpoint {host = httpUrl, port = fromIntegral httpPort}
     run :: forall r. (FromJSON r) => Command r -> IO r
-    run cmd = callWebDriver httpEndpoint mLogger cmd >>= either (throwIO . parseFailToWDException) pure
-    runBody :: forall r.  Command r -> IO Value
-    runBody cmd = callWebDriver httpEndpoint mLogger cmd >>= either throwIO pure
+    run cmd = callWebDriver httpEndpoint logger cmd >>= either (throwIO . parseFailToWDException) pure
+
+    -- todo check why not an Either
+    runBody :: forall r. Command r -> IO Value
+    runBody cmd = callWebDriverBody httpEndpoint logger cmd
+
     httpActions = mkActions run runBody
+    
 
 withSession :: FullCapabilities -> HttpActions -> (SessionResponse -> IO ()) -> IO ()
 withSession capabilities http' action = do
@@ -84,3 +88,7 @@ withSession capabilities http' action = do
     (http'.newSession capabilities)
     (http'.deleteSession . (.sessionId))
     action
+
+
+noOpLogger :: Logger
+noOpLogger = MkLogger (\_ -> pure ())
