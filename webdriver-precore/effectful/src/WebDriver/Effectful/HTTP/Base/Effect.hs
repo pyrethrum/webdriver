@@ -16,38 +16,29 @@ module WebDriver.Effectful.HTTP.Base.Effect
     defaultHttpEndpoint,
     noOpLogger,
 
-    -- * Internal helpers
-    mkSessionRunner,
-
     -- * HTTP Effect
     WebDriverHttp (..),
   )
 where
 
-import Data.Aeson (FromJSON, Value)
+import Data.Aeson (Value)
 import Data.Text (Text)
 import Effectful (Dispatch (..), DispatchOf, Effect)
-import UnliftIO (throwIO)
-import WebDriverPreCore.Error (parseFailToWDException)
-import WebDriverPreCore.Extended.HTTP.Base.Actions qualified as HA
-import WebDriverPreCore.Extended.HTTP.Base.Protocol
-  ( Actions,
-    Cookie,
-    ElementId,
-    FrameReference,
-    Handle,
-    Script,
-    Selector,
-    Session (..),
-    ShadowRootElementId,
-    Status,
-    Timeouts,
-    URL,
-    WindowHandleSpec,
-    WindowRect,
-  )
-import WebDriverPreCore.HttpRunner (HttpEndpoint (..), callWebDriver)
-import WebDriverPreCore.Utils.Timeout (Timeout)
+import WebDriverPreCore.HTTP.Protocol
+    ( Actions,
+      Cookie,
+      ElementId,
+      FrameReference,
+      Handle,
+      Script,
+      Selector,
+      ShadowRootElementId,
+      Status,
+      Timeouts,
+      URL,
+      WindowHandleSpec,
+      WindowRect )
+import WebDriverPreCore.HttpRunner (HttpEndpoint (..))
 import WebDriverPreCore.Extended.Capabilities (HttpSessionResponse)
 
 -- ---------------------------------------------------------------------------
@@ -63,25 +54,11 @@ noOpLogger _ = pure ()
 -- | Session-scoped HTTP driver configuration.
 data HttpSessionInfo = MkHttpSessionInfo
   { endpoint :: HttpEndpoint,
-
+    -- | A logger for internal Webdriver operations.
     logger :: Text -> IO (),
-    -- | The active WebDriver session identifier.
-    session :: Session,
-    -- | Duration to sleep on each 'pause' call.
-    pauseDuration :: Timeout,
     -- | Full response
     sessionResponse :: HttpSessionResponse
   }
-
--- ---------------------------------------------------------------------------
--- Internal helpers
--- ---------------------------------------------------------------------------
-
--- | Build a @Command a -> IO a@ runner from an 'HttpSessionInfo'.
-mkSessionRunner :: (FromJSON a) => HttpEndpoint -> (Text -> IO ()) -> HA.Runner IO a
-mkSessionRunner endpoint logger cmd =
-  callWebDriver endpoint logger cmd
-    >>= either (throwIO . parseFailToWDException) pure
 
 -- ---------------------------------------------------------------------------
 -- HTTP effect

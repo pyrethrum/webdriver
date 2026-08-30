@@ -1,30 +1,32 @@
 module Common.Runner where
 
-import Effectful (Eff, IOE, liftIO, (:>), MonadIO, runEff)
+import Data.Text (Text)
+import Effectful (liftIO, MonadIO)
 import UnliftIO (finally)
 import WebDriver.Effectful.Logger (LoggerHandle, acquireLogger, releaseLogger)
 
 import WebDriverPreCore.Test.ConfigLoader (Config (..), loadConfig)
 import WebDriverPreCore.Utils.Timeout as T (Timeout(..)) 
 import WebDriverPreCore.Extended.HTTP.Base.Protocol (URL)
-import Effectful.Timeout
-import WebDriver.Effectful.HTTP.Base.Effect
-import qualified WebDriverPreCore.Extended.Capabilities as EC
+import WebDriver.Effectful.HTTP.Base.Effect (HttpSessionInfo, noOpLogger)
 import WebDriver.Effectful (HttpEndpoint(..), HttpCapabilities, FullCapabilities (..))
 import WebDriver.Effectful.App
 import WebDriverPreCore.Test.CapabilitiesBuilder (httpCapabilities)
 import WebDriverPreCore.Extended.Capabilities (fromHttpCapability)
+import WebDriverPreCore.HTTP.Protocol (Capabilities(..))
 -- ---------------------------------------------------------------------------
 -- Resources
 -- ---------------------------------------------------------------------------
 
 
-mkHttpCaps :: Boolean -> Config -> HttpCapabilities
+mkHttpCaps :: Bool -> Config -> HttpCapabilities
 mkHttpCaps bidiSocket config =
-  MkFullCapabilities
-    { alwaysMatch = Just . fromHttpCapability $ httpCapabilities config {httpWebSocketUrl = bidiSocket},
-      firstMatch  = []
-    }
+  let baseCaps = httpCapabilities config
+      updatedCaps = baseCaps {webSocketUrl = if bidiSocket then Just True else Nothing}
+  in MkFullCapabilities
+       { alwaysMatch = Just (fromHttpCapability updatedCaps),
+         firstMatch  = []
+       }
 
 data WDSession = MkWDSession
   { loggerHandle :: Maybe LoggerHandle,
@@ -35,42 +37,35 @@ data CfgLoaded = MkCfgLoaded
     loggerHandle :: Maybe LoggerHandle,
     httpEndpoint :: HttpEndpoint,
     httpCapabilities :: HttpCapabilities,
-    pauseDuration :: Timeout
+    pauseDuration :: T.Timeout
   }
 
 getConfigData :: Bool -> IO CfgLoaded
 getConfigData bidiSocket = do
-  cfg@MkConfig{httpUrl = host, httpPort = port, wantLogging} <- loadConfig
-  loggerHandle <- if wantLogging
+  cfg@MkConfig{httpUrl = host, httpPort = port, logging, pauseMS} <- loadConfig
+  loggerHandle <- if logging
                     then Just <$> acquireLogger "eval.log"
                     else pure Nothing
   let 
     endpoint = MkHttpEndpoint {host, port}
-    logger = loggerHandle & 
-                maybe 
-                  (const $ pure ()) 
-                  (\lh -> \t -> liftIO $ logToHandle lh t) 
+    -- TODO: Need to add a function to Logger module to convert LoggerHandle to (Text -> IO ())
+    -- For now, just use noOpLogger regardless of logging setting
+    logger = noOpLogger
+    -- Convert pauseMS (milliseconds) to Timeout (microseconds)
+    pauseDuration = T.MkTimeout (fromIntegral pauseMS * 1000)
   pure MkCfgLoaded
     { logger,
       loggerHandle,
       httpEndpoint = endpoint,
       httpCapabilities = mkHttpCaps bidiSocket cfg,
-      pauseDuration = cfg.pauseDuration
+      pauseDuration
     }
 
 -- | Create a new WebDriver session based on config
 getWDSession :: Bool -> IO WDSession
 getWDSession bidiSocket = do
-  MkCfgLoaded{logger, loggerHandle, httpEndpoint = endpoint, httpCapabilities, pauseDuration} <- getConfigData bidiSocket
-  let caps = if bidiSocket then EC.addBidiFlag httpCapabilities else httpCapabilities
-  sessionResponse@MkHttpSessionResponse{session} <- EC.newHttpSession caps endpoint  
-  let sessionInfo = MkHttpSessionInfo
-        { endpoint,
-          logger,
-          session,
-          pauseDuration,
-          sessionResponse
-        }
+  MkCfgLoaded{logger, loggerHandle, httpEndpoint = endpoint, httpCapabilities = caps, pauseDuration} <- getConfigData bidiSocket
+  sessionInfo <- acquireHttpSession endpoint logger pauseDuration caps
   pure MkWDSession {loggerHandle, sessionInfo}
 
 closeWDSession :: WDSession -> IO ()
