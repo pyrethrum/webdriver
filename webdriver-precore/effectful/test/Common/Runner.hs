@@ -19,10 +19,10 @@ import WebDriverPreCore.Extended.Capabilities (fromHttpCapability)
 -- ---------------------------------------------------------------------------
 
 
-mkHttpCaps :: Config -> HttpCapabilities
-mkHttpCaps config =
+mkHttpCaps :: Boolean -> Config -> HttpCapabilities
+mkHttpCaps bidiSocket config =
   MkFullCapabilities
-    { alwaysMatch = Just . fromHttpCapability $ httpCapabilities config,
+    { alwaysMatch = Just . fromHttpCapability $ httpCapabilities config {httpWebSocketUrl = bidiSocket},
       firstMatch  = []
     }
 
@@ -30,11 +30,16 @@ data WDSession = MkWDSession
   { loggerHandle :: Maybe LoggerHandle,
     sessionInfo :: HttpSessionInfo
   }
+data CfgLoaded = MkCfgLoaded
+  { logger :: Text -> IO (),
+    loggerHandle :: Maybe LoggerHandle,
+    httpEndpoint :: HttpEndpoint,
+    httpCapabilities :: HttpCapabilities,
+    pauseDuration :: Timeout
+  }
 
--- | Create a new WebDriver session based on config
--- TODO:: ADD BIDI Flag
-getWDSession :: IO WDSession
-getWDSession = do
+getConfigData :: Bool -> IO CfgLoaded
+getConfigData bidiSocket = do
   cfg@MkConfig{httpUrl = host, httpPort = port, wantLogging} <- loadConfig
   loggerHandle <- if wantLogging
                     then Just <$> acquireLogger "eval.log"
@@ -45,13 +50,26 @@ getWDSession = do
                 maybe 
                   (const $ pure ()) 
                   (\lh -> \t -> liftIO $ logToHandle lh t) 
-  sessionResponse@MkHttpSessionResponse{session} <- EC.newHttpSession (mkHttpCaps cfg) endpoint  
+  pure MkCfgLoaded
+    { logger,
+      loggerHandle,
+      httpEndpoint = endpoint,
+      httpCapabilities = mkHttpCaps bidiSocket cfg,
+      pauseDuration = cfg.pauseDuration
+    }
+
+-- | Create a new WebDriver session based on config
+getWDSession :: Bool -> IO WDSession
+getWDSession bidiSocket = do
+  MkCfgLoaded{logger, loggerHandle, httpEndpoint = endpoint, httpCapabilities, pauseDuration} <- getConfigData bidiSocket
+  let caps = if bidiSocket then EC.addBidiFlag httpCapabilities else httpCapabilities
+  sessionResponse@MkHttpSessionResponse{session} <- EC.newHttpSession caps endpoint  
   let sessionInfo = MkHttpSessionInfo
-        { endpoint = endpoint,
-          logger = logger,
-          session = session,
-          pauseDuration = cfg.pauseDuration,
-          sessionResponse = sessionResponse
+        { endpoint,
+          logger,
+          session,
+          pauseDuration,
+          sessionResponse
         }
   pure MkWDSession {loggerHandle, sessionInfo}
 

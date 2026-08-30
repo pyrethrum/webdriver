@@ -88,7 +88,7 @@ withHttpSession :: (IOE :> es) =>
 withHttpSession caps action =
   withSeqEffToIO $ \runInIO -> do
     bracket
-      getWDSession
+      (getWDSession False)
       releaseHttpSession
       (runInIO . flip runHttpSession action)
 

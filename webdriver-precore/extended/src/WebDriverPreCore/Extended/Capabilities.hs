@@ -94,7 +94,7 @@ data HttpCapability = MkHttpCapability
     timeouts :: Maybe HTTP.Timeouts,
     strictFileInteractability :: Maybe Bool,
     unhandledPromptBehavior :: Maybe HTTP.UnhandledPromptBehavior,
-    httpWebSocketUrl :: Maybe Bool,
+    httpWebSocketUrl :: Bool,
     vendorSpecific :: Maybe HTTP.VendorSpecific
   }
   deriving (Show, Eq)
@@ -248,7 +248,7 @@ fromHttpCapability HTTP.MkCapabilities {..} =
       timeouts,
       strictFileInteractability,
       unhandledPromptBehavior,
-      httpWebSocketUrl = webSocketUrl,
+      httpWebSocketUrl = maybe False id webSocketUrl,
       vendorSpecific
     }
 
@@ -358,7 +358,7 @@ fromHttpSessionResponse (HTTP.MkSessionResponse {sessionId = session, webSocketU
             timeouts,
             strictFileInteractability,
             unhandledPromptBehavior,
-            httpWebSocketUrl = webSocketUrl,
+            httpWebSocketUrl = maybe False id webSocketUrl,
             vendorSpecific
           }
     }
@@ -399,7 +399,7 @@ toHttpCapability (MkHttpCapability {..}) =
       timeouts,
       strictFileInteractability,
       unhandledPromptBehavior,
-      webSocketUrl = httpWebSocketUrl,
+      webSocketUrl = if httpWebSocketUrl then Just True else Just False,
       vendorSpecific
     }
 
@@ -502,7 +502,7 @@ biDiCapabilityToHttp (MkBiDiCapability {..}) mUnhandledPromptBehavior =
       timeouts = Nothing,
       strictFileInteractability = Nothing,
       unhandledPromptBehavior = mUnhandledPromptBehavior,
-      httpWebSocketUrl = Nothing,
+      httpWebSocketUrl = False,
       vendorSpecific = Nothing
     }
 
