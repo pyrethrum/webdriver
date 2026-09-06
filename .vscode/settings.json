@@ -29,5 +29,6 @@
   },
   "search.exclude": {
     "**/dist-newstyle/**": true
-  }
+  },
+  "haskell.componentsLoading": "multi: whole-project"
 }
