@@ -30,5 +30,7 @@
   "search.exclude": {
     "**/dist-newstyle/**": true
   },
-  "haskell.componentsLoading": "multi: whole-project"
+  "haskell.componentsLoading": "multi: whole-project",
+  // REMOVE WHEN OFFICIALLY RELEASED
+  "haskell.serverExecutablePath": "/home/john-walker/.ghcup/hls/2.15.0.0/lib/haskell-language-server-2.15.0.0/bin/haskell-language-server-wrapper"
 }
