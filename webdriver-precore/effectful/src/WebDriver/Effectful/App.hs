@@ -35,17 +35,19 @@ import WebDriver.Effectful.HTTP.Core
     HttpSessionInfo (..),
     WebDriverBiDi,
     WebDriverHttp,
-    mkSessionRunner,
     runWebDriverBiDi,
     runWebDriverHttp,
   )
 import WebDriverPreCore.BiDiRunner (BiDiUrl, parseBiDiUrl, withBiDi)
 import WebDriverPreCore.Extended.Capabilities qualified as EC
 import WebDriverPreCore.Extended.HTTP.Base.Actions qualified as HA
-import WebDriverPreCore.HttpRunner (HttpEndpoint, callWebDriver)
+import WebDriverPreCore.HttpRunner (HttpEndpoint, callWebDriver, Command)
 import WebDriverPreCore.HttpRunner qualified as R
 import WebDriverPreCore.Utils.Timeout (Timeout)
 import WebDriverPreCore.Error (parseFailToWDException)
+import Control.Exception (throw)
+import WebDriverPreCore.HTTP.Protocol (SessionResponse)
+import Control.Monad ((>=>))
 
 -- ---------------------------------------------------------------------------
 -- HTTP Session Management
@@ -58,27 +60,19 @@ import WebDriverPreCore.Error (parseFailToWDException)
 -- @Test.Tasty.withResource@) or within your own brackets.
 --
 -- For convenience, 'withHttpSession' provides a bracket version.
-acquireHttpSession ::
-  HttpEndpoint ->
-  (Text -> IO ()) ->
-  EC.HttpCapabilities ->
-  IO HttpSessionInfo
-acquireHttpSession endpoint logger caps = do
-  let runner = callWebDriverRunner endpoint logger
-  sessionResponse <- EC.newHttpSession runner caps
-  pure
-    MkHttpSessionInfo
-      { endpoint,
-        logger,
-        sessionResponse
-      }
+acquireHttpSession :: HttpEndpoint -> (Text -> IO ()) -> EC.HttpCapabilities -> IO HttpSessionInfo
+acquireHttpSession endpoint logger caps = 
+  MkHttpSessionInfo endpoint logger <$> EC.newHttpSession (httpIORunner endpoint logger) caps
+
+httpIORunner :: forall a. HttpEndpoint -> (Text -> IO ()) -> Command a -> IO a
+httpIORunner endpoint logger = callWebDriver endpoint logger >=> either throw pure
 
 -- | Delete the HTTP session associated with an 'HttpSessionInfo' handle.
 --
 -- This is the release half of the acquire/release pair.
 releaseHttpSession :: HttpSessionInfo -> IO ()
 releaseHttpSession MkHttpSessionInfo {endpoint, logger, sessionResponse} =
-  HA.deleteSession (callWebDriverRunner endpoint logger) sessionResponse.session
+  HA.deleteSession (httpIORunner endpoint logger) sessionResponse.session
 
 -- | Run an effectful action inside the 'WebDriverHttp' effect using an
 -- existing 'HttpSessionInfo' handle.
@@ -178,8 +172,6 @@ withBiDiSession endpoint logger pauseDuration caps action =
           MkHttpSessionInfo
             { endpoint,
               logger,
-              session = sessionResponse.session,
-              pauseDuration,
               sessionResponse
             }
     bidiUrl <- parseBiDiUrlIO sessionResponse.websocketUrl

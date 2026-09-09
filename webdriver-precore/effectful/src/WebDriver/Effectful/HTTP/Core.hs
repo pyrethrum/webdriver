@@ -33,10 +33,7 @@ module WebDriver.Effectful.HTTP.Core
     runWebDriverHttp,
 
     -- * BiDi Interpreter
-    runWebDriverBiDi,
-
-    -- * Internal helpers (re-exported for App module)
-    mkSessionRunner,
+    runWebDriverBiDi
   )
 where
 
@@ -48,7 +45,6 @@ import WebDriver.Effectful.BiDi.Base.Interpreter (runWebDriverBiDi)
 import WebDriver.Effectful.HTTP.Base.Effect
   ( 
     HttpSessionInfo (..),
-    WebDriverHttp (..),
-    mkSessionRunner,
+    WebDriverHttp (..)
   )
 import WebDriver.Effectful.HTTP.Base.Interpreter (runWebDriverHttp)
