@@ -369,7 +369,7 @@ library webdriver-precore-extended
       WebDriverPreCore.Extended.Common.Locators.Internal
   other-modules:
       WebDriverPreCore.Extended.BiDi.Internal
-      WebDriverPreCore.Extended.LocateCommon
+      WebDriverPreCore.Extended.Common.Locate
 
   hs-source-dirs: extended/src
   build-depends:

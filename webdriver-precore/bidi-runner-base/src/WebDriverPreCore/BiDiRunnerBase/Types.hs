@@ -21,7 +21,7 @@ module WebDriverPreCore.BiDiRunnerBase.Types
     
     -- * BiDi URL
     BiDiUrl (..),
-    parseBiDiUrl,
+    parseBiDiUrl
   )
 where
 
@@ -32,6 +32,7 @@ import Data.Text qualified as T
 import GHC.Generics (Generic)
 import Utils (JSUInt (..))
 import Text.Read (readMaybe)
+import UnliftIO (Exception)
 
 -- | A command to send over the BiDi socket
 data SocketCommand a r = MkSocketCommand
@@ -92,6 +93,7 @@ data BiDiUrl = MkBiDiUrl
   }
   deriving (Show, Eq)
 
+
 -- | Parse a WebSocket URL into BiDi components
 -- Example: "ws://127.0.0.1:9222/session/abc123"
 parseBiDiUrl :: Text -> Maybe BiDiUrl
@@ -106,3 +108,4 @@ parseBiDiUrl url = do
     (host, portStr) -> do
       port <- readMaybe . T.unpack =<< T.stripPrefix ":" portStr
       pure $ MkBiDiUrl {host, port, path}
+

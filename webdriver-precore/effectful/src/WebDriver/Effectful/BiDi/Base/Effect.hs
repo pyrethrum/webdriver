@@ -12,7 +12,7 @@
 -- "WebDriver.Effectful.BiDi.Base.Interpreter".
 module WebDriver.Effectful.BiDi.Base.Effect
   ( -- * Configuration type
-    BiDiInfo (..),
+    BiDiIORunner,
 
     -- * Internal helpers
     bidiRun,
@@ -147,12 +147,7 @@ import WebDriverPreCore.Utils.Timeout (Timeout)
 -- ---------------------------------------------------------------------------
 
 -- | BiDi driver environment holding the async WebSocket runner.
-data BiDiInfo = MkBiDiInfo
-  { biDiRunner :: BiDiRunner IO,
-    -- | Duration to sleep on each 'pause' call.
-    pauseDuration :: Timeout
-  }
-
+data BiDiIORunner = BiDiRunner IO
 -- ---------------------------------------------------------------------------
 -- Internal subscription helpers
 -- ---------------------------------------------------------------------------

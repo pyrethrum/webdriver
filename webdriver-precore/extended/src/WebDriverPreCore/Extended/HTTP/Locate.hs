@@ -25,7 +25,7 @@ import Data.Text qualified as T
 import GHC.Generics (Generic)
 import GHC.Stack (HasCallStack)
 
-import WebDriverPreCore.Extended.LocateCommon (
+import WebDriverPreCore.Extended.Common.Locate (
     LocateException (..),
     PreLocateException (..),
     LeafCardinality (..),

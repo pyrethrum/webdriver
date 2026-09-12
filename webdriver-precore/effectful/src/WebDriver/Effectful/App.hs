@@ -48,6 +48,7 @@ import WebDriverPreCore.Error (parseFailToWDException)
 import Control.Exception (throw)
 import WebDriverPreCore.HTTP.Protocol (SessionResponse)
 import Control.Monad ((>=>))
+import WebDriverPreCore.BiDiRunnerBase (parseBiDiUrlResponse)
 
 -- ---------------------------------------------------------------------------
 -- HTTP Session Management
@@ -129,7 +130,7 @@ acquireBiDiSession ::
   IO (HttpSessionInfo, BiDiInfo)
 acquireBiDiSession endpoint logger caps = do
   httpInfo <- acquireHttpSession endpoint logger caps
-  _bidiUrl <- parseBiDiUrlIO httpInfo.sessionResponse.websocketUrl
+  bidiUrl <- ioThrow $ parseBiDiUrlResponse httpInfo.sessionResponse.websocketUrl
   -- Note: withBiDi creates the WebSocket connection but doesn't close it
   -- until the continuation returns. We need to refactor this to return
   -- the BiDiRunner directly or use a different approach.
@@ -176,7 +177,7 @@ withBiDiSession endpoint logger pauseDuration caps action =
               logger,
               sessionResponse
             }
-    bidiUrl <- parseBiDiUrlIO sessionResponse.websocketUrl
+    bidiUrl <- parseBiDiUrl sessionResponse.websocketUrl
     finally
       ( withBiDi (Just logger) bidiUrl $ \ioRunner -> do
           let biDiInfo =
@@ -187,15 +188,3 @@ withBiDiSession endpoint logger pauseDuration caps action =
           runInIO (runWebDriverBiDi biDiInfo action)
       )
       (releaseHttpSession httpInfo)
-
--- | Parse a BiDi WebSocket URL, throwing 'IOError' on failure.
-parseBiDiUrlIO :: Maybe Text -> IO BiDiUrl
-parseBiDiUrlIO = maybe
-    (throwIO $
-      userError
-        "withBiDiSession: driver did not return a WebSocket URL \
-        \(set webSocketUrl = True in capabilities)")
-    \t ->
-    case parseBiDiUrl t of
-      Nothing -> throwIO $ userError $ "withBiDiSession: could not parse WebSocket URL: " <> show t
-      Just u  -> pure u

@@ -264,3 +264,25 @@ hoistBiDiRunner lift' unlift' MkBiDiRunner {run = mRun, socketActions = mSA, run
         B.SingleSubscription {subscriptionType, action = unlift . action}
       B.MultiSubscription {subscriptionTypes, nAction} ->
         B.MultiSubscription {subscriptionTypes, nAction = unlift . nAction}
+
+
+
+data SocketConnectionException 
+  = MkSocketConnectionException Text
+  deriving (Show, Eq)
+
+instance Exception SocketConnectionException
+
+-- | Parse a BiDi WebSocket URL, throwing 'IOError' on failure.
+parseBiDiUrlResponse :: Maybe Text -> Either SocketConnectionException BiDiUrl
+parseBiDiUrlResponse = maybe
+    (failConnection
+        "withBiDiSession: driver did not return a WebSocket URL \
+        \(set webSocketUrl = True in capabilities)")
+    \t ->
+    case parseBiDiUrl t of
+      Nothing -> failConnection $ "withBiDiSession: could not parse WebSocket URL: " <> t
+      Just u  -> pure u
+    where 
+      failConnection = Left . MkSocketConnectionException
+
