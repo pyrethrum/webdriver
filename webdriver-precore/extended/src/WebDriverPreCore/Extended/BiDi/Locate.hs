@@ -30,7 +30,7 @@ import WebDriverPreCore.Extended.LocateCommon (
     addLocToException,
     runLoc
   )
-import WebDriverPreCore.Extended.Locators.Internal (
+import WebDriverPreCore.Extended.Common.Locators.Internal (
     Locator,
     RoleLocator (..),
     CompoundLocator,
@@ -39,7 +39,7 @@ import WebDriverPreCore.Extended.Locators.Internal (
     CaseSensitivity (..),
     roleLabelText
   )
-import WebDriverPreCore.Extended.Locators.Internal qualified as LI
+import WebDriverPreCore.Extended.Common.Locators.Internal qualified as LI
 import WebDriverPreCore.BiDi.Protocol qualified as BiDiP
 import WebDriverPreCore.Extended.BiDi.Base.Protocol (JSUInt, SerializationOptions, SharedReference (..))
 import Utils (txt)

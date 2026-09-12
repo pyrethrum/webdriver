@@ -14,8 +14,8 @@ import Data.Text
 import GHC.Generics (Generic)
 import GHC.Stack (HasCallStack)
 
-import WebDriverPreCore.Extended.Locators.Internal (Locator)
-import WebDriverPreCore.Extended.Locators.Internal qualified as LI
+import WebDriverPreCore.Extended.Common.Locators.Internal (Locator)
+import WebDriverPreCore.Extended.Common.Locators.Internal qualified as LI
 import WebDriverPreCore.Error ( WebDriverException )
 import Prelude as P hiding (log)
 

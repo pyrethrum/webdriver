@@ -32,8 +32,8 @@ import WebDriverPreCore.Extended.LocateCommon (
     addLocToException,
     runLoc
   )
-import WebDriverPreCore.Extended.Locators.Internal (Locator, RoleLocator (..), CompoundLocator, HttpLoc (..), xPathRelativePrefix)
-import WebDriverPreCore.Extended.Locators.Internal qualified as LI
+import WebDriverPreCore.Extended.Common.Locators.Internal (Locator, RoleLocator (..), CompoundLocator, HttpLoc (..), xPathRelativePrefix)
+import WebDriverPreCore.Extended.Common.Locators.Internal qualified as LI
 import WebDriverPreCore.HTTP.Protocol as HTTPP (ElementId, Script (..), Selector (..))
 import Prelude as P hiding (log)
 import Utils (txt)

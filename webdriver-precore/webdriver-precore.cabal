@@ -366,7 +366,7 @@ library webdriver-precore-extended
       -- common
       WebDriverPreCore.Extended.Protocol
       --
-      WebDriverPreCore.Extended.Locators.Internal
+      WebDriverPreCore.Extended.Common.Locators.Internal
   other-modules:
       WebDriverPreCore.Extended.BiDi.Internal
       WebDriverPreCore.Extended.LocateCommon

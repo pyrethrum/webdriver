@@ -14,7 +14,7 @@ import Test.Tasty.HUnit (testCase, (@?=), (@?), assertFailure)
 import Utils (txt)
 import WebDriverPreCore.Extended.BiDi.Base.Protocol (BrowsingContext (..))
 import WebDriverPreCore.Extended.Locators hiding (Locator)
-import WebDriverPreCore.Extended.Locators.Internal
+import WebDriverPreCore.Extended.Common.Locators.Internal
   ( InvalidLocator (..),
     Locator (..),
     Protocol (..),

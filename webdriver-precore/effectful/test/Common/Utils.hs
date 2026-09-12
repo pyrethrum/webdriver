@@ -85,7 +85,7 @@ import WebDriver.Effectful.HTTP.Base.Actions
 import WebDriverPreCore.Extended.HTTP.Base.Protocol (ElementId)
 import WebDriverPreCore.Extended.Locate qualified as L
 import WebDriverPreCore.Extended.Locators (Locator, attribute')
-import WebDriverPreCore.Extended.Locators.Internal (CaseSensitivity (..), MatchType (..))
+import WebDriverPreCore.Extended.Common.Locators.Internal (CaseSensitivity (..), MatchType (..))
 import Data.List (singleton)
 import Data.Kind (Type)
 import System.Environment (withArgs)

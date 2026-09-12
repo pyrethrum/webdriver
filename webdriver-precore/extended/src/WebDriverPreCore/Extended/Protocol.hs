@@ -10,3 +10,6 @@ import WebDriverPreCore.Error
 import WebDriverPreCore.Extended.Capabilities
 import WebDriverPreCore.Extended.Locators
 import WebDriverPreCore.Utils.Timeout
+
+
+-- TODO: Clean Up PROTCOLS - THERE ARE MULTIPLE PROTOCOL MODULES SCATTERED ACROSS THE PROJECT

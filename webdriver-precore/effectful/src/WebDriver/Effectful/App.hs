@@ -29,7 +29,7 @@ where
 import Data.Aeson (FromJSON)
 import Data.Text (Text)
 import Effectful (Eff, IOE, (:>), withSeqEffToIO)
-import UnliftIO (bracket, finally, throwIO)
+import UnliftIO (bracket, finally, throwIO, Exception)
 import WebDriver.Effectful.HTTP.Core
   ( BiDiInfo (..),
     HttpSessionInfo (..),
@@ -65,7 +65,10 @@ acquireHttpSession endpoint logger caps =
   MkHttpSessionInfo endpoint logger <$> EC.newHttpSession (httpIORunner endpoint logger) caps
 
 httpIORunner :: forall a. HttpEndpoint -> (Text -> IO ()) -> Command a -> IO a
-httpIORunner endpoint logger = callWebDriver endpoint logger >=> either throw pure
+httpIORunner endpoint logger = callWebDriver endpoint logger >=> ioThrow
+
+ioThrow :: Either l r -> IO r
+ioThrow  =  either throwIO pure
 
 -- | Delete the HTTP session associated with an 'HttpSessionInfo' handle.
 --
@@ -122,11 +125,10 @@ withHttpSession endpoint logger caps action =
 acquireBiDiSession ::
   HttpEndpoint ->
   (Text -> IO ()) ->
-  Timeout ->
   EC.HttpCapabilities ->
   IO (HttpSessionInfo, BiDiInfo)
-acquireBiDiSession endpoint logger pauseDuration caps = do
-  httpInfo <- acquireHttpSession endpoint logger pauseDuration caps
+acquireBiDiSession endpoint logger caps = do
+  httpInfo <- acquireHttpSession endpoint logger caps
   _bidiUrl <- parseBiDiUrlIO httpInfo.sessionResponse.websocketUrl
   -- Note: withBiDi creates the WebSocket connection but doesn't close it
   -- until the continuation returns. We need to refactor this to return
