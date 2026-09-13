@@ -21,7 +21,7 @@
 module WebDriver.Effectful.HTTP.Core
   ( -- * Types
     HttpSessionInfo (..),
-    BiDiInfo (..),
+    BiDiIORunner,
 
     -- * HTTP Effect
     WebDriverHttp (..),
@@ -38,7 +38,7 @@ module WebDriver.Effectful.HTTP.Core
 where
 
 import WebDriver.Effectful.BiDi.Base.Effect
-  ( BiDiInfo (..),
+  ( BiDiIORunner,
     WebDriverBiDi (..),
   )
 import WebDriver.Effectful.BiDi.Base.Interpreter (runWebDriverBiDi)

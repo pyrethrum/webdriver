@@ -14,13 +14,13 @@ import Data.Aeson (FromJSON)
 import Effectful (Eff, IOE, Limit (..), Persistence (..), UnliftStrategy (..), liftIO, (:>))
 import Effectful.Dispatch.Dynamic (interpret, localUnliftIO)
 import WebDriver.Effectful.BiDi.Base.Effect
-  ( BiDiInfo (..),
+  (
     WebDriverBiDi (..),
     bidiRun,
     mkSendSub,
     mkSendSub',
     mkSendSubMany',
-    mkSendSubOffSpecMany',
+    mkSendSubOffSpecMany', BiDiIORunner,
   )
 import WebDriverPreCore.BiDi.Protocol
   ( SessionUnsubscribe (..),
@@ -40,8 +40,8 @@ import WebDriverPreCore.Extended.BiDi.Base.Actions qualified as BA
 -- The interpreter maps each effect constructor to the corresponding
 -- @WebDriverPreCore.Extended.BiDi.Base.Actions@ function, using the same
 -- subscription helper pattern as the Bluefin POC.
-runWebDriverBiDi :: forall es a. IOE :> es => BiDiInfo -> Eff (WebDriverBiDi : es) a -> Eff es a
-runWebDriverBiDi info = interpret $ \localEnv -> \case
+runWebDriverBiDi :: forall es a. IOE :> es => BiDiIORunner -> Eff (WebDriverBiDi : es) a -> Eff es a
+runWebDriverBiDi ioRunner = interpret $ \localEnv -> \case
   -- Session
   SessionNew caps -> run1 BA.sessionNew caps
   SessionStatus -> run BA.sessionStatus
@@ -105,7 +105,7 @@ runWebDriverBiDi info = interpret $ \localEnv -> \case
   ScriptCallFunction p -> run1 BA.scriptCallFunction p
   ScriptDisown p -> run1 BA.scriptDisown p
   ScriptEvaluate p -> run1 BA.scriptEvaluate p
-  ScriptEvaluateNoWait p -> liftIO $ Runner.runNoWait info.biDiRunner (mkCommand BP.ScriptEvaluate p)
+  ScriptEvaluateNoWait p -> liftIO $ Runner.runNoWait ioRunner (mkCommand BP.ScriptEvaluate p)
   ScriptGetRealms p -> run1 BA.scriptGetRealms p
   ScriptRemovePreloadScript p -> run1 BA.scriptRemovePreloadScript p
   -- Storage
@@ -116,10 +116,10 @@ runWebDriverBiDi info = interpret $ \localEnv -> \case
   WebExtensionInstall p -> run1 BA.webExtensionInstall p
   WebExtensionUninstall p -> run1 BA.webExtensionUninstall p
   -- Generic escape hatches
-  SendBiDiCmd cmd -> liftIO $ bidiRun info cmd
-  SendBiDiCmdNoWait cmd -> liftIO $ Runner.runNoWait info.biDiRunner cmd
-  SendBiDiOffSpecCmd mid m ps -> liftIO $ info.biDiRunner.runOffSpecWithId mid m ps
-  SendBiDiOffSpecCmdNoWait m ps -> liftIO $ Runner.runOffSpecNoWait info.biDiRunner m ps
+  SendBiDiCmd cmd -> liftIO $ bidiRun ioRunner cmd
+  SendBiDiCmdNoWait cmd -> liftIO $ Runner.runNoWait ioRunner cmd
+  SendBiDiOffSpecCmd mid m ps -> liftIO $ ioRunner.runOffSpecWithId mid m ps
+  SendBiDiOffSpecCmdNoWait m ps -> liftIO $ Runner.runOffSpecNoWait ioRunner m ps
   -- Log subscriptions
   SubscribeLogEntryAdded h -> localUnliftIO localEnv unliftStrategy $ \unlift -> BA.subscribeLogEntryAdded sendSub (unlift . h)
   SubscribeLogEntryAdded' b u h -> localUnliftIO localEnv unliftStrategy $ \unlift -> BA.subscribeLogEntryAdded' sendSub' b u (unlift . h)
@@ -182,18 +182,18 @@ runWebDriverBiDi info = interpret $ \localEnv -> \case
   Unsubscribe subId ->
     liftIO $
       Runner.unsubscribe
-        info.biDiRunner.socketActions
-        (bidiRun info . BA.sessionUnsubscribe)
+        ioRunner.socketActions
+        (run' . BA.sessionUnsubscribe)
         (UnsubscribeById {subscriptions = [subId]})
   SessionUnsubscribe unsub ->
     liftIO $
       Runner.unsubscribe
-        info.biDiRunner.socketActions
-        (bidiRun info . BA.sessionUnsubscribe)
+        ioRunner.socketActions
+        (run' . BA.sessionUnsubscribe)
         unsub
   where
     run' :: forall r. (FromJSON r) => BA.Runner IO r
-    run' = bidiRun info
+    run' = bidiRun ioRunner
 
     run :: forall r. (FromJSON r) => (BA.Runner IO r -> IO r) -> Eff es r
     run action = liftIO $ action run'
@@ -206,15 +206,15 @@ runWebDriverBiDi info = interpret $ \localEnv -> \case
     unliftStrategy = ConcUnlift Persistent Unlimited
 
     sendSub :: forall c. BA.SendSub IO c
-    sendSub = mkSendSub info.biDiRunner
+    sendSub = mkSendSub ioRunner
 
     sendSub' :: forall d. BA.SendSub' IO d
-    sendSub' = mkSendSub' info.biDiRunner
+    sendSub' = mkSendSub' ioRunner
 
-    sendSubMany' = mkSendSubMany' info.biDiRunner
+    sendSubMany' = mkSendSubMany' ioRunner
 
 
-    sendSubOffSpecMany' = mkSendSubOffSpecMany' info.biDiRunner
+    sendSubOffSpecMany' = mkSendSubOffSpecMany' ioRunner
 
 
 

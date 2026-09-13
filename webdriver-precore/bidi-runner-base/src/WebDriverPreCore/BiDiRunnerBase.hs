@@ -94,12 +94,11 @@ mkChannelActions logger = do
 withBiDiBase ::
   forall a m.
   (MonadUnliftIO m) =>
-  Maybe (Logger m) ->
+  Logger m->
   BiDiUrl ->
   (SocketActions m -> m a) ->
   m a
-withBiDiBase mLogger bidiUrl action = do
-  let logger = maybe nullLogger id mLogger
+withBiDiBase logger bidiUrl action = do
   ca <- mkChannelActions logger
   withSocket bidiUrl logger ca.messageLoops $
     action ca.socketActions
@@ -107,13 +106,12 @@ withBiDiBase mLogger bidiUrl action = do
 -- | Run a BiDi session with custom message actions
 withBiDiWithActions ::
   (MonadUnliftIO m) =>
-  Maybe (Logger m) ->
+  Logger m ->
   BiDiUrl ->
   (Logger m -> m (ChannelActions m)) ->
   (SocketActions m -> m a) ->
   m a
-withBiDiWithActions mLogger bidiUrl mkActions action = do
-  let logger = maybe nullLogger id mLogger
+withBiDiWithActions logger bidiUrl mkActions action = do
   ca <- mkActions logger
   withSocket bidiUrl logger ca.messageLoops $
     action ca.socketActions

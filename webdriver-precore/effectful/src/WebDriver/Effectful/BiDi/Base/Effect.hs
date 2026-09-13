@@ -140,35 +140,34 @@ import WebDriverPreCore.BiDi.Protocol
 import WebDriverPreCore.BiDiRunner (BiDiRunner (..), Request)
 import WebDriverPreCore.BiDiRunner qualified as Runner
 import WebDriverPreCore.Extended.BiDi.Base.Actions qualified as BA
-import WebDriverPreCore.Utils.Timeout (Timeout)
 
 -- ---------------------------------------------------------------------------
 -- Types
 -- ---------------------------------------------------------------------------
 
 -- | BiDi driver environment holding the async WebSocket runner.
-data BiDiIORunner = BiDiRunner IO
+type BiDiIORunner = BiDiRunner IO
 -- ---------------------------------------------------------------------------
 -- Internal subscription helpers
 -- ---------------------------------------------------------------------------
 
 -- | Extract the rank-2 polymorphic @run@ function from a 'BiDiRunner'.
-bidiRun :: (FromJSON r) => BiDiInfo -> Command r -> IO r
-bidiRun (MkBiDiInfo {biDiRunner = MkBiDiRunner {run = r}}) = r
+bidiRun :: (FromJSON r) => BiDiIORunner -> Command r -> IO r
+bidiRun (MkBiDiRunner {run = r}) = r
 
-mkSendSub :: BiDiRunner IO -> BA.SendSub IO a
+mkSendSub :: BiDiIORunner -> BA.SendSub IO a
 mkSendSub MkBiDiRunner {run = r, socketActions} mkSub handler =
   Runner.subscribe socketActions (r . BA.sessionSubscribe) (mkSub [] [] handler)
 
-mkSendSub' :: BiDiRunner IO -> BA.SendSub' IO a
+mkSendSub' :: BiDiIORunner -> BA.SendSub' IO a
 mkSendSub' MkBiDiRunner {run = r, socketActions} mkSub bcs ucs handler =
   Runner.subscribe socketActions (r . BA.sessionSubscribe) (mkSub bcs ucs handler)
 
-mkSendSubMany' :: BiDiRunner IO -> BA.SendSubMany' IO
+mkSendSubMany' :: BiDiIORunner -> BA.SendSubMany' IO
 mkSendSubMany' MkBiDiRunner {run = r, socketActions} mkSub sts bcs ucs handler =
   Runner.subscribe socketActions (r . BA.sessionSubscribe) (mkSub sts bcs ucs handler)
 
-mkSendSubOffSpecMany' :: BiDiRunner IO -> BA.SendSubOffSpecMany' IO
+mkSendSubOffSpecMany' :: BiDiIORunner -> BA.SendSubOffSpecMany' IO
 mkSendSubOffSpecMany' MkBiDiRunner {run = r, socketActions} mkSub sts bcs ucs handler =
   Runner.subscribe socketActions (r . BA.sessionSubscribe) (mkSub sts bcs ucs handler)
 

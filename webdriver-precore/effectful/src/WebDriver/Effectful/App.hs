@@ -31,7 +31,7 @@ import Data.Text (Text)
 import Effectful (Eff, IOE, (:>), withSeqEffToIO)
 import UnliftIO (bracket, finally, throwIO, Exception)
 import WebDriver.Effectful.HTTP.Core
-  ( BiDiInfo (..),
+  ( BiDiIORunner,
     HttpSessionInfo (..),
     WebDriverBiDi,
     WebDriverHttp,
@@ -110,25 +110,9 @@ withHttpSession endpoint logger caps action =
 -- BiDi Session Management
 -- ---------------------------------------------------------------------------
 
--- | Create an HTTP session with BiDi enabled, open the WebSocket, and return
--- both handles.
---
--- This is the acquire half of the acquire/release pair. Use with
--- 'releaseBiDiSession' in test framework resource management.
---
--- The capabilities must have @webSocketUrl = True@ enabled.
---
--- NOTE: Currently not implemented because 'withBiDi' from
--- WebDriverPreCore.BiDiRunner uses a bracket-style API that doesn't expose
--- separate acquire/release functions. This would require refactoring the
--- BiDiRunner module to support that pattern.
-acquireBiDiSession ::
-  HttpEndpoint ->
-  (Text -> IO ()) ->
-  EC.HttpCapabilities ->
-  IO (HttpSessionInfo, BiDiInfo)
-acquireBiDiSession endpoint logger caps = do
-  httpInfo <- acquireHttpSession endpoint logger caps
+-- get a bidi session runner from an existing HTTP session
+acquireBiDiSession :: HttpSessionInfo -> IO BiDiIORunner
+acquireBiDiSession httpInfo = do
   bidiUrl <- ioThrow $ parseBiDiUrlProperty httpInfo.sessionResponse.websocketUrl
   -- Note: withBiDi creates the WebSocket connection but doesn't close it
   -- until the continuation returns. We need to refactor this to return
