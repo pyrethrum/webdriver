@@ -48,6 +48,7 @@ import WebDriverPreCore.Error (parseFailToWDException)
 import Control.Exception (throw)
 import Control.Monad ((>=>))
 import WebDriverPreCore.HTTP.Protocol (SessionResponse)
+import WebDriverPreCore.Utils (ioThrow)
 
 -- ---------------------------------------------------------------------------
 -- HTTP Session Management
@@ -66,9 +67,6 @@ acquireHttpSession endpoint logger caps =
 
 httpIORunner :: forall a. HttpEndpoint -> (Text -> IO ()) -> Command a -> IO a
 httpIORunner endpoint logger = callWebDriver endpoint logger >=> ioThrow
-
-ioThrow :: Either l r -> IO r
-ioThrow  =  either throwIO pure
 
 -- | Delete the HTTP session associated with an 'HttpSessionInfo' handle.
 --
@@ -114,19 +112,13 @@ withHttpSession endpoint logger caps action =
 acquireBiDiSession :: HttpSessionInfo -> IO BiDiIORunner
 acquireBiDiSession httpInfo = do
   bidiUrl <- ioThrow $ parseBiDiUrlProperty httpInfo.sessionResponse.websocketUrl
-  -- Note: withBiDi creates the WebSocket connection but doesn't close it
-  -- until the continuation returns. We need to refactor this to return
-  -- the BiDiRunner directly or use a different approach.
-  --
-  -- For now, this is a placeholder that shows the intent.
-  -- A proper implementation would require changes to WebDriverPreCore.BiDiRunner
-  -- to expose an acquire/release style API.
+  
   error "acquireBiDiSession: not yet implemented - requires BiDiRunner refactoring"
 
 -- | Close the BiDi WebSocket and delete the HTTP session.
 --
 -- This is the release half of the acquire/release pair.
-releaseBiDiSession :: (HttpSessionInfo, BiDiInfo) -> IO ()
+releaseBiDiSession :: HttpSessionInfo -> IO ()
 releaseBiDiSession (httpInfo, _biDiInfo) = do
   -- TODO: close BiDi WebSocket connection
   releaseHttpSession httpInfo
@@ -163,11 +155,7 @@ withBiDiSession endpoint logger pauseDuration caps action =
     bidiUrl <- parseBiDiUrl sessionResponse.websocketUrl
     finally
       ( withBiDi (Just logger) bidiUrl $ \ioRunner -> do
-          let biDiInfo =
-                MkBiDiInfo
-                  { biDiRunner = ioRunner,
-                    pauseDuration
-                  }
-          runInIO (runWebDriverBiDi biDiInfo action)
+
+          runInIO (runWebDriverBiDi ioRunner action)
       )
       (releaseHttpSession httpInfo)

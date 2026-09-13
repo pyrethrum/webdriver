@@ -3,23 +3,25 @@
 module WebDriverPreCore.Utils
   ( txt,
     enumerate,
+    ioThrow,
     JSUInt (..),
     -- shared path elements
     SubPath (..),
     db,
     Logger,
-    nullLogger
+    IOLogger,
+    nullLogger,
   )
 where
 
 -- debugging only remove brefore release
 
+import Data.Aeson.Types (FromJSON, ToJSON)
 import Data.Text (Text, pack, unpack)
 import Debug.Trace (trace)
-import Text.Show.Pretty qualified as P
 import GHC.Word (Word64)
-import Data.Aeson.Types (FromJSON, ToJSON)
-
+import Text.Show.Pretty qualified as P
+import UnliftIO (Exception, throwIO)
 
 -- general utils
 
@@ -31,7 +33,7 @@ enumerate = [minBound ..]
 
 -- | JavaScript safe unsigned integer (0 to 2^53-1)
 -- Duplicated from webdriver-precore to avoid dependency
-newtype JSUInt = MkJSUInt Word64 
+newtype JSUInt = MkJSUInt Word64
   deriving newtype (Show, Eq, Ord, Enum, FromJSON, ToJSON, Num)
 
 -- shared path elements
@@ -40,6 +42,10 @@ newtype SubPath = MkSubPath {parts :: [Text]}
 
 -- | Logger type alias
 type Logger m = Text -> m ()
+type IOLogger = Text -> IO ()
+
+ioThrow :: (Exception l) => Either l r -> IO r
+ioThrow = either throwIO pure
 
 -- | Null logger
 nullLogger :: (Applicative m) => Logger m

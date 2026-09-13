@@ -1,5 +1,5 @@
 module WebDriverPreCore.Test.Logger
-  ( Printer (..),
+  ( 
     withLogger,
     withLogFileLogger,
     withChannelFileLogger,
@@ -7,58 +7,41 @@ module WebDriverPreCore.Test.Logger
   )
 where
 
-import Control.Monad (unless)
 import Data.Text (Text)
 import Data.Text.IO qualified as TIO
 import System.FilePath ((</>))
 import UnliftIO
   ( IOMode (..),
+    async,
     atomically,
     bracket,
-    cancel,
-    isEmptyTChan,
     newTChanIO,
     readTChan,
+    wait,
     withFile,
     writeTChan,
   )
-import UnliftIO.Concurrent (threadDelay)
 import UnliftIO.Directory (getCurrentDirectory)
 import UnliftIO.IO (BufferMode (..), hSetBuffering)
-import WebDriverPreCore.Test.IOUtils (Logger (..), findWebDriverRoot, loopForever)
+import WebDriverPreCore.Test.IOUtils (findWebDriverRoot)
+import WebDriverPreCore.Utils (IOLogger)
 
--- | Printer abstraction for logging output
-newtype Printer = MkPrinter
-  { print :: Text -> IO ()
-  }
+-- given an IOLogger, perform IO action with logging
+type IOActionWithLogging = IOLogger -> IO ()
 
--- | Creates a logger with a channel and async loop that processes messages using the provided Printer
-withLogger :: Printer -> (Logger -> IO ()) -> IO ()
-withLogger p loggingAction = do
+-- | Creates a logger with a channel and async loop that processes messages using the provided IOLogger
+withLogger :: IOLogger -> IOActionWithLogging -> IO ()
+withLogger print' loggingAction = do
   logChan <- newTChanIO
-  let waitEmpty :: Int -> IO ()
-      waitEmpty attempt = do
-        empty <- atomically $ isEmptyTChan logChan
-        unless (empty || attempt > 500) $ do
-          threadDelay 10_000
-          waitEmpty $ succ attempt
-
-      writeToChan = atomically . writeTChan @Text logChan
-      readAndPrint = atomically (readTChan logChan) >>= p.print
-
+  let writeToChan = atomically . writeTChan logChan . Just
+      drainLoop = atomically (readTChan logChan) >>= maybe (pure ()) (\m -> print' m >> drainLoop)
   bracket
-    -- initialise printloop
-    (loopForever writeToChan "Logger" readAndPrint)
-    -- empty and cancel print loop
-    ( \printLoop -> do
-        waitEmpty 0
-        cancel printLoop
-    )
-    -- run the loggingAction with a logger that writes messages to the print channel
-    (const . loggingAction $ MkLogger writeToChan)
-
+    (async drainLoop)
+    (\printLoop -> atomically (writeTChan logChan Nothing) >> wait printLoop)
+    (const $ loggingAction writeToChan)
+    
 -- | Opens a log file and provides a function to write to it
-withLogFileLogger :: ((Text -> IO ()) -> IO ()) -> IO ()
+withLogFileLogger :: IOActionWithLogging -> IO ()
 withLogFileLogger action = do
   lgPath <- getLogPath <$> getCurrentDirectory
   withFile lgPath WriteMode $ \h -> do
@@ -69,17 +52,14 @@ withLogFileLogger action = do
     getLogPath = maybe lgName (</> lgName) . findWebDriverRoot
 
 -- | Combines withLogger and withLogFileLogger to provide channel-based file logging
-withChannelFileLogger :: (Logger -> IO ()) -> IO ()
+withChannelFileLogger :: IOActionWithLogging -> IO ()
 withChannelFileLogger loggingAction =
   withLogFileLogger $ \printToFile ->
     withLogger (printToFileAndLog printToFile) loggingAction
 
--- | Creates a Printer that writes to both a file and stdout
-printToFileAndLog :: (Text -> IO ()) -> Printer
-printToFileAndLog printToFile =
-  MkPrinter
-    { print = \msg -> do
-        let logMsg = "[LOG] " <> msg
-        TIO.putStrLn logMsg
-        printToFile logMsg
-    }
+-- | Creates a IOLogger that writes to both a file and stdout
+printToFileAndLog :: IOLogger -> Text -> IO ()
+printToFileAndLog printToFile msg =
+  TIO.putStrLn logMsg >> printToFile logMsg
+  where
+    logMsg = "[LOG] " <> msg

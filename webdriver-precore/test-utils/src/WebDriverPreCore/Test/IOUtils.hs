@@ -8,7 +8,6 @@ module WebDriverPreCore.Test.IOUtils
     mkDemoActions,
     (===),
     findWebDriverRoot,
-    Logger (..),
     loopForever,
     catchLog
   )
@@ -23,7 +22,6 @@ import Data.Aeson (Value)
 import Data.Base64.Types qualified as B64T
 import Data.ByteString qualified as BS
 import Data.ByteString.Base64 qualified as B64
-import Data.Maybe (fromMaybe)
 import Data.Text (Text, isInfixOf, pack, toLower, unpack)
 import GHC.Base (coerce)
 import System.FilePath (joinPath, splitDirectories, (</>))
@@ -31,7 +29,7 @@ import Test.Tasty.HUnit as HUnit (Assertion, HasCallStack, (@=?))
 import UnliftIO (AsyncCancelled, async, atomically, race_, readTMVar, throwIO, tryPutTMVar)
 import UnliftIO.Async (Async)
 import UnliftIO.STM (newEmptyTMVarIO)
-import WebDriverPreCore.Utils (txt)
+import WebDriverPreCore.Utils (txt, Logger)
 import Prelude hiding (log)
 
 findWebDriverRoot :: FilePath -> Maybe FilePath
@@ -44,12 +42,9 @@ findWebDriverRoot path =
     dirs = splitDirectories path
     webDriverPath = (joinPath $ takeWhile (/= rootDir) dirs) </> rootDir
 
-newtype Logger = MkLogger
-  { log :: Text -> IO ()
-  }
 
-mkDemoActions :: Logger -> Timeout -> DemoActions
-mkDemoActions qLog pause =
+mkDemoActions :: Logger IO -> Timeout -> DemoActions
+mkDemoActions log  pause =
   MkDemoActions
     { sleep,
       log = log',
@@ -66,7 +61,7 @@ mkDemoActions qLog pause =
     }
   where
     logTxt' :: Text -> IO ()
-    logTxt' = qLog.log
+    logTxt' = log
     log' l t = logTxt' $ l <> ": " <> t
     logJSON msg val = prettyJSON msg val >>= logTxt'
     logShow' :: forall a. (Show a) => Text -> a -> IO ()

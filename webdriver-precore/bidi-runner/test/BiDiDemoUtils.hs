@@ -34,7 +34,7 @@ import Data.Text qualified as T
 import Data.Time.Clock.POSIX (POSIXTime, getPOSIXTime)
 import Data.Word (Word64)
 import HttpActions (HttpActions (..), mkActions)
-import WebDriverPreCore.Utils (txt)
+import WebDriverPreCore.Utils (txt, ioThrow, nullLogger)
 import WebDriverPreCore.BiDi.Protocol
   ( BrowsingContext,
     Close (..),
@@ -52,7 +52,7 @@ import WebDriverPreCore.BiDi.Protocol
     Target (..),
   )
 import FailSimulation (withBiDiFailTest)
-import WebDriverPreCore.BiDiRunner (BiDiUrl, parseBiDiUrl, withBiDi)
+import WebDriverPreCore.BiDiRunner (BiDiUrl, parseBiDiUrl, withBiDi, parseBiDiUrlProperty)
 import WebDriverPreCore.HTTP.Protocol (Command, FullCapabilities (..), SessionResponse (..))
 import WebDriverPreCore.HTTP.Protocol qualified as Caps (Capabilities (..))
 import WebDriverPreCore.HttpRunner (HttpEndpoint (..), callWebDriver)
@@ -82,15 +82,6 @@ httpBidiCapabilities cfg =
         Just $ (httpCapabilities cfg) {Caps.webSocketUrl = Just True}
     }
 
--- | Extract BiDi URL from session response
-getBiDiUrl :: SessionResponse -> Either Text BiDiUrl
-getBiDiUrl r =
-  case r.webSocketUrl of
-    Nothing -> Left $ "WebSocket URL not provided in session response:\n" <> txt r
-    Just wsUrl ->
-      case parseBiDiUrl wsUrl of
-        Nothing -> Left $ "Could not parse WebSocket URL: " <> wsUrl
-        Just bidiUrl -> Right bidiUrl
 
 -- | Run a BiDi demo with the default config
 runDemo :: BiDiDemo -> IO ()
@@ -103,7 +94,7 @@ runDemoWithConfig cfg demo' = do
     then
       withChannelFileLogger runWithLogger
     else
-      runWithLogger . MkLogger $ const $ pure ()
+      runWithLogger . MkLogger $ nullLogger
   where
     runWithLogger :: Logger -> IO ()
     runWithLogger logger = do
@@ -120,12 +111,10 @@ runDemoWithConfig cfg demo' = do
         (httpActions.deleteSession . (.sessionId))
         $ \ses -> do
           -- Parse the BiDi URL from the session response
-          bidiUrl <- case getBiDiUrl ses of
-            Left err -> fail $ show err
-            Right url -> pure url
+          bidiUrl <- ioThrow $ parseBiDiUrlProperty ses.webSocketUrl
 
           -- Run with BiDi connection
-          withBiDi mLogger bidiUrl $ \biDiRunner -> do
+          withBiDi logger bidiUrl $ \biDiRunner -> do
             let bidiActions = Actions.mkActions biDiRunner
             demoActions.logTxt $ "Executing: " <> demo'.name
             demo'.action demoActions bidiActions

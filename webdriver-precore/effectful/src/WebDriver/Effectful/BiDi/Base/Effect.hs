@@ -151,7 +151,6 @@ type BiDiIORunner = BiDiRunner IO
 -- Internal subscription helpers
 -- ---------------------------------------------------------------------------
 
--- | Extract the rank-2 polymorphic @run@ function from a 'BiDiRunner'.
 bidiRun :: (FromJSON r) => BiDiIORunner -> Command r -> IO r
 bidiRun (MkBiDiRunner {run = r}) = r
 
