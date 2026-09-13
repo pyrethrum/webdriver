@@ -119,8 +119,8 @@ import WebDriverPreCore.HTTP.Protocol
     WindowHandleSpec (..),
     WindowRect (..)
   )
-import AesonUtils (jsonToText)
-import Utils (SubPath (..))
+import WebDriverPreCore.AesonUtils (jsonToText)
+import WebDriverPreCore.Utils (SubPath (..))
 import Prelude hiding (id, lookup)
 import Data.Aeson (withObject)
 import Control.Monad (when)

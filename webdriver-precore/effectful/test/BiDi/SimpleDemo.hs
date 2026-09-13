@@ -16,7 +16,7 @@ import Effectful (Eff, IOE, liftIO, (:>))
 import UnliftIO (throwIO)
 import UnliftIO.Async (race_)
 import UnliftIO.Concurrent (threadDelay)
-import Utils (txt)
+import WebDriverPreCore.Utils (txt)
 import WebDriver.Effectful
   (
     Pause,

@@ -18,12 +18,16 @@ module WebDriverPreCore.BiDiRunner
     subscribe,
     unsubscribe,
 
-    -- * Re-exports from base
-    BiDiUrl (..),
-    parseBiDiUrl,
+    -- * Types
     SocketActions (..),
     ResponseException (..),
-    Request,
+    Request(..),
+
+    -- * BiDi URL
+    BiDiUrl (..),
+    parseBiDiUrl,
+    parseBiDiUrlProperty,
+    SocketConnectionException (..),
   )
 where
 
@@ -94,13 +98,13 @@ runOffSpecNoWait MkBiDiRunner {socketActions} method params =
 -- | Run a BiDi session with typed commands
 withBiDi
   :: forall a m. (MonadUnliftIO m, MonadThrow m)
-  => Maybe (Text -> m ())  -- ^ Optional logger
+  => (Text -> m () ) -- ^ a logger for internal bidi actions Pass NOOp for none
   -> BiDiUrl
   -> (BiDiRunner m -> m a)
   -> m a
-withBiDi mLogger bidiUrl action =
-  withBiDiBase mLogger bidiUrl $ \sa ->
-    action (mkBiDiRunner sa)
+withBiDi logger bidiUrl action =
+  withBiDiBase logger bidiUrl $ \sa ->
+   action (mkBiDiRunner sa)
 
 -- | Execute a typed command
 runTypedCommand :: forall m r. (FromJSON r, MonadUnliftIO m, MonadThrow m) => SocketActions m -> Command r -> m r
@@ -264,25 +268,4 @@ hoistBiDiRunner lift' unlift' MkBiDiRunner {run = mRun, socketActions = mSA, run
         B.SingleSubscription {subscriptionType, action = unlift . action}
       B.MultiSubscription {subscriptionTypes, nAction} ->
         B.MultiSubscription {subscriptionTypes, nAction = unlift . nAction}
-
-
-
-data SocketConnectionException 
-  = MkSocketConnectionException Text
-  deriving (Show, Eq)
-
-instance Exception SocketConnectionException
-
--- | Parse a BiDi WebSocket URL, throwing 'IOError' on failure.
-parseBiDiUrlResponse :: Maybe Text -> Either SocketConnectionException BiDiUrl
-parseBiDiUrlResponse = maybe
-    (failConnection
-        "withBiDiSession: driver did not return a WebSocket URL \
-        \(set webSocketUrl = True in capabilities)")
-    \t ->
-    case parseBiDiUrl t of
-      Nothing -> failConnection $ "withBiDiSession: could not parse WebSocket URL: " <> t
-      Just u  -> pure u
-    where 
-      failConnection = Left . MkSocketConnectionException
 

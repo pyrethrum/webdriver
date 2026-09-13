@@ -86,7 +86,7 @@ module WebDriverPreCore.HTTP.Protocol
   )
 where
 
-import AesonUtils (nonEmpty, opt, parseObject)
+import WebDriverPreCore.AesonUtils (nonEmpty, opt, parseObject)
 import Data.Aeson as A
   ( FromJSON (..),
     Key,
@@ -109,7 +109,7 @@ import Data.Text (Text, pack, unpack)
 import Data.Text qualified as T
 import Data.Word (Word16)
 import GHC.Generics (Generic)
-import Utils (txt)
+import WebDriverPreCore.Utils (txt)
 import WebDriverPreCore.Error
 import WebDriverPreCore.HTTP.Capabilities
 import WebDriverPreCore.HTTP.Command

@@ -34,7 +34,7 @@ import Data.Text qualified as T
 import Data.Time.Clock.POSIX (POSIXTime, getPOSIXTime)
 import Data.Word (Word64)
 import HttpActions (HttpActions (..), mkActions)
-import Utils (txt)
+import WebDriverPreCore.Utils (txt)
 import WebDriverPreCore.BiDi.Protocol
   ( BrowsingContext,
     Close (..),
@@ -103,15 +103,14 @@ runDemoWithConfig cfg demo' = do
     then
       withChannelFileLogger runWithLogger
     else
-      runWithLogger . const $ pure ()
+      runWithLogger . MkLogger $ const $ pure ()
   where
     runWithLogger :: Logger -> IO ()
     runWithLogger logger = do
       let demoActions = mkDemoActions logger $ fromIntegral cfg.pauseMS * milliseconds
-          mLogger = if cfg.logging then Just logger.log else Nothing
           httpEndpoint = MkHttpEndpoint {host = cfg.httpUrl, port = cfg.httpPort}
           run :: forall r. (FromJSON r) => Command r -> IO r
-          run cmd = callWebDriver httpEndpoint mLogger cmd >>= either throwIO pure
+          run cmd = callWebDriver httpEndpoint logger.log  cmd >>= either throwIO pure
           httpActions = mkActions run
           httpCaps = httpBidiCapabilities cfg
 

@@ -18,7 +18,7 @@ import WebDriverPreCore.BiDi.Protocol
       extendLoosenCommand,
       loosenCommand,
       mkOffSpecCommand )
-import Utils (txt)
+import WebDriverPreCore.Utils (txt)
 import Prelude hiding (log, putStrLn)
 import GHC.Generics (Generic)
 

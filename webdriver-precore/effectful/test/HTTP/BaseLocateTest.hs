@@ -8,7 +8,7 @@ import Effectful
 import HTTP.Runner (WDSession, runHttp, runHttpTest, testUrl)
 import Prelude
 import Test.Tasty (TestTree, inOrderTestGroup, testGroup, withResource)
-import Utils (txt)
+import WebDriverPreCore.Utils (txt)
 import WebDriver.Effectful
 import WebDriver.Effectful.HTTP.Base.Actions
 import WebDriverPreCore.Extended.HTTP.Base.Protocol (ElementId, URL)

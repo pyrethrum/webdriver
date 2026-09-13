@@ -1,12 +1,14 @@
 {-# OPTIONS_HADDOCK hide #-}
 
-module Utils
+module WebDriverPreCore.Utils
   ( txt,
     enumerate,
     JSUInt (..),
     -- shared path elements
     SubPath (..),
-    db
+    db,
+    Logger,
+    nullLogger
   )
 where
 
@@ -18,10 +20,6 @@ import Text.Show.Pretty qualified as P
 import GHC.Word (Word64)
 import Data.Aeson.Types (FromJSON, ToJSON)
 
-{-
-  this module is used between the library and testing modules
-  it will be removed in a later release
--}
 
 -- general utils
 
@@ -39,6 +37,13 @@ newtype JSUInt = MkJSUInt Word64
 -- shared path elements
 newtype SubPath = MkSubPath {parts :: [Text]}
   deriving newtype (Show, Eq, Ord, Semigroup)
+
+-- | Logger type alias
+type Logger m = Text -> m ()
+
+-- | Null logger
+nullLogger :: (Applicative m) => Logger m
+nullLogger = const $ pure ()
 
 -- debugging
 

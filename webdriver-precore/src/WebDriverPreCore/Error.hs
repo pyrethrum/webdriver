@@ -11,7 +11,7 @@ module WebDriverPreCore.Error
   )
 where
 
-import AesonUtils (jsonToText)
+import WebDriverPreCore.AesonUtils (jsonToText)
 import Control.Exception (Exception (..))
 import Data.Aeson (FromJSON (..), Options (..), Value, defaultOptions, genericParseJSON, withObject)
 import Data.Aeson.Types (Parser, parseEither, parseMaybe, (.:))
@@ -20,7 +20,7 @@ import Data.Char (isUpper, toLower)
 import Data.Function ((&))
 import Data.Text as T (Text, concat, pack, toTitle, unpack, words)
 import GHC.Generics (Generic)
-import Utils (JSUInt (..))
+import WebDriverPreCore.Utils (JSUInt (..))
 import Text.Read (readEither)
 import WebDriverPreCore.ParseFailure (ParseFailure (..))
 import Prelude as P hiding (error, words)

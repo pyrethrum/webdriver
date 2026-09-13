@@ -60,7 +60,7 @@ import Data.Text (Text, unpack)
 import Data.Vector qualified as V
 import GHC.Generics
 import WebDriverPreCore.BiDi.CoreTypes (BrowsingContext, Handle, InternalId (..), JSUInt, NodeRemoteValue (..), SerializationOptions (..), SharedId, SharedReference (..), StringValue (..), UserContext)
-import AesonUtils (jsonToText, opt, parseJSONOmitNothing, toJSONOmitNothing)
+import WebDriverPreCore.AesonUtils (jsonToText, opt, parseJSONOmitNothing, toJSONOmitNothing)
 
 
 -- ######### REMOTE #########

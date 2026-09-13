@@ -25,7 +25,7 @@ module WebDriverPreCore.BiDi.Emulation
   )
 where
 
-import AesonUtils (opt)
+import WebDriverPreCore.AesonUtils (opt)
 import Data.Aeson (ToJSON (..), Value (..), object, (.=))
 import Data.Maybe (catMaybes)
 import Data.Text (Text)

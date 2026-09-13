@@ -17,11 +17,7 @@ module WebDriverPreCore.BiDiRunnerBase.Types
     SocketSubscriptionType (..),
     SocketUnregister (..),
     RegisteredSubscription (..),
-    Request (..),
-    
-    -- * BiDi URL
-    BiDiUrl (..),
-    parseBiDiUrl
+    Request (..)
   )
 where
 
@@ -30,7 +26,7 @@ import Data.Set (Set)
 import Data.Text (Text)
 import Data.Text qualified as T
 import GHC.Generics (Generic)
-import Utils (JSUInt (..))
+import WebDriverPreCore.Utils (JSUInt (..))
 import Text.Read (readMaybe)
 import UnliftIO (Exception)
 
@@ -85,27 +81,4 @@ data Request = MkRequest
   }
   deriving (Show, Generic)
 
--- | BiDi WebSocket URL components
-data BiDiUrl = MkBiDiUrl
-  { host :: Text,
-    port :: Int,
-    path :: Text
-  }
-  deriving (Show, Eq)
-
-
--- | Parse a WebSocket URL into BiDi components
--- Example: "ws://127.0.0.1:9222/session/abc123"
-parseBiDiUrl :: Text -> Maybe BiDiUrl
-parseBiDiUrl url = do
-  -- Strip ws:// prefix
-  rest <- T.stripPrefix "ws://" url
-  -- Split host:port from path
-  let (hostPort, pathWithSlash) = T.break (== '/') rest
-      path = if T.null pathWithSlash then "/" else pathWithSlash
-  -- Split host from port
-  case T.break (== ':') hostPort of
-    (host, portStr) -> do
-      port <- readMaybe . T.unpack =<< T.stripPrefix ":" portStr
-      pure $ MkBiDiUrl {host, port, path}
 

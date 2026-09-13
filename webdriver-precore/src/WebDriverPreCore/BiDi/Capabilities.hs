@@ -15,7 +15,7 @@ import Data.Text (Text)
 import Data.Vector (fromList)
 import Data.Word (Word8)
 import GHC.Generics (Generic)
-import AesonUtils (opt, fromJSONCamelCase)
+import WebDriverPreCore.AesonUtils (opt, fromJSONCamelCase)
 import Data.Aeson.Types (Parser)
 import WebDriverPreCore.Internal.HTTPBiDiCommon (BrowserName, PlatformName)
 

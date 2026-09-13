@@ -27,7 +27,7 @@ import Data.Aeson.Types (Parser)
 import Data.Maybe (fromMaybe, catMaybes)
 import Data.Text (Text)
 import GHC.Generics (Generic)
-import AesonUtils (toJSONOmitNothing, parseJSONOmitNothing, opt)
+import WebDriverPreCore.AesonUtils (toJSONOmitNothing, parseJSONOmitNothing, opt)
 import WebDriverPreCore.BiDi.CoreTypes (BrowsingContext(..), SharedReference)
 
 -- ######### Local #########

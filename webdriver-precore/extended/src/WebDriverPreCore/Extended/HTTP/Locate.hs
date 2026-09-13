@@ -36,7 +36,7 @@ import WebDriverPreCore.Extended.Common.Locators.Internal (Locator, RoleLocator 
 import WebDriverPreCore.Extended.Common.Locators.Internal qualified as LI
 import WebDriverPreCore.HTTP.Protocol as HTTPP (ElementId, Script (..), Selector (..))
 import Prelude as P hiding (log)
-import Utils (txt)
+import WebDriverPreCore.Utils (txt)
 import Data.Bifunctor (Bifunctor(..))
 
 -- | Whether to find the unique element (error if multiple match) or just the first.

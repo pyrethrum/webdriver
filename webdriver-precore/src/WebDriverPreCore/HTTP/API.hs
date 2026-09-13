@@ -114,7 +114,7 @@ import WebDriverPreCore.HTTP.Protocol
     mkPost,
     mkPost'
   )
-import Utils (SubPath (..))
+import WebDriverPreCore.Utils (SubPath (..))
 import Prelude hiding (id, lookup)
 import Data.Aeson.KeyMap (fromList)
 

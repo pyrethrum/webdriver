@@ -23,10 +23,15 @@ module WebDriverPreCore.BiDiRunnerBase
     ChannelActions (..),
     mkChannelActions,
 
+    -- * Logger helpers
+    Logger,
+    nullLogger,
+
     -- * Re-exports
     module WebDriverPreCore.BiDiRunnerBase.Types,
     module WebDriverPreCore.BiDiRunnerBase.Response,
     module WebDriverPreCore.BiDiRunnerBase.Socket,
+    module WebDriverPreCore.BiDiUrl,
   )
 where
 
@@ -50,14 +55,10 @@ import UnliftIO.STM (TVar, atomically, readTChan, readTVarIO, writeTChan)
 import WebDriverPreCore.BiDiRunnerBase.Response
 import WebDriverPreCore.BiDiRunnerBase.Socket
 import WebDriverPreCore.BiDiRunnerBase.Types
+import WebDriverPreCore.BiDiUrl
+import WebDriverPreCore.Utils (Logger, nullLogger)
 import Prelude hiding (log, take)
 
--- | Logger type alias
-type Logger m = Text -> m ()
-
--- | Null logger
-nullLogger :: (Applicative m) => Logger m
-nullLogger = const $ pure ()
 
 -- | Combined channel and socket actions
 data ChannelActions m = MkChannelActions

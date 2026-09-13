@@ -38,7 +38,7 @@ import WebDriver.Effectful.HTTP.Core
     runWebDriverBiDi,
     runWebDriverHttp,
   )
-import WebDriverPreCore.BiDiRunner (BiDiUrl, parseBiDiUrl, withBiDi)
+import WebDriverPreCore.BiDiRunner (BiDiUrl, parseBiDiUrl, parseBiDiUrlProperty, withBiDi)
 import WebDriverPreCore.Extended.Capabilities qualified as EC
 import WebDriverPreCore.Extended.HTTP.Base.Actions qualified as HA
 import WebDriverPreCore.HttpRunner (HttpEndpoint, callWebDriver, Command)
@@ -46,9 +46,8 @@ import WebDriverPreCore.HttpRunner qualified as R
 import WebDriverPreCore.Utils.Timeout (Timeout)
 import WebDriverPreCore.Error (parseFailToWDException)
 import Control.Exception (throw)
-import WebDriverPreCore.HTTP.Protocol (SessionResponse)
 import Control.Monad ((>=>))
-import WebDriverPreCore.BiDiRunnerBase (parseBiDiUrlResponse)
+import WebDriverPreCore.HTTP.Protocol (SessionResponse)
 
 -- ---------------------------------------------------------------------------
 -- HTTP Session Management
@@ -130,7 +129,7 @@ acquireBiDiSession ::
   IO (HttpSessionInfo, BiDiInfo)
 acquireBiDiSession endpoint logger caps = do
   httpInfo <- acquireHttpSession endpoint logger caps
-  bidiUrl <- ioThrow $ parseBiDiUrlResponse httpInfo.sessionResponse.websocketUrl
+  bidiUrl <- ioThrow $ parseBiDiUrlProperty httpInfo.sessionResponse.websocketUrl
   -- Note: withBiDi creates the WebSocket connection but doesn't close it
   -- until the continuation returns. We need to refactor this to return
   -- the BiDiRunner directly or use a different approach.

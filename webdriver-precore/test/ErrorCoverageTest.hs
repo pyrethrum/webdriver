@@ -10,7 +10,7 @@ import WebDriverPreCore.BiDi.Protocol
       errorDescription,
       toErrorType )
 import Data.Function ((&))
-import Utils(enumerate)
+import WebDriverPreCore.Utils(enumerate)
 import Data.Foldable (traverse_)
 import WebDriverPreCore.HTTP.Protocol (ErrorType)
 

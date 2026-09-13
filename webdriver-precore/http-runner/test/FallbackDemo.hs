@@ -21,7 +21,7 @@ import WebDriverPreCore.HTTP.Protocol
     loosenCommand,
     voidCommand,
   )
-import Utils (SubPath (..))
+import WebDriverPreCore.Utils (SubPath (..))
 import Prelude hiding (log)
 
 -- >>> runDemo demoFallbackActions

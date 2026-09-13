@@ -33,7 +33,7 @@ import Data.Text (Text)
 import GHC.Generics (Generic)
 import WebDriverPreCore.BiDi.CoreTypes (BrowsingContext, UserContext)
 import WebDriverPreCore.BiDi.Network qualified as Network
-import AesonUtils (fromJSONCamelCase, opt, toJSONOmitNothing)
+import WebDriverPreCore.AesonUtils (fromJSONCamelCase, opt, toJSONOmitNothing)
 
 -- ######### Remote #########
 

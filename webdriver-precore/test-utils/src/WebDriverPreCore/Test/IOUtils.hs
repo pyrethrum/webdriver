@@ -14,7 +14,7 @@ module WebDriverPreCore.Test.IOUtils
   )
 where
 
-import AesonUtils (prettyJSON)
+import WebDriverPreCore.AesonUtils (prettyJSON)
 import WebDriverPreCore.Test.Const (Timeout (..), seconds)
 import Control.Concurrent (threadDelay)
 import Control.Exception (Exception (..), Handler (..), SomeException, catches)
@@ -31,7 +31,7 @@ import Test.Tasty.HUnit as HUnit (Assertion, HasCallStack, (@=?))
 import UnliftIO (AsyncCancelled, async, atomically, race_, readTMVar, throwIO, tryPutTMVar)
 import UnliftIO.Async (Async)
 import UnliftIO.STM (newEmptyTMVarIO)
-import Utils (txt)
+import WebDriverPreCore.Utils (txt)
 import Prelude hiding (log)
 
 findWebDriverRoot :: FilePath -> Maybe FilePath

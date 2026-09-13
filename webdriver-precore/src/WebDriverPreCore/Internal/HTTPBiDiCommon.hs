@@ -16,7 +16,7 @@ import Data.Aeson as A
   )
 import Data.Aeson.Types (Parser)
 import Data.Text (Text, unpack)
-import Utils (txt, JSUInt (..))
+import WebDriverPreCore.Utils (txt, JSUInt (..))
 import GHC.Generics (Generic)
 
 

@@ -57,7 +57,7 @@ import Network.HTTP.Req
     (/:),
   )
 import Network.HTTP.Req qualified as R
-import Utils (SubPath (..))
+import WebDriverPreCore.Utils (SubPath (..))
 import WebDriverPreCore.HTTP.Command (Command (..))
 import Prelude hiding (log)
 
