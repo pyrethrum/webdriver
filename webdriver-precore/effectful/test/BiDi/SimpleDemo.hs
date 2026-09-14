@@ -19,7 +19,7 @@ import UnliftIO.Concurrent (threadDelay)
 import WebDriverPreCore.Utils.Utils (txt)
 import WebDriver.Effectful
   (
-    Pause,
+    WaitPrimative,
     WebDriverBiDi,
     pause,
   )
@@ -50,7 +50,7 @@ import WebDriverPreCore.Test.TestData (loginUrl)
 import Prelude hiding (log)
 
 -- >>> runBiDiTest bidi_login_demo
-bidi_login_demo :: (Logger :> es, WebDriverBiDi :> es, IOE :> es, Pause :> es) => Eff es ()
+bidi_login_demo :: (Logger :> es, WebDriverBiDi :> es, IOE :> es, WaitPrimative :> es) => Eff es ()
 bidi_login_demo = do
   log "=== Get root browsing context ==="
   tree <- browsingContextGetTree (MkGetTree Nothing Nothing)

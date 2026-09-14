@@ -20,7 +20,7 @@ import UnliftIO (finally)
 import WebDriver.Effectful
   ( HttpCapabilities,
     HttpSessionInfo (..),
-    Pause,
+    WaitPrimative,
     WebDriverHttp,
     acquireHttpSession,
     fromHttpCapability,
@@ -42,7 +42,7 @@ import WebDriverPreCore.Test.CapabilitiesBuilder (httpCapabilities)
 import WebDriverPreCore.Test.ConfigLoader (Config (..))
 
 
-withHttp :: (forall es. ( IOE :> es, Logger :> es, Pause :> es, WebDriverHttp :> es) => Eff es ()) -> IO ()
+withHttp :: (forall es. ( IOE :> es, Logger :> es, WaitPrimative :> es, WebDriverHttp :> es) => Eff es ()) -> IO ()
 withHttp action =
   runSetup $ \driverInfo opts config ->
     runPause opts.pauseDuration $
@@ -75,8 +75,8 @@ runHttp MkWDSession {loggerHandle, sessionInfo} action =
 
 
 
-type BaseHTTPEffs a =  forall es. (IOE :> es, Logger :> es, Pause :> es, WebDriverHttp :> es) => Eff es a
-type  HttpTestEff = Eff '[WebDriverHttp, Logger, Pause, IOE]
+type BaseHTTPEffs a =  forall es. (IOE :> es, Logger :> es, WaitPrimative :> es, WebDriverHttp :> es) => Eff es a
+type  HttpTestEff = Eff '[WebDriverHttp, Logger, WaitPrimative, IOE]
 
 
 

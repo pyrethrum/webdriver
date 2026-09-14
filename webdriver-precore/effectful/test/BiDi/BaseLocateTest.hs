@@ -442,7 +442,7 @@ tests =
         locateAllFn = U.locateAllHttp U.defHttpOpts
         locateAllNeverCheckDisplayed = U.locateAllHttp U.defHttpOpts {L.jsRecheckDisplayed = L.DisplayedCheckNever}
 
-        da :: DriverActions (Eff '[WebDriverHttp, Logger, Pause, IOE])
+        da :: DriverActions (Eff '[WebDriverHttp, Logger, WaitPrimative, IOE])
         da =
           MkDriverActions
             { testRunner,
@@ -957,7 +957,7 @@ testsHttp =
         locateAllFn = U.locateAllHttp U.defHttpOpts
         locateAllNeverCheckDisplayed = U.locateAllHttp U.defHttpOpts {L.jsRecheckDisplayed = L.DisplayedCheckNever}
 
-        da :: DriverActions (Eff '[WebDriverHttp, Logger, Pause, IOE])
+        da :: DriverActions (Eff '[WebDriverHttp, Logger, WaitPrimative, IOE])
         da =
           MkDriverActions
             { testRunner,

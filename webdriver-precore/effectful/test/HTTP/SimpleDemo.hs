@@ -3,7 +3,7 @@ module HTTP.SimpleDemo where
 import Effectful (Eff, IOE, (:>), Effect)
 import HTTP.Runner (withHttp, testUrl)
 import WebDriver.Effectful
-  ( Pause,
+  ( WaitPrimative,
     WebDriverHttp,
     pause,
   )
@@ -20,11 +20,11 @@ import WebDriverPreCore.Test.TestData (contentPageUrl, loginUrl)
 import Prelude hiding (log)
 
 -- get rid of warning
-_runHttpTest :: (forall (es :: [Effect]).  (IOE :> es, Logger :> es, Pause :> es, WebDriverHttp :> es) =>  Eff es ()) -> IO ()
+_runHttpTest :: (forall (es :: [Effect]).  (IOE :> es, Logger :> es, WaitPrimative :> es, WebDriverHttp :> es) =>  Eff es ()) -> IO ()
 _runHttpTest = withHttp
 
 -- >>> runHttpTest http_login_navigation_demo
-http_login_navigation_demo :: (Logger :> es, WebDriverHttp :> es, IOE :> es, Pause :> es) => Eff es ()
+http_login_navigation_demo :: (Logger :> es, WebDriverHttp :> es, IOE :> es, WaitPrimative :> es) => Eff es ()
 http_login_navigation_demo = do
   log "=== Navigate to login form ==="
   loginPage <- testUrl loginUrl

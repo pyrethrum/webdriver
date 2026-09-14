@@ -181,7 +181,7 @@ tests =
         locateFn = U.locateHttp U.defHttpOpts
         locateAllFn = U.locateAllHttp U.defHttpOpts
         
-        da :: DriverActions (Eff '[WebDriverHttp, Logger, Pause, IOE])
+        da :: DriverActions (Eff '[WebDriverHttp, Logger, WaitPrimative, IOE])
         da = MkDriverActions { 
             testRunner,
             getProperty,
