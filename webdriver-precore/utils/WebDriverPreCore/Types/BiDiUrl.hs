@@ -1,10 +1,11 @@
-module WebDriverPreCore.BiDiUrl
-  ( BiDiUrl(..),
+module WebDriverPreCore.Types.BiDiUrl
+  ( BiDiUrl (..),
+    SocketConnectionException (..),
     parseBiDiUrl,
-    SocketConnectionException(..),
-    parseBiDiUrlProperty
+    parseBiDiUrlProperty,
   )
 where
+
 import Data.Text (Text)
 import Data.Text qualified as T
 import Text.Read (readMaybe)
@@ -18,23 +19,19 @@ data BiDiUrl = MkBiDiUrl
   }
   deriving (Show, Eq)
 
-
 -- | Parse a WebSocket URL into BiDi components
 -- Example: "ws://127.0.0.1:9222/session/abc123"
 parseBiDiUrl :: Text -> Maybe BiDiUrl
 parseBiDiUrl url = do
-  -- Strip ws:// prefix
   rest <- T.stripPrefix "ws://" url
-  -- Split host:port from path
   let (hostPort, pathWithSlash) = T.break (== '/') rest
       path = if T.null pathWithSlash then "/" else pathWithSlash
-  -- Split host from port
   case T.break (== ':') hostPort of
     (host, portStr) -> do
       port <- readMaybe . T.unpack =<< T.stripPrefix ":" portStr
       pure $ MkBiDiUrl {host, port, path}
 
-data SocketConnectionException 
+data SocketConnectionException
   = MkSocketConnectionException Text
   deriving (Show, Eq)
 
@@ -50,5 +47,5 @@ parseBiDiUrlProperty = maybe
     case parseBiDiUrl t of
       Nothing -> failConnection $ "withBiDiSession: could not parse WebSocket URL: " <> t
       Just u  -> pure u
-    where 
+    where
       failConnection = Left . MkSocketConnectionException

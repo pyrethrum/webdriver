@@ -26,7 +26,7 @@ import Data.Set (Set)
 import Data.Text (Text)
 import Data.Text qualified as T
 import GHC.Generics (Generic)
-import WebDriverPreCore.Utils (JSUInt (..))
+import WebDriverPreCore.Types.BaseTypes (JSUInt (..))
 import Text.Read (readMaybe)
 import UnliftIO (Exception)
 

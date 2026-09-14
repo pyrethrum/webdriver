@@ -16,7 +16,7 @@ module WebDriverPreCore.BiDi.Command
   )
 where
 
-import WebDriverPreCore.AesonUtils (jsonToText, objectOrThrow)
+import WebDriverPreCore.Utils.Aeson (jsonToText, objectOrThrow)
 import Control.Applicative (Alternative (..))
 import Data.Aeson
   ( Object,
@@ -26,7 +26,7 @@ import Data.Aeson
 import Data.Aeson.KeyMap qualified as KM
 import Data.Aeson.Types (FromJSON (parseJSON), Parser, ToJSON (..))
 import Data.Text as T (Text, intercalate, unpack)
-import WebDriverPreCore.Utils (enumerate)
+import WebDriverPreCore.Utils.Utils (enumerate)
 
 -- |  A BiDi Command to be sent over the WebSocket connection.
 --

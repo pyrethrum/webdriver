@@ -24,7 +24,7 @@ import WebDriverPreCore.Test.IOUtils (DemoActions (..), mkDemoActions)
 import WebDriverPreCore.Test.Logger (withChannelFileLogger)
 import WebDriverPreCore.Test.CapabilitiesBuilder (httpFullCapabilities)
 import WebDriverPreCore.HttpRunner (HttpEndpoint(..))
-import WebDriverPreCore.Utils ( IOLogger, nullLogger )
+import WebDriverPreCore.Types.BaseTypes ( IOLogger, nullLogger )
 
 data HttpDemo
   = Demo

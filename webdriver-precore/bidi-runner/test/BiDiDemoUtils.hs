@@ -34,7 +34,8 @@ import Data.Text qualified as T
 import Data.Time.Clock.POSIX (POSIXTime, getPOSIXTime)
 import Data.Word (Word64)
 import HttpActions (HttpActions (..), mkActions)
-import WebDriverPreCore.Utils (txt, ioThrow, nullLogger, IOLogger)
+import WebDriverPreCore.Utils.Utils (txt, ioThrow)
+import WebDriverPreCore.Types.BaseTypes (nullLogger, IOLogger)
 import WebDriverPreCore.BiDi.Protocol
   ( BrowsingContext,
     Close (..),

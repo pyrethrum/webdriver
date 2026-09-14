@@ -23,7 +23,7 @@ module WebDriverPreCore.BiDi.CoreTypes
   )
 where
 
-import WebDriverPreCore.AesonUtils (jsonToText, parseJSONOmitNothing, toJSONOmitNothing)
+import WebDriverPreCore.Utils.Aeson (jsonToText, parseJSONOmitNothing, toJSONOmitNothing)
 import Control.Applicative (Alternative (..))
 import Control.Monad (unless)
 import Data.Aeson (FromJSON (..), Object, ToJSON (..), Value (..), defaultOptions, genericToJSON, withText, (.:), (.:?))

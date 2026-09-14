@@ -5,7 +5,7 @@ import Data.Text as T (Text, intercalate, lines, null, pack, replace, strip, unw
 import GHC.Utils.Misc (filterOut)
 import Test.Tasty.HUnit as HUnit (Assertion, assertBool)
 import Text.RawString.QQ (r)
-import WebDriverPreCore.Utils (SubPath(..))
+import WebDriverPreCore.Types.BaseTypes (SubPath(..))
 import WebDriverPreCore.Http
 import WebDriverPreCore.HTTP.Protocol
   ( Actions (..),

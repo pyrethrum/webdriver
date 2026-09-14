@@ -19,7 +19,7 @@ import Data.Text (Text)
 import GHC.Generics (Generic)
 import WebDriverPreCore.BiDi.CoreTypes (JSUInt)
 import WebDriverPreCore.BiDi.Script (RemoteValue, Source, StackTrace)
-import WebDriverPreCore.AesonUtils (fromJSONCamelCase, parseJSONOmitNothing)
+import WebDriverPreCore.Utils.Aeson (fromJSONCamelCase, parseJSONOmitNothing)
 
 -- ######### Local #########
 -- Note: log module does not have a remote end

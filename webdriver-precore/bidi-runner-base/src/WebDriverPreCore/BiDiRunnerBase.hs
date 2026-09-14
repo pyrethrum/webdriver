@@ -31,7 +31,7 @@ module WebDriverPreCore.BiDiRunnerBase
     module WebDriverPreCore.BiDiRunnerBase.Types,
     module WebDriverPreCore.BiDiRunnerBase.Response,
     module WebDriverPreCore.BiDiRunnerBase.Socket,
-    module WebDriverPreCore.BiDiUrl,
+    module WebDriverPreCore.Types.BiDiUrl,
   )
 where
 
@@ -55,8 +55,8 @@ import UnliftIO.STM (TVar, atomically, readTChan, readTVarIO, writeTChan)
 import WebDriverPreCore.BiDiRunnerBase.Response
 import WebDriverPreCore.BiDiRunnerBase.Socket
 import WebDriverPreCore.BiDiRunnerBase.Types
-import WebDriverPreCore.BiDiUrl
-import WebDriverPreCore.Utils (Logger, nullLogger)
+import WebDriverPreCore.Types.BiDiUrl
+import WebDriverPreCore.Types.BaseTypes (Logger, nullLogger)
 import Prelude hiding (log, take)
 
 

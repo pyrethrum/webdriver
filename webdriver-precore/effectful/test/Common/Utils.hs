@@ -71,7 +71,7 @@ import Effectful.Exception (catch)
 import Test.Tasty (TestTree, withResource, defaultMain)
 import Test.Tasty.HUnit (assertFailure, assertEqual)
 import UnliftIO (throwIO)
-import WebDriverPreCore.Utils (txt)
+import WebDriverPreCore.Utils.Utils (txt)
 import WebDriver.Effectful
 import WebDriver.Effectful.HTTP.Base.Actions
   ( executeScript,

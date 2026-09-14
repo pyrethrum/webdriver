@@ -1,4 +1,4 @@
-module WebDriverPreCore.ParseFailure
+module WebDriverPreCore.Types.ParseFailure
   ( ParseFailure (..),
   )
 where

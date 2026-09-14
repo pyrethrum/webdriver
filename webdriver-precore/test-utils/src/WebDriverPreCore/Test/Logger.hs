@@ -24,7 +24,7 @@ import UnliftIO
 import UnliftIO.Directory (getCurrentDirectory)
 import UnliftIO.IO (BufferMode (..), hSetBuffering)
 import WebDriverPreCore.Test.IOUtils (findWebDriverRoot)
-import WebDriverPreCore.Utils (IOLogger)
+import WebDriverPreCore.Types.BaseTypes (IOLogger)
 
 -- given an IOLogger, perform IO action with logging
 type IOActionWithLogging = IOLogger -> IO ()

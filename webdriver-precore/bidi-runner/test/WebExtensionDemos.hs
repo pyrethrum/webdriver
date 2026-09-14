@@ -10,7 +10,7 @@ import WebDriverPreCore.BiDi.Protocol
       WebExtensionInstall(..),
       WebExtensionResult(..),
       WebExtensionUninstall(..) )
-import WebDriverPreCore.Utils (txt)
+import WebDriverPreCore.Utils.Utils (txt)
 import Prelude hiding (log, putStrLn)
 
 -- this is just to silence "defined but not used" warnings for runDemo

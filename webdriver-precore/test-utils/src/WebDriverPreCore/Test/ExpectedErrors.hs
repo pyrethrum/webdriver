@@ -14,7 +14,7 @@ where
 
 import Control.Exception (SomeException, try)
 import Data.Text (Text, isInfixOf, unpack)
-import WebDriverPreCore.Utils (txt)
+import WebDriverPreCore.Utils.Utils (txt)
 
 -- | Test specification for expected error
 data FailTest

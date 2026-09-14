@@ -144,11 +144,12 @@ flag legacy-test
 library utils-internal
   import: commonExtensions, commonGhcOptions, libDepends
   exposed-modules:
-      WebDriverPreCore.AesonUtils
-      WebDriverPreCore.BiDiUrl
-      WebDriverPreCore.Utils
+      WebDriverPreCore.Types.BaseTypes
+      WebDriverPreCore.Types.BiDiUrl
+      WebDriverPreCore.Types.ParseFailure
+      WebDriverPreCore.Utils.Aeson
+      WebDriverPreCore.Utils.Utils
       WebDriverPreCore.HTTP.Command
-      WebDriverPreCore.ParseFailure
       WebDriverPreCore.Utils.Timeout
   hs-source-dirs: utils
   build-depends:

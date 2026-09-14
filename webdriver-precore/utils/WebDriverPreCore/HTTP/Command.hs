@@ -17,8 +17,8 @@ import Data.Aeson as A
     ToJSON (..), Value,
   )
 import Data.Text (Text)
-import WebDriverPreCore.AesonUtils (objectOrThrow)
-import WebDriverPreCore.Utils (SubPath (..))
+import WebDriverPreCore.Utils.Aeson (objectOrThrow)
+import WebDriverPreCore.Types.BaseTypes (SubPath (..))
 import Prelude hiding (id, lookup)
 
 -- |

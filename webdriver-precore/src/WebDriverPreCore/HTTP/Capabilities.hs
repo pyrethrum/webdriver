@@ -49,7 +49,7 @@ import Data.Maybe (catMaybes)
 import Data.Text (Text)
 import Data.Vector (fromList)
 import GHC.Generics (Generic)
-import WebDriverPreCore.AesonUtils (opt, parseOpt, toJSONOmitNothing, parseJSONOmitNothing)
+import WebDriverPreCore.Utils.Aeson (opt, parseOpt, toJSONOmitNothing, parseJSONOmitNothing)
 import WebDriverPreCore.Internal.HTTPBiDiCommon (BrowserName (..), PlatformName (..))
 
 {- references:

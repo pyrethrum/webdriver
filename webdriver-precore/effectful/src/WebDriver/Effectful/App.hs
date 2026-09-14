@@ -48,7 +48,7 @@ import WebDriverPreCore.Error (parseFailToWDException)
 import Control.Exception (throw)
 import Control.Monad ((>=>))
 import WebDriverPreCore.HTTP.Protocol (SessionResponse)
-import WebDriverPreCore.Utils (ioThrow)
+import WebDriverPreCore.Utils.Utils (ioThrow)
 
 -- ---------------------------------------------------------------------------
 -- HTTP Session Management

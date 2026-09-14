@@ -63,7 +63,7 @@ import WebDriverPreCore.BiDi.Protocol
     UrlPatternString (..),
     mkCommand,
   )
-import WebDriverPreCore.Utils (txt)
+import WebDriverPreCore.Utils.Utils (txt)
 import Prelude hiding (log)
 
 

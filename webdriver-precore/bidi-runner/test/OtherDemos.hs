@@ -13,7 +13,7 @@ import WebDriverPreCore.BiDi.Protocol
     Navigate (..),
     ReadinessState (..),
   )
-import WebDriverPreCore.Utils (txt)
+import WebDriverPreCore.Utils.Utils (txt)
 import Prelude hiding (log, putStrLn)
 
 -- low level demos -  TODO turn into tests ---

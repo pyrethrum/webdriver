@@ -34,7 +34,7 @@ import Data.Text (Text, intercalate, pack, splitOn, toLower)
 import Data.Text qualified as T
 import Data.Word (Word8)
 import GHC.Generics (Generic)
-import WebDriverPreCore.Utils (txt)
+import WebDriverPreCore.Utils.Utils (txt)
 import WebDriverPreCore.Extended.BiDi.Base.Protocol (BrowsingContext)
 import Prelude
 import Control.Monad ((>=>))

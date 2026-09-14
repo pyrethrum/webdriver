@@ -6,7 +6,7 @@ import WebDriverPreCore.Test.Const (milliseconds, second)
 import Data.Text (unpack)
 import WebDriverPreCore.Test.IOUtils (DemoActions (..))
 import WebDriverPreCore.Test.TestData (checkboxesUrl, downloadLinkUrl, fragmentUrl, promptUrl, slowLoadUrl, textAreaUrl)
-import WebDriverPreCore.Utils (txt)
+import WebDriverPreCore.Utils.Utils (txt)
 import WebDriverPreCore.BiDi.Protocol
   ( BrowsingContext (..),
     Close (..),

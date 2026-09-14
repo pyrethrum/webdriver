@@ -19,7 +19,7 @@ import WebDriverPreCore.BiDiRunnerBase
     counterVar,
     mkAtomicCounter,
   )
-import WebDriverPreCore.Utils (JSUInt (..), IOLogger)
+import WebDriverPreCore.Types.BaseTypes (JSUInt (..), IOLogger)
 
 -- | Run a BiDi session with failure injection for testing
 withBiDiFailTest

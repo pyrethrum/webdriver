@@ -1,6 +1,6 @@
 {-# OPTIONS_HADDOCK hide #-}
 
-module WebDriverPreCore.AesonUtils
+module WebDriverPreCore.Utils.Aeson
   ( aesonTypeError,
     aesonTypeErrorMessage,
     asObject,

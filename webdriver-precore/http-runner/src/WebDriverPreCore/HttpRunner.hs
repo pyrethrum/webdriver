@@ -36,7 +36,7 @@ import WebDriverPreCore.HttpRunner.Utils
     callWebDriverResponse',
     commandToRequest,
   )
-import WebDriverPreCore.ParseFailure (ParseFailure (..))
+import WebDriverPreCore.Types.ParseFailure (ParseFailure (..))
 
 import Prelude hiding (log)
 

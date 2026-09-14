@@ -36,7 +36,7 @@ import Data.Maybe (fromMaybe)
 import Data.Text (Text, pack)
 import Data.Text.Encoding (decodeUtf8Lenient)
 import Data.Word (Word16)
-import WebDriverPreCore.ParseFailure (ParseFailure (..))
+import WebDriverPreCore.Types.ParseFailure (ParseFailure (..))
 import Network.HTTP.Req
   ( DELETE (DELETE),
     GET (GET),
@@ -57,7 +57,7 @@ import Network.HTTP.Req
     (/:),
   )
 import Network.HTTP.Req qualified as R
-import WebDriverPreCore.Utils (SubPath (..))
+import WebDriverPreCore.Types.BaseTypes (SubPath (..))
 import WebDriverPreCore.HTTP.Command (Command (..))
 import Prelude hiding (log)
 
