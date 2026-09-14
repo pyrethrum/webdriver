@@ -55,10 +55,9 @@ import UnliftIO.STM (TVar, atomically, readTChan, readTVarIO, writeTChan)
 import WebDriverPreCore.BiDiRunnerBase.Response
 import WebDriverPreCore.BiDiRunnerBase.Socket
 import WebDriverPreCore.BiDiRunnerBase.Types
-import WebDriverPreCore.Types.BiDiUrl
 import WebDriverPreCore.Types.BaseTypes (Logger, nullLogger)
+import WebDriverPreCore.Types.BiDiUrl
 import Prelude hiding (log, take)
-
 
 -- | Combined channel and socket actions
 data ChannelActions m = MkChannelActions
@@ -94,7 +93,7 @@ mkChannelActions logger = do
 withBiDiBase ::
   forall a m.
   (MonadUnliftIO m) =>
-  Logger m->
+  Logger m ->
   BiDiUrl ->
   (SocketActions m -> m a) ->
   m a
@@ -123,9 +122,9 @@ mkMessageActions log' MkChannels {sendChan, receiveChan, eventChan, subscription
     { send = \conn -> do
         msgToSend <- atomically $ readTChan sendChan
         log' $ "Sending Message: " <> jsonToText msgToSend
-        catchLog "Message Send Failed" log' $
-          liftIO $
-            sendTextData conn (BL.toStrict $ encode msgToSend),
+        catchLog "Message Send Failed" log'
+          $ liftIO
+          $ sendTextData conn (BL.toStrict $ encode msgToSend),
       --
       get = \conn -> do
         msg <- liftIO $ receiveData conn
@@ -178,43 +177,49 @@ catchLog msg logger action =
 
 -- | Run a WebSocket client
 withSocket :: forall a m. (MonadUnliftIO m) => BiDiUrl -> Logger m -> MessageLoops m -> m a -> m a
-withSocket pth@MkBiDiUrl {host, port, path} logger messageLoops action = do
-  logger $ "Connecting to WebDriver at " <> pack (show pth)
+withSocket pth@MkBiDiUrl {host, port, path} log MkMessageLoops {getLoop, sendLoop, eventLoop} action = do
+  log $ "Connecting to WebDriver at " <> pack (show pth)
   withRunInIO $ \runInIO ->
     WS.runClient (unpack host) port (unpack path) $ \conn -> do
-      eventLoop <- runInIO messageLoops.eventLoop
-      getLoop <- (runInIO $ messageLoops.getLoop conn)
-      sendLoop <- (runInIO $ messageLoops.sendLoop conn)
+      runInIO $ log "WebSocket connection established"
 
-      runInIO $ logger "WebSocket connection established"
+      -- Set async messages loops
+      asyncEventLoop <- runInIO eventLoop
+      asyncGetLoop <- runInIO $ getLoop conn
+      asyncSendLoop <- runInIO $ sendLoop conn
 
-      result <- async $ runInIO action
+      -- Set up async action
+      asyncResult <- async $ runInIO action
 
+      -- Aggregate all async actions
       let asyncs :: [Async (Maybe a)]
           asyncs =
-            [ getLoop $> Nothing,
-              sendLoop $> Nothing,
-              eventLoop $> Nothing,
-              Just <$> result
+            [ asyncGetLoop $> Nothing,
+              asyncSendLoop $> Nothing,
+              asyncEventLoop $> Nothing,
+              Just <$> asyncResult
             ]
 
+      -- Wait complete and catch errors
       (_asy, ethresult) <- waitAnyCatch asyncs
 
+      -- Cancel all after completion
       traverse_ cancel asyncs
 
+      -- log / throw errors
       ethresult
         & either
-          ( \e -> do
-              runInIO $ logger $ "One of the BiDi client threads failed: \n" <> pack (displayException e)
-              throw e
+          ( \e ->
+              runInIO $
+                log ("One of the BiDi client threads failed: \n" <> pack (displayException e))
+                  >> throw e
           )
-          ( \case
-              Nothing -> do
-                runInIO $ logger message
-                throwIO $ userError $ unpack message
-                where
-                  message = "BiDi client threads did not return a result, likely due to WebSocket closure."
-              Just r -> pure r
+          ( maybe
+              do
+                let message = "BiDi client threads did not return a result, likely due to WebSocket closure."
+                runInIO $ log message
+                fail $ unpack message
+              pure
           )
 
 -- | Apply subscriptions to an event
@@ -223,9 +228,9 @@ applySubscriptions log' obj subscriptions = do
   case parseEither parseEventProps (Object obj) of
     Left err -> log' $ "Could not parse event properties: " <> pack err
     Right MkEventProps {msgType, method, fullObj, params} -> do
-      when (msgType /= "event") $
-        log' $
-          "Not an event message: " <> msgType
+      when (msgType /= "event")
+        $ log'
+        $ "Not an event message: " <> msgType
       subs <- readTVarIO subscriptions
       traverse_ (applySubscription (MkSocketSubscriptionType method) params fullObj) ((.subscription) <$> subs)
 

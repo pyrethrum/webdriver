@@ -119,7 +119,7 @@ acquireBiDiSession httpInfo = do
 --
 -- This is the release half of the acquire/release pair.
 releaseBiDiSession :: HttpSessionInfo -> IO ()
-releaseBiDiSession (httpInfo, _biDiInfo) = do
+releaseBiDiSession httpInfo = do
   -- TODO: close BiDi WebSocket connection
   releaseHttpSession httpInfo
 
