@@ -13,15 +13,12 @@ import Control.Concurrent.STM
 import Data.Text qualified as T
 import Data.Text.IO qualified as TIO
 import Effectful (Eff, IOE, liftIO, (:>))
-import UnliftIO (throwIO)
 import UnliftIO.Async (race_)
 import UnliftIO.Concurrent (threadDelay)
 import WebDriverPreCore.Utils.Utils (txt)
 import WebDriver.Effectful
   (
-    WaitPrimative,
-    WebDriverBiDi,
-    pause,
+    WebDriverBiDi
   )
 import WebDriver.Effectful.Logger (Logger, log)
 import WebDriver.Effectful.BiDi.Base.Actions
@@ -50,7 +47,7 @@ import WebDriverPreCore.Test.TestData (loginUrl)
 import Prelude hiding (log)
 
 -- >>> runBiDiTest bidi_login_demo
-bidi_login_demo :: (Logger :> es, WebDriverBiDi :> es, IOE :> es, WaitPrimative :> es) => Eff es ()
+bidi_login_demo :: (Logger :> es, WebDriverBiDi :> es, IOE :> es) => Eff es ()
 bidi_login_demo = do
   log "=== Get root browsing context ==="
   tree <- browsingContextGetTree (MkGetTree Nothing Nothing)
@@ -76,7 +73,7 @@ bidi_login_demo = do
   log "=== Navigate to login page ==="
   loginPage <- liftIO loginUrl
   browsingContextNavigate $ MkNavigate {context = bc, url = loginPage, wait = Nothing}
-  pause
+
 
   log "=== Waiting for domContentLoaded event ==="
   liftIO $
@@ -87,7 +84,6 @@ bidi_login_demo = do
       ( threadDelay (10 * 1_000_000)
           >> fail "Timeout: domContentLoaded did not fire within 10 s"
       )
-  pause
 
   log "=== Locate #username field ==="
   nodesResult <-
@@ -100,7 +96,6 @@ bidi_login_demo = do
           startNodes         = Nothing
         }
   log $ "Located nodes: " <> txt nodesResult
-  pause
 
   let MkLocateNodesResult nodes = nodesResult
   usernameSharedId <- case nodes of
@@ -148,4 +143,3 @@ bidi_login_demo = do
                 }
           ]
       }
-  pause

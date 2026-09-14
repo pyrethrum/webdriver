@@ -20,7 +20,7 @@ import Common.Utils (DriverActions(..), chkCount, chkSingleton)
 
 tests :: TestTree
 tests =
-  withResource getWDSession closeWDSession runSessionTests
+  withResource getHttpSession closeWDSession runSessionTests
   where
     runSessionTests :: IO WDSession -> TestTree
     runSessionTests ses =
@@ -209,6 +209,9 @@ navToUrl getSes urlAction = do
   ses <- getSes
   runHttp ses $ testUrl urlAction >>= navigateTo
   pure ses
+
+getHttpSession :: IO WDSession
+getHttpSession =  getWDSession False
 
 _eval :: Maybe Text -> TestTree -> IO ()
 _eval = U.testPattern

@@ -27,7 +27,7 @@ import WebDriver.Effectful
     FullCapabilities (..),
     releaseHttpSession,
     runHttpSession,
-    runPause,
+    runWaitPrimative,
     withHttpSession,
   )
 import WebDriver.Effectful.Logger
@@ -69,47 +69,9 @@ runHttpTest getRes name action =
 runHttp :: forall a. WDSession -> HttpTestEff a -> IO a
 runHttp MkWDSession {loggerHandle, sessionInfo} action = 
     runEff 
-      $ runPause sessionInfo.pauseDuration 
+      $ runWaitPrimative
       $ runLogger loggerHandle 
       $ runHttpSession sessionInfo action
 
-
-
 type BaseHTTPEffs a =  forall es. (IOE :> es, Logger :> es, WaitPrimative :> es, WebDriverHttp :> es) => Eff es a
 type  HttpTestEff = Eff '[WebDriverHttp, Logger, WaitPrimative, IOE]
-
-
-
-
--- -- from pyrethrum these will probably be split off and go into core or another library
--- -- module later
--- type Action = Eff ApEffs
-
--- type HasLog es = Out NodeLog :> es
-
--- type LogEffs a = forall es. (Out NodeLog :> es) => Eff es a
-
--- type ApEffs = '[RunConfigReader, FileSystem, WebUI, Out NodeLog, IOE]
--- -- type ApEffs = '[FileSystem, WebUI, Out NodeLog, IOE]
-
--- -- Define a labeled Reader effect for RunConfig
--- type RunConfigReader = Labeled "runConfig" (LR.Reader RunConfig) 
-
--- -- type ApConstraints es = (FileSystem :> es, Out NodeLog :> es, Error FSException :> es, IOE :> es)
--- -- type AppEffs a = forall es. (FileSystem :> es, Out NodeLog :> es, Error FSException :> es, IOE :> es) => Eff es a
-
--- type SuiteRunner = Suite 
---   -> Filters RunConfig FixtureConfig 
---   -> RunConfig 
---   -> ThreadCount 
---   -> L.LogActions (L.Log L.ExePath AE.NodeLog)
---   -> IO ()
-
--- ioInterpreter :: RunConfig -> AE.LogSink -> Action a -> IO a
--- ioInterpreter rc sink ap =
---   ap
---     & LR.runReader @"runConfig" rc
---     & FIO.runFileSystem
---     & WDIO.runWebDriver
---     & runOut sink
---     & runEff

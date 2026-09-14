@@ -43,7 +43,7 @@ tests =
           sanityNested,
           sanityNested2
           ],
-    withResource getWDSession closeWDSession runSessionTests
+    withResource (getWDSession False) closeWDSession runSessionTests
   ]
   where
   runSessionTests :: IO WDSession -> TestTree

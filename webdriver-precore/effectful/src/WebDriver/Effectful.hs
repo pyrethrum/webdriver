@@ -15,8 +15,8 @@ module WebDriver.Effectful
   ( -- * Capabilities
     module WebDriverPreCore.Extended.Capabilities,
 
-    -- * Core effects (log / pause)
-    WaitPrimative, sleep, 
+    -- * Core effects wait primative
+    module WebDriver.Effectful.WaitPrimative,
   
     -- * Effect + interpreter types
     module WebDriver.Effectful.HTTP.Core,
@@ -34,7 +34,7 @@ where
 
 import Prelude hiding (log)
 import WebDriverPreCore.Extended.Capabilities
-import WebDriver.Effectful.WaitPrimative (WaitPrimative, sleep)
+import WebDriver.Effectful.WaitPrimative 
 import WebDriver.Effectful.HTTP.Core
 import WebDriver.Effectful.App
 import WebDriverPreCore.HttpRunner

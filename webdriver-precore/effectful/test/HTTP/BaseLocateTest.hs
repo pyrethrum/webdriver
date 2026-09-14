@@ -22,7 +22,7 @@ import Common.Runner (getWDSession, closeWDSession)
 -- *** Exception: ExitSuccess
 tests :: TestTree
 tests =
-  withResource getWDSession closeWDSession runSessionTests
+  withResource (getWDSession False) closeWDSession runSessionTests
   where
   runSessionTests :: IO WDSession -> TestTree
   runSessionTests ses =

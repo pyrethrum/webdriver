@@ -1,15 +1,3 @@
--- |
--- Module: WebDriver.Effectful.App
--- Description: Runner functions to initialize effects and execute Effectful WebDriver actions
---
--- Provides top-level runners that stack interpreter effects and execute
--- 'Eff' actions.
---
--- This mirrors 'WebDriver.Bluefin.App' but uses Effectful algebraic effects
--- instead of explicit Bluefin compound handles.  The key technique is
--- 'withSeqEffToIO', which provides a @runInIO :: forall r. Eff es r -> IO r@
--- function so resource-management brackets run in ordinary @IO@ while still
--- being able to call back into the outer effect stack.
 module WebDriver.Effectful.App
   ( -- * HTTP Session Management
     acquireHttpSession,
@@ -18,9 +6,7 @@ module WebDriver.Effectful.App
     withHttpSession,
 
     -- * BiDi Session Management
-    withBiDiSession,
-
-    -- * Re-exports
+    withBiDiSession
   )
 where
 
@@ -36,11 +22,11 @@ import WebDriver.Effectful.HTTP.Core
     runWebDriverBiDi,
     runWebDriverHttp,
   )
+import WebDriver.Effectful.Logger (Logger, Severity (..), getLogFn)
 import WebDriverPreCore.BiDiRunner qualified as BiDiRunner
 import WebDriverPreCore.Extended.Capabilities qualified as EC
 import WebDriverPreCore.Extended.HTTP.Base.Actions qualified as HA
 import WebDriverPreCore.HttpRunner (Command, HttpEndpoint, callWebDriver)
-import WebDriverPreCore.Types.BaseTypes (IOLogger)
 import WebDriverPreCore.Utils.Utils (ioThrow)
 
 -- ---------------------------------------------------------------------------
@@ -78,13 +64,15 @@ runHttpSession = runWebDriverHttp
 --
 
 withHttpSession ::
-  (IOE :> es) =>
+  (IOE :> es, Logger :> es) =>
   HttpEndpoint ->
-  (Text -> IO ()) ->
   EC.HttpCapabilities ->
   Eff (WebDriverHttp : es) a ->
   Eff es a
-withHttpSession endpoint logger caps action =
+withHttpSession endpoint caps action = do
+  -- Extract the IO logger before entering withSeqEffToIO.
+  logFn <- getLogFn
+  let logger = logFn InfoS
   -- uses 'withSeqEffToIO' so that 'releaseHttpSession' runs even when the action throws.
   withSeqEffToIO $ \runInIO -> do
     bracket
@@ -98,12 +86,13 @@ withHttpSession endpoint logger caps action =
 
 -- | Close the BiDi WebSocket and delete the HTTP session.
 withBiDiSession ::
-  (IOE :> es) =>
+  (IOE :> es, Logger :> es) =>
   BiDiRunner.BiDiUrl ->
-  IOLogger ->
   Eff (WebDriverBiDi : es) a ->
   Eff es a
-withBiDiSession bidiUrl logger action =
+withBiDiSession bidiUrl action = do
+  logFn <- getLogFn
+  let logger = logFn InfoS
   withSeqEffToIO $ \runInIO ->
     BiDiRunner.withBiDi logger bidiUrl $
       \ioRunner -> runInIO (runWebDriverBiDi ioRunner action)
