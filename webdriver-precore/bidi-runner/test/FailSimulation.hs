@@ -19,19 +19,19 @@ import WebDriverPreCore.BiDiRunnerBase
     counterVar,
     mkAtomicCounter,
   )
-import WebDriverPreCore.Utils (JSUInt (..))
+import WebDriverPreCore.Utils (JSUInt (..), IOLogger)
 
 -- | Run a BiDi session with failure injection for testing
 withBiDiFailTest
   :: Word64              -- ^ Fail send after this many calls
   -> Word64              -- ^ Fail get after this many calls
   -> Word64              -- ^ Fail event handler after this many calls
-  -> Maybe (Text -> IO ())  -- ^ Optional logger
+  -> IOLogger     -- ^  logger use noOp for no logging
   -> BiDiUrl
   -> (BiDiRunner IO -> IO ())
   -> IO ()
-withBiDiFailTest failSendCount failGetCount failEventCount mLogger bidiUrl action =
-  withBiDiWithActions mLogger bidiUrl (mkFailChannelActions failSendCount failGetCount failEventCount) $ \sa ->
+withBiDiFailTest failSendCount failGetCount failEventCount logger bidiUrl action =
+  withBiDiWithActions logger bidiUrl (mkFailChannelActions failSendCount failGetCount failEventCount) $ \sa ->
     action (mkBiDiRunner sa)
 
 -- | Create channel actions with failure injection

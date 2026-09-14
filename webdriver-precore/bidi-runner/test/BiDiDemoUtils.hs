@@ -34,7 +34,7 @@ import Data.Text qualified as T
 import Data.Time.Clock.POSIX (POSIXTime, getPOSIXTime)
 import Data.Word (Word64)
 import HttpActions (HttpActions (..), mkActions)
-import WebDriverPreCore.Utils (txt, ioThrow, nullLogger)
+import WebDriverPreCore.Utils (txt, ioThrow, nullLogger, IOLogger)
 import WebDriverPreCore.BiDi.Protocol
   ( BrowsingContext,
     Close (..),
@@ -60,7 +60,7 @@ import WebDriverPreCore.Test.CapabilitiesBuilder (httpCapabilities, httpFullCapa
 import WebDriverPreCore.Test.Config (Config (..))
 import WebDriverPreCore.Test.ConfigLoader (loadConfig)
 import WebDriverPreCore.Test.Const (Timeout (..), milliseconds, seconds)
-import WebDriverPreCore.Test.IOUtils (DemoActions (..), Logger (..), mkDemoActions)
+import WebDriverPreCore.Test.IOUtils (DemoActions (..), mkDemoActions)
 import WebDriverPreCore.Test.Logger (withChannelFileLogger)
 import Prelude hiding (log)
 
@@ -96,7 +96,7 @@ runDemoWithConfig cfg demo' = do
     else
       runWithLogger . MkLogger $ nullLogger
   where
-    runWithLogger :: Logger -> IO ()
+    runWithLogger :: IOLogger -> IO ()
     runWithLogger logger = do
       let demoActions = mkDemoActions logger $ fromIntegral cfg.pauseMS * milliseconds
           httpEndpoint = MkHttpEndpoint {host = cfg.httpUrl, port = cfg.httpPort}
@@ -286,28 +286,25 @@ runDemoFail' :: Config -> Word64 -> Word64 -> Word64 -> BiDiDemo -> IO ()
 runDemoFail' cfg failSendCount failGetCount failEventCount demo' = do
   if cfg.logging
     then withChannelFileLogger runWithLogger
-    else runWithLogger logNothingLogger
+    else runWithLogger nullLogger
   where
-    runWithLogger :: Logger -> IO ()
+    runWithLogger :: IOLogger -> IO ()
     runWithLogger logger = do
       let demoActions = mkDemoActions logger $ fromIntegral cfg.pauseMS * milliseconds
-          mLogger = if cfg.logging then Just logger.log else Nothing
           endpoint = MkHttpEndpoint {host = cfg.httpUrl, port = cfg.httpPort}
           run :: forall r. (FromJSON r) => Command r -> IO r
-          run cmd = callWebDriver endpoint mLogger cmd >>= either throwIO pure
+          run cmd = callWebDriver endpoint logger cmd >>= either throwIO pure
           httpActions = mkActions run
           httpCaps = httpBidiCapabilities cfg
 
       bracket
         (httpActions.newSession httpCaps)
         (httpActions.deleteSession . (.sessionId))
-        $ \ses -> do
-          bidiUrl <- case getBiDiUrl ses of
-            Left err -> fail $ show err
-            Right url -> pure url
+        $ \ses -> do 
+          bidiUrl <- ioThrow . parseBiDiUrlProperty  $ (.webSocketUrl) ses
 
           -- Run with BiDi connection with failure injection
-          withBiDiFailTest failSendCount failGetCount failEventCount mLogger bidiUrl $ \biDiRunner -> do
+          withBiDiFailTest failSendCount failGetCount failEventCount logger bidiUrl $ \biDiRunner -> do
             let bidiActions = Actions.mkActions biDiRunner
             demoActions.logTxt $ "Executing (with failures): " <> demo'.name
             demo'.action demoActions bidiActions

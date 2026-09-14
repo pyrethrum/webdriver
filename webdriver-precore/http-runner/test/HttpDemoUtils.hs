@@ -20,10 +20,11 @@ import Actions (HttpActions (..), mkActions)
 import WebDriverPreCore.Test.Config (Config (..))
 import WebDriverPreCore.Test.ConfigLoader (loadConfig)
 import WebDriverPreCore.Test.Const (milliseconds)
-import WebDriverPreCore.Test.IOUtils (DemoActions (..), Logger (..), mkDemoActions)
+import WebDriverPreCore.Test.IOUtils (DemoActions (..), mkDemoActions)
 import WebDriverPreCore.Test.Logger (withChannelFileLogger)
 import WebDriverPreCore.Test.CapabilitiesBuilder (httpFullCapabilities)
 import WebDriverPreCore.HttpRunner (HttpEndpoint(..))
+import WebDriverPreCore.Utils ( IOLogger, nullLogger )
 
 data HttpDemo
   = Demo
@@ -57,9 +58,9 @@ runDemoWithConfig cfg demo' = do
     then
       withChannelFileLogger run
     else
-      run noOpLogger
+      run nullLogger
 
-runDemo' :: Config -> Logger -> HttpDemo -> IO ()
+runDemo' :: Config -> IOLogger -> HttpDemo -> IO ()
 runDemo' cfg@MkConfig {httpUrl, httpPort, pauseMS} lgr demo' = do
   demoActions.logTxt demo'.name
   case demo' of
@@ -70,7 +71,7 @@ runDemo' cfg@MkConfig {httpUrl, httpPort, pauseMS} lgr demo' = do
     capabilities = httpFullCapabilities cfg
     demoActions = mkDemoActions lgr $ fromIntegral pauseMS * milliseconds
     -- Create runner functions from endpoint
-    logger = if cfg.logging then lgr.log else noOpLogger.log
+    logger = if cfg.logging then lgr else \_ -> pure ()
     httpEndpoint = MkHttpEndpoint {host = httpUrl, port = fromIntegral httpPort}
     run :: forall r. (FromJSON r) => Command r -> IO r
     run cmd = callWebDriver httpEndpoint logger cmd >>= either (throwIO . parseFailToWDException) pure
@@ -88,7 +89,3 @@ withSession capabilities http' action = do
     (http'.newSession capabilities)
     (http'.deleteSession . (.sessionId))
     action
-
-
-noOpLogger :: Logger
-noOpLogger = MkLogger (\_ -> pure ())
