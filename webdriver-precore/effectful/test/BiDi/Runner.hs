@@ -17,7 +17,7 @@ import WebDriverPreCore.Utils.Timeout as T (Timeout(..))
 mkBiDiCaps :: Config -> HttpCapabilities
 mkBiDiCaps config =
   MkFullCapabilities
-    { alwaysMatch = Just cap {httpWebSocketUrl = Just True},
+    { alwaysMatch = Just cap {httpWebSocketUrl = True},
       firstMatch  = []
     }
   where
@@ -34,7 +34,7 @@ runBiDiTest
      => Eff es ()
      )
   -> IO ()
-runBiDiTest pauseDuration action =
+runBiDiTest action =
   runSetup $ \driverInfo config ->
     withLogger "eval.log" $
       withBiDiSession pauseDuration driverInfo (mkBiDiCaps config) $

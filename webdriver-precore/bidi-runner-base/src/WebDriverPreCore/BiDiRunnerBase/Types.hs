@@ -24,11 +24,8 @@ where
 import Data.Aeson (FromJSON (..), ToJSON (..), Value)
 import Data.Set (Set)
 import Data.Text (Text)
-import Data.Text qualified as T
 import GHC.Generics (Generic)
 import WebDriverPreCore.Types.BaseTypes (JSUInt (..))
-import Text.Read (readMaybe)
-import UnliftIO (Exception)
 
 -- | A command to send over the BiDi socket
 data SocketCommand a r = MkSocketCommand

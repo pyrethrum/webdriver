@@ -18,36 +18,29 @@ module WebDriver.Effectful.App
     withHttpSession,
 
     -- * BiDi Session Management
-    acquireBiDiSession,
-    releaseBiDiSession,
     withBiDiSession,
 
     -- * Re-exports
   )
 where
 
+import Control.Monad ((>=>))
 import Data.Aeson (FromJSON)
 import Data.Text (Text)
-import Effectful (Eff, IOE, (:>), withSeqEffToIO)
-import UnliftIO (bracket, finally, throwIO, Exception)
+import Effectful (Eff, IOE, withSeqEffToIO, (:>))
+import UnliftIO (bracket)
 import WebDriver.Effectful.HTTP.Core
-  ( BiDiIORunner,
-    HttpSessionInfo (..),
+  ( HttpSessionInfo (..),
     WebDriverBiDi,
     WebDriverHttp,
     runWebDriverBiDi,
     runWebDriverHttp,
   )
-import WebDriverPreCore.BiDiRunner (BiDiUrl, parseBiDiUrl, parseBiDiUrlProperty, withBiDi)
+import WebDriverPreCore.BiDiRunner qualified as BiDiRunner
 import WebDriverPreCore.Extended.Capabilities qualified as EC
 import WebDriverPreCore.Extended.HTTP.Base.Actions qualified as HA
-import WebDriverPreCore.HttpRunner (HttpEndpoint, callWebDriver, Command)
-import WebDriverPreCore.HttpRunner qualified as R
-import WebDriverPreCore.Utils.Timeout (Timeout)
-import WebDriverPreCore.Error (parseFailToWDException)
-import Control.Exception (throw)
-import Control.Monad ((>=>))
-import WebDriverPreCore.HTTP.Protocol (SessionResponse)
+import WebDriverPreCore.HttpRunner (Command, HttpEndpoint, callWebDriver)
+import WebDriverPreCore.Types.BaseTypes (IOLogger)
 import WebDriverPreCore.Utils.Utils (ioThrow)
 
 -- ---------------------------------------------------------------------------
@@ -62,10 +55,10 @@ import WebDriverPreCore.Utils.Utils (ioThrow)
 --
 -- For convenience, 'withHttpSession' provides a bracket version.
 acquireHttpSession :: HttpEndpoint -> (Text -> IO ()) -> EC.HttpCapabilities -> IO HttpSessionInfo
-acquireHttpSession endpoint logger caps = 
+acquireHttpSession endpoint logger caps =
   MkHttpSessionInfo endpoint logger <$> EC.newHttpSession (httpIORunner endpoint logger) caps
 
-httpIORunner :: forall a. HttpEndpoint -> (Text -> IO ()) -> Command a -> IO a
+httpIORunner :: forall a. (FromJSON a) => HttpEndpoint -> (Text -> IO ()) -> Command a -> IO a
 httpIORunner endpoint logger = callWebDriver endpoint logger >=> ioThrow
 
 -- | Delete the HTTP session associated with an 'HttpSessionInfo' handle.
@@ -80,16 +73,10 @@ releaseHttpSession MkHttpSessionInfo {endpoint, logger, sessionResponse} =
 runHttpSession :: forall es a. (IOE :> es) => HttpSessionInfo -> Eff (WebDriverHttp : es) a -> Eff es a
 runHttpSession = runWebDriverHttp
 
-
 -- | Create an HTTP session, run an action inside the 'WebDriverHttp' effect,
 -- then delete the session on completion or error.
 --
--- Uses 'withSeqEffToIO' so that 'releaseHttpSession' runs even when the
--- action throws.
---
--- This is a convenience function that combines 'acquireHttpSession',
--- 'runHttpSession', and 'releaseHttpSession'. For test framework resource
--- management, use the acquire/release functions directly.
+
 withHttpSession ::
   (IOE :> es) =>
   HttpEndpoint ->
@@ -98,6 +85,7 @@ withHttpSession ::
   Eff (WebDriverHttp : es) a ->
   Eff es a
 withHttpSession endpoint logger caps action =
+  -- uses 'withSeqEffToIO' so that 'releaseHttpSession' runs even when the action throws.
   withSeqEffToIO $ \runInIO -> do
     bracket
       (acquireHttpSession endpoint logger caps)
@@ -108,54 +96,14 @@ withHttpSession endpoint logger caps action =
 -- BiDi Session Management
 -- ---------------------------------------------------------------------------
 
--- get a bidi session runner from an existing HTTP session
-acquireBiDiSession :: HttpSessionInfo -> IO BiDiIORunner
-acquireBiDiSession httpInfo = do
-  bidiUrl <- ioThrow $ parseBiDiUrlProperty httpInfo.sessionResponse.websocketUrl
-  
-  error "acquireBiDiSession: not yet implemented - requires BiDiRunner refactoring"
-
 -- | Close the BiDi WebSocket and delete the HTTP session.
---
--- This is the release half of the acquire/release pair.
-releaseBiDiSession :: HttpSessionInfo -> IO ()
-releaseBiDiSession httpInfo = do
-  -- TODO: close BiDi WebSocket connection
-  releaseHttpSession httpInfo
-
--- | Create an HTTP session with BiDi enabled, open the WebSocket, and run an
--- action inside the 'WebDriverBiDi' effect.
---
--- * Creates an HTTP session (the capabilities must have @webSocketUrl = True@).
--- * Parses the WebSocket URL from the session response.
--- * Opens the WebSocket via 'withBiDi'.
--- * Deletes the HTTP session on exit (success or failure).
---
--- This is a convenience function. For test framework resource management,
--- you'll need to use the approach in the commented code below once
--- 'acquireBiDiSession' is properly implemented.
 withBiDiSession ::
   (IOE :> es) =>
-  HttpEndpoint ->
-  (Text -> IO ()) ->
-  Timeout ->
-  EC.HttpCapabilities ->
+  BiDiRunner.BiDiUrl ->
+  IOLogger ->
   Eff (WebDriverBiDi : es) a ->
   Eff es a
-withBiDiSession endpoint logger pauseDuration caps action =
-  withSeqEffToIO $ \runInIO -> do
-    let runner = mkRootRunner endpoint logger
-    sessionResponse <- EC.newHttpSession runner caps
-    let httpInfo =
-          MkHttpSessionInfo
-            { endpoint,
-              logger,
-              sessionResponse
-            }
-    bidiUrl <- parseBiDiUrl sessionResponse.websocketUrl
-    finally
-      ( withBiDi (Just logger) bidiUrl $ \ioRunner -> do
-
-          runInIO (runWebDriverBiDi ioRunner action)
-      )
-      (releaseHttpSession httpInfo)
+withBiDiSession bidiUrl logger action =
+  withSeqEffToIO $ \runInIO ->
+    BiDiRunner.withBiDi logger bidiUrl $
+      \ioRunner -> runInIO (runWebDriverBiDi ioRunner action)

@@ -73,7 +73,7 @@ import Data.Text (Text)
 import Data.Word (Word8)
 import WebDriverPreCore.BiDi.Protocol qualified as BiDi
 import WebDriverPreCore.Extended.HTTP.Base.Actions qualified as Actions
-import WebDriverPreCore.HTTP.Protocol (Session (..), BrowserName (..), PlatformName (..))
+import WebDriverPreCore.HTTP.Protocol (BrowserName (..), PlatformName (..))
 import WebDriverPreCore.HTTP.Protocol qualified as HTTP
 import GHC.Generics (Generic)
 

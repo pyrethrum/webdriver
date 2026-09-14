@@ -41,7 +41,7 @@ data CfgLoaded = MkCfgLoaded
   }
 
 getConfigData :: Bool -> IO CfgLoaded
-getConfigData bidiSocket = do
+getConfigData wantBiDiSocket = do
   cfg@MkConfig{httpUrl = host, httpPort = port, logging, pauseMS} <- loadConfig
   loggerHandle <- if logging
                     then Just <$> acquireLogger "eval.log"
@@ -57,15 +57,15 @@ getConfigData bidiSocket = do
     { logger,
       loggerHandle,
       httpEndpoint = endpoint,
-      httpCapabilities = mkHttpCaps bidiSocket cfg,
+      httpCapabilities = mkHttpCaps wantBiDiSocket cfg,
       pauseDuration
     }
 
 -- | Create a new WebDriver session based on config
 getWDSession :: Bool -> IO WDSession
-getWDSession bidiSocket = do
-  MkCfgLoaded{logger, loggerHandle, httpEndpoint = endpoint, httpCapabilities = caps, pauseDuration} <- getConfigData bidiSocket
-  sessionInfo <- acquireHttpSession endpoint logger pauseDuration caps
+getWDSession wantBiDiSocket = do
+  MkCfgLoaded{logger, loggerHandle, httpEndpoint = endpoint, httpCapabilities = caps} <- getConfigData wantBiDiSocket
+  sessionInfo <- acquireHttpSession endpoint logger caps
   pure MkWDSession {loggerHandle, sessionInfo}
 
 closeWDSession :: WDSession -> IO ()

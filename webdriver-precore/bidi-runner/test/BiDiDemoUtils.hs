@@ -33,9 +33,8 @@ import Data.Text (Text, isInfixOf, unpack)
 import Data.Text qualified as T
 import Data.Time.Clock.POSIX (POSIXTime, getPOSIXTime)
 import Data.Word (Word64)
+import FailSimulation (withBiDiFailTest)
 import HttpActions (HttpActions (..), mkActions)
-import WebDriverPreCore.Utils.Utils (txt, ioThrow)
-import WebDriverPreCore.Types.BaseTypes (nullLogger, IOLogger)
 import WebDriverPreCore.BiDi.Protocol
   ( BrowsingContext,
     Close (..),
@@ -52,8 +51,7 @@ import WebDriverPreCore.BiDi.Protocol
     StringValue (..),
     Target (..),
   )
-import FailSimulation (withBiDiFailTest)
-import WebDriverPreCore.BiDiRunner (BiDiUrl, parseBiDiUrl, withBiDi, parseBiDiUrlProperty)
+import WebDriverPreCore.BiDiRunner (BiDiUrl, parseBiDiUrl, parseBiDiUrlProperty, withBiDi)
 import WebDriverPreCore.HTTP.Protocol (Command, FullCapabilities (..), SessionResponse (..))
 import WebDriverPreCore.HTTP.Protocol qualified as Caps (Capabilities (..))
 import WebDriverPreCore.HttpRunner (HttpEndpoint (..), callWebDriver)
@@ -63,6 +61,8 @@ import WebDriverPreCore.Test.ConfigLoader (loadConfig)
 import WebDriverPreCore.Test.Const (Timeout (..), milliseconds, seconds)
 import WebDriverPreCore.Test.IOUtils (DemoActions (..), mkDemoActions)
 import WebDriverPreCore.Test.Logger (withChannelFileLogger)
+import WebDriverPreCore.Types.BaseTypes (IOLogger, nullLogger)
+import WebDriverPreCore.Utils.Utils (ioThrow, txt)
 import Prelude hiding (log)
 
 -- | A BiDi demo is a named action that runs with DemoActions and a Actions
@@ -83,7 +83,6 @@ httpBidiCapabilities cfg =
         Just $ (httpCapabilities cfg) {Caps.webSocketUrl = Just True}
     }
 
-
 -- | Run a BiDi demo with the default config
 runDemo :: BiDiDemo -> IO ()
 runDemo dmo = loadConfig >>= flip runDemoWithConfig dmo
@@ -95,14 +94,14 @@ runDemoWithConfig cfg demo' = do
     then
       withChannelFileLogger runWithLogger
     else
-      runWithLogger . MkLogger $ nullLogger
+      runWithLogger nullLogger
   where
     runWithLogger :: IOLogger -> IO ()
-    runWithLogger logger = do
-      let demoActions = mkDemoActions logger $ fromIntegral cfg.pauseMS * milliseconds
+    runWithLogger log = do
+      let demoActions = mkDemoActions log $ fromIntegral cfg.pauseMS * milliseconds
           httpEndpoint = MkHttpEndpoint {host = cfg.httpUrl, port = cfg.httpPort}
           run :: forall r. (FromJSON r) => Command r -> IO r
-          run cmd = callWebDriver httpEndpoint logger.log  cmd >>= either throwIO pure
+          run cmd = callWebDriver httpEndpoint log cmd >>= either throwIO pure
           httpActions = mkActions run
           httpCaps = httpBidiCapabilities cfg
 
@@ -115,7 +114,7 @@ runDemoWithConfig cfg demo' = do
           bidiUrl <- ioThrow $ parseBiDiUrlProperty ses.webSocketUrl
 
           -- Run with BiDi connection
-          withBiDi logger bidiUrl $ \biDiRunner -> do
+          withBiDi log bidiUrl $ \biDiRunner -> do
             let bidiActions = Actions.mkActions biDiRunner
             demoActions.logTxt $ "Executing: " <> demo'.name
             demo'.action demoActions bidiActions
@@ -301,8 +300,8 @@ runDemoFail' cfg failSendCount failGetCount failEventCount demo' = do
       bracket
         (httpActions.newSession httpCaps)
         (httpActions.deleteSession . (.sessionId))
-        $ \ses -> do 
-          bidiUrl <- ioThrow . parseBiDiUrlProperty  $ (.webSocketUrl) ses
+        $ \ses -> do
+          bidiUrl <- ioThrow . parseBiDiUrlProperty $ (.webSocketUrl) ses
 
           -- Run with BiDi connection with failure injection
           withBiDiFailTest failSendCount failGetCount failEventCount logger bidiUrl $ \biDiRunner -> do

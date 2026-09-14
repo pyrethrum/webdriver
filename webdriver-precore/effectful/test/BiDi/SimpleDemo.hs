@@ -59,7 +59,7 @@ bidi_login_demo = do
       let MkBrowsingContext ctxId = info.context
       log $ "Root context: " <> ctxId
       pure info.context
-    _ -> liftIO . throwIO . userError $ "No browsing contexts found"
+    _ -> liftIO . fail $ "No browsing contexts found"
 
   log "=== Subscribe to browsingContext.domContentLoaded ==="
   loadedVar <- liftIO newEmptyTMVarIO
@@ -85,7 +85,7 @@ bidi_login_demo = do
           TIO.putStrLn $ "!!! domContentLoaded fired: " <> txt evt
       )
       ( threadDelay (10 * 1_000_000)
-          >> throwIO (userError "Timeout: domContentLoaded did not fire within 10 s")
+          >> fail "Timeout: domContentLoaded did not fire within 10 s"
       )
   pause
 
@@ -104,8 +104,8 @@ bidi_login_demo = do
 
   let MkLocateNodesResult nodes = nodesResult
   usernameSharedId <- case nodes of
-    [node] -> maybe (liftIO . throwIO . userError $ "sharedId is missing") pure node.sharedId
-    _      -> liftIO . throwIO . userError $ "Expected exactly one #username element"
+    [node] -> maybe (liftIO . fail $ "sharedId is missing") pure node.sharedId
+    _      -> liftIO . fail $ "Expected exactly one #username element"
 
   log "=== Type 'effectful-user' into #username via BiDi key actions ==="
   inputPerformActions $
