@@ -1,4 +1,4 @@
-module Common.Runner where
+module Common.SessionInit where
 
 import Data.Text (Text)
 import Effectful (liftIO, MonadIO)
@@ -14,9 +14,6 @@ import WebDriver.Effectful.App
 import WebDriverPreCore.Test.CapabilitiesBuilder (httpCapabilities)
 import WebDriverPreCore.Extended.Capabilities (fromHttpCapability)
 import WebDriverPreCore.HTTP.Protocol (Capabilities(..))
--- ---------------------------------------------------------------------------
--- Resources
--- ---------------------------------------------------------------------------
 
 
 mkHttpCaps :: Bool -> Config -> HttpCapabilities

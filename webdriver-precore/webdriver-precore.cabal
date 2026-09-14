@@ -456,7 +456,7 @@ test-suite test-effectful
     BiDi.Runner
     BiDi.SimpleDemo
     BiDi.BaseLocateTest
-    Common.Runner
+    Common.SessionInit
     Common.Utils
     HTTP.BaseLocateTest
     HTTP.LocateCombinatorTest

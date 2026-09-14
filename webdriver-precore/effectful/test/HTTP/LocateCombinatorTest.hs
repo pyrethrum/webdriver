@@ -28,7 +28,7 @@ import WebDriverPreCore.Extended.Locators (Locator, css, elmClass, (&&&), (>>>),
 import Data.Bifunctor (Bifunctor(first))
 import Test.Falsify.Property (gen)
 import WebDriverPreCore.Extended.HTTP.Locate (DisplayedCheck(..))
-import Common.Runner (getWDSession, closeWDSession)
+import Common.SessionInit (getWDSession, closeWDSession)
 
 tests :: TestTree
 tests =

@@ -1,6 +1,6 @@
 module BiDi.BaseLocateTest where
 
-import Common.Runner qualified as R
+import Common.SessionInit qualified as R
 import Common.Utils (DriverActions (..), autoId, beforeAll_, chkEmpty, chkEq, chkLocException, chkSingleton)
 import Common.Utils qualified as U
 import Data.Text (Text)

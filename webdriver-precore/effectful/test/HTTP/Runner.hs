@@ -10,8 +10,8 @@ module HTTP.Runner (
 ) where
 
 -- TODO: Update to use new acquire/release pattern
--- import Common.Runner (runSetup, testUrl, WDSession (..), mkHttpCaps)
-import Common.Runner (testUrl, WDSession (..), mkHttpCaps)
+
+import Common.SessionInit (testUrl, WDSession (..), mkHttpCaps)
 import Data.Text (Text, unpack)
 import Effectful (Eff, IOE, liftIO, (:>), runEff)
 import Test.Tasty (TestTree)

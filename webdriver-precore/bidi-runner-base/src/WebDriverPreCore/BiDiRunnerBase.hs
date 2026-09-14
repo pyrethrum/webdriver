@@ -181,23 +181,23 @@ withSocket pth@MkBiDiUrl {host, port, path} log MkMessageLoops {getLoop, sendLoo
   log $ "Connecting to WebDriver at " <> pack (show pth)
   withRunInIO $ \runInIO ->
     WS.runClient (unpack host) port (unpack path) $ \conn -> do
-      runInIO $ log "WebSocket connection established"
+      -- Generate async actions
+      (asyncSendLoop, asyncGetLoop, asyncEventLoop, asyncAction) <-
+        runInIO $ do
+          log "WebSocket connection established"
+          (,,,)
+            <$> sendLoop conn
+            <*> getLoop conn
+            <*> eventLoop
+            <*> async action
 
-      -- Set async messages loops
-      asyncEventLoop <- runInIO eventLoop
-      asyncGetLoop <- runInIO $ getLoop conn
-      asyncSendLoop <- runInIO $ sendLoop conn
-
-      -- Set up async action
-      asyncResult <- async $ runInIO action
-
-      -- Aggregate all async actions
+      -- Aggregate async actions
       let asyncs :: [Async (Maybe a)]
           asyncs =
             [ asyncGetLoop $> Nothing,
               asyncSendLoop $> Nothing,
               asyncEventLoop $> Nothing,
-              Just <$> asyncResult
+              Just <$> asyncAction
             ]
 
       -- Wait complete and catch errors

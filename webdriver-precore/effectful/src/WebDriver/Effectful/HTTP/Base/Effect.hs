@@ -1,21 +1,8 @@
 -- |
 -- Module: WebDriver.Effectful.HTTP.Base.Effect
--- Description: HTTP WebDriver algebraic effect definition
---
--- Defines the 'WebDriverHttp' algebraic effect together with the
--- configuration types 'HttpDriverInfo', 'HttpSessionInfo', and
--- 'defaultDriverInfo' used to configure the interpreter.
---
--- Smart constructors for each operation are in
--- "WebDriver.Effectful.HTTP.Base.Actions".
--- The IO-backed interpreter is in
--- "WebDriver.Effectful.HTTP.Base.Interpreter".
+-- Description: HTTP WebDriver  effect definition
 module WebDriver.Effectful.HTTP.Base.Effect
-  ( -- * Configuration types
-    HttpSessionInfo (..),
-    defaultHttpEndpoint,
-    noOpLogger,
-
+  ( 
     -- * HTTP Effect
     WebDriverHttp (..),
   )
@@ -38,27 +25,26 @@ import WebDriverPreCore.HTTP.Protocol
       URL,
       WindowHandleSpec,
       WindowRect )
-import WebDriverPreCore.HttpRunner (HttpEndpoint (..))
-import WebDriverPreCore.Extended.Capabilities (HttpSessionResponse)
 
 -- ---------------------------------------------------------------------------
 -- Types
 -- ---------------------------------------------------------------------------
 
-defaultHttpEndpoint :: HttpEndpoint
-defaultHttpEndpoint = MkHttpEndpoint {host = "127.0.0.1", port = 4444}
+--  DELETE ME
+-- defaultHttpEndpoint :: HttpEndpoint
+-- defaultHttpEndpoint = MkHttpEndpoint {host = "127.0.0.1", port = 4444}
 
-noOpLogger :: Text -> IO ()
-noOpLogger _ = pure ()
+-- noOpLogger :: Text -> IO ()
+-- noOpLogger _ = pure ()
 
--- | Session-scoped HTTP driver configuration.
-data HttpSessionInfo = MkHttpSessionInfo
-  { endpoint :: HttpEndpoint,
-    -- | A logger for internal Webdriver operations.
-    logger :: Text -> IO (),
-    -- | Full response
-    sessionResponse :: HttpSessionResponse
-  }
+-- -- | Session-scoped HTTP driver configuration.
+-- data HttpSessionInfo = MkHttpSessionInfo
+--   { endpoint :: HttpEndpoint,
+--     -- | A logger for internal Webdriver operations.
+--     logger :: Text -> IO (),
+--     -- | Full response
+--     sessionResponse :: HttpSessionResponse
+--   }
 
 -- ---------------------------------------------------------------------------
 -- HTTP effect

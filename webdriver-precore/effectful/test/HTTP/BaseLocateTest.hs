@@ -16,7 +16,7 @@ import WebDriverPreCore.Extended.Locate qualified as L
 import WebDriverPreCore.Extended.Locators as LS
 import WebDriverPreCore.Test.TestData
 import WebDriver.Effectful.Logger (Logger)
-import Common.Runner (getWDSession, closeWDSession)
+import Common.SessionInit (getWDSession, closeWDSession)
 
 -- >>> _eval tests
 -- *** Exception: ExitSuccess

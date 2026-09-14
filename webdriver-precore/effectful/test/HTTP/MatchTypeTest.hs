@@ -1,6 +1,6 @@
 module HTTP.MatchTypeTest where
 
-import Common.Runner (testUrl, getWDSession, closeWDSession)
+import Common.SessionInit (testUrl, getWDSession, closeWDSession)
 import Common.Utils qualified as U
 
 import Data.Text (Text)
