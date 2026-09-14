@@ -1,6 +1,3 @@
-{-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE RecordWildCards #-}
-
 -- |
 -- Module: WebDriver.Effectful.Logger
 -- Description: Katip-based Logger effect for Effectful WebDriver
@@ -27,8 +24,9 @@ module WebDriver.Effectful.Logger
     withLogger,
 
     -- * Logger resource management
-    LoggerHandle,
+    LoggerData (..),
     acquireLogger,
+    acquireNoOpLogger,
     releaseLogger,
     runLogger,
 
@@ -52,7 +50,7 @@ import Data.Text (Text)
 import Data.Text.Lazy.Builder (Builder, fromString, fromText)
 import Data.Time.Format (defaultTimeLocale, formatTime)
 import Data.Time.LocalTime (TimeZone, getCurrentTimeZone, utcToLocalTime)
-import Effectful (Eff, IOE, (:>), liftIO, withSeqEffToIO)
+import Effectful (Eff, IOE, liftIO, withSeqEffToIO, (:>))
 import Effectful.Katip
   ( Item (..),
     ItemFormatter,
@@ -64,9 +62,9 @@ import Effectful.Katip
     runKatipE,
     unLogStr,
   )
-import qualified Effectful.Katip as EK
+import Effectful.Katip qualified as EK
 import Katip (initLogEnv)
-import qualified Katip as K
+import Katip qualified as K
 import Katip.Scribes.Handle (colorBySeverity)
 import System.IO (Handle, IOMode (..), hClose, openFile, stdout)
 import Prelude hiding (log)
@@ -95,7 +93,7 @@ localBracketFormat tz withColor _verb Item {..} =
     <> unLogStr _itemMessage
   where
     localTime = utcToLocalTime tz _itemTime
-    nowStr    = fromString $ formatTime defaultTimeLocale "%Y-%m-%d %H:%M:%S" localTime
+    nowStr = fromString $ formatTime defaultTimeLocale "%Y-%m-%d %H:%M:%S" localTime
 
 brackets :: Builder -> Builder
 brackets m = "[" <> m <> "]"
@@ -105,48 +103,65 @@ brackets m = "[" <> m <> "]"
 -- ---------------------------------------------------------------------------
 
 -- | Opaque handle holding a Katip 'K.LogEnv' (with scribes registered) and
--- the log-file 'Handle'.
+-- an optional log-file 'Handle'.
 --
 -- Use 'acquireLogger' \/ 'releaseLogger' as an acquire\/release pair (e.g.
 -- with 'Test.Tasty.withResource') and 'runLogger' to inject the
 -- 'Logger' effect into each action.  'withLogger' uses all three internally.
-data LoggerHandle = MkLoggerHandle K.LogEnv Handle
+-- Use 'acquireNoOpLogger' to obtain a handle that discards all log output.
+data LoggerData = MkLoggerData
+  { 
+    fileHandle :: (Maybe Handle),
+    loggerEnv :: K.LogEnv
+  }
 
 -- ---------------------------------------------------------------------------
 -- Logger introducer
 -- ---------------------------------------------------------------------------
 
 -- | Open a log file and register a terminal scribe and a file scribe,
--- returning a 'LoggerHandle'.
+-- returning a 'LoggerData'.
 --
 -- Pair with 'releaseLogger' to form an acquire\/release pair suitable for
 -- 'Test.Tasty.withResource' or any other bracket-style combinator.
 -- Use 'withLogger' when a single bracketed scope suffices.
-acquireLogger :: FilePath -> IO LoggerHandle
+acquireLogger :: FilePath -> IO LoggerData
 acquireLogger logFile = do
-  fh         <- openFile logFile WriteMode
-  tz         <- getCurrentTimeZone
-  le0        <- initLogEnv "webdriver" "eval"
-  termScribe <- K.mkHandleScribeWithFormatter (localBracketFormat tz) K.ColorIfTerminal stdout (K.permitItem K.DebugS) K.V2
-  fileScribe <- K.mkHandleScribeWithFormatter (localBracketFormat tz) (K.ColorLog False) fh   (K.permitItem K.DebugS) K.V2
-  le1        <- K.registerScribe "stdout" termScribe K.defaultScribeSettings le0
-  le2        <- K.registerScribe "file"   fileScribe K.defaultScribeSettings le1
-  pure (MkLoggerHandle le2 fh)
+  fileHandle <- openFile logFile WriteMode
+  timeZone <- getCurrentTimeZone
 
--- | Flush and close all scribes in a 'LoggerHandle', then close the
--- log-file handle.
-releaseLogger :: LoggerHandle -> IO ()
-releaseLogger (MkLoggerHandle le fh) = K.closeScribes le >> hClose fh
+  -- make scribes
+  termScribe <- K.mkHandleScribeWithFormatter (localBracketFormat timeZone) K.ColorIfTerminal stdout (K.permitItem K.DebugS) K.V2
+  fileScribe <- K.mkHandleScribeWithFormatter (localBracketFormat timeZone) (K.ColorLog False) fileHandle (K.permitItem K.DebugS) K.V2
+
+  -- register scribes with env
+  baseLogEnv <- initLogEnv "webdriver" "eval"
+  logEnvTerm <- K.registerScribe "stdout" termScribe K.defaultScribeSettings baseLogEnv
+  logEnvFull <- K.registerScribe "file" fileScribe K.defaultScribeSettings logEnvTerm
+  pure $ MkLoggerData (Just fileHandle) logEnvFull
+
+-- | Create a 'LoggerData' with no scribes registered; all log output is
+-- discarded.  Useful when logging is disabled but a 'LoggerData' is still
+-- required (e.g. as a resource in 'Test.Tasty.withResource').
+acquireNoOpLogger :: IO LoggerData
+acquireNoOpLogger = MkLoggerData Nothing <$> initLogEnv "webdriver" "eval"
+
+
+-- | Flush and close all scribes in a 'LoggerData', then close the
+-- log-file handle if one was opened.
+releaseLogger :: LoggerData -> IO ()
+releaseLogger MkLoggerData{fileHandle, loggerEnv} = K.closeScribes loggerEnv >> maybe (pure ()) hClose fileHandle
 
 -- | Run an effectful action inside the 'Logger' effect using an existing
--- 'LoggerHandle'.
-runLogger :: (IOE :> es) => Maybe LoggerHandle -> Eff (Logger : es) a -> Eff es a
+-- 'LoggerData'.
+runLogger :: (IOE :> es) => Maybe LoggerData -> Eff (Logger : es) a -> Eff es a
 runLogger mlh action = do
-  le <- maybe
-     -- create a fresh env with no registered scribes (effectively no output)
-    (liftIO $ initLogEnv "webdriver" "eval")
-    (\(MkLoggerHandle le _) -> pure le)
-    mlh
+  le <-
+    maybe
+      -- create a fresh env with no registered scribes (effectively no output)
+      (liftIO $ initLogEnv "webdriver" "eval")
+      (\(MkLoggerData le _) -> pure le)
+      mlh
   runKatipE le action
 
 -- | Introduce a 'Logger' effect backed by Katip.
