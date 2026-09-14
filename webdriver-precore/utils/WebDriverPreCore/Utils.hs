@@ -42,6 +42,7 @@ newtype SubPath = MkSubPath {parts :: [Text]}
 
 -- | Logger type alias
 type Logger m = Text -> m ()
+
 type IOLogger = Text -> IO ()
 
 ioThrow :: (Exception l) => Either l r -> IO r
