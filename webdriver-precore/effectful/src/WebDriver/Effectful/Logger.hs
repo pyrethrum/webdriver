@@ -160,7 +160,7 @@ runLogger mlh action = do
     maybe
       -- create a fresh env with no registered scribes (effectively no output)
       (liftIO $ initLogEnv "webdriver" "eval")
-      (\(MkLoggerData le _) -> pure le)
+      (\(MkLoggerData _ le ) -> pure le)
       mlh
   runKatipE le action
 

@@ -11,20 +11,25 @@ module WebDriver.Effectful.HTTP.Base.Interpreter
 where
 
 import Data.Aeson (FromJSON)
+import Data.Text (Text)
 import Effectful (Eff, IOE, liftIO, (:>))
 import Effectful.Dispatch.Dynamic (interpret)
+import UnliftIO (throwIO)
 import WebDriver.Effectful.HTTP.Base.Effect
-  ( HttpSessionInfo (..),
-    WebDriverHttp (..)
+  ( WebDriverHttp (..),
   )
+import WebDriverPreCore.Extended.Capabilities (HttpSessionResponse (..))
 import WebDriverPreCore.Extended.HTTP.Base.Actions qualified as A
+import WebDriverPreCore.Extended.HTTP.Base.Actions qualified as HA
+import WebDriverPreCore.Extended.HTTP.Base.Protocol (parseFailToWDException)
 import WebDriverPreCore.Extended.Protocol (Session)
 import WebDriverPreCore.HttpRunner qualified as HR
-import Data.Text (Text)
-import qualified WebDriverPreCore.Extended.HTTP.Base.Actions as HA
-import UnliftIO (throwIO)
-import WebDriverPreCore.Extended.HTTP.Base.Protocol (parseFailToWDException)
-import WebDriverPreCore.Extended.Capabilities (HttpSessionResponse(..))
+
+data HttpParams = MkHttpParams
+  { session :: Session,
+    endPoint :: HR.HttpEndpoint,
+    logger :: HR.Logger
+  }
 
 -- ---------------------------------------------------------------------------
 -- HTTP interpreter
@@ -106,7 +111,7 @@ runWebDriverHttp info = interpret $ \_localEnv -> \case
 
     run1 :: forall r p. (FromJSON r) => (A.Runner IO r -> Session -> p -> IO r) -> p -> Eff es r
     run1 action p = liftIO $ action runner sess p
-    
+
     run2 :: forall r p1 p2. (FromJSON r) => (A.Runner IO r -> Session -> p1 -> p2 -> IO r) -> p1 -> p2 -> Eff es r
     run2 action p1 p2 = liftIO $ action runner sess p1 p2
 

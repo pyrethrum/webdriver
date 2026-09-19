@@ -20,7 +20,6 @@
 -- effects instead of explicit Bluefin compound handles.
 module WebDriver.Effectful.HTTP.Core
   ( -- * Types
-    HttpSessionInfo (..),
     BiDiIORunner,
 
     -- * HTTP Effect
