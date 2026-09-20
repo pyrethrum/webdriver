@@ -22,7 +22,7 @@ import WebDriver.Effectful.HTTP.Core
     runWebDriverBiDi,
     runWebDriverHttp,
   )
-import WebDriver.Effectful.Logger (Logger, Severity (..), getLogFn)
+import WebDriver.Effectful.Logger (Logger, logInfo)
 import WebDriverPreCore.BiDiRunner qualified as BiDiRunner
 import WebDriverPreCore.Extended.Capabilities qualified as EC
 import WebDriverPreCore.Extended.HTTP.Base.Actions qualified as HA
@@ -69,12 +69,9 @@ withHttpSession ::
   EC.HttpCapabilities ->
   Eff (WebDriverHttp : es) a ->
   Eff es a
-withHttpSession endpoint caps action = do
-  -- Extract the IO logger before entering withSeqEffToIO.
-  logFn <- getLogFn
-  let logger = logFn InfoS
-  -- uses 'withSeqEffToIO' so that 'releaseHttpSession' runs even when the action throws.
+withHttpSession endpoint caps action =
   withSeqEffToIO $ \runInIO -> do
+    let logger txt = runInIO (logInfo txt)
     bracket
       (acquireHttpSession endpoint logger caps)
       releaseHttpSession
@@ -90,9 +87,8 @@ withBiDiSession ::
   BiDiRunner.BiDiUrl ->
   Eff (WebDriverBiDi : es) a ->
   Eff es a
-withBiDiSession bidiUrl action = do
-  logFn <- getLogFn
-  let logger = logFn InfoS
-  withSeqEffToIO $ \runInIO ->
+withBiDiSession bidiUrl action =
+  withSeqEffToIO $ \runInIO -> do
+    let logger txt = runInIO (logInfo txt)
     BiDiRunner.withBiDi logger bidiUrl $
       \ioRunner -> runInIO (runWebDriverBiDi ioRunner action)
