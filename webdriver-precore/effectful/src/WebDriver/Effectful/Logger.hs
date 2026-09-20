@@ -110,8 +110,7 @@ brackets m = "[" <> m <> "]"
 -- 'Logger' effect into each action.  'withLogger' uses all three internally.
 -- Use 'acquireNoOpLogger' to obtain a handle that discards all log output.
 data LoggerData = MkLoggerData
-  { 
-    fileHandle :: (Maybe Handle),
+  { fileHandle :: (Maybe Handle),
     loggerEnv :: K.LogEnv
   }
 
@@ -134,11 +133,12 @@ acquireLogger logFile = do
   termScribe <- K.mkHandleScribeWithFormatter (localBracketFormat timeZone) K.ColorIfTerminal stdout (K.permitItem K.DebugS) K.V2
   fileScribe <- K.mkHandleScribeWithFormatter (localBracketFormat timeZone) (K.ColorLog False) fileHandle (K.permitItem K.DebugS) K.V2
 
-  -- register scribes with env
-  baseLogEnv <- initLogEnv "webdriver" "eval"
-  logEnvTerm <- K.registerScribe "stdout" termScribe K.defaultScribeSettings baseLogEnv
-  logEnvFull <- K.registerScribe "file" fileScribe K.defaultScribeSettings logEnvTerm
-  pure $ MkLoggerData (Just fileHandle) logEnvFull
+  MkLoggerData (Just fileHandle) <$>
+    -- register scribes with env
+    ( initLogEnv "webdriver" "eval"
+        >>= K.registerScribe "stdout" termScribe K.defaultScribeSettings
+        >>= K.registerScribe "file" fileScribe K.defaultScribeSettings
+    )
 
 -- | Create a 'LoggerData' with no scribes registered; all log output is
 -- discarded.  Useful when logging is disabled but a 'LoggerData' is still
@@ -146,11 +146,10 @@ acquireLogger logFile = do
 acquireNoOpLogger :: IO LoggerData
 acquireNoOpLogger = MkLoggerData Nothing <$> initLogEnv "webdriver" "eval"
 
-
 -- | Flush and close all scribes in a 'LoggerData', then close the
 -- log-file handle if one was opened.
 releaseLogger :: LoggerData -> IO ()
-releaseLogger MkLoggerData{fileHandle, loggerEnv} = K.closeScribes loggerEnv >> maybe (pure ()) hClose fileHandle
+releaseLogger MkLoggerData {fileHandle, loggerEnv} = K.closeScribes loggerEnv >> maybe (pure ()) hClose fileHandle
 
 -- | Run an effectful action inside the 'Logger' effect using an existing
 -- 'LoggerData'.
@@ -160,7 +159,7 @@ runLogger mlh action = do
     maybe
       -- create a fresh env with no registered scribes (effectively no output)
       (liftIO $ initLogEnv "webdriver" "eval")
-      (\(MkLoggerData _ le ) -> pure le)
+      (\(MkLoggerData _ le) -> pure le)
       mlh
   runKatipE le action
 
