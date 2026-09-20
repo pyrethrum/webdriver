@@ -43,7 +43,6 @@ import WebDriver.Effectful.BiDi.Base.Effect
 import WebDriver.Effectful.BiDi.Base.Interpreter (runWebDriverBiDi)
 import WebDriver.Effectful.HTTP.Base.Effect
   ( 
-    HttpSessionInfo (..),
     WebDriverHttp (..)
   )
 import WebDriver.Effectful.HTTP.Base.Interpreter (runWebDriverHttp)

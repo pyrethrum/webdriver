@@ -11,14 +11,13 @@ module WebDriver.Effectful.HTTP.Base.Interpreter
 where
 
 import Data.Aeson (FromJSON)
-import Data.Text (Text)
-import Effectful (Eff, IOE, liftIO, (:>))
+import Effectful (Eff, IOE, (:>))
 import Effectful.Dispatch.Dynamic (interpret)
 import UnliftIO (throwIO)
 import WebDriver.Effectful.HTTP.Base.Effect
   ( WebDriverHttp (..),
   )
-import WebDriverPreCore.Extended.Capabilities (HttpSessionResponse (..))
+import WebDriver.Effectful.Logger.Effect (Logger, logDebug)
 import WebDriverPreCore.Extended.HTTP.Base.Actions qualified as A
 import WebDriverPreCore.Extended.HTTP.Base.Actions qualified as HA
 import WebDriverPreCore.Extended.HTTP.Base.Protocol (parseFailToWDException)
@@ -27,16 +26,15 @@ import WebDriverPreCore.HttpRunner qualified as HR
 
 data HttpParams = MkHttpParams
   { session :: Session,
-    endPoint :: HR.HttpEndpoint,
-    logger :: HR.Logger
+    endpoint :: HR.HttpEndpoint
   }
 
 -- ---------------------------------------------------------------------------
 -- HTTP interpreter
 -- ---------------------------------------------------------------------------
 
-runWebDriverHttp :: forall es a. (IOE :> es) => HttpSessionInfo -> Eff (WebDriverHttp : es) a -> Eff es a
-runWebDriverHttp info = interpret $ \_localEnv -> \case
+runWebDriverHttp :: forall es a. (IOE :> es, Logger :> es) => HttpParams -> Eff (WebDriverHttp : es) a -> Eff es a
+runWebDriverHttp MkHttpParams {session = sess, endpoint} = interpret $ \_localEnv -> \case
   Status -> runRoot A.status
   GetTimeouts -> run A.getTimeouts
   SetTimeouts ts -> run1 A.setTimeouts ts
@@ -97,25 +95,21 @@ runWebDriverHttp info = interpret $ \_localEnv -> \case
   ElementSendKeys el t -> run2 A.elementSendKeys el t
   TakeElementScreenshot el -> run1 A.takeElementScreenshot el
   where
-    runner :: forall r. (FromJSON r) => A.Runner IO r
-    runner = callWebDriver info.endpoint info.logger
+    runner :: forall r. (FromJSON r) => A.Runner (Eff es) r
+    runner = callWebDriver endpoint
 
-    sess :: Session
-    sess = info.sessionResponse.session
+    runRoot :: forall r. (FromJSON r) => (A.Runner (Eff es) r ->  (Eff es)  r) -> Eff es r
+    runRoot action = action runner
 
-    runRoot :: forall r. (FromJSON r) => (A.Runner IO r -> IO r) -> Eff es r
-    runRoot action = liftIO $ action runner
+    run :: forall r. (FromJSON r) => (A.Runner (Eff es) r -> Session -> (Eff es) r) -> Eff es r
+    run action = action runner sess
 
-    run :: forall r. (FromJSON r) => (A.Runner IO r -> Session -> IO r) -> Eff es r
-    run action = liftIO $ action runner sess
+    run1 :: forall r p. (FromJSON r) => (A.Runner (Eff es) r -> Session -> p -> (Eff es) r) -> p -> Eff es r
+    run1 action p = action runner sess p
 
-    run1 :: forall r p. (FromJSON r) => (A.Runner IO r -> Session -> p -> IO r) -> p -> Eff es r
-    run1 action p = liftIO $ action runner sess p
+    run2 :: forall r p1 p2. (FromJSON r) => (A.Runner (Eff es) r -> Session -> p1 -> p2 -> (Eff es) r) -> p1 -> p2 -> Eff es r
+    run2 action p1 p2 = action runner sess p1 p2
 
-    run2 :: forall r p1 p2. (FromJSON r) => (A.Runner IO r -> Session -> p1 -> p2 -> IO r) -> p1 -> p2 -> Eff es r
-    run2 action p1 p2 = liftIO $ action runner sess p1 p2
-
-callWebDriver :: (FromJSON a) => HR.HttpEndpoint -> (Text -> IO ()) -> HA.Runner IO a
-callWebDriver endpoint logger cmd =
-  HR.callWebDriver endpoint logger cmd
-    >>= either (throwIO . parseFailToWDException) pure
+callWebDriver :: forall a es. (IOE :> es, Logger :> es, FromJSON a) => HR.HttpEndpoint -> HA.Runner (Eff es) a
+callWebDriver endpoint cmd =
+  HR.callWebDriver endpoint logDebug cmd >>= either (throwIO . parseFailToWDException) pure
