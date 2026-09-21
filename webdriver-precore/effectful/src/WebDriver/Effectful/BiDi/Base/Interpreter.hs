@@ -23,7 +23,7 @@ import WebDriver.Effectful.BiDi.Base.Effect
   )
 import WebDriverPreCore.BiDi.Protocol
   ( SessionUnsubscribe (..),
-    mkCommand,
+    mkCommand, BrowsingContext, UserContext, Subscription,
   )
 import WebDriverPreCore.BiDi.Protocol qualified as BP
 import WebDriverPreCore.BiDiRunner (BiDiRunner)
@@ -137,62 +137,62 @@ runWebDriverBiDi ioRunner = interpret $ \localEnv ->
       case subscription of
         -- Log subscriptions
         SubscribeLogEntryAdded s -> \unlift -> BA.subscribeLogEntryAdded sendSub (unlift . s)
-        SubscribeLogEntryAdded' b u h -> \unlift -> BA.subscribeLogEntryAdded' sendSub' b u (unlift . h)
+        SubscribeLogEntryAdded' b u s -> \unlift -> BA.subscribeLogEntryAdded' sendSub' b u (unlift . s)
         -- BrowsingContext subscriptions
-        SubscribeBrowsingContextCreated h -> \unlift -> BA.subscribeBrowsingContextCreated sendSub (unlift . h)
-        SubscribeBrowsingContextCreated' b u h -> \unlift -> BA.subscribeBrowsingContextCreated' sendSub' b u (unlift . h)
-        SubscribeBrowsingContextDestroyed h -> \unlift -> BA.subscribeBrowsingContextDestroyed sendSub (unlift . h)
-        SubscribeBrowsingContextDestroyed' b u h -> \unlift -> BA.subscribeBrowsingContextDestroyed' sendSub' b u (unlift . h)
-        SubscribeBrowsingContextNavigationStarted h -> \unlift -> BA.subscribeBrowsingContextNavigationStarted sendSub (unlift . h)
-        SubscribeBrowsingContextNavigationStarted' b u h -> \unlift -> BA.subscribeBrowsingContextNavigationStarted' sendSub' b u (unlift . h)
-        SubscribeBrowsingContextFragmentNavigated h -> \unlift -> BA.subscribeBrowsingContextFragmentNavigated sendSub (unlift . h)
-        SubscribeBrowsingContextFragmentNavigated' b u h -> \unlift -> BA.subscribeBrowsingContextFragmentNavigated' sendSub' b u (unlift . h)
-        SubscribeBrowsingContextHistoryUpdated h -> \unlift -> BA.subscribeBrowsingContextHistoryUpdated sendSub (unlift . h)
-        SubscribeBrowsingContextHistoryUpdated' b u h -> \unlift -> BA.subscribeBrowsingContextHistoryUpdated' sendSub' b u (unlift . h)
-        SubscribeBrowsingContextDomContentLoaded h -> \unlift -> BA.subscribeBrowsingContextDomContentLoaded sendSub (unlift . h)
-        SubscribeBrowsingContextDomContentLoaded' b u h -> \unlift -> BA.subscribeBrowsingContextDomContentLoaded' sendSub' b u (unlift . h)
-        SubscribeBrowsingContextLoad h -> \unlift -> BA.subscribeBrowsingContextLoad sendSub (unlift . h)
-        SubscribeBrowsingContextLoad' b u h -> \unlift -> BA.subscribeBrowsingContextLoad' sendSub' b u (unlift . h)
-        SubscribeBrowsingContextDownloadWillBegin h -> \unlift -> BA.subscribeBrowsingContextDownloadWillBegin sendSub (unlift . h)
-        SubscribeBrowsingContextDownloadWillBegin' b u h -> \unlift -> BA.subscribeBrowsingContextDownloadWillBegin' sendSub' b u (unlift . h)
-        SubscribeBrowsingContextDownloadEnd h -> \unlift -> BA.subscribeBrowsingContextDownloadEnd sendSub (unlift . h)
-        SubscribeBrowsingContextDownloadEnd' b u h -> \unlift -> BA.subscribeBrowsingContextDownloadEnd' sendSub' b u (unlift . h)
-        SubscribeBrowsingContextNavigationAborted h -> \unlift -> BA.subscribeBrowsingContextNavigationAborted sendSub (unlift . h)
-        SubscribeBrowsingContextNavigationAborted' b u h -> \unlift -> BA.subscribeBrowsingContextNavigationAborted' sendSub' b u (unlift . h)
-        SubscribeBrowsingContextNavigationCommitted h -> \unlift -> BA.subscribeBrowsingContextNavigationCommitted sendSub (unlift . h)
-        SubscribeBrowsingContextNavigationCommitted' b u h -> \unlift -> BA.subscribeBrowsingContextNavigationCommitted' sendSub' b u (unlift . h)
-        SubscribeBrowsingContextNavigationFailed h -> \unlift -> BA.subscribeBrowsingContextNavigationFailed sendSub (unlift . h)
-        SubscribeBrowsingContextNavigationFailed' b u h -> \unlift -> BA.subscribeBrowsingContextNavigationFailed' sendSub' b u (unlift . h)
-        SubscribeBrowsingContextUserPromptClosed h -> \unlift -> BA.subscribeBrowsingContextUserPromptClosed sendSub (unlift . h)
-        SubscribeBrowsingContextUserPromptClosed' b u h -> \unlift -> BA.subscribeBrowsingContextUserPromptClosed' sendSub' b u (unlift . h)
-        SubscribeBrowsingContextUserPromptOpened h -> \unlift -> BA.subscribeBrowsingContextUserPromptOpened sendSub (unlift . h)
-        SubscribeBrowsingContextUserPromptOpened' b u h -> \unlift -> BA.subscribeBrowsingContextUserPromptOpened' sendSub' b u (unlift . h)
+        SubscribeBrowsingContextCreated s -> \unlift -> BA.subscribeBrowsingContextCreated sendSub (unlift . s)
+        SubscribeBrowsingContextCreated' b u s -> \unlift -> BA.subscribeBrowsingContextCreated' sendSub' b u (unlift . s)
+        SubscribeBrowsingContextDestroyed s -> \unlift -> BA.subscribeBrowsingContextDestroyed sendSub (unlift . s)
+        SubscribeBrowsingContextDestroyed' b u s -> \unlift -> BA.subscribeBrowsingContextDestroyed' sendSub' b u (unlift . s)
+        SubscribeBrowsingContextNavigationStarted s -> \unlift -> BA.subscribeBrowsingContextNavigationStarted sendSub (unlift . s)
+        SubscribeBrowsingContextNavigationStarted' b u s -> \unlift -> BA.subscribeBrowsingContextNavigationStarted' sendSub' b u (unlift . s)
+        SubscribeBrowsingContextFragmentNavigated s -> \unlift -> BA.subscribeBrowsingContextFragmentNavigated sendSub (unlift . s)
+        SubscribeBrowsingContextFragmentNavigated' b u s -> \unlift -> BA.subscribeBrowsingContextFragmentNavigated' sendSub' b u (unlift . s)
+        SubscribeBrowsingContextHistoryUpdated s -> \unlift -> BA.subscribeBrowsingContextHistoryUpdated sendSub (unlift . s)
+        SubscribeBrowsingContextHistoryUpdated' b u s -> \unlift -> BA.subscribeBrowsingContextHistoryUpdated' sendSub' b u (unlift . s)
+        SubscribeBrowsingContextDomContentLoaded s -> \unlift -> BA.subscribeBrowsingContextDomContentLoaded sendSub (unlift . s)
+        SubscribeBrowsingContextDomContentLoaded' b u s -> \unlift -> BA.subscribeBrowsingContextDomContentLoaded' sendSub' b u (unlift . s)
+        SubscribeBrowsingContextLoad s -> \unlift -> BA.subscribeBrowsingContextLoad sendSub (unlift . s)
+        SubscribeBrowsingContextLoad' b u s -> \unlift -> BA.subscribeBrowsingContextLoad' sendSub' b u (unlift . s)
+        SubscribeBrowsingContextDownloadWillBegin s -> \unlift -> BA.subscribeBrowsingContextDownloadWillBegin sendSub (unlift . s)
+        SubscribeBrowsingContextDownloadWillBegin' b u s -> \unlift -> BA.subscribeBrowsingContextDownloadWillBegin' sendSub' b u (unlift . s)
+        SubscribeBrowsingContextDownloadEnd s -> \unlift -> BA.subscribeBrowsingContextDownloadEnd sendSub (unlift . s)
+        SubscribeBrowsingContextDownloadEnd' b u s -> \unlift -> BA.subscribeBrowsingContextDownloadEnd' sendSub' b u (unlift . s)
+        SubscribeBrowsingContextNavigationAborted s -> \unlift -> BA.subscribeBrowsingContextNavigationAborted sendSub (unlift . s)
+        SubscribeBrowsingContextNavigationAborted' b u s -> \unlift -> BA.subscribeBrowsingContextNavigationAborted' sendSub' b u (unlift . s)
+        SubscribeBrowsingContextNavigationCommitted s -> \unlift -> BA.subscribeBrowsingContextNavigationCommitted sendSub (unlift . s)
+        SubscribeBrowsingContextNavigationCommitted' b u s -> \unlift -> BA.subscribeBrowsingContextNavigationCommitted' sendSub' b u (unlift . s)
+        SubscribeBrowsingContextNavigationFailed s -> \unlift -> BA.subscribeBrowsingContextNavigationFailed sendSub (unlift . s)
+        SubscribeBrowsingContextNavigationFailed' b u s -> \unlift -> BA.subscribeBrowsingContextNavigationFailed' sendSub' b u (unlift . s)
+        SubscribeBrowsingContextUserPromptClosed s -> \unlift -> BA.subscribeBrowsingContextUserPromptClosed sendSub (unlift . s)
+        SubscribeBrowsingContextUserPromptClosed' b u s -> \unlift -> BA.subscribeBrowsingContextUserPromptClosed' sendSub' b u (unlift . s)
+        SubscribeBrowsingContextUserPromptOpened s -> \unlift -> BA.subscribeBrowsingContextUserPromptOpened sendSub (unlift . s)
+        SubscribeBrowsingContextUserPromptOpened' b u s -> \unlift -> BA.subscribeBrowsingContextUserPromptOpened' sendSub' b u (unlift . s)
         -- Network subscriptions
-        SubscribeNetworkAuthRequired h -> \unlift -> BA.subscribeNetworkAuthRequired sendSub (unlift . h)
-        SubscribeNetworkAuthRequired' b u h -> \unlift -> BA.subscribeNetworkAuthRequired' sendSub' b u (unlift . h)
-        SubscribeNetworkBeforeRequestSent h -> \unlift -> BA.subscribeNetworkBeforeRequestSent sendSub (unlift . h)
-        SubscribeNetworkBeforeRequestSent' b u h -> \unlift -> BA.subscribeNetworkBeforeRequestSent' sendSub' b u (unlift . h)
-        SubscribeNetworkFetchError h -> \unlift -> BA.subscribeNetworkFetchError sendSub (unlift . h)
-        SubscribeNetworkFetchError' b u h -> \unlift -> BA.subscribeNetworkFetchError' sendSub' b u (unlift . h)
-        SubscribeNetworkResponseCompleted h -> \unlift -> BA.subscribeNetworkResponseCompleted sendSub (unlift . h)
-        SubscribeNetworkResponseCompleted' b u h -> \unlift -> BA.subscribeNetworkResponseCompleted' sendSub' b u (unlift . h)
-        SubscribeNetworkResponseStarted h -> \unlift -> BA.subscribeNetworkResponseStarted sendSub (unlift . h)
-        SubscribeNetworkResponseStarted' b u h -> \unlift -> BA.subscribeNetworkResponseStarted' sendSub' b u (unlift . h)
+        SubscribeNetworkAuthRequired s -> \unlift -> BA.subscribeNetworkAuthRequired sendSub (unlift . s)
+        SubscribeNetworkAuthRequired' b u s -> \unlift -> BA.subscribeNetworkAuthRequired' sendSub' b u (unlift . s)
+        SubscribeNetworkBeforeRequestSent s -> \unlift -> BA.subscribeNetworkBeforeRequestSent sendSub (unlift . s)
+        SubscribeNetworkBeforeRequestSent' b u s -> \unlift -> BA.subscribeNetworkBeforeRequestSent' sendSub' b u (unlift . s)
+        SubscribeNetworkFetchError s -> \unlift -> BA.subscribeNetworkFetchError sendSub (unlift . s)
+        SubscribeNetworkFetchError' b u s -> \unlift -> BA.subscribeNetworkFetchError' sendSub' b u (unlift . s)
+        SubscribeNetworkResponseCompleted s -> \unlift -> BA.subscribeNetworkResponseCompleted sendSub (unlift . s)
+        SubscribeNetworkResponseCompleted' b u s -> \unlift -> BA.subscribeNetworkResponseCompleted' sendSub' b u (unlift . s)
+        SubscribeNetworkResponseStarted s -> \unlift -> BA.subscribeNetworkResponseStarted sendSub (unlift . s)
+        SubscribeNetworkResponseStarted' b u s -> \unlift -> BA.subscribeNetworkResponseStarted' sendSub' b u (unlift . s)
         -- Script subscriptions
-        SubscribeScriptMessage h -> \unlift -> BA.subscribeScriptMessage sendSub (unlift . h)
-        SubscribeScriptMessage' b u h -> \unlift -> BA.subscribeScriptMessage' sendSub' b u (unlift . h)
-        SubscribeScriptRealmCreated h -> \unlift -> BA.subscribeScriptRealmCreated sendSub (unlift . h)
-        SubscribeScriptRealmCreated' b u h -> \unlift -> BA.subscribeScriptRealmCreated' sendSub' b u (unlift . h)
-        SubscribeScriptRealmDestroyed h -> \unlift -> BA.subscribeScriptRealmDestroyed sendSub (unlift . h)
-        SubscribeScriptRealmDestroyed' b u h -> \unlift -> BA.subscribeScriptRealmDestroyed' sendSub' b u (unlift . h)
+        SubscribeScriptMessage s -> \unlift -> BA.subscribeScriptMessage sendSub (unlift . s)
+        SubscribeScriptMessage' b u s -> \unlift -> BA.subscribeScriptMessage' sendSub' b u (unlift . s)
+        SubscribeScriptRealmCreated s -> \unlift -> BA.subscribeScriptRealmCreated sendSub (unlift . s)
+        SubscribeScriptRealmCreated' b u s -> \unlift -> BA.subscribeScriptRealmCreated' sendSub' b u (unlift . s)
+        SubscribeScriptRealmDestroyed s -> \unlift -> BA.subscribeScriptRealmDestroyed sendSub (unlift . s)
+        SubscribeScriptRealmDestroyed' b u s -> \unlift -> BA.subscribeScriptRealmDestroyed' sendSub' b u (unlift . s)
         -- Input subscriptions
-        SubscribeInputFileDialogOpened h -> \unlift -> BA.subscribeInputFileDialogOpened sendSub (unlift . h)
-        SubscribeInputFileDialogOpened' b u h -> \unlift -> BA.subscribeInputFileDialogOpened' sendSub' b u (unlift . h)
+        SubscribeInputFileDialogOpened s -> \unlift -> BA.subscribeInputFileDialogOpened sendSub (unlift . s)
+        SubscribeInputFileDialogOpened' b u s -> \unlift -> BA.subscribeInputFileDialogOpened' sendSub' b u (unlift . s)
         -- Multi-event subscriptions
-        SubscribeMany sts h -> \unlift -> BA.subscribeMany' sendSubMany' sts [] [] (unlift . h)
-        SubscribeMany' b u sts h -> \unlift -> BA.subscribeMany' sendSubMany' sts b u (unlift . h)
-        SubscribeOffSpecMany sts h -> \unlift -> BA.subscribeOffSpecMany' sendSubOffSpecMany' sts [] [] (unlift . h)
-        SubscribeOffSpecMany' b u sts h -> \unlift -> BA.subscribeOffSpecMany' sendSubOffSpecMany' sts b u (unlift . h)
+        SubscribeMany sts s -> \unlift -> BA.subscribeMany' sendSubMany' sts [] [] (unlift . s)
+        SubscribeMany' b u sts s -> \unlift -> BA.subscribeMany' sendSubMany' sts b u (unlift . s)
+        SubscribeOffSpecMany sts s -> \unlift -> BA.subscribeOffSpecMany' sendSubOffSpecMany' sts [] [] (unlift . s)
+        SubscribeOffSpecMany' b u sts s -> \unlift -> BA.subscribeOffSpecMany' sendSubOffSpecMany' sts b u (unlift . s)
   where
     run' :: forall r. (FromJSON r) => BA.Runner (Eff es) r
     run' = bidiRun ioRunner
@@ -202,11 +202,6 @@ runWebDriverBiDi ioRunner = interpret $ \localEnv ->
 
     run1 :: forall r p. (FromJSON r) => (BA.Runner (Eff es) r -> p -> Eff es r) -> p -> Eff es r
     run1 action p = action run' p
-
-    unliftStrategy :: UnliftStrategy
-    unliftStrategy = ConcUnlift Persistent Unlimited
-
-    unliftWithEnv = localUnlift localEnv unliftStrategy
 
     sendSub :: forall c. BA.SendSub (Eff es) c
     sendSub = mkSendSub ioRunner
@@ -219,3 +214,8 @@ runWebDriverBiDi ioRunner = interpret $ \localEnv ->
 
     sendSubOffSpecMany' :: BA.SendSubOffSpecMany' (Eff es)
     sendSubOffSpecMany' = mkSendSubOffSpecMany' ioRunner
+
+    subDefault :: forall m a. ([BrowsingContext] -> [UserContext] -> (a -> m ()) -> Subscription m )-> Subscription m
+
+
+type MkSubcription = forall m a. [BrowsingContext] -> [UserContext] -> (a -> m ()) -> Subscription m
