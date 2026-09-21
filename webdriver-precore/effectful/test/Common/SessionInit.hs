@@ -1,5 +1,5 @@
 module Common.SessionInit (
-  
+
 ) where
 
 import Data.Text (Text)
@@ -13,7 +13,7 @@ import WebDriverPreCore.Extended.HTTP.Base.Protocol (URL)
 import WebDriver.Effectful (HttpEndpoint(..), HttpCapabilities, FullCapabilities (..))
 import WebDriver.Effectful.App
 import WebDriverPreCore.Test.CapabilitiesBuilder (httpCapabilities)
-import WebDriverPreCore.Extended.Capabilities (fromHttpCapability)
+import WebDriverPreCore.Extended.Capabilities (fromHttpCapability, HttpSessionResponse)
 import WebDriverPreCore.HTTP.Protocol (Capabilities(..))
 
 
@@ -26,37 +26,28 @@ mkHttpCaps bidiSocket config =
          firstMatch  = []
        }
 
-data WDSession = MkWDSession
-  { loggerHandle :: Maybe LoggerHandle,
-    sessionInfo :: HttpSessionInfo
-  }
 data CfgLoaded = MkCfgLoaded
-  { logger :: Text -> IO (),
-    loggerHandle :: Maybe LoggerHandle,
+  {
     httpEndpoint :: HttpEndpoint,
     httpCapabilities :: HttpCapabilities,
-    pauseDuration :: T.Timeout
+    wantLogging :: Bool
   }
 
 getConfigData :: Bool -> IO CfgLoaded
 getConfigData wantBiDiSocket = do
-  cfg@MkConfig{httpUrl = host, httpPort = port, logging, pauseMS} <- loadConfig
+  cfg@MkConfig{httpUrl = host, httpPort = port, logging} <- loadConfig
   loggerHandle <- if logging
                     then Just <$> acquireLogger "eval.log"
                     else pure Nothing
   let 
     endpoint = MkHttpEndpoint {host, port}
     -- TODO: Need to add a function to Logger module to convert LoggerHandle to (Text -> IO ())
-    -- For now, just use noOpLogger regardless of logging setting
-    logger = noOpLogger
-    -- Convert pauseMS (milliseconds) to Timeout (microseconds)
-    pauseDuration = T.MkTimeout (fromIntegral pauseMS * 1000)
+
   pure MkCfgLoaded
-    { logger,
-      loggerHandle,
+    {
       httpEndpoint = endpoint,
       httpCapabilities = mkHttpCaps wantBiDiSocket cfg,
-      pauseDuration
+      wantLogging = logging
     }
 
 -- | Create a new WebDriver session based on config

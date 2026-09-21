@@ -26,6 +26,7 @@ data Config = MkConfig
     httpUrl :: Text,
     httpPort :: Word16,
     logging :: Bool,
+    -- TODO: REMOVE PAUSEMS and cascade
     pauseMS :: Word
   }
   deriving (Eq, Generic, Show)
