@@ -14,8 +14,7 @@ where
 
 import Control.Monad ((>=>))
 import Data.Aeson (FromJSON)
-import Data.Text (Text)
-import Effectful (Eff, IOE, withSeqEffToIO, (:>))
+import Effectful (Eff, IOE, Limit (..), Persistence (..), UnliftStrategy (..), withUnliftStrategy, (:>))
 import Effectful.Error.Static (Error, throwError)
 import Effectful.Exception (bracket)
 import WebDriver.Effectful.HTTP.Base.Interpreter (HttpParams (..))
@@ -85,6 +84,6 @@ withBiDiSession ::
   Eff (WebDriverBiDi : es) a ->
   Eff es a
 withBiDiSession bidiUrl action =
-  withSeqEffToIO $ \runInIO -> do
+  withUnliftStrategy (ConcUnlift Persistent Unlimited) $
     BiDiRunner.withBiDi logDebug bidiUrl $
-      \ioRunner -> runInIO (runWebDriverBiDi ioRunner action)
+      \runner -> runWebDriverBiDi runner action

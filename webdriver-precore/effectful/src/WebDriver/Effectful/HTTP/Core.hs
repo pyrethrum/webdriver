@@ -6,12 +6,11 @@
 --
 -- * 'HttpDriverInfo'   — HTTP connection configuration
 -- * 'HttpSessionInfo'  — driver info + session + pause duration
--- * 'BiDiInfo'         — BiDi runner + pause duration
 -- * 'WebDriverHttp'    — Dynamic effect encoding all HTTP session operations
 -- * 'WebDriverBiDi'    — Dynamic effect encoding all BiDi commands + subscriptions
 --
 -- The effects are dispatched dynamically: 'runWebDriverHttp' and
--- 'runWebDriverBiDi' provide the @IO@-backed interpreters.  The separation
+-- 'runWebDriverBiDi' provide the effectful interpreters.  The separation
 -- of "what" (effect algebra) from "how" (interpreter) means you can add
 -- alternative interpreters (e.g. pure test doubles) without changing
 -- call-site code.
@@ -19,10 +18,7 @@
 -- This mirrors "WebDriver.Bluefin.HTTP.Core" but uses Effectful algebraic
 -- effects instead of explicit Bluefin compound handles.
 module WebDriver.Effectful.HTTP.Core
-  ( -- * Types
-    BiDiIORunner,
-
-    -- * HTTP Effect
+  ( -- * HTTP Effect
     WebDriverHttp (..),
 
     -- * BiDi Effect
@@ -37,8 +33,7 @@ module WebDriver.Effectful.HTTP.Core
 where
 
 import WebDriver.Effectful.BiDi.Base.Effect
-  ( BiDiIORunner,
-    WebDriverBiDi (..),
+  ( WebDriverBiDi (..),
   )
 import WebDriver.Effectful.BiDi.Base.Interpreter (runWebDriverBiDi)
 import WebDriver.Effectful.HTTP.Base.Effect
