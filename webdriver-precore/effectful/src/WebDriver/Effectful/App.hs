@@ -1,6 +1,8 @@
 module WebDriver.Effectful.App
   ( -- * HTTP Session Management
     acquireHttpSession,
+    releaseHttpSession,
+    withHttpSession,
     -- releaseHttpSession,
     -- runHttpSession,
     -- withHttpSession,
@@ -14,23 +16,22 @@ import Control.Monad ((>=>))
 import Data.Aeson (FromJSON)
 import Data.Text (Text)
 import Effectful (Eff, IOE, withSeqEffToIO, (:>))
-import UnliftIO (bracket)
+import Effectful.Error.Static (Error, throwError)
+import Effectful.Exception (bracket)
+import WebDriver.Effectful.HTTP.Base.Interpreter (HttpParams (..))
 import WebDriver.Effectful.HTTP.Core
-  ( 
-    WebDriverBiDi,
+  ( WebDriverBiDi,
     WebDriverHttp,
     runWebDriverBiDi,
     runWebDriverHttp,
   )
 import WebDriver.Effectful.Logger (Logger, logDebug)
 import WebDriverPreCore.BiDiRunner qualified as BiDiRunner
+import WebDriverPreCore.Extended.Capabilities (HttpSessionResponse (..))
 import WebDriverPreCore.Extended.Capabilities qualified as EC
 import WebDriverPreCore.Extended.HTTP.Base.Actions qualified as HA
-import WebDriverPreCore.HttpRunner (Command, HttpEndpoint, callWebDriver, ParseFailure)
+import WebDriverPreCore.HttpRunner (Command, HttpEndpoint, ParseFailure, callWebDriver)
 import WebDriverPreCore.Utils.Utils (throwLeft)
-import WebDriver.Effectful.HTTP.Base.Interpreter (HttpParams(..))
-import Effectful.Error.Static (Error, throwError)
-import WebDriverPreCore.Extended.Capabilities (HttpSessionResponse(..))
 
 -- ---------------------------------------------------------------------------
 -- HTTP Session Management
@@ -45,44 +46,34 @@ import WebDriverPreCore.Extended.Capabilities (HttpSessionResponse(..))
 -- For convenience, 'withHttpSession' provides a bracket version.
 acquireHttpSession :: forall es. (IOE :> es, Logger :> es, Error ParseFailure :> es) => HttpEndpoint -> EC.HttpCapabilities -> Eff es HttpSessionResponse
 acquireHttpSession endpoint caps =
-   EC.newHttpSession (httpRunner endpoint) caps
+  EC.newHttpSession (httpRunner endpoint) caps
 
 httpRunner :: forall es a. (IOE :> es, Logger :> es, Error ParseFailure :> es, FromJSON a) => HttpEndpoint -> Command a -> Eff es a
 httpRunner endpoint = callWebDriver endpoint logDebug >=> throwLeft throwError
 
-
-
 -- | Delete the HTTP session associated with an 'HttpSessionInfo' handle.
 --
 -- This is the release half of the acquire/release pair.
-releaseHttpSession :: HttpSessionInfo -> IO ()
-releaseHttpSession MkHttpSessionInfo {endpoint, logger, sessionResponse} =
-  HA.deleteSession (httpIORunner endpoint logger) sessionResponse.session
-
-{-
--- | Run an effectful action inside the 'WebDriverHttp' effect using an
--- existing 'HttpSessionInfo' handle.
-runHttpSession :: forall es a. (IOE :> es) => HttpSessionInfo -> Eff (WebDriverHttp : es) a -> Eff es a
-runHttpSession = runWebDriverHttp
-
--- | Create an HTTP session, run an action inside the 'WebDriverHttp' effect,
--- then delete the session on completion or error.
---
+releaseHttpSession :: forall es. (IOE :> es, Logger :> es, Error ParseFailure :> es) => HttpParams -> Eff es ()
+releaseHttpSession MkHttpParams {endpoint, session} = HA.deleteSession (httpRunner endpoint) session
 
 withHttpSession ::
-  (IOE :> es, Logger :> es) =>
+  (IOE :> es, Logger :> es, Error ParseFailure :> es) =>
   HttpEndpoint ->
   EC.HttpCapabilities ->
   Eff (WebDriverHttp : es) a ->
   Eff es a
 withHttpSession endpoint caps action =
-  withSeqEffToIO $ \runInIO -> do
-    let logger txt = runInIO (logInfo txt)
-    bracket
-      (acquireHttpSession endpoint logger caps)
-      releaseHttpSession
-      (runInIO . flip runHttpSession action)
+  bracket
+    (flip MkHttpParams endpoint . (.session) <$> acquireHttpSession endpoint caps)
+    releaseHttpSession
+    (flip runWebDriverHttp action)
 
+
+
+-- | Create an HTTP session, run an action inside the 'WebDriverHttp' effect,
+-- then delete the session on completion or error.
+--
 -- ---------------------------------------------------------------------------
 -- BiDi Session Management
 -- ---------------------------------------------------------------------------
@@ -95,8 +86,5 @@ withBiDiSession ::
   Eff es a
 withBiDiSession bidiUrl action =
   withSeqEffToIO $ \runInIO -> do
-    let logger txt = runInIO (logInfo txt)
-    BiDiRunner.withBiDi logger bidiUrl $
+    BiDiRunner.withBiDi logDebug bidiUrl $
       \ioRunner -> runInIO (runWebDriverBiDi ioRunner action)
-
-      -}
