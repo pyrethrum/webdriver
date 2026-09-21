@@ -3,12 +3,8 @@ module WebDriver.Effectful.App
     acquireHttpSession,
     releaseHttpSession,
     withHttpSession,
-    -- releaseHttpSession,
-    -- runHttpSession,
-    -- withHttpSession,
-
-    -- -- * BiDi Session Management
     -- withBiDiSession
+    withBiDiSession
   )
 where
 
@@ -67,8 +63,6 @@ withHttpSession endpoint caps action =
     (flip MkHttpParams endpoint . (.session) <$> acquireHttpSession endpoint caps)
     releaseHttpSession
     (flip runWebDriverHttp action)
-
-
 
 -- | Create an HTTP session, run an action inside the 'WebDriverHttp' effect,
 -- then delete the session on completion or error.
