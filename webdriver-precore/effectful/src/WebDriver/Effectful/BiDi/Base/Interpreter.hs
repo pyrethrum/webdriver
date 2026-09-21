@@ -22,8 +22,10 @@ import WebDriver.Effectful.BiDi.Base.Effect
     mkSendSubOffSpecMany',
   )
 import WebDriverPreCore.BiDi.Protocol
-  ( SessionUnsubscribe (..),
+  ( BrowsingContext,
+    SessionUnsubscribe (..),
     SubscriptionId,
+    UserContext,
     mkCommand,
   )
 import WebDriverPreCore.BiDi.Protocol qualified as BP
@@ -188,7 +190,8 @@ runWebDriverBiDi ioRunner = interpret $ \localEnv ->
         SubscribeScriptRealmDestroyed' b u s -> \unlift -> BA.subscribeScriptRealmDestroyed' sendSub' b u (unlift . s)
         -- Input subscriptions
         SubscribeInputFileDialogOpened s -> subDefault BA.subscribeInputFileDialogOpened s
-        SubscribeInputFileDialogOpened' b u s -> \unlift -> BA.subscribeInputFileDialogOpened' sendSub' b u (unlift . s)
+        -- SubscribeInputFileDialogOpened' b u s -> \unlift -> BA.subscribeInputFileDialogOpened' sendSub' b u (unlift . s)
+        SubscribeInputFileDialogOpened' b u s -> subWithContexts BA.subscribeInputFileDialogOpened' b u s
         -- Multi-event subscriptions
         SubscribeMany sts s -> \unlift -> BA.subscribeMany' sendSubMany' sts [] [] (unlift . s)
         SubscribeMany' b u sts s -> \unlift -> BA.subscribeMany' sendSubMany' sts b u (unlift . s)
@@ -216,11 +219,20 @@ runWebDriverBiDi ioRunner = interpret $ \localEnv ->
     sendSubOffSpecMany' :: BA.SendSubOffSpecMany' (Eff es)
     sendSubOffSpecMany' = mkSendSubOffSpecMany' ioRunner
 
-    subDefault :: forall ev localM.
-      (BA.SendSub (Eff es) ev -> (ev -> Eff es ()) -> Eff es SubscriptionId)
-      -> (ev -> localM ())
-      -> (forall r. localM r -> Eff es r)
-      -> Eff es SubscriptionId
+    subDefault ::
+      forall ev localM.
+      (BA.SendSub (Eff es) ev -> (ev -> Eff es ()) -> Eff es SubscriptionId) ->
+      (ev -> localM ()) ->
+      (forall r. localM r -> Eff es r) ->
+      Eff es SubscriptionId
     subDefault param s unlift = param sendSub (unlift . s)
 
-
+    subWithContexts ::
+      forall ev localM.
+      (BA.SendSub' (Eff es) ev -> [BrowsingContext] -> [UserContext] -> (ev -> Eff es ()) -> Eff es SubscriptionId) ->
+      [BrowsingContext] ->
+      [UserContext] ->
+      (ev -> localM ()) ->
+      (forall r. localM r -> Eff es r) ->
+      Eff es SubscriptionId
+    subWithContexts param b u s unlift = param sendSub' b u (unlift . s)
