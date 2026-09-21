@@ -1,7 +1,7 @@
 module BiDi.Runner where
 
 -- TODO: Update to use new acquire/release pattern
--- import Common.SessionInit (runSetup)
+import Common.SessionInit (runSetup)
 import Data.Text qualified as T
 import Effectful (Eff, IOE, (:>))
 import WebDriver.Effectful

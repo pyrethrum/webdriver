@@ -139,57 +139,57 @@ runWebDriverBiDi ioRunner = interpret $ \localEnv ->
     subscription -> localUnlift localEnv (ConcUnlift Persistent Unlimited) $
       case subscription of
         -- Log subscriptions
-        SubscribeLogEntryAdded s -> subDefault BA.subscribeLogEntryAdded s
+        SubscribeLogEntryAdded s -> sub BA.subscribeLogEntryAdded s
         SubscribeLogEntryAdded' b u s -> subWithContexts BA.subscribeLogEntryAdded' b u s
         -- BrowsingContext subscriptions
-        SubscribeBrowsingContextCreated s -> subDefault BA.subscribeBrowsingContextCreated s
+        SubscribeBrowsingContextCreated s -> sub BA.subscribeBrowsingContextCreated s
         SubscribeBrowsingContextCreated' b u s -> subWithContexts BA.subscribeBrowsingContextCreated' b u s
-        SubscribeBrowsingContextDestroyed s -> subDefault BA.subscribeBrowsingContextDestroyed s
+        SubscribeBrowsingContextDestroyed s -> sub BA.subscribeBrowsingContextDestroyed s
         SubscribeBrowsingContextDestroyed' b u s -> subWithContexts BA.subscribeBrowsingContextDestroyed' b u s
-        SubscribeBrowsingContextNavigationStarted s -> subDefault BA.subscribeBrowsingContextNavigationStarted s
+        SubscribeBrowsingContextNavigationStarted s -> sub BA.subscribeBrowsingContextNavigationStarted s
         SubscribeBrowsingContextNavigationStarted' b u s -> subWithContexts BA.subscribeBrowsingContextNavigationStarted' b u s
-        SubscribeBrowsingContextFragmentNavigated s -> subDefault BA.subscribeBrowsingContextFragmentNavigated s
+        SubscribeBrowsingContextFragmentNavigated s -> sub BA.subscribeBrowsingContextFragmentNavigated s
         SubscribeBrowsingContextFragmentNavigated' b u s -> subWithContexts BA.subscribeBrowsingContextFragmentNavigated' b u s
-        SubscribeBrowsingContextHistoryUpdated s -> subDefault BA.subscribeBrowsingContextHistoryUpdated s
+        SubscribeBrowsingContextHistoryUpdated s -> sub BA.subscribeBrowsingContextHistoryUpdated s
         SubscribeBrowsingContextHistoryUpdated' b u s -> subWithContexts BA.subscribeBrowsingContextHistoryUpdated' b u s
-        SubscribeBrowsingContextDomContentLoaded s -> subDefault BA.subscribeBrowsingContextDomContentLoaded s
+        SubscribeBrowsingContextDomContentLoaded s -> sub BA.subscribeBrowsingContextDomContentLoaded s
         SubscribeBrowsingContextDomContentLoaded' b u s -> subWithContexts BA.subscribeBrowsingContextDomContentLoaded' b u s
-        SubscribeBrowsingContextLoad s -> subDefault BA.subscribeBrowsingContextLoad s
+        SubscribeBrowsingContextLoad s -> sub BA.subscribeBrowsingContextLoad s
         SubscribeBrowsingContextLoad' b u s -> subWithContexts BA.subscribeBrowsingContextLoad' b u s
-        SubscribeBrowsingContextDownloadWillBegin s -> subDefault BA.subscribeBrowsingContextDownloadWillBegin s
+        SubscribeBrowsingContextDownloadWillBegin s -> sub BA.subscribeBrowsingContextDownloadWillBegin s
         SubscribeBrowsingContextDownloadWillBegin' b u s -> subWithContexts BA.subscribeBrowsingContextDownloadWillBegin' b u s
-        SubscribeBrowsingContextDownloadEnd s -> subDefault BA.subscribeBrowsingContextDownloadEnd s
+        SubscribeBrowsingContextDownloadEnd s -> sub BA.subscribeBrowsingContextDownloadEnd s
         SubscribeBrowsingContextDownloadEnd' b u s -> subWithContexts BA.subscribeBrowsingContextDownloadEnd' b u s
-        SubscribeBrowsingContextNavigationAborted s -> subDefault BA.subscribeBrowsingContextNavigationAborted s
+        SubscribeBrowsingContextNavigationAborted s -> sub BA.subscribeBrowsingContextNavigationAborted s
         SubscribeBrowsingContextNavigationAborted' b u s -> subWithContexts BA.subscribeBrowsingContextNavigationAborted' b u s
-        SubscribeBrowsingContextNavigationCommitted s -> subDefault BA.subscribeBrowsingContextNavigationCommitted s
+        SubscribeBrowsingContextNavigationCommitted s -> sub BA.subscribeBrowsingContextNavigationCommitted s
         SubscribeBrowsingContextNavigationCommitted' b u s -> subWithContexts BA.subscribeBrowsingContextNavigationCommitted' b u s
-        SubscribeBrowsingContextNavigationFailed s -> subDefault BA.subscribeBrowsingContextNavigationFailed s
+        SubscribeBrowsingContextNavigationFailed s -> sub BA.subscribeBrowsingContextNavigationFailed s
         SubscribeBrowsingContextNavigationFailed' b u s -> subWithContexts BA.subscribeBrowsingContextNavigationFailed' b u s
-        SubscribeBrowsingContextUserPromptClosed s -> subDefault BA.subscribeBrowsingContextUserPromptClosed s
+        SubscribeBrowsingContextUserPromptClosed s -> sub BA.subscribeBrowsingContextUserPromptClosed s
         SubscribeBrowsingContextUserPromptClosed' b u s -> subWithContexts BA.subscribeBrowsingContextUserPromptClosed' b u s
-        SubscribeBrowsingContextUserPromptOpened s -> subDefault BA.subscribeBrowsingContextUserPromptOpened s
+        SubscribeBrowsingContextUserPromptOpened s -> sub BA.subscribeBrowsingContextUserPromptOpened s
         SubscribeBrowsingContextUserPromptOpened' b u s -> subWithContexts BA.subscribeBrowsingContextUserPromptOpened' b u s
         -- Network subscriptions
-        SubscribeNetworkAuthRequired s -> subDefault BA.subscribeNetworkAuthRequired s
+        SubscribeNetworkAuthRequired s -> sub BA.subscribeNetworkAuthRequired s
         SubscribeNetworkAuthRequired' b u s -> subWithContexts BA.subscribeNetworkAuthRequired' b u s
-        SubscribeNetworkBeforeRequestSent s -> subDefault BA.subscribeNetworkBeforeRequestSent s
+        SubscribeNetworkBeforeRequestSent s -> sub BA.subscribeNetworkBeforeRequestSent s
         SubscribeNetworkBeforeRequestSent' b u s -> subWithContexts BA.subscribeNetworkBeforeRequestSent' b u s
-        SubscribeNetworkFetchError s -> subDefault BA.subscribeNetworkFetchError s
+        SubscribeNetworkFetchError s -> sub BA.subscribeNetworkFetchError s
         SubscribeNetworkFetchError' b u s -> subWithContexts BA.subscribeNetworkFetchError' b u s
-        SubscribeNetworkResponseCompleted s -> subDefault BA.subscribeNetworkResponseCompleted s
+        SubscribeNetworkResponseCompleted s -> sub BA.subscribeNetworkResponseCompleted s
         SubscribeNetworkResponseCompleted' b u s -> subWithContexts BA.subscribeNetworkResponseCompleted' b u s
-        SubscribeNetworkResponseStarted s -> subDefault BA.subscribeNetworkResponseStarted s
+        SubscribeNetworkResponseStarted s -> sub BA.subscribeNetworkResponseStarted s
         SubscribeNetworkResponseStarted' b u s -> subWithContexts BA.subscribeNetworkResponseStarted' b u s
         -- Script subscriptions
-        SubscribeScriptMessage s -> subDefault BA.subscribeScriptMessage s
+        SubscribeScriptMessage s -> sub BA.subscribeScriptMessage s
         SubscribeScriptMessage' b u s -> subWithContexts BA.subscribeScriptMessage' b u s
-        SubscribeScriptRealmCreated s -> subDefault BA.subscribeScriptRealmCreated s
+        SubscribeScriptRealmCreated s -> sub BA.subscribeScriptRealmCreated s
         SubscribeScriptRealmCreated' b u s -> subWithContexts BA.subscribeScriptRealmCreated' b u s
-        SubscribeScriptRealmDestroyed s -> subDefault BA.subscribeScriptRealmDestroyed s
+        SubscribeScriptRealmDestroyed s -> sub BA.subscribeScriptRealmDestroyed s
         SubscribeScriptRealmDestroyed' b u s -> subWithContexts BA.subscribeScriptRealmDestroyed' b u s
         -- Input subscriptions
-        SubscribeInputFileDialogOpened s -> subDefault BA.subscribeInputFileDialogOpened s
+        SubscribeInputFileDialogOpened s -> sub BA.subscribeInputFileDialogOpened s
         -- SubscribeInputFileDialogOpened' b u s -> \unlift -> BA.subscribeInputFileDialogOpened' sendSub' b u (unlift . s)
         SubscribeInputFileDialogOpened' b u s -> subWithContexts BA.subscribeInputFileDialogOpened' b u s
         -- Multi-event subscriptions
@@ -207,25 +207,19 @@ runWebDriverBiDi ioRunner = interpret $ \localEnv ->
     run1 :: forall r p. (FromJSON r) => (BA.Runner (Eff es) r -> p -> Eff es r) -> p -> Eff es r
     run1 action p = action run' p
 
-    sendSub :: forall c. BA.SendSub (Eff es) c
-    sendSub = mkSendSub ioRunner
-
-    sendSub' :: forall d. BA.SendSub' (Eff es) d
-    sendSub' = mkSendSub' ioRunner
-
     sendSubMany' :: BA.SendSubMany' (Eff es)
     sendSubMany' = mkSendSubMany' ioRunner
 
     sendSubOffSpecMany' :: BA.SendSubOffSpecMany' (Eff es)
     sendSubOffSpecMany' = mkSendSubOffSpecMany' ioRunner
 
-    subDefault ::
+    sub ::
       forall ev localM.
       (BA.SendSub (Eff es) ev -> (ev -> Eff es ()) -> Eff es SubscriptionId) ->
       (ev -> localM ()) ->
       (forall r. localM r -> Eff es r) ->
       Eff es SubscriptionId
-    subDefault param s unlift = param sendSub (unlift . s)
+    sub sender s unlift = sender (mkSendSub ioRunner) (unlift . s)
 
     subWithContexts ::
       forall ev localM.
@@ -235,4 +229,4 @@ runWebDriverBiDi ioRunner = interpret $ \localEnv ->
       (ev -> localM ()) ->
       (forall r. localM r -> Eff es r) ->
       Eff es SubscriptionId
-    subWithContexts param b u s unlift = param sendSub' b u (unlift . s)
+    subWithContexts sender b u s unlift = sender (mkSendSub' ioRunner) b u (unlift . s)

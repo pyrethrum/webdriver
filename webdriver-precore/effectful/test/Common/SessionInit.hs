@@ -1,14 +1,15 @@
-module Common.SessionInit where
+module Common.SessionInit (
+  
+) where
 
 import Data.Text (Text)
 import Effectful (liftIO, MonadIO)
 import UnliftIO (finally)
-import WebDriver.Effectful.Logger (LoggerHandle, acquireLogger, releaseLogger)
+import WebDriver.Effectful.Logger ( acquireLogger, releaseLogger)
 
 import WebDriverPreCore.Test.ConfigLoader (Config (..), loadConfig)
 import WebDriverPreCore.Utils.Timeout as T (Timeout(..)) 
 import WebDriverPreCore.Extended.HTTP.Base.Protocol (URL)
-import WebDriver.Effectful.HTTP.Base.Effect (HttpSessionInfo, noOpLogger)
 import WebDriver.Effectful (HttpEndpoint(..), HttpCapabilities, FullCapabilities (..))
 import WebDriver.Effectful.App
 import WebDriverPreCore.Test.CapabilitiesBuilder (httpCapabilities)
