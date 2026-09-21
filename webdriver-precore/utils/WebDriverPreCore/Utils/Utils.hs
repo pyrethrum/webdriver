@@ -3,6 +3,7 @@
 module WebDriverPreCore.Utils.Utils
   ( txt,
     enumerate,
+    throwLeft,
     ioThrow,
     db,
   )
@@ -19,8 +20,11 @@ txt = pack . P.ppShow
 enumerate :: (Enum a, Bounded a) => [a]
 enumerate = [minBound ..]
 
+throwLeft  :: forall l r m. Applicative m => (l -> m r) -> Either l r -> m r
+throwLeft throw = either throw pure
+
 ioThrow :: (Exception l) => Either l r -> IO r
-ioThrow = either throwIO pure
+ioThrow = throwLeft throwIO
 
 -- debugging
 db :: (Show a) => Text -> a -> a

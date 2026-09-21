@@ -7,6 +7,7 @@
 -- function in "WebDriverPreCore.Extended.HTTP.Base.Actions".
 module WebDriver.Effectful.HTTP.Base.Interpreter
   ( runWebDriverHttp,
+    HttpParams (..),
   )
 where
 
@@ -98,7 +99,7 @@ runWebDriverHttp MkHttpParams {session = sess, endpoint} = interpret $ \_localEn
     runner :: forall r. (FromJSON r) => A.Runner (Eff es) r
     runner = callWebDriver endpoint
 
-    runRoot :: forall r. (FromJSON r) => (A.Runner (Eff es) r ->  (Eff es)  r) -> Eff es r
+    runRoot :: forall r. (FromJSON r) => (A.Runner (Eff es) r -> (Eff es) r) -> Eff es r
     runRoot action = action runner
 
     run :: forall r. (FromJSON r) => (A.Runner (Eff es) r -> Session -> (Eff es) r) -> Eff es r
@@ -108,7 +109,7 @@ runWebDriverHttp MkHttpParams {session = sess, endpoint} = interpret $ \_localEn
     run1 action p = action runner sess p
 
     run2 :: forall r p1 p2. (FromJSON r) => (A.Runner (Eff es) r -> Session -> p1 -> p2 -> (Eff es) r) -> p1 -> p2 -> Eff es r
-    run2 action p1 p2 = action runner sess p1 p2
+    run2 action = action runner sess
 
 callWebDriver :: forall a es. (IOE :> es, Logger :> es, FromJSON a) => HR.HttpEndpoint -> HA.Runner (Eff es) a
 callWebDriver endpoint cmd =
