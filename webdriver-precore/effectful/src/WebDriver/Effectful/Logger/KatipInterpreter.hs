@@ -1,23 +1,3 @@
--- |
--- Module: WebDriver.Effectful.Logger.KatipInterpreter
--- Description: Katip-backed interpreter for the 'Logger' effect
---
--- Provides 'runLogger' (and the 'LoggerData' resource) which interpret the
--- generic 'Logger' dynamic effect using Katip scribes.
---
--- Typical usage with a single bracketed scope:
---
--- @
--- withLogger "eval.log" $ do
---   logInfo "session started"
--- @
---
--- For test frameworks that need explicit acquire\/release:
---
--- @
--- withResource acquireLogger releaseLogger $ \ld ->
---   runLogger (Just ld) myTest
--- @
 module WebDriver.Effectful.Logger.KatipInterpreter
   ( -- * Logger resource management
     LoggerData (..),
@@ -37,7 +17,7 @@ import Data.Time.Format (defaultTimeLocale, formatTime)
 import Data.Time.LocalTime (TimeZone, getCurrentTimeZone, utcToLocalTime)
 import Effectful (Eff, IOE, liftIO, withSeqEffToIO, (:>))
 import Effectful.Dispatch.Dynamic (EffectHandler, interpret)
-import Katip (Item (..), initLogEnv)
+import Katip (Item (..), initLogEnv, ColorStrategy, Scribe)
 import Katip qualified as K
 import Katip.Scribes.Handle (colorBySeverity)
 import System.IO (Handle, IOMode (..), hClose, openFile, stdout)
@@ -64,10 +44,10 @@ toKatipSeverity = \case
 -- ---------------------------------------------------------------------------
 
 -- | Katip 'K.ItemFormatter' that displays timestamps in the local time zone.
-localBracketFormat :: TimeZone -> K.ItemFormatter a
-localBracketFormat tz withColor _verb Item {..} =
+localBracketFormat :: TimeZone -> Bool -> K.Verbosity -> K.Item a -> Builder
+localBracketFormat tz wantColour _verb Item {_itemSeverity, _itemTime, _itemMessage} =
   brackets nowStr
-    <> brackets (fromText (colorBySeverity withColor _itemSeverity (K.renderSeverity _itemSeverity)))
+    <> brackets (fromText (colorBySeverity wantColour _itemSeverity (K.renderSeverity _itemSeverity)))
     <> fromText " "
     <> K.unLogStr _itemMessage
   where
@@ -92,18 +72,18 @@ data LoggerData = MkLoggerData
 acquireLogger :: FilePath -> IO LoggerData
 acquireLogger logFile = do
   -- get IO ingerdients
-  fh <- openFile logFile WriteMode
+  fileHandle <- openFile logFile WriteMode
   timeZone <- getCurrentTimeZone
 
   -- make scribes
-  let timeFormatter :: forall a. K.ItemFormatter a
-      timeFormatter = localBracketFormat timeZone
-      mkScribe = K.mkHandleScribeWithFormatter 
-  termScribe <- mkScribe timeFormatter K.ColorIfTerminal stdout (K.permitItem K.DebugS) K.V2
-  fileScribe <- mkScribe timeFormatter (K.ColorLog False) fh (K.permitItem K.DebugS) K.V2
+  let 
+    mkScribe :: ColorStrategy -> Handle -> IO Scribe
+    mkScribe cs hndl = K.mkHandleScribeWithFormatter (localBracketFormat timeZone) cs hndl (K.permitItem K.DebugS) K.V2
+  termScribe <- mkScribe K.ColorIfTerminal stdout
+  fileScribe <- mkScribe (K.ColorLog False) fileHandle
 
   -- register scribes
-  MkLoggerData (Just fh)
+  MkLoggerData (Just fileHandle)
     <$> ( initLogEnv "webdriver" "eval"
             >>= K.registerScribe "stdout" termScribe K.defaultScribeSettings
             >>= K.registerScribe "file" fileScribe K.defaultScribeSettings
