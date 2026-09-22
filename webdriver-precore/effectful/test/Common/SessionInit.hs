@@ -3,7 +3,7 @@ module Common.SessionInit (
 ) where
 
 import Data.Text (Text)
-import Effectful (liftIO, MonadIO)
+import Effectful (liftIO, MonadIO, runEff)
 import UnliftIO (finally)
 import WebDriver.Effectful.Logger ( acquireLogger, releaseLogger)
 
@@ -14,7 +14,9 @@ import WebDriver.Effectful (HttpEndpoint(..), HttpCapabilities, FullCapabilities
 import WebDriver.Effectful.App
 import WebDriverPreCore.Test.CapabilitiesBuilder (httpCapabilities)
 import WebDriverPreCore.Extended.Capabilities (fromHttpCapability, HttpSessionResponse)
-import WebDriverPreCore.HTTP.Protocol (Capabilities(..))
+import WebDriverPreCore.HTTP.Protocol (Capabilities(..), ParseFailure)
+import Effectful.Error.Dynamic (runError)
+import WebDriverPreCore.Utils.Utils (throwLeft, ioThrow)
 
 
 mkHttpCaps :: Bool -> Config -> HttpCapabilities
@@ -51,16 +53,18 @@ getConfigData wantBiDiSocket = do
     }
 
 -- | Create a new WebDriver session based on config
-getWDSession :: Bool -> IO WDSession
+getWDSession :: Bool -> IO HttpSessionResponse
 getWDSession wantBiDiSocket = do
-  MkCfgLoaded{logger, loggerHandle, httpEndpoint = endpoint, httpCapabilities = caps} <- getConfigData wantBiDiSocket
-  sessionInfo <- acquireHttpSession endpoint logger caps
-  pure MkWDSession {loggerHandle, sessionInfo}
+  MkCfgLoaded{httpEndpoint = endpoint, httpCapabilities = caps} <- getConfigData wantBiDiSocket
+  (runEff 
+    $ runError @ParseFailure
+    $ acquireHttpSession endpoint caps) >>= ioThrow
 
-closeWDSession :: WDSession -> IO ()
-closeWDSession MkWDSession {loggerHandle, sessionInfo} =
-  releaseHttpSession sessionInfo
-    `finally` maybe (pure ()) releaseLogger loggerHandle
+
+-- closeWDSession :: WDSession -> IO ()
+-- closeWDSession MkWDSession {loggerHandle, sessionInfo} =
+--   releaseHttpSession sessionInfo
+--     `finally` maybe (pure ()) releaseLogger loggerHandle
   
 
 testUrl :: MonadIO m => IO URL -> m URL 

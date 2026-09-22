@@ -40,8 +40,7 @@ import WebDriverPreCore.Utils.Utils (throwLeft)
 --
 -- For convenience, 'withHttpSession' provides a bracket version.
 acquireHttpSession :: forall es. (IOE :> es, Logger :> es, Error ParseFailure :> es) => HttpEndpoint -> EC.HttpCapabilities -> Eff es HttpSessionResponse
-acquireHttpSession endpoint caps =
-  EC.newHttpSession (httpRunner endpoint) caps
+acquireHttpSession endpoint caps = EC.newHttpSession (httpRunner endpoint) caps
 
 httpRunner :: forall es a. (IOE :> es, Logger :> es, Error ParseFailure :> es, FromJSON a) => HttpEndpoint -> Command a -> Eff es a
 httpRunner endpoint = callWebDriver endpoint logDebug >=> throwLeft throwError

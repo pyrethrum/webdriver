@@ -19,19 +19,17 @@ import Test.Tasty.HUnit (testCase)
 import UnliftIO (finally)
 import WebDriver.Effectful
   ( HttpCapabilities,
-    HttpSessionInfo (..),
     WaitPrimative,
     WebDriverHttp,
     acquireHttpSession,
     fromHttpCapability,
     FullCapabilities (..),
     releaseHttpSession,
-    runHttpSession,
     runWaitPrimative,
     withHttpSession,
   )
 import WebDriver.Effectful.Logger
-  ( LoggerHandle,
+  ( 
     Logger,
     acquireLogger,
     releaseLogger,

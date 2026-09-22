@@ -11,13 +11,13 @@ module WebDriver.Effectful.Logger.KatipInterpreter
   )
 where
 
-import Control.Exception (bracket)
+import Effectful.Exception (bracket)
 import Data.Text.Lazy.Builder (Builder, fromString, fromText)
 import Data.Time.Format (defaultTimeLocale, formatTime)
 import Data.Time.LocalTime (TimeZone, getCurrentTimeZone, utcToLocalTime)
 import Effectful (Eff, IOE, liftIO, withSeqEffToIO, (:>))
 import Effectful.Dispatch.Dynamic (EffectHandler, interpret)
-import Katip (Item (..), initLogEnv, ColorStrategy, Scribe)
+import Katip (ColorStrategy, Item (..), Scribe, initLogEnv)
 import Katip qualified as K
 import Katip.Scribes.Handle (colorBySeverity)
 import System.IO (Handle, IOMode (..), hClose, openFile, stdout)
@@ -69,6 +69,9 @@ data LoggerData = MkLoggerData
 -- Acquire / release
 -- ---------------------------------------------------------------------------
 
+acquireNoOpLogger :: IO LoggerData
+acquireNoOpLogger = MkLoggerData Nothing <$> initLogEnv "webdriver" "eval"
+
 acquireLogger :: FilePath -> IO LoggerData
 acquireLogger logFile = do
   -- get IO ingerdients
@@ -76,9 +79,8 @@ acquireLogger logFile = do
   timeZone <- getCurrentTimeZone
 
   -- make scribes
-  let 
-    mkScribe :: ColorStrategy -> Handle -> IO Scribe
-    mkScribe cs hndl = K.mkHandleScribeWithFormatter (localBracketFormat timeZone) cs hndl (K.permitItem K.DebugS) K.V2
+  let mkScribe :: ColorStrategy -> Handle -> IO Scribe
+      mkScribe cs hndl = K.mkHandleScribeWithFormatter (localBracketFormat timeZone) cs hndl (K.permitItem K.DebugS) K.V2
   termScribe <- mkScribe K.ColorIfTerminal stdout
   fileScribe <- mkScribe (K.ColorLog False) fileHandle
 
@@ -89,9 +91,6 @@ acquireLogger logFile = do
             >>= K.registerScribe "file" fileScribe K.defaultScribeSettings
         )
 
-acquireNoOpLogger :: IO LoggerData
-acquireNoOpLogger = MkLoggerData Nothing <$> initLogEnv "webdriver" "eval"
-
 releaseLogger :: LoggerData -> IO ()
 releaseLogger MkLoggerData {fileHandle, loggerEnv} =
   K.closeScribes loggerEnv >> maybe (pure ()) hClose fileHandle
@@ -100,15 +99,9 @@ releaseLogger MkLoggerData {fileHandle, loggerEnv} =
 -- Interpreter
 -- ---------------------------------------------------------------------------
 
-runLogger :: forall es a. (IOE :> es) => Maybe LoggerData -> Eff (Logger : es) a -> Eff es a
-runLogger mlh action = do
-  le <-
-    liftIO $
-      maybe
-        (initLogEnv "webdriver" "eval")
-        (\(MkLoggerData _ env) -> pure env)
-        mlh
-  interpret (katipHandler le) action
+runLogger :: forall es a. (IOE :> es) => K.LogEnv -> Eff (Logger : es) a -> Eff es a
+runLogger lgrEnv action = do
+  interpret (katipHandler lgrEnv) action
   where
     katipHandler :: K.LogEnv -> EffectHandler Logger es
     katipHandler le _ = \case
@@ -117,6 +110,5 @@ runLogger mlh action = do
 
 withLogger :: (IOE :> es) => FilePath -> Eff (Logger : es) a -> Eff es a
 withLogger logFile action =
-  withSeqEffToIO $ \runInIO ->
-    bracket (acquireLogger logFile) releaseLogger $ \lh ->
-      runInIO (runLogger (Just lh) action)
+  bracket (liftIO $ acquireLogger logFile) (liftIO . releaseLogger) $ \lgData ->
+    runLogger lgData.loggerEnv action

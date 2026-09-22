@@ -822,6 +822,7 @@ locateCombinatorProperty getSes =
           overrideMaxRatio = Nothing
         }
 
+-- used to shoehorn IO actions into Falsify which at time of writing does not support IO actions
 unsafeRunIO :: IO a -> Either Text a
 unsafeRunIO action =
   let rslt = unsafePerformIO $ try action
