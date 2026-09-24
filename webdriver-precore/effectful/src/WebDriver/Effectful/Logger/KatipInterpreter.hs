@@ -15,7 +15,7 @@ import Effectful.Exception (bracket)
 import Data.Text.Lazy.Builder (Builder, fromString, fromText)
 import Data.Time.Format (defaultTimeLocale, formatTime)
 import Data.Time.LocalTime (TimeZone, getCurrentTimeZone, utcToLocalTime)
-import Effectful (Eff, IOE, liftIO, withSeqEffToIO, (:>))
+import Effectful (Eff, IOE, liftIO, (:>))
 import Effectful.Dispatch.Dynamic (EffectHandler, interpret)
 import Katip (ColorStrategy, Item (..), Scribe, initLogEnv)
 import Katip qualified as K
