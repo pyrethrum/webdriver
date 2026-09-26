@@ -3,7 +3,10 @@ module WebDriver.Effectful.App
     acquireHttpSession,
     releaseHttpSession,
     withHttpSession,
-    -- withBiDiSession
+
+    -- * BiDi Session Management
+    acquireBiDiSession,
+    releaseBiDiSession,
     withBiDiSession
   )
 where
@@ -70,13 +73,39 @@ withHttpSession endpoint caps action =
 -- BiDi Session Management
 -- ---------------------------------------------------------------------------
 
--- | Close the BiDi WebSocket and delete the HTTP session.
+-- | Create a BiDi WebSocket session and return a typed resource handle.
+--
+-- This is the acquire half of the acquire/release pair. Use with
+-- 'releaseBiDiSession' in test framework resource management (e.g.
+-- @Test.Tasty.withResource@) or within your own brackets.
+acquireBiDiSession ::
+  (IOE :> es, Logger :> es) =>
+  BiDiRunner.BiDiUrl ->
+  Eff es (BiDiRunner.BiDiRunnerHandle (Eff es))
+acquireBiDiSession bidiUrl =
+  withUnliftStrategy (ConcUnlift Persistent Unlimited) $
+    BiDiRunner.acquireBiDi logDebug bidiUrl
+
+-- | Release a BiDi WebSocket session resource handle.
+--
+-- This is the release half of the acquire/release pair.
+releaseBiDiSession ::
+  (IOE :> es) =>
+  BiDiRunner.BiDiRunnerHandle (Eff es) ->
+  Eff es ()
+releaseBiDiSession handle =
+  withUnliftStrategy (ConcUnlift Persistent Unlimited) $
+    BiDiRunner.releaseBiDi handle
+
+-- | Create a BiDi session, run an action inside the 'WebDriverBiDi' effect,
+-- then close the WebSocket on completion or error.
 withBiDiSession ::
   (IOE :> es, Logger :> es) =>
   BiDiRunner.BiDiUrl ->
   Eff (WebDriverBiDi : es) a ->
   Eff es a
 withBiDiSession bidiUrl action =
-  withUnliftStrategy (ConcUnlift Persistent Unlimited) $
-    BiDiRunner.withBiDi logDebug bidiUrl $
-      \runner -> runWebDriverBiDi runner action
+  bracket
+    (acquireBiDiSession bidiUrl)
+    releaseBiDiSession
+    (\h -> runWebDriverBiDi h.biDiRunner action)

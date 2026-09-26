@@ -9,6 +9,11 @@ module WebDriverPreCore.BiDiRunnerBase
     withBiDiBase,
     withBiDiWithActions,
 
+    -- * BiDi Resource (acquire/release)
+    BiDiResource (..),
+    acquireBiDiBase,
+    releaseBiDiBase,
+
     -- * Socket Actions
     SocketActions (..),
     Channels (..),
@@ -35,21 +40,42 @@ module WebDriverPreCore.BiDiRunnerBase
   )
 where
 
-import Control.Exception (Exception (displayException), throw)
+import Control.Exception (Exception (displayException))
 import Control.Monad (when)
 import Data.Aeson (Object, Value (..), encode, parseJSON, toJSON, withObject, (.:))
 import Data.Aeson.Encode.Pretty (encodePretty)
 import Data.Aeson.Types (Parser, parseEither)
 import Data.ByteString.Lazy qualified as BL
 import Data.Foldable (traverse_)
-import Data.Function ((&))
-import Data.Functor (($>))
 import Data.Set qualified as Set
 import Data.Text (Text, pack, take, unpack)
 import Data.Text.Encoding (decodeUtf8)
+import Network.Socket qualified as NS
+  ( Socket,
+    SocketType (Stream),
+    AddrInfo (addrAddress, addrFamily, addrSocketType),
+    ShutdownCmd (ShutdownBoth),
+    connect,
+    defaultHints,
+    defaultProtocol,
+    getAddrInfo,
+    shutdown,
+    socket,
+  )
 import Network.WebSockets (Connection, receiveData, sendTextData)
 import Network.WebSockets qualified as WS
-import UnliftIO (MonadIO, MonadUnliftIO, catchAny, liftIO, throwIO, waitAnyCatch, withRunInIO)
+import Network.WebSockets.Stream qualified as WSStream
+import UnliftIO
+  ( MonadIO,
+    MonadUnliftIO,
+    bracket,
+    catchAny,
+    catchIO,
+    liftIO,
+    throwIO,
+    throwString,
+    waitAnyCatch,
+  )
 import UnliftIO.Async (Async, async, cancel)
 import UnliftIO.STM (TVar, atomically, readTChan, readTVarIO, writeTChan)
 import WebDriverPreCore.BiDiRunnerBase.Response
@@ -89,7 +115,67 @@ mkChannelActions logger = do
         messageLoops = mkMessageLoops logger c
       }
 
--- | Run a BiDi session
+-- | An acquired BiDi resource: the 'SocketActions' for issuing commands, the
+-- running message-loop 'Async's (for status and fail-fast reporting), and a
+-- close action that shuts down the transport and loops.
+--
+-- Acquire with 'acquireBiDiBase', release with 'releaseBiDiBase' (or hold the
+-- resource across many tests and close it in a test framework hook).
+data BiDiResource m = MkBiDiResource
+  { bidiSocketActions :: SocketActions m,
+    bidiLoops :: [Async ()],
+    bidiClose :: m ()
+  }
+
+-- | Open the WebSocket and start the send/get/event loops.
+-- Returns the loop handles and the close action.
+openBiDi ::
+  forall m.
+  (MonadUnliftIO m) =>
+  Logger m ->
+  BiDiUrl ->
+  MessageLoops m ->
+  m ([Async ()], m ())
+openBiDi log' bidiUrl@MkBiDiUrl {host, port, path} MkMessageLoops {getLoop, sendLoop, eventLoop} = do
+  log' $ "Connecting to WebDriver at " <> pack (show bidiUrl)
+  (sock, stream, conn) <- liftIO $ openClientConn host port path
+  log' "WebSocket connection established"
+  asyncSendLoop <- sendLoop conn
+  asyncGetLoop <- getLoop conn
+  asyncEventLoop <- eventLoop
+  let loops = [asyncSendLoop, asyncGetLoop, asyncEventLoop]
+  pure
+    ( loops,
+      do
+        -- Best-effort friendly close; "peer already gone" is expected noise.
+        catchLog "sendClose failed (ignoring)" log' $
+          liftIO $ WS.sendClose conn ("" :: BL.ByteString)
+        -- Wake a reader blocked in recv, then release the fd.
+        ignoreIO log' "shutdown" $
+          liftIO $ NS.shutdown sock NS.ShutdownBoth
+        ignoreIO log' "stream close" $
+          liftIO $ WSStream.close stream
+        -- The loops are now unblocked, so cancellation completes promptly.
+        traverse_ cancel loops
+    )
+
+-- | Create a BiDi session and return its resource handle.
+acquireBiDiBase :: (MonadUnliftIO m) => Logger m -> BiDiUrl -> m (BiDiResource m)
+acquireBiDiBase logger bidiUrl = do
+  ca <- mkChannelActions logger
+  (loops, close') <- openBiDi logger bidiUrl ca.messageLoops
+  pure
+    MkBiDiResource
+      { bidiSocketActions = ca.socketActions,
+        bidiLoops = loops,
+        bidiClose = close'
+      }
+
+-- | Release a 'BiDiResource'.
+releaseBiDiBase :: BiDiResource m -> m ()
+releaseBiDiBase = (.bidiClose)
+
+-- | Run a BiDi session (bracket form, kept for convenience).
 withBiDiBase ::
   forall a m.
   (MonadUnliftIO m) =>
@@ -97,12 +183,11 @@ withBiDiBase ::
   BiDiUrl ->
   (SocketActions m -> m a) ->
   m a
-withBiDiBase logger bidiUrl action = do
-  ca <- mkChannelActions logger
-  withSocket bidiUrl logger ca.messageLoops $
-    action ca.socketActions
+withBiDiBase logger bidiUrl action =
+  bracket (acquireBiDiBase logger bidiUrl) releaseBiDiBase $
+    runBiDi logger action
 
--- | Run a BiDi session with custom message actions
+-- | Run a BiDi session with custom message actions (bracket form).
 withBiDiWithActions ::
   (MonadUnliftIO m) =>
   Logger m ->
@@ -110,10 +195,42 @@ withBiDiWithActions ::
   (Logger m -> m (ChannelActions m)) ->
   (SocketActions m -> m a) ->
   m a
-withBiDiWithActions logger bidiUrl mkActions action = do
-  ca <- mkActions logger
-  withSocket bidiUrl logger ca.messageLoops $
-    action ca.socketActions
+withBiDiWithActions logger bidiUrl mkActions action =
+  bracket acquire releaseBiDiBase $
+    runBiDi logger action
+  where
+    acquire = do
+      ca <- mkActions logger
+      (loops, close') <- openBiDi logger bidiUrl ca.messageLoops
+      pure
+        MkBiDiResource
+          { bidiSocketActions = ca.socketActions,
+            bidiLoops = loops,
+            bidiClose = close'
+          }
+
+-- | Run an action against an acquired resource, failing fast and reporting if
+-- any message loop dies (mirrors the old 'withSocket' behaviour).
+runBiDi ::
+  forall a m.
+  (MonadUnliftIO m) =>
+  Logger m ->
+  (SocketActions m -> m a) ->
+  BiDiResource m ->
+  m a
+runBiDi logger action r = do
+  actionAsync <- async $ action r.bidiSocketActions
+  let asyncs :: [Async (Maybe a)]
+      asyncs = (Just <$> actionAsync) : ((Nothing <$) <$> r.bidiLoops)
+  (_completed, ethresult) <- waitAnyCatch asyncs
+  cancel actionAsync
+  case ethresult of
+    Left e -> do
+      logger $ "One of the BiDi client threads failed: \n" <> pack (displayException e)
+      throwIO e
+    Right (Just a) -> pure a
+    Right Nothing ->
+      throwString "BiDi client threads did not return a result, likely due to WebSocket closure."
 
 -- | Create message actions for handling WebSocket communication
 mkMessageActions :: (MonadUnliftIO m) => Logger m -> Channels m -> MessageActions m
@@ -175,52 +292,34 @@ catchLog msg logger action =
   catchAny action $ \e ->
     logger $ msg <> ": " <> pack (displayException e)
 
--- | Run a WebSocket client
-withSocket :: forall a m. (MonadUnliftIO m) => BiDiUrl -> Logger m -> MessageLoops m -> m a -> m a
-withSocket pth@MkBiDiUrl {host, port, path} log MkMessageLoops {getLoop, sendLoop, eventLoop} action = do
-  log $ "Connecting to WebDriver at " <> pack (show pth)
-  withRunInIO $ \runInIO ->
-    WS.runClient (unpack host) port (unpack path) $ \conn -> do
-      -- Generate async actions
-      (asyncSendLoop, asyncGetLoop, asyncEventLoop, asyncAction) <-
-        runInIO $ do
-          log "WebSocket connection established"
-          (,,,)
-            <$> sendLoop conn
-            <*> getLoop conn
-            <*> eventLoop
-            <*> async action
+-- | Open a raw TCP socket and perform the WebSocket client handshake.
+openClientConn :: Text -> Int -> Text -> IO (NS.Socket, WSStream.Stream, Connection)
+openClientConn host' port' path' = do
+  let hints = NS.defaultHints {NS.addrSocketType = NS.Stream}
+  addrs <- NS.getAddrInfo (Just hints) (Just (unpack host')) (Just (show port'))
+  addr <- case addrs of
+    a : _ -> pure a
+    [] ->
+      ioError . userError $
+        "openClientConn: no address for " <> unpack host' <> ":" <> show port'
+  sock <- NS.socket (NS.addrFamily addr) NS.Stream NS.defaultProtocol
+  NS.connect sock (NS.addrAddress addr)
+  stream <- WSStream.makeSocketStream sock
+  conn <-
+    WS.newClientConnection
+      stream
+      (unpack host')
+      (unpack path')
+      WS.defaultConnectionOptions
+      []
+  pure (sock, stream, conn)
 
-      -- Aggregate async actions
-      let asyncs :: [Async (Maybe a)]
-          asyncs =
-            [ asyncGetLoop $> Nothing,
-              asyncSendLoop $> Nothing,
-              asyncEventLoop $> Nothing,
-              Just <$> asyncAction
-            ]
-
-      -- Wait complete and catch errors
-      (_asy, ethresult) <- waitAnyCatch asyncs
-
-      -- Cancel all after completion
-      traverse_ cancel asyncs
-
-      -- log / throw errors
-      ethresult
-        & either
-          ( \e ->
-              runInIO $
-                log ("One of the BiDi client threads failed: \n" <> pack (displayException e))
-                  >> throw e
-          )
-          ( maybe
-              do
-                let message = "BiDi client threads did not return a result, likely due to WebSocket closure."
-                runInIO $ log message
-                fail $ unpack message
-              pure
-          )
+-- | Run an IO cleanup action, swallowing only 'IOException's (logging them).
+-- Any other exception propagates, so bugs are not silently masked.
+ignoreIO :: (MonadUnliftIO m) => Logger m -> Text -> m () -> m ()
+ignoreIO log' what action =
+  catchIO action $ \e ->
+    log' $ what <> " failed (ignoring): " <> pack (displayException e)
 
 -- | Apply subscriptions to an event
 applySubscriptions :: (MonadIO m) => Logger m -> Object -> TVar [RegisteredSubscription m] -> m ()

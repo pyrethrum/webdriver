@@ -8,6 +8,12 @@ Command types, built on top of the JSON-based runner in BiDiRunnerBase.
 module WebDriverPreCore.BiDiRunner
   ( -- * BiDi Runner
     withBiDi,
+
+    -- * BiDi Resource (acquire/release)
+    BiDiRunnerHandle (..),
+    acquireBiDi,
+    releaseBiDi,
+
     BiDiRunner (..),
     mkBiDiRunner,
     hoistBiDiRunner,
@@ -105,6 +111,32 @@ withBiDi
 withBiDi logger bidiUrl action =
   withBiDiBase logger bidiUrl $ \sa ->
    action (mkBiDiRunner sa)
+
+-- | A typed BiDi resource handle: the 'BiDiRunner' for issuing commands and a
+-- close action. Acquire with 'acquireBiDi', release with 'releaseBiDi'.
+data BiDiRunnerHandle m = MkBiDiRunnerHandle
+  { biDiRunner :: BiDiRunner m,
+    biDiClose :: m ()
+  }
+
+-- | Open a BiDi session and return a typed resource handle.
+acquireBiDi ::
+  forall m.
+  (MonadUnliftIO m, MonadThrow m) =>
+  (Text -> m ()) ->
+  BiDiUrl ->
+  m (BiDiRunnerHandle m)
+acquireBiDi logger bidiUrl = do
+  r <- B.acquireBiDiBase logger bidiUrl
+  pure
+    MkBiDiRunnerHandle
+      { biDiRunner = mkBiDiRunner r.bidiSocketActions,
+        biDiClose = B.releaseBiDiBase r
+      }
+
+-- | Release a typed BiDi resource handle.
+releaseBiDi :: BiDiRunnerHandle m -> m ()
+releaseBiDi = (.biDiClose)
 
 -- | Execute a typed command
 runTypedCommand :: forall m r. (FromJSON r, MonadUnliftIO m, MonadThrow m) => SocketActions m -> Command r -> m r
