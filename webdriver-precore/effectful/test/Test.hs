@@ -1,6 +1,6 @@
 module Main where
 
-import BiDi.Runner (runBiDiTest)
+import BiDi.Runner (withBidi)
 import BiDi.SimpleDemo (bidi_login_demo)
 import HTTP.Runner (withHttp)
 import HTTP.SimpleDemo (http_login_navigation_demo)
@@ -19,7 +19,7 @@ tests =
   testGroup
     "Effectful Tests"
     [ testCase "HTTP login and navigation demo" (withHttp http_login_navigation_demo),
-      testCase "BiDi login demo" (runBiDiTest bidi_login_demo),
+      testCase "BiDi login demo" (withBidi bidi_login_demo),
       BaseLocateTest.tests,
       BiDiBaseLocateTest.tests,
       MatchTypeTest.tests,

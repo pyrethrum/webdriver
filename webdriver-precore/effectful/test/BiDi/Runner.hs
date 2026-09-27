@@ -1,30 +1,18 @@
 module BiDi.Runner where
 
--- TODO: Update to use new acquire/release pattern
-
+import Common.SessionInit (WDSession (..), closeWDSession, getWDSession)
 import Data.Text qualified as T
-import Effectful (Eff, IOE, (:>))
+import Effectful (Eff, IOE, runEff, (:>))
+import UnliftIO (finally)
 import WebDriver.Effectful
 import WebDriverPreCore.BiDi.Protocol
   ( KeySourceAction (..),
     PointerCommonProperties (..),
   )
-import WebDriverPreCore.Test.CapabilitiesBuilder (httpCapabilities)
-import WebDriverPreCore.Test.ConfigLoader (Config (..))
-import WebDriver.Effectful.Logger (withLogger, Logger)
-import WebDriverPreCore.Utils.Timeout as T (Timeout(..)) 
-import WebDriver.Effectful.WaitPrimative (runWaitPrimative)
+import WebDriver.Effectful.Logger (Logger, runLogger)
+import WebDriverPreCore.Utils.Utils (ioThrow)
 
-mkBiDiCaps :: Config -> HttpCapabilities
-mkBiDiCaps config =
-  MkFullCapabilities
-    { alwaysMatch = Just cap {httpWebSocketUrl = True},
-      firstMatch  = []
-    }
-  where
-    cap = fromHttpCapability $ httpCapabilities config
-
-runBiDiTest
+withBidi
   ::  ( forall es
       . ( IOE :> es
         , Logger :> es
@@ -34,11 +22,16 @@ runBiDiTest
      => Eff es ()
      )
   -> IO ()
-runBiDiTest action =
-  runSetup $ \driverInfo config ->
-    withLogger "eval.log" $
-      withBiDiSession driverInfo (mkBiDiCaps config) $
-        runWaitPrimative action
+withBidi action = do
+  session@MkWDSession {loggerEnv, websocketUrl} <- getWDSession True
+  bidiUrl <- ioThrow (parseBiDiUrlProperty websocketUrl)
+  ( runEff
+      $ runWaitPrimative
+      $ runLogger loggerEnv
+      $ withBiDiSession bidiUrl
+      $ action
+    )
+    `finally` closeWDSession session
 
 -- | Minimal pointer properties with all optional fields set to 'Nothing'.
 defaultPointerProps :: PointerCommonProperties

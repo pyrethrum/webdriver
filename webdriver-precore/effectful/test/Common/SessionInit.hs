@@ -7,8 +7,10 @@ module Common.SessionInit
   )
 where
 
+import Data.Text (Text)
 import Effectful (MonadIO, liftIO, runEff)
-import Effectful.Error.Static (runErrorNoCallStack, HasCallStack)
+import Effectful.Error.Static (HasCallStack, runErrorNoCallStack)
+import System.IO (Handle)
 import UnliftIO (finally)
 import WebDriver.Effectful (FullCapabilities (..), HttpCapabilities, HttpEndpoint (..))
 import WebDriver.Effectful.App (acquireHttpSession, releaseHttpSession)
@@ -23,7 +25,7 @@ import WebDriver.Effectful.Logger
   )
 import WebDriverPreCore.Extended.Capabilities (HttpSessionResponse (..), fromHttpCapability)
 import WebDriverPreCore.Extended.HTTP.Base.Protocol (URL)
-import WebDriverPreCore.HTTP.Protocol (Capabilities (..), ParseFailure)
+import WebDriverPreCore.HTTP.Protocol (Capabilities (..), ParseFailure, Session)
 import WebDriverPreCore.Test.CapabilitiesBuilder (httpCapabilities)
 import WebDriverPreCore.Test.ConfigLoader (Config (..), loadConfig)
 import WebDriverPreCore.Utils.Utils (ioThrow)
@@ -50,51 +52,57 @@ getConfigData wantBiDiSocket = do
     if logging
       then acquireLogger "eval.log"
       else acquireNoOpLogger
-  let endpoint = MkHttpEndpoint {host, port}
-
   pure
     MkCfgLoaded
-      { httpEndpoint = endpoint,
+      { httpEndpoint = MkHttpEndpoint {host, port},
         httpCapabilities = mkHttpCaps wantBiDiSocket cfg,
-        loggerData = loggerData
+        loggerData
       }
 
 -- | A WebDriver session together with the resources needed to run and
 -- release it: a logger environment, the underlying logger data (for
 -- releasing scribes/file handles), and the HTTP session parameters.
 data WDSession = MkWDSession
-  { loggerHandle :: LogEnv,
-    loggerData :: LoggerData,
-    sessionInfo :: HttpParams
+  { session :: Session,
+    endpoint :: HttpEndpoint,
+    websocketUrl :: Maybe Text,
+    loggerEnv :: LogEnv,
+    loggerFileHandle :: Maybe Handle
   }
 
 -- | Create a new WebDriver session based on config
 getWDSession :: (HasCallStack) => Bool -> IO WDSession
 getWDSession wantBiDiSocket = do
-  MkCfgLoaded {httpEndpoint = endpoint, httpCapabilities = caps, loggerData = loggerData} <-
+  MkCfgLoaded
+    { httpEndpoint = endpoint,
+      httpCapabilities = caps,
+      loggerData = MkLoggerData {fileHandle = loggerFileHandle, loggerEnv}
+    } <-
     getConfigData wantBiDiSocket
-  MkHttpSessionResponse {session = sessionId} <-
+  MkHttpSessionResponse {session, websocketUrl} <-
     ( runEff
         $ runErrorNoCallStack @ParseFailure
-        $ runLogger loggerData.loggerEnv
+        $ runLogger loggerEnv
         $ acquireHttpSession endpoint caps
-      )
+    )
       >>= ioThrow
   pure
     MkWDSession
-      { loggerHandle = loggerData.loggerEnv,
-        loggerData = loggerData,
-        sessionInfo = MkHttpParams {session = sessionId, endpoint}
+      { session,
+        endpoint,
+        loggerEnv,
+        websocketUrl,
+        loggerFileHandle
       }
 
 closeWDSession :: (HasCallStack) => WDSession -> IO ()
-closeWDSession MkWDSession {loggerHandle, loggerData, sessionInfo} = do
+closeWDSession MkWDSession {loggerEnv, loggerFileHandle = fileHandle, session, endpoint} = do
   result <-
     runEff
       $ runErrorNoCallStack @ParseFailure
-      $ runLogger loggerHandle
-      $ releaseHttpSession sessionInfo
-  ioThrow result `finally` releaseLogger loggerData
+      $ runLogger loggerEnv
+      $ releaseHttpSession (MkHttpParams {session, endpoint})
+  ioThrow result `finally` releaseLogger (MkLoggerData {fileHandle, loggerEnv})
 
 testUrl :: (MonadIO m) => IO URL -> m URL
 testUrl = liftIO
