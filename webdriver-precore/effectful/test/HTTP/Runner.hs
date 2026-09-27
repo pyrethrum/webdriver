@@ -26,6 +26,7 @@ import WebDriver.Effectful
     FullCapabilities (..),
     releaseHttpSession,
     runWaitPrimative,
+    runWebDriverHttp,
     withHttpSession,
   )
 import WebDriver.Effectful.Logger
@@ -69,7 +70,7 @@ runHttp MkWDSession {loggerHandle, sessionInfo} action =
     runEff 
       $ runWaitPrimative
       $ runLogger loggerHandle 
-      $ runHttpSession sessionInfo action
+      $ runWebDriverHttp sessionInfo action
 
 type BaseHTTPEffs a =  forall es. (IOE :> es, Logger :> es, WaitPrimative :> es, WebDriverHttp :> es) => Eff es a
 type  HttpTestEff = Eff '[WebDriverHttp, Logger, WaitPrimative, IOE]
