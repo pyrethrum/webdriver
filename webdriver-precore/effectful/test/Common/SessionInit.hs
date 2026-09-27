@@ -29,11 +29,12 @@ import WebDriverPreCore.HTTP.Protocol (Capabilities (..), ParseFailure, Session)
 import WebDriverPreCore.Test.CapabilitiesBuilder (httpCapabilities)
 import WebDriverPreCore.Test.ConfigLoader (Config (..), loadConfig)
 import WebDriverPreCore.Utils.Utils (ioThrow)
+import Data.Bool (bool)
 
 mkHttpCaps :: Bool -> Config -> HttpCapabilities
 mkHttpCaps bidiSocket config =
   let baseCaps = httpCapabilities config
-      updatedCaps = baseCaps {webSocketUrl = if bidiSocket then Just True else Nothing}
+      updatedCaps = baseCaps {webSocketUrl = bool Nothing (Just True) bidiSocket}
    in MkFullCapabilities
         { alwaysMatch = Just (fromHttpCapability updatedCaps),
           firstMatch = []
