@@ -5,8 +5,6 @@ module Main where
 
 import Test.Tasty (TestTree, defaultMain, testGroup)
 import Test.Tasty.HUnit (testCase, (@?=))
-import Data.Aeson (object, (.=))
-import Data.Text (Text)
 import WebDriverPreCore.BiDiRunnerBase
 
 main :: IO ()

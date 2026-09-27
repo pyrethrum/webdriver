@@ -437,7 +437,8 @@ tests =
     isAmbiguous :: L.LocateException -> Maybe Text
     isAmbiguous (L.AmbiguousLocator {}) = Nothing
     isAmbiguous other = Just $ "expected AmbiguousLocator but got: " <> txt other
--- (textbox "Nickname") "auto-id" "edt-nickname"
+
+
 _eval :: Maybe Text -> TestTree -> IO ()
 _eval = U.testPattern
 
@@ -449,7 +450,6 @@ _pattern = Just "ExtLocateAlways finds textbox with aria-label"
 -- *** Exception: ExitSuccess
 
 -- All tests
---- >>> _eval Nothing tests -- eval all
--- *** Exception: ExitSuccess
-
+--- >>> _eval Nothing tests
+-- *** Exception: ExitFailure 1
 
