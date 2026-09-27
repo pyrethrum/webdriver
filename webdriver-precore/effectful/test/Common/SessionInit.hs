@@ -7,6 +7,7 @@ module Common.SessionInit
   )
 where
 
+import Data.Bool (bool)
 import Data.Text (Text)
 import Effectful (MonadIO, liftIO, runEff)
 import Effectful.Error.Static (HasCallStack, runErrorNoCallStack)
@@ -29,14 +30,13 @@ import WebDriverPreCore.HTTP.Protocol (Capabilities (..), ParseFailure, Session)
 import WebDriverPreCore.Test.CapabilitiesBuilder (httpCapabilities)
 import WebDriverPreCore.Test.ConfigLoader (Config (..), loadConfig)
 import WebDriverPreCore.Utils.Utils (ioThrow)
-import Data.Bool (bool)
 
 mkHttpCaps :: Bool -> Config -> HttpCapabilities
 mkHttpCaps bidiSocket config =
   let baseCaps = httpCapabilities config
       updatedCaps = baseCaps {webSocketUrl = bool Nothing (Just True) bidiSocket}
    in MkFullCapabilities
-        { alwaysMatch = Just (fromHttpCapability updatedCaps),
+        { alwaysMatch = Just $ fromHttpCapability updatedCaps,
           firstMatch = []
         }
 
