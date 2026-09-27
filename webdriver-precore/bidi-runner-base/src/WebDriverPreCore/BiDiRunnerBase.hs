@@ -11,8 +11,8 @@ module WebDriverPreCore.BiDiRunnerBase
 
     -- * BiDi Resource (acquire/release)
     BiDiResource (..),
-    acquireBiDiBase,
-    releaseBiDiBase,
+    acquireBiDi,
+    releaseBiDi,
 
     -- * Socket Actions
     SocketActions (..),
@@ -51,10 +51,10 @@ import Data.Set qualified as Set
 import Data.Text (Text, pack, take, unpack)
 import Data.Text.Encoding (decodeUtf8)
 import Network.Socket qualified as NS
-  ( Socket,
-    SocketType (Stream),
-    AddrInfo (addrAddress, addrFamily, addrSocketType),
+  ( AddrInfo (addrAddress, addrFamily, addrSocketType),
     ShutdownCmd (ShutdownBoth),
+    Socket,
+    SocketType (Stream),
     connect,
     defaultHints,
     defaultProtocol,
@@ -69,8 +69,6 @@ import UnliftIO
   ( MonadIO,
     MonadUnliftIO,
     bracket,
-    catchAny,
-    catchIO,
     liftIO,
     throwIO,
     throwString,
@@ -83,6 +81,7 @@ import WebDriverPreCore.BiDiRunnerBase.Socket
 import WebDriverPreCore.BiDiRunnerBase.Types
 import WebDriverPreCore.Types.BaseTypes (Logger, nullLogger)
 import WebDriverPreCore.Types.BiDiUrl
+import WebDriverPreCore.Utils.Utils (logSupress, logRethrow)
 import Prelude hiding (log, take)
 
 -- | Combined channel and socket actions
@@ -100,9 +99,15 @@ data MessageActions m = MkMessageActions
 
 -- | Async message loops
 data MessageLoops m = MkMessageLoops
-  { sendLoop :: Connection -> m (Async ()),
-    getLoop :: Connection -> m (Async ()),
+  { mkSendLoop :: Connection -> m (Async ()),
+    mkGetLoop :: Connection -> m (Async ()),
     eventLoop :: m (Async ())
+  }
+
+data BiDiResource m = MkBiDiResource
+  { socketActions :: SocketActions m,
+    asyncLoops :: [Async ()],
+    closeAction :: m ()
   }
 
 -- | Create channel actions with a logger
@@ -115,65 +120,48 @@ mkChannelActions logger = do
         messageLoops = mkMessageLoops logger c
       }
 
--- | An acquired BiDi resource: the 'SocketActions' for issuing commands, the
--- running message-loop 'Async's (for status and fail-fast reporting), and a
--- close action that shuts down the transport and loops.
---
--- Acquire with 'acquireBiDiBase', release with 'releaseBiDiBase' (or hold the
--- resource across many tests and close it in a test framework hook).
-data BiDiResource m = MkBiDiResource
-  { bidiSocketActions :: SocketActions m,
-    bidiLoops :: [Async ()],
-    bidiClose :: m ()
-  }
+-- | Create a BiDi session and return its resource handle.
+acquireBiDiFromChannels :: forall m. (MonadUnliftIO m) => m (ChannelActions m) -> Logger m -> BiDiUrl -> m (BiDiResource m)
+acquireBiDiFromChannels chnlActions log' bidiUrl@MkBiDiUrl {host, port, path} = do
+  MkChannelActions
+    { messageLoops = MkMessageLoops {mkGetLoop, mkSendLoop, eventLoop = eventLoop'},
+      socketActions
+    } <-
+    chnlActions
 
--- | Open the WebSocket and start the send/get/event loops.
--- Returns the loop handles and the close action.
-openBiDi ::
-  forall m.
-  (MonadUnliftIO m) =>
-  Logger m ->
-  BiDiUrl ->
-  MessageLoops m ->
-  m ([Async ()], m ())
-openBiDi log' bidiUrl@MkBiDiUrl {host, port, path} MkMessageLoops {getLoop, sendLoop, eventLoop} = do
   log' $ "Connecting to WebDriver at " <> pack (show bidiUrl)
   (sock, stream, conn) <- liftIO $ openClientConn host port path
+
   log' "WebSocket connection established"
-  asyncSendLoop <- sendLoop conn
-  asyncGetLoop <- getLoop conn
-  asyncEventLoop <- eventLoop
-  let loops = [asyncSendLoop, asyncGetLoop, asyncEventLoop]
-  pure
-    ( loops,
-      do
+  sendLoop <- mkSendLoop conn
+  getLoop <- mkGetLoop conn
+  eventLoop <- eventLoop'
+  let asyncLoops :: [Async ()]
+      asyncLoops = [sendLoop, getLoop, eventLoop]
+
+      closeAction :: m ()
+      closeAction = do
+        let supress msg = logSupress log' msg . liftIO
         -- Best-effort friendly close; "peer already gone" is expected noise.
-        catchLog "sendClose failed (ignoring)" log' $
-          liftIO $ WS.sendClose conn ("" :: BL.ByteString)
+        supress "sendClose failed (ignoring)" $
+          WS.sendClose conn ("" :: BL.ByteString)
         -- Wake a reader blocked in recv, then release the fd.
-        ignoreIO log' "shutdown" $
-          liftIO $ NS.shutdown sock NS.ShutdownBoth
-        ignoreIO log' "stream close" $
-          liftIO $ WSStream.close stream
+        supress "shutdown failed (ignoring)" $
+          NS.shutdown sock NS.ShutdownBoth
+        supress "stream close failed (ignoring)" $
+          WSStream.close stream
         -- The loops are now unblocked, so cancellation completes promptly.
-        traverse_ cancel loops
-    )
+        traverse_ cancel asyncLoops
+
+  pure MkBiDiResource {socketActions, asyncLoops, closeAction}
 
 -- | Create a BiDi session and return its resource handle.
-acquireBiDiBase :: (MonadUnliftIO m) => Logger m -> BiDiUrl -> m (BiDiResource m)
-acquireBiDiBase logger bidiUrl = do
-  ca <- mkChannelActions logger
-  (loops, close') <- openBiDi logger bidiUrl ca.messageLoops
-  pure
-    MkBiDiResource
-      { bidiSocketActions = ca.socketActions,
-        bidiLoops = loops,
-        bidiClose = close'
-      }
+acquireBiDi :: forall m. (MonadUnliftIO m) => Logger m -> BiDiUrl -> m (BiDiResource m)
+acquireBiDi lg = acquireBiDiFromChannels (mkChannelActions lg) lg
 
 -- | Release a 'BiDiResource'.
-releaseBiDiBase :: BiDiResource m -> m ()
-releaseBiDiBase = (.bidiClose)
+releaseBiDi :: BiDiResource m -> m ()
+releaseBiDi = (.closeAction)
 
 -- | Run a BiDi session (bracket form, kept for convenience).
 withBiDiBase ::
@@ -184,8 +172,10 @@ withBiDiBase ::
   (SocketActions m -> m a) ->
   m a
 withBiDiBase logger bidiUrl action =
-  bracket (acquireBiDiBase logger bidiUrl) releaseBiDiBase $
-    runBiDi logger action
+  bracket
+    (acquireBiDi logger bidiUrl)
+    releaseBiDi
+    (runBiDi logger action)
 
 -- | Run a BiDi session with custom message actions (bracket form).
 withBiDiWithActions ::
@@ -196,18 +186,10 @@ withBiDiWithActions ::
   (SocketActions m -> m a) ->
   m a
 withBiDiWithActions logger bidiUrl mkActions action =
-  bracket acquire releaseBiDiBase $
+  bracket acquire releaseBiDi $
     runBiDi logger action
   where
-    acquire = do
-      ca <- mkActions logger
-      (loops, close') <- openBiDi logger bidiUrl ca.messageLoops
-      pure
-        MkBiDiResource
-          { bidiSocketActions = ca.socketActions,
-            bidiLoops = loops,
-            bidiClose = close'
-          }
+    acquire = acquireBiDiFromChannels (mkActions logger) logger bidiUrl
 
 -- | Run an action against an acquired resource, failing fast and reporting if
 -- any message loop dies (mirrors the old 'withSocket' behaviour).
@@ -218,10 +200,10 @@ runBiDi ::
   (SocketActions m -> m a) ->
   BiDiResource m ->
   m a
-runBiDi logger action r = do
-  actionAsync <- async $ action r.bidiSocketActions
+runBiDi logger action bidi = do
+  actionAsync <- async $ action bidi.socketActions
   let asyncs :: [Async (Maybe a)]
-      asyncs = (Just <$> actionAsync) : ((Nothing <$) <$> r.bidiLoops)
+      asyncs = (Just <$> actionAsync) : ((Nothing <$) <$> bidi.asyncLoops)
   (_completed, ethresult) <- waitAnyCatch asyncs
   cancel actionAsync
   case ethresult of
@@ -239,9 +221,7 @@ mkMessageActions log' MkChannels {sendChan, receiveChan, eventChan, subscription
     { send = \conn -> do
         msgToSend <- atomically $ readTChan sendChan
         log' $ "Sending Message: " <> jsonToText msgToSend
-        catchLog "Message Send Failed" log'
-          $ liftIO
-          $ sendTextData conn (BL.toStrict $ encode msgToSend),
+        logSupress log' "Message Send" $ liftIO $ sendTextData conn (BL.toStrict $ encode msgToSend),
       --
       get = \conn -> do
         msg <- liftIO $ receiveData conn
@@ -269,8 +249,8 @@ mkMessageLoops logger channels =
 loopActions :: (MonadUnliftIO m) => Logger m -> MessageActions m -> MessageLoops m
 loopActions logger MkMessageActions {..} =
   MkMessageLoops
-    { sendLoop = asyncLoop "Sender" . send,
-      getLoop = asyncLoop "Receiver" . get,
+    { mkSendLoop = asyncLoop "Sender" . send,
+      mkGetLoop = asyncLoop "Receiver" . get,
       eventLoop = asyncLoop "EventHandler" eventHandler
     }
   where
@@ -280,17 +260,8 @@ loopActions logger MkMessageActions {..} =
 loopForever :: (MonadUnliftIO m) => Logger m -> Text -> m () -> m (Async ())
 loopForever logger name action = async go
   where
-    go = do
-      catchAny action $ \e -> do
-        logger $ "Loop " <> name <> " error: " <> pack (displayException e)
-        throwIO e
-      go
+    go = logRethrow logger ("Loop " <> name) action >> go
 
--- | Catch and log exceptions
-catchLog :: (MonadUnliftIO m) => Text -> Logger m -> m () -> m ()
-catchLog msg logger action =
-  catchAny action $ \e ->
-    logger $ msg <> ": " <> pack (displayException e)
 
 -- | Open a raw TCP socket and perform the WebSocket client handshake.
 openClientConn :: Text -> Int -> Text -> IO (NS.Socket, WSStream.Stream, Connection)
@@ -314,13 +285,6 @@ openClientConn host' port' path' = do
       []
   pure (sock, stream, conn)
 
--- | Run an IO cleanup action, swallowing only 'IOException's (logging them).
--- Any other exception propagates, so bugs are not silently masked.
-ignoreIO :: (MonadUnliftIO m) => Logger m -> Text -> m () -> m ()
-ignoreIO log' what action =
-  catchIO action $ \e ->
-    log' $ what <> " failed (ignoring): " <> pack (displayException e)
-
 -- | Apply subscriptions to an event
 applySubscriptions :: (MonadIO m) => Logger m -> Object -> TVar [RegisteredSubscription m] -> m ()
 applySubscriptions log' obj subscriptions = do
@@ -328,7 +292,7 @@ applySubscriptions log' obj subscriptions = do
     Left err -> log' $ "Could not parse event properties: " <> pack err
     Right MkEventProps {msgType, method, fullObj, params} -> do
       when (msgType /= "event")
-        $ log'
+        . log'
         $ "Not an event message: " <> msgType
       subs <- readTVarIO subscriptions
       traverse_ (applySubscription (MkSocketSubscriptionType method) params fullObj) ((.subscription) <$> subs)

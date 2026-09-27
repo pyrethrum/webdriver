@@ -8,15 +8,14 @@ module WebDriverPreCore.Test.IOUtils
     mkDemoActions,
     (===),
     findWebDriverRoot,
-    loopForever,
-    catchLog
+    loopForever
   )
 where
 
 import WebDriverPreCore.Utils.Aeson (prettyJSON)
 import WebDriverPreCore.Test.Const (Timeout (..), seconds)
 import Control.Concurrent (threadDelay)
-import Control.Exception (Exception (..), Handler (..), SomeException, catches)
+import Control.Exception (Exception (..), SomeException)
 import Control.Monad (void, when)
 import Data.Aeson (Value)
 import Data.Base64.Types qualified as B64T
@@ -26,10 +25,10 @@ import Data.Text (Text, isInfixOf, pack, toLower, unpack)
 import GHC.Base (coerce)
 import System.FilePath (joinPath, splitDirectories, (</>))
 import Test.Tasty.HUnit as HUnit (Assertion, HasCallStack, (@=?))
-import UnliftIO (AsyncCancelled, async, atomically, race_, readTMVar, throwIO, tryPutTMVar)
+import UnliftIO (async, atomically, race_, readTMVar, tryPutTMVar, MonadUnliftIO)
 import UnliftIO.Async (Async)
 import UnliftIO.STM (newEmptyTMVarIO)
-import WebDriverPreCore.Utils.Utils (txt)
+import WebDriverPreCore.Utils.Utils (txt, catchLog)
 import WebDriverPreCore.Types.BaseTypes (Logger)
 import Prelude hiding (log)
 
@@ -159,21 +158,10 @@ encodeFileToBase64 filePath =
   Assertion
 (===) = (@=?)
 
-catchLog :: Text -> (Text -> IO ()) -> IO () -> IO ()
-catchLog name logAction action =
-  action
-    `catches` [ Handler $ \(e :: AsyncCancelled) -> do
-                  logAction $ name <> " thread cancelled"
-                  throwIO e,
-                Handler $ \(e :: SomeException) -> do
-                  logAction $ "Exception thrown in " <> name <> " thread" <> ": " <> (pack $ displayException e)
-                  throwIO e
-              ]
-
 -- | like forever but, unlike forever, it fails if an exception is thrown
-loopForever :: (Text -> IO ()) -> Text -> IO () -> IO (Async ())
+loopForever :: (MonadUnliftIO m) => (Text -> m ()) -> Text -> m () -> m (Async ())
 loopForever logger name action = async $ do
   logger $ "Starting " <> name <> " thread"
   loop
   where
-    loop = catchLog name logger action >> loop
+    loop = catchLog logger name action >> loop
