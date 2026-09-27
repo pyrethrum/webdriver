@@ -8,6 +8,9 @@ module WebDriver.Effectful.Logger.KatipInterpreter
 
     -- * Convenience bracket
     withLogger,
+
+    -- * katip Reexport
+    K.LogEnv (..)
   )
 where
 

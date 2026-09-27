@@ -1,10 +1,9 @@
-{-|
-Module: WebDriverPreCore.BiDiRunner
-Description: Typed BiDi runner for WebDriver commands
-
-This module provides a typed BiDi runner that works with webdriver-precore
-Command types, built on top of the JSON-based runner in BiDiRunnerBase.
--}
+-- |
+-- Module: WebDriverPreCore.BiDiRunner
+-- Description: Typed BiDi runner for WebDriver commands
+--
+-- This module provides a typed BiDi runner that works with webdriver-precore
+-- Command types, built on top of the JSON-based runner in BiDiRunnerBase.
 module WebDriverPreCore.BiDiRunner
   ( -- * BiDi Runner
     withBiDi,
@@ -13,21 +12,22 @@ module WebDriverPreCore.BiDiRunner
     BiDiRunnerHandle (..),
     acquireBiDi,
     releaseBiDi,
-
     BiDiRunner (..),
     mkBiDiRunner,
     hoistBiDiRunner,
-        -- * Low-level commands
+
+    -- * Low-level commands
     runNoWait,
     runOffSpecNoWait,
-        -- * Subscription Management
+
+    -- * Subscription Management
     subscribe,
     unsubscribe,
 
     -- * Types
     SocketActions (..),
     ResponseException (..),
-    Request(..),
+    Request (..),
 
     -- * BiDi URL
     BiDiUrl (..),
@@ -39,31 +39,46 @@ where
 
 import Control.Exception (fromException)
 import Control.Monad.Catch (MonadThrow)
-import Data.Aeson (FromJSON, Object, toJSON, parseJSON)
+import Data.Aeson (FromJSON, Object, parseJSON, toJSON)
 import Data.Aeson.Types (parseEither)
 import Data.Coerce (coerce)
 import Data.Set qualified as Set
 import Data.Text (Text)
 import UnliftIO (MonadUnliftIO, catchAny, throwIO)
 import UnliftIO.STM (STM, atomically)
-import WebDriverPreCore.BiDiRunnerBase  as B hiding (JSUInt(..))
-
 import WebDriverPreCore.BiDi.Protocol as P
   ( Command (..),
     CommandMethod (..),
     JSUInt (..),
     OffSpecCommand (..),
-    SessionSubscribeResult (..),
+    ParseFailure (..),
     SessionSubscibe (..),
+    SessionSubscribeResult (..),
     SessionUnsubscribe (..),
     Subscription (..),
     SubscriptionId (..),
     SubscriptionType (..),
-    ParseFailure(..),
-    subscriptionTypeToText,
     knownCommandToText,
-    parseFailToWDException, 
+    parseFailToWDException,
+    subscriptionTypeToText,
   )
+import WebDriverPreCore.BiDiRunnerBase
+  ( BiDiUrl (..),
+    BiDiResource (..),
+    Request (..),
+    ResponseException (..),
+    SocketActions (..),
+    SocketConnectionException (..),
+    SocketCommand (..),
+    SocketSubscription (..),
+    SocketSubscriptionId (..),
+    SocketSubscriptionType (..),
+    SocketUnregister (..),
+    parseBiDiUrl,
+    parseBiDiUrlProperty,
+    withBiDiBase, sendCommand,
+  )
+import WebDriverPreCore.BiDiRunnerBase qualified as B hiding (JSUInt (..))
 import Prelude hiding (log)
 
 -- | Typed BiDi runner
@@ -80,15 +95,16 @@ data BiDiRunner m = MkBiDiRunner
 
 -- | Create a typed BiDi runner from socket actions
 mkBiDiRunner :: (MonadUnliftIO m, MonadThrow m) => SocketActions m -> BiDiRunner m
-mkBiDiRunner sa = MkBiDiRunner
-  { run = runTypedCommand sa,
-    socketActions = sa,
-    runWithId = \(MkJSUInt msgId) cmd ->
-      B.sendCommand' (coerceSocketActions sa) (MkJSUInt msgId) (commandToSocketCommand cmd),
-    runOffSpecWithId = \(MkJSUInt msgId) method params ->
-      B.sendCommand' (coerceSocketActions sa) (MkJSUInt msgId) $
-        MkSocketCommand method (toJSON params)
-  }
+mkBiDiRunner sa =
+  MkBiDiRunner
+    { run = runTypedCommand sa,
+      socketActions = sa,
+      runWithId = \(MkJSUInt msgId) cmd ->
+        B.sendCommand' (coerceSocketActions sa) (MkJSUInt msgId) (commandToSocketCommand cmd),
+      runOffSpecWithId = \(MkJSUInt msgId) method params ->
+        B.sendCommand' (coerceSocketActions sa) (MkJSUInt msgId) $
+          MkSocketCommand method (toJSON params)
+    }
 
 -- | Send a typed 'Command' without waiting for a response.
 runNoWait :: (MonadUnliftIO m, MonadThrow m) => BiDiRunner m -> Command r -> m Request
@@ -102,15 +118,17 @@ runOffSpecNoWait MkBiDiRunner {socketActions} method params =
     MkSocketCommand method (toJSON params)
 
 -- | Run a BiDi session with typed commands
-withBiDi
-  :: forall a m. (MonadUnliftIO m, MonadThrow m)
-  => (Text -> m () ) -- ^ a logger for internal bidi actions pass NoOp for none
-  -> BiDiUrl
-  -> (BiDiRunner m -> m a)
-  -> m a
+withBiDi ::
+  forall a m.
+  (MonadUnliftIO m, MonadThrow m) =>
+  -- | a logger for internal bidi actions pass NoOp for none
+  (Text -> m ()) ->
+  BiDiUrl ->
+  (BiDiRunner m -> m a) ->
+  m a
 withBiDi logger bidiUrl action =
   withBiDiBase logger bidiUrl $ \sa ->
-   action (mkBiDiRunner sa)
+    action (mkBiDiRunner sa)
 
 -- | A typed BiDi resource handle: the 'BiDiRunner' for issuing commands and a
 -- close action. Acquire with 'acquireBiDi', release with 'releaseBiDi'.
@@ -127,11 +145,11 @@ acquireBiDi ::
   BiDiUrl ->
   m (BiDiRunnerHandle m)
 acquireBiDi logger bidiUrl = do
-  r <- B.acquireBiDiBase logger bidiUrl
+  r <- B.acquireBiDi logger bidiUrl
   pure
     MkBiDiRunnerHandle
-      { biDiRunner = mkBiDiRunner r.bidiSocketActions,
-        biDiClose = B.releaseBiDiBase r
+      { biDiRunner = mkBiDiRunner r.socketActions,
+        biDiClose = r.closeAction
       }
 
 -- | Release a typed BiDi resource handle.
@@ -144,16 +162,17 @@ runTypedCommand sa cmd = do
   let socketCmd = commandToSocketCommand cmd
   sendCommand (coerceSocketActions sa) socketCmd
     `catchAny` \e -> case fromException e :: Maybe ResponseException of
-      Just (BiDIError errorValue) -> 
+      Just (BiDIError errorValue) ->
         throwIO . parseFailToWDException $ MkParseFailure "BiDi error response" errorValue
       _ -> throwIO e
 
 -- | Convert a typed Command to a SocketCommand
 commandToSocketCommand :: Command r -> SocketCommand Text r
-commandToSocketCommand cmd = MkSocketCommand
-  { method = toCommandText cmd.method,
-    params = toJSON cmd.params
-  }
+commandToSocketCommand cmd =
+  MkSocketCommand
+    { method = toCommandText cmd.method,
+      params = toJSON cmd.params
+    }
   where
     toCommandText :: CommandMethod -> Text
     toCommandText = \case
@@ -167,7 +186,7 @@ coerceSocketActions = coerce
 -- | Subscribe to events with a typed handler
 subscribe ::
   forall m.
-  MonadUnliftIO m =>
+  (MonadUnliftIO m) =>
   SocketActions m ->
   (SessionSubscibe -> m SessionSubscribeResult) ->
   Subscription m ->
@@ -224,8 +243,8 @@ subscribe sa callSubscribe subscription = do
           }
       _ -> case sub of
         P.MultiSubscription {nAction, subscriptionTypes} ->
-          B.MultiSubscription {
-              subscriptionTypes = socketSubtypes subscriptionTypes ,
+          B.MultiSubscription
+            { subscriptionTypes = socketSubtypes subscriptionTypes,
               nAction = \v -> case parseEither parseJSON v of
                 Left _ -> pure ()
                 Right r -> nAction r
@@ -236,7 +255,7 @@ subscribe sa callSubscribe subscription = do
               nAction = nValueAction
             }
       where
-        socketSubtypes = Set.fromList . fmap toSocketSubType 
+        socketSubtypes = Set.fromList . fmap toSocketSubType
 
     dummySubId = MkSocketSubscriptionId "dummy"
 
@@ -245,12 +264,13 @@ subscribe sa callSubscribe subscription = do
       (coerceSocketActions sa).registerSubscription (mkRegistration subscription) subId
 
     removeDummySub :: STM ()
-    removeDummySub = 
-      (coerceSocketActions sa).unregisterSubscription $ 
-        UnregisterById $ Set.singleton dummySubId
+    removeDummySub =
+      (coerceSocketActions sa).unregisterSubscription
+        $ UnregisterById
+        $ Set.singleton dummySubId
 
 -- | Unsubscribe from events
-unsubscribe :: MonadUnliftIO m => SocketActions m -> (SessionUnsubscribe -> m ()) -> SessionUnsubscribe -> m ()
+unsubscribe :: (MonadUnliftIO m) => SocketActions m -> (SessionUnsubscribe -> m ()) -> SessionUnsubscribe -> m ()
 unsubscribe sa callUnsubscribe unsub = do
   callUnsubscribe unsub
   atomically $ (coerceSocketActions sa).unregisterSubscription (toSocketUnregister unsub)
@@ -258,10 +278,10 @@ unsubscribe sa callUnsubscribe unsub = do
     toSocketUnregister :: SessionUnsubscribe -> SocketUnregister
     toSocketUnregister = \case
       UnsubscribeById {subscriptions} ->
-        UnregisterById . Set.fromList $ 
+        UnregisterById . Set.fromList $
           MkSocketSubscriptionId . coerce <$> subscriptions
       UnsubscribeByAttributes {unsubEvents} ->
-        UnregisterByAttributes . Set.fromList $ 
+        UnregisterByAttributes . Set.fromList $
           toSocketSubType <$> unsubEvents
 
 -- | Convert SubscriptionType to SocketSubscriptionType
@@ -300,4 +320,3 @@ hoistBiDiRunner lift' unlift' MkBiDiRunner {run = mRun, socketActions = mSA, run
         B.SingleSubscription {subscriptionType, action = unlift . action}
       B.MultiSubscription {subscriptionTypes, nAction} ->
         B.MultiSubscription {subscriptionTypes, nAction = unlift . nAction}
-

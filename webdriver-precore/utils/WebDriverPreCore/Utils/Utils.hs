@@ -8,6 +8,7 @@ module WebDriverPreCore.Utils.Utils
     ioThrow,
     throwLeft,
     db,
+    loopForever,
   )
 where
 
@@ -15,7 +16,7 @@ import Control.Monad (when)
 import Data.Text (Text, pack, unpack)
 import Debug.Trace (trace)
 import Text.Show.Pretty qualified as P
-import UnliftIO (AsyncCancelled, Exception (displayException), Handler (Handler), MonadIO, MonadUnliftIO, SomeException, catches, throwIO)
+import UnliftIO (AsyncCancelled, Exception (displayException), Handler (Handler), MonadIO, MonadUnliftIO, SomeException, catches, throwIO, Async, async)
 
 txt :: (Show a) => a -> Text
 txt = pack . P.ppShow
@@ -63,6 +64,14 @@ catchLog' rethrowSynchExceptions logger name action =
                   logger $ "Exception thrown in " <> name <> " thread" <> ": " <> (pack $ displayException e)
                   when rethrowSynchExceptions $ throwIO e
               ]
+
+-- | like forever but, unlike forever, it fails if an exception is thrown
+loopForever :: (MonadUnliftIO m) => (Text -> m ()) -> Text -> m () -> m (Async ())
+loopForever logger name action = async $ do
+  logger $ "Starting " <> name <> " thread"
+  loop
+  where
+    loop = logRethrow logger name action >> loop
 
 -- debugging
 db :: (Show a) => Text -> a -> a

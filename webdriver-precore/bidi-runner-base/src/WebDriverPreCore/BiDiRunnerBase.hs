@@ -81,8 +81,9 @@ import WebDriverPreCore.BiDiRunnerBase.Socket
 import WebDriverPreCore.BiDiRunnerBase.Types
 import WebDriverPreCore.Types.BaseTypes (Logger, nullLogger)
 import WebDriverPreCore.Types.BiDiUrl
-import WebDriverPreCore.Utils.Utils (logSupress, logRethrow)
+import WebDriverPreCore.Utils.Utils (logSupress, loopForever)
 import Prelude hiding (log, take)
+
 
 -- | Combined channel and socket actions
 data ChannelActions m = MkChannelActions
@@ -255,13 +256,6 @@ loopActions logger MkMessageActions {..} =
     }
   where
     asyncLoop name action = loopForever logger name action
-
--- | Run an action forever in a loop
-loopForever :: (MonadUnliftIO m) => Logger m -> Text -> m () -> m (Async ())
-loopForever logger name action = async go
-  where
-    go = logRethrow logger ("Loop " <> name) action >> go
-
 
 -- | Open a raw TCP socket and perform the WebSocket client handshake.
 openClientConn :: Text -> Int -> Text -> IO (NS.Socket, WSStream.Stream, Connection)

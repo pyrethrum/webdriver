@@ -7,8 +7,7 @@ module WebDriverPreCore.Test.IOUtils
     noOpUtils,
     mkDemoActions,
     (===),
-    findWebDriverRoot,
-    loopForever
+    findWebDriverRoot
   )
 where
 
@@ -25,10 +24,9 @@ import Data.Text (Text, isInfixOf, pack, toLower, unpack)
 import GHC.Base (coerce)
 import System.FilePath (joinPath, splitDirectories, (</>))
 import Test.Tasty.HUnit as HUnit (Assertion, HasCallStack, (@=?))
-import UnliftIO (async, atomically, race_, readTMVar, tryPutTMVar, MonadUnliftIO)
-import UnliftIO.Async (Async)
+import UnliftIO (atomically, race_, readTMVar, tryPutTMVar)
 import UnliftIO.STM (newEmptyTMVarIO)
-import WebDriverPreCore.Utils.Utils (txt, catchLog)
+import WebDriverPreCore.Utils.Utils (txt)
 import WebDriverPreCore.Types.BaseTypes (Logger)
 import Prelude hiding (log)
 
@@ -157,11 +155,3 @@ encodeFileToBase64 filePath =
   a ->
   Assertion
 (===) = (@=?)
-
--- | like forever but, unlike forever, it fails if an exception is thrown
-loopForever :: (MonadUnliftIO m) => (Text -> m ()) -> Text -> m () -> m (Async ())
-loopForever logger name action = async $ do
-  logger $ "Starting " <> name <> " thread"
-  loop
-  where
-    loop = catchLog logger name action >> loop
