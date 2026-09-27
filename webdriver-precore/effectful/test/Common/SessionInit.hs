@@ -82,8 +82,8 @@ getWDSession wantBiDiSocket = do
     getConfigData wantBiDiSocket
   MkHttpSessionResponse {session, websocketUrl} <-
     ( runEff
-        $ runErrorNoCallStack @ParseFailure
-        $ runLogger loggerEnv
+        . runErrorNoCallStack @ParseFailure
+        . runLogger loggerEnv
         $ acquireHttpSession endpoint caps
     )
       >>= ioThrow
@@ -100,8 +100,8 @@ closeWDSession :: (HasCallStack) => WDSession -> IO ()
 closeWDSession MkWDSession {loggerEnv, loggerFileHandle = fileHandle, session, endpoint} = do
   result <-
     runEff
-      $ runErrorNoCallStack @ParseFailure
-      $ runLogger loggerEnv
+      . runErrorNoCallStack @ParseFailure
+      . runLogger loggerEnv
       $ releaseHttpSession (MkHttpParams {session, endpoint})
   ioThrow result `finally` releaseLogger (MkLoggerData {fileHandle, loggerEnv})
 
