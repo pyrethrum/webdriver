@@ -16,6 +16,7 @@ import WebDriverPreCore.Extended.Locators as LS
 import WebDriverPreCore.Test.TestData
 import WebDriverPreCore.Utils.Utils (txt)
 import Prelude
+import BiDi.Runner (runBiDiTest)
 
 -- >>> _eval tests
 
@@ -435,14 +436,14 @@ tests =
               ]
         ]
       where
-        testRunner = \name act -> runHttpTest ses name act
+        testRunner = \name act -> runBiDiTest ses name act
         getProperty = getElementProperty
         getAttribute = getElementAttribute
         locateFn = U.locateHttp U.defHttpOpts
         locateAllFn = U.locateAllHttp U.defHttpOpts
         locateAllNeverCheckDisplayed = U.locateAllHttp U.defHttpOpts {L.jsRecheckDisplayed = L.DisplayedCheckNever}
 
-        da :: DriverActions (Eff '[WebDriverHttp, Logger, WaitPrimative, IOE])
+        da :: DriverActions (Eff '[WebDriverBiDi, Logger, WaitPrimative, IOE])
         da =
           MkDriverActions
             { testRunner,
@@ -452,7 +453,7 @@ tests =
               locateAllFn
             }
 
-        test = runHttpTest ses
+        test = runBiDiTest ses
 
         chkElm = U.chkElm da
 

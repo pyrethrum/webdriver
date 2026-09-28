@@ -177,7 +177,7 @@ beforeAll_ action tree = withResource (action >> pure ()) (\_ -> pure ()) (\_ ->
 beforeAll :: forall a. IO a -> (IO a -> TestTree) -> TestTree
 beforeAll action mkTree = withResource action (\_ -> pure ()) mkTree
 
-locateHttp :: (IOE :> es, WebDriverHttp :> es) => L.HttpLocateOpts -> Locator -> Eff es (Either L.LocateException ElementId)
+locateHttp :: (IOE :> es, WebDriverBiDi :> es) => L.HttpLocateOpts -> Locator -> Eff es (Either L.LocateException ElementId)
 locateHttp opts loc = httpActions >>= \a -> L.locateHttp a opts loc
 
 locateAllHttp :: (IOE :> es, WebDriverHttp :> es) => L.HttpLocateOpts -> Locator -> Eff es (Either L.LocateException [ElementId])
