@@ -1052,7 +1052,7 @@ getBiDiSession = R.getWDSession True
 
 -- (textbox "Nickname") "auto-id" "edt-nickname"
 _eval :: Maybe Text -> TestTree -> IO Bool
-_eval = U.testPattern
+_eval = U.tastyEval
 
 _pattern :: Maybe Text
 _pattern = Just "ExtLocateAlways finds textbox with aria-label"

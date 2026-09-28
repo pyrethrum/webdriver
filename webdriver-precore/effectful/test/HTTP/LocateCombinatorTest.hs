@@ -10,7 +10,7 @@ import Data.Maybe (catMaybes)
 import Data.Text qualified as T
 import Data.Text (Text, unpack)
 import Effectful (Eff, IOE, (:>), liftIO)
-import Common.Utils (defHttpOpts, locateAllHttp, testPattern)
+import Common.Utils (defHttpOpts, locateAllHttp, tastyEval)
 import HTTP.Runner (WDSession, runHttp)
 import Prelude
 import Test.Falsify.Generator as G (Gen, frequency, integral)
@@ -903,7 +903,7 @@ _pattern :: Maybe Text
 _pattern = Nothing
 
 _eval :: Maybe Text -> TestTree -> IO Bool
-_eval = testPattern
+_eval = tastyEval
 
 --- >>> _eval _pattern tests
 -- *** Exception: ExitSuccess

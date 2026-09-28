@@ -439,8 +439,8 @@ tests =
     isAmbiguous other = Just $ "expected AmbiguousLocator but got: " <> txt other
 
 
-_eval :: Maybe Text -> TestTree -> IO Bool
-_eval = U.testPattern
+_eval :: Maybe Text -> TestTree -> IO U.TastyResult
+_eval = U.tastyEval U.StdOutOnFailure
 
 _pattern :: Maybe Text
 _pattern = Just "ExtLocateAlways finds textbox with aria-label"
@@ -451,5 +451,7 @@ _pattern = Just "ExtLocateAlways finds textbox with aria-label"
 
 -- All tests
 --- >>> _eval Nothing tests
-
+-- *** Exception: ExitSuccess
+-- 
+-- All 128 tests passed (3.48s)
 

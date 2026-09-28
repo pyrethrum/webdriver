@@ -54,11 +54,15 @@ module Common.Utils
     -- * Config
     autoId,
     defHttpOpts,
-    testPattern,
+
+    -- * Tasty Eval
+    tastyEval,
+    OutPutOpts(..),
+    TastyResult(..)
   )
 where
 
-import Control.Exception (try)
+import Control.Exception (throw, try)
 import Data.Aeson (Value (String))
 import Data.Function ((&))
 import Data.Functor ((<&>))
@@ -90,6 +94,10 @@ import WebDriverPreCore.Extended.Locate qualified as L
 import WebDriverPreCore.Extended.Locators (Locator, attribute')
 import WebDriverPreCore.Utils.Utils (txt)
 
+data OutPutOpts = NoStdOut | StdOut | StdOutOnFailure
+
+data TastyResult = Pass | Fail ExitCode
+
 -- | Run a test tree without terminating the process.
 --
 -- 'Test.Tasty.defaultMain' ends by throwing 'ExitCode' (via 'exitSuccess' /
@@ -99,13 +107,21 @@ import WebDriverPreCore.Utils.Utils (txt)
 -- statement throws. Catching the 'ExitCode' here lets the statement return a
 -- normal 'Bool' result so the eval plugin can stream the test output back into
 -- the source file.
-testPattern :: Maybe Text -> TestTree -> IO Bool
-testPattern mPattern tree =
-  try (withArgs (maybe [] (\pat -> ["-p", unpack pat]) mPattern) $ defaultMain tree)
-    <&> \case
-      Left ExitSuccess -> True
-      Left (ExitFailure _) -> False
-      Right () -> True
+tastyEval :: OutPutOpts -> Maybe Text -> TestTree -> IO TastyResult
+tastyEval outOpt mPattern tree =
+  do
+    try (withArgs (maybe [] (\pat -> ["-p", unpack pat]) mPattern) $ defaultMain tree)
+      <&> \case
+        Left ExitSuccess -> Pass
+        Left extCode -> Fail extCode
+        Right () -> Pass
+    -- catch all and handle or rethrow if we dont want StdOut (rethrow short-circuits printing to stdOut)
+    >>= \rslt -> case (outOpt, rslt) of
+      (NoStdOut, Pass) -> throw ExitSuccess
+      (NoStdOut, Fail extFail) -> throw extFail
+      (StdOutOnFailure, Pass) -> throw ExitSuccess
+      (StdOutOnFailure, _) -> pure rslt
+      (StdOut, _) -> pure rslt
 
 -- ################ Base Eff Actions ################
 

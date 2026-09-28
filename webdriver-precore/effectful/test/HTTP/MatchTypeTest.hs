@@ -214,7 +214,7 @@ getHttpSession :: IO WDSession
 getHttpSession =  getWDSession False
 
 _eval :: Maybe Text -> TestTree -> IO Bool
-_eval = U.testPattern
+_eval = U.tastyEval
 
 _pattern :: Maybe Text
 -- _pattern = Just "Contains Match - Partial MatchType"
