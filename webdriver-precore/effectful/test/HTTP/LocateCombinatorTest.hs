@@ -902,7 +902,7 @@ _pattern :: Maybe Text
 -- _pattern = Just "OR with contains under"
 _pattern = Nothing
 
-_eval :: Maybe Text -> TestTree -> IO ()
+_eval :: Maybe Text -> TestTree -> IO Bool
 _eval = testPattern
 
 --- >>> _eval _pattern tests
