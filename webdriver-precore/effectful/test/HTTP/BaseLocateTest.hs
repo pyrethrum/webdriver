@@ -451,5 +451,5 @@ _pattern = Just "ExtLocateAlways finds textbox with aria-label"
 
 -- All tests
 --- >>> _eval Nothing tests
--- *** Exception: ExitFailure 1
+-- *** Exception: ExitSuccess
 
