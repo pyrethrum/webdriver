@@ -1051,7 +1051,7 @@ getBiDiSession :: IO WDSession
 getBiDiSession = R.getWDSession True
 
 -- (textbox "Nickname") "auto-id" "edt-nickname"
-_eval :: Maybe Text -> TestTree -> IO Bool
+_eval :: Maybe Text -> TestTree -> IO U.TastyResult
 _eval = U.tastyEval
 
 _pattern :: Maybe Text

@@ -440,7 +440,7 @@ tests =
 
 
 _eval :: Maybe Text -> TestTree -> IO U.TastyResult
-_eval = U.tastyEval U.StdOutOnFailure
+_eval = U.tastyEval
 
 _pattern :: Maybe Text
 _pattern = Just "ExtLocateAlways finds textbox with aria-label"

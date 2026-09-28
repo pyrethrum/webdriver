@@ -10,8 +10,8 @@ import Data.Maybe (catMaybes)
 import Data.Text qualified as T
 import Data.Text (Text, unpack)
 import Effectful (Eff, IOE, (:>), liftIO)
-import Common.Utils (defHttpOpts, locateAllHttp, tastyEval)
-import HTTP.Runner (WDSession, runHttp)
+import Common.Utils (defHttpOpts, locateAllHttp, TastyResult)
+import Common.Utils qualified as U 
 import Prelude
 import Test.Falsify.Generator as G (Gen, frequency, integral)
 import Test.Falsify.Range as R (between)
@@ -29,6 +29,7 @@ import Data.Bifunctor (Bifunctor(first))
 import Test.Falsify.Property (gen)
 import WebDriverPreCore.Extended.HTTP.Locate (DisplayedCheck(..))
 import Common.SessionInit (getWDSession, closeWDSession)
+import HTTP.Runner
 
 tests :: TestTree
 tests =
@@ -902,8 +903,8 @@ _pattern :: Maybe Text
 -- _pattern = Just "OR with contains under"
 _pattern = Nothing
 
-_eval :: Maybe Text -> TestTree -> IO Bool
-_eval = tastyEval
+_eval :: Maybe Text -> TestTree -> IO TastyResult
+_eval = U.tastyEval
 
 --- >>> _eval _pattern tests
 -- *** Exception: ExitSuccess

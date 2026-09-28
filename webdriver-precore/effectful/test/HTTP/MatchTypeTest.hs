@@ -213,7 +213,7 @@ navToUrl getSes urlAction = do
 getHttpSession :: IO WDSession
 getHttpSession =  getWDSession False
 
-_eval :: Maybe Text -> TestTree -> IO Bool
+_eval :: Maybe Text -> TestTree -> IO U.TastyResult
 _eval = U.tastyEval
 
 _pattern :: Maybe Text
