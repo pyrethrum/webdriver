@@ -3,9 +3,11 @@ module Common.WebDriver.InterpreterBiDi
   )
 where
 
+import Common.WebDriver.Effect (WebDriver (..))
 import Control.Monad (void)
 import Data.Aeson (Value)
 import Data.Aeson qualified as Aeson
+import Data.Function ((&))
 import Data.Text (Text)
 import Effectful (Eff, IOE, (:>))
 import Effectful.Dispatch.Dynamic (interpret)
@@ -18,8 +20,6 @@ import WebDriverPreCore.Extended.BiDi.Locate qualified as BL
 import WebDriverPreCore.Extended.Locate qualified as L
 import WebDriverPreCore.Extended.Locators (Locator)
 
-import Common.WebDriver.Effect (WebDriver (..))
-
 -- | Interpret 'WebDriver' in terms of the 'WebDriverBiDi' effect.
 runWebDriverBiDi ::
   forall es a.
@@ -28,27 +28,27 @@ runWebDriverBiDi ::
   BrowsingContext ->
   Eff (WebDriver NodeRemoteValue : es) a ->
   Eff es a
-runWebDriverBiDi opts bc = interpret $ \_ -> \case
+runWebDriverBiDi opts context = interpret $ \_ -> \case
   MaximizeWindow -> setFirstWindowState MaximizedState
   MinimizeWindow -> setFirstWindowState MinimizedState
   NavigateTo url ->
-    void $
-      B.browsingContextNavigate $
-        MkNavigate {context = bc, url = url, wait = Nothing}
-  Locate loc -> BL.locateBiDi actions opts bc loc
-  LocateAll loc -> BL.locateAllBiDi actions opts bc loc
+    void
+      $ B.browsingContextNavigate
+      $ MkNavigate {context, url, wait = Nothing}
+  Locate loc -> BL.locateBiDi actions opts context loc
+  LocateAll loc -> BL.locateAllBiDi actions opts context loc
   LocateFromElement el loc ->
     case requireSharedRef loc el of
       Left err -> pure $ Left err
-      Right sr -> BL.locateFromElementBiDi actions opts bc sr loc
+      Right sr -> BL.locateFromElementBiDi actions opts context sr loc
   LocateAllFromElement el loc ->
     case requireSharedRef loc el of
       Left err -> pure $ Left err
-      Right sr -> BL.locateAllFromElementBiDi actions opts bc sr loc
-  GetProperty el name -> getProperty bc el name
-  GetAttribute el name -> getAttribute bc el name
+      Right sr -> BL.locateAllFromElementBiDi actions opts context sr loc
+  GetProperty el name -> getProperty context el name
+  GetAttribute el name -> getAttribute context el name
   where
-    actions = mkBiDiLocateActions bc
+    actions = mkBiDiLocateActions context
 
 -- | Build BiDi 'BL.LocateActions' from the 'WebDriverBiDi' effect.
 mkBiDiLocateActions :: forall es. (IOE :> es, WebDriverBiDi :> es) => BrowsingContext -> BL.LocateActions (Eff es)
@@ -71,20 +71,20 @@ setFirstWindowState named = do
   case clientWindows of
     [] -> pure ()
     MkClientWindowInfo {clientWindow} : _ ->
-      void $
-        B.browserSetClientWindowState $
-          MkSetClientWindowState
-            { clientWindow,
-              windowState = ClientWindowNamedState named
-            }
+      void
+        $ B.browserSetClientWindowState
+        $ MkSetClientWindowState
+          { clientWindow,
+            windowState = ClientWindowNamedState named
+          }
 
 -- | Resolve a located node into a 'SharedReference' for use as a start node.
 requireSharedRef :: Locator -> NodeRemoteValue -> Either L.LocateException SharedReference
 requireSharedRef loc node =
-  maybe
-    (Left $ L.ElementNotFound {description = "Cannot resolve element to a BiDi shared reference", locator = loc})
-    Right
-    (nodeToSharedRef node)
+  (nodeToSharedRef node)
+    & maybe
+      (Left $ L.ElementNotFound {description = "Cannot resolve element to a BiDi shared reference", locator = loc})
+      Right
 
 -- | Convert a located node into a 'SharedReference', returning 'Nothing' if the
 --   node has no shared id.

@@ -459,6 +459,8 @@ test-suite test-effectful
     BiDi.SimpleDemo
     BiDi.BaseLocateTest
     Common.SessionInit
+    Common.TastyEval
+    Common.WebDriver.TestUtils
     Common.WebDriver.Effect
     Common.WebDriver.InterpreterBiDi
     Common.WebDriver.InterpreterHttp

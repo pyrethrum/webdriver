@@ -10,7 +10,8 @@ import Data.Maybe (catMaybes)
 import Data.Text qualified as T
 import Data.Text (Text, unpack)
 import Effectful (Eff, IOE, (:>), liftIO)
-import Common.Utils (defHttpOpts, locateAllHttp, TastyResult)
+import Common.TastyEval qualified as TE
+import Common.Utils (defHttpOpts, locateAllHttp)
 import Common.Utils qualified as U 
 import Prelude
 import Test.Falsify.Generator as G (Gen, frequency, integral)
@@ -903,8 +904,8 @@ _pattern :: Maybe Text
 -- _pattern = Just "OR with contains under"
 _pattern = Nothing
 
-_eval :: Maybe Text -> TestTree -> IO TastyResult
-_eval = U.tastyEval
+_eval :: Maybe Text -> TestTree -> IO TE.TastyResult
+_eval = TE.tastyEval
 
 --- >>> _eval _pattern tests
 -- *** Exception: ExitSuccess

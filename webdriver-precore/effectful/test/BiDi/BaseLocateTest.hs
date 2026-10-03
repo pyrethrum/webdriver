@@ -1,6 +1,7 @@
 module BiDi.BaseLocateTest where
 
 import Common.SessionInit qualified as R
+import Common.TastyEval qualified as TE
 import Common.Utils (DriverActions (..), autoId, beforeAll_, chkEmpty, chkEq, chkLocException, chkSingleton)
 import Common.Utils qualified as U
 import Data.Text (Text)
@@ -1052,8 +1053,8 @@ getBiDiSession :: IO WDSession
 getBiDiSession = R.getWDSession True
 
 -- (textbox "Nickname") "auto-id" "edt-nickname"
-_eval :: Maybe Text -> TestTree -> IO U.TastyResult
-_eval = U.tastyEval
+_eval :: Maybe Text -> TestTree -> IO TE.TastyResult
+_eval = TE.tastyEval
 
 _pattern :: Maybe Text
 _pattern = Just "ExtLocateAlways finds textbox with aria-label"

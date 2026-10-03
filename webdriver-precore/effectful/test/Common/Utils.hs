@@ -53,13 +53,7 @@ module Common.Utils
 
     -- * Config
     autoId,
-    defHttpOpts,
-
-    -- * Tasty Eval
-    tastyEval,
-    tastyEvalStdOut,
-    tastyEvalStdOutOnFailure,
-    TastyResult(..)
+    defHttpOpts
   )
 where
 
@@ -94,44 +88,6 @@ import WebDriverPreCore.Extended.HTTP.Base.Protocol (ElementId)
 import WebDriverPreCore.Extended.Locate qualified as L
 import WebDriverPreCore.Extended.Locators (Locator, attribute')
 import WebDriverPreCore.Utils.Utils (txt)
-
-data OutPutOpts = NoStdOut | StdOut | StdOutOnFailure
-
-data TastyResult = Pass | Fail ExitCode
-
-tastyEval :: Maybe Text -> TestTree -> IO TastyResult
-tastyEval = tastyEval' NoStdOut 
-
-tastyEvalStdOut :: Maybe Text -> TestTree -> IO TastyResult
-tastyEvalStdOut = tastyEval' StdOut
-
-tastyEvalStdOutOnFailure :: Maybe Text -> TestTree -> IO TastyResult
-tastyEvalStdOutOnFailure = tastyEval' StdOutOnFailure
-
--- | Run a test tree without terminating the process.
---
--- 'Test.Tasty.defaultMain' ends by throwing 'ExitCode' (via 'exitSuccess' /
--- 'exitFailure'). That is fine for a real @main@, but it defeats HLS's eval
--- plugin (@-- >>>@ comments): the plugin only reports captured @stdout@ when
--- the evaluated statement returns normally, and discards it when the
--- statement throws. Catching the 'ExitCode' here lets the statement return a
--- normal 'Bool' result so the eval plugin can stream the test output back into
--- the source file.
-tastyEval' :: OutPutOpts -> Maybe Text -> TestTree -> IO TastyResult
-tastyEval' outOpt mPattern tree =
-  do
-    try (withArgs (maybe [] (\pat -> ["-p", unpack pat]) mPattern) $ defaultMain tree)
-      <&> \case
-        Left ExitSuccess -> Pass
-        Left extCode -> Fail extCode
-        Right () -> Pass
-    -- catch all and handle or rethrow if we dont want StdOut (rethrow short-circuits printing to stdOut)
-    >>= \rslt -> case (outOpt, rslt) of
-      (NoStdOut, Pass) -> throw ExitSuccess
-      (NoStdOut, Fail extFail) -> throw extFail
-      (StdOutOnFailure, Pass) -> throw ExitSuccess
-      (StdOutOnFailure, _) -> pure rslt
-      (StdOut, _) -> pure rslt
 
 -- ################ Base Eff Actions ################
 
@@ -177,7 +133,7 @@ beforeAll_ action tree = withResource (action >> pure ()) (\_ -> pure ()) (\_ ->
 beforeAll :: forall a. IO a -> (IO a -> TestTree) -> TestTree
 beforeAll action mkTree = withResource action (\_ -> pure ()) mkTree
 
-locateHttp :: (IOE :> es, WebDriverBiDi :> es) => L.HttpLocateOpts -> Locator -> Eff es (Either L.LocateException ElementId)
+locateHttp :: (IOE :> es, WebDriverHttp :> es) => L.HttpLocateOpts -> Locator -> Eff es (Either L.LocateException ElementId)
 locateHttp opts loc = httpActions >>= \a -> L.locateHttp a opts loc
 
 locateAllHttp :: (IOE :> es, WebDriverHttp :> es) => L.HttpLocateOpts -> Locator -> Eff es (Either L.LocateException [ElementId])

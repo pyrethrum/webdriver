@@ -2,6 +2,7 @@ module HTTP.MatchTypeTest where
 
 import Common.SessionInit (testUrl, getWDSession, closeWDSession)
 import Common.Utils qualified as U
+import Common.TastyEval qualified as TE
 
 import Data.Text (Text)
 import Effectful
@@ -213,8 +214,8 @@ navToUrl getSes urlAction = do
 getHttpSession :: IO WDSession
 getHttpSession =  getWDSession False
 
-_eval :: Maybe Text -> TestTree -> IO U.TastyResult
-_eval = U.tastyEval
+_eval :: Maybe Text -> TestTree -> IO TE.TastyResult
+_eval = TE.tastyEval
 
 _pattern :: Maybe Text
 -- _pattern = Just "Contains Match - Partial MatchType"

@@ -3,6 +3,7 @@ module HTTP.BaseLocateTest where
 
 import Common.Utils (beforeAll_, DriverActions (..),chkEq, chkLocException, chkSingleton, chkEmpty, autoId )
 import Common.Utils qualified as U
+import Common.TastyEval qualified as TE
 import Data.Text (Text)
 import Effectful
 import HTTP.Runner (WDSession, runHttp, runHttpTest, testUrl)
@@ -439,8 +440,8 @@ tests =
     isAmbiguous other = Just $ "expected AmbiguousLocator but got: " <> txt other
 
 
-_eval :: Maybe Text -> TestTree -> IO U.TastyResult
-_eval = U.tastyEval
+_eval :: Maybe Text -> TestTree -> IO TE.TastyResult
+_eval = TE.tastyEval
 
 _pattern :: Maybe Text
 _pattern = Just "ExtLocateAlways finds textbox with aria-label"
