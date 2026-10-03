@@ -445,7 +445,6 @@ library webdriver-effectful
     aeson           >=2.0   && <3,
     effectful       >=2.3   && <2.7,
     effectful-core  >=2.3   && <2.7,
-    katip-effectful >=0.0.1 && <0.1,
     katip           >=0.8   && <0.9,
     time            >=1.9   && <2,
     unliftio        >=0.2   && <0.3
@@ -460,6 +459,12 @@ test-suite test-effectful
     BiDi.SimpleDemo
     BiDi.BaseLocateTest
     Common.SessionInit
+    Common.WebDriver.Effect
+    Common.WebDriver.InterpreterBiDi
+    Common.WebDriver.InterpreterHttp
+    Common.TestEffect
+    Common.TestEffectInterpreterBiDi
+    Common.TestEffectInterpreterHttp
     Common.Utils
     HTTP.BaseLocateTest
     HTTP.LocateCombinatorTest
