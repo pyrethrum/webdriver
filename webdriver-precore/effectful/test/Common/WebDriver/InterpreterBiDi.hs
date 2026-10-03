@@ -38,15 +38,15 @@ runWebDriverBiDi opts bc = interpret $ \_ -> \case
   Locate loc -> BL.locateBiDi actions opts bc loc
   LocateAll loc -> BL.locateAllBiDi actions opts bc loc
   LocateFromElement el loc ->
-    case bidiRequireSharedRef loc el of
+    case requireSharedRef loc el of
       Left err -> pure $ Left err
       Right sr -> BL.locateFromElementBiDi actions opts bc sr loc
   LocateAllFromElement el loc ->
-    case bidiRequireSharedRef loc el of
+    case requireSharedRef loc el of
       Left err -> pure $ Left err
       Right sr -> BL.locateAllFromElementBiDi actions opts bc sr loc
-  GetProperty el name -> bidiGetProperty bc el name
-  GetAttribute el name -> bidiGetAttribute bc el name
+  GetProperty el name -> getProperty bc el name
+  GetAttribute el name -> getAttribute bc el name
   where
     actions = mkBiDiLocateActions bc
 
@@ -58,7 +58,7 @@ mkBiDiLocateActions bc =
       catch,
       trace = \_ -> pure (),
       locateNodes = B.browsingContextLocateNodes,
-      getElementText = bidiGetElementText bc
+      getElementText = getElementText bc
     }
 
 -- | Set the current window to a named state (maximized/minimized/fullscreen).
@@ -79,77 +79,77 @@ setFirstWindowState named = do
             }
 
 -- | Resolve a located node into a 'SharedReference' for use as a start node.
-bidiRequireSharedRef :: Locator -> NodeRemoteValue -> Either L.LocateException SharedReference
-bidiRequireSharedRef loc node =
+requireSharedRef :: Locator -> NodeRemoteValue -> Either L.LocateException SharedReference
+requireSharedRef loc node =
   maybe
     (Left $ L.ElementNotFound {description = "Cannot resolve element to a BiDi shared reference", locator = loc})
     Right
-    (bidiNodeToSharedRef node)
+    (nodeToSharedRef node)
 
 -- | Convert a located node into a 'SharedReference', returning 'Nothing' if the
 --   node has no shared id.
-bidiNodeToSharedRef :: NodeRemoteValue -> Maybe SharedReference
-bidiNodeToSharedRef (MkNodeRemoteValue {sharedId, handle}) =
+nodeToSharedRef :: NodeRemoteValue -> Maybe SharedReference
+nodeToSharedRef (MkNodeRemoteValue {sharedId, handle}) =
   MkSharedReference <$> sharedId <*> pure handle <*> pure Nothing
 
 -- | Read an element attribute via @script.callFunction@.
-bidiGetAttribute :: (WebDriverBiDi :> es) => BrowsingContext -> NodeRemoteValue -> Text -> Eff es (Maybe Text)
-bidiGetAttribute bc node name =
-  case bidiNodeToLocalValue node of
+getAttribute :: (WebDriverBiDi :> es) => BrowsingContext -> NodeRemoteValue -> Text -> Eff es (Maybe Text)
+getAttribute bc node name =
+  case nodeToLocalValue node of
     Nothing -> pure Nothing
     Just nodeArg' -> do
       rslt <-
-        bidiCallFunction
+        callFunction
           bc
           "function(el, name) { return el.getAttribute(name); }"
           [ nodeArg',
             PrimitiveLocalValue (StringValue (MkStringValue {value = name}))
           ]
-      pure $ bidiResultMaybeText rslt
+      pure $ resultMaybeText rslt
 
 -- | Read a live JS property via @script.callFunction@.
-bidiGetProperty :: (WebDriverBiDi :> es) => BrowsingContext -> NodeRemoteValue -> Text -> Eff es (Maybe Value)
-bidiGetProperty bc node name =
-  case bidiNodeToLocalValue node of
+getProperty :: (WebDriverBiDi :> es) => BrowsingContext -> NodeRemoteValue -> Text -> Eff es (Maybe Value)
+getProperty bc node name =
+  case nodeToLocalValue node of
     Nothing -> pure Nothing
     Just nodeArg' -> do
       rslt <-
-        bidiCallFunction
+        callFunction
           bc
           "function(el, name) { return el[name]; }"
           [ nodeArg',
             PrimitiveLocalValue (StringValue (MkStringValue {value = name}))
           ]
       pure $ case rslt of
-        EvaluateResultSuccess {result} -> bidiRemoteValueToValue result
+        EvaluateResultSuccess {result} -> remoteValueToValue result
         EvaluateResultException {} -> Nothing
 
 -- | Read the rendered text of a node via @script.callFunction@.
-bidiGetElementText :: (WebDriverBiDi :> es) => BrowsingContext -> SharedReference -> Eff es Text
-bidiGetElementText bc (MkSharedReference {sharedId, handle}) =
+getElementText :: (WebDriverBiDi :> es) => BrowsingContext -> SharedReference -> Eff es Text
+getElementText bc (MkSharedReference {sharedId, handle}) =
   case handle of
-    Nothing -> error "InterpreterBiDi.bidiGetElementText: node has no handle - cannot call script.callFunction"
+    Nothing -> error "InterpreterBiDi.getElementText: node has no handle - cannot call script.callFunction"
     Just h -> do
-      rslt <- bidiCallFunction bc "function(el) { return el.innerText; }" [bidiRefArg sharedId h]
-      pure $ bidiResultText rslt
+      rslt <- callFunction bc "function(el) { return el.innerText; }" [refArg sharedId h]
+      pure $ resultText rslt
 
 -- | Build a @script.callFunction@ local value referencing a node.
-bidiNodeToLocalValue :: NodeRemoteValue -> Maybe LocalValue
-bidiNodeToLocalValue (MkNodeRemoteValue {sharedId, handle}) = do
+nodeToLocalValue :: NodeRemoteValue -> Maybe LocalValue
+nodeToLocalValue (MkNodeRemoteValue {sharedId, handle}) = do
   sid <- sharedId
   h <- handle
-  pure $ bidiRefArg sid h
+  pure $ refArg sid h
 
-bidiRefArg :: SharedId -> Handle -> LocalValue
-bidiRefArg sid h =
+refArg :: SharedId -> Handle -> LocalValue
+refArg sid h =
   RemoteReference $
     MkRemoteReference
       { sharedreference = MkSharedReference {sharedId = sid, handle = Just h, extensions = Nothing},
         remoteObjectReference = MkRemoteObjectReference {handle = h, shartedId = Just sid, extensions = Nothing}
       }
 
-bidiCallFunction :: (WebDriverBiDi :> es) => BrowsingContext -> Text -> [LocalValue] -> Eff es EvaluateResult
-bidiCallFunction bc declaration args =
+callFunction :: (WebDriverBiDi :> es) => BrowsingContext -> Text -> [LocalValue] -> Eff es EvaluateResult
+callFunction bc declaration args =
   B.scriptCallFunction $
     MkCallFunction
       { functionDeclaration = declaration,
@@ -161,20 +161,20 @@ bidiCallFunction bc declaration args =
         this = Nothing
       }
 
-bidiResultText :: EvaluateResult -> Text
-bidiResultText = \case
+resultText :: EvaluateResult -> Text
+resultText = \case
   EvaluateResultSuccess {result = PrimitiveValue (StringValue (MkStringValue {value}))} -> value
   EvaluateResultSuccess {} -> ""
   EvaluateResultException {} -> ""
 
-bidiResultMaybeText :: EvaluateResult -> Maybe Text
-bidiResultMaybeText = \case
+resultMaybeText :: EvaluateResult -> Maybe Text
+resultMaybeText = \case
   EvaluateResultSuccess {result = PrimitiveValue NullValue} -> Nothing
   EvaluateResultSuccess {result = PrimitiveValue (StringValue (MkStringValue {value}))} -> Just value
   _ -> Nothing
 
-bidiRemoteValueToValue :: RemoteValue -> Maybe Value
-bidiRemoteValueToValue = \case
+remoteValueToValue :: RemoteValue -> Maybe Value
+remoteValueToValue = \case
   PrimitiveValue NullValue -> Just Aeson.Null
   PrimitiveValue (StringValue (MkStringValue {value})) -> Just (Aeson.String value)
   PrimitiveValue (BooleanValue b) -> Just (Aeson.Bool b)
