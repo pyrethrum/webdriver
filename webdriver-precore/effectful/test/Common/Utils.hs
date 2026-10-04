@@ -57,10 +57,8 @@ module Common.Utils
   )
 where
 
-import Control.Exception (throw, try)
 import Data.Aeson (Value (String))
 import Data.Function ((&))
-import Data.Functor ((<&>))
 import Data.Kind (Type)
 import Data.List (singleton)
 import Data.Text (Text, unpack)
@@ -68,9 +66,7 @@ import Data.Text qualified as T
 import Data.Text.IO qualified as T
 import Effectful
 import Effectful.Exception (catch)
-import System.Environment (withArgs)
-import System.Exit (ExitCode (..))
-import Test.Tasty (TestTree, defaultMain, withResource)
+import Test.Tasty (TestTree, withResource)
 import Test.Tasty.HUnit (assertEqual, assertFailure)
 import UnliftIO (throwIO)
 import WebDriver.Effectful

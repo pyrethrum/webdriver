@@ -29,46 +29,46 @@ import WebDriverPreCore.Extended.Locators (Locator)
 --
 -- The effect is parameterised over the element type: HTTP tests use
 -- 'ElementId' while BiDi tests use 'BiDiP.NodeRemoteValue'.
-data WebDriver (elem :: Type) :: Effect where
-  MaximizeWindow :: WebDriver elem m ()
-  MinimizeWindow :: WebDriver elem m ()
-  NavigateTo :: URL -> WebDriver elem m ()
-  Locate :: Locator -> WebDriver elem m (Either L.LocateException elem)
-  LocateAll :: Locator -> WebDriver elem m (Either L.LocateException [elem])
-  LocateFromElement :: elem -> Locator -> WebDriver elem m (Either L.LocateException elem)
-  LocateAllFromElement :: elem -> Locator -> WebDriver elem m (Either L.LocateException [elem])
-  GetProperty :: elem -> Text -> WebDriver elem m (Maybe Value)
-  GetAttribute :: elem -> Text -> WebDriver elem m (Maybe Text)
+data WebDriver (elm :: Type) :: Effect where
+  MaximizeWindow :: WebDriver elm m ()
+  MinimizeWindow :: WebDriver elm m ()
+  NavigateTo :: URL -> WebDriver elm m ()
+  Locate :: Locator -> WebDriver elm m (Either L.LocateException elm)
+  LocateAll :: Locator -> WebDriver elm m (Either L.LocateException [elm])
+  LocateFromElement :: elm -> Locator -> WebDriver elm m (Either L.LocateException elm)
+  LocateAllFromElement :: elm -> Locator -> WebDriver elm m (Either L.LocateException [elm])
+  GetProperty :: elm -> Text -> WebDriver elm m (Maybe Value)
+  GetAttribute :: elm -> Text -> WebDriver elm m (Maybe Text)
 
-type instance DispatchOf (WebDriver elem) = Dynamic
+type instance DispatchOf (WebDriver elm) = Dynamic
 
 -- ---------------------------------------------------------------------------
 -- Operations
 -- ---------------------------------------------------------------------------
 
-maximizeWindow :: forall elem es. (WebDriver elem :> es) => Eff es ()
-maximizeWindow = send (MaximizeWindow @elem)
+maximizeWindow :: forall elm es. (WebDriver elm :> es) => Eff es ()
+maximizeWindow = send (MaximizeWindow @elm)
 
-minimizeWindow :: forall elem es. (WebDriver elem :> es) => Eff es ()
-minimizeWindow = send (MinimizeWindow @elem)
+minimizeWindow :: forall elm es. (WebDriver elm :> es) => Eff es ()
+minimizeWindow = send (MinimizeWindow @elm)
 
-navigateTo :: forall elem es. (WebDriver elem :> es) => URL -> Eff es ()
-navigateTo = send . NavigateTo @elem
+navigateTo :: forall elm es. (WebDriver elm :> es) => URL -> Eff es ()
+navigateTo = send . NavigateTo @elm
 
-locate :: (WebDriver elem :> es) => Locator -> Eff es (Either L.LocateException elem)
+locate :: forall elm es. (WebDriver elm :> es) => Locator -> Eff es (Either L.LocateException elm)
 locate = send . Locate
 
-locateAll :: (WebDriver elem :> es) => Locator -> Eff es (Either L.LocateException [elem])
+locateAll :: forall elm es. (WebDriver elm :> es) => Locator -> Eff es (Either L.LocateException [elm])
 locateAll = send . LocateAll
 
-locateFromElement :: (WebDriver elem :> es) => elem -> Locator -> Eff es (Either L.LocateException elem)
+locateFromElement :: forall elm es. (WebDriver elm :> es) => elm -> Locator -> Eff es (Either L.LocateException elm)
 locateFromElement el = send . LocateFromElement el
 
-locateAllFromElement :: (WebDriver elem :> es) => elem -> Locator -> Eff es (Either L.LocateException [elem])
+locateAllFromElement :: forall elm es. (WebDriver elm :> es) => elm -> Locator -> Eff es (Either L.LocateException [elm])
 locateAllFromElement el = send . LocateAllFromElement el
 
-getProperty :: (WebDriver elem :> es) => elem -> Text -> Eff es (Maybe Value)
+getProperty :: forall elm es. (WebDriver elm :> es) => elm -> Text -> Eff es (Maybe Value)
 getProperty el = send . GetProperty el
 
-getAttribute :: (WebDriver elem :> es) => elem -> Text -> Eff es (Maybe Text)
+getAttribute :: forall elm es. (WebDriver elm :> es) => elm -> Text -> Eff es (Maybe Text)
 getAttribute el = send . GetAttribute el
