@@ -15,8 +15,7 @@ module Common.WebDriver.TestUtils
     chkAttributesEq,
     chkLocException,
     chkEq,
-    liftFail,
-    liftChk,
+    locateFail,
 
     -- * Checkers (singleton result)
     chkElm,
@@ -56,10 +55,10 @@ import Control.Monad (unless)
 import Data.Aeson (Value (String))
 import Data.Function ((&))
 import Data.List (singleton)
-import Data.Text (Text, unpack)
+import Data.Text (Text)
 import Data.Text qualified as T
 import Effectful
-import Test.Tasty.HUnit (assertEqual, assertFailure)
+import Effectful.Error.Dynamic
 import WebDriverPreCore.Extended.Common.Locators.Internal (CaseSensitivity (..), MatchType (..))
 import WebDriverPreCore.Extended.Locate qualified as L
 import WebDriverPreCore.Extended.Locators (Locator, attribute')
@@ -83,14 +82,14 @@ getOuterHtmls = traverse getOuterHtml
 formatOuterHtmls :: [Text] -> Text
 formatOuterHtmls htmls = T.intercalate "\n---------\n" htmls
 
-fail :: forall es a. (IOE :> es) => Text -> Eff es a
-fail = liftIO . assertFailure . unpack
+fail :: (Error Text :> es) => Text -> Eff es a
+fail = throwError
 
-failLeft :: forall es a. (IOE :> es) => Either L.LocateException a -> Eff es a
+failLeft :: forall a e es. (Show e, Error Text :> es) => Either e a -> Eff es a
 failLeft = either (fail . txt) pure
 
 -- | Fail with element outerHTML information appended (WebDriver variant)
-failWithElements :: forall elm es a. (Show elm, IOE :> es, WebDriver elm :> es) => Either L.LocateException [elm] -> Text -> [elm] -> Eff es a
+failWithElements :: forall elm es a. (Show elm, WebDriver elm :> es, Error Text :> es) => Either L.LocateException [elm] -> Text -> [elm] -> Eff es a
 failWithElements locRslt msg elms = do
   htmls <- getOuterHtmls elms
   let htmlSection = if null htmls then "" else "\n\nFailure Elements:\n" <> formatOuterHtmls htmls
@@ -101,39 +100,38 @@ mapSingleton :: Either L.LocateException elm -> Either L.LocateException [elm]
 mapSingleton = fmap singleton
 
 -- | Fail with element outerHTML information appended (singleton variant, WebDriver)
-failWithElement :: forall elm es a. (Show elm, IOE :> es, WebDriver elm :> es) => Either L.LocateException elm -> Text -> elm -> Eff es a
+failWithElement :: forall elm es a. (Show elm, WebDriver elm :> es, Error Text :> es) => Either L.LocateException elm -> Text -> elm -> Eff es a
 failWithElement locRslt msg el = failWithElements (mapSingleton locRslt) msg [el]
 
 -- | Check with element outerHTML information on failure (WebDriver variant)
-chkWithElements :: forall elm es. (Show elm, IOE :> es, WebDriver elm :> es) => Either L.LocateException [elm] -> Text -> [elm] -> Maybe Text -> Eff es ()
+chkWithElements :: forall elm es. (Show elm, WebDriver elm :> es, Error Text :> es) => Either L.LocateException [elm] -> Text -> [elm] -> Maybe Text -> Eff es ()
 chkWithElements locRslt testTitle elms mErr =
   mErr & maybe (pure ()) (\erMsg -> failWithElements locRslt (testTitle <> " - " <> erMsg) elms)
 
 -- | Check with element outerHTML information on failure (singleton variant, WebDriver)
-chkWithElement :: forall elm es. (Show elm, IOE :> es, WebDriver elm :> es) => Either L.LocateException elm -> Text -> elm -> Maybe Text -> Eff es ()
+chkWithElement :: forall elm es. (Show elm, WebDriver elm :> es, Error Text :> es) => Either L.LocateException elm -> Text -> elm -> Maybe Text -> Eff es ()
 chkWithElement locRslt testTitle el mErr =
   chkWithElements (mapSingleton locRslt) testTitle [el] mErr
 
 -- ################ Checks ################
 
 -- | Check that a locate result is an exception matching a predicate
-chkLocException :: forall es a. (IOE :> es, Show a) => Text -> (L.LocateException -> Maybe Text) -> Either L.LocateException a -> Eff es ()
+chkLocException :: forall es a. (Show a, Error Text :> es) => Text -> (L.LocateException -> Bool) -> Either L.LocateException a -> Eff es ()
 chkLocException errMsg p locRslt =
-  either
-    (\ex -> liftChk locRslt (errMsg <> ": LocateException check failed: " <> txt ex) $ p ex)
-    (const . liftFail locRslt $ errMsg <> ": expected Left LocateException but got Right")
-    locRslt
+  locRslt & either
+    (\ex -> unless (p ex) $ fail (errMsg <> " (LocateException check failed)\n" <> txt ex))
+    (\_ -> fail (errMsg <> ": expected Left LocateException but got Right\n" <> txt locRslt))
 
 -- | Check a list of elements against a predicate
-chkElms :: forall elm es. (Show elm, IOE :> es, WebDriver elm :> es) => Text -> ([elm] -> Maybe Text) -> Either L.LocateException [elm] -> Eff es ()
+chkElms :: forall elm es. (Show elm, WebDriver elm :> es, Error Text :> es) => Text -> ([elm] -> Maybe Text) -> Either L.LocateException [elm] -> Eff es ()
 chkElms errMsg p locRslt =
   either
-    (liftFail locRslt . (errMsg <>) . (<> ": expected Right elements but got Left: ") . txt)
+    (locateFail locRslt . (errMsg <>) . (<> ": expected Right elements but got Left: ") . txt)
     (\elms -> chkWithElements locRslt (errMsg <> ": element list check failed") elms $ p elms)
     locRslt
 
 -- | Singleton variant of 'chkElms'.
-chkElm :: forall elm es. (Show elm, IOE :> es, WebDriver elm :> es) => Text -> (elm -> Maybe Text) -> Either L.LocateException elm -> Eff es ()
+chkElm :: forall elm es. (Show elm, WebDriver elm :> es, Error Text :> es) => Text -> (elm -> Maybe Text) -> Either L.LocateException elm -> Eff es ()
 chkElm errMsg p =
   chkElms
     errMsg
@@ -143,27 +141,9 @@ chkElm errMsg p =
     )
     . mapSingleton
 
--- -- | Check a list of elements with a monadic predicate
--- chkElmsM :: forall elm es. (Show elm, IOE :> es, WebDriver elm :> es) => Text -> Either L.LocateException [elm] -> ([elm] -> Eff es (Maybe Text)) -> Eff es ()
--- chkElmsM testTitle locRslt chkM =
---   locRslt
---     & either
---       (\err -> liftFail locRslt $ testTitle <> " - locate failed: " <> txt err)
---       (\elms -> chkM elms >>= chkWithElements locRslt (testTitle <> " - element list check failed") elms)
-
--- -- | Singleton variant of 'chkElmsM'.
--- chkElmM :: forall elm es. (Show elm, IOE :> es, WebDriver elm :> es) => Text -> Either L.LocateException elm -> (elm -> Eff es (Maybe Text)) -> Eff es ()
--- chkElmM testTitle locRslt chkM =
---   chkElmsM
---     testTitle
---     (mapSingleton locRslt)
---     ( \case
---         [x] -> chkM x
---         _ -> error . unpack $ testTitle <> " - expected singleton element but got multiple"
---     )
 
 -- | Check an element's attribute against a predicate
-chkAttribute :: forall elm es. (IOE :> es, WebDriver elm :> es) => Text -> [elm] -> Text -> (Text -> Eff es ()) -> Eff es ()
+chkAttribute :: forall elm es. (WebDriver elm :> es, Error Text :> es) => Text -> [elm] -> Text -> (Text -> Eff es ()) -> Eff es ()
 chkAttribute testTitle locRslt attrName attrValChk =
   case locRslt of
     [el] ->
@@ -174,11 +154,11 @@ chkAttribute testTitle locRslt attrName attrValChk =
     elms -> fail $ testTitle <> " - expected singleton element but got " <> txt (length elms) <> " elms"
 
 -- | Singleton variant of 'chkAttribute'.
-chkAttributeElm :: forall elm es. (IOE :> es, WebDriver elm :> es) => Text -> elm -> Text -> (Text -> Eff es ()) -> Eff es ()
+chkAttributeElm :: forall elm es. (WebDriver elm :> es, Error Text :> es) => Text -> elm -> Text -> (Text -> Eff es ()) -> Eff es ()
 chkAttributeElm testTitle locRslt attrName attrValChk = chkAttribute testTitle [locRslt] attrName attrValChk
 
 -- | Check that an element's attribute equals an expected value
-chkAttributesEq :: forall elm es. (IOE :> es, WebDriver elm :> es) => Text -> Text -> Text -> [elm] -> Eff es ()
+chkAttributesEq :: forall elm es. (WebDriver elm :> es, Error Text :> es) => Text -> Text -> Text -> [elm] -> Eff es ()
 chkAttributesEq testTitle attrName expctd actual =
   chkAttribute testTitle actual attrName \actVal ->
     unless (actVal == expctd)
@@ -186,27 +166,23 @@ chkAttributesEq testTitle attrName expctd actual =
       $ testTitle <> " - expected attribute value: " <> txt expctd <> " but got: " <> txt actVal
 
 -- | Singleton variant of 'chkAttributeEq'.
-chkAttributeEq :: forall elm es. (IOE :> es, WebDriver elm :> es) => Text -> Text -> Text -> elm -> Eff es ()
+chkAttributeEq :: forall elm es. (WebDriver elm :> es, Error Text :> es) => Text -> Text -> Text -> elm -> Eff es ()
 chkAttributeEq testTitle attrName expctd = chkAttributesEq testTitle attrName expctd . pure
 
 -- | Fail with detailed locate result information
-liftFail :: forall elm es a. (IOE :> es, Show elm) => Either L.LocateException elm -> Text -> Eff es a
-liftFail locRslt msg = liftIO . assertFailure . unpack $ msg <> "\n\nLocateResult:\n" <> txt locRslt
-
--- | Check with optional error message, fail if present
-liftChk :: forall elm es. (IOE :> es, Show elm) => Either L.LocateException elm -> Text -> Maybe Text -> Eff es ()
-liftChk locRslt testTitle mErr = mErr & maybe (pure ()) (\erMsg -> liftFail locRslt $ testTitle <> " - " <> erMsg)
+locateFail :: forall elm es a. (Show elm, Error Text :> es) => Either L.LocateException elm -> Text -> Eff es a
+locateFail locRslt msg = fail $ msg <> "\n\nLocateResult:\n" <> txt locRslt
 
 -- | Assert equality of two values
-chkEq :: forall es a. (IOE :> es, Eq a, Show a) => Text -> a -> a -> Eff es ()
-chkEq msg a b = liftIO $ assertEqual (unpack msg) a b
+chkEq :: forall es a. (Eq a, Show a, Error Text :> es) => Text -> a -> a -> Eff es ()
+chkEq msg expt act = unless (expt == act) $ fail $ msg <> ":\n  expected: " <> txt expt <> "\n  but got: " <> txt act
 
 -- | Check that an element has the expected auto-id attribute
-chkElmsWithAutoId :: forall elm es. (Show elm, IOE :> es, WebDriver elm :> es) => Text -> Text -> Either L.LocateException [elm] -> Eff es ()
+chkElmsWithAutoId :: forall elm es. (Show elm, WebDriver elm :> es, Error Text :> es) => Text -> Text -> Either L.LocateException [elm] -> Eff es ()
 chkElmsWithAutoId testTitle expctd locRslt =
   locRslt
     & either
-      (\err -> liftFail locRslt $ testTitle <> " - locate failed: " <> txt err)
+      (\err -> fail $ testTitle <> " - locate failed: " <> txt err)
       (\elms -> elmChk elms >>= chkWithElements locRslt (testTitle <> " - element check failed") elms)
   where
     elmChk :: [elm] -> Eff es (Maybe Text)
@@ -220,14 +196,14 @@ chkElmsWithAutoId testTitle expctd locRslt =
       elms -> pure $ Just $ testTitle <> " - expected single element but got " <> txt (length elms)
 
 -- | Singleton variant of 'chkElmsWithAutoId'.
-chkElmWithAutoId :: forall elm es. (Show elm, IOE :> es, WebDriver elm :> es) => Text -> Text -> Either L.LocateException elm -> Eff es ()
+chkElmWithAutoId :: forall elm es. (Show elm, WebDriver elm :> es, Error Text :> es) => Text -> Text -> Either L.LocateException elm -> Eff es ()
 chkElmWithAutoId testTitle expctd = chkElmsWithAutoId testTitle expctd . mapSingleton
 
 -- ################ Test Helpers ################
 
 atrrChk ::
   forall elm es.
-  (IOE :> es, WebDriver elm :> es) =>
+  (WebDriver elm :> es, Error Text :> es) =>
   Locator ->
   Text ->
   Text ->
@@ -239,7 +215,7 @@ atrrChk loc attrName expctd = do
 
 chkAutoId ::
   forall elm es.
-  (IOE :> es, WebDriver elm :> es) =>
+  (WebDriver elm :> es, Error Text :> es) =>
   Locator ->
   Text ->
   Eff es ()
@@ -248,7 +224,7 @@ chkAutoId loc expctd =
 
 atrrChkElm ::
   forall elm es.
-  (IOE :> es, WebDriver elm :> es) =>
+  (WebDriver elm :> es, Error Text :> es) =>
   Locator ->
   Text ->
   Text ->
@@ -258,7 +234,7 @@ atrrChkElm loc attrName expctd =
 
 chkAutoIdElm ::
   forall elm es.
-  (IOE :> es, WebDriver elm :> es) =>
+  (WebDriver elm :> es, Error Text :> es) =>
   Locator ->
   Text ->
   Eff es ()
@@ -267,7 +243,7 @@ chkAutoIdElm loc expctd =
 
 chkAll ::
   forall elm es.
-  (Show elm, IOE :> es, WebDriver elm :> es) =>
+  (Show elm, WebDriver elm :> es, Error Text :> es) =>
   Locator ->
   ([elm] -> Maybe Text) ->
   Eff es ()
@@ -278,7 +254,7 @@ chkAll loc chk =
 
 chkAllNever ::
   forall elm es.
-  (Show elm, IOE :> es, WebDriver elm :> es) =>
+  (Show elm, WebDriver elm :> es, Error Text :> es) =>
   Locator ->
   ([elm] -> Maybe Text) ->
   Eff es ()
@@ -287,7 +263,7 @@ chkAllNever loc chk =
 
 -- ################ Predicates ################
 
-chkCount :: (IOE :> es) => Int -> [a] -> Eff es ()
+chkCount :: (Error Text :> es) => Int -> [a] -> Eff es ()
 chkCount expected actual =
   unless
     (expected == actualCount)
@@ -296,11 +272,11 @@ chkCount expected actual =
     actualCount = length actual
 
 -- | Check that a list contains exactly one element
-chkSingleton :: (IOE :> es) => [a] -> Eff es ()
+chkSingleton :: (Error Text :> es) => [a] -> Eff es ()
 chkSingleton = chkCount 1
 
 -- | Check that a list is empty
-chkEmpty :: (IOE :> es) => [a] -> Eff es ()
+chkEmpty :: (Error Text :> es) => [a] -> Eff es ()
 chkEmpty = chkCount 0
 
 -- ################ Config ################
