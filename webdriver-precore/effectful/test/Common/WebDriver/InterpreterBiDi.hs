@@ -8,6 +8,7 @@ import Control.Monad (void)
 import Data.Aeson (Value)
 import Data.Aeson qualified as Aeson
 import Data.Function ((&))
+import Data.List (singleton)
 import Data.Text (Text)
 import Effectful (Eff, IOE, (:>))
 import Effectful.Dispatch.Dynamic (interpret)
@@ -97,48 +98,45 @@ getAttribute :: (WebDriverBiDi :> es) => BrowsingContext -> NodeRemoteValue -> T
 getAttribute bc node name =
   case nodeToLocalValue node of
     Nothing -> pure Nothing
-    Just nodeArg' -> do
-      rslt <-
-        callFunction
+    Just nodeArg' ->
+      resultMaybeText
+        <$> callFunction
           bc
           "function(el, name) { return el.getAttribute(name); }"
           [ nodeArg',
             PrimitiveLocalValue (StringValue (MkStringValue {value = name}))
           ]
-      pure $ resultMaybeText rslt
 
 -- | Read a live JS property via @script.callFunction@.
 getProperty :: (WebDriverBiDi :> es) => BrowsingContext -> NodeRemoteValue -> Text -> Eff es (Maybe Value)
 getProperty bc node name =
-  case nodeToLocalValue node of
-    Nothing -> pure Nothing
-    Just nodeArg' -> do
-      rslt <-
-        callFunction
-          bc
-          "function(el, name) { return el[name]; }"
-          [ nodeArg',
-            PrimitiveLocalValue (StringValue (MkStringValue {value = name}))
-          ]
-      pure $ case rslt of
-        EvaluateResultSuccess {result} -> remoteValueToValue result
-        EvaluateResultException {} -> Nothing
+  nodeToLocalValue node
+    & maybe
+      (pure Nothing)
+      \nodeArg' ->
+        extractValue
+          <$> callFunction
+            bc
+            "function(el, name) { return el[name]; }"
+            [ nodeArg',
+              PrimitiveLocalValue (StringValue (MkStringValue {value = name}))
+            ]
+  where
+    extractValue = \case
+      EvaluateResultSuccess {result} -> remoteValueToValue result
+      EvaluateResultException {} -> Nothing
 
 -- | Read the rendered text of a node via @script.callFunction@.
 getElementText :: (WebDriverBiDi :> es) => BrowsingContext -> SharedReference -> Eff es Text
 getElementText bc (MkSharedReference {sharedId, handle}) =
-  case handle of
-    Nothing -> error "InterpreterBiDi.getElementText: node has no handle - cannot call script.callFunction"
-    Just h -> do
-      rslt <- callFunction bc "function(el) { return el.innerText; }" [refArg sharedId h]
-      pure $ resultText rslt
+  handle
+    & maybe
+      (error "InterpreterBiDi.getElementText: node has no handle - cannot call script.callFunction")
+      (fmap resultText . callFunction bc "function(el) { return el.innerText; }" . singleton . refArg sharedId)
 
 -- | Build a @script.callFunction@ local value referencing a node.
 nodeToLocalValue :: NodeRemoteValue -> Maybe LocalValue
-nodeToLocalValue (MkNodeRemoteValue {sharedId, handle}) = do
-  sid <- sharedId
-  h <- handle
-  pure $ refArg sid h
+nodeToLocalValue (MkNodeRemoteValue {sharedId, handle}) = refArg <$> sharedId <*> handle
 
 refArg :: SharedId -> Handle -> LocalValue
 refArg sid h =

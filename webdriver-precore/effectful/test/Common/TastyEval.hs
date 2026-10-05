@@ -13,7 +13,6 @@ import Data.Text (Text, unpack)
 import System.Environment (withArgs)
 import System.Exit (ExitCode (..))
 import Test.Tasty (TestTree, defaultMain)
-import UnliftIO (throwIO)
 
 data OutPutOpts = NoStdOut | StdOut | StdOutOnFailure
 
