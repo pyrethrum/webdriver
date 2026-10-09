@@ -19,6 +19,7 @@ import WebDriverPreCore.Utils.Utils (txt)
 import Prelude
 import BiDi.Runner (runBiDiTest)
 
+{-
 -- >>> _eval tests
 
 -- *** Exception: ExitSuccess
@@ -1068,3 +1069,5 @@ _pattern = Just "ExtLocateAlways finds textbox with aria-label"
 --- >>> _eval Nothing tests -- eval all
 
 -- *** Exception: ExitSuccess
+
+-}

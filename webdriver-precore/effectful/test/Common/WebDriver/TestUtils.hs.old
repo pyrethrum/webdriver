@@ -2,6 +2,10 @@ module Common.WebDriver.TestUtils
   ( -- * Element Inspection
     getOuterHtmls,
     formatOuterHtmls,
+    failWithElements,
+    failWithElement,
+    chkWithElements,
+    chkWithElement,
 
     -- * Checkers (list result)
     chkElms,
@@ -41,6 +45,7 @@ import Common.WebDriver.Effect qualified as E
 import Control.Monad (unless, (>=>))
 import Data.Aeson (Value (String))
 import Data.Function ((&))
+import Data.List (singleton)
 import Data.Text (Text)
 import Data.Text qualified as T
 import Effectful
@@ -91,6 +96,30 @@ failLeft = either (fail . txt) pure
 failNothing :: forall a es. (Error Text :> es) => Text -> Maybe a -> Eff es a
 failNothing errMsg = maybe (fail errMsg) pure
 
+-- | Fail with element outerHTML information appended (WebDriver variant)
+-- failWithElements :: forall elm es a. (Show elm, WebDriver elm :> es, Error Text :> es) => Either L.LocateException [elm] -> Text -> [elm] -> Eff es a
+-- failWithElements locRslt msg elms = do
+--   htmls <- getOuterHtmls elms
+--   let htmlSection = if null htmls then "" else "\n\nFailure Elements:\n" <> formatOuterHtmls htmls
+--   fail $ msg <> "\n\nLocateResult:\n" <> txt locRslt <> htmlSection
+
+-- | Convert a singleton 'Either' result to a list 'Either' result.
+mapSingleton :: Either L.LocateException elm -> Either L.LocateException [elm]
+mapSingleton = fmap singleton
+
+-- -- | Fail with element outerHTML information appended (singleton variant, WebDriver)
+-- failWithElement :: forall elm es a. (Show elm, WebDriver elm :> es, Error Text :> es) => Either L.LocateException elm -> Text -> elm -> Eff es a
+-- failWithElement locRslt msg el = failWithElements (mapSingleton locRslt) msg [el]
+
+-- | Check with element outerHTML information on failure (WebDriver variant)
+chkWithElements :: forall elm es. (Show elm, WebDriver elm :> es, Error Text :> es) => Either L.LocateException [elm] -> Text -> [elm] -> Maybe Text -> Eff es ()
+chkWithElements locRslt testTitle elms mErr =
+  mErr & maybe (pure ()) (\erMsg -> failWithElements locRslt (testTitle <> " - " <> erMsg) elms)
+
+-- | Check with element outerHTML information on failure (singleton variant, WebDriver)
+chkWithElement :: forall elm es. (Show elm, WebDriver elm :> es, Error Text :> es) => Either L.LocateException elm -> Text -> elm -> Maybe Text -> Eff es ()
+chkWithElement locRslt testTitle el mErr =
+  chkWithElements (mapSingleton locRslt) testTitle [el] mErr
 
 -- ################ Checks ################
 
