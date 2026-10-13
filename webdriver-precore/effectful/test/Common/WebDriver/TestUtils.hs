@@ -1,32 +1,31 @@
 module Common.WebDriver.TestUtils
-  ( -- * Element Inspection
+  ( -- * locateAll checks
+    locateChkAll,
+    locateAllChkAttr,
+    locatAllChkAutoId,
+
+    -- * locate checks
+    locateChkAttr,
+    locateChkAutoId,
+
+    -- * Element Inspection
     getOuterHtmls,
     formatOuterHtmls,
 
-    -- * Checkers (list result)
+    -- * Failure Related
+    locateFail,
+    chkLocException,
+
+    -- * Elm / Attribute Predicates
+    chkElm,
     chkElms,
     chkAttribute,
-    chkAttributesEq,
-    chkLocException,
-    chkEq,
-    locateFail,
-
-    -- * Checkers (singleton result)
-    chkElm,
-    chkAttributeElm,
     chkAttributeEq,
-
-    -- * Test Helpers (list result)
-    atrrChkAll,
-    chkAutoId,
-    chkAll,
-    chkAllNever,
-
-    -- * Test Helpers (singleton result)
-    atrrChkElm,
-    chkAutoIdElm,
+    chkAttributeSingleton,
+    chkAttributesSingletonEq,
 
     -- * Predicates
+    chkEq,
     chkCount,
     chkSingleton,
     chkEmpty,
@@ -41,6 +40,7 @@ import Common.WebDriver.Effect qualified as E
 import Control.Monad (unless, (>=>))
 import Data.Aeson (Value (String))
 import Data.Function ((&))
+import Data.List (singleton)
 import Data.Text (Text)
 import Data.Text qualified as T
 import Effectful
@@ -65,6 +65,15 @@ locate = E.locate >=> failLeft
 locateAll :: forall elm es. (WebDriver elm :> es, Error Text :> es) => Locator -> Eff es [elm]
 locateAll = E.locateAll >=> failLeft
 
+fail :: (Error e :> es, Show e) => e -> Eff es a
+fail = throwError
+
+failLeft :: forall a e es. (Show e, Error Text :> es) => Either e a -> Eff es a
+failLeft = either (fail . txt) pure
+
+failNothing :: forall a es. (Error Text :> es) => Text -> Maybe a -> Eff es a
+failNothing errMsg = maybe (fail errMsg) pure
+
 -- ################ Element Inspection ################
 
 -- | Get outerHTML for a list of elements using WebDriver effect
@@ -81,16 +90,6 @@ getOuterHtmls = traverse getOuterHtml
 -- | Format outer HTMLs as a single text with separators
 formatOuterHtmls :: [Text] -> Text
 formatOuterHtmls htmls = T.intercalate "\n---------\n" htmls
-
-fail :: (Error e :> es, Show e) => e -> Eff es a
-fail = throwError
-
-failLeft :: forall a e es. (Show e, Error Text :> es) => Either e a -> Eff es a
-failLeft = either (fail . txt) pure
-
-failNothing :: forall a es. (Error Text :> es) => Text -> Maybe a -> Eff es a
-failNothing errMsg = maybe (fail errMsg) pure
-
 
 -- ################ Checks ################
 
@@ -113,97 +112,82 @@ chkElm errMsg p elm =
   unless (p elm) $ fail (errMsg <> ": element check failed for\n" <> txt elm)
 
 -- | Check an element's attribute against a predicate
-chkAttribute :: forall elm es. (WebDriver elm :> es, Error Text :> es) => Text -> [elm] -> Text -> (Text -> Eff es ()) -> Eff es ()
-chkAttribute testTitle locRslt attrName attrValChk =
-  case locRslt of
+chkAttributeSingleton :: forall elm es. (WebDriver elm :> es, Error Text :> es) => Text -> Text -> (Text -> Eff es ()) -> [elm] -> Eff es ()
+chkAttributeSingleton testTitle attrName attrValChk elms =
+  case elms of
     [el] -> getAttribute el attrName >>= attrValChk
-    elms -> fail $ testTitle <> " - expected singleton element but got " <> txt (length elms) <> " elms"
+    _ -> fail $ testTitle <> " - expected singleton element but got " <> txt (length elms) <> " elms"
 
 -- | Singleton variant of 'chkAttribute'.
-chkAttributeElm :: forall elm es. (WebDriver elm :> es, Error Text :> es) => Text -> elm -> Text -> (Text -> Eff es ()) -> Eff es ()
-chkAttributeElm testTitle locRslt attrName attrValChk = chkAttribute testTitle [locRslt] attrName attrValChk
+chkAttribute :: forall elm es. (WebDriver elm :> es, Error Text :> es) => Text -> Text -> (Text -> Eff es ()) -> elm -> Eff es ()
+chkAttribute testTitle attrName attrValChk = chkAttributeSingleton testTitle attrName attrValChk . singleton
 
 -- | Check that an element's attribute equals an expected value
-chkAttributesEq :: forall elm es. (WebDriver elm :> es, Error Text :> es) => Text -> Text -> Text -> [elm] -> Eff es ()
-chkAttributesEq testTitle attrName expctd actual =
-  chkAttribute testTitle actual attrName \actVal ->
-    unless (actVal == expctd)
-      . fail
-      $ testTitle <> " - expected attribute value: " <> txt expctd <> " but got: " <> txt actVal
+chkAttributesSingletonEq :: forall elm es. (WebDriver elm :> es, Error Text :> es) => Text -> Text -> Text -> [elm] -> Eff es ()
+chkAttributesSingletonEq testTitle attrName expctd =
+  chkAttributeSingleton testTitle attrName (chkEq (testTitle <> " - attribute " <> txt attrName <> " not as expected") expctd)
 
 -- | Singleton variant of 'chkAttributeEq'.
 chkAttributeEq :: forall elm es. (WebDriver elm :> es, Error Text :> es) => Text -> Text -> Text -> elm -> Eff es ()
-chkAttributeEq testTitle attrName expctd = chkAttributesEq testTitle attrName expctd . pure
+chkAttributeEq testTitle attrName expctd = chkAttributesSingletonEq testTitle attrName expctd . singleton
 
 -- | Fail with detailed locate result information
 locateFail :: forall elm es a. (Show elm, Error Text :> es) => Either L.LocateException elm -> Text -> Eff es a
 locateFail locRslt msg = fail $ msg <> "\n\nLocateResult:\n" <> txt locRslt
 
+-- ################ Test Helpers ################
+
+locateAllChkAttr ::
+  forall elm es.
+  (WebDriver elm :> es, Error Text :> es) =>
+  Locator ->
+  Text ->
+  Text ->
+  Eff es ()
+locateAllChkAttr loc attrName expctd = do
+  locateAll @elm loc >>= chkAttributesSingletonEq (txt loc) attrName expctd
+
+locateChkAttr ::
+  forall elm es.
+  (WebDriver elm :> es, Error Text :> es) =>
+  Locator ->
+  Text ->
+  Text ->
+  Eff es ()
+locateChkAttr loc attrName expctd =
+  locate @elm loc >>= chkAttributeEq @elm (txt loc) attrName expctd
+
+locatAllChkAutoId ::
+  forall elm es.
+  (WebDriver elm :> es, Error Text :> es) =>
+  Locator ->
+  Text ->
+  Eff es ()
+locatAllChkAutoId loc expctd =
+  locateAllChkAttr @elm loc "auto-id" expctd
+
+locateChkAutoId ::
+  forall elm es.
+  (WebDriver elm :> es, Error Text :> es) =>
+  Locator ->
+  Text ->
+  Eff es ()
+locateChkAutoId loc expctd =
+  locateChkAttr @elm loc "auto-id" expctd
+
+locateChkAll ::
+  forall elm es.
+  (Show elm, WebDriver elm :> es, Error Text :> es) =>
+  Locator ->
+  ([elm] -> Bool) ->
+  Eff es ()
+locateChkAll loc chk = locateAll loc >>= chkElms (txt loc) chk
+
+-- ################ Predicates ################
+
 -- | Assert equality of two values
 chkEq :: forall es a. (Eq a, Show a, Error Text :> es) => Text -> a -> a -> Eff es ()
 chkEq msg expt act = unless (expt == act) $ fail $ msg <> ":\n  expected: " <> txt expt <> "\n  but got: " <> txt act
-
--- ################ Test Helpers ################
-
-atrrChkAll ::
-  forall elm es.
-  (WebDriver elm :> es, Error Text :> es) =>
-  Locator ->
-  Text ->
-  Text ->
-  Eff es ()
-atrrChkAll loc attrName expctd = do
-  locateAll @elm loc >>= chkAttributesEq (txt loc) attrName expctd
-
-chkAutoId ::
-  forall elm es.
-  (WebDriver elm :> es, Error Text :> es) =>
-  Locator ->
-  Text ->
-  Eff es ()
-chkAutoId loc expctd =
-  atrrChkAll @elm loc "auto-id" expctd
-
-atrrChkElm ::
-  forall elm es.
-  (WebDriver elm :> es, Error Text :> es) =>
-  Locator ->
-  Text ->
-  Text ->
-  Eff es ()
-atrrChkElm loc attrName expctd =
-  locate @elm loc >>= chkAttributeEq @elm (txt loc) attrName expctd
-
-chkAutoIdElm ::
-  forall elm es.
-  (WebDriver elm :> es, Error Text :> es) =>
-  Locator ->
-  Text ->
-  Eff es ()
-chkAutoIdElm loc expctd =
-  atrrChkElm @elm loc "auto-id" expctd
-
-chkAll ::
-  forall elm es.
-  (Show elm, WebDriver elm :> es, Error Text :> es) =>
-  Locator ->
-  ([elm] -> Bool) ->
-  Eff es ()
-chkAll loc chk =
-  do
-    locRslt <- locateAll loc
-    chkElms (txt loc) chk locRslt
-
-chkAllNever ::
-  forall elm es.
-  (Show elm, WebDriver elm :> es, Error Text :> es) =>
-  Locator ->
-  ([elm] -> Bool) ->
-  Eff es ()
-chkAllNever loc chk =
-  locateAll loc >>= chkElms (txt loc) chk
-
--- ################ Predicates ################
 
 chkCount :: (Error Text :> es) => Int -> [a] -> Eff es ()
 chkCount expected actual =

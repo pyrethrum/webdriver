@@ -11,7 +11,7 @@ import Common.WebDriver.Effect
     minimizeWindow,
     navigateTo,
   )
-import Common.WebDriver.TestUtils (atrrChkElm, chkAutoIdElm)
+import Common.WebDriver.TestUtils (locateChkAttr, locateChkAutoId)
 import Common.WebDriver.TestUtils qualified as TU
 import Data.Function ((&))
 import Data.Text (Text, unpack)
@@ -80,10 +80,10 @@ testLandmarkAndRole run interp =
     test name act = testCase (unpack name) (run (interp act))
 
     chkAutoId :: Text -> Locator -> Text -> TestTree
-    chkAutoId name loc expctd = test name (chkAutoIdElm @elm loc expctd)
+    chkAutoId name loc expctd = test name (locateChkAutoId @elm loc expctd)
 
     chkElmCount :: Text -> Locator -> Int -> TestTree
-    chkElmCount name loc expected = test name (TU.chkAll @elm loc (elmCountMatches expected))
+    chkElmCount name loc expected = test name (TU.locateChkAll @elm loc (elmCountMatches expected))
 
 -- ---------------------------------------------------------------------------
 -- Extended Role Matching Tests
@@ -200,15 +200,15 @@ testExtendedRoleMatching run interpNever interpAlways interpMiss =
     testBase name act = testCase (unpack name) (run act)
 
     chkAutoId :: Text -> Locator -> Text -> TestTree
-    chkAutoId name loc expctd = testNever name (chkAutoIdElm @elm loc expctd)
+    chkAutoId name loc expctd = testNever name (locateChkAutoId @elm loc expctd)
 
     atrrChkExtRole :: Text -> Locator -> Text -> Text -> TestTree
     atrrChkExtRole testName loc attrName expctd =
-      testAlways testName (atrrChkElm @elm loc attrName expctd)
+      testAlways testName (locateChkAttr @elm loc attrName expctd)
 
     atrrChkExtMiss :: Text -> Locator -> Text -> Text -> TestTree
     atrrChkExtMiss testName loc attrName expctd =
-      testMiss testName (atrrChkElm @elm loc attrName expctd)
+      testMiss testName (locateChkAttr @elm loc attrName expctd)
 
 -- ---------------------------------------------------------------------------
 -- Visibility Check Tests
@@ -341,9 +341,9 @@ testVisibility run interpAlways interpNever interpDisambiguate =
               locRslt <- locate @elm $ elmClass "notes-area"
               TU.chkLocException (txt (elmClass "notes-area")) isAmbiguous locRslt,
             testDisambiguate "DisplayedCheckDisambiguateUnique filters hidden - resolving to unique visible element" $
-              atrrChkElm @elm (elmClass "notes-area") "auto-id" "edt-notes-visible",
+              locateChkAttr @elm (elmClass "notes-area") "auto-id" "edt-notes-visible",
             testAlways "DisplayedCheckAlways also filters hidden, resolving to unique visible element" $
-              atrrChkElm @elm (elmClass "notes-area") "auto-id" "edt-notes-visible"
+              locateChkAttr @elm (elmClass "notes-area") "auto-id" "edt-notes-visible"
           ],
         testGroup
           "locateAll - DisplayedCheckDisambiguateUnique has no effect - only Always filters"
@@ -372,10 +372,10 @@ testVisibility run interpAlways interpNever interpDisambiguate =
     testBase name act = testCase (unpack name) (run act)
 
     chkElmCount :: Text -> Locator -> Int -> TestTree
-    chkElmCount name loc expected = testAlways name (TU.chkAll @elm loc (elmCountMatches expected))
+    chkElmCount name loc expected = testAlways name (TU.locateChkAll @elm loc (elmCountMatches expected))
 
     chkElmCountNever :: Text -> Locator -> Int -> TestTree
-    chkElmCountNever name loc expected = testNever name (TU.chkAll @elm loc (elmCountMatches expected))
+    chkElmCountNever name loc expected = testNever name (TU.locateChkAll @elm loc (elmCountMatches expected))
 
 -- ---------------------------------------------------------------------------
 -- Basic Locator Types
@@ -405,13 +405,13 @@ testBasicLocatorTypes run interp =
     test name act = testCase (unpack name) (run (interp act))
 
     chkAutoId :: Text -> Locator -> Text -> TestTree
-    chkAutoId name loc expctd = test name (chkAutoIdElm @elm loc expctd)
+    chkAutoId name loc expctd = test name (locateChkAutoId @elm loc expctd)
 
     chkElmCount :: Text -> Locator -> Int -> TestTree
-    chkElmCount name loc expected = test name (TU.chkAll @elm loc (elmCountMatches expected))
+    chkElmCount name loc expected = test name (TU.locateChkAll @elm loc (elmCountMatches expected))
 
     chkAll :: Text -> Locator -> ([elm] -> Maybe Text) -> TestTree
-    chkAll name loc chk = test name (TU.chkAll @elm loc chk)
+    chkAll name loc chk = test name (TU.locateChkAll @elm loc chk)
 
 -- ---------------------------------------------------------------------------
 -- Class Locator Variants
@@ -437,10 +437,10 @@ testClassLocatorVariants run interp =
     test name act = testCase (unpack name) (run (interp act))
 
     chkAutoId :: Text -> Locator -> Text -> TestTree
-    chkAutoId name loc expctd = test name (chkAutoIdElm @elm loc expctd)
+    chkAutoId name loc expctd = test name (locateChkAutoId @elm loc expctd)
 
     chkElmCount :: Text -> Locator -> Int -> TestTree
-    chkElmCount name loc expected = test name (TU.chkAll @elm loc (elmCountMatches expected))
+    chkElmCount name loc expected = test name (TU.locateChkAll @elm loc (elmCountMatches expected))
 
 -- ---------------------------------------------------------------------------
 -- Attribute Locator Variants
@@ -467,10 +467,10 @@ testAttributeLocatorVariants run interp =
     test name act = testCase (unpack name) (run (interp act))
 
     chkAutoId :: Text -> Locator -> Text -> TestTree
-    chkAutoId name loc expctd = test name (chkAutoIdElm @elm loc expctd)
+    chkAutoId name loc expctd = test name (locateChkAutoId @elm loc expctd)
 
     chkElmCount :: Text -> Locator -> Int -> TestTree
-    chkElmCount name loc expected = test name (TU.chkAll @elm loc (elmCountMatches expected))
+    chkElmCount name loc expected = test name (TU.locateChkAll @elm loc (elmCountMatches expected))
 
 -- ---------------------------------------------------------------------------
 -- roleName and role Constructors
@@ -496,7 +496,7 @@ testRoleNameAndRole run interp =
     test name act = testCase (unpack name) (run (interp act))
 
     chkAutoId :: Text -> Locator -> Text -> TestTree
-    chkAutoId name loc expctd = test name (chkAutoIdElm @elm loc expctd)
+    chkAutoId name loc expctd = test name (locateChkAutoId @elm loc expctd)
 
 -- ---------------------------------------------------------------------------
 -- Locate and LocateAll from Element
@@ -567,7 +567,7 @@ testCombinedLocators run interp =
     test name act = testCase (unpack name) (run (interp act))
 
     chkElmCount :: Text -> Locator -> Int -> TestTree
-    chkElmCount name loc expected = test name (TU.chkAll @elm loc (elmCountMatches expected))
+    chkElmCount name loc expected = test name (TU.locateChkAll @elm loc (elmCountMatches expected))
 
 -- ---------------------------------------------------------------------------
 -- Misc ARIA Role Types
@@ -635,13 +635,13 @@ testMiscAriaRoleTypes run interp interpNever =
     testNever = interpret interpNever
 
     chkAutoId :: Text -> Locator -> Text -> TestTree
-    chkAutoId name loc expctd = test name (chkAutoIdElm @elm loc expctd)
+    chkAutoId name loc expctd = test name (locateChkAutoId @elm loc expctd)
 
     chkElmCount :: Text -> Locator -> Int -> TestTree
-    chkElmCount name loc expected = test name (TU.chkAll @elm loc (elmCountMatches expected))
+    chkElmCount name loc expected = test name (TU.locateChkAll @elm loc (elmCountMatches expected))
 
     chkElmCountNever :: Text -> Locator -> Int -> TestTree
-    chkElmCountNever name loc expected = testNever name (TU.chkAll @elm loc (elmCountMatches expected))
+    chkElmCountNever name loc expected = testNever name (TU.locateChkAll @elm loc (elmCountMatches expected))
 
 -- ---------------------------------------------------------------------------
 -- Shared helpers
