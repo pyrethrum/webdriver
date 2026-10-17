@@ -84,7 +84,7 @@ testLandmarkAndRole run interp =
     chkAutoId name loc expctd = test name (locateChkAutoId @elm loc expctd)
 
     chkElmCount :: Text -> Locator -> Int -> TestTree
-    chkElmCount name loc expected = test name (TU.locateChkAll @elm loc (elmCountMatches expected))
+    chkElmCount = chkElmCount' run interp
 
 -- ---------------------------------------------------------------------------
 -- Extended Role Matching Tests
@@ -118,6 +118,7 @@ testExtendedRoleMatching run interpNever interpAlways interpMiss =
               locRslt <- locate @elm $ region "Personal Information"
               TU.chkLocException (txt (region "Personal Information")) isNotFound locRslt,
             testAlways "ExtLocateAlways - locateAll finds region via aria-labelledby" $ do
+              
               locRslt <- locateAll @elm $ region "Personal Information"
               TU.chkElms (txt (region "Personal Information")) (elmCountMatches 1) locRslt,
             testMiss "ExtLocateSingletonMiss - locateAll does NOT find region via aria-labelledby" $ do
@@ -152,15 +153,14 @@ testExtendedRoleMatching run interpNever interpAlways interpMiss =
               (textbox "Given Name")
               "auto-id"
               "edt-given-name",
+              
             testNever "ExtLocateNever - locate does NOT find textbox via for id label" $ do
               locRslt <- locate @elm $ textbox "Given Name"
               TU.chkLocException (txt (textbox "Given Name")) isNotFound locRslt,
-            testAlways "ExtLocateAlways - locateAll finds radio via for id label" $ do
-              locRslt <- locateAll @elm $ radio "Email"
-              TU.chkElms (txt (radio "Email")) (elmCountMatches 1) locRslt,
-            testMiss "ExtLocateSingletonMiss - locateAll does NOT find radio via for id label" $ do
-              locRslt <- locateAll @elm $ radio "Email"
-              TU.chkElms (txt (radio "Email")) (elmCountMatches 0) locRslt
+            
+            chkElmCountAlways "ExtLocateAlways - locateAll finds radio via for id label" (radio "Email") 1,
+            chkElmCountMiss  "ExtLocateSingletonMiss - locateAll does NOT find radio via for id label" (radio "Email") 0
+  
           ],
         testGroup
           "RoleType - unaffected by extended matching"
@@ -193,6 +193,15 @@ testExtendedRoleMatching run interpNever interpAlways interpMiss =
 
     testAlways :: Text -> Eff (WebDriver elm : es) () -> TestTree
     testAlways name act = testCase (unpack name) (run (interpAlways act))
+
+    chkElmCountAlways :: Text -> Locator -> Int -> TestTree
+    chkElmCountAlways = chkElmCount' run interpAlways
+
+    chkElmCountMiss :: Text -> Locator -> Int -> TestTree
+    chkElmCountMiss = chkElmCount' run interpMiss
+
+    chkElmCountNever :: Text -> Locator -> Int -> TestTree
+    chkElmCountNever = chkElmCount' run interpNever
 
     testMiss :: Text -> Eff (WebDriver elm : es) () -> TestTree
     testMiss name act = testCase (unpack name) (run (interpMiss act))
@@ -373,10 +382,10 @@ testVisibility run interpAlways interpNever interpDisambiguate =
     testBase name act = testCase (unpack name) (run act)
 
     chkElmCount :: Text -> Locator -> Int -> TestTree
-    chkElmCount name loc expected = testAlways name (TU.locateChkAll @elm loc (elmCountMatches expected))
+    chkElmCount = chkElmCount' run interpAlways
 
     chkElmCountNever :: Text -> Locator -> Int -> TestTree
-    chkElmCountNever name loc expected = testNever name (TU.locateChkAll @elm loc (elmCountMatches expected))
+    chkElmCountNever = chkElmCount' run interpNever
 
 -- ---------------------------------------------------------------------------
 -- Basic Locator Types
@@ -384,7 +393,7 @@ testVisibility run interpAlways interpNever interpDisambiguate =
 
 testBasicLocatorTypes ::
   forall elm es.
-  (Show elm, Error Text :> es) =>
+  (Error Text :> es) =>
   (forall a. Eff es a -> IO a) ->
   (forall a. Eff (WebDriver elm : es) a -> Eff es a) ->
   TestTree
@@ -409,7 +418,7 @@ testBasicLocatorTypes run interp =
     chkAutoId name loc expctd = test name (locateChkAutoId @elm loc expctd)
 
     chkElmCount :: Text -> Locator -> Int -> TestTree
-    chkElmCount name loc expected = test name (TU.locateChkAll @elm loc (elmCountMatches expected))
+    chkElmCount = chkElmCount' run interp
 
 -- ---------------------------------------------------------------------------
 -- Class Locator Variants
@@ -417,7 +426,7 @@ testBasicLocatorTypes run interp =
 
 testClassLocatorVariants ::
   forall elm es.
-  (Show elm, Error Text :> es) =>
+  (Error Text :> es) =>
   (forall a. Eff es a -> IO a) ->
   (forall a. Eff (WebDriver elm : es) a -> Eff es a) ->
   TestTree
@@ -438,7 +447,7 @@ testClassLocatorVariants run interp =
     chkAutoId name loc expctd = test name (locateChkAutoId @elm loc expctd)
 
     chkElmCount :: Text -> Locator -> Int -> TestTree
-    chkElmCount name loc expected = test name (TU.locateChkAll @elm loc (elmCountMatches expected))
+    chkElmCount = chkElmCount' run interp
 
 -- ---------------------------------------------------------------------------
 -- Attribute Locator Variants
@@ -446,7 +455,7 @@ testClassLocatorVariants run interp =
 
 testAttributeLocatorVariants ::
   forall elm es.
-  (Show elm, Error Text :> es) =>
+  (Error Text :> es) =>
   (forall a. Eff es a -> IO a) ->
   (forall a. Eff (WebDriver elm : es) a -> Eff es a) ->
   TestTree
@@ -468,7 +477,7 @@ testAttributeLocatorVariants run interp =
     chkAutoId name loc expctd = test name (locateChkAutoId @elm loc expctd)
 
     chkElmCount :: Text -> Locator -> Int -> TestTree
-    chkElmCount name loc expected = test name (TU.locateChkAll @elm loc (elmCountMatches expected))
+    chkElmCount = chkElmCount' run interp
 
 -- ---------------------------------------------------------------------------
 -- roleName and role Constructors
@@ -543,7 +552,7 @@ testLocateFromElement run interp =
 
 testCombinedLocators ::
   forall elm es.
-  (Show elm, Error Text :> es) =>
+  (Error Text :> es) =>
   (forall a. Eff es a -> IO a) ->
   (forall a. Eff (WebDriver elm : es) a -> Eff es a) ->
   TestTree
@@ -557,11 +566,8 @@ testCombinedLocators run interp =
         chkElmCount "OR - roleType Navigation or roleType Search" (roleType Navigation ||| roleType Search) 3
       ]
   where
-    test :: Text -> Eff (WebDriver elm : es) () -> TestTree
-    test name act = testCase (unpack name) (run (interp act))
-
     chkElmCount :: Text -> Locator -> Int -> TestTree
-    chkElmCount name loc expected = test name (TU.locateChkAll @elm ("Element count not as expected\nExpected " <> txt expected <> "\nActual: " <> txt expected) loc (elmCountMatches expected))
+    chkElmCount = chkElmCount' run interp
 
 -- ---------------------------------------------------------------------------
 -- Misc ARIA Role Types
@@ -569,13 +575,13 @@ testCombinedLocators run interp =
 
 testMiscAriaRoleTypes ::
   forall elm es.
-  (Show elm, Error Text :> es) =>
+  (Error Text :> es) =>
   (forall a. Eff es a -> IO a) ->
   (forall a. Eff (WebDriver elm : es) a -> Eff es a) ->
   (forall a. Eff (WebDriver elm : es) a -> Eff es a) ->
   TestTree
-testMiscAriaRoleTypes run interp interpNever =
-  beforeAll_ (miscRolesUrl >>= \url -> run (interp (navigateTo @elm url))) $
+testMiscAriaRoleTypes run wdIntprt interpNever =
+  beforeAll_ (miscRolesUrl >>= \url -> run (wdIntprt (navigateTo @elm url))) $
     testGroup
       "Misc ARIA Role Types"
       [ chkAutoId "roleType Article" (roleType Article) "art-main",
@@ -622,19 +628,16 @@ testMiscAriaRoleTypes run interp interpNever =
     interpret = mkTest run
 
     test :: Text -> Eff (WebDriver elm : es) () -> TestTree
-    test = interpret interp
-
-    testNever :: Text -> Eff (WebDriver elm : es) () -> TestTree
-    testNever = interpret interpNever
+    test = interpret wdIntprt
 
     chkAutoId :: Text -> Locator -> Text -> TestTree
     chkAutoId name loc expctd = test name (locateChkAutoId @elm loc expctd)
 
     chkElmCount :: Text -> Locator -> Int -> TestTree
-    chkElmCount name loc expected = test name (TU.locateChkAll @elm loc (elmCountMatches expected))
+    chkElmCount = chkElmCount' run wdIntprt
 
     chkElmCountNever :: Text -> Locator -> Int -> TestTree
-    chkElmCountNever name loc expected = testNever name (TU.locateChkAll @elm loc (elmCountMatches expected))
+    chkElmCountNever = chkElmCount' run interpNever
 
 -- ---------------------------------------------------------------------------
 -- Shared helpers
@@ -673,3 +676,17 @@ mkTest ::
   Eff (WebDriver elm : es) () ->
   TestTree
 mkTest run interp name act = testCase (unpack name) (run (interp act))
+
+-- | Build a 'TestTree' that checks @locateAll loc@ returns exactly @expected@ elements.
+chkElmCount' ::
+  forall elm es.
+  (Error Text :> es) =>
+  (forall a. Eff es a -> IO a) ->
+  (forall a. Eff (WebDriver elm : es) a -> Eff es a) ->
+  Text ->
+  Locator ->
+  Int ->
+  TestTree
+chkElmCount' run interp name loc expected =
+  mkTest run interp name $
+    TU.locateChkAll ("Element count not as expected for " <> txt loc) loc (TU.chkCount expected)
