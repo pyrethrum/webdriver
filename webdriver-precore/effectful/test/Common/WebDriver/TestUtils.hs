@@ -191,6 +191,7 @@ locateChkAll errMsg loc chk = do
         throwError $
           errMsg
             <> "\n"
+            <> "Intial Error:\n"
             <> e
             <> "\n"
             <> "Elements:\n"
@@ -223,7 +224,7 @@ chkCount :: (Error Text :> es) => Text -> Int -> [a] -> Eff es ()
 chkCount msg expected actual =
   unless
     (expected == actualCount)
-    (fail $ if (T.null msg) then "" else msg <> "\n" <> "Expected " <> txt expected <> " elements but got " <> txt actualCount)
+    (fail $ (if (T.null msg) then "" else msg <> "\n") <> "Expected " <> txt expected <> " elements but got " <> txt actualCount)
   where
     actualCount = length actual
 

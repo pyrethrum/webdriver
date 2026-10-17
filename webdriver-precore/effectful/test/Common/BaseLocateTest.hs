@@ -623,9 +623,13 @@ testLocateFromElement run interp =
   beforeAll_ (landmarkRolesUrl >>= \url -> run (interp (navigateTo @elm url))) $
     testGroup
       "Locate and LocateAll from Element"
-      [ test "locateAll from element - inputs within sec-personal"
-          $ TU.locateChkAll @elm "find sec-personal" (TU.autoId "sec-personal")
-          $ TU.chkCount "" 5,
+      [ test "locateAll from element - inputs within sec-personal" $ do
+          secResult <- locate @elm $ TU.autoId "sec-personal"
+          case secResult of
+            Left _ -> TU.locateFail secResult "find sec-personal - locate failed"
+            Right sec -> do
+              inResult <- locateAllFromElement @elm sec input_
+              TU.chkRightCount "inputs in sec-personal" 5 inResult,
         test "locateAll from element - links within nav-main" $ do
           navResult <- locate @elm $ TU.autoId "nav-main"
           case navResult of

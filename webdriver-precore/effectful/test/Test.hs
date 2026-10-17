@@ -5,7 +5,6 @@ import BiDi.SimpleDemo (bidi_login_demo)
 import HTTP.Runner (withHttp)
 import HTTP.SimpleDemo (http_login_navigation_demo)
 import HTTP.BaseLocateTest qualified as BaseLocateTest
-import BiDi.BaseLocateTest qualified as BiDiBaseLocateTest
 import HTTP.LocateCombinatorTest qualified as LocateCombinatorTest
 import HTTP.MatchTypeTest qualified as MatchTypeTest
 import Test.Tasty (TestTree, defaultMain, testGroup)

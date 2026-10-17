@@ -72,7 +72,7 @@ data WDSession = MkWDSession
   }
 
 -- | Create a new WebDriver session based on config
-getWDSession :: (HasCallStack) => Bool -> IO WDSession
+getWDSession :: HasCallStack => Bool -> IO WDSession
 getWDSession wantBiDiSocket = do
   MkCfgLoaded
     { httpEndpoint = endpoint,
