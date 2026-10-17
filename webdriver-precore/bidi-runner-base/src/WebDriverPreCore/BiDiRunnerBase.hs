@@ -273,7 +273,7 @@ openClientConn host' port' path' = do
   conn <-
     WS.newClientConnection
       stream
-      (unpack host')
+      (unpack host' <> ":" <> show port')
       (unpack path')
       WS.defaultConnectionOptions
       []
