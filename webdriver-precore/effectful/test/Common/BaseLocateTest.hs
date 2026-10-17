@@ -13,6 +13,7 @@ import Common.WebDriver.Effect
   )
 import Common.WebDriver.TestUtils (locateChkAttr, locateChkAutoId)
 import Common.WebDriver.TestUtils qualified as TU
+import Data.Either (isRight)
 import Data.Function ((&))
 import Data.Text (Text, unpack)
 import Effectful (Eff, (:>))
@@ -24,7 +25,6 @@ import WebDriverPreCore.Extended.Locators as LS
 import WebDriverPreCore.Test.TestData
 import WebDriverPreCore.Utils.Utils (txt)
 import Prelude
-import Data.Either (isRight)
 
 -- ---------------------------------------------------------------------------
 -- Landmark and Role Tests
@@ -117,16 +117,9 @@ testExtendedRoleMatching run interpNever interpAlways interpMiss =
             testNever "ExtLocateNever - locate does NOT find region via aria-labelledby" $ do
               locRslt <- locate @elm $ region "Personal Information"
               TU.chkLocException (txt (region "Personal Information")) isNotFound locRslt,
-            testAlways "ExtLocateAlways - locateAll finds region via aria-labelledby" $ do
-              
-              locRslt <- locateAll @elm $ region "Personal Information"
-              TU.chkElms (txt (region "Personal Information")) (elmCountMatches 1) locRslt,
-            testMiss "ExtLocateSingletonMiss - locateAll does NOT find region via aria-labelledby" $ do
-              locRslt <- locateAll @elm $ region "Personal Information"
-              TU.chkElms (txt (region "Personal Information")) (elmCountMatches 0) locRslt,
-            testNever "ExtLocateNever - locateAll does NOT find region via aria-labelledby" $ do
-              locRslt <- locateAll @elm $ region "Personal Information"
-              TU.chkElms (txt (region "Personal Information")) (elmCountMatches 0) locRslt
+            chkElmCountAlways "ExtLocateAlways - locateAll finds region via aria-labelledby" (region "Personal Information") 1,
+            chkElmCountMiss "ExtLocateSingletonMiss - locateAll does NOT find region via aria-labelledby" (region "Personal Information") 0,
+            chkElmCountNever "ExtLocateNever - locateAll does NOT find region via aria-labelledby" (region "Personal Information") 0
           ],
         testGroup
           "for id label association"
@@ -153,14 +146,11 @@ testExtendedRoleMatching run interpNever interpAlways interpMiss =
               (textbox "Given Name")
               "auto-id"
               "edt-given-name",
-              
             testNever "ExtLocateNever - locate does NOT find textbox via for id label" $ do
               locRslt <- locate @elm $ textbox "Given Name"
               TU.chkLocException (txt (textbox "Given Name")) isNotFound locRslt,
-            
             chkElmCountAlways "ExtLocateAlways - locateAll finds radio via for id label" (radio "Email") 1,
-            chkElmCountMiss  "ExtLocateSingletonMiss - locateAll does NOT find radio via for id label" (radio "Email") 0
-  
+            chkElmCountMiss "ExtLocateSingletonMiss - locateAll does NOT find radio via for id label" (radio "Email") 0
           ],
         testGroup
           "RoleType - unaffected by extended matching"
@@ -519,8 +509,9 @@ testLocateFromElement run interp =
   beforeAll_ (landmarkRolesUrl >>= \url -> run (interp (navigateTo @elm url))) $
     testGroup
       "Locate and LocateAll from Element"
-      [ test "locateAll from element - inputs within sec-personal" $ 
-          TU.locateChkAll "find sec-personal" (TU.autoId "sec-personal") $ elmCountMatches 5,
+      [ test "locateAll from element - inputs within sec-personal"
+          $ TU.locateChkAll "find sec-personal" (TU.autoId "sec-personal")
+          $ elmCountMatches 5,
         test "locateAll from element - links within nav-main" $ do
           navResult <- locate @elm $ TU.autoId "nav-main"
           chkElmM "find nav-main" navResult $ \nav -> do
@@ -656,18 +647,18 @@ isAmbiguous = \case
   L.AmbiguousLocator {} -> True
   _ -> False
 
-chkElmM ::
-  forall elm es.
-  (Show elm, WebDriver elm :> es, Error Text :> es) =>
-  Text ->
-  Either L.LocateException elm ->
-  (elm -> Eff es (Maybe Text)) ->
-  Eff es ()
-chkElmM title locRslt chk =
-  locRslt
-    & either
-      (\err -> TU.locateFail locRslt (title <> " - locate failed: " <> txt err))
-      (\el -> chk el >>= TU.chkWithElement locRslt (title <> " - element check failed") el)
+-- chkElmM ::
+--   forall elm es.
+--   (Show elm, WebDriver elm :> es, Error Text :> es) =>
+--   Text ->
+--   Either L.LocateException elm ->
+--   (elm -> Eff es (Maybe Text)) ->
+--   Eff es ()
+-- chkElmM title locRslt chk =
+--   locRslt
+--     & either
+--       (\err -> TU.locateFail locRslt (title <> " - locate failed: " <> txt err))
+--       (\el -> chk el >>= TU.chkWithElement locRslt (title <> " - element check failed") el)
 
 mkTest ::
   (forall a. Eff es a -> IO a) ->
@@ -689,4 +680,7 @@ chkElmCount' ::
   TestTree
 chkElmCount' run interp name loc expected =
   mkTest run interp name $
-    TU.locateChkAll ("Element count not as expected for " <> txt loc) loc (TU.chkCount expected)
+    TU.locateChkAll
+      ("Element count not as expected for " <> txt loc)
+      loc
+      (TU.chkCount "" expected)

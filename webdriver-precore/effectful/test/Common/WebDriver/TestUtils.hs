@@ -25,6 +25,8 @@ module Common.WebDriver.TestUtils
 
     -- * Predicates
     chkEq,
+    chkRightEq,
+    chkRightCount,
     chkCount,
     chkSingleton,
     chkEmpty,
@@ -200,25 +202,38 @@ locateChkAll errMsg loc chk = do
 
 -- ################ Predicates ################
 
+
+chkRightCount :: forall es a l. (Show l, Error Text :> es) => Text -> Int -> Either l [a] -> Eff es ()
+chkRightCount msg expt =
+  either
+    (fail . txt)
+    (chkCount msg expt)
+
+chkRightEq :: forall es a l. (Eq a, Show a, Show l, Error Text :> es) => Text -> a -> Either l a -> Eff es ()
+chkRightEq msg expt =
+  either
+    (fail . txt)
+    \act -> unless (expt == act) $ fail $ msg <> ":\n  expected: " <> txt expt <> "\n  but got: " <> txt act
+
 -- | Assert equality of two values
 chkEq :: forall es a. (Eq a, Show a, Error Text :> es) => Text -> a -> a -> Eff es ()
 chkEq msg expt act = unless (expt == act) $ fail $ msg <> ":\n  expected: " <> txt expt <> "\n  but got: " <> txt act
 
-chkCount :: (Error Text :> es) => Int -> [a] -> Eff es ()
-chkCount expected actual =
+chkCount :: (Error Text :> es) => Text -> Int -> [a] -> Eff es ()
+chkCount msg expected actual =
   unless
     (expected == actualCount)
-    (fail $ "Expected " <> txt expected <> " elements but got " <> txt actualCount)
+    (fail $ if (T.null msg) then "" else msg <> "\n" <> "Expected " <> txt expected <> " elements but got " <> txt actualCount)
   where
     actualCount = length actual
 
 -- | Check that a list contains exactly one element
 chkSingleton :: (Error Text :> es) => [a] -> Eff es ()
-chkSingleton = chkCount 1
+chkSingleton = chkCount "Singleton Check Failed" 1
 
 -- | Check that a list is empty
 chkEmpty :: (Error Text :> es) => [a] -> Eff es ()
-chkEmpty = chkCount 0
+chkEmpty = chkCount  "Expected 0 elements" 0
 
 -- ################ Config ################
 
