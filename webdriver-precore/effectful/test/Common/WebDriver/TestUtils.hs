@@ -9,8 +9,8 @@ module Common.WebDriver.TestUtils
     locateChkAutoId,
 
     -- * Element Inspection
-    getOuterHtmls,
-    formatOuterHtmls,
+    outerHtmls,
+    outerHtmlsFormatted,
 
     -- * Failure Related
     locateFail,
@@ -18,7 +18,6 @@ module Common.WebDriver.TestUtils
 
     -- * Elm / Attribute Predicates
     chkElm,
-    chkElms,
     chkAttribute,
     chkAttributeEq,
     chkAttributeSingleton,
@@ -77,8 +76,8 @@ failNothing errMsg = maybe (fail errMsg) pure
 -- ################ Element Inspection ################
 
 -- | Get outerHTML for a list of elements using WebDriver effect
-getOuterHtmls :: forall elm es. (WebDriver elm :> es, Error Text :> es) => [elm] -> Eff es [Text]
-getOuterHtmls = traverse getOuterHtml
+outerHtmls :: forall elm es. (WebDriver elm :> es, Error Text :> es) => [elm] -> Eff es (Either (CallStack, Text) [Text])
+outerHtmls = tryError . traverse getOuterHtml
   where
     getOuterHtml :: elm -> Eff es Text
     getOuterHtml =
@@ -88,8 +87,13 @@ getOuterHtmls = traverse getOuterHtml
           wrong -> fail $ "unable to retrieve outerHTML - expected a String but got: " <> txt wrong
 
 -- | Format outer HTMLs as a single text with separators
-formatOuterHtmls :: [Text] -> Text
-formatOuterHtmls htmls = T.intercalate "\n---------\n" htmls
+outerHtmlsFormatted :: (WebDriver elm :> es, Error Text :> es) => [elm] -> Eff es Text
+outerHtmlsFormatted elms =
+  ( either
+      (\l -> "Failed to get outer HTMLs:\n" <> txt l)
+      (T.intercalate "\n---------\n")
+  )
+    <$> outerHtmls elms
 
 -- ################ Checks ################
 
@@ -100,11 +104,6 @@ chkLocException errMsg p locRslt =
     & either
       (\ex -> unless (p ex) $ fail (errMsg <> " (LocateException check failed)\n" <> txt ex))
       (const $ fail (errMsg <> ": expected Left LocateException but got Right:\n" <> txt locRslt))
-
--- | Check a list of elements against a predicate
-chkElms :: forall elm es. (Show elm, Error Text :> es) => Text -> ([elm] -> Bool) -> [elm] -> Eff es ()
-chkElms errMsg p elms =
-  unless (p elms) $ fail (errMsg <> ": element list check failed for\n" <> txt elms)
 
 -- | Singleton variant of 'chkElms'.
 chkElm :: forall elm es. (Show elm, Error Text :> es) => Text -> (elm -> Bool) -> elm -> Eff es ()
@@ -177,11 +176,27 @@ locateChkAutoId loc expctd =
 
 locateChkAll ::
   forall elm es.
-  (Show elm, WebDriver elm :> es, Error Text :> es) =>
+  (WebDriver elm :> es, Error Text :> es) =>
+  Text ->
   Locator ->
-  ([elm] -> Bool) ->
+  ([elm] -> Eff es ()) ->
   Eff es ()
-locateChkAll loc chk = locateAll loc >>= chkElms (txt loc) chk
+locateChkAll errMsg loc chk = do
+  lr <- locateAll loc
+  handleError
+    ( \cs e -> do
+        htmls <- outerHtmlsFormatted lr
+        throwError $
+          errMsg
+            <> "\n"
+            <> e
+            <> "\n"
+            <> "Elements:\n"
+            <> htmls
+            <> "CallStack:\n"
+            <> txt cs
+    )
+    (chk lr)
 
 -- ################ Predicates ################
 

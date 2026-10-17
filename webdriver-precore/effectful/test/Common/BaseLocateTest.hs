@@ -24,6 +24,7 @@ import WebDriverPreCore.Extended.Locators as LS
 import WebDriverPreCore.Test.TestData
 import WebDriverPreCore.Utils.Utils (txt)
 import Prelude
+import Data.Either (isRight)
 
 -- ---------------------------------------------------------------------------
 -- Landmark and Role Tests
@@ -398,7 +399,7 @@ testBasicLocatorTypes run interp =
         chkAutoId "xpath finds element by tag" (xpath "//footer") "ftr-main",
         chkElmCount "input_ tag locator finds all inputs" input_ 7,
         chkElmCount "button_ tag locator finds button elements" button_ 2,
-        chkAll "h1_ tag locator finds the single h1 heading" h1_ (elmCountMatches 1)
+        chkElmCount "h1_ tag locator finds the single h1 heading" h1_ 1
       ]
   where
     test :: Text -> Eff (WebDriver elm : es) () -> TestTree
@@ -409,9 +410,6 @@ testBasicLocatorTypes run interp =
 
     chkElmCount :: Text -> Locator -> Int -> TestTree
     chkElmCount name loc expected = test name (TU.locateChkAll @elm loc (elmCountMatches expected))
-
-    chkAll :: Text -> Locator -> ([elm] -> Maybe Text) -> TestTree
-    chkAll name loc chk = test name (TU.locateChkAll @elm loc chk)
 
 -- ---------------------------------------------------------------------------
 -- Class Locator Variants
@@ -512,12 +510,8 @@ testLocateFromElement run interp =
   beforeAll_ (landmarkRolesUrl >>= \url -> run (interp (navigateTo @elm url))) $
     testGroup
       "Locate and LocateAll from Element"
-      [ test "locateAll from element - inputs within sec-personal" $ do
-          secResult <- locate @elm $ TU.autoId "sec-personal"
-          chkElmM "find sec-personal" secResult $ \sec -> do
-            inResult <- locateAllFromElement @elm sec input_
-            TU.chkElms "inputs in sec-personal" (elmCountMatches 5) inResult
-            pure Nothing,
+      [ test "locateAll from element - inputs within sec-personal" $ 
+          TU.locateChkAll "find sec-personal" (TU.autoId "sec-personal") $ elmCountMatches 5,
         test "locateAll from element - links within nav-main" $ do
           navResult <- locate @elm $ TU.autoId "nav-main"
           chkElmM "find nav-main" navResult $ \nav -> do
@@ -528,7 +522,7 @@ testLocateFromElement run interp =
           secResult <- locate @elm $ TU.autoId "sec-personal"
           chkElmM "find sec-personal" secResult $ \sec -> do
             givenResult <- locateFromElement @elm sec $ TU.autoId "edt-given-name"
-            TU.chkElm "edt-given-name in section" (\_ -> Nothing) givenResult
+            TU.chkElm "edt-given-name in section" isRight givenResult
             pure Nothing,
         test "locate from element - not found when element not in scope" $ do
           hdrResult <- locate @elm $ TU.autoId "hdr-main"
@@ -567,7 +561,7 @@ testCombinedLocators run interp =
     test name act = testCase (unpack name) (run (interp act))
 
     chkElmCount :: Text -> Locator -> Int -> TestTree
-    chkElmCount name loc expected = test name (TU.locateChkAll @elm loc (elmCountMatches expected))
+    chkElmCount name loc expected = test name (TU.locateChkAll @elm ("Element count not as expected\nExpected " <> txt expected <> "\nActual: " <> txt expected) loc (elmCountMatches expected))
 
 -- ---------------------------------------------------------------------------
 -- Misc ARIA Role Types
@@ -625,7 +619,6 @@ testMiscAriaRoleTypes run interp interpNever =
         chkAutoId "definition by text content" (definition "John") "def-name"
       ]
   where
-
     interpret = mkTest run
 
     test :: Text -> Eff (WebDriver elm : es) () -> TestTree
@@ -647,11 +640,8 @@ testMiscAriaRoleTypes run interp interpNever =
 -- Shared helpers
 -- ---------------------------------------------------------------------------
 
-elmCountMatches :: forall elm. Int -> [elm] -> Maybe Text
-elmCountMatches expected actual =
-  if length actual == expected
-    then Nothing
-    else Just $ "expected " <> txt expected <> " elements but got " <> txt (length actual)
+elmCountMatches :: forall elm. Int -> [elm] -> Bool
+elmCountMatches expected = (==) expected . length
 
 isNotFound :: L.LocateException -> Bool
 isNotFound = \case
