@@ -1,1073 +1,1514 @@
 module BiDi.BaseLocateTest where
 
-import Common.SessionInit qualified as R
+import Common.BaseLocateTest qualified as Common
+import Common.SessionInit (WDSession (..), closeWDSession, getWDSession)
 import Common.TastyEval qualified as TE
-import Common.Utils (DriverActions (..), autoId, beforeAll_, chkEmpty, chkEq, chkLocException, chkSingleton)
-import Common.Utils qualified as U
-import Data.Text (Text)
-import Effectful
-import HTTP.Runner (WDSession, runHttp, runHttpTest, testUrl)
-import Test.Tasty (TestTree, inOrderTestGroup, testGroup, withResource)
+import Common.Utils (autoId)
+import Common.WebDriver.Effect (WebDriver)
+import Common.WebDriver.InterpreterBiDi qualified as Interp
+import Data.Text (Text, unpack)
+import Effectful (Eff, IOE, liftIO, runEff, (:>))
+import Effectful.Error.Dynamic (Error, runErrorNoCallStack)
+import Test.Tasty (TestTree, inOrderTestGroup, withResource)
+import UnliftIO (finally, onException, throwIO)
 import WebDriver.Effectful
-import WebDriver.Effectful.HTTP.Base.Actions
-import WebDriver.Effectful.Logger (Logger)
-import WebDriverPreCore.Extended.HTTP.Base.Protocol (ElementId, URL)
-import WebDriverPreCore.Extended.Locate qualified as L
-import WebDriverPreCore.Extended.Locators as LS
-import WebDriverPreCore.Test.TestData
-import WebDriverPreCore.Utils.Utils (txt)
+  ( BiDiRunnerHandle (..),
+    WaitPrimative,
+    WebDriverBiDi,
+    acquireBiDiSession,
+    parseBiDiUrlProperty,
+    releaseBiDiSession,
+    runWaitPrimative,
+    runWebDriverBiDi,
+  )
+import WebDriver.Effectful.BiDi.Base.Actions (browsingContextGetTree)
+import WebDriver.Effectful.Logger (Logger, runLogger)
+import WebDriverPreCore.BiDi.Protocol
+  ( BrowsingContext,
+    GetTree (..),
+    GetTreeResult (..),
+    Info (..),
+    NodeRemoteValue,
+  )
+import WebDriverPreCore.Extended.BiDi.Locate qualified as BL
+import WebDriverPreCore.Utils.Utils (ioThrow)
 import Prelude
-import BiDi.Runner (runBiDiTest)
 
-{-
+-- | Base effect stack for BiDi tests, with the dynamic 'Error' effect first.
+type BiDiBaseEffs = '[Error Text, WebDriverBiDi, Logger, WaitPrimative, IOE]
+
+-- | Effect stack over which the shared BiDi WebSocket is established.
+type BiDiRunnerEffs = '[Logger, WaitPrimative, IOE]
+
+-- | The HTTP session together with its single BiDi WebSocket, shared by all tests.
+data BiDiResources = MkBiDiResources
+  { wdSession :: WDSession,
+    biDiHandle :: BiDiRunnerHandle (Eff BiDiRunnerEffs)
+  }
+
+-- | Acquire the HTTP session and its BiDi WebSocket once for the whole group.
+acquireBiDiResources :: IO BiDiResources
+acquireBiDiResources = do
+  sess@MkWDSession {loggerEnv, websocketUrl} <- getWDSession True
+  ( do
+      bidiUrl <- ioThrow (parseBiDiUrlProperty websocketUrl)
+      handle <-
+        runEff
+          $ runWaitPrimative
+          $ runLogger loggerEnv
+          $ acquireBiDiSession bidiUrl
+      pure (MkBiDiResources sess handle)
+    )
+    `onException` closeWDSession sess
+
+-- | Close the BiDi WebSocket and then the HTTP session.
+--
+-- The HTTP session is deleted in a 'finally' so a failure while closing the
+-- WebSocket cannot leak a live session in geckodriver (which then rejects the
+-- next run with @\"Session is already started\"@).
+releaseBiDiResources :: BiDiResources -> IO ()
+releaseBiDiResources MkBiDiResources {wdSession = ws@MkWDSession {loggerEnv}, biDiHandle} =
+  ( runEff
+      $ runWaitPrimative
+      $ runLogger loggerEnv
+      $ releaseBiDiSession biDiHandle
+    )
+    `finally` closeWDSession ws
+
+-- | Default BiDi locate options.
+--
+-- Note: BiDi locate has no equivalent of the HTTP-only extended role matching
+-- or displayed-check modes, so every test group shares these defaults.
+defBiDiOpts :: BL.BiDiLocateOpts
+defBiDiOpts =
+  BL.MkBiDiLocateOpts
+    { singletonCardinality = BL.Unique,
+      mkDefaultLoc = autoId
+    }
+
+-- | Fetch the root (top-level) browsing context of the current session.
+getRootBrowsingContext :: (WebDriverBiDi :> es, IOE :> es) => Eff es BrowsingContext
+getRootBrowsingContext = do
+  tree <- browsingContextGetTree (MkGetTree Nothing Nothing)
+  case tree of
+    MkGetTreeResult (info : _) -> pure info.context
+    _ -> liftIO (fail "No browsing contexts found")
+
 -- >>> _eval tests
-
 -- *** Exception: ExitSuccess
-
 tests :: TestTree
 tests =
-  withResource getBiDiSession R.closeWDSession runSessionTests
+  withResource acquireBiDiResources releaseBiDiResources runSessionTests
   where
-    runSessionTests :: IO WDSession -> TestTree
-    runSessionTests ses =
-      inOrderTestGroup
-        "Base Locate Tests"
-        [ -- Landmark roles and basic element locators on locator-landmark-roles.html
-          beforeAll_ (navToUrl landmarkRolesUrl) $
-            testGroup
-              "Landmark and Role Tests"
-              [ chkAutoId "Locate by ID" (elmId "section-personal") "sec-personal",
-                test "jsDisplay check should NOT be affected by viewport" $ do
-                  maximizeWindow
-                  maxResult <- locateAll $ elmClass "input"
-                  minimizeWindow
-                  minResult <- locateAll $ elmClass "input"
-                  chkEq "Displayed result should be the same for minised and maximised viewport" maxResult minResult,
-                testGroup
-                  "Role Locator Tests"
-                  [ testGroup
-                      "Landmark role types - roleType"
-                      [ chkAutoId "Banner - page header" (roleType Banner) "hdr-main",
-                        chkAutoId "Main landmark" (roleType Main) "main-content",
-                        chkAutoId "ContentInfo - page footer" (roleType ContentInfo) "ftr-main",
-                        chkAutoId "Complementary - aside" (roleType Complementary) "aside-help",
-                        chkAutoId "Search landmark" (roleType Search) "srch-widget"
-                      ],
-                    testGroup
-                      "Role with name - aria-label"
-                      [ chkAutoId "Navigation - Main navigation" (navigation "Main navigation") "nav-main",
-                        chkAutoId "Navigation - Breadcrumb" (navigation "Breadcrumb") "nav-breadcrumb",
-                        chkAutoId "Form - Mega test form" (form "Mega test form") "frm-mega",
-                        chkAutoId "Complementary - Help and tips" (complementary "Help and tips") "aside-help",
-                        chkAutoId "Button - submit by aria-label" (button "Submit the mega form") "btn-submit",
-                        chkAutoId "Button - span with explicit role override" (button "Span acting as button") "btn-span-role",
-                        chkAutoId "Button - link with explicit role override" (button "Link acting as button") "btn-link-role",
-                        chkAutoId "Textbox - Nickname via aria-label" (textbox "Nickname") "edt-nickname",
-                        chkAutoId "Checkbox - Read documents via aria-label" (checkbox "Read documents") "chk-docs-read",
-                        chkAutoId "Img - div with explicit role override" (img "Abstract coloured shape") "img-div-role"
-                      ],
-                    testGroup
-                      "Multi-element role types"
-                      [ chkElmCount "Navigation - finds both nav landmarks" (roleType Navigation) 2
-                      ]
-                  ]
-              ],
-          -- Extended role matching (aria-labelledby, for id label) on locator-extended-roles.html
-          beforeAll_ (navToUrl extendedRolesUrl) $
-            testGroup
-              "Extended Role Matching Tests"
-              [ testGroup
-                  "aria-labelledby resolution"
-                  [ atrrChkExtRole
-                      "ExtLocateAlways - locate finds region via aria-labelledby"
-                      (region "Personal Information")
-                      "auto-id"
-                      "sec-personal",
-                    atrrChkExtMiss
-                      "ExtLocateSingletonMiss - locate finds region via aria-labelledby"
-                      (region "Personal Information")
-                      "auto-id"
-                      "sec-personal",
-                    test "ExtLocateNever - locate does NOT find region via aria-labelledby" $ do
-                      locRslt <- locate $ region "Personal Information"
-                      chkLocException (txt (region "Personal Information")) isNotFound locRslt,
-                    test "ExtLocateAlways - locateAll finds region via aria-labelledby" $ do
-                      locRslt <- locateAllExt $ region "Personal Information"
-                      chkElms (txt (region "Personal Information")) chkSingleton locRslt,
-                    test "ExtLocateSingletonMiss - locateAll does NOT find region via aria-labelledby" $ do
-                      locRslt <- locateAllExtMiss $ region "Personal Information"
-                      chkElms (txt (region "Personal Information")) chkEmpty locRslt,
-                    test "ExtLocateNever - locateAll does NOT find region via aria-labelledby" $ do
-                      locRslt <- locateAll $ region "Personal Information"
-                      chkElms (txt (region "Personal Information")) chkEmpty locRslt
-                  ],
-                testGroup
-                  "for id label association"
-                  [ atrrChkExtRole
-                      "ExtLocateAlways - locate finds radio via for id label"
-                      (radio "Email")
-                      "auto-id"
-                      "rdo-contact-email",
-                    atrrChkExtMiss
-                      "ExtLocateSingletonMiss - locate finds radio via for id label"
-                      (radio "Email")
-                      "auto-id"
-                      "rdo-contact-email",
-                    test "ExtLocateNever - locate does NOT find radio via for id label" $ do
-                      locRslt <- locate $ radio "Email"
-                      chkLocException (txt (radio "Email")) isNotFound locRslt,
-                    atrrChkExtRole
-                      "ExtLocateAlways - locate finds textbox via for id label"
-                      (textbox "Given Name")
-                      "auto-id"
-                      "edt-given-name",
-                    atrrChkExtMiss
-                      "ExtLocateSingletonMiss - locate finds textbox via for id label"
-                      (textbox "Given Name")
-                      "auto-id"
-                      "edt-given-name",
-                    test "ExtLocateNever - locate does NOT find textbox via for id label" $ do
-                      locRslt <- locate $ textbox "Given Name"
-                      chkLocException (txt (textbox "Given Name")) isNotFound locRslt,
-                    test "ExtLocateAlways - locateAll finds radio via for id label" $ do
-                      locRslt <- locateAllExt $ radio "Email"
-                      chkElms (txt (radio "Email")) chkSingleton locRslt,
-                    test "ExtLocateSingletonMiss - locateAll does NOT find radio via for id label" $ do
-                      locRslt <- locateAllExtMiss $ radio "Email"
-                      chkElms (txt (radio "Email")) chkEmpty locRslt
-                  ],
-                testGroup
-                  "RoleType - unaffected by extended matching"
-                  [ test "RoleType Region - ExtLocateNever and ExtLocateAlways give same results" $ do
-                      never <- locateAll $ roleType Region
-                      always <- locateAllExt $ roleType Region
-                      chkEq "RoleType Region results should be identical" never always
-                  ],
-                testGroup
-                  "aria-label - always resolved regardless of setting"
-                  [ chkAutoId
-                      "ExtLocateNever finds textbox with aria-label"
-                      (textbox "Nickname")
-                      "edt-nickname",
-                    atrrChkExtRole
-                      "ExtLocateAlways finds textbox with aria-label"
-                      (textbox "Nickname")
-                      "auto-id"
-                      "edt-nickname",
-                    atrrChkExtMiss
-                      "ExtLocateSingletonMiss finds textbox with aria-label"
-                      (textbox "Nickname")
-                      "auto-id"
-                      "edt-nickname"
-                  ]
-              ],
-          -- Visibility checks on locator-visibility.html
-          beforeAll_ (navToUrl visibilityUrl) $
-            testGroup
-              "Visibility Check Tests"
-              [ testGroup
-                  "locateAll - DisplayedCheckAlways filters hidden and DisplayedCheckNever does not"
-                  [ testGroup
-                      "Rule 1 - display none on element itself"
-                      [ chkElmCount
-                          "edt-notes-hidden has display none via own CSS class - DisplayedCheckAlways filters"
-                          (autoId "edt-notes-hidden")
-                          0,
-                        chkElmCount'
-                          da {locateAllFn = locateAllNeverCheckDisplayed}
-                          "edt-notes-hidden has display none via own CSS class - DisplayedCheckNever finds"
-                          (autoId "edt-notes-hidden")
-                          1
-                      ],
-                    testGroup
-                      "Rule 2 - visibility hidden or collapse - inherited"
-                      [ chkElmCount
-                          "edt-vis-hidden inside inline visibility hidden parent - DisplayedCheckAlways filters"
-                          (autoId "edt-vis-hidden")
-                          0,
-                        chkElmCount'
-                          da {locateAllFn = locateAllNeverCheckDisplayed}
-                          "edt-vis-hidden inside inline visibility hidden parent - DisplayedCheckNever finds"
-                          (autoId "edt-vis-hidden")
-                          1,
-                        chkElmCount
-                          "edt-css-vis-hidden inside CSS class visibility hidden parent - DisplayedCheckAlways filters"
-                          (autoId "edt-css-vis-hidden")
-                          0,
-                        chkElmCount'
-                          da {locateAllFn = locateAllNeverCheckDisplayed}
-                          "edt-css-vis-hidden inside CSS class visibility hidden parent - DisplayedCheckNever finds"
-                          (autoId "edt-css-vis-hidden")
-                          1
-                      ],
-                    testGroup
-                      "Rule 3 - parseFloat opacity equals 0 on element itself"
-                      [ chkElmCount
-                          "fg-opacity-zero div has opacity 0 applied directly - DisplayedCheckAlways filters"
-                          (autoId "fg-opacity-zero")
-                          0,
-                        chkElmCount'
-                          da {locateAllFn = locateAllNeverCheckDisplayed}
-                          "fg-opacity-zero div has opacity 0 applied directly - DisplayedCheckNever finds"
-                          (autoId "fg-opacity-zero")
-                          1
-                      ],
-                    testGroup
-                      "Rule 4 - INPUT with type hidden"
-                      [ chkElmCount
-                          "hdn-session-token is input type hidden - DisplayedCheckAlways filters"
-                          (autoId "hdn-session-token")
-                          0,
-                        chkElmCount'
-                          da {locateAllFn = locateAllNeverCheckDisplayed}
-                          "hdn-session-token is input type hidden - DisplayedCheckNever finds"
-                          (autoId "hdn-session-token")
-                          1
-                      ],
-                    testGroup
-                      "Rule 5 - offsetWidth or offsetHeight equals 0 - parent has display none"
-                      [ chkElmCount
-                          "edt-display-none inside inline display none parent - DisplayedCheckAlways filters"
-                          (autoId "edt-display-none")
-                          0,
-                        chkElmCount'
-                          da {locateAllFn = locateAllNeverCheckDisplayed}
-                          "edt-display-none inside inline display none parent - DisplayedCheckNever finds"
-                          (autoId "edt-display-none")
-                          1,
-                        chkElmCount
-                          "edt-css-none inside CSS class display none parent - DisplayedCheckAlways filters"
-                          (autoId "edt-css-none")
-                          0,
-                        chkElmCount'
-                          da {locateAllFn = locateAllNeverCheckDisplayed}
-                          "edt-css-none inside CSS class display none parent - DisplayedCheckNever finds"
-                          (autoId "edt-css-none")
-                          1,
-                        chkElmCount
-                          "edt-html-hidden inside HTML hidden attribute parent - DisplayedCheckAlways filters"
-                          (autoId "edt-html-hidden")
-                          0,
-                        chkElmCount'
-                          da {locateAllFn = locateAllNeverCheckDisplayed}
-                          "edt-html-hidden inside HTML hidden attribute parent - DisplayedCheckNever finds"
-                          (autoId "edt-html-hidden")
-                          1
-                      ],
-                    testGroup
-                      "NOT filtered by displayedJS"
-                      [ chkElmCount
-                          "edt-aria-hidden - aria-hidden does not affect display - DisplayedCheckAlways finds"
-                          (autoId "edt-aria-hidden")
-                          1,
-                        chkElmCount'
-                          da {locateAllFn = locateAllNeverCheckDisplayed}
-                          "edt-aria-hidden - aria-hidden does not affect display - DisplayedCheckNever finds"
-                          (autoId "edt-aria-hidden")
-                          1,
-                        chkElmCount
-                          "edt-offscreen positioned off-viewport but has non-zero dimensions - DisplayedCheckAlways finds"
-                          (autoId "edt-offscreen")
-                          1,
-                        chkElmCount'
-                          da {locateAllFn = locateAllNeverCheckDisplayed}
-                          "edt-offscreen positioned off-viewport but has non-zero dimensions - DisplayedCheckNever finds"
-                          (autoId "edt-offscreen")
-                          1,
-                        chkElmCount
-                          "edt-opacity-zero input child of opacity 0 container - opacity not inherited - DisplayedCheckAlways finds"
-                          (autoId "edt-opacity-zero")
-                          1,
-                        chkElmCount'
-                          da {locateAllFn = locateAllNeverCheckDisplayed}
-                          "edt-opacity-zero input child of opacity 0 container - opacity not inherited - DisplayedCheckNever finds"
-                          (autoId "edt-opacity-zero")
-                          1
-                      ]
-                  ],
-                testGroup
-                  "locate singleton - DisplayedCheckDisambiguateUnique resolves hidden-visible ambiguity"
-                  [ test "DisplayedCheckNever with Unique throws AmbiguousLocator - hidden and visible share class" $ do
-                      locRslt <- locateNever $ elmClass "notes-area"
-                      chkLocException (txt (elmClass "notes-area")) isAmbiguous locRslt,
-                    test "DisplayedCheckDisambiguateUnique filters hidden - resolving to unique visible element" $ do
-                      locRslt <- locateDisambiguate $ elmClass "notes-area"
-                      chkAttributeEqElm (txt (elmClass "notes-area")) "auto-id" "edt-notes-visible" locRslt,
-                    test "DisplayedCheckAlways also filters hidden, resolving to unique visible element" $ do
-                      locRslt <- locate $ elmClass "notes-area"
-                      chkAttributeEqElm (txt (elmClass "notes-area")) "auto-id" "edt-notes-visible" locRslt
-                  ],
-                testGroup
-                  "locateAll - DisplayedCheckDisambiguateUnique has no effect - only Always filters"
-                  [ test "DisambiguateUnique gives same result as Never for locateAll" $ do
-                      disambiguate <- locateAllDisambiguate $ elmClass "notes-area"
-                      never <- locateAllNever $ elmClass "notes-area"
-                      chkEq "DisambiguateUnique locateAll result must equal Never" disambiguate never,
-                    testGroup
-                      "DisplayedCheckAlways filters hidden in locateAll - Never returns both"
-                      [ chkElmCount "notes-area with DisplayedCheckAlways finds visible only" (elmClass "notes-area") 1,
-                        chkElmCount'
-                          da {locateAllFn = locateAllNeverCheckDisplayed}
-                          "notes-area with DisplayedCheckNever finds both visible and hidden"
-                          (elmClass "notes-area")
-                          2
-                      ]
-                  ]
-              ],
-          beforeAll_ (navToUrl landmarkRolesUrl) $
-            testGroup
-              "Basic Locator Types"
-              [ chkAutoId "defaultId resolves via mkDefaultLoc option" (defaultId "hdr-main") "hdr-main",
-                chkElmCount "allElms finds all page elements" allElms 42,
-                chkAutoId "elmId finds element by HTML id" (elmId "megaforma") "frm-mega",
-                chkAutoId "css attribute selector" (css "[auto-id='ftr-main']") "ftr-main",
-                chkAutoId "xpath finds element by tag" (xpath "//footer") "ftr-main",
-                chkElmCount "input_ tag locator finds all inputs" input_ 7,
-                chkElmCount "button_ tag locator finds button elements" button_ 2,
-                chkAll "h1_ tag locator finds the single h1 heading" h1_ chkSingleton
-              ],
-          beforeAll_ (navToUrl landmarkRolesUrl) $
-            testGroup
-              "Class Locator Variants"
-              [ chkElmCount "elmClass contains match" (elmClass "text-input") 7,
-                chkElmCount "elmClassExact full-equality match" (elmClass "text-input") 7,
-                chkElmCount "elemClassStarts starts-with match" (elemClassStarts "text") 7,
-                chkAutoId "elmClass finds element by single class name" (elmClass "span-button") "btn-span-role"
-              ],
-          beforeAll_ (navToUrl landmarkRolesUrl) $
-            testGroup
-              "Attribute Locator Variants"
-              [ chkAutoId "attribute default contains match" (attribute "auto-id" "hdr-main") "hdr-main",
-                chkAutoId "attributeExact full-equality match" (attribute "auto-id" "hdr-main") "hdr-main",
-                chkElmCount "attributeStarts starts-with match" (attributeStarts "auto-id" "nav") 4,
-                chkElmCount "attribute full case-sensitive finds type text inputs" (attribute' "type" Full CaseSensitive "text") 3,
-                chkAutoId "attribute full case-insensitive matches uppercase value" (attribute' "auto-id" Full CaseInsensitive "HDR-MAIN") "hdr-main"
-              ],
-          beforeAll_ (navToUrl landmarkRolesUrl) $
-            testGroup
-              "roleName and role Constructors"
-              [ chkAutoId "roleName finds element by accessible name" (roleName "Submit the mega form") "btn-submit",
-                chkAutoId "roleName finds aside by aria-label" (roleName "Help and tips") "aside-help",
-                chkAutoId "roleName finds nav by aria-label" (roleName "Main navigation") "nav-main",
-                chkAutoId "role generic constructor - Navigation with name" (role Navigation "Breadcrumb") "nav-breadcrumb"
-              ],
-          beforeAll_ (navToUrl landmarkRolesUrl) $
-            testGroup
-              "Locate and LocateAll from Element"
-              [ test "locateAll from element - inputs within sec-personal" $ do
-                  secResult <- locate $ autoId "sec-personal"
-                  chkElmM "find sec-personal" secResult $ \sec -> do
-                    inResult <- locateAllFromElement sec input_
-                    chkElms "inputs in sec-personal" (elmCountMatches 5) inResult
-                    pure Nothing,
-                test "locateAll from element - links within nav-main" $ do
-                  navResult <- locate $ autoId "nav-main"
-                  chkElmM "find nav-main" navResult $ \nav -> do
-                    linkResult <- locateAllFromElement nav a_
-                    chkElms "links in nav-main" (elmCountMatches 2) linkResult
-                    pure Nothing,
-                test "locate from element - edt-given-name within sec-personal" $ do
-                  secResult <- locate $ autoId "sec-personal"
-                  chkElmM "find sec-personal" secResult $ \sec -> do
-                    givenResult <- locateFromElement sec $ autoId "edt-given-name"
-                    chkElm "edt-given-name in section" (\_ -> Nothing) givenResult
-                    pure Nothing,
-                test "locate from element - not found when element not in scope" $ do
-                  hdrResult <- locate $ autoId "hdr-main"
-                  chkElmM "find hdr-main" hdrResult $ \hdr -> do
-                    notInHdr <- locateFromElement hdr $ autoId "edt-given-name"
-                    pure $ case notInHdr of
-                      Left (L.ElementNotFound {}) -> Nothing
-                      Left other -> Just $ "expected ElementNotFound but got: " <> txt other
-                      Right _ -> Just "expected ElementNotFound but edt-given-name was found in header"
-              ],
-          beforeAll_ (navToUrl landmarkRolesUrl) $
-            testGroup
-              "Combined Locators"
-              [ chkElmCount "AND - input_ and elmClass text-input" (input_ &&& elmClass "text-input") 6,
-                chkElmCount "OR - h1_ or h2_ finds all headings" (h1_ ||| h2_) 3,
-                chkElmCount "Descendant - sec-personal contains input_ finds contained inputs" (autoId "sec-personal" >>> input_) 5,
-                chkElmCount "OR - roleType Navigation or roleType Search" (roleType Navigation ||| roleType Search) 3
-              ],
-          beforeAll_ (navToUrl miscRolesUrl) $
-            testGroup
-              "Misc ARIA Role Types"
-              [ chkAutoId "roleType Article" (roleType Article) "art-main",
-                chkAutoId "article by accessible name" (article "Test article") "art-main",
-                chkAutoId "roleType Heading - single heading on page" (roleType Heading) "hdg-article",
-                chkAutoId "heading by text content" (heading "Article Heading") "hdg-article",
-                chkAutoId "roleType Figure" (roleType Figure) "fig-sample",
-                chkAutoId "figure by accessible name" (figure "Sample figure") "fig-sample",
-                chkAutoId "roleType List - single list on page" (roleType List) "lst-nav",
-                chkAutoId "list by accessible name" (list "Navigation list") "lst-nav",
-                chkElmCount "roleType ListItem finds all list items" (roleType ListItem) 2,
-                chkAutoId "link by text content" (link "Home") "lnk-home",
-                chkElmCount "roleType Link finds all links" (roleType Link) 2,
-                chkAutoId "roleType Table" (roleType Table) "tbl-data",
-                chkAutoId "table by accessible name" (table "Data table") "tbl-data",
-                chkElmCount "roleType Row finds header and data rows" (roleType Row) 2,
-                chkElmCount "roleType ColumnHeader finds both column headers" (roleType ColumnHeader) 2,
-                chkAutoId "columnHeader by text content" (columnHeader "Name") "col-name",
-                chkAutoId "roleType RowHeader" (roleType RowHeader) "row-hdr-a",
-                chkAutoId "rowHeader by text content" (rowHeader "Row A") "row-hdr-a",
-                chkAutoId "roleType Cell" (roleType Cell) "cel-a1",
-                chkAutoId "cell by text content" (cell "Cell A1") "cel-a1",
-                chkAutoId "roleType Group finds fieldset" (roleType Group) "grp-options",
-                chkAutoId "group by accessible name" (group "Options Group") "grp-options",
-                -- Note: <option> elements always have offsetWidth/offsetHeight of 0, even when the
-                -- dropdown is visually open. Browser <select> dropdowns are rendered as native OS
-                -- widgets (not DOM elements), so options never have CSS dimensions. DisplayedCheckAlways
-                -- filters them out. Use DisplayedCheckNever to locate them programmatically.
-                chkElmCount "roleType Option finds no options (DisplayedCheckAlways)" (roleType Option) 0,
-                chkElmCount'
-                  da {locateAllFn = locateAllNeverCheckDisplayed}
-                  "roleType Option with DisplayedCheckNever finds all options"
-                  (roleType Option)
-                  2,
-                chkAutoId "option by text content" (option "Alpha") "opt-alpha",
-                chkAutoId "roleType Separator" (roleType Separator) "sep-main",
-                chkAutoId "progressBar by accessible name" (progressBar "Upload progress") "prg-upload",
-                chkAutoId "slider by accessible name" (slider "Volume") "sld-volume",
-                chkAutoId "spinButton by accessible name" (spinButton "Item count") "spn-count",
-                chkAutoId "roleType Status" (roleType LS.Status) "out-result",
-                chkAutoId "status by accessible name" (LS.status "Calculation result") "out-result",
-                chkAutoId "roleType Term" (roleType Term) "trm-name",
-                chkAutoId "term by text content" (term "Name") "trm-name",
-                chkAutoId "roleType Definition" (roleType Definition) "def-name",
-                chkAutoId "definition by text content" (definition "John") "def-name"
-              ]
+    runSessionTests :: IO BiDiResources -> TestTree
+    runSessionTests res =
+      inOrderTestGroup "Base Locate Tests"
+        [ runInterp Common.testLandmarkAndRole,
+          runInterp Common.testExtendedRoleMatchingNever,
+          Common.testExtendedRoleMatchingAlways run interp,
+          Common.testExtendedRoleMatchingMiss run interp,
+          Common.testExtendedRoleMatchingRoleType run interp interp,
+          Common.testVisibilityAlways run interp,
+          Common.testVisibilityNever run interp,
+          Common.testVisibilityDisambiguate run interp,
+          Common.testVisibilityDisambiguateVsNever run interp interp,
+          Common.testBasicLocatorTypes run interp,
+          Common.testClassLocatorVariants run interp,
+          Common.testAttributeLocatorVariants run interp,
+          Common.testRoleNameAndRole run interp,
+          Common.testLocateFromElement run interp,
+          Common.testCombinedLocators run interp,
+          Common.testMiscAriaRoleTypes run interp,
+          Common.testMiscAriaRoleTypesNever run interp
         ]
       where
-        testRunner = \name act -> runBiDiTest ses name act
-        getProperty = getElementProperty
-        getAttribute = getElementAttribute
-        locateFn = U.locateHttp U.defHttpOpts
-        locateAllFn = U.locateAllHttp U.defHttpOpts
-        locateAllNeverCheckDisplayed = U.locateAllHttp U.defHttpOpts {L.jsRecheckDisplayed = L.DisplayedCheckNever}
 
-        da :: DriverActions (Eff '[WebDriverBiDi, Logger, WaitPrimative, IOE])
-        da =
-          MkDriverActions
-            { testRunner,
-              getProperty,
-              getAttribute,
-              locateFn,
-              locateAllFn
-            }
+        runInterp :: (forall es.
+            (Error Text :> es) =>
+            (forall a. Eff es a -> IO a) ->
+            (forall a. Eff (WebDriver NodeRemoteValue : es) a -> Eff es a) ->
+            TestTree) -> TestTree
+        runInterp tst = tst run interp
 
-        test = runBiDiTest ses
+        run :: forall a. Eff BiDiBaseEffs a -> IO a
+        run act = do
+          MkBiDiResources {wdSession = MkWDSession {loggerEnv}, biDiHandle = MkBiDiRunnerHandle {biDiRunner}} <- res
+          result <-
+            runEff
+              $ runWaitPrimative
+              $ runLogger loggerEnv
+              $ runWebDriverBiDi biDiRunner
+              $ runErrorNoCallStack @Text act
+          case result of
+            Left err -> throwIO (userError (unpack err))
+            Right a -> pure a
 
-        chkElm = U.chkElm da
+        interp :: forall a. Eff (WebDriver NodeRemoteValue : BiDiBaseEffs) a -> Eff BiDiBaseEffs a
+        interp act = do
+          ctx <- getRootBrowsingContext
+          Interp.runWebDriverBiDi defBiDiOpts ctx act
 
-        chkElms = U.chkElms da
-
-        -- Partially applied test helpers using shared functions from Common.Utils
-        chkAutoId :: Text -> Locator -> Text -> TestTree
-        chkAutoId = U.chkAutoIdElm da
-
-        chkElmCount :: Text -> Locator -> Int -> TestTree
-        chkElmCount = chkElmCount' da
-
-        chkElmCount' :: forall m. (MonadIO m) => DriverActions m -> Text -> Locator -> Int -> TestTree
-        chkElmCount' dact header loc expected = U.chkAll dact header loc (elmCountMatches expected)
-
-        elmCountMatches :: Int -> [ElementId] -> Maybe Text
-        elmCountMatches expected actual =
-          if length actual == expected
-            then Nothing
-            else Just $ "expected " <> txt expected <> " elements but got " <> txt (length actual)
-
-        chkAll :: Text -> Locator -> ([ElementId] -> Maybe Text) -> TestTree
-        chkAll = U.chkAll da
-
-        chkAttributeEqElm = U.chkAttributeEqElm da
-
-        chkElmM = U.chkElmM da
-
-        atrrChkExtRole :: Text -> Locator -> Text -> Text -> TestTree
-        atrrChkExtRole testName loc attrName expctd =
-          test testName $ locateExt loc >>= chkAttributeEqElm (txt loc) attrName expctd
-
-        atrrChkExtMiss :: Text -> Locator -> Text -> Text -> TestTree
-        atrrChkExtMiss testName loc attrName expctd =
-          test testName $ do
-            locRslt <- locateExtMiss loc
-            chkAttributeEqElm (txt loc) attrName expctd locRslt
-
-        navToUrl :: IO URL -> IO WDSession
-        navToUrl urlAction = do
-          s <- ses
-          runHttp s $ testUrl urlAction >>= navigateTo
-          pure s
-
-        locate = da.locateFn
-
-        locateAll = da.locateAllFn
-
-        locateFromElement = U.locateFromElementHttp U.defHttpOpts
-
-        locateAllFromElement = U.locateAllFromElementHttp U.defHttpOpts
-
-        withExtendedRoleLocation er = U.defHttpOpts {L.extendedRoleLocation = er}
-
-        locateExt = U.locateHttp (withExtendedRoleLocation L.ExtLocateAlways)
-
-        locateExtMiss = U.locateHttp (withExtendedRoleLocation L.ExtLocateSingletonMiss)
-
-        locateAllExt = U.locateAllHttp (withExtendedRoleLocation L.ExtLocateAlways)
-
-        locateAllExtMiss = U.locateAllHttp (withExtendedRoleLocation L.ExtLocateSingletonMiss)
-
-        isNotFound :: L.LocateException -> Maybe Text
-        isNotFound = \case
-          L.ElementNotFound {} -> Nothing
-          other -> Just $ "expected ElementNotFound but got: " <> txt other
-
-        withDisplayCheck dc = U.defHttpOpts {L.jsRecheckDisplayed = dc}
-
-        locateAllDisambiguate = U.locateAllHttp (withDisplayCheck L.DisplayedCheckDisambiguateUnique)
-        locateAllNever = U.locateAllHttp (withDisplayCheck L.DisplayedCheckNever)
-
-        locateNever = U.locateHttp (withDisplayCheck L.DisplayedCheckNever)
-        locateDisambiguate = U.locateHttp (withDisplayCheck L.DisplayedCheckDisambiguateUnique)
-
-        isAmbiguous :: L.LocateException -> Maybe Text
-        isAmbiguous (L.AmbiguousLocator {}) = Nothing
-        isAmbiguous other = Just $ "expected AmbiguousLocator but got: " <> txt other
-
--- >>> _eval tests
-
--- *** Exception: ExitSuccess
-
-testsHttp :: TestTree
-testsHttp =
-  withResource getBiDiSession R.closeWDSession runSessionTests
-  where
-    runSessionTests :: IO WDSession -> TestTree
-    runSessionTests ses =
-      inOrderTestGroup
-        "Base Locate Tests"
-        [ -- Landmark roles and basic element locators on locator-landmark-roles.html
-          beforeAll_ (navToUrl landmarkRolesUrl) $
-            testGroup
-              "Landmark and Role Tests"
-              [ chkAutoId "Locate by ID" (elmId "section-personal") "sec-personal",
-                test "jsDisplay check should NOT be affected by viewport" $ do
-                  maximizeWindow
-                  maxResult <- locateAll $ elmClass "input"
-                  minimizeWindow
-                  minResult <- locateAll $ elmClass "input"
-                  chkEq "Displayed result should be the same for minised and maximised viewport" maxResult minResult,
-                testGroup
-                  "Role Locator Tests"
-                  [ testGroup
-                      "Landmark role types - roleType"
-                      [ chkAutoId "Banner - page header" (roleType Banner) "hdr-main",
-                        chkAutoId "Main landmark" (roleType Main) "main-content",
-                        chkAutoId "ContentInfo - page footer" (roleType ContentInfo) "ftr-main",
-                        chkAutoId "Complementary - aside" (roleType Complementary) "aside-help",
-                        chkAutoId "Search landmark" (roleType Search) "srch-widget"
-                      ],
-                    testGroup
-                      "Role with name - aria-label"
-                      [ chkAutoId "Navigation - Main navigation" (navigation "Main navigation") "nav-main",
-                        chkAutoId "Navigation - Breadcrumb" (navigation "Breadcrumb") "nav-breadcrumb",
-                        chkAutoId "Form - Mega test form" (form "Mega test form") "frm-mega",
-                        chkAutoId "Complementary - Help and tips" (complementary "Help and tips") "aside-help",
-                        chkAutoId "Button - submit by aria-label" (button "Submit the mega form") "btn-submit",
-                        chkAutoId "Button - span with explicit role override" (button "Span acting as button") "btn-span-role",
-                        chkAutoId "Button - link with explicit role override" (button "Link acting as button") "btn-link-role",
-                        chkAutoId "Textbox - Nickname via aria-label" (textbox "Nickname") "edt-nickname",
-                        chkAutoId "Checkbox - Read documents via aria-label" (checkbox "Read documents") "chk-docs-read",
-                        chkAutoId "Img - div with explicit role override" (img "Abstract coloured shape") "img-div-role"
-                      ],
-                    testGroup
-                      "Multi-element role types"
-                      [ chkElmCount "Navigation - finds both nav landmarks" (roleType Navigation) 2
-                      ]
-                  ]
-              ],
-          -- Extended role matching (aria-labelledby, for id label) on locator-extended-roles.html
-          beforeAll_ (navToUrl extendedRolesUrl) $
-            testGroup
-              "Extended Role Matching Tests"
-              [ testGroup
-                  "aria-labelledby resolution"
-                  [ atrrChkExtRole
-                      "ExtLocateAlways - locate finds region via aria-labelledby"
-                      (region "Personal Information")
-                      "auto-id"
-                      "sec-personal",
-                    atrrChkExtMiss
-                      "ExtLocateSingletonMiss - locate finds region via aria-labelledby"
-                      (region "Personal Information")
-                      "auto-id"
-                      "sec-personal",
-                    test "ExtLocateNever - locate does NOT find region via aria-labelledby" $ do
-                      locRslt <- locate $ region "Personal Information"
-                      chkLocException (txt (region "Personal Information")) isNotFound locRslt,
-                    test "ExtLocateAlways - locateAll finds region via aria-labelledby" $ do
-                      locRslt <- locateAllExt $ region "Personal Information"
-                      chkElms (txt (region "Personal Information")) chkSingleton locRslt,
-                    test "ExtLocateSingletonMiss - locateAll does NOT find region via aria-labelledby" $ do
-                      locRslt <- locateAllExtMiss $ region "Personal Information"
-                      chkElms (txt (region "Personal Information")) chkEmpty locRslt,
-                    test "ExtLocateNever - locateAll does NOT find region via aria-labelledby" $ do
-                      locRslt <- locateAll $ region "Personal Information"
-                      chkElms (txt (region "Personal Information")) chkEmpty locRslt
-                  ],
-                testGroup
-                  "for id label association"
-                  [ atrrChkExtRole
-                      "ExtLocateAlways - locate finds radio via for id label"
-                      (radio "Email")
-                      "auto-id"
-                      "rdo-contact-email",
-                    atrrChkExtMiss
-                      "ExtLocateSingletonMiss - locate finds radio via for id label"
-                      (radio "Email")
-                      "auto-id"
-                      "rdo-contact-email",
-                    test "ExtLocateNever - locate does NOT find radio via for id label" $ do
-                      locRslt <- locate $ radio "Email"
-                      chkLocException (txt (radio "Email")) isNotFound locRslt,
-                    atrrChkExtRole
-                      "ExtLocateAlways - locate finds textbox via for id label"
-                      (textbox "Given Name")
-                      "auto-id"
-                      "edt-given-name",
-                    atrrChkExtMiss
-                      "ExtLocateSingletonMiss - locate finds textbox via for id label"
-                      (textbox "Given Name")
-                      "auto-id"
-                      "edt-given-name",
-                    test "ExtLocateNever - locate does NOT find textbox via for id label" $ do
-                      locRslt <- locate $ textbox "Given Name"
-                      chkLocException (txt (textbox "Given Name")) isNotFound locRslt,
-                    test "ExtLocateAlways - locateAll finds radio via for id label" $ do
-                      locRslt <- locateAllExt $ radio "Email"
-                      chkElms (txt (radio "Email")) chkSingleton locRslt,
-                    test "ExtLocateSingletonMiss - locateAll does NOT find radio via for id label" $ do
-                      locRslt <- locateAllExtMiss $ radio "Email"
-                      chkElms (txt (radio "Email")) chkEmpty locRslt
-                  ],
-                testGroup
-                  "RoleType - unaffected by extended matching"
-                  [ test "RoleType Region - ExtLocateNever and ExtLocateAlways give same results" $ do
-                      never <- locateAll $ roleType Region
-                      always <- locateAllExt $ roleType Region
-                      chkEq "RoleType Region results should be identical" never always
-                  ],
-                testGroup
-                  "aria-label - always resolved regardless of setting"
-                  [ chkAutoId
-                      "ExtLocateNever finds textbox with aria-label"
-                      (textbox "Nickname")
-                      "edt-nickname",
-                    atrrChkExtRole
-                      "ExtLocateAlways finds textbox with aria-label"
-                      (textbox "Nickname")
-                      "auto-id"
-                      "edt-nickname",
-                    atrrChkExtMiss
-                      "ExtLocateSingletonMiss finds textbox with aria-label"
-                      (textbox "Nickname")
-                      "auto-id"
-                      "edt-nickname"
-                  ]
-              ],
-          -- Visibility checks on locator-visibility.html
-          beforeAll_ (navToUrl visibilityUrl) $
-            testGroup
-              "Visibility Check Tests"
-              [ testGroup
-                  "locateAll - DisplayedCheckAlways filters hidden and DisplayedCheckNever does not"
-                  [ testGroup
-                      "Rule 1 - display none on element itself"
-                      [ chkElmCount
-                          "edt-notes-hidden has display none via own CSS class - DisplayedCheckAlways filters"
-                          (autoId "edt-notes-hidden")
-                          0,
-                        chkElmCount'
-                          da {locateAllFn = locateAllNeverCheckDisplayed}
-                          "edt-notes-hidden has display none via own CSS class - DisplayedCheckNever finds"
-                          (autoId "edt-notes-hidden")
-                          1
-                      ],
-                    testGroup
-                      "Rule 2 - visibility hidden or collapse - inherited"
-                      [ chkElmCount
-                          "edt-vis-hidden inside inline visibility hidden parent - DisplayedCheckAlways filters"
-                          (autoId "edt-vis-hidden")
-                          0,
-                        chkElmCount'
-                          da {locateAllFn = locateAllNeverCheckDisplayed}
-                          "edt-vis-hidden inside inline visibility hidden parent - DisplayedCheckNever finds"
-                          (autoId "edt-vis-hidden")
-                          1,
-                        chkElmCount
-                          "edt-css-vis-hidden inside CSS class visibility hidden parent - DisplayedCheckAlways filters"
-                          (autoId "edt-css-vis-hidden")
-                          0,
-                        chkElmCount'
-                          da {locateAllFn = locateAllNeverCheckDisplayed}
-                          "edt-css-vis-hidden inside CSS class visibility hidden parent - DisplayedCheckNever finds"
-                          (autoId "edt-css-vis-hidden")
-                          1
-                      ],
-                    testGroup
-                      "Rule 3 - parseFloat opacity equals 0 on element itself"
-                      [ chkElmCount
-                          "fg-opacity-zero div has opacity 0 applied directly - DisplayedCheckAlways filters"
-                          (autoId "fg-opacity-zero")
-                          0,
-                        chkElmCount'
-                          da {locateAllFn = locateAllNeverCheckDisplayed}
-                          "fg-opacity-zero div has opacity 0 applied directly - DisplayedCheckNever finds"
-                          (autoId "fg-opacity-zero")
-                          1
-                      ],
-                    testGroup
-                      "Rule 4 - INPUT with type hidden"
-                      [ chkElmCount
-                          "hdn-session-token is input type hidden - DisplayedCheckAlways filters"
-                          (autoId "hdn-session-token")
-                          0,
-                        chkElmCount'
-                          da {locateAllFn = locateAllNeverCheckDisplayed}
-                          "hdn-session-token is input type hidden - DisplayedCheckNever finds"
-                          (autoId "hdn-session-token")
-                          1
-                      ],
-                    testGroup
-                      "Rule 5 - offsetWidth or offsetHeight equals 0 - parent has display none"
-                      [ chkElmCount
-                          "edt-display-none inside inline display none parent - DisplayedCheckAlways filters"
-                          (autoId "edt-display-none")
-                          0,
-                        chkElmCount'
-                          da {locateAllFn = locateAllNeverCheckDisplayed}
-                          "edt-display-none inside inline display none parent - DisplayedCheckNever finds"
-                          (autoId "edt-display-none")
-                          1,
-                        chkElmCount
-                          "edt-css-none inside CSS class display none parent - DisplayedCheckAlways filters"
-                          (autoId "edt-css-none")
-                          0,
-                        chkElmCount'
-                          da {locateAllFn = locateAllNeverCheckDisplayed}
-                          "edt-css-none inside CSS class display none parent - DisplayedCheckNever finds"
-                          (autoId "edt-css-none")
-                          1,
-                        chkElmCount
-                          "edt-html-hidden inside HTML hidden attribute parent - DisplayedCheckAlways filters"
-                          (autoId "edt-html-hidden")
-                          0,
-                        chkElmCount'
-                          da {locateAllFn = locateAllNeverCheckDisplayed}
-                          "edt-html-hidden inside HTML hidden attribute parent - DisplayedCheckNever finds"
-                          (autoId "edt-html-hidden")
-                          1
-                      ],
-                    testGroup
-                      "NOT filtered by displayedJS"
-                      [ chkElmCount
-                          "edt-aria-hidden - aria-hidden does not affect display - DisplayedCheckAlways finds"
-                          (autoId "edt-aria-hidden")
-                          1,
-                        chkElmCount'
-                          da {locateAllFn = locateAllNeverCheckDisplayed}
-                          "edt-aria-hidden - aria-hidden does not affect display - DisplayedCheckNever finds"
-                          (autoId "edt-aria-hidden")
-                          1,
-                        chkElmCount
-                          "edt-offscreen positioned off-viewport but has non-zero dimensions - DisplayedCheckAlways finds"
-                          (autoId "edt-offscreen")
-                          1,
-                        chkElmCount'
-                          da {locateAllFn = locateAllNeverCheckDisplayed}
-                          "edt-offscreen positioned off-viewport but has non-zero dimensions - DisplayedCheckNever finds"
-                          (autoId "edt-offscreen")
-                          1,
-                        chkElmCount
-                          "edt-opacity-zero input child of opacity 0 container - opacity not inherited - DisplayedCheckAlways finds"
-                          (autoId "edt-opacity-zero")
-                          1,
-                        chkElmCount'
-                          da {locateAllFn = locateAllNeverCheckDisplayed}
-                          "edt-opacity-zero input child of opacity 0 container - opacity not inherited - DisplayedCheckNever finds"
-                          (autoId "edt-opacity-zero")
-                          1
-                      ]
-                  ],
-                testGroup
-                  "locate singleton - DisplayedCheckDisambiguateUnique resolves hidden-visible ambiguity"
-                  [ test "DisplayedCheckNever with Unique throws AmbiguousLocator - hidden and visible share class" $ do
-                      locRslt <- locateNever $ elmClass "notes-area"
-                      chkLocException (txt (elmClass "notes-area")) isAmbiguous locRslt,
-                    test "DisplayedCheckDisambiguateUnique filters hidden - resolving to unique visible element" $ do
-                      locRslt <- locateDisambiguate $ elmClass "notes-area"
-                      chkAttributeEqElm (txt (elmClass "notes-area")) "auto-id" "edt-notes-visible" locRslt,
-                    test "DisplayedCheckAlways also filters hidden, resolving to unique visible element" $ do
-                      locRslt <- locate $ elmClass "notes-area"
-                      chkAttributeEqElm (txt (elmClass "notes-area")) "auto-id" "edt-notes-visible" locRslt
-                  ],
-                testGroup
-                  "locateAll - DisplayedCheckDisambiguateUnique has no effect - only Always filters"
-                  [ test "DisambiguateUnique gives same result as Never for locateAll" $ do
-                      disambiguate <- locateAllDisambiguate $ elmClass "notes-area"
-                      never <- locateAllNever $ elmClass "notes-area"
-                      chkEq "DisambiguateUnique locateAll result must equal Never" disambiguate never,
-                    testGroup
-                      "DisplayedCheckAlways filters hidden in locateAll - Never returns both"
-                      [ chkElmCount "notes-area with DisplayedCheckAlways finds visible only" (elmClass "notes-area") 1,
-                        chkElmCount'
-                          da {locateAllFn = locateAllNeverCheckDisplayed}
-                          "notes-area with DisplayedCheckNever finds both visible and hidden"
-                          (elmClass "notes-area")
-                          2
-                      ]
-                  ]
-              ],
-          beforeAll_ (navToUrl landmarkRolesUrl) $
-            testGroup
-              "Basic Locator Types"
-              [ chkAutoId "defaultId resolves via mkDefaultLoc option" (defaultId "hdr-main") "hdr-main",
-                chkElmCount "allElms finds all page elements" allElms 42,
-                chkAutoId "elmId finds element by HTML id" (elmId "megaforma") "frm-mega",
-                chkAutoId "css attribute selector" (css "[auto-id='ftr-main']") "ftr-main",
-                chkAutoId "xpath finds element by tag" (xpath "//footer") "ftr-main",
-                chkElmCount "input_ tag locator finds all inputs" input_ 7,
-                chkElmCount "button_ tag locator finds button elements" button_ 2,
-                chkAll "h1_ tag locator finds the single h1 heading" h1_ chkSingleton
-              ],
-          beforeAll_ (navToUrl landmarkRolesUrl) $
-            testGroup
-              "Class Locator Variants"
-              [ chkElmCount "elmClass contains match" (elmClass "text-input") 7,
-                chkElmCount "elmClassExact full-equality match" (elmClass "text-input") 7,
-                chkElmCount "elemClassStarts starts-with match" (elemClassStarts "text") 7,
-                chkAutoId "elmClass finds element by single class name" (elmClass "span-button") "btn-span-role"
-              ],
-          beforeAll_ (navToUrl landmarkRolesUrl) $
-            testGroup
-              "Attribute Locator Variants"
-              [ chkAutoId "attribute default contains match" (attribute "auto-id" "hdr-main") "hdr-main",
-                chkAutoId "attributeExact full-equality match" (attribute "auto-id" "hdr-main") "hdr-main",
-                chkElmCount "attributeStarts starts-with match" (attributeStarts "auto-id" "nav") 4,
-                chkElmCount "attribute full case-sensitive finds type text inputs" (attribute' "type" Full CaseSensitive "text") 3,
-                chkAutoId "attribute full case-insensitive matches uppercase value" (attribute' "auto-id" Full CaseInsensitive "HDR-MAIN") "hdr-main"
-              ],
-          beforeAll_ (navToUrl landmarkRolesUrl) $
-            testGroup
-              "roleName and role Constructors"
-              [ chkAutoId "roleName finds element by accessible name" (roleName "Submit the mega form") "btn-submit",
-                chkAutoId "roleName finds aside by aria-label" (roleName "Help and tips") "aside-help",
-                chkAutoId "roleName finds nav by aria-label" (roleName "Main navigation") "nav-main",
-                chkAutoId "role generic constructor - Navigation with name" (role Navigation "Breadcrumb") "nav-breadcrumb"
-              ],
-          beforeAll_ (navToUrl landmarkRolesUrl) $
-            testGroup
-              "Locate and LocateAll from Element"
-              [ test "locateAll from element - inputs within sec-personal" $ do
-                  secResult <- locate $ autoId "sec-personal"
-                  chkElmM "find sec-personal" secResult $ \sec -> do
-                    inResult <- locateAllFromElement sec input_
-                    chkElms "inputs in sec-personal" (elmCountMatches 5) inResult
-                    pure Nothing,
-                test "locateAll from element - links within nav-main" $ do
-                  navResult <- locate $ autoId "nav-main"
-                  chkElmM "find nav-main" navResult $ \nav -> do
-                    linkResult <- locateAllFromElement nav a_
-                    chkElms "links in nav-main" (elmCountMatches 2) linkResult
-                    pure Nothing,
-                test "locate from element - edt-given-name within sec-personal" $ do
-                  secResult <- locate $ autoId "sec-personal"
-                  chkElmM "find sec-personal" secResult $ \sec -> do
-                    givenResult <- locateFromElement sec $ autoId "edt-given-name"
-                    chkElm "edt-given-name in section" (\_ -> Nothing) givenResult
-                    pure Nothing,
-                test "locate from element - not found when element not in scope" $ do
-                  hdrResult <- locate $ autoId "hdr-main"
-                  chkElmM "find hdr-main" hdrResult $ \hdr -> do
-                    notInHdr <- locateFromElement hdr $ autoId "edt-given-name"
-                    pure $ case notInHdr of
-                      Left (L.ElementNotFound {}) -> Nothing
-                      Left other -> Just $ "expected ElementNotFound but got: " <> txt other
-                      Right _ -> Just "expected ElementNotFound but edt-given-name was found in header"
-              ],
-          beforeAll_ (navToUrl landmarkRolesUrl) $
-            testGroup
-              "Combined Locators"
-              [ chkElmCount "AND - input_ and elmClass text-input" (input_ &&& elmClass "text-input") 6,
-                chkElmCount "OR - h1_ or h2_ finds all headings" (h1_ ||| h2_) 3,
-                chkElmCount "Descendant - sec-personal contains input_ finds contained inputs" (autoId "sec-personal" >>> input_) 5,
-                chkElmCount "OR - roleType Navigation or roleType Search" (roleType Navigation ||| roleType Search) 3
-              ],
-          beforeAll_ (navToUrl miscRolesUrl) $
-            testGroup
-              "Misc ARIA Role Types"
-              [ chkAutoId "roleType Article" (roleType Article) "art-main",
-                chkAutoId "article by accessible name" (article "Test article") "art-main",
-                chkAutoId "roleType Heading - single heading on page" (roleType Heading) "hdg-article",
-                chkAutoId "heading by text content" (heading "Article Heading") "hdg-article",
-                chkAutoId "roleType Figure" (roleType Figure) "fig-sample",
-                chkAutoId "figure by accessible name" (figure "Sample figure") "fig-sample",
-                chkAutoId "roleType List - single list on page" (roleType List) "lst-nav",
-                chkAutoId "list by accessible name" (list "Navigation list") "lst-nav",
-                chkElmCount "roleType ListItem finds all list items" (roleType ListItem) 2,
-                chkAutoId "link by text content" (link "Home") "lnk-home",
-                chkElmCount "roleType Link finds all links" (roleType Link) 2,
-                chkAutoId "roleType Table" (roleType Table) "tbl-data",
-                chkAutoId "table by accessible name" (table "Data table") "tbl-data",
-                chkElmCount "roleType Row finds header and data rows" (roleType Row) 2,
-                chkElmCount "roleType ColumnHeader finds both column headers" (roleType ColumnHeader) 2,
-                chkAutoId "columnHeader by text content" (columnHeader "Name") "col-name",
-                chkAutoId "roleType RowHeader" (roleType RowHeader) "row-hdr-a",
-                chkAutoId "rowHeader by text content" (rowHeader "Row A") "row-hdr-a",
-                chkAutoId "roleType Cell" (roleType Cell) "cel-a1",
-                chkAutoId "cell by text content" (cell "Cell A1") "cel-a1",
-                chkAutoId "roleType Group finds fieldset" (roleType Group) "grp-options",
-                chkAutoId "group by accessible name" (group "Options Group") "grp-options",
-                -- Note: <option> elements always have offsetWidth/offsetHeight of 0, even when the
-                -- dropdown is visually open. Browser <select> dropdowns are rendered as native OS
-                -- widgets (not DOM elements), so options never have CSS dimensions. DisplayedCheckAlways
-                -- filters them out. Use DisplayedCheckNever to locate them programmatically.
-                chkElmCount "roleType Option finds no options (DisplayedCheckAlways)" (roleType Option) 0,
-                chkElmCount'
-                  da {locateAllFn = locateAllNeverCheckDisplayed}
-                  "roleType Option with DisplayedCheckNever finds all options"
-                  (roleType Option)
-                  2,
-                chkAutoId "option by text content" (option "Alpha") "opt-alpha",
-                chkAutoId "roleType Separator" (roleType Separator) "sep-main",
-                chkAutoId "progressBar by accessible name" (progressBar "Upload progress") "prg-upload",
-                chkAutoId "slider by accessible name" (slider "Volume") "sld-volume",
-                chkAutoId "spinButton by accessible name" (spinButton "Item count") "spn-count",
-                chkAutoId "roleType Status" (roleType LS.Status) "out-result",
-                chkAutoId "status by accessible name" (LS.status "Calculation result") "out-result",
-                chkAutoId "roleType Term" (roleType Term) "trm-name",
-                chkAutoId "term by text content" (term "Name") "trm-name",
-                chkAutoId "roleType Definition" (roleType Definition) "def-name",
-                chkAutoId "definition by text content" (definition "John") "def-name"
-              ]
-        ]
-      where
-        testRunner = \name act -> runHttpTest ses name act
-        getProperty = getElementProperty
-        getAttribute = getElementAttribute
-        locateFn = U.locateHttp U.defHttpOpts
-        locateAllFn = U.locateAllHttp U.defHttpOpts
-        locateAllNeverCheckDisplayed = U.locateAllHttp U.defHttpOpts {L.jsRecheckDisplayed = L.DisplayedCheckNever}
-
-        da :: DriverActions (Eff '[WebDriverHttp, Logger, WaitPrimative, IOE])
-        da =
-          MkDriverActions
-            { testRunner,
-              getProperty,
-              getAttribute,
-              locateFn,
-              locateAllFn
-            }
-
-        test = runHttpTest ses
-
-        chkElm = U.chkElm da
-
-        chkElms = U.chkElms da
-
-        -- Partially applied test helpers using shared functions from Common.Utils
-        chkAutoId :: Text -> Locator -> Text -> TestTree
-        chkAutoId = U.chkAutoIdElm da
-
-        chkElmCount :: Text -> Locator -> Int -> TestTree
-        chkElmCount = chkElmCount' da
-
-        chkElmCount' :: forall m. (MonadIO m) => DriverActions m -> Text -> Locator -> Int -> TestTree
-        chkElmCount' dact header loc expected = U.chkAll dact header loc (elmCountMatches expected)
-
-        elmCountMatches :: Int -> [ElementId] -> Maybe Text
-        elmCountMatches expected actual =
-          if length actual == expected
-            then Nothing
-            else Just $ "expected " <> txt expected <> " elements but got " <> txt (length actual)
-
-        chkAll :: Text -> Locator -> ([ElementId] -> Maybe Text) -> TestTree
-        chkAll = U.chkAll da
-
-        chkAttributeEqElm = U.chkAttributeEqElm da
-
-        chkElmM = U.chkElmM da
-
-        atrrChkExtRole :: Text -> Locator -> Text -> Text -> TestTree
-        atrrChkExtRole testName loc attrName expctd =
-          test testName $ locateExt loc >>= chkAttributeEqElm (txt loc) attrName expctd
-
-        atrrChkExtMiss :: Text -> Locator -> Text -> Text -> TestTree
-        atrrChkExtMiss testName loc attrName expctd =
-          test testName $ do
-            locRslt <- locateExtMiss loc
-            chkAttributeEqElm (txt loc) attrName expctd locRslt
-
-        navToUrl :: IO URL -> IO WDSession
-        navToUrl urlAction = do
-          s <- ses
-          runHttp s $ testUrl urlAction >>= navigateTo
-          pure s
-
-        locate = da.locateFn
-
-        locateAll = da.locateAllFn
-
-        locateFromElement = U.locateFromElementHttp U.defHttpOpts
-
-        locateAllFromElement = U.locateAllFromElementHttp U.defHttpOpts
-
-        withExtendedRoleLocation er = U.defHttpOpts {L.extendedRoleLocation = er}
-
-        locateExt = U.locateHttp (withExtendedRoleLocation L.ExtLocateAlways)
-
-        locateExtMiss = U.locateHttp (withExtendedRoleLocation L.ExtLocateSingletonMiss)
-
-        locateAllExt = U.locateAllHttp (withExtendedRoleLocation L.ExtLocateAlways)
-
-        locateAllExtMiss = U.locateAllHttp (withExtendedRoleLocation L.ExtLocateSingletonMiss)
-
-        isNotFound :: L.LocateException -> Maybe Text
-        isNotFound = \case
-          L.ElementNotFound {} -> Nothing
-          other -> Just $ "expected ElementNotFound but got: " <> txt other
-
-        withDisplayCheck dc = U.defHttpOpts {L.jsRecheckDisplayed = dc}
-
-        locateAllDisambiguate = U.locateAllHttp (withDisplayCheck L.DisplayedCheckDisambiguateUnique)
-        locateAllNever = U.locateAllHttp (withDisplayCheck L.DisplayedCheckNever)
-
-        locateNever = U.locateHttp (withDisplayCheck L.DisplayedCheckNever)
-        locateDisambiguate = U.locateHttp (withDisplayCheck L.DisplayedCheckDisambiguateUnique)
-
-        isAmbiguous :: L.LocateException -> Maybe Text
-        isAmbiguous (L.AmbiguousLocator {}) = Nothing
-        isAmbiguous other = Just $ "expected AmbiguousLocator but got: " <> txt other
-
-getBiDiSession :: IO WDSession
-getBiDiSession = R.getWDSession True
-
--- (textbox "Nickname") "auto-id" "edt-nickname"
 _eval :: Maybe Text -> TestTree -> IO TE.TastyResult
-_eval = TE.tastyEval
+_eval = TE.tastyEvalStdOutOnFailure
 
 _pattern :: Maybe Text
 _pattern = Just "ExtLocateAlways finds textbox with aria-label"
 
 -- Specific test
 --- >>> _eval _pattern tests
-
--- *** Exception: ExitSuccess
+-- Using debug local config
+-- Base Locate Tests
+--   Extended Role Matching Tests - ExtLocateAlways
+--     aria-label - always resolved regardless of setting
+--       ExtLocateAlways finds textbox with aria-label: FAIL
+--         Exception: websockets-0.13.0.0-88b3b12ba74629ce0101e1cb56645b62632867e7db8688b5eb3bdc9971076bde:Network.WebSockets.Http.HandshakeException:
+--         
+--         RequestRejected (RequestHead {requestPath = "/session/52bcd867-c1e0-47f8-ad5f-a04fefe3a8b3", requestHeaders = [("Host","127.0.0.1"),("Connection","Upgrade"),("Upgrade","websocket"),("Sec-WebSocket-Key","8V5BgwU/8XUwPw97cZ12fw=="),("Sec-WebSocket-Version","13")], requestSecure = False}) (ResponseHead {responseCode = 400, responseMessage = "Bad Request", responseHeaders = [("content-type","text/plain;charset=utf-8"),("connection","close"),("server","httpd.js"),("date","Sat, 17 Oct 2026 20:08:22 GMT"),("content-length","12")]})
+--         
+--         While handling RequestRejected (RequestHead {requestPath = "/session/52bcd867-c1e0-47f8-ad5f-a04fefe3a8b3", requestHeaders = [("Host","127.0.0.1"),("Connection","Upgrade"),("Upgrade","websocket"),("Sec-WebSocket-Key","8V5BgwU/8XUwPw97cZ12fw=="),("Sec-WebSocket-Version","13")], requestSecure = False}) (ResponseHead {responseCode = 400, responseMessage = "Bad Request", responseHeaders = [("content-type","text/plain;charset=utf-8"),("connection","close"),("server","httpd.js"),("date","Sat, 17 Oct 2026 20:08:22 GMT"),("content-length","12")]})
+--         
+--         IPE backtrace:
+--         HasCallStack backtrace:
+--           throwIO, called at ./Test/Tasty/Run.hs:169:19 in tasty-1.5.4-c219ffdaeeb21cab11e36afde43b2b97fa361763300e20b8e8c29de0e1f9bdfc:Test.Tasty.Run
+-- 
+-- 1 out of 1 tests failed (6.07s)
 
 -- All tests
---- >>> _eval Nothing tests -- eval all
-
--- *** Exception: ExitSuccess
-
--}
+--- >>> _eval Nothing tests
+-- Using debug local config
+-- Base Locate Tests
+--   Landmark and Role Tests
+--     Locate by ID:                                                                                                 FAIL
+--       Exception: websockets-0.13.0.0-88b3b12ba74629ce0101e1cb56645b62632867e7db8688b5eb3bdc9971076bde:Network.WebSockets.Http.HandshakeException:
+--       
+--       RequestRejected (RequestHead {requestPath = "/session/1ef3add3-e33b-44de-afd7-161b5f5b2267", requestHeaders = [("Host","127.0.0.1"),("Connection","Upgrade"),("Upgrade","websocket"),("Sec-WebSocket-Key","VImr8OpRQa3aiyAxynZNMA=="),("Sec-WebSocket-Version","13")], requestSecure = False}) (ResponseHead {responseCode = 400, responseMessage = "Bad Request", responseHeaders = [("content-type","text/plain;charset=utf-8"),("connection","close"),("server","httpd.js"),("date","Sat, 17 Oct 2026 10:04:51 GMT"),("content-length","12")]})
+--       
+--       While handling RequestRejected (RequestHead {requestPath = "/session/1ef3add3-e33b-44de-afd7-161b5f5b2267", requestHeaders = [("Host","127.0.0.1"),("Connection","Upgrade"),("Upgrade","websocket"),("Sec-WebSocket-Key","VImr8OpRQa3aiyAxynZNMA=="),("Sec-WebSocket-Version","13")], requestSecure = False}) (ResponseHead {responseCode = 400, responseMessage = "Bad Request", responseHeaders = [("content-type","text/plain;charset=utf-8"),("connection","close"),("server","httpd.js"),("date","Sat, 17 Oct 2026 10:04:51 GMT"),("content-length","12")]})
+--       
+--       IPE backtrace:
+--       HasCallStack backtrace:
+--         throwIO, called at ./Test/Tasty/Run.hs:169:19 in tasty-1.5.4-c219ffdaeeb21cab11e36afde43b2b97fa361763300e20b8e8c29de0e1f9bdfc:Test.Tasty.Run
+--       
+--       Use -p '/Locate by ID/' to rerun this test only.
+--     jsDisplay check should NOT be affected by viewport:                                                           FAIL
+--       Exception: websockets-0.13.0.0-88b3b12ba74629ce0101e1cb56645b62632867e7db8688b5eb3bdc9971076bde:Network.WebSockets.Http.HandshakeException:
+--       
+--       RequestRejected (RequestHead {requestPath = "/session/1ef3add3-e33b-44de-afd7-161b5f5b2267", requestHeaders = [("Host","127.0.0.1"),("Connection","Upgrade"),("Upgrade","websocket"),("Sec-WebSocket-Key","VImr8OpRQa3aiyAxynZNMA=="),("Sec-WebSocket-Version","13")], requestSecure = False}) (ResponseHead {responseCode = 400, responseMessage = "Bad Request", responseHeaders = [("content-type","text/plain;charset=utf-8"),("connection","close"),("server","httpd.js"),("date","Sat, 17 Oct 2026 10:04:51 GMT"),("content-length","12")]})
+--       
+--       IPE backtrace:
+--       HasCallStack backtrace:
+--         throwIO, called at ./Test/Tasty/Run.hs:172:44 in tasty-1.5.4-c219ffdaeeb21cab11e36afde43b2b97fa361763300e20b8e8c29de0e1f9bdfc:Test.Tasty.Run
+--       
+--       Use -p '/jsDisplay check should NOT be affected by viewport/' to rerun this test only.
+--     Role Locator Tests
+--       Landmark role types - roleType
+--         Banner - page header:                                                                                     FAIL
+--           Exception: websockets-0.13.0.0-88b3b12ba74629ce0101e1cb56645b62632867e7db8688b5eb3bdc9971076bde:Network.WebSockets.Http.HandshakeException:
+--           
+--           RequestRejected (RequestHead {requestPath = "/session/1ef3add3-e33b-44de-afd7-161b5f5b2267", requestHeaders = [("Host","127.0.0.1"),("Connection","Upgrade"),("Upgrade","websocket"),("Sec-WebSocket-Key","VImr8OpRQa3aiyAxynZNMA=="),("Sec-WebSocket-Version","13")], requestSecure = False}) (ResponseHead {responseCode = 400, responseMessage = "Bad Request", responseHeaders = [("content-type","text/plain;charset=utf-8"),("connection","close"),("server","httpd.js"),("date","Sat, 17 Oct 2026 10:04:51 GMT"),("content-length","12")]})
+--           
+--           IPE backtrace:
+--           HasCallStack backtrace:
+--             throwIO, called at ./Test/Tasty/Run.hs:172:44 in tasty-1.5.4-c219ffdaeeb21cab11e36afde43b2b97fa361763300e20b8e8c29de0e1f9bdfc:Test.Tasty.Run
+--           
+--           Use -p '/Banner - page header/' to rerun this test only.
+--         Main landmark:                                                                                            FAIL
+--           Exception: websockets-0.13.0.0-88b3b12ba74629ce0101e1cb56645b62632867e7db8688b5eb3bdc9971076bde:Network.WebSockets.Http.HandshakeException:
+--           
+--           RequestRejected (RequestHead {requestPath = "/session/1ef3add3-e33b-44de-afd7-161b5f5b2267", requestHeaders = [("Host","127.0.0.1"),("Connection","Upgrade"),("Upgrade","websocket"),("Sec-WebSocket-Key","VImr8OpRQa3aiyAxynZNMA=="),("Sec-WebSocket-Version","13")], requestSecure = False}) (ResponseHead {responseCode = 400, responseMessage = "Bad Request", responseHeaders = [("content-type","text/plain;charset=utf-8"),("connection","close"),("server","httpd.js"),("date","Sat, 17 Oct 2026 10:04:51 GMT"),("content-length","12")]})
+--           
+--           IPE backtrace:
+--           HasCallStack backtrace:
+--             throwIO, called at ./Test/Tasty/Run.hs:172:44 in tasty-1.5.4-c219ffdaeeb21cab11e36afde43b2b97fa361763300e20b8e8c29de0e1f9bdfc:Test.Tasty.Run
+--           
+--           Use -p '/Main landmark/' to rerun this test only.
+--         ContentInfo - page footer:                                                                                FAIL
+--           Exception: websockets-0.13.0.0-88b3b12ba74629ce0101e1cb56645b62632867e7db8688b5eb3bdc9971076bde:Network.WebSockets.Http.HandshakeException:
+--           
+--           RequestRejected (RequestHead {requestPath = "/session/1ef3add3-e33b-44de-afd7-161b5f5b2267", requestHeaders = [("Host","127.0.0.1"),("Connection","Upgrade"),("Upgrade","websocket"),("Sec-WebSocket-Key","VImr8OpRQa3aiyAxynZNMA=="),("Sec-WebSocket-Version","13")], requestSecure = False}) (ResponseHead {responseCode = 400, responseMessage = "Bad Request", responseHeaders = [("content-type","text/plain;charset=utf-8"),("connection","close"),("server","httpd.js"),("date","Sat, 17 Oct 2026 10:04:51 GMT"),("content-length","12")]})
+--           
+--           IPE backtrace:
+--           HasCallStack backtrace:
+--             throwIO, called at ./Test/Tasty/Run.hs:172:44 in tasty-1.5.4-c219ffdaeeb21cab11e36afde43b2b97fa361763300e20b8e8c29de0e1f9bdfc:Test.Tasty.Run
+--           
+--           Use -p '/ContentInfo - page footer/' to rerun this test only.
+--         Complementary - aside:                                                                                    FAIL
+--           Exception: websockets-0.13.0.0-88b3b12ba74629ce0101e1cb56645b62632867e7db8688b5eb3bdc9971076bde:Network.WebSockets.Http.HandshakeException:
+--           
+--           RequestRejected (RequestHead {requestPath = "/session/1ef3add3-e33b-44de-afd7-161b5f5b2267", requestHeaders = [("Host","127.0.0.1"),("Connection","Upgrade"),("Upgrade","websocket"),("Sec-WebSocket-Key","VImr8OpRQa3aiyAxynZNMA=="),("Sec-WebSocket-Version","13")], requestSecure = False}) (ResponseHead {responseCode = 400, responseMessage = "Bad Request", responseHeaders = [("content-type","text/plain;charset=utf-8"),("connection","close"),("server","httpd.js"),("date","Sat, 17 Oct 2026 10:04:51 GMT"),("content-length","12")]})
+--           
+--           IPE backtrace:
+--           HasCallStack backtrace:
+--             throwIO, called at ./Test/Tasty/Run.hs:172:44 in tasty-1.5.4-c219ffdaeeb21cab11e36afde43b2b97fa361763300e20b8e8c29de0e1f9bdfc:Test.Tasty.Run
+--           
+--           Use -p '/Complementary - aside/' to rerun this test only.
+--         Search landmark:                                                                                          FAIL
+--           Exception: websockets-0.13.0.0-88b3b12ba74629ce0101e1cb56645b62632867e7db8688b5eb3bdc9971076bde:Network.WebSockets.Http.HandshakeException:
+--           
+--           RequestRejected (RequestHead {requestPath = "/session/1ef3add3-e33b-44de-afd7-161b5f5b2267", requestHeaders = [("Host","127.0.0.1"),("Connection","Upgrade"),("Upgrade","websocket"),("Sec-WebSocket-Key","VImr8OpRQa3aiyAxynZNMA=="),("Sec-WebSocket-Version","13")], requestSecure = False}) (ResponseHead {responseCode = 400, responseMessage = "Bad Request", responseHeaders = [("content-type","text/plain;charset=utf-8"),("connection","close"),("server","httpd.js"),("date","Sat, 17 Oct 2026 10:04:51 GMT"),("content-length","12")]})
+--           
+--           IPE backtrace:
+--           HasCallStack backtrace:
+--             throwIO, called at ./Test/Tasty/Run.hs:172:44 in tasty-1.5.4-c219ffdaeeb21cab11e36afde43b2b97fa361763300e20b8e8c29de0e1f9bdfc:Test.Tasty.Run
+--           
+--           Use -p '/Search landmark/' to rerun this test only.
+--       Role with name - aria-label
+--         Navigation - Main navigation:                                                                             FAIL
+--           Exception: websockets-0.13.0.0-88b3b12ba74629ce0101e1cb56645b62632867e7db8688b5eb3bdc9971076bde:Network.WebSockets.Http.HandshakeException:
+--           
+--           RequestRejected (RequestHead {requestPath = "/session/1ef3add3-e33b-44de-afd7-161b5f5b2267", requestHeaders = [("Host","127.0.0.1"),("Connection","Upgrade"),("Upgrade","websocket"),("Sec-WebSocket-Key","VImr8OpRQa3aiyAxynZNMA=="),("Sec-WebSocket-Version","13")], requestSecure = False}) (ResponseHead {responseCode = 400, responseMessage = "Bad Request", responseHeaders = [("content-type","text/plain;charset=utf-8"),("connection","close"),("server","httpd.js"),("date","Sat, 17 Oct 2026 10:04:51 GMT"),("content-length","12")]})
+--           
+--           IPE backtrace:
+--           HasCallStack backtrace:
+--             throwIO, called at ./Test/Tasty/Run.hs:172:44 in tasty-1.5.4-c219ffdaeeb21cab11e36afde43b2b97fa361763300e20b8e8c29de0e1f9bdfc:Test.Tasty.Run
+--           
+--           Use -p '/Navigation - Main navigation/' to rerun this test only.
+--         Navigation - Breadcrumb:                                                                                  FAIL
+--           Exception: websockets-0.13.0.0-88b3b12ba74629ce0101e1cb56645b62632867e7db8688b5eb3bdc9971076bde:Network.WebSockets.Http.HandshakeException:
+--           
+--           RequestRejected (RequestHead {requestPath = "/session/1ef3add3-e33b-44de-afd7-161b5f5b2267", requestHeaders = [("Host","127.0.0.1"),("Connection","Upgrade"),("Upgrade","websocket"),("Sec-WebSocket-Key","VImr8OpRQa3aiyAxynZNMA=="),("Sec-WebSocket-Version","13")], requestSecure = False}) (ResponseHead {responseCode = 400, responseMessage = "Bad Request", responseHeaders = [("content-type","text/plain;charset=utf-8"),("connection","close"),("server","httpd.js"),("date","Sat, 17 Oct 2026 10:04:51 GMT"),("content-length","12")]})
+--           
+--           IPE backtrace:
+--           HasCallStack backtrace:
+--             throwIO, called at ./Test/Tasty/Run.hs:172:44 in tasty-1.5.4-c219ffdaeeb21cab11e36afde43b2b97fa361763300e20b8e8c29de0e1f9bdfc:Test.Tasty.Run
+--           
+--           Use -p '/Navigation - Breadcrumb/' to rerun this test only.
+--         Form - Mega test form:                                                                                    FAIL
+--           Exception: websockets-0.13.0.0-88b3b12ba74629ce0101e1cb56645b62632867e7db8688b5eb3bdc9971076bde:Network.WebSockets.Http.HandshakeException:
+--           
+--           RequestRejected (RequestHead {requestPath = "/session/1ef3add3-e33b-44de-afd7-161b5f5b2267", requestHeaders = [("Host","127.0.0.1"),("Connection","Upgrade"),("Upgrade","websocket"),("Sec-WebSocket-Key","VImr8OpRQa3aiyAxynZNMA=="),("Sec-WebSocket-Version","13")], requestSecure = False}) (ResponseHead {responseCode = 400, responseMessage = "Bad Request", responseHeaders = [("content-type","text/plain;charset=utf-8"),("connection","close"),("server","httpd.js"),("date","Sat, 17 Oct 2026 10:04:51 GMT"),("content-length","12")]})
+--           
+--           IPE backtrace:
+--           HasCallStack backtrace:
+--             throwIO, called at ./Test/Tasty/Run.hs:172:44 in tasty-1.5.4-c219ffdaeeb21cab11e36afde43b2b97fa361763300e20b8e8c29de0e1f9bdfc:Test.Tasty.Run
+--           
+--           Use -p '/Form - Mega test form/' to rerun this test only.
+--         Complementary - Help and tips:                                                                            FAIL
+--           Exception: websockets-0.13.0.0-88b3b12ba74629ce0101e1cb56645b62632867e7db8688b5eb3bdc9971076bde:Network.WebSockets.Http.HandshakeException:
+--           
+--           RequestRejected (RequestHead {requestPath = "/session/1ef3add3-e33b-44de-afd7-161b5f5b2267", requestHeaders = [("Host","127.0.0.1"),("Connection","Upgrade"),("Upgrade","websocket"),("Sec-WebSocket-Key","VImr8OpRQa3aiyAxynZNMA=="),("Sec-WebSocket-Version","13")], requestSecure = False}) (ResponseHead {responseCode = 400, responseMessage = "Bad Request", responseHeaders = [("content-type","text/plain;charset=utf-8"),("connection","close"),("server","httpd.js"),("date","Sat, 17 Oct 2026 10:04:51 GMT"),("content-length","12")]})
+--           
+--           IPE backtrace:
+--           HasCallStack backtrace:
+--             throwIO, called at ./Test/Tasty/Run.hs:172:44 in tasty-1.5.4-c219ffdaeeb21cab11e36afde43b2b97fa361763300e20b8e8c29de0e1f9bdfc:Test.Tasty.Run
+--           
+--           Use -p '/Complementary - Help and tips/' to rerun this test only.
+--         Button - submit by aria-label:                                                                            FAIL
+--           Exception: websockets-0.13.0.0-88b3b12ba74629ce0101e1cb56645b62632867e7db8688b5eb3bdc9971076bde:Network.WebSockets.Http.HandshakeException:
+--           
+--           RequestRejected (RequestHead {requestPath = "/session/1ef3add3-e33b-44de-afd7-161b5f5b2267", requestHeaders = [("Host","127.0.0.1"),("Connection","Upgrade"),("Upgrade","websocket"),("Sec-WebSocket-Key","VImr8OpRQa3aiyAxynZNMA=="),("Sec-WebSocket-Version","13")], requestSecure = False}) (ResponseHead {responseCode = 400, responseMessage = "Bad Request", responseHeaders = [("content-type","text/plain;charset=utf-8"),("connection","close"),("server","httpd.js"),("date","Sat, 17 Oct 2026 10:04:51 GMT"),("content-length","12")]})
+--           
+--           IPE backtrace:
+--           HasCallStack backtrace:
+--             throwIO, called at ./Test/Tasty/Run.hs:172:44 in tasty-1.5.4-c219ffdaeeb21cab11e36afde43b2b97fa361763300e20b8e8c29de0e1f9bdfc:Test.Tasty.Run
+--           
+--           Use -p '/Button - submit by aria-label/' to rerun this test only.
+--         Button - span with explicit role override:                                                                FAIL
+--           Exception: websockets-0.13.0.0-88b3b12ba74629ce0101e1cb56645b62632867e7db8688b5eb3bdc9971076bde:Network.WebSockets.Http.HandshakeException:
+--           
+--           RequestRejected (RequestHead {requestPath = "/session/1ef3add3-e33b-44de-afd7-161b5f5b2267", requestHeaders = [("Host","127.0.0.1"),("Connection","Upgrade"),("Upgrade","websocket"),("Sec-WebSocket-Key","VImr8OpRQa3aiyAxynZNMA=="),("Sec-WebSocket-Version","13")], requestSecure = False}) (ResponseHead {responseCode = 400, responseMessage = "Bad Request", responseHeaders = [("content-type","text/plain;charset=utf-8"),("connection","close"),("server","httpd.js"),("date","Sat, 17 Oct 2026 10:04:51 GMT"),("content-length","12")]})
+--           
+--           IPE backtrace:
+--           HasCallStack backtrace:
+--             throwIO, called at ./Test/Tasty/Run.hs:172:44 in tasty-1.5.4-c219ffdaeeb21cab11e36afde43b2b97fa361763300e20b8e8c29de0e1f9bdfc:Test.Tasty.Run
+--           
+--           Use -p '/Button - span with explicit role override/' to rerun this test only.
+--         Button - link with explicit role override:                                                                FAIL
+--           Exception: websockets-0.13.0.0-88b3b12ba74629ce0101e1cb56645b62632867e7db8688b5eb3bdc9971076bde:Network.WebSockets.Http.HandshakeException:
+--           
+--           RequestRejected (RequestHead {requestPath = "/session/1ef3add3-e33b-44de-afd7-161b5f5b2267", requestHeaders = [("Host","127.0.0.1"),("Connection","Upgrade"),("Upgrade","websocket"),("Sec-WebSocket-Key","VImr8OpRQa3aiyAxynZNMA=="),("Sec-WebSocket-Version","13")], requestSecure = False}) (ResponseHead {responseCode = 400, responseMessage = "Bad Request", responseHeaders = [("content-type","text/plain;charset=utf-8"),("connection","close"),("server","httpd.js"),("date","Sat, 17 Oct 2026 10:04:51 GMT"),("content-length","12")]})
+--           
+--           IPE backtrace:
+--           HasCallStack backtrace:
+--             throwIO, called at ./Test/Tasty/Run.hs:172:44 in tasty-1.5.4-c219ffdaeeb21cab11e36afde43b2b97fa361763300e20b8e8c29de0e1f9bdfc:Test.Tasty.Run
+--           
+--           Use -p '/Button - link with explicit role override/' to rerun this test only.
+--         Textbox - Nickname via aria-label:                                                                        FAIL
+--           Exception: websockets-0.13.0.0-88b3b12ba74629ce0101e1cb56645b62632867e7db8688b5eb3bdc9971076bde:Network.WebSockets.Http.HandshakeException:
+--           
+--           RequestRejected (RequestHead {requestPath = "/session/1ef3add3-e33b-44de-afd7-161b5f5b2267", requestHeaders = [("Host","127.0.0.1"),("Connection","Upgrade"),("Upgrade","websocket"),("Sec-WebSocket-Key","VImr8OpRQa3aiyAxynZNMA=="),("Sec-WebSocket-Version","13")], requestSecure = False}) (ResponseHead {responseCode = 400, responseMessage = "Bad Request", responseHeaders = [("content-type","text/plain;charset=utf-8"),("connection","close"),("server","httpd.js"),("date","Sat, 17 Oct 2026 10:04:51 GMT"),("content-length","12")]})
+--           
+--           IPE backtrace:
+--           HasCallStack backtrace:
+--             throwIO, called at ./Test/Tasty/Run.hs:172:44 in tasty-1.5.4-c219ffdaeeb21cab11e36afde43b2b97fa361763300e20b8e8c29de0e1f9bdfc:Test.Tasty.Run
+--           
+--           Use -p '/Textbox - Nickname via aria-label/' to rerun this test only.
+--         Checkbox - Read documents via aria-label:                                                                 FAIL
+--           Exception: websockets-0.13.0.0-88b3b12ba74629ce0101e1cb56645b62632867e7db8688b5eb3bdc9971076bde:Network.WebSockets.Http.HandshakeException:
+--           
+--           RequestRejected (RequestHead {requestPath = "/session/1ef3add3-e33b-44de-afd7-161b5f5b2267", requestHeaders = [("Host","127.0.0.1"),("Connection","Upgrade"),("Upgrade","websocket"),("Sec-WebSocket-Key","VImr8OpRQa3aiyAxynZNMA=="),("Sec-WebSocket-Version","13")], requestSecure = False}) (ResponseHead {responseCode = 400, responseMessage = "Bad Request", responseHeaders = [("content-type","text/plain;charset=utf-8"),("connection","close"),("server","httpd.js"),("date","Sat, 17 Oct 2026 10:04:51 GMT"),("content-length","12")]})
+--           
+--           IPE backtrace:
+--           HasCallStack backtrace:
+--             throwIO, called at ./Test/Tasty/Run.hs:172:44 in tasty-1.5.4-c219ffdaeeb21cab11e36afde43b2b97fa361763300e20b8e8c29de0e1f9bdfc:Test.Tasty.Run
+--           
+--           Use -p '/Checkbox - Read documents via aria-label/' to rerun this test only.
+--         Img - div with explicit role override:                                                                    FAIL
+--           Exception: websockets-0.13.0.0-88b3b12ba74629ce0101e1cb56645b62632867e7db8688b5eb3bdc9971076bde:Network.WebSockets.Http.HandshakeException:
+--           
+--           RequestRejected (RequestHead {requestPath = "/session/1ef3add3-e33b-44de-afd7-161b5f5b2267", requestHeaders = [("Host","127.0.0.1"),("Connection","Upgrade"),("Upgrade","websocket"),("Sec-WebSocket-Key","VImr8OpRQa3aiyAxynZNMA=="),("Sec-WebSocket-Version","13")], requestSecure = False}) (ResponseHead {responseCode = 400, responseMessage = "Bad Request", responseHeaders = [("content-type","text/plain;charset=utf-8"),("connection","close"),("server","httpd.js"),("date","Sat, 17 Oct 2026 10:04:51 GMT"),("content-length","12")]})
+--           
+--           IPE backtrace:
+--           HasCallStack backtrace:
+--             throwIO, called at ./Test/Tasty/Run.hs:172:44 in tasty-1.5.4-c219ffdaeeb21cab11e36afde43b2b97fa361763300e20b8e8c29de0e1f9bdfc:Test.Tasty.Run
+--           
+--           Use -p '/Img - div with explicit role override/' to rerun this test only.
+--       Multi-element role types
+--         Navigation - finds both nav landmarks:                                                                    FAIL
+--           Exception: websockets-0.13.0.0-88b3b12ba74629ce0101e1cb56645b62632867e7db8688b5eb3bdc9971076bde:Network.WebSockets.Http.HandshakeException:
+--           
+--           RequestRejected (RequestHead {requestPath = "/session/1ef3add3-e33b-44de-afd7-161b5f5b2267", requestHeaders = [("Host","127.0.0.1"),("Connection","Upgrade"),("Upgrade","websocket"),("Sec-WebSocket-Key","VImr8OpRQa3aiyAxynZNMA=="),("Sec-WebSocket-Version","13")], requestSecure = False}) (ResponseHead {responseCode = 400, responseMessage = "Bad Request", responseHeaders = [("content-type","text/plain;charset=utf-8"),("connection","close"),("server","httpd.js"),("date","Sat, 17 Oct 2026 10:04:51 GMT"),("content-length","12")]})
+--           
+--           IPE backtrace:
+--           HasCallStack backtrace:
+--             throwIO, called at ./Test/Tasty/Run.hs:172:44 in tasty-1.5.4-c219ffdaeeb21cab11e36afde43b2b97fa361763300e20b8e8c29de0e1f9bdfc:Test.Tasty.Run
+--           
+--           Use -p '/Navigation - finds both nav landmarks/' to rerun this test only.
+--   Extended Role Matching Tests - ExtLocateNever
+--     aria-labelledby resolution
+--       ExtLocateNever - locate does NOT find region via aria-labelledby:                                           FAIL
+--         Exception: websockets-0.13.0.0-88b3b12ba74629ce0101e1cb56645b62632867e7db8688b5eb3bdc9971076bde:Network.WebSockets.Http.HandshakeException:
+--         
+--         RequestRejected (RequestHead {requestPath = "/session/1ef3add3-e33b-44de-afd7-161b5f5b2267", requestHeaders = [("Host","127.0.0.1"),("Connection","Upgrade"),("Upgrade","websocket"),("Sec-WebSocket-Key","VImr8OpRQa3aiyAxynZNMA=="),("Sec-WebSocket-Version","13")], requestSecure = False}) (ResponseHead {responseCode = 400, responseMessage = "Bad Request", responseHeaders = [("content-type","text/plain;charset=utf-8"),("connection","close"),("server","httpd.js"),("date","Sat, 17 Oct 2026 10:04:51 GMT"),("content-length","12")]})
+--         
+--         IPE backtrace:
+--         HasCallStack backtrace:
+--           throwIO, called at ./Test/Tasty/Run.hs:172:44 in tasty-1.5.4-c219ffdaeeb21cab11e36afde43b2b97fa361763300e20b8e8c29de0e1f9bdfc:Test.Tasty.Run
+--         
+--         Use -p '/ExtLocateNever - locate does NOT find region via aria-labelledby/' to rerun this test only.
+--       ExtLocateNever - locateAll does NOT find region via aria-labelledby:                                        FAIL
+--         Exception: websockets-0.13.0.0-88b3b12ba74629ce0101e1cb56645b62632867e7db8688b5eb3bdc9971076bde:Network.WebSockets.Http.HandshakeException:
+--         
+--         RequestRejected (RequestHead {requestPath = "/session/1ef3add3-e33b-44de-afd7-161b5f5b2267", requestHeaders = [("Host","127.0.0.1"),("Connection","Upgrade"),("Upgrade","websocket"),("Sec-WebSocket-Key","VImr8OpRQa3aiyAxynZNMA=="),("Sec-WebSocket-Version","13")], requestSecure = False}) (ResponseHead {responseCode = 400, responseMessage = "Bad Request", responseHeaders = [("content-type","text/plain;charset=utf-8"),("connection","close"),("server","httpd.js"),("date","Sat, 17 Oct 2026 10:04:51 GMT"),("content-length","12")]})
+--         
+--         IPE backtrace:
+--         HasCallStack backtrace:
+--           throwIO, called at ./Test/Tasty/Run.hs:172:44 in tasty-1.5.4-c219ffdaeeb21cab11e36afde43b2b97fa361763300e20b8e8c29de0e1f9bdfc:Test.Tasty.Run
+--         
+--         Use -p '/ExtLocateNever - locateAll does NOT find region via aria-labelledby/' to rerun this test only.
+--     for id label association
+--       ExtLocateNever - locate does NOT find radio via for id label:                                               FAIL
+--         Exception: websockets-0.13.0.0-88b3b12ba74629ce0101e1cb56645b62632867e7db8688b5eb3bdc9971076bde:Network.WebSockets.Http.HandshakeException:
+--         
+--         RequestRejected (RequestHead {requestPath = "/session/1ef3add3-e33b-44de-afd7-161b5f5b2267", requestHeaders = [("Host","127.0.0.1"),("Connection","Upgrade"),("Upgrade","websocket"),("Sec-WebSocket-Key","VImr8OpRQa3aiyAxynZNMA=="),("Sec-WebSocket-Version","13")], requestSecure = False}) (ResponseHead {responseCode = 400, responseMessage = "Bad Request", responseHeaders = [("content-type","text/plain;charset=utf-8"),("connection","close"),("server","httpd.js"),("date","Sat, 17 Oct 2026 10:04:51 GMT"),("content-length","12")]})
+--         
+--         IPE backtrace:
+--         HasCallStack backtrace:
+--           throwIO, called at ./Test/Tasty/Run.hs:172:44 in tasty-1.5.4-c219ffdaeeb21cab11e36afde43b2b97fa361763300e20b8e8c29de0e1f9bdfc:Test.Tasty.Run
+--         
+--         Use -p '/ExtLocateNever - locate does NOT find radio via for id label/' to rerun this test only.
+--       ExtLocateNever - locate does NOT find textbox via for id label:                                             FAIL
+--         Exception: websockets-0.13.0.0-88b3b12ba74629ce0101e1cb56645b62632867e7db8688b5eb3bdc9971076bde:Network.WebSockets.Http.HandshakeException:
+--         
+--         RequestRejected (RequestHead {requestPath = "/session/1ef3add3-e33b-44de-afd7-161b5f5b2267", requestHeaders = [("Host","127.0.0.1"),("Connection","Upgrade"),("Upgrade","websocket"),("Sec-WebSocket-Key","VImr8OpRQa3aiyAxynZNMA=="),("Sec-WebSocket-Version","13")], requestSecure = False}) (ResponseHead {responseCode = 400, responseMessage = "Bad Request", responseHeaders = [("content-type","text/plain;charset=utf-8"),("connection","close"),("server","httpd.js"),("date","Sat, 17 Oct 2026 10:04:51 GMT"),("content-length","12")]})
+--         
+--         IPE backtrace:
+--         HasCallStack backtrace:
+--           throwIO, called at ./Test/Tasty/Run.hs:172:44 in tasty-1.5.4-c219ffdaeeb21cab11e36afde43b2b97fa361763300e20b8e8c29de0e1f9bdfc:Test.Tasty.Run
+--         
+--         Use -p '/ExtLocateNever - locate does NOT find textbox via for id label/' to rerun this test only.
+--     aria-label - always resolved regardless of setting
+--       ExtLocateNever finds textbox with aria-label:                                                               FAIL
+--         Exception: websockets-0.13.0.0-88b3b12ba74629ce0101e1cb56645b62632867e7db8688b5eb3bdc9971076bde:Network.WebSockets.Http.HandshakeException:
+--         
+--         RequestRejected (RequestHead {requestPath = "/session/1ef3add3-e33b-44de-afd7-161b5f5b2267", requestHeaders = [("Host","127.0.0.1"),("Connection","Upgrade"),("Upgrade","websocket"),("Sec-WebSocket-Key","VImr8OpRQa3aiyAxynZNMA=="),("Sec-WebSocket-Version","13")], requestSecure = False}) (ResponseHead {responseCode = 400, responseMessage = "Bad Request", responseHeaders = [("content-type","text/plain;charset=utf-8"),("connection","close"),("server","httpd.js"),("date","Sat, 17 Oct 2026 10:04:51 GMT"),("content-length","12")]})
+--         
+--         IPE backtrace:
+--         HasCallStack backtrace:
+--           throwIO, called at ./Test/Tasty/Run.hs:172:44 in tasty-1.5.4-c219ffdaeeb21cab11e36afde43b2b97fa361763300e20b8e8c29de0e1f9bdfc:Test.Tasty.Run
+--         
+--         Use -p '/ExtLocateNever finds textbox with aria-label/' to rerun this test only.
+--   Extended Role Matching Tests - ExtLocateAlways
+--     aria-labelledby resolution
+--       ExtLocateAlways - locate finds region via aria-labelledby:                                                  FAIL
+--         Exception: websockets-0.13.0.0-88b3b12ba74629ce0101e1cb56645b62632867e7db8688b5eb3bdc9971076bde:Network.WebSockets.Http.HandshakeException:
+--         
+--         RequestRejected (RequestHead {requestPath = "/session/1ef3add3-e33b-44de-afd7-161b5f5b2267", requestHeaders = [("Host","127.0.0.1"),("Connection","Upgrade"),("Upgrade","websocket"),("Sec-WebSocket-Key","VImr8OpRQa3aiyAxynZNMA=="),("Sec-WebSocket-Version","13")], requestSecure = False}) (ResponseHead {responseCode = 400, responseMessage = "Bad Request", responseHeaders = [("content-type","text/plain;charset=utf-8"),("connection","close"),("server","httpd.js"),("date","Sat, 17 Oct 2026 10:04:51 GMT"),("content-length","12")]})
+--         
+--         IPE backtrace:
+--         HasCallStack backtrace:
+--           throwIO, called at ./Test/Tasty/Run.hs:172:44 in tasty-1.5.4-c219ffdaeeb21cab11e36afde43b2b97fa361763300e20b8e8c29de0e1f9bdfc:Test.Tasty.Run
+--         
+--         Use -p '/ExtLocateAlways - locate finds region via aria-labelledby/' to rerun this test only.
+--       ExtLocateAlways - locateAll finds region via aria-labelledby:                                               FAIL
+--         Exception: websockets-0.13.0.0-88b3b12ba74629ce0101e1cb56645b62632867e7db8688b5eb3bdc9971076bde:Network.WebSockets.Http.HandshakeException:
+--         
+--         RequestRejected (RequestHead {requestPath = "/session/1ef3add3-e33b-44de-afd7-161b5f5b2267", requestHeaders = [("Host","127.0.0.1"),("Connection","Upgrade"),("Upgrade","websocket"),("Sec-WebSocket-Key","VImr8OpRQa3aiyAxynZNMA=="),("Sec-WebSocket-Version","13")], requestSecure = False}) (ResponseHead {responseCode = 400, responseMessage = "Bad Request", responseHeaders = [("content-type","text/plain;charset=utf-8"),("connection","close"),("server","httpd.js"),("date","Sat, 17 Oct 2026 10:04:51 GMT"),("content-length","12")]})
+--         
+--         IPE backtrace:
+--         HasCallStack backtrace:
+--           throwIO, called at ./Test/Tasty/Run.hs:172:44 in tasty-1.5.4-c219ffdaeeb21cab11e36afde43b2b97fa361763300e20b8e8c29de0e1f9bdfc:Test.Tasty.Run
+--         
+--         Use -p '/ExtLocateAlways - locateAll finds region via aria-labelledby/' to rerun this test only.
+--     for id label association
+--       ExtLocateAlways - locate finds radio via for id label:                                                      FAIL
+--         Exception: websockets-0.13.0.0-88b3b12ba74629ce0101e1cb56645b62632867e7db8688b5eb3bdc9971076bde:Network.WebSockets.Http.HandshakeException:
+--         
+--         RequestRejected (RequestHead {requestPath = "/session/1ef3add3-e33b-44de-afd7-161b5f5b2267", requestHeaders = [("Host","127.0.0.1"),("Connection","Upgrade"),("Upgrade","websocket"),("Sec-WebSocket-Key","VImr8OpRQa3aiyAxynZNMA=="),("Sec-WebSocket-Version","13")], requestSecure = False}) (ResponseHead {responseCode = 400, responseMessage = "Bad Request", responseHeaders = [("content-type","text/plain;charset=utf-8"),("connection","close"),("server","httpd.js"),("date","Sat, 17 Oct 2026 10:04:51 GMT"),("content-length","12")]})
+--         
+--         IPE backtrace:
+--         HasCallStack backtrace:
+--           throwIO, called at ./Test/Tasty/Run.hs:172:44 in tasty-1.5.4-c219ffdaeeb21cab11e36afde43b2b97fa361763300e20b8e8c29de0e1f9bdfc:Test.Tasty.Run
+--         
+--         Use -p '/ExtLocateAlways - locate finds radio via for id label/' to rerun this test only.
+--       ExtLocateAlways - locate finds textbox via for id label:                                                    FAIL
+--         Exception: websockets-0.13.0.0-88b3b12ba74629ce0101e1cb56645b62632867e7db8688b5eb3bdc9971076bde:Network.WebSockets.Http.HandshakeException:
+--         
+--         RequestRejected (RequestHead {requestPath = "/session/1ef3add3-e33b-44de-afd7-161b5f5b2267", requestHeaders = [("Host","127.0.0.1"),("Connection","Upgrade"),("Upgrade","websocket"),("Sec-WebSocket-Key","VImr8OpRQa3aiyAxynZNMA=="),("Sec-WebSocket-Version","13")], requestSecure = False}) (ResponseHead {responseCode = 400, responseMessage = "Bad Request", responseHeaders = [("content-type","text/plain;charset=utf-8"),("connection","close"),("server","httpd.js"),("date","Sat, 17 Oct 2026 10:04:51 GMT"),("content-length","12")]})
+--         
+--         IPE backtrace:
+--         HasCallStack backtrace:
+--           throwIO, called at ./Test/Tasty/Run.hs:172:44 in tasty-1.5.4-c219ffdaeeb21cab11e36afde43b2b97fa361763300e20b8e8c29de0e1f9bdfc:Test.Tasty.Run
+--         
+--         Use -p '/ExtLocateAlways - locate finds textbox via for id label/' to rerun this test only.
+--       ExtLocateAlways - locateAll finds radio via for id label:                                                   FAIL
+--         Exception: websockets-0.13.0.0-88b3b12ba74629ce0101e1cb56645b62632867e7db8688b5eb3bdc9971076bde:Network.WebSockets.Http.HandshakeException:
+--         
+--         RequestRejected (RequestHead {requestPath = "/session/1ef3add3-e33b-44de-afd7-161b5f5b2267", requestHeaders = [("Host","127.0.0.1"),("Connection","Upgrade"),("Upgrade","websocket"),("Sec-WebSocket-Key","VImr8OpRQa3aiyAxynZNMA=="),("Sec-WebSocket-Version","13")], requestSecure = False}) (ResponseHead {responseCode = 400, responseMessage = "Bad Request", responseHeaders = [("content-type","text/plain;charset=utf-8"),("connection","close"),("server","httpd.js"),("date","Sat, 17 Oct 2026 10:04:51 GMT"),("content-length","12")]})
+--         
+--         IPE backtrace:
+--         HasCallStack backtrace:
+--           throwIO, called at ./Test/Tasty/Run.hs:172:44 in tasty-1.5.4-c219ffdaeeb21cab11e36afde43b2b97fa361763300e20b8e8c29de0e1f9bdfc:Test.Tasty.Run
+--         
+--         Use -p '/ExtLocateAlways - locateAll finds radio via for id label/' to rerun this test only.
+--     aria-label - always resolved regardless of setting
+--       ExtLocateAlways finds textbox with aria-label:                                                              FAIL
+--         Exception: websockets-0.13.0.0-88b3b12ba74629ce0101e1cb56645b62632867e7db8688b5eb3bdc9971076bde:Network.WebSockets.Http.HandshakeException:
+--         
+--         RequestRejected (RequestHead {requestPath = "/session/1ef3add3-e33b-44de-afd7-161b5f5b2267", requestHeaders = [("Host","127.0.0.1"),("Connection","Upgrade"),("Upgrade","websocket"),("Sec-WebSocket-Key","VImr8OpRQa3aiyAxynZNMA=="),("Sec-WebSocket-Version","13")], requestSecure = False}) (ResponseHead {responseCode = 400, responseMessage = "Bad Request", responseHeaders = [("content-type","text/plain;charset=utf-8"),("connection","close"),("server","httpd.js"),("date","Sat, 17 Oct 2026 10:04:51 GMT"),("content-length","12")]})
+--         
+--         IPE backtrace:
+--         HasCallStack backtrace:
+--           throwIO, called at ./Test/Tasty/Run.hs:172:44 in tasty-1.5.4-c219ffdaeeb21cab11e36afde43b2b97fa361763300e20b8e8c29de0e1f9bdfc:Test.Tasty.Run
+--         
+--         Use -p '/ExtLocateAlways finds textbox with aria-label/' to rerun this test only.
+--   Extended Role Matching Tests - ExtLocateSingletonMiss
+--     aria-labelledby resolution
+--       ExtLocateSingletonMiss - locate finds region via aria-labelledby:                                           FAIL
+--         Exception: websockets-0.13.0.0-88b3b12ba74629ce0101e1cb56645b62632867e7db8688b5eb3bdc9971076bde:Network.WebSockets.Http.HandshakeException:
+--         
+--         RequestRejected (RequestHead {requestPath = "/session/1ef3add3-e33b-44de-afd7-161b5f5b2267", requestHeaders = [("Host","127.0.0.1"),("Connection","Upgrade"),("Upgrade","websocket"),("Sec-WebSocket-Key","VImr8OpRQa3aiyAxynZNMA=="),("Sec-WebSocket-Version","13")], requestSecure = False}) (ResponseHead {responseCode = 400, responseMessage = "Bad Request", responseHeaders = [("content-type","text/plain;charset=utf-8"),("connection","close"),("server","httpd.js"),("date","Sat, 17 Oct 2026 10:04:51 GMT"),("content-length","12")]})
+--         
+--         IPE backtrace:
+--         HasCallStack backtrace:
+--           throwIO, called at ./Test/Tasty/Run.hs:172:44 in tasty-1.5.4-c219ffdaeeb21cab11e36afde43b2b97fa361763300e20b8e8c29de0e1f9bdfc:Test.Tasty.Run
+--         
+--         Use -p '/ExtLocateSingletonMiss - locate finds region via aria-labelledby/' to rerun this test only.
+--       ExtLocateSingletonMiss - locateAll does NOT find region via aria-labelledby:                                FAIL
+--         Exception: websockets-0.13.0.0-88b3b12ba74629ce0101e1cb56645b62632867e7db8688b5eb3bdc9971076bde:Network.WebSockets.Http.HandshakeException:
+--         
+--         RequestRejected (RequestHead {requestPath = "/session/1ef3add3-e33b-44de-afd7-161b5f5b2267", requestHeaders = [("Host","127.0.0.1"),("Connection","Upgrade"),("Upgrade","websocket"),("Sec-WebSocket-Key","VImr8OpRQa3aiyAxynZNMA=="),("Sec-WebSocket-Version","13")], requestSecure = False}) (ResponseHead {responseCode = 400, responseMessage = "Bad Request", responseHeaders = [("content-type","text/plain;charset=utf-8"),("connection","close"),("server","httpd.js"),("date","Sat, 17 Oct 2026 10:04:51 GMT"),("content-length","12")]})
+--         
+--         IPE backtrace:
+--         HasCallStack backtrace:
+--           throwIO, called at ./Test/Tasty/Run.hs:172:44 in tasty-1.5.4-c219ffdaeeb21cab11e36afde43b2b97fa361763300e20b8e8c29de0e1f9bdfc:Test.Tasty.Run
+--         
+--         Use -p '/ExtLocateSingletonMiss - locateAll does NOT find region via aria-labelledby/' to rerun this test only.
+--     for id label association
+--       ExtLocateSingletonMiss - locate finds radio via for id label:                                               FAIL
+--         Exception: websockets-0.13.0.0-88b3b12ba74629ce0101e1cb56645b62632867e7db8688b5eb3bdc9971076bde:Network.WebSockets.Http.HandshakeException:
+--         
+--         RequestRejected (RequestHead {requestPath = "/session/1ef3add3-e33b-44de-afd7-161b5f5b2267", requestHeaders = [("Host","127.0.0.1"),("Connection","Upgrade"),("Upgrade","websocket"),("Sec-WebSocket-Key","VImr8OpRQa3aiyAxynZNMA=="),("Sec-WebSocket-Version","13")], requestSecure = False}) (ResponseHead {responseCode = 400, responseMessage = "Bad Request", responseHeaders = [("content-type","text/plain;charset=utf-8"),("connection","close"),("server","httpd.js"),("date","Sat, 17 Oct 2026 10:04:51 GMT"),("content-length","12")]})
+--         
+--         IPE backtrace:
+--         HasCallStack backtrace:
+--           throwIO, called at ./Test/Tasty/Run.hs:172:44 in tasty-1.5.4-c219ffdaeeb21cab11e36afde43b2b97fa361763300e20b8e8c29de0e1f9bdfc:Test.Tasty.Run
+--         
+--         Use -p '/ExtLocateSingletonMiss - locate finds radio via for id label/' to rerun this test only.
+--       ExtLocateSingletonMiss - locate finds textbox via for id label:                                             FAIL
+--         Exception: websockets-0.13.0.0-88b3b12ba74629ce0101e1cb56645b62632867e7db8688b5eb3bdc9971076bde:Network.WebSockets.Http.HandshakeException:
+--         
+--         RequestRejected (RequestHead {requestPath = "/session/1ef3add3-e33b-44de-afd7-161b5f5b2267", requestHeaders = [("Host","127.0.0.1"),("Connection","Upgrade"),("Upgrade","websocket"),("Sec-WebSocket-Key","VImr8OpRQa3aiyAxynZNMA=="),("Sec-WebSocket-Version","13")], requestSecure = False}) (ResponseHead {responseCode = 400, responseMessage = "Bad Request", responseHeaders = [("content-type","text/plain;charset=utf-8"),("connection","close"),("server","httpd.js"),("date","Sat, 17 Oct 2026 10:04:51 GMT"),("content-length","12")]})
+--         
+--         IPE backtrace:
+--         HasCallStack backtrace:
+--           throwIO, called at ./Test/Tasty/Run.hs:172:44 in tasty-1.5.4-c219ffdaeeb21cab11e36afde43b2b97fa361763300e20b8e8c29de0e1f9bdfc:Test.Tasty.Run
+--         
+--         Use -p '/ExtLocateSingletonMiss - locate finds textbox via for id label/' to rerun this test only.
+--       ExtLocateSingletonMiss - locateAll does NOT find radio via for id label:                                    FAIL
+--         Exception: websockets-0.13.0.0-88b3b12ba74629ce0101e1cb56645b62632867e7db8688b5eb3bdc9971076bde:Network.WebSockets.Http.HandshakeException:
+--         
+--         RequestRejected (RequestHead {requestPath = "/session/1ef3add3-e33b-44de-afd7-161b5f5b2267", requestHeaders = [("Host","127.0.0.1"),("Connection","Upgrade"),("Upgrade","websocket"),("Sec-WebSocket-Key","VImr8OpRQa3aiyAxynZNMA=="),("Sec-WebSocket-Version","13")], requestSecure = False}) (ResponseHead {responseCode = 400, responseMessage = "Bad Request", responseHeaders = [("content-type","text/plain;charset=utf-8"),("connection","close"),("server","httpd.js"),("date","Sat, 17 Oct 2026 10:04:51 GMT"),("content-length","12")]})
+--         
+--         IPE backtrace:
+--         HasCallStack backtrace:
+--           throwIO, called at ./Test/Tasty/Run.hs:172:44 in tasty-1.5.4-c219ffdaeeb21cab11e36afde43b2b97fa361763300e20b8e8c29de0e1f9bdfc:Test.Tasty.Run
+--         
+--         Use -p '/ExtLocateSingletonMiss - locateAll does NOT find radio via for id label/' to rerun this test only.
+--     aria-label - always resolved regardless of setting
+--       ExtLocateSingletonMiss finds textbox with aria-label:                                                       FAIL
+--         Exception: websockets-0.13.0.0-88b3b12ba74629ce0101e1cb56645b62632867e7db8688b5eb3bdc9971076bde:Network.WebSockets.Http.HandshakeException:
+--         
+--         RequestRejected (RequestHead {requestPath = "/session/1ef3add3-e33b-44de-afd7-161b5f5b2267", requestHeaders = [("Host","127.0.0.1"),("Connection","Upgrade"),("Upgrade","websocket"),("Sec-WebSocket-Key","VImr8OpRQa3aiyAxynZNMA=="),("Sec-WebSocket-Version","13")], requestSecure = False}) (ResponseHead {responseCode = 400, responseMessage = "Bad Request", responseHeaders = [("content-type","text/plain;charset=utf-8"),("connection","close"),("server","httpd.js"),("date","Sat, 17 Oct 2026 10:04:51 GMT"),("content-length","12")]})
+--         
+--         IPE backtrace:
+--         HasCallStack backtrace:
+--           throwIO, called at ./Test/Tasty/Run.hs:172:44 in tasty-1.5.4-c219ffdaeeb21cab11e36afde43b2b97fa361763300e20b8e8c29de0e1f9bdfc:Test.Tasty.Run
+--         
+--         Use -p '/ExtLocateSingletonMiss finds textbox with aria-label/' to rerun this test only.
+--   Extended Role Matching Tests
+--     RoleType - unaffected by extended matching
+--       RoleType Region - ExtLocateNever and ExtLocateAlways give same results:                                     FAIL
+--         Exception: websockets-0.13.0.0-88b3b12ba74629ce0101e1cb56645b62632867e7db8688b5eb3bdc9971076bde:Network.WebSockets.Http.HandshakeException:
+--         
+--         RequestRejected (RequestHead {requestPath = "/session/1ef3add3-e33b-44de-afd7-161b5f5b2267", requestHeaders = [("Host","127.0.0.1"),("Connection","Upgrade"),("Upgrade","websocket"),("Sec-WebSocket-Key","VImr8OpRQa3aiyAxynZNMA=="),("Sec-WebSocket-Version","13")], requestSecure = False}) (ResponseHead {responseCode = 400, responseMessage = "Bad Request", responseHeaders = [("content-type","text/plain;charset=utf-8"),("connection","close"),("server","httpd.js"),("date","Sat, 17 Oct 2026 10:04:51 GMT"),("content-length","12")]})
+--         
+--         IPE backtrace:
+--         HasCallStack backtrace:
+--           throwIO, called at ./Test/Tasty/Run.hs:172:44 in tasty-1.5.4-c219ffdaeeb21cab11e36afde43b2b97fa361763300e20b8e8c29de0e1f9bdfc:Test.Tasty.Run
+--         
+--         Use -p '/RoleType Region - ExtLocateNever and ExtLocateAlways give same results/' to rerun this test only.
+--   Visibility Check Tests - DisplayedCheckAlways
+--     locateAll filters hidden
+--       Rule 1 - display none on element itself
+--         edt-notes-hidden has display none via own CSS class - DisplayedCheckAlways filters:                       FAIL
+--           Exception: websockets-0.13.0.0-88b3b12ba74629ce0101e1cb56645b62632867e7db8688b5eb3bdc9971076bde:Network.WebSockets.Http.HandshakeException:
+--           
+--           RequestRejected (RequestHead {requestPath = "/session/1ef3add3-e33b-44de-afd7-161b5f5b2267", requestHeaders = [("Host","127.0.0.1"),("Connection","Upgrade"),("Upgrade","websocket"),("Sec-WebSocket-Key","VImr8OpRQa3aiyAxynZNMA=="),("Sec-WebSocket-Version","13")], requestSecure = False}) (ResponseHead {responseCode = 400, responseMessage = "Bad Request", responseHeaders = [("content-type","text/plain;charset=utf-8"),("connection","close"),("server","httpd.js"),("date","Sat, 17 Oct 2026 10:04:51 GMT"),("content-length","12")]})
+--           
+--           IPE backtrace:
+--           HasCallStack backtrace:
+--             throwIO, called at ./Test/Tasty/Run.hs:172:44 in tasty-1.5.4-c219ffdaeeb21cab11e36afde43b2b97fa361763300e20b8e8c29de0e1f9bdfc:Test.Tasty.Run
+--           
+--           Use -p '/edt-notes-hidden has display none via own CSS class - DisplayedCheckAlways filters/' to rerun this test only.
+--       Rule 2 - visibility hidden or collapse - inherited
+--         edt-vis-hidden inside inline visibility hidden parent - DisplayedCheckAlways filters:                     FAIL
+--           Exception: websockets-0.13.0.0-88b3b12ba74629ce0101e1cb56645b62632867e7db8688b5eb3bdc9971076bde:Network.WebSockets.Http.HandshakeException:
+--           
+--           RequestRejected (RequestHead {requestPath = "/session/1ef3add3-e33b-44de-afd7-161b5f5b2267", requestHeaders = [("Host","127.0.0.1"),("Connection","Upgrade"),("Upgrade","websocket"),("Sec-WebSocket-Key","VImr8OpRQa3aiyAxynZNMA=="),("Sec-WebSocket-Version","13")], requestSecure = False}) (ResponseHead {responseCode = 400, responseMessage = "Bad Request", responseHeaders = [("content-type","text/plain;charset=utf-8"),("connection","close"),("server","httpd.js"),("date","Sat, 17 Oct 2026 10:04:51 GMT"),("content-length","12")]})
+--           
+--           IPE backtrace:
+--           HasCallStack backtrace:
+--             throwIO, called at ./Test/Tasty/Run.hs:172:44 in tasty-1.5.4-c219ffdaeeb21cab11e36afde43b2b97fa361763300e20b8e8c29de0e1f9bdfc:Test.Tasty.Run
+--           
+--           Use -p '/edt-vis-hidden inside inline visibility hidden parent - DisplayedCheckAlways filters/' to rerun this test only.
+--         edt-css-vis-hidden inside CSS class visibility hidden parent - DisplayedCheckAlways filters:              FAIL
+--           Exception: websockets-0.13.0.0-88b3b12ba74629ce0101e1cb56645b62632867e7db8688b5eb3bdc9971076bde:Network.WebSockets.Http.HandshakeException:
+--           
+--           RequestRejected (RequestHead {requestPath = "/session/1ef3add3-e33b-44de-afd7-161b5f5b2267", requestHeaders = [("Host","127.0.0.1"),("Connection","Upgrade"),("Upgrade","websocket"),("Sec-WebSocket-Key","VImr8OpRQa3aiyAxynZNMA=="),("Sec-WebSocket-Version","13")], requestSecure = False}) (ResponseHead {responseCode = 400, responseMessage = "Bad Request", responseHeaders = [("content-type","text/plain;charset=utf-8"),("connection","close"),("server","httpd.js"),("date","Sat, 17 Oct 2026 10:04:51 GMT"),("content-length","12")]})
+--           
+--           IPE backtrace:
+--           HasCallStack backtrace:
+--             throwIO, called at ./Test/Tasty/Run.hs:172:44 in tasty-1.5.4-c219ffdaeeb21cab11e36afde43b2b97fa361763300e20b8e8c29de0e1f9bdfc:Test.Tasty.Run
+--           
+--           Use -p '/edt-css-vis-hidden inside CSS class visibility hidden parent - DisplayedCheckAlways filters/' to rerun this test only.
+--       Rule 3 - parseFloat opacity equals 0 on element itself
+--         fg-opacity-zero div has opacity 0 applied directly - DisplayedCheckAlways filters:                        FAIL
+--           Exception: websockets-0.13.0.0-88b3b12ba74629ce0101e1cb56645b62632867e7db8688b5eb3bdc9971076bde:Network.WebSockets.Http.HandshakeException:
+--           
+--           RequestRejected (RequestHead {requestPath = "/session/1ef3add3-e33b-44de-afd7-161b5f5b2267", requestHeaders = [("Host","127.0.0.1"),("Connection","Upgrade"),("Upgrade","websocket"),("Sec-WebSocket-Key","VImr8OpRQa3aiyAxynZNMA=="),("Sec-WebSocket-Version","13")], requestSecure = False}) (ResponseHead {responseCode = 400, responseMessage = "Bad Request", responseHeaders = [("content-type","text/plain;charset=utf-8"),("connection","close"),("server","httpd.js"),("date","Sat, 17 Oct 2026 10:04:51 GMT"),("content-length","12")]})
+--           
+--           IPE backtrace:
+--           HasCallStack backtrace:
+--             throwIO, called at ./Test/Tasty/Run.hs:172:44 in tasty-1.5.4-c219ffdaeeb21cab11e36afde43b2b97fa361763300e20b8e8c29de0e1f9bdfc:Test.Tasty.Run
+--           
+--           Use -p '/fg-opacity-zero div has opacity 0 applied directly - DisplayedCheckAlways filters/' to rerun this test only.
+--       Rule 4 - INPUT with type hidden
+--         hdn-session-token is input type hidden - DisplayedCheckAlways filters:                                    FAIL
+--           Exception: websockets-0.13.0.0-88b3b12ba74629ce0101e1cb56645b62632867e7db8688b5eb3bdc9971076bde:Network.WebSockets.Http.HandshakeException:
+--           
+--           RequestRejected (RequestHead {requestPath = "/session/1ef3add3-e33b-44de-afd7-161b5f5b2267", requestHeaders = [("Host","127.0.0.1"),("Connection","Upgrade"),("Upgrade","websocket"),("Sec-WebSocket-Key","VImr8OpRQa3aiyAxynZNMA=="),("Sec-WebSocket-Version","13")], requestSecure = False}) (ResponseHead {responseCode = 400, responseMessage = "Bad Request", responseHeaders = [("content-type","text/plain;charset=utf-8"),("connection","close"),("server","httpd.js"),("date","Sat, 17 Oct 2026 10:04:51 GMT"),("content-length","12")]})
+--           
+--           IPE backtrace:
+--           HasCallStack backtrace:
+--             throwIO, called at ./Test/Tasty/Run.hs:172:44 in tasty-1.5.4-c219ffdaeeb21cab11e36afde43b2b97fa361763300e20b8e8c29de0e1f9bdfc:Test.Tasty.Run
+--           
+--           Use -p '/hdn-session-token is input type hidden - DisplayedCheckAlways filters/' to rerun this test only.
+--       Rule 5 - offsetWidth or offsetHeight equals 0 - parent has display none
+--         edt-display-none inside inline display none parent - DisplayedCheckAlways filters:                        FAIL
+--           Exception: websockets-0.13.0.0-88b3b12ba74629ce0101e1cb56645b62632867e7db8688b5eb3bdc9971076bde:Network.WebSockets.Http.HandshakeException:
+--           
+--           RequestRejected (RequestHead {requestPath = "/session/1ef3add3-e33b-44de-afd7-161b5f5b2267", requestHeaders = [("Host","127.0.0.1"),("Connection","Upgrade"),("Upgrade","websocket"),("Sec-WebSocket-Key","VImr8OpRQa3aiyAxynZNMA=="),("Sec-WebSocket-Version","13")], requestSecure = False}) (ResponseHead {responseCode = 400, responseMessage = "Bad Request", responseHeaders = [("content-type","text/plain;charset=utf-8"),("connection","close"),("server","httpd.js"),("date","Sat, 17 Oct 2026 10:04:51 GMT"),("content-length","12")]})
+--           
+--           IPE backtrace:
+--           HasCallStack backtrace:
+--             throwIO, called at ./Test/Tasty/Run.hs:172:44 in tasty-1.5.4-c219ffdaeeb21cab11e36afde43b2b97fa361763300e20b8e8c29de0e1f9bdfc:Test.Tasty.Run
+--           
+--           Use -p '/edt-display-none inside inline display none parent - DisplayedCheckAlways filters/' to rerun this test only.
+--         edt-css-none inside CSS class display none parent - DisplayedCheckAlways filters:                         FAIL
+--           Exception: websockets-0.13.0.0-88b3b12ba74629ce0101e1cb56645b62632867e7db8688b5eb3bdc9971076bde:Network.WebSockets.Http.HandshakeException:
+--           
+--           RequestRejected (RequestHead {requestPath = "/session/1ef3add3-e33b-44de-afd7-161b5f5b2267", requestHeaders = [("Host","127.0.0.1"),("Connection","Upgrade"),("Upgrade","websocket"),("Sec-WebSocket-Key","VImr8OpRQa3aiyAxynZNMA=="),("Sec-WebSocket-Version","13")], requestSecure = False}) (ResponseHead {responseCode = 400, responseMessage = "Bad Request", responseHeaders = [("content-type","text/plain;charset=utf-8"),("connection","close"),("server","httpd.js"),("date","Sat, 17 Oct 2026 10:04:51 GMT"),("content-length","12")]})
+--           
+--           IPE backtrace:
+--           HasCallStack backtrace:
+--             throwIO, called at ./Test/Tasty/Run.hs:172:44 in tasty-1.5.4-c219ffdaeeb21cab11e36afde43b2b97fa361763300e20b8e8c29de0e1f9bdfc:Test.Tasty.Run
+--           
+--           Use -p '/edt-css-none inside CSS class display none parent - DisplayedCheckAlways filters/' to rerun this test only.
+--         edt-html-hidden inside HTML hidden attribute parent - DisplayedCheckAlways filters:                       FAIL
+--           Exception: websockets-0.13.0.0-88b3b12ba74629ce0101e1cb56645b62632867e7db8688b5eb3bdc9971076bde:Network.WebSockets.Http.HandshakeException:
+--           
+--           RequestRejected (RequestHead {requestPath = "/session/1ef3add3-e33b-44de-afd7-161b5f5b2267", requestHeaders = [("Host","127.0.0.1"),("Connection","Upgrade"),("Upgrade","websocket"),("Sec-WebSocket-Key","VImr8OpRQa3aiyAxynZNMA=="),("Sec-WebSocket-Version","13")], requestSecure = False}) (ResponseHead {responseCode = 400, responseMessage = "Bad Request", responseHeaders = [("content-type","text/plain;charset=utf-8"),("connection","close"),("server","httpd.js"),("date","Sat, 17 Oct 2026 10:04:51 GMT"),("content-length","12")]})
+--           
+--           IPE backtrace:
+--           HasCallStack backtrace:
+--             throwIO, called at ./Test/Tasty/Run.hs:172:44 in tasty-1.5.4-c219ffdaeeb21cab11e36afde43b2b97fa361763300e20b8e8c29de0e1f9bdfc:Test.Tasty.Run
+--           
+--           Use -p '/edt-html-hidden inside HTML hidden attribute parent - DisplayedCheckAlways filters/' to rerun this test only.
+--       NOT filtered by displayedJS
+--         edt-aria-hidden - aria-hidden does not affect display - DisplayedCheckAlways finds:                       FAIL
+--           Exception: websockets-0.13.0.0-88b3b12ba74629ce0101e1cb56645b62632867e7db8688b5eb3bdc9971076bde:Network.WebSockets.Http.HandshakeException:
+--           
+--           RequestRejected (RequestHead {requestPath = "/session/1ef3add3-e33b-44de-afd7-161b5f5b2267", requestHeaders = [("Host","127.0.0.1"),("Connection","Upgrade"),("Upgrade","websocket"),("Sec-WebSocket-Key","VImr8OpRQa3aiyAxynZNMA=="),("Sec-WebSocket-Version","13")], requestSecure = False}) (ResponseHead {responseCode = 400, responseMessage = "Bad Request", responseHeaders = [("content-type","text/plain;charset=utf-8"),("connection","close"),("server","httpd.js"),("date","Sat, 17 Oct 2026 10:04:51 GMT"),("content-length","12")]})
+--           
+--           IPE backtrace:
+--           HasCallStack backtrace:
+--             throwIO, called at ./Test/Tasty/Run.hs:172:44 in tasty-1.5.4-c219ffdaeeb21cab11e36afde43b2b97fa361763300e20b8e8c29de0e1f9bdfc:Test.Tasty.Run
+--           
+--           Use -p '/edt-aria-hidden - aria-hidden does not affect display - DisplayedCheckAlways finds/' to rerun this test only.
+--         edt-offscreen positioned off-viewport but has non-zero dimensions - DisplayedCheckAlways finds:           FAIL
+--           Exception: websockets-0.13.0.0-88b3b12ba74629ce0101e1cb56645b62632867e7db8688b5eb3bdc9971076bde:Network.WebSockets.Http.HandshakeException:
+--           
+--           RequestRejected (RequestHead {requestPath = "/session/1ef3add3-e33b-44de-afd7-161b5f5b2267", requestHeaders = [("Host","127.0.0.1"),("Connection","Upgrade"),("Upgrade","websocket"),("Sec-WebSocket-Key","VImr8OpRQa3aiyAxynZNMA=="),("Sec-WebSocket-Version","13")], requestSecure = False}) (ResponseHead {responseCode = 400, responseMessage = "Bad Request", responseHeaders = [("content-type","text/plain;charset=utf-8"),("connection","close"),("server","httpd.js"),("date","Sat, 17 Oct 2026 10:04:51 GMT"),("content-length","12")]})
+--           
+--           IPE backtrace:
+--           HasCallStack backtrace:
+--             throwIO, called at ./Test/Tasty/Run.hs:172:44 in tasty-1.5.4-c219ffdaeeb21cab11e36afde43b2b97fa361763300e20b8e8c29de0e1f9bdfc:Test.Tasty.Run
+--           
+--           Use -p '/edt-offscreen positioned off-viewport but has non-zero dimensions - DisplayedCheckAlways finds/' to rerun this test only.
+--         edt-opacity-zero input child of opacity 0 container - opacity not inherited - DisplayedCheckAlways finds: FAIL
+--           Exception: websockets-0.13.0.0-88b3b12ba74629ce0101e1cb56645b62632867e7db8688b5eb3bdc9971076bde:Network.WebSockets.Http.HandshakeException:
+--           
+--           RequestRejected (RequestHead {requestPath = "/session/1ef3add3-e33b-44de-afd7-161b5f5b2267", requestHeaders = [("Host","127.0.0.1"),("Connection","Upgrade"),("Upgrade","websocket"),("Sec-WebSocket-Key","VImr8OpRQa3aiyAxynZNMA=="),("Sec-WebSocket-Version","13")], requestSecure = False}) (ResponseHead {responseCode = 400, responseMessage = "Bad Request", responseHeaders = [("content-type","text/plain;charset=utf-8"),("connection","close"),("server","httpd.js"),("date","Sat, 17 Oct 2026 10:04:51 GMT"),("content-length","12")]})
+--           
+--           IPE backtrace:
+--           HasCallStack backtrace:
+--             throwIO, called at ./Test/Tasty/Run.hs:172:44 in tasty-1.5.4-c219ffdaeeb21cab11e36afde43b2b97fa361763300e20b8e8c29de0e1f9bdfc:Test.Tasty.Run
+--           
+--           Use -p '/edt-opacity-zero input child of opacity 0 container - opacity not inherited - DisplayedCheckAlways finds/' to rerun this test only.
+--     locate singleton
+--       DisplayedCheckAlways also filters hidden, resolving to unique visible element:                              FAIL
+--         Exception: websockets-0.13.0.0-88b3b12ba74629ce0101e1cb56645b62632867e7db8688b5eb3bdc9971076bde:Network.WebSockets.Http.HandshakeException:
+--         
+--         RequestRejected (RequestHead {requestPath = "/session/1ef3add3-e33b-44de-afd7-161b5f5b2267", requestHeaders = [("Host","127.0.0.1"),("Connection","Upgrade"),("Upgrade","websocket"),("Sec-WebSocket-Key","VImr8OpRQa3aiyAxynZNMA=="),("Sec-WebSocket-Version","13")], requestSecure = False}) (ResponseHead {responseCode = 400, responseMessage = "Bad Request", responseHeaders = [("content-type","text/plain;charset=utf-8"),("connection","close"),("server","httpd.js"),("date","Sat, 17 Oct 2026 10:04:51 GMT"),("content-length","12")]})
+--         
+--         IPE backtrace:
+--         HasCallStack backtrace:
+--           throwIO, called at ./Test/Tasty/Run.hs:172:44 in tasty-1.5.4-c219ffdaeeb21cab11e36afde43b2b97fa361763300e20b8e8c29de0e1f9bdfc:Test.Tasty.Run
+--         
+--         Use -p '/DisplayedCheckAlways also filters hidden, resolving to unique visible element/' to rerun this test only.
+--     locateAll
+--       notes-area with DisplayedCheckAlways finds visible only:                                                    FAIL
+--         Exception: websockets-0.13.0.0-88b3b12ba74629ce0101e1cb56645b62632867e7db8688b5eb3bdc9971076bde:Network.WebSockets.Http.HandshakeException:
+--         
+--         RequestRejected (RequestHead {requestPath = "/session/1ef3add3-e33b-44de-afd7-161b5f5b2267", requestHeaders = [("Host","127.0.0.1"),("Connection","Upgrade"),("Upgrade","websocket"),("Sec-WebSocket-Key","VImr8OpRQa3aiyAxynZNMA=="),("Sec-WebSocket-Version","13")], requestSecure = False}) (ResponseHead {responseCode = 400, responseMessage = "Bad Request", responseHeaders = [("content-type","text/plain;charset=utf-8"),("connection","close"),("server","httpd.js"),("date","Sat, 17 Oct 2026 10:04:51 GMT"),("content-length","12")]})
+--         
+--         IPE backtrace:
+--         HasCallStack backtrace:
+--           throwIO, called at ./Test/Tasty/Run.hs:172:44 in tasty-1.5.4-c219ffdaeeb21cab11e36afde43b2b97fa361763300e20b8e8c29de0e1f9bdfc:Test.Tasty.Run
+--         
+--         Use -p '/notes-area with DisplayedCheckAlways finds visible only/' to rerun this test only.
+--   Visibility Check Tests - DisplayedCheckNever
+--     locateAll does NOT filter hidden
+--       Rule 1 - display none on element itself
+--         edt-notes-hidden has display none via own CSS class - DisplayedCheckNever finds:                          FAIL
+--           Exception: websockets-0.13.0.0-88b3b12ba74629ce0101e1cb56645b62632867e7db8688b5eb3bdc9971076bde:Network.WebSockets.Http.HandshakeException:
+--           
+--           RequestRejected (RequestHead {requestPath = "/session/1ef3add3-e33b-44de-afd7-161b5f5b2267", requestHeaders = [("Host","127.0.0.1"),("Connection","Upgrade"),("Upgrade","websocket"),("Sec-WebSocket-Key","VImr8OpRQa3aiyAxynZNMA=="),("Sec-WebSocket-Version","13")], requestSecure = False}) (ResponseHead {responseCode = 400, responseMessage = "Bad Request", responseHeaders = [("content-type","text/plain;charset=utf-8"),("connection","close"),("server","httpd.js"),("date","Sat, 17 Oct 2026 10:04:51 GMT"),("content-length","12")]})
+--           
+--           IPE backtrace:
+--           HasCallStack backtrace:
+--             throwIO, called at ./Test/Tasty/Run.hs:172:44 in tasty-1.5.4-c219ffdaeeb21cab11e36afde43b2b97fa361763300e20b8e8c29de0e1f9bdfc:Test.Tasty.Run
+--           
+--           Use -p '/edt-notes-hidden has display none via own CSS class - DisplayedCheckNever finds/' to rerun this test only.
+--       Rule 2 - visibility hidden or collapse - inherited
+--         edt-vis-hidden inside inline visibility hidden parent - DisplayedCheckNever finds:                        FAIL
+--           Exception: websockets-0.13.0.0-88b3b12ba74629ce0101e1cb56645b62632867e7db8688b5eb3bdc9971076bde:Network.WebSockets.Http.HandshakeException:
+--           
+--           RequestRejected (RequestHead {requestPath = "/session/1ef3add3-e33b-44de-afd7-161b5f5b2267", requestHeaders = [("Host","127.0.0.1"),("Connection","Upgrade"),("Upgrade","websocket"),("Sec-WebSocket-Key","VImr8OpRQa3aiyAxynZNMA=="),("Sec-WebSocket-Version","13")], requestSecure = False}) (ResponseHead {responseCode = 400, responseMessage = "Bad Request", responseHeaders = [("content-type","text/plain;charset=utf-8"),("connection","close"),("server","httpd.js"),("date","Sat, 17 Oct 2026 10:04:51 GMT"),("content-length","12")]})
+--           
+--           IPE backtrace:
+--           HasCallStack backtrace:
+--             throwIO, called at ./Test/Tasty/Run.hs:172:44 in tasty-1.5.4-c219ffdaeeb21cab11e36afde43b2b97fa361763300e20b8e8c29de0e1f9bdfc:Test.Tasty.Run
+--           
+--           Use -p '/edt-vis-hidden inside inline visibility hidden parent - DisplayedCheckNever finds/' to rerun this test only.
+--         edt-css-vis-hidden inside CSS class visibility hidden parent - DisplayedCheckNever finds:                 FAIL
+--           Exception: websockets-0.13.0.0-88b3b12ba74629ce0101e1cb56645b62632867e7db8688b5eb3bdc9971076bde:Network.WebSockets.Http.HandshakeException:
+--           
+--           RequestRejected (RequestHead {requestPath = "/session/1ef3add3-e33b-44de-afd7-161b5f5b2267", requestHeaders = [("Host","127.0.0.1"),("Connection","Upgrade"),("Upgrade","websocket"),("Sec-WebSocket-Key","VImr8OpRQa3aiyAxynZNMA=="),("Sec-WebSocket-Version","13")], requestSecure = False}) (ResponseHead {responseCode = 400, responseMessage = "Bad Request", responseHeaders = [("content-type","text/plain;charset=utf-8"),("connection","close"),("server","httpd.js"),("date","Sat, 17 Oct 2026 10:04:51 GMT"),("content-length","12")]})
+--           
+--           IPE backtrace:
+--           HasCallStack backtrace:
+--             throwIO, called at ./Test/Tasty/Run.hs:172:44 in tasty-1.5.4-c219ffdaeeb21cab11e36afde43b2b97fa361763300e20b8e8c29de0e1f9bdfc:Test.Tasty.Run
+--           
+--           Use -p '/edt-css-vis-hidden inside CSS class visibility hidden parent - DisplayedCheckNever finds/' to rerun this test only.
+--       Rule 3 - parseFloat opacity equals 0 on element itself
+--         fg-opacity-zero div has opacity 0 applied directly - DisplayedCheckNever finds:                           FAIL
+--           Exception: websockets-0.13.0.0-88b3b12ba74629ce0101e1cb56645b62632867e7db8688b5eb3bdc9971076bde:Network.WebSockets.Http.HandshakeException:
+--           
+--           RequestRejected (RequestHead {requestPath = "/session/1ef3add3-e33b-44de-afd7-161b5f5b2267", requestHeaders = [("Host","127.0.0.1"),("Connection","Upgrade"),("Upgrade","websocket"),("Sec-WebSocket-Key","VImr8OpRQa3aiyAxynZNMA=="),("Sec-WebSocket-Version","13")], requestSecure = False}) (ResponseHead {responseCode = 400, responseMessage = "Bad Request", responseHeaders = [("content-type","text/plain;charset=utf-8"),("connection","close"),("server","httpd.js"),("date","Sat, 17 Oct 2026 10:04:51 GMT"),("content-length","12")]})
+--           
+--           IPE backtrace:
+--           HasCallStack backtrace:
+--             throwIO, called at ./Test/Tasty/Run.hs:172:44 in tasty-1.5.4-c219ffdaeeb21cab11e36afde43b2b97fa361763300e20b8e8c29de0e1f9bdfc:Test.Tasty.Run
+--           
+--           Use -p '/fg-opacity-zero div has opacity 0 applied directly - DisplayedCheckNever finds/' to rerun this test only.
+--       Rule 4 - INPUT with type hidden
+--         hdn-session-token is input type hidden - DisplayedCheckNever finds:                                       FAIL
+--           Exception: websockets-0.13.0.0-88b3b12ba74629ce0101e1cb56645b62632867e7db8688b5eb3bdc9971076bde:Network.WebSockets.Http.HandshakeException:
+--           
+--           RequestRejected (RequestHead {requestPath = "/session/1ef3add3-e33b-44de-afd7-161b5f5b2267", requestHeaders = [("Host","127.0.0.1"),("Connection","Upgrade"),("Upgrade","websocket"),("Sec-WebSocket-Key","VImr8OpRQa3aiyAxynZNMA=="),("Sec-WebSocket-Version","13")], requestSecure = False}) (ResponseHead {responseCode = 400, responseMessage = "Bad Request", responseHeaders = [("content-type","text/plain;charset=utf-8"),("connection","close"),("server","httpd.js"),("date","Sat, 17 Oct 2026 10:04:51 GMT"),("content-length","12")]})
+--           
+--           IPE backtrace:
+--           HasCallStack backtrace:
+--             throwIO, called at ./Test/Tasty/Run.hs:172:44 in tasty-1.5.4-c219ffdaeeb21cab11e36afde43b2b97fa361763300e20b8e8c29de0e1f9bdfc:Test.Tasty.Run
+--           
+--           Use -p '/hdn-session-token is input type hidden - DisplayedCheckNever finds/' to rerun this test only.
+--       Rule 5 - offsetWidth or offsetHeight equals 0 - parent has display none
+--         edt-display-none inside inline display none parent - DisplayedCheckNever finds:                           FAIL
+--           Exception: websockets-0.13.0.0-88b3b12ba74629ce0101e1cb56645b62632867e7db8688b5eb3bdc9971076bde:Network.WebSockets.Http.HandshakeException:
+--           
+--           RequestRejected (RequestHead {requestPath = "/session/1ef3add3-e33b-44de-afd7-161b5f5b2267", requestHeaders = [("Host","127.0.0.1"),("Connection","Upgrade"),("Upgrade","websocket"),("Sec-WebSocket-Key","VImr8OpRQa3aiyAxynZNMA=="),("Sec-WebSocket-Version","13")], requestSecure = False}) (ResponseHead {responseCode = 400, responseMessage = "Bad Request", responseHeaders = [("content-type","text/plain;charset=utf-8"),("connection","close"),("server","httpd.js"),("date","Sat, 17 Oct 2026 10:04:51 GMT"),("content-length","12")]})
+--           
+--           IPE backtrace:
+--           HasCallStack backtrace:
+--             throwIO, called at ./Test/Tasty/Run.hs:172:44 in tasty-1.5.4-c219ffdaeeb21cab11e36afde43b2b97fa361763300e20b8e8c29de0e1f9bdfc:Test.Tasty.Run
+--           
+--           Use -p '/edt-display-none inside inline display none parent - DisplayedCheckNever finds/' to rerun this test only.
+--         edt-css-none inside CSS class display none parent - DisplayedCheckNever finds:                            FAIL
+--           Exception: websockets-0.13.0.0-88b3b12ba74629ce0101e1cb56645b62632867e7db8688b5eb3bdc9971076bde:Network.WebSockets.Http.HandshakeException:
+--           
+--           RequestRejected (RequestHead {requestPath = "/session/1ef3add3-e33b-44de-afd7-161b5f5b2267", requestHeaders = [("Host","127.0.0.1"),("Connection","Upgrade"),("Upgrade","websocket"),("Sec-WebSocket-Key","VImr8OpRQa3aiyAxynZNMA=="),("Sec-WebSocket-Version","13")], requestSecure = False}) (ResponseHead {responseCode = 400, responseMessage = "Bad Request", responseHeaders = [("content-type","text/plain;charset=utf-8"),("connection","close"),("server","httpd.js"),("date","Sat, 17 Oct 2026 10:04:51 GMT"),("content-length","12")]})
+--           
+--           IPE backtrace:
+--           HasCallStack backtrace:
+--             throwIO, called at ./Test/Tasty/Run.hs:172:44 in tasty-1.5.4-c219ffdaeeb21cab11e36afde43b2b97fa361763300e20b8e8c29de0e1f9bdfc:Test.Tasty.Run
+--           
+--           Use -p '/edt-css-none inside CSS class display none parent - DisplayedCheckNever finds/' to rerun this test only.
+--         edt-html-hidden inside HTML hidden attribute parent - DisplayedCheckNever finds:                          FAIL
+--           Exception: websockets-0.13.0.0-88b3b12ba74629ce0101e1cb56645b62632867e7db8688b5eb3bdc9971076bde:Network.WebSockets.Http.HandshakeException:
+--           
+--           RequestRejected (RequestHead {requestPath = "/session/1ef3add3-e33b-44de-afd7-161b5f5b2267", requestHeaders = [("Host","127.0.0.1"),("Connection","Upgrade"),("Upgrade","websocket"),("Sec-WebSocket-Key","VImr8OpRQa3aiyAxynZNMA=="),("Sec-WebSocket-Version","13")], requestSecure = False}) (ResponseHead {responseCode = 400, responseMessage = "Bad Request", responseHeaders = [("content-type","text/plain;charset=utf-8"),("connection","close"),("server","httpd.js"),("date","Sat, 17 Oct 2026 10:04:51 GMT"),("content-length","12")]})
+--           
+--           IPE backtrace:
+--           HasCallStack backtrace:
+--             throwIO, called at ./Test/Tasty/Run.hs:172:44 in tasty-1.5.4-c219ffdaeeb21cab11e36afde43b2b97fa361763300e20b8e8c29de0e1f9bdfc:Test.Tasty.Run
+--           
+--           Use -p '/edt-html-hidden inside HTML hidden attribute parent - DisplayedCheckNever finds/' to rerun this test only.
+--       NOT filtered by displayedJS
+--         edt-aria-hidden - aria-hidden does not affect display - DisplayedCheckNever finds:                        FAIL
+--           Exception: websockets-0.13.0.0-88b3b12ba74629ce0101e1cb56645b62632867e7db8688b5eb3bdc9971076bde:Network.WebSockets.Http.HandshakeException:
+--           
+--           RequestRejected (RequestHead {requestPath = "/session/1ef3add3-e33b-44de-afd7-161b5f5b2267", requestHeaders = [("Host","127.0.0.1"),("Connection","Upgrade"),("Upgrade","websocket"),("Sec-WebSocket-Key","VImr8OpRQa3aiyAxynZNMA=="),("Sec-WebSocket-Version","13")], requestSecure = False}) (ResponseHead {responseCode = 400, responseMessage = "Bad Request", responseHeaders = [("content-type","text/plain;charset=utf-8"),("connection","close"),("server","httpd.js"),("date","Sat, 17 Oct 2026 10:04:51 GMT"),("content-length","12")]})
+--           
+--           IPE backtrace:
+--           HasCallStack backtrace:
+--             throwIO, called at ./Test/Tasty/Run.hs:172:44 in tasty-1.5.4-c219ffdaeeb21cab11e36afde43b2b97fa361763300e20b8e8c29de0e1f9bdfc:Test.Tasty.Run
+--           
+--           Use -p '/edt-aria-hidden - aria-hidden does not affect display - DisplayedCheckNever finds/' to rerun this test only.
+--         edt-offscreen positioned off-viewport but has non-zero dimensions - DisplayedCheckNever finds:            FAIL
+--           Exception: websockets-0.13.0.0-88b3b12ba74629ce0101e1cb56645b62632867e7db8688b5eb3bdc9971076bde:Network.WebSockets.Http.HandshakeException:
+--           
+--           RequestRejected (RequestHead {requestPath = "/session/1ef3add3-e33b-44de-afd7-161b5f5b2267", requestHeaders = [("Host","127.0.0.1"),("Connection","Upgrade"),("Upgrade","websocket"),("Sec-WebSocket-Key","VImr8OpRQa3aiyAxynZNMA=="),("Sec-WebSocket-Version","13")], requestSecure = False}) (ResponseHead {responseCode = 400, responseMessage = "Bad Request", responseHeaders = [("content-type","text/plain;charset=utf-8"),("connection","close"),("server","httpd.js"),("date","Sat, 17 Oct 2026 10:04:51 GMT"),("content-length","12")]})
+--           
+--           IPE backtrace:
+--           HasCallStack backtrace:
+--             throwIO, called at ./Test/Tasty/Run.hs:172:44 in tasty-1.5.4-c219ffdaeeb21cab11e36afde43b2b97fa361763300e20b8e8c29de0e1f9bdfc:Test.Tasty.Run
+--           
+--           Use -p '/edt-offscreen positioned off-viewport but has non-zero dimensions - DisplayedCheckNever finds/' to rerun this test only.
+--         edt-opacity-zero input child of opacity 0 container - opacity not inherited - DisplayedCheckNever finds:  FAIL
+--           Exception: websockets-0.13.0.0-88b3b12ba74629ce0101e1cb56645b62632867e7db8688b5eb3bdc9971076bde:Network.WebSockets.Http.HandshakeException:
+--           
+--           RequestRejected (RequestHead {requestPath = "/session/1ef3add3-e33b-44de-afd7-161b5f5b2267", requestHeaders = [("Host","127.0.0.1"),("Connection","Upgrade"),("Upgrade","websocket"),("Sec-WebSocket-Key","VImr8OpRQa3aiyAxynZNMA=="),("Sec-WebSocket-Version","13")], requestSecure = False}) (ResponseHead {responseCode = 400, responseMessage = "Bad Request", responseHeaders = [("content-type","text/plain;charset=utf-8"),("connection","close"),("server","httpd.js"),("date","Sat, 17 Oct 2026 10:04:51 GMT"),("content-length","12")]})
+--           
+--           IPE backtrace:
+--           HasCallStack backtrace:
+--             throwIO, called at ./Test/Tasty/Run.hs:172:44 in tasty-1.5.4-c219ffdaeeb21cab11e36afde43b2b97fa361763300e20b8e8c29de0e1f9bdfc:Test.Tasty.Run
+--           
+--           Use -p '/edt-opacity-zero input child of opacity 0 container - opacity not inherited - DisplayedCheckNever finds/' to rerun this test only.
+--     locate singleton
+--       DisplayedCheckNever with Unique throws AmbiguousLocator - hidden and visible share class:                   FAIL
+--         Exception: websockets-0.13.0.0-88b3b12ba74629ce0101e1cb56645b62632867e7db8688b5eb3bdc9971076bde:Network.WebSockets.Http.HandshakeException:
+--         
+--         RequestRejected (RequestHead {requestPath = "/session/1ef3add3-e33b-44de-afd7-161b5f5b2267", requestHeaders = [("Host","127.0.0.1"),("Connection","Upgrade"),("Upgrade","websocket"),("Sec-WebSocket-Key","VImr8OpRQa3aiyAxynZNMA=="),("Sec-WebSocket-Version","13")], requestSecure = False}) (ResponseHead {responseCode = 400, responseMessage = "Bad Request", responseHeaders = [("content-type","text/plain;charset=utf-8"),("connection","close"),("server","httpd.js"),("date","Sat, 17 Oct 2026 10:04:51 GMT"),("content-length","12")]})
+--         
+--         IPE backtrace:
+--         HasCallStack backtrace:
+--           throwIO, called at ./Test/Tasty/Run.hs:172:44 in tasty-1.5.4-c219ffdaeeb21cab11e36afde43b2b97fa361763300e20b8e8c29de0e1f9bdfc:Test.Tasty.Run
+--         
+--         Use -p '/DisplayedCheckNever with Unique throws AmbiguousLocator - hidden and visible share class/' to rerun this test only.
+--     locateAll
+--       notes-area with DisplayedCheckNever finds both visible and hidden:                                          FAIL
+--         Exception: websockets-0.13.0.0-88b3b12ba74629ce0101e1cb56645b62632867e7db8688b5eb3bdc9971076bde:Network.WebSockets.Http.HandshakeException:
+--         
+--         RequestRejected (RequestHead {requestPath = "/session/1ef3add3-e33b-44de-afd7-161b5f5b2267", requestHeaders = [("Host","127.0.0.1"),("Connection","Upgrade"),("Upgrade","websocket"),("Sec-WebSocket-Key","VImr8OpRQa3aiyAxynZNMA=="),("Sec-WebSocket-Version","13")], requestSecure = False}) (ResponseHead {responseCode = 400, responseMessage = "Bad Request", responseHeaders = [("content-type","text/plain;charset=utf-8"),("connection","close"),("server","httpd.js"),("date","Sat, 17 Oct 2026 10:04:51 GMT"),("content-length","12")]})
+--         
+--         IPE backtrace:
+--         HasCallStack backtrace:
+--           throwIO, called at ./Test/Tasty/Run.hs:172:44 in tasty-1.5.4-c219ffdaeeb21cab11e36afde43b2b97fa361763300e20b8e8c29de0e1f9bdfc:Test.Tasty.Run
+--         
+--         Use -p '/notes-area with DisplayedCheckNever finds both visible and hidden/' to rerun this test only.
+--   Visibility Check Tests - DisplayedCheckDisambiguateUnique
+--     locate singleton
+--       DisplayedCheckDisambiguateUnique filters hidden - resolving to unique visible element:                      FAIL
+--         Exception: websockets-0.13.0.0-88b3b12ba74629ce0101e1cb56645b62632867e7db8688b5eb3bdc9971076bde:Network.WebSockets.Http.HandshakeException:
+--         
+--         RequestRejected (RequestHead {requestPath = "/session/1ef3add3-e33b-44de-afd7-161b5f5b2267", requestHeaders = [("Host","127.0.0.1"),("Connection","Upgrade"),("Upgrade","websocket"),("Sec-WebSocket-Key","VImr8OpRQa3aiyAxynZNMA=="),("Sec-WebSocket-Version","13")], requestSecure = False}) (ResponseHead {responseCode = 400, responseMessage = "Bad Request", responseHeaders = [("content-type","text/plain;charset=utf-8"),("connection","close"),("server","httpd.js"),("date","Sat, 17 Oct 2026 10:04:51 GMT"),("content-length","12")]})
+--         
+--         IPE backtrace:
+--         HasCallStack backtrace:
+--           throwIO, called at ./Test/Tasty/Run.hs:172:44 in tasty-1.5.4-c219ffdaeeb21cab11e36afde43b2b97fa361763300e20b8e8c29de0e1f9bdfc:Test.Tasty.Run
+--         
+--         Use -p '/DisplayedCheckDisambiguateUnique filters hidden - resolving to unique visible element/' to rerun this test only.
+--   Visibility Check Tests
+--     locateAll - DisplayedCheckDisambiguateUnique has no effect
+--       DisambiguateUnique gives same result as Never for locateAll:                                                FAIL
+--         Exception: websockets-0.13.0.0-88b3b12ba74629ce0101e1cb56645b62632867e7db8688b5eb3bdc9971076bde:Network.WebSockets.Http.HandshakeException:
+--         
+--         RequestRejected (RequestHead {requestPath = "/session/1ef3add3-e33b-44de-afd7-161b5f5b2267", requestHeaders = [("Host","127.0.0.1"),("Connection","Upgrade"),("Upgrade","websocket"),("Sec-WebSocket-Key","VImr8OpRQa3aiyAxynZNMA=="),("Sec-WebSocket-Version","13")], requestSecure = False}) (ResponseHead {responseCode = 400, responseMessage = "Bad Request", responseHeaders = [("content-type","text/plain;charset=utf-8"),("connection","close"),("server","httpd.js"),("date","Sat, 17 Oct 2026 10:04:51 GMT"),("content-length","12")]})
+--         
+--         IPE backtrace:
+--         HasCallStack backtrace:
+--           throwIO, called at ./Test/Tasty/Run.hs:172:44 in tasty-1.5.4-c219ffdaeeb21cab11e36afde43b2b97fa361763300e20b8e8c29de0e1f9bdfc:Test.Tasty.Run
+--         
+--         Use -p '/DisambiguateUnique gives same result as Never for locateAll/' to rerun this test only.
+--   Basic Locator Types
+--     defaultId resolves via mkDefaultLoc option:                                                                   FAIL
+--       Exception: websockets-0.13.0.0-88b3b12ba74629ce0101e1cb56645b62632867e7db8688b5eb3bdc9971076bde:Network.WebSockets.Http.HandshakeException:
+--       
+--       RequestRejected (RequestHead {requestPath = "/session/1ef3add3-e33b-44de-afd7-161b5f5b2267", requestHeaders = [("Host","127.0.0.1"),("Connection","Upgrade"),("Upgrade","websocket"),("Sec-WebSocket-Key","VImr8OpRQa3aiyAxynZNMA=="),("Sec-WebSocket-Version","13")], requestSecure = False}) (ResponseHead {responseCode = 400, responseMessage = "Bad Request", responseHeaders = [("content-type","text/plain;charset=utf-8"),("connection","close"),("server","httpd.js"),("date","Sat, 17 Oct 2026 10:04:51 GMT"),("content-length","12")]})
+--       
+--       IPE backtrace:
+--       HasCallStack backtrace:
+--         throwIO, called at ./Test/Tasty/Run.hs:172:44 in tasty-1.5.4-c219ffdaeeb21cab11e36afde43b2b97fa361763300e20b8e8c29de0e1f9bdfc:Test.Tasty.Run
+--       
+--       Use -p '/defaultId resolves via mkDefaultLoc option/' to rerun this test only.
+--     allElms finds all page elements:                                                                              FAIL
+--       Exception: websockets-0.13.0.0-88b3b12ba74629ce0101e1cb56645b62632867e7db8688b5eb3bdc9971076bde:Network.WebSockets.Http.HandshakeException:
+--       
+--       RequestRejected (RequestHead {requestPath = "/session/1ef3add3-e33b-44de-afd7-161b5f5b2267", requestHeaders = [("Host","127.0.0.1"),("Connection","Upgrade"),("Upgrade","websocket"),("Sec-WebSocket-Key","VImr8OpRQa3aiyAxynZNMA=="),("Sec-WebSocket-Version","13")], requestSecure = False}) (ResponseHead {responseCode = 400, responseMessage = "Bad Request", responseHeaders = [("content-type","text/plain;charset=utf-8"),("connection","close"),("server","httpd.js"),("date","Sat, 17 Oct 2026 10:04:51 GMT"),("content-length","12")]})
+--       
+--       IPE backtrace:
+--       HasCallStack backtrace:
+--         throwIO, called at ./Test/Tasty/Run.hs:172:44 in tasty-1.5.4-c219ffdaeeb21cab11e36afde43b2b97fa361763300e20b8e8c29de0e1f9bdfc:Test.Tasty.Run
+--       
+--       Use -p '/allElms finds all page elements/' to rerun this test only.
+--     elmId finds element by HTML id:                                                                               FAIL
+--       Exception: websockets-0.13.0.0-88b3b12ba74629ce0101e1cb56645b62632867e7db8688b5eb3bdc9971076bde:Network.WebSockets.Http.HandshakeException:
+--       
+--       RequestRejected (RequestHead {requestPath = "/session/1ef3add3-e33b-44de-afd7-161b5f5b2267", requestHeaders = [("Host","127.0.0.1"),("Connection","Upgrade"),("Upgrade","websocket"),("Sec-WebSocket-Key","VImr8OpRQa3aiyAxynZNMA=="),("Sec-WebSocket-Version","13")], requestSecure = False}) (ResponseHead {responseCode = 400, responseMessage = "Bad Request", responseHeaders = [("content-type","text/plain;charset=utf-8"),("connection","close"),("server","httpd.js"),("date","Sat, 17 Oct 2026 10:04:51 GMT"),("content-length","12")]})
+--       
+--       IPE backtrace:
+--       HasCallStack backtrace:
+--         throwIO, called at ./Test/Tasty/Run.hs:172:44 in tasty-1.5.4-c219ffdaeeb21cab11e36afde43b2b97fa361763300e20b8e8c29de0e1f9bdfc:Test.Tasty.Run
+--       
+--       Use -p '/elmId finds element by HTML id/' to rerun this test only.
+--     css attribute selector:                                                                                       FAIL
+--       Exception: websockets-0.13.0.0-88b3b12ba74629ce0101e1cb56645b62632867e7db8688b5eb3bdc9971076bde:Network.WebSockets.Http.HandshakeException:
+--       
+--       RequestRejected (RequestHead {requestPath = "/session/1ef3add3-e33b-44de-afd7-161b5f5b2267", requestHeaders = [("Host","127.0.0.1"),("Connection","Upgrade"),("Upgrade","websocket"),("Sec-WebSocket-Key","VImr8OpRQa3aiyAxynZNMA=="),("Sec-WebSocket-Version","13")], requestSecure = False}) (ResponseHead {responseCode = 400, responseMessage = "Bad Request", responseHeaders = [("content-type","text/plain;charset=utf-8"),("connection","close"),("server","httpd.js"),("date","Sat, 17 Oct 2026 10:04:51 GMT"),("content-length","12")]})
+--       
+--       IPE backtrace:
+--       HasCallStack backtrace:
+--         throwIO, called at ./Test/Tasty/Run.hs:172:44 in tasty-1.5.4-c219ffdaeeb21cab11e36afde43b2b97fa361763300e20b8e8c29de0e1f9bdfc:Test.Tasty.Run
+--       
+--       Use -p '/css attribute selector/' to rerun this test only.
+--     xpath finds element by tag:                                                                                   FAIL
+--       Exception: websockets-0.13.0.0-88b3b12ba74629ce0101e1cb56645b62632867e7db8688b5eb3bdc9971076bde:Network.WebSockets.Http.HandshakeException:
+--       
+--       RequestRejected (RequestHead {requestPath = "/session/1ef3add3-e33b-44de-afd7-161b5f5b2267", requestHeaders = [("Host","127.0.0.1"),("Connection","Upgrade"),("Upgrade","websocket"),("Sec-WebSocket-Key","VImr8OpRQa3aiyAxynZNMA=="),("Sec-WebSocket-Version","13")], requestSecure = False}) (ResponseHead {responseCode = 400, responseMessage = "Bad Request", responseHeaders = [("content-type","text/plain;charset=utf-8"),("connection","close"),("server","httpd.js"),("date","Sat, 17 Oct 2026 10:04:51 GMT"),("content-length","12")]})
+--       
+--       IPE backtrace:
+--       HasCallStack backtrace:
+--         throwIO, called at ./Test/Tasty/Run.hs:172:44 in tasty-1.5.4-c219ffdaeeb21cab11e36afde43b2b97fa361763300e20b8e8c29de0e1f9bdfc:Test.Tasty.Run
+--       
+--       Use -p '/xpath finds element by tag/' to rerun this test only.
+--     input_ tag locator finds all inputs:                                                                          FAIL
+--       Exception: websockets-0.13.0.0-88b3b12ba74629ce0101e1cb56645b62632867e7db8688b5eb3bdc9971076bde:Network.WebSockets.Http.HandshakeException:
+--       
+--       RequestRejected (RequestHead {requestPath = "/session/1ef3add3-e33b-44de-afd7-161b5f5b2267", requestHeaders = [("Host","127.0.0.1"),("Connection","Upgrade"),("Upgrade","websocket"),("Sec-WebSocket-Key","VImr8OpRQa3aiyAxynZNMA=="),("Sec-WebSocket-Version","13")], requestSecure = False}) (ResponseHead {responseCode = 400, responseMessage = "Bad Request", responseHeaders = [("content-type","text/plain;charset=utf-8"),("connection","close"),("server","httpd.js"),("date","Sat, 17 Oct 2026 10:04:51 GMT"),("content-length","12")]})
+--       
+--       IPE backtrace:
+--       HasCallStack backtrace:
+--         throwIO, called at ./Test/Tasty/Run.hs:172:44 in tasty-1.5.4-c219ffdaeeb21cab11e36afde43b2b97fa361763300e20b8e8c29de0e1f9bdfc:Test.Tasty.Run
+--       
+--       Use -p '/input_ tag locator finds all inputs/' to rerun this test only.
+--     button_ tag locator finds button elements:                                                                    FAIL
+--       Exception: websockets-0.13.0.0-88b3b12ba74629ce0101e1cb56645b62632867e7db8688b5eb3bdc9971076bde:Network.WebSockets.Http.HandshakeException:
+--       
+--       RequestRejected (RequestHead {requestPath = "/session/1ef3add3-e33b-44de-afd7-161b5f5b2267", requestHeaders = [("Host","127.0.0.1"),("Connection","Upgrade"),("Upgrade","websocket"),("Sec-WebSocket-Key","VImr8OpRQa3aiyAxynZNMA=="),("Sec-WebSocket-Version","13")], requestSecure = False}) (ResponseHead {responseCode = 400, responseMessage = "Bad Request", responseHeaders = [("content-type","text/plain;charset=utf-8"),("connection","close"),("server","httpd.js"),("date","Sat, 17 Oct 2026 10:04:51 GMT"),("content-length","12")]})
+--       
+--       IPE backtrace:
+--       HasCallStack backtrace:
+--         throwIO, called at ./Test/Tasty/Run.hs:172:44 in tasty-1.5.4-c219ffdaeeb21cab11e36afde43b2b97fa361763300e20b8e8c29de0e1f9bdfc:Test.Tasty.Run
+--       
+--       Use -p '/button_ tag locator finds button elements/' to rerun this test only.
+--     h1_ tag locator finds the single h1 heading:                                                                  FAIL
+--       Exception: websockets-0.13.0.0-88b3b12ba74629ce0101e1cb56645b62632867e7db8688b5eb3bdc9971076bde:Network.WebSockets.Http.HandshakeException:
+--       
+--       RequestRejected (RequestHead {requestPath = "/session/1ef3add3-e33b-44de-afd7-161b5f5b2267", requestHeaders = [("Host","127.0.0.1"),("Connection","Upgrade"),("Upgrade","websocket"),("Sec-WebSocket-Key","VImr8OpRQa3aiyAxynZNMA=="),("Sec-WebSocket-Version","13")], requestSecure = False}) (ResponseHead {responseCode = 400, responseMessage = "Bad Request", responseHeaders = [("content-type","text/plain;charset=utf-8"),("connection","close"),("server","httpd.js"),("date","Sat, 17 Oct 2026 10:04:51 GMT"),("content-length","12")]})
+--       
+--       IPE backtrace:
+--       HasCallStack backtrace:
+--         throwIO, called at ./Test/Tasty/Run.hs:172:44 in tasty-1.5.4-c219ffdaeeb21cab11e36afde43b2b97fa361763300e20b8e8c29de0e1f9bdfc:Test.Tasty.Run
+--       
+--       Use -p '/h1_ tag locator finds the single h1 heading/' to rerun this test only.
+--   Class Locator Variants
+--     elmClass contains match:                                                                                      FAIL
+--       Exception: websockets-0.13.0.0-88b3b12ba74629ce0101e1cb56645b62632867e7db8688b5eb3bdc9971076bde:Network.WebSockets.Http.HandshakeException:
+--       
+--       RequestRejected (RequestHead {requestPath = "/session/1ef3add3-e33b-44de-afd7-161b5f5b2267", requestHeaders = [("Host","127.0.0.1"),("Connection","Upgrade"),("Upgrade","websocket"),("Sec-WebSocket-Key","VImr8OpRQa3aiyAxynZNMA=="),("Sec-WebSocket-Version","13")], requestSecure = False}) (ResponseHead {responseCode = 400, responseMessage = "Bad Request", responseHeaders = [("content-type","text/plain;charset=utf-8"),("connection","close"),("server","httpd.js"),("date","Sat, 17 Oct 2026 10:04:51 GMT"),("content-length","12")]})
+--       
+--       IPE backtrace:
+--       HasCallStack backtrace:
+--         throwIO, called at ./Test/Tasty/Run.hs:172:44 in tasty-1.5.4-c219ffdaeeb21cab11e36afde43b2b97fa361763300e20b8e8c29de0e1f9bdfc:Test.Tasty.Run
+--       
+--       Use -p '/elmClass contains match/' to rerun this test only.
+--     elmClassExact full-equality match:                                                                            FAIL
+--       Exception: websockets-0.13.0.0-88b3b12ba74629ce0101e1cb56645b62632867e7db8688b5eb3bdc9971076bde:Network.WebSockets.Http.HandshakeException:
+--       
+--       RequestRejected (RequestHead {requestPath = "/session/1ef3add3-e33b-44de-afd7-161b5f5b2267", requestHeaders = [("Host","127.0.0.1"),("Connection","Upgrade"),("Upgrade","websocket"),("Sec-WebSocket-Key","VImr8OpRQa3aiyAxynZNMA=="),("Sec-WebSocket-Version","13")], requestSecure = False}) (ResponseHead {responseCode = 400, responseMessage = "Bad Request", responseHeaders = [("content-type","text/plain;charset=utf-8"),("connection","close"),("server","httpd.js"),("date","Sat, 17 Oct 2026 10:04:51 GMT"),("content-length","12")]})
+--       
+--       IPE backtrace:
+--       HasCallStack backtrace:
+--         throwIO, called at ./Test/Tasty/Run.hs:172:44 in tasty-1.5.4-c219ffdaeeb21cab11e36afde43b2b97fa361763300e20b8e8c29de0e1f9bdfc:Test.Tasty.Run
+--       
+--       Use -p '/elmClassExact full-equality match/' to rerun this test only.
+--     elemClassStarts starts-with match:                                                                            FAIL
+--       Exception: websockets-0.13.0.0-88b3b12ba74629ce0101e1cb56645b62632867e7db8688b5eb3bdc9971076bde:Network.WebSockets.Http.HandshakeException:
+--       
+--       RequestRejected (RequestHead {requestPath = "/session/1ef3add3-e33b-44de-afd7-161b5f5b2267", requestHeaders = [("Host","127.0.0.1"),("Connection","Upgrade"),("Upgrade","websocket"),("Sec-WebSocket-Key","VImr8OpRQa3aiyAxynZNMA=="),("Sec-WebSocket-Version","13")], requestSecure = False}) (ResponseHead {responseCode = 400, responseMessage = "Bad Request", responseHeaders = [("content-type","text/plain;charset=utf-8"),("connection","close"),("server","httpd.js"),("date","Sat, 17 Oct 2026 10:04:51 GMT"),("content-length","12")]})
+--       
+--       IPE backtrace:
+--       HasCallStack backtrace:
+--         throwIO, called at ./Test/Tasty/Run.hs:172:44 in tasty-1.5.4-c219ffdaeeb21cab11e36afde43b2b97fa361763300e20b8e8c29de0e1f9bdfc:Test.Tasty.Run
+--       
+--       Use -p '/elemClassStarts starts-with match/' to rerun this test only.
+--     elmClass finds element by single class name:                                                                  FAIL
+--       Exception: websockets-0.13.0.0-88b3b12ba74629ce0101e1cb56645b62632867e7db8688b5eb3bdc9971076bde:Network.WebSockets.Http.HandshakeException:
+--       
+--       RequestRejected (RequestHead {requestPath = "/session/1ef3add3-e33b-44de-afd7-161b5f5b2267", requestHeaders = [("Host","127.0.0.1"),("Connection","Upgrade"),("Upgrade","websocket"),("Sec-WebSocket-Key","VImr8OpRQa3aiyAxynZNMA=="),("Sec-WebSocket-Version","13")], requestSecure = False}) (ResponseHead {responseCode = 400, responseMessage = "Bad Request", responseHeaders = [("content-type","text/plain;charset=utf-8"),("connection","close"),("server","httpd.js"),("date","Sat, 17 Oct 2026 10:04:51 GMT"),("content-length","12")]})
+--       
+--       IPE backtrace:
+--       HasCallStack backtrace:
+--         throwIO, called at ./Test/Tasty/Run.hs:172:44 in tasty-1.5.4-c219ffdaeeb21cab11e36afde43b2b97fa361763300e20b8e8c29de0e1f9bdfc:Test.Tasty.Run
+--       
+--       Use -p '/elmClass finds element by single class name/' to rerun this test only.
+--   Attribute Locator Variants
+--     attribute default contains match:                                                                             FAIL
+--       Exception: websockets-0.13.0.0-88b3b12ba74629ce0101e1cb56645b62632867e7db8688b5eb3bdc9971076bde:Network.WebSockets.Http.HandshakeException:
+--       
+--       RequestRejected (RequestHead {requestPath = "/session/1ef3add3-e33b-44de-afd7-161b5f5b2267", requestHeaders = [("Host","127.0.0.1"),("Connection","Upgrade"),("Upgrade","websocket"),("Sec-WebSocket-Key","VImr8OpRQa3aiyAxynZNMA=="),("Sec-WebSocket-Version","13")], requestSecure = False}) (ResponseHead {responseCode = 400, responseMessage = "Bad Request", responseHeaders = [("content-type","text/plain;charset=utf-8"),("connection","close"),("server","httpd.js"),("date","Sat, 17 Oct 2026 10:04:51 GMT"),("content-length","12")]})
+--       
+--       IPE backtrace:
+--       HasCallStack backtrace:
+--         throwIO, called at ./Test/Tasty/Run.hs:172:44 in tasty-1.5.4-c219ffdaeeb21cab11e36afde43b2b97fa361763300e20b8e8c29de0e1f9bdfc:Test.Tasty.Run
+--       
+--       Use -p '/attribute default contains match/' to rerun this test only.
+--     attributeExact full-equality match:                                                                           FAIL
+--       Exception: websockets-0.13.0.0-88b3b12ba74629ce0101e1cb56645b62632867e7db8688b5eb3bdc9971076bde:Network.WebSockets.Http.HandshakeException:
+--       
+--       RequestRejected (RequestHead {requestPath = "/session/1ef3add3-e33b-44de-afd7-161b5f5b2267", requestHeaders = [("Host","127.0.0.1"),("Connection","Upgrade"),("Upgrade","websocket"),("Sec-WebSocket-Key","VImr8OpRQa3aiyAxynZNMA=="),("Sec-WebSocket-Version","13")], requestSecure = False}) (ResponseHead {responseCode = 400, responseMessage = "Bad Request", responseHeaders = [("content-type","text/plain;charset=utf-8"),("connection","close"),("server","httpd.js"),("date","Sat, 17 Oct 2026 10:04:51 GMT"),("content-length","12")]})
+--       
+--       IPE backtrace:
+--       HasCallStack backtrace:
+--         throwIO, called at ./Test/Tasty/Run.hs:172:44 in tasty-1.5.4-c219ffdaeeb21cab11e36afde43b2b97fa361763300e20b8e8c29de0e1f9bdfc:Test.Tasty.Run
+--       
+--       Use -p '/attributeExact full-equality match/' to rerun this test only.
+--     attributeStarts starts-with match:                                                                            FAIL
+--       Exception: websockets-0.13.0.0-88b3b12ba74629ce0101e1cb56645b62632867e7db8688b5eb3bdc9971076bde:Network.WebSockets.Http.HandshakeException:
+--       
+--       RequestRejected (RequestHead {requestPath = "/session/1ef3add3-e33b-44de-afd7-161b5f5b2267", requestHeaders = [("Host","127.0.0.1"),("Connection","Upgrade"),("Upgrade","websocket"),("Sec-WebSocket-Key","VImr8OpRQa3aiyAxynZNMA=="),("Sec-WebSocket-Version","13")], requestSecure = False}) (ResponseHead {responseCode = 400, responseMessage = "Bad Request", responseHeaders = [("content-type","text/plain;charset=utf-8"),("connection","close"),("server","httpd.js"),("date","Sat, 17 Oct 2026 10:04:51 GMT"),("content-length","12")]})
+--       
+--       IPE backtrace:
+--       HasCallStack backtrace:
+--         throwIO, called at ./Test/Tasty/Run.hs:172:44 in tasty-1.5.4-c219ffdaeeb21cab11e36afde43b2b97fa361763300e20b8e8c29de0e1f9bdfc:Test.Tasty.Run
+--       
+--       Use -p '/attributeStarts starts-with match/' to rerun this test only.
+--     attribute full case-sensitive finds type text inputs:                                                         FAIL
+--       Exception: websockets-0.13.0.0-88b3b12ba74629ce0101e1cb56645b62632867e7db8688b5eb3bdc9971076bde:Network.WebSockets.Http.HandshakeException:
+--       
+--       RequestRejected (RequestHead {requestPath = "/session/1ef3add3-e33b-44de-afd7-161b5f5b2267", requestHeaders = [("Host","127.0.0.1"),("Connection","Upgrade"),("Upgrade","websocket"),("Sec-WebSocket-Key","VImr8OpRQa3aiyAxynZNMA=="),("Sec-WebSocket-Version","13")], requestSecure = False}) (ResponseHead {responseCode = 400, responseMessage = "Bad Request", responseHeaders = [("content-type","text/plain;charset=utf-8"),("connection","close"),("server","httpd.js"),("date","Sat, 17 Oct 2026 10:04:51 GMT"),("content-length","12")]})
+--       
+--       IPE backtrace:
+--       HasCallStack backtrace:
+--         throwIO, called at ./Test/Tasty/Run.hs:172:44 in tasty-1.5.4-c219ffdaeeb21cab11e36afde43b2b97fa361763300e20b8e8c29de0e1f9bdfc:Test.Tasty.Run
+--       
+--       Use -p '/attribute full case-sensitive finds type text inputs/' to rerun this test only.
+--     attribute full case-insensitive matches uppercase value:                                                      FAIL
+--       Exception: websockets-0.13.0.0-88b3b12ba74629ce0101e1cb56645b62632867e7db8688b5eb3bdc9971076bde:Network.WebSockets.Http.HandshakeException:
+--       
+--       RequestRejected (RequestHead {requestPath = "/session/1ef3add3-e33b-44de-afd7-161b5f5b2267", requestHeaders = [("Host","127.0.0.1"),("Connection","Upgrade"),("Upgrade","websocket"),("Sec-WebSocket-Key","VImr8OpRQa3aiyAxynZNMA=="),("Sec-WebSocket-Version","13")], requestSecure = False}) (ResponseHead {responseCode = 400, responseMessage = "Bad Request", responseHeaders = [("content-type","text/plain;charset=utf-8"),("connection","close"),("server","httpd.js"),("date","Sat, 17 Oct 2026 10:04:51 GMT"),("content-length","12")]})
+--       
+--       IPE backtrace:
+--       HasCallStack backtrace:
+--         throwIO, called at ./Test/Tasty/Run.hs:172:44 in tasty-1.5.4-c219ffdaeeb21cab11e36afde43b2b97fa361763300e20b8e8c29de0e1f9bdfc:Test.Tasty.Run
+--       
+--       Use -p '/attribute full case-insensitive matches uppercase value/' to rerun this test only.
+--   roleName and role Constructors
+--     roleName finds element by accessible name:                                                                    FAIL
+--       Exception: websockets-0.13.0.0-88b3b12ba74629ce0101e1cb56645b62632867e7db8688b5eb3bdc9971076bde:Network.WebSockets.Http.HandshakeException:
+--       
+--       RequestRejected (RequestHead {requestPath = "/session/1ef3add3-e33b-44de-afd7-161b5f5b2267", requestHeaders = [("Host","127.0.0.1"),("Connection","Upgrade"),("Upgrade","websocket"),("Sec-WebSocket-Key","VImr8OpRQa3aiyAxynZNMA=="),("Sec-WebSocket-Version","13")], requestSecure = False}) (ResponseHead {responseCode = 400, responseMessage = "Bad Request", responseHeaders = [("content-type","text/plain;charset=utf-8"),("connection","close"),("server","httpd.js"),("date","Sat, 17 Oct 2026 10:04:51 GMT"),("content-length","12")]})
+--       
+--       IPE backtrace:
+--       HasCallStack backtrace:
+--         throwIO, called at ./Test/Tasty/Run.hs:172:44 in tasty-1.5.4-c219ffdaeeb21cab11e36afde43b2b97fa361763300e20b8e8c29de0e1f9bdfc:Test.Tasty.Run
+--       
+--       Use -p '/roleName finds element by accessible name/' to rerun this test only.
+--     roleName finds aside by aria-label:                                                                           FAIL
+--       Exception: websockets-0.13.0.0-88b3b12ba74629ce0101e1cb56645b62632867e7db8688b5eb3bdc9971076bde:Network.WebSockets.Http.HandshakeException:
+--       
+--       RequestRejected (RequestHead {requestPath = "/session/1ef3add3-e33b-44de-afd7-161b5f5b2267", requestHeaders = [("Host","127.0.0.1"),("Connection","Upgrade"),("Upgrade","websocket"),("Sec-WebSocket-Key","VImr8OpRQa3aiyAxynZNMA=="),("Sec-WebSocket-Version","13")], requestSecure = False}) (ResponseHead {responseCode = 400, responseMessage = "Bad Request", responseHeaders = [("content-type","text/plain;charset=utf-8"),("connection","close"),("server","httpd.js"),("date","Sat, 17 Oct 2026 10:04:51 GMT"),("content-length","12")]})
+--       
+--       IPE backtrace:
+--       HasCallStack backtrace:
+--         throwIO, called at ./Test/Tasty/Run.hs:172:44 in tasty-1.5.4-c219ffdaeeb21cab11e36afde43b2b97fa361763300e20b8e8c29de0e1f9bdfc:Test.Tasty.Run
+--       
+--       Use -p '/roleName finds aside by aria-label/' to rerun this test only.
+--     roleName finds nav by aria-label:                                                                             FAIL
+--       Exception: websockets-0.13.0.0-88b3b12ba74629ce0101e1cb56645b62632867e7db8688b5eb3bdc9971076bde:Network.WebSockets.Http.HandshakeException:
+--       
+--       RequestRejected (RequestHead {requestPath = "/session/1ef3add3-e33b-44de-afd7-161b5f5b2267", requestHeaders = [("Host","127.0.0.1"),("Connection","Upgrade"),("Upgrade","websocket"),("Sec-WebSocket-Key","VImr8OpRQa3aiyAxynZNMA=="),("Sec-WebSocket-Version","13")], requestSecure = False}) (ResponseHead {responseCode = 400, responseMessage = "Bad Request", responseHeaders = [("content-type","text/plain;charset=utf-8"),("connection","close"),("server","httpd.js"),("date","Sat, 17 Oct 2026 10:04:51 GMT"),("content-length","12")]})
+--       
+--       IPE backtrace:
+--       HasCallStack backtrace:
+--         throwIO, called at ./Test/Tasty/Run.hs:172:44 in tasty-1.5.4-c219ffdaeeb21cab11e36afde43b2b97fa361763300e20b8e8c29de0e1f9bdfc:Test.Tasty.Run
+--       
+--       Use -p '/roleName finds nav by aria-label/' to rerun this test only.
+--     role generic constructor - Navigation with name:                                                              FAIL
+--       Exception: websockets-0.13.0.0-88b3b12ba74629ce0101e1cb56645b62632867e7db8688b5eb3bdc9971076bde:Network.WebSockets.Http.HandshakeException:
+--       
+--       RequestRejected (RequestHead {requestPath = "/session/1ef3add3-e33b-44de-afd7-161b5f5b2267", requestHeaders = [("Host","127.0.0.1"),("Connection","Upgrade"),("Upgrade","websocket"),("Sec-WebSocket-Key","VImr8OpRQa3aiyAxynZNMA=="),("Sec-WebSocket-Version","13")], requestSecure = False}) (ResponseHead {responseCode = 400, responseMessage = "Bad Request", responseHeaders = [("content-type","text/plain;charset=utf-8"),("connection","close"),("server","httpd.js"),("date","Sat, 17 Oct 2026 10:04:51 GMT"),("content-length","12")]})
+--       
+--       IPE backtrace:
+--       HasCallStack backtrace:
+--         throwIO, called at ./Test/Tasty/Run.hs:172:44 in tasty-1.5.4-c219ffdaeeb21cab11e36afde43b2b97fa361763300e20b8e8c29de0e1f9bdfc:Test.Tasty.Run
+--       
+--       Use -p '/role generic constructor - Navigation with name/' to rerun this test only.
+--   Locate and LocateAll from Element
+--     locateAll from element - inputs within sec-personal:                                                          FAIL
+--       Exception: websockets-0.13.0.0-88b3b12ba74629ce0101e1cb56645b62632867e7db8688b5eb3bdc9971076bde:Network.WebSockets.Http.HandshakeException:
+--       
+--       RequestRejected (RequestHead {requestPath = "/session/1ef3add3-e33b-44de-afd7-161b5f5b2267", requestHeaders = [("Host","127.0.0.1"),("Connection","Upgrade"),("Upgrade","websocket"),("Sec-WebSocket-Key","VImr8OpRQa3aiyAxynZNMA=="),("Sec-WebSocket-Version","13")], requestSecure = False}) (ResponseHead {responseCode = 400, responseMessage = "Bad Request", responseHeaders = [("content-type","text/plain;charset=utf-8"),("connection","close"),("server","httpd.js"),("date","Sat, 17 Oct 2026 10:04:51 GMT"),("content-length","12")]})
+--       
+--       IPE backtrace:
+--       HasCallStack backtrace:
+--         throwIO, called at ./Test/Tasty/Run.hs:172:44 in tasty-1.5.4-c219ffdaeeb21cab11e36afde43b2b97fa361763300e20b8e8c29de0e1f9bdfc:Test.Tasty.Run
+--       
+--       Use -p '/locateAll from element - inputs within sec-personal/' to rerun this test only.
+--     locateAll from element - links within nav-main:                                                               FAIL
+--       Exception: websockets-0.13.0.0-88b3b12ba74629ce0101e1cb56645b62632867e7db8688b5eb3bdc9971076bde:Network.WebSockets.Http.HandshakeException:
+--       
+--       RequestRejected (RequestHead {requestPath = "/session/1ef3add3-e33b-44de-afd7-161b5f5b2267", requestHeaders = [("Host","127.0.0.1"),("Connection","Upgrade"),("Upgrade","websocket"),("Sec-WebSocket-Key","VImr8OpRQa3aiyAxynZNMA=="),("Sec-WebSocket-Version","13")], requestSecure = False}) (ResponseHead {responseCode = 400, responseMessage = "Bad Request", responseHeaders = [("content-type","text/plain;charset=utf-8"),("connection","close"),("server","httpd.js"),("date","Sat, 17 Oct 2026 10:04:51 GMT"),("content-length","12")]})
+--       
+--       IPE backtrace:
+--       HasCallStack backtrace:
+--         throwIO, called at ./Test/Tasty/Run.hs:172:44 in tasty-1.5.4-c219ffdaeeb21cab11e36afde43b2b97fa361763300e20b8e8c29de0e1f9bdfc:Test.Tasty.Run
+--       
+--       Use -p '/locateAll from element - links within nav-main/' to rerun this test only.
+--     locate from element - edt-given-name within sec-personal:                                                     FAIL
+--       Exception: websockets-0.13.0.0-88b3b12ba74629ce0101e1cb56645b62632867e7db8688b5eb3bdc9971076bde:Network.WebSockets.Http.HandshakeException:
+--       
+--       RequestRejected (RequestHead {requestPath = "/session/1ef3add3-e33b-44de-afd7-161b5f5b2267", requestHeaders = [("Host","127.0.0.1"),("Connection","Upgrade"),("Upgrade","websocket"),("Sec-WebSocket-Key","VImr8OpRQa3aiyAxynZNMA=="),("Sec-WebSocket-Version","13")], requestSecure = False}) (ResponseHead {responseCode = 400, responseMessage = "Bad Request", responseHeaders = [("content-type","text/plain;charset=utf-8"),("connection","close"),("server","httpd.js"),("date","Sat, 17 Oct 2026 10:04:51 GMT"),("content-length","12")]})
+--       
+--       IPE backtrace:
+--       HasCallStack backtrace:
+--         throwIO, called at ./Test/Tasty/Run.hs:172:44 in tasty-1.5.4-c219ffdaeeb21cab11e36afde43b2b97fa361763300e20b8e8c29de0e1f9bdfc:Test.Tasty.Run
+--       
+--       Use -p '/locate from element - edt-given-name within sec-personal/' to rerun this test only.
+--     locate from element - not found when element not in scope:                                                    FAIL
+--       Exception: websockets-0.13.0.0-88b3b12ba74629ce0101e1cb56645b62632867e7db8688b5eb3bdc9971076bde:Network.WebSockets.Http.HandshakeException:
+--       
+--       RequestRejected (RequestHead {requestPath = "/session/1ef3add3-e33b-44de-afd7-161b5f5b2267", requestHeaders = [("Host","127.0.0.1"),("Connection","Upgrade"),("Upgrade","websocket"),("Sec-WebSocket-Key","VImr8OpRQa3aiyAxynZNMA=="),("Sec-WebSocket-Version","13")], requestSecure = False}) (ResponseHead {responseCode = 400, responseMessage = "Bad Request", responseHeaders = [("content-type","text/plain;charset=utf-8"),("connection","close"),("server","httpd.js"),("date","Sat, 17 Oct 2026 10:04:51 GMT"),("content-length","12")]})
+--       
+--       IPE backtrace:
+--       HasCallStack backtrace:
+--         throwIO, called at ./Test/Tasty/Run.hs:172:44 in tasty-1.5.4-c219ffdaeeb21cab11e36afde43b2b97fa361763300e20b8e8c29de0e1f9bdfc:Test.Tasty.Run
+--       
+--       Use -p '/locate from element - not found when element not in scope/' to rerun this test only.
+--   Combined Locators
+--     AND - input_ and elmClass text-input:                                                                         FAIL
+--       Exception: websockets-0.13.0.0-88b3b12ba74629ce0101e1cb56645b62632867e7db8688b5eb3bdc9971076bde:Network.WebSockets.Http.HandshakeException:
+--       
+--       RequestRejected (RequestHead {requestPath = "/session/1ef3add3-e33b-44de-afd7-161b5f5b2267", requestHeaders = [("Host","127.0.0.1"),("Connection","Upgrade"),("Upgrade","websocket"),("Sec-WebSocket-Key","VImr8OpRQa3aiyAxynZNMA=="),("Sec-WebSocket-Version","13")], requestSecure = False}) (ResponseHead {responseCode = 400, responseMessage = "Bad Request", responseHeaders = [("content-type","text/plain;charset=utf-8"),("connection","close"),("server","httpd.js"),("date","Sat, 17 Oct 2026 10:04:51 GMT"),("content-length","12")]})
+--       
+--       IPE backtrace:
+--       HasCallStack backtrace:
+--         throwIO, called at ./Test/Tasty/Run.hs:172:44 in tasty-1.5.4-c219ffdaeeb21cab11e36afde43b2b97fa361763300e20b8e8c29de0e1f9bdfc:Test.Tasty.Run
+--       
+--       Use -p '/AND - input_ and elmClass text-input/' to rerun this test only.
+--     OR - h1_ or h2_ finds all headings:                                                                           FAIL
+--       Exception: websockets-0.13.0.0-88b3b12ba74629ce0101e1cb56645b62632867e7db8688b5eb3bdc9971076bde:Network.WebSockets.Http.HandshakeException:
+--       
+--       RequestRejected (RequestHead {requestPath = "/session/1ef3add3-e33b-44de-afd7-161b5f5b2267", requestHeaders = [("Host","127.0.0.1"),("Connection","Upgrade"),("Upgrade","websocket"),("Sec-WebSocket-Key","VImr8OpRQa3aiyAxynZNMA=="),("Sec-WebSocket-Version","13")], requestSecure = False}) (ResponseHead {responseCode = 400, responseMessage = "Bad Request", responseHeaders = [("content-type","text/plain;charset=utf-8"),("connection","close"),("server","httpd.js"),("date","Sat, 17 Oct 2026 10:04:51 GMT"),("content-length","12")]})
+--       
+--       IPE backtrace:
+--       HasCallStack backtrace:
+--         throwIO, called at ./Test/Tasty/Run.hs:172:44 in tasty-1.5.4-c219ffdaeeb21cab11e36afde43b2b97fa361763300e20b8e8c29de0e1f9bdfc:Test.Tasty.Run
+--       
+--       Use -p '/OR - h1_ or h2_ finds all headings/' to rerun this test only.
+--     Descendant - sec-personal contains input_ finds contained inputs:                                             FAIL
+--       Exception: websockets-0.13.0.0-88b3b12ba74629ce0101e1cb56645b62632867e7db8688b5eb3bdc9971076bde:Network.WebSockets.Http.HandshakeException:
+--       
+--       RequestRejected (RequestHead {requestPath = "/session/1ef3add3-e33b-44de-afd7-161b5f5b2267", requestHeaders = [("Host","127.0.0.1"),("Connection","Upgrade"),("Upgrade","websocket"),("Sec-WebSocket-Key","VImr8OpRQa3aiyAxynZNMA=="),("Sec-WebSocket-Version","13")], requestSecure = False}) (ResponseHead {responseCode = 400, responseMessage = "Bad Request", responseHeaders = [("content-type","text/plain;charset=utf-8"),("connection","close"),("server","httpd.js"),("date","Sat, 17 Oct 2026 10:04:51 GMT"),("content-length","12")]})
+--       
+--       IPE backtrace:
+--       HasCallStack backtrace:
+--         throwIO, called at ./Test/Tasty/Run.hs:172:44 in tasty-1.5.4-c219ffdaeeb21cab11e36afde43b2b97fa361763300e20b8e8c29de0e1f9bdfc:Test.Tasty.Run
+--       
+--       Use -p '/Descendant - sec-personal contains input_ finds contained inputs/' to rerun this test only.
+--     OR - roleType Navigation or roleType Search:                                                                  FAIL
+--       Exception: websockets-0.13.0.0-88b3b12ba74629ce0101e1cb56645b62632867e7db8688b5eb3bdc9971076bde:Network.WebSockets.Http.HandshakeException:
+--       
+--       RequestRejected (RequestHead {requestPath = "/session/1ef3add3-e33b-44de-afd7-161b5f5b2267", requestHeaders = [("Host","127.0.0.1"),("Connection","Upgrade"),("Upgrade","websocket"),("Sec-WebSocket-Key","VImr8OpRQa3aiyAxynZNMA=="),("Sec-WebSocket-Version","13")], requestSecure = False}) (ResponseHead {responseCode = 400, responseMessage = "Bad Request", responseHeaders = [("content-type","text/plain;charset=utf-8"),("connection","close"),("server","httpd.js"),("date","Sat, 17 Oct 2026 10:04:51 GMT"),("content-length","12")]})
+--       
+--       IPE backtrace:
+--       HasCallStack backtrace:
+--         throwIO, called at ./Test/Tasty/Run.hs:172:44 in tasty-1.5.4-c219ffdaeeb21cab11e36afde43b2b97fa361763300e20b8e8c29de0e1f9bdfc:Test.Tasty.Run
+--       
+--       Use -p '/OR - roleType Navigation or roleType Search/' to rerun this test only.
+--   Misc ARIA Role Types
+--     roleType Article:                                                                                             FAIL
+--       Exception: websockets-0.13.0.0-88b3b12ba74629ce0101e1cb56645b62632867e7db8688b5eb3bdc9971076bde:Network.WebSockets.Http.HandshakeException:
+--       
+--       RequestRejected (RequestHead {requestPath = "/session/1ef3add3-e33b-44de-afd7-161b5f5b2267", requestHeaders = [("Host","127.0.0.1"),("Connection","Upgrade"),("Upgrade","websocket"),("Sec-WebSocket-Key","VImr8OpRQa3aiyAxynZNMA=="),("Sec-WebSocket-Version","13")], requestSecure = False}) (ResponseHead {responseCode = 400, responseMessage = "Bad Request", responseHeaders = [("content-type","text/plain;charset=utf-8"),("connection","close"),("server","httpd.js"),("date","Sat, 17 Oct 2026 10:04:51 GMT"),("content-length","12")]})
+--       
+--       IPE backtrace:
+--       HasCallStack backtrace:
+--         throwIO, called at ./Test/Tasty/Run.hs:172:44 in tasty-1.5.4-c219ffdaeeb21cab11e36afde43b2b97fa361763300e20b8e8c29de0e1f9bdfc:Test.Tasty.Run
+--       
+--       Use -p '/roleType Article/' to rerun this test only.
+--     article by accessible name:                                                                                   FAIL
+--       Exception: websockets-0.13.0.0-88b3b12ba74629ce0101e1cb56645b62632867e7db8688b5eb3bdc9971076bde:Network.WebSockets.Http.HandshakeException:
+--       
+--       RequestRejected (RequestHead {requestPath = "/session/1ef3add3-e33b-44de-afd7-161b5f5b2267", requestHeaders = [("Host","127.0.0.1"),("Connection","Upgrade"),("Upgrade","websocket"),("Sec-WebSocket-Key","VImr8OpRQa3aiyAxynZNMA=="),("Sec-WebSocket-Version","13")], requestSecure = False}) (ResponseHead {responseCode = 400, responseMessage = "Bad Request", responseHeaders = [("content-type","text/plain;charset=utf-8"),("connection","close"),("server","httpd.js"),("date","Sat, 17 Oct 2026 10:04:51 GMT"),("content-length","12")]})
+--       
+--       IPE backtrace:
+--       HasCallStack backtrace:
+--         throwIO, called at ./Test/Tasty/Run.hs:172:44 in tasty-1.5.4-c219ffdaeeb21cab11e36afde43b2b97fa361763300e20b8e8c29de0e1f9bdfc:Test.Tasty.Run
+--       
+--       Use -p '/article by accessible name/' to rerun this test only.
+--     roleType Heading - single heading on page:                                                                    FAIL
+--       Exception: websockets-0.13.0.0-88b3b12ba74629ce0101e1cb56645b62632867e7db8688b5eb3bdc9971076bde:Network.WebSockets.Http.HandshakeException:
+--       
+--       RequestRejected (RequestHead {requestPath = "/session/1ef3add3-e33b-44de-afd7-161b5f5b2267", requestHeaders = [("Host","127.0.0.1"),("Connection","Upgrade"),("Upgrade","websocket"),("Sec-WebSocket-Key","VImr8OpRQa3aiyAxynZNMA=="),("Sec-WebSocket-Version","13")], requestSecure = False}) (ResponseHead {responseCode = 400, responseMessage = "Bad Request", responseHeaders = [("content-type","text/plain;charset=utf-8"),("connection","close"),("server","httpd.js"),("date","Sat, 17 Oct 2026 10:04:51 GMT"),("content-length","12")]})
+--       
+--       IPE backtrace:
+--       HasCallStack backtrace:
+--         throwIO, called at ./Test/Tasty/Run.hs:172:44 in tasty-1.5.4-c219ffdaeeb21cab11e36afde43b2b97fa361763300e20b8e8c29de0e1f9bdfc:Test.Tasty.Run
+--       
+--       Use -p '/roleType Heading - single heading on page/' to rerun this test only.
+--     heading by text content:                                                                                      FAIL
+--       Exception: websockets-0.13.0.0-88b3b12ba74629ce0101e1cb56645b62632867e7db8688b5eb3bdc9971076bde:Network.WebSockets.Http.HandshakeException:
+--       
+--       RequestRejected (RequestHead {requestPath = "/session/1ef3add3-e33b-44de-afd7-161b5f5b2267", requestHeaders = [("Host","127.0.0.1"),("Connection","Upgrade"),("Upgrade","websocket"),("Sec-WebSocket-Key","VImr8OpRQa3aiyAxynZNMA=="),("Sec-WebSocket-Version","13")], requestSecure = False}) (ResponseHead {responseCode = 400, responseMessage = "Bad Request", responseHeaders = [("content-type","text/plain;charset=utf-8"),("connection","close"),("server","httpd.js"),("date","Sat, 17 Oct 2026 10:04:51 GMT"),("content-length","12")]})
+--       
+--       IPE backtrace:
+--       HasCallStack backtrace:
+--         throwIO, called at ./Test/Tasty/Run.hs:172:44 in tasty-1.5.4-c219ffdaeeb21cab11e36afde43b2b97fa361763300e20b8e8c29de0e1f9bdfc:Test.Tasty.Run
+--       
+--       Use -p '/heading by text content/' to rerun this test only.
+--     roleType Figure:                                                                                              FAIL
+--       Exception: websockets-0.13.0.0-88b3b12ba74629ce0101e1cb56645b62632867e7db8688b5eb3bdc9971076bde:Network.WebSockets.Http.HandshakeException:
+--       
+--       RequestRejected (RequestHead {requestPath = "/session/1ef3add3-e33b-44de-afd7-161b5f5b2267", requestHeaders = [("Host","127.0.0.1"),("Connection","Upgrade"),("Upgrade","websocket"),("Sec-WebSocket-Key","VImr8OpRQa3aiyAxynZNMA=="),("Sec-WebSocket-Version","13")], requestSecure = False}) (ResponseHead {responseCode = 400, responseMessage = "Bad Request", responseHeaders = [("content-type","text/plain;charset=utf-8"),("connection","close"),("server","httpd.js"),("date","Sat, 17 Oct 2026 10:04:51 GMT"),("content-length","12")]})
+--       
+--       IPE backtrace:
+--       HasCallStack backtrace:
+--         throwIO, called at ./Test/Tasty/Run.hs:172:44 in tasty-1.5.4-c219ffdaeeb21cab11e36afde43b2b97fa361763300e20b8e8c29de0e1f9bdfc:Test.Tasty.Run
+--       
+--       Use -p '/roleType Figure/' to rerun this test only.
+--     figure by accessible name:                                                                                    FAIL
+--       Exception: websockets-0.13.0.0-88b3b12ba74629ce0101e1cb56645b62632867e7db8688b5eb3bdc9971076bde:Network.WebSockets.Http.HandshakeException:
+--       
+--       RequestRejected (RequestHead {requestPath = "/session/1ef3add3-e33b-44de-afd7-161b5f5b2267", requestHeaders = [("Host","127.0.0.1"),("Connection","Upgrade"),("Upgrade","websocket"),("Sec-WebSocket-Key","VImr8OpRQa3aiyAxynZNMA=="),("Sec-WebSocket-Version","13")], requestSecure = False}) (ResponseHead {responseCode = 400, responseMessage = "Bad Request", responseHeaders = [("content-type","text/plain;charset=utf-8"),("connection","close"),("server","httpd.js"),("date","Sat, 17 Oct 2026 10:04:51 GMT"),("content-length","12")]})
+--       
+--       IPE backtrace:
+--       HasCallStack backtrace:
+--         throwIO, called at ./Test/Tasty/Run.hs:172:44 in tasty-1.5.4-c219ffdaeeb21cab11e36afde43b2b97fa361763300e20b8e8c29de0e1f9bdfc:Test.Tasty.Run
+--       
+--       Use -p '/figure by accessible name/' to rerun this test only.
+--     roleType List - single list on page:                                                                          FAIL
+--       Exception: websockets-0.13.0.0-88b3b12ba74629ce0101e1cb56645b62632867e7db8688b5eb3bdc9971076bde:Network.WebSockets.Http.HandshakeException:
+--       
+--       RequestRejected (RequestHead {requestPath = "/session/1ef3add3-e33b-44de-afd7-161b5f5b2267", requestHeaders = [("Host","127.0.0.1"),("Connection","Upgrade"),("Upgrade","websocket"),("Sec-WebSocket-Key","VImr8OpRQa3aiyAxynZNMA=="),("Sec-WebSocket-Version","13")], requestSecure = False}) (ResponseHead {responseCode = 400, responseMessage = "Bad Request", responseHeaders = [("content-type","text/plain;charset=utf-8"),("connection","close"),("server","httpd.js"),("date","Sat, 17 Oct 2026 10:04:51 GMT"),("content-length","12")]})
+--       
+--       IPE backtrace:
+--       HasCallStack backtrace:
+--         throwIO, called at ./Test/Tasty/Run.hs:172:44 in tasty-1.5.4-c219ffdaeeb21cab11e36afde43b2b97fa361763300e20b8e8c29de0e1f9bdfc:Test.Tasty.Run
+--       
+--       Use -p '/roleType List - single list on page/' to rerun this test only.
+--     list by accessible name:                                                                                      FAIL
+--       Exception: websockets-0.13.0.0-88b3b12ba74629ce0101e1cb56645b62632867e7db8688b5eb3bdc9971076bde:Network.WebSockets.Http.HandshakeException:
+--       
+--       RequestRejected (RequestHead {requestPath = "/session/1ef3add3-e33b-44de-afd7-161b5f5b2267", requestHeaders = [("Host","127.0.0.1"),("Connection","Upgrade"),("Upgrade","websocket"),("Sec-WebSocket-Key","VImr8OpRQa3aiyAxynZNMA=="),("Sec-WebSocket-Version","13")], requestSecure = False}) (ResponseHead {responseCode = 400, responseMessage = "Bad Request", responseHeaders = [("content-type","text/plain;charset=utf-8"),("connection","close"),("server","httpd.js"),("date","Sat, 17 Oct 2026 10:04:51 GMT"),("content-length","12")]})
+--       
+--       IPE backtrace:
+--       HasCallStack backtrace:
+--         throwIO, called at ./Test/Tasty/Run.hs:172:44 in tasty-1.5.4-c219ffdaeeb21cab11e36afde43b2b97fa361763300e20b8e8c29de0e1f9bdfc:Test.Tasty.Run
+--       
+--       Use -p '/list by accessible name/' to rerun this test only.
+--     roleType ListItem finds all list items:                                                                       FAIL
+--       Exception: websockets-0.13.0.0-88b3b12ba74629ce0101e1cb56645b62632867e7db8688b5eb3bdc9971076bde:Network.WebSockets.Http.HandshakeException:
+--       
+--       RequestRejected (RequestHead {requestPath = "/session/1ef3add3-e33b-44de-afd7-161b5f5b2267", requestHeaders = [("Host","127.0.0.1"),("Connection","Upgrade"),("Upgrade","websocket"),("Sec-WebSocket-Key","VImr8OpRQa3aiyAxynZNMA=="),("Sec-WebSocket-Version","13")], requestSecure = False}) (ResponseHead {responseCode = 400, responseMessage = "Bad Request", responseHeaders = [("content-type","text/plain;charset=utf-8"),("connection","close"),("server","httpd.js"),("date","Sat, 17 Oct 2026 10:04:51 GMT"),("content-length","12")]})
+--       
+--       IPE backtrace:
+--       HasCallStack backtrace:
+--         throwIO, called at ./Test/Tasty/Run.hs:172:44 in tasty-1.5.4-c219ffdaeeb21cab11e36afde43b2b97fa361763300e20b8e8c29de0e1f9bdfc:Test.Tasty.Run
+--       
+--       Use -p '/roleType ListItem finds all list items/' to rerun this test only.
+--     link by text content:                                                                                         FAIL
+--       Exception: websockets-0.13.0.0-88b3b12ba74629ce0101e1cb56645b62632867e7db8688b5eb3bdc9971076bde:Network.WebSockets.Http.HandshakeException:
+--       
+--       RequestRejected (RequestHead {requestPath = "/session/1ef3add3-e33b-44de-afd7-161b5f5b2267", requestHeaders = [("Host","127.0.0.1"),("Connection","Upgrade"),("Upgrade","websocket"),("Sec-WebSocket-Key","VImr8OpRQa3aiyAxynZNMA=="),("Sec-WebSocket-Version","13")], requestSecure = False}) (ResponseHead {responseCode = 400, responseMessage = "Bad Request", responseHeaders = [("content-type","text/plain;charset=utf-8"),("connection","close"),("server","httpd.js"),("date","Sat, 17 Oct 2026 10:04:51 GMT"),("content-length","12")]})
+--       
+--       IPE backtrace:
+--       HasCallStack backtrace:
+--         throwIO, called at ./Test/Tasty/Run.hs:172:44 in tasty-1.5.4-c219ffdaeeb21cab11e36afde43b2b97fa361763300e20b8e8c29de0e1f9bdfc:Test.Tasty.Run
+--       
+--       Use -p '/link by text content/' to rerun this test only.
+--     roleType Link finds all links:                                                                                FAIL
+--       Exception: websockets-0.13.0.0-88b3b12ba74629ce0101e1cb56645b62632867e7db8688b5eb3bdc9971076bde:Network.WebSockets.Http.HandshakeException:
+--       
+--       RequestRejected (RequestHead {requestPath = "/session/1ef3add3-e33b-44de-afd7-161b5f5b2267", requestHeaders = [("Host","127.0.0.1"),("Connection","Upgrade"),("Upgrade","websocket"),("Sec-WebSocket-Key","VImr8OpRQa3aiyAxynZNMA=="),("Sec-WebSocket-Version","13")], requestSecure = False}) (ResponseHead {responseCode = 400, responseMessage = "Bad Request", responseHeaders = [("content-type","text/plain;charset=utf-8"),("connection","close"),("server","httpd.js"),("date","Sat, 17 Oct 2026 10:04:51 GMT"),("content-length","12")]})
+--       
+--       IPE backtrace:
+--       HasCallStack backtrace:
+--         throwIO, called at ./Test/Tasty/Run.hs:172:44 in tasty-1.5.4-c219ffdaeeb21cab11e36afde43b2b97fa361763300e20b8e8c29de0e1f9bdfc:Test.Tasty.Run
+--       
+--       Use -p '/roleType Link finds all links/' to rerun this test only.
+--     roleType Table:                                                                                               FAIL
+--       Exception: websockets-0.13.0.0-88b3b12ba74629ce0101e1cb56645b62632867e7db8688b5eb3bdc9971076bde:Network.WebSockets.Http.HandshakeException:
+--       
+--       RequestRejected (RequestHead {requestPath = "/session/1ef3add3-e33b-44de-afd7-161b5f5b2267", requestHeaders = [("Host","127.0.0.1"),("Connection","Upgrade"),("Upgrade","websocket"),("Sec-WebSocket-Key","VImr8OpRQa3aiyAxynZNMA=="),("Sec-WebSocket-Version","13")], requestSecure = False}) (ResponseHead {responseCode = 400, responseMessage = "Bad Request", responseHeaders = [("content-type","text/plain;charset=utf-8"),("connection","close"),("server","httpd.js"),("date","Sat, 17 Oct 2026 10:04:51 GMT"),("content-length","12")]})
+--       
+--       IPE backtrace:
+--       HasCallStack backtrace:
+--         throwIO, called at ./Test/Tasty/Run.hs:172:44 in tasty-1.5.4-c219ffdaeeb21cab11e36afde43b2b97fa361763300e20b8e8c29de0e1f9bdfc:Test.Tasty.Run
+--       
+--       Use -p '/roleType Table/' to rerun this test only.
+--     table by accessible name:                                                                                     FAIL
+--       Exception: websockets-0.13.0.0-88b3b12ba74629ce0101e1cb56645b62632867e7db8688b5eb3bdc9971076bde:Network.WebSockets.Http.HandshakeException:
+--       
+--       RequestRejected (RequestHead {requestPath = "/session/1ef3add3-e33b-44de-afd7-161b5f5b2267", requestHeaders = [("Host","127.0.0.1"),("Connection","Upgrade"),("Upgrade","websocket"),("Sec-WebSocket-Key","VImr8OpRQa3aiyAxynZNMA=="),("Sec-WebSocket-Version","13")], requestSecure = False}) (ResponseHead {responseCode = 400, responseMessage = "Bad Request", responseHeaders = [("content-type","text/plain;charset=utf-8"),("connection","close"),("server","httpd.js"),("date","Sat, 17 Oct 2026 10:04:51 GMT"),("content-length","12")]})
+--       
+--       IPE backtrace:
+--       HasCallStack backtrace:
+--         throwIO, called at ./Test/Tasty/Run.hs:172:44 in tasty-1.5.4-c219ffdaeeb21cab11e36afde43b2b97fa361763300e20b8e8c29de0e1f9bdfc:Test.Tasty.Run
+--       
+--       Use -p '/table by accessible name/' to rerun this test only.
+--     roleType Row finds header and data rows:                                                                      FAIL
+--       Exception: websockets-0.13.0.0-88b3b12ba74629ce0101e1cb56645b62632867e7db8688b5eb3bdc9971076bde:Network.WebSockets.Http.HandshakeException:
+--       
+--       RequestRejected (RequestHead {requestPath = "/session/1ef3add3-e33b-44de-afd7-161b5f5b2267", requestHeaders = [("Host","127.0.0.1"),("Connection","Upgrade"),("Upgrade","websocket"),("Sec-WebSocket-Key","VImr8OpRQa3aiyAxynZNMA=="),("Sec-WebSocket-Version","13")], requestSecure = False}) (ResponseHead {responseCode = 400, responseMessage = "Bad Request", responseHeaders = [("content-type","text/plain;charset=utf-8"),("connection","close"),("server","httpd.js"),("date","Sat, 17 Oct 2026 10:04:51 GMT"),("content-length","12")]})
+--       
+--       IPE backtrace:
+--       HasCallStack backtrace:
+--         throwIO, called at ./Test/Tasty/Run.hs:172:44 in tasty-1.5.4-c219ffdaeeb21cab11e36afde43b2b97fa361763300e20b8e8c29de0e1f9bdfc:Test.Tasty.Run
+--       
+--       Use -p '/roleType Row finds header and data rows/' to rerun this test only.
+--     roleType ColumnHeader finds both column headers:                                                              FAIL
+--       Exception: websockets-0.13.0.0-88b3b12ba74629ce0101e1cb56645b62632867e7db8688b5eb3bdc9971076bde:Network.WebSockets.Http.HandshakeException:
+--       
+--       RequestRejected (RequestHead {requestPath = "/session/1ef3add3-e33b-44de-afd7-161b5f5b2267", requestHeaders = [("Host","127.0.0.1"),("Connection","Upgrade"),("Upgrade","websocket"),("Sec-WebSocket-Key","VImr8OpRQa3aiyAxynZNMA=="),("Sec-WebSocket-Version","13")], requestSecure = False}) (ResponseHead {responseCode = 400, responseMessage = "Bad Request", responseHeaders = [("content-type","text/plain;charset=utf-8"),("connection","close"),("server","httpd.js"),("date","Sat, 17 Oct 2026 10:04:51 GMT"),("content-length","12")]})
+--       
+--       IPE backtrace:
+--       HasCallStack backtrace:
+--         throwIO, called at ./Test/Tasty/Run.hs:172:44 in tasty-1.5.4-c219ffdaeeb21cab11e36afde43b2b97fa361763300e20b8e8c29de0e1f9bdfc:Test.Tasty.Run
+--       
+--       Use -p '/roleType ColumnHeader finds both column headers/' to rerun this test only.
+--     columnHeader by text content:                                                                                 FAIL
+--       Exception: websockets-0.13.0.0-88b3b12ba74629ce0101e1cb56645b62632867e7db8688b5eb3bdc9971076bde:Network.WebSockets.Http.HandshakeException:
+--       
+--       RequestRejected (RequestHead {requestPath = "/session/1ef3add3-e33b-44de-afd7-161b5f5b2267", requestHeaders = [("Host","127.0.0.1"),("Connection","Upgrade"),("Upgrade","websocket"),("Sec-WebSocket-Key","VImr8OpRQa3aiyAxynZNMA=="),("Sec-WebSocket-Version","13")], requestSecure = False}) (ResponseHead {responseCode = 400, responseMessage = "Bad Request", responseHeaders = [("content-type","text/plain;charset=utf-8"),("connection","close"),("server","httpd.js"),("date","Sat, 17 Oct 2026 10:04:51 GMT"),("content-length","12")]})
+--       
+--       IPE backtrace:
+--       HasCallStack backtrace:
+--         throwIO, called at ./Test/Tasty/Run.hs:172:44 in tasty-1.5.4-c219ffdaeeb21cab11e36afde43b2b97fa361763300e20b8e8c29de0e1f9bdfc:Test.Tasty.Run
+--       
+--       Use -p '/columnHeader by text content/' to rerun this test only.
+--     roleType RowHeader:                                                                                           FAIL
+--       Exception: websockets-0.13.0.0-88b3b12ba74629ce0101e1cb56645b62632867e7db8688b5eb3bdc9971076bde:Network.WebSockets.Http.HandshakeException:
+--       
+--       RequestRejected (RequestHead {requestPath = "/session/1ef3add3-e33b-44de-afd7-161b5f5b2267", requestHeaders = [("Host","127.0.0.1"),("Connection","Upgrade"),("Upgrade","websocket"),("Sec-WebSocket-Key","VImr8OpRQa3aiyAxynZNMA=="),("Sec-WebSocket-Version","13")], requestSecure = False}) (ResponseHead {responseCode = 400, responseMessage = "Bad Request", responseHeaders = [("content-type","text/plain;charset=utf-8"),("connection","close"),("server","httpd.js"),("date","Sat, 17 Oct 2026 10:04:51 GMT"),("content-length","12")]})
+--       
+--       IPE backtrace:
+--       HasCallStack backtrace:
+--         throwIO, called at ./Test/Tasty/Run.hs:172:44 in tasty-1.5.4-c219ffdaeeb21cab11e36afde43b2b97fa361763300e20b8e8c29de0e1f9bdfc:Test.Tasty.Run
+--       
+--       Use -p '/roleType RowHeader/' to rerun this test only.
+--     rowHeader by text content:                                                                                    FAIL
+--       Exception: websockets-0.13.0.0-88b3b12ba74629ce0101e1cb56645b62632867e7db8688b5eb3bdc9971076bde:Network.WebSockets.Http.HandshakeException:
+--       
+--       RequestRejected (RequestHead {requestPath = "/session/1ef3add3-e33b-44de-afd7-161b5f5b2267", requestHeaders = [("Host","127.0.0.1"),("Connection","Upgrade"),("Upgrade","websocket"),("Sec-WebSocket-Key","VImr8OpRQa3aiyAxynZNMA=="),("Sec-WebSocket-Version","13")], requestSecure = False}) (ResponseHead {responseCode = 400, responseMessage = "Bad Request", responseHeaders = [("content-type","text/plain;charset=utf-8"),("connection","close"),("server","httpd.js"),("date","Sat, 17 Oct 2026 10:04:51 GMT"),("content-length","12")]})
+--       
+--       IPE backtrace:
+--       HasCallStack backtrace:
+--         throwIO, called at ./Test/Tasty/Run.hs:172:44 in tasty-1.5.4-c219ffdaeeb21cab11e36afde43b2b97fa361763300e20b8e8c29de0e1f9bdfc:Test.Tasty.Run
+--       
+--       Use -p '/rowHeader by text content/' to rerun this test only.
+--     roleType Cell:                                                                                                FAIL
+--       Exception: websockets-0.13.0.0-88b3b12ba74629ce0101e1cb56645b62632867e7db8688b5eb3bdc9971076bde:Network.WebSockets.Http.HandshakeException:
+--       
+--       RequestRejected (RequestHead {requestPath = "/session/1ef3add3-e33b-44de-afd7-161b5f5b2267", requestHeaders = [("Host","127.0.0.1"),("Connection","Upgrade"),("Upgrade","websocket"),("Sec-WebSocket-Key","VImr8OpRQa3aiyAxynZNMA=="),("Sec-WebSocket-Version","13")], requestSecure = False}) (ResponseHead {responseCode = 400, responseMessage = "Bad Request", responseHeaders = [("content-type","text/plain;charset=utf-8"),("connection","close"),("server","httpd.js"),("date","Sat, 17 Oct 2026 10:04:51 GMT"),("content-length","12")]})
+--       
+--       IPE backtrace:
+--       HasCallStack backtrace:
+--         throwIO, called at ./Test/Tasty/Run.hs:172:44 in tasty-1.5.4-c219ffdaeeb21cab11e36afde43b2b97fa361763300e20b8e8c29de0e1f9bdfc:Test.Tasty.Run
+--       
+--       Use -p '/roleType Cell/' to rerun this test only.
+--     cell by text content:                                                                                         FAIL
+--       Exception: websockets-0.13.0.0-88b3b12ba74629ce0101e1cb56645b62632867e7db8688b5eb3bdc9971076bde:Network.WebSockets.Http.HandshakeException:
+--       
+--       RequestRejected (RequestHead {requestPath = "/session/1ef3add3-e33b-44de-afd7-161b5f5b2267", requestHeaders = [("Host","127.0.0.1"),("Connection","Upgrade"),("Upgrade","websocket"),("Sec-WebSocket-Key","VImr8OpRQa3aiyAxynZNMA=="),("Sec-WebSocket-Version","13")], requestSecure = False}) (ResponseHead {responseCode = 400, responseMessage = "Bad Request", responseHeaders = [("content-type","text/plain;charset=utf-8"),("connection","close"),("server","httpd.js"),("date","Sat, 17 Oct 2026 10:04:51 GMT"),("content-length","12")]})
+--       
+--       IPE backtrace:
+--       HasCallStack backtrace:
+--         throwIO, called at ./Test/Tasty/Run.hs:172:44 in tasty-1.5.4-c219ffdaeeb21cab11e36afde43b2b97fa361763300e20b8e8c29de0e1f9bdfc:Test.Tasty.Run
+--       
+--       Use -p '/cell by text content/' to rerun this test only.
+--     roleType Group finds fieldset:                                                                                FAIL
+--       Exception: websockets-0.13.0.0-88b3b12ba74629ce0101e1cb56645b62632867e7db8688b5eb3bdc9971076bde:Network.WebSockets.Http.HandshakeException:
+--       
+--       RequestRejected (RequestHead {requestPath = "/session/1ef3add3-e33b-44de-afd7-161b5f5b2267", requestHeaders = [("Host","127.0.0.1"),("Connection","Upgrade"),("Upgrade","websocket"),("Sec-WebSocket-Key","VImr8OpRQa3aiyAxynZNMA=="),("Sec-WebSocket-Version","13")], requestSecure = False}) (ResponseHead {responseCode = 400, responseMessage = "Bad Request", responseHeaders = [("content-type","text/plain;charset=utf-8"),("connection","close"),("server","httpd.js"),("date","Sat, 17 Oct 2026 10:04:51 GMT"),("content-length","12")]})
+--       
+--       IPE backtrace:
+--       HasCallStack backtrace:
+--         throwIO, called at ./Test/Tasty/Run.hs:172:44 in tasty-1.5.4-c219ffdaeeb21cab11e36afde43b2b97fa361763300e20b8e8c29de0e1f9bdfc:Test.Tasty.Run
+--       
+--       Use -p '/roleType Group finds fieldset/' to rerun this test only.
+--     group by accessible name:                                                                                     FAIL
+--       Exception: websockets-0.13.0.0-88b3b12ba74629ce0101e1cb56645b62632867e7db8688b5eb3bdc9971076bde:Network.WebSockets.Http.HandshakeException:
+--       
+--       RequestRejected (RequestHead {requestPath = "/session/1ef3add3-e33b-44de-afd7-161b5f5b2267", requestHeaders = [("Host","127.0.0.1"),("Connection","Upgrade"),("Upgrade","websocket"),("Sec-WebSocket-Key","VImr8OpRQa3aiyAxynZNMA=="),("Sec-WebSocket-Version","13")], requestSecure = False}) (ResponseHead {responseCode = 400, responseMessage = "Bad Request", responseHeaders = [("content-type","text/plain;charset=utf-8"),("connection","close"),("server","httpd.js"),("date","Sat, 17 Oct 2026 10:04:51 GMT"),("content-length","12")]})
+--       
+--       IPE backtrace:
+--       HasCallStack backtrace:
+--         throwIO, called at ./Test/Tasty/Run.hs:172:44 in tasty-1.5.4-c219ffdaeeb21cab11e36afde43b2b97fa361763300e20b8e8c29de0e1f9bdfc:Test.Tasty.Run
+--       
+--       Use -p '/group by accessible name/' to rerun this test only.
+--     roleType Option finds no options (DisplayedCheckAlways):                                                      FAIL
+--       Exception: websockets-0.13.0.0-88b3b12ba74629ce0101e1cb56645b62632867e7db8688b5eb3bdc9971076bde:Network.WebSockets.Http.HandshakeException:
+--       
+--       RequestRejected (RequestHead {requestPath = "/session/1ef3add3-e33b-44de-afd7-161b5f5b2267", requestHeaders = [("Host","127.0.0.1"),("Connection","Upgrade"),("Upgrade","websocket"),("Sec-WebSocket-Key","VImr8OpRQa3aiyAxynZNMA=="),("Sec-WebSocket-Version","13")], requestSecure = False}) (ResponseHead {responseCode = 400, responseMessage = "Bad Request", responseHeaders = [("content-type","text/plain;charset=utf-8"),("connection","close"),("server","httpd.js"),("date","Sat, 17 Oct 2026 10:04:51 GMT"),("content-length","12")]})
+--       
+--       IPE backtrace:
+--       HasCallStack backtrace:
+--         throwIO, called at ./Test/Tasty/Run.hs:172:44 in tasty-1.5.4-c219ffdaeeb21cab11e36afde43b2b97fa361763300e20b8e8c29de0e1f9bdfc:Test.Tasty.Run
+--       
+--       Use -p '/roleType Option finds no options (DisplayedCheckAlways)/' to rerun this test only.
+--     option by text content:                                                                                       FAIL
+--       Exception: websockets-0.13.0.0-88b3b12ba74629ce0101e1cb56645b62632867e7db8688b5eb3bdc9971076bde:Network.WebSockets.Http.HandshakeException:
+--       
+--       RequestRejected (RequestHead {requestPath = "/session/1ef3add3-e33b-44de-afd7-161b5f5b2267", requestHeaders = [("Host","127.0.0.1"),("Connection","Upgrade"),("Upgrade","websocket"),("Sec-WebSocket-Key","VImr8OpRQa3aiyAxynZNMA=="),("Sec-WebSocket-Version","13")], requestSecure = False}) (ResponseHead {responseCode = 400, responseMessage = "Bad Request", responseHeaders = [("content-type","text/plain;charset=utf-8"),("connection","close"),("server","httpd.js"),("date","Sat, 17 Oct 2026 10:04:51 GMT"),("content-length","12")]})
+--       
+--       IPE backtrace:
+--       HasCallStack backtrace:
+--         throwIO, called at ./Test/Tasty/Run.hs:172:44 in tasty-1.5.4-c219ffdaeeb21cab11e36afde43b2b97fa361763300e20b8e8c29de0e1f9bdfc:Test.Tasty.Run
+--       
+--       Use -p '/option by text content/' to rerun this test only.
+--     roleType Separator:                                                                                           FAIL
+--       Exception: websockets-0.13.0.0-88b3b12ba74629ce0101e1cb56645b62632867e7db8688b5eb3bdc9971076bde:Network.WebSockets.Http.HandshakeException:
+--       
+--       RequestRejected (RequestHead {requestPath = "/session/1ef3add3-e33b-44de-afd7-161b5f5b2267", requestHeaders = [("Host","127.0.0.1"),("Connection","Upgrade"),("Upgrade","websocket"),("Sec-WebSocket-Key","VImr8OpRQa3aiyAxynZNMA=="),("Sec-WebSocket-Version","13")], requestSecure = False}) (ResponseHead {responseCode = 400, responseMessage = "Bad Request", responseHeaders = [("content-type","text/plain;charset=utf-8"),("connection","close"),("server","httpd.js"),("date","Sat, 17 Oct 2026 10:04:51 GMT"),("content-length","12")]})
+--       
+--       IPE backtrace:
+--       HasCallStack backtrace:
+--         throwIO, called at ./Test/Tasty/Run.hs:172:44 in tasty-1.5.4-c219ffdaeeb21cab11e36afde43b2b97fa361763300e20b8e8c29de0e1f9bdfc:Test.Tasty.Run
+--       
+--       Use -p '/roleType Separator/' to rerun this test only.
+--     progressBar by accessible name:                                                                               FAIL
+--       Exception: websockets-0.13.0.0-88b3b12ba74629ce0101e1cb56645b62632867e7db8688b5eb3bdc9971076bde:Network.WebSockets.Http.HandshakeException:
+--       
+--       RequestRejected (RequestHead {requestPath = "/session/1ef3add3-e33b-44de-afd7-161b5f5b2267", requestHeaders = [("Host","127.0.0.1"),("Connection","Upgrade"),("Upgrade","websocket"),("Sec-WebSocket-Key","VImr8OpRQa3aiyAxynZNMA=="),("Sec-WebSocket-Version","13")], requestSecure = False}) (ResponseHead {responseCode = 400, responseMessage = "Bad Request", responseHeaders = [("content-type","text/plain;charset=utf-8"),("connection","close"),("server","httpd.js"),("date","Sat, 17 Oct 2026 10:04:51 GMT"),("content-length","12")]})
+--       
+--       IPE backtrace:
+--       HasCallStack backtrace:
+--         throwIO, called at ./Test/Tasty/Run.hs:172:44 in tasty-1.5.4-c219ffdaeeb21cab11e36afde43b2b97fa361763300e20b8e8c29de0e1f9bdfc:Test.Tasty.Run
+--       
+--       Use -p '/progressBar by accessible name/' to rerun this test only.
+--     slider by accessible name:                                                                                    FAIL
+--       Exception: websockets-0.13.0.0-88b3b12ba74629ce0101e1cb56645b62632867e7db8688b5eb3bdc9971076bde:Network.WebSockets.Http.HandshakeException:
+--       
+--       RequestRejected (RequestHead {requestPath = "/session/1ef3add3-e33b-44de-afd7-161b5f5b2267", requestHeaders = [("Host","127.0.0.1"),("Connection","Upgrade"),("Upgrade","websocket"),("Sec-WebSocket-Key","VImr8OpRQa3aiyAxynZNMA=="),("Sec-WebSocket-Version","13")], requestSecure = False}) (ResponseHead {responseCode = 400, responseMessage = "Bad Request", responseHeaders = [("content-type","text/plain;charset=utf-8"),("connection","close"),("server","httpd.js"),("date","Sat, 17 Oct 2026 10:04:51 GMT"),("content-length","12")]})
+--       
+--       IPE backtrace:
+--       HasCallStack backtrace:
+--         throwIO, called at ./Test/Tasty/Run.hs:172:44 in tasty-1.5.4-c219ffdaeeb21cab11e36afde43b2b97fa361763300e20b8e8c29de0e1f9bdfc:Test.Tasty.Run
+--       
+--       Use -p '/slider by accessible name/' to rerun this test only.
+--     spinButton by accessible name:                                                                                FAIL
+--       Exception: websockets-0.13.0.0-88b3b12ba74629ce0101e1cb56645b62632867e7db8688b5eb3bdc9971076bde:Network.WebSockets.Http.HandshakeException:
+--       
+--       RequestRejected (RequestHead {requestPath = "/session/1ef3add3-e33b-44de-afd7-161b5f5b2267", requestHeaders = [("Host","127.0.0.1"),("Connection","Upgrade"),("Upgrade","websocket"),("Sec-WebSocket-Key","VImr8OpRQa3aiyAxynZNMA=="),("Sec-WebSocket-Version","13")], requestSecure = False}) (ResponseHead {responseCode = 400, responseMessage = "Bad Request", responseHeaders = [("content-type","text/plain;charset=utf-8"),("connection","close"),("server","httpd.js"),("date","Sat, 17 Oct 2026 10:04:51 GMT"),("content-length","12")]})
+--       
+--       IPE backtrace:
+--       HasCallStack backtrace:
+--         throwIO, called at ./Test/Tasty/Run.hs:172:44 in tasty-1.5.4-c219ffdaeeb21cab11e36afde43b2b97fa361763300e20b8e8c29de0e1f9bdfc:Test.Tasty.Run
+--       
+--       Use -p '/spinButton by accessible name/' to rerun this test only.
+--     roleType Status:                                                                                              FAIL
+--       Exception: websockets-0.13.0.0-88b3b12ba74629ce0101e1cb56645b62632867e7db8688b5eb3bdc9971076bde:Network.WebSockets.Http.HandshakeException:
+--       
+--       RequestRejected (RequestHead {requestPath = "/session/1ef3add3-e33b-44de-afd7-161b5f5b2267", requestHeaders = [("Host","127.0.0.1"),("Connection","Upgrade"),("Upgrade","websocket"),("Sec-WebSocket-Key","VImr8OpRQa3aiyAxynZNMA=="),("Sec-WebSocket-Version","13")], requestSecure = False}) (ResponseHead {responseCode = 400, responseMessage = "Bad Request", responseHeaders = [("content-type","text/plain;charset=utf-8"),("connection","close"),("server","httpd.js"),("date","Sat, 17 Oct 2026 10:04:51 GMT"),("content-length","12")]})
+--       
+--       IPE backtrace:
+--       HasCallStack backtrace:
+--         throwIO, called at ./Test/Tasty/Run.hs:172:44 in tasty-1.5.4-c219ffdaeeb21cab11e36afde43b2b97fa361763300e20b8e8c29de0e1f9bdfc:Test.Tasty.Run
+--       
+--       Use -p '/roleType Status/' to rerun this test only.
+--     status by accessible name:                                                                                    FAIL
+--       Exception: websockets-0.13.0.0-88b3b12ba74629ce0101e1cb56645b62632867e7db8688b5eb3bdc9971076bde:Network.WebSockets.Http.HandshakeException:
+--       
+--       RequestRejected (RequestHead {requestPath = "/session/1ef3add3-e33b-44de-afd7-161b5f5b2267", requestHeaders = [("Host","127.0.0.1"),("Connection","Upgrade"),("Upgrade","websocket"),("Sec-WebSocket-Key","VImr8OpRQa3aiyAxynZNMA=="),("Sec-WebSocket-Version","13")], requestSecure = False}) (ResponseHead {responseCode = 400, responseMessage = "Bad Request", responseHeaders = [("content-type","text/plain;charset=utf-8"),("connection","close"),("server","httpd.js"),("date","Sat, 17 Oct 2026 10:04:51 GMT"),("content-length","12")]})
+--       
+--       IPE backtrace:
+--       HasCallStack backtrace:
+--         throwIO, called at ./Test/Tasty/Run.hs:172:44 in tasty-1.5.4-c219ffdaeeb21cab11e36afde43b2b97fa361763300e20b8e8c29de0e1f9bdfc:Test.Tasty.Run
+--       
+--       Use -p '/status by accessible name/' to rerun this test only.
+--     roleType Term:                                                                                                FAIL
+--       Exception: websockets-0.13.0.0-88b3b12ba74629ce0101e1cb56645b62632867e7db8688b5eb3bdc9971076bde:Network.WebSockets.Http.HandshakeException:
+--       
+--       RequestRejected (RequestHead {requestPath = "/session/1ef3add3-e33b-44de-afd7-161b5f5b2267", requestHeaders = [("Host","127.0.0.1"),("Connection","Upgrade"),("Upgrade","websocket"),("Sec-WebSocket-Key","VImr8OpRQa3aiyAxynZNMA=="),("Sec-WebSocket-Version","13")], requestSecure = False}) (ResponseHead {responseCode = 400, responseMessage = "Bad Request", responseHeaders = [("content-type","text/plain;charset=utf-8"),("connection","close"),("server","httpd.js"),("date","Sat, 17 Oct 2026 10:04:51 GMT"),("content-length","12")]})
+--       
+--       IPE backtrace:
+--       HasCallStack backtrace:
+--         throwIO, called at ./Test/Tasty/Run.hs:172:44 in tasty-1.5.4-c219ffdaeeb21cab11e36afde43b2b97fa361763300e20b8e8c29de0e1f9bdfc:Test.Tasty.Run
+--       
+--       Use -p '/roleType Term/' to rerun this test only.
+--     term by text content:                                                                                         FAIL
+--       Exception: websockets-0.13.0.0-88b3b12ba74629ce0101e1cb56645b62632867e7db8688b5eb3bdc9971076bde:Network.WebSockets.Http.HandshakeException:
+--       
+--       RequestRejected (RequestHead {requestPath = "/session/1ef3add3-e33b-44de-afd7-161b5f5b2267", requestHeaders = [("Host","127.0.0.1"),("Connection","Upgrade"),("Upgrade","websocket"),("Sec-WebSocket-Key","VImr8OpRQa3aiyAxynZNMA=="),("Sec-WebSocket-Version","13")], requestSecure = False}) (ResponseHead {responseCode = 400, responseMessage = "Bad Request", responseHeaders = [("content-type","text/plain;charset=utf-8"),("connection","close"),("server","httpd.js"),("date","Sat, 17 Oct 2026 10:04:51 GMT"),("content-length","12")]})
+--       
+--       IPE backtrace:
+--       HasCallStack backtrace:
+--         throwIO, called at ./Test/Tasty/Run.hs:172:44 in tasty-1.5.4-c219ffdaeeb21cab11e36afde43b2b97fa361763300e20b8e8c29de0e1f9bdfc:Test.Tasty.Run
+--       
+--       Use -p '/term by text content/' to rerun this test only.
+--     roleType Definition:                                                                                          FAIL
+--       Exception: websockets-0.13.0.0-88b3b12ba74629ce0101e1cb56645b62632867e7db8688b5eb3bdc9971076bde:Network.WebSockets.Http.HandshakeException:
+--       
+--       RequestRejected (RequestHead {requestPath = "/session/1ef3add3-e33b-44de-afd7-161b5f5b2267", requestHeaders = [("Host","127.0.0.1"),("Connection","Upgrade"),("Upgrade","websocket"),("Sec-WebSocket-Key","VImr8OpRQa3aiyAxynZNMA=="),("Sec-WebSocket-Version","13")], requestSecure = False}) (ResponseHead {responseCode = 400, responseMessage = "Bad Request", responseHeaders = [("content-type","text/plain;charset=utf-8"),("connection","close"),("server","httpd.js"),("date","Sat, 17 Oct 2026 10:04:51 GMT"),("content-length","12")]})
+--       
+--       IPE backtrace:
+--       HasCallStack backtrace:
+--         throwIO, called at ./Test/Tasty/Run.hs:172:44 in tasty-1.5.4-c219ffdaeeb21cab11e36afde43b2b97fa361763300e20b8e8c29de0e1f9bdfc:Test.Tasty.Run
+--       
+--       Use -p '/roleType Definition/' to rerun this test only.
+--     definition by text content:                                                                                   FAIL
+--       Exception: websockets-0.13.0.0-88b3b12ba74629ce0101e1cb56645b62632867e7db8688b5eb3bdc9971076bde:Network.WebSockets.Http.HandshakeException:
+--       
+--       RequestRejected (RequestHead {requestPath = "/session/1ef3add3-e33b-44de-afd7-161b5f5b2267", requestHeaders = [("Host","127.0.0.1"),("Connection","Upgrade"),("Upgrade","websocket"),("Sec-WebSocket-Key","VImr8OpRQa3aiyAxynZNMA=="),("Sec-WebSocket-Version","13")], requestSecure = False}) (ResponseHead {responseCode = 400, responseMessage = "Bad Request", responseHeaders = [("content-type","text/plain;charset=utf-8"),("connection","close"),("server","httpd.js"),("date","Sat, 17 Oct 2026 10:04:51 GMT"),("content-length","12")]})
+--       
+--       IPE backtrace:
+--       HasCallStack backtrace:
+--         throwIO, called at ./Test/Tasty/Run.hs:172:44 in tasty-1.5.4-c219ffdaeeb21cab11e36afde43b2b97fa361763300e20b8e8c29de0e1f9bdfc:Test.Tasty.Run
+--       
+--       Use -p '/definition by text content/' to rerun this test only.
+--   Misc ARIA Role Types - DisplayedCheckNever
+--     roleType Option with DisplayedCheckNever finds all options:                                                   FAIL
+--       Exception: websockets-0.13.0.0-88b3b12ba74629ce0101e1cb56645b62632867e7db8688b5eb3bdc9971076bde:Network.WebSockets.Http.HandshakeException:
+--       
+--       RequestRejected (RequestHead {requestPath = "/session/1ef3add3-e33b-44de-afd7-161b5f5b2267", requestHeaders = [("Host","127.0.0.1"),("Connection","Upgrade"),("Upgrade","websocket"),("Sec-WebSocket-Key","VImr8OpRQa3aiyAxynZNMA=="),("Sec-WebSocket-Version","13")], requestSecure = False}) (ResponseHead {responseCode = 400, responseMessage = "Bad Request", responseHeaders = [("content-type","text/plain;charset=utf-8"),("connection","close"),("server","httpd.js"),("date","Sat, 17 Oct 2026 10:04:51 GMT"),("content-length","12")]})
+--       
+--       IPE backtrace:
+--       HasCallStack backtrace:
+--         throwIO, called at ./Test/Tasty/Run.hs:172:44 in tasty-1.5.4-c219ffdaeeb21cab11e36afde43b2b97fa361763300e20b8e8c29de0e1f9bdfc:Test.Tasty.Run
+--       
+--       Use -p '/roleType Option with DisplayedCheckNever finds all options/' to rerun this test only.
+-- 
+-- 128 out of 128 tests failed (1.35s)
