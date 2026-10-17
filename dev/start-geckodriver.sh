@@ -3,7 +3,7 @@
 # Exit immediately if a command exits with a non-zero status
 set -e
 
-# Kill any existing or chromedriver processes
+# Kill any existing geckodriver or chromedriver processes
 pkill -x geckodriver || true
 pkill -x chromedriver || true
 
@@ -12,8 +12,12 @@ PORT=4444
 WEBSOCKET_PORT=0 
 MARIONETTE_PORT=2828
 
+# --allow-system-access  - look up and test
+# note vv = verbose
 nohup geckodriver \
   --port $PORT \
+  --allow-system-access \
+  -vv \
   --websocket-port $WEBSOCKET_PORT > geckodriver.log 2>&1 &
 
 disown

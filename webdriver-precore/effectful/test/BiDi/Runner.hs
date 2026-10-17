@@ -1,18 +1,29 @@
 module BiDi.Runner where
 
 import Common.SessionInit (WDSession (..), closeWDSession, getWDSession)
+import Common.Utils (autoId)
+import Common.WebDriver.Effect (WebDriver)
+import Common.WebDriver.InterpreterBiDi qualified as Interp
 import Data.Text (Text, unpack)
 import Data.Text qualified as T
-import Effectful (Eff, IOE, runEff, (:>))
-import Test.Tasty (TestTree)
+import Effectful (Eff, IOE, liftIO, runEff, (:>))
+import Effectful.Error.Dynamic (Error, runErrorNoCallStack)
+import Test.Tasty (TestTree, withResource)
 import Test.Tasty.HUnit (testCase)
-import UnliftIO (finally)
+import UnliftIO (finally, onException, throwIO)
 import WebDriver.Effectful
+import WebDriver.Effectful.BiDi.Base.Actions (browsingContextGetTree)
+import WebDriver.Effectful.Logger (Logger, runLogger)
 import WebDriverPreCore.BiDi.Protocol
-  ( KeySourceAction (..),
+  ( BrowsingContext,
+    GetTree (..),
+    GetTreeResult (..),
+    Info (..),
+    KeySourceAction (..),
+    NodeRemoteValue,
     PointerCommonProperties (..),
   )
-import WebDriver.Effectful.Logger (Logger, runLogger)
+import WebDriverPreCore.Extended.BiDi.Locate qualified as BL
 import WebDriverPreCore.Utils.Utils (ioThrow)
 
 -- | Acquire a BiDi-enabled session, run the action, then release resources.
@@ -43,6 +54,92 @@ runBiDi MkWDSession {loggerEnv, websocketUrl} action = do
     $ action
 
 type BiDiTestEff = Eff '[WebDriverBiDi, Logger, WaitPrimative, IOE]
+
+-- | Effect stack over which the shared BiDi WebSocket is established.
+type BiDiRunnerEffs = '[Logger, WaitPrimative, IOE]
+
+-- | Effect stack for tests using the extended 'WebDriver' locate abstraction
+-- over BiDi, with the dynamic 'Error' effect first.
+type BiDiLocateEffs = '[Error Text, WebDriverBiDi, Logger, WaitPrimative, IOE]
+
+-- | The HTTP session together with its single BiDi WebSocket, shared by all tests.
+data BiDiResources = MkBiDiResources
+  { wdSession :: WDSession,
+    biDiHandle :: BiDiRunnerHandle (Eff BiDiRunnerEffs)
+  }
+
+-- | Acquire the HTTP session and its BiDi WebSocket once for the whole group.
+acquireBiDiResources :: IO BiDiResources
+acquireBiDiResources = do
+  sess@MkWDSession {loggerEnv, websocketUrl} <- getWDSession True
+  ( do
+      bidiUrl <- ioThrow (parseBiDiUrlProperty websocketUrl)
+      handle <-
+        runEff
+          $ runWaitPrimative
+          $ runLogger loggerEnv
+          $ acquireBiDiSession bidiUrl
+      pure (MkBiDiResources sess handle)
+    )
+    `finally` closeWDSession sess
+
+-- | Close the BiDi WebSocket and then the HTTP session.
+--
+-- The HTTP session is deleted in a 'finally' so a failure while closing the
+-- WebSocket cannot leak a live session in geckodriver (which then rejects the
+-- next run with @\"Session is already started\"@).
+releaseBiDiResources :: BiDiResources -> IO ()
+releaseBiDiResources MkBiDiResources {wdSession = ws@MkWDSession {loggerEnv}, biDiHandle} =
+  ( runEff
+      $ runWaitPrimative
+      $ runLogger loggerEnv
+      $ releaseBiDiSession biDiHandle
+    )
+    `finally` closeWDSession ws
+
+-- | Run a group of tests sharing one HTTP session and BiDi WebSocket.
+withBiDiResources :: (IO BiDiResources -> TestTree) -> TestTree
+withBiDiResources = withResource acquireBiDiResources releaseBiDiResources
+
+-- | Default BiDi locate options.
+--
+-- Note: BiDi locate has no equivalent of the HTTP-only extended role matching
+-- or displayed-check modes, so every test group shares these defaults.
+defBiDiOpts :: BL.BiDiLocateOpts
+defBiDiOpts =
+  BL.MkBiDiLocateOpts
+    { singletonCardinality = BL.Unique,
+      mkDefaultLoc = autoId
+    }
+
+-- | Fetch the root (top-level) browsing context of the current session.
+getRootBrowsingContext :: (WebDriverBiDi :> es, IOE :> es) => Eff es BrowsingContext
+getRootBrowsingContext = do
+  tree <- browsingContextGetTree (MkGetTree Nothing Nothing)
+  case tree of
+    MkGetTreeResult (info : _) -> pure info.context
+    _ -> liftIO (fail "No browsing contexts found")
+
+-- | Interpret the extended 'WebDriver' locate effect over the BiDi effect stack.
+interpBiDiLocate :: Eff (WebDriver NodeRemoteValue : BiDiLocateEffs) a -> Eff BiDiLocateEffs a
+interpBiDiLocate act = do
+  ctx <- getRootBrowsingContext
+  Interp.runWebDriverBiDi defBiDiOpts ctx act
+
+-- | Run a 'BiDiLocateEffs' action against the shared resources, converting the
+-- dynamic 'Error' effect into an 'IO' exception.
+runBiDiLocate :: IO BiDiResources -> Eff BiDiLocateEffs a -> IO a
+runBiDiLocate res act = do
+  MkBiDiResources {wdSession = MkWDSession {loggerEnv}, biDiHandle = MkBiDiRunnerHandle {biDiRunner}} <- res
+  result <-
+    runEff
+      $ runWaitPrimative
+      $ runLogger loggerEnv
+      $ runWebDriverBiDi biDiRunner
+      $ runErrorNoCallStack @Text act
+  case result of
+    Left err -> throwIO (userError (unpack err))
+    Right a -> pure a
 
 -- | Minimal pointer properties with all optional fields set to 'Nothing'.
 defaultPointerProps :: PointerCommonProperties
