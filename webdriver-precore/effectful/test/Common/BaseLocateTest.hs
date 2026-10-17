@@ -14,7 +14,6 @@ import Common.WebDriver.Effect
 import Common.WebDriver.TestUtils (locateChkAttr, locateChkAutoId)
 import Common.WebDriver.TestUtils qualified as TU
 import Data.Either (isRight)
-import Data.Function ((&))
 import Data.Text (Text, unpack)
 import Effectful (Eff, (:>))
 import Effectful.Error.Dynamic (Error)
@@ -90,18 +89,57 @@ testLandmarkAndRole run interp =
 -- Extended Role Matching Tests
 -- ---------------------------------------------------------------------------
 
-testExtendedRoleMatching ::
+testExtendedRoleMatchingNever ::
   forall elm es.
-  (Eq elm, Show elm, Error Text :> es) =>
+  (Show elm, Error Text :> es) =>
   (forall a. Eff es a -> IO a) ->
   (forall a. Eff (WebDriver elm : es) a -> Eff es a) ->
-  (forall a. Eff (WebDriver elm : es) a -> Eff es a) ->
-  (forall a. Eff (WebDriver elm : es) a -> Eff es a) ->
   TestTree
-testExtendedRoleMatching run interpNever interpAlways interpMiss =
+testExtendedRoleMatchingNever run interpNever =
   beforeAll_ (extendedRolesUrl >>= \url -> run (interpNever (navigateTo @elm url))) $
     testGroup
-      "Extended Role Matching Tests"
+      "Extended Role Matching Tests - ExtLocateNever"
+      [ testGroup
+          "aria-labelledby resolution"
+          [ testNever "ExtLocateNever - locate does NOT find region via aria-labelledby" $ do
+              locRslt <- locate @elm $ region "Personal Information"
+              TU.chkLocException (txt (region "Personal Information")) isNotFound locRslt,
+            chkElmCountNever "ExtLocateNever - locateAll does NOT find region via aria-labelledby" (region "Personal Information") 0
+          ],
+        testGroup
+          "for id label association"
+          [ testNever "ExtLocateNever - locate does NOT find radio via for id label" $ do
+              locRslt <- locate @elm $ radio "Email"
+              TU.chkLocException (txt (radio "Email")) isNotFound locRslt,
+            testNever "ExtLocateNever - locate does NOT find textbox via for id label" $ do
+              locRslt <- locate @elm $ textbox "Given Name"
+              TU.chkLocException (txt (textbox "Given Name")) isNotFound locRslt
+          ],
+        testGroup
+          "aria-label - always resolved regardless of setting"
+          [ chkAutoId "ExtLocateNever finds textbox with aria-label" (textbox "Nickname") "edt-nickname"
+          ]
+      ]
+  where
+    testNever :: Text -> Eff (WebDriver elm : es) () -> TestTree
+    testNever name act = testCase (unpack name) (run (interpNever act))
+
+    chkAutoId :: Text -> Locator -> Text -> TestTree
+    chkAutoId name loc expctd = testNever name (locateChkAutoId @elm loc expctd)
+
+    chkElmCountNever :: Text -> Locator -> Int -> TestTree
+    chkElmCountNever = chkElmCount' run interpNever
+
+testExtendedRoleMatchingAlways ::
+  forall elm es.
+  (Error Text :> es) =>
+  (forall a. Eff es a -> IO a) ->
+  (forall a. Eff (WebDriver elm : es) a -> Eff es a) ->
+  TestTree
+testExtendedRoleMatchingAlways run interpAlways =
+  beforeAll_ (extendedRolesUrl >>= \url -> run (interpAlways (navigateTo @elm url))) $
+    testGroup
+      "Extended Role Matching Tests - ExtLocateAlways"
       [ testGroup
           "aria-labelledby resolution"
           [ atrrChkExtRole
@@ -109,17 +147,7 @@ testExtendedRoleMatching run interpNever interpAlways interpMiss =
               (region "Personal Information")
               "auto-id"
               "sec-personal",
-            atrrChkExtMiss
-              "ExtLocateSingletonMiss - locate finds region via aria-labelledby"
-              (region "Personal Information")
-              "auto-id"
-              "sec-personal",
-            testNever "ExtLocateNever - locate does NOT find region via aria-labelledby" $ do
-              locRslt <- locate @elm $ region "Personal Information"
-              TU.chkLocException (txt (region "Personal Information")) isNotFound locRslt,
-            chkElmCountAlways "ExtLocateAlways - locateAll finds region via aria-labelledby" (region "Personal Information") 1,
-            chkElmCountMiss "ExtLocateSingletonMiss - locateAll does NOT find region via aria-labelledby" (region "Personal Information") 0,
-            chkElmCountNever "ExtLocateNever - locateAll does NOT find region via aria-labelledby" (region "Personal Information") 0
+            chkElmCountAlways "ExtLocateAlways - locateAll finds region via aria-labelledby" (region "Personal Information") 1
           ],
         testGroup
           "for id label association"
@@ -128,49 +156,69 @@ testExtendedRoleMatching run interpNever interpAlways interpMiss =
               (radio "Email")
               "auto-id"
               "rdo-contact-email",
-            atrrChkExtMiss
-              "ExtLocateSingletonMiss - locate finds radio via for id label"
-              (radio "Email")
-              "auto-id"
-              "rdo-contact-email",
-            testNever "ExtLocateNever - locate does NOT find radio via for id label" $ do
-              locRslt <- locate @elm $ radio "Email"
-              TU.chkLocException (txt (radio "Email")) isNotFound locRslt,
             atrrChkExtRole
               "ExtLocateAlways - locate finds textbox via for id label"
               (textbox "Given Name")
               "auto-id"
               "edt-given-name",
+            chkElmCountAlways "ExtLocateAlways - locateAll finds radio via for id label" (radio "Email") 1
+          ],
+        testGroup
+          "aria-label - always resolved regardless of setting"
+          [ atrrChkExtRole
+              "ExtLocateAlways finds textbox with aria-label"
+              (textbox "Nickname")
+              "auto-id"
+              "edt-nickname"
+          ]
+      ]
+  where
+    testAlways :: Text -> Eff (WebDriver elm : es) () -> TestTree
+    testAlways name act = testCase (unpack name) (run (interpAlways act))
+
+    atrrChkExtRole :: Text -> Locator -> Text -> Text -> TestTree
+    atrrChkExtRole testName loc attrName expctd =
+      testAlways testName (locateChkAttr @elm loc attrName expctd)
+
+    chkElmCountAlways :: Text -> Locator -> Int -> TestTree
+    chkElmCountAlways = chkElmCount' run interpAlways
+
+testExtendedRoleMatchingMiss ::
+  forall elm es.
+  (Error Text :> es) =>
+  (forall a. Eff es a -> IO a) ->
+  (forall a. Eff (WebDriver elm : es) a -> Eff es a) ->
+  TestTree
+testExtendedRoleMatchingMiss run interpMiss =
+  beforeAll_ (extendedRolesUrl >>= \url -> run (interpMiss (navigateTo @elm url))) $
+    testGroup
+      "Extended Role Matching Tests - ExtLocateSingletonMiss"
+      [ testGroup
+          "aria-labelledby resolution"
+          [ atrrChkExtMiss
+              "ExtLocateSingletonMiss - locate finds region via aria-labelledby"
+              (region "Personal Information")
+              "auto-id"
+              "sec-personal",
+            chkElmCountMiss "ExtLocateSingletonMiss - locateAll does NOT find region via aria-labelledby" (region "Personal Information") 0
+          ],
+        testGroup
+          "for id label association"
+          [ atrrChkExtMiss
+              "ExtLocateSingletonMiss - locate finds radio via for id label"
+              (radio "Email")
+              "auto-id"
+              "rdo-contact-email",
             atrrChkExtMiss
               "ExtLocateSingletonMiss - locate finds textbox via for id label"
               (textbox "Given Name")
               "auto-id"
               "edt-given-name",
-            testNever "ExtLocateNever - locate does NOT find textbox via for id label" $ do
-              locRslt <- locate @elm $ textbox "Given Name"
-              TU.chkLocException (txt (textbox "Given Name")) isNotFound locRslt,
-            chkElmCountAlways "ExtLocateAlways - locateAll finds radio via for id label" (radio "Email") 1,
             chkElmCountMiss "ExtLocateSingletonMiss - locateAll does NOT find radio via for id label" (radio "Email") 0
           ],
         testGroup
-          "RoleType - unaffected by extended matching"
-          [ testBase "RoleType Region - ExtLocateNever and ExtLocateAlways give same results" $ do
-              never <- interpNever (locateAll @elm $ roleType Region)
-              always <- interpAlways (locateAll @elm $ roleType Region)
-              TU.chkEq "RoleType Region results should be identical" never always
-          ],
-        testGroup
           "aria-label - always resolved regardless of setting"
-          [ chkAutoId
-              "ExtLocateNever finds textbox with aria-label"
-              (textbox "Nickname")
-              "edt-nickname",
-            atrrChkExtRole
-              "ExtLocateAlways finds textbox with aria-label"
-              (textbox "Nickname")
-              "auto-id"
-              "edt-nickname",
-            atrrChkExtMiss
+          [ atrrChkExtMiss
               "ExtLocateSingletonMiss finds textbox with aria-label"
               (textbox "Nickname")
               "auto-id"
@@ -178,66 +226,61 @@ testExtendedRoleMatching run interpNever interpAlways interpMiss =
           ]
       ]
   where
-    testNever :: Text -> Eff (WebDriver elm : es) () -> TestTree
-    testNever name act = testCase (unpack name) (run (interpNever act))
-
-    testAlways :: Text -> Eff (WebDriver elm : es) () -> TestTree
-    testAlways name act = testCase (unpack name) (run (interpAlways act))
-
-    chkElmCountAlways :: Text -> Locator -> Int -> TestTree
-    chkElmCountAlways = chkElmCount' run interpAlways
-
-    chkElmCountMiss :: Text -> Locator -> Int -> TestTree
-    chkElmCountMiss = chkElmCount' run interpMiss
-
-    chkElmCountNever :: Text -> Locator -> Int -> TestTree
-    chkElmCountNever = chkElmCount' run interpNever
-
     testMiss :: Text -> Eff (WebDriver elm : es) () -> TestTree
     testMiss name act = testCase (unpack name) (run (interpMiss act))
-
-    testBase :: Text -> Eff es () -> TestTree
-    testBase name act = testCase (unpack name) (run act)
-
-    chkAutoId :: Text -> Locator -> Text -> TestTree
-    chkAutoId name loc expctd = testNever name (locateChkAutoId @elm loc expctd)
-
-    atrrChkExtRole :: Text -> Locator -> Text -> Text -> TestTree
-    atrrChkExtRole testName loc attrName expctd =
-      testAlways testName (locateChkAttr @elm loc attrName expctd)
 
     atrrChkExtMiss :: Text -> Locator -> Text -> Text -> TestTree
     atrrChkExtMiss testName loc attrName expctd =
       testMiss testName (locateChkAttr @elm loc attrName expctd)
 
--- ---------------------------------------------------------------------------
--- Visibility Check Tests
--- ---------------------------------------------------------------------------
+    chkElmCountMiss :: Text -> Locator -> Int -> TestTree
+    chkElmCountMiss = chkElmCount' run interpMiss
 
-testVisibility ::
+testExtendedRoleMatchingRoleType ::
   forall elm es.
   (Eq elm, Show elm, Error Text :> es) =>
   (forall a. Eff es a -> IO a) ->
   (forall a. Eff (WebDriver elm : es) a -> Eff es a) ->
   (forall a. Eff (WebDriver elm : es) a -> Eff es a) ->
+  TestTree
+testExtendedRoleMatchingRoleType run interpNever interpAlways =
+  beforeAll_ (extendedRolesUrl >>= \url -> run (interpNever (navigateTo @elm url))) $
+    testGroup
+      "Extended Role Matching Tests"
+      [ testGroup
+          "RoleType - unaffected by extended matching"
+          [ testCase
+              (unpack "RoleType Region - ExtLocateNever and ExtLocateAlways give same results")
+              ( run $ do
+                  never <- interpNever (locateAll @elm $ roleType Region)
+                  always <- interpAlways (locateAll @elm $ roleType Region)
+                  TU.chkEq "RoleType Region results should be identical" never always
+              )
+          ]
+      ]
+
+-- ---------------------------------------------------------------------------
+-- Visibility Check Tests
+-- ---------------------------------------------------------------------------
+
+testVisibilityAlways ::
+  forall elm es.
+  (Error Text :> es) =>
+  (forall a. Eff es a -> IO a) ->
   (forall a. Eff (WebDriver elm : es) a -> Eff es a) ->
   TestTree
-testVisibility run interpAlways interpNever interpDisambiguate =
+testVisibilityAlways run interpAlways =
   beforeAll_ (visibilityUrl >>= \url -> run (interpAlways (navigateTo @elm url))) $
     testGroup
-      "Visibility Check Tests"
+      "Visibility Check Tests - DisplayedCheckAlways"
       [ testGroup
-          "locateAll - DisplayedCheckAlways filters hidden and DisplayedCheckNever does not"
+          "locateAll filters hidden"
           [ testGroup
               "Rule 1 - display none on element itself"
               [ chkElmCount
                   "edt-notes-hidden has display none via own CSS class - DisplayedCheckAlways filters"
                   (TU.autoId "edt-notes-hidden")
-                  0,
-                chkElmCountNever
-                  "edt-notes-hidden has display none via own CSS class - DisplayedCheckNever finds"
-                  (TU.autoId "edt-notes-hidden")
-                  1
+                  0
               ],
             testGroup
               "Rule 2 - visibility hidden or collapse - inherited"
@@ -245,40 +288,24 @@ testVisibility run interpAlways interpNever interpDisambiguate =
                   "edt-vis-hidden inside inline visibility hidden parent - DisplayedCheckAlways filters"
                   (TU.autoId "edt-vis-hidden")
                   0,
-                chkElmCountNever
-                  "edt-vis-hidden inside inline visibility hidden parent - DisplayedCheckNever finds"
-                  (TU.autoId "edt-vis-hidden")
-                  1,
                 chkElmCount
                   "edt-css-vis-hidden inside CSS class visibility hidden parent - DisplayedCheckAlways filters"
                   (TU.autoId "edt-css-vis-hidden")
-                  0,
-                chkElmCountNever
-                  "edt-css-vis-hidden inside CSS class visibility hidden parent - DisplayedCheckNever finds"
-                  (TU.autoId "edt-css-vis-hidden")
-                  1
+                  0
               ],
             testGroup
               "Rule 3 - parseFloat opacity equals 0 on element itself"
               [ chkElmCount
                   "fg-opacity-zero div has opacity 0 applied directly - DisplayedCheckAlways filters"
                   (TU.autoId "fg-opacity-zero")
-                  0,
-                chkElmCountNever
-                  "fg-opacity-zero div has opacity 0 applied directly - DisplayedCheckNever finds"
-                  (TU.autoId "fg-opacity-zero")
-                  1
+                  0
               ],
             testGroup
               "Rule 4 - INPUT with type hidden"
               [ chkElmCount
                   "hdn-session-token is input type hidden - DisplayedCheckAlways filters"
                   (TU.autoId "hdn-session-token")
-                  0,
-                chkElmCountNever
-                  "hdn-session-token is input type hidden - DisplayedCheckNever finds"
-                  (TU.autoId "hdn-session-token")
-                  1
+                  0
               ],
             testGroup
               "Rule 5 - offsetWidth or offsetHeight equals 0 - parent has display none"
@@ -286,26 +313,14 @@ testVisibility run interpAlways interpNever interpDisambiguate =
                   "edt-display-none inside inline display none parent - DisplayedCheckAlways filters"
                   (TU.autoId "edt-display-none")
                   0,
-                chkElmCountNever
-                  "edt-display-none inside inline display none parent - DisplayedCheckNever finds"
-                  (TU.autoId "edt-display-none")
-                  1,
                 chkElmCount
                   "edt-css-none inside CSS class display none parent - DisplayedCheckAlways filters"
                   (TU.autoId "edt-css-none")
                   0,
-                chkElmCountNever
-                  "edt-css-none inside CSS class display none parent - DisplayedCheckNever finds"
-                  (TU.autoId "edt-css-none")
-                  1,
                 chkElmCount
                   "edt-html-hidden inside HTML hidden attribute parent - DisplayedCheckAlways filters"
                   (TU.autoId "edt-html-hidden")
-                  0,
-                chkElmCountNever
-                  "edt-html-hidden inside HTML hidden attribute parent - DisplayedCheckNever finds"
-                  (TU.autoId "edt-html-hidden")
-                  1
+                  0
               ],
             testGroup
               "NOT filtered by displayedJS"
@@ -313,21 +328,101 @@ testVisibility run interpAlways interpNever interpDisambiguate =
                   "edt-aria-hidden - aria-hidden does not affect display - DisplayedCheckAlways finds"
                   (TU.autoId "edt-aria-hidden")
                   1,
-                chkElmCountNever
-                  "edt-aria-hidden - aria-hidden does not affect display - DisplayedCheckNever finds"
-                  (TU.autoId "edt-aria-hidden")
-                  1,
                 chkElmCount
                   "edt-offscreen positioned off-viewport but has non-zero dimensions - DisplayedCheckAlways finds"
-                  (TU.autoId "edt-offscreen")
-                  1,
-                chkElmCountNever
-                  "edt-offscreen positioned off-viewport but has non-zero dimensions - DisplayedCheckNever finds"
                   (TU.autoId "edt-offscreen")
                   1,
                 chkElmCount
                   "edt-opacity-zero input child of opacity 0 container - opacity not inherited - DisplayedCheckAlways finds"
                   (TU.autoId "edt-opacity-zero")
+                  1
+              ]
+          ],
+        testGroup
+          "locate singleton"
+          [ testAlways "DisplayedCheckAlways also filters hidden, resolving to unique visible element" $
+              locateChkAttr @elm (elmClass "notes-area") "auto-id" "edt-notes-visible"
+          ],
+        testGroup
+          "locateAll"
+          [ chkElmCount "notes-area with DisplayedCheckAlways finds visible only" (elmClass "notes-area") 1
+          ]
+      ]
+  where
+    testAlways :: Text -> Eff (WebDriver elm : es) () -> TestTree
+    testAlways name act = testCase (unpack name) (run (interpAlways act))
+
+    chkElmCount :: Text -> Locator -> Int -> TestTree
+    chkElmCount = chkElmCount' run interpAlways
+
+testVisibilityNever ::
+  forall elm es.
+  (Show elm, Error Text :> es) =>
+  (forall a. Eff es a -> IO a) ->
+  (forall a. Eff (WebDriver elm : es) a -> Eff es a) ->
+  TestTree
+testVisibilityNever run interpNever =
+  beforeAll_ (visibilityUrl >>= \url -> run (interpNever (navigateTo @elm url))) $
+    testGroup
+      "Visibility Check Tests - DisplayedCheckNever"
+      [ testGroup
+          "locateAll does NOT filter hidden"
+          [ testGroup
+              "Rule 1 - display none on element itself"
+              [ chkElmCountNever
+                  "edt-notes-hidden has display none via own CSS class - DisplayedCheckNever finds"
+                  (TU.autoId "edt-notes-hidden")
+                  1
+              ],
+            testGroup
+              "Rule 2 - visibility hidden or collapse - inherited"
+              [ chkElmCountNever
+                  "edt-vis-hidden inside inline visibility hidden parent - DisplayedCheckNever finds"
+                  (TU.autoId "edt-vis-hidden")
+                  1,
+                chkElmCountNever
+                  "edt-css-vis-hidden inside CSS class visibility hidden parent - DisplayedCheckNever finds"
+                  (TU.autoId "edt-css-vis-hidden")
+                  1
+              ],
+            testGroup
+              "Rule 3 - parseFloat opacity equals 0 on element itself"
+              [ chkElmCountNever
+                  "fg-opacity-zero div has opacity 0 applied directly - DisplayedCheckNever finds"
+                  (TU.autoId "fg-opacity-zero")
+                  1
+              ],
+            testGroup
+              "Rule 4 - INPUT with type hidden"
+              [ chkElmCountNever
+                  "hdn-session-token is input type hidden - DisplayedCheckNever finds"
+                  (TU.autoId "hdn-session-token")
+                  1
+              ],
+            testGroup
+              "Rule 5 - offsetWidth or offsetHeight equals 0 - parent has display none"
+              [ chkElmCountNever
+                  "edt-display-none inside inline display none parent - DisplayedCheckNever finds"
+                  (TU.autoId "edt-display-none")
+                  1,
+                chkElmCountNever
+                  "edt-css-none inside CSS class display none parent - DisplayedCheckNever finds"
+                  (TU.autoId "edt-css-none")
+                  1,
+                chkElmCountNever
+                  "edt-html-hidden inside HTML hidden attribute parent - DisplayedCheckNever finds"
+                  (TU.autoId "edt-html-hidden")
+                  1
+              ],
+            testGroup
+              "NOT filtered by displayedJS"
+              [ chkElmCountNever
+                  "edt-aria-hidden - aria-hidden does not affect display - DisplayedCheckNever finds"
+                  (TU.autoId "edt-aria-hidden")
+                  1,
+                chkElmCountNever
+                  "edt-offscreen positioned off-viewport but has non-zero dimensions - DisplayedCheckNever finds"
+                  (TU.autoId "edt-offscreen")
                   1,
                 chkElmCountNever
                   "edt-opacity-zero input child of opacity 0 container - opacity not inherited - DisplayedCheckNever finds"
@@ -336,46 +431,65 @@ testVisibility run interpAlways interpNever interpDisambiguate =
               ]
           ],
         testGroup
-          "locate singleton - DisplayedCheckDisambiguateUnique resolves hidden-visible ambiguity"
+          "locate singleton"
           [ testNever "DisplayedCheckNever with Unique throws AmbiguousLocator - hidden and visible share class" $ do
               locRslt <- locate @elm $ elmClass "notes-area"
-              TU.chkLocException (txt (elmClass "notes-area")) isAmbiguous locRslt,
-            testDisambiguate "DisplayedCheckDisambiguateUnique filters hidden - resolving to unique visible element" $
-              locateChkAttr @elm (elmClass "notes-area") "auto-id" "edt-notes-visible",
-            testAlways "DisplayedCheckAlways also filters hidden, resolving to unique visible element" $
-              locateChkAttr @elm (elmClass "notes-area") "auto-id" "edt-notes-visible"
+              TU.chkLocException (txt (elmClass "notes-area")) isAmbiguous locRslt
           ],
         testGroup
-          "locateAll - DisplayedCheckDisambiguateUnique has no effect - only Always filters"
-          [ testBase "DisambiguateUnique gives same result as Never for locateAll" $ do
-              disambiguate <- interpDisambiguate (locateAll @elm $ elmClass "notes-area")
-              never <- interpNever (locateAll @elm $ elmClass "notes-area")
-              TU.chkEq "DisambiguateUnique locateAll result must equal Never" disambiguate never,
-            testGroup
-              "DisplayedCheckAlways filters hidden in locateAll - Never returns both"
-              [ chkElmCount "notes-area with DisplayedCheckAlways finds visible only" (elmClass "notes-area") 1,
-                chkElmCountNever "notes-area with DisplayedCheckNever finds both visible and hidden" (elmClass "notes-area") 2
-              ]
+          "locateAll"
+          [ chkElmCountNever "notes-area with DisplayedCheckNever finds both visible and hidden" (elmClass "notes-area") 2
           ]
       ]
   where
-    testAlways :: Text -> Eff (WebDriver elm : es) () -> TestTree
-    testAlways name act = testCase (unpack name) (run (interpAlways act))
-
     testNever :: Text -> Eff (WebDriver elm : es) () -> TestTree
     testNever name act = testCase (unpack name) (run (interpNever act))
 
+    chkElmCountNever :: Text -> Locator -> Int -> TestTree
+    chkElmCountNever = chkElmCount' run interpNever
+
+testVisibilityDisambiguate ::
+  forall elm es.
+  (Error Text :> es) =>
+  (forall a. Eff es a -> IO a) ->
+  (forall a. Eff (WebDriver elm : es) a -> Eff es a) ->
+  TestTree
+testVisibilityDisambiguate run interpDisambiguate =
+  beforeAll_ (visibilityUrl >>= \url -> run (interpDisambiguate (navigateTo @elm url))) $
+    testGroup
+      "Visibility Check Tests - DisplayedCheckDisambiguateUnique"
+      [ testGroup
+          "locate singleton"
+          [ testDisambiguate "DisplayedCheckDisambiguateUnique filters hidden - resolving to unique visible element" $
+              locateChkAttr @elm (elmClass "notes-area") "auto-id" "edt-notes-visible"
+          ]
+      ]
+  where
     testDisambiguate :: Text -> Eff (WebDriver elm : es) () -> TestTree
     testDisambiguate name act = testCase (unpack name) (run (interpDisambiguate act))
 
-    testBase :: Text -> Eff es () -> TestTree
-    testBase name act = testCase (unpack name) (run act)
-
-    chkElmCount :: Text -> Locator -> Int -> TestTree
-    chkElmCount = chkElmCount' run interpAlways
-
-    chkElmCountNever :: Text -> Locator -> Int -> TestTree
-    chkElmCountNever = chkElmCount' run interpNever
+testVisibilityDisambiguateVsNever ::
+  forall elm es.
+  (Eq elm, Show elm, Error Text :> es) =>
+  (forall a. Eff es a -> IO a) ->
+  (forall a. Eff (WebDriver elm : es) a -> Eff es a) ->
+  (forall a. Eff (WebDriver elm : es) a -> Eff es a) ->
+  TestTree
+testVisibilityDisambiguateVsNever run interpDisambiguate interpNever =
+  beforeAll_ (visibilityUrl >>= \url -> run (interpDisambiguate (navigateTo @elm url))) $
+    testGroup
+      "Visibility Check Tests"
+      [ testGroup
+          "locateAll - DisplayedCheckDisambiguateUnique has no effect"
+          [ testCase
+              (unpack "DisambiguateUnique gives same result as Never for locateAll")
+              ( run $ do
+                  disambiguate <- interpDisambiguate (locateAll @elm $ elmClass "notes-area")
+                  never <- interpNever (locateAll @elm $ elmClass "notes-area")
+                  TU.chkEq "DisambiguateUnique locateAll result must equal Never" disambiguate never
+              )
+          ]
+      ]
 
 -- ---------------------------------------------------------------------------
 -- Basic Locator Types
@@ -510,28 +624,29 @@ testLocateFromElement run interp =
     testGroup
       "Locate and LocateAll from Element"
       [ test "locateAll from element - inputs within sec-personal"
-          $ TU.locateChkAll "find sec-personal" (TU.autoId "sec-personal")
-          $ elmCountMatches 5,
+          $ TU.locateChkAll @elm "find sec-personal" (TU.autoId "sec-personal")
+          $ TU.chkCount "" 5,
         test "locateAll from element - links within nav-main" $ do
           navResult <- locate @elm $ TU.autoId "nav-main"
-          chkElmM "find nav-main" navResult $ \nav -> do
-            linkResult <- locateAllFromElement @elm nav a_
-            TU.chkElms "links in nav-main" (elmCountMatches 2) linkResult
-            pure Nothing,
+          case navResult of
+            Left _ -> TU.locateFail navResult "find nav-main - locate failed"
+            Right nav -> do
+              linkResult <- locateAllFromElement @elm nav a_
+              TU.chkRightCount "links in nav-main" 2 linkResult,
         test "locate from element - edt-given-name within sec-personal" $ do
           secResult <- locate @elm $ TU.autoId "sec-personal"
-          chkElmM "find sec-personal" secResult $ \sec -> do
-            givenResult <- locateFromElement @elm sec $ TU.autoId "edt-given-name"
-            TU.chkElm "edt-given-name in section" isRight givenResult
-            pure Nothing,
+          case secResult of
+            Left _ -> TU.locateFail secResult "find sec-personal - locate failed"
+            Right sec -> do
+              givenResult <- locateFromElement @elm sec $ TU.autoId "edt-given-name"
+              TU.chkElm "edt-given-name in section" isRight givenResult,
         test "locate from element - not found when element not in scope" $ do
           hdrResult <- locate @elm $ TU.autoId "hdr-main"
-          chkElmM "find hdr-main" hdrResult $ \hdr -> do
-            notInHdr <- locateFromElement @elm hdr $ TU.autoId "edt-given-name"
-            pure $ case notInHdr of
-              Left (L.ElementNotFound {}) -> Nothing
-              Left other -> Just $ "expected ElementNotFound but got: " <> txt other
-              Right _ -> Just "expected ElementNotFound but edt-given-name was found in header"
+          case hdrResult of
+            Left _ -> TU.locateFail hdrResult "find hdr-main - locate failed"
+            Right hdr -> do
+              notInHdr <- locateFromElement @elm hdr $ TU.autoId "edt-given-name"
+              TU.chkLocException "edt-given-name in header" isNotFound notInHdr
       ]
   where
     test :: Text -> Eff (WebDriver elm : es) () -> TestTree
@@ -569,9 +684,8 @@ testMiscAriaRoleTypes ::
   (Error Text :> es) =>
   (forall a. Eff es a -> IO a) ->
   (forall a. Eff (WebDriver elm : es) a -> Eff es a) ->
-  (forall a. Eff (WebDriver elm : es) a -> Eff es a) ->
   TestTree
-testMiscAriaRoleTypes run wdIntprt interpNever =
+testMiscAriaRoleTypes run wdIntprt =
   beforeAll_ (miscRolesUrl >>= \url -> run (wdIntprt (navigateTo @elm url))) $
     testGroup
       "Misc ARIA Role Types"
@@ -602,7 +716,6 @@ testMiscAriaRoleTypes run wdIntprt interpNever =
         -- widgets (not DOM elements), so options never have CSS dimensions. DisplayedCheckAlways
         -- filters them out. Use DisplayedCheckNever to locate them programmatically.
         chkElmCount "roleType Option finds no options (DisplayedCheckAlways)" (roleType Option) 0,
-        chkElmCountNever "roleType Option with DisplayedCheckNever finds all options" (roleType Option) 2,
         chkAutoId "option by text content" (option "Alpha") "opt-alpha",
         chkAutoId "roleType Separator" (roleType Separator) "sep-main",
         chkAutoId "progressBar by accessible name" (progressBar "Upload progress") "prg-upload",
@@ -627,6 +740,21 @@ testMiscAriaRoleTypes run wdIntprt interpNever =
     chkElmCount :: Text -> Locator -> Int -> TestTree
     chkElmCount = chkElmCount' run wdIntprt
 
+testMiscAriaRoleTypesNever ::
+  forall elm es.
+  (Error Text :> es) =>
+  (forall a. Eff es a -> IO a) ->
+  (forall a. Eff (WebDriver elm : es) a -> Eff es a) ->
+  TestTree
+testMiscAriaRoleTypesNever run interpNever =
+  beforeAll_ (miscRolesUrl >>= \url -> run (interpNever (navigateTo @elm url))) $
+    testGroup
+      "Misc ARIA Role Types - DisplayedCheckNever"
+      [ -- Note: <option> elements have no CSS dimensions, so DisplayedCheckAlways filters them
+        -- out. Use DisplayedCheckNever to locate them programmatically.
+        chkElmCountNever "roleType Option with DisplayedCheckNever finds all options" (roleType Option) 2
+      ]
+  where
     chkElmCountNever :: Text -> Locator -> Int -> TestTree
     chkElmCountNever = chkElmCount' run interpNever
 
@@ -646,19 +774,6 @@ isAmbiguous :: L.LocateException -> Bool
 isAmbiguous = \case
   L.AmbiguousLocator {} -> True
   _ -> False
-
--- chkElmM ::
---   forall elm es.
---   (Show elm, WebDriver elm :> es, Error Text :> es) =>
---   Text ->
---   Either L.LocateException elm ->
---   (elm -> Eff es (Maybe Text)) ->
---   Eff es ()
--- chkElmM title locRslt chk =
---   locRslt
---     & either
---       (\err -> TU.locateFail locRslt (title <> " - locate failed: " <> txt err))
---       (\el -> chk el >>= TU.chkWithElement locRslt (title <> " - element check failed") el)
 
 mkTest ::
   (forall a. Eff es a -> IO a) ->
@@ -680,7 +795,7 @@ chkElmCount' ::
   TestTree
 chkElmCount' run interp name loc expected =
   mkTest run interp name $
-    TU.locateChkAll
+    TU.locateChkAll @elm
       ("Element count not as expected for " <> txt loc)
       loc
       (TU.chkCount "" expected)
