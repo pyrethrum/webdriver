@@ -53,8 +53,6 @@ defaultPointerProps =
     }
 
 -- >>> runDemo inputKeyboardDemo
--- *** Exception: RequestRejected (RequestHead {requestPath = "/session/4315123e-252f-44cc-b300-83897b653dbf", requestHeaders = [("Host","127.0.0.1"),("Connection","Upgrade"),("Upgrade","websocket"),("Sec-WebSocket-Key","i1AG4IkN1dbu8Ra8fDesDQ=="),("Sec-WebSocket-Version","13")], requestSecure = False}) (ResponseHead {responseCode = 400, responseMessage = "Bad Request", responseHeaders = [("content-type","text/plain;charset=utf-8"),("connection","close"),("server","httpd.js"),("date","Sat, 17 Oct 2026 21:45:07 GMT"),("content-length","12")]})
--- IPE backtrace:
 inputKeyboardDemo :: BiDiDemo
 inputKeyboardDemo =
   demo "Input I - Keyboard Actions" action
