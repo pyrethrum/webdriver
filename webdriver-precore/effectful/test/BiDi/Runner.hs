@@ -10,7 +10,7 @@ import Effectful (Eff, IOE, liftIO, runEff, (:>))
 import Effectful.Error.Dynamic (Error, runErrorNoCallStack)
 import Test.Tasty (TestTree, withResource)
 import Test.Tasty.HUnit (testCase)
-import UnliftIO (finally, onException, throwIO)
+import UnliftIO (SomeException, catchAny, finally, throwIO, try)
 import WebDriver.Effectful
 import WebDriver.Effectful.BiDi.Base.Actions (browsingContextGetTree)
 import WebDriver.Effectful.Logger (Logger, runLogger)
@@ -72,16 +72,21 @@ data BiDiResources = MkBiDiResources
 acquireBiDiResources :: IO BiDiResources
 acquireBiDiResources = do
   sess@MkWDSession {loggerEnv, websocketUrl} <- getWDSession True
-  ( do
-      bidiUrl <- ioThrow (parseBiDiUrlProperty websocketUrl)
-      handle <-
-        runEff
-          $ runWaitPrimative
-          $ runLogger loggerEnv
-          $ acquireBiDiSession bidiUrl
-      pure (MkBiDiResources sess handle)
-    )
-    `finally` closeWDSession sess
+  acquired <- try $ do
+    bidiUrl <- ioThrow (parseBiDiUrlProperty websocketUrl)
+    handle <-
+      runEff
+        $ runWaitPrimative
+        $ runLogger loggerEnv
+        $ acquireBiDiSession bidiUrl
+    pure (MkBiDiResources sess handle)
+  case acquired of
+    Right resources -> pure resources
+    Left (e :: SomeException) -> do
+      -- Close the leaked HTTP session, but don't let a cleanup failure mask
+      -- the original exception.
+      closeWDSession sess `catchAny` \_ -> pure ()
+      throwIO e
 
 -- | Close the BiDi WebSocket and then the HTTP session.
 --
