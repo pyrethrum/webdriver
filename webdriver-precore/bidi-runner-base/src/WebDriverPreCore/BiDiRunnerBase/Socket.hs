@@ -28,11 +28,12 @@ module WebDriverPreCore.BiDiRunnerBase.Socket
 where
 
 import Control.Exception (throw)
+import Control.Monad (when)
 import Control.Monad.Catch (MonadThrow (..))
 import Data.Aeson (FromJSON, Object, ToJSON, Value (..), object, toJSON, (.=))
 import Data.Function ((&))
 import Data.Set qualified as Set
-import UnliftIO.Exception (Exception (..), SomeException, catch)
+import UnliftIO.Exception (Exception (..), SomeException, catch, throwIO)
 import UnliftIO.STM
   ( STM,
     TChan,
@@ -49,6 +50,7 @@ import WebDriverPreCore.BiDiRunnerBase.Types
 import WebDriverPreCore.BiDiRunnerBase.Response
 import Prelude hiding (id, log)
 import UnliftIO (MonadIO, MonadUnliftIO)
+import UnliftIO.Concurrent (ThreadId, myThreadId)
 
 -- | Communication channels for BiDi
 data Channels m = MkChannels
@@ -56,7 +58,8 @@ data Channels m = MkChannels
     receiveChan :: TChan (Either JSONEncodeException ResponseObject),
     eventChan :: TChan Object,
     counterVar :: TVar JSUInt,
-    subscriptions :: TVar [RegisteredSubscription m]
+    subscriptions :: TVar [RegisteredSubscription m],
+    ownerThreadId :: ThreadId
   }
 
 -- | Actions available on the socket
@@ -65,18 +68,21 @@ data SocketActions m = MkSocketActions
     send :: forall a. (ToJSON a, Show a) => a -> STM (),
     getNext :: STM (Either JSONEncodeException ResponseObject),
     registerSubscription :: SocketSubscription m -> SocketSubscriptionId -> STM (),
-    unregisterSubscription :: SocketUnregister -> STM ()
+    unregisterSubscription :: SocketUnregister -> STM (),
+    ownerThreadId :: ThreadId
   }
 
 -- | Initialise communication channels
 initChannels :: MonadIO m => m (Channels m)
-initChannels =
+initChannels = do
+  owner <- myThreadId
   MkChannels
     <$> newTChanIO
     <*> newTChanIO
     <*> newTChanIO
     <*> counterVar
     <*> newTVarIO []
+    <*> pure owner
 
 -- | Create a counter variable
 counterVar :: MonadIO m => m (TVar JSUInt)
@@ -96,7 +102,8 @@ mkSocketActions c =
       send,
       getNext = readTChan c.receiveChan,
       registerSubscription = \sub subid -> registerSubscription' c.subscriptions sub subid,
-      unregisterSubscription = unregisterSubscription' c.subscriptions
+      unregisterSubscription = unregisterSubscription' c.subscriptions,
+      ownerThreadId = c.ownerThreadId
     }
   where
     send :: forall a. (ToJSON a) => a -> STM ()
@@ -105,13 +112,30 @@ mkSocketActions c =
       let !json = toJSON a
       writeTChan c.sendChan json
 
+-- | Guard against multiplexing a single BiDi socket across threads.
+--
+-- The send\/receive channel pair is an actor: it must only be used from the
+-- thread that opened the session. Sharing one 'SocketActions' across threads
+-- would interleave responses and lose request\/response correspondence.
+assertOwnerThread :: (MonadIO m) => ThreadId -> m ()
+assertOwnerThread owner = do
+  tid <- myThreadId
+  when (tid /= owner) $
+    throwIO . userError $
+      "BiDi runner multiplexing detected: command issued from thread "
+        <> show tid
+        <> " but the session was opened on thread "
+        <> show owner
+        <> ". Use one BiDi runner per thread (e.g. 'withBiDi' within the thread)."
+
 -- | Send a command without waiting for response
 sendCommandNoWait' :: forall a m r. (Show a, ToJSON a, MonadUnliftIO m, MonadThrow m)
   => SocketActions m
   -> SocketCommand a r
   -> JSUInt
   -> m Request
-sendCommandNoWait' MkSocketActions {send} command id = do
+sendCommandNoWait' MkSocketActions {send, ownerThreadId} command id = do
+  assertOwnerThread ownerThreadId
   (atomically $ send payload)
     `catch` \(e :: SomeException) -> do
       throwM . userError $
