@@ -9,7 +9,7 @@ module WebDriverPreCore.BiDiRunner
     withBiDi,
 
     -- * BiDi Resource (acquire/release)
-    BiDiRunnerHandle (..),
+    BiDiRunClose (..),
     acquireBiDi,
     releaseBiDi,
     BiDiRunner (..),
@@ -132,9 +132,9 @@ withBiDi logger bidiUrl action =
 
 -- | A typed BiDi resource handle: the 'BiDiRunner' for issuing commands and a
 -- close action. Acquire with 'acquireBiDi', release with 'releaseBiDi'.
-data BiDiRunnerHandle m = MkBiDiRunnerHandle
-  { biDiRunner :: BiDiRunner m,
-    biDiClose :: m ()
+data BiDiRunClose m = MkBiDiRunClose
+  { run :: BiDiRunner m,
+    close :: m ()
   }
 
 -- | Open a BiDi session and return a typed resource handle.
@@ -143,18 +143,18 @@ acquireBiDi ::
   (MonadUnliftIO m, MonadThrow m) =>
   (Text -> m ()) ->
   BiDiUrl ->
-  m (BiDiRunnerHandle m)
+  m (BiDiRunClose m)
 acquireBiDi logger bidiUrl = do
   r <- B.acquireBiDi logger bidiUrl
   pure
-    MkBiDiRunnerHandle
-      { biDiRunner = mkBiDiRunner r.socketActions,
-        biDiClose = r.closeAction
+    MkBiDiRunClose
+      { run = mkBiDiRunner r.socketActions,
+        close = r.closeAction
       }
 
 -- | Release a typed BiDi resource handle.
-releaseBiDi :: BiDiRunnerHandle m -> m ()
-releaseBiDi = (.biDiClose)
+releaseBiDi :: BiDiRunClose m -> m ()
+releaseBiDi = (.close)
 
 -- | Execute a typed command
 runTypedCommand :: forall m r. (FromJSON r, MonadUnliftIO m, MonadThrow m) => SocketActions m -> Command r -> m r

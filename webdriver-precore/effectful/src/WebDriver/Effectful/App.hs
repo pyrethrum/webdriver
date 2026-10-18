@@ -81,7 +81,7 @@ withHttpSession endpoint caps action =
 acquireBiDiSession ::
   (IOE :> es, Logger :> es) =>
   BiDiRunner.BiDiUrl ->
-  Eff es (BiDiRunner.BiDiRunnerHandle (Eff es))
+  Eff es (BiDiRunner.BiDiRunClose (Eff es))
 acquireBiDiSession bidiUrl =
   withUnliftStrategy (ConcUnlift Persistent Unlimited) $
     BiDiRunner.acquireBiDi logDebug bidiUrl
@@ -91,7 +91,7 @@ acquireBiDiSession bidiUrl =
 -- This is the release half of the acquire/release pair.
 releaseBiDiSession ::
   (IOE :> es) =>
-  BiDiRunner.BiDiRunnerHandle (Eff es) ->
+  BiDiRunner.BiDiRunClose (Eff es) ->
   Eff es ()
 releaseBiDiSession handle =
   withUnliftStrategy (ConcUnlift Persistent Unlimited) $
@@ -108,4 +108,4 @@ withBiDiSession bidiUrl action =
   bracket
     (acquireBiDiSession bidiUrl)
     releaseBiDiSession
-    (\h -> runWebDriverBiDi h.biDiRunner action)
+    (\h -> runWebDriverBiDi h.run action)

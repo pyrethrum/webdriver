@@ -65,7 +65,7 @@ type BiDiLocateEffs = '[Error Text, WebDriverBiDi, Logger, WaitPrimative, IOE]
 -- | The HTTP session together with its single BiDi WebSocket, shared by all tests.
 data BiDiResources = MkBiDiResources
   { wdSession :: WDSession,
-    biDiHandle :: BiDiRunnerHandle (Eff BiDiRunnerEffs)
+    biDiHandle :: BiDiRunClose (Eff BiDiRunnerEffs)
   }
 
 -- | Acquire the HTTP session and its BiDi WebSocket once for the whole group.
@@ -135,12 +135,12 @@ interpBiDiLocate act = do
 -- dynamic 'Error' effect into an 'IO' exception.
 runBiDiLocate :: IO BiDiResources -> Eff BiDiLocateEffs a -> IO a
 runBiDiLocate res act = do
-  MkBiDiResources {wdSession = MkWDSession {loggerEnv}, biDiHandle = MkBiDiRunnerHandle {biDiRunner}} <- res
+  MkBiDiResources {wdSession = MkWDSession {loggerEnv}, biDiHandle = MkBiDiRunClose {run}} <- res
   result <-
     runEff
       $ runWaitPrimative
       $ runLogger loggerEnv
-      $ runWebDriverBiDi biDiRunner
+      $ runWebDriverBiDi run
       $ runErrorNoCallStack @Text act
   case result of
     Left err -> throwIO (userError (unpack err))
