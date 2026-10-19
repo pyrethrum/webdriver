@@ -59,7 +59,4 @@ _pattern = Just "Banner - page header"
 
 -- Run it all
 --- >>> _eval Nothing tests
--- Using debug local config
 
--- Specific test
---- >>> _eval _pattern tests
