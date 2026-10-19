@@ -17,7 +17,7 @@ import Data.Either (isRight)
 import Data.Text (Text, unpack)
 import Effectful (Eff, (:>))
 import Effectful.Error.Dynamic (Error)
-import Test.Tasty (TestTree, testGroup)
+import Test.Tasty (TestTree, testGroup, inOrderTestGroup)
 import Test.Tasty.HUnit (testCase)
 import WebDriverPreCore.Extended.Locate qualified as L
 import WebDriverPreCore.Extended.Locators as LS
@@ -37,7 +37,7 @@ testLandmarkAndRole ::
   TestTree
 testLandmarkAndRole run interp =
   beforeAll_ (landmarkRolesUrl >>= \url -> run (interp (navigateTo @elm url))) $
-    testGroup
+    inOrderTestGroup
       "Landmark and Role Tests"
       [ chkAutoId "Locate by ID" (elmId "section-personal") "sec-personal",
         test "jsDisplay check should NOT be affected by viewport" $ do
@@ -46,9 +46,9 @@ testLandmarkAndRole run interp =
           minimizeWindow @elm
           minResult <- locateAll @elm $ elmClass "input"
           TU.chkEq "Displayed result should be the same for minised and maximised viewport" maxResult minResult,
-        testGroup
+        inOrderTestGroup
           "Role Locator Tests"
-          [ testGroup
+          [ inOrderTestGroup
               "Landmark role types - roleType"
               [ chkAutoId "Banner - page header" (roleType Banner) "hdr-main",
                 chkAutoId "Main landmark" (roleType Main) "main-content",
@@ -56,7 +56,7 @@ testLandmarkAndRole run interp =
                 chkAutoId "Complementary - aside" (roleType Complementary) "aside-help",
                 chkAutoId "Search landmark" (roleType Search) "srch-widget"
               ],
-            testGroup
+            inOrderTestGroup
               "Role with name - aria-label"
               [ chkAutoId "Navigation - Main navigation" (navigation "Main navigation") "nav-main",
                 chkAutoId "Navigation - Breadcrumb" (navigation "Breadcrumb") "nav-breadcrumb",
@@ -69,7 +69,7 @@ testLandmarkAndRole run interp =
                 chkAutoId "Checkbox - Read documents via aria-label" (checkbox "Read documents") "chk-docs-read",
                 chkAutoId "Img - div with explicit role override" (img "Abstract coloured shape") "img-div-role"
               ],
-            testGroup
+            inOrderTestGroup
               "Multi-element role types"
               [ chkElmCount "Navigation - finds both nav landmarks" (roleType Navigation) 2
               ]

@@ -28,29 +28,32 @@ module WebDriverPreCore.BiDiRunnerBase.Socket
 where
 
 import Control.Exception (throw)
-import Control.Monad (when)
+import Control.Monad (void)
 import Control.Monad.Catch (MonadThrow (..))
 import Data.Aeson (FromJSON, Object, ToJSON, Value (..), object, toJSON, (.=))
 import Data.Function ((&))
 import Data.Set qualified as Set
-import UnliftIO.Exception (Exception (..), SomeException, catch, throwIO)
+import UnliftIO.Exception (Exception (..), SomeException, catch)
 import UnliftIO.STM
   ( STM,
     TChan,
+    TMVar,
     TVar,
     atomically,
     modifyTVar',
     newTChanIO,
+    newTMVarIO,
     newTVarIO,
     readTChan,
     readTVar,
+    takeTMVar,
+    tryPutTMVar,
     writeTChan,
   )
 import WebDriverPreCore.BiDiRunnerBase.Types
 import WebDriverPreCore.BiDiRunnerBase.Response
 import Prelude hiding (id, log)
-import UnliftIO (MonadIO, MonadUnliftIO)
-import UnliftIO.Concurrent (ThreadId, myThreadId)
+import UnliftIO (MonadIO, MonadUnliftIO, finally)
 
 -- | Communication channels for BiDi
 data Channels m = MkChannels
@@ -59,7 +62,7 @@ data Channels m = MkChannels
     eventChan :: TChan Object,
     counterVar :: TVar JSUInt,
     subscriptions :: TVar [RegisteredSubscription m],
-    ownerThreadId :: ThreadId
+    commandSlot :: TMVar ()
   }
 
 -- | Actions available on the socket
@@ -67,22 +70,22 @@ data SocketActions m = MkSocketActions
   { nextId :: STM JSUInt,
     send :: forall a. (ToJSON a, Show a) => a -> STM (),
     getNext :: STM (Either JSONEncodeException ResponseObject),
+    takeCommandSlot :: STM (),
+    releaseCommandSlot :: STM (),
     registerSubscription :: SocketSubscription m -> SocketSubscriptionId -> STM (),
-    unregisterSubscription :: SocketUnregister -> STM (),
-    ownerThreadId :: ThreadId
+    unregisterSubscription :: SocketUnregister -> STM ()
   }
 
 -- | Initialise communication channels
 initChannels :: MonadIO m => m (Channels m)
-initChannels = do
-  owner <- myThreadId
+initChannels =
   MkChannels
     <$> newTChanIO
     <*> newTChanIO
     <*> newTChanIO
     <*> counterVar
     <*> newTVarIO []
-    <*> pure owner
+    <*> newTMVarIO ()
 
 -- | Create a counter variable
 counterVar :: MonadIO m => m (TVar JSUInt)
@@ -101,9 +104,10 @@ mkSocketActions c =
     { nextId = mkAtomicCounter c.counterVar,
       send,
       getNext = readTChan c.receiveChan,
+      takeCommandSlot = takeTMVar c.commandSlot,
+      releaseCommandSlot = void (tryPutTMVar c.commandSlot ()),
       registerSubscription = \sub subid -> registerSubscription' c.subscriptions sub subid,
-      unregisterSubscription = unregisterSubscription' c.subscriptions,
-      ownerThreadId = c.ownerThreadId
+      unregisterSubscription = unregisterSubscription' c.subscriptions
     }
   where
     send :: forall a. (ToJSON a) => a -> STM ()
@@ -112,30 +116,13 @@ mkSocketActions c =
       let !json = toJSON a
       writeTChan c.sendChan json
 
--- | Guard against multiplexing a single BiDi socket across threads.
---
--- The send\/receive channel pair is an actor: it must only be used from the
--- thread that opened the session. Sharing one 'SocketActions' across threads
--- would interleave responses and lose request\/response correspondence.
-assertOwnerThread :: (MonadIO m) => ThreadId -> m ()
-assertOwnerThread owner = do
-  tid <- myThreadId
-  when (tid /= owner) $
-    throwIO . userError $
-      "BiDi runner multiplexing detected: command issued from thread "
-        <> show tid
-        <> " but the session was opened on thread "
-        <> show owner
-        <> ". Use one BiDi runner per thread (e.g. 'withBiDi' within the thread)."
-
 -- | Send a command without waiting for response
 sendCommandNoWait' :: forall a m r. (Show a, ToJSON a, MonadUnliftIO m, MonadThrow m)
   => SocketActions m
   -> SocketCommand a r
   -> JSUInt
   -> m Request
-sendCommandNoWait' MkSocketActions {send, ownerThreadId} command id = do
-  assertOwnerThread ownerThreadId
+sendCommandNoWait' MkSocketActions {send} command id = do
   (atomically $ send payload)
     `catch` \(e :: SomeException) -> do
       throwM . userError $
@@ -153,6 +140,14 @@ sendCommandNoWait' MkSocketActions {send, ownerThreadId} command id = do
         ]
 
 -- | Send a command without waiting (auto-generates ID)
+--
+-- TODO: fire-and-forget commands bypass the multiplexing guard in
+-- 'sendCommand'\/'sendCommand''. Two known consequences to address later:
+--
+--   1. Their responses accumulate in 'receiveChan' until a later waiting
+--      command drains them (unbounded channel growth).
+--   2. Error responses are silently discarded, so a failed fire-and-forget
+--      command is never surfaced.
 sendCommandNoWait :: forall a m r. (Show a, ToJSON a, MonadUnliftIO m, MonadThrow m)
   => SocketActions m
   -> SocketCommand a r
@@ -166,18 +161,24 @@ sendCommand' :: forall a m r. (FromJSON r, Show a, ToJSON a, MonadUnliftIO m, Mo
   -> JSUInt
   -> SocketCommand a r
   -> m r
-sendCommand' sa id' command = do
-  MkRequest {payload} <- sendCommandNoWait' sa command id'
-  matchedRequest sa.getNext payload id'
+sendCommand' sa@MkSocketActions {getNext, takeCommandSlot, releaseCommandSlot} id' command = do
+  atomically takeCommandSlot
+  (do
+      MkRequest {payload} <- sendCommandNoWait' sa command id'
+      matchedRequest getNext payload id')
+    `finally` atomically releaseCommandSlot
 
 -- | Send a command and wait for response (auto-generates ID)
 sendCommand :: forall a m r. (FromJSON r, Show a, ToJSON a, MonadUnliftIO m, MonadThrow m)
   => SocketActions m
   -> SocketCommand a r
   -> m r
-sendCommand sa@MkSocketActions {getNext} command = do
-  MkRequest {id = id', payload} <- sendCommandNoWait sa command
-  matchedRequest getNext payload id'
+sendCommand sa@MkSocketActions {getNext, takeCommandSlot, releaseCommandSlot} command = do
+  atomically takeCommandSlot
+  (do
+      MkRequest {id = id', payload} <- sendCommandNoWait sa command
+      matchedRequest getNext payload id')
+    `finally` atomically releaseCommandSlot
 
 -- | Wait for a response matching the given ID
 matchedRequest :: forall m r. (FromJSON r, MonadIO m)
