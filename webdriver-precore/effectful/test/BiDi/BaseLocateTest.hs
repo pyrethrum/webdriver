@@ -7,43 +7,75 @@ import BiDi.Runner
     runBiDiLocate,
     withBiDiResources,
   )
-import Common.BaseLocateTest qualified as Common
+import Common.BaseLocateTest
+  ( testAttributeLocatorVariants,
+    testBasicLocatorTypes,
+    testClassLocatorVariants,
+    testCombinedLocators,
+    testExtendedRoleMatchingAlways,
+    testExtendedRoleMatchingMiss,
+    testExtendedRoleMatchingNever,
+    testExtendedRoleMatchingRoleType,
+    testLandmarkAndRole,
+    testLocateFromElement,
+    testMiscAriaRoleTypes,
+    testMiscAriaRoleTypesNever,
+    testRoleNameAndRole,
+    testVisibilityAlways,
+    testVisibilityDisambiguate,
+    testVisibilityDisambiguateVsNever,
+    testVisibilityNever,
+  )
 import Common.TastyEval qualified as TE
 import Common.WebDriver.Effect (WebDriver)
 import Data.Text (Text)
-import Effectful (Eff)
+import Effectful (Eff, (:>))
+import Effectful.Error.Dynamic (Error)
 import Test.Tasty (TestTree, inOrderTestGroup)
 import WebDriverPreCore.BiDi.Protocol (NodeRemoteValue)
 import Prelude
 
 -- >>> _eval tests
+
 -- *** Exception: ExitSuccess
+
 tests :: TestTree
 tests =
   withBiDiResources runSessionTests
   where
     runSessionTests :: IO BiDiResources -> TestTree
     runSessionTests res =
-      inOrderTestGroup "Base Locate Tests"
-        [ Common.testLandmarkAndRole run interp,
-          Common.testExtendedRoleMatchingNever run interp,
-          Common.testExtendedRoleMatchingAlways run interp,
-          Common.testExtendedRoleMatchingMiss run interp,
-          Common.testExtendedRoleMatchingRoleType run interp interp,
-          Common.testVisibilityAlways run interp,
-          Common.testVisibilityNever run interp,
-          Common.testVisibilityDisambiguate run interp,
-          Common.testVisibilityDisambiguateVsNever run interp interp,
-          Common.testBasicLocatorTypes run interp,
-          Common.testClassLocatorVariants run interp,
-          Common.testAttributeLocatorVariants run interp,
-          Common.testRoleNameAndRole run interp,
-          Common.testLocateFromElement run interp,
-          Common.testCombinedLocators run interp,
-          Common.testMiscAriaRoleTypes run interp,
-          Common.testMiscAriaRoleTypesNever run interp
+      inOrderTestGroup
+        "Base Locate Tests"
+        [ runInprt testLandmarkAndRole,
+          runInprt testExtendedRoleMatchingNever,
+          runInprt testExtendedRoleMatchingAlways,
+          runInprt testExtendedRoleMatchingMiss,
+          runInprt testVisibilityAlways,
+          runInprt testVisibilityNever,
+          runInprt testVisibilityDisambiguate,
+          runInprt testBasicLocatorTypes,
+          runInprt testClassLocatorVariants,
+          runInprt testAttributeLocatorVariants,
+          runInprt testRoleNameAndRole,
+          runInprt testLocateFromElement,
+          runInprt testCombinedLocators,
+          runInprt testMiscAriaRoleTypes,
+          runInprt testMiscAriaRoleTypesNever,
+          testExtendedRoleMatchingRoleType run interp interp,
+          testVisibilityDisambiguateVsNever run interp interp
         ]
       where
+        runInprt ::
+          ( forall elm es.
+            (Eq elm, Show elm, Error Text :> es) =>
+            (forall a. Eff es a -> IO a) ->
+            (forall a. Eff (WebDriver elm : es) a -> Eff es a) ->
+            TestTree
+          ) ->
+          TestTree
+        runInprt test = test run interp
+
         run :: forall a. Eff BiDiLocateEffs a -> IO a
         run = runBiDiLocate res
 
@@ -56,7 +88,5 @@ _eval = TE.tastyEvalStdOut
 _pattern :: Maybe Text
 _pattern = Just "Banner - page header"
 
-
 -- Run it all
 --- >>> _eval Nothing tests
-
