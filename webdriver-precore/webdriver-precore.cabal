@@ -16,6 +16,22 @@ extra-doc-files:
   README.md
   ChangeLog.md
 
+extra-source-files:
+  test-resources/testFiles/**/*.css
+  test-resources/testFiles/**/*.html
+  test-resources/testFiles/**/*.jpg
+  test-resources/testFiles/**/*.js
+  test-resources/testFiles/**/*.json
+  test-resources/testFiles/**/*.md
+  test-resources/testFiles/**/*.mp4
+  test-resources/testFiles/**/*.pdf
+  test-resources/testFiles/**/*.pptx
+  test-resources/testFiles/**/*.svg
+  test-resources/testFiles/**/*.txt
+  test-resources/testFiles/**/*.webp
+  test-resources/testFiles/**/*.xlsx
+  test-resources/testFiles/**/*.zip
+
 tested-with: GHC == 9.8.2 || == 9.8.4 || == 9.10.1 || == 9.12.4
 
 synopsis:       A typed wrapper for W3C WebDriver (HTTP and BiDi) protocols.
