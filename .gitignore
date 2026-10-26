@@ -10,4 +10,5 @@ cabal.project.local
 # local config files
 config.dhall
 DebugConfig.hs
+.logs
 

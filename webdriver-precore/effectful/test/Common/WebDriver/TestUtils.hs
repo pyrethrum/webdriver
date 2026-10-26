@@ -55,7 +55,14 @@ import Prelude hiding (fail)
 -- ################ Error Conversion ################
 
 getAttribute :: forall elm es. (WebDriver elm :> es, Error Text :> es) => elm -> Text -> Eff es Text
-getAttribute el attr = E.getAttribute el attr >>= failNothing ("Attribute not found: " <> attr)
+getAttribute el attr = do 
+  mattr <- E.getAttribute el attr 
+  mattr & maybe 
+     do 
+      otr <- outerHtmlsFormatted [el]
+      fail $ "Attribute not found: " <> attr <> "\n" <> otr
+    pure
+
 
 getProperty :: forall elm es. (WebDriver elm :> es, Error Text :> es) => elm -> Text -> Eff es Value
 getProperty elm prop = E.getProperty elm prop >>= failNothing ("Property not found: " <> prop)

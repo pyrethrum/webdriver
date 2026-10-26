@@ -82,11 +82,19 @@ tests =
         interp :: forall a. Eff (WebDriver NodeRemoteValue : BiDiLocateEffs) a -> Eff BiDiLocateEffs a
         interp = interpBiDiLocate
 
+
+
+arggh :: IO TE.TastyResult
+arggh = TE.tastyEvalStdOut (Just "/Landmark and Role Tests/&&/Locate by ID/") tests
+
 _eval :: Maybe Text -> TestTree -> IO TE.TastyResult
 _eval = TE.tastyEvalStdOut
 
 _pattern :: Maybe Text
-_pattern = Just "Banner - page header"
+_pattern = Just "Landmark and Role Tests"
 
 -- Run it all
 --- >>> _eval Nothing tests
+
+--- >>> _eval _pattern tests
+-- *** Exception: ProgressCancelledException

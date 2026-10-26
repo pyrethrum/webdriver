@@ -226,7 +226,8 @@ mkMessageActions log' MkChannels {sendChan, receiveChan, eventChan, subscription
       --
       get = \conn -> do
         msg <- liftIO $ receiveData conn
-        log' $ "Received raw data: " <> Data.Text.take 100 (decodeUtf8 msg) <> "..."
+        log' $ "Received raw data: " <> decodeUtf8 msg
+        -- log' $ "Received raw data: " <> Data.Text.take 100 (decodeUtf8 msg) <> "..."
         let writeReceiveChan = atomically . writeTChan receiveChan
             writeEventChan = atomically . writeTChan eventChan
             r = decodeResponse (BL.fromStrict msg)

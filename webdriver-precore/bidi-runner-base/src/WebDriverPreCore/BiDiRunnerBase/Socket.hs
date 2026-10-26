@@ -1,26 +1,25 @@
-{-|
-Module: WebDriverPreCore.BiDiRunnerBase.Socket
-Description: WebSocket channel management for BiDi
-
-This module provides the low-level WebSocket channel management for BiDi
-communication, decoupled from webdriver-precore types.
--}
+-- |
+-- Module: WebDriverPreCore.BiDiRunnerBase.Socket
+-- Description: WebSocket channel management for BiDi
+--
+-- This module provides the low-level WebSocket channel management for BiDi
+-- communication, decoupled from webdriver-precore types.
 module WebDriverPreCore.BiDiRunnerBase.Socket
   ( -- * Socket Actions
     SocketActions (..),
     Channels (..),
-    
+
     -- * Channel Management
     initChannels,
     mkSocketActions,
-    
+
     -- * Command Execution
     sendCommand,
     sendCommand',
     sendCommandNoWait,
     sendCommandNoWait',
     matchedRequest,
-    
+
     -- * Counter Utilities
     counterVar,
     mkAtomicCounter,
@@ -33,6 +32,7 @@ import Control.Monad.Catch (MonadThrow (..))
 import Data.Aeson (FromJSON, Object, ToJSON, Value (..), object, toJSON, (.=))
 import Data.Function ((&))
 import Data.Set qualified as Set
+import UnliftIO (MonadIO, MonadUnliftIO, finally)
 import UnliftIO.Exception (Exception (..), SomeException, catch)
 import UnliftIO.STM
   ( STM,
@@ -50,10 +50,10 @@ import UnliftIO.STM
     tryPutTMVar,
     writeTChan,
   )
-import WebDriverPreCore.BiDiRunnerBase.Types
 import WebDriverPreCore.BiDiRunnerBase.Response
+import WebDriverPreCore.BiDiRunnerBase.Types
 import Prelude hiding (id, log)
-import UnliftIO (MonadIO, MonadUnliftIO, finally)
+import WebDriverPreCore.Utils.Utils (db)
 
 -- | Communication channels for BiDi
 data Channels m = MkChannels
@@ -77,7 +77,7 @@ data SocketActions m = MkSocketActions
   }
 
 -- | Initialise communication channels
-initChannels :: MonadIO m => m (Channels m)
+initChannels :: (MonadIO m) => m (Channels m)
 initChannels =
   MkChannels
     <$> newTChanIO
@@ -88,7 +88,7 @@ initChannels =
     <*> newTMVarIO ()
 
 -- | Create a counter variable
-counterVar :: MonadIO m => m (TVar JSUInt)
+counterVar :: (MonadIO m) => m (TVar JSUInt)
 counterVar = newTVarIO $ MkJSUInt 0
 
 -- | Create an atomic counter
@@ -117,11 +117,13 @@ mkSocketActions c =
       writeTChan c.sendChan json
 
 -- | Send a command without waiting for response
-sendCommandNoWait' :: forall a m r. (Show a, ToJSON a, MonadUnliftIO m, MonadThrow m)
-  => SocketActions m
-  -> SocketCommand a r
-  -> JSUInt
-  -> m Request
+sendCommandNoWait' ::
+  forall a m r.
+  (Show a, ToJSON a, MonadUnliftIO m, MonadThrow m) =>
+  SocketActions m ->
+  SocketCommand a r ->
+  JSUInt ->
+  m Request
 sendCommandNoWait' MkSocketActions {send} command id = do
   (atomically $ send payload)
     `catch` \(e :: SomeException) -> do
@@ -148,44 +150,59 @@ sendCommandNoWait' MkSocketActions {send} command id = do
 --      command drains them (unbounded channel growth).
 --   2. Error responses are silently discarded, so a failed fire-and-forget
 --      command is never surfaced.
-sendCommandNoWait :: forall a m r. (Show a, ToJSON a, MonadUnliftIO m, MonadThrow m)
-  => SocketActions m
-  -> SocketCommand a r
-  -> m Request
+sendCommandNoWait ::
+  forall a m r.
+  (Show a, ToJSON a, MonadUnliftIO m, MonadThrow m) =>
+  SocketActions m ->
+  SocketCommand a r ->
+  m Request
 sendCommandNoWait sa command =
   atomically sa.nextId >>= sendCommandNoWait' sa command
 
 -- | Send a command with specific ID and wait for response
-sendCommand' :: forall a m r. (FromJSON r, Show a, ToJSON a, MonadUnliftIO m, MonadThrow m)
-  => SocketActions m
-  -> JSUInt
-  -> SocketCommand a r
-  -> m r
-sendCommand' sa@MkSocketActions {getNext, takeCommandSlot, releaseCommandSlot} id' command = do
-  atomically takeCommandSlot
-  (do
+sendCommand' ::
+  forall a m r.
+  (FromJSON r, Show a, ToJSON a, MonadUnliftIO m, MonadThrow m) =>
+  SocketActions m ->
+  JSUInt ->
+  SocketCommand a r ->
+  m r
+sendCommand' sa@MkSocketActions {getNext, takeCommandSlot, releaseCommandSlot} id' command =
+  do
+    _ <- pure $ db "Taking command slot" command.params
+    atomically takeCommandSlot
+    do
       MkRequest {payload} <- sendCommandNoWait' sa command id'
-      matchedRequest getNext payload id')
-    `finally` atomically releaseCommandSlot
+      matchedRequest getNext payload id'
+    `finally`
+    --
+    do
+      _ <-pure $ db "Releasing command slot" command.params
+      atomically releaseCommandSlot
 
 -- | Send a command and wait for response (auto-generates ID)
-sendCommand :: forall a m r. (FromJSON r, Show a, ToJSON a, MonadUnliftIO m, MonadThrow m)
-  => SocketActions m
-  -> SocketCommand a r
-  -> m r
+sendCommand ::
+  forall a m r.
+  (FromJSON r, Show a, ToJSON a, MonadUnliftIO m, MonadThrow m) =>
+  SocketActions m ->
+  SocketCommand a r ->
+  m r
 sendCommand sa@MkSocketActions {getNext, takeCommandSlot, releaseCommandSlot} command = do
   atomically takeCommandSlot
-  (do
+  ( do
       MkRequest {id = id', payload} <- sendCommandNoWait sa command
-      matchedRequest getNext payload id')
+      matchedRequest getNext payload id'
+    )
     `finally` atomically releaseCommandSlot
 
 -- | Wait for a response matching the given ID
-matchedRequest :: forall m r. (FromJSON r, MonadIO m)
-  => STM (Either JSONEncodeException ResponseObject)
-  -> Value
-  -> JSUInt
-  -> m r
+matchedRequest ::
+  forall m r.
+  (FromJSON r, MonadIO m) =>
+  STM (Either JSONEncodeException ResponseObject) ->
+  Value ->
+  JSUInt ->
+  m r
 matchedRequest getNext request id' = do
   response <- atomically getNext
   parseResponse id' response
