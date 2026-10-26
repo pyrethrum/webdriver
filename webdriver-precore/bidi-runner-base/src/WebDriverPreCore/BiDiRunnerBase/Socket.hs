@@ -169,16 +169,11 @@ sendCommand' ::
   m r
 sendCommand' sa@MkSocketActions {getNext, takeCommandSlot, releaseCommandSlot} id' command =
   do
-    _ <- pure $ db "Taking command slot" command.params
     atomically takeCommandSlot
     do
       MkRequest {payload} <- sendCommandNoWait' sa command id'
       matchedRequest getNext payload id'
-    `finally`
-    --
-    do
-      _ <- pure $ db "Releasing command slot" command.params
-      atomically releaseCommandSlot
+    `finally` atomically releaseCommandSlot
 
 -- | Send a command and wait for response (auto-generates ID)
 sendCommand ::
@@ -187,13 +182,9 @@ sendCommand ::
   SocketActions m ->
   SocketCommand a r ->
   m r
-sendCommand sa@MkSocketActions {getNext, takeCommandSlot, releaseCommandSlot} command = do
-  atomically takeCommandSlot
-  ( do
-      MkRequest {id = id', payload} <- sendCommandNoWait sa command
-      matchedRequest getNext payload id'
-    )
-    `finally` atomically releaseCommandSlot
+sendCommand sa command = do
+   atomically sa.nextId >>= \id' -> sendCommand' sa id' command
+
 
 -- | Default time (microseconds) to wait for a command response before
 -- failing with 'BiDiTimeoutError'. Kept as a single named constant so it can

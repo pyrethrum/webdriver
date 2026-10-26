@@ -63,20 +63,21 @@ import WebDriverPreCore.BiDi.Protocol as P
     subscriptionTypeToText,
   )
 import WebDriverPreCore.BiDiRunnerBase
-  ( BiDiUrl (..),
-    BiDiResource (..),
+  ( BiDiResource (..),
+    BiDiUrl (..),
     Request (..),
     ResponseException (..),
     SocketActions (..),
-    SocketConnectionException (..),
     SocketCommand (..),
+    SocketConnectionException (..),
     SocketSubscription (..),
     SocketSubscriptionId (..),
     SocketSubscriptionType (..),
     SocketUnregister (..),
     parseBiDiUrl,
     parseBiDiUrlProperty,
-    withBiDiBase, sendCommand,
+    sendCommand,
+    withBiDiBase,
   )
 import WebDriverPreCore.BiDiRunnerBase qualified as B hiding (JSUInt (..))
 import Prelude hiding (log)
@@ -99,10 +100,10 @@ mkBiDiRunner sa =
   MkBiDiRunner
     { run = runTypedCommand sa,
       socketActions = sa,
-      runWithId = \(MkJSUInt msgId) cmd ->
-        B.sendCommand' (coerceSocketActions sa) (MkJSUInt msgId) (commandToSocketCommand cmd),
-      runOffSpecWithId = \(MkJSUInt msgId) method params ->
-        B.sendCommand' (coerceSocketActions sa) (MkJSUInt msgId) $
+      runWithId = \msgId cmd ->
+        B.sendCommand' (coerceSocketActions sa) msgId (commandToSocketCommand cmd),
+      runOffSpecWithId = \msgId method params ->
+        B.sendCommand' (coerceSocketActions sa) msgId $
           MkSocketCommand method (toJSON params)
     }
 
