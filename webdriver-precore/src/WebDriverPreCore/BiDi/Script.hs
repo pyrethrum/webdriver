@@ -311,15 +311,14 @@ data LocalValue
   | SetLocalValue SetLocalValue
   deriving (Show, Eq, Generic)
 
-data RemoteReference = MkRemoteReference
-  { sharedreference :: SharedReference,
-    remoteObjectReference :: RemoteObjectReference
-  }
+data RemoteReference
+  = SharedRemoteReference SharedReference
+  | ObjectRemoteReference RemoteObjectReference
   deriving (Show, Eq, Generic)
 
 data RemoteObjectReference = MkRemoteObjectReference
   { handle :: Handle,
-    shartedId :: Maybe SharedId,
+    sharedId :: Maybe SharedId,
     extensions :: Maybe (Map.Map Text Value) -- "extensions" field is optional
   }
   deriving (Show, Eq, Generic)
@@ -742,9 +741,21 @@ instance ToJSON LocalValue where
     RegExpLocalValue regex -> toJSON regex
     SetLocalValue set -> toJSON set
 
-instance ToJSON RemoteReference
+instance ToJSON RemoteReference where
+  toJSON :: RemoteReference -> Value
+  toJSON = \case
+    SharedRemoteReference sr -> toJSON sr
+    ObjectRemoteReference objRef -> toJSON objRef
 
-instance ToJSON RemoteObjectReference
+instance ToJSON RemoteObjectReference where
+  toJSON :: RemoteObjectReference -> Value
+  toJSON (MkRemoteObjectReference {handle, sharedId, extensions}) =
+    object $
+      ["handle" .= handle]
+        <> catMaybes
+          [ opt "sharedId" sharedId,
+            opt "extensions" extensions
+          ]
 
 instance ToJSON ListLocalValue
 

@@ -8,7 +8,6 @@ import Control.Monad (void)
 import Data.Aeson (Value)
 import Data.Aeson qualified as Aeson
 import Data.Function ((&))
-import Data.List (singleton)
 import Data.Text (Text)
 import Effectful (Eff, IOE, (:>))
 import Effectful.Dispatch.Dynamic (interpret)
@@ -129,22 +128,17 @@ getProperty bc node name =
 -- | Read the rendered text of a node via @script.callFunction@.
 getElementText :: (WebDriverBiDi :> es) => BrowsingContext -> SharedReference -> Eff es Text
 getElementText bc (MkSharedReference {sharedId, handle}) =
-  handle
-    & maybe
-      (error "InterpreterBiDi.getElementText: node has no handle - cannot call script.callFunction")
-      (fmap resultText . callFunction bc "function(el) { return el.innerText; }" . singleton . refArg sharedId)
+  resultText
+    <$> callFunction bc "function(el) { return el.innerText; }" [refArg sharedId handle]
 
 -- | Build a @script.callFunction@ local value referencing a node.
 nodeToLocalValue :: NodeRemoteValue -> Maybe LocalValue
-nodeToLocalValue (MkNodeRemoteValue {sharedId, handle}) = refArg <$> sharedId <*> handle
+nodeToLocalValue (MkNodeRemoteValue {sharedId, handle}) = refArg <$> sharedId <*> pure handle
 
-refArg :: SharedId -> Handle -> LocalValue
-refArg sid h =
-  RemoteReference $
-    MkRemoteReference
-      { sharedreference = MkSharedReference {sharedId = sid, handle = Just h, extensions = Nothing},
-        remoteObjectReference = MkRemoteObjectReference {handle = h, shartedId = Just sid, extensions = Nothing}
-      }
+refArg :: SharedId -> Maybe Handle -> LocalValue
+refArg sharedId handle =
+  RemoteReference . SharedRemoteReference $
+    MkSharedReference {sharedId, handle, extensions = Nothing}
 
 callFunction :: (WebDriverBiDi :> es) => BrowsingContext -> Text -> [LocalValue] -> Eff es EvaluateResult
 callFunction bc declaration args =

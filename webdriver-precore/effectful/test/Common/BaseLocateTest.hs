@@ -31,7 +31,7 @@ import Prelude
 
 testLandmarkAndRole ::
   forall elm es.
-  (Eq elm, Show elm, Error Text :> es) =>
+  (Error Text :> es) =>
   (forall a. Eff es a -> IO a) ->
   (forall a. Eff (WebDriver elm : es) a -> Eff es a) ->
   TestTree
@@ -40,12 +40,6 @@ testLandmarkAndRole run interp =
     inOrderTestGroup
       "Landmark and Role Tests"
       [ chkAutoId "Locate by ID" (elmId "section-personal") "sec-personal",
-        test "jsDisplay check should NOT be affected by viewport" $ do
-          maximizeWindow @elm
-          maxResult <- locateAll @elm $ elmClass "input"
-          minimizeWindow @elm
-          minResult <- locateAll @elm $ elmClass "input"
-          TU.chkEq "Displayed result should be the same for minised and maximised viewport" maxResult minResult,
         inOrderTestGroup
           "Role Locator Tests"
           [ inOrderTestGroup
@@ -84,6 +78,28 @@ testLandmarkAndRole run interp =
 
     chkElmCount :: Text -> Locator -> Int -> TestTree
     chkElmCount = chkElmCount' run interp
+
+-- ---------------------------------------------------------------------------
+-- Viewport Display Check
+-- ---------------------------------------------------------------------------
+
+testViewportDisplayCheck ::
+  forall elm es.
+  (Eq elm, Show elm, Error Text :> es) =>
+  (forall a. Eff es a -> IO a) ->
+  (forall a. Eff (WebDriver elm : es) a -> Eff es a) ->
+  TestTree
+testViewportDisplayCheck run interp =
+  beforeAll_ (landmarkRolesUrl >>= \url -> run (interp (navigateTo @elm url))) $
+    testGroup
+      "Viewport Display Check"
+      [ mkTest run interp "jsDisplay check should NOT be affected by viewport" $ do
+          maximizeWindow @elm
+          maxResult <- locateAll @elm $ elmClass "input"
+          minimizeWindow @elm
+          minResult <- locateAll @elm $ elmClass "input"
+          TU.chkEq "Displayed result should be the same for minised and maximised viewport" maxResult minResult
+      ]
 
 -- ---------------------------------------------------------------------------
 -- Extended Role Matching Tests

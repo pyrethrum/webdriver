@@ -27,14 +27,34 @@ import Prelude
 type HttpBaseEffs = '[Error Text, WebDriverHttp, Logger, WaitPrimative, IOE]
 
 -- >>> _eval tests
+
 -- *** Exception: ExitSuccess
+
 tests :: TestTree
 tests =
-  withResource (getWDSession False) closeWDSession runSessionTests
+  inOrderTestGroup
+    "Base Locate Test Suite"
+    [ withResource (getWDSession False) closeWDSession viewportTests,
+      withResource (getWDSession False) closeWDSession runSessionTests
+    ]
   where
+    runWith :: IO WDSession -> forall a. Eff HttpBaseEffs a -> IO a
+    runWith ses act = do
+      MkWDSession {loggerEnv, session, endpoint} <- ses
+      res <-
+        runEff
+          $ runWaitPrimative
+          $ runLogger loggerEnv
+          $ runWebDriverHttp (MkHttpParams {session = session, endpoint = endpoint})
+          $ runErrorNoCallStack @Text act
+      case res of
+        Left err -> throwIO (userError (unpack err))
+        Right a -> pure a
+
     runSessionTests :: IO WDSession -> TestTree
     runSessionTests ses =
-      inOrderTestGroup "Base Locate Tests"
+      inOrderTestGroup
+        "Base Locate Tests"
         [ Common.testLandmarkAndRole run (interp defHttpOpts),
           Common.testExtendedRoleMatchingNever run (interp defHttpOpts),
           Common.testExtendedRoleMatchingAlways
@@ -71,20 +91,17 @@ tests =
         ]
       where
         run :: forall a. Eff HttpBaseEffs a -> IO a
-        run act = do
-          MkWDSession {loggerEnv, session, endpoint} <- ses
-          res <-
-            runEff
-              $ runWaitPrimative
-              $ runLogger loggerEnv
-              $ runWebDriverHttp (MkHttpParams {session = session, endpoint = endpoint})
-              $ runErrorNoCallStack @Text act
-          case res of
-            Left err -> throwIO (userError (unpack err))
-            Right a -> pure a
+        run = runWith ses
 
         interp :: L.HttpLocateOpts -> forall a. Eff (WebDriver ElementId : HttpBaseEffs) a -> Eff HttpBaseEffs a
-        interp opts = Interp.runWebDriverHttp opts
+        interp = interpHttp
+
+    interpHttp :: L.HttpLocateOpts -> forall a. Eff (WebDriver ElementId : HttpBaseEffs) a -> Eff HttpBaseEffs a
+    interpHttp opts = Interp.runWebDriverHttp opts
+
+    viewportTests :: IO WDSession -> TestTree
+    viewportTests ses =
+      Common.testViewportDisplayCheck (runWith ses) (interpHttp defHttpOpts)
 
 _eval :: Maybe Text -> TestTree -> IO TE.TastyResult
 _eval = TE.tastyEvalStdOutOnFailure
@@ -94,9 +111,10 @@ _pattern = Just "ExtLocateAlways finds textbox with aria-label"
 
 -- Specific test
 --- >>> _eval _pattern tests
+
 -- *** Exception: ExitSuccess
 
 -- All tests
 --- >>> _eval Nothing tests
--- *** Exception: ExitSuccess
 
+-- *** Exception: ExitSuccess
