@@ -12,7 +12,7 @@ import Data.Text (Text)
 import Effectful (MonadIO, liftIO, runEff)
 import Effectful.Error.Static (HasCallStack, runErrorNoCallStack)
 import System.IO (Handle)
-import UnliftIO (finally)
+import UnliftIO (finally, onException)
 import WebDriver.Effectful (FullCapabilities (..), HttpCapabilities, HttpEndpoint (..))
 import WebDriver.Effectful.App (acquireHttpSession, releaseHttpSession)
 import WebDriver.Effectful.HTTP.Base.Interpreter (HttpParams (..))
@@ -77,16 +77,18 @@ getWDSession wantBiDiSocket = do
   MkCfgLoaded
     { httpEndpoint = endpoint,
       httpCapabilities = caps,
-      loggerData = MkLoggerData {fileHandle = loggerFileHandle, loggerEnv}
+      loggerData = loggerData@MkLoggerData {fileHandle = loggerFileHandle, loggerEnv}
     } <-
     getConfigData wantBiDiSocket
   MkHttpSessionResponse {session, websocketUrl} <-
-    ( runEff
-        . runErrorNoCallStack @ParseFailure
-        . runLogger loggerEnv
-        $ acquireHttpSession endpoint caps
+    ( ( runEff
+          . runErrorNoCallStack @ParseFailure
+          . runLogger loggerEnv
+          $ acquireHttpSession endpoint caps
+      )
+        >>= ioThrow
     )
-      >>= ioThrow
+      `onException` releaseLogger loggerData
   pure
     MkWDSession
       { session,

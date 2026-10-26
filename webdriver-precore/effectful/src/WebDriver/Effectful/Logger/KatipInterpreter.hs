@@ -14,6 +14,8 @@ module WebDriver.Effectful.Logger.KatipInterpreter
   )
 where
 
+import Control.Exception (finally, onException)
+import Control.Monad (void)
 import Effectful.Exception (bracket)
 import Data.Text.Lazy.Builder (Builder, fromString, fromText)
 import Data.Time.Format (defaultTimeLocale, formatTime)
@@ -79,24 +81,27 @@ acquireLogger :: FilePath -> IO LoggerData
 acquireLogger logFile = do
   -- get IO ingerdients
   fileHandle <- openFile logFile WriteMode
-  timeZone <- getCurrentTimeZone
+  (do
+      timeZone <- getCurrentTimeZone
 
-  -- make scribes
-  let mkScribe :: ColorStrategy -> Handle -> IO Scribe
-      mkScribe cs hndl = K.mkHandleScribeWithFormatter (localBracketFormat timeZone) cs hndl (K.permitItem K.DebugS) K.V2
-  termScribe <- mkScribe K.ColorIfTerminal stdout
-  fileScribe <- mkScribe (K.ColorLog False) fileHandle
+      -- make scribes
+      let mkScribe :: ColorStrategy -> Handle -> IO Scribe
+          mkScribe cs hndl = K.mkHandleScribeWithFormatter (localBracketFormat timeZone) cs hndl (K.permitItem K.DebugS) K.V2
+      termScribe <- mkScribe K.ColorIfTerminal stdout
+      fileScribe <- mkScribe (K.ColorLog False) fileHandle
 
-  -- register scribes
-  MkLoggerData (Just fileHandle)
-    <$> ( initLogEnv "webdriver" "eval"
-            >>= K.registerScribe "stdout" termScribe K.defaultScribeSettings
-            >>= K.registerScribe "file" fileScribe K.defaultScribeSettings
-        )
+      -- register scribes
+      MkLoggerData (Just fileHandle)
+        <$> ( initLogEnv "webdriver" "eval"
+                >>= K.registerScribe "stdout" termScribe K.defaultScribeSettings
+                >>= K.registerScribe "file" fileScribe K.defaultScribeSettings
+            )
+    )
+    `onException` hClose fileHandle
 
 releaseLogger :: LoggerData -> IO ()
 releaseLogger MkLoggerData {fileHandle, loggerEnv} =
-  K.closeScribes loggerEnv >> maybe (pure ()) hClose fileHandle
+  void (K.closeScribes loggerEnv) `finally` maybe (pure ()) hClose fileHandle
 
 -- ---------------------------------------------------------------------------
 -- Interpreter
