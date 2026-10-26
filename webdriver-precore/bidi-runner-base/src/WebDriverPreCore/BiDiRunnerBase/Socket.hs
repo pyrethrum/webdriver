@@ -18,7 +18,6 @@ module WebDriverPreCore.BiDiRunnerBase.Socket
     sendCommand',
     sendCommandNoWait,
     sendCommandNoWait',
-    matchedRequest,
 
     -- * Counter Utilities
     counterVar,
@@ -32,7 +31,7 @@ import Control.Monad.Catch (MonadThrow (..))
 import Data.Aeson (FromJSON, Object, ToJSON, Value (..), object, toJSON, (.=))
 import Data.Function ((&))
 import Data.Set qualified as Set
-import UnliftIO (MonadIO, MonadUnliftIO, finally)
+import UnliftIO (MonadIO, MonadUnliftIO, finally, timeout)
 import UnliftIO.Exception (Exception (..), SomeException, catch)
 import UnliftIO.STM
   ( STM,
@@ -52,8 +51,9 @@ import UnliftIO.STM
   )
 import WebDriverPreCore.BiDiRunnerBase.Response
 import WebDriverPreCore.BiDiRunnerBase.Types
-import Prelude hiding (id, log)
+import WebDriverPreCore.Utils.Timeout (Timeout (..), seconds)
 import WebDriverPreCore.Utils.Utils (db)
+import Prelude hiding (id, log)
 
 -- | Communication channels for BiDi
 data Channels m = MkChannels
@@ -177,7 +177,7 @@ sendCommand' sa@MkSocketActions {getNext, takeCommandSlot, releaseCommandSlot} i
     `finally`
     --
     do
-      _ <-pure $ db "Releasing command slot" command.params
+      _ <- pure $ db "Releasing command slot" command.params
       atomically releaseCommandSlot
 
 -- | Send a command and wait for response (auto-generates ID)
@@ -195,20 +195,32 @@ sendCommand sa@MkSocketActions {getNext, takeCommandSlot, releaseCommandSlot} co
     )
     `finally` atomically releaseCommandSlot
 
--- | Wait for a response matching the given ID
+-- | Default time (microseconds) to wait for a command response before
+-- failing with 'BiDiTimeoutError'. Kept as a single named constant so it can
+-- be threaded through as a parameter later if needed.
+defaultCommandResponseTimeout :: Timeout
+defaultCommandResponseTimeout = 10 * seconds
+
+-- | Wait for a response matching the given ID, failing after
+-- 'defaultCommandResponseTimeout' if the driver never answers.
 matchedRequest ::
   forall m r.
-  (FromJSON r, MonadIO m) =>
+  (FromJSON r, MonadUnliftIO m) =>
   STM (Either JSONEncodeException ResponseObject) ->
   Value ->
   JSUInt ->
   m r
 matchedRequest getNext request id' = do
-  response <- atomically getNext
-  parseResponse id' response
-    & maybe
-      (matchedRequest getNext request id')
-      (either throw (pure . (.response)))
+  timeout defaultCommandResponseTimeout.microseconds getMatched
+    >>= maybe
+      (throw $ BiDiTimeoutError {request, ms})
+      pure
+  where
+    ms = defaultCommandResponseTimeout.microseconds `div` 1000
+    getMatched = do
+      response <- atomically getNext
+      parseResponse id' response
+        & maybe getMatched (either throw (pure . (.response)))
 
 -- | Register a subscription
 registerSubscription' ::

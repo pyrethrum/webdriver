@@ -1,9 +1,8 @@
-{-|
-Module: WebDriverPreCore.BiDiRunnerBase.Response
-Description: Response parsing for BiDi WebSocket messages
-
-This module provides types and functions for parsing BiDi WebSocket responses.
--}
+-- |
+-- Module: WebDriverPreCore.BiDiRunnerBase.Response
+-- Description: Response parsing for BiDi WebSocket messages
+--
+-- This module provides types and functions for parsing BiDi WebSocket responses.
 module WebDriverPreCore.BiDiRunnerBase.Response
   ( -- * Response Types
     ResponseObject (..),
@@ -11,7 +10,7 @@ module WebDriverPreCore.BiDiRunnerBase.Response
     ResponseException (..),
     JSONEncodeException (..),
     Success (..),
-    
+
     -- * Parsing Functions
     parseResponse,
     matchResponseId,
@@ -27,6 +26,7 @@ import Data.ByteString.Lazy (ByteString)
 import Data.Text (Text, pack, unpack)
 import GHC.Generics (Generic)
 import WebDriverPreCore.BiDiRunnerBase.Types (JSUInt (..))
+import WebDriverPreCore.Utils.Utils (txt)
 
 -- | Exception for JSON encoding/decoding failures
 data JSONEncodeException = MkJSONEncodeException
@@ -46,8 +46,10 @@ instance Exception JSONEncodeException where
 
 -- | A parsed response object from the WebSocket
 data ResponseObject
-  = NoID {object :: Object}  -- ^ Event message (no ID)
-  | WithID {id :: JSUInt, object :: Object}  -- ^ Command response (has ID)
+  = -- | Event message (no ID)
+    NoID {object :: Object}
+  | -- | Command response (has ID)
+    WithID {id :: JSUInt, object :: Object}
   deriving (Show, Generic)
 
 -- | A matched response with parsed result
@@ -60,14 +62,19 @@ data MatchedResponse a = MkMatchedResponse
 -- | Exception during response parsing/matching
 data ResponseException
   = BiDIError Value
-  | BiDiTimeoutError {ms :: Int}
+  | BiDiTimeoutError
+      { request :: Value,
+        ms :: Int
+      }
   deriving (Show, Eq, Generic)
 
 instance Exception ResponseException where
   displayException :: ResponseException -> String
   displayException = \case
     BiDIError v -> "BiDi error response: " <> show v
-    BiDiTimeoutError {ms} -> "Timed out waiting for matching command response from driver (" <> show ms <> " milliseconds)"
+    BiDiTimeoutError {
+      request,
+      ms} -> unpack $ "Timed out waiting for matching command response from driver (" <> txt ms <> " milliseconds)\nRequest was: " <> txt request
 
 -- | Successful command response
 data Success a = MkSuccess
@@ -83,17 +90,20 @@ instance (FromJSON a) => FromJSON (Success a) where
     id' <- o .: "id"
     result <- o .: "result"
     let extensions = KM.delete "id" $ KM.delete "result" o
-    pure $ MkSuccess
-      { id = id',
-        result,
-        extensions
-      }
+    pure $
+      MkSuccess
+        { id = id',
+          result,
+          extensions
+        }
 
 -- | Parse and match a response to a command ID
-parseResponse :: forall r. (FromJSON r) 
-  => JSUInt 
-  -> Either JSONEncodeException ResponseObject 
-  -> Maybe (Either ResponseException (MatchedResponse r))
+parseResponse ::
+  forall r.
+  (FromJSON r) =>
+  JSUInt ->
+  Either JSONEncodeException ResponseObject ->
+  Maybe (Either ResponseException (MatchedResponse r))
 parseResponse id' =
   either
     (Just . Left . BiDIError . toObject)
@@ -101,19 +111,22 @@ parseResponse id' =
   where
     toObject :: JSONEncodeException -> Value
     toObject MkJSONEncodeException {message, responseText} =
-      Object $ KM.fromList 
-        [ ("error", String "json encode exception"), 
-          ("message", String message), 
-          ("responseText", String responseText)
-        ]
+      Object $
+        KM.fromList
+          [ ("error", String "json encode exception"),
+            ("message", String message),
+            ("responseText", String responseText)
+          ]
 
 -- | Match a response object to a command ID
-matchResponseId :: forall a. (FromJSON a) 
-  => JSUInt 
-  -> ResponseObject 
-  -> Maybe (Either ResponseException (MatchedResponse a))
+matchResponseId ::
+  forall a.
+  (FromJSON a) =>
+  JSUInt ->
+  ResponseObject ->
+  Maybe (Either ResponseException (MatchedResponse a))
 matchResponseId msgId = \case
-  NoID {} -> Nothing  -- Events don't have IDs, skip
+  NoID {} -> Nothing -- Events don't have IDs, skip
   WithID id' obj ->
     if id' == msgId
       then Just $ parseSuccessOrError obj
