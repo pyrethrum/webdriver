@@ -11,6 +11,7 @@ module WebDriverPreCore.Extended.Common.Locators.Internal (
     -- * internal xpath utils
     roleTypeOnlyXPath,
     roleLabelText,
+    getSynonyms,
     xPathRelativePrefix,
 
     -- * BiDi
@@ -150,7 +151,7 @@ data AriaRole
   | Form
   | Group
   | Heading
-  | Img
+  | Image
   | Link
   | List
   | ListItem
@@ -798,6 +799,13 @@ wildcardPredX normText val =
 roleLabelText :: AriaRole -> Text
 roleLabelText = toLower . pack . show
 
+-- | Return the ARIA role synonyms for a role, excluding the canonical name
+--   produced by 'roleLabelText'. Based on WAI-ARIA 1.3 role definitions.
+getSynonyms :: AriaRole -> [Text]
+getSynonyms = \case
+  Image -> ["img"]
+  _ -> []
+
 -- | Generate XPath for role type predicates only (without .// prefix or name matching).
 -- Used as a building block for constructing role-based XPath expressions.
 roleTypeOnlyXPath :: RoleLocator -> Text
@@ -832,7 +840,13 @@ roleTypeXPathContent wantBrackets r =
     then "[" <> content <> "]"
     else content
   where 
-    content = implicitRoleXPath r <> " or @role='" <> roleLabelText r <> "'"
+    content = implicitRoleXPath r <> " or " <> explicitRolePredX r
+
+-- | XPath predicate matching elements whose explicit @role@ attribute equals
+--   the canonical ARIA role or one of its synonyms.
+explicitRolePredX :: AriaRole -> Text
+explicitRolePredX r =
+  intercalate " or " [ "@role='" <> label <> "'" | label <- roleLabelText r : getSynonyms r ]
 
 
 -- | Maps an ARIA role to an XPath predicate matching elements that have
@@ -855,7 +869,7 @@ implicitRoleXPath =
     Form -> "form[@aria-label or @aria-labelledby]"
     Group -> "fieldset or self::optgroup"
     Heading -> "h1 or self::h2 or self::h3 or self::h4 or self::h5 or self::h6"
-    Img -> "img[@alt and string-length(@alt)>0]"
+    Image -> "img[@alt and string-length(@alt)>0]"
     Link -> "a[@href] or self::area[@href]"
     List -> "ul or self::ol"
     ListItem -> "li"

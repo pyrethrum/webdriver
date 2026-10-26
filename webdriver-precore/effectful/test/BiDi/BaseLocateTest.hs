@@ -105,72 +105,79 @@ _pattern = Just "/Landmark and Role Tests/"
 
 --- >>> arggh
 -- Using debug local config
--- [2026-10-26 20:03:34][Debug] HTTP POST Url Http ("session" :| ["127.0.0.1"])
 -- Base Locate Test Suite
 --   Base Locate Tests
 --     Landmark and Role Tests
 --       Role Locator Tests
 --         Role with name - aria-label
---           Img - div with explicit role override: [2026-10-26 20:03:35][Debug] Response: 200
--- [2026-10-26 20:03:35][Debug] Connecting to WebDriver at MkBiDiUrl {host = "127.0.0.1", port = 43597, path = "/session/35630206-74c7-49c5-b3f0-e5a016aca8cd"}
--- [2026-10-26 20:03:35][Debug] WebSocket connection established
--- [2026-10-26 20:03:35][Debug] Starting Sender thread
--- [2026-10-26 20:03:35][Debug] Starting Receiver thread
--- [2026-10-26 20:03:35][Debug] Starting EventHandler thread
--- [2026-10-26 20:03:35][Debug] Sending Message: {
---     "id": 1,
---     "method": "browsingContext.getTree",
---     "params": {}
--- }
--- [2026-10-26 20:03:35][Debug] Received raw data: {"type":"success","id":1,"result":{"contexts":[{"children":[],"context":"7e4a375c-ee67-4ca3-ae50-aefba4cf8681","originalOpener":null,"url":"about:blank","userContext":"default","clientWindow":"0e03c52e-dde1-46ef-ae60-1117ac58790d","parent":null,"moz:scope":"content","moz:name":""}]}}
--- [2026-10-26 20:03:35][Debug] Sending Message: {
---     "id": 2,
---     "method": "browsingContext.navigate",
---     "params": {
---         "context": "7e4a375c-ee67-4ca3-ae50-aefba4cf8681",
---         "url": "file:///home/john-walker/repos/webdriver/webdriver-precore/test-resources/testFiles/locator-landmark-roles.html"
---     }
--- }
--- [2026-10-26 20:03:35][Debug] Received raw data: {"type":"success","id":2,"result":{"navigation":"09929683-3745-412a-afa7-5c9079bbed87","url":"file:///home/john-walker/repos/webdriver/webdriver-precore/test-resources/testFiles/locator-landmark-roles.html"}}
--- [2026-10-26 20:03:35][Debug] Sending Message: {
---     "id": 3,
---     "method": "browsingContext.getTree",
---     "params": {}
--- }
--- [2026-10-26 20:03:35][Debug] Received raw data: {"type":"success","id":3,"result":{"contexts":[{"children":[],"context":"7e4a375c-ee67-4ca3-ae50-aefba4cf8681","originalOpener":null,"url":"file:///home/john-walker/repos/webdriver/webdriver-precore/test-resources/testFiles/locator-landmark-roles.html","userContext":"default","clientWindow":"0e03c52e-dde1-46ef-ae60-1117ac58790d","parent":null,"moz:scope":"content","moz:name":""}]}}
--- [2026-10-26 20:03:35][Debug] Sending Message: {
---     "id": 4,
---     "method": "browsingContext.locateNodes",
---     "params": {
---         "context": "7e4a375c-ee67-4ca3-ae50-aefba4cf8681",
---         "locator": {
---             "type": "accessibility",
---             "value": {
---                 "name": "Abstract coloured shape",
---                 "role": "img"
---             }
---         }
---     }
--- }
--- [2026-10-26 20:03:36][Debug] Received raw data: {"type":"success","id":4,"result":{"nodes":[]}}
--- [2026-10-26 20:03:36][Error] ElementNotFound
---   { description = "No element found matching locator."
---   , locator =
---       Role
---         { role = RoleFull { role = Img , name = "Abstract coloured shape" }
---         }
---   }
--- [2026-10-26 20:03:36][Debug] Exception thrown in Receiver thread: ConnectionClosed
--- [2026-10-26 20:03:36][Debug] HTTP DELETE Url Http ("35630206-74c7-49c5-b3f0-e5a016aca8cd" :| ["session","127.0.0.1"])
--- [2026-10-26 20:03:36][Debug] Response: 200
--- FAIL
+--           Img - div with explicit role override: FAIL
 --             Exception: ghc-internal:GHC.Internal.IO.Exception.IOException:
+--             
+--             eval.log: openFile: resource busy (file is locked)
+--             
+--             While handling eval.log: openFile: resource busy (file is locked)
+--             
+--             IPE backtrace:
+--             HasCallStack backtrace:
+--               throwIO, called at ./Test/Tasty/Run.hs:169:19 in tasty-1.5.4-c219ffdaeeb21cab11e36afde43b2b97fa361763300e20b8e8c29de0e1f9bdfc:Test.Tasty.Run
+-- 
+-- 1 out of 1 tests failed (0.00s)
+--             
+--             eval.log: openFile: resource busy (file is locked)
+--             
+--             While handling eval.log: openFile: resource busy (file is locked)
+--             
+--             IPE backtrace:
+--             HasCallStack backtrace:
+--               throwIO, called at ./Test/Tasty/Run.hs:169:19 in tasty-1.5.4-c219ffdaeeb21cab11e36afde43b2b97fa361763300e20b8e8c29de0e1f9bdfc:Test.Tasty.Run
+-- 
+-- 1 out of 1 tests failed (0.00s)
+--             
+--             VanillaHttpException (HttpExceptionRequest Request {
+--               host                 = "127.0.0.1"
+--               port                 = 4444
+--               secure               = False
+--               requestHeaders       = [("Accept","application/json"),("Content-Type","application/json; charset=utf-8")]
+--               path                 = "/session"
+--               queryString          = ""
+--               method               = "POST"
+--               proxy                = Nothing
+--               rawBody              = False
+--               redirectCount        = 10
+--               responseTimeout      = ResponseTimeoutDefault
+--               requestVersion       = HTTP/1.1
+--               proxySecureMode      = ProxySecureWithConnect
+--             }
+--              (ConnectionFailure Network.Socket.connect: <socket: 125>: does not exist (Connection refused)))
+--             
+--             While handling VanillaHttpException (HttpExceptionRequest Request {
+--               |   host                 = "127.0.0.1"
+--               |   port                 = 4444
+--               |   secure               = False
+--               |   requestHeaders       = [("Accept","application/json"),("Content-Type","application/json; charset=utf-8")]
+--               |   path                 = "/session"
+--               |   queryString          = ""
+--               |   method               = "POST"
+--               |   proxy                = Nothing
+--               |   rawBody              = False
+--               |   redirectCount        = 10
+--               |   responseTimeout      = ResponseTimeoutDefault
+--               |   requestVersion       = HTTP/1.1
+--               |   proxySecureMode      = ProxySecureWithConnect
+--               | }
+--               |  (ConnectionFailure Network.Socket.connect: <socket: 125>: does not exist (Connection refused)))
+--             
+--             IPE backtrace:
+--             HasCallStack backtrace:
+--               throwIO, called at ./Test/Tasty/Run.hs:169:19 in tasty-1.5.4-c219ffdaeeb21cab11e36afde43b2b97fa361763300e20b8e8c29de0e1f9bdfc:Test.Tasty.Run
+-- 
+-- 1 out of 1 tests failed (0.05s)
 --             
 --             user error (ElementNotFound
 --               { description = "No element found matching locator."
 --               , locator =
 --                   Role
---                     { role = RoleFull { role = Img , name = "Abstract coloured shape" }
+--                     { role = RoleFull { role = Image , name = "Abstract coloured shape" }
 --                     }
 --               })
 --             

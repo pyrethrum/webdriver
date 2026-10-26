@@ -287,7 +287,7 @@ heading :: Text -> Locator
 heading = role Heading
 
 img :: Text -> Locator
-img = role Img
+img = role Image
 
 link :: Text -> Locator
 link = role Link

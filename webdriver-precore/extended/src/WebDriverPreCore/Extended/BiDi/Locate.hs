@@ -312,10 +312,48 @@ locateLeafBiDi prms baseOpts loc =
       locateInnerTextBiDi prms baseOpts value matchType caseSensitivity maxDepth
     CSSBiDi {} -> leafLoc
     XPathBiDi {} -> leafLoc
-    RoleBiDi {} -> leafLoc
+    RoleBiDi {roleSpec} -> locateRoleBiDi prms baseOpts roleSpec
     ContextBiDi {} -> leafLoc
   where 
     leafLoc = runLeafLocator prms baseOpts (toBiDiLocator loc)
+
+-- | Locate nodes matching a role locator. Roles with ARIA synonyms retry each
+--   synonym when the canonical role finds no nodes.
+locateRoleBiDi ::
+  forall m.
+  (Monad m) =>
+  LocParams m ->
+  BaseLocateOpts ->
+  RoleLocator ->
+  m [BiDiP.NodeRemoteValue]
+locateRoleBiDi prms baseOpts roleSpec =
+  case roleSpec of
+    RoleName {} -> runLeafLocator prms baseOpts (roleToAccessibility roleSpec)
+    RoleType {role} -> locateRoleWithSynonyms prms baseOpts roleSpec (LI.getSynonyms role)
+    RoleFull {role} -> locateRoleWithSynonyms prms baseOpts roleSpec (LI.getSynonyms role)
+
+-- | Locate using the canonical role first, then each synonym in turn until one
+--   returns nodes (or all are exhausted).
+locateRoleWithSynonyms ::
+  forall m.
+  (Monad m) =>
+  LocParams m ->
+  BaseLocateOpts ->
+  RoleLocator ->
+  [Text] ->
+  m [BiDiP.NodeRemoteValue]
+locateRoleWithSynonyms prms baseOpts roleLoc synonyms = do
+  found <- runLeafLocator prms baseOpts (roleToAccessibility roleLoc)
+  case found of
+    [] -> trySynonyms synonyms
+    _ -> pure found
+  where
+    trySynonyms [] = pure []
+    trySynonyms (syn : rest) = do
+      found <- runLeafLocator prms baseOpts (overrideRoleLabel syn roleLoc)
+      case found of
+        [] -> trySynonyms rest
+        _ -> pure found
 
 -- | Run a single BiDi locateNodes command for a directly-supported BiDi locator.
 runLeafLocator ::
@@ -477,6 +515,17 @@ roleToAccessibility = \case
     BiDiP.Accessibility {name = Just name, role = Just (roleLabelText role)}
   RoleType {role} ->
     BiDiP.Accessibility {name = Nothing, role = Just (roleLabelText role)}
+  RoleName {name} ->
+    BiDiP.Accessibility {name = Just name, role = Nothing}
+
+-- | Like 'roleToAccessibility', but with an explicit role label, allowing ARIA
+--   synonyms (e.g. @img@ for @image@) to be used in retries.
+overrideRoleLabel :: Text -> RoleLocator -> BiDiP.Locator
+overrideRoleLabel roleLabel = \case
+  RoleFull {name} ->
+    BiDiP.Accessibility {name = Just name, role = Just roleLabel}
+  RoleType {} ->
+    BiDiP.Accessibility {name = Nothing, role = Just roleLabel}
   RoleName {name} ->
     BiDiP.Accessibility {name = Just name, role = Nothing}
 
