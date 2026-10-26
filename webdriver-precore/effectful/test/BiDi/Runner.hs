@@ -58,9 +58,7 @@ type BiDiTestEff = Eff '[WebDriverBiDi, Logger, WaitPrimative, IOE]
 -- | Effect stack over which the shared BiDi WebSocket is established.
 type BiDiRunnerEffs = '[Logger, WaitPrimative, IOE]
 
--- | Effect stack for tests using the extended 'WebDriver' locate abstraction
--- over BiDi, with the dynamic 'Error' effect first.
-type BiDiLocateEffs = '[Error Text, WebDriverBiDi, Logger, WaitPrimative, IOE]
+
 
 -- | The HTTP session together with its single BiDi WebSocket, shared by all tests.
 data BiDiResources = MkBiDiResources
@@ -126,14 +124,14 @@ getRootBrowsingContext = do
     _ -> liftIO (fail "No browsing contexts found")
 
 -- | Interpret the extended 'WebDriver' locate effect over the BiDi effect stack.
-interpBiDiLocate :: Eff (WebDriver NodeRemoteValue : BiDiLocateEffs) a -> Eff BiDiLocateEffs a
+interpBiDiLocate :: (WebDriverBiDi :> es, IOE :> es) => Eff (WebDriver NodeRemoteValue : es) a -> Eff es a
 interpBiDiLocate act = do
   ctx <- getRootBrowsingContext
   Interp.runWebDriverBiDi defBiDiOpts ctx act
 
 -- | Run a 'BiDiLocateEffs' action against the shared resources, converting the
 -- dynamic 'Error' effect into an 'IO' exception.
-runBiDiLocate :: IO BiDiResources -> Eff BiDiLocateEffs a -> IO a
+runBiDiLocate :: IO BiDiResources -> Eff '[Error Text, WebDriverBiDi, Logger, WaitPrimative, IOE] a -> IO a
 runBiDiLocate res act = do
   MkBiDiResources {wdSession = MkWDSession {loggerEnv}, biDiHandle = MkBiDiRunClose {run}} <- res
   result <-
