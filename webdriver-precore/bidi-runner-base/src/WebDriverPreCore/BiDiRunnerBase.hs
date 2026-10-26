@@ -48,7 +48,7 @@ import Data.Aeson.Types (Parser, parseEither)
 import Data.ByteString.Lazy qualified as BL
 import Data.Foldable (traverse_)
 import Data.Set qualified as Set
-import Data.Text (Text, pack, take, unpack)
+import Data.Text (Text, pack, unpack)
 import Data.Text.Encoding (decodeUtf8)
 import Network.Socket qualified as NS
   ( AddrInfo (addrAddress, addrFamily, addrSocketType),

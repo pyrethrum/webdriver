@@ -13,7 +13,7 @@ import Test.Tasty.HUnit (testCase)
 import UnliftIO (SomeException, catchAny, finally, throwIO, try)
 import WebDriver.Effectful
 import WebDriver.Effectful.BiDi.Base.Actions (browsingContextGetTree)
-import WebDriver.Effectful.Logger (Logger, runLogger)
+import WebDriver.Effectful.Logger (Logger, logError, runLogger)
 import WebDriverPreCore.BiDi.Protocol
   ( BrowsingContext,
     GetTree (..),
@@ -58,7 +58,9 @@ type BiDiTestEff = Eff '[WebDriverBiDi, Logger, WaitPrimative, IOE]
 -- | Effect stack over which the shared BiDi WebSocket is established.
 type BiDiRunnerEffs = '[Logger, WaitPrimative, IOE]
 
-
+-- | Effect stack for tests using the extended 'WebDriver' locate abstraction
+-- over BiDi, with the dynamic 'Error' effect first.
+type BiDiLocateEffs = '[Error Text, WebDriverBiDi, Logger, WaitPrimative, IOE]
 
 -- | The HTTP session together with its single BiDi WebSocket, shared by all tests.
 data BiDiResources = MkBiDiResources
@@ -129,20 +131,21 @@ interpBiDiLocate act = do
   ctx <- getRootBrowsingContext
   Interp.runWebDriverBiDi defBiDiOpts ctx act
 
--- | Run a 'BiDiLocateEffs' action against the shared resources, converting the
--- dynamic 'Error' effect into an 'IO' exception.
-runBiDiLocate :: IO BiDiResources -> Eff '[Error Text, WebDriverBiDi, Logger, WaitPrimative, IOE] a -> IO a
+-- | Run a 'BiDiLocateEffs' action against the shared resources, logging any
+-- dynamic 'Error' via the katip 'Logger' before converting it into an 'IO'
+-- exception.
+runBiDiLocate :: forall a. IO BiDiResources -> Eff '[Error Text, WebDriverBiDi, Logger, WaitPrimative, IOE] a -> IO a
 runBiDiLocate res act = do
   MkBiDiResources {wdSession = MkWDSession {loggerEnv}, biDiHandle = MkBiDiRunClose {run}} <- res
-  result <-
-    runEff
-      $ runWaitPrimative
-      $ runLogger loggerEnv
-      $ runWebDriverBiDi run
-      $ runErrorNoCallStack @Text act
-  case result of
-    Left err -> throwIO (userError (unpack err))
-    Right a -> pure a
+  runEff
+    $ runWaitPrimative
+    $ runLogger loggerEnv
+    $ runWebDriverBiDi run
+    $ runErrorNoCallStack @Text act
+      >>= either logAndThrowIO pure
+  where
+    logAndThrowIO :: (Logger :> es, IOE :> es) => Text -> Eff es a
+    logAndThrowIO err = logError err >> liftIO (throwIO $ userError $ unpack err)
 
 -- | Minimal pointer properties with all optional fields set to 'Nothing'.
 defaultPointerProps :: PointerCommonProperties
