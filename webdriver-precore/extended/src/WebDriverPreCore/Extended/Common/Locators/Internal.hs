@@ -134,7 +134,7 @@ instance ToJSON Locator
 
 instance FromJSON Locator
 
--- | ARIA roles from https://www.w3.org/TR/wai-aria-1.2/#role_definitions
+-- | ARIA roles from https://www.w3.org/TR/wai-aria-1.3/#role_definitions
 data AriaRole
   = Article
   | Banner
