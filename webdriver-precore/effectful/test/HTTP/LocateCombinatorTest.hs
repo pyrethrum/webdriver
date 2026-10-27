@@ -28,7 +28,7 @@ import WebDriverPreCore.Extended.Locate qualified as L
 import WebDriverPreCore.Extended.Locators (Locator, css, elmClass, (&&&), (>>>), (|||), elmClass', MatchType (..), CaseSensitivity (..))
 import Data.Bifunctor (Bifunctor(first))
 import Test.Falsify.Property (gen)
-import WebDriverPreCore.Extended.HTTP.Locate (DisplayedCheck(..))
+import WebDriverPreCore.Extended.Locate (DisplayedCheck(..))
 import Common.SessionInit (getWDSession, closeWDSession)
 import HTTP.Runner
 

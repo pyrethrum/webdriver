@@ -1,6 +1,5 @@
 module WebDriverPreCore.Extended.HTTP.Locate
   (
-    DisplayedCheck(..),
     ExtendedRoleLocateSingleton(..),
     HttpLocateOpts (..),
     LocateActions (..),
@@ -26,11 +25,16 @@ import GHC.Generics (Generic)
 import GHC.Stack (HasCallStack)
 
 import WebDriverPreCore.Extended.Common.Locate (
+    DisplayedCheck (..),
     LocateException (..),
     PreLocateException (..),
     LeafCardinality (..),
     addLocToException,
-    runLoc
+    runLoc,
+    displayedJS,
+    shouldRunDisplayedCheck,
+    filterDisplayed,
+    filterDisplayedForSingleton
   )
 import WebDriverPreCore.Extended.Common.Locators.Internal (Locator, RoleLocator (..), CompoundLocator, HttpLoc (..), xPathRelativePrefix)
 import WebDriverPreCore.Extended.Common.Locators.Internal qualified as LI
@@ -41,8 +45,6 @@ import Data.Bifunctor (Bifunctor(..))
 
 -- | Whether to find the unique element (error if multiple match) or just the first.
 data SingletonCardinality = Unique | First deriving (Show, Eq)
-
-data DisplayedCheck = DisplayedCheckNever | DisplayedCheckDisambiguateUnique | DisplayedCheckAlways deriving (Show, Eq)
 
 data ExtendedRoleLocateSingleton = ExtLocateNever | ExtLocateSingletonMiss | ExtLocateAlways deriving (Show, Eq)
 
@@ -183,18 +185,18 @@ jsFilterDisplayed ::
   LocParams m ->
   [ElementId] ->
   m [ElementId]
-jsFilterDisplayed MkLocParams{throw, catch, trace, executeScript} elms = do
-  bools <- catch
-    (toBools <$> executeScript MkScript {script = displayedJS, args = [toJSON elms]})
-    (throw . DriverException')
-  let filtered = fmap fst . P.filter snd $ P.zip elms bools
-  trace $ 
-    JSDisplayedCheck { 
-      beforeCheck = elms, 
-      afterCheck = filtered
+jsFilterDisplayed MkLocParams{trace, executeScript} elms = do
+  filtered <- filterDisplayed runScript elms
+  trace $
+    JSDisplayedCheck
+      { beforeCheck = elms,
+        afterCheck = filtered
       }
   pure filtered
   where
+    runScript :: [ElementId] -> m [Bool]
+    runScript elms' = toBools <$> executeScript MkScript {script = displayedJS, args = [toJSON elms']}
+
     toBools :: Value -> [Bool]
     toBools val = case A.fromJSON val of
       A.Success bs -> bs
@@ -245,17 +247,8 @@ chkRefilterSingleton ::
   LocParams m ->
   [ElementId] ->
   m [ElementId]
-chkRefilterSingleton actions elmIds =
-  chkSingleton True elmIds
-  where
-    chkSingleton recheckAmbiguous =
-      \case
-        [] -> pure []
-        [x] -> pure [x]
-        xs ->
-          if recheckAmbiguous
-            then jsFilterDisplayed actions xs >>= chkSingleton False
-            else pure xs
+chkRefilterSingleton actions =
+  filterDisplayedForSingleton (jsFilterDisplayed actions)
 
 -- single shot base locate (all cardinality)
 locateElmsUnchecked ::
@@ -348,10 +341,8 @@ httpLocateSingleton prms@MkLocParams{throw}  loc = do
           then chkRefilterSingleton prms elms
           else pure elms
         where
-          displayChk = prms.jsRecheckDisplayed
-          wantRecheck = 
-             displayChk == DisplayedCheckAlways 
-             || displayChk == DisplayedCheckDisambiguateUnique && prms.singletonCardinality == Unique
+          wantRecheck =
+            shouldRunDisplayedCheck prms.jsRecheckDisplayed (prms.singletonCardinality == Unique)
 
 elementNotFoundError :: PreLocateException
 elementNotFoundError = ElementNotFound' "No element found matching locator."
@@ -368,7 +359,7 @@ httpLocateAll prms loc = do
         ExtLocateSingletonMiss -> NoRoleJSSecondPass
         ExtLocateAlways -> DoRoleJSSecondPass
   elms <- locateElmsUnchecked prms FindAll secondPassOnInitial loc
-  if prms.jsRecheckDisplayed == DisplayedCheckAlways
+  if shouldRunDisplayedCheck prms.jsRecheckDisplayed False
     then jsFilterDisplayed prms elms 
     else pure elms
 
@@ -496,25 +487,3 @@ filterElms lc matcher = recurse []
           (e : es) -> do
             matches <- matcher e
             recurse (if matches then e : acc else acc) es
-
-
-displayedJS :: Text
-displayedJS =
-  "function isDisplayed(el) {\n\
-  \  if (!el || !el.isConnected) return false;\n\
-  \\n\
-  \  const style = getComputedStyle(el);\n\
-  \\n\
-  \  if (style.display === \"none\") return false;\n\
-  \  if (style.visibility === \"hidden\" || style.visibility === \"collapse\") return false;\n\
-  \  if (parseFloat(style.opacity) === 0) return false;\n\
-  \\n\
-  \  if (el.tagName === \"INPUT\" && el.type === \"hidden\")\n\
-  \    return false;\n\
-  \\n\
-  \  if (el.offsetWidth === 0 || el.offsetHeight === 0)\n\
-  \    return false;\n\
-  \\n\
-  \  return true;\n\
-  \}\n\
-  \return Array.from(arguments[0]).map(isDisplayed);"

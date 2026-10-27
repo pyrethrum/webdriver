@@ -108,12 +108,14 @@ withBiDiResources = withResource acquireBiDiResources releaseBiDiResources
 
 -- | Default BiDi locate options.
 --
--- Note: BiDi locate has no equivalent of the HTTP-only extended role matching
--- or displayed-check modes, so every test group shares these defaults.
+-- Note: BiDi locate has no equivalent of the HTTP-only extended role matching,
+-- so the extended-role test groups all share these defaults. Displayed-check
+-- modes are configured per group, as they are for HTTP.
 defBiDiOpts :: BL.BiDiLocateOpts
 defBiDiOpts =
   BL.MkBiDiLocateOpts
-    { singletonCardinality = BL.Unique,
+    { jsRecheckDisplayed = BL.DisplayedCheckAlways,
+      singletonCardinality = BL.Unique,
       mkDefaultLoc = autoId
     }
 
@@ -126,10 +128,10 @@ getRootBrowsingContext = do
     _ -> liftIO (fail "No browsing contexts found")
 
 -- | Interpret the extended 'WebDriver' locate effect over the BiDi effect stack.
-interpBiDiLocate :: (WebDriverBiDi :> es, IOE :> es) => Eff (WebDriver NodeRemoteValue : es) a -> Eff es a
-interpBiDiLocate act = do
+interpBiDiLocate :: (WebDriverBiDi :> es, IOE :> es) => BL.BiDiLocateOpts -> Eff (WebDriver NodeRemoteValue : es) a -> Eff es a
+interpBiDiLocate opts act = do
   ctx <- getRootBrowsingContext
-  Interp.runWebDriverBiDi defBiDiOpts ctx act
+  Interp.runWebDriverBiDi opts ctx act
 
 -- | Run a 'BiDiLocateEffs' action against the shared resources, logging any
 -- dynamic 'Error' via the katip 'Logger' before converting it into an 'IO'

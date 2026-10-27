@@ -58,6 +58,7 @@ mkBiDiLocateActions bc =
       catch,
       trace = \_ -> pure (),
       locateNodes = B.browsingContextLocateNodes,
+      scriptCallFunction = B.scriptCallFunction,
       getElementText = getElementText bc
     }
 

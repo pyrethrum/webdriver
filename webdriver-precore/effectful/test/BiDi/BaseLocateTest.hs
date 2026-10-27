@@ -3,6 +3,7 @@ module BiDi.BaseLocateTest where
 import BiDi.Runner
   ( BiDiLocateEffs,
     BiDiResources,
+    defBiDiOpts,
     interpBiDiLocate,
     runBiDiLocate,
     withBiDiResources,
@@ -14,7 +15,6 @@ import Common.BaseLocateTest
     testCombinedLocators,
     testExtendedRoleMatchingAlways,
     testExtendedRoleMatchingMiss,
-    testExtendedRoleMatchingNever,
     testExtendedRoleMatchingRoleType,
     testLandmarkAndRole,
     testLocateFromElement,
@@ -34,6 +34,7 @@ import Effectful (Eff, (:>))
 import Effectful.Error.Dynamic (Error)
 import Test.Tasty (TestTree, inOrderTestGroup)
 import WebDriverPreCore.BiDi.Protocol (NodeRemoteValue)
+import WebDriverPreCore.Extended.BiDi.Locate qualified as BL
 import Prelude
 
 -- >>> _eval tests
@@ -50,19 +51,22 @@ tests =
   where
     viewportTests :: IO BiDiResources -> TestTree
     viewportTests res =
-      testViewportDisplayCheck (runBiDiLocate res) interpBiDiLocate
+      testViewportDisplayCheck (runBiDiLocate res) (interpBiDiLocate defBiDiOpts)
 
     runSessionTests :: IO BiDiResources -> TestTree
     runSessionTests res =
       inOrderTestGroup
         "Base Locate Tests"
         [ runInprt testLandmarkAndRole,
-          runInprt testExtendedRoleMatchingNever,
           runInprt testExtendedRoleMatchingAlways,
           runInprt testExtendedRoleMatchingMiss,
-          runInprt testVisibilityAlways,
-          runInprt testVisibilityNever,
-          runInprt testVisibilityDisambiguate,
+          testVisibilityAlways run (interpWith defBiDiOpts),
+          testVisibilityNever
+            run
+            (interpWith (defBiDiOpts {BL.jsRecheckDisplayed = BL.DisplayedCheckNever})),
+          testVisibilityDisambiguate
+            run
+            (interpWith (defBiDiOpts {BL.jsRecheckDisplayed = BL.DisplayedCheckDisambiguateUnique})),
           runInprt testBasicLocatorTypes,
           runInprt testClassLocatorVariants,
           runInprt testAttributeLocatorVariants,
@@ -70,9 +74,14 @@ tests =
           runInprt testLocateFromElement,
           runInprt testCombinedLocators,
           runInprt testMiscAriaRoleTypes,
-          runInprt testMiscAriaRoleTypesNever,
-          testExtendedRoleMatchingRoleType run interp interp,
-          testVisibilityDisambiguateVsNever run interp interp
+          testMiscAriaRoleTypesNever
+            run
+            (interpWith (defBiDiOpts {BL.jsRecheckDisplayed = BL.DisplayedCheckNever})),
+          testExtendedRoleMatchingRoleType run (interpWith defBiDiOpts) (interpWith defBiDiOpts),
+          testVisibilityDisambiguateVsNever
+            run
+            (interpWith (defBiDiOpts {BL.jsRecheckDisplayed = BL.DisplayedCheckDisambiguateUnique}))
+            (interpWith (defBiDiOpts {BL.jsRecheckDisplayed = BL.DisplayedCheckNever}))
         ]
       where
         runInprt ::
@@ -83,13 +92,13 @@ tests =
             TestTree
           ) ->
           TestTree
-        runInprt test = test run interp
+        runInprt test = test run (interpWith defBiDiOpts)
 
         run :: forall a. Eff BiDiLocateEffs a -> IO a
         run = runBiDiLocate res
 
-        interp :: forall a. Eff (WebDriver NodeRemoteValue : BiDiLocateEffs) a -> Eff BiDiLocateEffs a
-        interp = interpBiDiLocate
+        interpWith :: BL.BiDiLocateOpts -> forall a. Eff (WebDriver NodeRemoteValue : BiDiLocateEffs) a -> Eff BiDiLocateEffs a
+        interpWith = interpBiDiLocate
 
 
 

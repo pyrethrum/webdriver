@@ -1,5 +1,6 @@
 module WebDriverPreCore.Extended.BiDi.Locate
   (
+    DisplayedCheck (..),
     SingletonCardinality (..),
     BiDiLocateOpts (..),
     LocateActions (..),
@@ -24,11 +25,16 @@ import Data.Word (Word8)
 import GHC.Stack (HasCallStack)
 
 import WebDriverPreCore.Extended.Common.Locate (
+    DisplayedCheck (..),
     LocateException (..),
     PreLocateException (..),
     LeafCardinality (..),
     addLocToException,
-    runLoc
+    runLoc,
+    displayedFunctionDeclaration,
+    shouldRunDisplayedCheck,
+    filterDisplayed,
+    filterDisplayedForSingleton
   )
 import WebDriverPreCore.Extended.Common.Locators.Internal (
     Locator,
@@ -89,6 +95,7 @@ data SingletonCardinality = Unique | First deriving (Show, Eq)
 -- | Options for singleton locate functions ('locateHttp', 'locateFromElementHttp').
 data BiDiLocateOpts = MkBiDiLocateOpts
   {
+    jsRecheckDisplayed :: DisplayedCheck,
     singletonCardinality :: SingletonCardinality,
     mkDefaultLoc :: Text -> Locator
   } 
@@ -101,6 +108,7 @@ data LocateActions m = MkLocateActions
     catch :: forall a e. (HasCallStack, Exception e) => m a -> (e -> m a) -> m a,
     trace :: WDBiDITrace -> m (),
     locateNodes :: BiDiP.LocateNodes -> m BiDiP.LocateNodesResult,
+    scriptCallFunction :: BiDiP.CallFunction -> m BiDiP.EvaluateResult,
     getElementText :: SharedReference -> m Text
   }
 
@@ -110,10 +118,12 @@ data LocParams m = MkLocParams
     catch :: forall a e. (HasCallStack, Exception e) => m a -> (e -> m a) -> m a,
     trace :: WDBiDITrace -> m (),
     locateNodes :: BiDiP.LocateNodes -> m BiDiP.LocateNodesResult,
+    scriptCallFunction :: BiDiP.CallFunction -> m BiDiP.EvaluateResult,
     getElementText :: SharedReference -> m Text,
     context :: BiDiP.BrowsingContext,
     startNodes :: Maybe [SharedReference],
     defaultLoc :: Text -> Locator,
+    jsRecheckDisplayed :: DisplayedCheck,
     singletonCardinality :: SingletonCardinality
   }
 
@@ -138,17 +148,22 @@ data WDBiDITrace = Prepared {
   selector :: BiDiP.Locator,
   cardinality :: LeafCardinality,
   found :: [BiDiP.NodeRemoteValue]
-  } 
+  } |
+ JSDisplayedCheck {
+  beforeCheck :: [BiDiP.NodeRemoteValue],
+  afterCheck :: [BiDiP.NodeRemoteValue]
+  }
  deriving (Show, Eq)
 
   -- context :: BrowsingContext,
   --   locator :: Locator,
 
 mkLocParams :: BiDiLocateOpts -> BiDiP.BrowsingContext -> LocateActions m -> LocParams m
-mkLocParams MkBiDiLocateOpts{mkDefaultLoc = defaultLoc, singletonCardinality} context MkLocateActions{..} =
+mkLocParams MkBiDiLocateOpts{mkDefaultLoc = defaultLoc, singletonCardinality, jsRecheckDisplayed} context MkLocateActions{..} =
   MkLocParams
     { defaultLoc,
       singletonCardinality,
+      jsRecheckDisplayed,
       context,
       startNodes = Nothing,
       ..
@@ -213,7 +228,7 @@ setBaseElement mRootId act@MkLocParams{..} =
 
 -- | Recover the underlying 'LocateActions' from the extended params.
 mkLocateActions :: LocParams m -> LocateActions m
-mkLocateActions MkLocParams{throw, catch, trace, locateNodes, getElementText} = MkLocateActions{throw, catch, trace, locateNodes, getElementText}
+mkLocateActions MkLocParams{throw, catch, trace, locateNodes, scriptCallFunction, getElementText} = MkLocateActions{throw, catch, trace, locateNodes, scriptCallFunction, getElementText}
 
 -- | Locate a single node. Cardinality checks are deferred until the query
 --   completes; for 'First' the driver is asked for at most one node, while for
@@ -224,17 +239,22 @@ biDiLocateSingleton ::
   LocParams m ->
   CompoundLocator BiDiLoc ->
   m BiDiP.NodeRemoteValue
-biDiLocateSingleton prms@MkLocParams{throw, singletonCardinality, startNodes} loc = do
-  let baseOpts =
+biDiLocateSingleton prms@MkLocParams{throw, singletonCardinality, startNodes, jsRecheckDisplayed} loc = do
+  let fetchAll = singletonCardinality == Unique || jsRecheckDisplayed == DisplayedCheckAlways
+      baseOpts =
         MkBaseLocateOpts
-          { maxNodeCount = case (singletonCardinality, loc) of
-              (First, LI.LeafC leafLoc) | not (needsTextFilter leafLoc) -> Just 1
+          { maxNodeCount = case (fetchAll, loc) of
+              (False, LI.LeafC leafLoc) | not (needsTextFilter leafLoc) -> Just 1
               _ -> Nothing,
             serializationOptions = Nothing,
             startNodes
           }
   allNodes <- locateElmsBiDi prms baseOpts loc
-  case allNodes of
+  filtered <-
+    if shouldRunDisplayedCheck jsRecheckDisplayed (singletonCardinality == Unique)
+      then filterDisplayedForSingleton (jsFilterDisplayed prms) allNodes
+      else pure allNodes
+  case filtered of
     [] -> throw elementNotFoundError
     (x : xs) ->
       case singletonCardinality of
@@ -250,14 +270,17 @@ biDiLocateAll ::
   LocParams m ->
   CompoundLocator BiDiLoc ->
   m [BiDiP.NodeRemoteValue]
-biDiLocateAll prms@MkLocParams{startNodes} loc = do
+biDiLocateAll prms@MkLocParams{startNodes, jsRecheckDisplayed} loc = do
   let baseOpts =
         MkBaseLocateOpts
           { maxNodeCount = Nothing,
             serializationOptions = Nothing,
             startNodes
           }
-  locateElmsBiDi prms baseOpts loc
+  elms <- locateElmsBiDi prms baseOpts loc
+  if shouldRunDisplayedCheck jsRecheckDisplayed False
+    then jsFilterDisplayed prms elms
+    else pure elms
 
 -- | Locate all matching nodes for a compound locator, with no cardinality filtering.
 locateElmsBiDi ::
@@ -427,6 +450,59 @@ filterByText MkLocParams{getElementText} predicate =
   where
     predicate' :: BiDiP.NodeRemoteValue -> m Bool
     predicate' = maybe (pure False) (fmap predicate . getElementText) . nodeToSharedRef
+
+-- | Post-filter located nodes by the WebDriver "element displayed" algorithm,
+--   running the shared 'displayedFunctionDeclaration' through @script.callFunction@.
+jsFilterDisplayed ::
+  forall m.
+  (Monad m) =>
+  LocParams m ->
+  [BiDiP.NodeRemoteValue] ->
+  m [BiDiP.NodeRemoteValue]
+jsFilterDisplayed MkLocParams{context, trace, scriptCallFunction} nodes = do
+  filtered <- filterDisplayed runScript nodes
+  trace $
+    JSDisplayedCheck
+      { beforeCheck = nodes,
+        afterCheck = filtered
+      }
+  pure filtered
+  where
+    runScript :: [BiDiP.NodeRemoteValue] -> m [Bool]
+    runScript nodes' =
+      toBools <$> scriptCallFunction BiDiP.MkCallFunction
+        { functionDeclaration = displayedFunctionDeclaration,
+          awaitPromise = False,
+          target = BiDiP.ContextTarget (BiDiP.MkContextTarget {context, sandbox = Nothing}),
+          arguments = Just [BiDiP.ArrayLocalValue (BiDiP.MkArrayLocalValue {typ = "array", value = BiDiP.MkListLocalValue (nodeToLocalValue <$> nodes')})],
+          resultOwnership = Nothing,
+          serializationOptions = Nothing,
+          this = Nothing
+        }
+
+-- | Convert a located node into a @script.callFunction@ local value, erroring
+--   if the node has no shared reference (which would make it unusable as an
+--   argument to the displayed-check script).
+nodeToLocalValue :: BiDiP.NodeRemoteValue -> BiDiP.LocalValue
+nodeToLocalValue =
+  maybe
+    (error "library defect - jsFilterDisplayed: located node has no shared reference")
+    (BiDiP.RemoteReference . BiDiP.SharedRemoteReference)
+    . nodeToSharedRef
+
+-- | Decode the boolean array returned by 'displayedFunctionDeclaration' from a
+--   @script.callFunction@ result.
+toBools :: BiDiP.EvaluateResult -> [Bool]
+toBools = \case
+  BiDiP.EvaluateResultSuccess {result = BiDiP.ArrayValue {value = Just items}} ->
+    remoteToBool <$> items
+  other ->
+    error $ "library defect - jsFilterDisplayed: script.callFunction returned unexpected value (expected [Bool]) - got:\n  " <> P.show other
+  where
+    remoteToBool :: BiDiP.RemoteValue -> Bool
+    remoteToBool = \case
+      BiDiP.PrimitiveValue (BiDiP.BooleanValue b) -> b
+      other -> error $ "library defect - jsFilterDisplayed: unexpected displayed result element:\n  " <> P.show other
 
 -- | Build a BiDi InnerText locator with the given matching configuration.
 innerTextLocator :: CaseSensitivity -> Maybe BiDiP.MatchType -> Text -> Maybe Word8 -> BiDiP.Locator
