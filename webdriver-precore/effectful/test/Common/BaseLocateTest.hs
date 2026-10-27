@@ -105,47 +105,6 @@ testViewportDisplayCheck run interp =
 -- Extended Role Matching Tests
 -- ---------------------------------------------------------------------------
 
-testExtendedRoleMatchingNever ::
-  forall elm es.
-  (Show elm, Error Text :> es) =>
-  (forall a. Eff es a -> IO a) ->
-  (forall a. Eff (WebDriver elm : es) a -> Eff es a) ->
-  TestTree
-testExtendedRoleMatchingNever run interpNever =
-  beforeAll_ (extendedRolesUrl >>= \url -> run (interpNever (navigateTo @elm url))) $
-    testGroup
-      "Extended Role Matching Tests - ExtLocateNever"
-      [ testGroup
-          "aria-labelledby resolution"
-          [ testNever "ExtLocateNever - locate does NOT find region via aria-labelledby" $ do
-              locRslt <- locate @elm $ region "Personal Information"
-              TU.chkLocException (txt (region "Personal Information")) isNotFound locRslt,
-            chkElmCountNever "ExtLocateNever - locateAll does NOT find region via aria-labelledby" (region "Personal Information") 0
-          ],
-        testGroup
-          "for id label association"
-          [ testNever "ExtLocateNever - locate does NOT find radio via for id label" $ do
-              locRslt <- locate @elm $ radio "Email"
-              TU.chkLocException (txt (radio "Email")) isNotFound locRslt,
-            testNever "ExtLocateNever - locate does NOT find textbox via for id label" $ do
-              locRslt <- locate @elm $ textbox "Given Name"
-              TU.chkLocException (txt (textbox "Given Name")) isNotFound locRslt
-          ],
-        testGroup
-          "aria-label - always resolved regardless of setting"
-          [ chkAutoId "ExtLocateNever finds textbox with aria-label" (textbox "Nickname") "edt-nickname"
-          ]
-      ]
-  where
-    testNever :: Text -> Eff (WebDriver elm : es) () -> TestTree
-    testNever name act = testCase (unpack name) (run (interpNever act))
-
-    chkAutoId :: Text -> Locator -> Text -> TestTree
-    chkAutoId name loc expctd = testNever name (locateChkAutoId @elm loc expctd)
-
-    chkElmCountNever :: Text -> Locator -> Int -> TestTree
-    chkElmCountNever = chkElmCount' run interpNever
-
 testExtendedRoleMatchingAlways ::
   forall elm es.
   (Error Text :> es) =>

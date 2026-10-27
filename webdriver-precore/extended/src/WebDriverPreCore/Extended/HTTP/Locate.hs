@@ -222,7 +222,6 @@ locateLeaf prms rolesSecondPass lc loc = do
             FindFirst ->
               case sr of
                 [] -> indirectRoleElms
-                [x] -> pure [x]
                 x:_ -> pure [x]
             FindAll ->
               (sr <>) <$> indirectRoleElms
