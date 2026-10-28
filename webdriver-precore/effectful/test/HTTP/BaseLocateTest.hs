@@ -71,7 +71,7 @@ tests =
           testExtendedRoleMatchingAlways
             run
             (interp (defHttpOpts {L.extendedRoleLocation = L.ExtLocateAlways})),
-          testExtendedRoleMatchingMiss
+          testExtendedRoleMatchingMiss True
             run
             (interp (defHttpOpts {L.extendedRoleLocation = L.ExtLocateSingletonMiss})),
           testExtendedRoleMatchingRoleType

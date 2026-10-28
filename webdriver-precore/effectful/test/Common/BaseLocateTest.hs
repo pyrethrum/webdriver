@@ -24,6 +24,7 @@ import WebDriverPreCore.Extended.Locators as LS
 import WebDriverPreCore.Test.TestData
 import WebDriverPreCore.Utils.Utils (txt)
 import Prelude
+import Data.Bool (bool)
 
 -- ---------------------------------------------------------------------------
 -- Landmark and Role Tests
@@ -161,10 +162,11 @@ testExtendedRoleMatchingAlways run interpAlways =
 testExtendedRoleMatchingMiss ::
   forall elm es.
   (Error Text :> es) =>
+  Bool ->
   (forall a. Eff es a -> IO a) ->
   (forall a. Eff (WebDriver elm : es) a -> Eff es a) ->
   TestTree
-testExtendedRoleMatchingMiss run interpMiss =
+testExtendedRoleMatchingMiss isHttp run interpMiss =
   beforeAll_ (extendedRolesUrl >>= \url -> run (interpMiss (navigateTo @elm url))) $
     testGroup
       "Extended Role Matching Tests - ExtLocateSingletonMiss"
@@ -175,7 +177,13 @@ testExtendedRoleMatchingMiss run interpMiss =
               (region "Personal Information")
               "auto-id"
               "sec-personal",
-            chkElmCountMiss "ExtLocateSingletonMiss - locateAll does NOT find region via aria-labelledby" (region "Personal Information") 0
+            chkElmCountMiss 
+              "ExtLocateSingletonMiss - locateAll does NOT find region via aria-labelledby" 
+              (region "Personal Information") 
+              -- bidi will find the element as it is using role via render engine
+              -- http is expected to miss because the interpreter options do not include extended matching
+              -- which uses JS to emulate the render matching
+              (bool 1 0 isHttp)
           ],
         testGroup
           "for id label association"
@@ -189,7 +197,13 @@ testExtendedRoleMatchingMiss run interpMiss =
               (textbox "Given Name")
               "auto-id"
               "edt-given-name",
-            chkElmCountMiss "ExtLocateSingletonMiss - locateAll does NOT find radio via for id label" (radio "Email") 0
+            chkElmCountMiss 
+              "ExtLocateSingletonMiss - locateAll does NOT find radio via for id label" 
+              (radio "Email")
+               -- bidi will find the element as it is using role via render engine
+              -- http is expected to miss because the interpreter options do not include extended matching
+              -- which uses JS to emulate the render matching
+              (bool 1 0 isHttp)
           ],
         testGroup
           "aria-label - always resolved regardless of setting"
