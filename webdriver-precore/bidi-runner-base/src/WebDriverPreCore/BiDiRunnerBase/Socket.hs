@@ -52,7 +52,6 @@ import UnliftIO.STM
 import WebDriverPreCore.BiDiRunnerBase.Response
 import WebDriverPreCore.BiDiRunnerBase.Types
 import WebDriverPreCore.Utils.Timeout (Timeout (..), seconds)
-import WebDriverPreCore.Utils.Utils (db)
 import Prelude hiding (id, log)
 
 -- | Communication channels for BiDi
