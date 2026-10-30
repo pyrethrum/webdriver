@@ -37,6 +37,9 @@ jobs: 1
 -- allow cabal repl to load multiple packages at once
 multi-repl: True
 
+-- Keep going on test failures otherwise test-all will stop running after first suite fails
+keep-going: True
+
 -- dhall-1.42.3 has duplicate Lift instances for TimeOfDay/TimeZone that
 -- conflict with time-1.15 (GHC 9.14.1). The fix is in PR #2704 (commit
 -- f741aff) but not yet released. Use the patched git source directly.

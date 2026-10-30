@@ -387,4 +387,8 @@ unknownCommandError actualBrowser failBrowsers =
   biDiError actualBrowser failBrowsers (Predicate hasUnsupportedTxt) 
   where
     hasUnsupportedTxt =
-      flip L.any ["not implemented", "unknown command", "UnsupportedOperation"] . T.isInfixOf
+      flip L.any [
+        "not implemented", 
+        "UnknownCommand",
+        "unknown command", 
+        "UnsupportedOperation"] . flip T.isInfixOf
