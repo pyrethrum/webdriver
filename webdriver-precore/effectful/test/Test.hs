@@ -3,6 +3,7 @@ module Main where
 import BiDi.Runner (withBidi)
 import BiDi.SimpleDemo (bidi_login_demo)
 import BiDi.BaseLocateTest qualified as BiDiBaseLocateTest
+import BiDi.LocateCombinatorTest qualified as BiDiLocateCombinatorTest
 import HTTP.Runner (withHttp)
 import HTTP.SimpleDemo (http_login_navigation_demo)
 import HTTP.BaseLocateTest qualified as BaseLocateTest
@@ -25,5 +26,6 @@ tests =
       BiDiBaseLocateTest.tests,
       MatchTypeTest.tests,
       LocatorCombinatorSanityTests.tests,
-      LocateCombinatorTest.tests
+      LocateCombinatorTest.tests,
+      BiDiLocateCombinatorTest.tests
     ]

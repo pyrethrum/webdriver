@@ -474,6 +474,7 @@ test-suite test-effectful
     BiDi.Runner
     BiDi.SimpleDemo
     BiDi.BaseLocateTest
+    BiDi.LocateCombinatorTest
     Common.BaseLocateTest
     Common.LocateCombinatorTest
     Common.LocatorCombinatorSanityTests
