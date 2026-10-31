@@ -6,6 +6,7 @@ module Common.WebDriver.Effect
     maximizeWindow,
     minimizeWindow,
     navigateTo,
+    executeScript,
     locate,
     locateAll,
     locateFromElement,
@@ -33,6 +34,7 @@ data WebDriver (elm :: Type) :: Effect where
   MaximizeWindow :: WebDriver elm m ()
   MinimizeWindow :: WebDriver elm m ()
   NavigateTo :: URL -> WebDriver elm m ()
+  ExecuteScript :: Text -> [Value] -> WebDriver elm m ()
   Locate :: Locator -> WebDriver elm m (Either L.LocateException elm)
   LocateAll :: Locator -> WebDriver elm m (Either L.LocateException [elm])
   LocateFromElement :: elm -> Locator -> WebDriver elm m (Either L.LocateException elm)
@@ -54,6 +56,9 @@ minimizeWindow = send (MinimizeWindow @elm)
 
 navigateTo :: forall elm es. (WebDriver elm :> es) => URL -> Eff es ()
 navigateTo = send . NavigateTo @elm
+
+executeScript :: forall elm es. (WebDriver elm :> es) => Text -> [Value] -> Eff es ()
+executeScript script args = send (ExecuteScript @elm script args)
 
 locate :: forall elm es. (WebDriver elm :> es) => Locator -> Eff es (Either L.LocateException elm)
 locate = send . Locate

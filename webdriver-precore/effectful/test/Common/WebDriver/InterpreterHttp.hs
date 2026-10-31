@@ -10,7 +10,7 @@ import Effectful.Exception (catch)
 import UnliftIO (throwIO)
 import WebDriver.Effectful (WebDriverHttp)
 import WebDriver.Effectful.HTTP.Base.Actions qualified as H
-import WebDriverPreCore.Extended.HTTP.Base.Protocol (ElementId)
+import WebDriverPreCore.Extended.HTTP.Base.Protocol (ElementId, Script (MkScript, args, script))
 import WebDriverPreCore.Extended.Locate qualified as L
 
 import Common.WebDriver.Effect (WebDriver (..))
@@ -26,6 +26,7 @@ runWebDriverHttp opts = interpret $ \_ -> \case
   MaximizeWindow -> void H.maximizeWindow
   MinimizeWindow -> void H.minimizeWindow
   NavigateTo url -> H.navigateTo url
+  ExecuteScript script' args' -> void $ H.executeScript (MkScript {script = script', args = args'})
   Locate loc -> L.locateHttp actions opts loc
   LocateAll loc -> L.locateAllHttp actions opts loc
   LocateFromElement el loc -> L.locateFromElementHttp actions opts el loc

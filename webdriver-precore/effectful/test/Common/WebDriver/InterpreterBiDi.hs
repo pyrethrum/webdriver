@@ -7,8 +7,11 @@ import Common.WebDriver.Effect (WebDriver (..))
 import Control.Monad (void)
 import Data.Aeson (Value)
 import Data.Aeson qualified as Aeson
+import Data.ByteString.Lazy qualified as BL
 import Data.Function ((&))
 import Data.Text (Text)
+import Data.Text qualified as T
+import Data.Text.Encoding qualified as TE
 import Effectful (Eff, IOE, (:>))
 import Effectful.Dispatch.Dynamic (interpret)
 import Effectful.Exception (catch)
@@ -35,6 +38,7 @@ runWebDriverBiDi opts context = interpret $ \_ -> \case
     void
       $ B.browsingContextNavigate
       $ MkNavigate {context, url, wait = Nothing}
+  ExecuteScript script args -> executeScript context script args
   Locate loc -> BL.locateBiDi actions opts context loc
   LocateAll loc -> BL.locateAllBiDi actions opts context loc
   LocateFromElement el loc ->
@@ -106,6 +110,24 @@ getAttribute bc node name =
           [ nodeArg',
             PrimitiveLocalValue (StringValue (MkStringValue {value = name}))
           ]
+
+-- | Execute an arbitrary script in the page context, passing JSON-encoded
+-- arguments through a wrapper function so @arguments@ is available inside the
+-- script body.
+executeScript :: (WebDriverBiDi :> es) => BrowsingContext -> Text -> [Value] -> Eff es ()
+executeScript bc script args =
+  void
+    $ B.scriptEvaluate
+    $ MkEvaluate
+      { expression = "(function(){" <> script <> "}).apply(null," <> jsonArgs <> ");",
+        target = ContextTarget (MkContextTarget {context = bc, sandbox = Nothing}),
+        awaitPromise = False,
+        resultOwnership = Nothing,
+        serializationOptions = Nothing
+      }
+  where
+    jsonArgs = "[" <> T.intercalate "," (jsonLiteral <$> args) <> "]"
+    jsonLiteral = TE.decodeUtf8 . BL.toStrict . Aeson.encode
 
 -- | Read a live JS property via @script.callFunction@.
 getProperty :: (WebDriverBiDi :> es) => BrowsingContext -> NodeRemoteValue -> Text -> Eff es (Maybe Value)

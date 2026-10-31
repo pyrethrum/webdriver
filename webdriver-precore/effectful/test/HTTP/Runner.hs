@@ -3,19 +3,22 @@ module HTTP.Runner
     testUrl,
     BaseHTTPEffs,
     HttpTestEff,
+    HttpBaseEffs,
     WDSession (..),
     -- TODO: Clean this up
     runHttpTest,
     runHttp,
+    runWith,
   )
 where
 
 import Common.SessionInit (WDSession (..), closeWDSession, getWDSession, testUrl)
 import Data.Text (Text, unpack)
 import Effectful (Eff, IOE, runEff, (:>))
+import Effectful.Error.Dynamic (Error, runErrorNoCallStack)
 import Test.Tasty (TestTree)
 import Test.Tasty.HUnit (testCase)
-import UnliftIO (finally)
+import UnliftIO (finally, throwIO)
 import WebDriver.Effectful
   ( WaitPrimative,
     WebDriverHttp,
@@ -55,6 +58,25 @@ runHttp MkWDSession {loggerEnv, session, endpoint} action =
     $ runLogger loggerEnv
     $ runWebDriverHttp (MkHttpParams {session = session, endpoint = endpoint}) action
 
+-- | Run an 'HttpBaseEffs' action against a shared session, throwing any
+-- dynamic 'Error' as an 'IO' exception.
+runWith :: IO WDSession -> forall a. Eff HttpBaseEffs a -> IO a
+runWith ses act = do
+  MkWDSession {loggerEnv, session, endpoint} <- ses
+  res <-
+    runEff
+      $ runWaitPrimative
+      $ runLogger loggerEnv
+      $ runWebDriverHttp (MkHttpParams {session = session, endpoint = endpoint})
+      $ runErrorNoCallStack @Text act
+  case res of
+    Left err -> throwIO (userError (unpack err))
+    Right a -> pure a
+
 type BaseHTTPEffs a = forall es. (IOE :> es, Logger :> es, WaitPrimative :> es, WebDriverHttp :> es) => Eff es a
 
 type HttpTestEff = Eff '[WebDriverHttp, Logger, WaitPrimative, IOE]
+
+-- | Base effect stack for tests using the shared 'WebDriver' abstraction over
+-- HTTP, with the dynamic 'Error' effect first.
+type HttpBaseEffs = '[Error Text, WebDriverHttp, Logger, WaitPrimative, IOE]

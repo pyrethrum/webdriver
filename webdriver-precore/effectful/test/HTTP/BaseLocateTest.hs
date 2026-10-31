@@ -1,22 +1,16 @@
 module HTTP.BaseLocateTest where
 
 import Common.BaseLocateTest 
-import Common.SessionInit (WDSession (..), closeWDSession, getWDSession)
+import Common.SessionInit (WDSession, closeWDSession, getWDSession)
 import Common.TastyEval qualified as TE
 import Common.Utils (defHttpOpts)
 import Common.WebDriver.Effect (WebDriver)
 import Common.WebDriver.InterpreterHttp qualified as Interp
 import Data.Text (Text, unpack)
-import Effectful (Eff, IOE, runEff, (:>))
-import Effectful.Error.Dynamic (Error, runErrorNoCallStack)
+import Effectful (Eff, (:>))
+import Effectful.Error.Dynamic (Error)
+import HTTP.Runner (HttpBaseEffs, runWith)
 import Test.Tasty (TestTree, inOrderTestGroup, withResource)
-import UnliftIO (throwIO)
-import WebDriver.Effectful.HTTP.Core
-    ( WebDriverHttp, runWebDriverHttp )
-import WebDriver.Effectful.WaitPrimative
-    ( WaitPrimative, runWaitPrimative )
-import WebDriver.Effectful.HTTP.Base.Interpreter (HttpParams (..))
-import WebDriver.Effectful.Logger (Logger, runLogger)
 import WebDriverPreCore.Extended.HTTP.Base.Protocol (ElementId)
 import WebDriverPreCore.Extended.Locate qualified as L
 import Prelude
@@ -34,9 +28,6 @@ import WebDriverPreCore.Extended.Locators as LS
 import WebDriverPreCore.Test.TestData
 import WebDriverPreCore.Utils.Utils (txt)
 
--- | Base effect stack for HTTP tests, with the dynamic 'Error' effect first.
-type HttpBaseEffs = '[Error Text, WebDriverHttp, Logger, WaitPrimative, IOE]
-
 -- >>> _eval tests
 
 -- *** Exception: ExitSuccess
@@ -49,19 +40,6 @@ tests =
       withResource (getWDSession False) closeWDSession runSessionTests
     ]
   where
-    runWith :: IO WDSession -> forall a. Eff HttpBaseEffs a -> IO a
-    runWith ses act = do
-      MkWDSession {loggerEnv, session, endpoint} <- ses
-      res <-
-        runEff
-          $ runWaitPrimative
-          $ runLogger loggerEnv
-          $ runWebDriverHttp (MkHttpParams {session = session, endpoint = endpoint})
-          $ runErrorNoCallStack @Text act
-      case res of
-        Left err -> throwIO (userError (unpack err))
-        Right a -> pure a
-
     runSessionTests :: IO WDSession -> TestTree
     runSessionTests ses =
       inOrderTestGroup
