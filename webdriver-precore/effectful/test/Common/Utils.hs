@@ -1,9 +1,5 @@
 module Common.Utils
   ( -- * LocateActions
-    httpActions,
-    httpTraceActions,
-    locateHttp,
-    locateAllHttp,
     beforeAll_,
 
     -- * Driver Actions
@@ -60,22 +56,9 @@ import Data.Kind (Type)
 import Data.List (singleton)
 import Data.Text (Text, unpack)
 import Data.Text qualified as T
-import Data.Text.IO qualified as T
 import Effectful
-import Effectful.Exception (catch)
 import Test.Tasty (TestTree, withResource)
 import Test.Tasty.HUnit (assertEqual, assertFailure)
-import UnliftIO (throwIO)
-import WebDriver.Effectful
-import WebDriver.Effectful.HTTP.Base.Actions
-  ( executeScript,
-    findElement,
-    findElementFromElement,
-    findElements,
-    findElementsFromElement,
-    getElementAttribute,
-    getElementText,
-  )
 import WebDriverPreCore.Extended.Common.Locators.Internal (CaseSensitivity (..), MatchType (..))
 import WebDriverPreCore.Extended.HTTP.Base.Protocol (ElementId)
 import WebDriverPreCore.Extended.Locate qualified as L
@@ -84,51 +67,8 @@ import WebDriverPreCore.Utils.Utils (txt)
 
 -- ################ Base Eff Actions ################
 
-httpActions :: forall es. (IOE :> es, WebDriverHttp :> es) => Eff es (L.LocateActions (Eff es))
-httpActions =
-  pure $
-    L.MkLocateActions
-      { throw = throwIO,
-        catch,
-        -- noOp trace - tracing is disabled unless a real trace function is supplied
-        trace = \_ -> pure (),
-        -- Alternative: log a pretty printed WDTrace to stdout
-        -- trace = \traceEntry -> liftIO . putStrLn . unpack $ "WDTrace: " <> txt traceEntry,
-        findElement,
-        findElementFromElement,
-        findElements,
-        findElementsFromElement,
-        executeScript,
-        getElementAttribute,
-        getElementText
-      }
-
-httpTraceActions :: forall es. (IOE :> es, WebDriverHttp :> es) => Eff es (L.LocateActions (Eff es))
-httpTraceActions =
-  pure $
-    L.MkLocateActions
-      { throw = throwIO,
-        catch,
-        trace = \traceEntry -> liftIO $ T.putStrLn $ "WDTrace: " <> txt traceEntry,
-        findElement,
-        findElementFromElement,
-        findElements,
-        findElementsFromElement,
-        executeScript,
-        getElementAttribute,
-        getElementText
-      }
-
 beforeAll_ :: forall a. IO a -> TestTree -> TestTree
 beforeAll_ action tree = withResource (action >> pure ()) (\_ -> pure ()) (\_ -> tree)
-
-
-locateHttp :: (IOE :> es, WebDriverHttp :> es) => L.HttpLocateOpts -> Locator -> Eff es (Either L.LocateException ElementId)
-locateHttp opts loc = httpActions >>= \a -> L.locateHttp a opts loc
-
-locateAllHttp :: (IOE :> es, WebDriverHttp :> es) => L.HttpLocateOpts -> Locator -> Eff es (Either L.LocateException [ElementId])
--- locateAllHttp opts loc = httpTraceActions >>= \a -> L.locateAllHttp a opts loc
-locateAllHttp opts loc = httpActions >>= \a -> L.locateAllHttp a opts loc
 
 -- ################ Element Inspection ################
 

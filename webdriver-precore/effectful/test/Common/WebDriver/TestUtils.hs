@@ -8,6 +8,10 @@ module Common.WebDriver.TestUtils
     locateChkAttr,
     locateChkAutoId,
 
+    -- * locate / locateAll
+    locate,
+    locateAll,
+
     -- * Element Inspection
     outerHtmls,
     outerHtmlsFormatted,

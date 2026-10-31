@@ -475,9 +475,11 @@ test-suite test-effectful
     BiDi.SimpleDemo
     BiDi.BaseLocateTest
     BiDi.LocateCombinatorTest
+    BiDi.MatchTypeTest
     Common.BaseLocateTest
     Common.LocateCombinatorTest
     Common.LocatorCombinatorSanityTests
+    Common.MatchTypeTest
     Common.SessionInit
     Common.TastyEval
     Common.WebDriver.TestUtils
