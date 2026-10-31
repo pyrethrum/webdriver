@@ -11,8 +11,8 @@ import Common.WebDriver.Effect
     minimizeWindow,
     navigateTo,
   )
-import Common.WebDriver.TestUtils (locateChkAttr, locateChkAutoId)
-import Common.WebDriver.TestUtils qualified as TU
+import Common.Utils (locateChkAttr, locateChkAutoId)
+import Common.Utils qualified as TU
 import Data.Either (isRight)
 import Data.Text (Text, unpack)
 import Effectful (Eff, (:>))

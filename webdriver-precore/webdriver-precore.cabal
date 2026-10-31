@@ -482,7 +482,6 @@ test-suite test-effectful
     Common.MatchTypeTest
     Common.SessionInit
     Common.TastyEval
-    Common.WebDriver.TestUtils
     Common.WebDriver.Effect
     Common.WebDriver.InterpreterBiDi
     Common.WebDriver.InterpreterHttp

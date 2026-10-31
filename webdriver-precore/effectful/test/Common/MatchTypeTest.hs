@@ -5,7 +5,7 @@ where
 
 import Common.Utils (beforeAll_)
 import Common.WebDriver.Effect (WebDriver, navigateTo)
-import Common.WebDriver.TestUtils qualified as TU
+import Common.Utils qualified as TU
 import Data.Text (Text, unpack)
 import Effectful (Eff, (:>))
 import Effectful.Error.Dynamic (Error)

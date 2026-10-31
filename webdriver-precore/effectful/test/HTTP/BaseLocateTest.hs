@@ -20,8 +20,8 @@ import Common.WebDriver.Effect
   ( locate,
     navigateTo,
   )
-import Common.WebDriver.TestUtils (locateChkAutoId)
-import Common.WebDriver.TestUtils qualified as TU
+import Common.Utils (locateChkAutoId)
+import Common.Utils qualified as TU
 import Test.Tasty (testGroup)
 import Test.Tasty.HUnit (testCase)
 import WebDriverPreCore.Extended.Locators as LS
