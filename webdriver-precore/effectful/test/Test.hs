@@ -8,6 +8,7 @@ import HTTP.SimpleDemo (http_login_navigation_demo)
 import HTTP.BaseLocateTest qualified as BaseLocateTest
 import HTTP.LocateCombinatorTest qualified as LocateCombinatorTest
 import HTTP.MatchTypeTest qualified as MatchTypeTest
+import Common.LocatorCombinatorSanityTests qualified as LocatorCombinatorSanityTests
 import Test.Tasty (TestTree, defaultMain, testGroup)
 import Test.Tasty.HUnit (testCase)
 
@@ -23,5 +24,6 @@ tests =
       BaseLocateTest.tests,
       BiDiBaseLocateTest.tests,
       MatchTypeTest.tests,
+      LocatorCombinatorSanityTests.tests,
       LocateCombinatorTest.tests
     ]
