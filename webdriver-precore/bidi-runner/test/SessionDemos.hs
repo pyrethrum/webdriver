@@ -17,7 +17,7 @@ import WebDriverPreCore.BiDi.Protocol
     UserPromptHandler (..),
     UserPromptHandlerType (..),
   )
-import WebDriverPreCore.HTTP.Protocol (BrowserName (..), PlatformName (..))
+import WebDriverPreCore.Common.Protocol (BrowserName (..), PlatformName (..))
 import Prelude hiding (log, putStrLn)
 
 -- TODO: change from text to typed events

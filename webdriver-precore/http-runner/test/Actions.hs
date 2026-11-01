@@ -23,16 +23,15 @@ import WebDriverPreCore.HTTP.Protocol
     Handle (..),
     Script (..),
     Selector (..),
-    Session (..),
     SessionResponse (..),
     ShadowRootElementId,
     Status (..),
     Timeouts (..),
-    URL,
     WindowHandleSpec (..),
     WindowRect (..),
     Command,
   )
+import WebDriverPreCore.Common.Protocol (Session, URL)
 
 data HttpActions = MkHttpActions
   { -- Root methods

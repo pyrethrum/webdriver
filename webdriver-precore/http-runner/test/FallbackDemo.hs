@@ -13,7 +13,6 @@ import WebDriverPreCore.HTTP.API qualified as A
 import WebDriverPreCore.HTTP.Protocol
   ( Command (..),
     ElementId (..),
-    Session (..),
     Timeouts (..),
     coerceCommand,
     extendPost,
@@ -21,6 +20,7 @@ import WebDriverPreCore.HTTP.Protocol
     loosenCommand,
     voidCommand,
   )
+import WebDriverPreCore.Common.Protocol (Session)
 import WebDriverPreCore.Types.BaseTypes (SubPath (..))
 import Prelude hiding (log)
 

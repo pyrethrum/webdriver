@@ -15,13 +15,12 @@ import WebDriverPreCore.HTTP.Protocol
     Handle (..),
     Script (..),
     Selector (..),
-    Session (..),
     ShadowRootElementId (..),
     Timeouts (..),
-    URL (..),
     WindowRect (..),
     minFirefoxCapabilities
   )
+import WebDriverPreCore.Common.Protocol (Session (..), URL (..))
 
 {-
 !! Replace this the endepoints from the spec with every release

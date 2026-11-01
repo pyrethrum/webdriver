@@ -10,9 +10,9 @@ import UnliftIO (try)
 import WebDriverPreCore.HTTP.Protocol (ErrorType (..), WebDriverException (..))
 import WebDriverPreCore.HTTP.Protocol
   ( Selector (..),
-    Session,
     Timeouts (..)
   )
+import WebDriverPreCore.Common.Protocol (Session)
 import Prelude hiding (log)
 
 -- stop warning for unused demo (its used in eval)

@@ -39,8 +39,7 @@ module Common.Utils
     chkEmpty,
 
     -- * Config
-    autoId,
-    defHttpOpts,
+    autoId
   )
 where
 
@@ -56,7 +55,7 @@ import Effectful
 import Effectful.Error.Dynamic
 import Test.Tasty (TestTree, withResource)
 import WebDriverPreCore.Extended.Common.Locators.Internal (CaseSensitivity (..), MatchType (..))
-import WebDriverPreCore.Extended.Locate qualified as L
+import WebDriverPreCore.Extended.Common.Locate qualified as L
 import WebDriverPreCore.Extended.Locators (Locator, attribute')
 import WebDriverPreCore.Utils.Utils (txt)
 import Prelude hiding (fail)
@@ -260,13 +259,3 @@ chkEmpty = chkCount  "Expected 0 elements" 0
 -- | Construct an auto-id locator for an attribute value
 autoId :: Text -> Locator
 autoId = attribute' "auto-id" Full CaseSensitive
-
-defHttpOpts :: L.HttpLocateOpts
-defHttpOpts =
-  L.MkHttpLocateOpts
-    { extendedRoleLocation = L.ExtLocateNever,
-      jsRecheckDisplayed = L.DisplayedCheckAlways,
-      singletonCardinality = L.Unique,
-      mkDefaultLoc = autoId
-    }
-

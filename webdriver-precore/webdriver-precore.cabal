@@ -377,19 +377,17 @@ library webdriver-precore-extended
       WebDriverPreCore.Extended.BiDi.Protocol
       --
       -- TODO: move to other modules
-      WebDriverPreCore.Extended.Locate
       WebDriverPreCore.Extended.Locators
       WebDriverPreCore.Extended.HTTP.Locate
-      -- WIP: excluded from the build while under development
+
       WebDriverPreCore.Extended.BiDi.Locate
       WebDriverPreCore.Extended.Capabilities
       -- common
       WebDriverPreCore.Extended.Protocol
       --
       WebDriverPreCore.Extended.Common.Locators.Internal
-  other-modules:
-      WebDriverPreCore.Extended.BiDi.Internal
       WebDriverPreCore.Extended.Common.Locate
+  -- other-modules:
 
   hs-source-dirs: extended/src
   build-depends:
@@ -486,6 +484,7 @@ test-suite test-effectful
     Common.WebDriver.InterpreterBiDi
     Common.WebDriver.InterpreterHttp
     Common.Utils
+    HTTP.LocateOpts
     HTTP.BaseLocateTest
     HTTP.LocateCombinatorTest
     HTTP.MatchTypeTest
@@ -518,13 +517,13 @@ library
       -- HTTP
       WebDriverPreCore.HTTP.API
       WebDriverPreCore.HTTP.Protocol
+      -- Common (shared HTTP/BiDi types)
+      WebDriverPreCore.Common.Protocol
       -- Deprecated (to be removed ~ 2027-02-01)
       WebDriverPreCore.Http
       WebDriverPreCore.HTTP.SpecDefinition
       WebDriverPreCore.HTTP.HttpResponse
   other-modules:
-      -- Shared
-      WebDriverPreCore.Internal.HTTPBiDiCommon
       -- HTTP
       WebDriverPreCore.HTTP.Capabilities
       -- BiDI

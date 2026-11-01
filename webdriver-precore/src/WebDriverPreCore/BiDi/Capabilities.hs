@@ -17,7 +17,7 @@ import Data.Word (Word8)
 import GHC.Generics (Generic)
 import WebDriverPreCore.Utils.Aeson (opt, fromJSONCamelCase)
 import Data.Aeson.Types (Parser)
-import WebDriverPreCore.Internal.HTTPBiDiCommon (BrowserName, PlatformName)
+import WebDriverPreCore.Common.Protocol (BrowserName, PlatformName)
 
 
 

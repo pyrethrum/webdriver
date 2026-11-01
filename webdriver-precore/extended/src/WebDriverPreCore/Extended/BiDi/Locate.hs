@@ -46,7 +46,8 @@ import WebDriverPreCore.Extended.Common.Locators.Internal (
   )
 import WebDriverPreCore.Extended.Common.Locators.Internal qualified as LI
 import WebDriverPreCore.BiDi.Protocol qualified as BiDiP
-import WebDriverPreCore.Extended.BiDi.Base.Protocol (JSUInt, SerializationOptions, SharedReference (..))
+import WebDriverPreCore.Extended.BiDi.Base.Protocol (SerializationOptions, SharedReference (..))
+import WebDriverPreCore.Common.Protocol (JSUInt)
 import WebDriverPreCore.Utils.Utils (txt)
 import Prelude as P hiding (log)
 

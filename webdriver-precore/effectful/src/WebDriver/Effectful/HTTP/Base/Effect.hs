@@ -22,9 +22,9 @@ import WebDriverPreCore.HTTP.Protocol
       ShadowRootElementId,
       Status,
       Timeouts,
-      URL,
       WindowHandleSpec,
       WindowRect )
+import WebDriverPreCore.Common.Protocol (URL)
 
 -- ---------------------------------------------------------------------------
 -- Types

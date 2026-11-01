@@ -32,7 +32,7 @@ module WebDriverPreCore.Extended.Capabilities
     HTTP.LogLevel (..),
     HTTP.LogSettings (..),
     HTTP.DeviceMetrics (..),
-    HTTP.Session (..),
+    Session (..),
     HTTP.UnhandledPromptBehavior(..),
 
     -- * Full Capabilities
@@ -73,7 +73,7 @@ import Data.Text (Text)
 import Data.Word (Word8)
 import WebDriverPreCore.BiDi.Protocol qualified as BiDi
 import WebDriverPreCore.Extended.HTTP.Base.Actions qualified as Actions
-import WebDriverPreCore.HTTP.Protocol (BrowserName (..), PlatformName (..))
+import WebDriverPreCore.Common.Protocol (BrowserName (..), PlatformName (..), Session (..))
 import WebDriverPreCore.HTTP.Protocol qualified as HTTP
 import GHC.Generics (Generic)
 
@@ -130,7 +130,7 @@ data Proxy
   deriving (Show, Eq)
 
 data HttpSessionResponse = MkHttpSessionResponse
-  { session :: HTTP.Session,
+  { session :: Session,
     websocketUrl :: Maybe Text,
     browserVersion :: Text,
     httpSetWindowRect :: Maybe Bool,
@@ -210,7 +210,7 @@ fromBidiPromptHandlerType = \case
 
 data BiDiSessionResponse = MkBiDiSessionResponse
   { -- TODO - make base BIDI Session use the same newtype as HTTP
-    session :: HTTP.Session,
+    session :: Session,
     acceptInsecureCerts :: Bool,
     browserName :: BrowserName,
     browserVersion :: Text,

@@ -50,7 +50,7 @@ import Data.Text (Text)
 import Data.Vector (fromList)
 import GHC.Generics (Generic)
 import WebDriverPreCore.Utils.Aeson (opt, parseOpt, toJSONOmitNothing, parseJSONOmitNothing)
-import WebDriverPreCore.Internal.HTTPBiDiCommon (BrowserName (..), PlatformName (..))
+import WebDriverPreCore.Common.Protocol (BrowserName (..), PlatformName (..))
 
 {- references:
 - https://www.w3.org/TR/2026/WD-webdriver2-20260702/#capabilities

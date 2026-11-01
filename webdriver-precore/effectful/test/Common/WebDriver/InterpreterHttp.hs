@@ -11,7 +11,7 @@ import UnliftIO (throwIO)
 import WebDriver.Effectful (WebDriverHttp)
 import WebDriver.Effectful.HTTP.Base.Actions qualified as H
 import WebDriverPreCore.Extended.HTTP.Base.Protocol (ElementId, Script (MkScript, args, script))
-import WebDriverPreCore.Extended.Locate qualified as L
+import WebDriverPreCore.Extended.HTTP.Locate qualified as L
 
 import Common.WebDriver.Effect (WebDriver (..))
 

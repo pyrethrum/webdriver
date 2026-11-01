@@ -102,15 +102,14 @@ import WebDriverPreCore.Extended.HTTP.Base.Protocol
     Handle,
     Script,
     Selector,
-    Session,
     SessionResponse,
     ShadowRootElementId,
     Status,
     Timeouts,
-    URL,
     WindowHandleSpec,
     WindowRect,
   )
+import WebDriverPreCore.Common.Protocol (Session, URL)
 
 type Runner m a = Command a -> m a
 

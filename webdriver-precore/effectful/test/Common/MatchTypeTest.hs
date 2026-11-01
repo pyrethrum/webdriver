@@ -12,7 +12,7 @@ import Effectful.Error.Dynamic (Error)
 import Prelude
 import Test.Tasty (TestTree, inOrderTestGroup, testGroup)
 import Test.Tasty.HUnit (testCase)
-import WebDriverPreCore.Extended.HTTP.Base.Protocol (URL)
+import WebDriverPreCore.Common.Protocol (URL)
 import WebDriverPreCore.Extended.Locators
 import WebDriverPreCore.Test.TestData (fileUrl)
 

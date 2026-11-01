@@ -3,7 +3,7 @@ module HTTP.MatchTypeTest where
 import Common.MatchTypeTest qualified as Common
 import Common.SessionInit (closeWDSession, getWDSession)
 import Common.TastyEval qualified as TE
-import Common.Utils (defHttpOpts)
+import HTTP.LocateOpts (defHttpOpts)
 import Common.WebDriver.InterpreterHttp qualified as Interp
 import Data.Text (Text)
 import HTTP.Runner (runWith)

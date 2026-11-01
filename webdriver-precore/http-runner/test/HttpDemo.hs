@@ -43,15 +43,14 @@ import WebDriverPreCore.HTTP.Protocol
     SameSite (..),
     Script (..),
     Selector (..),
-    Session (..),
     SessionResponse (..),
     Status (..),
     Timeouts (..),
-    URL (..),
     WheelAction (..),
     WindowHandleSpec (..),
     WindowRect (..),
   )
+import WebDriverPreCore.Common.Protocol (Session, URL (..))
 import Prelude hiding (log)
 
 _stopDemoUnusedWarning :: HttpDemo -> IO ()

@@ -5,13 +5,13 @@ module WebDriverPreCore.Test.CapabilitiesBuilder
 where
 
 import WebDriverPreCore.Test.Config as CFG
-import WebDriverPreCore.HTTP.Protocol as WPC
-  ( BrowserName (..),
-    Capabilities (..),
+import WebDriverPreCore.HTTP.Protocol
+  ( Capabilities (..),
     FullCapabilities (..),
     UnhandledPromptBehavior (..),
     VendorSpecific (..),
   )
+import WebDriverPreCore.Common.Protocol as WPC (BrowserName (..))
 import Prelude as P
   ( Maybe (..),
     ($),

@@ -31,20 +31,19 @@ import Test.Tasty.Falsify
 import Test.Tasty.HUnit (Assertion, (@=?))
 import Text.Show.Pretty (ppShow)
 import WebDriverPreCore.HTTP.Protocol
-  ( BrowserName (..),
-    Capabilities (..),
+  ( Capabilities (..),
     DeviceMetrics (..),
     LogLevel (..),
     LogSettings (..),
     MobileEmulation (..),
     PerfLoggingPrefs (..),
-    PlatformName (..),
     Proxy (..),
     SessionResponse (..),
     SocksProxy (..),
     Timeouts (..),
     VendorSpecific (..)
   )
+import WebDriverPreCore.Common.Protocol (BrowserName (..), PlatformName (..))
 import WebDriverPreCore.Utils.Aeson (jsonToText)
 import Prelude hiding (log)
 

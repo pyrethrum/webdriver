@@ -135,7 +135,7 @@ __An Actions Implementation__ an instance of the Actions type that uses the runn
 
 @
 import WebDriverPreCore.HTTP.API qualified as API
-import WebDriverPreCore.HTTP.Protocol (Session, URL)
+import WebDriverPreCore.Common.Protocol (Session, URL)
 
 -- The Actions type
 data HttpActions = MkHttpActions

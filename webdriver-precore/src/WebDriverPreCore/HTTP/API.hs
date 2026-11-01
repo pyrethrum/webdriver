@@ -102,10 +102,8 @@ import WebDriverPreCore.HTTP.Protocol
     FullCapabilities,
     Script,
     Selector (..),
-    Session (..),
     SessionResponse (..),
     Timeouts,
-    URL,
     Handle (..),
     WindowHandleSpec (..),
     WindowRect (..), 
@@ -114,6 +112,7 @@ import WebDriverPreCore.HTTP.Protocol
     mkPost,
     mkPost'
   )
+import WebDriverPreCore.Common.Protocol (Session (..), URL)
 import WebDriverPreCore.Types.BaseTypes (SubPath (..))
 import Prelude hiding (id, lookup)
 import Data.Aeson.KeyMap (fromList)

@@ -47,7 +47,7 @@ import Data.ByteString.Base64 qualified as B64
 import Data.Text (Text, pack, unpack)
 import System.Directory (getCurrentDirectory)
 import System.FilePath ((</>))
-import WebDriverPreCore.HTTP.Protocol (URL (..))
+import WebDriverPreCore.Common.Protocol (URL (..))
 import WebDriverPreCore.Test.IOUtils (findWebDriverRoot)
 
 testFilesDir :: MonadIO m => m FilePath

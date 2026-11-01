@@ -19,7 +19,7 @@ import Effectful (Eff, (:>))
 import Effectful.Error.Dynamic (Error)
 import Test.Tasty (TestTree, testGroup, inOrderTestGroup)
 import Test.Tasty.HUnit (testCase)
-import WebDriverPreCore.Extended.Locate qualified as L
+import WebDriverPreCore.Extended.Common.Locate qualified as L
 import WebDriverPreCore.Extended.Locators as LS
 import WebDriverPreCore.Test.TestData
 import WebDriverPreCore.Utils.Utils (txt)

@@ -25,8 +25,8 @@ import WebDriver.Effectful.Logger
     runLogger,
   )
 import WebDriverPreCore.Extended.Capabilities (HttpSessionResponse (..), fromHttpCapability)
-import WebDriverPreCore.Extended.HTTP.Base.Protocol (URL)
-import WebDriverPreCore.HTTP.Protocol (Capabilities (..), ParseFailure, Session)
+import WebDriverPreCore.Common.Protocol (Session, URL)
+import WebDriverPreCore.HTTP.Protocol (Capabilities (..), ParseFailure)
 import WebDriverPreCore.Test.CapabilitiesBuilder (httpCapabilities)
 import WebDriverPreCore.Test.ConfigLoader (Config (..), loadConfig)
 import WebDriverPreCore.Utils.Utils (ioThrow)

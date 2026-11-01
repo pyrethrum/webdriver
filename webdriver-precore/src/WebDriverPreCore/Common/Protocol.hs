@@ -1,4 +1,13 @@
-module WebDriverPreCore.Internal.HTTPBiDiCommon
+{-|
+Module      : WebDriverPreCore.Common.Protocol
+Description : Types shared by the HTTP and BiDi protocols
+
+Types used by both "WebDriverPreCore.HTTP.Protocol" and
+"WebDriverPreCore.BiDi.Protocol". These are deliberately re-exported nowhere;
+import this module directly when you need a protocol-neutral type such as
+'URL', 'Session', 'BrowserName', or 'PlatformName'.
+-}
+module WebDriverPreCore.Common.Protocol
   ( URL (..),
     JSUInt (..),
     Session (..),

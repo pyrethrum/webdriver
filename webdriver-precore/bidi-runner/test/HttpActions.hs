@@ -16,9 +16,9 @@ import WebDriverPreCore.HTTP.API qualified as API
 import WebDriverPreCore.HTTP.Protocol
   ( Command,
     FullCapabilities,
-    Session,
     SessionResponse,
   )
+import WebDriverPreCore.Common.Protocol (Session)
 
 data HttpActions = MkHttpActions
   { -- Session management for BiDi connection

@@ -22,7 +22,7 @@ import WebDriver.Effectful.Logger.Effect (Logger, logDebug)
 import WebDriverPreCore.Extended.HTTP.Base.Actions qualified as A
 import WebDriverPreCore.Extended.HTTP.Base.Actions qualified as HA
 import WebDriverPreCore.Extended.HTTP.Base.Protocol (parseFailToWDException)
-import WebDriverPreCore.Extended.Protocol (Session)
+import WebDriverPreCore.Common.Protocol (Session)
 import WebDriverPreCore.HttpRunner qualified as HR
 
 data HttpParams = MkHttpParams

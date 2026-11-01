@@ -3,7 +3,7 @@ module HTTP.LocateCombinatorTest where
 import Common.LocateCombinatorTest qualified as Common
 import Common.SessionInit (closeWDSession, getWDSession)
 import Common.TastyEval qualified as TE
-import Common.Utils (defHttpOpts)
+import HTTP.LocateOpts (defHttpOpts)
 import Common.WebDriver.Effect (WebDriver)
 import Common.WebDriver.InterpreterHttp qualified as Interp
 import Data.Text (Text)
@@ -12,7 +12,8 @@ import HTTP.Runner (HttpBaseEffs, runWith)
 import Prelude
 import Test.Tasty (TestTree, withResource)
 import WebDriverPreCore.HTTP.Protocol ( ElementId )
-import WebDriverPreCore.Extended.Locate qualified as L
+import WebDriverPreCore.Extended.Common.Locate qualified as L
+import WebDriverPreCore.Extended.HTTP.Locate qualified as L
 
 -- >>> _eval tests
 

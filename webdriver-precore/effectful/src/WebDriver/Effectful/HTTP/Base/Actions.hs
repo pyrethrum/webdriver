@@ -125,10 +125,10 @@ import WebDriverPreCore.Extended.HTTP.Base.Protocol
     ShadowRootElementId,
     Status,
     Timeouts,
-    URL,
     WindowHandleSpec,
     WindowRect,
   )
+import WebDriverPreCore.Common.Protocol (URL)
 
 -- ---------------------------------------------------------------------------
 -- Root operations

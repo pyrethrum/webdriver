@@ -28,7 +28,7 @@ import Test.Falsify.Range as R (between)
 import Test.Tasty (TestTree, inOrderTestGroup)
 import Test.Tasty.Falsify (ExpectFailure (DontExpectFailure), TestOptions (..), info, testFailed, testPropertyWith)
 import Test.Tasty.HUnit (testCase)
-import WebDriverPreCore.Extended.HTTP.Base.Protocol (URL (..))
+import WebDriverPreCore.Common.Protocol (URL (..))
 import WebDriverPreCore.Extended.Locators (CaseSensitivity (..), Locator, MatchType (..), css, elmClass, elmClass', (&&&), (>>>), (|||))
 import WebDriverPreCore.Utils.Utils (txt)
 import Prelude

@@ -3,7 +3,6 @@ module HTTP.BaseLocateTest where
 import Common.BaseLocateTest 
 import Common.SessionInit (WDSession, closeWDSession, getWDSession)
 import Common.TastyEval qualified as TE
-import Common.Utils (defHttpOpts)
 import Common.WebDriver.Effect (WebDriver)
 import Common.WebDriver.InterpreterHttp qualified as Interp
 import Data.Text (Text, unpack)
@@ -12,7 +11,8 @@ import Effectful.Error.Dynamic (Error)
 import HTTP.Runner (HttpBaseEffs, runWith)
 import Test.Tasty (TestTree, inOrderTestGroup, withResource)
 import WebDriverPreCore.Extended.HTTP.Base.Protocol (ElementId)
-import WebDriverPreCore.Extended.Locate qualified as L
+import WebDriverPreCore.Extended.Common.Locate qualified as L
+import WebDriverPreCore.Extended.HTTP.Locate qualified as L
 import Prelude
 
 import Common.Utils (beforeAll_)
@@ -27,6 +27,7 @@ import Test.Tasty.HUnit (testCase)
 import WebDriverPreCore.Extended.Locators as LS
 import WebDriverPreCore.Test.TestData
 import WebDriverPreCore.Utils.Utils (txt)
+import HTTP.LocateOpts (defHttpOpts)
 
 -- >>> _eval tests
 

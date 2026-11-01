@@ -64,16 +64,10 @@ module WebDriverPreCore.HTTP.Protocol
     Script (..),
     Selector (..),
     -- | [spec](https://www.w3.org/TR/2025/WD-webdriver2-20251028/#dfn-new-sessions)
-    Session (..),
     SessionResponse (..),
     Handle (..),
     WindowHandleSpec (..),
     WindowRect (..),
-    module Url,
-
-    -- * Common HTTP/BiDi Types
-    BrowserName (..),
-    PlatformName (..),
 
     -- * Action Types
     Action (..),
@@ -111,9 +105,9 @@ import Data.Word (Word16)
 import GHC.Generics (Generic)
 import WebDriverPreCore.Utils.Utils (txt)
 import WebDriverPreCore.Error
+import WebDriverPreCore.Common.Protocol (Session (id))
 import WebDriverPreCore.HTTP.Capabilities
 import WebDriverPreCore.HTTP.Command
-import WebDriverPreCore.Internal.HTTPBiDiCommon as Url (URL (..), Session (..), BrowserName (..), PlatformName (..))
 import Prelude hiding (id)
 
 -- | [spec](https://www.w3.org/TR/2026/WD-webdriver2-20260702/#dfn-get-window-handle)

@@ -110,15 +110,14 @@ import WebDriverPreCore.HTTP.Protocol
     Handle (..),
     Script (..),
     Selector (..),
-    Session (..),
     SessionResponse (..),
     ShadowRootElementId (..),
     Status (..),
     Timeouts (..),
-    URL (..),
     WindowHandleSpec (..),
     WindowRect (..)
   )
+import WebDriverPreCore.Common.Protocol (Session (..), URL (..))
 import WebDriverPreCore.Utils.Aeson (jsonToText)
 import WebDriverPreCore.Types.BaseTypes (SubPath (..))
 import Prelude hiding (id, lookup)
