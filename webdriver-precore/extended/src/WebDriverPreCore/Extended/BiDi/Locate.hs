@@ -6,11 +6,10 @@ module WebDriverPreCore.Extended.BiDi.Locate
     LocateActions (..),
     WDBiDITrace (..),
     BaseLocateOpts (..),
-    locatePrimative,
-    locateBiDi,
-    locateAllBiDi,
-    locateFromElementBiDi,
-    locateAllFromElementBiDi
+    locate,
+    locateAll,
+    locateFromElement,
+    locateAllFromElement
   )
 where
 
@@ -180,20 +179,20 @@ locatePrimative MkLocateActions {catch, locateNodes} context MkBaseLocateOpts {m
           }
 
 -- | Locate a unique or first-matching element from the document root.
-locateBiDi :: forall m. (Monad m) => LocateActions m -> BiDiLocateOpts -> BiDiP.BrowsingContext -> Locator -> m (Either LocateException BiDiP.NodeRemoteValue)
-locateBiDi actions opts context = runBiDiAction actions opts context Nothing biDiLocateSingleton
+locate :: forall m. (Monad m) => LocateActions m -> BiDiLocateOpts -> BiDiP.BrowsingContext -> Locator -> m (Either LocateException BiDiP.NodeRemoteValue)
+locate actions opts context = runBiDiAction actions opts context Nothing biDiLocateSingleton
 
 -- | Locate all matching elements from the document root.
-locateAllBiDi :: forall m. (Monad m) => LocateActions m -> BiDiLocateOpts -> BiDiP.BrowsingContext -> Locator -> m (Either LocateException [BiDiP.NodeRemoteValue])
-locateAllBiDi actions opts context = runBiDiAction actions opts context Nothing biDiLocateAll
+locateAll :: forall m. (Monad m) => LocateActions m -> BiDiLocateOpts -> BiDiP.BrowsingContext -> Locator -> m (Either LocateException [BiDiP.NodeRemoteValue])
+locateAll actions opts context = runBiDiAction actions opts context Nothing biDiLocateAll
 
 -- | Locate a unique or first-matching element rooted at a given element.
-locateFromElementBiDi :: forall m. (Monad m) => LocateActions m -> BiDiLocateOpts -> BiDiP.BrowsingContext -> SharedReference -> Locator -> m (Either LocateException BiDiP.NodeRemoteValue)
-locateFromElementBiDi actions opts context sharedRef = runBiDiAction actions opts context (Just sharedRef) biDiLocateSingleton
+locateFromElement :: forall m. (Monad m) => LocateActions m -> BiDiLocateOpts -> BiDiP.BrowsingContext -> SharedReference -> Locator -> m (Either LocateException BiDiP.NodeRemoteValue)
+locateFromElement actions opts context sharedRef = runBiDiAction actions opts context (Just sharedRef) biDiLocateSingleton
 
 -- | Locate all matching elements rooted at a given element.
-locateAllFromElementBiDi :: forall m. (Monad m) => LocateActions m -> BiDiLocateOpts -> BiDiP.BrowsingContext -> SharedReference -> Locator -> m (Either LocateException [BiDiP.NodeRemoteValue])
-locateAllFromElementBiDi actions opts context sharedRef = runBiDiAction actions opts context (Just sharedRef) biDiLocateAll
+locateAllFromElement :: forall m. (Monad m) => LocateActions m -> BiDiLocateOpts -> BiDiP.BrowsingContext -> SharedReference -> Locator -> m (Either LocateException [BiDiP.NodeRemoteValue])
+locateAllFromElement actions opts context sharedRef = runBiDiAction actions opts context (Just sharedRef) biDiLocateAll
 
 -- | Common implementation for all public BiDi locate functions. This transforms
 --   the user-facing 'Locator' into a 'CompoundLocator' of BiDi leaf locators and

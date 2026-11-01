@@ -39,16 +39,16 @@ runWebDriverBiDi opts context = interpret $ \_ -> \case
       $ B.browsingContextNavigate
       $ MkNavigate {context, url, wait = Nothing}
   ExecuteScript script args -> executeScript context script args
-  Locate loc -> BL.locateBiDi actions opts context loc
-  LocateAll loc -> BL.locateAllBiDi actions opts context loc
+  Locate loc -> BL.locate actions opts context loc
+  LocateAll loc -> BL.locateAll actions opts context loc
   LocateFromElement el loc ->
     case requireSharedRef loc el of
       Left err -> pure $ Left err
-      Right sr -> BL.locateFromElementBiDi actions opts context sr loc
+      Right sr -> BL.locateFromElement actions opts context sr loc
   LocateAllFromElement el loc ->
     case requireSharedRef loc el of
       Left err -> pure $ Left err
-      Right sr -> BL.locateAllFromElementBiDi actions opts context sr loc
+      Right sr -> BL.locateAllFromElement actions opts context sr loc
   GetProperty el name -> getProperty context el name
   GetAttribute el name -> getAttribute context el name
   where
