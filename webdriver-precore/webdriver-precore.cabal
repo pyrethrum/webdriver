@@ -389,9 +389,6 @@ library webdriver-precore-extended
       -- Exposed as internal for testing only
       WebDriverPreCore.Extended.Common.Locate.Internal
 
-      -- Locate exception types shared by HTTP/BiDi locate implementations
-      WebDriverPreCore.Extended.Common.Locate
-
   hs-source-dirs: extended/src
   build-depends:
     webdriver-precore:webdriver-precore,

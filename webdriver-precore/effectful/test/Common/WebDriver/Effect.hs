@@ -22,9 +22,8 @@ import Data.Text (Text)
 import Effectful (Dispatch (..), DispatchOf, Eff, Effect, (:>))
 import Effectful.Dispatch.Dynamic (send)
 import WebDriverPreCore.Common.Protocol (URL)
-import WebDriverPreCore.Extended.Common.Locate qualified as L
-import WebDriverPreCore.Extended.Common.Locate.Internal
-    ( Locator )
+import WebDriverPreCore.Extended.Common.Locate.Internal qualified as L
+import WebDriverPreCore.Extended.Locators ( Locator )
 
 -- | A test-level algebraic effect abstracting over the WebDriver operations
 -- shared by the HTTP and BiDi test modules.

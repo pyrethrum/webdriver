@@ -12,7 +12,7 @@ import HTTP.Runner (HttpBaseEffs, runWith)
 import Prelude
 import Test.Tasty (TestTree, withResource)
 import WebDriverPreCore.HTTP.Protocol ( ElementId )
-import WebDriverPreCore.Extended.Common.Locate qualified as L
+import WebDriverPreCore.Extended.Common.Locate.Internal qualified as L
 import WebDriverPreCore.Extended.HTTP.Locate qualified as L
 
 -- >>> _eval tests

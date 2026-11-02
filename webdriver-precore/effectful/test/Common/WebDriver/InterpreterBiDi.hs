@@ -20,7 +20,7 @@ import WebDriver.Effectful (WebDriverBiDi)
 import WebDriver.Effectful.BiDi.Base.Actions qualified as B
 import WebDriverPreCore.BiDi.Protocol hiding (Locator)
 import WebDriverPreCore.Extended.BiDi.Locate qualified as BL
-import WebDriverPreCore.Extended.Common.Locate qualified as L
+import WebDriverPreCore.Extended.Common.Locate.Internal qualified as L
 import WebDriverPreCore.Extended.Locators (Locator)
 
 -- | Interpret 'WebDriver' in terms of the 'WebDriverBiDi' effect.

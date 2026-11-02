@@ -23,12 +23,10 @@ import Data.Text qualified as T
 import Data.Word (Word8)
 import GHC.Stack (HasCallStack)
 
-import WebDriverPreCore.Extended.Common.Locate (
+import WebDriverPreCore.Extended.Common.Locate.Internal (
     DisplayedCheck (..),
     LocateException (..),
-    PreLocateException (..)
-  )
-import WebDriverPreCore.Extended.Common.Locate.Internal (
+    PreLocateException (..),
     LeafCardinality (..),
     addLocToException,
     runLoc,

@@ -54,8 +54,8 @@ import Data.Text qualified as T
 import Effectful
 import Effectful.Error.Dynamic
 import Test.Tasty (TestTree, withResource)
-import WebDriverPreCore.Extended.Common.Locate.Internal (CaseSensitivity (..), MatchType (..))
-import WebDriverPreCore.Extended.Common.Locate qualified as L
+import WebDriverPreCore.Extended.Locators (CaseSensitivity (..), MatchType (..))
+import WebDriverPreCore.Extended.Common.Locate.Internal qualified as L
 import WebDriverPreCore.Extended.Locators (Locator, attribute')
 import WebDriverPreCore.Utils.Utils (txt)
 import Prelude hiding (fail)
