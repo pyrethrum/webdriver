@@ -2,9 +2,7 @@
 -- Module: WebDriverPreCore.Extended.BiDi.Base.Actions
 -- Description: BiDi actions module
 module WebDriverPreCore.Extended.BiDi.Base.Actions
-  ( -- * Runner Type
-    Runner,
-
+  ( 
     -- * Session Commands
     sessionNew,
     sessionStatus,

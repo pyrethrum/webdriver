@@ -6,9 +6,7 @@
 -- parameter to execute commands. These functions wrap the Command-based API
 -- into a more flexible interface suitable for the Extended module system.
 module WebDriverPreCore.Extended.HTTP.Base.Actions
-  ( -- * Runner Type
-    Runner,
-
+  ( 
     -- * Root Methods
     status,
     newSession,

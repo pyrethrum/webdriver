@@ -33,6 +33,7 @@ import WebDriverPreCore.BiDi.Protocol qualified as BP
 import WebDriverPreCore.BiDiRunner (BiDiRunner)
 import WebDriverPreCore.BiDiRunner qualified as Runner
 import WebDriverPreCore.Extended.BiDi.Base.Actions qualified as BA
+import WebDriverPreCore.Extended.Common.Types (Runner)
 
 -- ---------------------------------------------------------------------------
 -- BiDi interpreter
@@ -199,13 +200,13 @@ runWebDriverBiDi ioRunner = interpret $ \localEnv ->
         SubscribeOffSpecMany sts s -> \unlift -> BA.subscribeOffSpecMany' sendSubOffSpecMany' sts [] [] (unlift . s)
         SubscribeOffSpecMany' b u sts s -> \unlift -> BA.subscribeOffSpecMany' sendSubOffSpecMany' sts b u (unlift . s)
   where
-    run' :: forall r. (FromJSON r) => BA.Runner Command (Eff es) r
+    run' :: forall r. (FromJSON r) => Runner Command (Eff es) r
     run' = bidiRun ioRunner
 
-    run :: forall r. (FromJSON r) => (BA.Runner Command (Eff es) r -> Eff es r) -> Eff es r
+    run :: forall r. (FromJSON r) => (Runner Command (Eff es) r -> Eff es r) -> Eff es r
     run action = action run'
 
-    run1 :: forall r p. (FromJSON r) => (BA.Runner Command (Eff es) r -> p -> Eff es r) -> p -> Eff es r
+    run1 :: forall r p. (FromJSON r) => (Runner Command (Eff es) r -> p -> Eff es r) -> p -> Eff es r
     run1 action p = action run' p
 
     sendSubMany' :: BA.SendSubMany' (Eff es)

@@ -14,8 +14,9 @@ import WebDriverPreCore.Extended.Capabilities
     fromHttpSessionResponse,
     toHttpCapabilities,
   )
-import WebDriverPreCore.Extended.HTTP.Base.Actions (Runner, newSession)
+import WebDriverPreCore.Extended.HTTP.Base.Actions (newSession)
 import WebDriverPreCore.HTTP.Protocol qualified as HTTP
+import WebDriverPreCore.Extended.Common.Types (Runner)
 
 -- | Create a new HTTP WebDriver session with the given capabilities.
 --

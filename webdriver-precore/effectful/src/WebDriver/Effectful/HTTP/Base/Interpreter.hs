@@ -20,11 +20,11 @@ import WebDriver.Effectful.HTTP.Base.Effect
   )
 import WebDriver.Effectful.Logger.Effect (Logger, logDebug)
 import WebDriverPreCore.Extended.HTTP.Base.Actions qualified as A
-import WebDriverPreCore.Extended.HTTP.Base.Actions qualified as HA
-import WebDriverPreCore.Extended.HTTP.Base.Protocol (parseFailToWDException)
+import WebDriverPreCore.Error ( parseFailToWDException )
+import WebDriverPreCore.HTTP.Command ( Command )
 import WebDriverPreCore.Common.Protocol (Session)
-import WebDriverPreCore.HTTP.Protocol (Command)
 import WebDriverPreCore.HttpRunner qualified as HR
+import WebDriverPreCore.Extended.Common.Types (Runner)
 
 data HttpParams = MkHttpParams
   { session :: Session,
@@ -97,21 +97,21 @@ runWebDriverHttp MkHttpParams {session = sess, endpoint} = interpret $ \_localEn
   ElementSendKeys el t -> run2 A.elementSendKeys el t
   TakeElementScreenshot el -> run1 A.takeElementScreenshot el
   where
-    runner :: forall r. (FromJSON r) => A.Runner Command (Eff es) r
+    runner :: forall r. (FromJSON r) => Runner Command (Eff es) r
     runner = callWebDriver endpoint
 
-    runRoot :: forall r. (FromJSON r) => (A.Runner Command (Eff es) r -> (Eff es) r) -> Eff es r
+    runRoot :: forall r. (FromJSON r) => (Runner Command (Eff es) r -> (Eff es) r) -> Eff es r
     runRoot action = action runner
 
-    run :: forall r. (FromJSON r) => (A.Runner Command (Eff es) r -> Session -> (Eff es) r) -> Eff es r
+    run :: forall r. (FromJSON r) => (Runner Command (Eff es) r -> Session -> (Eff es) r) -> Eff es r
     run action = action runner sess
 
-    run1 :: forall r p. (FromJSON r) => (A.Runner Command (Eff es) r -> Session -> p -> (Eff es) r) -> p -> Eff es r
+    run1 :: forall r p. (FromJSON r) => (Runner Command (Eff es) r -> Session -> p -> (Eff es) r) -> p -> Eff es r
     run1 action p = action runner sess p
 
-    run2 :: forall r p1 p2. (FromJSON r) => (A.Runner Command (Eff es) r -> Session -> p1 -> p2 -> (Eff es) r) -> p1 -> p2 -> Eff es r
+    run2 :: forall r p1 p2. (FromJSON r) => (Runner Command (Eff es) r -> Session -> p1 -> p2 -> (Eff es) r) -> p1 -> p2 -> Eff es r
     run2 action = action runner sess
 
-callWebDriver :: forall a es. (IOE :> es, Logger :> es, FromJSON a) => HR.HttpEndpoint -> HA.Runner Command (Eff es) a
+callWebDriver :: forall a es. (IOE :> es, Logger :> es, FromJSON a) => HR.HttpEndpoint -> Runner Command (Eff es) a
 callWebDriver endpoint cmd =
   HR.callWebDriver endpoint logDebug cmd >>= either (throwIO . parseFailToWDException) pure
