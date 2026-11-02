@@ -24,7 +24,7 @@ import Data.Text qualified as T
 import GHC.Generics (Generic)
 import GHC.Stack (HasCallStack)
 
-import WebDriverPreCore.Extended.Common.Locate.Internal (
+import WebDriverPreCore.Extended.Common.Locate (
     DisplayedCheck (..),
     LocateException (..),
     PreLocateException (..),
@@ -36,8 +36,8 @@ import WebDriverPreCore.Extended.Common.Locate.Internal (
     filterDisplayed,
     filterDisplayedForSingleton
   )
-import WebDriverPreCore.Extended.Common.Locate.Internal (Locator, RoleLocator (..), CompoundLocator, HttpLoc (..), xPathRelativePrefix)
-import WebDriverPreCore.Extended.Common.Locate.Internal qualified as LI
+import WebDriverPreCore.Extended.Common.Locate (Locator, RoleLocator (..), CompoundLocator, HttpLoc (..), xPathRelativePrefix)
+import WebDriverPreCore.Extended.Common.Locate qualified as LI
 import WebDriverPreCore.HTTP.Protocol as HTTPP (ElementId, Script (..), Selector (..))
 import Prelude as P hiding (log)
 import WebDriverPreCore.Utils.Utils (txt)

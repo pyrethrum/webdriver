@@ -359,6 +359,17 @@ test-suite test-bidi-runner
     websockets
   default-language: Haskell2010
 
+library webdriver-precore-extended-internal
+  import: commonExtensions, commonGhcOptions, libDepends
+  exposed-modules:
+      WebDriverPreCore.Extended.Common.Locate
+  hs-source-dirs: extended-internal/src
+  build-depends:
+    webdriver-precore:webdriver-precore,
+    webdriver-precore:utils-internal,
+    aeson         >=1.4   && <2.3
+  default-language: Haskell2010
+
 library webdriver-precore-extended
   import: commonExtensions, commonGhcOptions, libDepends
   exposed-modules:
@@ -385,13 +396,11 @@ library webdriver-precore-extended
       WebDriverPreCore.Extended.Capabilities
       WebDriverPreCore.Extended.Session
 
-  other-modules:
-      WebDriverPreCore.Extended.Common.Locate.Internal
-
   hs-source-dirs: extended/src
   build-depends:
     webdriver-precore:webdriver-precore,
     webdriver-precore:utils-internal,
+    webdriver-precore:webdriver-precore-extended-internal,
     aeson         >=1.4   && <2.3, 
     containers    >=0.6   && <0.8,
     mtl           >=2.2   && <2.4,
@@ -407,7 +416,8 @@ test-suite test-extended
   other-modules:
     Internal.LocatorsTest
   build-depends:
-    webdriver-precore:webdriver-precore-extended
+    webdriver-precore:webdriver-precore-extended,
+    webdriver-precore:webdriver-precore-extended-internal
   default-language: Haskell2010
 
 library webdriver-precore-driver-control

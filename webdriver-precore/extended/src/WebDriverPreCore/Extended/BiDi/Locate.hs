@@ -23,7 +23,7 @@ import Data.Text qualified as T
 import Data.Word (Word8)
 import GHC.Stack (HasCallStack)
 
-import WebDriverPreCore.Extended.Common.Locate.Internal (
+import WebDriverPreCore.Extended.Common.Locate (
     DisplayedCheck (..),
     LocateException (..),
     PreLocateException (..),
@@ -35,7 +35,7 @@ import WebDriverPreCore.Extended.Common.Locate.Internal (
     filterDisplayed,
     filterDisplayedForSingleton
   )
-import WebDriverPreCore.Extended.Common.Locate.Internal (
+import WebDriverPreCore.Extended.Common.Locate (
     Locator,
     RoleLocator (..),
     CompoundLocator,
@@ -44,7 +44,7 @@ import WebDriverPreCore.Extended.Common.Locate.Internal (
     CaseSensitivity (..),
     roleLabelText
   )
-import WebDriverPreCore.Extended.Common.Locate.Internal qualified as LI
+import WebDriverPreCore.Extended.Common.Locate qualified as LI
 import WebDriverPreCore.BiDi.Protocol qualified as BiDiP
 import WebDriverPreCore.Extended.BiDi.Base.Protocol (SerializationOptions, SharedReference (..))
 import WebDriverPreCore.Common.Protocol (JSUInt)

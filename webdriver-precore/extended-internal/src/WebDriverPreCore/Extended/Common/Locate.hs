@@ -1,4 +1,4 @@
-module WebDriverPreCore.Extended.Common.Locate.Internal (
+module WebDriverPreCore.Extended.Common.Locate (
     CompoundLocator(..),
     Locator(..),
     HttpLoc(..),
