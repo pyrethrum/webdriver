@@ -170,8 +170,7 @@ import Data.Aeson (Object, Value)
 import Data.Text (Text)
 import WebDriverPreCore.Extended.BiDi.Base.API qualified as API
 import WebDriverPreCore.Extended.BiDi.Base.Protocol
-
-type Runner m a = Command a -> m a
+import WebDriverPreCore.Extended.Common.Types (Runner)
 
 --- ############## Commands ##############
 
@@ -183,13 +182,13 @@ type Runner m a = Command a -> m a
 -- Creating a new BiDi session via this command may result in a driver error.
 --
 -- First added to Spec: <https://www.w3.org/TR/2024/WD-webdriver-bidi-20241121/#command-session-new 21 November 2024 - First Public Working Draft>
-sessionNew :: forall m. Runner m SessionNewResult -> Capabilities -> m SessionNewResult
+sessionNew :: forall m. Runner Command m SessionNewResult -> Capabilities -> m SessionNewResult
 sessionNew r = r . API.sessionNew
 
 -- | Specification Entry: <BiDiSpecURL#command-session-status session.status>
 --
 -- First added to Spec: <https://www.w3.org/TR/2024/WD-webdriver-bidi-20241121/#command-session-status 21 November 2024 - First Public Working Draft>
-sessionStatus :: forall m. Runner m SessionStatusResult -> m SessionStatusResult
+sessionStatus :: forall m. Runner Command m SessionStatusResult -> m SessionStatusResult
 sessionStatus r = r API.sessionStatus
 
 -- | Specification Entry: <BiDiSpecURL#command-session-end session.end>
@@ -198,7 +197,7 @@ sessionStatus r = r API.sessionStatus
 -- If the BiDi session was created by other means (e.g. during HTTP session creation with a web socket port), it needs to be ended by ending the HTTP session.
 --
 -- First added to Spec: <https://www.w3.org/TR/2024/WD-webdriver-bidi-20241121/#command-session-end 21 November 2024 - First Public Working Draft>
-sessionEnd :: forall m. Runner m () -> m ()
+sessionEnd :: forall m. Runner Command m () -> m ()
 sessionEnd r = r API.sessionEnd
 
 -- | Specification Entry: <BiDiSpecURL#command-session-subscribe session.subscribe>
@@ -218,91 +217,91 @@ sessionUnsubscribe = mkCommand SessionUnsubscribe
 -- | Specification Entry: <BiDiSpecURL#command-browsingContext-activate browsingContext.activate>
 --
 -- First added to Spec: <https://www.w3.org/TR/2024/WD-webdriver-bidi-20241121/#command-browsingContext-activate 21 November 2024 - First Public Working Draft>
-browsingContextActivate :: forall m. Runner m () -> Activate -> m ()
+browsingContextActivate :: forall m. Runner Command m () -> Activate -> m ()
 browsingContextActivate r = r . API.browsingContextActivate
 
 -- | Specification Entry: <BiDiSpecURL#command-browsingContext-captureScreenshot browsingContext.captureScreenshot>
 --
 -- First added to Spec: <https://www.w3.org/TR/2024/WD-webdriver-bidi-20241121/#command-browsingContext-captureScreenshot 21 November 2024 - First Public Working Draft>
-browsingContextCaptureScreenshot :: forall m. Runner m CaptureScreenshotResult -> CaptureScreenshot -> m CaptureScreenshotResult
+browsingContextCaptureScreenshot :: forall m. Runner Command m CaptureScreenshotResult -> CaptureScreenshot -> m CaptureScreenshotResult
 browsingContextCaptureScreenshot r = r . API.browsingContextCaptureScreenshot
 
 -- | Specification Entry: <BiDiSpecURL#command-browsingContext-close browsingContext.close>
 --
 -- First added to Spec: <https://www.w3.org/TR/2024/WD-webdriver-bidi-20241121/#command-browsingContext-close 21 November 2024 - First Public Working Draft>
-browsingContextClose :: forall m. Runner m () -> Close -> m ()
+browsingContextClose :: forall m. Runner Command m () -> Close -> m ()
 browsingContextClose r = r . API.browsingContextClose
 
 -- | Specification Entry: <BiDiSpecURL#command-browsingContext-create browsingContext.create>
 --
 -- First added to Spec: <https://www.w3.org/TR/2024/WD-webdriver-bidi-20241121/#command-browsingContext-create 21 November 2024 - First Public Working Draft>
-browsingContextCreate :: forall m. Runner m BrowsingContext -> Create -> m BrowsingContext
+browsingContextCreate :: forall m. Runner Command m BrowsingContext -> Create -> m BrowsingContext
 browsingContextCreate r = r . API.browsingContextCreate
 
 -- | Specification Entry: <BiDiSpecURL#command-browsingContext-getTree browsingContext.getTree>
 --
 -- First added to Spec: <https://www.w3.org/TR/2024/WD-webdriver-bidi-20241121/#command-browsingContext-getTree 21 November 2024 - First Public Working Draft>
-browsingContextGetTree :: forall m. Runner m GetTreeResult -> GetTree -> m GetTreeResult
+browsingContextGetTree :: forall m. Runner Command m GetTreeResult -> GetTree -> m GetTreeResult
 browsingContextGetTree r = r . API.browsingContextGetTree
 
 -- | Specification Entry: <BiDiSpecURL#command-browsingContext-handleUserPrompt browsingContext.handleUserPrompt>
 --
 -- First added to Spec: <https://www.w3.org/TR/2024/WD-webdriver-bidi-20241121/#command-browsingContext-handleUserPrompt 21 November 2024 - First Public Working Draft>
-browsingContextHandleUserPrompt :: forall m. Runner m () -> HandleUserPrompt -> m ()
+browsingContextHandleUserPrompt :: forall m. Runner Command m () -> HandleUserPrompt -> m ()
 browsingContextHandleUserPrompt r = r . API.browsingContextHandleUserPrompt
 
 -- | Specification Entry: <BiDiSpecURL#command-browsingContext-locateNodes browsingContext.locateNodes>
 --
 -- First added to Spec: <https://www.w3.org/TR/2024/WD-webdriver-bidi-20241121/#command-browsingContext-locateNodes 21 November 2024 - First Public Working Draft>
-browsingContextLocateNodes :: forall m. Runner m LocateNodesResult -> LocateNodes -> m LocateNodesResult
+browsingContextLocateNodes :: forall m. Runner Command m LocateNodesResult -> LocateNodes -> m LocateNodesResult
 browsingContextLocateNodes r = r . API.browsingContextLocateNodes
 
 -- | Specification Entry: <BiDiSpecURL#command-browsingContext-navigate browsingContext.navigate>
 --
 -- First added to Spec: <https://www.w3.org/TR/2024/WD-webdriver-bidi-20241121/#command-browsingContext-navigate 21 November 2024 - First Public Working Draft>
-browsingContextNavigate :: forall m. Runner m NavigateResult -> Navigate -> m NavigateResult
+browsingContextNavigate :: forall m. Runner Command m NavigateResult -> Navigate -> m NavigateResult
 browsingContextNavigate r = r . API.browsingContextNavigate
 
 -- | Specification Entry: <BiDiSpecURL#command-browsingContext-print browsingContext.print>
 --
 -- First added to Spec: <https://www.w3.org/TR/2024/WD-webdriver-bidi-20241121/#command-browsingContext-print 21 November 2024 - First Public Working Draft>
-browsingContextPrint :: forall m. Runner m PrintResult -> Print -> m PrintResult
+browsingContextPrint :: forall m. Runner Command m PrintResult -> Print -> m PrintResult
 browsingContextPrint r = r . API.browsingContextPrint
 
 -- | Specification Entry: <BiDiSpecURL#command-browsingContext-reload browsingContext.reload>
 --
 -- First added to Spec: <https://www.w3.org/TR/2024/WD-webdriver-bidi-20241121/#command-browsingContext-reload 21 November 2024 - First Public Working Draft>
-browsingContextReload :: forall m. Runner m () -> Reload -> m ()
+browsingContextReload :: forall m. Runner Command m () -> Reload -> m ()
 browsingContextReload r = r . API.browsingContextReload
 
 -- | Specification Entry: <BiDiSpecURL#command-browsingContext-setBypassCSP browsingContext.setBypassCSP>
 --
 -- First added to Spec: <https://www.w3.org/TR/2026/WD-webdriver-bidi-20260629/#command-browsingContext-setBypassCSP 29 June 2026 - Working Draft>
-browsingContextSetBypassCSP :: forall m. Runner m () -> SetBypassCSP -> m ()
+browsingContextSetBypassCSP :: forall m. Runner Command m () -> SetBypassCSP -> m ()
 browsingContextSetBypassCSP r = r . API.browsingContextSetBypassCSP
 
 -- | Specification Entry: <BiDiSpecURL#command-browsingContext-setViewport browsingContext.setViewport>
 --
 -- First added to Spec: <https://www.w3.org/TR/2024/WD-webdriver-bidi-20241121/#command-browsingContext-setViewport 21 November 2024 - First Public Working Draft>
-browsingContextSetViewport :: forall m. Runner m () -> SetViewport -> m ()
+browsingContextSetViewport :: forall m. Runner Command m () -> SetViewport -> m ()
 browsingContextSetViewport r = r . API.browsingContextSetViewport
 
 -- | Specification Entry: <BiDiSpecURL#command-browsingContext-startScreencast browsingContext.startScreencast>
 --
 -- First added to Spec: <https://www.w3.org/TR/2026/WD-webdriver-bidi-20260629/#command-browsingContext-startScreencast 29 June 2026 - Working Draft>
-browsingContextStartScreencast :: forall m. Runner m StartScreencastResult -> StartScreencast -> m StartScreencastResult
+browsingContextStartScreencast :: forall m. Runner Command m StartScreencastResult -> StartScreencast -> m StartScreencastResult
 browsingContextStartScreencast r = r . API.browsingContextStartScreencast
 
 -- | Specification Entry: <BiDiSpecURL#command-browsingContext-stopScreencast browsingContext.stopScreencast>
 --
 -- First added to Spec: <https://www.w3.org/TR/2026/WD-webdriver-bidi-20260629/#command-browsingContext-stopScreencast 29 June 2026 - Working Draft>
-browsingContextStopScreencast :: forall m. Runner m StopScreencastResult -> StopScreencast -> m StopScreencastResult
+browsingContextStopScreencast :: forall m. Runner Command m StopScreencastResult -> StopScreencast -> m StopScreencastResult
 browsingContextStopScreencast r = r . API.browsingContextStopScreencast
 
 -- | Specification Entry: <BiDiSpecURL#command-browsingContext-traverseHistory browsingContext.traverseHistory>
 --
 -- First added to Spec: <https://www.w3.org/TR/2024/WD-webdriver-bidi-20241121/#command-browsingContext-traverseHistory 21 November 2024 - First Public Working Draft>
-browsingContextTraverseHistory :: forall m. Runner m () -> TraverseHistory -> m ()
+browsingContextTraverseHistory :: forall m. Runner Command m () -> TraverseHistory -> m ()
 browsingContextTraverseHistory r = r . API.browsingContextTraverseHistory
 
 ---- Browser ----
@@ -310,37 +309,37 @@ browsingContextTraverseHistory r = r . API.browsingContextTraverseHistory
 -- | Specification Entry: <BiDiSpecURL#command-browser-close browser.close>
 --
 -- First added to Spec: <https://www.w3.org/TR/2024/WD-webdriver-bidi-20241121/#command-browser-close 21 November 2024 - First Public Working Draft>
-browserClose :: forall m. Runner m () -> m ()
+browserClose :: forall m. Runner Command m () -> m ()
 browserClose r = r API.browserClose
 
 -- | Specification Entry: <BiDiSpecURL#command-browser-createUserContext browser.createUserContext>
 --
 -- First added to Spec: <https://www.w3.org/TR/2024/WD-webdriver-bidi-20241121/#command-browser-createUserContext 21 November 2024 - First Public Working Draft>
-browserCreateUserContext :: forall m. Runner m UserContext -> CreateUserContext -> m UserContext
+browserCreateUserContext :: forall m. Runner Command m UserContext -> CreateUserContext -> m UserContext
 browserCreateUserContext r = r . API.browserCreateUserContext
 
 -- | Specification Entry: <BiDiSpecURL#command-browser-getClientWindows browser.getClientWindows>
 --
 -- First added to Spec: <https://www.w3.org/TR/2024/WD-webdriver-bidi-20241121/#command-browser-getClientWindows 21 November 2024 - First Public Working Draft>
-browserGetClientWindows :: forall m. Runner m GetClientWindowsResult -> m GetClientWindowsResult
+browserGetClientWindows :: forall m. Runner Command m GetClientWindowsResult -> m GetClientWindowsResult
 browserGetClientWindows r = r API.browserGetClientWindows
 
 -- | Specification Entry: <BiDiSpecURL#command-browser-getUserContexts browser.getUserContexts>
 --
 -- First added to Spec: <https://www.w3.org/TR/2024/WD-webdriver-bidi-20241121/#command-browser-getUserContexts 21 November 2024 - First Public Working Draft>
-browserGetUserContexts :: forall m. Runner m GetUserContextsResult -> m GetUserContextsResult
+browserGetUserContexts :: forall m. Runner Command m GetUserContextsResult -> m GetUserContextsResult
 browserGetUserContexts r = r API.browserGetUserContexts
 
 -- | Specification Entry: <BiDiSpecURL#command-browser-removeUserContext browser.removeUserContext>
 --
 -- First added to Spec: <https://www.w3.org/TR/2024/WD-webdriver-bidi-20241121/#command-browser-removeUserContext 21 November 2024 - First Public Working Draft>
-browserRemoveUserContext :: forall m. Runner m () -> RemoveUserContext -> m ()
+browserRemoveUserContext :: forall m. Runner Command m () -> RemoveUserContext -> m ()
 browserRemoveUserContext r = r . API.browserRemoveUserContext
 
 -- | Specification Entry: <BiDiSpecURL#command-browser-setClientWindowState browser.setClientWindowState>
 --
 -- First added to Spec: <https://www.w3.org/TR/2024/WD-webdriver-bidi-20241121/#command-browser-setClientWindowState 21 November 2024 - First Public Working Draft>
-browserSetClientWindowState :: forall m. Runner m ClientWindowInfo -> SetClientWindowState -> m ClientWindowInfo
+browserSetClientWindowState :: forall m. Runner Command m ClientWindowInfo -> SetClientWindowState -> m ClientWindowInfo
 browserSetClientWindowState r = r . API.browserSetClientWindowState
 
 -- since 18-09-2025 https://www.w3.org/TR/2025/WD-webdriver-bidi-20250918
@@ -348,7 +347,7 @@ browserSetClientWindowState r = r . API.browserSetClientWindowState
 -- | Specification Entry: <BiDiSpecURL#command-browser-setDownloadBehavior browser.setDownloadBehavior>
 --
 -- First added to Spec: <https://www.w3.org/TR/2025/WD-webdriver-bidi-20250917/#command-browser-setDownloadBehavior 17 September 2025>
-browserSetDownloadBehavior :: forall m. Runner m () -> SetDownloadBehavior -> m ()
+browserSetDownloadBehavior :: forall m. Runner Command m () -> SetDownloadBehavior -> m ()
 browserSetDownloadBehavior r = r . API.browserSetDownloadBehavior
 
 ---- Emulation ----
@@ -356,19 +355,19 @@ browserSetDownloadBehavior r = r . API.browserSetDownloadBehavior
 -- | Specification Entry: <BiDiSpecURL#command-emulation-setForcedColorsModeThemeOverride emulation.setForcedColorsModeThemeOverride>
 --
 -- First added to Spec: <https://www.w3.org/TR/2025/WD-webdriver-bidi-20250729/#command-emulation-setForcedColorsModeThemeOverride 29 July 2025>
-emulationSetForcedColorsModeThemeOverride :: forall m. Runner m () -> SetForcedColorsModeThemeOverride -> m ()
+emulationSetForcedColorsModeThemeOverride :: forall m. Runner Command m () -> SetForcedColorsModeThemeOverride -> m ()
 emulationSetForcedColorsModeThemeOverride r = r . API.emulationSetForcedColorsModeThemeOverride
 
 -- | Specification Entry: <BiDiSpecURL#command-emulation-setGeolocationOverride emulation.setGeolocationOverride>
 --
 -- First added to Spec: <https://www.w3.org/TR/2025/WD-webdriver-bidi-20250321/#command-emulation-setGeolocationOverride 21 March 2025>
-emulationSetGeolocationOverride :: forall m. Runner m () -> SetGeolocationOverride -> m ()
+emulationSetGeolocationOverride :: forall m. Runner Command m () -> SetGeolocationOverride -> m ()
 emulationSetGeolocationOverride r = r . API.emulationSetGeolocationOverride
 
 -- | Specification Entry: <BiDiSpecURL#command-emulation-setLocaleOverride emulation.setLocaleOverride>
 --
 -- First added to Spec: <https://www.w3.org/TR/2025/WD-webdriver-bidi-20250626/#command-emulation-setLocaleOverride 26 June 2025>
-emulationSetLocaleOverride :: forall m. Runner m () -> SetLocaleOverride -> m ()
+emulationSetLocaleOverride :: forall m. Runner Command m () -> SetLocaleOverride -> m ()
 emulationSetLocaleOverride r = r . API.emulationSetLocaleOverride
 
 -- since 07-10-2025 https://www.w3.org/TR/2025/WD-webdriver-bidi-20251007
@@ -376,13 +375,13 @@ emulationSetLocaleOverride r = r . API.emulationSetLocaleOverride
 -- | Specification Entry: <BiDiSpecURL#command-emulation-setNetworkConditions emulation.setNetworkConditions>
 --
 -- First added to Spec: <https://www.w3.org/TR/2025/WD-webdriver-bidi-20251007/#command-emulation-setNetworkConditions 07 October 2025>
-emulationSetNetworkConditions :: forall m. Runner m () -> SetNetworkConditions -> m ()
+emulationSetNetworkConditions :: forall m. Runner Command m () -> SetNetworkConditions -> m ()
 emulationSetNetworkConditions r = r . API.emulationSetNetworkConditions
 
 -- | Specification Entry: <BiDiSpecURL#command-emulation-setScreenOrientationOverride emulation.setScreenOrientationOverride>
 --
 -- First added to Spec: <https://www.w3.org/TR/2025/WD-webdriver-bidi-20250626/#command-emulation-setScreenOrientationOverride 26 June 2025>
-emulationSetScreenOrientationOverride :: forall m. Runner m () -> SetScreenOrientationOverride -> m ()
+emulationSetScreenOrientationOverride :: forall m. Runner Command m () -> SetScreenOrientationOverride -> m ()
 emulationSetScreenOrientationOverride r = r . API.emulationSetScreenOrientationOverride
 
 -- since 20-11-2025 https://www.w3.org/TR/2025/WD-webdriver-bidi-20251120
@@ -390,7 +389,7 @@ emulationSetScreenOrientationOverride r = r . API.emulationSetScreenOrientationO
 -- | Specification Entry: <BiDiSpecURL#command-emulation-setScreenSettingsOverride emulation.setScreenSettingsOverride>
 --
 -- First added to Spec: <https://www.w3.org/TR/2025/WD-webdriver-bidi-20251120/#command-emulation-setScreenSettingsOverride 20 November 2025>
-emulationSetScreenSettingsOverride :: forall m. Runner m () -> SetScreenSettingsOverride -> m ()
+emulationSetScreenSettingsOverride :: forall m. Runner Command m () -> SetScreenSettingsOverride -> m ()
 emulationSetScreenSettingsOverride r = r . API.emulationSetScreenSettingsOverride
 
 -- since 11-08-2025 https://www.w3.org/TR/2025/WD-webdriver-bidi-20250811
@@ -398,19 +397,19 @@ emulationSetScreenSettingsOverride r = r . API.emulationSetScreenSettingsOverrid
 -- | Specification Entry: <BiDiSpecURL#command-emulation-setScriptingEnabled emulation.setScriptingEnabled>
 --
 -- First added to Spec: <https://www.w3.org/TR/2025/WD-webdriver-bidi-20250811/#command-emulation-setScriptingEnabled 11 August 2025>
-emulationSetScriptingEnabled :: forall m. Runner m () -> SetScriptingEnabled -> m ()
+emulationSetScriptingEnabled :: forall m. Runner Command m () -> SetScriptingEnabled -> m ()
 emulationSetScriptingEnabled r = r . API.emulationSetScriptingEnabled
 
 -- | Specification Entry: <BiDiSpecURL#command-emulation-setScrollbarTypeOverride emulation.setScrollbarTypeOverride>
 --
 -- First added to Spec: <https://www.w3.org/TR/2026/WD-webdriver-bidi-20260629/#command-emulation-setScrollbarTypeOverride 29 June 2026 - Working Draft>
-emulationSetScrollbarTypeOverride :: forall m. Runner m () -> SetScrollbarTypeOverride -> m ()
+emulationSetScrollbarTypeOverride :: forall m. Runner Command m () -> SetScrollbarTypeOverride -> m ()
 emulationSetScrollbarTypeOverride r = r . API.emulationSetScrollbarTypeOverride
 
 -- | Specification Entry: <BiDiSpecURL#command-emulation-setTimezoneOverride emulation.setTimezoneOverride>
 --
 -- First added to Spec: <https://www.w3.org/TR/2025/WD-webdriver-bidi-20250718/#command-emulation-setTimezoneOverride 18 July 2025>
-emulationSetTimezoneOverride :: forall m. Runner m () -> SetTimezoneOverride -> m ()
+emulationSetTimezoneOverride :: forall m. Runner Command m () -> SetTimezoneOverride -> m ()
 emulationSetTimezoneOverride r = r . API.emulationSetTimezoneOverride
 
 -- since 09-01-2026 https://www.w3.org/TR/2026/WD-webdriver-bidi-20260109
@@ -418,7 +417,7 @@ emulationSetTimezoneOverride r = r . API.emulationSetTimezoneOverride
 -- | Specification Entry: <BiDiSpecURL#command-emulation-setTouchOverride emulation.setTouchOverride>
 --
 -- First added to Spec: <https://www.w3.org/TR/2026/WD-webdriver-bidi-20260109/#command-emulation-setTouchOverride 09 January 2026>
-emulationSetTouchOverride :: forall m. Runner m () -> SetTouchOverride -> m ()
+emulationSetTouchOverride :: forall m. Runner Command m () -> SetTouchOverride -> m ()
 emulationSetTouchOverride r = r . API.emulationSetTouchOverride
 
 -- since 10-09-2025 https://www.w3.org/TR/2025/WD-webdriver-bidi-20250910
@@ -426,7 +425,7 @@ emulationSetTouchOverride r = r . API.emulationSetTouchOverride
 -- | Specification Entry: <BiDiSpecURL#command-emulation-setUserAgentOverride emulation.setUserAgentOverride>
 --
 -- First added to Spec: <https://www.w3.org/TR/2025/WD-webdriver-bidi-20250910/#command-emulation-setUserAgentOverride 10 September 2025>
-emulationSetUserAgentOverride :: forall m. Runner m () -> SetUserAgentOverride -> m ()
+emulationSetUserAgentOverride :: forall m. Runner Command m () -> SetUserAgentOverride -> m ()
 emulationSetUserAgentOverride r = r . API.emulationSetUserAgentOverride
 
 ---- Input ----
@@ -434,19 +433,19 @@ emulationSetUserAgentOverride r = r . API.emulationSetUserAgentOverride
 -- | Specification Entry: <BiDiSpecURL#command-input-performActions input.performActions>
 --
 -- First added to Spec: <https://www.w3.org/TR/2024/WD-webdriver-bidi-20241121/#command-input-performActions 21 November 2024 - First Public Working Draft>
-inputPerformActions :: forall m. Runner m () -> PerformActions -> m ()
+inputPerformActions :: forall m. Runner Command m () -> PerformActions -> m ()
 inputPerformActions r = r . API.inputPerformActions
 
 -- | Specification Entry: <BiDiSpecURL#command-input-releaseActions input.releaseActions>
 --
 -- First added to Spec: <https://www.w3.org/TR/2024/WD-webdriver-bidi-20241121/#command-input-releaseActions 21 November 2024 - First Public Working Draft>
-inputReleaseActions :: forall m. Runner m () -> ReleaseActions -> m ()
+inputReleaseActions :: forall m. Runner Command m () -> ReleaseActions -> m ()
 inputReleaseActions r = r . API.inputReleaseActions
 
 -- | Specification Entry: <BiDiSpecURL#command-input-setFiles input.setFiles>
 --
 -- First added to Spec: <https://www.w3.org/TR/2024/WD-webdriver-bidi-20241121/#command-input-setFiles 21 November 2024 - First Public Working Draft>
-inputSetFiles :: forall m. Runner m () -> SetFiles -> m ()
+inputSetFiles :: forall m. Runner Command m () -> SetFiles -> m ()
 inputSetFiles r = r . API.inputSetFiles
 
 ---- Network ----
@@ -454,79 +453,79 @@ inputSetFiles r = r . API.inputSetFiles
 -- | Specification Entry: <BiDiSpecURL#command-network-addDataCollector network.addDataCollector>
 --
 -- First added to Spec: <https://www.w3.org/TR/2025/WD-webdriver-bidi-20250620/#command-network-addDataCollector 20 June 2025>
-networkAddDataCollector :: forall m. Runner m AddDataCollectorResult -> AddDataCollector -> m AddDataCollectorResult
+networkAddDataCollector :: forall m. Runner Command m AddDataCollectorResult -> AddDataCollector -> m AddDataCollectorResult
 networkAddDataCollector r = r . API.networkAddDataCollector
 
 -- | Specification Entry: <BiDiSpecURL#command-network-addIntercept network.addIntercept>
 --
 -- First added to Spec: <https://www.w3.org/TR/2024/WD-webdriver-bidi-20241121/#command-network-addIntercept 21 November 2024 - First Public Working Draft>
-networkAddIntercept :: forall m. Runner m AddInterceptResult -> AddIntercept -> m AddInterceptResult
+networkAddIntercept :: forall m. Runner Command m AddInterceptResult -> AddIntercept -> m AddInterceptResult
 networkAddIntercept r = r . API.networkAddIntercept
 
 -- | Specification Entry: <BiDiSpecURL#command-network-continueRequest network.continueRequest>
 --
 -- First added to Spec: <https://www.w3.org/TR/2024/WD-webdriver-bidi-20241121/#command-network-continueRequest 21 November 2024 - First Public Working Draft>
-networkContinueRequest :: forall m. Runner m () -> ContinueRequest -> m ()
+networkContinueRequest :: forall m. Runner Command m () -> ContinueRequest -> m ()
 networkContinueRequest r = r . API.networkContinueRequest
 
 -- | Specification Entry: <BiDiSpecURL#command-network-continueResponse network.continueResponse>
 --
 -- First added to Spec: <https://www.w3.org/TR/2024/WD-webdriver-bidi-20241121/#command-network-continueResponse 21 November 2024 - First Public Working Draft>
-networkContinueResponse :: forall m. Runner m () -> ContinueResponse -> m ()
+networkContinueResponse :: forall m. Runner Command m () -> ContinueResponse -> m ()
 networkContinueResponse r = r . API.networkContinueResponse
 
 -- | Specification Entry: <BiDiSpecURL#command-network-continueWithAuth network.continueWithAuth>
 --
 -- First added to Spec: <https://www.w3.org/TR/2024/WD-webdriver-bidi-20241121/#command-network-continueWithAuth 21 November 2024 - First Public Working Draft>
-networkContinueWithAuth :: forall m. Runner m () -> ContinueWithAuth -> m ()
+networkContinueWithAuth :: forall m. Runner Command m () -> ContinueWithAuth -> m ()
 networkContinueWithAuth r = r . API.networkContinueWithAuth
 
 -- | Specification Entry: <BiDiSpecURL#command-network-disownData network.disownData>
 --
 -- First added to Spec: <https://www.w3.org/TR/2025/WD-webdriver-bidi-20250620/#command-network-disownData 20 June 2025>
-networkDisownData :: forall m. Runner m () -> DisownData -> m ()
+networkDisownData :: forall m. Runner Command m () -> DisownData -> m ()
 networkDisownData r = r . API.networkDisownData
 
 -- | Specification Entry: <BiDiSpecURL#command-network-failRequest network.failRequest>
 --
 -- First added to Spec: <https://www.w3.org/TR/2024/WD-webdriver-bidi-20241121/#command-network-failRequest 21 November 2024 - First Public Working Draft>
-networkFailRequest :: forall m. Runner m () -> FailRequest -> m ()
+networkFailRequest :: forall m. Runner Command m () -> FailRequest -> m ()
 networkFailRequest r = r . API.networkFailRequest
 
 -- | Specification Entry: <BiDiSpecURL#command-network-getData network.getData>
 --
 -- First added to Spec: <https://www.w3.org/TR/2025/WD-webdriver-bidi-20250620/#command-network-getData 20 June 2025>
-networkGetData :: forall m. Runner m GetDataResult -> GetData -> m GetDataResult
+networkGetData :: forall m. Runner Command m GetDataResult -> GetData -> m GetDataResult
 networkGetData r = r . API.networkGetData
 
 -- | Specification Entry: <BiDiSpecURL#command-network-provideResponse network.provideResponse>
 --
 -- First added to Spec: <https://www.w3.org/TR/2024/WD-webdriver-bidi-20241121/#command-network-provideResponse 21 November 2024 - First Public Working Draft>
-networkProvideResponse :: forall m. Runner m () -> ProvideResponse -> m ()
+networkProvideResponse :: forall m. Runner Command m () -> ProvideResponse -> m ()
 networkProvideResponse r = r . API.networkProvideResponse
 
 -- | Specification Entry: <BiDiSpecURL#command-network-removeDataCollector network.removeDataCollector>
 --
 -- First added to Spec: <https://www.w3.org/TR/2025/WD-webdriver-bidi-20250620/#command-network-removeDataCollector 20 June 2025>
-networkRemoveDataCollector :: forall m. Runner m () -> RemoveDataCollector -> m ()
+networkRemoveDataCollector :: forall m. Runner Command m () -> RemoveDataCollector -> m ()
 networkRemoveDataCollector r = r . API.networkRemoveDataCollector
 
 -- | Specification Entry: <BiDiSpecURL#command-network-removeIntercept network.removeIntercept>
 --
 -- First added to Spec: <https://www.w3.org/TR/2024/WD-webdriver-bidi-20241121/#command-network-removeIntercept 21 November 2024 - First Public Working Draft>
-networkRemoveIntercept :: forall m. Runner m () -> RemoveIntercept -> m ()
+networkRemoveIntercept :: forall m. Runner Command m () -> RemoveIntercept -> m ()
 networkRemoveIntercept r = r . API.networkRemoveIntercept
 
 -- | Specification Entry: <BiDiSpecURL#command-network-setCacheBehavior network.setCacheBehavior>
 --
 -- First added to Spec: <https://www.w3.org/TR/2024/WD-webdriver-bidi-20241121/#command-network-setCacheBehavior 21 November 2024 - First Public Working Draft>
-networkSetCacheBehavior :: forall m. Runner m () -> SetCacheBehavior -> m ()
+networkSetCacheBehavior :: forall m. Runner Command m () -> SetCacheBehavior -> m ()
 networkSetCacheBehavior r = r . API.networkSetCacheBehavior
 
 -- | Specification Entry: <BiDiSpecURL#command-network-setExtraHeaders network.setExtraHeaders>
 --
 -- First added to Spec: <https://www.w3.org/TR/2025/WD-webdriver-bidi-20250728/#command-network-setExtraHeaders 28 July 2025>
-networkSetExtraHeaders :: forall m. Runner m () -> SetExtraHeaders -> m ()
+networkSetExtraHeaders :: forall m. Runner Command m () -> SetExtraHeaders -> m ()
 networkSetExtraHeaders r = r . API.networkSetExtraHeaders
 
 ---- Script ----
@@ -534,37 +533,37 @@ networkSetExtraHeaders r = r . API.networkSetExtraHeaders
 -- | Specification Entry: <BiDiSpecURL#command-script-addPreloadScript script.addPreloadScript>
 --
 -- First added to Spec: <https://www.w3.org/TR/2024/WD-webdriver-bidi-20241121/#command-script-addPreloadScript 21 November 2024 - First Public Working Draft>
-scriptAddPreloadScript :: forall m. Runner m AddPreloadScriptResult -> AddPreloadScript -> m AddPreloadScriptResult
+scriptAddPreloadScript :: forall m. Runner Command m AddPreloadScriptResult -> AddPreloadScript -> m AddPreloadScriptResult
 scriptAddPreloadScript r = r . API.scriptAddPreloadScript
 
 -- | Specification Entry: <BiDiSpecURL#command-script-callFunction script.callFunction>
 --
 -- First added to Spec: <https://www.w3.org/TR/2024/WD-webdriver-bidi-20241121/#command-script-callFunction 21 November 2024 - First Public Working Draft>
-scriptCallFunction :: forall m. Runner m EvaluateResult -> CallFunction -> m EvaluateResult
+scriptCallFunction :: forall m. Runner Command m EvaluateResult -> CallFunction -> m EvaluateResult
 scriptCallFunction r = r . API.scriptCallFunction
 
 -- | Specification Entry: <BiDiSpecURL#command-script-disown script.disown>
 --
 -- First added to Spec: <https://www.w3.org/TR/2024/WD-webdriver-bidi-20241121/#command-script-disown 21 November 2024 - First Public Working Draft>
-scriptDisown :: forall m. Runner m () -> Disown -> m ()
+scriptDisown :: forall m. Runner Command m () -> Disown -> m ()
 scriptDisown r = r . API.scriptDisown
 
 -- | Specification Entry: <BiDiSpecURL#type-script-EvaluateResult script.evaluate>
 --
 -- First added to Spec: <https://www.w3.org/TR/2024/WD-webdriver-bidi-20241121/#type-script-EvaluateResult 21 November 2024 - First Public Working Draft>
-scriptEvaluate :: forall m. Runner m EvaluateResult -> Evaluate -> m EvaluateResult
+scriptEvaluate :: forall m. Runner Command m EvaluateResult -> Evaluate -> m EvaluateResult
 scriptEvaluate r = r . API.scriptEvaluate
 
 -- | Specification Entry: <BiDiSpecURL#command-script-getRealms script.getRealms>
 --
 -- First added to Spec: <https://www.w3.org/TR/2024/WD-webdriver-bidi-20241121/#command-script-getRealms 21 November 2024 - First Public Working Draft>
-scriptGetRealms :: forall m. Runner m GetRealmsResult -> GetRealms -> m GetRealmsResult
+scriptGetRealms :: forall m. Runner Command m GetRealmsResult -> GetRealms -> m GetRealmsResult
 scriptGetRealms r = r . API.scriptGetRealms
 
 -- | Specification Entry: <BiDiSpecURL#command-script-removePreloadScript script.removePreloadScript>
 --
 -- First added to Spec: <https://www.w3.org/TR/2024/WD-webdriver-bidi-20241121/#command-script-removePreloadScript 21 November 2024 - First Public Working Draft>
-scriptRemovePreloadScript :: forall m. Runner m () -> RemovePreloadScript -> m ()
+scriptRemovePreloadScript :: forall m. Runner Command m () -> RemovePreloadScript -> m ()
 scriptRemovePreloadScript r = r . API.scriptRemovePreloadScript
 
 ---- Storage ----
@@ -572,19 +571,19 @@ scriptRemovePreloadScript r = r . API.scriptRemovePreloadScript
 -- | Specification Entry: <BiDiSpecURL#command-storage-deleteCookies storage.deleteCookies>
 --
 -- First added to Spec: <https://www.w3.org/TR/2024/WD-webdriver-bidi-20241121/#command-storage-deleteCookies 21 November 2024 - First Public Working Draft>
-storageDeleteCookies :: forall m. Runner m DeleteCookiesResult -> DeleteCookies -> m DeleteCookiesResult
+storageDeleteCookies :: forall m. Runner Command m DeleteCookiesResult -> DeleteCookies -> m DeleteCookiesResult
 storageDeleteCookies r = r . API.storageDeleteCookies
 
 -- | Specification Entry: <BiDiSpecURL#command-storage-getCookies storage.getCookies>
 --
 -- First added to Spec: <https://www.w3.org/TR/2024/WD-webdriver-bidi-20241121/#command-storage-getCookies 21 November 2024 - First Public Working Draft>
-storageGetCookies :: forall m. Runner m GetCookiesResult -> GetCookies -> m GetCookiesResult
+storageGetCookies :: forall m. Runner Command m GetCookiesResult -> GetCookies -> m GetCookiesResult
 storageGetCookies r = r . API.storageGetCookies
 
 -- | Specification Entry: <BiDiSpecURL#command-storage-setCookie storage.setCookie>
 --
 -- First added to Spec: <https://www.w3.org/TR/2024/WD-webdriver-bidi-20241121/#command-storage-setCookie 21 November 2024 - First Public Working Draft>
-storageSetCookie :: forall m. Runner m SetCookieResult -> SetCookie -> m SetCookieResult
+storageSetCookie :: forall m. Runner Command m SetCookieResult -> SetCookie -> m SetCookieResult
 storageSetCookie r = r . API.storageSetCookie
 
 ---- WebExtension ----
@@ -592,13 +591,13 @@ storageSetCookie r = r . API.storageSetCookie
 -- | Specification Entry: <BiDiSpecURL#command-webExtension-install webExtension.install>
 --
 -- First added to Spec: <https://www.w3.org/TR/2024/WD-webdriver-bidi-20241202/#command-webExtension-install 02 December 2024>
-webExtensionInstall :: forall m. Runner m WebExtensionResult -> WebExtensionInstall -> m WebExtensionResult
+webExtensionInstall :: forall m. Runner Command m WebExtensionResult -> WebExtensionInstall -> m WebExtensionResult
 webExtensionInstall r = r . API.webExtensionInstall
 
 -- | Specification Entry: <BiDiSpecURL#command-webExtension-uninstall webExtension.uninstall>
 --
 -- First added to Spec: <https://www.w3.org/TR/2024/WD-webdriver-bidi-20241202/#command-webExtension-uninstall 02 December 2024>
-webExtensionUninstall :: forall m. Runner m () -> WebExtensionUninstall -> m ()
+webExtensionUninstall :: forall m. Runner Command m () -> WebExtensionUninstall -> m ()
 webExtensionUninstall r = r . API.webExtensionUninstall
 
 -- ############## Subscriptions (Events) ##############
@@ -931,5 +930,5 @@ subscribeOffSpecMany' sendSubOffSpecMany' = sendSubOffSpecMany' API.subscribeOff
 --
 -- The first argument is the command name (e.g., "cdp.sendCommand"), and the
 -- second is the parameters as a JSON Object.
-offSpecCommand :: forall m. Runner m Object -> Text -> Object -> m Object
+offSpecCommand :: forall m. Runner Command m Object -> Text -> Object -> m Object
 offSpecCommand r method params = r (mkOffSpecCommand method params)

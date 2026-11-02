@@ -4,3 +4,5 @@
 --
 -- TODO: implementation pending.
 module WebDriverPreCore.Extended.HTTP.CompoundActions () where
+
+  -- Locator -> m (Either LocateException ElementId)

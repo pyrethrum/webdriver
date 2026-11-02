@@ -23,6 +23,7 @@ import WebDriver.Effectful.BiDi.Base.Effect
   )
 import WebDriverPreCore.BiDi.Protocol
   ( BrowsingContext,
+    Command,
     SessionUnsubscribe (..),
     SubscriptionId,
     UserContext,
@@ -198,13 +199,13 @@ runWebDriverBiDi ioRunner = interpret $ \localEnv ->
         SubscribeOffSpecMany sts s -> \unlift -> BA.subscribeOffSpecMany' sendSubOffSpecMany' sts [] [] (unlift . s)
         SubscribeOffSpecMany' b u sts s -> \unlift -> BA.subscribeOffSpecMany' sendSubOffSpecMany' sts b u (unlift . s)
   where
-    run' :: forall r. (FromJSON r) => BA.Runner (Eff es) r
+    run' :: forall r. (FromJSON r) => BA.Runner Command (Eff es) r
     run' = bidiRun ioRunner
 
-    run :: forall r. (FromJSON r) => (BA.Runner (Eff es) r -> Eff es r) -> Eff es r
+    run :: forall r. (FromJSON r) => (BA.Runner Command (Eff es) r -> Eff es r) -> Eff es r
     run action = action run'
 
-    run1 :: forall r p. (FromJSON r) => (BA.Runner (Eff es) r -> p -> Eff es r) -> p -> Eff es r
+    run1 :: forall r p. (FromJSON r) => (BA.Runner Command (Eff es) r -> p -> Eff es r) -> p -> Eff es r
     run1 action p = action run' p
 
     sendSubMany' :: BA.SendSubMany' (Eff es)

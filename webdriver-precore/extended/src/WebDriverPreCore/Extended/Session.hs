@@ -25,7 +25,7 @@ import WebDriverPreCore.HTTP.Protocol qualified as HTTP
 newHttpSession ::
   forall m.
   (Functor m) =>
-  Runner m HTTP.SessionResponse ->
+  Runner HTTP.Command m HTTP.SessionResponse ->
   FullCapabilities HttpCapability ->
   m HttpSessionResponse
 newHttpSession runner =

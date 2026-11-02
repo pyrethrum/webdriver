@@ -373,6 +373,8 @@ library webdriver-precore-extended-internal
 library webdriver-precore-extended
   import: commonExtensions, commonGhcOptions, libDepends
   exposed-modules:
+      WebDriverPreCore.Extended.Common.Types
+      --
       WebDriverPreCore.Extended.HTTP.Base.API
       WebDriverPreCore.Extended.HTTP.Base.Actions
       WebDriverPreCore.Extended.HTTP.Base.Protocol

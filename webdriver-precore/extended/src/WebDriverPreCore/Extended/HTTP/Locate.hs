@@ -374,13 +374,7 @@ toSelector = \case
   CSSHttp {value} -> HTTPP.CSS value
   XPathHttp {value} -> HTTPP.XPath value
   RoleHttp {xpath} -> HTTPP.XPath xpath
-  -- shim BiDiNative locators
-  -- BiDiNative sl -> case sl of
-  --   Role {role} -> HTTPP.XPath $ roleToXPath role
-  --   InnerText {value, matchType, caseSensitivity, maxDepth} -> HTTPP.XPath $ innerTextToXPath value caseSensitivity matchType maxDepth
 
-_locateBiDi :: a
-_locateBiDi = undefined
 
 notNull :: [a] -> Bool
 notNull = not . P.null
