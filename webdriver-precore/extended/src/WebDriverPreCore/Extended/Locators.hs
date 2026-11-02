@@ -5,7 +5,9 @@ module WebDriverPreCore.Extended.Locators
     -- * Re-exports from Internal
     AriaRole (..),
     MatchType (..),
-    CaseSensitivity(..),
+    CaseSensitivity (..),
+    DisplayedCheck (..),
+    LocateException (..),
 
     -- * Smart Constructors
     css,
@@ -23,6 +25,7 @@ module WebDriverPreCore.Extended.Locators
     attribute',
     attributeStarts,
     --
+
     -- * Role Constructors
     role,
     roleType,
@@ -189,6 +192,14 @@ import Data.Bool (bool)
 import Data.List.NonEmpty (NonEmpty (..))
 import Data.Text (Text, isInfixOf)
 import WebDriverPreCore.Extended.Common.Locate.Internal
+  ( AriaRole (..),
+    CaseSensitivity (..),
+    DisplayedCheck (..),
+    LocateException (..),
+    Locator (..),
+    MatchType (..),
+    RoleLocator (..),
+  )
 import Prelude
 
 css :: Text -> Locator
@@ -703,5 +714,3 @@ infixr 2 |||
 (>>>) = Contains
 
 infixr 1 >>>
-
-

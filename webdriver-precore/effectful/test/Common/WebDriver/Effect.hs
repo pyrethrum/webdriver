@@ -22,8 +22,7 @@ import Data.Text (Text)
 import Effectful (Dispatch (..), DispatchOf, Eff, Effect, (:>))
 import Effectful.Dispatch.Dynamic (send)
 import WebDriverPreCore.Common.Protocol (URL)
-import WebDriverPreCore.Extended.Common.Locate.Internal qualified as L
-import WebDriverPreCore.Extended.Locators ( Locator )
+import WebDriverPreCore.Extended.Locators ( Locator, LocateException )
 
 -- | A test-level algebraic effect abstracting over the WebDriver operations
 -- shared by the HTTP and BiDi test modules.
@@ -35,10 +34,10 @@ data WebDriver (elm :: Type) :: Effect where
   MinimizeWindow :: WebDriver elm m ()
   NavigateTo :: URL -> WebDriver elm m ()
   ExecuteScript :: Text -> [Value] -> WebDriver elm m ()
-  Locate :: Locator -> WebDriver elm m (Either L.LocateException elm)
-  LocateAll :: Locator -> WebDriver elm m (Either L.LocateException [elm])
-  LocateFromElement :: elm -> Locator -> WebDriver elm m (Either L.LocateException elm)
-  LocateAllFromElement :: elm -> Locator -> WebDriver elm m (Either L.LocateException [elm])
+  Locate :: Locator -> WebDriver elm m (Either LocateException elm)
+  LocateAll :: Locator -> WebDriver elm m (Either LocateException [elm])
+  LocateFromElement :: elm -> Locator -> WebDriver elm m (Either LocateException elm)
+  LocateAllFromElement :: elm -> Locator -> WebDriver elm m (Either LocateException [elm])
   GetProperty :: elm -> Text -> WebDriver elm m (Maybe Value)
   GetAttribute :: elm -> Text -> WebDriver elm m (Maybe Text)
 
@@ -60,16 +59,16 @@ navigateTo = send . NavigateTo @elm
 executeScript :: forall elm es. (WebDriver elm :> es) => Text -> [Value] -> Eff es ()
 executeScript script args = send (ExecuteScript @elm script args)
 
-locate :: forall elm es. (WebDriver elm :> es) => Locator -> Eff es (Either L.LocateException elm)
+locate :: forall elm es. (WebDriver elm :> es) => Locator -> Eff es (Either LocateException elm)
 locate = send . Locate
 
-locateAll :: forall elm es. (WebDriver elm :> es) => Locator -> Eff es (Either L.LocateException [elm])
+locateAll :: forall elm es. (WebDriver elm :> es) => Locator -> Eff es (Either LocateException [elm])
 locateAll = send . LocateAll
 
-locateFromElement :: forall elm es. (WebDriver elm :> es) => elm -> Locator -> Eff es (Either L.LocateException elm)
+locateFromElement :: forall elm es. (WebDriver elm :> es) => elm -> Locator -> Eff es (Either LocateException elm)
 locateFromElement el = send . LocateFromElement el
 
-locateAllFromElement :: forall elm es. (WebDriver elm :> es) => elm -> Locator -> Eff es (Either L.LocateException [elm])
+locateAllFromElement :: forall elm es. (WebDriver elm :> es) => elm -> Locator -> Eff es (Either LocateException [elm])
 locateAllFromElement el = send . LocateAllFromElement el
 
 getProperty :: forall elm es. (WebDriver elm :> es) => elm -> Text -> Eff es (Maybe Value)

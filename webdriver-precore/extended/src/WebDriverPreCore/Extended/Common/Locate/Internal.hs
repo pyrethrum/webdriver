@@ -49,7 +49,7 @@ import Data.Text qualified as T
 import Data.Word (Word8)
 import GHC.Generics (Generic)
 import WebDriverPreCore.Utils.Utils (txt)
-import WebDriverPreCore.Extended.BiDi.Base.Protocol (BrowsingContext)
+import WebDriverPreCore.BiDi.Protocol ( BrowsingContext )
 import Prelude
 import Control.Monad ((>=>))
 import Data.Function ((&))

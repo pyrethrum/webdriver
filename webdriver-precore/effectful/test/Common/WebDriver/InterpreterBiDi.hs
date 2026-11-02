@@ -20,8 +20,7 @@ import WebDriver.Effectful (WebDriverBiDi)
 import WebDriver.Effectful.BiDi.Base.Actions qualified as B
 import WebDriverPreCore.BiDi.Protocol hiding (Locator)
 import WebDriverPreCore.Extended.BiDi.Locate qualified as BL
-import WebDriverPreCore.Extended.Common.Locate.Internal qualified as L
-import WebDriverPreCore.Extended.Locators (Locator)
+import WebDriverPreCore.Extended.Locators (Locator, LocateException(..))
 
 -- | Interpret 'WebDriver' in terms of the 'WebDriverBiDi' effect.
 runWebDriverBiDi ::
@@ -84,11 +83,11 @@ setFirstWindowState named = do
           }
 
 -- | Resolve a located node into a 'SharedReference' for use as a start node.
-requireSharedRef :: Locator -> NodeRemoteValue -> Either L.LocateException SharedReference
+requireSharedRef :: Locator -> NodeRemoteValue -> Either LocateException SharedReference
 requireSharedRef loc node =
   (nodeToSharedRef node)
     & maybe
-      (Left $ L.ElementNotFound {description = "Cannot resolve element to a BiDi shared reference", locator = loc})
+      (Left $ ElementNotFound {description = "Cannot resolve element to a BiDi shared reference", locator = loc})
       Right
 
 -- | Convert a located node into a 'SharedReference', returning 'Nothing' if the

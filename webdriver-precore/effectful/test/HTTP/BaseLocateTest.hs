@@ -11,7 +11,6 @@ import Effectful.Error.Dynamic (Error)
 import HTTP.Runner (HttpBaseEffs, runWith)
 import Test.Tasty (TestTree, inOrderTestGroup, withResource)
 import WebDriverPreCore.Extended.HTTP.Base.Protocol (ElementId)
-import WebDriverPreCore.Extended.Common.Locate.Internal qualified as L
 import WebDriverPreCore.Extended.HTTP.Locate qualified as L
 import Prelude
 

@@ -1,14 +1,17 @@
 module HTTP.LocateOpts (defHttpOpts) where
 
-import WebDriverPreCore.Extended.HTTP.Locate qualified as L
-import qualified WebDriverPreCore.Extended.Common.Locate.Internal as L
+import WebDriverPreCore.Extended.HTTP.Locate
+    ( SingletonCardinality(..),
+      ExtendedRoleLocateSingleton(..),
+      HttpLocateOpts(..) ) 
 import Common.Utils (autoId)
+import WebDriverPreCore.Extended.Locators (DisplayedCheck(..))
 
-defHttpOpts :: L.HttpLocateOpts
+defHttpOpts :: HttpLocateOpts
 defHttpOpts =
-  L.MkHttpLocateOpts
-    { extendedRoleLocation = L.ExtLocateNever,
-      jsRecheckDisplayed = L.DisplayedCheckAlways,
-      singletonCardinality = L.Unique,
+  MkHttpLocateOpts
+    { extendedRoleLocation = ExtLocateNever,
+      jsRecheckDisplayed = DisplayedCheckAlways,
+      singletonCardinality = Unique,
       mkDefaultLoc = autoId
     }

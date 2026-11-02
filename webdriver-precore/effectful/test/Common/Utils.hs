@@ -54,8 +54,7 @@ import Data.Text qualified as T
 import Effectful
 import Effectful.Error.Dynamic
 import Test.Tasty (TestTree, withResource)
-import WebDriverPreCore.Extended.Locators (CaseSensitivity (..), MatchType (..))
-import WebDriverPreCore.Extended.Common.Locate.Internal qualified as L
+import WebDriverPreCore.Extended.Locators (CaseSensitivity (..), MatchType (..), LocateException)
 import WebDriverPreCore.Extended.Locators (Locator, attribute')
 import WebDriverPreCore.Utils.Utils (txt)
 import Prelude hiding (fail)
@@ -118,7 +117,7 @@ outerHtmlsFormatted elms =
 -- ################ Checks ################
 
 -- | Check that a locate result is an exception matching a predicate
-chkLocException :: forall es a. (Show a, Error Text :> es) => Text -> (L.LocateException -> Bool) -> Either L.LocateException a -> Eff es ()
+chkLocException :: forall es a. (Show a, Error Text :> es) => Text -> (LocateException -> Bool) -> Either LocateException a -> Eff es ()
 chkLocException errMsg p locRslt =
   locRslt
     & either
@@ -151,7 +150,7 @@ chkAttributeEq :: forall elm es. (WebDriver elm :> es, Error Text :> es) => Text
 chkAttributeEq testTitle attrName expctd = chkAttributesSingletonEq testTitle attrName expctd . singleton
 
 -- | Fail with detailed locate result information
-locateFail :: forall elm es a. (Show elm, Error Text :> es) => Either L.LocateException elm -> Text -> Eff es a
+locateFail :: forall elm es a. (Show elm, Error Text :> es) => Either LocateException elm -> Text -> Eff es a
 locateFail locRslt msg = fail $ msg <> "\n\nLocateResult:\n" <> txt locRslt
 
 -- ################ Test Helpers ################

@@ -19,7 +19,6 @@ import Effectful (Eff, (:>))
 import Effectful.Error.Dynamic (Error)
 import Test.Tasty (TestTree, testGroup, inOrderTestGroup)
 import Test.Tasty.HUnit (testCase)
-import WebDriverPreCore.Extended.Common.Locate.Internal qualified as L
 import WebDriverPreCore.Extended.Locators as LS
 import WebDriverPreCore.Test.TestData
 import WebDriverPreCore.Utils.Utils (txt)
@@ -758,14 +757,14 @@ testMiscAriaRoleTypesNever run interpNever =
 elmCountMatches :: forall elm. Int -> [elm] -> Bool
 elmCountMatches expected = (==) expected . length
 
-isNotFound :: L.LocateException -> Bool
+isNotFound :: LocateException -> Bool
 isNotFound = \case
-  L.ElementNotFound {} -> True
+  ElementNotFound {} -> True
   _ -> False
 
-isAmbiguous :: L.LocateException -> Bool
+isAmbiguous :: LocateException -> Bool
 isAmbiguous = \case
-  L.AmbiguousLocator {} -> True
+  AmbiguousLocator {} -> True
   _ -> False
 
 mkTest ::

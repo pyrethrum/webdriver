@@ -389,7 +389,7 @@ test_contradictory_tags_siingleton_nested_any =
         
     transformHttp ID loc & either
       (\(MkInvalidLocator _ msg) -> "Contradictory tags" `T.isInfixOf` msg @? "Expected contradictory tags error")
-      (\_ -> assertFailure "Expected Left (contradictory tags error), got Right")
+      (\_ -> assertFailure "Expected Left (contradictory tags errtransformBiDior), got Right")
 
 -- >>> _eval test_noncontradictory_tags_nested_any
 -- *** Exception: ExitSuccess
