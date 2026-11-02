@@ -396,6 +396,10 @@ library webdriver-precore-extended
       WebDriverPreCore.Extended.Capabilities
       WebDriverPreCore.Extended.Session
 
+  other-modules:
+      WebDriverPreCore.Extended.HTTP.CompoundActions
+      WebDriverPreCore.Extended.BiDi.CompoundActions
+
   hs-source-dirs: extended/src
   build-depends:
     webdriver-precore:webdriver-precore,

@@ -24,7 +24,8 @@ import Prelude hiding (id, lookup)
 -- |
 --  The 'Command' type is a specification for a WebDriver Http command.
 --  Every endpoint function in this module returns a 'Command' object which defines the HTTP method, URL path, and request body (if applicable) for the command.
---  The phantom type parameter 'r' represents the expected response type for the command. In practice, this 'r' type will always have a 'FromJSON' instance which can be used to parse the result from the response body.
+--  The phantom type parameter 'r' represents the expected response type for the command. 
+--  In practice, this 'r' type will always have a 'FromJSON' instance which can be used to parse the result from the response body.
 data Command r
   = Get
       { description :: Text,

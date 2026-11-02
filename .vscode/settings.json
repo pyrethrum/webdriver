@@ -17,7 +17,7 @@
     "Unrecognised"
   ],
   "cSpell.enabled": true,
-  "workbench.colorTheme": "Dark Modern",
+  "workbench.colorTheme": "Light Modern",
   "chat.tools.terminal.autoApprove": {
     "ghcup": true,
     "timeout": true,
