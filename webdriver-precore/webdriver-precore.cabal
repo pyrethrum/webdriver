@@ -384,6 +384,7 @@ library webdriver-precore-extended
 
       -- Universal capabilities for both protocols
       WebDriverPreCore.Extended.Capabilities
+      WebDriverPreCore.Extended.Session
 
       -- Exposed as internal for testing only
       WebDriverPreCore.Extended.Common.Locate.Internal

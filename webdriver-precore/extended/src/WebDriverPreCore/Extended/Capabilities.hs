@@ -55,11 +55,7 @@ module WebDriverPreCore.Extended.Capabilities
     -- * Cross-Protocol Conversions
     BiDiPromptHandlerSource (..),
     biDiCapabilityToHttp,
-    httpCapabilityToBiDi,
-
-    -- * Session Management
-    Runner,
-    newHttpSession
+    httpCapabilityToBiDi
   )
 where
 
@@ -69,7 +65,6 @@ import Data.Maybe (fromMaybe)
 import Data.Text (Text)
 import Data.Word (Word8)
 import WebDriverPreCore.BiDi.Protocol qualified as BiDi
-import WebDriverPreCore.Extended.HTTP.Base.Actions qualified as Actions
 import WebDriverPreCore.Common.Protocol (BrowserName (..), PlatformName (..), Session (..))
 import WebDriverPreCore.HTTP.Protocol qualified as HTTP
 import GHC.Generics (Generic)
@@ -546,25 +541,3 @@ httpCapabilityToBiDi (MkHttpCapability {unhandledPromptBehavior = httpPromptHand
         }
       where
         promptHandlerType = Just $ convertHandlerType hpb
-
--- ######################################################################
--- ######################## Session Management ##########################
--- ######################################################################
-
--- | A 'Runner' is a function that executes a 'Command' in a monadic context.
--- This allows the Extended module to work with different execution strategies.
-type Runner m a = HTTP.Command a -> m a
-
--- | Create a new HTTP WebDriver session with the given capabilities.
---
--- Specification Entry: [HTMLSpecURL#new-session](https://www.w3.org/TR/webdriver/#new-session)
---
--- @POST \/session New Session@
-newHttpSession ::
-  forall m.
-  (Functor m) =>
-  Runner m HTTP.SessionResponse ->
-  FullCapabilities HttpCapability ->
-  m HttpSessionResponse
-newHttpSession runner =
-  fmap fromHttpSessionResponse . Actions.newSession runner . toHttpCapabilities

@@ -27,6 +27,7 @@ import WebDriver.Effectful.Logger (Logger, logDebug)
 import WebDriverPreCore.BiDiRunner qualified as BiDiRunner
 import WebDriverPreCore.Extended.Capabilities (HttpSessionResponse (..))
 import WebDriverPreCore.Extended.Capabilities qualified as EC
+import WebDriverPreCore.Extended.Session qualified as ES
 import WebDriverPreCore.Extended.HTTP.Base.Actions qualified as HA
 import WebDriverPreCore.HttpRunner (Command, HttpEndpoint, ParseFailure, callWebDriver)
 import WebDriverPreCore.Utils.Utils (throwLeft)
@@ -43,7 +44,7 @@ import WebDriverPreCore.Utils.Utils (throwLeft)
 --
 -- For convenience, 'withHttpSession' provides a bracket version.
 acquireHttpSession :: forall es. (IOE :> es, Logger :> es, Error ParseFailure :> es) => HttpEndpoint -> EC.HttpCapabilities -> Eff es HttpSessionResponse
-acquireHttpSession endpoint caps = EC.newHttpSession (httpRunner endpoint) caps
+acquireHttpSession endpoint caps = ES.newHttpSession (httpRunner endpoint) caps
 
 httpRunner :: forall es a. (IOE :> es, Logger :> es, Error ParseFailure :> es, FromJSON a) => HttpEndpoint -> Command a -> Eff es a
 httpRunner endpoint = callWebDriver endpoint logDebug >=> throwLeft throwError
