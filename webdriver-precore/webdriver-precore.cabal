@@ -381,13 +381,15 @@ library webdriver-precore-extended
       WebDriverPreCore.Extended.HTTP.Locate
 
       WebDriverPreCore.Extended.BiDi.Locate
+
+      -- Universal capabilities for both protocols
       WebDriverPreCore.Extended.Capabilities
-      -- common
-      WebDriverPreCore.Extended.Protocol
-      --
-      WebDriverPreCore.Extended.Common.Locators.Internal
+
+      -- Exposed as internal for testing only
+      WebDriverPreCore.Extended.Common.Locate.Internal
+
+      -- Locate exception types shared by HTTP/BiDi locate implementations
       WebDriverPreCore.Extended.Common.Locate
-  -- other-modules:
 
   hs-source-dirs: extended/src
   build-depends:

@@ -23,7 +23,7 @@ import Effectful (Dispatch (..), DispatchOf, Eff, Effect, (:>))
 import Effectful.Dispatch.Dynamic (send)
 import WebDriverPreCore.Common.Protocol (URL)
 import WebDriverPreCore.Extended.Common.Locate qualified as L
-import WebDriverPreCore.Extended.Common.Locators.Internal
+import WebDriverPreCore.Extended.Common.Locate.Internal
     ( Locator )
 
 -- | A test-level algebraic effect abstracting over the WebDriver operations

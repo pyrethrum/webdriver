@@ -26,7 +26,9 @@ import GHC.Stack (HasCallStack)
 import WebDriverPreCore.Extended.Common.Locate (
     DisplayedCheck (..),
     LocateException (..),
-    PreLocateException (..),
+    PreLocateException (..)
+  )
+import WebDriverPreCore.Extended.Common.Locate.Internal (
     LeafCardinality (..),
     addLocToException,
     runLoc,
@@ -35,7 +37,7 @@ import WebDriverPreCore.Extended.Common.Locate (
     filterDisplayed,
     filterDisplayedForSingleton
   )
-import WebDriverPreCore.Extended.Common.Locators.Internal (
+import WebDriverPreCore.Extended.Common.Locate.Internal (
     Locator,
     RoleLocator (..),
     CompoundLocator,
@@ -44,7 +46,7 @@ import WebDriverPreCore.Extended.Common.Locators.Internal (
     CaseSensitivity (..),
     roleLabelText
   )
-import WebDriverPreCore.Extended.Common.Locators.Internal qualified as LI
+import WebDriverPreCore.Extended.Common.Locate.Internal qualified as LI
 import WebDriverPreCore.BiDi.Protocol qualified as BiDiP
 import WebDriverPreCore.Extended.BiDi.Base.Protocol (SerializationOptions, SharedReference (..))
 import WebDriverPreCore.Common.Protocol (JSUInt)

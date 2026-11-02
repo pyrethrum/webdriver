@@ -1,6 +1,3 @@
-{-# LANGUAGE DuplicateRecordFields #-}
-{-# LANGUAGE NamedFieldPuns #-}
-
 -- |
 -- Module: WebDriverPreCore.Extended.Capabilities
 -- Description: Universal capabilities abstraction for HTTP and BiDi protocols
