@@ -27,10 +27,10 @@ runWebDriverHttp opts = interpret $ \_ -> \case
   MinimizeWindow -> void H.minimizeWindow
   NavigateTo url -> H.navigateTo url
   ExecuteScript script' args' -> void $ H.executeScript (MkScript {script = script', args = args'})
-  Locate loc -> L.locateHttp actions opts loc
-  LocateAll loc -> L.locateAllHttp actions opts loc
-  LocateFromElement el loc -> L.locateFromElementHttp actions opts el loc
-  LocateAllFromElement el loc -> L.locateAllFromElementHttp actions opts el loc
+  Locate loc -> L.locate actions opts loc
+  LocateAll loc -> L.locateAll actions opts loc
+  LocateFromElement el loc -> L.locateFromElement actions opts el loc
+  LocateAllFromElement el loc -> L.locateAllFromElement actions opts el loc
   GetProperty el name -> H.getElementProperty el name
   GetAttribute el name -> H.getElementAttribute el name
   where

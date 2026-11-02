@@ -59,14 +59,14 @@ tests =
           testVisibilityAlways run (interp defHttpOpts),
           testVisibilityNever
             run
-            (interp (defHttpOpts {L.jsRecheckDisplayed = L.DisplayedCheckNever})),
+            (interp (defHttpOpts {L.jsRecheckDisplayed = DisplayedCheckNever})),
           testVisibilityDisambiguate
             run
-            (interp (defHttpOpts {L.jsRecheckDisplayed = L.DisplayedCheckDisambiguateUnique})),
+            (interp (defHttpOpts {L.jsRecheckDisplayed = DisplayedCheckDisambiguateUnique})),
           testVisibilityDisambiguateVsNever
             run
-            (interp (defHttpOpts {L.jsRecheckDisplayed = L.DisplayedCheckDisambiguateUnique}))
-            (interp (defHttpOpts {L.jsRecheckDisplayed = L.DisplayedCheckNever})),
+            (interp (defHttpOpts {L.jsRecheckDisplayed = DisplayedCheckDisambiguateUnique}))
+            (interp (defHttpOpts {L.jsRecheckDisplayed = DisplayedCheckNever})),
           testBasicLocatorTypes run (interp defHttpOpts),
           testClassLocatorVariants run (interp defHttpOpts),
           testAttributeLocatorVariants run (interp defHttpOpts),
@@ -76,7 +76,7 @@ tests =
           testMiscAriaRoleTypes run (interp defHttpOpts),
           testMiscAriaRoleTypesNever
             run
-            (interp (defHttpOpts {L.jsRecheckDisplayed = L.DisplayedCheckNever}))
+            (interp (defHttpOpts {L.jsRecheckDisplayed = DisplayedCheckNever}))
         ]
       where
         run :: forall a. Eff HttpBaseEffs a -> IO a

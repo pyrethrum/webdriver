@@ -13,6 +13,8 @@ import Prelude
 import Test.Tasty (TestTree, withResource)
 import WebDriverPreCore.HTTP.Protocol ( ElementId )
 import WebDriverPreCore.Extended.HTTP.Locate qualified as L
+import WebDriverPreCore.Extended.Locators (DisplayedCheck(..))
+
 
 -- >>> _eval tests
 
@@ -24,7 +26,7 @@ tests =
     Common.tests (runWith ses) (interpHttp opts) 
   where
     opts :: L.HttpLocateOpts
-    opts = defHttpOpts {L.jsRecheckDisplayed = L.DisplayedCheckNever}
+    opts = defHttpOpts {L.jsRecheckDisplayed = DisplayedCheckNever}
 
     interpHttp :: L.HttpLocateOpts -> forall a. Eff (WebDriver ElementId : HttpBaseEffs) a -> Eff HttpBaseEffs a
     interpHttp = Interp.runWebDriverHttp

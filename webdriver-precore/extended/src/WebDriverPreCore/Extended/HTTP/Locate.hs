@@ -5,10 +5,10 @@ module WebDriverPreCore.Extended.HTTP.Locate
     LocateActions (..),
     SingletonCardinality (..),
     WDTrace(..),
-    locateHttp,
-    locateFromElementHttp,
-    locateAllHttp,
-    locateAllFromElementHttp
+    locate,
+    locateFromElement,
+    locateAll,
+    locateAllFromElement
   )
 where
 
@@ -132,20 +132,20 @@ mkSingleton loc = \case
   Left e        -> Left e
 
 -- | Locate a unique or first-matching element from the document root.
-locateHttp :: forall m. Monad m => LocateActions m -> HttpLocateOpts -> Locator -> m (Either LocateException ElementId)
-locateHttp actions opts l = mkSingleton l <$> runHttpAction actions opts Nothing httpLocateSingleton l
+locate :: forall m. Monad m => LocateActions m -> HttpLocateOpts -> Locator -> m (Either LocateException ElementId)
+locate actions opts l = mkSingleton l <$> runHttpAction actions opts Nothing httpLocateSingleton l
 
 -- | Locate all matching elements from the document root.
-locateAllHttp :: forall m. Monad m => LocateActions m -> HttpLocateOpts -> Locator -> m (Either LocateException [ElementId])
-locateAllHttp actions opts = runHttpAction actions opts Nothing httpLocateAll
+locateAll :: forall m. Monad m => LocateActions m -> HttpLocateOpts -> Locator -> m (Either LocateException [ElementId])
+locateAll actions opts = runHttpAction actions opts Nothing httpLocateAll
 
 -- | Locate a unique or first-matching element rooted at a given element.
-locateFromElementHttp :: forall m. Monad m => LocateActions m -> HttpLocateOpts -> ElementId -> Locator -> m (Either LocateException ElementId)
-locateFromElementHttp actions opts rootId l = mkSingleton l <$> runHttpAction actions opts (Just rootId) httpLocateSingleton l
+locateFromElement :: forall m. Monad m => LocateActions m -> HttpLocateOpts -> ElementId -> Locator -> m (Either LocateException ElementId)
+locateFromElement actions opts rootId l = mkSingleton l <$> runHttpAction actions opts (Just rootId) httpLocateSingleton l
 
 -- | Locate all matching elements rooted at a given element.
-locateAllFromElementHttp :: forall m. Monad m => LocateActions m -> HttpLocateOpts -> ElementId -> Locator -> m (Either LocateException [ElementId])
-locateAllFromElementHttp actions opts rootId = runHttpAction actions opts (Just rootId) httpLocateAll
+locateAllFromElement :: forall m. Monad m => LocateActions m -> HttpLocateOpts -> ElementId -> Locator -> m (Either LocateException [ElementId])
+locateAllFromElement actions opts rootId = runHttpAction actions opts (Just rootId) httpLocateAll
 
 -- | Common implementation for all public HTTP locate functions.
 runHttpAction ::
@@ -265,20 +265,20 @@ locateElmsUnchecked actions leafCardinality rolesSecondPass loc =
       LI.LeafC cl ->
         locateLeaf actions rolesSecondPass leafCardinality cl
       LI.ContainsC {container, contained} -> do
-        containers <- locateAll rolesSecondPass container
+        containers <- locateAll' rolesSecondPass container
         locateContained containers contained
       LI.AllC {elms = locs} -> do
         let (l :| ls) = locs
             step acc loc' =
               if P.null acc
                 then pure []
-                else LST.intersect acc <$> locateAll rolesSecondPass loc'
-        initial <- locateAll rolesSecondPass l
+                else LST.intersect acc <$> locateAll' rolesSecondPass loc'
+        initial <- locateAll' rolesSecondPass l
         foldM step initial ls
       LI.AnyC {elms = locs} ->
-       join <$> traverse (\l -> locateAll rolesSecondPass l) (toList locs)
+       join <$> traverse (\l -> locateAll' rolesSecondPass l) (toList locs)
   where
-    locateAll = locateElmsUnchecked actions FindAll
+    locateAll' = locateElmsUnchecked actions FindAll
 
     locateContained :: [ElementId] -> CompoundLocator HttpLoc -> m [ElementId]
     locateContained containerIds subLoc = do
