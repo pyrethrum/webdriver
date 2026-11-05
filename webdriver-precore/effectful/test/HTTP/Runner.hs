@@ -21,7 +21,7 @@ import Test.Tasty.HUnit (testCase)
 import UnliftIO (finally, throwIO)
 import WebDriver.Effectful
   ( WaitPrimative,
-    WebDriverHttp,
+    WebDriver,
     runWaitPrimative,
     runWebDriverHttp,
   )
@@ -31,7 +31,7 @@ import WebDriver.Effectful.Logger
     runLogger,
   )
 
-withHttp :: (forall es. (IOE :> es, Logger :> es, WaitPrimative :> es, WebDriverHttp :> es) => Eff es ()) -> IO ()
+withHttp :: (forall es. (IOE :> es, Logger :> es, WaitPrimative :> es, WebDriver :> es) => Eff es ()) -> IO ()
 withHttp action = do
   sess <- getWDSession False
   runHttp sess action `finally` closeWDSession sess
@@ -73,10 +73,10 @@ runWith ses act = do
     Left err -> throwIO (userError (unpack err))
     Right a -> pure a
 
-type BaseHTTPEffs a = forall es. (IOE :> es, Logger :> es, WaitPrimative :> es, WebDriverHttp :> es) => Eff es a
+type BaseHTTPEffs a = forall es. (IOE :> es, Logger :> es, WaitPrimative :> es, WebDriver :> es) => Eff es a
 
-type HttpTestEff = Eff '[WebDriverHttp, Logger, WaitPrimative, IOE]
+type HttpTestEff = Eff '[WebDriver, Logger, WaitPrimative, IOE]
 
 -- | Base effect stack for tests using the shared 'WebDriver' abstraction over
 -- HTTP, with the dynamic 'Error' effect first.
-type HttpBaseEffs = '[Error Text, WebDriverHttp, Logger, WaitPrimative, IOE]
+type HttpBaseEffs = '[Error Text, WebDriver, Logger, WaitPrimative, IOE]

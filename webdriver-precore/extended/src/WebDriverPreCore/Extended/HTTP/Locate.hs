@@ -1,7 +1,7 @@
 module WebDriverPreCore.Extended.HTTP.Locate
   (
     ExtendedRoleLocateSingleton(..),
-    HttpLocateOpts (..),
+    LocateOpts (..),
     LocateActions (..),
     SingletonCardinality (..),
     WDTrace(..),
@@ -82,7 +82,7 @@ instance ToJSON WDTrace
 instance FromJSON WDTrace
 
 -- | Options for singleton locate functions ('locateHttp', 'locateFromElementHttp').
-data HttpLocateOpts = MkHttpLocateOpts
+data LocateOpts = MkLocateOpts
   { jsRecheckDisplayed :: DisplayedCheck,
     extendedRoleLocation :: ExtendedRoleLocateSingleton,
     singletonCardinality :: SingletonCardinality,
@@ -121,8 +121,8 @@ data LocParams m = MkLocParams
     singletonCardinality :: SingletonCardinality
   }
 
-mkParams :: HttpLocateOpts -> LocateActions m -> LocParams m
-mkParams MkHttpLocateOpts{mkDefaultLoc = defaultLoc, ..} MkLocateActions{..} = MkLocParams{..}
+mkParams :: LocateOpts -> LocateActions m -> LocParams m
+mkParams MkLocateOpts{mkDefaultLoc = defaultLoc, ..} MkLocateActions{..} = MkLocParams{..}
 
 -- | Extract a single element from a locate result.
 mkSingleton :: Locator -> Either LocateException [ElementId] -> Either LocateException ElementId
@@ -132,19 +132,19 @@ mkSingleton loc = \case
   Left e        -> Left e
 
 -- | Locate a unique or first-matching element from the document root.
-locate :: forall m. Monad m => LocateActions m -> HttpLocateOpts -> Locator -> m (Either LocateException ElementId)
+locate :: forall m. Monad m => LocateActions m -> LocateOpts -> Locator -> m (Either LocateException ElementId)
 locate actions opts l = mkSingleton l <$> runHttpAction actions opts Nothing httpLocateSingleton l
 
 -- | Locate all matching elements from the document root.
-locateAll :: forall m. Monad m => LocateActions m -> HttpLocateOpts -> Locator -> m (Either LocateException [ElementId])
+locateAll :: forall m. Monad m => LocateActions m -> LocateOpts -> Locator -> m (Either LocateException [ElementId])
 locateAll actions opts = runHttpAction actions opts Nothing httpLocateAll
 
 -- | Locate a unique or first-matching element rooted at a given element.
-locateFromElement :: forall m. Monad m => LocateActions m -> HttpLocateOpts -> ElementId -> Locator -> m (Either LocateException ElementId)
+locateFromElement :: forall m. Monad m => LocateActions m -> LocateOpts -> ElementId -> Locator -> m (Either LocateException ElementId)
 locateFromElement actions opts rootId l = mkSingleton l <$> runHttpAction actions opts (Just rootId) httpLocateSingleton l
 
 -- | Locate all matching elements rooted at a given element.
-locateAllFromElement :: forall m. Monad m => LocateActions m -> HttpLocateOpts -> ElementId -> Locator -> m (Either LocateException [ElementId])
+locateAllFromElement :: forall m. Monad m => LocateActions m -> LocateOpts -> ElementId -> Locator -> m (Either LocateException [ElementId])
 locateAllFromElement actions opts rootId = runHttpAction actions opts (Just rootId) httpLocateAll
 
 -- | Common implementation for all public HTTP locate functions.
@@ -152,7 +152,7 @@ runHttpAction ::
   forall m.
   Monad m =>
   LocateActions m ->
-  HttpLocateOpts ->
+  LocateOpts ->
   -- | root element
   Maybe ElementId ->
   (LocParams m -> CompoundLocator HttpLoc -> m [ElementId]) ->

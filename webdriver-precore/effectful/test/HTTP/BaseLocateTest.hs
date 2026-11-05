@@ -82,10 +82,10 @@ tests =
         run :: forall a. Eff HttpBaseEffs a -> IO a
         run = runWith ses
 
-        interp :: L.HttpLocateOpts -> forall a. Eff (WebDriver ElementId : HttpBaseEffs) a -> Eff HttpBaseEffs a
+        interp :: L.LocateOpts -> forall a. Eff (WebDriver ElementId : HttpBaseEffs) a -> Eff HttpBaseEffs a
         interp = interpHttp
 
-    interpHttp :: L.HttpLocateOpts -> forall a. Eff (WebDriver ElementId : HttpBaseEffs) a -> Eff HttpBaseEffs a
+    interpHttp :: L.LocateOpts -> forall a. Eff (WebDriver ElementId : HttpBaseEffs) a -> Eff HttpBaseEffs a
     interpHttp opts = Interp.runWebDriverHttp opts
 
     viewportTests :: IO WDSession -> TestTree

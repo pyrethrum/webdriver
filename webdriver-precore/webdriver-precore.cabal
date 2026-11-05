@@ -458,7 +458,6 @@ library webdriver-effectful
       WebDriver.Effectful.Logger.Effect
       WebDriver.Effectful.Logger.KatipInterpreter
       WebDriver.Effectful.WaitPrimative
-      WebDriver.Effectful.HTTP.Core
       WebDriver.Effectful.HTTP.Base.Effect
       WebDriver.Effectful.HTTP.Base.Interpreter
       WebDriver.Effectful.HTTP.Base.Actions

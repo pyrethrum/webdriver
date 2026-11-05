@@ -112,7 +112,7 @@ import Data.Text (Text)
 import Effectful (Eff, (:>))
 import Effectful.Dispatch.Dynamic (send)
 import WebDriver.Effectful.HTTP.Base.Effect
-  ( WebDriverHttp (..),
+  ( WebDriver (..),
   )
 import WebDriverPreCore.Extended.HTTP.Base.Protocol
   ( Actions,
@@ -134,227 +134,227 @@ import WebDriverPreCore.Common.Protocol (URL)
 -- Root operations
 -- ---------------------------------------------------------------------------
 
-status :: (WebDriverHttp :> es) => Eff es Status
+status :: (WebDriver :> es) => Eff es Status
 status = send Status
 
 -- ---------------------------------------------------------------------------
 -- Session management
 -- ---------------------------------------------------------------------------
 
-getTimeouts :: (WebDriverHttp :> es) => Eff es Timeouts
+getTimeouts :: (WebDriver :> es) => Eff es Timeouts
 getTimeouts = send GetTimeouts
 
-setTimeouts :: (WebDriverHttp :> es) => Timeouts -> Eff es ()
+setTimeouts :: (WebDriver :> es) => Timeouts -> Eff es ()
 setTimeouts = send . SetTimeouts
 
 -- ---------------------------------------------------------------------------
 -- Navigation
 -- ---------------------------------------------------------------------------
 
-navigateTo :: (WebDriverHttp :> es) => URL -> Eff es ()
+navigateTo :: (WebDriver :> es) => URL -> Eff es ()
 navigateTo = send . NavigateTo
 
-getCurrentUrl :: (WebDriverHttp :> es) => Eff es URL
+getCurrentUrl :: (WebDriver :> es) => Eff es URL
 getCurrentUrl = send GetCurrentUrl
 
-back :: (WebDriverHttp :> es) => Eff es ()
+back :: (WebDriver :> es) => Eff es ()
 back = send Back
 
-forward :: (WebDriverHttp :> es) => Eff es ()
+forward :: (WebDriver :> es) => Eff es ()
 forward = send Forward
 
-refresh :: (WebDriverHttp :> es) => Eff es ()
+refresh :: (WebDriver :> es) => Eff es ()
 refresh = send Refresh
 
-getTitle :: (WebDriverHttp :> es) => Eff es Text
+getTitle :: (WebDriver :> es) => Eff es Text
 getTitle = send GetTitle
 
 -- ---------------------------------------------------------------------------
 -- Windows
 -- ---------------------------------------------------------------------------
 
-getWindowHandle :: (WebDriverHttp :> es) => Eff es Handle
+getWindowHandle :: (WebDriver :> es) => Eff es Handle
 getWindowHandle = send GetWindowHandle
 
-getWindowHandles :: (WebDriverHttp :> es) => Eff es [Handle]
+getWindowHandles :: (WebDriver :> es) => Eff es [Handle]
 getWindowHandles = send GetWindowHandles
 
-newWindow :: (WebDriverHttp :> es) => Eff es WindowHandleSpec
+newWindow :: (WebDriver :> es) => Eff es WindowHandleSpec
 newWindow = send NewWindow
 
-closeWindow :: (WebDriverHttp :> es) => Eff es [Handle]
+closeWindow :: (WebDriver :> es) => Eff es [Handle]
 closeWindow = send CloseWindow
 
-switchToWindow :: (WebDriverHttp :> es) => Handle -> Eff es ()
+switchToWindow :: (WebDriver :> es) => Handle -> Eff es ()
 switchToWindow = send . SwitchToWindow
 
-getWindowRect :: (WebDriverHttp :> es) => Eff es WindowRect
+getWindowRect :: (WebDriver :> es) => Eff es WindowRect
 getWindowRect = send GetWindowRect
 
-setWindowRect :: (WebDriverHttp :> es) => WindowRect -> Eff es WindowRect
+setWindowRect :: (WebDriver :> es) => WindowRect -> Eff es WindowRect
 setWindowRect = send . SetWindowRect
 
-maximizeWindow :: (WebDriverHttp :> es) => Eff es WindowRect
+maximizeWindow :: (WebDriver :> es) => Eff es WindowRect
 maximizeWindow = send MaximizeWindow
 
-minimizeWindow :: (WebDriverHttp :> es) => Eff es WindowRect
+minimizeWindow :: (WebDriver :> es) => Eff es WindowRect
 minimizeWindow = send MinimizeWindow
 
-fullScreenWindow :: (WebDriverHttp :> es) => Eff es WindowRect
+fullScreenWindow :: (WebDriver :> es) => Eff es WindowRect
 fullScreenWindow = send FullScreenWindow
 
 -- ---------------------------------------------------------------------------
 -- Frames
 -- ---------------------------------------------------------------------------
 
-switchToFrame :: (WebDriverHttp :> es) => FrameReference -> Eff es ()
+switchToFrame :: (WebDriver :> es) => FrameReference -> Eff es ()
 switchToFrame = send . SwitchToFrame
 
-switchToParentFrame :: (WebDriverHttp :> es) => Eff es ()
+switchToParentFrame :: (WebDriver :> es) => Eff es ()
 switchToParentFrame = send SwitchToParentFrame
 
 -- ---------------------------------------------------------------------------
 -- Page / Script
 -- ---------------------------------------------------------------------------
 
-getPageSource :: (WebDriverHttp :> es) => Eff es Text
+getPageSource :: (WebDriver :> es) => Eff es Text
 getPageSource = send GetPageSource
 
-executeScript :: (WebDriverHttp :> es) => Script -> Eff es Value
+executeScript :: (WebDriver :> es) => Script -> Eff es Value
 executeScript = send . ExecuteScript
 
-executeScriptAsync :: (WebDriverHttp :> es) => Script -> Eff es Value
+executeScriptAsync :: (WebDriver :> es) => Script -> Eff es Value
 executeScriptAsync = send . ExecuteScriptAsync
 
 -- ---------------------------------------------------------------------------
 -- Cookies
 -- ---------------------------------------------------------------------------
 
-addCookie :: (WebDriverHttp :> es) => Cookie -> Eff es ()
+addCookie :: (WebDriver :> es) => Cookie -> Eff es ()
 addCookie = send . AddCookie
 
-getAllCookies :: (WebDriverHttp :> es) => Eff es [Cookie]
+getAllCookies :: (WebDriver :> es) => Eff es [Cookie]
 getAllCookies = send GetAllCookies
 
-getNamedCookie :: (WebDriverHttp :> es) => Text -> Eff es Cookie
+getNamedCookie :: (WebDriver :> es) => Text -> Eff es Cookie
 getNamedCookie = send . GetNamedCookie
 
-deleteCookie :: (WebDriverHttp :> es) => Text -> Eff es ()
+deleteCookie :: (WebDriver :> es) => Text -> Eff es ()
 deleteCookie = send . DeleteCookie
 
-deleteAllCookies :: (WebDriverHttp :> es) => Eff es ()
+deleteAllCookies :: (WebDriver :> es) => Eff es ()
 deleteAllCookies = send DeleteAllCookies
 
 -- ---------------------------------------------------------------------------
 -- User actions / Prompts
 -- ---------------------------------------------------------------------------
 
-performActions :: (WebDriverHttp :> es) => Actions -> Eff es ()
+performActions :: (WebDriver :> es) => Actions -> Eff es ()
 performActions = send . PerformActions
 
-releaseActions :: (WebDriverHttp :> es) => Eff es ()
+releaseActions :: (WebDriver :> es) => Eff es ()
 releaseActions = send ReleaseActions
 
-dismissAlert :: (WebDriverHttp :> es) => Eff es ()
+dismissAlert :: (WebDriver :> es) => Eff es ()
 dismissAlert = send DismissAlert
 
-acceptAlert :: (WebDriverHttp :> es) => Eff es ()
+acceptAlert :: (WebDriver :> es) => Eff es ()
 acceptAlert = send AcceptAlert
 
-getAlertText :: (WebDriverHttp :> es) => Eff es Text
+getAlertText :: (WebDriver :> es) => Eff es Text
 getAlertText = send GetAlertText
 
-sendAlertText :: (WebDriverHttp :> es) => Text -> Eff es ()
+sendAlertText :: (WebDriver :> es) => Text -> Eff es ()
 sendAlertText = send . SendAlertText
 
 -- ---------------------------------------------------------------------------
 -- Screenshots / Print
 -- ---------------------------------------------------------------------------
 
-takeScreenshot :: (WebDriverHttp :> es) => Eff es Text
+takeScreenshot :: (WebDriver :> es) => Eff es Text
 takeScreenshot = send TakeScreenshot
 
-printPage :: (WebDriverHttp :> es) => Eff es Text
+printPage :: (WebDriver :> es) => Eff es Text
 printPage = send PrintPage
 
 -- ---------------------------------------------------------------------------
 -- Element finders
 -- ---------------------------------------------------------------------------
 
-getActiveElement :: (WebDriverHttp :> es) => Eff es ElementId
+getActiveElement :: (WebDriver :> es) => Eff es ElementId
 getActiveElement = send GetActiveElement
 
-findElement :: (WebDriverHttp :> es) => Selector -> Eff es ElementId
+findElement :: (WebDriver :> es) => Selector -> Eff es ElementId
 findElement = send . FindElement
 
-findElements :: (WebDriverHttp :> es) => Selector -> Eff es [ElementId]
+findElements :: (WebDriver :> es) => Selector -> Eff es [ElementId]
 findElements = send . FindElements
 
 -- ---------------------------------------------------------------------------
 -- Element sub-finders
 -- ---------------------------------------------------------------------------
 
-findElementFromElement :: (WebDriverHttp :> es) => ElementId -> Selector -> Eff es ElementId
+findElementFromElement :: (WebDriver :> es) => ElementId -> Selector -> Eff es ElementId
 findElementFromElement el = send . FindElementFromElement el
 
-findElementsFromElement :: (WebDriverHttp :> es) => ElementId -> Selector -> Eff es [ElementId]
+findElementsFromElement :: (WebDriver :> es) => ElementId -> Selector -> Eff es [ElementId]
 findElementsFromElement el = send . FindElementsFromElement el
 
-findElementFromShadowRoot :: (WebDriverHttp :> es) => ShadowRootElementId -> Selector -> Eff es ElementId
+findElementFromShadowRoot :: (WebDriver :> es) => ShadowRootElementId -> Selector -> Eff es ElementId
 findElementFromShadowRoot sr = send . FindElementFromShadowRoot sr
 
-findElementsFromShadowRoot :: (WebDriverHttp :> es) => ShadowRootElementId -> Selector -> Eff es [ElementId]
+findElementsFromShadowRoot :: (WebDriver :> es) => ShadowRootElementId -> Selector -> Eff es [ElementId]
 findElementsFromShadowRoot sr = send . FindElementsFromShadowRoot sr
 
 -- ---------------------------------------------------------------------------
 -- Element state
 -- ---------------------------------------------------------------------------
 
-isElementSelected :: (WebDriverHttp :> es) => ElementId -> Eff es Bool
+isElementSelected :: (WebDriver :> es) => ElementId -> Eff es Bool
 isElementSelected = send . IsElementSelected
 
-getElementAttribute :: (WebDriverHttp :> es) => ElementId -> Text -> Eff es (Maybe Text)
+getElementAttribute :: (WebDriver :> es) => ElementId -> Text -> Eff es (Maybe Text)
 getElementAttribute el = send . GetElementAttribute el
 
-getElementProperty :: (WebDriverHttp :> es) => ElementId -> Text -> Eff es (Maybe Value)
+getElementProperty :: (WebDriver :> es) => ElementId -> Text -> Eff es (Maybe Value)
 getElementProperty el = send . GetElementProperty el
 
-getElementCssValue :: (WebDriverHttp :> es) => ElementId -> Text -> Eff es Text
+getElementCssValue :: (WebDriver :> es) => ElementId -> Text -> Eff es Text
 getElementCssValue el = send . GetElementCssValue el
 
-getElementShadowRoot :: (WebDriverHttp :> es) => ElementId -> Eff es ShadowRootElementId
+getElementShadowRoot :: (WebDriver :> es) => ElementId -> Eff es ShadowRootElementId
 getElementShadowRoot = send . GetElementShadowRoot
 
-getElementText :: (WebDriverHttp :> es) => ElementId -> Eff es Text
+getElementText :: (WebDriver :> es) => ElementId -> Eff es Text
 getElementText = send . GetElementText
 
-getElementTagName :: (WebDriverHttp :> es) => ElementId -> Eff es Text
+getElementTagName :: (WebDriver :> es) => ElementId -> Eff es Text
 getElementTagName = send . GetElementTagName
 
-getElementRect :: (WebDriverHttp :> es) => ElementId -> Eff es WindowRect
+getElementRect :: (WebDriver :> es) => ElementId -> Eff es WindowRect
 getElementRect = send . GetElementRect
 
-isElementEnabled :: (WebDriverHttp :> es) => ElementId -> Eff es Bool
+isElementEnabled :: (WebDriver :> es) => ElementId -> Eff es Bool
 isElementEnabled = send . IsElementEnabled
 
-getElementComputedRole :: (WebDriverHttp :> es) => ElementId -> Eff es Text
+getElementComputedRole :: (WebDriver :> es) => ElementId -> Eff es Text
 getElementComputedRole = send . GetElementComputedRole
 
-getElementComputedLabel :: (WebDriverHttp :> es) => ElementId -> Eff es Text
+getElementComputedLabel :: (WebDriver :> es) => ElementId -> Eff es Text
 getElementComputedLabel = send . GetElementComputedLabel
 
 -- ---------------------------------------------------------------------------
 -- Element actions
 -- ---------------------------------------------------------------------------
 
-elementClick :: (WebDriverHttp :> es) => ElementId -> Eff es ()
+elementClick :: (WebDriver :> es) => ElementId -> Eff es ()
 elementClick = send . ElementClick
 
-elementClear :: (WebDriverHttp :> es) => ElementId -> Eff es ()
+elementClear :: (WebDriver :> es) => ElementId -> Eff es ()
 elementClear = send . ElementClear
 
-elementSendKeys :: (WebDriverHttp :> es) => ElementId -> Text -> Eff es ()
+elementSendKeys :: (WebDriver :> es) => ElementId -> Text -> Eff es ()
 elementSendKeys el = send . ElementSendKeys el
 
-takeElementScreenshot :: (WebDriverHttp :> es) => ElementId -> Eff es Text
+takeElementScreenshot :: (WebDriver :> es) => ElementId -> Eff es Text
 takeElementScreenshot = send . TakeElementScreenshot

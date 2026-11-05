@@ -3,11 +3,11 @@ module HTTP.LocateOpts (defHttpOpts) where
 import WebDriverPreCore.Extended.HTTP.Locate
     ( SingletonCardinality(..),
       ExtendedRoleLocateSingleton(..),
-      HttpLocateOpts(..) ) 
+      LocateOpts(..) ) 
 import Common.Utils (autoId)
 import WebDriverPreCore.Extended.Locators (DisplayedCheck(..))
 
-defHttpOpts :: HttpLocateOpts
+defHttpOpts :: LocateOpts
 defHttpOpts =
   MkHttpLocateOpts
     { extendedRoleLocation = ExtLocateNever,

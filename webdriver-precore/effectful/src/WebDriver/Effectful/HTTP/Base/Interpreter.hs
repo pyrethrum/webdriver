@@ -8,6 +8,8 @@
 module WebDriver.Effectful.HTTP.Base.Interpreter
   ( runWebDriverHttp,
     HttpParams (..),
+    -- Reexports
+    HR.HttpEndpoint(..)
   )
 where
 
@@ -16,7 +18,7 @@ import Effectful (Eff, IOE, (:>))
 import Effectful.Dispatch.Dynamic (interpret)
 import UnliftIO (throwIO)
 import WebDriver.Effectful.HTTP.Base.Effect
-  ( WebDriverHttp (..),
+  ( WebDriver (..),
   )
 import WebDriver.Effectful.Logger.Effect (Logger, logDebug)
 import WebDriverPreCore.Extended.HTTP.Base.Actions qualified as A
@@ -35,7 +37,7 @@ data HttpParams = MkHttpParams
 -- HTTP interpreter
 -- ---------------------------------------------------------------------------
 
-runWebDriverHttp :: forall es a. (IOE :> es, Logger :> es) => HttpParams -> Eff (WebDriverHttp : es) a -> Eff es a
+runWebDriverHttp :: forall es a. (IOE :> es, Logger :> es) => HttpParams -> Eff (WebDriver : es) a -> Eff es a
 runWebDriverHttp MkHttpParams {session = sess, endpoint} = interpret $ \_localEnv -> \case
   Status -> runRoot A.status
   GetTimeouts -> run A.getTimeouts

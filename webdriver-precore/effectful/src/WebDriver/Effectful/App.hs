@@ -16,13 +16,8 @@ import Data.Aeson (FromJSON)
 import Effectful (Eff, IOE, Limit (..), Persistence (..), UnliftStrategy (..), withUnliftStrategy, (:>))
 import Effectful.Error.Static (Error, throwError)
 import Effectful.Exception (bracket)
-import WebDriver.Effectful.HTTP.Base.Interpreter (HttpParams (..))
-import WebDriver.Effectful.HTTP.Core
-  ( WebDriverBiDi,
-    WebDriverHttp,
-    runWebDriverBiDi,
-    runWebDriverHttp,
-  )
+import WebDriver.Effectful.HTTP.Base.Interpreter (HttpParams (..), runWebDriverHttp)
+
 import WebDriver.Effectful.Logger (Logger, logDebug)
 import WebDriverPreCore.BiDiRunner qualified as BiDiRunner
 import WebDriverPreCore.Extended.Capabilities (HttpSessionResponse (..))
@@ -31,6 +26,9 @@ import WebDriverPreCore.Extended.Session qualified as ES
 import WebDriverPreCore.Extended.HTTP.Base.Actions qualified as HA
 import WebDriverPreCore.HttpRunner (Command, HttpEndpoint, ParseFailure, callWebDriver)
 import WebDriverPreCore.Utils.Utils (throwLeft)
+import WebDriver.Effectful.HTTP.Base.Effect qualified as HTTP
+import WebDriver.Effectful.BiDi.Base.Effect qualified as BiDi
+import WebDriver.Effectful.BiDi.Base.Interpreter (runWebDriverBiDi)
 
 -- ---------------------------------------------------------------------------
 -- HTTP Session Management
@@ -59,7 +57,7 @@ withHttpSession ::
   (IOE :> es, Logger :> es, Error ParseFailure :> es) =>
   HttpEndpoint ->
   EC.HttpCapabilities ->
-  Eff (WebDriverHttp : es) a ->
+  Eff (HTTP.WebDriver : es) a ->
   Eff es a
 withHttpSession endpoint caps action =
   bracket
@@ -103,7 +101,7 @@ releaseBiDiSession handle =
 withBiDiSession ::
   (IOE :> es, Logger :> es) =>
   BiDiRunner.BiDiUrl ->
-  Eff (WebDriverBiDi : es) a ->
+  Eff (BiDi.WebDriverBiDi : es) a ->
   Eff es a
 withBiDiSession bidiUrl action =
   bracket

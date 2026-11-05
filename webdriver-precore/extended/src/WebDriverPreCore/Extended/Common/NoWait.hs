@@ -4,9 +4,9 @@
 --
 -- TODO: implementation pending.
 module WebDriverPreCore.Extended.Common.NoWait
-  ( LocateParams (..),
+  ( ActionParams (..),
     ActionException (..),
-    LocateAction,
+    ElmAction,
     runAction
   )
 where
@@ -24,16 +24,16 @@ data ActionException
   | ElmException WebDriverException
   | UnknownException SomeException
 
-data LocateParams m elm r t = MKLocateAction
+data ActionParams m elm r t = MKLocateAction
   { locate :: Locator -> m (Either LocateException elm),
     -- throw :: forall a. HasCallStack => ActionException -> m a,
     catch :: forall a e. (HasCallStack, Exception e) => m a -> (e -> m a) -> m a,
     trace :: t -> m ()
   }
 
-type LocateAction m elm r = elm -> m (Either ActionException r)
+type ElmAction m elm r = elm -> m (Either ActionException r)
 
-runAction :: Monad m => LocateParams m elm r t -> LocateAction m elm r  -> Locator -> m (Either ActionException r)
+runAction :: Monad m => ActionParams m elm r t -> ElmAction m elm r -> Locator -> m (Either ActionException r)
 runAction MKLocateAction {catch, locate} action loc = 
   catch 
     (locate loc >>= either (pure . Left . LocateException) action)

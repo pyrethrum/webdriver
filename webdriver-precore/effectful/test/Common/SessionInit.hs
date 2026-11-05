@@ -13,9 +13,8 @@ import Effectful (MonadIO, liftIO, runEff)
 import Effectful.Error.Static (HasCallStack, runErrorNoCallStack)
 import System.IO (Handle)
 import UnliftIO (finally, onException)
-import WebDriver.Effectful (FullCapabilities (..), HttpCapabilities, HttpEndpoint (..))
 import WebDriver.Effectful.App (acquireHttpSession, releaseHttpSession)
-import WebDriver.Effectful.HTTP.Base.Interpreter (HttpParams (..))
+import WebDriver.Effectful.HTTP.Base.Interpreter (HttpParams (..), HttpEndpoint (..))
 import WebDriver.Effectful.Logger
   ( LogEnv,
     LoggerData (..),
@@ -24,12 +23,15 @@ import WebDriver.Effectful.Logger
     releaseLogger,
     runLogger,
   )
-import WebDriverPreCore.Extended.Capabilities (HttpSessionResponse (..), fromHttpCapability)
+import WebDriverPreCore.Extended.Capabilities (HttpSessionResponse (..), fromHttpCapability, HttpCapabilities)
 import WebDriverPreCore.Common.Protocol (Session, URL)
-import WebDriverPreCore.HTTP.Protocol (Capabilities (..), ParseFailure)
+import WebDriverPreCore.HTTP.Protocol (Capabilities (..), ParseFailure, FullCapabilities (..))
 import WebDriverPreCore.Test.CapabilitiesBuilder (httpCapabilities)
 import WebDriverPreCore.Test.ConfigLoader (Config (..), loadConfig)
 import WebDriverPreCore.Utils.Utils (ioThrow)
+
+
+
 
 mkHttpCaps :: Bool -> Config -> HttpCapabilities
 mkHttpCaps bidiSocket config =

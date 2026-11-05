@@ -4,7 +4,7 @@
 module WebDriver.Effectful.HTTP.Base.Effect
   ( 
     -- * HTTP Effect
-    WebDriverHttp (..),
+    WebDriver (..),
   )
 where
 
@@ -59,78 +59,78 @@ import WebDriverPreCore.Common.Protocol (URL)
 --
 -- Smart constructors for each operation are in
 -- "WebDriver.Effectful.HTTP.Base.Actions".
-data WebDriverHttp :: Effect where
+data WebDriver :: Effect where
   -- Root operations (no session required)
-  Status :: WebDriverHttp m Status
+  Status :: WebDriver m Status
   -- Session operations (require active session managed by withHttpSession)
-  GetTimeouts :: WebDriverHttp m Timeouts
-  SetTimeouts :: Timeouts -> WebDriverHttp m ()
+  GetTimeouts :: WebDriver m Timeouts
+  SetTimeouts :: Timeouts -> WebDriver m ()
   -- Navigation
-  NavigateTo :: URL -> WebDriverHttp m ()
-  GetCurrentUrl :: WebDriverHttp m URL
-  Back :: WebDriverHttp m ()
-  Forward :: WebDriverHttp m ()
-  Refresh :: WebDriverHttp m ()
-  GetTitle :: WebDriverHttp m Text
+  NavigateTo :: URL -> WebDriver m ()
+  GetCurrentUrl :: WebDriver m URL
+  Back :: WebDriver m ()
+  Forward :: WebDriver m ()
+  Refresh :: WebDriver m ()
+  GetTitle :: WebDriver m Text
   -- Windows
-  GetWindowHandle :: WebDriverHttp m Handle
-  GetWindowHandles :: WebDriverHttp m [Handle]
-  NewWindow :: WebDriverHttp m WindowHandleSpec
-  CloseWindow :: WebDriverHttp m [Handle]
-  SwitchToWindow :: Handle -> WebDriverHttp m ()
-  GetWindowRect :: WebDriverHttp m WindowRect
-  SetWindowRect :: WindowRect -> WebDriverHttp m WindowRect
-  MaximizeWindow :: WebDriverHttp m WindowRect
-  MinimizeWindow :: WebDriverHttp m WindowRect
-  FullScreenWindow :: WebDriverHttp m WindowRect
+  GetWindowHandle :: WebDriver m Handle
+  GetWindowHandles :: WebDriver m [Handle]
+  NewWindow :: WebDriver m WindowHandleSpec
+  CloseWindow :: WebDriver m [Handle]
+  SwitchToWindow :: Handle -> WebDriver m ()
+  GetWindowRect :: WebDriver m WindowRect
+  SetWindowRect :: WindowRect -> WebDriver m WindowRect
+  MaximizeWindow :: WebDriver m WindowRect
+  MinimizeWindow :: WebDriver m WindowRect
+  FullScreenWindow :: WebDriver m WindowRect
   -- Frames
-  SwitchToFrame :: FrameReference -> WebDriverHttp m ()
-  SwitchToParentFrame :: WebDriverHttp m ()
+  SwitchToFrame :: FrameReference -> WebDriver m ()
+  SwitchToParentFrame :: WebDriver m ()
   -- Page / Script
-  GetPageSource :: WebDriverHttp m Text
-  ExecuteScript :: Script -> WebDriverHttp m Value
-  ExecuteScriptAsync :: Script -> WebDriverHttp m Value
+  GetPageSource :: WebDriver m Text
+  ExecuteScript :: Script -> WebDriver m Value
+  ExecuteScriptAsync :: Script -> WebDriver m Value
   -- Cookies
-  AddCookie :: Cookie -> WebDriverHttp m ()
-  GetAllCookies :: WebDriverHttp m [Cookie]
-  GetNamedCookie :: Text -> WebDriverHttp m Cookie
-  DeleteCookie :: Text -> WebDriverHttp m ()
-  DeleteAllCookies :: WebDriverHttp m ()
+  AddCookie :: Cookie -> WebDriver m ()
+  GetAllCookies :: WebDriver m [Cookie]
+  GetNamedCookie :: Text -> WebDriver m Cookie
+  DeleteCookie :: Text -> WebDriver m ()
+  DeleteAllCookies :: WebDriver m ()
   -- Actions / Prompts
-  PerformActions :: Actions -> WebDriverHttp m ()
-  ReleaseActions :: WebDriverHttp m ()
-  DismissAlert :: WebDriverHttp m ()
-  AcceptAlert :: WebDriverHttp m ()
-  GetAlertText :: WebDriverHttp m Text
-  SendAlertText :: Text -> WebDriverHttp m ()
+  PerformActions :: Actions -> WebDriver m ()
+  ReleaseActions :: WebDriver m ()
+  DismissAlert :: WebDriver m ()
+  AcceptAlert :: WebDriver m ()
+  GetAlertText :: WebDriver m Text
+  SendAlertText :: Text -> WebDriver m ()
   -- Screenshots / Print
-  TakeScreenshot :: WebDriverHttp m Text
-  PrintPage :: WebDriverHttp m Text
+  TakeScreenshot :: WebDriver m Text
+  PrintPage :: WebDriver m Text
   -- Elements
-  GetActiveElement :: WebDriverHttp m ElementId
-  FindElement :: Selector -> WebDriverHttp m ElementId
-  FindElements :: Selector -> WebDriverHttp m [ElementId]
+  GetActiveElement :: WebDriver m ElementId
+  FindElement :: Selector -> WebDriver m ElementId
+  FindElements :: Selector -> WebDriver m [ElementId]
   -- Element sub-finders
-  FindElementFromElement :: ElementId -> Selector -> WebDriverHttp m ElementId
-  FindElementsFromElement :: ElementId -> Selector -> WebDriverHttp m [ElementId]
-  FindElementFromShadowRoot :: ShadowRootElementId -> Selector -> WebDriverHttp m ElementId
-  FindElementsFromShadowRoot :: ShadowRootElementId -> Selector -> WebDriverHttp m [ElementId]
+  FindElementFromElement :: ElementId -> Selector -> WebDriver m ElementId
+  FindElementsFromElement :: ElementId -> Selector -> WebDriver m [ElementId]
+  FindElementFromShadowRoot :: ShadowRootElementId -> Selector -> WebDriver m ElementId
+  FindElementsFromShadowRoot :: ShadowRootElementId -> Selector -> WebDriver m [ElementId]
   -- Element state
-  IsElementSelected :: ElementId -> WebDriverHttp m Bool
-  GetElementAttribute :: ElementId -> Text -> WebDriverHttp m (Maybe Text)
-  GetElementProperty :: ElementId -> Text -> WebDriverHttp m (Maybe Value)
-  GetElementCssValue :: ElementId -> Text -> WebDriverHttp m Text
-  GetElementShadowRoot :: ElementId -> WebDriverHttp m ShadowRootElementId
-  GetElementText :: ElementId -> WebDriverHttp m Text
-  GetElementTagName :: ElementId -> WebDriverHttp m Text
-  GetElementRect :: ElementId -> WebDriverHttp m WindowRect
-  IsElementEnabled :: ElementId -> WebDriverHttp m Bool
-  GetElementComputedRole :: ElementId -> WebDriverHttp m Text
-  GetElementComputedLabel :: ElementId -> WebDriverHttp m Text
+  IsElementSelected :: ElementId -> WebDriver m Bool
+  GetElementAttribute :: ElementId -> Text -> WebDriver m (Maybe Text)
+  GetElementProperty :: ElementId -> Text -> WebDriver m (Maybe Value)
+  GetElementCssValue :: ElementId -> Text -> WebDriver m Text
+  GetElementShadowRoot :: ElementId -> WebDriver m ShadowRootElementId
+  GetElementText :: ElementId -> WebDriver m Text
+  GetElementTagName :: ElementId -> WebDriver m Text
+  GetElementRect :: ElementId -> WebDriver m WindowRect
+  IsElementEnabled :: ElementId -> WebDriver m Bool
+  GetElementComputedRole :: ElementId -> WebDriver m Text
+  GetElementComputedLabel :: ElementId -> WebDriver m Text
   -- Element actions
-  ElementClick :: ElementId -> WebDriverHttp m ()
-  ElementClear :: ElementId -> WebDriverHttp m ()
-  ElementSendKeys :: ElementId -> Text -> WebDriverHttp m ()
-  TakeElementScreenshot :: ElementId -> WebDriverHttp m Text
+  ElementClick :: ElementId -> WebDriver m ()
+  ElementClear :: ElementId -> WebDriver m ()
+  ElementSendKeys :: ElementId -> Text -> WebDriver m ()
+  TakeElementScreenshot :: ElementId -> WebDriver m Text
 
-type instance DispatchOf WebDriverHttp = Dynamic
+type instance DispatchOf WebDriver = Dynamic

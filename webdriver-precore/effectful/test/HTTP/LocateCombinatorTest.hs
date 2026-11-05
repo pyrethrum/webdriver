@@ -25,10 +25,10 @@ tests =
   withResource (getWDSession False) closeWDSession $ \ses ->
     Common.tests (runWith ses) (interpHttp opts) 
   where
-    opts :: L.HttpLocateOpts
+    opts :: L.LocateOpts
     opts = defHttpOpts {L.jsRecheckDisplayed = DisplayedCheckNever}
 
-    interpHttp :: L.HttpLocateOpts -> forall a. Eff (WebDriver ElementId : HttpBaseEffs) a -> Eff HttpBaseEffs a
+    interpHttp :: L.LocateOpts -> forall a. Eff (WebDriver ElementId : HttpBaseEffs) a -> Eff HttpBaseEffs a
     interpHttp = Interp.runWebDriverHttp
 
 -- locators mixture of css and xpath
