@@ -1,13 +1,15 @@
 module WebDriverPreCore.Extended.Locators
   ( -- * Locator Type
-    Locator,
+    Locator(..),
 
     -- * Re-exports from Internal
     AriaRole (..),
-    MatchType (..),
     CaseSensitivity (..),
     DisplayedCheck (..),
+    InvalidLocator(..),
     LocateException (..),
+    MatchType (..),
+    RoleLocator (..),
 
     -- * Smart Constructors
     css,
@@ -198,7 +200,8 @@ import WebDriverPreCore.Extended.Common.Locate
     LocateException (..),
     Locator (..),
     MatchType (..),
-    RoleLocator (..),
+    RoleLocator (..), 
+    InvalidLocator(..)
   )
 import Prelude
 

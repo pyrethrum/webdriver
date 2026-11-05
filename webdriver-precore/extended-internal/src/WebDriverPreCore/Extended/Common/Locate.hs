@@ -209,21 +209,12 @@ transform' locToIntermediate eliminateDrived defLoc loc = do
 
 -- ###################################### Locator types (and subtypes) #####################################
 
-data MatchFlags = MkMatchFlags
-  { ignoreCase :: Bool,
-    matchType :: MatchType
-  }
-  deriving (Show, Eq)
-
---
-data LocatorDirectives = ToDo deriving (Show, Eq)
-
 data RoleLocator
   = RoleFull {role :: AriaRole, name :: Text}
   | RoleType {role :: AriaRole}
   | RoleName {name :: Text}
   deriving
-    ( -- | WithOptions {base :: Locator, options :: [LocatorDirectives]}
+    (
       Show,
       Eq,
       Ord,
@@ -557,7 +548,7 @@ convertTagsXPathIDsBiDi = go
 
 -- ###################################### Common transformation types #####################################
 
--- | CompoundLocator represents the tree structure of composed locators.
+-- | Intermediate locator tree before final conversion.
 data CompoundLocatorI a
   = LeafI {getLeaf :: a}
   | TagLeaf {tag :: Text}
@@ -567,6 +558,7 @@ data CompoundLocatorI a
   | AnyI {elms :: NonEmpty (CompoundLocatorI a)}
   deriving (Show, Eq, Ord, Functor, Foldable, Traversable)
 
+-- | Final locator tree.
 data CompoundLocator a
   = LeafC {getLeaf :: a}
   | ContainsC {container :: CompoundLocator a, contained :: CompoundLocator a}

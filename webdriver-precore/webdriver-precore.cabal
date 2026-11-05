@@ -399,8 +399,9 @@ library webdriver-precore-extended
       WebDriverPreCore.Extended.Session
 
   other-modules:
-      WebDriverPreCore.Extended.HTTP.CompoundActions
-      WebDriverPreCore.Extended.BiDi.CompoundActions
+      WebDriverPreCore.Extended.Common.NoWait
+      WebDriverPreCore.Extended.HTTP.NoWait
+      WebDriverPreCore.Extended.BiDi.NoWait
 
   hs-source-dirs: extended/src
   build-depends:
