@@ -23,15 +23,12 @@ import WebDriver.Effectful.Logger
     releaseLogger,
     runLogger,
   )
-import WebDriverPreCore.Extended.Capabilities (HttpSessionResponse (..), fromHttpCapability, HttpCapabilities)
+import WebDriverPreCore.Extended.Capabilities (HttpSessionResponse (..), fromHttpCapability, HttpCapabilities, FullCapabilities(..))
 import WebDriverPreCore.Common.Protocol (Session, URL)
-import WebDriverPreCore.HTTP.Protocol (Capabilities (..), ParseFailure, FullCapabilities (..))
+import WebDriverPreCore.HTTP.Protocol (Capabilities (..), ParseFailure)
 import WebDriverPreCore.Test.CapabilitiesBuilder (httpCapabilities)
 import WebDriverPreCore.Test.ConfigLoader (Config (..), loadConfig)
 import WebDriverPreCore.Utils.Utils (ioThrow)
-
-
-
 
 mkHttpCaps :: Bool -> Config -> HttpCapabilities
 mkHttpCaps bidiSocket config =

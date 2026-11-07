@@ -25,6 +25,10 @@ import WebDriverPreCore.BiDi.Protocol
   )
 import WebDriverPreCore.Extended.BiDi.Locate qualified as BL
 import WebDriverPreCore.Utils.Utils (ioThrow)
+import WebDriver.Effectful.WaitPrimative (WaitPrimative)
+import WebDriver.Effectful.BiDi.Base.Effect (WebDriverBiDi)
+import WebDriverPreCore.BiDiRunner (BiDiRunClose)
+
 
 -- | Acquire a BiDi-enabled session, run the action, then release resources.
 withBidi :: (forall es. (IOE :> es, Logger :> es, WaitPrimative :> es, WebDriverBiDi :> es) => Eff es ()) -> IO ()

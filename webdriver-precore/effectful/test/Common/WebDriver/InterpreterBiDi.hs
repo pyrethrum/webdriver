@@ -16,11 +16,11 @@ import Effectful (Eff, IOE, (:>))
 import Effectful.Dispatch.Dynamic (interpret)
 import Effectful.Exception (catch)
 import UnliftIO (throwIO)
-import WebDriver.Effectful (WebDriverBiDi)
 import WebDriver.Effectful.BiDi.Base.Actions qualified as B
 import WebDriverPreCore.BiDi.Protocol hiding (Locator)
 import WebDriverPreCore.Extended.BiDi.Locate qualified as BL
 import WebDriverPreCore.Extended.Locators (Locator, LocateException(..))
+import WebDriver.Effectful.BiDi.Base.Effect (WebDriverBiDi)
 
 -- | Interpret 'WebDriver' in terms of the 'WebDriverBiDi' effect.
 runWebDriverBiDi ::

@@ -19,17 +19,14 @@ import Effectful.Error.Dynamic (Error, runErrorNoCallStack)
 import Test.Tasty (TestTree)
 import Test.Tasty.HUnit (testCase)
 import UnliftIO (finally, throwIO)
-import WebDriver.Effectful
-  ( WaitPrimative,
-    WebDriver,
-    runWaitPrimative,
-    runWebDriverHttp,
-  )
-import WebDriver.Effectful.HTTP.Base.Interpreter (HttpParams (..))
+
+import WebDriver.Effectful.HTTP.Base.Interpreter (HttpParams (..), runWebDriverHttp)
 import WebDriver.Effectful.Logger
   ( Logger,
     runLogger,
   )
+import WebDriver.Effectful.WaitPrimative (WaitPrimative, runWaitPrimative)
+import WebDriver.Effectful.HTTP.Base.Effect (WebDriver)
 
 withHttp :: (forall es. (IOE :> es, Logger :> es, WaitPrimative :> es, WebDriver :> es) => Eff es ()) -> IO ()
 withHttp action = do

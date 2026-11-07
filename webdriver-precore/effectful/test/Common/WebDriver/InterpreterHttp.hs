@@ -8,17 +8,16 @@ import Effectful (Eff, IOE, (:>))
 import Effectful.Dispatch.Dynamic (interpret)
 import Effectful.Exception (catch)
 import UnliftIO (throwIO)
-import WebDriver.Effectful (WebDriver)
 import WebDriver.Effectful.HTTP.Base.Actions qualified as H
 import WebDriverPreCore.Extended.HTTP.Base.Protocol (ElementId, Script (MkScript, args, script))
 import WebDriverPreCore.Extended.HTTP.Locate qualified as L
-
-import Common.WebDriver.Effect (WebDriver (..))
+import WebDriver.Effectful.HTTP.Base.Effect qualified as HTTPEff
+import Common.WebDriver.Effect ( WebDriver(..) )
 
 -- | Interpret 'WebDriver' in terms of the 'WebDriverHttp' effect.
 runWebDriverHttp ::
   forall es a.
-  (IOE :> es, WebDriver :> es) =>
+  (IOE :> es, HTTPEff.WebDriver :> es) =>
   L.LocateOpts ->
   Eff (WebDriver ElementId : es) a ->
   Eff es a
@@ -37,7 +36,7 @@ runWebDriverHttp opts = interpret $ \_ -> \case
     actions = mkHttpLocateActions
 
 -- | Build HTTP 'L.LocateActions' from the 'WebDriverHttp' effect.
-mkHttpLocateActions :: forall es. (IOE :> es, WebDriver :> es) => L.LocateActions (Eff es)
+mkHttpLocateActions :: forall es. (IOE :> es, HTTPEff.WebDriver :> es) => L.LocateActions (Eff es)
 mkHttpLocateActions =
   L.MkLocateActions
     { throw = throwIO,
