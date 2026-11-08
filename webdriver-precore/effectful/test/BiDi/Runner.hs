@@ -3,7 +3,6 @@ module BiDi.Runner where
 import Common.SessionInit (WDSession (..), closeWDSession, getWDSession)
 import Common.Utils (autoId)
 import Common.WebDriver.Effect (WebDriver)
-import Common.WebDriver.InterpreterBiDi qualified as Interp
 import Data.Text (Text, unpack)
 import Data.Text qualified as T
 import Effectful (Eff, IOE, liftIO, runEff, (:>))
@@ -13,7 +12,9 @@ import Test.Tasty.HUnit (testCase)
 import UnliftIO (SomeException, catchAny, finally, throwIO, try)
 import WebDriver.Effectful
 import WebDriver.Effectful.BiDi.Base.Actions (browsingContextGetTree)
+import WebDriver.Effectful.BiDi.Base.Effect (WebDriverBiDi)
 import WebDriver.Effectful.Logger (Logger, logError, runLogger)
+import WebDriver.Effectful.WaitPrimative (WaitPrimative, runWaitPrimative)
 import WebDriverPreCore.BiDi.Protocol
   ( BrowsingContext,
     GetTree (..),
@@ -25,10 +26,9 @@ import WebDriverPreCore.BiDi.Protocol
   )
 import WebDriverPreCore.Extended.BiDi.Locate qualified as BL
 import WebDriverPreCore.Utils.Utils (ioThrow)
-import WebDriver.Effectful.WaitPrimative (WaitPrimative)
-import WebDriver.Effectful.BiDi.Base.Effect (WebDriverBiDi)
-import WebDriverPreCore.BiDiRunner (BiDiRunClose)
-
+import WebDriverPreCore.BiDiRunner (BiDiRunClose (..), parseBiDiUrlProperty)
+import WebDriver.Effectful.App (withBiDiSession, acquireBiDiSession, releaseBiDiSession)
+import WebDriver.Effectful.BiDi.Base.Interpreter (runWebDriverBiDi)
 
 -- | Acquire a BiDi-enabled session, run the action, then release resources.
 withBidi :: (forall es. (IOE :> es, Logger :> es, WaitPrimative :> es, WebDriverBiDi :> es) => Eff es ()) -> IO ()
@@ -36,9 +36,8 @@ withBidi action = do
   sess <- getWDSession True
   runBiDi sess action `finally` closeWDSession sess
 
--- | Run a 'BiDiTestEff' action as a Tasty test using a session supplied by the
--- caller (typically via 'Test.Tasty.withResource').
-runBiDiTest :: IO WDSession -> Text -> BiDiTestEff () -> TestTree
+
+runBiDiTest :: IO WDSession -> Text -> Eff '[WebDriverBiDi, Logger, WaitPrimative, IOE] () -> TestTree
 runBiDiTest sessPrms name action =
   testCase (unpack name) $
     sessPrms >>= flip runBiDi action
@@ -62,8 +61,6 @@ type BiDiTestEff = Eff '[WebDriverBiDi, Logger, WaitPrimative, IOE]
 -- | Effect stack over which the shared BiDi WebSocket is established.
 type BiDiRunnerEffs = '[Logger, WaitPrimative, IOE]
 
--- | Effect stack for tests using the extended 'WebDriver' locate abstraction
--- over BiDi, with the dynamic 'Error' effect first.
 type BiDiLocateEffs = '[Error Text, WebDriverBiDi, Logger, WaitPrimative, IOE]
 
 -- | The HTTP session together with its single BiDi WebSocket, shared by all tests.
@@ -103,7 +100,7 @@ releaseBiDiResources MkBiDiResources {wdSession = ws@MkWDSession {loggerEnv}, bi
       $ runWaitPrimative
       $ runLogger loggerEnv
       $ releaseBiDiSession biDiHandle
-    )
+  )
     `finally` closeWDSession ws
 
 -- | Run a group of tests sharing one HTTP session and BiDi WebSocket.
@@ -131,18 +128,15 @@ getRootBrowsingContext = do
     MkGetTreeResult (info : _) -> pure info.context
     _ -> liftIO (fail "No browsing contexts found")
 
--- | Interpret the extended 'WebDriver' locate effect over the BiDi effect stack.
-interpBiDiLocate :: (WebDriverBiDi :> es, IOE :> es) => BL.BiDiLocateOpts -> Eff (WebDriver NodeRemoteValue : es) a -> Eff es a
-interpBiDiLocate opts act = do
-  ctx <- getRootBrowsingContext
-  Interp.runWebDriverBiDi opts ctx act
-
 -- | Run a 'BiDiLocateEffs' action against the shared resources, logging any
 -- dynamic 'Error' via the katip 'Logger' before converting it into an 'IO'
 -- exception.
 runBiDiLocate :: forall a. IO BiDiResources -> Eff '[Error Text, WebDriverBiDi, Logger, WaitPrimative, IOE] a -> IO a
 runBiDiLocate res act = do
-  MkBiDiResources {wdSession = MkWDSession {loggerEnv}, biDiHandle = MkBiDiRunClose {run}} <- res
+  MkBiDiResources
+    { wdSession = MkWDSession {loggerEnv},
+      biDiHandle = MkBiDiRunClose {run}
+    } <- res
   runEff
     $ runWaitPrimative
     $ runLogger loggerEnv
@@ -157,13 +151,13 @@ runBiDiLocate res act = do
 defaultPointerProps :: PointerCommonProperties
 defaultPointerProps =
   MkPointerCommonProperties
-    { width              = Nothing,
-      height             = Nothing,
-      pressure           = Nothing,
+    { width = Nothing,
+      height = Nothing,
+      pressure = Nothing,
       tangentialPressure = Nothing,
-      twist              = Nothing,
-      altitudeAngle      = Nothing,
-      azimuthAngle       = Nothing
+      twist = Nothing,
+      altitudeAngle = Nothing,
+      azimuthAngle = Nothing
     }
 
 -- | Convert a 'Char' to a pair of keyDown\/keyUp 'KeySourceAction's.

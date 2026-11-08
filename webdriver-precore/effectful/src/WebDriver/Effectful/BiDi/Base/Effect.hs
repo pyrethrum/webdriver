@@ -11,16 +11,7 @@
 -- The IO-backed interpreter is in
 -- "WebDriver.Effectful.BiDi.Base.Interpreter".
 module WebDriver.Effectful.BiDi.Base.Effect
-  ( -- * Configuration type
-    BiDiIORunner,
-
-    -- * Internal helpers
-    bidiRun,
-    mkSendSub,
-    mkSendSub',
-    mkSendSubMany',
-    mkSendSubOffSpecMany',
-
+  ( 
     -- * BiDi Effect
     WebDriverBiDi (..),
   )
@@ -137,40 +128,7 @@ import WebDriverPreCore.BiDi.Protocol
     WebExtensionResult,
     WebExtensionUninstall,
   )
-import UnliftIO (MonadUnliftIO)
-import WebDriverPreCore.BiDiRunner (BiDiRunner (..), Request)
-import WebDriverPreCore.BiDiRunner qualified as Runner
-import WebDriverPreCore.Extended.BiDi.Base.Actions qualified as BA
-
--- ---------------------------------------------------------------------------
--- Types
--- ---------------------------------------------------------------------------
-
--- | Convenience alias for an IO-backed BiDi runner.
-type BiDiIORunner = BiDiRunner IO
-
--- ---------------------------------------------------------------------------
--- Internal subscription helpers
--- ---------------------------------------------------------------------------
-
-bidiRun :: (FromJSON r) => BiDiRunner m -> Command r -> m r
-bidiRun MkBiDiRunner {run = r} = r
-
-mkSendSub :: (MonadUnliftIO m) => BiDiRunner m -> BA.SendSub m a
-mkSendSub MkBiDiRunner {run = r, socketActions} mkSub handler =
-  Runner.subscribe socketActions (r . BA.sessionSubscribe) (mkSub [] [] handler)
-
-mkSendSub' :: (MonadUnliftIO m) => BiDiRunner m -> BA.SendSub' m a
-mkSendSub' MkBiDiRunner {run = r, socketActions} mkSub bcs ucs handler =
-  Runner.subscribe socketActions (r . BA.sessionSubscribe) (mkSub bcs ucs handler)
-
-mkSendSubMany' :: (MonadUnliftIO m) => BiDiRunner m -> BA.SendSubMany' m
-mkSendSubMany' MkBiDiRunner {run = r, socketActions} mkSub sts bcs ucs handler =
-  Runner.subscribe socketActions (r . BA.sessionSubscribe) (mkSub sts bcs ucs handler)
-
-mkSendSubOffSpecMany' :: (MonadUnliftIO m) => BiDiRunner m -> BA.SendSubOffSpecMany' m
-mkSendSubOffSpecMany' MkBiDiRunner {run = r, socketActions} mkSub sts bcs ucs handler =
-  Runner.subscribe socketActions (r . BA.sessionSubscribe) (mkSub sts bcs ucs handler)
+import WebDriverPreCore.BiDiRunner ( Request)
 
 -- ---------------------------------------------------------------------------
 -- BiDi effect

@@ -2,10 +2,7 @@ module HTTP.SimpleDemo where
 
 import Effectful (Eff, IOE, (:>), Effect)
 import HTTP.Runner (withHttp, testUrl)
-import WebDriver.Effectful
-  ( WaitPrimative,
-    WebDriver
-  )
+
 import WebDriver.Effectful.Logger (log, Logger)
 import WebDriver.Effectful.HTTP.Base.Actions
   ( elementSendKeys,
@@ -17,6 +14,8 @@ import WebDriver.Effectful.HTTP.Base.Actions
 import WebDriverPreCore.Extended.HTTP.Base.Protocol qualified as P
 import WebDriverPreCore.Test.TestData (contentPageUrl, loginUrl)
 import Prelude hiding (log)
+import WebDriver.Effectful.WaitPrimative (WaitPrimative)
+import WebDriver.Effectful.HTTP.Base.Effect (WebDriver)
 
 -- get rid of warning
 _runHttpTest :: (forall (es :: [Effect]).  (IOE :> es, Logger :> es, WaitPrimative :> es, WebDriver :> es) =>  Eff es ()) -> IO ()

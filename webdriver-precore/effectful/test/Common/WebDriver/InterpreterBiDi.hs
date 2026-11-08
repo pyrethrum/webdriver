@@ -1,8 +1,10 @@
 module Common.WebDriver.InterpreterBiDi
   ( runWebDriverBiDi,
+    runWebDriverWithRootContext
   )
 where
 
+import BiDi.Runner (getRootBrowsingContext)
 import Common.WebDriver.Effect (WebDriver (..))
 import Control.Monad (void)
 import Data.Aeson (Value)
@@ -17,10 +19,16 @@ import Effectful.Dispatch.Dynamic (interpret)
 import Effectful.Exception (catch)
 import UnliftIO (throwIO)
 import WebDriver.Effectful.BiDi.Base.Actions qualified as B
+import WebDriver.Effectful.BiDi.Base.Effect (WebDriverBiDi)
 import WebDriverPreCore.BiDi.Protocol hiding (Locator)
 import WebDriverPreCore.Extended.BiDi.Locate qualified as BL
-import WebDriverPreCore.Extended.Locators (Locator, LocateException(..))
-import WebDriver.Effectful.BiDi.Base.Effect (WebDriverBiDi)
+import WebDriverPreCore.Extended.Locators (LocateException (..), Locator)
+
+-- | Interpret the extended 'WebDriver' locate effect over the BiDi effect stack.
+runWebDriverWithRootContext :: (WebDriverBiDi :> es, IOE :> es) => BL.BiDiLocateOpts -> Eff (WebDriver NodeRemoteValue : es) a -> Eff es a
+runWebDriverWithRootContext opts act = do
+  ctx <- getRootBrowsingContext
+  runWebDriverBiDi opts ctx act
 
 -- | Interpret 'WebDriver' in terms of the 'WebDriverBiDi' effect.
 runWebDriverBiDi ::

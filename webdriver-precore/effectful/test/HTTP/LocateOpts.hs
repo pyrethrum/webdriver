@@ -9,7 +9,7 @@ import WebDriverPreCore.Extended.Locators (DisplayedCheck(..))
 
 defHttpOpts :: LocateOpts
 defHttpOpts =
-  MkHttpLocateOpts
+  MkLocateOpts
     { extendedRoleLocation = ExtLocateNever,
       jsRecheckDisplayed = DisplayedCheckAlways,
       singletonCardinality = Unique,

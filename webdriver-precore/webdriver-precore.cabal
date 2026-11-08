@@ -511,6 +511,7 @@ test-suite test-effectful
     webdriver-precore:webdriver-precore-extended,
     webdriver-precore:webdriver-precore-test-utils,
     webdriver-precore:webdriver-effectful,
+    webdriver-precore:webdriver-precore-bidi-runner,
     webdriver-precore:utils-internal,
     base64        >=0.4   && <1.1,
     bytestring    >=0.10  && <0.12.3,

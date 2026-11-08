@@ -16,10 +16,7 @@ import Effectful (Eff, IOE, liftIO, (:>))
 import UnliftIO.Async (race_)
 import UnliftIO.Concurrent (threadDelay)
 import WebDriverPreCore.Utils.Utils (txt)
-import WebDriver.Effectful
-  (
-    WebDriverBiDi
-  )
+
 import WebDriver.Effectful.Logger (Logger, log)
 import WebDriver.Effectful.BiDi.Base.Actions
 import WebDriverPreCore.BiDi.Protocol
@@ -45,6 +42,7 @@ import WebDriverPreCore.BiDi.Protocol
   )
 import WebDriverPreCore.Test.TestData (loginUrl)
 import Prelude hiding (log)
+import WebDriver.Effectful.BiDi.Base.Effect (WebDriverBiDi)
 
 -- >>> withBidi bidi_login_demo
 bidi_login_demo :: (Logger :> es, WebDriverBiDi :> es, IOE :> es) => Eff es ()

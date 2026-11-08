@@ -4,7 +4,6 @@ import BiDi.Runner
   ( BiDiLocateEffs,
     BiDiResources,
     defBiDiOpts,
-    interpBiDiLocate,
     runBiDiLocate,
     withBiDiResources,
   )
@@ -36,6 +35,7 @@ import Test.Tasty (TestTree, inOrderTestGroup)
 import WebDriverPreCore.BiDi.Protocol (NodeRemoteValue)
 import WebDriverPreCore.Extended.BiDi.Locate qualified as BL
 import Prelude
+import Common.WebDriver.InterpreterBiDi (runWebDriverWithRootContext)
 
 -- >>> _eval tests
 
@@ -51,7 +51,7 @@ tests =
   where
     viewportTests :: IO BiDiResources -> TestTree
     viewportTests res =
-      testViewportDisplayCheck (runBiDiLocate res) (interpBiDiLocate defBiDiOpts)
+      testViewportDisplayCheck (runBiDiLocate res) (runWebDriverWithRootContext defBiDiOpts)
 
     runSessionTests :: IO BiDiResources -> TestTree
     runSessionTests res =
@@ -98,7 +98,7 @@ tests =
         run = runBiDiLocate res
 
         interpWith :: BL.BiDiLocateOpts -> forall a. Eff (WebDriver NodeRemoteValue : BiDiLocateEffs) a -> Eff BiDiLocateEffs a
-        interpWith = interpBiDiLocate
+        interpWith = runWebDriverWithRootContext
 
 
 

@@ -13,13 +13,9 @@ where
 import Data.Aeson (FromJSON)
 import Effectful (Eff, IOE, Limit (..), Persistence (..), UnliftStrategy (..), (:>))
 import Effectful.Dispatch.Dynamic (interpret, localUnlift)
+import UnliftIO (MonadUnliftIO)
 import WebDriver.Effectful.BiDi.Base.Effect
   ( WebDriverBiDi (..),
-    bidiRun,
-    mkSendSub,
-    mkSendSub',
-    mkSendSubMany',
-    mkSendSubOffSpecMany',
   )
 import WebDriverPreCore.BiDi.Protocol
   ( BrowsingContext,
@@ -30,7 +26,7 @@ import WebDriverPreCore.BiDi.Protocol
     mkCommand,
   )
 import WebDriverPreCore.BiDi.Protocol qualified as BP
-import WebDriverPreCore.BiDiRunner (BiDiRunner)
+import WebDriverPreCore.BiDiRunner (BiDiRunner (..))
 import WebDriverPreCore.BiDiRunner qualified as Runner
 import WebDriverPreCore.Extended.BiDi.Base.Actions qualified as BA
 import WebDriverPreCore.Extended.Common.Types (Runner)
@@ -232,3 +228,26 @@ runWebDriverBiDi ioRunner = interpret $ \localEnv ->
       (forall r. localM r -> Eff es r) ->
       Eff es SubscriptionId
     subWithContexts sender b u s unlift = sender (mkSendSub' ioRunner) b u (unlift . s)
+
+-- ---------------------------------------------------------------------------
+-- Subscription helpers
+-- ---------------------------------------------------------------------------
+
+bidiRun :: (FromJSON r) => BiDiRunner m -> Command r -> m r
+bidiRun MkBiDiRunner {run = r} = r
+
+mkSendSub :: (MonadUnliftIO m) => BiDiRunner m -> BA.SendSub m a
+mkSendSub MkBiDiRunner {run = r, socketActions} mkSub handler =
+  Runner.subscribe socketActions (r . BA.sessionSubscribe) (mkSub [] [] handler)
+
+mkSendSub' :: (MonadUnliftIO m) => BiDiRunner m -> BA.SendSub' m a
+mkSendSub' MkBiDiRunner {run = r, socketActions} mkSub bcs ucs handler =
+  Runner.subscribe socketActions (r . BA.sessionSubscribe) (mkSub bcs ucs handler)
+
+mkSendSubMany' :: (MonadUnliftIO m) => BiDiRunner m -> BA.SendSubMany' m
+mkSendSubMany' MkBiDiRunner {run = r, socketActions} mkSub sts bcs ucs handler =
+  Runner.subscribe socketActions (r . BA.sessionSubscribe) (mkSub sts bcs ucs handler)
+
+mkSendSubOffSpecMany' :: (MonadUnliftIO m) => BiDiRunner m -> BA.SendSubOffSpecMany' m
+mkSendSubOffSpecMany' MkBiDiRunner {run = r, socketActions} mkSub sts bcs ucs handler =
+  Runner.subscribe socketActions (r . BA.sessionSubscribe) (mkSub sts bcs ucs handler)

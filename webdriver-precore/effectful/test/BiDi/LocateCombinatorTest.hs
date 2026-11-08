@@ -3,7 +3,6 @@ module BiDi.LocateCombinatorTest where
 import BiDi.Runner
   ( BiDiLocateEffs,
     defBiDiOpts,
-    interpBiDiLocate,
     runBiDiLocate,
     withBiDiResources,
   )
@@ -14,6 +13,7 @@ import Prelude
 import Test.Tasty (TestTree)
 import WebDriverPreCore.BiDi.Protocol (NodeRemoteValue)
 import WebDriverPreCore.Extended.BiDi.Locate qualified as BL
+import Common.WebDriver.InterpreterBiDi (runWebDriverWithRootContext)
 
 tests :: TestTree
 tests =
@@ -24,4 +24,4 @@ tests =
     opts = defBiDiOpts {BL.jsRecheckDisplayed = BL.DisplayedCheckNever}
 
     interpWith :: BL.BiDiLocateOpts -> forall a. Eff (WebDriver NodeRemoteValue : BiDiLocateEffs) a -> Eff BiDiLocateEffs a
-    interpWith = interpBiDiLocate
+    interpWith = runWebDriverWithRootContext
