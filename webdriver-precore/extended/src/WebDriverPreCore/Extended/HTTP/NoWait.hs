@@ -1,31 +1,26 @@
 -- |
 -- Module: WebDriverPreCore.Extended.HTTP.NoWait
 -- Description: HTTP compound actions composed from the Base action functions
---
--- TODO: implementation pending.
 module WebDriverPreCore.Extended.HTTP.NoWait where
 
 import WebDriverPreCore.Extended.Common.Locate (Locator)
 import WebDriverPreCore.Extended.Common.NoWait qualified as C
--- import WebDriverPreCore.Extended.Common.NoWait(MKLocateAction)
+import WebDriverPreCore.Extended.HTTP.Locate (LocateActions (..), LocateOpts, WDTrace, locate)
 import WebDriverPreCore.HTTP.Protocol
-
--- Locator -> m (Either LocateException ElementId)
-
 
 runAction ::
   (Monad m) =>
-  C.ActionHandles m ElementId r t ->
+  LocateActions m ->
+  LocateOpts ->
   (ElementId -> m (Either C.ActionException r)) ->
   Locator ->
   m (Either C.ActionException r)
-runAction = C.runAction
-
-mkActionHandles :: LocateActions m -> HttpLocateOpts -> C.ActionHandles m ElementId r t
-
--- runAction :: Monad m =>  LocateActions m ->  -> Locator -> m (Either ActionException r)
--- runAction  = C.runAction
-
--- | Locate a unique or first-matching element from the document root.
--- locate :: forall m. Monad m => LocateActions m -> HttpLocateOpts -> Locator -> m (Either LocateException ElementId)
--- locate actions opts l = mkSingleton l <$> runHttpAction actions opts Nothing httpLocateSingleton l
+runAction la@MkLocateActions {catch, trace} opts =
+  C.runAction actionHandles
+  where
+    actionHandles =
+      C.MKElmActionHandles
+        { locate = locate la opts,
+          catch,
+          trace
+        }

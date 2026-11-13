@@ -398,8 +398,9 @@ library webdriver-precore-extended
       WebDriverPreCore.Extended.Capabilities
       WebDriverPreCore.Extended.Session
 
-  other-modules:
       WebDriverPreCore.Extended.Common.NoWait
+
+  other-modules:
       WebDriverPreCore.Extended.HTTP.NoWait
       WebDriverPreCore.Extended.BiDi.NoWait
 
@@ -461,6 +462,7 @@ library webdriver-effectful
       WebDriver.Effectful.HTTP.Base.Effect
       WebDriver.Effectful.HTTP.Base.Interpreter
       WebDriver.Effectful.HTTP.Base.Actions
+      WebDriver.Effectful.HTTP.ActionsNoWait
       WebDriver.Effectful.BiDi.Base.Effect
       WebDriver.Effectful.BiDi.Base.Interpreter
       WebDriver.Effectful.BiDi.Base.Actions
@@ -468,6 +470,7 @@ library webdriver-effectful
   build-depends:
     webdriver-precore:webdriver-precore,
     webdriver-precore:webdriver-precore-extended,
+    webdriver-precore:webdriver-precore-extended-internal,
     webdriver-precore:webdriver-precore-http-runner,
     webdriver-precore:webdriver-precore-bidi-runner,
     webdriver-precore:utils-internal,
