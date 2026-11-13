@@ -6,7 +6,7 @@
 module WebDriverPreCore.Extended.Common.NoWait
   ( ElmActionHandles (..),
     ActionException (..),
-    runAction
+    runElmAction
   )
 where
 
@@ -22,6 +22,7 @@ data ActionException
   = LocateException LocateException
   | ElmException WebDriverException
   | UnknownException SomeException
+  deriving (Show)
 
 data ElmActionHandles m elm r t = MKElmActionHandles
   { locate :: Locator -> m (Either LocateException elm),
@@ -30,8 +31,8 @@ data ElmActionHandles m elm r t = MKElmActionHandles
   }
 
 
-runAction :: Monad m => ElmActionHandles m elm r t -> (elm -> m (Either ActionException r)) -> Locator -> m (Either ActionException r)
-runAction MKElmActionHandles {catch, locate} action loc = 
+runElmAction :: Monad m => ElmActionHandles m elm r t -> (elm -> m (Either ActionException r)) -> Locator -> m (Either ActionException r)
+runElmAction MKElmActionHandles {catch, locate} action loc = 
   catch 
     (locate loc >>= either (pure . Left . LocateException) action)
     (pure . Left . UnknownException)

@@ -16,7 +16,7 @@ runAction ::
   Locator ->
   m (Either C.ActionException r)
 runAction la@MkLocateActions {catch, trace} opts =
-  C.runAction actionHandles
+  C.runElmAction actionHandles
   where
     actionHandles =
       C.MKElmActionHandles
