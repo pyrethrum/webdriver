@@ -39,7 +39,7 @@ import WebDriverPreCore.Extended.Common.Locate (
   )
 import WebDriverPreCore.Extended.Common.Locate (Locator, RoleLocator (..), CompoundLocator, HttpLoc (..), xPathRelativePrefix)
 import WebDriverPreCore.Extended.Common.Locate qualified as LI
-import WebDriverPreCore.HTTP.Protocol as HTTPP (ElementId, Script (..), Selector (..))
+import WebDriverPreCore.HTTP.Protocol as HTTPP (ElementId, Script (..), Selector (..), ShadowRootElementId)
 import Prelude as P hiding (log)
 import WebDriverPreCore.Utils.Utils (txt)
 import Data.Bifunctor (Bifunctor(..))
@@ -99,7 +99,11 @@ data LocateActions m = MkLocateActions
     findElementsFromElement :: ElementId -> Selector -> m [ElementId],
     executeScript :: Script -> m Value,
     getElementAttribute :: ElementId -> Text -> m (Maybe Text),
-    getElementText :: ElementId -> m Text
+    getElementText :: ElementId -> m Text,
+
+    getElementShadowRoot :: ElementId -> m ShadowRootElementId,
+    findElementFromShadowRoot :: ShadowRootElementId -> Selector -> m ElementId,
+    findElementsFromShadowRoot :: ShadowRootElementId -> Selector -> m [ElementId]
   }
 data LocParams m = MkLocParams
   { 
@@ -114,6 +118,9 @@ data LocParams m = MkLocParams
     getElementAttribute :: ElementId -> Text -> m (Maybe Text),
     getElementText :: ElementId -> m Text,
     defaultLoc :: Text -> Locator,
+    getElementShadowRoot :: ElementId -> m ShadowRootElementId,
+    findElementFromShadowRoot :: ShadowRootElementId -> Selector -> m ElementId,
+    findElementsFromShadowRoot :: ShadowRootElementId -> Selector -> m [ElementId],
     jsRecheckDisplayed :: DisplayedCheck,
     extendedRoleLocation :: ExtendedRoleLocateSingleton,
     singletonCardinality :: SingletonCardinality

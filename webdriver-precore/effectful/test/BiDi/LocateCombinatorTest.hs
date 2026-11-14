@@ -14,6 +14,7 @@ import Test.Tasty (TestTree)
 import WebDriverPreCore.BiDi.Protocol (NodeRemoteValue)
 import WebDriverPreCore.Extended.BiDi.Locate qualified as BL
 import Common.WebDriver.InterpreterBiDi (runWebDriverWithRootContext)
+import WebDriverPreCore.Extended.Common.Locate (DisplayedCheck(..))
 
 tests :: TestTree
 tests =
@@ -21,7 +22,7 @@ tests =
     Common.tests (runBiDiLocate res) (interpWith opts)
   where
     opts :: BL.BiDiLocateOpts
-    opts = defBiDiOpts {BL.jsRecheckDisplayed = BL.DisplayedCheckNever}
+    opts = defBiDiOpts {BL.jsRecheckDisplayed = DisplayedCheckNever}
 
     interpWith :: BL.BiDiLocateOpts -> forall a. Eff (WebDriver NodeRemoteValue : BiDiLocateEffs) a -> Eff BiDiLocateEffs a
     interpWith = runWebDriverWithRootContext
