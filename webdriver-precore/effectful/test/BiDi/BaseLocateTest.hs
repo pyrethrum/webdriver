@@ -78,12 +78,12 @@ tests =
           runInprt testMiscAriaRoleTypes,
           testMiscAriaRoleTypesNever
             run
-            (interpWith (defBiDiOpts {BL.jsRecheckDisplayed = BL.DisplayedCheckNever})),
+            (interpWith (defBiDiOpts {BL.jsRecheckDisplayed = DisplayedCheckNever})),
           testExtendedRoleMatchingRoleType run (interpWith defBiDiOpts) (interpWith defBiDiOpts),
           testVisibilityDisambiguateVsNever
             run
-            (interpWith (defBiDiOpts {BL.jsRecheckDisplayed = BL.DisplayedCheckDisambiguateUnique}))
-            (interpWith (defBiDiOpts {BL.jsRecheckDisplayed = BL.DisplayedCheckNever}))
+            (interpWith (defBiDiOpts {BL.jsRecheckDisplayed = DisplayedCheckDisambiguateUnique}))
+            (interpWith (defBiDiOpts {BL.jsRecheckDisplayed = DisplayedCheckNever}))
         ]
       where
         runInprt ::

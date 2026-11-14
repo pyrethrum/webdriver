@@ -34,7 +34,8 @@ import WebDriverPreCore.Extended.Common.Locate (
     displayedJS,
     shouldRunDisplayedCheck,
     filterDisplayed,
-    filterDisplayedForSingleton
+    filterDisplayedForSingleton,
+    SingletonCardinality (..)
   )
 import WebDriverPreCore.Extended.Common.Locate (Locator, RoleLocator (..), CompoundLocator, HttpLoc (..), xPathRelativePrefix)
 import WebDriverPreCore.Extended.Common.Locate qualified as LI

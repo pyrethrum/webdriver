@@ -2,7 +2,6 @@ module BiDi.Runner where
 
 import Common.SessionInit (WDSession (..), closeWDSession, getWDSession)
 import Common.Utils (autoId)
-import Common.WebDriver.Effect (WebDriver)
 import Data.Text (Text, unpack)
 import Data.Text qualified as T
 import Effectful (Eff, IOE, liftIO, runEff, (:>))
@@ -10,7 +9,6 @@ import Effectful.Error.Dynamic (Error, runErrorNoCallStack)
 import Test.Tasty (TestTree, withResource)
 import Test.Tasty.HUnit (testCase)
 import UnliftIO (SomeException, catchAny, finally, throwIO, try)
-import WebDriver.Effectful
 import WebDriver.Effectful.BiDi.Base.Actions (browsingContextGetTree)
 import WebDriver.Effectful.BiDi.Base.Effect (WebDriverBiDi)
 import WebDriver.Effectful.Logger (Logger, logError, runLogger)
@@ -21,7 +19,6 @@ import WebDriverPreCore.BiDi.Protocol
     GetTreeResult (..),
     Info (..),
     KeySourceAction (..),
-    NodeRemoteValue,
     PointerCommonProperties (..),
   )
 import WebDriverPreCore.Extended.BiDi.Locate qualified as BL
@@ -29,6 +26,7 @@ import WebDriverPreCore.Utils.Utils (ioThrow)
 import WebDriverPreCore.BiDiRunner (BiDiRunClose (..), parseBiDiUrlProperty)
 import WebDriver.Effectful.App (withBiDiSession, acquireBiDiSession, releaseBiDiSession)
 import WebDriver.Effectful.BiDi.Base.Interpreter (runWebDriverBiDi)
+import WebDriverPreCore.Extended.Common.Locate (DisplayedCheck(..), SingletonCardinality (..))
 
 -- | Acquire a BiDi-enabled session, run the action, then release resources.
 withBidi :: (forall es. (IOE :> es, Logger :> es, WaitPrimative :> es, WebDriverBiDi :> es) => Eff es ()) -> IO ()
@@ -115,8 +113,8 @@ withBiDiResources = withResource acquireBiDiResources releaseBiDiResources
 defBiDiOpts :: BL.BiDiLocateOpts
 defBiDiOpts =
   BL.MkBiDiLocateOpts
-    { jsRecheckDisplayed = BL.DisplayedCheckAlways,
-      singletonCardinality = BL.Unique,
+    { jsRecheckDisplayed = DisplayedCheckAlways,
+      singletonCardinality = Unique,
       mkDefaultLoc = autoId
     }
 

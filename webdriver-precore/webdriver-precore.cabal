@@ -512,6 +512,7 @@ test-suite test-effectful
   build-depends:
     webdriver-precore:webdriver-precore,
     webdriver-precore:webdriver-precore-extended,
+    webdriver-precore:webdriver-precore-extended-internal,
     webdriver-precore:webdriver-precore-test-utils,
     webdriver-precore:webdriver-effectful,
     webdriver-precore:webdriver-precore-bidi-runner,
