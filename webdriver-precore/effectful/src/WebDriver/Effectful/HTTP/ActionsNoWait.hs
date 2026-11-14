@@ -59,7 +59,10 @@ mkLocateActions =
       findElementsFromElement = BA.findElementsFromElement,
       executeScript = BA.executeScript,
       getElementAttribute = BA.getElementAttribute,
-      getElementText = BA.getElementText
+      getElementText = BA.getElementText,
+      getElementShadowRoot = BA.getElementShadowRoot,
+      findElementFromShadowRoot = BA.findElementFromShadowRoot,
+      findElementsFromShadowRoot = BA.findElementsFromShadowRoot
     }
 
 -- | Locate an element and run the given element action on it, signalling any failure via 'Error'.

@@ -48,5 +48,8 @@ mkHttpLocateActions =
       findElementsFromElement = H.findElementsFromElement,
       executeScript = H.executeScript,
       getElementAttribute = H.getElementAttribute,
-      getElementText = H.getElementText
+      getElementText = H.getElementText,
+      getElementShadowRoot = H.getElementShadowRoot,
+      findElementFromShadowRoot = H.findElementFromShadowRoot,
+      findElementsFromShadowRoot = H.findElementsFromShadowRoot
     }
