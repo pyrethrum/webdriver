@@ -36,6 +36,8 @@ import WebDriverPreCore.BiDi.Protocol (NodeRemoteValue)
 import WebDriverPreCore.Extended.BiDi.Locate qualified as BL
 import Prelude
 import Common.WebDriver.InterpreterBiDi (runWebDriverWithRootContext)
+import WebDriverPreCore.Extended.Common.Locate (DisplayedCheck(..))
+
 
 -- >>> _eval tests
 
@@ -63,10 +65,10 @@ tests =
           testVisibilityAlways run (interpWith defBiDiOpts),
           testVisibilityNever
             run
-            (interpWith (defBiDiOpts {BL.jsRecheckDisplayed = BL.DisplayedCheckNever})),
+            (interpWith (defBiDiOpts {BL.jsRecheckDisplayed = DisplayedCheckNever})),
           testVisibilityDisambiguate
             run
-            (interpWith (defBiDiOpts {BL.jsRecheckDisplayed = BL.DisplayedCheckDisambiguateUnique})),
+            (interpWith (defBiDiOpts {BL.jsRecheckDisplayed = DisplayedCheckDisambiguateUnique})),
           runInprt testBasicLocatorTypes,
           runInprt testClassLocatorVariants,
           runInprt testAttributeLocatorVariants,

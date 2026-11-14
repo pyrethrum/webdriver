@@ -26,6 +26,7 @@ module WebDriverPreCore.Extended.Common.Locate (
 
     -- * Locate helpers (moved from Common.Locate)
     DisplayedCheck(..),
+    SingletonCardinality(..),
     PreLocateException(..),
     LocateException(..),
     LeafCardinality(..),
@@ -117,6 +118,9 @@ data LeafCardinality = FindFirst | FindAll deriving (Show, Eq, Generic)
 instance ToJSON LeafCardinality
 
 instance FromJSON LeafCardinality
+
+-- | Whether to find the unique element (error if multiple match) or just the first.
+data SingletonCardinality = Unique | First deriving (Show, Eq)
 
 -- | Controls whether located elements are post-filtered by the WebDriver
 --   "element displayed" algorithm.

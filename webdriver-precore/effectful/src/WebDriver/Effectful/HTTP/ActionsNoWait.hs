@@ -62,12 +62,6 @@ mkLocateActions =
       getElementText = BA.getElementText
     }
 
--- | Locate an element, returning it or the locate error.
-locate :: forall es. (WebDriver :> es, Logger :> es, Reader LocateOpts :> es) => Locator -> Eff es (Either LocateException ElementId)
-locate loc = do
-  opts <- ask @LocateOpts
-  HL.locate mkLocateActions opts loc
-
 -- | Locate an element and run the given element action on it, signalling any failure via 'Error'.
 elmRunner :: forall es r. (WebDriver :> es, Logger :> es, Error ActionException :> es, Reader LocateOpts :> es) => (ElementId -> Eff es r) -> Locator -> Eff es r
 elmRunner action loc = do
@@ -80,6 +74,30 @@ elmRunner action loc = do
           catch,
           trace = logDebug . txt
         }
+
+-- | Locate an element, returning it or the locate error.
+locate :: forall es. (WebDriver :> es, Logger :> es, Reader LocateOpts :> es) => Locator -> Eff es (Either LocateException ElementId)
+locate loc = do
+  opts <- ask @LocateOpts
+  HL.locate mkLocateActions opts loc
+
+-- | Locate an element, returning it or the locate error.
+locateFromElm :: forall es. (WebDriver :> es, Logger :> es, Reader LocateOpts :> es) => ElementId -> Locator -> Eff es (Either LocateException ElementId)
+locateFromElm el loc = do
+  opts <- ask @LocateOpts
+  HL.locateFromElement mkLocateActions opts el loc
+
+-- | Locate an element, returning it or the locate error.
+locateAll :: forall es. (WebDriver :> es, Logger :> es, Reader LocateOpts :> es) => Locator -> Eff es (Either LocateException [ElementId])
+locateAll loc = do
+  opts <- ask @LocateOpts
+  HL.locateAll mkLocateActions opts loc
+
+-- | Locate an element, returning it or the locate error.
+locateAllFromElm :: forall es. (WebDriver :> es, Logger :> es, Reader LocateOpts :> es) => ElementId -> Locator -> Eff es (Either LocateException [ElementId])
+locateAllFromElm el loc = do
+  opts <- ask @LocateOpts
+  HL.locateAllFromElement mkLocateActions opts el loc
 
 -- | Locate an element and click it, signalling any failure via 'Error'.
 click :: forall es. (WebDriver :> es, Logger :> es, Error ActionException :> es, Reader LocateOpts :> es) => Locator -> Eff es ()
@@ -140,11 +158,3 @@ getComputedRole = elmRunner BA.getElementComputedRole
 -- | Locate an element and get its computed label, signalling any failure via 'Error'.
 getComputedLabel :: forall es. (WebDriver :> es, Logger :> es, Error ActionException :> es, Reader LocateOpts :> es) => Locator -> Eff es Text
 getComputedLabel = elmRunner BA.getElementComputedLabel
-
--- | Locate an element and find a descendant matching the selector, signalling any failure via 'Error'.
-findElementFrom :: forall es. (WebDriver :> es, Logger :> es, Error ActionException :> es, Reader LocateOpts :> es) => Locator -> Selector -> Eff es ElementId
-findElementFrom loc sel = elmRunner (\el -> BA.findElementFromElement el sel) loc
-
--- | Locate an element and find all descendants matching the selector, signalling any failure via 'Error'.
-findElementsFrom :: forall es. (WebDriver :> es, Logger :> es, Error ActionException :> es, Reader LocateOpts :> es) => Locator -> Selector -> Eff es [ElementId]
-findElementsFrom loc sel = elmRunner (\el -> BA.findElementsFromElement el sel) loc

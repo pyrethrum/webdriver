@@ -1,15 +1,12 @@
 module WebDriverPreCore.Extended.BiDi.Locate
-  (
-    DisplayedCheck (..),
-    SingletonCardinality (..),
-    BiDiLocateOpts (..),
+  ( BiDiLocateOpts (..),
     LocateActions (..),
     WDBiDITrace (..),
     BaseLocateOpts (..),
     locate,
     locateAll,
     locateFromElement,
-    locateAllFromElement
+    locateAllFromElement,
   )
 where
 
@@ -22,38 +19,34 @@ import Data.Text
 import Data.Text qualified as T
 import Data.Word (Word8)
 import GHC.Stack (HasCallStack)
-
-import WebDriverPreCore.Extended.Common.Locate (
-    DisplayedCheck (..),
-    LocateException (..),
-    PreLocateException (..),
-    LeafCardinality (..),
-    addLocToException,
-    runLoc,
-    displayedFunctionDeclaration,
-    shouldRunDisplayedCheck,
-    filterDisplayed,
-    filterDisplayedForSingleton
-  )
-import WebDriverPreCore.Extended.Common.Locate (
-    Locator,
-    RoleLocator (..),
-    CompoundLocator,
-    BiDiLoc (..),
-    MatchType (..),
+import WebDriverPreCore.BiDi.Protocol qualified as BiDiP
+import WebDriverPreCore.Common.Protocol (JSUInt)
+import WebDriverPreCore.Extended.BiDi.Base.Protocol (SerializationOptions, SharedReference (..))
+import WebDriverPreCore.Extended.Common.Locate
+  ( BiDiLoc (..),
     CaseSensitivity (..),
-    roleLabelText
+    CompoundLocator,
+    DisplayedCheck (..),
+    LeafCardinality (..),
+    LocateException (..),
+    Locator,
+    MatchType (..),
+    PreLocateException (..),
+    RoleLocator (..),
+    SingletonCardinality (..),
+    addLocToException,
+    displayedFunctionDeclaration,
+    filterDisplayed,
+    filterDisplayedForSingleton,
+    roleLabelText,
+    runLoc,
+    shouldRunDisplayedCheck,
   )
 import WebDriverPreCore.Extended.Common.Locate qualified as LI
-import WebDriverPreCore.BiDi.Protocol qualified as BiDiP
-import WebDriverPreCore.Extended.BiDi.Base.Protocol (SerializationOptions, SharedReference (..))
-import WebDriverPreCore.Common.Protocol (JSUInt)
 import WebDriverPreCore.Utils.Utils (txt)
 import Prelude as P hiding (log)
 
-
 -- TODO
-
 
 -- 9. retries / wait / logging / recovery Http - need directives eg. log pagesource
 --   -- should this be an asyc race
@@ -61,23 +54,16 @@ import Prelude as P hiding (log)
 
 -- 11. adapt retries to Bidi
 
--- | Whether to find the unique element (error if multiple match) or just the first.
-data SingletonCardinality = Unique | First deriving (Show, Eq)
-
-
 -- | Options for singleton locate functions ('locateHttp', 'locateFromElementHttp').
 data BiDiLocateOpts = MkBiDiLocateOpts
-  {
-    jsRecheckDisplayed :: DisplayedCheck,
+  { jsRecheckDisplayed :: DisplayedCheck,
     singletonCardinality :: SingletonCardinality,
     mkDefaultLoc :: Text -> Locator
-  } 
-
+  }
 
 -- | Actions for singleton locate functions ('locateHttp', 'locateFirstHttp', 'locateFromElementHttp').
 data LocateActions m = MkLocateActions
-  { 
-    throw :: forall a. HasCallStack => PreLocateException -> m a,
+  { throw :: forall a. (HasCallStack) => PreLocateException -> m a,
     catch :: forall a e. (HasCallStack, Exception e) => m a -> (e -> m a) -> m a,
     trace :: WDBiDITrace -> m (),
     locateNodes :: BiDiP.LocateNodes -> m BiDiP.LocateNodesResult,
@@ -86,8 +72,7 @@ data LocateActions m = MkLocateActions
   }
 
 data LocParams m = MkLocParams
-  { 
-    throw :: forall a. HasCallStack => PreLocateException -> m a,
+  { throw :: forall a. (HasCallStack) => PreLocateException -> m a,
     catch :: forall a e. (HasCallStack, Exception e) => m a -> (e -> m a) -> m a,
     trace :: WDBiDITrace -> m (),
     locateNodes :: BiDiP.LocateNodes -> m BiDiP.LocateNodesResult,
@@ -100,39 +85,38 @@ data LocParams m = MkLocParams
     singletonCardinality :: SingletonCardinality
   }
 
-
 data BaseLocateOpts = MkBaseLocateOpts
-  { 
-    maxNodeCount :: Maybe JSUInt,
+  { maxNodeCount :: Maybe JSUInt,
     serializationOptions :: Maybe SerializationOptions,
     startNodes :: Maybe [SharedReference]
   }
   deriving (Show, Eq)
 
-data WDBiDITrace = Prepared {
-  loc :: Locator,
-  reducedLoc :: CompoundLocator BiDiLoc
-} |
- PrepareFailed {
-  loc :: Locator,
-  error :: LI.InvalidLocator
-} | 
- LeafLocate {
-  selector :: BiDiP.Locator,
-  cardinality :: LeafCardinality,
-  found :: [BiDiP.NodeRemoteValue]
-  } |
- JSDisplayedCheck {
-  beforeCheck :: [BiDiP.NodeRemoteValue],
-  afterCheck :: [BiDiP.NodeRemoteValue]
-  }
- deriving (Show, Eq)
+data WDBiDITrace
+  = Prepared
+      { loc :: Locator,
+        reducedLoc :: CompoundLocator BiDiLoc
+      }
+  | PrepareFailed
+      { loc :: Locator,
+        error :: LI.InvalidLocator
+      }
+  | LeafLocate
+      { selector :: BiDiP.Locator,
+        cardinality :: LeafCardinality,
+        found :: [BiDiP.NodeRemoteValue]
+      }
+  | JSDisplayedCheck
+      { beforeCheck :: [BiDiP.NodeRemoteValue],
+        afterCheck :: [BiDiP.NodeRemoteValue]
+      }
+  deriving (Show, Eq)
 
-  -- context :: BrowsingContext,
-  --   locator :: Locator,
+-- context :: BrowsingContext,
+--   locator :: Locator,
 
 mkLocParams :: BiDiLocateOpts -> BiDiP.BrowsingContext -> LocateActions m -> LocParams m
-mkLocParams MkBiDiLocateOpts{mkDefaultLoc = defaultLoc, singletonCardinality, jsRecheckDisplayed} context MkLocateActions{..} =
+mkLocParams MkBiDiLocateOpts {mkDefaultLoc = defaultLoc, singletonCardinality, jsRecheckDisplayed} context MkLocateActions {..} =
   MkLocParams
     { defaultLoc,
       singletonCardinality,
@@ -142,15 +126,18 @@ mkLocParams MkBiDiLocateOpts{mkDefaultLoc = defaultLoc, singletonCardinality, js
       ..
     }
 
-locatePrimative :: Applicative m => LocateActions m -> BiDiP.BrowsingContext -> BaseLocateOpts -> BiDiP.Locator -> m (Either PreLocateException BiDiP.LocateNodesResult)
-locatePrimative MkLocateActions {catch, locateNodes} context MkBaseLocateOpts {maxNodeCount, serializationOptions, startNodes} locator = 
-   runLoc catch locateNodes BiDiP.MkLocateNodes  
-         { context,
-            locator,
-            maxNodeCount,
-            serializationOptions,
-            startNodes
-          }
+locatePrimative :: (Applicative m) => LocateActions m -> BiDiP.BrowsingContext -> BaseLocateOpts -> BiDiP.Locator -> m (Either PreLocateException BiDiP.LocateNodesResult)
+locatePrimative MkLocateActions {catch, locateNodes} context MkBaseLocateOpts {maxNodeCount, serializationOptions, startNodes} locator =
+  runLoc
+    catch
+    locateNodes
+    BiDiP.MkLocateNodes
+      { context,
+        locator,
+        maxNodeCount,
+        serializationOptions,
+        startNodes
+      }
 
 -- | Locate a unique or first-matching element from the document root.
 locate :: forall m. (Monad m) => LocateActions m -> BiDiLocateOpts -> BiDiP.BrowsingContext -> Locator -> m (Either LocateException BiDiP.NodeRemoteValue)
@@ -182,8 +169,8 @@ runBiDiAction ::
   (LocParams m -> CompoundLocator BiDiLoc -> m r) ->
   Locator ->
   m (Either LocateException r)
-runBiDiAction actions@MkLocateActions{catch} opts context mRootId locateAction loc = do
-  let p@MkLocParams{trace} = setBaseElement mRootId $ mkLocParams opts context actions
+runBiDiAction actions@MkLocateActions {catch} opts context mRootId locateAction loc = do
+  let p@MkLocParams {trace} = setBaseElement mRootId $ mkLocParams opts context actions
   case LI.transformBiDi p.defaultLoc loc of
     -- log failure if the transformation failed
     Left err -> do
@@ -196,12 +183,12 @@ runBiDiAction actions@MkLocateActions{catch} opts context mRootId locateAction l
 
 -- | Set the start node (root element) used by the locate.
 setBaseElement :: Maybe SharedReference -> LocParams m -> LocParams m
-setBaseElement mRootId act@MkLocParams{..} =
+setBaseElement mRootId act@MkLocParams {..} =
   maybe act (\rootId -> MkLocParams {startNodes = Just [rootId], ..}) mRootId
 
 -- | Recover the underlying 'LocateActions' from the extended params.
 mkLocateActions :: LocParams m -> LocateActions m
-mkLocateActions MkLocParams{throw, catch, trace, locateNodes, scriptCallFunction, getElementText} = MkLocateActions{throw, catch, trace, locateNodes, scriptCallFunction, getElementText}
+mkLocateActions MkLocParams {throw, catch, trace, locateNodes, scriptCallFunction, getElementText} = MkLocateActions {throw, catch, trace, locateNodes, scriptCallFunction, getElementText}
 
 -- | Locate a single node. Cardinality checks are deferred until the query
 --   completes; for 'First' the driver is asked for at most one node, while for
@@ -212,7 +199,7 @@ biDiLocateSingleton ::
   LocParams m ->
   CompoundLocator BiDiLoc ->
   m BiDiP.NodeRemoteValue
-biDiLocateSingleton prms@MkLocParams{throw, singletonCardinality, startNodes, jsRecheckDisplayed} loc = do
+biDiLocateSingleton prms@MkLocParams {throw, singletonCardinality, startNodes, jsRecheckDisplayed} loc = do
   let fetchAll = singletonCardinality == Unique || jsRecheckDisplayed == DisplayedCheckAlways
       baseOpts =
         MkBaseLocateOpts
@@ -243,7 +230,7 @@ biDiLocateAll ::
   LocParams m ->
   CompoundLocator BiDiLoc ->
   m [BiDiP.NodeRemoteValue]
-biDiLocateAll prms@MkLocParams{startNodes, jsRecheckDisplayed} loc = do
+biDiLocateAll prms@MkLocParams {startNodes, jsRecheckDisplayed} loc = do
   let baseOpts =
         MkBaseLocateOpts
           { maxNodeCount = Nothing,
@@ -310,7 +297,7 @@ locateLeafBiDi prms baseOpts loc =
     XPathBiDi {} -> leafLoc
     RoleBiDi {roleSpec} -> locateRoleBiDi prms baseOpts roleSpec
     ContextBiDi {} -> leafLoc
-  where 
+  where
     leafLoc = runLeafLocator prms baseOpts (toBiDiLocator loc)
 
 -- | Locate nodes matching a role locator. Roles with ARIA synonyms retry each
@@ -359,7 +346,7 @@ runLeafLocator ::
   BaseLocateOpts ->
   BiDiP.Locator ->
   m [BiDiP.NodeRemoteValue]
-runLeafLocator prms@MkLocParams{throw, trace, context} baseOpts bidiLoc = do
+runLeafLocator prms@MkLocParams {throw, trace, context} baseOpts bidiLoc = do
   rslt <- locatePrimative (mkLocateActions prms) context baseOpts bidiLoc
   case rslt of
     Left e -> throw e
@@ -387,8 +374,8 @@ locateInnerTextBiDi prms baseOpts value matchType cs maxDepth =
     Starts -> do
       found <- leafInnerTxtLocate BiDiP.Partial
       filterByText prms (startsMatch cs value) found
-    Wildcard -> locateWildcardInnerTextBiDi 
-  where 
+    Wildcard -> locateWildcardInnerTextBiDi
+  where
     leafInnerTxtLocate mt = runLeafLocator prms baseOpts $ innerTextLocator cs (Just mt) value maxDepth
 
     locateWildcardInnerTextBiDi =
@@ -418,7 +405,7 @@ filterByText ::
   (Text -> Bool) ->
   [BiDiP.NodeRemoteValue] ->
   m [BiDiP.NodeRemoteValue]
-filterByText MkLocParams{getElementText} predicate = 
+filterByText MkLocParams {getElementText} predicate =
   filterM predicate'
   where
     predicate' :: BiDiP.NodeRemoteValue -> m Bool
@@ -432,7 +419,7 @@ jsFilterDisplayed ::
   LocParams m ->
   [BiDiP.NodeRemoteValue] ->
   m [BiDiP.NodeRemoteValue]
-jsFilterDisplayed MkLocParams{context, trace, scriptCallFunction} nodes = do
+jsFilterDisplayed MkLocParams {context, trace, scriptCallFunction} nodes = do
   filtered <- filterDisplayed runScript nodes
   trace $
     JSDisplayedCheck
@@ -443,15 +430,17 @@ jsFilterDisplayed MkLocParams{context, trace, scriptCallFunction} nodes = do
   where
     runScript :: [BiDiP.NodeRemoteValue] -> m [Bool]
     runScript nodes' =
-      toBools <$> scriptCallFunction BiDiP.MkCallFunction
-        { functionDeclaration = displayedFunctionDeclaration,
-          awaitPromise = False,
-          target = BiDiP.ContextTarget (BiDiP.MkContextTarget {context, sandbox = Nothing}),
-          arguments = Just [BiDiP.ArrayLocalValue (BiDiP.MkArrayLocalValue {typ = "array", value = BiDiP.MkListLocalValue (nodeToLocalValue <$> nodes')})],
-          resultOwnership = Nothing,
-          serializationOptions = Nothing,
-          this = Nothing
-        }
+      toBools
+        <$> scriptCallFunction
+          BiDiP.MkCallFunction
+            { functionDeclaration = displayedFunctionDeclaration,
+              awaitPromise = False,
+              target = BiDiP.ContextTarget (BiDiP.MkContextTarget {context, sandbox = Nothing}),
+              arguments = Just [BiDiP.ArrayLocalValue (BiDiP.MkArrayLocalValue {typ = "array", value = BiDiP.MkListLocalValue (nodeToLocalValue <$> nodes')})],
+              resultOwnership = Nothing,
+              serializationOptions = Nothing,
+              this = Nothing
+            }
 
 -- | Convert a located node into a @script.callFunction@ local value, erroring
 --   if the node has no shared reference (which would make it unusable as an
@@ -482,14 +471,13 @@ innerTextLocator :: CaseSensitivity -> Maybe BiDiP.MatchType -> Text -> Maybe Wo
 innerTextLocator cs matchType value mDepth =
   BiDiP.InnerText
     { value,
-      ignoreCase = Just 
-       $ case cs of
+      ignoreCase = Just $
+        case cs of
           CaseSensitive -> False
           CaseInsensitive -> True,
       matchType,
       maxDepth = fmap fromIntegral mDepth
     }
-
 
 -- | XPath selecting every element that has non-empty text content.
 allTextXPath :: Maybe Word8 -> Text
@@ -520,7 +508,7 @@ startsMatch cs prefix text = normText cs prefix `T.isPrefixOf` normText cs text
 
 -- | Does @text@ match the wildcard pattern @pat@ ('*' matches any run of characters)?
 wildcardMatch :: CaseSensitivity -> Text -> Text -> Bool
-wildcardMatch cs pat text = 
+wildcardMatch cs pat text =
   globMatch (normText cs pat) (normText cs text)
   where
     globMatch :: Text -> Text -> Bool
@@ -538,7 +526,7 @@ wildcardMatch cs pat text =
         [] -> True
         [lastFrag] -> T.isSuffixOf lastFrag remaining
         frag : rest
-          | T.null frag -> match rest remaining            -- "**" collapses to "*"
+          | T.null frag -> match rest remaining -- "**" collapses to "*"
           | otherwise ->
               case T.breakOn frag remaining of
                 (_, after)
@@ -580,7 +568,7 @@ overrideRoleLabel roleLabel = \case
 
 -- | Update the start nodes used by the base locate options.
 setStartNodes :: BaseLocateOpts -> Maybe [SharedReference] -> BaseLocateOpts
-setStartNodes MkBaseLocateOpts{..} startNodes' = MkBaseLocateOpts {startNodes = startNodes', ..}
+setStartNodes MkBaseLocateOpts {..} startNodes' = MkBaseLocateOpts {startNodes = startNodes', ..}
 
 -- | Convert a located node into a 'SharedReference' for use as a start node,
 --   returning 'Nothing' if the node has no shared id.

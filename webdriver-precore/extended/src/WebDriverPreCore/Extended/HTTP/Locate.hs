@@ -43,9 +43,6 @@ import Prelude as P hiding (log)
 import WebDriverPreCore.Utils.Utils (txt)
 import Data.Bifunctor (Bifunctor(..))
 
--- | Whether to find the unique element (error if multiple match) or just the first.
-data SingletonCardinality = Unique | First deriving (Show, Eq)
-
 data ExtendedRoleLocateSingleton = ExtLocateNever | ExtLocateSingletonMiss | ExtLocateAlways deriving (Show, Eq)
 
 data RoleJSSecondPass = DoRoleJSSecondPass | NoRoleJSSecondPass deriving (Show, Eq)
