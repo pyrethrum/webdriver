@@ -10,13 +10,10 @@ module WebDriverPreCore.Extended.Common.NoWait
   )
 where
 
-import Data.Text (Text, pack)
 import GHC.Stack (HasCallStack)
 import WebDriverPreCore.Error (WebDriverException)
 import WebDriverPreCore.Extended.Common.Locate (LocateException, Locator)
 import Control.Exception (Exception, SomeException)
-import WebDriverPreCore.Utils.Utils (txt)
-import Control.Exception.Base (Exception(..))
 
 data ActionException
   = LocateException LocateException
@@ -29,7 +26,6 @@ data ElmActionHandles m elm r t = MKElmActionHandles
     catch :: forall a e. (HasCallStack, Exception e) => m a -> (e -> m a) -> m a,
     trace :: t -> m ()
   }
-
 
 runElmAction :: Monad m => ElmActionHandles m elm r t -> (elm -> m (Either ActionException r)) -> Locator -> m (Either ActionException r)
 runElmAction MKElmActionHandles {catch, locate} action loc = 
