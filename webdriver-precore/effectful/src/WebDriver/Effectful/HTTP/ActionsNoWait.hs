@@ -102,34 +102,23 @@ locateAllFromElm el loc = do
   opts <- ask @LocateOpts
   HL.locateAllFromElement mkLocateActions opts el loc
 
-locateElementShadowRoot :: forall es. (WebDriver :> es, Logger :> es) => Locator -> Eff es ShadowRootElementId
-locateElementShadowRoot loc = do
-  el <- HL.locate mkLocateActions defHttpOpts loc >>= either throwIO pure
-  BA.getElementShadowRoot el
+locateElementShadowRoot :: forall es. (WebDriver :> es, Logger :> es) => Locator -> Eff es (Either LocateException ShadowRootElementId)
+locateElementShadowRoot loc =
+  HL.locate mkLocateActions defHttpOpts loc
+    >>= either (pure . Left) (fmap Right . BA.getElementShadowRoot)
 
 locateFromShadowElement :: forall es. (WebDriver :> es, Logger :> es, Reader LocateOpts :> es) => Locator -> Locator -> Eff es (Either LocateException ElementId)
 locateFromShadowElement shadowLoc loc = do
   opts <- ask @LocateOpts
-  ethShadowRoot <- do
-    ethEl <- HL.locate mkLocateActions opts shadowLoc
-    case ethEl of
-      Left err -> pure $ Left err
-      Right el -> Right <$> BA.getElementShadowRoot el
-  case ethShadowRoot of
-    Left err -> pure $ Left err
-    Right shadowRoot -> HL.locateFromShadowElement mkLocateActions opts shadowRoot loc
+  baseElm <- HL.locate mkLocateActions opts shadowLoc
+  either (pure . Left) (fmap Right . BA.getElementShadowRoot) baseElm
+    >>= either (pure . Left) (\shadowRoot -> HL.locateFromShadowElement mkLocateActions opts shadowRoot loc)
 
 locateAllFromShadowElement :: forall es. (WebDriver :> es, Logger :> es, Reader LocateOpts :> es) => Locator -> Locator -> Eff es (Either LocateException [ElementId])
 locateAllFromShadowElement shadowLoc loc = do
   opts <- ask @LocateOpts
-  ethShadowRoot <- do
-    ethEl <- HL.locate mkLocateActions opts shadowLoc
-    case ethEl of
-      Left err -> pure $ Left err
-      Right el -> Right <$> BA.getElementShadowRoot el
-  case ethShadowRoot of
-    Left err -> pure $ Left err
-    Right shadowRoot -> HL.locateAllFromShadowElement mkLocateActions opts shadowRoot loc
+  ethShadowRoot <- either (pure . Left) (fmap Right . BA.getElementShadowRoot) =<< HL.locate mkLocateActions opts shadowLoc
+  either (pure . Left) (\shadowRoot -> HL.locateAllFromShadowElement mkLocateActions opts shadowRoot loc) ethShadowRoot
 
 -- | Locate an element and click it, signalling any failure via 'Error'.
 click :: forall es. (WebDriver :> es, Logger :> es, Error ActionException :> es, Reader LocateOpts :> es) => Locator -> Eff es ()
