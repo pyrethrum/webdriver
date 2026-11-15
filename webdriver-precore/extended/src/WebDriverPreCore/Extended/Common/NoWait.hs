@@ -13,7 +13,7 @@ where
 import Control.Exception (Exception, SomeException)
 import GHC.Stack (HasCallStack)
 import WebDriverPreCore.Error (WebDriverException)
-import WebDriverPreCore.Extended.Common.Locate (Locatable (..), LocateException, Locator)
+import WebDriverPreCore.Extended.Common.Locate (LocateException, Locator)
 
 data ActionException
   = LocateException LocateException

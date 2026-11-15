@@ -393,6 +393,7 @@ library webdriver-precore-extended
       WebDriverPreCore.Extended.Locators
       WebDriverPreCore.Extended.HTTP.Locate
       WebDriverPreCore.Extended.BiDi.Locate
+      WebDriverPreCore.Extended.Common.Locatable
 
       -- Universal capabilities for both protocols
       WebDriverPreCore.Extended.Capabilities
