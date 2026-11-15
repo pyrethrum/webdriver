@@ -177,7 +177,7 @@ shouldRunDisplayedCheck check isUnique =
 --   @runScript@ receives the candidate element references and returns one
 --   boolean per element (the result of the displayed check). The candidates are
 --   then zipped with the results, keeping only the displayed elements.
-filterDisplayed :: forall m el. (Monad m) => ([el] -> m [Bool]) -> [el] -> m [el]
+filterDisplayed :: forall m el. Monad m => ([el] -> m [Bool]) -> [el] -> m [el]
 filterDisplayed runScript elms = do
   bools <- runScript elms
   pure $ P.map P.fst . P.filter P.snd $ P.zip elms bools

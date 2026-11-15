@@ -193,7 +193,7 @@ instance ToJSON PointerSourceAction where
           object $
             [ "type" .= "pointerDown",
               "button" .= button
-            ] ++ [(k, v) | (k, v) <- Data.Aeson.KeyMap.toList props]
+            ] <> Data.Aeson.KeyMap.toList props
         _ -> 
           object
             [ "type" .= "pointerDown",
@@ -213,7 +213,7 @@ instance ToJSON PointerSourceAction where
               "y" .= y
             ] 
             <> catMaybes [opt "duration" duration, opt "origin" origin]
-            ++ [(k, v) | (k, v) <- Data.Aeson.KeyMap.toList props]
+            <> Data.Aeson.KeyMap.toList props
         _ -> 
           object $
             [ "type" .= "pointerMove",
