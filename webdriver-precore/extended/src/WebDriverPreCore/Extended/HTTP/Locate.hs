@@ -1,5 +1,6 @@
 module WebDriverPreCore.Extended.HTTP.Locate
-  ( ExtendedRoleLocateSingleton (..),
+  ( 
+    ExtendedRoleLocateSingleton (..),
     LocateOpts (..),
     LocateActions (..),
     SingletonCardinality (..),
@@ -25,7 +26,7 @@ import Data.Text
 import Data.Text qualified as T
 import GHC.Generics (Generic)
 import GHC.Stack (HasCallStack)
-import WebDriverPreCore.Extended.Common.Locate (CompoundLocator, DisplayedCheck (..), HttpLoc (..), LeafCardinality (..), LocateException (..), Locator, PreLocateException (..), RoleLocator (..), SingletonCardinality (..), addLocToException, displayedJS, filterDisplayed, filterDisplayedForSingleton, runLoc, shouldRunDisplayedCheck, xPathRelativePrefix)
+import WebDriverPreCore.Extended.Common.Locate (CompoundLocator, DisplayedCheck (..), HttpLoc (..), LeafCardinality (..), LocateException (..), Locator, PreLocateException (..), RoleLocator (..), SingletonCardinality (..), addLocToException, displayedJS, filterDisplayed, filterDisplayedForSingleton, runLoc, shouldRunDisplayedCheck, xPathRelativePrefix, Locatable)
 import WebDriverPreCore.Extended.Common.Locate qualified as LI
 import WebDriverPreCore.HTTP.Protocol as HTTPP (ElementId, Script (..), Selector (..), ShadowRootElementId)
 import WebDriverPreCore.Utils.Utils (txt)

@@ -36,7 +36,7 @@ module WebDriverPreCore.Extended.Common.Locate (
     displayedJS,
     shouldRunDisplayedCheck,
     filterDisplayed,
-    filterDisplayedForSingleton
+    filterDisplayedForSingleton, Locatable (..)
 ) where
 
 import Control.Exception (Exception)
@@ -57,6 +57,7 @@ import Data.Function ((&))
 import GHC.Stack (HasCallStack)
 import Prelude qualified as P
 import WebDriverPreCore.Error (WebDriverException)
+import WebDriverPreCore.HTTP.Protocol (ElementId)
 
 data PreLocateException
   = AmbiguousLocator' Text
@@ -228,6 +229,12 @@ data RoleLocator
 instance ToJSON RoleLocator
 
 instance FromJSON RoleLocator
+class Locatable a b where
+  applyLocate :: Monad m => (Locator -> m (Either LocateException b)) -> a -> m (Either LocateException b)
+instance Locatable Locator ElementId where
+  applyLocate locateFn = locateFn
+instance Locatable ElementId ElementId where
+  applyLocate _ = pure . Right
 
 -- | Locator for use with both HTTP and BiDi protocols.
 data Locator
