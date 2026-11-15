@@ -5,9 +5,10 @@ module WebDriverPreCore.Extended.HTTP.NoWait where
 
 import WebDriverPreCore.Extended.Common.Locate (Locator)
 import WebDriverPreCore.Extended.Common.NoWait qualified as C
-import WebDriverPreCore.Extended.HTTP.Locate (LocateActions (..), LocateOpts, WDTrace, locate)
+import WebDriverPreCore.Extended.HTTP.Locate (LocateActions (..), LocateOpts, locate)
 import WebDriverPreCore.HTTP.Protocol
 
+-- Todo delete
 runAction ::
   (Monad m) =>
   LocateActions m ->

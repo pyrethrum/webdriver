@@ -12,13 +12,12 @@ import Effectful (Eff, (:>))
 import Effectful.Error.Dynamic (Error, throwError)
 import Effectful.Exception (catch, throwIO)
 import Effectful.Reader.Static (Reader, ask)
-import WebDriver.Effectful.HTTP.Base.Actions qualified as BA
+import WebDriver.Effectful.HTTP.Base.Actions
 import WebDriver.Effectful.HTTP.Base.Effect (WebDriver)
 import WebDriver.Effectful.Logger.Effect (Logger, logDebug)
 import WebDriverPreCore.Extended.Common.Locate (Locator)
 import WebDriverPreCore.Extended.Common.NoWait (ActionException)
 import WebDriverPreCore.Extended.Common.NoWait qualified as CNW
-import WebDriverPreCore.Extended.HTTP.Base.Protocol (ElementId, ShadowRootElementId, WindowRect)
 import WebDriverPreCore.Extended.HTTP.Locate
   ( ExtendedRoleLocateSingleton (..),
     LocateActions (..),
@@ -28,12 +27,19 @@ import WebDriverPreCore.Extended.HTTP.Locate
 import WebDriverPreCore.Extended.HTTP.Locate qualified as HL
 import WebDriverPreCore.Extended.HTTP.NoWait qualified as NW
 import WebDriverPreCore.Extended.Locators (DisplayedCheck (..), LocateException, elmId)
+import WebDriverPreCore.HTTP.Protocol
+  ( ElementId,
+    ShadowRootElementId,
+    WindowRect,
+  )
 import WebDriverPreCore.Utils.Utils (txt)
 
+-- TODO DELETE
+
 -- | Locate an element and click it, signalling any failure via 'Error'.
-click2 :: (WebDriver :> es, Logger :> es, Error ActionException :> es) => Locator -> Eff es ()
+click2 :: forall es. (WebDriver :> es, Logger :> es, Error ActionException :> es) => Locator -> Eff es ()
 click2 loc =
-  NW.runAction locActions defHttpOpts (fmap Right . BA.elementClick) loc
+  NW.runAction locActions defHttpOpts (fmap Right . elementClick) loc
     >>= either throwError pure
 
 -- | Default locate options for no-wait actions.
@@ -53,16 +59,16 @@ locActions =
     { throw = throwIO,
       catch,
       trace = logDebug . txt,
-      findElement = BA.findElement,
-      findElementFromElement = BA.findElementFromElement,
-      findElements = BA.findElements,
-      findElementsFromElement = BA.findElementsFromElement,
-      executeScript = BA.executeScript,
-      getElementAttribute = BA.getElementAttribute,
-      getElementText = BA.getElementText,
-      getElementShadowRoot = BA.getElementShadowRoot,
-      findElementFromShadowRoot = BA.findElementFromShadowRoot,
-      findElementsFromShadowRoot = BA.findElementsFromShadowRoot
+      findElement,
+      findElementFromElement,
+      findElements,
+      findElementsFromElement,
+      executeScript,
+      getElementAttribute,
+      getElementText,
+      getElementShadowRoot,
+      findElementFromShadowRoot,
+      findElementsFromShadowRoot
     }
 
 -- | Locate an element and run the given element action on it, signalling any failure via 'Error'.
@@ -105,16 +111,15 @@ locateAllFromElm el loc = do
 bindRight :: (Monad m) => (a -> m (Either e b)) -> (Either e a) -> m (Either e b)
 bindRight = either (pure . Left)
 
-locateElementShadowRoot :: forall es. (WebDriver :> es, Logger :> es) => Locator -> Eff es (Either LocateException ShadowRootElementId)
+locateElementShadowRoot :: forall es. (WebDriver :> es, Logger :> es, Reader LocateOpts :> es) => Locator -> Eff es (Either LocateException ShadowRootElementId)
 locateElementShadowRoot loc =
-  HL.locate locActions defHttpOpts loc
-    >>= bindRight (fmap Right . BA.getElementShadowRoot)
+  locate loc
+    >>= bindRight (fmap Right . getElementShadowRoot)
 
 shadowRoot :: forall es. (WebDriver :> es, Logger :> es, Reader LocateOpts :> es) => Locator -> Eff es (Either LocateException ShadowRootElementId)
-shadowRoot shadowLoc = do
-  opts <- ask @LocateOpts
-  HL.locate locActions opts shadowLoc
-    >>= bindRight (fmap Right . BA.getElementShadowRoot)
+shadowRoot shadowLoc =
+  locate shadowLoc
+    >>= bindRight (fmap Right . getElementShadowRoot)
 
 locateFromShadowElement :: forall es. (WebDriver :> es, Logger :> es, Reader LocateOpts :> es) => Locator -> Locator -> Eff es (Either LocateException ElementId)
 locateFromShadowElement shadowLoc loc = do
@@ -130,60 +135,60 @@ locateAllFromShadowElement shadowLoc loc = do
 
 -- | Locate an element and click it, signalling any failure via 'Error'.
 click :: forall es. (WebDriver :> es, Logger :> es, Error ActionException :> es, Reader LocateOpts :> es) => Locator -> Eff es ()
-click = elmRunner BA.elementClick
+click = elmRunner elementClick
 
 -- | Locate an element and clear it, signalling any failure via 'Error'.
 clear :: forall es. (WebDriver :> es, Logger :> es, Error ActionException :> es, Reader LocateOpts :> es) => Locator -> Eff es ()
-clear = elmRunner BA.elementClear
+clear = elmRunner elementClear
 
 -- | Locate an element and send keys to it, signalling any failure via 'Error'.
 sendKeys :: forall es. (WebDriver :> es, Logger :> es, Error ActionException :> es, Reader LocateOpts :> es) => Locator -> Text -> Eff es ()
-sendKeys loc keys = elmRunner (\el -> BA.elementSendKeys el keys) loc
+sendKeys loc keys = elmRunner (\el -> elementSendKeys el keys) loc
 
 -- | Locate an element and take a screenshot of it, signalling any failure via 'Error'.
 screenshot :: forall es. (WebDriver :> es, Logger :> es, Error ActionException :> es, Reader LocateOpts :> es) => Locator -> Eff es Text
-screenshot = elmRunner BA.takeElementScreenshot
+screenshot = elmRunner takeElementScreenshot
 
 -- | Locate an element and check whether it is selected, signalling any failure via 'Error'.
 isSelected :: forall es. (WebDriver :> es, Logger :> es, Error ActionException :> es, Reader LocateOpts :> es) => Locator -> Eff es Bool
-isSelected = elmRunner BA.isElementSelected
+isSelected = elmRunner isElementSelected
 
 -- | Locate an element and get one of its attributes, signalling any failure via 'Error'.
 getAttribute :: forall es. (WebDriver :> es, Logger :> es, Error ActionException :> es, Reader LocateOpts :> es) => Locator -> Text -> Eff es (Maybe Text)
-getAttribute loc name = elmRunner (\el -> BA.getElementAttribute el name) loc
+getAttribute loc name = elmRunner (\el -> getElementAttribute el name) loc
 
 -- | Locate an element and get one of its properties, signalling any failure via 'Error'.
 getProperty :: forall es. (WebDriver :> es, Logger :> es, Error ActionException :> es, Reader LocateOpts :> es) => Locator -> Text -> Eff es (Maybe Value)
-getProperty loc name = elmRunner (\el -> BA.getElementProperty el name) loc
+getProperty loc name = elmRunner (\el -> getElementProperty el name) loc
 
 -- | Locate an element and get one of its CSS values, signalling any failure via 'Error'.
 getCssValue :: forall es. (WebDriver :> es, Logger :> es, Error ActionException :> es, Reader LocateOpts :> es) => Locator -> Text -> Eff es Text
-getCssValue loc prop = elmRunner (\el -> BA.getElementCssValue el prop) loc
+getCssValue loc prop = elmRunner (\el -> getElementCssValue el prop) loc
 
 -- | Locate an element and get its shadow root, signalling any failure via 'Error'.
 getShadowRoot :: forall es. (WebDriver :> es, Logger :> es, Error ActionException :> es, Reader LocateOpts :> es) => Locator -> Eff es ShadowRootElementId
-getShadowRoot = elmRunner BA.getElementShadowRoot
+getShadowRoot = elmRunner getElementShadowRoot
 
 -- | Locate an element and get its text, signalling any failure via 'Error'.
 getText :: forall es. (WebDriver :> es, Logger :> es, Error ActionException :> es, Reader LocateOpts :> es) => Locator -> Eff es Text
-getText = elmRunner BA.getElementText
+getText = elmRunner getElementText
 
 -- | Locate an element and get its tag name, signalling any failure via 'Error'.
 getTagName :: forall es. (WebDriver :> es, Logger :> es, Error ActionException :> es, Reader LocateOpts :> es) => Locator -> Eff es Text
-getTagName = elmRunner BA.getElementTagName
+getTagName = elmRunner getElementTagName
 
 -- | Locate an element and get its bounding rectangle, signalling any failure via 'Error'.
 getRect :: forall es. (WebDriver :> es, Logger :> es, Error ActionException :> es, Reader LocateOpts :> es) => Locator -> Eff es WindowRect
-getRect = elmRunner BA.getElementRect
+getRect = elmRunner getElementRect
 
 -- | Locate an element and check whether it is enabled, signalling any failure via 'Error'.
 isEnabled :: forall es. (WebDriver :> es, Logger :> es, Error ActionException :> es, Reader LocateOpts :> es) => Locator -> Eff es Bool
-isEnabled = elmRunner BA.isElementEnabled
+isEnabled = elmRunner isElementEnabled
 
 -- | Locate an element and get its computed role, signalling any failure via 'Error'.
 getComputedRole :: forall es. (WebDriver :> es, Logger :> es, Error ActionException :> es, Reader LocateOpts :> es) => Locator -> Eff es Text
-getComputedRole = elmRunner BA.getElementComputedRole
+getComputedRole = elmRunner getElementComputedRole
 
 -- | Locate an element and get its computed label, signalling any failure via 'Error'.
 getComputedLabel :: forall es. (WebDriver :> es, Logger :> es, Error ActionException :> es, Reader LocateOpts :> es) => Locator -> Eff es Text
-getComputedLabel = elmRunner BA.getElementComputedLabel
+getComputedLabel = elmRunner getElementComputedLabel
