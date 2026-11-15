@@ -102,6 +102,12 @@ locateAllFromElm el loc = do
   opts <- ask @LocateOpts
   HL.locateAllFromElement mkLocateActions opts el loc
 
+locateElementShadowRoot :: forall es. (WebDriver :> es, Logger :> es) => ElementId -> Eff es Locator
+
+locateFromShadowElement :: forall es. (WebDriver :> es, Logger :> es, Reader LocateOpts :> es) => Locator -> Locator -> Eff es (Either LocateException ElementId)
+
+locateAllFromShadowElement :: forall es. (WebDriver :> es, Logger :> es, Reader LocateOpts :> es) => Locator -> Locator -> Eff es (Either LocateException [ElementId])
+
 -- | Locate an element and click it, signalling any failure via 'Error'.
 click :: forall es. (WebDriver :> es, Logger :> es, Error ActionException :> es, Reader LocateOpts :> es) => Locator -> Eff es ()
 click = elmRunner BA.elementClick
