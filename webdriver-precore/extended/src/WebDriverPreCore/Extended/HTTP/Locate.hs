@@ -141,18 +141,18 @@ locateAllFromElement actions opts rootId = runHttpAction actions opts (Just $ Do
 
 -- | Convert a ShadowLocatableParam to a ShadowRootElementId.
 shadowLocatableToRootId :: forall m. (Monad m) => LocateActions m -> LocateOpts -> ShadowLocatableParam -> m (Either LocateException ShadowRootElementId)
-shadowLocatableToRootId actions opts param = case param of
+shadowLocatableToRootId acts@MkLocateActions{getElementShadowRoot, catch} opts param = case param of
   ShadowRootElementId rootId -> pure $ Right rootId
-  ElementId elmId -> pure $ Right $ HTTPP.MkShadowRootElementId (HTTPP.id elmId)
-  Locator loc -> 
-    locate actions opts loc
-      >>= pure
-        . either
-          Left
-          ( Right
-              . HTTPP.MkShadowRootElementId
-              . HTTPP.id
-          )
+  ElementId elmId -> getShadowRoot elmId
+  Locator loc ->
+    locate acts opts loc
+      >>= either (pure . Left) getShadowRoot
+  where 
+    getShadowRoot ::  ElementId -> m (Either LocateException ShadowRootElementId)
+    getShadowRoot elmId = 
+      catch 
+        (getElementShadowRoot elmId)
+        (\e -> _)
 
 -- | Locate a unique or first-matching element rooted at a given element.
 locateFromShadowElement :: forall m a. (Monad m, ShadowLocatable a) => LocateActions m -> LocateOpts -> a -> Locator -> m (Either LocateException ElementId)
