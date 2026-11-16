@@ -15,7 +15,7 @@ import Effectful.Reader.Static (Reader, ask)
 import WebDriver.Effectful.HTTP.Base.Actions
 import WebDriver.Effectful.HTTP.Base.Effect (WebDriver)
 import WebDriver.Effectful.Logger.Effect (Logger, logDebug)
-import WebDriverPreCore.Extended.Common.Locate (Locator, Locatable)
+import WebDriverPreCore.Extended.Common.Locate (Locator)
 import WebDriverPreCore.Extended.Common.NoWait (ActionException)
 import WebDriverPreCore.Extended.Common.NoWait qualified as CNW
 import WebDriverPreCore.Extended.HTTP.Locate
@@ -32,7 +32,8 @@ import WebDriverPreCore.HTTP.Protocol
     ShadowRootElementId,
     WindowRect,
   )
-import WebDriverPreCore.Utils.Utils (txt)
+import WebDriverPreCore.Utils.Utils (txt, bindRight)
+import WebDriverPreCore.Extended.Common.Locatable (Locatable)
 
 -- TODO DELETE
 
@@ -121,9 +122,6 @@ locateAllFromElm :: forall es. (WebDriver :> es, Logger :> es, Reader LocateOpts
 locateAllFromElm el loc = do
   opts <- ask @LocateOpts
   HL.locateAllFromElement locActions opts el loc
-
-bindRight :: (Monad m) => (a -> m (Either e b)) -> (Either e a) -> m (Either e b)
-bindRight = either (pure . Left)
 
 locateElementShadowRoot :: forall es. (WebDriver :> es, Logger :> es, Reader LocateOpts :> es) => Locator -> Eff es (Either LocateException ShadowRootElementId)
 locateElementShadowRoot loc =

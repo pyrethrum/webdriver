@@ -25,11 +25,11 @@ import Data.Text
 import Data.Text qualified as T
 import GHC.Generics (Generic)
 import GHC.Stack (HasCallStack)
-import WebDriverPreCore.Extended.Common.Locatable (Locatable, ShadowLocatable, ShadowLocatableParam (..))
+import WebDriverPreCore.Extended.Common.Locatable (Locatable, ShadowLocatable (..), ShadowLocatableParam (..))
 import WebDriverPreCore.Extended.Common.Locate (CompoundLocator, DisplayedCheck (..), HttpLoc (..), LeafCardinality (..), LocateException (..), Locator, PreLocateException (..), RoleLocator (..), SingletonCardinality (..), addLocToException, displayedJS, filterDisplayed, filterDisplayedForSingleton, runLoc, shouldRunDisplayedCheck, xPathRelativePrefix)
 import WebDriverPreCore.Extended.Common.Locate qualified as LI
-import WebDriverPreCore.HTTP.Protocol as HTTPP (ElementId, Script (..), Selector (..), ShadowRootElementId)
-import WebDriverPreCore.Utils.Utils (txt)
+import WebDriverPreCore.HTTP.Protocol as HTTPP (ElementId, Script (..), Selector (..), ShadowRootElementId, WebDriverException)
+import WebDriverPreCore.Utils.Utils (bindRight, txt)
 import Prelude as P hiding (log)
 
 data ExtendedRoleLocateSingleton = ExtLocateNever | ExtLocateSingletonMiss | ExtLocateAlways deriving (Show, Eq)
@@ -139,36 +139,42 @@ locateFromElement actions opts rootId l = mkSingleton l <$> runHttpAction action
 locateAllFromElement :: forall m. (Monad m) => LocateActions m -> LocateOpts -> ElementId -> Locator -> m (Either LocateException [ElementId])
 locateAllFromElement actions opts rootId = runHttpAction actions opts (Just $ Document rootId) httpLocateAll
 
+data ShadowRootLocateException
+  = WebDriverError WebDriverException
+  | LocateError LocateException
+  deriving (Show)
+
+instance Exception ShadowRootLocateException
+
 -- | Convert a ShadowLocatableParam to a ShadowRootElementId.
-shadowLocatableToRootId :: forall m. (Monad m) => LocateActions m -> LocateOpts -> ShadowLocatableParam -> m (Either LocateException ShadowRootElementId)
-shadowLocatableToRootId acts@MkLocateActions{getElementShadowRoot, catch} opts param = case param of
+shadowLocatableToRootId :: forall m. (Monad m) => LocateActions m -> LocateOpts -> ShadowLocatableParam -> m (Either ShadowRootLocateException ShadowRootElementId)
+shadowLocatableToRootId acts@MkLocateActions {getElementShadowRoot, catch} opts param = case param of
   ShadowRootElementId rootId -> pure $ Right rootId
   ElementId elmId -> getShadowRoot elmId
   Locator loc ->
     locate acts opts loc
-      >>= either (pure . Left) getShadowRoot
-  where 
-    getShadowRoot ::  ElementId -> m (Either LocateException ShadowRootElementId)
-    getShadowRoot elmId = 
-      catch 
-        (getElementShadowRoot elmId)
-        (\e -> _)
+      >>= either (pure . Left . LocateError) getShadowRoot
+  where
+    getShadowRoot :: ElementId -> m (Either ShadowRootLocateException ShadowRootElementId)
+    getShadowRoot elmId =
+      catch
+        (Right <$> getElementShadowRoot elmId)
+        (pure . Left . WebDriverError)
 
 -- | Locate a unique or first-matching element rooted at a given element.
-locateFromShadowElement :: forall m a. (Monad m, ShadowLocatable a) => LocateActions m -> LocateOpts -> a -> Locator -> m (Either LocateException ElementId)
+locateFromShadowElement :: forall m sLoc. (Monad m, ShadowLocatable sLoc) => LocateActions m -> LocateOpts -> sLoc -> Locator -> m (Either ShadowRootLocateException ElementId)
 locateFromShadowElement actions opts root l = do
-  rootIdResult <- shadowLocatableToRootId actions opts (extractShadowLocatable root)
-  case rootIdResult of
-    Right rootId -> mkSingleton l <$> runHttpAction actions opts (Just $ Shadow rootId) httpLocateSingleton l
-    Left err -> pure $ Left err
+  shadowLocatableToRootId actions opts (extractShadowLocatable root)
+    >>= bindRight
+      \rootId -> first LocateError . mkSingleton l <$> runHttpAction actions opts (Just $ Shadow rootId) httpLocateSingleton l
 
 -- | Locate all matching elements rooted at a given element.
-locateAllFromShadowElement :: forall m a. (Monad m, ShadowLocatable a) => LocateActions m -> LocateOpts -> a -> Locator -> m (Either LocateException [ElementId])
-locateAllFromShadowElement actions opts root l = do
-  rootIdResult <- shadowLocatableToRootId actions opts (extractShadowLocatable root)
-  case rootIdResult of
-    Right rootId -> runHttpAction actions opts (Just $ Shadow rootId) httpLocateAll l
-    Left err -> pure $ Left err
+locateAllFromShadowElement :: forall m sLoc. (Monad m, ShadowLocatable sLoc) => LocateActions m -> LocateOpts -> sLoc -> Locator -> m (Either ShadowRootLocateException [ElementId])
+locateAllFromShadowElement actions opts root l =
+  do
+    shadowLocatableToRootId actions opts (extractShadowLocatable root)
+    >>= bindRight
+      \rootId -> first LocateError <$> runHttpAction actions opts (Just $ Shadow rootId) httpLocateAll l
 
 data Root
   = Document ElementId

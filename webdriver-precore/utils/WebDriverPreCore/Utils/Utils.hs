@@ -2,6 +2,7 @@
 
 module WebDriverPreCore.Utils.Utils
   ( txt,
+    bindRight,
     enumerate,
     logRethrow,
     logSupress,
@@ -16,7 +17,7 @@ import Control.Monad (when)
 import Data.Text (Text, pack, unpack)
 import Debug.Trace (trace)
 import Text.Show.Pretty qualified as P
-import UnliftIO (AsyncCancelled, Exception (displayException), Handler (Handler), MonadIO, MonadUnliftIO, SomeException, catches, throwIO, Async, async)
+import UnliftIO (Async, AsyncCancelled, Exception (displayException), Handler (Handler), MonadIO, MonadUnliftIO, SomeException, async, catches, throwIO)
 
 txt :: (Show a) => a -> Text
 txt = pack . P.ppShow
@@ -29,6 +30,9 @@ throwLeft throw = either throw pure
 
 ioThrow :: (Exception l, MonadIO m) => Either l r -> m r
 ioThrow = throwLeft throwIO
+
+bindRight :: (Monad m) => (a -> m (Either e b)) -> (Either e a) -> m (Either e b)
+bindRight = either (pure . Left)
 
 -- | Logs exceptions thrown in a thread and rethrows synchronous exceptions
 logRethrow ::

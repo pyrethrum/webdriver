@@ -14,6 +14,7 @@ import Control.Exception (Exception, SomeException)
 import GHC.Stack (HasCallStack)
 import WebDriverPreCore.Error (WebDriverException)
 import WebDriverPreCore.Extended.Common.Locate (LocateException, Locator)
+import WebDriverPreCore.Extended.Common.Locatable (Locatable (..))
 
 data ActionException
   = LocateException LocateException
