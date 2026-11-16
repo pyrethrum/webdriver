@@ -7,6 +7,7 @@
 module WebDriver.Effectful.HTTP.ActionsNoWait where
 
 import Data.Aeson (Value)
+import Data.Bifunctor (Bifunctor (..))
 import Data.Text (Text)
 import Effectful (Eff, (:>))
 import Effectful.Error.Dynamic (Error, throwError)
@@ -15,13 +16,15 @@ import Effectful.Reader.Static (Reader, ask)
 import WebDriver.Effectful.HTTP.Base.Actions
 import WebDriver.Effectful.HTTP.Base.Effect (WebDriver)
 import WebDriver.Effectful.Logger.Effect (Logger, logDebug)
+import WebDriverPreCore.Extended.Common.Locatable (Locatable)
 import WebDriverPreCore.Extended.Common.Locate (Locator)
-import WebDriverPreCore.Extended.Common.NoWait (ActionException)
+import WebDriverPreCore.Extended.Common.NoWait (ActionException (..))
 import WebDriverPreCore.Extended.Common.NoWait qualified as CNW
 import WebDriverPreCore.Extended.HTTP.Locate
   ( ExtendedRoleLocateSingleton (..),
     LocateActions (..),
     LocateOpts (..),
+    ShadowRootLocateException (..),
     SingletonCardinality (..),
   )
 import WebDriverPreCore.Extended.HTTP.Locate qualified as HL
@@ -32,8 +35,7 @@ import WebDriverPreCore.HTTP.Protocol
     ShadowRootElementId,
     WindowRect,
   )
-import WebDriverPreCore.Utils.Utils (txt, bindRight)
-import WebDriverPreCore.Extended.Common.Locatable (Locatable)
+import WebDriverPreCore.Utils.Utils (bindRight, txt)
 
 -- TODO DELETE
 
@@ -128,18 +130,20 @@ locateElementShadowRoot loc =
   locate loc
     >>= bindRight (fmap Right . getElementShadowRoot)
 
-shadowRoot :: forall es. (WebDriver :> es, Logger :> es, Reader LocateOpts :> es) => Locator -> Eff es (Either LocateException ShadowRootElementId)
+shadowRoot :: forall es. (WebDriver :> es, Logger :> es, Reader LocateOpts :> es) => Locator -> Eff es (Either ShadowRootLocateException ShadowRootElementId)
 shadowRoot shadowLoc =
   locate shadowLoc
-    >>= bindRight (fmap Right . getElementShadowRoot)
+    >>= either
+      (pure . Left . LocateError)
+      (fmap Right . getElementShadowRoot)
 
-locateFromShadowElement :: forall es. (WebDriver :> es, Logger :> es, Reader LocateOpts :> es) => Locator -> Locator -> Eff es (Either LocateException ElementId)
+locateFromShadowElement :: forall es. (WebDriver :> es, Logger :> es, Reader LocateOpts :> es) => Locator -> Locator -> Eff es (Either ShadowRootLocateException ElementId)
 locateFromShadowElement shadowLoc loc = do
   opts <- ask @LocateOpts
   shadowRoot shadowLoc
     >>= bindRight \sroot -> HL.locateFromShadowElement locActions opts sroot loc
 
-locateAllFromShadowElement :: forall es. (WebDriver :> es, Logger :> es, Reader LocateOpts :> es) => Locator -> Locator -> Eff es (Either LocateException [ElementId])
+locateAllFromShadowElement :: forall es. (WebDriver :> es, Logger :> es, Reader LocateOpts :> es) => Locator -> Locator -> Eff es (Either ShadowRootLocateException [ElementId])
 locateAllFromShadowElement shadowLoc loc = do
   opts <- ask @LocateOpts
   shadowRoot shadowLoc

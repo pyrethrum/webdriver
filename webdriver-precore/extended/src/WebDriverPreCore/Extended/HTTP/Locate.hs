@@ -4,6 +4,7 @@ module WebDriverPreCore.Extended.HTTP.Locate
     LocateActions (..),
     SingletonCardinality (..),
     WDTrace (..),
+    ShadowRootLocateException(..),
     locate,
     locateFromElement,
     locateAll,
@@ -25,7 +26,7 @@ import Data.Text
 import Data.Text qualified as T
 import GHC.Generics (Generic)
 import GHC.Stack (HasCallStack)
-import WebDriverPreCore.Extended.Common.Locatable (Locatable, ShadowLocatable (..), ShadowLocatableParam (..))
+import WebDriverPreCore.Extended.Common.Locatable (Locatable (..), ShadowLocatable (..), ShadowLocatableParam (..))
 import WebDriverPreCore.Extended.Common.Locate (CompoundLocator, DisplayedCheck (..), HttpLoc (..), LeafCardinality (..), LocateException (..), Locator, PreLocateException (..), RoleLocator (..), SingletonCardinality (..), addLocToException, displayedJS, filterDisplayed, filterDisplayedForSingleton, runLoc, shouldRunDisplayedCheck, xPathRelativePrefix)
 import WebDriverPreCore.Extended.Common.Locate qualified as LI
 import WebDriverPreCore.HTTP.Protocol as HTTPP (ElementId, Script (..), Selector (..), ShadowRootElementId, WebDriverException)
@@ -131,13 +132,21 @@ locate actions opts l = mkSingleton l <$> runHttpAction actions opts Nothing htt
 locateAll :: forall m. (Monad m) => LocateActions m -> LocateOpts -> Locator -> m (Either LocateException [ElementId])
 locateAll actions opts = runHttpAction actions opts Nothing httpLocateAll
 
+-- TODO - DOCUMENTATION
+
 -- | Locate a unique or first-matching element rooted at a given element.
-locateFromElement :: forall m. (Monad m) => LocateActions m -> LocateOpts -> ElementId -> Locator -> m (Either LocateException ElementId)
-locateFromElement actions opts rootId l = mkSingleton l <$> runHttpAction actions opts (Just $ Document rootId) httpLocateSingleton l
+locateFromElement :: forall m rootLoc. (Monad m, Locatable rootLoc ElementId) => LocateActions m -> LocateOpts -> rootLoc -> Locator -> m (Either LocateException ElementId)
+locateFromElement actions opts rootIdOrLocator l =
+  applyLocate (locate actions opts) rootIdOrLocator
+    >>= bindRight
+      \rootId -> mkSingleton l <$> runHttpAction actions opts (Just $ Document rootId) httpLocateSingleton l
 
 -- | Locate all matching elements rooted at a given element.
-locateAllFromElement :: forall m. (Monad m) => LocateActions m -> LocateOpts -> ElementId -> Locator -> m (Either LocateException [ElementId])
-locateAllFromElement actions opts rootId = runHttpAction actions opts (Just $ Document rootId) httpLocateAll
+locateAllFromElement :: forall m rootLoc. (Monad m, Locatable rootLoc ElementId) => LocateActions m -> LocateOpts -> rootLoc -> Locator -> m (Either LocateException [ElementId])
+locateAllFromElement actions opts rootIdOrLocator l =
+  applyLocate (locate actions opts) rootIdOrLocator
+    >>= bindRight
+      \rootId -> runHttpAction actions opts (Just $ Document rootId) httpLocateAll l
 
 data ShadowRootLocateException
   = WebDriverError WebDriverException

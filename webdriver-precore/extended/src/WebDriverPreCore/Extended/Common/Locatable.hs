@@ -6,7 +6,6 @@ module WebDriverPreCore.Extended.Common.Locatable
   )
 where
 
-import Control.Monad (Monad)
 import WebDriverPreCore.Extended.Common.Locate (LocateException, Locator)
 import WebDriverPreCore.HTTP.Protocol (ElementId, ShadowRootElementId)
 
@@ -31,10 +30,13 @@ class ShadowLocatable a where
   extractShadowLocatable :: a -> ShadowLocatableParam
 
 instance ShadowLocatable Locator  where
+  extractShadowLocatable :: Locator -> ShadowLocatableParam
   extractShadowLocatable = Locator
 
 instance ShadowLocatable ElementId where
+  extractShadowLocatable :: ElementId -> ShadowLocatableParam
   extractShadowLocatable = ElementId 
 
 instance ShadowLocatable ShadowRootElementId  where
+  extractShadowLocatable :: ShadowRootElementId -> ShadowLocatableParam
   extractShadowLocatable = ShadowRootElementId
