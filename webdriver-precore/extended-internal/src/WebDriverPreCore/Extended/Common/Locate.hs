@@ -57,7 +57,6 @@ import Data.Function ((&))
 import GHC.Stack (HasCallStack)
 import Prelude qualified as P
 import WebDriverPreCore.Error (WebDriverException)
-import WebDriverPreCore.HTTP.Protocol (ElementId)
 
 data PreLocateException
   = AmbiguousLocator' Text
