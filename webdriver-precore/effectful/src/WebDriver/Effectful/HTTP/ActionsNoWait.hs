@@ -28,7 +28,6 @@ import WebDriverPreCore.Extended.HTTP.Locate
     SingletonCardinality (..),
   )
 import WebDriverPreCore.Extended.HTTP.Locate qualified as HL
-import WebDriverPreCore.Extended.HTTP.NoWait qualified as NW
 import WebDriverPreCore.Extended.Locators (DisplayedCheck (..), LocateException, elmId)
 import WebDriverPreCore.HTTP.Protocol
   ( ElementId,
@@ -36,14 +35,6 @@ import WebDriverPreCore.HTTP.Protocol
     WindowRect,
   )
 import WebDriverPreCore.Utils.Utils (bindRight, txt)
-
--- TODO DELETE
-
--- | Locate an element and click it, signalling any failure via 'Error'.
-click2 :: forall es. (WebDriver :> es, Logger :> es, Error ActionException :> es) => Locator -> Eff es ()
-click2 loc =
-  NW.runAction locActions defHttpOpts (fmap Right . elementClick) loc
-    >>= either throwError pure
 
 -- | Default locate options for no-wait actions.
 defHttpOpts :: LocateOpts
