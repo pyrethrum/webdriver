@@ -27,7 +27,7 @@ import Data.Text qualified as T
 import GHC.Generics (Generic)
 import GHC.Stack (HasCallStack)
 import WebDriverPreCore.Extended.Common.Locatable (Locatable (..), ShadowLocatable (..), ShadowLocatableParam (..))
-import WebDriverPreCore.Extended.Common.Locate (CompoundLocator, DisplayedCheck (..), HttpLoc (..), LeafCardinality (..), LocateException (..), Locator, PreLocateException (..), RoleLocator (..), SingletonCardinality (..), addLocToException, displayedJS, filterDisplayed, filterDisplayedForSingleton, runLoc, shouldRunDisplayedCheck, xPathRelativePrefix)
+import WebDriverPreCore.Extended.Common.Locate (CompoundLocator, DisplayedCheck (..), HttpLoc (..), LeafCardinality (..), LocateException (..), Locator, PreLocateException (..), RoleLocator (..), SingletonCardinality (..), addLocToException, displayedJS, filterDisplayed, filterDisplayedForSingleton, shouldRunDisplayedCheck, xPathRelativePrefix)
 import WebDriverPreCore.Extended.Common.Locate qualified as LI
 import WebDriverPreCore.HTTP.Protocol as HTTPP (ElementId, Script (..), Selector (..), ShadowRootElementId, WebDriverException)
 import WebDriverPreCore.Utils.Utils (bindRight, txt)
@@ -79,8 +79,7 @@ data LocateOpts = MkLocateOpts
 
 -- | Actions for singleton locate functions ('locateHttp', 'locateFirstHttp', 'locateFromElementHttp').
 data LocateActions m = MkLocateActions
-  { throw :: forall a. (HasCallStack) => PreLocateException -> m a,
-    catch :: forall a e. (HasCallStack, Exception e) => m a -> (e -> m a) -> m a,
+  { catch :: forall a e. (HasCallStack, Exception e) => m a -> (e -> m a) -> m a,
     trace :: WDTrace -> m (),
     findElement :: Selector -> m ElementId,
     findElementFromElement :: ElementId -> Selector -> m ElementId,
@@ -95,8 +94,7 @@ data LocateActions m = MkLocateActions
   }
 
 data LocParams m = MkLocParams
-  { throw :: forall a. (HasCallStack) => PreLocateException -> m a,
-    catch :: forall a e. (HasCallStack, Exception e) => m a -> (e -> m a) -> m a,
+  { catch :: forall a e. (HasCallStack, Exception e) => m a -> (e -> m a) -> m a,
     trace :: WDTrace -> m (),
     findElement :: Selector -> m ElementId,
     findElementFromElement :: ElementId -> Selector -> m ElementId,
@@ -197,7 +195,7 @@ runHttpAction ::
   LocateOpts ->
   -- | root element
   Maybe Root ->
-  (LocParams m -> CompoundLocator HttpLoc -> m [ElementId]) ->
+  (LocParams m -> CompoundLocator HttpLoc -> m (Either PreLocateException [ElementId])) ->
   Locator ->
   m (Either LocateException [ElementId])
 runHttpAction actions@MkLocateActions {catch} opts mRootId locateAction loc = do
@@ -210,7 +208,11 @@ runHttpAction actions@MkLocateActions {catch} opts mRootId locateAction loc = do
     -- run locator if transformation succeeded
     Right compoundLoc -> do
       p.trace (Prepared loc compoundLoc)
-      first (addLocToException loc) <$> runLoc catch (locateAction p) compoundLoc
+      catch
+        (catch
+          (bimap (addLocToException loc) id <$> locateAction p compoundLoc)
+          (pure . Left . addLocToException loc . DriverException'))
+        (pure . Left . addLocToException loc . DriverException')
 
 setBaseElement :: Maybe Root -> LocParams m -> LocParams m
 setBaseElement mRootId act@MkLocParams {..} =
@@ -346,8 +348,8 @@ httpLocateSingleton ::
   (Monad m) =>
   LocParams m ->
   CompoundLocator HttpLoc ->
-  m [ElementId]
-httpLocateSingleton prms@MkLocParams {throw} loc = do
+  m (Either PreLocateException [ElementId])
+httpLocateSingleton prms loc = do
   case loc of
     LI.LeafC ll -> do
       let leafCard =
@@ -364,23 +366,21 @@ httpLocateSingleton prms@MkLocParams {throw} loc = do
               missRetryRslt <- locateLeaf prms DoRoleJSSecondPass FindAll ll
               retryChked <- chkElmsSingleton missRetryRslt
               case retryChked of
-                [] -> throwNotFound
-                [x] -> pure [x]
+                [] -> pure $ Left elementNotFoundError
+                [x] -> pure $ Right [x]
                 (x : xs) ->
                   if isUnique
-                    then throwAmbiguous xs
-                    else pure [x]
-            else throwNotFound
-        [x] -> pure [x]
+                    then pure $ Left (AmbiguousLocator' ("Multiple elements found matching locator: " <> txt (x : xs)))
+                    else pure $ Right [x]
+            else pure $ Left elementNotFoundError
+        [x] -> pure $ Right [x]
         elms@(x : _xs) ->
           if isUnique
-            then throwAmbiguous elms
-            else pure [x]
+            then pure $ Left (AmbiguousLocator' ("Multiple elements found matching locator: " <> txt elms))
+            else pure $ Right [x]
     _ ->
-      locateElmsUnchecked prms FindAll secondPassOnInitial loc
+      Right <$> locateElmsUnchecked prms FindAll secondPassOnInitial loc
   where
-    throwNotFound = throw elementNotFoundError
-    throwAmbiguous elms = throw (AmbiguousLocator' ("Multiple elements found matching locator: " <> txt elms))
     isUnique = prms.singletonCardinality == Unique
     isRole = case loc of
       LI.LeafC RoleHttp {} -> True
@@ -406,7 +406,7 @@ httpLocateAll ::
   (Monad m) =>
   LocParams m ->
   CompoundLocator HttpLoc ->
-  m [ElementId]
+  m (Either PreLocateException [ElementId])
 httpLocateAll prms loc = do
   let secondPassOnInitial = case prms.extendedRoleLocation of
         ExtLocateNever -> NoRoleJSSecondPass
@@ -414,8 +414,8 @@ httpLocateAll prms loc = do
         ExtLocateAlways -> DoRoleJSSecondPass
   elms <- locateElmsUnchecked prms FindAll secondPassOnInitial loc
   if shouldRunDisplayedCheck prms.jsRecheckDisplayed False
-    then jsFilterDisplayed prms elms
-    else pure elms
+    then Right <$> jsFilterDisplayed prms elms
+    else pure $ Right elms
 
 data SingletonCheckResult
   = SingletonSuccess {elms :: [ElementId]}

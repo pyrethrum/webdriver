@@ -63,8 +63,7 @@ data BiDiLocateOpts = MkBiDiLocateOpts
 
 -- | Actions for singleton locate functions ('locateHttp', 'locateFirstHttp', 'locateFromElementHttp').
 data LocateActions m = MkLocateActions
-  { throw :: forall a. (HasCallStack) => PreLocateException -> m a,
-    catch :: forall a e. (HasCallStack, Exception e) => m a -> (e -> m a) -> m a,
+  { catch :: forall a e. (HasCallStack, Exception e) => m a -> (e -> m a) -> m a,
     trace :: WDBiDITrace -> m (),
     locateNodes :: BiDiP.LocateNodes -> m BiDiP.LocateNodesResult,
     scriptCallFunction :: BiDiP.CallFunction -> m BiDiP.EvaluateResult,
@@ -72,8 +71,7 @@ data LocateActions m = MkLocateActions
   }
 
 data LocParams m = MkLocParams
-  { throw :: forall a. (HasCallStack) => PreLocateException -> m a,
-    catch :: forall a e. (HasCallStack, Exception e) => m a -> (e -> m a) -> m a,
+  { catch :: forall a e. (HasCallStack, Exception e) => m a -> (e -> m a) -> m a,
     trace :: WDBiDITrace -> m (),
     locateNodes :: BiDiP.LocateNodes -> m BiDiP.LocateNodesResult,
     scriptCallFunction :: BiDiP.CallFunction -> m BiDiP.EvaluateResult,
@@ -166,7 +164,7 @@ runBiDiAction ::
   BiDiP.BrowsingContext ->
   -- | start node (root element)
   Maybe SharedReference ->
-  (LocParams m -> CompoundLocator BiDiLoc -> m r) ->
+  (LocParams m -> CompoundLocator BiDiLoc -> m (Either PreLocateException r)) ->
   Locator ->
   m (Either LocateException r)
 runBiDiAction actions@MkLocateActions {catch} opts context mRootId locateAction loc = do
@@ -179,7 +177,11 @@ runBiDiAction actions@MkLocateActions {catch} opts context mRootId locateAction 
     -- run the locator if the transformation succeeded
     Right compoundLoc -> do
       trace (Prepared loc compoundLoc)
-      first (addLocToException loc) <$> runLoc catch (locateAction p) compoundLoc
+      catch
+        (catch
+          (bimap (addLocToException loc) id <$> locateAction p compoundLoc)
+          (pure . Left . addLocToException loc . DriverException'))
+        (pure . Left . addLocToException loc . DriverException')
 
 -- | Set the start node (root element) used by the locate.
 setBaseElement :: Maybe SharedReference -> LocParams m -> LocParams m
@@ -188,7 +190,7 @@ setBaseElement mRootId act@MkLocParams {..} =
 
 -- | Recover the underlying 'LocateActions' from the extended params.
 mkLocateActions :: LocParams m -> LocateActions m
-mkLocateActions MkLocParams {throw, catch, trace, locateNodes, scriptCallFunction, getElementText} = MkLocateActions {throw, catch, trace, locateNodes, scriptCallFunction, getElementText}
+mkLocateActions MkLocParams {catch, trace, locateNodes, scriptCallFunction, getElementText} = MkLocateActions {catch, trace, locateNodes, scriptCallFunction, getElementText}
 
 -- | Locate a single node. Cardinality checks are deferred until the query
 --   completes; for 'First' the driver is asked for at most one node, while for
@@ -198,9 +200,12 @@ biDiLocateSingleton ::
   (Monad m) =>
   LocParams m ->
   CompoundLocator BiDiLoc ->
-  m BiDiP.NodeRemoteValue
-biDiLocateSingleton prms@MkLocParams {throw, singletonCardinality, startNodes, jsRecheckDisplayed} loc = do
-  let fetchAll = singletonCardinality == Unique || jsRecheckDisplayed == DisplayedCheckAlways
+  m (Either PreLocateException BiDiP.NodeRemoteValue)
+biDiLocateSingleton prms loc = do
+  let singletonCardinality = prms.singletonCardinality
+      jsRecheckDisplayed = prms.jsRecheckDisplayed
+      startNodes = prms.startNodes
+      fetchAll = singletonCardinality == Unique || jsRecheckDisplayed == DisplayedCheckAlways
       baseOpts =
         MkBaseLocateOpts
           { maxNodeCount = case (fetchAll, loc) of
@@ -215,13 +220,13 @@ biDiLocateSingleton prms@MkLocParams {throw, singletonCardinality, startNodes, j
       then filterDisplayedForSingleton (jsFilterDisplayed prms) allNodes
       else pure allNodes
   case filtered of
-    [] -> throw elementNotFoundError
+    [] -> pure $ Left elementNotFoundError
     (x : xs) ->
       case singletonCardinality of
         Unique
-          | not (P.null xs) -> throw (AmbiguousLocator' ("Multiple elements found matching locator: " <> txt (x : xs)))
-          | otherwise -> pure x
-        First -> pure x
+          | not (P.null xs) -> pure $ Left (AmbiguousLocator' ("Multiple elements found matching locator: " <> txt (x : xs)))
+          | otherwise -> pure $ Right x
+        First -> pure $ Right x
 
 -- | Locate all matching nodes.
 biDiLocateAll ::
@@ -229,9 +234,11 @@ biDiLocateAll ::
   (Monad m) =>
   LocParams m ->
   CompoundLocator BiDiLoc ->
-  m [BiDiP.NodeRemoteValue]
-biDiLocateAll prms@MkLocParams {startNodes, jsRecheckDisplayed} loc = do
-  let baseOpts =
+  m (Either PreLocateException [BiDiP.NodeRemoteValue])
+biDiLocateAll prms loc = do
+  let startNodes = prms.startNodes
+      jsRecheckDisplayed = prms.jsRecheckDisplayed
+      baseOpts =
         MkBaseLocateOpts
           { maxNodeCount = Nothing,
             serializationOptions = Nothing,
@@ -239,8 +246,8 @@ biDiLocateAll prms@MkLocParams {startNodes, jsRecheckDisplayed} loc = do
           }
   elms <- locateElmsBiDi prms baseOpts loc
   if shouldRunDisplayedCheck jsRecheckDisplayed False
-    then jsFilterDisplayed prms elms
-    else pure elms
+    then Right <$> jsFilterDisplayed prms elms
+    else pure $ Right elms
 
 -- | Locate all matching nodes for a compound locator, with no cardinality filtering.
 locateElmsBiDi ::
@@ -249,37 +256,46 @@ locateElmsBiDi ::
   LocParams m ->
   BaseLocateOpts ->
   CompoundLocator BiDiLoc ->
-  m [BiDiP.NodeRemoteValue]
+  m (Either PreLocateException [BiDiP.NodeRemoteValue])
 locateElmsBiDi prms baseOpts loc =
-  fmap LST.nub $
+  fmap (fmap LST.nub) $
     case loc of
       LI.LeafC cl -> locateLeafBiDi prms baseOpts cl
       LI.ContainsC {container, contained} -> do
         containers <- locateElmsBiDi prms baseOpts container
-        locateContained containers contained
+        case containers of
+          Left e -> pure $ Left e
+          Right containerIds -> locateContained containerIds contained
       LI.AllC {elms = locs} -> do
         let (l :| ls) = locs
             step acc loc' =
-              if P.null acc
-                then pure []
-                else fmap (LST.intersect acc) (locateElmsBiDi prms baseOpts loc')
+              case acc of
+                Left e -> pure $ Left e
+                Right elms ->
+                  if P.null elms
+                    then pure $ Right []
+                    else do
+                      res <- locateElmsBiDi prms baseOpts loc'
+                      case res of
+                        Left e -> pure $ Left e
+                        Right res' -> pure $ Right (LST.intersect elms res')
         initial <- locateElmsBiDi prms baseOpts l
         foldM step initial ls
-      LI.AnyC {elms = locs} ->
-        fmap join $
-          traverse (locateElmsBiDi prms baseOpts) (toList locs)
+      LI.AnyC {elms = locs} -> do
+        results <- traverse (locateElmsBiDi prms baseOpts) (toList locs)
+        pure $ fmap join $ sequenceA results
   where
-    locateContained :: [BiDiP.NodeRemoteValue] -> CompoundLocator BiDiLoc -> m [BiDiP.NodeRemoteValue]
+    locateContained :: [BiDiP.NodeRemoteValue] -> CompoundLocator BiDiLoc -> m (Either PreLocateException [BiDiP.NodeRemoteValue])
     locateContained containerIds subLoc = do
       containedResults <-
         traverse
           ( \containerId ->
               case nodeToSharedRef containerId of
                 Just ref -> locateElmsBiDi prms (setStartNodes baseOpts (Just [ref])) subLoc
-                Nothing -> pure []
+                Nothing -> pure $ Right []
           )
           containerIds
-      pure $ join containedResults
+      pure $ sequenceA containedResults >>= \results -> Right (join results)
 
 -- | Run a single BiDi locateNodes command for a leaf locator.
 locateLeafBiDi ::
@@ -288,7 +304,7 @@ locateLeafBiDi ::
   LocParams m ->
   BaseLocateOpts ->
   BiDiLoc ->
-  m [BiDiP.NodeRemoteValue]
+  m (Either PreLocateException [BiDiP.NodeRemoteValue])
 locateLeafBiDi prms baseOpts loc =
   case loc of
     InnerTextBiDi {value, matchType, caseSensitivity, maxDepth} ->
@@ -308,7 +324,7 @@ locateRoleBiDi ::
   LocParams m ->
   BaseLocateOpts ->
   RoleLocator ->
-  m [BiDiP.NodeRemoteValue]
+  m (Either PreLocateException [BiDiP.NodeRemoteValue])
 locateRoleBiDi prms baseOpts roleSpec =
   case roleSpec of
     RoleName {} -> runLeafLocator prms baseOpts (roleToAccessibility roleSpec)
@@ -324,19 +340,21 @@ locateRoleWithSynonyms ::
   BaseLocateOpts ->
   RoleLocator ->
   [Text] ->
-  m [BiDiP.NodeRemoteValue]
+  m (Either PreLocateException [BiDiP.NodeRemoteValue])
 locateRoleWithSynonyms prms baseOpts roleLoc synonyms = do
   found <- runLeafLocator prms baseOpts (roleToAccessibility roleLoc)
   case found of
-    [] -> trySynonyms synonyms
-    _ -> pure found
+    Left e -> pure $ Left e
+    Right [] -> trySynonyms synonyms
+    Right elms -> pure $ Right elms
   where
-    trySynonyms [] = pure []
+    trySynonyms [] = pure $ Right []
     trySynonyms (syn : rest) = do
       found <- runLeafLocator prms baseOpts (overrideRoleLabel syn roleLoc)
       case found of
-        [] -> trySynonyms rest
-        _ -> pure found
+        Left e -> pure $ Left e
+        Right [] -> trySynonyms rest
+        Right elms -> pure $ Right elms
 
 -- | Run a single BiDi locateNodes command for a directly-supported BiDi locator.
 runLeafLocator ::
@@ -345,14 +363,16 @@ runLeafLocator ::
   LocParams m ->
   BaseLocateOpts ->
   BiDiP.Locator ->
-  m [BiDiP.NodeRemoteValue]
-runLeafLocator prms@MkLocParams {throw, trace, context} baseOpts bidiLoc = do
+  m (Either PreLocateException [BiDiP.NodeRemoteValue])
+runLeafLocator prms baseOpts bidiLoc = do
+  let trace = prms.trace
+      context = prms.context
   rslt <- locatePrimative (mkLocateActions prms) context baseOpts bidiLoc
   case rslt of
-    Left e -> throw e
+    Left e -> pure $ Left e
     Right (BiDiP.MkLocateNodesResult found) -> do
       trace $ LeafLocate bidiLoc FindAll found
-      pure found
+      pure $ Right found
 
 -- | Locate nodes matching an InnerText leaf locator. BiDi natively supports
 --   Full and Partial matching; 'Starts' and 'Wildcard' are implemented with a
@@ -366,14 +386,16 @@ locateInnerTextBiDi ::
   MatchType ->
   CaseSensitivity ->
   Maybe Word8 ->
-  m [BiDiP.NodeRemoteValue]
+  m (Either PreLocateException [BiDiP.NodeRemoteValue])
 locateInnerTextBiDi prms baseOpts value matchType cs maxDepth =
   case matchType of
     Full -> leafInnerTxtLocate BiDiP.Full
     Partial -> leafInnerTxtLocate BiDiP.Partial
     Starts -> do
       found <- leafInnerTxtLocate BiDiP.Partial
-      filterByText prms (startsMatch cs value) found
+      case found of
+        Left e -> pure $ Left e
+        Right elms -> Right <$> filterByText prms (startsMatch cs value) elms
     Wildcard -> locateWildcardInnerTextBiDi
   where
     leafInnerTxtLocate mt = runLeafLocator prms baseOpts $ innerTextLocator cs (Just mt) value maxDepth
@@ -388,7 +410,9 @@ locateInnerTextBiDi prms baseOpts value matchType cs maxDepth =
         Just fragments -> do
           let longest = longestFragment fragments
           found <- runLeafLocator prms baseOpts $ innerTextLocator cs (Just BiDiP.Partial) longest maxDepth
-          filterByText prms (wildcardMatch cs value) found
+          case found of
+            Left e -> pure $ Left e
+            Right elms -> Right <$> filterByText prms (wildcardMatch cs value) elms
 
 -- | Whether locating this leaf requires a text-based post-filter, so the
 --   pre-filter query must return every candidate rather than just the first.

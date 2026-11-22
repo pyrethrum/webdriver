@@ -65,8 +65,7 @@ runWebDriverBiDi opts context = interpret $ \_ -> \case
 mkBiDiLocateActions :: forall es. (IOE :> es, WebDriverBiDi :> es) => BrowsingContext -> BL.LocateActions (Eff es)
 mkBiDiLocateActions bc =
   BL.MkLocateActions
-    { throw = throwIO,
-      catch,
+    { catch,
       trace = \_ -> pure (),
       locateNodes = B.browsingContextLocateNodes,
       scriptCallFunction = B.scriptCallFunction,

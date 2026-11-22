@@ -59,8 +59,7 @@ defHttpOpts =
 locActions :: (WebDriver :> es, Logger :> es) => LocateActions (Eff es)
 locActions =
   MkLocateActions
-    { throw = throwIO,
-      catch,
+    { catch,
       trace = logDebug . txt,
       findElement,
       findElementFromElement,

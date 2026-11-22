@@ -39,8 +39,7 @@ runWebDriverHttp opts = interpret $ \_ -> \case
 mkHttpLocateActions :: forall es. (IOE :> es, HTTPEff.WebDriver :> es) => L.LocateActions (Eff es)
 mkHttpLocateActions =
   L.MkLocateActions
-    { throw = throwIO,
-      catch,
+    { catch,
       trace = \_ -> pure (),
       findElement = H.findElement,
       findElementFromElement = H.findElementFromElement,
